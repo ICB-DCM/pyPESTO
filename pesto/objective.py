@@ -1,30 +1,51 @@
+import numpy as np
 import amici
+
 
 class Objective:
     
-    def __init__(fun, dim)
+    def __init__(self, fun):
         # must be nll, i.e. to be minimized:
         self.fun = fun
-        self.dim = dim
-        # dim rather in optimizer
 
-    def call(par, sensi_order=0):
-        return nllh
+    def get_fval(self, par):
+        return self.call(par, sensi_order=0)[0]
+
+    def get_grad(self, par):
+        return self.call(par, sensi_order=1)[1]
+
+    def call(self, par, sensi_order=1):
+        return self.fun(par, sensi_order)
+
 
 class AmiciObjective(Objective):
-    
-    def __init__(amici_model, amici_solver, edata, dim, sensi_order):
+
+    def __init__(self, amici_model, amici_solver, edata, sensi_order):
         self.amici_model = amici_model
         self.amici_solver = amici_solver
         self.edata = edata
         self.sensi_order = sensi_order
-        # dim can be read from model
+        self.dim = amici_model.np()
+        super().__init__(None)
 
-    def call(par, sensi_order=0)
-        if sensi_order > self.sensi_order
+    def call(self, par, sensi_order=0):
+        if sensi_order > self.sensi_order:
             raise Exception("Sensitivity order not allowed.")
 
-        self.amici_solver.setSensitivityOrder(sensi_order)
-        rdata = amici.runAmiciSimulation(self.amici_model, self.amici_solver, self.edata)
+        nllh = 0
+        snllh = np.zeros(self.dim)
 
-        return - rdata.llh, - rdata.sllh
+        self.amici_model.setParameters(amici.DoubleVector(par))
+        self.amici_solver.setSensitivityOrder(sensi_order)
+        for data in self.edata:
+            rdata = amici.runAmiciSimulation(self.amici_model, self.amici_solver, data)
+            if rdata['status'] < 0.0:
+                return float('inf'), np.nan(self.dim)
+
+            nllh -= rdata['llh']
+            if sensi_order > 0:
+                snllh -= rdata['sllh']
+
+
+
+        return nllh, snllh
