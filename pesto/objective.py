@@ -8,6 +8,10 @@ class Objective:
         # must be nll, i.e. to be minimized:
         self.fun = fun
 
+    def get_fval_vararg(self, *par):
+        nllh, snllh = self.call(par, sensi_order=0)
+        return nllh
+
     def get_fval(self, par):
         nllh, snllh = self.call(par, sensi_order=0)
         return nllh
@@ -42,8 +46,6 @@ class AmiciObjective(Objective):
         for data in self.edata:
             rdata = amici.runAmiciSimulation(self.amici_model, self.amici_solver, data)
             if rdata['status'] < 0.0:
-                print(float('inf'))
-                print(np.nan(self.dim))
                 return float('inf'), np.nan*np.ones(self.dim)
 
             nllh -= rdata['llh']

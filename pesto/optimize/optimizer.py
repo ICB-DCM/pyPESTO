@@ -1,5 +1,6 @@
 import scipy.optimize
 import re
+import dlib
 
 class Optimizer:
 
@@ -24,9 +25,21 @@ class Optimizer:
                 x0,
                 method=scipy_method,
                 jac=problem.objective.get_grad,
-                hess=scipy.optimize.BFGS(),
                 bounds=bounds,
                 tol=self.tol,
-                options=self.options)
+                options=self.options,
+            )
+
+        elif re.match('^(?i)(dlib_)',self.solver):
+
+            dlib_method = self.solver[5:]
+
+            res = dlib.find_min_global(
+                problem.objective.get_fval_vararg,
+                list(lb[0, :]),
+                list(ub[0, :]),
+                int(self.options['maxiter']),
+                0.002,
+            )
 
         return res
