@@ -12,8 +12,8 @@ import warnings
 
 optimizers = {
     'scipy': ['Nelder-Mead', 'Powell', 'CG', 'BFGS', 'Newton-CG', 'L-BFGS-B', 'TNC', 'COBYLA', 'SLSQP',],
-    # disabled: 'trust-constr', 'dogleg', 'trust-ncg', 'trust-exact', 'trust-krylov'
-    'dlib' : ['global']
+    # scipy_disabled: 'trust-constr', 'dogleg', 'trust-ncg', 'trust-exact', 'trust-krylov'
+    'dlib' : ['default']
 }
 
 class OptimizerTest(unittest.TestCase):
@@ -21,7 +21,7 @@ class OptimizerTest(unittest.TestCase):
         for example in ['conversion_reaction']:
             objective, model = load_model_objective(example)
             target_fval = objective.get_fval(list(model.getParameters()))
-            for library in ['scipy','dlib']:
+            for library in optimizers.keys():
                 for method in optimizers[library]:
                     with self.subTest(library=library, caseName=method):
                         with warnings.catch_warnings():
@@ -31,24 +31,31 @@ class OptimizerTest(unittest.TestCase):
 
 def test_parameter_estimation(objective, model, solver, n_starts, target_fval):
     optimizer = pesto.optimize.optimizer.Optimizer(solver=solver)
+    optimizer.options['maxiter'] = 100
 
     problem = pesto.problem.Problem(objective, model)
     problem.generate_starting_points(n_starts)
 
     results = pesto.optimize.optimize.optimize(problem, optimizer, result=None)
 
-    successes = [result for result in results if result.fun < target_fval]
+    if 'fun' in dir(results[0]):
+        successes = [result for result in results if result.fun < target_fval]
 
-    summary = solver + ':\n ' + str(len(successes)) + '/' + str(len(results)) + ' reached target\n'
-    if 'nfev' in dir(results[0]):
-        function_evals = [result.nfev for result in successes]
-        summary = summary + 'mean fun evals:' + str(statistics.mean(function_evals)) \
-                  + '±' + str(statistics.stdev(function_evals)/n_starts) + '\n'
+        summary = solver + ':\n ' + str(len(successes)) + '/' + str(len(results)) + ' reached target\n'
+        if 'nfev' in dir(results[0]):
+            function_evals = [result.nfev for result in successes]
+            summary = summary + 'mean fun evals:' + str(statistics.mean(function_evals)) \
+                      + '±' + str(statistics.stdev(function_evals)/n_starts) + '\n'
 
-    if 'njev' in dir(results[0]):
-        grad_evals = [result.njev for result in successes]
-        summary = summary + 'mean grad evals:' + str(statistics.mean(grad_evals)) \
-                  + '±' + str(statistics.stdev(grad_evals)/n_starts) + '\n'
+        if 'njev' in dir(results[0]):
+            grad_evals = [result.njev for result in successes]
+            summary = summary + 'mean grad evals:' + str(statistics.mean(grad_evals)) \
+                      + '±' + str(statistics.stdev(grad_evals)/n_starts) + '\n'
+
+    else: #dlib
+        processed_results = [{'fval':result[1],'par':result[0]} for result in results]
+        successes = [result for result in processed_results if result['fval'] < target_fval]
+        summary = solver + ':\n ' + str(len(successes)) + '/' + str(len(results)) + ' reached target\n'
 
     print(summary)
 
