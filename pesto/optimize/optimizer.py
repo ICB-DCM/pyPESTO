@@ -4,7 +4,7 @@ import dlib
 
 class Optimizer:
 
-    def __init__(self, solver='SciPy_BFGS'):
+    def __init__(self, solver='SciPy_L-BFGS-B'):
 
         self.solver = solver
         self.tol = 1e-9
