@@ -11,8 +11,10 @@ import statistics
 import warnings
 
 optimizers = {
-    'scipy': ['Nelder-Mead', 'Powell', 'CG', 'BFGS', 'Newton-CG', 'L-BFGS-B', 'TNC', 'COBYLA', 'SLSQP',],
-    # scipy_disabled: 'trust-constr', 'dogleg', 'trust-ncg', 'trust-exact', 'trust-krylov'
+    'scipy': ['Nelder-Mead', 'Powell', 'CG', 'BFGS', 'Newton-CG', 'L-BFGS-B', 'TNC', 'COBYLA', 'SLSQP',
+              'dogleg', 'trust-ncg', 'trust-exact', 'trust-krylov',
+              'ls_trf', 'ls_dogbox'],
+    # disabled: ,'trust-constr', 'ls_lm'
     'dlib' : ['default']
 }
 
@@ -39,7 +41,11 @@ def test_parameter_estimation(objective, model, solver, n_starts, target_fval):
     results = pesto.optimize.optimize.optimize(problem, optimizer, result=None)
 
     if 'fun' in dir(results[0]):
-        successes = [result for result in results if result.fun < target_fval]
+        if 'cost' in dir(results[0]): # least squares
+            successes = [result for result in results if problem.objective.get_fval(result.x) < target_fval]
+        else:
+            successes = [result for result in results if result.fun < target_fval]
+
 
         summary = solver + ':\n ' + str(len(successes)) + '/' + str(len(results)) + ' reached target\n'
         if 'nfev' in dir(results[0]):
