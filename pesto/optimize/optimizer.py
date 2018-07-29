@@ -1,6 +1,6 @@
 import scipy.optimize
 import re
-import dlib
+import sys
 
 class Optimizer:
 
@@ -52,6 +52,12 @@ class Optimizer:
                 )
 
         elif re.match('^(?i)(dlib_)',self.solver):
+
+            if 'dlib' not in sys.modules:
+                try:
+                    import dlib
+                except ImportError:
+                    print('No installation of dlib was found, which is required for this solver.')
 
             dlib_method = self.solver[5:]
 
