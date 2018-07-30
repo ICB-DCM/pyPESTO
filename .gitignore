@@ -1,0 +1,99 @@
+*.py[cod]
+*.npy
+
+#temporary files
+*~
+
+# C extensions
+*.so
+*.build
+
+#matlab
+*.mat
+
+#pycharm
+.idea/
+
+#eclipse
+.settings/
+
+# Cython created C files
+*.c
+*.cpp
+
+# redis
+dump.rdb
+
+
+# IPython checkpoints (these are actually pretty useless to me)
+.ipynb_checkpoints/
+
+# Packages
+*.egg
+*.egg-info
+dist
+build
+eggs
+parts
+bin
+var
+sdist
+develop-eggs
+.installed.cfg
+lib
+lib64
+__pycache__
+.cache
+
+
+# Installer logs
+pip-log.txt
+
+# Unit test / coverage reports
+.coverage
+.tox
+nosetests.xml
+
+# Translations
+*.mo
+
+# Mr Developer
+.mr.developer.cfg
+.project
+.pydevproject
+
+#images
+#*.png
+Thumbs.db
+
+*.swp
+
+
+#documentation
+doc/_build
+
+
+# data
+data/raw
+data/figures
+
+# osx 
+.DS_Store
+
+# examples
+example/model_conversion_reaction/*
+example/conversion_reaction/*
+
+# general
+data/.snakemake
+data/.spyderproject
+data/.spyproject
+data/processed
+examples/*.err
+examples/*.out
+doc/*.log
+*.kdev*
+.pytest_cache
+dask-worker-space
+*.lock
+venv/*
