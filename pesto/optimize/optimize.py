@@ -7,7 +7,6 @@ def optimize(problem, optimizer, result=None):
 
     fvals = []
 
-
     results = optimizer_results
 
     return results
