@@ -1,72 +1,179 @@
 import scipy.optimize
 import re
 import sys
+import abc
 
-class Optimizer:
 
-    def __init__(self, solver='SciPy_L-BFGS-B'):
+class OptimizerResult(dict):
+    """
+    The results of a (local) optimizer run.
 
-        self.solver = solver
+    Attributes
+    ----------
+
+    x: ndarray
+        The best found parameters.
+
+    fval: float
+        The best found function value, fun(x).
+
+    grad, hess: ndarray
+        The gradient and Hessian at x.
+
+    n_fval: int
+        Number of function evaluations.
+
+    n_grad: int
+        Number of gradient evaluations.
+
+    n_hess: int
+        Number of Hessian evaluations.
+
+    exitflag: int
+        The exitflag of the optimizer.
+
+    message: str
+        Textual comment on the optimization result.
+
+    Any field not supported by the optimizer is to be filled with None.
+
+    """
+
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+
+    def __getattr__(self, key):
+        try:
+            return self[key]
+        except KeyError:
+            raise AttributeError(key)
+
+    __setattr__ = dict.__setitem__
+
+    __delattr__ = dict.__delitem__
+
+class Optimizer(abc.ABC):
+    """
+    This is the optimizer base class, not functional on its own.
+
+    An optimizer takes a problem, and possibly a start point, and then
+    performs and optimization. It returns an OptimizerResult, which is then
+    integrated into a Result object.
+    """
+
+    def __init__(self):
+        """
+        Default constructor.
+        """
+
+    @abc.abstractmethod
+    def minimize(self, problem, x0):
+        """"
+        Perform optimization.
+        """
+
+    @classmethod
+    def get_default_options():
+        """
+        Create default options specific to the optimizer.
+        """
+        return {}
+
+
+class ScipyOptimizer(Optimizer):
+
+    def __init__(self, method='L-BFGS-B', tol=1e-9, options=None):
+        super().__init__()
+
+        self.method = method
+
         self.tol = 1e-9
-        self.options = {'maxiter': 1000, 'disp': False}
+
+        self.options = options
+        if self.options is None:
+            self.options = ScipyOptimizer.get_default_options()
 
     def minimize(self, problem, x0):
 
-        lb = problem.upper_parameter_bounds
-        ub = problem.lower_parameter_bounds
+        lb = problem.lb
+        ub = problem.ub
 
-        if re.match('^(?i)(scipy_)',self.solver):
+        if re.match('^(?i)(ls_)', method):
+            ls_method = method[3:]
+            bounds = (lb[0, :], ub[0, :])
 
-            scipy_method = self.solver[6:]
-
-            if re.match('^(?i)(ls_)',scipy_method):
-
-                ls_method = scipy_method[3:]
-                bounds = (lb[0, :], ub[0, :])
-
-                res = scipy.optimize.least_squares(
-                    problem.objective.get_res,
-                    x0,
-                    method=ls_method,
-                    jac=problem.objective.get_sres,
-                    bounds=bounds,
-                    ftol=self.tol,
-                    tr_solver='exact',
-                    loss='linear',
+            res = scipy.optimize.least_squares(
+                problem.objective.get_res,
+                x0,
+                method=ls_method,
+                jac=problem.objective.get_sres,
+                bounds=bounds,
+                ftol=self.tol,
+                tr_solver='exact',
+                loss='linear',
                 )
 
-            else:
+        else:
+            bounds = scipy.optimize.Bounds(lb[0, :], ub[0, :])
 
-                bounds = scipy.optimize.Bounds(lb[0, :], ub[0, :])
-
-                res = scipy.optimize.minimize(
-                    problem.objective.get_fval,
-                    x0,
-                    method=scipy_method,
-                    jac=problem.objective.get_grad,
-                    hess=problem.objective.get_hess,
-                    hessp=problem.objective.get_hessp,
-                    bounds=bounds,
-                    tol=self.tol,
-                    options=self.options,
+            res = scipy.optimize.minimize(
+                problem.objective.get_fval,
+                x0,
+                method=method,
+                jac=problem.objective.get_grad,
+                hess=problem.objective.get_hess,
+                hessp=problem.objective.get_hessp,
+                bounds=bounds,
+                tol=self.tol,
+                options=self.options,
                 )
 
-        elif re.match('^(?i)(dlib_)',self.solver):
+        return OptimizerResult(
+            x=res.x,
+            fval=res.fun,
+            grad=res.jac,
+            hess=res.hess,
+            n_fval=res.nfev,
+            n_grad=res.njev,
+            n_hess=res.nhv,
+            exitflag=res.status,
+            message=res.message
+        )
 
-            if 'dlib' not in sys.modules:
-                try:
-                    import dlib
-                except ImportError:
-                    print('No installation of dlib was found, which is required for this solver.')
+    @classmethod
+    def get_default_options():
+        options = {'maxiter': 1000, 'disp': False}
+        return options
 
-            dlib_method = self.solver[5:]
 
-            res = dlib.find_min_global(
-                problem.objective.get_fval_vararg,
-                list(lb[0, :]),
-                list(ub[0, :]),
-                int(self.options['maxiter']),
-                0.002,
+class DlibOptimizer(Optimizer):
+
+    def __init__(self, method, options):
+        super().__init__()
+
+        self.method = method
+        self.options = options
+
+    def minimize(self, problem, x0):
+
+        if 'dlib' not in sys.modules:
+            try:
+                import dlib
+            except ImportError:
+                print('This optimizer requires an installation of dlib.')
+
+        # dlib requires variable length arguments
+        def get_fval_vararg(*par):
+            return problem.objective.get_fval(par)
+
+        res = dlib.find_min_global(
+            get_fval_vararg,
+            list(lb[0, :]),
+            list(ub[0, :]),
+            int(self.options['maxiter']),
+            0.002,
             )
 
         return res
+
+    def get_default_options():
