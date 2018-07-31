@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 #
-# pyPESTO documentation build configuration file, created by
+# PESTO documentation build configuration file, created by
 # sphinx-quickstart on Mon Jul 30 08:30:38 2018.
 #
 # This file is execfile()d with the current directory set to its
@@ -46,17 +46,17 @@ source_suffix = '.rst'
 master_doc = 'index'
 
 # General information about the project.
-project = 'pyPESTO'
-copyright = '2018, The pyPESTO developers'
-author = 'The pyPESTO developers'
+project = 'PESTO'
+copyright = '2018, The PESTO developers'
+author = 'The PESTO developers'
 
 # The version info for the project you're documenting, acts as replacement for
 # |version| and |release|, also used in various other places throughout the
 # built documents.
 #
 # The short X.Y version.
-import pypesto
-version = pypesto.__version__
+import pesto
+version = pesto.__version__
 # The full version, including alpha/beta/rc tags.
 release = version
 
@@ -113,7 +113,7 @@ html_sidebars = {
 # -- Options for HTMLHelp output ------------------------------------------
 
 # Output file base name for HTML help builder.
-htmlhelp_basename = 'pyPESTOdoc'
+htmlhelp_basename = 'PESTOdoc'
 
 
 # -- Options for LaTeX output ---------------------------------------------
@@ -140,8 +140,8 @@ latex_elements = {
 # (source start file, target name, title,
 #  author, documentclass [howto, manual, or own class]).
 latex_documents = [
-    (master_doc, 'pyPESTO.tex', 'pyPESTO Documentation',
-     'The pyPESTO developers', 'manual'),
+    (master_doc, 'PESTO.tex', 'PESTO Documentation',
+     'The PESTO developers', 'manual'),
 ]
 
 
@@ -150,7 +150,7 @@ latex_documents = [
 # One entry per manual page. List of tuples
 # (source start file, name, description, authors, manual section).
 man_pages = [
-    (master_doc, 'pypesto', 'pyPESTO Documentation',
+    (master_doc, 'pesto', 'PESTO Documentation',
      [author], 1)
 ]
 
@@ -161,8 +161,8 @@ man_pages = [
 # (source start file, target name, title, author,
 #  dir menu entry, description, category)
 texinfo_documents = [
-    (master_doc, 'pyPESTO', 'pyPESTO Documentation',
-     author, 'pyPESTO', 'One line description of project.',
+    (master_doc, 'PESTO', 'PESTO Documentation',
+     author, 'PESTO', 'One line description of project.',
      'Miscellaneous'),
 ]
 
