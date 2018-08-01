@@ -28,4 +28,4 @@ install:
   - python3 setup.py install
     
 script:  
-  - python3 ./test/test_sbml_coverage.py
+  - python3 ./test/test_sbml_conversion.py
