@@ -253,16 +253,16 @@ class AmiciObjective(Objective):
             output = ()
             if mode == Objective.MODE_FUN:
                 if 0 in sensi_orders:
-                    output += (kwargs['fval'],)
+                    return kwargs['fval']
                 if 1 in sensi_orders:
-                    output += (kwargs['grad'],)
+                    return kwargs['grad']
                 if 2 in sensi_orders:
-                    output += (kwargs['hess'],)
+                    return kwargs['hess']
             elif mode == Objective.MODE_RES:
                 if 0 in sensi_orders:
-                    output += (kwargs['res'],)
+                    return kwargs['res']
                 if 1 in sensi_orders:
-                    output += (kwargs['sres'],)
+                    return kwargs['sres']
             return output
 
         # set parameters in model
