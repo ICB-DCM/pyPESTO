@@ -1,0 +1,29 @@
+language: generic
+sudo: false
+
+branches:
+  only:
+    - master
+
+os: linux
+dist: xenial
+compiler: gcc
+addons:
+  apt:
+    update: true
+    packages:
+      - libhdf5-serial-dev
+      - zlib1g-dev
+      - libatlas-base-dev
+      - lcov
+      - swig3.0
+after_success: 
+  - python3 ./test/testCoverage.py
+  - bash <(curl -s https://codecov.io/bash) -f coverage_py.xml -X fix -cF python
+
+install:
+    - pip3 install --user --upgrade pip setuptools wheel pkgconfig coverage scipy dlib amici
+    - python3 setup.py install
+    
+script:  
+    - 
