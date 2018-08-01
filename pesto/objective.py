@@ -88,7 +88,7 @@ class Objective:
             The parameters for which to evaluate the objective function.
 
         sensi_orders: tuple
-            Specifying which sensitivities to compute, i.e. (0,1) -> fval, grad.
+            Specifying which sensitivities to compute, e.g. (0,1) -> fval, grad.
 
         mode: str
             Whether to compute function values or residuals.

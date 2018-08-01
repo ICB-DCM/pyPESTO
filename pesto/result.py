@@ -47,7 +47,7 @@ class Result:
 
     def get_optimizer_results_for_key(self, key) -> list:
         """
-        Extract the list of value for the specified key from the optimization
+        Extract the list of values for the specified key from the optimization
         results.
 
         Parameters
