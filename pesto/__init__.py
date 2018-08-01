@@ -2,7 +2,11 @@ __all__ = ['objective', 'problem', 'result', 'version',
            'optimize', 'profile', 'sample', 'visualize']
 
 from .version import __version__
-from .result import Result
+from .objective import Objective, AmiciObjective
 from .problem import Problem
-from .optimize import (optimize,
-                       Optimizer)
+from .result import Result
+from .optimize import (minimize,
+                       OptimizerResult,
+                       Optimizer,
+                       ScipyOptimizer,
+                       DlibOptimizer)

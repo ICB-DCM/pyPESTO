@@ -1,11 +1,21 @@
-def uniform(lb, ub, n_starts):
-    """"""
-
-    self.starting_points = \
-                 np.random.random((n_starts, self.parameter_number)) \
-               * (self.upper_parameter_bounds - self.lower_parameter_bounds) \
-               + self.lower_parameter_bounds
+import numpy as np
 
 
-def latin_hypercube(lb, ub, n_starts):
-    pass
+def uniform(n_starts, lb, ub, par_guesses=None):
+    """
+    Uniform sampling of start points.
+
+    TODO: Use par_guesses.
+    """
+    dim = lb.shape[1]
+    random_points = np.random.random((n_starts, dim))
+    startpoints = random_points * (ub - lb) + lb
+
+    return startpoints
+
+
+def latin_hypercube(n_starts, lb, ub):
+    """
+    Latin hypercube sampling of start points.
+    """
+    raise NotImplementedError()

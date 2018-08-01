@@ -4,9 +4,13 @@ import sys
 import abc
 
 
-class OptimizerResult
+class OptimizerResult(dict):
     """
-    The results of a (local) optimizer run.
+    The result of an optimizer run. Used as a standardized return value to
+    map from the individual result objects returned by the employed
+    optimizers to the format understood by pesto.
+
+    Can be used like a dict.
 
     Attributes
     ----------
@@ -47,8 +51,11 @@ class OptimizerResult
                  n_fval=None,
                  n_grad=None,
                  n_hess=None,
+                 x0=None,
+                 fval0=None,
                  exitflag=None,
                  message=None):
+        super().__init__()
         self.x = x
         self.fval = fval
         self.grad = grad
@@ -56,8 +63,19 @@ class OptimizerResult
         self.n_fval = n_fval
         self.n_grad = n_grad
         self.n_hess = n_hess
+        self.x0 = x0
+        self.fval0 = fval0
         self.exitflag = exitflag
         self.message= message
+
+    def __getattr__(self, key):
+        try:
+            return self[key]
+        except KeyError:
+            raise AttributeError(key)
+
+    __setattr__ = dict.__setitem__
+    __delattr__ = dict.__delitem__
 
 
 class Optimizer(abc.ABC):
@@ -104,13 +122,14 @@ class ScipyOptimizer(Optimizer):
             self.options = ScipyOptimizer.get_default_options()
 
     def minimize(self, problem, x0):
-
         lb = problem.lb
         ub = problem.ub
 
-        if re.match('^(?i)(ls_)', method):
-            ls_method = method[3:]
-            bounds = (lb[0, :], ub[0, :])
+        if re.match('^(?i)(ls_)', self.method):
+            # is a residual based least squares method
+
+            ls_method = self.method[3:]
+            bounds = (lb, ub)
 
             res = scipy.optimize.least_squares(
                 problem.objective.get_res,
@@ -124,12 +143,13 @@ class ScipyOptimizer(Optimizer):
                 )
 
         else:
+            # is a fval based optimization method
             bounds = scipy.optimize.Bounds(lb[0, :], ub[0, :])
 
             res = scipy.optimize.minimize(
                 problem.objective.get_fval,
                 x0,
-                method=method,
+                method=self.method,
                 jac=problem.objective.get_grad,
                 hess=problem.objective.get_hess,
                 hessp=problem.objective.get_hessp,
@@ -138,17 +158,22 @@ class ScipyOptimizer(Optimizer):
                 options=self.options,
                 )
 
-        return OptimizerResult(
+        # some fields are not filled by all optimizers, then fill in None
+        optimizer_result = OptimizerResult(
             x=res.x,
             fval=res.fun,
-            grad=res.jac,
-            hess=res.hess,
-            n_fval=res.nfev,
-            n_grad=res.njev,
-            n_hess=res.nhev,
+            grad=res.__dict__.get('jac'),
+            hess=res.__dict__.get('hess'),
+            n_fval=res.__dict__.get('nfev'),
+            n_grad=res.__dict__.get('njev'),
+            n_hess=res.__dict__.get('nhev'),
+            x0=x0,
+            fval0=None,
             exitflag=res.status,
             message=res.message
         )
+
+        return optimizer_result
 
     @staticmethod
     def get_default_options():
@@ -160,13 +185,14 @@ class DlibOptimizer(Optimizer):
     """
     Use the Dlib toolbox for optimization.
 
-    TODO: I don't know which optimizers we want to suport here.
+    TODO: I don't know which optimizers we want to support here.
     """
 
     def __init__(self, method, options=None):
         super().__init__()
 
         self.method = method
+
         self.options = options
         if self.options is None:
             self.options.DlibOptimizer.get_default_options()
@@ -185,16 +211,19 @@ class DlibOptimizer(Optimizer):
 
         res = dlib.find_min_global(
             get_fval_vararg,
-            list(lb[0, :]),
-            list(ub[0, :]),
+            list(problem.lb[0, :]),
+            list(problem.ub[0, :]),
             int(self.options['maxiter']),
             0.002,
             )
 
-        return OptimizerResult(
+        optimizer_result = OptimizerResult(
             x=res[0],
-            fval=res[1]
+            fval=res[1],
+            x0=x0
         )
+
+        return optimizer_result
 
     @staticmethod
     def get_default_options():
