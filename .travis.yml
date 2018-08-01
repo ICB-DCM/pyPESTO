@@ -18,12 +18,13 @@ addons:
       - lcov
       - swig3.0
 after_success: 
-  - python3.6 ./test/testCoverage.py
+  - python3 ./test/testCoverage.py
   - bash <(curl -s https://codecov.io/bash) -f coverage_py.xml -X fix -cF python
 
 install:
-    - pip3.6 install --user --upgrade pip setuptools wheel pkgconfig coverage scipy dlib amici
-    - python3.6 setup.py install
+    - pyenv shell 2.7 3.6
+    - pip3 install --user --upgrade pip setuptools wheel pkgconfig coverage scipy dlib amici
+    - python3 setup.py install
     
 script:  
-    - python3.6 ./test/test_sbml_coverage.py
+    - python3 ./test/test_sbml_coverage.py
