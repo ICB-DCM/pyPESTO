@@ -4,7 +4,7 @@ import sys
 import abc
 
 
-class OptimizerResult(dict):
+class OptimizerResult
     """
     The results of a (local) optimizer run.
 
@@ -35,30 +35,37 @@ class OptimizerResult(dict):
     message: str
         Textual comment on the optimization result.
 
-    Any field not supported by the optimizer is to be filled with None.
+    Any field not supported by the optimizer is filled with None.
 
     """
 
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
+    def __init__(self,
+                 x=None,
+                 fval=None,
+                 grad=None,
+                 hess=None,
+                 n_fval=None,
+                 n_grad=None,
+                 n_hess=None,
+                 exitflag=None,
+                 message=None):
+        self.x = x
+        self.fval = fval
+        self.grad = grad
+        self.hess = hess
+        self.n_fval = n_fval
+        self.n_grad = n_grad
+        self.n_hess = n_hess
+        self.exitflag = exitflag
+        self.message= message
 
-    def __getattr__(self, key):
-        try:
-            return self[key]
-        except KeyError:
-            raise AttributeError(key)
-
-    __setattr__ = dict.__setitem__
-
-    __delattr__ = dict.__delitem__
 
 class Optimizer(abc.ABC):
     """
     This is the optimizer base class, not functional on its own.
 
     An optimizer takes a problem, and possibly a start point, and then
-    performs and optimization. It returns an OptimizerResult, which is then
-    integrated into a Result object.
+    performs an optimization. It returns an OptimizerResult.
     """
 
     def __init__(self):
@@ -72,22 +79,25 @@ class Optimizer(abc.ABC):
         Perform optimization.
         """
 
-    @classmethod
+    @staticmethod
     def get_default_options():
         """
-        Create default options specific to the optimizer.
+        Create default options specific for the optimizer.
         """
-        return {}
+        return None
 
 
 class ScipyOptimizer(Optimizer):
+    """
+    Use the SciPy optimizers.
+    """
 
     def __init__(self, method='L-BFGS-B', tol=1e-9, options=None):
         super().__init__()
 
         self.method = method
 
-        self.tol = 1e-9
+        self.tol = tol
 
         self.options = options
         if self.options is None:
@@ -135,24 +145,31 @@ class ScipyOptimizer(Optimizer):
             hess=res.hess,
             n_fval=res.nfev,
             n_grad=res.njev,
-            n_hess=res.nhv,
+            n_hess=res.nhev,
             exitflag=res.status,
             message=res.message
         )
 
-    @classmethod
+    @staticmethod
     def get_default_options():
         options = {'maxiter': 1000, 'disp': False}
         return options
 
 
 class DlibOptimizer(Optimizer):
+    """
+    Use the Dlib toolbox for optimization.
 
-    def __init__(self, method, options):
+    TODO: I don't know which optimizers we want to suport here.
+    """
+
+    def __init__(self, method, options=None):
         super().__init__()
 
         self.method = method
         self.options = options
+        if self.options is None:
+            self.options.DlibOptimizer.get_default_options()
 
     def minimize(self, problem, x0):
 
@@ -174,6 +191,11 @@ class DlibOptimizer(Optimizer):
             0.002,
             )
 
-        return res
+        return OptimizerResult(
+            x=res[0],
+            fval=res[1]
+        )
 
+    @staticmethod
     def get_default_options():
+        return {}
