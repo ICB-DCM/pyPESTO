@@ -23,7 +23,7 @@ after_success:
 
 install:
   - pyenv shell 2.7 3.6
-  - pip3 install --user --upgrade pip setuptools wheel pkgconfig 
+  - pip3 install --user --upgrade setuptools wheel pkgconfig 
   - pip3 install --user coverage scipy dlib amici
   - python3 setup.py install
     
