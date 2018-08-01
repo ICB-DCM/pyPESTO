@@ -1,6 +1,4 @@
 import numpy as np
-import sys
-
 
 class Objective:
     """
@@ -226,11 +224,10 @@ class AmiciObjective(Objective):
 
     def __call__(self, x, sensi_orders: tuple, mode=Objective.MODE_FUN):
 
-        if 'amici' not in sys.modules:
-            try:
-                import amici
-            except ImportError:
-                print('This objective requires an installation of amici.')
+        try:
+            import amici
+        except ImportError:
+            print('This objective requires an installation of amici.')
 
         # amici is built so that only the maximum sensitivity is required,
         # the lower orders are then automatically computed

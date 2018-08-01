@@ -80,6 +80,9 @@ data/figures
 # osx 
 .DS_Store
 
+# coverage
+coverage_py.xml
+
 # examples
 example/model_conversion_reaction/*
 example/conversion_reaction/*
@@ -97,4 +100,5 @@ doc/*.log
 dask-worker-space
 *.lock
 venv/*
+
 
