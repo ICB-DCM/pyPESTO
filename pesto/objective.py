@@ -68,16 +68,16 @@ class Objective:
         and diverse approximations of the Hessian.
         """
 
-    def __call__(self, x, sensi_orders: tuple, mode=MODE_FUN):
+    def __call__(self, x, sensi_orders: tuple=(0,), mode=MODE_FUN):
         """
         Method to get arbitrary sensitivities.
 
-        This method is a bit lengthy, because there are different ways in which
+        There are different ways in which
         an optimizer calls the objective function, and in how the objective
         function provides
         information (e.g. derivatives via separate functions or along with
         the function values). The different calling modes increase efficiency
-        in space and time.
+        in space and time and make the objective flexible.
 
         Parameters
         ----------
@@ -91,82 +91,89 @@ class Objective:
         mode: str
             Whether to compute function values or residuals.
         """
+        if mode == Objective.MODE_FUN:
+            return self.call_mode_fun(x, sensi_orders)
+        elif mode == Objective.MODE_RES:
+            return self.call_mode_res(x, sensi_orders)
+        else:
+            raise ValueError("This mode is not supported.")
 
-        if mode == Objective.MODE_RES:
-            if sensi_orders == (0,):
-                if self.sres is True:
-                    res = self.res(x)[0]
-                else:
-                    res = self.res(x)
-                return res
-            elif sensi_orders == (1,):
-                if self.sres is True:
-                    sres = self.res(x)[1]
-                else:
-                    sres = self.sres(x)
-                return sres
-            elif sensi_orders == (0, 1):
-                if self.sres is True:
-                    res, sres = self.res(x)
-                else:
-                    res = self.res(x)
-                    sres = self.sres(x)
-                return res, sres
+    def call_mode_fun(self, x, sensi_orders):
+        if sensi_orders == (0,):
+            if self.grad is True:
+                fval = self.fun(x)[0]
             else:
-                raise ValueError("These sensitivity orders are not supported.")
-
-        elif mode == Objective.MODE_FUN:
-            if sensi_orders == (0,):
-                if self.grad is True:
-                    fval = self.fun(x)[0]
-                else:
-                    fval = self.fun(x)
-                return fval
-            elif sensi_orders == (1,):
+                fval = self.fun(x)
+            return fval
+        elif sensi_orders == (1,):
+            if self.grad is True:
+                grad = self.fun(x)[1]
+            else:
+                grad = self.grad(x)
+            return grad
+        elif sensi_orders == (2,):
+            if self.hess is True:
+                hess = self.fun(x)[2]
+            else:
+                hess = self.hess(x)
+            return hess
+        elif sensi_orders == (0, 1):
+            if self.grad is True:
+                fval, grad = self.fun(x)[0, 1]
+            else:
+                fval = self.fun(x)
+                grad = self.grad(x)
+            return fval, grad
+        elif sensi_orders == (1, 2):
+            if self.hess is True:
+                grad, hess = self.fun(x)[1, 2]
+            else:
+                hess = self.hess(x)
                 if self.grad is True:
                     grad = self.fun(x)[1]
                 else:
                     grad = self.grad(x)
-                return grad
-            elif sensi_orders == (2,):
-                if self.hess is True:
-                    hess = self.fun(x)[2]
-                else:
-                    hess = self.hess(x)
-                return hess
-            elif sensi_orders == (0, 1):
+            return grad, hess
+        elif sensi_orders == (0, 1, 2):
+            if self.hess is True:
+                fval, grad, hess = self.fun(x)[0, 1, 2]
+            else:
+                hess = self.hess(x)
                 if self.grad is True:
                     fval, grad = self.fun(x)[0, 1]
                 else:
                     fval = self.fun(x)
                     grad = self.grad(x)
-                return fval, grad
-            elif sensi_orders == (1, 2):
-                if self.hess is True:
-                    grad, hess = self.fun(x)[1, 2]
-                else:
-                    hess = self.hess(x)
-                    if self.grad is True:
-                        grad = self.fun(x)[1]
-                    else:
-                        grad = self.grad(x)
-                return grad, hess
-            elif sensi_orders == (0, 1, 2):
-                if self.hess is True:
-                    fval, grad, hess = self.fun(x)[0, 1, 2]
-                else:
-                    hess = self.hess(x)
-                    if self.grad is True:
-                        fval, grad = self.fun(x)[0, 1]
-                    else:
-                        fval = self.fun(x)
-                        grad = self.grad(x)
-                return fval, grad, hess
-
-            else:
-                raise ValueError("These sensitivity orders are not supported.")
+            return fval, grad, hess
         else:
-            raise ValueError("This mode is not supported.")
+            raise ValueError("These sensitivity orders are not supported.")
+
+    def call_mode_res(self, x, sensi_orders):
+        if sensi_orders == (0,):
+            if self.sres is True:
+                res = self.res(x)[0]
+            else:
+                res = self.res(x)
+            return res
+        elif sensi_orders == (1,):
+            if self.sres is True:
+                sres = self.res(x)[1]
+            else:
+                sres = self.sres(x)
+            return sres
+        elif sensi_orders == (0, 1):
+            if self.sres is True:
+                res, sres = self.res(x)
+            else:
+                res = self.res(x)
+                sres = self.sres(x)
+            return res, sres
+        else:
+            raise ValueError("These sensitivity orders are not supported.")
+
+    """
+    The following are convenience functions for getting specific outputs.
+    """
 
     def get_fval(self, x):
         fval = self.__call__(x, (0,), Objective.MODE_FUN)
