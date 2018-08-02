@@ -208,10 +208,10 @@ class AmiciObjective(Objective):
     Parameters
     ----------
 
-    amici_model: amici.model
+    amici_model: amici.Model
         The amici model.
 
-    amici_solver: amici.solver
+    amici_solver: amici.Solver
         The solver to use for the numeric integration of the model.
 
     edata:
@@ -221,20 +221,22 @@ class AmiciObjective(Objective):
         Maximum sensitivity order supported by the model.
     """
 
-    def __init__(self, amici_model, amici_solver, edata, max_sensi_order):
+    def __init__(self, amici_model, amici_solver, edata, max_sensi_order=None):
         super().__init__(None)
         self.amici_model = amici_model
         self.amici_solver = amici_solver
         self.edata = edata
         self.max_sensi_order = max_sensi_order
+        if self.max_sensi_order is None:
+            self.max_sensi_order = 2 if amici_model.o2mode else 1
         self.dim = amici_model.np()
 
-    def __call__(self, x, sensi_orders: tuple, mode=Objective.MODE_FUN):
-
+    def __call__(self, x, sensi_orders: tuple=(0,), mode=Objective.MODE_FUN):
         try:
             import amici
         except ImportError:
-            print('This objective requires an installation of amici.')
+            print('This objective requires an installation of amici ('
+                  'github.com/icb-dcm/amici. Install via pip3 install amici.')
 
         # amici is built so that only the maximum sensitivity is required,
         # the lower orders are then automatically computed
@@ -248,29 +250,12 @@ class AmiciObjective(Objective):
         space in particular for the Hessian.
         """
 
-        nllh = 0
+        nllh = 0.0
         snllh = np.zeros(self.dim)
         ssnllh = np.zeros([self.dim, self.dim])
 
         res = np.zeros([0])
         sres = np.zeros([0, self.dim])
-
-        # sometimes only a subset of the outputs are demanded
-        def map_to_output(**kwargs):
-            output = ()
-            if mode == Objective.MODE_FUN:
-                if 0 in sensi_orders:
-                    return kwargs['fval']
-                if 1 in sensi_orders:
-                    return kwargs['grad']
-                if 2 in sensi_orders:
-                    return kwargs['hess']
-            elif mode == Objective.MODE_RES:
-                if 0 in sensi_orders:
-                    return kwargs['res']
-                if 1 in sensi_orders:
-                    return kwargs['sres']
-            return output
 
         # set parameters in model
         self.amici_model.setParameters(amici.DoubleVector(x))
@@ -290,7 +275,8 @@ class AmiciObjective(Objective):
             # check if the computation failed
             if rdata['status'] < 0.0:
                 # TODO: Not sure about res, sres.
-                return map_to_output(
+                return AmiciObjective.map_to_output(
+                    sensi_orders=sensi_orders,
                     fval=np.inf,
                     grad=np.nan * np.ones(self.dim),
                     hess=np.nan * np.ones([self.dim, self.dim]),
@@ -312,5 +298,28 @@ class AmiciObjective(Objective):
                     sres = np.vstack([rdata['sres'], rdata['sres']]) \
                         if sres.size else rdata['sres']
 
-        return map_to_output(fval=nllh, grad=snllh, hess=ssnllh,
-                             res=res, sres=sres)
+        return AmiciObjective.map_to_output(
+            sensi_orders=sensi_orders,
+            fval=nllh, grad=snllh, hess=ssnllh,
+            res=res, sres=sres)
+
+    @staticmethod
+    def map_to_output(sensi_orders, **kwargs):
+        """
+        Return values as requested by the caller (sometimes only a subset of
+        the outputs are demanded).
+        """
+        output = ()
+        if mode == Objective.MODE_FUN:
+            if 0 in sensi_orders:
+                return kwargs['fval']
+            if 1 in sensi_orders:
+                return kwargs['grad']
+            if 2 in sensi_orders:
+                return kwargs['hess']
+        elif mode == Objective.MODE_RES:
+            if 0 in sensi_orders:
+                return kwargs['res']
+            if 1 in sensi_orders:
+                return kwargs['sres']
+        return output
