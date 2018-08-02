@@ -49,19 +49,22 @@ def test_parameter_estimation(objective, library, solver, n_starts, target_fval)
     summary = solver + ':\n ' + str(len(successes)) + '/' + str(len(results)) + ' reached target\n'
 
     if hasattr(results[0], 'n_fval'):
-        function_evals = [result.n_fval for result in results]
-        summary = summary + 'mean fun evals:' + str(statistics.mean(function_evals)) \
-                  + '±' + str(statistics.stdev(function_evals)/n_starts) + '\n'
+        function_evals = [result.n_fval for result in results if result.n_fval]
+        if len(function_evals):
+            summary = summary + 'mean fun evals:' + str(statistics.mean(function_evals)) \
+                      + '±' + str(statistics.stdev(function_evals)/n_starts) + '\n'
 
     if hasattr(results[0], 'n_grad'):
-        grad_evals = [result.n_grad for result in results]
-        summary = summary + 'mean grad evals:' + str(statistics.mean(grad_evals)) \
-                  + '±' + str(statistics.stdev(grad_evals)/n_starts) + '\n'
+        grad_evals = [result.n_grad for result in results if result.n_grad]
+        if len(grad_evals):
+            summary = summary + 'mean grad evals:' + str(statistics.mean(grad_evals)) \
+                      + '±' + str(statistics.stdev(grad_evals)/n_starts) + '\n'
 
     if hasattr(results[0], 'n_hess'):
-        hess_evals = [result.n_hess for result in results]
-        summary = summary + 'mean hess evals:' + str(statistics.mean(hess_evals)) \
-                  + '±' + str(statistics.stdev(hess_evals)/n_starts) + '\n'
+        hess_evals = [result.n_hess for result in results if result.n_hess]
+        if len(hess_evals):
+            summary = summary + 'mean hess evals:' + str(statistics.mean(hess_evals)) \
+                      + '±' + str(statistics.stdev(hess_evals)/n_starts) + '\n'
 
 
     print(summary)
