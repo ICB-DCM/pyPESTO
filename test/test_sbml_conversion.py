@@ -10,9 +10,9 @@ import warnings
 
 optimizers = {
     'scipy': ['Nelder-Mead', 'Powell', 'CG', 'BFGS', 'Newton-CG', 'L-BFGS-B', 'TNC', 'COBYLA', 'SLSQP',
-              'dogleg', 'trust-ncg', 'trust-exact', 'trust-krylov',
+              'trust-ncg', 'trust-exact', 'trust-krylov',
               'ls_trf', 'ls_dogbox'],
-    # disabled: ,'trust-constr', 'ls_lm'
+    # disabled: ,'trust-constr', 'ls_lm', 'dogleg'
     'dlib' : ['default']
 }
 
