@@ -26,10 +26,10 @@ class OptimizerTest(unittest.TestCase):
                     with self.subTest(library=library, solver=method):
                         with warnings.catch_warnings():
                             warnings.simplefilter("ignore")
-                            test_parameter_estimation(objective, model, library, method, 20, target_fval)
+                            test_parameter_estimation(objective, library, method, 20, target_fval)
 
 
-def test_parameter_estimation(objective, model, library, solver, n_starts, target_fval):
+def test_parameter_estimation(objective, library, solver, n_starts, target_fval):
 
     options = {
         'maxiter': 100
@@ -42,34 +42,27 @@ def test_parameter_estimation(objective, model, library, solver, n_starts, targe
 
     problem = pesto.problem.Problem(objective, -2*np.ones((1,objective.dim)), 2*np.ones((1,objective.dim)))
 
-    results = pesto.optimize.minimize(problem, optimizer, n_starts)
+    results = pesto.optimize.minimize(problem, optimizer, n_starts).optimizer_results
 
-    if 'fun' in dir(results[0]):
-        if 'cost' in dir(results[0]): # least squares
-            successes = [result for result in results if problem.objective.get_fval(result.x) < target_fval]
-        else:
-            successes = [result for result in results if result.fun < target_fval]
+    successes = [result for result in results if result.fval < target_fval]
 
-        summary = solver + ':\n ' + str(len(successes)) + '/' + str(len(results)) + ' reached target\n'
-        if 'nfev' in dir(results[0]):
-            function_evals = [result.nfev for result in successes]
-            summary = summary + 'mean fun evals:' + str(statistics.mean(function_evals)) \
-                      + '±' + str(statistics.stdev(function_evals)/n_starts) + '\n'
+    summary = solver + ':\n ' + str(len(successes)) + '/' + str(len(results)) + ' reached target\n'
 
-        if 'njev' in dir(results[0]):
-            grad_evals = [result.njev for result in successes]
-            summary = summary + 'mean grad evals:' + str(statistics.mean(grad_evals)) \
-                      + '±' + str(statistics.stdev(grad_evals)/n_starts) + '\n'
+    if hasattr(results[0], 'n_fval'):
+        function_evals = [result.n_fval for result in successes]
+        summary = summary + 'mean fun evals:' + str(statistics.mean(function_evals)) \
+                  + '±' + str(statistics.stdev(function_evals)/n_starts) + '\n'
 
-        if 'nhev' in dir(results[0]):
-            hess_evals = [result.nhev for result in successes]
-            summary = summary + 'mean hess evals:' + str(statistics.mean(hess_evals)) \
-                      + '±' + str(statistics.stdev(hess_evals)/n_starts) + '\n'
+    if hasattr(results[0], 'n_grad'):
+        grad_evals = [result.n_grad for result in successes]
+        summary = summary + 'mean grad evals:' + str(statistics.mean(grad_evals)) \
+                  + '±' + str(statistics.stdev(grad_evals)/n_starts) + '\n'
 
-    else: #dlib
-        processed_results = [{'fval':result[1],'par':result[0]} for result in results]
-        successes = [result for result in processed_results if result['fval'] < target_fval]
-        summary = solver + ':\n ' + str(len(successes)) + '/' + str(len(results)) + ' reached target\n'
+    if hasattr(results[0], 'n_hess'):
+        hess_evals = [result.n_hess for result in successes]
+        summary = summary + 'mean hess evals:' + str(statistics.mean(hess_evals)) \
+                  + '±' + str(statistics.stdev(hess_evals)/n_starts) + '\n'
+
 
     print(summary)
 
@@ -105,7 +98,7 @@ def load_model_objective(example_name):
     rdata = amici.runAmiciSimulation(model, solver, None)
     edata = amici.ExpData(rdata['ptr'].get(), 0.05, 0.0)
 
-    return pesto.objective.AmiciObjective(model, solver, [edata], 1), model
+    return pesto.objective.AmiciObjective(model, solver, [edata], 2), model
 
 
 if __name__ == '__main__':

@@ -128,8 +128,10 @@ class ScipyOptimizer(Optimizer):
         if re.match('^(?i)(ls_)', self.method):
             # is a residual based least squares method
 
+            least_squares = True
+
             ls_method = self.method[3:]
-            bounds = (lb, ub)
+            bounds = (lb[0, :], ub[0, :])
 
             res = scipy.optimize.least_squares(
                 problem.objective.get_res,
@@ -143,6 +145,9 @@ class ScipyOptimizer(Optimizer):
                 )
 
         else:
+
+            least_squares = False
+
             # is a fval based optimization method
             bounds = scipy.optimize.Bounds(lb[0, :], ub[0, :])
 
@@ -161,12 +166,12 @@ class ScipyOptimizer(Optimizer):
         # some fields are not filled by all optimizers, then fill in None
         optimizer_result = OptimizerResult(
             x=res.x,
-            fval=res.fun,
-            grad=res.__dict__.get('jac'),
-            hess=res.__dict__.get('hess'),
-            n_fval=res.__dict__.get('nfev'),
-            n_grad=res.__dict__.get('njev'),
-            n_hess=res.__dict__.get('nhev'),
+            fval=res.fun if not least_squares else problem.objective.get_fval(res.x),
+            grad=res.jac if hasattr(res, 'jac') else None,
+            hess=res.hess if hasattr(res, 'hess') else None,
+            n_fval=res.nfev if hasattr(res, 'nfev') else 0,
+            n_grad=res.njev if hasattr(res, 'njev') else 0,
+            n_hess=res.nhev if hasattr(res, 'nhev') else 0,
             x0=x0,
             fval0=None,
             exitflag=res.status,
@@ -195,15 +200,14 @@ class DlibOptimizer(Optimizer):
 
         self.options = options
         if self.options is None:
-            self.options.DlibOptimizer.get_default_options()
+            self.options = DlibOptimizer.get_default_options()
 
     def minimize(self, problem, x0):
 
-        if 'dlib' not in sys.modules:
-            try:
-                import dlib
-            except ImportError:
-                print('This optimizer requires an installation of dlib.')
+        try:
+            import dlib
+        except ImportError:
+            print('This optimizer requires an installation of dlib.')
 
         # dlib requires variable length arguments
         def get_fval_vararg(*par):
