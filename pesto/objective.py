@@ -1,5 +1,6 @@
 import numpy as np
 
+
 class Objective:
     """
     This class contains the objective function.
@@ -61,10 +62,10 @@ class Objective:
         self.sres = sres
 
         """
-        TODO: 
-        
-        * Implement methods to compute grad via finite differences (with 
-        an automatic adaptation of the step size), 
+        TODO:
+
+        * Implement methods to compute grad via finite differences (with
+        an automatic adaptation of the step size),
         and diverse approximations of the Hessian.
         """
 
@@ -86,7 +87,7 @@ class Objective:
             The parameters for which to evaluate the objective function.
 
         sensi_orders: tuple
-            Specifying which sensitivities to compute, e.g. (0,1) -> fval, grad.
+            Specifies which sensitivities to compute, e.g. (0,1) -> fval, grad.
 
         mode: str
             Whether to compute function values or residuals.
@@ -246,7 +247,7 @@ class AmiciObjective(Objective):
             raise Exception("Sensitivity order not allowed.")
 
         """
-        TODO: For large-scale models it might be bad to always reserve 
+        TODO: For large-scale models it might be bad to always reserve
         space in particular for the Hessian.
         """
 
@@ -277,6 +278,7 @@ class AmiciObjective(Objective):
                 # TODO: Not sure about res, sres.
                 return AmiciObjective.map_to_output(
                     sensi_orders=sensi_orders,
+                    mode=mode,
                     fval=np.inf,
                     grad=np.nan * np.ones(self.dim),
                     hess=np.nan * np.ones([self.dim, self.dim]),
@@ -300,11 +302,12 @@ class AmiciObjective(Objective):
 
         return AmiciObjective.map_to_output(
             sensi_orders=sensi_orders,
+            mode=mode,
             fval=nllh, grad=snllh, hess=ssnllh,
             res=res, sres=sres)
 
     @staticmethod
-    def map_to_output(sensi_orders, **kwargs):
+    def map_to_output(sensi_orders, mode, **kwargs):
         """
         Return values as requested by the caller (sometimes only a subset of
         the outputs are demanded).

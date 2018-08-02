@@ -1,6 +1,5 @@
 import scipy.optimize
 import re
-import sys
 import abc
 
 
@@ -66,7 +65,7 @@ class OptimizerResult(dict):
         self.x0 = x0
         self.fval0 = fval0
         self.exitflag = exitflag
-        self.message= message
+        self.message = message
 
     def __getattr__(self, key):
         try:
