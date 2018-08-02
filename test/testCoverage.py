@@ -12,8 +12,8 @@ import sys
 
 import test_sbml_conversion
 
-# only consider amici module and ignore the swig generated amici.py
-cov = coverage.Coverage(source=['pesto'])
+# only consider pesto module and 
+cov = coverage.Coverage(omit=['*/amici/*','*/numpy/*','*/scipy/*','*/symengine/*','example/*'])
 
 # ignore code blocks containing import statements
 cov.exclude('import')
