@@ -19,14 +19,13 @@ addons:
       - swig3.0
 after_success: 
   - python3 ./test/testCoverage.py
-  - bash <(curl -s https://codecov.io/bash) -f coverage_py.xml -X fix -cF python
+  - bash <(curl -s https://codecov.io/bash) -f coverage_py.xml -X fix 
 
 install:
   - pyenv shell 2.7 3.6
   - mkdir -p ~/bin/ && ln -s /usr/bin/swig3.0 ~/bin/swig && export PATH=~/bin/:$PATH
   - pip3 install --user --upgrade setuptools wheel pkgconfig numpy
   - pip3 install --user coverage scipy dlib amici
-  - python3 setup.py install
     
 script:  
   - python3 ./test/test_sbml_conversion.py
