@@ -27,7 +27,7 @@ class OptimizerTest(unittest.TestCase):
                     with self.subTest(library=library, solver=method):
                         with warnings.catch_warnings():
                             warnings.simplefilter("ignore")
-                            test_parameter_estimation(objective, library, method, 20, target_fval)
+                            test_parameter_estimation(objective, library, method, 25, target_fval)
 
 
 def test_parameter_estimation(objective, library, solver, n_starts, target_fval):
