@@ -315,14 +315,18 @@ class AmiciObjective(Objective):
         output = ()
         if mode == Objective.MODE_FUN:
             if 0 in sensi_orders:
-                return kwargs['fval']
+                output += (kwargs['fval'],)
             if 1 in sensi_orders:
-                return kwargs['grad']
+                output += (kwargs['grad'],)
             if 2 in sensi_orders:
-                return kwargs['hess']
+                output += (kwargs['hess'],)
         elif mode == Objective.MODE_RES:
             if 0 in sensi_orders:
-                return kwargs['res']
+                output += (kwargs['res'],)
             if 1 in sensi_orders:
-                return kwargs['sres']
+                output += (kwargs['sres'],)
+        if len(output) == 1
+            # return a single value not as tuple
+            output = output[0]
         return output
+
