@@ -1,18 +1,19 @@
+import os
+import sys
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 import unittest
 import amici
 import pesto
 import importlib
-import os
-import sys
 import numpy as np
 import statistics
 import warnings
 
 optimizers = {
     'scipy': ['Nelder-Mead', 'Powell', 'CG', 'BFGS', 'Newton-CG', 'L-BFGS-B', 'TNC', 'COBYLA', 'SLSQP',
-              'dogleg', 'trust-ncg', 'trust-exact', 'trust-krylov',
+              'trust-ncg', 'trust-exact', 'trust-krylov',
               'ls_trf', 'ls_dogbox'],
-    # disabled: ,'trust-constr', 'ls_lm'
+    # disabled: ,'trust-constr', 'ls_lm', 'dogleg'
     'dlib' : ['default']
 }
 
@@ -26,7 +27,7 @@ class OptimizerTest(unittest.TestCase):
                     with self.subTest(library=library, solver=method):
                         with warnings.catch_warnings():
                             warnings.simplefilter("ignore")
-                            test_parameter_estimation(objective, library, method, 20, target_fval)
+                            test_parameter_estimation(objective, library, method, 25, target_fval)
 
 
 def test_parameter_estimation(objective, library, solver, n_starts, target_fval):
@@ -38,7 +39,7 @@ def test_parameter_estimation(objective, library, solver, n_starts, target_fval)
     if library == 'scipy':
         optimizer = pesto.optimize.optimizer.ScipyOptimizer(method=solver, options=options)
     elif library == 'dlib':
-        optimizer = pesto.optimize.optimizer.DlibOptimizer(method=solver)
+        optimizer = pesto.optimize.optimizer.DlibOptimizer(method=solver, options=options)
 
     problem = pesto.problem.Problem(objective, -2*np.ones((1,objective.dim)), 2*np.ones((1,objective.dim)))
 
@@ -49,19 +50,22 @@ def test_parameter_estimation(objective, library, solver, n_starts, target_fval)
     summary = solver + ':\n ' + str(len(successes)) + '/' + str(len(results)) + ' reached target\n'
 
     if hasattr(results[0], 'n_fval'):
-        function_evals = [result.n_fval for result in successes]
-        summary = summary + 'mean fun evals:' + str(statistics.mean(function_evals)) \
-                  + '±' + str(statistics.stdev(function_evals)/n_starts) + '\n'
+        function_evals = [result.n_fval for result in results if result.n_fval]
+        if len(function_evals):
+            summary = summary + 'mean fun evals:' + str(statistics.mean(function_evals)) \
+                      + '±' + str(statistics.stdev(function_evals)/n_starts) + '\n'
 
     if hasattr(results[0], 'n_grad'):
-        grad_evals = [result.n_grad for result in successes]
-        summary = summary + 'mean grad evals:' + str(statistics.mean(grad_evals)) \
-                  + '±' + str(statistics.stdev(grad_evals)/n_starts) + '\n'
+        grad_evals = [result.n_grad for result in results if result.n_grad]
+        if len(grad_evals):
+            summary = summary + 'mean grad evals:' + str(statistics.mean(grad_evals)) \
+                      + '±' + str(statistics.stdev(grad_evals)/n_starts) + '\n'
 
     if hasattr(results[0], 'n_hess'):
-        hess_evals = [result.n_hess for result in successes]
-        summary = summary + 'mean hess evals:' + str(statistics.mean(hess_evals)) \
-                  + '±' + str(statistics.stdev(hess_evals)/n_starts) + '\n'
+        hess_evals = [result.n_hess for result in results if result.n_hess]
+        if len(hess_evals):
+            summary = summary + 'mean hess evals:' + str(statistics.mean(hess_evals)) \
+                      + '±' + str(statistics.stdev(hess_evals)/n_starts) + '\n'
 
 
     print(summary)
