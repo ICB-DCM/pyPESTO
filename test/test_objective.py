@@ -33,14 +33,14 @@ def _test_rosenbrock_objective(obj):
     fval, grad, hess = obj(x, (0,1,2))
     assert np.isclose(fval, fval_true) 
     assert np.isclose(grad, grad_true).all()
-    assert np.pisclose(hess, hess_true).all()
+    assert np.isclose(hess, hess_true).all()
 
     # check default argument
     assert np.isclose(obj(x), fval_true)
 
     # check convenience functions
     assert np.isclose(obj.get_fval(x), fval_true)
-    assert np.icclose(obj.get_grad(x), grad_true).all()
+    assert np.isclose(obj.get_grad(x), grad_true).all()
     assert np.isclose(obj.get_hess(x), hess_true).all()
 
     # check different calling types
