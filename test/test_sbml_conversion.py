@@ -43,7 +43,7 @@ def test_parameter_estimation(objective, library, solver, n_starts, target_fval)
 
     problem = pesto.problem.Problem(objective, -2*np.ones((1,objective.dim)), 2*np.ones((1,objective.dim)))
 
-    results = pesto.optimize.minimize(problem, optimizer, n_starts).optimizer_results
+    results = pesto.optimize.minimize(problem, optimizer, n_starts, startpoint_method=pesto.optimize.startpoint.uniform).optimizer_results
 
     successes = [result for result in results if result.fval < target_fval]
 
