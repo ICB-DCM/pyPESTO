@@ -120,14 +120,14 @@ class Objective:
             return hess
         elif sensi_orders == (0, 1):
             if self.grad is True:
-                fval, grad = self.fun(x)[0, 1]
+                fval, grad = self.fun(x)[0:2]
             else:
                 fval = self.fun(x)
                 grad = self.grad(x)
             return fval, grad
         elif sensi_orders == (1, 2):
             if self.hess is True:
-                grad, hess = self.fun(x)[1, 2]
+                grad, hess = self.fun(x)[1:3]
             else:
                 hess = self.hess(x)
                 if self.grad is True:
@@ -137,11 +137,11 @@ class Objective:
             return grad, hess
         elif sensi_orders == (0, 1, 2):
             if self.hess is True:
-                fval, grad, hess = self.fun(x)[0, 1, 2]
+                fval, grad, hess = self.fun(x)[0:3]
             else:
                 hess = self.hess(x)
                 if self.grad is True:
-                    fval, grad = self.fun(x)[0, 1]
+                    fval, grad = self.fun(x)[0:2]
                 else:
                     fval = self.fun(x)
                     grad = self.grad(x)
@@ -315,14 +315,18 @@ class AmiciObjective(Objective):
         output = ()
         if mode == Objective.MODE_FUN:
             if 0 in sensi_orders:
-                return kwargs['fval']
+                output += (kwargs['fval'],)
             if 1 in sensi_orders:
-                return kwargs['grad']
+                output += (kwargs['grad'],)
             if 2 in sensi_orders:
-                return kwargs['hess']
+                output += (kwargs['hess'],)
         elif mode == Objective.MODE_RES:
             if 0 in sensi_orders:
-                return kwargs['res']
+                output += (kwargs['res'],)
             if 1 in sensi_orders:
-                return kwargs['sres']
+                output += (kwargs['sres'],)
+        if len(output) == 1:
+            # return a single value not as tuple
+            output = output[0]
         return output
+
