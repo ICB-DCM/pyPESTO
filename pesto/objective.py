@@ -275,15 +275,20 @@ class AmiciObjective(Objective):
 
             # check if the computation failed
             if rdata['status'] < 0.0:
-                # TODO: Not sure about res, sres.
+                if not self.amici_model.nt():
+                    nt = sum([data.nt() for data in self.edata])
+                else:
+                    nt = sum([data.nt() if data.nt() else self.amici_model.nt()
+                              for data in self.edata])
+                n_res = nt*self.amici_model.nytrue
                 return AmiciObjective.map_to_output(
                     sensi_orders=sensi_orders,
                     mode=mode,
                     fval=np.inf,
                     grad=np.nan * np.ones(self.dim),
                     hess=np.nan * np.ones([self.dim, self.dim]),
-                    res=np.nan * np.ones([0]),
-                    sres=np.nan * np.ones([0, self.dim])
+                    res=np.nan * np.ones(n_res),
+                    sres=np.nan * np.ones([n_res, self.dim])
                 )
 
             # extract required result fields
