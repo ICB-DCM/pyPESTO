@@ -1,12 +1,12 @@
 language: python
 python:
   - "3.6"
-sudo: false
 
-os: 
+os:
   - linux
-dist: xenial
-compiler: 
+dist:
+  - xenial
+compiler:
   - gcc
 
 # install dependencies
