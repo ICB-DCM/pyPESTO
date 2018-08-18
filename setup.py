@@ -10,5 +10,6 @@ setup(name='pesto',
       author="The PESTO developers",
       author_email="yannik.schaelte@gmail.com",
       url="https://github.com/icb-dcm/pypesto",
-      packages=find_packages(exclude=["example*", "test*"])
+      packages=find_packages(exclude=["example*", "test*"]),
+      install_requires=['numpy', 'scipy', 'matplotlib']
      )
