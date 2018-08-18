@@ -33,9 +33,9 @@ script:
   - python3 -m pytest ./test
   - python3 -m flake8 --ignore=F401 --exclude=doc,build
 
-after_success:
-  - python3 ./test/code_coverage.py
-  - bash <(curl -s https://codecov.io/bash) -f coverage_py.xml -X fix
+#after_success:
+#  - python3 ./test/code_coverage.py
+#  - bash <(curl -s https://codecov.io/bash) -f coverage_py.xml -X fix
 
 # cache dependencies
 
