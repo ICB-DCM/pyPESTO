@@ -31,6 +31,7 @@ install:
 
 script:  
   - python3 -m pytest ./test
+  - python3 -m flake8 --ignore=F401 --exclude=doc,build
 
 after_success:
   - python3 ./test/coverage.py
