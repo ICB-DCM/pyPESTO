@@ -92,11 +92,11 @@ def load_model_objective(example_name):
     model = model_module.getModel()
     model.requireSensitivitiesForAllParameters()
     model.setTimepoints(amici.DoubleVector(np.linspace(0, 10, 11)))
-    model.setParameterScale(amici.AMICI_SCALING_LOG10)
+    model.setParameterScale(amici.ParameterScaling_log10)
     model.setParameters(amici.DoubleVector([-0.3, -0.7]))
     solver = model.getSolver()
-    solver.setSensitivityMethod(amici.AMICI_SENSI_FSA)
-    solver.setSensitivityOrder(amici.AMICI_SENSI_ORDER_FIRST)
+    solver.setSensitivityMethod(amici.SensitivityMethod_forward)
+    solver.setSensitivityOrder(amici.SensitivityOrder_first)
 
     # generate experimental data
     rdata = amici.runAmiciSimulation(model, solver, None)
