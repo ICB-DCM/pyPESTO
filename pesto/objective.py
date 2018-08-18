@@ -329,4 +329,3 @@ class AmiciObjective(Objective):
             # return a single value not as tuple
             output = output[0]
         return output
-

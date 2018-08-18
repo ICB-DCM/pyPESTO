@@ -12,7 +12,7 @@ import sys
 
 import test_sbml_conversion
 
-# only consider pesto module and 
+# only consider pesto module and
 cov = coverage.Coverage(source=['pesto'])
 
 # ignore code blocks containing import statements

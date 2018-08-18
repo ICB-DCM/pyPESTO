@@ -141,7 +141,7 @@ class ScipyOptimizer(Optimizer):
                 ftol=self.tol,
                 tr_solver='exact',
                 loss='linear',
-                )
+            )
 
         else:
 
@@ -160,12 +160,13 @@ class ScipyOptimizer(Optimizer):
                 bounds=bounds,
                 tol=self.tol,
                 options=self.options,
-                )
+            )
 
         # some fields are not filled by all optimizers, then fill in None
         optimizer_result = OptimizerResult(
             x=res.x,
-            fval=res.fun if not least_squares else problem.objective.get_fval(res.x),
+            fval=res.fun if not least_squares
+            else problem.objective.get_fval(res.x),
             grad=res.jac if hasattr(res, 'jac') else None,
             hess=res.hess if hasattr(res, 'hess') else None,
             n_fval=res.nfev if hasattr(res, 'nfev') else 0,
@@ -218,7 +219,7 @@ class DlibOptimizer(Optimizer):
             list(problem.ub[0, :]),
             int(self.options['maxiter']),
             0.002,
-            )
+        )
 
         optimizer_result = OptimizerResult(
             x=res[0],

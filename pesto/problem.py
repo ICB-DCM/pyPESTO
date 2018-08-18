@@ -31,4 +31,3 @@ class Problem:
         self.ub = np.asarray(ub).reshape((1, -1))
         self.dim = self.lb.shape[1]
         self.par_guesses = par_guesses
-

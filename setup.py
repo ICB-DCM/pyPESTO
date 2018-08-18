@@ -12,4 +12,4 @@ setup(name='pesto',
       url="https://github.com/icb-dcm/pypesto",
       packages=find_packages(exclude=["example*", "test*"]),
       install_requires=['numpy', 'scipy', 'matplotlib']
-     )
+      )
