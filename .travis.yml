@@ -1,10 +1,6 @@
 language: python3
 sudo: false
 
-branches:
-  only:
-    - master
-
 os: linux
 dist: xenial
 compiler: gcc
