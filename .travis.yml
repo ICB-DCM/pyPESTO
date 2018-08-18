@@ -23,9 +23,9 @@ addons:
 install:
   - pyenv shell 2.7 3.6
   - mkdir -p ~/bin/ && ln -s /usr/bin/swig3.0 ~/bin/swig && export PATH=~/bin/:$PATH
-  - pip3 install --user --upgrade setuptools wheel pkgconfig numpy
-  - pip3 install --user -r ./travis_requirements.txt
-  - pip3 install --user .
+  - pip3 install --upgrade setuptools wheel pkgconfig numpy
+  - pip3 install -r ./travis_requirements.txt
+  - pip3 install .
 
 # run tests
 
