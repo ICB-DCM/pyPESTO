@@ -1,7 +1,8 @@
 language: python3
 sudo: false
 
-os: linux
+os: 
+  - linux
 dist: xenial
 compiler: gcc
 addons:
@@ -22,7 +23,8 @@ install:
   - mkdir -p ~/bin/ && ln -s /usr/bin/swig3.0 ~/bin/swig && export PATH=~/bin/:$PATH
   - pip3 install --user --upgrade setuptools wheel pkgconfig numpy
   - pip3 install --user coverage scipy dlib amici
-    
+  - pip3 install --user .
+
 script:  
   - python3 ./test/test_objective.py
 
