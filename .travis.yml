@@ -1,13 +1,9 @@
-language: python3
-sudo: false
-
-branches:
-  only:
-    - master
-
-os: linux
-dist: xenial
+language: python
+python:
+  - "3.6"
 compiler: gcc
+
+# install dependencies
 addons:
   apt:
     update: true
@@ -28,6 +24,6 @@ install:
   - pip3 install --user coverage scipy dlib amici
     
 script:  
-  - python3 ./test/test_sbml_conversion.py
+  - python3 ./test/test_objective.py
 
 cache: pip
