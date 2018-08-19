@@ -11,7 +11,7 @@ The documentation is based on sphinx. Install via
 pip3 install sphinx
 ```
 
-Furthermore, the files specified in [../.rst_pip_reqs.txt] and [../.rst_apt_reqs.txt] are required. Install via
+Furthermore, the files specified in `../.rst_pip_reqs.txt` and `../.rst_apt_reqs.txt` are required. Install via
 
 ```
 pip3 install --update -r ../.rst_pip_reqs.txt
