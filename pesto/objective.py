@@ -290,7 +290,7 @@ class AmiciObjective(Objective):
                 else:
                     nt = sum([data.nt() if data.nt() else self.amici_model.nt()
                               for data in self.edata])
-                n_res = nt*self.amici_model.nytrue
+                n_res = nt * self.amici_model.nytrue
                 return AmiciObjective.map_to_output(
                     sensi_orders=sensi_orders,
                     mode=mode,

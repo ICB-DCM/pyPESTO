@@ -141,7 +141,9 @@ class ScipyOptimizer(Optimizer):
                 ftol=self.tol,
                 tr_solver='exact',
                 loss='linear',
-                verbose=2 if 'disp' in self.options.keys() and self.options['disp'] else 0,
+                verbose=2 if 'disp' in
+                self.options.keys() and self.options['disp']
+                else 0,
             )
 
         else:
