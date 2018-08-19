@@ -6,9 +6,51 @@
 Welcome to PESTO's documentation!
 ===================================
 
+Version: |version|
+
+Source code: https://github.com/icb-dcm/pypesto
+
+
+
+User's guide
+============
+
+This part of the documentation provides a quick step through
+the usage of the different PESTO features.
+
+
+
+Developer's guide
+=================
+
+This part of the documentation describes how to contribute 
+to PESTO.
+
+
+
+About
+=====
+
+This part of the documentation contains information on the
+package, its history, and the authors.
+
 .. toctree::
    :maxdepth: 2
-   :caption: Contents:
+
+   releasenotes
+   authors
+   contact
+   license
+
+
+
+API reference
+=============
+
+This part of the documentation describes the application
+processing interface.
+
+.. toctree::
 
 
 
