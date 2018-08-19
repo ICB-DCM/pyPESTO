@@ -1,6 +1,7 @@
 import scipy.optimize
 import re
 import abc
+import time
 
 
 class OptimizerResult(dict):
@@ -53,6 +54,7 @@ class OptimizerResult(dict):
                  x0=None,
                  fval0=None,
                  exitflag=None,
+                 time=None,
                  message=None):
         super().__init__()
         self.x = x
@@ -65,6 +67,7 @@ class OptimizerResult(dict):
         self.x0 = x0
         self.fval0 = fval0
         self.exitflag = exitflag
+        self.time = time
         self.message = message
 
     def __getattr__(self, key):
@@ -75,6 +78,22 @@ class OptimizerResult(dict):
 
     __setattr__ = dict.__setitem__
     __delattr__ = dict.__delitem__
+
+
+def time_decorator(minimize):
+    """
+    Default decorator for the minimize() method to take time.
+    Currently, the method time.time() is used, which measures
+    the wall-clock time.
+
+    """
+    def timed_minimize(self, problem, x0):
+        start_time = time.time()
+        result = minimize(self, problem, x0)
+        used_time = time.time() - start_time
+        result.time = used_time
+        return result
+    return timed_minimize
 
 
 class Optimizer(abc.ABC):
@@ -120,6 +139,7 @@ class ScipyOptimizer(Optimizer):
         if self.options is None:
             self.options = ScipyOptimizer.get_default_options()
 
+    @time_decorator
     def minimize(self, problem, x0):
         lb = problem.lb
         ub = problem.ub
@@ -205,6 +225,7 @@ class DlibOptimizer(Optimizer):
         if self.options is None:
             self.options = DlibOptimizer.get_default_options()
 
+    @time_decorator
     def minimize(self, problem, x0):
 
         try:
