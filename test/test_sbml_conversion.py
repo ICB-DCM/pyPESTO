@@ -20,17 +20,17 @@ optimizers = {
 class OptimizerTest(unittest.TestCase):
     def runTest(self):
         for example in ['conversion_reaction']:
-            objective, model = load_model_objective(example)
+            objective, model = _load_model_objective(example)
             target_fval = objective.get_fval(list(model.getParameters()))
             for library in optimizers.keys():
                 for method in optimizers[library]:
                     with self.subTest(library=library, solver=method):
                         with warnings.catch_warnings():
                             warnings.simplefilter("ignore")
-                            test_parameter_estimation(objective, library, method, 25, target_fval)
+                            _test_parameter_estimation(objective, library, method, 25, target_fval)
 
 
-def test_parameter_estimation(objective, library, solver, n_starts, target_fval):
+def _test_parameter_estimation(objective, library, solver, n_starts, target_fval):
 
     options = {
         'maxiter': 100
@@ -73,7 +73,7 @@ def test_parameter_estimation(objective, library, solver, n_starts, target_fval)
     assert(len(successes))
 
 
-def load_model_objective(example_name):
+def _load_model_objective(example_name):
     sbml_file = os.path.join('example', 'model_' + example_name + '.xml')
     # name of the model that will also be the name of the python module
     model_name = 'model_' + example_name
@@ -92,11 +92,11 @@ def load_model_objective(example_name):
     model = model_module.getModel()
     model.requireSensitivitiesForAllParameters()
     model.setTimepoints(amici.DoubleVector(np.linspace(0, 10, 11)))
-    model.setParameterScale(amici.AMICI_SCALING_LOG10)
+    model.setParameterScale(amici.ParameterScaling_log10)
     model.setParameters(amici.DoubleVector([-0.3, -0.7]))
     solver = model.getSolver()
-    solver.setSensitivityMethod(amici.AMICI_SENSI_FSA)
-    solver.setSensitivityOrder(amici.AMICI_SENSI_ORDER_FIRST)
+    solver.setSensitivityMethod(amici.SensitivityMethod_forward)
+    solver.setSensitivityOrder(amici.SensitivityOrder_first)
 
     # generate experimental data
     rdata = amici.runAmiciSimulation(model, solver, None)
