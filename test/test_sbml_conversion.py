@@ -1,6 +1,5 @@
 import os
 import sys
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 import unittest
 import amici
 import pesto
@@ -9,13 +8,18 @@ import numpy as np
 import statistics
 import warnings
 
+
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
 optimizers = {
-    'scipy': ['Nelder-Mead', 'Powell', 'CG', 'BFGS', 'Newton-CG', 'L-BFGS-B', 'TNC', 'COBYLA', 'SLSQP',
+    'scipy': ['Nelder-Mead', 'Powell', 'CG', 'BFGS', 'Newton-CG',
+              'L-BFGS-B', 'TNC', 'COBYLA', 'SLSQP',
               'trust-ncg', 'trust-exact', 'trust-krylov',
               'ls_trf', 'ls_dogbox'],
     # disabled: ,'trust-constr', 'ls_lm', 'dogleg'
-    'dlib' : ['default']
+    'dlib': ['default']
 }
+
 
 class OptimizerTest(unittest.TestCase):
     def runTest(self):
@@ -27,46 +31,60 @@ class OptimizerTest(unittest.TestCase):
                     with self.subTest(library=library, solver=method):
                         with warnings.catch_warnings():
                             warnings.simplefilter("ignore")
-                            _test_parameter_estimation(objective, library, method, 25, target_fval)
+                            _test_parameter_estimation(objective,
+                                                       library,
+                                                       method,
+                                                       25,
+                                                       target_fval)
 
 
-def _test_parameter_estimation(objective, library, solver, n_starts, target_fval):
-
+def _test_parameter_estimation(objective, library, solver, n_starts,
+                               target_fval):
     options = {
         'maxiter': 100
     }
 
     if library == 'scipy':
-        optimizer = pesto.optimize.optimizer.ScipyOptimizer(method=solver, options=options)
+        optimizer = pesto.optimize.optimizer.ScipyOptimizer(method=solver,
+                                                            options=options)
     elif library == 'dlib':
-        optimizer = pesto.optimize.optimizer.DlibOptimizer(method=solver, options=options)
+        optimizer = pesto.optimize.optimizer.DlibOptimizer(method=solver,
+                                                           options=options)
 
-    problem = pesto.problem.Problem(objective, -2*np.ones((1,objective.dim)), 2*np.ones((1,objective.dim)))
+    lb = -2 * np.ones((1, objective.dim))
+    ub = 2 * np.ones((1, objective.dim))
+    problem = pesto.problem.Problem(objective, lb, ub)
 
-    results = pesto.optimize.minimize(problem, optimizer, n_starts, startpoint_method=pesto.optimize.startpoint.uniform).optimizer_results
+    results = pesto.optimize.minimize(
+        problem, optimizer, n_starts,
+        startpoint_method=pesto.optimize.startpoint.uniform)
+    results = results.optimizer_results
 
     successes = [result for result in results if result.fval < target_fval]
 
-    summary = solver + ':\n ' + str(len(successes)) + '/' + str(len(results)) + ' reached target\n'
+    summary = solver + ':\n ' + str(len(successes)) \
+        + '/' + str(len(results)) + ' reached target\n'
 
     if hasattr(results[0], 'n_fval'):
         function_evals = [result.n_fval for result in results if result.n_fval]
         if len(function_evals):
-            summary = summary + 'mean fun evals:' + str(statistics.mean(function_evals)) \
-                      + '±' + str(statistics.stdev(function_evals)/n_starts) + '\n'
+            summary = summary + 'mean fun evals:' \
+                + str(statistics.mean(function_evals)) \
+                + '±' + str(statistics.stdev(function_evals) / n_starts) + '\n'
 
     if hasattr(results[0], 'n_grad'):
         grad_evals = [result.n_grad for result in results if result.n_grad]
         if len(grad_evals):
-            summary = summary + 'mean grad evals:' + str(statistics.mean(grad_evals)) \
-                      + '±' + str(statistics.stdev(grad_evals)/n_starts) + '\n'
+            summary = summary + 'mean grad evals:' \
+                + str(statistics.mean(grad_evals)) \
+                + '±' + str(statistics.stdev(grad_evals) / n_starts) + '\n'
 
     if hasattr(results[0], 'n_hess'):
         hess_evals = [result.n_hess for result in results if result.n_hess]
         if len(hess_evals):
-            summary = summary + 'mean hess evals:' + str(statistics.mean(hess_evals)) \
-                      + '±' + str(statistics.stdev(hess_evals)/n_starts) + '\n'
-
+            summary = summary + 'mean hess evals:' \
+                + str(statistics.mean(hess_evals)) \
+                + '±' + str(statistics.stdev(hess_evals) / n_starts) + '\n'
 
     print(summary)
 
@@ -74,11 +92,13 @@ def _test_parameter_estimation(objective, library, solver, n_starts, target_fval
 
 
 def _load_model_objective(example_name):
-    sbml_file = os.path.join('example', 'model_' + example_name + '.xml')
+    sbml_file = os.path.join('doc', 'example',
+                             'model_' + example_name + '.xml')
     # name of the model that will also be the name of the python module
     model_name = 'model_' + example_name
     # directory to which the generated model code is written
-    model_output_dir = os.path.join('example', example_name )
+    model_output_dir = os.path.join('doc', 'example',
+                                    example_name)
 
     # import sbml model, complile and generate amici module
     sbml_importer = amici.SbmlImporter(sbml_file)

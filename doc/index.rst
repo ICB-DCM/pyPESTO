@@ -6,9 +6,47 @@
 Welcome to PESTO's documentation!
 ===================================
 
+
+.. image:: https://travis-ci.org/ICB-DCM/pyPESTO.svg?branch=master
+   :target: https://travis-ci.org/ICB-DCM/pyPESTO
+
+| Version: |version|
+| Source code: https://github.com/icb-dcm/pypesto
+
+
 .. toctree::
    :maxdepth: 2
-   :caption: Contents:
+   :caption: User's guide
+
+   install
+   examples
+
+
+.. toctree::
+   :maxdepth: 2
+   :caption: Developer's guide
+
+   contribute
+   deploy
+
+
+.. toctree::
+   :maxdepth: 2
+   :caption: API reference
+
+   api_pesto
+   api_objective
+   api_problem
+
+
+.. toctree::
+   :maxdepth: 2
+   :caption: About
+
+   releasenotes
+   authors
+   contact
+   license
 
 
 

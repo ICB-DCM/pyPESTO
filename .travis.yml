@@ -1,13 +1,16 @@
-language: python3
-sudo: false
+language: python
+python:
+  - "3.6"
 
-branches:
-  only:
-    - master
+os:
+  - linux
+dist:
+  - xenial
+compiler:
+  - gcc
 
-os: linux
-dist: xenial
-compiler: gcc
+# install dependencies
+
 addons:
   apt:
     update: true
@@ -17,17 +20,24 @@ addons:
       - libatlas-base-dev
       - lcov
       - swig3.0
-after_success: 
-  - python3 ./test/testCoverage.py
-  - bash <(curl -s https://codecov.io/bash) -f coverage_py.xml -X fix 
-
 install:
   - pyenv shell 2.7 3.6
   - mkdir -p ~/bin/ && ln -s /usr/bin/swig3.0 ~/bin/swig && export PATH=~/bin/:$PATH
-  - pip3 install --user --upgrade setuptools wheel pkgconfig numpy
-  - pip3 install --user --upgrade coverage scipy dlib amici
-    
+  - pip3 install --upgrade setuptools wheel pkgconfig
+  - pip3 install --upgrade -r ./.travis_pip_reqs.txt
+  - pip3 install .
+
+# run tests
+
 script:  
-  - python3 ./test/test_sbml_conversion.py
+  - python3 -m flake8 --ignore=F401 --exclude=build,doc,example
+  - python3 -m pytest ./test
+
+after_success:
+  - python3 ./test/code_coverage.py
+  - bash <(curl -s https://codecov.io/bash) -f coverage_py.xml -X fix
+
+# cache dependencies
 
 cache: pip
+

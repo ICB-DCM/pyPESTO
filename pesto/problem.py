@@ -1,3 +1,13 @@
+"""
+Problem
+-------
+
+A problem contains the objective as well as all information like prior
+describing the problem to be solved.
+
+"""
+
+
 import numpy as np
 
 
@@ -31,4 +41,3 @@ class Problem:
         self.ub = np.asarray(ub).reshape((1, -1))
         self.dim = self.lb.shape[1]
         self.par_guesses = par_guesses
-

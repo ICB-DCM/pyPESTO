@@ -1,3 +1,13 @@
+"""
+Objective
+---------
+
+The objective class is a simple wrapper around the objective function,
+giving a standardized way of calling.
+
+"""
+
+
 import numpy as np
 
 
@@ -280,7 +290,7 @@ class AmiciObjective(Objective):
                 else:
                     nt = sum([data.nt() if data.nt() else self.amici_model.nt()
                               for data in self.edata])
-                n_res = nt*self.amici_model.nytrue
+                n_res = nt * self.amici_model.nytrue
                 return AmiciObjective.map_to_output(
                     sensi_orders=sensi_orders,
                     mode=mode,
@@ -334,4 +344,3 @@ class AmiciObjective(Objective):
             # return a single value not as tuple
             output = output[0]
         return output
-
