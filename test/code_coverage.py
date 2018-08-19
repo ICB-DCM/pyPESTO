@@ -10,7 +10,7 @@ import unittest
 import os
 import sys
 
-import _test_sbml_conversion
+import test_sbml_conversion
 
 # only consider pesto module and
 cov = coverage.Coverage(source=['pesto'])
@@ -21,7 +21,7 @@ cov.start()
 
 # build the testSuite from testModels and testSBML
 suite = unittest.TestSuite()
-suite.addTest(_test_sbml_conversion.OptimizerTest())
+suite.addTest(test_sbml_conversion.OptimizerTest())
 testRunner = unittest.TextTestRunner(verbosity=0)
 result = testRunner.run(suite)
 
