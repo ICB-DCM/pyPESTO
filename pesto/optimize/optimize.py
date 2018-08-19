@@ -50,8 +50,11 @@ def minimize(problem, optimizer,
     # do multistart optimization
     for j in range(0, n_starts):
         startpoint = startpoints[j, :]
-        optimizer_result = optimizer.minimize(problem, startpoint)
-        result.append_optimizer_result(optimizer_result=optimizer_result)
+        try:
+            optimizer_result = optimizer.minimize(problem, startpoint)
+            result.append_optimizer_result(optimizer_result=optimizer_result)
+        except Exception as err:
+            print(('start ' + str(j) + ' failed: {0}').format(err))
 
     # sort by best fval
     result.sort_optimizer_results()
