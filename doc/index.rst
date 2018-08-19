@@ -26,9 +26,7 @@ Welcome to PESTO's documentation!
    :maxdepth: 2
    :caption: Developer's guide
 
-   contribute_doc
-   contribute_code
-   contribute_tests
+   contribute
    deploy
 
 
@@ -36,7 +34,9 @@ Welcome to PESTO's documentation!
    :maxdepth: 2
    :caption: API reference
 
-   pesto_api
+   api_pesto
+   api_objective
+   api_problem
 
 
 .. toctree::

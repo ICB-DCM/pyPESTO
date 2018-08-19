@@ -1,3 +1,11 @@
+"""
+PESTO
+=======
+
+Parameter Estimation TOolbox written in python.
+"""
+
+
 __all__ = ['objective', 'problem', 'result', 'version',
            'optimize', 'profile', 'sample', 'visualize']
 

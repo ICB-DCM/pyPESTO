@@ -1,3 +1,13 @@
+"""
+Objective
+---------
+
+The objective class is a simple wrapper around the objective function,
+giving a standardized way of calling.
+
+"""
+
+
 import numpy as np
 
 
