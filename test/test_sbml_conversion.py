@@ -24,21 +24,21 @@ optimizers = {
 class OptimizerTest(unittest.TestCase):
     def runTest(self):
         for example in ['conversion_reaction']:
-            objective, model = load_model_objective(example)
+            objective, model = _load_model_objective(example)
             target_fval = objective.get_fval(list(model.getParameters()))
             for library in optimizers.keys():
                 for method in optimizers[library]:
                     with self.subTest(library=library, solver=method):
                         with warnings.catch_warnings():
                             warnings.simplefilter("ignore")
-                            test_parameter_estimation(objective,
-                                                      library,
-                                                      method,
-                                                      25,
-                                                      target_fval)
+                            _test_parameter_estimation(objective,
+                                                       library,
+                                                       method,
+                                                       25,
+                                                       target_fval)
 
 
-def test_parameter_estimation(objective, library, solver, n_starts,
+def _test_parameter_estimation(objective, library, solver, n_starts,
                               target_fval):
 
     options = {
@@ -92,7 +92,7 @@ def test_parameter_estimation(objective, library, solver, n_starts,
     assert(len(successes))
 
 
-def load_model_objective(example_name):
+def _load_model_objective(example_name):
     sbml_file = os.path.join('example', 'model_' + example_name + '.xml')
     # name of the model that will also be the name of the python module
     model_name = 'model_' + example_name
