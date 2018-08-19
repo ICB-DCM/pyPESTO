@@ -92,12 +92,12 @@ def _test_parameter_estimation(objective, library, solver, n_starts,
 
 
 def _load_model_objective(example_name):
-    sbml_file = os.path.join('doc', 'example', 
+    sbml_file = os.path.join('doc', 'example',
                              'model_' + example_name + '.xml')
     # name of the model that will also be the name of the python module
     model_name = 'model_' + example_name
     # directory to which the generated model code is written
-    model_output_dir = os.path.join('doc', 'example', 
+    model_output_dir = os.path.join('doc', 'example',
                                     example_name)
 
     # import sbml model, complile and generate amici module
