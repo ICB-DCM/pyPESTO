@@ -53,6 +53,8 @@ class OptimizerResult(dict):
                  n_hess=None,
                  x0=None,
                  fval0=None,
+                 x_trace=None,
+                 fval_trace=None,
                  exitflag=None,
                  time=None,
                  message=None):
@@ -66,6 +68,8 @@ class OptimizerResult(dict):
         self.n_hess = n_hess
         self.x0 = x0
         self.fval0 = fval0
+        self.x_trace = x_trace
+        self.fval_trace = fval_trace
         self.exitflag = exitflag
         self.time = time
         self.message = message
