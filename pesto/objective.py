@@ -302,7 +302,7 @@ class AmiciObjective(Objective):
                 res = np.hstack([res, rdata['res']]) \
                     if res.size else rdata['res']
                 if sensi_order > 0:
-                    sres = np.vstack([rdata['sres'], rdata['sres']]) \
+                    sres = np.vstack([sres, rdata['sres']]) \
                         if sres.size else rdata['sres']
 
         return AmiciObjective.map_to_output(
