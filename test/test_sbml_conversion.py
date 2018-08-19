@@ -39,7 +39,7 @@ class OptimizerTest(unittest.TestCase):
 
 
 def _test_parameter_estimation(objective, library, solver, n_starts,
-                              target_fval):
+                               target_fval):
 
     options = {
         'maxiter': 100
