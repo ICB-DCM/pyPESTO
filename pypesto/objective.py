@@ -9,6 +9,13 @@ giving a standardized way of calling.
 
 
 import numpy as np
+import sys
+import copy
+
+try:
+    import amici
+except ImportError:
+    pass # we only pass import errors, if the initialization of the module itself fails this should not be caught right?
 
 
 class Objective:
@@ -232,23 +239,27 @@ class AmiciObjective(Objective):
         Maximum sensitivity order supported by the model.
     """
 
-    def __init__(self, amici_model, amici_solver, edata, max_sensi_order=None):
+    def __init__(self, amici_model, amici_solver, edata, max_sensi_order=None, preprocess_edata=True):
+        if 'amici' not in sys.modules:
+            print('This objective requires an installation of amici ('
+                  'github.com/icb-dcm/amici. Install via pip3 install amici.')
         super().__init__(None)
         self.amici_model = amici_model
         self.amici_solver = amici_solver
-        self.edata = edata
+        if preprocess_edata:
+            self.preequilibration_edata = dict()
+            self.preprocess_edata(edata)
+            self.edata = edata
+        else:
+            self.edata = edata
+            self.preequilibration_edata = None
+
         self.max_sensi_order = max_sensi_order
         if self.max_sensi_order is None:
             self.max_sensi_order = 2 if amici_model.o2mode else 1
         self.dim = amici_model.np()
 
     def __call__(self, x, sensi_orders: tuple=(0,), mode=Objective.MODE_FUN):
-        try:
-            import amici
-        except ImportError:
-            print('This objective requires an installation of amici ('
-                  'github.com/icb-dcm/amici. Install via pip3 install amici.')
-
         # amici is built so that only the maximum sensitivity is required,
         # the lower orders are then automatically computed
         sensi_order = max(sensi_orders)
@@ -274,8 +285,25 @@ class AmiciObjective(Objective):
         # set order in solver
         self.amici_solver.setSensitivityOrder(sensi_order)
 
+        for fixedParameters in self.preequilibration_edata:
+            rdata = amici.runAmiciSimulation(
+                self.amici_model,
+                self.amici_solver,
+                self.preequilibration_edata[fixedParameters]['edata'])
+
+            if rdata['status'] < 0.0:
+                return self.getErrorOutput(sensi_orders, mode)
+
+            self.preequilibration_edata[fixedParameters]['x0'] = rdata['x0']
+            if self.amici_solver.getSensitivityOrder() > amici.SensitivityOrder_none:
+                self.preequilibration_edata[fixedParameters]['sx0'] = rdata['sx0']
+
+
         # loop over experimental data
         for data in self.edata:
+
+            if self.preequilibration_edata:
+                self.preprocessPreequilibration(data)
 
             # run amici simulation
             rdata = amici.runAmiciSimulation(
@@ -283,23 +311,12 @@ class AmiciObjective(Objective):
                 self.amici_solver,
                 data)
 
+            if self.preequilibration_edata:
+                self.postprocessPreequilibration(data)
+
             # check if the computation failed
             if rdata['status'] < 0.0:
-                if not self.amici_model.nt():
-                    nt = sum([data.nt() for data in self.edata])
-                else:
-                    nt = sum([data.nt() if data.nt() else self.amici_model.nt()
-                              for data in self.edata])
-                n_res = nt * self.amici_model.nytrue
-                return AmiciObjective.map_to_output(
-                    sensi_orders=sensi_orders,
-                    mode=mode,
-                    fval=np.inf,
-                    grad=np.nan * np.ones(self.dim),
-                    hess=np.nan * np.ones([self.dim, self.dim]),
-                    res=np.nan * np.ones(n_res),
-                    sres=np.nan * np.ones([n_res, self.dim])
-                )
+                return self.getErrorOutput(sensi_orders, mode)
 
             # extract required result fields
             if mode == Objective.MODE_FUN:
@@ -320,6 +337,74 @@ class AmiciObjective(Objective):
             mode=mode,
             fval=nllh, grad=snllh, hess=ssnllh,
             res=res, sres=sres)
+
+    def preprocessPreequilibration(self,data):
+        self.originalFixedParametersPreequilibration = None
+        self.originalInitialStates = None
+        self.originalInitialStateSensitivities = None
+        if data.fixedParametersPreequilibration.size():
+            self.originalInitialStates = self.amici_model.getInitialStates()
+
+            if self.amici_solver.getSensitivityOrder() > amici.SensitivityOrder_none:
+                self.originalInitialStateSensitivities = self.amici_model.getInitialStateSensitivities()
+
+            fixedParameters = copy.deepcopy(list(data.fixedParametersPreequilibration))
+            data.fixedParametersPreequilibration = amici.DoubleVector([])
+            self.originalFixedParametersPreequilibration = fixedParameters
+
+            self.amici_model.setInitialStates(
+                amici.DoubleVector(self.preequilibration_edata[str(fixedParameters)]['x0'])
+            )
+            if self.amici_solver.getSensitivityOrder() > amici.SensitivityOrder_none:
+                self.amici_model.setInitialStateSensitivities(
+                    amici.DoubleVector(self.preequilibration_edata[str(fixedParameters)]['sx0'].flatten())
+                )
+
+    def postprocessPreequilibration(self, data):
+        if self.originalFixedParametersPreequilibration:
+            data.fixedParametersPreequilibration = amici.DoubleVector(self.originalFixedParametersPreequilibration)
+
+        if self.originalInitialStates:
+            self.amici_model.setInitialStates(self.originalInitialStates)
+
+        if self.originalInitialStateSensitivities:
+            self.amici_model.setInitialStateSensitivities(self.originalInitialStateSensitivities)
+
+    def preprocess_edata(self, edata_vector):
+        for edata in edata_vector:
+            fixed_parameters = list(edata.fixedParametersPreequilibration)
+            if str(fixed_parameters) in self.preequilibration_edata.keys() or \
+                len(fixed_parameters) == 0:
+                continue  # we only need to keep unique ones
+
+            preeq_edata = amici.ExpData(self.amici_model.get())
+            preeq_edata.fixedParametersPreequilibration = amici.DoubleVector(fixed_parameters)
+
+            # only preequilibration
+            preeq_edata.setTimepoints(amici.DoubleVector([]))
+
+            self.preequilibration_edata[str(fixed_parameters)] = dict(
+                edata=preeq_edata
+            )
+
+
+
+    def getErrorOutput(self, sensi_orders, mode):
+        if not self.amici_model.nt():
+            nt = sum([data.nt() for data in self.edata])
+        else:
+            nt = sum([data.nt() if data.nt() else self.amici_model.nt()
+                      for data in self.edata])
+        n_res = nt * self.amici_model.nytrue
+        return AmiciObjective.map_to_output(
+            sensi_orders=sensi_orders,
+            mode=mode,
+            fval=np.inf,
+            grad=np.nan * np.ones(self.dim),
+            hess=np.nan * np.ones([self.dim, self.dim]),
+            res=np.nan * np.ones(n_res),
+            sres=np.nan * np.ones([n_res, self.dim])
+        )
 
     @staticmethod
     def map_to_output(sensi_orders, mode, **kwargs):
