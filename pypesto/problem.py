@@ -20,7 +20,7 @@ class Problem:
     Parameters
     ----------
 
-    objective: pesto.Objective
+    objective: pypesto.Objective
         The objective function for minimization.
 
     lb, ub: array_like
