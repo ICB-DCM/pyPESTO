@@ -1,3 +1,3 @@
-# PESTO - Parameter EStimation TOolbox
+# pyPESTO - python Parameter EStimation TOolbox
 
-PESTO is a widely applicable and highly customizable toolbox for parameter estimation.
+pyPESTO is a widely applicable and highly customizable toolbox for parameter estimation.
