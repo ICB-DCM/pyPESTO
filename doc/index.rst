@@ -34,7 +34,7 @@ Welcome to pyPESTO's documentation!
    :maxdepth: 2
    :caption: API reference
 
-   api_pesto
+   api_pypesto
    api_objective
    api_problem
 

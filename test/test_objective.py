@@ -1,17 +1,17 @@
 """
-This is for testing the pesto.Objective.
+This is for testing the pypesto.Objective.
 """
 
 
 import numpy as np
 import scipy as sp
-import pesto
+import pypesto
 
 
 def test_objective_separated():
-    obj = pesto.Objective(fun=sp.optimize.rosen,
-                          grad=sp.optimize.rosen_der,
-                          hess=sp.optimize.rosen_hess)
+    obj = pypesto.Objective(fun=sp.optimize.rosen,
+                            grad=sp.optimize.rosen_der,
+                            hess=sp.optimize.rosen_hess)
     _test_rosenbrock_objective(obj)
 
 
@@ -20,7 +20,7 @@ def test_objective_integrated():
         return (sp.optimize.rosen(x),
                 sp.optimize.rosen_der(x),
                 sp.optimize.rosen_hess(x))
-    obj = pesto.Objective(fun=rosenbrock, grad=True, hess=True)
+    obj = pypesto.Objective(fun=rosenbrock, grad=True, hess=True)
     _test_rosenbrock_objective(obj)
 
 

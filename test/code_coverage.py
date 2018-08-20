@@ -12,8 +12,8 @@ import sys
 
 import test_sbml_conversion
 
-# only consider pesto module and
-cov = coverage.Coverage(source=['pesto'])
+# only consider pypesto module and
+cov = coverage.Coverage(source=['pypesto'])
 
 # ignore code blocks containing import statements
 cov.exclude('import')

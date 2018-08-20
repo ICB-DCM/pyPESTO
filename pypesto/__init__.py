@@ -1,8 +1,8 @@
 """
-PESTO
+pyPESTO
 =======
 
-Parameter Estimation TOolbox written in python.
+python Parameter Estimation TOolbox.
 """
 
 
