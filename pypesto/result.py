@@ -9,12 +9,16 @@ optimization, profiles, sampling.
 """
 
 
+import pandas as pd
+
+
 class OptimizeResult:
     """
     Result of the minimize() function.
     """
 
     def __init__(self):
+
         self.list = []
 
     def append(self, optimizer_result):
@@ -27,23 +31,51 @@ class OptimizeResult:
         optimizer_result:
             The result of one (local) optimizer run.
         """
+
         self.list.append(optimizer_result)
 
     def sort(self):
         """
         Sort the optimizer results by function value fval (ascending).
         """
+
         self.list = sorted(self.list, key=lambda res: res.fval)
 
-    def get_for_key(self, key) -> list:
+    def as_dataframe(self, keys=None) -> pd.DataFrame:
         """
-        Extract the list of values for the specified key.
+        Get as pandas DataFrame. If keys is a list,
+        return only the specified values.
+        """
+
+        lst = self.as_list(keys)
+
+        df = pd.DataFrame(lst)
+
+        return df
+
+    def as_list(self, keys=None) -> list:
+        """
+        Get as list. If keys is a list,
+        return only the specified values.
 
         Parameters
         ----------
-        key: str
-            Name of the field to extract.
+        keys: list(str), optional
+            Labels of the field to extract.
         """
+
+        lst = self.list
+
+        if keys is not None:
+            lst = [{key: res[key] for key in keys} for res in lst]
+
+        return lst
+
+    def get_for_key(self, key) -> list:
+        """
+        Extract the list of values for the specified key as a list.
+        """
+
         return [res[key] for res in self.list]
 
 
