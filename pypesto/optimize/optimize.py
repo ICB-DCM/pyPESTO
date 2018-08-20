@@ -1,5 +1,5 @@
 import numpy as np
-from pesto import Result
+from pypesto import Result
 from .startpoint import uniform
 
 
@@ -12,10 +12,10 @@ def minimize(problem, optimizer,
     Parameters
     ----------
 
-    problem: pesto.Problem
+    problem: pypesto.Problem
         The problem to be solved.
 
-    optimizer: pesto.Optimizer
+    optimizer: pypesto.Optimizer
         The optimizer to be used n_starts times.
 
     n_starts: int
@@ -25,7 +25,7 @@ def minimize(problem, optimizer,
         Method for how to choose start points. False means the optimizer does
         not require start points.
 
-    result: pesto.Result
+    result: pypesto.Result
         A result object to append the optimization results to. For example,
         one might append more runs to a previous optimization. If None,
         a new object is created.

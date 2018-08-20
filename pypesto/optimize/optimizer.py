@@ -7,7 +7,7 @@ class OptimizerResult(dict):
     """
     The result of an optimizer run. Used as a standardized return value to
     map from the individual result objects returned by the employed
-    optimizers to the format understood by pesto.
+    optimizers to the format understood by pypesto.
 
     Can be used like a dict.
 

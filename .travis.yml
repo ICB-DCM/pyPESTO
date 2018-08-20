@@ -31,11 +31,11 @@ install:
 
 script:  
   - python3 -m flake8 --ignore=F401 --exclude=build,doc,example
-  - python3 -m pytest ./test
+  - python3 -m pytest --cov=pypesto ./test
+  - coverage xml
 
 after_success:
-  - python3 ./test/code_coverage.py
-  - bash <(curl -s https://codecov.io/bash) -f coverage_py.xml -X fix
+  - bash <(curl -s https://codecov.io/bash)
 
 # cache dependencies
 

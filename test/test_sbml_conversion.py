@@ -2,7 +2,7 @@ import os
 import sys
 import unittest
 import amici
-import pesto
+import pypesto
 import importlib
 import numpy as np
 import statistics
@@ -45,19 +45,19 @@ def _test_parameter_estimation(objective, library, solver, n_starts,
     }
 
     if library == 'scipy':
-        optimizer = pesto.optimize.optimizer.ScipyOptimizer(method=solver,
-                                                            options=options)
+        optimizer = pypesto.ScipyOptimizer(method=solver,
+                                           options=options)
     elif library == 'dlib':
-        optimizer = pesto.optimize.optimizer.DlibOptimizer(method=solver,
-                                                           options=options)
+        optimizer = pypesto.DlibOptimizer(method=solver,
+                                          options=options)
 
     lb = -2 * np.ones((1, objective.dim))
     ub = 2 * np.ones((1, objective.dim))
-    problem = pesto.problem.Problem(objective, lb, ub)
+    problem = pypesto.Problem(objective, lb, ub)
 
-    results = pesto.optimize.minimize(
+    results = pypesto.minimize(
         problem, optimizer, n_starts,
-        startpoint_method=pesto.optimize.startpoint.uniform)
+        startpoint_method=pypesto.optimize.startpoint.uniform)
     results = results.optimizer_results
 
     successes = [result for result in results if result.fval < target_fval]
@@ -122,7 +122,7 @@ def _load_model_objective(example_name):
     rdata = amici.runAmiciSimulation(model, solver, None)
     edata = amici.ExpData(rdata['ptr'].get(), 0.05, 0.0)
 
-    return pesto.objective.AmiciObjective(model, solver, [edata], 2), model
+    return pypesto.AmiciObjective(model, solver, [edata], 2), model
 
 
 if __name__ == '__main__':

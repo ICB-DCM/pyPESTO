@@ -1,12 +1,13 @@
 class Result:
     """
-    Universal result object for pesto. The algorithms like optimize, profile,
+    Universal result object for pypesto.
+    The algorithms like optimize, profile,
     sample fill different parts of it.
 
     Attributes
     ----------
 
-    problem: pesto.Problem
+    problem: pypesto.Problem
         The problem underlying the results.
 
     optimizer_results:

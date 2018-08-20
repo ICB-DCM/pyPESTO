@@ -1,4 +1,4 @@
-# PESTO Documentation
+# pyPESTO Documentation
 
 This folder contains files for building the documentation of this package.
 
