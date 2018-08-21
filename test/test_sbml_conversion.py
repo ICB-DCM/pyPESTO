@@ -58,7 +58,7 @@ def _test_parameter_estimation(objective, library, solver, n_starts,
     results = pypesto.minimize(
         problem, optimizer, n_starts,
         startpoint_method=pypesto.optimize.startpoint.uniform)
-    results = results.optimizer_results
+    results = results.optimize_result.list
 
     successes = [result for result in results if result.fval < target_fval]
 
