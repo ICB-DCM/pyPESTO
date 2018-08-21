@@ -17,7 +17,8 @@ try:
 except ImportError:
     amici = None
     pass
-    # we only pass import errors, if the initialization of the module itself fails this should not be caught right?
+    # we only pass import errors, if the initialization of the module itself
+    # fails this should not be caught right?
 
 
 class Objective:
@@ -241,7 +242,8 @@ class AmiciObjective(Objective):
         Maximum sensitivity order supported by the model.
     """
 
-    def __init__(self, amici_model, amici_solver, edata, max_sensi_order=None, preprocess_edata=True):
+    def __init__(self, amici_model, amici_solver, edata, max_sensi_order=None,
+                 preprocess_edata=True):
         if 'amici' not in sys.modules:
             print('This objective requires an installation of amici ('
                   'github.com/icb-dcm/amici. Install via pip3 install amici.')
@@ -297,8 +299,10 @@ class AmiciObjective(Objective):
                 return self.get_error_output(sensi_orders, mode)
 
             self.preequilibration_edata[fixedParameters]['x0'] = rdata['x0']
-            if self.amici_solver.getSensitivityOrder() > amici.SensitivityOrder_none:
-                self.preequilibration_edata[fixedParameters]['sx0'] = rdata['sx0']
+            if self.amici_solver.getSensitivityOrder() > \
+                    amici.SensitivityOrder_none:
+                self.preequilibration_edata[fixedParameters]['sx0'] = \
+                    rdata['sx0']
 
         # loop over experimental data
         for data in self.edata:
@@ -348,19 +352,29 @@ class AmiciObjective(Objective):
         if data.fixedParametersPreequilibration.size():
             original_initial_states = self.amici_model.getInitialStates()
 
-            if self.amici_solver.getSensitivityOrder() > amici.SensitivityOrder_none:
-                original_initial_state_sensitivities = self.amici_model.getInitialStateSensitivities()
+            if self.amici_solver.getSensitivityOrder() > \
+                    amici.SensitivityOrder_none:
+                original_initial_state_sensitivities = \
+                    self.amici_model.getInitialStateSensitivities()
 
-            fixed_parameters = copy.deepcopy(list(data.fixedParametersPreequilibration))
+            fixed_parameters = copy.deepcopy(
+                list(data.fixedParametersPreequilibration)
+            )
             data.fixedParametersPreequilibration = amici.DoubleVector([])
             original_fixed_parameters_preequilibration = fixed_parameters
 
             self.amici_model.setInitialStates(
-                amici.DoubleVector(self.preequilibration_edata[str(fixed_parameters)]['x0'])
+                amici.DoubleVector(
+                    self.preequilibration_edata[str(fixed_parameters)]['x0']
+                )
             )
-            if self.amici_solver.getSensitivityOrder() > amici.SensitivityOrder_none:
+            if self.amici_solver.getSensitivityOrder() > \
+                    amici.SensitivityOrder_none:
                 self.amici_model.setInitialStateSensitivities(
-                    amici.DoubleVector(self.preequilibration_edata[str(fixed_parameters)]['sx0'].flatten())
+                    amici.DoubleVector(
+                        self.preequilibration_edata[
+                            str(fixed_parameters)
+                        ]['sx0'].flatten())
                 )
 
         return {
@@ -371,13 +385,17 @@ class AmiciObjective(Objective):
 
     def postprocess_preequilibration(self, data, original_value_dict):
         if original_value_dict['k']:
-            data.fixedParametersPreequilibration = amici.DoubleVector(original_value_dict['k'])
+            data.fixedParametersPreequilibration = amici.DoubleVector(
+                original_value_dict['k']
+            )
 
         if original_value_dict['x0']:
             self.amici_model.setInitialStates(original_value_dict['x0'])
 
         if original_value_dict['sx0']:
-            self.amici_model.setInitialStateSensitivities(original_value_dict['sx0'])
+            self.amici_model.setInitialStateSensitivities(
+                original_value_dict['sx0']
+            )
 
     def preprocess_edata(self, edata_vector):
         for edata in edata_vector:
@@ -387,7 +405,9 @@ class AmiciObjective(Objective):
                 continue  # we only need to keep unique ones
 
             preeq_edata = amici.ExpData(self.amici_model.get())
-            preeq_edata.fixedParametersPreequilibration = amici.DoubleVector(fixed_parameters)
+            preeq_edata.fixedParametersPreequilibration = amici.DoubleVector(
+                fixed_parameters
+            )
 
             # only preequilibration
             preeq_edata.setTimepoints(amici.DoubleVector([]))
