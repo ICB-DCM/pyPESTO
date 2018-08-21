@@ -289,20 +289,21 @@ class AmiciObjective(Objective):
         # set order in solver
         self.amici_solver.setSensitivityOrder(sensi_order)
 
-        for fixedParameters in self.preequilibration_edata:
-            rdata = amici.runAmiciSimulation(
-                self.amici_model,
-                self.amici_solver,
-                self.preequilibration_edata[fixedParameters]['edata'])
+        if self.preequilibration_edata:
+            for fixedParameters in self.preequilibration_edata:
+                rdata = amici.runAmiciSimulation(
+                    self.amici_model,
+                    self.amici_solver,
+                    self.preequilibration_edata[fixedParameters]['edata'])
 
-            if rdata['status'] < 0.0:
-                return self.get_error_output(sensi_orders, mode)
+                if rdata['status'] < 0.0:
+                    return self.get_error_output(sensi_orders, mode)
 
-            self.preequilibration_edata[fixedParameters]['x0'] = rdata['x0']
-            if self.amici_solver.getSensitivityOrder() > \
-                    amici.SensitivityOrder_none:
-                self.preequilibration_edata[fixedParameters]['sx0'] = \
-                    rdata['sx0']
+                self.preequilibration_edata[fixedParameters]['x0'] = rdata['x0']
+                if self.amici_solver.getSensitivityOrder() > \
+                        amici.SensitivityOrder_none:
+                    self.preequilibration_edata[fixedParameters]['sx0'] = \
+                        rdata['sx0']
 
         # loop over experimental data
         for data in self.edata:
