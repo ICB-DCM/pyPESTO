@@ -26,7 +26,7 @@ cat ../.rst_apt_reqs.txt | xargs sudo apt install
 respectively.
 
 
-## Buid the documentation
+## Build the documentation
 
 The documentation can be built in different formats, e.g. in html (to be then found in the `_build` sub-directory) via
 
