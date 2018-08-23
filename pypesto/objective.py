@@ -17,8 +17,12 @@ try:
 except ImportError:
     amici = None
     pass
-    # we only pass import errors, if the initialization of the module itself
-    # fails this should not be caught right?
+
+try:
+    import pandas as pd
+except ImportError:
+    pd = None
+    pass
 
 
 class Objective:
@@ -220,6 +224,86 @@ class Objective:
         sres = self.__call__(x, (1,), Objective.MODE_RES)
         return sres
 
+    """
+    Gradient checker function
+    """
+
+    def check_grad(self, x0,
+                   param_indices=None,
+                   eps=1e-5,
+                   verbosity=1,
+                   mode='MODE_FUN'):
+
+        if param_indices is None:
+            param_indices = range(self.dim)
+
+        f = self.__call__(x0, (0,), mode)
+        g = self.__call__(x0, (1,), mode)
+
+        fd_f = []
+        fd_b = []
+        fd_c = []
+        fd_error = []
+        rel_error = []
+        abs_error = []
+
+        for ipar in param_indices:
+            xp = copy.deepcopy(x0)
+            xp[ipar] = xp[ipar] + eps
+
+            fp = self.__call__(xp, (0,), mode)
+
+            xm = copy.deepcopy(x0)
+            xm[ipar] = xm[ipar] - eps
+
+            fm = self.__call__(xm, (0,), mode)
+
+            fd_f_single = (fp - f) / eps
+            fd_b_single = (f - fm) / eps
+            fd_c_single = (fp - fm) / ( 2 * eps )
+
+            if (len(g.shape) == 1):
+                g_ipar = g[ipar]
+            elif (len(g.shape) == 2):
+                g_ipar = g[:,ipar]
+
+            if verbosity >1:
+                print('index ' + str(ipar) + ':\n' +
+                      'gradient: ' + str(g_ipar) + '\n' +
+                      'cntr FDs: ' + str(fd_c_single) + '\n' +
+                      'fwd  FDs: ' + str(fd_f_single) + '\n' +
+                      'bwd  FDs: ' + str(fd_b_single) + '\n' +
+                      'rel err: ' + str(abs((g_ipar - fd_c_single) /
+                                            (fd_c_single + eps))) + '\n' +
+                      'abs err: ' + str(abs((g_ipar - fd_c_single)))
+                     )
+
+            fd_f.append(np.mean(fd_f_single))
+            fd_b.append(np.mean(fd_b_single))
+            fd_c.append(np.mean(fd_c_single))
+            rel_error.append(np.mean(abs((g_ipar - fd_c_single) /
+                                   (fd_c_single + eps))))
+            abs_error.append(np.mean(abs((g_ipar - fd_c_single))))
+            fd_error.append(np.mean(abs(fd_f_single-fd_b_single)))
+
+        if verbosity>0:
+            if pd is None:
+                print('gradient:' + str(list(g[param_indices])) + '\n' +
+                      'rel err:' + str(rel_error) + '\n' +
+                      'abs err:' + str(abs_error) + '\n' +
+                      'FD err:' + str(fd_error)
+                      )
+            else:
+                print(pd.DataFrame(data={
+                    'gradient': list(g[param_indices]),
+                    'FD': fd_c,
+                    'rel err': rel_error,
+                    'abs err:': abs_error,
+                    'FD err:': fd_error,
+                }))
+
+        return g[param_indices], fd_c, fd_f, fd_b
+
 
 class AmiciObjective(Objective):
     """
@@ -244,7 +328,7 @@ class AmiciObjective(Objective):
 
     def __init__(self, amici_model, amici_solver, edata, max_sensi_order=None,
                  preprocess_edata=True):
-        if 'amici' not in sys.modules:
+        if amici is None:
             print('This objective requires an installation of amici ('
                   'github.com/icb-dcm/amici. Install via pip3 install amici.')
         super().__init__(None)
