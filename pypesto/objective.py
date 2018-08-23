@@ -9,7 +9,6 @@ giving a standardized way of calling.
 
 
 import numpy as np
-import sys
 import copy
 
 try:
@@ -235,7 +234,7 @@ class Objective:
                    mode='MODE_FUN'):
 
         if param_indices is None:
-            param_indices = range(self.dim)
+            param_indices = range(len(x0))
 
         f = self.__call__(x0, (0,), mode)
         g = self.__call__(x0, (1,), mode)
@@ -260,14 +259,15 @@ class Objective:
 
             fd_f_single = (fp - f) / eps
             fd_b_single = (f - fm) / eps
-            fd_c_single = (fp - fm) / ( 2 * eps )
+            fd_c_single = (fp - fm) / (2 * eps)
 
-            if (len(g.shape) == 1):
+            g_ipar = None
+            if len(g.shape) == 1:
                 g_ipar = g[ipar]
-            elif (len(g.shape) == 2):
-                g_ipar = g[:,ipar]
+            elif len(g.shape) == 2:
+                g_ipar = g[:, ipar]
 
-            if verbosity >1:
+            if verbosity > 1:
                 print('index ' + str(ipar) + ':\n' +
                       'gradient: ' + str(g_ipar) + '\n' +
                       'cntr FDs: ' + str(fd_c_single) + '\n' +
@@ -276,17 +276,17 @@ class Objective:
                       'rel err: ' + str(abs((g_ipar - fd_c_single) /
                                             (fd_c_single + eps))) + '\n' +
                       'abs err: ' + str(abs((g_ipar - fd_c_single)))
-                     )
+                      )
 
             fd_f.append(np.mean(fd_f_single))
             fd_b.append(np.mean(fd_b_single))
             fd_c.append(np.mean(fd_c_single))
             rel_error.append(np.mean(abs((g_ipar - fd_c_single) /
-                                   (fd_c_single + eps))))
+                                         (fd_c_single + eps))))
             abs_error.append(np.mean(abs((g_ipar - fd_c_single))))
-            fd_error.append(np.mean(abs(fd_f_single-fd_b_single)))
+            fd_error.append(np.mean(abs(fd_f_single - fd_b_single)))
 
-        if verbosity>0:
+        if verbosity > 0:
             if pd is None:
                 print('gradient:' + str(list(g[param_indices])) + '\n' +
                       'rel err:' + str(rel_error) + '\n' +
@@ -383,7 +383,8 @@ class AmiciObjective(Objective):
                 if rdata['status'] < 0.0:
                     return self.get_error_output(sensi_orders, mode)
 
-                self.preequilibration_edata[fixedParameters]['x0'] = rdata['x0']
+                self.preequilibration_edata[fixedParameters]['x0'] = \
+                    rdata['x0']
                 if self.amici_solver.getSensitivityOrder() > \
                         amici.SensitivityOrder_none:
                     self.preequilibration_edata[fixedParameters]['sx0'] = \
