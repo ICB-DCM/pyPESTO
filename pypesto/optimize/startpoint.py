@@ -1,13 +1,15 @@
 import numpy as np
 
 
-def uniform(n_starts, lb, ub, par_guesses=None):
+def uniform(n_starts, lb, ub, x_guesses=None):
     """
     Uniform sampling of start points.
 
-    TODO: Use par_guesses.
+    TODO: Use x_guesses.
     """
-    dim = lb.shape[1]
+    dim = lb.size
+    lb = lb.reshape((1, -1))
+    ub = ub.reshape((1, -1))
     random_points = np.random.random((n_starts, dim))
     startpoints = random_points * (ub - lb) + lb
 

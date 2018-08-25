@@ -41,7 +41,7 @@ def minimize(problem, optimizer,
         startpoints = startpoint_method(n_starts,
                                         problem.lb,
                                         problem.ub,
-                                        problem.par_guesses)
+                                        problem.x_guesses)
 
     # prepare result object
     if result is None:
