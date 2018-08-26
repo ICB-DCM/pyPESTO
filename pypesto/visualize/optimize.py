@@ -4,6 +4,7 @@ import matplotlib.colors as colors
 import matplotlib.cm as cm
 from scipy import cluster
 
+
 def waterfall(result):
     """
 

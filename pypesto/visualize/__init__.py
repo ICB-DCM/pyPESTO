@@ -4,4 +4,4 @@ Visualizations
 
 """
 
-from waterfall import waterfall
+from .optimize import waterfall
