@@ -1,14 +1,15 @@
-import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.colors as colors
 import matplotlib.cm as cm
+from matplotlib.ticker import MaxNLocator
 from scipy import cluster
+import numpy as np
 
 
 def waterfall(result):
     """
 
-    Plot waterwall plot.
+    Plot waterfall plot.
 
     Parameters
     ----------
@@ -38,6 +39,7 @@ def waterfall(result):
 
     # plot
     ax = plt.figure().gca()
+    ax.xaxis.set_major_locator(MaxNLocator(integer=True))
     ax.plot(startpoints, result_fval)
     sum_grey = 1
     for iind in range(len(ind_clust)):
@@ -48,8 +50,6 @@ def waterfall(result):
             Col = scalarMap.to_rgba(uclust[ind_clust[iind]]-sum_grey)
             ax.plot(startpoints[iind], result_fval[iind], color=Col, marker='o')
 
-    if clustsize[ind_clust[0]] > 1:
-        Col0 = (1, 0, 0, 1)
-        ax.plot(1, result_fval[0], color=Col0, marker='o')
-
+    plt.xlabel('Start index')
+    plt.ylabel('Function value')
     plt.show()
