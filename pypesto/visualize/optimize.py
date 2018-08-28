@@ -19,6 +19,12 @@ def waterfall(result, ax=None):
 
     ax: matplotlib.Axes, optional
         Axes object to use.
+
+    Returns
+    -------
+
+    ax: matplotlib.Axes
+        The plot axes.
     """
 
     # axes
@@ -27,13 +33,13 @@ def waterfall(result, ax=None):
 
     # extract cost function values from result
     result_fval = result.optimize_result.get_for_key('fval')
-    result_fval = np.reshape(result_fval,[len(result_fval), 1])
+    result_fval = np.reshape(result_fval, [len(result_fval), 1])
     startpoints = range(1, len(result_fval) + 1)
 
     # cluster
     clust = cluster.hierarchy.fcluster(
-            cluster.hierarchy.linkage(result_fval), 
-            0.1, criterion='distance')
+        cluster.hierarchy.linkage(result_fval),
+        0.1, criterion='distance')
     uclust, ind_clust = np.unique(clust, return_inverse=True)
     clustsize = np.zeros(len(uclust))
     for iclustsize in range(len(uclust)):
@@ -41,8 +47,8 @@ def waterfall(result, ax=None):
 
     # assign colors
     jet = plt.get_cmap('jet')
-    vmax = len(uclust)-sum(clustsize == 1)
-    cNorm  = colors.Normalize(vmin=0, vmax=vmax)
+    vmax = len(uclust) - sum(clustsize == 1)
+    cNorm = colors.Normalize(vmin=0, vmax=vmax)
     scalarMap = cm.ScalarMappable(norm=cNorm, cmap=jet)
 
     # plot
@@ -55,10 +61,11 @@ def waterfall(result, ax=None):
                     color='lightgrey', marker='o')
             sum_grey = sum_grey
         else:
-            Col = scalarMap.to_rgba(uclust[ind_clust[iind]]-sum_grey)
+            Col = scalarMap.to_rgba(uclust[ind_clust[iind]] - sum_grey)
             ax.plot(startpoints[iind], result_fval[iind],
                     color=Col, marker='o')
 
-    plt.xlabel('Ordered multi-starts')
-    plt.ylabel('Function value')
-    plt.show()
+    ax.set_xlabel('Ordered multi-starts')
+    ax.set_ylabel('Function value')
+
+    return ax
