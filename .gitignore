@@ -84,8 +84,7 @@ data/figures
 coverage_py.xml
 
 # examples
-example/model_conversion_reaction/*
-example/conversion_reaction/*
+doc/example/*/*
 
 # general
 data/.snakemake
@@ -100,5 +99,4 @@ doc/*.log
 dask-worker-space
 *.lock
 venv/*
-
 
