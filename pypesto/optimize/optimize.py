@@ -1,6 +1,7 @@
 import numpy as np
 from pypesto import Result
 from .startpoint import uniform
+import traceback
 
 
 def minimize(problem, optimizer,
@@ -55,6 +56,7 @@ def minimize(problem, optimizer,
             result.optimize_result.append(optimizer_result=optimizer_result)
         except Exception as err:
             print(('start ' + str(j) + ' failed: {0}').format(err))
+            traceback.print_exc()
 
     # sort by best fval
     result.optimize_result.sort()

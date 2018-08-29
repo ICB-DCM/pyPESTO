@@ -65,11 +65,15 @@ class Objective:
             ``sres(x) -> array, shape (m,n).``
         If its value is True, then res should return the residual
         sensitivities as a second output.
-
     """
 
     MODE_FUN = 'MODE_FUN'  # mode for function values
     MODE_RES = 'MODE_RES'  # mode for residuals
+    FVAL = 'fval'
+    GRAD = 'grad'
+    HESS = 'hess'
+    RES = 'res'
+    SRES = 'sres'
 
     def __init__(self, fun,
                  grad=None, hess=None, hessp=None,
@@ -83,14 +87,14 @@ class Objective:
 
     def __call__(self, x, sensi_orders: tuple=(0,), mode=MODE_FUN):
         """
-        Method to get arbitrary sensitivities.
+        Method to get arbitrary sensitivities. This is the central method
+        which is always called, also by the get_ functions.
 
-        There are different ways in which
-        an optimizer calls the objective function, and in how the objective
-        function provides
-        information (e.g. derivatives via separate functions or along with
-        the function values). The different calling modes increase efficiency
-        in space and time and make the objective flexible.
+        There are different ways in which an optimizer calls the objective
+        function, and in how the objective function provides information
+        (e.g. derivatives via separate functions or along with the function
+        values). The different calling modes increase efficiency in space
+        and time and make the objective flexible.
 
         Parameters
         ----------
@@ -104,13 +108,25 @@ class Objective:
         mode: str
             Whether to compute function values or residuals.
         """
+
+        # pre-process
+        x = self.preprocess(x=x)
+
         # function or residue mode
         if mode == Objective.MODE_FUN:
-            return self._call_mode_fun(x, sensi_orders)
+            result = self._call_mode_fun(x, sensi_orders)
         elif mode == Objective.MODE_RES:
-            return self._call_mode_res(x, sensi_orders)
+            result = self._call_mode_res(x, sensi_orders)
         else:
             raise ValueError("This mode is not supported.")
+
+        # post-process
+        result = self.postprocess(result=result)
+
+        # map to output format
+        result = Objective.map_to_output(sensi_orders, mode, **result)
+
+        return result
 
     def _call_mode_fun(self, x, sensi_orders):
         if sensi_orders == (0,):
@@ -118,26 +134,27 @@ class Objective:
                 fval = self.fun(x)[0]
             else:
                 fval = self.fun(x)
-            return fval
+            return {Objective.FVAL: fval}
         elif sensi_orders == (1,):
             if self.grad is True:
                 grad = self.fun(x)[1]
             else:
                 grad = self.grad(x)
-            return grad
+            return {Objective.GRAD: grad}
         elif sensi_orders == (2,):
             if self.hess is True:
                 hess = self.fun(x)[2]
             else:
                 hess = self.hess(x)
-            return hess
+            return {Objective.HESS: hess}
         elif sensi_orders == (0, 1):
             if self.grad is True:
                 fval, grad = self.fun(x)[0:2]
             else:
                 fval = self.fun(x)
                 grad = self.grad(x)
-            return fval, grad
+            return {Objective.FVAL: fval,
+                    Objective.GRAD: grad}
         elif sensi_orders == (1, 2):
             if self.hess is True:
                 grad, hess = self.fun(x)[1:3]
@@ -147,7 +164,8 @@ class Objective:
                     grad = self.fun(x)[1]
                 else:
                     grad = self.grad(x)
-            return grad, hess
+            return {Objective.GRAD: grad,
+                    Objective.HESS: hess}
         elif sensi_orders == (0, 1, 2):
             if self.hess is True:
                 fval, grad, hess = self.fun(x)[0:3]
@@ -158,7 +176,9 @@ class Objective:
                 else:
                     fval = self.fun(x)
                     grad = self.grad(x)
-            return fval, grad, hess
+            return {Objective.FVAL: fval,
+                    Objective.GRAD: grad,
+                    Objective.HESS: hess}
         else:
             raise ValueError("These sensitivity orders are not supported.")
 
@@ -168,22 +188,48 @@ class Objective:
                 res = self.res(x)[0]
             else:
                 res = self.res(x)
-            return res
+            return {Objective.RES: res}
         elif sensi_orders == (1,):
             if self.sres is True:
                 sres = self.res(x)[1]
             else:
                 sres = self.sres(x)
-            return sres
+            return {Objective.SRES: sres}
         elif sensi_orders == (0, 1):
             if self.sres is True:
                 res, sres = self.res(x)
             else:
                 res = self.res(x)
                 sres = self.sres(x)
-            return res, sres
+            return {Objective.RES: res,
+                    Objective.SRES: sres}
         else:
             raise ValueError("These sensitivity orders are not supported.")
+
+    @staticmethod
+    def map_to_output(sensi_orders, mode, **kwargs):
+        """
+        Return values as requested by the caller, since usually only a subset
+        is demanded. One output is returned as-is, more than one output are
+        returned as a tuple in order (fval, grad, hess).
+        """
+        output = ()
+        if mode == Objective.MODE_FUN:
+            if 0 in sensi_orders:
+                output += (kwargs[Objective.FVAL],)
+            if 1 in sensi_orders:
+                output += (np.array(kwargs[Objective.GRAD]),)
+            if 2 in sensi_orders:
+                output += (np.array(kwargs[Objective.HESS]),)
+        elif mode == Objective.MODE_RES:
+            if 0 in sensi_orders:
+                output += (np.array(kwargs[Objective.RES]),)
+            if 1 in sensi_orders:
+                output += (np.array(kwargs[Objective.SRES]),)
+        if len(output) == 1:
+            # return a single value not as tuple
+            output = output[0]
+        return output
 
     """
     The following are convenience functions for getting specific outputs.
@@ -212,6 +258,86 @@ class Objective:
     def get_sres(self, x):
         sres = self(x, (1,), Objective.MODE_RES)
         return sres
+
+    """
+    The following functions handle parameter mappings.
+    """
+
+    def handle_x_fixed(self,
+                       dim_full,
+                       x_free_indices,
+                       x_fixed_indices,
+                       x_fixed_vals):
+
+        # pre-process
+        def preprocess(x):
+            x_full = np.zeros(dim_full)
+            x_full[x_free_indices] = x
+            x_full[x_fixed_indices] = x_fixed_vals
+            return x_full
+        self.preprocess = preprocess
+
+        # post-process
+        def postprocess(result):
+            if Objective.GRAD in result:
+                grad = result[Objective.GRAD]
+                grad = grad[x_free_indices]
+                result[Objective.GRAD] = grad
+            if Objective.HESS in result:
+                hess = result[Objective.HESS]
+                hess = hess[np.ix_(x_free_indices, x_free_indices)]
+                result[Objective.HESS] = hess
+            return result
+        self.postprocess = postprocess
+
+        # map to full dimension
+        def get_full_vector(x, x_fixed_vals=None):
+            if x is None:
+                return None
+            x_full = np.zeros(dim_full)
+            x_full[:] = np.nan
+            x_full[x_free_indices] = x
+            if x_fixed_vals is not None:
+                x_full[x_fixed_indices] = x_fixed_vals
+            return x_full
+        self.get_full_vector = get_full_vector
+
+        def get_full_matrix(x):
+            if x is None:
+                return None
+            x_full = np.zeros((dim_full, dim_full))
+            x_full[:, :] = np.nan
+            x_full[np.ix_(x_free_indices, x_free_indices)] = x
+            return x_full
+        self.get_full_matrix = get_full_matrix
+
+    def preprocess(self, x):
+        """
+        Preprocess the input parameter array in __call__.
+        Default: Do nothing.
+        """
+        return x
+
+    def postprocess(self, result):
+        """
+        Postprocess the output values in __call__.
+        Default: Do nothing.
+        """
+        return result
+
+    def get_full_vector(self, x, x_fixed_vals=None):
+        """
+        Map vector from dim to dim_full.
+        Default: Do nothing.
+        """
+        return x
+
+    def get_full_matrix(self, x):
+        """
+        Map vector from dim to dim_full.
+        Default: Do nothing.
+        """
+        return x
 
 
 class AmiciObjective(Objective):
@@ -332,7 +458,7 @@ class AmiciObjective(Objective):
                     sres = np.vstack([sres, rdata['sres']]) \
                         if sres.size else rdata['sres']
 
-        return AmiciObjective.map_to_output(
+        return Objective.map_to_output(
             sensi_orders=sensi_orders,
             mode=mode,
             fval=nllh, grad=snllh, hess=ssnllh,
@@ -416,7 +542,7 @@ class AmiciObjective(Objective):
             nt = sum([data.nt() if data.nt() else self.amici_model.nt()
                       for data in self.edata])
         n_res = nt * self.amici_model.nytrue
-        return AmiciObjective.map_to_output(
+        return Objective.map_to_output(
             sensi_orders=sensi_orders,
             mode=mode,
             fval=np.inf,
@@ -425,27 +551,3 @@ class AmiciObjective(Objective):
             res=np.nan * np.ones(n_res),
             sres=np.nan * np.ones([n_res, self.dim])
         )
-
-    @staticmethod
-    def map_to_output(sensi_orders, mode, **kwargs):
-        """
-        Return values as requested by the caller (sometimes only a subset of
-        the outputs are demanded).
-        """
-        output = ()
-        if mode == Objective.MODE_FUN:
-            if 0 in sensi_orders:
-                output += (kwargs['fval'],)
-            if 1 in sensi_orders:
-                output += (kwargs['grad'],)
-            if 2 in sensi_orders:
-                output += (kwargs['hess'],)
-        elif mode == Objective.MODE_RES:
-            if 0 in sensi_orders:
-                output += (kwargs['res'],)
-            if 1 in sensi_orders:
-                output += (kwargs['sres'],)
-        if len(output) == 1:
-            # return a single value not as tuple
-            output = output[0]
-        return output

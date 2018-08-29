@@ -23,10 +23,11 @@ class Problem:
     ----------
 
     objective: pypesto.Objective
-        The objective function for minimization.
+        The objective function for minimization. Note that a shallow copy
+        is created.
 
     lb, ub: array_like
-        The lower and upper bounds. For unbounded directions set to inf. 
+        The lower and upper bounds. For unbounded directions set to inf.
 
     dim_full: int, optional
         The full dimension of the problem, including fixed parameters.
@@ -34,7 +35,7 @@ class Problem:
     dim: int
         The number of non-fixed parameters.
         Computed from the other values.
-        
+
     x_fixed_indices: array_like of int, optional
         Vector containing the indices (zero-based) of parameter components
         that are not to be optipmized.
@@ -53,8 +54,8 @@ class Problem:
     On the fixing of parameter values:
 
     The number of parameters dim_full the objective takes as input must
-    be known, so it must be either lb a vector of that size, or dim_full 
-    specified as a parameter. 
+    be known, so it must be either lb a vector of that size, or dim_full
+    specified as a parameter.
     All vectors are mapped to the reduced space of dimension dim in __init__,
     regardless of whether they were in dimension dim or dim_full before.
     """
@@ -73,10 +74,10 @@ class Problem:
         self.ub = np.array(ub).flatten()
 
         self.dim_full = dim_full if dim_full is not None else self.lb.size
-        
+
         if x_fixed_indices is None:
             x_fixed_indices = np.array([])
-        self.x_fixed_indices = np.array(x_fixed_indices)
+        self.x_fixed_indices = np.array(x_fixed_indices, dtype=int)
 
         if x_fixed_vals is None:
             x_fixed_vals = np.array([])
@@ -85,7 +86,8 @@ class Problem:
         self.dim = self.dim_full - self.x_fixed_indices.size
 
         self.x_free_indices = np.array(
-            list(set(range(0, self.dim_full)) - set(self.x_fixed_vals))
+            list(set(range(0, self.dim_full)) - set(self.x_fixed_indices)),
+            dtype=int
         )
 
         if x_guesses is None:
@@ -113,37 +115,13 @@ class Problem:
         if self.x_guesses.shape[1] == self.dim_full:
             self.x_guesses = self.x_guesses[:, self.x_free_indices]
 
-        # wrap objective
-        preprocess_x = create_preprocess_x_with_fixed_indices(
-            dim_full = self.dim_full,
-            x_free_indices = self.x_free_indices,
-            x_fixed_indices = self.x_fixed_indices,
-            x_fixed_vals = self.x_fixed_vals
-        )
-        self.objective.__call__ = preprocess_decorator(self.objective.__call__, preprocess_x)
+        # make objective aware of fixed parameters
+        self.objective.handle_x_fixed(
+            dim_full=self.dim_full,
+            x_free_indices=self.x_free_indices,
+            x_fixed_indices=self.x_fixed_indices,
+            x_fixed_vals=self.x_fixed_vals)
 
         assert self.lb.size == self.dim
         assert self.ub.size == self.dim
         assert self.x_guesses.shape[1] == self.dim
-
-
-def preprocess_decorator(method, preprocess_x):
-	def wrapper(self, x, sensi_orders=(0,), mode=Objective.MODE_FUN):
-		x = preprocess_x(x)
-		return method(self, x, sensi_orders, mode)
-	return wrapper
-
-
-def create_preprocess_x_with_fixed_indices(
-        dim_full,
-        x_free_indices,
-        x_fixed_indices,
-        x_fixed_vals):
-
-    def preprocess_x(x):
-        x_full = np.zeros(dim_full)
-        x_full[x_free_indices] = x
-        x_full[x_fixed_indices] = x_fixed_vals
-        return x_full
-
-    return preprocess_x
