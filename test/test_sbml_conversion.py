@@ -21,7 +21,7 @@ optimizers = {
 }
 
 
-class OptimizerTest(unittest.TestCase):
+class AmiciObjectiveTest(unittest.TestCase):
     def runTest(self):
         for example in ['conversion_reaction']:
             objective, model = _load_model_objective(example)
@@ -51,6 +51,8 @@ def _test_parameter_estimation(objective, library, solver, n_starts,
         optimizer = pypesto.DlibOptimizer(method=solver,
                                           options=options)
 
+    optimizer.temp_file = os.path.join('test', 'tmp_{index}.csv')
+
     lb = -2 * np.ones((1, objective.dim))
     ub = 2 * np.ones((1, objective.dim))
     problem = pypesto.Problem(objective, lb, ub)
@@ -65,26 +67,23 @@ def _test_parameter_estimation(objective, library, solver, n_starts,
     summary = solver + ':\n ' + str(len(successes)) \
         + '/' + str(len(results)) + ' reached target\n'
 
-    if hasattr(results[0], 'n_fval'):
-        function_evals = [result.n_fval for result in results if result.n_fval]
-        if len(function_evals):
-            summary = summary + 'mean fun evals:' \
-                + str(statistics.mean(function_evals)) \
-                + '±' + str(statistics.stdev(function_evals) / n_starts) + '\n'
+    function_evals = [result.n_fval for result in results]
+    if len(function_evals):
+        summary = summary + 'mean fun evals:' \
+            + str(statistics.mean(function_evals)) \
+            + '±' + str(statistics.stdev(function_evals) / n_starts) + '\n'
 
-    if hasattr(results[0], 'n_grad'):
-        grad_evals = [result.n_grad for result in results if result.n_grad]
-        if len(grad_evals):
-            summary = summary + 'mean grad evals:' \
-                + str(statistics.mean(grad_evals)) \
-                + '±' + str(statistics.stdev(grad_evals) / n_starts) + '\n'
+    grad_evals = [result.n_grad for result in results]
+    if len(grad_evals):
+        summary = summary + 'mean grad evals:' \
+            + str(statistics.mean(grad_evals)) \
+            + '±' + str(statistics.stdev(grad_evals) / n_starts) + '\n'
 
-    if hasattr(results[0], 'n_hess'):
-        hess_evals = [result.n_hess for result in results if result.n_hess]
-        if len(hess_evals):
-            summary = summary + 'mean hess evals:' \
-                + str(statistics.mean(hess_evals)) \
-                + '±' + str(statistics.stdev(hess_evals) / n_starts) + '\n'
+    hess_evals = [result.n_hess for result in results]
+    if len(hess_evals):
+        summary = summary + 'mean hess evals:' \
+            + str(statistics.mean(hess_evals)) \
+            + '±' + str(statistics.stdev(hess_evals) / n_starts) + '\n'
 
     print(summary)
 
@@ -127,5 +126,5 @@ def _load_model_objective(example_name):
 
 if __name__ == '__main__':
     suite = unittest.TestSuite()
-    suite.addTest(OptimizerTest())
+    suite.addTest(AmiciObjectiveTest())
     unittest.main()

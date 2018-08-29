@@ -102,3 +102,4 @@ dask-worker-space
 venv/*
 
 
+doc/example/conversion_reaction/*
