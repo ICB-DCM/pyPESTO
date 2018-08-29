@@ -48,8 +48,7 @@ class ObjectiveTest(unittest.TestCase):
 def get_objective_rosen_separated():
     return pypesto.Objective(fun=sp.optimize.rosen,
                              grad=sp.optimize.rosen_der,
-                             hess=sp.optimize.rosen_hess,
-                             dim=2)
+                             hess=sp.optimize.rosen_hess)
 
 
 def get_objective_rosen_integrated():
@@ -59,8 +58,7 @@ def get_objective_rosen_integrated():
                 sp.optimize.rosen_hess(x))
     return pypesto.Objective(fun=rosenbrock,
                              grad=True,
-                             hess=True,
-                             dim=2)
+                             hess=True)
 
 
 if __name__ == '__main__':

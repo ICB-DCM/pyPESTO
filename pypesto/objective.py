@@ -70,7 +70,7 @@ class Objective:
     MODE_FUN = 'MODE_FUN'  # mode for function values
     MODE_RES = 'MODE_RES'  # mode for residuals
 
-    def __init__(self, fun, dim,
+    def __init__(self, fun,
                  grad=None, hess=None, hessp=None,
                  res=None, sres=None):
         self.fun = fun
@@ -79,8 +79,6 @@ class Objective:
         self.hessp = hessp
         self.res = res
         self.sres = sres
-
-        self.dim = dim
 
         self.n_fval = 0
         self.n_grad = 0
@@ -220,6 +218,7 @@ class Objective:
             raise ValueError("These sensitivity orders are not supported.")
 
     def reset_history(self,
+                      dim,
                       temp_file=None,
                       temp_save_iter=10):
         """
@@ -228,6 +227,8 @@ class Objective:
 
         Parameters
         ----------
+
+        dim: number of parameters
 
         temp_file: filename
             If specified, temporary results of traces for every optimization
@@ -247,12 +248,11 @@ class Objective:
         parameter_names = self.get_parameter_names()
 
         if parameter_names is None:
-            parameter_names = ['x' + str(ix) for ix in range(self.dim)]
+            parameter_names = ['x' + str(ix) for ix in range(dim)]
         else:
-            if len(parameter_names) != self.dim:
+            if len(parameter_names) != dim:
                 raise ValueError('List of parameter names must be of the same'
-                                 'length as number of parameters specified'
-                                 'at initialization of the objective')
+                                 'length as the length of the startpoint')
 
         if temp_file is not None:
             cols = ['time', 'n_fval', 'n_grad', 'n_hess', 'fval'] \
@@ -322,15 +322,40 @@ class Objective:
         sres = self.call_mode_res(x, (1,))
         return sres
 
-    """
-    Gradient checker function
-    """
-
-    def check_grad(self, x0,
+    def check_grad(self,
+                   x0,
                    param_indices=None,
                    eps=1e-5,
                    verbosity=1,
-                   mode='MODE_FUN'):
+                   mode='MODE_FUN') -> pd.DataFrame:
+        """
+        Method to evaluate the gradient via finite differences and compare the
+        result to the objective gradient.
+
+        Parameters
+        ----------
+
+        x0: list
+            Parameter values at which the gradient will be evaluated
+
+        param_indices: list
+            List of index values which allows computation of finite differences
+            only for the specified subset of parameters
+
+        TODO: pass param_indices to amici instead of subselecting result
+
+        eps: float
+            Step size
+
+        verbosity: int
+            Level of verbosity for function output
+
+        mode: str
+            Computation mode can be used to switch between residual
+            computation ('MODE_RES') and objective function value computation
+            ('MODE_FUN')
+
+        """
 
         if param_indices is None:
             param_indices = range(len(x0))
@@ -435,7 +460,6 @@ class AmiciObjective(Objective):
                 tuple(i for i in range(max_sensi_order)),
                 'MODE_FUN'
             ),
-            dim=amici_model.np(),
             grad=max_sensi_order > 0,
             hess=lambda x: self.call_amici(
                 x,
@@ -455,6 +479,7 @@ class AmiciObjective(Objective):
         )
         self.amici_model = amici_model
         self.amici_solver = amici_solver
+        self.dim = amici_model.np()
         if preprocess_edata:
             self.preequilibration_edata = dict()
             self.preprocess_edata(edata)

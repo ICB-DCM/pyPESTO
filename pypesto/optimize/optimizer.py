@@ -102,6 +102,7 @@ def objective_decorator(minimize):
             temp_file = None
 
         problem.objective.reset_history(
+            len(x0),
             temp_file,
             self.temp_save_iter,
         )

@@ -70,8 +70,8 @@ class OptimizerTest(unittest.TestCase):
 
         optimizer.temp_file = os.path.join('test', 'tmp_{index}.csv')
 
-        lb = 0 * np.ones((1, objective.dim))
-        ub = 1 * np.ones((1, objective.dim))
+        lb = 0 * np.ones((1, 2))
+        ub = 1 * np.ones((1, 2))
         problem = pypesto.Problem(objective, lb, ub)
 
         pypesto.minimize(
