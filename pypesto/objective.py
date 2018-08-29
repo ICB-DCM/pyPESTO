@@ -199,7 +199,7 @@ class Objective:
             else:
                 res = self.res(x)
             if self.trace is not None:
-                self.update_trace(np.power(res,2).sum(), x)
+                self.update_trace(np.power(res, 2).sum(), x)
             return res
         elif sensi_orders == (1,):
             if self.sres is True:
@@ -214,7 +214,7 @@ class Objective:
                 res = self.res(x)
                 sres = self.sres(x)
             if self.trace is not None:
-                self.update_trace(np.power(res,2).sum(), x)
+                self.update_trace(np.power(res, 2).sum(), x)
             return res, sres
         else:
             raise ValueError("These sensitivity orders are not supported.")
@@ -428,24 +428,24 @@ class AmiciObjective(Objective):
             print('This objective requires an installation of amici ('
                   'github.com/icb-dcm/amici. Install via pip3 install amici.')
         super().__init__(
-            fun=lambda x: self.__call_amici__(
+            fun=lambda x: self.call_amici(
                 x,
                 tuple(i for i in range(max_sensi_order)),
                 'MODE_FUN'
             ),
             dim=amici_model.np(),
             grad=max_sensi_order > 0,
-            hess=lambda x: self.__call_amici__(
+            hess=lambda x: self.call_amici(
                 x,
                 (2, ),
                 'MODE_FUN'
             ),
-            res=lambda x: self.__call_amici__(
+            res=lambda x: self.call_amici(
                 x,
                 (0,),
                 'MODE_RES'
             ),
-            sres=lambda x: self.__call_amici__(
+            sres=lambda x: self.call_amici(
                 x,
                 (1,),
                 'MODE_RES'
@@ -465,7 +465,12 @@ class AmiciObjective(Objective):
         if self.max_sensi_order is None:
             self.max_sensi_order = 2 if amici_model.o2mode else 1
 
-    def __call_amici__(self, x, sensi_orders: tuple=(0,), mode=Objective.MODE_FUN):
+    def call_amici(
+            self,
+            x,
+            sensi_orders: tuple=(0,),
+            mode=Objective.MODE_FUN
+    ):
         # amici is built so that only the maximum sensitivity is required,
         # the lower orders are then automatically computed
         sensi_order = min(max(sensi_orders), 1)

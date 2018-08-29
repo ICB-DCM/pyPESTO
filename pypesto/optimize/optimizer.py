@@ -165,7 +165,8 @@ class Optimizer(abc.ABC):
         result.n_grad = problem.objective.n_grad
         result.n_hess = problem.objective.n_hess
 
-        if problem.objective.trace is not None and len(problem.objective.trace):
+        if problem.objective.trace is not None \
+                and len(problem.objective.trace):
             result.fval0 = problem.objective.trace.loc[0].fval
 
         result.trace = problem.objective.trace
