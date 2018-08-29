@@ -41,42 +41,43 @@ class OptimizerTest(unittest.TestCase):
                             if re.match('^(?i)(ls_)', method):
                                 self.assertRaises(
                                     Exception,
-                                    _test_optimizer,
+                                    self.check_minimize,
                                     (obj,
                                      library,
                                      method)
                                 )
                             else:
-                                _test_optimizer(obj,
-                                                library,
-                                                method)
+                                self.check_minimize(
+                                    obj,
+                                    library,
+                                    method
+                                )
 
+    def check_minimize(self, objective, library, solver):
 
-def _test_optimizer(objective, library, solver):
+        options = {
+            'maxiter': 100
+        }
 
-    options = {
-        'maxiter': 100
-    }
+        optimizer = None
 
-    optimizer = None
+        if library == 'scipy':
+            optimizer = pypesto.ScipyOptimizer(method=solver,
+                                               options=options)
+        elif library == 'dlib':
+            optimizer = pypesto.DlibOptimizer(method=solver,
+                                              options=options)
 
-    if library == 'scipy':
-        optimizer = pypesto.ScipyOptimizer(method=solver,
-                                           options=options)
-    elif library == 'dlib':
-        optimizer = pypesto.DlibOptimizer(method=solver,
-                                          options=options)
+        optimizer.temp_file = os.path.join('test', 'tmp_{index}.csv')
 
-    optimizer.temp_file = os.path.join('test', 'tmp_{index}.csv')
+        lb = 0 * np.ones((1, objective.dim))
+        ub = 1 * np.ones((1, objective.dim))
+        problem = pypesto.Problem(objective, lb, ub)
 
-    lb = 0 * np.ones((1, objective.dim))
-    ub = 1 * np.ones((1, objective.dim))
-    problem = pypesto.Problem(objective, lb, ub)
-
-    pypesto.minimize(
-        problem,
-        optimizer,
-        1,
-        startpoint_method=pypesto.optimize.startpoint.uniform,
-        allow_failed_starts=False
-    )
+        pypesto.minimize(
+            problem,
+            optimizer,
+            1,
+            startpoint_method=pypesto.optimize.startpoint.uniform,
+            allow_failed_starts=False
+        )

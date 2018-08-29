@@ -338,6 +338,7 @@ class Objective:
         f = self.__call__(x0, (0,), mode)
         g = self.__call__(x0, (1,), mode)
 
+        g_list = []
         fd_f = []
         fd_b = []
         fd_c = []
@@ -377,22 +378,23 @@ class Objective:
                       'abs err: ' + str(abs((g_ipar - fd_c_single)))
                       )
 
-            fd_f.append(np.mean(fd_f_single))
-            fd_b.append(np.mean(fd_b_single))
-            fd_c.append(np.mean(fd_c_single))
+            g_list.append(g_ipar)
+            fd_f.append(fd_f_single)
+            fd_b.append(fd_b_single)
+            fd_c.append(fd_c_single)
             rel_error.append(np.mean(abs((g_ipar - fd_c_single) /
                                          (fd_c_single + eps))))
             abs_error.append(np.mean(abs((g_ipar - fd_c_single))))
             fd_error.append(np.mean(abs(fd_f_single - fd_b_single)))
 
         result = pd.DataFrame(data={
-            'gradient': list(g[param_indices]),
+            'gradient': g_list,
             'FD_f': fd_f,
             'FD_b': fd_b,
             'FD_c': fd_c,
-            'rel err': rel_error,
-            'abs err:': abs_error,
-            'FD err:': fd_error,
+            'rel_err': rel_error,
+            'abs_err': abs_error,
+            'FD_err': fd_error,
         })
 
         if verbosity > 0:
