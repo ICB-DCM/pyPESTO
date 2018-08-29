@@ -113,13 +113,13 @@ class Objective:
             Whether to compute function values or residuals.
         """
         if mode == Objective.MODE_FUN:
-            return self.call_mode_fun(x, sensi_orders)
+            return self._call_mode_fun(x, sensi_orders)
         elif mode == Objective.MODE_RES:
-            return self.call_mode_res(x, sensi_orders)
+            return self._call_mode_res(x, sensi_orders)
         else:
             raise ValueError("This mode is not supported.")
 
-    def call_mode_fun(self, x, sensi_orders):
+    def _call_mode_fun(self, x, sensi_orders):
         if sensi_orders == (0,):
             if self.grad is True:
                 fval = self.fun(x)[0]
@@ -169,7 +169,7 @@ class Objective:
         else:
             raise ValueError("These sensitivity orders are not supported.")
 
-    def call_mode_res(self, x, sensi_orders):
+    def _call_mode_res(self, x, sensi_orders):
         if sensi_orders == (0,):
             if self.sres is True:
                 res = self.res(x)[0]
@@ -197,27 +197,27 @@ class Objective:
     """
 
     def get_fval(self, x):
-        fval = self.__call__(x, (0,), Objective.MODE_FUN)
+        fval = self(x, (0,), Objective.MODE_FUN)
         return fval
 
     def get_grad(self, x):
-        grad = self.__call__(x, (1,), Objective.MODE_FUN)
+        grad = self(x, (1,), Objective.MODE_FUN)
         return grad
 
     def get_hess(self, x):
-        hess = self.__call__(x, (2,), Objective.MODE_FUN)
+        hess = self(x, (2,), Objective.MODE_FUN)
         return hess
 
     def get_hessp(self, x, p):
-        hess = self.__call__(x, (2,), Objective.MODE_FUN)
+        hess = self(x, (2,), Objective.MODE_FUN)
         return np.dot(hess, p)
 
     def get_res(self, x):
-        res = self.__call__(x, (0,), Objective.MODE_RES)
+        res = self(x, (0,), Objective.MODE_RES)
         return res
 
     def get_sres(self, x):
-        sres = self.__call__(x, (1,), Objective.MODE_RES)
+        sres = self(x, (1,), Objective.MODE_RES)
         return sres
 
 

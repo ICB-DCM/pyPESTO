@@ -111,6 +111,8 @@ class Problem:
         if self.x_guesses.shape[1] == self.dim_full:
             self.x_guesses = self.x_guesses[:, self.x_free_indices]
 
+        # wrap objective
+
         assert self.lb.size == self.dim
         assert self.ub.size == self.dim
         assert self.x_guesses.shape[1] == self.dim
