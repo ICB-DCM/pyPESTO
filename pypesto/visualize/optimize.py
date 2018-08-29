@@ -8,7 +8,6 @@ import numpy as np
 
 def waterfall(result, ax=None):
     """
-
     Plot waterfall plot.
 
     Parameters
