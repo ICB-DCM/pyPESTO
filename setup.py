@@ -22,6 +22,6 @@ setup(name='pypesto',
       author_email="yannik.schaelte@gmail.com",
       url="https://github.com/icb-dcm/pypesto",
       packages=find_packages(exclude=["example*", "test*"]),
-      install_requires=['numpy', 'scipy', 'pandas',
+      install_requires=['numpy', 'scipy>=1.1.0', 'pandas',
                         'matplotlib']
       )
