@@ -124,8 +124,6 @@ class Objective:
             Whether to compute function values or residuals.
         """
 
-        self.update_eval_counts(sensi_orders)
-
         if mode == Objective.MODE_FUN:
             result = self.call_mode_fun(x, sensi_orders)
 
@@ -137,6 +135,7 @@ class Objective:
         return result
 
     def call_mode_fun(self, x, sensi_orders):
+        self.update_eval_counts(sensi_orders)
         if sensi_orders == (0,):
             if self.grad is True:
                 fval = self.fun(x)[0]
@@ -193,13 +192,14 @@ class Objective:
             raise ValueError("These sensitivity orders are not supported.")
 
     def call_mode_res(self, x, sensi_orders):
+        self.update_eval_counts(sensi_orders)
         if sensi_orders == (0,):
             if self.sres is True:
                 res = self.res(x)[0]
             else:
                 res = self.res(x)
             if self.trace is not None:
-                self.update_trace(sum(res**2), x)
+                self.update_trace(np.power(res,2).sum(), x)
             return res
         elif sensi_orders == (1,):
             if self.sres is True:
@@ -214,7 +214,7 @@ class Objective:
                 res = self.res(x)
                 sres = self.sres(x)
             if self.trace is not None:
-                self.update_trace(sum(res**2), x)
+                self.update_trace(np.power(res,2).sum(), x)
             return res, sres
         else:
             raise ValueError("These sensitivity orders are not supported.")
@@ -428,19 +428,28 @@ class AmiciObjective(Objective):
             print('This objective requires an installation of amici ('
                   'github.com/icb-dcm/amici. Install via pip3 install amici.')
         super().__init__(
-            fun=lambda x: self.__call__(
+            fun=lambda x: self.__call_amici__(
                 x,
                 tuple(i for i in range(max_sensi_order)),
                 'MODE_FUN'
             ),
             dim=amici_model.np(),
             grad=max_sensi_order > 0,
-            res=lambda x: self.__call__(
+            hess=lambda x: self.__call_amici__(
                 x,
-                tuple(i for i in range(max(max_sensi_order, 1))),
+                (2, ),
+                'MODE_FUN'
+            ),
+            res=lambda x: self.__call_amici__(
+                x,
+                (0,),
                 'MODE_RES'
             ),
-            sres=max_sensi_order > 0,
+            sres=lambda x: self.__call_amici__(
+                x,
+                (1,),
+                'MODE_RES'
+            ),
         )
         self.amici_model = amici_model
         self.amici_solver = amici_solver
@@ -456,12 +465,11 @@ class AmiciObjective(Objective):
         if self.max_sensi_order is None:
             self.max_sensi_order = 2 if amici_model.o2mode else 1
 
-    def __call__(self, x, sensi_orders: tuple=(0,), mode=Objective.MODE_FUN):
+    def __call_amici__(self, x, sensi_orders: tuple=(0,), mode=Objective.MODE_FUN):
         # amici is built so that only the maximum sensitivity is required,
         # the lower orders are then automatically computed
-        sensi_order = max(sensi_orders)
-
-        self.update_eval_counts(sensi_orders)
+        sensi_order = min(max(sensi_orders), 1)
+        # order 2 currently not implemented, we are using the FIM
 
         if sensi_order > self.max_sensi_order:
             raise Exception("Sensitivity order not allowed.")

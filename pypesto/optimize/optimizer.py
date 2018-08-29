@@ -227,7 +227,6 @@ class ScipyOptimizer(Optimizer):
             )
 
         else:
-
             # is a fval based optimization method
             bounds = scipy.optimize.Bounds(lb[0, :], ub[0, :])
 
