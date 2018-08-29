@@ -2,25 +2,47 @@
 This is for testing the pypesto.Objective.
 """
 
-
 import numpy as np
 import scipy as sp
 import pypesto
+import unittest
 
 
-def test_objective_separated():
-    obj = pypesto.Objective(fun=sp.optimize.rosen,
-                            grad=sp.optimize.rosen_der,
-                            hess=sp.optimize.rosen_hess)
-    _test_rosenbrock_objective(obj)
+class ObjectiveTest(unittest.TestCase):
+    def runTest(self):
+        for mode in ['seperated', 'integrated']:
+            with self.subTest(mode=mode):
+                if mode == 'seperated':
+                    test_objective_separated()
+                elif mode == 'integrated':
+                    test_objective_integrated()
 
 
-def test_objective_integrated():
+def get_objective_rosen_separated():
+    return pypesto.Objective(fun=sp.optimize.rosen,
+                             grad=sp.optimize.rosen_der,
+                             hess=sp.optimize.rosen_hess,
+                             dim=2)
+
+
+def get_objective_rosen_integrated():
     def rosenbrock(x):
         return (sp.optimize.rosen(x),
                 sp.optimize.rosen_der(x),
                 sp.optimize.rosen_hess(x))
-    obj = pypesto.Objective(fun=rosenbrock, grad=True, hess=True)
+    return pypesto.Objective(fun=rosenbrock,
+                             grad=True,
+                             hess=True,
+                             dim=2)
+
+
+def test_objective_separated():
+    obj = get_objective_rosen_separated()
+    _test_rosenbrock_objective(obj)
+
+
+def test_objective_integrated():
+    obj = get_objective_rosen_integrated()
     _test_rosenbrock_objective(obj)
 
 
@@ -49,3 +71,9 @@ def _test_rosenbrock_objective(obj):
     grad, hess = obj(x, (1, 2))
     assert np.isclose(grad, grad_true).all()
     assert np.isclose(hess, hess_true).all()
+
+
+if __name__ == '__main__':
+    suite = unittest.TestSuite()
+    suite.addTest(ObjectiveTest())
+    unittest.main()

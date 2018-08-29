@@ -11,6 +11,8 @@ import os
 import sys
 
 import test_sbml_conversion
+import test_objective
+import test_optimize
 
 # only consider pypesto module and
 cov = coverage.Coverage(source=['pypesto'])
@@ -21,7 +23,9 @@ cov.start()
 
 # build the testSuite from testModels and testSBML
 suite = unittest.TestSuite()
-suite.addTest(test_sbml_conversion.OptimizerTest())
+suite.addTest(test_sbml_conversion.AmiciObjectiveTest())
+suite.addTest(test_objective.ObjectiveTest())
+suite.addTest(test_optimize.OptimizerTest())
 testRunner = unittest.TextTestRunner(verbosity=0)
 result = testRunner.run(suite)
 
