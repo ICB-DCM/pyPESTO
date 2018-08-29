@@ -171,7 +171,7 @@ class ScipyOptimizer(Optimizer):
             least_squares = True
 
             ls_method = self.method[3:]
-            bounds = (lb[0, :], ub[0, :])
+            bounds = (lb, ub)
             res = scipy.optimize.least_squares(
                 problem.objective.get_res,
                 x0,
