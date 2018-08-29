@@ -1,3 +1,8 @@
+import matplotlib.pyplot as plt
+from matplotlib.ticker import MaxNLocator
+import numpy as np
+from .clust_color import assigncolor
+
 def waterfall(result, ax = None):
 
     """
@@ -22,22 +27,15 @@ def waterfall(result, ax = None):
     result_fval = result.optimize_result.get_for_key('fval')
     return waterfall_lowlevel(result_fval, ax)
 
-
-import matplotlib.pyplot as plt
-import matplotlib.colors as colors
-import matplotlib.cm as cm
-from matplotlib.ticker import MaxNLocator
-from scipy import cluster
-import numpy as np
-
 def waterfall_lowlevel(result_fval, ax=None):
+
     """
-    Plot waterfall plot.
+    Plot waterfall plot using list of cost function values.
 
     Parameters
     ----------
 
-    result: list of cost function values
+    result_fval: list of cost function values
 
     ax: matplotlib.Axes, optional
         Axes object to use.
@@ -58,36 +56,17 @@ def waterfall_lowlevel(result_fval, ax=None):
     result_fval = np.reshape(result_fval, [len(result_fval), 1])
     startpoints = range(1, len(result_fval) + 1)
 
-    # cluster
-    clust = cluster.hierarchy.fcluster(
-        cluster.hierarchy.linkage(result_fval),
-        0.1, criterion='distance')
-    uclust, ind_clust = np.unique(clust, return_inverse=True)
-    clustsize = np.zeros(len(uclust))
-    for iclustsize in range(len(uclust)):
-        clustsize[iclustsize] = sum(clust == uclust[iclustsize])
-
-    # assign colors
-    vmax = len(uclust) - sum(clustsize == 1)
-    cNorm = colors.Normalize(vmin=0, vmax=vmax)
-    scalarMap = cm.ScalarMappable(norm=cNorm)
+    # assign color
+    Col = assigncolor(result_fval)
 
     # plot
     ax.xaxis.set_major_locator(MaxNLocator(integer=True))
     ax.plot(startpoints, result_fval)
-    sum_grey = 1
-    for iind in range(len(ind_clust)):
-        if clustsize[ind_clust[iind]] == 1:
-            ax.plot(startpoints[iind], result_fval[iind],
-                    color='lightgrey', marker='o')
-            sum_grey = sum_grey
-        else:
-            Col = scalarMap.to_rgba(uclust[ind_clust[iind]] - sum_grey)
-            ax.plot(startpoints[iind], result_fval[iind],
-                    color=Col, marker='o')
+    for ifval in range(len(result_fval)):
+        ax.plot(startpoints[ifval],result_fval[ifval],
+                color = Col[ifval],marker = 'o')
 
     ax.set_xlabel('Ordered optimizer run')
     ax.set_ylabel('Function value')
-    plt.show()
 
     return ax
