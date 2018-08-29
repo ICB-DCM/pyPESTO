@@ -155,7 +155,6 @@ class ScipyOptimizer(Optimizer):
 
             ls_method = self.method[3:]
             bounds = (lb[0, :], ub[0, :])
-
             res = scipy.optimize.least_squares(
                 problem.objective.get_res,
                 x0,
@@ -171,11 +170,10 @@ class ScipyOptimizer(Optimizer):
             )
 
         else:
-
             least_squares = False
 
             # is a fval based optimization method
-            bounds = scipy.optimize.Bounds(lb[0, :], ub[0, :])
+            bounds = scipy.optimize.Bounds(lb, ub)
 
             res = scipy.optimize.minimize(
                 problem.objective.get_fval,

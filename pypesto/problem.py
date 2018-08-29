@@ -9,6 +9,8 @@ describing the problem to be solved.
 
 
 import numpy as np
+import copy
+from .objective import Objective
 
 
 class Problem:
@@ -65,7 +67,7 @@ class Problem:
                  x_fixed_vals=None,
                  x_guesses=None):
 
-        self.objective = objective
+        self.objective = copy.copy(objective)
 
         self.lb = np.array(lb).flatten()
         self.ub = np.array(ub).flatten()
@@ -112,7 +114,36 @@ class Problem:
             self.x_guesses = self.x_guesses[:, self.x_free_indices]
 
         # wrap objective
+        preprocess_x = create_preprocess_x_with_fixed_indices(
+            dim_full = self.dim_full,
+            x_free_indices = self.x_free_indices,
+            x_fixed_indices = self.x_fixed_indices,
+            x_fixed_vals = self.x_fixed_vals
+        )
+        self.objective.__call__ = preprocess_decorator(self.objective.__call__, preprocess_x)
 
         assert self.lb.size == self.dim
         assert self.ub.size == self.dim
         assert self.x_guesses.shape[1] == self.dim
+
+
+def preprocess_decorator(method, preprocess_x):
+	def wrapper(self, x, sensi_orders=(0,), mode=Objective.MODE_FUN):
+		x = preprocess_x(x)
+		return method(self, x, sensi_orders, mode)
+	return wrapper
+
+
+def create_preprocess_x_with_fixed_indices(
+        dim_full,
+        x_free_indices,
+        x_fixed_indices,
+        x_fixed_vals):
+
+    def preprocess_x(x):
+        x_full = np.zeros(dim_full)
+        x_full[x_free_indices] = x
+        x_full[x_fixed_indices] = x_fixed_vals
+        return x_full
+
+    return preprocess_x

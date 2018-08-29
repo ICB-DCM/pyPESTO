@@ -81,14 +81,6 @@ class Objective:
         self.res = res
         self.sres = sres
 
-        """
-        TODO:
-
-        * Implement methods to compute grad via finite differences (with
-        an automatic adaptation of the step size),
-        and diverse approximations of the Hessian.
-        """
-
     def __call__(self, x, sensi_orders: tuple=(0,), mode=MODE_FUN):
         """
         Method to get arbitrary sensitivities.
@@ -112,6 +104,7 @@ class Objective:
         mode: str
             Whether to compute function values or residuals.
         """
+        # function or residue mode
         if mode == Objective.MODE_FUN:
             return self._call_mode_fun(x, sensi_orders)
         elif mode == Objective.MODE_RES:
