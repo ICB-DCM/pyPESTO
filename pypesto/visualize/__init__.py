@@ -4,4 +4,5 @@ Visualizations
 
 """
 
-from .optimize import waterfall
+from .waterfall import (waterfall_lowlevel,
+                        waterfall)

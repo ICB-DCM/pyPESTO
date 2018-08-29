@@ -1,12 +1,5 @@
-import matplotlib.pyplot as plt
-import matplotlib.colors as colors
-import matplotlib.cm as cm
-from matplotlib.ticker import MaxNLocator
-from scipy import cluster
-import numpy as np
+def waterfall(result, ax = None):
 
-
-def waterfall(result, ax=None):
     """
     Plot waterfall plot.
 
@@ -26,12 +19,42 @@ def waterfall(result, ax=None):
         The plot axes.
     """
 
+    result_fval = result.optimize_result.get_for_key('fval')
+    return waterfall_lowlevel(result_fval, ax)
+
+
+import matplotlib.pyplot as plt
+import matplotlib.colors as colors
+import matplotlib.cm as cm
+from matplotlib.ticker import MaxNLocator
+from scipy import cluster
+import numpy as np
+
+def waterfall_lowlevel(result_fval, ax=None):
+    """
+    Plot waterfall plot.
+
+    Parameters
+    ----------
+
+    result: list of cost function values
+
+    ax: matplotlib.Axes, optional
+        Axes object to use.
+
+    Returns
+    -------
+
+    ax: matplotlib.Axes
+        The plot axes.
+    """
+
     # axes
     if ax is None:
         fig, ax = plt.subplots()
 
     # extract cost function values from result
-    result_fval = result.optimize_result.get_for_key('fval')
+
     result_fval = np.reshape(result_fval, [len(result_fval), 1])
     startpoints = range(1, len(result_fval) + 1)
 
@@ -45,10 +68,9 @@ def waterfall(result, ax=None):
         clustsize[iclustsize] = sum(clust == uclust[iclustsize])
 
     # assign colors
-    jet = plt.get_cmap('jet')
     vmax = len(uclust) - sum(clustsize == 1)
     cNorm = colors.Normalize(vmin=0, vmax=vmax)
-    scalarMap = cm.ScalarMappable(norm=cNorm, cmap=jet)
+    scalarMap = cm.ScalarMappable(norm=cNorm)
 
     # plot
     ax.xaxis.set_major_locator(MaxNLocator(integer=True))
@@ -64,7 +86,8 @@ def waterfall(result, ax=None):
             ax.plot(startpoints[iind], result_fval[iind],
                     color=Col, marker='o')
 
-    ax.set_xlabel('Ordered multi-starts')
+    ax.set_xlabel('Ordered optimizer run')
     ax.set_ylabel('Function value')
+    plt.show()
 
     return ax
