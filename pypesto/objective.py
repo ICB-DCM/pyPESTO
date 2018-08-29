@@ -299,27 +299,27 @@ class Objective:
     """
 
     def get_fval(self, x):
-        fval = self.__call__(x, (0,), Objective.MODE_FUN)
+        fval = self.call_mode_fun(x, (0,))
         return fval
 
     def get_grad(self, x):
-        grad = self.__call__(x, (1,), Objective.MODE_FUN)
+        grad = self.call_mode_fun(x, (1,))
         return grad
 
     def get_hess(self, x):
-        hess = self.__call__(x, (2,), Objective.MODE_FUN)
+        hess = self.call_mode_fun(x, (2,))
         return hess
 
     def get_hessp(self, x, p):
-        hess = self.__call__(x, (2,), Objective.MODE_FUN)
+        hess = self.call_mode_fun(x, (2,))
         return np.dot(hess, p)
 
     def get_res(self, x):
-        res = self.__call__(x, (0,), Objective.MODE_RES)
+        res = self.call_mode_res(x, (0,))
         return res
 
     def get_sres(self, x):
-        sres = self.__call__(x, (1,), Objective.MODE_RES)
+        sres = self.call_mode_res(x, (1,))
         return sres
 
     """
