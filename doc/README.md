@@ -11,16 +11,16 @@ The documentation is based on sphinx. Install via
 pip3 install sphinx
 ```
 
-Furthermore, the files specified in `../.rst_pip_reqs.txt` and `../.rst_apt_reqs.txt` are required. Install via
+Furthermore, the files specified in `../.rtd_pip_reqs.txt` and `../.rtd_apt_reqs.txt` are required. Install via
 
 ```
-pip3 install --update -r ../.rst_pip_reqs.txt
+pip3 install --upgrade -r ../.rtd_pip_reqs.txt
 ```
 
 and
 
 ```
-cat ../.rst_apt_reqs.txt | xargs sudo apt install
+cat ../.rtd_apt_reqs.txt | xargs sudo apt install -y
 ```
 
 respectively.
