@@ -7,23 +7,26 @@ import numpy as np
 def get_clust(result_fval):
 
     """
-        Cluster cost function values
+    Cluster cost function values
 
-        Parameters
-        ----------
+    Parameters
+    ----------
 
-        result_fval: list of cost function values
+    result_fval: numeric list or array
+        Including values need to be plotted.
 
-        Returns
-        -------
+    Returns
+    -------
 
-        clust: clusters of cost function values
+    clust: numeric list
+         Indicating the corresponding cluster of each element from 'result_fval'.
 
-        clustsize: size of clusters form 1 to number of clusters
+    clustsize: numeric list
+        size of clusters, form 1 to number of clusters.
 
-        ind_clust: indices to reconstruct 'clust' from a list
-        with 1:number of clusters
-        """
+    ind_clust: numeric list
+        Indices to reconstruct 'clust' from a list with 1:number of clusters
+    """
 
     clust = cluster.hierarchy.fcluster(
         cluster.hierarchy.linkage(result_fval),
@@ -39,18 +42,20 @@ def get_clust(result_fval):
 def assigncolor(result_fval):
 
     """
-        Assign color to each cluster
+    Assign color to each cluster
 
-        Parameters
-        ----------
+    Parameters
+    ----------
 
-        result_fval: list of cost function values
+    result_fval: numeric list or array
+        Including values need to be plotted.
 
-        Returns
-        -------
+    Returns
+    -------
 
-        Col: a list of RGB, one for each cost function value
-        """
+    Col: list of RGB
+        One for each element in 'result_fval'
+    """
 
     clust, clustsize, ind_clust = get_clust(result_fval)
     vmax = max(clust) - sum(clustsize == 1)
