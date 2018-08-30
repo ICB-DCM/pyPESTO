@@ -16,9 +16,6 @@ try:
     import amici
 except ImportError:
     amici = None
-    pass
-    # we only pass import errors, if the initialization of the module itself
-    # fails this should not be caught right?
 
 
 class Objective:
@@ -65,10 +62,19 @@ class Objective:
             ``sres(x) -> array, shape (m,n).``
         If its value is True, then res should return the residual
         sensitivities as a second output.
+
+    Attributes
+    ----------
+
+    preprocess: callable
+        Preprocess input values to __call__.
+
+    postprocess: callable
+        Postprocess output values from __call__.
     """
 
-    MODE_FUN = 'MODE_FUN'  # mode for function values
-    MODE_RES = 'MODE_RES'  # mode for residuals
+    MODE_FUN = 'mode_fun'  # mode for function values
+    MODE_RES = 'mode_res'  # mode for residuals
     FVAL = 'fval'
     GRAD = 'grad'
     HESS = 'hess'
@@ -84,6 +90,9 @@ class Objective:
         self.hessp = hessp
         self.res = res
         self.sres = sres
+
+        self.preprocess = lambda x: x
+        self.postprocess = lambda result: result
 
     def __call__(self, x, sensi_orders: tuple=(0,), mode=MODE_FUN):
         """
@@ -129,6 +138,9 @@ class Objective:
         return result
 
     def _call_mode_fun(self, x, sensi_orders):
+        """
+        The method __call__ was called with mode MODE_FUN.
+        """
         if sensi_orders == (0,):
             if self.grad is True:
                 fval = self.fun(x)[0]
@@ -183,6 +195,9 @@ class Objective:
             raise ValueError("These sensitivity orders are not supported.")
 
     def _call_mode_res(self, x, sensi_orders):
+        """
+        The method __call__ was called with mode MODE_RES.
+        """
         if sensi_orders == (0,):
             if self.sres is True:
                 res = self.res(x)[0]
@@ -236,26 +251,44 @@ class Objective:
     """
 
     def get_fval(self, x):
+        """
+        Get the function value at x.
+        """
         fval = self(x, (0,), Objective.MODE_FUN)
         return fval
 
     def get_grad(self, x):
+        """
+        Get the gradient at x.
+        """
         grad = self(x, (1,), Objective.MODE_FUN)
         return grad
 
     def get_hess(self, x):
+        """
+        Get the Hessian at x.
+        """
         hess = self(x, (2,), Objective.MODE_FUN)
         return hess
 
     def get_hessp(self, x, p):
+        """
+        Get the product of the Hessian at x with p.
+        """
         hess = self(x, (2,), Objective.MODE_FUN)
         return np.dot(hess, p)
 
     def get_res(self, x):
+        """
+        Get the residuals at x.
+        """
         res = self(x, (0,), Objective.MODE_RES)
         return res
 
     def get_sres(self, x):
+        """
+        Get the residual sensitivities at x.
+        """
         sres = self(x, (1,), Objective.MODE_RES)
         return sres
 
@@ -268,6 +301,39 @@ class Objective:
                        x_free_indices,
                        x_fixed_indices,
                        x_fixed_vals):
+        """
+        Handle fixed parameters. Later, the objective will be given parameter
+        vectors x of dimension dim, which have to be filled up with fixed
+        parameter values to form a vector of dimension dim_full >= dim.
+        This vector is then used to compute function value and derivaties.
+        The derivatives must later be reduced again to dimension dim.
+
+        This is so as to make the fixing of parameters transparent to the
+        caller.
+
+        The methods preprocess, postprocess are overwritten for the above
+        functionality, respectively.
+
+        Parameters
+        ----------
+
+        dim_full: int
+            Dimension of the full vector including fixed parameters.
+
+        x_free_indices: array_like of int
+            Vector containing the indices (zero-based) of free parameters
+            (complimentary to x_fixed_indices).
+
+        x_fixed_indices: array_like of int, optional
+            Vector containing the indices (zero-based) of parameter components
+            that are not to be optimized.
+
+        x_fixed_vals: array_like, optional
+            Vector of the same length as x_fixed_indices, containing the values
+            of the fixed parameters.
+        """
+
+        dim = len(x_free_indices)
 
         # pre-process
         def preprocess(x):
@@ -281,63 +347,18 @@ class Objective:
         def postprocess(result):
             if Objective.GRAD in result:
                 grad = result[Objective.GRAD]
-                grad = grad[x_free_indices]
-                result[Objective.GRAD] = grad
+                if grad.size == dim_full:
+                    grad = grad[x_free_indices]
+                    result[Objective.GRAD] = grad
+                assert grad.size == dim
             if Objective.HESS in result:
                 hess = result[Objective.HESS]
-                hess = hess[np.ix_(x_free_indices, x_free_indices)]
-                result[Objective.HESS] = hess
+                if hess.shape[0] == dim_full:
+                    hess = hess[np.ix_(x_free_indices, x_free_indices)]
+                    result[Objective.HESS] = hess
+                assert hess.shape == (dim, dim)
             return result
         self.postprocess = postprocess
-
-        # map to full dimension
-        def get_full_vector(x, x_fixed_vals=None):
-            if x is None:
-                return None
-            x_full = np.zeros(dim_full)
-            x_full[:] = np.nan
-            x_full[x_free_indices] = x
-            if x_fixed_vals is not None:
-                x_full[x_fixed_indices] = x_fixed_vals
-            return x_full
-        self.get_full_vector = get_full_vector
-
-        def get_full_matrix(x):
-            if x is None:
-                return None
-            x_full = np.zeros((dim_full, dim_full))
-            x_full[:, :] = np.nan
-            x_full[np.ix_(x_free_indices, x_free_indices)] = x
-            return x_full
-        self.get_full_matrix = get_full_matrix
-
-    def preprocess(self, x):
-        """
-        Preprocess the input parameter array in __call__.
-        Default: Do nothing.
-        """
-        return x
-
-    def postprocess(self, result):
-        """
-        Postprocess the output values in __call__.
-        Default: Do nothing.
-        """
-        return result
-
-    def get_full_vector(self, x, x_fixed_vals=None):
-        """
-        Map vector from dim to dim_full.
-        Default: Do nothing.
-        """
-        return x
-
-    def get_full_matrix(self, x):
-        """
-        Map vector from dim to dim_full.
-        Default: Do nothing.
-        """
-        return x
 
 
 class AmiciObjective(Objective):

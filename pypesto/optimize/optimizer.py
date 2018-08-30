@@ -101,17 +101,16 @@ def timed_minimize(minimize):
 
 def fixed_minimize(minimize):
     """
-    Default decorator for the minimize() method to include nans
-    for fixed parameters in the result arrays.
+    Default decorator for the minimize() method to include also fixed
+    parameters in the result arrays (nans will be inserted in the
+    derivatives).
     """
     def fixed_minimize(self, problem, x0):
         result = minimize(self, problem, x0)
-        result.x = problem.objective.get_full_vector(result.x,
-                                                     problem.x_fixed_vals)
-        result.grad = problem.objective.get_full_vector(result.grad)
-        result.hess = problem.objective.get_full_matrix(result.hess)
-        result.x0 = problem.objective.get_full_vector(result.x0,
-                                                      problem.x_fixed_vals)
+        result.x = problem.get_full_vector(result.x, problem.x_fixed_vals)
+        result.grad = problem.get_full_vector(result.grad)
+        result.hess = problem.get_full_matrix(result.hess)
+        result.x0 = problem.get_full_vector(result.x0, problem.x_fixed_vals)
         return result
     return fixed_minimize
 
@@ -209,11 +208,11 @@ class ScipyOptimizer(Optimizer):
             x=res.x,
             fval=res.fun if not least_squares
             else problem.objective.get_fval(res.x),
-            grad=res.jac if hasattr(res, 'jac') else None,
-            hess=res.hess if hasattr(res, 'hess') else None,
-            n_fval=res.nfev if hasattr(res, 'nfev') else 0,
-            n_grad=res.njev if hasattr(res, 'njev') else 0,
-            n_hess=res.nhev if hasattr(res, 'nhev') else 0,
+            grad=getattr(res, 'jac', None),
+            hess=getattr(res, 'hess', None),
+            n_fval=getattr(res, 'nfev', 0),
+            n_grad=getattr(res, 'njev', 0),
+            n_hess=getattr(res, 'nhev', 0),
             x0=x0,
             fval0=None,
             exitflag=res.status,

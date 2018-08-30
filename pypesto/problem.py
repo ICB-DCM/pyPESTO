@@ -10,7 +10,6 @@ describing the problem to be solved.
 
 import numpy as np
 import copy
-from .objective import Objective
 
 
 class Problem:
@@ -38,11 +37,15 @@ class Problem:
 
     x_fixed_indices: array_like of int, optional
         Vector containing the indices (zero-based) of parameter components
-        that are not to be optipmized.
+        that are not to be optimized.
 
     x_fixed_vals: array_like, optional
         Vector of the same length as x_fixed_indices, containing the values
         of the fixed parameters.
+
+    x_free_indices: array_like of int
+        Vector containing the indices (zero-based) of free parameters
+        (complimentary to x_fixed_indices).
 
     x_guesses: array_like, optional
         Guesses for the parameter values, shape (g, dim), where g denotes the
@@ -56,8 +59,11 @@ class Problem:
     The number of parameters dim_full the objective takes as input must
     be known, so it must be either lb a vector of that size, or dim_full
     specified as a parameter.
+
     All vectors are mapped to the reduced space of dimension dim in __init__,
-    regardless of whether they were in dimension dim or dim_full before.
+    regardless of whether they were in dimension dim or dim_full before. If
+    the full representation is needed, the methods get_full_vector() and
+    get_full_matrix() can be used.
     """
 
     def __init__(self,
@@ -122,6 +128,83 @@ class Problem:
             x_fixed_indices=self.x_fixed_indices,
             x_fixed_vals=self.x_fixed_vals)
 
+        # sanity checks
         assert self.lb.size == self.dim
         assert self.ub.size == self.dim
         assert self.x_guesses.shape[1] == self.dim
+
+    def get_full_vector(self, x, x_fixed_vals=None):
+        """
+        Map vector from dim to dim_full. Usually used for x, grad.
+
+        Parameters
+        ----------
+
+        x: array_like, ndim=1
+            The vector in dimension dim.
+
+        x_fixed_vals: array_like, ndim=1
+            The values to be used for the fixed indices. If None, then nans are
+            inserted. Usually, None will be used for grad and
+            problem.x_fixed_vals for x.
+        """
+        if x is None:
+            return None
+
+        """
+        Note: The funny indexing construct is to handle residual gradients,
+        where the last dimension is assumed to be the parameter one.
+        """
+        x_full = np.zeros(x.shape[:-1] + (self.dim_full,))
+        x_full[:] = np.nan
+        x_full[..., self.x_free_indices] = x
+        if x_fixed_vals is not None:
+            x_full[..., self.x_fixed_indices] = x_fixed_vals
+        return x_full
+
+    def get_full_matrix(self, x):
+        """
+        Map matrix from dim to dim_full. Usually used for hessian.
+
+        Parameters
+        ----------
+
+        x: array_like, ndim=2
+            The matrix in shape (dim, dim).
+        """
+        if x is None:
+            return None
+        x_full = np.zeros((self.dim_full, self.dim_full))
+        x_full[:, :] = np.nan
+        x_full[np.ix_(self.x_free_indices, self.x_free_indices)] = x
+        return x_full
+
+    def get_reduced_vector(self, x_full):
+        """
+        Map vector from dim_full to dim, i.e. delete fixed indices.
+
+        Parameters
+        ----------
+
+        x: array_like, ndim=1
+            The vector in dimension dim_full.
+        """
+        if x_full is None:
+            return None
+        x = x_full[self.x_free_indices]
+        return x
+
+    def get_reduced_matrix(self, x_full):
+        """
+        Map matrix from dim_full to dim, i.e. delete fixed indices.
+
+        Parameters
+        ----------
+
+        x: array_like, ndim=2
+            The matrix in dimension dim_full.
+        """
+        if x_full is None:
+            return None
+        x = x_full[np.ix_(self.x_free_indices, self.x_free_indices)]
+        return x
