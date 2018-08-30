@@ -1,7 +1,7 @@
 import matplotlib.pyplot as plt
 from matplotlib.ticker import MaxNLocator
 import numpy as np
-from .clust_color import assigncolor
+from .clust_color import assign_color
 
 
 def parameters(result, ax=None):
@@ -65,7 +65,7 @@ def parameters_lowlevel(result_x, result_fval, lb=None, ub=None, ax=None):
     result_fval = np.reshape(result_fval, [len(result_fval), 1])
 
     # assign color
-    col = assigncolor(result_fval)
+    col = assign_color(result_fval)
 
     # parameter indices
     parameters_ind = range(1, len(result_x[0]) + 1)

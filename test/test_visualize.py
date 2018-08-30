@@ -3,9 +3,6 @@ import pypesto.visualize
 import numpy as np
 import scipy as sp
 
-import matplotlib as mpl
-mpl.use('Agg')
-
 
 objective = pypesto.Objective(fun=sp.optimize.rosen,
                               grad=sp.optimize.rosen_der,
@@ -35,18 +32,19 @@ def test_waterfall_lowlevel():
     pypesto.visualize.waterfall_lowlevel(result_fval)
 
 
-def test_clust():
+def test_cluster():
     result_fval = [0.01, 0.02, 1.01, 2.02, 2.03, 2.04, 3, 4, 4.1, 4.11]
-    pypesto.visualize.get_clust(result_fval)
+    pypesto.visualize.get_cluster(result_fval)
     result_fval = np.array(result_fval)
-    pypesto.visualize.get_clust(result_fval)
+    pypesto.visualize.get_cluster(result_fval)
+    # TODO: evaluate calculated clusters
 
 
 def test_assign_color():
     result_fval = [0.01, 0.02, 1.01, 2.02, 2.03, 2.04, 3, 4, 4.1, 4.11]
-    pypesto.visualize.assigncolor(result_fval)
+    pypesto.visualize.assign_color(result_fval)
     result_fval = np.array(result_fval)
-    pypesto.visualize.assigncolor(result_fval)
+    pypesto.visualize.assign_color(result_fval)
 
 
 def test_parameters():

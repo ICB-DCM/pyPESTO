@@ -4,8 +4,7 @@ import matplotlib.cm as cm
 import numpy as np
 
 
-def get_clust(result_fval):
-
+def get_cluster(result_fval):
     """
     Cluster cost function values
 
@@ -40,10 +39,9 @@ def get_clust(result_fval):
     return clust, clustsize, ind_clust
 
 
-def assigncolor(result_fval):
-
+def assign_color(result_fval):
     """
-    Assign color to each cluster
+    Assign color to each cluster.
 
     Parameters
     ----------
@@ -58,7 +56,7 @@ def assigncolor(result_fval):
         One for each element in 'result_fval'
     """
 
-    clust, clustsize, ind_clust = get_clust(result_fval)
+    clust, clustsize, ind_clust = get_cluster(result_fval)
     vmax = max(clust) - sum(clustsize == 1)
     cnorm = colors.Normalize(vmin=0, vmax=vmax)
     scalarmap = cm.ScalarMappable(norm=cnorm)
