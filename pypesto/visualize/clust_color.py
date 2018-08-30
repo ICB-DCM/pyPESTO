@@ -3,6 +3,7 @@ import matplotlib.colors as colors
 import matplotlib.cm as cm
 import numpy as np
 
+
 def get_clust(result_fval):
 
     """
@@ -20,7 +21,8 @@ def get_clust(result_fval):
 
         clustsize: size of clusters form 1 to number of clusters
 
-        ind_clust: indices to reconstruct 'clust' from a list with 1:number of clusters
+        ind_clust: indices to reconstruct 'clust' from a list
+        with 1:number of clusters
         """
 
     clust = cluster.hierarchy.fcluster(
@@ -28,10 +30,11 @@ def get_clust(result_fval):
         0.1, criterion='distance')
     uclust, ind_clust = np.unique(clust, return_inverse=True)
     clustsize = np.zeros(len(uclust))
-    for iclustsize in range(len(uclust)):
-        clustsize[iclustsize] = sum(clust == uclust[iclustsize])
+    for iclustsize, value_uclust in enumerate(uclust):
+        clustsize[iclustsize] = sum(clust == value_uclust)
 
     return clust, clustsize, ind_clust
+
 
 def assigncolor(result_fval):
 
@@ -51,16 +54,16 @@ def assigncolor(result_fval):
 
     clust, clustsize, ind_clust = get_clust(result_fval)
     vmax = max(clust) - sum(clustsize == 1)
-    cNorm = colors.Normalize(vmin=0, vmax=vmax)
-    scalarMap = cm.ScalarMappable(norm=cNorm)
+    cnorm = colors.Normalize(vmin=0, vmax=vmax)
+    scalarmap = cm.ScalarMappable(norm=cnorm)
     uind_col = vmax*np.ones(len(clustsize))
     sum_col = 0
-    for iclustsize in range(len(clustsize)):
-        if clustsize[iclustsize] > 1:
+    for iclustsize, value_clustsize in enumerate(clustsize):
+        if value_clustsize > 1:
             uind_col[iclustsize] = sum_col
             sum_col = sum_col+1
 
     ind_col = uind_col[ind_clust]
-    Col = scalarMap.to_rgba(ind_col)
+    col = scalarmap.to_rgba(ind_col)
 
-    return Col
+    return col

@@ -3,7 +3,8 @@ from matplotlib.ticker import MaxNLocator
 import numpy as np
 from .clust_color import assigncolor
 
-def waterfall(result, ax = None):
+
+def waterfall(result, ax=None):
 
     """
     Plot waterfall plot.
@@ -26,6 +27,7 @@ def waterfall(result, ax = None):
 
     result_fval = result.optimize_result.get_for_key('fval')
     return waterfall_lowlevel(result_fval, ax)
+
 
 def waterfall_lowlevel(result_fval, ax=None):
 
@@ -57,14 +59,14 @@ def waterfall_lowlevel(result_fval, ax=None):
     startpoints = range(1, len(result_fval) + 1)
 
     # assign color
-    Col = assigncolor(result_fval)
+    col = assigncolor(result_fval)
 
     # plot
     ax.xaxis.set_major_locator(MaxNLocator(integer=True))
     ax.plot(startpoints, result_fval)
-    for ifval in range(len(result_fval)):
-        ax.plot(startpoints[ifval],result_fval[ifval],
-                color = Col[ifval],marker = 'o')
+    for ifval, fval in enumerate(result_fval):
+        ax.plot(ifval+1, fval,
+                color=col[ifval], marker='o')
 
     ax.set_xlabel('Ordered optimizer run')
     ax.set_ylabel('Function value')
