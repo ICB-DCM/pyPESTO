@@ -32,7 +32,7 @@ def parameters(result, ax=None):
     return parameters_lowlevel(result_x, result_fval, lb, ub, ax,)
 
 
-def parameters_lowlevel(result_x, result_fval, lb=None, ub=None, ax=None):
+def parameters_lowlevel(xs, fvals, lb=None, ub=None, ax=None):
 
     """
     Plot waterfall plot using list of cost function values.
@@ -40,10 +40,10 @@ def parameters_lowlevel(result_x, result_fval, lb=None, ub=None, ax=None):
     Parameters
     ----------
 
-    result_x: nested list or array
+    xs: nested list or array
         Including optimized parameters for each startpoint.
 
-    result_fval: numeric list or array
+    fvals: numeric list or array
         Including values need to be plotted.
 
     lb, ub: array_like, optional
@@ -62,18 +62,20 @@ def parameters_lowlevel(result_x, result_fval, lb=None, ub=None, ax=None):
     if ax is None:
         ax = plt.subplots()[1]
 
-    result_fval = np.reshape(result_fval, [len(result_fval), 1])
+    n_fvals = len(fvals)
+
+    fvals = np.reshape(fvals, [n_fvals, 1])
 
     # assign color
-    col = assign_color(result_fval)
+    colors = assign_color(fvals)
 
     # parameter indices
-    parameters_ind = range(1, len(result_x[0]) + 1)
+    parameters_ind = range(1, len(xs[0]) + 1)
 
     # plot parameters
     ax.xaxis.set_major_locator(MaxNLocator(integer=True))
-    for ix, value_x in reversed(list(enumerate(result_x))):
-        ax.plot(value_x, parameters_ind, color=col[ix], marker='o')
+    for j_x, x in reversed(list(enumerate(xs))):
+        ax.plot(x, parameters_ind, color=colors[j_x], marker='o')
 
     # draw bounds
     if lb is not None:

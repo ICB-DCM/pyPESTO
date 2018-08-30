@@ -26,25 +26,25 @@ def test_waterfall():
 
 
 def test_waterfall_lowlevel():
-    result_fval = [0.01, 0.02, 1.01, 2.02, 2.03, 2.04, 3, 4, 4.1, 4.11]
-    pypesto.visualize.waterfall_lowlevel(result_fval)
-    result_fval = np.array(result_fval)
-    pypesto.visualize.waterfall_lowlevel(result_fval)
+    fvals = [0.01, 0.02, 1.01, 2.02, 2.03, 2.04, 3, 4, 4.1, 4.11]
+    pypesto.visualize.waterfall_lowlevel(fvals)
+    fvals = np.array(fvals)
+    pypesto.visualize.waterfall_lowlevel(fvals)
 
 
 def test_cluster():
-    result_fval = [0.01, 0.02, 1.01, 2.02, 2.03, 2.04, 3, 4, 4.1, 4.11]
-    pypesto.visualize.get_cluster(result_fval)
-    result_fval = np.array(result_fval)
-    pypesto.visualize.get_cluster(result_fval)
+    fvals = [0.01, 0.02, 1.01, 2.02, 2.03, 2.04, 3, 4, 4.1, 4.11]
+    pypesto.visualize.get_cluster(fvals)
+    fvals = np.array(fvals)
+    pypesto.visualize.get_cluster(fvals)
     # TODO: evaluate calculated clusters
 
 
 def test_assign_color():
-    result_fval = [0.01, 0.02, 1.01, 2.02, 2.03, 2.04, 3, 4, 4.1, 4.11]
-    pypesto.visualize.assign_color(result_fval)
-    result_fval = np.array(result_fval)
-    pypesto.visualize.assign_color(result_fval)
+    fvals = [0.01, 0.02, 1.01, 2.02, 2.03, 2.04, 3, 4, 4.1, 4.11]
+    pypesto.visualize.assign_color(fvals)
+    fvals = np.array(fvals)
+    pypesto.visualize.assign_color(fvals)
 
 
 def test_parameters():
@@ -52,14 +52,14 @@ def test_parameters():
 
 
 def test_parameters_lowlevel():
-    result_fval = [0.01, 0.02, 1.01, 2.02, 2.03, 2.04, 3, 4, 4.1, 4.11]
-    result_x = [[0.1, 1], [1.2, 3], [2, 4], [1.2, 4.1], [1.1, 3.5],
-                [4.2, 3.5], [1, 4], [6.2, 5], [4.3, 3], [3, 2]]
+    fvals = [0.01, 0.02, 1.01, 2.02, 2.03, 2.04, 3, 4, 4.1, 4.11]
+    xs = [[0.1, 1], [1.2, 3], [2, 4], [1.2, 4.1], [1.1, 3.5],
+          [4.2, 3.5], [1, 4], [6.2, 5], [4.3, 3], [3, 2]]
 
     # pass lists
-    pypesto.visualize.parameters_lowlevel(result_x, result_fval, lb=lb, ub=ub)
+    pypesto.visualize.parameters_lowlevel(xs, fvals, lb=lb, ub=ub)
 
     # pass numpy arrays
-    result_fval = np.array(result_fval)
-    result_x = np.array(result_x)
-    pypesto.visualize.parameters_lowlevel(result_x, result_fval, lb=lb, ub=ub)
+    fvals = np.array(fvals)
+    xs = np.array(xs)
+    pypesto.visualize.parameters_lowlevel(xs, fvals, lb=lb, ub=ub)

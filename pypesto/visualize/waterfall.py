@@ -26,12 +26,12 @@ def waterfall(result, ax=None):
     """
 
     # extract cost function values from result
-    result_fval = result.optimize_result.get_for_key('fval')
+    fvals = result.optimize_result.get_for_key('fval')
 
-    return waterfall_lowlevel(result_fval, ax)
+    return waterfall_lowlevel(fvals, ax)
 
 
-def waterfall_lowlevel(result_fval, ax=None):
+def waterfall_lowlevel(fvals, ax=None):
 
     """
     Plot waterfall plot using list of cost function values.
@@ -39,7 +39,7 @@ def waterfall_lowlevel(result_fval, ax=None):
     Parameters
     ----------
 
-    result_fval: numeric list or array
+    fvals: numeric list or array
         Including values need to be plotted.
 
     ax: matplotlib.Axes, optional
@@ -56,20 +56,31 @@ def waterfall_lowlevel(result_fval, ax=None):
     if ax is None:
         ax = plt.subplots()[1]
 
-    # reshape cost function values
-    result_fval = np.reshape(result_fval, [len(result_fval), 1])
-    start_ind = range(1, len(result_fval) + 1)
+    n_fvals = len(fvals)
 
-    # assign color
-    col = assign_color(result_fval)
+    # reshape cost function values
+    fvals = np.reshape(fvals, [n_fvals, 1])
+    start_ind = range(1, n_fvals + 1)
+
+    # assign colors
+    # note: this has to happen before sorting
+    # to get the same colors in different plots
+    colors = assign_color(fvals)
+
+    # sort
+    indices = sorted(range(n_fvals),
+                     key=lambda j: fvals[j])
 
     # plot
     ax.xaxis.set_major_locator(MaxNLocator(integer=True))
-    ax.plot(start_ind, result_fval)
-    for ifval, fval in enumerate(result_fval):
-        ax.plot(ifval + 1, fval,
-                color=col[ifval], marker='o')
+    ax.plot(start_ind, fvals)
+    for j in range(n_fvals):
+        j_fval = indices[j]
+        color = colors[j_fval]
+        fval = fvals[j_fval]
+        ax.plot(j + 1, fval, color=color, marker='o')
 
+    # labels
     ax.set_xlabel('Ordered optimizer run')
     ax.set_ylabel('Function value')
     ax.set_title('Waterfall plot')
