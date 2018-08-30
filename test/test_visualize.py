@@ -3,6 +3,9 @@ import pypesto.visualize
 import numpy as np
 import scipy as sp
 
+import matplotlib as mpl
+mpl.use('Agg')
+
 
 objective = pypesto.Objective(fun=sp.optimize.rosen,
                               grad=sp.optimize.rosen_der,
