@@ -1,3 +1,4 @@
+import numpy as np
 import scipy.optimize
 import re
 import abc
@@ -59,14 +60,14 @@ class OptimizerResult(dict):
                  time=None,
                  message=None):
         super().__init__()
-        self.x = x
+        self.x = np.array(x)
         self.fval = fval
-        self.grad = grad
-        self.hess = hess
+        self.grad = np.array(grad)
+        self.hess = np.array(hess)
         self.n_fval = n_fval
         self.n_grad = n_grad
         self.n_hess = n_hess
-        self.x0 = x0
+        self.x0 = np.array(x0)
         self.fval0 = fval0
         self.x_trace = x_trace
         self.fval_trace = fval_trace
@@ -258,8 +259,8 @@ class DlibOptimizer(Optimizer):
 
         res = dlib.find_min_global(
             get_fval_vararg,
-            list(problem.lb[0, :]),
-            list(problem.ub[0, :]),
+            list(problem.lb),
+            list(problem.ub),
             int(self.options['maxiter']),
             0.002,
         )
