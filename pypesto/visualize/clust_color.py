@@ -56,12 +56,12 @@ def assigncolor(result_fval):
     vmax = max(clust) - sum(clustsize == 1)
     cnorm = colors.Normalize(vmin=0, vmax=vmax)
     scalarmap = cm.ScalarMappable(norm=cnorm)
-    uind_col = vmax*np.ones(len(clustsize))
+    uind_col = vmax * np.ones(len(clustsize))
     sum_col = 0
     for iclustsize, value_clustsize in enumerate(clustsize):
         if value_clustsize > 1:
             uind_col[iclustsize] = sum_col
-            sum_col = sum_col+1
+            sum_col = sum_col + 1
 
     ind_col = uind_col[ind_clust]
     col = scalarmap.to_rgba(ind_col)

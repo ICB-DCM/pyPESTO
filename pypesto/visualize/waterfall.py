@@ -25,6 +25,7 @@ def waterfall(result, ax=None):
         The plot axes.
     """
 
+    # extract cost function values from result
     result_fval = result.optimize_result.get_for_key('fval')
     return waterfall_lowlevel(result_fval, ax)
 
@@ -51,10 +52,9 @@ def waterfall_lowlevel(result_fval, ax=None):
 
     # axes
     if ax is None:
-        fig, ax = plt.subplots()
+        ax = plt.subplots()[1]
 
-    # extract cost function values from result
-
+    # reshape cost function values
     result_fval = np.reshape(result_fval, [len(result_fval), 1])
     startpoints = range(1, len(result_fval) + 1)
 
@@ -65,7 +65,7 @@ def waterfall_lowlevel(result_fval, ax=None):
     ax.xaxis.set_major_locator(MaxNLocator(integer=True))
     ax.plot(startpoints, result_fval)
     for ifval, fval in enumerate(result_fval):
-        ax.plot(ifval+1, fval,
+        ax.plot(ifval + 1, fval,
                 color=col[ifval], marker='o')
 
     ax.set_xlabel('Ordered optimizer run')
