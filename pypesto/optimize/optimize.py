@@ -4,8 +4,12 @@ from .startpoint import uniform
 import traceback
 
 
-def minimize(problem, optimizer,
-             n_starts, startpoint_method=uniform, result=None) -> Result:
+def minimize(
+        problem,
+        optimizer,
+        n_starts,
+        startpoint_method=uniform,
+        result=None) -> Result:
     """
 
     This is the main function to be called to perform multistart optimization.

@@ -146,27 +146,27 @@ class Objective:
                 fval = self.fun(x)[0]
             else:
                 fval = self.fun(x)
-            return {Objective.FVAL: fval}
+            result = {Objective.FVAL: fval}
         elif sensi_orders == (1,):
             if self.grad is True:
                 grad = self.fun(x)[1]
             else:
                 grad = self.grad(x)
-            return {Objective.GRAD: grad}
+            result = {Objective.GRAD: grad}
         elif sensi_orders == (2,):
             if self.hess is True:
                 hess = self.fun(x)[2]
             else:
                 hess = self.hess(x)
-            return {Objective.HESS: hess}
+            result = {Objective.HESS: hess}
         elif sensi_orders == (0, 1):
             if self.grad is True:
                 fval, grad = self.fun(x)[0:2]
             else:
                 fval = self.fun(x)
                 grad = self.grad(x)
-            return {Objective.FVAL: fval,
-                    Objective.GRAD: grad}
+            result = {Objective.FVAL: fval,
+                      Objective.GRAD: grad}
         elif sensi_orders == (1, 2):
             if self.hess is True:
                 grad, hess = self.fun(x)[1:3]
@@ -176,8 +176,8 @@ class Objective:
                     grad = self.fun(x)[1]
                 else:
                     grad = self.grad(x)
-            return {Objective.GRAD: grad,
-                    Objective.HESS: hess}
+            result = {Objective.GRAD: grad,
+                      Objective.HESS: hess}
         elif sensi_orders == (0, 1, 2):
             if self.hess is True:
                 fval, grad, hess = self.fun(x)[0:3]
@@ -188,11 +188,12 @@ class Objective:
                 else:
                     fval = self.fun(x)
                     grad = self.grad(x)
-            return {Objective.FVAL: fval,
-                    Objective.GRAD: grad,
-                    Objective.HESS: hess}
+            result = {Objective.FVAL: fval,
+                      Objective.GRAD: grad,
+                      Objective.HESS: hess}
         else:
             raise ValueError("These sensitivity orders are not supported.")
+        return result
 
     def _call_mode_res(self, x, sensi_orders):
         """
@@ -203,23 +204,24 @@ class Objective:
                 res = self.res(x)[0]
             else:
                 res = self.res(x)
-            return {Objective.RES: res}
+            result = {Objective.RES: res}
         elif sensi_orders == (1,):
             if self.sres is True:
                 sres = self.res(x)[1]
             else:
                 sres = self.sres(x)
-            return {Objective.SRES: sres}
+            result = {Objective.SRES: sres}
         elif sensi_orders == (0, 1):
             if self.sres is True:
                 res, sres = self.res(x)
             else:
                 res = self.res(x)
                 sres = self.sres(x)
-            return {Objective.RES: res,
-                    Objective.SRES: sres}
+            result = {Objective.RES: res,
+                      Objective.SRES: sres}
         else:
             raise ValueError("These sensitivity orders are not supported.")
+        return result
 
     @staticmethod
     def map_to_output(sensi_orders, mode, **kwargs):
