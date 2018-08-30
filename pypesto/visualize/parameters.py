@@ -5,7 +5,6 @@ from .clust_color import assigncolor
 
 
 def parameters(result, ax=None):
-
     """
     Plot parameter values.
 
@@ -13,7 +12,7 @@ def parameters(result, ax=None):
     ----------
 
     result: pypesto.Result
-        Optimization result obtained by 'optimize.py'
+        Optimization result obtained by 'optimize.py'.
 
     ax: matplotlib.Axes, optional
         Axes object to use.
@@ -33,7 +32,7 @@ def parameters(result, ax=None):
     return parameters_lowlevel(result_x, result_fval, lb, ub, ax,)
 
 
-def parameters_lowlevel(result_x, result_fval, lb, ub, ax=None):
+def parameters_lowlevel(result_x, result_fval, lb=None, ub=None, ax=None):
 
     """
     Plot waterfall plot using list of cost function values.
@@ -47,8 +46,8 @@ def parameters_lowlevel(result_x, result_fval, lb, ub, ax=None):
     result_fval: numeric list or array
         Including values need to be plotted.
 
-    lb, ub: array_like
-        The lower and upper bounds. For unbounded problems set to inf.
+    lb, ub: array_like, optional
+        The lower and upper bounds.
 
     ax: matplotlib.Axes, optional
         Axes object to use.
@@ -73,14 +72,17 @@ def parameters_lowlevel(result_x, result_fval, lb, ub, ax=None):
 
     # plot parameters
     ax.xaxis.set_major_locator(MaxNLocator(integer=True))
-    for ix, value_x in enumerate(result_x):
+    for ix, value_x in reversed(list(enumerate(result_x))):
         ax.plot(value_x, parameters_ind, color=col[ix], marker='o')
 
     # draw bounds
-    ax.plot(lb[0], parameters_ind, 'b--')
-    ax.plot(ub[0], parameters_ind, 'b--')
+    if lb is not None:
+        ax.plot(lb[0], parameters_ind, 'b--', marker='+')
+    if ub is not None:
+        ax.plot(ub[0], parameters_ind, 'b--', marker='+')
 
     ax.set_xlabel('Parameter value')
+    ax.set_ylabel('Parameter index')
     ax.set_title('Estimated parameters')
 
     return ax
