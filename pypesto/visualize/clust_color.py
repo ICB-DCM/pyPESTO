@@ -19,7 +19,8 @@ def get_clust(result_fval):
     -------
 
     clust: numeric list
-         Indicating the corresponding cluster of each element from 'result_fval'.
+         Indicating the corresponding cluster of each element from
+         'result_fval'.
 
     clustsize: numeric list
         size of clusters, form 1 to number of clusters.
