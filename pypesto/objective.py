@@ -18,7 +18,19 @@ try:
     import amici
 except ImportError:
     amici = None
-    pass
+    
+    
+class ObjectiveState(dict):
+	def __init__(self,
+	             n_fval = 0,
+	             n_grad = 0,
+	             n_hess = 0,
+	             
+	             
+	def init(self):
+		self.n_fval = 0
+		self.n_grad = 0
+		self.n_hess = 0
 
 
 class Objective:
@@ -66,10 +78,23 @@ class Objective:
         If its value is True, then res should return the residual
         sensitivities as a second output.
 
+    Attributes
+    ----------
+
+    preprocess: callable
+        Preprocess input values to __call__.
+
+    postprocess: callable
+        Postprocess output values from __call__.
     """
 
-    MODE_FUN = 'MODE_FUN'  # mode for function values
-    MODE_RES = 'MODE_RES'  # mode for residuals
+    MODE_FUN = 'mode_fun'  # mode for function values
+    MODE_RES = 'mode_res'  # mode for residuals
+    FVAL = 'fval'
+    GRAD = 'grad'
+    HESS = 'hess'
+    RES = 'res'
+    SRES = 'sres'
 
     def __init__(self, fun,
                  grad=None, hess=None, hessp=None,
@@ -81,6 +106,7 @@ class Objective:
         self.res = res
         self.sres = sres
 
+<<<<<<< HEAD
         self.n_fval = 0
         self.n_grad = 0
         self.n_hess = 0
@@ -98,17 +124,24 @@ class Objective:
         an automatic adaptation of the step size),
         and diverse approximations of the Hessian.
         """
+=======
+        self.preprocess = lambda x: x
+        self.postprocess = lambda result: result
+        
+        self.state = ObjectiveState()
+>>>>>>> feature_fixedpars
+
 
     def __call__(self, x, sensi_orders: tuple=(0,), mode=MODE_FUN):
         """
-        Method to get arbitrary sensitivities.
+        Method to get arbitrary sensitivities. This is the central method
+        which is always called, also by the get_ functions.
 
-        There are different ways in which
-        an optimizer calls the objective function, and in how the objective
-        function provides
-        information (e.g. derivatives via separate functions or along with
-        the function values). The different calling modes increase efficiency
-        in space and time and make the objective flexible.
+        There are different ways in which an optimizer calls the objective
+        function, and in how the objective function provides information
+        (e.g. derivatives via separate functions or along with the function
+        values). The different calling modes increase efficiency in space
+        and time and make the objective flexible.
 
         Parameters
         ----------
@@ -123,6 +156,7 @@ class Objective:
             Whether to compute function values or residuals.
         """
 
+<<<<<<< HEAD
         if mode == Objective.MODE_FUN:
             result = self.call_mode_fun(x, sensi_orders)
 
@@ -135,35 +169,69 @@ class Objective:
 
     def call_mode_fun(self, x, sensi_orders):
         self.update_eval_counts(sensi_orders)
+=======
+        # pre-process
+        x = self.preprocess(x=x)
+
+        # function or residue mode
+        if mode == Objective.MODE_FUN:
+            result = self._call_mode_fun(x, sensi_orders)
+        elif mode == Objective.MODE_RES:
+            result = self._call_mode_res(x, sensi_orders)
+        else:
+            raise ValueError("This mode is not supported.")
+
+        # post-process
+        result = self.postprocess(result=result)
+
+        # map to output format
+        result = Objective.map_to_output(sensi_orders, mode, **result)
+
+        return result
+
+    def _call_mode_fun(self, x, sensi_orders):
+        """
+        The method __call__ was called with mode MODE_FUN.
+        """
+>>>>>>> feature_fixedpars
         if sensi_orders == (0,):
             if self.grad is True:
                 fval = self.fun(x)[0]
             else:
                 fval = self.fun(x)
+<<<<<<< HEAD
             if self.trace is not None:
                 self.update_trace(fval, x)
             return fval
+=======
+            result = {Objective.FVAL: fval}
+>>>>>>> feature_fixedpars
         elif sensi_orders == (1,):
             if self.grad is True:
                 grad = self.fun(x)[1]
             else:
                 grad = self.grad(x)
-            return grad
+            result = {Objective.GRAD: grad}
         elif sensi_orders == (2,):
             if self.hess is True:
                 hess = self.fun(x)[2]
             else:
                 hess = self.hess(x)
-            return hess
+            result = {Objective.HESS: hess}
         elif sensi_orders == (0, 1):
             if self.grad is True:
                 fval, grad = self.fun(x)[0:2]
             else:
                 fval = self.fun(x)
                 grad = self.grad(x)
+<<<<<<< HEAD
             if self.trace is not None:
                 self.update_trace(fval, x)
             return fval, grad
+=======
+            result = {Objective.FVAL: fval,
+                      Objective.GRAD: grad}
+>>>>>>> feature_fixedpars
         elif sensi_orders == (1, 2):
             if self.hess is True:
                 grad, hess = self.fun(x)[1:3]
@@ -173,7 +241,8 @@ class Objective:
                     grad = self.fun(x)[1]
                 else:
                     grad = self.grad(x)
-            return grad, hess
+            result = {Objective.GRAD: grad,
+                      Objective.HESS: hess}
         elif sensi_orders == (0, 1, 2):
             if self.hess is True:
                 fval, grad, hess = self.fun(x)[0:3]
@@ -184,39 +253,88 @@ class Objective:
                 else:
                     fval = self.fun(x)
                     grad = self.grad(x)
+<<<<<<< HEAD
             if self.trace is not None:
                 self.update_trace(fval, x)
             return fval, grad, hess
+=======
+            result = {Objective.FVAL: fval,
+                      Objective.GRAD: grad,
+                      Objective.HESS: hess}
+>>>>>>> feature_fixedpars
         else:
             raise ValueError("These sensitivity orders are not supported.")
+        return result
 
+<<<<<<< HEAD
     def call_mode_res(self, x, sensi_orders):
         self.update_eval_counts(sensi_orders)
+=======
+    def _call_mode_res(self, x, sensi_orders):
+        """
+        The method __call__ was called with mode MODE_RES.
+        """
+>>>>>>> feature_fixedpars
         if sensi_orders == (0,):
             if self.sres is True:
                 res = self.res(x)[0]
             else:
                 res = self.res(x)
+<<<<<<< HEAD
             if self.trace is not None:
                 self.update_trace(np.power(res, 2).sum(), x)
             return res
+=======
+            result = {Objective.RES: res}
+>>>>>>> feature_fixedpars
         elif sensi_orders == (1,):
             if self.sres is True:
                 sres = self.res(x)[1]
             else:
                 sres = self.sres(x)
-            return sres
+            result = {Objective.SRES: sres}
         elif sensi_orders == (0, 1):
             if self.sres is True:
                 res, sres = self.res(x)
             else:
                 res = self.res(x)
                 sres = self.sres(x)
+<<<<<<< HEAD
             if self.trace is not None:
                 self.update_trace(np.power(res, 2).sum(), x)
             return res, sres
+=======
+            result = {Objective.RES: res,
+                      Objective.SRES: sres}
+>>>>>>> feature_fixedpars
         else:
             raise ValueError("These sensitivity orders are not supported.")
+        return result
+
+    @staticmethod
+    def map_to_output(sensi_orders, mode, **kwargs):
+        """
+        Return values as requested by the caller, since usually only a subset
+        is demanded. One output is returned as-is, more than one output are
+        returned as a tuple in order (fval, grad, hess).
+        """
+        output = ()
+        if mode == Objective.MODE_FUN:
+            if 0 in sensi_orders:
+                output += (kwargs[Objective.FVAL],)
+            if 1 in sensi_orders:
+                output += (np.array(kwargs[Objective.GRAD]),)
+            if 2 in sensi_orders:
+                output += (np.array(kwargs[Objective.HESS]),)
+        elif mode == Objective.MODE_RES:
+            if 0 in sensi_orders:
+                output += (np.array(kwargs[Objective.RES]),)
+            if 1 in sensi_orders:
+                output += (np.array(kwargs[Objective.SRES]),)
+        if len(output) == 1:
+            # return a single value not as tuple
+            output = output[0]
+        return output
 
     def reset_history(self,
                       dim,
@@ -301,6 +419,7 @@ class Objective:
     """
 
     def get_fval(self, x):
+<<<<<<< HEAD
         fval = self.call_mode_fun(x, (0,))
         return fval
 
@@ -437,6 +556,116 @@ class Objective:
             print(result)
 
         return result
+=======
+        """
+        Get the function value at x.
+        """
+        fval = self(x, (0,), Objective.MODE_FUN)
+        return fval
+
+    def get_grad(self, x):
+        """
+        Get the gradient at x.
+        """
+        grad = self(x, (1,), Objective.MODE_FUN)
+        return grad
+
+    def get_hess(self, x):
+        """
+        Get the Hessian at x.
+        """
+        hess = self(x, (2,), Objective.MODE_FUN)
+        return hess
+
+    def get_hessp(self, x, p):
+        """
+        Get the product of the Hessian at x with p.
+        """
+        hess = self(x, (2,), Objective.MODE_FUN)
+        return np.dot(hess, p)
+
+    def get_res(self, x):
+        """
+        Get the residuals at x.
+        """
+        res = self(x, (0,), Objective.MODE_RES)
+        return res
+
+    def get_sres(self, x):
+        """
+        Get the residual sensitivities at x.
+        """
+        sres = self(x, (1,), Objective.MODE_RES)
+        return sres
+
+    """
+    The following functions handle parameter mappings.
+    """
+
+    def handle_x_fixed(self,
+                       dim_full,
+                       x_free_indices,
+                       x_fixed_indices,
+                       x_fixed_vals):
+        """
+        Handle fixed parameters. Later, the objective will be given parameter
+        vectors x of dimension dim, which have to be filled up with fixed
+        parameter values to form a vector of dimension dim_full >= dim.
+        This vector is then used to compute function value and derivaties.
+        The derivatives must later be reduced again to dimension dim.
+
+        This is so as to make the fixing of parameters transparent to the
+        caller.
+
+        The methods preprocess, postprocess are overwritten for the above
+        functionality, respectively.
+
+        Parameters
+        ----------
+
+        dim_full: int
+            Dimension of the full vector including fixed parameters.
+
+        x_free_indices: array_like of int
+            Vector containing the indices (zero-based) of free parameters
+            (complimentary to x_fixed_indices).
+
+        x_fixed_indices: array_like of int, optional
+            Vector containing the indices (zero-based) of parameter components
+            that are not to be optimized.
+
+        x_fixed_vals: array_like, optional
+            Vector of the same length as x_fixed_indices, containing the values
+            of the fixed parameters.
+        """
+
+        dim = len(x_free_indices)
+
+        # pre-process
+        def preprocess(x):
+            x_full = np.zeros(dim_full)
+            x_full[x_free_indices] = x
+            x_full[x_fixed_indices] = x_fixed_vals
+            return x_full
+        self.preprocess = preprocess
+
+        # post-process
+        def postprocess(result):
+            if Objective.GRAD in result:
+                grad = result[Objective.GRAD]
+                if grad.size == dim_full:
+                    grad = grad[x_free_indices]
+                    result[Objective.GRAD] = grad
+                assert grad.size == dim
+            if Objective.HESS in result:
+                hess = result[Objective.HESS]
+                if hess.shape[0] == dim_full:
+                    hess = hess[np.ix_(x_free_indices, x_free_indices)]
+                    result[Objective.HESS] = hess
+                assert hess.shape == (dim, dim)
+            return result
+        self.postprocess = postprocess
+>>>>>>> feature_fixedpars
 
 
 class AmiciObjective(Objective):
@@ -588,7 +817,7 @@ class AmiciObjective(Objective):
                     sres = np.vstack([sres, rdata['sres']]) \
                         if sres.size else rdata['sres']
 
-        return AmiciObjective.map_to_output(
+        return Objective.map_to_output(
             sensi_orders=sensi_orders,
             mode=mode,
             fval=nllh, grad=snllh, hess=ssnllh,
@@ -672,7 +901,7 @@ class AmiciObjective(Objective):
             nt = sum([data.nt() if data.nt() else self.amici_model.nt()
                       for data in self.edata])
         n_res = nt * self.amici_model.nytrue
-        return AmiciObjective.map_to_output(
+        return Objective.map_to_output(
             sensi_orders=sensi_orders,
             mode=mode,
             fval=np.inf,
@@ -681,6 +910,7 @@ class AmiciObjective(Objective):
             res=np.nan * np.ones(n_res),
             sres=np.nan * np.ones([n_res, self.dim])
         )
+<<<<<<< HEAD
 
     def get_parameter_names(self):
         return list(self.amici_model.getParameterNames())
@@ -708,3 +938,5 @@ class AmiciObjective(Objective):
             # return a single value not as tuple
             output = output[0]
         return output
+=======
+>>>>>>> feature_fixedpars

@@ -1,14 +1,53 @@
 import numpy as np
 from pypesto import Result
-from .startpoint import uniform
+from .startpoint import assign_startpoints, uniform
+import traceback
 
 
+class OptimizeOptions(dict):
+    
+    def __init__(self,
+                 startpoint_method=None,
+                 startpoint_resample=False,
+                 allow_exceptions=False,
+                 tmp_save=False
+                 tmp_file=None)
+        super().__init__()
+        
+        if startpoint_method is None:
+            startpoint_method = uniform
+        self.startpoint_method = startpoint_method
+        
+        self.startpoint_resample = startpoint_resample        
+        self.allow_exceptions = allow_exceptions
+        self.tmp_save = tmp_save
+        self.tmp_file = tmp_file
+    
+    def __getattr__(self, key):
+        try:
+            return self[key]
+        except KeyError:
+            raise AttributeError(key)
+
+    __setattr__ = dict.__setitem__
+    __delattr__ = dict.__delitem__
+
+
+<<<<<<< HEAD
 def minimize(problem, optimizer,
              n_starts,
              startpoint_method=uniform,
              result=None,
              startpoint_resampling=True,
              allow_failed_starts=True) -> Result:
+=======
+def minimize(
+        problem,
+        optimizer,
+        n_starts,
+        result=None,
+        options=None) -> Result:
+>>>>>>> feature_fixedpars
     """
 
     This is the main function to be called to perform multistart optimization.
@@ -44,17 +83,16 @@ def minimize(problem, optimizer,
 
 
     """
+    
+    # check options
+    if options is None:
+        # use default
+        options = OptimizeOptions()
 
-    # compute start points
-    if startpoint_method is False:
-        # fill with dummies
-        startpoints = np.zeros(n_starts, problem.dim)
-    else:
-        # apply startpoint method
-        startpoints = startpoint_method(n_starts,
-                                        problem.lb,
-                                        problem.ub,
-                                        problem.par_guesses)
+    # assign startpoints
+    startpoints = assign_startpoints(n_starts=n_starts,
+                                     problem=problem,
+                                     options=options)
 
     # prepare result object
     if result is None:
@@ -63,20 +101,11 @@ def minimize(problem, optimizer,
     # do multistart optimization
     for j in range(0, n_starts):
         startpoint = startpoints[j, :]
-        if startpoint_resampling:
-            valid_startpoint = problem.objective(startpoint) < float('inf')
-            while not valid_startpoint:
-                startpoint = startpoint_method(
-                    1,
-                    problem.lb,
-                    problem.ub,
-                    problem.par_guesses
-                )[0, :]
-                valid_startpoint = problem.objective(startpoint) < float('inf')
-
         try:
             optimizer_result = optimizer.minimize(problem, startpoint, j)
         except Exception as err:
+            handle_exception(options.allow_failed_starts
+<<<<<<< HEAD
             if allow_failed_starts:
                 print(('start ' + str(j) + ' failed: {0}').format(err))
                 optimizer_result = optimizer.recover_result(
@@ -88,8 +117,15 @@ def minimize(problem, optimizer,
                 raise
 
         result.optimize_result.append(optimizer_result=optimizer_result)
+=======
+            print(('start ' + str(j) + ' failed: {0}').format(err))
+            traceback.print_exc()
+>>>>>>> feature_fixedpars
 
     # sort by best fval
     result.optimize_result.sort()
 
     return result
+   
+
+

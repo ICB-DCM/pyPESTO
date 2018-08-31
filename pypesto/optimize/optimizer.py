@@ -1,3 +1,4 @@
+import numpy as np
 import scipy.optimize
 import re
 import abc
@@ -64,14 +65,14 @@ class OptimizerResult(dict):
                  time=None,
                  message=None):
         super().__init__()
-        self.x = x
+        self.x = np.array(x)
         self.fval = fval
-        self.grad = grad
-        self.hess = hess
+        self.grad = np.array(grad)
+        self.hess = np.array(hess)
         self.n_fval = n_fval
         self.n_grad = n_grad
         self.n_hess = n_hess
-        self.x0 = x0
+        self.x0 = np.array(x0)
         self.fval0 = fval0
         self.trace = trace
         self.exitflag = exitflag
@@ -88,11 +89,19 @@ class OptimizerResult(dict):
     __delattr__ = dict.__delitem__
 
 
+<<<<<<< HEAD
 def objective_decorator(minimize):
     """
     Default decorator for the minimize() method to initialise and extract
     information stored in the objective
 
+=======
+def timed_minimize(minimize):
+    """
+    Default decorator for the minimize() method to take time.
+    Currently, the method time.time() is used, which measures
+    the wall-clock time.
+>>>>>>> feature_fixedpars
     """
     def timed_minimize(self, problem, x0, index):
 
@@ -116,6 +125,22 @@ def objective_decorator(minimize):
 
         return result
     return timed_minimize
+
+
+def fixed_minimize(minimize):
+    """
+    Default decorator for the minimize() method to include also fixed
+    parameters in the result arrays (nans will be inserted in the
+    derivatives).
+    """
+    def fixed_minimize(self, problem, x0):
+        result = minimize(self, problem, x0)
+        result.x = problem.get_full_vector(result.x, problem.x_fixed_vals)
+        result.grad = problem.get_full_vector(result.grad)
+        result.hess = problem.get_full_matrix(result.hess)
+        result.x0 = problem.get_full_vector(result.x0, problem.x_fixed_vals)
+        return result
+    return fixed_minimize
 
 
 class Optimizer(abc.ABC):
@@ -200,8 +225,14 @@ class ScipyOptimizer(Optimizer):
         if self.options is None:
             self.options = ScipyOptimizer.get_default_options()
 
+<<<<<<< HEAD
     @objective_decorator
     def minimize(self, problem, x0, index):
+=======
+    @fixed_minimize
+    @timed_minimize
+    def minimize(self, problem, x0):
+>>>>>>> feature_fixedpars
         lb = problem.lb
         ub = problem.ub
 
@@ -213,8 +244,7 @@ class ScipyOptimizer(Optimizer):
                                 'for this type of objective.')
 
             ls_method = self.method[3:]
-            bounds = (lb[0, :], ub[0, :])
-
+            bounds = (lb, ub)
             res = scipy.optimize.least_squares(
                 problem.objective.get_res,
                 x0,
@@ -230,8 +260,13 @@ class ScipyOptimizer(Optimizer):
             )
 
         else:
+<<<<<<< HEAD
+=======
+            least_squares = False
+
+>>>>>>> feature_fixedpars
             # is a fval based optimization method
-            bounds = scipy.optimize.Bounds(lb[0, :], ub[0, :])
+            bounds = scipy.optimize.Bounds(lb, ub)
 
             fun_may_return_tuple = self.method.lower() in \
                 ['cg', 'bfgs', 'newton-cg', 'l-bfgs-b', 'tnc', 'slsqp',
@@ -257,8 +292,19 @@ class ScipyOptimizer(Optimizer):
 
         # some fields are not filled by all optimizers, then fill in None
         optimizer_result = OptimizerResult(
+<<<<<<< HEAD
             grad=res.jac if hasattr(res, 'jac') else None,
             hess=res.hess if hasattr(res, 'hess') else None,
+=======
+            x=res.x,
+            fval=res.fun if not least_squares
+            else problem.objective.get_fval(res.x),
+            grad=getattr(res, 'jac', None),
+            hess=getattr(res, 'hess', None),
+            n_fval=getattr(res, 'nfev', 0),
+            n_grad=getattr(res, 'njev', 0),
+            n_hess=getattr(res, 'nhev', 0),
+>>>>>>> feature_fixedpars
             x0=x0,
             fval0=None,
             exitflag=res.status,
@@ -292,8 +338,14 @@ class DlibOptimizer(Optimizer):
         if self.options is None:
             self.options = DlibOptimizer.get_default_options()
 
+<<<<<<< HEAD
     @objective_decorator
     def minimize(self, problem, x0, index):
+=======
+    @fixed_minimize
+    @timed_minimize
+    def minimize(self, problem, x0):
+>>>>>>> feature_fixedpars
 
         if dlib is None:
             raise ImportError(
@@ -306,8 +358,8 @@ class DlibOptimizer(Optimizer):
 
         dlib.find_min_global(
             get_fval_vararg,
-            list(problem.lb[0, :]),
-            list(problem.ub[0, :]),
+            list(problem.lb),
+            list(problem.ub),
             int(self.options['maxiter']),
             0.002,
         )

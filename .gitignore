@@ -24,7 +24,6 @@
 # redis
 dump.rdb
 
-
 # IPython checkpoints (these are actually pretty useless to me)
 .ipynb_checkpoints/
 
@@ -44,7 +43,6 @@ lib
 lib64
 __pycache__
 .cache
-
 
 # Installer logs
 pip-log.txt
@@ -68,10 +66,8 @@ Thumbs.db
 
 *.swp
 
-
 #documentation
 doc/_build
-
 
 # data
 data/raw
