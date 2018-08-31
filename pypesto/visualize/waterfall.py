@@ -5,7 +5,6 @@ from .clust_color import assign_clustered_colors
 
 
 def waterfall(result, ax=None):
-
     """
     Plot waterfall plot.
 
@@ -32,7 +31,6 @@ def waterfall(result, ax=None):
 
 
 def waterfall_lowlevel(fvals, ax=None):
-
     """
     Plot waterfall plot using list of function values.
 

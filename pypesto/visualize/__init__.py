@@ -2,6 +2,9 @@
 Visualizations
 ==============
 
+pypesto comes with various visualization routines. To use these,
+import pypesto.visualize.
+
 """
 
 from .waterfall import (waterfall_lowlevel,
