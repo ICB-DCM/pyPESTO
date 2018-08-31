@@ -26,6 +26,11 @@ install:
   - pip3 install --upgrade setuptools wheel pkgconfig
   - pip3 install --upgrade -r ./.travis_pip_reqs.txt
   - pip3 install .
+before_script:
+  # use a no-screen x-server to test plotting
+  - "export DISPLAY=:99.0"
+  - "sh -e /etc/init.d/xvfb start"
+  - sleep 3 # give xvfb some time to start
 
 # run tests
 
