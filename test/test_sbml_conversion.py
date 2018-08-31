@@ -12,7 +12,9 @@ import warnings
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 optimizers = {
-    'scipy': ['Powell', 'trust-exact', 'trust-krylov',
+    'scipy': ['Nelder-Mead', 'Powell', 'CG', 'BFGS', 'Newton-CG',
+              'L-BFGS-B', 'TNC', 'COBYLA', 'SLSQP',
+              'trust-ncg', 'trust-exact', 'trust-krylov',
               'ls_trf', 'ls_dogbox'],
     # disabled: ,'trust-constr', 'ls_lm', 'dogleg'
     'dlib': ['default']
@@ -30,7 +32,7 @@ class AmiciObjectiveTest(unittest.TestCase):
                 verbosity=0,
                 mode='MODE_FUN'
             )
-            self.assertTrue(np.all(df.rel_err.values < 1e-3))
+            self.assertTrue(np.all(df.rel_err.values < 1e-2))
             self.assertTrue(np.all(df.abs_err.values < 1e-1))
             df = objective.check_grad(
                 x0,
@@ -47,74 +49,43 @@ class AmiciObjectiveTest(unittest.TestCase):
                     with self.subTest(library=library, solver=method):
                         with warnings.catch_warnings():
                             warnings.simplefilter("ignore")
-                            self.parameter_estimation(
+                            parameter_estimation(
                                 objective,
                                 library,
                                 method,
                                 1,
                                 target_fval)
 
-    def parameter_estimation(
-        self,
-        objective,
-        library,
-        solver,
-        n_starts,
-        target
-    ):
-        options = {
-            'maxiter': 100
-        }
 
-        if library == 'scipy':
-            optimizer = pypesto.ScipyOptimizer(method=solver,
-                                               options=options)
-        elif library == 'dlib':
-            optimizer = pypesto.DlibOptimizer(method=solver,
-                                              options=options)
+def parameter_estimation(
+    objective,
+    library,
+    solver,
+    n_starts,
+    target
+):
+    options = {
+        'maxiter': 100
+    }
 
-        optimizer.temp_file = os.path.join('test', 'tmp_{index}.csv')
+    if library == 'scipy':
+        optimizer = pypesto.ScipyOptimizer(method=solver,
+                                           options=options)
+    elif library == 'dlib':
+        optimizer = pypesto.DlibOptimizer(method=solver,
+                                          options=options)
 
-        lb = -2 * np.ones((1, objective.dim))
-        ub = 2 * np.ones((1, objective.dim))
-        problem = pypesto.Problem(objective, lb, ub)
+    optimizer.temp_file = os.path.join('test', 'tmp_{index}.csv')
 
-        results = pypesto.minimize(
-            problem, optimizer, n_starts,
-            startpoint_method=pypesto.optimize.startpoint.uniform,
-            allow_failed_starts=False)
-        results = results.optimize_result.list
+    lb = -2 * np.ones((1, objective.dim))
+    ub = 2 * np.ones((1, objective.dim))
+    problem = pypesto.Problem(objective, lb, ub)
 
-        successes = [result for result in results if result.fval < target]
-
-        summary = solver + ':\n ' + str(len(successes)) \
-            + '/' + str(len(results)) + ' reached target\n'
-
-        function_evals = [result.n_fval for result in results]
-        if len(function_evals):
-            summary = summary + 'mean fun evals:' \
-                + str(statistics.mean(function_evals)) \
-                + '±' + str(statistics.stdev(function_evals) / n_starts) \
-                + '\n'
-
-        grad_evals = [result.n_grad for result in results]
-        if len(grad_evals):
-            summary = summary + 'mean grad evals:' \
-                + str(statistics.mean(grad_evals)) \
-                + '±' + str(statistics.stdev(grad_evals) / n_starts) \
-                + '\n'
-
-        hess_evals = [result.n_hess for result in results]
-        if len(hess_evals):
-            summary = summary + 'mean hess evals:' \
-                + str(statistics.mean(hess_evals)) \
-                + '±' + str(statistics.stdev(hess_evals) / n_starts) \
-                + '\n'
-
-        print(summary)
-
-        #self.assertTrue(len(successes) > 0)
-
+    results = pypesto.minimize(
+        problem, optimizer, n_starts,
+        startpoint_method=pypesto.optimize.startpoint.uniform,
+        allow_failed_starts=False)
+    results = results.optimize_result.list
 
 def _load_model_objective(example_name):
     sbml_file = os.path.join('doc', 'example',

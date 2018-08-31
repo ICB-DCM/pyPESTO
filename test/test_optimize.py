@@ -53,6 +53,7 @@ class OptimizerTest(unittest.TestCase):
                                     method
                                 )
 
+
 def check_minimize(objective, library, solver):
 
     options = {
