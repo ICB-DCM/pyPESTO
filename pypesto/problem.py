@@ -129,9 +129,12 @@ class Problem:
             x_fixed_vals=self.x_fixed_vals)
 
         # sanity checks
-        assert self.lb.size == self.dim
-        assert self.ub.size == self.dim
-        assert self.x_guesses.shape[1] == self.dim
+        if self.lb.size != self.dim:
+            raise AssertionError("lb dimension not understood.")
+        if self.ub.size != self.dim:
+            raise AssertionError("ub dimension not understood.")
+        if self.x_guesses.shape[1] != self.dim:
+            raise AssertionError("x_guesses form not understood.")
 
     def get_full_vector(self, x, x_fixed_vals=None):
         """
@@ -151,10 +154,8 @@ class Problem:
         if x is None:
             return None
 
-        """
-        Note: The funny indexing construct is to handle residual gradients,
-        where the last dimension is assumed to be the parameter one.
-        """
+        # Note: The funny indexing construct is to handle residual gradients,
+        # where the last dimension is assumed to be the parameter one.
         x_full = np.zeros(x.shape[:-1] + (self.dim_full,))
         x_full[:] = np.nan
         x_full[..., self.x_free_indices] = x
