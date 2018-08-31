@@ -99,6 +99,3 @@ doc/*.log
 dask-worker-space
 *.lock
 venv/*
-
-
-doc/example/conversion_reaction/*
