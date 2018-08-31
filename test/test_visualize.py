@@ -24,10 +24,12 @@ for j in range(0, 4):
 
 class TestVisualize(unittest.TestCase):
 
-    def test_waterfall(self):
+    @staticmethod
+    def test_waterfall():
         pypesto.visualize.waterfall(result)
 
-    def test_waterfall_lowlevel(self):
+    @staticmethod
+    def test_waterfall_lowlevel():
         # test empty input
         pypesto.visualize.waterfall_lowlevel([])
 
@@ -54,7 +56,8 @@ class TestVisualize(unittest.TestCase):
         self.assertEqual(len(clustsize), 3)
         self.assertEqual(len(ind_clust), 5)
 
-    def test_assign_clustered_colors(self):
+    @staticmethod
+    def test_assign_clustered_colors():
         # test empty input
         pypesto.visualize.assign_clustered_colors([])
 
@@ -64,10 +67,12 @@ class TestVisualize(unittest.TestCase):
         fvals = np.array(fvals)
         pypesto.visualize.assign_clustered_colors(fvals)
 
-    def test_parameters(self):
+    @staticmethod
+    def test_parameters():
         pypesto.visualize.parameters(result)
 
-    def test_parameters_lowlevel(self):
+    @staticmethod
+    def test_parameters_lowlevel():
         # test empty input
         xs = np.array([])
         xs.shape = (0, 0)  # we can assume in input that xs.ndim == 2

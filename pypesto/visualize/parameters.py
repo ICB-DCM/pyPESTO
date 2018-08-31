@@ -52,7 +52,7 @@ def parameters_lowlevel(xs, fvals, lb=None, ub=None, x_labels=None, ax=None):
         The lower and upper bounds.
 
     x_labels: array_like of str, optional
-        Labels to be used for the parameters (Not implemented).
+        Labels to be used for the parameters.
 
     ax: matplotlib.Axes, optional
         Axes object to use.
@@ -70,6 +70,9 @@ def parameters_lowlevel(xs, fvals, lb=None, ub=None, x_labels=None, ax=None):
     # parse input
     xs = np.array(xs)
     fvals = np.array(fvals)
+
+    if x_labels is not None:
+        raise NotImplementedError("x_labels not implemented.")
 
     # assign color
     colors = assign_clustered_colors(fvals)
