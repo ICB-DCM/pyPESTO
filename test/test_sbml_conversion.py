@@ -43,7 +43,6 @@ class AmiciObjectiveTest(unittest.TestCase):
             self.assertTrue(np.all(df.rel_err.values < 1e-6))
             self.assertTrue(np.all(df.abs_err.values < 1e-6))
 
-            target_fval = objective.get_fval(list(model.getParameters()))
             for library in optimizers.keys():
                 for method in optimizers[library]:
                     with self.subTest(library=library, solver=method):
@@ -53,8 +52,7 @@ class AmiciObjectiveTest(unittest.TestCase):
                                 objective,
                                 library,
                                 method,
-                                1,
-                                target_fval)
+                                1)
 
 
 def parameter_estimation(
@@ -62,7 +60,6 @@ def parameter_estimation(
     library,
     solver,
     n_starts,
-    target
 ):
     options = {
         'maxiter': 100
