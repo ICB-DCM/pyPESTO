@@ -12,6 +12,7 @@ import numpy as np
 import copy
 import pandas as pd
 import time
+import abc
 
 try:
     import amici
@@ -291,6 +292,7 @@ class Objective:
             if (len(self.trace) - 1) % self.temp_save_iter == 0:
                 self.trace.to_csv(self.temp_file)
 
+    @abc.abstractmethod
     def get_parameter_names(self):
         return None
 

@@ -139,6 +139,7 @@ class Optimizer(abc.ABC):
         Perform optimization.
         """
 
+    @abc.abstractmethod
     def is_least_squares(self):
         return False
 
