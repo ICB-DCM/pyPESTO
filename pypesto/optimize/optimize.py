@@ -74,18 +74,18 @@ def minimize(problem, optimizer,
                 )[0, :]
                 valid_startpoint = problem.objective(startpoint) < float('inf')
 
-        if allow_failed_starts:
-            try:
-                optimizer_result = optimizer.minimize(problem, startpoint, j)
-            except Exception as err:
+        try:
+            optimizer_result = optimizer.minimize(problem, startpoint, j)
+        except Exception as err:
+            if allow_failed_starts:
                 print(('start ' + str(j) + ' failed: {0}').format(err))
                 optimizer_result = optimizer.recover_result(
                     problem,
                     startpoint,
                     err
                 )
-        else:
-            optimizer_result = optimizer.minimize(problem, startpoint, j)
+            else:
+                raise
 
         result.optimize_result.append(optimizer_result=optimizer_result)
 

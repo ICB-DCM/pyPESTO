@@ -351,11 +351,20 @@ class Objective:
 
         verbosity: int
             Level of verbosity for function output
+                0: no output
+                1: summary for all parameters
+                2: summary for individual parameters
 
         mode: str
             Computation mode can be used to switch between residual
             computation ('MODE_RES') and objective function value computation
             ('MODE_FUN')
+
+        Returns
+        ----------
+        gradient, finite difference approximations and error estimates as
+        DataFrame
+
 
         """
 
@@ -454,8 +463,9 @@ class AmiciObjective(Objective):
     def __init__(self, amici_model, amici_solver, edata, max_sensi_order=None,
                  preprocess_edata=True):
         if amici is None:
-            print('This objective requires an installation of amici ('
-                  'github.com/icb-dcm/amici. Install via pip3 install amici.')
+            raise ImportError('This objective requires an installation of '
+                              'amici (github.com/icb-dcm/amici. Install via '
+                              'pip3 install amici.')
         super().__init__(
             fun=lambda x: self.call_amici(
                 x,
