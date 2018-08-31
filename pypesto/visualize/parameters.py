@@ -85,10 +85,11 @@ def parameters_lowlevel(xs, fvals, lb=None, ub=None, x_labels=None, ax=None):
         ax.plot(x, parameters_ind, color=colors[j_x], marker='o')
 
     # draw bounds
+    parameters_ind = np.array(parameters_ind).flatten()
     if lb is not None:
-        ax.plot(lb[0], parameters_ind, 'k--', marker='+')
+        ax.plot(lb.flatten(), parameters_ind, 'k--', marker='+')
     if ub is not None:
-        ax.plot(ub[0], parameters_ind, 'k--', marker='+')
+        ax.plot(ub.flatten(), parameters_ind, 'k--', marker='+')
 
     ax.set_xlabel('Parameter value')
     ax.set_ylabel('Parameter index')
