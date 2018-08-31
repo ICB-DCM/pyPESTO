@@ -1,7 +1,7 @@
 import matplotlib.pyplot as plt
 from matplotlib.ticker import MaxNLocator
 import numpy as np
-from .clust_color import assign_color
+from .clust_color import assign_clustered_colors
 
 
 def parameters(result, ax=None):
@@ -24,30 +24,35 @@ def parameters(result, ax=None):
         The plot axes.
     """
 
-    result_fval = result.optimize_result.get_for_key('fval')
-    result_x = result.optimize_result.get_for_key('x')
+    fvals = result.optimize_result.get_for_key('fval')
+    xs = result.optimize_result.get_for_key('x')
     lb = result.problem.lb
     ub = result.problem.ub
 
-    return parameters_lowlevel(result_x, result_fval, lb, ub, ax,)
+    return parameters_lowlevel(xs=xs, fvals=fvals, lb=lb, ub=ub,
+                               x_labels=None, ax=ax)
 
 
-def parameters_lowlevel(xs, fvals, lb=None, ub=None, ax=None):
+def parameters_lowlevel(xs, fvals, lb=None, ub=None, x_labels=None, ax=None):
 
     """
-    Plot waterfall plot using list of cost function values.
+    Plot parameters plot using list of parameters.
 
     Parameters
     ----------
 
     xs: nested list or array
         Including optimized parameters for each startpoint.
+        Shape: (n_starts, dim).
 
     fvals: numeric list or array
-        Including values need to be plotted.
+        Function values. Needed to assign cluster colors.
 
     lb, ub: array_like, optional
         The lower and upper bounds.
+
+    x_labels: array_like of str, optional
+        Labels to be used for the parameters (Not implemented).
 
     ax: matplotlib.Axes, optional
         Axes object to use.
@@ -62,15 +67,15 @@ def parameters_lowlevel(xs, fvals, lb=None, ub=None, ax=None):
     if ax is None:
         ax = plt.subplots()[1]
 
-    n_fvals = len(fvals)
-
-    fvals = np.reshape(fvals, [n_fvals, 1])
+    # parse input
+    xs = np.array(xs)
+    fvals = np.array(fvals)
 
     # assign color
-    colors = assign_color(fvals)
+    colors = assign_clustered_colors(fvals)
 
     # parameter indices
-    parameters_ind = range(1, len(xs[0]) + 1)
+    parameters_ind = range(1, xs.shape[1] + 1)
 
     # plot parameters
     ax.xaxis.set_major_locator(MaxNLocator(integer=True))
@@ -79,9 +84,9 @@ def parameters_lowlevel(xs, fvals, lb=None, ub=None, ax=None):
 
     # draw bounds
     if lb is not None:
-        ax.plot(lb[0], parameters_ind, 'b--', marker='+')
+        ax.plot(lb[0], parameters_ind, 'k--', marker='+')
     if ub is not None:
-        ax.plot(ub[0], parameters_ind, 'b--', marker='+')
+        ax.plot(ub[0], parameters_ind, 'k--', marker='+')
 
     ax.set_xlabel('Parameter value')
     ax.set_ylabel('Parameter index')

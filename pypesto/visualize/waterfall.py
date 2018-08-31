@@ -1,7 +1,7 @@
 import matplotlib.pyplot as plt
 from matplotlib.ticker import MaxNLocator
 import numpy as np
-from .clust_color import assign_color
+from .clust_color import assign_clustered_colors
 
 
 def waterfall(result, ax=None):
@@ -34,7 +34,7 @@ def waterfall(result, ax=None):
 def waterfall_lowlevel(fvals, ax=None):
 
     """
-    Plot waterfall plot using list of cost function values.
+    Plot waterfall plot using list of function values.
 
     Parameters
     ----------
@@ -56,16 +56,16 @@ def waterfall_lowlevel(fvals, ax=None):
     if ax is None:
         ax = plt.subplots()[1]
 
-    n_fvals = len(fvals)
+    # parse input
+    fvals = np.array(fvals)
 
-    # reshape cost function values
-    fvals = np.reshape(fvals, [n_fvals, 1])
+    n_fvals = len(fvals)
     start_ind = range(1, n_fvals + 1)
 
     # assign colors
     # note: this has to happen before sorting
     # to get the same colors in different plots
-    colors = assign_color(fvals)
+    colors = assign_clustered_colors(fvals)
 
     # sort
     indices = sorted(range(n_fvals),

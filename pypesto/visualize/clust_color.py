@@ -4,32 +4,39 @@ import matplotlib.cm as cm
 import numpy as np
 
 
-def get_cluster(result_fval):
+def assign_clusters(vals):
     """
-    Cluster cost function values
+    Find clustering.
 
     Parameters
     ----------
 
-    result_fval: numeric list or array
-        Including values need to be plotted.
+    vals: numeric list or array
+        List to be clustered.
 
     Returns
     -------
 
     clust: numeric list
          Indicating the corresponding cluster of each element from
-         'result_fval'.
+         'vals'.
 
     clustsize: numeric list
-        size of clusters, form 1 to number of clusters.
+        Size of clusters, length equals number of clusters.
 
     ind_clust: numeric list
-        Indices to reconstruct 'clust' from a list with 1:number of clusters
+        Indices to reconstruct 'clust' from a list with 1:number of clusters.
     """
 
+    # sanity checks
+    if vals is None or len(vals) == 0:
+        return [], [], []
+
+    # linkage requires (n, 1) data array
+    vals = np.reshape(vals, (-1, 1))
+
     clust = cluster.hierarchy.fcluster(
-        cluster.hierarchy.linkage(result_fval),
+        cluster.hierarchy.linkage(vals),
         0.1, criterion='distance')
     uclust, ind_clust = np.unique(clust, return_inverse=True)
     clustsize = np.zeros(len(uclust))
@@ -39,24 +46,31 @@ def get_cluster(result_fval):
     return clust, clustsize, ind_clust
 
 
-def assign_color(result_fval):
+def assign_clustered_colors(vals):
     """
-    Assign color to each cluster.
+    Cluster and assign colors.
 
     Parameters
     ----------
 
-    result_fval: numeric list or array
-        Including values need to be plotted.
+    vals: numeric list or array
+        List to be clustered and assigned colors.
 
     Returns
     -------
 
     Col: list of RGB
-        One for each element in 'result_fval'
+        One for each element in 'vals'.
     """
 
-    clust, clustsize, ind_clust = get_cluster(result_fval)
+    # sanity checks
+    if vals is None or len(vals) == 0:
+        return []
+
+    # assign clusters
+    clust, clustsize, ind_clust = assign_clusters(vals)
+
+    # assign colors
     vmax = max(clust) - sum(clustsize == 1)
     cnorm = colors.Normalize(vmin=0, vmax=vmax)
     scalarmap = cm.ScalarMappable(norm=cnorm)
