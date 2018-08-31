@@ -26,25 +26,41 @@ def test_waterfall():
 
 
 def test_waterfall_lowlevel():
+    # test empty input
+    pypesto.visualize.waterfall_lowlevel([])
+
+    # test if it runs at all
     fvals = [0.01, 0.02, 1.01, 2.02, 2.03, 2.04, 3, 4, 4.1, 4.11]
     pypesto.visualize.waterfall_lowlevel(fvals)
     fvals = np.array(fvals)
     pypesto.visualize.waterfall_lowlevel(fvals)
 
 
-def test_cluster():
-    fvals = [0.01, 0.02, 1.01, 2.02, 2.03, 2.04, 3, 4, 4.1, 4.11]
-    pypesto.visualize.get_cluster(fvals)
+def test_assign_clusters():
+    # test empty input
+    pypesto.visualize.assign_clusters([])
+
+    # test if it runs at all
+    fvals = [0.01, 0.02, 1.01, 2.02, 2.03, 2.04, 3, 4, 4.1, 4.11, 10]
+    pypesto.visualize.assign_clusters(fvals)
     fvals = np.array(fvals)
-    pypesto.visualize.get_cluster(fvals)
-    # TODO: evaluate calculated clusters
+    clust, clustsize, ind_clust = pypesto.visualize.assign_clusters(fvals)
+
+    # test if clustering works as intended
+    fvals = [0., 0.00001, 1., 2., 2.001]
+    clust, clustsize, ind_clust = pypesto.visualize.assign_clusters(fvals)
+    assert len(clustsize) == 3
 
 
-def test_assign_color():
+def test_assign_clustered_colors():
+    # test empty input
+    pypesto.visualize.assign_clustered_colors([])
+
+    # test if it runs at all
     fvals = [0.01, 0.02, 1.01, 2.02, 2.03, 2.04, 3, 4, 4.1, 4.11]
-    pypesto.visualize.assign_color(fvals)
+    pypesto.visualize.assign_clustered_colors(fvals)
     fvals = np.array(fvals)
-    pypesto.visualize.assign_color(fvals)
+    pypesto.visualize.assign_clustered_colors(fvals)
 
 
 def test_parameters():
@@ -52,6 +68,12 @@ def test_parameters():
 
 
 def test_parameters_lowlevel():
+    # test empty input
+    xs = np.array([])
+    xs.shape = (0, 0)  # we can assume in input that xs.ndim == 2
+    fvals = np.array([])
+    pypesto.visualize.parameters_lowlevel(xs, fvals)
+
     fvals = [0.01, 0.02, 1.01, 2.02, 2.03, 2.04, 3, 4, 4.1, 4.11]
     xs = [[0.1, 1], [1.2, 3], [2, 4], [1.2, 4.1], [1.1, 3.5],
           [4.2, 3.5], [1, 4], [6.2, 5], [4.3, 3], [3, 2]]
@@ -63,3 +85,6 @@ def test_parameters_lowlevel():
     fvals = np.array(fvals)
     xs = np.array(xs)
     pypesto.visualize.parameters_lowlevel(xs, fvals, lb=lb, ub=ub)
+
+    # test no bounds
+    pypesto.visualize.parameters_lowlevel(xs, fvals)
