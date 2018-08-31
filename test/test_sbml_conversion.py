@@ -84,6 +84,7 @@ def parameter_estimation(
         allow_failed_starts=False)
     results = results.optimize_result.list
 
+
 def _load_model_objective(example_name):
     sbml_file = os.path.join('doc', 'example',
                              'model_' + example_name + '.xml')
