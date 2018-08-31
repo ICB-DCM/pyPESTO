@@ -34,7 +34,6 @@ def parameters(result, ax=None):
 
 
 def parameters_lowlevel(xs, fvals, lb=None, ub=None, x_labels=None, ax=None):
-
     """
     Plot parameters plot using list of parameters.
 
