@@ -2,6 +2,12 @@ import scipy.optimize
 import re
 import abc
 import time
+import os
+
+try:
+    import dlib
+except ImportError:
+    dlib = None
 
 
 class OptimizerResult(dict):
@@ -53,8 +59,7 @@ class OptimizerResult(dict):
                  n_hess=None,
                  x0=None,
                  fval0=None,
-                 x_trace=None,
-                 fval_trace=None,
+                 trace=None,
                  exitflag=None,
                  time=None,
                  message=None):
@@ -68,8 +73,7 @@ class OptimizerResult(dict):
         self.n_hess = n_hess
         self.x0 = x0
         self.fval0 = fval0
-        self.x_trace = x_trace
-        self.fval_trace = fval_trace
+        self.trace = trace
         self.exitflag = exitflag
         self.time = time
         self.message = message
@@ -84,18 +88,32 @@ class OptimizerResult(dict):
     __delattr__ = dict.__delitem__
 
 
-def time_decorator(minimize):
+def objective_decorator(minimize):
     """
-    Default decorator for the minimize() method to take time.
-    Currently, the method time.time() is used, which measures
-    the wall-clock time.
+    Default decorator for the minimize() method to initialise and extract
+    information stored in the objective
 
     """
-    def timed_minimize(self, problem, x0):
-        start_time = time.time()
-        result = minimize(self, problem, x0)
-        used_time = time.time() - start_time
-        result.time = used_time
+    def timed_minimize(self, problem, x0, index):
+
+        if self.temp_file is not None:
+            temp_file = self.temp_file.replace('{index}', str(index))
+        else:
+            temp_file = None
+
+        problem.objective.reset_history(
+            len(x0),
+            temp_file,
+            self.temp_save_iter,
+        )
+
+        result = minimize(self, problem, x0, index)
+
+        result = self.fill_result_from_objective(result, problem)
+
+        if temp_file is not None and os.path.isfile(temp_file):
+            os.remove(temp_file)
+
         return result
     return timed_minimize
 
@@ -112,12 +130,51 @@ class Optimizer(abc.ABC):
         """
         Default constructor.
         """
+        self.temp_file = None
+        self.temp_save_iter = 10
 
     @abc.abstractmethod
-    def minimize(self, problem, x0):
+    def minimize(self, problem, x0, index):
         """"
         Perform optimization.
         """
+
+    @abc.abstractmethod
+    def is_least_squares(self):
+        return False
+
+    def recover_result(self, problem, startpoint, err):
+        result = OptimizerResult(
+            x0=startpoint,
+            grad=None,
+            hess=None,
+            exitflag=-99,
+            message='{0}'.format(err),
+        )
+        self.fill_result_from_objective(result, problem)
+
+        return result
+
+    def fill_result_from_objective(self, result, problem):
+
+        result.x = problem.objective.min_x
+        if self.is_least_squares():
+            result.fval = problem.objective.get_fval(problem.objective.min_x)
+        else:
+            result.fval = problem.objective.min_fval
+
+        result.n_fval = problem.objective.n_fval
+        result.n_grad = problem.objective.n_grad
+        result.n_hess = problem.objective.n_hess
+
+        if problem.objective.trace is not None \
+                and len(problem.objective.trace):
+            result.fval0 = problem.objective.trace.loc[0].fval
+
+        result.trace = problem.objective.trace
+        result.time = problem.objective.start_time - time.time()
+
+        return result
 
     @staticmethod
     def get_default_options():
@@ -143,15 +200,17 @@ class ScipyOptimizer(Optimizer):
         if self.options is None:
             self.options = ScipyOptimizer.get_default_options()
 
-    @time_decorator
-    def minimize(self, problem, x0):
+    @objective_decorator
+    def minimize(self, problem, x0, index):
         lb = problem.lb
         ub = problem.ub
 
-        if re.match('^(?i)(ls_)', self.method):
+        if self.is_least_squares():
             # is a residual based least squares method
 
-            least_squares = True
+            if problem.objective.res is None:
+                raise Exception('Least Squares optimization is not available '
+                                'for this type of objective.')
 
             ls_method = self.method[3:]
             bounds = (lb[0, :], ub[0, :])
@@ -171,17 +230,24 @@ class ScipyOptimizer(Optimizer):
             )
 
         else:
-
-            least_squares = False
-
             # is a fval based optimization method
             bounds = scipy.optimize.Bounds(lb[0, :], ub[0, :])
 
+            fun_may_return_tuple = self.method.lower() in \
+                ['cg', 'bfgs', 'newton-cg', 'l-bfgs-b', 'tnc', 'slsqp',
+                    'dogleg', 'trust-ncg']
+            if fun_may_return_tuple and problem.objective.grad is True:
+                def fun(x):
+                    return problem.objective.call_mode_fun(x, (0, 1))
+            else:
+                fun = problem.objective.get_fval
+
             res = scipy.optimize.minimize(
-                problem.objective.get_fval,
+                fun,
                 x0,
                 method=self.method,
-                jac=problem.objective.get_grad,
+                jac=problem.objective.grad if fun_may_return_tuple else
+                problem.objective.get_grad,
                 hess=problem.objective.get_hess,
                 hessp=problem.objective.get_hessp,
                 bounds=bounds,
@@ -191,14 +257,8 @@ class ScipyOptimizer(Optimizer):
 
         # some fields are not filled by all optimizers, then fill in None
         optimizer_result = OptimizerResult(
-            x=res.x,
-            fval=res.fun if not least_squares
-            else problem.objective.get_fval(res.x),
             grad=res.jac if hasattr(res, 'jac') else None,
             hess=res.hess if hasattr(res, 'hess') else None,
-            n_fval=res.nfev if hasattr(res, 'nfev') else 0,
-            n_grad=res.njev if hasattr(res, 'njev') else 0,
-            n_hess=res.nhev if hasattr(res, 'nhev') else 0,
             x0=x0,
             fval0=None,
             exitflag=res.status,
@@ -206,6 +266,9 @@ class ScipyOptimizer(Optimizer):
         )
 
         return optimizer_result
+
+    def is_least_squares(self):
+        return re.match('^(?i)(ls_)', self.method)
 
     @staticmethod
     def get_default_options():
@@ -229,19 +292,19 @@ class DlibOptimizer(Optimizer):
         if self.options is None:
             self.options = DlibOptimizer.get_default_options()
 
-    @time_decorator
-    def minimize(self, problem, x0):
+    @objective_decorator
+    def minimize(self, problem, x0, index):
 
-        try:
-            import dlib
-        except ImportError:
-            print('This optimizer requires an installation of dlib.')
+        if dlib is None:
+            raise ImportError(
+                'This optimizer requires an installation of dlib.'
+            )
 
         # dlib requires variable length arguments
         def get_fval_vararg(*par):
             return problem.objective.get_fval(par)
 
-        res = dlib.find_min_global(
+        dlib.find_min_global(
             get_fval_vararg,
             list(problem.lb[0, :]),
             list(problem.ub[0, :]),
@@ -250,12 +313,13 @@ class DlibOptimizer(Optimizer):
         )
 
         optimizer_result = OptimizerResult(
-            x=res[0],
-            fval=res[1],
             x0=x0
         )
 
         return optimizer_result
+
+    def is_least_squares(self):
+        return False
 
     @staticmethod
     def get_default_options():

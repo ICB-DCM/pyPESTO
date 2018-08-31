@@ -21,25 +21,46 @@ optimizers = {
 }
 
 
-class OptimizerTest(unittest.TestCase):
+class AmiciObjectiveTest(unittest.TestCase):
     def runTest(self):
         for example in ['conversion_reaction']:
             objective, model = _load_model_objective(example)
-            target_fval = objective.get_fval(list(model.getParameters()))
+            x0 = list(model.getParameters())
+            df = objective.check_grad(
+                x0,
+                eps=1e-5,
+                verbosity=0,
+                mode='MODE_FUN'
+            )
+            self.assertTrue(np.all(df.rel_err.values < 1e-2))
+            self.assertTrue(np.all(df.abs_err.values < 1e-1))
+            df = objective.check_grad(
+                x0,
+                eps=1e-5,
+                verbosity=0,
+                mode='MODE_RES'
+            )
+            self.assertTrue(np.all(df.rel_err.values < 1e-6))
+            self.assertTrue(np.all(df.abs_err.values < 1e-6))
+
             for library in optimizers.keys():
                 for method in optimizers[library]:
                     with self.subTest(library=library, solver=method):
                         with warnings.catch_warnings():
                             warnings.simplefilter("ignore")
-                            _test_parameter_estimation(objective,
-                                                       library,
-                                                       method,
-                                                       25,
-                                                       target_fval)
+                            parameter_estimation(
+                                objective,
+                                library,
+                                method,
+                                1)
 
 
-def _test_parameter_estimation(objective, library, solver, n_starts,
-                               target_fval):
+def parameter_estimation(
+    objective,
+    library,
+    solver,
+    n_starts,
+):
     options = {
         'maxiter': 100
     }
@@ -51,44 +72,17 @@ def _test_parameter_estimation(objective, library, solver, n_starts,
         optimizer = pypesto.DlibOptimizer(method=solver,
                                           options=options)
 
+    optimizer.temp_file = os.path.join('test', 'tmp_{index}.csv')
+
     lb = -2 * np.ones((1, objective.dim))
     ub = 2 * np.ones((1, objective.dim))
     problem = pypesto.Problem(objective, lb, ub)
 
     results = pypesto.minimize(
         problem, optimizer, n_starts,
-        startpoint_method=pypesto.optimize.startpoint.uniform)
+        startpoint_method=pypesto.optimize.startpoint.uniform,
+        allow_failed_starts=False)
     results = results.optimize_result.list
-
-    successes = [result for result in results if result.fval < target_fval]
-
-    summary = solver + ':\n ' + str(len(successes)) \
-        + '/' + str(len(results)) + ' reached target\n'
-
-    if hasattr(results[0], 'n_fval'):
-        function_evals = [result.n_fval for result in results if result.n_fval]
-        if len(function_evals):
-            summary = summary + 'mean fun evals:' \
-                + str(statistics.mean(function_evals)) \
-                + '±' + str(statistics.stdev(function_evals) / n_starts) + '\n'
-
-    if hasattr(results[0], 'n_grad'):
-        grad_evals = [result.n_grad for result in results if result.n_grad]
-        if len(grad_evals):
-            summary = summary + 'mean grad evals:' \
-                + str(statistics.mean(grad_evals)) \
-                + '±' + str(statistics.stdev(grad_evals) / n_starts) + '\n'
-
-    if hasattr(results[0], 'n_hess'):
-        hess_evals = [result.n_hess for result in results if result.n_hess]
-        if len(hess_evals):
-            summary = summary + 'mean hess evals:' \
-                + str(statistics.mean(hess_evals)) \
-                + '±' + str(statistics.stdev(hess_evals) / n_starts) + '\n'
-
-    print(summary)
-
-    assert(len(successes))
 
 
 def _load_model_objective(example_name):
@@ -127,5 +121,5 @@ def _load_model_objective(example_name):
 
 if __name__ == '__main__':
     suite = unittest.TestSuite()
-    suite.addTest(OptimizerTest())
+    suite.addTest(AmiciObjectiveTest())
     unittest.main()
