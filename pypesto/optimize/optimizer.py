@@ -318,6 +318,9 @@ class DlibOptimizer(Optimizer):
 
         return optimizer_result
 
+    def is_least_squares(self):
+        return False
+
     @staticmethod
     def get_default_options():
         return {}
