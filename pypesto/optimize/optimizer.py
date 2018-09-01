@@ -4,6 +4,7 @@ import re
 import abc
 import time
 import os
+from .objective import ObjectiveOptimizeState
 
 try:
     import dlib
@@ -46,8 +47,8 @@ class OptimizerResult(dict):
     message: str
         Textual comment on the optimization result.
 
-    Any field not supported by the optimizer is filled with None.
-
+    Any field not supported by the optimizer is filled with None. Some
+    fields are filled by pypesto itself.
     """
 
     def __init__(self,
@@ -109,6 +110,8 @@ def timed_minimize(minimize):
             temp_file = self.temp_file.replace('{index}', str(index))
         else:
             temp_file = None
+            
+        problem.objective.reset_history()
 
         problem.objective.reset_history(
             len(x0),
@@ -118,7 +121,7 @@ def timed_minimize(minimize):
 
         result = minimize(self, problem, x0, index)
 
-        result = self.fill_result_from_objective(result, problem)
+        result = self.fill_result_from_objective(result, problem.objective)
 
         if temp_file is not None and os.path.isfile(temp_file):
             os.remove(temp_file)
@@ -168,36 +171,34 @@ class Optimizer(abc.ABC):
     def is_least_squares(self):
         return False
 
-    def recover_result(self, problem, startpoint, err):
+    def recover_result(self, objective, startpoint, err):
         result = OptimizerResult(
             x0=startpoint,
-            grad=None,
-            hess=None,
-            exitflag=-99,
+            exitflag=-1,
             message='{0}'.format(err),
         )
-        self.fill_result_from_objective(result, problem)
+        self.fill_result_from_objective(result, objective)
 
         return result
 
-    def fill_result_from_objective(self, result, problem):
+    def fill_result_from_objective(self, result, objective):
 
-        result.x = problem.objective.min_x
+        result.x = objective.min_x
         if self.is_least_squares():
-            result.fval = problem.objective.get_fval(problem.objective.min_x)
+            result.fval = objective.get_fval(objective.min_x)
         else:
-            result.fval = problem.objective.min_fval
+            result.fval = objective.min_fval
 
-        result.n_fval = problem.objective.n_fval
-        result.n_grad = problem.objective.n_grad
-        result.n_hess = problem.objective.n_hess
+        result.n_fval = objective.n_fval
+        result.n_grad = objective.n_grad
+        result.n_hess = objective.n_hess
 
-        if problem.objective.trace is not None \
-                and len(problem.objective.trace):
-            result.fval0 = problem.objective.trace.loc[0].fval
+        if objective.trace is not None \
+                and len(objective.trace):
+            result.fval0 = objective.trace.loc[0].fval
 
-        result.trace = problem.objective.trace
-        result.time = problem.objective.start_time - time.time()
+        result.trace = objective.trace
+        result.time = objective.start_time - time.time()
 
         return result
 

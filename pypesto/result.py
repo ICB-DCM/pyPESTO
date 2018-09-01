@@ -120,7 +120,7 @@ class Result:
 
     """
 
-    def __init__(self, problem):
+    def __init__(self, problem=None):
         self.problem = problem
         self.optimize_result = OptimizeResult()
         self.profile_result = ProfileResult()

@@ -20,18 +20,72 @@ except ImportError:
     amici = None
     
     
-class ObjectiveState(dict):
-	def __init__(self,
-	             n_fval = 0,
-	             n_grad = 0,
-	             n_hess = 0,
-	             
-	             
-	def init(self):
-		self.n_fval = 0
-		self.n_grad = 0
-		self.n_hess = 0
+class ObjectiveHistory(dict):
+	def __init__(self
+			     trace_record=False,
+			     trace_record_hess=False,
+			     tmp_save=False,
+			     tmp_file=None,
+			     tmp_save_iter=10)
+        self.n_fval = 0
+        self.n_grad = 0
+        self.n_hess = 0
+		self.trace = None
+		self.trace_record = trace_record
+		self.trace_record_hess = trace_record_hess
+		self.tmp_save = tmp_save
+		self.tmp_file = tmp_file
+		self.tmp_save_iter = tmp_save_iter
+		self.start_time = time.time()
+		
+	def update(self, x, result):
+		self.update_counts(result)
+		self.update_trace(x, result)
+		
+	def update_counts(self, result):
+		if Objective.FVAL in result:
+            self.n_fval += 1
+        if Objective.GRAD in result:
+            self.n_grad += 1
+        if Objective.HESS in result:
+            self.n_hess += 1		
+            
+    def update_trace(self, x, result):
+		if not self.trace_record:
+			return
+			
+		# init trace
+		if self.trace is None:
+			self.trace = pd.DataFrame(
+			    columns=['time',
+			             'n_fval', 'n_grad', 'n_hess', 
+			             'fval', 'grad', 'hess', 
+			             'x'])
+		
+		# extract function values
+		fval = result.get(Objective.FVAL, None)
+		grad = result.get(Objective.GRAD, None)
+		hess = None if self.trace_record_hess 
+		    else result.get(Objective.HESS, None)
+		
+		# create table row
+		values = [
+            time.time() - self.start_time,
+            self.n_fval,
+            self.n_grad,
+            elf.n_hess,
+            fval
+            grad,
+            hess,
+            x
+        }
 
+		# append to trace
+        self.trace.loc[len(self.trace)] = values
+
+		# save to file
+        if (len(self.trace) - 1) % self.tmp_save_iter == 0:
+            self.trace.to_csv(self.tmp_file)
 
 class Objective:
     """
@@ -106,31 +160,10 @@ class Objective:
         self.res = res
         self.sres = sres
 
-<<<<<<< HEAD
-        self.n_fval = 0
-        self.n_grad = 0
-        self.n_hess = 0
-
-        self.temp_file = None
-        self.temp_save_iter = None
-        self.min_fval = float('inf')
-        self.min_x = None
-        self.trace = None
-
-        """
-        TODO:
-
-        * Implement methods to compute grad via finite differences (with
-        an automatic adaptation of the step size),
-        and diverse approximations of the Hessian.
-        """
-=======
         self.preprocess = lambda x: x
         self.postprocess = lambda result: result
-        
-        self.state = ObjectiveState()
->>>>>>> feature_fixedpars
-
+		
+        self.history = None
 
     def __call__(self, x, sensi_orders: tuple=(0,), mode=MODE_FUN):
         """
@@ -156,20 +189,6 @@ class Objective:
             Whether to compute function values or residuals.
         """
 
-<<<<<<< HEAD
-        if mode == Objective.MODE_FUN:
-            result = self.call_mode_fun(x, sensi_orders)
-
-        elif mode == Objective.MODE_RES:
-            result = self.call_mode_res(x, sensi_orders)
-        else:
-            raise ValueError("This mode is not supported.")
-
-        return result
-
-    def call_mode_fun(self, x, sensi_orders):
-        self.update_eval_counts(sensi_orders)
-=======
         # pre-process
         x = self.preprocess(x=x)
 
@@ -183,6 +202,9 @@ class Objective:
 
         # post-process
         result = self.postprocess(result=result)
+        
+        # update history
+        self.history.update(x, result)
 
         # map to output format
         result = Objective.map_to_output(sensi_orders, mode, **result)
@@ -193,19 +215,12 @@ class Objective:
         """
         The method __call__ was called with mode MODE_FUN.
         """
->>>>>>> feature_fixedpars
         if sensi_orders == (0,):
             if self.grad is True:
                 fval = self.fun(x)[0]
             else:
                 fval = self.fun(x)
-<<<<<<< HEAD
-            if self.trace is not None:
-                self.update_trace(fval, x)
-            return fval
-=======
             result = {Objective.FVAL: fval}
->>>>>>> feature_fixedpars
         elif sensi_orders == (1,):
             if self.grad is True:
                 grad = self.fun(x)[1]
@@ -224,14 +239,8 @@ class Objective:
             else:
                 fval = self.fun(x)
                 grad = self.grad(x)
-<<<<<<< HEAD
-            if self.trace is not None:
-                self.update_trace(fval, x)
-            return fval, grad
-=======
             result = {Objective.FVAL: fval,
                       Objective.GRAD: grad}
->>>>>>> feature_fixedpars
         elif sensi_orders == (1, 2):
             if self.hess is True:
                 grad, hess = self.fun(x)[1:3]
@@ -253,40 +262,23 @@ class Objective:
                 else:
                     fval = self.fun(x)
                     grad = self.grad(x)
-<<<<<<< HEAD
-            if self.trace is not None:
-                self.update_trace(fval, x)
-            return fval, grad, hess
-=======
             result = {Objective.FVAL: fval,
                       Objective.GRAD: grad,
                       Objective.HESS: hess}
->>>>>>> feature_fixedpars
         else:
             raise ValueError("These sensitivity orders are not supported.")
         return result
 
-<<<<<<< HEAD
-    def call_mode_res(self, x, sensi_orders):
-        self.update_eval_counts(sensi_orders)
-=======
     def _call_mode_res(self, x, sensi_orders):
         """
         The method __call__ was called with mode MODE_RES.
         """
->>>>>>> feature_fixedpars
         if sensi_orders == (0,):
             if self.sres is True:
                 res = self.res(x)[0]
             else:
                 res = self.res(x)
-<<<<<<< HEAD
-            if self.trace is not None:
-                self.update_trace(np.power(res, 2).sum(), x)
-            return res
-=======
             result = {Objective.RES: res}
->>>>>>> feature_fixedpars
         elif sensi_orders == (1,):
             if self.sres is True:
                 sres = self.res(x)[1]
@@ -299,14 +291,8 @@ class Objective:
             else:
                 res = self.res(x)
                 sres = self.sres(x)
-<<<<<<< HEAD
-            if self.trace is not None:
-                self.update_trace(np.power(res, 2).sum(), x)
-            return res, sres
-=======
             result = {Objective.RES: res,
                       Objective.SRES: sres}
->>>>>>> feature_fixedpars
         else:
             raise ValueError("These sensitivity orders are not supported.")
         return result
@@ -335,6 +321,17 @@ class Objective:
             # return a single value not as tuple
             output = output[0]
         return output
+        
+    def init_history(self,
+					  trace_record,
+					  trace_record_hess,
+					  tmp_save,
+					  tmp_file,
+					  tmp_save_iter):
+		"""
+		Initialize or reset the history of the objective function.
+		"""
+		self.history = ObjectiveHistory()
 
     def reset_history(self,
                       dim,
@@ -383,14 +380,6 @@ class Objective:
             self.trace = None
             self.temp_file = None
             self.temp_save_iter = None
-
-    def update_eval_counts(self, sensi_orders):
-        if max(sensi_orders) == 0:
-            self.n_fval += 1
-        if max(sensi_orders) == 1:
-            self.n_grad += 1
-        if max(sensi_orders) == 2:
-            self.n_hess += 1
 
     def update_trace(self, fval, x):
         if fval < self.min_fval:
