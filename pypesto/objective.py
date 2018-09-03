@@ -27,22 +27,49 @@ class ObjectiveHistory(dict):
 			     tmp_save=False,
 			     tmp_file=None,
 			     tmp_save_iter=10)
-        self.n_fval = 0
-        self.n_grad = 0
-        self.n_hess = 0
-		self.trace = None
-		self.trace_record = trace_record
+			     
+        self.trace_record = trace_record
 		self.trace_record_hess = trace_record_hess
 		self.tmp_save = tmp_save
 		self.tmp_file = tmp_file
 		self.tmp_save_iter = tmp_save_iter
+		
+        self.n_fval = None
+        self.n_grad = None
+        self.n_hess = None
+		self.trace = None
+		self.start_time = None
+		
+		self.reset()
+		
+	def reset(self):
+		"""
+		Reset all counters, the trace, and start the timer.
+		"""
+		self.n_fval = 0
+		self.n_grad = 0
+		self.n_hess = 0
+		self.trace = None
 		self.start_time = time.time()
 		
 	def update(self, x, result):
+		"""
+		Update the history.
+		
+		Parameters
+		----------
+		x: np.ndarray
+		    The current parameter.
+		result: dict
+		    The result for x.
+		"""
 		self.update_counts(result)
 		self.update_trace(x, result)
 		
 	def update_counts(self, result):
+		"""
+		Update the counters.
+		"""
 		if Objective.FVAL in result:
             self.n_fval += 1
         if Objective.GRAD in result:
@@ -51,6 +78,9 @@ class ObjectiveHistory(dict):
             self.n_hess += 1		
             
     def update_trace(self, x, result):
+		"""
+		Update and possibly store the trace.
+		"""
 		if not self.trace_record:
 			return
 			
