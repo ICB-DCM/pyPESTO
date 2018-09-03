@@ -90,53 +90,42 @@ class OptimizerResult(dict):
     __delattr__ = dict.__delitem__
 
 
-<<<<<<< HEAD
 def objective_decorator(minimize):
     """
-    Default decorator for the minimize() method to initialise and extract
-    information stored in the objective
+    Default decorator for the minimize() method to initialize and extract
+    information stored in the objective.
+    """
+    def wrapped_minimize(self, problem, x0, index):
+		problem.objective.reset_history(index=index)
+		result = minimize(self, problem, x0 , index)
+		result = fill_result_from_objective_history(
+		    result, problem.objective.history)
+		return result
+	return wrapped_minimize
 
-=======
-def timed_minimize(minimize):
+
+def time_decorator(minimize):
     """
     Default decorator for the minimize() method to take time.
     Currently, the method time.time() is used, which measures
     the wall-clock time.
->>>>>>> feature_fixedpars
     """
-    def timed_minimize(self, problem, x0, index):
-
-        if self.temp_file is not None:
-            temp_file = self.temp_file.replace('{index}', str(index))
-        else:
-            temp_file = None
-            
-        problem.objective.reset_history()
-
-        problem.objective.reset_history(
-            len(x0),
-            temp_file,
-            self.temp_save_iter,
-        )
-
+    def wrapped_minimize(self, problem, x0, index):
+		start_time = time.time()
         result = minimize(self, problem, x0, index)
-
-        result = self.fill_result_from_objective(result, problem.objective)
-
-        if temp_file is not None and os.path.isfile(temp_file):
-            os.remove(temp_file)
-
+		used_time = time.time() - start_time
+		result.time = used_time
         return result
     return timed_minimize
 
 
-def fixed_minimize(minimize):
+def fix_decorator(minimize):
     """
     Default decorator for the minimize() method to include also fixed
     parameters in the result arrays (nans will be inserted in the
     derivatives).
     """
-    def fixed_minimize(self, problem, x0):
+    def wrapped_minimize(self, problem, x0):
         result = minimize(self, problem, x0)
         result.x = problem.get_full_vector(result.x, problem.x_fixed_vals)
         result.grad = problem.get_full_vector(result.grad)
@@ -144,6 +133,32 @@ def fixed_minimize(minimize):
         result.x0 = problem.get_full_vector(result.x0, problem.x_fixed_vals)
         return result
     return fixed_minimize
+    
+   
+def fill_result_from_objective_history(self, result, history):
+	
+	# counters
+	result.n_fval = history.n_fval
+	result.n_grad = history.n_grad
+	result.n_hess = history.n_hess
+	
+	# best found values
+	result.x = history.x_bst
+	result.fval = history.f_bst
+	if self.is_least_squares():
+		# TODO
+		result.fval = objective.get_fval(objective.min_x)
+	else:
+		result.fval = objective.min_fval
+
+	# start value
+	if history.tr is not None and len(objective.trace) > 0:
+		result.fval0 = objective.trace.loc[0].fval
+
+	# trace
+	result.trace = objective.trace
+
+	return result
 
 
 class Optimizer(abc.ABC):
@@ -178,27 +193,6 @@ class Optimizer(abc.ABC):
             message='{0}'.format(err),
         )
         self.fill_result_from_objective(result, objective)
-
-        return result
-
-    def fill_result_from_objective(self, result, objective):
-
-        result.x = objective.min_x
-        if self.is_least_squares():
-            result.fval = objective.get_fval(objective.min_x)
-        else:
-            result.fval = objective.min_fval
-
-        result.n_fval = objective.n_fval
-        result.n_grad = objective.n_grad
-        result.n_hess = objective.n_hess
-
-        if objective.trace is not None \
-                and len(objective.trace):
-            result.fval0 = objective.trace.loc[0].fval
-
-        result.trace = objective.trace
-        result.time = objective.start_time - time.time()
 
         return result
 

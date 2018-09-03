@@ -22,17 +22,28 @@ except ImportError:
 
 
 class ObjectiveOptions(dict):
+	"""
+	Options for the objective that are used in optimization, profiles
+	and sampling.
+	
+	Parameters
+	----------
+	
+	
+	"""
 	
     def __init__(self
                  tr_record=False,
                  tr_record_hess=False,
                  tr_file=None,
-                 tr_save_iter=10)
+                 tr_save_iter=10,
+                 is_minimize=True)
                  
         self.tr_record = tr_record
         self.tr_record_hess = tr_record_hess
         self.tr_file = tr_file
         self.tr_save_iter = tr_save_iter
+        self.is_minimize = is_minimize
 
 	def __getattr__(self, key):
         try:
@@ -45,6 +56,29 @@ class ObjectiveOptions(dict):
 
 
 class ObjectiveHistory:
+    """
+    Objective call history. Also handles saving of intermediate results.
+    
+    Parameteters
+    ------------
+    
+    options: ObjectiveOptions, optional
+        Values needed for creating a history are extracted.
+    
+    Attributes
+    ----------
+    
+    n_fval, n_grad, n_hess: int
+		Counters of function values, gradients and hessians.
+		
+	tr: pd.DataFrame
+	    DataFrame containing a function value and parameter history if
+	    options.tr_record is True.
+	    
+	start_time: float
+		Reference start time.
+    """
+    
     def __init__(self, options=None)
                  
         if options is None:
@@ -57,6 +91,9 @@ class ObjectiveHistory:
         self.tr = None
         self.start_time = None
         
+        self.fval_bst = None
+        self.x_bst = None
+        
         self.reset()
         
     def reset(self):
@@ -68,6 +105,9 @@ class ObjectiveHistory:
         self.n_hess = 0
         self.tr = None
         self.start_time = time.time()
+        
+        self.fval_bst = np.inf if self.options.is_minimize else - np.inf
+        self.x_bst = None
         
     def update(self, x, result):
         """
