@@ -21,21 +21,12 @@ class OptimizeOptions(dict):
 	allow_failed_starts: bool, optional
         Flag indicating whether we tolerate that exceptions are thrown during
         the minimization process.
-        
-	tmp_save: bool, optional
-		Flag indicating whether do save intermediate results during
-		optimization.
-	
-	tmp_file: str, optional
-		Name of the file to save intermediate results to if tmp_save is True.
 	"""
     
     def __init__(self,
                  startpoint_method=None,
                  startpoint_resample=False,
-                 allow_exceptions=False,
-                 tmp_save=False
-                 tmp_file=None)
+                 allow_exceptions=False)
         super().__init__()
         
         if startpoint_method is None:
@@ -44,8 +35,9 @@ class OptimizeOptions(dict):
         
         self.startpoint_resample = startpoint_resample        
         self.allow_exceptions = allow_exceptions
-        self.tmp_save = tmp_save
-        self.tmp_file = tmp_file
+        
+        if objective_history is None:
+			objective_history = ObjectiveHistory()
     
     def __getattr__(self, key):
         try:
@@ -97,9 +89,6 @@ def minimize(
     startpoints = assign_startpoints(n_starts=n_starts,
                                      problem=problem,
                                      options=options)
-
-	# prepare objective
-	problem.objective.options = options.objective_options
 
     # prepare result
     if result is None:
