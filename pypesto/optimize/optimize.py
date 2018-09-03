@@ -35,9 +35,6 @@ class OptimizeOptions(dict):
         
         self.startpoint_resample = startpoint_resample        
         self.allow_exceptions = allow_exceptions
-        
-        if objective_history is None:
-			objective_history = ObjectiveHistory()
     
     def __getattr__(self, key):
         try:
