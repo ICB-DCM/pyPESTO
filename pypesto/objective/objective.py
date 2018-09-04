@@ -420,8 +420,14 @@ class Objective:
 
         self.history = ObjectiveHistory(self.options)
 
-        self.preprocess = lambda x: np.array(x)
-        self.postprocess = lambda result: result
+        def preprocess(x):
+            return np.array(x)
+
+        def postprocess(result):
+            return result
+
+        self.preprocess = preprocess
+        self.postprocess = postprocess
 
     # The following has_ properties can be used to find out what values
     # the objective supports.
