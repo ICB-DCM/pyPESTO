@@ -101,7 +101,8 @@ def objective_decorator(minimize):
     """
     def wrapped_minimize(self, problem, x0, index):
         problem.objective.reset_history(index=index)
-        result = minimize(self, problem, x0 , index)
+        result = minimize(self, problem, x0, index)
+        problem.objective.finalize_history()
         result = fill_result_from_objective_history(
             result, problem.objective.history)
         return result
@@ -137,8 +138,8 @@ def fix_decorator(minimize):
         result.x0 = problem.get_full_vector(result.x0, problem.x_fixed_vals)
         return result
     return wrapped_minimize
-    
-    
+
+
 def fill_result_from_objective_history(result, history):
     """
     Overwrite function values in the result object with the values recorded in
@@ -194,7 +195,7 @@ class Optimizer(abc.ABC):
             exitflag=-1,
             message='{0}'.format(err),
         )
-        fill_result_from_objective_history(result, objective_history)
+        fill_result_from_objective_history(result, objective.history)
 
         return result
 
@@ -228,23 +229,29 @@ class ScipyOptimizer(Optimizer):
     def minimize(self, problem, x0, index):
         lb = problem.lb
         ub = problem.ub
+        objective = problem.objective
 
         if self.is_least_squares():
             # is a residual based least squares method
 
-            if problem.objective.res is None:
-                raise Exception('Least Squares optimization is not available '
-                                'for this type of objective.')
+            if not objective.has_res:
+                raise Exception(
+                    "For least squares optimization, the objective "
+                    "must be able to compute residuals.")
 
             ls_method = self.method[3:]
             bounds = (lb, ub)
-            
+
+            fun = objective.get_res
+            jac = objective.get_sres if objective.has_sres else '2-point'
+            # TODO: pass jac computing methods in options
+
             # optimize
             res = scipy.optimize.least_squares(
-                problem.objective.get_res,
-                x0,
+                fun=fun,
+                x0=x0,
                 method=ls_method,
-                jac=problem.objective.get_sres,
+                jac=jac,
                 bounds=bounds,
                 ftol=self.tol,
                 tr_solver='exact',
@@ -255,40 +262,63 @@ class ScipyOptimizer(Optimizer):
             )
 
         else:
-            # is a fval based optimization method
-            
+            # is an fval based optimization method
+
+            if not objective.has_fun:
+                raise Exception("For this optimizer, the objective must "
+                                "be able to compute function values")
+
             bounds = scipy.optimize.Bounds(lb, ub)
 
-            fun_may_return_tuple = self.method.lower() in \
+            # fun_may_return_tuple = self.method.lower() in \
+            #    ['cg', 'bfgs', 'newton-cg', 'l-bfgs-b', 'tnc', 'slsqp',
+            #        'dogleg', 'trust-ncg']
+            # TODO: is it more efficient to have tuple as output of fun?
+            method_supports_grad = self.method.lower() in \
                 ['cg', 'bfgs', 'newton-cg', 'l-bfgs-b', 'tnc', 'slsqp',
-                    'dogleg', 'trust-ncg']
-            if fun_may_return_tuple and problem.objective.grad is True:
-                def fun(x):
-                    return problem.objective(x, (0, 1), mode=Objective.MODE_FUN)
-            else:
-                fun = problem.objective.get_fval
-            
-            #optimize
+                 'dogleg', 'trust-ncg', 'trust-krylov', 'trust-exact',
+                 'trust-constr']
+            method_supports_hess = self.method.lower() in \
+                ['newton-cg', 'dogleg', 'trust-ncg', 'trust-krylov',
+                 'trust-exact', 'trust-constr']
+            method_supports_hessp = self.method.lower() in \
+                ['newton-cg', 'trust-ncg', 'trust-krylov', 'trust-constr']
+
+            fun = objective.get_fval
+            jac = objective.get_grad \
+                if objective.has_grad and method_supports_grad \
+                else None
+            hess = objective.get_hess \
+                if objective.has_hess and method_supports_hess \
+                else None
+            hessp = objective.get_hessp \
+                if objective.has_hessp and method_supports_hessp \
+                else None
+            # minimize will ignore hessp otherwise
+            if hessp is not None:
+                hess = None
+
+            # optimize
             res = scipy.optimize.minimize(
-                fun,
-                x0,
+                fun=fun,
+                x0=x0,
                 method=self.method,
-                jac=problem.objective.grad if fun_may_return_tuple else
-                problem.objective.get_grad,
-                hess=problem.objective.get_hess,
-                hessp=problem.objective.get_hessp,
+                jac=jac,
+                hess=hess,
+                hessp=hessp,
                 bounds=bounds,
                 tol=self.tol,
                 options=self.options,
             )
 
         # some fields are not filled by all optimizers, then fill in None
-        grad=getattr(res, 'grad', None) if self.is_least_squares() \
+        grad = getattr(res, 'grad', None) if self.is_least_squares() \
             else getattr(res, 'jac', None)
         fval = res_to_fval(res.fun) if self.is_least_squares() \
             else res.fun
-            
-        optimizer_result = OptimizerResult(           
+
+        # fill in everything known, although some parts will be overwritten
+        optimizer_result = OptimizerResult(
             x=res.x,
             fval=fval,
             grad=grad,
@@ -334,19 +364,27 @@ class DlibOptimizer(Optimizer):
     @objective_decorator
     def minimize(self, problem, x0, index):
 
+        lb = problem.lb
+        ub = problem.ub
+        objective = problem.objective
+
         if dlib is None:
             raise ImportError(
-                'This optimizer requires an installation of dlib.'
+                "This optimizer requires an installation of dlib."
             )
 
+        if not objective.has_fun:
+            raise Exception("For this optimizer, the objective must "
+                            "be able to return function values.")
+
         # dlib requires variable length arguments
-        def get_fval_vararg(*par):
-            return problem.objective.get_fval(par)
+        def get_fval_vararg(*x):
+            return objective.get_fval(x)
 
         dlib.find_min_global(
             get_fval_vararg,
-            list(problem.lb),
-            list(problem.ub),
+            list(lb),
+            list(ub),
             int(self.options['maxiter']),
             0.002,
         )

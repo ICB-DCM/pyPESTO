@@ -21,7 +21,7 @@ def latin_hypercube(n_starts, lb, ub):
     Latin hypercube sampling of start points.
     """
     raise NotImplementedError()
-    
+
 
 def assign_startpoints(n_starts, problem, options):
     """
@@ -31,7 +31,7 @@ def assign_startpoints(n_starts, problem, options):
     if options.startpoint_method is False:
         # fill with dummies
         startpoints = np.zeros(n_starts, problem.dim)
-        startpoints[:] = nan        
+        startpoints[:] = np.nan
     else:
         # apply startpoint method
         startpoints = options.startpoint_method(
@@ -52,10 +52,13 @@ def resample_startpoints(startpoints, problem, options):
     Resample startpoints having non-finite value according to the
     startpoint_method.
     """
-                         
+
     n_starts = startpoints.shape[0]
     resampled_startpoints = np.zeros_like(startpoints)
-    
+    lb = problem.lb
+    ub = problem.ub
+    x_guesses = problem.x_guesses
+
     # iterate over startpoints
     for j in range(0, n_starts):
         startpoint = startpoints[j, :]
@@ -67,5 +70,5 @@ def resample_startpoints(startpoints, problem, options):
             fval = problem.objective(startpoint)
         # assign startpoint
         resampled_startpoints[j, :] = startpoint
-        
+
     return resampled_startpoints
