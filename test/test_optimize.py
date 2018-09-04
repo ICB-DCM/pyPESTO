@@ -9,7 +9,6 @@ import unittest
 import test.test_objective as test_objective
 import warnings
 import re
-import os
 
 optimizers = {
     'scipy': ['Nelder-Mead', 'Powell', 'CG', 'BFGS', 'Newton-CG',
