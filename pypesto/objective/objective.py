@@ -12,8 +12,6 @@ import numpy as np
 import copy
 import pandas as pd
 import time
-import abc
-import pickle
 
 
 def res_to_fval(res):
@@ -70,6 +68,7 @@ class ObjectiveOptions(dict):
                  trace_save=False,
                  trace_file=None,
                  trace_save_iter=10):
+        super().__init__()
 
         self.trace_record = trace_record
         self.trace_record_hess = trace_record_hess
@@ -200,9 +199,15 @@ class ObjectiveHistory:
             As in Objective.MODE_.
         result: dict
             The result for x.
+
+        Notes
+        -----
+
+        It is assumed that the result dictionary only contains those
+        values that were requested in Objective.___call__.
         """
-        self._update_counts(result)
-        self._update_trace(x, sensi_orders, mode, result)
+        self._update_counts(sensi_orders, mode)
+        self._update_trace(x, mode, result)
         self._update_vals(x, sensi_orders, mode, result)
 
     def finalize(self):
@@ -211,22 +216,24 @@ class ObjectiveHistory:
         """
         self._save_trace(finalize=True)
 
-    def _update_counts(self, result):
+    def _update_counts(self, sensi_orders, mode):
         """
         Update the counters.
         """
-        if Objective.FVAL in result:
-            self.n_fval += 1
-        if Objective.GRAD in result:
-            self.n_grad += 1
-        if Objective.HESS in result:
-            self.n_hess += 1
-        if Objective.RES in result:
-            self.n_res += 1
-        if Objective.SRES in result:
-            self.n_sres += 1
+        if mode == Objective.MODE_FUN:
+            if 0 in sensi_orders:
+                self.n_fval += 1
+            if 1 in sensi_orders:
+                self.n_grad += 1
+            if 2 in sensi_orders:
+                self.n_hess += 1
+        elif mode == Objective.MODE_RES:
+            if 0 in sensi_orders:
+                self.n_res += 1
+            if 1 in sensi_orders:
+                self.n_sres += 1
 
-    def _update_trace(self, x, sensi_orders, mode, result):
+    def _update_trace(self, x, mode, result):
         """
         Update and possibly store the trace.
         """
@@ -234,16 +241,13 @@ class ObjectiveHistory:
         if not self.options.trace_record:
             return
 
-        # appending to pd.DataFrame is slow, so we use lists here atm
-
         # init trace
         if self.trace is None:
-            self.trace = []
-            self.trace.append(
-                ['time',
-                 'n_fval', 'n_grad', 'n_hess', 'n_res', 'n_sres',
-                 'fval', 'grad', 'hess', 'res', 'sres',
-                 'x'])
+            columns = ['time',
+                       'n_fval', 'n_grad', 'n_hess', 'n_res', 'n_sres',
+                       'fval', 'grad', 'hess', 'res', 'sres',
+                       'x']
+            self.trace = pd.DataFrame(columns=columns)
 
         # extract function values
         if mode == Objective.MODE_FUN:
@@ -256,8 +260,10 @@ class ObjectiveHistory:
         else:  # mode == Objective.MODE_RES
             res = result.get(Objective.RES, None)
             sres = result.get(Objective.SRES, None)
+            # can compute fval from res
             fval = res_to_fval(res)
-            grad = None  # can also be computed from sres
+            # grad could also be computed from sres
+            grad = None
             hess = None
 
         used_time = time.time() - self.start_time
@@ -275,7 +281,7 @@ class ObjectiveHistory:
             return
 
         # append to trace
-        self.trace.append(values)
+        self.trace.loc[len(self.trace)] = values
 
         # save trace to file
         self._save_trace()
@@ -294,7 +300,8 @@ class ObjectiveHistory:
             filename = self.options.trace_file
             if self.index is not None:
                 filename = filename.replace("{index}", str(self.index))
-            pickle.dump(self.trace, open(filename, 'wb'))
+            # save
+            self.trace.to_csv(filename)
 
     def _update_vals(self, x, sensi_orders, mode, result):
         """
@@ -416,10 +423,8 @@ class Objective:
         self.preprocess = lambda x: np.array(x)
         self.postprocess = lambda result: result
 
-    """
-    The following has_ properties can be used to find out what values
-    the objective supports.
-    """
+    # The following has_ properties can be used to find out what values
+    # the objective supports.
 
     @property
     def has_fun(self):
@@ -630,9 +635,7 @@ class Objective:
             output = output[0]
         return output
 
-    """
-    The following are convenience functions for getting specific outputs.
-    """
+    # The following are convenience functions for getting specific outputs.
 
     def get_fval(self, x):
         """
@@ -669,11 +672,9 @@ class Objective:
         sres = self(x, (1,), Objective.MODE_RES)
         return sres
 
-    """
-    The following are functions that are called by other parts in
-    pypesto to modify the objective state, e.g. set its history, or
-    make it aware of fixed parameters.
-    """
+    # The following are functions that are called by other parts in
+    # pypesto to modify the objective state, e.g. set its history, or
+    # make it aware of fixed parameters.
 
     def reset_history(self, index=None):
         """

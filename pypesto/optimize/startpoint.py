@@ -23,18 +23,18 @@ def latin_hypercube(n_starts, lb, ub):
     raise NotImplementedError()
 
 
-def assign_startpoints(n_starts, problem, options):
+def assign_startpoints(n_starts, startpoint_method, problem, options):
     """
     Assign startpoints.
     """
     # check if startpoints needed
-    if options.startpoint_method is False:
+    if startpoint_method is False:
         # fill with dummies
         startpoints = np.zeros(n_starts, problem.dim)
         startpoints[:] = np.nan
     else:
         # apply startpoint method
-        startpoints = options.startpoint_method(
+        startpoints = startpoint_method(
             n_starts=n_starts,
             lb=problem.lb, ub=problem.ub,
             x_guesses=problem.x_guesses)

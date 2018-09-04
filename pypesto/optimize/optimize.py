@@ -1,7 +1,6 @@
-import numpy as np
 from pypesto import Result
 from .startpoint import assign_startpoints, uniform
-from .optimizer import OptimizerResult
+from .optimizer import OptimizerResult, recover_result
 
 
 class OptimizeOptions(dict):
@@ -10,10 +9,6 @@ class OptimizeOptions(dict):
 
     Parameters
     ----------
-
-    startpoint_method: {callable, False}, optional
-        Method for how to choose start points. False means the optimizer does
-        not require start points.
 
     startpoint_resample: bool, optional
         Flag indicating whether initial points are supposed to be resampled if
@@ -29,10 +24,6 @@ class OptimizeOptions(dict):
                  startpoint_resample=False,
                  allow_failed_starts=False):
         super().__init__()
-
-        if startpoint_method is None:
-            startpoint_method = uniform
-        self.startpoint_method = startpoint_method
 
         self.startpoint_resample = startpoint_resample
         self.allow_failed_starts = allow_failed_starts
@@ -66,6 +57,7 @@ def minimize(
         problem,
         optimizer,
         n_starts,
+        startpoint_method=None,
         result=None,
         options=None) -> Result:
     """
@@ -83,6 +75,10 @@ def minimize(
     n_starts: int
         Number of starts of the optimizer.
 
+    startpoint_method: {callable, False}, optional
+        Method for how to choose start points. False means the optimizer does
+        not require start points
+
     result: pypesto.Result
         A result object to append the optimization results to. For example,
         one might append more runs to a previous optimization. If None,
@@ -92,15 +88,18 @@ def minimize(
         Various options applied to the multistart optimization.
     """
 
+    # startpoint method
+    if startpoint_method is None:
+        startpoint_method = uniform
+
     # check options
     if options is None:
         options = OptimizeOptions()
     options = OptimizeOptions.assert_instance(options)
 
     # assign startpoints
-    startpoints = assign_startpoints(n_starts=n_starts,
-                                     problem=problem,
-                                     options=options)
+    startpoints = assign_startpoints(n_starts, startpoint_method,
+                                     problem, options)
 
     # prepare result
     if result is None:
@@ -120,7 +119,7 @@ def minimize(
                 startpoint, j_start, err)
 
         # append to result
-        result.optimize_result.append(optimizer_result=optimizer_result)
+        result.optimize_result.append(optimizer_result)
 
     # sort by best fval
     result.optimize_result.sort()
@@ -139,7 +138,6 @@ def handle_exception(
     """
     if allow_failed_starts:
         print(('start ' + str(j_start) + ' failed: {0}').format(err))
-        optimizer_result = optimizer.recover_result(
-            objective=objective, startpoint=startpoint, err=err)
+        optimizer_result = recover_result(objective, startpoint, err)
         return optimizer_result
     raise err

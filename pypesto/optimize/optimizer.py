@@ -3,8 +3,7 @@ import scipy.optimize
 import re
 import abc
 import time
-import os
-from ..objective import Objective, res_to_fval
+from ..objective import res_to_fval
 
 try:
     import dlib
@@ -99,6 +98,7 @@ def objective_decorator(minimize):
     Default decorator for the minimize() method to initialize and extract
     information stored in the objective.
     """
+
     def wrapped_minimize(self, problem, x0, index):
         problem.objective.reset_history(index=index)
         result = minimize(self, problem, x0, index)
@@ -115,6 +115,7 @@ def time_decorator(minimize):
     Currently, the method time.time() is used, which measures
     the wall-clock time.
     """
+
     def wrapped_minimize(self, problem, x0, index):
         start_time = time.time()
         result = minimize(self, problem, x0, index)
@@ -130,6 +131,7 @@ def fix_decorator(minimize):
     parameters in the result arrays (nans will be inserted in the
     derivatives).
     """
+
     def wrapped_minimize(self, problem, x0, index):
         result = minimize(self, problem, x0, index)
         result.x = problem.get_full_vector(result.x, problem.x_fixed_vals)
@@ -167,6 +169,21 @@ def fill_result_from_objective_history(result, history):
     return result
 
 
+def recover_result(objective, startpoint, err):
+    """
+    Upon an error, recover from the objective history whatever available,
+    and indicate in exitflag and message that an error occurred.
+    """
+    result = OptimizerResult(
+        x0=startpoint,
+        exitflag=-1,
+        message='{0}'.format(err),
+    )
+    fill_result_from_objective_history(result, objective.history)
+
+    return result
+
+
 class Optimizer(abc.ABC):
     """
     This is the optimizer base class, not functional on its own.
@@ -189,15 +206,6 @@ class Optimizer(abc.ABC):
     @abc.abstractmethod
     def is_least_squares(self):
         return False
-
-    def recover_result(self, objective, startpoint, err):
-        result = OptimizerResult(
-            exitflag=-1,
-            message='{0}'.format(err),
-        )
-        fill_result_from_objective_history(result, objective.history)
-
-        return result
 
     @staticmethod
     def get_default_options():

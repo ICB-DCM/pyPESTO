@@ -145,11 +145,11 @@ class Problem:
 
         # sanity checks
         if self.lb.size != self.dim:
-            raise AssertionError("lb dimension not understood.")
+            raise AssertionError("lb dimension invalid.")
         if self.ub.size != self.dim:
-            raise AssertionError("ub dimension not understood.")
+            raise AssertionError("ub dimension invalid.")
         if self.x_guesses.shape[1] != self.dim:
-            raise AssertionError("x_guesses form not understood.")
+            raise AssertionError("x_guesses form invalid.")
 
     def get_full_vector(self, x, x_fixed_vals=None):
         """
