@@ -20,8 +20,7 @@ addons:
       - libatlas-base-dev
       - lcov
       - swig3.0
-      - python3-nbconvert # for jupyter notebooks
-      - jupyter-notebook  # for jupyter notebooks
+      - ipython3-notebook # for jupyter notebooks
 
 install:
   - pyenv shell 2.7 3.6
