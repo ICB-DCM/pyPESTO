@@ -1,16 +1,17 @@
 import numpy as np
 from pypesto import Result
 from .startpoint import assign_startpoints, uniform
+from .optimizer import OptimizerResult
 
 
 class OptimizeOptions(dict):
-	"""
-	Options for the multistart optimization.
-	
-	Parameters
-	----------
-	
-	startpoint_method: {callable, False}, optional
+    """
+    Options for the multistart optimization.
+    
+    Parameters
+    ----------
+    
+    startpoint_method: {callable, False}, optional
         Method for how to choose start points. False means the optimizer does
         not require start points.
 
@@ -18,15 +19,15 @@ class OptimizeOptions(dict):
         Flag indicating whether initial points are supposed to be resampled if
         function evaluation fails at the initial point
         
-	allow_failed_starts: bool, optional
+    allow_failed_starts: bool, optional
         Flag indicating whether we tolerate that exceptions are thrown during
         the minimization process.
-	"""
+    """
     
     def __init__(self,
                  startpoint_method=None,
                  startpoint_resample=False,
-                 allow_exceptions=False)
+                 allow_failed_starts=False):
         super().__init__()
         
         if startpoint_method is None:
@@ -34,7 +35,7 @@ class OptimizeOptions(dict):
         self.startpoint_method = startpoint_method
         
         self.startpoint_resample = startpoint_resample        
-        self.allow_exceptions = allow_exceptions
+        self.allow_failed_starts = allow_failed_starts
     
     def __getattr__(self, key):
         try:
@@ -73,8 +74,8 @@ def minimize(
         one might append more runs to a previous optimization. If None,
         a new object is created.
 
-	options: pypesto.OptimizeOptions, optional
-		Various options applied to the multistart optimization.
+    options: pypesto.OptimizeOptions, optional
+        Various options applied to the multistart optimization.
     """
     
     # check options
@@ -100,7 +101,7 @@ def minimize(
             optimizer_result = optimizer.minimize(problem, startpoint, j)
         except Exception as err:
             optimizer_result = handle_exception(
-                objective=objective,
+                objective=problem.objective,
                 startpoint=startpoint,
                 allow_failed_starts=options.allow_failed_starts, 
                 err=err)
@@ -115,14 +116,14 @@ def minimize(
 
 
 def handle_exception(
-		objective,
-		startpoint,
-		allow_failed_starts,
-		err) -> OptimizerResult:
-	"""
-	Handle exceptions. Raise exception if allow_faile_starts is False,
-	otherwise return a dummy pypesto.OptimizerResult.
-	"""
+        objective,
+        startpoint,
+        allow_failed_starts,
+        err) -> OptimizerResult:
+    """
+    Handle exceptions. Raise exception if allow_faile_starts is False,
+    otherwise return a dummy pypesto.OptimizerResult.
+    """
     if allow_failed_starts:
         print(('start ' + str(j) + ' failed: {0}').format(err))
         optimizer_result = optimizer.recover_result(

@@ -39,7 +39,7 @@ def assign_startpoints(n_starts, problem, options):
             lb=problem.lb, ub=problem.ub,
             x_guesses=problem.x_guesses)
         # resample startpoints
-        if options.startpoint_resampling:
+        if options.startpoint_resample:
             startpoints = resample_startpoints(
                 startpoints=startpoints,
                 problem=problem,
@@ -47,7 +47,7 @@ def assign_startpoints(n_starts, problem, options):
     return startpoints
 
 
-def resample_startpoints(startpoints, problem, options)
+def resample_startpoints(startpoints, problem, options):
     """
     Resample startpoints having non-finite value according to the
     startpoint_method.
@@ -60,9 +60,11 @@ def resample_startpoints(startpoints, problem, options)
     for j in range(0, n_starts):
         startpoint = startpoints[j, :]
         # apply method until found valid point
-        while not np.isfinite(problem.objective(startpoint)):
+        fval = problem.objective(startpoint)
+        while fval == np.inf or fval == np.nan:
             startpoint = options.startpoint_method(
                 n_starts=1, lb=lb, ub=ub, x_guesses=x_guesses)[0, :]
+            fval = problem.objective(startpoint)
         # assign startpoint
         resampled_startpoints[j, :] = startpoint
         

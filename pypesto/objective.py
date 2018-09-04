@@ -21,31 +21,71 @@ except ImportError:
     amici = None
 
 
-class ObjectiveOptions(dict):
-	"""
-	Options for the objective that are used in optimization, profiles
-	and sampling.
-	
-	Parameters
-	----------
-	
-	
-	"""
-	
-    def __init__(self
-                 tr_record=False,
-                 tr_record_hess=False,
-                 tr_file=None,
-                 tr_save_iter=10,
-                 is_minimize=True)
-                 
-        self.tr_record = tr_record
-        self.tr_record_hess = tr_record_hess
-        self.tr_file = tr_file
-        self.tr_save_iter = tr_save_iter
-        self.is_minimize = is_minimize
+def res_to_fval(res):
+    """
+    We assume that the residuals res are related to an objective function
+    value fval via::
+        fval = 0.5 * sum(res**2),
+    which is the 'Linear' formulation in scipy.
+    """
+    return 0.5 * np.power(res, 2).sum()
+    
 
-	def __getattr__(self, key):
+class ObjectiveOptions(dict):
+    """
+    Options for the objective that are used in optimization, profiles
+    and sampling.
+    
+    Parameters
+    ----------
+    
+    trace_record: bool, optional
+        Flag indicating whether to record the trace of function calls.
+        Default: False.
+        
+    trace_record_hess: bool, optional
+        Flag indicating whether to record also the Hessian in the trace.
+        Default: False.
+        
+    trace_all: bool, optional
+        Flag indicating whether to record all (True, default) or only
+        better (False) values.
+        
+    trace_save: bool, optional
+        Flag indicating whether to save the trace.
+        Default: False.
+        
+    trace_file: str, optional
+        The string passed here is the file name for storing the trace.
+        A contained substring {index} is converted to the multistart
+        index.
+        Default: "tmp_trace_{index}.dat".
+        
+    trace_save_iter. index, optional
+        Trace is saved every tr_save_iter iterations.
+        Default: 10.
+    """
+    
+    def __init__(self,
+                 trace_record=False,
+                 trace_record_hess=False,
+                 trace_all=True,
+                 trace_save=False,
+                 trace_file=None,
+                 trace_save_iter=10):
+ 
+        self.trace_record = trace_record
+        self.trace_record_hess = trace_record_hess
+        self.trace_all = trace_all
+        self.trace_save = trace_save
+        
+        if trace_file is None:
+            trace_file = "tmp_trace_{index}.dat"
+        self.trace_file = trace_file
+        
+        self.trace_save_iter = trace_save_iter
+
+    def __getattr__(self, key):
         try:
             return self[key]
         except KeyError:
@@ -68,46 +108,71 @@ class ObjectiveHistory:
     Attributes
     ----------
     
-    n_fval, n_grad, n_hess: int
-		Counters of function values, gradients and hessians.
-		
-	tr: pd.DataFrame
-	    DataFrame containing a function value and parameter history if
-	    options.tr_record is True.
-	    
-	start_time: float
-		Reference start time.
+    n_fval, n_grad, n_hess, n_res, n_sres: int
+        Counters of function values, gradients and hessians,
+        residuals and residual sensitivities.
+        
+    tr: pd.DataFrame
+        DataFrame containing a function value and parameter history if
+        options.tr_record is True.
+        
+    start_time: float
+        Reference start time.
+        
+    fval0, fval_min: float
+        Initial and best function value found.
+        
+    x0, x_min: np.ndarray
+        Initial and best parameters found.
+        
+    index: str
+        Id identifying the history object when called in a multistart
+        setting.
     """
     
-    def __init__(self, options=None)
+    def __init__(self, options=None):
                  
         if options is None:
-		    options = ObjectiveOptions()
-		self.options = options
+            options = ObjectiveOptions()
+        self.options = options
         
         self.n_fval = None
         self.n_grad = None
         self.n_hess = None
-        self.tr = None
+        self.n_res = None
+        self.n_sres = None
+        
+        self.trace = None
         self.start_time = None
         
-        self.fval_bst = None
-        self.x_bst = None
+        self.fval_min = None
+        self.x_min = None
+        self.fval0 = None
+        self.x0 = None
+        
+        self.index = None
         
         self.reset()
         
-    def reset(self):
+    def reset(self, index=None):
         """
         Reset all counters, the trace, and start the timer.
         """
         self.n_fval = 0
         self.n_grad = 0
         self.n_hess = 0
-        self.tr = None
-        self.start_time = time.time()
+        self.n_res = 0
+        self.n_sres = 0
         
-        self.fval_bst = np.inf if self.options.is_minimize else - np.inf
-        self.x_bst = None
+        self.trace = None
+        self.start_time = time.time()
+
+        self.fval0 = None
+        self.x0 = None
+        self.fval_min = np.inf
+        self.x_min = None
+        
+        self.index = index
         
     def update(self, x, result):
         """
@@ -121,7 +186,8 @@ class ObjectiveHistory:
             The result for x.
         """
         self.update_counts(result)
-        self.update_tr(x, result)
+        self.update_trace(x, result)
+        self.update_vals(x, result)
         
     def update_counts(self, result):
         """
@@ -132,50 +198,93 @@ class ObjectiveHistory:
         if Objective.GRAD in result:
             self.n_grad += 1
         if Objective.HESS in result:
-            self.n_hess += 1        
+            self.n_hess += 1
+        if Objective.RES in result:
+            self.n_res += 1
+        if Objective.SRES in result:
+            self.n_sres += 1
             
-    def update_tr(self, x, result):
+    def update_trace(self, x, result):
         """
         Update and possibly store the trace.
         """
+
         if not self.options.trace_record:
             return
-            
+
         # init trace
-        if self.tr is None:
-            self.tr = pd.DataFrame(
+        if self.trace is None:
+            self.trace = pd.DataFrame(
                 columns=['time',
                          'n_fval', 'n_grad', 'n_hess', 
-                         'fval', 'grad', 'hess', 
+                         'fval', 'grad', 'hess',
+                         'res', 'sres',
                          'x']
             )
-        
+
         # extract function values
         fval = result.get(Objective.FVAL, None)
         grad = result.get(Objective.GRAD, None)
-        hess = None if self.trace_record_hess 
+        hess = None if self.trace_record_hess \
             else result.get(Objective.HESS, None)
+        res = result.get(Objective.RES, None)
+        sres = result.get(Objective.SRES, None)
         
         # create table row
         values = [
             time.time() - self.start_time,
             self.n_fval,
             self.n_grad,
-            elf.n_hess,
-            fval
+            self.n_hess,
+            fval,
             grad,
             hess,
+            res,
+            sres,
             x
-        }
+        ]
+        
+        # check whether to append to trace
+        if not self.trace_all and fval >= self.fval_min:
+            return
 
         # append to trace
-        self.tr.loc[len(self.tr)] = values
+        self.trace.loc[len(self.trace)] = values
 
-        # save to file
-        if self.options.tr_file is not None \
-                and len(self.tr > 0) \
-                and len(self.tr) % self.options.tr_save_iter == 0:
-            pickle.dump(self.tr, open(self.options.tr_file, 'wb'))
+        # save to file via pickle
+        # format might be revised when storage is implemented
+        if self.options.trace_file is not None \
+                and len(self.trace > 0) \
+                and len(self.trace) % self.options.trace_save_iter == 0:
+            filename = self.options.trace_file
+            if self.index is not None:
+                filename = filename.replace("{index}", str(self.index))
+            pickle.dump(self.trace, open(filename, 'wb'))
+
+    def update_vals(self, x, result):
+        """
+        Update initial and best function values. Must be called after
+        update_trace().
+        """
+        
+        # update initial point
+        if self.fval0 is None:
+            if Objective.FVAL in result:
+                self.fval0 = result[Objective.FVAL]
+                self.x0 = x
+            elif Objective.RES in result:
+                self.fval0 = res_to_fval(result[Objective.RES])
+                self.x0 = x
+        
+        # update best point
+        fval = np.inf
+        if Objective.FVAL in result:
+            fval = result[Objective.FVAL]
+        elif Objective.RES in result:
+            fval = res_to_fval(result[Objective.RES])
+        if fval < self.fval_min:
+            self.fval_min = fval
+            self.x_min = x
 
 
 class Objective:
@@ -224,19 +333,28 @@ class Objective:
         sensitivities as a second output.
         
     options: pypesto.ObjectiveOptions, optional
-		Options as specified in pypesto.ObjectiveOptions.
+        Options as specified in pypesto.ObjectiveOptions.
 
     Attributes
     ----------
     
     history: pypesto.ObjectiveHistory
-        For storing the call history.
+        For storing the call history. Initialized by the optimizer in
+        reset_history().
 
+    The following variables are set by the problem in update_from_problem():
+    
     preprocess: callable
         Preprocess input values to __call__.
 
     postprocess: callable
         Postprocess output values from __call__.
+        
+    dim, dim_full: int
+        Dimension of the reduced and full problem.
+    
+    parameter_names: list of str
+        Parameter names.
     """
 
     MODE_FUN = 'mode_fun'  # mode for function values
@@ -259,12 +377,12 @@ class Objective:
         self.sres = sres
         
         if options is None:
-			options = ObjectiveOptions()
-		self.options = options
-		
+            options = ObjectiveOptions()
+        self.options = options
+        
         self.history = ObjectiveHistory(self.options)
         
-        self.preprocess = lambda x: x
+        self.preprocess = lambda x: np.array(x)
         self.postprocess = lambda result: result
 
     def __call__(self, x, sensi_orders: tuple=(0,), mode=MODE_FUN):
@@ -290,17 +408,18 @@ class Objective:
         mode: str
             Whether to compute function values or residuals.
         """
-
+        
         # pre-process
         x = self.preprocess(x=x)
 
-        # function or residue mode
-        if mode == Objective.MODE_FUN:
-            result = self._call_mode_fun(x, sensi_orders)
-        elif mode == Objective.MODE_RES:
-            result = self._call_mode_res(x, sensi_orders)
-        else:
-            raise ValueError("This mode is not supported.")
+        # compute function value
+        result = self._call_unprocessed(x, sensi_orders, mode)
+            
+        # compute result
+        result = self._call_unprocessed(x, sensi_orders, mode)
+        
+        # convert to ndarray
+        result = Objective.as_ndarrays(result)
 
         # post-process
         result = self.postprocess(result=result)
@@ -310,7 +429,21 @@ class Objective:
 
         # map to output format
         result = Objective.map_to_output(sensi_orders, mode, **result)
-
+        
+        return result
+        
+    def _call_unprocessed(self, x, sensi_orders, mode):
+        """
+        Call objective function without pre- or post-processing and
+        formatting.
+        """
+        if mode == Objective.MODE_FUN:
+            result = self._call_mode_fun(x, sensi_orders)
+        elif mode == Objective.MODE_RES:
+            result = self._call_mode_res(x, sensi_orders)
+        else:
+            raise ValueError("This mode is not supported.")
+            
         return result
 
     def _call_mode_fun(self, x, sensi_orders):
@@ -398,6 +531,22 @@ class Objective:
         else:
             raise ValueError("These sensitivity orders are not supported.")
         return result
+        
+    @staticmethod
+    def as_ndarrays(result):
+        """
+        Convert all array_like objects to numpy arrays. This has the advantage
+        of a uniform output datatype which offers various methods to assess
+        the data.
+        """
+        keys = [Objective.GRAD, Objective.HESS, Objective.RES, Objective.SRES]
+        for key in keys:
+            if key in result:
+                value = result[key]
+                if value is not None:
+                    result[key] = np.array(value)
+                
+        return result
 
     @staticmethod
     def map_to_output(sensi_orders, mode, **kwargs):
@@ -411,24 +560,18 @@ class Objective:
             if 0 in sensi_orders:
                 output += (kwargs[Objective.FVAL],)
             if 1 in sensi_orders:
-                output += (np.array(kwargs[Objective.GRAD]),)
+                output += (kwargs[Objective.GRAD],)
             if 2 in sensi_orders:
-                output += (np.array(kwargs[Objective.HESS]),)
+                output += (kwargs[Objective.HESS],)
         elif mode == Objective.MODE_RES:
             if 0 in sensi_orders:
-                output += (np.array(kwargs[Objective.RES]),)
+                output += (kwargs[Objective.RES],)
             if 1 in sensi_orders:
-                output += (np.array(kwargs[Objective.SRES]),)
+                output += (kwargs[Objective.SRES],)
         if len(output) == 1:
             # return a single value not as tuple
             output = output[0]
         return output
-
-    def reset_history(self)):
-        """
-        Reset the objective history and specify temporary saving options.
-        """
-		self.history.reset()
 
     """
     The following are convenience functions for getting specific outputs.
@@ -476,128 +619,31 @@ class Objective:
         sres = self(x, (1,), Objective.MODE_RES)
         return sres
 
-    def check_grad(self,
-                   x,
-                   x_indices=None,
-                   eps=1e-5,
-                   verbosity=1,
-                   mode=Objective.MODE_FUN) -> pd.DataFrame:
+    def reset_history(self, index=None):
         """
-        Compare gradient evaluation: Firstly approximate via finite
-        differences, and secondly use the objective gradient.
-
+        Reset the objective history and specify temporary saving options.
+        
         Parameters
         ----------
-
-        x: array_like
-            The parameters for which to evaluate the gradient.
-
-        x_indices: array_like, optional
-            List of index values for which to compute gradients. Default: all.
-
-        eps: float, optional
-            Finite differences step size. Default: 1e-5.
-
-        verbosity: int
-            Level of verbosity for function output
-                0: no output
-                1: summary for all parameters
-                2: summary for individual parameters
-            Default: 1.
-
-        mode: str
-            Residual (Objective.MODE_RES) or objective function value
-            (Objective.MODE_FUN, default) computation mode.
-
-        Returns
-        ----------
         
-        result: pd.DataFrame
-			gradient, finite difference approximations and error estimates.
+        index: As in ObjectiveHistory.index.
         """
+        self.history.reset(index=index)
+        
+    def reset(self):
+        """
+        Completely reset the objective, i.e. undo the modifications in
+        update_from_problem().
+        """
+        self.history = ObjectiveHistory(self.options)
+        self.preprocess = lambda x: np.array(x)
+        self.postprocess = lambda result: result
 
-        if x_indices is None:
-            x_indices = range(len(x))
-	
-		# function value and objective gradient
-        fval, grad = self(x, (0, 1), mode)
-
-        grad_list = []
-        fd_f_list = []
-        fd_b_list = []
-        fd_c_list = []
-        fd_err_list = []
-        abs_err_list = []
-        rel_err_list = []
-
-		# loop over indices
-        for ix in x_indices:
-            # forward (plus) point
-            x_p = copy.deepcopy(x)
-            x_p[ix] += eps
-            fval_p = self(x_p, (0,), mode)
-			
-			# backward (minus) point
-            x_m = copy.deepcopy(x)
-            x_m[ix] -= eps
-            fval_m = self(x_m, (0,), mode)
-			
-			# finite differences
-            fd_f_ix = (fval_p - fval) / eps
-            fd_b_ix = (fval - fval_m) / eps
-            fd_c_ix = (fval_p - fval_m) / (2 * eps)
-			
-			# gradient in direction ix
-            grad_ix = grad[ix] if grad.ndim == 1 else grad[:, ix]
-			
-			# errors
-			fd_err_ix = abs(fd_f_ix - fd_b_ix)
-			abs_err_ix = abs(grad_ix - fd_c_ix)
-			rel_err_ix = abs(abs_err_ix / (fd_c_ix + eps))
-			
-			# log for dimension ix
-            if verbosity > 1:
-                print('index:    ' + str(ix) + '\n' +
-                      'grad: ' + str(grad_ix) + '\n' +
-                      'fd_f:  ' + str(fd_c_ix) + '\n' +
-                      'fd_b:  ' + str(fd_f_ix) + '\n' +
-                      'fd_c:  ' + str(fd_b_ix) + '\n' +
-                      'fd_err:   '
-                      'abs_err:  ' + str(abs_err_ix) + '\n' +
-                      'rel_err:  ' + str(rel_err_ix) + '\n'
-                      )
-
-			# append to lists
-            grad_list.append(grad_ix)
-            fd_f_list.append(fd_f_ix)
-            fd_b_list.append(fd_b_ix)
-            fd_c_list.append(fd_c_ix)
-            fd_err_list.append(fd_err_ix)
-            abs_err_list.append(abs_err_ix)
-            rel_err_list.append(re_err_ix)
-            
-        # create dataframe
-        result = pd.DataFrame(data={
-            'grad': g_list,
-            'fd_f': fd_f_list,
-            'fd_b': fd_b_list,
-            'fd_c': fd_c_list,
-            'fd_err': fd_err_list,
-            'abs_err': abs_error_list,
-            'rel_err': rel_error_list,
-        })
-		
-		# log full result
-        if verbosity > 0:
-            print(result)
-
-        return result
-
-    def handle_x_fixed(self,
-                       dim_full,
-                       x_free_indices,
-                       x_fixed_indices,
-                       x_fixed_vals):
+    def update_from_problem(self,
+                            dim_full,
+                            x_free_indices,
+                            x_fixed_indices,
+                            x_fixed_vals):
         """
         Handle fixed parameters. Later, the objective will be given parameter
         vectors x of dimension dim, which have to be filled up with fixed
@@ -647,15 +693,151 @@ class Objective:
                 if grad.size == dim_full:
                     grad = grad[x_free_indices]
                     result[Objective.GRAD] = grad
-                assert grad.size == dim
             if Objective.HESS in result:
                 hess = result[Objective.HESS]
                 if hess.shape[0] == dim_full:
                     hess = hess[np.ix_(x_free_indices, x_free_indices)]
                     result[Objective.HESS] = hess
-                assert hess.shape == (dim, dim)
+            if Objective.RES in result:
+                res = result[Objective.RES]
+                if res.size == dim_full:
+                    res = res.flatten()[x_free_indices]
+                    result[Objective.RES] = res
+            if Objective.SRES in result:
+                sres = result[Objective.SRES]
+                if sres.shape[-1] == dim_full:
+                    sres = sres[..., x_free_indices]
+                    result[Objective.SRES] = sres
             return result
         self.postprocess = postprocess
+        
+    def get_x_names(self):
+        """
+        Get parameter names.
+        
+        Returns
+        -------
+        
+        None if no names provided, otherwise a list of str, length dim_full.
+        """
+        return None
+        
+    def check_grad(self,
+                   x,
+                   x_indices=None,
+                   eps=1e-5,
+                   verbosity=1,
+                   mode=MODE_FUN) -> pd.DataFrame:
+        """
+        Compare gradient evaluation: Firstly approximate via finite
+        differences, and secondly use the objective gradient.
+
+        Parameters
+        ----------
+
+        x: array_like
+            The parameters for which to evaluate the gradient.
+
+        x_indices: array_like, optional
+            List of index values for which to compute gradients. Default: all.
+
+        eps: float, optional
+            Finite differences step size. Default: 1e-5.
+
+        verbosity: int
+            Level of verbosity for function output
+                0: no output
+                1: summary for all parameters
+                2: summary for individual parameters
+            Default: 1.
+
+        mode: str
+            Residual (Objective.MODE_RES) or objective function value
+            (Objective.MODE_FUN, default) computation mode.
+
+        Returns
+        ----------
+        
+        result: pd.DataFrame
+            gradient, finite difference approximations and error estimates.
+        """
+
+        if x_indices is None:
+            x_indices = list(range(len(x)))
+
+        # function value and objective gradient
+        fval, grad = self(x, (0, 1), mode)
+
+        grad_list = []
+        fd_f_list = []
+        fd_b_list = []
+        fd_c_list = []
+        fd_err_list = []
+        abs_err_list = []
+        rel_err_list = []
+
+        # loop over indices
+        for ix in x_indices:
+            # forward (plus) point
+            x_p = copy.deepcopy(x)
+            x_p[ix] += eps
+            fval_p = self(x_p, (0,), mode)
+            
+            # backward (minus) point
+            x_m = copy.deepcopy(x)
+            x_m[ix] -= eps
+            fval_m = self(x_m, (0,), mode)
+            
+            # finite differences
+            fd_f_ix = (fval_p - fval) / eps
+            fd_b_ix = (fval - fval_m) / eps
+            fd_c_ix = (fval_p - fval_m) / (2 * eps)
+            
+            # gradient in direction ix
+            grad_ix = grad[ix] if grad.ndim == 1 else grad[:, ix]
+            
+            # errors
+            fd_err_ix = abs(fd_f_ix - fd_b_ix)
+            abs_err_ix = abs(grad_ix - fd_c_ix)
+            rel_err_ix = abs(abs_err_ix / (fd_c_ix + eps))
+            
+            # log for dimension ix
+            if verbosity > 1:
+                print('index:    ' + str(ix) + '\n' +
+                      'grad: ' + str(grad_ix) + '\n' +
+                      'fd_f:  ' + str(fd_c_ix) + '\n' +
+                      'fd_b:  ' + str(fd_f_ix) + '\n' +
+                      'fd_c:  ' + str(fd_b_ix) + '\n' +
+                      'fd_err:   '
+                      'abs_err:  ' + str(abs_err_ix) + '\n' +
+                      'rel_err:  ' + str(rel_err_ix) + '\n'
+                      )
+
+            # append to lists
+            grad_list.append(grad_ix)
+            fd_f_list.append(fd_f_ix)
+            fd_b_list.append(fd_b_ix)
+            fd_c_list.append(fd_c_ix)
+            fd_err_list.append(np.mean(fd_err_ix))
+            abs_err_list.append(np.mean(abs_err_ix))
+            rel_err_list.append(np.mean(rel_err_ix))
+            
+        # create dataframe
+        result = pd.DataFrame(data={
+            'grad': grad_list,
+            'fd_f': fd_f_list,
+            'fd_b': fd_b_list,
+            'fd_c': fd_c_list,
+            'fd_err': fd_err_list,
+            'abs_err': abs_err_list,
+            'rel_err': rel_err_list,
+        })
+        
+        # log full result
+        if verbosity > 0:
+            print(result)
+
+        return result
 
 
 class AmiciObjective(Objective):
@@ -685,29 +867,7 @@ class AmiciObjective(Objective):
             raise ImportError('This objective requires an installation of '
                               'amici (github.com/icb-dcm/amici. Install via '
                               'pip3 install amici.')
-        super().__init__(
-            fun=lambda x: self.call_amici(
-                x,
-                tuple(i for i in range(max_sensi_order)),
-                'MODE_FUN'
-            ),
-            grad=max_sensi_order > 0,
-            hess=lambda x: self.call_amici(
-                x,
-                (2, ),
-                'MODE_FUN'
-            ),
-            res=lambda x: self.call_amici(
-                x,
-                (0,),
-                'MODE_RES'
-            ),
-            sres=lambda x: self.call_amici(
-                x,
-                (1,),
-                'MODE_RES'
-            ),
-        )
+        super().__init__(fun=None)
         self.amici_model = amici_model
         self.amici_solver = amici_solver
         self.dim = amici_model.np()
@@ -723,7 +883,7 @@ class AmiciObjective(Objective):
         if self.max_sensi_order is None:
             self.max_sensi_order = 2 if amici_model.o2mode else 1
 
-    def call_amici(
+    def _call_unprocessed(
             self,
             x,
             sensi_orders: tuple=(0,),
@@ -733,7 +893,6 @@ class AmiciObjective(Objective):
         # the lower orders are then automatically computed
         sensi_order = min(max(sensi_orders), 1)
         # order 2 currently not implemented, we are using the FIM
-
         if sensi_order > self.max_sensi_order:
             raise Exception("Sensitivity order not allowed.")
 
@@ -806,12 +965,12 @@ class AmiciObjective(Objective):
                 if sensi_order > 0:
                     sres = np.vstack([sres, rdata['sres']]) \
                         if sres.size else rdata['sres']
-
-        return Objective.map_to_output(
-            sensi_orders=sensi_orders,
-            mode=mode,
-            fval=nllh, grad=snllh, hess=ssnllh,
-            res=res, sres=sres)
+        
+        return {Objective.FVAL: nllh,
+                Objective.GRAD: snllh,
+                Objective.HESS: ssnllh,
+                Objective.RES: res,
+                Objective.SRES: sres}
 
     def preprocess_preequilibration(self, data):
         original_fixed_parameters_preequilibration = None
@@ -901,5 +1060,8 @@ class AmiciObjective(Objective):
             sres=np.nan * np.ones([n_res, self.dim])
         )
 
-    def get_parameter_names(self):
+    def get_x_names(self):
+        """
+        Extracts the parameter names from the model.
+        """
         return list(self.amici_model.getParameterNames())

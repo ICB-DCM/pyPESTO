@@ -50,6 +50,13 @@ class Problem:
     x_guesses: array_like, optional
         Guesses for the parameter values, shape (g, dim), where g denotes the
         number of guesses. These are used as start points in the optimization.
+    
+    x_names: array_like of str, optional
+        Parameter names that can be optionally used e.g. in visualizations.
+        If objective.get_x_names() is not None, those values are used,
+        else the values specified here are used if not None, otherwise
+        the variable names are set to ['x0', ... 'x{dim_full}']. The list
+        must always be of length dim_full.
 
     Notes
     -----
@@ -72,7 +79,8 @@ class Problem:
                  dim_full=None,
                  x_fixed_indices=None,
                  x_fixed_vals=None,
-                 x_guesses=None):
+                 x_guesses=None,
+                 x_names=None):
 
         self.objective = copy.copy(objective)
 
@@ -99,6 +107,13 @@ class Problem:
         if x_guesses is None:
             x_guesses = np.zeros((0, self.dim))
         self.x_guesses = np.array(x_guesses)
+        
+        objective_x_names = objective.get_x_names()
+        if objective_x_names is not None:
+            x_names = objective_x_names
+        elif x_names is None:
+            x_names = ['x' + str(j) for j in range(0, self.dim_full)]
+        self.x_names = x_names
 
         self.normalize_input()
 
@@ -122,7 +137,7 @@ class Problem:
             self.x_guesses = self.x_guesses[:, self.x_free_indices]
 
         # make objective aware of fixed parameters
-        self.objective.handle_x_fixed(
+        self.objective.update_from_problem(
             dim_full=self.dim_full,
             x_free_indices=self.x_free_indices,
             x_fixed_indices=self.x_fixed_indices,
@@ -143,7 +158,7 @@ class Problem:
         Parameters
         ----------
 
-        x: array_like, ndim=1
+        x: array_like, shape=(dim,)
             The vector in dimension dim.
 
         x_fixed_vals: array_like, ndim=1
@@ -153,6 +168,9 @@ class Problem:
         """
         if x is None:
             return None
+
+        if len(x) == self.dim_full:
+            return np.array(x)
 
         # Note: The funny indexing construct is to handle residual gradients,
         # where the last dimension is assumed to be the parameter one.
@@ -170,14 +188,19 @@ class Problem:
         Parameters
         ----------
 
-        x: array_like, ndim=2
-            The matrix in shape (dim, dim).
+        x: array_like, shape=(dim, dim)
+            The matrix in dimension dim.
         """
         if x is None:
             return None
+            
+        if len(x) == self.dim_full:
+            return np.array(x)
+            
         x_full = np.zeros((self.dim_full, self.dim_full))
         x_full[:, :] = np.nan
         x_full[np.ix_(self.x_free_indices, self.x_free_indices)] = x
+        
         return x_full
 
     def get_reduced_vector(self, x_full):
@@ -192,7 +215,12 @@ class Problem:
         """
         if x_full is None:
             return None
+            
+        if len(x_full) == self.dim:
+            return x_full
+            
         x = x_full[self.x_free_indices]
+        
         return x
 
     def get_reduced_matrix(self, x_full):
@@ -207,5 +235,10 @@ class Problem:
         """
         if x_full is None:
             return None
+        
+        if len(x_full) == self.dim:
+            return x_full
+            
         x = x_full[np.ix_(self.x_free_indices, self.x_free_indices)]
+        
         return x
