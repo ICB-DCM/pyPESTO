@@ -14,7 +14,10 @@ from .objective import (ObjectiveOptions,
                         Objective,
                         AmiciObjective)
 from .problem import Problem
-from .result import Result
+from .result import (Result,
+                     OptimizeResult,
+                     ProfileResult,
+                     SampleResult)
 from .optimize import (minimize,
                        OptimizeOptions,
                        OptimizerResult,
