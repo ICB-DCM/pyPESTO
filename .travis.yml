@@ -20,12 +20,16 @@ addons:
       - libatlas-base-dev
       - lcov
       - swig3.0
+      - python3-nbconvert # for jupyter notebooks
+      - jupyter-notebook  # for jupyter notebooks
+
 install:
   - pyenv shell 2.7 3.6
   - mkdir -p ~/bin/ && ln -s /usr/bin/swig3.0 ~/bin/swig && export PATH=~/bin/:$PATH
   - pip3 install --upgrade setuptools wheel pkgconfig
   - pip3 install --upgrade -r ./.travis_pip_reqs.txt
   - pip3 install .
+
 before_script:
   # use a no-screen x-server to test plotting
   - "export DISPLAY=:99.0"
@@ -33,11 +37,12 @@ before_script:
   - sleep 3 # give xvfb some time to start
 
 # run tests
-
 script:  
   - python3 -m flake8 --ignore=F401 --exclude=build,doc,example
   - python3 -m pytest --cov=pypesto ./test
   - coverage xml
+  - test/runNotebook.sh doc/example/rosenbrock.ipynb
+  - test/runNotebook.sh doc/example/conversion_reaction.ipynb
 
 after_success:
   - bash <(curl -s https://codecov.io/bash)
