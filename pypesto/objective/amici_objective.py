@@ -81,6 +81,9 @@ class AmiciObjective(Objective):
 
         self.max_sensi_order = max_sensi_order
 
+        # extract parameter names from model
+        self.x_names = list(self.amici_model.getParameterNames())
+
     def call_amici(
             self,
             x,
@@ -261,9 +264,3 @@ class AmiciObjective(Objective):
             res=np.nan * np.ones(n_res),
             sres=np.nan * np.ones([n_res, self.dim])
         )
-
-    def get_x_names(self):
-        """
-        Extracts the parameter names from the model.
-        """
-        return list(self.amici_model.getParameterNames())

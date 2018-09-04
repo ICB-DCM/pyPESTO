@@ -108,9 +108,8 @@ class Problem:
             x_guesses = np.zeros((0, self.dim))
         self.x_guesses = np.array(x_guesses)
 
-        objective_x_names = objective.get_x_names()
-        if objective_x_names is not None:
-            x_names = objective_x_names
+        if objective.x_names is not None:
+            x_names = objective.x_names
         elif x_names is None:
             x_names = ['x' + str(j) for j in range(0, self.dim_full)]
         self.x_names = x_names
@@ -150,6 +149,8 @@ class Problem:
             raise AssertionError("ub dimension invalid.")
         if self.x_guesses.shape[1] != self.dim:
             raise AssertionError("x_guesses form invalid.")
+        if len(self.x_names) != self.dim_full:
+            raise AssertionError("x_names must be of length dim_full")
 
     def get_full_vector(self, x, x_fixed_vals=None):
         """

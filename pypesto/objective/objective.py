@@ -385,6 +385,11 @@ class Objective:
         For storing the call history. Initialized by the optimizer in
         reset_history().
 
+    x_names: list of str
+        Parameter names. The base Objective class provides None.
+        None if no names provided, otherwise a list of str, length dim_full.
+        Can be read by the problem.
+
     The following variables are set by the problem in update_from_problem():
 
     preprocess: callable
@@ -428,6 +433,8 @@ class Objective:
 
         self.preprocess = preprocess
         self.postprocess = postprocess
+
+        self.x_names = None
 
     # The following has_ properties can be used to find out what values
     # the objective supports.
@@ -777,17 +784,6 @@ class Objective:
                     result[Objective.SRES] = sres
             return result
         self.postprocess = postprocess
-
-    def get_x_names(self):
-        """
-        Get parameter names.
-
-        Returns
-        -------
-
-        None if no names provided, otherwise a list of str, length dim_full.
-        """
-        return None
 
     def check_grad(self,
                    x,
