@@ -69,19 +69,17 @@ def check_minimize(objective, library, solver):
         optimizer = pypesto.DlibOptimizer(method=solver,
                                           options=options)
 
-    optimizer.temp_file = os.path.join('test', 'tmp_{index}.csv')
-
     lb = 0 * np.ones((1, 2))
     ub = 1 * np.ones((1, 2))
     problem = pypesto.Problem(objective, lb, ub)
 
     optimize_options = pypesto.OptimizeOptions(
-        startpoint_method=pypesto.optimize.startpoint.uniform,
         allow_failed_starts=False)
 
     pypesto.minimize(
         problem=problem,
         optimizer=optimizer,
         n_starts=1,
+        startpoint_method=pypesto.optimize.uniform,
         options=optimize_options
     )
