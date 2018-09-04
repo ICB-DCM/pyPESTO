@@ -21,6 +21,7 @@ addons:
       - lcov
       - swig3.0
       - ipython3-notebook # for jupyter notebooks
+      - python3-pygments  # for jupyter notebooks
 
 install:
   - pyenv shell 2.7 3.6
@@ -40,8 +41,7 @@ script:
   - python3 -m flake8 --ignore=F401 --exclude=build,doc,example
   - python3 -m pytest --cov=pypesto ./test
   - coverage xml
-  - test/runNotebook.sh doc/example/rosenbrock.ipynb
-  - test/runNotebook.sh doc/example/conversion_reaction.ipynb
+  - test/runNotebook.sh doc/example/
 
 after_success:
   - bash <(curl -s https://codecov.io/bash)
