@@ -712,8 +712,15 @@ class Objective:
         update_from_problem().
         """
         self.history = ObjectiveHistory(self.options)
-        self.preprocess = lambda x: np.array(x)
-        self.postprocess = lambda result: result
+
+        def preprocess(x):
+            return np.array(x)
+
+        def postprocess(result):
+            return result
+
+        self.preprocess = preprocess
+        self.postprocess = postprocess
 
     def update_from_problem(self,
                             dim_full,

@@ -20,7 +20,6 @@ class OptimizeOptions(dict):
     """
 
     def __init__(self,
-                 startpoint_method=None,
                  startpoint_resample=False,
                  allow_failed_starts=False):
         super().__init__()
@@ -115,8 +114,7 @@ def minimize(
         except Exception as err:
             optimizer_result = handle_exception(
                 options.allow_failed_starts,
-                optimizer, problem.objective,
-                startpoint, j_start, err)
+                problem.objective, startpoint, j_start, err)
 
         # append to result
         result.optimize_result.append(optimizer_result)
@@ -128,9 +126,8 @@ def minimize(
 
 
 def handle_exception(
-    allow_failed_starts,
-    optimizer, objective,
-        startpoint, j_start,
+        allow_failed_starts,
+        objective, startpoint, j_start,
         err) -> OptimizerResult:
     """
     Handle exceptions. Raise exception if allow_faile_starts is False,
