@@ -30,7 +30,9 @@ tests. If flake8 complains, the tests won't pass. You can run it via::
 
     ./run_flake8.sh
 
-in Linux from the base directory.
+in Linux from the base directory, or directly from python. More, you can use
+the tool `autopep8 <https://pypi.org/project/autopep8>`_ to automatically
+fix various coding issues.
 
 
 Contribute code
