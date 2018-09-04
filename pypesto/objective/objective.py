@@ -23,6 +23,8 @@ def res_to_fval(res):
         fval = 0.5 * sum(res**2),
     which is the 'Linear' formulation in scipy.
     """
+    if res is None:
+        return None
     return 0.5 * np.power(res, 2).sum()
 
 
@@ -122,8 +124,8 @@ class ObjectiveHistory:
         Counters of function values, gradients and hessians,
         residuals and residual sensitivities.
 
-    tr: pd.DataFrame
-        DataFrame containing a function value and parameter history if
+    trace: list
+        List containing history of function values and parameters if
         options.tr_record is True.
 
     start_time: float
@@ -237,11 +239,11 @@ class ObjectiveHistory:
         # init trace
         if self.trace is None:
             self.trace = []
-            self.trace.append(['time',
-                               'n_fval', 'n_grad', 'n_hess',
-                               'fval', 'grad', 'hess',
-                               'res', 'sres',
-                               'x'])
+            self.trace.append(
+                ['time',
+                 'n_fval', 'n_grad', 'n_hess', 'n_res', 'n_sres',
+                 'fval', 'grad', 'hess', 'res', 'sres',
+                 'x'])
 
         # extract function values
         if mode == Objective.MODE_FUN:
@@ -263,14 +265,8 @@ class ObjectiveHistory:
         # create table row
         values = [
             used_time,
-            self.n_fval,
-            self.n_grad,
-            self.n_hess,
-            fval,
-            grad,
-            hess,
-            res,
-            sres,
+            self.n_fval, self.n_grad, self.n_hess, self.n_res, self.n_sres,
+            fval, grad, hess, res, sres,
             x
         ]
 
@@ -389,12 +385,6 @@ class Objective:
 
     postprocess: callable
         Postprocess output values from __call__.
-
-    dim, dim_full: int
-        Dimension of the reduced and full problem.
-
-    parameter_names: list of str
-        Parameter names.
     """
 
     MODE_FUN = 'mode_fun'  # mode for function values
@@ -679,6 +669,12 @@ class Objective:
         sres = self(x, (1,), Objective.MODE_RES)
         return sres
 
+    """
+    The following are functions that are called by other parts in
+    pypesto to modify the objective state, e.g. set its history, or
+    make it aware of fixed parameters.
+    """
+
     def reset_history(self, index=None):
         """
         Reset the objective history and specify temporary saving options.
@@ -868,11 +864,11 @@ class Objective:
             # log for dimension ix
             if verbosity > 1:
                 print('index:    ' + str(ix) + '\n' +
-                      'grad: ' + str(grad_ix) + '\n' +
-                      'fd_f:  ' + str(fd_c_ix) + '\n' +
-                      'fd_b:  ' + str(fd_f_ix) + '\n' +
-                      'fd_c:  ' + str(fd_b_ix) + '\n' +
-                      'fd_err:   '
+                      'grad:     ' + str(grad_ix) + '\n' +
+                      'fd_f:     ' + str(fd_c_ix) + '\n' +
+                      'fd_b:     ' + str(fd_f_ix) + '\n' +
+                      'fd_c:     ' + str(fd_b_ix) + '\n' +
+                      'fd_err:   ' + str(fd_err_ix) + '\n' +
                       'abs_err:  ' + str(abs_err_ix) + '\n' +
                       'rel_err:  ' + str(rel_err_ix) + '\n'
                       )

@@ -54,7 +54,7 @@ class OptimizeOptions(dict):
         Parameters
         ----------
 
-        maybe_options: ObjectiveOptions or dict
+        maybe_options: OptimizeOptions or dict
         """
         if isinstance(maybe_options, OptimizeOptions):
             return maybe_options
@@ -66,12 +66,10 @@ def minimize(
         problem,
         optimizer,
         n_starts,
-        startpoint_method=None,
         result=None,
         options=None) -> Result:
     """
-
-    This is the main function to be called to perform multistart optimization.
+    This is the main function to call to do multistart optimization.
 
     Parameters
     ----------

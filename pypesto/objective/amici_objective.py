@@ -166,6 +166,7 @@ class AmiciObjective(Objective):
                     sres = np.vstack([sres, rdata['sres']]) \
                         if sres.size else rdata['sres']
 
+        # map_to_output is called twice, might be prettified
         return Objective.map_to_output(
             sensi_orders,
             mode,
