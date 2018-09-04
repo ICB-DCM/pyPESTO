@@ -75,10 +75,10 @@ def check_minimize(objective, library, solver):
     ub = 1 * np.ones((1, 2))
     problem = pypesto.Problem(objective, lb, ub)
 
-    optimize_options=pypesto.OptimizeOptions(
+    optimize_options = pypesto.OptimizeOptions(
         startpoint_method=pypesto.optimize.startpoint.uniform,
         allow_failed_starts=False)
-        
+
     pypesto.minimize(
         problem=problem,
         optimizer=optimizer,
