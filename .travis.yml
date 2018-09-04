@@ -20,14 +20,12 @@ addons:
       - libatlas-base-dev
       - lcov
       - swig3.0
-      - ipython3-notebook # for jupyter notebooks
-      - python3-pygments  # for jupyter notebooks
 
 install:
   - pyenv shell 2.7 3.6
   - mkdir -p ~/bin/ && ln -s /usr/bin/swig3.0 ~/bin/swig && export PATH=~/bin/:$PATH
   - pip3 install --upgrade setuptools wheel pkgconfig
-  - pip3 install --upgrade nbconvert # for jupyter notebooks
+  - pip3 install --upgrade jupyter # for jupyter notebooks
   - pip3 install --upgrade -r ./.travis_pip_reqs.txt
   - pip3 install .
 
