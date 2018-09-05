@@ -385,13 +385,17 @@ class Objective:
         None if no names provided, otherwise a list of str, length dim_full.
         Can be read by the problem.
 
-    The following variables are set by the problem in update_from_problem():
-
     preprocess: callable
         Preprocess input values to __call__.
 
     postprocess: callable
         Postprocess output values from __call__.
+
+    Notes
+    -----
+
+    preprocess, postprocess are configured in update_from_problem()
+    and can be reset using the reset() method.
     """
 
     MODE_FUN = 'mode_fun'  # mode for function values
@@ -461,8 +465,8 @@ class Objective:
 
     def __call__(self, x, sensi_orders: tuple=(0,), mode=MODE_FUN):
         """
-        Method to get arbitrary sensitivities. This is the central method
-        which is always called, also by the get_ functions.
+        Method to obtain arbitrary sensitivities. This is the central method
+        which is always called, also by the get_* methods.
 
         There are different ways in which an optimizer calls the objective
         function, and in how the objective function provides information

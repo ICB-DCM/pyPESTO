@@ -1,2 +1,0 @@
-.. automodule:: pypesto
-   :members:

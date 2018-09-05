@@ -2,12 +2,9 @@
 pyPESTO
 =======
 
-python Parameter Estimation TOolbox.
+Parameter Estimation TOolbox for python.
 """
 
-
-__all__ = ['objective', 'problem', 'result', 'version',
-           'optimize', 'profile', 'sample', 'visualize']
 
 from .version import __version__
 from .objective import (ObjectiveOptions,
@@ -24,3 +21,18 @@ from .optimize import (minimize,
                        Optimizer,
                        ScipyOptimizer,
                        DlibOptimizer)
+
+__all__ = ["ObjectiveOptions",
+           "Objective",
+           "AmiciObjective",
+           "Problem",
+           "Result",
+           "OptimizeResult",
+           "ProfileResult",
+           "SampleResult",
+           "minimize",
+           "OptimizeOptions",
+           "OptimizerResult",
+           "Optimizer",
+           "ScipyOptimizer",
+           "DlibOptimizer"]
