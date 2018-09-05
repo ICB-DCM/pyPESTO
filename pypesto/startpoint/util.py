@@ -27,18 +27,36 @@ def assign_startpoints(n_starts, startpoint_method, problem, options):
         # fill with dummies
         startpoints = np.zeros(n_starts, problem.dim)
         startpoints[:] = np.nan
-    else:
-        # apply startpoint method
-        startpoints = startpoint_method(
-            n_starts=n_starts,
-            lb=problem.lb, ub=problem.ub,
-            x_guesses=problem.x_guesses)
-        # resample startpoints
-        if options.startpoint_resample:
-            startpoints = resample_startpoints(
-                startpoints=startpoints,
-                problem=problem,
-                options=options)
+        return startpoints
+    
+    x_guesses = problem.x_guesses
+    dim = problem.lb.size
+
+    # number of required startpoints
+    n_guessed_points = x_guesses.shape[0]
+    n_required_points = n_starts - n_guessed_points
+
+    if n_required_points <= 0:
+        return x_guesses[n_starts, :]
+
+    # apply startpoint method
+    x_sampled = startpoint_method(
+        n_starts=n_required_points,
+        lb=problem.lb, ub=problem.ub,
+        x_guesses=problem.x_guesses)
+
+    # put together
+    startpoints = np.zeros((n_starts, dim))
+    startpoints[0:n_guessed_points, :] = x_guesses
+    startpoints[n_guessed_points:n_starts, :] = x_sampled
+
+    # resample startpoints
+    if options.startpoint_resample:
+        startpoints = resample_startpoints(
+            startpoints=startpoints,
+            problem=problem,
+            options=options)
+
     return startpoints
 
 
