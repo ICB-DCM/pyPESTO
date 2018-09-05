@@ -76,6 +76,6 @@ def check_minimize(objective, library, solver, allow_failed_starts=False):
         problem=problem,
         optimizer=optimizer,
         n_starts=1,
-        startpoint_method=pypesto.optimize.uniform,
+        startpoint_method=pypesto.startpoint.uniform,
         options=optimize_options
     )

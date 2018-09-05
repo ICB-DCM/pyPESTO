@@ -21,8 +21,6 @@ from .optimize import (minimize,
                        Optimizer,
                        ScipyOptimizer,
                        DlibOptimizer)
-from .startpoint import (uniform,
-                         latin_hypercube)
 
 __all__ = ["ObjectiveOptions",
            "Objective",
@@ -37,6 +35,4 @@ __all__ = ["ObjectiveOptions",
            "OptimizerResult",
            "Optimizer",
            "ScipyOptimizer",
-           "DlibOptimizer",
-           "uniform",
-           "latin_hypercube"]
+           "DlibOptimizer"]

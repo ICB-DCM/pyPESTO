@@ -13,11 +13,12 @@ ub = 3 * np.ones(dim)
 class StartpointTest(unittest.TestCase):
 
     def test_uniform(self):
-        xs = pypesto.uniform(n_starts=n_starts, lb=lb, ub=ub)
+        xs = pypesto.startpoint.uniform(n_starts=n_starts, lb=lb, ub=ub)
         self.assertEqual(xs.shape, (5, 2))
 
     def test_latin_hypercube(self):
-        xs = pypesto.latin_hypercube(n_starts=n_starts, lb=lb, ub=ub)
+        xs = pypesto.startpoint.latin_hypercube(
+            n_starts=n_starts, lb=lb, ub=ub)
         self.assertTrue(xs.shape, (5, 2))
 
         # test latin hypercube properties
