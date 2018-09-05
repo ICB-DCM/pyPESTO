@@ -283,8 +283,8 @@ class ObjectiveHistory:
 
     def _save_trace(self, finalize=False):
         """
-        Save to file via pickle if options.trace_save is True and other
-        conditions apply.
+        Save to file via pd.DataFrame.to_csv() if options.trace_file is
+        not None and other conditions apply.
         Format might be revised when storage is implemented.
         """
         if self.options.trace_file is None:
