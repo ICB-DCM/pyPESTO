@@ -150,7 +150,11 @@ class Problem:
         if self.x_guesses.shape[1] != self.dim:
             raise AssertionError("x_guesses form invalid.")
         if len(self.x_names) != self.dim_full:
-            raise AssertionError("x_names must be of length dim_full")
+            raise AssertionError("x_names must be of length dim_full.")
+        if len(self.x_fixed_indices) != len(self.x_fixed_vals):
+            raise AssertionError(
+                "x_fixed_indices and x_fixed_vals musti have the same length."
+            )
 
     def get_full_vector(self, x, x_fixed_vals=None):
         """
