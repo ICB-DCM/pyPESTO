@@ -3,7 +3,7 @@
 pyPESTO is a widely applicable and highly customizable toolbox for parameter estimation.
 
 
-Build: [[!Build Status](https://travis-ci.com/ICB-DCM/pyPESTO.svg?branch=master)](https://travis-ci.org/ICB-DCM/pyPESTO)
+Build: [![Build Status](https://travis-ci.com/ICB-DCM/pyPESTO.svg?branch=master)](https://travis-ci.org/ICB-DCM/pyPESTO)
 
 
 ## Documentation
