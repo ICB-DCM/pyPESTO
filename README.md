@@ -15,4 +15,4 @@ The documentation is hosted on readthedocs.io:
 ## Examples
 
 Multiple use cases are discussed in the documentation. In particular, there are
-jupyter notebooks in the <doc/examples> directory.
+jupyter notebooks in the [doc/examples](doc/examples) directory.
