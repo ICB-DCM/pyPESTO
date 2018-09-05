@@ -46,15 +46,12 @@ class ObjectiveOptions(dict):
         Flag indicating whether to record all (True, default) or only
         better (False) values.
 
-    trace_save: bool, optional
-        Flag indicating whether to save the trace.
-        Default: False.
-
-    trace_file: str, optional
-        The string passed here is the file name for storing the trace.
-        A contained substring {index} is converted to the multistart
-        index.
-        Default: "tmp_trace_{index}.dat".
+    trace_file: str or True, optional
+        Either pass a string here denoting the file name for storing the
+        trace, or True, in which case the default file name
+        "tmp_trace_{index}.dat" is used. A contained substring {index}
+        is converted to the multistart index.
+        Default: None, i.e. no file is created.
 
     trace_save_iter. index, optional
         Trace is saved every tr_save_iter iterations.
@@ -65,7 +62,6 @@ class ObjectiveOptions(dict):
                  trace_record=False,
                  trace_record_hess=False,
                  trace_all=True,
-                 trace_save=False,
                  trace_file=None,
                  trace_save_iter=10):
         super().__init__()
@@ -73,9 +69,8 @@ class ObjectiveOptions(dict):
         self.trace_record = trace_record
         self.trace_record_hess = trace_record_hess
         self.trace_all = trace_all
-        self.trace_save = trace_save
 
-        if trace_file is None:
+        if trace_file is True:
             trace_file = "tmp_trace_{index}.dat"
         self.trace_file = trace_file
 
@@ -266,6 +261,10 @@ class ObjectiveHistory:
             grad = None
             hess = None
 
+        # check whether to append to trace
+        if not self.options.trace_all and fval >= self.fval_min:
+            return
+
         used_time = time.time() - self.start_time
 
         # create table row
@@ -276,10 +275,6 @@ class ObjectiveHistory:
             x
         ]
 
-        # check whether to append to trace
-        if not self.options.trace_all and fval >= self.fval_min:
-            return
-
         # append to trace
         self.trace.loc[len(self.trace)] = values
 
@@ -288,11 +283,11 @@ class ObjectiveHistory:
 
     def _save_trace(self, finalize=False):
         """
-        Save to file via pickle if options.trace_save is True and other
-        conditions apply.
+        Save to file via pd.DataFrame.to_csv() if options.trace_file is
+        not None and other conditions apply.
         Format might be revised when storage is implemented.
         """
-        if not self.options.trace_save:
+        if self.options.trace_file is None:
             return
 
         if finalize or (len(self.trace) > 0 and
