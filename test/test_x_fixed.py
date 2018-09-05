@@ -23,17 +23,17 @@ class XFixedTest(unittest.TestCase):
         optimizer = pypesto.ScipyOptimizer()
         n_starts = 5
         result = pypesto.minimize(problem, optimizer, n_starts)
-        
+
         optimizer_result = result.optimize_result.list[0]
         self.assertEqual(len(optimizer_result.x), 5)
         self.assertEqual(len(optimizer_result.grad), 5)
-        
+
         # maybe not what we want, but that's how it is right now
         self.assertEqual(len(problem.ub), 3)
 
         # nans written into unknown components
         self.assertTrue(np.isnan(optimizer_result.grad[1]))
-       
+
         # fixed values written into parameter vector
         self.assertEqual(optimizer_result.x[1], 1)
 
