@@ -41,6 +41,7 @@ Welcome to pyPESTO's documentation!
    api_sample
    api_result
    api_visualize
+   api_startpoint
 
 
 .. toctree::

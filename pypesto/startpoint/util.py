@@ -1,7 +1,10 @@
+import numpy as np
+
+
 def rescale(points, lb, ub):
     """
     Rescale points from [0, 1] to [lb, ub].
-    
+
     Parameters
     ----------
 

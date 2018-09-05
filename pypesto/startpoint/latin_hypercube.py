@@ -26,14 +26,15 @@ def latin_hypercube(**kwargs):
 
     return xs
 
+
 def _latin_hypercube(n_starts, dim, smooth=True):
     """
     Generate simple latin hypercube points.
     """
-    
+
     # uniform points
     xs = np.random.random((n_starts, dim))
-    
+
     # assign sorted indices
     for j_dim in range(0, dim):
         indices = np.argsort(xs[:, j_dim])
