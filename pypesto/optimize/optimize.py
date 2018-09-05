@@ -1,5 +1,5 @@
 from pypesto import Result
-from .startpoint import assign_startpoints, uniform
+from ..startpoint import assign_startpoints, uniform
 from .optimizer import OptimizerResult, recover_result
 
 
