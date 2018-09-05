@@ -46,6 +46,9 @@ class OptimizerResult(dict):
     message: str
         Textual comment on the optimization result.
 
+    Notes
+    -----
+
     Any field not supported by the optimizer is filled with None. Some
     fields are filled by pypesto itself.
     """
@@ -354,8 +357,6 @@ class ScipyOptimizer(Optimizer):
 class DlibOptimizer(Optimizer):
     """
     Use the Dlib toolbox for optimization.
-
-    TODO: I don't know which optimizers we want to support here.
     """
 
     def __init__(self, method, options=None):

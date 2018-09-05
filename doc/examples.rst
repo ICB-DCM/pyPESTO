@@ -14,4 +14,6 @@ The following examples cover typical use cases and should help get a better idea
 Download the examples as notebooks
 ----------------------------------
 
-
+* :download:`Rosenbrock <example/rosenbrock.ipynb>`
+* :download:`Conversion reaction <example/conversion_reaction.ipynb>`
+* :download:`Fixed parameters <example/fixed_parameters.ipynb>`

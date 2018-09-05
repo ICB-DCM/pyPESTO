@@ -13,7 +13,7 @@ I cannot use my system's Python distribution, what now?
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Several Python distributions can co-exist on a single system.
-if you don't have access to a recent Python version via your
+If you don't have access to a recent Python version via your
 system's package manager (this might be the case for old
 operating systems), it is recommended to install the latest
 version of the
@@ -32,7 +32,7 @@ Install from PIP
 ----------------
 
 The package can be installed from the Python Package Index PyPI
-via pip.::
+via pip::
 
     pip3 install pypesto
 
@@ -67,7 +67,7 @@ Install optional packages
 * This package includes multiple comfort methods simplyfing its use for
   parameter estimation for models generated using the toolbox
   `amici <https://www.github.com/icb-dcm/amici>`_.
-  To use AMICI, install it via pip.::
+  To use AMICI, install it via pip::
 
     pip3 install amici
 

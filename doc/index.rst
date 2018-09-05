@@ -7,8 +7,8 @@ Welcome to pyPESTO's documentation!
 ===================================
 
 
-.. image:: https://travis-ci.org/ICB-DCM/pyPESTO.svg?branch=master
-   :target: https://travis-ci.org/ICB-DCM/pyPESTO
+.. image:: https://travis-ci.com/ICB-DCM/pyPESTO.svg?branch=master
+   :target: https://travis-ci.com/ICB-DCM/pyPESTO
 
 | Version: |version|
 | Source code: https://github.com/icb-dcm/pypesto
@@ -34,9 +34,13 @@ Welcome to pyPESTO's documentation!
    :maxdepth: 2
    :caption: API reference
 
-   api_pypesto
    api_objective
    api_problem
+   api_optimize
+   api_profile
+   api_sample
+   api_result
+   api_visualize
 
 
 .. toctree::

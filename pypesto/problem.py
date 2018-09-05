@@ -18,7 +18,7 @@ class Problem:
     boundaries and constraints, parameter guesses as well as the parameters
     which are to be optimized.
 
-    Attributes
+    Parameters
     ----------
 
     objective: pypesto.Objective
@@ -31,10 +31,6 @@ class Problem:
     dim_full: int, optional
         The full dimension of the problem, including fixed parameters.
 
-    dim: int
-        The number of non-fixed parameters.
-        Computed from the other values.
-
     x_fixed_indices: array_like of int, optional
         Vector containing the indices (zero-based) of parameter components
         that are not to be optimized.
@@ -42,10 +38,6 @@ class Problem:
     x_fixed_vals: array_like, optional
         Vector of the same length as x_fixed_indices, containing the values
         of the fixed parameters.
-
-    x_free_indices: array_like of int
-        Vector containing the indices (zero-based) of free parameters
-        (complimentary to x_fixed_indices).
 
     x_guesses: array_like, optional
         Guesses for the parameter values, shape (g, dim), where g denotes the
@@ -57,6 +49,17 @@ class Problem:
         else the values specified here are used if not None, otherwise
         the variable names are set to ['x0', ... 'x{dim_full}']. The list
         must always be of length dim_full.
+
+    Attributes
+    ----------
+
+    dim: int
+        The number of non-fixed parameters.
+        Computed from the other values.
+
+    x_free_indices: array_like of int
+        Vector containing the indices (zero-based) of free parameters
+        (complimentary to x_fixed_indices).
 
     Notes
     -----
@@ -81,7 +84,6 @@ class Problem:
                  x_fixed_vals=None,
                  x_guesses=None,
                  x_names=None):
-
         self.objective = copy.copy(objective)
 
         self.lb = np.array(lb).flatten()
@@ -166,7 +168,7 @@ class Problem:
         x: array_like, shape=(dim,)
             The vector in dimension dim.
 
-        x_fixed_vals: array_like, ndim=1
+        x_fixed_vals: array_like, ndim=1, optional
             The values to be used for the fixed indices. If None, then nans are
             inserted. Usually, None will be used for grad and
             problem.x_fixed_vals for x.
