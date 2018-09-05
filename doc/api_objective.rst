@@ -1,4 +1,2 @@
 .. automodule:: pypesto.objective
-   :members:
-   :special-members: __call__
-   :show-inheritance:
+   :special-members: __init__,__call__

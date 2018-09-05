@@ -15,6 +15,10 @@ type::
 
     python3 -m pytest test
 
+or alternatively::
+
+    python3 -m unittest test
+
 You can also run specific tests.
 
 Tests can be written with `pytest <https://docs.pytest.org/en/latest/>`_
@@ -38,5 +42,5 @@ fix various coding issues.
 Contribute code
 ---------------
 
-* Internally, we use ``numpy`` for arrays. In particular, vectors are represented
-  as arrays of shape (n,).
+* Internally, we use ``numpy`` for arrays. In particular, vectors are
+  represented as arrays of shape (n,).

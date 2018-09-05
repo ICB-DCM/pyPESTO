@@ -34,9 +34,13 @@ Welcome to pyPESTO's documentation!
    :maxdepth: 2
    :caption: API reference
 
-   api_pypesto
    api_objective
    api_problem
+   api_optimize
+   api_profile
+   api_sample
+   api_result
+   api_visualize
 
 
 .. toctree::
