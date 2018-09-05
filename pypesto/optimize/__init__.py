@@ -4,7 +4,8 @@ Multistart optimization
 
 """
 
-from .optimize import minimize
+from .optimize import (minimize,
+                       OptimizeOptions)
 from .optimizer import (OptimizerResult,
                         Optimizer,
                         ScipyOptimizer,

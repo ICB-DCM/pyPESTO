@@ -8,7 +8,6 @@ import numpy as np
 import statistics
 import warnings
 
-
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 optimizers = {
@@ -30,7 +29,7 @@ class AmiciObjectiveTest(unittest.TestCase):
                 x0,
                 eps=1e-5,
                 verbosity=0,
-                mode='MODE_FUN'
+                mode=pypesto.Objective.MODE_FUN
             )
             self.assertTrue(np.all(df.rel_err.values < 1e-2))
             self.assertTrue(np.all(df.abs_err.values < 1e-1))
@@ -38,7 +37,7 @@ class AmiciObjectiveTest(unittest.TestCase):
                 x0,
                 eps=1e-5,
                 verbosity=0,
-                mode='MODE_RES'
+                mode=pypesto.Objective.MODE_RES
             )
             self.assertTrue(np.all(df.rel_err.values < 1e-6))
             self.assertTrue(np.all(df.abs_err.values < 1e-6))
@@ -79,9 +78,7 @@ def parameter_estimation(
     problem = pypesto.Problem(objective, lb, ub)
 
     results = pypesto.minimize(
-        problem, optimizer, n_starts,
-        startpoint_method=pypesto.optimize.startpoint.uniform,
-        allow_failed_starts=False)
+        problem, optimizer, n_starts)
     results = results.optimize_result.list
 
 

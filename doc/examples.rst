@@ -8,6 +8,7 @@ The following examples cover typical use cases and should help get a better idea
 
    example/rosenbrock.ipynb
    example/conversion_reaction.ipynb
+   example/fixed_parameters.ipynb
 
 
 Download the examples as notebooks

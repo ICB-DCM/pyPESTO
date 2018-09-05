@@ -1,17 +1,66 @@
-import numpy as np
 from pypesto import Result
-from .startpoint import uniform
+from .startpoint import assign_startpoints, uniform
+from .optimizer import OptimizerResult, recover_result
 
 
-def minimize(problem, optimizer,
-             n_starts,
-             startpoint_method=uniform,
-             result=None,
-             startpoint_resampling=True,
-             allow_failed_starts=True) -> Result:
+class OptimizeOptions(dict):
+    """
+    Options for the multistart optimization.
+
+    Parameters
+    ----------
+
+    startpoint_resample: bool, optional
+        Flag indicating whether initial points are supposed to be resampled if
+        function evaluation fails at the initial point
+
+    allow_failed_starts: bool, optional
+        Flag indicating whether we tolerate that exceptions are thrown during
+        the minimization process.
     """
 
-    This is the main function to be called to perform multistart optimization.
+    def __init__(self,
+                 startpoint_resample=False,
+                 allow_failed_starts=False):
+        super().__init__()
+
+        self.startpoint_resample = startpoint_resample
+        self.allow_failed_starts = allow_failed_starts
+
+    def __getattr__(self, key):
+        try:
+            return self[key]
+        except KeyError:
+            raise AttributeError(key)
+
+    __setattr__ = dict.__setitem__
+    __delattr__ = dict.__delitem__
+
+    @staticmethod
+    def assert_instance(maybe_options):
+        """
+        Returns a valid options object.
+
+        Parameters
+        ----------
+
+        maybe_options: OptimizeOptions or dict
+        """
+        if isinstance(maybe_options, OptimizeOptions):
+            return maybe_options
+        options = OptimizeOptions(**maybe_options)
+        return options
+
+
+def minimize(
+        problem,
+        optimizer,
+        n_starts,
+        startpoint_method=None,
+        result=None,
+        options=None) -> Result:
+    """
+    This is the main function to call to do multistart optimization.
 
     Parameters
     ----------
@@ -25,71 +74,64 @@ def minimize(problem, optimizer,
     n_starts: int
         Number of starts of the optimizer.
 
-    startpoint_method: {callable, bool}
+    startpoint_method: {callable, False}, optional
         Method for how to choose start points. False means the optimizer does
-        not require start points.
-
-    startpoint_resampling: bool
-        Flag indicating whether initial points are supposed to be resampled if
-        function evaluation fails at the initial point
+        not require start points
 
     result: pypesto.Result
         A result object to append the optimization results to. For example,
         one might append more runs to a previous optimization. If None,
         a new object is created.
 
-    allow_failed_starts: bool
-        Flag indicating whether we tolerate that exceptions are thrown during
-        the minimization process.
-
-
+    options: pypesto.OptimizeOptions, optional
+        Various options applied to the multistart optimization.
     """
 
-    # compute start points
-    if startpoint_method is False:
-        # fill with dummies
-        startpoints = np.zeros(n_starts, problem.dim)
-    else:
-        # apply startpoint method
-        startpoints = startpoint_method(n_starts,
-                                        problem.lb,
-                                        problem.ub,
-                                        problem.par_guesses)
+    # startpoint method
+    if startpoint_method is None:
+        startpoint_method = uniform
 
-    # prepare result object
+    # check options
+    if options is None:
+        options = OptimizeOptions()
+    options = OptimizeOptions.assert_instance(options)
+
+    # assign startpoints
+    startpoints = assign_startpoints(n_starts, startpoint_method,
+                                     problem, options)
+
+    # prepare result
     if result is None:
         result = Result(problem)
 
     # do multistart optimization
-    for j in range(0, n_starts):
-        startpoint = startpoints[j, :]
-        if startpoint_resampling:
-            valid_startpoint = problem.objective(startpoint) < float('inf')
-            while not valid_startpoint:
-                startpoint = startpoint_method(
-                    1,
-                    problem.lb,
-                    problem.ub,
-                    problem.par_guesses
-                )[0, :]
-                valid_startpoint = problem.objective(startpoint) < float('inf')
+    for j_start in range(0, n_starts):
+        startpoint = startpoints[j_start, :]
 
+        # apply optimizer
         try:
-            optimizer_result = optimizer.minimize(problem, startpoint, j)
+            optimizer_result = optimizer.minimize(problem, startpoint, j_start)
         except Exception as err:
-            if allow_failed_starts:
-                print(('start ' + str(j) + ' failed: {0}').format(err))
-                optimizer_result = optimizer.recover_result(
-                    problem,
-                    startpoint,
-                    err
-                )
+            if options.allow_failed_starts:
+                optimizer_result = handle_exception(
+                    problem.objective, startpoint, j_start, err)
             else:
                 raise
 
-        result.optimize_result.append(optimizer_result=optimizer_result)
+        # append to result
+        result.optimize_result.append(optimizer_result)
 
     # sort by best fval
     result.optimize_result.sort()
 
     return result
+
+
+def handle_exception(
+        objective, startpoint, j_start, err) -> OptimizerResult:
+    """
+    Handle exception by creating a dummy pypesto.OptimizerResult.
+    """
+    print(('start ' + str(j_start) + ' failed: {0}').format(err))
+    optimizer_result = recover_result(objective, startpoint, err)
+    return optimizer_result
