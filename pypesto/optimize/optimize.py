@@ -112,9 +112,11 @@ def minimize(
         try:
             optimizer_result = optimizer.minimize(problem, startpoint, j_start)
         except Exception as err:
-            optimizer_result = handle_exception(
-                options.allow_failed_starts,
-                problem.objective, startpoint, j_start, err)
+            if options.allow_failed_starts:
+                optimizer_result = handle_exception(
+                    problem.objective, startpoint, j_start, err)
+            else:
+                raise
 
         # append to result
         result.optimize_result.append(optimizer_result)
@@ -126,15 +128,10 @@ def minimize(
 
 
 def handle_exception(
-        allow_failed_starts,
-        objective, startpoint, j_start,
-        err) -> OptimizerResult:
+        objective, startpoint, j_start, err) -> OptimizerResult:
     """
-    Handle exceptions. Raise exception if allow_faile_starts is False,
-    otherwise return a dummy pypesto.OptimizerResult.
+    Handle exception by creating a dummy pypesto.OptimizerResult.
     """
-    if allow_failed_starts:
-        print(('start ' + str(j_start) + ' failed: {0}').format(err))
-        optimizer_result = recover_result(objective, startpoint, err)
-        return optimizer_result
-    raise err
+    print(('start ' + str(j_start) + ' failed: {0}').format(err))
+    optimizer_result = recover_result(objective, startpoint, err)
+    return optimizer_result

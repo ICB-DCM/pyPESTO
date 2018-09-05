@@ -266,6 +266,10 @@ class ObjectiveHistory:
             grad = None
             hess = None
 
+        # check whether to append to trace
+        if not self.options.trace_all and fval >= self.fval_min:
+            return
+
         used_time = time.time() - self.start_time
 
         # create table row
@@ -275,10 +279,6 @@ class ObjectiveHistory:
             fval, grad, hess, res, sres,
             x
         ]
-
-        # check whether to append to trace
-        if not self.options.trace_all and fval >= self.fval_min:
-            return
 
         # append to trace
         self.trace.loc[len(self.trace)] = values

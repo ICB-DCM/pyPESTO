@@ -38,22 +38,19 @@ class OptimizerTest(unittest.TestCase):
                         with warnings.catch_warnings():
                             warnings.simplefilter("ignore")
                             if re.match('^(?i)(ls_)', method):
-                                self.assertRaises(
-                                    Exception,
-                                    check_minimize,
-                                    (obj,
-                                     library,
-                                     method)
-                                )
+                                # obj has no residuals
+                                with self.assertRaises(Exception):
+                                    check_minimize(
+                                        obj, library, method)
+                                # no error when allow failed starts
+                                check_minimize(
+                                    obj, library, method, True)
                             else:
                                 check_minimize(
-                                    obj,
-                                    library,
-                                    method
-                                )
+                                    obj, library, method)
 
 
-def check_minimize(objective, library, solver):
+def check_minimize(objective, library, solver, allow_failed_starts=False):
 
     options = {
         'maxiter': 100
@@ -73,7 +70,7 @@ def check_minimize(objective, library, solver):
     problem = pypesto.Problem(objective, lb, ub)
 
     optimize_options = pypesto.OptimizeOptions(
-        allow_failed_starts=False)
+        allow_failed_starts=allow_failed_starts)
 
     pypesto.minimize(
         problem=problem,
