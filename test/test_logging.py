@@ -19,7 +19,7 @@ class LoggingTest(unittest.TestCase):
         logger.info("start test")
 
         # problem definition
-        def fun(x):
+        def fun(_):
             raise Exception("This function cannot be called.")
 
         objective = pypesto.Objective(fun=fun)
