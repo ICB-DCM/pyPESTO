@@ -36,10 +36,12 @@ class LoggingTest(unittest.TestCase):
         f = open(filename, 'rb')
         content = str(f.read())
         f.close()
-        self.assertTrue("failed" in content)
 
         # tidy up
         os.remove(filename)
+
+        # check if error message got inserted
+        self.assertTrue("fail" in content)
 
 
 if __name__ == '__main__':
