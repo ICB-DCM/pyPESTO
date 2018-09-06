@@ -74,14 +74,38 @@ def assign_clustered_colors(vals):
     vmax = max(clust) - sum(clustsize == 1)
     cnorm = colors.Normalize(vmin=0, vmax=vmax)
     scalarmap = cm.ScalarMappable(norm=cnorm)
-    uind_col = vmax * np.ones(len(clustsize))
-    sum_col = 0
-    for iclustsize, value_clustsize in enumerate(clustsize):
-        if value_clustsize > 1:
-            uind_col[iclustsize] = sum_col
-            sum_col = sum_col + 1
 
-    ind_col = uind_col[ind_clust]
-    col = scalarmap.to_rgba(ind_col)
+    # colors for each cluster and one-size clusters
+    cols_clust = scalarmap.to_rgba(range(vmax + 1))
+
+    # grey color for 1-size clusters as the last color in 'cols_clust'
+    cols_clust[vmax] = (0.7, 0.7, 0.7, 1)
+
+    # pre-array of indices for colors
+    ind_col = np.zeros(len(ind_clust))
+
+    # number of colors assigned to cluster
+    sum_col = 0
+
+    # assign color indices for each point
+    for iind, value_ind in enumerate(ind_clust):
+        # if cluster size > 1
+        if clustsize[value_ind] > 1:
+            # assign a color with is not grey
+            ind_col[iind] = sum_col
+            # if element is not the last one in 'ind_col'
+            if iind < len(ind_clust) - 1:
+                # if the next element does not belongs to the seem cluster
+                if value_ind != ind_clust[iind + 1]:
+                    # use the next color
+                    sum_col = sum_col + 1
+        # if cluster size = 1
+        else:
+            # use grey
+            ind_col[iind] = vmax
+
+    # indices for colors
+    ind_col = [int(ind) for ind in ind_col]
+    col = cols_clust[ind_col]
 
     return col
