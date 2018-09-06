@@ -43,7 +43,8 @@ def assign_startpoints(n_starts, startpoint_method, problem, options):
     x_sampled = startpoint_method(
         n_starts=n_required_points,
         lb=problem.lb, ub=problem.ub,
-        x_guesses=problem.x_guesses)
+        x_guesses=problem.x_guesses,
+        objective=problem.objective)
 
     # put together
     startpoints = np.zeros((n_starts, dim))
