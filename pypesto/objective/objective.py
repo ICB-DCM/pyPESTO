@@ -12,6 +12,10 @@ import numpy as np
 import copy
 import pandas as pd
 import time
+import logging
+
+
+logger = logging.getLogger(__name__)
 
 
 def res_to_fval(res):
@@ -872,15 +876,16 @@ class Objective:
 
             # log for dimension ix
             if verbosity > 1:
-                print('index:    ' + str(ix) + '\n' +
-                      'grad:     ' + str(grad_ix) + '\n' +
-                      'fd_f:     ' + str(fd_c_ix) + '\n' +
-                      'fd_b:     ' + str(fd_f_ix) + '\n' +
-                      'fd_c:     ' + str(fd_b_ix) + '\n' +
-                      'fd_err:   ' + str(fd_err_ix) + '\n' +
-                      'abs_err:  ' + str(abs_err_ix) + '\n' +
-                      'rel_err:  ' + str(rel_err_ix) + '\n'
-                      )
+                logger.info(
+                    'index:    ' + str(ix) + '\n' +
+                    'grad:     ' + str(grad_ix) + '\n' +
+                    'fd_f:     ' + str(fd_c_ix) + '\n' +
+                    'fd_b:     ' + str(fd_f_ix) + '\n' +
+                    'fd_c:     ' + str(fd_b_ix) + '\n' +
+                    'fd_err:   ' + str(fd_err_ix) + '\n' +
+                    'abs_err:  ' + str(abs_err_ix) + '\n' +
+                    'rel_err:  ' + str(rel_err_ix) + '\n'
+                )
 
             # append to lists
             grad_list.append(grad_ix)
@@ -904,6 +909,6 @@ class Objective:
 
         # log full result
         if verbosity > 0:
-            print(result)
+            logger.info(result)
 
         return result
