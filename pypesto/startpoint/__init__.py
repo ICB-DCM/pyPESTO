@@ -35,7 +35,6 @@ from .uniform import uniform
 from .latin_hypercube import latin_hypercube
 from .util import assign_startpoints
 
-
 __all__ = ['uniform',
            'latin_hypercube',
            'assign_startpoints']

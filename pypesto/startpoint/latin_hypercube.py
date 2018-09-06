@@ -29,7 +29,7 @@ def latin_hypercube(**kwargs):
 
 def _latin_hypercube(n_starts, dim, smooth=True):
     """
-    Generate simple latin hypercube points.
+    Generate simple latin hypercube points in [0, 1].
     """
 
     # uniform points
