@@ -28,7 +28,7 @@ def assign_startpoints(n_starts, startpoint_method, problem, options):
         startpoints = np.zeros(n_starts, problem.dim)
         startpoints[:] = np.nan
         return startpoints
-    
+
     x_guesses = problem.x_guesses
     dim = problem.lb.size
 
