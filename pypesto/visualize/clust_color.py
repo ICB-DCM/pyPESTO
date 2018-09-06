@@ -74,14 +74,20 @@ def assign_clustered_colors(vals):
     vmax = max(clust) - sum(clustsize == 1)
     cnorm = colors.Normalize(vmin=0, vmax=vmax)
     scalarmap = cm.ScalarMappable(norm=cnorm)
-    uind_col = vmax * np.ones(len(clustsize))
+    pre_col = scalarmap.to_rgba(range(vmax+1))
+    pre_col[vmax] = (0.7,0.7,0.7,1)
+    ind_col = np.zeros(len(clust))
     sum_col = 0
-    for iclustsize, value_clustsize in enumerate(clustsize):
-        if value_clustsize > 1:
-            uind_col[iclustsize] = sum_col
-            sum_col = sum_col + 1
+    for iind, value_ind in enumerate(ind_clust):
+        if clustsize[value_ind] > 1:
+            ind_col[iind] = int(sum_col)
+            if iind < len(ind_clust)-1:
+                if value_ind != ind_clust[iind+1]:
+                    sum_col = sum_col + 1
+        else:
+            ind_col[iind] = vmax
 
-    ind_col = uind_col[ind_clust]
-    col = scalarmap.to_rgba(ind_col)
+    ind_col = [int(ind) for ind in ind_col]
+    col = pre_col[ind_col]
 
     return col
