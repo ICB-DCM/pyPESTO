@@ -1,6 +1,10 @@
+import logging
 from pypesto import Result
 from ..startpoint import assign_startpoints, uniform
 from .optimizer import OptimizerResult, recover_result
+
+
+logger = logging.getLogger(__name__)
 
 
 class OptimizeOptions(dict):
@@ -132,6 +136,6 @@ def handle_exception(
     """
     Handle exception by creating a dummy pypesto.OptimizerResult.
     """
-    print(('start ' + str(j_start) + ' failed: {0}').format(err))
+    logger.error(('start ' + str(j_start) + ' failed: {0}').format(err))
     optimizer_result = recover_result(objective, startpoint, err)
     return optimizer_result
