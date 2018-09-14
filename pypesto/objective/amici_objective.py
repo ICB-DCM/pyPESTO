@@ -102,7 +102,7 @@ class AmiciObjective(Objective):
         # gradients can always be computed
         if self.sensi_orders is None:
             raise Exception('Sensitivity Orders were not specified. Please use'
-                      '__call__ to evaluate the objective function.')
+                            '__call__ to evaluate the objective function.')
         sensi_order = min(max(self.sensi_orders), 1)
         # order 2 currently not implemented, we are using the FIM
 
