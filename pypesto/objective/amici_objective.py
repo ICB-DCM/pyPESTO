@@ -43,12 +43,6 @@ class AmiciObjective(Objective):
         if max_sensi_order is None:
             max_sensi_order = 2 if amici_model.o2mode else 1
 
-        def fun(x):
-            return self.call_amici(
-                x,
-                Objective.MODE_FUN
-            )
-
         if max_sensi_order > 0:
             grad = True
             hess = True
@@ -56,21 +50,16 @@ class AmiciObjective(Objective):
             grad = None
             hess = None
 
-        def res(x):
-            return self.call_amici(
-                x,
-                Objective.MODE_RES
-            )
-
         if max_sensi_order > 0:
             sres = True
         else:
             sres = None
 
         super().__init__(
-            fun=fun, grad=grad, hess=hess, hessp=None,
-            res=res, sres=sres,
-            options=options
+            fun=None, grad=grad, hess=hess, hessp=None,
+            res=None, sres=sres,
+            options=options,
+            overwritefun=False, overwriteres=False
         )
 
         self.amici_model = amici_model
@@ -90,6 +79,18 @@ class AmiciObjective(Objective):
         # extract parameter names from model
         self.x_names = list(self.amici_model.getParameterNames())
 
+    def fun(self, x):
+        return self.call_amici(
+            x,
+            Objective.MODE_FUN
+        )
+
+    def res(self, x):
+        return self.call_amici(
+            x,
+            Objective.MODE_RES
+        )
+
     def call_amici(
             self,
             x,
@@ -100,7 +101,7 @@ class AmiciObjective(Objective):
 
         # gradients can always be computed
         if self.sensi_orders is None:
-            Exception('Sensitivity Orders were not specified. Please use'
+            raise Exception('Sensitivity Orders were not specified. Please use'
                       '__call__ to evaluate the objective function.')
         sensi_order = min(max(self.sensi_orders), 1)
         # order 2 currently not implemented, we are using the FIM

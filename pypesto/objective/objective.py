@@ -414,15 +414,25 @@ class Objective:
     RES = 'res'
     SRES = 'sres'
 
-    def __init__(self, fun=None,
-                 grad=None, hess=None, hessp=None,
+    def __init__(self,
+                 fun=None, grad=None, hess=None, hessp=None,
                  res=None, sres=None,
-                 options=None):
-        self.fun = fun
+                 options=None,
+                 overwritefun=True, overwriteres=True):
+
+        # AmiciObjective implements its own fun and res functions,
+        # if we pass them here, they will be bound to the instance of the
+        # objective at initialization, which makes it impossible to
+        # propagate changes to the objective after initialization to calls
+        # to fun and res (this is necessary to pass self.sensi_orders as
+        # temporary class variable
+        if overwritefun:
+            self.fun = fun
         self.grad = grad
         self.hess = hess
         self.hessp = hessp
-        self.res = res
+        if overwriteres:
+            self.res = res
         self.sres = sres
 
         if options is None:
@@ -440,7 +450,7 @@ class Objective:
         self.preprocess = preprocess
         self.postprocess = postprocess
 
-        self.sensi_order = None
+        self.sensi_orders = None
 
         self.x_names = None
 
