@@ -164,7 +164,6 @@ class AmiciObjective(Objective):
             logger.debug('llh: ' + str(rdata['llh']))
             logger.debug('y:\n' + str(rdata['y']))
 
-
             # check if the computation failed
             if rdata['status'] < 0.0:
                 return self.get_error_output(mode)
@@ -259,9 +258,10 @@ class AmiciObjective(Objective):
 
     def get_error_output(self, mode):
         if mode == Objective.MODE_FUN:
-            return np.inf, \
-                   np.nan * np.ones(self.dim), \
-                   np.nan * np.ones([self.dim, self.dim])
+            return \
+                np.inf, \
+                np.nan * np.ones(self.dim), \
+                np.nan * np.ones([self.dim, self.dim])
         elif mode == Objective.MODE_RES:
             if not self.amici_model.nt():
                 nt = sum([data.nt() for data in self.edata])
@@ -269,5 +269,6 @@ class AmiciObjective(Objective):
                 nt = sum([data.nt() if data.nt() else self.amici_model.nt()
                           for data in self.edata])
             n_res = nt * self.amici_model.nytrue
-            return np.nan * np.ones(n_res), \
-                   np.nan * np.ones([n_res, self.dim])
+            return \
+                np.nan * np.ones(n_res), \
+                np.nan * np.ones([n_res, self.dim])
