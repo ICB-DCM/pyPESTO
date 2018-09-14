@@ -7,6 +7,10 @@ try:
 except ImportError:
     amici = None
 
+import logging
+
+logger = logging.getLogger(__name__)
+
 
 class AmiciObjective(Objective):
     """
@@ -139,7 +143,7 @@ class AmiciObjective(Objective):
                         rdata['sx0']
 
         # loop over experimental data
-        for data in enumerate(self.edata):
+        for data_index, data in enumerate(self.edata):
 
             if self.preequilibration_edata:
                 original_value_dict = self.preprocess_preequilibration(data)
@@ -155,6 +159,12 @@ class AmiciObjective(Objective):
             if self.preequilibration_edata:
                 self.postprocess_preequilibration(data, original_value_dict)
 
+            logger.debug('=== DATASET %d ===' % data_index)
+            logger.debug('status: ' + str(rdata['status']))
+            logger.debug('llh: ' + str(rdata['llh']))
+            logger.debug('y:\n' + str(rdata['y']))
+
+
             # check if the computation failed
             if rdata['status'] < 0.0:
                 return self.get_error_output(mode)
@@ -166,20 +176,15 @@ class AmiciObjective(Objective):
                     snllh -= rdata['sllh']
                     # TODO: Compute the full Hessian, and check here
                     ssnllh -= rdata['FIM']
+                return nllh, snllh, ssnllh
+
             elif mode == Objective.MODE_RES:
                 res = np.hstack([res, rdata['res']]) \
                     if res.size else rdata['res']
                 if sensi_order > 0:
                     sres = np.vstack([sres, rdata['sres']]) \
                         if sres.size else rdata['sres']
-
-        # map_to_output is called twice, might be prettified
-        return self.map_to_output(
-            self.sensi_orders,
-            mode,
-            fval=nllh, grad=snllh, hess=ssnllh,
-            res=res, sres=sres
-        )
+                return res, sres
 
     def preprocess_preequilibration(self, data):
         original_fixed_parameters_preequilibration = None

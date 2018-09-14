@@ -654,9 +654,9 @@ class Objective:
             if 1 in sensi_orders:
                 output += (kwargs[Objective.SRES],)
         if len(output) == 1 and (
-            (mode == Objective.MODE_RES and self.sres == False)
+            (mode == Objective.MODE_RES and self.sres)
             or
-            (mode == Objective.MODE_FUN and self.grad == False)
+            (mode == Objective.MODE_FUN and self.grad)
         ):
             output = output[0]
         return output
