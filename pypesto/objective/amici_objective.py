@@ -258,18 +258,16 @@ class AmiciObjective(Objective):
             )
 
     def get_error_output(self, mode):
-        if not self.amici_model.nt():
-            nt = sum([data.nt() for data in self.edata])
-        else:
-            nt = sum([data.nt() if data.nt() else self.amici_model.nt()
-                      for data in self.edata])
-        n_res = nt * self.amici_model.nytrue
-        return self.map_to_output(
-            self.sensi_orders,
-            mode,
-            fval=np.inf,
-            grad=np.nan * np.ones(self.dim),
-            hess=np.nan * np.ones([self.dim, self.dim]),
-            res=np.nan * np.ones(n_res),
-            sres=np.nan * np.ones([n_res, self.dim])
-        )
+        if mode == Objective.MODE_FUN:
+            return np.inf, \
+                   np.nan * np.ones(self.dim), \
+                   np.nan * np.ones([self.dim, self.dim])
+        elif mode == Objective.MODE_RES:
+            if not self.amici_model.nt():
+                nt = sum([data.nt() for data in self.edata])
+            else:
+                nt = sum([data.nt() if data.nt() else self.amici_model.nt()
+                          for data in self.edata])
+            n_res = nt * self.amici_model.nytrue
+            return np.nan * np.ones(n_res), \
+                   np.nan * np.ones([n_res, self.dim])
