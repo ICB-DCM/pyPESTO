@@ -395,6 +395,9 @@ class Objective:
     postprocess: callable
         Postprocess output values from __call__.
 
+    sensitivity_orders: tuple
+        Temporary variable to store requested sensitivity orders
+
     Notes
     -----
 
@@ -436,6 +439,8 @@ class Objective:
 
         self.preprocess = preprocess
         self.postprocess = postprocess
+
+        self.sensi_order = None
 
         self.x_names = None
 
@@ -507,7 +512,7 @@ class Objective:
         self.history.update(x, sensi_orders, mode, result)
 
         # map to output format
-        result = Objective.map_to_output(sensi_orders, mode, **result)
+        result = self.map_to_output(sensi_orders, mode, **result)
 
         return result
 
@@ -516,12 +521,15 @@ class Objective:
         Call objective function without pre- or post-processing and
         formatting.
         """
+        self.sensi_orders = sensi_orders
         if mode == Objective.MODE_FUN:
             result = self._call_mode_fun(x, sensi_orders)
         elif mode == Objective.MODE_RES:
             result = self._call_mode_res(x, sensi_orders)
         else:
+            self.sensi_orders = None
             raise ValueError("This mode is not supported.")
+        self.sensi_orders = None
         return result
 
     def _call_mode_fun(self, x, sensi_orders):
@@ -626,8 +634,7 @@ class Objective:
 
         return result
 
-    @staticmethod
-    def map_to_output(sensi_orders, mode, **kwargs):
+    def map_to_output(self, sensi_orders, mode, **kwargs):
         """
         Return values as requested by the caller, since usually only a subset
         is demanded. One output is returned as-is, more than one output are
@@ -646,8 +653,11 @@ class Objective:
                 output += (kwargs[Objective.RES],)
             if 1 in sensi_orders:
                 output += (kwargs[Objective.SRES],)
-        if len(output) == 1:
-            # return a single value not as tuple
+        if len(output) == 1 and (
+            (mode == Objective.MODE_RES and self.sres == False)
+            or
+            (mode == Objective.MODE_FUN and self.grad == False)
+        ):
             output = output[0]
         return output
 

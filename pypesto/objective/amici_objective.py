@@ -40,24 +40,26 @@ class AmiciObjective(Objective):
             max_sensi_order = 2 if amici_model.o2mode else 1
 
         def fun(x):
-            return self.call_amici(x, (0,), Objective.MODE_FUN)
+            return self.call_amici(
+                x,
+                Objective.MODE_FUN
+            )
 
         if max_sensi_order > 0:
-            def grad(x):
-                return self.call_amici(x, (1,), Objective.MODE_FUN)
-
-            def hess(x):
-                return self.call_amici(x, (2,), Objective.MODE_FUN)
+            grad = True
+            hess = True
         else:
             grad = None
             hess = None
 
         def res(x):
-            return self.call_amici(x, (0,), Objective.MODE_RES)
+            return self.call_amici(
+                x,
+                Objective.MODE_RES
+            )
 
         if max_sensi_order > 0:
-            def sres(x):
-                return self.call_amici(x, (1,), Objective.MODE_RES)
+            sres = True
         else:
             sres = None
 
@@ -87,14 +89,16 @@ class AmiciObjective(Objective):
     def call_amici(
             self,
             x,
-            sensi_orders,
             mode
     ):
         # amici is built so that only the maximum sensitivity is required,
         # the lower orders are then automatically computed
 
         # gradients can always be computed
-        sensi_order = min(max(sensi_orders), 1)
+        if self.sensi_orders is None:
+            Exception('Sensitivity Orders were not specified. Please use'
+                      '__call__ to evaluate the objective function.')
+        sensi_order = min(max(self.sensi_orders), 1)
         # order 2 currently not implemented, we are using the FIM
 
         # check if sensitivities can be computed
@@ -125,7 +129,7 @@ class AmiciObjective(Objective):
                     self.preequilibration_edata[fixedParameters]['edata'])
 
                 if rdata['status'] < 0.0:
-                    return self.get_error_output(sensi_orders, mode)
+                    return self.get_error_output(mode)
 
                 self.preequilibration_edata[fixedParameters]['x0'] = \
                     rdata['x0']
@@ -135,7 +139,7 @@ class AmiciObjective(Objective):
                         rdata['sx0']
 
         # loop over experimental data
-        for data in self.edata:
+        for data in enumerate(self.edata):
 
             if self.preequilibration_edata:
                 original_value_dict = self.preprocess_preequilibration(data)
@@ -153,7 +157,7 @@ class AmiciObjective(Objective):
 
             # check if the computation failed
             if rdata['status'] < 0.0:
-                return self.get_error_output(sensi_orders, mode)
+                return self.get_error_output(mode)
 
             # extract required result fields
             if mode == Objective.MODE_FUN:
@@ -170,8 +174,8 @@ class AmiciObjective(Objective):
                         if sres.size else rdata['sres']
 
         # map_to_output is called twice, might be prettified
-        return Objective.map_to_output(
-            sensi_orders,
+        return self.map_to_output(
+            self.sensi_orders,
             mode,
             fval=nllh, grad=snllh, hess=ssnllh,
             res=res, sres=sres
@@ -248,16 +252,16 @@ class AmiciObjective(Objective):
                 edata=preeq_edata
             )
 
-    def get_error_output(self, sensi_orders, mode):
+    def get_error_output(self, mode):
         if not self.amici_model.nt():
             nt = sum([data.nt() for data in self.edata])
         else:
             nt = sum([data.nt() if data.nt() else self.amici_model.nt()
                       for data in self.edata])
         n_res = nt * self.amici_model.nytrue
-        return Objective.map_to_output(
-            sensi_orders=sensi_orders,
-            mode=mode,
+        return self.map_to_output(
+            self.sensi_orders,
+            mode,
             fval=np.inf,
             grad=np.nan * np.ones(self.dim),
             hess=np.nan * np.ones([self.dim, self.dim]),
