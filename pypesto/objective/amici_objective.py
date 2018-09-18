@@ -168,7 +168,6 @@ class AmiciObjective(Objective):
                 logger.debug('t_steadystate: ' + str(rdata['t_steadystate']))
             logger.debug('res:\n' + str(rdata['res']))
 
-
             # check if the computation failed
             if rdata['status'] < 0.0:
                 return self.get_error_output(mode)
@@ -192,7 +191,6 @@ class AmiciObjective(Objective):
             return nllh, snllh, ssnllh
         elif mode == Objective.MODE_RES:
             return res, sres
-
 
     def preprocess_preequilibration(self, data):
         original_fixed_parameters_preequilibration = None
