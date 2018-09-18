@@ -163,7 +163,8 @@ class AmiciObjective(Objective):
             logger.debug('=== DATASET %d ===' % data_index)
             logger.debug('status: ' + str(rdata['status']))
             logger.debug('llh: ' + str(rdata['llh']))
-            if not rdata['t_steadystate'] == np.nan:
+            if 't_steadystate' in rdata.keys() and not rdata['t_steadystate'] \
+                    == np.nan:
                 logger.debug('t_steadystate: ' + str(rdata['t_steadystate']))
             logger.debug('res:\n' + str(rdata['res']))
 
