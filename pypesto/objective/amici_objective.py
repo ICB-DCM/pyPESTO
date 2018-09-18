@@ -163,7 +163,10 @@ class AmiciObjective(Objective):
             logger.debug('=== DATASET %d ===' % data_index)
             logger.debug('status: ' + str(rdata['status']))
             logger.debug('llh: ' + str(rdata['llh']))
-            logger.debug('y:\n' + str(rdata['y']))
+            if not rdata['t_steadystate'] == np.nan:
+                logger.debug('t_steadystate: ' + str(rdata['t_steadystate']))
+            logger.debug('res:\n' + str(rdata['res']))
+
 
             # check if the computation failed
             if rdata['status'] < 0.0:
@@ -176,7 +179,6 @@ class AmiciObjective(Objective):
                     snllh -= rdata['sllh']
                     # TODO: Compute the full Hessian, and check here
                     ssnllh -= rdata['FIM']
-                return nllh, snllh, ssnllh
 
             elif mode == Objective.MODE_RES:
                 res = np.hstack([res, rdata['res']]) \
@@ -184,7 +186,12 @@ class AmiciObjective(Objective):
                 if sensi_order > 0:
                     sres = np.vstack([sres, rdata['sres']]) \
                         if sres.size else rdata['sres']
-                return res, sres
+
+        if mode == Objective.MODE_FUN:
+            return nllh, snllh, ssnllh
+        elif mode == Objective.MODE_RES:
+            return res, sres
+
 
     def preprocess_preequilibration(self, data):
         original_fixed_parameters_preequilibration = None
