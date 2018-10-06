@@ -13,6 +13,7 @@ import copy
 import pandas as pd
 import time
 import logging
+import os
 
 
 logger = logging.getLogger(__name__)
@@ -166,7 +167,8 @@ class ObjectiveHistory:
 
     def reset(self, index=None):
         """
-        Reset all counters, the trace, and start the timer.
+        Reset all counters, the trace, and start the timer, create directory
+        for trace file
         """
         self.n_fval = 0
         self.n_grad = 0
@@ -183,6 +185,10 @@ class ObjectiveHistory:
         self.x_min = None
 
         self.index = index
+
+        if self.options.trace_file:
+            if not os.path.exists(os.path.dirname(self.options.trace_file)):
+                os.makedirs(os.path.dirname(self.options.trace_file))
 
     def update(self, x, sensi_orders, mode, result):
         """
