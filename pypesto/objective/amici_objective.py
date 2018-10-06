@@ -251,7 +251,7 @@ class AmiciObjective(Objective):
                len(fixed_parameters) == 0:
                 continue  # we only need to keep unique ones
 
-            preeq_edata = amici.ExpData(self.amici_model.get())
+            preeq_edata = amici.amici.ExpData(self.amici_model.get())
             preeq_edata.fixedParametersPreequilibration = amici.DoubleVector(
                 fixed_parameters
             )

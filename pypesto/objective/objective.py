@@ -44,8 +44,18 @@ class ObjectiveOptions(dict):
         Default: False.
 
     trace_record_hess: bool, optional
-        Flag indicating whether to record also the Hessian in the trace.
+        Flag indicating whether to record the Hessian in the trace.
         Default: False.
+
+    trace_record_res: bool, optional
+        Flag indicating whether to record the residual (and sensitivity) in
+        the trace.
+        Default: False.
+
+    trace_record_chi2: bool, optional
+        Flag indicating whether to record the chi2 (and sensitivity) in
+        the trace.
+        Default: True.
 
     trace_all: bool, optional
         Flag indicating whether to record all (True, default) or only
@@ -66,6 +76,8 @@ class ObjectiveOptions(dict):
     def __init__(self,
                  trace_record=False,
                  trace_record_hess=False,
+                 trace_record_res=False,
+                 trace_record_chi2=True,
                  trace_all=True,
                  trace_file=None,
                  trace_save_iter=10):
@@ -73,6 +85,8 @@ class ObjectiveOptions(dict):
 
         self.trace_record = trace_record
         self.trace_record_hess = trace_record_hess
+        self.trace_record_res = trace_record_res
+        self.trace_record_chi2 = trace_record_chi2
         self.trace_all = trace_all
 
         if trace_file is True:
@@ -250,21 +264,34 @@ class ObjectiveHistory:
         if self.trace is None:
             columns = ['time',
                        'n_fval', 'n_grad', 'n_hess', 'n_res', 'n_sres',
-                       'fval', 'grad', 'hess', 'res', 'sres',
-                       'x']
+                       'fval', 'grad', 'hess', 'res', 'sres', 'chi2', 'schi2',
+                       'x',]
             self.trace = pd.DataFrame(columns=columns)
 
         # extract function values
         if mode == Objective.MODE_FUN:
             fval = result.get(Objective.FVAL, None)
             grad = result.get(Objective.GRAD, None)
-            hess = None if self.options.trace_record_hess \
+            hess = None if not self.options.trace_record_hess \
                 else result.get(Objective.HESS, None)
             res = None
             sres = None
+            chi2 = None
+            schi2 = None
         else:  # mode == Objective.MODE_RES
-            res = result.get(Objective.RES, None)
-            sres = result.get(Objective.SRES, None)
+            res_result = result.get(Objective.RES, None)
+            sres_result = result.get(Objective.SRES, None)
+            res = None if not self.options.trace_record_res \
+                else res_result
+            sres = None if not self.options.trace_record_res \
+                else sres_result
+            chi2 = None if not self.options.trace_record_chi2 \
+                           or res_result is None \
+                else np.inner(res_result,res_result)/2
+            schi2 = None if not self.options.trace_record_chi2 \
+                            or sres_result is None \
+                            or res_result is None \
+                else res_result * res_result
             # can compute fval from res
             fval = res_to_fval(res)
             # grad could also be computed from sres
@@ -281,7 +308,7 @@ class ObjectiveHistory:
         values = [
             used_time,
             self.n_fval, self.n_grad, self.n_hess, self.n_res, self.n_sres,
-            fval, grad, hess, res, sres,
+            fval, grad, hess, res, sres, chi2, schi2,
             x
         ]
 
