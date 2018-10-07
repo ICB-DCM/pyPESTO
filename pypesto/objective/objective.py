@@ -13,6 +13,7 @@ import copy
 import pandas as pd
 import time
 import logging
+import os
 
 
 logger = logging.getLogger(__name__)
@@ -166,7 +167,8 @@ class ObjectiveHistory:
 
     def reset(self, index=None):
         """
-        Reset all counters, the trace, and start the timer.
+        Reset all counters, the trace, and start the timer, and create
+        directory for trace file.
         """
         self.n_fval = 0
         self.n_grad = 0
@@ -183,6 +185,11 @@ class ObjectiveHistory:
         self.x_min = None
 
         self.index = index
+
+        if self.options.trace_file is not None:
+            dirname = os.path.dirname(self.options.trace_file)
+            if not os.path.exists(dirname):
+                os.makedirs(dirname)
 
     def update(self, x, sensi_orders, mode, result):
         """
@@ -252,10 +259,12 @@ class ObjectiveHistory:
         if mode == Objective.MODE_FUN:
             fval = result.get(Objective.FVAL, None)
             grad = result.get(Objective.GRAD, None)
-            hess = None if self.options.trace_record_hess \
+            hess = None if not self.options.trace_record_hess \
                 else result.get(Objective.HESS, None)
             res = None
             sres = None
+            chi2 = None
+            schi2 = None
         else:  # mode == Objective.MODE_RES
             res = result.get(Objective.RES, None)
             sres = result.get(Objective.SRES, None)
@@ -374,6 +383,14 @@ class Objective:
         If its value is True, then res should return the residual
         sensitivities as a second output.
 
+    fun_accept_sensi_orders: bool, optional
+        Flag indicating whether fun takes sensi_orders as an argument.
+        Default: False.
+
+    res_accept_sensi_orders: bool, optional
+        Flag indicating whether res takes sensi_orders as an argument.
+        Default: False
+
     options: pypesto.ObjectiveOptions, optional
         Options as specified in pypesto.ObjectiveOptions.
 
@@ -414,6 +431,8 @@ class Objective:
     def __init__(self, fun=None,
                  grad=None, hess=None, hessp=None,
                  res=None, sres=None,
+                 fun_accept_sensi_orders=False,
+                 res_accept_sensi_orders=False,
                  options=None):
         self.fun = fun
         self.grad = grad
@@ -421,6 +440,8 @@ class Objective:
         self.hessp = hessp
         self.res = res
         self.sres = sres
+        self.fun_accept_sensi_orders = fun_accept_sensi_orders
+        self.res_accept_sensi_orders = res_accept_sensi_orders
 
         if options is None:
             options = ObjectiveOptions()
@@ -507,7 +528,7 @@ class Objective:
         self.history.update(x, sensi_orders, mode, result)
 
         # map to output format
-        result = Objective.map_to_output(sensi_orders, mode, **result)
+        result = Objective.output_to_tuple(sensi_orders, mode, **result)
 
         return result
 
@@ -528,7 +549,12 @@ class Objective:
         """
         The method __call__ was called with mode MODE_FUN.
         """
-        if sensi_orders == (0,):
+        if self.fun_accept_sensi_orders:
+            result = self.fun(x, sensi_orders)
+            if type(result) is not dict:
+                result = Objective.output_to_dict(
+                    sensi_orders, Objective.MODE_FUN, result)
+        elif sensi_orders == (0,):
             if self.grad is True:
                 fval = self.fun(x)[0]
             else:
@@ -586,7 +612,12 @@ class Objective:
         """
         The method __call__ was called with mode MODE_RES.
         """
-        if sensi_orders == (0,):
+        if self.res_accept_sensi_orders:
+            result = self.res(x, sensi_orders)
+            if type(result) is not dict:
+                result = Objective.output_to_dict(
+                    sensi_orders, Objective.MODE_RES, result)
+        elif sensi_orders == (0,):
             if self.sres is True:
                 res = self.res(x)[0]
             else:
@@ -627,7 +658,33 @@ class Objective:
         return result
 
     @staticmethod
-    def map_to_output(sensi_orders, mode, **kwargs):
+    def output_to_dict(sensi_orders, mode, output_tuple):
+        """
+        Convert output tuple to dict.
+        """
+        output_dict = {}
+        index = 0
+        if type(output_tuple) is not tuple:
+            output_tuple = (output_tuple,)
+        if mode == Objective.MODE_FUN:
+            if 0 in sensi_orders:
+                output_dict[Objective.FVAL] = output_tuple[index]
+                index += 1
+            if 1 in sensi_orders:
+                output_dict[Objective.GRAD] = output_tuple[index]
+                index += 1
+            if 2 in sensi_orders:
+                output_dict[Objective.HESS] = output_tuple[index]
+        elif mode == Objective.MODE_RES:
+            if 0 in sensi_orders:
+                output_dict[Objective.RES] = output_tuple[index]
+                index += 1
+            if 1 in sensi_orders:
+                output_dict[Objective.SRES] = output_tuple[index]
+        return output_dict
+
+    @staticmethod
+    def output_to_tuple(sensi_orders, mode, **kwargs):
         """
         Return values as requested by the caller, since usually only a subset
         is demanded. One output is returned as-is, more than one output are

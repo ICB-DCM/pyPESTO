@@ -1,11 +1,14 @@
 import numpy as np
 import copy
 from .objective import Objective
+import logging
 
 try:
     import amici
 except ImportError:
     amici = None
+
+logger = logging.getLogger(__name__)
 
 
 class AmiciObjective(Objective):
@@ -39,31 +42,29 @@ class AmiciObjective(Objective):
         if max_sensi_order is None:
             max_sensi_order = 2 if amici_model.o2mode else 1
 
-        def fun(x):
-            return self.call_amici(x, (0,), Objective.MODE_FUN)
+        def fun(x, sensi_orders):
+            return self._call_amici(x, sensi_orders, Objective.MODE_FUN)
 
         if max_sensi_order > 0:
-            def grad(x):
-                return self.call_amici(x, (1,), Objective.MODE_FUN)
-
-            def hess(x):
-                return self.call_amici(x, (2,), Objective.MODE_FUN)
+            grad = True
+            hess = True
         else:
             grad = None
             hess = None
 
-        def res(x):
-            return self.call_amici(x, (0,), Objective.MODE_RES)
+        def res(x, sensi_orders):
+            return self._call_amici(x, sensi_orders, Objective.MODE_RES)
 
         if max_sensi_order > 0:
-            def sres(x):
-                return self.call_amici(x, (1,), Objective.MODE_RES)
+            sres = True
         else:
             sres = None
 
         super().__init__(
             fun=fun, grad=grad, hess=hess, hessp=None,
             res=res, sres=sres,
+            fun_accept_sensi_orders=True,
+            res_accept_sensi_orders=True,
             options=options
         )
 
@@ -84,7 +85,7 @@ class AmiciObjective(Objective):
         # extract parameter names from model
         self.x_names = list(self.amici_model.getParameterNames())
 
-    def call_amici(
+    def _call_amici(
             self,
             x,
             sensi_orders,
@@ -135,7 +136,7 @@ class AmiciObjective(Objective):
                         rdata['sx0']
 
         # loop over experimental data
-        for data in self.edata:
+        for data_index, data in enumerate(self.edata):
 
             if self.preequilibration_edata:
                 original_value_dict = self.preprocess_preequilibration(data)
@@ -151,6 +152,14 @@ class AmiciObjective(Objective):
             if self.preequilibration_edata:
                 self.postprocess_preequilibration(data, original_value_dict)
 
+            # logging
+            logger.debug('=== DATASET %d ===' % data_index)
+            logger.debug('status: ' + str(rdata['status']))
+            logger.debug('llh: ' + str(rdata['llh']))
+            if 't_steadystate' in rdata and rdata['t_steadystate'] != np.nan:
+                logger.debug('t_steadystate: ' + str(rdata['t_steadystate']))
+            logger.debug('res: ' + str(rdata['res']))
+
             # check if the computation failed
             if rdata['status'] < 0.0:
                 return self.get_error_output(sensi_orders, mode)
@@ -162,6 +171,7 @@ class AmiciObjective(Objective):
                     snllh -= rdata['sllh']
                     # TODO: Compute the full Hessian, and check here
                     ssnllh -= rdata['FIM']
+
             elif mode == Objective.MODE_RES:
                 res = np.hstack([res, rdata['res']]) \
                     if res.size else rdata['res']
@@ -170,7 +180,7 @@ class AmiciObjective(Objective):
                         if sres.size else rdata['sres']
 
         # map_to_output is called twice, might be prettified
-        return Objective.map_to_output(
+        return Objective.output_to_tuple(
             sensi_orders,
             mode,
             fval=nllh, grad=snllh, hess=ssnllh,
@@ -236,7 +246,7 @@ class AmiciObjective(Objective):
                len(fixed_parameters) == 0:
                 continue  # we only need to keep unique ones
 
-            preeq_edata = amici.ExpData(self.amici_model.get())
+            preeq_edata = amici.amici.ExpData(self.amici_model.get())
             preeq_edata.fixedParametersPreequilibration = amici.DoubleVector(
                 fixed_parameters
             )
@@ -255,7 +265,7 @@ class AmiciObjective(Objective):
             nt = sum([data.nt() if data.nt() else self.amici_model.nt()
                       for data in self.edata])
         n_res = nt * self.amici_model.nytrue
-        return Objective.map_to_output(
+        return Objective.output_to_tuple(
             sensi_orders=sensi_orders,
             mode=mode,
             fval=np.inf,
