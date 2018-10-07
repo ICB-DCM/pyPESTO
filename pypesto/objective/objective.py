@@ -701,7 +701,7 @@ class Objective:
         """
         output_dict = {}
         index = 0
-        if type(output_tuple) is not tuple:
+        if not isinstance(output_tuple, tuple):
             output_tuple = (output_tuple,)
         if mode == Objective.MODE_FUN:
             if 0 in sensi_orders:
