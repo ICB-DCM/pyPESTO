@@ -266,7 +266,7 @@ class ObjectiveHistory:
             columns = ['time',
                        'n_fval', 'n_grad', 'n_hess', 'n_res', 'n_sres',
                        'fval', 'grad', 'hess', 'res', 'sres', 'chi2', 'schi2',
-                       'x',]
+                       'x', ]
             self.trace = pd.DataFrame(columns=columns)
 
         # extract function values
@@ -282,17 +282,21 @@ class ObjectiveHistory:
         else:  # mode == Objective.MODE_RES
             res_result = result.get(Objective.RES, None)
             sres_result = result.get(Objective.SRES, None)
-            res = None if not self.options.trace_record_res \
+            res = None \
+                if not self.options.trace_record_res \
                 else res_result
-            sres = None if not self.options.trace_record_res \
+            sres = None \
+                if not self.options.trace_record_res \
                 else sres_result
-            chi2 = None if not self.options.trace_record_chi2 \
-                           or res_result is None \
-                else np.inner(res_result,res_result)/2
-            schi2 = None if not self.options.trace_record_chi2 \
-                            or sres_result is None \
-                            or res_result is None \
-                else res_result * res_result
+            chi2 = None \
+                if not self.options.trace_record_chi2 \
+                or res_result is None \
+                else np.inner(res_result, res_result) / 2
+            schi2 = None \
+                if not self.options.trace_record_chi2 \
+                or sres_result is None \
+                or res_result is None \
+                else res_result * sres_result
             # can compute fval from res
             fval = res_to_fval(res)
             # grad could also be computed from sres
@@ -716,7 +720,7 @@ class Objective:
                 output_dict[Objective.SRES] = output_tuple[index]
         return output_dict
 
-    def output_to_tuple(self,sensi_orders, mode, return_scalar=False,
+    def output_to_tuple(self, sensi_orders, mode, return_scalar=False,
                         **kwargs):
         """
         Return values as requested by the caller, since usually only a subset
