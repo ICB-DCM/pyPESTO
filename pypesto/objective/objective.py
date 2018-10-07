@@ -588,7 +588,7 @@ class Objective:
         """
         if self.fun_accept_sensi_orders:
             result = self.fun(x, sensi_orders)
-            if type(result) is not dict:
+            if not isinstance(result, dict):
                 result = Objective.output_to_dict(
                     sensi_orders, Objective.MODE_FUN, result)
         elif sensi_orders == (0,):
@@ -651,7 +651,7 @@ class Objective:
         """
         if self.res_accept_sensi_orders:
             result = self.res(x, sensi_orders)
-            if type(result) is not dict:
+            if not isinstance(result, dict):
                 result = Objective.output_to_dict(
                     sensi_orders, Objective.MODE_RES, result)
         elif sensi_orders == (0,):
@@ -720,8 +720,7 @@ class Objective:
                 output_dict[Objective.SRES] = output_tuple[index]
         return output_dict
 
-    def output_to_tuple(self, sensi_orders, mode, return_scalar=False,
-                        **kwargs):
+    def output_to_tuple(self, sensi_orders, mode, **kwargs):
         """
         Return values as requested by the caller, since usually only a subset
         is demanded. One output is returned as-is, more than one output are

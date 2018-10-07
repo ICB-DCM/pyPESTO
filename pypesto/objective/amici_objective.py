@@ -126,7 +126,7 @@ class AmiciObjective(Objective):
                     self.preequilibration_edata[fixedParameters]['edata'])
 
                 if rdata['status'] < 0.0:
-                    return self.get_error_output(mode)
+                    return self.get_error_output(sensi_orders, mode)
 
                 self.preequilibration_edata[fixedParameters]['x0'] = \
                     rdata['x0']
