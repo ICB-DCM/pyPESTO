@@ -10,7 +10,10 @@ import warnings
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 optimizers = {
-    'scipy': ['ls_trf', 'ls_dogbox'],
+    'scipy': ['Nelder-Mead', 'Powell', 'CG', 'BFGS', 'Newton-CG',
+        'L-BFGS-B', 'TNC', 'COBYLA', 'SLSQP',
+        'trust-ncg', 'trust-exact', 'trust-krylov',
+        'ls_trf', 'ls_dogbox'],
     # disabled: ,'trust-constr', 'ls_lm', 'dogleg'
     'dlib': ['default']
 }
