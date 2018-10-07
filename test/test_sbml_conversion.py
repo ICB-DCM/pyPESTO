@@ -107,7 +107,7 @@ def _load_model_objective(example_name):
 
     # generate experimental data
     rdata = amici.runAmiciSimulation(model, solver, None)
-    edata = amici.ExpData(rdata, 0.05, 0.0)
+    edata = amici.ExpData(rdata['ptr'].get(), 0.05, 0.0)
 
     options = pypesto.objective.ObjectiveOptions(
         trace_record=True,
