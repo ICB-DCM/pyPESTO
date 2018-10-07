@@ -117,8 +117,8 @@ def _load_model_objective(example_name):
         trace_save_iter=1
     )
 
-    return pypesto.AmiciObjective(model, solver, [edata], 2,
-                                  options=options), model
+    return (pypesto.AmiciObjective(model, solver, [edata], 2, options=options),
+            model)
 
 
 if __name__ == '__main__':

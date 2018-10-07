@@ -1,13 +1,12 @@
 import numpy as np
 import copy
 from .objective import Objective
+import logging
 
 try:
     import amici
 except ImportError:
     amici = None
-
-import logging
 
 logger = logging.getLogger(__name__)
 
@@ -43,6 +42,9 @@ class AmiciObjective(Objective):
         if max_sensi_order is None:
             max_sensi_order = 2 if amici_model.o2mode else 1
 
+        def fun(x, sensi_orders):
+            return self._call_amici(x, sensi_orders, Objective.MODE_FUN)
+
         if max_sensi_order > 0:
             grad = True
             hess = True
@@ -50,16 +52,20 @@ class AmiciObjective(Objective):
             grad = None
             hess = None
 
+        def res(x, sensi_orders):
+            return self._call_amici(x, sensi_orders, Objective.MODE_RES)
+
         if max_sensi_order > 0:
             sres = True
         else:
             sres = None
 
         super().__init__(
-            fun=None, grad=grad, hess=hess, hessp=None,
-            res=None, sres=sres,
-            options=options,
-            overwritefun=False, overwriteres=False
+            fun=fun, grad=grad, hess=hess, hessp=None,
+            res=res, sres=sres,
+            fun_accept_sensi_orders=True,
+            res_accept_sensi_orders=True,
+            options=options
         )
 
         self.amici_model = amici_model
@@ -79,31 +85,17 @@ class AmiciObjective(Objective):
         # extract parameter names from model
         self.x_names = list(self.amici_model.getParameterNames())
 
-    def fun(self, x):
-        return self.call_amici(
-            x,
-            Objective.MODE_FUN
-        )
-
-    def res(self, x):
-        return self.call_amici(
-            x,
-            Objective.MODE_RES
-        )
-
-    def call_amici(
+    def _call_amici(
             self,
             x,
+            sensi_orders,
             mode
     ):
         # amici is built so that only the maximum sensitivity is required,
         # the lower orders are then automatically computed
 
         # gradients can always be computed
-        if self.sensi_orders is None:
-            raise Exception('Sensitivity Orders were not specified. Please use'
-                            '__call__ to evaluate the objective function.')
-        sensi_order = min(max(self.sensi_orders), 1)
+        sensi_order = min(max(sensi_orders), 1)
         # order 2 currently not implemented, we are using the FIM
 
         # check if sensitivities can be computed
@@ -160,17 +152,17 @@ class AmiciObjective(Objective):
             if self.preequilibration_edata:
                 self.postprocess_preequilibration(data, original_value_dict)
 
+            # logging
             logger.debug('=== DATASET %d ===' % data_index)
             logger.debug('status: ' + str(rdata['status']))
             logger.debug('llh: ' + str(rdata['llh']))
-            if 't_steadystate' in rdata.keys() and not rdata['t_steadystate'] \
-                    == np.nan:
+            if 't_steadystate' in rdata and rdata['t_steadystate'] != np.nan:
                 logger.debug('t_steadystate: ' + str(rdata['t_steadystate']))
-            logger.debug('res:\n' + str(rdata['res']))
+            logger.debug('res: ' + str(rdata['res']))
 
             # check if the computation failed
             if rdata['status'] < 0.0:
-                return self.get_error_output(mode)
+                return self.get_error_output(sensi_orders, mode)
 
             # extract required result fields
             if mode == Objective.MODE_FUN:
@@ -187,10 +179,13 @@ class AmiciObjective(Objective):
                     sres = np.vstack([sres, rdata['sres']]) \
                         if sres.size else rdata['sres']
 
-        if mode == Objective.MODE_FUN:
-            return nllh, snllh, ssnllh
-        elif mode == Objective.MODE_RES:
-            return res, sres
+        # map_to_output is called twice, might be prettified
+        return self.output_to_tuple(
+            sensi_orders,
+            mode,
+            fval=nllh, grad=snllh, hess=ssnllh,
+            res=res, sres=sres
+        )
 
     def preprocess_preequilibration(self, data):
         original_fixed_parameters_preequilibration = None
@@ -263,19 +258,19 @@ class AmiciObjective(Objective):
                 edata=preeq_edata
             )
 
-    def get_error_output(self, mode):
-        if mode == Objective.MODE_FUN:
-            return \
-                np.inf, \
-                np.nan * np.ones(self.dim), \
-                np.nan * np.ones([self.dim, self.dim])
-        elif mode == Objective.MODE_RES:
-            if not self.amici_model.nt():
-                nt = sum([data.nt() for data in self.edata])
-            else:
-                nt = sum([data.nt() if data.nt() else self.amici_model.nt()
-                          for data in self.edata])
-            n_res = nt * self.amici_model.nytrue
-            return \
-                np.nan * np.ones(n_res), \
-                np.nan * np.ones([n_res, self.dim])
+    def get_error_output(self, sensi_orders, mode):
+        if not self.amici_model.nt():
+            nt = sum([data.nt() for data in self.edata])
+        else:
+            nt = sum([data.nt() if data.nt() else self.amici_model.nt()
+                      for data in self.edata])
+        n_res = nt * self.amici_model.nytrue
+        return self.output_to_tuple(
+            sensi_orders=sensi_orders,
+            mode=mode,
+            fval=np.inf,
+            grad=np.nan * np.ones(self.dim),
+            hess=np.nan * np.ones([self.dim, self.dim]),
+            res=np.nan * np.ones(n_res),
+            sres=np.nan * np.ones([n_res, self.dim])
+        )

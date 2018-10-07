@@ -181,8 +181,8 @@ class ObjectiveHistory:
 
     def reset(self, index=None):
         """
-        Reset all counters, the trace, and start the timer, create directory
-        for trace file
+        Reset all counters, the trace, and start the timer, and create
+        directory for trace file.
         """
         self.n_fval = 0
         self.n_grad = 0
@@ -200,9 +200,10 @@ class ObjectiveHistory:
 
         self.index = index
 
-        if self.options.trace_file:
-            if not os.path.exists(os.path.dirname(self.options.trace_file)):
-                os.makedirs(os.path.dirname(self.options.trace_file))
+        if self.options.trace_file is not None:
+            dirname = os.path.dirname(self.options.trace_file)
+            if not os.path.exists(dirname):
+                os.makedirs(dirname)
 
     def update(self, x, sensi_orders, mode, result):
         """
@@ -407,6 +408,14 @@ class Objective:
         If its value is True, then res should return the residual
         sensitivities as a second output.
 
+    fun_accept_sensi_orders: bool, optional
+        Flag indicating whether fun takes sensi_orders as an argument.
+        Default: False.
+
+    res_accept_sensi_orders: bool, optional
+        Flag indicating whether res takes sensi_orders as an argument.
+        Default: False
+
     options: pypesto.ObjectiveOptions, optional
         Options as specified in pypesto.ObjectiveOptions.
 
@@ -450,23 +459,17 @@ class Objective:
     def __init__(self,
                  fun=None, grad=None, hess=None, hessp=None,
                  res=None, sres=None,
-                 options=None,
-                 overwritefun=True, overwriteres=True):
-
-        # AmiciObjective implements its own fun and res functions,
-        # if we pass them here, they will be bound to the instance of the
-        # objective at initialization, which makes it impossible to
-        # propagate changes to the objective after initialization to calls
-        # to fun and res (this is necessary to pass self.sensi_orders as
-        # temporary class variable
-        if overwritefun:
-            self.fun = fun
+                 fun_accept_sensi_orders=False,
+                 res_accept_sensi_orders=False,
+                 options=None):
+        self.fun = fun
         self.grad = grad
         self.hess = hess
         self.hessp = hessp
-        if overwriteres:
-            self.res = res
+        self.res = res
         self.sres = sres
+        self.fun_accept_sensi_orders = fun_accept_sensi_orders
+        self.res_accept_sensi_orders = res_accept_sensi_orders
 
         if options is None:
             options = ObjectiveOptions()
@@ -555,7 +558,7 @@ class Objective:
         self.history.update(x, sensi_orders, mode, result)
 
         # map to output format
-        result = self.map_to_output(sensi_orders, mode, **result)
+        result = self.output_to_tuple(sensi_orders, mode, **result)
 
         return result
 
@@ -579,7 +582,12 @@ class Objective:
         """
         The method __call__ was called with mode MODE_FUN.
         """
-        if sensi_orders == (0,):
+        if self.fun_accept_sensi_orders:
+            result = self.fun(x, sensi_orders)
+            if type(result) is not dict:
+                result = Objective.output_to_dict(
+                    sensi_orders, Objective.MODE_FUN, result)
+        elif sensi_orders == (0,):
             if self.grad is True:
                 fval = self.fun(x)[0]
             else:
@@ -637,7 +645,12 @@ class Objective:
         """
         The method __call__ was called with mode MODE_RES.
         """
-        if sensi_orders == (0,):
+        if self.res_accept_sensi_orders:
+            result = self.res(x, sensi_orders)
+            if type(result) is not dict:
+                result = Objective.output_to_dict(
+                    sensi_orders, Objective.MODE_RES, result)
+        elif sensi_orders == (0,):
             if self.sres is True:
                 res = self.res(x)[0]
             else:
@@ -677,7 +690,34 @@ class Objective:
 
         return result
 
-    def map_to_output(self, sensi_orders, mode, **kwargs):
+    @staticmethod
+    def output_to_dict(sensi_orders, mode, output_tuple):
+        """
+        Convert output tuple to dict.
+        """
+        output_dict = {}
+        index = 0
+        if type(output_tuple) is not tuple:
+            output_tuple = (output_tuple,)
+        if mode == Objective.MODE_FUN:
+            if 0 in sensi_orders:
+                output_dict[Objective.FVAL] = output_tuple[index]
+                index += 1
+            if 1 in sensi_orders:
+                output_dict[Objective.GRAD] = output_tuple[index]
+                index += 1
+            if 2 in sensi_orders:
+                output_dict[Objective.HESS] = output_tuple[index]
+        elif mode == Objective.MODE_RES:
+            if 0 in sensi_orders:
+                output_dict[Objective.RES] = output_tuple[index]
+                index += 1
+            if 1 in sensi_orders:
+                output_dict[Objective.SRES] = output_tuple[index]
+        return output_dict
+
+    def output_to_tuple(self,sensi_orders, mode, return_scalar=False,
+                        **kwargs):
         """
         Return values as requested by the caller, since usually only a subset
         is demanded. One output is returned as-is, more than one output are
