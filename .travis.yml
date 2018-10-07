@@ -22,7 +22,6 @@ addons:
       - swig3.0
 
 install:
-  - pyenv shell 2.7 3.6
   - mkdir -p ~/bin/ && ln -s /usr/bin/swig3.0 ~/bin/swig && export PATH=~/bin/:$PATH
   - pip3 install --upgrade setuptools wheel pkgconfig
   - pip3 install --upgrade jupyter # for jupyter notebooks
