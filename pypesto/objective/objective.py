@@ -263,8 +263,6 @@ class ObjectiveHistory:
                 else result.get(Objective.HESS, None)
             res = None
             sres = None
-            chi2 = None
-            schi2 = None
         else:  # mode == Objective.MODE_RES
             res = result.get(Objective.RES, None)
             sres = result.get(Objective.SRES, None)
