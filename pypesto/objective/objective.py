@@ -930,6 +930,9 @@ class Objective:
         if x_indices is None:
             x_indices = list(range(len(x)))
 
+        tmp_trace_record = self.options.trace_record
+        self.options.trace_record = False
+
         # function value and objective gradient
         fval, grad = self(x, (0, 1), mode)
 
@@ -1002,5 +1005,7 @@ class Objective:
         # log full result
         if verbosity > 0:
             logger.info(result)
+
+        self.options.trace_record = tmp_trace_record
 
         return result
