@@ -490,8 +490,6 @@ class Objective:
         self.preprocess = preprocess
         self.postprocess = postprocess
 
-        self.sensi_orders = None
-
         self.x_names = None
 
     # The following has_ properties can be used to find out what values
@@ -571,15 +569,12 @@ class Objective:
         Call objective function without pre- or post-processing and
         formatting.
         """
-        self.sensi_orders = sensi_orders
         if mode == Objective.MODE_FUN:
             result = self._call_mode_fun(x, sensi_orders)
         elif mode == Objective.MODE_RES:
             result = self._call_mode_res(x, sensi_orders)
         else:
-            self.sensi_orders = None
             raise ValueError("This mode is not supported.")
-        self.sensi_orders = None
         return result
 
     def _call_mode_fun(self, x, sensi_orders):
