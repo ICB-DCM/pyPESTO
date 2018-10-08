@@ -200,6 +200,7 @@ class ObjectiveHistory:
 
         self.index = index
 
+        # create trace file dirs
         if self.options.trace_file is not None:
             dirname = os.path.dirname(self.options.trace_file)
             if not os.path.exists(dirname):
