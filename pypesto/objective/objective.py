@@ -13,6 +13,7 @@ import copy
 import pandas as pd
 import time
 import logging
+import os
 
 
 logger = logging.getLogger(__name__)
@@ -43,8 +44,18 @@ class ObjectiveOptions(dict):
         Default: False.
 
     trace_record_hess: bool, optional
-        Flag indicating whether to record also the Hessian in the trace.
+        Flag indicating whether to record the Hessian in the trace.
         Default: False.
+
+    trace_record_res: bool, optional
+        Flag indicating whether to record the residual (and sensitivity) in
+        the trace.
+        Default: False.
+
+    trace_record_chi2: bool, optional
+        Flag indicating whether to record the chi2 (and sensitivity) in
+        the trace.
+        Default: True.
 
     trace_all: bool, optional
         Flag indicating whether to record all (True, default) or only
@@ -65,6 +76,8 @@ class ObjectiveOptions(dict):
     def __init__(self,
                  trace_record=False,
                  trace_record_hess=False,
+                 trace_record_res=False,
+                 trace_record_chi2=True,
                  trace_all=True,
                  trace_file=None,
                  trace_save_iter=10):
@@ -72,6 +85,8 @@ class ObjectiveOptions(dict):
 
         self.trace_record = trace_record
         self.trace_record_hess = trace_record_hess
+        self.trace_record_res = trace_record_res
+        self.trace_record_chi2 = trace_record_chi2
         self.trace_all = trace_all
 
         if trace_file is True:
@@ -166,7 +181,8 @@ class ObjectiveHistory:
 
     def reset(self, index=None):
         """
-        Reset all counters, the trace, and start the timer.
+        Reset all counters, the trace, and start the timer, and create
+        directory for trace file.
         """
         self.n_fval = 0
         self.n_grad = 0
@@ -183,6 +199,12 @@ class ObjectiveHistory:
         self.x_min = None
 
         self.index = index
+
+        # create trace file dirs
+        if self.options.trace_file is not None:
+            dirname = os.path.dirname(self.options.trace_file)
+            if not os.path.exists(dirname):
+                os.makedirs(dirname)
 
     def update(self, x, sensi_orders, mode, result):
         """
@@ -244,21 +266,38 @@ class ObjectiveHistory:
         if self.trace is None:
             columns = ['time',
                        'n_fval', 'n_grad', 'n_hess', 'n_res', 'n_sres',
-                       'fval', 'grad', 'hess', 'res', 'sres',
-                       'x']
+                       'fval', 'grad', 'hess', 'res', 'sres', 'chi2', 'schi2',
+                       'x', ]
             self.trace = pd.DataFrame(columns=columns)
 
         # extract function values
         if mode == Objective.MODE_FUN:
             fval = result.get(Objective.FVAL, None)
             grad = result.get(Objective.GRAD, None)
-            hess = None if self.options.trace_record_hess \
+            hess = None if not self.options.trace_record_hess \
                 else result.get(Objective.HESS, None)
             res = None
             sres = None
+            chi2 = None
+            schi2 = None
         else:  # mode == Objective.MODE_RES
-            res = result.get(Objective.RES, None)
-            sres = result.get(Objective.SRES, None)
+            res_result = result.get(Objective.RES, None)
+            sres_result = result.get(Objective.SRES, None)
+            res = None \
+                if not self.options.trace_record_res \
+                else res_result
+            sres = None \
+                if not self.options.trace_record_res \
+                else sres_result
+            chi2 = None \
+                if not self.options.trace_record_chi2 \
+                or res_result is None \
+                else np.inner(res_result, res_result) / 2
+            schi2 = None \
+                if not self.options.trace_record_chi2 \
+                or sres_result is None \
+                or res_result is None \
+                else res_result * sres_result
             # can compute fval from res
             fval = res_to_fval(res)
             # grad could also be computed from sres
@@ -275,7 +314,7 @@ class ObjectiveHistory:
         values = [
             used_time,
             self.n_fval, self.n_grad, self.n_hess, self.n_res, self.n_sres,
-            fval, grad, hess, res, sres,
+            fval, grad, hess, res, sres, chi2, schi2,
             x
         ]
 
@@ -374,6 +413,14 @@ class Objective:
         If its value is True, then res should return the residual
         sensitivities as a second output.
 
+    fun_accept_sensi_orders: bool, optional
+        Flag indicating whether fun takes sensi_orders as an argument.
+        Default: False.
+
+    res_accept_sensi_orders: bool, optional
+        Flag indicating whether res takes sensi_orders as an argument.
+        Default: False
+
     options: pypesto.ObjectiveOptions, optional
         Options as specified in pypesto.ObjectiveOptions.
 
@@ -395,6 +442,9 @@ class Objective:
     postprocess: callable
         Postprocess output values from __call__.
 
+    sensitivity_orders: tuple
+        Temporary variable to store requested sensitivity orders
+
     Notes
     -----
 
@@ -411,9 +461,11 @@ class Objective:
     RES = 'res'
     SRES = 'sres'
 
-    def __init__(self, fun=None,
-                 grad=None, hess=None, hessp=None,
+    def __init__(self,
+                 fun=None, grad=None, hess=None, hessp=None,
                  res=None, sres=None,
+                 fun_accept_sensi_orders=False,
+                 res_accept_sensi_orders=False,
                  options=None):
         self.fun = fun
         self.grad = grad
@@ -421,6 +473,8 @@ class Objective:
         self.hessp = hessp
         self.res = res
         self.sres = sres
+        self.fun_accept_sensi_orders = fun_accept_sensi_orders
+        self.res_accept_sensi_orders = res_accept_sensi_orders
 
         if options is None:
             options = ObjectiveOptions()
@@ -507,7 +561,7 @@ class Objective:
         self.history.update(x, sensi_orders, mode, result)
 
         # map to output format
-        result = Objective.map_to_output(sensi_orders, mode, **result)
+        result = self.output_to_tuple(sensi_orders, mode, **result)
 
         return result
 
@@ -528,7 +582,12 @@ class Objective:
         """
         The method __call__ was called with mode MODE_FUN.
         """
-        if sensi_orders == (0,):
+        if self.fun_accept_sensi_orders:
+            result = self.fun(x, sensi_orders)
+            if not isinstance(result, dict):
+                result = Objective.output_to_dict(
+                    sensi_orders, Objective.MODE_FUN, result)
+        elif sensi_orders == (0,):
             if self.grad is True:
                 fval = self.fun(x)[0]
             else:
@@ -586,7 +645,12 @@ class Objective:
         """
         The method __call__ was called with mode MODE_RES.
         """
-        if sensi_orders == (0,):
+        if self.res_accept_sensi_orders:
+            result = self.res(x, sensi_orders)
+            if not isinstance(result, dict):
+                result = Objective.output_to_dict(
+                    sensi_orders, Objective.MODE_RES, result)
+        elif sensi_orders == (0,):
             if self.sres is True:
                 res = self.res(x)[0]
             else:
@@ -627,7 +691,32 @@ class Objective:
         return result
 
     @staticmethod
-    def map_to_output(sensi_orders, mode, **kwargs):
+    def output_to_dict(sensi_orders, mode, output_tuple):
+        """
+        Convert output tuple to dict.
+        """
+        output_dict = {}
+        index = 0
+        if not isinstance(output_tuple, tuple):
+            output_tuple = (output_tuple,)
+        if mode == Objective.MODE_FUN:
+            if 0 in sensi_orders:
+                output_dict[Objective.FVAL] = output_tuple[index]
+                index += 1
+            if 1 in sensi_orders:
+                output_dict[Objective.GRAD] = output_tuple[index]
+                index += 1
+            if 2 in sensi_orders:
+                output_dict[Objective.HESS] = output_tuple[index]
+        elif mode == Objective.MODE_RES:
+            if 0 in sensi_orders:
+                output_dict[Objective.RES] = output_tuple[index]
+                index += 1
+            if 1 in sensi_orders:
+                output_dict[Objective.SRES] = output_tuple[index]
+        return output_dict
+
+    def output_to_tuple(self, sensi_orders, mode, **kwargs):
         """
         Return values as requested by the caller, since usually only a subset
         is demanded. One output is returned as-is, more than one output are
@@ -646,8 +735,10 @@ class Objective:
                 output += (kwargs[Objective.RES],)
             if 1 in sensi_orders:
                 output += (kwargs[Objective.SRES],)
-        if len(output) == 1:
-            # return a single value not as tuple
+        if len(output) == 1 and (
+            (mode == Objective.MODE_RES and self.sres) or
+            (mode == Objective.MODE_FUN and self.grad)
+        ):
             output = output[0]
         return output
 
@@ -838,6 +929,9 @@ class Objective:
         if x_indices is None:
             x_indices = list(range(len(x)))
 
+        tmp_trace_record = self.options.trace_record
+        self.options.trace_record = False
+
         # function value and objective gradient
         fval, grad = self(x, (0, 1), mode)
 
@@ -910,5 +1004,7 @@ class Objective:
         # log full result
         if verbosity > 0:
             logger.info(result)
+
+        self.options.trace_record = tmp_trace_record
 
         return result

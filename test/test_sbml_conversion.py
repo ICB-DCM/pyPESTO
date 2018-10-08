@@ -5,7 +5,6 @@ import amici
 import pypesto
 import importlib
 import numpy as np
-import statistics
 import warnings
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -113,7 +112,16 @@ def _load_model_objective(example_name):
     rdata = amici.runAmiciSimulation(model, solver, None)
     edata = amici.ExpData(rdata['ptr'].get(), 0.05, 0.0)
 
-    return pypesto.AmiciObjective(model, solver, [edata], 2), model
+    options = pypesto.objective.ObjectiveOptions(
+        trace_record=True,
+        trace_record_hess=False,
+        trace_all=True,
+        trace_file='tmp/traces/conversion_example_{index}.csv',
+        trace_save_iter=1
+    )
+
+    return (pypesto.AmiciObjective(model, solver, [edata], 2, options=options),
+            model)
 
 
 if __name__ == '__main__':
