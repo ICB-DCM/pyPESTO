@@ -557,7 +557,7 @@ class Objective:
 
         result: pd.DataFrame
             gradient, finite difference approximations and error estimates.
-        
+
         """
 
         if x_indices is None:
