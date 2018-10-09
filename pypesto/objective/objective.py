@@ -1,34 +1,14 @@
-"""
-Objective
----------
-
-The objective class is a simple wrapper around the objective function,
-giving a standardized way of calling.
-
-"""
-
-
 import numpy as np
 import copy
 import pandas as pd
 import time
 import logging
 import os
+from .constants import *
+from .history import ObjectiveHistory
 
 
 logger = logging.getLogger(__name__)
-
-
-def res_to_fval(res):
-    """
-    We assume that the residuals res are related to an objective function
-    value fval via::
-        fval = 0.5 * sum(res**2),
-    which is the 'Linear' formulation in scipy.
-    """
-    if res is None:
-        return None
-    return 0.5 * np.power(res, 2).sum()
 
 
 class ObjectiveOptions(dict):
@@ -120,257 +100,11 @@ class ObjectiveOptions(dict):
         return options
 
 
-class ObjectiveHistory:
-    """
-    Objective call history. Also handles saving of intermediate results.
-
-    Parameteters
-    ------------
-
-    options: ObjectiveOptions, optional
-        Values needed for creating a history are extracted.
-
-    Attributes
-    ----------
-
-    n_fval, n_grad, n_hess, n_res, n_sres: int
-        Counters of function values, gradients and hessians,
-        residuals and residual sensitivities.
-
-    trace: list
-        List containing history of function values and parameters if
-        options.tr_record is True.
-
-    start_time: float
-        Reference start time.
-
-    fval0, fval_min: float
-        Initial and best function value found.
-
-    x0, x_min: np.ndarray
-        Initial and best parameters found.
-
-    index: str
-        Id identifying the history object when called in a multistart
-        setting.
-    """
-
-    def __init__(self, options=None):
-
-        if options is None:
-            options = ObjectiveOptions()
-        self.options = options
-
-        self.n_fval = None
-        self.n_grad = None
-        self.n_hess = None
-        self.n_res = None
-        self.n_sres = None
-
-        self.trace = None
-        self.start_time = None
-
-        self.fval_min = None
-        self.x_min = None
-        self.fval0 = None
-        self.x0 = None
-
-        self.index = None
-
-        self.reset()
-
-    def reset(self, index=None):
-        """
-        Reset all counters, the trace, and start the timer, and create
-        directory for trace file.
-        """
-        self.n_fval = 0
-        self.n_grad = 0
-        self.n_hess = 0
-        self.n_res = 0
-        self.n_sres = 0
-
-        self.trace = None
-        self.start_time = time.time()
-
-        self.fval0 = None
-        self.x0 = None
-        self.fval_min = np.inf
-        self.x_min = None
-
-        self.index = index
-
-        # create trace file dirs
-        if self.options.trace_file is not None:
-            dirname = os.path.dirname(self.options.trace_file)
-            if not os.path.exists(dirname):
-                os.makedirs(dirname)
-
-    def update(self, x, sensi_orders, mode, result):
-        """
-        Update the history.
-
-        Parameters
-        ----------
-        x: np.ndarray
-            The current parameter.
-        sensi_orders: tuple
-            The sensitivity orders.
-        mode: str
-            As in Objective.MODE_.
-        result: dict
-            The result for x.
-
-        Notes
-        -----
-
-        It is assumed that the result dictionary only contains those
-        values that were requested in Objective.___call__.
-        """
-        self._update_counts(sensi_orders, mode)
-        self._update_trace(x, mode, result)
-        self._update_vals(x, sensi_orders, mode, result)
-
-    def finalize(self):
-        """
-        Save the trace to file if options.trace_save is True.
-        """
-        self._save_trace(finalize=True)
-
-    def _update_counts(self, sensi_orders, mode):
-        """
-        Update the counters.
-        """
-        if mode == Objective.MODE_FUN:
-            if 0 in sensi_orders:
-                self.n_fval += 1
-            if 1 in sensi_orders:
-                self.n_grad += 1
-            if 2 in sensi_orders:
-                self.n_hess += 1
-        elif mode == Objective.MODE_RES:
-            if 0 in sensi_orders:
-                self.n_res += 1
-            if 1 in sensi_orders:
-                self.n_sres += 1
-
-    def _update_trace(self, x, mode, result):
-        """
-        Update and possibly store the trace.
-        """
-
-        if not self.options.trace_record:
-            return
-
-        # init trace
-        if self.trace is None:
-            columns = ['time',
-                       'n_fval', 'n_grad', 'n_hess', 'n_res', 'n_sres',
-                       'fval', 'grad', 'hess', 'res', 'sres', 'chi2', 'schi2',
-                       'x', ]
-            self.trace = pd.DataFrame(columns=columns)
-
-        # extract function values
-        if mode == Objective.MODE_FUN:
-            fval = result.get(Objective.FVAL, None)
-            grad = result.get(Objective.GRAD, None)
-            hess = None if not self.options.trace_record_hess \
-                else result.get(Objective.HESS, None)
-            res = None
-            sres = None
-            chi2 = None
-            schi2 = None
-        else:  # mode == Objective.MODE_RES
-            res_result = result.get(Objective.RES, None)
-            sres_result = result.get(Objective.SRES, None)
-            res = None \
-                if not self.options.trace_record_res \
-                else res_result
-            sres = None \
-                if not self.options.trace_record_res \
-                else sres_result
-            chi2 = None \
-                if not self.options.trace_record_chi2 \
-                or res_result is None \
-                else np.inner(res_result, res_result) / 2
-            schi2 = None \
-                if not self.options.trace_record_chi2 \
-                or sres_result is None \
-                or res_result is None \
-                else res_result * sres_result
-            # can compute fval from res
-            fval = res_to_fval(res)
-            # grad could also be computed from sres
-            grad = None
-            hess = None
-
-        # check whether to append to trace
-        if not self.options.trace_all and fval >= self.fval_min:
-            return
-
-        used_time = time.time() - self.start_time
-
-        # create table row
-        values = [
-            used_time,
-            self.n_fval, self.n_grad, self.n_hess, self.n_res, self.n_sres,
-            fval, grad, hess, res, sres, chi2, schi2,
-            x
-        ]
-
-        # append to trace
-        self.trace.loc[len(self.trace)] = values
-
-        # save trace to file
-        self._save_trace()
-
-    def _save_trace(self, finalize=False):
-        """
-        Save to file via pd.DataFrame.to_csv() if options.trace_file is
-        not None and other conditions apply.
-        Format might be revised when storage is implemented.
-        """
-        if self.options.trace_file is None:
-            return
-
-        if finalize or (len(self.trace) > 0 and
-                        len(self.trace) % self.options.trace_save_iter == 0):
-            filename = self.options.trace_file
-            if self.index is not None:
-                filename = filename.replace("{index}", str(self.index))
-            # save
-            self.trace.to_csv(filename)
-
-    def _update_vals(self, x, sensi_orders, mode, result):
-        """
-        Update initial and best function values. Must be called after
-        update_trace().
-        """
-
-        # update initial point
-        if self.fval0 is None and 0 in sensi_orders:
-            if mode == Objective.MODE_FUN:
-                self.fval0 = result[Objective.FVAL]
-                self.x0 = x
-            else:  # mode == Objective.MODE_RES:
-                self.fval0 = res_to_fval(result[Objective.RES])
-                self.x0 = x
-
-        # update best point
-        fval = np.inf
-        if 0 in sensi_orders:
-            if mode == Objective.MODE_FUN:
-                fval = result[Objective.FVAL]
-            else:  # mode == Objective.MODE_RES:
-                fval = res_to_fval(result[Objective.RES])
-        if fval < self.fval_min:
-            self.fval_min = fval
-            self.x_min = x
-
-
 class Objective:
     """
-    This class contains the objective function.
+    The objective class is a simple wrapper around the objective function,
+    giving a standardized way of calling. Apart from that, it manages several
+    things including fixing of parameters and history.
 
     Parameters
     ----------
@@ -451,15 +185,6 @@ class Objective:
     preprocess, postprocess are configured in update_from_problem()
     and can be reset using the reset() method.
     """
-
-    MODE_FUN = 'mode_fun'  # mode for function values
-    MODE_RES = 'mode_res'  # mode for residuals
-    FVAL = 'fval'
-    GRAD = 'grad'
-    HESS = 'hess'
-    HESSP = 'hessp'
-    RES = 'res'
-    SRES = 'sres'
 
     def __init__(self,
                  fun=None, grad=None, hess=None, hessp=None,
@@ -561,7 +286,7 @@ class Objective:
         self.history.update(x, sensi_orders, mode, result)
 
         # map to output format
-        result = self.output_to_tuple(sensi_orders, mode, **result)
+        result = Objective.output_to_tuple(sensi_orders, mode, **result)
 
         return result
 
@@ -570,9 +295,9 @@ class Objective:
         Call objective function without pre- or post-processing and
         formatting.
         """
-        if mode == Objective.MODE_FUN:
+        if mode == MODE_FUN:
             result = self._call_mode_fun(x, sensi_orders)
-        elif mode == Objective.MODE_RES:
+        elif mode == MODE_RES:
             result = self._call_mode_res(x, sensi_orders)
         else:
             raise ValueError("This mode is not supported.")
@@ -586,33 +311,33 @@ class Objective:
             result = self.fun(x, sensi_orders)
             if not isinstance(result, dict):
                 result = Objective.output_to_dict(
-                    sensi_orders, Objective.MODE_FUN, result)
+                    sensi_orders, MODE_FUN, result)
         elif sensi_orders == (0,):
             if self.grad is True:
                 fval = self.fun(x)[0]
             else:
                 fval = self.fun(x)
-            result = {Objective.FVAL: fval}
+            result = {FVAL: fval}
         elif sensi_orders == (1,):
             if self.grad is True:
                 grad = self.fun(x)[1]
             else:
                 grad = self.grad(x)
-            result = {Objective.GRAD: grad}
+            result = {GRAD: grad}
         elif sensi_orders == (2,):
             if self.hess is True:
                 hess = self.fun(x)[2]
             else:
                 hess = self.hess(x)
-            result = {Objective.HESS: hess}
+            result = {HESS: hess}
         elif sensi_orders == (0, 1):
             if self.grad is True:
                 fval, grad = self.fun(x)[0:2]
             else:
                 fval = self.fun(x)
                 grad = self.grad(x)
-            result = {Objective.FVAL: fval,
-                      Objective.GRAD: grad}
+            result = {FVAL: fval,
+                      GRAD: grad}
         elif sensi_orders == (1, 2):
             if self.hess is True:
                 grad, hess = self.fun(x)[1:3]
@@ -622,8 +347,8 @@ class Objective:
                     grad = self.fun(x)[1]
                 else:
                     grad = self.grad(x)
-            result = {Objective.GRAD: grad,
-                      Objective.HESS: hess}
+            result = {GRAD: grad,
+                      HESS: hess}
         elif sensi_orders == (0, 1, 2):
             if self.hess is True:
                 fval, grad, hess = self.fun(x)[0:3]
@@ -634,9 +359,9 @@ class Objective:
                 else:
                     fval = self.fun(x)
                     grad = self.grad(x)
-            result = {Objective.FVAL: fval,
-                      Objective.GRAD: grad,
-                      Objective.HESS: hess}
+            result = {FVAL: fval,
+                      GRAD: grad,
+                      HESS: hess}
         else:
             raise ValueError("These sensitivity orders are not supported.")
         return result
@@ -649,27 +374,27 @@ class Objective:
             result = self.res(x, sensi_orders)
             if not isinstance(result, dict):
                 result = Objective.output_to_dict(
-                    sensi_orders, Objective.MODE_RES, result)
+                    sensi_orders, MODE_RES, result)
         elif sensi_orders == (0,):
             if self.sres is True:
                 res = self.res(x)[0]
             else:
                 res = self.res(x)
-            result = {Objective.RES: res}
+            result = {RES: res}
         elif sensi_orders == (1,):
             if self.sres is True:
                 sres = self.res(x)[1]
             else:
                 sres = self.sres(x)
-            result = {Objective.SRES: sres}
+            result = {SRES: sres}
         elif sensi_orders == (0, 1):
             if self.sres is True:
                 res, sres = self.res(x)
             else:
                 res = self.res(x)
                 sres = self.sres(x)
-            result = {Objective.RES: res,
-                      Objective.SRES: sres}
+            result = {RES: res,
+                      SRES: sres}
         else:
             raise ValueError("These sensitivity orders are not supported.")
         return result
@@ -681,7 +406,7 @@ class Objective:
         of a uniform output datatype which offers various methods to assess
         the data.
         """
-        keys = [Objective.GRAD, Objective.HESS, Objective.RES, Objective.SRES]
+        keys = [GRAD, HESS, RES, SRES]
         for key in keys:
             if key in result:
                 value = result[key]
@@ -699,46 +424,44 @@ class Objective:
         index = 0
         if not isinstance(output_tuple, tuple):
             output_tuple = (output_tuple,)
-        if mode == Objective.MODE_FUN:
+        if mode == MODE_FUN:
             if 0 in sensi_orders:
-                output_dict[Objective.FVAL] = output_tuple[index]
+                output_dict[FVAL] = output_tuple[index]
                 index += 1
             if 1 in sensi_orders:
-                output_dict[Objective.GRAD] = output_tuple[index]
+                output_dict[GRAD] = output_tuple[index]
                 index += 1
             if 2 in sensi_orders:
-                output_dict[Objective.HESS] = output_tuple[index]
-        elif mode == Objective.MODE_RES:
+                output_dict[HESS] = output_tuple[index]
+        elif mode == MODE_RES:
             if 0 in sensi_orders:
-                output_dict[Objective.RES] = output_tuple[index]
+                output_dict[RES] = output_tuple[index]
                 index += 1
             if 1 in sensi_orders:
-                output_dict[Objective.SRES] = output_tuple[index]
+                output_dict[SRES] = output_tuple[index]
         return output_dict
 
-    def output_to_tuple(self, sensi_orders, mode, **kwargs):
+    @staticmethod
+    def output_to_tuple(sensi_orders, mode, **kwargs):
         """
         Return values as requested by the caller, since usually only a subset
         is demanded. One output is returned as-is, more than one output are
         returned as a tuple in order (fval, grad, hess).
         """
         output = ()
-        if mode == Objective.MODE_FUN:
+        if mode == MODE_FUN:
             if 0 in sensi_orders:
-                output += (kwargs[Objective.FVAL],)
+                output += (kwargs[FVAL],)
             if 1 in sensi_orders:
-                output += (kwargs[Objective.GRAD],)
+                output += (kwargs[GRAD],)
             if 2 in sensi_orders:
-                output += (kwargs[Objective.HESS],)
-        elif mode == Objective.MODE_RES:
+                output += (kwargs[HESS],)
+        elif mode == MODE_RES:
             if 0 in sensi_orders:
-                output += (kwargs[Objective.RES],)
+                output += (kwargs[RES],)
             if 1 in sensi_orders:
-                output += (kwargs[Objective.SRES],)
-        if len(output) == 1 and (
-            (mode == Objective.MODE_RES and self.sres) or
-            (mode == Objective.MODE_FUN and self.grad)
-        ):
+                output += (kwargs[SRES],)
+        if len(output) == 1:
             output = output[0]
         return output
 
@@ -748,35 +471,35 @@ class Objective:
         """
         Get the function value at x.
         """
-        fval = self(x, (0,), Objective.MODE_FUN)
+        fval = self(x, (0,), MODE_FUN)
         return fval
 
     def get_grad(self, x):
         """
         Get the gradient at x.
         """
-        grad = self(x, (1,), Objective.MODE_FUN)
+        grad = self(x, (1,), MODE_FUN)
         return grad
 
     def get_hess(self, x):
         """
         Get the Hessian at x.
         """
-        hess = self(x, (2,), Objective.MODE_FUN)
+        hess = self(x, (2,), MODE_FUN)
         return hess
 
     def get_res(self, x):
         """
         Get the residuals at x.
         """
-        res = self(x, (0,), Objective.MODE_RES)
+        res = self(x, (0,), MODE_RES)
         return res
 
     def get_sres(self, x):
         """
         Get the residual sensitivities at x.
         """
-        sres = self(x, (1,), Objective.MODE_RES)
+        sres = self(x, (1,), MODE_RES)
         return sres
 
     # The following are functions that are called by other parts in
@@ -863,26 +586,26 @@ class Objective:
 
         # post-process
         def postprocess(result):
-            if Objective.GRAD in result:
-                grad = result[Objective.GRAD]
+            if GRAD in result:
+                grad = result[GRAD]
                 if grad.size == dim_full:
                     grad = grad[x_free_indices]
-                    result[Objective.GRAD] = grad
-            if Objective.HESS in result:
-                hess = result[Objective.HESS]
+                    result[GRAD] = grad
+            if HESS in result:
+                hess = result[HESS]
                 if hess.shape[0] == dim_full:
                     hess = hess[np.ix_(x_free_indices, x_free_indices)]
-                    result[Objective.HESS] = hess
-            if Objective.RES in result:
-                res = result[Objective.RES]
+                    result[HESS] = hess
+            if RES in result:
+                res = result[RES]
                 if res.size == dim_full:
                     res = res.flatten()[x_free_indices]
-                    result[Objective.RES] = res
-            if Objective.SRES in result:
-                sres = result[Objective.SRES]
+                    result[RES] = res
+            if SRES in result:
+                sres = result[SRES]
                 if sres.shape[-1] == dim_full:
                     sres = sres[..., x_free_indices]
-                    result[Objective.SRES] = sres
+                    result[SRES] = sres
             return result
         self.postprocess = postprocess
 
@@ -916,8 +639,8 @@ class Objective:
             Default: 1.
 
         mode: str
-            Residual (Objective.MODE_RES) or objective function value
-            (Objective.MODE_FUN, default) computation mode.
+            Residual (MODE_RES) or objective function value
+            (MODE_FUN, default) computation mode.
 
         Returns
         ----------

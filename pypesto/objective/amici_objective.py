@@ -1,7 +1,8 @@
 import numpy as np
 import copy
-from .objective import Objective
 import logging
+from .objective import Objective
+from .constants import *
 
 try:
     import amici
@@ -43,7 +44,7 @@ class AmiciObjective(Objective):
             max_sensi_order = 2 if amici_model.o2mode else 1
 
         def fun(x, sensi_orders):
-            return self._call_amici(x, sensi_orders, Objective.MODE_FUN)
+            return self._call_amici(x, sensi_orders, MODE_FUN)
 
         if max_sensi_order > 0:
             grad = True
@@ -53,7 +54,7 @@ class AmiciObjective(Objective):
             hess = None
 
         def res(x, sensi_orders):
-            return self._call_amici(x, sensi_orders, Objective.MODE_RES)
+            return self._call_amici(x, sensi_orders, MODE_RES)
 
         if max_sensi_order > 0:
             sres = True
@@ -165,14 +166,14 @@ class AmiciObjective(Objective):
                 return self.get_error_output(sensi_orders, mode)
 
             # extract required result fields
-            if mode == Objective.MODE_FUN:
+            if mode == MODE_FUN:
                 nllh -= rdata['llh']
                 if sensi_order > 0:
                     snllh -= rdata['sllh']
                     # TODO: Compute the full Hessian, and check here
                     ssnllh -= rdata['FIM']
 
-            elif mode == Objective.MODE_RES:
+            elif mode == MODE_RES:
                 res = np.hstack([res, rdata['res']]) \
                     if res.size else rdata['res']
                 if sensi_order > 0:
@@ -180,7 +181,7 @@ class AmiciObjective(Objective):
                         if sres.size else rdata['sres']
 
         # map_to_output is called twice, might be prettified
-        return self.output_to_tuple(
+        return Objective.output_to_tuple(
             sensi_orders,
             mode,
             fval=nllh, grad=snllh, hess=ssnllh,
@@ -265,7 +266,7 @@ class AmiciObjective(Objective):
             nt = sum([data.nt() if data.nt() else self.amici_model.nt()
                       for data in self.edata])
         n_res = nt * self.amici_model.nytrue
-        return self.output_to_tuple(
+        return Objective.output_to_tuple(
             sensi_orders=sensi_orders,
             mode=mode,
             fval=np.inf,

@@ -28,7 +28,7 @@ class AmiciObjectiveTest(unittest.TestCase):
                 x0,
                 eps=1e-5,
                 verbosity=0,
-                mode=pypesto.Objective.MODE_FUN
+                mode=pypesto.objective.constants.MODE_FUN
             )
             self.assertTrue(np.all(df.rel_err.values < 1e-2))
             self.assertTrue(np.all(df.abs_err.values < 1e-1))
@@ -36,7 +36,7 @@ class AmiciObjectiveTest(unittest.TestCase):
                 x0,
                 eps=1e-5,
                 verbosity=0,
-                mode=pypesto.Objective.MODE_RES
+                mode=pypesto.objective.constants.MODE_RES
             )
             self.assertTrue(np.all(df.rel_err.values < 1e-6))
             self.assertTrue(np.all(df.abs_err.values < 1e-6))
