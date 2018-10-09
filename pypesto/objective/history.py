@@ -2,8 +2,9 @@ import numpy as np
 import pandas as pd
 import time
 import os
-from .constants import *
-from .util import res_to_fval
+from .constants import MODE_FUN, MODE_RES, FVAL, GRAD, HESS, RES, SRES
+from .util import res_to_chi2, sres_to_schi2
+from .options import ObjectiveOptions
 
 
 class ObjectiveHistory:
@@ -147,13 +148,14 @@ class ObjectiveHistory:
             columns = ['time',
                        'n_fval', 'n_grad', 'n_hess', 'n_res', 'n_sres',
                        'fval', 'grad', 'hess', 'res', 'sres', 'chi2', 'schi2',
-                       'x', ]
+                       'x']
             self.trace = pd.DataFrame(columns=columns)
 
         # extract function values
         if mode == MODE_FUN:
             fval = result.get(FVAL, None)
-            grad = result.get(GRAD, None)
+            grad = None if not self.options.trace_record_grad \
+                else result.get(GRAD, None)
             hess = None if not self.options.trace_record_hess \
                 else result.get(HESS, None)
             res = None
@@ -161,28 +163,19 @@ class ObjectiveHistory:
             chi2 = None
             schi2 = None
         else:  # mode == MODE_RES
-            res_result = result.get(RES, None)
-            sres_result = result.get(SRES, None)
-            res = None \
-                if not self.options.trace_record_res \
-                else res_result
-            sres = None \
-                if not self.options.trace_record_res \
-                else sres_result
-            chi2 = None \
-                if not self.options.trace_record_chi2 \
-                or res_result is None \
-                else np.inner(res_result, res_result) / 2
-            schi2 = None \
-                if not self.options.trace_record_chi2 \
-                or sres_result is None \
-                or res_result is None \
-                else res_result * sres_result
-            # can compute fval from res
-            fval = res_to_fval(res)
-            # grad could also be computed from sres
+            fval = None
             grad = None
             hess = None
+            res_result = result.get(RES, None)
+            sres_result = result.get(SRES, None)
+            res = None if not self.options.trace_record_res \
+                else res_result
+            sres = None if not self.options.trace_record_sres \
+                else sres_result
+            chi2 = None if not self.options.trace_record_chi2 \
+                else res_to_chi2(res_result)
+            schi2 = None if not self.options.trace_record_schi2 \
+                else sres_to_schi2(res_result, sres_result)
 
         # check whether to append to trace
         if not self.options.trace_all and fval >= self.fval_min:
@@ -233,7 +226,7 @@ class ObjectiveHistory:
                 self.fval0 = result[FVAL]
                 self.x0 = x
             else:  # mode == MODE_RES:
-                self.fval0 = res_to_fval(result[RES])
+                self.fval0 = res_to_chi2(result[RES])
                 self.x0 = x
 
         # update best point
@@ -242,7 +235,7 @@ class ObjectiveHistory:
             if mode == MODE_FUN:
                 fval = result[FVAL]
             else:  # mode == MODE_RES:
-                fval = res_to_fval(result[RES])
+                fval = res_to_chi2(result[RES])
         if fval < self.fval_min:
             self.fval_min = fval
             self.x_min = x

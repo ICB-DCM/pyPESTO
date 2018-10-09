@@ -2,7 +2,7 @@ import numpy as np
 import copy
 import logging
 from .objective import Objective
-from .constants import *
+from .constants import MODE_FUN, MODE_RES
 
 try:
     import amici
