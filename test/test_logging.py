@@ -2,15 +2,17 @@ import logging
 import os
 import unittest
 import pypesto
+import pypesto.logging
 
 
 class LoggingTest(unittest.TestCase):
 
     def test_optimize(self):
         # logging
-        logger = logging.getLogger('pypesto')
-        logger.setLevel(logging.DEBUG)
+        pypesto.logging.log_to_console(logging.WARN)
         filename = ".test_logging.tmp"
+        pypesto.logging.log_to_file(logging.DEBUG, filename)
+        logger = logging.getLogger('pypesto')
         if os.path.exists(filename):
             os.remove(filename)
         fh = logging.FileHandler(filename)
