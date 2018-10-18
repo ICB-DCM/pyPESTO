@@ -346,7 +346,7 @@ class ScipyOptimizer(Optimizer):
         return optimizer_result
 
     def is_least_squares(self):
-        return re.match('^(?i)(ls_)', self.method)
+        return re.match(r'^(?i)(ls_)', self.method)
 
     @staticmethod
     def get_default_options():
