@@ -84,13 +84,16 @@ def parameter_estimation(
 
 
 def _load_model_objective(example_name):
-    sbml_file = os.path.join('doc', 'example',
-                             'model_' + example_name + '.xml')
     # name of the model that will also be the name of the python module
     model_name = 'model_' + example_name
+
+    # sbml file
+    sbml_file = os.path.join('doc', 'example', 'tmp',
+                             model_name + '.xml')
+    
     # directory to which the generated model code is written
-    model_output_dir = os.path.join('doc', 'example',
-                                    example_name)
+    model_output_dir = os.path.join('doc', 'example', 'tmp',
+                                    model_name)
 
     # import sbml model, complile and generate amici module
     sbml_importer = amici.SbmlImporter(sbml_file)

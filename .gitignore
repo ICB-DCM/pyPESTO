@@ -80,7 +80,7 @@ data/figures
 coverage_py.xml
 
 # examples
-doc/example/*/*/*
+doc/example/tmp
 
 # general
 data/.snakemake
