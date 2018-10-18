@@ -76,8 +76,10 @@ def parameter_estimation(
     ub = 2 * np.ones((1, objective.dim))
     problem = pypesto.Problem(objective, lb, ub)
 
+    optimize_options = pypesto.OptimizeOptions(allow_failed_starts=False)
+
     results = pypesto.minimize(
-        problem, optimizer, n_starts)
+        problem, optimizer, n_starts, options=optimize_options)
     results = results.optimize_result.list
 
 
