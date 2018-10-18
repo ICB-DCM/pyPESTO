@@ -88,8 +88,8 @@ def get_objective_rosen_integrated():
 
 def get_objective_poly_integrated():
     def poly(x):
-        return ((x-2)**2 + 1,
-                2*(x-2),
+        return ((x - 2)**2 + 1,
+                2 * (x - 2),
                 2)
     return pypesto.Objective(fun=poly, grad=True, hess=True)
 
