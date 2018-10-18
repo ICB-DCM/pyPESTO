@@ -88,7 +88,7 @@ def _load_model_objective(example_name):
     model_name = 'model_' + example_name
 
     # sbml file
-    sbml_file = os.path.join('doc', 'example', 'tmp',
+    sbml_file = os.path.join('doc', 'example', example_name,
                              model_name + '.xml')
     
     # directory to which the generated model code is written
