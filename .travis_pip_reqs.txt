@@ -3,4 +3,4 @@ pytest-cov
 coverage
 flake8
 dlib
-amici
+amici>=0.7.11
