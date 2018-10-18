@@ -13,7 +13,7 @@ class ObjectiveTest(unittest.TestCase):
     def test_evaluate(self):
         for obj in [get_objective_rosen_separated(),
                     get_objective_rosen_integrated()]:
-            self._test_evaluate(obj, 
+            self._test_evaluate(obj,
                                 rosen_x, rosen_fval_true,
                                 rosen_grad_true, rosen_hess_true)
         self._test_evaluate(get_objective_poly_integrated(),
@@ -49,7 +49,7 @@ class ObjectiveTest(unittest.TestCase):
                                    rosen_x)
         self._test_return_type(get_objective_poly_integrated(), poly_x)
 
-    def _test_return_type(self, obj, 
+    def _test_return_type(self, obj,
                           x):
         ret = obj(x, (0,))
         self.assertTrue(isinstance(ret, float))

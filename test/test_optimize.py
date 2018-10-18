@@ -80,4 +80,5 @@ class OptimizerTest(unittest.TestCase):
             options=optimize_options
         )
 
-        self.assertTrue(isinstance(result.optimize_result.list[0]['fval'], float))
+        self.assertTrue(
+            isinstance(result.optimize_result.list[0]['fval'], float))
