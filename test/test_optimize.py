@@ -22,8 +22,8 @@ optimizers = {
 
 class OptimizerTest(unittest.TestCase):
     def runTest(self):
-        for mode in ['seperated', 'integrated']:
-            if mode == 'seperated':
+        for mode in ['separated', 'integrated']:
+            if mode == 'separated':
                 obj = test_objective.get_objective_rosen_separated()
             elif mode == 'integrated':
                 obj = test_objective.get_objective_rosen_integrated()
@@ -37,45 +37,48 @@ class OptimizerTest(unittest.TestCase):
                     ):
                         with warnings.catch_warnings():
                             warnings.simplefilter("ignore")
-                            if re.match('^(?i)(ls_)', method):
+                            if re.match(r'^(?i)(ls_)', method):
                                 # obj has no residuals
                                 with self.assertRaises(Exception):
-                                    check_minimize(
+                                    self.check_minimize(
                                         obj, library, method)
                                 # no error when allow failed starts
-                                check_minimize(
+                                self.check_minimize(
                                     obj, library, method, True)
                             else:
-                                check_minimize(
+                                self.check_minimize(
                                     obj, library, method)
 
+    def check_minimize(self,
+                       objective, library, solver, allow_failed_starts=False):
 
-def check_minimize(objective, library, solver, allow_failed_starts=False):
+        options = {
+            'maxiter': 100
+        }
 
-    options = {
-        'maxiter': 100
-    }
+        optimizer = None
 
-    optimizer = None
+        if library == 'scipy':
+            optimizer = pypesto.ScipyOptimizer(method=solver,
+                                               options=options)
+        elif library == 'dlib':
+            optimizer = pypesto.DlibOptimizer(method=solver,
+                                              options=options)
 
-    if library == 'scipy':
-        optimizer = pypesto.ScipyOptimizer(method=solver,
-                                           options=options)
-    elif library == 'dlib':
-        optimizer = pypesto.DlibOptimizer(method=solver,
-                                          options=options)
+        lb = 0 * np.ones((1, 2))
+        ub = 1 * np.ones((1, 2))
+        problem = pypesto.Problem(objective, lb, ub)
 
-    lb = 0 * np.ones((1, 2))
-    ub = 1 * np.ones((1, 2))
-    problem = pypesto.Problem(objective, lb, ub)
+        optimize_options = pypesto.OptimizeOptions(
+            allow_failed_starts=allow_failed_starts)
 
-    optimize_options = pypesto.OptimizeOptions(
-        allow_failed_starts=allow_failed_starts)
+        result = pypesto.minimize(
+            problem=problem,
+            optimizer=optimizer,
+            n_starts=1,
+            startpoint_method=pypesto.startpoint.uniform,
+            options=optimize_options
+        )
 
-    pypesto.minimize(
-        problem=problem,
-        optimizer=optimizer,
-        n_starts=1,
-        startpoint_method=pypesto.startpoint.uniform,
-        options=optimize_options
-    )
+        self.assertTrue(
+            isinstance(result.optimize_result.list[0]['fval'], float))

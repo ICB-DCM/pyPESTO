@@ -28,7 +28,7 @@ class AmiciObjectiveTest(unittest.TestCase):
                 x0,
                 eps=1e-5,
                 verbosity=0,
-                mode=pypesto.Objective.MODE_FUN
+                mode=pypesto.objective.constants.MODE_FUN
             )
             self.assertTrue(np.all(df.rel_err.values < 1e-2))
             self.assertTrue(np.all(df.abs_err.values < 1e-1))
@@ -36,7 +36,7 @@ class AmiciObjectiveTest(unittest.TestCase):
                 x0,
                 eps=1e-5,
                 verbosity=0,
-                mode=pypesto.Objective.MODE_RES
+                mode=pypesto.objective.constants.MODE_RES
             )
             self.assertTrue(np.all(df.rel_err.values < 1e-6))
             self.assertTrue(np.all(df.abs_err.values < 1e-6))
@@ -76,19 +76,24 @@ def parameter_estimation(
     ub = 2 * np.ones((1, objective.dim))
     problem = pypesto.Problem(objective, lb, ub)
 
+    optimize_options = pypesto.OptimizeOptions(allow_failed_starts=False)
+
     results = pypesto.minimize(
-        problem, optimizer, n_starts)
+        problem, optimizer, n_starts, options=optimize_options)
     results = results.optimize_result.list
 
 
 def _load_model_objective(example_name):
-    sbml_file = os.path.join('doc', 'example',
-                             'model_' + example_name + '.xml')
     # name of the model that will also be the name of the python module
     model_name = 'model_' + example_name
+
+    # sbml file
+    sbml_file = os.path.join('doc', 'example', example_name,
+                             model_name + '.xml')
+
     # directory to which the generated model code is written
-    model_output_dir = os.path.join('doc', 'example',
-                                    example_name)
+    model_output_dir = os.path.join('doc', 'example', 'tmp',
+                                    model_name)
 
     # import sbml model, complile and generate amici module
     sbml_importer = amici.SbmlImporter(sbml_file)
@@ -110,7 +115,7 @@ def _load_model_objective(example_name):
 
     # generate experimental data
     rdata = amici.runAmiciSimulation(model, solver, None)
-    edata = amici.ExpData(rdata['ptr'].get(), 0.05, 0.0)
+    edata = amici.ExpData(rdata, 0.05, 0.0)
 
     options = pypesto.objective.ObjectiveOptions(
         trace_record=True,

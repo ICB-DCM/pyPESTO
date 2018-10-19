@@ -3,7 +3,7 @@ import scipy.optimize
 import re
 import abc
 import time
-from ..objective import res_to_fval
+from ..objective import res_to_chi2
 
 try:
     import dlib
@@ -325,7 +325,7 @@ class ScipyOptimizer(Optimizer):
         # some fields are not filled by all optimizers, then fill in None
         grad = getattr(res, 'grad', None) if self.is_least_squares() \
             else getattr(res, 'jac', None)
-        fval = res_to_fval(res.fun) if self.is_least_squares() \
+        fval = res_to_chi2(res.fun) if self.is_least_squares() \
             else res.fun
 
         # fill in everything known, although some parts will be overwritten
@@ -346,7 +346,7 @@ class ScipyOptimizer(Optimizer):
         return optimizer_result
 
     def is_least_squares(self):
-        return re.match('^(?i)(ls_)', self.method)
+        return re.match(r'^(?i)(ls_)', self.method)
 
     @staticmethod
     def get_default_options():
