@@ -35,8 +35,7 @@ before_script:
   - sleep 3 # give xvfb some time to start
 
 # run tests
-script:  
-  - python3 -m flake8 --exclude=build,doc,example
+script:
   - python3 -m pytest --cov=pypesto ./test
   - coverage xml
   - test/run_notebook.sh doc/example/
