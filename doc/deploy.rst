@@ -50,7 +50,7 @@ After a successful merge, you need to update also the package on PyPI:
 
    ::
 
-       twin upload dist/pypesto-x.y.z-py3-none-any.whl
+       twine upload dist/pypesto-x.y.z-py3-none-any.whl
 
    replacing x.y.z by the latest version number.
 

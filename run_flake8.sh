@@ -1,1 +1,1 @@
-python3 -m flake8 --ignore=F401 --exclude=build,doc,example
+python3 -m flake8 --exclude=build,doc,example
