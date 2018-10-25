@@ -173,7 +173,7 @@ class Objective:
                 "Objective cannot be called with sensi_orders={}"
                 " and mode={}".format(sensi_orders, mode))
 
-    def __call__(self, x, sensi_orders: tuple=(0,), mode=MODE_FUN):
+    def __call__(self, x, sensi_orders: tuple = (0,), mode=MODE_FUN):
         """
         Method to obtain arbitrary sensitivities. This is the central method
         which is always called, also by the get_* methods.
