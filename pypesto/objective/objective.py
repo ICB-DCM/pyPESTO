@@ -156,6 +156,19 @@ class Objective:
     def has_sres(self):
         return callable(self.sres) or self.sres is True
 
+    def check_sensi_orders(self, sensi_orders, mode):
+        if (mode is MODE_FUN and
+            (0 in sensi_orders and not self.has_fun
+             or 1 in sensi_orders and not self.has_grad
+             or 2 in sensi_orders and not self.has_hess)
+           ) or (mode is MODE_RES and
+            (0 in sensi_orders and not self.has_res
+             or 1 in sensi_orders and not selfhas_sres)
+           ):
+            raise ValueError(
+                "Objective cannot be called with sensi_orders={}"
+                " and mode={}".format(sensi_orders, mode))
+
     def __call__(self, x, sensi_orders: tuple=(0,), mode=MODE_FUN):
         """
         Method to obtain arbitrary sensitivities. This is the central method
@@ -179,6 +192,9 @@ class Objective:
         mode: str
             Whether to compute function values or residuals.
         """
+
+        # check input
+        self.check_sensi_orders(sensi_orders, mode)
 
         # pre-process
         x = self.preprocess(x=x)
