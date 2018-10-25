@@ -27,7 +27,7 @@ class ObjectiveTest(unittest.TestCase):
         grad_true = struct['grad']
         hess_true = struct['hess']
         max_sensi_order = struct['max_sensi_order']
-        
+
         # check function values
         if max_sensi_order >= 2:
             fval, grad, hess = obj(x, (0, 1, 2))
@@ -92,7 +92,7 @@ class ObjectiveTest(unittest.TestCase):
         """
         for integrated in [True, False]:
             for max_sensi_order in [2, 1, 0]:
-                for struct in [_rosen_for_sensi(max_sensi_order, 
+                for struct in [_rosen_for_sensi(max_sensi_order,
                                                 integrated, [0, 1]),
                                _poly_for_sensi(max_sensi_order,
                                                integrated, 0)]:
@@ -102,7 +102,7 @@ class ObjectiveTest(unittest.TestCase):
         obj = struct['obj']
         x = struct['x']
         max_sensi_order = struct['max_sensi_order']
-                
+
         obj(x, (0,))
         if max_sensi_order >= 1:
             obj(x, (0, 1))
@@ -115,12 +115,13 @@ class ObjectiveTest(unittest.TestCase):
             with self.assertRaises(ValueError):
                 obj(x, (0, 1, 2))
 
+
 def _obj_for_sensi(fun, grad, hess, max_sensi_order, integrated, x):
     """
     Create a pypesto.Objective able to compute up to the speficied
     max_sensi_order. Returns a dict containing the objective obj as well
     as max_sensi_order and fval, grad, hess for the passed x.
-    
+
     Parameters
     ----------
 
@@ -164,7 +165,7 @@ def _obj_for_sensi(fun, grad, hess, max_sensi_order, integrated, x):
         else:
             arg_grad = None
         arg_fun = fun
-    obj = pypesto.Objective(fun=arg_fun, grad=arg_grad, hess=arg_hess)   
+    obj = pypesto.Objective(fun=arg_fun, grad=arg_grad, hess=arg_hess)
     return {'obj': obj,
             'max_sensi_order': max_sensi_order,
             'x': x,
@@ -173,7 +174,7 @@ def _obj_for_sensi(fun, grad, hess, max_sensi_order, integrated, x):
             'hess': hess(x)}
 
 
-def _rosen_for_sensi(max_sensi_order, integrated, x):
+def _rosen_for_sensi(max_sensi_order, integrated=False, x=[0, 1]):
     """
     Rosenbrock function from scipy.optimize.
     """
@@ -182,15 +183,24 @@ def _rosen_for_sensi(max_sensi_order, integrated, x):
                           sp.optimize.rosen_hess,
                           max_sensi_order, integrated, x)
 
-def _poly_for_sensi(max_sensi_order, integrated, x):
+
+def _poly_for_sensi(max_sensi_order, integrated=False, x=0):
     """
     1-dim polynomial for testing in 1d.
     """
-    fun = lambda x: (x - 2)**2 + 1
-    grad = lambda x: 2 * (x - 2)
-    hess = lambda x: 2
+
+    def fun(x):
+        return (x - 2)**2 + 1
+
+    def grad(x):
+        return 2 * (x - 2)
+
+    def hess(x):
+        return 2
+
     return _obj_for_sensi(fun, grad, hess,
                           max_sensi_order, integrated, x)
+
 
 if __name__ == '__main__':
     suite = unittest.TestSuite()

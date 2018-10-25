@@ -165,10 +165,10 @@ class Objective:
             (0 in sensi_orders and not self.has_fun
              or 1 in sensi_orders and not self.has_grad
              or 2 in sensi_orders and not self.has_hess)
-           ) or (mode is MODE_RES and
-            (0 in sensi_orders and not self.has_res
-             or 1 in sensi_orders and not selfhas_sres)
-           ):
+            ) or (mode is MODE_RES and
+                  (0 in sensi_orders and not self.has_res
+                   or 1 in sensi_orders and not self.has_sres)
+                  ):
             raise ValueError(
                 "Objective cannot be called with sensi_orders={}"
                 " and mode={}".format(sensi_orders, mode))
