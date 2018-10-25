@@ -157,6 +157,10 @@ class Objective:
         return callable(self.sres) or self.sres is True
 
     def check_sensi_orders(self, sensi_orders, mode):
+        """
+        Check if the objective is able to compute the requested
+        sensitivities. If not, throw an exception.
+        """
         if (mode is MODE_FUN and
             (0 in sensi_orders and not self.has_fun
              or 1 in sensi_orders and not self.has_grad
