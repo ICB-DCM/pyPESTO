@@ -133,6 +133,7 @@ class AmiciObjective(Objective):
                     # see https://github.com/ICB-DCM/AMICI/issues/274
                     hess = hess[..., x_free_indices]
                     result[HESS] = hess
+            return result
 
         self.postprocess = postprocess
 
@@ -213,8 +214,8 @@ class AmiciObjective(Objective):
             if 't_steadystate' in rdata and rdata['t_steadystate'] != np.nan:
                 t_ss = rdata['t_steadystate']
                 logger.debug(f't_steadystate: {t_ss}')
-            res = rdata['res']
-            logger.debug(f'res: {res}')
+            res_idx = rdata['res']
+            logger.debug(f'res: {res_idx}')
 
             # check if the computation failed
             if rdata['status'] < 0.0:
