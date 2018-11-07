@@ -166,7 +166,7 @@ class AmiciObjective(Objective):
         sres = np.zeros([0, self.dim])
 
         # set parameters in model
-        self.amici_model.setParameters(amici.DoubleVector(x))
+        self.amici_model.setParameters(x)
 
         # set order in solver
         self.amici_solver.setSensitivityOrder(sensi_order)
@@ -260,21 +260,18 @@ class AmiciObjective(Objective):
             fixed_parameters = copy.deepcopy(
                 list(data.fixedParametersPreequilibration)
             )
-            data.fixedParametersPreequilibration = amici.DoubleVector([])
+            data.fixedParametersPreequilibration = []
             original_fixed_parameters_preequilibration = fixed_parameters
 
             self.amici_model.setInitialStates(
-                amici.DoubleVector(
-                    self.preequilibration_edata[str(fixed_parameters)]['x0']
-                )
+                self.preequilibration_edata[str(fixed_parameters)]['x0']
             )
             if self.amici_solver.getSensitivityOrder() > \
                     amici.SensitivityOrder_none:
                 self.amici_model.setInitialStateSensitivities(
-                    amici.DoubleVector(
                         self.preequilibration_edata[
                             str(fixed_parameters)
-                        ]['sx0'].flatten())
+                        ]['sx0'].flatten()
                 )
 
         return {
@@ -285,9 +282,7 @@ class AmiciObjective(Objective):
 
     def postprocess_preequilibration(self, data, original_value_dict):
         if original_value_dict['k']:
-            data.fixedParametersPreequilibration = amici.DoubleVector(
-                original_value_dict['k']
-            )
+            data.fixedParametersPreequilibration = original_value_dict['k']
 
         if original_value_dict['x0']:
             self.amici_model.setInitialStates(original_value_dict['x0'])
@@ -305,12 +300,10 @@ class AmiciObjective(Objective):
                 continue  # we only need to keep unique ones
 
             preeq_edata = amici.amici.ExpData(self.amici_model.get())
-            preeq_edata.fixedParametersPreequilibration = amici.DoubleVector(
-                fixed_parameters
-            )
+            preeq_edata.fixedParametersPreequilibration = fixed_parameters
 
             # only preequilibration
-            preeq_edata.setTimepoints(amici.DoubleVector([]))
+            preeq_edata.setTimepoints([])
 
             self.preequilibration_edata[str(fixed_parameters)] = dict(
                 edata=preeq_edata
