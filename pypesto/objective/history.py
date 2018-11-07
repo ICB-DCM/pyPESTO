@@ -206,8 +206,9 @@ class ObjectiveHistory:
         if self.options.trace_file is None:
             return
 
-        if finalize or (len(self.trace) > 0 and
-                        len(self.trace) % self.options.trace_save_iter == 0):
+        if finalize \
+           or (len(self.trace) > 0 and len(self.trace) %
+               self.options.trace_save_iter == 0):
             filename = self.options.trace_file
             if self.index is not None:
                 filename = filename.replace("{index}", str(self.index))

@@ -162,7 +162,7 @@ class Objective:
     def has_sres(self):
         return callable(self.sres) or self.sres is True
 
-    def __call__(self, x, sensi_orders: tuple=(0,), mode=MODE_FUN):
+    def __call__(self, x, sensi_orders: tuple = (0, ), mode=MODE_FUN):
         """
         Method to obtain arbitrary sensitivities. This is the central method
         which is always called, also by the get_* methods.
