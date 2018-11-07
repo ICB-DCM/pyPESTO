@@ -506,11 +506,6 @@ class Objective:
                 if hess.shape[0] == dim_full:
                     hess = hess[np.ix_(x_free_indices, x_free_indices)]
                     result[HESS] = hess
-            if RES in result:
-                res = result[RES]
-                if res.size == dim_full:
-                    res = res.flatten()[x_free_indices]
-                    result[RES] = res
             if SRES in result:
                 sres = result[SRES]
                 if sres.shape[-1] == dim_full:

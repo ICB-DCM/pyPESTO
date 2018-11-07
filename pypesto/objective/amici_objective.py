@@ -86,6 +86,58 @@ class AmiciObjective(Objective):
         # extract parameter names from model
         self.x_names = list(self.amici_model.getParameterNames())
 
+    def update_from_problem(self,
+                            dim_full,
+                            x_free_indices,
+                            x_fixed_indices,
+                            x_fixed_vals):
+        """
+        Handle fixed parameters. Here we implement the amici exclusive
+        initialization of ParameterLists and respectively replace the
+        generic postprocess function
+
+        Parameters
+        ----------
+
+        dim_full: int
+            Dimension of the full vector including fixed parameters.
+
+        x_free_indices: array_like of int
+            Vector containing the indices (zero-based) of free parameters
+            (complimentary to x_fixed_indices).
+
+        x_fixed_indices: array_like of int, optional
+            Vector containing the indices (zero-based) of parameter components
+            that are not to be optimized.
+
+        x_fixed_vals: array_like, optional
+            Vector of the same length as x_fixed_indices, containing the values
+            of the fixed parameters.
+        """
+        super(AmiciObjective, self).update_from_problem(
+            dim_full,
+            x_free_indices,
+            x_fixed_indices,
+            x_fixed_vals
+        )
+        # we subindex the existing plist in case there already is a user
+        # specified plist
+        plist = self.amici_model.getParameterList()
+        plist = [plist[idx] for idx in x_free_indices]
+        self.amici_model.setParameterList(plist)
+        def postprocess(result):
+            if HESS in result:
+                hess = result[HESS]
+                if hess.shape[0] == dim_full:
+                    # see https://github.com/ICB-DCM/AMICI/issues/274
+                    hess = hess[..., x_free_indices]
+                    result[HESS] = hess
+
+        self.postprocess = postprocess
+
+
+
+
     def _call_amici(
             self,
             x,
