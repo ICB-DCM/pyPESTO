@@ -2,7 +2,7 @@ import numpy as np
 import copy
 import logging
 from .objective import Objective
-from .constants import MODE_FUN, MODE_RES
+from .constants import MODE_FUN, MODE_RES, HESS
 
 try:
     import amici
@@ -125,6 +125,7 @@ class AmiciObjective(Objective):
         plist = self.amici_model.getParameterList()
         plist = [plist[idx] for idx in x_free_indices]
         self.amici_model.setParameterList(plist)
+
         def postprocess(result):
             if HESS in result:
                 hess = result[HESS]
@@ -134,9 +135,6 @@ class AmiciObjective(Objective):
                     result[HESS] = hess
 
         self.postprocess = postprocess
-
-
-
 
     def _call_amici(
             self,
@@ -209,7 +207,7 @@ class AmiciObjective(Objective):
             logger.debug(f'=== DATASET {data_index} ===')
             status = rdata['status']
             logger.debug(f'status: {status}')
-            llh=llh=rdata['llh']
+            llh = rdata['llh']
             logger.debug(f'llh: {llh}')
 
             if 't_steadystate' in rdata and rdata['t_steadystate'] != np.nan:
@@ -269,9 +267,9 @@ class AmiciObjective(Objective):
             if self.amici_solver.getSensitivityOrder() > \
                     amici.SensitivityOrder_none:
                 self.amici_model.setInitialStateSensitivities(
-                        self.preequilibration_edata[
-                            str(fixed_parameters)
-                        ]['sx0'].flatten()
+                    self.preequilibration_edata[
+                        str(fixed_parameters)
+                    ]['sx0'].flatten()
                 )
 
         return {

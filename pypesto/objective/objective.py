@@ -604,7 +604,7 @@ class Objective:
                     f'grad:     {grad_ix}\n'
                     f'fd_f:     {fd_f_ix}\n'
                     f'fd_b:     {fd_b_ix}\n'
-                    f'fd_c:     {fd_c_ic}\n'
+                    f'fd_c:     {fd_c_ix}\n'
                     f'fd_err:   {fd_err_ix}\n'
                     f'abs_err:  {abs_err_ix}\n'
                     f'rel_err:  {rel_err_ix}\n'
