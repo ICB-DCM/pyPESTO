@@ -43,8 +43,7 @@ class AmiciObjective(Objective):
         if max_sensi_order is None:
             max_sensi_order = 2 if amici_model.o2mode else 1
 
-        def fun(x, sensi_orders):
-            return self._call_amici(x, sensi_orders, MODE_FUN)
+        fun = self.get_bound_fun()
 
         if max_sensi_order > 0:
             grad = True
@@ -53,8 +52,7 @@ class AmiciObjective(Objective):
             grad = None
             hess = None
 
-        def res(x, sensi_orders):
-            return self._call_amici(x, sensi_orders, MODE_RES)
+        res = self.get_bound_res()
 
         if max_sensi_order > 0:
             sres = True
@@ -71,7 +69,7 @@ class AmiciObjective(Objective):
 
         self.amici_model = amici_model
         self.amici_solver = amici_solver
-        self.dim = amici_model.np()
+        self.dim = len(amici_model.getParameterList())
 
         if preprocess_edata:
             self.preequilibration_edata = dict()
@@ -86,9 +84,43 @@ class AmiciObjective(Objective):
         # extract parameter names from model
         self.x_names = list(self.amici_model.getParameterNames())
 
+    def get_bound_fun(self):
+        """
+        Generate a fun function that calls _call_amici with MODE_FUN bound
+        to the current instance
+        """
+        def fun(x, sensi_orders):
+            return self._call_amici(x, sensi_orders, MODE_FUN)
+
+        return fun
+
+    def get_bound_res(self):
+        """
+        Generate a res function that calls _call_amici with MODE_RES bound
+        to the current instance
+        """
+        def res(x, sensi_orders):
+            return self._call_amici(x, sensi_orders, MODE_RES)
+
+        return res
+
+    def rebind_fun(self):
+        """
+        Replace the current fun function with one that is bound to the current
+        instance
+        """
+        self.fun = self.get_bound_fun()
+
+    def rebind_res(self):
+        """
+        Replace the current res function with one that is bound to the current
+        instance
+        """
+        self.res = self.get_bound_res()
+
     def __deepcopy__(self, memodict=None):
-        model = self.amici_model.clone()
-        solver = self.amici_solver.clone()
+        model = amici.ModelPtr(self.amici_model.clone())
+        solver = amici.SolverPtr(self.amici_solver.clone())
         edata = [amici.amici.ExpData(data) for data in self.edata]
         other = AmiciObjective(model, solver, edata)
         for attr in self.__dict__:
@@ -136,6 +168,8 @@ class AmiciObjective(Objective):
         plist = [plist[idx] for idx in x_free_indices]
         self.amici_model.setParameterList(plist)
 
+        self.dim = len(plist)
+
         def postprocess(result):
             if HESS in result:
                 hess = result[HESS]
@@ -146,6 +180,11 @@ class AmiciObjective(Objective):
             return result
 
         self.postprocess = postprocess
+
+        # now we need to rebind fun and res to this instance of AmiciObjective
+        # for the changes to have an effect
+        self.rebind_fun()
+        self.rebind_res()
 
     def _call_amici(
             self,
