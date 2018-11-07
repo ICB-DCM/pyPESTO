@@ -154,12 +154,17 @@ class AmiciObjective(Objective):
                 self.postprocess_preequilibration(data, original_value_dict)
 
             # logging
-            logger.debug('=== DATASET %d ===' % data_index)
-            logger.debug('status: ' + str(rdata['status']))
-            logger.debug('llh: ' + str(rdata['llh']))
+            logger.debug(f'=== DATASET {data_index} ===')
+            status = rdata['status']
+            logger.debug(f'status: {status}')
+            llh=llh=rdata['llh']
+            logger.debug(f'llh: {llh}')
+
             if 't_steadystate' in rdata and rdata['t_steadystate'] != np.nan:
-                logger.debug('t_steadystate: ' + str(rdata['t_steadystate']))
-            logger.debug('res: ' + str(rdata['res']))
+                t_ss = rdata['t_steadystate']
+                logger.debug(f't_steadystate: {t_ss}')
+            res = rdata['res']
+            logger.debug(f'res: {res}')
 
             # check if the computation failed
             if rdata['status'] < 0.0:

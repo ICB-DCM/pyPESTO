@@ -605,14 +605,14 @@ class Objective:
             # log for dimension ix
             if verbosity > 1:
                 logger.info(
-                    'index:    ' + str(ix) + '\n' +
-                    'grad:     ' + str(grad_ix) + '\n' +
-                    'fd_f:     ' + str(fd_c_ix) + '\n' +
-                    'fd_b:     ' + str(fd_f_ix) + '\n' +
-                    'fd_c:     ' + str(fd_b_ix) + '\n' +
-                    'fd_err:   ' + str(fd_err_ix) + '\n' +
-                    'abs_err:  ' + str(abs_err_ix) + '\n' +
-                    'rel_err:  ' + str(rel_err_ix) + '\n'
+                    f'index:    {ix}\n'
+                    f'grad:     {grad_ix}\n'
+                    f'fd_f:     {fd_f_ix}\n'
+                    f'fd_b:     {fd_b_ix}\n'
+                    f'fd_c:     {fd_c_ic}\n'
+                    f'fd_err:   {fd_err_ix}\n'
+                    f'abs_err:  {abs_err_ix}\n'
+                    f'rel_err:  {rel_err_ix}\n'
                 )
 
             # append to lists
