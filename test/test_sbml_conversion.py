@@ -43,20 +43,25 @@ class AmiciObjectiveTest(unittest.TestCase):
 
             for library in optimizers.keys():
                 for method in optimizers[library]:
-                    with self.subTest(library=library, solver=method):
-                        with warnings.catch_warnings():
-                            warnings.simplefilter("ignore")
-                            parameter_estimation(
-                                objective,
-                                library,
-                                method,
-                                1)
+                    for fp in [[], [1]]:
+                        with self.subTest(library=library,
+                                          solver=method,
+                                          fp=fp):
+                            with warnings.catch_warnings():
+                                warnings.simplefilter("ignore")
+                                parameter_estimation(
+                                    objective,
+                                    library,
+                                    method,
+                                    fp,
+                                    1)
 
 
 def parameter_estimation(
     objective,
     library,
     solver,
+    fixed_pars,
     n_starts,
 ):
     options = {
@@ -74,7 +79,11 @@ def parameter_estimation(
 
     lb = -2 * np.ones((1, objective.dim))
     ub = 2 * np.ones((1, objective.dim))
-    problem = pypesto.Problem(objective, lb, ub)
+    pars = objective.amici_model.getParameters()
+    problem = pypesto.Problem(objective, lb, ub,
+                              x_fixed_indices=fixed_pars,
+                              x_fixed_vals=[pars[idx] for idx in fixed_pars]
+                              )
 
     optimize_options = pypesto.OptimizeOptions(allow_failed_starts=False)
 
@@ -106,9 +115,9 @@ def _load_model_objective(example_name):
     model_module = importlib.import_module(model_name)
     model = model_module.getModel()
     model.requireSensitivitiesForAllParameters()
-    model.setTimepoints(amici.DoubleVector(np.linspace(0, 10, 11)))
+    model.setTimepoints(np.linspace(0, 10, 11))
     model.setParameterScale(amici.ParameterScaling_log10)
-    model.setParameters(amici.DoubleVector([-0.3, -0.7]))
+    model.setParameters([-0.3, -0.7])
     solver = model.getSolver()
     solver.setSensitivityMethod(amici.SensitivityMethod_forward)
     solver.setSensitivityOrder(amici.SensitivityOrder_first)
