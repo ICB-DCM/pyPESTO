@@ -84,7 +84,7 @@ class Problem:
                  x_fixed_vals=None,
                  x_guesses=None,
                  x_names=None):
-        self.objective = copy.copy(objective)
+        self.objective = copy.deepcopy(objective)
 
         self.lb = np.array(lb).flatten()
         self.ub = np.array(ub).flatten()

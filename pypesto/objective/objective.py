@@ -128,6 +128,12 @@ class Objective:
 
         self.x_names = None
 
+    def __deepcopy__(self, memodict=None):
+        other = Objective()
+        for attr in self.__dict__:
+            other.__dict__[attr] = copy.deepcopy(self.__dict__[attr])
+        return other
+
     # The following has_ properties can be used to find out what values
     # the objective supports.
 

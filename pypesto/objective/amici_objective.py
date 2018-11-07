@@ -86,6 +86,16 @@ class AmiciObjective(Objective):
         # extract parameter names from model
         self.x_names = list(self.amici_model.getParameterNames())
 
+    def __deepcopy__(self, memodict=None):
+        model = self.amici_model.clone()
+        solver = self.amici_solver.clone()
+        edata = [amici.amici.ExpData(data) for data in self.edata]
+        other = AmiciObjective(model, solver, edata)
+        for attr in self.__dict__:
+            if attr not in ['amici_solver', 'amici_model', 'edata']:
+                other.__dict__[attr] = copy.deepcopy(self.__dict__[attr])
+        return other
+
     def update_from_problem(self,
                             dim_full,
                             x_free_indices,
