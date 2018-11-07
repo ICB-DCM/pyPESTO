@@ -113,7 +113,7 @@ class Problem:
         if objective.x_names is not None:
             x_names = objective.x_names
         elif x_names is None:
-            x_names = ['x' + str(j) for j in range(0, self.dim_full)]
+            x_names = [f'x{j}' for j in range(0, self.dim_full)]
         self.x_names = x_names
 
         self.normalize_input()
