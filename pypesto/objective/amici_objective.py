@@ -255,16 +255,12 @@ class AmiciObjective(Objective):
 
             # logging
             logger.debug(f'=== DATASET {data_index} ===')
-            status = rdata['status']
-            logger.debug(f'status: {status}')
-            llh = rdata['llh']
-            logger.debug(f'llh: {llh}')
+            logger.debug(f'status: {rdata["status"]}')
+            logger.debug(f'llh: {rdata["llh"]}')
 
             if 't_steadystate' in rdata and rdata['t_steadystate'] != np.nan:
-                t_ss = rdata['t_steadystate']
-                logger.debug(f't_steadystate: {t_ss}')
-            res_idx = rdata['res']
-            logger.debug(f'res: {res_idx}')
+                logger.debug(f't_steadystate: {rdata["t_steadystate"]}')
+            logger.debug(f'res: {rdata["res"]}')
 
             # check if the computation failed
             if rdata['status'] < 0.0:
