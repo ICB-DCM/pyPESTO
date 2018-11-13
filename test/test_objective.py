@@ -16,8 +16,8 @@ class ObjectiveTest(unittest.TestCase):
         Test if values are computed correctly.
         """
         for integrated in [True, False]:
-            for struct in [_rosen_for_sensi(2, integrated, [0, 1]),
-                           _poly_for_sensi(2, True, 0.5)]:
+            for struct in [rosen_for_sensi(2, integrated, [0, 1]),
+                           poly_for_sensi(2, True, 0.5)]:
                 self._test_evaluate(struct)
 
     def _test_evaluate(self, struct):
@@ -62,9 +62,9 @@ class ObjectiveTest(unittest.TestCase):
         """
         for integrated in [True, False]:
             for max_sensi_order in [2, 1, 0]:
-                for struct in [_rosen_for_sensi(max_sensi_order,
+                for struct in [rosen_for_sensi(max_sensi_order,
                                                 integrated, [0, 1]),
-                               _poly_for_sensi(max_sensi_order,
+                               poly_for_sensi(max_sensi_order,
                                                integrated, 0)]:
                     self._test_return_type(struct)
 
@@ -92,10 +92,10 @@ class ObjectiveTest(unittest.TestCase):
         """
         for integrated in [True, False]:
             for max_sensi_order in [2, 1, 0]:
-                for struct in [_rosen_for_sensi(max_sensi_order,
-                                                integrated, [0, 1]),
-                               _poly_for_sensi(max_sensi_order,
-                                               integrated, 0)]:
+                for struct in [rosen_for_sensi(max_sensi_order,
+                                               integrated, [0, 1]),
+                               poly_for_sensi(max_sensi_order,
+                                              integrated, 0)]:
                     self._test_sensis(struct)
 
     def _test_sensis(self, struct):
@@ -116,7 +116,7 @@ class ObjectiveTest(unittest.TestCase):
                 obj(x, (0, 1, 2))
 
 
-def _obj_for_sensi(fun, grad, hess, max_sensi_order, integrated, x):
+def obj_for_sensi(fun, grad, hess, max_sensi_order, integrated, x):
     """
     Create a pypesto.Objective able to compute up to the speficied
     max_sensi_order. Returns a dict containing the objective obj as well
@@ -174,20 +174,20 @@ def _obj_for_sensi(fun, grad, hess, max_sensi_order, integrated, x):
             'hess': hess(x)}
 
 
-def _rosen_for_sensi(max_sensi_order, integrated=False, x=None):
+def rosen_for_sensi(max_sensi_order, integrated=False, x=None):
     """
     Rosenbrock function from scipy.optimize.
     """
     if x is None:
         x = [0, 1]
 
-    return _obj_for_sensi(sp.optimize.rosen,
+    return obj_for_sensi(sp.optimize.rosen,
                           sp.optimize.rosen_der,
                           sp.optimize.rosen_hess,
                           max_sensi_order, integrated, x)
 
 
-def _poly_for_sensi(max_sensi_order, integrated=False, x=0):
+def poly_for_sensi(max_sensi_order, integrated=False, x=0):
     """
     1-dim polynomial for testing in 1d.
     """
@@ -201,8 +201,8 @@ def _poly_for_sensi(max_sensi_order, integrated=False, x=0):
     def hess(_):
         return 2
 
-    return _obj_for_sensi(fun, grad, hess,
-                          max_sensi_order, integrated, x)
+    return obj_for_sensi(fun, grad, hess,
+                         max_sensi_order, integrated, x)
 
 
 if __name__ == '__main__':
