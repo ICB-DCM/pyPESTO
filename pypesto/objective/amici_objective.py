@@ -86,8 +86,10 @@ class AmiciObjective(Objective):
 
     def get_bound_fun(self):
         """
-        Generate a fun function that calls _call_amici with MODE_FUN bound
-        to the current instance
+        Generate a fun function that calls _call_amici with MODE_FUN. Defining
+        a non-class function that references self as a local variable will bind
+        the function to a copy of the current self object and will
+        accordingly not take future changes to self into account.
         """
         def fun(x, sensi_orders):
             return self._call_amici(x, sensi_orders, MODE_FUN)
@@ -96,8 +98,10 @@ class AmiciObjective(Objective):
 
     def get_bound_res(self):
         """
-        Generate a res function that calls _call_amici with MODE_RES bound
-        to the current instance
+        Generate a res function that calls _call_amici with MODE_RES. Defining
+        a non-class function that references self as a local variable will bind
+        the function to a copy of the current self object and will
+        accordingly not take future changes to self into account.
         """
         def res(x, sensi_orders):
             return self._call_amici(x, sensi_orders, MODE_RES)
