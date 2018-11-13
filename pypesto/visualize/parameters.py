@@ -4,7 +4,7 @@ import numpy as np
 from .clust_color import assign_clustered_colors
 
 
-def parameters(result, ax=None):
+def parameters(result, ax=None, x_fixed=False):
     """
     Plot parameter values.
 
@@ -28,6 +28,23 @@ def parameters(result, ax=None):
     xs = result.optimize_result.get_for_key('x')
     lb = result.problem.lb
     ub = result.problem.ub
+    x_fixed_indices = result.problem.x_fixed_indices
+    if x_fixed_indices.size > 0:
+        x_free_indices = result.problem.x_free_indices
+        # if print fixed parameters
+        if x_fixed:
+            lb_full = np.zeros(result.problem.dim_full)
+            ub_full = np.zeros(result.problem.dim_full)
+            lb_full[x_free_indices] = lb
+            ub_full[x_free_indices] = ub
+            lb_full[x_fixed_indices] = float("Inf")
+            ub_full[x_fixed_indices] = float("Inf")
+            lb = lb_full
+            ub = ub_full
+        # if not print fixed parameters
+        else:
+            for j_x, x in enumerate(xs):
+                xs[j_x] = x[x_free_indices]
 
     return parameters_lowlevel(xs=xs, fvals=fvals, lb=lb, ub=ub,
                                x_labels=None, ax=ax)
