@@ -63,9 +63,9 @@ class ObjectiveTest(unittest.TestCase):
         for integrated in [True, False]:
             for max_sensi_order in [2, 1, 0]:
                 for struct in [rosen_for_sensi(max_sensi_order,
-                                                integrated, [0, 1]),
+                                               integrated, [0, 1]),
                                poly_for_sensi(max_sensi_order,
-                                               integrated, 0)]:
+                                              integrated, 0)]:
                     self._test_return_type(struct)
 
     def _test_return_type(self, struct):
@@ -182,9 +182,9 @@ def rosen_for_sensi(max_sensi_order, integrated=False, x=None):
         x = [0, 1]
 
     return obj_for_sensi(sp.optimize.rosen,
-                          sp.optimize.rosen_der,
-                          sp.optimize.rosen_hess,
-                          max_sensi_order, integrated, x)
+                         sp.optimize.rosen_der,
+                         sp.optimize.rosen_hess,
+                         max_sensi_order, integrated, x)
 
 
 def poly_for_sensi(max_sensi_order, integrated=False, x=0):
