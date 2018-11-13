@@ -128,6 +128,12 @@ class Objective:
 
         self.x_names = None
 
+    def __deepcopy__(self, memodict=None):
+        other = Objective()
+        for attr in self.__dict__:
+            other.__dict__[attr] = copy.deepcopy(self.__dict__[attr])
+        return other
+
     # The following has_ properties can be used to find out what values
     # the objective supports.
 
@@ -173,7 +179,7 @@ class Objective:
                 "Objective cannot be called with sensi_orders={}"
                 " and mode={}".format(sensi_orders, mode))
 
-    def __call__(self, x, sensi_orders: tuple = (0,), mode=MODE_FUN):
+    def __call__(self, x, sensi_orders: tuple = (0, ), mode=MODE_FUN):
         """
         Method to obtain arbitrary sensitivities. This is the central method
         which is always called, also by the get_* methods.
@@ -526,11 +532,6 @@ class Objective:
                 if hess.shape[0] == dim_full:
                     hess = hess[np.ix_(x_free_indices, x_free_indices)]
                     result[HESS] = hess
-            if RES in result:
-                res = result[RES]
-                if res.size == dim_full:
-                    res = res.flatten()[x_free_indices]
-                    result[RES] = res
             if SRES in result:
                 sres = result[SRES]
                 if sres.shape[-1] == dim_full:
@@ -625,14 +626,14 @@ class Objective:
             # log for dimension ix
             if verbosity > 1:
                 logger.info(
-                    'index:    ' + str(ix) + '\n' +
-                    'grad:     ' + str(grad_ix) + '\n' +
-                    'fd_f:     ' + str(fd_c_ix) + '\n' +
-                    'fd_b:     ' + str(fd_f_ix) + '\n' +
-                    'fd_c:     ' + str(fd_b_ix) + '\n' +
-                    'fd_err:   ' + str(fd_err_ix) + '\n' +
-                    'abs_err:  ' + str(abs_err_ix) + '\n' +
-                    'rel_err:  ' + str(rel_err_ix) + '\n'
+                    f'index:    {ix}\n'
+                    f'grad:     {grad_ix}\n'
+                    f'fd_f:     {fd_f_ix}\n'
+                    f'fd_b:     {fd_b_ix}\n'
+                    f'fd_c:     {fd_c_ix}\n'
+                    f'fd_err:   {fd_err_ix}\n'
+                    f'abs_err:  {abs_err_ix}\n'
+                    f'rel_err:  {rel_err_ix}\n'
                 )
 
             # append to lists
