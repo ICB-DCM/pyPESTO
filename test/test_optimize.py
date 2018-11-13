@@ -24,11 +24,11 @@ class OptimizerTest(unittest.TestCase):
     def runTest(self):
         for mode in ['separated', 'integrated']:
             if mode == 'separated':
-                obj = test_objective._rosen_for_sensi(max_sensi_order=2,
-                                                      integrated=False)['obj']
+                obj = test_objective.rosen_for_sensi(max_sensi_order=2,
+                                                     integrated=False)['obj']
             elif mode == 'integrated':
-                obj = test_objective._rosen_for_sensi(max_sensi_order=2,
-                                                      integrated=True)['obj']
+                obj = test_objective.rosen_for_sensi(max_sensi_order=2,
+                                                     integrated=True)['obj']
 
             for library in optimizers.keys():
                 for method in optimizers[library]:
