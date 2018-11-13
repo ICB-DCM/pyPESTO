@@ -2,7 +2,7 @@ import numpy as np
 import copy
 import logging
 from .objective import Objective
-from .constants import MODE_FUN, MODE_RES
+from .constants import MODE_FUN, MODE_RES, HESS
 
 try:
     import amici
@@ -43,8 +43,7 @@ class AmiciObjective(Objective):
         if max_sensi_order is None:
             max_sensi_order = 2 if amici_model.o2mode else 1
 
-        def fun(x, sensi_orders):
-            return self._call_amici(x, sensi_orders, MODE_FUN)
+        fun = self.get_bound_fun()
 
         if max_sensi_order > 0:
             grad = True
@@ -53,8 +52,7 @@ class AmiciObjective(Objective):
             grad = None
             hess = None
 
-        def res(x, sensi_orders):
-            return self._call_amici(x, sensi_orders, MODE_RES)
+        res = self.get_bound_res()
 
         if max_sensi_order > 0:
             sres = True
@@ -71,7 +69,7 @@ class AmiciObjective(Objective):
 
         self.amici_model = amici_model
         self.amici_solver = amici_solver
-        self.dim = amici_model.np()
+        self.dim = len(amici_model.getParameterList())
 
         if preprocess_edata:
             self.preequilibration_edata = dict()
@@ -85,6 +83,112 @@ class AmiciObjective(Objective):
 
         # extract parameter names from model
         self.x_names = list(self.amici_model.getParameterNames())
+
+    def get_bound_fun(self):
+        """
+        Generate a fun function that calls _call_amici with MODE_FUN. Defining
+        a non-class function that references self as a local variable will bind
+        the function to a copy of the current self object and will
+        accordingly not take future changes to self into account.
+        """
+        def fun(x, sensi_orders):
+            return self._call_amici(x, sensi_orders, MODE_FUN)
+
+        return fun
+
+    def get_bound_res(self):
+        """
+        Generate a res function that calls _call_amici with MODE_RES. Defining
+        a non-class function that references self as a local variable will bind
+        the function to a copy of the current self object and will
+        accordingly not take future changes to self into account.
+        """
+        def res(x, sensi_orders):
+            return self._call_amici(x, sensi_orders, MODE_RES)
+
+        return res
+
+    def rebind_fun(self):
+        """
+        Replace the current fun function with one that is bound to the current
+        instance
+        """
+        self.fun = self.get_bound_fun()
+
+    def rebind_res(self):
+        """
+        Replace the current res function with one that is bound to the current
+        instance
+        """
+        self.res = self.get_bound_res()
+
+    def __deepcopy__(self, memodict=None):
+        model = amici.ModelPtr(self.amici_model.clone())
+        solver = amici.SolverPtr(self.amici_solver.clone())
+        edata = [amici.amici.ExpData(data) for data in self.edata]
+        other = AmiciObjective(model, solver, edata)
+        for attr in self.__dict__:
+            if attr not in ['amici_solver', 'amici_model', 'edata']:
+                other.__dict__[attr] = copy.deepcopy(self.__dict__[attr])
+        return other
+
+    def update_from_problem(self,
+                            dim_full,
+                            x_free_indices,
+                            x_fixed_indices,
+                            x_fixed_vals):
+        """
+        Handle fixed parameters. Here we implement the amici exclusive
+        initialization of ParameterLists and respectively replace the
+        generic postprocess function
+
+        Parameters
+        ----------
+
+        dim_full: int
+            Dimension of the full vector including fixed parameters.
+
+        x_free_indices: array_like of int
+            Vector containing the indices (zero-based) of free parameters
+            (complimentary to x_fixed_indices).
+
+        x_fixed_indices: array_like of int, optional
+            Vector containing the indices (zero-based) of parameter components
+            that are not to be optimized.
+
+        x_fixed_vals: array_like, optional
+            Vector of the same length as x_fixed_indices, containing the values
+            of the fixed parameters.
+        """
+        super(AmiciObjective, self).update_from_problem(
+            dim_full,
+            x_free_indices,
+            x_fixed_indices,
+            x_fixed_vals
+        )
+        # we subindex the existing plist in case there already is a user
+        # specified plist
+        plist = self.amici_model.getParameterList()
+        plist = [plist[idx] for idx in x_free_indices]
+        self.amici_model.setParameterList(plist)
+
+        self.dim = len(plist)
+
+        def postprocess(result):
+            if HESS in result:
+                hess = result[HESS]
+                if hess.shape[0] == dim_full:
+                    # see https://github.com/ICB-DCM/AMICI/issues/274
+                    hess = hess[..., x_free_indices]
+                    result[HESS] = hess
+            return result
+
+        self.postprocess = postprocess
+
+        # now we need to rebind fun and res to this instance of AmiciObjective
+        # for the changes to have an effect
+        self.rebind_fun()
+        self.rebind_res()
 
     def _call_amici(
             self,
@@ -114,7 +218,7 @@ class AmiciObjective(Objective):
         sres = np.zeros([0, self.dim])
 
         # set parameters in model
-        self.amici_model.setParameters(amici.DoubleVector(x))
+        self.amici_model.setParameters(x)
 
         # set order in solver
         self.amici_solver.setSensitivityOrder(sensi_order)
@@ -154,12 +258,13 @@ class AmiciObjective(Objective):
                 self.postprocess_preequilibration(data, original_value_dict)
 
             # logging
-            logger.debug('=== DATASET %d ===' % data_index)
-            logger.debug('status: ' + str(rdata['status']))
-            logger.debug('llh: ' + str(rdata['llh']))
+            logger.debug(f'=== DATASET {data_index} ===')
+            logger.debug(f'status: {rdata["status"]}')
+            logger.debug(f'llh: {rdata["llh"]}')
+
             if 't_steadystate' in rdata and rdata['t_steadystate'] != np.nan:
-                logger.debug('t_steadystate: ' + str(rdata['t_steadystate']))
-            logger.debug('res: ' + str(rdata['res']))
+                logger.debug(f't_steadystate: {rdata["t_steadystate"]}')
+            logger.debug(f'res: {rdata["res"]}')
 
             # check if the computation failed
             if rdata['status'] < 0.0:
@@ -203,21 +308,18 @@ class AmiciObjective(Objective):
             fixed_parameters = copy.deepcopy(
                 list(data.fixedParametersPreequilibration)
             )
-            data.fixedParametersPreequilibration = amici.DoubleVector([])
+            data.fixedParametersPreequilibration = []
             original_fixed_parameters_preequilibration = fixed_parameters
 
             self.amici_model.setInitialStates(
-                amici.DoubleVector(
-                    self.preequilibration_edata[str(fixed_parameters)]['x0']
-                )
+                self.preequilibration_edata[str(fixed_parameters)]['x0']
             )
             if self.amici_solver.getSensitivityOrder() > \
                     amici.SensitivityOrder_none:
                 self.amici_model.setInitialStateSensitivities(
-                    amici.DoubleVector(
-                        self.preequilibration_edata[
-                            str(fixed_parameters)
-                        ]['sx0'].flatten())
+                    self.preequilibration_edata[
+                        str(fixed_parameters)
+                    ]['sx0'].flatten()
                 )
 
         return {
@@ -228,9 +330,7 @@ class AmiciObjective(Objective):
 
     def postprocess_preequilibration(self, data, original_value_dict):
         if original_value_dict['k']:
-            data.fixedParametersPreequilibration = amici.DoubleVector(
-                original_value_dict['k']
-            )
+            data.fixedParametersPreequilibration = original_value_dict['k']
 
         if original_value_dict['x0']:
             self.amici_model.setInitialStates(original_value_dict['x0'])
@@ -248,12 +348,10 @@ class AmiciObjective(Objective):
                 continue  # we only need to keep unique ones
 
             preeq_edata = amici.amici.ExpData(self.amici_model.get())
-            preeq_edata.fixedParametersPreequilibration = amici.DoubleVector(
-                fixed_parameters
-            )
+            preeq_edata.fixedParametersPreequilibration = fixed_parameters
 
             # only preequilibration
-            preeq_edata.setTimepoints(amici.DoubleVector([]))
+            preeq_edata.setTimepoints([])
 
             self.preequilibration_edata[str(fixed_parameters)] = dict(
                 edata=preeq_edata
