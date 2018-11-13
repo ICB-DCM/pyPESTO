@@ -198,7 +198,7 @@ def _poly_for_sensi(max_sensi_order, integrated=False, x=0):
     def grad(x):
         return 2 * (x - 2)
 
-    def hess(x):
+    def hess(_):
         return 2
 
     return _obj_for_sensi(fun, grad, hess,
