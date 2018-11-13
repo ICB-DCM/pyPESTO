@@ -92,19 +92,17 @@ class Problem:
         self.dim_full = dim_full if dim_full is not None else self.lb.size
 
         if x_fixed_indices is None:
-            x_fixed_indices = np.array([])
-        self.x_fixed_indices = np.array(x_fixed_indices, dtype=int)
+            x_fixed_indices = []
+        self.x_fixed_indices = [int(i) for i in x_fixed_indices]
 
         if x_fixed_vals is None:
             x_fixed_vals = np.array([])
         self.x_fixed_vals = np.array(x_fixed_vals)
 
-        self.dim = self.dim_full - self.x_fixed_indices.size
+        self.dim = self.dim_full - len(self.x_fixed_indices)
 
-        self.x_free_indices = np.array(
-            list(set(range(0, self.dim_full)) - set(self.x_fixed_indices)),
-            dtype=int
-        )
+        self.x_free_indices = [int(i) for i in \
+                set(range(0, self.dim_full)) - set(self.x_fixed_indices)]
 
         if x_guesses is None:
             x_guesses = np.zeros((0, self.dim))
