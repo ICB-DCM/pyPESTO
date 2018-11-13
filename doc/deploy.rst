@@ -25,9 +25,10 @@ Merge into master
 First, you need to merge into the master:
 
 1. check that all tests on travis pass
-2. adapt the version number in the file pesto/version.py
-3. update the release notes in doc/releasenotes.rst
-4. merge into the origin master branch
+2. check that the documentation is up-to-date
+3. adapt the version number in the file pesto/version.py
+4. update the release notes in doc/releasenotes.rst
+5. merge into the origin master branch
 
 To be able to actualize perform the merge, sufficient rights may be
 required. Also, at least one review is required.
