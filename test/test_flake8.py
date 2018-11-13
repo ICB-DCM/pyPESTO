@@ -1,4 +1,4 @@
-import subprocess
+import os
 import sys
 import pathlib
 import unittest
@@ -14,10 +14,7 @@ class Flake8Test(unittest.TestCase):
                     exec=sys.executable,
                     exclude="build,doc,example")
         )
-        r = subprocess.run(cmd, shell=True, stdout=subprocess.PIPE,
-                           stderr=subprocess.PIPE)
-        stdout = r.stdout.decode()
-        stderr = r.stderr.decode()
-        print(stdout, stderr, sep='\n')
-        self.assertTrue(stdout == "")
-        self.assertTrue(stderr == "")
+        output = os.popen(cmd).readlines()
+        for msg in output:
+            print(msg.rstrip())
+        self.assertTrue(output == [])
