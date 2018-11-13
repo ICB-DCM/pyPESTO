@@ -174,10 +174,13 @@ def _obj_for_sensi(fun, grad, hess, max_sensi_order, integrated, x):
             'hess': hess(x)}
 
 
-def _rosen_for_sensi(max_sensi_order, integrated=False, x=[0, 1]):
+def _rosen_for_sensi(max_sensi_order, integrated=False, x=None):
     """
     Rosenbrock function from scipy.optimize.
     """
+    if x is None:
+        x = [0, 1]
+
     return _obj_for_sensi(sp.optimize.rosen,
                           sp.optimize.rosen_der,
                           sp.optimize.rosen_hess,
