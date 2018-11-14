@@ -101,6 +101,7 @@ class Objective:
                  res=None, sres=None,
                  fun_accept_sensi_orders=False,
                  res_accept_sensi_orders=False,
+                 prior = None
                  options=None):
         self.fun = fun
         self.grad = grad
@@ -108,6 +109,7 @@ class Objective:
         self.hessp = hessp
         self.res = res
         self.sres = sres
+        self.prior = prior
         self.fun_accept_sensi_orders = fun_accept_sensi_orders
         self.res_accept_sensi_orders = res_accept_sensi_orders
 
@@ -161,6 +163,10 @@ class Objective:
     @property
     def has_sres(self):
         return callable(self.sres) or self.sres is True
+    
+    @property
+    def has_prior(self):
+        return callable(self.prior) or self.prior is True
 
     def __call__(self, x, sensi_orders: tuple = (0, ), mode=MODE_FUN):
         """
@@ -191,6 +197,13 @@ class Objective:
 
         # compute result
         result = self._call_unprocessed(x, sensi_orders, mode)
+        
+        # compute penalized objective funciton and gradient
+        if callable(self.prior):
+            if sensi_orders == (0,):
+                result[FVAL] += self.prior(x, sensi_orders)['prior_fun']
+            if sensi_orders == (1,):
+                result[GRAD] += self.prior(x, sensi_orders)['prior_grad']
 
         # convert to ndarray
         result = Objective.as_ndarrays(result)
