@@ -41,7 +41,6 @@ def parameters(result, ax=None, free_indices_only=True, lb=None, ub=None):
     xs = result.optimize_result.get_for_key('x')
 
     x_labels = result.problem.x_names
-    x_free_indices = [int(i) for i in result.problem.x_free_indices]
 
     if free_indices_only:
         for i in range(0, len(xs)):
