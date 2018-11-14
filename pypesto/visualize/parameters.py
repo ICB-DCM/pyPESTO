@@ -43,8 +43,8 @@ def parameters(result, ax=None, free_indices_only=True, lb=None, ub=None):
     x_labels = result.problem.x_names
 
     if free_indices_only:
-        for i in range(0, len(xs)):
-            xs[i] = result.problem.get_reduced_vector(xs[i])
+        for ix, x in enumerate(xs):
+            xs[ix] = result.problem.get_reduced_vector(x)
         lb = result.problem.get_reduced_vector(lb)
         ub = result.problem.get_reduced_vector(ub)
         x_labels = [x_labels[int(i)] for i in result.problem.x_free_indices]
