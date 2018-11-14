@@ -101,7 +101,7 @@ class Objective:
                  res=None, sres=None,
                  fun_accept_sensi_orders=False,
                  res_accept_sensi_orders=False,
-                 prior = None
+                 prior = None,
                  options=None):
         self.fun = fun
         self.grad = grad
