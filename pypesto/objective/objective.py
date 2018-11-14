@@ -176,8 +176,8 @@ class Objective:
                    or 1 in sensi_orders and not self.has_sres)
                   ):
             raise ValueError(
-                "Objective cannot be called with sensi_orders={}"
-                " and mode={}".format(sensi_orders, mode))
+                f"Objective cannot be called with sensi_orders={sensi_orders}"
+                f" and mode={mode}")
 
     def __call__(self, x, sensi_orders: tuple = (0, ), mode=MODE_FUN):
         """
