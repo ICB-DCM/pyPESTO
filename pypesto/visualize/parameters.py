@@ -20,7 +20,7 @@ def parameters(result, ax=None, free_indices_only=True, lb=None, ub=None):
     free_indices_only: bool, optional
         If True, only free parameters are shown. If
         False, also the fixed parameters are shown.
-    
+
     lb, ub: ndarray, optional
         If not None, override result.problem.lb, problem.problem.ub.
         Dimension either result.problem.dim or result.problem.dim_full.
@@ -31,7 +31,7 @@ def parameters(result, ax=None, free_indices_only=True, lb=None, ub=None):
     ax: matplotlib.Axes
         The plot axes.
     """
-    
+
     if lb is None:
         lb = result.problem.lb
     if ub is None:

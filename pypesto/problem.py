@@ -101,8 +101,10 @@ class Problem:
 
         self.dim = self.dim_full - len(self.x_fixed_indices)
 
-        self.x_free_indices = [int(i) for i in \
-                set(range(0, self.dim_full)) - set(self.x_fixed_indices)]
+        self.x_free_indices = [
+            int(i) for i in
+            set(range(0, self.dim_full)) - set(self.x_fixed_indices)
+        ]
 
         if x_guesses is None:
             x_guesses = np.zeros((0, self.dim))
