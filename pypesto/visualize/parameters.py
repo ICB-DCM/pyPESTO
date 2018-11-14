@@ -4,7 +4,7 @@ import numpy as np
 from .clust_color import assign_clustered_colors
 
 
-def parameters(result, ax=None):
+def parameters(result, ax=None, free_indices_only=True, lb=None, ub=None):
     """
     Plot parameter values.
 
@@ -17,6 +17,14 @@ def parameters(result, ax=None):
     ax: matplotlib.Axes, optional
         Axes object to use.
 
+    free_indices_only: bool, optional
+        If True, only free parameters are shown. If
+        False, also the fixed parameters are shown.
+
+    lb, ub: ndarray, optional
+        If not None, override result.problem.lb, problem.problem.ub.
+        Dimension either result.problem.dim or result.problem.dim_full.
+
     Returns
     -------
 
@@ -24,13 +32,28 @@ def parameters(result, ax=None):
         The plot axes.
     """
 
+    if lb is None:
+        lb = result.problem.lb
+    if ub is None:
+        ub = result.problem.ub
+
     fvals = result.optimize_result.get_for_key('fval')
     xs = result.optimize_result.get_for_key('x')
-    lb = result.problem.lb
-    ub = result.problem.ub
+
+    x_labels = result.problem.x_names
+
+    if free_indices_only:
+        for ix, x in enumerate(xs):
+            xs[ix] = result.problem.get_reduced_vector(x)
+        lb = result.problem.get_reduced_vector(lb)
+        ub = result.problem.get_reduced_vector(ub)
+        x_labels = [x_labels[int(i)] for i in result.problem.x_free_indices]
+    else:
+        lb = result.problem.get_full_vector(lb)
+        ub = result.problem.get_full_vector(ub)
 
     return parameters_lowlevel(xs=xs, fvals=fvals, lb=lb, ub=ub,
-                               x_labels=None, ax=ax)
+                               x_labels=x_labels, ax=ax)
 
 
 def parameters_lowlevel(xs, fvals, lb=None, ub=None, x_labels=None, ax=None):
@@ -70,9 +93,6 @@ def parameters_lowlevel(xs, fvals, lb=None, ub=None, x_labels=None, ax=None):
     xs = np.array(xs)
     fvals = np.array(fvals)
 
-    if x_labels is not None:
-        raise NotImplementedError("x_labels not implemented.")
-
     # assign color
     colors = assign_clustered_colors(fvals)
 
@@ -83,6 +103,8 @@ def parameters_lowlevel(xs, fvals, lb=None, ub=None, x_labels=None, ax=None):
     ax.xaxis.set_major_locator(MaxNLocator(integer=True))
     for j_x, x in reversed(list(enumerate(xs))):
         ax.plot(x, parameters_ind, color=colors[j_x], marker='o')
+
+    plt.yticks(parameters_ind, x_labels)
 
     # draw bounds
     parameters_ind = np.array(parameters_ind).flatten()
