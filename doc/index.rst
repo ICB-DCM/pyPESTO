@@ -9,6 +9,13 @@ Welcome to pyPESTO's documentation!
 
 .. image:: https://travis-ci.com/ICB-DCM/pyPESTO.svg?branch=master
    :target: https://travis-ci.com/ICB-DCM/pyPESTO
+   :alt: Build Status
+.. image:: https://api.codacy.com/project/badge/Grade/134432ddad0e464b8494587ff370f661
+   :target: https://www.codacy.com/app/dweindl/pyPESTO?utm_source=github.com&amp;utm_medium=referral&amp;utm_content=ICB-DCM/pyPESTO&amp;utm_campaign=Badge_Grade
+   :alt: Code Quality
+.. image:: https://readthedocs.org/projects/pypesto/badge/?version=latest
+   :target: https://pypesto.readthedocs.io/en/latest/?badge=latest
+   :alt: Documentation Status
 
 | Version: |version|
 | Source code: https://github.com/icb-dcm/pypesto
