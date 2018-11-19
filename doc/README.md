@@ -28,8 +28,15 @@ respectively.
 
 ## Build the documentation
 
-The documentation can be built in different formats, e.g. in html (to be then found in the `_build` sub-directory) via
+The documentation can be built in different formats, e.g. in html via
 
 ```
 make html
 ```
+
+The built documentation can then be found locally in the `_build`
+sub-directory.
+
+The documentation is built and published automatically on readthedocs.io
+every time the master branch on github.com is changed. It is recommended
+to compile and check the documentation manually beforehand.

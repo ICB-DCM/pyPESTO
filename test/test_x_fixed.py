@@ -5,7 +5,7 @@ This is for testing the fixing of parameters feature.
 import unittest
 import numpy as np
 import pypesto
-from .test_objective import get_objective_rosen_separated
+from .test_objective import rosen_for_sensi
 
 
 class XFixedTest(unittest.TestCase):
@@ -42,7 +42,7 @@ class XFixedTest(unittest.TestCase):
 
 
 def create_problem():
-    objective = get_objective_rosen_separated()
+    objective = rosen_for_sensi(2)['obj']
     lb = [-3, -3, -3, -3, -3]
     ub = [3, 3, 3, 3, 3]
     x_fixed_indices = [1, 3]

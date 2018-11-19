@@ -5,6 +5,18 @@ Contribute
 Contribute documentation
 ------------------------
 
+To make pypesto easily usable, we are committed to documenting extensively.
+This involves in particular documenting the functionality of methods and
+classes, the purpose of single lines of code, and giving usage examples.
+The documentation is hosted on 
+`pypesto.readthedocs.io <https://pyabc.readthedocs.io>`_
+and updated automatically every time the master branch on 
+`github.com/icb-dcm/pypesto <https://github.com/icb-dcm/pypesto>`_ is updated.
+To compile the documentation locally, use::
+
+    cd doc
+    make html
+
 
 Contribute tests
 ----------------
