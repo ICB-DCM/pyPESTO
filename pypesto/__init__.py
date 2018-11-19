@@ -9,7 +9,9 @@ Parameter Estimation TOolbox for python.
 from .version import __version__
 from .objective import (ObjectiveOptions,
                         Objective,
-                        AmiciObjective)
+                        AmiciObjective,
+                        Prior,
+                        Scale)
 from .problem import Problem
 from .result import (Result,
                      OptimizeResult,
@@ -35,4 +37,6 @@ __all__ = ["ObjectiveOptions",
            "OptimizerResult",
            "Optimizer",
            "ScipyOptimizer",
-           "DlibOptimizer"]
+           "DlibOptimizer",
+           "Prior",
+           "Scale"]
