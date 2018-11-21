@@ -209,7 +209,6 @@ class AmiciObjective(Objective):
 
         # TODO: For large-scale models it might be bad to always reserve
         # space in particular for the Hessian.
-
         nllh = 0.0
         snllh = np.zeros(self.dim)
         ssnllh = np.zeros([self.dim, self.dim])
@@ -224,21 +223,9 @@ class AmiciObjective(Objective):
         self.amici_solver.setSensitivityOrder(sensi_order)
 
         if self.preequilibration_edata:
-            for fixedParameters in self.preequilibration_edata:
-                rdata = amici.runAmiciSimulation(
-                    self.amici_model,
-                    self.amici_solver,
-                    self.preequilibration_edata[fixedParameters]['edata'])
-
-                if rdata['status'] < 0.0:
-                    return self.get_error_output(sensi_orders, mode)
-
-                self.preequilibration_edata[fixedParameters]['x0'] = \
-                    rdata['x0']
-                if self.amici_solver.getSensitivityOrder() > \
-                        amici.SensitivityOrder_none:
-                    self.preequilibration_edata[fixedParameters]['sx0'] = \
-                        rdata['sx0']
+            preeq_status = self.run_preequilibration(sensi_orders, mode)
+            if preeq_status:
+                return preeq_status
 
         # loop over experimental data
         for data_index, data in enumerate(self.edata):
@@ -373,3 +360,23 @@ class AmiciObjective(Objective):
             res=np.nan * np.ones(n_res),
             sres=np.nan * np.ones([n_res, self.dim])
         )
+
+    def run_preequilibration(self, sensi_orders, mode):
+        """Run preequilibration"""
+
+        for fixedParameters in self.preequilibration_edata:
+            rdata = amici.runAmiciSimulation(
+                self.amici_model,
+                self.amici_solver,
+                self.preequilibration_edata[fixedParameters]['edata'])
+
+            if rdata['status'] < 0.0:
+                return self.get_error_output(sensi_orders, mode)
+
+            self.preequilibration_edata[fixedParameters]['x0'] = \
+                rdata['x0']
+            if self.amici_solver.getSensitivityOrder() > \
+                    amici.SensitivityOrder_none:
+                self.preequilibration_edata[fixedParameters]['sx0'] = \
+                    rdata['sx0']
+
