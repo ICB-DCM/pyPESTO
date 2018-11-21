@@ -1,6 +1,6 @@
 import logging
 from pypesto import Result
-from .optimizer import OptimizerResult, recover_result
+from ..optimizer import OptimizerResult, recover_result
 from .profiler import ProfilerResult
 from .profile_startpoint import simple_step
 
@@ -102,7 +102,7 @@ def profile(
 
     # profile startpoint method
     if create_profile_startpoint is None:
-        create_profile_startpoint = simple_step # simple_step should be a very first super-simple method
+        create_profile_startpoint = simple_step
 
     # check profiling options
     if profile_options is None:
@@ -115,7 +115,7 @@ def profile(
     optimize_options = OptimizeOptions.assert_instance(optimize_options)
 
     # assign startpoints
-    profile_result = initialize_profile(problem, result)
+    profile_result = initialize_profile(problem, result, result_index)
 
     # do multistart optimization
     for j_start in range(0, n_starts):
