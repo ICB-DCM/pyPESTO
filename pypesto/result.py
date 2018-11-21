@@ -85,7 +85,20 @@ class ProfileResult:
     """
 
     def __init__(self):
-        pass
+        self.list = []
+
+    def append(self):
+        """
+        Append an profiler result to the result object.
+
+        Parameters
+        ----------
+
+        profiler_result:
+            The result of one (local) profiler run.
+        """
+
+        self.list.append(profiler_result)
 
 
 class SampleResult:
