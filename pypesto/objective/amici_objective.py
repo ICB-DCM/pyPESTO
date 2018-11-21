@@ -1,6 +1,8 @@
+import os
 import numpy as np
 import copy
 import logging
+import pandas as pd
 from .objective import Objective
 from .constants import MODE_FUN, MODE_RES, HESS
 
@@ -125,10 +127,10 @@ class AmiciObjective(Objective):
     def __deepcopy__(self, memodict=None):
         model = amici.ModelPtr(self.amici_model.clone())
         solver = amici.SolverPtr(self.amici_solver.clone())
-        edata = [amici.amici.ExpData(data) for data in self.edata]
+        edata = [amici.ExpData(data) for data in self.edata]
         other = AmiciObjective(model, solver, edata)
         for attr in self.__dict__:
-            if attr not in ['amici_solver', 'amici_model', 'edata']:
+            if attr not in ['amici_solver', 'amici_model', 'edata', 'preequilibration_edata']:
                 other.__dict__[attr] = copy.deepcopy(self.__dict__[attr])
         return other
 
@@ -224,7 +226,7 @@ class AmiciObjective(Objective):
 
         if self.preequilibration_edata:
             preeq_status = self.run_preequilibration(sensi_orders, mode)
-            if preeq_status:
+            if preeq_status is not None:
                 return preeq_status
 
         # loop over experimental data
@@ -284,7 +286,7 @@ class AmiciObjective(Objective):
         original_fixed_parameters_preequilibration = None
         original_initial_states = None
         original_initial_state_sensitivities = None
-        if data.fixedParametersPreequilibration.size():
+        if len(data.fixedParametersPreequilibration):
             original_initial_states = self.amici_model.getInitialStates()
 
             if self.amici_solver.getSensitivityOrder() > \
@@ -380,3 +382,204 @@ class AmiciObjective(Objective):
                 self.preequilibration_edata[fixedParameters]['sx0'] = \
                     rdata['sx0']
 
+
+    def simulations_to_measurement_df(self, x, measurement_file=None):
+        """Simulate all conditions and save results as """
+
+        self.amici_model.setParameters(amici.DoubleVector(x))
+        self.amici_solver.setSensitivityOrder(0)
+
+        if self.preequilibration_edata:
+            preeq_status = self.run_preequilibration(0, MODE_FUN)
+            if preeq_status is not None:
+                raise ValueError(preeq_status)
+
+        #df_mes = pd.read_csv(measurement_file, sep='\t')
+        df_sim = pd.DataFrame(columns=['observableId',
+                                   'preequilibrationConditionId',
+                                   'simulationConditionId',
+                                   'measurement',
+                                   'time',
+                                   'observableParameters',
+                                   'noiseParameters'
+                                   'observableTransformation'])
+
+        observable_ids = self.amici_model.getObservableIds()
+
+        # loop over experimental data
+        for data_index, data in enumerate(self.edata):
+
+            condition_id = f'condition_{data_index}'
+
+            if self.preequilibration_edata:
+                original_value_dict = self.preprocess_preequilibration(data)
+            else:
+                original_value_dict = None
+
+            # run amici simulation
+            rdata = amici.runAmiciSimulation(
+                self.amici_model,
+                self.amici_solver,
+                data)
+
+            if self.preequilibration_edata:
+                self.postprocess_preequilibration(data, original_value_dict)
+
+            if rdata['status'] < amici.AMICI_SUCCESS:
+                logger.debug('Simulation for condition {data_index} failed with status {rdata["status"]}')
+                continue
+
+            y = rdata['y']
+            timepoints = rdata['t']
+
+            for observable_idx in range(y.shape[1]):
+                for timepoint_idx in range(y.shape[0]):
+                    simulation = y[timepoint_idx, observable_idx]
+                    if np.isnan(simulation):
+                        continue
+                    df_sim = df_sim.append(
+                        {'observableId': observable_ids[observable_idx],
+                         'preequilibrationConditionId': None,
+                         'simulationConditionId': condition_id, # TODO Need from input file
+                         'measurement': simulation,
+                         'time': timepoints[timepoint_idx],
+                         'observableParameters': None, # TODO Need from input file
+                         'noiseParameters': rdata['sigmay'][timepoint_idx, observable_idx],
+                         'observableTransformation': None}, # TODO Need from input file
+                        ignore_index=True)
+        return df_sim
+
+
+def amici_objective_from_measurement_file(condition_filename, measurement_filename, amici_model, **kwargs):
+    """Create AmiciObjective based on measurement and condition files
+
+    TODO: Does not support any condition-specific parameters yet
+    """
+
+    condition_df = pd.read_csv(condition_filename, sep='\t')
+    measurement_df = pd.read_csv(measurement_filename, sep='\t')
+    measurement_df.time = measurement_df.time.astype(float)
+
+    if not np.all(measurement_df.observableParameters.isnull()):
+        raise ValueError('observableParameter column currently not supported.')
+
+    # Number of AMICI simulations will be number of unique preequilibrationCondition simulationCondition pairs
+    # Can be improved by checking for identical condition vectors
+    # (cannot group by NaNs)
+    simulation_conditions = measurement_df.groupby(
+        [measurement_df['preequilibrationConditionId'].fillna('#####'),
+         measurement_df['simulationConditionId'].fillna('#####')])\
+        .size().reset_index()\
+        .replace({'preequilibrationConditionId':{'#####': np.nan}})\
+        .replace({'simulationConditionId':{'#####': np.nan}})
+
+    observable_ids = amici_model.getObservableIds()
+    fixed_parameter_ids = amici_model.getFixedParameterIds()
+
+    edatas = []
+    for edata_idx, simulation_condition in simulation_conditions.iterrows():
+        # amici.ExpData for each simulation
+        cur_measurement_df = measurement_df.loc[
+                             (measurement_df.preequilibrationConditionId == simulation_condition.preequilibrationConditionId)
+                            & (measurement_df.simulationConditionId == simulation_condition.simulationConditionId), :]
+
+        timepoints = sorted(cur_measurement_df.time.unique())
+
+        edata = amici.ExpData(amici_model.get())
+        edata.setTimepoints(timepoints)
+
+        if len(fixed_parameter_ids):
+            fixed_parameter_values = condition_df.loc[
+                condition_df.conditionId == simulation_condition.simulationConditionId, fixed_parameter_ids].values
+            edata.fixedParameters = fixed_parameter_values.astype(float).flatten()
+
+            if simulation_condition.preequilibrationConditionId:
+                fixed_preequilibration_parameter_values = condition_df.loc[
+                    condition_df.conditionId == simulation_condition.preequilibrationConditionId, fixed_parameter_ids].values
+                edata.fixedParametersPreequilibration = fixed_preequilibration_parameter_values.astype(float).flatten()
+
+        y = np.full(shape=(edata.nt(), edata.nytrue()), fill_value=np.nan)
+        sigma_y = np.full(shape=(edata.nt(), edata.nytrue()), fill_value=np.nan)
+
+        # add measurements and stddev
+        for i, measurement in cur_measurement_df.iterrows():
+            time_idx = timepoints.index(measurement.time)
+            observable_idx = observable_ids.index(f'observable_{measurement.observableId}') # TODO measurement files should contain prefix
+
+            y[time_idx, observable_idx] = measurement.measurement
+
+            if isinstance(measurement.noiseParameters, float):
+                sigma_y[time_idx, observable_idx] = measurement.noiseParameters
+
+        edata.setObservedData(y.flatten())
+        edata.setObservedDataStdDev(sigma_y.flatten())
+
+    edatas.append(edata)
+
+    obj = AmiciObjective(amici_model=amici_model, edata=edatas, **kwargs)
+
+    return obj
+
+
+def import_sbml_model(sbml_model_file, model_output_dir, model_name=None,
+                      measurement_file=None, condition_file=None, **kwargs):
+    """Import SBML model following standard format documented in xxx
+
+    Determine fixed parameters and observables from SBML file.
+    """
+
+    if not model_name:
+        model_name = os.path.splitext(os.path.split(sbml_model_file)[-1])[0]
+
+    sbml_importer = amici.SbmlImporter(sbml_model_file)
+
+    # Determine constant parameters # TODO: also those marked constant in sbml model?
+    constant_parameters = None
+    if condition_file:
+        condition_df = pd.read_csv(condition_file, sep='\t')
+        constant_parameters = list(set(condition_df.columns.values.tolist()) - set(['conditionId', 'conditionName']))
+
+    # Retrieve model output names and formulae from AssignmentRules and remove the respective rules
+    observables = amici.assignmentRules2observables(
+            sbml_importer.sbml, # the libsbml model object
+            filter_function=lambda variable: variable.getId().startswith('observable_') \
+                                             and not variable.getId().endswith('_sigma')
+        )
+
+    # Determine noise parameters
+    sigmas = None
+    if measurement_file:
+        measurement_df = pd.read_csv(measurement_file, sep='\t')
+        # Read sigma<->observable mapping from measurement file
+        sigmas = {}
+        # for easier grouping
+        measurement_df.loc[measurement_df.noiseParameters.apply(isinstance, args=(float,)), 'noiseParameters'] = np.nan
+        obs_noise_df = measurement_df.groupby(['observableId', 'noiseParameters']).size().reset_index()
+        if len(obs_noise_df.observableId) != len(obs_noise_df.observableId.unique()):
+            raise AssertionError('Different noise parameters for same output currently not supported.')
+
+        for _, row in obs_noise_df.iterrows():
+            if isinstance(row.noiseParameters, float):
+                continue
+
+            assignment_rule = sbml_importer.sbml.getAssignmentRuleByVariable(
+                    f'sigma_{row.observableId}'
+                ).getFormula()
+            if assignment_rule in sigmas:
+                sigmas[assignment_rule].add(row.observableId)
+            else:
+                sigmas[assignment_rule] = set([row.observableId])
+
+        # Check if all observables in measurement files have been specified in the model
+        measurement_observables = [f'observable_{x}' for x in measurement_df.observableId.values]
+        if len(set(measurement_observables) - set(observables.keys())):
+            print(set(measurement_df.observableId.values) - set(observables.keys()))
+            raise AssertionError('Unknown observables in measurement file')
+
+    sbml_importer.sbml2amici(modelName=model_name,
+                             output_dir=model_output_dir,
+                             observables=observables,
+                             constantParameters=constant_parameters,
+                             sigmas=sigmas,
+                             **kwargs
+                             )
