@@ -1,6 +1,6 @@
 import logging
 from pypesto import Result
-from ..optimizer import OptimizerResult, recover_result
+from ..optimize import OptimizerResult, OptimizeOptions, minimize
 from .profiler import ProfilerResult
 from .profile_startpoint import simple_step
 
@@ -19,12 +19,8 @@ class ProfileOptions(dict):
         function which creates the next startpoint for optimization of the profile from the profile history
     """
 
-    def __init__(self,
-                 next_profile_startpoint=None):
+    def __init__(self):
         super().__init__()
-
-        if next_profile_startpoint is None:
-            next_profile_startpoint = create_profile_startpoint
 
     def __getattr__(self, key):
         try:
