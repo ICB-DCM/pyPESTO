@@ -158,6 +158,76 @@ class Problem:
                 "x_fixed_indices and x_fixed_vals musti have the same length."
             )
 
+    def fix_parameters(self, parameter_indices, parameter_vals):
+        """
+        Fix specified parameters to specified values
+        """
+
+        if not parameter_indices is list:
+            parameter_indices = [parameter_indices]
+
+        if not parameter_vals is list:
+            parameter_vals = [parameter_vals]
+
+        # first clean to be fixed indices to avoid redundancies
+        for i_index, i_parameter in enumerate(parameter_indices):
+            if i_parameter in self.x_fixed_indices:
+                parameter_vals.pop(i_index)
+            else:
+                self.x_fixed_indices.append(i_parameter)
+
+        for i_val in parameter_vals:
+            if len(self.x_fixed_vals) == 0:
+                self.x_fixed_vals = [np.array(i_val)]
+            else:
+                self.x_fixed_vals[-1] = np.array(i_val)
+
+        self.dim = self.dim_full - len(self.x_fixed_indices)
+
+        self.x_free_indices = [
+            int(i) for i in
+            set(range(0, self.dim_full)) - set(self.x_fixed_indices)
+        ]
+
+        # make objective aware of fixed parameters
+        self.objective.update_from_problem(
+            dim_full=self.dim_full,
+            x_free_indices=self.x_free_indices,
+            x_fixed_indices=self.x_fixed_indices,
+            x_fixed_vals=self.x_fixed_vals)
+
+        self.normalize_input()
+
+    def unfix_parameters(self, parameter_indices):
+        """
+        Free specified parameters
+        """
+
+        if not parameter_indices is list:
+            parameter_indices = [parameter_indices]
+
+        # first clean to be freed indices
+        for i_index, i_parameter in enumerate(parameter_indices):
+            if i_parameter in self.x_fixed_indices:
+                self.x_fixed_vals.pop(i_index)
+                self.x_fixed_indices.pop(i_index)
+
+        self.dim = self.dim_full - len(self.x_fixed_indices)
+
+        self.x_free_indices = [
+            int(i) for i in
+            set(range(0, self.dim_full)) - set(self.x_fixed_indices)
+        ]
+
+        # make objective aware of fixed parameters
+        self.objective.update_from_problem(
+            dim_full=self.dim_full,
+            x_free_indices=self.x_free_indices,
+            x_fixed_indices=self.x_fixed_indices,
+            x_fixed_vals=self.x_fixed_vals)
+
+        self.normalize_input()
+
     def get_full_vector(self, x, x_fixed_vals=None):
         """
         Map vector from dim to dim_full. Usually used for x, grad.

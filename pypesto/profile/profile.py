@@ -23,6 +23,7 @@ class ProfileOptions(dict):
     def __init__(self):
         super().__init__()
         self.default_step_size = 0.01
+        self.ratio_min = 0.145
 
     def __getattr__(self, key):
         try:
@@ -100,7 +101,7 @@ def profile(
 
     # profile startpoint method
     if create_profile_startpoint is None:
-        def create_profile_startpoint(x, par_index, par_direction):
+        def create_next_startpoint(x, par_index, par_direction):
             return fixed_step(x, par_index, par_direction, step_size = profile_options.default_step_size)
 
     # check profiling options
@@ -118,7 +119,7 @@ def profile(
 
     # loop over parameters for profiling
     for i_parameter in range(0, problem.dim_full):
-        if profile_index[i_parameter] == 0:
+        if (profile_index[i_parameter] == 0) | (i_parameter in problem.x_fixed_indices):
             continue
 
         current_profile = result.profile_result.get_current_profile(i_parameter)
@@ -126,23 +127,40 @@ def profile(
         # compute profile in descending and ascending direction
         for par_direction in [-1,1]:
 
-            # get current position on the profile path
-            x_now = current_profile.x_path[-1,:]
+            # flip profile
 
-            # compute the new start point for optimization
-            x_next =  create_profile_startpoint(x_now, i_parameter, par_direction)
+            # while loop for profiling
+            while True:
+                # get current position on the profile path
+                x_now = current_profile.x_path[-1, :]
 
-        try:
-            optimizer_result = optimizer.minimize(problem, startpoint, j_start)
-        except Exception as err:
-            if options.allow_failed_starts:
-                optimizer_result = handle_exception(
-                    problem.objective, startpoint, j_start, err)
-            else:
-                raise
+                # check if the next profile point needs to be computed
+                if par_direction is -1:
+                    stop_profile = (x_now[i_parameter] <= problem.lb[[i_parameter]]) | \
+                                      (current_profile.ratio_path[-1] < profile_options.ratio_min)
+                    if stop_profile:
+                        break
 
-        # append to result
-        result.optimize_result.append(profile_result)
+                # compute the new start point for optimization
+                x_next =  create_next_startpoint(x_now, i_parameter, par_direction)
+                if par_direction is -1:
+                    x_next[i_parameter] = np.max([x_next[i_parameter], problem.lb[i_parameter]])
+                else:
+                    x_next[i_parameter] = np.min([x_next[i_parameter], problem.ub[i_parameter]])
+
+                problem.fix_parameters(i_parameter, x_next[i_parameter])
+
+                try:
+                    optimizer_result = optimizer.minimize(problem, startpoint, j_start)
+                except Exception as err:
+                    if options.allow_failed_starts:
+                        optimizer_result = handle_exception(
+                            problem.objective, startpoint, j_start, err)
+                    else:
+                        raise
+
+        # free the profiling parameter again
+        problem.unfix_parameters(i_parameter)
 
     # sort by best fval
     result.optimize_result.sort()
