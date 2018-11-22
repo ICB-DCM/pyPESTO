@@ -163,7 +163,8 @@ def initialize_profile(
         print("Optimization has to be carried before profiling can be done.")
         return None
 
-    current_profile = len(result.profile_result)
+    current_profile = len(result.profile_result.list)
+    print(current_profile)
 
     for iParameter in range(0, problem.dim_full):
         tmp_result = {"x_path": result.optimize_result[result_index].x,
