@@ -1,8 +1,9 @@
 import logging
+import numpy as np
 from pypesto import Result
 from ..optimize import OptimizerResult, OptimizeOptions, minimize
 from .profiler import ProfilerResult
-from .profile_startpoint import simple_step
+from .profile_startpoint import fixed_step
 
 
 logger = logging.getLogger(__name__)
@@ -21,6 +22,7 @@ class ProfileOptions(dict):
 
     def __init__(self):
         super().__init__()
+        self.default_step_size = 0.01
 
     def __getattr__(self, key):
         try:
@@ -98,7 +100,8 @@ def profile(
 
     # profile startpoint method
     if create_profile_startpoint is None:
-        create_profile_startpoint = simple_step
+        def create_profile_startpoint(x, par_index, par_direction):
+            return fixed_step(x, par_index, par_direction, step_size = profile_options.default_step_size)
 
     # check profiling options
     if profile_options is None:
@@ -111,13 +114,24 @@ def profile(
     optimize_options = OptimizeOptions.assert_instance(optimize_options)
 
     # assign startpoints
-    profile_result = initialize_profile(problem, result, result_index)
+    initialize_profile(problem, result, result_index)
 
-    # do multistart optimization
-    for j_start in range(0, n_starts):
-        startpoint = startpoints[j_start, :]
+    # loop over parameters for profiling
+    for i_parameter in range(0, problem.dim_full):
+        if profile_index[i_parameter] == 0:
+            continue
 
-        # apply optimizer
+        current_profile = result.profile_result.get_current_profile(i_parameter)
+
+        # compute profile in descending and ascending direction
+        for par_direction in [-1,1]:
+
+            # get current position on the profile path
+            x_now = current_profile.x_path[-1,:]
+
+            # compute the new start point for optimization
+            x_next =  create_profile_startpoint(x_now, i_parameter, par_direction)
+
         try:
             optimizer_result = optimizer.minimize(problem, startpoint, j_start)
         except Exception as err:
@@ -163,20 +177,16 @@ def initialize_profile(
         print("Optimization has to be carried before profiling can be done.")
         return None
 
-    current_profile = len(result.profile_result.list)
-    print(current_profile)
-
     for iParameter in range(0, problem.dim_full):
-        tmp_result = {"x_path": result.optimize_result[result_index].x,
-                 "fval_path": result.optimize_result[result_index].fval,
-                 "ratio_path": np.array([1]),
-                 "gradnorm_path": np.linalg.norm(result.optimize_result[result_index].grad),
-                 "exitflag_path": result.optimize_result[result_index].exitflag,
-                 "time_path": np.array([0]),
-                 "time_total": np.array([0]),
-                 "n_fval": np.array([0]),
-                 "n_grad": np.array([0]),
-                 "n_hess": np.array([0]),
-                 "message": None}
-        result.profile_result[current_profile].append(ProfileResult(tmp_result))
-
+        tmp_optimize_result = result.optimize_result.as_list()
+        result.profile_result.append_profile(ProfilerResult(tmp_optimize_result[result_index]["x"],
+                                                            tmp_optimize_result[result_index]["fval"],
+                                                            np.array([1]),
+                                                            np.linalg.norm(tmp_optimize_result[result_index]["grad"]),
+                                                            tmp_optimize_result[result_index]["exitflag"],
+                                                            np.array([0]),
+                                                            np.array([0]),
+                                                            np.array([0]),
+                                                            np.array([0]),
+                                                            np.array([0]),
+                                                            None))

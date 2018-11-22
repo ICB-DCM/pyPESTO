@@ -67,7 +67,7 @@ class ProfilerResult(dict):
                  n_hess=None,
                  message=None):
         super().__init__()
-        self.x_path = np.array(x_path)
+        self.x_path = np.array([x_path])
         self.fval_path = np.array(fval_path)
         self.ratio_path = np.array(ratio_path)
         self.gradnorm_path = np.array(gradnorm_path) if gradnorm_path is not None else None

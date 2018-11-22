@@ -86,19 +86,40 @@ class ProfileResult:
 
     def __init__(self):
         self.list = []
+        self.create_new_profile_list()
 
-    def append(self):
+    def append_profile(self, profiler_result):
         """
         Append an profiler result to the result object.
 
         Parameters
         ----------
-
         profiler_result:
             The result of one (local) profiler run.
         """
+        current_profile = len(self.list)
+        self.list[current_profile - 1].append(profiler_result)
 
-        self.list.append(profiler_result)
+    def create_new_profile_list(self):
+        """
+        Append an profiler result to the result object.
+
+        Parameters
+        ----------
+        """
+        self.list.append([])
+
+    def get_current_profile(self, i_parameter):
+        """
+        Append an profiler result to the result object.
+
+        Parameters
+        ----------
+        i_parameter:
+            integer specifying the profile index
+        """
+        current_profile = len(self.list)
+        return self.list[current_profile - 1][i_parameter]
 
 
 class SampleResult:
