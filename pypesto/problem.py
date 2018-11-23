@@ -169,12 +169,18 @@ class Problem:
         if not parameter_vals is list:
             parameter_vals = [parameter_vals]
 
+        lb = []
+        ub = []
+
         # first clean to be fixed indices to avoid redundancies
         for i_index, i_parameter in enumerate(parameter_indices):
+            # check if parameter was already fixed, add it to the fixed parameters otherwise
             if i_parameter in self.x_fixed_indices:
-                parameter_vals.pop(i_index)
+                self.x_fixed_vals[self.x_fixed_indices.index(i_parameter)] = parameter_vals.pop(i_index)
             else:
                 self.x_fixed_indices.append(i_parameter)
+                lb.append(self.lb[i_parameter])
+                ub.append(self.ub[i_parameter])
 
         for i_val in parameter_vals:
             if len(self.x_fixed_vals) == 0:
@@ -197,6 +203,8 @@ class Problem:
             x_fixed_vals=self.x_fixed_vals)
 
         self.normalize_input()
+
+        return (lb,ub)
 
     def unfix_parameters(self, parameter_indices):
         """

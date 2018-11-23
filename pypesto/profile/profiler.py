@@ -61,10 +61,10 @@ class ProfilerResult(dict):
                  gradnorm_path=None,
                  exitflag_path=None,
                  time_path=None,
-                 time_total=None,
-                 n_fval=None,
-                 n_grad=None,
-                 n_hess=None,
+                 time_total=0.,
+                 n_fval=0,
+                 n_grad=0,
+                 n_hess=0,
                  message=None):
         super().__init__()
         self.x_path = np.array([x_path])
@@ -87,3 +87,37 @@ class ProfilerResult(dict):
 
     __setattr__ = dict.__setitem__
     __delattr__ = dict.__delitem__
+
+    def append_profile_point(self,
+                 x,
+                 fval,
+                 ratio,
+                 gradnorm = np.nan,
+                 exitflag = np.nan,
+                 time = np.nan,
+                 n_fval = 0,
+                 n_grad = 0,
+                 n_hess = 0):
+
+        def append_to_vector(field_name, val):
+            field_new = np.zeros(self[field_name].size + 1)
+            field_new[0:-1] = self[field_name]
+            field_new[-1] = val
+            self[field_name] = field_new
+
+        # write profile path
+        x_new = np.zeros((self.x_path.shape[0] + 1, self.x_path.shape[1]))
+        x_new[0:-1, :] = self.x_path
+        x_new[-1,:] = x
+        self.x_path = x_new
+
+        append_to_vector("fval_path",fval)
+        append_to_vector("ratio_path", ratio)
+        append_to_vector("gradnorm_path", gradnorm)
+        append_to_vector("exitflag_path", exitflag)
+        append_to_vector("time_path", time)
+
+        self.time_total += time
+        self.n_fval += n_fval
+        self.n_grad += n_grad
+        self.n_hess += n_hess

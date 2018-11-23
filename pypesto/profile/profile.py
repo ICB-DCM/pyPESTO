@@ -4,7 +4,7 @@ from pypesto import Result
 from ..optimize import OptimizerResult, OptimizeOptions, minimize
 from .profiler import ProfilerResult
 from .profile_startpoint import fixed_step
-
+from ..optimize import minimize
 
 logger = logging.getLogger(__name__)
 
@@ -114,8 +114,8 @@ def profile(
         optimize_options = OptimizeOptions()
     optimize_options = OptimizeOptions.assert_instance(optimize_options)
 
-    # assign startpoints
-    initialize_profile(problem, result, result_index)
+    # create the profile result object and retrieve global optimum
+    global_opt = initialize_profile(problem, result, result_index)
 
     # loop over parameters for profiling
     for i_parameter in range(0, problem.dim_full):
@@ -123,6 +123,7 @@ def profile(
             continue
 
         current_profile = result.profile_result.get_current_profile(i_parameter)
+        lb_old = None
 
         # compute profile in descending and ascending direction
         for par_direction in [-1,1]:
@@ -133,6 +134,7 @@ def profile(
             while True:
                 # get current position on the profile path
                 x_now = current_profile.x_path[-1, :]
+                print(current_profile.ratio_path)
 
                 # check if the next profile point needs to be computed
                 if par_direction is -1:
@@ -148,10 +150,27 @@ def profile(
                 else:
                     x_next[i_parameter] = np.min([x_next[i_parameter], problem.ub[i_parameter]])
 
-                problem.fix_parameters(i_parameter, x_next[i_parameter])
+                # fix current parameter to current value and set start point
+                if lb_old is None:
+                    (lb_old, ub_old) = problem.fix_parameters(i_parameter, x_next[i_parameter])
+                else:
+                    problem.fix_parameters(i_parameter, x_next[i_parameter])
+                startpoint = np.array([x_next[i] for i in problem.x_free_indices])
 
                 try:
-                    optimizer_result = optimizer.minimize(problem, startpoint, j_start)
+                    #run optimization
+                    optimizer_result = optimizer.minimize(problem, startpoint, 0)
+
+                    current_profile.append_profile_point(optimizer_result.x,
+                                                         optimizer_result.fval,
+                                                         np.exp(global_opt - optimizer_result.fval),
+                                                         np.linalg.norm(optimizer_result.grad[problem.x_free_indices]),
+                                                         optimizer_result.exitflag,
+                                                         optimizer_result.time,
+                                                         optimizer_result.n_fval,
+                                                         optimizer_result.n_grad,
+                                                         optimizer_result.n_hess)
+
                 except Exception as err:
                     if options.allow_failed_starts:
                         optimizer_result = handle_exception(
@@ -199,12 +218,14 @@ def initialize_profile(
         tmp_optimize_result = result.optimize_result.as_list()
         result.profile_result.append_profile(ProfilerResult(tmp_optimize_result[result_index]["x"],
                                                             tmp_optimize_result[result_index]["fval"],
-                                                            np.array([1]),
+                                                            np.array([1.]),
                                                             np.linalg.norm(tmp_optimize_result[result_index]["grad"]),
                                                             tmp_optimize_result[result_index]["exitflag"],
-                                                            np.array([0]),
-                                                            np.array([0]),
+                                                            np.array([0.]),
+                                                            np.array([0.]),
                                                             np.array([0]),
                                                             np.array([0]),
                                                             np.array([0]),
                                                             None))
+
+    return tmp_optimize_result[0]["fval"]
