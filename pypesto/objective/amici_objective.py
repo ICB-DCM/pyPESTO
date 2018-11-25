@@ -565,10 +565,11 @@ def import_sbml_model(sbml_model_file, model_output_dir, model_name=None,
             assignment_rule = sbml_importer.sbml.getAssignmentRuleByVariable(
                     f'sigma_{row.observableId}'
                 ).getFormula()
-            if assignment_rule in sigmas:
-                sigmas[assignment_rule].add(row.observableId)
-            else:
-                sigmas[assignment_rule] = set([row.observableId])
+            if not f'observable_{row.observableId}' in sigmas:
+                sigmas[f'observable_{row.observableId}'] = assignment_rule
+            elif sigmas[f'observable_{row.observableId}'] != assignment_rule:
+                raise ValueError('Inconsistent sigma specified for observable_{row.observableId}: '
+                                 'Previously "{sigmas[f"observable_{row.observableId}"]}", now "{assignment_rule}".')
 
         # Check if all observables in measurement files have been specified in the model
         measurement_observables = [f'observable_{x}' for x in measurement_df.observableId.values]
