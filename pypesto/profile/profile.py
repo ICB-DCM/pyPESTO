@@ -129,19 +129,24 @@ def profile(
         for par_direction in [-1,1]:
 
             # flip profile
+            current_profile.flip_profile()
 
             # while loop for profiling
             while True:
                 # get current position on the profile path
-                x_now = current_profile.x_path[-1, :]
-                print(current_profile.ratio_path)
+                x_now = current_profile.x_path[:, -1]
 
                 # check if the next profile point needs to be computed
                 if par_direction is -1:
                     stop_profile = (x_now[i_parameter] <= problem.lb[[i_parameter]]) | \
                                       (current_profile.ratio_path[-1] < profile_options.ratio_min)
-                    if stop_profile:
-                        break
+
+                if par_direction is 1:
+                    stop_profile = (x_now[i_parameter] >= problem.ub[[i_parameter]]) | \
+                                      (current_profile.ratio_path[-1] < profile_options.ratio_min)
+
+                if stop_profile:
+                    break
 
                 # compute the new start point for optimization
                 x_next =  create_next_startpoint(x_now, i_parameter, par_direction)
@@ -171,19 +176,16 @@ def profile(
                                                          optimizer_result.n_grad,
                                                          optimizer_result.n_hess)
 
-                except Exception as err:
-                    if options.allow_failed_starts:
-                        optimizer_result = handle_exception(
-                            problem.objective, startpoint, j_start, err)
-                    else:
-                        raise
+                except:
+                    print("An error occured while profiling.")
 
         # free the profiling parameter again
-        problem.unfix_parameters(i_parameter)
+        problem.unfix_parameters(i_parameter, lb_old, ub_old)
 
-    # sort by best fval
-    result.optimize_result.sort()
+        # add current profile to result.profile_result
+        result.profile_result.add_profile(current_profile, i_parameter)
 
+    # return
     return result
 
 

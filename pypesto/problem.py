@@ -118,7 +118,7 @@ class Problem:
 
         self.normalize_input()
 
-    def normalize_input(self):
+    def normalize_input(self, check_x_guesses = True):
         """
         Reduce all vectors to dimension dim and have the objective accept
         vectors of dimension dim.
@@ -149,8 +149,9 @@ class Problem:
             raise AssertionError("lb dimension invalid.")
         if self.ub.size != self.dim:
             raise AssertionError("ub dimension invalid.")
-        if self.x_guesses.shape[1] != self.dim:
-            raise AssertionError("x_guesses form invalid.")
+        if check_x_guesses:
+            if self.x_guesses.shape[1] != self.dim:
+                raise AssertionError("x_guesses form invalid.")
         if len(self.x_names) != self.dim_full:
             raise AssertionError("x_names must be of length dim_full.")
         if len(self.x_fixed_indices) != len(self.x_fixed_vals):
@@ -206,7 +207,7 @@ class Problem:
 
         return (lb,ub)
 
-    def unfix_parameters(self, parameter_indices):
+    def unfix_parameters(self, parameter_indices, fill_lb, fill_ub):
         """
         Free specified parameters
         """
@@ -222,6 +223,7 @@ class Problem:
 
         self.dim = self.dim_full - len(self.x_fixed_indices)
 
+        old_free_indices = self.x_free_indices
         self.x_free_indices = [
             int(i) for i in
             set(range(0, self.dim_full)) - set(self.x_fixed_indices)
@@ -234,7 +236,24 @@ class Problem:
             x_fixed_indices=self.x_fixed_indices,
             x_fixed_vals=self.x_fixed_vals)
 
-        self.normalize_input()
+        # fill the lower and upper parameter bounds
+        new_lb = np.zeros(len(self.x_free_indices))
+        new_ub = np.zeros(len(self.x_free_indices))
+        counter_old_free = 0
+        counter_new_free = 0
+        for i_parameter in range(0, self.dim_full):
+            if i_parameter in old_free_indices:
+                new_lb[counter_old_free + counter_new_free] = self.lb[counter_old_free]
+                new_ub[counter_old_free + counter_new_free] = self.ub[counter_old_free]
+                counter_old_free += 1
+            elif i_parameter in parameter_indices:
+                new_lb[counter_old_free + counter_new_free] = fill_lb[counter_new_free]
+                new_ub[counter_old_free + counter_new_free] = fill_ub[counter_new_free]
+                counter_new_free += 1
+
+        self.lb = new_lb
+        self.ub = new_ub
+        self.normalize_input(False)
 
     def get_full_vector(self, x, x_fixed_vals=None):
         """

@@ -100,6 +100,21 @@ class ProfileResult:
         current_profile = len(self.list)
         self.list[current_profile - 1].append(profiler_result)
 
+    def add_profile(self, profiler_result, i_parameter):
+        """
+        Writes a profiler result to the result object at i_parameter.
+
+        Parameters
+        ----------
+        profiler_result:
+            The result of one (local) profiler run.
+
+        i_parameter:
+            integer specifying the parameter index
+        """
+        current_profile = len(self.list)
+        self.list[current_profile - 1][i_parameter] = profiler_result
+
     def create_new_profile_list(self):
         """
         Append an profiler result to the result object.

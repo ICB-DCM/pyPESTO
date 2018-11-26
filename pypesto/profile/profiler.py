@@ -55,9 +55,9 @@ class ProfilerResult(dict):
     """
 
     def __init__(self,
-                 x_path=None,
-                 fval_path=None,
-                 ratio_path=None,
+                 x_path,
+                 fval_path,
+                 ratio_path,
                  gradnorm_path=None,
                  exitflag_path=None,
                  time_path=None,
@@ -67,7 +67,16 @@ class ProfilerResult(dict):
                  n_hess=0,
                  message=None):
         super().__init__()
-        self.x_path = np.array([x_path])
+
+        # initialize profile path, depending on whether we already have a profile or not
+        x_shape = x_path.shape
+        if len(x_shape) == 1:
+            self.x_path = np.zeros((x_shape[0], 1))
+            self.x_path[:, 0] = x_path[:]
+        else:
+            self.x_path = np.array((x_shape[0], x_shape[1]))
+            self.x_path[:,:] = x_path[:,:]
+
         self.fval_path = np.array(fval_path)
         self.ratio_path = np.array(ratio_path)
         self.gradnorm_path = np.array(gradnorm_path) if gradnorm_path is not None else None
@@ -99,6 +108,7 @@ class ProfilerResult(dict):
                  n_grad = 0,
                  n_hess = 0):
 
+        # short function to append to numpy vectors
         def append_to_vector(field_name, val):
             field_new = np.zeros(self[field_name].size + 1)
             field_new[0:-1] = self[field_name]
@@ -106,9 +116,9 @@ class ProfilerResult(dict):
             self[field_name] = field_new
 
         # write profile path
-        x_new = np.zeros((self.x_path.shape[0] + 1, self.x_path.shape[1]))
-        x_new[0:-1, :] = self.x_path
-        x_new[-1,:] = x
+        x_new = np.zeros((self.x_path.shape[0], self.x_path.shape[1] + 1))
+        x_new[:, 0:-1] = self.x_path
+        x_new[:, -1] = x
         self.x_path = x_new
 
         append_to_vector("fval_path",fval)
@@ -121,3 +131,13 @@ class ProfilerResult(dict):
         self.n_fval += n_fval
         self.n_grad += n_grad
         self.n_hess += n_hess
+
+    def flip_profile(self):
+        # when changing the profiling direction,
+            # the profile itself should be flipped
+        self.x_path = np.fliplr(self.x_path)
+        self.fval_path = np.flip(self.fval_path)
+        self.ratio_path = np.flip(self.ratio_path)
+        self.gradnorm_path = np.flip(self.gradnorm_path)
+        self.exitflag_path = np.flip(self.exitflag_path)
+        self.time_path = np.flip(self.time_path)
