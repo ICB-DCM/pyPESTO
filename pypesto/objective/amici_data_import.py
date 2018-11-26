@@ -8,6 +8,7 @@ import copy
 import numbers
 import amici
 from pypesto.objective import AmiciObjective
+from pypesto.problem import Problem
 
 
 class Importer:
@@ -185,3 +186,12 @@ class Importer:
         obj = AmiciObjective(amici_model=self.model, amici_solver=self.solver, edata=edatas)
         
         return obj, edatas
+
+    def create_problem(self, objective):
+        problem = Problem(objective=objective,
+                          lb=self.par_lb, ub=self.par_ub,
+                          x_fixed_indices=self.par_fixed_indices,
+                          x_fixed_vals=self.par_fixed_vals,
+                          x_names=self.par_ids)
+
+        return problem
