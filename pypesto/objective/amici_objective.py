@@ -364,7 +364,9 @@ class AmiciObjective(Objective):
         )
 
     def run_preequilibration(self, sensi_orders, mode):
-        """Run preequilibration"""
+        """
+        Run preequilibration.
+        """
 
         for fixedParameters in self.preequilibration_edata:
             rdata = amici.runAmiciSimulation(
@@ -384,7 +386,9 @@ class AmiciObjective(Objective):
 
 
     def simulations_to_measurement_df(self, x, measurement_file=None):
-        """Simulate all conditions and save results as """
+        """
+        Simulate all conditions.
+        """
 
         self.amici_model.setParameters(amici.DoubleVector(x))
         self.amici_solver.setSensitivityOrder(0)
@@ -451,7 +455,8 @@ class AmiciObjective(Objective):
 
 
 def amici_objective_from_measurement_file(condition_filename, measurement_filename, amici_model, **kwargs):
-    """Create AmiciObjective based on measurement and condition files
+    """
+    Create AmiciObjective based on measurement and condition files.
 
     TODO: Does not support any condition-specific parameters yet
     """
@@ -523,7 +528,8 @@ def amici_objective_from_measurement_file(condition_filename, measurement_filena
 
 def import_sbml_model(sbml_model_file, model_output_dir, model_name=None,
                       measurement_file=None, condition_file=None, **kwargs):
-    """Import SBML model following standard format documented in xxx
+    """
+    Import SBML model following standard format documented in xxx
 
     Determine fixed parameters and observables from SBML file.
     """
