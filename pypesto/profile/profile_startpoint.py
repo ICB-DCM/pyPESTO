@@ -1,5 +1,6 @@
 import numpy as np
 
+
 def fixed_step(x, par_index, par_direction, step_size):
     """
        This is function initializes profiling based on a previous optimization.
@@ -20,6 +21,7 @@ def fixed_step(x, par_index, par_direction, step_size):
     delta_x[par_index] = par_direction * step_size
 
     return x + delta_x
+
 
 def simple_step(x, par_index, par_direction):
     """

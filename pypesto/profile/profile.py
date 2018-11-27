@@ -102,7 +102,7 @@ def profile(
     # profile startpoint method
     if create_profile_startpoint is None:
         def create_next_startpoint(x, par_index, par_direction):
-            return fixed_step(x, par_index, par_direction, step_size = profile_options.default_step_size)
+            return fixed_step(x, par_index, par_direction, step_size=profile_options.default_step_size)
 
     # check profiling options
     if profile_options is None:
@@ -126,7 +126,7 @@ def profile(
         lb_old = None
 
         # compute profile in descending and ascending direction
-        for par_direction in [-1,1]:
+        for par_direction in [-1, 1]:
 
             # flip profile
             current_profile.flip_profile()
@@ -139,17 +139,17 @@ def profile(
                 # check if the next profile point needs to be computed
                 if par_direction is -1:
                     stop_profile = (x_now[i_parameter] <= problem.lb[[i_parameter]]) | \
-                                      (current_profile.ratio_path[-1] < profile_options.ratio_min)
+                                   (current_profile.ratio_path[-1] < profile_options.ratio_min)
 
                 if par_direction is 1:
                     stop_profile = (x_now[i_parameter] >= problem.ub[[i_parameter]]) | \
-                                      (current_profile.ratio_path[-1] < profile_options.ratio_min)
+                                   (current_profile.ratio_path[-1] < profile_options.ratio_min)
 
                 if stop_profile:
                     break
 
                 # compute the new start point for optimization
-                x_next =  create_next_startpoint(x_now, i_parameter, par_direction)
+                x_next = create_next_startpoint(x_now, i_parameter, par_direction)
                 if par_direction is -1:
                     x_next[i_parameter] = np.max([x_next[i_parameter], problem.lb[i_parameter]])
                 else:
@@ -163,7 +163,7 @@ def profile(
                 startpoint = np.array([x_next[i] for i in problem.x_free_indices])
 
                 try:
-                    #run optimization
+                    # run optimization
                     optimizer_result = optimizer.minimize(problem, startpoint, 0)
 
                     current_profile.append_profile_point(optimizer_result.x,

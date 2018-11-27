@@ -5,7 +5,6 @@ pyPESTO
 Parameter Estimation TOolbox for python.
 """
 
-
 from .version import __version__  # noqa: F401
 from .objective import (ObjectiveOptions,
                         Objective,

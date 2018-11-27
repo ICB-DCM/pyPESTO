@@ -7,7 +7,6 @@ describing the problem to be solved.
 
 """
 
-
 import numpy as np
 import copy
 
@@ -118,7 +117,7 @@ class Problem:
 
         self.normalize_input()
 
-    def normalize_input(self, check_x_guesses = True):
+    def normalize_input(self, check_x_guesses=True):
         """
         Reduce all vectors to dimension dim and have the objective accept
         vectors of dimension dim.
@@ -205,7 +204,7 @@ class Problem:
 
         self.normalize_input()
 
-        return (lb,ub)
+        return (lb, ub)
 
     def unfix_parameters(self, parameter_indices, fill_lb, fill_ub):
         """

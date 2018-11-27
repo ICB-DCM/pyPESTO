@@ -1,10 +1,9 @@
 import matplotlib.pyplot as plt
 from matplotlib.ticker import MaxNLocator
 import numpy as np
-from .clust_color import assign_clustered_colors
 
 
-def profiles(result, ax=None, profile_indices = None):
+def profiles(result, ax=None, profile_indices=None):
     """
     Plot waterfall plot.
 
@@ -28,13 +27,16 @@ def profiles(result, ax=None, profile_indices = None):
     """
 
     if profile_indices is None:
-        profile_indices = [i for i in range(0, len(result.profile_result.list[0]))]
+        profile_indices = \
+            [i for i in range(0, len(result.profile_result.list[0]))]
 
     # extract ratio values values from result
     fvals = []
-    for i_parameter in range(0, len(result.profile_result.list[0])):
-        if i_parameter in profile_indices:
-            tmp = np.array([result.profile_result.list[0][i_parameter].x_path[i_parameter, :], result.profile_result.list[0][i_parameter].ratio_path[:]])
+    for i_par in range(0, len(result.profile_result.list[0])):
+        if i_par in profile_indices:
+            tmp = np.array(
+                [result.profile_result.list[0][i_par].x_path[i_par, :],
+                 result.profile_result.list[0][i_par].ratio_path[:]])
         else:
             tmp = None
         fvals.append(tmp)
@@ -76,7 +78,7 @@ def profiles_lowlevel(fvals, ax=None):
         fvals = [fvals]
 
     columns = np.ceil(np.sqrt(n_fvals))
-    if n_fvals > columns * (columns-1):
+    if n_fvals > columns * (columns - 1):
         rows = columns
     else:
         rows = columns - 1
@@ -109,10 +111,9 @@ def profile_lowlevel(ax, fvals):
         The plot axes.
     """
 
-
     # plot
     ax.xaxis.set_major_locator(MaxNLocator(integer=True))
-    ax.plot(fvals[0,:], fvals[1,:], color=[.9, .2, .2, 1.])
+    ax.plot(fvals[0, :], fvals[1, :], color=[.9, .2, .2, 1.])
 
     # labels
     ax.set_xlabel('Parameter value')

@@ -8,7 +8,6 @@ optimization, profiles, sampling.
 
 """
 
-
 import pandas as pd
 
 
@@ -18,7 +17,6 @@ class OptimizeResult:
     """
 
     def __init__(self):
-
         self.list = []
 
     def append(self, optimizer_result):

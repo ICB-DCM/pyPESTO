@@ -9,6 +9,6 @@ from .profile import (profile,
 
 from .profiler import (ProfilerResult)
 
-__all__= ["profile",
-          "ProfileOptions",
-          "ProfilerResult"]
+__all__ = ["profile",
+           "ProfileOptions",
+           "ProfilerResult"]

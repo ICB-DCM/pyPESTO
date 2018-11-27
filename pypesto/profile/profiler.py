@@ -5,6 +5,7 @@ import time
 import re
 import abc
 
+
 class ProfilerResult(dict):
     """
     The result of a profiler run. A dict of results is created based on the results from pyPesto optimizers.
@@ -75,7 +76,7 @@ class ProfilerResult(dict):
             self.x_path[:, 0] = x_path[:]
         else:
             self.x_path = np.array((x_shape[0], x_shape[1]))
-            self.x_path[:,:] = x_path[:,:]
+            self.x_path[:, :] = x_path[:, :]
 
         self.fval_path = np.array(fval_path)
         self.ratio_path = np.array(ratio_path)
@@ -98,15 +99,15 @@ class ProfilerResult(dict):
     __delattr__ = dict.__delitem__
 
     def append_profile_point(self,
-                 x,
-                 fval,
-                 ratio,
-                 gradnorm = np.nan,
-                 exitflag = np.nan,
-                 time = np.nan,
-                 n_fval = 0,
-                 n_grad = 0,
-                 n_hess = 0):
+                             x,
+                             fval,
+                             ratio,
+                             gradnorm=np.nan,
+                             exitflag=np.nan,
+                             time=np.nan,
+                             n_fval=0,
+                             n_grad=0,
+                             n_hess=0):
 
         # short function to append to numpy vectors
         def append_to_vector(field_name, val):
@@ -121,7 +122,7 @@ class ProfilerResult(dict):
         x_new[:, -1] = x
         self.x_path = x_new
 
-        append_to_vector("fval_path",fval)
+        append_to_vector("fval_path", fval)
         append_to_vector("ratio_path", ratio)
         append_to_vector("gradnorm_path", gradnorm)
         append_to_vector("exitflag_path", exitflag)
@@ -134,7 +135,7 @@ class ProfilerResult(dict):
 
     def flip_profile(self):
         # when changing the profiling direction,
-            # the profile itself should be flipped
+        # the profile itself should be flipped
         self.x_path = np.fliplr(self.x_path)
         self.fval_path = np.flip(self.fval_path)
         self.ratio_path = np.flip(self.ratio_path)
