@@ -162,8 +162,7 @@ class Problem:
         """
         Fix specified parameters to specified values
         """
-
-        if not parameter_indices is list:
+        if not isinstance(parameter_indices, list):
             parameter_indices = [parameter_indices]
 
         if not parameter_vals is list:
@@ -174,9 +173,11 @@ class Problem:
 
         # first clean to be fixed indices to avoid redundancies
         for i_index, i_parameter in enumerate(parameter_indices):
-            # check if parameter was already fixed, add it to the fixed parameters otherwise
+            # check if parameter was already fixed, otherwise add it to the
+            # fixed parameters
             if i_parameter in self.x_fixed_indices:
-                self.x_fixed_vals[self.x_fixed_indices.index(i_parameter)] = parameter_vals.pop(i_index)
+                self.x_fixed_vals[self.x_fixed_indices.index(i_parameter)] = \
+                    parameter_vals.pop(i_index)
             else:
                 self.x_fixed_indices.append(i_parameter)
                 lb.append(self.lb[i_parameter])
@@ -211,7 +212,7 @@ class Problem:
         Free specified parameters
         """
 
-        if not parameter_indices is list:
+        if not isinstance(parameter_indices, list):
             parameter_indices = [parameter_indices]
 
         # first clean to be freed indices
@@ -242,12 +243,16 @@ class Problem:
         counter_new_free = 0
         for i_parameter in range(0, self.dim_full):
             if i_parameter in old_free_indices:
-                new_lb[counter_old_free + counter_new_free] = self.lb[counter_old_free]
-                new_ub[counter_old_free + counter_new_free] = self.ub[counter_old_free]
+                new_lb[counter_old_free + counter_new_free] = \
+                    self.lb[counter_old_free]
+                new_ub[counter_old_free + counter_new_free] = \
+                    self.ub[counter_old_free]
                 counter_old_free += 1
             elif i_parameter in parameter_indices:
-                new_lb[counter_old_free + counter_new_free] = fill_lb[counter_new_free]
-                new_ub[counter_old_free + counter_new_free] = fill_ub[counter_new_free]
+                new_lb[counter_old_free + counter_new_free] = \
+                    fill_lb[counter_new_free]
+                new_ub[counter_old_free + counter_new_free] = \
+                    fill_ub[counter_new_free]
                 counter_new_free += 1
 
         self.lb = new_lb

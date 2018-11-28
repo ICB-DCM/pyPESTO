@@ -1,14 +1,11 @@
 import numpy as np
 import scipy.optimize
-import scipy.integrate
-import time
-import re
-import abc
 
 
 class ProfilerResult(dict):
     """
-    The result of a profiler run. A dict of results is created based on the results from pyPesto optimizers.
+    The result of a profiler run. A dict of results is created based on the
+    results from pyPesto optimizers.
 
     Can be used like a dict.
 
@@ -51,8 +48,8 @@ class ProfilerResult(dict):
     Notes
     -----
 
-    Any field not supported by the optimizer is filled with None. Some
-    fields are filled by pypesto itself.
+    Any field not supported by the optimizer is filled with None.
+    Some fields are filled by pypesto itself.
     """
 
     def __init__(self,
@@ -69,7 +66,7 @@ class ProfilerResult(dict):
                  message=None):
         super().__init__()
 
-        # initialize profile path, depending on whether we already have a profile or not
+        # initialize profile path
         x_shape = x_path.shape
         if len(x_shape) == 1:
             self.x_path = np.zeros((x_shape[0], 1))
@@ -80,7 +77,8 @@ class ProfilerResult(dict):
 
         self.fval_path = np.array(fval_path)
         self.ratio_path = np.array(ratio_path)
-        self.gradnorm_path = np.array(gradnorm_path) if gradnorm_path is not None else None
+        self.gradnorm_path = np.array(gradnorm_path) \
+            if gradnorm_path is not None else None
         self.exitflag_path = np.array(exitflag_path)
         self.time_path = np.array(time_path)
         self.time_total = time_total
