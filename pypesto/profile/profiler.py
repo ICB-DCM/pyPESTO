@@ -1,5 +1,4 @@
 import numpy as np
-import scipy.optimize
 
 
 class ProfilerResult(dict):

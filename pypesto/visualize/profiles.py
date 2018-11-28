@@ -70,8 +70,8 @@ def profiles_lowlevel(fvals, ax=None):
 
     if isinstance(fvals, list):
         n_fvals = 0
-        for i in range(0, len(fvals)):
-            if fvals[i] is not None:
+        for fval in enumerate(fvals):
+            if fval is not None:
                 n_fvals += 1
     else:
         n_fvals = 1
@@ -84,10 +84,10 @@ def profiles_lowlevel(fvals, ax=None):
         rows = columns - 1
 
     counter = 1
-    for i_plot in range(0, len(fvals)):
-        if fvals[i_plot] is not None:
+    for i_plot, fval in enumerate(fvals):
+        if fval is not None:
             ax = plt.subplot(rows, columns, counter)
-            ax = profile_lowlevel(ax, fvals[i_plot])
+            ax = profile_lowlevel(ax, fval)
             ax.set_title('Parameter ' + str(i_plot) + ' profile')
             counter += 1
 
