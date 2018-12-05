@@ -139,8 +139,8 @@ def profile(
 
     # loop over parameters for profiling
     for i_parameter in range(0, problem.dim_full):
-        if (profile_index[i_parameter] == 0) or (i_parameter in \
-                problem.x_fixed_indices):
+        if (profile_index[i_parameter] == 0) or (i_parameter in
+                                                 problem.x_fixed_indices):
             continue
 
         # create an instance of ProfilerResult, which will be appended to the
@@ -159,6 +159,8 @@ def profile(
                                                  problem,
                                                  par_direction,
                                                  optimizer,
+                                                 profile_options,
+                                                 create_next_startpoint,
                                                  global_opt,
                                                  i_parameter)
 
@@ -173,6 +175,8 @@ def walk_along_profile(current_profile,
                        problem,
                        par_direction,
                        optimizer,
+                       profile_options,
+                       create_next_startpoint,
                        global_opt,
                        i_parameter):
     """

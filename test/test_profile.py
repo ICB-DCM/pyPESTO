@@ -11,6 +11,7 @@ import copy
 
 
 class ProfilerTest(unittest.TestCase):
+
     def runTest(self):
         objective = test_objective.rosen_for_sensi(max_sensi_order=2,
                                                    integrated=True)['obj']
@@ -31,33 +32,6 @@ class ProfilerTest(unittest.TestCase):
             self.check_selected_profiling(problem, result2, optimizer)
 
             # extending profiles (when changing bounds) works (T.B.D.)
-
-    @staticmethod
-    def create_optimization_results(objective):
-        # create optimizer, pypesto problem and options
-        options = {
-            'maxiter': 200
-        }
-        optimizer = pypesto.ScipyOptimizer(method='TNC',
-                                           options=options)
-
-        lb = -2 * np.ones((1, 2))
-        ub = 2 * np.ones((1, 2))
-        problem = pypesto.Problem(objective, lb, ub)
-
-        optimize_options = pypesto.OptimizeOptions(
-            allow_failed_starts=allow_failed_starts)
-
-        # run optimization
-        result = pypesto.minimize(
-            problem=problem,
-            optimizer=optimizer,
-            n_starts=5,
-            startpoint_method=pypesto.startpoint.uniform,
-            options=optimize_options
-        )
-
-        return problem, result, optimizer, lb, ub, optimize_options
 
     def check_default_profiling(self, problem, result, optimizer):
         # run profiling
@@ -102,3 +76,29 @@ class ProfilerTest(unittest.TestCase):
         self.assertIsInstance(result.profile_result.list[1][0],
                               pypesto.ProfilerResult)
         self.assertIsNone(result.profile_result.list[1][0])
+
+
+def create_optimization_results(objective):
+    # create optimizer, pypesto problem and options
+    options = {
+        'maxiter': 200
+    }
+    optimizer = pypesto.ScipyOptimizer(method='TNC',
+                                       options=options)
+
+    lb = -2 * np.ones((1, 2))
+    ub = 2 * np.ones((1, 2))
+    problem = pypesto.Problem(objective, lb, ub)
+
+    optimize_options = pypesto.OptimizeOptions(allow_failed_starts=True)
+
+    # run optimization
+    result = pypesto.minimize(
+        problem=problem,
+        optimizer=optimizer,
+        n_starts=5,
+        startpoint_method=pypesto.startpoint.uniform,
+        options=optimize_options
+    )
+
+    return problem, result, optimizer, lb, ub, optimize_options
