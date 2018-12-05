@@ -165,7 +165,7 @@ class Problem:
         if not isinstance(parameter_indices, list):
             parameter_indices = [parameter_indices]
 
-        if not parameter_vals is list:
+        if not isinstance(parameter_vals, list):
             parameter_vals = [parameter_vals]
 
         lb = []

@@ -3,8 +3,9 @@ import numpy as np
 
 class ProfilerResult(dict):
     """
-    The result of a profiler run. A dict of results is created based on the
-    results from pyPesto optimizers.
+    The result of a profiler run. The standardized return return value from
+    pypesto.profile, which can either be initialized from an OptimizerResult
+    or from an existing ProfilerResult (in order to extent the compputation).
 
     Can be used like a dict.
 
@@ -12,7 +13,8 @@ class ProfilerResult(dict):
     ----------
 
     x_path: ndarray
-        The path of the best found parameters along the profile.
+        The path of the best found parameters along the profile
+        (Dimension: n_par x n_profile_points)
 
     fval_path: ndarray
         The function values, fun(x), along the profile.
@@ -20,17 +22,17 @@ class ProfilerResult(dict):
     ratio_path: ndarray
         The ratio of the posterior function along the profile.
 
-    gradnorm_path, hess: ndarray
+    gradnorm_path: ndarray
         The gradient norm along the profile.
 
     exitflag_path: ndarray
         The exitflags of the optimizer along the profile.
 
     time_path: ndarray
-        The computation time of the optimizer along the profile.
+        The computation time of the optimizer runs along the profile.
 
     time_total: ndarray
-        The total computation time for this profile
+        The total computation time for the profile.
 
     n_fval: int
         Number of function evaluations.
@@ -42,13 +44,13 @@ class ProfilerResult(dict):
         Number of Hessian evaluations.
 
     message: str
-        Textual comment on the optimization result.
+        Textual comment on the profile result.
 
     Notes
     -----
 
-    Any field not supported by the optimizer is filled with None.
-    Some fields are filled by pypesto itself.
+    Any field not supported by the profiler or the profiling optimizer is
+    filled with None. Some fields are filled by pypesto itself.
     """
 
     def __init__(self,
@@ -105,6 +107,10 @@ class ProfilerResult(dict):
                              n_fval=0,
                              n_grad=0,
                              n_hess=0):
+        """
+        This function appends a new OptimizerResult to an existing
+        ProfilerResults
+        """
 
         # short function to append to numpy vectors
         def append_to_vector(field_name, val):
@@ -119,20 +125,26 @@ class ProfilerResult(dict):
         x_new[:, -1] = x
         self.x_path = x_new
 
+        # append to other paths
         append_to_vector("fval_path", fval)
         append_to_vector("ratio_path", ratio)
         append_to_vector("gradnorm_path", gradnorm)
         append_to_vector("exitflag_path", exitflag)
         append_to_vector("time_path", time)
 
+        # increment the time and f_eval counters
         self.time_total += time
         self.n_fval += n_fval
         self.n_grad += n_grad
         self.n_hess += n_hess
 
     def flip_profile(self):
-        # when changing the profiling direction,
-        # the profile itself should be flipped
+        """
+        This function flips the profiling direction (left-right)
+        Profiling direction needs to be changed once (if the profile is new)
+        and twice, if we append to an existing profile
+        """
+
         self.x_path = np.fliplr(self.x_path)
         self.fval_path = np.flip(self.fval_path)
         self.ratio_path = np.flip(self.ratio_path)

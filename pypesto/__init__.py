@@ -20,8 +20,7 @@ from .optimize import (minimize,
                        Optimizer,
                        ScipyOptimizer,
                        DlibOptimizer)
-from .profile import (profile,
-                      ProfileOptions,
+from .profile import (ProfileOptions,
                       ProfilerResult)
 
 __all__ = ["ObjectiveOptions",
@@ -37,7 +36,7 @@ __all__ = ["ObjectiveOptions",
            "OptimizerResult",
            "Optimizer",
            "ScipyOptimizer",
-           "DlibOptimizer"
+           "DlibOptimizer",
            "profile",
            "ProfileOptions",
            "ProfilerResult"]

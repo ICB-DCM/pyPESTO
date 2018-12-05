@@ -86,7 +86,7 @@ class ProfileResult:
         self.list = []
         self.create_new_profile_list()
 
-    def append_profile(self, profiler_result):
+    def create_new_profile(self, profiler_result):
         """
         Append an profiler result to the result object.
 

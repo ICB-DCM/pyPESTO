@@ -1,7 +1,7 @@
 import logging
 import numpy as np
 from pypesto import Result
-from ..optimize import OptimizeOptions, minimize
+from ..optimize import OptimizeOptions
 from .profiler import ProfilerResult
 from .profile_startpoint import fixed_step
 
@@ -15,15 +15,24 @@ class ProfileOptions(dict):
     Parameters
     ----------
 
-    next_profile_startpoint: function handle, optional
-        function which creates the next startpoint for optimization
-        from the profile from the profile history
+    default_step_size: float, optional
+        default step size of the profiling routine along the profile path
+        (adaptive step lengths algorithms will only use this as a first guess
+        and then refine the update)
+
+    ratio_min: float, optional
+        lower bound for likelihood ratio of the profile, based on inverse
+        chi2-distribution.
+        The default corresponds to 95% confidence
     """
 
-    def __init__(self):
+    def __init__(self,
+                 default_step_size=0.01,
+                 ratio_min=0.145):
         super().__init__()
-        self.default_step_size = 0.01
-        self.ratio_min = 0.145
+
+        self.default_step_size = default_step_size
+        self.ratio_min = ratio_min
 
     def __getattr__(self, key):
         try:
@@ -77,16 +86,18 @@ def profile(
     optimizer: pypesto.Optimizer
         The optimizer to be used along each profile.
 
-    profile_index: integer array, optional
+    profile_index: ndarray of integers, optional
         array with parameter indices, whether a profile should
         be computed (1) or not (0)
+        Default is all profiles should be computed
 
     result_index: integer, optional
-        index, from which optimization result profiling should be started
+        index from which optimization result profiling should be started
         (default: global optimum, i.e., index = 1)
 
     create_profile_startpoint: callable, optional
-        Method for how to create the next start point for profile optimization.
+        function handle to a method that creates the next starting point for
+        optimization in profiling.
 
     profile_options: pypesto.ProfileOptions, optional
         Various options applied to the profile optimization.
@@ -124,6 +135,8 @@ def profile(
                 (i_parameter in problem.x_fixed_indices):
             continue
 
+        # create an instance of ProfilerResult, which will be appended to the
+        #  result object, when this profile is finished
         current_profile = \
             result.profile_result.get_current_profile(i_parameter)
         lb_old = None
@@ -134,7 +147,7 @@ def profile(
             # flip profile
             current_profile.flip_profile()
 
-            # while loop for profiling
+            # while loop for profiling (will be exited by break command)
             while True:
                 # get current position on the profile path
                 x_now = current_profile.x_path[:, -1]
@@ -158,6 +171,9 @@ def profile(
                 # compute the new start point for optimization
                 x_next = create_next_startpoint(x_now, i_parameter,
                                                 par_direction)
+
+                # check whether the next point is maybe outside the bounds
+                # and correct it
                 if par_direction is -1:
                     x_next[i_parameter] = np.max(
                         [x_next[i_parameter], problem.lb[i_parameter]])
@@ -165,38 +181,32 @@ def profile(
                     x_next[i_parameter] = np.min(
                         [x_next[i_parameter], problem.ub[i_parameter]])
 
-                # fix current parameter to current value and set start point
+                # fix current profiling parameter to current value and set
+                # start point (retrieve old bounds, if necessary, in order to
+                # re-adapt them when this parameter is freed again)
                 if lb_old is None:
-                    (lb_old, ub_old) = problem.fix_parameters(i_parameter,
-                                                              x_next[
-                                                                  i_parameter])
+                    (lb_old, ub_old) = \
+                        problem.fix_parameters(i_parameter,x_next[i_parameter])
                 else:
                     problem.fix_parameters(i_parameter, x_next[i_parameter])
                 startpoint = np.array(
                     [x_next[i] for i in problem.x_free_indices])
 
-                try:
-                    # run optimization
-                    optimizer_result = optimizer.minimize(problem, startpoint,
-                                                          0)
-
-                    current_profile.append_profile_point(
-                        optimizer_result.x,
-                        optimizer_result.fval,
-                        np.exp(
-                            global_opt - optimizer_result.fval),
-                        np.linalg.norm(
-                            optimizer_result.grad[
-                                problem.x_free_indices]),
-                        optimizer_result.exitflag,
-                        optimizer_result.time,
-                        optimizer_result.n_fval,
-                        optimizer_result.n_grad,
-                        optimizer_result.n_hess)
-
-                except:
-                    print("An error occured while profiling.")
-                    raise
+                # run optimization
+                # IMPORTANT: This optimization will need a proper exception
+                # handling (coming soon)
+                optimizer_result = optimizer.minimize(problem, startpoint, 0)
+                current_profile.append_profile_point(
+                    optimizer_result.x,
+                    optimizer_result.fval,
+                    np.exp(global_opt - optimizer_result.fval),
+                    np.linalg.norm(
+                        optimizer_result.grad[problem.x_free_indices]),
+                    optimizer_result.exitflag,
+                    optimizer_result.time,
+                    optimizer_result.n_fval,
+                    optimizer_result.n_grad,
+                    optimizer_result.n_hess)
 
         # free the profiling parameter again
         problem.unfix_parameters(i_parameter, lb_old, ub_old)
@@ -213,31 +223,33 @@ def initialize_profile(
         result,
         result_index):
     """
-       This is function initializes profiling based on a previous optimization.
+    This is function initializes profiling based on a previous optimization.
 
-       Parameters
-       ----------
+    Parameters
+    ----------
 
-       problem: pypesto.Problem
-           The problem to be solved.
+    problem: pypesto.Problem
+        The problem to be solved.
 
-       result: pypesto.Result
-           A result object to initialize profiling and to append the profiling
-           results to. For example, one might append more profiling runs to a
-           previous profile, in order to merge these.
-           The existence of an optimization result is obligatory.
+    result: pypesto.Result
+        A result object to initialize profiling and to append the profiling
+        results to. For example, one might append more profiling runs to a
+        previous profile, in order to merge these.
+        The existence of an optimization result is obligatory.
 
-       result_index: integer
-           The index, starting from which optimization result profiling
-           should be carried out
-       """
+    result_index: integer
+        index from which optimization result profiling should be started
+    """
+
+    # check, whether an optimization result is existing
     if result.optimize_result is None:
         print("Optimization has to be carried before profiling can be done.")
         return None
 
+    # create the ProfilerResult beased on the optimization result
     for iParameter in range(0, problem.dim_full):
         tmp_optimize_result = result.optimize_result.as_list()
-        result.profile_result.append_profile(
+        result.profile_result.create_new_profile(
             ProfilerResult(tmp_optimize_result[result_index]["x"],
                            tmp_optimize_result[result_index]["fval"],
                            np.array([1.]),
@@ -251,4 +263,6 @@ def initialize_profile(
                            np.array([0]),
                            None))
 
+    # return the log-posterior of the global optimum (needed in order to
+    # compute the log-posterior-ratio)
     return tmp_optimize_result[0]["fval"]
