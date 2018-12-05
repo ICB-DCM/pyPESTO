@@ -196,13 +196,6 @@ class Problem:
             set(range(0, self.dim_full)) - set(self.x_fixed_indices)
         ]
 
-        # make objective aware of fixed parameters
-        self.objective.update_from_problem(
-            dim_full=self.dim_full,
-            x_free_indices=self.x_free_indices,
-            x_fixed_indices=self.x_fixed_indices,
-            x_fixed_vals=self.x_fixed_vals)
-
         self.normalize_input()
 
         return (lb, ub)
@@ -228,13 +221,6 @@ class Problem:
             int(i) for i in
             set(range(0, self.dim_full)) - set(self.x_fixed_indices)
         ]
-
-        # make objective aware of fixed parameters
-        self.objective.update_from_problem(
-            dim_full=self.dim_full,
-            x_free_indices=self.x_free_indices,
-            x_fixed_indices=self.x_fixed_indices,
-            x_fixed_vals=self.x_fixed_vals)
 
         # fill the lower and upper parameter bounds
         new_lb = np.zeros(len(self.x_free_indices))
