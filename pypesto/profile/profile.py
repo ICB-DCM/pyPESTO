@@ -204,15 +204,15 @@ def walk_along_profile(current_profile,
             index for the current parameter
         """
 
+    # create variables which are needed during iteration
+    lb_old = None
+    stop_profile = False
+
     # retrieve old bounds in order to re-adapt them when this parameter is
     # freed again
     x_now = current_profile.x_path[:, -1]
     (lb_old, ub_old) = problem.fix_parameters(i_parameter,
                                               x_now[i_parameter])
-
-    # create variables which are needed during iteration
-    lb_old = None
-    stop_profile = False
 
     # while loop for profiling (will be exited by break command)
     while True:
