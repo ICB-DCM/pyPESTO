@@ -19,7 +19,7 @@ class ProfilerTest(unittest.TestCase):
         with warnings.catch_warnings():
             warnings.simplefilter("ignore")
 
-            (problem, result, optimizer, lb, ub, options) = \
+            (problem, result, optimizer, options) = \
                 create_optimization_results(objective)
 
             result1 = copy.deepcopy(result)
@@ -101,4 +101,4 @@ def create_optimization_results(objective):
         options=optimize_options
     )
 
-    return problem, result, optimizer, lb, ub, optimize_options
+    return problem, result, optimizer, optimize_options
