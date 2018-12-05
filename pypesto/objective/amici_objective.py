@@ -496,9 +496,10 @@ def amici_objective_from_measurement_file(sbml_model, condition_df, measurement_
     edatas = []
     for edata_idx, simulation_condition in simulation_conditions.iterrows():
         # amici.ExpData for each simulation
-        cur_measurement_df = measurement_df.loc[
-                             (measurement_df.preequilibrationConditionId == simulation_condition.preequilibrationConditionId)
-                            & (measurement_df.simulationConditionId == simulation_condition.simulationConditionId), :]
+        filter = 1
+        for col in grouping_cols:
+            filter = (measurement_df[col] == simulation_condition[col]) & filter
+        cur_measurement_df = measurement_df.loc[filter, :]
 
         timepoints = sorted(cur_measurement_df.time.unique().astype(float))
         edata = amici.ExpData(amici_model.get())
