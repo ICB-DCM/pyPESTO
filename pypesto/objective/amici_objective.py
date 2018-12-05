@@ -3,6 +3,8 @@ import numpy as np
 import copy
 import logging
 import pandas as pd
+import petab
+import numbers
 from .objective import Objective
 from .constants import MODE_FUN, MODE_RES, HESS
 
@@ -19,24 +21,36 @@ class AmiciObjective(Objective):
     This is a convenience class to compute an objective function from an
     AMICI model.
 
-    Parameters
+    Attributes
     ----------
+    optimization_parameter_ids:
+        IDs of optimization parameters. In the simplest case, this will the
+        AMICI model parameters.
 
-    amici_model: amici.Model
-        The amici model.
-
-    amici_solver: amici.Solver
-        The solver to use for the numeric integration of the model.
-
-    edata:
-        The experimental data.
-
-    max_sensi_order: int
-        Maximum sensitivity order supported by the model.
+    simulation_to_optimization_parameter_mapping:
+        Mapping of optimization parameters to model parameters.
+        Array of size num_model_parameter x num_conditions
     """
 
     def __init__(self, amici_model, amici_solver, edata, max_sensi_order=None,
                  preprocess_edata=True, options=None):
+        """Constructor
+
+        Parameters
+        ----------
+
+        amici_model: amici.Model
+            The amici model.
+
+        amici_solver: amici.Solver
+            The solver to use for the numeric integration of the model.
+
+        edata:
+            The experimental data.
+
+        max_sensi_order: int
+            Maximum sensitivity order supported by the model.
+        """
         if amici is None:
             raise ImportError('This objective requires an installation of '
                               'amici (github.com/icb-dcm/amici. Install via '
@@ -454,15 +468,15 @@ class AmiciObjective(Objective):
         return df_sim
 
 
-def amici_objective_from_measurement_file(condition_filename, measurement_filename, amici_model, **kwargs):
+def amici_objective_from_measurement_file(sbml_model, condition_df, measurement_df, amici_model, **kwargs):
     """
     Create AmiciObjective based on measurement and condition files.
 
     TODO: Does not support any condition-specific parameters yet
     """
 
-    condition_df = pd.read_csv(condition_filename, sep='\t')
-    measurement_df = pd.read_csv(measurement_filename, sep='\t')
+
+    # TODO: to petab
     measurement_df.time = measurement_df.time.astype(float)
 
     if not np.all(measurement_df.observableParameters.isnull()):
@@ -521,7 +535,23 @@ def amici_objective_from_measurement_file(condition_filename, measurement_filena
 
     edatas.append(edata)
 
+    # optimization <-> simulation parameter mapping
+    optimization_parameter_ids, mapping = petab.get_simulation_to_optimization_parameter_mapping(
+        measurement_df,
+        condition_df,
+        amici_model.getParameterIds(),
+        observables=petab.get_observables(sbml_model),
+        noise=petab.get_sigmas(sbml_model))
+
+    print('optimization_parameter_ids', optimization_parameter_ids)
+    print('mapping', mapping)
+
     obj = AmiciObjective(amici_model=amici_model, edata=edatas, **kwargs)
+    obj.optimization_parameter_ids = optimization_parameter_ids
+    obj.simulation_to_optimization_parameter_mapping = mapping
+    obj.dim = len(optimization_parameter_ids)
+    if len(edatas) != mapping.shape[1]:
+        raise AssertionError
 
     return obj
 
@@ -559,7 +589,8 @@ def import_sbml_model(sbml_model_file, model_output_dir, model_name=None,
         # Read sigma<->observable mapping from measurement file
         sigmas = {}
         # for easier grouping
-        measurement_df.loc[measurement_df.noiseParameters.apply(isinstance, args=(float,)), 'noiseParameters'] = np.nan
+        measurement_df.loc[measurement_df.noiseParameters.apply(isinstance, args=(numbers.Number,)), 'noiseParameters'] = 1.0 # np.nan
+        print(measurement_df)
         obs_noise_df = measurement_df.groupby(['observableId', 'noiseParameters']).size().reset_index()
         if len(obs_noise_df.observableId) != len(obs_noise_df.observableId.unique()):
             raise AssertionError('Different noise parameters for same output currently not supported.')
@@ -571,7 +602,7 @@ def import_sbml_model(sbml_model_file, model_output_dir, model_name=None,
             assignment_rule = sbml_importer.sbml.getAssignmentRuleByVariable(
                     f'sigma_{row.observableId}'
                 ).getFormula()
-            if not f'observable_{row.observableId}' in sigmas:
+            if f'observable_{row.observableId}' not in sigmas:
                 sigmas[f'observable_{row.observableId}'] = assignment_rule
             elif sigmas[f'observable_{row.observableId}'] != assignment_rule:
                 raise ValueError('Inconsistent sigma specified for observable_{row.observableId}: '
