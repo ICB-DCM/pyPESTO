@@ -139,15 +139,14 @@ def profile(
 
     # loop over parameters for profiling
     for i_parameter in range(0, problem.dim_full):
-        if (profile_index[i_parameter] == 0) | \
-                (i_parameter in problem.x_fixed_indices):
+        if (profile_index[i_parameter] == 0) or (i_parameter in \
+                problem.x_fixed_indices):
             continue
 
         # create an instance of ProfilerResult, which will be appended to the
         #  result object, when this profile is finished
-        current_profile = \
-            result.profile_result.get_current_profile(i_parameter)
-        lb_old = None
+        current_profile = result.profile_result.get_current_profile(
+            i_parameter)
 
         # compute profile in descending and ascending direction
         for par_direction in [-1, 1]:
@@ -155,76 +154,92 @@ def profile(
             # flip profile
             current_profile.flip_profile()
 
-            # while loop for profiling (will be exited by break command)
-            while True:
-                # get current position on the profile path
-                x_now = current_profile.x_path[:, -1]
-
-                # check if the next profile point needs to be computed
-                if par_direction is -1:
-                    stop_profile = (x_now[i_parameter] <= problem.lb[
-                        [i_parameter]]) | \
-                                   (current_profile.ratio_path[
-                                        -1] < profile_options.ratio_min)
-
-                if par_direction is 1:
-                    stop_profile = (x_now[i_parameter] >= problem.ub[
-                        [i_parameter]]) | \
-                                   (current_profile.ratio_path[
-                                        -1] < profile_options.ratio_min)
-
-                if stop_profile:
-                    break
-
-                # compute the new start point for optimization
-                x_next = create_next_startpoint(x_now, i_parameter,
-                                                par_direction)
-
-                # check whether the next point is maybe outside the bounds
-                # and correct it
-                if par_direction is -1:
-                    x_next[i_parameter] = np.max(
-                        [x_next[i_parameter], problem.lb[i_parameter]])
-                else:
-                    x_next[i_parameter] = np.min(
-                        [x_next[i_parameter], problem.ub[i_parameter]])
-
-                # fix current profiling parameter to current value and set
-                # start point (retrieve old bounds, if necessary, in order to
-                # re-adapt them when this parameter is freed again)
-                if lb_old is None:
-                    (lb_old, ub_old) = \
-                        problem.fix_parameters(i_parameter,
-                                               x_next[i_parameter])
-                else:
-                    problem.fix_parameters(i_parameter, x_next[i_parameter])
-                startpoint = np.array(
-                    [x_next[i] for i in problem.x_free_indices])
-
-                # run optimization
-                # IMPORTANT: This optimization will need a proper exception
-                # handling (coming soon)
-                optimizer_result = optimizer.minimize(problem, startpoint, 0)
-                current_profile.append_profile_point(
-                    optimizer_result.x,
-                    optimizer_result.fval,
-                    np.exp(global_opt - optimizer_result.fval),
-                    np.linalg.norm(
-                        optimizer_result.grad[problem.x_free_indices]),
-                    optimizer_result.exitflag,
-                    optimizer_result.time,
-                    optimizer_result.n_fval,
-                    optimizer_result.n_grad,
-                    optimizer_result.n_hess)
-
-        # free the profiling parameter again
-        problem.unfix_parameters(i_parameter, lb_old, ub_old)
+            current_profile = walk_along_profile(current_profile,
+                                                 problem,
+                                                 par_direction,
+                                                 optimizer,
+                                                 global_opt,
+                                                 i_parameter)
 
         # add current profile to result.profile_result
         result.profile_result.add_profile(current_profile, i_parameter)
 
     # return
     return result
+
+
+def walk_along_profile(current_profile,
+                       problem,
+                       par_direction,
+                       optimizer,
+                       global_opt,
+                       i_parameter):
+
+    # retrieve old bounds in order to re-adapt them when this parameter is
+    # freed again
+    x_now = current_profile.x_path[:, -1]
+    (lb_old, ub_old) = problem.fix_parameters(i_parameter,
+                                              x_now[i_parameter])
+
+    # create variables which are needed during iteration
+    lb_old = None
+    stop_profile = False
+
+    # while loop for profiling (will be exited by break command)
+    while True:
+        # get current position on the profile path
+        x_now = current_profile.x_path[:, -1]
+
+        # check if the next profile point needs to be computed
+        if par_direction is -1:
+            stop_profile = (x_now[i_parameter] <= problem.lb[[i_parameter]])\
+                           or (current_profile.ratio_path[-1] <
+                               profile_options.ratio_min)
+
+        if par_direction is 1:
+            stop_profile = (x_now[i_parameter] >= problem.ub[[i_parameter]])\
+                           or (current_profile.ratio_path[-1] <
+                               profile_options.ratio_min)
+
+        if stop_profile:
+            break
+
+        # compute the new start point for optimization
+        x_next = create_next_startpoint(x_now, i_parameter, par_direction)
+
+        # check whether the next point is maybe outside the bounds
+        # and correct it
+        if par_direction is -1:
+            x_next[i_parameter] = np.max([x_next[i_parameter],
+                                          problem.lb[i_parameter]])
+        else:
+            x_next[i_parameter] = np.min([x_next[i_parameter],
+                                          problem.ub[i_parameter]])
+
+        # fix current profiling parameter to current value and set
+        # start point
+        problem.fix_parameters(i_parameter, x_next[i_parameter])
+        startpoint = np.array([x_next[i] for i in problem.x_free_indices])
+
+        # run optimization
+        # IMPORTANT: This optimization will need a proper exception
+        # handling (coming soon)
+        optimizer_result = optimizer.minimize(problem, startpoint, 0)
+        current_profile.append_profile_point(
+            optimizer_result.x,
+            optimizer_result.fval,
+            np.exp(global_opt - optimizer_result.fval),
+            np.linalg.norm(optimizer_result.grad[problem.x_free_indices]),
+            optimizer_result.exitflag,
+            optimizer_result.time,
+            optimizer_result.n_fval,
+            optimizer_result.n_grad,
+            optimizer_result.n_hess)
+
+    # free the profiling parameter again
+    problem.unfix_parameters(i_parameter, lb_old, ub_old)
+
+    return current_profile
 
 
 def initialize_profile(
