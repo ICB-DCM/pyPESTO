@@ -64,6 +64,7 @@ def profile(
         result,
         optimizer,
         profile_index=None,
+        profile_list=None,
         result_index=1,
         create_profile_startpoint=None,
         profile_options=None,
@@ -90,6 +91,11 @@ def profile(
         array with parameter indices, whether a profile should
         be computed (1) or not (0)
         Default is all profiles should be computed
+
+    profile_list: integer, optional
+        integer which specifies whether a call to the profiler should create
+        a new list of profiles (default) or should be added to a specific
+        profile list
 
     result_index: integer, optional
         index from which optimization result profiling should be started
@@ -126,8 +132,10 @@ def profile(
         optimize_options = OptimizeOptions()
     optimize_options = OptimizeOptions.assert_instance(optimize_options)
 
-    # create the profile result object and retrieve global optimum
-    global_opt = initialize_profile(problem, result, result_index)
+    # create the profile result object (retrieve global optimum) ar append to
+    #  existing list of profiles
+    global_opt = initialize_profile(problem, result, result_index,
+                                    profile_index, profile_list)
 
     # loop over parameters for profiling
     for i_parameter in range(0, problem.dim_full):
@@ -186,7 +194,8 @@ def profile(
                 # re-adapt them when this parameter is freed again)
                 if lb_old is None:
                     (lb_old, ub_old) = \
-                        problem.fix_parameters(i_parameter,x_next[i_parameter])
+                        problem.fix_parameters(i_parameter,
+                                               x_next[i_parameter])
                 else:
                     problem.fix_parameters(i_parameter, x_next[i_parameter])
                 startpoint = np.array(
@@ -221,7 +230,9 @@ def profile(
 def initialize_profile(
         problem,
         result,
-        result_index):
+        result_index,
+        profile_index,
+        profile_list):
     """
     This is function initializes profiling based on a previous optimization.
 
@@ -239,30 +250,113 @@ def initialize_profile(
 
     result_index: integer
         index from which optimization result profiling should be started
+
+    profile_index: ndarray of integers, optional
+        array with parameter indices, whether a profile should
+        be computed (1) or not (0)
+        Default is all profiles should be computed
+
+    profile_list: integer, optional
+        integer which specifies whether a call to the profiler should create
+        a new list of profiles (default) or should be added to a specific
+        profile list
     """
 
-    # check, whether an optimization result is existing
+    # Check, whether an optimization result is existing
     if result.optimize_result is None:
         print("Optimization has to be carried before profiling can be done.")
         return None
 
-    # create the ProfilerResult beased on the optimization result
-    for iParameter in range(0, problem.dim_full):
-        tmp_optimize_result = result.optimize_result.as_list()
-        result.profile_result.create_new_profile(
-            ProfilerResult(tmp_optimize_result[result_index]["x"],
-                           tmp_optimize_result[result_index]["fval"],
-                           np.array([1.]),
-                           np.linalg.norm(
-                               tmp_optimize_result[result_index]["grad"]),
-                           tmp_optimize_result[result_index]["exitflag"],
-                           np.array([0.]),
-                           np.array([0.]),
-                           np.array([0]),
-                           np.array([0]),
-                           np.array([0]),
-                           None))
+    tmp_optimize_result = result.optimize_result.as_list()
+
+    # Check if new profile_list is to be created
+    if profile_list is None:
+        result.profile_result.create_new_profile_list()
+
+    # fill the list with optimization results where necessary
+    fill_profile_list(result.profile_result,
+                      tmp_optimize_result[result_index],
+                      profile_index,
+                      profile_list,
+                      problem.dim_full)
 
     # return the log-posterior of the global optimum (needed in order to
     # compute the log-posterior-ratio)
     return tmp_optimize_result[0]["fval"]
+
+
+def fill_profile_list(
+        profile_result,
+        optimize_result,
+        profile_index,
+        profile_list,
+        problem_dimension):
+    """
+        This is a helper function for initialize_profile
+
+        Parameters
+        ----------
+
+        problem: pypesto.Problem
+            The problem to be solved.
+
+        profile_result: list of ProfilerResult objects
+            A list of profiler result objects
+
+        profile_index: ndarray of integers, optional
+            array with parameter indices, whether a profile should
+            be computed (1) or not (0)
+            Default is all profiles should be computed
+
+        profile_list: integer, optional
+            integer which specifies whether a call to the profiler should
+            create a new list of profiles (default) or should be added to a
+            specific profile list
+
+        problem_dimension: integer
+            number of parameters in the unreduced problem
+        """
+    if profile_list is None:
+        # All profiles have to be created from scratch
+        for i_parameter in range(0, problem_dimension):
+            if profile_index[i_parameter] > 0:
+                # Should we create a profile for this index?
+                profile_result.create_new_profile(
+                    ProfilerResult(optimize_result["x"],
+                                   optimize_result["fval"],
+                                   np.array([1.]),
+                                   np.linalg.norm(optimize_result["grad"]),
+                                   optimize_result["exitflag"],
+                                   np.array([0.]),
+                                   np.array([0.]),
+                                   np.array([0]),
+                                   np.array([0]),
+                                   np.array([0]),
+                                   None))
+            else:
+                # if no profile should be computed for this parameter
+                profile_result.create_new_profile()
+
+    else:
+        for i_parameter in range(0, problem_dimension):
+            # We append to an existing list
+            if profile_index[i_parameter] > 0:
+                # Do we have to create a new profile?
+                create_new = (profile_result.list[profile_list][i_parameter] is
+                              None) and (profile_index[i_parameter] > 0)
+
+                if create_new:
+                    new_profile = ProfilerResult(
+                        optimize_result["x"],
+                        optimize_result["fval"],
+                        np.array([1.]),
+                        np.linalg.norm(optimize_result["grad"]),
+                        optimize_result["exitflag"],
+                        np.array([0.]),
+                        np.array([0.]),
+                        np.array([0]),
+                        np.array([0]),
+                        np.array([0]),
+                        None)
+
+                    profile_result.add_profile(new_profile, i_parameter)
