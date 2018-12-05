@@ -316,23 +316,27 @@ def fill_profile_list(
         problem_dimension: integer
             number of parameters in the unreduced problem
         """
+
+    # create blanko profile
+    new_profile = ProfilerResult(
+        optimize_result["x"],
+        optimize_result["fval"],
+        np.array([1.]),
+        np.linalg.norm(optimize_result["grad"]),
+        optimize_result["exitflag"],
+        np.array([0.]),
+        np.array([0.]),
+        np.array([0]),
+        np.array([0]),
+        np.array([0]),
+        None)
+
     if profile_list is None:
         # All profiles have to be created from scratch
         for i_parameter in range(0, problem_dimension):
             if profile_index[i_parameter] > 0:
                 # Should we create a profile for this index?
-                profile_result.create_new_profile(
-                    ProfilerResult(optimize_result["x"],
-                                   optimize_result["fval"],
-                                   np.array([1.]),
-                                   np.linalg.norm(optimize_result["grad"]),
-                                   optimize_result["exitflag"],
-                                   np.array([0.]),
-                                   np.array([0.]),
-                                   np.array([0]),
-                                   np.array([0]),
-                                   np.array([0]),
-                                   None))
+                profile_result.create_new_profile(new_profile)
             else:
                 # if no profile should be computed for this parameter
                 profile_result.create_new_profile()
@@ -344,19 +348,5 @@ def fill_profile_list(
                 # Do we have to create a new profile?
                 create_new = (profile_result.list[profile_list][i_parameter] is
                               None) and (profile_index[i_parameter] > 0)
-
                 if create_new:
-                    new_profile = ProfilerResult(
-                        optimize_result["x"],
-                        optimize_result["fval"],
-                        np.array([1.]),
-                        np.linalg.norm(optimize_result["grad"]),
-                        optimize_result["exitflag"],
-                        np.array([0.]),
-                        np.array([0.]),
-                        np.array([0]),
-                        np.array([0]),
-                        np.array([0]),
-                        None)
-
                     profile_result.add_profile(new_profile, i_parameter)
