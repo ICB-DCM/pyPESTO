@@ -65,7 +65,7 @@ def profile(
         optimizer,
         profile_index=None,
         profile_list=None,
-        result_index=1,
+        result_index=0,
         create_profile_startpoint=None,
         profile_options=None,
         optimize_options=None) -> Result:
@@ -99,7 +99,7 @@ def profile(
 
     result_index: integer, optional
         index from which optimization result profiling should be started
-        (default: global optimum, i.e., index = 1)
+        (default: global optimum, i.e., index = 0)
 
     create_profile_startpoint: callable, optional
         function handle to a method that creates the next starting point for
@@ -116,16 +116,16 @@ def profile(
     if profile_index is None:
         profile_index = np.ones(problem.dim_full)
 
+    # check profiling options
+    if profile_options is None:
+        profile_options = ProfileOptions()
+    profile_options = ProfileOptions.assert_instance(profile_options)
+
     # profile startpoint method
     if create_profile_startpoint is None:
         def create_next_startpoint(x, par_index, par_direction):
             return fixed_step(x, par_index, par_direction,
                               step_size=profile_options.default_step_size)
-
-    # check profiling options
-    if profile_options is None:
-        profile_options = ProfileOptions()
-    profile_options = ProfileOptions.assert_instance(profile_options)
 
     # check optimization ptions
     if optimize_options is None:
