@@ -590,8 +590,13 @@ def import_sbml_model(sbml_model_file, model_output_dir, model_name=None,
         sigmas = {}
         # for easier grouping
         measurement_df.loc[measurement_df.noiseParameters.apply(isinstance, args=(numbers.Number,)), 'noiseParameters'] = 1.0 # np.nan
-        print(measurement_df)
-        obs_noise_df = measurement_df.groupby(['observableId', 'noiseParameters']).size().reset_index()
+        grouping_columns = petab.core.get_notnull_columns(
+            measurement_df,
+            ['observableId',
+             'noiseParameters',
+             'preequilibrationConditionId',
+             'simulationConditionId'])
+        obs_noise_df = measurement_df.groupby(grouping_columns).size().reset_index()
         if len(obs_noise_df.observableId) != len(obs_noise_df.observableId.unique()):
             raise AssertionError('Different noise parameters for same output currently not supported.')
 
