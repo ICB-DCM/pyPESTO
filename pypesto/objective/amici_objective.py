@@ -212,6 +212,8 @@ class AmiciObjective(Objective):
             sensi_orders,
             mode
     ):
+        # TODO: extract function to run simulations and return list of amici.ReturnData. use this then here, as well as for simulations_to_measurement_df below
+
         # amici is built so that only the maximum sensitivity is required,
         # the lower orders are then automatically computed
 
@@ -232,9 +234,6 @@ class AmiciObjective(Objective):
         res = np.zeros([0])
         sres = np.zeros([0, self.dim])
 
-        # set parameters in model
-        self.amici_model.setParameters(x)
-
         # set order in solver
         self.amici_solver.setSensitivityOrder(sensi_order)
 
@@ -244,7 +243,13 @@ class AmiciObjective(Objective):
                 return preeq_status
 
         # loop over experimental data
+        # TODO: ensure condition order is the same here for the generation of the mapping table
         for data_index, data in enumerate(self.edata):
+            # set parameters in model, according to mapping
+            optim_par_idxs = \
+                self.simulation_to_optimization_parameter_mapping[:, data_index]
+            simulation_parameters = x[optim_par_idxs]
+            self.amici_model.setParameters(simulation_parameters)
 
             if self.preequilibration_edata:
                 original_value_dict = self.preprocess_preequilibration(data)
@@ -273,6 +278,7 @@ class AmiciObjective(Objective):
             if rdata['status'] < 0.0:
                 return self.get_error_output(sensi_orders, mode)
 
+            # TODO: must respect mapping matrix when assembling overall gradient
             # extract required result fields
             if mode == MODE_FUN:
                 nllh -= rdata['llh']
@@ -404,6 +410,7 @@ class AmiciObjective(Objective):
         Simulate all conditions.
         """
 
+        # TODO mapping!
         self.amici_model.setParameters(amici.DoubleVector(x))
         self.amici_solver.setSensitivityOrder(0)
 
@@ -471,27 +478,18 @@ class AmiciObjective(Objective):
 def amici_objective_from_measurement_file(sbml_model, condition_df, measurement_df, amici_model, **kwargs):
     """
     Create AmiciObjective based on measurement and condition files.
-
-    TODO: Does not support any condition-specific parameters yet
     """
 
-
-    # TODO: to petab
-    measurement_df.time = measurement_df.time.astype(float)
-
-    if not np.all(measurement_df.observableParameters.isnull()):
-        raise ValueError('observableParameter column currently not supported.')
+    if petab.lint.measurement_table_has_timepoint_specific_mappings(measurement_df):
+        raise ValueError('Timepoint specific parameter mappings currently not supported.')
 
     # Number of AMICI simulations will be number of unique preequilibrationCondition simulationCondition pairs
     # Can be improved by checking for identical condition vectors
-    # (cannot group by NaNs)
-    simulation_conditions = measurement_df.groupby(
-        [measurement_df['preequilibrationConditionId'].fillna('#####'),
-         measurement_df['simulationConditionId'].fillna('#####')])\
-        .size().reset_index()\
-        .replace({'preequilibrationConditionId':{'#####': np.nan}})\
-        .replace({'simulationConditionId':{'#####': np.nan}})
-
+    grouping_cols = petab.core.get_notnull_columns(
+        measurement_df,
+        ['simulationConditionId', 'preequilibrationConditionId'])
+    simulation_conditions = measurement_df.groupby(grouping_cols)\
+                                          .size().reset_index()
     observable_ids = amici_model.getObservableIds()
     fixed_parameter_ids = amici_model.getFixedParameterIds()
 
@@ -502,8 +500,7 @@ def amici_objective_from_measurement_file(sbml_model, condition_df, measurement_
                              (measurement_df.preequilibrationConditionId == simulation_condition.preequilibrationConditionId)
                             & (measurement_df.simulationConditionId == simulation_condition.simulationConditionId), :]
 
-        timepoints = sorted(cur_measurement_df.time.unique())
-
+        timepoints = sorted(cur_measurement_df.time.unique().astype(float))
         edata = amici.ExpData(amici_model.get())
         edata.setTimepoints(timepoints)
 
@@ -565,59 +562,29 @@ def import_sbml_model(sbml_model_file, model_output_dir, model_name=None,
     """
 
     if not model_name:
+        # Default model name is sbml filename without extension
         model_name = os.path.splitext(os.path.split(sbml_model_file)[-1])[0]
 
     sbml_importer = amici.SbmlImporter(sbml_model_file)
 
-    # Determine constant parameters # TODO: also those marked constant in sbml model?
+    # Determine constant parameters
+    # TODO: also those marked constant in sbml model?
     constant_parameters = None
     if condition_file:
         condition_df = pd.read_csv(condition_file, sep='\t')
         constant_parameters = list(set(condition_df.columns.values.tolist()) - set(['conditionId', 'conditionName']))
 
-    # Retrieve model output names and formulae from AssignmentRules and remove the respective rules
-    observables = amici.assignmentRules2observables(
-            sbml_importer.sbml, # the libsbml model object
-            filter_function=lambda variable: variable.getId().startswith('observable_') \
-                                             and not variable.getId().endswith('_sigma')
-        )
-
-    # Determine noise parameters
-    sigmas = None
     if measurement_file:
-        measurement_df = pd.read_csv(measurement_file, sep='\t')
-        # Read sigma<->observable mapping from measurement file
-        sigmas = {}
-        # for easier grouping
-        measurement_df.loc[measurement_df.noiseParameters.apply(isinstance, args=(numbers.Number,)), 'noiseParameters'] = 1.0 # np.nan
-        grouping_columns = petab.core.get_notnull_columns(
-            measurement_df,
-            ['observableId',
-             'noiseParameters',
-             'preequilibrationConditionId',
-             'simulationConditionId'])
-        obs_noise_df = measurement_df.groupby(grouping_columns).size().reset_index()
-        if len(obs_noise_df.observableId) != len(obs_noise_df.observableId.unique()):
-            raise AssertionError('Different noise parameters for same output currently not supported.')
-
-        for _, row in obs_noise_df.iterrows():
-            if isinstance(row.noiseParameters, float):
-                continue
-
-            assignment_rule = sbml_importer.sbml.getAssignmentRuleByVariable(
-                    f'sigma_{row.observableId}'
-                ).getFormula()
-            if f'observable_{row.observableId}' not in sigmas:
-                sigmas[f'observable_{row.observableId}'] = assignment_rule
-            elif sigmas[f'observable_{row.observableId}'] != assignment_rule:
-                raise ValueError('Inconsistent sigma specified for observable_{row.observableId}: '
-                                 'Previously "{sigmas[f"observable_{row.observableId}"]}", now "{assignment_rule}".')
-
+        measurement_df = petab.get_measurement_df(measurement_file)
         # Check if all observables in measurement files have been specified in the model
-        measurement_observables = [f'observable_{x}' for x in measurement_df.observableId.values]
-        if len(set(measurement_observables) - set(observables.keys())):
-            print(set(measurement_df.observableId.values) - set(observables.keys()))
-            raise AssertionError('Unknown observables in measurement file')
+        petab.lint.assert_measured_observables_present_in_model(measurement_df,
+                                                            sbml_importer.sbml)
+
+    # Retrieve model output names and formulae from AssignmentRules and remove the respective rules
+    observables = petab.core.get_observables(sbml_importer.sbml, remove=True)
+
+    sigmas = petab.core.get_sigmas(sbml_importer.sbml, remove=True)
+    sigmas = {key[len('sigma_'):] : value['formula'] for key, value in sigmas.items()}
 
     sbml_importer.sbml2amici(modelName=model_name,
                              output_dir=model_output_dir,

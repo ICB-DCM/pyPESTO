@@ -43,34 +43,38 @@ for benchmark_model in models:
     skip_model = False
     for file in [condition_filename, measurement_filename, parameter_filename, sbml_model_file]:
         if not os.path.isfile(file):
-            print(f'ERROR: missing file {file}')
+            print(f'\tERROR: missing file {file}')
+            print(f'\tSKIPPING')
             skip_model = True
-        print(file)
+        print(f'\t{file}')
 
     if skip_model:
+        print()
         continue
 
-
-    rebuild = True
-    if rebuild:
-        import_sbml_model(sbml_model_file=sbml_model_file,
-                          condition_file=condition_filename,
-                          measurement_file=measurement_filename,
-                          model_output_dir=model_output_dir,
-                          model_name=model_name)
-
+    try:
+        rebuild = True
+        if rebuild:
+            import_sbml_model(sbml_model_file=sbml_model_file,
+                              condition_file=condition_filename,
+                              measurement_file=measurement_filename,
+                              model_output_dir=model_output_dir,
+                              model_name=model_name)
+        print("\tCompilation SUCCESSFUL")
+    except Exception as e:
+        print(e)
+        print()
+        continue
 
     sys.path.insert(0, os.path.abspath(model_output_dir))
     model_module = importlib.import_module(model_name)
-
-"""
     model = model_module.getModel()
     model.requireSensitivitiesForAllParameters()
-
     solver = model.getSolver()
     solver.setSensitivityMethod(amici.SensitivityMethod_forward)
     solver.setSensitivityOrder(amici.SensitivityOrder_first)
 
+    '''
     print("Model parameters:", list(model.getParameterIds()))
     print()
     print("Model const parameters:", list(model.getFixedParameterIds()))
@@ -78,46 +82,54 @@ for benchmark_model in models:
     print("Model outputs:   ", list(model.getObservableIds()))
     print()
     print("Model states:    ", list(model.getStateIds()))
+    '''
+    print()
 
     from pypesto.logging import log_to_console
     log_to_console()
 
-    # Create objective function instance from model and measurements
-    model.setParameterScale(amici.ParameterScaling_log10)
+    try:
+        # Create objective function instance from model and measurements
+        model.setParameterScale(amici.ParameterScaling_log10)
 
-    petab_problem = petab.OptimizationProblem(sbml_model_file,
-                                        measurement_filename,
-                                        condition_filename,
-                                        parameter_filename)
+        petab_problem = petab.OptimizationProblem(sbml_model_file,
+                                            measurement_filename,
+                                            condition_filename,
+                                            parameter_filename)
 
-    objective = amici_objective_from_measurement_file(amici_model=model,
-                                                      sbml_model=petab_problem.sbml_model,
-                                                      condition_df=petab_problem.condition_df,
-                                                    measurement_df=petab_problem.measurement_df,
-                                                    amici_solver=solver)
+        objective = amici_objective_from_measurement_file(amici_model=model,
+                                                          sbml_model=petab_problem.sbml_model,
+                                                          condition_df=petab_problem.condition_df,
+                                                        measurement_df=petab_problem.measurement_df,
+                                                        amici_solver=solver)
+    except Exception as e:
+        print(e)
+        print()
+        continue
 
+    """
 
-    # load nominal parameters from parameter description file
-    parameter_df = petab.get_parameter_df(parameter_filename)
-
-    #print(parameter_df)
-    model_parameters = set(model.getParameterIds())
-    parameter_df_parameters = set(parameter_df.index)
-
-    print("only in model:", model_parameters - parameter_df_parameters)
-    print("only in table", parameter_df_parameters - model_parameters)
-    print("opt param only not in table", set(objective.optimization_parameter_ids) - parameter_df_parameters)
-
-
-    nominal_x = parameter_df.loc[objective.optimization_parameter_ids, 'nominalValue'].values
-    #nominal_x = np.power(10, nominal_x)
-    for i, p in enumerate(model.getParameterIds()):
-        if p.startswith('noise'):
-            nominal_x[i] = -2.63 #np.power(10, -2.63)
-    print(nominal_x)
-
-
-    # evaluate with nominal parameters
-    llh = objective(x=nominal_x)
-    print(f'llh: {llh}, lh: {np.exp(llh)}')
-"""
+        # load nominal parameters from parameter description file
+        parameter_df = petab.get_parameter_df(parameter_filename)
+    
+        #print(parameter_df)
+        model_parameters = set(model.getParameterIds())
+        parameter_df_parameters = set(parameter_df.index)
+    
+        print("only in model:", model_parameters - parameter_df_parameters)
+        print("only in table", parameter_df_parameters - model_parameters)
+        print("opt param only not in table", set(objective.optimization_parameter_ids) - parameter_df_parameters)
+    
+    
+        nominal_x = parameter_df.loc[objective.optimization_parameter_ids, 'nominalValue'].values
+        #nominal_x = np.power(10, nominal_x)
+        for i, p in enumerate(model.getParameterIds()):
+            if p.startswith('noise'):
+                nominal_x[i] = -2.63 #np.power(10, -2.63)
+        print(nominal_x)
+    
+    
+        # evaluate with nominal parameters
+        llh = objective(x=nominal_x)
+        print(f'llh: {llh}, lh: {np.exp(llh)}')
+    """

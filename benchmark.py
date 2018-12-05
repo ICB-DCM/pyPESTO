@@ -15,7 +15,7 @@ import pandas as pd
 from pypesto.objective.amici_objective import (import_sbml_model,
                                                amici_objective_from_measurement_file)
 import petab
-
+import amici
 
 models = ['Bachmann_MSB2011', 'beer_MolBioSystems2014', 'boehm_JProteomeRes2014',
  'Borghans_BiophysChem1997', 'Brannmark_JBC2010', 'Bruno_JExpBio2016',
@@ -30,7 +30,7 @@ models = ['Bachmann_MSB2011', 'beer_MolBioSystems2014', 'boehm_JProteomeRes2014'
 #model_root = os.path.abspath(os.path.join('Benchmark-Models', 'hackathon_contributions_new_data_format'))
 model_root = '/home/dweindl/src/Benchmark-Models/hackathon_contributions_new_data_format/'
 
-benchmark_model = 'Bruno_JExpBio2016' # 'Zheng_PNAS2012'
+benchmark_model = 'Zheng_PNAS2012' # 'Zheng_PNAS2012'
 condition_filename = os.path.join(model_root, benchmark_model, f'experimentalCondition_{benchmark_model}.tsv')
 measurement_filename = os.path.join(model_root, benchmark_model,f'measurementData_{benchmark_model}.tsv')
 parameter_filename = os.path.join(model_root, benchmark_model, f'parameters_{benchmark_model}.tsv')
@@ -39,7 +39,7 @@ model_name = f'model_{benchmark_model}'
 model_output_dir = f'deleteme-{model_name}'
 
 rebuild = False
-rebuild = True
+#rebuild = True
 if rebuild:
     import_sbml_model(sbml_model_file=sbml_model_file,
                       condition_file=condition_filename,
@@ -69,8 +69,10 @@ print("Model states:    ", list(model.getStateIds()))
 from pypesto.logging import log_to_console
 log_to_console()
 
+# load nominal parameters from parameter description file
+parameter_df = petab.get_parameter_df(parameter_filename)
+
 # Create objective function instance from model and measurements
-model.setParameterScale(amici.ParameterScaling_log10)
 
 petab_problem = petab.OptimizationProblem(sbml_model_file,
                                     measurement_filename,
@@ -83,27 +85,34 @@ objective = amici_objective_from_measurement_file(amici_model=model,
                                                 measurement_df=petab_problem.measurement_df,
                                                 amici_solver=solver)
 
+def get_amici_scaling(scaling_string):
+    if scaling_string == 'lin':
+        return amici.ParameterScaling_none
+    if scaling_string == 'log10':
+        return amici.ParameterScaling_log10
+    if scaling_string == 'log':
+        return amici.ParameterScaling_ln
+    raise ValueError(f'Invalid parameter scaling string {scaling_string}. Must be one of ["lin", "log", "log10"]')
 
-# load nominal parameters from parameter description file
-parameter_df = petab.get_parameter_df(parameter_filename)
-
-#print(parameter_df)
-model_parameters = set(model.getParameterIds())
-parameter_df_parameters = set(parameter_df.index)
-
-print("only in model:", model_parameters - parameter_df_parameters)
-print("only in table", parameter_df_parameters - model_parameters)
-print("opt param only not in table", set(objective.optimization_parameter_ids) - parameter_df_parameters)
-
-
-nominal_x = parameter_df.loc[objective.optimization_parameter_ids, 'nominalValue'].values
-#nominal_x = np.power(10, nominal_x)
-for i, p in enumerate(model.getParameterIds()):
-    if p.startswith('noise'):
-        nominal_x[i] = -2.63 #np.power(10, -2.63)
-print(nominal_x)
-
+# TODO: need to expose std::vector<ParameterScaling> in AMICI to make this nicer; at the moment we can set only a single one for all parameters?
+pscale = parameter_df.loc[objective.optimization_parameter_ids, 'parameterScale'].apply(get_amici_scaling)
+if np.all(pscale == pscale[0]):
+    if pscale[0] == amici.ParameterScaling_log10:
+        model.setParameterScale(amici.ParameterScaling_log10)
+    elif pscale[0] == amici.ParameterScaling_none:
+        model.setParameterScale(amici.ParameterScaling_none)
+    elif pscale[0] == amici.ParameterScaling_ln:
+        model.setParameterScale(amici.ParameterScaling_ln)
+else:
+    raise ValueError('Currently all parameters must have same parameterScale.')
+#model_parameters = set(model.getParameterIds())
+#parameter_df_parameters = set(parameter_df.index)
+#print("only in model:", model_parameters - parameter_df_parameters)
+#print("only in table", parameter_df_parameters - model_parameters)
+#print("opt param only not in table", set(objective.optimization_parameter_ids) - parameter_df_parameters)
 
 # evaluate with nominal parameters
+nominal_x = parameter_df.loc[objective.optimization_parameter_ids, 'nominalValue'].values
+print(nominal_x)
 llh = objective(x=nominal_x)
 print(f'llh: {llh}, lh: {np.exp(llh)}')
