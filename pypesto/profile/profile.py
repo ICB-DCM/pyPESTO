@@ -144,7 +144,7 @@ def profile(
             continue
 
         # create an instance of ProfilerResult, which will be appended to the
-        #  result object, when this profile is finished
+        # result object, when this profile is finished
         current_profile = result.profile_result.get_current_profile(
             i_parameter)
 
@@ -154,6 +154,7 @@ def profile(
             # flip profile
             current_profile.flip_profile()
 
+            # compute the current profile
             current_profile = walk_along_profile(current_profile,
                                                  problem,
                                                  par_direction,
@@ -174,6 +175,30 @@ def walk_along_profile(current_profile,
                        optimizer,
                        global_opt,
                        i_parameter):
+    """
+        This is function compute a half-profile
+
+        Parameters
+        ----------
+
+        current_profile: pypesto.ProfilerResults
+            The profile which should be computed
+
+        problem: pypesto.Problem
+            The problem to be solved.
+
+        par_direction: integer
+            Indicates profiling direction (+1, -1: ascending, descending)
+
+        optimizer: pypesto.Optimizer
+            The optimizer to be used along each profile.
+
+        global_opt: float
+            log-posterior value of the global optimum
+
+        i_parameter: integer
+            index for the current parameter
+        """
 
     # retrieve old bounds in order to re-adapt them when this parameter is
     # freed again
