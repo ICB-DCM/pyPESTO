@@ -480,6 +480,9 @@ def amici_objective_from_measurement_file(sbml_model, condition_df, measurement_
     Create AmiciObjective based on measurement and condition files.
     """
 
+    if not petab.lint.condition_table_is_parameter_free(condition_df):
+        raise ValueError('Parameter names inside condition table currently not supported.')
+
     if petab.lint.measurement_table_has_timepoint_specific_mappings(measurement_df):
         raise ValueError('Timepoint specific parameter mappings currently not supported.')
 
@@ -510,8 +513,9 @@ def amici_objective_from_measurement_file(sbml_model, condition_df, measurement_
                 condition_df.conditionId == simulation_condition.simulationConditionId, fixed_parameter_ids].values
             edata.fixedParameters = fixed_parameter_values.astype(float).flatten()
 
-            if simulation_condition.preequilibrationConditionId:
+            if 'preequilibrationConditionId' in simulation_condition and simulation_condition.preequilibrationConditionId:
                 fixed_preequilibration_parameter_values = condition_df.loc[
+                    # TODO: preequilibrationConditionId might not exist
                     condition_df.conditionId == simulation_condition.preequilibrationConditionId, fixed_parameter_ids].values
                 edata.fixedParametersPreequilibration = fixed_preequilibration_parameter_values.astype(float).flatten()
 

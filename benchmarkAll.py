@@ -26,12 +26,30 @@ models = ['Bachmann_MSB2011', 'Beer_MolBioSystems2014', 'Boehm_JProteomeRes2014'
 'Schwen_PONE2014','Sneyd_PNAS2002', 'Sobotta_Frontiers2017',
 'Swameye_PNAS2003', 'Weber_BMC2015','Zheng_PNAS2012']
 
+blacklist = ['Beer_MolBioSystems2014', # piecewise
+             'Brannmark_JBC2010', # piecewise
+             'Bachmann_MSB2011', # unfinished
+             'Bruno_JExpBio2016', # parameters in condition table
+             'Fiedler_BMC2016', # timepoint specific observableParameters
+             'Chen_MSB2009', #unfinihsed
+             ]
+
+compiled = ['Crauste_CellSystems2017',
+            'Elowitz_Nature2000',
+            'Boehm_JProteomeRes2014',
+            'Borghans_BiophysChem1997',
+            'Crauste_CellSystems2017',]
 
 #model_root = os.path.abspath(os.path.join('Benchmark-Models', 'hackathon_contributions_new_data_format'))
 model_root = '/home/dweindl/src/Benchmark-Models/hackathon_contributions_new_data_format/'
 
 
 for benchmark_model in models:
+    if benchmark_model in blacklist:
+        print("Skipping", benchmark_model)
+        print()
+        continue
+
     condition_filename = os.path.join(model_root, benchmark_model, f'experimentalCondition_{benchmark_model}.tsv')
     measurement_filename = os.path.join(model_root, benchmark_model,f'measurementData_{benchmark_model}.tsv')
     parameter_filename = os.path.join(model_root, benchmark_model, f'parameters_{benchmark_model}.tsv')
@@ -54,6 +72,7 @@ for benchmark_model in models:
 
     try:
         rebuild = True
+        rebuild = benchmark_model not in compiled
         if rebuild:
             import_sbml_model(sbml_model_file=sbml_model_file,
                               condition_file=condition_filename,
@@ -102,7 +121,7 @@ for benchmark_model in models:
                                                           condition_df=petab_problem.condition_df,
                                                         measurement_df=petab_problem.measurement_df,
                                                         amici_solver=solver)
-    except Exception as e:
+    except KeyError as e:
         print(e)
         print()
         continue
