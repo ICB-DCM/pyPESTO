@@ -75,7 +75,7 @@ class ProfilerTest(unittest.TestCase):
         # check result
         self.assertIsInstance(result.profile_result.list[1][0],
                               pypesto.ProfilerResult)
-        self.assertIsNone(result.profile_result.list[1][0])
+        self.assertIsNone(result.profile_result.list[1][1])
 
 
 def create_optimization_results(objective):
