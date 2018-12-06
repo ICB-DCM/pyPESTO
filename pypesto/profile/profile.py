@@ -150,7 +150,6 @@ def profile(
 
         # compute profile in descending and ascending direction
         for par_direction in [-1, 1]:
-
             # flip profile
             current_profile.flip_profile()
 
@@ -165,7 +164,7 @@ def profile(
                                                  i_parameter)
 
         # add current profile to result.profile_result
-        result.profile_result.add_profile(current_profile, i_parameter)
+        # result.profile_result.add_profile(current_profile, i_parameter)
 
     # return
     return result
@@ -205,14 +204,7 @@ def walk_along_profile(current_profile,
         """
 
     # create variables which are needed during iteration
-    lb_old = None
     stop_profile = False
-
-    # retrieve old bounds in order to re-adapt them when this parameter is
-    # freed again
-    x_now = current_profile.x_path[:, -1]
-    (lb_old, ub_old) = problem.fix_parameters(i_parameter,
-                                              x_now[i_parameter])
 
     # while loop for profiling (will be exited by break command)
     while True:
@@ -221,14 +213,14 @@ def walk_along_profile(current_profile,
 
         # check if the next profile point needs to be computed
         if par_direction is -1:
-            stop_profile = (x_now[i_parameter] <= problem.lb[[i_parameter]])\
-                           or (current_profile.ratio_path[-1] <
-                               profile_options.ratio_min)
+            stop_profile = (x_now[i_parameter] <= problem.lb_full[[
+                i_parameter]]) or (current_profile.ratio_path[-1] <
+                                   profile_options.ratio_min)
 
         if par_direction is 1:
-            stop_profile = (x_now[i_parameter] >= problem.ub[[i_parameter]])\
-                           or (current_profile.ratio_path[-1] <
-                               profile_options.ratio_min)
+            stop_profile = (x_now[i_parameter] >= problem.ub_full[[
+                i_parameter]]) or (current_profile.ratio_path[-1] <
+                                   profile_options.ratio_min)
 
         if stop_profile:
             break
@@ -240,10 +232,10 @@ def walk_along_profile(current_profile,
         # and correct it
         if par_direction is -1:
             x_next[i_parameter] = np.max([x_next[i_parameter],
-                                          problem.lb[i_parameter]])
+                                          problem.lb_full[i_parameter]])
         else:
             x_next[i_parameter] = np.min([x_next[i_parameter],
-                                          problem.ub[i_parameter]])
+                                          problem.ub_full[i_parameter]])
 
         # fix current profiling parameter to current value and set
         # start point
@@ -266,7 +258,7 @@ def walk_along_profile(current_profile,
             optimizer_result.n_hess)
 
     # free the profiling parameter again
-    problem.unfix_parameters(i_parameter, lb_old, ub_old)
+    problem.unfix_parameters(i_parameter)
 
     return current_profile
 

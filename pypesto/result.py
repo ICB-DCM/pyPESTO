@@ -9,6 +9,7 @@ optimization, profiles, sampling.
 """
 
 import pandas as pd
+import copy
 
 
 class OptimizeResult:
@@ -108,7 +109,8 @@ class ProfileResult:
         """
 
         current_profile = len(self.list)
-        self.list[current_profile - 1].append(profiler_result)
+        new_profile = copy.deepcopy(profiler_result)
+        self.list[current_profile - 1].append(new_profile)
 
     def add_profile(self, profiler_result, i_parameter):
         """
@@ -124,7 +126,8 @@ class ProfileResult:
         """
 
         current_profile = len(self.list)
-        self.list[current_profile - 1][i_parameter] = profiler_result
+        self.list[current_profile - 1][i_parameter] = \
+            copy.deepcopy(profiler_result)
 
     def get_current_profile(self, i_parameter):
         """

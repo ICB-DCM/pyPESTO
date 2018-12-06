@@ -88,6 +88,9 @@ class Problem:
         self.lb = np.array(lb).flatten()
         self.ub = np.array(ub).flatten()
 
+        self.lb_full = np.array(lb).flatten()
+        self.ub_full = np.array(ub).flatten()
+
         self.dim_full = dim_full if dim_full is not None else self.lb.size
 
         if x_fixed_indices is None:
@@ -127,11 +130,13 @@ class Problem:
             self.lb = self.lb[self.x_free_indices]
         elif self.lb.size == 1:
             self.lb = self.lb * np.ones(self.dim)
+            self.lb_full = self.lb * np.ones(self.dim_full)
 
         if self.ub.size == self.dim_full:
             self.ub = self.ub[self.x_free_indices]
         elif self.ub.size == 1:
             self.ub = self.ub * np.ones(self.dim)
+            self.ub_full = self.ub * np.ones(self.dim_full)
 
         if self.x_guesses.shape[1] == self.dim_full:
             self.x_guesses = self.x_guesses[:, self.x_free_indices]
@@ -148,6 +153,10 @@ class Problem:
             raise AssertionError("lb dimension invalid.")
         if self.ub.size != self.dim:
             raise AssertionError("ub dimension invalid.")
+        if self.lb_full.size != self.dim_full:
+            raise AssertionError("lb_full dimension invalid.")
+        if self.ub_full.size != self.dim_full:
+            raise AssertionError("ub_full dimension invalid.")
         if check_x_guesses:
             if self.x_guesses.shape[1] != self.dim:
                 raise AssertionError("x_guesses form invalid.")
@@ -168,9 +177,6 @@ class Problem:
         if not isinstance(parameter_vals, list):
             parameter_vals = [parameter_vals]
 
-        lb = []
-        ub = []
-
         # first clean to be fixed indices to avoid redundancies
         for i_index, i_parameter in enumerate(parameter_indices):
             # check if parameter was already fixed, otherwise add it to the
@@ -180,8 +186,6 @@ class Problem:
                     parameter_vals.pop(i_index)
             else:
                 self.x_fixed_indices.append(i_parameter)
-                lb.append(self.lb[i_parameter])
-                ub.append(self.ub[i_parameter])
 
         for i_val in parameter_vals:
             if len(self.x_fixed_vals) == 0:
@@ -198,13 +202,12 @@ class Problem:
 
         self.normalize_input()
 
-        return (lb, ub)
-
-    def unfix_parameters(self, parameter_indices, fill_lb, fill_ub):
+    def unfix_parameters(self, parameter_indices):
         """
         Free specified parameters
         """
 
+        # check and adapt input
         if not isinstance(parameter_indices, list):
             parameter_indices = [parameter_indices]
 
@@ -216,33 +219,15 @@ class Problem:
 
         self.dim = self.dim_full - len(self.x_fixed_indices)
 
-        old_free_indices = self.x_free_indices
         self.x_free_indices = [
             int(i) for i in
             set(range(0, self.dim_full)) - set(self.x_fixed_indices)
         ]
 
-        # fill the lower and upper parameter bounds
-        new_lb = np.zeros(len(self.x_free_indices))
-        new_ub = np.zeros(len(self.x_free_indices))
-        counter_old_free = 0
-        counter_new_free = 0
-        for i_parameter in range(0, self.dim_full):
-            if i_parameter in old_free_indices:
-                new_lb[counter_old_free + counter_new_free] = \
-                    self.lb[counter_old_free]
-                new_ub[counter_old_free + counter_new_free] = \
-                    self.ub[counter_old_free]
-                counter_old_free += 1
-            elif i_parameter in parameter_indices:
-                new_lb[counter_old_free + counter_new_free] = \
-                    fill_lb[counter_new_free]
-                new_ub[counter_old_free + counter_new_free] = \
-                    fill_ub[counter_new_free]
-                counter_new_free += 1
+        # readapt bounds
+        self.lb = self.lb_full[self.x_free_indices]
+        self.ub = self.ub_full[self.x_free_indices]
 
-        self.lb = new_lb
-        self.ub = new_ub
         self.normalize_input(False)
 
     def get_full_vector(self, x, x_fixed_vals=None):
