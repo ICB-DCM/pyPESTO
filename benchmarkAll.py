@@ -32,13 +32,18 @@ blacklist = ['Beer_MolBioSystems2014', # piecewise
              'Bruno_JExpBio2016', # parameters in condition table
              'Fiedler_BMC2016', # timepoint specific observableParameters
              'Chen_MSB2009', #unfinihsed
+             'Swameye_PNAS2003', # events
+             'Weber_BMC2015', # numeric observable overrides
              ]
 
 compiled = ['Crauste_CellSystems2017',
             'Elowitz_Nature2000',
             'Boehm_JProteomeRes2014',
             'Borghans_BiophysChem1997',
-            'Crauste_CellSystems2017',]
+            'Crauste_CellSystems2017',
+            'Fujita_SciSignal2010',
+            'Raia_CancerResearch2011',
+            'Zheng_PNAS2012']
 
 #model_root = os.path.abspath(os.path.join('Benchmark-Models', 'hackathon_contributions_new_data_format'))
 model_root = '/home/dweindl/src/Benchmark-Models/hackathon_contributions_new_data_format/'

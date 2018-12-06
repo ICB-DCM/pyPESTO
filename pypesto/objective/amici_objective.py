@@ -535,7 +535,7 @@ def amici_objective_from_measurement_file(sbml_model, condition_df, measurement_
         edata.setObservedData(y.flatten())
         edata.setObservedDataStdDev(sigma_y.flatten())
 
-    edatas.append(edata)
+        edatas.append(edata)
 
     # optimization <-> simulation parameter mapping
     optimization_parameter_ids, mapping = petab.get_simulation_to_optimization_parameter_mapping(
@@ -553,7 +553,7 @@ def amici_objective_from_measurement_file(sbml_model, condition_df, measurement_
     obj.simulation_to_optimization_parameter_mapping = mapping
     obj.dim = len(optimization_parameter_ids)
     if len(edatas) != mapping.shape[1]:
-        raise AssertionError
+        raise AssertionError(f'Number of ExpData ({len(edatas)}) does not match number of conditions ({mapping.shape[1]})')
 
     return obj
 
