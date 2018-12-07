@@ -5,7 +5,8 @@ import numpy as np
 
 def profiles(result, ax=None, profile_indices=None):
     """
-    Plot waterfall plot.
+    Plot classical 1D profile plot (using the posterior, e.g. Gaussian like
+    profile)
 
     Parameters
     ----------
@@ -46,7 +47,8 @@ def profiles(result, ax=None, profile_indices=None):
 
 def profiles_lowlevel(fvals, ax=None):
     """
-    Plot waterfall plot using list of function values.
+    Lowlevel routine for profile plotting, working with a list of arrays
+    only, opening different axes objects in case
 
     Parameters
     ----------
@@ -94,7 +96,8 @@ def profiles_lowlevel(fvals, ax=None):
 
 def profile_lowlevel(ax, fvals):
     """
-    Plot waterfall plot using list of function values.
+    Lowlevel routine for plotting one profile, working with a numpy array only
+
     Parameters
     ----------
 

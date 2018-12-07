@@ -97,9 +97,14 @@ class Problem:
             x_fixed_indices = []
         self.x_fixed_indices = [int(i) for i in x_fixed_indices]
 
+        # We want the fixed values to be a list, since we might need to add
+        # or remove values during profile computation
         if x_fixed_vals is None:
-            x_fixed_vals = np.array([])
-        self.x_fixed_vals = np.array(x_fixed_vals)
+            x_fixed_vals = []
+        if not isinstance(x_fixed_vals, list):
+            x_fixed_vals = [x_fixed_vals]
+
+        self.x_fixed_vals = x_fixed_vals
 
         self.dim = self.dim_full - len(self.x_fixed_indices)
 
@@ -182,16 +187,12 @@ class Problem:
             # check if parameter was already fixed, otherwise add it to the
             # fixed parameters
             if i_parameter in self.x_fixed_indices:
-                self.x_fixed_vals[self.x_fixed_indices.index(i_parameter)] = \
-                    parameter_vals.pop(i_index)
+                self.x_fixed_vals[
+                    self.x_fixed_indices.index(i_parameter)] = \
+                    parameter_vals[i_index]
             else:
                 self.x_fixed_indices.append(i_parameter)
-
-        for i_val in parameter_vals:
-            if len(self.x_fixed_vals) == 0:
-                self.x_fixed_vals = [np.array(i_val)]
-            else:
-                self.x_fixed_vals[-1] = np.array(i_val)
+                self.x_fixed_vals.append(parameter_vals[i_index])
 
         self.dim = self.dim_full - len(self.x_fixed_indices)
 
@@ -214,8 +215,8 @@ class Problem:
         # first clean to be freed indices
         for i_index, i_parameter in enumerate(parameter_indices):
             if i_parameter in self.x_fixed_indices:
-                self.x_fixed_vals.pop(i_index)
                 self.x_fixed_indices.pop(i_index)
+                self.x_fixed_vals.pop(i_index)
 
         self.dim = self.dim_full - len(self.x_fixed_indices)
 
