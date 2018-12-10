@@ -33,6 +33,7 @@ class AmiciObjective(Objective):
     """
 
     def __init__(self, amici_model, amici_solver, edata, max_sensi_order=None,
+                 par_opt_ids=None, par_sim_ids=None, mapping=None,
                  preprocess_edata=True, options=None):
         """Constructor
 
@@ -58,6 +59,10 @@ class AmiciObjective(Objective):
 
         if max_sensi_order is None:
             max_sensi_order = 2 if amici_model.o2mode else 1
+
+        self.par_opt_ids = par_opt_ids
+        self.par_sim_ids = par_sim_ids
+        self.mapping = mapping
 
         fun = self.get_bound_fun()
 
@@ -218,7 +223,7 @@ class AmiciObjective(Objective):
         # the lower orders are then automatically computed
 
         # gradients can always be computed
-        sensi_order = min(max(sensi_orders), 1)
+        sensi_order = min(max(sensi_orders), 0)
         # order 2 currently not implemented, we are using the FIM
 
         # check if sensitivities can be computed
@@ -241,15 +246,21 @@ class AmiciObjective(Objective):
             preeq_status = self.run_preequilibration(sensi_orders, mode)
             if preeq_status is not None:
                 return preeq_status
-
+        print("I AM HERE")
         # loop over experimental data
         # TODO: ensure condition order is the same here for the generation of the mapping table
         for data_index, data in enumerate(self.edata):
             # set parameters in model, according to mapping
-            optim_par_idxs = \
-                self.simulation_to_optimization_parameter_mapping[:, data_index]
-            simulation_parameters = x[optim_par_idxs]
-            self.amici_model.setParameters(simulation_parameters)
+            par_opt_ids = self.mapping[data_index]
+            par_sim_vals = np.zeros(len(self.par_sim_ids))
+            for j, id_par_sim in enumerate(self.par_sim_ids):
+                if isinstance(par_opt_ids[j], numbers.Number):
+                    par_sim_vals[j] = par_opt_ids[j]
+                else:
+                    par_sim_vals[j] = x[self.par_opt_ids.index(par_opt_ids[j])]
+
+            print(par_sim_vals)
+            self.amici_model.setParameters(par_sim_vals)
 
             if self.preequilibration_edata:
                 original_value_dict = self.preprocess_preequilibration(data)
@@ -387,8 +398,9 @@ class AmiciObjective(Objective):
         """
         Run preequilibration.
         """
-
+        
         for fixedParameters in self.preequilibration_edata:
+            print(fixedParameters, self.preequilibration_edata[fixedParameters]['edata'])
             rdata = amici.runAmiciSimulation(
                 self.amici_model,
                 self.amici_solver,
@@ -538,9 +550,10 @@ def amici_objective_from_measurement_file(sbml_model, condition_df, measurement_
         edatas.append(edata)
 
     # optimization <-> simulation parameter mapping
+    print("amici_len_par ", len(amici_model.getParameterIds()), amici_model.getParameterIds())
     optimization_parameter_ids, mapping = petab.get_simulation_to_optimization_parameter_mapping(
-        measurement_df,
         condition_df,
+        measurement_df,
         amici_model.getParameterIds(),
         observables=petab.get_observables(sbml_model),
         noise=petab.get_sigmas(sbml_model))

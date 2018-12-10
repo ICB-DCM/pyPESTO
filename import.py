@@ -29,17 +29,17 @@ models = ['Bachmann_MSB2011', 'beer_MolBioSystems2014', 'boehm_JProteomeRes2014'
 
 #model_root = os.path.abspath(os.path.join('Benchmark-Models', 'hackathon_contributions_new_data_format'))
 model_root = '/home/yannik/benchmark-models/hackathon_contributions_new_data_format/'
-
 benchmark_model = 'Zheng_PNAS2012' # 'Zheng_PNAS2012'
+benchmark_model = "Boehm_JProteomeRes2014"
 condition_filename = os.path.join(model_root, benchmark_model, f'experimentalCondition_{benchmark_model}.tsv')
 measurement_filename = os.path.join(model_root, benchmark_model,f'measurementData_{benchmark_model}.tsv')
 parameter_filename = os.path.join(model_root, benchmark_model, f'parameters_{benchmark_model}.tsv')
 sbml_model_file = os.path.join(model_root, benchmark_model, f'model_{benchmark_model}.xml')
 model_name = f'model_{benchmark_model}'
 model_output_dir = f'deleteme-{model_name}'
-
+ 
 rebuild = False
-#rebuild = True
+rebuild = True
 if rebuild:
     import_sbml_model(sbml_model_file=sbml_model_file,
                       condition_file=condition_filename,
@@ -74,16 +74,22 @@ parameter_df = petab.get_parameter_df(parameter_filename)
 
 # Create objective function instance from model and measurements
 
-petab_problem = petab.OptimizationProblem(sbml_model_file,
-                                    measurement_filename,
-                                    condition_filename,
-                                    parameter_filename)
+manager = petab.Manager.from_folder(model_root + benchmark_model)
+manager.map_par_sim_to_par_opt()
+importer = pypesto.objective.Importer(manager)
+model = importer.model
+model.setParameterScale(amici.ParameterScaling_log10)
+obj, edatas = importer.create_objective()
+x_nom = manager.parameter_df['nominalValue'].values
+print(x_nom)
+obj(x_nom)
+#importer.get_simulation_to_optimization_parameter_mapping()
 
 objective = amici_objective_from_measurement_file(amici_model=model,
-                                                  sbml_model=petab_problem.sbml_model,
-                                                  condition_df=petab_problem.condition_df,
-                                                measurement_df=petab_problem.measurement_df,
-                                                amici_solver=solver)
+                                                  sbml_model=manager.sbml_model,
+                                                  condition_df=manager.condition_df,
+                                                  measurement_df=manager.measurement_df,
+                                                  amici_solver=solver)
 
 def get_amici_scaling(scaling_string):
     if scaling_string == 'lin':
@@ -92,7 +98,7 @@ def get_amici_scaling(scaling_string):
         return amici.ParameterScaling_log10
     if scaling_string == 'log':
         return amici.ParameterScaling_ln
-    raise ValueError(f'Invalid parameter scaling string {scaling_string}. Must be one of ["lin", "log", "log10"]')
+    #raise ValueError(f'Invalid parameter scaling string {scaling_string}. Must be one of ["lin", "log", "log10"]')
 
 # TODO: need to expose std::vector<ParameterScaling> in AMICI to make this nicer; at the moment we can set only a single one for all parameters?
 pscale = parameter_df.loc[objective.optimization_parameter_ids, 'parameterScale'].apply(get_amici_scaling)
