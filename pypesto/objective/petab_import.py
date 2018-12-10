@@ -123,7 +123,7 @@ class Importer:
         grouping_cols = petab.core.get_notnull_columns(
             measurement_df, ['simulationConditionId', 'preequilibrationConditionId'])
         simulation_conditions = measurement_df.groupby(grouping_cols).size().reset_index()
-        
+
         observable_ids = self.model.getObservableIds()
         fixed_parameter_ids = self.model.getFixedParameterIds()
         
@@ -134,7 +134,7 @@ class Importer:
             for col in grouping_cols:
                 filter = (measurement_df[col] == condition[col]) & filter
             cur_measurement_df = measurement_df.loc[filter, :]
-            print('CUR',cur_measurement_df) 
+
             timepoints = sorted(cur_measurement_df.time.unique().astype(float))
             
             edata = amici.ExpData(self.model.get())
@@ -144,7 +144,7 @@ class Importer:
                 fixed_parameter_vals = condition_df.loc[
                     condition_df.conditionId == condition.simulationConditionId, fixed_parameter_ids].values
                 edata.fixedParameters = fixed_parameter_vals.astype(float).flatten()
-                print('FP',edata.fixedParameters)
+
                 if 'preequilibrationConditionId' in condition and condition.preequilibrationConditionId:
                     fixed_preequilibration_parameter_vals = condition_df.loc[
                         # TODO: preequilibrationConditionId might not exist

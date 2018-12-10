@@ -85,7 +85,7 @@ print("MODEL OUTPUTS:", list(model.getObservableIds()))
 model.setParameterScale(amici.ParameterScaling_log10)
 obj, edatas = importer.create_objective()
 x_nom = manager.parameter_df['nominalValue'].values
-print(x_nom)
+#print(x_nom)
 obj(x_nom)
 #importer.get_simulation_to_optimization_parameter_mapping()
 
