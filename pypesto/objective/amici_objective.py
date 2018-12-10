@@ -246,7 +246,7 @@ class AmiciObjective(Objective):
             preeq_status = self.run_preequilibration(sensi_orders, mode)
             if preeq_status is not None:
                 return preeq_status
-        print("I AM HERE")
+
         # loop over experimental data
         # TODO: ensure condition order is the same here for the generation of the mapping table
         for data_index, data in enumerate(self.edata):
@@ -259,7 +259,6 @@ class AmiciObjective(Objective):
                 else:
                     par_sim_vals[j] = x[self.par_opt_ids.index(par_opt_ids[j])]
 
-            print(par_sim_vals)
             self.amici_model.setParameters(par_sim_vals)
 
             if self.preequilibration_edata:
@@ -400,7 +399,6 @@ class AmiciObjective(Objective):
         """
         
         for fixedParameters in self.preequilibration_edata:
-            print(fixedParameters, self.preequilibration_edata[fixedParameters]['edata'])
             rdata = amici.runAmiciSimulation(
                 self.amici_model,
                 self.amici_solver,

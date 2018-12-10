@@ -66,15 +66,17 @@ class Importer:
         sbml_importer = amici.SbmlImporter(self.petab_manager.sbml_file)
         
         # constant parameters
-        constant_parameter_ids = self.petab_manager.condition_df.columns.values.tolist()[2:]
-        
+        constant_parameter_ids = list(
+            set(self.petab_manager.condition_df.columns.values) - {'conditionId', 'conditionName'}
+        )
+
         # observables
-        observables = petab.get_observables(sbml_importer.sbml, remove=True)
+        observables = petab.get_observables(sbml_importer.sbml)
 
         # sigmas
-        sigmas = petab.get_sigmas(sbml_importer.sbml, remove=True)
-        sigmas = {key[len('sigma_'):] : value['formula'] for key, value in sigmas.items()}
-        
+        sigmas = petab.get_sigmas(sbml_importer.sbml)
+        sigmas = {key.replace('sigma_', 'observable_', 1) : value['formula'] for key, value in sigmas.items()}
+
         # convert
         sbml_importer.sbml2amici(
             modelName=self.petab_manager.name,
@@ -132,7 +134,7 @@ class Importer:
             for col in grouping_cols:
                 filter = (measurement_df[col] == condition[col]) & filter
             cur_measurement_df = measurement_df.loc[filter, :]
-            
+            print('CUR',cur_measurement_df) 
             timepoints = sorted(cur_measurement_df.time.unique().astype(float))
             
             edata = amici.ExpData(self.model.get())
@@ -142,7 +144,7 @@ class Importer:
                 fixed_parameter_vals = condition_df.loc[
                     condition_df.conditionId == condition.simulationConditionId, fixed_parameter_ids].values
                 edata.fixedParameters = fixed_parameter_vals.astype(float).flatten()
-                
+                print('FP',edata.fixedParameters)
                 if 'preequilibrationConditionId' in condition and condition.preequilibrationConditionId:
                     fixed_preequilibration_parameter_vals = condition_df.loc[
                         # TODO: preequilibrationConditionId might not exist
@@ -169,6 +171,7 @@ class Importer:
         # simulation <-> optimization parameter mapping
         par_opt_ids = self.petab_manager.get_optimization_parameters()
         par_sim_ids = self.petab_manager.get_dynamic_simulation_parameters()
+        
         mapping = petab.core.map_par_sim_to_par_opt(
             condition_df=self.petab_manager.condition_df,
             measurement_df=self.petab_manager.measurement_df,
@@ -177,7 +180,8 @@ class Importer:
             par_opt_ids=par_opt_ids,
             par_sim_ids=par_sim_ids
         )
-
+        
+        # create objective
         obj = AmiciObjective(
             amici_model=self.model, amici_solver=self.solver, edata=edatas,
             par_opt_ids=par_opt_ids, par_sim_ids=par_sim_ids, mapping=mapping

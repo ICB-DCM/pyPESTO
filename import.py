@@ -30,8 +30,8 @@ models = ['Bachmann_MSB2011', 'beer_MolBioSystems2014', 'boehm_JProteomeRes2014'
 #model_root = os.path.abspath(os.path.join('Benchmark-Models', 'hackathon_contributions_new_data_format'))
 model_root = '/home/yannik/benchmark-models/hackathon_contributions_new_data_format/'
 benchmark_model = 'Zheng_PNAS2012' # 'Zheng_PNAS2012'
-benchmark_model = "Boehm_JProteomeRes2014"
-benchmark_model = "Fujita_SciSignal2010"
+#benchmark_model = "Boehm_JProteomeRes2014"
+#benchmark_model = "Fujita_SciSignal2010"
 condition_filename = os.path.join(model_root, benchmark_model, f'experimentalCondition_{benchmark_model}.tsv')
 measurement_filename = os.path.join(model_root, benchmark_model,f'measurementData_{benchmark_model}.tsv')
 parameter_filename = os.path.join(model_root, benchmark_model, f'parameters_{benchmark_model}.tsv')
@@ -40,7 +40,7 @@ model_name = f'model_{benchmark_model}'
 model_output_dir = f'deleteme-{model_name}'
  
 rebuild = False
-rebuild = True
+#rebuild = True
 if rebuild:
     import_sbml_model(sbml_model_file=sbml_model_file,
                       condition_file=condition_filename,
@@ -79,6 +79,9 @@ manager = petab.Manager.from_folder(model_root + benchmark_model)
 manager.map_par_sim_to_par_opt()
 importer = pypesto.objective.Importer(manager)
 model = importer.model
+print("MODEL PAMS:", list(model.getParameterIds()))
+print("MODEL CONST PAMS:", list(model.getFixedParameterIds()))
+print("MODEL OUTPUTS:", list(model.getObservableIds()))
 model.setParameterScale(amici.ParameterScaling_log10)
 obj, edatas = importer.create_objective()
 x_nom = manager.parameter_df['nominalValue'].values
