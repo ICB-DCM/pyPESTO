@@ -31,6 +31,7 @@ models = ['Bachmann_MSB2011', 'beer_MolBioSystems2014', 'boehm_JProteomeRes2014'
 model_root = '/home/yannik/benchmark-models/hackathon_contributions_new_data_format/'
 benchmark_model = 'Zheng_PNAS2012' # 'Zheng_PNAS2012'
 benchmark_model = "Boehm_JProteomeRes2014"
+benchmark_model = "Fujita_SciSignal2010"
 condition_filename = os.path.join(model_root, benchmark_model, f'experimentalCondition_{benchmark_model}.tsv')
 measurement_filename = os.path.join(model_root, benchmark_model,f'measurementData_{benchmark_model}.tsv')
 parameter_filename = os.path.join(model_root, benchmark_model, f'parameters_{benchmark_model}.tsv')
