@@ -242,6 +242,15 @@ class AmiciObjective(Objective):
         # set order in solver
         self.amici_solver.setSensitivityOrder(sensi_order)
 
+        par_opt_ids = self.mapping[0]
+        par_sim_vals = np.zeros(len(self.par_sim_ids))
+        for j, id_par_sim in enumerate(self.par_sim_ids):
+            if isinstance(par_opt_ids[j], numbers.Number):
+                par_sim_vals[j] = par_opt_ids[j]
+            else:
+                par_sim_vals[j] = x[self.par_opt_ids.index(par_opt_ids[j])]
+        self.amici_model.setParameters(par_sim_vals)
+
         if self.preequilibration_edata:
             preeq_status = self.run_preequilibration(sensi_orders, mode)
             if preeq_status is not None:
@@ -609,3 +618,35 @@ def import_sbml_model(sbml_model_file, model_output_dir, model_name=None,
                              sigmas=sigmas,
                              **kwargs
                              )
+
+def map_par_opt_to_par_sim(mapping_opt_to_sim, par_opt_ids, x):
+    """
+    From the optimization vector `x`, create the simulation vector according
+    to the mapping `mapping`.
+
+    Parameters
+    ----------
+
+    mapping: array-like of str
+        len == n_par_sim, the entries are either numeric, or
+        optimization parameter ids.
+    par_opt_ids: array-like of str
+        The optimization parameter ids. This vector is needed to know the
+        order of the entries in x.
+    x: array-like of float
+        The optimization parameters vector.
+
+    Returns
+    -------
+
+    y: array-like of float
+        The simulation parameters vector corresponding to x under the
+        specified mapping.
+    """
+    par_sim_vals = np.zeros(len(par_sim_ids))
+    for j, id_par_sim in enumerate(par_sim_ids):
+        if isinstance(mapping_opt_to_sim[j], numbers.Number):
+            par_sim_vals[j] = par_opt_ids[j]
+        else:
+            par_sim_vals[j] = x[self.par_opt_ids.index(par_opt_ids[j])]
+    self.amici_model.setParameters(par_sim_vals)
