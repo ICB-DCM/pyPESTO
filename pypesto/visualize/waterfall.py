@@ -58,7 +58,7 @@ def waterfall_lowlevel(fvals, ax=None):
     fvals = np.array(fvals)
 
     n_fvals = len(fvals)
-    start_ind = range(1, n_fvals + 1)
+    start_ind = range(n_fvals)
 
     # assign colors
     # note: this has to happen before sorting
@@ -76,7 +76,7 @@ def waterfall_lowlevel(fvals, ax=None):
         j_fval = indices[j]
         color = colors[j_fval]
         fval = fvals[j_fval]
-        ax.plot(j + 1, fval, color=color, marker='o')
+        ax.plot(j, fval, color=color, marker='o')
 
     # labels
     ax.set_xlabel('Ordered optimizer run')
