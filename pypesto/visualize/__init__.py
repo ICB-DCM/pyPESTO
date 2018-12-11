@@ -13,10 +13,17 @@ from .clust_color import (assign_clusters,
                           assign_clustered_colors)
 from .parameters import (parameters,
                          parameters_lowlevel)
+from .profiles import (profiles,
+                       profiles_lowlevel,
+                       profile_lowlevel)
 
 __all__ = ["waterfall",
            "waterfall_lowlevel",
            "assign_clusters",
            "assign_clustered_colors",
            "parameters",
-           "parameters_lowlevel"]
+           "parameters_lowlevel",
+           "profiles",
+           "profiles_lowlevel",
+           "profile_lowlevel"
+           ]
