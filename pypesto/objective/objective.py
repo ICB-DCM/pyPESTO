@@ -65,6 +65,11 @@ class Objective:
         Flag indicating whether res takes sensi_orders as an argument.
         Default: False
 
+    x_names: list of str
+        Parameter names. None if no names provided, otherwise a list of str,
+        length dim_full (as in the Problem class). Can be read by the
+        problem.
+
     options: pypesto.ObjectiveOptions, optional
         Options as specified in pypesto.ObjectiveOptions.
 
@@ -74,11 +79,6 @@ class Objective:
     history: pypesto.ObjectiveHistory
         For storing the call history. Initialized by the optimizer in
         reset_history().
-
-    x_names: list of str
-        Parameter names. The base Objective class provides None.
-        None if no names provided, otherwise a list of str, length dim_full.
-        Can be read by the problem.
 
     preprocess: callable
         Preprocess input values to __call__.
@@ -101,6 +101,7 @@ class Objective:
                  res=None, sres=None,
                  fun_accept_sensi_orders=False,
                  res_accept_sensi_orders=False,
+                 x_names=None,
                  options=None):
         self.fun = fun
         self.grad = grad
@@ -126,7 +127,7 @@ class Objective:
         self.preprocess = preprocess
         self.postprocess = postprocess
 
-        self.x_names = None
+        self.x_names = x_names
 
     def __deepcopy__(self, memodict=None):
         other = Objective()

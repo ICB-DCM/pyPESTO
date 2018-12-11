@@ -20,20 +20,10 @@ class AmiciObjective(Objective):
     """
     This is a convenience class to compute an objective function from an
     AMICI model.
-
-    Attributes
-    ----------
-    optimization_parameter_ids:
-        IDs of optimization parameters. In the simplest case, this will the
-        AMICI model parameters.
-
-    simulation_to_optimization_parameter_mapping:
-        Mapping of optimization parameters to model parameters.
-        Array of size num_model_parameter x num_conditions
     """
 
     def __init__(self, amici_model, amici_solver, edata, max_sensi_order=None,
-                 par_opt_ids=None, par_sim_ids=None, mapping=None,
+                 x_ids=None, x_names=None, opt_to_sim_par_mapping=None,
                  preprocess_edata=True, options=None):
         """Constructor
 
@@ -46,11 +36,30 @@ class AmiciObjective(Objective):
         amici_solver: amici.Solver
             The solver to use for the numeric integration of the model.
 
-        edata:
+        edata: amici.ExpData or list of amici.ExpData
             The experimental data.
 
         max_sensi_order: int
             Maximum sensitivity order supported by the model.
+
+        x_ids: list of str, optional
+            Ids of optimization parameters. In the simplest case, this will be
+            the AMICI model parameters (default). Translates
+
+        x_names: list of str, optional
+            See Objective.
+
+        opt_to_sim_par_mapping, optional:
+            Mapping of optimization parameters to model parameters. List array
+            of size n_simulation_parameters * n_conditions.
+            The default is just to assume that optimization and simulation
+            parameters coincide. The default is to assume equality of both.
+
+        preprocess_edata: bool, optional
+            Whether to preprocess the experimental data.
+
+        options: pypesto.ObjectiveOptions, optional
+            Further options.
         """
         if amici is None:
             raise ImportError('This objective requires an installation of '
@@ -59,10 +68,6 @@ class AmiciObjective(Objective):
 
         if max_sensi_order is None:
             max_sensi_order = 2 if amici_model.o2mode else 1
-
-        self.par_opt_ids = par_opt_ids
-        self.par_sim_ids = par_sim_ids
-        self.mapping = mapping
 
         fun = self.get_bound_fun()
 
@@ -92,18 +97,32 @@ class AmiciObjective(Objective):
         self.amici_solver = amici_solver
         self.dim = len(amici_model.getParameterList())
 
+        if not isinstance(edata, list):
+            edata = [edata]
+
         if preprocess_edata:
-            self.preequilibration_edata = dict()
+            self.preequilibration_edata = []
             self.preprocess_edata(edata)
-            self.edata = edata
         else:
-            self.edata = edata
             self.preequilibration_edata = None
+        self.edata = edata
 
         self.max_sensi_order = max_sensi_order
 
+        # optimization parameter ids (for mapping)
+        if x_ids is None:
+            x_ids = list(self.amici_model.getParameterIds())
+        self.x_ids = x_ids
+
+        # mapping
+        if opt_to_sim_par_mapping is None:
+            opt_to_sim_par_mapping = [x_ids for _ in range(len(edata))]
+        self.opt_to_sim_par_mapping = opt_to_sim_par_mapping
+
         # extract parameter names from model
-        self.x_names = list(self.amici_model.getParameterNames())
+        if x_names is None:
+            x_names = list(self.amici_model.getParameterNames())
+        self.x_names = x_names
 
     def get_bound_fun(self):
         """
@@ -187,6 +206,7 @@ class AmiciObjective(Objective):
             x_fixed_indices,
             x_fixed_vals
         )
+
         # we subindex the existing plist in case there already is a user
         # specified plist
         plist = self.amici_model.getParameterList()
@@ -241,37 +261,21 @@ class AmiciObjective(Objective):
 
         # set order in solver
         self.amici_solver.setSensitivityOrder(sensi_order)
-
-        par_opt_ids = self.mapping[0]
-        par_sim_vals = np.zeros(len(self.par_sim_ids))
-        for j, id_par_sim in enumerate(self.par_sim_ids):
-            if isinstance(par_opt_ids[j], numbers.Number):
-                par_sim_vals[j] = par_opt_ids[j]
-            else:
-                par_sim_vals[j] = x[self.par_opt_ids.index(par_opt_ids[j])]
-        self.amici_model.setParameters(par_sim_vals)
-
+    
         if self.preequilibration_edata:
-            preeq_status = self.run_preequilibration(sensi_orders, mode)
+            preeq_status = self.run_preequilibration(sensi_orders, mode, x)
             if preeq_status is not None:
                 return preeq_status
 
         # loop over experimental data
         # TODO: ensure condition order is the same here for the generation of the mapping table
-        for data_index, data in enumerate(self.edata):
-            # set parameters in model, according to mapping
-            par_opt_ids = self.mapping[data_index]
-            par_sim_vals = np.zeros(len(self.par_sim_ids))
-            for j, id_par_sim in enumerate(self.par_sim_ids):
-                if isinstance(par_opt_ids[j], numbers.Number):
-                    par_sim_vals[j] = par_opt_ids[j]
-                else:
-                    par_sim_vals[j] = x[self.par_opt_ids.index(par_opt_ids[j])]
+        for data_ix, data in enumerate(self.edata):
 
-            self.amici_model.setParameters(par_sim_vals)
+            # set parameters in model, according to mapping
+            self.set_par_sim_for_condition(data_ix, x)
 
             if self.preequilibration_edata:
-                original_value_dict = self.preprocess_preequilibration(data)
+                original_value_dict = self.preprocess_preequilibration(data_ix)
             else:
                 original_value_dict = None
 
@@ -285,7 +289,7 @@ class AmiciObjective(Objective):
                 self.postprocess_preequilibration(data, original_value_dict)
 
             # logging
-            logger.debug(f'=== DATASET {data_index} ===')
+            logger.debug(f'=== DATASET {data_ix} ===')
             logger.debug(f'status: {rdata["status"]}')
             logger.debug(f'llh: {rdata["llh"]}')
 
@@ -321,10 +325,13 @@ class AmiciObjective(Objective):
             res=res, sres=sres
         )
 
-    def preprocess_preequilibration(self, data):
+    def preprocess_preequilibration(self, edata_ix):
+        data = self.edata[edata_ix]
+
         original_fixed_parameters_preequilibration = None
         original_initial_states = None
         original_initial_state_sensitivities = None
+        
         if len(data.fixedParametersPreequilibration):
             original_initial_states = self.amici_model.getInitialStates()
 
@@ -340,14 +347,12 @@ class AmiciObjective(Objective):
             original_fixed_parameters_preequilibration = fixed_parameters
 
             self.amici_model.setInitialStates(
-                self.preequilibration_edata[str(fixed_parameters)]['x0']
+                self.preequilibration_edata[edata_ix]['x0']
             )
             if self.amici_solver.getSensitivityOrder() > \
                     amici.SensitivityOrder_none:
                 self.amici_model.setInitialStateSensitivities(
-                    self.preequilibration_edata[
-                        str(fixed_parameters)
-                    ]['sx0'].flatten()
+                    self.preequilibration_edata[edata_ix]['sx0'].flatten()
                 )
 
         return {
@@ -356,9 +361,9 @@ class AmiciObjective(Objective):
             'sx0': original_initial_state_sensitivities
         }
 
-    def postprocess_preequilibration(self, data, original_value_dict):
+    def postprocess_preequilibration(self, edata, original_value_dict):
         if original_value_dict['k']:
-            data.fixedParametersPreequilibration = original_value_dict['k']
+            edata.fixedParametersPreequilibration = original_value_dict['k']
 
         if original_value_dict['x0']:
             self.amici_model.setInitialStates(original_value_dict['x0'])
@@ -369,21 +374,24 @@ class AmiciObjective(Objective):
             )
 
     def preprocess_edata(self, edata_vector):
+
+        self.preequilibration_edata = []
+
         for edata in edata_vector:
             fixed_parameters = list(edata.fixedParametersPreequilibration)
-            if str(fixed_parameters) in self.preequilibration_edata.keys() or \
-               len(fixed_parameters) == 0:
-                continue  # we only need to keep unique ones
+            #if str(fixed_parameters) in self.preequilibration_edata.keys() or \
+            #   len(fixed_parameters) == 0:
+            #    continue  # we only need to keep unique ones
 
             preeq_edata = amici.amici.ExpData(self.amici_model.get())
             preeq_edata.fixedParametersPreequilibration = fixed_parameters
 
             # only preequilibration
             preeq_edata.setTimepoints([])
-
-            self.preequilibration_edata[str(fixed_parameters)] = dict(
-                edata=preeq_edata
-            )
+            self.preequilibration_edata.append(dict(edata=preeq_edata))
+            #self.preequilibration_edata[str(fixed_parameters)] = dict(
+            #    edata=preeq_edata
+            #)
 
     def get_error_output(self, sensi_orders, mode):
         if not self.amici_model.nt():
@@ -402,27 +410,41 @@ class AmiciObjective(Objective):
             sres=np.nan * np.ones([n_res, self.dim])
         )
 
-    def run_preequilibration(self, sensi_orders, mode):
+    def run_preequilibration(self, sensi_orders, mode, x):
         """
         Run preequilibration.
         """
         
-        for fixedParameters in self.preequilibration_edata:
+        for data_ix, preeq_dict in enumerate(self.preequilibration_edata):
+
+            # map to simulation parameters
+            self.set_par_sim_for_condition(data_ix, x)
+
+            # TODO: Conditions might share preeq conditions and dynamic
+            # parameters. In that case, we can save time here.
+
+            # run amici simulation
             rdata = amici.runAmiciSimulation(
                 self.amici_model,
                 self.amici_solver,
-                self.preequilibration_edata[fixedParameters]['edata'])
+                preeq_dict['edata'])
 
             if rdata['status'] < 0.0:
                 return self.get_error_output(sensi_orders, mode)
 
-            self.preequilibration_edata[fixedParameters]['x0'] = \
-                rdata['x0']
+            preeq_dict['x0'] =  rdata['x0']
             if self.amici_solver.getSensitivityOrder() > \
                     amici.SensitivityOrder_none:
-                self.preequilibration_edata[fixedParameters]['sx0'] = \
-                    rdata['sx0']
+                preeq_dict['sx0'] = rdata['sx0']
 
+    def set_par_sim_for_condition(self, condition_idx, x):
+        """
+        Set the simulation parameters from the optimization parameters
+        for the given condnition.
+        """
+        mapping = self.opt_to_sim_par_mapping[condition_idx]
+        x_sim = map_par_opt_to_par_sim(mapping, self.x_ids, x)
+        self.amici_model.setParameters(x_sim)
 
     def simulations_to_measurement_df(self, x, measurement_file=None):
         """
@@ -619,7 +641,8 @@ def import_sbml_model(sbml_model_file, model_output_dir, model_name=None,
                              **kwargs
                              )
 
-def map_par_opt_to_par_sim(mapping_opt_to_sim, par_opt_ids, x):
+
+def map_par_opt_to_par_sim(mapping_par_opt_to_par_sim, par_opt_ids, x):
     """
     From the optimization vector `x`, create the simulation vector according
     to the mapping `mapping`.
@@ -627,7 +650,7 @@ def map_par_opt_to_par_sim(mapping_opt_to_sim, par_opt_ids, x):
     Parameters
     ----------
 
-    mapping: array-like of str
+    mapping_par_opt_to_par_sim: array-like of str
         len == n_par_sim, the entries are either numeric, or
         optimization parameter ids.
     par_opt_ids: array-like of str
@@ -643,10 +666,14 @@ def map_par_opt_to_par_sim(mapping_opt_to_sim, par_opt_ids, x):
         The simulation parameters vector corresponding to x under the
         specified mapping.
     """
-    par_sim_vals = np.zeros(len(par_sim_ids))
-    for j, id_par_sim in enumerate(par_sim_ids):
-        if isinstance(mapping_opt_to_sim[j], numbers.Number):
-            par_sim_vals[j] = par_opt_ids[j]
+
+    n_par_sim = len(mapping_par_opt_to_par_sim)
+    par_sim_vals = np.zeros(n_par_sim)
+    for j_par_sim in range(n_par_sim):
+        val = mapping_par_opt_to_par_sim[j_par_sim]
+        if isinstance(val, numbers.Number):
+            par_sim_vals[j_par_sim] = val
         else:
-            par_sim_vals[j] = x[self.par_opt_ids.index(par_opt_ids[j])]
-    self.amici_model.setParameters(par_sim_vals)
+            par_sim_vals[j_par_sim] = x[par_opt_ids.index(val)]
+    
+    return par_sim_vals

@@ -170,8 +170,10 @@ class Importer:
         
         # simulation <-> optimization parameter mapping
         par_opt_ids = self.petab_manager.get_optimization_parameters()
-        par_sim_ids = self.petab_manager.get_dynamic_simulation_parameters()
-        
+        # take sim parameter vector from model to ensure correct order
+        par_sim_ids = list(self.model.getParameterIds())
+        # par_sim_ids = self.petab_manager.get_dynamic_simulation_parameters()
+
         mapping = petab.core.map_par_sim_to_par_opt(
             condition_df=self.petab_manager.condition_df,
             measurement_df=self.petab_manager.measurement_df,
@@ -184,7 +186,7 @@ class Importer:
         # create objective
         obj = AmiciObjective(
             amici_model=self.model, amici_solver=self.solver, edata=edatas,
-            par_opt_ids=par_opt_ids, par_sim_ids=par_sim_ids, mapping=mapping
+            x_ids=par_opt_ids, x_names=par_opt_ids, opt_to_sim_par_mapping=mapping
         )
         
         return obj, edatas
