@@ -394,7 +394,7 @@ class AmiciObjective(Objective):
             print('pq_fp: ', preeq_dict['edata'].fixedParameters)
             # map to simulation parameters
             self.set_par_sim_for_condition(data_ix, x)
-
+            #self.amici_solver.setNewtonMaxSteps(1000000)
             # TODO: Conditions might share preeq conditions and dynamic
             # parameters. In that case, we can save time here.
             print(self.amici_model.getParameters())
@@ -403,7 +403,9 @@ class AmiciObjective(Objective):
                 self.amici_model,
                 self.amici_solver,
                 preeq_dict['edata'])
-            print(rdata['status']) 
+            print("NewtonMaxSteps:", self.amici_solver.getNewtonMaxSteps())
+            print(rdata['status'])
+            print(rdata)
             # check if an error occurred
             if rdata['status'] < 0.0:
                 return self.get_error_output(sensi_orders, mode)
