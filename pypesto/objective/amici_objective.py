@@ -22,10 +22,14 @@ class AmiciObjective(Objective):
     AMICI model.
     """
 
-    def __init__(self, amici_model, amici_solver, edata, max_sensi_order=None,
-                 x_ids=None, x_names=None, opt_to_sim_par_mapping=None,
-                 preprocess_edata=True, options=None):
-        """Constructor
+    def __init__(self,
+            amici_model, amici_solver, edata,
+            max_sensi_order=None,
+            x_ids=None, x_names=None, opt_to_sim_par_mapping=None,
+            preprocess_edata=True,
+            options=None):
+        """
+        Constructor
 
         Parameters
         ----------
@@ -37,7 +41,8 @@ class AmiciObjective(Objective):
             The solver to use for the numeric integration of the model.
 
         edata: amici.ExpData or list of amici.ExpData
-            The experimental data.
+            The experimental data. If a list is passed, its entries correspond
+            to multiple experimental conditions.
 
         max_sensi_order: int
             Maximum sensitivity order supported by the model.
@@ -67,6 +72,8 @@ class AmiciObjective(Objective):
                               'pip3 install amici.')
 
         if max_sensi_order is None:
+            # 2 if model was compiled with second orders,
+            # otherwise 1 can be guaranteed
             max_sensi_order = 2 if amici_model.o2mode else 1
 
         fun = self.get_bound_fun()
@@ -95,32 +102,41 @@ class AmiciObjective(Objective):
 
         self.amici_model = amici_model
         self.amici_solver = amici_solver
-        self.dim = len(amici_model.getParameterList())
 
+        # make sure the edatas are a list of edata objects
         if not isinstance(edata, list):
             edata = [edata]
 
         if preprocess_edata:
+            # preprocess the experimental data
             self.preequilibration_edata = []
-            self.preprocess_edata(edata)
+            self.init_preequilibration_edata(edata)
         else:
             self.preequilibration_edata = None
+        
+        # set the experimental data container
         self.edata = edata
 
+        # set the maximum sensitivity order
         self.max_sensi_order = max_sensi_order
 
-        # optimization parameter ids (for mapping)
+        # optimization parameter ids
         if x_ids is None:
+            # use model parameter ids as ids
             x_ids = list(self.amici_model.getParameterIds())
         self.x_ids = x_ids
+    
+        self.dim = len(self.x_ids)
 
         # mapping
         if opt_to_sim_par_mapping is None:
+            # use identity mapping for each condition
             opt_to_sim_par_mapping = [x_ids for _ in range(len(edata))]
         self.opt_to_sim_par_mapping = opt_to_sim_par_mapping
 
-        # extract parameter names from model
+        # optimization parameter names
         if x_names is None:
+            # use model parameter names as names
             x_names = list(self.amici_model.getParameterNames())
         self.x_names = x_names
 
@@ -172,7 +188,7 @@ class AmiciObjective(Objective):
                 other.__dict__[attr] = copy.deepcopy(self.__dict__[attr])
         return other
 
-    def update_from_problem(self,
+    def _update_from_problem(self,
                             dim_full,
                             x_free_indices,
                             x_fixed_indices,
@@ -181,6 +197,12 @@ class AmiciObjective(Objective):
         Handle fixed parameters. Here we implement the amici exclusive
         initialization of ParameterLists and respectively replace the
         generic postprocess function
+
+        TODO: Currently, this method is not used. Instead, the super fallback
+        Objective.update_from_problem ist used, which in particular does not
+        make use of pesto's ability to compute only compute requried directiol
+        derivativs. If that is inteded, the mapping between simulation and
+        optimization paraemters must be accounted for.
 
         Parameters
         ----------
@@ -261,14 +283,13 @@ class AmiciObjective(Objective):
 
         # set order in solver
         self.amici_solver.setSensitivityOrder(sensi_order)
-    
+        print("h1") 
         if self.preequilibration_edata:
             preeq_status = self.run_preequilibration(sensi_orders, mode, x)
             if preeq_status is not None:
                 return preeq_status
-
+        print("h2")
         # loop over experimental data
-        # TODO: ensure condition order is the same here for the generation of the mapping table
         for data_ix, data in enumerate(self.edata):
 
             # set parameters in model, according to mapping
@@ -325,36 +346,119 @@ class AmiciObjective(Objective):
             res=res, sres=sres
         )
 
+    def init_preequilibration_edata(self, edatas):
+        """
+        Extract information needed for doing preequilibration.
+        """
+        self.preequilibration_edata = []
+
+        for edata in edatas:
+            # extract values of the fixed parameters
+            fixed_parameters = list(edata.fixedParametersPreequilibration)
+
+            # create edata object from model
+            preeq_edata = amici.amici.ExpData(self.amici_model.get())
+
+            # fill in fixed parameter values for preequilibration
+            preeq_edata.fixedParametersPreequilibration = fixed_parameters
+
+            # only preequilibration
+            preeq_edata.setTimepoints([])
+
+            # indicate whether preequilibration is required for this data set
+            preequilibrate = len(fixed_parameters) > 0
+            # TODO: Currently, len(fixed_parameters) == 0 is used as an
+            # indicator of requiring no preequilibration. However, when there
+            # are events (which amici cannot deal with yet in python), the
+            # situation can occur that there are no fixed_parameters, but
+            # events that are omitted in the preequilibration run.
+
+            self.preequilibration_edata.append(dict(
+                edata=preeq_edata,
+                preequilibrate=preequilibrate
+            ))
+
+    def run_preequilibration(self, sensi_orders, mode, x):
+        """
+        Run preequilibration.
+        """
+        print("preeq_edata", self.preequilibration_edata) 
+        for data_ix, preeq_dict in enumerate(self.preequilibration_edata):
+            
+            if not preeq_dict['preequilibrate']:
+                # no preequilibration required
+                continue
+            print("h3", data_ix, preeq_dict)
+            print('pq_df: ', amici.getDataObservablesAsDataFrame(self.amici_model, [preeq_dict['edata']]))
+            print('pq_fpp: ', preeq_dict['edata'].fixedParametersPreequilibration)
+            print('pq_fp: ', preeq_dict['edata'].fixedParameters)
+            # map to simulation parameters
+            self.set_par_sim_for_condition(data_ix, x)
+
+            # TODO: Conditions might share preeq conditions and dynamic
+            # parameters. In that case, we can save time here.
+            print(self.amici_model.getParameters())
+            # run amici simulation
+            rdata = amici.runAmiciSimulation(
+                self.amici_model,
+                self.amici_solver,
+                preeq_dict['edata'])
+            print(rdata['status']) 
+            # check if an error occurred
+            if rdata['status'] < 0.0:
+                return self.get_error_output(sensi_orders, mode)
+
+            # fill state
+            preeq_dict['x0'] = rdata['x0']
+            if self.amici_solver.getSensitivityOrder() > \
+                    amici.SensitivityOrder_none:
+                # fill state sensitivities
+                # TODO check that these are always computed, i.e.
+                # forward sensitivities used
+                preeq_dict['sx0'] = rdata['sx0']
+
     def preprocess_preequilibration(self, edata_ix):
+        """
+        Update the model and data from the preequilibration states,
+        before running the real simulation.
+        """
+
         data = self.edata[edata_ix]
 
         original_fixed_parameters_preequilibration = None
         original_initial_states = None
         original_initial_state_sensitivities = None
         
-        if len(data.fixedParametersPreequilibration):
-            original_initial_states = self.amici_model.getInitialStates()
+        # if this data set needed preequilibration, adapt the states
+        # according to the previously run preequilibration
+        if self.preequilibration_edata[edata_ix]['preequilibrate']:
 
+            # remember original states and sensitivities
+            original_initial_states = self.amici_model.getInitialStates()
             if self.amici_solver.getSensitivityOrder() > \
                     amici.SensitivityOrder_none:
                 original_initial_state_sensitivities = \
                     self.amici_model.getInitialStateSensitivities()
-
-            fixed_parameters = copy.deepcopy(
-                list(data.fixedParametersPreequilibration)
-            )
+            
+            # remember original fixed parameters for preequilibration
+            original_fixed_parameters_preequilibration \
+                = data.fixedParametersPreequilibration
+            # unset fixed preequilibration parameters in data (TODO: Why?)
             data.fixedParametersPreequilibration = []
-            original_fixed_parameters_preequilibration = fixed_parameters
 
+            # set initial state from preequilibration
             self.amici_model.setInitialStates(
                 self.preequilibration_edata[edata_ix]['x0']
             )
+            
+            # set initial sensitivities from preequilibration
             if self.amici_solver.getSensitivityOrder() > \
                     amici.SensitivityOrder_none:
                 self.amici_model.setInitialStateSensitivities(
                     self.preequilibration_edata[edata_ix]['sx0'].flatten()
                 )
 
+        # return the original values
         return {
             'k': original_fixed_parameters_preequilibration,
             'x0': original_initial_states,
@@ -362,6 +466,14 @@ class AmiciObjective(Objective):
         }
 
     def postprocess_preequilibration(self, edata, original_value_dict):
+        """
+        Reset the model and edata to the true values, i.e. undo
+        the temporary changes done in preprocess_preequilibration.
+        """
+        
+        # reset values in edata from values in original_value_dict, if
+        # the corresponding entry in original_value_dict is not None.
+
         if original_value_dict['k']:
             edata.fixedParametersPreequilibration = original_value_dict['k']
 
@@ -372,26 +484,6 @@ class AmiciObjective(Objective):
             self.amici_model.setInitialStateSensitivities(
                 original_value_dict['sx0']
             )
-
-    def preprocess_edata(self, edata_vector):
-
-        self.preequilibration_edata = []
-
-        for edata in edata_vector:
-            fixed_parameters = list(edata.fixedParametersPreequilibration)
-            #if str(fixed_parameters) in self.preequilibration_edata.keys() or \
-            #   len(fixed_parameters) == 0:
-            #    continue  # we only need to keep unique ones
-
-            preeq_edata = amici.amici.ExpData(self.amici_model.get())
-            preeq_edata.fixedParametersPreequilibration = fixed_parameters
-
-            # only preequilibration
-            preeq_edata.setTimepoints([])
-            self.preequilibration_edata.append(dict(edata=preeq_edata))
-            #self.preequilibration_edata[str(fixed_parameters)] = dict(
-            #    edata=preeq_edata
-            #)
 
     def get_error_output(self, sensi_orders, mode):
         if not self.amici_model.nt():
@@ -410,39 +502,12 @@ class AmiciObjective(Objective):
             sres=np.nan * np.ones([n_res, self.dim])
         )
 
-    def run_preequilibration(self, sensi_orders, mode, x):
-        """
-        Run preequilibration.
-        """
-        
-        for data_ix, preeq_dict in enumerate(self.preequilibration_edata):
-
-            # map to simulation parameters
-            self.set_par_sim_for_condition(data_ix, x)
-
-            # TODO: Conditions might share preeq conditions and dynamic
-            # parameters. In that case, we can save time here.
-
-            # run amici simulation
-            rdata = amici.runAmiciSimulation(
-                self.amici_model,
-                self.amici_solver,
-                preeq_dict['edata'])
-
-            if rdata['status'] < 0.0:
-                return self.get_error_output(sensi_orders, mode)
-
-            preeq_dict['x0'] =  rdata['x0']
-            if self.amici_solver.getSensitivityOrder() > \
-                    amici.SensitivityOrder_none:
-                preeq_dict['sx0'] = rdata['sx0']
-
-    def set_par_sim_for_condition(self, condition_idx, x):
+    def set_par_sim_for_condition(self, condition_ix, x):
         """
         Set the simulation parameters from the optimization parameters
         for the given condnition.
         """
-        mapping = self.opt_to_sim_par_mapping[condition_idx]
+        mapping = self.opt_to_sim_par_mapping[condition_ix]
         x_sim = map_par_opt_to_par_sim(mapping, self.x_ids, x)
         self.amici_model.setParameters(x_sim)
 
@@ -667,13 +732,23 @@ def map_par_opt_to_par_sim(mapping_par_opt_to_par_sim, par_opt_ids, x):
         specified mapping.
     """
 
+    # number of simulation parameters
     n_par_sim = len(mapping_par_opt_to_par_sim)
+
+    # prepare simulation parameter vector
     par_sim_vals = np.zeros(n_par_sim)
+
+    # iterate over simulation parameter indices
     for j_par_sim in range(n_par_sim):
+        # extract entry in mapping table for j_par_sim
         val = mapping_par_opt_to_par_sim[j_par_sim]
+
         if isinstance(val, numbers.Number):
+            # fixed value assignment
             par_sim_vals[j_par_sim] = val
         else:
+            # value is optimization parameter id
             par_sim_vals[j_par_sim] = x[par_opt_ids.index(val)]
     
+    # return the created simulation parameter vector
     return par_sim_vals
