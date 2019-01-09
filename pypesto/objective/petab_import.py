@@ -41,14 +41,6 @@ class Importer:
         
         self.solver = self.model.getSolver()
         
-        self.x_ids = None
-        self.x_nominal = None
-        self.lb = None
-        self.ub = None
-        self.x_fixed_indices = None
-        self.x_fixed_vals = None
-        self.process_parameters()
-
     @staticmethod
     def from_folder(folder, output_folder=None, force_compile=False):
         """
@@ -125,26 +117,7 @@ class Importer:
             constantParameters=constant_parameter_ids,
             sigmas=sigmas
         )
-        
-    def process_parameters(self):
-        """
-        Extract parameter boundaries, nominal values, fixed indices.
-        """
-        parameter_df = self.petab_manager.parameter_df.reset_index()
-        
-        self.x_ids = list(parameter_df['parameterId'])
-        self.x_nominal = list(parameter_df['nominalValue'])
-
-        self.lb = list(parameter_df['lowerBound'])
-        self.ub = list(parameter_df['upperBound'])
-
-        scales = list(parameter_df['parameterScale'])
-        estimated = list(parameter_df['estimate'])
-        self.x_fixed_indices = [j for j, val in enumerate(estimated)
-                                if val == 0]
-        self.x_fixed_vals = [self.x_nominal[val]
-                             for val in self.x_fixed_indices]
-
+       
         # crate amici scalings vector
         #scaling_vector = amici.ParameterScalingVector()
         #for scale_str in scales:
@@ -250,9 +223,10 @@ class Importer:
 
     def create_problem(self, objective):
         problem = Problem(objective=objective,
-                          lb=self.lb, ub=self.ub,
-                          x_fixed_indices=self.x_fixed_indices,
-                          x_fixed_vals=self.x_fixed_vals,
-                          x_names=self.x_ids)
+                          lb=self.petab_manager.lb,
+                          ub=self.petab_manager.ub,
+                          x_fixed_indices=self.petab_manager.x_fixed_indices,
+                          x_fixed_vals=self.petab_manager.x_fixed_vals,
+                          x_names=self.petab_manager.x_ids)
 
         return problem
