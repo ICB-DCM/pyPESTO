@@ -25,7 +25,9 @@ class AmiciObjective(Objective):
     def __init__(self,
             amici_model, amici_solver, edata,
             max_sensi_order=None,
-            x_ids=None, x_names=None, opt_to_sim_par_mapping=None,
+            x_ids=None, x_names=None,
+            mapping_par_opt_to_par_sim=None,
+            mapping_scale_opt_to_scale_sim=None,
             preprocess_edata=True,
             options=None):
         """
@@ -54,11 +56,16 @@ class AmiciObjective(Objective):
         x_names: list of str, optional
             See Objective.
 
-        opt_to_sim_par_mapping, optional:
+        mapping_par_opt_to_par_sim, optional:
             Mapping of optimization parameters to model parameters. List array
             of size n_simulation_parameters * n_conditions.
             The default is just to assume that optimization and simulation
             parameters coincide. The default is to assume equality of both.
+
+        mapping_scale_opt_to_scale_sim, optional:
+            Mapping of optimization parameter scales to simulation parameter
+            scales. The defaul i to just use the scales specified in the
+            `amici_model` already.
 
         preprocess_edata: bool, optional
             Whether to preprocess the experimental data.
@@ -128,11 +135,19 @@ class AmiciObjective(Objective):
     
         self.dim = len(self.x_ids)
 
-        # mapping
-        if opt_to_sim_par_mapping is None:
+        # mapping of parameters
+        if mapping_par_opt_to_par_sim is None:
             # use identity mapping for each condition
-            opt_to_sim_par_mapping = [x_ids for _ in range(len(edata))]
-        self.opt_to_sim_par_mapping = opt_to_sim_par_mapping
+            mapping_par_opt_to_par_sim = [x_ids for _ in range(len(edata))]
+        self.mapping_par_opt_to_par_sim = mapping_par_opt_to_par_sim
+
+        # mapping of parameter scales
+        if mapping_scale_opt_to_scale_sim is None:
+            # use scales from amici_model
+            mapping_scale_opt_to_scale_sim = [
+                self.amici_model.getParameterScale() for _ in range(len(edata))
+            ]
+        self.mapping_scale_opt_to_scale_sim = mapping_scale_opt_to_scale_sim
 
         # optimization parameter names
         if x_names is None:
@@ -292,6 +307,9 @@ class AmiciObjective(Objective):
         # loop over experimental data
         for data_ix, data in enumerate(self.edata):
 
+            # set model parameter scale for condition index
+            self.set_parameter_scale(data_ix)
+
             # set parameters in model, according to mapping
             self.set_par_sim_for_condition(data_ix, x)
 
@@ -388,6 +406,10 @@ class AmiciObjective(Objective):
             if not preeq_dict['preequilibrate']:
                 # no preequilibration required
                 continue
+
+
+            # set model parameter scales for condition index
+            self.set_parameter_scale(data_ix)
 
             # map to simulation parameters
             self.set_par_sim_for_condition(data_ix, x)
@@ -504,9 +526,13 @@ class AmiciObjective(Objective):
         Set the simulation parameters from the optimization parameters
         for the given condnition.
         """
-        mapping = self.opt_to_sim_par_mapping[condition_ix]
+        mapping = self.mapping_par_opt_to_par_sim[condition_ix]
         x_sim = map_par_opt_to_par_sim(mapping, self.x_ids, x)
         self.amici_model.setParameters(x_sim)
+
+    def set_parameter_scale(self, condition_ix):
+        scale = self.mapping_scale_opt_to_scale_sim[condition_ix]
+        self.amici_model.setParameterScale(scale)
 
     def simulations_to_measurement_df(self, x, measurement_file=None):
         """

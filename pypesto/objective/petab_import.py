@@ -116,25 +116,8 @@ class Importer:
             observables=observables,
             constantParameters=constant_parameter_ids,
             sigmas=sigmas
-        )
-       
-        # crate amici scalings vector
-        #scaling_vector = amici.ParameterScalingVector()
-        #for scale_str in scales:
-        #    if scale_str == 'lin':
-        #        scale = amici.ParameterScaling_none
-        #    elif scale_str == 'log10':
-        #        scale = amici.ParameterScaling_log10
-        #    elif scale_str == 'log':
-        #        scale = amici.ParameterScaling_ln
-        #    else:
-        #        raise ValueError(
-        #            f"Parameter scaling not recognized: {scale_str}")
-        #    scaling_vector.append(scale)
+        ) 
 
-        # apply scalings to model
-        #self.model.setParameterScale(scaling_vector)
-        
     def create_objective(self):
         # number of amici simulations will be number of unique
         # (preequilibrationConditionId, simulationConditionId) pairs.
@@ -204,19 +187,34 @@ class Importer:
         par_sim_ids = list(self.model.getParameterIds())
         # par_sim_ids = self.petab_manager.get_dynamic_simulation_parameters()
 
-        mapping = petab.core.map_par_sim_to_par_opt(
-            condition_df=self.petab_manager.condition_df,
-            measurement_df=self.petab_manager.measurement_df,
-            parameter_df=self.petab_manager.parameter_df,
-            sbml_model=self.petab_manager.sbml_model,
-            par_opt_ids=par_opt_ids,
-            par_sim_ids=par_sim_ids
+        parameter_mapping = \
+            petab.core.get_optimization_to_simulation_parameter_mapping(
+                condition_df=self.petab_manager.condition_df,
+                measurement_df=self.petab_manager.measurement_df,
+                parameter_df=self.petab_manager.parameter_df,
+                sbml_model=self.petab_manager.sbml_model,
+                par_opt_ids=par_opt_ids,
+                par_sim_ids=par_sim_ids
         )
+
+        scale_mapping = \
+            petab.core.get_optimization_to_simulation_scale_mapping(
+                parameter_df= self.petab_manager.parameter_df,
+                mapping_par_opt_to_par_sim=parameter_mapping
+        )
+
+        print("PARAMETER MAPPING:", parameter_mapping)
+        print("SCALE MAPPING:", scale_mapping)
         
+        # convert scales to amici scales
+        scale_mapping = to_amici_parameter_scales(scale_mapping)
+
         # create objective
         obj = AmiciObjective(
             amici_model=self.model, amici_solver=self.solver, edata=edatas,
-            x_ids=par_opt_ids, x_names=par_opt_ids, opt_to_sim_par_mapping=mapping
+            x_ids=par_opt_ids, x_names=par_opt_ids,
+            mapping_par_opt_to_par_sim=parameter_mapping,
+            mapping_scale_opt_to_scale_sim=scale_mapping
         )
         
         return obj, edatas
@@ -230,3 +228,38 @@ class Importer:
                           x_names=self.petab_manager.x_ids)
 
         return problem
+
+def to_amici_parameter_scales(scale_mapping):
+    """
+    Convert petab parameter scales (e.g. 'lin', 'log', 'log10')
+    to amici scales.
+    """
+    n_condition = len(scale_mapping)
+    n_par_sim = len(scale_mapping[0])
+    
+    amici_scale_mapping = []
+
+    for j_condition in range(n_condition):
+        
+        amici_scale_vector = amici.ParameterScalingVector()
+        
+        for j_par_sim in range(n_par_sim):
+            val = scale_mapping[j_condition][j_par_sim]
+            
+            if val == 'lin':
+                scale = amici.ParameterScaling_none
+            elif val == 'log10':
+                scale = amici.ParameterScaling_log10
+            elif val == 'log':
+                scale = amici.ParameterScaling_ln
+            else:
+                raise ValueError(
+                    f"Parameter scaling not recognized: {val}")
+            
+            # append to scale vector
+            amici_scale_vector.append(scale)
+        
+        # append to mapping matrix
+        amici_scale_mapping.append(amici_scale_vector)
+    
+    return amici_scale_mapping
