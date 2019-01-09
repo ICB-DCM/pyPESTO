@@ -31,7 +31,7 @@ benchmark_model = 'Zheng_PNAS2012' # 'Zheng_PNAS2012'
 #benchmark_model = "Boehm_JProteomeRes2014"
 #benchmark_model = "Fujita_SciSignal2010"
 
-manager = petab.Manager.from_folder(model_root + benchmark_model)
+manager = petab.Problem.from_folder(model_root + benchmark_model)
 print("PARAMETER MAPPING:", manager.get_optimization_to_simulation_parameter_mapping())
 importer = pypesto.objective.Importer(manager)
 model = importer.model

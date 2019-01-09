@@ -15,25 +15,25 @@ from pypesto.problem import Problem
 
 class Importer:
 
-    def __init__(self, petab_manager, output_folder=None, force_compile=False):
+    def __init__(self, petab_problem, output_folder=None, force_compile=False):
         """
-        petab_manager: petab.Manager
+        petab_problem: petab.Problem
             Managing access to the model and data.
 
         output_folder: str,  optional
             Folder to contain the amici model. Defaults to
-            './tmp/petab_manager.name'.
+            './tmp/petab_problem.name'.
 
         force_compile: str, optional
             If False, the model is compiled only if the output folder does not
             exist yet. If True, the output folder is deleted and the model
             (re-)compiled in either case.
         """
-        self.petab_manager = petab_manager
+        self.petab_problem = petab_problem
 
         if output_folder is None:
             output_folder = os.path.abspath(
-                os.path.join("tmp", self.petab_manager.name))
+                os.path.join("tmp", self.petab_problem.name))
         self.output_folder = output_folder
         
         self.model = None
@@ -52,14 +52,14 @@ class Importer:
 
         folder: str
             Path to the base folder of the model, as in
-            petab.Manager.from_folder.
+            petab.Problem.from_folder.
 
         output_folder, force_compile: see __init__.
         """
-        petab_manager = petab.Manager.from_folder(folder)
+        petab_problem = petab.Problem.from_folder(folder)
 
         return Importer(
-            petab_manager=petab_manager,
+            petab_problem=petab_problem,
             output_folder=output_folder,
             force_compile=force_compile
         )
@@ -78,7 +78,7 @@ class Importer:
             sys.path.insert(0, self.output_folder)
         
         # load moduĺe
-        model_module = importlib.import_module(self.petab_manager.name)
+        model_module = importlib.import_module(self.petab_problem.name)
         
         # import model
         self.model = model_module.getModel()        
@@ -93,10 +93,10 @@ class Importer:
             os.rmtree(self.output_folder)
         
         # init sbml importer
-        sbml_importer = amici.SbmlImporter(self.petab_manager.sbml_file)
+        sbml_importer = amici.SbmlImporter(self.petab_problem.sbml_file)
         
         # constant parameters
-        condition_columns = self.petab_manager.condition_df.columns.values
+        condition_columns = self.petab_problem.condition_df.columns.values
         constant_parameter_ids = list(
             set(condition_columns) - {'conditionId', 'conditionName'}
         )
@@ -111,7 +111,7 @@ class Importer:
 
         # convert
         sbml_importer.sbml2amici(
-            modelName=self.petab_manager.name,
+            modelName=self.petab_problem.name,
             output_dir=self.output_folder,
             observables=observables,
             constantParameters=constant_parameter_ids,
@@ -123,8 +123,8 @@ class Importer:
         # (preequilibrationConditionId, simulationConditionId) pairs.
         # Can be improved by checking for identical condition vectors.
         
-        condition_df = self.petab_manager.condition_df
-        measurement_df = self.petab_manager.measurement_df
+        condition_df = self.petab_problem.condition_df
+        measurement_df = self.petab_problem.measurement_df
 
         # number of amici simulations will be number of unique
         # (preequilibrationCondition, simulationCondition) pairs.
@@ -182,24 +182,24 @@ class Importer:
             edatas.append(edata)
         
         # simulation <-> optimization parameter mapping
-        par_opt_ids = self.petab_manager.get_optimization_parameters()
+        par_opt_ids = self.petab_problem.get_optimization_parameters()
         # take sim parameter vector from model to ensure correct order
         par_sim_ids = list(self.model.getParameterIds())
-        # par_sim_ids = self.petab_manager.get_dynamic_simulation_parameters()
+        # par_sim_ids = self.petab_problem.get_dynamic_simulation_parameters()
 
         parameter_mapping = \
             petab.core.get_optimization_to_simulation_parameter_mapping(
-                condition_df=self.petab_manager.condition_df,
-                measurement_df=self.petab_manager.measurement_df,
-                parameter_df=self.petab_manager.parameter_df,
-                sbml_model=self.petab_manager.sbml_model,
+                condition_df=self.petab_problem.condition_df,
+                measurement_df=self.petab_problem.measurement_df,
+                parameter_df=self.petab_problem.parameter_df,
+                sbml_model=self.petab_problem.sbml_model,
                 par_opt_ids=par_opt_ids,
                 par_sim_ids=par_sim_ids
         )
 
         scale_mapping = \
             petab.core.get_optimization_to_simulation_scale_mapping(
-                parameter_df= self.petab_manager.parameter_df,
+                parameter_df= self.petab_problem.parameter_df,
                 mapping_par_opt_to_par_sim=parameter_mapping
         )
 
@@ -218,11 +218,11 @@ class Importer:
 
     def create_problem(self, objective):
         problem = Problem(objective=objective,
-                          lb=self.petab_manager.lb,
-                          ub=self.petab_manager.ub,
-                          x_fixed_indices=self.petab_manager.x_fixed_indices,
-                          x_fixed_vals=self.petab_manager.x_fixed_vals,
-                          x_names=self.petab_manager.x_ids)
+                          lb=self.petab_problem.lb,
+                          ub=self.petab_problem.ub,
+                          x_fixed_indices=self.petab_problem.x_fixed_indices,
+                          x_fixed_vals=self.petab_problem.x_fixed_vals,
+                          x_names=self.petab_problem.x_ids)
 
         return problem
 
