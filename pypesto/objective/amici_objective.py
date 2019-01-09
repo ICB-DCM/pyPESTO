@@ -343,6 +343,13 @@ class AmiciObjective(Objective):
             if mode == MODE_FUN:
                 nllh -= rdata['llh']
                 if sensi_order > 0:
+                    add_sim_grad_to_opt_grad(
+                        self.x_ids,
+                        self.mapping_par_opt_to_par_sim[data_ix],
+                        rdata['sllh'],
+                        snllh,
+                        coefficient=-1.0
+                    )
                     snllh -= rdata['sllh']
                     # TODO: Compute the full Hessian, and check here
                     ssnllh -= rdata['FIM']
@@ -595,3 +602,43 @@ def map_par_opt_to_par_sim(mapping_par_opt_to_par_sim, par_opt_ids, x):
 
     # return the created simulation parameter vector
     return par_sim_vals
+
+
+def add_sim_grad_to_opt_grad(par_opt_ids,
+                             mapping_par_opt_to_par_sim,
+                             sim_grad,
+                             opt_grad,
+                             coefficient=1.0):
+    """
+    Sum simulation gradients to objective gradient according to the provided
+    mapping `mapping`.
+
+    Parameters
+    ----------
+
+    par_opt_ids: array-like of str
+        The optimization parameter ids. This vector is needed to know the
+        order of the entries in x.
+    mapping_par_opt_to_par_sim: array-like of str
+        len == n_par_sim, the entries are either numeric, or
+        optimization parameter ids.
+    sim_grad: array-like of float
+        Simulation gradient.
+    opt_grad: array-like of float
+        The optimization gradient. To which sim_grad is added.
+        Will be changed in place.
+    coefficient: float
+        Coefficient for sim_grad when adding to opt_grad.
+
+    Returns
+    -------
+
+    """
+
+    for par_sim_idx, par_id in enumerate(mapping_par_opt_to_par_sim):
+        if not isinstance(par_id, str):
+            # This was a numeric override for which we ignore the gradient
+            continue
+
+        par_opt_idx = par_opt_ids.index(par_id)
+        opt_grad[par_opt_idx] += coefficient * sim_grad[par_sim_idx]
