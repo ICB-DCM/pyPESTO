@@ -5,7 +5,6 @@ pyPESTO
 Parameter Estimation TOolbox for python.
 """
 
-
 from .version import __version__  # noqa: F401
 from .objective import (ObjectiveOptions,
                         Objective,
@@ -21,6 +20,9 @@ from .optimize import (minimize,
                        Optimizer,
                        ScipyOptimizer,
                        DlibOptimizer)
+from .profile import (profile,
+                      ProfileOptions,
+                      ProfilerResult)
 
 __all__ = ["ObjectiveOptions",
            "Objective",
@@ -35,4 +37,7 @@ __all__ = ["ObjectiveOptions",
            "OptimizerResult",
            "Optimizer",
            "ScipyOptimizer",
-           "DlibOptimizer"]
+           "DlibOptimizer",
+           "profile",
+           "ProfileOptions",
+           "ProfilerResult"]

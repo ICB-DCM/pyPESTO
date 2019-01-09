@@ -8,8 +8,8 @@ optimization, profiles, sampling.
 
 """
 
-
 import pandas as pd
+import copy
 
 
 class OptimizeResult:
@@ -18,7 +18,6 @@ class OptimizeResult:
     """
 
     def __init__(self):
-
         self.list = []
 
     def append(self, optimizer_result):
@@ -85,7 +84,63 @@ class ProfileResult:
     """
 
     def __init__(self):
-        pass
+        self.list = []
+
+    def create_new_profile_list(self):
+        """
+        Append an profiler result to the result object.
+
+        Parameters
+        ----------
+        """
+        self.list.append([])
+
+    def create_new_profile(self, profiler_result=None):
+        """
+        Append an profiler result to the result object.
+
+        Parameters
+        ----------
+        profiler_result:
+            The result of one (local) profiler run or None, if to be left empty
+
+        profile_list: integer
+            index specifying the list of profiles, to which we want to append
+        """
+
+        current_profile = len(self.list)
+        new_profile = copy.deepcopy(profiler_result)
+        self.list[current_profile - 1].append(new_profile)
+
+    def add_profile(self, profiler_result, i_parameter):
+        """
+        Writes a profiler result to the result object at i_parameter.
+
+        Parameters
+        ----------
+        profiler_result:
+            The result of one (local) profiler run.
+
+        i_parameter:
+            integer specifying the parameter index
+        """
+
+        current_profile = len(self.list)
+        self.list[current_profile - 1][i_parameter] = \
+            copy.deepcopy(profiler_result)
+
+    def get_current_profile(self, i_parameter):
+        """
+        Append an profiler result to the result object.
+
+        Parameters
+        ----------
+        i_parameter:
+            integer specifying the profile index
+        """
+
+        current_profile = len(self.list)
+        return self.list[current_profile - 1][i_parameter]
 
 
 class SampleResult:
