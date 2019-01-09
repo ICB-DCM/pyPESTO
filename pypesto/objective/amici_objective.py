@@ -1,9 +1,7 @@
-import os
 import numpy as np
 import copy
 import logging
 import pandas as pd
-import petab
 import numbers
 from .objective import Objective
 from .constants import MODE_FUN, MODE_RES, HESS
@@ -23,13 +21,13 @@ class AmiciObjective(Objective):
     """
 
     def __init__(self,
-            amici_model, amici_solver, edata,
-            max_sensi_order=None,
-            x_ids=None, x_names=None,
-            mapping_par_opt_to_par_sim=None,
-            mapping_scale_opt_to_scale_sim=None,
-            preprocess_edata=True,
-            options=None):
+                 amici_model, amici_solver, edata,
+                 max_sensi_order=None,
+                 x_ids=None, x_names=None,
+                 mapping_par_opt_to_par_sim=None,
+                 mapping_scale_opt_to_scale_sim=None,
+                 preprocess_edata=True,
+                 options=None):
         """
         Constructor
 
@@ -56,15 +54,15 @@ class AmiciObjective(Objective):
         x_names: list of str, optional
             See Objective.
 
-        mapping_par_opt_to_par_sim, optional:
+        mapping_par_opt_to_par_sim: optional
             Mapping of optimization parameters to model parameters. List array
             of size n_simulation_parameters * n_conditions.
             The default is just to assume that optimization and simulation
             parameters coincide. The default is to assume equality of both.
 
-        mapping_scale_opt_to_scale_sim, optional:
+        mapping_scale_opt_to_scale_sim: optional
             Mapping of optimization parameter scales to simulation parameter
-            scales. The defaul i to just use the scales specified in the
+            scales. The default is to just use the scales specified in the
             `amici_model` already.
 
         preprocess_edata: bool, optional
@@ -120,7 +118,7 @@ class AmiciObjective(Objective):
             self.init_preequilibration_edata(edata)
         else:
             self.preequilibration_edata = None
-        
+
         # set the experimental data container
         self.edata = edata
 
@@ -132,7 +130,7 @@ class AmiciObjective(Objective):
             # use model parameter ids as ids
             x_ids = list(self.amici_model.getParameterIds())
         self.x_ids = x_ids
-    
+
         self.dim = len(self.x_ids)
 
         # mapping of parameters
@@ -402,7 +400,7 @@ class AmiciObjective(Objective):
         """
 
         for data_ix, preeq_dict in enumerate(self.preequilibration_edata):
-            
+
             if not preeq_dict['preequilibrate']:
                 # no preequilibration required
                 continue
@@ -447,7 +445,7 @@ class AmiciObjective(Objective):
         original_fixed_parameters_preequilibration = None
         original_initial_states = None
         original_initial_state_sensitivities = None
-        
+
         # if this data set needed preequilibration, adapt the states
         # according to the previously run preequilibration
         if self.preequilibration_edata[edata_ix]['preequilibrate']:
@@ -458,7 +456,7 @@ class AmiciObjective(Objective):
                     amici.SensitivityOrder_none:
                 original_initial_state_sensitivities = \
                     self.amici_model.getInitialStateSensitivities()
-            
+
             # remember original fixed parameters for preequilibration
             original_fixed_parameters_preequilibration \
                 = data.fixedParametersPreequilibration
@@ -469,7 +467,7 @@ class AmiciObjective(Objective):
             self.amici_model.setInitialStates(
                 self.preequilibration_edata[edata_ix]['x0']
             )
-            
+
             # set initial sensitivities from preequilibration
             if self.amici_solver.getSensitivityOrder() > \
                     amici.SensitivityOrder_none:
@@ -489,7 +487,7 @@ class AmiciObjective(Objective):
         Reset the model and edata to the true values, i.e. undo
         the temporary changes done in preprocess_preequilibration.
         """
-        
+
         # reset values in edata from values in original_value_dict, if
         # the corresponding entry in original_value_dict is not None.
 
@@ -533,9 +531,9 @@ class AmiciObjective(Objective):
     def set_parameter_scale(self, condition_ix):
         scale_list = self.mapping_scale_opt_to_scale_sim[condition_ix]
         amici_scale_vector = amici.ParameterScalingVector()
-        
+
         for val in scale_list:
-            
+
             if val == 'lin':
                 scale = amici.ParameterScaling_none
             elif val == 'log10':
@@ -545,10 +543,10 @@ class AmiciObjective(Objective):
             else:
                 raise ValueError(
                     f"Parameter scaling not recognized: {val}")
-            
+
             # append to scale vector
             amici_scale_vector.append(scale)
-        
+
         self.amici_model.setParameterScale(amici_scale_vector)
 
     def simulations_to_measurement_df(self, x, measurement_file=None):
@@ -663,6 +661,6 @@ def map_par_opt_to_par_sim(mapping_par_opt_to_par_sim, par_opt_ids, x):
         else:
             # value is optimization parameter id
             par_sim_vals[j_par_sim] = x[par_opt_ids.index(val)]
-    
+
     # return the created simulation parameter vector
     return par_sim_vals
