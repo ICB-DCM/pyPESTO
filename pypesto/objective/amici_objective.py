@@ -662,48 +662,6 @@ def amici_objective_from_measurement_file(sbml_model, condition_df, measurement_
     return obj
 
 
-def import_sbml_model(sbml_model_file, model_output_dir, model_name=None,
-                      measurement_file=None, condition_file=None, **kwargs):
-    """
-    Import SBML model following standard format documented in xxx
-
-    Determine fixed parameters and observables from SBML file.
-    """
-
-    if not model_name:
-        # Default model name is sbml filename without extension
-        model_name = os.path.splitext(os.path.split(sbml_model_file)[-1])[0]
-
-    sbml_importer = amici.SbmlImporter(sbml_model_file)
-
-    # Determine constant parameters
-    # TODO: also those marked constant in sbml model?
-    constant_parameters = None
-    if condition_file:
-        condition_df = pd.read_csv(condition_file, sep='\t')
-        constant_parameters = list(set(condition_df.columns.values.tolist()) - set(['conditionId', 'conditionName']))
-
-    if measurement_file:
-        measurement_df = petab.get_measurement_df(measurement_file)
-        # Check if all observables in measurement files have been specified in the model
-        petab.lint.assert_measured_observables_present_in_model(measurement_df,
-                                                            sbml_importer.sbml)
-
-    # Retrieve model output names and formulae from AssignmentRules and remove the respective rules
-    observables = petab.core.get_observables(sbml_importer.sbml, remove=True)
-
-    sigmas = petab.core.get_sigmas(sbml_importer.sbml, remove=True)
-    sigmas = {key[len('sigma_'):] : value['formula'] for key, value in sigmas.items()}
-
-    sbml_importer.sbml2amici(modelName=model_name,
-                             output_dir=model_output_dir,
-                             observables=observables,
-                             constantParameters=constant_parameters,
-                             sigmas=sigmas,
-                             **kwargs
-                             )
-
-
 def map_par_opt_to_par_sim(mapping_par_opt_to_par_sim, par_opt_ids, x):
     """
     From the optimization vector `x`, create the simulation vector according
