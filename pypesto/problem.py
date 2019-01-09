@@ -7,7 +7,6 @@ describing the problem to be solved.
 
 """
 
-
 import numpy as np
 import copy
 
@@ -89,15 +88,23 @@ class Problem:
         self.lb = np.array(lb).flatten()
         self.ub = np.array(ub).flatten()
 
+        self.lb_full = np.array(lb).flatten()
+        self.ub_full = np.array(ub).flatten()
+
         self.dim_full = dim_full if dim_full is not None else self.lb.size
 
         if x_fixed_indices is None:
             x_fixed_indices = []
         self.x_fixed_indices = [int(i) for i in x_fixed_indices]
 
+        # We want the fixed values to be a list, since we might need to add
+        # or remove values during profile computation
         if x_fixed_vals is None:
-            x_fixed_vals = np.array([])
-        self.x_fixed_vals = np.array(x_fixed_vals)
+            x_fixed_vals = []
+        if not isinstance(x_fixed_vals, list):
+            x_fixed_vals = [x_fixed_vals]
+
+        self.x_fixed_vals = x_fixed_vals
 
         self.dim = self.dim_full - len(self.x_fixed_indices)
 
@@ -118,7 +125,7 @@ class Problem:
 
         self.normalize_input()
 
-    def normalize_input(self):
+    def normalize_input(self, check_x_guesses=True):
         """
         Reduce all vectors to dimension dim and have the objective accept
         vectors of dimension dim.
@@ -128,11 +135,13 @@ class Problem:
             self.lb = self.lb[self.x_free_indices]
         elif self.lb.size == 1:
             self.lb = self.lb * np.ones(self.dim)
+            self.lb_full = self.lb * np.ones(self.dim_full)
 
         if self.ub.size == self.dim_full:
             self.ub = self.ub[self.x_free_indices]
         elif self.ub.size == 1:
             self.ub = self.ub * np.ones(self.dim)
+            self.ub_full = self.ub * np.ones(self.dim_full)
 
         if self.x_guesses.shape[1] == self.dim_full:
             self.x_guesses = self.x_guesses[:, self.x_free_indices]
@@ -149,14 +158,78 @@ class Problem:
             raise AssertionError("lb dimension invalid.")
         if self.ub.size != self.dim:
             raise AssertionError("ub dimension invalid.")
-        if self.x_guesses.shape[1] != self.dim:
-            raise AssertionError("x_guesses form invalid.")
+        if self.lb_full.size != self.dim_full:
+            raise AssertionError("lb_full dimension invalid.")
+        if self.ub_full.size != self.dim_full:
+            raise AssertionError("ub_full dimension invalid.")
+        if check_x_guesses:
+            if self.x_guesses.shape[1] != self.dim:
+                raise AssertionError("x_guesses form invalid.")
         if len(self.x_names) != self.dim_full:
             raise AssertionError("x_names must be of length dim_full.")
         if len(self.x_fixed_indices) != len(self.x_fixed_vals):
             raise AssertionError(
                 "x_fixed_indices and x_fixed_vals musti have the same length."
             )
+
+    def fix_parameters(self, parameter_indices, parameter_vals):
+        """
+        Fix specified parameters to specified values
+        """
+        if not isinstance(parameter_indices, list):
+            parameter_indices = [parameter_indices]
+
+        if not isinstance(parameter_vals, list):
+            parameter_vals = [parameter_vals]
+
+        # first clean to be fixed indices to avoid redundancies
+        for i_index, i_parameter in enumerate(parameter_indices):
+            # check if parameter was already fixed, otherwise add it to the
+            # fixed parameters
+            if i_parameter in self.x_fixed_indices:
+                self.x_fixed_vals[
+                    self.x_fixed_indices.index(i_parameter)] = \
+                    parameter_vals[i_index]
+            else:
+                self.x_fixed_indices.append(i_parameter)
+                self.x_fixed_vals.append(parameter_vals[i_index])
+
+        self.dim = self.dim_full - len(self.x_fixed_indices)
+
+        self.x_free_indices = [
+            int(i) for i in
+            set(range(0, self.dim_full)) - set(self.x_fixed_indices)
+        ]
+
+        self.normalize_input()
+
+    def unfix_parameters(self, parameter_indices):
+        """
+        Free specified parameters
+        """
+
+        # check and adapt input
+        if not isinstance(parameter_indices, list):
+            parameter_indices = [parameter_indices]
+
+        # first clean to be freed indices
+        for i_index, i_parameter in enumerate(parameter_indices):
+            if i_parameter in self.x_fixed_indices:
+                self.x_fixed_indices.pop(i_index)
+                self.x_fixed_vals.pop(i_index)
+
+        self.dim = self.dim_full - len(self.x_fixed_indices)
+
+        self.x_free_indices = [
+            int(i) for i in
+            set(range(0, self.dim_full)) - set(self.x_fixed_indices)
+        ]
+
+        # readapt bounds
+        self.lb = self.lb_full[self.x_free_indices]
+        self.ub = self.ub_full[self.x_free_indices]
+
+        self.normalize_input(False)
 
     def get_full_vector(self, x, x_fixed_vals=None):
         """
