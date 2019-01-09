@@ -30,48 +30,6 @@ model_root = '/home/yannik/benchmark-models/hackathon_contributions_new_data_for
 benchmark_model = 'Zheng_PNAS2012' # 'Zheng_PNAS2012'
 #benchmark_model = "Boehm_JProteomeRes2014"
 #benchmark_model = "Fujita_SciSignal2010"
-condition_filename = os.path.join(model_root, benchmark_model, f'experimentalCondition_{benchmark_model}.tsv')
-measurement_filename = os.path.join(model_root, benchmark_model,f'measurementData_{benchmark_model}.tsv')
-parameter_filename = os.path.join(model_root, benchmark_model, f'parameters_{benchmark_model}.tsv')
-sbml_model_file = os.path.join(model_root, benchmark_model, f'model_{benchmark_model}.xml')
-model_name = f'model_{benchmark_model}'
-model_output_dir = f'deleteme-{model_name}'
- 
-rebuild = False
-#rebuild = True
-if rebuild:
-    import_sbml_model(sbml_model_file=sbml_model_file,
-                      condition_file=condition_filename,
-                      measurement_file=measurement_filename,
-                      model_output_dir=model_output_dir,
-                      model_name=model_name)
-
-
-sys.path.insert(0, os.path.abspath(model_output_dir))
-model_module = importlib.import_module(model_name)
-
-model = model_module.getModel()
-model.requireSensitivitiesForAllParameters()
-
-solver = model.getSolver()
-solver.setSensitivityMethod(amici.SensitivityMethod_forward)
-solver.setSensitivityOrder(amici.SensitivityOrder_first)
-
-print("Model parameters:", list(model.getParameterIds()))
-print()
-print("Model const parameters:", list(model.getFixedParameterIds()))
-print()
-print("Model outputs:   ", list(model.getObservableIds()))
-print()
-print("Model states:    ", list(model.getStateIds()))
-
-from pypesto.logging import log_to_console
-log_to_console()
-
-# load nominal parameters from parameter description file
-parameter_df = petab.get_parameter_df(parameter_filename)
-
-# Create objective function instance from model and measurements
 
 manager = petab.Manager.from_folder(model_root + benchmark_model)
 manager.map_par_sim_to_par_opt()

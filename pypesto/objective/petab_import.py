@@ -46,7 +46,8 @@ class Importer:
         self.lb = None
         self.ub = None
         self.x_fixed_indices = None
-        #self.process_parameters()
+        self.x_fixed_vals = None
+        self.process_parameters()
 
     @staticmethod
     def from_folder(folder, output_folder=None, force_compile=False):
@@ -141,23 +142,25 @@ class Importer:
         estimated = list(parameter_df['estimate'])
         self.x_fixed_indices = [j for j, val in enumerate(estimated)
                                 if val == 0]
+        self.x_fixed_vals = [self.x_nominal[val]
+                             for val in self.x_fixed_indices]
 
         # crate amici scalings vector
-        scaling_vector = amici.ParameterScalingVector()
-        for scale_str in scales:
-            if scale_str == 'lin':
-                scale = amici.ParameterScaling_none
-            elif scale_str == 'log10':
-                scale = amici.ParameterScaling_log10
-            elif scale_str == 'log':
-                scale = amici.ParameterScaling_ln
-            else:
-                raise ValueError(
-                    f"Parameter scaling not recognized: {scale_str}")
-            scaling_vector.append(scale)
+        #scaling_vector = amici.ParameterScalingVector()
+        #for scale_str in scales:
+        #    if scale_str == 'lin':
+        #        scale = amici.ParameterScaling_none
+        #    elif scale_str == 'log10':
+        #        scale = amici.ParameterScaling_log10
+        #    elif scale_str == 'log':
+        #        scale = amici.ParameterScaling_ln
+        #    else:
+        #        raise ValueError(
+        #            f"Parameter scaling not recognized: {scale_str}")
+        #    scaling_vector.append(scale)
 
         # apply scalings to model
-        self.model.setParameterScale(scaling_vector)
+        #self.model.setParameterScale(scaling_vector)
         
     def create_objective(self):
         # number of amici simulations will be number of unique
@@ -247,9 +250,9 @@ class Importer:
 
     def create_problem(self, objective):
         problem = Problem(objective=objective,
-                          lb=self.par_lb, ub=self.par_ub,
-                          x_fixed_indices=self.par_fixed_indices,
-                          x_fixed_vals=self.par_fixed_vals,
-                          x_names=self.par_ids)
+                          lb=self.lb, ub=self.ub,
+                          x_fixed_indices=self.x_fixed_indices,
+                          x_fixed_vals=self.x_fixed_vals,
+                          x_names=self.x_ids)
 
         return problem
