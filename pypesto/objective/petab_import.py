@@ -1,10 +1,7 @@
 import numpy as np
-import pandas as pd
 import os
 import sys
 import importlib
-import libsbml
-import copy
 import numbers
 
 import amici
@@ -35,12 +32,12 @@ class Importer:
             output_folder = os.path.abspath(
                 os.path.join("tmp", self.petab_manager.name))
         self.output_folder = output_folder
-        
+
         self.model = None
         self.import_model(force_compile)
-        
+
         self.solver = self.model.getSolver()
-        
+
     @staticmethod
     def from_folder(folder, output_folder=None, force_compile=False):
         """
@@ -72,17 +69,17 @@ class Importer:
         # compile
         if not os.path.exists(self.output_folder) or force_compile:
             self.compile_model()
-        
+
         # add module to path
         if self.output_folder not in sys.path:
             sys.path.insert(0, self.output_folder)
-        
+
         # load moduĺe
         model_module = importlib.import_module(self.petab_manager.name)
-        
+
         # import model
-        self.model = model_module.getModel()        
-        
+        self.model = model_module.getModel()
+
     def compile_model(self):
         """
         Compile the model. If the output folder exists already, it is first
@@ -91,10 +88,10 @@ class Importer:
         # delete output directory
         if os.path.exists(self.output_folder):
             os.rmtree(self.output_folder)
-        
+
         # init sbml importer
         sbml_importer = amici.SbmlImporter(self.petab_manager.sbml_file)
-        
+
         # constant parameters
         condition_columns = self.petab_manager.condition_df.columns.values
         constant_parameter_ids = list(
@@ -116,13 +113,13 @@ class Importer:
             observables=observables,
             constantParameters=constant_parameter_ids,
             sigmas=sigmas
-        ) 
+        )
 
     def create_objective(self):
         # number of amici simulations will be number of unique
         # (preequilibrationConditionId, simulationConditionId) pairs.
         # Can be improved by checking for identical condition vectors.
-        
+
         condition_df = self.petab_manager.condition_df
         measurement_df = self.petab_manager.measurement_df
 
@@ -137,21 +134,21 @@ class Importer:
 
         observable_ids = self.model.getObservableIds()
         fixed_parameter_ids = self.model.getFixedParameterIds()
-        
+
         edatas = []
         for edata_idx, condition in simulation_conditions.iterrows():
             # amici.ExpData for each simulation
-            filter = 1
+            column_filter = 1
             for col in grouping_cols:
-                filter = (measurement_df[col] == condition[col]) & filter
-            cur_measurement_df = measurement_df.loc[filter, :]
+                column_filter = (measurement_df[col] == condition[col]) & column_filter
+            cur_measurement_df = measurement_df.loc[column_filter, :]
 
             timepoints = sorted(
                 cur_measurement_df.time.unique().astype(float))
-            
+
             edata = amici.ExpData(self.model.get())
             edata.setTimepoints(timepoints)
-            
+
             if len(fixed_parameter_ids) > 0:
                 fixed_parameter_vals = condition_df.loc[
                     condition_df.conditionId ==  condition.simulationConditionId,
@@ -163,24 +160,24 @@ class Importer:
                         # TODO: preequilibrationConditionId might not exist
                         condition_df.conditionId == condition.preequilibrationConditionId, fixed_parameter_ids].values
                     edata.fixedParametersPreequilibration = fixed_preequilibration_parameter_vals.astype(float).flatten()
-            
+
             y = np.full(shape=(edata.nt(), edata.nytrue()), fill_value=np.nan)
             sigma_y = np.full(shape=(edata.nt(), edata.nytrue()), fill_value=np.nan)
-            
+
             # add measurements and sigmas
             for _, measurement in cur_measurement_df.iterrows():
                 time_ix = timepoints.index(measurement.time)
                 observable_ix = observable_ids.index(f'observable_{measurement.observableId}')
                 # TODO: measurement file should contain prefix
-                
+
                 y[time_ix, observable_ix] = measurement.measurement
                 if isinstance(measurement.noiseParameters, numbers.Number):
                     sigma_y[time_ix, observable_ix] = measurement.noiseParameters
-            
+
             edata.setObservedData(y.flatten())
             edata.setObservedDataStdDev(sigma_y.flatten())
             edatas.append(edata)
-        
+
         # simulation <-> optimization parameter mapping
         par_opt_ids = self.petab_manager.get_optimization_parameters()
         # take sim parameter vector from model to ensure correct order
@@ -213,7 +210,7 @@ class Importer:
             mapping_par_opt_to_par_sim=parameter_mapping,
             mapping_scale_opt_to_scale_sim=scale_mapping
         )
-        
+
         return obj, edatas
 
     def create_problem(self, objective):
@@ -225,4 +222,3 @@ class Importer:
                           x_names=self.petab_manager.x_ids)
 
         return problem
-
