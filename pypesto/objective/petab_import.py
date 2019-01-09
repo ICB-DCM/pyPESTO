@@ -203,11 +203,8 @@ class Importer:
                 mapping_par_opt_to_par_sim=parameter_mapping
         )
 
-        print("PARAMETER MAPPING:", parameter_mapping)
-        print("SCALE MAPPING:", scale_mapping)
-        
-        # convert scales to amici scales
-        scale_mapping = to_amici_parameter_scales(scale_mapping)
+        #print("PARAMETER MAPPING:", parameter_mapping)
+        #print("SCALE MAPPING:", scale_mapping)
 
         # create objective
         obj = AmiciObjective(
@@ -229,37 +226,3 @@ class Importer:
 
         return problem
 
-def to_amici_parameter_scales(scale_mapping):
-    """
-    Convert petab parameter scales (e.g. 'lin', 'log', 'log10')
-    to amici scales.
-    """
-    n_condition = len(scale_mapping)
-    n_par_sim = len(scale_mapping[0])
-    
-    amici_scale_mapping = []
-
-    for j_condition in range(n_condition):
-        
-        amici_scale_vector = amici.ParameterScalingVector()
-        
-        for j_par_sim in range(n_par_sim):
-            val = scale_mapping[j_condition][j_par_sim]
-            
-            if val == 'lin':
-                scale = amici.ParameterScaling_none
-            elif val == 'log10':
-                scale = amici.ParameterScaling_log10
-            elif val == 'log':
-                scale = amici.ParameterScaling_ln
-            else:
-                raise ValueError(
-                    f"Parameter scaling not recognized: {val}")
-            
-            # append to scale vector
-            amici_scale_vector.append(scale)
-        
-        # append to mapping matrix
-        amici_scale_mapping.append(amici_scale_vector)
-    
-    return amici_scale_mapping

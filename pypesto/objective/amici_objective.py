@@ -531,8 +531,25 @@ class AmiciObjective(Objective):
         self.amici_model.setParameters(x_sim)
 
     def set_parameter_scale(self, condition_ix):
-        scale = self.mapping_scale_opt_to_scale_sim[condition_ix]
-        self.amici_model.setParameterScale(scale)
+        scale_list = self.mapping_scale_opt_to_scale_sim[condition_ix]
+        amici_scale_vector = amici.ParameterScalingVector()
+        
+        for val in scale_list:
+            
+            if val == 'lin':
+                scale = amici.ParameterScaling_none
+            elif val == 'log10':
+                scale = amici.ParameterScaling_log10
+            elif val == 'log':
+                scale = amici.ParameterScaling_ln
+            else:
+                raise ValueError(
+                    f"Parameter scaling not recognized: {val}")
+            
+            # append to scale vector
+            amici_scale_vector.append(scale)
+        
+        self.amici_model.setParameterScale(amici_scale_vector)
 
     def simulations_to_measurement_df(self, x, measurement_file=None):
         """
