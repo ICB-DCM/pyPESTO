@@ -28,10 +28,14 @@ class ProfileOptions(dict):
 
     def __init__(self,
                  default_step_size=0.01,
+                 min_step_size=0.0001,
+                 max_step_size=1.,
                  ratio_min=0.145):
         super().__init__()
 
         self.default_step_size = default_step_size
+        self.min_step_size = min_step_size
+        self.max_step_size = max_step_size
         self.ratio_min = ratio_min
 
     def __getattr__(self, key):
@@ -124,8 +128,33 @@ def profile(
     # profile startpoint method
     if create_profile_startpoint is None:
         def create_next_startpoint(x, par_index, par_direction):
-            return fixed_step(x, par_index, par_direction,
-                              step_size=profile_options.default_step_size)
+            return fixed_step(x, par_index, par_direction, profile_options,
+                              current_profile)
+    elif isinstance(create_profile_startpoint, basestring):
+        if create_profile_startpoint == 'fixed_step':
+            def create_next_startpoint(x, par_index, par_direction):
+                return fixed_step(x, par_index, par_direction, profile_options,
+                                  current_profile)
+        elif create_profile_startpoint == 'adaptive_step_order_0':
+            def create_next_startpoint(x, par_index, par_direction):
+                return adaptive_step_order_0(x, par_index, par_direction,
+                                             profile_options, current_profile)
+        elif create_profile_startpoint == 'adaptive_step_order_1':
+            def create_next_startpoint(x, par_index, par_direction):
+                return adaptive_step_order_0(x, par_index, par_direction,
+                                             profile_options, current_profile)
+        elif create_profile_startpoint == 'adaptive_step_regression':
+            def create_next_startpoint(x, par_index, par_direction):
+                return adaptive_step_order_0(x, par_index, par_direction,
+                                             profile_options, current_profile)
+        else:
+            raise Exception('Call to unknown name of profiling routine.')
+    elif isinstance(create_profile_startpoint, function):
+        raise Exception('Passing function handles for computation of next '
+                        'profiling point is not yet supported.')
+    else:
+        raise Exception('Unsupported input for create_next_startpoint.')
+    
 
     # check optimization ptions
     if optimize_options is None:
@@ -226,7 +255,8 @@ def walk_along_profile(current_profile,
             break
 
         # compute the new start point for optimization
-        x_next = create_next_startpoint(x_now, i_parameter, par_direction)
+        x_next = create_next_startpoint(x_now, i_parameter, par_direction,
+                                        current_profile)
 
         # check whether the next point is maybe outside the bounds
         # and correct it
