@@ -9,8 +9,7 @@ from .version import __version__  # noqa: F401
 from .objective import (ObjectiveOptions,
                         Objective,
                         AmiciObjective,
-                        Prior,
-                        Scale)
+                        Prior)
 from .problem import Problem
 from .result import (Result,
                      OptimizeResult,
@@ -41,8 +40,7 @@ __all__ = ["ObjectiveOptions",
            "ScipyOptimizer",
            "DlibOptimizer",
 <<<<<<< HEAD
-           "Prior",
-           "Scale"]
+           "Prior"]
 =======
            "profile",
            "ProfileOptions",

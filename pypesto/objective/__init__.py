@@ -9,12 +9,10 @@ from .amici_objective import AmiciObjective
 from .options import ObjectiveOptions
 from .util import res_to_chi2, sres_to_schi2
 from .prior import Prior
-from .scale import Scale
 
 __all__ = ["Objective",
            "ObjectiveOptions",
            "res_to_chi2",
            "sres_to_schi2",
            "AmiciObjective",
-           "Prior",
-           "Scale"]
+           "Prior"]
