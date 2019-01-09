@@ -283,12 +283,12 @@ class AmiciObjective(Objective):
 
         # set order in solver
         self.amici_solver.setSensitivityOrder(sensi_order)
-        print("h1") 
+
         if self.preequilibration_edata:
             preeq_status = self.run_preequilibration(sensi_orders, mode, x)
             if preeq_status is not None:
                 return preeq_status
-        print("h2")
+
         # loop over experimental data
         for data_ix, data in enumerate(self.edata):
 
@@ -382,30 +382,25 @@ class AmiciObjective(Objective):
         """
         Run preequilibration.
         """
-        print("preeq_edata", self.preequilibration_edata) 
+
         for data_ix, preeq_dict in enumerate(self.preequilibration_edata):
             
             if not preeq_dict['preequilibrate']:
                 # no preequilibration required
                 continue
-            print("h3", data_ix, preeq_dict)
-            print('pq_df: ', amici.getDataObservablesAsDataFrame(self.amici_model, [preeq_dict['edata']]))
-            print('pq_fpp: ', preeq_dict['edata'].fixedParametersPreequilibration)
-            print('pq_fp: ', preeq_dict['edata'].fixedParameters)
+
             # map to simulation parameters
             self.set_par_sim_for_condition(data_ix, x)
-            #self.amici_solver.setNewtonMaxSteps(1000000)
+
             # TODO: Conditions might share preeq conditions and dynamic
             # parameters. In that case, we can save time here.
-            print(self.amici_model.getParameters())
+
             # run amici simulation
             rdata = amici.runAmiciSimulation(
                 self.amici_model,
                 self.amici_solver,
                 preeq_dict['edata'])
-            print("NewtonMaxSteps:", self.amici_solver.getNewtonMaxSteps())
-            print(rdata['status'])
-            print(rdata)
+
             # check if an error occurred
             if rdata['status'] < 0.0:
                 return self.get_error_output(sensi_orders, mode)
