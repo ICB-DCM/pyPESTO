@@ -16,11 +16,24 @@ from pypesto.problem import Problem
 class Importer:
 
     def __init__(self, petab_manager, output_folder=None, force_compile=False):
-        
+        """
+        petab_manager: petab.Manager
+            Managing access to the model and data.
+
+        output_folder: str,  optional
+            Folder to contain the amici model. Defaults to
+            './tmp/petab_manager.name'.
+
+        force_compile: str, optional
+            If False, the model is compiled only if the output folder does not
+            exist yet. If True, the output folder is deleted and the model
+            (re-)compiled in either case.
+        """
         self.petab_manager = petab_manager
 
         if output_folder is None:
-            output_folder = os.path.abspath(os.path.join("tmp", self.petab_manager.name))
+            output_folder = os.path.abspath(
+                os.path.join("tmp", self.petab_manager.name))
         self.output_folder = output_folder
         
         self.model = None
@@ -28,13 +41,28 @@ class Importer:
         
         self.solver = self.model.getSolver()
         
+        self.x_ids = None
         self.x_nominal = None
         self.lb = None
         self.ub = None
+        self.x_fixed_indices = None
         #self.process_parameters()
 
     @staticmethod
     def from_folder(folder, output_folder=None, force_compile=False):
+        """
+        Simplified constructor exploiting the standardized petab folder
+        structure.
+
+        Parameters
+        ----------
+
+        folder: str
+            Path to the base folder of the model, as in
+            petab.Manager.from_folder.
+
+        output_folder, force_compile: see __init__.
+        """
         petab_manager = petab.Manager.from_folder(folder)
 
         return Importer(
@@ -44,9 +72,14 @@ class Importer:
         )
 
     def import_model(self, force_compile=False):
+        """
+        Import amici model. If necessary or force_compile is True, compile
+        first.
+        """
         # compile
         if not os.path.exists(self.output_folder) or force_compile:
             self.compile_model()
+        
         # add module to path
         if self.output_folder not in sys.path:
             sys.path.insert(0, self.output_folder)
@@ -58,6 +91,10 @@ class Importer:
         self.model = model_module.getModel()        
         
     def compile_model(self):
+        """
+        Compile the model. If the output folder exists already, it is first
+        deleted.
+        """
         # delete output directory
         if os.path.exists(self.output_folder):
             os.rmtree(self.output_folder)
@@ -66,8 +103,9 @@ class Importer:
         sbml_importer = amici.SbmlImporter(self.petab_manager.sbml_file)
         
         # constant parameters
+        condition_columns = self.petab_manager.condition_df.columns.values
         constant_parameter_ids = list(
-            set(self.petab_manager.condition_df.columns.values) - {'conditionId', 'conditionName'}
+            set(condition_columns) - {'conditionId', 'conditionName'}
         )
 
         # observables
@@ -75,7 +113,8 @@ class Importer:
 
         # sigmas
         sigmas = petab.get_sigmas(sbml_importer.sbml)
-        sigmas = {key.replace('sigma_', 'observable_', 1) : value['formula'] for key, value in sigmas.items()}
+        sigmas = {key.replace('sigma_', 'observable_', 1) : value['formula']
+                  for key, value in sigmas.items()}
 
         # convert
         sbml_importer.sbml2amici(
@@ -87,20 +126,25 @@ class Importer:
         )
         
     def process_parameters(self):
+        """
+        Extract parameter boundaries, nominal values, fixed indices.
+        """
         parameter_df = self.petab_manager.parameter_df.reset_index()
-        self.par_ids = list(parameter_df['parameterId'])
-        self.par_nominal_values = list(parameter_df['nominalValue'])
-        self.par_lb = list(parameter_df['lowerBound'])
-        self.par_ub = list(parameter_df['upperBound'])
-        self.par_scale = list(parameter_df['parameterScale'])
+        
+        self.x_ids = list(parameter_df['parameterId'])
+        self.x_nominal = list(parameter_df['nominalValue'])
+
+        self.lb = list(parameter_df['lowerBound'])
+        self.ub = list(parameter_df['upperBound'])
+
+        scales = list(parameter_df['parameterScale'])
         estimated = list(parameter_df['estimate'])
-        self.par_fixed_indices = [j for j, val in enumerate(estimated)
-                                  if val == 0]
-        self.par_fixed_vals = [self.par_nominal_values[j]
-                               for j, val in enumerate(estimated)
-                               if val == 0]
-        scaling_vector = amici.ScalingVector()
-        for scale_str in self.par_scale:
+        self.x_fixed_indices = [j for j, val in enumerate(estimated)
+                                if val == 0]
+
+        # crate amici scalings vector
+        scaling_vector = amici.ParameterScalingVector()
+        for scale_str in scales:
             if scale_str == 'lin':
                 scale = amici.ParameterScaling_none
             elif scale_str == 'log10':
@@ -108,8 +152,11 @@ class Importer:
             elif scale_str == 'log':
                 scale = amici.ParameterScaling_ln
             else:
-                raise ValueError(f"Parameter scaling not recognized: {scale_str}")
+                raise ValueError(
+                    f"Parameter scaling not recognized: {scale_str}")
             scaling_vector.append(scale)
+
+        # apply scalings to model
         self.model.setParameterScale(scaling_vector)
         
     def create_objective(self):
@@ -120,9 +167,14 @@ class Importer:
         condition_df = self.petab_manager.condition_df
         measurement_df = self.petab_manager.measurement_df
 
+        # number of amici simulations will be number of unique
+        # (preequilibrationCondition, simulationCondition) pairs.
+        # can be improved by checking for identical condition vectors.
         grouping_cols = petab.core.get_notnull_columns(
-            measurement_df, ['simulationConditionId', 'preequilibrationConditionId'])
-        simulation_conditions = measurement_df.groupby(grouping_cols).size().reset_index()
+            measurement_df,
+            ['simulationConditionId', 'preequilibrationConditionId'])
+        simulation_conditions = measurement_df.groupby(
+            grouping_cols).size().reset_index()
 
         observable_ids = self.model.getObservableIds()
         fixed_parameter_ids = self.model.getFixedParameterIds()
@@ -135,14 +187,16 @@ class Importer:
                 filter = (measurement_df[col] == condition[col]) & filter
             cur_measurement_df = measurement_df.loc[filter, :]
 
-            timepoints = sorted(cur_measurement_df.time.unique().astype(float))
+            timepoints = sorted(
+                cur_measurement_df.time.unique().astype(float))
             
             edata = amici.ExpData(self.model.get())
             edata.setTimepoints(timepoints)
             
             if len(fixed_parameter_ids) > 0:
                 fixed_parameter_vals = condition_df.loc[
-                    condition_df.conditionId == condition.simulationConditionId, fixed_parameter_ids].values
+                    condition_df.conditionId ==  condition.simulationConditionId,
+                    fixed_parameter_ids].values
                 edata.fixedParameters = fixed_parameter_vals.astype(float).flatten()
 
                 if 'preequilibrationConditionId' in condition and condition.preequilibrationConditionId:
