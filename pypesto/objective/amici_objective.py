@@ -350,7 +350,6 @@ class AmiciObjective(Objective):
                         snllh,
                         coefficient=-1.0
                     )
-                    snllh -= rdata['sllh']
                     # TODO: Compute the full Hessian, and check here
                     ssnllh -= rdata['FIM']
 
