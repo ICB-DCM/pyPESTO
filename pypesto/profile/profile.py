@@ -3,7 +3,7 @@ import numpy as np
 from pypesto import Result
 from ..optimize import OptimizeOptions
 from .profiler import ProfilerResult
-from .profile_startpoint import fixed_step
+from .profile_next_guess import next_guess
 
 logger = logging.getLogger(__name__)
 
@@ -30,6 +30,8 @@ class ProfileOptions(dict):
                  default_step_size=0.01,
                  min_step_size=0.0001,
                  max_step_size=1.,
+                 step_size_factor=1.25,
+                 delta_ratio_max=0.9,
                  ratio_min=0.145):
         super().__init__()
 
@@ -37,6 +39,8 @@ class ProfileOptions(dict):
         self.min_step_size = min_step_size
         self.max_step_size = max_step_size
         self.ratio_min = ratio_min
+        self.step_size_multiply_factor = step_size_factor
+        self.delta_ratio_max = delta_ratio_max
 
     def __getattr__(self, key):
         try:
@@ -70,7 +74,7 @@ def profile(
         profile_index=None,
         profile_list=None,
         result_index=0,
-        create_profile_startpoint=None,
+        next_guess_method=None,
         profile_options=None,
         optimize_options=None) -> Result:
     """
@@ -105,7 +109,7 @@ def profile(
         index from which optimization result profiling should be started
         (default: global optimum, i.e., index = 0)
 
-    create_profile_startpoint: callable, optional
+    next_guess_method: callable, optional
         function handle to a method that creates the next starting point for
         optimization in profiling.
 
@@ -126,35 +130,21 @@ def profile(
     profile_options = ProfileOptions.assert_instance(profile_options)
 
     # profile startpoint method
-    if create_profile_startpoint is None:
-        def create_next_startpoint(x, par_index, par_direction):
-            return fixed_step(x, par_index, par_direction, profile_options,
-                              current_profile)
-    elif isinstance(create_profile_startpoint, basestring):
-        if create_profile_startpoint == 'fixed_step':
-            def create_next_startpoint(x, par_index, par_direction):
-                return fixed_step(x, par_index, par_direction, profile_options,
-                                  current_profile)
-        elif create_profile_startpoint == 'adaptive_step_order_0':
-            def create_next_startpoint(x, par_index, par_direction):
-                return adaptive_step_order_0(x, par_index, par_direction,
-                                             profile_options, current_profile)
-        elif create_profile_startpoint == 'adaptive_step_order_1':
-            def create_next_startpoint(x, par_index, par_direction):
-                return adaptive_step_order_0(x, par_index, par_direction,
-                                             profile_options, current_profile)
-        elif create_profile_startpoint == 'adaptive_step_regression':
-            def create_next_startpoint(x, par_index, par_direction):
-                return adaptive_step_order_0(x, par_index, par_direction,
-                                             profile_options, current_profile)
-        else:
-            raise Exception('Call to unknown name of profiling routine.')
-    elif isinstance(create_profile_startpoint, function):
+    if next_guess_method is None:
+        def create_next_guess(x, par_index, par_direction, profile_options,
+                              current_profile, problem):
+            return next_guess(x, par_index, par_direction, profile_options,
+                              'fixed_step', current_profile, problem)
+    elif isinstance(next_guess_method, basestring):
+        def create_next_guess(x, par_index, par_direction, profile_options,
+                              current_profile, problem):
+            return next_guess(x, par_index, par_direction, profile_options,
+                              next_guess_method, current_profile, problem)
+    elif isinstance(next_guess_method, function):
         raise Exception('Passing function handles for computation of next '
                         'profiling point is not yet supported.')
     else:
         raise Exception('Unsupported input for create_next_startpoint.')
-    
 
     # check optimization ptions
     if optimize_options is None:
@@ -188,7 +178,7 @@ def profile(
                                                  par_direction,
                                                  optimizer,
                                                  profile_options,
-                                                 create_next_startpoint,
+                                                 create_next_guess,
                                                  global_opt,
                                                  i_parameter)
 
@@ -204,7 +194,7 @@ def walk_along_profile(current_profile,
                        par_direction,
                        optimizer,
                        profile_options,
-                       create_next_startpoint,
+                       create_next_guess,
                        global_opt,
                        i_parameter):
     """
@@ -255,17 +245,9 @@ def walk_along_profile(current_profile,
             break
 
         # compute the new start point for optimization
-        x_next = create_next_startpoint(x_now, i_parameter, par_direction,
-                                        current_profile)
-
-        # check whether the next point is maybe outside the bounds
-        # and correct it
-        if par_direction is -1:
-            x_next[i_parameter] = np.max([x_next[i_parameter],
-                                          problem.lb_full[i_parameter]])
-        else:
-            x_next[i_parameter] = np.min([x_next[i_parameter],
-                                          problem.ub_full[i_parameter]])
+        x_next = create_next_guess(x_now, i_parameter, par_direction,
+                                   profile_options, current_profile,
+                                   problem, global_opt)
 
         # fix current profiling parameter to current value and set
         # start point
