@@ -32,7 +32,7 @@ benchmark_model = 'Zheng_PNAS2012' # 'Zheng_PNAS2012'
 #benchmark_model = "Fujita_SciSignal2010"
 
 manager = petab.Manager.from_folder(model_root + benchmark_model)
-manager.map_par_sim_to_par_opt()
+print("PARAMETER MAPPING:", manager.get_optimization_to_simulation_parameter_mapping())
 importer = pypesto.objective.Importer(manager)
 model = importer.model
 
@@ -40,7 +40,7 @@ print("MODEL PAMS:", list(model.getParameterIds()))
 print("MODEL CONST PAMS:", list(model.getFixedParameterIds()))
 print("MODEL OUTPUTS:", list(model.getObservableIds()))
 
-model.setParameterScale(amici.ParameterScaling_log10)
+#model.setParameterScale(amici.ParameterScaling_log10)
 obj, edatas = importer.create_objective()
 x_nom = manager.parameter_df['nominalValue'].values
 
