@@ -362,6 +362,21 @@ class AmiciObjective(Objective):
             res=res, sres=sres
         )
 
+    def simulate_data(self, x):
+        """
+        Simulate date for the model.
+
+        Parameters
+        ----------
+
+        Returns
+        -------
+
+        A list of edatas in the same order of experimental conditions
+        as self.edatas.
+        """
+        pass
+
     def init_preequilibration_edata(self, edatas):
         """
         Extract information needed for doing preequilibration.
