@@ -142,7 +142,7 @@ def profile(
             return next_guess(x, par_index, par_direction, profile_options,
                               next_guess_method, current_profile, problem,
                               global_opt)
-    elif isinstance(next_guess_method, collections.Callable):
+    elif hasattr(next_guess_method, '__call__'):
         raise Exception('Passing function handles for computation of next '
                         'profiling point is not yet supported.')
     else:
@@ -154,7 +154,7 @@ def profile(
     optimize_options = OptimizeOptions.assert_instance(optimize_options)
 
     # create the profile result object (retrieve global optimum) ar append to
-    #  existing list of profiles
+    # existing list of profiles
     global_opt = initialize_profile(problem, result, result_index,
                                     profile_index, profile_list)
 
@@ -247,9 +247,9 @@ def walk_along_profile(current_profile,
             break
 
         # compute the new start point for optimization
-        (obj_next, x_next) = \
-            create_next_guess(x_now, i_parameter, par_direction, options,
-                              current_profile, problem, global_opt)
+        x_next = create_next_guess(x_now, i_parameter, par_direction,
+                                   options, current_profile, problem,
+                                   global_opt)
 
         # fix current profiling parameter to current value and set
         # start point

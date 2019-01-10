@@ -64,7 +64,7 @@ def fixed_step(x, par_index, par_direction, options, problem):
         if next_x_par > problem.ub_full[par_index]:
             delta_x[par_index] = problem.ub_full[par_index] - x[par_index]
 
-    return (np.nan, x + delta_x)
+    return x + delta_x
 
 
 def adaptive_step_order_0(x, par_index, par_direction, options,
@@ -92,7 +92,7 @@ def adaptive_step_order_0(x, par_index, par_direction, options,
             search = False
 
     if not search:
-        return (current_profile.fval_path[-1], x + delta_x)
+        return x + delta_x
 
     # parameter extrapolation function
     def par_extrapol(step_length):
@@ -112,8 +112,8 @@ def adaptive_step_order_0(x, par_index, par_direction, options,
 
     # next start point has to be searched
     # compute, where the next objective value which we aim for
-    next_obj_target = - np.log(1. - options.delta_ratio_max) \
-                      - magic_factor_obj_value * delta_obj_value + \
+    next_obj_target = - np.log(
+        1. - options.delta_ratio_max) - magic_factor_obj_value * delta_obj_value + \
                       current_profile.fval_path[-1]
 
     # compute objective at the guessed point
@@ -148,8 +148,8 @@ def adaptive_step_order_0(x, par_index, par_direction, options,
                     # interpolate between the last two steps
                     delta_obj = np.abs(current_obj - last_obj)
                     delta_theta = np.abs(last_theta - next_theta)
-                    add_theta = np.abs(last_obj - next_obj_target) * \
-                                delta_theta / delta_obj
+                    add_theta = np.abs(
+                        last_obj - next_obj_target) * delta_theta / delta_obj
 
                     # fix final guess
                     next_theta = last_theta + add_theta
@@ -181,8 +181,8 @@ def adaptive_step_order_0(x, par_index, par_direction, options,
                     # interpolate between the last two steps
                     delta_obj = np.abs(current_obj - last_obj)
                     delta_theta = np.abs(last_theta - next_theta)
-                    add_theta = np.abs(last_obj - next_obj_target) * \
-                                delta_theta / delta_obj
+                    add_theta = np.abs(
+                        last_obj - next_obj_target) * delta_theta / delta_obj
 
                     # fix final guess
                     next_theta = last_theta + add_theta
@@ -190,4 +190,4 @@ def adaptive_step_order_0(x, par_index, par_direction, options,
     delta_x = np.zeros(len(x))
     delta_x[par_index] = next_theta - x[par_index]
     # return (last_obj, last_theta)
-    return (next_obj_target, x + delta_x)
+    return x + delta_x
