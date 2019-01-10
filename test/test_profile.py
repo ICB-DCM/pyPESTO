@@ -25,7 +25,8 @@ class ProfilerTest(unittest.TestCase):
             result1 = copy.deepcopy(result)
             result2 = copy.deepcopy(result)
 
-            # profiling works using default settings
+            # profiling works using default settings and different proposals
+            # for creating the next starting point
             self.check_default_profiling(problem, result1, optimizer)
 
             # profiling works when specifying additional options
@@ -34,15 +35,20 @@ class ProfilerTest(unittest.TestCase):
             # extending profiles (when changing bounds) works (T.B.D.)
 
     def check_default_profiling(self, problem, result, optimizer):
-        # run profiling
-        result = pypesto.profile(problem=problem,
-                                 result=result,
-                                 optimizer=optimizer)
+        # loop over  methods for creating new initial guesses
+        method_list = [None, 'fixed_step', 'adaptive_step_order_0']
 
-        # check result
-        self.assertTrue(
-            isinstance(result.profile_result.list[0][0],
-                       pypesto.ProfilerResult))
+        for method in method_list:
+            # run profiling
+            result = pypesto.profile(problem=problem,
+                                     result=result,
+                                     optimizer=optimizer,
+                                     next_guess_method=method)
+
+            # check result
+            self.assertTrue(
+                isinstance(result.profile_result.list[0][0],
+                           pypesto.ProfilerResult))
 
     def check_selected_profiling(self, problem, result, optimizer):
         # 1st run of profiling, computing just one out of two profiles
@@ -50,6 +56,7 @@ class ProfilerTest(unittest.TestCase):
                                  result=result,
                                  optimizer=optimizer,
                                  profile_index=np.array([0, 1]),
+                                 next_guess_method='fixed_step',
                                  result_index=1)
 
         self.assertIsInstance(result.profile_result.list[0][1],
@@ -57,17 +64,19 @@ class ProfilerTest(unittest.TestCase):
         self.assertIsNone(result.profile_result.list[0][0])
 
         # 2nd run of profiling, appending to an existing list of profiles
+        # using another algorithm
         result = pypesto.profile(problem=problem,
                                  result=result,
                                  optimizer=optimizer,
                                  profile_index=np.array([1, 0]),
+                                 next_guess_method='adaptive_step_order_0',
                                  result_index=2,
                                  profile_list=0)
 
         self.assertIsInstance(result.profile_result.list[0][0],
                               pypesto.ProfilerResult)
 
-        # 3rd run of profiling, opening a new list
+        # 3rd run of profiling, opening a new list, using the default algorithm
         result = pypesto.profile(problem=problem,
                                  result=result,
                                  optimizer=optimizer,

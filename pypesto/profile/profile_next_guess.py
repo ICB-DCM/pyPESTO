@@ -64,7 +64,7 @@ def fixed_step(x, par_index, par_direction, options, problem):
         if next_x_par > problem.ub_full[par_index]:
             delta_x[par_index] = problem.ub_full[par_index] - x[par_index]
 
-    return x + delta_x
+    return (np.nan, x + delta_x)
 
 
 def adaptive_step_order_0(x, par_index, par_direction, options,
