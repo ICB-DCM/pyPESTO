@@ -142,7 +142,7 @@ def profile(
             return next_guess(x, par_index, par_direction, profile_options,
                               next_guess_method, current_profile, problem,
                               global_opt)
-    elif isinstance(next_guess_method, function):
+    elif isinstance(next_guess_method, collections.Callable):
         raise Exception('Passing function handles for computation of next '
                         'profiling point is not yet supported.')
     else:

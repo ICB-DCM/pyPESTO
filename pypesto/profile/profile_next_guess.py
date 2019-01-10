@@ -105,8 +105,8 @@ def adaptive_step_order_0(x, par_index, par_direction, options,
         step_size_guess = options.default_step_size
         delta_obj_value = 0.
     else:
-        step_size_guess = np.abs(current_profile.x_path[par_index,-1] -
-                                 current_profile.x_path[par_index,-2])
+        step_size_guess = np.abs(current_profile.x_path[par_index, -1] -
+                                 current_profile.x_path[par_index, -2])
         delta_obj_value = current_profile.fval_path[-1] - global_opt
     next_theta = par_extrapol(step_size_guess)
 
