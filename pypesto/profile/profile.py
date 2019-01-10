@@ -28,10 +28,10 @@ class ProfileOptions(dict):
 
     def __init__(self,
                  default_step_size=0.01,
-                 min_step_size=0.0001,
+                 min_step_size=0.001,
                  max_step_size=1.,
-                 step_size_factor=1.25,
-                 delta_ratio_max=0.9,
+                 step_size_factor=1.5,
+                 delta_ratio_max=0.2,
                  ratio_min=0.145):
         super().__init__()
 
@@ -39,7 +39,7 @@ class ProfileOptions(dict):
         self.min_step_size = min_step_size
         self.max_step_size = max_step_size
         self.ratio_min = ratio_min
-        self.step_size_multiply_factor = step_size_factor
+        self.step_size_factor = step_size_factor
         self.delta_ratio_max = delta_ratio_max
 
     def __getattr__(self, key):
@@ -74,7 +74,7 @@ def profile(
         profile_index=None,
         profile_list=None,
         result_index=0,
-        next_guess_method=None,
+        next_guess_method='adaptive_step_order_0',
         profile_options=None,
         optimize_options=None) -> Result:
     """
@@ -132,14 +132,16 @@ def profile(
     # profile startpoint method
     if next_guess_method is None:
         def create_next_guess(x, par_index, par_direction, profile_options,
-                              current_profile, problem):
+                              current_profile, problem, global_opt):
             return next_guess(x, par_index, par_direction, profile_options,
-                              'fixed_step', current_profile, problem)
-    elif isinstance(next_guess_method, basestring):
+                              'fixed_step', current_profile, problem,
+                              global_opt)
+    elif isinstance(next_guess_method, str):
         def create_next_guess(x, par_index, par_direction, profile_options,
-                              current_profile, problem):
+                              current_profile, problem, global_opt):
             return next_guess(x, par_index, par_direction, profile_options,
-                              next_guess_method, current_profile, problem)
+                              next_guess_method, current_profile, problem,
+                              global_opt)
     elif isinstance(next_guess_method, function):
         raise Exception('Passing function handles for computation of next '
                         'profiling point is not yet supported.')
@@ -193,7 +195,7 @@ def walk_along_profile(current_profile,
                        problem,
                        par_direction,
                        optimizer,
-                       profile_options,
+                       options,
                        create_next_guess,
                        global_opt,
                        i_parameter):
@@ -234,20 +236,20 @@ def walk_along_profile(current_profile,
         if par_direction is -1:
             stop_profile = (x_now[i_parameter] <= problem.lb_full[[
                 i_parameter]]) or (current_profile.ratio_path[-1] <
-                                   profile_options.ratio_min)
+                                   options.ratio_min)
 
         if par_direction is 1:
             stop_profile = (x_now[i_parameter] >= problem.ub_full[[
                 i_parameter]]) or (current_profile.ratio_path[-1] <
-                                   profile_options.ratio_min)
+                                   options.ratio_min)
 
         if stop_profile:
             break
 
         # compute the new start point for optimization
-        x_next = create_next_guess(x_now, i_parameter, par_direction,
-                                   profile_options, current_profile,
-                                   problem, global_opt)
+        (obj_next, x_next) = \
+            create_next_guess(x_now, i_parameter, par_direction, options,
+                              current_profile, problem, global_opt)
 
         # fix current profiling parameter to current value and set
         # start point
@@ -368,7 +370,7 @@ def fill_profile_list(
     # create blanko profile
     new_profile = ProfilerResult(
         optimize_result["x"],
-        optimize_result["fval"],
+        np.array([optimize_result["fval"]]),
         np.array([1.]),
         np.linalg.norm(optimize_result["grad"]),
         optimize_result["exitflag"],
