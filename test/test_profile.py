@@ -32,7 +32,8 @@ class ProfilerTest(unittest.TestCase):
             # profiling works when specifying additional options
             self.check_selected_profiling(problem, result2, optimizer)
 
-            # extending profiles (when changing bounds) works (T.B.D.)
+            # extending profiles (when changing bounds) works
+            self.check_extending_profiles(problem, result, optimizer)
 
     def check_default_profiling(self, problem, result, optimizer):
         # loop over  methods for creating new initial guesses
@@ -86,6 +87,31 @@ class ProfilerTest(unittest.TestCase):
                               pypesto.ProfilerResult)
         self.assertIsNone(result.profile_result.list[1][1])
 
+    def check_extending_profiles(self, problem, result, optimizer):
+        # run profiling
+        result = pypesto.profile(problem=problem,
+                                 result=result,
+                                 optimizer=optimizer,
+                                 next_guess_method='fixed_step')
+
+        # set new bounds (knowing that one parameter stopped at the bounds
+        problem.lb = -4 * np.ones((1, 2))
+        problem.ub = 4 * np.ones((1, 2))
+
+        # re-run profiling using new bounds
+        result = pypesto.profile(problem=problem,
+                                 result=result,
+                                 optimizer=optimizer,
+                                 next_guess_method='fixed_step',
+                                 profile_index=np.array([0, 1]),
+                                 profile_list=0)
+        # check result
+        self.assertTrue(
+            isinstance(result.profile_result.list[0][0],
+                       pypesto.ProfilerResult))
+        self.assertTrue(
+            isinstance(result.profile_result.list[0][1],
+                       pypesto.ProfilerResult))
 
 def create_optimization_results(objective):
     # create optimizer, pypesto problem and options
