@@ -100,7 +100,7 @@ def adaptive_step(x, par_index, par_direction, options, current_profile,
         elif order == 1:
             # set the update direction
             last_delta_x = current_profile.x_path[:, -1] - \
-                current_profile.x_path[:, -2]
+                           current_profile.x_path[:, -2]
             step_size_guess = np.abs(current_profile.x_path[par_index, -1] -
                                      current_profile.x_path[par_index, -2])
             delta_x_dir = last_delta_x / step_size_guess
