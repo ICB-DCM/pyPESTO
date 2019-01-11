@@ -97,10 +97,9 @@ def adaptive_step_order_0(x, par_index, par_direction, options,
 
     # restrict a step to the bounds
     def clip_to_bounds(step_proposal):
-        for i_par in range(0, len(step_proposal)):
-            step_proposal[i_par] = np.max(
-                [np.min([step_proposal[i_par], problem.ub_full[i_par]]),
-                 problem.lb_full[i_par]])
+        for i_par, i_step in enumerate(step_proposal):
+            step_proposal[i_par] = np.max([np.min([i_step, problem.ub_full[
+                i_par]]), problem.lb_full[i_par]])
         return step_proposal
 
     # parameter extrapolation function
@@ -131,8 +130,8 @@ def adaptive_step_order_0(x, par_index, par_direction, options,
     # next start point has to be searched
     # compute the next objective value which we aim for
     next_obj_target = - np.log(1. - options.delta_ratio_max) - \
-                      magic_factor_obj_value * delta_obj_value + \
-                      current_profile.fval_path[-1]
+        magic_factor_obj_value * delta_obj_value + \
+        current_profile.fval_path[-1]
 
     # compute objective at the guessed point
     problem.fix_parameters(par_index, next_x[par_index])
