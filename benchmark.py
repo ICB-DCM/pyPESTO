@@ -47,3 +47,4 @@ x_nom = manager.parameter_df['nominalValue'].values
 print(x_nom)
 print("obj: ", obj(x_nom))
 
+print(obj.simulate(x_nom))

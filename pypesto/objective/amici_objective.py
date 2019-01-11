@@ -298,9 +298,9 @@ class AmiciObjective(Objective):
         self.amici_solver.setSensitivityOrder(sensi_order)
 
         if self.preequilibration_edata:
-            preeq_status = self.run_preequilibration(sensi_orders, mode, x)
+            preeq_status = self.run_preequilibration(x)
             if preeq_status is not None:
-                return preeq_status
+                return self.get_error_output(sensi_orders, mode)
 
         # loop over experimental data
         for data_ix, data in enumerate(self.edata):
@@ -368,7 +368,7 @@ class AmiciObjective(Objective):
             res=res, sres=sres
         )
 
-    def simulate_data(self, x):
+    def simulate(self, x, max_sensi_order=0):
         """
         Simulate date for the model.
 
@@ -378,10 +378,65 @@ class AmiciObjective(Objective):
         Returns
         -------
 
-        A list of edatas in the same order of experimental conditions
+        rdatas: A list of rdatas in the same order of experimental conditions
         as self.edatas.
         """
-        pass
+
+        # set order in solver
+        self.amici_solver.setSensitivityOrder(max_sensi_order)
+        
+        # run preequilibration
+        if self.preequilibration_edata:
+            self.run_preequilibration(x)
+
+        # prepare returned rdatas
+        rdatas = []
+
+        # loop over experimental data
+        for data_ix, edata in enumerate(self.edata):
+
+            # set model parameter scale for condition index
+            self.set_parameter_scale(data_ix)
+
+            # set parameters in model according to mapping and x
+            self.set_par_sim_for_condition(data_ix, x)
+
+            # preprocess preeq parameters and initial states
+            # according to preequilibration
+            if self.preequilibration_edata:
+                original_value_dict = self.preprocess_preequilibration(data_ix)
+            else:
+                original_value_dict = None
+            
+            # run amici simulation
+            rdata = amici.runAmiciSimulation(
+                self.amici_model,
+                self.amici_solver,
+                edata)
+            
+            # append to result
+            rdatas.append(rdata)
+
+            # reset fixed preeq parameters and initial states
+            if self.preequilibration_edata:
+                self.postprocess_preequilibration(edata, original_value_dict)
+
+            # logging
+            self.log_simulation(data_ix, rdata)
+        
+        # return the list of rdata objects
+        return rdatas
+
+    def log_simulation(self, data_ix, rdata):
+        logger.debug(f"=== DATASET {data_ix} ===")
+        logger.debug(f"status: {rdata['status']}")
+        logger.debug(f"llh: {rdata['llh']}")
+
+        t_steadystate = 't_steadystate'
+        if t_steadystate in rdata and rdata[t_steadystate] != np.nan:
+            logger.debug(f"t_steadystate: {rdata[t_steadystate]}")
+
+        logger.debug(f"res: {rdata['res']}")
 
     def init_preequilibration_edata(self, edatas):
         """
@@ -415,7 +470,7 @@ class AmiciObjective(Objective):
                 preequilibrate=preequilibrate
             ))
 
-    def run_preequilibration(self, sensi_orders, mode, x):
+    def run_preequilibration(self, x):
         """
         Run preequilibration.
         """
@@ -444,7 +499,7 @@ class AmiciObjective(Objective):
 
             # check if an error occurred
             if rdata['status'] < 0.0:
-                return self.get_error_output(sensi_orders, mode)
+                return -1
 
             # fill state
             preeq_dict['x0'] = rdata['x0']
