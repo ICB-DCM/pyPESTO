@@ -113,6 +113,7 @@ class ProfilerTest(unittest.TestCase):
             isinstance(result.profile_result.list[0][1],
                        pypesto.ProfilerResult))
 
+
 def create_optimization_results(objective):
     # create optimizer, pypesto problem and options
     options = {

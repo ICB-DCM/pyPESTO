@@ -74,120 +74,137 @@ def adaptive_step_order_0(x, par_index, par_direction, options,
     magic_factor_obj_value = 0.
 
     # set the update direction
-    delta_x = np.zeros(len(x))
+    delta_x_dir = np.zeros(len(x))
+    delta_x_dir[par_index] = par_direction
 
     # boolean indicating whether a search should be carried out
     search = True
 
     # check whether we must make a minimum step anyway, since we're close to
     # the next bound
-    next_x_par = x[par_index] + par_direction * options.min_step_size
+    min_delta_x = x[par_index] + par_direction * options.min_step_size
     if par_direction is -1:
-        if next_x_par < problem.lb_full[par_index]:
-            delta_x[par_index] = problem.lb_full[par_index] - x[par_index]
+        if min_delta_x < problem.lb_full[par_index]:
+            step_length = problem.lb_full[par_index] - x[par_index]
             search = False
     else:
-        if next_x_par > problem.ub_full[par_index]:
-            delta_x[par_index] = problem.ub_full[par_index] - x[par_index]
+        if min_delta_x > problem.ub_full[par_index]:
+            step_length = problem.ub_full[par_index] - x[par_index]
             search = False
 
     if not search:
-        return x + delta_x
+        return x + step_length * delta_x_dir
+
+    # restrict a step to the bounds
+    def clip_to_bounds(step_proposal):
+        for i_par in range(0, len(step_proposal)):
+            step_proposal[i_par] = np.max(
+                [np.min([step_proposal[i_par], problem.ub_full[i_par]]),
+                 problem.lb_full[i_par]])
+        return step_proposal
 
     # parameter extrapolation function
     def par_extrapol(step_length):
-        return np.max([np.min([x[par_index] + step_length * par_direction,
-                               problem.ub_full[par_index]]),
-                       problem.lb_full[par_index]])
+        x_step = x + step_length * delta_x_dir
+        return clip_to_bounds(x_step)
+
+    # parameter reduction function (cutting out the entry par_index)
+    def reduce_x(next_x):
+        red_ind = list(range(0, len(next_x)))
+        red_ind.pop(par_index)
+        return np.array([next_x[ip] for ip in red_ind])
 
     # check if this is the first step, compute first guess of next step
     if len(current_profile.fval_path) == 1:
+        # take default step size
         step_size_guess = options.default_step_size
         delta_obj_value = 0.
     else:
+        # take last step size
         step_size_guess = np.abs(current_profile.x_path[par_index, -1] -
                                  current_profile.x_path[par_index, -2])
         delta_obj_value = current_profile.fval_path[-1] - global_opt
-    next_theta = par_extrapol(step_size_guess)
+
+    # compute proposal
+    next_x = par_extrapol(step_size_guess)
 
     # next start point has to be searched
-    # compute, where the next objective value which we aim for
-    next_obj_target = - np.log(
-        1. - options.delta_ratio_max) - magic_factor_obj_value * delta_obj_value + \
+    # compute the next objective value which we aim for
+    next_obj_target = - np.log(1. - options.delta_ratio_max) - \
+                      magic_factor_obj_value * delta_obj_value + \
                       current_profile.fval_path[-1]
 
     # compute objective at the guessed point
-    problem.fix_parameters(par_index, next_theta)
-    current_obj = problem.objective(next_theta)
+    problem.fix_parameters(par_index, next_x[par_index])
+    next_obj = problem.objective(reduce_x(next_x))
 
-    if next_obj_target < current_obj:
-        # The step was rather too long
+    # restrict a step size to min and max
+    def clip_to_minmax(step_size_proposal):
+        step_size_proposal = np.max(
+                [np.min([step_size_proposal, options.max_step_size]),
+                 options.min_step_size])
+        return step_size_proposal
+
+    # iterate until good step size is found
+    if next_obj_target < next_obj:
+        # The step is rather too long
         stop_search = False
         while not stop_search:
             # Reduce step size of guess
-            step_size_guess = \
-                np.min([np.max([step_size_guess / options.step_size_factor,
-                                options.min_step_size]),
-                        options.max_step_size])
-            last_theta = copy.copy(next_theta)
-            next_theta = par_extrapol(step_size_guess)
+            last_x = copy.copy(next_x)
+            step_size_guess = clip_to_minmax(step_size_guess /
+                                             options.step_size_factor)
+            next_x = clip_to_bounds(par_extrapol(step_size_guess))
 
             # Check if we crossed a root or reduced to the minimum
             if step_size_guess == options.min_step_size:
                 stop_search = True
             else:
                 # compute new objective value
-                problem.fix_parameters(par_index, next_theta)
-                last_obj = copy.copy(current_obj)
-                current_obj = problem.objective(next_theta)
+                problem.fix_parameters(par_index, next_x[par_index])
+                last_obj = copy.copy(next_obj)
+                next_obj = problem.objective(reduce_x(next_x))
 
                 # check for root crossing
-                if next_obj_target >= current_obj:
+                if next_obj_target >= next_obj:
                     stop_search = True
 
                     # interpolate between the last two steps
-                    delta_obj = np.abs(current_obj - last_obj)
-                    delta_theta = np.abs(last_theta - next_theta)
-                    add_theta = np.abs(
-                        last_obj - next_obj_target) * delta_theta / delta_obj
+                    delta_obj = np.abs(next_obj - last_obj)
+                    add_x = np.abs(last_obj - next_obj_target) * (
+                        next_x - last_x) / delta_obj
 
                     # fix final guess
-                    next_theta = last_theta + add_theta
+                    next_x = last_x + add_x
 
     else:
-        # The step was rather too short
+        # The step is rather too short
         stop_search = False
         while not stop_search:
-            step_size_guess = \
-                np.min([np.max([step_size_guess * options.step_size_factor,
-                                options.min_step_size]),
-                        options.max_step_size])
-            last_theta = copy.copy(next_theta)
-            next_theta = par_extrapol(step_size_guess)
+            last_x = copy.copy(next_x)
+            step_size_guess = clip_to_minmax(step_size_guess *
+                                             options.step_size_factor)
+            next_x = clip_to_bounds(par_extrapol(step_size_guess))
 
             # Check if we crossed a root or increased to the maximum
             if step_size_guess == options.max_step_size:
                 stop_search = True
             else:
                 # compute new objective value
-                problem.fix_parameters(par_index, next_theta)
-                last_obj = copy.copy(current_obj)
-                current_obj = problem.objective(next_theta)
+                problem.fix_parameters(par_index, next_x[par_index])
+                last_obj = copy.copy(next_obj)
+                next_obj = problem.objective(reduce_x(next_x))
 
                 # check for root crossing
-                if next_obj_target <= current_obj:
+                if next_obj_target <= next_obj:
                     stop_search = True
 
                     # interpolate between the last two steps
-                    delta_obj = np.abs(current_obj - last_obj)
-                    delta_theta = np.abs(last_theta - next_theta)
-                    add_theta = np.abs(
-                        last_obj - next_obj_target) * delta_theta / delta_obj
+                    delta_obj = np.abs(next_obj - last_obj)
+                    add_x = np.abs(last_obj - next_obj_target) * (
+                        next_x - last_x) / delta_obj
 
                     # fix final guess
-                    next_theta = last_theta + add_theta
+                    next_x = last_x + add_x
 
-    delta_x = np.zeros(len(x))
-    delta_x[par_index] = next_theta - x[par_index]
-    # return (last_obj, last_theta)
-    return x + delta_x
+    return next_x
