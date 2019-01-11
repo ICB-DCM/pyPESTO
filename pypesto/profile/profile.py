@@ -30,8 +30,8 @@ class ProfileOptions(dict):
                  default_step_size=0.01,
                  min_step_size=0.001,
                  max_step_size=1.,
-                 step_size_factor=1.5,
-                 delta_ratio_max=0.2,
+                 step_size_factor=1.25,
+                 delta_ratio_max=0.05,
                  ratio_min=0.145):
         super().__init__()
 
@@ -74,7 +74,7 @@ def profile(
         profile_index=None,
         profile_list=None,
         result_index=0,
-        next_guess_method='adaptive_step_order_0',
+        next_guess_method=None,
         profile_options=None,
         optimize_options=None) -> Result:
     """
@@ -134,8 +134,8 @@ def profile(
         def create_next_guess(x, par_index, par_direction, profile_options,
                               current_profile, problem, global_opt):
             return next_guess(x, par_index, par_direction, profile_options,
-                              'fixed_step', current_profile, problem,
-                              global_opt)
+                              'adaptive_step_order_0', current_profile,
+                              problem, global_opt)
     elif isinstance(next_guess_method, str):
         def create_next_guess(x, par_index, par_direction, profile_options,
                               current_profile, problem, global_opt):

@@ -37,7 +37,8 @@ class ProfilerTest(unittest.TestCase):
 
     def check_default_profiling(self, problem, result, optimizer):
         # loop over  methods for creating new initial guesses
-        method_list = [None, 'fixed_step', 'adaptive_step_order_0']
+        method_list = [None, 'fixed_step', 'adaptive_step_order_0',
+                       'adaptive_step_order_1']
 
         for method in method_list:
             # run profiling

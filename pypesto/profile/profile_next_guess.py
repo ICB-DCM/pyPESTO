@@ -44,10 +44,14 @@ def next_guess(x,
     if update_type == 'fixed_step':
         return fixed_step(x, par_index, par_direction, profile_options,
                           problem)
-    elif update_type == 'adaptive_step_order_0':
-        return adaptive_step_order_0(x, par_index, par_direction,
-                                     profile_options, current_profile,
-                                     problem, global_opt)
+    else:
+        if update_type == 'adaptive_step_order_0':
+            order = 0
+        elif update_type == 'adaptive_step_order_1':
+            order = 1
+
+        return adaptive_step(x, par_index, par_direction, profile_options,
+                             current_profile, problem, global_opt, order)
 
 
 def fixed_step(x, par_index, par_direction, options, problem):
@@ -67,15 +71,39 @@ def fixed_step(x, par_index, par_direction, options, problem):
     return x + delta_x
 
 
-def adaptive_step_order_0(x, par_index, par_direction, options,
-                          current_profile, problem, global_opt):
+def adaptive_step(x, par_index, par_direction, options, current_profile,
+                  problem, global_opt, order=1):
     # There is this magic factor in the old profiling code which slows down
     # profiling at small ratios (must be >= 0 and < 1)
-    magic_factor_obj_value = 0.
+    magic_factor_obj_value = 0.25
 
-    # set the update direction
-    delta_x_dir = np.zeros(len(x))
-    delta_x_dir[par_index] = par_direction
+    # check if this is the first step, compute the direction for the first
+    # guess of next step
+    if len(current_profile.fval_path) == 1:
+        # take default step size
+        step_size_guess = options.default_step_size
+        delta_obj_value = 0.
+
+        # set the update direction
+        delta_x_dir = np.zeros(len(x))
+        delta_x_dir[par_index] = par_direction
+    else:
+        # take last step size
+        step_size_guess = np.abs(current_profile.x_path[par_index, -1] -
+                                 current_profile.x_path[par_index, -2])
+        delta_obj_value = current_profile.fval_path[-1] - global_opt
+
+        if order == 0:
+            # set the update direction
+            delta_x_dir = np.zeros(len(x))
+            delta_x_dir[par_index] = par_direction
+        elif order == 1:
+            # set the update direction
+            last_delta_x = current_profile.x_path[:, -1] - \
+                current_profile.x_path[:, -2]
+            step_size_guess = np.abs(current_profile.x_path[par_index, -1] -
+                                     current_profile.x_path[par_index, -2])
+            delta_x_dir = last_delta_x / step_size_guess
 
     # boolean indicating whether a search should be carried out
     search = True
@@ -113,25 +141,14 @@ def adaptive_step_order_0(x, par_index, par_direction, options,
         red_ind.pop(par_index)
         return np.array([next_x[ip] for ip in red_ind])
 
-    # check if this is the first step, compute first guess of next step
-    if len(current_profile.fval_path) == 1:
-        # take default step size
-        step_size_guess = options.default_step_size
-        delta_obj_value = 0.
-    else:
-        # take last step size
-        step_size_guess = np.abs(current_profile.x_path[par_index, -1] -
-                                 current_profile.x_path[par_index, -2])
-        delta_obj_value = current_profile.fval_path[-1] - global_opt
-
     # compute proposal
     next_x = par_extrapol(step_size_guess)
 
     # next start point has to be searched
     # compute the next objective value which we aim for
     next_obj_target = - np.log(1. - options.delta_ratio_max) - \
-        magic_factor_obj_value * delta_obj_value + \
-        current_profile.fval_path[-1]
+                      magic_factor_obj_value * delta_obj_value + \
+                      current_profile.fval_path[-1]
 
     # compute objective at the guessed point
     problem.fix_parameters(par_index, next_x[par_index])
@@ -140,8 +157,8 @@ def adaptive_step_order_0(x, par_index, par_direction, options,
     # restrict a step size to min and max
     def clip_to_minmax(step_size_proposal):
         step_size_proposal = np.max(
-                [np.min([step_size_proposal, options.max_step_size]),
-                 options.min_step_size])
+            [np.min([step_size_proposal, options.max_step_size]),
+             options.min_step_size])
         return step_size_proposal
 
     # iterate until good step size is found
@@ -171,7 +188,7 @@ def adaptive_step_order_0(x, par_index, par_direction, options,
                     # interpolate between the last two steps
                     delta_obj = np.abs(next_obj - last_obj)
                     add_x = np.abs(last_obj - next_obj_target) * (
-                        next_x - last_x) / delta_obj
+                            next_x - last_x) / delta_obj
 
                     # fix final guess
                     next_x = last_x + add_x
@@ -201,7 +218,7 @@ def adaptive_step_order_0(x, par_index, par_direction, options,
                     # interpolate between the last two steps
                     delta_obj = np.abs(next_obj - last_obj)
                     add_x = np.abs(last_obj - next_obj_target) * (
-                        next_x - last_x) / delta_obj
+                            next_x - last_x) / delta_obj
 
                     # fix final guess
                     next_x = last_x + add_x
