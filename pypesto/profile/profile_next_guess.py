@@ -79,7 +79,8 @@ def adaptive_step(x, par_index, par_direction, options, current_profile,
 
     # check if this is the first step, compute the direction for the first
     # guess of next step
-    if len(current_profile.fval_path) == 1:
+    n_profile_points = len(current_profile.fval_path)
+    if n_profile_points == 1:
         # take default step size
         step_size_guess = options.default_step_size
         delta_obj_value = 0.
@@ -104,6 +105,15 @@ def adaptive_step(x, par_index, par_direction, options, current_profile,
             step_size_guess = np.abs(current_profile.x_path[par_index, -1] -
                                      current_profile.x_path[par_index, -2])
             delta_x_dir = last_delta_x / step_size_guess
+        elif np.isnan(order):
+            reg_max_order = np.floor(n_profile_points / 2)
+            reg_order = np.min(reg_max_order, options.reg_order)
+            reg_points = np.min(n_profile_points, options.reg_points)
+            reg_par = []
+            for i_par in problem.x_free_indices:
+                reg_par.append(np.polyfit(
+                    current_profile.x_path[par_index, -reg_points:-1],
+                    current_profile.x_path[i_par, -reg_points:-1], reg_order))
 
     # boolean indicating whether a search should be carried out
     search = True
@@ -147,8 +157,8 @@ def adaptive_step(x, par_index, par_direction, options, current_profile,
     # next start point has to be searched
     # compute the next objective value which we aim for
     next_obj_target = - np.log(1. - options.delta_ratio_max) - \
-        magic_factor_obj_value * delta_obj_value + \
-        current_profile.fval_path[-1]
+                      magic_factor_obj_value * delta_obj_value + \
+                      current_profile.fval_path[-1]
 
     # compute objective at the guessed point
     problem.fix_parameters(par_index, next_x[par_index])
