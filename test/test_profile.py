@@ -42,10 +42,10 @@ class ProfilerTest(unittest.TestCase):
 
         for method in method_list:
             # run profiling
-            result = pypesto.profile(problem=problem,
-                                     result=result,
-                                     optimizer=optimizer,
-                                     next_guess_method=method)
+            result = pypesto.parameterProfile(problem=problem,
+                                              result=result,
+                                              optimizer=optimizer,
+                                              next_guess_method=method)
 
             # check result
             self.assertTrue(
@@ -54,12 +54,12 @@ class ProfilerTest(unittest.TestCase):
 
     def check_selected_profiling(self, problem, result, optimizer):
         # 1st run of profiling, computing just one out of two profiles
-        result = pypesto.profile(problem=problem,
-                                 result=result,
-                                 optimizer=optimizer,
-                                 profile_index=np.array([0, 1]),
-                                 next_guess_method='fixed_step',
-                                 result_index=1)
+        result = pypesto.parameterProfile(problem=problem,
+                                          result=result,
+                                          optimizer=optimizer,
+                                          profile_index=np.array([0, 1]),
+                                          next_guess_method='fixed_step',
+                                          result_index=1)
 
         self.assertIsInstance(result.profile_result.list[0][1],
                               pypesto.ProfilerResult)
@@ -67,22 +67,22 @@ class ProfilerTest(unittest.TestCase):
 
         # 2nd run of profiling, appending to an existing list of profiles
         # using another algorithm
-        result = pypesto.profile(problem=problem,
-                                 result=result,
-                                 optimizer=optimizer,
-                                 profile_index=np.array([1, 0]),
-                                 next_guess_method='adaptive_step_order_0',
-                                 result_index=2,
-                                 profile_list=0)
+        result = pypesto.parameterProfile(problem=problem,
+                                          result=result,
+                                          optimizer=optimizer,
+                                          profile_index=np.array([1, 0]),
+                                          next_guess_method='adaptive_step_order_0',
+                                          result_index=2,
+                                          profile_list=0)
 
         self.assertIsInstance(result.profile_result.list[0][0],
                               pypesto.ProfilerResult)
 
         # 3rd run of profiling, opening a new list, using the default algorithm
-        result = pypesto.profile(problem=problem,
-                                 result=result,
-                                 optimizer=optimizer,
-                                 profile_index=np.array([1, 0]))
+        result = pypesto.parameterProfile(problem=problem,
+                                          result=result,
+                                          optimizer=optimizer,
+                                          profile_index=np.array([1, 0]))
         # check result
         self.assertIsInstance(result.profile_result.list[1][0],
                               pypesto.ProfilerResult)
@@ -90,22 +90,22 @@ class ProfilerTest(unittest.TestCase):
 
     def check_extending_profiles(self, problem, result, optimizer):
         # run profiling
-        result = pypesto.profile(problem=problem,
-                                 result=result,
-                                 optimizer=optimizer,
-                                 next_guess_method='fixed_step')
+        result = pypesto.parameterProfile(problem=problem,
+                                          result=result,
+                                          optimizer=optimizer,
+                                          next_guess_method='fixed_step')
 
         # set new bounds (knowing that one parameter stopped at the bounds
         problem.lb = -4 * np.ones((1, 2))
         problem.ub = 4 * np.ones((1, 2))
 
         # re-run profiling using new bounds
-        result = pypesto.profile(problem=problem,
-                                 result=result,
-                                 optimizer=optimizer,
-                                 next_guess_method='fixed_step',
-                                 profile_index=np.array([0, 1]),
-                                 profile_list=0)
+        result = pypesto.parameterProfile(problem=problem,
+                                          result=result,
+                                          optimizer=optimizer,
+                                          next_guess_method='fixed_step',
+                                          profile_index=np.array([0, 1]),
+                                          profile_list=0)
         # check result
         self.assertTrue(
             isinstance(result.profile_result.list[0][0],

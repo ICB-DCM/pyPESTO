@@ -67,7 +67,7 @@ class ProfileOptions(dict):
         return options
 
 
-def profile(
+def parameterProfile(
         problem,
         result,
         optimizer,
@@ -134,7 +134,7 @@ def profile(
         def create_next_guess(x, par_index, par_direction, profile_options,
                               current_profile, problem, global_opt):
             return next_guess(x, par_index, par_direction, profile_options,
-                              'adaptive_step_order_0', current_profile,
+                              'adaptive_step_order_1', current_profile,
                               problem, global_opt)
     elif isinstance(next_guess_method, str):
         def create_next_guess(x, par_index, par_direction, profile_options,
