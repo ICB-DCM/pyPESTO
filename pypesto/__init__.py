@@ -39,10 +39,8 @@ __all__ = ["ObjectiveOptions",
            "Optimizer",
            "ScipyOptimizer",
            "DlibOptimizer",
-<<<<<<< HEAD
-           "Prior"]
-=======
+           "Prior",
            "profile",
            "ProfileOptions",
            "ProfilerResult"]
->>>>>>> ICB-DCM/master
+

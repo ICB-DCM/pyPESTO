@@ -101,8 +101,7 @@ class Objective:
                  res=None, sres=None,
                  fun_accept_sensi_orders=False,
                  res_accept_sensi_orders=False,
-                 prior = None,
-                 prior_type=None,
+                 prior=None,
                  options=None):
 
         self.fun = fun
@@ -112,7 +111,6 @@ class Objective:
         self.res = res
         self.sres = sres
         self.prior = prior
-        self.prior_type = prior_type
         self.fun_accept_sensi_orders = fun_accept_sensi_orders
         self.res_accept_sensi_orders = res_accept_sensi_orders
 
@@ -166,7 +164,7 @@ class Objective:
     @property
     def has_sres(self):
         return callable(self.sres) or self.sres is True
-    
+
     @property
     def has_prior(self):
         return callable(self.prior) or self.prior is True
@@ -220,11 +218,11 @@ class Objective:
 
         # compute result
         result = self._call_unprocessed(x, sensi_orders, mode)
-        
+
         # compute penalized objective funciton and gradient
         if self.has_prior:
 
-            #call prior
+            # call prior
             prior = self.prior(x, sensi_orders)
 
             if sensi_orders == (0,):
@@ -232,7 +230,6 @@ class Objective:
             if sensi_orders == (1,):
                 result[GRAD] *= prior['chainrule']
                 result[GRAD] -= prior['prior_grad']
-
 
         # convert to ndarray
         result = Objective.as_ndarrays(result)
