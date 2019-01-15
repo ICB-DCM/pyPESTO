@@ -53,13 +53,16 @@ class Prior():
 
             # log10_index = np.where(self.scale_list=='log10')
             # only works with arrays
-            log10_index = [i for i, j in enumerate(self.scale_list) if j == 'log10']
+            log10_index = [i for i, j in enumerate(self.scale_list)
+                           if j == 'log10']
             x[log10_index] = 10**x[log10_index]
 
-            log_index = [i for i, j in enumerate(self.scale_list) if j == 'log']
+            log_index = [i for i, j in enumerate(self.scale_list)
+                         if j == 'log']
             x[log_index] = np.exp(x[log_index])
 
-            logE_index = [i for i, j in enumerate(self.scale_list) if j == 'logE']
+            logE_index = [i for i, j in enumerate(self.scale_list)
+                          if j == 'logE']
             x[logE_index] = 10**x[logE_index]-1
 
         else:
@@ -74,8 +77,10 @@ class Prior():
         # if x.all()<1e-4: flag=1
         # Hessian
 
-        norm_index_1 = [i for i, j in enumerate(self.priorType_list) if j == 'norm']
-        lap_index_1 = [i for i, j in enumerate(self.priorType_list) if j == 'lap']
+        norm_index_1 = [i for i, j in enumerate(self.priorType_list)
+                        if j == 'norm']
+        lap_index_1 = [i for i, j in enumerate(self.priorType_list)
+                       if j == 'lap']
 
         norm_index = np.intersect1d(norm_index_1, estimate)
         lap_index = np.intersect1d(lap_index_1, estimate)
@@ -110,8 +115,10 @@ class Prior():
         fun = fun_norm + fun_lap
 
         grad = np.zeros(len(x))
-        if norm_index != []: grad[norm_index] += grad_norm
-        if lap_index != []: grad[lap_index] += grad_lap
+        if norm_index != []:
+            grad[norm_index] += grad_norm
+        if lap_index != []:
+            grad[lap_index] += grad_lap
 
         # compute chainrule
         chainrule = np.zeros(len(x))
