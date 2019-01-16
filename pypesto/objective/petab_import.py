@@ -256,5 +256,7 @@ class PetabImporter:
             self.petab_problem.measurement_df.
         """
 
-        df = pd.DataFrame(columns=list(self.petab_problem.measurement_df.columns))
+        df = pd.DataFrame(
+            columns=list(
+                self.petab_problem.measurement_df.columns))
         return df
