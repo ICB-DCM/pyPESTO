@@ -4,7 +4,7 @@ import logging
 import pandas as pd
 import numbers
 from .objective import Objective
-from .constants import MODE_FUN, MODE_RES, HESS
+from .constants import MODE_FUN, MODE_RES, FVAL, GRAD, HESS, RES, SRES, RDATAS
 
 try:
     import amici
@@ -272,24 +272,22 @@ class AmiciObjective(Objective):
             sensi_orders,
             mode
     ):
-        # TODO: extract function to run simulations and return list of amici.ReturnData. use this then here, as well as for simulations_to_measurement_df below
-
-        # amici is built so that only the maximum sensitivity is required,
+        # amici is built such that only the maximum sensitivity is required,
         # the lower orders are then automatically computed
-
-        # gradients can always be computed
         sensi_order = min(max(sensi_orders), 1)
         # order 2 currently not implemented, we are using the FIM
 
-        # check if sensitivities can be computed
+        # check if the requested sensitivities can be computed
         if sensi_order > self.max_sensi_order:
             raise Exception("Sensitivity order not allowed.")
 
-        # TODO: For large-scale models it might be bad to always reserve
-        # space in particular for the Hessian.
+        # prepare result objects
+        
+        rdatas = []
+
         nllh = 0.0
         snllh = np.zeros(self.dim)
-        ssnllh = np.zeros([self.dim, self.dim])
+        s2nllh = np.zeros([self.dim, self.dim])
 
         res = np.zeros([0])
         sres = np.zeros([0, self.dim])
@@ -300,10 +298,10 @@ class AmiciObjective(Objective):
         if self.preequilibration_edata:
             preeq_status = self.run_preequilibration(x)
             if preeq_status is not None:
-                return self.get_error_output(sensi_orders, mode)
+                return self.get_error_output(sensi_orders, mode, rdatas)
 
         # loop over experimental data
-        for data_ix, data in enumerate(self.edata):
+        for data_ix, edata in enumerate(self.edata):
 
             # set model parameter scale for condition index
             self.set_parameter_scale(data_ix)
@@ -320,23 +318,21 @@ class AmiciObjective(Objective):
             rdata = amici.runAmiciSimulation(
                 self.amici_model,
                 self.amici_solver,
-                data)
+                edata)
 
+            # append to result
+            rdatas.append(rdata)
+
+            # reste fixed preeq parameters and initial states
             if self.preequilibration_edata:
-                self.postprocess_preequilibration(data, original_value_dict)
+                self.postprocess_preequilibration(edata, original_value_dict)
 
             # logging
-            logger.debug(f'=== DATASET {data_ix} ===')
-            logger.debug(f'status: {rdata["status"]}')
-            logger.debug(f'llh: {rdata["llh"]}')
-
-            if 't_steadystate' in rdata and rdata['t_steadystate'] != np.nan:
-                logger.debug(f't_steadystate: {rdata["t_steadystate"]}')
-            logger.debug(f'res: {rdata["res"]}')
+            self.log_simulation(data_ix, rdata)
 
             # check if the computation failed
             if rdata['status'] < 0.0:
-                return self.get_error_output(sensi_orders, mode)
+                return self.get_error_output(sensi_orders, mode, rdatas)
 
             # compute objective
             if mode == MODE_FUN:
@@ -350,7 +346,7 @@ class AmiciObjective(Objective):
                         coefficient=-1.0
                     )
                     # TODO: Compute the full Hessian, and check here
-                    ssnllh -= rdata['FIM']
+                    s2nllh -= rdata['FIM']
 
             elif mode == MODE_RES:
                 res = np.hstack([res, rdata['res']]) \
@@ -359,71 +355,14 @@ class AmiciObjective(Objective):
                     sres = np.vstack([sres, rdata['sres']]) \
                         if sres.size else rdata['sres']
 
-        return Objective.output_to_tuple(
-            sensi_orders,
-            mode,
-            fval=nllh, grad=snllh, hess=ssnllh,
-            res=res, sres=sres
-        )
-
-    def simulate(self, x, max_sensi_order=0):
-        """
-        Simulate date for the model.
-
-        Parameters
-        ----------
-
-        Returns
-        -------
-
-        rdatas: A list of rdatas in the same order of experimental conditions
-        as self.edatas.
-        """
-
-        # set order in solver
-        self.amici_solver.setSensitivityOrder(max_sensi_order)
-        
-        # run preequilibration
-        if self.preequilibration_edata:
-            self.run_preequilibration(x)
-
-        # prepare returned rdatas
-        rdatas = []
-
-        # loop over experimental data
-        for data_ix, edata in enumerate(self.edata):
-
-            # set model parameter scale for condition index
-            self.set_parameter_scale(data_ix)
-
-            # set parameters in model according to mapping and x
-            self.set_par_sim_for_condition(data_ix, x)
-
-            # preprocess preeq parameters and initial states
-            # according to preequilibration
-            if self.preequilibration_edata:
-                original_value_dict = self.preprocess_preequilibration(data_ix)
-            else:
-                original_value_dict = None
-            
-            # run amici simulation
-            rdata = amici.runAmiciSimulation(
-                self.amici_model,
-                self.amici_solver,
-                edata)
-            
-            # append to result
-            rdatas.append(rdata)
-
-            # reset fixed preeq parameters and initial states
-            if self.preequilibration_edata:
-                self.postprocess_preequilibration(edata, original_value_dict)
-
-            # logging
-            self.log_simulation(data_ix, rdata)
-        
-        # return the list of rdata objects
-        return rdatas
+        return {
+            FVAL: nllh,
+            GRAD: snllh,
+            HESS: s2nllh,
+            RES: res,
+            SRES: sres,
+            RDATAS: rdatas
+        }
 
     def log_simulation(self, data_ix, rdata):
         logger.debug(f"=== DATASET {data_ix} ===")
@@ -576,22 +515,22 @@ class AmiciObjective(Objective):
                 original_value_dict['sx0']
             )
 
-    def get_error_output(self, sensi_orders, mode):
+    def get_error_output(self, sensi_orders, mode, rdatas):
         if not self.amici_model.nt():
             nt = sum([data.nt() for data in self.edata])
         else:
             nt = sum([data.nt() if data.nt() else self.amici_model.nt()
                       for data in self.edata])
         n_res = nt * self.amici_model.nytrue
-        return Objective.output_to_tuple(
-            sensi_orders=sensi_orders,
-            mode=mode,
-            fval=np.inf,
-            grad=np.nan * np.ones(self.dim),
-            hess=np.nan * np.ones([self.dim, self.dim]),
-            res=np.nan * np.ones(n_res),
-            sres=np.nan * np.ones([n_res, self.dim])
-        )
+        
+        return {
+            FVAL: np.inf,
+            GRAD: np.nan * np.ones(self.dim),
+            HESS: np.nan * np.ones([self.dim, self.dim]),
+            RES: np.nan * np.ones(n_res),
+            SRES: np.nan * np.ones([n_res, self.dim]),
+            RDATAS: rdatas
+        }
 
     def set_par_sim_for_condition(self, condition_ix, x):
         """

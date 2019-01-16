@@ -94,6 +94,13 @@ class Objective:
 
     preprocess, postprocess are configured in update_from_problem()
     and can be reset using the reset() method.
+
+    If fun_accept_sensi_orders resp. res_accept_sensi_orders is True,
+    fun resp. res can also return dictionaries instead of tuples.
+    In that case, they are expected to follow the naming conventions
+    in ``constants.py``. This is of interest, because when __call__ is
+    called with return_dict = True, the full dictionary is returned, which
+    can contain e.g. also simulation data or debuggin information.
     """
 
     def __init__(self,
@@ -180,7 +187,11 @@ class Objective:
                 f"Objective cannot be called with sensi_orders={sensi_orders}"
                 f" and mode={mode}")
 
-    def __call__(self, x, sensi_orders: tuple = (0, ), mode=MODE_FUN):
+    def __call__(self,
+            x,
+            sensi_orders: tuple = (0, ),
+            mode=MODE_FUN,
+            return_dict=False):
         """
         Method to obtain arbitrary sensitivities. This is the central method
         which is always called, also by the get_* methods.
@@ -223,7 +234,8 @@ class Objective:
         self.history.update(x, sensi_orders, mode, result)
 
         # map to output format
-        result = Objective.output_to_tuple(sensi_orders, mode, **result)
+        if not return_dict:
+            result = Objective.output_to_tuple(sensi_orders, mode, **result)
 
         return result
 
