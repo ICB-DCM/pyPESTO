@@ -32,7 +32,9 @@ class ProfileOptions(dict):
                  max_step_size=1.,
                  step_size_factor=1.25,
                  delta_ratio_max=0.05,
-                 ratio_min=0.145):
+                 ratio_min=0.145,
+                 reg_points=10,
+                 reg_order=4):
         super().__init__()
 
         self.default_step_size = default_step_size
@@ -41,6 +43,8 @@ class ProfileOptions(dict):
         self.ratio_min = ratio_min
         self.step_size_factor = step_size_factor
         self.delta_ratio_max = delta_ratio_max
+        self.reg_points = reg_points
+        self.reg_order = reg_order
 
     def __getattr__(self, key):
         try:
@@ -134,7 +138,7 @@ def parameterProfile(
         def create_next_guess(x, par_index, par_direction, profile_options,
                               current_profile, problem, global_opt):
             return next_guess(x, par_index, par_direction, profile_options,
-                              'adaptive_step_order_1', current_profile,
+                              'adaptive_step_regression', current_profile,
                               problem, global_opt)
     elif isinstance(next_guess_method, str):
         def create_next_guess(x, par_index, par_direction, profile_options,

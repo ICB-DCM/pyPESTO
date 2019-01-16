@@ -1,6 +1,6 @@
 import numpy as np
 import copy
-
+import warnings
 
 def next_guess(x,
                par_index,
@@ -49,6 +49,11 @@ def next_guess(x,
             order = 0
         elif update_type == 'adaptive_step_order_1':
             order = 1
+        elif update_type == 'adaptive_step_regression':
+            order = float('nan')
+        else:
+            raise Exception('Unsupported update_type for '
+                            'create_next_startpoint.')
 
         return adaptive_step(x, par_index, par_direction, profile_options,
                              current_profile, problem, global_opt, order)
@@ -80,6 +85,9 @@ def adaptive_step(x, par_index, par_direction, options, current_profile,
     # check if this is the first step, compute the direction for the first
     # guess of next step
     n_profile_points = len(current_profile.fval_path)
+    pos_ind_red = len([ip for ip in problem.x_free_indices if ip < par_index])
+    problem.fix_parameters(par_index, x[par_index])
+
     if n_profile_points == 1:
         # take default step size
         step_size_guess = options.default_step_size
@@ -98,7 +106,7 @@ def adaptive_step(x, par_index, par_direction, options, current_profile,
             # set the update direction
             delta_x_dir = np.zeros(len(x))
             delta_x_dir[par_index] = par_direction
-        elif order == 1:
+        elif order == 1 or (np.isnan(order) and n_profile_points < 3):
             # set the update direction
             last_delta_x = current_profile.x_path[:, -1] - \
                            current_profile.x_path[:, -2]
@@ -106,14 +114,22 @@ def adaptive_step(x, par_index, par_direction, options, current_profile,
                                      current_profile.x_path[par_index, -2])
             delta_x_dir = last_delta_x / step_size_guess
         elif np.isnan(order):
+            # disable rank warnings
+            warnings.simplefilter('ignore', np.RankWarning)
+
+            # determine interpolation order
             reg_max_order = np.floor(n_profile_points / 2)
-            reg_order = np.min(reg_max_order, options.reg_order)
-            reg_points = np.min(n_profile_points, options.reg_points)
+            reg_order = np.min([reg_max_order, options.reg_order])
+            reg_points = np.min([n_profile_points, options.reg_points])
             reg_par = []
-            for i_par in problem.x_free_indices:
-                reg_par.append(np.polyfit(
-                    current_profile.x_path[par_index, -reg_points:-1],
-                    current_profile.x_path[i_par, -reg_points:-1], reg_order))
+            for i_par in range(0, len(problem.x_free_indices) + 1):
+                if i_par == pos_ind_red:
+                    reg_par.append(float('nan'));
+                else:
+                    reg_par.append(np.polyfit(
+                        current_profile.x_path[par_index, -reg_points:-1],
+                        current_profile.x_path[i_par, -reg_points:-1],
+                        reg_order))
 
     # boolean indicating whether a search should be carried out
     search = True
@@ -142,7 +158,21 @@ def adaptive_step(x, par_index, par_direction, options, current_profile,
 
     # parameter extrapolation function
     def par_extrapol(step_length):
-        x_step = x + step_length * delta_x_dir
+        if np.isnan(order) and n_profile_points > 2:
+            # if we do regression
+            x_step_tmp = []
+            for i_par in range(0, len(problem.x_free_indices) + 1):
+                if i_par == pos_ind_red:
+                    x_step_tmp.append(x[par_index] + step_length)
+                else:
+                    cur_par_extrapol = np.poly1d(reg_par[i_par])
+                    x_step_tmp.append(cur_par_extrapol(x[par_index] +
+                                                       step_length))
+            x_step = np.array(x_step_tmp)
+        else:
+            # if we do simple extrapolation
+            x_step = x + step_length * delta_x_dir
+
         return clip_to_bounds(x_step)
 
     # parameter reduction function (cutting out the entry par_index)
