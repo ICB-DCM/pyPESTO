@@ -188,10 +188,10 @@ class Objective:
                 f" and mode={mode}")
 
     def __call__(self,
-            x,
-            sensi_orders: tuple = (0, ),
-            mode=MODE_FUN,
-            return_dict=False):
+                 x,
+                 sensi_orders: tuple = (0, ),
+                 mode=MODE_FUN,
+                 return_dict=False):
         """
         Method to obtain arbitrary sensitivities. This is the central method
         which is always called, also by the get_* methods.

@@ -1,7 +1,6 @@
 import numpy as np
 import copy
 import logging
-import pandas as pd
 import numbers
 from .objective import Objective
 from .constants import MODE_FUN, MODE_RES, FVAL, GRAD, HESS, RES, SRES, RDATAS
@@ -197,15 +196,16 @@ class AmiciObjective(Objective):
         edata = [amici.ExpData(data) for data in self.edata]
         other = AmiciObjective(model, solver, edata)
         for attr in self.__dict__:
-            if attr not in ['amici_solver', 'amici_model', 'edata', 'preequilibration_edata']:
+            if attr not in ['amici_solver', 'amici_model',
+                            'edata', 'preequilibration_edata']:
                 other.__dict__[attr] = copy.deepcopy(self.__dict__[attr])
         return other
 
     def _update_from_problem(self,
-                            dim_full,
-                            x_free_indices,
-                            x_fixed_indices,
-                            x_fixed_vals):
+                             dim_full,
+                             x_free_indices,
+                             x_fixed_indices,
+                             x_fixed_vals):
         """
         Handle fixed parameters. Here we implement the amici exclusive
         initialization of ParameterLists and respectively replace the
@@ -282,7 +282,7 @@ class AmiciObjective(Objective):
             raise Exception("Sensitivity order not allowed.")
 
         # prepare result objects
-        
+
         rdatas = []
 
         nllh = 0.0
@@ -418,7 +418,6 @@ class AmiciObjective(Objective):
                 # no preequilibration required
                 continue
 
-
             # set model parameter scales for condition index
             self.set_parameter_scale(data_ix)
 
@@ -522,7 +521,7 @@ class AmiciObjective(Objective):
             nt = sum([data.nt() if data.nt() else self.amici_model.nt()
                       for data in self.edata])
         n_res = nt * self.amici_model.nytrue
-        
+
         return {
             FVAL: np.inf,
             GRAD: np.nan * np.ones(self.dim),
@@ -617,7 +616,7 @@ def create_scale_mapping_from_model(amici_scales, n_edata):
     """
     scales = []
     amici_scales = list(amici_scales)
-    
+
     for amici_scale in amici_scales:
         if amici_scale == amici.ParameterScaling_none:
             scale = 'lin'
@@ -630,7 +629,7 @@ def create_scale_mapping_from_model(amici_scales, n_edata):
                 f"Parameter scaling {amici_scale} in amici model not"
                 f"recognized.")
         scales.append(scale)
-    
+
     mapping_scale_opt_to_scale_sim = [scales for _ in range(n_edata)]
 
     return mapping_scale_opt_to_scale_sim
