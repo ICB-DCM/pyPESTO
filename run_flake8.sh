@@ -1,3 +1,3 @@
 #!/bin/sh
 
-python3 -m flake8 --exclude=build,doc,example
+python3 -m flake8 --exclude=build,doc,example,tmp
