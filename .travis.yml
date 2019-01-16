@@ -8,6 +8,8 @@ dist:
   - xenial
 compiler:
   - gcc
+services:
+  - xvfb
 
 # install dependencies
 
