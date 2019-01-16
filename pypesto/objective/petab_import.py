@@ -10,7 +10,7 @@ from pypesto.objective import AmiciObjective
 from pypesto.problem import Problem
 
 
-class Importer:
+class PetabImporter:
 
     def __init__(self, petab_problem, output_folder=None, force_compile=False):
         """
