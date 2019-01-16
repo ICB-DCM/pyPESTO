@@ -71,7 +71,8 @@ class ProfilerTest(unittest.TestCase):
                                           result=result,
                                           optimizer=optimizer,
                                           profile_index=np.array([1, 0]),
-                                          next_guess_method='adaptive_step_order_0',
+                                          next_guess_method= \
+                                              'adaptive_step_order_0',
                                           result_index=2,
                                           profile_list=0)
 
