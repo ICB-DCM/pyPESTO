@@ -25,6 +25,7 @@ setup(name='pypesto',
       install_requires=['numpy>=1.15.1',
                         'scipy>=1.1.0',
                         'pandas>=0.23.4',
-                        'matplotlib>=2.2.3'],
+                        'matplotlib>=2.2.3',
+                        'petab>=0.0.0a4'],
       extras_require={'amici': ['amici>=0.8.1']}
       )
