@@ -234,3 +234,26 @@ class PetabImporter:
                           x_names=self.petab_problem.x_ids)
 
         return problem
+    
+
+    def rdatas_to_measurement_df(self, rdatas):
+        """
+        Create a measurement dataframe in the petab format from
+        the passed `rdatas` and own information.
+        
+        Parameters
+        ----------
+
+        rdatas: list of amici.RData
+            A list of rdatas as produced by
+            pypesto.AmiciObjective.__call__(x, return_dict=True)['rdatas'].
+
+        Returns
+        -------
+
+        df: pandas.DataFrame
+            A dataframe built from the rdatas in the format as in
+            self.petab_problem.measurement_df.
+        """
+
+        return None
