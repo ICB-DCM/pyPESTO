@@ -346,7 +346,16 @@ class AmiciObjective(Objective):
                         coefficient=-1.0
                     )
                     # TODO: Compute the full Hessian, and check here
-                    s2nllh -= rdata['FIM']
+                    if sensi_order > 1:
+                        pass
+                    else:
+                        add_sim_hess_to_opt_hess(
+                            self.x_ids,
+                            self.mapping_par_opt_to_par_sim[data_ix],
+                            rdata['FIM'],
+                            s2nllh,
+                            coefficient=-1.0
+                        )
 
             elif mode == MODE_RES:
                 res = np.hstack([res, rdata['res']]) \
@@ -639,10 +648,10 @@ def add_sim_grad_to_opt_grad(par_opt_ids,
                              mapping_par_opt_to_par_sim,
                              sim_grad,
                              opt_grad,
-                             coefficient=1.0):
+                             coefficient=-1.0):
     """
     Sum simulation gradients to objective gradient according to the provided
-    mapping `mapping`.
+    mapping `mapping_par_opt_to_par_sim`.
 
     Parameters
     ----------
@@ -660,16 +669,44 @@ def add_sim_grad_to_opt_grad(par_opt_ids,
         Will be changed in place.
     coefficient: float
         Coefficient for sim_grad when adding to opt_grad.
-
-    Returns
-    -------
-
     """
 
-    for par_sim_idx, par_id in enumerate(mapping_par_opt_to_par_sim):
-        if not isinstance(par_id, str):
-            # This was a numeric override for which we ignore the gradient
+    for par_sim_idx, par_opt_id in enumerate(mapping_par_opt_to_par_sim):
+        if not isinstance(par_opt_id, str):
+            # this was a numeric override for which we ignore the gradient
             continue
 
-        par_opt_idx = par_opt_ids.index(par_id)
+        par_opt_idx = par_opt_ids.index(par_opt_id)
         opt_grad[par_opt_idx] += coefficient * sim_grad[par_sim_idx]
+
+
+def add_sim_hess_to_opt_hess(par_opt_ids,
+                             mapping_par_opt_to_par_sim,
+                             sim_hess,
+                             opt_hess,
+                             coefficient=-1.0):
+    """
+    Sum simulation hessians to objective hessian according to the provided
+    mapping `mapping_par_opt_to_par_sim`.
+
+    Parameters
+    ----------
+
+    Same as for add_sim_grad_to_opt_grad, replacing the gradients by hessians.
+    """
+
+    for par_sim_idx, par_opt_id in enumerate(mapping_par_opt_to_par_sim):
+        if not isinstance(par_opt_id, str):
+            # this was a numeric override for which we ignore the hessian
+            continue
+
+        par_opt_idx = par_opt_ids.index(par_opt_id)
+        
+        for par_sim_idx_2, par_opt_id_2 in enumerate(mapping_par_opt_to_par_sim):
+            if not isinstance(par_opt_id_2, str):
+                continue
+       
+            par_opt_idx_2 = par_opt_ids.index(par_opt_id_2)
+
+            opt_hess[par_opt_idx, par_opt_idx_2] += \
+                coefficient * sim_hess[par_sim_idx, par_sim_idx_2]
