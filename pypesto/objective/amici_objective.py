@@ -278,7 +278,7 @@ class AmiciObjective(Objective):
         # the lower orders are then automatically computed
 
         # gradients can always be computed
-        sensi_order = min(max(sensi_orders), 0)
+        sensi_order = min(max(sensi_orders), 1)
         # order 2 currently not implemented, we are using the FIM
 
         # check if sensitivities can be computed
@@ -338,8 +338,7 @@ class AmiciObjective(Objective):
             if rdata['status'] < 0.0:
                 return self.get_error_output(sensi_orders, mode)
 
-            # TODO: must respect mapping matrix when assembling overall gradient
-            # extract required result fields
+            # compute objective
             if mode == MODE_FUN:
                 nllh -= rdata['llh']
                 if sensi_order > 0:
@@ -360,7 +359,6 @@ class AmiciObjective(Objective):
                     sres = np.vstack([sres, rdata['sres']]) \
                         if sres.size else rdata['sres']
 
-        # map_to_output is called twice, might be prettified
         return Objective.output_to_tuple(
             sensi_orders,
             mode,
