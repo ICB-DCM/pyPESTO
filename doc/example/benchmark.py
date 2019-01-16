@@ -2,6 +2,9 @@
 
 import pypesto
 import petab
+import sys
+
+sys.path.insert(0, "/home/yannik/pypesto")
 
 models = ['Bachmann_MSB2011', 'beer_MolBioSystems2014',
           'boehm_JProteomeRes2014',
@@ -37,4 +40,7 @@ x_nom = manager.parameter_df['nominalValue'].values
 print(x_nom)
 print("obj: ", obj(x_nom))
 
-print(obj(x_nom, return_dict=True)['rdatas'])
+rdatas = obj(x_nom, return_dict=True)['rdatas']
+print(rdatas)
+df = importer.rdatas_to_measurement_df(rdatas)
+print(df)

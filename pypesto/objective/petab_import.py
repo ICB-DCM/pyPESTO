@@ -1,4 +1,5 @@
 import numpy as np
+import pandas as pd
 import os
 import sys
 import importlib
@@ -255,4 +256,5 @@ class PetabImporter:
             self.petab_problem.measurement_df.
         """
 
-        return None
+        df = pd.DataFrame(columns=list(self.petab_problem.measurement_df.columns))
+        return df
