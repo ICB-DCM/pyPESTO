@@ -20,6 +20,7 @@ addons:
       - libatlas-base-dev
       - lcov
       - swig3.0
+      - xvfb
 
 install:
   - mkdir -p ~/bin/ && ln -s /usr/bin/swig3.0 ~/bin/swig && export PATH=~/bin/:$PATH
