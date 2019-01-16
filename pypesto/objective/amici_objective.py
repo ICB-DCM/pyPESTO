@@ -141,10 +141,10 @@ class AmiciObjective(Objective):
 
         # mapping of parameter scales
         if mapping_scale_opt_to_scale_sim is None:
-            # use scales from amici_model
-            mapping_scale_opt_to_scale_sim = [
-                self.amici_model.getParameterScale() for _ in range(len(edata))
-            ]
+            # use scales from amici model
+            mapping_scale_opt_to_scale_sim = \
+                create_scale_mapping_from_model(
+                    self.amici_model.getParameterScale(), len(self.edata))
         self.mapping_scale_opt_to_scale_sim = mapping_scale_opt_to_scale_sim
 
         # optimization parameter names
@@ -671,6 +671,32 @@ def map_par_opt_to_par_sim(mapping_par_opt_to_par_sim, par_opt_ids, x):
 
     # return the created simulation parameter vector
     return par_sim_vals
+
+
+def create_scale_mapping_from_model(amici_scales, n_edata):
+    """
+    Create parameter scaling mapping matrix from amici scaling
+    vector.
+    """
+    scales = []
+    amici_scales = list(amici_scales)
+    
+    for amici_scale in amici_scales:
+        if amici_scale == amici.ParameterScaling_none:
+            scale = 'lin'
+        elif amici_scale == amici.ParameterScaling_ln:
+            scale = 'log'
+        elif amici_scale == amici.ParameterScaling_log10:
+            scale = 'log10'
+        else:
+            raise Exception(
+                f"Parameter scaling {amici_scale} in amici model not"
+                f"recognized.")
+        scales.append(scale)
+    
+    mapping_scale_opt_to_scale_sim = [scales for _ in range(n_edata)]
+
+    return mapping_scale_opt_to_scale_sim
 
 
 def add_sim_grad_to_opt_grad(par_opt_ids,
