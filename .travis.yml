@@ -9,7 +9,6 @@ dist:
 compiler:
   - gcc
 
-
 # install dependencies
 
 addons:
