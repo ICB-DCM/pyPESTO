@@ -103,7 +103,7 @@ class Importer:
 
         # sigmas
         sigmas = petab.get_sigmas(sbml_importer.sbml)
-        sigmas = {key.replace('sigma_', 'observable_', 1) : value['formula']
+        sigmas = {key.replace('sigma_', 'observable_', 1): value['formula']
                   for key, value in sigmas.items()}
 
         # convert
@@ -119,7 +119,7 @@ class Importer:
         # number of amici simulations will be number of unique
         # (preequilibrationConditionId, simulationConditionId) pairs.
         # Can be improved by checking for identical condition vectors.
-      
+
         condition_df = self.petab_problem.condition_df
         measurement_df = self.petab_problem.measurement_df
 
@@ -140,7 +140,8 @@ class Importer:
             # amici.ExpData for each simulation
             column_filter = 1
             for col in grouping_cols:
-                column_filter = (measurement_df[col] == condition[col]) & column_filter
+                column_filter = (
+                    measurement_df[col] == condition[col]) & column_filter
             cur_measurement_df = measurement_df.loc[column_filter, :]
 
             timepoints = sorted(
@@ -151,28 +152,39 @@ class Importer:
 
             if len(fixed_parameter_ids) > 0:
                 fixed_parameter_vals = condition_df.loc[
-                    condition_df.conditionId ==  condition.simulationConditionId,
+                    condition_df.conditionId ==
+                    condition.simulationConditionId,
                     fixed_parameter_ids].values
-                edata.fixedParameters = fixed_parameter_vals.astype(float).flatten()
+                edata.fixedParameters = fixed_parameter_vals.astype(
+                    float).flatten()
 
-                if 'preequilibrationConditionId' in condition and condition.preequilibrationConditionId:
+                if 'preequilibrationConditionId' in condition \
+                        and condition.preequilibrationConditionId:
                     fixed_preequilibration_parameter_vals = condition_df.loc[
                         # TODO: preequilibrationConditionId might not exist
-                        condition_df.conditionId == condition.preequilibrationConditionId, fixed_parameter_ids].values
-                    edata.fixedParametersPreequilibration = fixed_preequilibration_parameter_vals.astype(float).flatten()
+                        condition_df.conditionId == \
+                        condition.preequilibrationConditionId,
+                        fixed_parameter_ids].values
+                    edata.fixedParametersPreequilibration = \
+                        fixed_preequilibration_parameter_vals.astype(float) \
+                                                             .flatten()
 
             y = np.full(shape=(edata.nt(), edata.nytrue()), fill_value=np.nan)
-            sigma_y = np.full(shape=(edata.nt(), edata.nytrue()), fill_value=np.nan)
+            sigma_y = np.full(
+                shape=(edata.nt(), edata.nytrue()),
+                fill_value=np.nan)
 
             # add measurements and sigmas
             for _, measurement in cur_measurement_df.iterrows():
                 time_ix = timepoints.index(measurement.time)
-                observable_ix = observable_ids.index(f'observable_{measurement.observableId}')
+                observable_ix = observable_ids.index(
+                    f'observable_{measurement.observableId}')
                 # TODO: measurement file should contain prefix
 
                 y[time_ix, observable_ix] = measurement.measurement
                 if isinstance(measurement.noiseParameters, numbers.Number):
-                    sigma_y[time_ix, observable_ix] = measurement.noiseParameters
+                    sigma_y[time_ix,
+                            observable_ix] = measurement.noiseParameters
 
             edata.setObservedData(y.flatten())
             edata.setObservedDataStdDev(sigma_y.flatten())
@@ -192,16 +204,16 @@ class Importer:
                 sbml_model=self.petab_problem.sbml_model,
                 par_opt_ids=par_opt_ids,
                 par_sim_ids=par_sim_ids
-        )
+            )
 
         scale_mapping = \
             petab.core.get_optimization_to_simulation_scale_mapping(
-                parameter_df= self.petab_problem.parameter_df,
+                parameter_df=self.petab_problem.parameter_df,
                 mapping_par_opt_to_par_sim=parameter_mapping
-        )
+            )
 
-        #print("PARAMETER MAPPING:", parameter_mapping)
-        #print("SCALE MAPPING:", scale_mapping)
+        # print("PARAMETER MAPPING:", parameter_mapping)
+        # print("SCALE MAPPING:", scale_mapping)
 
         # create objective
         obj = AmiciObjective(
