@@ -23,7 +23,7 @@ manager = petab.Problem.from_folder(model_root + benchmark_model)
 print(
     "PARAMETER MAPPING:",
     manager.get_optimization_to_simulation_parameter_mapping())
-importer = pypesto.objective.Importer(manager)
+importer = pypesto.PetabImporter(manager)
 model = importer.model
 
 print("MODEL PAMS:", list(model.getParameterIds()))
@@ -37,4 +37,4 @@ x_nom = manager.parameter_df['nominalValue'].values
 print(x_nom)
 print("obj: ", obj(x_nom))
 
-print(obj.simulate(x_nom))
+print(obj(x_nom, return_dict=True)['rdatas'])
