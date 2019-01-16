@@ -701,11 +701,12 @@ def add_sim_hess_to_opt_hess(par_opt_ids,
             continue
 
         par_opt_idx = par_opt_ids.index(par_opt_id)
-        
-        for par_sim_idx_2, par_opt_id_2 in enumerate(mapping_par_opt_to_par_sim):
+
+        for par_sim_idx_2, par_opt_id_2 in enumerate(
+                mapping_par_opt_to_par_sim):
             if not isinstance(par_opt_id_2, str):
                 continue
-       
+
             par_opt_idx_2 = par_opt_ids.index(par_opt_id_2)
 
             opt_hess[par_opt_idx, par_opt_idx_2] += \

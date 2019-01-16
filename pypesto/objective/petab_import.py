@@ -55,7 +55,7 @@ class PetabImporter:
         """
         petab_problem = petab.Problem.from_folder(folder)
 
-        return Importer(
+        return PetabImporter(
             petab_problem=petab_problem,
             output_folder=output_folder,
             force_compile=force_compile
@@ -234,13 +234,12 @@ class PetabImporter:
                           x_names=self.petab_problem.x_ids)
 
         return problem
-    
 
     def rdatas_to_measurement_df(self, rdatas):
         """
         Create a measurement dataframe in the petab format from
         the passed `rdatas` and own information.
-        
+
         Parameters
         ----------
 
