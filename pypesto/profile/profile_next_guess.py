@@ -1,6 +1,5 @@
 import numpy as np
 import copy
-import warnings
 
 
 def next_guess(x,

@@ -69,7 +69,6 @@ class ProfilerTest(unittest.TestCase):
                 self.assertTrue(steps > 1, 'Profiling with 0th order based '
                                            'proposal needed not enough steps.')
 
-
     def check_selected_profiling(self, problem, result, optimizer):
         # create options in order to ensure a short computation time
         options = pypesto.ProfileOptions(default_step_size=0.02,
@@ -100,8 +99,6 @@ class ProfilerTest(unittest.TestCase):
                                           result=result,
                                           optimizer=optimizer,
                                           profile_index=np.array([1, 0]),
-                                          next_guess_method=
-                                              'adaptive_step_order_1',
                                           result_index=2,
                                           profile_list=0,
                                           profile_options=options)
