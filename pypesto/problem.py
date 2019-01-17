@@ -299,7 +299,7 @@ class Problem:
         if len(x_full) == self.dim:
             return x_full
 
-        x = x_full[self.x_free_indices]
+        x = [x_full[idx] for idx in self.x_free_indices]
 
         return x
 
