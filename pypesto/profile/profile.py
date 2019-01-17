@@ -31,7 +31,7 @@ class ProfileOptions(dict):
                  min_step_size=0.001,
                  max_step_size=1.,
                  step_size_factor=1.25,
-                 delta_ratio_max=0.05,
+                 delta_ratio_max=0.1,
                  ratio_min=0.145,
                  reg_points=10,
                  reg_order=4):

@@ -81,7 +81,7 @@ def adaptive_step(x, par_index, par_direction, options, current_profile,
                   problem, global_opt, order=1):
     # There is this magic factor in the old profiling code which slows down
     # profiling at small ratios (must be >= 0 and < 1)
-    magic_factor_obj_value = 0.25
+    magic_factor_obj_value = 0.5
 
     # check if this is the first step, compute the direction for the first
     # guess of next step
@@ -116,7 +116,7 @@ def adaptive_step(x, par_index, par_direction, options, current_profile,
             delta_x_dir = last_delta_x / step_size_guess
         elif np.isnan(order):
             # disable rank warnings
-            warnings.simplefilter('ignore', np.RankWarning)
+            # warnings.simplefilter('ignore', np.RankWarning)
 
             # determine interpolation order
             reg_max_order = np.floor(n_profile_points / 2)
@@ -127,10 +127,22 @@ def adaptive_step(x, par_index, par_direction, options, current_profile,
                 if i_par == pos_ind_red:
                     reg_par.append(float('nan'))
                 else:
-                    reg_par.append(np.polyfit(
-                        current_profile.x_path[par_index, -reg_points:-1],
-                        current_profile.x_path[i_par, -reg_points:-1],
-                        reg_order))
+                    # Do polynomial interpolation of profile path
+                    # Determine rank of polynomial interpolation
+                    regression_tmp = np.polyfit(
+                        current_profile.x_path[par_index, -1:-reg_points:-1],
+                        current_profile.x_path[i_par, -1:-reg_points:-1],
+                        reg_order, full=True)
+
+                    # Decrease rank if interpolation problem is illconditioned
+                    if regression_tmp[2] < reg_order:
+                        reg_order = regression_tmp[2]
+                        regression_tmp = np.polyfit(
+                            current_profile.x_path[par_index, -reg_points:-1],
+                            current_profile.x_path[i_par, -reg_points:-1],
+                            reg_order, full=True)
+
+                    reg_par.append(regression_tmp[0])
 
     # boolean indicating whether a search should be carried out
     search = True
@@ -164,11 +176,13 @@ def adaptive_step(x, par_index, par_direction, options, current_profile,
             x_step_tmp = []
             for i_par in range(0, len(problem.x_free_indices) + 1):
                 if i_par == pos_ind_red:
-                    x_step_tmp.append(x[par_index] + step_length)
+                    x_step_tmp.append(x[par_index] + step_length *
+                                      par_direction)
                 else:
                     cur_par_extrapol = np.poly1d(reg_par[i_par])
                     x_step_tmp.append(cur_par_extrapol(x[par_index] +
-                                                       step_length))
+                                                       step_length *
+                                                       par_direction))
             x_step = np.array(x_step_tmp)
         else:
             # if we do simple extrapolation
@@ -187,7 +201,7 @@ def adaptive_step(x, par_index, par_direction, options, current_profile,
 
     # next start point has to be searched
     # compute the next objective value which we aim for
-    next_obj_target = - np.log(1. - options.delta_ratio_max) - \
+    next_obj_target = - np.log(1. - options.delta_ratio_max) + \
         magic_factor_obj_value * delta_obj_value + \
         current_profile.fval_path[-1]
 
