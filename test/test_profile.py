@@ -38,8 +38,7 @@ class ProfilerTest(unittest.TestCase):
     def check_default_profiling(self, problem, result, optimizer):
         # loop over  methods for creating new initial guesses
         method_list = [None, 'fixed_step', 'adaptive_step_order_0',
-                       'adaptive_step_order_1']
-
+                       'adaptive_step_order_1', 'adaptive_step_regression']
         for method in method_list:
             # run profiling
             result = pypesto.parameterProfile(problem=problem,
@@ -52,14 +51,35 @@ class ProfilerTest(unittest.TestCase):
                 isinstance(result.profile_result.list[0][0],
                            pypesto.ProfilerResult))
 
+            # check whether profiling needed maybe too many steps
+            steps = result.profile_result.list[0][0]['ratio_path'].size
+            if method == 'adaptive_step_regression':
+                self.assertTrue(steps < 20, 'Profiling with regression based '
+                                            'proposal needed too many steps.')
+                self.assertTrue(steps > 1, 'Profiling with regression based '
+                                           'proposal needed not enough steps.')
+            elif method == 'adaptive_step_order_1':
+                self.assertTrue(steps < 25, 'Profiling with 1st order based '
+                                            'proposal needed too many steps.')
+                self.assertTrue(steps > 1, 'Profiling with 1st order based '
+                                           'proposal needed not enough steps.')
+            elif method == 'adaptive_step_order_0':
+                self.assertTrue(steps < 100, 'Profiling with 0th order based '
+                                             'proposal needed too many steps.')
+                self.assertTrue(steps > 1, 'Profiling with 0th order based '
+                                           'proposal needed not enough steps.')
+
+
     def check_selected_profiling(self, problem, result, optimizer):
         # create options in order to ensure a short computation time
         options = pypesto.ProfileOptions(default_step_size=0.02,
-                                         min_step_size=0.01,
+                                         min_step_size=0.005,
                                          max_step_size=1.,
-                                         step_size_factor=1.25,
-                                         delta_ratio_max=0.1,
-                                         ratio_min=0.5)
+                                         step_size_factor=1.5,
+                                         delta_ratio_max=0.2,
+                                         ratio_min=0.3,
+                                         reg_points=5,
+                                         reg_order=2)
 
         # 1st run of profiling, computing just one out of two profiles
         result = pypesto.parameterProfile(problem=problem,
