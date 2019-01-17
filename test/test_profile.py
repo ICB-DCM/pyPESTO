@@ -53,28 +53,38 @@ class ProfilerTest(unittest.TestCase):
                            pypesto.ProfilerResult))
 
     def check_selected_profiling(self, problem, result, optimizer):
+        # create options in order to ensure a short computation time
+        options = pypesto.ProfileOptions(default_step_size=0.02,
+                                         min_step_size=0.01,
+                                         max_step_size=1.,
+                                         step_size_factor=1.25,
+                                         delta_ratio_max=0.1,
+                                         ratio_min=0.5)
+
         # 1st run of profiling, computing just one out of two profiles
         result = pypesto.parameterProfile(problem=problem,
                                           result=result,
                                           optimizer=optimizer,
                                           profile_index=np.array([0, 1]),
                                           next_guess_method='fixed_step',
-                                          result_index=1)
+                                          result_index=1,
+                                          profile_options=options)
 
         self.assertIsInstance(result.profile_result.list[0][1],
                               pypesto.ProfilerResult)
         self.assertIsNone(result.profile_result.list[0][0])
 
         # 2nd run of profiling, appending to an existing list of profiles
-        # using another algorithm
+        # using another algorithm and another optimum
         result = pypesto.parameterProfile(problem=problem,
                                           result=result,
                                           optimizer=optimizer,
                                           profile_index=np.array([1, 0]),
-                                          next_guess_method= \
-                                              'adaptive_step_order_0',
+                                          next_guess_method=
+                                              'adaptive_step_order_1',
                                           result_index=2,
-                                          profile_list=0)
+                                          profile_list=0,
+                                          profile_options=options)
 
         self.assertIsInstance(result.profile_result.list[0][0],
                               pypesto.ProfilerResult)
@@ -83,7 +93,9 @@ class ProfilerTest(unittest.TestCase):
         result = pypesto.parameterProfile(problem=problem,
                                           result=result,
                                           optimizer=optimizer,
-                                          profile_index=np.array([1, 0]))
+                                          next_guess_method='fixed_step',
+                                          profile_index=np.array([1, 0]),
+                                          profile_options=options)
         # check result
         self.assertIsInstance(result.profile_result.list[1][0],
                               pypesto.ProfilerResult)

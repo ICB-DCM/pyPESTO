@@ -2,6 +2,7 @@ import numpy as np
 import copy
 import warnings
 
+
 def next_guess(x,
                par_index,
                par_direction,
@@ -124,7 +125,7 @@ def adaptive_step(x, par_index, par_direction, options, current_profile,
             reg_par = []
             for i_par in range(0, len(problem.x_free_indices) + 1):
                 if i_par == pos_ind_red:
-                    reg_par.append(float('nan'));
+                    reg_par.append(float('nan'))
                 else:
                     reg_par.append(np.polyfit(
                         current_profile.x_path[par_index, -reg_points:-1],
@@ -187,8 +188,8 @@ def adaptive_step(x, par_index, par_direction, options, current_profile,
     # next start point has to be searched
     # compute the next objective value which we aim for
     next_obj_target = - np.log(1. - options.delta_ratio_max) - \
-                      magic_factor_obj_value * delta_obj_value + \
-                      current_profile.fval_path[-1]
+        magic_factor_obj_value * delta_obj_value + \
+        current_profile.fval_path[-1]
 
     # compute objective at the guessed point
     problem.fix_parameters(par_index, next_x[par_index])
