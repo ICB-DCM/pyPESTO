@@ -116,37 +116,36 @@ class PetabImporter:
         )
 
     def create_objective(self):
-        # number of amici simulations will be number of unique
-        # (preequilibrationConditionId, simulationConditionId) pairs.
-        # Can be improved by checking for identical condition vectors.
+        """
+        Create a pypesto.AmiciObjective.
+        """
 
         condition_df = self.petab_problem.condition_df.reset_index()
         measurement_df = self.petab_problem.measurement_df
 
         # number of amici simulations will be number of unique
-        # (preequilibrationCondition, simulationCondition) pairs.
-        # can be improved by checking for identical condition vectors.
-        grouping_cols = petab.core.get_notnull_columns(
-            measurement_df,
-            ['simulationConditionId', 'preequilibrationConditionId'])
-        simulation_conditions = measurement_df.groupby(
-            grouping_cols).size().reset_index()
-
+        # (preequilibrationConditionId, simulationConditionId) pairs.
+        # Can be improved by checking for identical condition vectors.
+        grouping_cols, simulation_conditions = \
+            _get_simulation_conditions(condition_df, measurement_df)
+        
         observable_ids = self.model.getObservableIds()
+
         fixed_parameter_ids = self.model.getFixedParameterIds()
 
         edatas = []
         for edata_idx, condition in simulation_conditions.iterrows():
             # amici.ExpData for each simulation
-            column_filter = 1
-            for col in grouping_cols:
-                column_filter = (
-                    measurement_df[col] == condition[col]) & column_filter
-            cur_measurement_df = measurement_df.loc[column_filter, :]
 
+            # extract rows for condition
+            cur_measurement_df = _get_rows_for_condition(
+                measurement_df, grouping_cols, condition)
+
+            # make list of all timepoints for which measurements exist
             timepoints = sorted(
                 cur_measurement_df.time.unique().astype(float))
 
+            # init edata object
             edata = amici.ExpData(self.model.get())
             edata.setTimepoints(timepoints)
 
@@ -254,54 +253,104 @@ class PetabImporter:
             A dataframe built from the rdatas in the format as in
             self.petab_problem.measurement_df.
         """
+    
+        condition_df = self.petab_problem.condition_df.reset_index()
+        measurement_df = self.petab_problem.measurement_df
 
         # initialize dataframe
         df = pd.DataFrame(
             columns=list(
                 self.petab_problem.measurement_df.columns))
 
-        condition_df = self.petab_problem.condition_df.reset_index()
-        measurement_df = self.petab_problem.measurement_df
+        # get simulation conditions
+        grouping_cols, simulation_conditions = \
+            _get_simulation_conditions(condition_df, measurement_df)
 
-        grouping_cols = petab.core.get_notnull_columns(
-            measurement_df,
-            ['simulationConditionId', 'preequilibrationConditionId'])
-        simulation_conditions = measurement_df.groupby(
-            grouping_cols).size().reset_index()
-
+        # get observable ids
         observable_ids = self.model.getObservableIds()
         
+        # iterate over conditions
         for data_idx, condition in simulation_conditions.iterrows():
+            # current rdata
             rdata = rdatas[data_idx]
+            # current simulation matrix
             y = rdata['y']
+            # time array used in rdata
             t = list(rdata['t'])
-            col_filter = 1
-            for col in grouping_cols:
-                col_filter = (
-                    measurement_df[col] == condition[col]) & col_filter
-            cur_measurement_df = measurement_df.loc[col_filter, :]
 
-            timepoints = sorted(
-                    cur_measurement_df.time.unique().astype(float))
+            # extract rows for condition
+            cur_measurement_df = _get_rows_for_condition(
+                measurement_df, grouping_cols, condition)
 
+            # iterate over entries for the given condition
             for _, row in cur_measurement_df.iterrows():
+                # copy row
                 row_sim = copy.deepcopy(row)
                 
                 # extract simulated measurement value
                 timepoint_idx = t.index(row.time)
-                observable_idx = observable_ids.index("observable_" + row.observableId)
-                measurement = y[timepoint_idx, observable_idx]
+                observable_idx = observable_ids.index(
+                    "observable_" + row.observableId)
+                measurement_sim = y[timepoint_idx, observable_idx]
                 
-                row_sim.measurement = measurement
+                # change measurement entry
+                row_sim.measurement = measurement_sim
+
+                # append to dataframe
                 df = df.append(row_sim, ignore_index=True)
-                #ow.observableId,
-                #     'preequilibrationConditionId': row.preequilibrationConditionId,
-                #     'simulationConditionId': row.simulationConditionId,
-                #     'measurement': measurement,
-                #     'time': row.time,
-                #     'observableParameters': row.observableParameters,
-                #     'noiseParameters': row.noiseParameters,
-                #     'observableTransformation': row.observableTransformation},
-                #    ignore_index=True)
 
         return df
+
+
+def _get_simulation_conditions(condition_df, measurement_df):
+    """
+    Compute the conditions by which to group the measurements, so
+    that for each group an amici.EData can be generated.
+
+    Returns
+    -------
+    (grouping_cols, simulation_conditions): tuple
+        Here, grouping_cols is the columns according to which the grouping
+        was done, and simulation_conditions are the identified conditions.
+    """
+    # make sure index is reset
+    condition_df = condition_df.reset_index()
+
+    # find columns to group by (i.e. if not all nans).
+    # number of amici simulations will be number of unique
+    # (preequilibrationCondition, simulationCondition) pairs.
+    # can be improved by checking for identical condition vectors.
+    grouping_cols = petab.core.get_notnull_columns(
+        measurement_df,
+        ['simulationConditionId', 'preequilibrationConditionId'])
+
+    # group by cols and return dataframe containing each combination
+    # of those rows only once (and an additional counting row)
+    simulation_conditions = measurement_df.groupby(
+        grouping_cols).size().reset_index()
+
+    return grouping_cols, simulation_conditions
+
+
+def _get_rows_for_condition(measurement_df, grouping_cols, condition):
+    """
+    Extract rows in `measurement_df` according to `grouping_cols`
+    for `condition`.
+
+    Returns
+    -------
+
+    cur_measurement_df: pd.DataFrame
+        The subselection for the condition.
+    """
+    # filter rows for condition
+    row_filter = 1
+    # check for equality in all grouping cols
+    for col in grouping_cols:
+        row_filter = (
+            measurement_df[col] == condition[col]
+        ) & row_filter
+    
+    # apply filter    
+    cur_measurement_df = measurement_df.loc[row_filter, :]
+    return cur_measurement_df
