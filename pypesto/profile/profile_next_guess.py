@@ -138,89 +138,6 @@ def adaptive_step(x, par_index, par_direction, options, current_profile,
             complex regression should be used)
        """
 
-    # There is this magic factor in the old profiling code which slows down
-    # profiling at small ratios (must be >= 0 and < 1)
-    magic_factor_obj_value = options.magic_factor_obj_value
-
-    # check if this is the first step, compute the direction for the first
-    # guess of next step
-    n_profile_points = len(current_profile.fval_path)
-    pos_ind_red = len([ip for ip in problem.x_free_indices if ip < par_index])
-    problem.fix_parameters(par_index, x[par_index])
-
-    if n_profile_points == 1:
-        # take default step size
-        step_size_guess = options.default_step_size
-        delta_obj_value = 0.
-
-        # set the update direction
-        delta_x_dir = np.zeros(len(x))
-        delta_x_dir[par_index] = par_direction
-    else:
-        # take last step size
-        step_size_guess = np.abs(current_profile.x_path[par_index, -1] -
-                                 current_profile.x_path[par_index, -2])
-        delta_obj_value = current_profile.fval_path[-1] - global_opt
-
-        if order == 0:
-            # set the update direction
-            delta_x_dir = np.zeros(len(x))
-            delta_x_dir[par_index] = par_direction
-        elif order == 1 or (np.isnan(order) and n_profile_points < 3):
-            # set the update direction
-            last_delta_x = current_profile.x_path[:, -1] - \
-                           current_profile.x_path[:, -2]
-            step_size_guess = np.abs(current_profile.x_path[par_index, -1] -
-                                     current_profile.x_path[par_index, -2])
-            delta_x_dir = last_delta_x / step_size_guess
-        elif np.isnan(order):
-            # disable rank warnings
-            # warnings.simplefilter('ignore', np.RankWarning)
-
-            # determine interpolation order
-            reg_max_order = np.floor(n_profile_points / 2)
-            reg_order = np.min([reg_max_order, options.reg_order])
-            reg_points = np.min([n_profile_points, options.reg_points])
-            reg_par = []
-            for i_par in range(len(problem.x_free_indices) + 1):
-                if i_par == pos_ind_red:
-                    reg_par.append(np.nan)
-                else:
-                    # Do polynomial interpolation of profile path
-                    # Determine rank of polynomial interpolation
-                    regression_tmp = np.polyfit(
-                        current_profile.x_path[par_index, -1:-reg_points:-1],
-                        current_profile.x_path[i_par, -1:-reg_points:-1],
-                        reg_order, full=True)
-
-                    # Decrease rank if interpolation problem is illconditioned
-                    if regression_tmp[2] < reg_order:
-                        reg_order = regression_tmp[2]
-                        regression_tmp = np.polyfit(
-                            current_profile.x_path[par_index, -reg_points:-1],
-                            current_profile.x_path[i_par, -reg_points:-1],
-                            reg_order.astype('int'), full=True)
-
-                    reg_par.append(regression_tmp[0])
-
-    # boolean indicating whether a search should be carried out
-    search = True
-
-    # check whether we must make a minimum step anyway, since we're close to
-    # the next bound
-    min_delta_x = x[par_index] + par_direction * options.min_step_size
-    if par_direction is -1:
-        if min_delta_x < problem.lb_full[par_index]:
-            step_length = problem.lb_full[par_index] - x[par_index]
-            search = False
-    else:
-        if min_delta_x > problem.ub_full[par_index]:
-            step_length = problem.ub_full[par_index] - x[par_index]
-            search = False
-
-    if not search:
-        return x + step_length * delta_x_dir
-
     # restrict step proposal to minimum and maximum step size
     def clip_to_minmax(step_size_proposal):
         return clip_vector(step_size_proposal, options.min_step_size,
@@ -230,16 +147,43 @@ def adaptive_step(x, par_index, par_direction, options, current_profile,
     def clip_to_bounds(step_proposal):
         return clip_vector(step_proposal, problem.lb_full, problem.ub_full)
 
+    # check if this is the first step
+    n_profile_points = len(current_profile.fval_path)
+    pos_ind_red = len([ip for ip in problem.x_free_indices if ip < par_index])
+    problem.fix_parameters(par_index, x[par_index])
+
+    # Get update directions and first step size guesses
+    (step_size_guess, delta_x_dir, reg_par, delta_obj_value) = \
+        handle_profile_history(x, par_index, par_direction, n_profile_points,
+                               pos_ind_red, global_opt, order,
+                               current_profile, problem, options)
+
+    # check whether we must make a minimum step anyway, since we're close to
+    # the next bound
+    min_delta_x = x[par_index] + par_direction * options.min_step_size
+    if par_direction is -1:
+        if min_delta_x < problem.lb_full[par_index]:
+            step_length = problem.lb_full[par_index] - x[par_index]
+            return x + step_length * delta_x_dir
+    else:
+        if min_delta_x > problem.ub_full[par_index]:
+            step_length = problem.ub_full[par_index] - x[par_index]
+            return x + step_length * delta_x_dir
+
     # parameter extrapolation function
     def par_extrapol(step_length):
+        # Do we have enough points to do a regression?
         if np.isnan(order) and n_profile_points > 2:
-            # if we do regression
             x_step_tmp = []
+            # loop over parameters, extrapolate each one
             for i_par in range(len(problem.x_free_indices) + 1):
                 if i_par == pos_ind_red:
+                    # if we meet the profiling parameter, just increase,
+                    # don't extrapolate
                     x_step_tmp.append(x[par_index] + step_length *
                                       par_direction)
                 else:
+                    # extrapolate
                     cur_par_extrapol = np.poly1d(reg_par[i_par])
                     x_step_tmp.append(cur_par_extrapol(x[par_index] +
                                                        step_length *
@@ -257,7 +201,7 @@ def adaptive_step(x, par_index, par_direction, options, current_profile,
     # next start point has to be searched
     # compute the next objective value which we aim for
     next_obj_target = - np.log(1. - options.delta_ratio_max) + \
-        magic_factor_obj_value * delta_obj_value + \
+        options.magic_factor_obj_value * delta_obj_value + \
         current_profile.fval_path[-1]
 
     # compute objective at the guessed point
@@ -268,66 +212,156 @@ def adaptive_step(x, par_index, par_direction, options, current_profile,
     # iterate until good step size is found
     if next_obj_target < next_obj:
         # The step is rather too long
-        stop_search = False
-        while not stop_search:
-            # Reduce step size of guess
-            last_x = copy.copy(next_x)
-            step_size_guess = clip_to_minmax(step_size_guess /
-                                             options.step_size_factor)
-            next_x = clip_to_bounds(par_extrapol(step_size_guess))
-
-            # Check if we crossed a root or reduced to the minimum
-            if step_size_guess == options.min_step_size:
-                stop_search = True
-            else:
-                # compute new objective value
-                problem.fix_parameters(par_index, next_x[par_index])
-                last_obj = copy.copy(next_obj)
-                next_obj = problem.objective(reduce_x(next_x, par_index))
-
-                # check for root crossing
-                if next_obj_target >= next_obj:
-                    stop_search = True
-
-                    # interpolate between the last two steps
-                    delta_obj = np.abs(next_obj - last_obj)
-                    add_x = np.abs(last_obj - next_obj_target) * (
-                            next_x - last_x) / delta_obj
-
-                    # fix final guess
-                    next_x = last_x + add_x
+        return do_line_seach(next_x, step_size_guess, 'decrease',
+                             par_extrapol, next_obj, next_obj_target,
+                             clip_to_minmax, clip_to_bounds, par_index,
+                             problem, options)
 
     else:
         # The step is rather too short
-        stop_search = False
-        while not stop_search:
-            last_x = copy.copy(next_x)
-            step_size_guess = clip_to_minmax(step_size_guess *
-                                             options.step_size_factor)
-            next_x = clip_to_bounds(par_extrapol(step_size_guess))
+        return do_line_seach(next_x, step_size_guess, 'increase',
+                             par_extrapol, next_obj, next_obj_target,
+                             clip_to_minmax, clip_to_bounds, par_index,
+                             problem, options)
 
-            # Check if we crossed a root or increased to the maximum
-            if step_size_guess == options.max_step_size:
-                stop_search = True
-            else:
-                # compute new objective value
-                problem.fix_parameters(par_index, next_x[par_index])
-                last_obj = copy.copy(next_obj)
-                next_obj = problem.objective(reduce_x(next_x, par_index))
 
-                # check for root crossing
-                if next_obj_target <= next_obj:
-                    stop_search = True
+def handle_profile_history(x, par_index, par_direction, n_profile_points,
+                           pos_ind_red, global_opt, order, current_profile,
+                           problem, options):
+    """
+       Computes the very first step direction update guesses, check whether
+       enough step have been taken for applying regression, computes
+       regression or simple extrapolation
+    """
 
-                    # interpolate between the last two steps
-                    delta_obj = np.abs(next_obj - last_obj)
-                    add_x = np.abs(last_obj - next_obj_target) * (
-                            next_x - last_x) / delta_obj
+    # set the update direction
+    delta_x_dir = np.zeros(len(x))
+    delta_x_dir[par_index] = par_direction
+    reg_par = None
 
-                    # fix final guess
-                    next_x = last_x + add_x
+    # Is this the first step along this profile? If so, try a simple step
+    if n_profile_points == 1:
+        # try to use the default step size
+        step_size_guess = options.default_step_size
+        delta_obj_value = 0.
 
-    return next_x
+    else:
+        # try to reuse the previous step size
+        step_size_guess = np.abs(current_profile.x_path[par_index, -1] -
+                                 current_profile.x_path[par_index, -2])
+        delta_obj_value = current_profile.fval_path[-1] - global_opt
+
+        if order == 1 or (np.isnan(order) and n_profile_points < 3):
+            # set the update direction (extrapolate with order 1)
+            last_delta_x = current_profile.x_path[:, -1] - \
+                           current_profile.x_path[:, -2]
+            step_size_guess = np.abs(current_profile.x_path[par_index, -1] -
+                                     current_profile.x_path[par_index, -2])
+            delta_x_dir = last_delta_x / step_size_guess
+        elif np.isnan(order):
+            # compute the regression polynomial for parameter extrapolation
+
+            reg_par = get_reg_polynomial(n_profile_points, pos_ind_red,
+                                         par_index, current_profile,
+                                         problem, options)
+
+    return step_size_guess, delta_x_dir, reg_par, delta_obj_value
+
+def get_reg_polynomial(n_profile_points, pos_ind_red, par_index,
+                       current_profile, problem, options):
+    """
+       Computes the regression polynomial which is used to step proposal
+       extrapolation from the last profile points
+    """
+
+    # determine interpolation order
+    reg_max_order = np.floor(n_profile_points / 2)
+    reg_order = np.min([reg_max_order, options.reg_order])
+    reg_points = np.min([n_profile_points, options.reg_points])
+
+    # set up matrix of regression parameters
+    reg_par = []
+    for i_par in range(len(problem.x_free_indices) + 1):
+        if i_par == pos_ind_red:
+            # if we meet the current profiling parameter, there is nothing
+            # to do, so pass an np.nan
+            reg_par.append(np.nan)
+        else:
+            # Do polynomial interpolation of profile path
+            # Determine rank of polynomial interpolation
+            regression_tmp = np.polyfit(
+                current_profile.x_path[par_index, -1:-reg_points:-1],
+                current_profile.x_path[i_par, -1:-reg_points:-1],
+                reg_order, full=True)
+
+            # Decrease rank if interpolation problem is ill-conditioned
+            if regression_tmp[2] < reg_order:
+                reg_order = regression_tmp[2]
+                regression_tmp = np.polyfit(
+                    current_profile.x_path[par_index, -reg_points:-1],
+                    current_profile.x_path[i_par, -reg_points:-1],
+                    reg_order.astype(int), full=True)
+
+            # add to regression parameters
+            reg_par.append(regression_tmp[0])
+
+    return reg_par
+
+def do_line_seach(next_x, step_size_guess, direction, par_extrapol, next_obj,
+                  next_obj_target, clip_to_minmax, clip_to_bounds,
+                  par_index, problem, options):
+    """
+       Performs the line search based on the objective function we want to
+       reach, based on the current position in parameter space and on the
+       first guess for the proposal
+    """
+
+    # Was the inital step too big or too small?
+    if direction == 'increase':
+        adapt_factor = options.step_size_factor
+    else:
+        adapt_factor = 1 / options.step_size_factor
+
+    # Loop until correct step size was found
+    stop_search = False
+    while not stop_search:
+        # Adapt step size of guess
+        last_x = copy.copy(next_x)
+        step_size_guess = clip_to_minmax(step_size_guess * adapt_factor)
+        next_x = clip_to_bounds(par_extrapol(step_size_guess))
+
+        # Check if we hit the bounds
+        hit_bounds = (direction == 'decrease' and step_size_guess ==
+            options.min_step_size) or (direction == 'increase' and
+                                       step_size_guess ==
+                                       options.max_step_size)
+
+        if hit_bounds:
+            return next_x
+        else:
+            # compute new objective value
+            problem.fix_parameters(par_index, next_x[par_index])
+            last_obj = copy.copy(next_obj)
+            next_obj = problem.objective(reduce_x(next_x, par_index))
+
+            # check for root crossing and compute correct step size in case
+            if direction == 'decrease' and next_obj_target >= next_obj:
+                return next_x_interpolate(next_obj, last_obj, next_x,
+                                          last_x, next_obj_target)
+            elif direction == 'increase' and next_obj_target <= next_obj:
+                return next_x_interpolate(next_obj, last_obj, next_x,
+                                          last_x, next_obj_target)
+
+def next_x_interpolate(next_obj, last_obj, next_x, last_x, next_obj_target):
+    """
+       interpolate between the last two steps
+    """
+    delta_obj = np.abs(next_obj - last_obj)
+    add_x = np.abs(last_obj - next_obj_target) * (
+            next_x - last_x) / delta_obj
+
+    # fix final guess and return
+    return last_x + add_x
 
 def reduce_x(next_x, par_index):
     """
