@@ -11,7 +11,62 @@ def next_guess(x,
                problem,
                global_opt):
     """
-       This is function initializes profiling based on a previous optimization.
+    This function creates the next inital guess for the optimizer in
+    order to compute the next profile point. Different proposal methods
+    are available.
+
+    Parameters
+    ----------
+
+    x: numpy.ndarray
+       The current position of the profiler
+
+    par_index: int
+        The index of the parameter of the current profile
+
+    par_direction: int
+        The direction, in which the profiling is done (1 or -1)
+
+    profile_options: pypesto.ProfileOptions, optional
+        Various options applied to the profile optimization.
+
+    update_type: str
+        type of update for next profile point
+
+    current_profile: pypesto.ProfilerResults
+        The profile which should be computed
+
+    problem: pypesto.Problem
+        The problem to be solved.
+
+    global_opt: float
+        log-posterior value of the global optimum
+    """
+
+    if update_type == 'fixed_step':
+        return fixed_step(x, par_index, par_direction, profile_options,
+                          problem)
+    elif update_type == 'adaptive_step_order_0':
+        order = 0
+    elif update_type == 'adaptive_step_order_1':
+        order = 1
+    elif update_type == 'adaptive_step_regression':
+        order = np.nan
+    else:
+        raise Exception('Unsupported update_type for '
+                        'create_next_startpoint.')
+
+    return adaptive_step(x, par_index, par_direction, profile_options,
+                         current_profile, problem, global_opt, order)
+
+
+def fixed_step(x,
+               par_index,
+               par_direction,
+               options,
+               problem):
+    """
+       Most simple method to create the next guess.
 
        Parameters
        ----------
@@ -19,17 +74,53 @@ def next_guess(x,
         x: ndarray
            The current position of the profiler
 
-        par_index: ndarray
-            The index of the current profile
+        par_index: int
+            The index of the parameter of the current profile
 
         par_direction: int
             The direction, in which the profiling is done (1 or -1)
 
-        profile_options: pypesto.ProfileOptions, optional
+        options: pypesto.ProfileOptions, optional
             Various options applied to the profile optimization.
 
-        update_type: basestring
-            type of update for next profile point
+        problem: pypesto.Problem
+            The problem to be solved.
+       """
+
+    delta_x = np.zeros(len(x))
+    delta_x[par_index] = par_direction * options.default_step_size
+
+    # check whether the next point is maybe outside the bounds
+    # and correct it
+    next_x_par = x[par_index] + delta_x[par_index]
+    if par_direction is -1 and next_x_par < problem.lb_full[par_index]:
+        delta_x[par_index] = problem.lb_full[par_index] - x[par_index]
+    elif par_direction is 1 and next_x_par > problem.ub_full[par_index]:
+        delta_x[par_index] = problem.ub_full[par_index] - x[par_index]
+
+    return x + delta_x
+
+
+def adaptive_step(x, par_index, par_direction, options, current_profile,
+                  problem, global_opt, order=1):
+    """
+       group of more complex methods for point proposal, step size is
+       automatically computed by a line search algorithm (hence: adaptive)
+
+       Parameters
+       ----------
+
+        x: ndarray
+           The current position of the profiler
+
+        par_index: int
+            The index of the parameter of the current profile
+
+        par_direction: int
+            The direction, in which the profiling is done (1 or -1)
+
+        options: pypesto.ProfileOptions
+            Various options applied to the profile optimization.
 
         current_profile: pypesto.ProfilerResults
             The profile which should be computed
@@ -39,48 +130,17 @@ def next_guess(x,
 
         global_opt: float
             log-posterior value of the global optimum
+
+        order: int
+            specifies the precise algorithm for extrapolation: can be 0 (
+            just one parameter is updated), 1 (last two points used to
+            extrapolate all parameters), and np.nan (indicates that a more
+            complex regression should be used)
        """
 
-    if update_type == 'fixed_step':
-        return fixed_step(x, par_index, par_direction, profile_options,
-                          problem)
-    else:
-        if update_type == 'adaptive_step_order_0':
-            order = 0
-        elif update_type == 'adaptive_step_order_1':
-            order = 1
-        elif update_type == 'adaptive_step_regression':
-            order = float('nan')
-        else:
-            raise Exception('Unsupported update_type for '
-                            'create_next_startpoint.')
-
-        return adaptive_step(x, par_index, par_direction, profile_options,
-                             current_profile, problem, global_opt, order)
-
-
-def fixed_step(x, par_index, par_direction, options, problem):
-    delta_x = np.zeros(len(x))
-    delta_x[par_index] = par_direction * options.default_step_size
-
-    # check whether the next point is maybe outside the bounds
-    # and correct it
-    next_x_par = x[par_index] + delta_x[par_index]
-    if par_direction is -1:
-        if next_x_par < problem.lb_full[par_index]:
-            delta_x[par_index] = problem.lb_full[par_index] - x[par_index]
-    else:
-        if next_x_par > problem.ub_full[par_index]:
-            delta_x[par_index] = problem.ub_full[par_index] - x[par_index]
-
-    return x + delta_x
-
-
-def adaptive_step(x, par_index, par_direction, options, current_profile,
-                  problem, global_opt, order=1):
     # There is this magic factor in the old profiling code which slows down
     # profiling at small ratios (must be >= 0 and < 1)
-    magic_factor_obj_value = 0.5
+    magic_factor_obj_value = options.magic_factor_obj_value
 
     # check if this is the first step, compute the direction for the first
     # guess of next step
@@ -122,9 +182,9 @@ def adaptive_step(x, par_index, par_direction, options, current_profile,
             reg_order = np.min([reg_max_order, options.reg_order])
             reg_points = np.min([n_profile_points, options.reg_points])
             reg_par = []
-            for i_par in range(0, len(problem.x_free_indices) + 1):
+            for i_par in range(len(problem.x_free_indices) + 1):
                 if i_par == pos_ind_red:
-                    reg_par.append(float('nan'))
+                    reg_par.append(np.nan)
                 else:
                     # Do polynomial interpolation of profile path
                     # Determine rank of polynomial interpolation
@@ -173,7 +233,7 @@ def adaptive_step(x, par_index, par_direction, options, current_profile,
         if np.isnan(order) and n_profile_points > 2:
             # if we do regression
             x_step_tmp = []
-            for i_par in range(0, len(problem.x_free_indices) + 1):
+            for i_par in range(len(problem.x_free_indices) + 1):
                 if i_par == pos_ind_red:
                     x_step_tmp.append(x[par_index] + step_length *
                                       par_direction)
@@ -191,7 +251,7 @@ def adaptive_step(x, par_index, par_direction, options, current_profile,
 
     # parameter reduction function (cutting out the entry par_index)
     def reduce_x(next_x):
-        red_ind = list(range(0, len(next_x)))
+        red_ind = list(range(len(next_x)))
         red_ind.pop(par_index)
         return np.array([next_x[ip] for ip in red_ind])
 
