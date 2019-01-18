@@ -199,7 +199,7 @@ def adaptive_step(x, par_index, par_direction, options, current_profile,
                         regression_tmp = np.polyfit(
                             current_profile.x_path[par_index, -reg_points:-1],
                             current_profile.x_path[i_par, -reg_points:-1],
-                            reg_order, full=True)
+                            reg_order.astype('int'), full=True)
 
                     reg_par.append(regression_tmp[0])
 
@@ -221,12 +221,14 @@ def adaptive_step(x, par_index, par_direction, options, current_profile,
     if not search:
         return x + step_length * delta_x_dir
 
-    # restrict a step to the bounds
+    # restrict step proposal to minimum and maximum step size
+    def clip_to_minmax(step_size_proposal):
+        return clip_vector(step_size_proposal, options.min_step_size,
+                           options.max_step_size)
+
+    # restrict step proposal to bounds
     def clip_to_bounds(step_proposal):
-        for i_par, i_step in enumerate(step_proposal):
-            step_proposal[i_par] = np.max([np.min([i_step, problem.ub_full[
-                i_par]]), problem.lb_full[i_par]])
-        return step_proposal
+        return clip_vector(step_proposal, problem.lb_full, problem.ub_full)
 
     # parameter extrapolation function
     def par_extrapol(step_length):
@@ -249,12 +251,6 @@ def adaptive_step(x, par_index, par_direction, options, current_profile,
 
         return clip_to_bounds(x_step)
 
-    # parameter reduction function (cutting out the entry par_index)
-    def reduce_x(next_x):
-        red_ind = list(range(len(next_x)))
-        red_ind.pop(par_index)
-        return np.array([next_x[ip] for ip in red_ind])
-
     # compute proposal
     next_x = par_extrapol(step_size_guess)
 
@@ -266,14 +262,8 @@ def adaptive_step(x, par_index, par_direction, options, current_profile,
 
     # compute objective at the guessed point
     problem.fix_parameters(par_index, next_x[par_index])
-    next_obj = problem.objective(reduce_x(next_x))
+    next_obj = problem.objective(reduce_x(next_x, par_index))
 
-    # restrict a step size to min and max
-    def clip_to_minmax(step_size_proposal):
-        step_size_proposal = np.max(
-            [np.min([step_size_proposal, options.max_step_size]),
-             options.min_step_size])
-        return step_size_proposal
 
     # iterate until good step size is found
     if next_obj_target < next_obj:
@@ -293,7 +283,7 @@ def adaptive_step(x, par_index, par_direction, options, current_profile,
                 # compute new objective value
                 problem.fix_parameters(par_index, next_x[par_index])
                 last_obj = copy.copy(next_obj)
-                next_obj = problem.objective(reduce_x(next_x))
+                next_obj = problem.objective(reduce_x(next_x, par_index))
 
                 # check for root crossing
                 if next_obj_target >= next_obj:
@@ -323,7 +313,7 @@ def adaptive_step(x, par_index, par_direction, options, current_profile,
                 # compute new objective value
                 problem.fix_parameters(par_index, next_x[par_index])
                 last_obj = copy.copy(next_obj)
-                next_obj = problem.objective(reduce_x(next_x))
+                next_obj = problem.objective(reduce_x(next_x, par_index))
 
                 # check for root crossing
                 if next_obj_target <= next_obj:
@@ -338,3 +328,23 @@ def adaptive_step(x, par_index, par_direction, options, current_profile,
                     next_x = last_x + add_x
 
     return next_x
+
+def reduce_x(next_x, par_index):
+    """
+       reduce step proposal to non-fixed parameters
+    """
+    red_ind = list(range(len(next_x)))
+    red_ind.pop(par_index)
+    return np.array([next_x[ip] for ip in red_ind])
+
+def clip_vector(vector_guess, lower, upper):
+    """
+       restrict a scalar or a vector to given bounds
+    """
+    if isinstance(vector_guess, float):
+        vector_guess = np.max([np.min([vector_guess, upper]), lower])
+    else:
+        for i_par, i_guess in enumerate(vector_guess):
+            vector_guess[i_par] = np.max([np.min([i_guess, upper[i_par]]),
+                                          lower[i_par]])
+    return vector_guess
