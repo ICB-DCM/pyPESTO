@@ -31,7 +31,7 @@ class PetabImporter:
 
         if output_folder is None:
             output_folder = os.path.abspath(
-                os.path.join("tmp", self.petab_problem.name))
+                os.path.join("tmp", self.petab_problem.model_name))
         self.output_folder = output_folder
 
         self.model = None
