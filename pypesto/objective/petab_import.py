@@ -4,6 +4,7 @@ import os
 import sys
 import importlib
 import numbers
+import copy
 
 import amici
 import petab
@@ -284,21 +285,23 @@ class PetabImporter:
                     cur_measurement_df.time.unique().astype(float))
 
             for _, row in cur_measurement_df.iterrows():
-
+                row_sim = copy.deepcopy(row)
+                
                 # extract simulated measurement value
                 timepoint_idx = t.index(row.time)
                 observable_idx = observable_ids.index("observable_" + row.observableId)
                 measurement = y[timepoint_idx, observable_idx]
                 
-                df = df.append(
-                    {'observableId': row.observableId,
-                     'preequilibrationConditionId': row.preequilibrationConditionId,
-                     'simulationConditionId': row.simulationConditionId,
-                     'measurement': measurement,
-                     'time': row.time,
-                     'observableParameters': row.observableParameters,
-                     'noiseParameters': row.noiseParameters,
-                     'observableTransformation': row.observableTransformation},
-                    ignore_index=True)
+                row_sim.measurement = measurement
+                df = df.append(row_sim, ignore_index=True)
+                #ow.observableId,
+                #     'preequilibrationConditionId': row.preequilibrationConditionId,
+                #     'simulationConditionId': row.simulationConditionId,
+                #     'measurement': measurement,
+                #     'time': row.time,
+                #     'observableParameters': row.observableParameters,
+                #     'noiseParameters': row.noiseParameters,
+                #     'observableTransformation': row.observableTransformation},
+                #    ignore_index=True)
 
         return df
