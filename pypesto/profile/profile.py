@@ -71,7 +71,7 @@ class ProfileOptions(dict):
         return options
 
 
-def parameterProfile(
+def parameter_profile(
         problem,
         result,
         optimizer,
