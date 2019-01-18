@@ -149,6 +149,7 @@ class PetabImporter:
             edata = amici.ExpData(self.model.get())
             edata.setTimepoints(timepoints)
 
+            # handle fixed parameters
             if len(fixed_parameter_ids) > 0:
                 fixed_parameter_vals = condition_df.loc[
                     condition_df.conditionId ==
@@ -168,7 +169,9 @@ class PetabImporter:
                         fixed_preequilibration_parameter_vals.astype(float) \
                                                              .flatten()
 
+            # prepare measurement matrix
             y = np.full(shape=(edata.nt(), edata.nytrue()), fill_value=np.nan)
+            # prepare sigma matrix
             sigma_y = np.full(
                 shape=(edata.nt(), edata.nytrue()),
                 fill_value=np.nan)
@@ -182,11 +185,14 @@ class PetabImporter:
 
                 y[time_ix, observable_ix] = measurement.measurement
                 if isinstance(measurement.noiseParameters, numbers.Number):
-                    sigma_y[time_ix,
-                            observable_ix] = measurement.noiseParameters
+                    sigma_y[time_ix, observable_ix] = \
+                        measurement.noiseParameters
 
+            # fill measurements and sigmas into edata
             edata.setObservedData(y.flatten())
             edata.setObservedDataStdDev(sigma_y.flatten())
+
+            # append edata to edatas list
             edatas.append(edata)
 
         # simulation <-> optimization parameter mapping
@@ -210,9 +216,6 @@ class PetabImporter:
                 parameter_df=self.petab_problem.parameter_df,
                 mapping_par_opt_to_par_sim=parameter_mapping
             )
-
-        # print("PARAMETER MAPPING:", parameter_mapping)
-        # print("SCALE MAPPING:", scale_mapping)
 
         # create objective
         obj = AmiciObjective(
@@ -283,6 +286,10 @@ class PetabImporter:
                 measurement_df, grouping_cols, condition)
 
             # iterate over entries for the given condition
+            # note: this way we only generate a dataframe entry for every
+            # row that existed in the original dataframe. if we want to
+            # e.g. have also timepoints non-existent in the original file,
+            # we need to instead iterate over the rdata['y'] entries
             for _, row in cur_measurement_df.iterrows():
                 # copy row
                 row_sim = copy.deepcopy(row)
