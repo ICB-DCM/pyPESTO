@@ -201,13 +201,12 @@ def adaptive_step(x, par_index, par_direction, options, current_profile,
     # next start point has to be searched
     # compute the next objective value which we aim for
     next_obj_target = - np.log(1. - options.delta_ratio_max) + \
-        options.magic_factor_obj_value * delta_obj_value + \
-        current_profile.fval_path[-1]
+                      options.magic_factor_obj_value * delta_obj_value + \
+                      current_profile.fval_path[-1]
 
     # compute objective at the guessed point
     problem.fix_parameters(par_index, next_x[par_index])
     next_obj = problem.objective(reduce_x(next_x, par_index))
-
 
     # iterate until good step size is found
     if next_obj_target < next_obj:
@@ -267,6 +266,7 @@ def handle_profile_history(x, par_index, par_direction, n_profile_points,
 
     return step_size_guess, delta_x_dir, reg_par, delta_obj_value
 
+
 def get_reg_polynomial(n_profile_points, pos_ind_red, par_index,
                        current_profile, problem, options):
     """
@@ -307,6 +307,7 @@ def get_reg_polynomial(n_profile_points, pos_ind_red, par_index,
 
     return reg_par
 
+
 def do_line_seach(next_x, step_size_guess, direction, par_extrapol, next_obj,
                   next_obj_target, clip_to_minmax, clip_to_bounds,
                   par_index, problem, options):
@@ -332,9 +333,9 @@ def do_line_seach(next_x, step_size_guess, direction, par_extrapol, next_obj,
 
         # Check if we hit the bounds
         hit_bounds = (direction == 'decrease' and step_size_guess ==
-            options.min_step_size) or (direction == 'increase' and
-                                       step_size_guess ==
-                                       options.max_step_size)
+                      options.min_step_size) or (direction == 'increase' and
+                                                 step_size_guess ==
+                                                 options.max_step_size)
 
         if hit_bounds:
             return next_x
@@ -352,6 +353,7 @@ def do_line_seach(next_x, step_size_guess, direction, par_extrapol, next_obj,
                 return next_x_interpolate(next_obj, last_obj, next_x,
                                           last_x, next_obj_target)
 
+
 def next_x_interpolate(next_obj, last_obj, next_x, last_x, next_obj_target):
     """
        interpolate between the last two steps
@@ -363,6 +365,7 @@ def next_x_interpolate(next_obj, last_obj, next_x, last_x, next_obj_target):
     # fix final guess and return
     return last_x + add_x
 
+
 def reduce_x(next_x, par_index):
     """
        reduce step proposal to non-fixed parameters
@@ -370,6 +373,7 @@ def reduce_x(next_x, par_index):
     red_ind = list(range(len(next_x)))
     red_ind.pop(par_index)
     return np.array([next_x[ip] for ip in red_ind])
+
 
 def clip_vector(vector_guess, lower, upper):
     """
