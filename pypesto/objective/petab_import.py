@@ -128,7 +128,7 @@ class PetabImporter:
         # Can be improved by checking for identical condition vectors.
         grouping_cols, simulation_conditions = \
             _get_simulation_conditions(condition_df, measurement_df)
-        
+
         observable_ids = self.model.getObservableIds()
 
         fixed_parameter_ids = self.model.getFixedParameterIds()
@@ -256,7 +256,7 @@ class PetabImporter:
             A dataframe built from the rdatas in the format as in
             self.petab_problem.measurement_df.
         """
-    
+
         condition_df = self.petab_problem.condition_df.reset_index()
         measurement_df = self.petab_problem.measurement_df
 
@@ -271,7 +271,7 @@ class PetabImporter:
 
         # get observable ids
         observable_ids = self.model.getObservableIds()
-        
+
         # iterate over conditions
         for data_idx, condition in simulation_conditions.iterrows():
             # current rdata
@@ -293,13 +293,13 @@ class PetabImporter:
             for _, row in cur_measurement_df.iterrows():
                 # copy row
                 row_sim = copy.deepcopy(row)
-                
+
                 # extract simulated measurement value
                 timepoint_idx = t.index(row.time)
                 observable_idx = observable_ids.index(
                     "observable_" + row.observableId)
                 measurement_sim = y[timepoint_idx, observable_idx]
-                
+
                 # change measurement entry
                 row_sim.measurement = measurement_sim
 
@@ -357,7 +357,7 @@ def _get_rows_for_condition(measurement_df, grouping_cols, condition):
         row_filter = (
             measurement_df[col] == condition[col]
         ) & row_filter
-    
-    # apply filter    
+
+    # apply filter
     cur_measurement_df = measurement_df.loc[row_filter, :]
     return cur_measurement_df
