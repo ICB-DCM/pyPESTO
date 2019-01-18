@@ -254,7 +254,51 @@ class PetabImporter:
             self.petab_problem.measurement_df.
         """
 
+        # initialize dataframe
         df = pd.DataFrame(
             columns=list(
                 self.petab_problem.measurement_df.columns))
+
+        condition_df = self.petab_problem.condition_df.reset_index()
+        measurement_df = self.petab_problem.measurement_df
+
+        grouping_cols = petab.core.get_notnull_columns(
+            measurement_df,
+            ['simulationConditionId', 'preequilibrationConditionId'])
+        simulation_conditions = measurement_df.groupby(
+            grouping_cols).size().reset_index()
+
+        observable_ids = self.model.getObservableIds()
+        
+        for data_idx, condition in simulation_conditions.iterrows():
+            rdata = rdatas[data_idx]
+            y = rdata['y']
+            t = list(rdata['t'])
+            col_filter = 1
+            for col in grouping_cols:
+                col_filter = (
+                    measurement_df[col] == condition[col]) & col_filter
+            cur_measurement_df = measurement_df.loc[col_filter, :]
+
+            timepoints = sorted(
+                    cur_measurement_df.time.unique().astype(float))
+
+            for _, row in cur_measurement_df.iterrows():
+
+                # extract simulated measurement value
+                timepoint_idx = t.index(row.time)
+                observable_idx = observable_ids.index("observable_" + row.observableId)
+                measurement = y[timepoint_idx, observable_idx]
+                
+                df = df.append(
+                    {'observableId': row.observableId,
+                     'preequilibrationConditionId': row.preequilibrationConditionId,
+                     'simulationConditionId': row.simulationConditionId,
+                     'measurement': measurement,
+                     'time': row.time,
+                     'observableParameters': row.observableParameters,
+                     'noiseParameters': row.noiseParameters,
+                     'observableTransformation': row.observableTransformation},
+                    ignore_index=True)
+
         return df
