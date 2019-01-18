@@ -76,7 +76,7 @@ class PetabImporter:
             sys.path.insert(0, self.output_folder)
 
         # load moduĺe
-        model_module = importlib.import_module(self.petab_problem.name)
+        model_module = importlib.import_module(self.petab_problem.model_name)
 
         # import model
         self.model = model_module.getModel()
@@ -104,12 +104,10 @@ class PetabImporter:
 
         # sigmas
         sigmas = petab.get_sigmas(sbml_importer.sbml)
-        sigmas = {key.replace('sigma_', 'observable_', 1): value['formula']
-                  for key, value in sigmas.items()}
 
         # convert
         sbml_importer.sbml2amici(
-            modelName=self.petab_problem.name,
+            modelName=self.petab_problem.model_name,
             output_dir=self.output_folder,
             observables=observables,
             constantParameters=constant_parameter_ids,
@@ -121,7 +119,7 @@ class PetabImporter:
         # (preequilibrationConditionId, simulationConditionId) pairs.
         # Can be improved by checking for identical condition vectors.
 
-        condition_df = self.petab_problem.condition_df
+        condition_df = self.petab_problem.condition_df.reset_index()
         measurement_df = self.petab_problem.measurement_df
 
         # number of amici simulations will be number of unique
