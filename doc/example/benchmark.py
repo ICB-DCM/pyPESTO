@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
 
-import pypesto
 import petab
 import sys
 
 sys.path.insert(0, "/home/yannik/pypesto")
+import pypesto
 
 models = ['Bachmann_MSB2011', 'beer_MolBioSystems2014',
           'boehm_JProteomeRes2014',
@@ -41,6 +41,9 @@ print(x_nom)
 print("obj: ", obj(x_nom))
 
 rdatas = obj(x_nom, return_dict=True)['rdatas']
-print(rdatas)
+print("rdata:   ", rdatas[0])
+#print(rdatas)
 df = importer.rdatas_to_measurement_df(rdatas)
 print(df)
+
+df.to_csv("simulation.csv", sep='\t')
