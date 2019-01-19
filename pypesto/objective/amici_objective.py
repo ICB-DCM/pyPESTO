@@ -298,7 +298,7 @@ class AmiciObjective(Objective):
         if self.preequilibration_edata:
             preeq_status = self.run_preequilibration(x)
             if preeq_status is not None:
-                return self.get_error_output(sensi_orders, mode, rdatas)
+                return self.get_error_output(rdatas)
 
         # loop over experimental data
         for data_ix, edata in enumerate(self.edata):
@@ -332,7 +332,7 @@ class AmiciObjective(Objective):
 
             # check if the computation failed
             if rdata['status'] < 0.0:
-                return self.get_error_output(sensi_orders, mode, rdatas)
+                return self.get_error_output(rdatas)
 
             # compute objective
             if mode == MODE_FUN:
@@ -512,7 +512,7 @@ class AmiciObjective(Objective):
                 original_value_dict['sx0']
             )
 
-    def get_error_output(self, sensi_orders, mode, rdatas):
+    def get_error_output(self, rdatas):
         if not self.amici_model.nt():
             nt = sum([data.nt() for data in self.edata])
         else:
