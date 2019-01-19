@@ -134,7 +134,7 @@ class PetabImporter:
         fixed_parameter_ids = self.model.getFixedParameterIds()
 
         edatas = []
-        for edata_idx, condition in simulation_conditions.iterrows():
+        for _, condition in simulation_conditions.iterrows():
             # amici.ExpData for each simulation
 
             # extract rows for condition
