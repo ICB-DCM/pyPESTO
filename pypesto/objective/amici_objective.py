@@ -328,7 +328,7 @@ class AmiciObjective(Objective):
                 self.postprocess_preequilibration(edata, original_value_dict)
 
             # logging
-            self.log_simulation(data_ix, rdata)
+            log_simulation(data_ix, rdata)
 
             # check if the computation failed
             if rdata['status'] < 0.0:
@@ -372,17 +372,6 @@ class AmiciObjective(Objective):
             SRES: sres,
             RDATAS: rdatas
         }
-
-    def log_simulation(self, data_ix, rdata):
-        logger.debug(f"=== DATASET {data_ix} ===")
-        logger.debug(f"status: {rdata['status']}")
-        logger.debug(f"llh: {rdata['llh']}")
-
-        t_steadystate = 't_steadystate'
-        if t_steadystate in rdata and rdata[t_steadystate] != np.nan:
-            logger.debug(f"t_steadystate: {rdata[t_steadystate]}")
-
-        logger.debug(f"res: {rdata['res']}")
 
     def init_preequilibration_edata(self, edatas):
         """
@@ -569,6 +558,21 @@ class AmiciObjective(Objective):
             amici_scale_vector.append(scale)
 
         self.amici_model.setParameterScale(amici_scale_vector)
+
+
+def log_simulation(data_ix, rdata):
+    """
+    Log the simulation results.
+    """
+    logger.debug(f"=== DATASET {data_ix} ===")
+    logger.debug(f"status: {rdata['status']}")
+    logger.debug(f"llh: {rdata['llh']}")
+
+    t_steadystate = 't_steadystate'
+    if t_steadystate in rdata and rdata[t_steadystate] != np.nan:
+        logger.debug(f"t_steadystate: {rdata[t_steadystate]}")
+
+    logger.debug(f"res: {rdata['res']}")
 
 
 def map_par_opt_to_par_sim(mapping_par_opt_to_par_sim, par_opt_ids, x):
