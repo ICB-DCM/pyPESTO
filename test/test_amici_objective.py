@@ -33,7 +33,7 @@ class AmiciObjectiveTest(unittest.TestCase):
             opt_grad,
             coefficient=2.0)
 
-        assert expected == opt_grad
+        self.assertEqual(expected, opt_grad)
 
 
 if __name__ == '__main__':
