@@ -46,4 +46,4 @@ print("rdata:   ", rdatas[0])
 df = importer.rdatas_to_measurement_df(rdatas)
 print(df)
 
-df.to_csv("simulation.csv", sep='\t')
+df.to_csv("tmp/simulation.csv", sep='\t')
