@@ -15,11 +15,10 @@ class Prior():
 
         # priorType_list = ['norm','lap','norm',...]
         # priorParameters_list = [[mean,cov],[mean,cov],...,[mean,cov]]
-        # estimate_list: list of 0,1, prior works only on estimate
-        # parameter [0,1,1,0,0,...]
+        # estimate_list: array of 0,1, prior works only on estimate
+        # parameter array([0,1,1,0,0,...])
         # scale_list: list of parameter scales from model
         # ['lin','log10','log',...]
-        # log_prior: boolean if the prior is in log
 
         self.priorType_list = priorType_list
         self.priorParameters_list = priorParameters_list
@@ -51,7 +50,6 @@ class Prior():
         # get scale of all parameters
         if self.has_scale_list:
 
-            # log10_index = np.where(self.scale_list=='log10')
             # only works with arrays
             log10_index = [i for i, j in enumerate(self.scale_list)
                            if j == 'log10']
@@ -77,10 +75,10 @@ class Prior():
         # if x.all()<1e-4: flag=1
         # Hessian
 
-        norm_index_1 = [i for i, j in enumerate(self.priorType_list)
-                        if j == 'norm']
-        lap_index_1 = [i for i, j in enumerate(self.priorType_list)
-                       if j == 'lap']
+        norm_index_1 = [i_par for i_par, j_par in enumerate(self.priorType_list)
+                        if j_par == 'norm']
+        lap_index_1 = [i_par for i_par, j_par in enumerate(self.priorType_list)
+                       if j_par == 'lap']
 
         norm_index = np.intersect1d(norm_index_1, estimate)
         lap_index = np.intersect1d(lap_index_1, estimate)
@@ -89,36 +87,33 @@ class Prior():
 
         fun_norm = 0
         grad_norm = []
-        for i in norm_index:
-            mean = self.priorParameters_list[i][0]
-            cov = self.priorParameters_list[i][1]
+        for i_par in norm_index:
+            mean = self.priorParameters_list[i_par][0]
+            cov = self.priorParameters_list[i_par][1]
 
-            f1 = multivariate_normal.pdf(x[i], mean=mean, cov=cov)
-            fun_norm += np.log(f1)
+            fun_norm += np.log(multivariate_normal.pdf(x[i_par], mean=mean, cov=cov))
 
-            g1 = fun_norm * (mean-x[i])/cov**2
-            grad_norm.append(g1)
+            grad_norm.append(fun_norm * (mean-x[i_par])/cov**2)
 
         fun_lap = 0
         grad_lap = []
-        for i in lap_index:
-            loc = self.priorParameters_list[i][0]
-            scale = self.priorParameters_list[i][1]
+        for i_par in lap_index:
+            loc = self.priorParameters_list[i_par][0]
+            scale = self.priorParameters_list[i_par][1]
 
-            f2 = laplace.pdf(x[i], loc=loc, scale=scale)
-            fun_lap += np.log(f2)  # - np.log(1/(2*scale))
+            fun_lap += np.log(laplace.pdf(x[i_par], loc=loc, scale=scale))
 
-            g2 = np.sign(loc-x[i])/scale
-            grad_lap.append(g2)
+            grad_lap.append(np.sign(loc-x[i_par])/scale)
 
         # calculate prior function and gradient
-        fun = fun_norm + fun_lap
+        prior_fun = fun_norm + fun_lap
 
-        grad = np.zeros(len(x))
+        prior_grad = np.zeros(len(x))
+
         if norm_index != []:
-            grad[norm_index] += grad_norm
+            prior_grad[norm_index] += grad_norm
         if lap_index != []:
-            grad[lap_index] += grad_lap
+            prior_grad[lap_index] += grad_lap
 
         # compute chainrule
         chainrule = np.zeros(len(x))
@@ -139,9 +134,9 @@ class Prior():
             x[logE_index] = np.log10(x[logE_index] + 1)
             chainrule[logE_index] *= 10**x[logE_index]*np.log(10)
 
-        grad *= chainrule
+        prior_grad *= chainrule
 
-        return {'prior_fun': fun,
-                'prior_grad': grad,
+        return {'prior_fun': prior_fun,
+                'prior_grad': prior_grad,
                 # 'prior_hess': hess,
                 'chainrule': chainrule}
