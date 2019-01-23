@@ -3,7 +3,7 @@ import numpy as np
 from pypesto import Result
 from ..optimize import OptimizeOptions
 from .profiler import ProfilerResult
-from .profile_startpoint import fixed_step
+from .profile_next_guess import next_guess
 
 logger = logging.getLogger(__name__)
 
@@ -20,19 +20,59 @@ class ProfileOptions(dict):
         (adaptive step lengths algorithms will only use this as a first guess
         and then refine the update)
 
+    min_step_size: float, optional
+        lower bound for the step size in adaptive methods
+
+    max_step_size: float, optional
+        upper bound for the step size in adaptive methods
+
+    step_size_factor: float, optional
+        Adaptive methods recompute the likelihood at the predicted point and
+        try to find a good step length by a sort of line search algorithm.
+        This factor controls step handling in this line search
+
+    delta_ratio_max: float, optional
+        maximum allowed drop of the posterior ratio between two profile steps
+
     ratio_min: float, optional
         lower bound for likelihood ratio of the profile, based on inverse
         chi2-distribution.
         The default corresponds to 95% confidence
+
+    reg_points: float, optional
+        number of profile points used for regression in regression based
+        adaptive profile points proposal
+
+    reg_order: float, optional
+        maximum dregee of regriossion polynomial used in regression based
+        adaptive profile points proposal
+
+    magic_factor_obj_value: float, optional
+        There is this magic factor in the old profiling code which slows down
+        profiling at small ratios (must be >= 0 and < 1)
     """
 
     def __init__(self,
                  default_step_size=0.01,
-                 ratio_min=0.145):
+                 min_step_size=0.001,
+                 max_step_size=1.,
+                 step_size_factor=1.25,
+                 delta_ratio_max=0.1,
+                 ratio_min=0.145,
+                 reg_points=10,
+                 reg_order=4,
+                 magic_factor_obj_value=0.5):
         super().__init__()
 
         self.default_step_size = default_step_size
+        self.min_step_size = min_step_size
+        self.max_step_size = max_step_size
         self.ratio_min = ratio_min
+        self.step_size_factor = step_size_factor
+        self.delta_ratio_max = delta_ratio_max
+        self.reg_points = reg_points
+        self.reg_order = reg_order
+        self.magic_factor_obj_value = magic_factor_obj_value
 
     def __getattr__(self, key):
         try:
@@ -44,7 +84,7 @@ class ProfileOptions(dict):
     __delattr__ = dict.__delitem__
 
     @staticmethod
-    def assert_instance(maybe_options):
+    def create_instance(maybe_options):
         """
         Returns a valid options object.
 
@@ -59,14 +99,14 @@ class ProfileOptions(dict):
         return options
 
 
-def profile(
+def parameter_profile(
         problem,
         result,
         optimizer,
         profile_index=None,
         profile_list=None,
         result_index=0,
-        create_profile_startpoint=None,
+        next_guess_method=None,
         profile_options=None,
         optimize_options=None) -> Result:
     """
@@ -101,7 +141,7 @@ def profile(
         index from which optimization result profiling should be started
         (default: global optimum, i.e., index = 0)
 
-    create_profile_startpoint: callable, optional
+    next_guess_method: callable, optional
         function handle to a method that creates the next starting point for
         optimization in profiling.
 
@@ -112,6 +152,7 @@ def profile(
         Various options applied to the optimizer.
     """
 
+    # Handling defaults
     # profiling indices
     if profile_index is None:
         profile_index = np.ones(problem.dim_full)
@@ -119,21 +160,32 @@ def profile(
     # check profiling options
     if profile_options is None:
         profile_options = ProfileOptions()
-    profile_options = ProfileOptions.assert_instance(profile_options)
+    profile_options = ProfileOptions.create_instance(profile_options)
 
     # profile startpoint method
-    if create_profile_startpoint is None:
-        def create_next_startpoint(x, par_index, par_direction):
-            return fixed_step(x, par_index, par_direction,
-                              step_size=profile_options.default_step_size)
+    if next_guess_method is None:
+        next_guess_method = 'adaptive_step_regression'
 
-    # check optimization ptions
+    # create a function handle that will be called later to get the next point
+    if isinstance(next_guess_method, str):
+        def create_next_guess(x, par_index, par_direction, profile_options,
+                              current_profile, problem, global_opt):
+            return next_guess(x, par_index, par_direction, profile_options,
+                              next_guess_method, current_profile, problem,
+                              global_opt)
+    elif callable(next_guess_method):
+        raise Exception('Passing function handles for computation of next '
+                        'profiling point is not yet supported.')
+    else:
+        raise Exception('Unsupported input for next_guess_method.')
+
+    # check optimization options
     if optimize_options is None:
         optimize_options = OptimizeOptions()
     optimize_options = OptimizeOptions.assert_instance(optimize_options)
 
     # create the profile result object (retrieve global optimum) ar append to
-    #  existing list of profiles
+    # existing list of profiles
     global_opt = initialize_profile(problem, result, result_index,
                                     profile_index, profile_list)
 
@@ -159,7 +211,7 @@ def profile(
                                                  par_direction,
                                                  optimizer,
                                                  profile_options,
-                                                 create_next_startpoint,
+                                                 create_next_guess,
                                                  global_opt,
                                                  i_parameter)
 
@@ -174,8 +226,8 @@ def walk_along_profile(current_profile,
                        problem,
                        par_direction,
                        optimizer,
-                       profile_options,
-                       create_next_startpoint,
+                       options,
+                       create_next_guess,
                        global_opt,
                        i_parameter):
     """
@@ -199,6 +251,12 @@ def walk_along_profile(current_profile,
         global_opt: float
             log-posterior value of the global optimum
 
+        options: pypesto.ProfileOptions
+            Various options applied to the profile optimization.
+
+        create_next_guess: callable
+            Handle of the method which creates the next profile point proposal
+
         i_parameter: integer
             index for the current parameter
         """
@@ -215,27 +273,20 @@ def walk_along_profile(current_profile,
         if par_direction is -1:
             stop_profile = (x_now[i_parameter] <= problem.lb_full[[
                 i_parameter]]) or (current_profile.ratio_path[-1] <
-                                   profile_options.ratio_min)
+                                   options.ratio_min)
 
         if par_direction is 1:
             stop_profile = (x_now[i_parameter] >= problem.ub_full[[
                 i_parameter]]) or (current_profile.ratio_path[-1] <
-                                   profile_options.ratio_min)
+                                   options.ratio_min)
 
         if stop_profile:
             break
 
         # compute the new start point for optimization
-        x_next = create_next_startpoint(x_now, i_parameter, par_direction)
-
-        # check whether the next point is maybe outside the bounds
-        # and correct it
-        if par_direction is -1:
-            x_next[i_parameter] = np.max([x_next[i_parameter],
-                                          problem.lb_full[i_parameter]])
-        else:
-            x_next[i_parameter] = np.min([x_next[i_parameter],
-                                          problem.ub_full[i_parameter]])
+        x_next = create_next_guess(x_now, i_parameter, par_direction,
+                                   options, current_profile, problem,
+                                   global_opt)
 
         # fix current profiling parameter to current value and set
         # start point
@@ -356,7 +407,7 @@ def fill_profile_list(
     # create blanko profile
     new_profile = ProfilerResult(
         optimize_result["x"],
-        optimize_result["fval"],
+        np.array([optimize_result["fval"]]),
         np.array([1.]),
         np.linalg.norm(optimize_result["grad"]),
         optimize_result["exitflag"],
