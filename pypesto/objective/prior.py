@@ -75,9 +75,11 @@ class Prior():
         # if x.all()<1e-4: flag=1
         # Hessian
 
-        norm_index_1 = [i_par for i_par, j_par in enumerate(self.priorType_list)
+        norm_index_1 = [i_par for i_par,
+                        j_par in enumerate(self.priorType_list)
                         if j_par == 'norm']
-        lap_index_1 = [i_par for i_par, j_par in enumerate(self.priorType_list)
+        lap_index_1 = [i_par for i_par,
+                       j_par in enumerate(self.priorType_list)
                        if j_par == 'lap']
 
         norm_index = np.intersect1d(norm_index_1, estimate)
@@ -91,7 +93,9 @@ class Prior():
             mean = self.priorParameters_list[i_par][0]
             cov = self.priorParameters_list[i_par][1]
 
-            fun_norm += np.log(multivariate_normal.pdf(x[i_par], mean=mean, cov=cov))
+            fun_norm += np.log(multivariate_normal.pdf(x[i_par],
+                                                       mean=mean,
+                                                       cov=cov))
 
             grad_norm.append(fun_norm * (mean-x[i_par])/cov**2)
 
