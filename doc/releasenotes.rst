@@ -6,7 +6,7 @@ Release notes
 ..........
 
 
-0.0.3 (2019-01-16)
+0.0.3 (2019-01-30)
 ------------------
 
 * Import amici models and the petab data format automatically using
