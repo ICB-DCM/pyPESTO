@@ -38,6 +38,14 @@ script:
 after_success:
   - bash <(curl -s https://codecov.io/bash)
 
+deploy:
+  provider: pypi
+  username: $TWINE_USERNAME
+  password: $TWINE_PASSWORD
+  on:
+    tags: true
+  skip_existing: true
+
 # cache dependencies
 
 cache: pip
