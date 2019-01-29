@@ -4,11 +4,11 @@ Profile
 
 """
 
-from .profile import (profile,
+from .profile import (parameter_profile,
                       ProfileOptions)
 
 from .profiler import (ProfilerResult)
 
-__all__ = ["profile",
+__all__ = ["parameter_profile",
            "ProfileOptions",
            "ProfilerResult"]
