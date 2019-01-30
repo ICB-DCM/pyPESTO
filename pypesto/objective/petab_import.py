@@ -5,6 +5,7 @@ import sys
 import importlib
 import numbers
 import copy
+import shutil
 
 import amici
 import petab
@@ -97,7 +98,7 @@ class PetabImporter:
 
         # delete output directory
         if os.path.exists(self.output_folder):
-            os.rmtree(self.output_folder)
+            shutil.rmtree(self.output_folder)
 
         # init sbml importer
         sbml_importer = amici.SbmlImporter(self.petab_problem.sbml_file)
