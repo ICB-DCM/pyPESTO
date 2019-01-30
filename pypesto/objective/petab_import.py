@@ -89,7 +89,7 @@ class PetabImporter:
         """
 
         # check prerequisites
-        if not petab.check_condition_table_is_parameter_free(
+        if not petab.condition_table_is_parameter_free(
                 self.petab_problem.sbml_file):
             raise AssertionError(
                 "Parameter dependent conditions in the condition file "
