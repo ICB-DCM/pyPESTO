@@ -4,7 +4,7 @@
 
 run_notebook () {
     tempfile=$(tempfile)
-    jupyter nbconvert --debug --stdout --execute --to markdown $@ &> $tempfile
+    jupyter nbconvert --ExecutePreprocessor.timeout=-1 --debug --stdout --execute --to markdown $@ &> $tempfile
     ret=$?
     if [[ $ret != 0 ]]; then
       cat $tempfile
