@@ -26,6 +26,6 @@ setup(name='pypesto',
                         'scipy>=1.1.0',
                         'pandas>=0.23.4',
                         'matplotlib>=2.2.3',
-                        'petab>=0.0.0a4'],
-      extras_require={'amici': ['amici>=0.8.1']}
+                        'petab>=0.0.0a6'],
+      extras_require={'amici': ['amici>=0.9.2']}
       )
