@@ -11,3 +11,4 @@ HESS = 'hess'  # Hessian
 HESSP = 'hessp'  # Hessian vector product
 RES = 'res'  # residual
 SRES = 'sres'  # residual sensitivities
+RDATAS = 'rdatas'  # returned simulated data sets

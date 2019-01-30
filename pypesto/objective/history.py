@@ -109,7 +109,7 @@ class ObjectiveHistory:
             The result for x.
         """
         self._update_counts(sensi_orders, mode)
-        self._update_trace(x, mode, result)
+        self._update_trace(x, sensi_orders, mode, result)
         self._update_vals(x, sensi_orders, mode, result)
 
     def finalize(self):
@@ -135,7 +135,7 @@ class ObjectiveHistory:
             if 1 in sensi_orders:
                 self.n_sres += 1
 
-    def _update_trace(self, x, mode, result):
+    def _update_trace(self, x, sensi_orders, mode, result):
         """
         Update and possibly store the trace.
         """
@@ -153,10 +153,13 @@ class ObjectiveHistory:
 
         # extract function values
         if mode == MODE_FUN:
-            fval = result.get(FVAL, None)
+            fval = None if 0 not in sensi_orders \
+                else result.get(FVAL, None)
             grad = None if not self.options.trace_record_grad \
+                or 1 not in sensi_orders \
                 else result.get(GRAD, None)
             hess = None if not self.options.trace_record_hess \
+                or 2 not in sensi_orders \
                 else result.get(HESS, None)
             res = None
             sres = None
@@ -169,12 +172,16 @@ class ObjectiveHistory:
             res_result = result.get(RES, None)
             sres_result = result.get(SRES, None)
             res = None if not self.options.trace_record_res \
+                or 0 not in sensi_orders \
                 else res_result
             sres = None if not self.options.trace_record_sres \
+                or 1 not in sensi_orders \
                 else sres_result
             chi2 = None if not self.options.trace_record_chi2 \
+                or 0 not in sensi_orders \
                 else res_to_chi2(res_result)
             schi2 = None if not self.options.trace_record_schi2 \
+                or 0 not in sensi_orders or 1 not in sensi_orders \
                 else sres_to_schi2(res_result, sres_result)
 
         # check whether to append to trace

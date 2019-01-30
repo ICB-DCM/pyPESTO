@@ -65,6 +65,11 @@ class Objective:
         Flag indicating whether res takes sensi_orders as an argument.
         Default: False
 
+    x_names: list of str
+        Parameter names. None if no names provided, otherwise a list of str,
+        length dim_full (as in the Problem class). Can be read by the
+        problem.
+
     options: pypesto.ObjectiveOptions, optional
         Options as specified in pypesto.ObjectiveOptions.
 
@@ -74,11 +79,6 @@ class Objective:
     history: pypesto.ObjectiveHistory
         For storing the call history. Initialized by the optimizer in
         reset_history().
-
-    x_names: list of str
-        Parameter names. The base Objective class provides None.
-        None if no names provided, otherwise a list of str, length dim_full.
-        Can be read by the problem.
 
     preprocess: callable
         Preprocess input values to __call__.
@@ -94,6 +94,13 @@ class Objective:
 
     preprocess, postprocess are configured in update_from_problem()
     and can be reset using the reset() method.
+
+    If fun_accept_sensi_orders resp. res_accept_sensi_orders is True,
+    fun resp. res can also return dictionaries instead of tuples.
+    In that case, they are expected to follow the naming conventions
+    in ``constants.py``. This is of interest, because when __call__ is
+    called with return_dict = True, the full dictionary is returned, which
+    can contain e.g. also simulation data or debugging information.
     """
 
     def __init__(self,
@@ -101,6 +108,7 @@ class Objective:
                  res=None, sres=None,
                  fun_accept_sensi_orders=False,
                  res_accept_sensi_orders=False,
+                 x_names=None,
                  options=None):
         self.fun = fun
         self.grad = grad
@@ -126,7 +134,7 @@ class Objective:
         self.preprocess = preprocess
         self.postprocess = postprocess
 
-        self.x_names = None
+        self.x_names = x_names
 
     def __deepcopy__(self, memodict=None):
         other = Objective()
@@ -179,7 +187,11 @@ class Objective:
                 f"Objective cannot be called with sensi_orders={sensi_orders}"
                 f" and mode={mode}")
 
-    def __call__(self, x, sensi_orders: tuple = (0, ), mode=MODE_FUN):
+    def __call__(self,
+                 x,
+                 sensi_orders: tuple = (0, ),
+                 mode=MODE_FUN,
+                 return_dict=False):
         """
         Method to obtain arbitrary sensitivities. This is the central method
         which is always called, also by the get_* methods.
@@ -222,7 +234,8 @@ class Objective:
         self.history.update(x, sensi_orders, mode, result)
 
         # map to output format
-        result = Objective.output_to_tuple(sensi_orders, mode, **result)
+        if not return_dict:
+            result = Objective.output_to_tuple(sensi_orders, mode, **result)
 
         return result
 
