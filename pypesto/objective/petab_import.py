@@ -159,11 +159,8 @@ class PetabImporter:
 
             # handle fixed parameters
             _handle_fixed_parameters(
-                edata, condition_df,
-                fixed_parameter_ids, fixed_parameter_vals,
-                condition
-            )
-            
+                edata, condition_df, fixed_parameter_ids, condition)
+
             # prepare measurement matrix
             y = np.full(shape=(edata.nt(), edata.nytrue()), fill_value=np.nan)
             # prepare sigma matrix
@@ -220,7 +217,7 @@ class PetabImporter:
         )
 
         return obj, edatas
-    
+
     def create_problem(self, objective):
         problem = Problem(objective=objective,
                           lb=self.petab_problem.lb,
@@ -358,24 +355,41 @@ def _get_rows_for_condition(measurement_df, grouping_cols, condition):
 
 
 def _handle_fixed_parameters(
-        edata, condition_df,
-        fixed_parameter_ids, fixed_parameter_vals,
-        condition):
+        edata, condition_df, fixed_parameter_ids, condition):
     """
     Hande fixed parameters and update edata accordingly.
+
+    Parameters
+    ----------
+
+    edata: amici.amici.ExpData
+        Current edata.
+
+    condition_df: pd.DataFrame
+        The conditions table.
+
+    fixed_parameter_ids: array_like
+        Ids of parameters that are to be considered constant.
+
+    condition:
+        The current condition, as created by
+        _get_simulation_conditions.
     """
 
     if len(fixed_parameter_ids) == 0:
         # nothing to be done
         return
-
+    
+    # find fixed parameter values
     fixed_parameter_vals = condition_df.loc[
         condition_df.conditionId ==
         condition.simulationConditionId,
         fixed_parameter_ids].values
+    # fill into edata
     edata.fixedParameters = fixed_parameter_vals.astype(
         float).flatten()
 
+    # same for preequilibration if necessary
     if 'preequilibrationConditionId' in condition \
             and condition.preequilibrationConditionId:
         fixed_preequilibration_parameter_vals = condition_df.loc[
@@ -386,4 +400,3 @@ def _handle_fixed_parameters(
         edata.fixedParametersPreequilibration = \
             fixed_preequilibration_parameter_vals.astype(float) \
                                                  .flatten()
-
