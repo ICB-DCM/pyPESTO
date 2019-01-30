@@ -433,7 +433,7 @@ class AmiciObjective(Objective):
 
             # check if an error occurred
             if rdata['status'] < 0.0:
-                return -1
+                return rdata['status']
 
             # fill state
             preeq_dict['x0'] = rdata['x0']
