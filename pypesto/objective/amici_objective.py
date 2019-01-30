@@ -663,7 +663,7 @@ def add_sim_grad_to_opt_grad(par_opt_ids,
                              mapping_par_opt_to_par_sim,
                              sim_grad,
                              opt_grad,
-                             coefficient=-1.0):
+                             coefficient: float = 1.0):
     """
     Sum simulation gradients to objective gradient according to the provided
     mapping `mapping_par_opt_to_par_sim`.
@@ -699,7 +699,7 @@ def add_sim_hess_to_opt_hess(par_opt_ids,
                              mapping_par_opt_to_par_sim,
                              sim_hess,
                              opt_hess,
-                             coefficient=-1.0):
+                             coefficient: float = 1.0):
     """
     Sum simulation hessians to objective hessian according to the provided
     mapping `mapping_par_opt_to_par_sim`.
