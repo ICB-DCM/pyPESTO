@@ -21,10 +21,10 @@ fi
 for arg in "$@"; do
     if [ -d $arg ]; then
         for notebook in $(ls -1 $arg | grep -E ipynb\$); do
-            echo run_notebook $arg/$notebook
+            run_notebook $arg/$notebook
         done
     elif [ -f $arg ]; then
-        echo run_notebook $arg
+        run_notebook $arg
     fi
 done
 exit 0
