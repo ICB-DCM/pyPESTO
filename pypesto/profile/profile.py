@@ -270,12 +270,12 @@ def walk_along_profile(current_profile,
         x_now = current_profile.x_path[:, -1]
 
         # check if the next profile point needs to be computed
-        if par_direction is -1:
+        if par_direction == -1:
             stop_profile = (x_now[i_parameter] <= problem.lb_full[[
                 i_parameter]]) or (current_profile.ratio_path[-1] <
                                    options.ratio_min)
 
-        if par_direction is 1:
+        if par_direction == 1:
             stop_profile = (x_now[i_parameter] >= problem.ub_full[[
                 i_parameter]]) or (current_profile.ratio_path[-1] <
                                    options.ratio_min)

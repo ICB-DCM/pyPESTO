@@ -5,7 +5,9 @@ def res_to_chi2(res):
     """
     We assume that the residuals res are related to an objective function
     value fval = chi2 via::
+
         fval = 0.5 * sum(res**2)
+
     which is the 'Linear' formulation in scipy.
 
     """

@@ -10,6 +10,7 @@ The following examples cover typical use cases and should help get a better idea
    example/conversion_reaction.ipynb
    example/fixed_parameters.ipynb
    example/boehm_JProteomeRes2014.ipynb
+   example/petab_import.ipynb
 
 
 Download the examples as notebooks
@@ -19,6 +20,7 @@ Download the examples as notebooks
 * :download:`Conversion reaction <example/conversion_reaction.ipynb>`
 * :download:`Fixed parameters <example/fixed_parameters.ipynb>`
 * :download:`Boehm model <example/boehm_JProteomeRes2014.ipynb>`
+* :download:`Petab import <example/petab_import.ipynb>`
 
 .. Note::
    Some of the notebooks have extra dependencies.
