@@ -470,7 +470,9 @@ class AmiciObjective(Objective):
             # remember original fixed parameters for preequilibration
             original_fixed_parameters_preequilibration \
                 = data.fixedParametersPreequilibration
-            # unset fixed preequilibration parameters in data (TODO: Why?)
+
+            # unset fixed preequilibration parameters in data
+            # this prevents amici from doing preequilibration again
             data.fixedParametersPreequilibration = []
 
             # set initial state from preequilibration
@@ -532,7 +534,16 @@ class AmiciObjective(Objective):
     def set_par_sim_for_condition(self, condition_ix, x):
         """
         Set the simulation parameters from the optimization parameters
-        for the given condnition.
+        for the given condition.
+
+        Parameters
+        ----------
+
+        condition_ix: int
+            Index of the current experimental condition.
+
+        x: array_like
+            Optimization parameters.
         """
         mapping = self.mapping_par_opt_to_par_sim[condition_ix]
         x_sim = map_par_opt_to_par_sim(mapping, self.x_ids, x)
