@@ -5,7 +5,6 @@ This is for testing the petab import.
 
 import unittest
 import git
-import os
 import numpy as np
 
 import petab
@@ -30,9 +29,8 @@ folder_base = repo_base + "hackathon_contributions_new_data_format/"
 model_names = ["Zheng_PNAS2012", "Boehm_JProteomeRes2014"]
 
 
-
 class PetabImportTest(unittest.TestCase):
-    
+
     @classmethod
     def setUpClass(cls):
 
@@ -67,11 +65,11 @@ class PetabImportTest(unittest.TestCase):
         for petab_importer in self.petab_importers:
             obj, edatas = petab_importer.create_objective()
             self.obj_edatas.append((obj, edatas))
-            
+
             # run function
             x_nominal = petab_importer.petab_problem.x_nominal
             ret = obj(x_nominal)
-            
+
             self.assertTrue(np.isfinite(ret))
 
     def test_3_optimize(self):
