@@ -87,6 +87,14 @@ class PetabImporter:
         Compile the model. If the output folder exists already, it is first
         deleted.
         """
+
+        # check prerequisites
+        if not petab.check_condition_table_is_parameter_free(
+                self.petab_problem.sbml_file):
+            raise AssertionError(
+                "Parameter dependent conditions in the condition file "
+                "are not yet supported.")
+
         # delete output directory
         if os.path.exists(self.output_folder):
             os.rmtree(self.output_folder)
@@ -150,25 +158,12 @@ class PetabImporter:
             edata.setTimepoints(timepoints)
 
             # handle fixed parameters
-            if len(fixed_parameter_ids) > 0:
-                fixed_parameter_vals = condition_df.loc[
-                    condition_df.conditionId ==
-                    condition.simulationConditionId,
-                    fixed_parameter_ids].values
-                edata.fixedParameters = fixed_parameter_vals.astype(
-                    float).flatten()
-
-                if 'preequilibrationConditionId' in condition \
-                        and condition.preequilibrationConditionId:
-                    fixed_preequilibration_parameter_vals = condition_df.loc[
-                        # TODO: preequilibrationConditionId might not exist
-                        condition_df.conditionId == \
-                        condition.preequilibrationConditionId,
-                        fixed_parameter_ids].values
-                    edata.fixedParametersPreequilibration = \
-                        fixed_preequilibration_parameter_vals.astype(float) \
-                                                             .flatten()
-
+            _handle_fixed_parameters(
+                edata, condition_df,
+                fixed_parameter_ids, fixed_parameter_vals,
+                condition
+            )
+            
             # prepare measurement matrix
             y = np.full(shape=(edata.nt(), edata.nytrue()), fill_value=np.nan)
             # prepare sigma matrix
@@ -226,7 +221,7 @@ class PetabImporter:
         )
 
         return obj, edatas
-
+    
     def create_problem(self, objective):
         problem = Problem(objective=objective,
                           lb=self.petab_problem.lb,
@@ -361,3 +356,35 @@ def _get_rows_for_condition(measurement_df, grouping_cols, condition):
     # apply filter
     cur_measurement_df = measurement_df.loc[row_filter, :]
     return cur_measurement_df
+
+
+def _handle_fixed_parameters(
+        edata, condition_df,
+        fixed_parameter_ids, fixed_parameter_vals,
+        condition):
+    """
+    Hande fixed parameters and update edata accordingly.
+    """
+
+    if len(fixed_parameter_ids) == 0:
+        # nothing to be done
+        return
+
+    fixed_parameter_vals = condition_df.loc[
+        condition_df.conditionId ==
+        condition.simulationConditionId,
+        fixed_parameter_ids].values
+    edata.fixedParameters = fixed_parameter_vals.astype(
+        float).flatten()
+
+    if 'preequilibrationConditionId' in condition \
+            and condition.preequilibrationConditionId:
+        fixed_preequilibration_parameter_vals = condition_df.loc[
+            # TODO: preequilibrationConditionId might not exist
+            condition_df.conditionId == \
+            condition.preequilibrationConditionId,
+            fixed_parameter_ids].values
+        edata.fixedParametersPreequilibration = \
+            fixed_preequilibration_parameter_vals.astype(float) \
+                                                 .flatten()
+
