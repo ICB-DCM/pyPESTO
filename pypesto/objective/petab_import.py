@@ -304,7 +304,7 @@ class PetabImporter:
 def _get_simulation_conditions(condition_df, measurement_df):
     """
     Compute the conditions by which to group the measurements, so
-    that for each group an amici.EData can be generated.
+    that for each group an amici.ExpData can be generated.
 
     Returns
     -------
