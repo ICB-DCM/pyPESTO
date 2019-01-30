@@ -1,3 +1,9 @@
 nbsphinx
 sphinx_rtd_theme
+numpy
+scipy
+pandas
+matplotlib
+petab
 amici
+gitpython
