@@ -379,7 +379,7 @@ def _handle_fixed_parameters(
     if len(fixed_parameter_ids) == 0:
         # nothing to be done
         return
-    
+
     # find fixed parameter values
     fixed_parameter_vals = condition_df.loc[
         condition_df.conditionId ==
