@@ -176,7 +176,6 @@ class PetabImporter:
                 time_ix = timepoints.index(measurement.time)
                 observable_ix = observable_ids.index(
                     f'observable_{measurement.observableId}')
-                # TODO: measurement file should contain prefix
 
                 y[time_ix, observable_ix] = measurement.measurement
                 if isinstance(measurement.noiseParameters, numbers.Number):
