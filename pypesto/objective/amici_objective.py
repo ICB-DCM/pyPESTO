@@ -28,7 +28,7 @@ class AmiciObjective(Objective):
                  preprocess_edata=True,
                  options=None):
         """
-        Constructor
+        Constructor.
 
         Parameters
         ----------
@@ -43,15 +43,16 @@ class AmiciObjective(Objective):
             The experimental data. If a list is passed, its entries correspond
             to multiple experimental conditions.
 
-        max_sensi_order: int
-            Maximum sensitivity order supported by the model.
+        max_sensi_order: int, optional
+            Maximum sensitivity order supported by the model. Defaults to 2 if
+            the model was compiled with o2mode, otherwise 1.
 
         x_ids: list of str, optional
             Ids of optimization parameters. In the simplest case, this will be
-            the AMICI model parameters (default). Translates
+            the AMICI model parameters (default).
 
         x_names: list of str, optional
-            See Objective.
+            See ``Objective.x_names``.
 
         mapping_par_opt_to_par_sim: optional
             Mapping of optimization parameters to model parameters. List array
@@ -64,16 +65,18 @@ class AmiciObjective(Objective):
             scales. The default is to just use the scales specified in the
             `amici_model` already.
 
-        preprocess_edata: bool, optional
-            Whether to preprocess the experimental data.
+        preprocess_edata: bool, optional (default = True)
+            Whether to perform preprocessing, i.e. preequilibration, if that
+            is specified in the model.
 
         options: pypesto.ObjectiveOptions, optional
             Further options.
         """
         if amici is None:
-            raise ImportError('This objective requires an installation of '
-                              'amici (github.com/icb-dcm/amici. Install via '
-                              'pip3 install amici.')
+            raise ImportError("This objective requires an installation of "
+                              "amici "
+                              "(https://github.com/icb-dcm/amici). "
+                              "Install via `pip3 install amici`.")
 
         if max_sensi_order is None:
             # 2 if model was compiled with second orders,
@@ -108,7 +111,7 @@ class AmiciObjective(Objective):
         self.amici_solver = amici_solver
 
         # make sure the edatas are a list of edata objects
-        if not isinstance(edata, list):
+        if isinstance(edata, amici.ExpData):
             edata = [edata]
 
         if preprocess_edata:
@@ -148,8 +151,8 @@ class AmiciObjective(Objective):
 
         # optimization parameter names
         if x_names is None:
-            # use model parameter names as names
-            x_names = list(self.amici_model.getParameterNames())
+            # use ids as names
+            x_names = x_ids
         self.x_names = x_names
 
     def get_bound_fun(self):
@@ -211,11 +214,11 @@ class AmiciObjective(Objective):
         initialization of ParameterLists and respectively replace the
         generic postprocess function
 
-        TODO: Currently, this method is not used. Instead, the super fallback
-        Objective.update_from_problem ist used, which in particular does not
-        make use of pesto's ability to compute only compute requried directiol
-        derivativs. If that is inteded, the mapping between simulation and
-        optimization paraemters must be accounted for.
+        TODO (see #99): Currently, this method is not used. Instead, the super
+        fallback Objective.update_from_problem ist used, which in particular
+        does not make use of pesto's ability to compute only compute required
+        directional derivativs. If that is intended, the mapping between
+        simulation and optimization parameters must be accounted for.
 
         Parameters
         ----------
@@ -323,7 +326,7 @@ class AmiciObjective(Objective):
             # append to result
             rdatas.append(rdata)
 
-            # reste fixed preeq parameters and initial states
+            # reset fixed preequilibration parameters and initial states
             if self.preequilibration_edata:
                 self.postprocess_preequilibration(edata, original_value_dict)
 
@@ -346,16 +349,13 @@ class AmiciObjective(Objective):
                         coefficient=-1.0
                     )
                     # TODO: Compute the full Hessian, and check here
-                    if sensi_order > 1:
-                        pass
-                    else:
-                        add_sim_hess_to_opt_hess(
-                            self.x_ids,
-                            self.mapping_par_opt_to_par_sim[data_ix],
-                            rdata['FIM'],
-                            s2nllh,
-                            coefficient=-1.0
-                        )
+                    add_sim_hess_to_opt_hess(
+                        self.x_ids,
+                        self.mapping_par_opt_to_par_sim[data_ix],
+                        rdata['FIM'],
+                        s2nllh,
+                        coefficient=-1.0
+                    )
 
             elif mode == MODE_RES:
                 res = np.hstack([res, rdata['res']]) \
