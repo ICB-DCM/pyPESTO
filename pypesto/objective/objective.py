@@ -100,7 +100,7 @@ class Objective:
     In that case, they are expected to follow the naming conventions
     in ``constants.py``. This is of interest, because when __call__ is
     called with return_dict = True, the full dictionary is returned, which
-    can contain e.g. also simulation data or debuggin information.
+    can contain e.g. also simulation data or debugging information.
     """
 
     def __init__(self,
