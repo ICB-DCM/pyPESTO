@@ -6,9 +6,11 @@ run_notebook () {
     tempfile=$(tempfile)
     jupyter nbconvert --debug --stdout --execute --to markdown $@ &> $tempfile
     ret=$?
-    if [[ $ret != 0 ]]; then cat $tempfile; fi
+    if [[ $ret != 0 ]]; then
+      cat $tempfile
+      exit $ret
+    fi
     rm $tempfile
-    exit $ret
 }
 
 if [ $# -eq 0 ]; then
@@ -19,10 +21,10 @@ fi
 for arg in "$@"; do
     if [ -d $arg ]; then
         for notebook in $(ls -1 $arg | grep -E ipynb\$); do
-            run_notebook $arg/$notebook
+            echo run_notebook $arg/$notebook
         done
     elif [ -f $arg ]; then
-        run_notebook $arg
+        echo run_notebook $arg
     fi
 done
 exit 0
