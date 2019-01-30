@@ -28,7 +28,7 @@ setup(name='pypesto',
                         'pandas>=0.23.4',
                         'matplotlib>=2.2.3',
                         'petab>=0.0.0a6'],
-      tests_require=['pytest', 'flake8>=3.7.1', 'git'],
+      tests_require=['pytest', 'flake8>=3.7.1'],
       extras_require={'amici': ['amici>=0.9.2']},
       python_requires='>=3.6',
       )
