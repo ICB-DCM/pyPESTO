@@ -93,9 +93,9 @@ def fixed_step(x,
     # check whether the next point is maybe outside the bounds
     # and correct it
     next_x_par = x[par_index] + delta_x[par_index]
-    if par_direction is -1 and next_x_par < problem.lb_full[par_index]:
+    if par_direction == -1 and next_x_par < problem.lb_full[par_index]:
         delta_x[par_index] = problem.lb_full[par_index] - x[par_index]
-    elif par_direction is 1 and next_x_par > problem.ub_full[par_index]:
+    elif par_direction == 1 and next_x_par > problem.ub_full[par_index]:
         delta_x[par_index] = problem.ub_full[par_index] - x[par_index]
 
     return x + delta_x
