@@ -111,7 +111,7 @@ class AmiciObjective(Objective):
         self.amici_solver = amici_solver
 
         # make sure the edatas are a list of edata objects
-        if isinstance(edata, amici.ExpData):
+        if isinstance(edata, amici.amici.ExpData):
             edata = [edata]
 
         if preprocess_edata:
