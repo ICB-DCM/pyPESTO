@@ -7,10 +7,15 @@ import numbers
 import copy
 import shutil
 
-import amici
 import petab
+
 from pypesto.objective import AmiciObjective
 from pypesto.problem import Problem
+
+try:
+    import amici
+except ImportError:
+    amici = None
 
 
 class PetabImporter:
