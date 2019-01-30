@@ -394,10 +394,10 @@ class AmiciObjective(Objective):
 
             # indicate whether preequilibration is required for this data set
             preequilibrate = len(fixed_parameters) > 0
-            # TODO: Currently, len(fixed_parameters) == 0 is used as an
-            # indicator of requiring no preequilibration. However, when there
-            # are events (which amici cannot deal with yet in python), the
-            # situation can occur that there are no fixed_parameters, but
+            # TODO (see #100): Currently, len(fixed_parameters) == 0 is used
+            # as an indicator of requiring no preequilibration. However, when
+            # there are events (which amici cannot deal with yet in python),
+            # the situation can occur that there are no fixed_parameters, but
             # events that are omitted in the preequilibration run.
 
             self.preequilibration_edata.append(dict(
