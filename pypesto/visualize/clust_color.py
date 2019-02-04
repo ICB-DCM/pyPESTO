@@ -77,7 +77,7 @@ def assign_clustered_colors(vals):
 
     # colors for each cluster and one-size clusters
     cols_clust = scalarmap.to_rgba(range(vmax + 1))
-    
+
     # grey color for 1-size clusters as the last color in 'cols_clust'
     cols_clust[vmax] = (0.7, 0.7, 0.7, 1)
 
