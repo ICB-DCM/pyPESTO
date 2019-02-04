@@ -56,6 +56,6 @@ to **pyPESTO** check out
 
 ## References
 
-**PESTO**: Parameter estimation toolbox for MATLAB. Development is
-discontinued, but PESTO comes with additional features waiting to be ported to
-pyPESTO.
+[**PESTO**](https://github.com/ICB-DCM/PESTO/):
+Parameter estimation toolbox for MATLAB. Development is discontinued, but PESTO
+comes with additional features waiting to be ported to pyPESTO.

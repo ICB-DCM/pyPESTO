@@ -42,12 +42,13 @@ required. Also, at least one review is required.
 Creating a release on github
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-After merging into master:
+After merging into master, create a new release on Github.
+In the release form:
 
-1. create a new release on github
-2. tag the commit with the new version number
-3. include the latest additions to ``doc/releasenotes.rst`` in the release
-   description
+* specify a tag with the new version as specified in ``pesto/version.py``,
+  prefixed with ``v`` (e.g. ``v0.0.1``)
+* include the latest additions to ``doc/releasenotes.rst`` in the release
+  description
 
 Tagging the release commit will automatically trigger deployment of the new
 version to pypi.
