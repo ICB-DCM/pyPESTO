@@ -1,6 +1,9 @@
 Deploy
 ======
 
+New features and bug fixes are continuously added to the develop branch. On
+every merge to master, the version number in ``pypesto/version.py``  should
+be incremented as described below.
 
 Versioning scheme
 -----------------
@@ -8,51 +11,43 @@ Versioning scheme
 For version numbers, we use ``A.B.C``, where
 
 * ``C`` is increased for bug fixes,
-* ``B`` is increased for new features,
-* ``A`` is increased for major or API breaking changes.
+* ``B`` is increased for new features and minor API breaking changes,
+* ``A`` is increased for major API breaking changes.
 
 
-Deploy a new release
---------------------
+Creating a new release
+----------------------
 
-When you are done with the changes on your git branch, proceed as follows
-to deploy a new release.
+After new commits have been added to the develop branch, changes can be merged
+to master and a new version of pyPESTO can be released. Every merge to master
+should coincide with an incremented version number and a git tag on the
+respective merge commit.
 
 
 Merge into master
 ~~~~~~~~~~~~~~~~~
 
-First, you need to merge into the master:
+1. create a pull request from develop to master
+2. check that all tests on travis pass
+3. check that the documentation is up-to-date
+4. adapt the version number in the file ``pesto/version.py`` (see above)
+5. update the release notes in ``doc/releasenotes.rst``
+6. request a code review
+7. merge into the origin master branch
 
-1. check that all tests on travis pass
-2. check that the documentation is up-to-date
-3. adapt the version number in the file pesto/version.py
-4. update the release notes in doc/releasenotes.rst
-5. merge into the origin master branch
-
-To be able to actualize perform the merge, sufficient rights may be
+To be able to actually perform the merge, sufficient rights may be
 required. Also, at least one review is required.
 
 
-Upload to PyPI
-~~~~~~~~~~~~~~
+Creating a release on github
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-After a successful merge, you need to update also the package on PyPI:
+After merging into master:
 
-5. create a so-called "wheel" via
+1. create a new release on github
+2. tag the commit with the new version number
+3. include the latest additions to ``doc/releasenotes.rst`` in the release
+   description
 
-   ::
-     
-       python setup.py bdist_wheel
-
-   A wheel is essentially a zip archive which contains the source code
-   and the binaries (if any).
-6. upload the archive to PyPI using twine via
-
-   ::
-
-       twine upload dist/pypesto-x.y.z-py3-none-any.whl
-
-   replacing x.y.z by the latest version number.
-
-The last step will only be possible if you have sufficient rights.
+Tagging the release commit will automatically trigger deployment of the new
+version to pypi.
