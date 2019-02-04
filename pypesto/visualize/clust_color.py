@@ -59,7 +59,7 @@ def assign_clustered_colors(vals):
     Returns
     -------
 
-    Col: list of RGB
+    Col: list of RGBA
         One for each element in 'vals'.
     """
 
@@ -77,9 +77,21 @@ def assign_clustered_colors(vals):
 
     # colors for each cluster and one-size clusters
     cols_clust = scalarmap.to_rgba(range(vmax + 1))
-
+    
     # grey color for 1-size clusters as the last color in 'cols_clust'
     cols_clust[vmax] = (0.7, 0.7, 0.7, 1)
+
+    for icluster in range(vmax+1):
+        if icluster == vmax:
+            # grey color for 1-size clusters as the last color in 'cols_clust'
+            # alpha set according to number of 1-size clusters (+1 to avoid
+            # zero division)
+            cols_clust[icluster][3] = min(1, 5 / (sum(clustsize == 1) + 1))
+        else:
+            # normalize alpha according to clustersize (why is this in inverse
+            # order?)
+            cols_clust[icluster][3] = min(1,
+                                          5 / clustsize[vmax - 1 - icluster])
 
     # pre-array of indices for colors
     ind_col = np.zeros(len(ind_clust))
@@ -91,11 +103,11 @@ def assign_clustered_colors(vals):
     for iind, value_ind in enumerate(ind_clust):
         # if cluster size > 1
         if clustsize[value_ind] > 1:
-            # assign a color with is not grey
+            # assign a non-grey color
             ind_col[iind] = sum_col
             # if element is not the last one in 'ind_col'
             if iind < len(ind_clust) - 1:
-                # if the next element does not belongs to the seem cluster
+                # if the next element does not belong to the same cluster
                 if value_ind != ind_clust[iind + 1]:
                     # use the next color
                     sum_col = sum_col + 1

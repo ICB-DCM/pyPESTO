@@ -76,7 +76,7 @@ def waterfall_lowlevel(fvals, ax=None):
         j_fval = indices[j]
         color = colors[j_fval]
         fval = fvals[j_fval]
-        ax.plot(j, fval, color=color, marker='o')
+        ax.plot(j, fval, color=color, marker='o', alpha=1)
 
     # labels
     ax.set_xlabel('Ordered optimizer run')
