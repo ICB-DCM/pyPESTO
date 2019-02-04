@@ -3,7 +3,7 @@ from matplotlib.ticker import MaxNLocator
 import numpy as np
 
 
-def profiles(result, ax=None, profile_indices=None):
+def profiles(result, ax=None, profile_indices=None, size=(18.5, 6.5)):
     """
     Plot classical 1D profile plot (using the posterior, e.g. Gaussian like
     profile)
@@ -19,6 +19,10 @@ def profiles(result, ax=None, profile_indices=None):
 
     profile_indices: list of integer values
         list of integer values specifying which profiles should be plotted
+
+    size: tuple, optional
+        Figure size (width, height) in inches. Is only applied when no ax
+        object is specified
 
     Returns
     -------
@@ -45,7 +49,7 @@ def profiles(result, ax=None, profile_indices=None):
     return profiles_lowlevel(fvals, ax)
 
 
-def profiles_lowlevel(fvals, ax=None):
+def profiles_lowlevel(fvals, ax=None, size=(18.5, 6.5)):
     """
     Lowlevel routine for profile plotting, working with a list of arrays
     only, opening different axes objects in case
@@ -69,6 +73,8 @@ def profiles_lowlevel(fvals, ax=None):
     # axes
     if ax is None:
         ax = plt.subplots()[1]
+        fig = plt.gcf()
+        fig.set_size_inches(*size)
 
     if isinstance(fvals, list):
         n_fvals = 0
@@ -90,7 +96,7 @@ def profiles_lowlevel(fvals, ax=None):
         if fval is not None:
             ax = plt.subplot(rows, columns, counter)
             ax = profile_lowlevel(ax, fval)
-            ax.set_title('Parameter ' + str(i_plot) + ' profile')
+            ax.set_title(f'Parameter {i_plot} profile')
             counter += 1
 
 

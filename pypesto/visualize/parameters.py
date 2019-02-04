@@ -95,6 +95,10 @@ def parameters_lowlevel(xs, fvals, lb=None, ub=None, x_labels=None, ax=None,
         The plot axes.
     """
 
+    # parse input
+    xs = np.array(xs)
+    fvals = np.array(fvals)
+
     if size is None:
         # 0.5 inch height per parameter
         size = (18.5, xs.shape[1]/2)
@@ -103,10 +107,6 @@ def parameters_lowlevel(xs, fvals, lb=None, ub=None, x_labels=None, ax=None,
         ax = plt.subplots()[1]
         fig = plt.gcf()
         fig.set_size_inches(*size)
-
-    # parse input
-    xs = np.array(xs)
-    fvals = np.array(fvals)
 
     # assign color
     colors = assign_clustered_colors(fvals)
