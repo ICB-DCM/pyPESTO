@@ -3,7 +3,6 @@ import pypesto.visualize
 import numpy as np
 import scipy as sp
 import unittest
-import copy
 
 
 # define a pypesto problem
@@ -26,21 +25,22 @@ for j in range(0, 4):
     result.optimize_result.append(optimizer_result=optimizer_result)
 
 # write some dummy results for profiling
-# initialize profile
 ratio_path_1 = [0.15, 0.25, 0.7, 1., 0.8, 0.35, 0.15]
 ratio_path_2 = [0.1, 0.2, 0.7, 1., 0.8, 0.3, 0.1]
 x_path_1 = np.array([[2., 2.1, 2.3, 2.5, 2.7, 2.9, 3.],
-            [1., 1.2, 1.4, 1.5, 1.6, 1.8, 2.]])
+                     [1., 1.2, 1.4, 1.5, 1.6, 1.8, 2.]])
 x_path_2 = np.array([[1., 1.1, 1.3, 1.5, 1.7, 1.9, 2.1],
-            [2.1, 2.2, 2.4, 2.5, 2.8, 2.9, 3.1]])
+                     [2.1, 2.2, 2.4, 2.5, 2.8, 2.9, 3.1]])
 fval_path_1 = [4., 3., 1., 0., 1.5, 2.5, 5.]
 fval_path_2 = [4.5, 3.5, 1.5, 0., 1.3, 2.3, 4.3]
 tmp_result_1 = pypesto.ProfilerResult(x_path_1, fval_path_1, ratio_path_1)
 tmp_result_2 = pypesto.ProfilerResult(x_path_2, fval_path_2, ratio_path_2)
 
+# use pypesto function to write the numeric values into the results
 result.profile_result.create_new_profile_list()
 result.profile_result.create_new_profile(tmp_result_1)
 result.profile_result.create_new_profile(tmp_result_2)
+
 
 class TestVisualize(unittest.TestCase):
 
