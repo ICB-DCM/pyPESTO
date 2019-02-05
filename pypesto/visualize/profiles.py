@@ -63,6 +63,10 @@ def profiles_lowlevel(fvals, ax=None, size=(18.5, 6.5)):
     ax: matplotlib.Axes, optional
         Axes object to use.
 
+    size: tuple, optional
+        Figure size (width, height) in inches. Is only applied when no ax
+        object is specified
+
     Returns
     -------
 
@@ -93,10 +97,17 @@ def profiles_lowlevel(fvals, ax=None, size=(18.5, 6.5)):
 
     counter = 1
     for i_plot, fval in enumerate(fvals):
+
         if fval is not None:
             ax = plt.subplot(rows, columns, counter)
             ax = profile_lowlevel(ax, fval)
-            ax.set_title(f'Parameter {i_plot} profile')
+
+            # labels
+            ax.set_xlabel(f'Parameter {i_plot} value')
+            if (counter-1) % columns == 0:
+                ax.set_ylabel('Log-posterior ratio')
+            else:
+                ax.set_yticklabels([''])
             counter += 1
 
 
@@ -123,9 +134,5 @@ def profile_lowlevel(ax, fvals):
     # plot
     ax.xaxis.set_major_locator(MaxNLocator(integer=True))
     ax.plot(fvals[0, :], fvals[1, :], color=[.9, .2, .2, 1.])
-
-    # labels
-    ax.set_xlabel('Parameter value')
-    ax.set_ylabel('Log-posterior ratio')
 
     return ax
