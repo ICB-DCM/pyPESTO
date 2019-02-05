@@ -111,7 +111,7 @@ def profiles_lowlevel(fvals, ax=None, size=(18.5, 6.5)):
             counter += 1
 
 
-def profile_lowlevel(fvals, ax=None):
+def profile_lowlevel(fvals, ax=None, size=(18.5, 6.5)):
     """
     Lowlevel routine for plotting one profile, working with a numpy array only
 
@@ -133,6 +133,12 @@ def profile_lowlevel(fvals, ax=None):
 
     # parse input
     fvals = np.array(fvals)
+
+    # axes
+    if ax is None:
+        ax = plt.subplots()[1]
+        fig = plt.gcf()
+        fig.set_size_inches(*size)
 
     # plot
     ax.xaxis.set_major_locator(MaxNLocator(integer=True))
