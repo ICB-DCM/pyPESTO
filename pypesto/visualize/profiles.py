@@ -100,7 +100,7 @@ def profiles_lowlevel(fvals, ax=None, size=(18.5, 6.5)):
 
         if fval is not None:
             ax = plt.subplot(rows, columns, counter)
-            ax = profile_lowlevel(ax, fval)
+            ax = profile_lowlevel(fval, ax)
 
             # labels
             ax.set_xlabel(f'Parameter {i_plot} value')
@@ -111,7 +111,7 @@ def profiles_lowlevel(fvals, ax=None, size=(18.5, 6.5)):
             counter += 1
 
 
-def profile_lowlevel(ax, fvals):
+def profile_lowlevel(fvals, ax=None):
     """
     Lowlevel routine for plotting one profile, working with a numpy array only
 
@@ -133,7 +133,7 @@ def profile_lowlevel(ax, fvals):
 
     # parse input
     fvals = np.array(fvals)
-    
+
     # plot
     ax.xaxis.set_major_locator(MaxNLocator(integer=True))
     ax.plot(fvals[0, :], fvals[1, :], color=[.9, .2, .2, 1.])
