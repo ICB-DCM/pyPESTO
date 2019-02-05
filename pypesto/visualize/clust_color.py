@@ -82,6 +82,10 @@ def assign_clustered_colors(vals):
     # grey color for 1-size clusters as the last color in 'cols_clust'
     cols_clust[vmax] = (0.7, 0.7, 0.7, 1)
 
+    # find non-1-size clusters in 'clustsize'
+    ind_one = np.where(clustsize == 1)[0]
+    n_clustsize = np.delete(clustsize, ind_one)
+
     for icluster in range(vmax+1):
         if icluster == vmax:
             # grey color for 1-size clusters as the last color in 'cols_clust'
@@ -89,10 +93,9 @@ def assign_clustered_colors(vals):
             # zero division)
             cols_clust[icluster][3] = min(1, 5 / (sum(clustsize == 1) + 1))
         else:
-            # normalize alpha according to clustersize (why is this in inverse
-            # order?)
+            # normalize alpha according to clustersize 
             cols_clust[icluster][3] = min(1,
-                                          5 / clustsize[vmax - 1 - icluster])
+                                          5 / n_clustsize[icluster])
 
     # pre-array of indices for colors
     ind_col = np.zeros(len(clust))
