@@ -131,6 +131,9 @@ def profile_lowlevel(ax, fvals):
         The plot axes.
     """
 
+    # parse input
+    fvals = np.array(fvals)
+    
     # plot
     ax.xaxis.set_major_locator(MaxNLocator(integer=True))
     ax.plot(fvals[0, :], fvals[1, :], color=[.9, .2, .2, 1.])
