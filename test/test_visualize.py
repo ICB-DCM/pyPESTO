@@ -134,12 +134,12 @@ class TestVisualize(unittest.TestCase):
     @staticmethod
     def test_profile_lowlevel():
         # test empty input
-        pypesto.visualize.profile_lowlevel([])
+        pypesto.visualize.profile_lowlevel(fvals=[])
 
         # test if it runs at all
         fvals = np.array([[2., 2.1, 2.3, 2.5, 2.7, 2.9, 3.],
                           [0.15, 0.25, 0.7, 1., 0.8, 0.35, 0.15]])
-        pypesto.visualize.profile_lowlevel(fvals)
+        pypesto.visualize.profile_lowlevel(fvals=fvals)
 
 
 if __name__ == '__main__':
