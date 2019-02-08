@@ -10,7 +10,7 @@ multistart itself is parallelized.
 
 from .single_core import SingleCoreEngine
 from .multi_process import MultiProcessEngine
-from .task import Task, OptimizerTask
+from .task import OptimizerTask
 
 
 __all__ = [

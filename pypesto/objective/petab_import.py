@@ -135,7 +135,7 @@ class PetabImporter:
         if model is None:
             model = self.create_model()
 
-        solver= model.getSolver()
+        solver = model.getSolver()
         return solver
 
     def create_edatas(self, model=None):
@@ -477,11 +477,11 @@ class PetabAmiciObjective(AmiciObjective):
     def __setstate__(self, state):
         self.__dict__.update(state)
         petab_importer = state['petab_importer']
-        
+
         model = petab_importer.create_model()
         solver = petab_importer.create_solver(model)
         edatas = petab_importer.create_edatas(model)
-        
+
         self.amici_model = model
         self.amici_solver = solver
         self.edatas = edatas

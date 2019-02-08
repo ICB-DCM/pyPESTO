@@ -501,10 +501,10 @@ class Objective:
         """
 
         pre_post_processor = FixedParametersProcessor(
-            dim_full = dim_full,
-            x_free_indices = x_free_indices,
-            x_fixed_indices = x_fixed_indices,
-            x_fixed_vals = x_fixed_vals)
+            dim_full=dim_full,
+            x_free_indices=x_free_indices,
+            x_fixed_indices=x_fixed_indices,
+            x_fixed_vals=x_fixed_vals)
 
         self.pre_post_processor = pre_post_processor
 

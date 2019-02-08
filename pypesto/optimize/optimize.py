@@ -132,7 +132,7 @@ def minimize(
     # aggregate results
     for optimizer_result in ret:
         result.optimize_result.append(optimizer_result)
-    
+
     # sort by best fval
     result.optimize_result.sort()
 
