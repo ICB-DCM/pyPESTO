@@ -1,8 +1,12 @@
 from multiprocessing import Pool
 import cloudpickle as pickle
 import os
+import logging
 
 from .base import Engine
+
+
+logger = logging.getLogger(__name__)
 
 
 def work(pickled_task):
@@ -27,6 +31,8 @@ class MultiProcessEngine(Engine):
             pickled_tasks.append(pickle.dumps(task))
 
         n_procs = min(self.n_procs, n_tasks)
+        logger.info(f"Performing parallel task execution on {n_procs} "
+                    f"processes.")
 
         with Pool(processes=n_procs) as pool:
             results = pool.map(work, pickled_tasks)
