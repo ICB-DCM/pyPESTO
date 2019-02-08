@@ -9,7 +9,6 @@ import shutil
 
 import petab
 
-from pypesto.objective import AmiciObjective
 from pypesto.problem import Problem
 
 try:
@@ -20,7 +19,7 @@ except ImportError:
 
 class PetabImporter:
 
-    def __init__(self, petab_problem, output_folder=None, force_compile=False):
+    def __init__(self, petab_problem, output_folder=None):
         """
         petab_problem: petab.Problem
             Managing access to the model and data.
@@ -28,11 +27,6 @@ class PetabImporter:
         output_folder: str,  optional
             Folder to contain the amici model. Defaults to
             './tmp/petab_problem.name'.
-
-        force_compile: str, optional
-            If False, the model is compiled only if the output folder does not
-            exist yet. If True, the output folder is deleted and the model
-            (re-)compiled in either case.
         """
         self.petab_problem = petab_problem
 
@@ -41,13 +35,8 @@ class PetabImporter:
                 os.path.join("tmp", self.petab_problem.model_name))
         self.output_folder = output_folder
 
-        self.model = None
-        self.import_model(force_compile)
-
-        self.solver = self.model.getSolver()
-
     @staticmethod
-    def from_folder(folder, output_folder=None, force_compile=False):
+    def from_folder(folder, output_folder=None):
         """
         Simplified constructor exploiting the standardized petab folder
         structure.
@@ -59,23 +48,29 @@ class PetabImporter:
             Path to the base folder of the model, as in
             petab.Problem.from_folder.
 
-        output_folder, force_compile: see __init__.
+        output_folder: see __init__.
         """
         petab_problem = petab.Problem.from_folder(folder)
 
         return PetabImporter(
             petab_problem=petab_problem,
-            output_folder=output_folder,
-            force_compile=force_compile
-        )
+            output_folder=output_folder)
 
-    def import_model(self, force_compile=False):
+    def create_model(self, force_compile=False):
         """
         Import amici model. If necessary or force_compile is True, compile
         first.
+
+        Parameters
+        ----------
+
+        force_compile: str, optional
+            If False, the model is compiled only if the output folder does not
+            exist yet. If True, the output folder is deleted and the model
+            (re-)compiled in either case.
         """
         # compile
-        if not os.path.exists(self.output_folder) or force_compile:
+        if force_compile or not os.path.exists(self.output_folder):
             self.compile_model()
 
         # add module to path
@@ -86,7 +81,9 @@ class PetabImporter:
         model_module = importlib.import_module(self.petab_problem.model_name)
 
         # import model
-        self.model = model_module.getModel()
+        model = model_module.getModel()
+
+        return model
 
     def compile_model(self):
         """
@@ -129,11 +126,14 @@ class PetabImporter:
             sigmas=sigmas
         )
 
-    def create_objective(self):
-        """
-        Create a pypesto.AmiciObjective.
-        """
+    def create_solver(self, model):
+        solver= model.getSolver()
+        return solver
 
+    def create_edatas(self, model):
+        """
+        Create list of amici.ExpData objects.
+        """
         condition_df = self.petab_problem.condition_df.reset_index()
         measurement_df = self.petab_problem.measurement_df
 
@@ -192,11 +192,30 @@ class PetabImporter:
             # append edata to edatas list
             edatas.append(edata)
 
+        return edatas
+
+    def create_objective(self,
+                         model=None,
+                         solver=None,
+                         edatas=None,
+                         force_compile: bool = False):
+        """
+        Create a pypesto.PetabAmiciObjective.
+        """
+        # create model
+        if model is None:
+            model = self.create_model(force_compile=force_compile)
+        # create solver
+        if solver is None:
+            solver = self.create_solver(model)
+        # create conditions and edatas from measurement data
+        if edatas is None:
+            edatas = self.create_edatas(model=model)
+
         # simulation <-> optimization parameter mapping
         par_opt_ids = self.petab_problem.get_optimization_parameters()
         # take sim parameter vector from model to ensure correct order
-        par_sim_ids = list(self.model.getParameterIds())
-        # par_sim_ids = self.petab_problem.get_dynamic_simulation_parameters()
+        par_sim_ids = list(model.getParameterIds())
 
         parameter_mapping = \
             petab.core.get_optimization_to_simulation_parameter_mapping(
@@ -215,14 +234,15 @@ class PetabImporter:
             )
 
         # create objective
-        obj = AmiciObjective(
-            amici_model=self.model, amici_solver=self.solver, edata=edatas,
+        obj = PetabAmiciObjective(
+            petab_importer=self,
+            amici_model=model, amici_solver=solver, edata=edatas,
             x_ids=par_opt_ids, x_names=par_opt_ids,
             mapping_par_opt_to_par_sim=parameter_mapping,
             mapping_scale_opt_to_scale_sim=scale_mapping
         )
 
-        return obj, edatas
+        return obj
 
     def create_problem(self, objective):
         problem = Problem(objective=objective,
@@ -406,3 +426,36 @@ def _handle_fixed_parameters(
         edata.fixedParametersPreequilibration = \
             fixed_preequilibration_parameter_vals.astype(float) \
                                                  .flatten()
+
+
+class PetabAmiciObjective(AmiciObjective):
+    """
+    This is a shallow wrapper around AmiciObjective to make it serializable.
+    """
+
+    def __init__(
+            self,
+            petab_importer,
+            amici_model, amici_solver, edatas,
+            x_ids, x_names,
+            mapping_par_opt_to_par_sim,
+            mapping_scale_opt_to_scale_sim):
+
+        super().__init__(
+            amici_model=amici_model,
+            amici_solver=amici_solver,
+            edatas=edatas,
+            x_ids=x_ids, x_names=x_names,
+            mapping_par_opt_to_par_sim=mapping_par_opt_to_par_sim,
+            mapping_scale_opt_to_scale_sim=mapping_scale_opt_to_scale_sim)
+
+        self.petab_importer = petab_importer
+
+    def __getstate__(self):
+        state = {'petab_importer': self.petab_importer}
+        return state
+
+    def __setstate__(self, state):
+        petab_importer = state['petab_importer']
+        obj = petab_importer.create_objective()
+        self.__dict__ = obj.__dict__
