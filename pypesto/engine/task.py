@@ -2,7 +2,9 @@ class Task:
 
     def __init__(self):
         """
-        Create a task object.
+        Create a task object. A task is one of a list of independent
+        execution tasks that are submitted to the execution engine
+        to be executed using the execute() method, commonly in parallel.
         """
         pass
 
@@ -15,6 +17,9 @@ class Task:
 
 
 class OptimizerTask(Task):
+    """
+    A multistart optimization task, performed in `pypesto.minimize`.
+    """
 
     def __init__(self, optimizer, problem, startpoint, j_start,
                  options, handle_exception):

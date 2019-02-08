@@ -15,12 +15,27 @@ def work(pickled_task):
 
 
 class MultiProcessEngine(Engine):
+    """
+    Parallelize the task execution using the `multiprocessing.Pool`
+    environment.
 
-    def __init__(self, n_procs=None):
+    Parameters
+    ----------
+
+    n_procs: int, optional
+        The number of cores to use. Defaults to the number of cpus available
+        on the system according to ``os.cpu_count()``.
+        The effectively used number of cores will be the minimum of n_procs
+        and the number of tasks submitted (and the number of CPUs available).
+    """
+
+    def __init__(self, n_procs: int = None):
         if n_procs is None:
             n_procs = os.cpu_count()
-            # TODO: Issue warning that this might be not safe
-            # on cluster environments
+            logger.warn(
+                f"Engine set up to use up to {n_procs} in total, the number "
+                f"automatically determined. This may not be appropriate on "
+                f"some systems.")
         self.n_procs = n_procs
 
     def execute(self, tasks):
