@@ -33,9 +33,9 @@ class MultiProcessEngine(Engine):
         if n_procs is None:
             n_procs = os.cpu_count()
             logger.warning(
-                f"Engine set up to use up to {n_procs} in total, the number "
-                f"automatically determined. This may not be appropriate on "
-                f"some systems.")
+                f"Engine set up to use up to {n_procs} processes in total. "
+                f"The number was automatically determined and might not be "
+                f"appropriate on some systems.")
         self.n_procs = n_procs
 
     def execute(self, tasks):
