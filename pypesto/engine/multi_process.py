@@ -32,7 +32,7 @@ class MultiProcessEngine(Engine):
     def __init__(self, n_procs: int = None):
         if n_procs is None:
             n_procs = os.cpu_count()
-            logger.warn(
+            logger.warning(
                 f"Engine set up to use up to {n_procs} in total, the number "
                 f"automatically determined. This may not be appropriate on "
                 f"some systems.")
