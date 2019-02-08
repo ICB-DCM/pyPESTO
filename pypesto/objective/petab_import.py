@@ -266,7 +266,7 @@ class PetabImporter:
 
         return problem
 
-    def rdatas_to_measurement_df(self, rdatas):
+    def rdatas_to_measurement_df(self, rdatas, model=None):
         """
         Create a measurement dataframe in the petab format from
         the passed `rdatas` and own information.
@@ -285,6 +285,9 @@ class PetabImporter:
             A dataframe built from the rdatas in the format as in
             self.petab_problem.measurement_df.
         """
+        # create model
+        if model is None:
+            model = self.create_model()
 
         condition_df = self.petab_problem.condition_df.reset_index()
         measurement_df = self.petab_problem.measurement_df
@@ -299,7 +302,7 @@ class PetabImporter:
             _get_simulation_conditions(condition_df, measurement_df)
 
         # get observable ids
-        observable_ids = self.model.getObservableIds()
+        observable_ids = model.getObservableIds()
 
         # iterate over conditions
         for data_idx, condition in simulation_conditions.iterrows():
