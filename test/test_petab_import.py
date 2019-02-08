@@ -9,24 +9,7 @@ import numpy as np
 
 import petab
 import pypesto
-
-
-# prerequisites
-
-# clone or pull git repo
-
-repo_base = "doc/example/tmp/benchmark-models/"
-try:
-    git.Git().clone("git://github.com/LoosC/Benchmark-Models.git",
-                    repo_base, depth=1)
-except Exception:
-    git.Git(repo_base).pull()
-
-# model folder base
-folder_base = repo_base + "hackathon_contributions_new_data_format/"
-
-# model name
-model_names = ["Zheng_PNAS2012", "Boehm_JProteomeRes2014"]
+from test.util import *
 
 
 class PetabImportTest(unittest.TestCase):
@@ -46,12 +29,11 @@ class PetabImportTest(unittest.TestCase):
 
     def test_1_compile(self):
         for petab_problem in self.petab_problems:
-            importer = pypesto.PetabImporter(petab_problem,
-                                             force_compile=True)
+            importer = pypesto.PetabImporter(petab_problem)
             self.petab_importers.append(importer)
 
             # check model
-            model = importer.model
+            model = importer.create_model(force_compile=True)
 
             # observable ids
             model_obs_ids = list(model.getObservableIds())
@@ -63,7 +45,8 @@ class PetabImportTest(unittest.TestCase):
 
     def test_2_simulate(self):
         for petab_importer in self.petab_importers:
-            obj, edatas = petab_importer.create_objective()
+            obj = petab_importer.create_objective()
+            edatas = petab_importer.create_edatas()
             self.obj_edatas.append((obj, edatas))
 
             # run function
