@@ -13,7 +13,7 @@ def work(pickled_task):
 class MultiProcessEngine(Engine):
 
     def __init__(self, n_procs=None):
-        if n_proces is None:
+        if n_procs is None:
             n_procs = os.cpu_count()
             # TODO: Issue warning that this might be not safe
             # on cluster environments

@@ -23,16 +23,16 @@ class PrePostProcessor:
         """
         return x
 
-    def postprocess(self, results):
+    def postprocess(self, result):
         """
         Convert all arrays into np.ndarrays if necessary, and return them
         without further modifications.
         """
-        results = PrePostProcessor.as_ndarrays(result)
+        result = PrePostProcessor.as_ndarrays(result)
         return result
 
     @staticmethod
-    def as_ndarray(result):
+    def as_ndarrays(result):
         """
         Convert all array_like objects to np.ndarrays. This has the advantage
         of a uniform output datatype which offers various methods to assess

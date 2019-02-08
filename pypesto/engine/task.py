@@ -14,10 +14,10 @@ class Task:
             "This is a non-functional base class.")
 
 
-def OptimizerTask(Task):
+class OptimizerTask(Task):
 
     def __init__(self, optimizer, problem, startpoint, j_start,
-            options, handle_exception):
+                 options, handle_exception):
         super().__init__()
 
         self.optimizer = optimizer
@@ -32,7 +32,7 @@ def OptimizerTask(Task):
             optimizer_result = self.optimizer.minimize(
                 self.problem, self.startpoint, self.j_start)
         except Exception as err:
-            if self.options.allow_failed_starts
+            if self.options.allow_failed_starts:
                 optimizer_result = self.handle_exception(
                     self.problem.objective, self.startpoint, self.j_start,
                     err)

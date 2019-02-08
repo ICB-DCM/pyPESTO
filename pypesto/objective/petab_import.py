@@ -9,7 +9,8 @@ import shutil
 
 import petab
 
-from pypesto.problem import Problem
+from ..problem import Problem
+from .amici_objective import AmiciObjective
 
 try:
     import amici
@@ -126,14 +127,25 @@ class PetabImporter:
             sigmas=sigmas
         )
 
-    def create_solver(self, model):
+    def create_solver(self, model=None):
+        """
+        Return model solver.
+        """
+        # create model
+        if model is None:
+            model = self.create_model()
+
         solver= model.getSolver()
         return solver
 
-    def create_edatas(self, model):
+    def create_edatas(self, model=None):
         """
         Create list of amici.ExpData objects.
         """
+        # create model
+        if model is None:
+            model = self.create_model()
+
         condition_df = self.petab_problem.condition_df.reset_index()
         measurement_df = self.petab_problem.measurement_df
 
@@ -143,9 +155,9 @@ class PetabImporter:
         grouping_cols, simulation_conditions = \
             _get_simulation_conditions(condition_df, measurement_df)
 
-        observable_ids = self.model.getObservableIds()
+        observable_ids = model.getObservableIds()
 
-        fixed_parameter_ids = self.model.getFixedParameterIds()
+        fixed_parameter_ids = model.getFixedParameterIds()
 
         edatas = []
         for _, condition in simulation_conditions.iterrows():
@@ -160,7 +172,7 @@ class PetabImporter:
                 cur_measurement_df.time.unique().astype(float))
 
             # init edata object
-            edata = amici.ExpData(self.model.get())
+            edata = amici.ExpData(model.get())
             edata.setTimepoints(timepoints)
 
             # handle fixed parameters
@@ -236,7 +248,7 @@ class PetabImporter:
         # create objective
         obj = PetabAmiciObjective(
             petab_importer=self,
-            amici_model=model, amici_solver=solver, edata=edatas,
+            amici_model=model, amici_solver=solver, edatas=edatas,
             x_ids=par_opt_ids, x_names=par_opt_ids,
             mapping_par_opt_to_par_sim=parameter_mapping,
             mapping_scale_opt_to_scale_sim=scale_mapping
@@ -459,3 +471,8 @@ class PetabAmiciObjective(AmiciObjective):
         petab_importer = state['petab_importer']
         obj = petab_importer.create_objective()
         self.__dict__ = obj.__dict__
+
+    def __deepcopy__(self, memodict=None):
+        petab_importer = copy.deepcopy(self.petab_importer)
+        other = petab_importer.create_objective()
+        return other

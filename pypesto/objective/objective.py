@@ -2,10 +2,11 @@ import numpy as np
 import copy
 import pandas as pd
 import logging
+
 from .constants import MODE_FUN, MODE_RES, FVAL, GRAD, HESS, RES, SRES
 from .history import ObjectiveHistory
 from .options import ObjectiveOptions
-
+from .pre_post_process import PrePostProcessor, FixedParametersProcessor
 
 logger = logging.getLogger(__name__)
 
@@ -216,9 +217,6 @@ class Objective:
 
         # compute result
         result = self._call_unprocessed(x, sensi_orders, mode)
-
-        # convert to ndarray
-        result = Objective.as_ndarrays(result)
 
         # post-process
         result = self.pre_post_processor.postprocess(result)

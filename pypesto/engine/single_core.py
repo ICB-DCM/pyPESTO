@@ -7,7 +7,7 @@ class SingleCoreEngine(Engine):
         pass
 
     def execute(self, tasks):
-        result = []
+        results = []
         for task in tasks:
             results.append(task.execute())
 
