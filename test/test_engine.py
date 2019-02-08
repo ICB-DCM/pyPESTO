@@ -3,7 +3,7 @@ import unittest
 
 import pypesto
 import test.test_objective as test_objective
-from test.util import *
+from test.util import folder_base, model_names
 
 
 class EngineTest(unittest.TestCase):

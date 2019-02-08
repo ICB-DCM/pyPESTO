@@ -4,12 +4,11 @@ This is for testing the petab import.
 """
 
 import unittest
-import git
 import numpy as np
 
 import petab
 import pypesto
-from test.util import *
+from test.util import folder_base, model_names
 
 
 class PetabImportTest(unittest.TestCase):
