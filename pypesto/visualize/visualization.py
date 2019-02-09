@@ -1,7 +1,7 @@
 import numpy as np
 
 
-class VisualizeOptions(dict):
+class VisualizationOptions(dict):
     """
     Options for visualization. Will contain things as color maps and options
     for the axes objects. At the moment, it contains only reference points for
@@ -62,8 +62,12 @@ class ReferencePoint(dict):
                  fval=None):
         super().__init__()
 
-        self.x = x
-        self.fval = fval
+        if isinstance(x, dict) or isinstance(x, ReferencePoint):
+            self.x = x["x"]
+            self.fval = x["fval"]
+        else:
+            self.x = x
+            self.fval = fval
 
     def __getattr__(self, key):
         try:

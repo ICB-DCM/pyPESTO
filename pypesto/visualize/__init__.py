@@ -7,7 +7,7 @@ import pypesto.visualize.
 
 """
 
-from .visualization import (VisualizeOptions,
+from .visualization import (VisualizationOptions,
                             ReferencePoint)
 from .waterfall import (waterfall,
                         waterfall_lowlevel)
@@ -19,7 +19,7 @@ from .profiles import (profiles,
                        profiles_lowlevel,
                        profile_lowlevel)
 
-__all__ = ["VisualizeOptions",
+__all__ = ["VisualizationOptions",
            "RefrencePoint",
            "waterfall",
            "waterfall_lowlevel",
