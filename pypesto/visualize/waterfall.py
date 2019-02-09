@@ -1,10 +1,16 @@
 import matplotlib.pyplot as plt
 from matplotlib.ticker import MaxNLocator
 import numpy as np
+from .visualization import ReferencePoint
+from .visualization import VisualizationOptions
+# from .visualization import apply_options
 from .clust_color import assign_clustered_colors
 
 
-def waterfall(result, ax=None, size=(18.5, 10.5)):
+def waterfall(result, ax=None,
+              size=(18.5, 10.5),
+              options=None,
+              reference=None):
     """
     Plot waterfall plot.
 
@@ -21,6 +27,13 @@ def waterfall(result, ax=None, size=(18.5, 10.5)):
         Figure size (width, height) in inches. Is only applied when no ax
         object is specified
 
+    options: VisualizationOptions, optional
+        Options specifying axes, colors and reference points
+
+    reference: list, optional
+        List of reference points for optimization results, containing et
+        least a function value fval
+
     Returns
     -------
 
@@ -31,7 +44,38 @@ def waterfall(result, ax=None, size=(18.5, 10.5)):
     # extract cost function values from result
     fvals = result.optimize_result.get_for_key('fval')
 
-    return waterfall_lowlevel(fvals, ax, size)
+    # call lowlevel plot routine
+    ax = waterfall_lowlevel(fvals, ax, size)
+
+    # apply options, if necessary
+    if options is not None:
+        options = VisualizationOptions(options)
+        # apply_options(ax, options)
+    else:
+        ref = None
+
+    # parse reference points
+    if reference is not None:
+        ref = []
+        if isinstance(reference, list):
+            for i_ref in enumerate(reference):
+                self.reference.append(ReferencePoint(i_ref))
+        else:
+            self.reference.append(ReferencePoint(reference))
+    elif options is not None:
+        ref = options.reference
+    else:
+        ref = None
+
+    # plot reference points
+    if ref is not None:
+        (lb_x, ub_x) = ax.get_xlim()
+        ax.plot([lb_x, ub_x],
+                [ref.fval, ref.fval],
+                '--',
+                color=[0.,0.6,0.,0.9])
+
+    return ax
 
 
 def waterfall_lowlevel(fvals, ax=None, size=(18.5, 10.5)):
