@@ -3,8 +3,9 @@ from matplotlib.ticker import MaxNLocator
 import numpy as np
 from .visualization import ReferencePoint
 from .visualization import VisualizationOptions
+from .visualization import handle_options
 from .clust_color import assign_clustered_colors
-# from .visualization import apply_options
+
 
 def waterfall(result, ax=None,
               size=(18.5, 10.5),
@@ -46,33 +47,14 @@ def waterfall(result, ax=None,
     # call lowlevel plot routine
     ax = waterfall_lowlevel(fvals, ax, size)
 
-    # apply options, if necessary
-    if options is not None:
-        options = VisualizationOptions(options)
-        # apply_options(ax, options)
-    else:
-        ref = None
-
-    # parse reference points
-    if reference is not None:
-        ref = []
-        if isinstance(reference, list):
-            for i_ref in reference:
-                ref.append(ReferencePoint(i_ref))
-        else:
-            ref.append(ReferencePoint(reference))
-    elif options is not None:
-        ref = options.reference
-    else:
-        ref = None
+    # parse and apply plotting options
+    ref = handle_options(ax, options, reference)
 
     # plot reference points
     if ref is not None:
         ref_len = len(ref)
         for i_num, i_ref in enumerate(ref):
-            ax.plot([0, len(fvals) - 1],
-                    [i_ref.fval, i_ref.fval],
-                    '--',
+            ax.plot([0, len(fvals) - 1], [i_ref.fval, i_ref.fval], '--',
                     color=[0., 0.5 * (1. + i_num/ref_len), 0., 0.9])
 
     return ax

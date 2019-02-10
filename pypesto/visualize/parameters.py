@@ -1,11 +1,14 @@
 import matplotlib.pyplot as plt
 from matplotlib.ticker import MaxNLocator
 import numpy as np
+from .visualization import ReferencePoint
+from .visualization import VisualizationOptions
+from .visualization import handle_options
 from .clust_color import assign_clustered_colors
 
 
 def parameters(result, ax=None, free_indices_only=True, lb=None, ub=None,
-               size=None):
+               size=None, options=None, reference=None):
     """
     Plot parameter values.
 
@@ -29,6 +32,13 @@ def parameters(result, ax=None, free_indices_only=True, lb=None, ub=None,
     size: tuple, optional
         Figure size (width, height) in inches. Is only applied when no ax
         object is specified
+
+    options: VisualizationOptions, optional
+        Options specifying axes, colors and reference points
+
+    reference: list, optional
+        List of reference points for optimization results, containing et
+        least a function value fval
 
     Returns
     -------
@@ -57,12 +67,33 @@ def parameters(result, ax=None, free_indices_only=True, lb=None, ub=None,
         lb = result.problem.get_full_vector(lb)
         ub = result.problem.get_full_vector(ub)
 
-    return parameters_lowlevel(xs=xs, fvals=fvals, lb=lb, ub=ub,
-                               x_labels=x_labels, ax=ax, size=size)
+    # call lowlevel routine
+    ax = parameters_lowlevel(xs=xs, fvals=fvals, lb=lb, ub=ub,
+                             x_labels=x_labels, ax=ax, size=size)
+
+    # parse and apply plotting options
+    ref = handle_options(ax, options, reference)
+
+    # plot reference points
+    if ref is not None:
+        # create set of colors for reference points
+        ref_len = len(ref)
+        colors = []
+        ref_x = []
+        ref_fvals=[]
+        for i_num, i_ref in enumerate(ref):
+            colors.append([0., 0.5 * (1. + i_num/ref_len), 0., 0.9])
+            ref_x.append(i_ref["x"])
+            ref_fvals.append(i_ref["fval"])
+
+        # plot reference points using the lowleve routine
+        ax = parameters_lowlevel(ref_x, ref_fvals, ax=ax, colors=colors)
+
+    return ax
 
 
 def parameters_lowlevel(xs, fvals, lb=None, ub=None, x_labels=None, ax=None,
-                        size=None):
+                        size=None, colors=None):
     """
     Plot parameters plot using list of parameters.
 
@@ -88,6 +119,9 @@ def parameters_lowlevel(xs, fvals, lb=None, ub=None, x_labels=None, ax=None,
     size: tuple, optional
         see parameters
 
+    colors: list of RGB
+        One for each element in 'fvals'.
+
     Returns
     -------
 
@@ -109,7 +143,8 @@ def parameters_lowlevel(xs, fvals, lb=None, ub=None, x_labels=None, ax=None,
         fig.set_size_inches(*size)
 
     # assign color
-    colors = assign_clustered_colors(fvals)
+    if colors is None:
+        colors = assign_clustered_colors(fvals)
 
     # parameter indices
     parameters_ind = range(1, xs.shape[1] + 1)

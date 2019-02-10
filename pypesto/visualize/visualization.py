@@ -40,6 +40,50 @@ class VisualizationOptions(dict):
     __delattr__ = dict.__delitem__
 
 
+def handle_options(ax, options=None, reference=None):
+    """
+    This function handles the options, which are passed to the plotting
+    routines
+
+    Parameters
+    ----------
+
+    ax: matplotlib.Axes
+        Axes object to use.
+
+    options: VisualizationOptions, optional
+        Options specifying axes, colors and reference points
+
+    reference: list, optional
+        List of reference points for optimization results, containing et
+        least a function value fval
+    """
+
+    # apply options, if necessary
+    if options is not None:
+        options = VisualizationOptions(options)
+        # apply_options(ax, options)
+    else:
+        ref = None
+
+    # parse reference points
+    if reference is not None:
+        ref = []
+        if isinstance(reference, list):
+            for i_ref in reference:
+                ref.append(ReferencePoint(i_ref))
+        else:
+            ref.append(ReferencePoint(reference))
+    elif options is not None:
+        ref = options.reference
+    else:
+        ref = None
+
+    # return reference points, as they need to be applied seperately,
+    # depending on the precise visualization routine
+    return ref
+
+
 class ReferencePoint(dict):
     """
     Reference point for plotting. Should contain a parameter value and an
@@ -66,7 +110,7 @@ class ReferencePoint(dict):
             self.x = x["x"]
             self.fval = x["fval"]
         else:
-            self.x = x
+            self.x = np.array(x)
             self.fval = fval
 
     def __getattr__(self, key):
