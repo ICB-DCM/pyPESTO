@@ -23,6 +23,19 @@ class OptimizerTask(Task):
 
     def __init__(self, optimizer, problem, startpoint, j_start,
                  options, handle_exception):
+        """
+        Create the task object.
+
+        Parameters
+        ----------
+
+        optimizer: the optimizer to use
+        problem: the problem to solve
+        startpoint: the point from which to start
+        j_start: the index of the multistart
+        options: options object applying to optimization
+        handle_exception: callable to apply when the optimization fails
+        """
         super().__init__()
 
         self.optimizer = optimizer
