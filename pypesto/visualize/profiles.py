@@ -1,9 +1,12 @@
 import matplotlib.pyplot as plt
 from matplotlib.ticker import MaxNLocator
 import numpy as np
+from .visualization import VisualizationOptions
+from .visualization import handle_options
 
 
-def profiles(result, ax=None, profile_indices=None, size=(18.5, 6.5)):
+def profiles(result, fig=None, profile_indices=None, size=(18.5, 6.5),
+             options=None, reference=None):
     """
     Plot classical 1D profile plot (using the posterior, e.g. Gaussian like
     profile)
@@ -14,8 +17,8 @@ def profiles(result, ax=None, profile_indices=None, size=(18.5, 6.5)):
     result: pypesto.Result
         Optimization result obtained by 'optimize.py'
 
-    ax: matplotlib.Axes, optional
-        Axes object to use.
+    fig: matplotlib.Figure, optional
+        Figure object to use.
 
     profile_indices: list of integer values
         list of integer values specifying which profiles should be plotted
@@ -23,6 +26,13 @@ def profiles(result, ax=None, profile_indices=None, size=(18.5, 6.5)):
     size: tuple, optional
         Figure size (width, height) in inches. Is only applied when no ax
         object is specified
+
+    options: VisualizationOptions, optional
+        Options specifying axes, colors and reference points
+
+    reference: list, optional
+        List of reference points for optimization results, containing et
+        least a function value fval
 
     Returns
     -------
@@ -46,7 +56,17 @@ def profiles(result, ax=None, profile_indices=None, size=(18.5, 6.5)):
             tmp = None
         fvals.append(tmp)
 
-    return profiles_lowlevel(fvals, ax)
+    # call lowlevel routine
+    ax = profiles_lowlevel(fvals, fig, size)
+
+    # parse and apply plotting options
+    ref = handle_options(ax, options, reference)
+
+    # plot reference points
+    if ref is not None:
+        ax = handle_refrence_points(ref, ax, fvals)
+
+    return ax
 
 
 def profiles_lowlevel(fvals, ax=None, size=(18.5, 6.5)):
@@ -60,8 +80,8 @@ def profiles_lowlevel(fvals, ax=None, size=(18.5, 6.5)):
     fvals: numeric list or array
         Including values need to be plotted.
 
-    ax: matplotlib.Axes, optional
-        Axes object to use.
+    ax: list of matplotlib.Axes, optional
+        list of axes object to use.
 
     size: tuple, optional
         Figure size (width, height) in inches. Is only applied when no ax
@@ -76,9 +96,12 @@ def profiles_lowlevel(fvals, ax=None, size=(18.5, 6.5)):
 
     # axes
     if ax is None:
-        ax = plt.subplots()[1]
-        fig = plt.gcf()
+        ax = []
+        fig = plt.figure()
         fig.set_size_inches(*size)
+    else:
+        plt.axes(ax)
+        fig = plt.gcf()
 
     if isinstance(fvals, list):
         n_fvals = 0
@@ -95,20 +118,22 @@ def profiles_lowlevel(fvals, ax=None, size=(18.5, 6.5)):
     else:
         rows = columns - 1
 
-    counter = 1
+    counter = 0
     for i_plot, fval in enumerate(fvals):
 
         if fval is not None:
-            ax = plt.subplot(rows, columns, counter)
-            ax = profile_lowlevel(fval, ax)
+            ax.append(fig.add_subplot(rows, columns, counter + 1))
+            ax[counter] = profile_lowlevel(fval, ax[counter])
 
             # labels
-            ax.set_xlabel(f'Parameter {i_plot} value')
-            if (counter-1) % columns == 0:
-                ax.set_ylabel('Log-posterior ratio')
+            ax[counter].set_xlabel(f'Parameter {i_plot} value')
+            if counter % columns == 0:
+                ax[counter].set_ylabel('Log-posterior ratio')
             else:
-                ax.set_yticklabels([''])
+                ax[counter].set_yticklabels([''])
             counter += 1
+
+    return ax
 
 
 def profile_lowlevel(fvals, ax=None, size=(18.5, 6.5)):
@@ -150,5 +175,43 @@ def profile_lowlevel(fvals, ax=None, size=(18.5, 6.5)):
     if fvals.size != 0:
         ax.xaxis.set_major_locator(MaxNLocator(integer=True))
         ax.plot(fvals[0, :], fvals[1, :], color=[.9, .2, .2, 1.])
+
+    return ax
+
+
+def handle_refrence_points(ref, ax, fvals):
+    """
+    Handle reference points.
+
+    Parameters
+    ----------
+
+    ref: list, optional
+        List of reference points for optimization results, containing et
+        least a function value fval
+
+    ax: matplotlib.Axes, optional
+        Axes object to use.
+    """
+
+    # get the parameters which have profiles plotted
+    par_indices = []
+    for i_plot, fval in enumerate(fvals):
+        if fval is not None:
+            par_indices.append(i_plot)
+
+    # create set of colors for reference points
+    ref_len = len(ref)
+    colors = []
+    ref_x = []
+    for i_num, i_ref in enumerate(ref):
+        colors.append([0., 0.5 * (1. + i_num / ref_len), 0., 0.9])
+        ref_x.append(i_ref["x"])
+
+    # loop over axes objects
+    for i_par, i_ax in enumerate(ax):
+        for i_ref, i_col in enumerate(colors):
+            current_x = ref_x[i_ref][par_indices[i_par]]
+            i_ax.plot([current_x, current_x], [0., 1.], color=i_col)
 
     return ax
