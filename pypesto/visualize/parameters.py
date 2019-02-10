@@ -47,25 +47,9 @@ def parameters(result, ax=None, free_indices_only=True, lb=None, ub=None,
         The plot axes.
     """
 
-    if lb is None:
-        lb = result.problem.lb
-    if ub is None:
-        ub = result.problem.ub
-
-    fvals = result.optimize_result.get_for_key('fval')
-    xs = result.optimize_result.get_for_key('x')
-
-    x_labels = result.problem.x_names
-
-    if free_indices_only:
-        for ix, x in enumerate(xs):
-            xs[ix] = result.problem.get_reduced_vector(x)
-        lb = result.problem.get_reduced_vector(lb)
-        ub = result.problem.get_reduced_vector(ub)
-        x_labels = [x_labels[int(i)] for i in result.problem.x_free_indices]
-    else:
-        lb = result.problem.get_full_vector(lb)
-        ub = result.problem.get_full_vector(ub)
+    # handle results and bounds
+    (lb, ub, x_labels, fvals, xs) = handle_bounds(result, free_indices_only,
+                                                  lb, ub)
 
     # call lowlevel routine
     ax = parameters_lowlevel(xs=xs, fvals=fvals, lb=lb, ub=ub,
@@ -76,18 +60,7 @@ def parameters(result, ax=None, free_indices_only=True, lb=None, ub=None,
 
     # plot reference points
     if ref is not None:
-        # create set of colors for reference points
-        ref_len = len(ref)
-        colors = []
-        ref_x = []
-        ref_fvals=[]
-        for i_num, i_ref in enumerate(ref):
-            colors.append([0., 0.5 * (1. + i_num/ref_len), 0., 0.9])
-            ref_x.append(i_ref["x"])
-            ref_fvals.append(i_ref["fval"])
-
-        # plot reference points using the lowleve routine
-        ax = parameters_lowlevel(ref_x, ref_fvals, ax=ax, colors=colors)
+        ax = handle_refrence_points(ref, ax)
 
     return ax
 
@@ -135,7 +108,7 @@ def parameters_lowlevel(xs, fvals, lb=None, ub=None, x_labels=None, ax=None,
 
     if size is None:
         # 0.5 inch height per parameter
-        size = (18.5, xs.shape[1]/2)
+        size = (18.5, xs.shape[1] / 2)
 
     if ax is None:
         ax = plt.subplots()[1]
@@ -166,5 +139,88 @@ def parameters_lowlevel(xs, fvals, lb=None, ub=None, x_labels=None, ax=None,
     ax.set_xlabel('Parameter value')
     ax.set_ylabel('Parameter index')
     ax.set_title('Estimated parameters')
+
+    return ax
+
+
+def handle_bounds(result, free_indices_only, lb=None, ub=None):
+    """
+    Handle bounds and results.
+
+    Parameters
+    ----------
+
+    result: pypesto.Result
+        Optimization result obtained by 'optimize.py'.
+
+    free_indices_only: bool, optional
+        If True, only free parameters are shown. If
+        False, also the fixed parameters are shown.
+
+    lb, ub: ndarray, optional
+        If not None, override result.problem.lb, problem.problem.ub.
+        Dimension either result.problem.dim or result.problem.dim_full.
+
+    Returns
+    -------
+
+    ax: matplotlib.Axes
+        The plot axes.
+    """
+
+    # retrieve results
+    fvals = result.optimize_result.get_for_key('fval')
+    xs = result.optimize_result.get_for_key('x')
+
+    # get bounds
+    if lb is None:
+        lb = result.problem.lb
+    if ub is None:
+        ub = result.problem.ub
+
+    # get labels
+    x_labels = result.problem.x_names
+
+    # handle fixed and free indices
+    if free_indices_only:
+        for ix, x in enumerate(xs):
+            xs[ix] = result.problem.get_reduced_vector(x)
+        lb = result.problem.get_reduced_vector(lb)
+        ub = result.problem.get_reduced_vector(ub)
+        x_labels = [x_labels[int(i)] for i in result.problem.x_free_indices]
+    else:
+        lb = result.problem.get_full_vector(lb)
+        ub = result.problem.get_full_vector(ub)
+
+    return lb, ub, x_labels, fvals, xs
+
+
+def handle_refrence_points(ref, ax):
+    """
+    Handle reference points.
+
+    Parameters
+    ----------
+
+    ref: list, optional
+        List of reference points for optimization results, containing et
+        least a function value fval
+
+    ax: matplotlib.Axes, optional
+        Axes object to use.
+    """
+
+    # create set of colors for reference points
+    ref_len = len(ref)
+    colors = []
+    ref_x = []
+    ref_fvals = []
+    for i_num, i_ref in enumerate(ref):
+        colors.append([0., 0.5 * (1. + i_num / ref_len), 0., 0.9])
+        ref_x.append(i_ref["x"])
+        ref_fvals.append(i_ref["fval"])
+
+    # plot reference points using the lowleve routine
+    ax = parameters_lowlevel(ref_x, ref_fvals, ax=ax, colors=colors)
 
     return ax
