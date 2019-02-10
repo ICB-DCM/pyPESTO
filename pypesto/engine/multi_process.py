@@ -19,7 +19,7 @@ class MultiProcessEngine(Engine):
     Parallelize the task execution using the `multiprocessing.Pool`
     environment.
 
-    Parameters
+    Attributes
     ----------
 
     n_procs: int, optional
