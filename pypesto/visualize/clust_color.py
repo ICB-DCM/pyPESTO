@@ -47,7 +47,7 @@ def assign_clusters(vals):
     return clust, clustsize
 
 
-def assign_clustered_colors(vals):
+def assign_clustered_colors(vals, balance_alpha=True):
     """
     Cluster and assign colors.
 
@@ -56,6 +56,10 @@ def assign_clustered_colors(vals):
 
     vals: numeric list or array
         List to be clustered and assigned colors.
+
+    balance_alpha: bool (optional)
+        Flag indicating whether alpha for large clusters should be reduced to
+        avoid overplotting (default: True)
 
     Returns
     -------
@@ -86,16 +90,17 @@ def assign_clustered_colors(vals):
     ind_one = np.where(clustsize == 1)[0]
     n_clustsize = np.delete(clustsize, ind_one)
 
-    for icluster in range(vmax+1):
-        if icluster == vmax:
-            # grey color for 1-size clusters as the last color in 'cols_clust'
-            # alpha set according to number of 1-size clusters (+1 to avoid
-            # zero division)
-            cols_clust[icluster][3] = min(1, 5 / (sum(clustsize == 1) + 1))
-        else:
-            # normalize alpha according to clustersize
-            cols_clust[icluster][3] = min(1,
-                                          5 / n_clustsize[icluster])
+    if balance_alpha:
+        for icluster in range(vmax+1):
+            if icluster == vmax:
+                # grey color for 1-size clusters as the last color in
+                # 'cols_clust' alpha set according to number of 1-size
+                # clusters (+1 to avoid zero division)
+                cols_clust[icluster][3] = min(1, 5 / (sum(clustsize == 1) + 1))
+            else:
+                # normalize alpha according to clustersize
+                cols_clust[icluster][3] = min(1,
+                                              5 / n_clustsize[icluster])
 
     # pre-array of indices for colors
     ind_col = np.zeros(len(clust))

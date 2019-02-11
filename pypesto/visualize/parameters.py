@@ -4,7 +4,8 @@ import numpy as np
 from .clust_color import assign_clustered_colors
 
 
-def parameters(result, ax=None, free_indices_only=True, lb=None, ub=None):
+def parameters(result, ax=None, free_indices_only=True, lb=None, ub=None,
+               balance_alpha=True):
     """
     Plot parameter values.
 
@@ -24,6 +25,10 @@ def parameters(result, ax=None, free_indices_only=True, lb=None, ub=None):
     lb, ub: ndarray, optional
         If not None, override result.problem.lb, problem.problem.ub.
         Dimension either result.problem.dim or result.problem.dim_full.
+
+    balance_alpha: bool (optional)
+        Flag indicating whether alpha for large clusters should be reduced to
+        avoid overplotting (default: True)
 
     Returns
     -------
@@ -53,10 +58,12 @@ def parameters(result, ax=None, free_indices_only=True, lb=None, ub=None):
         ub = result.problem.get_full_vector(ub)
 
     return parameters_lowlevel(xs=xs, fvals=fvals, lb=lb, ub=ub,
-                               x_labels=x_labels, ax=ax)
+                               x_labels=x_labels, ax=ax,
+                               balance_alpha=balance_alpha)
 
 
-def parameters_lowlevel(xs, fvals, lb=None, ub=None, x_labels=None, ax=None):
+def parameters_lowlevel(xs, fvals, lb=None, ub=None, x_labels=None, ax=None,
+                        balance_alpha=True):
     """
     Plot parameters plot using list of parameters.
 
@@ -79,6 +86,10 @@ def parameters_lowlevel(xs, fvals, lb=None, ub=None, x_labels=None, ax=None):
     ax: matplotlib.Axes, optional
         Axes object to use.
 
+    balance_alpha: bool (optional)
+        Flag indicating whether alpha for large clusters should be reduced to
+        avoid overplotting (default: True)
+
     Returns
     -------
 
@@ -94,7 +105,7 @@ def parameters_lowlevel(xs, fvals, lb=None, ub=None, x_labels=None, ax=None):
     fvals = np.array(fvals)
 
     # assign color
-    colors = assign_clustered_colors(fvals)
+    colors = assign_clustered_colors(fvals, balance_alpha)
 
     # parameter indices
     parameters_ind = range(1, xs.shape[1] + 1)
