@@ -225,15 +225,15 @@ def get_offset(vals, offset_y):
     # get the minimal value shich should be plotted
     min_val = np.inf
     for val in vals:
-        tmp_min = np.min(val[1,:])
+        tmp_min = np.min(val[1, :])
         min_val = np.min([min_val, tmp_min])
 
     # check whether the offset specified by the user is sufficient
     if offset_y is not None:
         if min_val + offset_y <= 0.:
-            Warning("Offset specified by user is insufficient. Ignoring "
-                    "specified offset and using" + str(np.abs(min_val) + 1.) +
-                    "instead.")
+            warnings.warn("Offset specified by user is insufficient. "
+                          "Ignoring specified offset and using" +
+                          str(np.abs(min_val) + 1.) + "instead.")
             offset_y = np.abs(min_val) + 1.
     else:
         if min_val <= 0.:
@@ -243,6 +243,6 @@ def get_offset(vals, offset_y):
 
     if offset_y != 0:
         for val in vals:
-            val[1, :] +=  offset_y * np.ones(val[1].shape)
+            val[1, :] += offset_y * np.ones(val[1].shape)
 
     return vals, offset_y
