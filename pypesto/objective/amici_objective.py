@@ -15,17 +15,16 @@ logger = logging.getLogger(__name__)
 
 class AmiciObjective(Objective):
     """
-    This is a convenience class to compute an objective function from an
-    AMICI model.
+    This class allows to create an objective directly from an amici model.
     """
 
     def __init__(self,
-                 amici_model, amici_solver, edata,
+                 amici_model, amici_solver, edatas,
                  max_sensi_order=None,
                  x_ids=None, x_names=None,
                  mapping_par_opt_to_par_sim=None,
                  mapping_scale_opt_to_scale_sim=None,
-                 preprocess_edata=True,
+                 preprocess_edatas=True,
                  options=None):
         """
         Constructor.
@@ -39,7 +38,7 @@ class AmiciObjective(Objective):
         amici_solver: amici.Solver
             The solver to use for the numeric integration of the model.
 
-        edata: amici.ExpData or list of amici.ExpData
+        edatas: amici.ExpData or list of amici.ExpData
             The experimental data. If a list is passed, its entries correspond
             to multiple experimental conditions.
 
@@ -65,7 +64,7 @@ class AmiciObjective(Objective):
             scales. The default is to just use the scales specified in the
             `amici_model` already.
 
-        preprocess_edata: bool, optional (default = True)
+        preprocess_edatas: bool, optional (default = True)
             Whether to perform preprocessing, i.e. preequilibration, if that
             is specified in the model.
 
@@ -73,10 +72,10 @@ class AmiciObjective(Objective):
             Further options.
         """
         if amici is None:
-            raise ImportError("This objective requires an installation of "
-                              "amici "
-                              "(https://github.com/icb-dcm/amici). "
-                              "Install via `pip3 install amici`.")
+            raise ImportError(
+                "This objective requires an installation of amici "
+                "(https://github.com/icb-dcm/amici). "
+                "Install via `pip3 install amici`.")
 
         if max_sensi_order is None:
             # 2 if model was compiled with second orders,
@@ -111,18 +110,19 @@ class AmiciObjective(Objective):
         self.amici_solver = amici_solver
 
         # make sure the edatas are a list of edata objects
-        if isinstance(edata, amici.amici.ExpData):
-            edata = [edata]
+        if isinstance(edatas, amici.amici.ExpData):
+            edatas = [edatas]
 
-        if preprocess_edata:
+        self.preprocess_edatas = preprocess_edatas
+        if preprocess_edatas:
             # preprocess the experimental data
-            self.preequilibration_edata = []
-            self.init_preequilibration_edata(edata)
+            self.preequilibration_edatas = []
+            self.init_preequilibration_edatas(edatas)
         else:
-            self.preequilibration_edata = None
+            self.preequilibration_edatas = None
 
         # set the experimental data container
-        self.edata = edata
+        self.edatas = edatas
 
         # set the maximum sensitivity order
         self.max_sensi_order = max_sensi_order
@@ -138,7 +138,8 @@ class AmiciObjective(Objective):
         # mapping of parameters
         if mapping_par_opt_to_par_sim is None:
             # use identity mapping for each condition
-            mapping_par_opt_to_par_sim = [x_ids for _ in range(len(edata))]
+            mapping_par_opt_to_par_sim = \
+                [x_ids for _ in range(len(self.edatas))]
         self.mapping_par_opt_to_par_sim = mapping_par_opt_to_par_sim
 
         # mapping of parameter scales
@@ -146,7 +147,7 @@ class AmiciObjective(Objective):
             # use scales from amici model
             mapping_scale_opt_to_scale_sim = \
                 create_scale_mapping_from_model(
-                    self.amici_model.getParameterScale(), len(self.edata))
+                    self.amici_model.getParameterScale(), len(self.edatas))
         self.mapping_scale_opt_to_scale_sim = mapping_scale_opt_to_scale_sim
 
         # optimization parameter names
@@ -196,11 +197,11 @@ class AmiciObjective(Objective):
     def __deepcopy__(self, memodict=None):
         model = amici.ModelPtr(self.amici_model.clone())
         solver = amici.SolverPtr(self.amici_solver.clone())
-        edata = [amici.ExpData(data) for data in self.edata]
-        other = AmiciObjective(model, solver, edata)
+        edatas = [amici.ExpData(data) for data in self.edatas]
+        other = AmiciObjective(model, solver, edatas)
         for attr in self.__dict__:
             if attr not in ['amici_solver', 'amici_model',
-                            'edata', 'preequilibration_edata']:
+                            'edatas', 'preequilibration_edatas']:
                 other.__dict__[attr] = copy.deepcopy(self.__dict__[attr])
         return other
 
@@ -298,13 +299,13 @@ class AmiciObjective(Objective):
         # set order in solver
         self.amici_solver.setSensitivityOrder(sensi_order)
 
-        if self.preequilibration_edata:
+        if self.preequilibration_edatas:
             preeq_status = self.run_preequilibration(x)
             if preeq_status is not None:
                 return self.get_error_output(rdatas)
 
         # loop over experimental data
-        for data_ix, edata in enumerate(self.edata):
+        for data_ix, edata in enumerate(self.edatas):
 
             # set model parameter scale for condition index
             self.set_parameter_scale(data_ix)
@@ -312,7 +313,7 @@ class AmiciObjective(Objective):
             # set parameters in model, according to mapping
             self.set_par_sim_for_condition(data_ix, x)
 
-            if self.preequilibration_edata:
+            if self.preequilibration_edatas:
                 original_value_dict = self.preprocess_preequilibration(data_ix)
             else:
                 original_value_dict = None
@@ -327,7 +328,7 @@ class AmiciObjective(Objective):
             rdatas.append(rdata)
 
             # reset fixed preequilibration parameters and initial states
-            if self.preequilibration_edata:
+            if self.preequilibration_edatas:
                 self.postprocess_preequilibration(edata, original_value_dict)
 
             # logging
@@ -373,11 +374,11 @@ class AmiciObjective(Objective):
             RDATAS: rdatas
         }
 
-    def init_preequilibration_edata(self, edatas):
+    def init_preequilibration_edatas(self, edatas):
         """
         Extract information needed for doing preequilibration.
         """
-        self.preequilibration_edata = []
+        self.preequilibration_edatas = []
 
         for edata in edatas:
             # extract values of the fixed parameters
@@ -400,7 +401,7 @@ class AmiciObjective(Objective):
             # the situation can occur that there are no fixed_parameters, but
             # events that are omitted in the preequilibration run.
 
-            self.preequilibration_edata.append(dict(
+            self.preequilibration_edatas.append(dict(
                 edata=preeq_edata,
                 preequilibrate=preequilibrate
             ))
@@ -410,7 +411,7 @@ class AmiciObjective(Objective):
         Run preequilibration.
         """
 
-        for data_ix, preeq_dict in enumerate(self.preequilibration_edata):
+        for data_ix, preeq_dict in enumerate(self.preequilibration_edatas):
 
             if not preeq_dict['preequilibrate']:
                 # no preequilibration required
@@ -450,7 +451,7 @@ class AmiciObjective(Objective):
         before running the real simulation.
         """
 
-        data = self.edata[edata_ix]
+        data = self.edatas[edata_ix]
 
         original_fixed_parameters_preequilibration = None
         original_initial_states = None
@@ -458,7 +459,7 @@ class AmiciObjective(Objective):
 
         # if this data set needed preequilibration, adapt the states
         # according to the previously run preequilibration
-        if self.preequilibration_edata[edata_ix]['preequilibrate']:
+        if self.preequilibration_edatas[edata_ix]['preequilibrate']:
 
             # remember original states and sensitivities
             original_initial_states = self.amici_model.getInitialStates()
@@ -477,14 +478,14 @@ class AmiciObjective(Objective):
 
             # set initial state from preequilibration
             self.amici_model.setInitialStates(
-                self.preequilibration_edata[edata_ix]['x0']
+                self.preequilibration_edatas[edata_ix]['x0']
             )
 
             # set initial sensitivities from preequilibration
             if self.amici_solver.getSensitivityOrder() > \
                     amici.SensitivityOrder_none:
                 self.amici_model.setInitialStateSensitivities(
-                    self.preequilibration_edata[edata_ix]['sx0'].flatten()
+                    self.preequilibration_edatas[edata_ix]['sx0'].flatten()
                 )
 
         # return the original values
@@ -516,10 +517,10 @@ class AmiciObjective(Objective):
 
     def get_error_output(self, rdatas):
         if not self.amici_model.nt():
-            nt = sum([data.nt() for data in self.edata])
+            nt = sum([data.nt() for data in self.edatas])
         else:
             nt = sum([data.nt() if data.nt() else self.amici_model.nt()
-                      for data in self.edata])
+                      for data in self.edatas])
         n_res = nt * self.amici_model.nytrue
 
         return {

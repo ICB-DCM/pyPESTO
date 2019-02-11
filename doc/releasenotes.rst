@@ -6,6 +6,14 @@ Release notes
 ..........
 
 
+0.0.4 (2019-02-28)
+------------------
+
+* Implement multi process parallelization engine for optimization.
+* Introduction of PrePostProcessor to more reliably handle pre- and
+  post-processing.
+
+
 0.0.3 (2019-01-30)
 ------------------
 
