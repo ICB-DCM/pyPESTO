@@ -35,6 +35,7 @@ class EngineTest(unittest.TestCase):
         result = pypesto.minimize(problem=problem, n_starts=3, engine=engine)
         self.assertTrue(len(result.optimize_result.as_list()) == 3)
 
+
 if __name__ == '__main__':
     suite = unittest.TestSuite()
     suite.addTest(EngineTest())
