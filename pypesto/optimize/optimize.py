@@ -1,7 +1,8 @@
 import logging
 from pypesto import Result
 from ..startpoint import assign_startpoints, uniform
-from .optimizer import OptimizerResult, recover_result
+from .optimizer import OptimizerResult, recover_result, ScipyOptimizer
+from ..engine import OptimizerTask, SingleCoreEngine
 
 
 logger = logging.getLogger(__name__)
@@ -58,10 +59,11 @@ class OptimizeOptions(dict):
 
 def minimize(
         problem,
-        optimizer,
-        n_starts,
+        optimizer=None,
+        n_starts=100,
         startpoint_method=None,
         result=None,
+        engine=None,
         options=None) -> Result:
     """
     This is the main function to call to do multistart optimization.
@@ -91,6 +93,10 @@ def minimize(
         Various options applied to the multistart optimization.
     """
 
+    # optimizer
+    if optimizer is None:
+        optimizer = ScipyOptimizer()
+
     # startpoint method
     if startpoint_method is None:
         startpoint_method = uniform
@@ -108,21 +114,23 @@ def minimize(
     if result is None:
         result = Result(problem)
 
-    # do multistart optimization
+    # engine
+    if engine is None:
+        engine = SingleCoreEngine()
+
+    # define tasks
+    tasks = []
     for j_start in range(0, n_starts):
         startpoint = startpoints[j_start, :]
+        task = OptimizerTask(optimizer, problem, startpoint, j_start,
+                             options, handle_exception)
+        tasks.append(task)
 
-        # apply optimizer
-        try:
-            optimizer_result = optimizer.minimize(problem, startpoint, j_start)
-        except Exception as err:
-            if options.allow_failed_starts:
-                optimizer_result = handle_exception(
-                    problem.objective, startpoint, j_start, err)
-            else:
-                raise
+    # do multistart optimization
+    ret = engine.execute(tasks)
 
-        # append to result
+    # aggregate results
+    for optimizer_result in ret:
         result.optimize_result.append(optimizer_result)
 
     # sort by best fval

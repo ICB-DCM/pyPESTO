@@ -2,10 +2,11 @@ import numpy as np
 import copy
 import pandas as pd
 import logging
+
 from .constants import MODE_FUN, MODE_RES, FVAL, GRAD, HESS, RES, SRES
 from .history import ObjectiveHistory
 from .options import ObjectiveOptions
-
+from .pre_post_process import PrePostProcessor, FixedParametersProcessor
 
 logger = logging.getLogger(__name__)
 
@@ -125,14 +126,7 @@ class Objective:
 
         self.history = ObjectiveHistory(self.options)
 
-        def preprocess(x):
-            return np.array(x)
-
-        def postprocess(result):
-            return result
-
-        self.preprocess = preprocess
-        self.postprocess = postprocess
+        self.pre_post_processor = PrePostProcessor()
 
         self.x_names = x_names
 
@@ -219,16 +213,13 @@ class Objective:
         self.check_sensi_orders(sensi_orders, mode)
 
         # pre-process
-        x = self.preprocess(x=x)
+        x = self.pre_post_processor.preprocess(x)
 
         # compute result
         result = self._call_unprocessed(x, sensi_orders, mode)
 
-        # convert to ndarray
-        result = Objective.as_ndarrays(result)
-
         # post-process
-        result = self.postprocess(result=result)
+        result = self.pre_post_processor.postprocess(result)
 
         # update history
         self.history.update(x, sensi_orders, mode, result)
@@ -346,22 +337,6 @@ class Objective:
                       SRES: sres}
         else:
             raise ValueError("These sensitivity orders are not supported.")
-        return result
-
-    @staticmethod
-    def as_ndarrays(result):
-        """
-        Convert all array_like objects to numpy arrays. This has the advantage
-        of a uniform output datatype which offers various methods to assess
-        the data.
-        """
-        keys = [GRAD, HESS, RES, SRES]
-        for key in keys:
-            if key in result:
-                value = result[key]
-                if value is not None:
-                    result[key] = np.array(value)
-
         return result
 
     @staticmethod
@@ -525,33 +500,13 @@ class Objective:
             of the fixed parameters.
         """
 
-        # pre-process
-        def preprocess(x):
-            x_full = np.zeros(dim_full)
-            x_full[x_free_indices] = x
-            x_full[x_fixed_indices] = x_fixed_vals
-            return x_full
-        self.preprocess = preprocess
+        pre_post_processor = FixedParametersProcessor(
+            dim_full=dim_full,
+            x_free_indices=x_free_indices,
+            x_fixed_indices=x_fixed_indices,
+            x_fixed_vals=x_fixed_vals)
 
-        # post-process
-        def postprocess(result):
-            if GRAD in result:
-                grad = result[GRAD]
-                if grad.size == dim_full:
-                    grad = grad[x_free_indices]
-                    result[GRAD] = grad
-            if HESS in result:
-                hess = result[HESS]
-                if hess.shape[0] == dim_full:
-                    hess = hess[np.ix_(x_free_indices, x_free_indices)]
-                    result[HESS] = hess
-            if SRES in result:
-                sres = result[SRES]
-                if sres.shape[-1] == dim_full:
-                    sres = sres[..., x_free_indices]
-                    result[SRES] = sres
-            return result
-        self.postprocess = postprocess
+        self.pre_post_processor = pre_post_processor
 
     def check_grad(self,
                    x,
