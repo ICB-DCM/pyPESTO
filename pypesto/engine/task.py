@@ -1,3 +1,9 @@
+import logging
+
+
+logger = logging.getLogger(__name__)
+
+
 class Task:
 
     def __init__(self):
@@ -29,12 +35,12 @@ class OptimizerTask(Task):
         Parameters
         ----------
 
-        optimizer: the optimizer to use
-        problem: the problem to solve
-        startpoint: the point from which to start
-        j_start: the index of the multistart
-        options: options object applying to optimization
-        handle_exception: callable to apply when the optimization fails
+        optimizer: the optimizer to use.
+        problem: the problem to solve.
+        startpoint: the point from which to start.
+        j_start: the index of the multistart.
+        options: options object applying to optimization.
+        handle_exception: callable to apply when the optimization fails.
         """
         super().__init__()
 
@@ -46,6 +52,7 @@ class OptimizerTask(Task):
         self.handle_exception = handle_exception
 
     def execute(self):
+        logger.info(f"Executing task {self.j_start}.")
         try:
             optimizer_result = self.optimizer.minimize(
                 self.problem, self.startpoint, self.j_start)
