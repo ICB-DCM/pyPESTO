@@ -1,6 +1,7 @@
 import matplotlib.pyplot as plt
 from matplotlib.ticker import MaxNLocator
 import numpy as np
+import warnings
 from .reference_points import create_references
 from .clust_color import assign_clustered_colors
 
@@ -9,6 +10,7 @@ def optimizer_history(result, ax=None,
                       size=(18.5, 10.5),
                       trace_x='steps',
                       trace_y='fval',
+                      offset_y=None,
                       reference=None):
     """
     Plot waterfall plot.
@@ -36,6 +38,10 @@ def optimizer_history(result, ax=None,
         Possibilities: 'fval', 'gradnorm', 'stepsize'
         Default: 'fval'
 
+    offset_y: float, optional
+        Offset for the y-axis-values, as these are plotted on a log10-scale
+        Will be computed automatically if necessary
+
     reference: list, optional
         List of reference points for optimization results, containing et
         least a function value fval
@@ -49,6 +55,9 @@ def optimizer_history(result, ax=None,
 
     # extract cost function values from result
     (x_label, y_label, vals) = get_trace(result, trace_x, trace_y)
+
+    # compute the necessary offset for the y-axis
+    (vals, offset_y) = get_offset(vals, offset_y)
 
     # call lowlevel plot routine
     ax = optimizer_history_lowlevel(vals, ax, size)
@@ -188,3 +197,52 @@ def get_trace(result, trace_x, trace_y):
         vals.append(np.array([x_vals, y_vals]))
 
     return x_label, y_label, vals
+
+
+def get_offset(vals, offset_y):
+    """
+    Handle bounds and results.
+
+    Parameters
+    ----------
+
+    vals: list
+        list of 2xn-numpy arrays
+
+    offset_y:
+        offset for the y-axis, as this is supposed to be in log10-scale
+
+    Returns
+    -------
+
+    vals: list
+        list of 2xn-numpy arrays
+
+    offset_y:
+        offset for the y-axis, as this is supposed to be in log10-scale
+    """
+
+    # get the minimal value shich should be plotted
+    min_val = np.inf
+    for val in vals:
+        tmp_min = np.min(val[1,:])
+        min_val = np.min([min_val, tmp_min])
+
+    # check whether the offset specified by the user is sufficient
+    if offset_y is not None:
+        if min_val + offset_y <= 0.:
+            Warning("Offset specified by user is insufficient. Ignoring "
+                    "specified offset and using" + str(np.abs(min_val) + 1.) +
+                    "instead.")
+            offset_y = np.abs(min_val) + 1.
+    else:
+        if min_val <= 0.:
+            offset_y = np.abs(min_val) + 1.
+        else:
+            offset_y = 0
+
+    if offset_y != 0:
+        for val in vals:
+            val[1, :] +=  offset_y * np.ones(val[1].shape)
+
+    return vals, offset_y
