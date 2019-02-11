@@ -8,7 +8,7 @@ class Task:
         """
         pass
 
-    def execute(self):
+    def execute(self):  # pylint: disable=R0201
         """
         Execute the task and return its results.
         """

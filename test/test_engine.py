@@ -20,7 +20,8 @@ class EngineTest(unittest.TestCase):
         lb = 0 * np.ones((1, 2))
         ub = 1 * np.ones((1, 2))
         problem = pypesto.Problem(objective, lb, ub)
-        pypesto.minimize(problem=problem, n_starts=9, engine=engine)
+        result = pypesto.minimize(problem=problem, n_starts=9, engine=engine)
+        self.assertTrue(len(result.optimize_result.as_list()) == 9)
 
     def test_petab(self):
         for engine in [pypesto.MultiProcessEngine()]:
@@ -31,8 +32,8 @@ class EngineTest(unittest.TestCase):
             folder_base + model_names[0])
         objective = petab_importer.create_objective()
         problem = petab_importer.create_problem(objective)
-        pypesto.minimize(problem=problem, n_starts=3, engine=engine)
-
+        result = pypesto.minimize(problem=problem, n_starts=3, engine=engine)
+        self.assertTrue(len(result.optimize_result.as_list()) == 3)
 
 if __name__ == '__main__':
     suite = unittest.TestSuite()
