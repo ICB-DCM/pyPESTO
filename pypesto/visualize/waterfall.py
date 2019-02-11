@@ -1,7 +1,6 @@
 import matplotlib.pyplot as plt
 from matplotlib.ticker import MaxNLocator
 import numpy as np
-from .visualization import VisualizationOptions
 from .visualization import handle_options
 from .clust_color import assign_clustered_colors
 
