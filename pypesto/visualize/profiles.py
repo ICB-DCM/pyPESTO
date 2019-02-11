@@ -1,7 +1,7 @@
 import matplotlib.pyplot as plt
 from matplotlib.ticker import MaxNLocator
 import numpy as np
-from .visualization import handle_options
+from .reference_points import create_references
 
 
 def profiles(result, fig=None, profile_indices=None, size=(18.5, 6.5),
@@ -59,10 +59,10 @@ def profiles(result, fig=None, profile_indices=None, size=(18.5, 6.5),
     ax = profiles_lowlevel(fvals, fig, size)
 
     # parse and apply plotting options
-    ref = handle_options(ax, options, reference)
+    ref = create_references(references=reference)
 
     # plot reference points
-    if ref is not None:
+    if len(ref) > 0:
         ax = handle_refrence_points(ref, ax, fvals)
 
     return ax

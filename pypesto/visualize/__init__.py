@@ -7,9 +7,8 @@ import pypesto.visualize.
 
 """
 
-from .visualization import (VisualizationOptions,
-                            handle_options,
-                            ReferencePoint)
+from .reference_points import (ReferencePoint,
+                               create_references)
 from .waterfall import (waterfall,
                         waterfall_lowlevel)
 from .clust_color import (assign_clusters,
@@ -22,9 +21,8 @@ from .profiles import (profiles,
                        profiles_lowlevel,
                        profile_lowlevel)
 
-__all__ = ["VisualizationOptions",
-           "handle_options",
-           "ReferencePoint",
+__all__ = ["ReferencePoint",
+           "create_references",
            "waterfall",
            "waterfall_lowlevel",
            "assign_clusters",

@@ -1,7 +1,7 @@
 import matplotlib.pyplot as plt
 from matplotlib.ticker import MaxNLocator
 import numpy as np
-from .visualization import handle_options
+from .reference_points import create_references
 from .clust_color import assign_clustered_colors
 
 
@@ -54,10 +54,10 @@ def parameters(result, ax=None, free_indices_only=True, lb=None, ub=None,
                              x_labels=x_labels, ax=ax, size=size)
 
     # parse and apply plotting options
-    ref = handle_options(ax, options, reference)
+    ref = create_references(references=reference)
 
     # plot reference points
-    if ref is not None:
+    if len(ref) > 0:
         ax = handle_refrence_points(ref, ax)
 
     return ax

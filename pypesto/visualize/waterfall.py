@@ -1,7 +1,7 @@
 import matplotlib.pyplot as plt
 from matplotlib.ticker import MaxNLocator
 import numpy as np
-from .visualization import handle_options
+from .reference_points import create_references
 from .clust_color import assign_clustered_colors
 
 
@@ -46,10 +46,10 @@ def waterfall(result, ax=None,
     ax = waterfall_lowlevel(fvals, ax, size)
 
     # parse and apply plotting options
-    ref = handle_options(ax, options, reference)
+    ref = create_references(references=reference)
 
     # plot reference points
-    if ref is not None:
+    if len(ref) > 0:
         ref_len = len(ref)
         for i_num, i_ref in enumerate(ref):
             ax.plot([0, len(fvals) - 1], [i_ref.fval, i_ref.fval], '--',

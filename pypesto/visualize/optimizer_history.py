@@ -1,7 +1,7 @@
 import matplotlib.pyplot as plt
 from matplotlib.ticker import MaxNLocator
 import numpy as np
-from .visualization import handle_options
+from .reference_points import create_references
 from .clust_color import assign_clustered_colors
 
 
@@ -59,7 +59,7 @@ def optimizer_history(result, ax=None,
     ax.set_title('Optimizer history')
 
     # parse and apply plotting options
-    ref = handle_options(ax, None, reference)
+    ref = create_references(references=reference)
 
     # plot reference points
     # get length of longest trajectory
@@ -67,7 +67,7 @@ def optimizer_history(result, ax=None,
     for val in vals:
         max_len = np.max([max_len, val[0, -1]])
 
-    if ref is not None:
+    if len(ref) > 0:
         ref_len = len(ref)
         for i_num, i_ref in enumerate(ref):
             ax.semilogy([0, max_len], [i_ref.fval, i_ref.fval], '--',
