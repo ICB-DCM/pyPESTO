@@ -83,6 +83,10 @@ def profiles_lowlevel(fvals, ax=None, size=(18.5, 6.5)):
         Figure size (width, height) in inches. Is only applied when no ax
         object is specified
 
+    size: tuple, optional
+        Figure size (width, height) in inches. Is only applied when no ax
+        object is specified
+
     Returns
     -------
 
