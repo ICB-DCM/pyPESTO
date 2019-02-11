@@ -47,7 +47,7 @@ class TestVisualize(unittest.TestCase):
         fvals = [0.01, 0.02, 1.01, 2.02, 2.03, 2.04, 3, 4, 4.1, 4.11, 10]
         pypesto.visualize.assign_clusters(fvals)
         fvals = np.array(fvals)
-        clust, clustsize, ind_clust = pypesto.visualize.assign_clusters(fvals)
+        clust, clustsize = pypesto.visualize.assign_clusters(fvals)
 
         # test if clustering works as intended
         fvals = [0., 0.00001, 1., 2., 2.001]

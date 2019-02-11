@@ -93,7 +93,7 @@ def assign_clustered_colors(vals):
             # zero division)
             cols_clust[icluster][3] = min(1, 5 / (sum(clustsize == 1) + 1))
         else:
-            # normalize alpha according to clustersize 
+            # normalize alpha according to clustersize
             cols_clust[icluster][3] = min(1,
                                           5 / n_clustsize[icluster])
 
@@ -117,7 +117,6 @@ def assign_clustered_colors(vals):
             # use grey
             ind_col[int(i_ind_col)] = vmax
             i_ind_col = i_ind_col + 1
-
 
     # indices for colors
     ind_col = [int(ind) for ind in ind_col]
