@@ -6,7 +6,7 @@ from .clust_color import assign_clustered_colors
 
 
 def parameters(result, ax=None, free_indices_only=True, lb=None, ub=None,
-               size=None, options=None, reference=None):
+               size=None, reference=None):
     """
     Plot parameter values.
 
@@ -30,9 +30,6 @@ def parameters(result, ax=None, free_indices_only=True, lb=None, ub=None,
     size: tuple, optional
         Figure size (width, height) in inches. Is only applied when no ax
         object is specified
-
-    options: VisualizationOptions, optional
-        Options specifying axes, colors and reference points
 
     reference: list, optional
         List of reference points for optimization results, containing et
@@ -206,6 +203,12 @@ def handle_refrence_points(ref, ax):
 
     ax: matplotlib.Axes, optional
         Axes object to use.
+
+    Returns
+    -------
+
+    ax: matplotlib.Axes
+        The plot axes.
     """
 
     # create set of colors for reference points

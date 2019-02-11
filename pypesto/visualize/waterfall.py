@@ -5,9 +5,10 @@ from .reference_points import create_references
 from .clust_color import assign_clustered_colors
 
 
-def waterfall(result, ax=None,
+def waterfall(result,
+              ax=None,
               size=(18.5, 10.5),
-              options=None,
+              y_limits=None,
               reference=None):
     """
     Plot waterfall plot.
@@ -25,8 +26,8 @@ def waterfall(result, ax=None,
         Figure size (width, height) in inches. Is only applied when no ax
         object is specified
 
-    options: VisualizationOptions, optional
-        Options specifying axes, colors and reference points
+    y_limits: float or ndarray, optional
+        maximum value to be plotted on the y-axis, or y-limits
 
     reference: list, optional
         List of reference points for optimization results, containing et
@@ -42,18 +43,14 @@ def waterfall(result, ax=None,
     # extract cost function values from result
     fvals = result.optimize_result.get_for_key('fval')
 
-    # call lowlevel plot routine
-    ax = waterfall_lowlevel(fvals, ax, size)
-
     # parse and apply plotting options
     ref = create_references(references=reference)
 
-    # plot reference points
-    if len(ref) > 0:
-        ref_len = len(ref)
-        for i_num, i_ref in enumerate(ref):
-            ax.plot([0, len(fvals) - 1], [i_ref.fval, i_ref.fval], '--',
-                    color=[0., 0.5 * (1. + i_num/ref_len), 0., 0.9])
+    # call lowlevel plot routine
+    ax = waterfall_lowlevel(fvals, ax, size)
+
+    # handle options
+    ax = handle_options(ax, fvals, ref, y_limits)
 
     return ax
 
@@ -115,5 +112,57 @@ def waterfall_lowlevel(fvals, ax=None, size=(18.5, 10.5)):
     ax.set_xlabel('Ordered optimizer run')
     ax.set_ylabel('Function value')
     ax.set_title('Waterfall plot')
+
+    return ax
+
+
+def handle_options(ax, fvals, ref, y_limits):
+    """
+    Handle reference points.
+
+    Parameters
+    ----------
+
+    ax: matplotlib.Axes, optional
+        Axes object to use.
+
+    fvals: numeric list or array
+        Including values need to be plotted.
+
+    ref: list, optional
+        List of reference points for optimization results, containing et
+        least a function value fval
+
+    y_limits: float or ndarray, optional
+        maximum value to be plotted on the y-axis, or y-limits
+
+    Returns
+    -------
+
+    ax: matplotlib.Axes
+        The plot axes.
+    """
+
+    # handle y-limits
+    if y_limits is not None:
+        y_limits = np.array(y_limits)
+        if y_limits.size == 1:
+            tmp_y_limits = ax.get_ylim()
+            y_limits = [tmp_y_limits[0], y_limits[0]]
+        else:
+            y_limits = [y_limits[0], y_limits[1]]
+
+        # set limits
+        ax.set_ylim(y_limits)
+
+    # handle reference points
+    if len(ref) > 0:
+        # create set of colors for reference points
+        ref_len = len(ref)
+        for i_num, i_ref in enumerate(ref):
+            ax.plot([0, len(fvals) - 1],
+                    [i_ref.fval, i_ref.fval],
+                    '--',
+                    color=[0., 0.5 * (1. + i_num / ref_len), 0., 0.9])
 
     return ax

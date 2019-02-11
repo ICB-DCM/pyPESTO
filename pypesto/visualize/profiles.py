@@ -5,7 +5,7 @@ from .reference_points import create_references
 
 
 def profiles(result, fig=None, profile_indices=None, size=(18.5, 6.5),
-             options=None, reference=None):
+             reference=None):
     """
     Plot classical 1D profile plot (using the posterior, e.g. Gaussian like
     profile)
@@ -25,9 +25,6 @@ def profiles(result, fig=None, profile_indices=None, size=(18.5, 6.5),
     size: tuple, optional
         Figure size (width, height) in inches. Is only applied when no ax
         object is specified
-
-    options: VisualizationOptions, optional
-        Options specifying axes, colors and reference points
 
     reference: list, optional
         List of reference points for optimization results, containing et

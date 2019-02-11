@@ -11,6 +11,7 @@ def optimizer_history(result, ax=None,
                       trace_x='steps',
                       trace_y='fval',
                       offset_y=None,
+                      y_limits=None,
                       reference=None):
     """
     Plot waterfall plot.
@@ -42,6 +43,9 @@ def optimizer_history(result, ax=None,
         Offset for the y-axis-values, as these are plotted on a log10-scale
         Will be computed automatically if necessary
 
+    y_limits: float or ndarray, optional
+        maximum value to be plotted on the y-axis, or y-limits
+
     reference: list, optional
         List of reference points for optimization results, containing et
         least a function value fval
@@ -56,31 +60,17 @@ def optimizer_history(result, ax=None,
     # extract cost function values from result
     (x_label, y_label, vals) = get_trace(result, trace_x, trace_y)
 
+    # parse and apply plotting options
+    ref = create_references(references=reference)
+
     # compute the necessary offset for the y-axis
     (vals, offset_y) = get_offset(vals, offset_y)
 
     # call lowlevel plot routine
     ax = optimizer_history_lowlevel(vals, ax, size)
 
-    # set labels
-    ax.set_xlabel(x_label)
-    ax.set_ylabel(y_label)
-    ax.set_title('Optimizer history')
-
-    # parse and apply plotting options
-    ref = create_references(references=reference)
-
-    # plot reference points
-    # get length of longest trajectory
-    max_len = 0
-    for val in vals:
-        max_len = np.max([max_len, val[0, -1]])
-
-    if len(ref) > 0:
-        ref_len = len(ref)
-        for i_num, i_ref in enumerate(ref):
-            ax.semilogy([0, max_len], [i_ref.fval, i_ref.fval], '--',
-                        color=[0., 0.5 * (1. + i_num / ref_len), 0., 0.9])
+    # handle options
+    ax = handle_options(ax, vals, ref, y_limits, x_label, y_label)
 
     return ax
 
@@ -246,3 +236,69 @@ def get_offset(vals, offset_y):
             val[1, :] += offset_y * np.ones(val[1].shape)
 
     return vals, offset_y
+
+
+def handle_options(ax, vals, ref, y_limits, x_label, y_label):
+    """
+    Handle reference points.
+
+    Parameters
+    ----------
+
+    ref: list, optional
+        List of reference points for optimization results, containing et
+        least a function value fval
+
+    vals: list
+        list of 2xn-numpy arrays
+
+    ax: matplotlib.Axes, optional
+        Axes object to use.
+
+    y_limits: float or ndarray, optional
+        maximum value to be plotted on the y-axis, or y-limits
+
+    x_label: str
+        label for x-axis
+
+    y_label: str
+        label for x-axis
+
+    Returns
+    -------
+
+    ax: matplotlib.Axes
+        The plot axes.
+    """
+
+    # handle y-limits
+    if y_limits is not None:
+        y_limits = np.array(y_limits)
+        if y_limits.size == 1:
+            tmp_y_limits = ax.get_ylim()
+            y_limits = [tmp_y_limits[0], y_limits[0]]
+        else:
+            y_limits = [y_limits[0], y_limits[1]]
+    ax.set_ylim(y_limits)
+
+    # handle reference points
+    if len(ref) > 0:
+        # plot reference points
+        # get length of longest trajectory
+        max_len = 0
+        for val in vals:
+            max_len = np.max([max_len, val[0, -1]])
+
+        ref_len = len(ref)
+        for i_num, i_ref in enumerate(ref):
+            ax.semilogy([0, max_len],
+                        [i_ref.fval, i_ref.fval],
+                        '--',
+                        color=[0., 0.5 * (1. + i_num / ref_len), 0., 0.9])
+
+    # set labels
+    ax.set_xlabel(x_label)
+    ax.set_ylabel(y_label)
+    ax.set_title('Optimizer history')
+
+    return ax
