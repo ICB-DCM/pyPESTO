@@ -120,7 +120,10 @@ def parameters_lowlevel(xs, fvals, lb=None, ub=None, x_labels=None, ax=None,
     # plot parameters
     ax.xaxis.set_major_locator(MaxNLocator(integer=True))
     for j_x, x in reversed(list(enumerate(xs))):
-        ax.plot(x, parameters_ind, color=colors[j_x], marker='o')
+        ax.plot(reversed(x),
+                reversed(parameters_ind),
+                color=colors[j_x],
+                marker='o')
 
     plt.yticks(parameters_ind, x_labels)
 
