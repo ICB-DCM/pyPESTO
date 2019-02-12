@@ -172,13 +172,24 @@ def get_trace(result, trace_x, trace_y):
         if trace_x == 'time':
             x_vals = np.array(trace['time'][indices])
             x_label = 'Computation time [s]'
+
         else:  # trace_x == 'steps':
             x_vals = np.array(list(range(len(indices))))
             x_label = 'Optimizer steps'
 
         if trace_y == 'gradnorm':
-            raise ('gradient norm history is not implemented yet!')
+            # retrieve gradient trace, if saved
+            if trace['grad'] is None:
+                raise("No gradient norm trace can be visualized: "
+                      "The pypesto.result object does not contain "
+                      "a gradient trace")
+
+            # Get gradient trace, prune Nones, compute norm
+            tmp_grad_trace = list(trace['grad'].values)
+            y_vals = np.array([np.linalg.norm(grad) for grad in
+                               tmp_grad_trace if grad is not None])
             y_label = 'Gradient norm'
+
         else:  # trace_y == 'fval':
             y_label = 'Objective value'
             y_vals = np.array(trace['fval'][indices])

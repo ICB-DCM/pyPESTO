@@ -266,6 +266,7 @@ class TestVisualize(unittest.TestCase):
                                             y_limits=5.,
                                             reference=ref3,
                                             trace_x='time',
+                                            trace_y='gradnorm',
                                             offset_y=10.)
 
     @staticmethod
