@@ -115,7 +115,7 @@ def parameters_lowlevel(xs, fvals, lb=None, ub=None, x_labels=None, ax=None,
         colors = assign_clustered_colors(fvals)
 
     # parameter indices
-    parameters_ind = range(1, xs.shape[1] + 1)
+    parameters_ind = list(range(1, xs.shape[1] + 1))[::-1]
 
     # plot parameters
     ax.xaxis.set_major_locator(MaxNLocator(integer=True))
