@@ -33,8 +33,8 @@ class ReferencePoint(dict):
             self.x = reference["x"]
             self.fval = reference["fval"]
         elif isinstance(reference, tuple):
-            self.x = reference[1]
-            self.fval = reference[2]
+            self.x = reference[0]
+            self.fval = reference[1]
 
         if x is not None:
             self.x = np.array(x)
