@@ -117,7 +117,7 @@ class TestVisualize(unittest.TestCase):
         pypesto.visualize.waterfall(result,
                                     reference=ref_point,
                                     y_limits=[-0.5, 2.5],
-                                    start_indices=[0,1,4,11],
+                                    start_indices=[0, 1, 4, 11],
                                     size=alt_fig_size)
 
         # Test with y-limits as float
