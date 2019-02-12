@@ -20,7 +20,7 @@ def create_problem():
     ub = 7 * np.ones((1, 2))
     problem = pypesto.Problem(objective=objective, lb=lb, ub=ub)
 
-    return problem
+    return lb, ub, problem
 
 
 def create_optimization_result(problem):
@@ -93,7 +93,7 @@ def create_plotting_options():
 
 
 # create the pypesto problem
-problem = create_problem()
+(lb, ub, problem) = create_problem()
 
 # create some artificial optimization results, which can be visualized
 result = create_optimization_result(problem)
