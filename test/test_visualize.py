@@ -98,6 +98,9 @@ def create_plotting_options():
 # create some artificial optimization results, which can be visualized
 result = create_optimization_result(problem)
 
+# create some artificial profiling results, which can be visualized
+result = create_profile_result(result)
+
 # create some real optimization results, since we need the trace
 result_with_trace = create_optimization_history(problem)
 
@@ -233,7 +236,7 @@ class TestVisualize(unittest.TestCase):
         pypesto.visualize.profile_lowlevel(fvals=fvals)
 
     @staticmethod
-    def test_reference_points(ref1, ref2, ref3, ref4):
+    def test_reference_points():
         # Try conversion from different inputs
         pypesto.visualize.create_references(ref1)
         pypesto.visualize.create_references(references=ref2)
@@ -276,7 +279,7 @@ class TestVisualize(unittest.TestCase):
     @staticmethod
     def test_optimizer_history_lowlevel():
         # test empty input
-        pypesto.visualize.optimizer_history([])
+        pypesto.visualize.optimizer_history_lowlevel([])
 
         # pass numpy array
         x_vals = np.array(list(range(10)))

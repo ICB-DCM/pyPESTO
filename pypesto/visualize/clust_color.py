@@ -31,6 +31,8 @@ def assign_clusters(vals):
     # sanity checks
     if vals is None or len(vals) == 0:
         return [], [], []
+    elif len(vals) == 1:
+        return np.array([1]), np.array([1.]), np.array([0])
 
     # linkage requires (n, 1) data array
     vals = np.reshape(vals, (-1, 1))

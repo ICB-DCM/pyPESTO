@@ -194,7 +194,7 @@ def handle_options(ax, fvals, ref, y_limits):
         y_limits = np.array(y_limits)
         if y_limits.size == 1:
             tmp_y_limits = ax.get_ylim()
-            y_limits = [tmp_y_limits[0], y_limits[0]]
+            y_limits = [tmp_y_limits[0], y_limits]
         else:
             y_limits = [y_limits[0], y_limits[1]]
 

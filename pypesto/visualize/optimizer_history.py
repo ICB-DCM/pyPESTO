@@ -112,9 +112,18 @@ def optimizer_history_lowlevel(vals, ax=None, size=(18.5, 10.5)):
     # parse input
     fvals = []
     if isinstance(vals, list):
+        # convert entries to numpy arrays
         for val in vals:
             val = np.array(val)
             fvals.append(val[1, -1])
+    else:
+        # convert to a list of numpy arrays
+        vals = np.array(vals)
+        if vals.shape[0] != 2 or vals.ndim != 2:
+            raise('If numpy array is passed directly to lowlevel routine of'
+                  'optimizer_history, shape needs to be 2 x n.')
+        fvals = [vals[1, -1]]
+        vals = [vals]
     n_fvals = len(fvals)
 
     # assign colors
@@ -312,7 +321,7 @@ def handle_options(ax, vals, ref, y_limits, x_label, y_label):
         y_limits = np.array(y_limits)
         if y_limits.size == 1:
             tmp_y_limits = ax.get_ylim()
-            y_limits = [tmp_y_limits[0], y_limits[0]]
+            y_limits = [tmp_y_limits[0], y_limits]
         else:
             y_limits = [y_limits[0], y_limits[1]]
     ax.set_ylim(y_limits)
