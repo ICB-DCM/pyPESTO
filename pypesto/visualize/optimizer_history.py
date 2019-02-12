@@ -12,6 +12,7 @@ def optimizer_history(result, ax=None,
                       trace_y='fval',
                       offset_y=None,
                       y_limits=None,
+                      start_indices=None,
                       reference=None):
     """
     Plot waterfall plot.
@@ -46,6 +47,10 @@ def optimizer_history(result, ax=None,
     y_limits: float or ndarray, optional
         maximum value to be plotted on the y-axis, or y-limits
 
+    start_indices: list or int
+        list of integers specifying the multistart to be plotted or
+        int specifying up to which start index should be plotted
+
     reference: list, optional
         List of reference points for optimization results, containing et
         least a function value fval
@@ -64,7 +69,7 @@ def optimizer_history(result, ax=None,
     ref = create_references(references=reference)
 
     # compute the necessary offset for the y-axis
-    (vals, offset_y) = get_offset(vals, offset_y)
+    (vals, offset_y) = get_vals(vals, offset_y, start_indices)
 
     # call lowlevel plot routine
     ax = optimizer_history_lowlevel(vals, ax, size)
@@ -200,7 +205,7 @@ def get_trace(result, trace_x, trace_y):
     return x_label, y_label, vals
 
 
-def get_offset(vals, offset_y):
+def get_vals(vals, offset_y, start_indices):
     """
     Handle bounds and results.
 
@@ -213,6 +218,10 @@ def get_offset(vals, offset_y):
     offset_y:
         offset for the y-axis, as this is supposed to be in log10-scale
 
+    start_indices: list or int
+        list of integers specifying the multistart to be plotted or
+        int specifying up to which start index should be plotted
+
     Returns
     -------
 
@@ -222,6 +231,22 @@ def get_offset(vals, offset_y):
     offset_y:
         offset for the y-axis, as this is supposed to be in log10-scale
     """
+
+    # get list of indices
+    if start_indices is None:
+        start_indices = np.array(range(len(vals)))
+    else:
+        # check whether list or maximum value
+        start_indices = np.array(start_indices)
+        if start_indices.size == 1:
+            start_indices = np.array(range(start_indices))
+
+        # check, whether index set is not too big
+        existing_indices = np.array(range(len(vals)))
+        start_indices = np.intersect1d(start_indices, existing_indices)
+
+    # reduce values to listed values
+    vals = [val for i, val in enumerate(vals) if i in start_indices]
 
     # get the minimal value shich should be plotted
     min_val = np.inf

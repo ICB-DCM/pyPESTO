@@ -9,6 +9,7 @@ def waterfall(result,
               ax=None,
               size=(18.5, 10.5),
               y_limits=None,
+              start_indices=None,
               reference=None):
     """
     Plot waterfall plot.
@@ -29,6 +30,10 @@ def waterfall(result,
     y_limits: float or ndarray, optional
         maximum value to be plotted on the y-axis, or y-limits
 
+    start_indices: list or int
+        list of integers specifying the multistart to be plotted or
+        int specifying up to which start index should be plotted
+
     reference: list, optional
         List of reference points for optimization results, containing et
         least a function value fval
@@ -40,8 +45,8 @@ def waterfall(result,
         The plot axes.
     """
 
-    # extract cost function values from result
-    fvals = result.optimize_result.get_for_key('fval')
+    # extract specific cost function values from result
+    fvals = get_fvals(result, start_indices)
 
     # parse and apply plotting options
     ref = create_references(references=reference)
@@ -114,6 +119,47 @@ def waterfall_lowlevel(fvals, ax=None, size=(18.5, 10.5)):
     ax.set_title('Waterfall plot')
 
     return ax
+
+
+def get_fvals(result, start_indices):
+    """
+    Get function values from results.
+
+    Parameters
+    ----------
+
+    result: pypesto.Result
+        Optimization result obtained by 'optimize.py'
+
+    start_indices: list or int
+        list of integers specifying the multistart to be plotted or
+        int specifying up to which start index should be plotted
+
+    Returns
+    -------
+
+    fvals: ndarray
+        function values
+    """
+
+    # extract cost function values from result
+    fvals = np.array(result.optimize_result.get_for_key('fval'))
+
+    # get list of indices
+    if start_indices is None:
+        start_indices = np.array(range(len(fvals)))
+    else:
+        # check whether list or maximum value
+        start_indices = np.array(start_indices)
+        if start_indices.size == 1:
+            start_indices = np.array(range(start_indices))
+
+        # check, whether index set is not too big
+        existing_indices = np.array(range(len(fvals)))
+        start_indices = np.intersect1d(start_indices, existing_indices)
+
+    # get only the indices which the user asked for
+    return fvals[start_indices]
 
 
 def handle_options(ax, fvals, ref, y_limits):

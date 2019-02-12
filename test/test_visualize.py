@@ -117,11 +117,13 @@ class TestVisualize(unittest.TestCase):
         pypesto.visualize.waterfall(result,
                                     reference=ref_point,
                                     y_limits=[-0.5, 2.5],
+                                    start_indices=[0,1,4,11],
                                     size=alt_fig_size)
 
         # Test with y-limits as float
         pypesto.visualize.waterfall(result,
                                     reference=ref3,
+                                    start_indices=3,
                                     y_limits=5.)
 
     @staticmethod
@@ -255,6 +257,7 @@ class TestVisualize(unittest.TestCase):
         # Test with y-limits as vector
         pypesto.visualize.optimizer_history(result_with_trace,
                                             y_limits=[-0.5, 2.5],
+                                            start_indices=[0, 1, 4, 11],
                                             reference=ref_point,
                                             size=alt_fig_size,
                                             trace_x='steps',
@@ -264,6 +267,7 @@ class TestVisualize(unittest.TestCase):
         # Test with y-limits as float
         pypesto.visualize.optimizer_history(result_with_trace,
                                             y_limits=5.,
+                                            start_indices=3,
                                             reference=ref3,
                                             trace_x='time',
                                             trace_y='gradnorm',
