@@ -6,6 +6,8 @@ import importlib
 import numbers
 import copy
 import shutil
+import re
+import logging
 
 import petab
 
@@ -16,6 +18,9 @@ try:
     import amici
 except ImportError:
     amici = None
+
+
+logger = logging.getLogger(__name__)
 
 
 class PetabImporter:
@@ -138,7 +143,7 @@ class PetabImporter:
         solver = model.getSolver()
         return solver
 
-    def create_edatas(self, model=None):
+    def create_edatas(self, model=None, simulation_conditions=None):
         """
         Create list of amici.ExpData objects.
         """
@@ -152,8 +157,9 @@ class PetabImporter:
         # number of amici simulations will be number of unique
         # (preequilibrationConditionId, simulationConditionId) pairs.
         # Can be improved by checking for identical condition vectors.
-        grouping_cols, simulation_conditions = \
-            _get_simulation_conditions(condition_df, measurement_df)
+        if simulation_conditions is None:
+            simulation_conditions = petab.core.get_simulation_conditions(
+                measurement_df)
 
         observable_ids = model.getObservableIds()
 
@@ -164,8 +170,8 @@ class PetabImporter:
             # amici.ExpData for each simulation
 
             # extract rows for condition
-            cur_measurement_df = _get_rows_for_condition(
-                measurement_df, grouping_cols, condition)
+            cur_measurement_df = petab.core.get_rows_for_condition(
+                measurement_df, condition)
 
             # make list of all timepoints for which measurements exist
             timepoints = sorted(
@@ -214,6 +220,10 @@ class PetabImporter:
         """
         Create a pypesto.PetabAmiciObjective.
         """
+        # get simulation conditions
+        simulation_conditions = petab.core.get_simulation_conditions(
+            self.petab_problem.measurement_df)
+
         # create model
         if model is None:
             model = self.create_model(force_compile=force_compile)
@@ -222,7 +232,9 @@ class PetabImporter:
             solver = self.create_solver(model)
         # create conditions and edatas from measurement data
         if edatas is None:
-            edatas = self.create_edatas(model=model)
+            edatas = self.create_edatas(
+                model=model,
+                simulation_conditions=simulation_conditions)
 
         # simulation <-> optimization parameter mapping
         par_opt_ids = self.petab_problem.get_optimization_parameters()
@@ -236,7 +248,8 @@ class PetabImporter:
                 parameter_df=self.petab_problem.parameter_df,
                 sbml_model=self.petab_problem.sbml_model,
                 par_opt_ids=par_opt_ids,
-                par_sim_ids=par_sim_ids
+                par_sim_ids=par_sim_ids,
+                simulation_conditions=simulation_conditions,
             )
 
         scale_mapping = \
@@ -244,6 +257,10 @@ class PetabImporter:
                 parameter_df=self.petab_problem.parameter_df,
                 mapping_par_opt_to_par_sim=parameter_mapping
             )
+
+        # check whether there is something suspicious in the mapping
+        _check_parameter_mapping_ok(
+            parameter_mapping, par_sim_ids, model, edatas)
 
         # create objective
         obj = PetabAmiciObjective(
@@ -289,7 +306,6 @@ class PetabImporter:
         if model is None:
             model = self.create_model()
 
-        condition_df = self.petab_problem.condition_df.reset_index()
         measurement_df = self.petab_problem.measurement_df
 
         # initialize dataframe
@@ -298,8 +314,8 @@ class PetabImporter:
                 self.petab_problem.measurement_df.columns))
 
         # get simulation conditions
-        grouping_cols, simulation_conditions = \
-            _get_simulation_conditions(condition_df, measurement_df)
+        simulation_conditions = petab.core.get_simulation_conditions(
+            measurement_df)
 
         # get observable ids
         observable_ids = model.getObservableIds()
@@ -314,8 +330,8 @@ class PetabImporter:
             t = list(rdata['t'])
 
             # extract rows for condition
-            cur_measurement_df = _get_rows_for_condition(
-                measurement_df, grouping_cols, condition)
+            cur_measurement_df = petab.core.get_rows_for_condition(
+                measurement_df, condition)
 
             # iterate over entries for the given condition
             # note: this way we only generate a dataframe entry for every
@@ -341,58 +357,62 @@ class PetabImporter:
         return df
 
 
-def _get_simulation_conditions(condition_df, measurement_df):
+def _check_parameter_mapping_ok(
+        mapping_par_opt_to_par_sim, par_sim_ids, model, edatas):
     """
-    Compute the conditions by which to group the measurements, so
-    that for each group an amici.ExpData can be generated.
+    Check whether there are suspicious parameter mappings and/or data points.
 
-    Returns
-    -------
-    (grouping_cols, simulation_conditions): tuple
-        Here, grouping_cols is the columns according to which the grouping
-        was done, and simulation_conditions are the identified conditions.
+    Currently checks whether nan values in the parameter mapping table
+    correspond to nan columns in the edatas, corresponding to missing
+    data points.
     """
-    # make sure index is reset
-    condition_df = condition_df.reset_index()
+    # regular expression for noise and observable parameters
+    pattern = "(noise|observable)Parameter[0-9]+_"
+    rex = re.compile(pattern)
 
-    # find columns to group by (i.e. if not all nans).
-    # number of amici simulations will be number of unique
-    # (preequilibrationCondition, simulationCondition) pairs.
-    # can be improved by checking for identical condition vectors.
-    grouping_cols = petab.core.get_notnull_columns(
-        measurement_df,
-        ['simulationConditionId', 'preequilibrationConditionId'])
+    # prepare output
+    msg_data_notnan = ""
+    msg_data_nan = ""
 
-    # group by cols and return dataframe containing each combination
-    # of those rows only once (and an additional counting row)
-    simulation_conditions = measurement_df.groupby(
-        grouping_cols).size().reset_index()
+    # iterate over conditions
+    for i_condition, (mapping_for_condition, edata_for_condition) in \
+            enumerate(zip(mapping_par_opt_to_par_sim, edatas)):
+        # turn amici.ExpData into pd.DataFrame
+        df = amici.getDataObservablesAsDataFrame(model, [edata_for_condition])
+        # iterate over simulation parameters indices and the mapped
+        # optimization parameters
+        for i_sim_id, par_sim_id in enumerate(par_sim_ids):
+            # only continue if sim par is a noise or observable parameter
+            if not rex.match(par_sim_id):
+                continue
+            # extract observable id
+            obs_id = re.sub(pattern, "", par_sim_id)
+            # extract mapped optimization parameter
+            mapped_par = mapping_for_condition[i_sim_id]
+            # check if opt par is nan, but not all corresponding data points
+            if not isinstance(mapped_par, str) and np.isnan(mapped_par) \
+                    and not df["observable_" + obs_id].isnull().all():
+                msg_data_notnan += \
+                    f"({i_condition, par_sim_id, obs_id})\n"
+            # check if opt par is string, but all corresponding data points
+            # are nan
+            if isinstance(mapped_par, str) \
+                    and df["observable_" + obs_id].isnull().all():
+                msg_data_nan += f"({i_condition, par_sim_id, obs_id})\n"
 
-    return grouping_cols, simulation_conditions
+    if not len(msg_data_notnan) + len(msg_data_nan):
+        return
 
-
-def _get_rows_for_condition(measurement_df, grouping_cols, condition):
-    """
-    Extract rows in `measurement_df` according to `grouping_cols`
-    for `condition`.
-
-    Returns
-    -------
-
-    cur_measurement_df: pd.DataFrame
-        The subselection for the condition.
-    """
-    # filter rows for condition
-    row_filter = 1
-    # check for equality in all grouping cols
-    for col in grouping_cols:
-        row_filter = (
-            measurement_df[col] == condition[col]
-        ) & row_filter
-
-    # apply filter
-    cur_measurement_df = measurement_df.loc[row_filter, :]
-    return cur_measurement_df
+    logger.warn(
+        "There are suspicious combinations of parameters and data "
+        "points:\n"
+        "For the following combinations of "
+        "(condition_ix, par_sim_id, obs_id)"
+        ", there are real-valued data points, but unmapped scaling or noise "
+        "parameters: \n" + msg_data_notnan + "\n"
+        "For the following combinations, scaling or noise parameters have "
+        "been mapped, but all corresponding data points are nan: \n"
+        + msg_data_nan + "\n")
 
 
 def _handle_fixed_parameters(
