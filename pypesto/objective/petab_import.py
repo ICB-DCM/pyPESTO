@@ -363,11 +363,12 @@ def _check_parameter_mapping_ok(
     Check whether there are suspicious parameter mappings and/or data points.
 
     Currently checks whether nan values in the parameter mapping table
-    corresponds to nan columns in the edatas, corresponding to missing
+    correspond to nan columns in the edatas, corresponding to missing
     data points.
     """
     # regular expression for noise and observable parameters
-    rex = "(noise|observable)Parameter[0-9]+_"
+    pattern = "(noise|observable)Parameter[0-9]+_"
+    rex = re.compile(pattern)
 
     # prepare output
     msg_data_notnan = ""
@@ -382,10 +383,10 @@ def _check_parameter_mapping_ok(
         # optimization parameters
         for i_sim_id, par_sim_id in enumerate(par_sim_ids):
             # only continue if sim par is a noise or observable parameter
-            if not re.match(rex, par_sim_id):
+            if not rex.match(par_sim_id):
                 continue
             # extract observable id
-            obs_id = re.sub(rex, "", par_sim_id)
+            obs_id = re.sub(pattern, "", par_sim_id)
             # extract mapped optimization parameter
             mapped_par = mapping_for_condition[i_sim_id]
             # check if opt par is nan, but not all corresponding data points
