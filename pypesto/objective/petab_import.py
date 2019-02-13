@@ -7,6 +7,7 @@ import numbers
 import copy
 import shutil
 import re
+import logging
 
 import petab
 
@@ -17,6 +18,9 @@ try:
     import amici
 except ImportError:
     amici = None
+
+
+logger = logging.getLogger(__name__)
 
 
 class PetabImporter:
@@ -253,7 +257,7 @@ class PetabImporter:
                 parameter_df=self.petab_problem.parameter_df,
                 mapping_par_opt_to_par_sim=parameter_mapping
             )
-        
+
         # check whether there is something suspicious in the mapping
         _check_parameter_mapping_ok(
             parameter_mapping, par_sim_ids, model, edatas)
@@ -302,7 +306,6 @@ class PetabImporter:
         if model is None:
             model = self.create_model()
 
-        condition_df = self.petab_problem.condition_df.reset_index()
         measurement_df = self.petab_problem.measurement_df
 
         # initialize dataframe
