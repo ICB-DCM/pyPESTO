@@ -6,6 +6,7 @@ import importlib
 import numbers
 import copy
 import shutil
+import re
 
 import petab
 
@@ -245,6 +246,8 @@ class PetabImporter:
                 mapping_par_opt_to_par_sim=parameter_mapping
             )
 
+        _assert_parameter_mapping_ok(parameter_mapping, par_sim_ids, model, edatas)
+
         # create objective
         obj = PetabAmiciObjective(
             petab_importer=self,
@@ -339,6 +342,24 @@ class PetabImporter:
                 df = df.append(row_sim, ignore_index=True)
 
         return df
+
+
+def _assert_parameter_mapping_ok(mapping_par_opt_to_par_sim, par_sim_ids, model, edatas):
+    rex = "(noise|observable)Parameter[0-9]+_"
+    i_condition = -1
+    for mapping_for_condition, edata_for_condition in \
+            zip(mapping_par_opt_to_par_sim, edatas):
+        i_condition += 1
+        df = amici.getDataObservablesAsDataFrame(model, [edata_for_condition])
+        for i_sim_id, par_sim_id in enumerate(par_sim_ids):
+            if not re.match(rex, par_sim_id):
+                continue
+            obs_id = re.sub(rex, "", par_sim_id)
+            mapped_par = mapping_for_condition[i_sim_id]
+            if not isinstance(mapped_par, str) and np.isnan(mapped_par):
+                if not df["observable_" + obs_id].isnull().all():
+                    print(i_condition, i_sim_id, par_sim_id, obs_id)
+                    print(df)
 
 
 def _get_simulation_conditions(condition_df, measurement_df):
