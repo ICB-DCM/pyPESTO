@@ -207,19 +207,31 @@ class PetabImporter:
 
             # add measurements and sigmas
             # iterate over time points
-            for time_ix, time in enumerate(timepoints_w_reps):
+            for time in timepoints:
                 # subselect for time
                 df_for_time = df_for_condition[df_for_condition.time == time]
+                time_ix_0 = timepoints_w_reps.index(time)
+
+                # remember used time indices for each observable
+                time_ix_for_obs_ix = {}
+
                 # iterate over measurements
                 for _, measurement in df_for_time.iterrows():
-                    # get observable index
+
+                    # update time indexf for observable
                     observable_ix = observable_ids.index(
                         f'observable_{measurement.observableId}')
+                    if observable_ix in time_ix_for_obs_ix:
+                        time_ix_for_obs_ix[observable_ix] += 1
+                    else:
+                        time_ix_for_obs_ix[observable_ix] = time_ix_0
+
                     # fill observable and possibly noise parameter
-                    y[time_ix, observable_ix] = measurement.measurement
+                    y[time_ix_for_obs_ix[observable_ix],
+                        observable_ix] = measurement.measurement
                     if isinstance(measurement.noiseParameters, numbers.Number):
-                        sigma_y[time_ix, observable_ix] = \
-                            measurement.noiseParameters
+                        sigma_y[time_ix_for_obs_ix[observable_ix],
+                                observable_ix] = measurement.noiseParameters
 
             # fill measurements and sigmas into edata
             edata.setObservedData(y.flatten())
