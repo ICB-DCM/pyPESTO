@@ -139,7 +139,6 @@ class SpecialFeaturesTest(unittest.TestCase):
                 # test if the measurement data coincide for the given time
                 # point
                 for amici_val, meas_val in zip(amici_vals, meas_vals):
-                    print(amici_val)
                     self.assertTrue(np.isclose(amici_val, meas_val))
 
 
