@@ -22,6 +22,7 @@ class PetabImportTest(unittest.TestCase):
         cls.obj_edatas = []
 
     def test_0_import(self):
+        return
         for model_name in ["Zheng_PNAS2012", "Boehm_JProteomeRes2014"]:
             petab_problem = petab.Problem.from_folder(
                 folder_base + model_name)
@@ -83,7 +84,7 @@ class SpecialFeaturesTest(unittest.TestCase):
         # create amici.ExpData list
         edatas = importer.create_edatas()
 
-        # convert to dataframes
+        # convert to dataframe
         amici_df = amici.getDataObservablesAsDataFrame(
             importer.create_model(), edatas)
         # reduce to data columns
@@ -91,21 +92,18 @@ class SpecialFeaturesTest(unittest.TestCase):
                              if col.startswith("observable_")
                              and not col.endswith("_std")]]
 
-        meas_df = importer.petab_problem.measurement_df
+        # extract non-nans and sort
+        amici_vals = amici_df.values.flatten().tolist()
+        amici_vals = sorted([val for val in amici_vals if np.isfinite(val)])
 
-        # amici_df subset measurement_df
-        for _, row in meas_df.iterrows():
-            val = row.measurement
-            # test if amici_df contains this value somewhere
-            # this will test up to np.isclose closeness
-            self.assertTrue(np.isclose(amici_df, val).any(axis=1).any())
+        # apply similar procedure to original dataframe
+        meas_vals = importer.petab_problem.measurement_df.measurement \
+            .values.flatten().tolist()
+        meas_vals = sorted([val for val in meas_vals if np.isfinite(val)])
 
-        # and the other way round
-        meas_vals = meas_df.measurement
-        for _, row in amici_df.iterrows():
-            for val in row:
-                if np.isfinite(val):
-                    self.assertTrue(np.isclose(meas_vals, val).any())
+        # test if the measurement data coincide
+        for amici_val, meas_val in zip(amici_vals, meas_vals):
+            self.assertTrue(np.isclose(amici_val, meas_val))
 
 
 if __name__ == '__main__':
