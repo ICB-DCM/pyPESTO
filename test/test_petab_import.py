@@ -8,7 +8,8 @@ import numpy as np
 
 import petab
 import pypesto
-from test.util import folder_base, model_names
+from test.petab_util import folder_base
+import amici
 
 
 class PetabImportTest(unittest.TestCase):
@@ -21,7 +22,7 @@ class PetabImportTest(unittest.TestCase):
         cls.obj_edatas = []
 
     def test_0_import(self):
-        for model_name in model_names:
+        for model_name in ["Zheng_PNAS2012", "Boehm_JProteomeRes2014"]:
             petab_problem = petab.Problem.from_folder(
                 folder_base + model_name)
             self.petab_problems.append(petab_problem)
@@ -40,7 +41,7 @@ class PetabImportTest(unittest.TestCase):
             self.assertEqual(set(model_obs_ids),
                              set(problem_obs_ids))
 
-            # TODO continue
+            # also other checks would be possible here
 
     def test_2_simulate(self):
         for petab_importer in self.petab_importers:
@@ -68,7 +69,47 @@ class PetabImportTest(unittest.TestCase):
                 result.optimize_result.get_for_key('fval')[0]))
 
 
+class SpecialFeaturesTest(unittest.TestCase):
+
+    def test_replicates(self):
+        """
+        Use a model that has replicates and check that all data points are
+        inserted.
+        """
+        # import a model with replicates at some time points and observables
+        importer = pypesto.PetabImporter.from_folder(
+            folder_base + "Schwen_PONE2014")
+
+        # create amici.ExpData list
+        edatas = importer.create_edatas()
+
+        # convert to dataframes
+        amici_df = amici.getDataObservablesAsDataFrame(
+            importer.create_model(), edatas)
+        # reduce to data columns
+        amici_df = amici_df[[col for col in amici_df.columns
+                             if col.startswith("observable_")
+                             and not col.endswith("_std")]]
+
+        meas_df = importer.petab_problem.measurement_df
+
+        # amici_df subset measurement_df
+        for _, row in meas_df.iterrows():
+            val = row.measurement
+            # test if amici_df contains this value somewhere
+            # this will test up to np.isclose closeness
+            self.assertTrue(np.isclose(amici_df, val).any(axis=1).any())
+
+        # and the other way round
+        meas_vals = meas_df.measurement
+        for _, row in amici_df.iterrows():
+            for val in row:
+                if np.isfinite(val):
+                    self.assertTrue(np.isclose(meas_vals, val).any())
+
+
 if __name__ == '__main__':
     suite = unittest.TestSuite()
     suite.addTest(PetabImportTest())
+    suite.addTest(SpecialFeaturesTest())
     unittest.main()
