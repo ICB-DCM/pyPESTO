@@ -1,6 +1,7 @@
 import matplotlib.pyplot as plt
 from matplotlib.ticker import MaxNLocator
 import numpy as np
+import warnings
 from .reference_points import create_references
 from .clust_color import assign_clustered_colors
 
@@ -9,6 +10,8 @@ def waterfall(result,
               ax=None,
               size=(18.5, 10.5),
               y_limits=None,
+              scale_y='log10',
+              offset_y=None,
               start_indices=None,
               reference=None):
     """
@@ -30,6 +33,12 @@ def waterfall(result,
     y_limits: float or ndarray, optional
         maximum value to be plotted on the y-axis, or y-limits
 
+    scale_y: str, optional
+        May be logarithmic or linear ('log10' or 'lin')
+
+    offset_y:
+        offset for the y-axis, if this is supposed to be in log10-scale
+
     start_indices: list or int
         list of integers specifying the multistart to be plotted or
         int specifying up to which start index should be plotted
@@ -46,13 +55,13 @@ def waterfall(result,
     """
 
     # extract specific cost function values from result
-    fvals = get_fvals(result, start_indices)
+    fvals = get_fvals(result, scale_y, offset_y, start_indices)
 
     # parse and apply plotting options
     ref = create_references(references=reference)
 
     # call lowlevel plot routine
-    ax = waterfall_lowlevel(fvals, ax, size)
+    ax = waterfall_lowlevel(fvals, scale_y, ax, size)
 
     # handle options
     ax = handle_options(ax, fvals, ref, y_limits)
@@ -60,7 +69,7 @@ def waterfall(result,
     return ax
 
 
-def waterfall_lowlevel(fvals, ax=None, size=(18.5, 10.5)):
+def waterfall_lowlevel(fvals, scale_y='log10', ax=None, size=(18.5, 10.5)):
     """
     Plot waterfall plot using list of function values.
 
@@ -69,6 +78,9 @@ def waterfall_lowlevel(fvals, ax=None, size=(18.5, 10.5)):
 
     fvals: numeric list or array
         Including values need to be plotted.
+
+    scale_y: str, optional
+        May be logarithmic or linear ('log10' or 'lin')
 
     ax: matplotlib.Axes, optional
         Axes object to use.
@@ -106,12 +118,21 @@ def waterfall_lowlevel(fvals, ax=None, size=(18.5, 10.5)):
 
     # plot
     ax.xaxis.set_major_locator(MaxNLocator(integer=True))
-    ax.plot(start_ind, fvals)
+    # plot line
+    if scale_y == 'log10':
+        ax.semilogy(start_ind, fvals)
+    else:
+        ax.plot(start_ind, fvals)
+
+    # plot points
     for j in range(n_fvals):
         j_fval = indices[j]
         color = colors[j_fval]
         fval = fvals[j_fval]
-        ax.plot(j, fval, color=color, marker='o')
+        if scale_y == 'log10':
+            ax.semilogy(j, fval, color=color, marker='o')
+        else:
+            ax.plot(j, fval, color=color, marker='o')
 
     # labels
     ax.set_xlabel('Ordered optimizer run')
@@ -121,7 +142,7 @@ def waterfall_lowlevel(fvals, ax=None, size=(18.5, 10.5)):
     return ax
 
 
-def get_fvals(result, start_indices):
+def get_fvals(result, scale_y, offset_y, start_indices):
     """
     Get function values from results.
 
@@ -130,6 +151,12 @@ def get_fvals(result, start_indices):
 
     result: pypesto.Result
         Optimization result obtained by 'optimize.py'
+
+    scale_y: str, optional
+        May be logarithmic or linear ('log10' or 'lin')
+
+    offset_y:
+        offset for the y-axis, if this is supposed to be in log10-scale
 
     start_indices: list or int
         list of integers specifying the multistart to be plotted or
@@ -158,8 +185,32 @@ def get_fvals(result, start_indices):
         existing_indices = np.array(range(len(fvals)))
         start_indices = np.intersect1d(start_indices, existing_indices)
 
+    # reduce to indices for which the user asked
+    fvals = fvals[start_indices]
+
+    # get the minimal value shich should be plotted
+    min_val = np.min(fvals)
+
+    # check whether the offset specified by the user is sufficient
+    if offset_y is not None:
+        if (scale_y == 'log10') and (min_val + offset_y <= 0.):
+            warnings.warn("Offset specified by user is insufficient. "
+                          "Ignoring specified offset and using " +
+                          str(np.abs(min_val) + 1.) + " instead.")
+            offset_y = 1. - min_val
+    else:
+        # check whether scaling is lin or log10
+        if scale_y == 'lin':
+            offset_y = 0.
+        else:
+            offset_y = 1. - min_val
+
+    # apply offset
+    if offset_y != 0.:
+        fvals += offset_y * np.ones(fvals.shape)
+
     # get only the indices which the user asked for
-    return fvals[start_indices]
+    return fvals
 
 
 def handle_options(ax, fvals, ref, y_limits):

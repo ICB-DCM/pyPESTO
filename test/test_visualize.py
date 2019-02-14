@@ -123,10 +123,18 @@ class TestVisualize(unittest.TestCase):
                                     start_indices=[0, 1, 4, 11],
                                     size=alt_fig_size)
 
+        # Test with linear scale
+        pypesto.visualize.waterfall(result,
+                                    reference=ref3,
+                                    offset_y=-2.5,
+                                    start_indices=3,
+                                    y_limits=5.)
+
         # Test with y-limits as float
         pypesto.visualize.waterfall(result,
                                     reference=ref3,
-                                    start_indices=3,
+                                    scale_y='lin',
+                                    offset_y=0.2,
                                     y_limits=5.)
 
     @staticmethod
@@ -266,6 +274,14 @@ class TestVisualize(unittest.TestCase):
                                             trace_x='steps',
                                             trace_y='fval',
                                             offset_y=-10.)
+
+        # Test with linear scale
+        pypesto.visualize.optimizer_history(result_with_trace,
+                                            y_limits=[-0.5, 2.5],
+                                            start_indices=[0, 1, 4, 11],
+                                            reference=ref_point,
+                                            size=alt_fig_size,
+                                            scale_y='lin')
 
         # Test with y-limits as float
         pypesto.visualize.optimizer_history(result_with_trace,

@@ -10,6 +10,7 @@ def optimizer_history(result, ax=None,
                       size=(18.5, 10.5),
                       trace_x='steps',
                       trace_y='fval',
+                      scale_y='log10',
                       offset_y=None,
                       y_limits=None,
                       start_indices=None,
@@ -40,6 +41,9 @@ def optimizer_history(result, ax=None,
         Possibilities: 'fval', 'gradnorm', 'stepsize'
         Default: 'fval'
 
+    scale_y: str, optional
+        May be logarithmic or linear ('log10' or 'lin')
+
     offset_y: float, optional
         Offset for the y-axis-values, as these are plotted on a log10-scale
         Will be computed automatically if necessary
@@ -69,10 +73,10 @@ def optimizer_history(result, ax=None,
     ref = create_references(references=reference)
 
     # compute the necessary offset for the y-axis
-    (vals, offset_y) = get_vals(vals, offset_y, start_indices)
+    vals = get_vals(vals, scale_y, offset_y, start_indices)
 
     # call lowlevel plot routine
-    ax = optimizer_history_lowlevel(vals, ax, size)
+    ax = optimizer_history_lowlevel(vals, scale_y, ax, size)
 
     # handle options
     ax = handle_options(ax, vals, ref, y_limits, x_label, y_label)
@@ -80,7 +84,7 @@ def optimizer_history(result, ax=None,
     return ax
 
 
-def optimizer_history_lowlevel(vals, ax=None, size=(18.5, 10.5)):
+def optimizer_history_lowlevel(vals, scale_y='log10', ax=None, size=(18.5, 10.5)):
     """
     Plot optimizer history using list of numpy array.
 
@@ -89,6 +93,9 @@ def optimizer_history_lowlevel(vals, ax=None, size=(18.5, 10.5)):
 
     vals:  list of numpy arrays
         list of 2xn-arrays (x_values and y_values of the trace)
+
+    scale_y: str, optional
+        May be logarithmic or linear ('log10' or 'lin')
 
     ax: matplotlib.Axes, optional
         Axes object to use.
@@ -140,7 +147,10 @@ def optimizer_history_lowlevel(vals, ax=None, size=(18.5, 10.5)):
     for j, val in enumerate(vals):
         j_fval = indices[j]
         color = colors[j_fval]
-        ax.semilogy(val[0, :], val[1, :], color=color)
+        if scale_y == 'log10':
+            ax.semilogy(val[0, :], val[1, :], color=color)
+        else:
+            ax.plot(val[0, :], val[1, :], color=color)
 
     return ax
 
@@ -214,7 +224,7 @@ def get_trace(result, trace_x, trace_y):
     return x_label, y_label, vals
 
 
-def get_vals(vals, offset_y, start_indices):
+def get_vals(vals, scale_y, offset_y, start_indices):
     """
     Handle bounds and results.
 
@@ -223,6 +233,9 @@ def get_vals(vals, offset_y, start_indices):
 
     vals: list
         list of 2xn-numpy arrays
+
+    scale_y: str, optional
+        May be logarithmic or linear ('log10' or 'lin')
 
     offset_y:
         offset for the y-axis, as this is supposed to be in log10-scale
@@ -265,22 +278,23 @@ def get_vals(vals, offset_y, start_indices):
 
     # check whether the offset specified by the user is sufficient
     if offset_y is not None:
-        if min_val + offset_y <= 0.:
+        if (scale_y == 'log10') and (min_val + offset_y <= 0.):
             warnings.warn("Offset specified by user is insufficient. "
-                          "Ignoring specified offset and using" +
-                          str(np.abs(min_val) + 1.) + "instead.")
-            offset_y = np.abs(min_val) + 1.
+                          "Ignoring specified offset and using " +
+                          str(np.abs(min_val) + 1.) + " instead.")
+            offset_y = 1. - min_val
     else:
-        if min_val <= 0.:
-            offset_y = np.abs(min_val) + 1.
-        else:
+        # check whether scaling is lin or log10
+        if scale_y == 'lin':
             offset_y = 0
+        else:
+            offset_y = 1. - min_val
 
     if offset_y != 0:
         for val in vals:
             val[1, :] += offset_y * np.ones(val[1].shape)
 
-    return vals, offset_y
+    return vals
 
 
 def handle_options(ax, vals, ref, y_limits, x_label, y_label):
