@@ -103,25 +103,44 @@ class SpecialFeaturesTest(unittest.TestCase):
                              if col == 'time' or col.startswith('observable_')
                              and not col.endswith("_std")]]
 
+        # find observable ids
+        amici_obs_ids = [col for col in amici_df.columns if col != 'time']
+        amici_obs_ids = [val.replace("observable_", "")
+                         for val in amici_obs_ids]
+        amici_obs_ids = sorted(amici_obs_ids)
+        meas_obs_ids = sorted(meas_df.observableId.unique().tolist())
+        for amici_obs_id, meas_obs_id in zip(amici_obs_ids, meas_obs_ids):
+            self.assertEqual(amici_obs_id, meas_obs_id)
+
         # iterate over time points
         for time in meas_times:
             amici_df_for_time = amici_df[amici_df.time == time]
             amici_df_for_time = amici_df_for_time[
                 [col for col in amici_df.columns if col != 'time']]
 
-            # extract non-nans and sort
-            amici_vals = amici_df_for_time.values.flatten().tolist()
-            amici_vals = sorted([val for val in amici_vals
-                                 if np.isfinite(val)])
+            meas_df_for_time = meas_df[meas_df.time == time]
 
-            meas_df_for_time = meas_df[meas_df.time == time].measurement
-            meas_vals = meas_df_for_time.values.flatten().tolist()
-            meas_vals = sorted([val for val in meas_vals
-                                if np.isfinite(val)])
+            # iterate over observables
+            for obs_id in meas_obs_ids:
+                amici_df_for_obs = amici_df_for_time["observable_" + obs_id]
+                meas_df_for_obs = meas_df_for_time[
+                    meas_df_for_time.observableId == obs_id]
 
-            # test if the measurement data coincide for the given time point
-            for amici_val, meas_val in zip(amici_vals, meas_vals):
-                self.assertTrue(np.isclose(amici_val, meas_val))
+                # extract non-nans and sort
+                amici_vals = amici_df_for_obs.values.flatten().tolist()
+                amici_vals = sorted([val for val in amici_vals
+                                     if np.isfinite(val)])
+
+                meas_vals = meas_df_for_obs.measurement \
+                    .values.flatten().tolist()
+                meas_vals = sorted([val for val in meas_vals
+                                    if np.isfinite(val)])
+
+                # test if the measurement data coincide for the given time
+                # point
+                for amici_val, meas_val in zip(amici_vals, meas_vals):
+                    print(amici_val)
+                    self.assertTrue(np.isclose(amici_val, meas_val))
 
 
 if __name__ == '__main__':
