@@ -217,10 +217,11 @@ class PetabImporter:
 
                 # iterate over measurements
                 for _, measurement in df_for_time.iterrows():
-
-                    # update time indexf for observable
+                    # extract observable index
                     observable_ix = observable_ids.index(
                         f'observable_{measurement.observableId}')
+
+                    # update time index for observable
                     if observable_ix in time_ix_for_obs_ix:
                         time_ix_for_obs_ix[observable_ix] += 1
                     else:
