@@ -170,16 +170,29 @@ class PetabImporter:
             # amici.ExpData for each simulation
 
             # extract rows for condition
-            cur_measurement_df = petab.core.get_rows_for_condition(
+            df_for_condition = petab.core.get_rows_for_condition(
                 measurement_df, condition)
 
             # make list of all timepoints for which measurements exist
             timepoints = sorted(
-                cur_measurement_df.time.unique().astype(float))
+                df_for_condition.time.unique().astype(float))
 
             # init edata object
             edata = amici.ExpData(model.get())
-            edata.setTimepoints(timepoints)
+
+            # find rep numbers of time points
+            timepoints_w_reps = []
+            for time in timepoints:
+                # subselect for time
+                df_for_time = df_for_condition[df_for_condition.time == time]
+                # rep number is maximum over rep numbers for observables
+                n_reps = max(df_for_time.groupby(
+                    ['observableId', 'time']).size())
+                # append time point n_rep times
+                timepoints_w_reps.extend([time] * n_reps)
+
+            # set time points in edata
+            edata.setTimepoints(timepoints_w_reps)
 
             # handle fixed parameters
             _handle_fixed_parameters(
@@ -193,15 +206,33 @@ class PetabImporter:
                 fill_value=np.nan)
 
             # add measurements and sigmas
-            for _, measurement in cur_measurement_df.iterrows():
-                time_ix = timepoints.index(measurement.time)
-                observable_ix = observable_ids.index(
-                    f'observable_{measurement.observableId}')
+            # iterate over time points
+            for time in timepoints:
+                # subselect for time
+                df_for_time = df_for_condition[df_for_condition.time == time]
+                time_ix_0 = timepoints_w_reps.index(time)
 
-                y[time_ix, observable_ix] = measurement.measurement
-                if isinstance(measurement.noiseParameters, numbers.Number):
-                    sigma_y[time_ix, observable_ix] = \
-                        measurement.noiseParameters
+                # remember used time indices for each observable
+                time_ix_for_obs_ix = {}
+
+                # iterate over measurements
+                for _, measurement in df_for_time.iterrows():
+                    # extract observable index
+                    observable_ix = observable_ids.index(
+                        f'observable_{measurement.observableId}')
+
+                    # update time index for observable
+                    if observable_ix in time_ix_for_obs_ix:
+                        time_ix_for_obs_ix[observable_ix] += 1
+                    else:
+                        time_ix_for_obs_ix[observable_ix] = time_ix_0
+
+                    # fill observable and possibly noise parameter
+                    y[time_ix_for_obs_ix[observable_ix],
+                        observable_ix] = measurement.measurement
+                    if isinstance(measurement.noiseParameters, numbers.Number):
+                        sigma_y[time_ix_for_obs_ix[observable_ix],
+                                observable_ix] = measurement.noiseParameters
 
             # fill measurements and sigmas into edata
             edata.setObservedData(y.flatten())
