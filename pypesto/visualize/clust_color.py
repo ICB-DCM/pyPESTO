@@ -1,5 +1,5 @@
 from scipy import cluster
-import matplotlib.colors as colors
+import matplotlib.colors as plt_colors
 import matplotlib.cm as cm
 import numpy as np
 
@@ -74,7 +74,7 @@ def assign_clustered_colors(vals):
 
     # assign colors
     vmax = max(clust) - sum(clustsize == 1)
-    cnorm = colors.Normalize(vmin=0, vmax=vmax)
+    cnorm = plt_colors.Normalize(vmin=0, vmax=vmax)
     scalarmap = cm.ScalarMappable(norm=cnorm)
 
     # colors for each cluster and one-size clusters
@@ -111,3 +111,48 @@ def assign_clustered_colors(vals):
     col = cols_clust[ind_col]
 
     return col
+
+
+def assign_colors(vals, colors=None):
+    """
+    Assign colors or format user specified colors.
+
+    Parameters
+    ----------
+
+    vals: numeric list or array
+        List to be clustered and assigned colors.
+
+    colors: list, or RGB, optional
+        list of colors, or single color
+
+    Returns
+    -------
+
+    Col: list of RGB
+        One for each element in 'vals'.
+    """
+
+    # sanity checks
+    if vals is None or len(vals) == 0:
+        return []
+
+    # if the user did not specify any colors:
+    if colors is None:
+        return assign_clustered_colors(vals)
+
+    # get number of elements and use user assigned colors
+    n_vals = len(vals) if isinstance(vals, list) else vals.size
+
+    # check correct length
+    if any(isinstance(i_color, list) for i_color in colors):
+        if len(colors) == n_vals:
+            return colors
+    else:
+        if isinstance(colors, list) and len(colors) == 4:
+            return [colors] * n_vals
+
+    raise ('Incorrect color input. Colors must be specified either as '
+           'list of [r, g, b, alpha] with length equal to function '
+           'values Number of function (here: ' + str(n_vals) + '), or as '
+           'one single [r, g, b, alpha] color.')

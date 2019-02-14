@@ -3,7 +3,7 @@ from matplotlib.ticker import MaxNLocator
 import numpy as np
 import warnings
 from .reference_points import create_references
-from .clust_color import assign_clustered_colors
+from .clust_color import assign_colors
 
 
 def waterfall(result,
@@ -13,7 +13,8 @@ def waterfall(result,
               scale_y='log10',
               offset_y=None,
               start_indices=None,
-              reference=None):
+              reference=None,
+              colors=None):
     """
     Plot waterfall plot.
 
@@ -47,6 +48,11 @@ def waterfall(result,
         List of reference points for optimization results, containing et
         least a function value fval
 
+    colors: list, or RGB, optional
+        list of colors, or single color
+        color or list of colors for plotting. If not set, clustering is done
+        and colors are assigned automatically
+
     Returns
     -------
 
@@ -61,7 +67,8 @@ def waterfall(result,
     ref = create_references(references=reference)
 
     # call lowlevel plot routine
-    ax = waterfall_lowlevel(fvals, scale_y, ax, size)
+    ax = waterfall_lowlevel(fvals=fvals, scale_y=scale_y, ax=ax, size=size,
+                            colors=colors)
 
     # handle options
     ax = handle_options(ax, fvals, ref, y_limits)
@@ -69,7 +76,8 @@ def waterfall(result,
     return ax
 
 
-def waterfall_lowlevel(fvals, scale_y='log10', ax=None, size=(18.5, 10.5)):
+def waterfall_lowlevel(fvals, scale_y='log10', ax=None, size=(18.5, 10.5),
+                       colors=None):
     """
     Plot waterfall plot using list of function values.
 
@@ -87,6 +95,11 @@ def waterfall_lowlevel(fvals, scale_y='log10', ax=None, size=(18.5, 10.5)):
 
     size: tuple, optional
         see waterfall
+
+    colors: list, or RGB, optional
+        list of colors, or single color
+        color or list of colors for plotting. If not set, clustering is done
+        and colors are assigned automatically
 
     Returns
     -------
@@ -110,7 +123,8 @@ def waterfall_lowlevel(fvals, scale_y='log10', ax=None, size=(18.5, 10.5)):
     # assign colors
     # note: this has to happen before sorting
     # to get the same colors in different plots
-    colors = assign_clustered_colors(fvals)
+    if colors is None:
+        colors = assign_colors(fvals)
 
     # sort
     indices = sorted(range(n_fvals),

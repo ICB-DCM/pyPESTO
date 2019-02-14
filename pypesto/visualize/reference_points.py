@@ -21,24 +21,33 @@ class ReferencePoint(dict):
     def __init__(self,
                  reference=None,
                  x=None,
-                 fval=None):
+                 fval=None,
+                 color=None):
         super().__init__()
 
         if (reference is not None) and ((x is not None) or (fval is not None)):
             raise ("Please specify either an argument for reference or for x "
                    "and fval, but not both.")
 
-        if isinstance(reference, dict) or isinstance(reference,
-                                                     ReferencePoint):
+        if isinstance(reference, dict) or \
+                isinstance(reference, ReferencePoint):
             self.x = reference["x"]
             self.fval = reference["fval"]
+            if "color" in reference.keys():
+                self.color = reference["color"]
+            else:
+                self.color = None
         elif isinstance(reference, tuple):
             self.x = reference[0]
             self.fval = reference[1]
 
-        if x is not None:
-            self.x = np.array(x)
-            self.fval = fval
+        if reference is None:
+            if x is not None:
+                self.x = np.array(x)
+            if fval is not None:
+                self.fval = fval
+            if color is not None:
+                self.color = color
 
     def __getattr__(self, key):
         try:

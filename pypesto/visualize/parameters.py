@@ -2,11 +2,11 @@ import matplotlib.pyplot as plt
 from matplotlib.ticker import MaxNLocator
 import numpy as np
 from .reference_points import create_references
-from .clust_color import assign_clustered_colors
+from .clust_color import assign_colors
 
 
 def parameters(result, ax=None, free_indices_only=True, lb=None, ub=None,
-               size=None, reference=None):
+               size=None, reference=None, colors=None):
     """
     Plot parameter values.
 
@@ -35,6 +35,11 @@ def parameters(result, ax=None, free_indices_only=True, lb=None, ub=None,
         List of reference points for optimization results, containing et
         least a function value fval
 
+    colors: list, or RGB, optional
+        list of colors, or single color
+        color or list of colors for plotting. If not set, clustering is done
+        and colors are assigned automatically
+
     Returns
     -------
 
@@ -43,12 +48,14 @@ def parameters(result, ax=None, free_indices_only=True, lb=None, ub=None,
     """
 
     # handle results and bounds
-    (lb, ub, x_labels, fvals, xs) = handle_bounds(result, free_indices_only,
-                                                  lb, ub)
+    (lb, ub, x_labels, fvals, xs) = \
+        handle_inputs(result=result, lb=lb, ub=ub,
+                      free_indices_only=free_indices_only)
 
     # call lowlevel routine
     ax = parameters_lowlevel(xs=xs, fvals=fvals, lb=lb, ub=ub,
-                             x_labels=x_labels, ax=ax, size=size)
+                             x_labels=x_labels, ax=ax, size=size,
+                             colors=colors)
 
     # parse and apply plotting options
     ref = create_references(references=reference)
@@ -110,9 +117,8 @@ def parameters_lowlevel(xs, fvals, lb=None, ub=None, x_labels=None, ax=None,
         fig = plt.gcf()
         fig.set_size_inches(*size)
 
-    # assign color
-    if colors is None:
-        colors = assign_clustered_colors(fvals)
+    # assign colors
+    colors = assign_colors(vals=fvals, colors=colors)
 
     # parameter indices
     parameters_ind = list(range(1, xs.shape[1] + 1))[::-1]
@@ -140,7 +146,7 @@ def parameters_lowlevel(xs, fvals, lb=None, ub=None, x_labels=None, ax=None,
     return ax
 
 
-def handle_bounds(result, free_indices_only, lb=None, ub=None):
+def handle_inputs(result, free_indices_only, lb=None, ub=None):
     """
     Handle bounds and results.
 

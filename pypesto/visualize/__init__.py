@@ -12,7 +12,8 @@ from .reference_points import (ReferencePoint,
 from .waterfall import (waterfall,
                         waterfall_lowlevel)
 from .clust_color import (assign_clusters,
-                          assign_clustered_colors)
+                          assign_clustered_colors,
+                          assign_colors)
 from .parameters import (parameters,
                          parameters_lowlevel)
 from .optimizer_history import (optimizer_history,
@@ -27,6 +28,7 @@ __all__ = ["ReferencePoint",
            "waterfall_lowlevel",
            "assign_clusters",
            "assign_clustered_colors",
+           "assign_colors",
            "parameters",
            "parameters_lowlevel",
            "optimizer_history",

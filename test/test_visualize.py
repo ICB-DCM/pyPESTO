@@ -121,7 +121,8 @@ class TestVisualize(unittest.TestCase):
                                     reference=ref_point,
                                     y_limits=[-0.5, 2.5],
                                     start_indices=[0, 1, 4, 11],
-                                    size=alt_fig_size)
+                                    size=alt_fig_size,
+                                    colors=[1., .3, .3, 0.5])
 
         # Test with linear scale
         pypesto.visualize.waterfall(result,
@@ -177,6 +178,22 @@ class TestVisualize(unittest.TestCase):
         pypesto.visualize.assign_clustered_colors(fvals)
 
     @staticmethod
+    def test_assign_colors():
+        # test empty input
+        pypesto.visualize.assign_colors([])
+
+        # test if it runs at all
+        fvals = [0.01, 0.02, 1.01, 2.02, 2.03, 2.04, 3, 4, 4.1, 4.11]
+        pypesto.visualize.assign_colors(fvals)
+        fvals = np.array(fvals)
+        pypesto.visualize.assign_colors(fvals)
+        fvals = [0.01, 0.02, 1.]
+        pypesto.visualize.assign_colors(fvals, colors=[.5, .9, .9, .3])
+        pypesto.visualize.assign_colors(fvals, colors=[[.5, .9, .9, .3],
+                                                       [.5, .8, .8, .5],
+                                                       [.9, .1, .1, .1]])
+
+    @staticmethod
     def test_parameters():
         pypesto.visualize.parameters(result)
 
@@ -185,7 +202,8 @@ class TestVisualize(unittest.TestCase):
         pypesto.visualize.parameters(result,
                                      free_indices_only=False,
                                      reference=ref_point,
-                                     size=alt_fig_size)
+                                     size=alt_fig_size,
+                                     colors=[1., .3, .3, 0.5])
 
     @staticmethod
     def test_parameters_lowlevel():
@@ -218,7 +236,8 @@ class TestVisualize(unittest.TestCase):
     def test_profiles_with_options():
         pypesto.visualize.profiles(result,
                                    reference=ref_point,
-                                   size=alt_fig_size)
+                                   size=alt_fig_size,
+                                   colors=[1., .3, .3, 0.5])
 
     @staticmethod
     def test_profiles_lowlevel():
@@ -273,7 +292,8 @@ class TestVisualize(unittest.TestCase):
                                             size=alt_fig_size,
                                             trace_x='steps',
                                             trace_y='fval',
-                                            offset_y=-10.)
+                                            offset_y=-10.,
+                                            colors=[1., .3, .3, 0.5])
 
         # Test with linear scale
         pypesto.visualize.optimizer_history(result_with_trace,

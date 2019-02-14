@@ -3,7 +3,7 @@ from matplotlib.ticker import MaxNLocator
 import numpy as np
 import warnings
 from .reference_points import create_references
-from .clust_color import assign_clustered_colors
+from .clust_color import assign_colors
 
 
 def optimizer_history(result, ax=None,
@@ -12,6 +12,7 @@ def optimizer_history(result, ax=None,
                       trace_y='fval',
                       scale_y='log10',
                       offset_y=None,
+                      colors=None,
                       y_limits=None,
                       start_indices=None,
                       reference=None):
@@ -48,6 +49,11 @@ def optimizer_history(result, ax=None,
         Offset for the y-axis-values, as these are plotted on a log10-scale
         Will be computed automatically if necessary
 
+    colors: list, or RGB, optional
+        list of colors, or single color
+        color or list of colors for plotting. If not set, clustering is done
+        and colors are assigned automatically
+
     y_limits: float or ndarray, optional
         maximum value to be plotted on the y-axis, or y-limits
 
@@ -76,7 +82,8 @@ def optimizer_history(result, ax=None,
     vals = get_vals(vals, scale_y, offset_y, start_indices)
 
     # call lowlevel plot routine
-    ax = optimizer_history_lowlevel(vals, scale_y, ax, size)
+    ax = optimizer_history_lowlevel(vals, scale_y=scale_y, colors=colors,
+                                    ax=ax, size=size)
 
     # handle options
     ax = handle_options(ax, vals, ref, y_limits, x_label, y_label)
@@ -84,7 +91,8 @@ def optimizer_history(result, ax=None,
     return ax
 
 
-def optimizer_history_lowlevel(vals, scale_y='log10', ax=None, size=(18.5, 10.5)):
+def optimizer_history_lowlevel(vals, scale_y='log10', colors=None, ax=None,
+                               size=(18.5, 10.5)):
     """
     Plot optimizer history using list of numpy array.
 
@@ -96,6 +104,11 @@ def optimizer_history_lowlevel(vals, scale_y='log10', ax=None, size=(18.5, 10.5)
 
     scale_y: str, optional
         May be logarithmic or linear ('log10' or 'lin')
+
+    colors: list, or RGB, optional
+        list of colors, or single color
+        color or list of colors for plotting. If not set, clustering is done
+        and colors are assigned automatically
 
     ax: matplotlib.Axes, optional
         Axes object to use.
@@ -136,7 +149,7 @@ def optimizer_history_lowlevel(vals, scale_y='log10', ax=None, size=(18.5, 10.5)
     # assign colors
     # note: this has to happen before sorting
     # to get the same colors in different plots
-    colors = assign_clustered_colors(fvals)
+    colors = assign_colors(fvals, colors)
 
     # sort
     indices = sorted(range(n_fvals),

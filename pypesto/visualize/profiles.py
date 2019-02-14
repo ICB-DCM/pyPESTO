@@ -2,10 +2,11 @@ import matplotlib.pyplot as plt
 from matplotlib.ticker import MaxNLocator
 import numpy as np
 from .reference_points import create_references
+from .clust_color import assign_colors
 
 
 def profiles(result, fig=None, profile_indices=None, size=(18.5, 6.5),
-             reference=None):
+             reference=None, colors=None):
     """
     Plot classical 1D profile plot (using the posterior, e.g. Gaussian like
     profile)
@@ -30,6 +31,11 @@ def profiles(result, fig=None, profile_indices=None, size=(18.5, 6.5),
         List of reference points for optimization results, containing et
         least a function value fval
 
+    colors: list, or RGB, optional
+        list of colors, or single color
+        color or list of colors for plotting. If not set, clustering is done
+        and colors are assigned automatically
+
     Returns
     -------
 
@@ -53,7 +59,7 @@ def profiles(result, fig=None, profile_indices=None, size=(18.5, 6.5),
         fvals.append(tmp)
 
     # call lowlevel routine
-    ax = profiles_lowlevel(fvals, fig, size)
+    ax = profiles_lowlevel(fvals=fvals, ax=fig, size=size, color=colors)
 
     # parse and apply plotting options
     ref = create_references(references=reference)
@@ -65,7 +71,7 @@ def profiles(result, fig=None, profile_indices=None, size=(18.5, 6.5),
     return ax
 
 
-def profiles_lowlevel(fvals, ax=None, size=(18.5, 6.5)):
+def profiles_lowlevel(fvals, ax=None, size=(18.5, 6.5), color=None):
     """
     Lowlevel routine for profile plotting, working with a list of arrays
     only, opening different axes objects in case
@@ -86,6 +92,9 @@ def profiles_lowlevel(fvals, ax=None, size=(18.5, 6.5)):
     size: tuple, optional
         Figure size (width, height) in inches. Is only applied when no ax
         object is specified
+
+    color: RGB, optional
+        color for profiles in plot.
 
     Returns
     -------
@@ -123,7 +132,8 @@ def profiles_lowlevel(fvals, ax=None, size=(18.5, 6.5)):
 
         if fval is not None:
             ax.append(fig.add_subplot(rows, columns, counter + 1))
-            ax[counter] = profile_lowlevel(fval, ax[counter])
+            ax[counter] = profile_lowlevel(fval, ax[counter],
+                                           size=size, color=color)
 
             # labels
             ax[counter].set_xlabel(f'Parameter {i_plot} value')
@@ -136,7 +146,7 @@ def profiles_lowlevel(fvals, ax=None, size=(18.5, 6.5)):
     return ax
 
 
-def profile_lowlevel(fvals, ax=None, size=(18.5, 6.5)):
+def profile_lowlevel(fvals, ax=None, size=(18.5, 6.5), color=None):
     """
     Lowlevel routine for plotting one profile, working with a numpy array only
 
@@ -153,6 +163,9 @@ def profile_lowlevel(fvals, ax=None, size=(18.5, 6.5)):
         Figure size (width, height) in inches. Is only applied when no ax
         object is specified
 
+    color: RGB, optional
+        color for profiles in plot.
+
     Returns
     -------
 
@@ -162,6 +175,9 @@ def profile_lowlevel(fvals, ax=None, size=(18.5, 6.5)):
 
     # parse input
     fvals = np.array(fvals)
+
+    # get colors
+    color = assign_colors([1.], color)
 
     # axes
     if ax is None:
@@ -174,7 +190,7 @@ def profile_lowlevel(fvals, ax=None, size=(18.5, 6.5)):
     # plot
     if fvals.size != 0:
         ax.xaxis.set_major_locator(MaxNLocator(integer=True))
-        ax.plot(fvals[0, :], fvals[1, :], color=[.9, .2, .2, 1.])
+        ax.plot(fvals[0, :], fvals[1, :], color=color[0])
 
     return ax
 
