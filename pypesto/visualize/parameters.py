@@ -61,8 +61,9 @@ def parameters(result, ax=None, free_indices_only=True, lb=None, ub=None,
     ref = create_references(references=reference)
 
     # plot reference points
-    if len(ref) > 0:
-        ax = handle_refrence_points(ref, ax)
+    for i_ref in ref:
+        ax = parameters_lowlevel([i_ref['x']], [i_ref['fval']], ax=ax,
+                                 colors=i_ref['color'])
 
     return ax
 
@@ -196,40 +197,3 @@ def handle_inputs(result, free_indices_only, lb=None, ub=None):
         ub = result.problem.get_full_vector(ub)
 
     return lb, ub, x_labels, fvals, xs
-
-
-def handle_refrence_points(ref, ax):
-    """
-    Handle reference points.
-
-    Parameters
-    ----------
-
-    ref: list, optional
-        List of reference points for optimization results, containing et
-        least a function value fval
-
-    ax: matplotlib.Axes, optional
-        Axes object to use.
-
-    Returns
-    -------
-
-    ax: matplotlib.Axes
-        The plot axes.
-    """
-
-    # create set of colors for reference points
-    ref_len = len(ref)
-    colors = []
-    ref_x = []
-    ref_fvals = []
-    for i_num, i_ref in enumerate(ref):
-        colors.append([0., 0.5 * (1. + i_num / ref_len), 0., 0.9])
-        ref_x.append(i_ref["x"])
-        ref_fvals.append(i_ref["fval"])
-
-    # plot reference points using the lowleve routine
-    ax = parameters_lowlevel(ref_x, ref_fvals, ax=ax, colors=colors)
-
-    return ax

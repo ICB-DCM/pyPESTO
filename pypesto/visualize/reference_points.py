@@ -16,6 +16,10 @@ class ReferencePoint(dict):
 
     fval: float
         Function value, fun(x), for reference parameters.
+
+    color: RGB, optional
+        Color which should be used for reference point.
+
     """
 
     def __init__(self,
@@ -31,23 +35,45 @@ class ReferencePoint(dict):
 
         if isinstance(reference, dict) or \
                 isinstance(reference, ReferencePoint):
-            self.x = reference["x"]
+            # Handle case of dict or ReferencePoint
+            self.x = np.array(reference["x"])
             self.fval = reference["fval"]
             if "color" in reference.keys():
                 self.color = reference["color"]
+                if "auto_color" in reference.keys():
+                    self.auto_color = reference["auto_color"]
+                else:
+                    self.auto_color = True
             else:
                 self.color = None
+                self.auto_color = True
         elif isinstance(reference, tuple):
-            self.x = reference[0]
+            # Handle case of tuple
+            self.x = np.array(reference[0])
             self.fval = reference[1]
-
+            if len(reference) > 2:
+                self.color = reference[2]
+                self.auto_color = False
+            else:
+                self.color = None
+                self.auto_color = True
         if reference is None:
             if x is not None:
                 self.x = np.array(x)
+            else:
+                raise ('Parameter vector x not passed, but is a manadatory '
+                       'input when creating a reference point. Stopping.')
             if fval is not None:
                 self.fval = fval
+            else:
+                raise ('Objective value fval not passed, but is a manadatory '
+                       'input when creating a reference point. Stopping.')
             if color is not None:
                 self.color = color
+                self.auto_color = False
+            else:
+                self.color = None
+                self.auto_color = True
 
     def __getattr__(self, key):
         try:
@@ -57,6 +83,26 @@ class ReferencePoint(dict):
 
     __setattr__ = dict.__setitem__
     __delattr__ = dict.__delitem__
+
+
+def assign_colors(ref):
+    # loop over reference points
+    auto_color_count = 0
+    for i_ref in ref:
+        if i_ref['auto_color']:
+            auto_color_count += 1
+
+    auto_colors = [[0., 0.5 * (1. + i_auto / auto_color_count), 0., 0.9] for
+                   i_auto in range(auto_color_count)]
+
+    # loop over reference points and assign auto_colors
+    auto_color_count = 0
+    for i_num, i_ref in enumerate(ref):
+        if i_ref['auto_color']:
+            i_ref['color'] = auto_colors[i_num]
+            auto_color_count += 1
+
+    return ref
 
 
 def create_references(references=None, x=None, fval=None):
@@ -90,4 +136,5 @@ def create_references(references=None, x=None, fval=None):
     if (x is not None) and (fval is not None):
         ref.append(ReferencePoint(x=x, fval=fval))
 
-    return ref
+    # assign colors for reference points which have no user-specified colors
+    return assign_colors(ref)

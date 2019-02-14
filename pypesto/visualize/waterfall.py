@@ -267,13 +267,8 @@ def handle_options(ax, fvals, ref, y_limits):
         ax.set_ylim(y_limits)
 
     # handle reference points
-    if len(ref) > 0:
-        # create set of colors for reference points
-        ref_len = len(ref)
-        for i_num, i_ref in enumerate(ref):
-            ax.plot([0, len(fvals) - 1],
-                    [i_ref.fval, i_ref.fval],
-                    '--',
-                    color=[0., 0.5 * (1. + i_num / ref_len), 0., 0.9])
+    for i_ref in ref:
+        ax.plot([0, len(fvals) - 1], [i_ref.fval, i_ref.fval], '--',
+                color=i_ref.color)
 
     return ax

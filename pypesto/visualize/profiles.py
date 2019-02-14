@@ -216,18 +216,10 @@ def handle_refrence_points(ref, ax, fvals):
         if fval is not None:
             par_indices.append(i_plot)
 
-    # create set of colors for reference points
-    ref_len = len(ref)
-    colors = []
-    ref_x = []
-    for i_num, i_ref in enumerate(ref):
-        colors.append([0., 0.5 * (1. + i_num / ref_len), 0., 0.9])
-        ref_x.append(i_ref["x"])
-
     # loop over axes objects
     for i_par, i_ax in enumerate(ax):
-        for i_ref, i_col in enumerate(colors):
-            current_x = ref_x[i_ref][par_indices[i_par]]
-            i_ax.plot([current_x, current_x], [0., 1.], color=i_col)
+        for i_ref in ref:
+            current_x = i_ref['x'][par_indices[i_par]]
+            i_ax.plot([current_x, current_x], [0., 1.], color=i_ref['color'])
 
     return ax

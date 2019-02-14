@@ -361,12 +361,9 @@ def handle_options(ax, vals, ref, y_limits, x_label, y_label):
         for val in vals:
             max_len = np.max([max_len, val[0, -1]])
 
-        ref_len = len(ref)
-        for i_num, i_ref in enumerate(ref):
-            ax.semilogy([0, max_len],
-                        [i_ref.fval, i_ref.fval],
-                        '--',
-                        color=[0., 0.5 * (1. + i_num / ref_len), 0., 0.9])
+        for i_ref in ref:
+            ax.semilogy([0, max_len], [i_ref.fval, i_ref.fval], '--',
+                        color=i_ref.color)
 
     # set labels
     ax.set_xlabel(x_label)
