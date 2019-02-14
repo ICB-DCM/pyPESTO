@@ -22,7 +22,6 @@ class PetabImportTest(unittest.TestCase):
         cls.obj_edatas = []
 
     def test_0_import(self):
-        return
         for model_name in ["Zheng_PNAS2012", "Boehm_JProteomeRes2014"]:
             petab_problem = petab.Problem.from_folder(
                 folder_base + model_name)
@@ -87,23 +86,42 @@ class SpecialFeaturesTest(unittest.TestCase):
         # convert to dataframe
         amici_df = amici.getDataObservablesAsDataFrame(
             importer.create_model(), edatas)
-        # reduce to data columns
+
+        # extract original measurement df
+        meas_df = importer.petab_problem.measurement_df
+
+        # find time points
+        amici_times = sorted(amici_df.time.unique().tolist())
+        meas_times = sorted(meas_df.time.unique().tolist())
+
+        # assert same time points
+        for amici_time, meas_time in zip(amici_times, meas_times):
+            self.assertTrue(np.isclose(amici_time, meas_time))
+
+        # extract needed stuff from amici df
         amici_df = amici_df[[col for col in amici_df.columns
-                             if col.startswith("observable_")
+                             if col == 'time' or col.startswith('observable_')
                              and not col.endswith("_std")]]
 
-        # extract non-nans and sort
-        amici_vals = amici_df.values.flatten().tolist()
-        amici_vals = sorted([val for val in amici_vals if np.isfinite(val)])
+        # iterate over time points
+        for time in meas_times:
+            amici_df_for_time = amici_df[amici_df.time == time]
+            amici_df_for_time = amici_df_for_time[
+                [col for col in amici_df.columns if col != 'time']]
 
-        # apply similar procedure to original dataframe
-        meas_vals = importer.petab_problem.measurement_df.measurement \
-            .values.flatten().tolist()
-        meas_vals = sorted([val for val in meas_vals if np.isfinite(val)])
+            # extract non-nans and sort
+            amici_vals = amici_df_for_time.values.flatten().tolist()
+            amici_vals = sorted([val for val in amici_vals
+                                 if np.isfinite(val)])
 
-        # test if the measurement data coincide
-        for amici_val, meas_val in zip(amici_vals, meas_vals):
-            self.assertTrue(np.isclose(amici_val, meas_val))
+            meas_df_for_time = meas_df[meas_df.time == time].measurement
+            meas_vals = meas_df_for_time.values.flatten().tolist()
+            meas_vals = sorted([val for val in meas_vals
+                                if np.isfinite(val)])
+
+            # test if the measurement data coincide for the given time point
+            for amici_val, meas_val in zip(amici_vals, meas_vals):
+                self.assertTrue(np.isclose(amici_val, meas_val))
 
 
 if __name__ == '__main__':
