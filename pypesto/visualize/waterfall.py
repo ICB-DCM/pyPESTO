@@ -4,9 +4,10 @@ import numpy as np
 import warnings
 from .reference_points import create_references
 from .clust_color import assign_colors
+from .clust_color import handle_result_list
 
 
-def waterfall(result,
+def waterfall(results,
               ax=None,
               size=(18.5, 10.5),
               y_limits=None,
@@ -21,7 +22,7 @@ def waterfall(result,
     Parameters
     ----------
 
-    result: pypesto.Result
+    results: pypesto.Result
         Optimization result obtained by 'optimize.py'
 
     ax: matplotlib.Axes, optional
@@ -60,18 +61,27 @@ def waterfall(result,
         The plot axes.
     """
 
-    # extract specific cost function values from result
-    fvals = get_fvals(result, scale_y, offset_y, start_indices)
+    # parse input
+    (results, colors) = handle_result_list(results, colors)
+
+    # plotting routine needs the maximum number of multistarts
+    max_len_fvals = np.array([0])
+
+    # loop over results
+    for result in results:
+        # extract specific cost function values from result
+        fvals = get_fvals(result, scale_y, offset_y, start_indices)
+        max_len_fvals = np.max([max_len_fvals, len(fvals)])
+
+        # call lowlevel plot routine
+        ax = waterfall_lowlevel(fvals=fvals, scale_y=scale_y, ax=ax, size=size,
+                                colors=colors)
 
     # parse and apply plotting options
     ref = create_references(references=reference)
 
-    # call lowlevel plot routine
-    ax = waterfall_lowlevel(fvals=fvals, scale_y=scale_y, ax=ax, size=size,
-                            colors=colors)
-
     # handle options
-    ax = handle_options(ax, fvals, ref, y_limits)
+    ax = handle_options(ax, max_len_fvals, ref, y_limits)
 
     return ax
 
@@ -227,7 +237,7 @@ def get_fvals(result, scale_y, offset_y, start_indices):
     return fvals
 
 
-def handle_options(ax, fvals, ref, y_limits):
+def handle_options(ax, max_len_fvals, ref, y_limits):
     """
     Handle reference points.
 
@@ -237,8 +247,8 @@ def handle_options(ax, fvals, ref, y_limits):
     ax: matplotlib.Axes, optional
         Axes object to use.
 
-    fvals: numeric list or array
-        Including values need to be plotted.
+    max_len_fvals: int
+        maximum number of points
 
     ref: list, optional
         List of reference points for optimization results, containing et
@@ -268,7 +278,7 @@ def handle_options(ax, fvals, ref, y_limits):
 
     # handle reference points
     for i_ref in ref:
-        ax.plot([0, len(fvals) - 1], [i_ref.fval, i_ref.fval], '--',
+        ax.plot([0, max_len_fvals - 1], [i_ref.fval, i_ref.fval], '--',
                 color=i_ref.color)
 
     return ax

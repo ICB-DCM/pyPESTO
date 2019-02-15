@@ -4,9 +4,11 @@ import numpy as np
 import warnings
 from .reference_points import create_references
 from .clust_color import assign_colors
+from .clust_color import handle_result_list
 
 
-def optimizer_history(result, ax=None,
+def optimizer_history(results,
+                      ax=None,
                       size=(18.5, 10.5),
                       trace_x='steps',
                       trace_y='fval',
@@ -22,7 +24,7 @@ def optimizer_history(result, ax=None,
     Parameters
     ----------
 
-    result: pypesto.Result
+    results: pypesto.Result
         Optimization result obtained by 'optimize.py'
 
     ax: matplotlib.Axes, optional
@@ -72,18 +74,22 @@ def optimizer_history(result, ax=None,
         The plot axes.
     """
 
-    # extract cost function values from result
-    (x_label, y_label, vals) = get_trace(result, trace_x, trace_y)
+    # parse input
+    (results, colors) = handle_result_list(results, colors)
+
+    for result in results:
+        # extract cost function values from result
+        (x_label, y_label, vals) = get_trace(result, trace_x, trace_y)
+
+        # compute the necessary offset for the y-axis
+        vals = get_vals(vals, scale_y, offset_y, start_indices)
+
+        # call lowlevel plot routine
+        ax = optimizer_history_lowlevel(vals, scale_y=scale_y, colors=colors,
+                                        ax=ax, size=size)
 
     # parse and apply plotting options
     ref = create_references(references=reference)
-
-    # compute the necessary offset for the y-axis
-    vals = get_vals(vals, scale_y, offset_y, start_indices)
-
-    # call lowlevel plot routine
-    ax = optimizer_history_lowlevel(vals, scale_y=scale_y, colors=colors,
-                                    ax=ax, size=size)
 
     # handle options
     ax = handle_options(ax, vals, ref, y_limits, x_label, y_label)

@@ -3,9 +3,10 @@ from matplotlib.ticker import MaxNLocator
 import numpy as np
 from .reference_points import create_references
 from .clust_color import assign_colors
+from .clust_color import handle_result_list
 
 
-def parameters(result, ax=None, free_indices_only=True, lb=None, ub=None,
+def parameters(results, ax=None, free_indices_only=True, lb=None, ub=None,
                size=None, reference=None, colors=None):
     """
     Plot parameter values.
@@ -13,7 +14,7 @@ def parameters(result, ax=None, free_indices_only=True, lb=None, ub=None,
     Parameters
     ----------
 
-    result: pypesto.Result
+    results: pypesto.Result
         Optimization result obtained by 'optimize.py'.
 
     ax: matplotlib.Axes, optional
@@ -47,15 +48,19 @@ def parameters(result, ax=None, free_indices_only=True, lb=None, ub=None,
         The plot axes.
     """
 
-    # handle results and bounds
-    (lb, ub, x_labels, fvals, xs) = \
-        handle_inputs(result=result, lb=lb, ub=ub,
-                      free_indices_only=free_indices_only)
+    # parse input
+    (results, colors) = handle_result_list(results, colors)
 
-    # call lowlevel routine
-    ax = parameters_lowlevel(xs=xs, fvals=fvals, lb=lb, ub=ub,
-                             x_labels=x_labels, ax=ax, size=size,
-                             colors=colors)
+    for result in results:
+        # handle results and bounds
+        (lb, ub, x_labels, fvals, xs) = \
+            handle_inputs(result=result, lb=lb, ub=ub,
+                          free_indices_only=free_indices_only)
+
+        # call lowlevel routine
+        ax = parameters_lowlevel(xs=xs, fvals=fvals, lb=lb, ub=ub,
+                                 x_labels=x_labels, ax=ax, size=size,
+                                 colors=colors)
 
     # parse and apply plotting options
     ref = create_references(references=reference)

@@ -3,9 +3,10 @@ from matplotlib.ticker import MaxNLocator
 import numpy as np
 from .reference_points import create_references
 from .clust_color import assign_colors
+from .clust_color import handle_result_list
 
 
-def profiles(result, fig=None, profile_indices=None, size=(18.5, 6.5),
+def profiles(results, fig=None, profile_indices=None, size=(18.5, 6.5),
              reference=None, colors=None):
     """
     Plot classical 1D profile plot (using the posterior, e.g. Gaussian like
@@ -14,8 +15,8 @@ def profiles(result, fig=None, profile_indices=None, size=(18.5, 6.5),
     Parameters
     ----------
 
-    result: pypesto.Result
-        Optimization result obtained by 'optimize.py'
+    results: list or pypesto.Result
+        list of pypesto.Result or single pypesto.Result
 
     fig: matplotlib.Figure, optional
         Figure object to use.
@@ -43,30 +44,30 @@ def profiles(result, fig=None, profile_indices=None, size=(18.5, 6.5),
         The plot axes.
     """
 
+    # parse input
+    (results, colors) = handle_result_list(results, colors=colors)
+
+    # get the correct number of parameter indices, even if not the same in
+    # all result obejcts
     if profile_indices is None:
-        profile_indices = \
-            [i for i in range(0, len(result.profile_result.list[0]))]
+        profile_indices = []
+        for result in results:
+            tmp_indices = [i for i in
+                           range(len(result.profile_result.list[0]))]
+            profile_indices = list(set().union(profile_indices, tmp_indices))
 
-    # extract ratio values values from result
-    fvals = []
-    for i_par in range(0, len(result.profile_result.list[0])):
-        if i_par in profile_indices:
-            tmp = np.array(
-                [result.profile_result.list[0][i_par].x_path[i_par, :],
-                 result.profile_result.list[0][i_par].ratio_path[:]])
-        else:
-            tmp = None
-        fvals.append(tmp)
+    # loop over results
+    for result in results:
+        fvals = handle_inputs(result, profile_indices)
 
-    # call lowlevel routine
-    ax = profiles_lowlevel(fvals=fvals, ax=fig, size=size, color=colors)
+        # call lowlevel routine
+        ax = profiles_lowlevel(fvals=fvals, ax=fig, size=size, color=colors)
 
     # parse and apply plotting options
     ref = create_references(references=reference)
 
     # plot reference points
-    if len(ref) > 0:
-        ax = handle_refrence_points(ref, ax, fvals)
+    ax = handle_reference_points(ref, ax, fvals)
 
     return ax
 
@@ -195,7 +196,7 @@ def profile_lowlevel(fvals, ax=None, size=(18.5, 6.5), color=None):
     return ax
 
 
-def handle_refrence_points(ref, ax, fvals):
+def handle_reference_points(ref, ax, fvals):
     """
     Handle reference points.
 
@@ -210,16 +211,52 @@ def handle_refrence_points(ref, ax, fvals):
         Axes object to use.
     """
 
-    # get the parameters which have profiles plotted
-    par_indices = []
-    for i_plot, fval in enumerate(fvals):
-        if fval is not None:
-            par_indices.append(i_plot)
+    if len(ref) > 0:
+        # get the parameters which have profiles plotted
+        par_indices = []
+        for i_plot, fval in enumerate(fvals):
+            if fval is not None:
+                par_indices.append(i_plot)
 
-    # loop over axes objects
-    for i_par, i_ax in enumerate(ax):
-        for i_ref in ref:
-            current_x = i_ref['x'][par_indices[i_par]]
-            i_ax.plot([current_x, current_x], [0., 1.], color=i_ref['color'])
+        # loop over axes objects
+        for i_par, i_ax in enumerate(ax):
+            for i_ref in ref:
+                current_x = i_ref['x'][par_indices[i_par]]
+                i_ax.plot([current_x, current_x], [0., 1.], color=i_ref[
+                    'color'])
 
     return ax
+
+
+def handle_inputs(result, profile_indices):
+    """
+    Handle reference points.
+
+    Parameters
+    ----------
+
+    result: pypesto.Result
+        Profile result obtained by 'profile.py'
+
+    ax: matplotlib.Axes, optional
+        Axes object to use.
+
+    Returns
+    -------
+
+    fvals: numeric list
+        Including values need to be plotted.
+    """
+
+    # extract ratio values values from result
+    fvals = []
+    for i_par in range(0, len(result.profile_result.list[0])):
+        if i_par in profile_indices:
+            tmp = np.array(
+                [result.profile_result.list[0][i_par].x_path[i_par, :],
+                 result.profile_result.list[0][i_par].ratio_path[:]])
+        else:
+            tmp = None
+        fvals.append(tmp)
+
+    return fvals
