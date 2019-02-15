@@ -1,10 +1,11 @@
 import matplotlib.pyplot as plt
 from matplotlib.ticker import MaxNLocator
 import numpy as np
-import warnings
 from .reference_points import create_references
 from .clust_color import assign_colors
-from .clust_color import handle_result_list
+from .misc import handle_result_list
+from .misc import handle_y_limits
+from .misc import handle_offset_y
 
 
 def waterfall(results,
@@ -215,19 +216,8 @@ def get_fvals(result, scale_y, offset_y, start_indices):
     # get the minimal value shich should be plotted
     min_val = np.min(fvals)
 
-    # check whether the offset specified by the user is sufficient
-    if offset_y is not None:
-        if (scale_y == 'log10') and (min_val + offset_y <= 0.):
-            warnings.warn("Offset specified by user is insufficient. "
-                          "Ignoring specified offset and using " +
-                          str(np.abs(min_val) + 1.) + " instead.")
-            offset_y = 1. - min_val
-    else:
-        # check whether scaling is lin or log10
-        if scale_y == 'lin':
-            offset_y = 0.
-        else:
-            offset_y = 1. - min_val
+    # check, whether offset can be used with this data
+    offset_y = handle_offset_y(offset_y, scale_y, min_val)
 
     # apply offset
     if offset_y != 0.:
@@ -265,16 +255,7 @@ def handle_options(ax, max_len_fvals, ref, y_limits):
     """
 
     # handle y-limits
-    if y_limits is not None:
-        y_limits = np.array(y_limits)
-        if y_limits.size == 1:
-            tmp_y_limits = ax.get_ylim()
-            y_limits = [tmp_y_limits[0], y_limits]
-        else:
-            y_limits = [y_limits[0], y_limits[1]]
-
-        # set limits
-        ax.set_ylim(y_limits)
+    ax = handle_y_limits(ax, y_limits)
 
     # handle reference points
     for i_ref in ref:

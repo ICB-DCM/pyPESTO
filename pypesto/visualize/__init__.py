@@ -9,11 +9,14 @@ import pypesto.visualize.
 
 from .reference_points import (ReferencePoint,
                                create_references)
-from .waterfall import (waterfall,
-                        waterfall_lowlevel)
 from .clust_color import (assign_clusters,
                           assign_clustered_colors,
                           assign_colors)
+from .misc import (handle_result_list,
+                   handle_offset_y,
+                   handle_y_limits)
+from .waterfall import (waterfall,
+                        waterfall_lowlevel)
 from .parameters import (parameters,
                          parameters_lowlevel)
 from .optimizer_history import (optimizer_history,
@@ -24,11 +27,14 @@ from .profiles import (profiles,
 
 __all__ = ["ReferencePoint",
            "create_references",
-           "waterfall",
-           "waterfall_lowlevel",
            "assign_clusters",
            "assign_clustered_colors",
            "assign_colors",
+           "handle_result_list",
+           "handle_offset_y",
+           "handle_y_limits",
+           "waterfall",
+           "waterfall_lowlevel",
            "parameters",
            "parameters_lowlevel",
            "optimizer_history",

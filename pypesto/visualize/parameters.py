@@ -3,7 +3,7 @@ from matplotlib.ticker import MaxNLocator
 import numpy as np
 from .reference_points import create_references
 from .clust_color import assign_colors
-from .clust_color import handle_result_list
+from .misc import handle_result_list
 
 
 def parameters(results, ax=None, free_indices_only=True, lb=None, ub=None,

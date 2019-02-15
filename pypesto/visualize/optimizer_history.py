@@ -1,10 +1,11 @@
 import matplotlib.pyplot as plt
 from matplotlib.ticker import MaxNLocator
 import numpy as np
-import warnings
 from .reference_points import create_references
 from .clust_color import assign_colors
-from .clust_color import handle_result_list
+from .misc import handle_result_list
+from .misc import handle_y_limits
+from .misc import handle_offset_y
 
 
 def optimizer_history(results,
@@ -86,19 +87,21 @@ def optimizer_history(results,
 
         # call lowlevel plot routine
         ax = optimizer_history_lowlevel(vals, scale_y=scale_y, colors=colors,
-                                        ax=ax, size=size)
+                                        ax=ax, size=size, x_label=x_label,
+                                        y_label=y_label)
 
     # parse and apply plotting options
     ref = create_references(references=reference)
 
     # handle options
-    ax = handle_options(ax, vals, ref, y_limits, x_label, y_label)
+    ax = handle_options(ax, vals, ref, y_limits)
 
     return ax
 
 
 def optimizer_history_lowlevel(vals, scale_y='log10', colors=None, ax=None,
-                               size=(18.5, 10.5)):
+                               size=(18.5, 10.5), x_label='Optimizer steps',
+                               y_label='Obejctive value'):
     """
     Plot optimizer history using list of numpy array.
 
@@ -121,6 +124,12 @@ def optimizer_history_lowlevel(vals, scale_y='log10', colors=None, ax=None,
 
     size: tuple, optional
         see waterfall
+
+    x_label: str
+        label for x-axis
+
+    y_label: str
+        label for x-axis
 
     Returns
     -------
@@ -170,6 +179,11 @@ def optimizer_history_lowlevel(vals, scale_y='log10', colors=None, ax=None,
             ax.semilogy(val[0, :], val[1, :], color=color)
         else:
             ax.plot(val[0, :], val[1, :], color=color)
+
+    # set labels
+    ax.set_xlabel(x_label)
+    ax.set_ylabel(y_label)
+    ax.set_title('Optimizer history')
 
     return ax
 
@@ -295,19 +309,8 @@ def get_vals(vals, scale_y, offset_y, start_indices):
         tmp_min = np.min(val[1, :])
         min_val = np.min([min_val, tmp_min])
 
-    # check whether the offset specified by the user is sufficient
-    if offset_y is not None:
-        if (scale_y == 'log10') and (min_val + offset_y <= 0.):
-            warnings.warn("Offset specified by user is insufficient. "
-                          "Ignoring specified offset and using " +
-                          str(np.abs(min_val) + 1.) + " instead.")
-            offset_y = 1. - min_val
-    else:
-        # check whether scaling is lin or log10
-        if scale_y == 'lin':
-            offset_y = 0
-        else:
-            offset_y = 1. - min_val
+    # check, whether offset can be used with this data
+    offset_y = handle_offset_y(offset_y, scale_y, min_val)
 
     if offset_y != 0:
         for val in vals:
@@ -316,7 +319,7 @@ def get_vals(vals, scale_y, offset_y, start_indices):
     return vals
 
 
-def handle_options(ax, vals, ref, y_limits, x_label, y_label):
+def handle_options(ax, vals, ref, y_limits):
     """
     Handle reference points.
 
@@ -336,12 +339,6 @@ def handle_options(ax, vals, ref, y_limits, x_label, y_label):
     y_limits: float or ndarray, optional
         maximum value to be plotted on the y-axis, or y-limits
 
-    x_label: str
-        label for x-axis
-
-    y_label: str
-        label for x-axis
-
     Returns
     -------
 
@@ -350,14 +347,7 @@ def handle_options(ax, vals, ref, y_limits, x_label, y_label):
     """
 
     # handle y-limits
-    if y_limits is not None:
-        y_limits = np.array(y_limits)
-        if y_limits.size == 1:
-            tmp_y_limits = ax.get_ylim()
-            y_limits = [tmp_y_limits[0], y_limits]
-        else:
-            y_limits = [y_limits[0], y_limits[1]]
-    ax.set_ylim(y_limits)
+    ax = handle_y_limits(ax, y_limits)
 
     # handle reference points
     if len(ref) > 0:
@@ -370,10 +360,5 @@ def handle_options(ax, vals, ref, y_limits, x_label, y_label):
         for i_ref in ref:
             ax.semilogy([0, max_len], [i_ref.fval, i_ref.fval], '--',
                         color=i_ref.color)
-
-    # set labels
-    ax.set_xlabel(x_label)
-    ax.set_ylabel(y_label)
-    ax.set_title('Optimizer history')
 
     return ax
