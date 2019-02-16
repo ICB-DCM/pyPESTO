@@ -1,6 +1,7 @@
 import numpy as np
 import warnings
 from .clust_color import assign_colors
+from .clust_color import assign_colors_for_result_list
 
 
 def handle_result_list(results, colors=None):
@@ -28,11 +29,16 @@ def handle_result_list(results, colors=None):
 
     # check if list
     if not isinstance(results, list):
+        # assign colors
+        colors = assign_colors([results], colors)
+
+        # create lists from results and colors for correct later handling
         results = [results]
+        colors = [colors]
     else:
         # if more than one result is passed, one color per result is used
         if colors is None:
-            colors = assign_colors(range(len(results)), colors)
+            colors = assign_colors_for_result_list(len(results), colors)
 
         # if the user passed a list of colors, does it have the correct length?
         if any(isinstance(i_color, list) for i_color in colors):

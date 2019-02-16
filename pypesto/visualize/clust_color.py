@@ -141,18 +141,59 @@ def assign_colors(vals, colors=None):
     if colors is None:
         return assign_clustered_colors(vals)
 
-    # get number of elements and use user assigned colors
+    # The user passed vlas and colors:
+    # Get number of elements and use user assigned colors
     n_vals = len(vals) if isinstance(vals, list) else vals.size
 
-    # check correct length
+    # Two usages are possible: One color for the whole data set, or one
+    # color for each value:
     if any(isinstance(i_color, list) for i_color in colors):
+        # a list of colors was used
         if len(colors) == n_vals:
             return colors
+        elif len(colors) == 1:
+            return colors * n_vals
     else:
-        if isinstance(colors, list) and len(colors) == 4:
+        # only one color was used
+        if (isinstance(colors, list) and len(colors) == 4) or \
+                (isinstance(colors, np.ndarray) and colors.size == 4):
             return [colors] * n_vals
 
     raise ('Incorrect color input. Colors must be specified either as '
            'list of [r, g, b, alpha] with length equal to function '
            'values Number of function (here: ' + str(n_vals) + '), or as '
            'one single [r, g, b, alpha] color.')
+
+
+def assign_colors_for_result_list(num_results, colors=None):
+    """
+    Assign colors or format user specified colors.
+
+    Parameters
+    ----------
+
+    num_results: int
+        number of results in list
+
+    colors: list, or RGB, optional
+        list of colors, or single color
+
+    Returns
+    -------
+
+    Col: list of RGB
+        One for each element in 'vals'.
+    """
+
+    # if the user did not specify any colors:
+    if colors is None:
+        return assign_clustered_colors(range(num_results))
+
+    # if the user specified color lies does not match the number of results
+    if len(colors) != num_results:
+        raise ('Incorrect color input. Colors must be specified either as '
+               'list of [r, g, b, alpha] with length equal to function '
+               'values Number of function (here: ' + str(n_vals) + '), or as '
+               'one single [r, g, b, alpha] color.')
+
+    return colors

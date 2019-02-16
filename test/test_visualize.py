@@ -3,6 +3,7 @@ import pypesto.visualize
 import numpy as np
 import scipy as sp
 import unittest
+import copy
 
 
 # Dfine some helping function, to have the test code more readable
@@ -100,9 +101,11 @@ result = create_optimization_result(problem)
 
 # create some artificial profiling results, which can be visualized
 result = create_profile_result(result)
+result_2 = copy.deepcopy(result)
 
 # create some real optimization results, since we need the trace
 result_with_trace = create_optimization_history(problem)
+result_with_trace_2 = copy.deepcopy(result_with_trace)
 
 # create some options for plotting
 (ref1, ref2, ref3, ref4, ref_point, alt_fig_size) = create_plotting_options()
@@ -113,6 +116,9 @@ class TestVisualize(unittest.TestCase):
     @staticmethod
     def test_waterfall():
         pypesto.visualize.waterfall(result)
+        
+        # test plotting of lists
+        pypesto.visualize.waterfall([result, result_with_trace])
 
     @staticmethod
     def test_waterfall_with_options():
@@ -125,7 +131,7 @@ class TestVisualize(unittest.TestCase):
                                     colors=[1., .3, .3, 0.5])
 
         # Test with linear scale
-        pypesto.visualize.waterfall(result,
+        pypesto.visualize.waterfall([result, result_with_trace],
                                     reference=ref3,
                                     offset_y=-2.5,
                                     start_indices=3,
@@ -148,6 +154,143 @@ class TestVisualize(unittest.TestCase):
         pypesto.visualize.waterfall_lowlevel(fvals)
         fvals = np.array(fvals)
         pypesto.visualize.waterfall_lowlevel(fvals)
+
+    @staticmethod
+    def test_parameters():
+        pypesto.visualize.parameters(result)
+        
+        # test plotting of lists
+        pypesto.visualize.parameters([result, result_with_trace])
+
+    @staticmethod
+    def test_parameters_with_options():
+        pypesto.visualize.parameters(result,
+                                     free_indices_only=False,
+                                     reference=ref_point,
+                                     size=alt_fig_size,
+                                     colors=[1., .3, .3, 0.5])
+
+        pypesto.visualize.parameters([result, result_with_trace],
+                                     free_indices_only=False,
+                                     reference=ref_point)
+
+    @staticmethod
+    def test_parameters_lowlevel():
+        # test empty input
+        xs = np.array([])
+        xs.shape = (0, 0)  # we can assume in input that xs.ndim == 2
+        fvals = np.array([])
+        pypesto.visualize.parameters_lowlevel(xs, fvals)
+
+        fvals = [0.01, 0.02, 1.01, 2.02, 2.03, 2.04, 3, 4, 4.1, 4.11]
+        xs = [[0.1, 1], [1.2, 3], [2, 4], [1.2, 4.1], [1.1, 3.5],
+              [4.2, 3.5], [1, 4], [6.2, 5], [4.3, 3], [3, 2]]
+
+        # pass lists
+        pypesto.visualize.parameters_lowlevel(xs, fvals, lb=lb, ub=ub)
+
+        # pass numpy arrays
+        fvals = np.array(fvals)
+        xs = np.array(xs)
+        pypesto.visualize.parameters_lowlevel(xs, fvals, lb=lb, ub=ub)
+
+        # test no bounds
+        pypesto.visualize.parameters_lowlevel(xs, fvals)
+
+    @staticmethod
+    def test_profiles():
+        pypesto.visualize.profiles(result)
+
+        # test plotting of lists
+        pypesto.visualize.profiles([result, result_2])
+
+    @staticmethod
+    def test_profiles_with_options():
+        pypesto.visualize.profiles(result,
+                                   reference=ref_point,
+                                   size=alt_fig_size,
+                                   colors=[1., .3, .3, 0.5])
+
+    @staticmethod
+    def test_profiles_lowlevel():
+        # test empty input
+        pypesto.visualize.profiles_lowlevel([])
+
+        # test if it runs at all
+        p1 = np.array([[2., 2.1, 2.3, 2.5, 2.7, 2.9, 3.],
+                       [0.15, 0.25, 0.7, 1., 0.8, 0.35, 0.15]])
+        p2 = np.array([[1., 1.2, 1.4, 1.5, 1.6, 1.8, 2.],
+                       [0.1, 0.2, 0.5, 1., 0.6, 0.4, 0.1]])
+        fvals = [p1, p2]
+        pypesto.visualize.profiles_lowlevel(fvals)
+
+    @staticmethod
+    def test_profile_lowlevel():
+        # test empty input
+        pypesto.visualize.profile_lowlevel(fvals=[])
+
+        # test if it runs at all
+        fvals = np.array([[2., 2.1, 2.3, 2.5, 2.7, 2.9, 3.],
+                          [0.15, 0.25, 0.7, 1., 0.8, 0.35, 0.15]])
+        pypesto.visualize.profile_lowlevel(fvals=fvals)
+
+    @staticmethod
+    def test_optimizer_history():
+        pypesto.visualize.optimizer_history(result_with_trace)
+
+        # test plotting of lists
+        pypesto.visualize.optimizer_history([result_with_trace,
+                                             result_with_trace_2])
+
+    @staticmethod
+    def test_optimizer_history_with_options():
+        # Test with y-limits as vector
+        pypesto.visualize.optimizer_history(result_with_trace,
+                                            y_limits=[-0.5, 2.5],
+                                            start_indices=[0, 1, 4, 11],
+                                            reference=ref_point,
+                                            size=alt_fig_size,
+                                            trace_x='steps',
+                                            trace_y='fval',
+                                            offset_y=-10.,
+                                            colors=[1., .3, .3, 0.5])
+
+        # Test with linear scale
+        pypesto.visualize.optimizer_history([result_with_trace,
+                                             result_with_trace_2],
+                                            y_limits=[-0.5, 2.5],
+                                            start_indices=[0, 1, 4, 11],
+                                            reference=ref_point,
+                                            size=alt_fig_size,
+                                            scale_y='lin')
+
+        # Test with y-limits as float
+        pypesto.visualize.optimizer_history(result_with_trace,
+                                            y_limits=5.,
+                                            start_indices=3,
+                                            reference=ref3,
+                                            trace_x='time',
+                                            trace_y='gradnorm',
+                                            offset_y=10.)
+
+    @staticmethod
+    def test_optimizer_history_lowlevel():
+        # test empty input
+        pypesto.visualize.optimizer_history_lowlevel([])
+
+        # pass numpy array
+        x_vals = np.array(list(range(10)))
+        y_vals = 11. * np.ones(10) - x_vals
+        vals1 = np.array([x_vals, y_vals])
+        vals2 = np.array([0.1 * np.ones(10) + x_vals, np.ones(10) + y_vals])
+        vals = [vals1, vals2]
+
+        # test with numpy arrays
+        pypesto.visualize.optimizer_history_lowlevel(vals1)
+        pypesto.visualize.optimizer_history_lowlevel(vals2)
+
+        # test with a list of arrays
+        pypesto.visualize.optimizer_history_lowlevel(vals)
 
     def test_assign_clusters(self):
         # test empty input
@@ -193,74 +336,6 @@ class TestVisualize(unittest.TestCase):
                                                        [.5, .8, .8, .5],
                                                        [.9, .1, .1, .1]])
 
-    @staticmethod
-    def test_parameters():
-        pypesto.visualize.parameters(result)
-
-    @staticmethod
-    def test_parameters_with_options():
-        pypesto.visualize.parameters(result,
-                                     free_indices_only=False,
-                                     reference=ref_point,
-                                     size=alt_fig_size,
-                                     colors=[1., .3, .3, 0.5])
-
-    @staticmethod
-    def test_parameters_lowlevel():
-        # test empty input
-        xs = np.array([])
-        xs.shape = (0, 0)  # we can assume in input that xs.ndim == 2
-        fvals = np.array([])
-        pypesto.visualize.parameters_lowlevel(xs, fvals)
-
-        fvals = [0.01, 0.02, 1.01, 2.02, 2.03, 2.04, 3, 4, 4.1, 4.11]
-        xs = [[0.1, 1], [1.2, 3], [2, 4], [1.2, 4.1], [1.1, 3.5],
-              [4.2, 3.5], [1, 4], [6.2, 5], [4.3, 3], [3, 2]]
-
-        # pass lists
-        pypesto.visualize.parameters_lowlevel(xs, fvals, lb=lb, ub=ub)
-
-        # pass numpy arrays
-        fvals = np.array(fvals)
-        xs = np.array(xs)
-        pypesto.visualize.parameters_lowlevel(xs, fvals, lb=lb, ub=ub)
-
-        # test no bounds
-        pypesto.visualize.parameters_lowlevel(xs, fvals)
-
-    @staticmethod
-    def test_profiles():
-        pypesto.visualize.profiles(result)
-
-    @staticmethod
-    def test_profiles_with_options():
-        pypesto.visualize.profiles(result,
-                                   reference=ref_point,
-                                   size=alt_fig_size,
-                                   colors=[1., .3, .3, 0.5])
-
-    @staticmethod
-    def test_profiles_lowlevel():
-        # test empty input
-        pypesto.visualize.profiles_lowlevel([])
-
-        # test if it runs at all
-        p1 = np.array([[2., 2.1, 2.3, 2.5, 2.7, 2.9, 3.],
-                       [0.15, 0.25, 0.7, 1., 0.8, 0.35, 0.15]])
-        p2 = np.array([[1., 1.2, 1.4, 1.5, 1.6, 1.8, 2.],
-                       [0.1, 0.2, 0.5, 1., 0.6, 0.4, 0.1]])
-        fvals = [p1, p2]
-        pypesto.visualize.profiles_lowlevel(fvals)
-
-    @staticmethod
-    def test_profile_lowlevel():
-        # test empty input
-        pypesto.visualize.profile_lowlevel(fvals=[])
-
-        # test if it runs at all
-        fvals = np.array([[2., 2.1, 2.3, 2.5, 2.7, 2.9, 3.],
-                          [0.15, 0.25, 0.7, 1., 0.8, 0.35, 0.15]])
-        pypesto.visualize.profile_lowlevel(fvals=fvals)
 
     @staticmethod
     def test_reference_points():
@@ -279,57 +354,19 @@ class TestVisualize(unittest.TestCase):
                                             x=ref2[0], fval=ref2[1])
 
     @staticmethod
-    def test_optimizer_history():
-        pypesto.visualize.optimizer_history(result_with_trace)
+    def test_handle_results_list():
+        # Test empty arguments
+        pypesto.visualize.handle_result_list([])
 
-    @staticmethod
-    def test_optimizer_history_with_options():
-        # Test with y-limits as vector
-        pypesto.visualize.optimizer_history(result_with_trace,
-                                            y_limits=[-0.5, 2.5],
-                                            start_indices=[0, 1, 4, 11],
-                                            reference=ref_point,
-                                            size=alt_fig_size,
-                                            trace_x='steps',
-                                            trace_y='fval',
-                                            offset_y=-10.,
-                                            colors=[1., .3, .3, 0.5])
+        # Test single argument
+        # Test single argument
+        pypesto.visualize.handle_result_list(result)
 
-        # Test with linear scale
-        pypesto.visualize.optimizer_history(result_with_trace,
-                                            y_limits=[-0.5, 2.5],
-                                            start_indices=[0, 1, 4, 11],
-                                            reference=ref_point,
-                                            size=alt_fig_size,
-                                            scale_y='lin')
-
-        # Test with y-limits as float
-        pypesto.visualize.optimizer_history(result_with_trace,
-                                            y_limits=5.,
-                                            start_indices=3,
-                                            reference=ref3,
-                                            trace_x='time',
-                                            trace_y='gradnorm',
-                                            offset_y=10.)
-
-    @staticmethod
-    def test_optimizer_history_lowlevel():
-        # test empty input
-        pypesto.visualize.optimizer_history_lowlevel([])
-
-        # pass numpy array
-        x_vals = np.array(list(range(10)))
-        y_vals = 11. * np.ones(10) - x_vals
-        vals1 = np.array([x_vals, y_vals])
-        vals2 = np.array([0.1 * np.ones(10) + x_vals, np.ones(10) + y_vals])
-        vals = [vals1, vals2]
-
-        # test with numpy arrays
-        pypesto.visualize.optimizer_history_lowlevel(vals1)
-        pypesto.visualize.optimizer_history_lowlevel(vals2)
-
-        # test with a list of arrays
-        pypesto.visualize.optimizer_history_lowlevel(vals)
+        # Test handling of a real list
+        res_list = [result]
+        pypesto.visualize.handle_result_list(res_list)
+        res_list.append(result_with_trace)
+        pypesto.visualize.handle_result_list(res_list)
 
 
 if __name__ == '__main__':

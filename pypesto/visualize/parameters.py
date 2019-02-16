@@ -14,8 +14,8 @@ def parameters(results, ax=None, free_indices_only=True, lb=None, ub=None,
     Parameters
     ----------
 
-    results: pypesto.Result
-        Optimization result obtained by 'optimize.py'.
+    results: pypesto.Result or list
+        Optimization result obtained by 'optimize.py' or list of those
 
     ax: matplotlib.Axes, optional
         Axes object to use.
@@ -51,7 +51,7 @@ def parameters(results, ax=None, free_indices_only=True, lb=None, ub=None,
     # parse input
     (results, colors) = handle_result_list(results, colors)
 
-    for result in results:
+    for j, result in enumerate(results):
         # handle results and bounds
         (lb, ub, x_labels, fvals, xs) = \
             handle_inputs(result=result, lb=lb, ub=ub,
@@ -60,7 +60,7 @@ def parameters(results, ax=None, free_indices_only=True, lb=None, ub=None,
         # call lowlevel routine
         ax = parameters_lowlevel(xs=xs, fvals=fvals, lb=lb, ub=ub,
                                  x_labels=x_labels, ax=ax, size=size,
-                                 colors=colors)
+                                 colors=colors[j])
 
     # parse and apply plotting options
     ref = create_references(references=reference)

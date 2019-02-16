@@ -57,11 +57,11 @@ def profiles(results, fig=None, profile_indices=None, size=(18.5, 6.5),
             profile_indices = list(set().union(profile_indices, tmp_indices))
 
     # loop over results
-    for result in results:
+    for j, result in enumerate(results):
         fvals = handle_inputs(result, profile_indices)
 
         # call lowlevel routine
-        ax = profiles_lowlevel(fvals=fvals, ax=fig, size=size, color=colors)
+        ax = profiles_lowlevel(fvals=fvals, ax=fig, size=size, color=colors[j])
 
     # parse and apply plotting options
     ref = create_references(references=reference)

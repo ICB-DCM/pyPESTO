@@ -23,8 +23,8 @@ def waterfall(results,
     Parameters
     ----------
 
-    results: pypesto.Result
-        Optimization result obtained by 'optimize.py'
+    results: pypesto.Result or list
+        Optimization result obtained by 'optimize.py' or list of those
 
     ax: matplotlib.Axes, optional
         Axes object to use.
@@ -69,14 +69,14 @@ def waterfall(results,
     max_len_fvals = np.array([0])
 
     # loop over results
-    for result in results:
+    for j, result in enumerate(results):
         # extract specific cost function values from result
         fvals = get_fvals(result, scale_y, offset_y, start_indices)
         max_len_fvals = np.max([max_len_fvals, len(fvals)])
 
         # call lowlevel plot routine
         ax = waterfall_lowlevel(fvals=fvals, scale_y=scale_y, ax=ax, size=size,
-                                colors=colors)
+                                colors=colors[j])
 
     # parse and apply plotting options
     ref = create_references(references=reference)
@@ -134,8 +134,7 @@ def waterfall_lowlevel(fvals, scale_y='log10', ax=None, size=(18.5, 10.5),
     # assign colors
     # note: this has to happen before sorting
     # to get the same colors in different plots
-    if colors is None:
-        colors = assign_colors(fvals)
+    colors = assign_colors(fvals, colors=colors)
 
     # sort
     indices = sorted(range(n_fvals),

@@ -25,8 +25,8 @@ def optimizer_history(results,
     Parameters
     ----------
 
-    results: pypesto.Result
-        Optimization result obtained by 'optimize.py'
+    results: pypesto.Result or list
+        Optimization result obtained by 'optimize.py' or list of those
 
     ax: matplotlib.Axes, optional
         Axes object to use.
@@ -78,7 +78,7 @@ def optimizer_history(results,
     # parse input
     (results, colors) = handle_result_list(results, colors)
 
-    for result in results:
+    for j, result in enumerate(results):
         # extract cost function values from result
         (x_label, y_label, vals) = get_trace(result, trace_x, trace_y)
 
@@ -86,8 +86,9 @@ def optimizer_history(results,
         vals = get_vals(vals, scale_y, offset_y, start_indices)
 
         # call lowlevel plot routine
-        ax = optimizer_history_lowlevel(vals, scale_y=scale_y, colors=colors,
-                                        ax=ax, size=size, x_label=x_label,
+        ax = optimizer_history_lowlevel(vals, scale_y=scale_y, ax=ax,
+                                        colors=colors[j],
+                                        size=size, x_label=x_label,
                                         y_label=y_label)
 
     # parse and apply plotting options
