@@ -16,7 +16,8 @@ def waterfall(results,
               offset_y=None,
               start_indices=None,
               reference=None,
-              colors=None):
+              colors=None,
+              legends=None):
     """
     Plot waterfall plot.
 
@@ -55,6 +56,9 @@ def waterfall(results,
         color or list of colors for plotting. If not set, clustering is done
         and colors are assigned automatically
 
+    legends: list or str
+        Labels for line plots, one label per result object
+
     Returns
     -------
 
@@ -63,7 +67,7 @@ def waterfall(results,
     """
 
     # parse input
-    (results, colors) = handle_result_list(results, colors)
+    (results, colors, legends) = handle_result_list(results, colors, legends)
 
     # plotting routine needs the maximum number of multistarts
     max_len_fvals = np.array([0])
@@ -76,7 +80,7 @@ def waterfall(results,
 
         # call lowlevel plot routine
         ax = waterfall_lowlevel(fvals=fvals, scale_y=scale_y, ax=ax, size=size,
-                                colors=colors[j])
+                                colors=colors[j], legend_text=legends[j])
 
     # parse and apply plotting options
     ref = create_references(references=reference)
@@ -88,7 +92,7 @@ def waterfall(results,
 
 
 def waterfall_lowlevel(fvals, scale_y='log10', ax=None, size=(18.5, 10.5),
-                       colors=None):
+                       colors=None, legend_text=None):
     """
     Plot waterfall plot using list of function values.
 
@@ -111,6 +115,9 @@ def waterfall_lowlevel(fvals, scale_y='log10', ax=None, size=(18.5, 10.5),
         list of colors, or single color
         color or list of colors for plotting. If not set, clustering is done
         and colors are assigned automatically
+
+    legend_text: str
+        Label for line plots
 
     Returns
     -------
@@ -150,13 +157,20 @@ def waterfall_lowlevel(fvals, scale_y='log10', ax=None, size=(18.5, 10.5),
 
     # plot points
     for j in range(n_fvals):
+        # parse data for plotting
         j_fval = indices[j]
         color = colors[j_fval]
         fval = fvals[j_fval]
-        if scale_y == 'log10':
-            ax.semilogy(j, fval, color=color, marker='o')
+        if j == 0:
+            tmp_legend = legend_text
         else:
-            ax.plot(j, fval, color=color, marker='o')
+            tmp_legend = None
+
+        # line plot (linear or logarithmic)
+        if scale_y == 'log10':
+            ax.semilogy(j, fval, color=color, marker='o', label=tmp_legend)
+        else:
+            ax.plot(j, fval, color=color, marker='o', label=tmp_legend)
 
     # labels
     ax.set_xlabel('Ordered optimizer run')

@@ -18,7 +18,8 @@ def optimizer_history(results,
                       colors=None,
                       y_limits=None,
                       start_indices=None,
-                      reference=None):
+                      reference=None,
+                      legends=None):
     """
     Plot waterfall plot.
 
@@ -68,6 +69,9 @@ def optimizer_history(results,
         List of reference points for optimization results, containing et
         least a function value fval
 
+    legends: list or str
+        Labels for line plots, one label per result object
+
     Returns
     -------
 
@@ -76,7 +80,7 @@ def optimizer_history(results,
     """
 
     # parse input
-    (results, colors) = handle_result_list(results, colors)
+    (results, colors, legends) = handle_result_list(results, colors, legends)
 
     for j, result in enumerate(results):
         # extract cost function values from result
@@ -89,7 +93,7 @@ def optimizer_history(results,
         ax = optimizer_history_lowlevel(vals, scale_y=scale_y, ax=ax,
                                         colors=colors[j],
                                         size=size, x_label=x_label,
-                                        y_label=y_label)
+                                        y_label=y_label, legend_text=legends[j])
 
     # parse and apply plotting options
     ref = create_references(references=reference)
@@ -102,7 +106,7 @@ def optimizer_history(results,
 
 def optimizer_history_lowlevel(vals, scale_y='log10', colors=None, ax=None,
                                size=(18.5, 10.5), x_label='Optimizer steps',
-                               y_label='Obejctive value'):
+                               y_label='Obejctive value', legend_text=None):
     """
     Plot optimizer history using list of numpy array.
 
@@ -131,6 +135,9 @@ def optimizer_history_lowlevel(vals, scale_y='log10', colors=None, ax=None,
 
     y_label: str
         label for x-axis
+
+    legend_text: str
+        Label for line plots
 
     Returns
     -------
@@ -174,12 +181,19 @@ def optimizer_history_lowlevel(vals, scale_y='log10', colors=None, ax=None,
     # plot
     ax.xaxis.set_major_locator(MaxNLocator(integer=True))
     for j, val in enumerate(vals):
+        # collect and parse data
         j_fval = indices[j]
         color = colors[j_fval]
-        if scale_y == 'log10':
-            ax.semilogy(val[0, :], val[1, :], color=color)
+        if j == 0:
+            tmp_legend = legend_text
         else:
-            ax.plot(val[0, :], val[1, :], color=color)
+            tmp_legend = None
+
+        # line plots
+        if scale_y == 'log10':
+            ax.semilogy(val[0, :], val[1, :], color=color, label=tmp_legend)
+        else:
+            ax.plot(val[0, :], val[1, :], color=color, label=tmp_legend)
 
     # set labels
     ax.set_xlabel(x_label)

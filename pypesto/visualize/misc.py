@@ -4,7 +4,7 @@ from .clust_color import assign_colors
 from .clust_color import assign_colors_for_result_list
 
 
-def handle_result_list(results, colors=None):
+def handle_result_list(results, colors=None, legends=None):
     """
     assigns colors to a list of results
 
@@ -17,6 +17,9 @@ def handle_result_list(results, colors=None):
     colors: list, optional
         list of RGB colors
 
+    legends: str or list
+        labels for line plots
+
     Returns
     -------
 
@@ -25,6 +28,9 @@ def handle_result_list(results, colors=None):
 
     colors: list of RGB
         One for each element in 'results'.
+
+    legends: str or list
+        labels for line plots
     """
 
     # check if list
@@ -35,6 +41,8 @@ def handle_result_list(results, colors=None):
         # create lists from results and colors for correct later handling
         results = [results]
         colors = [colors]
+        if not isinstance(legends, list):
+            legends=[legends]
     else:
         # if more than one result is passed, one color per result is used
         if colors is None:
@@ -47,7 +55,16 @@ def handle_result_list(results, colors=None):
                        'length of the color list must match he length of the '
                        'results list. Stopping.')
 
-    return results, colors
+        # check whether list of legends has the correct length
+        if not isinstance(legends, list) and len(results) > 1:
+            raise ('List of results passed, but only one label. Please pass a '
+                   'list of labels with the same length as the list of '
+                   'results. Stopping.')
+        if len(legends) != len(results):
+            raise ('List of results passed and list of labels do not have the'
+                   ' same length but should. Stopping.')
+
+    return results, colors, legends
 
 
 def handle_offset_y(offset_y, scale_y, min_val):

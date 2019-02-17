@@ -7,7 +7,7 @@ from .misc import handle_result_list
 
 
 def parameters(results, ax=None, free_indices_only=True, lb=None, ub=None,
-               size=None, reference=None, colors=None):
+               size=None, reference=None, colors=None, legends=None):
     """
     Plot parameter values.
 
@@ -41,6 +41,9 @@ def parameters(results, ax=None, free_indices_only=True, lb=None, ub=None,
         color or list of colors for plotting. If not set, clustering is done
         and colors are assigned automatically
 
+    legends: list or str
+        Labels for line plots, one label per result object
+
     Returns
     -------
 
@@ -49,7 +52,7 @@ def parameters(results, ax=None, free_indices_only=True, lb=None, ub=None,
     """
 
     # parse input
-    (results, colors) = handle_result_list(results, colors)
+    (results, colors, legends) = handle_result_list(results, colors, legends)
 
     for j, result in enumerate(results):
         # handle results and bounds
@@ -60,7 +63,7 @@ def parameters(results, ax=None, free_indices_only=True, lb=None, ub=None,
         # call lowlevel routine
         ax = parameters_lowlevel(xs=xs, fvals=fvals, lb=lb, ub=ub,
                                  x_labels=x_labels, ax=ax, size=size,
-                                 colors=colors[j])
+                                 colors=colors[j], legend_text=legends[j])
 
     # parse and apply plotting options
     ref = create_references(references=reference)
@@ -106,7 +109,7 @@ def parameters_lowlevel(xs, fvals, lb=None, ub=None, x_labels=None, ax=None,
         One for each element in 'fvals'.
 
     legend_text: str
-        legendLabel for line plots
+        Label for line plots
 
     Returns
     -------

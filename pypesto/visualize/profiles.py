@@ -7,7 +7,7 @@ from .misc import handle_result_list
 
 
 def profiles(results, fig=None, profile_indices=None, size=(18.5, 6.5),
-             reference=None, colors=None):
+             reference=None, colors=None, legends=None):
     """
     Plot classical 1D profile plot (using the posterior, e.g. Gaussian like
     profile)
@@ -37,6 +37,9 @@ def profiles(results, fig=None, profile_indices=None, size=(18.5, 6.5),
         color or list of colors for plotting. If not set, clustering is done
         and colors are assigned automatically
 
+    legends: list or str
+        Labels for line plots, one label per result object
+
     Returns
     -------
 
@@ -45,7 +48,7 @@ def profiles(results, fig=None, profile_indices=None, size=(18.5, 6.5),
     """
 
     # parse input
-    (results, colors) = handle_result_list(results, colors=colors)
+    (results, colors, legends) = handle_result_list(results, colors, legends)
 
     # get the correct number of parameter indices, even if not the same in
     # all result obejcts
@@ -61,7 +64,8 @@ def profiles(results, fig=None, profile_indices=None, size=(18.5, 6.5),
         fvals = handle_inputs(result, profile_indices)
 
         # call lowlevel routine
-        ax = profiles_lowlevel(fvals=fvals, ax=fig, size=size, color=colors[j])
+        ax = profiles_lowlevel(fvals=fvals, ax=fig, size=size,
+                               color=colors[j], legend_text=legends[j])
 
     # parse and apply plotting options
     ref = create_references(references=reference)
@@ -72,7 +76,8 @@ def profiles(results, fig=None, profile_indices=None, size=(18.5, 6.5),
     return ax
 
 
-def profiles_lowlevel(fvals, ax=None, size=(18.5, 6.5), color=None):
+def profiles_lowlevel(fvals, ax=None, size=(18.5, 6.5), color=None,
+                      legend_text=None):
     """
     Lowlevel routine for profile plotting, working with a list of arrays
     only, opening different axes objects in case
@@ -96,6 +101,9 @@ def profiles_lowlevel(fvals, ax=None, size=(18.5, 6.5), color=None):
 
     color: RGB, optional
         color for profiles in plot.
+
+    legend_text: str
+        Label for line plots
 
     Returns
     -------
@@ -130,11 +138,18 @@ def profiles_lowlevel(fvals, ax=None, size=(18.5, 6.5), color=None):
 
     counter = 0
     for i_plot, fval in enumerate(fvals):
+        # handle legend
+        if i_plot == 0:
+            tmp_legend = legend_text
+        else:
+            tmp_legend = None
 
+        # plot if data
         if fval is not None:
             ax.append(fig.add_subplot(rows, columns, counter + 1))
             ax[counter] = profile_lowlevel(fval, ax[counter],
-                                           size=size, color=color)
+                                           size=size, color=color,
+                                           legend_text=tmp_legend)
 
             # labels
             ax[counter].set_xlabel(f'Parameter {i_plot} value')
@@ -143,11 +158,13 @@ def profiles_lowlevel(fvals, ax=None, size=(18.5, 6.5), color=None):
             else:
                 ax[counter].set_yticklabels([''])
             counter += 1
+            tmp_legend = None
 
     return ax
 
 
-def profile_lowlevel(fvals, ax=None, size=(18.5, 6.5), color=None):
+def profile_lowlevel(fvals, ax=None, size=(18.5, 6.5), color=None,
+                     legend_text=tmp_legend):
     """
     Lowlevel routine for plotting one profile, working with a numpy array only
 
@@ -166,6 +183,9 @@ def profile_lowlevel(fvals, ax=None, size=(18.5, 6.5), color=None):
 
     color: RGB, optional
         color for profiles in plot.
+
+    legend_text: str
+        Label for line plots
 
     Returns
     -------
@@ -191,7 +211,7 @@ def profile_lowlevel(fvals, ax=None, size=(18.5, 6.5), color=None):
     # plot
     if fvals.size != 0:
         ax.xaxis.set_major_locator(MaxNLocator(integer=True))
-        ax.plot(fvals[0, :], fvals[1, :], color=color[0])
+        ax.plot(fvals[0, :], fvals[1, :], color=color[0], label=legend_text)
 
     return ax
 
