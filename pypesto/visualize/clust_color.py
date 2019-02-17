@@ -193,7 +193,7 @@ def assign_colors_for_result_list(num_results, colors=None):
     if len(colors) != num_results:
         raise ('Incorrect color input. Colors must be specified either as '
                'list of [r, g, b, alpha] with length equal to function '
-               'values Number of function (here: ' + str(n_vals) + '), or as '
-               'one single [r, g, b, alpha] color.')
+               'values Number of function (here: ' + str(num_results) + '), '
+               'or as one single [r, g, b, alpha] color.')
 
     return colors

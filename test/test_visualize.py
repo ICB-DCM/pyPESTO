@@ -116,7 +116,7 @@ class TestVisualize(unittest.TestCase):
     @staticmethod
     def test_waterfall():
         pypesto.visualize.waterfall(result)
-        
+
         # test plotting of lists
         pypesto.visualize.waterfall([result, result_with_trace])
 
@@ -158,7 +158,7 @@ class TestVisualize(unittest.TestCase):
     @staticmethod
     def test_parameters():
         pypesto.visualize.parameters(result)
-        
+
         # test plotting of lists
         pypesto.visualize.parameters([result, result_with_trace])
 
@@ -335,7 +335,6 @@ class TestVisualize(unittest.TestCase):
         pypesto.visualize.assign_colors(fvals, colors=[[.5, .9, .9, .3],
                                                        [.5, .8, .8, .5],
                                                        [.9, .1, .1, .1]])
-
 
     @staticmethod
     def test_reference_points():
