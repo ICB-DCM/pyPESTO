@@ -259,6 +259,6 @@ def handle_options(ax, max_len_fvals, ref, y_limits):
     # handle reference points
     for i_ref in ref:
         ax.plot([0, max_len_fvals - 1], [i_ref.fval, i_ref.fval], '--',
-                color=i_ref.color)
+                color=i_ref.color, label=i_ref.legend)
 
     return ax

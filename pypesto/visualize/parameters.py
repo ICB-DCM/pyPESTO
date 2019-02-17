@@ -68,13 +68,15 @@ def parameters(results, ax=None, free_indices_only=True, lb=None, ub=None,
     # plot reference points
     for i_ref in ref:
         ax = parameters_lowlevel([i_ref['x']], [i_ref['fval']], ax=ax,
-                                 colors=i_ref['color'])
+                                 colors=i_ref['color'],
+                                 legend_text=i_ref.legend)
+
 
     return ax
 
 
 def parameters_lowlevel(xs, fvals, lb=None, ub=None, x_labels=None, ax=None,
-                        size=None, colors=None):
+                        size=None, colors=None, legend_text=None):
     """
     Plot parameters plot using list of parameters.
 
@@ -102,6 +104,9 @@ def parameters_lowlevel(xs, fvals, lb=None, ub=None, x_labels=None, ax=None,
 
     colors: list of RGB
         One for each element in 'fvals'.
+
+    legend_text: str
+        legendLabel for line plots
 
     Returns
     -------
@@ -132,9 +137,14 @@ def parameters_lowlevel(xs, fvals, lb=None, ub=None, x_labels=None, ax=None,
     # plot parameters
     ax.xaxis.set_major_locator(MaxNLocator(integer=True))
     for j_x, x in reversed(list(enumerate(xs))):
+        if j_x == 0:
+            tmp_legend = legend_text
+        else:
+            tmp_legend = None
         ax.plot(x, parameters_ind,
                 color=colors[j_x],
-                marker='o')
+                marker='o',
+                label=tmp_legend)
 
     plt.yticks(parameters_ind, x_labels)
 

@@ -20,19 +20,29 @@ class ReferencePoint(dict):
     color: RGB, optional
         Color which should be used for reference point.
 
+    auto_color: boolean
+        flag indicating whether color for this reference point should be
+        assigned automatically or whether it was assigned by user
+
+    legend: str
+        legend text for reference point
+
     """
 
     def __init__(self,
                  reference=None,
                  x=None,
                  fval=None,
-                 color=None):
+                 color=None,
+                 legend=None):
         super().__init__()
 
         if (reference is not None) and ((x is not None) or (fval is not None)):
             raise ("Please specify either an argument for reference or for x "
                    "and fval, but not both.")
 
+        # assign legend, my be None
+        self.legend = legend
         if isinstance(reference, dict) or \
                 isinstance(reference, ReferencePoint):
             # Handle case of dict or ReferencePoint

@@ -222,8 +222,8 @@ def handle_reference_points(ref, ax, fvals):
         for i_par, i_ax in enumerate(ax):
             for i_ref in ref:
                 current_x = i_ref['x'][par_indices[i_par]]
-                i_ax.plot([current_x, current_x], [0., 1.], color=i_ref[
-                    'color'])
+                i_ax.plot([current_x, current_x], [0., 1.],
+                          color=i_ref.color, label=i_ref.legend)
 
     return ax
 
