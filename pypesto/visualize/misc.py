@@ -62,7 +62,7 @@ def handle_result_list(results, colors=None, legends=None):
             # No legends were passed: create some custom legends
             legends = []
             for i_leg in range(len(results)):
-                legends.append(['Result ' + str(i_leg)])
+                legends.append('Result ' + str(i_leg))
         else:
             # legends were passed: check length
             if isinstance(legends, list):

@@ -176,6 +176,7 @@ def waterfall_lowlevel(fvals, scale_y='log10', ax=None, size=(18.5, 10.5),
     ax.set_xlabel('Ordered optimizer run')
     ax.set_ylabel('Function value')
     ax.set_title('Waterfall plot')
+    ax.legend()
 
     return ax
 
