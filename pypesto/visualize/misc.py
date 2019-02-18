@@ -33,43 +33,48 @@ def handle_result_list(results, colors=None, legends=None):
         labels for line plots
     """
 
-    # check if list
-    if not isinstance(results, list):
-        # assign colors
-        colors = assign_colors([results], colors)
-
-        # create lists from results and colors for correct later handling
+    # check how many results were passed
+    single_result = False
+    legend_error = False
+    if isinstance(results, list):
+        if len(results) == 1:
+            single_result = True
+    else:
+        single_result = True
         results = [results]
+
+    # handle results according to their number
+    if single_result:
+        # assign colors and create list for later handling
+        if colors is not None:
+            colors = assign_colors(results, colors)
         colors = [colors]
+
+        # create list of legends for later handling
         if not isinstance(legends, list):
             legends = [legends]
     else:
-        # if more than one result is passed, one color per result is used
-        if colors is None:
-            colors = assign_colors_for_result_list(len(results), colors)
-
-        # if the user passed a list of colors, does it have the correct length?
-        if any(isinstance(i_color, list) for i_color in colors):
-            if len(colors) != len(colors):
-                raise ('List of results and list of colors is passed. The '
-                       'length of the color list must match he length of the '
-                       'results list. Stopping.')
+        # if more than one result is passed, we use one color per result
+        colors = assign_colors_for_result_list(len(results), colors)
 
         # check whether list of legends has the correct length
         if legends is None:
-            # create some custom legends
+            # No legends were passed: create some custom legends
             legends = []
             for i_leg in range(len(results)):
                 legends.append(['Result ' + str(i_leg)])
+        else:
+            # legends were passed: check length
+            if isinstance(legends, list):
+                if len(legends) != len(results):
+                    legend_error = True
+            else:
+                legend_error = True
 
-        # errors due to incorrect lengths
-        if not isinstance(legends, list) and len(results) > 1:
-            raise ('List of results passed, but only one label. Please pass a '
-                   'list of labels with the same length as the list of '
-                   'results. Stopping.')
-        if len(legends) != len(results):
-            raise ('List of results passed and list of labels do not have the'
-                   ' same length but should. Stopping.')
+    # size of legend list and size of results does not match
+    if legend_error:
+        raise ('List of results passed and list of labels do not have the'
+               ' same length but should. Stopping.')
 
     return results, colors, legends
 

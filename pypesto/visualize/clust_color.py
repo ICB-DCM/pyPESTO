@@ -1,5 +1,4 @@
 from scipy import cluster
-import matplotlib.colors as plt_colors
 import matplotlib.cm as cm
 import numpy as np
 
@@ -70,47 +69,44 @@ def assign_clustered_colors(vals):
         return []
 
     # assign clusters
-    clust, clustsize, ind_clust = assign_clusters(vals)
+    clust, cluster_size, cluster_indices = assign_clusters(vals)
 
-    # assign colors
-    vmax = max(clust) - sum(clustsize == 1)
-    cnorm = plt_colors.Normalize(vmin=0, vmax=vmax)
-    scalarmap = cm.ScalarMappable(norm=cnorm)
+    # create list of colors, which has the correct shape
+    n_clusters = max(clust) - sum(cluster_size == 1)
 
-    # colors for each cluster and one-size clusters
-    cols_clust = scalarmap.to_rgba(range(vmax + 1))
+    # fill color array from colormap
+    colormap = cm.ScalarMappable().to_rgba
+    color_list = colormap(np.linspace(0., 1., n_clusters))
 
-    # grey color for 1-size clusters as the last color in 'cols_clust'
-    cols_clust[vmax] = (0.7, 0.7, 0.7, 1)
+    # We have clustered the results. However, clusters may have size 1,
+    # so we need to rearrange ind_clust in order to map all 1-element-clusters
+    # to the cluster with index n_clusters
 
-    # pre-array of indices for colors
-    ind_col = np.zeros(len(ind_clust))
+    # create a dummy variable with the colors
+    colors = np.zeros((clust.size, 4))
 
-    # number of colors assigned to cluster
-    sum_col = 0
-
-    # assign color indices for each point
-    for iind, value_ind in enumerate(ind_clust):
-        # if cluster size > 1
-        if clustsize[value_ind] > 1:
-            # assign a color with is not grey
-            ind_col[iind] = sum_col
-            # if element is not the last one in 'ind_col'
-            if iind < len(ind_clust) - 1:
-                # if the next element does not belongs to the seem cluster
-                if value_ind != ind_clust[iind + 1]:
-                    # use the next color
-                    sum_col = sum_col + 1
-        # if cluster size = 1
+    # run through the cluster_indices and collect which element
+    # is in 1-element-clusters, and which is in real clusters
+    no_clusters = []
+    real_clusters = []
+    for index in cluster_indices:
+        if cluster_size[index] == 1:
+            no_clusters.append(index)
         else:
-            # use grey
-            ind_col[iind] = vmax
+            real_clusters.append(index)
+    real_clusters = np.unique(real_clusters)
 
-    # indices for colors
-    ind_col = [int(ind) for ind in ind_col]
-    col = cols_clust[ind_col]
+    # assign colors to real clusters
+    for icol, iclust in enumerate(real_clusters):
+        ind_of_iclust = np.argwhere(cluster_indices == iclust).flatten()
+        colors[ind_of_iclust, :] = color_list[icol, :]
 
-    return col
+    # assing color to non-clustered indices
+    for noclust in no_clusters:
+        ind_of_noclust = np.argwhere(noclust in no_clusters).flatten()
+        colors[ind_of_noclust, :] = [0.7, 0.7, 0.7, 1]
+
+    return colors
 
 
 def assign_colors(vals, colors=None):
@@ -135,34 +131,41 @@ def assign_colors(vals, colors=None):
 
     # sanity checks
     if vals is None or len(vals) == 0:
-        return []
+        return np.array([])
 
     # if the user did not specify any colors:
     if colors is None:
         return assign_clustered_colors(vals)
 
-    # The user passed vlas and colors:
+    # The user passed values and colors: parse them first!
+    # we want everything to be numpy arrays, to not check everytime wther a
+    # list was passed or an ndarray
+    colors = np.array(colors)
+
     # Get number of elements and use user assigned colors
     n_vals = len(vals) if isinstance(vals, list) else vals.size
 
     # Two usages are possible: One color for the whole data set, or one
     # color for each value:
-    if any(isinstance(i_color, list) for i_color in colors):
-        # a list of colors was used
-        if len(colors) == n_vals:
-            return colors
-        elif len(colors) == 1:
-            return colors * n_vals
+    if colors.size == 4:
+        # Only on color was passed: flatten in case and repeat n_vals times
+        if colors.ndim == 2:
+            colors = colors[0]
+        return np.array([colors] * n_vals)
     else:
-        # only one color was used
-        if (isinstance(colors, list) and len(colors) == 4) or \
-                (isinstance(colors, np.ndarray) and colors.size == 4):
-            return [colors] * n_vals
+        if colors.shape[1] == 4:
+            if n_vals == colors.shape[0]:
+                return colors
+        elif colors.shape[0] == 4:
+            colors = np.transpose(colors)
+            if n_vals == colors.shape[0]:
+                return colors
 
-    raise ('Incorrect color input. Colors must be specified either as '
-           'list of [r, g, b, alpha] with length equal to function '
-           'values Number of function (here: ' + str(n_vals) + '), or as '
-           'one single [r, g, b, alpha] color.')
+        # Shape of array did not match n_vals. Error due to size mismatch:
+        raise ('Incorrect color input. Colors must be specified either as '
+               'list of [r, g, b, alpha] with length equal to function '
+               'values Number of function (here: ' + str(n_vals) + '), or as '
+               'one single [r, g, b, alpha] color.')
 
 
 def assign_colors_for_result_list(num_results, colors=None):
@@ -187,7 +190,10 @@ def assign_colors_for_result_list(num_results, colors=None):
 
     # if the user did not specify any colors:
     if colors is None:
-        return assign_clustered_colors(range(num_results))
+        dummy_clusters = np.array(list(range(num_results)) * 2)
+        colors = assign_colors(dummy_clusters)
+        real_indices = list(range(int(colors.shape[0] / 2)))
+        return colors[real_indices]
 
     # if the user specified color lies does not match the number of results
     if len(colors) != num_results:
