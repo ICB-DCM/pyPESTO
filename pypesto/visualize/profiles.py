@@ -164,7 +164,7 @@ def profiles_lowlevel(fvals, ax=None, size=(18.5, 6.5), color=None,
 
 
 def profile_lowlevel(fvals, ax=None, size=(18.5, 6.5), color=None,
-                     legend_text=tmp_legend):
+                     legend_text=None):
     """
     Lowlevel routine for plotting one profile, working with a numpy array only
 

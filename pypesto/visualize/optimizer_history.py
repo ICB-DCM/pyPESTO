@@ -93,7 +93,8 @@ def optimizer_history(results,
         ax = optimizer_history_lowlevel(vals, scale_y=scale_y, ax=ax,
                                         colors=colors[j],
                                         size=size, x_label=x_label,
-                                        y_label=y_label, legend_text=legends[j])
+                                        y_label=y_label,
+                                        legend_text=legends[j])
 
     # parse and apply plotting options
     ref = create_references(references=reference)

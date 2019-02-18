@@ -74,7 +74,6 @@ def parameters(results, ax=None, free_indices_only=True, lb=None, ub=None,
                                  colors=i_ref['color'],
                                  legend_text=i_ref.legend)
 
-
     return ax
 
 

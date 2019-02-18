@@ -42,7 +42,7 @@ def handle_result_list(results, colors=None, legends=None):
         results = [results]
         colors = [colors]
         if not isinstance(legends, list):
-            legends=[legends]
+            legends = [legends]
     else:
         # if more than one result is passed, one color per result is used
         if colors is None:
@@ -56,6 +56,13 @@ def handle_result_list(results, colors=None, legends=None):
                        'results list. Stopping.')
 
         # check whether list of legends has the correct length
+        if legends is None:
+            # create some custom legends
+            legends = []
+            for i_leg in range(len(results)):
+                legends.append(['Result ' + str(i_leg)])
+
+        # errors due to incorrect lengths
         if not isinstance(legends, list) and len(results) > 1:
             raise ('List of results passed, but only one label. Please pass a '
                    'list of labels with the same length as the list of '
