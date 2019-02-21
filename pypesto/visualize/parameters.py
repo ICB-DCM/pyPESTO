@@ -3,7 +3,7 @@ from matplotlib.ticker import MaxNLocator
 import numpy as np
 from .reference_points import create_references
 from .clust_color import assign_colors
-from .misc import handle_result_list
+from .misc import process_result_list
 
 
 def parameters(results, ax=None, free_indices_only=True, lb=None, ub=None,
@@ -36,7 +36,7 @@ def parameters(results, ax=None, free_indices_only=True, lb=None, ub=None,
         List of reference points for optimization results, containing et
         least a function value fval
 
-    colors: list, or RGB, optional
+    colors: list, or RGBA, optional
         list of colors, or single color
         color or list of colors for plotting. If not set, clustering is done
         and colors are assigned automatically
@@ -52,7 +52,7 @@ def parameters(results, ax=None, free_indices_only=True, lb=None, ub=None,
     """
 
     # parse input
-    (results, colors, legends) = handle_result_list(results, colors, legends)
+    (results, colors, legends) = process_result_list(results, colors, legends)
 
     for j, result in enumerate(results):
         # handle results and bounds
@@ -104,7 +104,7 @@ def parameters_lowlevel(xs, fvals, lb=None, ub=None, x_labels=None, ax=None,
     size: tuple, optional
         see parameters
 
-    colors: list of RGB
+    colors: list of RGBA
         One for each element in 'fvals'.
 
     legend_text: str
@@ -166,7 +166,8 @@ def parameters_lowlevel(xs, fvals, lb=None, ub=None, x_labels=None, ax=None,
 
 def handle_inputs(result, free_indices_only, lb=None, ub=None):
     """
-    Handle bounds and results.
+    Computes the correct bounds for the parameter indices to be plotted and
+    outputs the corrsponding parameters and their labels
 
     Parameters
     ----------
@@ -185,8 +186,17 @@ def handle_inputs(result, free_indices_only, lb=None, ub=None):
     Returns
     -------
 
-    ax: matplotlib.Axes
-        The plot axes.
+    lb, ub: ndarray
+        Dimension either result.problem.dim or result.problem.dim_full.
+
+    x_labels: list of str
+        ytick labels to be applied later on
+
+    fvals: ndarray
+        objective function values which are needed for plotting later
+
+    xs: ndarray
+        parameter values which will be plotted later
     """
 
     # retrieve results

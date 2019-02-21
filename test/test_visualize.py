@@ -6,7 +6,7 @@ import unittest
 import copy
 
 
-# Dfine some helping function, to have the test code more readable
+# Define some helper functions, to have the test code more readable
 def create_problem():
     # define a pypesto objective (with tracing options)
     objective_options = pypesto.ObjectiveOptions(trace_record=True,
@@ -353,19 +353,19 @@ class TestVisualize(unittest.TestCase):
                                             x=ref2[0], fval=ref2[1])
 
     @staticmethod
-    def test_handle_results_list():
+    def test_process_result_list():
         # Test empty arguments
-        pypesto.visualize.handle_result_list([])
+        pypesto.visualize.process_result_list([])
 
         # Test single argument
         # Test single argument
-        pypesto.visualize.handle_result_list(result)
+        pypesto.visualize.process_result_list(result)
 
         # Test handling of a real list
         res_list = [result]
-        pypesto.visualize.handle_result_list(res_list)
+        pypesto.visualize.process_result_list(res_list)
         res_list.append(result_with_trace)
-        pypesto.visualize.handle_result_list(res_list)
+        pypesto.visualize.process_result_list(res_list)
 
 
 if __name__ == '__main__':

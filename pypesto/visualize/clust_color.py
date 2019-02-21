@@ -60,7 +60,7 @@ def assign_clustered_colors(vals):
     Returns
     -------
 
-    Col: list of RGB
+    colors: list of RGBA
         One for each element in 'vals'.
     """
 
@@ -79,29 +79,23 @@ def assign_clustered_colors(vals):
     color_list = colormap(np.linspace(0., 1., n_clusters))
 
     # We have clustered the results. However, clusters may have size 1,
-    # so we need to rearrange ind_clust in order to map all 1-element-clusters
-    # to the cluster with index n_clusters
+    # so we need to rearrange cluster_indices in order to map all
+    # 1-element-clusters to the cluster with index n_clusters
 
     # create a dummy variable with the colors
     colors = np.zeros((clust.size, 4))
 
     # run through the cluster_indices and collect which element
     # is in 1-element-clusters, and which is in real clusters
-    no_clusters = []
-    real_clusters = []
-    for index in cluster_indices:
-        if cluster_size[index] == 1:
-            no_clusters.append(index)
-        else:
-            real_clusters.append(index)
-    real_clusters = np.unique(real_clusters)
+    no_clusters = np.where(cluster_size == 1)[0]
+    real_clusters = np.unique(np.where(cluster_size > 1)[0])
 
     # assign colors to real clusters
     for icol, iclust in enumerate(real_clusters):
         ind_of_iclust = np.argwhere(cluster_indices == iclust).flatten()
         colors[ind_of_iclust, :] = color_list[icol, :]
 
-    # assing color to non-clustered indices
+    # assign color to non-clustered indices
     for noclust in no_clusters:
         ind_of_noclust = np.argwhere(noclust in no_clusters).flatten()
         colors[ind_of_noclust, :] = [0.7, 0.7, 0.7, 1]
@@ -119,13 +113,13 @@ def assign_colors(vals, colors=None):
     vals: numeric list or array
         List to be clustered and assigned colors.
 
-    colors: list, or RGB, optional
+    colors: list, or RGBA, optional
         list of colors, or single color
 
     Returns
     -------
 
-    Col: list of RGB
+    colors: list of RGBA
         One for each element in 'vals'.
     """
 
@@ -153,9 +147,8 @@ def assign_colors(vals, colors=None):
             colors = colors[0]
         return np.array([colors] * n_vals)
     else:
-        if colors.shape[1] == 4:
-            if n_vals == colors.shape[0]:
-                return colors
+        if colors.shape[1] == 4 and n_vals == colors.shape[0]:
+            return colors
         elif colors.shape[0] == 4:
             colors = np.transpose(colors)
             if n_vals == colors.shape[0]:
@@ -170,7 +163,8 @@ def assign_colors(vals, colors=None):
 
 def assign_colors_for_result_list(num_results, colors=None):
     """
-    Assign colors or format user specified colors.
+    Creates a list of colors for a list of pypesto.Result objects or checks
+    a user-provided list of colors and uses this if everything is ok
 
     Parameters
     ----------
@@ -178,13 +172,13 @@ def assign_colors_for_result_list(num_results, colors=None):
     num_results: int
         number of results in list
 
-    colors: list, or RGB, optional
+    colors: list, or RGBA, optional
         list of colors, or single color
 
     Returns
     -------
 
-    Col: list of RGB
+    colors: list of RGBA
         One for each element in 'vals'.
     """
 

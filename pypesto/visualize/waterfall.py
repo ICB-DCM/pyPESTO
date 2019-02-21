@@ -3,9 +3,9 @@ from matplotlib.ticker import MaxNLocator
 import numpy as np
 from .reference_points import create_references
 from .clust_color import assign_colors
-from .misc import handle_result_list
-from .misc import handle_y_limits
-from .misc import handle_offset_y
+from .misc import process_result_list
+from .misc import process_y_limits
+from .misc import process_offset_y
 
 
 def waterfall(results,
@@ -51,7 +51,7 @@ def waterfall(results,
         List of reference points for optimization results, containing et
         least a function value fval
 
-    colors: list, or RGB, optional
+    colors: list, or RGBA, optional
         list of colors, or single color
         color or list of colors for plotting. If not set, clustering is done
         and colors are assigned automatically
@@ -67,7 +67,7 @@ def waterfall(results,
     """
 
     # parse input
-    (results, colors, legends) = handle_result_list(results, colors, legends)
+    (results, colors, legends) = process_result_list(results, colors, legends)
 
     # plotting routine needs the maximum number of multistarts
     max_len_fvals = np.array([0])
@@ -85,7 +85,7 @@ def waterfall(results,
     # parse and apply plotting options
     ref = create_references(references=reference)
 
-    # handle options
+    # apply changes specified be the user to the axis object
     ax = handle_options(ax, max_len_fvals, ref, y_limits)
 
     return ax
@@ -111,7 +111,7 @@ def waterfall_lowlevel(fvals, scale_y='log10', ax=None, size=(18.5, 10.5),
     size: tuple, optional
         see waterfall
 
-    colors: list, or RGB, optional
+    colors: list, or RGBA, optional
         list of colors, or single color
         color or list of colors for plotting. If not set, clustering is done
         and colors are assigned automatically
@@ -183,7 +183,7 @@ def waterfall_lowlevel(fvals, scale_y='log10', ax=None, size=(18.5, 10.5),
 
 def get_fvals(result, scale_y, offset_y, start_indices):
     """
-    Get function values from results.
+    Get function values to be plotted later from results.
 
     Parameters
     ----------
@@ -227,11 +227,11 @@ def get_fvals(result, scale_y, offset_y, start_indices):
     # reduce to indices for which the user asked
     fvals = fvals[start_indices]
 
-    # get the minimal value shich should be plotted
+    # get the minimal value which should be plotted
     min_val = np.min(fvals)
 
     # check, whether offset can be used with this data
-    offset_y = handle_offset_y(offset_y, scale_y, min_val)
+    offset_y = process_offset_y(offset_y, scale_y, min_val)
 
     # apply offset
     if offset_y != 0.:
@@ -243,7 +243,9 @@ def get_fvals(result, scale_y, offset_y, start_indices):
 
 def handle_options(ax, max_len_fvals, ref, y_limits):
     """
-    Handle reference points.
+    Get the limits for the y-axis, plots the reference points, will do
+    more at a later time point. This function is there to apply whatever
+    kind of post-plotting transformations to the axis object.
 
     Parameters
     ----------
@@ -255,7 +257,7 @@ def handle_options(ax, max_len_fvals, ref, y_limits):
         maximum number of points
 
     ref: list, optional
-        List of reference points for optimization results, containing et
+        List of reference points for optimization results, containing at
         least a function value fval
 
     y_limits: float or ndarray, optional
@@ -269,7 +271,7 @@ def handle_options(ax, max_len_fvals, ref, y_limits):
     """
 
     # handle y-limits
-    ax = handle_y_limits(ax, y_limits)
+    ax = process_y_limits(ax, y_limits)
 
     # handle reference points
     for i_ref in ref:

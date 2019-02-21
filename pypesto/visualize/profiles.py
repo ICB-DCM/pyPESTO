@@ -3,7 +3,7 @@ from matplotlib.ticker import MaxNLocator
 import numpy as np
 from .reference_points import create_references
 from .clust_color import assign_colors
-from .misc import handle_result_list
+from .misc import process_result_list
 
 
 def profiles(results, fig=None, profile_indices=None, size=(18.5, 6.5),
@@ -32,7 +32,7 @@ def profiles(results, fig=None, profile_indices=None, size=(18.5, 6.5),
         List of reference points for optimization results, containing et
         least a function value fval
 
-    colors: list, or RGB, optional
+    colors: list, or RGBA, optional
         list of colors, or single color
         color or list of colors for plotting. If not set, clustering is done
         and colors are assigned automatically
@@ -48,7 +48,7 @@ def profiles(results, fig=None, profile_indices=None, size=(18.5, 6.5),
     """
 
     # parse input
-    (results, colors, legends) = handle_result_list(results, colors, legends)
+    (results, colors, legends) = process_result_list(results, colors, legends)
 
     # get the correct number of parameter indices, even if not the same in
     # all result obejcts
@@ -99,7 +99,7 @@ def profiles_lowlevel(fvals, ax=None, size=(18.5, 6.5), color=None,
         Figure size (width, height) in inches. Is only applied when no ax
         object is specified
 
-    color: RGB, optional
+    color: RGBA, optional
         color for profiles in plot.
 
     legend_text: str
@@ -181,7 +181,7 @@ def profile_lowlevel(fvals, ax=None, size=(18.5, 6.5), color=None,
         Figure size (width, height) in inches. Is only applied when no ax
         object is specified
 
-    color: RGB, optional
+    color: RGBA, optional
         color for profiles in plot.
 
     legend_text: str
@@ -250,7 +250,8 @@ def handle_reference_points(ref, ax, fvals):
 
 def handle_inputs(result, profile_indices):
     """
-    Handle reference points.
+    Retrieves the values of the profiles to be plotted later from a
+    pypesto.ProfileResult object
 
     Parameters
     ----------
@@ -258,8 +259,8 @@ def handle_inputs(result, profile_indices):
     result: pypesto.Result
         Profile result obtained by 'profile.py'
 
-    ax: matplotlib.Axes, optional
-        Axes object to use.
+    profile_indices: list of integer values
+        list of integer values specifying which profiles should be plotted
 
     Returns
     -------

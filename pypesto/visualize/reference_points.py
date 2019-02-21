@@ -4,7 +4,7 @@ import numpy as np
 class ReferencePoint(dict):
     """
     Reference point for plotting. Should contain a parameter value and an
-    objective function value.
+    objective function value, may alos contain a color and a legend.
 
     Can be used like a dict.
 
@@ -17,7 +17,7 @@ class ReferencePoint(dict):
     fval: float
         Function value, fun(x), for reference parameters.
 
-    color: RGB, optional
+    color: RGBA, optional
         Color which should be used for reference point.
 
     auto_color: boolean
@@ -26,7 +26,6 @@ class ReferencePoint(dict):
 
     legend: str
         legend text for reference point
-
     """
 
     def __init__(self,
@@ -96,6 +95,22 @@ class ReferencePoint(dict):
 
 
 def assign_colors(ref):
+    """
+    Assigns colors to reference points, depending on user settings
+
+    Parameters
+    ----------
+
+    ref: list of ReferencePoint
+        Reference points, which need to get their color property filled
+
+    Returns
+    -------
+
+    ref: list of ReferencePoint
+        Reference points, which got their color property filled
+    """
+
     # loop over reference points
     auto_color_count = 0
     for i_ref in ref:
@@ -117,8 +132,7 @@ def assign_colors(ref):
 
 def create_references(references=None, x=None, fval=None):
     """
-    This function handles the options, which are passed to the plotting
-    routines
+    This function creates a list of reference point objects from user inputs
 
     Parameters
     ----------
@@ -131,6 +145,12 @@ def create_references(references=None, x=None, fval=None):
 
     fval: float, optional
         Objective function value which should be used for reference point
+
+    Returns
+    -------
+
+    colors: list of RGBA
+        One for each element in 'vals'.
     """
 
     # parse input (reference)

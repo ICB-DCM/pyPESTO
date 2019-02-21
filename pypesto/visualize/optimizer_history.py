@@ -3,9 +3,9 @@ from matplotlib.ticker import MaxNLocator
 import numpy as np
 from .reference_points import create_references
 from .clust_color import assign_colors
-from .misc import handle_result_list
-from .misc import handle_y_limits
-from .misc import handle_offset_y
+from .misc import process_result_list
+from .misc import process_y_limits
+from .misc import process_offset_y
 
 
 def optimizer_history(results,
@@ -21,7 +21,9 @@ def optimizer_history(results,
                       reference=None,
                       legends=None):
     """
-    Plot waterfall plot.
+    Plot history of optimizer. Can plot either the history of the cost
+    function or of the gradient norm, over either the optimizer steps or
+    the computation time.
 
     Parameters
     ----------
@@ -53,7 +55,7 @@ def optimizer_history(results,
         Offset for the y-axis-values, as these are plotted on a log10-scale
         Will be computed automatically if necessary
 
-    colors: list, or RGB, optional
+    colors: list, or RGBA, optional
         list of colors, or single color
         color or list of colors for plotting. If not set, clustering is done
         and colors are assigned automatically
@@ -80,7 +82,7 @@ def optimizer_history(results,
     """
 
     # parse input
-    (results, colors, legends) = handle_result_list(results, colors, legends)
+    (results, colors, legends) = process_result_list(results, colors, legends)
 
     for j, result in enumerate(results):
         # extract cost function values from result
@@ -107,20 +109,20 @@ def optimizer_history(results,
 
 def optimizer_history_lowlevel(vals, scale_y='log10', colors=None, ax=None,
                                size=(18.5, 10.5), x_label='Optimizer steps',
-                               y_label='Obejctive value', legend_text=None):
+                               y_label='Objective value', legend_text=None):
     """
-    Plot optimizer history using list of numpy array.
+    Plot optimizer history using list of numpy arrays.
 
     Parameters
     ----------
 
-    vals:  list of numpy arrays
+    vals: list of numpy arrays
         list of 2xn-arrays (x_values and y_values of the trace)
 
     scale_y: str, optional
         May be logarithmic or linear ('log10' or 'lin')
 
-    colors: list, or RGB, optional
+    colors: list, or RGBA, optional
         list of colors, or single color
         color or list of colors for plotting. If not set, clustering is done
         and colors are assigned automatically
@@ -135,7 +137,7 @@ def optimizer_history_lowlevel(vals, scale_y='log10', colors=None, ax=None,
         label for x-axis
 
     y_label: str
-        label for x-axis
+        label for y-axis
 
     legend_text: str
         Label for line plots
@@ -176,8 +178,7 @@ def optimizer_history_lowlevel(vals, scale_y='log10', colors=None, ax=None,
     colors = assign_colors(fvals, colors)
 
     # sort
-    indices = sorted(range(n_fvals),
-                     key=lambda j: fvals[j])
+    indices = sorted(range(n_fvals), key=lambda j: fvals[j])
 
     # plot
     ax.xaxis.set_major_locator(MaxNLocator(integer=True))
@@ -206,7 +207,7 @@ def optimizer_history_lowlevel(vals, scale_y='log10', colors=None, ax=None,
 
 def get_trace(result, trace_x, trace_y):
     """
-    Handle bounds and results.
+    Get the values of the optimizer trace from the pypesto.Result object
 
     Parameters
     ----------
@@ -229,6 +230,12 @@ def get_trace(result, trace_x, trace_y):
 
     ax: matplotlib.Axes
         The plot axes.
+
+    x_label: str
+        label for x-axis to be plotted later
+
+    y_label: str
+        label for y-axis to be plotted later
     """
 
     # get data frames
@@ -275,13 +282,14 @@ def get_trace(result, trace_x, trace_y):
 
 def get_vals(vals, scale_y, offset_y, start_indices):
     """
-    Handle bounds and results.
+    Postprocesses the values of the optimization history, depending on the
+    options set by the user (e.g. scale_y, offset_y, start_indices)
 
     Parameters
     ----------
 
     vals: list
-        list of 2xn-numpy arrays
+        list of numpy arrays of dimension 2 x len(start_indices)
 
     scale_y: str, optional
         May be logarithmic or linear ('log10' or 'lin')
@@ -290,17 +298,14 @@ def get_vals(vals, scale_y, offset_y, start_indices):
         offset for the y-axis, as this is supposed to be in log10-scale
 
     start_indices: list or int
-        list of integers specifying the multistart to be plotted or
-        int specifying up to which start index should be plotted
+        list of integers specifying the multi start indices to be plotted or
+        int specifying up to which start index trajectories should be plotted
 
     Returns
     -------
 
     vals: list
-        list of 2xn-numpy arrays
-
-    offset_y:
-        offset for the y-axis, as this is supposed to be in log10-scale
+        list of numpy arrays of size 2 x len(start_indices)
     """
 
     # get list of indices
@@ -319,14 +324,14 @@ def get_vals(vals, scale_y, offset_y, start_indices):
     # reduce values to listed values
     vals = [val for i, val in enumerate(vals) if i in start_indices]
 
-    # get the minimal value shich should be plotted
+    # get the minimal value which should be plotted
     min_val = np.inf
     for val in vals:
         tmp_min = np.min(val[1, :])
         min_val = np.min([min_val, tmp_min])
 
     # check, whether offset can be used with this data
-    offset_y = handle_offset_y(offset_y, scale_y, min_val)
+    offset_y = process_offset_y(offset_y, scale_y, min_val)
 
     if offset_y != 0:
         for val in vals:
@@ -337,7 +342,9 @@ def get_vals(vals, scale_y, offset_y, start_indices):
 
 def handle_options(ax, vals, ref, y_limits):
     """
-    Handle reference points.
+    Get the limits for the y-axis, plots the reference points, will do
+    more at a later time point. This function is there to apply whatever
+    kind of post-plotting transformations to the axis object.
 
     Parameters
     ----------
@@ -347,7 +354,7 @@ def handle_options(ax, vals, ref, y_limits):
         least a function value fval
 
     vals: list
-        list of 2xn-numpy arrays
+        list of numpy arrays of size 2 x number of values
 
     ax: matplotlib.Axes, optional
         Axes object to use.
@@ -363,7 +370,7 @@ def handle_options(ax, vals, ref, y_limits):
     """
 
     # handle y-limits
-    ax = handle_y_limits(ax, y_limits)
+    ax = process_y_limits(ax, y_limits)
 
     # handle reference points
     if len(ref) > 0:

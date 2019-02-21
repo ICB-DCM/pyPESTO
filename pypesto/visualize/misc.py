@@ -4,9 +4,9 @@ from .clust_color import assign_colors
 from .clust_color import assign_colors_for_result_list
 
 
-def handle_result_list(results, colors=None, legends=None):
+def process_result_list(results, colors=None, legends=None):
     """
-    assigns colors to a list of results
+    assigns colors and legends to a list of results, chekc user provided lists
 
     Parameters
     ----------
@@ -15,7 +15,7 @@ def handle_result_list(results, colors=None, legends=None):
         list of pypesto.Result objects or a single pypesto.Result
 
     colors: list, optional
-        list of RGB colors
+        list of RGBA colors
 
     legends: str or list
         labels for line plots
@@ -23,13 +23,13 @@ def handle_result_list(results, colors=None, legends=None):
     Returns
     -------
 
-    results: pypesto.result or list
-       list of pypesto.result objects
+    results: list of pypesto.Result
+       list of pypesto.Result objects
 
-    colors: list of RGB
+    colors: list of RGBA
         One for each element in 'results'.
 
-    legends: str or list
+    legends: list of str
         labels for line plots
     """
 
@@ -64,7 +64,7 @@ def handle_result_list(results, colors=None, legends=None):
             for i_leg in range(len(results)):
                 legends.append('Result ' + str(i_leg))
         else:
-            # legends were passed: check length
+            # legends were passed by user: check length
             if isinstance(legends, list):
                 if len(legends) != len(results):
                     legend_error = True
@@ -79,7 +79,31 @@ def handle_result_list(results, colors=None, legends=None):
     return results, colors, legends
 
 
-def handle_offset_y(offset_y, scale_y, min_val):
+def process_offset_y(offset_y, scale_y, min_val):
+    """
+    compute offset for y-axis, depend on user settings
+
+    Parameters
+    ----------
+
+    offset_y: float
+       value for offsetting the later plotted values, in order to ensure
+       positivity if a semilog-plot is used
+
+    min_val: float
+       Can be 'lin' or 'log10', specifying whether values should be plotted
+       on linear or on log10-scale
+
+    min_val: float
+        Smallest value to be plotted
+
+    Returns
+    -------
+
+    offset_y: float
+       value for offsetting the later plotted values, in order to ensure
+       positivity if a semilog-plot is used
+    """
 
     # check whether the offset specified by the user is sufficient
     if offset_y is not None:
@@ -100,8 +124,30 @@ def handle_offset_y(offset_y, scale_y, min_val):
     return offset_y
 
 
-def handle_y_limits(ax, y_limits):
-    # handle y-limits
+def process_y_limits(ax, y_limits):
+    """
+    apply user specified limits of y-axis
+
+    Parameters
+    ----------
+
+    ax: matplotlib.Axes, optional
+        Axes object to use.
+
+    y_limits: ndarray
+       y_limits, minimum and maximum, for current axes object
+
+    min_val: float
+        Smallest value to be plotted
+
+    Returns
+    -------
+
+    ax: matplotlib.Axes, optional
+        Axes object to use.
+    """
+
+    # apply y-limits, if they were specified by the user
     if y_limits is not None:
         y_limits = np.array(y_limits)
         if y_limits.size == 1:
