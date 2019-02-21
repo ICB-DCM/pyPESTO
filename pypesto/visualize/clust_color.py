@@ -142,7 +142,7 @@ def assign_colors(vals, colors=None):
     # Two usages are possible: One color for the whole data set, or one
     # color for each value:
     if colors.size == 4:
-        # Only on color was passed: flatten in case and repeat n_vals times
+        # Only one color was passed: flatten in case and repeat n_vals times
         if colors.ndim == 2:
             colors = colors[0]
         return np.array([colors] * n_vals)
