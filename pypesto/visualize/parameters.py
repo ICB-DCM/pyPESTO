@@ -29,7 +29,7 @@ def parameters(result, ax=None, free_indices_only=True, lb=None, ub=None,
     size: tuple, optional
         Figure size (width, height) in inches. Is only applied when no ax
         object is specified
-        
+
     balance_alpha: bool (optional)
         Flag indicating whether alpha for large clusters should be reduced to
         avoid overplotting (default: True)
@@ -64,6 +64,7 @@ def parameters(result, ax=None, free_indices_only=True, lb=None, ub=None,
     return parameters_lowlevel(xs=xs, fvals=fvals, lb=lb, ub=ub,
                                x_labels=x_labels, ax=ax, size=size,
                                balance_alpha=balance_alpha)
+
 
 def parameters_lowlevel(xs, fvals, lb=None, ub=None, x_labels=None, ax=None,
                         size=None, balance_alpha=True):
