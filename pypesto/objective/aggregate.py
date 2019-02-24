@@ -173,5 +173,3 @@ def _check_boolean_value_consistent(objectives, attr):
     if len(values) > 1:
         raise ValueError(f'{attr} of all objectives must have a consistent '
                          f'value!')
-
-
