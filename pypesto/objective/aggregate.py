@@ -49,7 +49,7 @@ class AggregateObjective(Objective):
 
         # check if all objectives consistently accept sensi orders in fun/res
         # and adopt the same behaviour in aggregate
-        for attributes in [
+        for attr in [
             'fun', 'grad', 'hess', 'hessp', 'res', 'sres'
         ]:
             if any(
@@ -67,7 +67,17 @@ class AggregateObjective(Objective):
                 callable(getattr(objective, attr))
                 for objective in objectives
             ):
-                init_kwargs[attr] = getattr(self, f'aggregate_{attr}')
+                aggregate_fun = f'aggregate_{attr}'
+                if (
+                        attr == 'fun'
+                        and init_kwargs['fun_accept_sensi_orders']
+                ) or (
+                        attr == 'res'
+                        and init_kwargs['res_accept_sensi_orders']
+                ):
+                    aggregate_fun += '_sensi_orders'
+
+                init_kwargs[attr] = getattr(self, aggregate_fun)
             else:
                 raise ValueError(f'{attr} has incompatible types across '
                                  f'instances!')
@@ -80,8 +90,9 @@ class AggregateObjective(Objective):
             for objective in self.objectives
         ]
         return {
-            key: sum(rval[key]) for rval in rvals
-            for key in rvals[0]
+            key: sum(rval[key] for rval in rvals)
+            for key in ['fval', 'grad', 'hess']
+            if key in rvals[0]
         }
 
     def aggregate_res_sensi_orders(self, x, sensi_orders):
@@ -115,9 +126,16 @@ class AggregateObjective(Objective):
         return result
 
     def aggregate_res(self, x):
-        res = self.objectives[0].res(x)
+        if self.sres is True:  # integrated mode
+            res = self.objectives[0].res(x)[0]
+        else:
+            res = self.objectives[0].res(x)
         for iobj in range(1, len(self.objectives)):
-            res = np.hstack([res, np.asarray(self.objectives[iobj].res(x))])
+            if self.sres is True:  # integrated mode
+                res_stack = np.asarray(self.objectives[iobj].res(x))[0]
+            else:
+                res_stack = np.asarray(self.objectives[iobj].res(x))
+            res = np.hstack([res, res_stack])
 
         return res
 
@@ -129,7 +147,13 @@ class AggregateObjective(Objective):
         return sres
 
     def aggregate_fun(self, x):
-        return sum(objective.fun(x) for objective in self.objectives)
+        if self.grad is True:  # integrated mode
+            return tuple(
+                sum(objective.fun(x)[idx] for objective in self.objectives)
+                for idx in range(2+self.hess)
+            )
+        else:
+            return sum(objective.fun(x) for objective in self.objectives)
 
     def aggregate_grad(self, x):
         return sum(objective.grad(x) for objective in self.objectives)
