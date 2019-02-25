@@ -13,6 +13,8 @@ Release notes
 * Introduce PrePostProcessor to more reliably handle pre- and
   post-processing.
 * Fix problems with simulating for multiple conditions.
+* Add more visualization routines and options for those (colors, 
+  reference points, plotting of lists of result obejcts)
 
 
 0.0.3 (2019-01-30)
