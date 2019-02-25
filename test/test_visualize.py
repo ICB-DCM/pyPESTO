@@ -126,7 +126,7 @@ class TestVisualize(unittest.TestCase):
         result_2 = create_optimization_result()
 
         # alternative figure size and plotting options
-        (ref1, ref2, ref3, ref4, ref_point) = create_plotting_options()
+        (_, _, ref3, _, ref_point) = create_plotting_options()
         alt_fig_size = (9.0, 8.0)
 
         # Test with y-limits as vector
@@ -181,7 +181,7 @@ class TestVisualize(unittest.TestCase):
         result_2 = create_optimization_result()
 
         # alternative figure size and plotting options
-        (ref1, ref2, ref3, ref4, ref_point) = create_plotting_options()
+        (_, _, _, _, ref_point) = create_plotting_options()
         alt_fig_size = (9.0, 8.0)
 
         # test calls with specific options
@@ -240,7 +240,7 @@ class TestVisualize(unittest.TestCase):
         result = create_profile_result()
 
         # alternative figure size and plotting options
-        (ref1, ref2, ref3, ref4, ref_point) = create_plotting_options()
+        (_, _, _, _, ref_point) = create_plotting_options()
         alt_fig_size = (9.0, 8.0)
 
         # test a call with some specific options
@@ -292,7 +292,7 @@ class TestVisualize(unittest.TestCase):
         result_2 = create_optimization_history()
 
         # alternative figure size and plotting options
-        (ref1, ref2, ref3, ref4, ref_point) = create_plotting_options()
+        (_, _, ref3, _, ref_point) = create_plotting_options()
         alt_fig_size = (9.0, 8.0)
 
         # Test with y-limits as vector
@@ -390,7 +390,7 @@ class TestVisualize(unittest.TestCase):
     @staticmethod
     def test_reference_points():
         # create the necessary results
-        (ref1, ref2, ref3, ref4, ref_point) = create_plotting_options()
+        (ref1, ref2, ref3, ref4, _) = create_plotting_options()
 
         # Try conversion from different inputs
         pypesto.visualize.create_references(ref1)
