@@ -3,7 +3,6 @@ import pypesto.visualize
 import numpy as np
 import scipy as sp
 import unittest
-import copy
 
 
 # Define some helper functions, to have the test code more readable
