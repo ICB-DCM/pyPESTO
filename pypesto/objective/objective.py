@@ -227,6 +227,7 @@ class Objective:
 
             if sensi_orders == (0,):
                 result[FVAL] -= prior['prior_fun']
+
             if sensi_orders == (1,):
                 result[GRAD] *= prior['chainrule']
                 result[GRAD] -= prior['prior_grad']
@@ -456,6 +457,13 @@ class Objective:
         """
         sres = self(x, (1,), MODE_RES)
         return sres
+
+    def get_prior(self,x,sensi_order):
+        """
+        Get the prior value at x.
+        """
+        prior_value = self.prior(x,sensi_order)
+        return prior_value
 
     # The following are functions that are called by other parts in
     # pypesto to modify the objective state, e.g. set its history, or

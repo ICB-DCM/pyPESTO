@@ -125,6 +125,7 @@ def minimize(
         # append to result
         result.optimize_result.append(optimizer_result)
 
+    #if optimizer_result['x']
     # sort by best fval
     result.optimize_result.sort()
 

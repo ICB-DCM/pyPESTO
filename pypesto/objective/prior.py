@@ -3,7 +3,10 @@ define your prior
 
 """
 import numpy as np
-
+from LogicleScale import (logicleTransform,
+                          logicleInverseTransform,
+                          logicleGradient,
+                          logicleInverseGradient)
 
 class Prior():
 
@@ -18,7 +21,7 @@ class Prior():
         # estimate_list: array of 0,1, prior works only on estimate
         # parameter array([0,1,1,0,0,...])
         # scale_list: list of parameter scales from model
-        # ['lin','log10','log',...]
+        # ['lin','log10','logE','logicle',...]
 
         self.priorType_list = priorType_list
         self.priorParameters_list = priorParameters_list
@@ -63,16 +66,23 @@ class Prior():
                           if j == 'logE']
             x[logE_index] = 10**x[logE_index]-1
 
+            T=100
+            W=1
+            M=4
+            A=-W
+
+            logicle_index = [i for i, j in enumerate(self.scale_list)
+                           if j == 'logicle']
+            x[logicle_index] = logicleInverseTransform(x[logicle_index],T,W,M,A)
+
         else:
             # default: all parameters are in linear scale
             log10_index = None
             log_index = None
             logE_index = None
+            logicle_index = None
 
         # TODO
-        # check if all parameters are already zero
-        # print(x)
-        # if x.all()<1e-4: flag=1
         # Hessian
 
         norm_index_1 = [i_par for i_par,
@@ -85,37 +95,42 @@ class Prior():
         norm_index = np.intersect1d(norm_index_1, estimate)
         lap_index = np.intersect1d(lap_index_1, estimate)
 
-        from scipy.stats import multivariate_normal, laplace
-
+        # LOGARITHMIC NORMAL PRIOR
         fun_norm = 0
-        grad_norm = []
-        for i_par in norm_index:
-            mean = self.priorParameters_list[i_par][0]
-            cov = self.priorParameters_list[i_par][1]
+        if len(norm_index) > 0:
+            mean = np.array([self.priorParameters_list[i_par]
+                         for i_par in norm_index])[:,0]
+            cov = np.array([self.priorParameters_list[i_par]
+                            for i_par in norm_index])[:,1]
 
-            fun_norm += np.log(multivariate_normal.pdf(x[i_par],
-                                                       mean=mean,
-                                                       cov=cov))
+            norm_log = -0.5*np.log(2*np.pi*cov**2) - (x[norm_index]-mean)**2/(2*cov**2)
 
-            grad_norm.append(fun_norm * (mean-x[i_par])/cov**2)
+            fun_norm = sum(norm_log)
 
+            grad_norm = norm_log * (mean-x[norm_index])/cov**2
+
+        # LOGARITHMIC LAPLACE PRIOR
         fun_lap = 0
-        grad_lap = []
-        for i_par in lap_index:
-            loc = self.priorParameters_list[i_par][0]
-            scale = self.priorParameters_list[i_par][1]
+        if len(lap_index) > 0:
+            loc = np.array([self.priorParameters_list[i_par]
+                            for i_par in lap_index])[:,0]
 
-            fun_lap += np.log(laplace.pdf(x[i_par], loc=loc, scale=scale))
+            scale = np.array([self.priorParameters_list[i_par]
+                            for i_par in lap_index])[:,1]
 
-            grad_lap.append(np.sign(loc-x[i_par])/scale)
+            fun_lap = sum(- 1 / scale * np.abs(x[lap_index] - loc))#+ np.log(1 / (2 * scale)))
 
-        # calculate prior function and gradient
+            grad_lap = np.sign(loc - x[lap_index]) / scale
+
+        # calculate prior function
         prior_fun = fun_norm + fun_lap
 
+        # calculate prior gradient
         prior_grad = np.zeros(len(x))
 
         if norm_index != []:
             prior_grad[norm_index] += grad_norm
+
         if lap_index != []:
             prior_grad[lap_index] += grad_lap
 
@@ -123,6 +138,7 @@ class Prior():
         chainrule = np.zeros(len(x))
         chainrule[estimate] += 1
 
+        #reset the different parameterizations and compute chainrule
         if log10_index is not None:
             # reset the values
             x[log10_index] = np.log10(x[log10_index])
@@ -138,6 +154,12 @@ class Prior():
             x[logE_index] = np.log10(x[logE_index] + 1)
             chainrule[logE_index] *= 10**x[logE_index]*np.log(10)
 
+        if logicle_index is not None:
+            #reset the values
+            x[logicle_index] = logicleTransform(x[logicle_index],T,W,M,A)
+            chainrule[logicle_index] *= logicleInverseGradient(x[logicle_index],T,W,M,A)
+
+        # multiply the gradient by the chainrule
         prior_grad *= chainrule
 
         return {'prior_fun': prior_fun,
