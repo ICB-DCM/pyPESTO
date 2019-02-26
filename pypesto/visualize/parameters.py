@@ -1,19 +1,21 @@
 import matplotlib.pyplot as plt
 from matplotlib.ticker import MaxNLocator
 import numpy as np
-from .clust_color import assign_clustered_colors
+from .reference_points import create_references
+from .clust_color import assign_colors
+from .misc import process_result_list
 
 
-def parameters(result, ax=None, free_indices_only=True, lb=None, ub=None,
-               size=None):
+def parameters(results, ax=None, free_indices_only=True, lb=None, ub=None,
+               size=None, reference=None, colors=None, legends=None):
     """
     Plot parameter values.
 
     Parameters
     ----------
 
-    result: pypesto.Result
-        Optimization result obtained by 'optimize.py'.
+    results: pypesto.Result or list
+        Optimization result obtained by 'optimize.py' or list of those
 
     ax: matplotlib.Axes, optional
         Axes object to use.
@@ -30,6 +32,18 @@ def parameters(result, ax=None, free_indices_only=True, lb=None, ub=None,
         Figure size (width, height) in inches. Is only applied when no ax
         object is specified
 
+    reference: list, optional
+        List of reference points for optimization results, containing et
+        least a function value fval
+
+    colors: list, or RGBA, optional
+        list of colors, or single color
+        color or list of colors for plotting. If not set, clustering is done
+        and colors are assigned automatically
+
+    legends: list or str
+        Labels for line plots, one label per result object
+
     Returns
     -------
 
@@ -37,32 +51,34 @@ def parameters(result, ax=None, free_indices_only=True, lb=None, ub=None,
         The plot axes.
     """
 
-    if lb is None:
-        lb = result.problem.lb
-    if ub is None:
-        ub = result.problem.ub
+    # parse input
+    (results, colors, legends) = process_result_list(results, colors, legends)
 
-    fvals = result.optimize_result.get_for_key('fval')
-    xs = result.optimize_result.get_for_key('x')
+    for j, result in enumerate(results):
+        # handle results and bounds
+        (lb, ub, x_labels, fvals, xs) = \
+            handle_inputs(result=result, lb=lb, ub=ub,
+                          free_indices_only=free_indices_only)
 
-    x_labels = result.problem.x_names
+        # call lowlevel routine
+        ax = parameters_lowlevel(xs=xs, fvals=fvals, lb=lb, ub=ub,
+                                 x_labels=x_labels, ax=ax, size=size,
+                                 colors=colors[j], legend_text=legends[j])
 
-    if free_indices_only:
-        for ix, x in enumerate(xs):
-            xs[ix] = result.problem.get_reduced_vector(x)
-        lb = result.problem.get_reduced_vector(lb)
-        ub = result.problem.get_reduced_vector(ub)
-        x_labels = [x_labels[int(i)] for i in result.problem.x_free_indices]
-    else:
-        lb = result.problem.get_full_vector(lb)
-        ub = result.problem.get_full_vector(ub)
+    # parse and apply plotting options
+    ref = create_references(references=reference)
 
-    return parameters_lowlevel(xs=xs, fvals=fvals, lb=lb, ub=ub,
-                               x_labels=x_labels, ax=ax, size=size)
+    # plot reference points
+    for i_ref in ref:
+        ax = parameters_lowlevel([i_ref['x']], [i_ref['fval']], ax=ax,
+                                 colors=i_ref['color'],
+                                 legend_text=i_ref.legend)
+
+    return ax
 
 
 def parameters_lowlevel(xs, fvals, lb=None, ub=None, x_labels=None, ax=None,
-                        size=None):
+                        size=None, colors=None, legend_text=None):
     """
     Plot parameters plot using list of parameters.
 
@@ -88,6 +104,12 @@ def parameters_lowlevel(xs, fvals, lb=None, ub=None, x_labels=None, ax=None,
     size: tuple, optional
         see parameters
 
+    colors: list of RGBA
+        One for each element in 'fvals'.
+
+    legend_text: str
+        Label for line plots
+
     Returns
     -------
 
@@ -101,23 +123,30 @@ def parameters_lowlevel(xs, fvals, lb=None, ub=None, x_labels=None, ax=None,
 
     if size is None:
         # 0.5 inch height per parameter
-        size = (18.5, xs.shape[1]/2)
+        size = (18.5, xs.shape[1] / 2)
 
     if ax is None:
         ax = plt.subplots()[1]
         fig = plt.gcf()
         fig.set_size_inches(*size)
 
-    # assign color
-    colors = assign_clustered_colors(fvals)
+    # assign colors
+    colors = assign_colors(vals=fvals, colors=colors)
 
     # parameter indices
-    parameters_ind = range(1, xs.shape[1] + 1)
+    parameters_ind = list(range(1, xs.shape[1] + 1))[::-1]
 
     # plot parameters
     ax.xaxis.set_major_locator(MaxNLocator(integer=True))
     for j_x, x in reversed(list(enumerate(xs))):
-        ax.plot(x, parameters_ind, color=colors[j_x], marker='o')
+        if j_x == 0:
+            tmp_legend = legend_text
+        else:
+            tmp_legend = None
+        ax.plot(x, parameters_ind,
+                color=colors[j_x],
+                marker='o',
+                label=tmp_legend)
 
     plt.yticks(parameters_ind, x_labels)
 
@@ -133,3 +162,65 @@ def parameters_lowlevel(xs, fvals, lb=None, ub=None, x_labels=None, ax=None,
     ax.set_title('Estimated parameters')
 
     return ax
+
+
+def handle_inputs(result, free_indices_only, lb=None, ub=None):
+    """
+    Computes the correct bounds for the parameter indices to be plotted and
+    outputs the corrsponding parameters and their labels
+
+    Parameters
+    ----------
+
+    result: pypesto.Result
+        Optimization result obtained by 'optimize.py'.
+
+    free_indices_only: bool, optional
+        If True, only free parameters are shown. If
+        False, also the fixed parameters are shown.
+
+    lb, ub: ndarray, optional
+        If not None, override result.problem.lb, problem.problem.ub.
+        Dimension either result.problem.dim or result.problem.dim_full.
+
+    Returns
+    -------
+
+    lb, ub: ndarray
+        Dimension either result.problem.dim or result.problem.dim_full.
+
+    x_labels: list of str
+        ytick labels to be applied later on
+
+    fvals: ndarray
+        objective function values which are needed for plotting later
+
+    xs: ndarray
+        parameter values which will be plotted later
+    """
+
+    # retrieve results
+    fvals = result.optimize_result.get_for_key('fval')
+    xs = result.optimize_result.get_for_key('x')
+
+    # get bounds
+    if lb is None:
+        lb = result.problem.lb
+    if ub is None:
+        ub = result.problem.ub
+
+    # get labels
+    x_labels = result.problem.x_names
+
+    # handle fixed and free indices
+    if free_indices_only:
+        for ix, x in enumerate(xs):
+            xs[ix] = result.problem.get_reduced_vector(x)
+        lb = result.problem.get_reduced_vector(lb)
+        ub = result.problem.get_reduced_vector(ub)
+        x_labels = [x_labels[int(i)] for i in result.problem.x_free_indices]
+    else:
+        lb = result.problem.get_full_vector(lb)
+        ub = result.problem.get_full_vector(ub)
+
+    return lb, ub, x_labels, fvals, xs
