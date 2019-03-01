@@ -2,7 +2,7 @@ import numpy as np
 
 from .objective import Objective
 
-from .objective.constants import RDATAS
+from .constants import RDATAS
 
 
 class AggregatedObjective(Objective):
