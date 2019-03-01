@@ -2,8 +2,10 @@ import numpy as np
 
 from .objective import Objective
 
+from .objective.constants import RDATAS
 
-class AggregateObjective(Objective):
+
+class AggregatedObjective(Objective):
     """
     This class allows to create an aggregateObjective from a list of
     Objective instances.
@@ -32,6 +34,9 @@ class AggregateObjective(Objective):
             raise TypeError('Objectives must only contain elements of type'
                             'pypesto.Objective')
 
+        if not len(objectives):
+            raise ValueError('Length of objectives must be at least one')
+
         self.objectives = objectives
 
         # assemble a dict that we can pass as kwargs to the
@@ -56,6 +61,7 @@ class AggregateObjective(Objective):
                 getattr(objective, attr) is None
                 for objective in objectives
             ):
+                _check_none_value_consistent(objectives, attr)
                 init_kwargs[attr] = None
             elif all(
                 isinstance(getattr(objective, attr), bool)
@@ -89,13 +95,25 @@ class AggregateObjective(Objective):
             objective.fun(x, sensi_orders)
             for objective in self.objectives
         ]
-        return {
+
+        # sum over fval/grad/hess
+        result = {
             key: sum(rval[key] for rval in rvals)
             for key in ['fval', 'grad', 'hess']
             if key in rvals[0]
         }
 
+        # extract rdatas and flatten
+        result[RDATAS] = []
+        for rval in rvals:
+            if RDATAS in rval:
+                result[RDATAS].extend(rval[RDATAS])
+
+        return result
+
     def aggregate_res_sensi_orders(self, x, sensi_orders):
+        result = dict()
+
         # initialize res and sres
         rval0 = self.objectives[0].res(x, sensi_orders)
         if 'res' in rval0:
@@ -108,6 +126,11 @@ class AggregateObjective(Objective):
         else:
             sres = None
 
+        if RDATAS in rval0:
+            result[RDATAS] = rval0[RDATAS]
+        else:
+            result[RDATAS] = []
+
         # skip iobj=0 after initialization, stack matrices
         for iobj in range(1, len(self.objectives)):
             rval = self.objectives[iobj].res(x, sensi_orders)
@@ -115,9 +138,11 @@ class AggregateObjective(Objective):
                 res = np.hstack([res, np.asarray(rval['res'])])
             if sres is not None:
                 sres = np.vstack([sres, np.asarray(rval['sres'])])
+            if RDATAS in rval:
+                result[RDATAS].extend(rval[RDATAS])
 
         # transform results to dict
-        result = dict()
+
         if res is not None:
             result['res'] = res
         if sres is not None:
@@ -171,5 +196,15 @@ def _check_boolean_value_consistent(objectives, attr):
         for objective in objectives
     )
     if len(values) > 1:
+        raise ValueError(f'{attr} of all objectives must have a consistent '
+                         f'value!')
+
+
+def _check_none_value_consistent(objectives, attr):
+    is_none = (
+        getattr(objective, attr) is None
+        for objective in objectives
+    )
+    if not all(is_none):
         raise ValueError(f'{attr} of all objectives must have a consistent '
                          f'value!')

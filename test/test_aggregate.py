@@ -44,7 +44,7 @@ class AggregateObjectiveTest(unittest.TestCase):
         self._test_evaluate_resmode(convreact_for_resmode(1, [-0.3, -0.7]))
 
     def _test_evaluate_funmode(self, struct):
-        obj = pypesto.objective.AggregateObjective(
+        obj = pypesto.objective.AggregatedObjective(
             [struct['obj'], struct['obj']]
         )
         x = struct['x']
@@ -88,7 +88,7 @@ class AggregateObjectiveTest(unittest.TestCase):
             self.assertTrue(np.isclose(hess, hess_true).all())
 
     def _test_evaluate_resmode(self, struct):
-        obj = pypesto.objective.AggregateObjective(
+        obj = pypesto.objective.AggregatedObjective(
             [struct['obj'], struct['obj']]
         )
         x = struct['x']
@@ -113,21 +113,26 @@ class AggregateObjectiveTest(unittest.TestCase):
     def test_exceptions(self):
         self.assertRaises(
             TypeError,
-            pypesto.objective.AggregateObjective,
+            pypesto.objective.AggregatedObjective,
             rosen_for_sensi(2, False, [0, 1])['obj']
         )
         self.assertRaises(
             TypeError,
-            pypesto.objective.AggregateObjective,
+            pypesto.objective.AggregatedObjective,
             [0.5]
         )
         self.assertRaises(
             ValueError,
-            pypesto.objective.AggregateObjective,
+            pypesto.objective.AggregatedObjective,
             [
                 rosen_for_sensi(2, False, [0, 1])['obj'],
                 rosen_for_sensi(2, True, [0, 1])['obj']
             ]
+        )
+        self.assertRaises(
+            ValueError,
+            pypesto.objective.AggregatedObjective,
+            []
         )
 
 
