@@ -142,6 +142,21 @@ class AmiciObjective(Objective):
                     self.amici_model.getParameterScale(), len(self.edatas))
         self.mapping_scale_opt_to_scale_sim = mapping_scale_opt_to_scale_sim
 
+        # preallocate guesses, construct a dict for every edata for which we
+        # need to do preequilibration
+        if guess_steadystate:
+            self.preeq_guesses = {
+                'fval': np.inf,
+                'data': {
+                    str(iexp): dict()
+                    for iexp, edata in enumerate(self.edatas)
+                    if len(edata.fixedParametersPreequilibration) or
+                    self.amici_solver.getNewtonPreequilibration()
+                }
+            }
+        else:
+            self.preeq_guesses = dict()
+
         # optimization parameter names
         if x_names is None:
             # use ids as names
@@ -299,6 +314,9 @@ class AmiciObjective(Objective):
             # set parameters in model, according to mapping
             self.set_par_sim_for_condition(data_ix, x)
 
+            if 'fval' in self.preeq_guesses:
+                self.apply_steadystate_guess(data_ix, x)
+
             # run amici simulation
             rdata = amici.runAmiciSimulation(
                 self.amici_model,
@@ -341,6 +359,12 @@ class AmiciObjective(Objective):
                 if sensi_order > 0:
                     sres = np.vstack([sres, rdata['sres']]) \
                         if sres.size else rdata['sres']
+
+        # check whether we should update data for preequilibration guesses
+        if 'fval' in self.preeq_guesses and \
+                nllh <= self.preeq_guesses['fval']:
+            self.store_steadystate_guesses(x, rdatas)
+
 
         return {
             FVAL: nllh,
@@ -406,6 +430,38 @@ class AmiciObjective(Objective):
             amici_scale_vector.append(scale)
 
         self.amici_model.setParameterScale(amici_scale_vector)
+
+    def apply_steadystate_guess(self, condition_ix, x):
+        x_ss_guess = []  # resets initial state by default
+        if str(condition_ix) in self.preeq_guesses['data']:
+            guess_data = self.preeq_guesses['data'][str(condition_ix)]
+            if 'x_ss' in guess_data:
+                x_ss_guess = guess_data['x_ss']
+                if 'sx_ss' in guess_data:
+                    x_ss_guess += (x - self.preeq_guesses['x']) \
+                                  * guess_data['sx_ss']
+
+        self.amici_model.setInitialStates(x_ss_guess)
+
+    def store_steadystate_guesses(self, x, rdatas):
+        # update parameter
+        self.preeq_guesses['x'] = x
+
+        for iexp, edata in enumerate(self.edatas):
+            if str(iexp) in self.preeq_guesses['data']:
+                # update steadystates
+                self.preeq_guesses['data'][str(iexp)]['x_ss'] \
+                    = rdatas[iexp]['x_ss']
+
+                # update steadystate sensitivities
+                if 'sx_ss' in rdatas[iexp]:
+                    self.preeq_guesses['data'][str(iexp)][
+                        'sx_ss'] \
+                        = rdatas[iexp]['sx_ss']
+                else:
+                    self.preeq_guesses['data'][str(iexp)].pop(
+                        'sx_ss', None
+                    )
 
 
 def log_simulation(data_ix, rdata):
