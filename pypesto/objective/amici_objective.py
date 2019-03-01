@@ -24,7 +24,7 @@ class AmiciObjective(Objective):
                  x_ids=None, x_names=None,
                  mapping_par_opt_to_par_sim=None,
                  mapping_scale_opt_to_scale_sim=None,
-                 preprocess_edatas=True,
+                 guess_steadystate=True,
                  options=None):
         """
         Constructor.
@@ -64,9 +64,9 @@ class AmiciObjective(Objective):
             scales. The default is to just use the scales specified in the
             `amici_model` already.
 
-        preprocess_edatas: bool, optional (default = True)
-            Whether to perform preprocessing, i.e. preequilibration, if that
-            is specified in the model.
+        guess_steadystate: bool, optional (default = True)
+            Whether to guess steadystates based on previous steadystates and
+            respective derivatives.
 
         options: pypesto.ObjectiveOptions, optional
             Further options.
@@ -112,14 +112,6 @@ class AmiciObjective(Objective):
         # make sure the edatas are a list of edata objects
         if isinstance(edatas, amici.amici.ExpData):
             edatas = [edatas]
-
-        self.preprocess_edatas = preprocess_edatas
-        if preprocess_edatas:
-            # preprocess the experimental data
-            self.preequilibration_edatas = []
-            self.init_preequilibration_edatas(edatas)
-        else:
-            self.preequilibration_edatas = None
 
         # set the experimental data container
         self.edatas = edatas
@@ -200,8 +192,7 @@ class AmiciObjective(Objective):
         edatas = [amici.ExpData(data) for data in self.edatas]
         other = AmiciObjective(model, solver, edatas)
         for attr in self.__dict__:
-            if attr not in ['amici_solver', 'amici_model',
-                            'edatas', 'preequilibration_edatas']:
+            if attr not in ['amici_solver', 'amici_model', 'edatas']:
                 other.__dict__[attr] = copy.deepcopy(self.__dict__[attr])
         return other
 
@@ -299,11 +290,6 @@ class AmiciObjective(Objective):
         # set order in solver
         self.amici_solver.setSensitivityOrder(sensi_order)
 
-        if self.preequilibration_edatas:
-            preeq_status = self.run_preequilibration(x)
-            if preeq_status is not None:
-                return self.get_error_output(rdatas)
-
         # loop over experimental data
         for data_ix, edata in enumerate(self.edatas):
 
@@ -313,11 +299,6 @@ class AmiciObjective(Objective):
             # set parameters in model, according to mapping
             self.set_par_sim_for_condition(data_ix, x)
 
-            if self.preequilibration_edatas:
-                original_value_dict = self.preprocess_preequilibration(data_ix)
-            else:
-                original_value_dict = None
-
             # run amici simulation
             rdata = amici.runAmiciSimulation(
                 self.amici_model,
@@ -326,10 +307,6 @@ class AmiciObjective(Objective):
 
             # append to result
             rdatas.append(rdata)
-
-            # reset fixed preequilibration parameters and initial states
-            if self.preequilibration_edatas:
-                self.postprocess_preequilibration(edata, original_value_dict)
 
             # logging
             log_simulation(data_ix, rdata)
@@ -373,147 +350,6 @@ class AmiciObjective(Objective):
             SRES: sres,
             RDATAS: rdatas
         }
-
-    def init_preequilibration_edatas(self, edatas):
-        """
-        Extract information needed for doing preequilibration.
-        """
-        self.preequilibration_edatas = []
-
-        for edata in edatas:
-            # extract values of the fixed parameters
-            fixed_parameters = list(edata.fixedParametersPreequilibration)
-
-            # create edata object from model
-            preeq_edata = amici.amici.ExpData(self.amici_model.get())
-
-            # fill in fixed parameter values for preequilibration
-            preeq_edata.fixedParametersPreequilibration = fixed_parameters
-
-            # only preequilibration
-            preeq_edata.setTimepoints([])
-
-            # indicate whether preequilibration is required for this data set
-            preequilibrate = len(fixed_parameters) > 0
-            # TODO (see #100): Currently, len(fixed_parameters) == 0 is used
-            # as an indicator of requiring no preequilibration. However, when
-            # there are events (which amici cannot deal with yet in python),
-            # the situation can occur that there are no fixed_parameters, but
-            # events that are omitted in the preequilibration run.
-
-            self.preequilibration_edatas.append(dict(
-                edata=preeq_edata,
-                preequilibrate=preequilibrate
-            ))
-
-    def run_preequilibration(self, x):
-        """
-        Run preequilibration.
-        """
-
-        for data_ix, preeq_dict in enumerate(self.preequilibration_edatas):
-
-            if not preeq_dict['preequilibrate']:
-                # no preequilibration required
-                continue
-
-            # set model parameter scales for condition index
-            self.set_parameter_scale(data_ix)
-
-            # map to simulation parameters
-            self.set_par_sim_for_condition(data_ix, x)
-
-            # TODO: Conditions might share preeq conditions and dynamic
-            # parameters. In that case, we can save time here.
-
-            # run amici simulation
-            rdata = amici.runAmiciSimulation(
-                self.amici_model,
-                self.amici_solver,
-                preeq_dict['edata'])
-
-            # check if an error occurred
-            if rdata['status'] < 0.0:
-                return rdata['status']
-
-            # fill state
-            preeq_dict['x0'] = rdata['x0']
-            if self.amici_solver.getSensitivityOrder() > \
-                    amici.SensitivityOrder_none:
-                # fill state sensitivities
-                # TODO check that these are always computed, i.e.
-                # forward sensitivities used
-                preeq_dict['sx0'] = rdata['sx0']
-
-    def preprocess_preequilibration(self, edata_ix):
-        """
-        Update the model and data from the preequilibration states,
-        before running the real simulation.
-        """
-
-        data = self.edatas[edata_ix]
-
-        original_fixed_parameters_preequilibration = None
-        original_initial_states = None
-        original_initial_state_sensitivities = None
-
-        # if this data set needed preequilibration, adapt the states
-        # according to the previously run preequilibration
-        if self.preequilibration_edatas[edata_ix]['preequilibrate']:
-
-            # remember original states and sensitivities
-            original_initial_states = self.amici_model.getInitialStates()
-            if self.amici_solver.getSensitivityOrder() > \
-                    amici.SensitivityOrder_none:
-                original_initial_state_sensitivities = \
-                    self.amici_model.getInitialStateSensitivities()
-
-            # remember original fixed parameters for preequilibration
-            original_fixed_parameters_preequilibration \
-                = data.fixedParametersPreequilibration
-
-            # unset fixed preequilibration parameters in data
-            # this prevents amici from doing preequilibration again
-            data.fixedParametersPreequilibration = []
-
-            # set initial state from preequilibration
-            self.amici_model.setInitialStates(
-                self.preequilibration_edatas[edata_ix]['x0']
-            )
-
-            # set initial sensitivities from preequilibration
-            if self.amici_solver.getSensitivityOrder() > \
-                    amici.SensitivityOrder_none:
-                self.amici_model.setInitialStateSensitivities(
-                    self.preequilibration_edatas[edata_ix]['sx0'].flatten()
-                )
-
-        # return the original values
-        return {
-            'k': original_fixed_parameters_preequilibration,
-            'x0': original_initial_states,
-            'sx0': original_initial_state_sensitivities
-        }
-
-    def postprocess_preequilibration(self, edata, original_value_dict):
-        """
-        Reset the model and edata to the true values, i.e. undo
-        the temporary changes done in preprocess_preequilibration.
-        """
-
-        # reset values in edata from values in original_value_dict, if
-        # the corresponding entry in original_value_dict is not None.
-
-        if original_value_dict['k']:
-            edata.fixedParametersPreequilibration = original_value_dict['k']
-
-        if original_value_dict['x0']:
-            self.amici_model.setInitialStates(original_value_dict['x0'])
-
-        if original_value_dict['sx0']:
-            self.amici_model.setInitialStateSensitivities(
-                original_value_dict['sx0']
-            )
 
     def get_error_output(self, rdatas):
         if not self.amici_model.nt():
