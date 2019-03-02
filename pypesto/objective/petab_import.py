@@ -409,7 +409,8 @@ def _check_parameter_mapping_ok(
     for i_condition, (mapping_for_condition, edata_for_condition) in \
             enumerate(zip(mapping_par_opt_to_par_sim, edatas)):
         # turn amici.ExpData into pd.DataFrame
-        df = amici.getDataObservablesAsDataFrame(model, [edata_for_condition])
+        df = amici.getDataObservablesAsDataFrame(
+                model, edata_for_condition, by_id=by_id)
         # iterate over simulation parameters indices and the mapped
         # optimization parameters
         for i_sim_id, par_sim_id in enumerate(par_sim_ids):
