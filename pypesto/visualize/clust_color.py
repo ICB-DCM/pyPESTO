@@ -206,8 +206,14 @@ def assign_colors_for_result_list(num_results, colors=None):
 
     # if the user did not specify any colors:
     if colors is None:
+        # default colors will be used, on for each entry in the result list.
+        # Colors are created from assign_colors, which needs a dummy list
         dummy_clusters = np.array(list(range(num_results)) * 2)
+
+        # we don't want alpha levels for all plotting routines in this case...
         colors = assign_colors(dummy_clusters, balance_alpha=False)
+
+        # dummy cluster had twice as many entries as really there. Reduce.
         real_indices = list(range(int(colors.shape[0] / 2)))
         return colors[real_indices]
 
