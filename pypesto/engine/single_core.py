@@ -8,7 +8,7 @@ class SingleCoreEngine(Engine):
     """
 
     def __init__(self):
-        pass
+        super().__init__()
 
     def execute(self, tasks):
         """
