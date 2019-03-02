@@ -8,6 +8,8 @@ import copy
 import shutil
 import re
 import logging
+import tempfile
+import libsbml
 
 import petab
 
@@ -27,14 +29,21 @@ class PetabImporter:
 
     MODEL_BASE_DIR = "amici_models"
 
-    def __init__(self, petab_problem, output_folder=None):
+    def __init__(self,
+                 petab_problem: petab.Problem,
+                 output_folder: str = None,
+                 model_name: str = None):
         """
         petab_problem: petab.Problem
             Managing access to the model and data.
 
         output_folder: str,  optional
             Folder to contain the amici model. Defaults to
-            './tmp/petab_problem.name'.
+            './amici_models/model_name'.
+
+        model_name: str, optional
+            Name of the model, which will in particular be the name of the
+            compiled model python module.
         """
         self.petab_problem = petab_problem
 
@@ -42,8 +51,14 @@ class PetabImporter:
             output_folder = _find_output_folder_name(self.petab_problem)
         self.output_folder = output_folder
 
+        if model_name is None:
+            model_name = _find_model_name(self.output_folder)
+        self.model_name = model_name
+
     @staticmethod
-    def from_folder(folder, output_folder=None):
+    def from_folder(folder,
+                    output_folder: str = None,
+                    model_name: str = None):
         """
         Simplified constructor exploiting the standardized petab folder
         structure.
@@ -54,8 +69,8 @@ class PetabImporter:
         folder: str
             Path to the base folder of the model, as in
             petab.Problem.from_folder.
-
-        output_folder: see __init__.
+        output_folder: See __init__.
+        model_name: See __init__.
         """
         petab_problem = petab.Problem.from_folder(folder)
 
@@ -82,27 +97,28 @@ class PetabImporter:
             deleted.
         """
         # courtesy check if target not folder
-        if not os.path.isdir(self.output_folder):
+        if os.path.exists(self.output_folder) \
+                and not os.path.isdir(self.output_folder):
             raise AssertionError(
                 f"Refusing to remove {self.output_folder} for model "
                 f"compilation: Not a folder.")
 
         # compile
         if force_compile or not os.path.exists(self.output_folder) or \
-                 not os.listdir(self.output_folder)):
+                 not os.listdir(self.output_folder):
             logger.info(f"Compiling amici model to folder "
-                        f"{self.output_folder}.")
+                f"{self.output_folder}.")
             self.compile_model()
         else:
             logger.info(f"Using existing amici model in folder "
-                        f"{self.output_folder}.")
-
+                f"{self.output_folder}.")
+ 
         # add module to path
         if self.output_folder not in sys.path:
             sys.path.insert(0, self.output_folder)
 
         # load moduĺe
-        model_module = importlib.import_module(self.petab_problem.model_name)
+        model_module = importlib.import_module(self.model_name)
 
         # import model
         model = model_module.getModel()
@@ -126,9 +142,6 @@ class PetabImporter:
         if os.path.exists(self.output_folder):
             shutil.rmtree(self.output_folder)
 
-        # init sbml importer
-        sbml_importer = amici.SbmlImporter(self.petab_problem.sbml_file)
-
         # constant parameters
         condition_columns = self.petab_problem.condition_df.columns.values
         constant_parameter_ids = list(
@@ -136,14 +149,21 @@ class PetabImporter:
         )
 
         # observables
-        observables = petab.get_observables(sbml_importer.sbml)
+        observables = self.petab_problem.get_observables()
 
         # sigmas
-        sigmas = petab.get_sigmas(sbml_importer.sbml)
+        sigmas = self.petab_problem.get_sigmas()
+
+        # model to string
+        sbml_string = libsbml.SBMLWriter().writeSBMLToString(
+            self.petab_problem.sbml_document)
+        # init sbml importer
+        sbml_importer = amici.SbmlImporter(
+            sbml_string, from_file = False)
 
         # convert
         sbml_importer.sbml2amici(
-            modelName=self.petab_problem.model_name,
+            modelName=self.model_name,
             output_dir=self.output_folder,
             observables=observables,
             constantParameters=constant_parameter_ids,
@@ -513,12 +533,12 @@ def _handle_fixed_parameters(
                                                  .flatten()
 
 
-def _find_output_folder_name(petab_problem):
+def _find_output_folder_name(petab_problem: petab.Problem):
     """
     Find a name for storing the compiled amici model in. If available,
     use the sbml model name from the `petab_problem`, otherwise create
     a unique name.
-    The folder will be located in the `PetabProblem.MODEL_BASE_DIR`
+    The folder will be located in the `PetabImporter.MODEL_BASE_DIR`
     subdirectory of the current directory.
     """
     # check whether location for amici model is a file
@@ -542,6 +562,13 @@ def _find_output_folder_name(petab_problem):
         output_folder = os.path.abspath(
             tempfile.mkdtemp(dir=PetabImporter.MODEL_BASE_DIR))
     return output_folder
+
+
+def _find_model_name(output_folder):
+    """
+    Just re-use the last part of the output folder.
+    """
+    return os.path.split(os.path.normpath(output_folder))[-1]
 
 
 class PetabAmiciObjective(AmiciObjective):
