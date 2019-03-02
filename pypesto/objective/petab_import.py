@@ -75,11 +75,21 @@ class PetabImporter:
             If False, the model is compiled only if the output folder does not
             exist yet. If True, the output folder is deleted and the model
             (re-)compiled in either case.
+
+ 
+        .. warning::
+            If `force_compile`, then an existing folder of that name will be
+            deleted.
         """
+        # courtesy check if target not folder
+        if not os.path.isdir(self.output_folder):
+            raise AssertionError(
+                f"Refusing to remove {self.output_folder} for model "
+                f"compilation: Not a folder.")
+
         # compile
         if force_compile or not os.path.exists(self.output_folder) or \
-                (os.path.isdir(self.output_folder)
-                 and not os.listdir(self.output_folder)):
+                 not os.listdir(self.output_folder)):
             logger.info(f"Compiling amici model to folder "
                         f"{self.output_folder}.")
             self.compile_model()
