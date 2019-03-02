@@ -173,6 +173,8 @@ def parameters_lowlevel(xs, fvals, lb=None, ub=None, x_labels=None,
     ax.set_xlabel('Parameter value')
     ax.set_ylabel('Parameter index')
     ax.set_title('Estimated parameters')
+    if legend_text is not None:
+        ax.legend()
 
     return ax
 
