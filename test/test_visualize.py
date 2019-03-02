@@ -353,12 +353,16 @@ class TestVisualize(unittest.TestCase):
         pypesto.visualize.assign_clusters(fvals)
         fvals = np.array(fvals)
         clust, clustsize = pypesto.visualize.assign_clusters(fvals)
+        np.testing.assert_array_equal(clust, [0, 0, 1, 2, 2, 2, 3, 4, 4, 4, 5])
+        np.testing.assert_array_equal(clustsize, [2, 1, 3, 1, 3, 1])
 
         # test if clustering works as intended
         fvals = [0., 0.00001, 1., 2., 2.001]
         clust, clustsize = pypesto.visualize.assign_clusters(fvals)
         self.assertEqual(len(clust), 5)
         self.assertEqual(len(clustsize), 3)
+        np.testing.assert_array_equal(clust, [0, 0, 1, 2, 2])
+        np.testing.assert_array_equal(clustsize, [2, 1, 2])
 
     @staticmethod
     def test_assign_clustered_colors():

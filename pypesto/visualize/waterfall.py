@@ -144,16 +144,15 @@ def waterfall_lowlevel(fvals, scale_y='log10', ax=None, size=(18.5, 10.5),
     colors = assign_colors(fvals, colors=colors)
 
     # sort
-    indices = sorted(range(n_fvals),
-                     key=lambda j: fvals[j])
+    indices = sorted(range(n_fvals), key=lambda j: fvals[j])
 
     # plot
     ax.xaxis.set_major_locator(MaxNLocator(integer=True))
     # plot line
     if scale_y == 'log10':
-        ax.semilogy(start_ind, fvals)
+        ax.semilogy(start_ind, fvals, color=[0.7, 0.7, 0.7, 0.6])
     else:
-        ax.plot(start_ind, fvals)
+        ax.plot(start_ind, fvals, color=[0.7, 0.7, 0.7, 0.6])
 
     # plot points
     for j in range(n_fvals):

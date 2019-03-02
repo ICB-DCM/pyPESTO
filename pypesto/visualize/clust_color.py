@@ -28,24 +28,34 @@ def assign_clusters(vals):
     if vals is None or len(vals) == 0:
         return [], []
     elif len(vals) == 1:
-        return np.array([1]), np.array([1.])
+        return np.array([0]), np.array([1.])
 
     # linkage requires (n, 1) data array
     vals = np.reshape(vals, (-1, 1))
 
+    # however: clusters are sorted by size, not by value... Resort.
+    # Create preallocated object first
+    cluster_indices = np.zeros(vals.size, dtype=int)
+
+    # get clustering based on distance
     clust = cluster.hierarchy.fcluster(
         cluster.hierarchy.linkage(vals),
-        0.1, criterion='distance')
+        t=0.1, criterion='distance')
+
+    # get unique clusters
     _, ind_clust = np.unique(clust, return_index=True)
-    uclust = clust[np.sort(list(ind_clust))]
-    clustsize = np.zeros(len(uclust))
-    for iclustsize, value_uclust in enumerate(uclust):
-        clustsize[iclustsize] = sum(clust == value_uclust)
+    unique_clust = clust[np.sort(ind_clust)]
+    cluster_size = np.zeros(unique_clust.size, dtype=int)
 
-    return clust, clustsize
+    # loop over clusters: resort and count number of entries
+    for index, i_clust in enumerate(unique_clust):
+        cluster_indices[np.where(clust == i_clust)] = index
+        cluster_size[index] = sum(clust == i_clust)
+
+    return cluster_indices, cluster_size
 
 
-def assign_clustered_colors(vals, balance_alpha=True):
+def assign_clustered_colors(vals, balance_alpha=True, highlight_global=True):
     """
     Cluster and assign colors.
 
@@ -58,6 +68,9 @@ def assign_clustered_colors(vals, balance_alpha=True):
     balance_alpha: bool (optional)
         Flag indicating whether alpha for large clusters should be reduced to
         avoid overplotting (default: True)
+
+    highlight_global: bool (optional)
+        flag indicating whether global optimum should be highlighted
 
     Returns
     -------
@@ -74,14 +87,19 @@ def assign_clustered_colors(vals, balance_alpha=True):
     clusters, cluster_size = assign_clusters(vals)
 
     # create list of colors, which has the correct shape
-    n_clusters = max(clusters) - sum(cluster_size == 1)
+    n_clusters = 1 + max(clusters) - sum(cluster_size == 1)
+
+    # if best value was found more than once: we need one color less
+    if highlight_global and cluster_size[0] > 1:
+        n_clusters -= 1
 
     # fill color array from colormap
     colormap = cm.ScalarMappable().to_rgba
     color_list = colormap(np.linspace(0., 1., n_clusters))
 
-    # create a dummy variable with the colors
-    colors = np.zeros((clusters.size, 4))
+    # best optimum should be colored in red
+    if highlight_global and cluster_size[0] > 1:
+        color_list = np.concatenate(([[1., 0., 0., 1.]], color_list))
 
     # We have clustered the results. However, clusters may have size 1,
     # so we need to rearrange the regroup the results into "no_clusters",
@@ -105,23 +123,24 @@ def assign_clustered_colors(vals, balance_alpha=True):
         # assign neutral color
         grey = [0.7, 0.7, 0.7, 1.]
 
+    # create a color list, prfilled with grey values
+    colors = np.array([grey] * clusters.size)
+
     # assign colors to real clusters
     for icol, iclust in enumerate(real_clusters):
         # find indices belonging to the cluster iclust and assign color
-        ind_of_iclust = np.argwhere(clusters - 1 == iclust).flatten()
+        ind_of_iclust = np.argwhere(clusters == iclust).flatten()
         colors[ind_of_iclust, :] = color_list[icol, :]
 
-        # assign alpha value
-
-    # assign color to non-clustered indices
-    for noclust in no_clusters:
-        ind_of_noclust = np.argwhere(noclust in no_clusters).flatten()
-        colors[ind_of_noclust, :] = grey
+    # if best value was found only once: replace it with red
+    if highlight_global and cluster_size[0] == 1:
+        colors[0] = [1., 0., 0., 1.]
 
     return colors
 
 
-def assign_colors(vals, colors=None, balance_alpha=True):
+def assign_colors(vals, colors=None, balance_alpha=True,
+                  highlight_global=True):
     """
     Assign colors or format user specified colors.
 
@@ -138,6 +157,9 @@ def assign_colors(vals, colors=None, balance_alpha=True):
         Flag indicating whether alpha for large clusters should be reduced to
         avoid overplotting (default: True)
 
+    highlight_global: bool (optional)
+        flag indicating whether global optimum should be highlighted
+
     Returns
     -------
 
@@ -151,7 +173,8 @@ def assign_colors(vals, colors=None, balance_alpha=True):
 
     # if the user did not specify any colors:
     if colors is None:
-        return assign_clustered_colors(vals, balance_alpha=balance_alpha)
+        return assign_clustered_colors(vals, balance_alpha=balance_alpha,
+                                       highlight_global=highlight_global)
 
     # The user passed values and colors: parse them first!
     # we want everything to be numpy arrays, to not check every time whether a
@@ -211,7 +234,8 @@ def assign_colors_for_result_list(num_results, colors=None):
         dummy_clusters = np.array(list(range(num_results)) * 2)
 
         # we don't want alpha levels for all plotting routines in this case...
-        colors = assign_colors(dummy_clusters, balance_alpha=False)
+        colors = assign_colors(dummy_clusters, balance_alpha=False,
+                               highlight_global=False)
 
         # dummy cluster had twice as many entries as really there. Reduce.
         real_indices = list(range(int(colors.shape[0] / 2)))
