@@ -97,3 +97,4 @@ dask-worker-space
 venv/*
 *.tmp
 tmp/*
+test/tmp/Zheng_PNAS2012/*

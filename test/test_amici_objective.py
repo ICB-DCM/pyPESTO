@@ -5,6 +5,11 @@ This is for testing the pypesto.Objective.
 from pypesto.objective.amici_objective import add_sim_grad_to_opt_grad
 import unittest
 
+import petab
+import pypesto
+import numpy as np
+from test.petab_util import folder_base
+
 
 class AmiciObjectiveTest(unittest.TestCase):
 
@@ -34,6 +39,19 @@ class AmiciObjectiveTest(unittest.TestCase):
             coefficient=2.0)
 
         self.assertEqual(expected, opt_grad)
+
+    def test_preeq_guesses(self):
+        petab_problem = petab.Problem.from_folder(folder_base +
+                                                  "Zheng_PNAS2012")
+        petab_problem.model_name = "Zheng_PNAS2012"
+        importer = pypesto.PetabImporter(petab_problem)
+        obj = importer.create_objective()
+        problem = importer.create_problem(obj)
+        optimizer = pypesto.ScipyOptimizer('ls_trf')
+
+        result = pypesto.minimize(
+            problem=problem, optimizer=optimizer, n_starts=2,
+        )
 
 
 if __name__ == '__main__':
