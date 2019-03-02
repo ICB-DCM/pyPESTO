@@ -30,6 +30,8 @@ class MultiProcessEngine(Engine):
     """
 
     def __init__(self, n_procs: int = None):
+        super().__init__()
+
         if n_procs is None:
             n_procs = os.cpu_count()
             logger.warning(

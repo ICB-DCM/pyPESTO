@@ -201,6 +201,8 @@ def optimizer_history_lowlevel(vals, scale_y='log10', colors=None, ax=None,
     ax.set_xlabel(x_label)
     ax.set_ylabel(y_label)
     ax.set_title('Optimizer history')
+    if legend_text is not None:
+        ax.legend()
 
     return ax
 
