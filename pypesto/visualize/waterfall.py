@@ -168,9 +168,11 @@ def waterfall_lowlevel(fvals, scale_y='log10', ax=None, size=(18.5, 10.5),
 
         # line plot (linear or logarithmic)
         if scale_y == 'log10':
-            ax.semilogy(j, fval, color=color, marker='o', label=tmp_legend)
+            ax.semilogy(j, fval, color=color,
+                        marker='o', label=tmp_legend, alpha=1.)
         else:
-            ax.plot(j, fval, color=color, marker='o', label=tmp_legend)
+            ax.plot(j, fval, color=color,
+                    marker='o', label=tmp_legend, alpha=1.)
 
     # labels
     ax.set_xlabel('Ordered optimizer run')

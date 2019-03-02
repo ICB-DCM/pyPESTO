@@ -39,15 +39,16 @@ def assign_clusters(vals):
     clust = cluster.hierarchy.fcluster(
         cluster.hierarchy.linkage(vals),
         0.1, criterion='distance')
-    uclust, ind_clust = np.unique(clust, return_inverse=True)
+    _, ind_clust = np.unique(clust, return_index=True)
+    uclust = clust[np.sort(list(ind_clust))]
     clustsize = np.zeros(len(uclust))
     for iclustsize, value_uclust in enumerate(uclust):
         clustsize[iclustsize] = sum(clust == value_uclust)
 
-    return clust, clustsize, ind_clust
+    return clust, clustsize
 
 
-def assign_clustered_colors(vals):
+def assign_clustered_colors(vals, balance_alpha=True):
     """
     Cluster and assign colors.
 
@@ -56,6 +57,10 @@ def assign_clustered_colors(vals):
 
     vals: numeric list or array
         List to be clustered and assigned colors.
+
+    balance_alpha: bool (optional)
+        Flag indicating whether alpha for large clusters should be reduced to
+        avoid overplotting (default: True)
 
     Returns
     -------
@@ -69,36 +74,53 @@ def assign_clustered_colors(vals):
         return []
 
     # assign clusters
-    clust, cluster_size, cluster_indices = assign_clusters(vals)
+    clusters, cluster_size = assign_clusters(vals)
 
     # create list of colors, which has the correct shape
-    n_clusters = max(clust) - sum(cluster_size == 1)
+    n_clusters = max(clusters) - sum(cluster_size == 1)
 
     # fill color array from colormap
     colormap = cm.ScalarMappable().to_rgba
     color_list = colormap(np.linspace(0., 1., n_clusters))
 
-    # We have clustered the results. However, clusters may have size 1,
-    # so we need to rearrange cluster_indices in order to map all
-    # 1-element-clusters to the cluster with index n_clusters
-
     # create a dummy variable with the colors
-    colors = np.zeros((clust.size, 4))
+    colors = np.zeros((clusters.size, 4))
+
+    # We have clustered the results. However, clusters may have size 1,
+    # so we need to rearrange the regroup the results into "no_clusters",
+    # which will be grey, and "real_clusters", which will be colored
 
     # run through the cluster_indices and collect which element
     # is in 1-element-clusters, and which is in real clusters
     no_clusters = np.where(cluster_size == 1)[0]
     real_clusters = np.unique(np.where(cluster_size > 1)[0])
 
+    # assign transparency valuesaccording to cluster size, if wanted
+    if balance_alpha:
+        # assign neutral color, add 1 for avoiding division by zero
+        grey = [0.7, 0.7, 0.7, min(1., 5. / (no_clusters.size + 1.))]
+
+        # reduce alpha level depend on size of each cluster
+        n_cluster_size = np.delete(cluster_size, no_clusters)
+        for icluster in range(n_clusters):
+            color_list[icluster][3] = min(1., 5. / n_cluster_size[icluster])
+
+    else:
+        # assign neutral color
+        grey = [0.7, 0.7, 0.7, 1.]
+
     # assign colors to real clusters
     for icol, iclust in enumerate(real_clusters):
-        ind_of_iclust = np.argwhere(cluster_indices == iclust).flatten()
+        # find indices belonging to the cluster iclust and assign color
+        ind_of_iclust = np.argwhere(clusters - 1 == iclust).flatten()
         colors[ind_of_iclust, :] = color_list[icol, :]
+
+        # assign alpha value
 
     # assign color to non-clustered indices
     for noclust in no_clusters:
         ind_of_noclust = np.argwhere(noclust in no_clusters).flatten()
-        colors[ind_of_noclust, :] = [0.7, 0.7, 0.7, 1]
+        colors[ind_of_noclust, :] = grey
 
     return colors
 
