@@ -25,6 +25,8 @@ logger = logging.getLogger(__name__)
 
 class PetabImporter:
 
+    MODEL_BASE_DIR = "amici_models"
+
     def __init__(self, petab_problem, output_folder=None):
         """
         petab_problem: petab.Problem
@@ -37,8 +39,7 @@ class PetabImporter:
         self.petab_problem = petab_problem
 
         if output_folder is None:
-            output_folder = os.path.abspath(
-                os.path.join("tmp", self.petab_problem.model_name))
+            output_folder = _find_output_folder_name(self.petab_problem)
         self.output_folder = output_folder
 
     @staticmethod
@@ -76,8 +77,15 @@ class PetabImporter:
             (re-)compiled in either case.
         """
         # compile
-        if force_compile or not os.path.exists(self.output_folder):
+        if force_compile or not os.path.exists(self.output_folder) or \
+                (os.path.isdir(self.output_folder)
+                 and not os.listdir(self.output_folder)):
+            logger.info(f"Compiling amici model to folder "
+                        f"{self.output_folder}.")
             self.compile_model()
+        else:
+            logger.info(f"Using existing amici model in folder "
+                        f"{self.output_folder}.")
 
         # add module to path
         if self.output_folder not in sys.path:
@@ -493,6 +501,37 @@ def _handle_fixed_parameters(
         edata.fixedParametersPreequilibration = \
             fixed_preequilibration_parameter_vals.astype(float) \
                                                  .flatten()
+
+
+def _find_output_folder_name(petab_problem):
+    """
+    Find a name for storing the compiled amici model in. If available,
+    use the sbml model name from the `petab_problem`, otherwise create
+    a unique name.
+    The folder will be located in the `PetabProblem.MODEL_BASE_DIR`
+    subdirectory of the current directory.
+    """
+    # check whether location for amici model is a file
+    if os.path.exists(PetabImporter.MODEL_BASE_DIR) and \
+            not os.path.isdir(PetabImporter.MODEL_BASE_DIR):
+        raise AssertionError(
+            f"{PetabImporter.MODEL_BASE_DIR} exists and is not a directory, "
+            f"thus cannot create a directory for the compiled amici model.")
+
+    # create base directory if non-existent
+    if not os.path.exists(PetabImporter.MODEL_BASE_DIR):
+        os.makedirs(PetabImporter.MODEL_BASE_DIR)
+
+    # try sbml model id
+    sbml_model_id = petab_problem.sbml_model.getId()
+    if sbml_model_id:
+        output_folder = os.path.abspath(
+            os.path.join(PetabImporter.MODEL_BASE_DIR, sbml_model_id))
+    else:
+        # create random folder name
+        output_folder = os.path.abspath(
+            tempfile.mkdtemp(dir=PetabImporter.MODEL_BASE_DIR))
+    return output_folder
 
 
 class PetabAmiciObjective(AmiciObjective):
