@@ -22,16 +22,13 @@ def assign_clusters(vals):
 
     clustsize: numeric list
         Size of clusters, length equals number of clusters.
-
-    ind_clust: numeric list
-        Indices to reconstruct 'clust' from a list with 1:number of clusters.
     """
 
     # sanity checks
     if vals is None or len(vals) == 0:
-        return [], [], []
+        return [], []
     elif len(vals) == 1:
-        return np.array([1]), np.array([1.]), np.array([0])
+        return np.array([1]), np.array([1.])
 
     # linkage requires (n, 1) data array
     vals = np.reshape(vals, (-1, 1))
@@ -104,7 +101,6 @@ def assign_clustered_colors(vals, balance_alpha=True):
         n_cluster_size = np.delete(cluster_size, no_clusters)
         for icluster in range(n_clusters):
             color_list[icluster][3] = min(1., 5. / n_cluster_size[icluster])
-
     else:
         # assign neutral color
         grey = [0.7, 0.7, 0.7, 1.]
@@ -125,7 +121,7 @@ def assign_clustered_colors(vals, balance_alpha=True):
     return colors
 
 
-def assign_colors(vals, colors=None):
+def assign_colors(vals, colors=None, balance_alpha=True):
     """
     Assign colors or format user specified colors.
 
@@ -137,6 +133,10 @@ def assign_colors(vals, colors=None):
 
     colors: list, or RGBA, optional
         list of colors, or single color
+
+    balance_alpha: bool (optional)
+        Flag indicating whether alpha for large clusters should be reduced to
+        avoid overplotting (default: True)
 
     Returns
     -------
@@ -151,10 +151,10 @@ def assign_colors(vals, colors=None):
 
     # if the user did not specify any colors:
     if colors is None:
-        return assign_clustered_colors(vals)
+        return assign_clustered_colors(vals, balance_alpha=balance_alpha)
 
     # The user passed values and colors: parse them first!
-    # we want everything to be numpy arrays, to not check everytime wther a
+    # we want everything to be numpy arrays, to not check every time whether a
     # list was passed or an ndarray
     colors = np.array(colors)
 
@@ -207,7 +207,7 @@ def assign_colors_for_result_list(num_results, colors=None):
     # if the user did not specify any colors:
     if colors is None:
         dummy_clusters = np.array(list(range(num_results)) * 2)
-        colors = assign_colors(dummy_clusters)
+        colors = assign_colors(dummy_clusters, balance_alpha=False)
         real_indices = list(range(int(colors.shape[0] / 2)))
         return colors[real_indices]
 
