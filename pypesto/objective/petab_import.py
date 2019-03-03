@@ -91,7 +91,7 @@ class PetabImporter:
             exist yet. If True, the output folder is deleted and the model
             (re-)compiled in either case.
 
- 
+
         .. warning::
             If `force_compile`, then an existing folder of that name will be
             deleted.
@@ -105,14 +105,14 @@ class PetabImporter:
 
         # compile
         if force_compile or not os.path.exists(self.output_folder) or \
-                 not os.listdir(self.output_folder):
+                not os.listdir(self.output_folder):
             logger.info(f"Compiling amici model to folder "
-                f"{self.output_folder}.")
+                        f"{self.output_folder}.")
             self.compile_model()
         else:
             logger.info(f"Using existing amici model in folder "
-                f"{self.output_folder}.")
- 
+                        f"{self.output_folder}.")
+
         # add module to path
         if self.output_folder not in sys.path:
             sys.path.insert(0, self.output_folder)
@@ -159,7 +159,7 @@ class PetabImporter:
             self.petab_problem.sbml_document)
         # init sbml importer
         sbml_importer = amici.SbmlImporter(
-            sbml_string, from_file = False)
+            sbml_string, from_file=False)
 
         # convert
         sbml_importer.sbml2amici(
@@ -448,7 +448,7 @@ def _check_parameter_mapping_ok(
             enumerate(zip(mapping_par_opt_to_par_sim, edatas)):
         # turn amici.ExpData into pd.DataFrame
         df = amici.getDataObservablesAsDataFrame(
-                model, edata_for_condition, by_id=True)
+            model, edata_for_condition, by_id=True)
         # iterate over simulation parameters indices and the mapped
         # optimization parameters
         for i_sim_id, par_sim_id in enumerate(par_sim_ids):
