@@ -42,7 +42,7 @@ jupyter notebooks in the [doc/example](doc/example) directory.
 ## Contributing
 
 We are happy about any contributions. For more information on how to contribute
-to **pyPESTO** check out
+to pyPESTO check out
 <https://pypesto.readthedocs.io/en/latest/contribute.html>
 
 ## References
