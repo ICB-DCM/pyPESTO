@@ -12,15 +12,15 @@ parameter estimation.
 
 pyPESTO features include:
 
-* Multi-start local optimization
-* Profile computation
-* Result visualization
-* Interface to [AMICI](https://github.com/ICB-DCM/AMICI/) for efficient simulation and sensitivity analysis of ordinary differential equation (ODE) models
-* Parameter estimation pipeline for systems biology problems specified in [SBML](http://sbml.org/) and [PEtab](https://github.com/ICB-DCM/PEtab)
+*   Multi-start local optimization
+*   Profile computation
+*   Result visualization
+*   Interface to [AMICI](https://github.com/ICB-DCM/AMICI/) for efficient simulation and sensitivity analysis of ordinary differential equation (ODE) models
+*   Parameter estimation pipeline for systems biology problems specified in [SBML](http://sbml.org/) and [PEtab](https://github.com/ICB-DCM/PEtab)
 
 ## Quick install
 
-The simplest way to install **pyPESTO** is via pip:
+The simplest way to install pyPESTO is via pip:
 
 ```shell
 pip3 install pypesto
@@ -43,7 +43,7 @@ jupyter notebooks in the [doc/example](doc/example) directory.
 
 We are happy about any contributions. For more information on how to contribute
 to pyPESTO check out
-<https://pypesto.readthedocs.io/en/latest/contribute.html>
+[https://pypesto.readthedocs.io/en/latest/contribute.html](https://pypesto.readthedocs.io/en/latest/contribute.html)
 
 ## References
 
