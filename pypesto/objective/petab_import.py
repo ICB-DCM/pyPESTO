@@ -76,7 +76,8 @@ class PetabImporter:
 
         return PetabImporter(
             petab_problem=petab_problem,
-            output_folder=output_folder)
+            output_folder=output_folder,
+            model_name=model_name)
 
     def create_model(self, force_compile=False):
         """
