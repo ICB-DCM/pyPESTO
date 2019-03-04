@@ -50,9 +50,9 @@ Welcome to pyPESTO's documentation!
    api_profile
    api_sample
    api_result
+   api_engine
    api_visualize
    api_startpoint
-
 
 .. toctree::
    :maxdepth: 2
