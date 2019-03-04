@@ -213,6 +213,9 @@ def profile_lowlevel(fvals, ax=None, size=(18.5, 6.5), color=None,
         ax.xaxis.set_major_locator(MaxNLocator(integer=True))
         ax.plot(fvals[0, :], fvals[1, :], color=color[0], label=legend_text)
 
+    if legend_text is not None:
+        ax.legend()
+
     return ax
 
 
