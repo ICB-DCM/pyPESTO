@@ -393,4 +393,8 @@ def handle_options(ax, vals, ref, y_limits, offset_y):
                     [i_ref.fval + offset_y, i_ref.fval + offset_y],
                     '--', color=i_ref.color, label=i_ref.legend)
 
+            # create legend for reference points
+            if i_ref.legend is not None:
+                ax.legend()
+
     return ax

@@ -56,6 +56,10 @@ class ReferencePoint(dict):
             else:
                 self.color = None
                 self.auto_color = True
+            if "legend" in reference.keys():
+                self.legend = reference["legend"]
+            else:
+                self.legend = None
         elif isinstance(reference, tuple):
             # Handle case of tuple
             self.x = np.array(reference[0])

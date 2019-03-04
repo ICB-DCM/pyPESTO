@@ -6,7 +6,7 @@ from .clust_color import assign_colors
 from .misc import process_result_list
 
 
-def profiles(results, fig=None, profile_indices=None, size=(18.5, 6.5),
+def profiles(results, ax=None, profile_indices=None, size=(18.5, 6.5),
              reference=None, colors=None, legends=None, profile_list=0):
     """
     Plot classical 1D profile plot (using the posterior, e.g. Gaussian like
@@ -18,8 +18,8 @@ def profiles(results, fig=None, profile_indices=None, size=(18.5, 6.5),
     results: list or pypesto.Result
         list of pypesto.Result or single pypesto.Result
 
-    fig: matplotlib.Figure, optional
-        Figure object to use.
+    ax: list of matplotlib.Axes, optional
+        List of axes objects to use.
 
     profile_indices: list of integer values
         list of integer values specifying which profiles should be plotted
@@ -68,7 +68,7 @@ def profiles(results, fig=None, profile_indices=None, size=(18.5, 6.5),
                               profile_list=profile_list)
 
         # call lowlevel routine
-        ax = profiles_lowlevel(fvals=fvals, ax=fig, size=size,
+        ax = profiles_lowlevel(fvals=fvals, ax=ax, size=size,
                                color=colors[j], legend_text=legends[j])
 
     # parse and apply plotting options
@@ -251,6 +251,10 @@ def handle_reference_points(ref, ax, fvals):
                 current_x = i_ref['x'][par_indices[i_par]]
                 i_ax.plot([current_x, current_x], [0., 1.],
                           color=i_ref.color, label=i_ref.legend)
+
+            # create legend for reference points
+            if i_ref.legend is not None:
+                i_ax.legend()
 
     return ax
 
