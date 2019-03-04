@@ -89,7 +89,7 @@ def optimizer_history(results,
         (x_label, y_label, vals) = get_trace(result, trace_x, trace_y)
 
         # compute the necessary offset for the y-axis
-        vals = get_vals(vals, scale_y, offset_y, start_indices)
+        (vals, offset_y) = get_vals(vals, scale_y, offset_y, start_indices)
 
         # call lowlevel plot routine
         ax = optimizer_history_lowlevel(vals, scale_y=scale_y, ax=ax,
@@ -102,7 +102,7 @@ def optimizer_history(results,
     ref = create_references(references=reference)
 
     # handle options
-    ax = handle_options(ax, vals, ref, y_limits)
+    ax = handle_options(ax, vals, ref, y_limits, offset_y)
 
     return ax
 
@@ -308,6 +308,9 @@ def get_vals(vals, scale_y, offset_y, start_indices):
 
     vals: list
         list of numpy arrays of size 2 x len(start_indices)
+
+    offset_y:
+        offset for the y-axis, as this is supposed to be in log10-scale
     """
 
     # get list of indices
@@ -339,10 +342,10 @@ def get_vals(vals, scale_y, offset_y, start_indices):
         for val in vals:
             val[1, :] += offset_y * np.ones(val[1].shape)
 
-    return vals
+    return vals, offset_y
 
 
-def handle_options(ax, vals, ref, y_limits):
+def handle_options(ax, vals, ref, y_limits, offset_y):
     """
     Get the limits for the y-axis, plots the reference points, will do
     more at a later time point. This function is there to apply whatever
@@ -364,6 +367,9 @@ def handle_options(ax, vals, ref, y_limits):
     y_limits: float or ndarray, optional
         maximum value to be plotted on the y-axis, or y-limits
 
+    offset_y:
+        offset for the y-axis, if this is supposed to be in log10-scale
+
     Returns
     -------
 
@@ -383,7 +389,8 @@ def handle_options(ax, vals, ref, y_limits):
             max_len = np.max([max_len, val[0, -1]])
 
         for i_ref in ref:
-            ax.semilogy([0, max_len], [i_ref.fval, i_ref.fval], '--',
-                        color=i_ref.color, label=i_ref.legend)
+            ax.plot([0, max_len],
+                    [i_ref.fval + offset_y, i_ref.fval + offset_y],
+                    '--', color=i_ref.color, label=i_ref.legend)
 
     return ax

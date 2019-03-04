@@ -81,7 +81,15 @@ def parameters(results, ax=None, free_indices_only=True, lb=None, ub=None,
 
     # plot reference points
     for i_ref in ref:
-        ax = parameters_lowlevel([i_ref['x']], [i_ref['fval']], ax=ax,
+        # reduce parameter vector in reference point, if necessary
+        if free_indices_only:
+            x_ref = np.array(result.problem.get_reduced_vector(i_ref['x']))
+        else:
+            x_ref = np.array(i_ref['x'])
+        x_ref = np.reshape(x_ref, (1, x_ref.size))
+
+        # plot reference parameters using lowlevel routine
+        ax = parameters_lowlevel(x_ref, [i_ref['fval']], ax=ax,
                                  colors=i_ref['color'],
                                  linestyle='--',
                                  legend_text=i_ref.legend,
