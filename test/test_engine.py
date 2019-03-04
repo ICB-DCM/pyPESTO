@@ -32,8 +32,8 @@ class EngineTest(unittest.TestCase):
             folder_base + "Zheng_PNAS2012")
         objective = petab_importer.create_objective()
         problem = petab_importer.create_problem(objective)
-        result = pypesto.minimize(problem=problem, n_starts=3, engine=engine)
-        self.assertTrue(len(result.optimize_result.as_list()) == 3)
+        result = pypesto.minimize(problem=problem, n_starts=2, engine=engine)
+        self.assertTrue(len(result.optimize_result.as_list()) == 2)
 
 
 if __name__ == '__main__':
