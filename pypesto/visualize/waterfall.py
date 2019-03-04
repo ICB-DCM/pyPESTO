@@ -280,4 +280,8 @@ def handle_options(ax, max_len_fvals, ref, y_limits):
         ax.plot([0, max_len_fvals - 1], [i_ref.fval, i_ref.fval], '--',
                 color=i_ref.color, label=i_ref.legend)
 
+        # create legend for reference points
+        if i_ref.legend is not None:
+            ax.legend()
+
     return ax
