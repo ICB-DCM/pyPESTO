@@ -7,7 +7,8 @@ from .misc import process_result_list
 
 
 def parameters(results, ax=None, free_indices_only=True, lb=None, ub=None,
-               size=None, reference=None, colors=None, legends=None):
+               size=None, reference=None, colors=None, legends=None,
+               balance_alpha=True):
     """
     Plot parameter values.
 
@@ -44,6 +45,10 @@ def parameters(results, ax=None, free_indices_only=True, lb=None, ub=None,
     legends: list or str
         Labels for line plots, one label per result object
 
+    balance_alpha: bool (optional)
+        Flag indicating whether alpha for large clusters should be reduced to
+        avoid overplotting (default: True)
+
     Returns
     -------
 
@@ -72,13 +77,16 @@ def parameters(results, ax=None, free_indices_only=True, lb=None, ub=None,
     for i_ref in ref:
         ax = parameters_lowlevel([i_ref['x']], [i_ref['fval']], ax=ax,
                                  colors=i_ref['color'],
-                                 legend_text=i_ref.legend)
+                                 legend_text=i_ref.legend,
+                                 balance_alpha=balance_alpha)
 
     return ax
 
 
-def parameters_lowlevel(xs, fvals, lb=None, ub=None, x_labels=None, ax=None,
-                        size=None, colors=None, legend_text=None):
+def parameters_lowlevel(xs, fvals, lb=None, ub=None, x_labels=None,
+                        ax=None, size=None, colors=None, legend_text=None,
+                        balance_alpha=True):
+
     """
     Plot parameters plot using list of parameters.
 
@@ -110,6 +118,10 @@ def parameters_lowlevel(xs, fvals, lb=None, ub=None, x_labels=None, ax=None,
     legend_text: str
         Label for line plots
 
+    balance_alpha: bool (optional)
+        Flag indicating whether alpha for large clusters should be reduced to
+        avoid overplotting (default: True)
+
     Returns
     -------
 
@@ -131,7 +143,8 @@ def parameters_lowlevel(xs, fvals, lb=None, ub=None, x_labels=None, ax=None,
         fig.set_size_inches(*size)
 
     # assign colors
-    colors = assign_colors(vals=fvals, colors=colors)
+    colors = assign_colors(vals=fvals, colors=colors,
+                           balance_alpha=balance_alpha)
 
     # parameter indices
     parameters_ind = list(range(1, xs.shape[1] + 1))[::-1]
@@ -160,6 +173,8 @@ def parameters_lowlevel(xs, fvals, lb=None, ub=None, x_labels=None, ax=None,
     ax.set_xlabel('Parameter value')
     ax.set_ylabel('Parameter index')
     ax.set_title('Estimated parameters')
+    if legend_text is not None:
+        ax.legend()
 
     return ax
 

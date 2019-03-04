@@ -81,6 +81,7 @@ coverage_py.xml
 
 # examples
 doc/example/tmp
+doc/example/amici_models/*
 
 # general
 data/.snakemake
@@ -97,4 +98,4 @@ dask-worker-space
 venv/*
 *.tmp
 tmp/*
-test/tmp/Zheng_PNAS2012/*
+amici_models/*
