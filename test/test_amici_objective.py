@@ -7,7 +7,6 @@ import unittest
 
 import petab
 import pypesto
-import numpy as np
 from test.petab_util import folder_base
 
 
@@ -49,7 +48,7 @@ class AmiciObjectiveTest(unittest.TestCase):
         problem = importer.create_problem(obj)
         optimizer = pypesto.ScipyOptimizer('ls_trf')
 
-        result = pypesto.minimize(
+        pypesto.minimize(
             problem=problem, optimizer=optimizer, n_starts=2,
         )
 
