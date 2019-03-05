@@ -18,6 +18,8 @@ optimizers = {
     'dlib': ['default']
 }
 
+ATOL = 1e-2
+RTOL = 1e-3
 
 class AmiciObjectiveTest(unittest.TestCase):
     def runTest(self):
@@ -26,24 +28,24 @@ class AmiciObjectiveTest(unittest.TestCase):
             x0 = list(model.getParameters())
             df = objective.check_grad(
                 x0,
-                eps=1e-5,
+                eps=1e-3,
                 verbosity=0,
                 mode=pypesto.objective.constants.MODE_FUN
             )
             print("relative errors MODE_FUN: ", df.rel_err.values)
             print("absolute errors MODE_FUN: ", df.abs_err.values)
-            self.assertTrue(np.all(df.rel_err.values < 1e-2))
-            self.assertTrue(np.all(df.abs_err.values < 1e-1))
+            self.assertTrue(np.all((df.rel_err.values < RTOL) |
+                                   (df.abs_err.values < ATOL)))
             df = objective.check_grad(
                 x0,
-                eps=1e-5,
+                eps=1e-3,
                 verbosity=0,
                 mode=pypesto.objective.constants.MODE_RES
             )
             print("relative errors MODE_RES: ", df.rel_err.values)
             print("absolute errors MODE_RES: ", df.rel_err.values)
-            self.assertTrue(np.all(df.rel_err.values < 1e-2))
-            self.assertTrue(np.all(df.abs_err.values < 1e-2))
+            self.assertTrue(np.all((df.rel_err.values < RTOL) |
+                                   (df.abs_err.values < ATOL)))
 
             for library in optimizers.keys():
                 for method in optimizers[library]:

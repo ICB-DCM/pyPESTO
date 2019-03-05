@@ -371,7 +371,7 @@ class AmiciObjective(Objective):
                         self.x_ids,
                         self.mapping_par_opt_to_par_sim[data_ix],
                         rdata['sres'],
-                        coefficient=-1.0
+                        coefficient=1.0
                     )
                     sres = np.vstack([sres, opt_sres]) \
                         if sres.size else opt_sres
@@ -404,7 +404,7 @@ class AmiciObjective(Objective):
             FVAL: np.inf,
             GRAD: np.nan * np.ones(self.dim),
             HESS: np.nan * np.ones([self.dim, self.dim]),
-            RES: np.nan * np.ones(n_res),
+            RES:  np.nan * np.ones(n_res),
             SRES: np.nan * np.ones([n_res, self.dim]),
             RDATAS: rdatas
         }
