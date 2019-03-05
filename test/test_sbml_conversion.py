@@ -21,6 +21,7 @@ optimizers = {
 ATOL = 1e-2
 RTOL = 1e-3
 
+
 class AmiciObjectiveTest(unittest.TestCase):
     def runTest(self):
         for example in ['conversion_reaction']:
