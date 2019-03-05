@@ -148,7 +148,7 @@ class AmiciObjective(Objective):
             self.preeq_guesses = {
                 'fval': np.inf,
                 'data': {
-                    str(iexp): dict()
+                    iexp: dict()
                     for iexp, edata in enumerate(self.edatas)
                     if len(edata.fixedParametersPreequilibration) or
                     self.amici_solver.getNewtonPreequilibration()
@@ -446,8 +446,8 @@ class AmiciObjective(Objective):
         mapping = self.mapping_par_opt_to_par_sim[condition_ix]
         x_sim = map_par_opt_to_par_sim(mapping, self.x_ids, x)
         x_ss_guess = []  # resets initial state by default
-        if str(condition_ix) in self.preeq_guesses['data']:
-            guess_data = self.preeq_guesses['data'][str(condition_ix)]
+        if condition_ix in self.preeq_guesses['data']:
+            guess_data = self.preeq_guesses['data'][condition_ix]
             if guess_data['x_ss'] is not None:
                 x_ss_guess = guess_data['x_ss']
             if guess_data['sx_ss'] is not None:
@@ -459,10 +459,10 @@ class AmiciObjective(Objective):
 
     def store_steadystate_guess(self, condition_ix, x, rdata):
 
-        if str(condition_ix) not in self.preeq_guesses['data']:
+        if condition_ix not in self.preeq_guesses['data']:
             return
 
-        preeq_guesses = self.preeq_guesses['data'][str(condition_ix)]
+        preeq_guesses = self.preeq_guesses['data'][condition_ix]
 
         # update parameter
 
