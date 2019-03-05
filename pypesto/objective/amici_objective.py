@@ -119,6 +119,8 @@ class AmiciObjective(Objective):
         # set the maximum sensitivity order
         self.max_sensi_order = max_sensi_order
 
+        self.guess_steadystate = guess_steadystate
+
         # optimization parameter ids
         if x_ids is None:
             # use model parameter ids as ids
@@ -144,7 +146,12 @@ class AmiciObjective(Objective):
 
         # preallocate guesses, construct a dict for every edata for which we
         # need to do preequilibration
-        if guess_steadystate:
+        if self.guess_steadystate:
+            if self.amici_model.getSteadyStateSensitivityMode() == \
+                    amici.SteadyStateSensitivityMode_simulationFSA:
+                raise ValueError('Steadystate guesses cannot be enabled when'
+                                 ' `simulationFSA` as '
+                                 'SteadyStateSensitivityMode')
             self.preeq_guesses = {
                 'fval': np.inf,
                 'data': {
@@ -443,6 +450,13 @@ class AmiciObjective(Objective):
         self.amici_model.setParameterScale(amici_scale_vector)
 
     def apply_steadystate_guess(self, condition_ix, x):
+        """
+        This function uses the the stored steadystate as well as the
+        respective  sensitivity (if available) and parameter value to
+        approximate the steadystate at the current parameters using a
+        zero or first order taylor approximation:
+        x_ss(x') = x_ss(x) [+ dx_ss/dx(x)*(x'-x)]
+        """
         mapping = self.mapping_par_opt_to_par_sim[condition_ix]
         x_sim = map_par_opt_to_par_sim(mapping, self.x_ids, x)
         x_ss_guess = []  # resets initial state by default
