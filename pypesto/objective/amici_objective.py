@@ -383,7 +383,6 @@ class AmiciObjective(Objective):
             for data_ix, rdata in enumerate(rdatas):
                 self.store_steadystate_guess(data_ix, x, rdata)
 
-
         return {
             FVAL: nllh,
             GRAD: snllh,
