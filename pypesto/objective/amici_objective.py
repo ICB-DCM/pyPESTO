@@ -152,7 +152,7 @@ class AmiciObjective(Objective):
                 raise ValueError('Steadystate guesses cannot be enabled when'
                                  ' `simulationFSA` as '
                                  'SteadyStateSensitivityMode')
-            self.preeq_guesses = {
+            self.steadystate_guesses = {
                 'fval': np.inf,
                 'data': {
                     iexp: dict()
@@ -160,10 +160,6 @@ class AmiciObjective(Objective):
                     if len(edata.fixedParametersPreequilibration) or
                     self.amici_solver.getNewtonPreequilibration()
                 }
-            }
-        else:
-            self.preeq_guesses = {
-                'data': dict(),
             }
 
         # optimization parameter names
@@ -285,6 +281,13 @@ class AmiciObjective(Objective):
         self.rebind_fun()
         self.rebind_res()
 
+    def reset(self):
+        """
+        Resets the objective, including steadystate guesses
+        """
+        super(AmiciObjective, self).reset()
+        self.reset_steadystate_guesses()
+
     def _call_amici(
             self,
             x,
@@ -323,8 +326,8 @@ class AmiciObjective(Objective):
             # set parameters in model, according to mapping
             self.set_par_sim_for_condition(data_ix, x)
 
-            if 'fval' in self.preeq_guesses and \
-                    self.preeq_guesses['fval'] < np.inf:
+            if self.guess_steadystate and \
+                    self.steadystate_guesses['fval'] < np.inf:
                 self.apply_steadystate_guess(data_ix, x)
 
             # run amici simulation
@@ -377,9 +380,9 @@ class AmiciObjective(Objective):
                         if sres.size else opt_sres
 
         # check whether we should update data for preequilibration guesses
-        if 'fval' in self.preeq_guesses and \
-                nllh <= self.preeq_guesses['fval']:
-            self.preeq_guesses['fval'] = nllh
+        if 'fval' in self.steadystate_guesses and \
+                nllh <= self.steadystate_guesses['fval']:
+            self.steadystate_guesses['fval'] = nllh
             for data_ix, rdata in enumerate(rdatas):
                 self.store_steadystate_guess(data_ix, x, rdata)
 
@@ -450,17 +453,17 @@ class AmiciObjective(Objective):
 
     def apply_steadystate_guess(self, condition_ix, x):
         """
-        This function uses the the stored steadystate as well as the
-        respective  sensitivity (if available) and parameter value to
-        approximate the steadystate at the current parameters using a
-        zero or first order taylor approximation:
+        Use the stored steadystate as well as the respective  sensitivity (
+        if available) and parameter value to approximate the steadystate at
+        the current parameters using a zeroth or first order taylor
+        approximation:
         x_ss(x') = x_ss(x) [+ dx_ss/dx(x)*(x'-x)]
         """
         mapping = self.mapping_par_opt_to_par_sim[condition_ix]
         x_sim = map_par_opt_to_par_sim(mapping, self.x_ids, x)
         x_ss_guess = []  # resets initial state by default
-        if condition_ix in self.preeq_guesses['data']:
-            guess_data = self.preeq_guesses['data'][condition_ix]
+        if condition_ix in self.steadystate_guesses['data']:
+            guess_data = self.steadystate_guesses['data'][condition_ix]
             if guess_data['x_ss'] is not None:
                 x_ss_guess = guess_data['x_ss']
             if guess_data['sx_ss'] is not None:
@@ -471,11 +474,16 @@ class AmiciObjective(Objective):
         self.amici_model.setInitialStates(x_ss_guess)
 
     def store_steadystate_guess(self, condition_ix, x, rdata):
+        """
+        Store condition parameter, steadystate and steadystate sensitivity in
+        steadystate_guesses if steadystate guesses are enabled for this
+        condition
+        """
 
-        if condition_ix not in self.preeq_guesses['data']:
+        if condition_ix not in self.steadystate_guesses['data']:
             return
 
-        preeq_guesses = self.preeq_guesses['data'][condition_ix]
+        preeq_guesses = self.steadystate_guesses['data'][condition_ix]
 
         # update parameter
 
@@ -486,6 +494,17 @@ class AmiciObjective(Objective):
         # update steadystates
         preeq_guesses['x_ss'] = rdata['x_ss']
         preeq_guesses['sx_ss'] = rdata['sx_ss']
+
+    def reset_steadystate_guesses(self):
+        """
+        Resets all steadystate guess data
+        """
+        if not self.guess_steadystate:
+            return
+
+        self.steadystate_guesses['fval'] = np.inf
+        for condition in self.steadystate_guesses['data']:
+            self.steadystate_guesses['data'][condition] = dict()
 
 
 def log_simulation(data_ix, rdata):

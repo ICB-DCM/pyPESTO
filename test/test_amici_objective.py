@@ -7,7 +7,12 @@ import unittest
 
 import petab
 import pypesto
+import pypesto.objective.constants
+import numpy as np
 from test.petab_util import folder_base
+
+ATOL = 1e-6
+RTOL = 1e-6
 
 
 class AmiciObjectiveTest(unittest.TestCase):
@@ -40,6 +45,11 @@ class AmiciObjectiveTest(unittest.TestCase):
         self.assertEqual(expected, opt_grad)
 
     def test_preeq_guesses(self):
+        """
+        Test whether optimization with preequilibration guesses works, asserts
+        that steadystate guesses are written and checks that gradient is still
+        correct with guesses set
+        """
         petab_problem = petab.Problem.from_folder(folder_base +
                                                   "Zheng_PNAS2012")
         petab_problem.model_name = "Zheng_PNAS2012"
@@ -48,9 +58,23 @@ class AmiciObjectiveTest(unittest.TestCase):
         problem = importer.create_problem(obj)
         optimizer = pypesto.ScipyOptimizer('ls_trf')
 
-        pypesto.minimize(
+        result = pypesto.minimize(
             problem=problem, optimizer=optimizer, n_starts=2,
         )
+
+        self.assertTrue(obj.steadystate_guesses['fval'] < np.inf)
+        self.assertTrue(len(obj.steadystate_guesses['data']) == 1)
+
+        df = obj.check_grad(
+            result.optimize_result.list[0]['x'],
+            eps=1e-3,
+            verbosity=0,
+            mode=pypesto.objective.constants.MODE_FUN
+        )
+        print("relative errors MODE_FUN: ", df.rel_err.values)
+        print("absolute errors MODE_FUN: ", df.abs_err.values)
+        self.assertTrue(np.all((df.rel_err.values < RTOL) |
+                               (df.abs_err.values < ATOL)))
 
 
 if __name__ == '__main__':
