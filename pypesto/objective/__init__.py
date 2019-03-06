@@ -16,8 +16,6 @@ __all__ = ["Objective",
            "res_to_chi2",
            "sres_to_schi2",
            "AmiciObjective",
-<<<<<<< HEAD
-           "Prior"]
-=======
+           "Prior",
            "PetabImporter"]
->>>>>>> ICB-DCM/master
+

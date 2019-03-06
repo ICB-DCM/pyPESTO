@@ -109,11 +109,8 @@ class Objective:
                  res=None, sres=None,
                  fun_accept_sensi_orders=False,
                  res_accept_sensi_orders=False,
-<<<<<<< HEAD
                  prior=None,
-=======
                  x_names=None,
->>>>>>> ICB-DCM/master
                  options=None):
 
         self.fun = fun
@@ -228,7 +225,6 @@ class Objective:
         # compute result
         result = self._call_unprocessed(x, sensi_orders, mode)
 
-<<<<<<< HEAD
         # compute penalized objective funciton and gradient
         if self.has_prior:
 
@@ -245,8 +241,6 @@ class Objective:
         # convert to ndarray
         result = Objective.as_ndarrays(result)
 
-=======
->>>>>>> ICB-DCM/master
         # post-process
         result = self.pre_post_processor.postprocess(result)
 

@@ -10,11 +10,9 @@ from .version import __version__  # noqa: F401
 from .objective import (ObjectiveOptions,
                         Objective,
                         AmiciObjective,
-<<<<<<< HEAD
-                        Prior)
-=======
+                        Prior,
                         PetabImporter)
->>>>>>> ICB-DCM/master
+
 from .problem import Problem
 from .result import (Result,
                      OptimizeResult,
@@ -33,7 +31,6 @@ from .engine import (SingleCoreEngine,
                      MultiProcessEngine)
 
 
-<<<<<<< HEAD
 __all__ = ["ObjectiveOptions",
            "Objective",
            "AmiciObjective",
@@ -53,7 +50,7 @@ __all__ = ["ObjectiveOptions",
            "parameter_profile",
            "ProfileOptions",
            "ProfilerResult"]
-=======
+
 __all__ = [
     # objective
     "ObjectiveOptions",
@@ -80,6 +77,4 @@ __all__ = [
     "ProfilerResult",
     # engine
     "SingleCoreEngine",
-    "MultiProcessEngine",
-]
->>>>>>> ICB-DCM/master
+    "MultiProcessEngine"]
