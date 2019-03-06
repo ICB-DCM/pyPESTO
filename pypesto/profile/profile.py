@@ -270,12 +270,12 @@ def walk_along_profile(current_profile,
         x_now = current_profile.x_path[:, -1]
 
         # check if the next profile point needs to be computed
-        if par_direction is -1:
+        if par_direction == -1:
             stop_profile = (x_now[i_parameter] <= problem.lb_full[[
                 i_parameter]]) or (current_profile.ratio_path[-1] <
                                    options.ratio_min)
 
-        if par_direction is 1:
+        if par_direction == 1:
             stop_profile = (x_now[i_parameter] >= problem.ub_full[[
                 i_parameter]]) or (current_profile.ratio_path[-1] <
                                    options.ratio_min)
@@ -297,11 +297,17 @@ def walk_along_profile(current_profile,
         # IMPORTANT: This optimization will need a proper exception
         # handling (coming soon)
         optimizer_result = optimizer.minimize(problem, startpoint, 0)
+        if optimizer_result["grad"] is not None:
+            gradnorm = np.linalg.norm(optimizer_result["grad"][
+                                          problem.x_free_indices])
+        else:
+            gradnorm = None
+
         current_profile.append_profile_point(
             optimizer_result.x,
             optimizer_result.fval,
             np.exp(global_opt - optimizer_result.fval),
-            np.linalg.norm(optimizer_result.grad[problem.x_free_indices]),
+            gradnorm,
             optimizer_result.exitflag,
             optimizer_result.time,
             optimizer_result.n_fval,
@@ -404,12 +410,17 @@ def fill_profile_list(
             number of parameters in the unreduced problem
         """
 
+    if optimize_result["grad"] is not None:
+        gradnorm = np.linalg.norm(optimize_result["grad"])
+    else:
+        gradnorm = None
+
     # create blanko profile
     new_profile = ProfilerResult(
         optimize_result["x"],
         np.array([optimize_result["fval"]]),
         np.array([1.]),
-        np.linalg.norm(optimize_result["grad"]),
+        gradnorm,
         optimize_result["exitflag"],
         np.array([0.]),
         np.array([0.]),

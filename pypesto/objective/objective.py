@@ -2,10 +2,11 @@ import numpy as np
 import copy
 import pandas as pd
 import logging
+
 from .constants import MODE_FUN, MODE_RES, FVAL, GRAD, HESS, RES, SRES
 from .history import ObjectiveHistory
 from .options import ObjectiveOptions
-
+from .pre_post_process import PrePostProcessor, FixedParametersProcessor
 
 logger = logging.getLogger(__name__)
 
@@ -65,6 +66,11 @@ class Objective:
         Flag indicating whether res takes sensi_orders as an argument.
         Default: False
 
+    x_names: list of str
+        Parameter names. None if no names provided, otherwise a list of str,
+        length dim_full (as in the Problem class). Can be read by the
+        problem.
+
     options: pypesto.ObjectiveOptions, optional
         Options as specified in pypesto.ObjectiveOptions.
 
@@ -74,11 +80,6 @@ class Objective:
     history: pypesto.ObjectiveHistory
         For storing the call history. Initialized by the optimizer in
         reset_history().
-
-    x_names: list of str
-        Parameter names. The base Objective class provides None.
-        None if no names provided, otherwise a list of str, length dim_full.
-        Can be read by the problem.
 
     preprocess: callable
         Preprocess input values to __call__.
@@ -94,6 +95,13 @@ class Objective:
 
     preprocess, postprocess are configured in update_from_problem()
     and can be reset using the reset() method.
+
+    If fun_accept_sensi_orders resp. res_accept_sensi_orders is True,
+    fun resp. res can also return dictionaries instead of tuples.
+    In that case, they are expected to follow the naming conventions
+    in ``constants.py``. This is of interest, because when __call__ is
+    called with return_dict = True, the full dictionary is returned, which
+    can contain e.g. also simulation data or debugging information.
     """
 
     def __init__(self,
@@ -101,7 +109,11 @@ class Objective:
                  res=None, sres=None,
                  fun_accept_sensi_orders=False,
                  res_accept_sensi_orders=False,
+<<<<<<< HEAD
                  prior=None,
+=======
+                 x_names=None,
+>>>>>>> ICB-DCM/master
                  options=None):
 
         self.fun = fun
@@ -120,16 +132,9 @@ class Objective:
 
         self.history = ObjectiveHistory(self.options)
 
-        def preprocess(x):
-            return np.array(x)
+        self.pre_post_processor = PrePostProcessor()
 
-        def postprocess(result):
-            return result
-
-        self.preprocess = preprocess
-        self.postprocess = postprocess
-
-        self.x_names = None
+        self.x_names = x_names
 
     def __deepcopy__(self, memodict=None):
         other = Objective()
@@ -186,7 +191,11 @@ class Objective:
                 f"Objective cannot be called with sensi_orders={sensi_orders}"
                 f" and mode={mode}")
 
-    def __call__(self, x, sensi_orders: tuple = (0, ), mode=MODE_FUN):
+    def __call__(self,
+                 x,
+                 sensi_orders: tuple = (0, ),
+                 mode=MODE_FUN,
+                 return_dict=False):
         """
         Method to obtain arbitrary sensitivities. This is the central method
         which is always called, also by the get_* methods.
@@ -214,11 +223,12 @@ class Objective:
         self.check_sensi_orders(sensi_orders, mode)
 
         # pre-process
-        x = self.preprocess(x=x)
+        x = self.pre_post_processor.preprocess(x)
 
         # compute result
         result = self._call_unprocessed(x, sensi_orders, mode)
 
+<<<<<<< HEAD
         # compute penalized objective funciton and gradient
         if self.has_prior:
 
@@ -235,14 +245,17 @@ class Objective:
         # convert to ndarray
         result = Objective.as_ndarrays(result)
 
+=======
+>>>>>>> ICB-DCM/master
         # post-process
-        result = self.postprocess(result=result)
+        result = self.pre_post_processor.postprocess(result)
 
         # update history
         self.history.update(x, sensi_orders, mode, result)
 
         # map to output format
-        result = Objective.output_to_tuple(sensi_orders, mode, **result)
+        if not return_dict:
+            result = Objective.output_to_tuple(sensi_orders, mode, **result)
 
         return result
 
@@ -353,22 +366,6 @@ class Objective:
                       SRES: sres}
         else:
             raise ValueError("These sensitivity orders are not supported.")
-        return result
-
-    @staticmethod
-    def as_ndarrays(result):
-        """
-        Convert all array_like objects to numpy arrays. This has the advantage
-        of a uniform output datatype which offers various methods to assess
-        the data.
-        """
-        keys = [GRAD, HESS, RES, SRES]
-        for key in keys:
-            if key in result:
-                value = result[key]
-                if value is not None:
-                    result[key] = np.array(value)
-
         return result
 
     @staticmethod
@@ -539,33 +536,13 @@ class Objective:
             of the fixed parameters.
         """
 
-        # pre-process
-        def preprocess(x):
-            x_full = np.zeros(dim_full)
-            x_full[x_free_indices] = x
-            x_full[x_fixed_indices] = x_fixed_vals
-            return x_full
-        self.preprocess = preprocess
+        pre_post_processor = FixedParametersProcessor(
+            dim_full=dim_full,
+            x_free_indices=x_free_indices,
+            x_fixed_indices=x_fixed_indices,
+            x_fixed_vals=x_fixed_vals)
 
-        # post-process
-        def postprocess(result):
-            if GRAD in result:
-                grad = result[GRAD]
-                if grad.size == dim_full:
-                    grad = grad[x_free_indices]
-                    result[GRAD] = grad
-            if HESS in result:
-                hess = result[HESS]
-                if hess.shape[0] == dim_full:
-                    hess = hess[np.ix_(x_free_indices, x_free_indices)]
-                    result[HESS] = hess
-            if SRES in result:
-                sres = result[SRES]
-                if sres.shape[-1] == dim_full:
-                    sres = sres[..., x_free_indices]
-                    result[SRES] = sres
-            return result
-        self.postprocess = postprocess
+        self.pre_post_processor = pre_post_processor
 
     def check_grad(self,
                    x,
