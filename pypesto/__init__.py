@@ -25,6 +25,9 @@ from .optimize import (minimize,
 from .profile import (parameter_profile,
                       ProfileOptions,
                       ProfilerResult)
+from .sample import (parameter_sample,
+                     SampleOptions,
+                     SamplerResult)
 from .engine import (SingleCoreEngine,
                      MultiProcessEngine)
 

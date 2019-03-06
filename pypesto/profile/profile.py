@@ -91,7 +91,7 @@ class ProfileOptions(dict):
         Parameters
         ----------
 
-        maybe_options: OptimizeOptions or dict
+        maybe_options: ProfileOptions or dict
         """
         if isinstance(maybe_options, ProfileOptions):
             return maybe_options
