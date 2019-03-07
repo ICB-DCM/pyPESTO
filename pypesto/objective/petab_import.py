@@ -104,9 +104,12 @@ class PetabImporter:
                 f"Refusing to remove {self.output_folder} for model "
                 f"compilation: Not a folder.")
 
+        # add module to path
+        if self.output_folder not in sys.path:
+            sys.path.insert(0, self.output_folder)
+
         # compile
-        if force_compile or not os.path.exists(self.output_folder) or \
-                not os.listdir(self.output_folder):
+        if self._must_compile(force_compile):
             logger.info(f"Compiling amici model to folder "
                         f"{self.output_folder}.")
             self.compile_model()
@@ -114,10 +117,13 @@ class PetabImporter:
             logger.info(f"Using existing amici model in folder "
                         f"{self.output_folder}.")
 
-        # add module to path
-        if self.output_folder not in sys.path:
-            sys.path.insert(0, self.output_folder)
+        return self._create_model()
 
+    def _create_model(self):
+        """
+        No checks, no compilation, just load the model module and return
+        the model.
+        """
         # load moduĺe
         model_module = importlib.import_module(self.model_name)
 
@@ -125,6 +131,29 @@ class PetabImporter:
         model = model_module.getModel()
 
         return model
+
+    def _must_compile(self, force_compile: bool):
+        """
+        Check whether the model needs to be compiled first.
+        """
+        # asked by user
+        if force_compile:
+            return True
+
+        # folder does not exist
+        if not os.path.exists(self.output_folder) or \
+                not os.listdir(self.output_folder):
+            return True
+
+        # try to import (in particular checks version)
+        try:
+            # importing will already raise an exception if version wrong
+            importlib.import_module(self.model_name)
+        except RuntimeError:
+            return True
+
+        # no need to (re-)compile
+        return False
 
     def compile_model(self):
         """
