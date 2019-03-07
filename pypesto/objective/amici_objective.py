@@ -24,7 +24,7 @@ class AmiciObjective(Objective):
                  x_ids=None, x_names=None,
                  mapping_par_opt_to_par_sim=None,
                  mapping_scale_opt_to_scale_sim=None,
-                 preprocess_edatas=True,
+                 guess_steadystate=True,
                  options=None):
         """
         Constructor.
@@ -64,9 +64,9 @@ class AmiciObjective(Objective):
             scales. The default is to just use the scales specified in the
             `amici_model` already.
 
-        preprocess_edatas: bool, optional (default = True)
-            Whether to perform preprocessing, i.e. preequilibration, if that
-            is specified in the model.
+        guess_steadystate: bool, optional (default = True)
+            Whether to guess steadystates based on previous steadystates and
+            respective derivatives.
 
         options: pypesto.ObjectiveOptions, optional
             Further options.
@@ -113,19 +113,13 @@ class AmiciObjective(Objective):
         if isinstance(edatas, amici.amici.ExpData):
             edatas = [edatas]
 
-        self.preprocess_edatas = preprocess_edatas
-        if preprocess_edatas:
-            # preprocess the experimental data
-            self.preequilibration_edatas = []
-            self.init_preequilibration_edatas(edatas)
-        else:
-            self.preequilibration_edatas = None
-
         # set the experimental data container
         self.edatas = edatas
 
         # set the maximum sensitivity order
         self.max_sensi_order = max_sensi_order
+
+        self.guess_steadystate = guess_steadystate
 
         # optimization parameter ids
         if x_ids is None:
@@ -149,6 +143,24 @@ class AmiciObjective(Objective):
                 create_scale_mapping_from_model(
                     self.amici_model.getParameterScale(), len(self.edatas))
         self.mapping_scale_opt_to_scale_sim = mapping_scale_opt_to_scale_sim
+
+        # preallocate guesses, construct a dict for every edata for which we
+        # need to do preequilibration
+        if self.guess_steadystate:
+            if self.amici_model.getSteadyStateSensitivityMode() == \
+                    amici.SteadyStateSensitivityMode_simulationFSA:
+                raise ValueError('Steadystate guesses cannot be enabled when'
+                                 ' `simulationFSA` as '
+                                 'SteadyStateSensitivityMode')
+            self.steadystate_guesses = {
+                'fval': np.inf,
+                'data': {
+                    iexp: dict()
+                    for iexp, edata in enumerate(self.edatas)
+                    if len(edata.fixedParametersPreequilibration) or
+                    self.amici_solver.getNewtonPreequilibration()
+                }
+            }
 
         # optimization parameter names
         if x_names is None:
@@ -200,8 +212,7 @@ class AmiciObjective(Objective):
         edatas = [amici.ExpData(data) for data in self.edatas]
         other = AmiciObjective(model, solver, edatas)
         for attr in self.__dict__:
-            if attr not in ['amici_solver', 'amici_model',
-                            'edatas', 'preequilibration_edatas']:
+            if attr not in ['amici_solver', 'amici_model', 'edatas']:
                 other.__dict__[attr] = copy.deepcopy(self.__dict__[attr])
         return other
 
@@ -218,7 +229,7 @@ class AmiciObjective(Objective):
         TODO (see #99): Currently, this method is not used. Instead, the super
         fallback Objective.update_from_problem ist used, which in particular
         does not make use of pesto's ability to compute only compute required
-        directional derivativs. If that is intended, the mapping between
+        directional derivatives. If that is intended, the mapping between
         simulation and optimization parameters must be accounted for.
 
         Parameters
@@ -270,6 +281,13 @@ class AmiciObjective(Objective):
         self.rebind_fun()
         self.rebind_res()
 
+    def reset(self):
+        """
+        Resets the objective, including steadystate guesses
+        """
+        super(AmiciObjective, self).reset()
+        self.reset_steadystate_guesses()
+
     def _call_amici(
             self,
             x,
@@ -299,11 +317,6 @@ class AmiciObjective(Objective):
         # set order in solver
         self.amici_solver.setSensitivityOrder(sensi_order)
 
-        if self.preequilibration_edatas:
-            preeq_status = self.run_preequilibration(x)
-            if preeq_status is not None:
-                return self.get_error_output(rdatas)
-
         # loop over experimental data
         for data_ix, edata in enumerate(self.edatas):
 
@@ -313,10 +326,9 @@ class AmiciObjective(Objective):
             # set parameters in model, according to mapping
             self.set_par_sim_for_condition(data_ix, x)
 
-            if self.preequilibration_edatas:
-                original_value_dict = self.preprocess_preequilibration(data_ix)
-            else:
-                original_value_dict = None
+            if self.guess_steadystate and \
+                    self.steadystate_guesses['fval'] < np.inf:
+                self.apply_steadystate_guess(data_ix, x)
 
             # run amici simulation
             rdata = amici.runAmiciSimulation(
@@ -326,10 +338,6 @@ class AmiciObjective(Objective):
 
             # append to result
             rdatas.append(rdata)
-
-            # reset fixed preequilibration parameters and initial states
-            if self.preequilibration_edatas:
-                self.postprocess_preequilibration(edata, original_value_dict)
 
             # logging
             log_simulation(data_ix, rdata)
@@ -362,8 +370,21 @@ class AmiciObjective(Objective):
                 res = np.hstack([res, rdata['res']]) \
                     if res.size else rdata['res']
                 if sensi_order > 0:
-                    sres = np.vstack([sres, rdata['sres']]) \
-                        if sres.size else rdata['sres']
+                    opt_sres = sim_sres_to_opt_sres(
+                        self.x_ids,
+                        self.mapping_par_opt_to_par_sim[data_ix],
+                        rdata['sres'],
+                        coefficient=1.0
+                    )
+                    sres = np.vstack([sres, opt_sres]) \
+                        if sres.size else opt_sres
+
+        # check whether we should update data for preequilibration guesses
+        if 'fval' in self.steadystate_guesses and \
+                nllh <= self.steadystate_guesses['fval']:
+            self.steadystate_guesses['fval'] = nllh
+            for data_ix, rdata in enumerate(rdatas):
+                self.store_steadystate_guess(data_ix, x, rdata)
 
         return {
             FVAL: nllh,
@@ -373,147 +394,6 @@ class AmiciObjective(Objective):
             SRES: sres,
             RDATAS: rdatas
         }
-
-    def init_preequilibration_edatas(self, edatas):
-        """
-        Extract information needed for doing preequilibration.
-        """
-        self.preequilibration_edatas = []
-
-        for edata in edatas:
-            # extract values of the fixed parameters
-            fixed_parameters = list(edata.fixedParametersPreequilibration)
-
-            # create edata object from model
-            preeq_edata = amici.amici.ExpData(self.amici_model.get())
-
-            # fill in fixed parameter values for preequilibration
-            preeq_edata.fixedParametersPreequilibration = fixed_parameters
-
-            # only preequilibration
-            preeq_edata.setTimepoints([])
-
-            # indicate whether preequilibration is required for this data set
-            preequilibrate = len(fixed_parameters) > 0
-            # TODO (see #100): Currently, len(fixed_parameters) == 0 is used
-            # as an indicator of requiring no preequilibration. However, when
-            # there are events (which amici cannot deal with yet in python),
-            # the situation can occur that there are no fixed_parameters, but
-            # events that are omitted in the preequilibration run.
-
-            self.preequilibration_edatas.append(dict(
-                edata=preeq_edata,
-                preequilibrate=preequilibrate
-            ))
-
-    def run_preequilibration(self, x):
-        """
-        Run preequilibration.
-        """
-
-        for data_ix, preeq_dict in enumerate(self.preequilibration_edatas):
-
-            if not preeq_dict['preequilibrate']:
-                # no preequilibration required
-                continue
-
-            # set model parameter scales for condition index
-            self.set_parameter_scale(data_ix)
-
-            # map to simulation parameters
-            self.set_par_sim_for_condition(data_ix, x)
-
-            # TODO: Conditions might share preeq conditions and dynamic
-            # parameters. In that case, we can save time here.
-
-            # run amici simulation
-            rdata = amici.runAmiciSimulation(
-                self.amici_model,
-                self.amici_solver,
-                preeq_dict['edata'])
-
-            # check if an error occurred
-            if rdata['status'] < 0.0:
-                return rdata['status']
-
-            # fill state
-            preeq_dict['x0'] = rdata['x0']
-            if self.amici_solver.getSensitivityOrder() > \
-                    amici.SensitivityOrder_none:
-                # fill state sensitivities
-                # TODO check that these are always computed, i.e.
-                # forward sensitivities used
-                preeq_dict['sx0'] = rdata['sx0']
-
-    def preprocess_preequilibration(self, edata_ix):
-        """
-        Update the model and data from the preequilibration states,
-        before running the real simulation.
-        """
-
-        data = self.edatas[edata_ix]
-
-        original_fixed_parameters_preequilibration = None
-        original_initial_states = None
-        original_initial_state_sensitivities = None
-
-        # if this data set needed preequilibration, adapt the states
-        # according to the previously run preequilibration
-        if self.preequilibration_edatas[edata_ix]['preequilibrate']:
-
-            # remember original states and sensitivities
-            original_initial_states = self.amici_model.getInitialStates()
-            if self.amici_solver.getSensitivityOrder() > \
-                    amici.SensitivityOrder_none:
-                original_initial_state_sensitivities = \
-                    self.amici_model.getInitialStateSensitivities()
-
-            # remember original fixed parameters for preequilibration
-            original_fixed_parameters_preequilibration \
-                = data.fixedParametersPreequilibration
-
-            # unset fixed preequilibration parameters in data
-            # this prevents amici from doing preequilibration again
-            data.fixedParametersPreequilibration = []
-
-            # set initial state from preequilibration
-            self.amici_model.setInitialStates(
-                self.preequilibration_edatas[edata_ix]['x0']
-            )
-
-            # set initial sensitivities from preequilibration
-            if self.amici_solver.getSensitivityOrder() > \
-                    amici.SensitivityOrder_none:
-                self.amici_model.setInitialStateSensitivities(
-                    self.preequilibration_edatas[edata_ix]['sx0'].flatten()
-                )
-
-        # return the original values
-        return {
-            'k': original_fixed_parameters_preequilibration,
-            'x0': original_initial_states,
-            'sx0': original_initial_state_sensitivities
-        }
-
-    def postprocess_preequilibration(self, edata, original_value_dict):
-        """
-        Reset the model and edata to the true values, i.e. undo
-        the temporary changes done in preprocess_preequilibration.
-        """
-
-        # reset values in edata from values in original_value_dict, if
-        # the corresponding entry in original_value_dict is not None.
-
-        if original_value_dict['k']:
-            edata.fixedParametersPreequilibration = original_value_dict['k']
-
-        if original_value_dict['x0']:
-            self.amici_model.setInitialStates(original_value_dict['x0'])
-
-        if original_value_dict['sx0']:
-            self.amici_model.setInitialStateSensitivities(
-                original_value_dict['sx0']
-            )
 
     def get_error_output(self, rdatas):
         if not self.amici_model.nt():
@@ -527,7 +407,7 @@ class AmiciObjective(Objective):
             FVAL: np.inf,
             GRAD: np.nan * np.ones(self.dim),
             HESS: np.nan * np.ones([self.dim, self.dim]),
-            RES: np.nan * np.ones(n_res),
+            RES:  np.nan * np.ones(n_res),
             SRES: np.nan * np.ones([n_res, self.dim]),
             RDATAS: rdatas
         }
@@ -570,6 +450,61 @@ class AmiciObjective(Objective):
             amici_scale_vector.append(scale)
 
         self.amici_model.setParameterScale(amici_scale_vector)
+
+    def apply_steadystate_guess(self, condition_ix, x):
+        """
+        Use the stored steadystate as well as the respective  sensitivity (
+        if available) and parameter value to approximate the steadystate at
+        the current parameters using a zeroth or first order taylor
+        approximation:
+        x_ss(x') = x_ss(x) [+ dx_ss/dx(x)*(x'-x)]
+        """
+        mapping = self.mapping_par_opt_to_par_sim[condition_ix]
+        x_sim = map_par_opt_to_par_sim(mapping, self.x_ids, x)
+        x_ss_guess = []  # resets initial state by default
+        if condition_ix in self.steadystate_guesses['data']:
+            guess_data = self.steadystate_guesses['data'][condition_ix]
+            if guess_data['x_ss'] is not None:
+                x_ss_guess = guess_data['x_ss']
+            if guess_data['sx_ss'] is not None:
+                x_ss_guess += guess_data['sx_ss'].transpose().dot(
+                    (x_sim - guess_data['x'])
+                )
+
+        self.amici_model.setInitialStates(x_ss_guess)
+
+    def store_steadystate_guess(self, condition_ix, x, rdata):
+        """
+        Store condition parameter, steadystate and steadystate sensitivity in
+        steadystate_guesses if steadystate guesses are enabled for this
+        condition
+        """
+
+        if condition_ix not in self.steadystate_guesses['data']:
+            return
+
+        preeq_guesses = self.steadystate_guesses['data'][condition_ix]
+
+        # update parameter
+
+        mapping = self.mapping_par_opt_to_par_sim[condition_ix]
+        x_sim = map_par_opt_to_par_sim(mapping, self.x_ids, x)
+        preeq_guesses['x'] = x_sim
+
+        # update steadystates
+        preeq_guesses['x_ss'] = rdata['x_ss']
+        preeq_guesses['sx_ss'] = rdata['sx_ss']
+
+    def reset_steadystate_guesses(self):
+        """
+        Resets all steadystate guess data
+        """
+        if not self.guess_steadystate:
+            return
+
+        self.steadystate_guesses['fval'] = np.inf
+        for condition in self.steadystate_guesses['data']:
+            self.steadystate_guesses['data'][condition] = dict()
 
 
 def log_simulation(data_ix, rdata):
@@ -727,3 +662,31 @@ def add_sim_hess_to_opt_hess(par_opt_ids,
 
             opt_hess[par_opt_idx, par_opt_idx_2] += \
                 coefficient * sim_hess[par_sim_idx, par_sim_idx_2]
+
+
+def sim_sres_to_opt_sres(par_opt_ids,
+                         mapping_par_opt_to_par_sim,
+                         sim_sres,
+                         coefficient: float = 1.0):
+    """
+    Sum simulation residual sensitivities to objective residual sensitivities
+    according to the provided mapping `mapping_par_opt_to_par_sim`.
+
+    Parameters
+    ----------
+
+    Same as for add_sim_grad_to_opt_grad, replacing the gradients by residual
+    sensitivities.
+    """
+    opt_sres = np.zeros((sim_sres.shape[0], len(par_opt_ids)))
+
+    for par_sim_idx, par_opt_id in enumerate(mapping_par_opt_to_par_sim):
+        if not isinstance(par_opt_id, str):
+            # this was a numeric override for which we ignore the hessian
+            continue
+
+        par_opt_idx = par_opt_ids.index(par_opt_id)
+        opt_sres[:, par_opt_idx] += \
+            coefficient * sim_sres[:, par_sim_idx]
+
+    return opt_sres
