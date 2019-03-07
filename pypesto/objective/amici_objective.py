@@ -25,7 +25,6 @@ class AmiciObjective(Objective):
                  mapping_par_opt_to_par_sim=None,
                  mapping_scale_opt_to_scale_sim=None,
                  guess_steadystate=True,
-                 preprocess_edatas=True,
                  threads=1,
                  options=None):
         """
@@ -338,16 +337,15 @@ class AmiciObjective(Objective):
                     self.steadystate_guesses['fval'] < np.inf:
                 self.apply_steadystate_guess(data_ix, x)
 
-            # run amici simulation
-            rdata = amici.runAmiciSimulation(
-                self.amici_model,
-                self.amici_solver,
-                edata)
+        # run amici simulation
+        rdatas = amici.runAmiciSimulations(
+            self.amici_model,
+            self.amici_solver,
+            self.edatas,
+            num_threads=self.threads
+        )
 
-            # append to result
-            rdatas.append(rdata)
-
-            # logging
+        for data_ix, rdata in enumerate(rdatas):
             log_simulation(data_ix, rdata)
 
             # check if the computation failed
@@ -436,7 +434,7 @@ class AmiciObjective(Objective):
         """
         mapping = self.mapping_par_opt_to_par_sim[condition_ix]
         x_sim = map_par_opt_to_par_sim(mapping, self.x_ids, x)
-        self.amici_model.setParameters(x_sim)
+        self.edatas[condition_ix].parameter = x_sim
 
     def set_parameter_scale(self, condition_ix):
         scale_list = self.mapping_scale_opt_to_scale_sim[condition_ix]
@@ -457,7 +455,7 @@ class AmiciObjective(Objective):
             # append to scale vector
             amici_scale_vector.append(scale)
 
-        self.amici_model.setParameterScale(amici_scale_vector)
+        self.edatas[condition_ix].scale = amici_scale_vector
 
     def apply_steadystate_guess(self, condition_ix, x):
         """
@@ -479,7 +477,7 @@ class AmiciObjective(Objective):
                     (x_sim - guess_data['x'])
                 )
 
-        self.amici_model.setInitialStates(x_ss_guess)
+        self.edatas[condition_ix] = x_ss_guess
 
     def store_steadystate_guess(self, condition_ix, x, rdata):
         """
