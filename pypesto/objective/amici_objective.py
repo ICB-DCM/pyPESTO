@@ -25,6 +25,7 @@ class AmiciObjective(Objective):
                  mapping_par_opt_to_par_sim=None,
                  mapping_scale_opt_to_scale_sim=None,
                  preprocess_edatas=True,
+                 threads=1,
                  options=None):
         """
         Constructor.
@@ -67,6 +68,10 @@ class AmiciObjective(Objective):
         preprocess_edatas: bool, optional (default = True)
             Whether to perform preprocessing, i.e. preequilibration, if that
             is specified in the model.
+
+        threads: int, optional (default = 1(
+            Number of threads that are used for parallelization over
+            experimental conditions
 
         options: pypesto.ObjectiveOptions, optional
             Further options.
@@ -155,6 +160,8 @@ class AmiciObjective(Objective):
             # use ids as names
             x_names = x_ids
         self.x_names = x_names
+
+        self.threads = threads
 
     def get_bound_fun(self):
         """
