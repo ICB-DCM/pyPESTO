@@ -261,6 +261,9 @@ class AmiciObjective(Objective):
             # set parameters in model, according to mapping
             self.set_par_sim_for_condition(data_ix, x)
 
+            # set parameter list according to mapping
+            self.set_plist_for_condition(data_ix)
+
             if self.guess_steadystate and \
                     self.steadystate_guesses['fval'] < np.inf:
                 self.apply_steadystate_guess(data_ix, x)
