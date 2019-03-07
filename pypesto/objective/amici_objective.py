@@ -25,7 +25,7 @@ class AmiciObjective(Objective):
                  mapping_par_opt_to_par_sim=None,
                  mapping_scale_opt_to_scale_sim=None,
                  guess_steadystate=True,
-                 threads=1,
+                 n_threads=1,
                  options=None):
         """
         Constructor.
@@ -69,9 +69,9 @@ class AmiciObjective(Objective):
             Whether to guess steadystates based on previous steadystates and
             respective derivatives.
 
-        threads: int, optional (default = 1(
+        n_threads: int, optional (default = 1)
             Number of threads that are used for parallelization over
-            experimental conditions
+            experimental conditions.
 
         options: pypesto.ObjectiveOptions, optional
             Further options.
@@ -173,7 +173,7 @@ class AmiciObjective(Objective):
             x_names = x_ids
         self.x_names = x_names
 
-        self.threads = threads
+        self.n_threads = n_threads
 
     def get_bound_fun(self):
         """
@@ -342,7 +342,7 @@ class AmiciObjective(Objective):
             self.amici_model,
             self.amici_solver,
             self.edatas,
-            num_threads=self.threads
+            num_threads=self.n_threads
         )
 
         for data_ix, rdata in enumerate(rdatas):
