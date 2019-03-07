@@ -627,8 +627,7 @@ class PetabAmiciObjective(AmiciObjective):
     def __getstate__(self):
         state = {}
         for key in set(self.__dict__.keys()) - \
-                set(['amici_model', 'amici_solver', 'edatas',
-                     'preequilibration_edatas']):
+                set(['amici_model', 'amici_solver', 'edatas']):
             state[key] = self.__dict__[key]
         return state
 
@@ -644,26 +643,15 @@ class PetabAmiciObjective(AmiciObjective):
         self.amici_solver = solver
         self.edatas = edatas
 
-        if self.preprocess_edatas:
-            self.init_preequilibration_edatas(edatas)
-        else:
-            self.preequilibration_edatas = None
-
     def __deepcopy__(self, memodict=None):
         other = self.__class__.__new__(self.__class__)
 
         for key in set(self.__dict__.keys()) - \
-                set(['amici_model', 'amici_solver', 'edatas',
-                     'preequilibration_edatas']):
+                set(['amici_model', 'amici_solver', 'edatas']):
             other.__dict__[key] = copy.deepcopy(self.__dict__[key])
 
         other.amici_model = amici.ModelPtr(self.amici_model.clone())
         other.amici_solver = amici.SolverPtr(self.amici_solver.clone())
         other.edatas = [amici.ExpData(data) for data in self.edatas]
-
-        if self.preprocess_edatas:
-            other.init_preequilibration_edatas(other.edatas)
-        else:
-            other.preequilibration_edatas = None
 
         return other
