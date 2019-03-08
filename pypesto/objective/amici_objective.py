@@ -455,7 +455,7 @@ class AmiciObjective(Objective):
             # append to scale vector
             amici_scale_vector.append(scale)
 
-        self.edatas[condition_ix].scale = amici_scale_vector
+        self.edatas[condition_ix].pscale = amici_scale_vector
 
     def apply_steadystate_guess(self, condition_ix, x):
         """
