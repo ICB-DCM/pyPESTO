@@ -79,7 +79,8 @@ def waterfall(results,
         max_len_fvals = np.max([max_len_fvals, len(fvals)])
 
         # call lowlevel plot routine
-        ax = waterfall_lowlevel(fvals=fvals, scale_y=scale_y, ax=ax, size=size,
+        ax = waterfall_lowlevel(fvals=fvals, scale_y=scale_y,
+                                offset_y=offset_y, ax=ax, size=size,
                                 colors=colors[j], legend_text=legends[j])
 
     # parse and apply plotting options
@@ -91,8 +92,8 @@ def waterfall(results,
     return ax
 
 
-def waterfall_lowlevel(fvals, scale_y='log10', ax=None, size=(18.5, 10.5),
-                       colors=None, legend_text=None):
+def waterfall_lowlevel(fvals, scale_y='log10', offset_y=0., ax=None,
+                       size=(18.5, 10.5), colors=None, legend_text=None):
     """
     Plot waterfall plot using list of function values.
 
@@ -104,6 +105,9 @@ def waterfall_lowlevel(fvals, scale_y='log10', ax=None, size=(18.5, 10.5),
 
     scale_y: str, optional
         May be logarithmic or linear ('log10' or 'lin')
+
+    offset_y:
+        offset for the y-axis, if this is supposed to be in log10-scale
 
     ax: matplotlib.Axes, optional
         Axes object to use.
@@ -175,7 +179,10 @@ def waterfall_lowlevel(fvals, scale_y='log10', ax=None, size=(18.5, 10.5),
 
     # labels
     ax.set_xlabel('Ordered optimizer run')
-    ax.set_ylabel('Function value')
+    if offset_y == .0:
+        ax.set_ylabel('Function value')
+    else:
+        ax.set_ylabel('Offsetted function value (relative to best start)')
     ax.set_title('Waterfall plot')
     if legend_text is not None:
         ax.legend()

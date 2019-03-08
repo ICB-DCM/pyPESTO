@@ -89,7 +89,8 @@ def optimizer_history(results,
         (x_label, y_label, vals) = get_trace(result, trace_x, trace_y)
 
         # compute the necessary offset for the y-axis
-        (vals, offset_y) = get_vals(vals, scale_y, offset_y, start_indices)
+        (vals, offset_y, y_label) = get_vals(vals, scale_y, offset_y, y_label,
+                                    start_indices)
 
         # call lowlevel plot routine
         ax = optimizer_history_lowlevel(vals, scale_y=scale_y, ax=ax,
@@ -270,10 +271,10 @@ def get_trace(result, trace_x, trace_y):
             tmp_grad_trace = list(trace['grad'].values)
             y_vals = np.array([np.linalg.norm(grad) for grad in
                                tmp_grad_trace if grad is not None])
-            y_label = 'Gradient norm'
+            y_label = 'gradient norm'
 
         else:  # trace_y == 'fval':
-            y_label = 'Objective value'
+            y_label = 'objective value'
             y_vals = np.array(trace['fval'][indices])
 
         # write down values
@@ -282,7 +283,7 @@ def get_trace(result, trace_x, trace_y):
     return x_label, y_label, vals
 
 
-def get_vals(vals, scale_y, offset_y, start_indices):
+def get_vals(vals, scale_y, offset_y, y_label, start_indices):
     """
     Postprocesses the values of the optimization history, depending on the
     options set by the user (e.g. scale_y, offset_y, start_indices)
@@ -296,8 +297,11 @@ def get_vals(vals, scale_y, offset_y, start_indices):
     scale_y: str, optional
         May be logarithmic or linear ('log10' or 'lin')
 
-    offset_y:
+    offset_y: float
         offset for the y-axis, as this is supposed to be in log10-scale
+
+    y_label: str
+        Label for y axis
 
     start_indices: list or int
         list of integers specifying the multi start indices to be plotted or
@@ -311,6 +315,9 @@ def get_vals(vals, scale_y, offset_y, start_indices):
 
     offset_y:
         offset for the y-axis, as this is supposed to be in log10-scale
+
+    y_label:
+        Label for y axis
     """
 
     # get list of indices
@@ -336,13 +343,17 @@ def get_vals(vals, scale_y, offset_y, start_indices):
         min_val = np.min([min_val, tmp_min])
 
     # check, whether offset can be used with this data
-    offset_y = process_offset_y(offset_y, scale_y, min_val)
+    if y_label == 'fval':
+        offset_y = process_offset_y(offset_y, scale_y, min_val)
+    else:
+        offset_y = 0.
 
     if offset_y != 0:
         for val in vals:
             val[1, :] += offset_y * np.ones(val[1].shape)
+            y_label = 'offsetted ' + y_label
 
-    return vals, offset_y
+    return vals, offset_y, y_label
 
 
 def handle_options(ax, vals, ref, y_limits, offset_y):
