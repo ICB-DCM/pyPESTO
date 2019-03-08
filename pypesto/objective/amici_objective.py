@@ -541,12 +541,13 @@ def create_plist_from_par_opt_to_par_sim(mapping_par_opt_to_par_sim):
     -------
 
     plist: array-like of float
-        List of parameter indices for which the sensitivity needs to be computed
+        List of parameter indices for which the sensitivity needs to be
+        computed
     """
     plist = []
 
     # iterate over simulation parameter indices
-    for j_par_sim, val in mapping_par_opt_to_par_sim.items():
+    for j_par_sim, val in enumerate(mapping_par_opt_to_par_sim):
         if not isinstance(val, numbers.Number):
             plist.append(j_par_sim)
 
