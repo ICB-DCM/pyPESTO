@@ -189,6 +189,11 @@ class AggregatedObjective(Objective):
     def aggregate_hessp(self, x):
         return sum(objective.hessp(x) for objective in self.objectives)
 
+    def reset_steadystate_guesses(self):
+        for objective in self.objectives:
+            if hasattr(objective, 'reset_steadystate_guesses'):
+                objective.reset_steadystate_guesses()
+
 
 def _check_boolean_value_consistent(objectives, attr):
     values = set(

@@ -4,6 +4,7 @@ import re
 import abc
 import time
 from ..objective import res_to_chi2
+from ..objective import AmiciObjective, AggregatedObjective
 
 try:
     import dlib
@@ -104,6 +105,8 @@ def objective_decorator(minimize):
 
     def wrapped_minimize(self, problem, x0, index):
         problem.objective.reset_history(index=index)
+        if hasattr(problem.objective, 'reset_steadystate_guesses'):
+            problem.objective.reset_steadystate_guesses()
         result = minimize(self, problem, x0, index)
         problem.objective.finalize_history()
         result = fill_result_from_objective_history(
