@@ -390,7 +390,7 @@ class AmiciObjective(Objective):
         """
         mapping = self.mapping_par_opt_to_par_sim[condition_ix]
         plist = create_plist_from_par_opt_to_par_sim(mapping)
-        self.amici_model.setParameterList(plist)
+        self.edatas[condition_ix].plist = plist
 
     def set_parameter_scale(self, condition_ix):
         scale_list = self.mapping_scale_opt_to_scale_sim[condition_ix]
