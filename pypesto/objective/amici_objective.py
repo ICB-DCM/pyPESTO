@@ -322,7 +322,7 @@ class AmiciObjective(Objective):
                         if sres.size else opt_sres
 
         # check whether we should update data for preequilibration guesses
-        if 'fval' in self.steadystate_guesses and \
+        if self.guess_steadystate and \
                 nllh <= self.steadystate_guesses['fval']:
             self.steadystate_guesses['fval'] = nllh
             for data_ix, rdata in enumerate(rdatas):
