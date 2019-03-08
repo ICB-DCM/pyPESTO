@@ -545,7 +545,7 @@ def create_plistfrom_par_opt_to_par_sim(mapping_par_opt_to_par_sim,
     -------
 
     plist: array-like of float
-        List of parameter indices for which sensitivity needs to be computed
+        List of parameter indices for which the sensitivity needs to be computed
     """
     plist = []
 
