@@ -246,10 +246,7 @@ class AmiciObjective(Objective):
         if sensi_order > self.max_sensi_order:
             raise Exception("Sensitivity order not allowed.")
 
-        # prepare result objects
-
-        rdatas = []
-
+        # prepare outputs
         nllh = 0.0
         snllh = np.zeros(self.dim)
         s2nllh = np.zeros([self.dim, self.dim])
