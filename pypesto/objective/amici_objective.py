@@ -383,7 +383,7 @@ class AmiciObjective(Objective):
             Optimization parameters.
         """
         mapping = self.mapping_par_opt_to_par_sim[condition_ix]
-        plist = create_plistfrom_par_opt_to_par_sim(mapping, self.x_ids)
+        plist = create_plist_from_par_opt_to_par_sim(mapping)
         self.amici_model.setParameterList(plist)
 
     def set_parameter_scale(self, condition_ix):
@@ -525,11 +525,10 @@ def map_par_opt_to_par_sim(mapping_par_opt_to_par_sim, par_opt_ids, x):
     return par_sim_vals
 
 
-def create_plistfrom_par_opt_to_par_sim(mapping_par_opt_to_par_sim,
-                                        par_opt_ids):
+def create_plist_from_par_opt_to_par_sim(mapping_par_opt_to_par_sim):
     """
-    From the optimization vector `x`, create the simulation vector according
-    to the mapping `mapping`.
+    From the parameter mapping `mapping_par_opt_to_par_sim`, create the
+    simulation plist according to the mapping `mapping`.
 
     Parameters
     ----------
@@ -537,9 +536,6 @@ def create_plistfrom_par_opt_to_par_sim(mapping_par_opt_to_par_sim,
     mapping_par_opt_to_par_sim: array-like of str
         len == n_par_sim, the entries are either numeric, or
         optimization parameter ids.
-    par_opt_ids: array-like of str
-        The optimization parameter ids. This vector is needed to know the
-        order of the entries in x.
 
     Returns
     -------
@@ -549,13 +545,8 @@ def create_plistfrom_par_opt_to_par_sim(mapping_par_opt_to_par_sim,
     """
     plist = []
 
-    # number of simulation parameters
-    n_par_sim = len(mapping_par_opt_to_par_sim)
-
     # iterate over simulation parameter indices
-    for j_par_sim in range(n_par_sim):
-        # extract entry in mapping table for j_par_sim
-        val = mapping_par_opt_to_par_sim[j_par_sim]
+    for j_par_sim, val in mapping_par_opt_to_par_sim.items():
         if not isinstance(val, numbers.Number):
             plist.append(j_par_sim)
 
@@ -618,8 +609,11 @@ def add_sim_grad_to_opt_grad(par_opt_ids,
 
     par_sim_idx = 0
     for par_opt_id in mapping_par_opt_to_par_sim:
+        # we ignore non-string indices as a fixed value as been set for
+        # those and they are not included in the condition specific nplist,
+        # we do not only skip here, but also do not increase par_sim_idx!
         if not isinstance(par_opt_id, str):
-            # this was a numeric override for which we ignore the hessian
+            # this was a numeric override for which we ignore the gradient
             continue
 
         par_opt_idx = par_opt_ids.index(par_opt_id)
@@ -642,7 +636,7 @@ def add_sim_hess_to_opt_hess(par_opt_ids,
     Same as for add_sim_grad_to_opt_grad, replacing the gradients by hessians.
     """
 
-    # use enumerate for first axis, see
+    # use enumerate for first axis as plist is not applied
     # https://github.com/ICB-DCM/AMICI/issues/274
     for par_sim_idx, par_opt_id in enumerate(mapping_par_opt_to_par_sim):
         if not isinstance(par_opt_id, str):
@@ -651,8 +645,13 @@ def add_sim_hess_to_opt_hess(par_opt_ids,
 
         par_opt_idx = par_opt_ids.index(par_opt_id)
 
+        # for second axis, plist was applied so we can skip over values with
+        # numeric mapping
         par_sim_idx_2 = 0
         for par_opt_id_2 in mapping_par_opt_to_par_sim:
+            # we ignore non-string indices as a fixed value as been set for
+            # those and they are not included in the condition specific nplist,
+            # we not only skip here, but also do not increase par_sim_idx_2!
             if not isinstance(par_opt_id_2, str):
                 continue
 
