@@ -121,19 +121,24 @@ def profiles_lowlevel(fvals, ax=None, size=(18.5, 6.5), color=None,
         ax = []
         fig = plt.figure()
         fig.set_size_inches(*size)
+        create_new_ax = True
     else:
-        plt.axes(ax)
+        plt.axes(ax[0])
         fig = plt.gcf()
+        create_new_ax = False
 
+    # count number of necessary axes
     if isinstance(fvals, list):
-        n_fvals = 0
-        for fval in enumerate(fvals):
-            if fval is not None:
-                n_fvals += 1
+        n_fvals = np.sum([1 for fval in fvals if fval is not None])
     else:
         n_fvals = 1
         fvals = [fvals]
 
+    # if axes already exist: does the number of axes fit?
+    if len(fvals) != len(ax) and not create_new_ax:
+        raise('Number of axes does not match number of profiles. Stopping.')
+
+    # compute number of columns and rows
     columns = np.ceil(np.sqrt(n_fvals))
     if n_fvals > columns * (columns - 1):
         rows = columns
@@ -150,7 +155,13 @@ def profiles_lowlevel(fvals, ax=None, size=(18.5, 6.5), color=None,
 
         # plot if data
         if fval is not None:
-            ax.append(fig.add_subplot(rows, columns, counter + 1))
+            # create or choose an axes object
+            if create_new_ax:
+                ax.append(fig.add_subplot(rows, columns, counter + 1))
+            else:
+                plt.axes(ax[counter])
+
+            # run lowlevel routine for one profile
             ax[counter] = profile_lowlevel(fval, ax[counter],
                                            size=size, color=color,
                                            legend_text=tmp_legend)
@@ -161,6 +172,8 @@ def profiles_lowlevel(fvals, ax=None, size=(18.5, 6.5), color=None,
                 ax[counter].set_ylabel('Log-posterior ratio')
             else:
                 ax[counter].set_yticklabels([''])
+
+            # increase counter and cleanup legend
             counter += 1
             tmp_legend = None
 
