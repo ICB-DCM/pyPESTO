@@ -6,6 +6,14 @@ Release notes
 ..........
 
 
+0.0.5 (2019-03-08)
+------------------
+
+* Introduce AggregatedObjective to use multiple objectives at once.
+* Estimate steady state in AmiciObjective.
+* Check amici model build version in PetabImporter.
+
+
 0.0.4 (2019-02-25)
 ------------------
 
