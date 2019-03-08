@@ -25,6 +25,7 @@ class AmiciObjective(Objective):
                  mapping_par_opt_to_par_sim=None,
                  mapping_scale_opt_to_scale_sim=None,
                  guess_steadystate=True,
+                 n_threads=1,
                  options=None):
         """
         Constructor.
@@ -67,6 +68,10 @@ class AmiciObjective(Objective):
         guess_steadystate: bool, optional (default = True)
             Whether to guess steadystates based on previous steadystates and
             respective derivatives.
+
+        n_threads: int, optional (default = 1)
+            Number of threads that are used for parallelization over
+            experimental conditions.
 
         options: pypesto.ObjectiveOptions, optional
             Further options.
@@ -168,6 +173,8 @@ class AmiciObjective(Objective):
             x_names = x_ids
         self.x_names = x_names
 
+        self.n_threads = n_threads
+
     def get_bound_fun(self):
         """
         Generate a fun function that calls _call_amici with MODE_FUN. Defining
@@ -268,16 +275,15 @@ class AmiciObjective(Objective):
                     self.steadystate_guesses['fval'] < np.inf:
                 self.apply_steadystate_guess(data_ix, x)
 
-            # run amici simulation
-            rdata = amici.runAmiciSimulation(
-                self.amici_model,
-                self.amici_solver,
-                edata)
+        # run amici simulation
+        rdatas = amici.runAmiciSimulations(
+            self.amici_model,
+            self.amici_solver,
+            self.edatas,
+            num_threads=self.n_threads
+        )
 
-            # append to result
-            rdatas.append(rdata)
-
-            # logging
+        for data_ix, rdata in enumerate(rdatas):
             log_simulation(data_ix, rdata)
 
             # check if the computation failed
@@ -366,7 +372,7 @@ class AmiciObjective(Objective):
         """
         mapping = self.mapping_par_opt_to_par_sim[condition_ix]
         x_sim = map_par_opt_to_par_sim(mapping, self.x_ids, x)
-        self.amici_model.setParameters(x_sim)
+        self.edatas[condition_ix].parameters = x_sim
 
     def set_plist_for_condition(self, condition_ix):
         """
@@ -384,7 +390,7 @@ class AmiciObjective(Objective):
         """
         mapping = self.mapping_par_opt_to_par_sim[condition_ix]
         plist = create_plist_from_par_opt_to_par_sim(mapping)
-        self.amici_model.setParameterList(plist)
+        self.edatas[condition_ix].plist = plist
 
     def set_parameter_scale(self, condition_ix):
         scale_list = self.mapping_scale_opt_to_scale_sim[condition_ix]
@@ -405,7 +411,7 @@ class AmiciObjective(Objective):
             # append to scale vector
             amici_scale_vector.append(scale)
 
-        self.amici_model.setParameterScale(amici_scale_vector)
+        self.edatas[condition_ix].pscale = amici_scale_vector
 
     def apply_steadystate_guess(self, condition_ix, x):
         """
@@ -427,7 +433,7 @@ class AmiciObjective(Objective):
                     (x_sim - guess_data['x'])
                 )
 
-        self.amici_model.setInitialStates(x_ss_guess)
+        self.edatas[condition_ix].x0 = tuple(x_ss_guess)
 
     def store_steadystate_guess(self, condition_ix, x, rdata):
         """
