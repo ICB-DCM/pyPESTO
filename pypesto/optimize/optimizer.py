@@ -4,7 +4,6 @@ import re
 import abc
 import time
 from ..objective import res_to_chi2
-from ..objective import AmiciObjective, AggregatedObjective
 
 try:
     import dlib
