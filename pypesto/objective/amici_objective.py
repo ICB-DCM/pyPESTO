@@ -71,7 +71,8 @@ class AmiciObjective(Objective):
 
         n_threads: int, optional (default = 1)
             Number of threads that are used for parallelization over
-            experimental conditions.
+            experimental conditions. If amici was not installed with openMP
+            support this option will have no effect.
 
         options: pypesto.ObjectiveOptions, optional
             Further options.
@@ -429,9 +430,12 @@ class AmiciObjective(Objective):
             if guess_data['x_ss'] is not None:
                 x_ss_guess = guess_data['x_ss']
             if guess_data['sx_ss'] is not None:
-                x_ss_guess += guess_data['sx_ss'].transpose().dot(
+                linear_update = guess_data['sx_ss'].transpose().dot(
                     (x_sim - guess_data['x'])
                 )
+                # limit linear updates to max 20 % elementwise change
+                if (x_ss_guess/linear_update).max() < 0.2:
+                    x_ss_guess += linear_update
 
         self.edatas[condition_ix].x0 = tuple(x_ss_guess)
 
