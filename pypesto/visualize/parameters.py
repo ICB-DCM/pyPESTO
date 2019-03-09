@@ -50,7 +50,7 @@ def parameters(results, ax=None, free_indices_only=True, lb=None, ub=None,
         avoid overplotting (default: True)
 
     start_indices: list or int
-        list of integers specifying the multistart to be plotted or
+        list of integers specifying the multistarts to be plotted or
         int specifying up to which start index should be plotted
 
     Returns
@@ -219,7 +219,7 @@ def handle_inputs(result, free_indices_only, lb=None, ub=None,
         Dimension either result.problem.dim or result.problem.dim_full.
 
     start_indices: list or int
-        list of integers specifying the multistart to be plotted or
+        list of integers specifying the multistarts to be plotted or
         int specifying up to which start index should be plotted
 
     Returns

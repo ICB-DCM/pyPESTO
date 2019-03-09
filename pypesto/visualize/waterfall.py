@@ -41,7 +41,7 @@ def waterfall(results,
         May be logarithmic or linear ('log10' or 'lin')
 
     offset_y:
-        offset for the y-axis, if this is supposed to be in log10-scale
+        offset for the y-axis, if it is supposed to be in log10-scale
 
     start_indices: list or int
         list of integers specifying the multistart to be plotted or
@@ -107,7 +107,7 @@ def waterfall_lowlevel(fvals, scale_y='log10', offset_y=0., ax=None,
         May be logarithmic or linear ('log10' or 'lin')
 
     offset_y:
-        offset for the y-axis, if this is supposed to be in log10-scale
+        offset for the y-axis, if it is supposed to be in log10-scale
 
     ax: matplotlib.Axes, optional
         Axes object to use.
@@ -204,7 +204,7 @@ def get_fvals(result, scale_y, offset_y, start_indices):
         May be logarithmic or linear ('log10' or 'lin')
 
     offset_y:
-        offset for the y-axis, if this is supposed to be in log10-scale
+        offset for the y-axis, if it is supposed to be in log10-scale
 
     start_indices: list or int
         list of integers specifying the multistart to be plotted or
@@ -276,7 +276,7 @@ def handle_options(ax, max_len_fvals, ref, y_limits, offset_y):
         maximum value to be plotted on the y-axis, or y-limits
 
     offset_y:
-        offset for the y-axis, if this is supposed to be in log10-scale
+        offset for the y-axis, if it is supposed to be in log10-scale
 
     Returns
     -------

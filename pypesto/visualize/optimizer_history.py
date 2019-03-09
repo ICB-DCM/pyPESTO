@@ -90,7 +90,7 @@ def optimizer_history(results,
 
         # compute the necessary offset for the y-axis
         (vals, offset_y, y_label) = get_vals(vals, scale_y, offset_y, y_label,
-                                    start_indices)
+                                             start_indices)
 
         # call lowlevel plot routine
         ax = optimizer_history_lowlevel(vals, scale_y=scale_y, ax=ax,
@@ -167,8 +167,8 @@ def optimizer_history_lowlevel(vals, scale_y='log10', colors=None, ax=None,
         # convert to a list of numpy arrays
         vals = np.array(vals)
         if vals.shape[0] != 2 or vals.ndim != 2:
-            raise('If numpy array is passed directly to lowlevel routine of'
-                  'optimizer_history, shape needs to be 2 x n.')
+            raise ('If numpy array is passed directly to lowlevel routine of'
+                   'optimizer_history, shape needs to be 2 x n.')
         fvals = [vals[1, -1]]
         vals = [vals]
     n_fvals = len(fvals)
@@ -263,9 +263,9 @@ def get_trace(result, trace_x, trace_y):
         if trace_y == 'gradnorm':
             # retrieve gradient trace, if saved
             if trace['grad'] is None:
-                raise("No gradient norm trace can be visualized: "
-                      "The pypesto.result object does not contain "
-                      "a gradient trace")
+                raise ("No gradient norm trace can be visualized: "
+                       "The pypesto.result object does not contain "
+                       "a gradient trace")
 
             # Get gradient trace, prune Nones, compute norm
             tmp_grad_trace = list(trace['grad'].values)
@@ -314,7 +314,7 @@ def get_vals(vals, scale_y, offset_y, y_label, start_indices):
         list of numpy arrays of size 2 x len(start_indices)
 
     offset_y:
-        offset for the y-axis, as this is supposed to be in log10-scale
+        offset for the y-axis, if this is supposed to be in log10-scale
 
     y_label:
         Label for y axis
