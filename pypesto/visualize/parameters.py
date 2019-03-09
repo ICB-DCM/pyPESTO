@@ -8,7 +8,7 @@ from .misc import process_result_list
 
 def parameters(results, ax=None, free_indices_only=True, lb=None, ub=None,
                size=None, reference=None, colors=None, legends=None,
-               balance_alpha=True):
+               balance_alpha=True, start_indices=None):
     """
     Plot parameter values.
 
@@ -49,6 +49,10 @@ def parameters(results, ax=None, free_indices_only=True, lb=None, ub=None,
         Flag indicating whether alpha for large clusters should be reduced to
         avoid overplotting (default: True)
 
+    start_indices: list or int
+        list of integers specifying the multistarts to be plotted or
+        int specifying up to which start index should be plotted
+
     Returns
     -------
 
@@ -63,20 +67,31 @@ def parameters(results, ax=None, free_indices_only=True, lb=None, ub=None,
         # handle results and bounds
         (lb, ub, x_labels, fvals, xs) = \
             handle_inputs(result=result, lb=lb, ub=ub,
-                          free_indices_only=free_indices_only)
+                          free_indices_only=free_indices_only,
+                          start_indices=start_indices)
 
         # call lowlevel routine
         ax = parameters_lowlevel(xs=xs, fvals=fvals, lb=lb, ub=ub,
                                  x_labels=x_labels, ax=ax, size=size,
-                                 colors=colors[j], legend_text=legends[j])
+                                 colors=colors[j], legend_text=legends[j],
+                                 balance_alpha=balance_alpha)
 
     # parse and apply plotting options
     ref = create_references(references=reference)
 
     # plot reference points
     for i_ref in ref:
-        ax = parameters_lowlevel([i_ref['x']], [i_ref['fval']], ax=ax,
+        # reduce parameter vector in reference point, if necessary
+        if free_indices_only:
+            x_ref = np.array(result.problem.get_reduced_vector(i_ref['x']))
+        else:
+            x_ref = np.array(i_ref['x'])
+        x_ref = np.reshape(x_ref, (1, x_ref.size))
+
+        # plot reference parameters using lowlevel routine
+        ax = parameters_lowlevel(x_ref, [i_ref['fval']], ax=ax,
                                  colors=i_ref['color'],
+                                 linestyle='--',
                                  legend_text=i_ref.legend,
                                  balance_alpha=balance_alpha)
 
@@ -84,8 +99,8 @@ def parameters(results, ax=None, free_indices_only=True, lb=None, ub=None,
 
 
 def parameters_lowlevel(xs, fvals, lb=None, ub=None, x_labels=None,
-                        ax=None, size=None, colors=None, legend_text=None,
-                        balance_alpha=True):
+                        ax=None, size=None, colors=None, linestyle='-',
+                        legend_text=None, balance_alpha=True):
 
     """
     Plot parameters plot using list of parameters.
@@ -114,6 +129,9 @@ def parameters_lowlevel(xs, fvals, lb=None, ub=None, x_labels=None,
 
     colors: list of RGBA
         One for each element in 'fvals'.
+
+    linestyle: str, optional
+        linestyle argument for parameter plot
 
     legend_text: str
         Label for line plots
@@ -157,6 +175,7 @@ def parameters_lowlevel(xs, fvals, lb=None, ub=None, x_labels=None,
         else:
             tmp_legend = None
         ax.plot(x, parameters_ind,
+                linestyle,
                 color=colors[j_x],
                 marker='o',
                 label=tmp_legend)
@@ -179,7 +198,8 @@ def parameters_lowlevel(xs, fvals, lb=None, ub=None, x_labels=None,
     return ax
 
 
-def handle_inputs(result, free_indices_only, lb=None, ub=None):
+def handle_inputs(result, free_indices_only, lb=None, ub=None,
+                  start_indices=None):
     """
     Computes the correct bounds for the parameter indices to be plotted and
     outputs the corrsponding parameters and their labels
@@ -197,6 +217,10 @@ def handle_inputs(result, free_indices_only, lb=None, ub=None):
     lb, ub: ndarray, optional
         If not None, override result.problem.lb, problem.problem.ub.
         Dimension either result.problem.dim or result.problem.dim_full.
+
+    start_indices: list or int
+        list of integers specifying the multistarts to be plotted or
+        int specifying up to which start index should be plotted
 
     Returns
     -------
@@ -218,6 +242,18 @@ def handle_inputs(result, free_indices_only, lb=None, ub=None):
     fvals = result.optimize_result.get_for_key('fval')
     xs = result.optimize_result.get_for_key('x')
 
+    # parse indices which should be plotted
+    if start_indices is not None:
+        start_indices = np.array(start_indices, dtype=int)
+
+        # reduce number of displayed results
+        xs_out = [xs[ind] for ind in start_indices]
+        fvals_out = [fvals[ind] for ind in start_indices]
+    else:
+        # use non-reduced versions
+        xs_out = xs
+        fvals_out = fvals
+
     # get bounds
     if lb is None:
         lb = result.problem.lb
@@ -229,8 +265,8 @@ def handle_inputs(result, free_indices_only, lb=None, ub=None):
 
     # handle fixed and free indices
     if free_indices_only:
-        for ix, x in enumerate(xs):
-            xs[ix] = result.problem.get_reduced_vector(x)
+        for ix, x in enumerate(xs_out):
+            xs_out[ix] = result.problem.get_reduced_vector(x)
         lb = result.problem.get_reduced_vector(lb)
         ub = result.problem.get_reduced_vector(ub)
         x_labels = [x_labels[int(i)] for i in result.problem.x_free_indices]
@@ -238,4 +274,4 @@ def handle_inputs(result, free_indices_only, lb=None, ub=None):
         lb = result.problem.get_full_vector(lb)
         ub = result.problem.get_full_vector(ub)
 
-    return lb, ub, x_labels, fvals, xs
+    return lb, ub, x_labels, fvals_out, xs_out
