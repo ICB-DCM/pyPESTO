@@ -67,7 +67,9 @@ class AmiciObjective(Objective):
 
         guess_steadystate: bool, optional (default = True)
             Whether to guess steadystates based on previous steadystates and
-            respective derivatives.
+            respective derivatives. This option may lead to unexpected
+            results for models with conservation laws and should accordingly
+            be deactivated for those models.
 
         n_threads: int, optional (default = 1)
             Number of threads that are used for parallelization over
@@ -153,11 +155,15 @@ class AmiciObjective(Objective):
         # preallocate guesses, construct a dict for every edata for which we
         # need to do preequilibration
         if self.guess_steadystate:
+            if self.amici_model.ncl() > 0:
+                raise ValueError('Steadystate prediciton is not supported for'
+                                 'models with conservation laws!')
+
             if self.amici_model.getSteadyStateSensitivityMode() == \
                     amici.SteadyStateSensitivityMode_simulationFSA:
                 raise ValueError('Steadystate guesses cannot be enabled when'
                                  ' `simulationFSA` as '
-                                 'SteadyStateSensitivityMode')
+                                 'SteadyStateSensitivityMode!')
             self.steadystate_guesses = {
                 'fval': np.inf,
                 'data': {
