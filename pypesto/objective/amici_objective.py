@@ -693,7 +693,8 @@ def sim_sres_to_opt_sres(par_opt_ids,
     """
     opt_sres = np.zeros((sim_sres.shape[0], len(par_opt_ids)))
 
-    for par_sim_idx, par_opt_id in enumerate(mapping_par_opt_to_par_sim):
+    par_sim_idx = 0
+    for par_opt_id in mapping_par_opt_to_par_sim:
         if not isinstance(par_opt_id, str):
             # this was a numeric override for which we ignore the hessian
             continue
@@ -701,5 +702,6 @@ def sim_sres_to_opt_sres(par_opt_ids,
         par_opt_idx = par_opt_ids.index(par_opt_id)
         opt_sres[:, par_opt_idx] += \
             coefficient * sim_sres[:, par_sim_idx]
+        par_sim_idx += 1
 
     return opt_sres
