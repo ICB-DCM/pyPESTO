@@ -1,4 +1,5 @@
 import numpy as np
+from copy import deepcopy
 
 from .objective import Objective
 
@@ -89,6 +90,14 @@ class AggregatedObjective(Objective):
                                  f'instances!')
 
         super().__init__(**init_kwargs)
+
+    def __deepcopy__(self, memodict=None):
+        other = AggregatedObjective(
+            objectives=[deepcopy(objective) for objective in self.objectives],
+            x_names=deepcopy(self.x_names),
+            options=deepcopy(self.options),
+        )
+        return other
 
     def aggregate_fun_sensi_orders(self, x, sensi_orders):
         rvals = [
