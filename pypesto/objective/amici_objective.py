@@ -224,7 +224,8 @@ class AmiciObjective(Objective):
         model = amici.ModelPtr(self.amici_model.clone())
         solver = amici.SolverPtr(self.amici_solver.clone())
         edatas = [amici.ExpData(data) for data in self.edatas]
-        other = AmiciObjective(model, solver, edatas)
+        other = AmiciObjective(model, solver, edatas,
+                               guess_steadystate=self.guess_steadystate)
         for attr in self.__dict__:
             if attr not in ['amici_solver', 'amici_model', 'edatas']:
                 other.__dict__[attr] = copy.deepcopy(self.__dict__[attr])
