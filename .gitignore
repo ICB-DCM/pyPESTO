@@ -100,3 +100,4 @@ venv/*
 tmp/*
 amici_models/*
 *.txt
+test/doc/example/tmp/benchmark-models/
