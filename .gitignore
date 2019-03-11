@@ -99,3 +99,4 @@ venv/*
 *.tmp
 tmp/*
 amici_models/*
+*.txt

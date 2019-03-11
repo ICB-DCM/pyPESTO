@@ -6,6 +6,18 @@ Release notes
 ..........
 
 
+0.0.5 (2019-03-11)
+------------------
+
+* Introduce AggregatedObjective to use multiple objectives at once.
+* Estimate steady state in AmiciObjective.
+* Check amici model build version in PetabImporter.
+* Use Amici multithreading in AmiciObjective.
+* Allow to sort multistarts by initial value.
+* Show usage of visualization routines in notebooks.
+* Various fixes, in particular to visualization.
+
+
 0.0.4 (2019-02-25)
 ------------------
 
