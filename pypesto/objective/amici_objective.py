@@ -285,7 +285,7 @@ class AmiciObjective(Objective):
             self.amici_model,
             self.amici_solver,
             self.edatas,
-            num_threads=self.n_threads
+            num_threads=min(self.n_threads,len(self.edatas)),
         )
 
         for data_ix, rdata in enumerate(rdatas):
