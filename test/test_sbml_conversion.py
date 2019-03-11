@@ -61,7 +61,7 @@ class AmiciObjectiveTest(unittest.TestCase):
                                     library,
                                     method,
                                     fp,
-                                    1)
+                                    2)
 
 
 def parameter_estimation(
@@ -92,10 +92,14 @@ def parameter_estimation(
                               x_fixed_vals=[pars[idx] for idx in fixed_pars]
                               )
 
-    optimize_options = pypesto.OptimizeOptions(allow_failed_starts=False)
+    optimize_options = pypesto.OptimizeOptions(
+        allow_failed_starts=False,
+        startpoint_resample=True,
+    )
 
     results = pypesto.minimize(
-        problem, optimizer, n_starts, options=optimize_options)
+        problem, optimizer, n_starts, options=optimize_options,
+    )
     results = results.optimize_result.list
 
 
