@@ -98,6 +98,6 @@ dask-worker-space
 venv/*
 *.tmp
 tmp/*
-*/amici_models/*
+amici_models/*
 *.txt
 test/doc/example/tmp/benchmark-models/
