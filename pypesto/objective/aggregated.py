@@ -199,6 +199,10 @@ class AggregatedObjective(Objective):
         return sum(objective.hessp(x) for objective in self.objectives)
 
     def reset_steadystate_guesses(self):
+        """
+        Propagates reset_steadystate_guesses() to child objectives if available
+        (currently only applies for amici_objective)
+        """
         for objective in self.objectives:
             if hasattr(objective, 'reset_steadystate_guesses'):
                 objective.reset_steadystate_guesses()
