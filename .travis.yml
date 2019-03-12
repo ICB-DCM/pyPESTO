@@ -31,8 +31,8 @@ install:
 # run tests
 script:
   - python3 -m flake8 --exclude=build,doc,example,tmp,amici_models
-  - python3 -m pytest ./test/test_*
-  - xvfb-run -a python3 -m pytest ./test/visualize/test_*
+  - python3 -m pytest --cov=pypesto ./test/test_*
+  - xvfb-run -a python3 -m pytest --cov=pypesto --cov-append ./test/visualize/test_*
   - coverage xml
   - test/run_notebook.sh doc/example/
 
