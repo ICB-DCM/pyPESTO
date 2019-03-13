@@ -23,4 +23,4 @@ def sres_to_schi2(res, sres):
     """
     if res is None or sres is None:
         return None
-    return res * sres
+    return res.dot(sres)

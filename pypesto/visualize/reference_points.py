@@ -174,7 +174,7 @@ def create_references(references=None, x=None, fval=None, color=None,
 
     # parse input (x and fval)
     if (x is not None) and (fval is not None):
-        ref.append(ReferencePoint(x=x, fval=fval, color=color))
+        ref.append(ReferencePoint(x=x, fval=fval, color=color, legend=legend))
 
     # assign colors for reference points which have no user-specified colors
     return assign_colors(ref)
