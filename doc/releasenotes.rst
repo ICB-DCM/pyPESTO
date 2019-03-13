@@ -6,6 +6,12 @@ Release notes
 ..........
 
 
+0.0.6 (2019-03-13)
+------------------
+
+* Several minor error fixes, in particular on tests and steady state.
+
+
 0.0.5 (2019-03-11)
 ------------------
 
