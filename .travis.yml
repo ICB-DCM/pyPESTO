@@ -31,8 +31,7 @@ install:
 # run tests
 script:
   - python3 -m flake8 --exclude=build,doc,example,tmp,amici_models
-  - travis_wait 20 python3 -m pytest --cov=pypesto ./test/test_*
-  - travis_wait 20 xvfb-run -a python3 -m pytest --cov=pypesto --cov-append ./test/visualize/test_*
+  - travis_wait 20 xvfb-run -a python3 -m pytest --cov=pypesto ./test
   - coverage xml
   - test/run_notebook.sh doc/example/
 
@@ -50,3 +49,4 @@ deploy:
 # cache dependencies
 
 cache: pip
+
