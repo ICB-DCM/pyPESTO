@@ -52,10 +52,21 @@ class ReferencePoint(dict):
                 if "auto_color" in reference.keys():
                     self.auto_color = reference["auto_color"]
                 else:
+<<<<<<< HEAD
                     self.auto_color = True
             else:
                 self.color = None
                 self.auto_color = True
+=======
+                    self.auto_color = False
+            else:
+                self.color = None
+                self.auto_color = True
+            if "legend" in reference.keys():
+                self.legend = reference["legend"]
+            else:
+                self.legend = None
+>>>>>>> ICB-DCM/master
         elif isinstance(reference, tuple):
             # Handle case of tuple
             self.x = np.array(reference[0])
@@ -130,7 +141,12 @@ def assign_colors(ref):
     return ref
 
 
+<<<<<<< HEAD
 def create_references(references=None, x=None, fval=None):
+=======
+def create_references(references=None, x=None, fval=None, color=None,
+                      legend=None):
+>>>>>>> ICB-DCM/master
     """
     This function creates a list of reference point objects from user inputs
 
@@ -146,6 +162,14 @@ def create_references(references=None, x=None, fval=None):
     fval: float, optional
         Objective function value which should be used for reference point
 
+<<<<<<< HEAD
+=======
+    color: RGBA, optional
+        Color which should be used for reference point.
+
+    legend: str
+        legend text for reference point
+>>>>>>> ICB-DCM/master
     Returns
     -------
 
@@ -164,7 +188,11 @@ def create_references(references=None, x=None, fval=None):
 
     # parse input (x and fval)
     if (x is not None) and (fval is not None):
+<<<<<<< HEAD
         ref.append(ReferencePoint(x=x, fval=fval))
+=======
+        ref.append(ReferencePoint(x=x, fval=fval, color=color))
+>>>>>>> ICB-DCM/master
 
     # assign colors for reference points which have no user-specified colors
     return assign_colors(ref)

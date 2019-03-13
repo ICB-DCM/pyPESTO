@@ -42,6 +42,27 @@ class AmiciObjective(Objective):
             The experimental data. If a list is passed, its entries correspond
             to multiple experimental conditions.
 
+
+                 guess_steadystate=True,
+                 n_threads=1,
+                 options=None):
+        """
+        Constructor.
+
+        Parameters
+        ----------
+
+        amici_model: amici.Model
+            The amici model.
+
+        amici_solver: amici.Solver
+            The solver to use for the numeric integration of the model.
+
+        edatas: amici.ExpData or list of amici.ExpData
+            The experimental data. If a list is passed, its entries correspond
+            to multiple experimental conditions.
+
+
         max_sensi_order: int, optional
             Maximum sensitivity order supported by the model. Defaults to 2 if
             the model was compiled with o2mode, otherwise 1.
@@ -49,6 +70,11 @@ class AmiciObjective(Objective):
         x_ids: list of str, optional
             Ids of optimization parameters. In the simplest case, this will be
             the AMICI model parameters (default).
+
+
+        x_names: list of str, optional
+            See ``Objective.x_names``.
+
 
         x_names: list of str, optional
             See ``Objective.x_names``.
@@ -67,6 +93,15 @@ class AmiciObjective(Objective):
         preprocess_edatas: bool, optional (default = True)
             Whether to perform preprocessing, i.e. preequilibration, if that
             is specified in the model.
+
+        guess_steadystate: bool, optional (default = True)
+            Whether to guess steadystates based on previous steadystates and
+            respective derivatives.
+
+        n_threads: int, optional (default = 1)
+            Number of threads that are used for parallelization over
+            experimental conditions.
+
 
         options: pypesto.ObjectiveOptions, optional
             Further options.
@@ -121,11 +156,19 @@ class AmiciObjective(Objective):
         else:
             self.preequilibration_edatas = None
 
+
+        # make sure the edatas are a list of edata objects
+        if isinstance(edatas, amici.amici.ExpData):
+            edatas = [edatas]
+
         # set the experimental data container
         self.edatas = edatas
 
         # set the maximum sensitivity order
         self.max_sensi_order = max_sensi_order
+
+
+        self.guess_steadystate = guess_steadystate
 
         # optimization parameter ids
         if x_ids is None:
@@ -150,11 +193,33 @@ class AmiciObjective(Objective):
                     self.amici_model.getParameterScale(), len(self.edatas))
         self.mapping_scale_opt_to_scale_sim = mapping_scale_opt_to_scale_sim
 
+        # preallocate guesses, construct a dict for every edata for which we
+        # need to do preequilibration
+        if self.guess_steadystate:
+            if self.amici_model.getSteadyStateSensitivityMode() == \
+                    amici.SteadyStateSensitivityMode_simulationFSA:
+                raise ValueError('Steadystate guesses cannot be enabled when'
+                                 ' `simulationFSA` as '
+                                 'SteadyStateSensitivityMode')
+            self.steadystate_guesses = {
+                'fval': np.inf,
+                'data': {
+                    iexp: dict()
+                    for iexp, edata in enumerate(self.edatas)
+                    if len(edata.fixedParametersPreequilibration) or
+                    self.amici_solver.getNewtonPreequilibration()
+                }
+            }
+
         # optimization parameter names
         if x_names is None:
             # use ids as names
             x_names = x_ids
         self.x_names = x_names
+
+
+        self.n_threads = n_threads
+
 
     def get_bound_fun(self):
         """
@@ -200,6 +265,7 @@ class AmiciObjective(Objective):
         edatas = [amici.ExpData(data) for data in self.edatas]
         other = AmiciObjective(model, solver, edatas)
         for attr in self.__dict__:
+<<<<<<< HEAD
             if attr not in ['amici_solver', 'amici_model',
                             'edatas', 'preequilibration_edatas']:
                 other.__dict__[attr] = copy.deepcopy(self.__dict__[attr])
@@ -269,6 +335,18 @@ class AmiciObjective(Objective):
         # for the changes to have an effect
         self.rebind_fun()
         self.rebind_res()
+=======
+            if attr not in ['amici_solver', 'amici_model', 'edatas']:
+                other.__dict__[attr] = copy.deepcopy(self.__dict__[attr])
+        return other
+
+    def reset(self):
+        """
+        Resets the objective, including steadystate guesses
+        """
+        super(AmiciObjective, self).reset()
+        self.reset_steadystate_guesses()
+>>>>>>> ICB-DCM/master
 
     def _call_amici(
             self,
@@ -299,6 +377,7 @@ class AmiciObjective(Objective):
         # set order in solver
         self.amici_solver.setSensitivityOrder(sensi_order)
 
+<<<<<<< HEAD
         if self.preequilibration_edatas:
             preeq_status = self.run_preequilibration(x)
             if preeq_status is not None:
@@ -332,6 +411,33 @@ class AmiciObjective(Objective):
                 self.postprocess_preequilibration(edata, original_value_dict)
 
             # logging
+=======
+        # loop over experimental data
+        for data_ix, edata in enumerate(self.edatas):
+
+            # set model parameter scale for condition index
+            self.set_parameter_scale(data_ix)
+
+            # set parameters in model, according to mapping
+            self.set_par_sim_for_condition(data_ix, x)
+
+            # set parameter list according to mapping
+            self.set_plist_for_condition(data_ix)
+
+            if self.guess_steadystate and \
+                    self.steadystate_guesses['fval'] < np.inf:
+                self.apply_steadystate_guess(data_ix, x)
+
+        # run amici simulation
+        rdatas = amici.runAmiciSimulations(
+            self.amici_model,
+            self.amici_solver,
+            self.edatas,
+            num_threads=self.n_threads
+        )
+
+        for data_ix, rdata in enumerate(rdatas):
+>>>>>>> ICB-DCM/master
             log_simulation(data_ix, rdata)
 
             # check if the computation failed
@@ -362,8 +468,21 @@ class AmiciObjective(Objective):
                 res = np.hstack([res, rdata['res']]) \
                     if res.size else rdata['res']
                 if sensi_order > 0:
-                    sres = np.vstack([sres, rdata['sres']]) \
-                        if sres.size else rdata['sres']
+                    opt_sres = sim_sres_to_opt_sres(
+                        self.x_ids,
+                        self.mapping_par_opt_to_par_sim[data_ix],
+                        rdata['sres'],
+                        coefficient=1.0
+                    )
+                    sres = np.vstack([sres, opt_sres]) \
+                        if sres.size else opt_sres
+
+        # check whether we should update data for preequilibration guesses
+        if 'fval' in self.steadystate_guesses and \
+                nllh <= self.steadystate_guesses['fval']:
+            self.steadystate_guesses['fval'] = nllh
+            for data_ix, rdata in enumerate(rdatas):
+                self.store_steadystate_guess(data_ix, x, rdata)
 
         return {
             FVAL: nllh,
@@ -373,6 +492,7 @@ class AmiciObjective(Objective):
             SRES: sres,
             RDATAS: rdatas
         }
+<<<<<<< HEAD
 
     def init_preequilibration_edatas(self, edatas):
         """
@@ -487,14 +607,28 @@ class AmiciObjective(Objective):
                 self.amici_model.setInitialStateSensitivities(
                     self.preequilibration_edatas[edata_ix]['sx0'].flatten()
                 )
+=======
+
+    def get_error_output(self, rdatas):
+        if not self.amici_model.nt():
+            nt = sum([data.nt() for data in self.edatas])
+        else:
+            nt = sum([data.nt() if data.nt() else self.amici_model.nt()
+                      for data in self.edatas])
+        n_res = nt * self.amici_model.nytrue
+>>>>>>> ICB-DCM/master
 
         # return the original values
         return {
-            'k': original_fixed_parameters_preequilibration,
-            'x0': original_initial_states,
-            'sx0': original_initial_state_sensitivities
+            FVAL: np.inf,
+            GRAD: np.nan * np.ones(self.dim),
+            HESS: np.nan * np.ones([self.dim, self.dim]),
+            RES:  np.nan * np.ones(n_res),
+            SRES: np.nan * np.ones([n_res, self.dim]),
+            RDATAS: rdatas
         }
 
+<<<<<<< HEAD
     def postprocess_preequilibration(self, edata, original_value_dict):
         """
         Reset the model and edata to the true values, i.e. undo
@@ -506,15 +640,27 @@ class AmiciObjective(Objective):
 
         if original_value_dict['k']:
             edata.fixedParametersPreequilibration = original_value_dict['k']
+=======
+    def set_par_sim_for_condition(self, condition_ix, x):
+        """
+        Set the simulation parameters from the optimization parameters
+        for the given condition.
 
-        if original_value_dict['x0']:
-            self.amici_model.setInitialStates(original_value_dict['x0'])
+        Parameters
+        ----------
+>>>>>>> ICB-DCM/master
 
-        if original_value_dict['sx0']:
-            self.amici_model.setInitialStateSensitivities(
-                original_value_dict['sx0']
-            )
+        condition_ix: int
+            Index of the current experimental condition.
 
+        x: array_like
+            Optimization parameters.
+        """
+        mapping = self.mapping_par_opt_to_par_sim[condition_ix]
+        x_sim = map_par_opt_to_par_sim(mapping, self.x_ids, x)
+        self.edatas[condition_ix].parameters = x_sim
+
+<<<<<<< HEAD
     def get_error_output(self, rdatas):
         if not self.amici_model.nt():
             nt = sum([data.nt() for data in self.edatas])
@@ -570,6 +716,101 @@ class AmiciObjective(Objective):
             amici_scale_vector.append(scale)
 
         self.amici_model.setParameterScale(amici_scale_vector)
+=======
+    def set_plist_for_condition(self, condition_ix):
+        """
+        Set the plist according to the optimization parameters
+        for the given condition.
+
+        Parameters
+        ----------
+
+        condition_ix: int
+            Index of the current experimental condition.
+
+        x: array_like
+            Optimization parameters.
+        """
+        mapping = self.mapping_par_opt_to_par_sim[condition_ix]
+        plist = create_plist_from_par_opt_to_par_sim(mapping)
+        self.edatas[condition_ix].plist = plist
+
+    def set_parameter_scale(self, condition_ix):
+        scale_list = self.mapping_scale_opt_to_scale_sim[condition_ix]
+        amici_scale_vector = amici.ParameterScalingVector()
+
+        for val in scale_list:
+
+            if val == 'lin':
+                scale = amici.ParameterScaling_none
+            elif val == 'log10':
+                scale = amici.ParameterScaling_log10
+            elif val == 'log':
+                scale = amici.ParameterScaling_ln
+            else:
+                raise ValueError(
+                    f"Parameter scaling not recognized: {val}")
+
+            # append to scale vector
+            amici_scale_vector.append(scale)
+
+        self.edatas[condition_ix].pscale = amici_scale_vector
+
+    def apply_steadystate_guess(self, condition_ix, x):
+        """
+        Use the stored steadystate as well as the respective  sensitivity (
+        if available) and parameter value to approximate the steadystate at
+        the current parameters using a zeroth or first order taylor
+        approximation:
+        x_ss(x') = x_ss(x) [+ dx_ss/dx(x)*(x'-x)]
+        """
+        mapping = self.mapping_par_opt_to_par_sim[condition_ix]
+        x_sim = map_par_opt_to_par_sim(mapping, self.x_ids, x)
+        x_ss_guess = []  # resets initial state by default
+        if condition_ix in self.steadystate_guesses['data']:
+            guess_data = self.steadystate_guesses['data'][condition_ix]
+            if guess_data['x_ss'] is not None:
+                x_ss_guess = guess_data['x_ss']
+            if guess_data['sx_ss'] is not None:
+                x_ss_guess += guess_data['sx_ss'].transpose().dot(
+                    (x_sim - guess_data['x'])
+                )
+
+        self.edatas[condition_ix].x0 = tuple(x_ss_guess)
+
+    def store_steadystate_guess(self, condition_ix, x, rdata):
+        """
+        Store condition parameter, steadystate and steadystate sensitivity in
+        steadystate_guesses if steadystate guesses are enabled for this
+        condition
+        """
+
+        if condition_ix not in self.steadystate_guesses['data']:
+            return
+
+        preeq_guesses = self.steadystate_guesses['data'][condition_ix]
+
+        # update parameter
+
+        mapping = self.mapping_par_opt_to_par_sim[condition_ix]
+        x_sim = map_par_opt_to_par_sim(mapping, self.x_ids, x)
+        preeq_guesses['x'] = x_sim
+
+        # update steadystates
+        preeq_guesses['x_ss'] = rdata['x_ss']
+        preeq_guesses['sx_ss'] = rdata['sx_ss']
+
+    def reset_steadystate_guesses(self):
+        """
+        Resets all steadystate guess data
+        """
+        if not self.guess_steadystate:
+            return
+
+        self.steadystate_guesses['fval'] = np.inf
+        for condition in self.steadystate_guesses['data']:
+            self.steadystate_guesses['data'][condition] = dict()
+>>>>>>> ICB-DCM/master
 
 
 def log_simulation(data_ix, rdata):
@@ -634,6 +875,39 @@ def map_par_opt_to_par_sim(mapping_par_opt_to_par_sim, par_opt_ids, x):
     return par_sim_vals
 
 
+<<<<<<< HEAD
+=======
+def create_plist_from_par_opt_to_par_sim(mapping_par_opt_to_par_sim):
+    """
+    From the parameter mapping `mapping_par_opt_to_par_sim`, create the
+    simulation plist according to the mapping `mapping`.
+
+    Parameters
+    ----------
+
+    mapping_par_opt_to_par_sim: array-like of str
+        len == n_par_sim, the entries are either numeric, or
+        optimization parameter ids.
+
+    Returns
+    -------
+
+    plist: array-like of float
+        List of parameter indices for which the sensitivity needs to be
+        computed
+    """
+    plist = []
+
+    # iterate over simulation parameter indices
+    for j_par_sim, val in enumerate(mapping_par_opt_to_par_sim):
+        if not isinstance(val, numbers.Number):
+            plist.append(j_par_sim)
+
+    # return the created simulation parameter vector
+    return plist
+
+
+>>>>>>> ICB-DCM/master
 def create_scale_mapping_from_model(amici_scales, n_edata):
     """
     Create parameter scaling mapping matrix from amici scaling
@@ -687,13 +961,25 @@ def add_sim_grad_to_opt_grad(par_opt_ids,
         Coefficient for sim_grad when adding to opt_grad.
     """
 
+<<<<<<< HEAD
     for par_sim_idx, par_opt_id in enumerate(mapping_par_opt_to_par_sim):
+=======
+    par_sim_idx = 0
+    for par_opt_id in mapping_par_opt_to_par_sim:
+        # we ignore non-string indices as a fixed value as been set for
+        # those and they are not included in the condition specific nplist,
+        # we do not only skip here, but also do not increase par_sim_idx!
+>>>>>>> ICB-DCM/master
         if not isinstance(par_opt_id, str):
             # this was a numeric override for which we ignore the gradient
             continue
 
         par_opt_idx = par_opt_ids.index(par_opt_id)
         opt_grad[par_opt_idx] += coefficient * sim_grad[par_sim_idx]
+<<<<<<< HEAD
+=======
+        par_sim_idx += 1
+>>>>>>> ICB-DCM/master
 
 
 def add_sim_hess_to_opt_hess(par_opt_ids,
@@ -711,6 +997,11 @@ def add_sim_hess_to_opt_hess(par_opt_ids,
     Same as for add_sim_grad_to_opt_grad, replacing the gradients by hessians.
     """
 
+<<<<<<< HEAD
+=======
+    # use enumerate for first axis as plist is not applied
+    # https://github.com/ICB-DCM/AMICI/issues/274
+>>>>>>> ICB-DCM/master
     for par_sim_idx, par_opt_id in enumerate(mapping_par_opt_to_par_sim):
         if not isinstance(par_opt_id, str):
             # this was a numeric override for which we ignore the hessian
@@ -718,8 +1009,18 @@ def add_sim_hess_to_opt_hess(par_opt_ids,
 
         par_opt_idx = par_opt_ids.index(par_opt_id)
 
+<<<<<<< HEAD
         for par_sim_idx_2, par_opt_id_2 in enumerate(
                 mapping_par_opt_to_par_sim):
+=======
+        # for second axis, plist was applied so we can skip over values with
+        # numeric mapping
+        par_sim_idx_2 = 0
+        for par_opt_id_2 in mapping_par_opt_to_par_sim:
+            # we ignore non-string indices as a fixed value as been set for
+            # those and they are not included in the condition specific nplist,
+            # we not only skip here, but also do not increase par_sim_idx_2!
+>>>>>>> ICB-DCM/master
             if not isinstance(par_opt_id_2, str):
                 continue
 
@@ -727,3 +1028,35 @@ def add_sim_hess_to_opt_hess(par_opt_ids,
 
             opt_hess[par_opt_idx, par_opt_idx_2] += \
                 coefficient * sim_hess[par_sim_idx, par_sim_idx_2]
+<<<<<<< HEAD
+=======
+            par_sim_idx_2 += 1
+
+
+def sim_sres_to_opt_sres(par_opt_ids,
+                         mapping_par_opt_to_par_sim,
+                         sim_sres,
+                         coefficient: float = 1.0):
+    """
+    Sum simulation residual sensitivities to objective residual sensitivities
+    according to the provided mapping `mapping_par_opt_to_par_sim`.
+
+    Parameters
+    ----------
+
+    Same as for add_sim_grad_to_opt_grad, replacing the gradients by residual
+    sensitivities.
+    """
+    opt_sres = np.zeros((sim_sres.shape[0], len(par_opt_ids)))
+
+    for par_sim_idx, par_opt_id in enumerate(mapping_par_opt_to_par_sim):
+        if not isinstance(par_opt_id, str):
+            # this was a numeric override for which we ignore the hessian
+            continue
+
+        par_opt_idx = par_opt_ids.index(par_opt_id)
+        opt_sres[:, par_opt_idx] += \
+            coefficient * sim_sres[:, par_sim_idx]
+
+    return opt_sres
+>>>>>>> ICB-DCM/master

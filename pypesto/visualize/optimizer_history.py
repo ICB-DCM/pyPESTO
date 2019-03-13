@@ -89,7 +89,12 @@ def optimizer_history(results,
         (x_label, y_label, vals) = get_trace(result, trace_x, trace_y)
 
         # compute the necessary offset for the y-axis
+<<<<<<< HEAD
         vals = get_vals(vals, scale_y, offset_y, start_indices)
+=======
+        (vals, offset_y, y_label) = get_vals(vals, scale_y, offset_y, y_label,
+                                             start_indices)
+>>>>>>> ICB-DCM/master
 
         # call lowlevel plot routine
         ax = optimizer_history_lowlevel(vals, scale_y=scale_y, ax=ax,
@@ -102,7 +107,11 @@ def optimizer_history(results,
     ref = create_references(references=reference)
 
     # handle options
+<<<<<<< HEAD
     ax = handle_options(ax, vals, ref, y_limits)
+=======
+    ax = handle_options(ax, vals, ref, y_limits, offset_y)
+>>>>>>> ICB-DCM/master
 
     return ax
 
@@ -166,8 +175,13 @@ def optimizer_history_lowlevel(vals, scale_y='log10', colors=None, ax=None,
         # convert to a list of numpy arrays
         vals = np.array(vals)
         if vals.shape[0] != 2 or vals.ndim != 2:
+<<<<<<< HEAD
             raise('If numpy array is passed directly to lowlevel routine of'
                   'optimizer_history, shape needs to be 2 x n.')
+=======
+            raise ('If numpy array is passed directly to lowlevel routine of'
+                   'optimizer_history, shape needs to be 2 x n.')
+>>>>>>> ICB-DCM/master
         fvals = [vals[1, -1]]
         vals = [vals]
     n_fvals = len(fvals)
@@ -262,18 +276,31 @@ def get_trace(result, trace_x, trace_y):
         if trace_y == 'gradnorm':
             # retrieve gradient trace, if saved
             if trace['grad'] is None:
+<<<<<<< HEAD
                 raise("No gradient norm trace can be visualized: "
                       "The pypesto.result object does not contain "
                       "a gradient trace")
+=======
+                raise ("No gradient norm trace can be visualized: "
+                       "The pypesto.result object does not contain "
+                       "a gradient trace")
+>>>>>>> ICB-DCM/master
 
             # Get gradient trace, prune Nones, compute norm
             tmp_grad_trace = list(trace['grad'].values)
             y_vals = np.array([np.linalg.norm(grad) for grad in
                                tmp_grad_trace if grad is not None])
+<<<<<<< HEAD
             y_label = 'Gradient norm'
 
         else:  # trace_y == 'fval':
             y_label = 'Objective value'
+=======
+            y_label = 'gradient norm'
+
+        else:  # trace_y == 'fval':
+            y_label = 'objective value'
+>>>>>>> ICB-DCM/master
             y_vals = np.array(trace['fval'][indices])
 
         # write down values
@@ -282,7 +309,11 @@ def get_trace(result, trace_x, trace_y):
     return x_label, y_label, vals
 
 
+<<<<<<< HEAD
 def get_vals(vals, scale_y, offset_y, start_indices):
+=======
+def get_vals(vals, scale_y, offset_y, y_label, start_indices):
+>>>>>>> ICB-DCM/master
     """
     Postprocesses the values of the optimization history, depending on the
     options set by the user (e.g. scale_y, offset_y, start_indices)
@@ -296,9 +327,18 @@ def get_vals(vals, scale_y, offset_y, start_indices):
     scale_y: str, optional
         May be logarithmic or linear ('log10' or 'lin')
 
+<<<<<<< HEAD
     offset_y:
         offset for the y-axis, as this is supposed to be in log10-scale
 
+=======
+    offset_y: float
+        offset for the y-axis, as this is supposed to be in log10-scale
+
+    y_label: str
+        Label for y axis
+
+>>>>>>> ICB-DCM/master
     start_indices: list or int
         list of integers specifying the multi start indices to be plotted or
         int specifying up to which start index trajectories should be plotted
@@ -308,6 +348,15 @@ def get_vals(vals, scale_y, offset_y, start_indices):
 
     vals: list
         list of numpy arrays of size 2 x len(start_indices)
+<<<<<<< HEAD
+=======
+
+    offset_y:
+        offset for the y-axis, if this is supposed to be in log10-scale
+
+    y_label:
+        Label for y axis
+>>>>>>> ICB-DCM/master
     """
 
     # get list of indices
@@ -333,16 +382,32 @@ def get_vals(vals, scale_y, offset_y, start_indices):
         min_val = np.min([min_val, tmp_min])
 
     # check, whether offset can be used with this data
+<<<<<<< HEAD
     offset_y = process_offset_y(offset_y, scale_y, min_val)
+=======
+    if y_label == 'fval':
+        offset_y = process_offset_y(offset_y, scale_y, min_val)
+    else:
+        offset_y = 0.
+>>>>>>> ICB-DCM/master
 
     if offset_y != 0:
         for val in vals:
             val[1, :] += offset_y * np.ones(val[1].shape)
+<<<<<<< HEAD
 
     return vals
 
 
 def handle_options(ax, vals, ref, y_limits):
+=======
+            y_label = 'offsetted ' + y_label
+
+    return vals, offset_y, y_label
+
+
+def handle_options(ax, vals, ref, y_limits, offset_y):
+>>>>>>> ICB-DCM/master
     """
     Get the limits for the y-axis, plots the reference points, will do
     more at a later time point. This function is there to apply whatever
@@ -364,6 +429,12 @@ def handle_options(ax, vals, ref, y_limits):
     y_limits: float or ndarray, optional
         maximum value to be plotted on the y-axis, or y-limits
 
+<<<<<<< HEAD
+=======
+    offset_y:
+        offset for the y-axis, if this is supposed to be in log10-scale
+
+>>>>>>> ICB-DCM/master
     Returns
     -------
 
@@ -383,7 +454,17 @@ def handle_options(ax, vals, ref, y_limits):
             max_len = np.max([max_len, val[0, -1]])
 
         for i_ref in ref:
+<<<<<<< HEAD
             ax.semilogy([0, max_len], [i_ref.fval, i_ref.fval], '--',
                         color=i_ref.color, label=i_ref.legend)
+=======
+            ax.plot([0, max_len],
+                    [i_ref.fval + offset_y, i_ref.fval + offset_y],
+                    '--', color=i_ref.color, label=i_ref.legend)
+
+            # create legend for reference points
+            if i_ref.legend is not None:
+                ax.legend()
+>>>>>>> ICB-DCM/master
 
     return ax

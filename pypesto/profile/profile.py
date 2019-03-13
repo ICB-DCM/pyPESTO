@@ -366,16 +366,20 @@ def initialize_profile(
     if profile_list is None:
         result.profile_result.create_new_profile_list()
 
+    # get the log-posterior of the global optimum
+    global_opt = tmp_optimize_result[0]["fval"]
+
     # fill the list with optimization results where necessary
     fill_profile_list(result.profile_result,
                       tmp_optimize_result[result_index],
                       profile_index,
                       profile_list,
-                      problem.dim_full)
+                      problem.dim_full,
+                      global_opt)
 
     # return the log-posterior of the global optimum (needed in order to
     # compute the log-posterior-ratio)
-    return tmp_optimize_result[0]["fval"]
+    return global_opt
 
 
 def fill_profile_list(
@@ -383,7 +387,8 @@ def fill_profile_list(
         optimize_result,
         profile_index,
         profile_list,
-        problem_dimension):
+        problem_dimension,
+        global_opt):
     """
         This is a helper function for initialize_profile
 
@@ -408,6 +413,9 @@ def fill_profile_list(
 
         problem_dimension: integer
             number of parameters in the unreduced problem
+
+        global_opt: float
+            log-posterior at global optimum
         """
 
     if optimize_result["grad"] is not None:
@@ -419,7 +427,11 @@ def fill_profile_list(
     new_profile = ProfilerResult(
         optimize_result["x"],
         np.array([optimize_result["fval"]]),
+<<<<<<< HEAD
         np.array([1.]),
+=======
+        np.array([np.exp(global_opt - optimize_result["fval"])]),
+>>>>>>> ICB-DCM/master
         gradnorm,
         optimize_result["exitflag"],
         np.array([0.]),

@@ -30,6 +30,10 @@ setup(name='pypesto',
                         'cloudpickle>=0.7.0',
                         'petab>=0.0.0a11'],
       tests_require=['pytest', 'flake8>=3.7.1', 'gitpython'],
+<<<<<<< HEAD
       extras_require={'amici': ['amici>=0.10.1']},
+=======
+      extras_require={'amici': ['amici>=0.10.2']},
+>>>>>>> ICB-DCM/master
       python_requires='>=3.6',
       )

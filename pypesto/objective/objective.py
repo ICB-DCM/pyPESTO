@@ -225,6 +225,7 @@ class Objective:
         # compute result
         result = self._call_unprocessed(x, sensi_orders, mode)
 
+
         # compute penalized objective funciton and gradient
         if self.has_prior:
 
@@ -237,9 +238,6 @@ class Objective:
             if sensi_orders == (1,):
                 # result[GRAD] *= prior['chainrule']
                 result[GRAD] -= prior['prior_grad']
-
-        # convert to ndarray
-        result = Objective.as_ndarrays(result)
 
         # post-process
         result = self.pre_post_processor.postprocess(result)

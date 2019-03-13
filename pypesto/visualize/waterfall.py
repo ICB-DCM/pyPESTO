@@ -41,7 +41,11 @@ def waterfall(results,
         May be logarithmic or linear ('log10' or 'lin')
 
     offset_y:
+<<<<<<< HEAD
         offset for the y-axis, if this is supposed to be in log10-scale
+=======
+        offset for the y-axis, if it is supposed to be in log10-scale
+>>>>>>> ICB-DCM/master
 
     start_indices: list or int
         list of integers specifying the multistart to be plotted or
@@ -75,24 +79,42 @@ def waterfall(results,
     # loop over results
     for j, result in enumerate(results):
         # extract specific cost function values from result
+<<<<<<< HEAD
         fvals = get_fvals(result, scale_y, offset_y, start_indices)
         max_len_fvals = np.max([max_len_fvals, len(fvals)])
 
         # call lowlevel plot routine
         ax = waterfall_lowlevel(fvals=fvals, scale_y=scale_y, ax=ax, size=size,
+=======
+        (fvals, offset_y) = get_fvals(result, scale_y, offset_y, start_indices)
+        max_len_fvals = np.max([max_len_fvals, len(fvals)])
+
+        # call lowlevel plot routine
+        ax = waterfall_lowlevel(fvals=fvals, scale_y=scale_y,
+                                offset_y=offset_y, ax=ax, size=size,
+>>>>>>> ICB-DCM/master
                                 colors=colors[j], legend_text=legends[j])
 
     # parse and apply plotting options
     ref = create_references(references=reference)
 
     # apply changes specified be the user to the axis object
+<<<<<<< HEAD
     ax = handle_options(ax, max_len_fvals, ref, y_limits)
+=======
+    ax = handle_options(ax, max_len_fvals, ref, y_limits, offset_y)
+>>>>>>> ICB-DCM/master
 
     return ax
 
 
+<<<<<<< HEAD
 def waterfall_lowlevel(fvals, scale_y='log10', ax=None, size=(18.5, 10.5),
                        colors=None, legend_text=None):
+=======
+def waterfall_lowlevel(fvals, scale_y='log10', offset_y=0., ax=None,
+                       size=(18.5, 10.5), colors=None, legend_text=None):
+>>>>>>> ICB-DCM/master
     """
     Plot waterfall plot using list of function values.
 
@@ -105,6 +127,12 @@ def waterfall_lowlevel(fvals, scale_y='log10', ax=None, size=(18.5, 10.5),
     scale_y: str, optional
         May be logarithmic or linear ('log10' or 'lin')
 
+<<<<<<< HEAD
+=======
+    offset_y:
+        offset for the y-axis, if it is supposed to be in log10-scale
+
+>>>>>>> ICB-DCM/master
     ax: matplotlib.Axes, optional
         Axes object to use.
 
@@ -175,7 +203,10 @@ def waterfall_lowlevel(fvals, scale_y='log10', ax=None, size=(18.5, 10.5),
 
     # labels
     ax.set_xlabel('Ordered optimizer run')
-    ax.set_ylabel('Function value')
+    if offset_y == .0:
+        ax.set_ylabel('Function value')
+    else:
+        ax.set_ylabel('Offsetted function value (relative to best start)')
     ax.set_title('Waterfall plot')
     if legend_text is not None:
         ax.legend()
@@ -197,7 +228,11 @@ def get_fvals(result, scale_y, offset_y, start_indices):
         May be logarithmic or linear ('log10' or 'lin')
 
     offset_y:
+<<<<<<< HEAD
         offset for the y-axis, if this is supposed to be in log10-scale
+=======
+        offset for the y-axis, if it is supposed to be in log10-scale
+>>>>>>> ICB-DCM/master
 
     start_indices: list or int
         list of integers specifying the multistart to be plotted or
@@ -208,6 +243,12 @@ def get_fvals(result, scale_y, offset_y, start_indices):
 
     fvals: ndarray
         function values
+<<<<<<< HEAD
+=======
+
+    offset_y:
+        offset for the y-axis, if this is supposed to be in log10-scale
+>>>>>>> ICB-DCM/master
     """
 
     # extract cost function values from result
@@ -240,10 +281,17 @@ def get_fvals(result, scale_y, offset_y, start_indices):
         fvals += offset_y * np.ones(fvals.shape)
 
     # get only the indices which the user asked for
+<<<<<<< HEAD
     return fvals
 
 
 def handle_options(ax, max_len_fvals, ref, y_limits):
+=======
+    return fvals, offset_y
+
+
+def handle_options(ax, max_len_fvals, ref, y_limits, offset_y):
+>>>>>>> ICB-DCM/master
     """
     Get the limits for the y-axis, plots the reference points, will do
     more at a later time point. This function is there to apply whatever
@@ -265,6 +313,12 @@ def handle_options(ax, max_len_fvals, ref, y_limits):
     y_limits: float or ndarray, optional
         maximum value to be plotted on the y-axis, or y-limits
 
+<<<<<<< HEAD
+=======
+    offset_y:
+        offset for the y-axis, if it is supposed to be in log10-scale
+
+>>>>>>> ICB-DCM/master
     Returns
     -------
 
@@ -277,7 +331,18 @@ def handle_options(ax, max_len_fvals, ref, y_limits):
 
     # handle reference points
     for i_ref in ref:
+<<<<<<< HEAD
         ax.plot([0, max_len_fvals - 1], [i_ref.fval, i_ref.fval], '--',
                 color=i_ref.color, label=i_ref.legend)
+=======
+        # plot reference point as line
+        ax.plot([0, max_len_fvals - 1],
+                [i_ref.fval + offset_y, i_ref.fval + offset_y], '--',
+                color=i_ref.color, label=i_ref.legend)
+
+        # create legend for reference points
+        if i_ref.legend is not None:
+            ax.legend()
+>>>>>>> ICB-DCM/master
 
     return ax

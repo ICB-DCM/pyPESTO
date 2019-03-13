@@ -104,9 +104,18 @@ class PetabImporter:
                 f"Refusing to remove {self.output_folder} for model "
                 f"compilation: Not a folder.")
 
+<<<<<<< HEAD
         # compile
         if force_compile or not os.path.exists(self.output_folder) or \
                 not os.listdir(self.output_folder):
+=======
+        # add module to path
+        if self.output_folder not in sys.path:
+            sys.path.insert(0, self.output_folder)
+
+        # compile
+        if self._must_compile(force_compile):
+>>>>>>> ICB-DCM/master
             logger.info(f"Compiling amici model to folder "
                         f"{self.output_folder}.")
             self.compile_model()
@@ -114,10 +123,20 @@ class PetabImporter:
             logger.info(f"Using existing amici model in folder "
                         f"{self.output_folder}.")
 
+<<<<<<< HEAD
         # add module to path
         if self.output_folder not in sys.path:
             sys.path.insert(0, self.output_folder)
 
+=======
+        return self._create_model()
+
+    def _create_model(self):
+        """
+        No checks, no compilation, just load the model module and return
+        the model.
+        """
+>>>>>>> ICB-DCM/master
         # load moduĺe
         model_module = importlib.import_module(self.model_name)
 
@@ -126,6 +145,32 @@ class PetabImporter:
 
         return model
 
+<<<<<<< HEAD
+=======
+    def _must_compile(self, force_compile: bool):
+        """
+        Check whether the model needs to be compiled first.
+        """
+        # asked by user
+        if force_compile:
+            return True
+
+        # folder does not exist
+        if not os.path.exists(self.output_folder) or \
+                not os.listdir(self.output_folder):
+            return True
+
+        # try to import (in particular checks version)
+        try:
+            # importing will already raise an exception if version wrong
+            importlib.import_module(self.model_name)
+        except RuntimeError:
+            return True
+
+        # no need to (re-)compile
+        return False
+
+>>>>>>> ICB-DCM/master
     def compile_model(self):
         """
         Compile the model. If the output folder exists already, it is first
@@ -598,8 +643,12 @@ class PetabAmiciObjective(AmiciObjective):
     def __getstate__(self):
         state = {}
         for key in set(self.__dict__.keys()) - \
+<<<<<<< HEAD
                 set(['amici_model', 'amici_solver', 'edatas',
                      'preequilibration_edatas']):
+=======
+                set(['amici_model', 'amici_solver', 'edatas']):
+>>>>>>> ICB-DCM/master
             state[key] = self.__dict__[key]
         return state
 
@@ -615,26 +664,36 @@ class PetabAmiciObjective(AmiciObjective):
         self.amici_solver = solver
         self.edatas = edatas
 
+<<<<<<< HEAD
         if self.preprocess_edatas:
             self.init_preequilibration_edatas(edatas)
         else:
             self.preequilibration_edatas = None
 
+=======
+>>>>>>> ICB-DCM/master
     def __deepcopy__(self, memodict=None):
         other = self.__class__.__new__(self.__class__)
 
         for key in set(self.__dict__.keys()) - \
+<<<<<<< HEAD
                 set(['amici_model', 'amici_solver', 'edatas',
                      'preequilibration_edatas']):
+=======
+                set(['amici_model', 'amici_solver', 'edatas']):
+>>>>>>> ICB-DCM/master
             other.__dict__[key] = copy.deepcopy(self.__dict__[key])
 
         other.amici_model = amici.ModelPtr(self.amici_model.clone())
         other.amici_solver = amici.SolverPtr(self.amici_solver.clone())
         other.edatas = [amici.ExpData(data) for data in self.edatas]
 
+<<<<<<< HEAD
         if self.preprocess_edatas:
             other.init_preequilibration_edatas(other.edatas)
         else:
             other.preequilibration_edatas = None
 
+=======
+>>>>>>> ICB-DCM/master
         return other

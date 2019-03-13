@@ -66,7 +66,8 @@ def assign_startpoints(n_starts, startpoint_method, problem, options):
 def resample_startpoints(startpoints, problem, method):
     """
     Resample startpoints having non-finite value according to the
-    startpoint_method.
+    startpoint_method. Also orders startpoints according to their objective
+    function values (in ascending order)
     """
 
     n_starts = startpoints.shape[0]
@@ -75,20 +76,23 @@ def resample_startpoints(startpoints, problem, method):
     ub = problem.ub
     x_guesses = problem.x_guesses
 
+    fvals = np.empty((n_starts,))
     # iterate over startpoints
     for j in range(0, n_starts):
         startpoint = startpoints[j, :]
         # apply method until found valid point
-        fval = problem.objective(startpoint)
-        while fval == np.inf or fval == np.nan:
+        fvals[j] = problem.objective(startpoint)
+        while fvals[j] == np.inf or fvals[j] == np.nan:
             startpoint = method(
                 n_starts=1,
                 lb=lb,
                 ub=ub,
                 x_guesses=x_guesses
             )[0, :]
-            fval = problem.objective(startpoint)
+            fvals[j] = problem.objective(startpoint)
         # assign startpoint
         resampled_startpoints[j, :] = startpoint
 
-    return resampled_startpoints
+    starpoint_order = np.argsort(fvals)
+
+    return resampled_startpoints[starpoint_order, :]

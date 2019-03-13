@@ -5,6 +5,18 @@ This is for testing the pypesto.Objective.
 from pypesto.objective.amici_objective import add_sim_grad_to_opt_grad
 import unittest
 
+<<<<<<< HEAD
+=======
+import petab
+import pypesto
+import pypesto.objective.constants
+import numpy as np
+from test.petab_util import folder_base
+
+ATOL = 1e-6
+RTOL = 1e-6
+
+>>>>>>> ICB-DCM/master
 
 class AmiciObjectiveTest(unittest.TestCase):
 
@@ -35,6 +47,41 @@ class AmiciObjectiveTest(unittest.TestCase):
 
         self.assertEqual(expected, opt_grad)
 
+<<<<<<< HEAD
+=======
+    def test_preeq_guesses(self):
+        """
+        Test whether optimization with preequilibration guesses works, asserts
+        that steadystate guesses are written and checks that gradient is still
+        correct with guesses set
+        """
+        petab_problem = petab.Problem.from_folder(folder_base +
+                                                  "Zheng_PNAS2012")
+        petab_problem.model_name = "Zheng_PNAS2012"
+        importer = pypesto.PetabImporter(petab_problem)
+        obj = importer.create_objective()
+        problem = importer.create_problem(obj)
+        optimizer = pypesto.ScipyOptimizer('ls_trf')
+
+        result = pypesto.minimize(
+            problem=problem, optimizer=optimizer, n_starts=2,
+        )
+
+        self.assertTrue(obj.steadystate_guesses['fval'] < np.inf)
+        self.assertTrue(len(obj.steadystate_guesses['data']) == 1)
+
+        df = obj.check_grad(
+            result.optimize_result.list[0]['x'],
+            eps=1e-3,
+            verbosity=0,
+            mode=pypesto.objective.constants.MODE_FUN
+        )
+        print("relative errors MODE_FUN: ", df.rel_err.values)
+        print("absolute errors MODE_FUN: ", df.abs_err.values)
+        self.assertTrue(np.all((df.rel_err.values < RTOL) |
+                               (df.abs_err.values < ATOL)))
+
+>>>>>>> ICB-DCM/master
 
 if __name__ == '__main__':
     suite = unittest.TestSuite()

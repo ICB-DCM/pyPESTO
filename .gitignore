@@ -99,3 +99,7 @@ venv/*
 *.tmp
 tmp/*
 amici_models/*
+<<<<<<< HEAD
+=======
+*.txt
+>>>>>>> ICB-DCM/master
