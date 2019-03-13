@@ -235,7 +235,7 @@ class Objective:
                 result[FVAL] -= prior['prior_fun']
 
             if sensi_orders == (1,):
-                result[GRAD] *= prior['chainrule']
+                # result[GRAD] *= prior['chainrule']
                 result[GRAD] -= prior['prior_grad']
 
         # convert to ndarray

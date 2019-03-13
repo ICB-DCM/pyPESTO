@@ -109,7 +109,7 @@ def minimize(
     # assign startpoints
     startpoints = assign_startpoints(n_starts, startpoint_method,
                                      problem, options)
-
+    print(startpoints)
     # prepare result
     if result is None:
         result = Result(problem)

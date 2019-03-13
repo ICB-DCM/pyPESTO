@@ -14,7 +14,8 @@ class Prior():
                  priorType_list=None,
                  priorParameters_list=None,
                  estimate_list=None,
-                 scale_list=None):
+                 scale_list=None,
+                 logicle_object=None):
 
         # priorType_list = ['norm','lap','norm',...]
         # priorParameters_list = [[mean,cov],[mean,cov],...,[mean,cov]]
@@ -27,6 +28,7 @@ class Prior():
         self.priorParameters_list = priorParameters_list
         self.estimate_list = estimate_list
         self.scale_list = scale_list
+        self.logicle_object = logicle_object
 
     @property
     def has_priorType_list(self):
@@ -73,7 +75,7 @@ class Prior():
 
             logicle_index = [i for i, j in enumerate(self.scale_list)
                            if j == 'logicle']
-            x[logicle_index] = logicleInverseTransform(x[logicle_index],T,W,M,A)
+            x[logicle_index] = logicleInverseTransform(x[logicle_index], self.logicle_object)
 
         else:
             # default: all parameters are in linear scale
@@ -156,8 +158,10 @@ class Prior():
 
         if logicle_index is not None:
             #reset the values
-            x[logicle_index] = logicleTransform(x[logicle_index],T,W,M,A)
-            chainrule[logicle_index] *= logicleInverseGradient(x[logicle_index],T,W,M,A)
+            T = 1000.0
+            e_lin = 1e-10
+            x[logicle_index] = logicleTransform(x[logicle_index], T=T, end_lin=e_lin)[0]
+            chainrule[logicle_index] *= logicleInverseGradient(x[logicle_index], self.logicle_object)
 
         # multiply the gradient by the chainrule
         prior_grad *= chainrule
