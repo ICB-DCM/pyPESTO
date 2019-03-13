@@ -9,10 +9,14 @@ from .misc import process_result_list
 def parameters(results, ax=None, free_indices_only=True, lb=None, ub=None,
                size=None, reference=None, colors=None, legends=None,
 <<<<<<< HEAD
+<<<<<<< HEAD
                balance_alpha=True):
 =======
                balance_alpha=True, start_indices=None):
 >>>>>>> ICB-DCM/master
+=======
+               balance_alpha=True, start_indices=None):
+>>>>>>> ICB-DCM/develop
     """
     Plot parameter values.
 
@@ -54,12 +58,18 @@ def parameters(results, ax=None, free_indices_only=True, lb=None, ub=None,
         avoid overplotting (default: True)
 
 <<<<<<< HEAD
+<<<<<<< HEAD
 =======
+=======
+>>>>>>> ICB-DCM/develop
     start_indices: list or int
         list of integers specifying the multistarts to be plotted or
         int specifying up to which start index should be plotted
 
+<<<<<<< HEAD
 >>>>>>> ICB-DCM/master
+=======
+>>>>>>> ICB-DCM/develop
     Returns
     -------
 
@@ -75,15 +85,21 @@ def parameters(results, ax=None, free_indices_only=True, lb=None, ub=None,
         (lb, ub, x_labels, fvals, xs) = \
             handle_inputs(result=result, lb=lb, ub=ub,
 <<<<<<< HEAD
+<<<<<<< HEAD
                           free_indices_only=free_indices_only)
 =======
                           free_indices_only=free_indices_only,
                           start_indices=start_indices)
 >>>>>>> ICB-DCM/master
+=======
+                          free_indices_only=free_indices_only,
+                          start_indices=start_indices)
+>>>>>>> ICB-DCM/develop
 
         # call lowlevel routine
         ax = parameters_lowlevel(xs=xs, fvals=fvals, lb=lb, ub=ub,
                                  x_labels=x_labels, ax=ax, size=size,
+<<<<<<< HEAD
 <<<<<<< HEAD
                                  colors=colors[j], legend_text=legends[j])
 
@@ -98,6 +114,8 @@ def parameters(results, ax=None, free_indices_only=True, lb=None, ub=None,
                                  balance_alpha=balance_alpha)
 
 =======
+=======
+>>>>>>> ICB-DCM/develop
                                  colors=colors[j], legend_text=legends[j],
                                  balance_alpha=balance_alpha)
 
@@ -120,11 +138,15 @@ def parameters(results, ax=None, free_indices_only=True, lb=None, ub=None,
                                  legend_text=i_ref.legend,
                                  balance_alpha=balance_alpha)
 
+<<<<<<< HEAD
 >>>>>>> ICB-DCM/master
+=======
+>>>>>>> ICB-DCM/develop
     return ax
 
 
 def parameters_lowlevel(xs, fvals, lb=None, ub=None, x_labels=None,
+<<<<<<< HEAD
 <<<<<<< HEAD
                         ax=None, size=None, colors=None, legend_text=None,
                         balance_alpha=True):
@@ -132,6 +154,10 @@ def parameters_lowlevel(xs, fvals, lb=None, ub=None, x_labels=None,
                         ax=None, size=None, colors=None, linestyle='-',
                         legend_text=None, balance_alpha=True):
 >>>>>>> ICB-DCM/master
+=======
+                        ax=None, size=None, colors=None, linestyle='-',
+                        legend_text=None, balance_alpha=True):
+>>>>>>> ICB-DCM/develop
 
     """
     Plot parameters plot using list of parameters.
@@ -162,11 +188,17 @@ def parameters_lowlevel(xs, fvals, lb=None, ub=None, x_labels=None,
         One for each element in 'fvals'.
 
 <<<<<<< HEAD
+<<<<<<< HEAD
 =======
     linestyle: str, optional
         linestyle argument for parameter plot
 
 >>>>>>> ICB-DCM/master
+=======
+    linestyle: str, optional
+        linestyle argument for parameter plot
+
+>>>>>>> ICB-DCM/develop
     legend_text: str
         Label for line plots
 
@@ -210,9 +242,13 @@ def parameters_lowlevel(xs, fvals, lb=None, ub=None, x_labels=None,
             tmp_legend = None
         ax.plot(x, parameters_ind,
 <<<<<<< HEAD
+<<<<<<< HEAD
 =======
                 linestyle,
 >>>>>>> ICB-DCM/master
+=======
+                linestyle,
+>>>>>>> ICB-DCM/develop
                 color=colors[j_x],
                 marker='o',
                 label=tmp_legend)
@@ -236,11 +272,16 @@ def parameters_lowlevel(xs, fvals, lb=None, ub=None, x_labels=None,
 
 
 <<<<<<< HEAD
+<<<<<<< HEAD
 def handle_inputs(result, free_indices_only, lb=None, ub=None):
 =======
 def handle_inputs(result, free_indices_only, lb=None, ub=None,
                   start_indices=None):
 >>>>>>> ICB-DCM/master
+=======
+def handle_inputs(result, free_indices_only, lb=None, ub=None,
+                  start_indices=None):
+>>>>>>> ICB-DCM/develop
     """
     Computes the correct bounds for the parameter indices to be plotted and
     outputs the corrsponding parameters and their labels
@@ -260,12 +301,18 @@ def handle_inputs(result, free_indices_only, lb=None, ub=None,
         Dimension either result.problem.dim or result.problem.dim_full.
 
 <<<<<<< HEAD
+<<<<<<< HEAD
 =======
+=======
+>>>>>>> ICB-DCM/develop
     start_indices: list or int
         list of integers specifying the multistarts to be plotted or
         int specifying up to which start index should be plotted
 
+<<<<<<< HEAD
 >>>>>>> ICB-DCM/master
+=======
+>>>>>>> ICB-DCM/develop
     Returns
     -------
 
@@ -287,7 +334,10 @@ def handle_inputs(result, free_indices_only, lb=None, ub=None,
     xs = result.optimize_result.get_for_key('x')
 
 <<<<<<< HEAD
+<<<<<<< HEAD
 =======
+=======
+>>>>>>> ICB-DCM/develop
     # parse indices which should be plotted
     if start_indices is not None:
         start_indices = np.array(start_indices, dtype=int)
@@ -300,7 +350,10 @@ def handle_inputs(result, free_indices_only, lb=None, ub=None,
         xs_out = xs
         fvals_out = fvals
 
+<<<<<<< HEAD
 >>>>>>> ICB-DCM/master
+=======
+>>>>>>> ICB-DCM/develop
     # get bounds
     if lb is None:
         lb = result.problem.lb
@@ -313,12 +366,17 @@ def handle_inputs(result, free_indices_only, lb=None, ub=None,
     # handle fixed and free indices
     if free_indices_only:
 <<<<<<< HEAD
+<<<<<<< HEAD
         for ix, x in enumerate(xs):
             xs[ix] = result.problem.get_reduced_vector(x)
 =======
         for ix, x in enumerate(xs_out):
             xs_out[ix] = result.problem.get_reduced_vector(x)
 >>>>>>> ICB-DCM/master
+=======
+        for ix, x in enumerate(xs_out):
+            xs_out[ix] = result.problem.get_reduced_vector(x)
+>>>>>>> ICB-DCM/develop
         lb = result.problem.get_reduced_vector(lb)
         ub = result.problem.get_reduced_vector(ub)
         x_labels = [x_labels[int(i)] for i in result.problem.x_free_indices]
@@ -327,7 +385,11 @@ def handle_inputs(result, free_indices_only, lb=None, ub=None,
         ub = result.problem.get_full_vector(ub)
 
 <<<<<<< HEAD
+<<<<<<< HEAD
     return lb, ub, x_labels, fvals, xs
 =======
     return lb, ub, x_labels, fvals_out, xs_out
 >>>>>>> ICB-DCM/master
+=======
+    return lb, ub, x_labels, fvals_out, xs_out
+>>>>>>> ICB-DCM/develop

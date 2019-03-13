@@ -31,11 +31,16 @@ install:
 # run tests
 script:
 <<<<<<< HEAD
+<<<<<<< HEAD
   - python3 -m flake8 --exclude=build,doc,example,tmp
 =======
   - python3 -m flake8 --exclude=build,doc,example,tmp,amici_models
 >>>>>>> ICB-DCM/master
   - xvfb-run -a python3 -m pytest --cov=pypesto ./test
+=======
+  - python3 -m flake8 --exclude=build,doc,example,tmp,amici_models
+  - travis_wait 20 xvfb-run -a python3 -m pytest --cov=pypesto ./test
+>>>>>>> ICB-DCM/develop
   - coverage xml
   - test/run_notebook.sh doc/example/
 

@@ -100,6 +100,11 @@ venv/*
 tmp/*
 amici_models/*
 <<<<<<< HEAD
+<<<<<<< HEAD
 =======
 *.txt
 >>>>>>> ICB-DCM/master
+=======
+*.txt
+test/doc/example/tmp/benchmark-models/
+>>>>>>> ICB-DCM/develop

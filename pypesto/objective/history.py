@@ -181,7 +181,11 @@ class ObjectiveHistory:
                 or 0 not in sensi_orders \
                 else res_to_chi2(res_result)
             schi2 = None if not self.options.trace_record_schi2 \
+<<<<<<< HEAD
                 or 0 not in sensi_orders or 1 not in sensi_orders \
+=======
+                or 1 not in sensi_orders \
+>>>>>>> ICB-DCM/develop
                 else sres_to_schi2(res_result, sres_result)
 
         # check whether to append to trace

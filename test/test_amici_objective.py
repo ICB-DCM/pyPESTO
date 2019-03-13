@@ -6,7 +6,10 @@ from pypesto.objective.amici_objective import add_sim_grad_to_opt_grad
 import unittest
 
 <<<<<<< HEAD
+<<<<<<< HEAD
 =======
+=======
+>>>>>>> ICB-DCM/develop
 import petab
 import pypesto
 import pypesto.objective.constants
@@ -16,7 +19,10 @@ from test.petab_util import folder_base
 ATOL = 1e-6
 RTOL = 1e-6
 
+<<<<<<< HEAD
 >>>>>>> ICB-DCM/master
+=======
+>>>>>>> ICB-DCM/develop
 
 class AmiciObjectiveTest(unittest.TestCase):
 
@@ -48,7 +54,10 @@ class AmiciObjectiveTest(unittest.TestCase):
         self.assertEqual(expected, opt_grad)
 
 <<<<<<< HEAD
+<<<<<<< HEAD
 =======
+=======
+>>>>>>> ICB-DCM/develop
     def test_preeq_guesses(self):
         """
         Test whether optimization with preequilibration guesses works, asserts
@@ -81,7 +90,10 @@ class AmiciObjectiveTest(unittest.TestCase):
         self.assertTrue(np.all((df.rel_err.values < RTOL) |
                                (df.abs_err.values < ATOL)))
 
+<<<<<<< HEAD
 >>>>>>> ICB-DCM/master
+=======
+>>>>>>> ICB-DCM/develop
 
 if __name__ == '__main__':
     suite = unittest.TestSuite()

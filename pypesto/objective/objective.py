@@ -109,7 +109,10 @@ class Objective:
                  res=None, sres=None,
                  fun_accept_sensi_orders=False,
                  res_accept_sensi_orders=False,
+<<<<<<< HEAD
                  prior=None,
+=======
+>>>>>>> ICB-DCM/develop
                  x_names=None,
                  options=None):
 
@@ -225,6 +228,7 @@ class Objective:
         # compute result
         result = self._call_unprocessed(x, sensi_orders, mode)
 
+<<<<<<< HEAD
 
         # compute penalized objective funciton and gradient
         if self.has_prior:
@@ -239,6 +243,8 @@ class Objective:
                 # result[GRAD] *= prior['chainrule']
                 result[GRAD] -= prior['prior_grad']
 
+=======
+>>>>>>> ICB-DCM/develop
         # post-process
         result = self.pre_post_processor.postprocess(result)
 
