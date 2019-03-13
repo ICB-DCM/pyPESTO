@@ -37,7 +37,7 @@ def assign_startpoints(n_starts, startpoint_method, problem, options):
     n_required_points = n_starts - n_guessed_points
 
     if n_required_points <= 0:
-        return x_guesses[n_starts, :]
+        return x_guesses[:n_starts, :]
 
     # apply startpoint method
     x_sampled = startpoint_method(
