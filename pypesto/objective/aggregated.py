@@ -1,8 +1,4 @@
 import numpy as np
-<<<<<<< HEAD
-=======
-from copy import deepcopy
->>>>>>> ICB-DCM/develop
 
 from .objective import Objective
 
@@ -94,17 +90,6 @@ class AggregatedObjective(Objective):
 
         super().__init__(**init_kwargs)
 
-<<<<<<< HEAD
-=======
-    def __deepcopy__(self, memodict=None):
-        other = AggregatedObjective(
-            objectives=[deepcopy(objective) for objective in self.objectives],
-            x_names=deepcopy(self.x_names),
-            options=deepcopy(self.options),
-        )
-        return other
-
->>>>>>> ICB-DCM/develop
     def aggregate_fun_sensi_orders(self, x, sensi_orders):
         rvals = [
             objective.fun(x, sensi_orders)
@@ -204,18 +189,6 @@ class AggregatedObjective(Objective):
     def aggregate_hessp(self, x):
         return sum(objective.hessp(x) for objective in self.objectives)
 
-<<<<<<< HEAD
-=======
-    def reset_steadystate_guesses(self):
-        """
-        Propagates reset_steadystate_guesses() to child objectives if available
-        (currently only applies for amici_objective)
-        """
-        for objective in self.objectives:
-            if hasattr(objective, 'reset_steadystate_guesses'):
-                objective.reset_steadystate_guesses()
-
->>>>>>> ICB-DCM/develop
 
 def _check_boolean_value_consistent(objectives, attr):
     values = set(

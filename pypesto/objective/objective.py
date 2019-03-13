@@ -109,13 +109,9 @@ class Objective:
                  res=None, sres=None,
                  fun_accept_sensi_orders=False,
                  res_accept_sensi_orders=False,
-<<<<<<< HEAD
                  prior=None,
-=======
->>>>>>> ICB-DCM/develop
                  x_names=None,
                  options=None):
-
         self.fun = fun
         self.grad = grad
         self.hess = hess
@@ -169,10 +165,6 @@ class Objective:
     @property
     def has_sres(self):
         return callable(self.sres) or self.sres is True
-
-    @property
-    def has_prior(self):
-        return callable(self.prior) or self.prior is True
 
     def check_sensi_orders(self, sensi_orders, mode):
         """
@@ -228,23 +220,6 @@ class Objective:
         # compute result
         result = self._call_unprocessed(x, sensi_orders, mode)
 
-<<<<<<< HEAD
-
-        # compute penalized objective funciton and gradient
-        if self.has_prior:
-
-            # call prior
-            prior = self.prior(x, sensi_orders)
-
-            if sensi_orders == (0,):
-                result[FVAL] -= prior['prior_fun']
-
-            if sensi_orders == (1,):
-                # result[GRAD] *= prior['chainrule']
-                result[GRAD] -= prior['prior_grad']
-
-=======
->>>>>>> ICB-DCM/develop
         # post-process
         result = self.pre_post_processor.postprocess(result)
 
@@ -452,13 +427,6 @@ class Objective:
         """
         sres = self(x, (1,), MODE_RES)
         return sres
-
-    def get_prior(self,x,sensi_order):
-        """
-        Get the prior value at x.
-        """
-        prior_value = self.prior(x,sensi_order)
-        return prior_value
 
     # The following are functions that are called by other parts in
     # pypesto to modify the objective state, e.g. set its history, or

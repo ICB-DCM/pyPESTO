@@ -6,18 +6,8 @@ from .clust_color import assign_colors
 from .misc import process_result_list
 
 
-<<<<<<< HEAD
-<<<<<<< HEAD
-def profiles(results, fig=None, profile_indices=None, size=(18.5, 6.5),
-             reference=None, colors=None, legends=None):
-=======
 def profiles(results, ax=None, profile_indices=None, size=(18.5, 6.5),
              reference=None, colors=None, legends=None, profile_list_id=0):
->>>>>>> ICB-DCM/master
-=======
-def profiles(results, ax=None, profile_indices=None, size=(18.5, 6.5),
-             reference=None, colors=None, legends=None, profile_list_id=0):
->>>>>>> ICB-DCM/develop
     """
     Plot classical 1D profile plot (using the posterior, e.g. Gaussian like
     profile)
@@ -28,18 +18,8 @@ def profiles(results, ax=None, profile_indices=None, size=(18.5, 6.5),
     results: list or pypesto.Result
         list of pypesto.Result or single pypesto.Result
 
-<<<<<<< HEAD
-<<<<<<< HEAD
-    fig: matplotlib.Figure, optional
-        Figure object to use.
-=======
     ax: list of matplotlib.Axes, optional
         List of axes objects to use.
->>>>>>> ICB-DCM/master
-=======
-    ax: list of matplotlib.Axes, optional
-        List of axes objects to use.
->>>>>>> ICB-DCM/develop
 
     profile_indices: list of integer values
         list of integer values specifying which profiles should be plotted
@@ -57,24 +37,12 @@ def profiles(results, ax=None, profile_indices=None, size=(18.5, 6.5),
         color or list of colors for plotting. If not set, clustering is done
         and colors are assigned automatically
 
-<<<<<<< HEAD
-<<<<<<< HEAD
-    legends: list or str
-        Labels for line plots, one label per result object
-
-=======
-=======
->>>>>>> ICB-DCM/develop
     legends: list or str, optional
         Labels for line plots, one label per result object
 
     profile_list_id: int, optional
         index of the profile list to be used for profiling
 
-<<<<<<< HEAD
->>>>>>> ICB-DCM/master
-=======
->>>>>>> ICB-DCM/develop
     Returns
     -------
 
@@ -86,86 +54,32 @@ def profiles(results, ax=None, profile_indices=None, size=(18.5, 6.5),
     (results, colors, legends) = process_result_list(results, colors, legends)
 
     # get the correct number of parameter indices, even if not the same in
-<<<<<<< HEAD
-<<<<<<< HEAD
-    # all result obejcts
-    if profile_indices is None:
-        profile_indices = []
-        for result in results:
-            tmp_indices = [i for i in
-                           range(len(result.profile_result.list[0]))]
-=======
     # all result objects
     if profile_indices is None:
         profile_indices = []
         for result in results:
             tmp_indices = [ind for ind in range(len(
                 result.profile_result.list[profile_list_id]))]
->>>>>>> ICB-DCM/master
-=======
-    # all result objects
-    if profile_indices is None:
-        profile_indices = []
-        for result in results:
-            tmp_indices = [ind for ind in range(len(
-                result.profile_result.list[profile_list_id]))]
->>>>>>> ICB-DCM/develop
             profile_indices = list(set().union(profile_indices, tmp_indices))
 
     # loop over results
     for j, result in enumerate(results):
-<<<<<<< HEAD
-<<<<<<< HEAD
-        fvals = handle_inputs(result, profile_indices)
-
-        # call lowlevel routine
-        ax = profiles_lowlevel(fvals=fvals, ax=fig, size=size,
-                               color=colors[j], legend_text=legends[j])
-
-    # parse and apply plotting options
-    ref = create_references(references=reference)
-
-    # plot reference points
-    ax = handle_reference_points(ref, ax, fvals)
-
-    return ax
-=======
-=======
->>>>>>> ICB-DCM/develop
         fvals = handle_inputs(result, profile_indices=profile_indices,
                               profile_list_id=profile_list_id)
 
         # call lowlevel routine
         ax = profiles_lowlevel(fvals=fvals, ax=ax, size=size,
                                color=colors[j], legend_text=legends[j])
-<<<<<<< HEAD
 
     # parse and apply plotting options
     ref = create_references(references=reference)
->>>>>>> ICB-DCM/master
 
     # plot reference points
     ax = handle_reference_points(ref, ax, fvals)
 
-<<<<<<< HEAD
-=======
-    return ax
-=======
-
-    # parse and apply plotting options
-    ref = create_references(references=reference)
->>>>>>> ICB-DCM/develop
-
-    # plot reference points
-    ax = handle_reference_points(ref, ax, fvals)
-
-<<<<<<< HEAD
->>>>>>> ICB-DCM/master
-=======
     return ax
 
 
->>>>>>> ICB-DCM/develop
 def profiles_lowlevel(fvals, ax=None, size=(18.5, 6.5), color=None,
                       legend_text=None):
     """
@@ -207,23 +121,11 @@ def profiles_lowlevel(fvals, ax=None, size=(18.5, 6.5), color=None,
         ax = []
         fig = plt.figure()
         fig.set_size_inches(*size)
-<<<<<<< HEAD
-<<<<<<< HEAD
-    else:
-        plt.axes(ax)
-        fig = plt.gcf()
-=======
-=======
->>>>>>> ICB-DCM/develop
         create_new_ax = True
     else:
         plt.axes(ax[0])
         fig = plt.gcf()
         create_new_ax = False
-<<<<<<< HEAD
->>>>>>> ICB-DCM/master
-=======
->>>>>>> ICB-DCM/develop
 
     # count number of necessary axes
     if isinstance(fvals, list):
@@ -253,12 +155,6 @@ def profiles_lowlevel(fvals, ax=None, size=(18.5, 6.5), color=None,
 
         # plot if data
         if fval is not None:
-<<<<<<< HEAD
-<<<<<<< HEAD
-            ax.append(fig.add_subplot(rows, columns, counter + 1))
-=======
-=======
->>>>>>> ICB-DCM/develop
             # create or choose an axes object
             if create_new_ax:
                 ax.append(fig.add_subplot(rows, columns, counter + 1))
@@ -266,10 +162,6 @@ def profiles_lowlevel(fvals, ax=None, size=(18.5, 6.5), color=None,
                 plt.axes(ax[counter])
 
             # run lowlevel routine for one profile
-<<<<<<< HEAD
->>>>>>> ICB-DCM/master
-=======
->>>>>>> ICB-DCM/develop
             ax[counter] = profile_lowlevel(fval, ax[counter],
                                            size=size, color=color,
                                            legend_text=tmp_legend)
@@ -280,16 +172,8 @@ def profiles_lowlevel(fvals, ax=None, size=(18.5, 6.5), color=None,
                 ax[counter].set_ylabel('Log-posterior ratio')
             else:
                 ax[counter].set_yticklabels([''])
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
 
             # increase counter and cleanup legend
->>>>>>> ICB-DCM/master
-=======
-
-            # increase counter and cleanup legend
->>>>>>> ICB-DCM/develop
             counter += 1
             tmp_legend = None
 
@@ -345,8 +229,6 @@ def profile_lowlevel(fvals, ax=None, size=(18.5, 6.5), color=None,
     if fvals.size != 0:
         ax.xaxis.set_major_locator(MaxNLocator(integer=True))
         ax.plot(fvals[0, :], fvals[1, :], color=color[0], label=legend_text)
-<<<<<<< HEAD
-<<<<<<< HEAD
 
     if legend_text is not None:
         ax.legend()
@@ -354,91 +236,6 @@ def profile_lowlevel(fvals, ax=None, size=(18.5, 6.5), color=None,
     return ax
 
 
-def handle_reference_points(ref, ax, fvals):
-    """
-    Handle reference points.
-
-    Parameters
-    ----------
-
-    ref: list, optional
-        List of reference points for optimization results, containing et
-        least a function value fval
-
-    ax: matplotlib.Axes, optional
-        Axes object to use.
-    """
-
-    if len(ref) > 0:
-        # get the parameters which have profiles plotted
-        par_indices = []
-        for i_plot, fval in enumerate(fvals):
-            if fval is not None:
-                par_indices.append(i_plot)
-
-        # loop over axes objects
-        for i_par, i_ax in enumerate(ax):
-            for i_ref in ref:
-                current_x = i_ref['x'][par_indices[i_par]]
-                i_ax.plot([current_x, current_x], [0., 1.],
-                          color=i_ref.color, label=i_ref.legend)
-=======
-
-    if legend_text is not None:
-        ax.legend()
->>>>>>> ICB-DCM/master
-
-    return ax
-
-
-<<<<<<< HEAD
-def handle_inputs(result, profile_indices):
-=======
-def handle_reference_points(ref, ax, fvals):
-    """
-    Handle reference points.
-
-    Parameters
-    ----------
-
-    ref: list, optional
-        List of reference points for optimization results, containing et
-        least a function value fval
-
-    ax: matplotlib.Axes, optional
-        Axes object to use.
-    """
-
-    if len(ref) > 0:
-        # get the parameters which have profiles plotted
-        par_indices = []
-        for i_plot, fval in enumerate(fvals):
-            if fval is not None:
-                par_indices.append(i_plot)
-
-        # loop over axes objects
-        for i_par, i_ax in enumerate(ax):
-            for i_ref in ref:
-                current_x = i_ref['x'][par_indices[i_par]]
-                i_ax.plot([current_x, current_x], [0., 1.],
-                          color=i_ref.color, label=i_ref.legend)
-
-            # create legend for reference points
-            if i_ref.legend is not None:
-                i_ax.legend()
-=======
-
-    if legend_text is not None:
-        ax.legend()
->>>>>>> ICB-DCM/develop
-
-    return ax
-
-
-<<<<<<< HEAD
-def handle_inputs(result, profile_indices, profile_list_id=0):
->>>>>>> ICB-DCM/master
-=======
 def handle_reference_points(ref, ax, fvals):
     """
     Handle reference points.
@@ -476,7 +273,6 @@ def handle_reference_points(ref, ax, fvals):
 
 
 def handle_inputs(result, profile_indices, profile_list_id=0):
->>>>>>> ICB-DCM/develop
     """
     Retrieves the values of the profiles to be plotted later from a
     pypesto.ProfileResult object
@@ -490,18 +286,9 @@ def handle_inputs(result, profile_indices, profile_list_id=0):
     profile_indices: list of integer values
         list of integer values specifying which profiles should be plotted
 
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
     profile_list_id: int, optional
         index of the profile list to be used for profiling
 
->>>>>>> ICB-DCM/master
-=======
-    profile_list_id: int, optional
-        index of the profile list to be used for profiling
-
->>>>>>> ICB-DCM/develop
     Returns
     -------
 
@@ -513,22 +300,10 @@ def handle_inputs(result, profile_indices, profile_list_id=0):
     fvals = []
     for i_par in range(0, len(result.profile_result.list[0])):
         if i_par in profile_indices:
-<<<<<<< HEAD
-<<<<<<< HEAD
-            tmp = np.array(
-                [result.profile_result.list[0][i_par].x_path[i_par, :],
-                 result.profile_result.list[0][i_par].ratio_path[:]])
-=======
-=======
->>>>>>> ICB-DCM/develop
             tmp = np.array([result.profile_result.list[
                 profile_list_id][i_par].x_path[i_par, :],
                 result.profile_result.list[profile_list_id][
                 i_par].ratio_path[:]])
-<<<<<<< HEAD
->>>>>>> ICB-DCM/master
-=======
->>>>>>> ICB-DCM/develop
         else:
             tmp = None
         fvals.append(tmp)

@@ -427,15 +427,7 @@ def fill_profile_list(
     new_profile = ProfilerResult(
         optimize_result["x"],
         np.array([optimize_result["fval"]]),
-<<<<<<< HEAD
-<<<<<<< HEAD
-        np.array([1.]),
-=======
         np.array([np.exp(global_opt - optimize_result["fval"])]),
->>>>>>> ICB-DCM/master
-=======
-        np.array([np.exp(global_opt - optimize_result["fval"])]),
->>>>>>> ICB-DCM/develop
         gradnorm,
         optimize_result["exitflag"],
         np.array([0.]),

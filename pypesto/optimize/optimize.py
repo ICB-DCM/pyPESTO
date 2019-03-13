@@ -109,7 +109,7 @@ def minimize(
     # assign startpoints
     startpoints = assign_startpoints(n_starts, startpoint_method,
                                      problem, options)
-    print(startpoints)
+
     # prepare result
     if result is None:
         result = Result(problem)
@@ -133,7 +133,6 @@ def minimize(
     for optimizer_result in ret:
         result.optimize_result.append(optimizer_result)
 
-    #if optimizer_result['x']
     # sort by best fval
     result.optimize_result.sort()
 

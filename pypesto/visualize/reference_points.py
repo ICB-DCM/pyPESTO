@@ -52,15 +52,6 @@ class ReferencePoint(dict):
                 if "auto_color" in reference.keys():
                     self.auto_color = reference["auto_color"]
                 else:
-<<<<<<< HEAD
-<<<<<<< HEAD
-                    self.auto_color = True
-            else:
-                self.color = None
-                self.auto_color = True
-=======
-=======
->>>>>>> ICB-DCM/develop
                     self.auto_color = False
             else:
                 self.color = None
@@ -69,10 +60,6 @@ class ReferencePoint(dict):
                 self.legend = reference["legend"]
             else:
                 self.legend = None
-<<<<<<< HEAD
->>>>>>> ICB-DCM/master
-=======
->>>>>>> ICB-DCM/develop
         elif isinstance(reference, tuple):
             # Handle case of tuple
             self.x = np.array(reference[0])
@@ -147,17 +134,8 @@ def assign_colors(ref):
     return ref
 
 
-<<<<<<< HEAD
-<<<<<<< HEAD
-def create_references(references=None, x=None, fval=None):
-=======
 def create_references(references=None, x=None, fval=None, color=None,
                       legend=None):
->>>>>>> ICB-DCM/master
-=======
-def create_references(references=None, x=None, fval=None, color=None,
-                      legend=None):
->>>>>>> ICB-DCM/develop
     """
     This function creates a list of reference point objects from user inputs
 
@@ -173,20 +151,11 @@ def create_references(references=None, x=None, fval=None, color=None,
     fval: float, optional
         Objective function value which should be used for reference point
 
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
-=======
->>>>>>> ICB-DCM/develop
     color: RGBA, optional
         Color which should be used for reference point.
 
     legend: str
         legend text for reference point
-<<<<<<< HEAD
->>>>>>> ICB-DCM/master
-=======
->>>>>>> ICB-DCM/develop
     Returns
     -------
 
@@ -205,15 +174,7 @@ def create_references(references=None, x=None, fval=None, color=None,
 
     # parse input (x and fval)
     if (x is not None) and (fval is not None):
-<<<<<<< HEAD
-<<<<<<< HEAD
-        ref.append(ReferencePoint(x=x, fval=fval))
-=======
         ref.append(ReferencePoint(x=x, fval=fval, color=color))
->>>>>>> ICB-DCM/master
-=======
-        ref.append(ReferencePoint(x=x, fval=fval, color=color))
->>>>>>> ICB-DCM/develop
 
     # assign colors for reference points which have no user-specified colors
     return assign_colors(ref)

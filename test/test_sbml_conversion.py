@@ -35,18 +35,8 @@ class AmiciObjectiveTest(unittest.TestCase):
             )
             print("relative errors MODE_FUN: ", df.rel_err.values)
             print("absolute errors MODE_FUN: ", df.abs_err.values)
-<<<<<<< HEAD
-<<<<<<< HEAD
-            self.assertTrue(np.all(df.rel_err.values < 1e-2))
-            self.assertTrue(np.all(df.abs_err.values < 1e-1))
-=======
             self.assertTrue(np.all((df.rel_err.values < RTOL) |
                                    (df.abs_err.values < ATOL)))
->>>>>>> ICB-DCM/master
-=======
-            self.assertTrue(np.all((df.rel_err.values < RTOL) |
-                                   (df.abs_err.values < ATOL)))
->>>>>>> ICB-DCM/develop
             df = objective.check_grad(
                 x0,
                 eps=1e-3,
@@ -55,18 +45,8 @@ class AmiciObjectiveTest(unittest.TestCase):
             )
             print("relative errors MODE_RES: ", df.rel_err.values)
             print("absolute errors MODE_RES: ", df.rel_err.values)
-<<<<<<< HEAD
-<<<<<<< HEAD
-            self.assertTrue(np.all(df.rel_err.values < 1e-2))
-            self.assertTrue(np.all(df.abs_err.values < 1e-2))
-=======
             self.assertTrue(np.all((df.rel_err.values < RTOL) |
                                    (df.abs_err.values < ATOL)))
->>>>>>> ICB-DCM/master
-=======
-            self.assertTrue(np.all((df.rel_err.values < RTOL) |
-                                   (df.abs_err.values < ATOL)))
->>>>>>> ICB-DCM/develop
 
             for library in optimizers.keys():
                 for method in optimizers[library]:

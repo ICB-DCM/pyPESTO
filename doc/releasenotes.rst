@@ -6,11 +6,6 @@ Release notes
 ..........
 
 
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
-=======
->>>>>>> ICB-DCM/develop
 0.0.5 (2019-03-11)
 ------------------
 
@@ -23,10 +18,6 @@ Release notes
 * Various fixes, in particular to visualization.
 
 
-<<<<<<< HEAD
->>>>>>> ICB-DCM/master
-=======
->>>>>>> ICB-DCM/develop
 0.0.4 (2019-02-25)
 ------------------
 
