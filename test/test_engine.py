@@ -10,8 +10,7 @@ class EngineTest(unittest.TestCase):
 
     def test_basic(self):
         for engine in [pypesto.SingleCoreEngine(),
-                       pypesto.MultiProcessEngine(),
-                       pypesto.MultiProcessEngine(5)]:
+                       pypesto.MultiProcessEngine(n_procs=2)]:
             self._test_basic(engine)
 
     def _test_basic(self, engine):
