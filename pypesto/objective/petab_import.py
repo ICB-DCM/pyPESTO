@@ -184,8 +184,8 @@ class PetabImporter:
         # sigmas
         sigmas = self.petab_problem.get_sigmas(remove=True)
 
-        # costs
-        costs = self.petab_problem.get_costs(remove=True)
+        # noise distributions
+        noise_distrs = self.petab_problem.get_noise_distributions(remove=True)
 
         # model to string
         sbml_string = libsbml.SBMLWriter().writeSBMLToString(
@@ -201,7 +201,7 @@ class PetabImporter:
             observables=observables,
             constantParameters=constant_parameter_ids,
             sigmas=sigmas,
-            costs=costs
+            noise_distributions=noise_distrs
         )
 
     def create_solver(self, model=None):
