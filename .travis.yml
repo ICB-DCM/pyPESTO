@@ -39,8 +39,13 @@ script:
   - xvfb-run -a python3 -m pytest --cov=pypesto ./test
 =======
   - python3 -m flake8 --exclude=build,doc,example,tmp,amici_models
+<<<<<<< HEAD
   - travis_wait 20 xvfb-run -a python3 -m pytest --cov=pypesto ./test
 >>>>>>> ICB-DCM/develop
+=======
+  - travis_wait 20 python3 -m pytest --cov=pypesto ./test/test_*
+  - travis_wait 20 xvfb-run -a python3 -m pytest --cov=pypesto --cov-append ./test/visualize/test_*
+>>>>>>> ICB-DCM/master
   - coverage xml
   - test/run_notebook.sh doc/example/
 
@@ -58,4 +63,3 @@ deploy:
 # cache dependencies
 
 cache: pip
-
