@@ -166,6 +166,10 @@ class Objective:
     def has_sres(self):
         return callable(self.sres) or self.sres is True
 
+    @property
+    def has_prior(self):
+        return callable(self.prior) or self.prior is True
+
     def check_sensi_orders(self, sensi_orders, mode):
         """
         Check if the objective is able to compute the requested
@@ -219,6 +223,19 @@ class Objective:
 
         # compute result
         result = self._call_unprocessed(x, sensi_orders, mode)
+
+        # compute penalized objective funciton and gradient
+        if self.has_prior:
+
+            # call prior
+            prior = self.prior(x, sensi_orders)
+
+            if sensi_orders == (0,):
+                result[FVAL] -= prior['prior_fun']
+
+            if sensi_orders == (1,):
+                # result[GRAD] *= prior['chainrule']
+                result[GRAD] -= prior['prior_grad']
 
         # post-process
         result = self.pre_post_processor.postprocess(result)
