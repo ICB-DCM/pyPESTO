@@ -182,7 +182,10 @@ class PetabImporter:
         observables = self.petab_problem.get_observables()
 
         # sigmas
-        sigmas = self.petab_problem.get_sigmas()
+        sigmas = self.petab_problem.get_sigmas(remove=True)
+
+        # costs
+        costs = self.petab_problem.get_costs(remove=True)
 
         # model to string
         sbml_string = libsbml.SBMLWriter().writeSBMLToString(
@@ -197,7 +200,8 @@ class PetabImporter:
             output_dir=self.output_folder,
             observables=observables,
             constantParameters=constant_parameter_ids,
-            sigmas=sigmas
+            sigmas=sigmas,
+            costs=costs
         )
 
     def create_solver(self, model=None):
@@ -346,7 +350,6 @@ class PetabImporter:
                 measurement_df=self.petab_problem.measurement_df,
                 parameter_df=self.petab_problem.parameter_df,
                 sbml_model=self.petab_problem.sbml_model,
-                par_opt_ids=par_opt_ids,
                 par_sim_ids=par_sim_ids,
                 simulation_conditions=simulation_conditions,
             )
