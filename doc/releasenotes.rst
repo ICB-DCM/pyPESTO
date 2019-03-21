@@ -9,7 +9,7 @@ Release notes
 0.0.7 (2019-03-21)
 ------------------
 
-* Allow different noise models in Petab and Amici.
+* Support noise models in Petab and Amici.
 * Minor Petab update bug fixes.
 
 
