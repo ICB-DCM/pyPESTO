@@ -182,7 +182,11 @@ class PetabImporter:
         observables = self.petab_problem.get_observables()
 
         # sigmas
-        sigmas = self.petab_problem.get_sigmas()
+        sigmas = self.petab_problem.get_sigmas(remove=True)
+
+        # noise distributions
+        noise_distrs = _to_amici_noise_distributions(
+            self.petab_problem.get_noise_distributions())
 
         # model to string
         sbml_string = libsbml.SBMLWriter().writeSBMLToString(
@@ -197,7 +201,8 @@ class PetabImporter:
             output_dir=self.output_folder,
             observables=observables,
             constantParameters=constant_parameter_ids,
-            sigmas=sigmas
+            sigmas=sigmas,
+            noise_distributions=noise_distrs
         )
 
     def create_solver(self, model=None):
@@ -346,7 +351,6 @@ class PetabImporter:
                 measurement_df=self.petab_problem.measurement_df,
                 parameter_df=self.petab_problem.parameter_df,
                 sbml_model=self.petab_problem.sbml_model,
-                par_opt_ids=par_opt_ids,
                 par_sim_ids=par_sim_ids,
                 simulation_conditions=simulation_conditions,
             )
@@ -592,6 +596,22 @@ def _find_output_folder_name(petab_problem: petab.Problem):
         output_folder = os.path.abspath(
             tempfile.mkdtemp(dir=PetabImporter.MODEL_BASE_DIR))
     return output_folder
+
+
+def _to_amici_noise_distributions(noise_distributions):
+    """
+    Map from the petab to the amici format of noise distribution
+    identifiers.
+    """
+    amici_distrs = {}
+    for id_, val in noise_distributions.items():
+        amici_val = ''
+        if val['observableTransformation']:
+            amici_val += val['observableTransformation'] + '-'
+        if val['noiseDistribution']:
+            amici_val += val['noiseDistribution']
+        amici_distrs[id_] = amici_val
+    return amici_distrs
 
 
 def _find_model_name(output_folder):
