@@ -35,6 +35,7 @@ script:
   - python3 -m flake8 --exclude=build,doc,example,tmp
 =======
   - python3 -m flake8 --exclude=build,doc,example,tmp,amici_models
+<<<<<<< HEAD
 >>>>>>> ICB-DCM/master
   - xvfb-run -a python3 -m pytest --cov=pypesto ./test
 =======
@@ -46,6 +47,10 @@ script:
   - travis_wait 20 python3 -m pytest --cov=pypesto ./test/test_*
   - travis_wait 20 xvfb-run -a python3 -m pytest --cov=pypesto --cov-append ./test/visualize/test_*
 >>>>>>> ICB-DCM/master
+=======
+  - travis_wait 20 python3 -m pytest --cov=pypesto ./test/test_*
+  - travis_wait 20 xvfb-run -a python3 -m pytest --cov=pypesto --cov-append ./test/visualize/test_*
+>>>>>>> ICB-DCM/develop
   - coverage xml
   - test/run_notebook.sh doc/example/
 

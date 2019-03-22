@@ -6,6 +6,16 @@ Release notes
 ..........
 
 
+<<<<<<< HEAD
+=======
+0.0.7 (2019-03-21)
+------------------
+
+* Support noise models in Petab and Amici.
+* Minor Petab update bug fixes.
+
+
+>>>>>>> ICB-DCM/develop
 0.0.6 (2019-03-13)
 ------------------
 
