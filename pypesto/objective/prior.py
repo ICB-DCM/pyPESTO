@@ -145,6 +145,7 @@ class Prior():
         if isinstance(x, list):
             x = np.array(x)
 
+        # print('vor', x)
         if self.log10_index != []:
             x[self.log10_index] = 10**x[self.log10_index]
 
@@ -156,7 +157,9 @@ class Prior():
             x[self.logE_index] = 10**x[self.logE_index]-1
 
         if self.logicle_index != []:
-            x[self.logicle_index] = logicleInverseTransform(x[self.logicle_index], self.logicle_object)
+            if np.isnan(x).any() == False:
+                x[self.logicle_index] = logicleInverseTransform(x[self.logicle_index], self.logicle_object)
+        # print('nach', x)
 
         # LOGARITHMIC NORMAL PRIOR
         fun_norm = 0
@@ -172,7 +175,7 @@ class Prior():
         fun_lap = 0
         if self.lap_index != []:
 
-            fun_lap = sum(-1/self.scale * np.abs(x[self.lap_index]-self.loc) - np.log(2*self.scale))
+            fun_lap = sum(-1/self.scale * np.abs(x[self.lap_index]-self.loc))# - np.log(2*self.scale))
 
             grad_lap = np.sign(self.loc - x[self.lap_index])/self.scale
 
@@ -208,7 +211,7 @@ class Prior():
             x[self.logE_index] = np.log10(x[self.logE_index] + 1)
             chainrule[self.logE_index] *= 10**x[self.logE_index]*np.log(10)
 
-        if self.logicle_index != []:
+        if self.logicle_index != [] and np.isnan(x).any() == False:
             #reset the values
             T = self.logicle_object.get_T()
             W = self.logicle_object.get_W()
@@ -221,6 +224,7 @@ class Prior():
         # multiply the gradient by the chainrule
         prior_grad *= chainrule
 
+       # print('nach nach', x)
         return {'prior_fun': prior_fun,
                 'prior_grad': prior_grad,
                 # 'prior_hess': hess,

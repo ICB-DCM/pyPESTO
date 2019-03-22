@@ -215,6 +215,8 @@ class Objective:
             Whether to compute function values or residuals.
         """
 
+        # print('X', x)
+
         # check input
         self.check_sensi_orders(sensi_orders, mode)
 
@@ -239,6 +241,9 @@ class Objective:
 
         # post-process
         result = self.pre_post_processor.postprocess(result)
+
+        # if GRAD in result:
+        #     print('Grad', result[GRAD])
 
         # update history
         self.history.update(x, sensi_orders, mode, result)
