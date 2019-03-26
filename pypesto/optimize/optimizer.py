@@ -115,7 +115,9 @@ def objective_decorator(minimize):
         problem.objective.finalize_history()
         result = fill_result_from_objective_history(
             result, problem.objective.history)
-        logger.info(f"Final function value: {result.fval}.")
+        logger.info(f"Final fval={result.fval}, "
+                    f"time={result.time}, "
+                    f"n_fval={result.n_fval}.")
         return result
     return wrapped_minimize
 
