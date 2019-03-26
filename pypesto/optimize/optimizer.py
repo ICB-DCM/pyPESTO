@@ -3,12 +3,17 @@ import scipy.optimize
 import re
 import abc
 import time
+import logging
+
 from ..objective import res_to_chi2
 
 try:
     import dlib
 except ImportError:
     dlib = None
+
+
+logger = logging.getLogger(__name__)
 
 
 class OptimizerResult(dict):
@@ -110,6 +115,7 @@ def objective_decorator(minimize):
         problem.objective.finalize_history()
         result = fill_result_from_objective_history(
             result, problem.objective.history)
+        logger.info(f"Final function value: {result.fval}.")
         return result
     return wrapped_minimize
 
