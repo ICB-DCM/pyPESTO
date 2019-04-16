@@ -650,7 +650,6 @@ def add_sim_hess_to_opt_hess(par_opt_ids,
 
     Same as for add_sim_grad_to_opt_grad, replacing the gradients by hessians.
     """
-
     par_sim_idx = 0
     for par_opt_id in mapping_par_opt_to_par_sim:
         if not isinstance(par_opt_id, str):
