@@ -3,12 +3,17 @@ import scipy.optimize
 import re
 import abc
 import time
+import logging
+
 from ..objective import res_to_chi2
 
 try:
     import dlib
 except ImportError:
     dlib = None
+
+
+logger = logging.getLogger(__name__)
 
 
 class OptimizerResult(dict):
@@ -141,6 +146,11 @@ def fix_decorator(minimize):
         result.grad = problem.get_full_vector(result.grad)
         result.hess = problem.get_full_matrix(result.hess)
         result.x0 = problem.get_full_vector(result.x0, problem.x_fixed_vals)
+
+        logger.info(f"Final fval={result.fval:.4f}, "
+                    f"time={result.time:.4f}s, "
+                    f"n_fval={result.n_fval}.")
+
         return result
     return wrapped_minimize
 
@@ -201,6 +211,9 @@ class Optimizer(abc.ABC):
         """
 
     @abc.abstractmethod
+    @fix_decorator
+    @time_decorator
+    @objective_decorator
     def minimize(self, problem, x0, index):
         """"
         Perform optimization.

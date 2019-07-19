@@ -86,7 +86,6 @@ class Prior():
         norm_index = np.intersect1d(norm_index_1, estimate)
         lap_index = np.intersect1d(lap_index_1, estimate)
 
-
         loc = []
         scale = []
         if lap_index != []:
@@ -94,6 +93,7 @@ class Prior():
                                  for i_par in lap_index])[:,0]
             scale = np.array([priorParameters_list[i_par]
                                    for i_par in lap_index])[:,1]
+
         mean = []
         cov = []
         if norm_index != []:
@@ -101,7 +101,6 @@ class Prior():
                          for i_par in norm_index])[:,0]
             cov = np.array([priorParameters_list[i_par]
                             for i_par in norm_index])[:,1]
-
 
         self.log10_index = log10_index
         self.log_index = log_index
@@ -155,11 +154,12 @@ class Prior():
         # log(1+x)
         if self.logE_index != []:
             x[self.logE_index] = 10**x[self.logE_index]-1
-
+        # print('vor prior', x)
         if self.logicle_index != []:
             if np.isnan(x).any() == False:
                 x[self.logicle_index] = logicleInverseTransform(x[self.logicle_index], self.logicle_object)
-        # print('nach', x)
+
+        # print('nach prior', x)
 
         # LOGARITHMIC NORMAL PRIOR
         fun_norm = 0
@@ -175,8 +175,8 @@ class Prior():
         fun_lap = 0
         if self.lap_index != []:
 
-            fun_lap = sum(-1/self.scale * np.abs(x[self.lap_index]-self.loc))# - np.log(2*self.scale))
-
+            fun_lap = sum(-1/self.scale * np.abs(x[self.lap_index]-self.loc) - np.log(2*self.scale))
+            # print(np.log(2*self.scale))
             grad_lap = np.sign(self.loc - x[self.lap_index])/self.scale
 
         # calculate prior function

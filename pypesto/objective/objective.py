@@ -10,7 +10,6 @@ from .pre_post_process import PrePostProcessor, FixedParametersProcessor
 
 logger = logging.getLogger(__name__)
 
-
 class Objective:
     """
     The objective class is a simple wrapper around the objective function,
@@ -215,16 +214,18 @@ class Objective:
             Whether to compute function values or residuals.
         """
 
-        # print('X', x)
-
         # check input
         self.check_sensi_orders(sensi_orders, mode)
 
         # pre-process
         x = self.pre_post_processor.preprocess(x)
-
+        
         # compute result
         result = self._call_unprocessed(x, sensi_orders, mode)
+
+        # print('x', x)
+        # if FVAL in result:
+        #     print('result', result[FVAL])
 
         # compute penalized objective funciton and gradient
         if self.has_prior:
@@ -234,16 +235,13 @@ class Objective:
 
             if sensi_orders == (0,):
                 result[FVAL] -= prior['prior_fun']
-
-            if sensi_orders == (1,):
+                #print('FVAL = ', result[FVAL])
+            if GRAD in result:
                 # result[GRAD] *= prior['chainrule']
                 result[GRAD] -= prior['prior_grad']
-
+                # print('GRAD = ', result[GRAD])
         # post-process
         result = self.pre_post_processor.postprocess(result)
-
-        # if GRAD in result:
-        #     print('Grad', result[GRAD])
 
         # update history
         self.history.update(x, sensi_orders, mode, result)
