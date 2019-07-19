@@ -16,27 +16,39 @@ class OptimizerResult(dict):
     The result of an optimizer run. Used as a standardized return value to
     map from the individual result objects returned by the employed
     optimizers to the format understood by pypesto.
+
     Can be used like a dict.
+
     Attributes
     ----------
+
     x: ndarray
         The best found parameters.
+
     fval: float
         The best found function value, fun(x).
+
     grad, hess: ndarray
         The gradient and Hessian at x.
+
     n_fval: int
         Number of function evaluations.
+
     n_grad: int
         Number of gradient evaluations.
+
     n_hess: int
         Number of Hessian evaluations.
+
     exitflag: int
         The exitflag of the optimizer.
+
     message: str
         Textual comment on the optimization result.
+
     Notes
     -----
+
     Any field not supported by the optimizer is filled with None. Some
     fields are filled by pypesto itself.
     """
@@ -180,6 +192,7 @@ def recover_result(objective, startpoint, err):
 class Optimizer(abc.ABC):
     """
     This is the optimizer base class, not functional on its own.
+
     An optimizer takes a problem, and possibly a start point, and then
     performs an optimization. It returns an OptimizerResult.
     """

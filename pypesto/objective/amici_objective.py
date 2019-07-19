@@ -67,11 +67,14 @@ class AmiciObjective(Objective):
 
         guess_steadystate: bool, optional (default = True)
             Whether to guess steadystates based on previous steadystates and
-            respective derivatives.
+            respective derivatives. This option may lead to unexpected
+            results for models with conservation laws and should accordingly
+            be deactivated for those models.
 
         n_threads: int, optional (default = 1)
             Number of threads that are used for parallelization over
-            experimental conditions.
+            experimental conditions. If amici was not installed with openMP
+            support this option will have no effect.
 
         options: pypesto.ObjectiveOptions, optional
             Further options.
@@ -152,11 +155,15 @@ class AmiciObjective(Objective):
         # preallocate guesses, construct a dict for every edata for which we
         # need to do preequilibration
         if self.guess_steadystate:
+            if self.amici_model.ncl() > 0:
+                raise ValueError('Steadystate prediciton is not supported for'
+                                 'models with conservation laws!')
+
             if self.amici_model.getSteadyStateSensitivityMode() == \
                     amici.SteadyStateSensitivityMode_simulationFSA:
                 raise ValueError('Steadystate guesses cannot be enabled when'
                                  ' `simulationFSA` as '
-                                 'SteadyStateSensitivityMode')
+                                 'SteadyStateSensitivityMode!')
             self.steadystate_guesses = {
                 'fval': np.inf,
                 'data': {
@@ -217,7 +224,8 @@ class AmiciObjective(Objective):
         model = amici.ModelPtr(self.amici_model.clone())
         solver = amici.SolverPtr(self.amici_solver.clone())
         edatas = [amici.ExpData(data) for data in self.edatas]
-        other = AmiciObjective(model, solver, edatas)
+        other = AmiciObjective(model, solver, edatas,
+                               guess_steadystate=self.guess_steadystate)
         for attr in self.__dict__:
             if attr not in ['amici_solver', 'amici_model', 'edatas']:
                 other.__dict__[attr] = copy.deepcopy(self.__dict__[attr])
@@ -245,10 +253,7 @@ class AmiciObjective(Objective):
         if sensi_order > self.max_sensi_order:
             raise Exception("Sensitivity order not allowed.")
 
-        # prepare result objects
-
-        rdatas = []
-
+        # prepare outputs
         nllh = 0.0
         snllh = np.zeros(self.dim)
         s2nllh = np.zeros([self.dim, self.dim])
@@ -280,7 +285,7 @@ class AmiciObjective(Objective):
             self.amici_model,
             self.amici_solver,
             self.edatas,
-            num_threads=self.n_threads
+            num_threads=min(self.n_threads, len(self.edatas)),
         )
 
         for data_ix, rdata in enumerate(rdatas):
@@ -324,7 +329,7 @@ class AmiciObjective(Objective):
                         if sres.size else opt_sres
 
         # check whether we should update data for preequilibration guesses
-        if 'fval' in self.steadystate_guesses and \
+        if self.guess_steadystate and \
                 nllh <= self.steadystate_guesses['fval']:
             self.steadystate_guesses['fval'] = nllh
             for data_ix, rdata in enumerate(rdatas):
@@ -429,9 +434,12 @@ class AmiciObjective(Objective):
             if guess_data['x_ss'] is not None:
                 x_ss_guess = guess_data['x_ss']
             if guess_data['sx_ss'] is not None:
-                x_ss_guess += guess_data['sx_ss'].transpose().dot(
+                linear_update = guess_data['sx_ss'].transpose().dot(
                     (x_sim - guess_data['x'])
                 )
+                # limit linear updates to max 20 % elementwise change
+                if (x_ss_guess/linear_update).max() < 0.2:
+                    x_ss_guess += linear_update
 
         self.edatas[condition_ix].x0 = tuple(x_ss_guess)
 
@@ -642,8 +650,10 @@ def add_sim_hess_to_opt_hess(par_opt_ids,
 
     Same as for add_sim_grad_to_opt_grad, replacing the gradients by hessians.
     """
-    par_sim_idx = 0
-    for par_opt_id in mapping_par_opt_to_par_sim:
+
+    # use enumerate for first axis as plist is not applied
+    # https://github.com/ICB-DCM/AMICI/issues/274
+    for par_sim_idx, par_opt_id in enumerate(mapping_par_opt_to_par_sim):
         if not isinstance(par_opt_id, str):
             # this was a numeric override for which we ignore the hessian
             continue
@@ -665,7 +675,6 @@ def add_sim_hess_to_opt_hess(par_opt_ids,
             opt_hess[par_opt_idx, par_opt_idx_2] += \
                 coefficient * sim_hess[par_sim_idx, par_sim_idx_2]
             par_sim_idx_2 += 1
-        par_sim_idx += 1
 
 
 def sim_sres_to_opt_sres(par_opt_ids,
@@ -684,7 +693,8 @@ def sim_sres_to_opt_sres(par_opt_ids,
     """
     opt_sres = np.zeros((sim_sres.shape[0], len(par_opt_ids)))
 
-    for par_sim_idx, par_opt_id in enumerate(mapping_par_opt_to_par_sim):
+    par_sim_idx = 0
+    for par_opt_id in mapping_par_opt_to_par_sim:
         if not isinstance(par_opt_id, str):
             # this was a numeric override for which we ignore the hessian
             continue
@@ -692,5 +702,6 @@ def sim_sres_to_opt_sres(par_opt_ids,
         par_opt_idx = par_opt_ids.index(par_opt_id)
         opt_sres[:, par_opt_idx] += \
             coefficient * sim_sres[:, par_sim_idx]
+        par_sim_idx += 1
 
     return opt_sres

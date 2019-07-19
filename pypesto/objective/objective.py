@@ -10,6 +10,7 @@ from .pre_post_process import PrePostProcessor, FixedParametersProcessor
 
 logger = logging.getLogger(__name__)
 
+
 class Objective:
     """
     The objective class is a simple wrapper around the objective function,
@@ -108,7 +109,6 @@ class Objective:
                  res=None, sres=None,
                  fun_accept_sensi_orders=False,
                  res_accept_sensi_orders=False,
-                 prior=None,
                  x_names=None,
                  options=None):
         self.fun = fun
@@ -117,7 +117,6 @@ class Objective:
         self.hessp = hessp
         self.res = res
         self.sres = sres
-        self.prior = prior
         self.fun_accept_sensi_orders = fun_accept_sensi_orders
         self.res_accept_sensi_orders = res_accept_sensi_orders
 
@@ -164,10 +163,6 @@ class Objective:
     @property
     def has_sres(self):
         return callable(self.sres) or self.sres is True
-
-    @property
-    def has_prior(self):
-        return callable(self.prior) or self.prior is True
 
     def check_sensi_orders(self, sensi_orders, mode):
         """
@@ -219,27 +214,10 @@ class Objective:
 
         # pre-process
         x = self.pre_post_processor.preprocess(x)
-        
+
         # compute result
         result = self._call_unprocessed(x, sensi_orders, mode)
 
-        # print('x', x)
-        # if FVAL in result:
-        #     print('result', result[FVAL])
-
-        # compute penalized objective funciton and gradient
-        if self.has_prior:
-
-            # call prior
-            prior = self.prior(x, sensi_orders)
-
-            if sensi_orders == (0,):
-                result[FVAL] -= prior['prior_fun']
-                #print('FVAL = ', result[FVAL])
-            if GRAD in result:
-                # result[GRAD] *= prior['chainrule']
-                result[GRAD] -= prior['prior_grad']
-                # print('GRAD = ', result[GRAD])
         # post-process
         result = self.pre_post_processor.postprocess(result)
 
