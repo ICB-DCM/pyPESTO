@@ -3,8 +3,6 @@ import scipy.optimize
 import re
 import abc
 import time
-import logging
-
 from ..objective import res_to_chi2
 
 try:
@@ -13,47 +11,32 @@ except ImportError:
     dlib = None
 
 
-logger = logging.getLogger(__name__)
-
-
 class OptimizerResult(dict):
     """
     The result of an optimizer run. Used as a standardized return value to
     map from the individual result objects returned by the employed
     optimizers to the format understood by pypesto.
-
     Can be used like a dict.
-
     Attributes
     ----------
-
     x: ndarray
         The best found parameters.
-
     fval: float
         The best found function value, fun(x).
-
     grad, hess: ndarray
         The gradient and Hessian at x.
-
     n_fval: int
         Number of function evaluations.
-
     n_grad: int
         Number of gradient evaluations.
-
     n_hess: int
         Number of Hessian evaluations.
-
     exitflag: int
         The exitflag of the optimizer.
-
     message: str
         Textual comment on the optimization result.
-
     Notes
     -----
-
     Any field not supported by the optimizer is filled with None. Some
     fields are filled by pypesto itself.
     """
@@ -109,6 +92,8 @@ def objective_decorator(minimize):
 
     def wrapped_minimize(self, problem, x0, index):
         problem.objective.reset_history(index=index)
+        if hasattr(problem.objective, 'reset_steadystate_guesses'):
+            problem.objective.reset_steadystate_guesses()
         result = minimize(self, problem, x0, index)
         problem.objective.finalize_history()
         result = fill_result_from_objective_history(
@@ -146,11 +131,6 @@ def fix_decorator(minimize):
         result.grad = problem.get_full_vector(result.grad)
         result.hess = problem.get_full_matrix(result.hess)
         result.x0 = problem.get_full_vector(result.x0, problem.x_fixed_vals)
-
-        logger.info(f"Final fval={result.fval:.4f}, "
-                    f"time={result.time:.4f}s, "
-                    f"n_fval={result.n_fval}.")
-
         return result
     return wrapped_minimize
 
@@ -200,7 +180,6 @@ def recover_result(objective, startpoint, err):
 class Optimizer(abc.ABC):
     """
     This is the optimizer base class, not functional on its own.
-
     An optimizer takes a problem, and possibly a start point, and then
     performs an optimization. It returns an OptimizerResult.
     """
@@ -211,9 +190,6 @@ class Optimizer(abc.ABC):
         """
 
     @abc.abstractmethod
-    @fix_decorator
-    @time_decorator
-    @objective_decorator
     def minimize(self, problem, x0, index):
         """"
         Perform optimization.
