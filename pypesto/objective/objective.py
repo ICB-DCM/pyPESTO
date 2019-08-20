@@ -219,7 +219,7 @@ class Objective:
 
         # pre-process
         x = self.pre_post_processor.preprocess(x)
-        
+
         # compute result
         result = self._call_unprocessed(x, sensi_orders, mode)
 
