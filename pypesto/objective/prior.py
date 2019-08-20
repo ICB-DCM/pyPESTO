@@ -51,7 +51,7 @@ class Prior():
             estimate_list = np.ones(len(priorType_list))
 
         if isinstance(estimate_list, list):
-                estimate_list = np.array(estimate_list)
+            estimate_list = np.array(estimate_list)
 
         estimate = np.where(estimate_list == 1)
 
@@ -165,11 +165,11 @@ class Prior():
         fun_norm = 0
         if len(self.norm_index) > 0:
 
-            norm_log = -0.5*np.log(2*np.pi*self.cov**2) - (x[self.norm_index]-self.mean)**2/(2*self.cov**2)
+            self.norm_log = -0.5*np.log(2*np.pi*self.cov**2) - (x[self.norm_index]-self.mean)**2/(2*self.cov**2)
 
             fun_norm = sum(self.norm_log)
 
-            grad_norm = self.norm_log * (mean-x[self.norm_index])/cov**2
+            grad_norm = self.norm_log * (self.mean-x[self.norm_index])/self.cov**2
 
         # LOGARITHMIC LAPLACE PRIOR
         fun_lap = 0
@@ -231,8 +231,8 @@ class Prior():
                 'chainrule': chainrule}
 
 
-def get_index(list, scale_name):
-    return [i_par for i_par, j_par in enumerate(list) if j_par == scale_name]
+def get_index(input_list, scale_name):
+    return [i_par for i_par, j_par in enumerate(input_list) if j_par == scale_name]
 
 #_____________________________________________________________________________________________________________
 #
