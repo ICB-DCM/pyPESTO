@@ -10,7 +10,8 @@ from .version import __version__  # noqa: F401
 from .objective import (ObjectiveOptions,
                         Objective,
                         AmiciObjective,
-                        PetabImporter)
+                        PetabImporter,
+                        Prior)
 from .problem import Problem
 from .result import (Result,
                      OptimizeResult,
@@ -57,5 +58,6 @@ __all__ = [
     # engine
     "SingleCoreEngine",
     "MultiProcessEngine",
-    "visualize",
+    "Prior",
+    "visualize"
 ]
