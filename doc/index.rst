@@ -21,7 +21,7 @@ Welcome to pyPESTO's documentation!
    :alt: Documentation status
 .. image:: https://zenodo.org/badge/DOI/10.5281/zenodo.2600850.svg
    :target: https://zenodo.org/record/2600850#.XVuwkHduJfF
-   :alt: Zenodo Badge
+   :alt: DOI
 
 | Version: |version|
 | Source code: https://github.com/icb-dcm/pypesto
