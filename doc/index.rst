@@ -62,6 +62,7 @@ Welcome to pyPESTO's documentation!
    authors
    contact
    license
+   logo
 
 
 
