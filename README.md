@@ -1,6 +1,6 @@
 # pyPESTO - Parameter EStimation TOolbox for python
 
-![pyPESTO logo](doc/logo/logo_wordmark.svg)
+<image src="doc/logo/logo_wordmark.png" width="50%" alt="pyPESTO logo"/>
 
 **pyPESTO** is a widely applicable and highly customizable toolbox for
 parameter estimation.
