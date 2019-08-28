@@ -371,7 +371,8 @@ class PetabImporter:
         scale_mapping = _mapping_to_list(scale_mapping, par_sim_ids)
 
         # check whether there is something suspicious in the mapping
-        _check_parameter_mapping_ok(parameter_mapping, model, edatas)
+        _check_parameter_mapping_ok(
+            parameter_mapping, par_sim_ids, model, edatas)
 
         # create objective
         obj = PetabAmiciObjective(
@@ -469,7 +470,7 @@ class PetabImporter:
 
 
 def _check_parameter_mapping_ok(
-        mapping_par_opt_to_par_sim, model, edatas):
+        mapping_par_opt_to_par_sim, par_sim_ids, model, edatas):
     """
     Check whether there are suspicious parameter mappings and/or data points.
 
@@ -484,9 +485,6 @@ def _check_parameter_mapping_ok(
     # prepare output
     msg_data_notnan = ""
     msg_data_nan = ""
-
-    # simulation parameter ids
-    par_sim_ids = list(model.getParameterIds())
 
     # iterate over conditions
     for i_condition, (mapping_for_condition, edata_for_condition) in \
