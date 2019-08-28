@@ -638,14 +638,12 @@ def _merge_preeq_and_sim_pars(parameter_mappings, scale_mappings):
 
     Parameters
     ----------
-
     parameter_mappings, scale_mappings: list of tuple of dict
         As returned by petab.get_optimization_to_simulation_parameter_mapping
         and petab.get_optimization_to_simulation_scale_mapping.
 
     Returns
     -------
-
     parameter_mapping, scale_mapping: list of dict
         The parameter and scale simulation mappings, modified and checked.
     """
@@ -673,11 +671,15 @@ def _mapping_to_list(mapping, par_sim_ids):
 
     Parameters
     ----------
-
     mapping: list of dict
         as created by _merge_preeq_and_sim_pars.
     par_sim_ids: list of str
         The simulation ids as returned by list(amici_model.getParameterIds()).
+
+    Returns
+    -------
+    mapping_list: list of list
+        Each dict turned into a list with order according to `par_sim_ids`.
     """
     mapping_list = []
     for map_for_cond in mapping:
