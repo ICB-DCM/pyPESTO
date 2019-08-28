@@ -500,7 +500,7 @@ def _check_parameter_mapping_ok(
                 continue
             # extract observable id
             obs_id = re.sub(pattern, "", par_sim_id)
-            # extract mapped optimization parameter (ignore preeq)
+            # extract mapped optimization parameter
             mapped_par = mapping_for_condition[i_sim_id]
             # check if opt par is nan, but not all corresponding data points
             if not isinstance(mapped_par, str) and np.isnan(mapped_par) \
