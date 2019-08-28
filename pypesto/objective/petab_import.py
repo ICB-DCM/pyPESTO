@@ -231,7 +231,7 @@ class PetabImporter:
         # (preequilibrationConditionId, simulationConditionId) pairs.
         # Can be improved by checking for identical condition vectors.
         if simulation_conditions is None:
-            simulation_conditions = petab.core.get_simulation_conditions(
+            simulation_conditions = petab.get_simulation_conditions(
                 measurement_df)
 
         observable_ids = model.getObservableIds()
@@ -243,7 +243,7 @@ class PetabImporter:
             # amici.ExpData for each simulation
 
             # extract rows for condition
-            df_for_condition = petab.core.get_rows_for_condition(
+            df_for_condition = petab.get_rows_for_condition(
                 measurement_df, condition)
 
             # make list of all timepoints for which measurements exist
@@ -325,7 +325,7 @@ class PetabImporter:
         Create a pypesto.PetabAmiciObjective.
         """
         # get simulation conditions
-        simulation_conditions = petab.core.get_simulation_conditions(
+        simulation_conditions = petab.get_simulation_conditions(
             self.petab_problem.measurement_df)
 
         # create model
@@ -342,28 +342,25 @@ class PetabImporter:
 
         # simulation <-> optimization parameter mapping
         par_opt_ids = self.petab_problem.get_optimization_parameters()
-        # take sim parameter vector from model to ensure correct order
-        par_sim_ids = list(model.getParameterIds())
 
         parameter_mapping = \
-            petab.core.get_optimization_to_simulation_parameter_mapping(
+            petab.get_optimization_to_simulation_parameter_mapping(
                 condition_df=self.petab_problem.condition_df,
                 measurement_df=self.petab_problem.measurement_df,
                 parameter_df=self.petab_problem.parameter_df,
                 sbml_model=self.petab_problem.sbml_model,
-                par_sim_ids=par_sim_ids,
                 simulation_conditions=simulation_conditions,
             )
 
         scale_mapping = \
-            petab.core.get_optimization_to_simulation_scale_mapping(
+            petab.get_optimization_to_simulation_scale_mapping(
                 parameter_df=self.petab_problem.parameter_df,
-                mapping_par_opt_to_par_sim=parameter_mapping
+                mapping_par_opt_to_par_sim=parameter_mapping,
+                measurement_df=self.petab_problem.measurement_df
             )
 
         # check whether there is something suspicious in the mapping
-        _check_parameter_mapping_ok(
-            parameter_mapping, par_sim_ids, model, edatas)
+        _check_parameter_mapping_ok(parameter_mapping, model, edatas)
 
         # create objective
         obj = PetabAmiciObjective(
@@ -417,7 +414,7 @@ class PetabImporter:
                 self.petab_problem.measurement_df.columns))
 
         # get simulation conditions
-        simulation_conditions = petab.core.get_simulation_conditions(
+        simulation_conditions = petab.get_simulation_conditions(
             measurement_df)
 
         # get observable ids
@@ -433,7 +430,7 @@ class PetabImporter:
             t = list(rdata['t'])
 
             # extract rows for condition
-            cur_measurement_df = petab.core.get_rows_for_condition(
+            cur_measurement_df = petab.get_rows_for_condition(
                 measurement_df, condition)
 
             # iterate over entries for the given condition
@@ -461,7 +458,7 @@ class PetabImporter:
 
 
 def _check_parameter_mapping_ok(
-        mapping_par_opt_to_par_sim, par_sim_ids, model, edatas):
+        mapping_par_opt_to_par_sim, model, edatas):
     """
     Check whether there are suspicious parameter mappings and/or data points.
 
@@ -477,6 +474,9 @@ def _check_parameter_mapping_ok(
     msg_data_notnan = ""
     msg_data_nan = ""
 
+    # simulation parameter ids
+    par_sim_ids = list(model.getParameterIds())
+
     # iterate over conditions
     for i_condition, (mapping_for_condition, edata_for_condition) in \
             enumerate(zip(mapping_par_opt_to_par_sim, edatas)):
@@ -485,14 +485,14 @@ def _check_parameter_mapping_ok(
             model, edata_for_condition, by_id=True)
         # iterate over simulation parameters indices and the mapped
         # optimization parameters
-        for i_sim_id, par_sim_id in enumerate(par_sim_ids):
+        for par_sim_id in par_sim_ids:
             # only continue if sim par is a noise or observable parameter
             if not rex.match(par_sim_id):
                 continue
             # extract observable id
             obs_id = re.sub(pattern, "", par_sim_id)
-            # extract mapped optimization parameter
-            mapped_par = mapping_for_condition[i_sim_id]
+            # extract mapped optimization parameter (ignore preeq)
+            mapped_par = mapping_for_condition[1][par_sim_id]
             # check if opt par is nan, but not all corresponding data points
             if not isinstance(mapped_par, str) and np.isnan(mapped_par) \
                     and not df["observable_" + obs_id].isnull().all():

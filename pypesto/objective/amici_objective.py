@@ -141,7 +141,7 @@ class AmiciObjective(Objective):
         if mapping_par_opt_to_par_sim is None:
             # use identity mapping for each condition
             mapping_par_opt_to_par_sim = \
-                [x_ids for _ in range(len(self.edatas))]
+                [(x_ids, x_ids) for _ in range(len(self.edatas))]
         self.mapping_par_opt_to_par_sim = mapping_par_opt_to_par_sim
 
         # mapping of parameter scales
@@ -590,7 +590,7 @@ def create_scale_mapping_from_model(amici_scales, n_edata):
                 f"recognized.")
         scales.append(scale)
 
-    mapping_scale_opt_to_scale_sim = [scales for _ in range(n_edata)]
+    mapping_scale_opt_to_scale_sim = [(scales, scales) for _ in range(n_edata)]
 
     return mapping_scale_opt_to_scale_sim
 
