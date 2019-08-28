@@ -343,7 +343,7 @@ class PetabImporter:
         # simulation <-> optimization parameter mapping
         par_opt_ids = self.petab_problem.get_optimization_parameters()
 
-        parameter_mapping = \
+        parameter_mappings = \
             petab.get_optimization_to_simulation_parameter_mapping(
                 condition_df=self.petab_problem.condition_df,
                 measurement_df=self.petab_problem.measurement_df,
@@ -352,12 +352,23 @@ class PetabImporter:
                 simulation_conditions=simulation_conditions,
             )
 
-        scale_mapping = \
+        scale_mappings = \
             petab.get_optimization_to_simulation_scale_mapping(
                 parameter_df=self.petab_problem.parameter_df,
-                mapping_par_opt_to_par_sim=parameter_mapping,
+                mapping_par_opt_to_par_sim=parameter_mappings,
                 measurement_df=self.petab_problem.measurement_df
             )
+
+        # unify and check preeq and sim mappings
+        parameter_mapping, scale_mapping = _merge_preeq_and_sim_pars(
+            parameter_mappings, scale_mappings)
+
+        # simulation ids (for correct order)
+        par_sim_ids = list(model.getParameterIds())
+
+        # create lists from dicts in correct order
+        parameter_mapping = _mapping_to_list(parameter_mapping, par_sim_ids)
+        scale_mapping = _mapping_to_list(scale_mapping, par_sim_ids)
 
         # check whether there is something suspicious in the mapping
         _check_parameter_mapping_ok(parameter_mapping, model, edatas)
@@ -485,14 +496,14 @@ def _check_parameter_mapping_ok(
             model, edata_for_condition, by_id=True)
         # iterate over simulation parameters indices and the mapped
         # optimization parameters
-        for par_sim_id in par_sim_ids:
+        for i_sim_id, par_sim_id in enumerate(par_sim_ids):
             # only continue if sim par is a noise or observable parameter
             if not rex.match(par_sim_id):
                 continue
             # extract observable id
             obs_id = re.sub(pattern, "", par_sim_id)
             # extract mapped optimization parameter (ignore preeq)
-            mapped_par = mapping_for_condition[1][par_sim_id]
+            mapped_par = mapping_for_condition[i_sim_id]
             # check if opt par is nan, but not all corresponding data points
             if not isinstance(mapped_par, str) and np.isnan(mapped_par) \
                     and not df["observable_" + obs_id].isnull().all():
@@ -619,6 +630,32 @@ def _find_model_name(output_folder):
     Just re-use the last part of the output folder.
     """
     return os.path.split(os.path.normpath(output_folder))[-1]
+
+
+def _merge_preeq_and_sim_pars(parameter_mappings, scale_mappings):
+    parameter_mapping = []
+    scale_mapping = []
+    for ic, ((map_preeq, map_sim), (scale_map_preeq, scale_map_sim)) in \
+            enumerate(zip(parameter_mappings, scale_mappings)):
+        petab.merge_preeq_and_sim_pars_condition(
+            condition_map_preeq=map_preeq,
+            condition_map_sim=map_sim,
+            condition_scale_map_preeq=scale_map_preeq,
+            condition_scale_map_sim=scale_map_sim,
+            condition=ic)
+        parameter_mapping.append(map_sim)
+        scale_mapping.append(scale_map_sim)
+    return parameter_mapping, scale_mapping
+
+
+def _mapping_to_list(mapping, par_sim_ids):
+    mapping_list = []
+    for map_for_cond in mapping:
+        map_for_cond_list = []
+        for sim_id in par_sim_ids:
+            map_for_cond_list.append(map_for_cond[sim_id])
+        mapping_list.append(map_for_cond_list)
+    return mapping_list
 
 
 class PetabAmiciObjective(AmiciObjective):
