@@ -222,12 +222,8 @@ class Objective:
 
         # compute result
         result = self._call_unprocessed(x, sensi_orders, mode)
-
-        # print('x', x)
-        # if FVAL in result:
-        #     print('result', result[FVAL])
-
-        # compute penalized objective funciton and gradient
+        
+        # add prior to the objective function
         if self.has_prior:
 
             # call prior
@@ -235,11 +231,10 @@ class Objective:
 
             if sensi_orders == (0,):
                 result[FVAL] -= prior['prior_fun']
-                #print('FVAL = ', result[FVAL])
+
             if GRAD in result:
-                # result[GRAD] *= prior['chainrule']
                 result[GRAD] -= prior['prior_grad']
-                # print('GRAD = ', result[GRAD])
+                
         # post-process
         result = self.pre_post_processor.postprocess(result)
 
