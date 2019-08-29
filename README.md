@@ -1,5 +1,7 @@
 # pyPESTO - Parameter EStimation TOolbox for python
 
+<img src="https://raw.githubusercontent.com/ICB-DCM/pyPESTO/master/doc/logo/logo_wordmark.svg" width="50%" alt="pyPESTO logo"/>
+
 **pyPESTO** is a widely applicable and highly customizable toolbox for
 parameter estimation.
 
