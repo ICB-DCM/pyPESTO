@@ -4,6 +4,7 @@ import re
 import abc
 import time
 from ..objective import res_to_chi2
+from pyswarm import pso
 
 try:
     import dlib
@@ -412,3 +413,32 @@ class DlibOptimizer(Optimizer):
     @staticmethod
     def get_default_options():
         return {}
+
+
+class GlobalOptimizer(Optimizer):
+
+    def __init__(self, method='pso', options=None):
+        super().__init__()
+
+        self.method = method
+
+        self.options = options
+
+    @fix_decorator
+    @time_decorator
+    #@objective_decorator
+    def minimize(self, problem, x0, index):
+        print("blub")
+        lb = problem.lb
+        ub = problem.ub
+        objective = problem.objective
+        xopt, fopt = pso(objective.fun, lb, ub, maxiter=200)
+        optimizer_result = OptimizerResult(
+            x=xopt,
+            fval=fopt
+        )
+
+        return optimizer_result
+
+    def is_least_squares(self):
+        return False
