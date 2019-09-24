@@ -422,17 +422,19 @@ class GlobalOptimizer(Optimizer):
 
         self.method = method
 
+        if options is None:
+            options = {}
         self.options = options
 
     @fix_decorator
     @time_decorator
-    #@objective_decorator
+    @objective_decorator
     def minimize(self, problem, x0, index):
-        print("blub")
         lb = problem.lb
         ub = problem.ub
-        objective = problem.objective
-        xopt, fopt = pso(objective.fun, lb, ub, maxiter=200)
+        xopt, fopt = pso(problem.objective.get_fval,
+                         lb, ub, maxiter=200,
+                         **self.options)
         optimizer_result = OptimizerResult(
             x=xopt,
             fval=fopt
