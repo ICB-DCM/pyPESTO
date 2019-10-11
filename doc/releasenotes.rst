@@ -6,6 +6,12 @@ Release notes
 ..........
 
 
+0.0.9 (2019-10-11)
+------------------
+
+* Allow petab models with constant species (#185).
+
+
 0.0.8 (2019-09-01)
 ------------------
 
