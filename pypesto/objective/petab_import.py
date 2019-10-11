@@ -18,6 +18,7 @@ from .amici_objective import AmiciObjective
 
 try:
     import amici
+    import amici.petab_import
 except ImportError:
     amici = None
 
@@ -172,10 +173,18 @@ class PetabImporter:
         if os.path.exists(self.output_folder):
             shutil.rmtree(self.output_folder)
 
+        # model to string
+        sbml_string = libsbml.SBMLWriter().writeSBMLToString(
+            self.petab_problem.sbml_document)
+
+        # init sbml importer
+        sbml_importer = amici.SbmlImporter(
+            sbml_string, from_file=False)
+
         # constant parameters
-        condition_columns = self.petab_problem.condition_df.columns.values
-        constant_parameter_ids = list(
-            set(condition_columns) - {'conditionId', 'conditionName'}
+        constant_parameter_ids = amici.petab_import.get_fixed_parameters(
+            condition_df=self.petab_problem.condition_df,
+            sbml_model=sbml_importer.sbml,
         )
 
         # observables
@@ -187,13 +196,6 @@ class PetabImporter:
         # noise distributions
         noise_distrs = _to_amici_noise_distributions(
             self.petab_problem.get_noise_distributions())
-
-        # model to string
-        sbml_string = libsbml.SBMLWriter().writeSBMLToString(
-            self.petab_problem.sbml_document)
-        # init sbml importer
-        sbml_importer = amici.SbmlImporter(
-            sbml_string, from_file=False)
 
         # convert
         sbml_importer.sbml2amici(
