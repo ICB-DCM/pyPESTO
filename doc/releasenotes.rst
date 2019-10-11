@@ -9,7 +9,9 @@ Release notes
 0.0.9 (2019-10-11)
 ------------------
 
-* Allow petab models with constant species (#185).
+* Update to AMICI 0.10.13, fix API changes (#185). 
+* Start using PEtab import from AMICI to be able to import constant species (#184, #185)
+* Require PEtab>=0.0.0a16 (#183)
 
 
 0.0.8 (2019-09-01)
