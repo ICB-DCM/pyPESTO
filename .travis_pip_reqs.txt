@@ -4,5 +4,5 @@ coverage
 flake8
 dlib
 gitpython
-petab>=0.0.0a6
-amici>=0.9.2
+petab>=0.0.0a12
+amici>=0.10.13

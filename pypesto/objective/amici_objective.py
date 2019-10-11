@@ -170,7 +170,7 @@ class AmiciObjective(Objective):
                     iexp: dict()
                     for iexp, edata in enumerate(self.edatas)
                     if len(edata.fixedParametersPreequilibration) or
-                    self.amici_solver.getNewtonPreequilibration()
+                    self.amici_solver.getPreequilibration()
                 }
             }
 
