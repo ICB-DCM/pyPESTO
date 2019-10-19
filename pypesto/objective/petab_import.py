@@ -162,13 +162,6 @@ class PetabImporter:
         deleted.
         """
 
-        # check prerequisites
-        if not petab.condition_table_is_parameter_free(
-                self.petab_problem.condition_df):
-            raise AssertionError(
-                "Parameter dependent conditions in the condition file "
-                "are not yet supported.")
-
         # delete output directory
         if os.path.exists(self.output_folder):
             shutil.rmtree(self.output_folder)
