@@ -306,14 +306,15 @@ class AmiciObjective(Objective):
                         snllh,
                         coefficient=-1.0
                     )
-                    # TODO: Compute the full Hessian, and check here
-                    add_sim_hess_to_opt_hess(
-                        self.x_ids,
-                        self.mapping_par_opt_to_par_sim[data_ix],
-                        rdata['FIM'],
-                        s2nllh,
-                        coefficient=-1.0
-                    )
+                    if sensi_order > 1:
+                        # TODO: Compute the full Hessian, and check here
+                        add_sim_hess_to_opt_hess(
+                            self.x_ids,
+                            self.mapping_par_opt_to_par_sim[data_ix],
+                            rdata['FIM'],
+                            s2nllh,
+                            coefficient=-1.0
+                        )
 
             elif mode == MODE_RES:
                 res = np.hstack([res, rdata['res']]) \
