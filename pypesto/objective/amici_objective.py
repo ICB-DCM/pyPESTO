@@ -253,6 +253,8 @@ class AmiciObjective(Objective):
         if sensi_order > self.max_sensi_order:
             raise Exception("Sensitivity order not allowed.")
 
+        sensi_method = self.amici_solver.getSensitivityMethod()
+
         # prepare outputs
         nllh = 0.0
         snllh = np.zeros(self.dim)
@@ -306,7 +308,7 @@ class AmiciObjective(Objective):
                         snllh,
                         coefficient=-1.0
                     )
-                    if sensi_order > 1:
+                    if sensi_method == 1:
                         # TODO: Compute the full Hessian, and check here
                         add_sim_hess_to_opt_hess(
                             self.x_ids,
