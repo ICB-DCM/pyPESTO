@@ -30,12 +30,12 @@ install:
 
 # run tests
 script:
+  - sphinx-build -W -b html -d doc/_build/html doc/ doc/_build/html
   - python3 -m flake8 --exclude=build,doc,example,tmp,amici_models
   - travis_wait 20 python3 -m pytest --cov=pypesto ./test/test_*
   - travis_wait 20 xvfb-run -a python3 -m pytest --cov=pypesto --cov-append ./test/visualize/test_*
   - coverage xml
   - test/run_notebook.sh doc/example/
-  - sphinx-build -W -b html -d doc/_build/html doc/ doc/_build/html
 
 
 after_success:
