@@ -6,6 +6,22 @@ Release notes
 ..........
 
 
+0.0.9 (2019-10-11)
+------------------
+
+* Update to AMICI 0.10.13, fix API changes (#185). 
+* Start using PEtab import from AMICI to be able to import constant species (#184, #185)
+* Require PEtab>=0.0.0a16 (#183)
+
+
+0.0.8 (2019-09-01)
+------------------
+
+* Add logo (#178).
+* Fix petab API changes (#179).
+* Some minor bugfixes (#168).
+
+
 0.0.7 (2019-03-21)
 ------------------
 

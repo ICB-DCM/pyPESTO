@@ -18,6 +18,7 @@ from .amici_objective import AmiciObjective
 
 try:
     import amici
+    import amici.petab_import
 except ImportError:
     amici = None
 
@@ -79,7 +80,7 @@ class PetabImporter:
             output_folder=output_folder,
             model_name=model_name)
 
-    def create_model(self, force_compile=False):
+    def create_model(self, force_compile=False, *args, **kwargs):
         """
         Import amici model. If necessary or force_compile is True, compile
         first.
@@ -92,10 +93,11 @@ class PetabImporter:
             exist yet. If True, the output folder is deleted and the model
             (re-)compiled in either case.
 
+            .. warning::
+                If `force_compile`, then an existing folder of that name will
+                be deleted.
 
-        .. warning::
-            If `force_compile`, then an existing folder of that name will be
-            deleted.
+        args, kwargs: Extra arguments passed to amici.SbmlImporter.sbml2amici
         """
         # courtesy check if target not folder
         if os.path.exists(self.output_folder) \
@@ -112,7 +114,7 @@ class PetabImporter:
         if self._must_compile(force_compile):
             logger.info(f"Compiling amici model to folder "
                         f"{self.output_folder}.")
-            self.compile_model()
+            self.compile_model(*args, **kwargs)
         else:
             logger.info(f"Using existing amici model in folder "
                         f"{self.output_folder}.")
@@ -155,27 +157,33 @@ class PetabImporter:
         # no need to (re-)compile
         return False
 
-    def compile_model(self):
+    def compile_model(self, *args, **kwargs):
         """
         Compile the model. If the output folder exists already, it is first
         deleted.
-        """
 
-        # check prerequisites
-        if not petab.condition_table_is_parameter_free(
-                self.petab_problem.condition_df):
-            raise AssertionError(
-                "Parameter dependent conditions in the condition file "
-                "are not yet supported.")
+        Parameters
+        ----------
+        args, kwargs: Extra arguments passed to amici.SbmlImporter.sbml2amici
+
+        """
 
         # delete output directory
         if os.path.exists(self.output_folder):
             shutil.rmtree(self.output_folder)
 
+        # model to string
+        sbml_string = libsbml.SBMLWriter().writeSBMLToString(
+            self.petab_problem.sbml_document)
+
+        # init sbml importer
+        sbml_importer = amici.SbmlImporter(
+            sbml_string, from_file=False)
+
         # constant parameters
-        condition_columns = self.petab_problem.condition_df.columns.values
-        constant_parameter_ids = list(
-            set(condition_columns) - {'conditionId', 'conditionName'}
+        constant_parameter_ids = amici.petab_import.get_fixed_parameters(
+            condition_df=self.petab_problem.condition_df,
+            sbml_model=sbml_importer.sbml,
         )
 
         # observables
@@ -188,13 +196,6 @@ class PetabImporter:
         noise_distrs = _to_amici_noise_distributions(
             self.petab_problem.get_noise_distributions())
 
-        # model to string
-        sbml_string = libsbml.SBMLWriter().writeSBMLToString(
-            self.petab_problem.sbml_document)
-        # init sbml importer
-        sbml_importer = amici.SbmlImporter(
-            sbml_string, from_file=False)
-
         # convert
         sbml_importer.sbml2amici(
             modelName=self.model_name,
@@ -202,7 +203,8 @@ class PetabImporter:
             observables=observables,
             constantParameters=constant_parameter_ids,
             sigmas=sigmas,
-            noise_distributions=noise_distrs
+            noise_distributions=noise_distrs,
+            *args, **kwargs
         )
 
     def create_solver(self, model=None):
@@ -231,7 +233,7 @@ class PetabImporter:
         # (preequilibrationConditionId, simulationConditionId) pairs.
         # Can be improved by checking for identical condition vectors.
         if simulation_conditions is None:
-            simulation_conditions = petab.core.get_simulation_conditions(
+            simulation_conditions = petab.get_simulation_conditions(
                 measurement_df)
 
         observable_ids = model.getObservableIds()
@@ -243,7 +245,7 @@ class PetabImporter:
             # amici.ExpData for each simulation
 
             # extract rows for condition
-            df_for_condition = petab.core.get_rows_for_condition(
+            df_for_condition = petab.get_rows_for_condition(
                 measurement_df, condition)
 
             # make list of all timepoints for which measurements exist
@@ -325,7 +327,7 @@ class PetabImporter:
         Create a pypesto.PetabAmiciObjective.
         """
         # get simulation conditions
-        simulation_conditions = petab.core.get_simulation_conditions(
+        simulation_conditions = petab.get_simulation_conditions(
             self.petab_problem.measurement_df)
 
         # create model
@@ -342,24 +344,33 @@ class PetabImporter:
 
         # simulation <-> optimization parameter mapping
         par_opt_ids = self.petab_problem.get_optimization_parameters()
-        # take sim parameter vector from model to ensure correct order
-        par_sim_ids = list(model.getParameterIds())
 
-        parameter_mapping = \
-            petab.core.get_optimization_to_simulation_parameter_mapping(
+        parameter_mappings = \
+            petab.get_optimization_to_simulation_parameter_mapping(
                 condition_df=self.petab_problem.condition_df,
                 measurement_df=self.petab_problem.measurement_df,
                 parameter_df=self.petab_problem.parameter_df,
                 sbml_model=self.petab_problem.sbml_model,
-                par_sim_ids=par_sim_ids,
                 simulation_conditions=simulation_conditions,
             )
 
-        scale_mapping = \
-            petab.core.get_optimization_to_simulation_scale_mapping(
+        scale_mappings = \
+            petab.get_optimization_to_simulation_scale_mapping(
                 parameter_df=self.petab_problem.parameter_df,
-                mapping_par_opt_to_par_sim=parameter_mapping
+                mapping_par_opt_to_par_sim=parameter_mappings,
+                measurement_df=self.petab_problem.measurement_df
             )
+
+        # unify and check preeq and sim mappings
+        parameter_mapping, scale_mapping = _merge_preeq_and_sim_pars(
+            parameter_mappings, scale_mappings)
+
+        # simulation ids (for correct order)
+        par_sim_ids = list(model.getParameterIds())
+
+        # create lists from dicts in correct order
+        parameter_mapping = _mapping_to_list(parameter_mapping, par_sim_ids)
+        scale_mapping = _mapping_to_list(scale_mapping, par_sim_ids)
 
         # check whether there is something suspicious in the mapping
         _check_parameter_mapping_ok(
@@ -417,7 +428,7 @@ class PetabImporter:
                 self.petab_problem.measurement_df.columns))
 
         # get simulation conditions
-        simulation_conditions = petab.core.get_simulation_conditions(
+        simulation_conditions = petab.get_simulation_conditions(
             measurement_df)
 
         # get observable ids
@@ -433,7 +444,7 @@ class PetabImporter:
             t = list(rdata['t'])
 
             # extract rows for condition
-            cur_measurement_df = petab.core.get_rows_for_condition(
+            cur_measurement_df = petab.get_rows_for_condition(
                 measurement_df, condition)
 
             # iterate over entries for the given condition
@@ -619,6 +630,66 @@ def _find_model_name(output_folder):
     Just re-use the last part of the output folder.
     """
     return os.path.split(os.path.normpath(output_folder))[-1]
+
+
+def _merge_preeq_and_sim_pars(parameter_mappings, scale_mappings):
+    """
+    Wrapper around petab.merge_preeq_and_sim_pars_condition for multiple
+    conditions. Merges preequilibration and simulation parameter mappings
+    and checks conformity with the amici capabilities.
+
+    Parameters
+    ----------
+    parameter_mappings, scale_mappings: list of tuple of dict
+        As returned by petab.get_optimization_to_simulation_parameter_mapping
+        and petab.get_optimization_to_simulation_scale_mapping.
+
+    Returns
+    -------
+    parameter_mapping, scale_mapping: list of dict
+        The parameter and scale simulation mappings, modified and checked.
+    """
+    parameter_mapping = []
+    scale_mapping = []
+    for ic, ((map_preeq, map_sim), (scale_map_preeq, scale_map_sim)) in \
+            enumerate(zip(parameter_mappings, scale_mappings)):
+        petab.merge_preeq_and_sim_pars_condition(
+            condition_map_preeq=map_preeq,
+            condition_map_sim=map_sim,
+            condition_scale_map_preeq=scale_map_preeq,
+            condition_scale_map_sim=scale_map_sim,
+            condition=ic)
+        parameter_mapping.append(map_sim)
+        scale_mapping.append(scale_map_sim)
+    return parameter_mapping, scale_mapping
+
+
+def _mapping_to_list(mapping, par_sim_ids):
+    """
+    Petab returns for each condition a dictionary which maps simulation
+    to optimization parameters. Given we know the correct order of
+    simulation parameters as used in the amici model, we here create
+    a list from the dictionary.
+
+    Parameters
+    ----------
+    mapping: list of dict
+        as created by _merge_preeq_and_sim_pars.
+    par_sim_ids: list of str
+        The simulation ids as returned by list(amici_model.getParameterIds()).
+
+    Returns
+    -------
+    mapping_list: list of list
+        Each dict turned into a list with order according to `par_sim_ids`.
+    """
+    mapping_list = []
+    for map_for_cond in mapping:
+        map_for_cond_list = []
+        for sim_id in par_sim_ids:
+            map_for_cond_list.append(map_for_cond[sim_id])
+        mapping_list.append(map_for_cond_list)
+    return mapping_list
 
 
 class PetabAmiciObjective(AmiciObjective):

@@ -28,6 +28,7 @@ from .profile import (parameter_profile,
                       ProfilerResult)
 from .engine import (SingleCoreEngine,
                      MultiProcessEngine)
+from . import visualize
 
 
 __all__ = [
@@ -58,4 +59,5 @@ __all__ = [
     # engine
     "SingleCoreEngine",
     "MultiProcessEngine",
+    "visualize",
 ]
