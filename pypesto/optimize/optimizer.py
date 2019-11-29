@@ -423,7 +423,7 @@ class GlobalOptimizer(Optimizer):
         self.method = method
 
         if options is None:
-            options = {}
+            options = {'maxiter': 200}
         self.options = options
 
     @fix_decorator
@@ -433,8 +433,7 @@ class GlobalOptimizer(Optimizer):
         lb = problem.lb
         ub = problem.ub
         xopt, fopt = pso(problem.objective.get_fval,
-                         lb, ub, maxiter=200,
-                         **self.options)
+                         lb, ub, **self.options)
         optimizer_result = OptimizerResult(
             x=xopt,
             fval=fopt
