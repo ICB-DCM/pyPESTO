@@ -4,7 +4,11 @@ import re
 import abc
 import time
 from ..objective import res_to_chi2
-from pyswarm import pso
+
+try:
+    from pyswarm import pso
+except ImportError:
+    pso = None
 
 try:
     import dlib
