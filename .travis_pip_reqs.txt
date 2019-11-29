@@ -6,6 +6,7 @@ dlib
 gitpython
 petab>=0.0.0a16
 amici>=0.10.13
+pandoc
 sphinx
 nbsphinx
 sphinx_rtd_theme
