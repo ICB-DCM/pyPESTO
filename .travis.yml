@@ -34,7 +34,7 @@ script:
   - travis_wait 20 python3 -m pytest --cov=pypesto ./test/test_*
   - travis_wait 20 xvfb-run -a python3 -m pytest --cov=pypesto --cov-append ./test/visualize/test_*
   - coverage xml
-  - test/run_notebook.sh doc/example/
+  - if [ "$TRAVIS_PULL_REQUEST" != "false" ]; then test/run_notebook.sh doc/example/; fi
 
 after_success:
   - bash <(curl -s https://codecov.io/bash)
