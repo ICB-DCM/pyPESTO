@@ -449,8 +449,15 @@ class GlobalOptimizer(Optimizer):
     def minimize(self, problem, x0, index):
         lb = problem.lb
         ub = problem.ub
-        xopt, fopt = pso(problem.objective.get_fval,
-                         lb, ub, **self.options)
+        if pso is None:
+            raise ImportError(
+                "This optimizer requires an installation of pyswarm."
+            )
+
+        if self.method == 'pso':
+            xopt, fopt = pso(problem.objective.get_fval,
+                             lb, ub, **self.options)
+
         optimizer_result = OptimizerResult(
             x=xopt,
             fval=fopt
