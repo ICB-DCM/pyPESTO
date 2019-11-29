@@ -35,6 +35,8 @@ script:
   - travis_wait 20 xvfb-run -a python3 -m pytest --cov=pypesto --cov-append ./test/visualize/test_*
   - coverage xml
   - test/run_notebook.sh doc/example/
+  - sphinx-build -W -b html -d doc/_build/html doc/ doc/_build/html
+
 
 after_success:
   - bash <(curl -s https://codecov.io/bash)
