@@ -1,3 +1,7 @@
+setuptools
+wheel
+pkgconfig
+jupyter
 pytest
 pytest-cov
 coverage
