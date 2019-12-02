@@ -17,44 +17,56 @@ class Objective:
     giving a standardized way of calling. Apart from that, it manages several
     things including fixing of parameters and history.
 
+
     Parameters
     ----------
 
     fun: callable, optional
         The objective function to be minimized. If it only computes the
         objective function value, it should be of the form
+
             ``fun(x) -> float``
+
         where x is an 1-D array with shape (n,), and n is the parameter space
         dimension.
 
     grad: callable, bool, optional
         Method for computing the gradient vector. If it is a callable,
         it should be of the form
+
             ``grad(x) -> array_like, shape (n,).``
+
         If its value is True, then fun should return the gradient as a second
         output.
 
     hess: callable, optional
         Method for computing the Hessian matrix. If it is a callable,
         it should be of the form
+
             ``hess(x) -> array, shape (n,n).``
+
         If its value is True, then fun should return the gradient as a
         second, and the Hessian as a third output, and grad should be True as
         well.
 
     hessp: callable, optional
         Method for computing the Hessian vector product, i.e.
+
             ``hessp(x, v) -> array_like, shape (n,)``
+
         computes the product H*v of the Hessian of fun at x with v.
 
     res: {callable, bool}, optional
         Method for computing residuals, i.e.
+
             ``res(x) -> array_like, shape(m,).``
 
     sres: callable, optional
         Method for computing residual sensitivities. If its is a callable,
         it should be of the form
+
             ``sres(x) -> array, shape (m,n).``
+
         If its value is True, then res should return the residual
         sensitivities as a second output.
 
@@ -74,6 +86,7 @@ class Objective:
     options: pypesto.ObjectiveOptions, optional
         Options as specified in pypesto.ObjectiveOptions.
 
+
     Attributes
     ----------
 
@@ -89,6 +102,7 @@ class Objective:
 
     sensitivity_orders: tuple
         Temporary variable to store requested sensitivity orders
+
 
     Notes
     -----
@@ -518,6 +532,7 @@ class Objective:
         Compare gradient evaluation: Firstly approximate via finite
         differences, and secondly use the objective gradient.
 
+
         Parameters
         ----------
 
@@ -531,22 +546,22 @@ class Objective:
             Finite differences step size. Default: 1e-5.
 
         verbosity: int
-            Level of verbosity for function output
-                0: no output
-                1: summary for all parameters
-                2: summary for individual parameters
+            Level of verbosity for function output.
+            * 0: no output,
+            * 1: summary for all parameters,
+            * 2: summary for individual parameters.
             Default: 1.
 
         mode: str
             Residual (MODE_RES) or objective function value
             (MODE_FUN, default) computation mode.
 
+
         Returns
         ----------
 
         result: pd.DataFrame
             gradient, finite difference approximations and error estimates.
-
         """
 
         if x_indices is None:

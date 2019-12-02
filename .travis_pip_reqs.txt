@@ -1,3 +1,7 @@
+setuptools
+wheel
+pkgconfig
+jupyter
 pytest
 pytest-cov
 coverage
@@ -6,3 +10,6 @@ dlib
 gitpython
 petab>=0.0.0a16
 amici>=0.10.13
+sphinx
+nbsphinx
+sphinx_rtd_theme
