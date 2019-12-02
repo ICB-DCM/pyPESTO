@@ -20,11 +20,10 @@ addons:
       - libatlas-base-dev
       - lcov
       - swig3.0
+      - pandoc
 
 install:
   - mkdir -p ~/bin/ && ln -s /usr/bin/swig3.0 ~/bin/swig && export PATH=~/bin/:$PATH
-  - pip3 install --upgrade setuptools wheel pkgconfig
-  - pip3 install --upgrade jupyter # for jupyter notebooks
   - pip3 install --upgrade -r ./.travis_pip_reqs.txt
   - pip3 install .
 
@@ -33,8 +32,9 @@ script:
   - python3 -m flake8 --exclude=build,doc,example,tmp,amici_models
   - travis_wait 20 python3 -m pytest --cov=pypesto ./test/test_*
   - travis_wait 20 xvfb-run -a python3 -m pytest --cov=pypesto --cov-append ./test/visualize/test_*
-  - coverage xml
+  - if [ "$TRAVIS_PULL_REQUEST" != "false" ]; then sphinx-build -W -b html -d doc/_build/html doc/ doc/_build/html; fi
   - if [ "$TRAVIS_PULL_REQUEST" != "false" ]; then test/run_notebook.sh doc/example/; fi
+  - coverage xml
 
 after_success:
   - bash <(curl -s https://codecov.io/bash)
