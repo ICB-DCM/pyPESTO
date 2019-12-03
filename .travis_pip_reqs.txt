@@ -7,6 +7,7 @@ pytest-cov
 coverage
 flake8
 dlib
+pyswarm
 gitpython
 petab>=0.0.0a16
 amici>=0.10.13
