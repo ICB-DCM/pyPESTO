@@ -82,7 +82,7 @@ def minimize(
 
     startpoint_method: {callable, False}, optional
         Method for how to choose start points. False means the optimizer does
-        not require start points
+        not require start points, e.g. 'pso' method in 'GlobalOptimizer'
 
     result: pypesto.Result
         A result object to append the optimization results to. For example,
