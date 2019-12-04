@@ -6,6 +6,15 @@ Release notes
 ..........
 
 
+0.0.10 (2019-12-04)
+-------------------
+
+* Only compute FIM when sensitivities are available (#194).
+* Fix documentation build (#197).
+* Add support for pyswarm optimizer (#198).
+* Run travis tests for documentation and notebooks only on pull requests (#199).
+
+
 0.0.9 (2019-10-11)
 ------------------
 
