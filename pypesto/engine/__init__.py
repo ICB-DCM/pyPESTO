@@ -7,13 +7,14 @@ multi-threaded or cluster-based. Note that it is not checked whether a single
 multistart itself is parallelized.
 """
 
-
+from .base import Engine
 from .single_core import SingleCoreEngine
 from .multi_process import MultiProcessEngine
 from .task import OptimizerTask
 
 
 __all__ = [
+    "Engine",
     "SingleCoreEngine",
     "MultiProcessEngine",
     "OptimizerTask"

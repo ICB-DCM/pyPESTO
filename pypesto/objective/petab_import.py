@@ -80,7 +80,7 @@ class PetabImporter:
             output_folder=output_folder,
             model_name=model_name)
 
-    def create_model(self, force_compile=False):
+    def create_model(self, force_compile=False, *args, **kwargs):
         """
         Import amici model. If necessary or force_compile is True, compile
         first.
@@ -93,10 +93,11 @@ class PetabImporter:
             exist yet. If True, the output folder is deleted and the model
             (re-)compiled in either case.
 
+            .. warning::
+                If `force_compile`, then an existing folder of that name will
+                be deleted.
 
-        .. warning::
-            If `force_compile`, then an existing folder of that name will be
-            deleted.
+        args, kwargs: Extra arguments passed to amici.SbmlImporter.sbml2amici
         """
         # courtesy check if target not folder
         if os.path.exists(self.output_folder) \
@@ -113,7 +114,7 @@ class PetabImporter:
         if self._must_compile(force_compile):
             logger.info(f"Compiling amici model to folder "
                         f"{self.output_folder}.")
-            self.compile_model()
+            self.compile_model(*args, **kwargs)
         else:
             logger.info(f"Using existing amici model in folder "
                         f"{self.output_folder}.")
@@ -156,18 +157,16 @@ class PetabImporter:
         # no need to (re-)compile
         return False
 
-    def compile_model(self):
+    def compile_model(self, *args, **kwargs):
         """
         Compile the model. If the output folder exists already, it is first
         deleted.
-        """
 
-        # check prerequisites
-        if not petab.condition_table_is_parameter_free(
-                self.petab_problem.condition_df):
-            raise AssertionError(
-                "Parameter dependent conditions in the condition file "
-                "are not yet supported.")
+        Parameters
+        ----------
+        args, kwargs: Extra arguments passed to amici.SbmlImporter.sbml2amici
+
+        """
 
         # delete output directory
         if os.path.exists(self.output_folder):
@@ -204,7 +203,8 @@ class PetabImporter:
             observables=observables,
             constantParameters=constant_parameter_ids,
             sigmas=sigmas,
-            noise_distributions=noise_distrs
+            noise_distributions=noise_distrs,
+            *args, **kwargs
         )
 
     def create_solver(self, model=None):

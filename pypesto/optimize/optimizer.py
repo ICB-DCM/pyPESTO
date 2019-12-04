@@ -8,6 +8,11 @@ import logging
 from ..objective import res_to_chi2
 
 try:
+    from pyswarm import pso
+except ImportError:
+    pso = None
+
+try:
     import dlib
 except ImportError:
     dlib = None
@@ -425,3 +430,40 @@ class DlibOptimizer(Optimizer):
     @staticmethod
     def get_default_options():
         return {}
+
+
+class GlobalOptimizer(Optimizer):
+
+    def __init__(self, method='pso', options=None):
+        super().__init__()
+
+        self.method = method
+
+        if options is None:
+            options = {'maxiter': 200}
+        self.options = options
+
+    @fix_decorator
+    @time_decorator
+    @objective_decorator
+    def minimize(self, problem, x0, index):
+        lb = problem.lb
+        ub = problem.ub
+        if pso is None:
+            raise ImportError(
+                "This optimizer requires an installation of pyswarm."
+            )
+
+        if self.method == 'pso':
+            xopt, fopt = pso(problem.objective.get_fval,
+                             lb, ub, **self.options)
+
+        optimizer_result = OptimizerResult(
+            x=xopt,
+            fval=fopt
+        )
+
+        return optimizer_result
+
+    def is_least_squares(self):
+        return False

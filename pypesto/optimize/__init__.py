@@ -9,11 +9,13 @@ from .optimize import (minimize,
 from .optimizer import (OptimizerResult,
                         Optimizer,
                         ScipyOptimizer,
-                        DlibOptimizer)
+                        DlibOptimizer,
+                        GlobalOptimizer)
 
 __all__ = ["minimize",
            "OptimizeOptions",
            "OptimizerResult",
            "Optimizer",
            "ScipyOptimizer",
-           "DlibOptimizer"]
+           "DlibOptimizer",
+           "GlobalOptimizer"]
