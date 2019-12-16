@@ -16,6 +16,8 @@ import petab
 from ..problem import Problem
 from .amici_objective import AmiciObjective
 
+from amici.petab_import import petab_noise_distributions_to_amici
+
 try:
     import amici
     import amici.petab_import
@@ -193,7 +195,7 @@ class PetabImporter:
         sigmas = self.petab_problem.get_sigmas(remove=True)
 
         # noise distributions
-        noise_distrs = _to_amici_noise_distributions(
+        noise_distrs = petab_noise_distributions_to_amici(
             self.petab_problem.get_noise_distributions())
 
         # convert
@@ -607,22 +609,6 @@ def _find_output_folder_name(petab_problem: petab.Problem):
         output_folder = os.path.abspath(
             tempfile.mkdtemp(dir=PetabImporter.MODEL_BASE_DIR))
     return output_folder
-
-
-def _to_amici_noise_distributions(noise_distributions):
-    """
-    Map from the petab to the amici format of noise distribution
-    identifiers.
-    """
-    amici_distrs = {}
-    for id_, val in noise_distributions.items():
-        amici_val = ''
-        if val['observableTransformation']:
-            amici_val += val['observableTransformation'] + '-'
-        if val['noiseDistribution']:
-            amici_val += val['noiseDistribution']
-        amici_distrs[id_] = amici_val
-    return amici_distrs
 
 
 def _find_model_name(output_folder):
