@@ -9,14 +9,13 @@ import shutil
 import re
 import logging
 import tempfile
-import libsbml
 
 import petab
 
 from ..problem import Problem
 from .amici_objective import AmiciObjective
 
-from amici.petab_import import petab_noise_distributions_to_amici
+from amici.petab_import import import_model
 
 try:
     import amici
@@ -159,14 +158,14 @@ class PetabImporter:
         # no need to (re-)compile
         return False
 
-    def compile_model(self, *args, **kwargs):
+    def compile_model(self, **kwargs):
         """
         Compile the model. If the output folder exists already, it is first
         deleted.
 
         Parameters
         ----------
-        args, kwargs: Extra arguments passed to amici.SbmlImporter.sbml2amici
+        kwargs: Extra arguments passed to amici.SbmlImporter.sbml2amici
 
         """
 
@@ -174,40 +173,11 @@ class PetabImporter:
         if os.path.exists(self.output_folder):
             shutil.rmtree(self.output_folder)
 
-        # model to string
-        sbml_string = libsbml.SBMLWriter().writeSBMLToString(
-            self.petab_problem.sbml_document)
-
-        # init sbml importer
-        sbml_importer = amici.SbmlImporter(
-            sbml_string, from_file=False)
-
-        # constant parameters
-        constant_parameter_ids = amici.petab_import.get_fixed_parameters(
-            condition_df=self.petab_problem.condition_df,
-            sbml_model=sbml_importer.sbml,
-        )
-
-        # observables
-        observables = self.petab_problem.get_observables()
-
-        # sigmas
-        sigmas = self.petab_problem.get_sigmas(remove=True)
-
-        # noise distributions
-        noise_distrs = petab_noise_distributions_to_amici(
-            self.petab_problem.get_noise_distributions())
-
-        # convert
-        sbml_importer.sbml2amici(
-            modelName=self.model_name,
-            output_dir=self.output_folder,
-            observables=observables,
-            constantParameters=constant_parameter_ids,
-            sigmas=sigmas,
-            noise_distributions=noise_distrs,
-            *args, **kwargs
-        )
+        import_model(sbml_model=self.petab_problem.sbml_model,
+                     condition_table=self.petab_problem.condition_df,
+                     measurement_table=self.petab_problem.measurement_df,
+                     model_output_dir=self.output_folder,
+                     model_name=self.model_name, **kwargs)
 
     def create_solver(self, model=None):
         """
