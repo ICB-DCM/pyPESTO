@@ -334,7 +334,7 @@ class PetabImporter:
             )
 
         # unify and check preeq and sim mappings
-        parameter_mapping, scale_mapping = _merge_preeq_and_sim_pars(
+        parameter_mapping, scale_mapping = petab.merge_preeq_and_sim_pars(
             parameter_mappings, scale_mappings)
 
         # simulation ids (for correct order)
@@ -586,38 +586,6 @@ def _find_model_name(output_folder):
     Just re-use the last part of the output folder.
     """
     return os.path.split(os.path.normpath(output_folder))[-1]
-
-
-def _merge_preeq_and_sim_pars(parameter_mappings, scale_mappings):
-    """
-    Wrapper around petab.merge_preeq_and_sim_pars_condition for multiple
-    conditions. Merges preequilibration and simulation parameter mappings
-    and checks conformity with the amici capabilities.
-
-    Parameters
-    ----------
-    parameter_mappings, scale_mappings: list of tuple of dict
-        As returned by petab.get_optimization_to_simulation_parameter_mapping
-        and petab.get_optimization_to_simulation_scale_mapping.
-
-    Returns
-    -------
-    parameter_mapping, scale_mapping: list of dict
-        The parameter and scale simulation mappings, modified and checked.
-    """
-    parameter_mapping = []
-    scale_mapping = []
-    for ic, ((map_preeq, map_sim), (scale_map_preeq, scale_map_sim)) in \
-            enumerate(zip(parameter_mappings, scale_mappings)):
-        petab.merge_preeq_and_sim_pars_condition(
-            condition_map_preeq=map_preeq,
-            condition_map_sim=map_sim,
-            condition_scale_map_preeq=scale_map_preeq,
-            condition_scale_map_sim=scale_map_sim,
-            condition=ic)
-        parameter_mapping.append(map_sim)
-        scale_mapping.append(scale_map_sim)
-    return parameter_mapping, scale_mapping
 
 
 def _mapping_to_list(mapping, par_sim_ids):
