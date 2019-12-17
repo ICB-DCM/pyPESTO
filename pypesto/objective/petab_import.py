@@ -3,12 +3,13 @@ import pandas as pd
 import os
 import sys
 import importlib
-import numbers
 import copy
 import shutil
 import re
 import logging
 import tempfile
+
+from typing import List
 
 import petab
 
@@ -16,6 +17,7 @@ from ..problem import Problem
 from .amici_objective import AmiciObjective
 
 from amici.petab_import import import_model
+from amici.petab_objective import edatas_from_petab
 
 try:
     import amici
@@ -81,7 +83,8 @@ class PetabImporter:
             output_folder=output_folder,
             model_name=model_name)
 
-    def create_model(self, force_compile=False, *args, **kwargs):
+    def create_model(self, force_compile=False,
+                     *args, **kwargs) -> amici.Model:
         """
         Import amici model. If necessary or force_compile is True, compile
         first.
@@ -122,7 +125,7 @@ class PetabImporter:
 
         return self._create_model()
 
-    def _create_model(self):
+    def _create_model(self) -> amici.Model:
         """
         No checks, no compilation, just load the model module and return
         the model.
@@ -190,7 +193,8 @@ class PetabImporter:
         solver = model.getSolver()
         return solver
 
-    def create_edatas(self, model=None, simulation_conditions=None):
+    def create_edatas(self, model: amici.Model,
+                      simulation_conditions=None) -> List[amici.ExpData()]:
         """
         Create list of amici.ExpData objects.
         """
@@ -198,97 +202,11 @@ class PetabImporter:
         if model is None:
             model = self.create_model()
 
-        condition_df = self.petab_problem.condition_df.reset_index()
-        measurement_df = self.petab_problem.measurement_df
-
-        # number of amici simulations will be number of unique
-        # (preequilibrationConditionId, simulationConditionId) pairs.
-        # Can be improved by checking for identical condition vectors.
-        if simulation_conditions is None:
-            simulation_conditions = petab.get_simulation_conditions(
-                measurement_df)
-
-        observable_ids = model.getObservableIds()
-
-        fixed_parameter_ids = model.getFixedParameterIds()
-
-        edatas = []
-        for _, condition in simulation_conditions.iterrows():
-            # amici.ExpData for each simulation
-
-            # extract rows for condition
-            df_for_condition = petab.get_rows_for_condition(
-                measurement_df, condition)
-
-            # make list of all timepoints for which measurements exist
-            timepoints = sorted(
-                df_for_condition.time.unique().astype(float))
-
-            # init edata object
-            edata = amici.ExpData(model.get())
-
-            # find rep numbers of time points
-            timepoints_w_reps = []
-            for time in timepoints:
-                # subselect for time
-                df_for_time = df_for_condition[df_for_condition.time == time]
-                # rep number is maximum over rep numbers for observables
-                n_reps = max(df_for_time.groupby(
-                    ['observableId', 'time']).size())
-                # append time point n_rep times
-                timepoints_w_reps.extend([time] * n_reps)
-
-            # set time points in edata
-            edata.setTimepoints(timepoints_w_reps)
-
-            # handle fixed parameters
-            _handle_fixed_parameters(
-                edata, condition_df, fixed_parameter_ids, condition)
-
-            # prepare measurement matrix
-            y = np.full(shape=(edata.nt(), edata.nytrue()), fill_value=np.nan)
-            # prepare sigma matrix
-            sigma_y = np.full(
-                shape=(edata.nt(), edata.nytrue()),
-                fill_value=np.nan)
-
-            # add measurements and sigmas
-            # iterate over time points
-            for time in timepoints:
-                # subselect for time
-                df_for_time = df_for_condition[df_for_condition.time == time]
-                time_ix_0 = timepoints_w_reps.index(time)
-
-                # remember used time indices for each observable
-                time_ix_for_obs_ix = {}
-
-                # iterate over measurements
-                for _, measurement in df_for_time.iterrows():
-                    # extract observable index
-                    observable_ix = observable_ids.index(
-                        f'observable_{measurement.observableId}')
-
-                    # update time index for observable
-                    if observable_ix in time_ix_for_obs_ix:
-                        time_ix_for_obs_ix[observable_ix] += 1
-                    else:
-                        time_ix_for_obs_ix[observable_ix] = time_ix_0
-
-                    # fill observable and possibly noise parameter
-                    y[time_ix_for_obs_ix[observable_ix],
-                        observable_ix] = measurement.measurement
-                    if isinstance(measurement.noiseParameters, numbers.Number):
-                        sigma_y[time_ix_for_obs_ix[observable_ix],
-                                observable_ix] = measurement.noiseParameters
-
-            # fill measurements and sigmas into edata
-            edata.setObservedData(y.flatten())
-            edata.setObservedDataStdDev(sigma_y.flatten())
-
-            # append edata to edatas list
-            edatas.append(edata)
-
-        return edatas
+        return edatas_from_petab(
+            model=model,
+            condition_df=self.petab_problem.condition_df,
+            measurement_df=self.petab_problem.measurement_df,
+            simulation_conditions=simulation_conditions)
 
     def create_objective(self,
                          model=None,
@@ -490,7 +408,7 @@ def _check_parameter_mapping_ok(
     if not len(msg_data_notnan) + len(msg_data_nan):
         return
 
-    logger.warn(
+    logger.warning(
         "There are suspicious combinations of parameters and data "
         "points:\n"
         "For the following combinations of "
@@ -500,54 +418,6 @@ def _check_parameter_mapping_ok(
         "For the following combinations, scaling or noise parameters have "
         "been mapped, but all corresponding data points are nan: \n"
         + msg_data_nan + "\n")
-
-
-def _handle_fixed_parameters(
-        edata, condition_df, fixed_parameter_ids, condition):
-    """
-    Hande fixed parameters and update edata accordingly.
-
-    Parameters
-    ----------
-
-    edata: amici.amici.ExpData
-        Current edata.
-
-    condition_df: pd.DataFrame
-        The conditions table.
-
-    fixed_parameter_ids: array_like
-        Ids of parameters that are to be considered constant.
-
-    condition:
-        The current condition, as created by
-        _get_simulation_conditions.
-    """
-
-    if len(fixed_parameter_ids) == 0:
-        # nothing to be done
-        return
-
-    # find fixed parameter values
-    fixed_parameter_vals = condition_df.loc[
-        condition_df.conditionId ==
-        condition.simulationConditionId,
-        fixed_parameter_ids].values
-    # fill into edata
-    edata.fixedParameters = fixed_parameter_vals.astype(
-        float).flatten()
-
-    # same for preequilibration if necessary
-    if 'preequilibrationConditionId' in condition \
-            and condition.preequilibrationConditionId:
-        fixed_preequilibration_parameter_vals = condition_df.loc[
-            # TODO: preequilibrationConditionId might not exist
-            condition_df.conditionId == \
-            condition.preequilibrationConditionId,
-            fixed_parameter_ids].values
-        edata.fixedParametersPreequilibration = \
-            fixed_preequilibration_parameter_vals.astype(float) \
-                                                 .flatten()
 
 
 def _find_output_folder_name(petab_problem: petab.Problem):
