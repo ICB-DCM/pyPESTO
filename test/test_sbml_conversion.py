@@ -115,7 +115,7 @@ def _load_model_objective(example_name):
     model_output_dir = os.path.join('doc', 'example', 'tmp',
                                     model_name)
 
-    # import sbml model, complile and generate amici module
+    # import sbml model, compile and generate amici module
     sbml_importer = amici.SbmlImporter(sbml_file)
     sbml_importer.sbml2amici(model_name,
                              model_output_dir,

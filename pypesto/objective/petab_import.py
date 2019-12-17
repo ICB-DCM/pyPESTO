@@ -279,8 +279,8 @@ class PetabImporter:
 
     def create_problem(self, objective):
         problem = Problem(objective=objective,
-                          lb=self.petab_problem.lb,
-                          ub=self.petab_problem.ub,
+                          lb=self.petab_problem.lb_scaled,
+                          ub=self.petab_problem.ub_scaled,
                           x_fixed_indices=self.petab_problem.x_fixed_indices,
                           x_fixed_vals=self.petab_problem.x_fixed_vals,
                           x_names=self.petab_problem.x_ids)

@@ -173,7 +173,6 @@ class AmiciObjective(Objective):
                     self.amici_solver.getPreequilibration()
                 }
             }
-
         # optimization parameter names
         if x_names is None:
             # use ids as names
