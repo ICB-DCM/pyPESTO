@@ -79,6 +79,9 @@ class SpecialFeaturesTest(unittest.TestCase):
         # import a model with replicates at some time points and observables
         importer = pypesto.PetabImporter.from_folder(
             folder_base + "Schwen_PONE2014")
+        # TODO: remove when fixed
+        importer.petab_problem.measurement_df.measurement = \
+            importer.petab_problem.measurement_df.measurement.pow(10)
 
         # create amici.ExpData list
         edatas = importer.create_edatas()
