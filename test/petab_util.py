@@ -4,7 +4,7 @@ import git
 repo_base = "doc/example/tmp/benchmark-models/"
 try:
     git.Git().clone("git://github.com/LeonardSchmiester/Benchmark-Models.git",
-                    repo_base, depth=1)
+                    repo_base, depth=10)
 except Exception:
     git.Git(repo_base).pull()
 

@@ -17,7 +17,7 @@ from ..problem import Problem
 from .amici_objective import AmiciObjective
 
 from amici.petab_import import import_model
-from amici.petab_objective import edatas_from_petab
+from amici.petab_objective import edatas_from_petab, rdatas_to_measurement_df
 
 try:
     import amici
@@ -194,7 +194,7 @@ class PetabImporter:
         return solver
 
     def create_edatas(self, model: amici.Model,
-                      simulation_conditions=None) -> List[amici.ExpData()]:
+                      simulation_conditions=None) -> List[amici.ExpData]:
         """
         Create list of amici.ExpData objects.
         """
@@ -287,7 +287,7 @@ class PetabImporter:
 
         return problem
 
-    def rdatas_to_measurement_df(self, rdatas, model=None):
+    def rdatas_to_measurement_df(self, rdatas, model=None) -> pd.DataFrame:
         """
         Create a measurement dataframe in the petab format from
         the passed `rdatas` and own information.
@@ -312,53 +312,7 @@ class PetabImporter:
 
         measurement_df = self.petab_problem.measurement_df
 
-        # initialize dataframe
-        df = pd.DataFrame(
-            columns=list(
-                self.petab_problem.measurement_df.columns))
-
-        # get simulation conditions
-        simulation_conditions = petab.get_simulation_conditions(
-            measurement_df)
-
-        # get observable ids
-        observable_ids = model.getObservableIds()
-
-        # iterate over conditions
-        for data_idx, condition in simulation_conditions.iterrows():
-            # current rdata
-            rdata = rdatas[data_idx]
-            # current simulation matrix
-            y = rdata['y']
-            # time array used in rdata
-            t = list(rdata['t'])
-
-            # extract rows for condition
-            cur_measurement_df = petab.get_rows_for_condition(
-                measurement_df, condition)
-
-            # iterate over entries for the given condition
-            # note: this way we only generate a dataframe entry for every
-            # row that existed in the original dataframe. if we want to
-            # e.g. have also timepoints non-existent in the original file,
-            # we need to instead iterate over the rdata['y'] entries
-            for _, row in cur_measurement_df.iterrows():
-                # copy row
-                row_sim = copy.deepcopy(row)
-
-                # extract simulated measurement value
-                timepoint_idx = t.index(row.time)
-                observable_idx = observable_ids.index(
-                    "observable_" + row.observableId)
-                measurement_sim = y[timepoint_idx, observable_idx]
-
-                # change measurement entry
-                row_sim.measurement = measurement_sim
-
-                # append to dataframe
-                df = df.append(row_sim, ignore_index=True)
-
-        return df
+        return rdatas_to_measurement_df(rdatas, model, measurement_df)
 
 
 def _check_parameter_mapping_ok(
