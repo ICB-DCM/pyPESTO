@@ -3,6 +3,7 @@
 This is for testing the petab import.
 """
 
+import os
 import unittest
 import numpy as np
 
@@ -23,8 +24,14 @@ class PetabImportTest(unittest.TestCase):
 
     def test_0_import(self):
         for model_name in ["Zheng_PNAS2012", "Boehm_JProteomeRes2014"]:
-            petab_problem = petab.Problem.from_folder(
-                folder_base + model_name)
+            # test yaml import for one model:
+            if model_name == "Zheng_PNAS2012":
+                yaml_config = os.path.join(folder_base, model_name,
+                                           model_name + '.yaml')
+                petab_problem = petab.Problem.from_yaml(yaml_config)
+            else:
+                petab_problem = petab.Problem.from_folder(
+                    folder_base + model_name)
             self.petab_problems.append(petab_problem)
 
     def test_1_compile(self):
