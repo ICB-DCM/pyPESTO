@@ -50,7 +50,7 @@ class PetabImportTest(unittest.TestCase):
             self.obj_edatas.append((obj, edatas))
 
             # run function
-            x_nominal = petab_importer.petab_problem.x_nominal
+            x_nominal = petab_importer.petab_problem.x_nominal_scaled
             ret = obj(x_nominal)
 
             self.assertTrue(np.isfinite(ret))
