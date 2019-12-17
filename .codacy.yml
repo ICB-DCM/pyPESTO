@@ -1,6 +1,7 @@
----
 engines:
   pylint:
     enabled: true
     python_version: 3
-
+  prospector:
+    enabled: true
+    python_version: 3
