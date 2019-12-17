@@ -193,7 +193,7 @@ class PetabImporter:
         solver = model.getSolver()
         return solver
 
-    def create_edatas(self, model: amici.Model,
+    def create_edatas(self, model: amici.Model = None,
                       simulation_conditions=None) -> List[amici.ExpData]:
         """
         Create list of amici.ExpData objects.
