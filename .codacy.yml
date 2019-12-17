@@ -1,3 +1,4 @@
+---
 engines:
   pylint:
     enabled: true
