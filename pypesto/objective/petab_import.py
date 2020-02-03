@@ -12,10 +12,9 @@ import tempfile
 from typing import List
 
 import petab
-
+from petab.C import NOMINAL_VALUE
 from ..problem import Problem
 from .amici_objective import AmiciObjective
-
 from amici.petab_import import import_model
 from amici.petab_objective import edatas_from_petab, rdatas_to_measurement_df
 
@@ -178,9 +177,10 @@ class PetabImporter:
 
         import_model(sbml_model=self.petab_problem.sbml_model,
                      condition_table=self.petab_problem.condition_df,
-                     measurement_table=self.petab_problem.measurement_df,
+                     observable_table=self.petab_problem.observable_df,
+                     model_name=self.model_name,
                      model_output_dir=self.output_folder,
-                     model_name=self.model_name, **kwargs)
+                     **kwargs)
 
     def create_solver(self, model=None):
         """
@@ -202,10 +202,13 @@ class PetabImporter:
         if model is None:
             model = self.create_model()
 
+        problem_parameters = {t.Index: getattr(t, NOMINAL_VALUE) for t in
+                              self.petab_problem.parameter_df.itertuples()}
+
         return edatas_from_petab(
             model=model,
-            condition_df=self.petab_problem.condition_df,
-            measurement_df=self.petab_problem.measurement_df,
+            petab_problem=self.petab_problem,
+            problem_parameters=problem_parameters,
             simulation_conditions=simulation_conditions)
 
     def create_objective(self,
@@ -262,10 +265,6 @@ class PetabImporter:
         parameter_mapping = _mapping_to_list(parameter_mapping, par_sim_ids)
         scale_mapping = _mapping_to_list(scale_mapping, par_sim_ids)
 
-        # check whether there is something suspicious in the mapping
-        _check_parameter_mapping_ok(
-            parameter_mapping, par_sim_ids, model, edatas)
-
         # create objective
         obj = PetabAmiciObjective(
             petab_importer=self,
@@ -282,7 +281,7 @@ class PetabImporter:
                           lb=self.petab_problem.lb_scaled,
                           ub=self.petab_problem.ub_scaled,
                           x_fixed_indices=self.petab_problem.x_fixed_indices,
-                          x_fixed_vals=self.petab_problem.x_fixed_vals,
+                          x_fixed_vals=self.petab_problem.x_fixed_vals_scaled,
                           x_names=self.petab_problem.x_ids)
 
         return problem
@@ -313,65 +312,6 @@ class PetabImporter:
         measurement_df = self.petab_problem.measurement_df
 
         return rdatas_to_measurement_df(rdatas, model, measurement_df)
-
-
-def _check_parameter_mapping_ok(
-        mapping_par_opt_to_par_sim, par_sim_ids, model, edatas):
-    """
-    Check whether there are suspicious parameter mappings and/or data points.
-
-    Currently checks whether nan values in the parameter mapping table
-    correspond to nan columns in the edatas, corresponding to missing
-    data points.
-    """
-    # regular expression for noise and observable parameters
-    pattern = "(noise|observable)Parameter[0-9]+_"
-    rex = re.compile(pattern)
-
-    # prepare output
-    msg_data_notnan = ""
-    msg_data_nan = ""
-
-    # iterate over conditions
-    for i_condition, (mapping_for_condition, edata_for_condition) in \
-            enumerate(zip(mapping_par_opt_to_par_sim, edatas)):
-        # turn amici.ExpData into pd.DataFrame
-        df = amici.getDataObservablesAsDataFrame(
-            model, edata_for_condition, by_id=True)
-        # iterate over simulation parameters indices and the mapped
-        # optimization parameters
-        for i_sim_id, par_sim_id in enumerate(par_sim_ids):
-            # only continue if sim par is a noise or observable parameter
-            if not rex.match(par_sim_id):
-                continue
-            # extract observable id
-            obs_id = re.sub(pattern, "", par_sim_id)
-            # extract mapped optimization parameter
-            mapped_par = mapping_for_condition[i_sim_id]
-            # check if opt par is nan, but not all corresponding data points
-            if not isinstance(mapped_par, str) and np.isnan(mapped_par) \
-                    and not df["observable_" + obs_id].isnull().all():
-                msg_data_notnan += \
-                    f"({i_condition, par_sim_id, obs_id})\n"
-            # check if opt par is string, but all corresponding data points
-            # are nan
-            if isinstance(mapped_par, str) \
-                    and df["observable_" + obs_id].isnull().all():
-                msg_data_nan += f"({i_condition, par_sim_id, obs_id})\n"
-
-    if not len(msg_data_notnan) + len(msg_data_nan):
-        return
-
-    logger.warning(
-        "There are suspicious combinations of parameters and data "
-        "points:\n"
-        "For the following combinations of "
-        "(condition_ix, par_sim_id, obs_id)"
-        ", there are real-valued data points, but unmapped scaling or noise "
-        "parameters: \n" + msg_data_notnan + "\n"
-        "For the following combinations, scaling or noise parameters have "
-        "been mapped, but all corresponding data points are nan: \n"
-        + msg_data_nan + "\n")
 
 
 def _find_output_folder_name(petab_problem: petab.Problem):
