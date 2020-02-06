@@ -6,8 +6,8 @@ import copy
 import shutil
 import logging
 import tempfile
-
-from typing import List
+from warnings import warn
+from typing import List, Union
 
 import petab
 from petab.C import NOMINAL_VALUE
@@ -74,7 +74,24 @@ class PetabImporter:
         output_folder: See __init__.
         model_name: See __init__.
         """
+        warn("This function will be removed in future releases. "
+             "Consider using `from_yaml` instead.")
+
         petab_problem = petab.Problem.from_folder(folder)
+
+        return PetabImporter(
+            petab_problem=petab_problem,
+            output_folder=output_folder,
+            model_name=model_name)
+
+    @staticmethod
+    def from_yaml(yaml_config: Union[dict, str],
+                  output_folder: str = None,
+                  model_name: str = None) -> 'PetabImporter':
+        """
+        Simplified constructor using a petab yaml file.
+        """
+        petab_problem = petab.Problem.from_yaml(yaml_config)
 
         return PetabImporter(
             petab_problem=petab_problem,
