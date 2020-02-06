@@ -1,11 +1,9 @@
-import numpy as np
 import pandas as pd
 import os
 import sys
 import importlib
 import copy
 import shutil
-import re
 import logging
 import tempfile
 
@@ -13,10 +11,11 @@ from typing import List
 
 import petab
 from petab.C import NOMINAL_VALUE
-from ..problem import Problem
-from .amici_objective import AmiciObjective
 from amici.petab_import import import_model
 from amici.petab_objective import edatas_from_petab, rdatas_to_measurement_df
+
+from ..problem import Problem
+from .amici_objective import AmiciObjective
 
 try:
     import amici
@@ -219,9 +218,11 @@ class PetabImporter:
         """
         Create a pypesto.PetabAmiciObjective.
         """
+        problem = self.petab_problem
+
         # get simulation conditions
         simulation_conditions = petab.get_simulation_conditions(
-            self.petab_problem.measurement_df)
+            problem.measurement_df)
 
         # create model
         if model is None:
@@ -236,27 +237,19 @@ class PetabImporter:
                 simulation_conditions=simulation_conditions)
 
         # simulation <-> optimization parameter mapping
-        par_opt_ids = self.petab_problem.get_optimization_parameters()
+        par_opt_ids = problem.x_ids
 
-        parameter_mappings = \
-            petab.get_optimization_to_simulation_parameter_mapping(
-                condition_df=self.petab_problem.condition_df,
-                measurement_df=self.petab_problem.measurement_df,
-                parameter_df=self.petab_problem.parameter_df,
-                sbml_model=self.petab_problem.sbml_model,
-                simulation_conditions=simulation_conditions,
-            )
+        parameter_mapping = \
+            problem.get_optimization_to_simulation_parameter_mapping(
+                warn_unmapped=False)
 
-        scale_mappings = \
-            petab.get_optimization_to_simulation_scale_mapping(
-                parameter_df=self.petab_problem.parameter_df,
-                mapping_par_opt_to_par_sim=parameter_mappings,
-                measurement_df=self.petab_problem.measurement_df
-            )
+        scale_mapping = \
+            problem.get_optimization_to_simulation_scale_mapping(
+                mapping_par_opt_to_par_sim=parameter_mapping)
 
         # unify and check preeq and sim mappings
         parameter_mapping, scale_mapping = petab.merge_preeq_and_sim_pars(
-            parameter_mappings, scale_mappings)
+            parameter_mapping, scale_mapping)
 
         # simulation ids (for correct order)
         par_sim_ids = list(model.getParameterIds())
