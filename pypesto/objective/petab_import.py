@@ -287,12 +287,13 @@ class PetabImporter:
         return obj
 
     def create_problem(self, objective):
-        problem = Problem(objective=objective,
-                          lb=self.petab_problem.lb_scaled,
-                          ub=self.petab_problem.ub_scaled,
-                          x_fixed_indices=self.petab_problem.x_fixed_indices,
-                          x_fixed_vals=self.petab_problem.x_fixed_vals_scaled,
-                          x_names=self.petab_problem.x_ids)
+        problem = Problem(
+            objective=objective,
+            lb=self.petab_problem.lb_scaled,
+            ub=self.petab_problem.ub_scaled,
+            x_fixed_indices=self.petab_problem.x_fixed_indices,
+            x_fixed_vals=self.petab_problem.x_nominal_fixed_scaled,
+            x_names=self.petab_problem.x_ids)
 
         return problem
 
