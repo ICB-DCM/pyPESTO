@@ -10,7 +10,7 @@ dlib
 pyswarm
 gitpython
 petab>=0.1.1
-amici>=0.10.17
+amici>=0.10.19
 sphinx
 nbsphinx
 sphinx_rtd_theme

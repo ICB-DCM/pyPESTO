@@ -1,3 +1,4 @@
+import numpy as np
 import pandas as pd
 import os
 import sys
@@ -16,6 +17,7 @@ from amici.petab_objective import edatas_from_petab, rdatas_to_measurement_df
 
 from ..problem import Problem
 from .amici_objective import AmiciObjective
+from .constants import FVAL, GRAD, RDATAS
 
 try:
     import amici
@@ -394,6 +396,13 @@ def _mapping_to_list(mapping, par_sim_ids):
 class PetabAmiciObjective(AmiciObjective):
     """
     This is a shallow wrapper around AmiciObjective to make it serializable.
+
+    Parameters
+    ----------
+
+    use_amici_petab_simulate:
+        Whether to use amici functions to compute derivatives. This is
+        only temporary until implementations have been reconciled.
     """
 
     def __init__(
@@ -402,7 +411,8 @@ class PetabAmiciObjective(AmiciObjective):
             amici_model, amici_solver, edatas,
             x_ids, x_names,
             mapping_par_opt_to_par_sim,
-            mapping_scale_opt_to_scale_sim):
+            mapping_scale_opt_to_scale_sim,
+            use_amici_petab_simulate: bool = True):
 
         super().__init__(
             amici_model=amici_model,
@@ -413,6 +423,42 @@ class PetabAmiciObjective(AmiciObjective):
             mapping_scale_opt_to_scale_sim=mapping_scale_opt_to_scale_sim)
 
         self.petab_importer = petab_importer
+        self.use_amici_petab_simulate = use_amici_petab_simulate
+
+    def _call_amici(self, x, sensi_orders, mode):
+        """
+        Performs all mappings and function value calculations via
+        AMICI's `simulated_petab` function, if `use_amici_petab_simulate`.
+        """
+        if not self.use_amici_petab_simulate:
+            return super()._call_amici(x, sensi_orders, mode)
+
+        sensi_order = min(max(sensi_orders), 1)
+
+        x_dct = self.par_arr_to_dct(x)
+        self.amici_solver.setSensitivityOrder(sensi_order)
+        ret = amici.petab_objective.simulate_petab(
+            petab_problem=self.petab_importer.petab_problem,
+            amici_model=self.amici_model,
+            solver=self.amici_solver,
+            problem_parameters=x_dct,
+            scaled_parameters=True)
+
+        nllh = - ret['llh']
+        snllh = - self.par_dct_to_arr(ret['sllh']) if sensi_order > 0 else None
+
+        return {
+            FVAL: nllh,
+            GRAD: snllh,
+            RDATAS: ret['rdatas']
+        }
+
+    def par_arr_to_dct(self, x):
+        return {_id: val for _id, val in zip(self.x_ids, x)}
+
+    def par_dct_to_arr(self, x_dct):
+        return np.array([x_dct[_id] if _id in x_dct else np.nan
+                         for _id in self.x_ids])
 
     def __getstate__(self):
         state = {}
