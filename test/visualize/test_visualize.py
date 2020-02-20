@@ -195,7 +195,7 @@ class TestVisualize(unittest.TestCase):
                                      free_indices_only=False,
                                      reference=ref_point,
                                      balance_alpha=False,
-                                     start_indices=(0,1,4))
+                                     start_indices=(0, 1, 4))
 
         pypesto.visualize.parameters([result_1, result_2],
                                      free_indices_only=True,
