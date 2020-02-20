@@ -50,8 +50,8 @@ class AmiciObjectiveTest(unittest.TestCase):
         that steadystate guesses are written and checks that gradient is still
         correct with guesses set
         """
-        petab_problem = petab.Problem.from_folder(folder_base +
-                                                  "Zheng_PNAS2012")
+        petab_problem = petab.Problem.from_yaml(
+            folder_base + "Zheng_PNAS2012/Zheng_PNAS2012.yaml")
         petab_problem.model_name = "Zheng_PNAS2012"
         importer = pypesto.PetabImporter(petab_problem)
         obj = importer.create_objective()
