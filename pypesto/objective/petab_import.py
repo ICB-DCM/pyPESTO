@@ -220,14 +220,16 @@ class PetabImporter:
         if model is None:
             model = self.create_model()
 
-        problem_parameters = {t.Index: getattr(t, NOMINAL_VALUE) for t in
-                              self.petab_problem.parameter_df.itertuples()}
+        problem_parameters = {key: val for key, val in zip(
+            self.petab_problem.x_ids,
+            self.petab_problem.x_nominal_scaled)}
 
         return edatas_from_petab(
             model=model,
             petab_problem=self.petab_problem,
             problem_parameters=problem_parameters,
-            simulation_conditions=simulation_conditions)
+            simulation_conditions=simulation_conditions,
+            scaled_parameters=True)
 
     def create_objective(self,
                          model=None,
