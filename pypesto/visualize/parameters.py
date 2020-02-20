@@ -1,6 +1,7 @@
 import matplotlib.pyplot as plt
 from matplotlib.ticker import MaxNLocator
 import numpy as np
+import numbers
 from .reference_points import create_references
 from .clust_color import assign_colors
 from .misc import process_result_list
@@ -244,6 +245,10 @@ def handle_inputs(result, free_indices_only, lb=None, ub=None,
 
     # parse indices which should be plotted
     if start_indices is not None:
+        # handle, if only a number was passed
+        if isinstance(start_indices, numbers.Number):
+            start_indices = range(int(start_indices))
+
         start_indices = np.array(start_indices, dtype=int)
 
         # reduce number of displayed results
