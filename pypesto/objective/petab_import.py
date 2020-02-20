@@ -412,7 +412,7 @@ class PetabAmiciObjective(AmiciObjective):
             x_ids, x_names,
             mapping_par_opt_to_par_sim,
             mapping_scale_opt_to_scale_sim,
-            use_amici_petab_simulate: bool = True):
+            use_amici_petab_simulate: bool = False):
 
         super().__init__(
             amici_model=amici_model,
