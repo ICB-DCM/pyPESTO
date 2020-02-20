@@ -244,6 +244,10 @@ def handle_inputs(result, free_indices_only, lb=None, ub=None,
 
     # parse indices which should be plotted
     if start_indices is not None:
+        # handle, if only a number was passed
+        if type(start_indices) in (float, int):
+            start_indices = range(int(start_indices))
+
         start_indices = np.array(start_indices, dtype=int)
 
         # reduce number of displayed results
