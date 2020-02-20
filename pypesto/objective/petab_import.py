@@ -11,7 +11,6 @@ from warnings import warn
 from typing import List, Union
 
 import petab
-from petab.C import NOMINAL_VALUE
 from amici.petab_import import import_model
 from amici.petab_objective import edatas_from_petab, rdatas_to_measurement_df
 
