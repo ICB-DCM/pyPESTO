@@ -31,6 +31,6 @@ setup(name='pypesto',
                         'petab>=0.1.1'],
       tests_require=['pytest', 'flake8>=3.7.1', 'gitpython'],
       extras_require={'amici': ['amici>=0.10.19'],
-                      'petab': ['petab>=0.1.1']},
+                      'petab': ['petab>=0.1.2']},
       python_requires='>=3.6',
       )

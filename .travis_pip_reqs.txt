@@ -9,7 +9,7 @@ flake8
 dlib
 pyswarm
 gitpython
-petab>=0.1.1
+petab>=0.1.2
 amici>=0.10.19
 sphinx
 nbsphinx
