@@ -260,7 +260,7 @@ class PetabImporter:
 
         parameter_mapping = \
             problem.get_optimization_to_simulation_parameter_mapping(
-                warn_unmapped=False)
+                warn_unmapped=False, scaled_parameters=True)
 
         scale_mapping = \
             problem.get_optimization_to_simulation_scale_mapping(

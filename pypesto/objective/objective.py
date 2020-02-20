@@ -486,7 +486,7 @@ class Objective:
         Handle fixed parameters. Later, the objective will be given parameter
         vectors x of dimension dim, which have to be filled up with fixed
         parameter values to form a vector of dimension dim_full >= dim.
-        This vector is then used to compute function value and derivaties.
+        This vector is then used to compute function value and derivatives.
         The derivatives must later be reduced again to dimension dim.
 
         This is so as to make the fixing of parameters transparent to the
