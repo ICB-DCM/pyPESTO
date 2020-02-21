@@ -247,7 +247,7 @@ def get_trace(result, trace_x, trace_y):
 
     for trace in traces:
         # SciPy optimizers seem to save more steps than actually taken: prune
-        indices = np.argwhere(np.isfinite(trace['fval']))
+        indices = np.argwhere(np.isfinite(np.array(trace['fval'])))
         indices = indices.flatten()
         indices.astype(int)
 

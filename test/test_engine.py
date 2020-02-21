@@ -27,8 +27,8 @@ class EngineTest(unittest.TestCase):
             self._test_petab(engine)
 
     def _test_petab(self, engine):
-        petab_importer = pypesto.PetabImporter.from_folder(
-            folder_base + "Zheng_PNAS2012")
+        petab_importer = pypesto.PetabImporter.from_yaml(
+            folder_base + "Zheng_PNAS2012/Zheng_PNAS2012.yaml")
         objective = petab_importer.create_objective()
         problem = petab_importer.create_problem(objective)
         result = pypesto.minimize(problem=problem, n_starts=2, engine=engine)

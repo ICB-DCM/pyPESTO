@@ -3,18 +3,20 @@ import pandas as pd
 import os
 import sys
 import importlib
-import numbers
 import copy
 import shutil
-import re
 import logging
 import tempfile
-import libsbml
+from warnings import warn
+from typing import List, Union
 
 import petab
+from amici.petab_import import import_model
+from amici.petab_objective import edatas_from_petab, rdatas_to_measurement_df
 
 from ..problem import Problem
 from .amici_objective import AmiciObjective
+from .constants import FVAL, GRAD, RDATAS
 
 try:
     import amici
@@ -73,6 +75,9 @@ class PetabImporter:
         output_folder: See __init__.
         model_name: See __init__.
         """
+        warn("This function will be removed in future releases. "
+             "Consider using `from_yaml` instead.")
+
         petab_problem = petab.Problem.from_folder(folder)
 
         return PetabImporter(
@@ -80,7 +85,22 @@ class PetabImporter:
             output_folder=output_folder,
             model_name=model_name)
 
-    def create_model(self, force_compile=False, *args, **kwargs):
+    @staticmethod
+    def from_yaml(yaml_config: Union[dict, str],
+                  output_folder: str = None,
+                  model_name: str = None) -> 'PetabImporter':
+        """
+        Simplified constructor using a petab yaml file.
+        """
+        petab_problem = petab.Problem.from_yaml(yaml_config)
+
+        return PetabImporter(
+            petab_problem=petab_problem,
+            output_folder=output_folder,
+            model_name=model_name)
+
+    def create_model(self, force_compile=False,
+                     *args, **kwargs) -> amici.Model:
         """
         Import amici model. If necessary or force_compile is True, compile
         first.
@@ -121,7 +141,7 @@ class PetabImporter:
 
         return self._create_model()
 
-    def _create_model(self):
+    def _create_model(self) -> amici.Model:
         """
         No checks, no compilation, just load the model module and return
         the model.
@@ -157,14 +177,14 @@ class PetabImporter:
         # no need to (re-)compile
         return False
 
-    def compile_model(self, *args, **kwargs):
+    def compile_model(self, **kwargs):
         """
         Compile the model. If the output folder exists already, it is first
         deleted.
 
         Parameters
         ----------
-        args, kwargs: Extra arguments passed to amici.SbmlImporter.sbml2amici
+        kwargs: Extra arguments passed to amici.SbmlImporter.sbml2amici
 
         """
 
@@ -172,40 +192,12 @@ class PetabImporter:
         if os.path.exists(self.output_folder):
             shutil.rmtree(self.output_folder)
 
-        # model to string
-        sbml_string = libsbml.SBMLWriter().writeSBMLToString(
-            self.petab_problem.sbml_document)
-
-        # init sbml importer
-        sbml_importer = amici.SbmlImporter(
-            sbml_string, from_file=False)
-
-        # constant parameters
-        constant_parameter_ids = amici.petab_import.get_fixed_parameters(
-            condition_df=self.petab_problem.condition_df,
-            sbml_model=sbml_importer.sbml,
-        )
-
-        # observables
-        observables = self.petab_problem.get_observables()
-
-        # sigmas
-        sigmas = self.petab_problem.get_sigmas(remove=True)
-
-        # noise distributions
-        noise_distrs = _to_amici_noise_distributions(
-            self.petab_problem.get_noise_distributions())
-
-        # convert
-        sbml_importer.sbml2amici(
-            modelName=self.model_name,
-            output_dir=self.output_folder,
-            observables=observables,
-            constantParameters=constant_parameter_ids,
-            sigmas=sigmas,
-            noise_distributions=noise_distrs,
-            *args, **kwargs
-        )
+        import_model(sbml_model=self.petab_problem.sbml_model,
+                     condition_table=self.petab_problem.condition_df,
+                     observable_table=self.petab_problem.observable_df,
+                     model_name=self.model_name,
+                     model_output_dir=self.output_folder,
+                     **kwargs)
 
     def create_solver(self, model=None):
         """
@@ -218,7 +210,8 @@ class PetabImporter:
         solver = model.getSolver()
         return solver
 
-    def create_edatas(self, model=None, simulation_conditions=None):
+    def create_edatas(self, model: amici.Model = None,
+                      simulation_conditions=None) -> List[amici.ExpData]:
         """
         Create list of amici.ExpData objects.
         """
@@ -226,97 +219,16 @@ class PetabImporter:
         if model is None:
             model = self.create_model()
 
-        condition_df = self.petab_problem.condition_df.reset_index()
-        measurement_df = self.petab_problem.measurement_df
+        problem_parameters = {key: val for key, val in zip(
+            self.petab_problem.x_ids,
+            self.petab_problem.x_nominal_scaled)}
 
-        # number of amici simulations will be number of unique
-        # (preequilibrationConditionId, simulationConditionId) pairs.
-        # Can be improved by checking for identical condition vectors.
-        if simulation_conditions is None:
-            simulation_conditions = petab.get_simulation_conditions(
-                measurement_df)
-
-        observable_ids = model.getObservableIds()
-
-        fixed_parameter_ids = model.getFixedParameterIds()
-
-        edatas = []
-        for _, condition in simulation_conditions.iterrows():
-            # amici.ExpData for each simulation
-
-            # extract rows for condition
-            df_for_condition = petab.get_rows_for_condition(
-                measurement_df, condition)
-
-            # make list of all timepoints for which measurements exist
-            timepoints = sorted(
-                df_for_condition.time.unique().astype(float))
-
-            # init edata object
-            edata = amici.ExpData(model.get())
-
-            # find rep numbers of time points
-            timepoints_w_reps = []
-            for time in timepoints:
-                # subselect for time
-                df_for_time = df_for_condition[df_for_condition.time == time]
-                # rep number is maximum over rep numbers for observables
-                n_reps = max(df_for_time.groupby(
-                    ['observableId', 'time']).size())
-                # append time point n_rep times
-                timepoints_w_reps.extend([time] * n_reps)
-
-            # set time points in edata
-            edata.setTimepoints(timepoints_w_reps)
-
-            # handle fixed parameters
-            _handle_fixed_parameters(
-                edata, condition_df, fixed_parameter_ids, condition)
-
-            # prepare measurement matrix
-            y = np.full(shape=(edata.nt(), edata.nytrue()), fill_value=np.nan)
-            # prepare sigma matrix
-            sigma_y = np.full(
-                shape=(edata.nt(), edata.nytrue()),
-                fill_value=np.nan)
-
-            # add measurements and sigmas
-            # iterate over time points
-            for time in timepoints:
-                # subselect for time
-                df_for_time = df_for_condition[df_for_condition.time == time]
-                time_ix_0 = timepoints_w_reps.index(time)
-
-                # remember used time indices for each observable
-                time_ix_for_obs_ix = {}
-
-                # iterate over measurements
-                for _, measurement in df_for_time.iterrows():
-                    # extract observable index
-                    observable_ix = observable_ids.index(
-                        f'observable_{measurement.observableId}')
-
-                    # update time index for observable
-                    if observable_ix in time_ix_for_obs_ix:
-                        time_ix_for_obs_ix[observable_ix] += 1
-                    else:
-                        time_ix_for_obs_ix[observable_ix] = time_ix_0
-
-                    # fill observable and possibly noise parameter
-                    y[time_ix_for_obs_ix[observable_ix],
-                        observable_ix] = measurement.measurement
-                    if isinstance(measurement.noiseParameters, numbers.Number):
-                        sigma_y[time_ix_for_obs_ix[observable_ix],
-                                observable_ix] = measurement.noiseParameters
-
-            # fill measurements and sigmas into edata
-            edata.setObservedData(y.flatten())
-            edata.setObservedDataStdDev(sigma_y.flatten())
-
-            # append edata to edatas list
-            edatas.append(edata)
-
-        return edatas
+        return edatas_from_petab(
+            model=model,
+            petab_problem=self.petab_problem,
+            problem_parameters=problem_parameters,
+            simulation_conditions=simulation_conditions,
+            scaled_parameters=True)
 
     def create_objective(self,
                          model=None,
@@ -326,9 +238,11 @@ class PetabImporter:
         """
         Create a pypesto.PetabAmiciObjective.
         """
+        problem = self.petab_problem
+
         # get simulation conditions
         simulation_conditions = petab.get_simulation_conditions(
-            self.petab_problem.measurement_df)
+            problem.measurement_df)
 
         # create model
         if model is None:
@@ -343,27 +257,19 @@ class PetabImporter:
                 simulation_conditions=simulation_conditions)
 
         # simulation <-> optimization parameter mapping
-        par_opt_ids = self.petab_problem.get_optimization_parameters()
+        par_opt_ids = problem.x_ids
 
-        parameter_mappings = \
-            petab.get_optimization_to_simulation_parameter_mapping(
-                condition_df=self.petab_problem.condition_df,
-                measurement_df=self.petab_problem.measurement_df,
-                parameter_df=self.petab_problem.parameter_df,
-                sbml_model=self.petab_problem.sbml_model,
-                simulation_conditions=simulation_conditions,
-            )
+        parameter_mapping = \
+            problem.get_optimization_to_simulation_parameter_mapping(
+                warn_unmapped=False, scaled_parameters=True)
 
-        scale_mappings = \
-            petab.get_optimization_to_simulation_scale_mapping(
-                parameter_df=self.petab_problem.parameter_df,
-                mapping_par_opt_to_par_sim=parameter_mappings,
-                measurement_df=self.petab_problem.measurement_df
-            )
+        scale_mapping = \
+            problem.get_optimization_to_simulation_scale_mapping(
+                mapping_par_opt_to_par_sim=parameter_mapping)
 
         # unify and check preeq and sim mappings
-        parameter_mapping, scale_mapping = _merge_preeq_and_sim_pars(
-            parameter_mappings, scale_mappings)
+        parameter_mapping, scale_mapping = petab.merge_preeq_and_sim_pars(
+            parameter_mapping, scale_mapping)
 
         # simulation ids (for correct order)
         par_sim_ids = list(model.getParameterIds())
@@ -371,10 +277,6 @@ class PetabImporter:
         # create lists from dicts in correct order
         parameter_mapping = _mapping_to_list(parameter_mapping, par_sim_ids)
         scale_mapping = _mapping_to_list(scale_mapping, par_sim_ids)
-
-        # check whether there is something suspicious in the mapping
-        _check_parameter_mapping_ok(
-            parameter_mapping, par_sim_ids, model, edatas)
 
         # create objective
         obj = PetabAmiciObjective(
@@ -388,16 +290,17 @@ class PetabImporter:
         return obj
 
     def create_problem(self, objective):
-        problem = Problem(objective=objective,
-                          lb=self.petab_problem.lb,
-                          ub=self.petab_problem.ub,
-                          x_fixed_indices=self.petab_problem.x_fixed_indices,
-                          x_fixed_vals=self.petab_problem.x_fixed_vals,
-                          x_names=self.petab_problem.x_ids)
+        problem = Problem(
+            objective=objective,
+            lb=self.petab_problem.lb_scaled,
+            ub=self.petab_problem.ub_scaled,
+            x_fixed_indices=self.petab_problem.x_fixed_indices,
+            x_fixed_vals=self.petab_problem.x_nominal_fixed_scaled,
+            x_names=self.petab_problem.x_ids)
 
         return problem
 
-    def rdatas_to_measurement_df(self, rdatas, model=None):
+    def rdatas_to_measurement_df(self, rdatas, model=None) -> pd.DataFrame:
         """
         Create a measurement dataframe in the petab format from
         the passed `rdatas` and own information.
@@ -422,160 +325,7 @@ class PetabImporter:
 
         measurement_df = self.petab_problem.measurement_df
 
-        # initialize dataframe
-        df = pd.DataFrame(
-            columns=list(
-                self.petab_problem.measurement_df.columns))
-
-        # get simulation conditions
-        simulation_conditions = petab.get_simulation_conditions(
-            measurement_df)
-
-        # get observable ids
-        observable_ids = model.getObservableIds()
-
-        # iterate over conditions
-        for data_idx, condition in simulation_conditions.iterrows():
-            # current rdata
-            rdata = rdatas[data_idx]
-            # current simulation matrix
-            y = rdata['y']
-            # time array used in rdata
-            t = list(rdata['t'])
-
-            # extract rows for condition
-            cur_measurement_df = petab.get_rows_for_condition(
-                measurement_df, condition)
-
-            # iterate over entries for the given condition
-            # note: this way we only generate a dataframe entry for every
-            # row that existed in the original dataframe. if we want to
-            # e.g. have also timepoints non-existent in the original file,
-            # we need to instead iterate over the rdata['y'] entries
-            for _, row in cur_measurement_df.iterrows():
-                # copy row
-                row_sim = copy.deepcopy(row)
-
-                # extract simulated measurement value
-                timepoint_idx = t.index(row.time)
-                observable_idx = observable_ids.index(
-                    "observable_" + row.observableId)
-                measurement_sim = y[timepoint_idx, observable_idx]
-
-                # change measurement entry
-                row_sim.measurement = measurement_sim
-
-                # append to dataframe
-                df = df.append(row_sim, ignore_index=True)
-
-        return df
-
-
-def _check_parameter_mapping_ok(
-        mapping_par_opt_to_par_sim, par_sim_ids, model, edatas):
-    """
-    Check whether there are suspicious parameter mappings and/or data points.
-
-    Currently checks whether nan values in the parameter mapping table
-    correspond to nan columns in the edatas, corresponding to missing
-    data points.
-    """
-    # regular expression for noise and observable parameters
-    pattern = "(noise|observable)Parameter[0-9]+_"
-    rex = re.compile(pattern)
-
-    # prepare output
-    msg_data_notnan = ""
-    msg_data_nan = ""
-
-    # iterate over conditions
-    for i_condition, (mapping_for_condition, edata_for_condition) in \
-            enumerate(zip(mapping_par_opt_to_par_sim, edatas)):
-        # turn amici.ExpData into pd.DataFrame
-        df = amici.getDataObservablesAsDataFrame(
-            model, edata_for_condition, by_id=True)
-        # iterate over simulation parameters indices and the mapped
-        # optimization parameters
-        for i_sim_id, par_sim_id in enumerate(par_sim_ids):
-            # only continue if sim par is a noise or observable parameter
-            if not rex.match(par_sim_id):
-                continue
-            # extract observable id
-            obs_id = re.sub(pattern, "", par_sim_id)
-            # extract mapped optimization parameter
-            mapped_par = mapping_for_condition[i_sim_id]
-            # check if opt par is nan, but not all corresponding data points
-            if not isinstance(mapped_par, str) and np.isnan(mapped_par) \
-                    and not df["observable_" + obs_id].isnull().all():
-                msg_data_notnan += \
-                    f"({i_condition, par_sim_id, obs_id})\n"
-            # check if opt par is string, but all corresponding data points
-            # are nan
-            if isinstance(mapped_par, str) \
-                    and df["observable_" + obs_id].isnull().all():
-                msg_data_nan += f"({i_condition, par_sim_id, obs_id})\n"
-
-    if not len(msg_data_notnan) + len(msg_data_nan):
-        return
-
-    logger.warn(
-        "There are suspicious combinations of parameters and data "
-        "points:\n"
-        "For the following combinations of "
-        "(condition_ix, par_sim_id, obs_id)"
-        ", there are real-valued data points, but unmapped scaling or noise "
-        "parameters: \n" + msg_data_notnan + "\n"
-        "For the following combinations, scaling or noise parameters have "
-        "been mapped, but all corresponding data points are nan: \n"
-        + msg_data_nan + "\n")
-
-
-def _handle_fixed_parameters(
-        edata, condition_df, fixed_parameter_ids, condition):
-    """
-    Hande fixed parameters and update edata accordingly.
-
-    Parameters
-    ----------
-
-    edata: amici.amici.ExpData
-        Current edata.
-
-    condition_df: pd.DataFrame
-        The conditions table.
-
-    fixed_parameter_ids: array_like
-        Ids of parameters that are to be considered constant.
-
-    condition:
-        The current condition, as created by
-        _get_simulation_conditions.
-    """
-
-    if len(fixed_parameter_ids) == 0:
-        # nothing to be done
-        return
-
-    # find fixed parameter values
-    fixed_parameter_vals = condition_df.loc[
-        condition_df.conditionId ==
-        condition.simulationConditionId,
-        fixed_parameter_ids].values
-    # fill into edata
-    edata.fixedParameters = fixed_parameter_vals.astype(
-        float).flatten()
-
-    # same for preequilibration if necessary
-    if 'preequilibrationConditionId' in condition \
-            and condition.preequilibrationConditionId:
-        fixed_preequilibration_parameter_vals = condition_df.loc[
-            # TODO: preequilibrationConditionId might not exist
-            condition_df.conditionId == \
-            condition.preequilibrationConditionId,
-            fixed_parameter_ids].values
-        edata.fixedParametersPreequilibration = \
-            fixed_preequilibration_parameter_vals.astype(float) \
-                                                 .flatten()
+        return rdatas_to_measurement_df(rdatas, model, measurement_df)
 
 
 def _find_output_folder_name(petab_problem: petab.Problem):
@@ -609,59 +359,11 @@ def _find_output_folder_name(petab_problem: petab.Problem):
     return output_folder
 
 
-def _to_amici_noise_distributions(noise_distributions):
-    """
-    Map from the petab to the amici format of noise distribution
-    identifiers.
-    """
-    amici_distrs = {}
-    for id_, val in noise_distributions.items():
-        amici_val = ''
-        if val['observableTransformation']:
-            amici_val += val['observableTransformation'] + '-'
-        if val['noiseDistribution']:
-            amici_val += val['noiseDistribution']
-        amici_distrs[id_] = amici_val
-    return amici_distrs
-
-
 def _find_model_name(output_folder):
     """
     Just re-use the last part of the output folder.
     """
     return os.path.split(os.path.normpath(output_folder))[-1]
-
-
-def _merge_preeq_and_sim_pars(parameter_mappings, scale_mappings):
-    """
-    Wrapper around petab.merge_preeq_and_sim_pars_condition for multiple
-    conditions. Merges preequilibration and simulation parameter mappings
-    and checks conformity with the amici capabilities.
-
-    Parameters
-    ----------
-    parameter_mappings, scale_mappings: list of tuple of dict
-        As returned by petab.get_optimization_to_simulation_parameter_mapping
-        and petab.get_optimization_to_simulation_scale_mapping.
-
-    Returns
-    -------
-    parameter_mapping, scale_mapping: list of dict
-        The parameter and scale simulation mappings, modified and checked.
-    """
-    parameter_mapping = []
-    scale_mapping = []
-    for ic, ((map_preeq, map_sim), (scale_map_preeq, scale_map_sim)) in \
-            enumerate(zip(parameter_mappings, scale_mappings)):
-        petab.merge_preeq_and_sim_pars_condition(
-            condition_map_preeq=map_preeq,
-            condition_map_sim=map_sim,
-            condition_scale_map_preeq=scale_map_preeq,
-            condition_scale_map_sim=scale_map_sim,
-            condition=ic)
-        parameter_mapping.append(map_sim)
-        scale_mapping.append(scale_map_sim)
-    return parameter_mapping, scale_mapping
 
 
 def _mapping_to_list(mapping, par_sim_ids):
@@ -695,6 +397,13 @@ def _mapping_to_list(mapping, par_sim_ids):
 class PetabAmiciObjective(AmiciObjective):
     """
     This is a shallow wrapper around AmiciObjective to make it serializable.
+
+    Parameters
+    ----------
+
+    use_amici_petab_simulate:
+        Whether to use amici functions to compute derivatives. This is
+        only temporary until implementations have been reconciled.
     """
 
     def __init__(
@@ -703,7 +412,8 @@ class PetabAmiciObjective(AmiciObjective):
             amici_model, amici_solver, edatas,
             x_ids, x_names,
             mapping_par_opt_to_par_sim,
-            mapping_scale_opt_to_scale_sim):
+            mapping_scale_opt_to_scale_sim,
+            use_amici_petab_simulate: bool = False):
 
         super().__init__(
             amici_model=amici_model,
@@ -714,6 +424,42 @@ class PetabAmiciObjective(AmiciObjective):
             mapping_scale_opt_to_scale_sim=mapping_scale_opt_to_scale_sim)
 
         self.petab_importer = petab_importer
+        self.use_amici_petab_simulate = use_amici_petab_simulate
+
+    def _call_amici(self, x, sensi_orders, mode):
+        """
+        Performs all mappings and function value calculations via
+        AMICI's `simulated_petab` function, if `use_amici_petab_simulate`.
+        """
+        if not self.use_amici_petab_simulate:
+            return super()._call_amici(x, sensi_orders, mode)
+
+        sensi_order = min(max(sensi_orders), 1)
+
+        x_dct = self.par_arr_to_dct(x)
+        self.amici_solver.setSensitivityOrder(sensi_order)
+        ret = amici.petab_objective.simulate_petab(
+            petab_problem=self.petab_importer.petab_problem,
+            amici_model=self.amici_model,
+            solver=self.amici_solver,
+            problem_parameters=x_dct,
+            scaled_parameters=True)
+
+        nllh = - ret['llh']
+        snllh = - self.par_dct_to_arr(ret['sllh']) if sensi_order > 0 else None
+
+        return {
+            FVAL: nllh,
+            GRAD: snllh,
+            RDATAS: ret['rdatas']
+        }
+
+    def par_arr_to_dct(self, x):
+        return {_id: val for _id, val in zip(self.x_ids, x)}
+
+    def par_dct_to_arr(self, x_dct):
+        return np.array([x_dct[_id] if _id in x_dct else np.nan
+                         for _id in self.x_ids])
 
     def __getstate__(self):
         state = {}
