@@ -30,6 +30,6 @@ setup(name='pypesto',
                         'cloudpickle>=0.7.0'],
       tests_require=['pytest', 'flake8>=3.7.1', 'gitpython'],
       extras_require={'amici': ['amici>=0.10.19'],
-                      'petab': ['petab>=0.1.2']},
+                      'petab': ['petab>=0.1.3']},
       python_requires='>=3.6',
       )

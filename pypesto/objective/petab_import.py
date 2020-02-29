@@ -259,13 +259,12 @@ class PetabImporter:
         # simulation <-> optimization parameter mapping
         par_opt_ids = problem.x_ids
 
-        parameter_mapping = \
+        mappings = \
             problem.get_optimization_to_simulation_parameter_mapping(
                 warn_unmapped=False, scaled_parameters=True)
 
-        scale_mapping = \
-            problem.get_optimization_to_simulation_scale_mapping(
-                mapping_par_opt_to_par_sim=parameter_mapping)
+        parameter_mapping = [(mapping[0], mapping[1]) for mapping in mappings]
+        scale_mapping = [(mapping[2], mapping[3]) for mapping in mappings]
 
         # unify and check preeq and sim mappings
         parameter_mapping, scale_mapping = petab.merge_preeq_and_sim_pars(
