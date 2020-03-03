@@ -28,8 +28,8 @@ install:
   - pip3 install .
   - pip3 install https://github.com/petab-dev/petab/archive/develop.zip # REMOVE ME
   - pip3 install -e git+https://github.com/icb-dcm/amici.git@develop#egg=amici\&subdirectory=python/sdist # REMOVE ME
-  - git clone --depth 1 https://github.com/petab-dev/petab_test_suite
-  - cd petab_test_suite; pip3 install -e .; cd ..
+  - git clone --depth 1 https://github.com/petab-dev/petab_test_suite tmp/petab_test_suite
+  - cd tmp/petab_test_suite; pip3 install -e .; cd ../..
 
 # run tests
 script:
