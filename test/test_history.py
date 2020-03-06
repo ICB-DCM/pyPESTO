@@ -67,13 +67,13 @@ class HistoryTest(unittest.TestCase):
             for var, fun in funs.items():
                 for it in range(5):
                     if var in ['fval', 'chi2']:
-                        if not np.isnan(start['trace'].loc[it, (var, np.NaN)]):
+                        if not np.isnan(start['trace'][var].values[it, 0]):
                             self.assertTrue(np.isclose(
                                 start['trace'][var].values[it, 0],
                                 fun(start['trace']['x'].values[it, :])
                             ))
                     elif var in ['hess', 'sres', 'res']:
-                        if start['trace'].loc[it, (var, np.NaN)] is not None:
+                        if start['trace'][var].values[it, 0] is not None:
                             self.assertTrue(np.isclose(
                                 start['trace'][var].values[it, 0],
                                 fun(start['trace']['x'].values[it, :])

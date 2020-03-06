@@ -201,7 +201,7 @@ class ObjectiveHistory:
             self.x_names = [f'x{i}' for i, _ in enumerate(x)]
 
         columns: List[Tuple] = [
-            (c, np.NaN) for c in [
+            (c, float('nan')) for c in [
                 'time', 'n_fval', 'n_grad', 'n_hess', 'n_res', 'n_sres',
                 'fval', 'chi2', 'res', 'sres', 'hess',
             ]
@@ -234,8 +234,8 @@ class ObjectiveHistory:
         }
 
         for var, dtype in trace_dtypes.items():
-            self.trace[(var, np.NaN)] = \
-                self.trace[(var, np.NaN)].astype(dtype)
+            self.trace[(var, float('nan'))] = \
+                self.trace[(var, float('nan'))].astype(dtype)
 
     def _update_trace(self,
                       x: np.ndarray,
@@ -317,15 +317,13 @@ class ObjectiveHistory:
             'hess': hess,
         }
         for var, val in values.items():
-            row[(var, np.NaN)] = val
+            row[(var, float('nan'))] = val
 
         for var, val in {'x': x, 'grad': grad, 'schi2': schi2}.items():
             if var == 'x' or self.options[f'trace_record_{var}']:
-                for ix, x_name in enumerate(self.x_names):
-                    row[(var, x_name)] = val[ix] \
-                        if val is not None else np.NaN
+                row[var] = val if val is not None else np.NaN
             else:
-                row[(var, np.NaN)] = None
+                row[(var, float('nan'))] = None
 
         self.trace = self.trace.append(row)
 
