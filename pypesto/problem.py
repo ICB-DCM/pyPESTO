@@ -11,7 +11,7 @@ import numpy as np
 import pandas as pd
 import copy
 
-import pypesto.objective
+from .objective.objective import Objective
 
 from typing import List, Optional, Iterable
 
@@ -81,7 +81,7 @@ class Problem:
     """
 
     def __init__(self,
-                 objective: pypesto.objective,
+                 objective: Objective,
                  lb: np.ndarray, ub: np.ndarray,
                  dim_full: Optional[int] = None,
                  x_fixed_indices: Optional[Iterable[int]] = None,
