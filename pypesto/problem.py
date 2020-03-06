@@ -11,6 +11,10 @@ import numpy as np
 import pandas as pd
 import copy
 
+import pypesto.objective
+
+from typing import List, Optional, Iterable
+
 
 class Problem:
     """
@@ -53,7 +57,7 @@ class Problem:
     Attributes
     ----------
 
-    dim: int
+    dim:
         The number of non-fixed parameters.
         Computed from the other values.
 
@@ -77,13 +81,13 @@ class Problem:
     """
 
     def __init__(self,
-                 objective,
-                 lb, ub,
-                 dim_full=None,
-                 x_fixed_indices=None,
-                 x_fixed_vals=None,
-                 x_guesses=None,
-                 x_names=None):
+                 objective: pypesto.objective,
+                 lb: np.ndarray, ub: np.ndarray,
+                 dim_full: Optional[int] = None,
+                 x_fixed_indices: Optional[Iterable[int]] = None,
+                 x_fixed_vals: Optional[Iterable[float]] = None,
+                 x_guesses: Optional[Iterable[float]] = None,
+                 x_names: Optional[Iterable[str]] = None):
         self.objective = copy.deepcopy(objective)
 
         self.lb = np.array(lb).flatten()
@@ -96,7 +100,7 @@ class Problem:
 
         if x_fixed_indices is None:
             x_fixed_indices = []
-        self.x_fixed_indices = [int(i) for i in x_fixed_indices]
+        self.x_fixed_indices: List[int] = [int(i) for i in x_fixed_indices]
 
         # We want the fixed values to be a list, since we might need to add
         # or remove values during profile computation
@@ -107,7 +111,7 @@ class Problem:
 
         self.x_fixed_vals = x_fixed_vals
 
-        self.dim = self.dim_full - len(self.x_fixed_indices)
+        self.dim: int = self.dim_full - len(self.x_fixed_indices)
 
         self.x_free_indices = [
             int(i) for i in
