@@ -19,16 +19,8 @@ def res_to_chi2(res):
 def sres_to_schi2(res, sres):
     """
     In line with the assumptions in res_to_chi2.
+
     """
     if res is None or sres is None:
         return None
     return res.dot(sres)
-
-
-def sres_to_fim(sres):
-    """
-    In line with the assumptions in res_to_chi2.
-    """
-    if sres is None:
-        return None
-    return sres.transpose().dot(sres)
