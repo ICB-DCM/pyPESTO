@@ -140,7 +140,10 @@ class Objective:
 
         self.x_names = x_names
 
-        self.history = ObjectiveHistory(self.options, self.x_names)
+        self.history = ObjectiveHistory(self.options,
+                                        self.x_names,
+                                        self._call_mode_fun
+                                        if self.has_fun else None)
 
         self.pre_post_processor = PrePostProcessor()
 

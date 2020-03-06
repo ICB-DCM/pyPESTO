@@ -19,6 +19,8 @@ class HistoryTest(unittest.TestCase):
     lb: np.ndarray = None
 
     def check_history(self):
+        self.obj.history.options = self.obj.options
+
         self.problem = pypesto.Problem(self.obj, self.lb, self.ub)
 
         optimize_options = pypesto.OptimizeOptions(
@@ -35,24 +37,29 @@ class HistoryTest(unittest.TestCase):
         # disable trace from here on
         self.obj.options.trace_record = False
         for start in result.optimize_result.list:
-            # the max here is arbitrary, one of the two will be NaN and we
-            # want to select the other one
-            it_final = start['trace'][[('fval', np.NaN),
-                                       ('chi2', np.NaN)]].idxmin().max()
-            self.assertTrue(np.array_equal(
-                start['trace'].loc[0, 'x'].values, start['x0']
-            ))
-            self.assertTrue(np.array_equal(
-                start['trace'].loc[it_final, 'x'].values, start['x']
+            it_final = int(start['trace'][('fval', np.NaN)].idxmin())
+            it_start = int(np.where(np.logical_not(
+                np.isnan(start['trace']['fval'].values)
+            ))[0][0])
+            self.assertTrue(np.isclose(
+                start['trace']['x'].values[0, :], start['x0']
+            ).all())
+            self.assertTrue(np.isclose(
+                start['trace']['x'].values[it_final, :], start['x']
+            ).all())
+            self.assertTrue(np.isclose(
+                start['trace']['fval'].values[it_start, 0], start['fval0']
             ))
 
             funs = {
                 'fval': self.obj.get_fval,
                 'grad': self.obj.get_grad,
                 'hess': self.obj.get_hess,
+                'res': self.obj.get_res,
+                'sres': self.obj.get_sres,
                 'chi2': lambda x: res_to_chi2(self.obj.get_res(x)),
                 'schi2': lambda x: sres_to_schi2(*self.obj(
-                    start['trace'].loc[it, 'x'].values,
+                    x,
                     (0, 1,),
                     pypesto.objective.constants.MODE_RES
                 ))
@@ -61,15 +68,21 @@ class HistoryTest(unittest.TestCase):
                 for it in range(5):
                     if var in ['fval', 'chi2']:
                         if not np.isnan(start['trace'].loc[it, (var, np.NaN)]):
-                            self.assertEqual(
-                                start['trace'].loc[it, (var, np.NaN)],
-                                fun(start['trace'].loc[it, 'x'].values)
-                            )
+                            self.assertTrue(np.isclose(
+                                start['trace'][var].values[it, 0],
+                                fun(start['trace']['x'].values[it, :])
+                            ))
+                    elif var in ['hess', 'sres', 'res']:
+                        if start['trace'].loc[it, (var, np.NaN)] is not None:
+                            self.assertTrue(np.isclose(
+                                start['trace'][var].values[it, 0],
+                                fun(start['trace']['x'].values[it, :])
+                            ).all())
                     elif self.obj.options[f'trace_record_{var}'] and not \
-                            np.isnan(start['trace'].loc[it, var].values).all():
+                            np.isnan(start['trace'][var].values[it, :]).all():
                         self.assertTrue(np.isclose(
-                            start['trace'].loc[it, var].values,
-                            fun(start['trace'].loc[it, 'x'].values)
+                            start['trace'][var].values[it, :],
+                            fun(start['trace']['x'].values[it, :])
                         ).all())
 
 
@@ -93,7 +106,6 @@ class ResModeHistoryTest(HistoryTest):
             trace_record_chi2=True,
             trace_record_schi2=False,
         )
-        self.obj.history.options = self.obj.options
 
         self.check_history()
 
@@ -103,7 +115,6 @@ class ResModeHistoryTest(HistoryTest):
             trace_record_chi2=True,
             trace_record_schi2=True,
         )
-        self.obj.history.options = self.obj.options
 
         self.check_history()
 
@@ -113,7 +124,6 @@ class ResModeHistoryTest(HistoryTest):
             trace_record_chi2=True,
             trace_record_schi2=False,
         )
-        self.obj.history.options = self.obj.options
 
         self.check_history()
 
@@ -122,7 +132,19 @@ class ResModeHistoryTest(HistoryTest):
             trace_record=True,
             trace_record_grad=True,
         )
-        self.obj.history.options = self.obj.options
+
+        self.check_history()
+
+    def test_trace_all(self):
+        self.obj.options = pypesto.objective.ObjectiveOptions(
+            trace_record=True,
+            trace_record_grad=True,
+            trace_record_hess=True,
+            trace_record_res=True,
+            trace_record_sres=True,
+            trace_record_chi2=True,
+            trace_record_schi2=True,
+        )
 
         self.check_history()
 
@@ -131,7 +153,7 @@ class FunModeHistoryTest(HistoryTest):
     @classmethod
     def setUpClass(cls):
         cls.optimizer = pypesto.ScipyOptimizer(
-            method='L-BFGS-B',
+            method='trust-exact',
             options={'maxiter': 100}
         )
 
@@ -149,7 +171,6 @@ class FunModeHistoryTest(HistoryTest):
             trace_record_grad=True,
             trace_record_hess=False,
         )
-        self.obj.history.options = self.obj.options
 
         self.check_history()
 
@@ -164,11 +185,10 @@ class FunModeHistoryTest(HistoryTest):
             trace_record_grad=True,
             trace_record_hess=False,
         )
-        self.obj.history.options = self.obj.options
 
         self.check_history()
 
-    def test_trace_chi2(self):
+    def test_trace_all(self):
         self.obj = rosen_for_sensi(
             max_sensi_order=2,
             integrated=True
@@ -176,9 +196,13 @@ class FunModeHistoryTest(HistoryTest):
 
         self.obj.options = pypesto.objective.ObjectiveOptions(
             trace_record=True,
+            trace_record_grad=True,
+            trace_record_hess=True,
+            trace_record_res=True,
+            trace_record_sres=True,
             trace_record_chi2=True,
+            trace_record_schi2=True,
         )
-        self.obj.history.options = self.obj.options
 
         self.check_history()
 

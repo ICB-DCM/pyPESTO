@@ -1,14 +1,14 @@
 import numpy as np
 import pandas as pd
-import itertools as itt
+import copy
 import time
 import os
 
 from .constants import MODE_FUN, MODE_RES, FVAL, GRAD, HESS, RES, SRES
-from .util import res_to_chi2, sres_to_schi2
+from .util import res_to_chi2, sres_to_schi2, sres_to_fim
 from .options import ObjectiveOptions
 
-from typing import List, Union, Optional, Dict, Tuple
+from typing import List, Union, Optional, Dict, Tuple, Callable
 ResultType = Dict[str, Union[float, np.ndarray]]
 
 
@@ -48,11 +48,18 @@ class ObjectiveHistory:
     index:
         Id identifying the history object when called in a multistart
         setting.
+
+    fval2chi2_offset:
+        conversion constant to convert chi2 values to fvals
+
+    obj:
+        _call_mode_fun of the parent objective (if available)
     """
 
     def __init__(self,
                  options: Optional[ObjectiveOptions] = None,
-                 x_names: Optional[List[str]] = None) -> None:
+                 x_names: Optional[List[str]] = None,
+                 obj: Optional[Callable] = None) -> None:
 
         if options is None:
             options = ObjectiveOptions()
@@ -65,7 +72,8 @@ class ObjectiveHistory:
         self.n_res: Union[int, None] = None
         self.n_sres: Union[int, None] = None
 
-        self.trace: Union[List[pd.Dataframe], None] = None
+        self.trace: pd.Dataframe = None
+
         self.start_time: Union[float, None] = None
 
         self.fval_min: Union[float, None] = None
@@ -75,7 +83,28 @@ class ObjectiveHistory:
 
         self.index: Union[str, None] = None
 
+        self.fval2chi2_offset: Union[float, None] = None
+
+        self.obj: Callable = obj
+
         self.reset()
+
+    def __deepcopy__(self, memodict=None):
+        """
+        Custom deepcopy routine to avoid infinite recursion when copying
+        self.obj
+        """
+
+        other = ObjectiveHistory(
+            copy.deepcopy(self.options),
+            copy.deepcopy(self.x_names),
+            self.obj
+        )
+
+        for attr in self.__dict__:
+            if attr not in ['obj', 'options', 'x_names']:
+                other.__dict__[attr] = copy.deepcopy(self.__dict__[attr])
+        return other
 
     def reset(self, index: str = None) -> None:
         """
@@ -152,6 +181,18 @@ class ObjectiveHistory:
             if 1 in sensi_orders:
                 self.n_sres += 1
 
+    def _fval2chi2_offset(self, x: np.ndarray, chi2: float):
+        """
+        Initialize the trace.
+        """
+        if self.fval2chi2_offset is None:
+            if self.obj is not None:
+                self.fval2chi2_offset = self.obj(x, (0,))[FVAL] - chi2
+            else:
+                self.fval2chi2_offset = 0.0
+
+        return self.fval2chi2_offset
+
     def _init_trace(self, x: np.ndarray):
         """
         Initialize the trace.
@@ -162,7 +203,7 @@ class ObjectiveHistory:
         columns: List[Tuple] = [
             (c, np.NaN) for c in [
                 'time', 'n_fval', 'n_grad', 'n_hess', 'n_res', 'n_sres',
-                'fval', 'chi2', 'res', 'sres',
+                'fval', 'chi2', 'res', 'sres', 'hess',
             ]
         ]
 
@@ -179,6 +220,22 @@ class ObjectiveHistory:
 
         self.trace = pd.DataFrame(columns=pd.MultiIndex.from_tuples(columns),
                                   dtype='float64')
+
+        # only non-float64
+        trace_dtypes = {
+            'res': 'object',
+            'sres': 'object',
+            'hess': 'object',
+            'n_fval': 'int64',
+            'n_grad': 'int64',
+            'n_hess': 'int64',
+            'n_res': 'int64',
+            'n_sres': 'int64',
+        }
+
+        for var, dtype in trace_dtypes.items():
+            self.trace[(var, np.NaN)] = \
+                self.trace[(var, np.NaN)].astype(dtype)
 
     def _update_trace(self,
                       x: np.ndarray,
@@ -198,8 +255,8 @@ class ObjectiveHistory:
 
         # extract function values
         if mode == MODE_FUN:
-            fval = None if 0 not in sensi_orders \
-                else result.get(FVAL, None)
+            fval = np.NaN if 0 not in sensi_orders \
+                else result.get(FVAL, np.NaN)
             grad = None if not self.options.trace_record_grad \
                 or 1 not in sensi_orders \
                 else result.get(GRAD, None)
@@ -208,43 +265,51 @@ class ObjectiveHistory:
                 else result.get(HESS, None)
             res = None
             sres = None
-            chi2 = None
+            chi2 = np.NaN
             schi2 = None
         else:  # mode == MODE_RES
-            fval = None
-            grad = None
-            hess = None
             res_result = result.get(RES, None)
             sres_result = result.get(SRES, None)
+            chi2 = np.NaN if not self.options.trace_record_chi2 \
+                or 0 not in sensi_orders \
+                else res_to_chi2(res_result)
+            schi2 = None if not self.options.trace_record_schi2 \
+                or 1 not in sensi_orders \
+                else sres_to_schi2(res_result, sres_result)
+            chi2_offset = self._fval2chi2_offset(x, chi2)
+            fval = np.NaN if 0 not in sensi_orders \
+                else chi2 + chi2_offset
+            grad = None if not self.options.trace_record_grad \
+                or 1 not in sensi_orders \
+                else schi2
+            hess = None if not self.options.trace_record_hess \
+                or 1 not in sensi_orders \
+                else sres_to_fim(sres_result)
             res = None if not self.options.trace_record_res \
                 or 0 not in sensi_orders \
                 else res_result
             sres = None if not self.options.trace_record_sres \
                 or 1 not in sensi_orders \
                 else sres_result
-            chi2 = None if not self.options.trace_record_chi2 \
-                or 0 not in sensi_orders \
-                else res_to_chi2(res_result)
-            schi2 = None if not self.options.trace_record_schi2 \
-                or 1 not in sensi_orders \
-                else sres_to_schi2(res_result, sres_result)
 
         # check whether to append to trace
-        if not self.options.trace_all and fval >= self.fval_min:
+        if not self.options.trace_all and not fval < self.fval_min:
             return
 
         used_time = time.time() - self.start_time
 
         # create table row
-        index = len(self.trace)
-        self.trace.append(pd.Series(name=index, dtype='float64'))
+        row = pd.Series(name=len(self.trace),
+                        index=self.trace.columns,
+                        dtype='object')
 
         values = {
             'time': used_time,
             'n_fval': self.n_fval,
             'n_grad': self.n_grad,
             'n_hess': self.n_hess,
-            'n_res': self.n_sres,
+            'n_res': self.n_res,
+            'n_sres': self.n_sres,
             'fval': fval,
             'res': res,
             'sres': sres,
@@ -252,15 +317,17 @@ class ObjectiveHistory:
             'hess': hess,
         }
         for var, val in values.items():
-            self.trace.loc[index, var] = val
+            row[(var, np.NaN)] = val
 
         for var, val in {'x': x, 'grad': grad, 'schi2': schi2}.items():
             if var == 'x' or self.options[f'trace_record_{var}']:
                 for ix, x_name in enumerate(self.x_names):
-                    self.trace.loc[index, (var, x_name)] = val[ix] \
+                    row[(var, x_name)] = val[ix] \
                         if val is not None else np.NaN
             else:
-                self.trace.loc[index, var] = None
+                row[(var, np.NaN)] = None
+
+        self.trace = self.trace.append(row)
 
         # save trace to file
         self._save_trace()
@@ -281,7 +348,12 @@ class ObjectiveHistory:
             if self.index is not None:
                 filename = filename.replace("{index}", str(self.index))
             # save
-            self.trace.to_csv(filename)
+            trace_copy = copy.deepcopy(self.trace)
+            for field in [('hess', np.NaN), ('res', np.NaN), ('sres', np.NaN)]:
+                trace_copy[field] = trace_copy[field].apply(
+                    ndarray2string_full
+                )
+            trace_copy.to_csv(filename)
 
     def _update_vals(self,
                      x: np.ndarray,
@@ -299,7 +371,9 @@ class ObjectiveHistory:
                 self.fval0 = result[FVAL]
                 self.x0 = x
             else:  # mode == MODE_RES:
-                self.fval0 = res_to_chi2(result[RES])
+                chi2 = res_to_chi2(result[RES])
+                chi2_offset = self._fval2chi2_offset(x, chi2)
+                self.fval0 = chi2 + chi2_offset
                 self.x0 = x
 
         # update best point
@@ -308,7 +382,16 @@ class ObjectiveHistory:
             if mode == MODE_FUN:
                 fval = result[FVAL]
             else:  # mode == MODE_RES:
-                fval = res_to_chi2(result[RES])
+                chi2 = res_to_chi2(result[RES])
+                chi2_offset = self._fval2chi2_offset(x, chi2)
+                fval = chi2 + chi2_offset
         if fval < self.fval_min:
             self.fval_min = fval
             self.x_min = x
+
+
+def ndarray2string_full(x):
+    if x is None:
+        return None
+    return np.array2string(x, threshold=len(x), precision=16,
+                           max_line_width=np.inf)
