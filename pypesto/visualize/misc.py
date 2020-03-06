@@ -3,6 +3,7 @@ import warnings
 from .clust_color import assign_colors
 from .clust_color import assign_colors_for_result_list
 
+from typing import Optional
 
 def process_result_list(results, colors=None, legends=None):
     """
@@ -79,7 +80,9 @@ def process_result_list(results, colors=None, legends=None):
     return results, colors, legends
 
 
-def process_offset_y(offset_y, scale_y, min_val):
+def process_offset_y(offset_y: Optional[float],
+                     scale_y: str,
+                     min_val: float) -> float:
     """
     compute offset for y-axis, depend on user settings
 
@@ -90,7 +93,7 @@ def process_offset_y(offset_y, scale_y, min_val):
        value for offsetting the later plotted values, in order to ensure
        positivity if a semilog-plot is used
 
-    min_val: float
+    scale_y: float
        Can be 'lin' or 'log10', specifying whether values should be plotted
        on linear or on log10-scale
 

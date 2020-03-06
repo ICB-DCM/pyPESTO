@@ -154,7 +154,7 @@ def parameters_lowlevel(xs, fvals, lb=None, ub=None, x_labels=None,
 
     if size is None:
         # 0.5 inch height per parameter
-        size = (18.5, xs.shape[1] / 2)
+        size = (18.5, max(xs.shape[1], 1) / 2)
 
     if ax is None:
         ax = plt.subplots()[1]

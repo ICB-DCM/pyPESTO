@@ -1,12 +1,15 @@
 import matplotlib.pyplot as plt
 from matplotlib.ticker import MaxNLocator
 import numpy as np
-from .reference_points import create_references
+from .reference_points import create_references, ReferencePoint
 from .clust_color import assign_colors
 from .misc import process_result_list
 from .misc import process_y_limits
 from .misc import process_offset_y
 
+from typing import List, Optional, Tuple, Union, Iterable
+
+from pypesto import Result
 
 def optimizer_history(results,
                       ax=None,
@@ -80,6 +83,8 @@ def optimizer_history(results,
     ax: matplotlib.Axes
         The plot axes.
     """
+    if isinstance(start_indices, int):
+        start_indices = list(range(start_indices))
 
     # parse input
     (results, colors, legends) = process_result_list(results, colors, legends)
@@ -208,7 +213,9 @@ def optimizer_history_lowlevel(vals, scale_y='log10', colors=None, ax=None,
     return ax
 
 
-def get_trace(result, trace_x, trace_y):
+def get_trace(result: Result,
+              trace_x: Optional[str],
+              trace_y: Optional[str]) -> Tuple[str, str, List[np.ndarray]]:
     """
     Get the values of the optimizer trace from the pypesto.Result object
 
@@ -231,34 +238,23 @@ def get_trace(result, trace_x, trace_y):
     Returns
     -------
 
-    ax: matplotlib.Axes
-        The plot axes.
+    vals:
+        list of
 
-    x_label: str
+    x_label:
         label for x-axis to be plotted later
 
-    y_label: str
+    y_label:
         label for y-axis to be plotted later
     """
 
     # get data frames
     traces = result.optimize_result.get_for_key('trace')
     vals = []
+    x_label = ''
+    y_label = ''
 
     for trace in traces:
-        # SciPy optimizers seem to save more steps than actually taken: prune
-        indices = np.argwhere(np.isfinite(np.array(trace['fval'])))
-        indices = indices.flatten()
-        indices.astype(int)
-
-        # retrieve values from dataframe
-        if trace_x == 'time':
-            x_vals = np.array(trace['time'][indices])
-            x_label = 'Computation time [s]'
-
-        else:  # trace_x == 'steps':
-            x_vals = np.array(list(range(len(indices))))
-            x_label = 'Optimizer steps'
 
         if trace_y == 'gradnorm':
             # retrieve gradient trace, if saved
@@ -267,23 +263,43 @@ def get_trace(result, trace_x, trace_y):
                        "The pypesto.result object does not contain "
                        "a gradient trace")
 
-            # Get gradient trace, prune Nones, compute norm
-            tmp_grad_trace = list(trace['grad'].values)
-            y_vals = np.array([np.linalg.norm(grad) for grad in
-                               tmp_grad_trace if grad is not None])
+            indices = np.argwhere(np.isfinite(
+                trace['grad'].values
+            ).all(axis=1))
+            indices = indices.flatten()
+
+            # Get gradient trace, compute norm
+            y_vals = np.linalg.norm(trace['grad'].values[indices, :], axis=1)
             y_label = 'gradient norm'
 
         else:  # trace_y == 'fval':
+            indices = np.argwhere(np.isfinite(trace['fval'].values[:, 0]))
+            indices = indices.flatten()
+
             y_label = 'objective value'
-            y_vals = np.array(trace['fval'][indices])
+            y_vals = trace['fval'].values[indices, 0]
+
+        # retrieve values from dataframe
+        if trace_x == 'time':
+            x_vals = trace['time'].values[indices, 0]
+            x_label = 'Computation time [s]'
+
+        else:  # trace_x == 'steps':
+            x_vals = np.array(list(range(len(indices))))
+            x_label = 'Optimizer steps'
 
         # write down values
-        vals.append(np.array([x_vals, y_vals]))
+        vals.append(np.vstack([x_vals, y_vals]))
 
     return x_label, y_label, vals
 
 
-def get_vals(vals, scale_y, offset_y, y_label, start_indices):
+def get_vals(vals: List[np.ndarray],
+             scale_y: Optional[str],
+             offset_y: float,
+             y_label: str,
+             start_indices: Iterable[int]) -> Tuple[List[np.ndarray], float,
+                                                    str]:
     """
     Postprocesses the values of the optimization history, depending on the
     options set by the user (e.g. scale_y, offset_y, start_indices)
@@ -303,15 +319,14 @@ def get_vals(vals, scale_y, offset_y, y_label, start_indices):
     y_label: str
         Label for y axis
 
-    start_indices: list or int
-        list of integers specifying the multi start indices to be plotted or
-        int specifying up to which start index trajectories should be plotted
+    start_indices:
+        list of integers specifying the multi start indices to be plotted
 
     Returns
     -------
 
     vals: list
-        list of numpy arrays of size 2 x len(start_indices)
+        list of numpy arrays
 
     offset_y:
         offset for the y-axis, if this is supposed to be in log10-scale
@@ -326,8 +341,6 @@ def get_vals(vals, scale_y, offset_y, y_label, start_indices):
     else:
         # check whether list or maximum value
         start_indices = np.array(start_indices)
-        if start_indices.size == 1:
-            start_indices = np.array(range(start_indices))
 
         # check, whether index set is not too big
         existing_indices = np.array(range(len(vals)))
@@ -356,7 +369,11 @@ def get_vals(vals, scale_y, offset_y, y_label, start_indices):
     return vals, offset_y, y_label
 
 
-def handle_options(ax, vals, ref, y_limits, offset_y):
+def handle_options(ax: plt.Axes,
+                   vals: List[np.ndarray],
+                   ref: List[ReferencePoint],
+                   y_limits: Union[float, np.ndarray],
+                   offset_y: float):
     """
     Get the limits for the y-axis, plots the reference points, will do
     more at a later time point. This function is there to apply whatever
@@ -365,17 +382,17 @@ def handle_options(ax, vals, ref, y_limits, offset_y):
     Parameters
     ----------
 
-    ref: list, optional
+    ref:
         List of reference points for optimization results, containing et
         least a function value fval
 
-    vals: list
+    vals:
         list of numpy arrays of size 2 x number of values
 
-    ax: matplotlib.Axes, optional
+    ax:
         Axes object to use.
 
-    y_limits: float or ndarray, optional
+    y_limits:
         maximum value to be plotted on the y-axis, or y-limits
 
     offset_y:
