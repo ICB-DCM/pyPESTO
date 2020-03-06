@@ -11,6 +11,7 @@ from typing import List, Optional, Tuple, Union, Iterable
 
 from pypesto import Result
 
+
 def optimizer_history(results,
                       ax=None,
                       size=(18.5, 10.5),

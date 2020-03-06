@@ -10,6 +10,7 @@ from .misc import process_offset_y
 from pypesto import Result
 from typing import Iterable, Optional
 
+
 def waterfall(results,
               ax=None,
               size=(18.5, 10.5),

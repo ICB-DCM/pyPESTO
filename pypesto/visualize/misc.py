@@ -5,6 +5,7 @@ from .clust_color import assign_colors_for_result_list
 
 from typing import Optional
 
+
 def process_result_list(results, colors=None, legends=None):
     """
     assigns colors and legends to a list of results, chekc user provided lists
