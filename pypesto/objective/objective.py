@@ -138,11 +138,11 @@ class Objective:
             options = ObjectiveOptions()
         self.options = ObjectiveOptions.assert_instance(options)
 
-        self.x_names = x_names
-
-        self.history = ObjectiveHistory(self.options, self.x_names)
+        self.history = ObjectiveHistory(self.options)
 
         self.pre_post_processor = PrePostProcessor()
+
+        self.x_names = x_names
 
     def __deepcopy__(self, memodict=None):
         other = Objective()
