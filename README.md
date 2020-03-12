@@ -19,7 +19,7 @@ pyPESTO features include:
 * Profile computation
 * Result visualization
 * Interface to [AMICI](https://github.com/ICB-DCM/AMICI/) for efficient simulation and sensitivity analysis of ordinary differential equation (ODE) models
-* Parameter estimation pipeline for systems biology problems specified in [SBML](http://sbml.org/) and [PEtab](https://github.com/ICB-DCM/PEtab)
+* Parameter estimation pipeline for systems biology problems specified in [SBML](http://sbml.org/) and [PEtab](https://github.com/PEtab-dev/PEtab)
 
 ## Quick install
 
