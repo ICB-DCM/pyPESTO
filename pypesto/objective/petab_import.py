@@ -1,4 +1,3 @@
-import numpy as np
 import pandas as pd
 import os
 import sys
@@ -11,18 +10,16 @@ from warnings import warn
 from typing import List, Union
 
 import petab
-from amici.petab_import import import_model
-from amici.petab_objective import edatas_from_petab, rdatas_to_measurement_df
 
 from ..problem import Problem
 from .amici_objective import AmiciObjective
-from .constants import FVAL, GRAD, RDATAS
 
 try:
     import amici
     import amici.petab_import
+    import amici.petab_objective
 except ImportError:
-    amici = None
+    pass
 
 
 logger = logging.getLogger(__name__)
@@ -192,12 +189,13 @@ class PetabImporter:
         if os.path.exists(self.output_folder):
             shutil.rmtree(self.output_folder)
 
-        import_model(sbml_model=self.petab_problem.sbml_model,
-                     condition_table=self.petab_problem.condition_df,
-                     observable_table=self.petab_problem.observable_df,
-                     model_name=self.model_name,
-                     model_output_dir=self.output_folder,
-                     **kwargs)
+        amici.petab_import.import_model(
+            sbml_model=self.petab_problem.sbml_model,
+            condition_table=self.petab_problem.condition_df,
+            observable_table=self.petab_problem.observable_df,
+            model_name=self.model_name,
+            model_output_dir=self.output_folder,
+            **kwargs)
 
     def create_solver(self, model=None):
         """
@@ -219,16 +217,10 @@ class PetabImporter:
         if model is None:
             model = self.create_model()
 
-        problem_parameters = {key: val for key, val in zip(
-            self.petab_problem.x_ids,
-            self.petab_problem.x_nominal_scaled)}
-
-        return edatas_from_petab(
-            model=model,
+        return amici.petab_objective.create_edatas(
+            amici_model=model,
             petab_problem=self.petab_problem,
-            problem_parameters=problem_parameters,
-            simulation_conditions=simulation_conditions,
-            scaled_parameters=True)
+            simulation_conditions=simulation_conditions)
 
     def create_objective(self,
                          model=None,
@@ -238,11 +230,9 @@ class PetabImporter:
         """
         Create a pypesto.PetabAmiciObjective.
         """
-        problem = self.petab_problem
-
         # get simulation conditions
         simulation_conditions = petab.get_simulation_conditions(
-            problem.measurement_df)
+            self.petab_problem.measurement_df)
 
         # create model
         if model is None:
@@ -256,35 +246,32 @@ class PetabImporter:
                 model=model,
                 simulation_conditions=simulation_conditions)
 
-        # simulation <-> optimization parameter mapping
-        par_opt_ids = problem.x_ids
+        parameter_mapping = amici.petab_objective.create_parameter_mapping(
+            petab_problem=self.petab_problem,
+            simulation_conditions=simulation_conditions,
+            scaled_parameters=True,
+            amici_model=model)
 
-        mappings = \
-            problem.get_optimization_to_simulation_parameter_mapping(
-                warn_unmapped=False, scaled_parameters=True)
+        par_ids = self.petab_problem.x_ids
 
-        parameter_mapping = [(mapping[0], mapping[1]) for mapping in mappings]
-        scale_mapping = [(mapping[2], mapping[3]) for mapping in mappings]
-
-        # unify and check preeq and sim mappings
-        parameter_mapping, scale_mapping = petab.merge_preeq_and_sim_pars(
-            parameter_mapping, scale_mapping)
-
-        # simulation ids (for correct order)
-        par_sim_ids = list(model.getParameterIds())
-
-        # create lists from dicts in correct order
-        parameter_mapping = _mapping_to_list(parameter_mapping, par_sim_ids)
-        scale_mapping = _mapping_to_list(scale_mapping, par_sim_ids)
+        # fill in dummy parameters (this is needed since some objective
+        #  initialization e.g. checks for preeq parameters
+        problem_parameters = {key: val for key, val in zip(
+            self.petab_problem.x_ids,
+            self.petab_problem.x_nominal_scaled)}
+        amici.petab_objective.fill_in_parameters(
+            edatas=edatas,
+            problem_parameters=problem_parameters,
+            scaled_parameters=True,
+            parameter_mapping=parameter_mapping,
+            amici_model=model)
 
         # create objective
         obj = PetabAmiciObjective(
             petab_importer=self,
             amici_model=model, amici_solver=solver, edatas=edatas,
-            x_ids=par_opt_ids, x_names=par_opt_ids,
-            mapping_par_opt_to_par_sim=parameter_mapping,
-            mapping_scale_opt_to_scale_sim=scale_mapping
-        )
+            x_ids=par_ids, x_names=par_ids,
+            parameter_mapping=parameter_mapping)
 
         return obj
 
@@ -324,7 +311,8 @@ class PetabImporter:
 
         measurement_df = self.petab_problem.measurement_df
 
-        return rdatas_to_measurement_df(rdatas, model, measurement_df)
+        return amici.petab_objective.rdatas_to_measurement_df(
+            rdatas, model, measurement_df)
 
 
 def _find_output_folder_name(petab_problem: petab.Problem):
@@ -410,55 +398,14 @@ class PetabAmiciObjective(AmiciObjective):
             petab_importer,
             amici_model, amici_solver, edatas,
             x_ids, x_names,
-            mapping_par_opt_to_par_sim,
-            mapping_scale_opt_to_scale_sim,
-            use_amici_petab_simulate: bool = False):
-
+            parameter_mapping):
         super().__init__(
             amici_model=amici_model,
             amici_solver=amici_solver,
             edatas=edatas,
             x_ids=x_ids, x_names=x_names,
-            mapping_par_opt_to_par_sim=mapping_par_opt_to_par_sim,
-            mapping_scale_opt_to_scale_sim=mapping_scale_opt_to_scale_sim)
-
+            parameter_mapping=parameter_mapping)
         self.petab_importer = petab_importer
-        self.use_amici_petab_simulate = use_amici_petab_simulate
-
-    def _call_amici(self, x, sensi_orders, mode):
-        """
-        Performs all mappings and function value calculations via
-        AMICI's `simulated_petab` function, if `use_amici_petab_simulate`.
-        """
-        if not self.use_amici_petab_simulate:
-            return super()._call_amici(x, sensi_orders, mode)
-
-        sensi_order = min(max(sensi_orders), 1)
-
-        x_dct = self.par_arr_to_dct(x)
-        self.amici_solver.setSensitivityOrder(sensi_order)
-        ret = amici.petab_objective.simulate_petab(
-            petab_problem=self.petab_importer.petab_problem,
-            amici_model=self.amici_model,
-            solver=self.amici_solver,
-            problem_parameters=x_dct,
-            scaled_parameters=True)
-
-        nllh = - ret['llh']
-        snllh = - self.par_dct_to_arr(ret['sllh']) if sensi_order > 0 else None
-
-        return {
-            FVAL: nllh,
-            GRAD: snllh,
-            RDATAS: ret['rdatas']
-        }
-
-    def par_arr_to_dct(self, x):
-        return {_id: val for _id, val in zip(self.x_ids, x)}
-
-    def par_dct_to_arr(self, x_dct):
-        return np.array([x_dct[_id] if _id in x_dct else np.nan
-                         for _id in self.x_ids])
 
     def __getstate__(self):
         state = {}
