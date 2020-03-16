@@ -35,7 +35,7 @@ class PetabImportTest(unittest.TestCase):
             self.petab_importers.append(importer)
 
             # check model
-            model = importer.create_model(force_compile=True)
+            model = importer.create_model(force_compile=False)
 
             # observable ids
             model_obs_ids = list(model.getObservableIds())
