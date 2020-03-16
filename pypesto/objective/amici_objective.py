@@ -2,11 +2,12 @@ import numpy as np
 import copy
 import logging
 import numbers
-from typing import List
+from typing import Dict, List, Tuple, Union
 from collections import OrderedDict
 
 from .objective import Objective
 from .constants import MODE_FUN, MODE_RES, FVAL, GRAD, HESS, RES, SRES, RDATAS
+from .options import ObjectiveOptions
 
 try:
     import amici
@@ -23,62 +24,51 @@ class AmiciObjective(Objective):
     """
 
     def __init__(self,
-                 amici_model, amici_solver, edatas,
-                 max_sensi_order=None,
-                 x_ids=None, x_names=None,
-                 parameter_mapping=None,
-                 guess_steadystate=True,
-                 n_threads=1,
-                 options=None):
+                 amici_model: amici.Model,
+                 amici_solver: amici.Solver,
+                 edatas: Union[List[amici.ExpData], amici.ExpData],
+                 max_sensi_order: int = None,
+                 x_ids: List[str] = None,
+                 x_names: List[str] = None,
+                 parameter_mapping: List[Tuple] = None,
+                 guess_steadystate: bool = True,
+                 n_threads: int = 1,
+                 options: ObjectiveOptions = None):
         """
         Constructor.
 
         Parameters
         ----------
 
-        amici_model: amici.Model
+        amici_model:
             The amici model.
-
-        amici_solver: amici.Solver
+        amici_solver:
             The solver to use for the numeric integration of the model.
-
-        edatas: amici.ExpData or list of amici.ExpData
+        edatas:
             The experimental data. If a list is passed, its entries correspond
             to multiple experimental conditions.
-
-        max_sensi_order: int, optional
+        max_sensi_order:
             Maximum sensitivity order supported by the model. Defaults to 2 if
             the model was compiled with o2mode, otherwise 1.
-
-        x_ids: list of str, optional
+        x_ids:
             Ids of optimization parameters. In the simplest case, this will be
             the AMICI model parameters (default).
-
-        x_names: list of str, optional
-            See ``Objective.x_names``.
-
-        parameter_mapping: optional
-            Mapping of optimization parameters to model parameters. List array
-            of size n_simulation_parameters * n_conditions.
+        x_names:
+            Names of optimization parameters.
+        parameter_mapping:
+            Mapping of optimization parameters to model parameters. Format
+            as created by `amici.petab_objective.create_parameter_mapping`.
             The default is just to assume that optimization and simulation
-            parameters coincide. The default is to assume equality of both.
-
-        mapping_scale_opt_to_scale_sim: optional
-            Mapping of optimization parameter scales to simulation parameter
-            scales. The default is to just use the scales specified in the
-            `amici_model` already.
-
-        guess_steadystate: bool, optional (default = True)
+            parameters coincide.
+        guess_steadystate:
             Whether to guess steadystates based on previous steadystates and
             respective derivatives. This option may lead to unexpected
             results for models with conservation laws and should accordingly
             be deactivated for those models.
-
-        n_threads: int, optional (default = 1)
+        n_threads:
             Number of threads that are used for parallelization over
             experimental conditions. If amici was not installed with openMP
             support this option will have no effect.
-
         options: pypesto.ObjectiveOptions, optional
             Further options.
         """
@@ -311,7 +301,7 @@ class AmiciObjective(Objective):
                         coefficient=-1.0
                     )
                     if sensi_method == 1:
-                        # TODO: Compute the full Hessian, and check here
+                        # TODO Compute the full Hessian, and check here
                         add_sim_hess_to_opt_hess(
                             self.x_ids,
                             par_sim_ids,
@@ -351,14 +341,12 @@ class AmiciObjective(Objective):
             RDATAS: rdatas
         }
 
-    def par_arr_to_dct(self, x):
+    def par_arr_to_dct(self, x: List[float]) -> Dict[str, float]:
+        """Create dict from parameter vector."""
         return OrderedDict(zip(self.x_ids, x))
 
-    def par_dct_to_arr(self, x_dct):
-        return np.array([x_dct[_id] if _id in x_dct else np.nan
-                         for _id in self.x_ids])
-
     def get_error_output(self, rdatas):
+        """Default output upon error."""
         if not self.amici_model.nt():
             nt = sum([data.nt() for data in self.edatas])
         else:
@@ -406,10 +394,8 @@ class AmiciObjective(Objective):
         steadystate_guesses if steadystate guesses are enabled for this
         condition
         """
-
         if condition_ix not in self.steadystate_guesses['data']:
             return
-
         preeq_guesses = self.steadystate_guesses['data'][condition_ix]
 
         # update parameter
@@ -423,9 +409,7 @@ class AmiciObjective(Objective):
         preeq_guesses['sx_ss'] = rdata['sx_ss']
 
     def reset_steadystate_guesses(self):
-        """
-        Resets all steadystate guess data
-        """
+        """Resets all steadystate guess data"""
         if not self.guess_steadystate:
             return
 
@@ -435,9 +419,7 @@ class AmiciObjective(Objective):
 
 
 def log_simulation(data_ix, rdata):
-    """
-    Log the simulation results.
-    """
+    """Log the simulation results."""
     logger.debug(f"=== DATASET {data_ix} ===")
     logger.debug(f"status: {rdata['status']}")
     logger.debug(f"llh: {rdata['llh']}")
@@ -450,23 +432,23 @@ def log_simulation(data_ix, rdata):
 
 
 def map_par_opt_to_par_sim(
-        condition_map_sim_var, x_dct, amici_model
+        condition_map_sim_var: Dict[str, Union[float, str]],
+        x_dct: Dict[str, float],
+        amici_model: amici.Model
 ) -> np.ndarray:
     """
-    From the optimization vector `x`, create the simulation vector according
-    to the mapping `mapping`.
+    From the optimization vector, create the simulation vector according
+    to the mapping.
 
     Parameters
     ----------
 
-    condition_map_sim_var: array-like of str
-        len == n_par_sim, the entries are either numeric, or
-        optimization parameter ids.
-    par_opt_ids: array-like of str
-        The optimization parameter ids. This vector is needed to know the
-        order of the entries in x.
-    x_dct: array-like of float
-        The optimization parameters vector.
+    condition_map_sim_var:
+        Simulation to optimization parameter mapping.
+    x_dct:
+        The optimization parameters dict.
+    amici_model:
+        The amici model.
 
     Returns
     -------
@@ -542,12 +524,13 @@ def create_identity_parameter_mapping(
     return parameter_mapping
 
 
-def add_sim_grad_to_opt_grad(par_opt_ids,
-                             par_sim_ids,
-                             condition_map_sim_var,
-                             sim_grad,
-                             opt_grad,
-                             coefficient: float = 1.0):
+def add_sim_grad_to_opt_grad(
+        par_opt_ids: List[str],
+        par_sim_ids: List[str],
+        condition_map_sim_var: Dict[str, Union[float, str]],
+        sim_grad: np.ndarray,
+        opt_grad: np.ndarray,
+        coefficient: float = 1.0):
     """
     Sum simulation gradients to objective gradient according to the provided
     mapping `mapping_par_opt_to_par_sim`.
@@ -555,18 +538,18 @@ def add_sim_grad_to_opt_grad(par_opt_ids,
     Parameters
     ----------
 
-    par_opt_ids: array-like of str
-        The optimization parameter ids. This vector is needed to know the
-        order of the entries in x.
-    condition_map_sim_var: array-like of str
-        len == n_par_sim, the entries are either numeric, or
-        optimization parameter ids.
-    sim_grad: array-like of float
+    par_opt_ids:
+        The optimization parameter ids. Needed for order.
+    par_sim_ids:
+        The simulation parameter ids. Needed for order.
+    condition_map_sim_var:
+        The simulation to optimization parameter mapping.
+    sim_grad:
         Simulation gradient.
-    opt_grad: array-like of float
+    opt_grad:
         The optimization gradient. To which sim_grad is added.
-        Will be changed in place.
-    coefficient: float
+        Changed in-place.
+    coefficient:
         Coefficient for sim_grad when adding to opt_grad.
     """
     for par_sim, par_opt in condition_map_sim_var.items():
@@ -578,12 +561,13 @@ def add_sim_grad_to_opt_grad(par_opt_ids,
         opt_grad[par_opt_idx] += coefficient * sim_grad[par_sim_idx]
 
 
-def add_sim_hess_to_opt_hess(par_opt_ids,
-                             par_sim_ids,
-                             condition_map_sim_var,
-                             sim_hess,
-                             opt_hess,
-                             coefficient: float = 1.0):
+def add_sim_hess_to_opt_hess(
+        par_opt_ids: List[str],
+        par_sim_ids: List[str],
+        condition_map_sim_var: Dict[str, Union[float, str]],
+        sim_hess: np.ndarray,
+        opt_hess: np.ndarray,
+        coefficient: float = 1.0):
     """
     Sum simulation hessians to objective hessian according to the provided
     mapping `mapping_par_opt_to_par_sim`.
@@ -611,20 +595,20 @@ def add_sim_hess_to_opt_hess(par_opt_ids,
                 coefficient * sim_hess[par_sim_idx, par_sim_idx_2]
 
 
-def sim_sres_to_opt_sres(par_opt_ids,
-                         par_sim_ids,
-                         condition_map_sim_var,
-                         sim_sres,
+def sim_sres_to_opt_sres(par_opt_ids: List[str],
+                         par_sim_ids: List[str],
+                         condition_map_sim_var: Dict[str, Union[float, str]],
+                         sim_sres: np.ndarray,
                          coefficient: float = 1.0):
     """
     Sum simulation residual sensitivities to objective residual sensitivities
-    according to the provided mapping `mapping_par_opt_to_par_sim`.
+    according to the provided mapping.
 
     Parameters
     ----------
 
-    Same as for add_sim_grad_to_opt_grad, replacing the gradients by residual
-    sensitivities.
+    Mostly the same as for add_sim_grad_to_opt_grad, replacing the gradients by
+    residual sensitivities.
     """
     opt_sres = np.zeros((sim_sres.shape[0], len(par_opt_ids)))
 
