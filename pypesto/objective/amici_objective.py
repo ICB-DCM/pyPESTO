@@ -18,6 +18,9 @@ except ImportError:
 logger = logging.getLogger(__name__)
 
 
+IDX_PAR_MAP_SIM_VAR: int = 2
+
+
 class AmiciObjective(Objective):
     """
     This class allows to create an objective directly from an amici model.
@@ -286,7 +289,8 @@ class AmiciObjective(Objective):
             if rdata['status'] < 0.0:
                 return self.get_error_output(rdatas)
 
-            condition_map_sim_var = self.parameter_mapping[data_ix][2]
+            condition_map_sim_var = \
+                self.parameter_mapping[data_ix][IDX_PAR_MAP_SIM_VAR]
 
             # compute objective
             if mode == MODE_FUN:
@@ -371,7 +375,7 @@ class AmiciObjective(Objective):
         approximation:
         x_ss(x') = x_ss(x) [+ dx_ss/dx(x)*(x'-x)]
         """
-        mapping = self.parameter_mapping[condition_ix][2]
+        mapping = self.parameter_mapping[condition_ix][IDX_PAR_MAP_SIM_VAR]
         x_sim = map_par_opt_to_par_sim(mapping, x_dct, self.amici_model)
         x_ss_guess = []  # resets initial state by default
         if condition_ix in self.steadystate_guesses['data']:
@@ -399,7 +403,8 @@ class AmiciObjective(Objective):
         preeq_guesses = self.steadystate_guesses['data'][condition_ix]
 
         # update parameter
-        condition_map_sim_var = self.parameter_mapping[condition_ix][2]
+        condition_map_sim_var = \
+            self.parameter_mapping[condition_ix][IDX_PAR_MAP_SIM_VAR]
         x_sim = map_par_opt_to_par_sim(
             condition_map_sim_var, x_dct, self.amici_model)
         preeq_guesses['x'] = x_sim
