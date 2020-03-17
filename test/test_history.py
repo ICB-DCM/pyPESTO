@@ -1,5 +1,5 @@
 """
-This is for testing optimization of the pypesto.Objective.
+This is for testing the pypesto.History.
 """
 
 
