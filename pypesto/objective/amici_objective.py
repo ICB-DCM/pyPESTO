@@ -18,15 +18,18 @@ except ImportError:
 logger = logging.getLogger(__name__)
 
 
+IDX_PAR_MAP_SIM_VAR: int = 2
+
+
 class AmiciObjective(Objective):
     """
     This class allows to create an objective directly from an amici model.
     """
 
     def __init__(self,
-                 amici_model: amici.Model,
-                 amici_solver: amici.Solver,
-                 edatas: Union[List[amici.ExpData], amici.ExpData],
+                 amici_model: 'amici.Model',
+                 amici_solver: 'amici.Solver',
+                 edatas: Union[List['amici.ExpData'], 'amici.ExpData'],
                  max_sensi_order: int = None,
                  x_ids: List[str] = None,
                  x_names: List[str] = None,
@@ -254,7 +257,7 @@ class AmiciObjective(Objective):
         x_dct = self.par_arr_to_dct(x)
 
         # fill in parameters
-        # TODO use plist to compute derivatives only for required parameters
+        # TODO (#226) use plist to compute only required derivatives
         amici.petab_objective.fill_in_parameters(
             edatas=self.edatas,
             problem_parameters=x_dct,
@@ -286,7 +289,8 @@ class AmiciObjective(Objective):
             if rdata['status'] < 0.0:
                 return self.get_error_output(rdatas)
 
-            condition_map_sim_var = self.parameter_mapping[data_ix][2]
+            condition_map_sim_var = \
+                self.parameter_mapping[data_ix][IDX_PAR_MAP_SIM_VAR]
 
             # compute objective
             if mode == MODE_FUN:
@@ -371,7 +375,7 @@ class AmiciObjective(Objective):
         approximation:
         x_ss(x') = x_ss(x) [+ dx_ss/dx(x)*(x'-x)]
         """
-        mapping = self.parameter_mapping[condition_ix][2]
+        mapping = self.parameter_mapping[condition_ix][IDX_PAR_MAP_SIM_VAR]
         x_sim = map_par_opt_to_par_sim(mapping, x_dct, self.amici_model)
         x_ss_guess = []  # resets initial state by default
         if condition_ix in self.steadystate_guesses['data']:
@@ -399,7 +403,8 @@ class AmiciObjective(Objective):
         preeq_guesses = self.steadystate_guesses['data'][condition_ix]
 
         # update parameter
-        condition_map_sim_var = self.parameter_mapping[condition_ix][2]
+        condition_map_sim_var = \
+            self.parameter_mapping[condition_ix][IDX_PAR_MAP_SIM_VAR]
         x_sim = map_par_opt_to_par_sim(
             condition_map_sim_var, x_dct, self.amici_model)
         preeq_guesses['x'] = x_sim
@@ -434,7 +439,7 @@ def log_simulation(data_ix, rdata):
 def map_par_opt_to_par_sim(
         condition_map_sim_var: Dict[str, Union[float, str]],
         x_dct: Dict[str, float],
-        amici_model: amici.Model
+        amici_model: 'amici.Model'
 ) -> np.ndarray:
     """
     From the optimization vector, create the simulation vector according
@@ -501,7 +506,8 @@ def create_plist_from_par_opt_to_par_sim(mapping_par_opt_to_par_sim):
 
 
 def create_identity_parameter_mapping(
-        x_ids: List[str], x_scales: List[int], n_conditions: int):
+        x_ids: List[str], x_scales: List[int], n_conditions: int
+) -> List[Tuple[Dict,Dict,Dict,Dict,Dict,Dict]]:
     """Create a dummy identity parameter mapping table."""
     parameter_mapping = []
     for _ in range(n_conditions):
@@ -583,8 +589,6 @@ def add_sim_hess_to_opt_hess(
         par_sim_idx = par_sim_ids.index(par_sim_id)
         par_opt_idx = par_opt_ids.index(par_opt_id)
 
-        # for second axis, plist was applied so we can skip over values with
-        # numeric mapping
         for par_sim_id_2, par_opt_id_2 in condition_map_sim_var.items():
             if not isinstance(par_opt_id_2, str):
                 continue

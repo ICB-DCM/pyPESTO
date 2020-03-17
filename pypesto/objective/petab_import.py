@@ -9,12 +9,11 @@ import tempfile
 from warnings import warn
 from typing import List, Union
 
-import petab
-
 from ..problem import Problem
 from .amici_objective import AmiciObjective
 
 try:
+    import petab
     import amici
     import amici.petab_import
     import amici.petab_objective
@@ -30,7 +29,7 @@ class PetabImporter:
     MODEL_BASE_DIR = "amici_models"
 
     def __init__(self,
-                 petab_problem: petab.Problem,
+                 petab_problem: 'petab.Problem',
                  output_folder: str = None,
                  model_name: str = None):
         """
@@ -97,7 +96,7 @@ class PetabImporter:
             model_name=model_name)
 
     def create_model(self, force_compile=False,
-                     *args, **kwargs) -> amici.Model:
+                     *args, **kwargs) -> 'amici.Model':
         """
         Import amici model. If necessary or force_compile is True, compile
         first.
@@ -138,7 +137,7 @@ class PetabImporter:
 
         return self._create_model()
 
-    def _create_model(self) -> amici.Model:
+    def _create_model(self) -> 'amici.Model':
         """
         No checks, no compilation, just load the model module and return
         the model.
@@ -208,8 +207,9 @@ class PetabImporter:
         solver = model.getSolver()
         return solver
 
-    def create_edatas(self, model: amici.Model = None,
-                      simulation_conditions=None) -> List[amici.ExpData]:
+    def create_edatas(self,
+                      model: 'amici.Model' = None,
+                      simulation_conditions=None) -> List['amici.ExpData']:
         """
         Create list of amici.ExpData objects.
         """
@@ -396,7 +396,9 @@ class PetabAmiciObjective(AmiciObjective):
     def __init__(
             self,
             petab_importer,
-            amici_model, amici_solver, edatas,
+            amici_model,
+            amici_solver,
+            edatas,
             x_ids, x_names,
             parameter_mapping):
         super().__init__(
