@@ -507,7 +507,7 @@ def create_plist_from_par_opt_to_par_sim(mapping_par_opt_to_par_sim):
 
 def create_identity_parameter_mapping(
         x_ids: List[str], x_scales: List[int], n_conditions: int
-) -> List[Tuple[Dict,Dict,Dict,Dict,Dict,Dict]]:
+) -> List[Tuple[Dict, Dict, Dict, Dict, Dict, Dict]]:
     """Create a dummy identity parameter mapping table."""
     parameter_mapping = []
     for _ in range(n_conditions):
