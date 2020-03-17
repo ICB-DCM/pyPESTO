@@ -90,15 +90,15 @@ def process_offset_y(offset_y: Optional[float],
     Parameters
     ----------
 
-    offset_y: float
+    offset_y:
        value for offsetting the later plotted values, in order to ensure
        positivity if a semilog-plot is used
 
-    scale_y: float
+    scale_y:
        Can be 'lin' or 'log10', specifying whether values should be plotted
        on linear or on log10-scale
 
-    min_val: float
+    min_val:
         Smallest value to be plotted
 
     Returns

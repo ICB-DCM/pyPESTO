@@ -295,11 +295,12 @@ def get_trace(result: Result,
     return x_label, y_label, vals
 
 
-def get_vals(vals: List[np.ndarray],
-             scale_y: Optional[str],
-             offset_y: float,
-             y_label: str,
-             start_indices: Iterable[int]
+def get_vals(
+    vals: List[np.ndarray],
+    scale_y: Optional[str],
+    offset_y: float,
+    y_label: str,
+    start_indices: Iterable[int]
 ) -> Tuple[List[np.ndarray], float, str]:
     """
     Postprocesses the values of the optimization history, depending on the

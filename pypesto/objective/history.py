@@ -19,7 +19,7 @@ class ObjectiveHistory:
     Parameters
     ------------
 
-    options: ObjectiveOptions, optional
+    options:
         Values needed for creating a history are extracted.
 
     Attributes
@@ -183,7 +183,8 @@ class ObjectiveHistory:
 
     def _fval2chi2_offset(self, x: np.ndarray, chi2: float):
         """
-        Initialize the trace.
+        Initializes the conversion factor between fval and chi2 values,
+        if possible.
         """
         if self.fval2chi2_offset is None:
             if self.obj is not None:
@@ -388,7 +389,21 @@ class ObjectiveHistory:
             self.x_min = x
 
 
-def ndarray2string_full(x):
+def ndarray2string_full(x: np.ndarray):
+    """
+    Helper function that converts numpy arrays to string with 16 digit
+    numerical precision and no truncation for large arrays
+
+    Parameters
+    ----------
+    x:
+        array to convert
+
+    Returns
+    -------
+    x:
+        array as string
+    """
     if x is None:
         return None
     return np.array2string(x, threshold=len(x), precision=16,
