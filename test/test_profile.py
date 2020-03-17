@@ -14,7 +14,7 @@ from pypesto.objective import Objective
 class ProfilerTest(unittest.TestCase):
 
     @classmethod
-    def setUpClass(cls):
+    def setUp(cls):
         cls.objective: Objective = test_objective.rosen_for_sensi(
             max_sensi_order=2, integrated=True
         )['obj']
