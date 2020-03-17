@@ -136,9 +136,8 @@ class AmiciObjective(Objective):
         # mapping of parameters
         if parameter_mapping is None:
             # use identity mapping for each condition
-            x_scales = list(self.amici_model.getParameterScale())
             parameter_mapping = create_identity_parameter_mapping(
-                x_ids, x_scales, len(edatas))
+                amici_model, len(edatas))
         self.parameter_mapping = parameter_mapping
 
         # preallocate guesses, construct a dict for every edata for which we
@@ -506,17 +505,25 @@ def create_plist_from_par_opt_to_par_sim(mapping_par_opt_to_par_sim):
 
 
 def create_identity_parameter_mapping(
-        x_ids: List[str], x_scales: List[int], n_conditions: int
-) -> List[Tuple[Dict,Dict,Dict,Dict,Dict,Dict]]:
+        amici_model: 'amici.Model', n_conditions: int
+) -> List[Tuple[Dict, Dict, Dict, Dict, Dict, Dict]]:
     """Create a dummy identity parameter mapping table."""
+    x_ids = list(amici_model.getParameterIds())
+    x_scales = list(amici_model.getParameterScale())
+    x_fixed_ids = list(amici_model.getFixedParameterIds())
+    x_fixed_vals = list(amici_model.getFixedParameters())
     parameter_mapping = []
     for _ in range(n_conditions):
         # assumes preeq parameters are filled in already in edatas, if needed
+        # TODO This could be done in a tidier manner
         condition_map_preeq_fix = {}
         condition_scale_map_preeq_fix = {}
-        # assumes fixed parameters are filled in already in edatas, if needed
-        condition_map_sim_fix = {}
-        condition_scale_map_sim_fix = {}
+        condition_map_sim_fix = {
+            x_id: x_val for x_id, x_val in zip(x_fixed_ids, x_fixed_vals)}
+        condition_scale_map_sim_fix = {
+            x_id: amici.petab_objective.amici_to_petab_scale(
+                amici.ParameterScaling_none)
+            for x_id in x_fixed_ids}
         condition_map_sim_var = {x_id: x_id for x_id in x_ids}
         condition_scale_map_sim_var = {
             x_id: amici.petab_objective.amici_to_petab_scale(x_scale)

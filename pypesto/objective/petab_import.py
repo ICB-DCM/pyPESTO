@@ -255,7 +255,7 @@ class PetabImporter:
         par_ids = self.petab_problem.x_ids
 
         # fill in dummy parameters (this is needed since some objective
-        #  initialization e.g. checks for preeq parameters
+        #  initialization e.g. checks for preeq parameters)
         problem_parameters = {key: val for key, val in zip(
             self.petab_problem.x_ids,
             self.petab_problem.x_nominal_scaled)}
@@ -315,7 +315,7 @@ class PetabImporter:
             rdatas, model, measurement_df)
 
 
-def _find_output_folder_name(petab_problem: petab.Problem):
+def _find_output_folder_name(petab_problem: 'petab.Problem'):
     """
     Find a name for storing the compiled amici model in. If available,
     use the sbml model name from the `petab_problem`, otherwise create
