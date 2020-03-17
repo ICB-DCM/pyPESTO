@@ -203,14 +203,6 @@ class TestVisualize(unittest.TestCase):
 
     @staticmethod
     def test_parameters_lowlevel():
-        # test empty input
-        xs = np.array([])
-
-        # test partial input
-        xs.shape = (0, 0)  # we can assume in input that xs.ndim == 2
-        fvals = np.array([])
-        pypesto.visualize.parameters_lowlevel(xs, fvals)
-
         # create some dummy results
         (lb, ub) = create_bounds()
         fvals = [0.01, 0.02, 1.01, 2.02, 2.03, 2.04, 3, 4, 4.1, 4.11]
