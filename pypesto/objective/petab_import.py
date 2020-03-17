@@ -315,7 +315,7 @@ class PetabImporter:
             rdatas, model, measurement_df)
 
 
-def _find_output_folder_name(petab_problem: petab.Problem):
+def _find_output_folder_name(petab_problem: 'petab.Problem'):
     """
     Find a name for storing the compiled amici model in. If available,
     use the sbml model name from the `petab_problem`, otherwise create
