@@ -7,43 +7,32 @@ import pypesto
 import unittest
 import test.test_objective as test_objective
 import warnings
-import copy
+
+from pypesto.objective import Objective
 
 
 class ProfilerTest(unittest.TestCase):
 
-    def runTest(self):
-        objective = test_objective.rosen_for_sensi(max_sensi_order=2,
-                                                   integrated=True)['obj']
+    @classmethod
+    def setUpClass(cls):
+        cls.objective: Objective = test_objective.rosen_for_sensi(
+            max_sensi_order=2, integrated=True
+        )['obj']
 
         with warnings.catch_warnings():
             warnings.simplefilter("ignore")
+            (cls.problem, cls.result, cls.optimizer) = \
+                create_optimization_results(cls.objective)
 
-            (problem, result, optimizer) = \
-                create_optimization_results(objective)
-
-            result1 = copy.deepcopy(result)
-            result2 = copy.deepcopy(result)
-
-            # profiling works using default settings and different proposals
-            # for creating the next starting point
-            self.check_default_profiling(problem, result1, optimizer)
-
-            # profiling works when specifying additional options
-            self.check_selected_profiling(problem, result2, optimizer)
-
-            # extending profiles (when changing bounds) works
-            self.check_extending_profiles(problem, result, optimizer)
-
-    def check_default_profiling(self, problem, result, optimizer):
+    def test_default_profiling(self):
         # loop over  methods for creating new initial guesses
         method_list = [None, 'fixed_step', 'adaptive_step_order_0',
                        'adaptive_step_order_1', 'adaptive_step_regression']
         for method in method_list:
             # run profiling
-            result = pypesto.parameter_profile(problem=problem,
-                                               result=result,
-                                               optimizer=optimizer,
+            result = pypesto.parameter_profile(problem=self.problem,
+                                               result=self.result,
+                                               optimizer=self.optimizer,
                                                next_guess_method=method)
 
             # check result
@@ -69,7 +58,7 @@ class ProfilerTest(unittest.TestCase):
                 self.assertTrue(steps > 1, 'Profiling with 0th order based '
                                            'proposal needed not enough steps.')
 
-    def check_selected_profiling(self, problem, result, optimizer):
+    def test_selected_profiling(self):
         # create options in order to ensure a short computation time
         options = pypesto.ProfileOptions(default_step_size=0.02,
                                          min_step_size=0.005,
@@ -81,9 +70,9 @@ class ProfilerTest(unittest.TestCase):
                                          reg_order=2)
 
         # 1st run of profiling, computing just one out of two profiles
-        result = pypesto.parameter_profile(problem=problem,
-                                           result=result,
-                                           optimizer=optimizer,
+        result = pypesto.parameter_profile(problem=self.problem,
+                                           result=self.result,
+                                           optimizer=self.optimizer,
                                            profile_index=np.array([0, 1]),
                                            next_guess_method='fixed_step',
                                            result_index=1,
@@ -95,9 +84,9 @@ class ProfilerTest(unittest.TestCase):
 
         # 2nd run of profiling, appending to an existing list of profiles
         # using another algorithm and another optimum
-        result = pypesto.parameter_profile(problem=problem,
+        result = pypesto.parameter_profile(problem=self.problem,
                                            result=result,
-                                           optimizer=optimizer,
+                                           optimizer=self.optimizer,
                                            profile_index=np.array([1, 0]),
                                            result_index=2,
                                            profile_list=0,
@@ -107,9 +96,9 @@ class ProfilerTest(unittest.TestCase):
                               pypesto.ProfilerResult)
 
         # 3rd run of profiling, opening a new list, using the default algorithm
-        result = pypesto.parameter_profile(problem=problem,
+        result = pypesto.parameter_profile(problem=self.problem,
                                            result=result,
-                                           optimizer=optimizer,
+                                           optimizer=self.optimizer,
                                            next_guess_method='fixed_step',
                                            profile_index=np.array([1, 0]),
                                            profile_options=options)
@@ -118,21 +107,21 @@ class ProfilerTest(unittest.TestCase):
                               pypesto.ProfilerResult)
         self.assertIsNone(result.profile_result.list[1][1])
 
-    def check_extending_profiles(self, problem, result, optimizer):
+    def test_extending_profiles(self):
         # run profiling
-        result = pypesto.parameter_profile(problem=problem,
-                                           result=result,
-                                           optimizer=optimizer,
+        result = pypesto.parameter_profile(problem=self.problem,
+                                           result=self.result,
+                                           optimizer=self.optimizer,
                                            next_guess_method='fixed_step')
 
         # set new bounds (knowing that one parameter stopped at the bounds
-        problem.lb = -4 * np.ones((1, 2))
-        problem.ub = 4 * np.ones((1, 2))
+        self.problem.lb = -4 * np.ones((1, 2))
+        self.problem.ub = 4 * np.ones((1, 2))
 
         # re-run profiling using new bounds
-        result = pypesto.parameter_profile(problem=problem,
+        result = pypesto.parameter_profile(problem=self.problem,
                                            result=result,
-                                           optimizer=optimizer,
+                                           optimizer=self.optimizer,
                                            next_guess_method='fixed_step',
                                            profile_index=np.array([0, 1]),
                                            profile_list=0)
@@ -143,6 +132,33 @@ class ProfilerTest(unittest.TestCase):
         self.assertTrue(
             isinstance(result.profile_result.list[0][1],
                        pypesto.ProfilerResult))
+
+
+# dont make this a class method such that we dont optimize twice
+def test_profile_with_history():
+    objective = test_objective.rosen_for_sensi(max_sensi_order=2,
+                                               integrated=False)['obj']
+
+    objective.history.options.trace_record = True
+
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore")
+        (problem, result, optimizer) = \
+            create_optimization_results(objective)
+
+    profile_options = pypesto.ProfileOptions(min_step_size=0.0005,
+                                             delta_ratio_max=0.05,
+                                             default_step_size=0.005,
+                                             ratio_min=0.03)
+
+    pypesto.parameter_profile(
+        problem=problem,
+        result=result,
+        optimizer=optimizer,
+        profile_index=np.array([1, 1, 1, 0, 0, 1, 0, 1, 0, 0, 0]),
+        result_index=0,
+        profile_options=profile_options
+    )
 
 
 def create_optimization_results(objective):

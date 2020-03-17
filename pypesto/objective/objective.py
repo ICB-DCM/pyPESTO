@@ -235,11 +235,11 @@ class Objective:
         # compute result
         result = self._call_unprocessed(x, sensi_orders, mode)
 
-        # post-process
-        result = self.pre_post_processor.postprocess(result)
-
         # update history
         self.history.update(x, sensi_orders, mode, result)
+
+        # post-process
+        result = self.pre_post_processor.postprocess(result)
 
         # map to output format
         if not return_dict:

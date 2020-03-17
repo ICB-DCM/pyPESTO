@@ -1,7 +1,6 @@
 import logging
 import numpy as np
 from pypesto import Result
-from ..optimize import OptimizeOptions
 from .profiler import ProfilerResult
 from .profile_next_guess import next_guess
 
@@ -91,7 +90,7 @@ class ProfileOptions(dict):
         Parameters
         ----------
 
-        maybe_options: OptimizeOptions or dict
+        maybe_options: ProfileOptions or dict
         """
         if isinstance(maybe_options, ProfileOptions):
             return maybe_options

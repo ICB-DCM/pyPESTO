@@ -294,7 +294,7 @@ class ObjectiveHistory:
                 else sres_result
 
         # check whether to append to trace
-        if not self.options.trace_all and not fval < self.fval_min:
+        if not self.options.trace_all and fval > self.fval_min:
             return
 
         used_time = time.time() - self.start_time
