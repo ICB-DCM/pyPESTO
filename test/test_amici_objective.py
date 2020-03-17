@@ -24,12 +24,12 @@ class AmiciObjectiveTest(unittest.TestCase):
         par_opt_ids = ['opt_par_1',
                        'opt_par_2',
                        'opt_par_3']
-        mapping_par_opt_to_par_sim = \
-            [
-                'opt_par_1',
-                'opt_par_3',
-                'opt_par_3'
-            ]
+        mapping_par_opt_to_par_sim = {
+            'sim_par_1': 'opt_par_1',
+            'sim_par_2': 'opt_par_3',
+            'sim_par_3': 'opt_par_3'
+        }
+        par_sim_ids = ['sim_par_1', 'sim_par_2', 'sim_par_3']
 
         sim_grad = [1.0, 3.0, 5.0]
         opt_grad = [1.0, 1.0, 1.0]
@@ -37,6 +37,7 @@ class AmiciObjectiveTest(unittest.TestCase):
 
         add_sim_grad_to_opt_grad(
             par_opt_ids,
+            par_sim_ids,
             mapping_par_opt_to_par_sim,
             sim_grad,
             opt_grad,
