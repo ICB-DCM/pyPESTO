@@ -13,6 +13,8 @@ Release notes
   amici.petab_objective routines (#209, #219, #225).
 * Implement petab test suite checks (#228).
 * Various error fixes, in particular regarding PEtab and visualization.
+* Improve trace structure.
+* Fix conversion between fval and chi2, fix FIM (all #223).
 
 
 
