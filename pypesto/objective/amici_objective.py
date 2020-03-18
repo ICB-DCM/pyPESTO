@@ -214,7 +214,7 @@ class AmiciObjective(Objective):
         other = AmiciObjective(model, solver, edatas,
                                guess_steadystate=self.guess_steadystate)
         for attr in self.__dict__:
-            if attr not in ['amici_solver', 'amici_model', 'edatas']:
+            if attr not in ['amici_solver', 'amici_model', 'edatas', '']:
                 other.__dict__[attr] = copy.deepcopy(self.__dict__[attr])
         return other
 
@@ -311,7 +311,7 @@ class AmiciObjective(Objective):
                             condition_map_sim_var,
                             rdata['FIM'],
                             s2nllh,
-                            coefficient=-1.0
+                            coefficient=+1.0
                         )
 
             elif mode == MODE_RES:

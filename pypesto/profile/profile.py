@@ -1,7 +1,6 @@
 import logging
 import numpy as np
 from pypesto import Result
-from ..optimize import OptimizeOptions
 from .profiler import ProfilerResult
 from .profile_next_guess import next_guess
 
@@ -91,7 +90,7 @@ class ProfileOptions(dict):
         Parameters
         ----------
 
-        maybe_options: OptimizeOptions or dict
+        maybe_options: ProfileOptions or dict
         """
         if isinstance(maybe_options, ProfileOptions):
             return maybe_options
@@ -107,8 +106,7 @@ def parameter_profile(
         profile_list=None,
         result_index=0,
         next_guess_method=None,
-        profile_options=None,
-        optimize_options=None) -> Result:
+        profile_options=None) -> Result:
     """
     This is the main function to call to do parameter profiling.
 
@@ -147,9 +145,6 @@ def parameter_profile(
 
     profile_options: pypesto.ProfileOptions, optional
         Various options applied to the profile optimization.
-
-    optimize_options: pypesto.OptimizeOptions, optional
-        Various options applied to the optimizer.
     """
 
     # Handling defaults
@@ -178,11 +173,6 @@ def parameter_profile(
                         'profiling point is not yet supported.')
     else:
         raise Exception('Unsupported input for next_guess_method.')
-
-    # check optimization options
-    if optimize_options is None:
-        optimize_options = OptimizeOptions()
-    optimize_options = OptimizeOptions.assert_instance(optimize_options)
 
     # create the profile result object (retrieve global optimum) ar append to
     # existing list of profiles
@@ -231,35 +221,35 @@ def walk_along_profile(current_profile,
                        global_opt,
                        i_parameter):
     """
-        This is function compute a half-profile
+    This is function compute a half-profile
 
-        Parameters
-        ----------
+    Parameters
+    ----------
 
-        current_profile: pypesto.ProfilerResults
-            The profile which should be computed
+    current_profile: pypesto.ProfilerResults
+        The profile which should be computed
 
-        problem: pypesto.Problem
-            The problem to be solved.
+    problem: pypesto.Problem
+        The problem to be solved.
 
-        par_direction: integer
-            Indicates profiling direction (+1, -1: ascending, descending)
+    par_direction: integer
+        Indicates profiling direction (+1, -1: ascending, descending)
 
-        optimizer: pypesto.Optimizer
-            The optimizer to be used along each profile.
+    optimizer: pypesto.Optimizer
+        The optimizer to be used along each profile.
 
-        global_opt: float
-            log-posterior value of the global optimum
+    global_opt: float
+        log-posterior value of the global optimum
 
-        options: pypesto.ProfileOptions
-            Various options applied to the profile optimization.
+    options: pypesto.ProfileOptions
+        Various options applied to the profile optimization.
 
-        create_next_guess: callable
-            Handle of the method which creates the next profile point proposal
+    create_next_guess: callable
+        Handle of the method which creates the next profile point proposal
 
-        i_parameter: integer
-            index for the current parameter
-        """
+    i_parameter: integer
+        index for the current parameter
+    """
 
     # create variables which are needed during iteration
     stop_profile = False

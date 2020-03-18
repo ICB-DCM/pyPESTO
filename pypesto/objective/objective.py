@@ -138,11 +138,14 @@ class Objective:
             options = ObjectiveOptions()
         self.options = ObjectiveOptions.assert_instance(options)
 
-        self.history = ObjectiveHistory(self.options)
+        self.x_names = x_names
+
+        self.history = ObjectiveHistory(self.options,
+                                        self.x_names,
+                                        self._call_mode_fun
+                                        if self.has_fun else None)
 
         self.pre_post_processor = PrePostProcessor()
-
-        self.x_names = x_names
 
     def __deepcopy__(self, memodict=None):
         other = Objective()
@@ -232,11 +235,11 @@ class Objective:
         # compute result
         result = self._call_unprocessed(x, sensi_orders, mode)
 
-        # post-process
-        result = self.pre_post_processor.postprocess(result)
-
         # update history
         self.history.update(x, sensi_orders, mode, result)
+
+        # post-process
+        result = self.pre_post_processor.postprocess(result)
 
         # map to output format
         if not return_dict:
