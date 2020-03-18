@@ -138,11 +138,14 @@ class Objective:
             options = ObjectiveOptions()
         self.options = ObjectiveOptions.assert_instance(options)
 
-        self.history = ObjectiveHistory(self.options)
+        self.x_names = x_names
+
+        self.history = ObjectiveHistory(self.options,
+                                        self.x_names,
+                                        self._call_mode_fun
+                                        if self.has_fun else None)
 
         self.pre_post_processor = PrePostProcessor()
-
-        self.x_names = x_names
 
     def __deepcopy__(self, memodict=None):
         other = Objective()
@@ -232,11 +235,11 @@ class Objective:
         # compute result
         result = self._call_unprocessed(x, sensi_orders, mode)
 
-        # post-process
-        result = self.pre_post_processor.postprocess(result)
-
         # update history
         self.history.update(x, sensi_orders, mode, result)
+
+        # post-process
+        result = self.pre_post_processor.postprocess(result)
 
         # map to output format
         if not return_dict:
@@ -486,7 +489,7 @@ class Objective:
         Handle fixed parameters. Later, the objective will be given parameter
         vectors x of dimension dim, which have to be filled up with fixed
         parameter values to form a vector of dimension dim_full >= dim.
-        This vector is then used to compute function value and derivaties.
+        This vector is then used to compute function value and derivatives.
         The derivatives must later be reduced again to dimension dim.
 
         This is so as to make the fixing of parameters transparent to the

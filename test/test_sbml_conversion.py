@@ -25,7 +25,7 @@ RTOL = 1e-3
 class AmiciObjectiveTest(unittest.TestCase):
     def runTest(self):
         for example in ['conversion_reaction']:
-            objective, model = _load_model_objective(example)
+            objective, model = load_model_objective(example)
             x0 = list(model.getParameters())
             df = objective.check_grad(
                 x0,
@@ -103,7 +103,7 @@ def parameter_estimation(
     results = results.optimize_result.list
 
 
-def _load_model_objective(example_name):
+def load_model_objective(example_name):
     # name of the model that will also be the name of the python module
     model_name = 'model_' + example_name
 
@@ -115,7 +115,7 @@ def _load_model_objective(example_name):
     model_output_dir = os.path.join('doc', 'example', 'tmp',
                                     model_name)
 
-    # import sbml model, complile and generate amici module
+    # import sbml model, compile and generate amici module
     sbml_importer = amici.SbmlImporter(sbml_file)
     sbml_importer.sbml2amici(model_name,
                              model_output_dir,

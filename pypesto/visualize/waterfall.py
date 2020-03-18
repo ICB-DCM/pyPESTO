@@ -7,6 +7,9 @@ from .misc import process_result_list
 from .misc import process_y_limits
 from .misc import process_offset_y
 
+from pypesto import Result
+from typing import Iterable, Optional
+
 
 def waterfall(results,
               ax=None,
@@ -65,6 +68,8 @@ def waterfall(results,
     ax: matplotlib.Axes
         The plot axes.
     """
+    if isinstance(start_indices, int):
+        start_indices = list(range(start_indices))
 
     # parse input
     (results, colors, legends) = process_result_list(results, colors, legends)
@@ -190,7 +195,10 @@ def waterfall_lowlevel(fvals, scale_y='log10', offset_y=0., ax=None,
     return ax
 
 
-def get_fvals(result, scale_y, offset_y, start_indices):
+def get_fvals(result: Result,
+              scale_y: str,
+              offset_y: float,
+              start_indices: Optional[Iterable[int]] = None):
     """
     Get function values to be plotted later from results.
 
@@ -206,7 +214,7 @@ def get_fvals(result, scale_y, offset_y, start_indices):
     offset_y:
         offset for the y-axis, if it is supposed to be in log10-scale
 
-    start_indices: list or int
+    start_indices:
         list of integers specifying the multistart to be plotted or
         int specifying up to which start index should be plotted
 
@@ -229,8 +237,6 @@ def get_fvals(result, scale_y, offset_y, start_indices):
     else:
         # check whether list or maximum value
         start_indices = np.array(start_indices)
-        if start_indices.size == 1:
-            start_indices = np.array(range(start_indices))
 
         # check, whether index set is not too big
         existing_indices = np.array(range(len(fvals)))

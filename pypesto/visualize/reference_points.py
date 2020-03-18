@@ -1,5 +1,7 @@
 import numpy as np
 
+from typing import List
+
 
 class ReferencePoint(dict):
     """
@@ -135,7 +137,7 @@ def assign_colors(ref):
 
 
 def create_references(references=None, x=None, fval=None, color=None,
-                      legend=None):
+                      legend=None) -> List[ReferencePoint]:
     """
     This function creates a list of reference point objects from user inputs
 
