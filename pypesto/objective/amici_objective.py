@@ -207,7 +207,7 @@ class AmiciObjective(Objective):
         """
         self.res = self.get_bound_res()
 
-    def __deepcopy__(self, memodict=None):
+    def __deepcopy__(self, memodict: Dict = None) -> 'AmiciObjective':
         model = amici.ModelPtr(self.amici_model.clone())
         solver = amici.SolverPtr(self.amici_solver.clone())
         edatas = [amici.ExpData(data) for data in self.edatas]
@@ -218,7 +218,7 @@ class AmiciObjective(Objective):
                 other.__dict__[attr] = copy.deepcopy(self.__dict__[attr])
         return other
 
-    def reset(self):
+    def reset(self) -> None:
         """
         Resets the objective, including steadystate guesses
         """
@@ -227,10 +227,10 @@ class AmiciObjective(Objective):
 
     def _call_amici(
             self,
-            x,
-            sensi_orders,
-            mode
-    ):
+            x: np.ndarray,
+            sensi_orders: Tuple[int, ...],
+            mode: str
+    ) -> Dict:
         # amici is built such that only the maximum sensitivity is required,
         # the lower orders are then automatically computed
         sensi_order = min(max(sensi_orders), 1)
@@ -348,7 +348,7 @@ class AmiciObjective(Objective):
         """Create dict from parameter vector."""
         return OrderedDict(zip(self.x_ids, x))
 
-    def get_error_output(self, rdatas):
+    def get_error_output(self, rdatas: List['amici.ReturnData']):
         """Default output upon error."""
         if not self.amici_model.nt():
             nt = sum([data.nt() for data in self.edatas])
@@ -366,7 +366,7 @@ class AmiciObjective(Objective):
             RDATAS: rdatas
         }
 
-    def apply_steadystate_guess(self, condition_ix, x_dct):
+    def apply_steadystate_guess(self, condition_ix: int, x_dct: Dict):
         """
         Use the stored steadystate as well as the respective  sensitivity (
         if available) and parameter value to approximate the steadystate at
@@ -391,7 +391,8 @@ class AmiciObjective(Objective):
 
         self.edatas[condition_ix].x0 = tuple(x_ss_guess)
 
-    def store_steadystate_guess(self, condition_ix, x_dct, rdata):
+    def store_steadystate_guess(
+            self, condition_ix: int, x_dct: Dict, rdata: 'amici.ReturnData'):
         """
         Store condition parameter, steadystate and steadystate sensitivity in
         steadystate_guesses if steadystate guesses are enabled for this

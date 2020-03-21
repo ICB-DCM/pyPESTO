@@ -1,3 +1,5 @@
+from typing import Dict, Union
+
 class ObjectiveOptions(dict):
     """
     Options for the objective that are used in optimization, profiles
@@ -5,44 +7,35 @@ class ObjectiveOptions(dict):
 
     Parameters
     ----------
-
     trace_record: bool, optional
         Flag indicating whether to record the trace of function calls.
         The trace_record_* flags only become effective if
         trace_record is True.
         Default: False.
-
     trace_record_grad: bool, optional
         Flag indicating whether to record the gradient in the trace.
         Default: True.
-
     trace_record_hess: bool, optional
         Flag indicating whether to record the Hessian in the trace.
         Default: False.
-
     trace_record_res: bool, optional
         Flag indicating whether to record the residual in
         the trace.
         Default: False.
-
     trace_record_sres: bool, optional.
         Flag indicating whether to record the residual sensitivities in
         the trace.
         Default: False.
-
     trace_record_chi2: bool, optional
         Flag indicating whether to record the chi2 in the trace.
         Default: True.
-
     trace_record_schi2: bool, optional
         Flag indicating whether to record the chi2 sensitivities in the
         trace.
         Default: True.
-
     trace_all: bool, optional
         Flag indicating whether to record all (True, default) or only
         better (False) values.
-
     trace_file: str or True, optional
         Either pass a string here denoting the file name for storing the
         trace, or True, in which case the default file name
@@ -56,16 +49,16 @@ class ObjectiveOptions(dict):
     """
 
     def __init__(self,
-                 trace_record=False,
-                 trace_record_grad=True,
-                 trace_record_hess=False,
-                 trace_record_res=False,
-                 trace_record_sres=False,
-                 trace_record_chi2=True,
-                 trace_record_schi2=True,
-                 trace_all=True,
-                 trace_file=None,
-                 trace_save_iter=10):
+                 trace_record: bool = False,
+                 trace_record_grad: bool = True,
+                 trace_record_hess: bool = False,
+                 trace_record_res: bool = False,
+                 trace_record_sres: bool = False,
+                 trace_record_chi2: bool = True,
+                 trace_record_schi2: bool = True,
+                 trace_all: bool = True,
+                 trace_file: Union[str, bool] = None,
+                 trace_save_iter: int = 10):
         super().__init__()
 
         self.trace_record = trace_record
@@ -93,7 +86,9 @@ class ObjectiveOptions(dict):
     __delattr__ = dict.__delitem__
 
     @staticmethod
-    def assert_instance(maybe_options):
+    def assert_instance(
+            maybe_options: Union['ObjectiveOptions', Dict]
+    ) -> 'ObjectiveOptions':
         """
         Returns a valid options object.
 

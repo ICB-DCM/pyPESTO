@@ -4,13 +4,15 @@ Optimize
 
 """
 
-from .optimize import (minimize,
-                       OptimizeOptions)
-from .optimizer import (OptimizerResult,
-                        Optimizer,
-                        ScipyOptimizer,
-                        DlibOptimizer,
-                        GlobalOptimizer)
+from .options import OptimizeOptions
+from .optimize import (
+    minimize)
+from .optimizer import (
+    Optimizer,
+    ScipyOptimizer,
+    DlibOptimizer,
+    PyswarmOptimizer)
+from .result import OptimizerResult
 
 __all__ = ["minimize",
            "OptimizeOptions",
@@ -18,4 +20,4 @@ __all__ = ["minimize",
            "Optimizer",
            "ScipyOptimizer",
            "DlibOptimizer",
-           "GlobalOptimizer"]
+           "PyswarmOptimizer"]

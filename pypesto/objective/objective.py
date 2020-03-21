@@ -2,6 +2,7 @@ import numpy as np
 import copy
 import pandas as pd
 import logging
+from typing import Callable, Dict, List, Tuple, Union
 
 from .constants import MODE_FUN, MODE_RES, FVAL, GRAD, HESS, RES, SRES
 from .history import ObjectiveHistory
@@ -17,11 +18,10 @@ class Objective:
     giving a standardized way of calling. Apart from that, it manages several
     things including fixing of parameters and history.
 
-
     Parameters
     ----------
 
-    fun: callable, optional
+    fun:
         The objective function to be minimized. If it only computes the
         objective function value, it should be of the form
 
@@ -30,7 +30,7 @@ class Objective:
         where x is an 1-D array with shape (n,), and n is the parameter space
         dimension.
 
-    grad: callable, bool, optional
+    grad:
         Method for computing the gradient vector. If it is a callable,
         it should be of the form
 
@@ -39,7 +39,7 @@ class Objective:
         If its value is True, then fun should return the gradient as a second
         output.
 
-    hess: callable, optional
+    hess:
         Method for computing the Hessian matrix. If it is a callable,
         it should be of the form
 
@@ -49,19 +49,19 @@ class Objective:
         second, and the Hessian as a third output, and grad should be True as
         well.
 
-    hessp: callable, optional
+    hessp:
         Method for computing the Hessian vector product, i.e.
 
             ``hessp(x, v) -> array_like, shape (n,)``
 
         computes the product H*v of the Hessian of fun at x with v.
 
-    res: {callable, bool}, optional
+    res:
         Method for computing residuals, i.e.
 
             ``res(x) -> array_like, shape(m,).``
 
-    sres: callable, optional
+    sres:
         Method for computing residual sensitivities. If its is a callable,
         it should be of the form
 
@@ -70,20 +70,20 @@ class Objective:
         If its value is True, then res should return the residual
         sensitivities as a second output.
 
-    fun_accept_sensi_orders: bool, optional
+    fun_accept_sensi_orders:
         Flag indicating whether fun takes sensi_orders as an argument.
         Default: False.
 
-    res_accept_sensi_orders: bool, optional
+    res_accept_sensi_orders:
         Flag indicating whether res takes sensi_orders as an argument.
         Default: False
 
-    x_names: list of str
+    x_names:
         Parameter names. None if no names provided, otherwise a list of str,
         length dim_full (as in the Problem class). Can be read by the
         problem.
 
-    options: pypesto.ObjectiveOptions, optional
+    options:
         Options as specified in pypesto.ObjectiveOptions.
 
 
@@ -94,21 +94,13 @@ class Objective:
         For storing the call history. Initialized by the optimizer in
         reset_history().
 
-    preprocess: callable
-        Preprocess input values to __call__.
-
-    postprocess: callable
-        Postprocess output values from __call__.
-
-    sensitivity_orders: tuple
-        Temporary variable to store requested sensitivity orders
-
+    pre_post_processor:
+        Preprocess input values to and postprocess output values from
+        __call__. Configured in `update_from_problem()` and reset in
+        `reset()`.
 
     Notes
     -----
-
-    preprocess, postprocess are configured in update_from_problem()
-    and can be reset using the reset() method.
 
     If fun_accept_sensi_orders resp. res_accept_sensi_orders is True,
     fun resp. res can also return dictionaries instead of tuples.
@@ -119,12 +111,16 @@ class Objective:
     """
 
     def __init__(self,
-                 fun=None, grad=None, hess=None, hessp=None,
-                 res=None, sres=None,
-                 fun_accept_sensi_orders=False,
-                 res_accept_sensi_orders=False,
-                 x_names=None,
-                 options=None):
+                 fun: Callable = None,
+                 grad: Union[Callable, bool] = None,
+                 hess: Callable = None,
+                 hessp: Callable = None,
+                 res: Callable = None,
+                 sres: Union[Callable, bool] = None,
+                 fun_accept_sensi_orders: bool = False,
+                 res_accept_sensi_orders: bool = False,
+                 x_names: List[str] = None,
+                 options: ObjectiveOptions = None):
         self.fun = fun
         self.grad = grad
         self.hess = hess
@@ -147,7 +143,7 @@ class Objective:
 
         self.pre_post_processor = PrePostProcessor()
 
-    def __deepcopy__(self, memodict=None):
+    def __deepcopy__(self, memodict=None) -> 'Objective':
         other = Objective()
         for attr in self.__dict__:
             other.__dict__[attr] = copy.deepcopy(self.__dict__[attr])
@@ -157,34 +153,39 @@ class Objective:
     # the objective supports.
 
     @property
-    def has_fun(self):
+    def has_fun(self) -> bool:
         return callable(self.fun)
 
     @property
-    def has_grad(self):
+    def has_grad(self) -> bool:
         return callable(self.grad) or self.grad is True
 
     @property
-    def has_hess(self):
+    def has_hess(self) -> bool:
         return callable(self.hess) or self.hess is True
 
     @property
-    def has_hessp(self):
+    def has_hessp(self) -> bool:
         # Not supported yet
         return False
 
     @property
-    def has_res(self):
+    def has_res(self) -> bool:
         return callable(self.res)
 
     @property
-    def has_sres(self):
+    def has_sres(self) -> bool:
         return callable(self.sres) or self.sres is True
 
-    def check_sensi_orders(self, sensi_orders, mode):
+    def check_sensi_orders(self, sensi_orders, mode) -> None:
         """
         Check if the objective is able to compute the requested
         sensitivities. If not, throw an exception.
+
+        Raises
+        ------
+        ValueError if the objective function cannot be called as
+        requested.
         """
         if (mode is MODE_FUN and
             (0 in sensi_orders and not self.has_fun
@@ -198,11 +199,13 @@ class Objective:
                 f"Objective cannot be called with sensi_orders={sensi_orders}"
                 f" and mode={mode}")
 
-    def __call__(self,
-                 x,
-                 sensi_orders: tuple = (0, ),
-                 mode=MODE_FUN,
-                 return_dict=False):
+    def __call__(
+            self,
+            x: np.ndarray,
+            sensi_orders: Tuple[int, ...] = (0, ),
+            mode: str = MODE_FUN,
+            return_dict: bool = False
+    ) -> Union[float, np.ndarray, Tuple, Dict]:
         """
         Method to obtain arbitrary sensitivities. This is the central method
         which is always called, also by the get_* methods.
@@ -215,15 +218,25 @@ class Objective:
 
         Parameters
         ----------
-
-        x: array_like
+        x:
             The parameters for which to evaluate the objective function.
-
-        sensi_orders: tuple
+        sensi_orders:
             Specifies which sensitivities to compute, e.g. (0,1) -> fval, grad.
-
-        mode: str
+        mode:
             Whether to compute function values or residuals.
+        return_dict:
+            If False (default), the result is a Tuple of the requested values
+            in the requested order. Tuples of length one are flattened.
+            If True, instead a dict is returned which can carry further
+            information.
+
+        Returns
+        -------
+        result:
+            By default, this is a tuple of the requested function values
+            and derivatives in the requested order (if only 1 value, the tuple
+            is flattened). If `return_dict`, then instead a dict is returned
+            with function values and derivatives indicated by ids.
         """
 
         # check input
@@ -247,10 +260,20 @@ class Objective:
 
         return result
 
-    def _call_unprocessed(self, x, sensi_orders, mode):
+    def _call_unprocessed(
+            self,
+            x: np.ndarray,
+            sensi_orders: Tuple[int, ...],
+            mode: str
+    ) -> Dict:
         """
         Call objective function without pre- or post-processing and
         formatting.
+
+        Returns
+        -------
+        result:
+            A dict containing the results.
         """
         if mode == MODE_FUN:
             result = self._call_mode_fun(x, sensi_orders)
@@ -260,7 +283,9 @@ class Objective:
             raise ValueError("This mode is not supported.")
         return result
 
-    def _call_mode_fun(self, x, sensi_orders):
+    def _call_mode_fun(
+            self, x: np.ndarray, sensi_orders: Tuple[int, ...]
+    ) -> Dict:
         """
         The method __call__ was called with mode MODE_FUN.
         """
@@ -323,7 +348,9 @@ class Objective:
             raise ValueError("These sensitivity orders are not supported.")
         return result
 
-    def _call_mode_res(self, x, sensi_orders):
+    def _call_mode_res(
+            self, x: np.ndarray, sensi_orders: Tuple[int, ...]
+    ) -> Dict:
         """
         The method __call__ was called with mode MODE_RES.
         """
@@ -357,7 +384,9 @@ class Objective:
         return result
 
     @staticmethod
-    def output_to_dict(sensi_orders, mode, output_tuple):
+    def output_to_dict(
+            sensi_orders: Tuple[int, ...], mode: str, output_tuple: Tuple
+    ) -> Dict:
         """
         Convert output tuple to dict.
         """
@@ -383,7 +412,9 @@ class Objective:
         return output_dict
 
     @staticmethod
-    def output_to_tuple(sensi_orders, mode, **kwargs):
+    def output_to_tuple(
+            sensi_orders: Tuple[int, ...], mode: str, **kwargs
+    ) -> Tuple:
         """
         Return values as requested by the caller, since usually only a subset
         is demanded. One output is returned as-is, more than one output are
@@ -408,35 +439,35 @@ class Objective:
 
     # The following are convenience functions for getting specific outputs.
 
-    def get_fval(self, x):
+    def get_fval(self, x: np.ndarray) -> float:
         """
         Get the function value at x.
         """
         fval = self(x, (0,), MODE_FUN)
         return fval
 
-    def get_grad(self, x):
+    def get_grad(self, x: np.ndarray) -> np.ndarray:
         """
         Get the gradient at x.
         """
         grad = self(x, (1,), MODE_FUN)
         return grad
 
-    def get_hess(self, x):
+    def get_hess(self, x: np.ndarray) -> np.ndarray:
         """
         Get the Hessian at x.
         """
         hess = self(x, (2,), MODE_FUN)
         return hess
 
-    def get_res(self, x):
+    def get_res(self, x: np.ndarray) -> np.ndarray:
         """
         Get the residuals at x.
         """
         res = self(x, (0,), MODE_RES)
         return res
 
-    def get_sres(self, x):
+    def get_sres(self, x: np.ndarray) -> np.ndarray:
         """
         Get the residual sensitivities at x.
         """
@@ -447,7 +478,7 @@ class Objective:
     # pypesto to modify the objective state, e.g. set its history, or
     # make it aware of fixed parameters.
 
-    def reset_history(self, index=None):
+    def reset_history(self, index: str = None) -> None:
         """
         Reset the objective history and specify temporary saving options.
 
@@ -458,33 +489,26 @@ class Objective:
         """
         self.history.reset(index=index)
 
-    def finalize_history(self):
+    def finalize_history(self) -> None:
         """
         Finalize the history object.
         """
         self.history.finalize()
 
-    def reset(self):
+    def reset(self) -> None:
         """
         Completely reset the objective, i.e. undo the modifications in
         update_from_problem().
         """
         self.history = ObjectiveHistory(self.options)
+        self.pre_post_processor = PrePostProcessor()
 
-        def preprocess(x):
-            return np.array(x)
-
-        def postprocess(result):
-            return result
-
-        self.preprocess = preprocess
-        self.postprocess = postprocess
-
-    def update_from_problem(self,
-                            dim_full,
-                            x_free_indices,
-                            x_fixed_indices,
-                            x_fixed_vals):
+    def update_from_problem(
+            self,
+            dim_full: int,
+            x_free_indices: List[int],
+            x_fixed_indices: List[int],
+            x_fixed_vals: List[int]):
         """
         Handle fixed parameters. Later, the objective will be given parameter
         vectors x of dimension dim, which have to be filled up with fixed
@@ -500,19 +524,15 @@ class Objective:
 
         Parameters
         ----------
-
-        dim_full: int
+        dim_full:
             Dimension of the full vector including fixed parameters.
-
-        x_free_indices: array_like of int
+        x_free_indices:
             Vector containing the indices (zero-based) of free parameters
             (complimentary to x_fixed_indices).
-
-        x_fixed_indices: array_like of int, optional
+        x_fixed_indices:
             Vector containing the indices (zero-based) of parameter components
             that are not to be optimized.
-
-        x_fixed_vals: array_like, optional
+        x_fixed_vals:
             Vector of the same length as x_fixed_indices, containing the values
             of the fixed parameters.
         """
@@ -525,45 +545,39 @@ class Objective:
 
         self.pre_post_processor = pre_post_processor
 
-    def check_grad(self,
-                   x,
-                   x_indices=None,
-                   eps=1e-5,
-                   verbosity=1,
-                   mode=MODE_FUN) -> pd.DataFrame:
+    def check_grad(
+            self,
+            x: np.ndarray,
+            x_indices: List[int] = None,
+            eps: float = 1e-5,
+            verbosity: int = 1,
+            mode: str = MODE_FUN
+    ) -> pd.DataFrame:
         """
         Compare gradient evaluation: Firstly approximate via finite
         differences, and secondly use the objective gradient.
 
-
         Parameters
         ----------
-
-        x: array_like
+        x:
             The parameters for which to evaluate the gradient.
-
-        x_indices: array_like, optional
+        x_indices:
             List of index values for which to compute gradients. Default: all.
-
-        eps: float, optional
+        eps:
             Finite differences step size. Default: 1e-5.
-
-        verbosity: int
+        verbosity:
             Level of verbosity for function output.
             * 0: no output,
             * 1: summary for all parameters,
             * 2: summary for individual parameters.
             Default: 1.
-
-        mode: str
+        mode:
             Residual (MODE_RES) or objective function value
             (MODE_FUN, default) computation mode.
 
-
         Returns
         ----------
-
-        result: pd.DataFrame
+        result:
             gradient, finite difference approximations and error estimates.
         """
 

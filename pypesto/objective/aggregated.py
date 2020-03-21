@@ -1,27 +1,29 @@
 import numpy as np
 from copy import deepcopy
+from typing import List
 
-from .objective import Objective
+from .objective import Objective, ObjectiveOptions
 
 from .constants import RDATAS
 
 
 class AggregatedObjective(Objective):
     """
-    This class allows to create an aggregateObjective from a list of
-    Objective instances.
+    This class aggregates multiple objectives into one objective.
     """
 
-    def __init__(self, objectives, x_names=None, options=None):
+    def __init__(
+            self,
+            objectives: List[Objective],
+            x_names: List[str] = None,
+            options: ObjectiveOptions = None):
         """
         Constructor.
 
         Parameters
         ----------
-
         objectives: list
             List of pypesto.objetive instances
-
         """
         # input typechecks
         if not isinstance(objectives, list):

@@ -2,11 +2,10 @@ import numpy as np
 from .util import rescale
 
 
-def latin_hypercube(**kwargs):
+def latin_hypercube(**kwargs) -> np.ndarray:
     """
     Generate latin hypercube points.
     """
-
     # extract input
     n_starts = kwargs['n_starts']
     lb = kwargs['lb']
@@ -27,11 +26,12 @@ def latin_hypercube(**kwargs):
     return xs
 
 
-def _latin_hypercube(n_starts, dim, smooth=True):
+def _latin_hypercube(
+        n_starts: int, dim: int, smooth: bool = True
+) -> np.ndarray:
     """
     Generate simple latin hypercube points in [0, 1].
     """
-
     # uniform points
     xs = np.random.random((n_starts, dim))
 

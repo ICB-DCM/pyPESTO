@@ -1,16 +1,15 @@
 import numpy as np
+from typing import Callable
+from ..problem import Problem
 
-
-def rescale(points, lb, ub):
+def rescale(points, lb: np.ndarray, ub: np.ndarray) -> np.ndarray:
     """
     Rescale points from [0, 1] to [lb, ub].
 
     Parameters
     ----------
-
     points: ndarray, shape=(n_starts, dim)
         Points in bounds [lb, ub]
-
     lb, ub: ndarray, shape=(1, dim)
         The boundaries, all components must be finite.
     """
@@ -18,7 +17,11 @@ def rescale(points, lb, ub):
     return rescaled_points
 
 
-def assign_startpoints(n_starts, startpoint_method, problem, options):
+def assign_startpoints(
+        n_starts: int,
+        startpoint_method: Callable,
+        problem: Problem,
+        options: 'OptimizeOptions') -> np.ndarray:
     """
     Assign startpoints.
     """

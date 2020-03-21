@@ -17,7 +17,7 @@ optimizers = {
               'ls_trf', 'ls_dogbox'],
     # disabled: ,'trust-constr', 'ls_lm', 'dogleg'
     'dlib': ['default'],
-    'pyswarm': ['pso']
+    'pyswarm': [None]
 }
 
 
@@ -69,8 +69,7 @@ class OptimizerTest(unittest.TestCase):
                                               options=options)
 
         elif library == 'pyswarm':
-            optimizer = pypesto.GlobalOptimizer(method=solver,
-                                                options=options)
+            optimizer = pypesto.GlobalOptimizer(options=options)
 
         lb = 0 * np.ones((1, 2))
         ub = 1 * np.ones((1, 2))

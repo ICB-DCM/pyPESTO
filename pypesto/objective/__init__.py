@@ -16,10 +16,12 @@ try:
 except ModuleNotFoundError:
     PetabImporter = None
 
-__all__ = ["Objective",
-           "ObjectiveOptions",
-           "res_to_chi2",
-           "sres_to_schi2",
-           "AmiciObjective",
-           "AggregatedObjective",
-           "PetabImporter"]
+__all__ = [
+    "Objective",
+    "ObjectiveOptions",
+    "res_to_chi2",
+    "sres_to_schi2",
+    "AmiciObjective",
+    "AggregatedObjective",
+    "PetabImporter"
+]
