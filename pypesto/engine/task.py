@@ -1,9 +1,10 @@
 import logging
 import abc
-
-from ..problem import Problem
 import numpy as np
 from typing import Callable
+
+from ..problem import Problem
+import pypesto
 
 
 logger = logging.getLogger(__name__)
@@ -20,7 +21,7 @@ class Task(abc.ABC):
         pass
 
     @abc.abstractmethod
-    def execute(self) -> 'OptimizerResult':  # noqa: F821,R0201
+    def execute(self) -> 'pypesto.OptimizerResult':  # noqa: R0201
         """
         Execute the task and return its results.
         """
@@ -33,11 +34,11 @@ class OptimizerTask(Task):
 
     def __init__(
             self,
-            optimizer: 'Optimizer',  # noqa: F821
+            optimizer: 'pypesto.Optimizer',
             problem: Problem,
             startpoint: np.ndarray,
             j_start: int,
-            options: 'OptimizeOptions',  # noqa: F821
+            options: 'pypesto.OptimizeOptions',
             handle_exception: Callable):
         """
         Create the task object.
@@ -66,7 +67,7 @@ class OptimizerTask(Task):
         self.options = options
         self.handle_exception = handle_exception
 
-    def execute(self) -> 'OptimizerResult':  # noqa: F821
+    def execute(self) -> 'pypesto.OptimizerResult':
         logger.info(f"Executing task {self.j_start}.")
         try:
             optimizer_result = self.optimizer.minimize(

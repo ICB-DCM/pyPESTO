@@ -1,6 +1,8 @@
 import numpy as np
 from typing import Callable
+
 from ..problem import Problem
+import pypesto
 
 
 def rescale(points, lb: np.ndarray, ub: np.ndarray) -> np.ndarray:
@@ -22,7 +24,7 @@ def assign_startpoints(
         n_starts: int,
         startpoint_method: Callable,
         problem: Problem,
-        options: 'OptimizeOptions'  # noqa: F821
+        options: 'pypesto.OptimizeOptions'
 ) -> np.ndarray:
     """
     Assign startpoints.

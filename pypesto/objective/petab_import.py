@@ -323,6 +323,16 @@ class PetabImporter:
         return amici.petab_objective.rdatas_to_measurement_df(
             rdatas, model, measurement_df)
 
+    def rdatas_to_simulation_df(
+            self, rdatas: List['amici.ReturnData'],
+            model: 'amici.Model' = None
+    ) -> pd.DataFrame:
+        """Same as `rdatas_to_measurement_df`, execpt a petab simulation
+        dataframe is created, i.e. the measurement column label is adjusted.
+        """
+        return self.rdatas_to_measurement_df(rdatas, model).rename(
+            {petab.MEASUREMENT: petab.SIMULATION})
+
 
 def _find_output_folder_name(petab_problem: 'petab.Problem') -> str:
     """

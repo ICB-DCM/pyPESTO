@@ -10,6 +10,7 @@ optimization, profiles, sampling.
 
 import pandas as pd
 import copy
+import pypesto
 
 
 class OptimizeResult:
@@ -22,7 +23,7 @@ class OptimizeResult:
 
     def append(
             self,
-            optimizer_result: 'OptimizerResult'  # noqa: F821
+            optimizer_result: 'pypesto.OptimizerResult'
     ):
         """
         Append an optimizer result to the result object.
@@ -100,7 +101,7 @@ class ProfileResult:
 
     def create_new_profile(
             self,
-            profiler_result: 'ProfilerResult' = None  # noqa: F821
+            profiler_result: 'pypesto.ProfilerResult' = None
     ):
         """
         Append an profiler result to the result object.
