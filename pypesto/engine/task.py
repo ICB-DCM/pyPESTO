@@ -20,7 +20,7 @@ class Task(abc.ABC):
         pass
 
     @abc.abstractmethod
-    def execute(self) -> 'OptimizerResult':  # pylint: disable=R0201
+    def execute(self) -> 'OptimizerResult':  # noqa: F821,R0201
         """
         Execute the task and return its results.
         """
@@ -33,11 +33,11 @@ class OptimizerTask(Task):
 
     def __init__(
             self,
-            optimizer: 'Optimizer',
+            optimizer: 'Optimizer',  # noqa: F821
             problem: Problem,
             startpoint: np.ndarray,
             j_start: int,
-            options: 'OptimizeOptions',
+            options: 'OptimizeOptions',  # noqa: F821
             handle_exception: Callable):
         """
         Create the task object.
@@ -66,7 +66,7 @@ class OptimizerTask(Task):
         self.options = options
         self.handle_exception = handle_exception
 
-    def execute(self) -> 'OptimizerResult':
+    def execute(self) -> 'OptimizerResult':  # noqa: F821
         logger.info(f"Executing task {self.j_start}.")
         try:
             optimizer_result = self.optimizer.minimize(

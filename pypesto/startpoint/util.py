@@ -2,6 +2,7 @@ import numpy as np
 from typing import Callable
 from ..problem import Problem
 
+
 def rescale(points, lb: np.ndarray, ub: np.ndarray) -> np.ndarray:
     """
     Rescale points from [0, 1] to [lb, ub].
@@ -21,7 +22,8 @@ def assign_startpoints(
         n_starts: int,
         startpoint_method: Callable,
         problem: Problem,
-        options: 'OptimizeOptions') -> np.ndarray:
+        options: 'OptimizeOptions'  # noqa: F821
+) -> np.ndarray:
     """
     Assign startpoints.
     """

@@ -1,5 +1,6 @@
 from typing import Dict, Union
 
+
 class ObjectiveOptions(dict):
     """
     Options for the objective that are used in optimization, profiles

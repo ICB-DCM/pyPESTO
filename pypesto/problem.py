@@ -233,7 +233,9 @@ class Problem:
         self.normalize_input(False)
 
     def get_full_vector(
-            self, x: Union[np.ndarray, None], x_fixed_vals: Iterable[float] = None
+            self,
+            x: Union[np.ndarray, None],
+            x_fixed_vals: Iterable[float] = None
     ) -> Union[np.ndarray, None]:
         """
         Map vector from dim to dim_full. Usually used for x, grad.

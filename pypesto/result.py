@@ -20,7 +20,10 @@ class OptimizeResult:
     def __init__(self):
         self.list = []
 
-    def append(self, optimizer_result: 'OptimizerResult'):
+    def append(
+            self,
+            optimizer_result: 'OptimizerResult'  # noqa: F821
+    ):
         """
         Append an optimizer result to the result object.
 
@@ -95,7 +98,10 @@ class ProfileResult:
         """
         self.list.append([])
 
-    def create_new_profile(self, profiler_result: 'ProfilerResult' = None):
+    def create_new_profile(
+            self,
+            profiler_result: 'ProfilerResult' = None  # noqa: F821
+    ):
         """
         Append an profiler result to the result object.
 
