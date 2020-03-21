@@ -59,7 +59,7 @@ __all__ = [
     "Optimizer",
     "ScipyOptimizer",
     "DlibOptimizer",
-    "GlobalOptimizer",
+    "PyswarmOptimizer",
     # profile
     "parameter_profile",
     "ProfileOptions",
