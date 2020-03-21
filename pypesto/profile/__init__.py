@@ -9,6 +9,8 @@ from .profile import (parameter_profile,
 
 from .profiler import (ProfilerResult)
 
-__all__ = ["parameter_profile",
-           "ProfileOptions",
-           "ProfilerResult"]
+__all__ = [
+    "parameter_profile",
+    "ProfileOptions",
+    "ProfilerResult"
+]

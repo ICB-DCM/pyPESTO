@@ -1,4 +1,7 @@
+from typing import List
+
 from .base import Engine
+from .task import Task
 
 
 class SingleCoreEngine(Engine):
@@ -10,7 +13,7 @@ class SingleCoreEngine(Engine):
     def __init__(self):
         super().__init__()
 
-    def execute(self, tasks):
+    def execute(self, tasks: List[Task]):
         """
         Execute all tasks in a simple for loop sequentially.
         """
