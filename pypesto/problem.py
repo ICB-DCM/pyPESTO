@@ -10,6 +10,9 @@ describing the problem to be solved.
 import numpy as np
 import pandas as pd
 import copy
+from typing import Iterable, List, Optional, Union
+
+from .objective.objective import Objective
 
 
 class Problem:
@@ -20,30 +23,23 @@ class Problem:
 
     Parameters
     ----------
-
-    objective: pypesto.Objective
+    objective:
         The objective function for minimization. Note that a shallow copy
         is created.
-
-    lb, ub: array_like
+    lb, ub:
         The lower and upper bounds. For unbounded directions set to inf.
-
-    dim_full: int, optional
+    dim_full:
         The full dimension of the problem, including fixed parameters.
-
-    x_fixed_indices: array_like of int, optional
+    x_fixed_indices:
         Vector containing the indices (zero-based) of parameter components
         that are not to be optimized.
-
-    x_fixed_vals: array_like, optional
+    x_fixed_vals:
         Vector of the same length as x_fixed_indices, containing the values
         of the fixed parameters.
-
-    x_guesses: array_like, optional
+    x_guesses:
         Guesses for the parameter values, shape (g, dim), where g denotes the
         number of guesses. These are used as start points in the optimization.
-
-    x_names: array_like of str, optional
+    x_names:
         Parameter names that can be optionally used e.g. in visualizations.
         If objective.get_x_names() is not None, those values are used,
         else the values specified here are used if not None, otherwise
@@ -53,10 +49,9 @@ class Problem:
     Attributes
     ----------
 
-    dim: int
+    dim:
         The number of non-fixed parameters.
         Computed from the other values.
-
     x_free_indices: array_like of int
         Vector containing the indices (zero-based) of free parameters
         (complimentary to x_fixed_indices).
@@ -77,13 +72,14 @@ class Problem:
     """
 
     def __init__(self,
-                 objective,
-                 lb, ub,
-                 dim_full=None,
-                 x_fixed_indices=None,
-                 x_fixed_vals=None,
-                 x_guesses=None,
-                 x_names=None):
+                 objective: Objective,
+                 lb: Union[np.ndarray, List[float]],
+                 ub: Union[np.ndarray, List[float]],
+                 dim_full: Optional[int] = None,
+                 x_fixed_indices: Optional[Iterable[int]] = None,
+                 x_fixed_vals: Optional[Iterable[float]] = None,
+                 x_guesses: Optional[Iterable[float]] = None,
+                 x_names: Optional[Iterable[str]] = None):
         self.objective = copy.deepcopy(objective)
 
         self.lb = np.array(lb).flatten()
@@ -96,7 +92,7 @@ class Problem:
 
         if x_fixed_indices is None:
             x_fixed_indices = []
-        self.x_fixed_indices = [int(i) for i in x_fixed_indices]
+        self.x_fixed_indices: List[int] = [int(i) for i in x_fixed_indices]
 
         # We want the fixed values to be a list, since we might need to add
         # or remove values during profile computation
@@ -107,7 +103,7 @@ class Problem:
 
         self.x_fixed_vals = x_fixed_vals
 
-        self.dim = self.dim_full - len(self.x_fixed_indices)
+        self.dim: int = self.dim_full - len(self.x_fixed_indices)
 
         self.x_free_indices = [
             int(i) for i in
@@ -126,7 +122,7 @@ class Problem:
 
         self.normalize_input()
 
-    def normalize_input(self, check_x_guesses=True):
+    def normalize_input(self, check_x_guesses: bool = True) -> None:
         """
         Reduce all vectors to dimension dim and have the objective accept
         vectors of dimension dim.
@@ -173,7 +169,11 @@ class Problem:
                 "x_fixed_indices and x_fixed_vals musti have the same length."
             )
 
-    def fix_parameters(self, parameter_indices, parameter_vals):
+    def fix_parameters(
+            self,
+            parameter_indices: Iterable[int],
+            parameter_vals: Iterable[float]
+    ) -> None:
         """
         Fix specified parameters to specified values
         """
@@ -204,7 +204,7 @@ class Problem:
 
         self.normalize_input()
 
-    def unfix_parameters(self, parameter_indices):
+    def unfix_parameters(self, parameter_indices: Iterable[int]) -> None:
         """
         Free specified parameters
         """
@@ -232,16 +232,18 @@ class Problem:
 
         self.normalize_input(False)
 
-    def get_full_vector(self, x, x_fixed_vals=None):
+    def get_full_vector(
+            self,
+            x: Union[np.ndarray, None],
+            x_fixed_vals: Iterable[float] = None
+    ) -> Union[np.ndarray, None]:
         """
         Map vector from dim to dim_full. Usually used for x, grad.
 
         Parameters
         ----------
-
         x: array_like, shape=(dim,)
             The vector in dimension dim.
-
         x_fixed_vals: array_like, ndim=1, optional
             The values to be used for the fixed indices. If None, then nans are
             inserted. Usually, None will be used for grad and
@@ -262,13 +264,14 @@ class Problem:
             x_full[..., self.x_fixed_indices] = x_fixed_vals
         return x_full
 
-    def get_full_matrix(self, x):
+    def get_full_matrix(
+            self, x: Union[np.ndarray, None]
+    ) -> Union[np.ndarray, None]:
         """
         Map matrix from dim to dim_full. Usually used for hessian.
 
         Parameters
         ----------
-
         x: array_like, shape=(dim, dim)
             The matrix in dimension dim.
         """
@@ -284,14 +287,15 @@ class Problem:
 
         return x_full
 
-    def get_reduced_vector(self, x_full):
+    def get_reduced_vector(
+            self, x_full: Union[np.ndarray, None]
+    ) -> Union[np.ndarray, None]:
         """
         Map vector from dim_full to dim, i.e. delete fixed indices.
 
         Parameters
         ----------
-
-        x: array_like, ndim=1
+        x_full: array_like, ndim=1
             The vector in dimension dim_full.
         """
         if x_full is None:
@@ -301,17 +305,17 @@ class Problem:
             return x_full
 
         x = [x_full[idx] for idx in self.x_free_indices]
+        return np.array(x)
 
-        return x
-
-    def get_reduced_matrix(self, x_full):
+    def get_reduced_matrix(
+            self, x_full: Union[np.ndarray, None]
+    ) -> Union[np.ndarray, None]:
         """
         Map matrix from dim_full to dim, i.e. delete fixed indices.
 
         Parameters
         ----------
-
-        x: array_like, ndim=2
+        x_full: array_like, ndim=2
             The matrix in dimension dim_full.
         """
         if x_full is None:
@@ -324,12 +328,11 @@ class Problem:
 
         return x
 
-    def print_parameter_summary(self):
+    def print_parameter_summary(self) -> None:
         """
         Prints a summary of what parameters are being optimized and
         what parameter boundaries are
         """
-
         print(
             pd.DataFrame(
                 index=self.x_names,

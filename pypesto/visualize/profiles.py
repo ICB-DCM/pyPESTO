@@ -6,8 +6,8 @@ from .clust_color import assign_colors
 from .misc import process_result_list
 
 
-def profiles(results, fig=None, profile_indices=None, size=(18.5, 6.5),
-             reference=None, colors=None, legends=None):
+def profiles(results, ax=None, profile_indices=None, size=(18.5, 6.5),
+             reference=None, colors=None, legends=None, profile_list_id=0):
     """
     Plot classical 1D profile plot (using the posterior, e.g. Gaussian like
     profile)
@@ -18,8 +18,8 @@ def profiles(results, fig=None, profile_indices=None, size=(18.5, 6.5),
     results: list or pypesto.Result
         list of pypesto.Result or single pypesto.Result
 
-    fig: matplotlib.Figure, optional
-        Figure object to use.
+    ax: list of matplotlib.Axes, optional
+        List of axes objects to use.
 
     profile_indices: list of integer values
         list of integer values specifying which profiles should be plotted
@@ -37,8 +37,11 @@ def profiles(results, fig=None, profile_indices=None, size=(18.5, 6.5),
         color or list of colors for plotting. If not set, clustering is done
         and colors are assigned automatically
 
-    legends: list or str
+    legends: list or str, optional
         Labels for line plots, one label per result object
+
+    profile_list_id: int, optional
+        index of the profile list to be used for profiling
 
     Returns
     -------
@@ -51,20 +54,21 @@ def profiles(results, fig=None, profile_indices=None, size=(18.5, 6.5),
     (results, colors, legends) = process_result_list(results, colors, legends)
 
     # get the correct number of parameter indices, even if not the same in
-    # all result obejcts
+    # all result objects
     if profile_indices is None:
         profile_indices = []
         for result in results:
-            tmp_indices = [i for i in
-                           range(len(result.profile_result.list[0]))]
+            tmp_indices = [ind for ind in range(len(
+                result.profile_result.list[profile_list_id]))]
             profile_indices = list(set().union(profile_indices, tmp_indices))
 
     # loop over results
     for j, result in enumerate(results):
-        fvals = handle_inputs(result, profile_indices)
+        fvals = handle_inputs(result, profile_indices=profile_indices,
+                              profile_list_id=profile_list_id)
 
         # call lowlevel routine
-        ax = profiles_lowlevel(fvals=fvals, ax=fig, size=size,
+        ax = profiles_lowlevel(fvals=fvals, ax=ax, size=size,
                                color=colors[j], legend_text=legends[j])
 
     # parse and apply plotting options
@@ -117,19 +121,24 @@ def profiles_lowlevel(fvals, ax=None, size=(18.5, 6.5), color=None,
         ax = []
         fig = plt.figure()
         fig.set_size_inches(*size)
+        create_new_ax = True
     else:
-        plt.axes(ax)
+        plt.axes(ax[0])
         fig = plt.gcf()
+        create_new_ax = False
 
+    # count number of necessary axes
     if isinstance(fvals, list):
-        n_fvals = 0
-        for fval in enumerate(fvals):
-            if fval is not None:
-                n_fvals += 1
+        n_fvals = np.sum([1 for fval in fvals if fval is not None])
     else:
         n_fvals = 1
         fvals = [fvals]
 
+    # if axes already exist: does the number of axes fit?
+    if len(fvals) != len(ax) and not create_new_ax:
+        raise ('Number of axes does not match number of profiles. Stopping.')
+
+    # compute number of columns and rows
     columns = np.ceil(np.sqrt(n_fvals))
     if n_fvals > columns * (columns - 1):
         rows = columns
@@ -146,7 +155,13 @@ def profiles_lowlevel(fvals, ax=None, size=(18.5, 6.5), color=None,
 
         # plot if data
         if fval is not None:
-            ax.append(fig.add_subplot(rows, columns, counter + 1))
+            # create or choose an axes object
+            if create_new_ax:
+                ax.append(fig.add_subplot(rows, columns, counter + 1))
+            else:
+                plt.axes(ax[counter])
+
+            # run lowlevel routine for one profile
             ax[counter] = profile_lowlevel(fval, ax[counter],
                                            size=size, color=color,
                                            legend_text=tmp_legend)
@@ -157,6 +172,8 @@ def profiles_lowlevel(fvals, ax=None, size=(18.5, 6.5), color=None,
                 ax[counter].set_ylabel('Log-posterior ratio')
             else:
                 ax[counter].set_yticklabels([''])
+
+            # increase counter and cleanup legend
             counter += 1
             tmp_legend = None
 
@@ -248,10 +265,14 @@ def handle_reference_points(ref, ax, fvals):
                 i_ax.plot([current_x, current_x], [0., 1.],
                           color=i_ref.color, label=i_ref.legend)
 
+            # create legend for reference points
+            if i_ref.legend is not None:
+                i_ax.legend()
+
     return ax
 
 
-def handle_inputs(result, profile_indices):
+def handle_inputs(result, profile_indices, profile_list_id=0):
     """
     Retrieves the values of the profiles to be plotted later from a
     pypesto.ProfileResult object
@@ -265,6 +286,9 @@ def handle_inputs(result, profile_indices):
     profile_indices: list of integer values
         list of integer values specifying which profiles should be plotted
 
+    profile_list_id: int, optional
+        index of the profile list to be used for profiling
+
     Returns
     -------
 
@@ -276,9 +300,10 @@ def handle_inputs(result, profile_indices):
     fvals = []
     for i_par in range(0, len(result.profile_result.list[0])):
         if i_par in profile_indices:
-            tmp = np.array(
-                [result.profile_result.list[0][i_par].x_path[i_par, :],
-                 result.profile_result.list[0][i_par].ratio_path[:]])
+            tmp = np.array([result.profile_result.list[
+                profile_list_id][i_par].x_path[i_par, :],
+                result.profile_result.list[profile_list_id][
+                i_par].ratio_path[:]])
         else:
             tmp = None
         fvals.append(tmp)

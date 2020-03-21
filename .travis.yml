@@ -1,7 +1,7 @@
 language: python
 python:
   - "3.6"
- 
+
 os:
   - linux
 dist:
@@ -20,20 +20,25 @@ addons:
       - libatlas-base-dev
       - lcov
       - swig3.0
+      - pandoc
 
 install:
   - mkdir -p ~/bin/ && ln -s /usr/bin/swig3.0 ~/bin/swig && export PATH=~/bin/:$PATH
-  - pip3 install --upgrade setuptools wheel pkgconfig
-  - pip3 install --upgrade jupyter # for jupyter notebooks
   - pip3 install --upgrade -r ./.travis_pip_reqs.txt
   - pip3 install .
+  - pip3 install https://github.com/petab-dev/petab/archive/develop.zip # REMOVE ME
+  - pip3 install -e git+https://github.com/icb-dcm/amici.git@develop#egg=amici\&subdirectory=python/sdist # REMOVE ME
+  - git clone --depth 1 https://github.com/petab-dev/petab_test_suite tmp/petab_test_suite
+  - pip3 install -e tmp/petab_test_suite
 
 # run tests
 script:
-  - python3 -m flake8 --exclude=build,doc,example,tmp
-  - xvfb-run -a python3 -m pytest --cov=pypesto ./test
+  - python3 -m flake8 --exclude=build,doc,example,tmp,amici_models
+  - travis_wait 20 python3 -m pytest --cov=pypesto ./test/test_*
+  - travis_wait 20 xvfb-run -a python3 -m pytest --cov=pypesto --cov-append ./test/visualize/test_*
+  - if [ "$TRAVIS_PULL_REQUEST" != "false" ]; then sphinx-build -W -b html -d doc/_build/html doc/ doc/_build/html; fi
+  - if [ "$TRAVIS_PULL_REQUEST" != "false" ]; then test/run_notebook.sh doc/example/; fi
   - coverage xml
-  - test/run_notebook.sh doc/example/
 
 after_success:
   - bash <(curl -s https://codecov.io/bash)
@@ -49,4 +54,3 @@ deploy:
 # cache dependencies
 
 cache: pip
-

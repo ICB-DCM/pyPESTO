@@ -1,5 +1,7 @@
 import numpy as np
 
+from typing import List
+
 
 class ReferencePoint(dict):
     """
@@ -52,10 +54,14 @@ class ReferencePoint(dict):
                 if "auto_color" in reference.keys():
                     self.auto_color = reference["auto_color"]
                 else:
-                    self.auto_color = True
+                    self.auto_color = False
             else:
                 self.color = None
                 self.auto_color = True
+            if "legend" in reference.keys():
+                self.legend = reference["legend"]
+            else:
+                self.legend = None
         elif isinstance(reference, tuple):
             # Handle case of tuple
             self.x = np.array(reference[0])
@@ -130,7 +136,8 @@ def assign_colors(ref):
     return ref
 
 
-def create_references(references=None, x=None, fval=None):
+def create_references(references=None, x=None, fval=None, color=None,
+                      legend=None) -> List[ReferencePoint]:
     """
     This function creates a list of reference point objects from user inputs
 
@@ -146,6 +153,11 @@ def create_references(references=None, x=None, fval=None):
     fval: float, optional
         Objective function value which should be used for reference point
 
+    color: RGBA, optional
+        Color which should be used for reference point.
+
+    legend: str
+        legend text for reference point
     Returns
     -------
 
@@ -164,7 +176,7 @@ def create_references(references=None, x=None, fval=None):
 
     # parse input (x and fval)
     if (x is not None) and (fval is not None):
-        ref.append(ReferencePoint(x=x, fval=fval))
+        ref.append(ReferencePoint(x=x, fval=fval, color=color, legend=legend))
 
     # assign colors for reference points which have no user-specified colors
     return assign_colors(ref)

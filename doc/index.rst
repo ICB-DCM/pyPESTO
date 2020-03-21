@@ -19,6 +19,9 @@ Welcome to pyPESTO's documentation!
 .. image:: https://readthedocs.org/projects/pypesto/badge/?version=latest
    :target: https://pypesto.readthedocs.io/en/latest/?badge=latest
    :alt: Documentation status
+.. image:: https://zenodo.org/badge/DOI/10.5281/zenodo.2600850.svg
+   :target: https://zenodo.org/record/2600850#.XVuwkHduJfF
+   :alt: DOI
 
 | Version: |version|
 | Source code: https://github.com/icb-dcm/pypesto
@@ -62,6 +65,7 @@ Welcome to pyPESTO's documentation!
    authors
    contact
    license
+   logo
 
 
 

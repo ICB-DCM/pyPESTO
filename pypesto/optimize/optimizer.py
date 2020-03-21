@@ -3,7 +3,17 @@ import scipy.optimize
 import re
 import abc
 import time
+import logging
+from typing import Dict
+
 from ..objective import res_to_chi2
+from ..problem import Problem
+from .result import OptimizerResult
+
+try:
+    import pyswarm
+except ImportError:
+    pyswarm = None
 
 try:
     import dlib
@@ -11,89 +21,7 @@ except ImportError:
     dlib = None
 
 
-class OptimizerResult(dict):
-    """
-    The result of an optimizer run. Used as a standardized return value to
-    map from the individual result objects returned by the employed
-    optimizers to the format understood by pypesto.
-
-    Can be used like a dict.
-
-    Attributes
-    ----------
-
-    x: ndarray
-        The best found parameters.
-
-    fval: float
-        The best found function value, fun(x).
-
-    grad, hess: ndarray
-        The gradient and Hessian at x.
-
-    n_fval: int
-        Number of function evaluations.
-
-    n_grad: int
-        Number of gradient evaluations.
-
-    n_hess: int
-        Number of Hessian evaluations.
-
-    exitflag: int
-        The exitflag of the optimizer.
-
-    message: str
-        Textual comment on the optimization result.
-
-    Notes
-    -----
-
-    Any field not supported by the optimizer is filled with None. Some
-    fields are filled by pypesto itself.
-    """
-
-    def __init__(self,
-                 x=None,
-                 fval=None,
-                 grad=None,
-                 hess=None,
-                 n_fval=None,
-                 n_grad=None,
-                 n_hess=None,
-                 n_res=None,
-                 n_sres=None,
-                 x0=None,
-                 fval0=None,
-                 trace=None,
-                 exitflag=None,
-                 time=None,
-                 message=None):
-        super().__init__()
-        self.x = np.array(x)
-        self.fval = fval
-        self.grad = np.array(grad) if grad is not None else None
-        self.hess = np.array(hess) if hess is not None else None
-        self.n_fval = n_fval
-        self.n_grad = n_grad
-        self.n_hess = n_hess
-        self.n_res = n_res
-        self.n_sres = n_sres
-        self.x0 = np.array(x0) if x0 is not None else None
-        self.fval0 = fval0
-        self.trace = trace
-        self.exitflag = exitflag
-        self.time = time
-        self.message = message
-
-    def __getattr__(self, key):
-        try:
-            return self[key]
-        except KeyError:
-            raise AttributeError(key)
-
-    __setattr__ = dict.__setitem__
-    __delattr__ = dict.__delitem__
+logger = logging.getLogger(__name__)
 
 
 def objective_decorator(minimize):
@@ -104,6 +32,8 @@ def objective_decorator(minimize):
 
     def wrapped_minimize(self, problem, x0, index):
         problem.objective.reset_history(index=index)
+        if hasattr(problem.objective, 'reset_steadystate_guesses'):
+            problem.objective.reset_steadystate_guesses()
         result = minimize(self, problem, x0, index)
         problem.objective.finalize_history()
         result = fill_result_from_objective_history(
@@ -141,6 +71,11 @@ def fix_decorator(minimize):
         result.grad = problem.get_full_vector(result.grad)
         result.hess = problem.get_full_matrix(result.hess)
         result.x0 = problem.get_full_vector(result.x0, problem.x_fixed_vals)
+
+        logger.info(f"Final fval={result.fval:.4f}, "
+                    f"time={result.time:.4f}s, "
+                    f"n_fval={result.n_fval}.")
+
         return result
     return wrapped_minimize
 
@@ -180,7 +115,7 @@ def recover_result(objective, startpoint, err):
     result = OptimizerResult(
         x0=startpoint,
         exitflag=-1,
-        message='{0}'.format(err),
+        message=str(err),
     )
     fill_result_from_objective_history(result, objective.history)
 
@@ -201,9 +136,26 @@ class Optimizer(abc.ABC):
         """
 
     @abc.abstractmethod
-    def minimize(self, problem, x0, index):
+    @fix_decorator
+    @time_decorator
+    @objective_decorator
+    def minimize(
+            self,
+            problem: Problem,
+            x0: np.ndarray,
+            index: int
+    ) -> OptimizerResult:
         """"
         Perform optimization.
+
+        Parameters
+        ----------
+        problem:
+            The problem to find optimal parameters for.
+        x0:
+            The starting parameters.
+        index:
+            Multistart index.
         """
 
     @abc.abstractmethod
@@ -223,7 +175,10 @@ class ScipyOptimizer(Optimizer):
     Use the SciPy optimizers.
     """
 
-    def __init__(self, method='L-BFGS-B', tol=1e-9, options=None):
+    def __init__(self,
+                 method: str = 'L-BFGS-B',
+                 tol: float = 1e-9,
+                 options: Dict = None):
         super().__init__()
 
         self.method = method
@@ -237,7 +192,12 @@ class ScipyOptimizer(Optimizer):
     @fix_decorator
     @time_decorator
     @objective_decorator
-    def minimize(self, problem, x0, index):
+    def minimize(
+            self,
+            problem: Problem,
+            x0: np.ndarray,
+            index: int
+    ) -> OptimizerResult:
         lb = problem.lb
         ub = problem.ub
         objective = problem.objective
@@ -359,7 +319,9 @@ class DlibOptimizer(Optimizer):
     Use the Dlib toolbox for optimization.
     """
 
-    def __init__(self, method, options=None):
+    def __init__(self,
+                 method: str,
+                 options: Dict = None):
         super().__init__()
 
         self.method = method
@@ -371,7 +333,12 @@ class DlibOptimizer(Optimizer):
     @fix_decorator
     @time_decorator
     @objective_decorator
-    def minimize(self, problem, x0, index):
+    def minimize(
+            self,
+            problem: Problem,
+            x0: np.ndarray,
+            index: int
+    ) -> OptimizerResult:
 
         lb = problem.lb
         ub = problem.ub
@@ -410,3 +377,44 @@ class DlibOptimizer(Optimizer):
     @staticmethod
     def get_default_options():
         return {}
+
+
+class PyswarmOptimizer(Optimizer):
+    """
+    Global optimization using pyswarm.
+    """
+
+    def __init__(self, options: Dict = None):
+        super().__init__()
+
+        if options is None:
+            options = {'maxiter': 200}
+        self.options = options
+
+    @fix_decorator
+    @time_decorator
+    @objective_decorator
+    def minimize(
+            self,
+            problem: Problem,
+            x0: np.ndarray,
+            index: int
+    ) -> OptimizerResult:
+        lb = problem.lb
+        ub = problem.ub
+        if pyswarm is None:
+            raise ImportError(
+                "This optimizer requires an installation of pyswarm.")
+
+        xopt, fopt = pyswarm.pso(problem.objective.get_fval,
+                                 lb, ub, **self.options)
+
+        optimizer_result = OptimizerResult(
+            x=xopt,
+            fval=fopt
+        )
+
+        return optimizer_result
+
+    def is_least_squares(self):
+        return False

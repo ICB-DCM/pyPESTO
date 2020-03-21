@@ -1,5 +1,7 @@
 # pyPESTO - Parameter EStimation TOolbox for python
 
+<img src="https://raw.githubusercontent.com/ICB-DCM/pyPESTO/master/doc/logo/logo_wordmark.png" width="50%" alt="pyPESTO logo"/>
+
 **pyPESTO** is a widely applicable and highly customizable toolbox for
 parameter estimation.
 
@@ -7,6 +9,7 @@ parameter estimation.
 [![Build Status](https://travis-ci.com/ICB-DCM/pyPESTO.svg?branch=master)](https://travis-ci.com/ICB-DCM/pyPESTO)
 [![Code coverage](https://codecov.io/gh/ICB-DCM/pyPESTO/branch/master/graph/badge.svg)](https://codecov.io/gh/ICB-DCM/pyPESTO) [![Code quality](https://api.codacy.com/project/badge/Grade/134432ddad0e464b8494587ff370f661)](https://www.codacy.com/app/dweindl/pyPESTO?utm_source=github.com&amp;utm_medium=referral&amp;utm_content=ICB-DCM/pyPESTO&amp;utm_campaign=Badge_Grade)
 [![Documentation Status](https://readthedocs.org/projects/pypesto/badge/?version=latest)](https://pypesto.readthedocs.io)
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.2600850.svg)](https://zenodo.org/record/2600850#.XVuwkHduJfF)
 
 ## Feature overview
 
@@ -16,7 +19,8 @@ pyPESTO features include:
 * Profile computation
 * Result visualization
 * Interface to [AMICI](https://github.com/ICB-DCM/AMICI/) for efficient simulation and sensitivity analysis of ordinary differential equation (ODE) models
-* Parameter estimation pipeline for systems biology problems specified in [SBML](http://sbml.org/) and [PEtab](https://github.com/ICB-DCM/PEtab)
+* Parameter estimation pipeline for systems biology problems specified in [SBML](http://sbml.org/) and [PEtab](https://github.com/PEtab-dev/PEtab)
+* Parameter estimation with qualitative data as described in [Schmiester et al. (2019)](https://www.biorxiv.org/content/10.1101/848648v1). This is currently implemented in the `feature_ordinal` branch.
 
 ## Quick install
 

@@ -1,16 +1,18 @@
 import numpy as np
+from typing import Callable
+
+from ..problem import Problem
+import pypesto
 
 
-def rescale(points, lb, ub):
+def rescale(points, lb: np.ndarray, ub: np.ndarray) -> np.ndarray:
     """
     Rescale points from [0, 1] to [lb, ub].
 
     Parameters
     ----------
-
     points: ndarray, shape=(n_starts, dim)
         Points in bounds [lb, ub]
-
     lb, ub: ndarray, shape=(1, dim)
         The boundaries, all components must be finite.
     """
@@ -18,7 +20,12 @@ def rescale(points, lb, ub):
     return rescaled_points
 
 
-def assign_startpoints(n_starts, startpoint_method, problem, options):
+def assign_startpoints(
+        n_starts: int,
+        startpoint_method: Callable,
+        problem: Problem,
+        options: 'pypesto.OptimizeOptions'
+) -> np.ndarray:
     """
     Assign startpoints.
     """
@@ -37,7 +44,7 @@ def assign_startpoints(n_starts, startpoint_method, problem, options):
     n_required_points = n_starts - n_guessed_points
 
     if n_required_points <= 0:
-        return x_guesses[n_starts, :]
+        return x_guesses[:n_starts, :]
 
     # apply startpoint method
     x_sampled = startpoint_method(
@@ -66,7 +73,8 @@ def assign_startpoints(n_starts, startpoint_method, problem, options):
 def resample_startpoints(startpoints, problem, method):
     """
     Resample startpoints having non-finite value according to the
-    startpoint_method.
+    startpoint_method. Also orders startpoints according to their objective
+    function values (in ascending order)
     """
 
     n_starts = startpoints.shape[0]
@@ -75,20 +83,23 @@ def resample_startpoints(startpoints, problem, method):
     ub = problem.ub
     x_guesses = problem.x_guesses
 
+    fvals = np.empty((n_starts,))
     # iterate over startpoints
     for j in range(0, n_starts):
         startpoint = startpoints[j, :]
         # apply method until found valid point
-        fval = problem.objective(startpoint)
-        while fval == np.inf or fval == np.nan:
+        fvals[j] = problem.objective(startpoint)
+        while fvals[j] == np.inf or fvals[j] == np.nan:
             startpoint = method(
                 n_starts=1,
                 lb=lb,
                 ub=ub,
                 x_guesses=x_guesses
             )[0, :]
-            fval = problem.objective(startpoint)
+            fvals[j] = problem.objective(startpoint)
         # assign startpoint
         resampled_startpoints[j, :] = startpoint
 
-    return resampled_startpoints
+    starpoint_order = np.argsort(fvals)
+
+    return resampled_startpoints[starpoint_order, :]

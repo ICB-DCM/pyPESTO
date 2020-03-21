@@ -5,7 +5,7 @@ Startpoint
 Method for selecting points that can be used as start points
 for multistart optimization. All methods have the form
 
-    method(**kwargs) -> startpoints
+    ``method(**kwargs) -> startpoints``
 
 where the kwargs can/should include the following parameters, which are
 passed by pypesto:
@@ -36,6 +36,7 @@ from .uniform import uniform
 from .latin_hypercube import latin_hypercube
 from .util import assign_startpoints
 
-__all__ = ['uniform',
-           'latin_hypercube',
-           'assign_startpoints']
+__all__ = [
+    'uniform',
+    'latin_hypercube',
+    'assign_startpoints']

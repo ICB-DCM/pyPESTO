@@ -8,11 +8,14 @@ import unittest
 from pypesto.objective.constants import MODE_RES
 
 from .test_objective import poly_for_sensi, rosen_for_sensi
-from .test_sbml_conversion import _load_model_objective
+from .test_sbml_conversion import load_model_objective
+
+ATOL = 1e-6
+RTOL = 1e-4
 
 
 def convreact_for_funmode(max_sensi_order, x=None):
-    obj = _load_model_objective('conversion_reaction')[0]
+    obj = load_model_objective('conversion_reaction')[0]
     return {'obj': obj,
             'max_sensi_order': max_sensi_order,
             'x': x,
@@ -22,7 +25,7 @@ def convreact_for_funmode(max_sensi_order, x=None):
 
 
 def convreact_for_resmode(max_sensi_order, x=None):
-    obj = _load_model_objective('conversion_reaction')[0]
+    obj = load_model_objective('conversion_reaction')[0]
     return {'obj': obj,
             'max_sensi_order': max_sensi_order,
             'x': x,
@@ -56,23 +59,32 @@ class AggregateObjectiveTest(unittest.TestCase):
         # check function values
         if max_sensi_order >= 2:
             fval, grad, hess = obj(x, (0, 1, 2))
-            self.assertTrue(np.isclose(fval, fval_true))
-            self.assertTrue(np.isclose(grad, grad_true).all())
-            self.assertTrue(np.isclose(hess, hess_true).all())
+            self.assertTrue(np.isclose(fval, fval_true,
+                                       atol=ATOL, rtol=RTOL))
+            self.assertTrue(np.isclose(grad, grad_true,
+                                       atol=ATOL, rtol=RTOL).all())
+            self.assertTrue(np.isclose(hess, hess_true,
+                                       atol=ATOL, rtol=RTOL).all())
         elif max_sensi_order >= 1:
             fval, grad = obj(x, (0, 1))
-            self.assertTrue(np.isclose(fval, fval_true))
-            self.assertTrue(np.isclose(grad, grad_true).all())
+            self.assertTrue(np.isclose(fval, fval_true,
+                                       atol=ATOL, rtol=RTOL))
+            self.assertTrue(np.isclose(grad, grad_true,
+                                       atol=ATOL, rtol=RTOL).all())
 
         # check default argument
-        self.assertTrue(np.isclose(obj(x), fval_true))
+        self.assertTrue(np.isclose(obj(x), fval_true,
+                                   atol=ATOL, rtol=RTOL))
 
         # check convenience functions
-        self.assertTrue(np.isclose(obj.get_fval(x), fval_true))
+        self.assertTrue(np.isclose(obj.get_fval(x), fval_true,
+                                   atol=ATOL, rtol=RTOL))
         if max_sensi_order >= 1:
-            self.assertTrue(np.isclose(obj.get_grad(x), grad_true).all())
+            self.assertTrue(np.isclose(obj.get_grad(x), grad_true,
+                                       atol=ATOL, rtol=RTOL).all())
         if max_sensi_order >= 2:
-            self.assertTrue(np.isclose(obj.get_hess(x), hess_true).all())
+            self.assertTrue(np.isclose(obj.get_hess(x), hess_true,
+                                       atol=ATOL, rtol=RTOL).all())
 
         # check different calling types
         if max_sensi_order >= 1:
@@ -81,11 +93,14 @@ class AggregateObjectiveTest(unittest.TestCase):
 
         if max_sensi_order >= 2:
             grad, hess = obj(x, (1, 2))
-            self.assertTrue(np.isclose(grad, grad_true).all())
-            self.assertTrue(np.isclose(hess, hess_true).all())
+            self.assertTrue(np.isclose(grad, grad_true,
+                                       atol=ATOL, rtol=RTOL).all())
+            self.assertTrue(np.isclose(hess, hess_true,
+                                       atol=ATOL, rtol=RTOL).all())
 
             hess = obj(x, (2,))
-            self.assertTrue(np.isclose(hess, hess_true).all())
+            self.assertTrue(np.isclose(hess, hess_true,
+                                       atol=ATOL, rtol=RTOL).all())
 
     def _test_evaluate_resmode(self, struct):
         obj = pypesto.objective.AggregatedObjective(
@@ -99,16 +114,21 @@ class AggregateObjectiveTest(unittest.TestCase):
         # check function values
         if max_sensi_order >= 1:
             res, sres = obj(x, (0, 1), MODE_RES)
-            self.assertTrue(np.isclose(res, res_true).all())
-            self.assertTrue(np.isclose(sres, sres_true).all())
+            self.assertTrue(np.isclose(res, res_true,
+                                       atol=ATOL, rtol=RTOL).all())
+            self.assertTrue(np.isclose(sres, sres_true,
+                                       atol=ATOL, rtol=RTOL).all())
 
         res = obj(x, (0,), MODE_RES)
-        self.assertTrue(np.isclose(res, res_true).all())
+        self.assertTrue(np.isclose(res, res_true,
+                                   atol=ATOL, rtol=RTOL).all())
 
         # check convenience functions
-        self.assertTrue(np.isclose(obj.get_res(x), res_true).all())
+        self.assertTrue(np.isclose(obj.get_res(x), res_true,
+                                   atol=ATOL, rtol=RTOL).all())
         if max_sensi_order >= 1:
-            self.assertTrue(np.isclose(obj.get_sres(x), sres_true).all())
+            self.assertTrue(np.isclose(obj.get_sres(x), sres_true,
+                                       atol=ATOL, rtol=RTOL).all())
 
     def test_exceptions(self):
         self.assertRaises(

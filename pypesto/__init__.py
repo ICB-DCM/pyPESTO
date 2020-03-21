@@ -7,29 +7,38 @@ Parameter Estimation TOolbox for python.
 
 
 from .version import __version__  # noqa: F401
-from .objective import (ObjectiveOptions,
-                        Objective,
-                        AmiciObjective,
-                        PetabImporter)
+from .objective import (
+    ObjectiveOptions,
+    Objective,
+    AmiciObjective,
+    PetabImporter)
 from .problem import Problem
-from .result import (Result,
-                     OptimizeResult,
-                     ProfileResult,
-                     SampleResult)
-from .optimize import (minimize,
-                       OptimizeOptions,
-                       OptimizerResult,
-                       Optimizer,
-                       ScipyOptimizer,
-                       DlibOptimizer)
-from .profile import (parameter_profile,
-                      ProfileOptions,
-                      ProfilerResult)
-from .sample import (parameter_sample,
-                     SampleOptions,
-                     SamplerResult)
-from .engine import (SingleCoreEngine,
-                     MultiProcessEngine)
+from . import startpoint
+from .result import (
+    Result,
+    OptimizeResult,
+    ProfileResult,
+    SampleResult)
+from .optimize import (
+    minimize,
+    OptimizeOptions,
+    OptimizerResult,
+    Optimizer,
+    ScipyOptimizer,
+    DlibOptimizer,
+    PyswarmOptimizer)
+from .profile import (
+    parameter_profile,
+    ProfileOptions,
+    ProfilerResult)
+from .sample import (
+    parameter_sample,
+    SampleOptions,
+    SamplerResult)
+from .engine import (
+    SingleCoreEngine,
+    MultiProcessEngine)
+from . import visualize
 
 
 __all__ = [
@@ -40,6 +49,8 @@ __all__ = [
     "PetabImporter",
     # problem
     "Problem",
+    # startpoint
+    "startpoint",
     # result
     "Result",
     "OptimizeResult",
@@ -52,11 +63,17 @@ __all__ = [
     "Optimizer",
     "ScipyOptimizer",
     "DlibOptimizer",
+    "PyswarmOptimizer",
     # profile
     "parameter_profile",
     "ProfileOptions",
     "ProfilerResult",
+    # sample
+    'parameter_sample',
+    'SampleOptions',
+    'SamplerResult',
     # engine
     "SingleCoreEngine",
     "MultiProcessEngine",
+    "visualize",
 ]

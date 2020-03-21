@@ -1,8 +1,10 @@
 from typing import List
-from abc import abstractmethod
+import abc
+
+from .task import Task
 
 
-class Engine:
+class Engine(abc.ABC):
     """
     Abstract engine base class.
     """
@@ -10,7 +12,7 @@ class Engine:
     def __init__(self):
         pass
 
-    @abstractmethod
-    def execute(self, tasks: List):
+    @abc.abstractmethod
+    def execute(self, tasks: List[Task]):
         raise NotImplementedError(
             "This engine is not intended to be called.")

@@ -2,8 +2,10 @@ from multiprocessing import Pool
 import cloudpickle as pickle
 import os
 import logging
+from typing import List
 
 from .base import Engine
+from .task import Task
 
 
 logger = logging.getLogger(__name__)
@@ -38,9 +40,9 @@ class MultiProcessEngine(Engine):
                 f"Engine set up to use up to {n_procs} processes in total. "
                 f"The number was automatically determined and might not be "
                 f"appropriate on some systems.")
-        self.n_procs = n_procs
+        self.n_procs: int = n_procs
 
-    def execute(self, tasks):
+    def execute(self, tasks: List[Task]):
         n_tasks = len(tasks)
 
         pickled_tasks = [pickle.dumps(task) for task in tasks]

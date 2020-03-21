@@ -6,6 +6,68 @@ Release notes
 ..........
 
 
+0.0.11 (2020-03-17)
+-------------------
+
+* Rewrite AmiciObjective and PetabAmiciObjective simulation routine to directly use
+  amici.petab_objective routines (#209, #219, #225).
+* Implement petab test suite checks (#228).
+* Various error fixes, in particular regarding PEtab and visualization.
+* Improve trace structure.
+* Fix conversion between fval and chi2, fix FIM (all #223).
+
+
+
+0.0.10 (2019-12-04)
+-------------------
+
+* Only compute FIM when sensitivities are available (#194).
+* Fix documentation build (#197).
+* Add support for pyswarm optimizer (#198).
+* Run travis tests for documentation and notebooks only on pull requests (#199).
+
+
+0.0.9 (2019-10-11)
+------------------
+
+* Update to AMICI 0.10.13, fix API changes (#185). 
+* Start using PEtab import from AMICI to be able to import constant species (#184, #185)
+* Require PEtab>=0.0.0a16 (#183)
+
+
+0.0.8 (2019-09-01)
+------------------
+
+* Add logo (#178).
+* Fix petab API changes (#179).
+* Some minor bugfixes (#168).
+
+
+0.0.7 (2019-03-21)
+------------------
+
+* Support noise models in Petab and Amici.
+* Minor Petab update bug fixes.
+
+
+0.0.6 (2019-03-13)
+------------------
+
+* Several minor error fixes, in particular on tests and steady state.
+
+
+0.0.5 (2019-03-11)
+------------------
+
+* Introduce AggregatedObjective to use multiple objectives at once.
+* Estimate steady state in AmiciObjective.
+* Check amici model build version in PetabImporter.
+* Use Amici multithreading in AmiciObjective.
+* Allow to sort multistarts by initial value.
+* Show usage of visualization routines in notebooks.
+* Various fixes, in particular to visualization.
+
+
 0.0.4 (2019-02-25)
 ------------------
 

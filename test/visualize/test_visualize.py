@@ -194,18 +194,15 @@ class TestVisualize(unittest.TestCase):
         pypesto.visualize.parameters([result_1, result_2],
                                      free_indices_only=False,
                                      reference=ref_point,
-                                     balance_alpha=False)
+                                     balance_alpha=False,
+                                     start_indices=(0, 1, 4))
+
+        pypesto.visualize.parameters([result_1, result_2],
+                                     free_indices_only=True,
+                                     start_indices=3)
 
     @staticmethod
     def test_parameters_lowlevel():
-        # test empty input
-        xs = np.array([])
-
-        # test partial input
-        xs.shape = (0, 0)  # we can assume in input that xs.ndim == 2
-        fvals = np.array([])
-        pypesto.visualize.parameters_lowlevel(xs, fvals)
-
         # create some dummy results
         (lb, ub) = create_bounds()
         fvals = [0.01, 0.02, 1.01, 2.02, 2.03, 2.04, 3, 4, 4.1, 4.11]

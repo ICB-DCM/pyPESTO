@@ -1,8 +1,13 @@
 import logging
-import pymc3 as pm
-import theano
-from pymc3.step_methods import (NUTS, HamiltonianMC, Metropolis, Slice)
-from pymc3.distributions import Uniform
+
+try:
+    import pymc3
+    from pymc3.step_methods import (NUTS, HamiltonianMC, Metropolis, Slice)
+    from pymc3.distributions import Uniform
+    import theano
+except ImportError:
+    pass
+
 from pypesto import Result
 from ..optimize import OptimizeOptions
 from .sampler import SamplerResult
@@ -176,7 +181,7 @@ def parameter_sample(
     else:
         step_method = (Metropolis, Slice)
 
-    pm.sampling.sample(
+    pymc3.sampling.sample(
         draws=draws,
         init='jitter+adapt_diag',
         start=dict(),  # TODO: extract from optimization
@@ -192,7 +197,7 @@ def parameter_sample(
     return result
 
 
-class PyMC3Model(pm.model.Model):
+class PyMC3Model(pymc3.model.Model):
 
     def __init__(self, problem):
 
@@ -207,7 +212,7 @@ class PyMC3Model(pm.model.Model):
 
         posterior = PosteriorTheano(problem.objective)
 
-        pm.Deterministic('model_posterior', posterior(theta))
+        pymc3.Deterministic('model_posterior', posterior(theta))
 
 
 class PosteriorTheano(theano.Op):
@@ -231,4 +236,4 @@ class PosteriorTheano(theano.Op):
     def grad(self, inputs, g):
         theta, = inputs
         sllh = self.objective._call_mode_fun(theta, (1,))
-        return g sllh
+        return sllh
