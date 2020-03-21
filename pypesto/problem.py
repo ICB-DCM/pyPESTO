@@ -305,8 +305,7 @@ class Problem:
             return x_full
 
         x = [x_full[idx] for idx in self.x_free_indices]
-
-        return np.ndarray(x)
+        return np.array(x)
 
     def get_reduced_matrix(
             self, x_full: Union[np.ndarray, None]
