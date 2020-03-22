@@ -1,4 +1,4 @@
-class SampleOptions(dict):
+class SamplerOptions(dict):
     """
     Options for parameter sampling.
 
@@ -19,29 +19,8 @@ class SampleOptions(dict):
         discard_tuned_samples is set to False.
     """
 
-    def __init__(self,
-                 n_init=None,
-                 chains=1,
-                 cores=1,
-                 tune=500,
-                 nuts_kwargs=None,
-                 step_kwargs=None,
-                 random_seed=None,
-                 discard_tuned_samples=None,
-                 compute_convergence_checks=None,
-                 use_mmap=None):
+    def __init__(self):
         super().__init__()
-
-        self.n_init = n_init
-        self.chains = chains
-        self.cores = cores
-        self.tune = tune
-        self.nuts_kwargs = nuts_kwargs
-        self.step_kwargs = step_kwargs
-        self.random_seed = random_seed
-        self.discard_tuned_samples = discard_tuned_samples
-        self.compute_convergence_checks = compute_convergence_checks
-        self.use_mmap = use_mmap
 
     def __getattr__(self, key):
         try:
@@ -59,10 +38,9 @@ class SampleOptions(dict):
 
         Parameters
         ----------
-
         maybe_options: OptimizeOptions or dict
         """
-        if isinstance(maybe_options, SampleOptions):
+        if isinstance(maybe_options, SamplerOptions):
             return maybe_options
-        options = SampleOptions(**maybe_options)
+        options = SamplerOptions(**maybe_options)
         return options

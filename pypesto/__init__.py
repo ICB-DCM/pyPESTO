@@ -33,7 +33,7 @@ from .profile import (
     ProfilerResult)
 from .sample import (
     parameter_sample,
-    SampleOptions,
+    SamplerOptions,
     SamplerResult)
 from .engine import (
     SingleCoreEngine,
@@ -70,7 +70,7 @@ __all__ = [
     "ProfilerResult",
     # sample
     'parameter_sample',
-    'SampleOptions',
+    'SamplerOptions',
     'SamplerResult',
     # engine
     "SingleCoreEngine",
