@@ -1,4 +1,5 @@
 import numpy as np
+from typing import Iterable
 
 
 class SamplerResult(dict):
@@ -32,24 +33,18 @@ class SamplerResult(dict):
     """
 
     def __init__(self,
-                 x_0,
-                 time=0.0,
-                 n_fval=0,
-                 n_grad=0,
-                 n_hess=0,
-                 message=None):
+                 x_0: np.ndarray,
+                 chains: Iterable[Iterable[np.ndarray]],
+                 time: float = 0.0,
+                 n_fval: int = 0,
+                 n_grad: int = 0,
+                 n_hess: int = 0,
+                 message: str = None):
         super().__init__()
 
-        # initialize profile path
-        x_shape = x_0.shape
-        if len(x_shape) == 1:
-            self.x_samples = np.zeros((x_shape[0], 0))
-            self.x_samples[:, 0] = x_0[:]
-        else:
-            self.x_samples = np.zeros((x_shape[0], x_shape[1]))
-            self.x_samples[:, :] = x_0[:, :]
-
-        self.total_time = time
+        self.x_0 = x_0
+        self.chains = chains
+        self.time = time
         self.n_fval = n_fval
         self.n_grad = n_grad
         self.n_hess = n_hess
@@ -71,15 +66,6 @@ class SamplerResult(dict):
                        n_grad=0,
                        n_hess=0):
         """
-        This function appends a new OptimizerResult to an existing
-        ProfilerResults
+        This function appends samples. TBD, maybe also append chains, or
+        generations.
         """
-
-        # concatenate samples
-        self.x_samples = np.concatenate((self.x_samples, x_samples), axis=1)
-
-        # increment the time and f_eval counters
-        self.total_time += time
-        self.n_fval += n_fval
-        self.n_grad += n_grad
-        self.n_hess += n_hess
