@@ -12,6 +12,7 @@
   - dim_full
   - x_fixed_values
   - x_fixed_indices
+  - x_names
 ```
 
 ## Parameter estimation
