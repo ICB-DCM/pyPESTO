@@ -3,7 +3,7 @@
 ## PEtab Problem
 
 ```
-+ /problem
++ /problem/
   - Attributes:
     - filled by objective.get_config()
     - ...
@@ -21,7 +21,6 @@
 
 ## Parameter estimation
 
-Parameter estimation
 
 ### Parameter estimation settings
 Parameter estimation settings are saved in `/optimization/settings`.
