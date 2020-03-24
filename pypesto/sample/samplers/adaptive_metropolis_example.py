@@ -14,7 +14,8 @@ def l_p_c(theta, measurements, measurement_timepoints, sigma):
     llh = 0
     for i, t in enumerate(measurement_timepoints):
         simulation = simulate_observable(theta, measurement_timepoints)
-        llh = llh - 0.5 * (math.log(2*math.pi*sigma) + math.pow((measurements[i] - simulation[i]), 2) / sigma)
+        llh = llh - 0.5 * (math.log(2*math.pi*sigma)
+                + math.pow((measurements[i] - simulation[i]), 2) / sigma)
     return llh
 
 # initial sample/initial parameter values
@@ -49,7 +50,9 @@ options = {
     'regularization_factor': 1e-6
 }
 
-result = adaptive_metropolis.adaptive_metropolis(lambda t: l_p_c(t, observable_measurements, observable_timepoints, sigma), theta, options)
+result = adaptive_metropolis.adaptive_metropolis(
+    lambda t: l_p_c(t, observable_measurements, observable_timepoints, sigma),
+    theta, options)
 
 sampling_fval.sampling_fval(result, size=None, fs = 12, noex_param_name = True)
 
