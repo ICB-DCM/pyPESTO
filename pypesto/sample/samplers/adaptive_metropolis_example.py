@@ -2,6 +2,7 @@ import numpy as np
 import math
 
 import pypesto.sample.samplers.adaptive_metropolis as adaptive_metropolis
+# import adaptive_metropolis
 import pypesto.visualize.sampling_fval as sampling_fval
 
 def simulate_observable(theta, t):
