@@ -1,5 +1,8 @@
 # HDF5 data format
 
+## Parameter estimation settings
+Parameter estimation settings are saved in `/optimization_settings`.
+
 ## Parameter estimation results
 Parameter estimation results are saved in `/optimize_results/`.
 
