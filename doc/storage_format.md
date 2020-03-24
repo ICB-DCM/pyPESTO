@@ -1,6 +1,6 @@
 # HDF5 data format
 
-## PEtab Problem
+## pyPESTO Problem
 
 ```
 + /problem/
