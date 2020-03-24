@@ -49,9 +49,10 @@ The history is saved under `/optimization/results/$n/trace/`
 
 ### Sampling results
 
-Sampling results are saved in `/optimization/chains/`.
+Sampling results are saved in `/sampling/chains/`.
 
-TODO
++ /sampling/chains/$n/
+```
 
 
 ## Profiling
