@@ -1,10 +1,12 @@
 import numpy as np
 import math
 
-import adaptive_metropolis
+import pypesto.sample.samplers.adaptive_metropolis as adaptive_metropolis
+import pypesto.visualize.sampling_fval as sampling_fval
 
 def simulate_observable(theta, t):
     return np.sum(theta) * np.power(t,2)/4
+
 
 def l_p_c(theta, measurements, measurement_timepoints, sigma):
     measured_theta = 1
@@ -40,13 +42,15 @@ options = {
     'Sigma': Sigma,
     'theta_bounds_lower': theta_bounds_lower,
     'theta_bounds_upper': theta_bounds_upper,
-    'iterations': 10,
+    'iterations': 100,
     'decay_rate': 0.5,
     'threshold_iteration': 5,
     'regularization_factor': 1e-6
 }
 
 result = adaptive_metropolis.adaptive_metropolis(lambda t: l_p_c(t, observable_measurements, observable_timepoints, sigma), theta, options)
+
+sampling_fval.sampling_fval(result, size=None, fs = 12, noex_param_name = True)
 
 from pprint import pprint
 pprint(result)
