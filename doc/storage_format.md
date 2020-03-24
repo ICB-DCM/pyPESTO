@@ -50,7 +50,7 @@ The history is saved under `/optimization/results/$n/trace/`
 ### Sampling results
 
 Sampling results are saved in `/sampling/chains/`.
-
+```
 + /sampling/chains/$n/
 ```
 
