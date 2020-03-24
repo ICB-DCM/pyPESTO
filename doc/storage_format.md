@@ -5,7 +5,7 @@
 ```
 + /problem
   - Attributes:
-    - ...
+    - fille by objective.get_config()
     - ...
     
   - lb
