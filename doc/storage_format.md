@@ -1,15 +1,21 @@
 # HDF5 data format
 
-## Parameter estimation settings
-Parameter estimation settings are saved in `/optimize_settings`.
+## PEtab Problem
 
-## Parameter estimation results
-Parameter estimation results are saved in `/optimize_results/`.
+TODO
 
-### Results per local optimization
+## Parameter estimation
+
+### Parameter estimation settings
+Parameter estimation settings are saved in `/optimization/settings`.
+
+### Parameter estimation results
+Parameter estimation results are saved in `/optimization/results/`.
+
+#### Results per local optimization
 Results of the `$n`'th multistart a saved in the format
 ```
-+ /optimize_results/multistarts/$n/
++ /optimization/results/$n/
   - fval: Objective function value of best iteration
   - x: Parameter set of best iteration
   - grad: Gradient of objective function at point x
@@ -25,8 +31,20 @@ Results of the `$n`'th multistart a saved in the format
   - time: ...
   - message: ...
 ```
-The history is saved under `/optimize_results/multistarts/$n/trace/`
+The history is saved under `/optimize_results/results/$n/trace/`
 
-## Sampling results
+
+## Sampling
+
+
+### Sampling results
+
+TODO
+
+
+## Profiling
+
+
+### Profiling results
 
 TODO
