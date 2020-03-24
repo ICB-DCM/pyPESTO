@@ -4,7 +4,7 @@ import matplotlib.pyplot as plt
 from parallel_tempering import *
 import adaptive_metropolis
 # from sampling_fval import *
-import scipy as sp
+from scipy.integrate import solve_ivp
 
 
 def model(k1, km1):
@@ -12,16 +12,16 @@ def model(k1, km1):
 
 
 def simulate(p):
-    sol = sp.integrate.solve_ivp(model(p[0], p[1]), (0, observable_timepoints[-1]), [1, 0],
+    sol = solve_ivp(model(p[0], p[1]), (0, observable_timepoints[-1]), [1, 0],
                                  dense_output=True, rtol=1e-4, atol=1e-6).sol
     return sol(observable_timepoints)[1]
 
 
-def loglikelihood(theta_vec):
+def objectiveFunction(theta_vec):
     simulation = simulate(np.power(10, theta_vec))
     sigma = 0.015
     diff = observable_measurements - simulation
-    return np.dot(diff, diff) / sigma**2
+    return -np.dot(diff, diff) / sigma**2
 
 
 observable_measurements = np.array([0.0244, 0.0842, 0.1208,
@@ -56,7 +56,7 @@ options = {
 }
 
 resultAM = adaptive_metropolis.adaptive_metropolis(
-    lambda t: loglikelihood(t),
+    lambda t: objectiveFunction(t),
     theta0, options)
 
 
