@@ -3,7 +3,7 @@ import matplotlib.pyplot as plt
 
 from parallel_tempering import *
 import adaptive_metropolis
-from sampling_fval import *
+# from sampling_fval import *
 import scipy as sp
 
 
