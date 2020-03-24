@@ -1,9 +1,22 @@
-# HDF5 data format
+
+  - Attributes:
+    - maxIter [int]
+    - hierarchicalOptimization [int]
+    - numStarts [int]
+    - optimizer [int]
+  - randomStarts [double np_opt x n_starts]
+
+  Groups with attributes for optimizer-specific settings:
+  - ceres/# HDF5 data format
 
 ## PEtab Problem
 
 ```
 + /problem
+  - Attributes:
+    - ...
+    - ...
+    
   - lb
   - ub
   - lb_full
