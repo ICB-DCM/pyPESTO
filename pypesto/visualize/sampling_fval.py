@@ -54,7 +54,7 @@ def sampling_fval(result, size=None, fs = 12, noex_param_name = True):
         The plot axes.
     """
 #
-    Version2 = True     # results format from Dilan
+    Version2 = True     # results format from Dilan TODO: TO DISCUSS
 
     # get parameters and fval results as numpy-arrays
     if Version2:
@@ -62,7 +62,7 @@ def sampling_fval(result, size=None, fs = 12, noex_param_name = True):
         arr_fval = result['log_posterior']
     else:
         arr, arr_fval = x_as_ndarray(result)
-        arr = arr[0]
+        arr = arr[0]    # only plot the first chain
 
     # plot fval
     ax = plt.subplots(figsize =size)[1]
@@ -85,5 +85,3 @@ def sampling_fval(result, size=None, fs = 12, noex_param_name = True):
     sns.pairplot(pd_array)
 
     return ax
-
-# sampling_fval(result, size=None, fs = 12, noex_param_name = True)
