@@ -27,9 +27,9 @@ observable_timepoints = np.array([0, 1, 2, 4, 5])
 sigma = 0.5
 
 # covariance matrix of sample/parameters
-Sigma = np.identity(theta.size)
+covariance = np.identity(theta.size)
 
-#Sigma = np.array([
+#covariance = np.array([
 #    [2, -1, 0],
 #    [-1, 2, -1],
 #    [0, -1, 2]
@@ -37,7 +37,7 @@ Sigma = np.identity(theta.size)
 
 options = {
     'debug': True,
-    'Sigma': Sigma,
+    'covariance': covariance,
     'theta_bounds_lower': theta_bounds_lower,
     'theta_bounds_upper': theta_bounds_upper,
     'iterations': 10,
