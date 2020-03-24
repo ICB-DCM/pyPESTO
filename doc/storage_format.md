@@ -8,6 +8,7 @@
   - ub
   - lb_full
   - ub_full
+  - dim
   - dim_full
   - x_fixed_values
   - x_fixed_indices
