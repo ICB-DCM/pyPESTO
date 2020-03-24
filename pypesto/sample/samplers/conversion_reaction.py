@@ -31,10 +31,10 @@ observable_measurements = np.array([0.0244, 0.0842, 0.1208,
 observable_timepoints = np.arange(len(observable_measurements))
 init = np.array([1, 0])
 
-# theta0 = np.array([0, 0])
-theta0 = np.log10(np.array([0.08594872, 0.1475647]))  # start at optimal parameters
+theta0 = np.array([0., -2.])
+# theta0 = np.log10(np.array([0.08594872, 0.1475647]))  # start at optimal parameters
 theta_bounds_lower = np.array([-4, -4])
-theta_bounds_upper = np.array([1, 1])
+theta_bounds_upper = np.array([3, 3])
 covariance0 = np.identity(theta0.size)
 
 options = {
@@ -42,7 +42,7 @@ options = {
     'covariance': covariance0,
     'theta_bounds_lower': theta_bounds_lower,
     'theta_bounds_upper': theta_bounds_upper,
-    'iterations': 100,
+    'iterations': 1000,
     'decay_rate': 0.5,
     'threshold_iteration': 5,
     'regularization_factor': 1e-6,
@@ -80,9 +80,10 @@ plt.close()
 plt.figure(figsize=(15, 5))
 for n in range(2):
     plt.subplot(1, 2, n+1)
-    plt.plot([0, options['iterations']], np.log10([theta_true[n], theta_true[n]]), 'k--')
     plt.plot(range(options['iterations']), resultAM['theta'][n, :], 'o')
+    plt.plot([0, options['iterations']], np.log10([theta_true[n], theta_true[n]]), 'k--')
     plt.xlabel('# iterations')
+    plt.ylim([theta_bounds_lower[n],theta_bounds_upper[n]])
     plt.ylabel('log($\Theta_{'+str(n+1)+'}$)')
 plt.savefig('testAM.svg')
 plt.close()
