@@ -6,6 +6,8 @@ TODO
 
 ## Parameter estimation
 
+Parameter estimation
+
 ### Parameter estimation settings
 Parameter estimation settings are saved in `/optimization/settings`.
 
@@ -31,7 +33,8 @@ Results of the `$n`'th multistart a saved in the format
   - time: ...
   - message: ...
 ```
-The history is saved under `/optimize_results/results/$n/trace/`
+#### Trace per local optimization
+The history is saved under `/optimization/results/$n/trace/`
 
 
 ## Sampling
