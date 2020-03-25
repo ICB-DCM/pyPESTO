@@ -13,11 +13,3 @@ from .optimizer import (
     DlibOptimizer,
     PyswarmOptimizer)
 from .result import OptimizerResult
-
-__all__ = ["minimize",
-           "OptimizeOptions",
-           "OptimizerResult",
-           "Optimizer",
-           "ScipyOptimizer",
-           "DlibOptimizer",
-           "PyswarmOptimizer"]

@@ -18,6 +18,13 @@ class Objective:
     giving a standardized way of calling. Apart from that, it manages several
     things including fixing of parameters and history.
 
+    The objective function is assumed to be in the format of a cost function,
+    log-likelihood function, or log-posterior function. These functions are
+    subject to minimization. For profiling and sampling, the sign is internally
+    flipped, all returned and stored values are however given as returned
+    by this objective function. If maximization is to be performed, the sign
+    should be flipped before creating the objective function.
+
     Parameters
     ----------
 
