@@ -60,15 +60,15 @@ The history is saved under `/optimization/results/$n/trace/`
 + /optimization/results/$n/trace/
   - fval: [float n_iter]
       Objective function value of best iteration
-  - x: [float n_par_full x n_iter]
+  - x: [float n_iter x n_par_full]
       Parameter set of best iteration
-  - grad: [float n_par_full x n_iter]
+  - grad: [float n_iter x n_par_full]
       Gradient of objective function at point x
-  - hess: [float n_par_full x n_par_full x n_iter]
+  - hess: [float n_iter x n_par_full x n_par_full]
       Hessian matrix of objective function at point x
   - time: [float n_iter] Executition time
-  - chi2: [float ... x n_iter]
-  - schi2: [float ... x n_iter]
+  - chi2: [float n_iter x ...]
+  - schi2: [float n_iter x ...]
 ```
 
 ## Sampling
