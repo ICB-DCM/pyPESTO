@@ -7,7 +7,7 @@ import shutil
 import logging
 import tempfile
 from warnings import warn
-from typing import Dict, List, Tuple, Union
+from typing import Dict, List, Union
 
 from ..problem import Problem
 from .amici_objective import AmiciObjective
@@ -17,6 +17,7 @@ try:
     import amici
     import amici.petab_import
     import amici.petab_objective
+    import amici.parameter_mapping
 except ImportError:
     pass
 
@@ -260,7 +261,7 @@ class PetabImporter:
         problem_parameters = {key: val for key, val in zip(
             self.petab_problem.x_ids,
             self.petab_problem.x_nominal_scaled)}
-        amici.petab_objective.fill_in_parameters(
+        amici.parameter_mapping.fill_in_parameters(
             edatas=edatas,
             problem_parameters=problem_parameters,
             scaled_parameters=True,
@@ -385,7 +386,7 @@ class PetabAmiciObjective(AmiciObjective):
             edatas: List['amici.ExpData'],
             x_ids: List[str],
             x_names: List[str],
-            parameter_mapping: List[Tuple]):
+            parameter_mapping: 'amici.parameter_mapping.ParameterMapping'):
         super().__init__(
             amici_model=amici_model,
             amici_solver=amici_solver,
