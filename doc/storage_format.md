@@ -55,18 +55,20 @@ Results of the `$n`'th multistart a saved in the format
   - message: [str] Some exit message
 ```
 #### Trace per local optimization
-The history is saved under `/optimization/results/$n/trace/$i`
+The history is saved under `/optimization/results/$n/trace/`
 ```
-+ /optimization/results/$n/trace/$i
-  - fval: [float]
++ /optimization/results/$n/trace/
+  - fval: [float n_iter]
       Objective function value of best iteration
-  - x: [float n_par_full]
+  - x: [float n_par_full x n_iter]
       Parameter set of best iteration
-  - grad: Gradient of objective function at point x
-  - hess: Hessian matrix of objective function at point x
-  - time: ...
-  - chi2: ...
-  - schi2: ...
+  - grad: [float n_par_full x n_iter]
+      Gradient of objective function at point x
+  - hess: [float n_par_full x n_par_full x n_iter]
+      Hessian matrix of objective function at point x
+  - time: [float n_iter] Executition time
+  - chi2: [float ... x n_iter]
+  - schi2: [float ... x n_iter]
 ```
 
 ## Sampling
