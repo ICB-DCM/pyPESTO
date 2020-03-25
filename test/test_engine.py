@@ -1,9 +1,11 @@
 import numpy as np
 import unittest
+import copy
 
 import pypesto
 import test.test_objective as test_objective
 from test.petab_util import folder_base
+import amici
 
 
 class EngineTest(unittest.TestCase):
@@ -19,8 +21,10 @@ class EngineTest(unittest.TestCase):
         lb = 0 * np.ones((1, 2))
         ub = 1 * np.ones((1, 2))
         problem = pypesto.Problem(objective, lb, ub)
-        result = pypesto.minimize(problem=problem, n_starts=9, engine=engine)
-        self.assertTrue(len(result.optimize_result.as_list()) == 9)
+        optimizer = pypesto.ScipyOptimizer(options={'maxiter': 10})
+        result = pypesto.minimize(
+            problem=problem, n_starts=5, engine=engine, optimizer=optimizer)
+        self.assertTrue(len(result.optimize_result.as_list()) == 5)
 
     def test_petab(self):
         for engine in [pypesto.MultiProcessEngine()]:
@@ -31,8 +35,29 @@ class EngineTest(unittest.TestCase):
             folder_base + "Zheng_PNAS2012/Zheng_PNAS2012.yaml")
         objective = petab_importer.create_objective()
         problem = petab_importer.create_problem(objective)
-        result = pypesto.minimize(problem=problem, n_starts=2, engine=engine)
+        optimizer = pypesto.ScipyOptimizer(options={'maxiter': 5})
+        result = pypesto.minimize(
+            problem=problem, n_starts=2, engine=engine, optimizer=optimizer)
         self.assertTrue(len(result.optimize_result.as_list()) == 2)
+
+    def test_deepcopy(self):
+        petab_importer = pypesto.PetabImporter.from_yaml(
+            folder_base + "Zheng_PNAS2012/Zheng_PNAS2012.yaml")
+        objective = petab_importer.create_objective()
+
+        objective.amici_solver.setSensitivityMethod(amici.SensitivityMethod_adjoint)
+
+        copy
+        objective2 = copy.deepcopy(objective)
+
+        # test some properties
+        assert objective.amici_model.getParameterIds() \
+            == objective2.amici_model.getParameterIds()
+        assert objective.amici_solver.getSensitivityOrder() \
+            == objective.amici_solver.getSensitivityOrder()
+        assert objective.amici_solver.getSensitivityMethod() \
+            == objective.amici_solver.getSensitivityMethod()
+        assert len(objective.edatas) == len(objective2.edatas)
 
 
 if __name__ == '__main__':
