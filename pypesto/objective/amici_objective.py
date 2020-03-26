@@ -520,7 +520,7 @@ def create_identity_parameter_mapping(
     for _ in range(n_conditions):
         condition_map_sim_var = {x_id: x_id for x_id in x_ids}
         condition_scale_map_sim_var = {
-            x_id: amici.petab_objective.amici_to_petab_scale(x_scale)
+            x_id: amici.parameter_mapping.amici_to_petab_scale(x_scale)
             for x_id, x_scale in zip(x_ids, x_scales)}
 
         # assumes fixed parameters are filled in already
