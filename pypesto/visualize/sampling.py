@@ -50,13 +50,20 @@ def get_data_to_plot(result, options, noex_param_name=True):
             param_names = np.append(param_names,'par' + str(i_param))
 
     # transform nparray to pandas for the use of seaborn
-    pd_array = pd.DataFrame(arr_param, columns=param_names)
+    pd_params = pd.DataFrame(arr_param, columns=param_names)
+    pd_fval = pd.DataFrame(data=np.transpose(arr_fval),
+                           columns=['logPosterior'])
+    pd_iter = pd.DataFrame(data=np.transpose(range(1, len(arr_fval) + 1)),
+                           columns=['iteration'])
+    params_fval = pd.concat([pd_params,pd_fval,pd_iter],
+                            axis=1, ignore_index=False)
+
 #
     # some global parameters
-    nr_iter = range(1, len(arr_fval) + 1)   # number of iterations
+    # nr_iter = range(1, len(arr_fval) + 1)   # number of iterations
     nr_params = arr_param.shape[1]                # number of parameters
 
-    return nr_params, nr_iter, pd_array, arr_param, arr_fval, theta_lb, theta_ub,param_names
+    return nr_params, params_fval, theta_lb, theta_ub
 
 
 def sampling_fval(result, options, size=None, fs = 12):
@@ -67,21 +74,29 @@ def sampling_fval(result, options, size=None, fs = 12):
     ----------
     """
     # get data which should be plotted
-    _, nr_iter, _, _, arr_fval, _, _,_ = get_data_to_plot(result,
-                                                        options,
-                                                        noex_param_name=True)
+    _, params_fval, _, _= get_data_to_plot(result,
+                                                    options,
+                                                    noex_param_name=True)
 
-    fig, axx = plt.subplots(figsize =size)
+    fig, ax = plt.subplots(figsize =size)
 
-    axx.scatter(nr_iter, arr_fval, alpha=0.5, s=10)
-    axx.set_xlabel('number of iterations', fontsize = fs)
-    axx.set_ylabel('log Posterior', fontsize = fs)
-    axx.tick_params(axis='both', which='major', labelsize=fs)
+    sns.set(style="ticks")
+    kwargs = {'edgecolor': "w",  # for edge color
+              'linewidth': 0.3,
+              's': 10}
+    ax = sns.scatterplot(x="iteration", y="logPosterior", data=params_fval,
+                         **kwargs)
 
-    fig.tight_layout()
+    # ax.scatter(nr_iter, arr_fval, alpha=0.5, s=10)
+    ax.set_xlabel('number of iterations', fontsize = fs)
+    ax.set_ylabel('log Posterior', fontsize = fs)
+    # ax.tick_params(axis='both', which='major', labelsize=fs)
+
+    sns.despine()
+
     plt.show()
 
-    return axx
+    return ax
 
 
 def sampling_parameters(result, options, size=None, fs = 12):
@@ -95,8 +110,9 @@ def sampling_parameters(result, options, size=None, fs = 12):
     :return:
     '''
     # get data which should be plotted
-    nr_params, nr_iter, pd_array, _, _, theta_lb, theta_ub, param_names = \
+    nr_params, params_fval, theta_lb, theta_ub = \
         get_data_to_plot(result,options,noex_param_name=True)
+    param_names = params_fval.columns.values[0:nr_params]
 
     # compute, how many rows and columns we need for the subplots
     num_row = int(np.round(np.sqrt(nr_params)))
@@ -104,21 +120,23 @@ def sampling_parameters(result, options, size=None, fs = 12):
 
     fig, axes = plt.subplots(num_row,num_col, squeeze=False, figsize=size)
     axes = dict(zip(param_names, axes.flat))
-    print(axes)
 
+    sns.set(style="ticks")
+    kwargs = {'edgecolor': "w",  # for edge color
+              'linewidth': 0.3,
+              's': 10}
     # fig, ax = plt.subplots(nr_params, figsize=size)[1]
     for idx, plot_id in enumerate(param_names):
-        print(plot_id)
-        print(idx)
-        print(plot_id)
-
         ax = axes[plot_id]
-        ax.scatter(nr_iter, pd_array[plot_id], alpha=0.5, s=10)
+        ax = sns.scatterplot(x="iteration", y=plot_id, data=params_fval, ax=ax,
+                             **kwargs)
+        # ax.scatter(nr_iter, params_fval[plot_id], alpha=0.5, s=10)
         ax.set_xlabel('number of iterations', fontsize=fs)
         ax.set_ylabel(param_names[idx], fontsize=fs)
         ax.set_ylim([theta_lb[idx],theta_ub[idx]])
-        ax.tick_params(axis='both', which='major', labelsize=fs)
+        # ax.tick_params(axis='both', which='major', labelsize=fs)
     fig.tight_layout()
+    sns.despine()
     plt.show()
 
     return ax
@@ -135,17 +153,50 @@ def sampling_parameter_corr(result, options, size=None, fs=12):
         '''
     #
     # get data which should be plotted
-    nr_params, nr_iter, pd_array, _, _, theta_lb, theta_ub, param_names = \
+    nr_params, params_fval, theta_lb, theta_ub = \
         get_data_to_plot(result, options, noex_param_name=True)
-    g = sns.set(style="ticks")
-    g = sns.pairplot(pd_array)
+
+    sns.set(style="ticks")
+    # df1 = df1.drop(['B', 'C'], axis=1)
+    ax = sns.pairplot(params_fval.drop(['logPosterior', 'iteration'], axis=1))
+
+    return ax
 
 
-    return g
+def sampling_marginal(result,options,size,fs):
+    '''
+    Plot Marginals
+    :param result:
+    :param options:
+    :param size:
+    :param fs:
+    :return:
+    '''
+    # get data which should be plotted
+    nr_params, params_fval, theta_lb, theta_ub = \
+        get_data_to_plot(result, options, noex_param_name=True)
+    param_names = params_fval.columns.values[0:nr_params]
 
-# ax = sampling_fval(result, options, size=None, fs = 12)
-# ##
-# ax = sampling_parameters(result, options, size=None, fs = 12)
-# ##
-# ax = sampling_parameter_corr(result, options, size=None, fs=12)
+    # compute, how many rows and columns we need for the subplots
+    num_row = int(np.round(np.sqrt(nr_params)))
+    num_col = int(np.ceil(nr_params / num_row))
+
+    fig, axes = plt.subplots(num_row, num_col, squeeze=False, figsize=size)
+    axes = dict(zip(param_names, axes.flat))
+
+    # fig, ax = plt.subplots(nr_params, figsize=size)[1]
+    for idx, plot_id in enumerate(param_names):
+
+        ax = axes[plot_id]
+        # sns.set_style('ticks')
+        sns.set(style="ticks")
+        ax = sns.kdeplot(params_fval[plot_id], bw=0.5, ax=ax)
+        ax.set_xlabel('log(' + param_names[idx] + ')')
+        ax.set_ylabel('Density')
+        sns.despine()
+
+    fig.tight_layout()
+    plt.show()
+
+    return ax
 
