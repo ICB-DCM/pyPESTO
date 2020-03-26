@@ -37,16 +37,16 @@ options = {
     'max_temp': 50000
 }
 
-np.random.seed(0)
+np.random.seed(2)
 resultAM = adaptive_metropolis.adaptive_metropolis(
     lambda x: p(x), theta0, options)
 
-np.random.seed(0)
+np.random.seed(2)
 resultPT = parallel_tempering(
     lambda x: p(x), theta0, options)
 
 # print(np.median(resultAM['log_posterior']))
-# print(resultAM['theta'])
+print(resultPT['theta'].shape)
 
 plt.figure()
 plt.plot(range(options['iterations']), resultAM['theta'][0], 'ko', label='MCMC sample')
@@ -83,8 +83,9 @@ plt.figure(figsize=(5, 13))
 sns.set_style('whitegrid')
 for n_T in range(options['n_temperatures']):
     plt.subplot(options['n_temperatures'], 1, n_T+1)
-    sns.kdeplot(resultPT['theta'][n_T][0], bw=0.5)
-    plt.title('T = '+str(n_T+1))
+    # sns.kdeplot(resultPT['theta'][n_T][0], bw=0.5)
+    plt.hist(resultPT['theta'][n_T][0])
+    plt.title('T'+str(n_T+1))
     plt.xlabel('x')
     plt.ylabel('Density')
 plt.tight_layout()
@@ -92,8 +93,9 @@ plt.savefig('toyExample_xKDE_PT.svg')
 plt.close()
 
 plt.figure()
-sns.set_style('whitegrid')
-sns.kdeplot(resultAM['theta'][0], bw=0.5)
+# sns.set_style('whitegrid')
+# sns.kdeplot(resultAM['theta'][0], bw=0.5)
+plt.hist(resultAM['theta'][0])
 plt.xlabel('x')
 plt.ylabel('Density')
 plt.tight_layout()
