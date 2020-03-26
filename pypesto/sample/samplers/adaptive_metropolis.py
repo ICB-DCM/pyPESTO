@@ -1,7 +1,7 @@
 from typing import Callable, Sequence, Tuple
 import numpy as np
 import math
-import random
+# import random
 
 # matlab starts counts at 1. python starts counts at 0. hence first iteration
 # will be 0, not 1 like in matlab. hence iteration+1 in code
@@ -185,7 +185,7 @@ def adaptive_metropolis_proposal_accepted(
                 log_acceptance = 0
 
     # here, the range is [0,1]. matlab range might be (0,1)?
-    if math.log(random.uniform(0,1)) <= log_acceptance:
+    if np.less_equal(np.log(float(np.random.uniform(0, 1, 1))), log_acceptance):
         return {
             'accepted': True,
             'log_posterior': log_posterior_proposal,
