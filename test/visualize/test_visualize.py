@@ -49,13 +49,18 @@ def create_optimization_result():
     return result
 
 def create_optimization_result_nan_inf():
+    """
+    Create a result object containing nan and inf function values
+    """
     # get result with only numbers
     result = create_optimization_result()
 
     # append nan and inf
-    optimizer_result = pypesto.OptimizerResult(fval=float('nan'), x=[float('nan'), float('nan')])
+    optimizer_result = pypesto.OptimizerResult(fval=float('nan'),
+                                               x=[float('nan'), float('nan')])
     result.optimize_result.append(optimizer_result=optimizer_result)
-    optimizer_result = pypesto.OptimizerResult(fval=-float('inf'), x=[-float('inf'), -float('inf')])
+    optimizer_result = pypesto.OptimizerResult(
+        fval=-float('inf'), x=[-float('inf'), -float('inf')])
     result.optimize_result.append(optimizer_result=optimizer_result)
 
     return result
@@ -133,9 +138,9 @@ class TestVisualize(unittest.TestCase):
 
     @staticmethod
     def test_waterfall_with_nan_inf():
-        # create the necessary results
+        # create the necessary results, one with nan and inf, one without
         result_1 = create_optimization_result_nan_inf()
-        result_2 = create_optimization_result_nan_inf()
+        result_2 = create_optimization_result()
 
         # test a standard call
         pypesto.visualize.waterfall(result_1)
@@ -423,6 +428,20 @@ class TestVisualize(unittest.TestCase):
         pypesto.visualize.assign_colors(fvals, colors=[[.5, .9, .9, .3],
                                                        [.5, .8, .8, .5],
                                                        [.9, .1, .1, .1]])
+
+    @staticmethod
+    def test_delete_nan_inf():
+        # create fvals contains nan and inf
+        fvals = np.array([42, 1.5, np.nan, 67.01, np.inf])
+
+        # create a random x
+        x = np.array([[1, 2], [1, 1], [np.nan, 1], [65, 1], [2, 3]])
+        x, fvals = pypesto.visualize.delete_nan_inf(fvals, x)
+
+        # test if the nan and inf in fvals are deleted, and so do the
+        # corresponding entries in x
+        np.testing.assert_array_equal(fvals, [42, 1.5, 67.01])
+        np.testing.assert_array_equal(x, [[1, 2], [1, 1], [65, 1]])
 
     @staticmethod
     def test_reference_points():
