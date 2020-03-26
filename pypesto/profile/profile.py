@@ -5,7 +5,7 @@ from typing import Callable, Dict, Union
 from ..optimize import Optimizer
 from ..problem import Problem
 from ..result import Result
-from .profiler import ProfilerResult
+from .result import ProfilerResult
 from .profile_next_guess import next_guess
 
 logger = logging.getLogger(__name__)
