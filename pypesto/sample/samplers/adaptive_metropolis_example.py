@@ -3,7 +3,7 @@ import math
 
 import pypesto.sample.samplers.adaptive_metropolis as adaptive_metropolis
 # import adaptive_metropolis
-import pypesto.visualize.sampling_fval as sampling_fval
+import pypesto.visualize.sampling as plot_sample
 
 def simulate_observable(theta, t):
     return np.sum(theta) * np.power(t,2)/4
@@ -54,7 +54,12 @@ result = adaptive_metropolis.adaptive_metropolis(
     lambda t: l_p_c(t, observable_measurements, observable_timepoints, sigma),
     theta, options)
 
-sampling_fval.sampling_fval(result, size=None, fs = 12, noex_param_name = True)
+# sampling_fval.sampling_fval(result, options, size=None, fs = 12, noex_param_name = True)
+ax = plot_sample.sampling_fval(result, options, size=None, fs = 12)
+#
+ax = plot_sample.sampling_parameters(result, options, size=None, fs = 12)
+#
+ax = plot_sample.sampling_parameter_corr(result, options, size=None, fs=12)
 
 from pprint import pprint
 pprint(result)
