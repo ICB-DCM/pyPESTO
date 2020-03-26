@@ -54,12 +54,10 @@ result = adaptive_metropolis.adaptive_metropolis(
     lambda t: l_p_c(t, observable_measurements, observable_timepoints, sigma),
     theta, options)
 
-# sampling_fval.sampling_fval(result, options, size=None, fs = 12, noex_param_name = True)
 ax = plot_sample.sampling_fval(result, options, size=None, fs = 12)
-#
 ax = plot_sample.sampling_parameters(result, options, size=None, fs = 12)
-#
 ax = plot_sample.sampling_parameter_corr(result, options, size=None, fs=12)
+ax = plot_sample.sampling_marginal(result,options,size=[10,10],fs=12)
 
 from pprint import pprint
 pprint(result)
