@@ -508,31 +508,25 @@ def create_plist_from_par_opt_to_par_sim(mapping_par_opt_to_par_sim):
 def create_identity_parameter_mapping(
         amici_model: 'amici.Model', n_conditions: int
 ) -> 'ParameterMapping':
-    """Create a dummy identity parameter mapping table."""
+    """Create a dummy identity parameter mapping table.
+
+    This fills in only the dynamic parameters. Values for fixed parameters,
+    both in preequilibration and simulation, are assumed to be provided
+    correctly in model or edatas already.
+    """
     x_ids = list(amici_model.getParameterIds())
     x_scales = list(amici_model.getParameterScale())
-    x_fixed_ids = list(amici_model.getFixedParameterIds())
-    x_fixed_vals = list(amici_model.getFixedParameters())
     parameter_mapping = ParameterMapping()
     for _ in range(n_conditions):
-        condition_map_sim_fix = {
-            x_id: x_val for x_id, x_val in zip(x_fixed_ids, x_fixed_vals)}
-        condition_scale_map_sim_fix = {
-            x_id: amici.petab_objective.amici_to_petab_scale(
-                amici.ParameterScaling_none)
-            for x_id in x_fixed_ids}
-
         condition_map_sim_var = {x_id: x_id for x_id in x_ids}
         condition_scale_map_sim_var = {
             x_id: amici.petab_objective.amici_to_petab_scale(x_scale)
             for x_id, x_scale in zip(x_ids, x_scales)}
 
-        # assumes preeq parameters are filled in already in edatas, if needed
+        # assumes fixed parameters are filled in already
         mapping_for_condition = ParameterMappingForCondition(
             map_sim_var=condition_map_sim_var,
-            scale_map_sim_var=condition_scale_map_sim_var,
-            map_sim_fix=condition_map_sim_fix,
-            scale_map_sim_fix=condition_scale_map_sim_fix)
+            scale_map_sim_var=condition_scale_map_sim_var)
 
         parameter_mapping.append(mapping_for_condition)
     return parameter_mapping
