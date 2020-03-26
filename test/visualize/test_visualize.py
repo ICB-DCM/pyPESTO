@@ -37,25 +37,27 @@ def create_optimization_result():
     # write some dummy results for optimization
     result = pypesto.Result(problem=problem)
     for j in range(0, 3):
-        optimizer_result = pypesto.OptimizerResult(fval=j * 0.01,
-                                                   x=[j + 0.1, j + 1])
+        optimizer_result = pypesto.OptimizerResult(
+            fval=j * 0.01, x=np.array([j + 0.1, j + 1]))
         result.optimize_result.append(optimizer_result=optimizer_result)
     for j in range(0, 4):
-        optimizer_result = pypesto.OptimizerResult(fval=10 + j * 0.01,
-                                                   x=[2.5 + j + 0.1,
-                                                      2 + j + 1])
+        optimizer_result = pypesto.OptimizerResult(
+            fval=10 + j * 0.01, x=np.array([2.5 + j + 0.1, 2 + j + 1]))
         result.optimize_result.append(optimizer_result=optimizer_result)
 
     return result
+
 
 def create_optimization_result_nan_inf():
     # get result with only numbers
     result = create_optimization_result()
 
     # append nan and inf
-    optimizer_result = pypesto.OptimizerResult(fval=float('nan'), x=[float('nan'), float('nan')])
+    optimizer_result = pypesto.OptimizerResult(
+        fval=float('nan'), x=np.array([float('nan'), float('nan')]))
     result.optimize_result.append(optimizer_result=optimizer_result)
-    optimizer_result = pypesto.OptimizerResult(fval=-float('inf'), x=[-float('inf'), -float('inf')])
+    optimizer_result = pypesto.OptimizerResult(
+        fval=-float('inf'), x=np.array([-float('inf'), -float('inf')]))
     result.optimize_result.append(optimizer_result=optimizer_result)
 
     return result
