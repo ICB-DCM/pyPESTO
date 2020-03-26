@@ -3,6 +3,7 @@ from matplotlib.ticker import MaxNLocator
 import numpy as np
 from .reference_points import create_references
 from .clust_color import assign_colors
+from .clust_color import delete_nan_inf
 from .misc import process_result_list
 from .misc import process_y_limits
 from .misc import process_offset_y
@@ -143,6 +144,8 @@ def waterfall_lowlevel(fvals, scale_y='log10', offset_y=0., ax=None,
 
     # parse input
     fvals = np.array(fvals)
+    # remove nan or inf values in fvals
+    _, fvals = delete_nan_inf(fvals)
 
     n_fvals = len(fvals)
     start_ind = range(n_fvals)
@@ -256,8 +259,8 @@ def get_fvals(result: Result,
     # reduce to indices for which the user asked
     fvals = fvals[start_indices]
 
-    # get the minimal value which should be plotted
-    min_val = np.min(fvals)
+    # get the minimal value which should be plotted, avoid the value being -inf or nan
+    min_val = np.nanmin(fvals[fvals != -np.inf])
 
     # check, whether offset can be used with this data
     offset_y = process_offset_y(offset_y, scale_y, min_val)
