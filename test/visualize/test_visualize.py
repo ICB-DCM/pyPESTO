@@ -48,6 +48,18 @@ def create_optimization_result():
 
     return result
 
+def create_optimization_result_nan_inf():
+    # get result with only numbers
+    result = create_optimization_result()
+
+    # append nan and inf
+    optimizer_result = pypesto.OptimizerResult(fval=float('nan'), x=[float('nan'), float('nan')])
+    result.optimize_result.append(optimizer_result=optimizer_result)
+    optimizer_result = pypesto.OptimizerResult(fval=-float('inf'), x=[-float('inf'), -float('inf')])
+    result.optimize_result.append(optimizer_result=optimizer_result)
+
+    return result
+
 
 def create_optimization_history():
     # create the pypesto problem
@@ -120,6 +132,18 @@ class TestVisualize(unittest.TestCase):
         pypesto.visualize.waterfall([result_1, result_2])
 
     @staticmethod
+    def test_waterfall_with_nan_inf():
+        # create the necessary results
+        result_1 = create_optimization_result_nan_inf()
+        result_2 = create_optimization_result_nan_inf()
+
+        # test a standard call
+        pypesto.visualize.waterfall(result_1)
+
+        # test plotting of lists
+        pypesto.visualize.waterfall([result_1, result_2])
+
+    @staticmethod
     def test_waterfall_with_options():
         # create the necessary results
         result_1 = create_optimization_result()
@@ -167,6 +191,18 @@ class TestVisualize(unittest.TestCase):
         # create the necessary results
         result_1 = create_optimization_result()
         result_2 = create_optimization_result()
+
+        # test a standard call
+        pypesto.visualize.parameters(result_1)
+
+        # test plotting of lists
+        pypesto.visualize.parameters([result_1, result_2])
+
+    @staticmethod
+    def test_parameters_with_nan_inf():
+        # create the necessary results
+        result_1 = create_optimization_result_nan_inf()
+        result_2 = create_optimization_result_nan_inf()
 
         # test a standard call
         pypesto.visualize.parameters(result_1)
