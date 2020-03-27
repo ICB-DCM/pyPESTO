@@ -143,10 +143,7 @@ class Objective:
 
         self.x_names = x_names
 
-        self.history = ObjectiveHistory(self.options,
-                                        self.x_names,
-                                        self._call_mode_fun
-                                        if self.has_fun else None)
+        self.history = ObjectiveHistory(self.options, self.x_names)
 
         self.pre_post_processor = PrePostProcessor()
 
@@ -256,7 +253,7 @@ class Objective:
         result = self._call_unprocessed(x, sensi_orders, mode)
 
         # update history
-        self.history.update(x, sensi_orders, mode, result)
+        self.history.update(x, sensi_orders, mode, result, self._call_mode_fun)
 
         # post-process
         result = self.pre_post_processor.postprocess(result)
