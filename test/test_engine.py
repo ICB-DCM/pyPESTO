@@ -1,6 +1,7 @@
 import numpy as np
 import unittest
 import copy
+import cloudpickle as pickle
 
 import pypesto
 import test.test_objective as test_objective
@@ -12,7 +13,8 @@ class EngineTest(unittest.TestCase):
 
     def test_basic(self):
         for engine in [pypesto.SingleCoreEngine(),
-                       pypesto.MultiProcessEngine(n_procs=2)]:
+                       pypesto.MultiProcessEngine(n_procs=2),
+                       pypesto.MultiThreadEngine(n_procs=2)]:
             self._test_basic(engine)
 
     def _test_basic(self, engine):
@@ -27,7 +29,9 @@ class EngineTest(unittest.TestCase):
         self.assertTrue(len(result.optimize_result.as_list()) == 5)
 
     def test_petab(self):
-        for engine in [pypesto.MultiProcessEngine()]:
+        for engine in [pypesto.SingleCoreEngine(),
+                       pypesto.MultiProcessEngine(n_procs=2),
+                       pypesto.MultiThreadEngine(n_procs=2)]:
             self._test_petab(engine)
 
     def _test_petab(self, engine):
@@ -40,23 +44,47 @@ class EngineTest(unittest.TestCase):
             problem=problem, n_starts=2, engine=engine, optimizer=optimizer)
         self.assertTrue(len(result.optimize_result.as_list()) == 2)
 
-    def test_deepcopy(self):
+    @staticmethod
+    def test_deepcopy_objective(self):
+        """Test copying objectives (needed for MultiProcessEngine)."""
         petab_importer = pypesto.PetabImporter.from_yaml(
             folder_base + "Zheng_PNAS2012/Zheng_PNAS2012.yaml")
         objective = petab_importer.create_objective()
 
-        objective.amici_solver.setSensitivityMethod(amici.SensitivityMethod_adjoint)
+        objective.amici_solver.setSensitivityMethod(
+            amici.SensitivityMethod_adjoint)
 
-        copy
         objective2 = copy.deepcopy(objective)
 
         # test some properties
         assert objective.amici_model.getParameterIds() \
             == objective2.amici_model.getParameterIds()
         assert objective.amici_solver.getSensitivityOrder() \
-            == objective.amici_solver.getSensitivityOrder()
+            == objective2.amici_solver.getSensitivityOrder()
         assert objective.amici_solver.getSensitivityMethod() \
-            == objective.amici_solver.getSensitivityMethod()
+            == objective2.amici_solver.getSensitivityMethod()
+        assert len(objective.edatas) == len(objective2.edatas)
+
+    @staticmethod
+    def test_pickle_objective(self):
+        """Test serializing objectives (needed for MultiThreadEngine)."""
+        petab_importer = pypesto.PetabImporter.from_yaml(
+            folder_base + "Zheng_PNAS2012/Zheng_PNAS2012.yaml")
+        objective = petab_importer.create_objective()
+
+        objective.amici_solver.setSensitivityMethod(
+            amici.SensitivityMethod_adjoint)
+
+        objective2=pickle.loads(pickle.dumps(objective))
+
+        # test some properties
+        assert objective.amici_model.getParameterIds() \
+               == objective2.amici_model.getParameterIds()
+        assert objective.amici_solver.getSensitivityOrder() \
+               == objective2.amici_solver.getSensitivityOrder()
+        # TODO Pickling does not preserve attributes yet
+        #assert objective.amici_solver.getSensitivityMethod() \
+        #       == objective2.amici_solver.getSensitivityMethod()
         assert len(objective.edatas) == len(objective2.edatas)
 
 

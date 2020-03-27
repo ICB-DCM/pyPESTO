@@ -207,15 +207,18 @@ class AmiciObjective(Objective):
         """
         self.res = self.get_bound_res()
 
-    def __deepcopy__(self, memodict: Dict = None) -> 'AmiciObjective':
-        model = amici.ModelPtr(self.amici_model.clone())
-        solver = amici.SolverPtr(self.amici_solver.clone())
-        edatas = [amici.ExpData(data) for data in self.edatas]
-        other = AmiciObjective(model, solver, edatas,
-                               guess_steadystate=self.guess_steadystate)
-        for attr in self.__dict__:
-            if attr not in ['amici_solver', 'amici_model', 'edatas', '']:
-                other.__dict__[attr] = copy.deepcopy(self.__dict__[attr])
+    def __deepcopy__(self, memodict: Dict = None):
+        print("deepcopy")
+        other = self.__class__.__new__(self.__class__)
+
+        for key in set(self.__dict__.keys()) - \
+                   {'amici_model', 'amici_solver', 'edatas'}:
+            other.__dict__[key] = copy.deepcopy(self.__dict__[key])
+
+        other.amici_model = amici.ModelPtr(self.amici_model.clone())
+        other.amici_solver = amici.SolverPtr(self.amici_solver.clone())
+        other.edatas = [amici.ExpData(data) for data in self.edatas]
+
         return other
 
     def reset(self) -> None:
@@ -564,8 +567,11 @@ def add_sim_grad_to_opt_grad(
             continue
         par_sim_idx = par_sim_ids.index(par_sim)
         par_opt_idx = par_opt_ids.index(par_opt)
-
-        opt_grad[par_opt_idx] += coefficient * sim_grad[par_sim_idx]
+        if sim_grad is None:
+            print(opt_grad, coefficient, sim_grad, par_opt_idx, par_sim_idx)
+ 
+        a = sim_grad[par_sim_idx]
+        opt_grad[par_opt_idx] += coefficient * a
 
 
 def add_sim_hess_to_opt_hess(

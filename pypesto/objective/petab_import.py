@@ -396,16 +396,20 @@ class PetabAmiciObjective(AmiciObjective):
         self.petab_importer = petab_importer
 
     def __getstate__(self) -> dict:
+        print("getstate")
         state = {}
         for key in set(self.__dict__.keys()) - \
                 {'amici_model', 'amici_solver', 'edatas'}:
             state[key] = self.__dict__[key]
+
         return state
 
     def __setstate__(self, state: Dict) -> None:
+        print("setstate")
         self.__dict__.update(state)
         petab_importer = state['petab_importer']
 
+        # note: attributes not defined in the importer are lost
         model = petab_importer.create_model()
         solver = petab_importer.create_solver(model)
         edatas = petab_importer.create_edatas(model)
@@ -413,16 +417,3 @@ class PetabAmiciObjective(AmiciObjective):
         self.amici_model = model
         self.amici_solver = solver
         self.edatas = edatas
-
-    def __deepcopy__(self, memodict: Dict = None):
-        other = self.__class__.__new__(self.__class__)
-
-        for key in set(self.__dict__.keys()) - \
-                {'amici_model', 'amici_solver', 'edatas'}:
-            other.__dict__[key] = copy.deepcopy(self.__dict__[key])
-
-        other.amici_model = amici.ModelPtr(self.amici_model.clone())
-        other.amici_solver = amici.SolverPtr(self.amici_solver.clone())
-        other.edatas = [amici.ExpData(data) for data in self.edatas]
-
-        return other
