@@ -164,14 +164,14 @@ class ObjectiveHistory:
                 self.n_sres += 1
 
     def _fval2chi2_offset(
-            self, x: np.ndarray, chi2: float, get_fval: Callable):
+            self, x: np.ndarray, chi2: float, call_mode_fun: Callable):
         """
         Initializes the conversion factor between fval and chi2 values,
         if possible.
         """
         if self.fval2chi2_offset is None:
-            if get_fval is not None:
-                self.fval2chi2_offset = get_fval(x, (0,))[FVAL] - chi2
+            if call_mode_fun is not None:
+                self.fval2chi2_offset = call_mode_fun(x, (0,))[FVAL] - chi2
             else:
                 self.fval2chi2_offset = 0.0
 
