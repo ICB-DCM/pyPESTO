@@ -217,7 +217,8 @@ class AmiciObjective(Objective):
         other.amici_model = amici.ModelPtr(self.amici_model.clone())
         other.amici_solver = amici.SolverPtr(self.amici_solver.clone())
         other.edatas = [amici.ExpData(data) for data in self.edatas]
-
+        other.rebind_fun()
+        other.rebind_res()
         return other
 
     def reset(self) -> None:
