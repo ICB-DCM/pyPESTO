@@ -33,5 +33,6 @@ from .profile import (
     ProfilerResult)
 from .engine import (
     SingleCoreEngine,
+    MultiThreadEngine,
     MultiProcessEngine)
 from . import visualize

@@ -93,10 +93,6 @@ class Objective:
     options:
         Options as specified in pypesto.ObjectiveOptions.
 
-
-    Attributes
-    ----------
-
     history: pypesto.ObjectiveHistory
         For storing the call history. Initialized by the optimizer in
         reset_history().
@@ -127,7 +123,9 @@ class Objective:
                  fun_accept_sensi_orders: bool = False,
                  res_accept_sensi_orders: bool = False,
                  x_names: List[str] = None,
-                 options: ObjectiveOptions = None):
+                 options: ObjectiveOptions = None,
+                 history: ObjectiveHistory = None,
+                 pre_post_processor: PrePostProcessor = None):
         self.fun = fun
         self.grad = grad
         self.hess = hess
@@ -143,9 +141,13 @@ class Objective:
 
         self.x_names = x_names
 
-        self.history = ObjectiveHistory(self.options, self.x_names)
+        if history is None:
+            history = ObjectiveHistory(self.options, self.x_names)
+        self.history = history
 
-        self.pre_post_processor = PrePostProcessor()
+        if pre_post_processor is None:
+            pre_post_processor = PrePostProcessor()
+        self.pre_post_processor = pre_post_processor
 
     def __deepcopy__(self, memodict=None) -> 'Objective':
         other = Objective()

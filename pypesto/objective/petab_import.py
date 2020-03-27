@@ -2,12 +2,10 @@ import pandas as pd
 import os
 import sys
 import importlib
-import copy
 import shutil
 import logging
 import tempfile
-from warnings import warn
-from typing import Dict, List, Union
+from typing import Dict, List, Sequence, Union
 
 from ..problem import Problem
 from .amici_objective import AmiciObjective
@@ -36,7 +34,7 @@ class PetabImporter:
             Managing access to the model and data.
         output_folder:
             Folder to contain the amici model. Defaults to
-            './amici_models/model_name'.
+            './amici_models/{model_name}'.
         model_name:
             Name of the model, which will in particular be the name of the
             compiled model python module.
@@ -50,33 +48,6 @@ class PetabImporter:
         if model_name is None:
             model_name = _find_model_name(self.output_folder)
         self.model_name = model_name
-
-    @staticmethod
-    def from_folder(folder: str,
-                    output_folder: str = None,
-                    model_name: str = None):
-        """
-        Simplified constructor exploiting the standardized petab folder
-        structure.
-
-        Parameters
-        ----------
-
-        folder:
-            Path to the base folder of the model, as in
-            petab.Problem.from_folder.
-        output_folder: See __init__.
-        model_name: See __init__.
-        """
-        warn("This function will be removed in future releases. "
-             "Consider using `from_yaml` instead.")
-
-        petab_problem = petab.Problem.from_folder(folder)
-
-        return PetabImporter(
-            petab_problem=petab_problem,
-            output_folder=output_folder,
-            model_name=model_name)
 
     @staticmethod
     def from_yaml(yaml_config: Union[dict, str],
@@ -101,8 +72,7 @@ class PetabImporter:
 
         Parameters
         ----------
-
-        force_compile: str, optional
+        force_compile:
             If False, the model is compiled only if the output folder does not
             exist yet. If True, the output folder is deleted and the model
             (re-)compiled in either case.
@@ -113,7 +83,7 @@ class PetabImporter:
 
         kwargs: Extra arguments passed to amici.SbmlImporter.sbml2amici
         """
-        # courtesy check if target not folder
+        # courtesy check whether target is folder
         if os.path.exists(self.output_folder) \
                 and not os.path.isdir(self.output_folder):
             raise AssertionError(
@@ -178,7 +148,7 @@ class PetabImporter:
 
         Parameters
         ----------
-        kwargs: Extra arguments passed to amici.SbmlImporter.sbml2amici
+        kwargs: Extra arguments passed to `amici.SbmlImporter.sbml2amici`.
 
         """
 
@@ -226,7 +196,7 @@ class PetabImporter:
             self,
             model: 'amici.Model' = None,
             solver: 'amici.Solver' = None,
-            edatas: List['amici.ExpData'] = None,
+            edatas: Sequence['amici.ExpData'] = None,
             force_compile: bool = False
     ) -> 'PetabAmiciObjective':
         """
@@ -294,7 +264,7 @@ class PetabImporter:
         return problem
 
     def rdatas_to_measurement_df(
-            self, rdatas: List['amici.ReturnData'],
+            self, rdatas: Sequence['amici.ReturnData'],
             model: 'amici.Model' = None
     ) -> pd.DataFrame:
         """
@@ -325,7 +295,7 @@ class PetabImporter:
             rdatas, model, measurement_df)
 
     def rdatas_to_simulation_df(
-            self, rdatas: List['amici.ReturnData'],
+            self, rdatas: Sequence['amici.ReturnData'],
             model: 'amici.Model' = None
     ) -> pd.DataFrame:
         """Same as `rdatas_to_measurement_df`, execpt a petab simulation
@@ -383,9 +353,9 @@ class PetabAmiciObjective(AmiciObjective):
             petab_importer: PetabImporter,
             amici_model: 'amici.Model',
             amici_solver: 'amici.Solver',
-            edatas: List['amici.ExpData'],
-            x_ids: List[str],
-            x_names: List[str],
+            edatas: Sequence['amici.ExpData'],
+            x_ids: Sequence[str],
+            x_names: Sequence[str],
             parameter_mapping: 'amici.parameter_mapping.ParameterMapping'):
         super().__init__(
             amici_model=amici_model,
@@ -400,12 +370,14 @@ class PetabAmiciObjective(AmiciObjective):
         for key in set(self.__dict__.keys()) - \
                 {'amici_model', 'amici_solver', 'edatas'}:
             state[key] = self.__dict__[key]
+
         return state
 
     def __setstate__(self, state: Dict) -> None:
         self.__dict__.update(state)
         petab_importer = state['petab_importer']
 
+        # note: attributes not defined in the importer are lost
         model = petab_importer.create_model()
         solver = petab_importer.create_solver(model)
         edatas = petab_importer.create_edatas(model)
@@ -413,16 +385,3 @@ class PetabAmiciObjective(AmiciObjective):
         self.amici_model = model
         self.amici_solver = solver
         self.edatas = edatas
-
-    def __deepcopy__(self, memodict: Dict = None):
-        other = self.__class__.__new__(self.__class__)
-
-        for key in set(self.__dict__.keys()) - \
-                {'amici_model', 'amici_solver', 'edatas'}:
-            other.__dict__[key] = copy.deepcopy(self.__dict__[key])
-
-        other.amici_model = amici.ModelPtr(self.amici_model.clone())
-        other.amici_solver = amici.SolverPtr(self.amici_solver.clone())
-        other.edatas = [amici.ExpData(data) for data in self.edatas]
-
-        return other

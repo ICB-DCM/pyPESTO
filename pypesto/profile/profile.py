@@ -341,7 +341,8 @@ def initialize_profile(
 
     # Check, whether an optimization result is existing
     if result.optimize_result is None:
-        print("Optimization has to be carried before profiling can be done.")
+        logger.error(
+            "Optimization has to be carried before profiling can be done.")
         return None
 
     tmp_optimize_result = result.optimize_result.as_list()
