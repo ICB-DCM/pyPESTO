@@ -47,6 +47,7 @@ def create_optimization_result():
 
     return result
 
+
 def create_optimization_result_nan_inf():
     """
     Create a result object containing nan and inf function values
