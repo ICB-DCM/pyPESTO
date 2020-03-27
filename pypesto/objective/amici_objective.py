@@ -301,10 +301,9 @@ class AmiciObjective(Objective):
             condition_map_sim_var = \
                 self.parameter_mapping[data_ix].map_sim_var
 
-            nllh -= rdata['llh']
-
             # compute objective
             if mode == MODE_FUN:
+                nllh -= rdata['llh']
 
                 if sensi_order > 0:
                     add_sim_grad_to_opt_grad(

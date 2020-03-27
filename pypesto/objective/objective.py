@@ -255,7 +255,8 @@ class Objective:
         result = self._call_unprocessed(x, sensi_orders, mode)
 
         # update history
-        self.history.update(x, sensi_orders, mode, result)
+        self.history.update(x, sensi_orders, mode, result,
+                            self._call_mode_fun if self.has_fun else None)
 
         # post-process
         result = self.pre_post_processor.postprocess(result)
