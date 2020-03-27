@@ -2,7 +2,6 @@ import pandas as pd
 import os
 import sys
 import importlib
-import copy
 import shutil
 import logging
 import tempfile
@@ -35,7 +34,7 @@ class PetabImporter:
             Managing access to the model and data.
         output_folder:
             Folder to contain the amici model. Defaults to
-            './amici_models/model_name'.
+            './amici_models/{model_name}'.
         model_name:
             Name of the model, which will in particular be the name of the
             compiled model python module.
@@ -74,8 +73,7 @@ class PetabImporter:
 
         Parameters
         ----------
-
-        force_compile: str, optional
+        force_compile:
             If False, the model is compiled only if the output folder does not
             exist yet. If True, the output folder is deleted and the model
             (re-)compiled in either case.
@@ -86,7 +84,7 @@ class PetabImporter:
 
         kwargs: Extra arguments passed to amici.SbmlImporter.sbml2amici
         """
-        # courtesy check if target not folder
+        # courtesy check whether target is folder
         if os.path.exists(self.output_folder) \
                 and not os.path.isdir(self.output_folder):
             raise AssertionError(
@@ -151,7 +149,7 @@ class PetabImporter:
 
         Parameters
         ----------
-        kwargs: Extra arguments passed to amici.SbmlImporter.sbml2amici
+        kwargs: Extra arguments passed to `amici.SbmlImporter.sbml2amici`.
 
         """
 
@@ -369,7 +367,6 @@ class PetabAmiciObjective(AmiciObjective):
         self.petab_importer = petab_importer
 
     def __getstate__(self) -> dict:
-        print("getstate")
         state = {}
         for key in set(self.__dict__.keys()) - \
                 {'amici_model', 'amici_solver', 'edatas'}:
@@ -378,7 +375,6 @@ class PetabAmiciObjective(AmiciObjective):
         return state
 
     def __setstate__(self, state: Dict) -> None:
-        print("setstate")
         self.__dict__.update(state)
         petab_importer = state['petab_importer']
 

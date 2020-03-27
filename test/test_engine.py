@@ -14,7 +14,7 @@ class EngineTest(unittest.TestCase):
     def test_basic(self):
         for engine in [pypesto.SingleCoreEngine(),
                        pypesto.MultiProcessEngine(n_procs=2),
-                       pypesto.MultiThreadEngine(n_procs=8)]:
+                       pypesto.MultiThreadEngine(n_threads=8)]:
             self._test_basic(engine)
 
     def _test_basic(self, engine):
@@ -31,7 +31,7 @@ class EngineTest(unittest.TestCase):
     def test_petab(self):
         for engine in [pypesto.SingleCoreEngine(),
                        pypesto.MultiProcessEngine(n_procs=2),
-                       pypesto.MultiThreadEngine(n_procs=8)]:
+                       pypesto.MultiThreadEngine(n_threads=8)]:
             self._test_petab(engine)
 
     def _test_petab(self, engine):

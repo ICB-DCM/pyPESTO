@@ -12,6 +12,7 @@ logger = logging.getLogger(__name__)
 
 
 def work(task):
+    """Just execute task."""
     return task.execute()
 
 
@@ -19,34 +20,36 @@ class MultiThreadEngine(Engine):
     """
     Parallelize the task execution using multithreading.
 
-    Attributes
+    Parameters
     ----------
-
-    n_procs: int, optional
-        The maximum number of threads to , unless less tasks are defined.
-        Defaults to the number of cpus available on the system according to
-        ``os.cpu_count()``.
+    n_threads:
+        The maximum number of threads to use in parallel.
+        Defaults to the number of CPUs available on the system according to
+        `os.cpu_count()`.
+        The effectively used number of threads will be the minimum of
+        `n_threads` and the number of tasks submitted.
     """
 
-    def __init__(self, n_procs: int = None):
+    def __init__(self, n_threads: int = None):
         super().__init__()
 
-        if n_procs is None:
-            n_procs = os.cpu_count()
+        if n_threads is None:
+            n_threads = os.cpu_count()
             logger.warning(
-                f"Engine set up to use up to {n_procs} processes in total. "
+                f"Engine set up to use up to {n_threads} processes in total. "
                 f"The number was automatically determined and might not be "
                 f"appropriate on some systems.")
-        self.n_procs: int = n_procs
+        self.n_procs: int = n_threads
 
     def execute(self, tasks: List[Task]):
+        """Deepcopy tasks and distribute work over parallel threads."""
         n_tasks = len(tasks)
 
         copied_tasks = [copy.deepcopy(task) for task in tasks]
+
         n_procs = min(self.n_procs, n_tasks)
         logger.info(f"Performing parallel task execution on {n_procs} "
                     f"threads.")
-        print(n_tasks)
         with ThreadPoolExecutor(max_workers=n_procs) as pool:
             results = pool.map(work, copied_tasks)
 
