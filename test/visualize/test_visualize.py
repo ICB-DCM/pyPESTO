@@ -1,7 +1,7 @@
 import pypesto
 import pypesto.visualize
 import numpy as np
-import scipy as sp
+import scipy.optimize as so
 import unittest
 
 
@@ -18,9 +18,9 @@ def create_problem():
     # define a pypesto objective (with tracing options)
     objective_options = pypesto.ObjectiveOptions(trace_record=True,
                                                  trace_save_iter=1)
-    objective = pypesto.Objective(fun=sp.optimize.rosen,
-                                  grad=sp.optimize.rosen_der,
-                                  hess=sp.optimize.rosen_hess,
+    objective = pypesto.Objective(fun=so.rosen,
+                                  grad=so.rosen_der,
+                                  hess=so.rosen_hess,
                                   options=objective_options)
 
     # define a pypesto problem
@@ -431,7 +431,7 @@ class TestVisualize(unittest.TestCase):
 
     @staticmethod
     def test_delete_nan_inf():
-        # create fvals contains nan and inf
+        # create fvals containing nan and inf
         fvals = np.array([42, 1.5, np.nan, 67.01, np.inf])
 
         # create a random x
