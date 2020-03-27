@@ -14,5 +14,6 @@ class Engine(abc.ABC):
 
     @abc.abstractmethod
     def execute(self, tasks: List[Task]):
+        """Execute a task."""
         raise NotImplementedError(
             "This engine is not intended to be called.")

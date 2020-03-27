@@ -23,10 +23,12 @@ class MultiProcessEngine(Engine):
     Attributes
     ----------
 
-    n_procs: int, optional
-        The maximum number of processes to start, unless less tasks are defined.
-        Defaults to the number of cpus available on the system according to
-        ``os.cpu_count()``.
+    n_procs:
+        The maximum number of processes to use in parallel.
+        Defaults to the number of CPUs available on the system according to
+        `os.cpu_count()`.
+        The effectively used number of processes will be the minimum of
+        `n_procs` and the number of tasks submitted.
     """
 
     def __init__(self, n_procs: int = None):

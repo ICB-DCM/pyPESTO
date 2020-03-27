@@ -2,7 +2,7 @@ import numpy as np
 import copy
 import logging
 import numbers
-from typing import Dict, List, Tuple, Union
+from typing import Dict, Tuple, Sequence, Union
 from collections import OrderedDict
 
 from .objective import Objective
@@ -18,6 +18,9 @@ try:
 except ImportError:
     pass
 
+AmiciModel = Union['amici.Model', 'amici.ModelPtr']
+AmiciSolver = Union['amici.Solver', 'amici.SolverPtr']
+
 logger = logging.getLogger(__name__)
 
 
@@ -27,12 +30,12 @@ class AmiciObjective(Objective):
     """
 
     def __init__(self,
-                 amici_model: 'amici.Model',
-                 amici_solver: 'amici.Solver',
-                 edatas: Union[List['amici.ExpData'], 'amici.ExpData'],
+                 amici_model: AmiciModel,
+                 amici_solver: AmiciSolver,
+                 edatas: Union[Sequence['amici.ExpData'], 'amici.ExpData'],
                  max_sensi_order: int = None,
-                 x_ids: List[str] = None,
-                 x_names: List[str] = None,
+                 x_ids: Sequence[str] = None,
+                 x_names: Sequence[str] = None,
                  parameter_mapping: 'ParameterMapping' = None,
                  guess_steadystate: bool = True,
                  n_threads: int = 1,
@@ -207,18 +210,22 @@ class AmiciObjective(Objective):
         """
         self.res = self.get_bound_res()
 
-    def __deepcopy__(self, memodict: Dict = None):
+    def __deepcopy__(self, memodict: Dict = None) -> 'AmiciObjective':
         other = self.__class__.__new__(self.__class__)
 
         for key in set(self.__dict__.keys()) - \
                    {'amici_model', 'amici_solver', 'edatas'}:
             other.__dict__[key] = copy.deepcopy(self.__dict__[key])
 
+        # copy objects that do not have __deepcopy__
         other.amici_model = amici.ModelPtr(self.amici_model.clone())
         other.amici_solver = amici.SolverPtr(self.amici_solver.clone())
         other.edatas = [amici.ExpData(data) for data in self.edatas]
+
+        # rebind functions for __call__
         other.rebind_fun()
         other.rebind_res()
+
         return other
 
     def reset(self) -> None:
@@ -281,7 +288,6 @@ class AmiciObjective(Objective):
             self.edatas,
             num_threads=min(self.n_threads, len(self.edatas)),
         )
-        #print(f"{rdatas[0]['status']}-{rdatas[0]['sllh'] is None}-{self.amici_solver.getSensitivityOrder()}")
 
         par_sim_ids = list(self.amici_model.getParameterIds())
 
@@ -348,11 +354,11 @@ class AmiciObjective(Objective):
             RDATAS: rdatas
         }
 
-    def par_arr_to_dct(self, x: List[float]) -> Dict[str, float]:
+    def par_arr_to_dct(self, x: Sequence[float]) -> Dict[str, float]:
         """Create dict from parameter vector."""
         return OrderedDict(zip(self.x_ids, x))
 
-    def get_error_output(self, rdatas: List['amici.ReturnData']):
+    def get_error_output(self, rdatas: Sequence['amici.ReturnData']):
         """Default output upon error."""
         if not self.amici_model.nt():
             nt = sum([data.nt() for data in self.edatas])
@@ -443,7 +449,7 @@ def log_simulation(data_ix, rdata):
 def map_par_opt_to_par_sim(
         condition_map_sim_var: Dict[str, Union[float, str]],
         x_dct: Dict[str, float],
-        amici_model: 'amici.Model'
+        amici_model: AmiciModel
 ) -> np.ndarray:
     """
     From the optimization vector, create the simulation vector according
@@ -510,7 +516,7 @@ def create_plist_from_par_opt_to_par_sim(mapping_par_opt_to_par_sim):
 
 
 def create_identity_parameter_mapping(
-        amici_model: 'amici.Model', n_conditions: int
+        amici_model: AmiciModel, n_conditions: int
 ) -> 'ParameterMapping':
     """Create a dummy identity parameter mapping table.
 
@@ -536,8 +542,8 @@ def create_identity_parameter_mapping(
 
 
 def add_sim_grad_to_opt_grad(
-        par_opt_ids: List[str],
-        par_sim_ids: List[str],
+        par_opt_ids: Sequence[str],
+        par_sim_ids: Sequence[str],
         condition_map_sim_var: Dict[str, Union[float, str]],
         sim_grad: np.ndarray,
         opt_grad: np.ndarray,
@@ -573,8 +579,8 @@ def add_sim_grad_to_opt_grad(
 
 
 def add_sim_hess_to_opt_hess(
-        par_opt_ids: List[str],
-        par_sim_ids: List[str],
+        par_opt_ids: Sequence[str],
+        par_sim_ids: Sequence[str],
         condition_map_sim_var: Dict[str, Union[float, str]],
         sim_hess: np.ndarray,
         opt_hess: np.ndarray,
@@ -604,8 +610,8 @@ def add_sim_hess_to_opt_hess(
                 coefficient * sim_hess[par_sim_idx, par_sim_idx_2]
 
 
-def sim_sres_to_opt_sres(par_opt_ids: List[str],
-                         par_sim_ids: List[str],
+def sim_sres_to_opt_sres(par_opt_ids: Sequence[str],
+                         par_sim_ids: Sequence[str],
                          condition_map_sim_var: Dict[str, Union[float, str]],
                          sim_sres: np.ndarray,
                          coefficient: float = 1.0):
