@@ -6,8 +6,7 @@ import copy
 import shutil
 import logging
 import tempfile
-from warnings import warn
-from typing import Dict, List, Union
+from typing import Dict, List, Sequence, Union
 
 from ..problem import Problem
 from .amici_objective import AmiciObjective
@@ -51,32 +50,6 @@ class PetabImporter:
             model_name = _find_model_name(self.output_folder)
         self.model_name = model_name
 
-    @staticmethod
-    def from_folder(folder: str,
-                    output_folder: str = None,
-                    model_name: str = None):
-        """
-        Simplified constructor exploiting the standardized petab folder
-        structure.
-
-        Parameters
-        ----------
-
-        folder:
-            Path to the base folder of the model, as in
-            petab.Problem.from_folder.
-        output_folder: See __init__.
-        model_name: See __init__.
-        """
-        warn("This function will be removed in future releases. "
-             "Consider using `from_yaml` instead.")
-
-        petab_problem = petab.Problem.from_folder(folder)
-
-        return PetabImporter(
-            petab_problem=petab_problem,
-            output_folder=output_folder,
-            model_name=model_name)
 
     @staticmethod
     def from_yaml(yaml_config: Union[dict, str],
@@ -226,7 +199,7 @@ class PetabImporter:
             self,
             model: 'amici.Model' = None,
             solver: 'amici.Solver' = None,
-            edatas: List['amici.ExpData'] = None,
+            edatas: Sequence['amici.ExpData'] = None,
             force_compile: bool = False
     ) -> 'PetabAmiciObjective':
         """
@@ -294,7 +267,7 @@ class PetabImporter:
         return problem
 
     def rdatas_to_measurement_df(
-            self, rdatas: List['amici.ReturnData'],
+            self, rdatas: Sequence['amici.ReturnData'],
             model: 'amici.Model' = None
     ) -> pd.DataFrame:
         """
@@ -325,7 +298,7 @@ class PetabImporter:
             rdatas, model, measurement_df)
 
     def rdatas_to_simulation_df(
-            self, rdatas: List['amici.ReturnData'],
+            self, rdatas: Sequence['amici.ReturnData'],
             model: 'amici.Model' = None
     ) -> pd.DataFrame:
         """Same as `rdatas_to_measurement_df`, execpt a petab simulation
@@ -383,9 +356,9 @@ class PetabAmiciObjective(AmiciObjective):
             petab_importer: PetabImporter,
             amici_model: 'amici.Model',
             amici_solver: 'amici.Solver',
-            edatas: List['amici.ExpData'],
-            x_ids: List[str],
-            x_names: List[str],
+            edatas: Sequence['amici.ExpData'],
+            x_ids: Sequence[str],
+            x_names: Sequence[str],
             parameter_mapping: 'amici.parameter_mapping.ParameterMapping'):
         super().__init__(
             amici_model=amici_model,
