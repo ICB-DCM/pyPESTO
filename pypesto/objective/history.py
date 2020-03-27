@@ -111,6 +111,21 @@ class ObjectiveHistory:
             if not os.path.exists(dirname):
                 os.makedirs(dirname)
 
+    def __deepcopy__(self, memodict=None):
+        """
+        Custom deepcopy routine to avoid infinite recursion when copying
+        self.obj
+        """
+
+        other = ObjectiveHistory(
+            copy.deepcopy(self.options),
+            copy.deepcopy(self.x_names))
+        for attr in self.__dict__:
+            if attr not in ['options', 'x_names']:
+                other.__dict__[attr] = copy.deepcopy(
+                    self.__dict__[attr])
+        return other
+
     def update(self,
                x: np.ndarray,
                sensi_orders: Tuple[int],
