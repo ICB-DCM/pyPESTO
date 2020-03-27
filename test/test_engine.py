@@ -41,7 +41,7 @@ class EngineTest(unittest.TestCase):
         problem = petab_importer.create_problem(objective)
         optimizer = pypesto.ScipyOptimizer(options={'maxiter': 10})
         result = pypesto.minimize(
-            problem=problem, n_starts=5, engine=engine, optimizer=optimizer)
+            problem=problem, n_starts=3, engine=engine, optimizer=optimizer)
         self.assertTrue(len(result.optimize_result.as_list()) == 3)
 
     @staticmethod
