@@ -1,6 +1,5 @@
 import numpy as np
 import copy
-import threading
 import logging
 import numbers
 from typing import Dict, List, Tuple, Union
@@ -134,8 +133,6 @@ class AmiciObjective(Objective):
 
         self.dim = len(self.x_ids)
 
-        self._lock = threading.Lock()
-
         # mapping of parameters
         if parameter_mapping is None:
             # use identity mapping for each condition
@@ -262,14 +259,13 @@ class AmiciObjective(Objective):
 
         # fill in parameters
         # TODO (#226) use plist to compute only required derivatives
-        with self._lock:
-            amici.parameter_mapping.fill_in_parameters(
-                edatas=self.edatas,
-                problem_parameters=x_dct,
-                scaled_parameters=True,
-                parameter_mapping=self.parameter_mapping,
-                amici_model=self.amici_model
-            )
+        amici.parameter_mapping.fill_in_parameters(
+            edatas=self.edatas,
+            problem_parameters=x_dct,
+            scaled_parameters=True,
+            parameter_mapping=self.parameter_mapping,
+            amici_model=self.amici_model
+        )
 
         # update steady state
         for data_ix, edata in enumerate(self.edatas):
