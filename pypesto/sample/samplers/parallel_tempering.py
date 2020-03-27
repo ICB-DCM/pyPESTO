@@ -1,5 +1,6 @@
 from typing import Callable
 import numpy as np
+import copy
 from adaptive_metropolis import *
 
 
@@ -20,6 +21,8 @@ def parallel_tempering(
     regularization_factor = options['regularization_factor']
     exp_temperature = options['exp_temperature']
     max_temp = options['max_temp']
+    debug = options['debug']
+
 
     theta0 = theta0.astype(float)
 
@@ -49,7 +52,6 @@ def parallel_tempering(
         else:
             raise ValueError("Dimension of options['theta0'] is incorrect.")
 
-
     parameter_count = theta.shape[1]  # parameter number
     log_posterior_theta = np.empty([n_temperatures, 1])
 
@@ -62,10 +64,15 @@ def parallel_tempering(
         # Evaluate posterior at theta0
         log_posterior_theta[n_T] = log_posterior_callable(theta[n_T])
 
-    historical_mean = theta
-    historical_covariance = covariance
+    # historical_mean = theta
+    historical_mean = copy.copy(theta)
+
+    # historical_covariance = covariance
+    historical_covariance = copy.copy(covariance)
+
     accepted_count = np.full([n_temperatures, iterations], 0)
-    covariance_scaling_factor = np.full([n_temperatures, 1], 1)
+    covariance_scaling_factor = np.full([n_temperatures, 1], 1.)
+    log_acceptance = np.full([n_temperatures, 1], np.nan)
 
     result = {'theta': np.full([n_temperatures, parameter_count, iterations], np.nan),
               'log_posterior': np.full([n_temperatures, iterations], np.nan)}
@@ -85,11 +92,12 @@ def parallel_tempering(
                                                                    covariance[n_T],
                                                                    theta_bounds_lower,
                                                                    theta_bounds_upper,
-                                                                   False)
+                                                                   debug)
+            log_acceptance[n_T] = theta_update_result['log_acceptance']
             if theta_update_result['accepted']:
+                accepted_count[n_T] += 1
                 theta[n_T] = theta_update_result['theta']
                 log_posterior_theta[n_T] = theta_update_result['log_posterior']
-                accepted_count[n_T] += 1
 
         for n_T in range(n_temperatures):
             covariance_update_result = adaptive_metropolis_update_covariance(historical_mean[n_T],
@@ -98,15 +106,13 @@ def parallel_tempering(
                                                                    threshold_iteration,
                                                                    decay_rate,
                                                                    covariance_scaling_factor[n_T],
-                                                                   theta_update_result['log_acceptance'],
+                                                                   log_acceptance[n_T],
                                                                    regularization_factor,
                                                                    parameter_count,
                                                                    i)
             historical_mean[n_T] = covariance_update_result['historical_mean']
-            historical_covariance[n_T] = (
-                covariance_update_result['historical_covariance'])
-            covariance_scaling_factor[n_T] = (
-                covariance_update_result['covariance_scaling_factor'])
+            historical_covariance[n_T] = covariance_update_result['historical_covariance']
+            covariance_scaling_factor[n_T] = covariance_update_result['covariance_scaling_factor']
             covariance[n_T] = covariance_update_result['covariance']
 
         # Swaps between all adjacent chains as in Vousden16
@@ -124,6 +130,7 @@ def parallel_tempering(
                 if a_bool[0, n_T - 1]:
                     theta[[n_T, n_T - 1]] = theta[[n_T - 1, n_T]]
                     log_posterior_theta[[n_T, n_T - 1]] = log_posterior_theta[[n_T - 1, n_T]]
+
         # Adaptation of the temperature values (Vousden 2016)
         if n_temperatures > 1:
             kappa = temperature_nu / (i + 1 + temperature_nu) / temperature_eta
@@ -131,6 +138,7 @@ def parallel_tempering(
             dt = np.diff(1. / beta[:- 1])
             dt = np.multiply(dt, np.exp(ds))
             beta[:-1] = 1/np.cumsum(np.insert(dt, 0, 1))
+
         # Update results
         for n_T in range(n_temperatures):
             result['theta'][n_T, :, i] = theta[n_T]
