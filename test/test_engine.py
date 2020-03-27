@@ -31,7 +31,7 @@ class EngineTest(unittest.TestCase):
     def test_petab(self):
         for engine in [pypesto.SingleCoreEngine(),
                        pypesto.MultiProcessEngine(n_procs=2),
-                       pypesto.MultiThreadEngine(n_threads=8)]:
+                       pypesto.MultiThreadEngine(n_threads=4)]:
             self._test_petab(engine)
 
     def _test_petab(self, engine):
@@ -39,10 +39,10 @@ class EngineTest(unittest.TestCase):
             folder_base + "Zheng_PNAS2012/Zheng_PNAS2012.yaml")
         objective = petab_importer.create_objective()
         problem = petab_importer.create_problem(objective)
-        optimizer = pypesto.ScipyOptimizer(options={'maxiter': 5})
+        optimizer = pypesto.ScipyOptimizer(options={'maxiter': 10})
         result = pypesto.minimize(
             problem=problem, n_starts=5, engine=engine, optimizer=optimizer)
-        self.assertTrue(len(result.optimize_result.as_list()) == 5)
+        self.assertTrue(len(result.optimize_result.as_list()) == 3)
 
     @staticmethod
     def test_deepcopy_objective():
@@ -67,7 +67,8 @@ class EngineTest(unittest.TestCase):
 
         assert objective.amici_model is not objective2.amici_model
         assert objective.amici_solver is not objective2.amici_solver
-        assert objective.steadystate_guesses is not objective2.steadystate_guesses
+        assert objective.steadystate_guesses is not \
+            objective2.steadystate_guesses
 
     @staticmethod
     def test_pickle_objective():
@@ -79,16 +80,16 @@ class EngineTest(unittest.TestCase):
         objective.amici_solver.setSensitivityMethod(
             amici.SensitivityMethod_adjoint)
 
-        objective2=pickle.loads(pickle.dumps(objective))
+        objective2 = pickle.loads(pickle.dumps(objective))
 
         # test some properties
         assert objective.amici_model.getParameterIds() \
-               == objective2.amici_model.getParameterIds()
+            == objective2.amici_model.getParameterIds()
         assert objective.amici_solver.getSensitivityOrder() \
-               == objective2.amici_solver.getSensitivityOrder()
-        # TODO Pickling does not preserve attributes yet
-        #assert objective.amici_solver.getSensitivityMethod() \
-        #       == objective2.amici_solver.getSensitivityMethod()
+            == objective2.amici_solver.getSensitivityOrder()
+        # TODO Pickling does not preserve attributes yet, see #248
+        # assert objective.amici_solver.getSensitivityMethod() \
+        #     == objective2.amici_solver.getSensitivityMethod()
         assert len(objective.edatas) == len(objective2.edatas)
 
 

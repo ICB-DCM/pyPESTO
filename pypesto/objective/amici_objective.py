@@ -214,7 +214,7 @@ class AmiciObjective(Objective):
         other = self.__class__.__new__(self.__class__)
 
         for key in set(self.__dict__.keys()) - \
-                   {'amici_model', 'amici_solver', 'edatas'}:
+                {'amici_model', 'amici_solver', 'edatas'}:
             other.__dict__[key] = copy.deepcopy(self.__dict__[key])
 
         # copy objects that do not have __deepcopy__

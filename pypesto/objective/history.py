@@ -85,7 +85,7 @@ class ObjectiveHistory:
 
         self.fval2chi2_offset: Union[float, None] = None
 
-        self.obj: Callable = None # obj
+        self.obj: Callable = obj
 
         self.reset()
 

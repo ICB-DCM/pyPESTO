@@ -49,7 +49,6 @@ class PetabImporter:
             model_name = _find_model_name(self.output_folder)
         self.model_name = model_name
 
-
     @staticmethod
     def from_yaml(yaml_config: Union[dict, str],
                   output_folder: str = None,
