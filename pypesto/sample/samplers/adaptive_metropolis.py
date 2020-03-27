@@ -1,6 +1,6 @@
 from typing import Callable, Sequence, Tuple
 import numpy as np
-import math
+# import math
 # import random
 
 # matlab starts counts at 1. python starts counts at 0. hence first iteration
@@ -46,13 +46,10 @@ def update_statistics(
     '''
     # magic number + 1 to avoid division by zero/match matlab numbers starting
     # at 0
-    update_rate = math.pow(iteration + 1, -decay_rate)
-
+    update_rate = np.power(iteration + 1, -decay_rate)
     mean = (1-update_rate)*mean0 + update_rate*theta
-
     covariance = ((1-update_rate)*covariance0
                  + update_rate*(theta - mean)*(theta - mean))
-
     return (mean, covariance)
 
 # presumably covariance is always real-valued?
@@ -333,9 +330,9 @@ def adaptive_metropolis_update_covariance(
         historical_mean, historical_covariance, theta,
         max(iteration, threshold_iteration), decay_rate)
 
-    covariance_scaling_factor = covariance_scaling_factor * math.exp(
-        (math.exp(log_acceptance)-0.234) # magic number 0.234. 23.4%?
-        / math.pow(iteration+1, decay_rate)
+    covariance_scaling_factor = covariance_scaling_factor * np.exp(
+        (np.exp(log_acceptance)-0.234) # magic number 0.234. 23.4%?
+        / np.power(iteration+1, decay_rate)
     )
 
     # implemented slightly differently in matlab code
@@ -434,6 +431,7 @@ def adaptive_metropolis(
         Estimated covariance matrices of samples from all previous iterations,
         at each iteration.
     '''
+
     # boolean, whether to collect debug information /doDebug/
     debug = options['debug']
     # initial proposal(?) covariance matrix of parameters /sigma0/
@@ -470,6 +468,7 @@ def adaptive_metropolis(
 
     historical_mean = theta # /muHist/
     historical_covariance = covariance #? /sigmaHist/
+
     covariance = adaptive_metropolis_regularizer(covariance,
         regularization_factor, parameter_count, MAGIC_DIVIDING_NUMBER = 1000)
 
