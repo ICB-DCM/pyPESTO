@@ -14,6 +14,12 @@ class Engine(abc.ABC):
 
     @abc.abstractmethod
     def execute(self, tasks: List[Task]):
-        """Execute a task."""
+        """Execute tasks.
+
+        Parameters
+        ----------
+        tasks:
+            List of tasks to execute.
+        """
         raise NotImplementedError(
             "This engine is not intended to be called.")
