@@ -31,7 +31,7 @@ def parallel_tempering(
         temperature = 1
         beta = 1
 
-    if n_temperatures > 1:
+    if n_temperatures > 0:
         if covariance0.shape[0] == 1:
             covariance = np.tile(covariance0, (n_temperatures, 1, 1))
         elif covariance0.shape[0] == n_temperatures:
@@ -48,6 +48,7 @@ def parallel_tempering(
             theta = np.tile(theta0, (n_temperatures, 1))
         else:
             raise ValueError("Dimension of options['theta0'] is incorrect.")
+
 
     parameter_count = theta.shape[1]  # parameter number
     log_posterior_theta = np.empty([n_temperatures, 1])
