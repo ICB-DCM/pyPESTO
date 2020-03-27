@@ -259,8 +259,8 @@ def get_fvals(result: Result,
     # reduce to indices for which the user asked
     fvals = fvals[start_indices]
 
-    # get the minimal value which should be plotted, avoid the value being
-    # -inf or nan
+    # get the minimal value which should be plotted,
+    # avoid the value being -inf or nan
     min_val = np.nanmin(fvals[fvals != -np.inf])
 
     # check, whether offset can be used with this data

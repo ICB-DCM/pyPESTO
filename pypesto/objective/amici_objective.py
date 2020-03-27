@@ -12,13 +12,13 @@ from .options import ObjectiveOptions
 try:
     import amici
     import amici.petab_objective
+    import amici.parameter_mapping
+    from amici.parameter_mapping import (
+        ParameterMapping, ParameterMappingForCondition)
 except ImportError:
     pass
 
 logger = logging.getLogger(__name__)
-
-
-IDX_PAR_MAP_SIM_VAR: int = 2
 
 
 class AmiciObjective(Objective):
@@ -33,7 +33,7 @@ class AmiciObjective(Objective):
                  max_sensi_order: int = None,
                  x_ids: List[str] = None,
                  x_names: List[str] = None,
-                 parameter_mapping: List[Tuple] = None,
+                 parameter_mapping: 'ParameterMapping' = None,
                  guess_steadystate: bool = True,
                  n_threads: int = 1,
                  options: ObjectiveOptions = None):
@@ -257,7 +257,7 @@ class AmiciObjective(Objective):
 
         # fill in parameters
         # TODO (#226) use plist to compute only required derivatives
-        amici.petab_objective.fill_in_parameters(
+        amici.parameter_mapping.fill_in_parameters(
             edatas=self.edatas,
             problem_parameters=x_dct,
             scaled_parameters=True,
@@ -289,7 +289,7 @@ class AmiciObjective(Objective):
                 return self.get_error_output(rdatas)
 
             condition_map_sim_var = \
-                self.parameter_mapping[data_ix][IDX_PAR_MAP_SIM_VAR]
+                self.parameter_mapping[data_ix].map_sim_var
 
             # compute objective
             if mode == MODE_FUN:
@@ -374,7 +374,7 @@ class AmiciObjective(Objective):
         approximation:
         x_ss(x') = x_ss(x) [+ dx_ss/dx(x)*(x'-x)]
         """
-        mapping = self.parameter_mapping[condition_ix][IDX_PAR_MAP_SIM_VAR]
+        mapping = self.parameter_mapping[condition_ix].map_sim_var
         x_sim = map_par_opt_to_par_sim(mapping, x_dct, self.amici_model)
         x_ss_guess = []  # resets initial state by default
         if condition_ix in self.steadystate_guesses['data']:
@@ -404,7 +404,7 @@ class AmiciObjective(Objective):
 
         # update parameter
         condition_map_sim_var = \
-            self.parameter_mapping[condition_ix][IDX_PAR_MAP_SIM_VAR]
+            self.parameter_mapping[condition_ix].map_sim_var
         x_sim = map_par_opt_to_par_sim(
             condition_map_sim_var, x_dct, self.amici_model)
         preeq_guesses['x'] = x_sim
@@ -507,33 +507,27 @@ def create_plist_from_par_opt_to_par_sim(mapping_par_opt_to_par_sim):
 
 def create_identity_parameter_mapping(
         amici_model: 'amici.Model', n_conditions: int
-) -> List[Tuple[Dict, Dict, Dict, Dict, Dict, Dict]]:
-    """Create a dummy identity parameter mapping table."""
+) -> 'ParameterMapping':
+    """Create a dummy identity parameter mapping table.
+
+    This fills in only the dynamic parameters. Values for fixed parameters,
+    both in preequilibration and simulation, are assumed to be provided
+    correctly in model or edatas already.
+    """
     x_ids = list(amici_model.getParameterIds())
     x_scales = list(amici_model.getParameterScale())
-    x_fixed_ids = list(amici_model.getFixedParameterIds())
-    x_fixed_vals = list(amici_model.getFixedParameters())
-    parameter_mapping = []
+    parameter_mapping = ParameterMapping()
     for _ in range(n_conditions):
-        # assumes preeq parameters are filled in already in edatas, if needed
-        # TODO This could be done in a tidier manner
-        condition_map_preeq_fix = {}
-        condition_scale_map_preeq_fix = {}
-        condition_map_sim_fix = {
-            x_id: x_val for x_id, x_val in zip(x_fixed_ids, x_fixed_vals)}
-        condition_scale_map_sim_fix = {
-            x_id: amici.petab_objective.amici_to_petab_scale(
-                amici.ParameterScaling_none)
-            for x_id in x_fixed_ids}
         condition_map_sim_var = {x_id: x_id for x_id in x_ids}
         condition_scale_map_sim_var = {
-            x_id: amici.petab_objective.amici_to_petab_scale(x_scale)
+            x_id: amici.parameter_mapping.amici_to_petab_scale(x_scale)
             for x_id, x_scale in zip(x_ids, x_scales)}
-        mapping_for_condition = (
-            condition_map_preeq_fix, condition_map_sim_fix,
-            condition_map_sim_var,
-            condition_scale_map_preeq_fix, condition_scale_map_sim_fix,
-            condition_scale_map_sim_var)
+
+        # assumes fixed parameters are filled in already
+        mapping_for_condition = ParameterMappingForCondition(
+            map_sim_var=condition_map_sim_var,
+            scale_map_sim_var=condition_scale_map_sim_var)
+
         parameter_mapping.append(mapping_for_condition)
     return parameter_mapping
 
