@@ -23,7 +23,7 @@ class MultiThreadEngine(Engine):
     ----------
 
     n_procs: int, optional
-        The maximum number of threads to start, unless less tasks are defined.
+        The maximum number of threads to , unless less tasks are defined.
         Defaults to the number of cpus available on the system according to
         ``os.cpu_count()``.
     """

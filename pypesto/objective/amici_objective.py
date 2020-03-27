@@ -1,5 +1,6 @@
 import numpy as np
 import copy
+import threading
 import logging
 import numbers
 from typing import Dict, List, Tuple, Union
@@ -133,6 +134,8 @@ class AmiciObjective(Objective):
 
         self.dim = len(self.x_ids)
 
+        self._lock = threading.Lock()
+
         # mapping of parameters
         if parameter_mapping is None:
             # use identity mapping for each condition
@@ -208,7 +211,6 @@ class AmiciObjective(Objective):
         self.res = self.get_bound_res()
 
     def __deepcopy__(self, memodict: Dict = None):
-        print("deepcopy")
         other = self.__class__.__new__(self.__class__)
 
         for key in set(self.__dict__.keys()) - \
@@ -260,13 +262,14 @@ class AmiciObjective(Objective):
 
         # fill in parameters
         # TODO (#226) use plist to compute only required derivatives
-        amici.parameter_mapping.fill_in_parameters(
-            edatas=self.edatas,
-            problem_parameters=x_dct,
-            scaled_parameters=True,
-            parameter_mapping=self.parameter_mapping,
-            amici_model=self.amici_model
-        )
+        with self._lock:
+            amici.parameter_mapping.fill_in_parameters(
+                edatas=self.edatas,
+                problem_parameters=x_dct,
+                scaled_parameters=True,
+                parameter_mapping=self.parameter_mapping,
+                amici_model=self.amici_model
+            )
 
         # update steady state
         for data_ix, edata in enumerate(self.edatas):
@@ -281,6 +284,7 @@ class AmiciObjective(Objective):
             self.edatas,
             num_threads=min(self.n_threads, len(self.edatas)),
         )
+        #print(f"{rdatas[0]['status']}-{rdatas[0]['sllh'] is None}-{self.amici_solver.getSensitivityOrder()}")
 
         par_sim_ids = list(self.amici_model.getParameterIds())
 
@@ -567,11 +571,8 @@ def add_sim_grad_to_opt_grad(
             continue
         par_sim_idx = par_sim_ids.index(par_sim)
         par_opt_idx = par_opt_ids.index(par_opt)
-        if sim_grad is None:
-            print(opt_grad, coefficient, sim_grad, par_opt_idx, par_sim_idx)
- 
-        a = sim_grad[par_sim_idx]
-        opt_grad[par_opt_idx] += coefficient * a
+
+        opt_grad[par_opt_idx] += coefficient * sim_grad[par_sim_idx]
 
 
 def add_sim_hess_to_opt_hess(
