@@ -130,8 +130,7 @@ class ObjectiveHistory:
                x: np.ndarray,
                sensi_orders: Tuple[int],
                mode: str,
-               result: ResultType,
-               call_mode_fun: Callable) -> None:
+               result: ResultType) -> None:
         """
         Update the history.
 
@@ -145,13 +144,10 @@ class ObjectiveHistory:
             As in constants.MODE_.
         result:
             The result for x.
-        call_mode_fun:
-            The objective function's `_call_mode_fun` method.
-            May be needed once throughout the history.
         """
         self._update_counts(sensi_orders, mode)
-        self._update_trace(x, sensi_orders, mode, result, call_mode_fun)
-        self._update_vals(x, sensi_orders, mode, result, call_mode_fun)
+        self._update_trace(x, sensi_orders, mode, result)
+        self._update_vals(x, sensi_orders, mode, result)
 
     def finalize(self):
         """
@@ -179,15 +175,15 @@ class ObjectiveHistory:
                 self.n_sres += 1
 
     def _fval2chi2_offset(
-            self, x: np.ndarray, chi2: float, call_mode_fun: Callable):
+            self, x: np.ndarray, chi2: float):
         """
         Initializes the conversion factor between fval and chi2 values,
         if possible.
         """
         if self.fval2chi2_offset is None:
-            if call_mode_fun is not None:
-                self.fval2chi2_offset = call_mode_fun(x, (0,))[FVAL] - chi2
-            else:
+            #if call_mode_fun is not None:
+            #    self.fval2chi2_offset = call_mode_fun(x, (0,))[FVAL] - chi2
+            #else:
                 self.fval2chi2_offset = 0.0
 
         return self.fval2chi2_offset
@@ -240,8 +236,7 @@ class ObjectiveHistory:
                       x: np.ndarray,
                       sensi_orders: Tuple[int],
                       mode: str,
-                      result: ResultType,
-                      call_mode_fun: Callable):
+                      result: ResultType):
         """
         Update and possibly store the trace.
         """
@@ -276,7 +271,7 @@ class ObjectiveHistory:
             schi2 = None if not self.options.trace_record_schi2 \
                 or 1 not in sensi_orders \
                 else sres_to_schi2(res_result, sres_result)
-            chi2_offset = self._fval2chi2_offset(x, chi2, call_mode_fun)
+            chi2_offset = self._fval2chi2_offset(x, chi2)
             fval = np.NaN if 0 not in sensi_orders \
                 else chi2 + chi2_offset
             grad = None if not self.options.trace_record_grad \
@@ -357,8 +352,7 @@ class ObjectiveHistory:
                      x: np.ndarray,
                      sensi_orders: Tuple[int],
                      mode: str,
-                     result: ResultType,
-                     call_mode_fun: Callable):
+                     result: ResultType):
         """
         Update initial and best function values. Must be called after
         update_trace().
@@ -371,7 +365,7 @@ class ObjectiveHistory:
                 self.x0 = x
             else:  # mode == MODE_RES:
                 chi2 = res_to_chi2(result[RES])
-                chi2_offset = self._fval2chi2_offset(x, chi2, call_mode_fun)
+                chi2_offset = self._fval2chi2_offset(x, chi2)
                 self.fval0 = chi2 + chi2_offset
                 self.x0 = x
 
@@ -382,7 +376,7 @@ class ObjectiveHistory:
                 fval = result[FVAL]
             else:  # mode == MODE_RES:
                 chi2 = res_to_chi2(result[RES])
-                chi2_offset = self._fval2chi2_offset(x, chi2, call_mode_fun)
+                chi2_offset = self._fval2chi2_offset(x, chi2)
                 fval = chi2 + chi2_offset
         if fval < self.fval_min:
             self.fval_min = fval
