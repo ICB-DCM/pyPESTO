@@ -11,7 +11,8 @@ from .reference_points import (ReferencePoint,
                                create_references)
 from .clust_color import (assign_clusters,
                           assign_clustered_colors,
-                          assign_colors)
+                          assign_colors,
+                          delete_nan_inf)
 from .misc import (process_result_list,
                    process_offset_y,
                    process_y_limits)

@@ -1,7 +1,7 @@
 import pypesto
 import pypesto.visualize
 import numpy as np
-import scipy as sp
+import scipy.optimize as so
 import unittest
 
 
@@ -18,9 +18,9 @@ def create_problem():
     # define a pypesto objective (with tracing options)
     objective_options = pypesto.ObjectiveOptions(trace_record=True,
                                                  trace_save_iter=1)
-    objective = pypesto.Objective(fun=sp.optimize.rosen,
-                                  grad=sp.optimize.rosen_der,
-                                  hess=sp.optimize.rosen_hess,
+    objective = pypesto.Objective(fun=so.rosen,
+                                  grad=so.rosen_der,
+                                  hess=so.rosen_hess,
                                   options=objective_options)
 
     # define a pypesto problem
@@ -37,14 +37,31 @@ def create_optimization_result():
     # write some dummy results for optimization
     result = pypesto.Result(problem=problem)
     for j in range(0, 3):
-        optimizer_result = pypesto.OptimizerResult(fval=j * 0.01,
-                                                   x=[j + 0.1, j + 1])
+        optimizer_result = pypesto.OptimizerResult(
+            fval=j * 0.01, x=np.array([j + 0.1, j + 1]))
         result.optimize_result.append(optimizer_result=optimizer_result)
     for j in range(0, 4):
-        optimizer_result = pypesto.OptimizerResult(fval=10 + j * 0.01,
-                                                   x=[2.5 + j + 0.1,
-                                                      2 + j + 1])
+        optimizer_result = pypesto.OptimizerResult(
+            fval=10 + j * 0.01, x=np.array([2.5 + j + 0.1, 2 + j + 1]))
         result.optimize_result.append(optimizer_result=optimizer_result)
+
+    return result
+
+
+def create_optimization_result_nan_inf():
+    """
+    Create a result object containing nan and inf function values
+    """
+    # get result with only numbers
+    result = create_optimization_result()
+
+    # append nan and inf
+    optimizer_result = pypesto.OptimizerResult(
+        fval=float('nan'), x=np.array([float('nan'), float('nan')]))
+    result.optimize_result.append(optimizer_result=optimizer_result)
+    optimizer_result = pypesto.OptimizerResult(
+        fval=-float('inf'), x=np.array([-float('inf'), -float('inf')]))
+    result.optimize_result.append(optimizer_result=optimizer_result)
 
     return result
 
@@ -120,6 +137,18 @@ class TestVisualize(unittest.TestCase):
         pypesto.visualize.waterfall([result_1, result_2])
 
     @staticmethod
+    def test_waterfall_with_nan_inf():
+        # create the necessary results, one with nan and inf, one without
+        result_1 = create_optimization_result_nan_inf()
+        result_2 = create_optimization_result()
+
+        # test a standard call
+        pypesto.visualize.waterfall(result_1)
+
+        # test plotting of lists
+        pypesto.visualize.waterfall([result_1, result_2])
+
+    @staticmethod
     def test_waterfall_with_options():
         # create the necessary results
         result_1 = create_optimization_result()
@@ -167,6 +196,18 @@ class TestVisualize(unittest.TestCase):
         # create the necessary results
         result_1 = create_optimization_result()
         result_2 = create_optimization_result()
+
+        # test a standard call
+        pypesto.visualize.parameters(result_1)
+
+        # test plotting of lists
+        pypesto.visualize.parameters([result_1, result_2])
+
+    @staticmethod
+    def test_parameters_with_nan_inf():
+        # create the necessary results
+        result_1 = create_optimization_result_nan_inf()
+        result_2 = create_optimization_result_nan_inf()
 
         # test a standard call
         pypesto.visualize.parameters(result_1)
@@ -387,6 +428,20 @@ class TestVisualize(unittest.TestCase):
         pypesto.visualize.assign_colors(fvals, colors=[[.5, .9, .9, .3],
                                                        [.5, .8, .8, .5],
                                                        [.9, .1, .1, .1]])
+
+    @staticmethod
+    def test_delete_nan_inf():
+        # create fvals containing nan and inf
+        fvals = np.array([42, 1.5, np.nan, 67.01, np.inf])
+
+        # create a random x
+        x = np.array([[1, 2], [1, 1], [np.nan, 1], [65, 1], [2, 3]])
+        x, fvals = pypesto.visualize.delete_nan_inf(fvals, x)
+
+        # test if the nan and inf in fvals are deleted, and so do the
+        # corresponding entries in x
+        np.testing.assert_array_equal(fvals, [42, 1.5, 67.01])
+        np.testing.assert_array_equal(x, [[1, 2], [1, 1], [65, 1]])
 
     @staticmethod
     def test_reference_points():

@@ -4,6 +4,7 @@ import numpy as np
 import numbers
 from .reference_points import create_references
 from .clust_color import assign_colors
+from .clust_color import delete_nan_inf
 from .misc import process_result_list
 
 
@@ -151,6 +152,8 @@ def parameters_lowlevel(xs, fvals, lb=None, ub=None, x_labels=None,
     # parse input
     xs = np.array(xs)
     fvals = np.array(fvals)
+    # remove nan or inf values in fvals and xs
+    xs, fvals = delete_nan_inf(fvals, xs)
 
     if size is None:
         # 0.5 inch height per parameter
