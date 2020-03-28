@@ -1,4 +1,5 @@
 from scipy import cluster
+from typing import Tuple
 import matplotlib.cm as cm
 import numpy as np
 
@@ -249,3 +250,43 @@ def assign_colors_for_result_list(num_results, colors=None):
                'or as one single [r, g, b, alpha] color.')
 
     return colors
+
+
+def delete_nan_inf(fvals: np.ndarray, x: np.ndarray = None) -> \
+        Tuple[np.ndarray, np.ndarray]:
+    """
+    Delete nan and inf values in fvals. If parameters 'x' are passend, also
+    the corresponding entries are deleted.
+
+    Parameters
+    ----------
+
+    x:
+        array of parameters
+
+    fvals:
+        array of fval
+
+    Returns
+    -------
+
+    x: np.array
+        array of parameters without nan or inf
+
+    fvals: np.array
+        array of fval without nan or inf
+    """
+
+    ind_delete = []
+    for fval_ind, fval_value in enumerate(fvals):
+        if not np.isfinite(fval_value):
+            if len(ind_delete) == 0:
+                ind_delete = [fval_ind]
+            else:
+                ind_delete.append(fval_ind)
+
+    fvals = np.delete(fvals, ind_delete)
+    if x is not None:
+        x = np.delete(x, ind_delete, axis=0)
+
+    return x, fvals

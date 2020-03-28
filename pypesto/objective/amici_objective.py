@@ -2,7 +2,7 @@ import numpy as np
 import copy
 import logging
 import numbers
-from typing import Dict, List, Tuple, Union
+from typing import Dict, Tuple, Sequence, Union
 from collections import OrderedDict
 
 from .objective import Objective
@@ -12,13 +12,16 @@ from .options import ObjectiveOptions
 try:
     import amici
     import amici.petab_objective
+    import amici.parameter_mapping
+    from amici.parameter_mapping import (
+        ParameterMapping, ParameterMappingForCondition)
 except ImportError:
     pass
 
+AmiciModel = Union['amici.Model', 'amici.ModelPtr']
+AmiciSolver = Union['amici.Solver', 'amici.SolverPtr']
+
 logger = logging.getLogger(__name__)
-
-
-IDX_PAR_MAP_SIM_VAR: int = 2
 
 
 class AmiciObjective(Objective):
@@ -27,13 +30,13 @@ class AmiciObjective(Objective):
     """
 
     def __init__(self,
-                 amici_model: 'amici.Model',
-                 amici_solver: 'amici.Solver',
-                 edatas: Union[List['amici.ExpData'], 'amici.ExpData'],
+                 amici_model: AmiciModel,
+                 amici_solver: AmiciSolver,
+                 edatas: Union[Sequence['amici.ExpData'], 'amici.ExpData'],
                  max_sensi_order: int = None,
-                 x_ids: List[str] = None,
-                 x_names: List[str] = None,
-                 parameter_mapping: List[Tuple] = None,
+                 x_ids: Sequence[str] = None,
+                 x_names: Sequence[str] = None,
+                 parameter_mapping: 'ParameterMapping' = None,
                  guess_steadystate: bool = True,
                  n_threads: int = 1,
                  options: ObjectiveOptions = None):
@@ -208,14 +211,21 @@ class AmiciObjective(Objective):
         self.res = self.get_bound_res()
 
     def __deepcopy__(self, memodict: Dict = None) -> 'AmiciObjective':
-        model = amici.ModelPtr(self.amici_model.clone())
-        solver = amici.SolverPtr(self.amici_solver.clone())
-        edatas = [amici.ExpData(data) for data in self.edatas]
-        other = AmiciObjective(model, solver, edatas,
-                               guess_steadystate=self.guess_steadystate)
-        for attr in self.__dict__:
-            if attr not in ['amici_solver', 'amici_model', 'edatas', '']:
-                other.__dict__[attr] = copy.deepcopy(self.__dict__[attr])
+        other = self.__class__.__new__(self.__class__)
+
+        for key in set(self.__dict__.keys()) - \
+                {'amici_model', 'amici_solver', 'edatas'}:
+            other.__dict__[key] = copy.deepcopy(self.__dict__[key])
+
+        # copy objects that do not have __deepcopy__
+        other.amici_model = amici.ModelPtr(self.amici_model.clone())
+        other.amici_solver = amici.SolverPtr(self.amici_solver.clone())
+        other.edatas = [amici.ExpData(data) for data in self.edatas]
+
+        # rebind functions for __call__
+        other.rebind_fun()
+        other.rebind_res()
+
         return other
 
     def reset(self) -> None:
@@ -257,7 +267,7 @@ class AmiciObjective(Objective):
 
         # fill in parameters
         # TODO (#226) use plist to compute only required derivatives
-        amici.petab_objective.fill_in_parameters(
+        amici.parameter_mapping.fill_in_parameters(
             edatas=self.edatas,
             problem_parameters=x_dct,
             scaled_parameters=True,
@@ -289,11 +299,12 @@ class AmiciObjective(Objective):
                 return self.get_error_output(rdatas)
 
             condition_map_sim_var = \
-                self.parameter_mapping[data_ix][IDX_PAR_MAP_SIM_VAR]
+                self.parameter_mapping[data_ix].map_sim_var
 
             # compute objective
             if mode == MODE_FUN:
                 nllh -= rdata['llh']
+
                 if sensi_order > 0:
                     add_sim_grad_to_opt_grad(
                         self.x_ids,
@@ -344,11 +355,11 @@ class AmiciObjective(Objective):
             RDATAS: rdatas
         }
 
-    def par_arr_to_dct(self, x: List[float]) -> Dict[str, float]:
+    def par_arr_to_dct(self, x: Sequence[float]) -> Dict[str, float]:
         """Create dict from parameter vector."""
         return OrderedDict(zip(self.x_ids, x))
 
-    def get_error_output(self, rdatas: List['amici.ReturnData']):
+    def get_error_output(self, rdatas: Sequence['amici.ReturnData']):
         """Default output upon error."""
         if not self.amici_model.nt():
             nt = sum([data.nt() for data in self.edatas])
@@ -374,7 +385,7 @@ class AmiciObjective(Objective):
         approximation:
         x_ss(x') = x_ss(x) [+ dx_ss/dx(x)*(x'-x)]
         """
-        mapping = self.parameter_mapping[condition_ix][IDX_PAR_MAP_SIM_VAR]
+        mapping = self.parameter_mapping[condition_ix].map_sim_var
         x_sim = map_par_opt_to_par_sim(mapping, x_dct, self.amici_model)
         x_ss_guess = []  # resets initial state by default
         if condition_ix in self.steadystate_guesses['data']:
@@ -404,7 +415,7 @@ class AmiciObjective(Objective):
 
         # update parameter
         condition_map_sim_var = \
-            self.parameter_mapping[condition_ix][IDX_PAR_MAP_SIM_VAR]
+            self.parameter_mapping[condition_ix].map_sim_var
         x_sim = map_par_opt_to_par_sim(
             condition_map_sim_var, x_dct, self.amici_model)
         preeq_guesses['x'] = x_sim
@@ -439,7 +450,7 @@ def log_simulation(data_ix, rdata):
 def map_par_opt_to_par_sim(
         condition_map_sim_var: Dict[str, Union[float, str]],
         x_dct: Dict[str, float],
-        amici_model: 'amici.Model'
+        amici_model: AmiciModel
 ) -> np.ndarray:
     """
     From the optimization vector, create the simulation vector according
@@ -506,41 +517,34 @@ def create_plist_from_par_opt_to_par_sim(mapping_par_opt_to_par_sim):
 
 
 def create_identity_parameter_mapping(
-        amici_model: 'amici.Model', n_conditions: int
-) -> List[Tuple[Dict, Dict, Dict, Dict, Dict, Dict]]:
-    """Create a dummy identity parameter mapping table."""
+        amici_model: AmiciModel, n_conditions: int
+) -> 'ParameterMapping':
+    """Create a dummy identity parameter mapping table.
+
+    This fills in only the dynamic parameters. Values for fixed parameters,
+    both in preequilibration and simulation, are assumed to be provided
+    correctly in model or edatas already.
+    """
     x_ids = list(amici_model.getParameterIds())
     x_scales = list(amici_model.getParameterScale())
-    x_fixed_ids = list(amici_model.getFixedParameterIds())
-    x_fixed_vals = list(amici_model.getFixedParameters())
-    parameter_mapping = []
+    parameter_mapping = ParameterMapping()
     for _ in range(n_conditions):
-        # assumes preeq parameters are filled in already in edatas, if needed
-        # TODO This could be done in a tidier manner
-        condition_map_preeq_fix = {}
-        condition_scale_map_preeq_fix = {}
-        condition_map_sim_fix = {
-            x_id: x_val for x_id, x_val in zip(x_fixed_ids, x_fixed_vals)}
-        condition_scale_map_sim_fix = {
-            x_id: amici.petab_objective.amici_to_petab_scale(
-                amici.ParameterScaling_none)
-            for x_id in x_fixed_ids}
         condition_map_sim_var = {x_id: x_id for x_id in x_ids}
         condition_scale_map_sim_var = {
-            x_id: amici.petab_objective.amici_to_petab_scale(x_scale)
+            x_id: amici.parameter_mapping.amici_to_petab_scale(x_scale)
             for x_id, x_scale in zip(x_ids, x_scales)}
-        mapping_for_condition = (
-            condition_map_preeq_fix, condition_map_sim_fix,
-            condition_map_sim_var,
-            condition_scale_map_preeq_fix, condition_scale_map_sim_fix,
-            condition_scale_map_sim_var)
+        # assumes fixed parameters are filled in already
+        mapping_for_condition = ParameterMappingForCondition(
+            map_sim_var=condition_map_sim_var,
+            scale_map_sim_var=condition_scale_map_sim_var)
+
         parameter_mapping.append(mapping_for_condition)
     return parameter_mapping
 
 
 def add_sim_grad_to_opt_grad(
-        par_opt_ids: List[str],
-        par_sim_ids: List[str],
+        par_opt_ids: Sequence[str],
+        par_sim_ids: Sequence[str],
         condition_map_sim_var: Dict[str, Union[float, str]],
         sim_grad: np.ndarray,
         opt_grad: np.ndarray,
@@ -576,8 +580,8 @@ def add_sim_grad_to_opt_grad(
 
 
 def add_sim_hess_to_opt_hess(
-        par_opt_ids: List[str],
-        par_sim_ids: List[str],
+        par_opt_ids: Sequence[str],
+        par_sim_ids: Sequence[str],
         condition_map_sim_var: Dict[str, Union[float, str]],
         sim_hess: np.ndarray,
         opt_hess: np.ndarray,
@@ -607,8 +611,8 @@ def add_sim_hess_to_opt_hess(
                 coefficient * sim_hess[par_sim_idx, par_sim_idx_2]
 
 
-def sim_sres_to_opt_sres(par_opt_ids: List[str],
-                         par_sim_ids: List[str],
+def sim_sres_to_opt_sres(par_opt_ids: Sequence[str],
+                         par_sim_ids: Sequence[str],
                          condition_map_sim_var: Dict[str, Union[float, str]],
                          sim_sres: np.ndarray,
                          coefficient: float = 1.0):

@@ -18,6 +18,13 @@ class Objective:
     giving a standardized way of calling. Apart from that, it manages several
     things including fixing of parameters and history.
 
+    The objective function is assumed to be in the format of a cost function,
+    log-likelihood function, or log-posterior function. These functions are
+    subject to minimization. For profiling and sampling, the sign is internally
+    flipped, all returned and stored values are however given as returned
+    by this objective function. If maximization is to be performed, the sign
+    should be flipped before creating the objective function.
+
     Parameters
     ----------
 
@@ -86,10 +93,6 @@ class Objective:
     options:
         Options as specified in pypesto.ObjectiveOptions.
 
-
-    Attributes
-    ----------
-
     history: pypesto.ObjectiveHistory
         For storing the call history. Initialized by the optimizer in
         reset_history().
@@ -120,7 +123,9 @@ class Objective:
                  fun_accept_sensi_orders: bool = False,
                  res_accept_sensi_orders: bool = False,
                  x_names: List[str] = None,
-                 options: ObjectiveOptions = None):
+                 options: ObjectiveOptions = None,
+                 history: ObjectiveHistory = None,
+                 pre_post_processor: PrePostProcessor = None):
         self.fun = fun
         self.grad = grad
         self.hess = hess
@@ -136,12 +141,13 @@ class Objective:
 
         self.x_names = x_names
 
-        self.history = ObjectiveHistory(self.options,
-                                        self.x_names,
-                                        self._call_mode_fun
-                                        if self.has_fun else None)
+        if history is None:
+            history = ObjectiveHistory(self.options, self.x_names)
+        self.history = history
 
-        self.pre_post_processor = PrePostProcessor()
+        if pre_post_processor is None:
+            pre_post_processor = PrePostProcessor()
+        self.pre_post_processor = pre_post_processor
 
     def __deepcopy__(self, memodict=None) -> 'Objective':
         other = Objective()
@@ -249,7 +255,8 @@ class Objective:
         result = self._call_unprocessed(x, sensi_orders, mode)
 
         # update history
-        self.history.update(x, sensi_orders, mode, result)
+        self.history.update(x, sensi_orders, mode, result,
+                            self._call_mode_fun if self.has_fun else None)
 
         # post-process
         result = self.pre_post_processor.postprocess(result)
