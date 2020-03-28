@@ -63,7 +63,7 @@ class AmiciObjectiveTest(unittest.TestCase):
             problem=problem, optimizer=optimizer, n_starts=2,
         )
 
-        self.assertTrue(obj.steadystate_guesses['fval'] < np.inf)
+        self.assertTrue(problem.objective.steadystate_guesses['fval'] < np.inf)
         self.assertTrue(len(obj.steadystate_guesses['data']) == 1)
 
         df = obj.check_grad(
