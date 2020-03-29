@@ -228,13 +228,6 @@ class AmiciObjective(Objective):
 
         return other
 
-    def reset(self) -> None:
-        """
-        Resets the objective, including steadystate guesses
-        """
-        super(AmiciObjective, self).reset()
-        self.reset_steadystate_guesses()
-
     def _call_amici(
             self,
             x: np.ndarray,

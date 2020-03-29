@@ -1,9 +1,9 @@
 import logging
-from typing import Callable, Union
+from typing import Callable, Iterable, Union
 import numpy as np
 
 from ..engine import OptimizerTask, Engine, SingleCoreEngine
-from ..objective import Objective
+from ..objective import Objective, OptimizerHistoryFactory
 from ..problem import Problem
 from ..result import Result
 from ..startpoint import assign_startpoints, uniform
@@ -19,10 +19,12 @@ def minimize(
         problem: Problem,
         optimizer: Optimizer = None,
         n_starts: int = 100,
+        ids: Iterable[str] = None,
         startpoint_method: Union[Callable, bool] = None,
         result: Result = None,
         engine: Engine = None,
-        options: OptimizeOptions = None
+        history_factory: OptimizerHistoryFactory = None,
+        options: OptimizeOptions = None,
 ) -> Result:
     """
     This is the main function to call to do multistart optimization.
@@ -35,6 +37,8 @@ def minimize(
         The optimizer to be used n_starts times.
     n_starts:
         Number of starts of the optimizer.
+    ids:
+        Ids assigned to the startpoints.
     startpoint_method:
         Method for how to choose start points. False means the optimizer does
         not require start points, e.g. 'pso' method in 'GlobalOptimizer'
@@ -45,6 +49,8 @@ def minimize(
     engine:
         Parallelization engine. Defaults to sequential execution on a
         SingleCoreEngine.
+    history_factory:
+        Factory to create optimizer histories.
     options:
         Various options applied to the multistart optimization.
 
@@ -63,14 +69,23 @@ def minimize(
     if startpoint_method is None:
         startpoint_method = uniform
 
+    if history_factory is None:
+        history_factory = OptimizerHistoryFactory()
+
     # check options
     if options is None:
         options = OptimizeOptions()
     options = OptimizeOptions.assert_instance(options)
 
     # assign startpoints
-    startpoints = assign_startpoints(n_starts, startpoint_method,
-                                     problem, options)
+    startpoints = assign_startpoints(
+        n_starts=n_starts, startpoint_method=startpoint_method,
+        problem=problem, options=options)
+
+    if ids is None:
+        ids = [str(j) for j in range(n_starts)]
+    if len(ids) != n_starts:
+        raise AssertionError("Number of starts and ids must coincide.")
 
     # prepare result
     if result is None:
@@ -82,10 +97,11 @@ def minimize(
 
     # define tasks
     tasks = []
-    for j_start in range(0, n_starts):
-        startpoint = startpoints[j_start, :]
-        task = OptimizerTask(optimizer, problem, startpoint, j_start,
-                             options, handle_exception)
+    for startpoint, id in zip(startpoints, ids):
+        task = OptimizerTask(
+            optimizer=optimizer, problem=problem, x0=startpoint, id=id,
+            options=options, history_factory=history_factory,
+            handle_exception=handle_exception)
         tasks.append(task)
 
     # do multistart optimization
@@ -103,13 +119,13 @@ def minimize(
 
 def handle_exception(
         objective: Objective,
-        startpoint: np.ndarray,
-        j_start: int,
+        x0: np.ndarray,
+        id: int,
         err: Exception
 ) -> OptimizerResult:
     """
     Handle exception by creating a dummy pypesto.OptimizerResult.
     """
-    logger.error(('start ' + str(j_start) + ' failed: {0}').format(err))
-    optimizer_result = recover_result(objective, startpoint, err)
+    logger.error(('start ' + str(id) + ' failed: {0}').format(err))
+    optimizer_result = recover_result(objective, x0, err)
     return optimizer_result

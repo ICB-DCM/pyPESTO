@@ -93,9 +93,12 @@ class Objective:
     options:
         Options as specified in pypesto.ObjectiveOptions.
 
-    history: pypesto.ObjectiveHistory
-        For storing the call history. Initialized by the optimizer in
-        reset_history().
+    Attributes
+    ----------
+
+    history:
+        For storing the call history. Initialized by the methods, e.g. the
+        optimizer, in `initialize_history()`.
 
     pre_post_processor:
         Preprocess input values to and postprocess output values from
@@ -123,9 +126,7 @@ class Objective:
                  fun_accept_sensi_orders: bool = False,
                  res_accept_sensi_orders: bool = False,
                  x_names: List[str] = None,
-                 options: ObjectiveOptions = None,
-                 history: ObjectiveHistory = None,
-                 pre_post_processor: PrePostProcessor = None):
+                 options: ObjectiveOptions = None):
         self.fun = fun
         self.grad = grad
         self.hess = hess
@@ -141,13 +142,8 @@ class Objective:
 
         self.x_names = x_names
 
-        if history is None:
-            history = ObjectiveHistory(self.options, self.x_names)
-        self.history = history
-
-        if pre_post_processor is None:
-            pre_post_processor = PrePostProcessor()
-        self.pre_post_processor = pre_post_processor
+        self.pre_post_processor = PrePostProcessor()
+        self.history = ObjectiveHistory()
 
     def __deepcopy__(self, memodict=None) -> 'Objective':
         other = Objective()
@@ -480,35 +476,6 @@ class Objective:
         """
         sres = self(x, (1,), MODE_RES)
         return sres
-
-    # The following are functions that are called by other parts in
-    # pypesto to modify the objective state, e.g. set its history, or
-    # make it aware of fixed parameters.
-
-    def reset_history(self, index: str = None) -> None:
-        """
-        Reset the objective history and specify temporary saving options.
-
-        Parameters
-        ----------
-
-        index: As in ObjectiveHistory.index.
-        """
-        self.history.reset(index=index)
-
-    def finalize_history(self) -> None:
-        """
-        Finalize the history object.
-        """
-        self.history.finalize()
-
-    def reset(self) -> None:
-        """
-        Completely reset the objective, i.e. undo the modifications in
-        update_from_problem().
-        """
-        self.history = ObjectiveHistory(self.options)
-        self.pre_post_processor = PrePostProcessor()
 
     def update_from_problem(
             self,

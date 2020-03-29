@@ -12,14 +12,20 @@ class OptimizerResult(dict):
 
     Attributes
     ----------
+    id:
+        Id of the optimizer run. Usually the start index.
     x:
         The best found parameters.
     fval:
-        The best found function value, fun(x).
+        The best found function value, `fun(x)`.
     grad:
-        The gradient at x.
+        The gradient at `x`.
     hess:
-        The Hessian at x.
+        The Hessian at `x`.
+    res:
+        The residuals at `x`.
+    sres:
+        The residual sensitivities at `x`.
     n_fval
         Number of function evaluations.
     n_grad:
@@ -33,7 +39,7 @@ class OptimizerResult(dict):
     x0:
         The starting parameters.
     fval0:
-        The starting function value, fun(x0).
+        The starting function value, `fun(x0)`.
     trace:
         History as maintained by pypesto.History.
     exitflag:
@@ -50,10 +56,13 @@ class OptimizerResult(dict):
     """
 
     def __init__(self,
+                 id: int = None,
                  x: np.ndarray = None,
                  fval: float = None,
                  grad: np.ndarray = None,
                  hess: np.ndarray = None,
+                 res: np.ndarray = None,
+                 sres: np.ndarray = None,
                  n_fval: int = None,
                  n_grad: int = None,
                  n_hess: int = None,
@@ -66,10 +75,13 @@ class OptimizerResult(dict):
                  time: float = None,
                  message: str = None):
         super().__init__()
+        self.id = id
         self.x: np.ndarray = np.array(x)
         self.fval: float = fval
         self.grad: np.ndarray = np.array(grad) if grad is not None else None
         self.hess: np.ndarray = np.array(hess) if hess is not None else None
+        self.res: np.ndarray = np.ndarray(res) if res is not None else None
+        self.sres: np.ndarray = np.ndarray(sres) if sres is not None else None
         self.n_fval: int = n_fval
         self.n_grad: int = n_grad
         self.n_hess: int = n_hess

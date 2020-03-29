@@ -40,10 +40,9 @@ class ObjectiveOptions(dict):
     trace_file: str or True, optional
         Either pass a string here denoting the file name for storing the
         trace, or True, in which case the default file name
-        "tmp_trace_{index}.dat" is used. A contained substring {index}
-        is converted to the multistart index.
+        "tmp_trace_{id}.dat" is used. A contained substring {id}
+        is converted to the multistart id.
         Default: None, i.e. no file is created.
-
     trace_save_iter. index, optional
         Trace is saved every tr_save_iter iterations.
         Default: 10.
@@ -72,7 +71,7 @@ class ObjectiveOptions(dict):
         self.trace_all = trace_all
 
         if trace_file is True:
-            trace_file = "tmp_trace_{index}.dat"
+            trace_file = "tmp_trace_{id}.dat"
         self.trace_file = trace_file
 
         self.trace_save_iter = trace_save_iter

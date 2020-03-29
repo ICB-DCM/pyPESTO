@@ -6,7 +6,7 @@ import time
 import logging
 from typing import Dict
 
-from ..objective import res_to_chi2
+from ..objective import OptimizerHistoryFactory
 from ..problem import Problem
 from .result import OptimizerResult
 
@@ -24,18 +24,27 @@ except ImportError:
 logger = logging.getLogger(__name__)
 
 
-def objective_decorator(minimize):
+def history_decorator(minimize):
     """
     Default decorator for the minimize() method to initialize and extract
-    information stored in the objective.
+    information stored in the history.
     """
 
-    def wrapped_minimize(self, problem, x0, index):
-        problem.objective.reset_history(index=index)
-        if hasattr(problem.objective, 'reset_steadystate_guesses'):
-            problem.objective.reset_steadystate_guesses()
-        result = minimize(self, problem, x0, index)
-        problem.objective.finalize_history()
+    def wrapped_minimize(self, problem, x0, id, history_factory):
+        objective = problem.objective
+
+        # plug in history
+        objective.history = history_factory.create(
+            id=id, x0=x0, x_names=objective.x_names)
+        # TODO this can be prettified
+        if hasattr(objective, 'reset_steadystate_guesses'):
+            objective.reset_steadystate_guesses()
+
+        # perform the actual minimization
+        result = minimize(self, problem, x0, id, history_factory)
+
+        objective.history.finalize()
+        result.id = id
         result = fill_result_from_objective_history(
             result, problem.objective.history)
         return result
@@ -49,9 +58,9 @@ def time_decorator(minimize):
     the wall-clock time.
     """
 
-    def wrapped_minimize(self, problem, x0, index):
+    def wrapped_minimize(self, problem, x0, id, history_factory):
         start_time = time.time()
-        result = minimize(self, problem, x0, index)
+        result = minimize(self, problem, x0, id, history_factory)
         used_time = time.time() - start_time
         result.time = used_time
         return result
@@ -65,8 +74,11 @@ def fix_decorator(minimize):
     derivatives).
     """
 
-    def wrapped_minimize(self, problem, x0, index):
-        result = minimize(self, problem, x0, index)
+    def wrapped_minimize(self, problem, x0, id, history_factory):
+        # perform the actual optimization
+        result = minimize(self, problem, x0, id, history_factory)
+
+        # vectors to full vectors
         result.x = problem.get_full_vector(result.x, problem.x_fixed_vals)
         result.grad = problem.get_full_vector(result.grad)
         result.hess = problem.get_full_matrix(result.hess)
@@ -85,21 +97,26 @@ def fill_result_from_objective_history(result, history):
     Overwrite function values in the result object with the values recorded in
     the history.
     """
+    # id
+    result.id = history.id
 
+    # best found values
+    result.x = history.x_min
+    result.fval = history.fval_min
+    result.grad = history.grad_min
+    result.hess = history.hess_min
+    result.res = history.res_min
+    result.sres = history.sres_min
+
+    # initial values
+    result.x0 = history.x0
+    result.fval0 = history.fval0
     # counters
     result.n_fval = history.n_fval
     result.n_grad = history.n_grad
     result.n_hess = history.n_hess
     result.n_res = history.n_res
     result.n_sres = history.n_sres
-
-    # initial values
-    result.x0 = history.x0
-    result.fval0 = history.fval0
-
-    # best found values
-    result.x = history.x_min
-    result.fval = history.fval_min
 
     # trace
     result.trace = history.trace
@@ -138,12 +155,13 @@ class Optimizer(abc.ABC):
     @abc.abstractmethod
     @fix_decorator
     @time_decorator
-    @objective_decorator
+    @history_decorator
     def minimize(
             self,
             problem: Problem,
             x0: np.ndarray,
-            index: int
+            id: str,
+            history_factory: OptimizerHistoryFactory,
     ) -> OptimizerResult:
         """"
         Perform optimization.
@@ -154,8 +172,10 @@ class Optimizer(abc.ABC):
             The problem to find optimal parameters for.
         x0:
             The starting parameters.
-        index:
-            Multistart index.
+        id:
+            Multistart id.
+        history_factory:
+            Factory to create histories.
         """
 
     @abc.abstractmethod
@@ -191,12 +211,13 @@ class ScipyOptimizer(Optimizer):
 
     @fix_decorator
     @time_decorator
-    @objective_decorator
+    @history_decorator
     def minimize(
             self,
             problem: Problem,
             x0: np.ndarray,
-            index: int
+            id: str,
+            history_factory: OptimizerHistoryFactory,
     ) -> OptimizerResult:
         lb = problem.lb
         ub = problem.ub
@@ -282,23 +303,8 @@ class ScipyOptimizer(Optimizer):
                 options=self.options,
             )
 
-        # some fields are not filled by all optimizers, then fill in None
-        grad = getattr(res, 'grad', None) if self.is_least_squares() \
-            else getattr(res, 'jac', None)
-        fval = res_to_chi2(res.fun) if self.is_least_squares() \
-            else res.fun
-
         # fill in everything known, although some parts will be overwritten
         optimizer_result = OptimizerResult(
-            x=res.x,
-            fval=fval,
-            grad=grad,
-            hess=getattr(res, 'hess', None),
-            n_fval=getattr(res, 'nfev', 0),
-            n_grad=getattr(res, 'njev', 0),
-            n_hess=getattr(res, 'nhev', 0),
-            x0=x0,
-            fval0=None,
             exitflag=res.status,
             message=res.message
         )
@@ -332,12 +338,13 @@ class DlibOptimizer(Optimizer):
 
     @fix_decorator
     @time_decorator
-    @objective_decorator
+    @history_decorator
     def minimize(
             self,
             problem: Problem,
             x0: np.ndarray,
-            index: int
+            id: str,
+            history_factory: OptimizerHistoryFactory,
     ) -> OptimizerResult:
 
         lb = problem.lb
@@ -365,9 +372,7 @@ class DlibOptimizer(Optimizer):
             0.002,
         )
 
-        optimizer_result = OptimizerResult(
-            x0=x0
-        )
+        optimizer_result = OptimizerResult()
 
         return optimizer_result
 
@@ -393,12 +398,13 @@ class PyswarmOptimizer(Optimizer):
 
     @fix_decorator
     @time_decorator
-    @objective_decorator
+    @history_decorator
     def minimize(
             self,
             problem: Problem,
             x0: np.ndarray,
-            index: int
+            id: str,
+            history_factory: OptimizerHistoryFactory,
     ) -> OptimizerResult:
         lb = problem.lb
         ub = problem.ub
@@ -406,13 +412,9 @@ class PyswarmOptimizer(Optimizer):
             raise ImportError(
                 "This optimizer requires an installation of pyswarm.")
 
-        xopt, fopt = pyswarm.pso(problem.objective.get_fval,
-                                 lb, ub, **self.options)
+        pyswarm.pso(problem.objective.get_fval, lb, ub, **self.options)
 
-        optimizer_result = OptimizerResult(
-            x=xopt,
-            fval=fopt
-        )
+        optimizer_result = OptimizerResult()
 
         return optimizer_result
 
