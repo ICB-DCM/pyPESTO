@@ -6,7 +6,6 @@ from typing import Callable, Dict, List, Tuple, Union
 
 from .constants import MODE_FUN, MODE_RES, FVAL, GRAD, HESS, RES, SRES
 from .history import ObjectiveHistory
-from .options import ObjectiveOptions
 from .pre_post_process import PrePostProcessor, FixedParametersProcessor
 
 logger = logging.getLogger(__name__)
@@ -125,8 +124,7 @@ class Objective:
                  sres: Union[Callable, bool] = None,
                  fun_accept_sensi_orders: bool = False,
                  res_accept_sensi_orders: bool = False,
-                 x_names: List[str] = None,
-                 options: ObjectiveOptions = None):
+                 x_names: List[str] = None):
         self.fun = fun
         self.grad = grad
         self.hess = hess
@@ -135,10 +133,6 @@ class Objective:
         self.sres = sres
         self.fun_accept_sensi_orders = fun_accept_sensi_orders
         self.res_accept_sensi_orders = res_accept_sensi_orders
-
-        if options is None:
-            options = ObjectiveOptions()
-        self.options = ObjectiveOptions.assert_instance(options)
 
         self.x_names = x_names
 

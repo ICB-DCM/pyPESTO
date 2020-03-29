@@ -7,7 +7,6 @@ from collections import OrderedDict
 
 from .objective import Objective
 from .constants import MODE_FUN, MODE_RES, FVAL, GRAD, HESS, RES, SRES, RDATAS
-from .options import ObjectiveOptions
 
 try:
     import amici
@@ -38,8 +37,7 @@ class AmiciObjective(Objective):
                  x_names: Sequence[str] = None,
                  parameter_mapping: 'ParameterMapping' = None,
                  guess_steadystate: bool = True,
-                 n_threads: int = 1,
-                 options: ObjectiveOptions = None):
+                 n_threads: int = 1):
         """
         Constructor.
 
@@ -110,7 +108,6 @@ class AmiciObjective(Objective):
             res=res, sres=sres,
             fun_accept_sensi_orders=True,
             res_accept_sensi_orders=True,
-            options=options
         )
 
         self.amici_model = amici.ModelPtr(amici_model.clone())
