@@ -7,7 +7,6 @@ from collections import OrderedDict
 
 from .objective import Objective
 from .constants import MODE_FUN, MODE_RES, FVAL, GRAD, HESS, RES, SRES, RDATAS
-from .options import ObjectiveOptions
 
 try:
     import amici
@@ -38,8 +37,7 @@ class AmiciObjective(Objective):
                  x_names: Sequence[str] = None,
                  parameter_mapping: 'ParameterMapping' = None,
                  guess_steadystate: bool = True,
-                 n_threads: int = 1,
-                 options: ObjectiveOptions = None):
+                 n_threads: int = 1):
         """
         Constructor.
 
@@ -75,8 +73,6 @@ class AmiciObjective(Objective):
             Number of threads that are used for parallelization over
             experimental conditions. If amici was not installed with openMP
             support this option will have no effect.
-        options: pypesto.ObjectiveOptions, optional
-            Further options.
         """
         if amici is None:
             raise ImportError(
@@ -110,7 +106,6 @@ class AmiciObjective(Objective):
             res=res, sres=sres,
             fun_accept_sensi_orders=True,
             res_accept_sensi_orders=True,
-            options=options
         )
 
         self.amici_model = amici.ModelPtr(amici_model.clone())
@@ -228,13 +223,6 @@ class AmiciObjective(Objective):
 
         return other
 
-    def reset(self) -> None:
-        """
-        Resets the objective, including steadystate guesses
-        """
-        super(AmiciObjective, self).reset()
-        self.reset_steadystate_guesses()
-
     def _call_amici(
             self,
             x: np.ndarray,
@@ -301,9 +289,10 @@ class AmiciObjective(Objective):
             condition_map_sim_var = \
                 self.parameter_mapping[data_ix].map_sim_var
 
+            nllh -= rdata['llh']
+
             # compute objective
             if mode == MODE_FUN:
-                nllh -= rdata['llh']
 
                 if sensi_order > 0:
                     add_sim_grad_to_opt_grad(
@@ -546,8 +535,8 @@ def add_sim_grad_to_opt_grad(
         par_opt_ids: Sequence[str],
         par_sim_ids: Sequence[str],
         condition_map_sim_var: Dict[str, Union[float, str]],
-        sim_grad: np.ndarray,
-        opt_grad: np.ndarray,
+        sim_grad: Sequence[float],
+        opt_grad: Sequence[float],
         coefficient: float = 1.0):
     """
     Sum simulation gradients to objective gradient according to the provided

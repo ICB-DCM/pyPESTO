@@ -171,9 +171,8 @@ class Problem:
 
     def fix_parameters(
             self,
-            parameter_indices: Iterable[int],
-            parameter_vals: Iterable[float]
-    ) -> None:
+            parameter_indices: Union[Iterable[int], int],
+            parameter_vals: Union[Iterable[float], float]) -> None:
         """
         Fix specified parameters to specified values
         """
@@ -204,7 +203,9 @@ class Problem:
 
         self.normalize_input()
 
-    def unfix_parameters(self, parameter_indices: Iterable[int]) -> None:
+    def unfix_parameters(
+            self,
+            parameter_indices: Union[Iterable[int], int]) -> None:
         """
         Free specified parameters
         """
@@ -252,8 +253,11 @@ class Problem:
         if x is None:
             return None
 
+        # make sure it is an array
+        x = np.array(x)
+
         if len(x) == self.dim_full:
-            return np.array(x)
+            return x
 
         # Note: The funny indexing construct is to handle residual gradients,
         # where the last dimension is assumed to be the parameter one.
@@ -278,8 +282,11 @@ class Problem:
         if x is None:
             return None
 
+        # make sure it is an array
+        x = np.array(x)
+
         if len(x) == self.dim_full:
-            return np.array(x)
+            return x
 
         x_full = np.zeros((self.dim_full, self.dim_full))
         x_full[:, :] = np.nan

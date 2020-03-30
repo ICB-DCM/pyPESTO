@@ -5,8 +5,7 @@ import logging
 from typing import Callable, Dict, List, Tuple, Union
 
 from .constants import MODE_FUN, MODE_RES, FVAL, GRAD, HESS, RES, SRES
-from .history import ObjectiveHistory
-from .options import ObjectiveOptions
+from .history import History
 from .pre_post_process import PrePostProcessor, FixedParametersProcessor
 
 logger = logging.getLogger(__name__)
@@ -90,17 +89,16 @@ class Objective:
         length dim_full (as in the Problem class). Can be read by the
         problem.
 
-    options:
-        Options as specified in pypesto.ObjectiveOptions.
+    Attributes
+    ----------
 
-    history: pypesto.ObjectiveHistory
-        For storing the call history. Initialized by the optimizer in
-        reset_history().
+    history:
+        For storing the call history. Initialized by the methods, e.g. the
+        optimizer, in `initialize_history()`.
 
     pre_post_processor:
         Preprocess input values to and postprocess output values from
-        __call__. Configured in `update_from_problem()` and reset in
-        `reset()`.
+        __call__. Configured in `update_from_problem()`.
 
     Notes
     -----
@@ -122,10 +120,7 @@ class Objective:
                  sres: Union[Callable, bool] = None,
                  fun_accept_sensi_orders: bool = False,
                  res_accept_sensi_orders: bool = False,
-                 x_names: List[str] = None,
-                 options: ObjectiveOptions = None,
-                 history: ObjectiveHistory = None,
-                 pre_post_processor: PrePostProcessor = None):
+                 x_names: List[str] = None):
         self.fun = fun
         self.grad = grad
         self.hess = hess
@@ -135,19 +130,10 @@ class Objective:
         self.fun_accept_sensi_orders = fun_accept_sensi_orders
         self.res_accept_sensi_orders = res_accept_sensi_orders
 
-        if options is None:
-            options = ObjectiveOptions()
-        self.options = ObjectiveOptions.assert_instance(options)
-
         self.x_names = x_names
 
-        if history is None:
-            history = ObjectiveHistory(self.options, self.x_names)
-        self.history = history
-
-        if pre_post_processor is None:
-            pre_post_processor = PrePostProcessor()
-        self.pre_post_processor = pre_post_processor
+        self.pre_post_processor = PrePostProcessor()
+        self.history = History()
 
     def __deepcopy__(self, memodict=None) -> 'Objective':
         other = Objective()
@@ -249,17 +235,16 @@ class Objective:
         self.check_sensi_orders(sensi_orders, mode)
 
         # pre-process
-        x = self.pre_post_processor.preprocess(x)
+        x_full = self.pre_post_processor.preprocess(x)
 
         # compute result
-        result = self._call_unprocessed(x, sensi_orders, mode)
-
-        # update history
-        self.history.update(x, sensi_orders, mode, result,
-                            self._call_mode_fun if self.has_fun else None)
+        result = self._call_unprocessed(x_full, sensi_orders, mode)
 
         # post-process
         result = self.pre_post_processor.postprocess(result)
+
+        # update history
+        self.history.update(x, sensi_orders, mode, result)
 
         # map to output format
         if not return_dict:
@@ -481,35 +466,6 @@ class Objective:
         sres = self(x, (1,), MODE_RES)
         return sres
 
-    # The following are functions that are called by other parts in
-    # pypesto to modify the objective state, e.g. set its history, or
-    # make it aware of fixed parameters.
-
-    def reset_history(self, index: str = None) -> None:
-        """
-        Reset the objective history and specify temporary saving options.
-
-        Parameters
-        ----------
-
-        index: As in ObjectiveHistory.index.
-        """
-        self.history.reset(index=index)
-
-    def finalize_history(self) -> None:
-        """
-        Finalize the history object.
-        """
-        self.history.finalize()
-
-    def reset(self) -> None:
-        """
-        Completely reset the objective, i.e. undo the modifications in
-        update_from_problem().
-        """
-        self.history = ObjectiveHistory(self.options)
-        self.pre_post_processor = PrePostProcessor()
-
     def update_from_problem(
             self,
             dim_full: int,
@@ -591,8 +547,8 @@ class Objective:
         if x_indices is None:
             x_indices = list(range(len(x)))
 
-        tmp_trace_record = self.options.trace_record
-        self.options.trace_record = False
+        tmp_trace_record = self.history.options.trace_record
+        self.history.options.trace_record = False
 
         # function value and objective gradient
         fval, grad = self(x, (0, 1), mode)
@@ -667,6 +623,6 @@ class Objective:
         if verbosity > 0:
             logger.info(result)
 
-        self.options.trace_record = tmp_trace_record
+        self.history.options.trace_record = tmp_trace_record
 
         return result

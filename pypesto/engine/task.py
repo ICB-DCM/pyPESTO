@@ -4,6 +4,7 @@ import numpy as np
 from typing import Callable
 
 from ..problem import Problem
+from ..objective import OptimizerHistoryOptions
 import pypesto
 
 
@@ -36,9 +37,10 @@ class OptimizerTask(Task):
             self,
             optimizer: 'pypesto.Optimizer',
             problem: Problem,
-            startpoint: np.ndarray,
-            j_start: int,
+            x0: np.ndarray,
+            id: str,
             options: 'pypesto.OptimizeOptions',
+            history_options: OptimizerHistoryOptions,
             handle_exception: Callable):
         """
         Create the task object.
@@ -49,12 +51,14 @@ class OptimizerTask(Task):
             The optimizer to use.
         problem:
             The problem to solve.
-        startpoint:
+        x0:
             The point from which to start.
-        j_start:
-            The index of the multistart.
+        id:
+            The multistart id.
         options:
             Options object applying to optimization.
+        history_options:
+            Optimizer history options.
         handle_exception:
             Callable to apply when the optimization fails.
         """
@@ -62,21 +66,22 @@ class OptimizerTask(Task):
 
         self.optimizer = optimizer
         self.problem = problem
-        self.startpoint = startpoint
-        self.j_start = j_start
+        self.x0 = x0
+        self.id = id
         self.options = options
+        self.history_options = history_options
         self.handle_exception = handle_exception
 
     def execute(self) -> 'pypesto.OptimizerResult':
-        logger.info(f"Executing task {self.j_start}.")
+        logger.info(f"Executing task {self.id}.")
         try:
             optimizer_result = self.optimizer.minimize(
-                self.problem, self.startpoint, self.j_start)
+                problem=self.problem, x0=self.x0, id=self.id,
+                history_options=self.history_options)
         except Exception as err:
             if self.options.allow_failed_starts:
                 optimizer_result = self.handle_exception(
-                    self.problem.objective, self.startpoint, self.j_start,
-                    err)
+                    self.problem.objective, self.x0, self.id, err)
             else:
                 raise
 
