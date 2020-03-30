@@ -29,7 +29,7 @@ settings = {
 from adaptive_metropolis_sampler import AdaptiveMetropolisSampler
 sampler = AdaptiveMetropolisSampler(settings=settings)
 print('first 1000')
-chain = sampler.sample()
+chains = sampler.sample()
 # Save "burn-in"
 sampler.save_state('checkpoint.pickle')
 print(sampler.get_state('chain')['samples_log_posterior'])
@@ -38,19 +38,19 @@ print(sampler.get_state('chain')['samples_log_posterior'])
 # These 100 samples will be in addition to the "burn-in" samples
 # Hence, the chain will contain 200 samples
 print('first a further 1000, for a total of 2000 samples')
-chain = sampler.sample(1000)
+chains = sampler.sample(1000)
 print(sampler.get_state('chain')['samples_log_posterior'])
 
 # Generate another 100 samples with "burn-in", by reading
 # in the saved file. Again, the chain will contain 200 samples.
 sampler.load_state('checkpoint.pickle')
 print('reload first 1000 samples, find another 1000 samples, for a total of 2000')
-chain = sampler.sample(1000)
+chains = sampler.sample(1000)
 print(sampler.get_state('chain')['samples_log_posterior'])
 
 # Elba's toy problem plotting code (slightly modified)
 plt.figure()
-plt.plot(range(sampler.state.n_samples), chain['samples'][0], 'ko', label='MCMC sample')
+plt.plot(range(sampler.state.n_samples), chains[0]['samples'][0], 'ko', label='MCMC sample')
 plt.xlabel('# iterations')
 plt.ylabel('log10(x)')
 plt.legend()
@@ -58,14 +58,14 @@ plt.show()
 plt.close()
 
 plt.figure()
-plt.hist(chain['samples'][0])
+plt.hist(chains[0]['samples'][0])
 plt.xlabel('log10(x)')
 plt.ylabel('Occurrence')
 plt.show()
 plt.close()
 
 plt.figure()
-plt.hist(chain['samples_log_posterior'])
+plt.hist(chains[0]['samples_log_posterior'])
 plt.xlabel('log posterior')
 plt.ylabel('Occurrence')
 plt.show()
