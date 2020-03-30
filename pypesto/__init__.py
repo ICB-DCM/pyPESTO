@@ -6,9 +6,12 @@ Parameter Estimation TOolbox for python.
 """
 
 
-from .version import __version__  # noqa: F401
+from .version import __version__
 from .objective import (
-    ObjectiveOptions,
+    HistoryOptions,
+    OptimizerHistoryOptions,
+    History,
+    OptimizerHistory,
     Objective,
     AmiciObjective,
     PetabImporter)
@@ -37,43 +40,6 @@ from .sample import (
     SamplerResult)
 from .engine import (
     SingleCoreEngine,
+    MultiThreadEngine,
     MultiProcessEngine)
 from . import visualize
-
-
-__all__ = [
-    # objective
-    "ObjectiveOptions",
-    "Objective",
-    "AmiciObjective",
-    "PetabImporter",
-    # problem
-    "Problem",
-    # startpoint
-    "startpoint",
-    # result
-    "Result",
-    "OptimizeResult",
-    "ProfileResult",
-    "SampleResult",
-    # optimize
-    "minimize",
-    "OptimizeOptions",
-    "OptimizerResult",
-    "Optimizer",
-    "ScipyOptimizer",
-    "DlibOptimizer",
-    "PyswarmOptimizer",
-    # profile
-    "parameter_profile",
-    "ProfileOptions",
-    "ProfilerResult",
-    # sample
-    'parameter_sample',
-    'SamplerOptions',
-    'SamplerResult',
-    # engine
-    "SingleCoreEngine",
-    "MultiProcessEngine",
-    "visualize",
-]

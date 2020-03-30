@@ -27,7 +27,7 @@ class OptimizerTest(unittest.TestCase):
             if mode == 'separated':
                 obj = test_objective.rosen_for_sensi(max_sensi_order=2,
                                                      integrated=False)['obj']
-            elif mode == 'integrated':
+            else:  # mode == 'integrated':
                 obj = test_objective.rosen_for_sensi(max_sensi_order=2,
                                                      integrated=True)['obj']
 

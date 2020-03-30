@@ -5,7 +5,7 @@ from typing import Callable, Dict, Union
 from ..optimize import Optimizer
 from ..problem import Problem
 from ..result import Result
-from .profiler import ProfilerResult
+from .result import ProfilerResult
 from .profile_next_guess import next_guess
 
 logger = logging.getLogger(__name__)
@@ -280,10 +280,10 @@ def walk_along_profile(current_profile,
         # run optimization
         # IMPORTANT: This optimization will need a proper exception
         # handling (coming soon)
-        optimizer_result = optimizer.minimize(problem, startpoint, 0)
+        optimizer_result = optimizer.minimize(problem, startpoint, '0')
         if optimizer_result["grad"] is not None:
             gradnorm = np.linalg.norm(optimizer_result["grad"][
-                                          problem.x_free_indices])
+                                      problem.x_free_indices])
         else:
             gradnorm = None
 
@@ -341,7 +341,8 @@ def initialize_profile(
 
     # Check, whether an optimization result is existing
     if result.optimize_result is None:
-        print("Optimization has to be carried before profiling can be done.")
+        logger.error(
+            "Optimization has to be carried before profiling can be done.")
         return None
 
     tmp_optimize_result = result.optimize_result.as_list()

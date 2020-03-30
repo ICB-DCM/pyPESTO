@@ -1,8 +1,7 @@
 import numpy as np
 from copy import deepcopy
 from typing import List
-
-from .objective import Objective, ObjectiveOptions
+from .objective import Objective
 
 from .constants import RDATAS
 
@@ -15,8 +14,7 @@ class AggregatedObjective(Objective):
     def __init__(
             self,
             objectives: List[Objective],
-            x_names: List[str] = None,
-            options: ObjectiveOptions = None):
+            x_names: List[str] = None):
         """
         Constructor.
 
@@ -45,8 +43,7 @@ class AggregatedObjective(Objective):
         # assemble a dict that we can pass as kwargs to the
         # pypesto.Objective constructor
         init_kwargs = {
-            'x_names': x_names,
-            'options': options
+            'x_names': x_names
         }
 
         # check if all objectives consistently accept sensi orders in fun/res
@@ -97,7 +94,6 @@ class AggregatedObjective(Objective):
         other = AggregatedObjective(
             objectives=[deepcopy(objective) for objective in self.objectives],
             x_names=deepcopy(self.x_names),
-            options=deepcopy(self.options),
         )
         return other
 
