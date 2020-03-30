@@ -56,7 +56,7 @@ class OptimizerResult(dict):
     """
 
     def __init__(self,
-                 id: int = None,
+                 id: str = None,
                  x: np.ndarray = None,
                  fval: float = None,
                  grad: np.ndarray = None,

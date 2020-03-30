@@ -73,8 +73,6 @@ class AmiciObjective(Objective):
             Number of threads that are used for parallelization over
             experimental conditions. If amici was not installed with openMP
             support this option will have no effect.
-        options: pypesto.ObjectiveOptions, optional
-            Further options.
         """
         if amici is None:
             raise ImportError(
@@ -537,8 +535,8 @@ def add_sim_grad_to_opt_grad(
         par_opt_ids: Sequence[str],
         par_sim_ids: Sequence[str],
         condition_map_sim_var: Dict[str, Union[float, str]],
-        sim_grad: np.ndarray,
-        opt_grad: np.ndarray,
+        sim_grad: Sequence[float],
+        opt_grad: Sequence[float],
         coefficient: float = 1.0):
     """
     Sum simulation gradients to objective gradient according to the provided

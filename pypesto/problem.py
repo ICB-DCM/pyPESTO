@@ -171,9 +171,8 @@ class Problem:
 
     def fix_parameters(
             self,
-            parameter_indices: Iterable[int],
-            parameter_vals: Iterable[float]
-    ) -> None:
+            parameter_indices: Union[Iterable[int], int],
+            parameter_vals: Union[Iterable[float], float]) -> None:
         """
         Fix specified parameters to specified values
         """
@@ -204,7 +203,9 @@ class Problem:
 
         self.normalize_input()
 
-    def unfix_parameters(self, parameter_indices: Iterable[int]) -> None:
+    def unfix_parameters(
+            self,
+            parameter_indices: Union[Iterable[int], int]) -> None:
         """
         Free specified parameters
         """

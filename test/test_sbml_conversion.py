@@ -81,6 +81,8 @@ def parameter_estimation(
     elif library == 'dlib':
         optimizer = pypesto.DlibOptimizer(method=solver,
                                           options=options)
+    else:
+        raise ValueError("This code should not be reached")
 
     optimizer.temp_file = os.path.join('test', 'tmp_{index}.csv')
 

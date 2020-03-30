@@ -280,7 +280,7 @@ def walk_along_profile(current_profile,
         # run optimization
         # IMPORTANT: This optimization will need a proper exception
         # handling (coming soon)
-        optimizer_result = optimizer.minimize(problem, startpoint, 0)
+        optimizer_result = optimizer.minimize(problem, startpoint, '0')
         if optimizer_result["grad"] is not None:
             gradnorm = np.linalg.norm(optimizer_result["grad"][
                                       problem.x_free_indices])

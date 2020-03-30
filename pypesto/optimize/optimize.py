@@ -121,7 +121,7 @@ def minimize(
 def handle_exception(
         objective: Objective,
         x0: np.ndarray,
-        id: int,
+        id: str,
         err: Exception
 ) -> OptimizerResult:
     """
