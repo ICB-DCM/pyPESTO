@@ -4,4 +4,4 @@ Storage
 
 """
 
-from .hdf5_storage import save_to_hdf5
+from .save_to_hdf5 import save_to_hdf5

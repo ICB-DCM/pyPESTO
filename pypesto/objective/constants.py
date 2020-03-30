@@ -22,3 +22,4 @@ N_SRES = 'n_sres'  # number of residual sensitivity evaluations
 CHI2 = 'chi2'  # chi2 value
 SCHI2 = 'schi2'  # chi2 value gradient
 X = 'x'
+X0 = 'x0'
