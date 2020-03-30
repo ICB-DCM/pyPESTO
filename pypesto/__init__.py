@@ -8,7 +8,10 @@ Parameter Estimation TOolbox for python.
 
 from .version import __version__
 from .objective import (
-    ObjectiveOptions,
+    HistoryOptions,
+    OptimizerHistoryOptions,
+    History,
+    OptimizerHistory,
     Objective,
     AmiciObjective,
     PetabImporter)

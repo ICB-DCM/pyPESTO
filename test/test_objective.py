@@ -3,7 +3,7 @@ This is for testing the pypesto.Objective.
 """
 
 import numpy as np
-import scipy as sp
+import scipy.optimize as so
 import numbers
 import pypesto
 import unittest
@@ -144,11 +144,11 @@ def obj_for_sensi(fun, grad, hess, max_sensi_order, integrated, x):
     if integrated:
         if max_sensi_order == 2:
             def arg_fun(x):
-                return (fun(x), grad(x), hess(x))
+                return fun(x), grad(x), hess(x)
             arg_grad = arg_hess = True
         elif max_sensi_order == 1:
             def arg_fun(x):
-                return (fun(x), grad(x))
+                return fun(x), grad(x)
             arg_grad = True
             arg_hess = False
         else:
@@ -181,9 +181,9 @@ def rosen_for_sensi(max_sensi_order, integrated=False, x=None):
     if x is None:
         x = [0, 1]
 
-    return obj_for_sensi(sp.optimize.rosen,
-                         sp.optimize.rosen_der,
-                         sp.optimize.rosen_hess,
+    return obj_for_sensi(so.rosen,
+                         so.rosen_der,
+                         so.rosen_hess,
                          max_sensi_order, integrated, x)
 
 
