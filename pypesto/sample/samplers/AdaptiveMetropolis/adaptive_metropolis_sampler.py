@@ -324,7 +324,7 @@ class AdaptiveMetropolisSampler(Sampler):
 
         self.state = state
         self.state.n_sample = self.state.n_samples
-        return self.state.chain
+        return [self.state.chain]
 
     def get_state(self, key: str = None):
         '''
