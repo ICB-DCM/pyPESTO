@@ -4,7 +4,7 @@ import numpy as np
 from typing import Callable
 
 from ..problem import Problem
-from ..objective import OptimizerHistoryFactory
+from ..objective import OptimizerHistoryOptions
 import pypesto
 
 
@@ -40,7 +40,7 @@ class OptimizerTask(Task):
             x0: np.ndarray,
             id: str,
             options: 'pypesto.OptimizeOptions',
-            history_factory: OptimizerHistoryFactory,
+            history_options: OptimizerHistoryOptions,
             handle_exception: Callable):
         """
         Create the task object.
@@ -57,8 +57,8 @@ class OptimizerTask(Task):
             The multistart id.
         options:
             Options object applying to optimization.
-        history_factory:
-            Optimizer history.
+        history_options:
+            Optimizer history options.
         handle_exception:
             Callable to apply when the optimization fails.
         """
@@ -69,7 +69,7 @@ class OptimizerTask(Task):
         self.x0 = x0
         self.id = id
         self.options = options
-        self.history_factory = history_factory
+        self.history_options = history_options
         self.handle_exception = handle_exception
 
     def execute(self) -> 'pypesto.OptimizerResult':
@@ -77,7 +77,7 @@ class OptimizerTask(Task):
         try:
             optimizer_result = self.optimizer.minimize(
                 problem=self.problem, x0=self.x0, id=self.id,
-                history_factory=self.history_factory)
+                history_options=self.history_options)
         except Exception as err:
             if self.options.allow_failed_starts:
                 optimizer_result = self.handle_exception(

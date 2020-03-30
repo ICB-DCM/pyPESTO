@@ -3,7 +3,7 @@ import pandas as pd
 import copy
 import time
 import os
-from typing import Callable, Dict, Iterable, List, Optional, Tuple, Union
+from typing import Dict, Iterable, List, Optional, Tuple, Union
 
 from .constants import (
     MODE_FUN, MODE_RES, FVAL, GRAD, HESS, RES, SRES, CHI2, SCHI2, TIME,
@@ -20,6 +20,9 @@ class HistoryOptions(dict):
     """
     Options for the objective that are used in optimization, profiles
     and sampling.
+
+    Further, this class implements a factory pattern to generate histories
+    from options via `create_history`.
 
     Parameters
     ----------
@@ -51,6 +54,12 @@ class HistoryOptions(dict):
         Default: True.
     trace_save_iter:
         After how many iterations to store the trace.
+    storage_file:
+        File to save the history to. Occurrences of "{id}" in the file name
+        are replaced by the `id` upon creation of a history, if provided.
+    storage_format:
+        Format of the storage file. Can be deduced from `storage_file` by
+        proper file endings.
     """
 
     def __init__(self,
@@ -61,7 +70,9 @@ class HistoryOptions(dict):
                  trace_record_sres: bool = True,
                  trace_record_chi2: bool = True,
                  trace_record_schi2: bool = True,
-                 trace_save_iter: int = 10):
+                 trace_save_iter: int = 10,
+                 storage_file: str = None,
+                 storage_format: str = None):
         super().__init__()
 
         self.trace_record = trace_record
@@ -72,6 +83,8 @@ class HistoryOptions(dict):
         self.trace_record_chi2 = trace_record_chi2
         self.trace_record_schi2 = trace_record_schi2
         self.trace_save_iter = trace_save_iter
+        self.storage_file = storage_file
+        self.storage_format = storage_format
 
     def __getattr__(self, key):
         try:
@@ -98,8 +111,65 @@ class HistoryOptions(dict):
         options = HistoryOptions(**maybe_options)
         return options
 
+    def create_history(
+            self, id: str, x_names: Iterable[str]
+    ) -> 'History':
+        """Factory method creating a :class:`ObjectiveHistory` object.
 
-class ObjectiveHistory:
+        Parameters
+        ----------
+        id:
+            Identifier for the history.
+        x_names:
+            Parameter names.
+        """
+        return History(
+            id=id, x_names=x_names, options=self)
+
+
+class OptimizerHistoryOptions(HistoryOptions):
+    """Options for the objective that are used for optimization.
+
+    Further, this class implements a factory pattern to generate optimizer
+    histories via `create_optimizer_history`.
+    """
+
+    @staticmethod
+    def assert_instance(
+            maybe_options: Union['OptimizerHistoryOptions', Dict]
+    ) -> 'OptimizerHistoryOptions':
+        """
+        Returns a valid options object.
+
+        Parameters
+        ----------
+        maybe_options: HistoryOptions or dict
+        """
+        if isinstance(maybe_options, OptimizerHistoryOptions):
+            return maybe_options
+        options = OptimizerHistoryOptions(**maybe_options)
+        return options
+
+    def create_optimizer_history(
+            self, id: str, x_names: Iterable[str], x0: np.ndarray = None,
+    ) -> 'OptimizerHistory':
+        """Factory method creating a :class:`OptimizerHistory` object.
+        Called for each multistart separately, just before the start.
+
+        Parameters
+        ----------
+        id:
+            Identifier for the history.
+        x_names:
+            Parameter names.
+        x0:
+            Starting point
+        """
+        return OptimizerHistory(
+            id=id, x0=x0, x_names=x_names, options=self)
+
+
+class History:
     """Base class for objective history.
     Tracks numbers of function evaluations and maintains a history.
 
@@ -109,11 +179,6 @@ class ObjectiveHistory:
         Identifier for the history.
     x_names:
         Parameter names.
-    storage_file:
-        File to save the history to. Occurrences of "{id}" in the file name
-        are replaced by the `id`, if provided.
-    storage_format:
-        Format of the storage file.
     options:
         History options.
 
@@ -132,8 +197,6 @@ class ObjectiveHistory:
     def __init__(self,
                  id: str = '',
                  x_names: Iterable[str] = None,
-                 storage_file: str = None,
-                 storage_format: str = None,
                  options: Optional[HistoryOptions] = None) -> None:
         self.id: str = id
 
@@ -149,16 +212,20 @@ class ObjectiveHistory:
 
         self.start_time = time.time()
 
-        # translate chi2 to fval
-        self._fval2chi2_offset: Union[float, None] = None
+        if options is None:
+            options = HistoryOptions()
+        options = HistoryOptions.assert_instance(options)
+        self.options: HistoryOptions = options
 
-        if storage_file not in [None, CSV, HDF5]:
-            raise ValueError(
-                f"file {storage_file} must be in {[None, CSV, HDF5]}")
+        storage_file = options.storage_file
         if self.id is not None and storage_file is not None:
             storage_file = storage_file.replace("{id}", str(self.id))
         self.storage_file: str = storage_file
 
+        storage_format = options.storage_format
+        if storage_format not in [None, CSV, HDF5]:
+            raise ValueError(
+                f"file {storage_file} must be in {[None, CSV, HDF5]}")
         if storage_format is None and storage_file is not None:
             if storage_file.endswith('csv'):
                 storage_format = CSV
@@ -171,23 +238,17 @@ class ObjectiveHistory:
                 "Storage to HDF5 is not yet supported. Use CSV instead.")
         self.storage_format: str = storage_format
 
-        if options is None:
-            options = HistoryOptions()
-        self.options: HistoryOptions = options
-
         # create trace file dirs
         if self.storage_file is not None:
             dirname = os.path.dirname(self.storage_file)
-            if not os.path.exists(dirname):
-                os.makedirs(dirname)
+            os.makedirs(dirname, exist_ok=True)
 
     def update(
             self,
             x: np.ndarray,
             sensi_orders: Tuple[int, ...],
             mode: str,
-            result: ResultType,
-            call_mode_fun: Union[Callable, None]
+            result: ResultType
     ) -> None:
         """Update history after a function evaluation.
 
@@ -202,34 +263,13 @@ class ObjectiveHistory:
         result:
             The objective function values for parameters `x`, sensitivities
             `sensi_orders` and mode `mode`.
-        call_mode_fun:
-            Callback that may be needed to transform residuals to function
-            values.
         """
         self.update_counts(sensi_orders, mode)
-        self.update_trace(x, sensi_orders, mode, result, call_mode_fun)
+        self.update_trace(x, sensi_orders, mode, result)
 
     def finalize(self):
         """Finalize history. Called after a run."""
         self.save_trace(finalize=True)
-
-    def fval2chi2_offset(
-            self,
-            x: np.ndarray,
-            chi2: float,
-            call_mode_fun: Union[Callable, None]):
-        """
-        Initializes the conversion factor between fval and chi2 values,
-        if possible.
-        """
-        # cache
-        if self._fval2chi2_offset is None:
-            if call_mode_fun is not None:
-                self._fval2chi2_offset = call_mode_fun(x, (0,))[FVAL] - chi2
-            else:
-                self._fval2chi2_offset = 0.0
-
-        return self._fval2chi2_offset
 
     def update_counts(self,
                       sensi_orders: Tuple[int, ...],
@@ -298,8 +338,7 @@ class ObjectiveHistory:
                      x: np.ndarray,
                      sensi_orders: Tuple[int],
                      mode: str,
-                     result: ResultType,
-                     call_mode_fun: Union[Callable, None]):
+                     result: ResultType):
         """
         Update and possibly store the trace.
         """
@@ -312,7 +351,7 @@ class ObjectiveHistory:
 
         # extract function values
         fval, grad, hess, res, sres, chi2, schi2 = \
-            self.extract_values(sensi_orders, mode, result, x, call_mode_fun)
+            self.extract_values(sensi_orders, mode, result)
 
         used_time = time.time() - self.start_time
 
@@ -349,7 +388,7 @@ class ObjectiveHistory:
         # save trace to file
         self.save_trace()
 
-    def extract_values(self, sensi_orders, mode, result, x, call_mode_fun):
+    def extract_values(self, sensi_orders, mode, result):
         """Extract values to record from result."""
         if mode == MODE_FUN:
             fval = np.NaN if 0 not in sensi_orders \
@@ -373,9 +412,8 @@ class ObjectiveHistory:
             schi2 = None if not self.options.trace_record_schi2 \
                 or 1 not in sensi_orders \
                 else sres_to_schi2(res_result, sres_result)
-            chi2_offset = self.fval2chi2_offset(x, chi2, call_mode_fun)
             fval = np.NaN if 0 not in sensi_orders \
-                else chi2 + chi2_offset
+                else result.get(FVAL, chi2)
             grad = None if not self.options.trace_record_grad \
                 or 1 not in sensi_orders \
                 else schi2
@@ -414,7 +452,7 @@ class ObjectiveHistory:
             trace_copy.to_csv(self.storage_file)
 
 
-class OptimizerHistory(ObjectiveHistory):
+class OptimizerHistory(History):
     """
     Objective call history. Also handles saving of intermediate results.
 
@@ -430,12 +468,8 @@ class OptimizerHistory(ObjectiveHistory):
                  id: str,
                  x0: np.ndarray,
                  x_names: Optional[Iterable[str]] = None,
-                 storage_file: str = None,
-                 storage_format: str = None,
                  options: Optional[HistoryOptions] = None) -> None:
         super().__init__(id=id, x_names=x_names,
-                         storage_file=storage_file,
-                         storage_format=storage_format,
                          options=options)
 
         # initial point
@@ -454,18 +488,16 @@ class OptimizerHistory(ObjectiveHistory):
                x: np.ndarray,
                sensi_orders: Tuple[int],
                mode: str,
-               result: ResultType,
-               call_mode_fun: Union[Callable, None]) -> None:
+               result: ResultType) -> None:
         """Update history and best found value."""
-        super().update(x, sensi_orders, mode, result, call_mode_fun)
-        self.update_vals(x, sensi_orders, mode, result, call_mode_fun)
+        super().update(x, sensi_orders, mode, result)
+        self.update_vals(x, sensi_orders, mode, result)
 
     def update_vals(self,
                     x: np.ndarray,
                     sensi_orders: Tuple[int],
                     mode: str,
-                    result: ResultType,
-                    call_mode_fun: Union[Callable, None]):
+                    result: ResultType):
         """
         Update initial and best function values.
         """
@@ -478,8 +510,7 @@ class OptimizerHistory(ObjectiveHistory):
                 self.x0 = x
             else:  # mode == MODE_RES:
                 chi2 = res_to_chi2(result[RES])
-                chi2_offset = self.fval2chi2_offset(x, chi2, call_mode_fun)
-                self.fval0 = chi2 + chi2_offset
+                self.fval0 = result.get(FVAL, chi2)
                 self.x0 = x
 
         # update best point
@@ -489,58 +520,15 @@ class OptimizerHistory(ObjectiveHistory):
                 fval = result[FVAL]
             else:  # mode == MODE_RES:
                 chi2 = res_to_chi2(result[RES])
-                chi2_offset = self.fval2chi2_offset(x, chi2, call_mode_fun)
-                fval = chi2 + chi2_offset
+                fval = result.get(FVAL, chi2)
             # store value
-            if fval <= self.fval_min:
+            if fval < self.fval_min:
                 self.fval_min = fval
                 self.x_min = x
                 self.grad_min = result.get(GRAD)
                 self.hess_min = result.get(HESS)
                 self.res_min = result.get(RES)
                 self.sres_min = result.get(SRES)
-
-
-class OptimizerHistoryFactory:
-    """Factory for :class:`OptimizerHistory` objects.
-
-    Parameters
-    ----------
-    storage_file:
-        File to save the history to. Occurrences of "{id}" in the file name
-        are replaced by the `id`, if provided.
-    storage_format:
-        Format of the storage file.
-    options:
-        Options for the history.
-    """
-
-    def __init__(self,
-                 storage_file: str = None,
-                 storage_format: str = None,
-                 options: Dict = None):
-        self.storage_file = storage_file
-        self.storage_format = storage_format
-        self.options = options
-
-    def create(
-            self, id: str, x0: np.ndarray, x_names: Iterable[str]
-    ) -> OptimizerHistory:
-        """Factory method creating a :class:`OptimizerHistory` object.
-        Called for each multistart separately, just before the start.
-
-        Parameters
-        ----------
-        id:
-            Identifier for the history.
-        x_names:
-            Parameter names.
-        """
-        return OptimizerHistory(
-            id=id, x0=x0, x_names=x_names,
-            storage_file=self.storage_file,
-            storage_format=self.storage_format,
-            options=self.options)
 
 
 def ndarray2string_full(x: np.ndarray):

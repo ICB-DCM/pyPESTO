@@ -2,7 +2,6 @@
 This is for testing the pypesto.History.
 """
 
-
 import numpy as np
 import pypesto
 import unittest
@@ -19,12 +18,17 @@ class HistoryTest(unittest.TestCase):
     lb: np.ndarray = None
 
     def check_history(self):
-        self.obj.history.options = self.obj.options
-
         self.problem = pypesto.Problem(self.obj, self.lb, self.ub)
 
         optimize_options = pypesto.OptimizeOptions(
             allow_failed_starts=False
+        )
+
+        history_options = pypesto.OptimizerHistoryOptions(
+            trace_record=True,
+            trace_record_hess=False,
+            trace_save_iter=1,
+            storage_file='/tmp/traces/conversion_example_{id}.csv',
         )
 
         result = pypesto.minimize(
@@ -32,10 +36,11 @@ class HistoryTest(unittest.TestCase):
             optimizer=self.optimizer,
             n_starts=1,
             startpoint_method=pypesto.startpoint.uniform,
-            options=optimize_options
+            options=optimize_options,
+            history_options=history_options
         )
         # disable trace from here on
-        self.obj.options.trace_record = False
+        self.obj.history.options.trace_record = False
         for start in result.optimize_result.list:
             it_final = int(start['trace'][('fval', np.NaN)].idxmin())
             it_start = int(np.where(np.logical_not(
@@ -78,7 +83,8 @@ class HistoryTest(unittest.TestCase):
                                 start['trace'][var].values[it, 0],
                                 fun(start['trace']['x'].values[it, :])
                             ).all())
-                    elif self.obj.options[f'trace_record_{var}'] and not \
+                    elif self.obj.history.options[f'trace_record_{var}'] \
+                            and not \
                             np.isnan(start['trace'][var].values[it, :]).all():
                         self.assertTrue(np.isclose(
                             start['trace'][var].values[it, :],
@@ -101,7 +107,7 @@ class ResModeHistoryTest(HistoryTest):
         cls.ub = 2 * np.ones((1, 2))
 
     def test_trace_chi2(self):
-        self.obj.options = pypesto.objective.ObjectiveOptions(
+        self.obj.history.options = pypesto.HistoryOptions(
             trace_record=True,
             trace_record_chi2=True,
             trace_record_schi2=False,
@@ -110,7 +116,7 @@ class ResModeHistoryTest(HistoryTest):
         self.check_history()
 
     def test_trace_chi2_schi2(self):
-        self.obj.options = pypesto.objective.ObjectiveOptions(
+        self.obj.history.options = pypesto.HistoryOptions(
             trace_record=True,
             trace_record_chi2=True,
             trace_record_schi2=True,
@@ -119,7 +125,7 @@ class ResModeHistoryTest(HistoryTest):
         self.check_history()
 
     def test_trace_schi2(self):
-        self.obj.options = pypesto.objective.ObjectiveOptions(
+        self.obj.history.options = pypesto.HistoryOptions(
             trace_record=True,
             trace_record_chi2=True,
             trace_record_schi2=False,
@@ -128,7 +134,7 @@ class ResModeHistoryTest(HistoryTest):
         self.check_history()
 
     def test_trace_grad(self):
-        self.obj.options = pypesto.objective.ObjectiveOptions(
+        self.obj.history.options = pypesto.HistoryOptions(
             trace_record=True,
             trace_record_grad=True,
         )
@@ -136,7 +142,7 @@ class ResModeHistoryTest(HistoryTest):
         self.check_history()
 
     def test_trace_all(self):
-        self.obj.options = pypesto.objective.ObjectiveOptions(
+        history = pypesto.History(options=pypesto.HistoryOptions(
             trace_record=True,
             trace_record_grad=True,
             trace_record_hess=True,
@@ -144,7 +150,8 @@ class ResModeHistoryTest(HistoryTest):
             trace_record_sres=True,
             trace_record_chi2=True,
             trace_record_schi2=True,
-        )
+        ))
+        self.obj.history = history
 
         self.check_history()
 
@@ -166,7 +173,7 @@ class FunModeHistoryTest(HistoryTest):
             integrated=False
         )['obj']
 
-        self.obj.options = pypesto.objective.ObjectiveOptions(
+        self.obj.history.options = pypesto.objective.HistoryOptions(
             trace_record=True,
             trace_record_grad=True,
             trace_record_hess=False,
@@ -180,7 +187,7 @@ class FunModeHistoryTest(HistoryTest):
             integrated=True
         )['obj']
 
-        self.obj.options = pypesto.objective.ObjectiveOptions(
+        self.obj.history.options = pypesto.objective.HistoryOptions(
             trace_record=True,
             trace_record_grad=True,
             trace_record_hess=False,
@@ -194,7 +201,7 @@ class FunModeHistoryTest(HistoryTest):
             integrated=True
         )['obj']
 
-        self.obj.options = pypesto.objective.ObjectiveOptions(
+        self.obj.history.options = pypesto.objective.HistoryOptions(
             trace_record=True,
             trace_record_grad=True,
             trace_record_hess=True,

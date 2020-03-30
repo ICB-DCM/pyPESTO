@@ -3,7 +3,7 @@ from typing import Callable, Iterable, Union
 import numpy as np
 
 from ..engine import OptimizerTask, Engine, SingleCoreEngine
-from ..objective import Objective, OptimizerHistoryFactory
+from ..objective import Objective, OptimizerHistoryOptions
 from ..problem import Problem
 from ..result import Result
 from ..startpoint import assign_startpoints, uniform
@@ -23,8 +23,8 @@ def minimize(
         startpoint_method: Union[Callable, bool] = None,
         result: Result = None,
         engine: Engine = None,
-        history_factory: OptimizerHistoryFactory = None,
         options: OptimizeOptions = None,
+        history_options: OptimizerHistoryOptions = None,
 ) -> Result:
     """
     This is the main function to call to do multistart optimization.
@@ -49,10 +49,10 @@ def minimize(
     engine:
         Parallelization engine. Defaults to sequential execution on a
         SingleCoreEngine.
-    history_factory:
-        Factory to create optimizer histories.
     options:
         Various options applied to the multistart optimization.
+    history_options:
+        Optimizer history options.
 
     Returns
     -------
@@ -69,13 +69,14 @@ def minimize(
     if startpoint_method is None:
         startpoint_method = uniform
 
-    if history_factory is None:
-        history_factory = OptimizerHistoryFactory()
-
     # check options
     if options is None:
         options = OptimizeOptions()
     options = OptimizeOptions.assert_instance(options)
+
+    if history_options is None:
+        history_options = OptimizerHistoryOptions()
+    history_options = OptimizerHistoryOptions.assert_instance(history_options)
 
     # assign startpoints
     startpoints = assign_startpoints(
@@ -100,7 +101,7 @@ def minimize(
     for startpoint, id in zip(startpoints, ids):
         task = OptimizerTask(
             optimizer=optimizer, problem=problem, x0=startpoint, id=id,
-            options=options, history_factory=history_factory,
+            options=options, history_options=history_options,
             handle_exception=handle_exception)
         tasks.append(task)
 

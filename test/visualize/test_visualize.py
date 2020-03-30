@@ -15,13 +15,10 @@ def create_bounds():
 
 
 def create_problem():
-    # define a pypesto objective (with tracing options)
-    objective_options = pypesto.ObjectiveOptions(trace_record=True,
-                                                 trace_save_iter=1)
+    # define a pypesto objective
     objective = pypesto.Objective(fun=so.rosen,
                                   grad=so.rosen_der,
-                                  hess=so.rosen_hess,
-                                  options=objective_options)
+                                  hess=so.rosen_hess)
 
     # define a pypesto problem
     (lb, ub) = create_bounds()
@@ -74,6 +71,9 @@ def create_optimization_history():
     optimizer_options = {'maxiter': 200}
     optimizer = pypesto.ScipyOptimizer(method='TNC', options=optimizer_options)
 
+    history_options = pypesto.OptimizerHistoryOptions(
+        trace_record=True, trace_save_iter=1)
+
     # run optimization
     optimize_options = pypesto.OptimizeOptions(allow_failed_starts=True)
     result_with_trace = pypesto.minimize(
@@ -81,7 +81,8 @@ def create_optimization_history():
         optimizer=optimizer,
         n_starts=5,
         startpoint_method=pypesto.startpoint.uniform,
-        options=optimize_options
+        options=optimize_options,
+        history_options=history_options
     )
 
     return result_with_trace

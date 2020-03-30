@@ -76,7 +76,7 @@ class OptimizerResult(dict):
                  message: str = None):
         super().__init__()
         self.id = id
-        self.x: np.ndarray = np.array(x)
+        self.x: np.ndarray = np.array(x) if x is not None else None
         self.fval: float = fval
         self.grad: np.ndarray = np.array(grad) if grad is not None else None
         self.hess: np.ndarray = np.array(hess) if hess is not None else None
