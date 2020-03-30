@@ -28,7 +28,7 @@ class HistoryTest(unittest.TestCase):
             trace_record=True,
             trace_record_hess=False,
             trace_save_iter=1,
-            storage_file='/tmp/traces/conversion_example_{id}.csv',
+            storage_file='tmp/traces/conversion_example_{id}.csv',
         )
 
         result = pypesto.minimize(
