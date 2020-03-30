@@ -97,6 +97,7 @@ dask-worker-space
 *.lock
 venv/*
 *.tmp
+tmp/*
 */tmp/*
 amici_models/*
 *.txt
