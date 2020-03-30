@@ -252,8 +252,11 @@ class Problem:
         if x is None:
             return None
 
+        # make sure it is an array
+        x = np.array(x)
+
         if len(x) == self.dim_full:
-            return np.array(x)
+            return x
 
         # Note: The funny indexing construct is to handle residual gradients,
         # where the last dimension is assumed to be the parameter one.
@@ -278,8 +281,11 @@ class Problem:
         if x is None:
             return None
 
+        # make sure it is an array
+        x = np.array(x)
+
         if len(x) == self.dim_full:
-            return np.array(x)
+            return x
 
         x_full = np.zeros((self.dim_full, self.dim_full))
         x_full[:, :] = np.nan

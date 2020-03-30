@@ -49,7 +49,7 @@ def history_decorator(minimize):
         objective.history.finalize()
         result.id = id
         result = fill_result_from_objective_history(
-            result, objective.history)
+            result, objective.history, self.is_least_squares)
 
         # unset history
         objective.history = History()
@@ -99,7 +99,8 @@ def fix_decorator(minimize):
     return wrapped_minimize
 
 
-def fill_result_from_objective_history(result, history):
+def fill_result_from_objective_history(
+        result, history, is_least_squares):
     """
     Overwrite function values in the result object with the values recorded in
     the history.
@@ -109,7 +110,8 @@ def fill_result_from_objective_history(result, history):
 
     # best found values
     if result.fval is not None and \
-            not np.isclose(result.fval, history.fval_min):
+            not np.isclose(result.fval, history.fval_min) and \
+            not is_least_squares:
         logger.warning(
             "Function values from history and optimizer do not match: "
             f"{history.fval_min}, {result.fval}")
@@ -159,7 +161,7 @@ def recover_result(objective, startpoint, err):
         exitflag=-1,
         message=str(err),
     )
-    fill_result_from_objective_history(result, objective.history)
+    fill_result_from_objective_history(result, objective.history, False)
 
     return result
 
@@ -336,7 +338,7 @@ class ScipyOptimizer(Optimizer):
 
         # fill in everything known, although some parts will be overwritten
         optimizer_result = OptimizerResult(
-            x=res.x,
+            x=np.array(res.x),
             fval=fval,
             grad=grad,
             hess=getattr(res, 'hess', None),
@@ -451,7 +453,7 @@ class PyswarmOptimizer(Optimizer):
             problem.objective.get_fval, lb, ub, **self.options)
 
         optimizer_result = OptimizerResult(
-            x=xopt,
+            x=np.array(xopt),
             fval=fopt
         )
 
