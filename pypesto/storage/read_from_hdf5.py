@@ -8,7 +8,8 @@ def read_hdf5_optimization(f: h5py.File,
     result = OptimizerResult()
     for optimization_key in f[f'/optimization/results/{start}']:
         if optimization_key in result.keys():
-            result[optimization_key] = f[f'/optimization/results/{start}/{optimization_key}']
+            result[optimization_key] = \
+                f[f'/optimization/results/{start}/{optimization_key}']
     return result
 
 
