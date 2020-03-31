@@ -1,7 +1,11 @@
 import numpy as np
 from typing import Dict
-from adaptive_metropolis_sampler_parent import SamplerState, Sampler
-import adaptive_metropolis_sampler_methods
+
+from .adaptive_metropolis_sampler_parent import SamplerState, Sampler
+from . import adaptive_metropolis_sampler_methods
+#from adaptive_metropolis_sampler_parent import SamplerState, Sampler
+#import adaptive_metropolis_sampler_methods
+
 # some of the "required" parameters could be given reasonable defaults
 # should this be re-written to produce n_samples unique samples?
 # at the moment, if a sample is rejected, then there will be duplicate samples
@@ -242,11 +246,13 @@ class AdaptiveMetropolisSampler(Sampler):
             # May occur if the previous request failed.
             # May occur if n_samples is specified in settings->__init__(), and
             # then sample(n_samples) is called before sample().
-            # What should default behaviour here be?
-            raise IndexError('The current requested sampling has not\n'
-                             'yet completed. Resume sampling with\n'
-                             'AdaptiveMetropolisSampler.sample()\n'
-                             'before requesting addition samples.')
+            # What should default behaviour here be? Could extend n_samples
+            # by the difference...
+            if n_samples + self.state.n_sample > self.state.n_samples:
+                raise IndexError('The current requested sampling has not\n'
+                                 'yet completed. Resume sampling with\n'
+                                 'AdaptiveMetropolisSampler.sample()\n'
+                                 'before requesting addition samples.')
 
     @staticmethod
     def sampling_loop(state: SamplerState, index: int) -> SamplerState:
@@ -310,12 +316,17 @@ class AdaptiveMetropolisSampler(Sampler):
         The chain of results, as described in the Results section of the
         docstring of this class.
         '''
+        #print(n_samples)
         self.additional_samples(n_samples)
         state = self.state
         state.chain = self.get_chain()
 
-        for index in range(state.n_sample, state.n_samples):
+        #n_samples = n_samples if n_samples > 0 else state.n_samples
+        #print((state.n_sample, n_samples))
+        for index in range(state.n_sample, self.state.n_samples):
             state = AdaptiveMetropolisSampler.sampling_loop(state, index)
+
+            #self.last
 
             if state.save_period > 0 and i % state.save_period == 0:
                 self.state = state
@@ -324,7 +335,8 @@ class AdaptiveMetropolisSampler(Sampler):
 
         self.state = state
         self.state.n_sample = self.state.n_samples
-        return [self.state.chain]
+        #return [self.state.chain]
+        return super().result_as_chains(self.state.chain)
 
     def get_state(self, key: str = None):
         '''

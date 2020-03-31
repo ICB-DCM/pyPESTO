@@ -1,9 +1,11 @@
 import abc
 
 from types import SimpleNamespace
-from typing import Dict
+from typing import Dict, Tuple
 
 import dill
+
+import copy
 
 class SamplerState(object):
     '''
@@ -141,10 +143,10 @@ class Sampler():
         self.state.n_samples += n_samples
         self.state.chain = chain
 
-    def get_chain(self) -> Dict:
+    def get_chain(self, ) -> Dict:
         '''
         Returns the chain of the state. If no chain exists, they are created
-        with the `new_chain` method.
+        with the `new_chain` method. Valid for single-chain samplers.
         '''
         if hasattr(self.state, 'chain'):
             return self.state.chain
@@ -196,6 +198,103 @@ class Sampler():
         self.state.chain = chain
         self.state.n_sample = self.state.n_samples
         return chain
+
+    @staticmethod
+    def result_as_chains(chain: Dict) -> Dict:
+        '''
+        Converts the results of single-chain samplers to the same format
+        as multiple-chain samplers.
+
+        Valid for single-chain samplers.
+
+        Arguments
+        ---------
+        chain:
+            The result of a single-chain sampler.
+
+        Returns
+        -------
+        The single chain in the same format as multiple chains.
+        '''
+        chains = []
+        chains.append(chain)
+        return chains
+
+    def get_last_sample(self, key: str = None):
+        '''
+        Returns the last sample (currently valid for single-chain samplers).
+        Requires the structure of the chain to be such that the last dimension
+        is n_samples (number of iterations).
+
+        Valid for single-chain samplers.
+
+        Arguments
+        ---------
+        key:
+            If specified, the last value for this key in the chain will be
+        returned. For example, if key='samples', then the last sample in the
+        chain will be returned.
+
+        Returns
+        -------
+        A dictionary where the keys are the corresponding keys in the
+        SamplerState chain, and the values are the last values for the
+        respective keys in the SamplerState chain.
+        '''
+        if key is not None:
+            return self.state.chain[key][...,self.state.n_sample - 1]
+        else:
+            return {
+                k: self.state.chain[k][...,self.state.n_sample - 1]
+                for k in self.state.chain
+            }
+
+    def set_last_sample(self, sample):
+        '''
+        Sets the most recently generated sample in a SamplerState chain to the
+        argument `sample`.
+
+        Valid for single-chain samplers.
+
+        Arguments
+        ---------
+        sample:
+            The sample that will replace the last sample in the SamplerState
+        chain.
+        '''
+        for key in sample:
+            self.state.chain[key][...,self.state.n_sample - 1] = sample[key]
+
+    @staticmethod
+    def swap_last_samples(
+            sampler1: 'Sampler',
+            sampler2: 'Sampler'
+    ) -> Tuple['Sampler', 'Sampler']:
+        '''
+        Swaps the last sample (including metadata such as log posterior values)
+        of two samplers. Currently valid for single-chain samplers (could be
+        extended by instead specifying the chain number(s) for multiple-chain
+        samplers).
+
+        Arguments
+        ---------
+        sampler1:
+            An instance of a single-chain Sampler child class.
+
+        sampler2:
+            An instance of a single-chain Sampler child class.
+
+        Returns
+        -------
+        The samplers after their last samples have been swapped.
+        '''
+        # Not sure if deepcopy is necessary...
+        sampler1_last_sample = copy.deepcopy(sampler1.get_last_sample())
+        sampler2_last_sample = copy.deepcopy(sampler2.get_last_sample())
+        #sampler1.set_last_sample(sampler2.get_last_sample())
+        sampler1.set_last_sample(sampler2_last_sample)
+        sampler2.set_last_sample(sampler1_last_sample)
+        return (sampler1, sampler2)
 
     def save_state(self, filename: str = None):
         '''

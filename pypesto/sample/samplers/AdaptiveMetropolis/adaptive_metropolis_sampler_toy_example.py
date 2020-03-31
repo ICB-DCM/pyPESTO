@@ -48,6 +48,8 @@ print('reload first 1000 samples, find another 1000 samples, for a total of 2000
 chains = sampler.sample(1000)
 print(sampler.get_state('chain')['samples_log_posterior'])
 
+print(chains)
+
 # Elba's toy problem plotting code (slightly modified)
 plt.figure()
 plt.plot(range(sampler.state.n_samples), chains[0]['samples'][0], 'ko', label='MCMC sample')
