@@ -1,5 +1,4 @@
 import numpy as np
-from AdaptiveMetropolis.adaptive_metropolis_sampler import AdaptiveMetropolisSampler
 from AdaptiveMetropolis.adaptive_metropolis_sampler_parent import Sampler
 
 def parallel_tempering(settings: dict) -> dict:
