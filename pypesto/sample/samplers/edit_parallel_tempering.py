@@ -2,9 +2,6 @@ import numpy as np
 from AdaptiveMetropolis.adaptive_metropolis_sampler_parent import Sampler
 
 def parallel_tempering(settings: dict) -> dict:
-
-    pt_settings = []
-
     n_samples = settings['n_samples']
     n_temperatures = settings['n_temperatures']
     temperature_nu = settings['temperature_nu']
