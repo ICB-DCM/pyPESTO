@@ -3,8 +3,7 @@ import matplotlib.pyplot as plt
 from scipy.stats import multivariate_normal
 import seaborn as sns
 
-from edit_parallel_tempering import *
-
+from parallel_tempering import parallel_tempering
 from AdaptiveMetropolis.adaptive_metropolis_sampler import AdaptiveMetropolisSampler
 
 def p(x):
@@ -78,7 +77,7 @@ sns.set_style('whitegrid')
 for n_T in range(settings['n_temperatures']):
     plt.subplot(settings['n_temperatures'], 1, n_T+1)
     sns.kdeplot(resultPT['samples'][n_T][0], bw=0.1)
-    # plt.hist(resultPT['sample'][n_T][0])
+    # plt.hist(resultPT['samples'][n_T][0])
     plt.title('T'+str(n_T+1))
     plt.xlabel('x')
     plt.ylabel('Density')
@@ -89,7 +88,7 @@ plt.close()
 plt.figure()
 sns.set_style('whitegrid')
 sns.kdeplot(resultAM['samples'][0][0], bw=0.1)
-# plt.hist(resultAM['sample'][0])
+# plt.hist(resultAM['samples'][0])
 plt.xlabel('x')
 plt.ylabel('Density')
 plt.tight_layout()
