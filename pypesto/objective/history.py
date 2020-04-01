@@ -613,6 +613,7 @@ class Hdf5History(History):
             TIME: used_time,
             X: x,
             FVAL: ret[FVAL],
+            GRAD: ret[GRAD],
             RES: ret[RES],
             SRES: ret[SRES],
             CHI2: ret[CHI2],
@@ -626,48 +627,55 @@ class Hdf5History(History):
             iteration = f[f'/optimization/results/{self.id}/trace/'].attrs['n_iterations']
 
             for key in values.keys():
-                f[f'/optimization/results/{self.id}/trace/{iteration}/{key}'] = values[key]
+                f[f'/optimization/results/{self.id}/trace/{str(iteration)}/{key}'] = values[key]
 
             f[f'/optimization/results/{self.id}/trace/'].attrs['n_iterations'] += 1
 
     def finalize(self):
         super().finalize()
 
+    def _get_hdf5_entries(self,
+                          entry_id: str) -> Sequence:
+        """
+        used in all get_{entry_id}_trace functions
+        """
+        trace_result = []
+
+        with h5py.File(self.file, 'r') as f:
+
+            for iteration in range(f[f'/optimization/results/{self.id}/trace/']
+                                           .attrs['n_iterations']):
+
+                trace_result.append(f[f'/optimization/results/{self.id}/trace/{str(iteration)}/{entry_id}'])
+
+        return trace_result
+
     def get_x_trace(self) -> Sequence[np.ndarray]:
-        # TODO implement
-        raise NotImplementedError()
+        return self._get_hdf5_entries(X)
 
     def get_fval_trace(self) -> Sequence[float]:
-        # TODO implement
-        raise NotImplementedError()
+        return self._get_hdf5_entries(FVAL)
 
     def get_grad_trace(self) -> Sequence[np.ndarray]:
-        # TODO implement
-        raise NotImplementedError()
+        return self._get_hdf5_entries(GRAD)
 
     def get_hess_trace(self) -> Sequence[np.ndarray]:
-        # TODO implement
-        raise NotImplementedError()
+        return self._get_hdf5_entries(HESS)
 
     def get_res_trace(self) -> Sequence[np.ndarray]:
-        # TODO implement
-        raise NotImplementedError()
+        return self._get_hdf5_entries(RES)
 
     def get_sres_trace(self) -> Sequence[np.ndarray]:
-        # TODO implement
-        raise NotImplementedError()
+        return self._get_hdf5_entries(SRES)
 
     def get_chi2_trace(self) -> Sequence[np.ndarray]:
-        # TODO implement
-        raise NotImplementedError()
+        return self._get_hdf5_entries(CHI2)
 
     def get_schi2_trace(self, t: Optional[int] = None) -> Sequence[np.ndarray]:
-        # TODO implement
-        raise NotImplementedError()
+        return self._get_hdf5_entries(SCHI2)
 
     def get_time_trace(self, t: Optional[int] = None) -> Sequence[np.ndarray]:
-        # TODO implement
-        raise NotImplementedError()
+        return self._get_hdf5_entries(TIME)
 
 
 class OptimizerHistory(HistoryBase):
