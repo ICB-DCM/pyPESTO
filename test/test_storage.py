@@ -2,6 +2,7 @@
 This is for testing the pypesto.Storage.
 """
 import tempfile
+import numpy as np
 from .visualize.test_visualize import create_problem, \
     create_optimization_result
 from pypesto.storage import ProblemHDF5Writer, OptimizationResultHDF5Writer, \
@@ -23,5 +24,10 @@ class TestResultStorage:
             read_result = opt_result_reader.read()
             for i, opt_res in enumerate(minimize_result.optimize_result.list):
                 for key in opt_res:
-                    assert opt_res[key] == \
-                           read_result.optimize_result.list[i][key]
+                    if isinstance(opt_res[key], np.ndarray):
+                        np.testing.assert_array_equal(
+                            opt_res[key],
+                            read_result.optimize_result.list[i][key])
+                    else:
+                        assert opt_res[key] == \
+                               read_result.optimize_result.list[i][key]
