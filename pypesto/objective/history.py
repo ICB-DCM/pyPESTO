@@ -555,7 +555,7 @@ class CsvHistory(History):
                 )
             trace_copy.to_csv(self.file)
 
-    def get_fval_trace(self) -> Sequence[float]:
+    def get_fval_trace(self) -> pd.Series:
         # TODO implement the other methods
         return self._trace[FVAL]
 
