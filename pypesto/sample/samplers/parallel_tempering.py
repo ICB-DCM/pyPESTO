@@ -1,7 +1,7 @@
 from typing import Dict
 import numpy as np
 from AdaptiveMetropolis.adaptive_metropolis_sampler_parent import Sampler
-from parallel_sampler_methods import sample_parallel_tempering
+from parallel_tempering_methods import sample_parallel_tempering
 
 def parallel_tempering(
         settings: Dict) -> Dict:
