@@ -52,7 +52,7 @@ class HistoryOptions(dict):
     trace_save_iter:
         After how many iterations to store the trace.
     storage_file:
-        File to save the trace to. Can be any of None, a
+        File to save the history to. Can be any of None, a
         "{filename}.csv", or a "{filename}.hdf5" file. Depending on the values,
         the `create_history` method creates the appropriate object.
         Occurrences of "{id}" in the file name are replaced by the `id`
