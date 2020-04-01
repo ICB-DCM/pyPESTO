@@ -44,7 +44,7 @@ class OptimizationResultHDF5Reader:
         self.storage_filename = storage_filename
         self.results = Result()
 
-    def read(self) -> 'OptimizeResult':
+    def read(self) -> 'Result':
         """
         Read HDF5 result file and return pyPESTO result object.
         """
