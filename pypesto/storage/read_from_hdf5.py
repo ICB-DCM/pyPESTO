@@ -51,11 +51,11 @@ class ProblemHDF5Reader:
         """
         with h5py.File(self.storage_filename, 'r') as f:
             for problem_key in f['/problem']:
-                print(problem_key)
-                print(f[f'/problem/{problem_key}'])
-                self.problem.problem_key = f[f'/problem/{problem_key}'][:]
+                # self.problem.problem_key = f[f'/problem/{problem_key}'][:]
+                setattr(self.problem, problem_key, f[f'/problem/{problem_key}'][:])
             for problem_attr in f['/problem'].attrs:
-                self.problem.problem_attr = f['/problem'].attrs[problem_attr]
+                # self.problem.problem_attr = f['/problem'].attrs[problem_attr]
+                setattr(self.problem, problem_attr, f['/problem'].attrs[problem_attr])
         return self.problem
 
 
@@ -79,8 +79,8 @@ class OptimizationResultHDF5Reader:
         """
         with h5py.File(self.storage_filename, "r") as f:
             if '/problem' in f['/']:
-                self.results.problem = \
-                    ProblemHDF5Reader(self.storage_filename).read()
+                problem_reader = ProblemHDF5Reader(self.storage_filename)
+                self.results.problem = problem_reader.read()
 
             for start in f['/optimization/results']:
                 result = read_hdf5_optimization(f, start)
