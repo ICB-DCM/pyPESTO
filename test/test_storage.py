@@ -1,5 +1,5 @@
 """
-This is for testing the pypesto.Storage+.
+This is for testing the pypesto.Storage.
 """
 import tempfile
 from .visualize.test_visualize import create_problem, \

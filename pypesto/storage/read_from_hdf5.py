@@ -1,6 +1,8 @@
 import h5py
 from ..result import Result
 from ..optimize.result import OptimizerResult
+from ..problem import Problem
+from ..objective import Objective
 
 
 def read_hdf5_optimization(f: h5py.File,
@@ -26,8 +28,35 @@ def read_hdf5_optimization(f: h5py.File,
                 f[f'/optimization/results/{start}'].attrs:
             result[optimization_key] = \
                 f[f'/optimization/results/{start}'].attrs[optimization_key]
-            continue
     return result
+
+
+class ProblemHDF5Reader:
+    """
+    Reader of the HDF5 problem files written
+    by class ProblemHDF5Writer.
+
+    Attributes
+    ---------
+    storage_filename:
+        HDF5 result file name
+    """
+    def __init__(self, storage_filename: str):
+        self.storage_filename = storage_filename
+        self.problem = Problem(Objective(), [], [])
+
+    def read(self) -> 'Problem':
+        """
+        Read HDF5 problem file and return pyPESTO problem object.
+        """
+        with h5py.File(self.storage_filename, 'r') as f:
+            for problem_key in f['/problem']:
+                print(problem_key)
+                print(f[f'/problem/{problem_key}'])
+                self.problem.problem_key = f[f'/problem/{problem_key}'][:]
+            for problem_attr in f['/problem'].attrs:
+                self.problem.problem_attr = f['/problem'].attrs[problem_attr]
+        return self.problem
 
 
 class OptimizationResultHDF5Reader:
@@ -49,8 +78,12 @@ class OptimizationResultHDF5Reader:
         Read HDF5 result file and return pyPESTO result object.
         """
         with h5py.File(self.storage_filename, "r") as f:
+            if '/problem' in f['/']:
+                self.results.problem = \
+                    ProblemHDF5Reader(self.storage_filename).read()
+
             for start in f['/optimization/results']:
                 result = read_hdf5_optimization(f, start)
                 self.results.optimize_result.append(result)
-                self.results.optimize_result.sort()
+            self.results.optimize_result.sort()
         return self.results
