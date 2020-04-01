@@ -19,10 +19,8 @@ def parallel_tempering(
     samplers = []
     n_temperatures = settings['n_temperatures']
 
-    # Loop over temperatures
-    for n_T in range(n_temperatures):
-        # Initialize sampling history
-        samplers.append(settings['sampler'](settings=settings))
+    # Initialize sampling history
+    samplers = [settings['sampler'](settings=settings) for n_T in range(settings['n_temperatures'])]
 
     # Perform parallel tempering
     result = sample_parallel_tempering(samplers,
