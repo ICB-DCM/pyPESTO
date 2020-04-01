@@ -18,8 +18,18 @@ class ProblemHDF5Writer:
     def __init__(self, storage_filename):
         self.storage_filename = storage_filename
 
-    def write(self, problem):
+    def write(self, problem, overwrite: bool = False):
+
         with h5py.File(self.storage_filename, "a") as f:
+            if "problem" in f:
+                if overwrite:
+                    del f["problem"]
+                else:
+                    raise Exception("The file already exists and contains "
+                                    "information about optimization result."
+                                    "If you wish to overwrite the file set"
+                                    "overwrite=True.")
+
             problem_grp = f.create_group("problem")
             # problem_grp.attrs['config'] = objective.get_config()
             problem_grp.attrs[self.DIM] = problem.dim
@@ -41,8 +51,17 @@ class OptimizationResultHDF5Writer:
     def __init__(self, storage_filename):
         self.storage_filename = storage_filename
 
-    def write(self, result: Result):
+    def write(self, result: Result, overwrite=False):
+
         with h5py.File(self.storage_filename, "a") as f:
+            if "optimization" in f:
+                if overwrite:
+                    del f["optimization"]
+                else:
+                    raise Exception("The file already exists and contains "
+                                    "information about optimization result."
+                                    "If you wish to overwrite the file set"
+                                    "overwrite=True.")
             optimization_grp = f.create_group("optimization")
             # settings =
             # optimization_grp.create_dataset("settings", settings, dtype=)
