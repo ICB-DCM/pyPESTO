@@ -588,8 +588,7 @@ class Hdf5History(History):
             mode: str,
             result: ResultType
     ) -> None:
-
-        super().update(x, sensi_orders, mode, result) 
+        super().update(x, sensi_orders, mode, result)
         self._update_trace(x, sensi_orders, mode, result)
 
     def _update_trace(self,
@@ -603,6 +602,25 @@ class Hdf5History(History):
 
         if not self.options.trace_record:
             return
+
+        # extract function values
+        ret = extract_values(sensi_orders, mode, result, self.options)
+
+        used_time = time.time() - self._start_time
+
+        values = {
+            TIME: used_time,
+            N_FVAL: self._n_fval,
+            N_GRAD: self._n_grad,
+            N_HESS: self._n_hess,
+            N_RES: self._n_res,
+            N_SRES: self._n_sres,
+            FVAL: ret[FVAL],
+            RES: ret[RES],
+            SRES: ret[SRES],
+            CHI2: ret[CHI2],
+            HESS: ret[HESS],
+        }
 
         # Schauen welche keys hat das hdf5 file?
         # speichern...
