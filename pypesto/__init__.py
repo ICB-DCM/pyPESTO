@@ -41,6 +41,7 @@ from .sample import (
     sample,
     Sampler,
     Pymc3Sampler,
+    MetropolisSampler,
     McmcPtResult)
 from .engine import (
     SingleCoreEngine,

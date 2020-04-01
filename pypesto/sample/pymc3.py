@@ -23,10 +23,12 @@ class Pymc3Sampler(Sampler):
         """
         if options is None:
             options = {}
-        self._options = options
-        self._return_native = return_native
+        self.options = options
+        self.return_native = return_native
 
-    def sample(self, problem: Problem) -> Union[McmcPtResult, Any]:
+    def sample(
+            self, problem: Problem, x0: np.ndarray = None
+    ) -> Union[McmcPtResult, Any]:
         # create our Op
         llh = TheanoLogLikelihood(problem)
 
@@ -44,9 +46,9 @@ class Pymc3Sampler(Sampler):
             pm.DensityDist('likelihood', lambda v: llh(v),
                            observed={'v': theta})
 
-            trace = pm.sample(**self._options)
+            trace = pm.sample(**self.options)
 
-        if self._return_native:
+        if self.return_native:
             return trace
 
         # TODO

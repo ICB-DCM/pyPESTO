@@ -1,21 +1,22 @@
 import numpy as np
-from typing import Iterable
+from typing import Iterable, Union
 
 
 class McmcPtResult(dict):
     """The result of a sampler run using Markov-chain Monte Carlo, and
     optionally parallel tempering.
-    The standardized return value of `pypesto.sample`, which can be
-    initialized from an OptimizerResult.
 
     Can be used like a dict.
 
-    Attributes
+    Parameters
     ----------
-
-    chains:
-        The chains.
-    temperatures:
+    trace_x: [n_chain, n_par, n_iter]
+        Parameters
+    trace_fval: [n_chain, n_iter]
+        Function values.
+    trace_grad: [n_chain, n_par, n_iter]
+        Gradients.
+    temperatures: [n_chain]
         The associated temperatures.
     time:
         Execution time.
@@ -27,17 +28,12 @@ class McmcPtResult(dict):
         Number of Hessian evaluations.
     message: str
         Textual comment on the profile result.
-
-    Notes
-    -----
-
-    Any field not supported by the profiler or the profiling optimizer is
-    filled with None. Some fields are filled by pypesto itself.
     """
 
     def __init__(self,
-                 x_0: np.ndarray,
-                 chains: Iterable[Iterable[np.ndarray]],
+                 trace_x: Iterable[Iterable[np.ndarray]],
+                 trace_fval: Iterable[Iterable[float]],
+                 trace_grad: Iterable[Iterable[Union[np.ndarray, None]]],
                  temperatures: Iterable[float],
                  time: float = 0.0,
                  n_fval: int = 0,
@@ -46,8 +42,9 @@ class McmcPtResult(dict):
                  message: str = None):
         super().__init__()
 
-        self.x_0 = x_0
-        self.chains = chains
+        self.trace_x = trace_x
+        self.trace_fval = trace_fval
+        self.trace_grad = trace_grad
         self.temperatures = temperatures
         self.time = time
         self.n_fval = n_fval
