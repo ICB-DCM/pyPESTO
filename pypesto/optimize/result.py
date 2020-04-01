@@ -1,5 +1,6 @@
 import numpy as np
-import pandas as pd
+
+from ..objective import History
 
 
 class OptimizerResult(dict):
@@ -40,8 +41,8 @@ class OptimizerResult(dict):
         The starting parameters.
     fval0:
         The starting function value, `fun(x0)`.
-    trace:
-        History as maintained by pypesto.History.
+    history:
+        Objective history.
     exitflag:
         The exitflag of the optimizer.
     time:
@@ -70,7 +71,7 @@ class OptimizerResult(dict):
                  n_sres: int = None,
                  x0: np.ndarray = None,
                  fval0: float = None,
-                 trace: pd.DataFrame = None,
+                 history: History = None,
                  exitflag: int = None,
                  time: float = None,
                  message: str = None):
@@ -89,7 +90,7 @@ class OptimizerResult(dict):
         self.n_sres: int = n_sres
         self.x0: np.ndarray = np.array(x0) if x0 is not None else None
         self.fval0: float = fval0
-        self.trace: pd.DataFrame = trace
+        self.history: History = history
         self.exitflag: int = exitflag
         self.time: float = time
         self.message: str = message
