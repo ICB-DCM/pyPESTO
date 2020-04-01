@@ -611,6 +611,7 @@ class Hdf5History(History):
 
         values = {
             TIME: used_time,
+            X: x,
             FVAL: ret[FVAL],
             RES: ret[RES],
             SRES: ret[SRES],
