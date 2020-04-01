@@ -588,7 +588,25 @@ class Hdf5History(History):
             mode: str,
             result: ResultType
     ) -> None:
-        # TODO implement
+
+        super().update(x, sensi_orders, mode, result) 
+        self._update_trace(x, sensi_orders, mode, result)
+
+    def _update_trace(self,
+                      x: np.ndarray,
+                      sensi_orders: Tuple[int],
+                      mode: str,
+                      result: ResultType):
+        """
+        Update and possibly store the trace.
+        """
+
+        if not self.options.trace_record:
+            return
+
+        # Schauen welche keys hat das hdf5 file?
+        # speichern...
+
         raise NotImplementedError()
 
     def finalize(self):
