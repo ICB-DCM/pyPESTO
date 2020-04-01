@@ -71,7 +71,7 @@ def create_optimization_history():
     optimizer_options = {'maxiter': 200}
     optimizer = pypesto.ScipyOptimizer(method='TNC', options=optimizer_options)
 
-    history_options = pypesto.OptimizerHistoryOptions(
+    history_options = pypesto.HistoryOptions(
         trace_record=True, trace_save_iter=1)
 
     # run optimization

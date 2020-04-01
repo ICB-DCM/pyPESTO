@@ -3,7 +3,7 @@ from typing import Callable, Iterable, Union
 import numpy as np
 
 from ..engine import OptimizerTask, Engine, SingleCoreEngine
-from ..objective import Objective, OptimizerHistoryOptions
+from ..objective import Objective, HistoryOptions
 from ..problem import Problem
 from ..result import Result
 from ..startpoint import assign_startpoints, uniform
@@ -24,7 +24,7 @@ def minimize(
         result: Result = None,
         engine: Engine = None,
         options: OptimizeOptions = None,
-        history_options: OptimizerHistoryOptions = None,
+        history_options: HistoryOptions = None,
 ) -> Result:
     """
     This is the main function to call to do multistart optimization.
@@ -75,8 +75,8 @@ def minimize(
     options = OptimizeOptions.assert_instance(options)
 
     if history_options is None:
-        history_options = OptimizerHistoryOptions()
-    history_options = OptimizerHistoryOptions.assert_instance(history_options)
+        history_options = HistoryOptions()
+    history_options = HistoryOptions.assert_instance(history_options)
 
     # assign startpoints
     startpoints = assign_startpoints(

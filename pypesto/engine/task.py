@@ -4,7 +4,7 @@ import numpy as np
 from typing import Callable
 
 from ..problem import Problem
-from ..objective import OptimizerHistoryOptions
+from ..objective import HistoryOptions
 import pypesto
 
 
@@ -40,7 +40,7 @@ class OptimizerTask(Task):
             x0: np.ndarray,
             id: str,
             options: 'pypesto.OptimizeOptions',
-            history_options: OptimizerHistoryOptions,
+            history_options: HistoryOptions,
             handle_exception: Callable):
         """
         Create the task object.
