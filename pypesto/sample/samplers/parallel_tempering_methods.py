@@ -1,5 +1,5 @@
 from typing import Callable, Tuple, Sequence, Dict
-from AdaptiveMetropolis.adaptive_metropolis_sampler_parent import Sampler
+from ..sampler import Sampler
 import numpy as np
 import copy
 
