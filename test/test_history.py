@@ -3,8 +3,12 @@ This is for testing the pypesto.History.
 """
 
 import numpy as np
+import pytest
 import pypesto
+from pypesto.objective.constants import FVAL, GRAD
 import unittest
+import tempfile
+
 from test.test_objective import rosen_for_sensi
 from test.test_sbml_conversion import load_model_objective
 from pypesto.objective.util import sres_to_schi2, res_to_chi2
@@ -213,3 +217,50 @@ class FunModeHistoryTest(HistoryTest):
         )
 
         self.check_history()
+
+
+@pytest.fixture(params=["", "memory", "csv"])
+def history(request) -> pypesto.History:
+    if request.param == "memory":
+        history = pypesto.MemoryHistory(options={'trace_record': True})
+    elif request.param == "csv":
+        file = tempfile.mkstemp(suffix='.csv')[1]
+        history = pypesto.CsvHistory(file, options={'trace_record': True})
+    else:
+        history = pypesto.History()
+    for _ in range(10):
+        result = {FVAL: np.random.randn(), GRAD: np.random.randn(7)}
+        history.update(np.random.randn(7), (0, 1), 'mode_fun', result)
+    history.finalize()
+    return history
+
+
+def test_history_properties(history: pypesto.History):
+    assert history.n_fval == 10
+    assert history.n_grad == 10
+    assert history.n_hess == 0
+    assert history.n_res == 0
+    assert history.n_sres == 0
+
+    if type(history) == pypesto.History:
+        with pytest.raises(NotImplementedError):
+            history.get_fval_trace()
+    else:
+        fvals = history.get_fval_trace()
+        assert len(fvals) == 10
+        assert all(np.isfinite(fvals))
+
+    if type(history) in \
+            (pypesto.History, pypesto.CsvHistory, pypesto.Hdf5History):
+        # TODO update as functionality is implemented
+        with pytest.raises(NotImplementedError):
+            history.get_grad_trace()
+    else:
+        grads = history.get_grad_trace()
+        assert len(grads) == 10
+        assert len(grads[0]) == 7
+
+    if type(history) == pypesto.MemoryHistory:
+        # TODO extend as funcionality is implemented
+        ress = history.get_res_trace()
+        assert all(res is None for res in ress)

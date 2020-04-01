@@ -342,7 +342,7 @@ class MemoryHistory(History):
         History options.
     """
 
-    def __init__(self, options: Union[HistoryOptions, Dict]):
+    def __init__(self, options: Union[HistoryOptions, Dict] = None):
         super().__init__(options=options)
         self._trace_keys = {X, FVAL, GRAD, HESS, RES, SRES, CHI2, SCHI2, TIME}
         self._trace: Dict[str, Any] = {key: [] for key in self._trace_keys}
