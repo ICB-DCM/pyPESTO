@@ -216,8 +216,7 @@ class Sampler():
         -------
         The single chain in the same format as multiple chains.
         '''
-        chains = []
-        chains.append(chain)
+        chains = {key: [chain[key]] for key in chain}
         return chains
 
     def get_last_sample(self, key: str = None):
