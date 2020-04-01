@@ -139,8 +139,6 @@ def test_profile_with_history():
     objective = test_objective.rosen_for_sensi(max_sensi_order=2,
                                                integrated=False)['obj']
 
-    objective.history.options.trace_record = True
-
     with warnings.catch_warnings():
         warnings.simplefilter("ignore")
         (problem, result, optimizer) = \
@@ -151,6 +149,7 @@ def test_profile_with_history():
                                              default_step_size=0.005,
                                              ratio_min=0.03)
 
+    problem.objective.history = pypesto.MemoryHistory({'trace_record': True})
     pypesto.parameter_profile(
         problem=problem,
         result=result,

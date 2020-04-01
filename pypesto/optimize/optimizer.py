@@ -7,7 +7,7 @@ import logging
 from typing import Dict
 
 from ..objective import (
-    History, OptimizerHistoryOptions, res_to_chi2)
+    OptimizerHistory, HistoryOptions, res_to_chi2)
 from ..problem import Problem
 from .result import OptimizerResult
 
@@ -34,11 +34,16 @@ def history_decorator(minimize):
     def wrapped_minimize(self, problem, x0, id, history_options=None):
         objective = problem.objective
 
-        # plug in history
+        # create optimizer history
         if history_options is None:
-            history_options = OptimizerHistoryOptions()
-        objective.history = history_options.create_optimizer_history(
-            id=id, x0=x0, x_names=objective.x_names)
+            history_options = HistoryOptions()
+        history = history_options.create_history(
+            id=id, x_names=objective.x_names)
+        optimizer_history = OptimizerHistory(history=history, x0=x0)
+
+        # plug in history for the objective to record it
+        objective.history = optimizer_history
+
         # TODO this can be prettified
         if hasattr(objective, 'reset_steadystate_guesses'):
             objective.reset_steadystate_guesses()
@@ -50,9 +55,6 @@ def history_decorator(minimize):
         result.id = id
         result = fill_result_from_objective_history(
             result, objective.history, self.is_least_squares)
-
-        # unset history
-        objective.history = History()
 
         return result
     return wrapped_minimize
@@ -100,53 +102,52 @@ def fix_decorator(minimize):
 
 
 def fill_result_from_objective_history(
-        result, history, is_least_squares):
+        result: OptimizerResult,
+        optimizer_history: OptimizerHistory,
+        is_least_squares: bool):
     """
     Overwrite function values in the result object with the values recorded in
     the history.
     """
-    # id
-    result.id = history.id
-
     # best found values
     if result.fval is not None and \
-            not np.isclose(result.fval, history.fval_min) and \
+            not np.isclose(result.fval, optimizer_history.fval_min) and \
             not is_least_squares:
         logger.warning(
             "Function values from history and optimizer do not match: "
-            f"{history.fval_min}, {result.fval}")
+            f"{optimizer_history.fval_min}, {result.fval}")
 
-    if history.x_min is not None and result.x is not None and \
-            not np.allclose(result.x, history.x_min):
+    if optimizer_history.x_min is not None and result.x is not None and \
+            not np.allclose(result.x, optimizer_history.x_min):
         logger.warning(
             "Parameters obtained from history and optimizer do not match: "
-            f"{history.x_min}, {result.x}")
+            f"{optimizer_history.x_min}, {result.x}")
     else:
         # override values from history if available
-        result.x = history.x_min
-        result.fval = history.fval_min
-        if history.grad_min is not None:
-            result.grad = history.grad_min
-        if history.hess_min is not None:
-            result.hess = history.hess_min
-        if history.res_min is not None:
-            result.res = history.res_min
-        if history.sres_min is not None:
-            result.sres = history.sres_min
+        result.x = optimizer_history.x_min
+        result.fval = optimizer_history.fval_min
+        if optimizer_history.grad_min is not None:
+            result.grad = optimizer_history.grad_min
+        if optimizer_history.hess_min is not None:
+            result.hess = optimizer_history.hess_min
+        if optimizer_history.res_min is not None:
+            result.res = optimizer_history.res_min
+        if optimizer_history.sres_min is not None:
+            result.sres = optimizer_history.sres_min
 
     # initial values
-    result.x0 = history.x0
-    result.fval0 = history.fval0
+    result.x0 = optimizer_history.x0
+    result.fval0 = optimizer_history.fval0
 
     # counters
-    result.n_fval = history.n_fval
-    result.n_grad = history.n_grad
-    result.n_hess = history.n_hess
-    result.n_res = history.n_res
-    result.n_sres = history.n_sres
+    result.n_fval = optimizer_history.history.n_fval
+    result.n_grad = optimizer_history.history.n_grad
+    result.n_hess = optimizer_history.history.n_hess
+    result.n_res = optimizer_history.history.n_res
+    result.n_sres = optimizer_history.history.n_sres
 
     # trace
-    result.trace = history.trace
+    result.history = optimizer_history.history
 
     return result
 
@@ -188,7 +189,7 @@ class Optimizer(abc.ABC):
             problem: Problem,
             x0: np.ndarray,
             id: str,
-            history_options: OptimizerHistoryOptions = None,
+            history_options: HistoryOptions = None,
     ) -> OptimizerResult:
         """"
         Perform optimization.
@@ -244,7 +245,7 @@ class ScipyOptimizer(Optimizer):
             problem: Problem,
             x0: np.ndarray,
             id: str,
-            history_options: OptimizerHistoryOptions = None,
+            history_options: HistoryOptions = None,
     ) -> OptimizerResult:
         lb = problem.lb
         ub = problem.ub
@@ -381,7 +382,7 @@ class DlibOptimizer(Optimizer):
             problem: Problem,
             x0: np.ndarray,
             id: str,
-            history_options: OptimizerHistoryOptions = None,
+            history_options: HistoryOptions = None,
     ) -> OptimizerResult:
 
         lb = problem.lb
@@ -441,7 +442,7 @@ class PyswarmOptimizer(Optimizer):
             problem: Problem,
             x0: np.ndarray,
             id: str,
-            history_options: OptimizerHistoryOptions = None,
+            history_options: HistoryOptions = None,
     ) -> OptimizerResult:
         lb = problem.lb
         ub = problem.ub

@@ -24,7 +24,7 @@ class HistoryTest(unittest.TestCase):
             allow_failed_starts=False
         )
 
-        history_options = pypesto.OptimizerHistoryOptions(
+        history_options = pypesto.HistoryOptions(
             trace_record=True,
             trace_record_hess=False,
             trace_save_iter=1,
@@ -42,18 +42,19 @@ class HistoryTest(unittest.TestCase):
         # disable trace from here on
         self.obj.history.options.trace_record = False
         for start in result.optimize_result.list:
-            it_final = int(start['trace'][('fval', np.NaN)].idxmin())
+            trace = start.history._trace
+            it_final = int(trace[('fval', np.NaN)].idxmin())
             it_start = int(np.where(np.logical_not(
-                np.isnan(start['trace']['fval'].values)
+                np.isnan(trace['fval'].values)
             ))[0][0])
             self.assertTrue(np.isclose(
-                start['trace']['x'].values[0, :], start['x0']
+                trace['x'].values[0, :], start.x0
             ).all())
             self.assertTrue(np.isclose(
-                start['trace']['x'].values[it_final, :], start['x']
+                trace['x'].values[it_final, :], start.x
             ).all())
             self.assertTrue(np.isclose(
-                start['trace']['fval'].values[it_start, 0], start['fval0']
+                trace['fval'].values[it_start, 0], start.fval0
             ))
 
             funs = {
@@ -72,23 +73,23 @@ class HistoryTest(unittest.TestCase):
             for var, fun in funs.items():
                 for it in range(5):
                     if var in ['fval', 'chi2']:
-                        if not np.isnan(start['trace'][var].values[it, 0]):
+                        if not np.isnan(trace[var].values[it, 0]):
                             self.assertTrue(np.isclose(
-                                start['trace'][var].values[it, 0],
-                                fun(start['trace']['x'].values[it, :])
+                                trace[var].values[it, 0],
+                                fun(trace['x'].values[it, :])
                             ))
                     elif var in ['hess', 'sres', 'res']:
-                        if start['trace'][var].values[it, 0] is not None:
+                        if trace[var].values[it, 0] is not None:
                             self.assertTrue(np.isclose(
-                                start['trace'][var].values[it, 0],
-                                fun(start['trace']['x'].values[it, :])
+                                trace[var].values[it, 0],
+                                fun(trace['x'].values[it, :])
                             ).all())
                     elif self.obj.history.options[f'trace_record_{var}'] \
                             and not \
-                            np.isnan(start['trace'][var].values[it, :]).all():
+                            np.isnan(trace[var].values[it, :]).all():
                         self.assertTrue(np.isclose(
-                            start['trace'][var].values[it, :],
-                            fun(start['trace']['x'].values[it, :])
+                            trace[var].values[it, :],
+                            fun(trace['x'].values[it, :])
                         ).all())
 
 
@@ -142,7 +143,7 @@ class ResModeHistoryTest(HistoryTest):
         self.check_history()
 
     def test_trace_all(self):
-        history = pypesto.History(options=pypesto.HistoryOptions(
+        history = pypesto.MemoryHistory(options=pypesto.HistoryOptions(
             trace_record=True,
             trace_record_grad=True,
             trace_record_hess=True,

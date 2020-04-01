@@ -5,7 +5,7 @@ import logging
 from typing import Callable, Dict, List, Tuple, Union
 
 from .constants import MODE_FUN, MODE_RES, FVAL, GRAD, HESS, RES, SRES
-from .history import History
+from .history import HistoryBase
 from .pre_post_process import PrePostProcessor, FixedParametersProcessor
 
 logger = logging.getLogger(__name__)
@@ -133,7 +133,7 @@ class Objective:
         self.x_names = x_names
 
         self.pre_post_processor = PrePostProcessor()
-        self.history = History()
+        self.history = HistoryBase()
 
     def __deepcopy__(self, memodict=None) -> 'Objective':
         other = Objective()
@@ -547,8 +547,9 @@ class Objective:
         if x_indices is None:
             x_indices = list(range(len(x)))
 
-        tmp_trace_record = self.history.options.trace_record
-        self.history.options.trace_record = False
+        if hasattr(self.history, 'options'):
+            tmp_trace_record = self.history.options.trace_record
+            self.history.options.trace_record = False
 
         # function value and objective gradient
         fval, grad = self(x, (0, 1), mode)
@@ -623,6 +624,7 @@ class Objective:
         if verbosity > 0:
             logger.info(result)
 
-        self.history.options.trace_record = tmp_trace_record
+        if hasattr(self.history, 'options'):
+            self.history.options.trace_record = tmp_trace_record
 
         return result

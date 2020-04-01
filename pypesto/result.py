@@ -11,6 +11,7 @@ optimization, profiles, sampling.
 import pandas as pd
 import copy
 import pypesto
+from typing import Sequence
 
 
 class OptimizeResult:
@@ -56,7 +57,7 @@ class OptimizeResult:
 
         return df
 
-    def as_list(self, keys=None) -> list:
+    def as_list(self, keys=None) -> Sequence['OptimizerResult']:
         """
         Get as list. If keys is a list,
         return only the specified values.
