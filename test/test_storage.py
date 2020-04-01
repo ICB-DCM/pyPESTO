@@ -23,4 +23,4 @@ class TestResultStorage:
             read_result = opt_result_reader.read()
             for i, opt_res in enumerate(minimize_result.optimize_result.list):
                 for key in opt_res:
-                    assert opt_res[key] == read_result.list[i][key]
+                    assert opt_res[key] == read_result.optimize_result.list[i][key]
