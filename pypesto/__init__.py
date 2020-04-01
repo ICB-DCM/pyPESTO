@@ -38,9 +38,10 @@ from .profile import (
     ProfileOptions,
     ProfilerResult)
 from .sample import (
-    parameter_sample,
-    SamplerOptions,
-    SamplerResult)
+    sample,
+    Sampler,
+    Pymc3Sampler,
+    McmcPtResult)
 from .engine import (
     SingleCoreEngine,
     MultiThreadEngine,

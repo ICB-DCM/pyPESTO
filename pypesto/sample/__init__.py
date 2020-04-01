@@ -4,10 +4,7 @@ Sample
 
 """
 
-from .sample import parameter_sample
-from .options import SamplerOptions
-from .result import (SamplerResult)
-
-__all__ = ["parameter_sample",
-           "SamplerOptions",
-           "SamplerResult"]
+from .sample import sample
+from .sampler import Sampler
+from .pymc3 import Pymc3Sampler
+from .result import McmcPtResult

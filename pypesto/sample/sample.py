@@ -2,15 +2,15 @@ import logging
 
 from ..problem import Problem
 from ..result import Result
-from .result import SamplerResult
 from .sampler import Sampler
+from .pymc3 import Pymc3Sampler
 
 logger = logging.getLogger(__name__)
 
 
-def parameter_sample(
+def sample(
         problem: Problem,
-        sampler: Sampler,
+        sampler: Sampler = None,
         result: Result = None
 ) -> Result:
     """
@@ -33,8 +33,10 @@ def parameter_sample(
     if result is None:
         result = Result(problem)
 
-    obj = problem.objective
-    sample_result: SamplerResult = sampler.sample(obj)
+    if sampler is None:
+        sampler = Pymc3Sampler()
+
+    sample_result = sampler.sample(problem=problem)
 
     result.sample_result = sample_result
 
