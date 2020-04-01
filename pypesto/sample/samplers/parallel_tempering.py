@@ -15,10 +15,6 @@ def parallel_tempering(
     -------
 
     '''
-    # Initialize variable
-    samplers = []
-    n_temperatures = settings['n_temperatures']
-
     # Initialize sampling history
     samplers = [settings['sampler'](settings=settings) for n_T in range(settings['n_temperatures'])]
 
