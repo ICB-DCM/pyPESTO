@@ -13,10 +13,6 @@ from .util import res_to_chi2, sres_to_schi2, sres_to_fim
 
 ResultType = Dict[str, Union[float, np.ndarray]]
 
-CSV = 'csv'
-HDF5 = 'hdf5'
-MEMORY = 'memory'
-
 
 class HistoryOptions(dict):
     """
@@ -148,7 +144,8 @@ class HistoryOptions(dict):
 class HistoryBase(abc.ABC):
     """Abstract base class for history objects.
 
-    Can be used as a dummy but does not implement any history functionality.
+    Can be used as a dummy history, but does not implement any history
+    functionality.
     """
 
     def update(
@@ -178,58 +175,73 @@ class HistoryBase(abc.ABC):
 
     @property
     def n_fval(self) -> int:
+        """Number of function evaluations."""
         raise NotImplementedError()
 
     @property
     def n_grad(self) -> int:
+        """Number of gradient evaluations."""
         raise NotImplementedError()
 
     @property
     def n_hess(self) -> int:
+        """Number of Hessian evaluations."""
         raise NotImplementedError()
 
     @property
     def n_res(self) -> int:
+        """Number of residual evaluations."""
         raise NotImplementedError()
 
     @property
     def n_sres(self) -> int:
+        """Number or residual sensitivity evaluations."""
         raise NotImplementedError()
 
     @property
     def start_time(self) -> float:
+        """Start time."""
         raise NotImplementedError()
 
     def get_x_trace(self) -> Sequence[np.ndarray]:
+        """Parameter trace."""
         raise NotImplementedError()
 
     def get_fval_trace(self) -> Sequence[float]:
+        """Function value trace."""
         raise NotImplementedError()
 
     def get_grad_trace(self) -> Sequence[np.ndarray]:
+        """Gradient trace."""
         raise NotImplementedError()
 
     def get_hess_trace(self) -> Sequence[np.ndarray]:
+        """Hessian trace."""
         raise NotImplementedError()
 
     def get_res_trace(self) -> Sequence[np.ndarray]:
+        """Residual trace."""
         raise NotImplementedError()
 
     def get_sres_trace(self) -> Sequence[np.ndarray]:
+        """Residual sensitivity trace."""
         raise NotImplementedError()
 
     def get_chi2_trace(self) -> Sequence[np.ndarray]:
+        """Chi2 value trace."""
         raise NotImplementedError()
 
     def get_schi2_trace(self, t: Optional[int] = None) -> Sequence[np.ndarray]:
+        """Chi2 value sensitivity trace."""
         raise NotImplementedError()
 
     def get_time_trace(self, t: Optional[int] = None) -> Sequence[np.ndarray]:
+        """Execution time trace."""
         raise NotImplementedError()
 
 
 class History(HistoryBase):
-    """Tracks numbers of function evaluations.
+    """Tracks numbers of function evaluations only, no trace.
 
     Parameters
     ----------
@@ -346,6 +358,7 @@ class MemoryHistory(History):
         self._update_trace(x, sensi_orders, mode, result)
 
     def _update_trace(self, x, sensi_orders, mode, result):
+        """Update internal trace representation."""
         ret = extract_values(sensi_orders, mode, result, self.options)
         for key in self._trace_keys - {X, TIME}:
             self._trace[key].append(ret[key])
@@ -382,12 +395,14 @@ class MemoryHistory(History):
 
 
 class CsvHistory(History):
-    """Keeps
+    """Stores a representation of the history in a CSV file.
 
     Parameters
     ----------
-    id:
-        Identifier for the history.
+    file:
+        CSV file name.
+    x_names:
+        Parameter names.
     options:
         History options.
     """
@@ -541,10 +556,22 @@ class CsvHistory(History):
             trace_copy.to_csv(self.file)
 
     def get_fval_trace(self) -> Sequence[float]:
+        # TODO implement the other methods
         return self._trace[FVAL]
 
 
 class Hdf5History(History):
+    """Stores a representation of the history in an HDF5 file.
+
+    Parameters
+    ----------
+    id:
+        Id of the history
+    file:
+        HDF5 file name.
+    options:
+        History options.
+    """
 
     def __init__(self,
                  id: str,
@@ -561,9 +588,47 @@ class Hdf5History(History):
             mode: str,
             result: ResultType
     ) -> None:
+        # TODO implement
         raise NotImplementedError()
 
     def finalize(self):
+        # TODO implement
+        raise NotImplementedError()
+
+    def get_x_trace(self) -> Sequence[np.ndarray]:
+        # TODO implement
+        raise NotImplementedError()
+
+    def get_fval_trace(self) -> Sequence[float]:
+        # TODO implement
+        raise NotImplementedError()
+
+    def get_grad_trace(self) -> Sequence[np.ndarray]:
+        # TODO implement
+        raise NotImplementedError()
+
+    def get_hess_trace(self) -> Sequence[np.ndarray]:
+        # TODO implement
+        raise NotImplementedError()
+
+    def get_res_trace(self) -> Sequence[np.ndarray]:
+        # TODO implement
+        raise NotImplementedError()
+
+    def get_sres_trace(self) -> Sequence[np.ndarray]:
+        # TODO implement
+        raise NotImplementedError()
+
+    def get_chi2_trace(self) -> Sequence[np.ndarray]:
+        # TODO implement
+        raise NotImplementedError()
+
+    def get_schi2_trace(self, t: Optional[int] = None) -> Sequence[np.ndarray]:
+        # TODO implement
+        raise NotImplementedError()
+
+    def get_time_trace(self, t: Optional[int] = None) -> Sequence[np.ndarray]:
+        # TODO implement
         raise NotImplementedError()
 
 
@@ -666,7 +731,10 @@ def ndarray2string_full(x: np.ndarray):
                            max_line_width=np.inf)
 
 
-def extract_values(sensi_orders, mode, result, options) -> Dict:
+def extract_values(sensi_orders: Tuple[int, ...],
+                   mode: str,
+                   result: ResultType,
+                   options: HistoryOptions) -> Dict:
     """Extract values to record from result."""
     if mode == MODE_FUN:
         fval = np.NaN if 0 not in sensi_orders \

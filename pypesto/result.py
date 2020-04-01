@@ -57,7 +57,7 @@ class OptimizeResult:
 
         return df
 
-    def as_list(self, keys=None) -> Sequence['OptimizerResult']:
+    def as_list(self, keys=None) -> Sequence:
         """
         Get as list. If keys is a list,
         return only the specified values.
