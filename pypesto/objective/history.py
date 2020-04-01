@@ -618,24 +618,19 @@ class Hdf5History(History):
             HESS: ret[HESS],
         }
 
-        # Schauen welche keys hat das hdf5 file?
-        # speichern...
-
         with h5py.File(self.file, 'a') as f:
+            if f'/optimization/results/{self.id}/trace/' not in f:
+                f[f'/optimization/results/{self.id}/trace/'].attrs['n_iterations'] = 0
 
-            if f'/optimization/{self.id}/trace/' not in f:
-                f[f'/optimization/{self.id}/trace/n_iterations'] = 0
-
-            iteration = f[f'/optimization/{self.id}/trace/n_iterations']
+            iteration = f[f'/optimization/results/{self.id}/trace/'].attrs['n_iterations']
 
             for key in values.keys():
-                f[f'/optimization/{self.id}/trace/{iteration}/{key}'] = values[key]
+                f[f'/optimization/results/{self.id}/trace/{iteration}/{key}'] = values[key]
 
-            f[f'/optimization/{self.id}/trace/n_iterations'] += 1
+            f[f'/optimization/results/{self.id}/trace/'].attrs['n_iterations'] += 1
 
     def finalize(self):
-        # TODO implement
-        raise NotImplementedError()
+        super().finalize()
 
     def get_x_trace(self) -> Sequence[np.ndarray]:
         # TODO implement
