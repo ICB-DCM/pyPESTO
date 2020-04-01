@@ -1,7 +1,7 @@
 import numpy as np
 from scipy.stats import kstest, norm
 
-from edit_parallel_tempering import *
+from parallel_tempering import parallel_tempering
 from AdaptiveMetropolis.adaptive_metropolis_sampler import AdaptiveMetropolisSampler
 
 def logpdf(x):
