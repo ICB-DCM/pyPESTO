@@ -1,5 +1,6 @@
 import numpy as np
 import pandas as pd
+import h5py
 import copy
 import time
 import os
@@ -610,11 +611,6 @@ class Hdf5History(History):
 
         values = {
             TIME: used_time,
-            N_FVAL: self._n_fval,
-            N_GRAD: self._n_grad,
-            N_HESS: self._n_hess,
-            N_RES: self._n_res,
-            N_SRES: self._n_sres,
             FVAL: ret[FVAL],
             RES: ret[RES],
             SRES: ret[SRES],
@@ -625,7 +621,17 @@ class Hdf5History(History):
         # Schauen welche keys hat das hdf5 file?
         # speichern...
 
-        raise NotImplementedError()
+        with h5py.File(self.file, 'a') as f:
+
+            if f'/optimization/{self.id}/trace/' not in f:
+                f[f'/optimization/{self.id}/trace/n_iterations'] = 0
+
+            iteration = f[f'/optimization/{self.id}/trace/n_iterations']
+
+            for key in values.keys():
+                f[f'/optimization/{self.id}/trace/{iteration}/{key}'] = values[key]
+
+            f[f'/optimization/{self.id}/trace/n_iterations'] += 1
 
     def finalize(self):
         # TODO implement
