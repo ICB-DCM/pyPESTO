@@ -1,5 +1,5 @@
 from typing import Callable, Tuple, Sequence, Dict
-from ..sampler import Sampler
+from ..sampler_v1 import Sampler
 import numpy as np
 import copy
 

@@ -1,6 +1,6 @@
 from typing import Dict
 import numpy as np
-from ..sampler import Sampler
+from ..sampler_v1 import Sampler
 from .parallel_tempering_methods import sample_parallel_tempering
 
 def parallel_tempering(
