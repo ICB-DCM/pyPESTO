@@ -622,10 +622,12 @@ class Hdf5History(History):
 
         with h5py.File(self.file, 'a') as f:
             if f'/optimization/results/{self.id}/trace/' not in f:
-                f[f'/optimization/results/{self.id}/trace/'].attrs['n_iterations'] = 0
+                grp = f.create_group(f'/optimization/results/{self.id}/trace/')
+                #f[f'/optimization/results/{self.id}/trace/'].attrs[n_iterations'] = 0
+                grp.attrs['n_iterations'] = 0
 
             iteration = f[f'/optimization/results/{self.id}/trace/'].attrs['n_iterations']
-
+            print(values)
             for key in values.keys():
                 f[f'/optimization/results/{self.id}/trace/{str(iteration)}/{key}'] = values[key]
 
