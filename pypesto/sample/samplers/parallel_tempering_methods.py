@@ -1,7 +1,7 @@
 from typing import Callable, Tuple, Sequence, Dict
 from ..sampler_v1 import Sampler
 import numpy as np
-#import copy
+import copy
 
 
 def initialize_reciprocal_temperature(
@@ -176,10 +176,10 @@ def sample_parallel_tempering(
 
     # Initialize tempering variables
     tempering_variables = {
-        'beta': beta,
+        'beta': copy.copy(beta),
         'acc_swap': np.full([1, n_temperatures - 1], np.nan),
         'prop_swap': np.full([1, n_temperatures - 1], np.nan),
-        'a_bool': np.full([1, n_temperatures - 1], np.nan),
+        'a_bool': np.full([1, n_temperatures - 1], 0.),
         'p_acc_swap': np.full([1, n_temperatures - 1], np.nan)}
 
     # Initialize result object
@@ -196,15 +196,16 @@ def sample_parallel_tempering(
     for i in range(n_samples):
         # Do MCMC step for each temperature
         for n_T in range(n_temperatures):
-            samplers[n_T].sample(1)
+            samplers[n_T].sample(1,
+                                 beta=tempering_variables['beta'][n_T])
 
         # Swaps between all adjacent chains
         # and adaptation of the temperature values
         if n_temperatures > 1:
-            swapping_and_adaptation(samplers,
-                                    tempering_variables,
-                                    i,
-                                    settings)
+            samplers, tempering_variables = swapping_and_adaptation(samplers,
+                                                                    tempering_variables,
+                                                                    i,
+                                                                    settings)
         # Update results
         for n_T in range(n_temperatures):
             result['samples'][n_T, :, i] = samplers[n_T].get_last_sample('samples')
