@@ -4,34 +4,6 @@ import pandas as pd
 import seaborn as sns
 
 
-# def x_as_ndarray(result):
-#     """Creates numpy array of size (n_chain, n_sample, n_par).
-#     Returns ndarray of parameters and fval
-#     """
-#     n_chain = len(result['chains'])
-#     n_sample = len(result['chains'][0])
-#     n_par = len(result['chains'][0][0]['x'])
-#
-#     # reserve space
-#     arr = np.zeros((n_chain, n_sample, n_par))
-#     arr_fval = np.zeros((n_sample, 1))
-#
-#     # fill
-#     for i_chain, chain in enumerate(result['chains']):
-#         for i_sample, sample in enumerate(chain):
-#             arr[i_chain, i_sample, :] = sample['x']
-#
-#     for i_sample in range(0, n_sample):
-#         arr_fval[i_sample] = result['chains'][0][i_sample]['fval']
-#
-#     return arr, arr_fval
-
-# ####################################################################
-# TODO: docstrings
-# TODO: input: n_iter [burn_in+1 :nSteps :-1]
-# TODO: include parameter names from problem object
-
-
 def get_data_to_plot(result, problem, i_chain, burn_in, n_steps):
     '''
     get the respective data as pandas dataframe which should be plotted.
@@ -125,12 +97,10 @@ def sampling_fval(result, problem, i_chain=0, burn_in=0, n_steps=1, figsize=None
     ax = sns.scatterplot(x="iteration", y="logPosterior", data=params_fval,
                          **kwargs)
 
-    # ax.scatter(nr_iter, arr_fval, alpha=0.5, s=10)
     ax.set_xlabel('number of iterations', fontsize = fs)
     ax.set_ylabel('log Posterior', fontsize = fs)
-    ax.set_title('Temperature chain: ' + str(i_chain))
+    ax.set_title('Temperature chain: ' + str(i_chain), fontsize=fs)
     ax.set_xlim([burn_in,result.sample_result.n_fval +2])
-    # ax.tick_params(axis='both', which='major', labelsize=fs)
 
     sns.despine()
 
@@ -190,16 +160,15 @@ def sampling_parameters(result,
         ax = axes[plot_id]
         ax = sns.scatterplot(x="iteration", y=plot_id, data=params_fval, ax=ax,
                              **kwargs)
-        # ax.scatter(nr_iter, params_fval[plot_id], alpha=0.5, s=10)
+
         ax.set_xlabel('number of iterations', fontsize=fs)
         ax.set_ylabel(param_names[idx], fontsize=fs)
         ax.set_ylim([theta_lb[idx],theta_ub[idx]])
-        # ax.tick_params(axis='both', which='major', labelsize=fs)
 
     ax.set_xlim([burn_in, result.sample_result.n_fval + 2])
     # ax.set_title('Temperature chain: ' + str(i_chain))
     # ax.fig.suptitle('Temperature chain: ' + str(i_chain))
-    fig.suptitle('Temperature chain: ' + str(i_chain))
+    fig.suptitle('Temperature chain: ' + str(i_chain), fontsize=fs)
     fig.tight_layout()
     sns.despine()
     plt.show()
@@ -248,7 +217,7 @@ def sampling_parameter_corr(result,
     ax = sns.pairplot(params_fval.drop(['logPosterior', 'iteration'], axis=1))
 
     # plt.title('Temperature chain: ' + str(i_chain), y=1.08)
-    ax.fig.suptitle('Temperature chain: ' + str(i_chain))
+    ax.fig.suptitle('Temperature chain: ' + str(i_chain), fontsize=fs)
     # sns.plt.suptitle('Temperature chain: ' + str(i_chain))
 
     return ax
@@ -295,13 +264,13 @@ def sampling_marginal(result, problem, i_chain=0, bw=0.3, figsize=None, fs=12):
         # sns.set_style('ticks')
         sns.set(style="ticks")
         ax = sns.kdeplot(params_fval[plot_id], bw=bw, ax=ax)
-        ax.set_xlabel('log(' + param_names[idx] + ')')
-        ax.set_ylabel('Density')
+        ax.set_xlabel('log(' + param_names[idx] + ')', fontsize=fs)
+        ax.set_ylabel('Density', fontsize=fs)
         sns.despine()
 
     # axes.fig.suptitle('Temperature chain: ' + str(i_chain))
     # axes.set_title('Temperature chain: ' + str(i_chain))
-    fig.suptitle('Temperature chain: ' + str(i_chain))
+    fig.suptitle('Temperature chain: ' + str(i_chain), fontsize=fs)
     fig.tight_layout()
     plt.show()
 
