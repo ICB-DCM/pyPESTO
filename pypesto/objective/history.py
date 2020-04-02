@@ -627,9 +627,9 @@ class Hdf5History(History):
                 grp.attrs['n_iterations'] = 0
 
             iteration = f[f'/optimization/results/{self.id}/trace/'].attrs['n_iterations']
-            print(values)
             for key in values.keys():
-                f[f'/optimization/results/{self.id}/trace/{str(iteration)}/{key}'] = values[key]
+                if values[key] is not None:
+                    f[f'/optimization/results/{self.id}/trace/{str(iteration)}/{key}'] = values[key]
 
             f[f'/optimization/results/{self.id}/trace/'].attrs['n_iterations'] += 1
 
