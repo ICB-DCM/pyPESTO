@@ -15,7 +15,7 @@ class TestResultStorage:
         problem = create_problem()
         minimize_result = create_optimization_result()
         with tempfile.TemporaryDirectory(dir=f".") as tmpdirname:
-            fn = tempfile.mktemp(".hdf5", dir=f"{tmpdirname}")
+            fn = tempfile.mkstemp(".hdf5", dir=f"{tmpdirname}")
             problem_writer = ProblemHDF5Writer(fn)
             problem_writer.write(problem)
             opt_result_writer = OptimizationResultHDF5Writer(fn)
