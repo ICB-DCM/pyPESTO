@@ -7,11 +7,11 @@ import numpy as np
 # theory?
 # Sequence typing appropriate? or ndarray for all?
 def update_statistics(
-    mean: Sequence[float],
-    covariance: np.ndarray,
-    sample: Sequence[float],
-    n_sample: int,
-    decay_constant: float
+        mean: Sequence[float],
+        covariance: np.ndarray,
+        sample: Sequence[float],
+        n_sample: int,
+        decay_constant: float
 ) -> Tuple[Sequence[float], np.ndarray]:
     '''
     Update sampling statistics.
@@ -83,10 +83,10 @@ def is_positive_definite(matrix: np.ndarray) -> bool:
 # argument covariance: expects two dimensional, square, numpy.ndarray of float
 #    (real-valued?)
 def regularize_covariance(
-    covariance: np.ndarray,
-    regularization_factor: float,
-    n_parameters: int,
-    MAGIC_DIVIDING_NUMBER: int = 1
+        covariance: np.ndarray,
+        regularization_factor: float,
+        n_parameters: int,
+        MAGIC_DIVIDING_NUMBER: int = 1
 ) -> np.ndarray:
     '''
     Regularizes the estimated covariance matrix of the sample. Useful if the
@@ -289,16 +289,16 @@ def try_sampling(
 # covariance_scaling_factor type? Add significance of 23% to documentation?
 # replace parameter_count with len(sample)?
 def estimate_covariance(
-    historical_mean: Sequence[float],
-    historical_covariance: np.ndarray,
-    sample: Sequence[float],
-    threshold_sample: int,
-    decay_constant: float,
-    covariance_scaling_factor,
-    log_acceptance: float,
-    regularization_factor: float,
-    n_parameters: int,
-    n_sample: int
+        historical_mean: Sequence[float],
+        historical_covariance: np.ndarray,
+        sample: Sequence[float],
+        threshold_sample: int,
+        decay_constant: float,
+        covariance_scaling_factor,
+        log_acceptance: float,
+        regularization_factor: float,
+        n_parameters: int,
+        n_sample: int
 ):
     '''
     Update the estimated covariance matrix of the sample.

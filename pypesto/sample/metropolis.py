@@ -31,8 +31,6 @@ class MetropolisSampler(Sampler, InternalSampler):
     def sample(
             self, problem: Problem, x0: np.ndarray = None
     ) -> Union[McmcPtResult, Any]:
-        trace_x = []
-        trace_fval = []
 
         # set up objective history
         objective = problem.objective
@@ -42,18 +40,19 @@ class MetropolisSampler(Sampler, InternalSampler):
 
         x = x0
         llh = - objective(x)
+        trace_x = [x]
+        trace_fval = [-llh]
 
-        for _ in range(self.options['n_samples']):
+        for _ in range(self.options['n_samples']-1):
             x, llh = self.perform_step(x, llh, objective)
 
             trace_x.append(x)
             trace_fval.append(-llh)
 
         result = McmcPtResult(
-            trace_x=[trace_x],
-            trace_fval=[trace_fval],
-            trace_grad=[[None]*len(trace_fval)],
-            temperatures=[1],
+            trace_x=np.array([trace_x]),
+            trace_fval=np.array([trace_fval]),
+            temperatures=np.array([1.]),
             time=time.time()-start_time,
             n_fval=objective.history.n_fval,
             n_grad=objective.history.n_grad,
@@ -72,3 +71,8 @@ class MetropolisSampler(Sampler, InternalSampler):
             llh = llh_new
 
         return x, llh
+
+
+#class AdaptiveMetropolisSampler(MetropolisSampler):
+#
+#    def perform_step(self, x: np.ndarray, llh: float, objective: Objective):

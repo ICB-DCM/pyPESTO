@@ -14,8 +14,6 @@ class McmcPtResult(dict):
         Parameters
     trace_fval: [n_chain, n_iter]
         Function values.
-    trace_grad: [n_chain, n_par, n_iter]
-        Gradients.
     temperatures: [n_chain]
         The associated temperatures.
     time:
@@ -31,9 +29,8 @@ class McmcPtResult(dict):
     """
 
     def __init__(self,
-                 trace_x: Iterable[Iterable[np.ndarray]],
-                 trace_fval: Iterable[Iterable[float]],
-                 trace_grad: Iterable[Iterable[Union[np.ndarray, None]]],
+                 trace_x: np.ndarray,
+                 trace_fval: np.ndarray,
                  temperatures: Iterable[float],
                  time: float = 0.0,
                  n_fval: int = 0,
@@ -44,7 +41,6 @@ class McmcPtResult(dict):
 
         self.trace_x = trace_x
         self.trace_fval = trace_fval
-        self.trace_grad = trace_grad
         self.temperatures = temperatures
         self.time = time
         self.n_fval = n_fval

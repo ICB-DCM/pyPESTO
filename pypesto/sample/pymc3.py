@@ -42,7 +42,7 @@ class Pymc3Sampler(Sampler):
             # convert m and c to a tensor vector
             theta = tt.as_tensor_variable(k)
 
-            # use a DensityDist (use a lamdba function to "call" the Op)
+            # use a DensityDist (use a lambda function to "call" the Op)
             pm.DensityDist('likelihood', lambda v: llh(v),
                            observed={'v': theta})
 
