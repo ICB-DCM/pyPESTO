@@ -194,7 +194,8 @@ class Sampler():
                 self.state.n_sample = i
                 self.save_state()
 
-        # Optional, save the chain in the state, as a "burn-in".
+        # Optional, save the chain in the state, such that additional
+        # sampling extends the chain.
         self.state.chain = chain
         self.state.n_sample = self.state.n_samples
         return chain
