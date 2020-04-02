@@ -56,30 +56,29 @@ def swapping_adjacent_chains(
     acc_swap = tempering_variables['acc_swap']
     prop_swap = tempering_variables['prop_swap']
     a_bool = tempering_variables['a_bool']
-    p_acc_swap = tempering_variables['p_acc_swap']
 
     # Number of parameters
     n_temperatures = len(beta)
 
     d_beta = beta[:-1] - beta[1:]
     for n_T in reversed(range(1, n_temperatures)):
-        p_acc_swap[0, n_T - 1] = np.multiply(d_beta[n_T - 1],
+        p_acc_swap = np.multiply(d_beta[n_T - 1],
                                              np.transpose(
                                                  samplers[n_T].get_last_sample('samples_log_posterior') - samplers[
                                                      n_T - 1].get_last_sample('samples_log_posterior')
                                              ))
-        a_bool[0, n_T - 1] = np.less(np.log(float(np.random.uniform(0, 1, 1))),
-                                     p_acc_swap[0, n_T - 1]
-                                     )
+
+        a_bool[0, n_T - 1] = float(np.less(np.log(float(np.random.uniform(0, 1, 1))),
+                                     p_acc_swap))
         prop_swap[0, n_T - 1] = prop_swap[0, n_T - 1] + 1
         acc_swap[0, n_T - 1] = acc_swap[0, n_T - 1] + a_bool[0, n_T - 1]
+
         # As usually implemented when using PT
         if a_bool[0, n_T - 1]:
-            samplers[n_T - 1], samplers[n_T] = Sampler.swap_last_samples(samplers[n_T],
+            samplers[n_T], samplers[n_T - 1] = Sampler.swap_last_samples(samplers[n_T],
                                                                          samplers[n_T - 1]
                                                                          )
-
-        return (samplers, tempering_variables)
+    return (samplers, tempering_variables)
 
 
 def adaptation_temperature_values(
@@ -177,10 +176,9 @@ def sample_parallel_tempering(
     # Initialize tempering variables
     tempering_variables = {
         'beta': copy.copy(beta),
-        'acc_swap': np.full([1, n_temperatures - 1], np.nan),
-        'prop_swap': np.full([1, n_temperatures - 1], np.nan),
-        'a_bool': np.full([1, n_temperatures - 1], 0.),
-        'p_acc_swap': np.full([1, n_temperatures - 1], np.nan)}
+        'acc_swap': np.full([1, n_temperatures - 1], 0.),
+        'prop_swap': np.full([1, n_temperatures - 1], 0.),
+        'a_bool': np.full([1, n_temperatures - 1], 0.)}
 
     # Initialize result object
     result = {
