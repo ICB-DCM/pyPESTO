@@ -50,9 +50,9 @@ class MetropolisSampler(Sampler, InternalSampler):
             trace_fval.append(-llh)
 
         result = McmcPtResult(
-            trace_x=np.ndarray([trace_x]),
-            trace_fval=np.ndarray([trace_fval]),
-            temperatures=np.ndarray([1.]),
+            trace_x=np.array([trace_x]),
+            trace_fval=np.array([trace_fval]),
+            temperatures=np.array([1.]),
             time=time.time()-start_time,
             n_fval=objective.history.n_fval,
             n_grad=objective.history.n_grad,
