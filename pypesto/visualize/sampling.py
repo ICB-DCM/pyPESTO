@@ -3,7 +3,11 @@ import numpy as np
 import pandas as pd
 import seaborn as sns
 
-# TODO: add in requirements: seaborn
+# TODO: add in requirements/setup.py: seaborn
+# TODO: get burn_in from results object (now: burn_in = 0)
+# TODO: get parameter scale (log,log10,lin) from results/problem object
+#       (now: scale = 'log10')
+
 
 def get_data_to_plot(result, problem, i_chain, burn_in, n_steps):
     '''
@@ -50,7 +54,7 @@ def get_data_to_plot(result, problem, i_chain, burn_in, n_steps):
     return nr_params, params_fval, theta_lb, theta_ub
 
 
-def sampling_fval(result, problem, i_chain=0, burn_in=0, n_steps=1, figsize=None, fs = 12):
+def sampling_fval(result, problem, i_chain=0, n_steps=1, figsize=None, fs = 12):
     """
     Plot logPosterior over iterations.
 
@@ -75,6 +79,9 @@ def sampling_fval(result, problem, i_chain=0, burn_in=0, n_steps=1, figsize=None
     --------
     ax: matplotlib-axes
     """
+    # TODO: get burn_in from results object
+    burn_in = 0
+
     # get data which should be plotted
     _, params_fval, _, _= get_data_to_plot(result,
                                            problem,
@@ -107,7 +114,6 @@ def sampling_fval(result, problem, i_chain=0, burn_in=0, n_steps=1, figsize=None
 def sampling_parameters(result,
                         problem,
                         i_chain=0,
-                        burn_in=0,
                         n_steps=1,
                         show_lb_ub=False,
                         figsize=None,
@@ -138,6 +144,11 @@ def sampling_parameters(result,
     --------
     ax: matplotlib-axes
     """
+    # TODO: get burn_in from results object
+    burn_in = 0
+    # TODO: get label of parameters: log/lin from results of problem object
+    scale = 'log10'  # possibilities: 'log','log10','lin'
+
     # get data which should be plotted
     nr_params, params_fval, theta_lb, theta_ub = \
         get_data_to_plot(result, problem, i_chain, burn_in, n_steps)
@@ -165,7 +176,19 @@ def sampling_parameters(result,
         if show_lb_ub:
             ax.set_ylim([theta_lb[idx],theta_ub[idx]])
 
-    ax.set_xlim([burn_in, result.sample_result.n_fval + 2])
+        ytick = ax.get_yticks()
+        if scale == 'log':
+            ytick_new = np.exp(ytick)
+        elif scale == 'log10':
+            ytick_new = 10**ytick
+        elif scale == 'lin':
+            ytick_new = ytick
+        ax.set_yticklabels(np.around(ytick_new, decimals=2))
+
+        ax.set_xlim([burn_in, result.sample_result.n_fval + 2])
+
+
+
     if i_chain > 1:
         fig.suptitle('Temperature chain: ' + str(i_chain), fontsize=fs)
     fig.tight_layout()
@@ -178,7 +201,6 @@ def sampling_parameters(result,
 def sampling_scatter(result,
                      problem,
                      i_chain=0,
-                     burn_in=0,
                      n_steps=1,
                      figsize=None,
                      fs=12):
@@ -206,6 +228,10 @@ def sampling_scatter(result,
     --------
     ax: matplotlib-axes
     """
+    # TODO: get burn_in from results object
+    burn_in = 0
+    # TODO: get scale from results/problem object
+    scale = 'log10'  # possibilities: 'log','log10','lin'
 
     # get data which should be plotted
     nr_params, params_fval, theta_lb, theta_ub = \
@@ -215,13 +241,30 @@ def sampling_scatter(result,
 
     ax = sns.pairplot(params_fval.drop(['logPosterior', 'iteration'], axis=1))
 
+    # change xtick/yticklabels to the scale of the parameters (log/log10)
+    for i in range(nr_params):
+        for j in range(nr_params):
+            xtick = ax.axes[i][j].get_xticks()
+            ytick = ax.axes[i][j].get_yticks()
+            if scale == 'log':
+                xtick_new = np.exp(xtick)
+                ytick_new = np.exp(ytick)
+            elif scale == 'log10':
+                xtick_new = 10 ** xtick
+                ytick_new = 10 ** ytick
+            elif scale == 'lin':
+                xtick_new = xtick
+                ytick_new = ytick
+            ax.axes[i][j].set_xticklabels(np.around(xtick_new, decimals=2))
+            ax.axes[i][j].set_yticklabels(np.around(ytick_new, decimals=2))
+
     if i_chain > 1:
         ax.fig.suptitle('Temperature chain: ' + str(i_chain), fontsize=fs)
 
     return ax
 
 
-def sampling_marginal(result, problem, i_chain=0, figsize=None, fs=12):
+def sampling_marginal(result, problem, hist_or_kde = 'both', i_chain=0, bw='scott', figsize=None, fs=12):
     """
     Plot Marginals.
 
@@ -230,10 +273,16 @@ def sampling_marginal(result, problem, i_chain=0, figsize=None, fs=12):
     result: dict
         sampling specific results object
     problem:
+    hist_or_kde: {'hist'|'kde'|'both'}
+        specify what how it should be plotted,
+        histograms: 'hist',
+        kernel density estimation: 'kde'
+        histogram + kde: 'both'
     i_chain: int
         which chain/temperature should be plotted. Default: First Chain
-    bw: float
-        bandwidth, softening of the kde-curve
+    bw: {'scott', 'silverman' | scalar | pair of scalars}
+        relates to the options, which seaborn provides in kdeplot
+        Default: 'scott'
     figsize: ndarray
         size of the figure, e.g. [10,5]
     fs: int
@@ -243,6 +292,9 @@ def sampling_marginal(result, problem, i_chain=0, figsize=None, fs=12):
     --------
     ax: matplotlib-axes
     """
+    # TODO: get scale from results/problem object
+    scale = 'log10'  # possibilities: 'log','log10','lin'
+
     # get data which should be plotted
     nr_params, params_fval, theta_lb, theta_ub = \
         get_data_to_plot(result, problem, i_chain, burn_in=0, n_steps=1)
@@ -260,9 +312,26 @@ def sampling_marginal(result, problem, i_chain=0, figsize=None, fs=12):
 
         ax = axes[plot_id]
         sns.set(style="ticks")
-        ax = sns.kdeplot(params_fval[plot_id], bw='silver', ax=ax)
-        ax.set_xlabel('log(' + param_names[idx] + ')', fontsize=fs)
+        if hist_or_kde == 'kde':
+            ax = sns.kdeplot(params_fval[plot_id], bw=bw, ax=ax)
+        elif hist_or_kde == 'hist':
+            ax = sns.distplot(params_fval[plot_id], kde=False, rug=True, ax=ax)
+        elif hist_or_kde =='both':
+            ax = sns.distplot(params_fval[plot_id], rug=True, ax=ax)
+
+        ax.set_xlabel(param_names[idx], fontsize=fs)
         ax.set_ylabel('Density', fontsize=fs)
+
+        # change xtick/yticklabels to the scale of the parameters (log/log10)
+        xtick = ax.get_xticks()
+        if scale == 'log':
+            xtick_new = np.exp(xtick)
+        elif scale == 'log10':
+            xtick_new = 10 ** xtick
+        elif scale == 'lin':
+            xtick_new = xtick
+        ax.set_xticklabels(np.around(xtick_new, decimals=2))
+
         sns.despine()
 
     if i_chain > 1:
