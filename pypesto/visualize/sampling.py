@@ -43,7 +43,8 @@ def get_data_to_plot(result, problem, i_chain, burn_in, n_steps):
 
     pd_iter = \
         pd.DataFrame(
-            data=np.arange(burn_in+1,result.sample_result['n_fval']+1, n_steps),
+            data=
+            np.arange(burn_in+1,result.sample_result['n_fval']+1, n_steps),
             columns=['iteration'])
     params_fval = pd.concat([pd_params,pd_fval,pd_iter],
                             axis=1, ignore_index=False)
@@ -54,7 +55,12 @@ def get_data_to_plot(result, problem, i_chain, burn_in, n_steps):
     return nr_params, params_fval, theta_lb, theta_ub
 
 
-def sampling_fval(result, problem, i_chain=0, n_steps=1, figsize=None, fs = 12):
+def sampling_fval(result,
+                  problem,
+                  i_chain=0,
+                  n_steps=1,
+                  figsize=None,
+                  fs = 12):
     """
     Plot logPosterior over iterations.
 
@@ -264,7 +270,12 @@ def sampling_scatter(result,
     return ax
 
 
-def sampling_marginal(result, problem, hist_or_kde = 'both', i_chain=0, bw='scott', figsize=None, fs=12):
+def sampling_marginal(result,
+                      problem,
+                      hist_or_kde = 'both',
+                      i_chain=0,
+                      bw='scott',
+                      figsize=None, fs=12):
     """
     Plot Marginals.
 
@@ -340,4 +351,3 @@ def sampling_marginal(result, problem, hist_or_kde = 'both', i_chain=0, bw='scot
     plt.show()
 
     return ax
-
