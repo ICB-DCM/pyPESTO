@@ -263,7 +263,8 @@ class AdaptiveMetropolisSampler(Sampler):
             state.covariance,
             state.lower_bounds,
             state.upper_bounds,
-            state.debug
+            state.debug,
+            beta
         )
         state.sample = sampling_result['sample']
         state.sample_log_posterior = sampling_result['log_posterior']
