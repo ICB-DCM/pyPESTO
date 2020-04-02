@@ -38,7 +38,8 @@ class TestResultStorage:
             problem_writer.write(problem)
             problem_reader = ProblemHDF5Reader(fn)
             read_problem = problem_reader.read()
-            problem_attrs = [value for name, value in vars(ProblemHDF5Writer).items() if
+            problem_attrs = [value for name, value in
+                             vars(ProblemHDF5Writer).items() if
                              not name.startswith('_') and not callable(value)]
             for attr in problem_attrs:
                 if isinstance(read_problem.__dict__[attr], np.ndarray):
