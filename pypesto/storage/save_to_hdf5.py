@@ -17,7 +17,7 @@ class ProblemHDF5Writer:
     UB = 'ub'
     LB_FULL = 'lb_full'
     UB_FULL = 'ub_full'
-    X_FIXED_VALUES = 'x_fixed_values'
+    X_FIXED_VALS = 'x_fixed_vals'
     X_FIXED_INDICES = 'x_fixed_indices'
     X_NAMES = 'x_names'
     DIM = 'dim'
@@ -56,7 +56,7 @@ class ProblemHDF5Writer:
             write_float_array(problem_grp, self.UB, problem.ub)
             write_float_array(problem_grp, self.LB_FULL, problem.lb_full)
             write_float_array(problem_grp, self.UB_FULL, problem.ub_full)
-            write_float_array(problem_grp, self.X_FIXED_VALUES,
+            write_float_array(problem_grp, self.X_FIXED_VALS,
                               problem.x_fixed_vals)
             write_int_array(problem_grp, self.X_FIXED_INDICES,
                             problem.x_fixed_indices)
@@ -108,3 +108,4 @@ class OptimizationResultHDF5Writer:
                         write_float_array(start_grp, key, start[key])
                     elif start[key] is not None:
                         start_grp.attrs[key] = start[key]
+                f.flush()
