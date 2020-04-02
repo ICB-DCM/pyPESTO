@@ -1,7 +1,7 @@
 from typing import Callable, Tuple, Sequence, Dict
 from ..sampler_v1 import Sampler
 import numpy as np
-import copy
+#import copy
 
 
 def initialize_reciprocal_temperature(

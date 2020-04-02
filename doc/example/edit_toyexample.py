@@ -3,8 +3,8 @@ import matplotlib.pyplot as plt
 from scipy.stats import multivariate_normal
 import seaborn as sns
 
-from parallel_tempering import parallel_tempering
-from AdaptiveMetropolis.adaptive_metropolis_sampler import AdaptiveMetropolisSampler
+from pypesto.sample.samplers.parallel_tempering import parallel_tempering
+from pypesto.sample.samplers.AdaptiveMetropolis.adaptive_metropolis_sampler import AdaptiveMetropolisSampler
 
 def p(x):
     return np.log(0.3*multivariate_normal.pdf(x, mean=-1.5, cov=0.1)+0.7*multivariate_normal.pdf(x, mean=2.5, cov=0.2))
