@@ -3,6 +3,7 @@ import numpy as np
 import pandas as pd
 import seaborn as sns
 
+# TODO: add in requirements: seaborn
 
 def get_data_to_plot(result, problem, i_chain, burn_in, n_steps):
     '''
@@ -90,9 +91,10 @@ def sampling_fval(result, problem, i_chain=0, burn_in=0, n_steps=1, figsize=None
     ax = sns.scatterplot(x="iteration", y="logPosterior", data=params_fval,
                          **kwargs)
 
-    ax.set_xlabel('number of iterations', fontsize = fs)
-    ax.set_ylabel('log Posterior', fontsize = fs)
-    ax.set_title('Temperature chain: ' + str(i_chain), fontsize=fs)
+    ax.set_xlabel('iteration index', fontsize = fs)
+    ax.set_ylabel('log-posterior', fontsize = fs)
+    if i_chain > 1:
+        ax.set_title('Temperature chain: ' + str(i_chain), fontsize=fs)
     ax.set_xlim([burn_in,result.sample_result.n_fval +2])
 
     sns.despine()
@@ -107,6 +109,7 @@ def sampling_parameters(result,
                         i_chain=0,
                         burn_in=0,
                         n_steps=1,
+                        show_lb_ub=False,
                         figsize=None,
                         fs = 12):
     """
@@ -123,6 +126,9 @@ def sampling_parameters(result,
     n_steps: int
         defines a subset of values which should be plotted, every n_steps
         value is plotted
+    show_lb_ub: bool
+        defines if the y-limits shall be the lower and upper bounds of
+        parameter estimation problem
     figsize: ndarray
         size of the figure, e.g. [10,5]
     fs: int
@@ -154,12 +160,14 @@ def sampling_parameters(result,
         ax = sns.scatterplot(x="iteration", y=plot_id, data=params_fval, ax=ax,
                              **kwargs)
 
-        ax.set_xlabel('number of iterations', fontsize=fs)
+        ax.set_xlabel('iteration index', fontsize=fs)
         ax.set_ylabel(param_names[idx], fontsize=fs)
-        ax.set_ylim([theta_lb[idx],theta_ub[idx]])
+        if show_lb_ub:
+            ax.set_ylim([theta_lb[idx],theta_ub[idx]])
 
     ax.set_xlim([burn_in, result.sample_result.n_fval + 2])
-    fig.suptitle('Temperature chain: ' + str(i_chain), fontsize=fs)
+    if i_chain > 1:
+        fig.suptitle('Temperature chain: ' + str(i_chain), fontsize=fs)
     fig.tight_layout()
     sns.despine()
     plt.show()
@@ -167,13 +175,13 @@ def sampling_parameters(result,
     return ax
 
 
-def sampling_parameter_corr(result,
-                            problem,
-                            i_chain=0,
-                            burn_in=0,
-                            n_steps=1,
-                            figsize=None,
-                            fs=12):
+def sampling_scatter(result,
+                     problem,
+                     i_chain=0,
+                     burn_in=0,
+                     n_steps=1,
+                     figsize=None,
+                     fs=12):
     """
     Plot parameter correlations.
 
@@ -207,12 +215,13 @@ def sampling_parameter_corr(result,
 
     ax = sns.pairplot(params_fval.drop(['logPosterior', 'iteration'], axis=1))
 
-    ax.fig.suptitle('Temperature chain: ' + str(i_chain), fontsize=fs)
+    if i_chain > 1:
+        ax.fig.suptitle('Temperature chain: ' + str(i_chain), fontsize=fs)
 
     return ax
 
 
-def sampling_marginal(result, problem, i_chain=0, bw=0.3, figsize=None, fs=12):
+def sampling_marginal(result, problem, i_chain=0, figsize=None, fs=12):
     """
     Plot Marginals.
 
@@ -251,12 +260,13 @@ def sampling_marginal(result, problem, i_chain=0, bw=0.3, figsize=None, fs=12):
 
         ax = axes[plot_id]
         sns.set(style="ticks")
-        ax = sns.kdeplot(params_fval[plot_id], bw=bw, ax=ax)
+        ax = sns.kdeplot(params_fval[plot_id], bw='silver', ax=ax)
         ax.set_xlabel('log(' + param_names[idx] + ')', fontsize=fs)
         ax.set_ylabel('Density', fontsize=fs)
         sns.despine()
 
-    fig.suptitle('Temperature chain: ' + str(i_chain), fontsize=fs)
+    if i_chain > 1:
+        fig.suptitle('Temperature chain: ' + str(i_chain), fontsize=fs)
     fig.tight_layout()
     plt.show()
 

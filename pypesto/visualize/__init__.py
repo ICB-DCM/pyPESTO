@@ -28,6 +28,6 @@ from .profiles import (profiles,
 
 from .sampling import (sampling_fval,
                        sampling_parameters,
-                       sampling_parameter_corr,
+                       sampling_scatter,
                        sampling_marginal)
 
