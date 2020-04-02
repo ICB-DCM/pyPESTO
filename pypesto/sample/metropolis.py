@@ -43,7 +43,7 @@ class MetropolisSampler(Sampler, InternalSampler):
         trace_x = [x]
         trace_fval = [-llh]
 
-        for _ in range(self.options['n_samples']):
+        for _ in range(self.options['n_samples']-1):
             x, llh = self.perform_step(x, llh, objective)
 
             trace_x.append(x)
@@ -73,6 +73,6 @@ class MetropolisSampler(Sampler, InternalSampler):
         return x, llh
 
 
-class AdaptiveMetropolisSampler(MetropolisSampler):
-
-    def perform_step(self, x: np.ndarray, llh: float, objective: Objective):
+#class AdaptiveMetropolisSampler(MetropolisSampler):
+#
+#    def perform_step(self, x: np.ndarray, llh: float, objective: Objective):
