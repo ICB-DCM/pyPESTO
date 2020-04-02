@@ -10,10 +10,14 @@ def write_string_array(f: h5py.Group,
     """
     Write string array to hdf5
 
-    Arguments:
-        f: h5py.File
-        path: path of the dataset to create
-        strings: list of strings
+    Parameters
+    ----------
+    f:
+        h5py.File
+    path:
+        path of the dataset to create
+    strings:
+        list of strings to be written to f
     """
     dt = h5py.special_dtype(vlen=str)
     dset = f.create_dataset(path, (len(strings),), dtype=dt)
@@ -28,11 +32,16 @@ def write_float_array(f: h5py.Group,
     """
     Write float array to hdf5
 
-    Arguments:
-        f: h5py.File
-        path: path of the dataset to create
-        values: array to write
-        dtype: datatype
+    Parameters
+    ----------
+    f:
+        h5py.File
+    path:
+        path of the dataset to create
+    values:
+        array to write
+    dtype:
+        datatype
     """
     dset = f.create_dataset(path, (len(values),), dtype=dtype)
     dset[:] = values
@@ -46,11 +55,16 @@ def write_int_array(f: h5py.Group,
     """
     Write integer array to hdf5
 
-    Arguments:
-        f: h5py.File
-        path: path of the dataset to create
-        values: array to write
-        dtype: datatype
+    Parameters
+    ----------
+    f:
+        h5py.File
+    path:
+        path of the dataset to create
+    values:
+        array to write
+    dtype:
+        datatype
     """
     dset = f.create_dataset(path, (len(values),), dtype=dtype)
     dset[:] = values
