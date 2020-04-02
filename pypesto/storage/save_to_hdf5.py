@@ -102,7 +102,7 @@ class OptimizationResultHDF5Writer:
             results_grp = optimization_grp.create_group("results")
             for i, start in enumerate(result.optimize_result.list):
                 start_grp = results_grp.create_group(str(i))
-                start['trace'] = None  # temporary fix
+                start['history'] = None  # TOOD temporary fix
                 for key in start.keys():
                     if isinstance(start[key], np.ndarray):
                         write_float_array(start_grp, key, start[key])
