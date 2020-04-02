@@ -129,7 +129,8 @@ def test_sample(
     sample: Sequence[float],
     sample0_log_posterior: float,
     lower_bounds: Sequence[float],
-    upper_bounds: Sequence[float]
+    upper_bounds: Sequence[float],
+    beta: float = 1.
 ) -> Dict:
     '''
     Determines whether to accept the proposed sample.
@@ -175,7 +176,7 @@ def test_sample(
             # next three lines?
             log_transformation_forward = 1 # magic number
             log_transformation_backward = 1 # magic number
-            log_acceptance = (sample_log_posterior - sample0_log_posterior
+            log_acceptance = beta * (sample_log_posterior - sample0_log_posterior
                 + log_transformation_backward - log_transformation_forward)
             if np.isnan(log_acceptance): # possible if log_posterior_callable
                                          # has numerical issues
