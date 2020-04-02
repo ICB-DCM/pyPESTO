@@ -33,7 +33,8 @@ settings = {
     'exp_temperature': 4,
     'temperature_nu': 1000,
     'temperature_eta': 100,
-    'max_temp': 50000
+    'max_temp': 50000,
+    'temperature_adaptation': True
 }
 
 AM_sampler = AdaptiveMetropolisSampler(settings)

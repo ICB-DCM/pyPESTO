@@ -169,6 +169,7 @@ def sample_parallel_tempering(
     n_parameters = len(settings['sample'])  # parameter number
     exp_temperature = settings['exp_temperature']
     max_temp = settings['max_temp']
+    temperature_adaptation = settings['temperature_adaptation']
 
     # Initialize reciprocal temperature (1/temperature)
     beta = initialize_reciprocal_temperature(settings)
@@ -197,13 +198,14 @@ def sample_parallel_tempering(
             samplers[n_T].sample(1,
                                  beta=tempering_variables['beta'][n_T])
 
-        # Swaps between all adjacent chains
-        # and adaptation of the temperature values
-        if n_temperatures > 1:
-            samplers, tempering_variables = swapping_and_adaptation(samplers,
-                                                                    tempering_variables,
-                                                                    i,
-                                                                    settings)
+        if temperature_adaptation:
+            # Swaps between all adjacent chains
+            # and adaptation of the temperature values
+            if n_temperatures > 1:
+                samplers, tempering_variables = swapping_and_adaptation(samplers,
+                                                                        tempering_variables,
+                                                                        i,
+                                                                        settings)
         # Update results
         for n_T in range(n_temperatures):
             result['samples'][n_T, :, i] = samplers[n_T].get_last_sample('samples')
