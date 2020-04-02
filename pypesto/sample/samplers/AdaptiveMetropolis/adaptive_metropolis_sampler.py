@@ -1,7 +1,7 @@
 import numpy as np
 from typing import Dict
 
-from .adaptive_metropolis_sampler_parent import SamplerState, Sampler
+from ...sampler_v1 import SamplerState, Sampler
 from . import adaptive_metropolis_sampler_methods
 #from adaptive_metropolis_sampler_parent import SamplerState, Sampler
 #import adaptive_metropolis_sampler_methods

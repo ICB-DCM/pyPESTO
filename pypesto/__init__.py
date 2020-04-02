@@ -9,8 +9,11 @@ Parameter Estimation TOolbox for python.
 from .version import __version__
 from .objective import (
     HistoryOptions,
-    OptimizerHistoryOptions,
+    HistoryBase,
     History,
+    MemoryHistory,
+    CsvHistory,
+    Hdf5History,
     OptimizerHistory,
     Objective,
     AmiciObjective,
@@ -35,9 +38,11 @@ from .profile import (
     ProfileOptions,
     ProfilerResult)
 from .sample import (
-    parameter_sample,
-    SamplerOptions,
-    SamplerResult)
+    sample,
+    Sampler,
+    Pymc3Sampler,
+    MetropolisSampler,
+    McmcPtResult)
 from .engine import (
     SingleCoreEngine,
     MultiThreadEngine,

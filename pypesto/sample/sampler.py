@@ -1,51 +1,52 @@
 import abc
-from typing import Dict, Union
+import numpy as np
+from typing import Any, Tuple, Union
 
 from ..objective import Objective
-from .options import SamplerOptions
-from .result import SamplerResult
+from ..problem import Problem
+from .result import McmcPtResult
+
 
 class Sampler(abc.ABC):
-
-    def __init__(self, options: Union[Dict, SamplerOptions]):
-        """Constructor.
-
-        Parameters
-        ----------
-        options:
-            Options configuring the sampler run.
-        """
-        options = SamplerOptions.create_instance(options)
-        self.options = self.__class__.translate_options(options)
-
-    @classmethod
-    def translate_options(cls, options: SamplerOptions) -> Dict:
-        """Translate options to sampler specific options.
-        Default: Do nothing.
-
-        Parameters
-        ----------
-        options:
-            The provided options.
-
-        Returns
-        -------
-        options:
-            The translated options.
-        """
-        return options
+    """Sampler base class, not functional on its own.
+    """
 
     @abc.abstractmethod
-    def sample(self, objective: Objective) -> SamplerResult:
-        """"Perform the actual sampling.
+    def sample(
+            self, problem: Problem, x0: np.ndarray = None
+    ) -> Union[McmcPtResult, Any]:
+        """"Perform sampling.
 
         Parameters
         ----------
-        objective:
-            The objective for which to sample.
+        problem:
+            The problem for which to sample.
+        x0:
+            Initial parameter.
 
         Returns
         -------
         sample_result:
             The sampling results in standardized format.
+        """
+
+
+class InternalSampler:
+    """Sampler to be used inside a parallel tempering sampler."""
+
+    @abc.abstractmethod
+    def perform_step(
+            self, x: np.ndarray, llh: float, objective: Objective
+    ) -> Tuple[np.ndarray, float]:
+        """
+        Perform a step.
+
+        Parameters
+        ----------
+        x:
+            The current parameter.
+        llh:
+            The current log-likelihood value.
+        objective:
+            Objective log
         """
