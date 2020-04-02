@@ -35,13 +35,13 @@ import seaborn as sns
 def get_data_to_plot(result, options, i_chain, burn_in, n_steps, noex_param_name=True):
 
     # get parameters and fval results as numpy-arrays
-    arr_param = np.transpose(result['theta'][i_chain])
+    arr_param = np.transpose(result['samples'][i_chain])
     # get each n_steps element, from the index burn_in until end of vector
     arr_param = arr_param[np.arange(burn_in, len(arr_param), n_steps)]
-    arr_fval = result['log_posterior'][i_chain]
+    arr_fval = result['samples_log_posterior'][i_chain]
     arr_fval = arr_fval[np.arange(burn_in, len(arr_fval), n_steps)]
-    theta_lb = options['theta_bounds_lower']
-    theta_ub = options['theta_bounds_upper']
+    theta_lb = options['lower_bounds']
+    theta_ub = options['upper_bounds']
 
     # default parameter names
     if noex_param_name: # for now: it does not exist, so create param names
@@ -55,7 +55,7 @@ def get_data_to_plot(result, options, i_chain, burn_in, n_steps, noex_param_name
                            columns=['logPosterior'])
 
     pd_iter = \
-        pd.DataFrame(data=np.transpose(np.arange(burn_in+1, options['iterations']+1, n_steps)),
+        pd.DataFrame(data=np.transpose(np.arange(burn_in+1, options['n_samples']+1, n_steps)),
          columns=['iteration'])
     params_fval = pd.concat([pd_params,pd_fval,pd_iter],
                             axis=1, ignore_index=False)
@@ -116,7 +116,7 @@ def sampling_fval(result, options, i_chain=0, burn_in=0, n_steps=1, figsize=None
     ax.set_xlabel('number of iterations', fontsize = fs)
     ax.set_ylabel('log Posterior', fontsize = fs)
     ax.set_title('Temperature chain: ' + str(i_chain))
-    ax.set_xlim([burn_in,options['iterations']+2])
+    ax.set_xlim([burn_in,options['n_samples']+2])
     # ax.tick_params(axis='both', which='major', labelsize=fs)
 
     sns.despine()
@@ -184,7 +184,7 @@ def sampling_parameters(result,
         ax.set_ylim([theta_lb[idx],theta_ub[idx]])
         # ax.tick_params(axis='both', which='major', labelsize=fs)
 
-    ax.set_xlim([burn_in, options['iterations'] + 2])
+    ax.set_xlim([burn_in, options['n_samples'] + 2])
     ax.set_title('Temperature chain: ' + str(i_chain))
     fig.tight_layout()
     sns.despine()
@@ -264,7 +264,7 @@ def sampling_marginal(result, options, i_chain=0, bw=0.3, figsize=None, fs=12):
     """
     # get data which should be plotted
     nr_params, params_fval, theta_lb, theta_ub = \
-        get_data_to_plot(result, options, i_chain, noex_param_name=True)
+        get_data_to_plot(result, options, i_chain, burn_in=0, n_steps=1, noex_param_name=True)
     param_names = params_fval.columns.values[0:nr_params]
 
     # compute, how many rows and columns we need for the subplots
