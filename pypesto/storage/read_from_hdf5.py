@@ -51,11 +51,11 @@ class ProblemHDF5Reader:
         """
         with h5py.File(self.storage_filename, 'r') as f:
             for problem_key in f['/problem']:
-                # self.problem.problem_key = f[f'/problem/{problem_key}'][:]
-                setattr(self.problem, problem_key, f[f'/problem/{problem_key}'][:])
+                setattr(self.problem, problem_key,
+                        f[f'/problem/{problem_key}'][:])
             for problem_attr in f['/problem'].attrs:
-                # self.problem.problem_attr = f['/problem'].attrs[problem_attr]
-                setattr(self.problem, problem_attr, f['/problem'].attrs[problem_attr])
+                setattr(self.problem, problem_attr,
+                        f['/problem'].attrs[problem_attr])
         return self.problem
 
 
