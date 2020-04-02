@@ -32,30 +32,32 @@ import seaborn as sns
 # TODO: include parameter names from problem object
 
 
-def get_data_to_plot(result, options, i_chain, burn_in, n_steps, noex_param_name=True):
+def get_data_to_plot(result, problem, i_chain, burn_in, n_steps):
 
     # get parameters and fval results as numpy-arrays
-    arr_param = np.transpose(result['samples'][i_chain])
+    arr_param = np.array(result.sample_result['trace_x'][i_chain])
     # get each n_steps element, from the index burn_in until end of vector
     arr_param = arr_param[np.arange(burn_in, len(arr_param), n_steps)]
-    arr_fval = result['samples_log_posterior'][i_chain]
+    arr_fval = np.array(result.sample_result['trace_fval'][i_chain])
     arr_fval = arr_fval[np.arange(burn_in, len(arr_fval), n_steps)]
-    theta_lb = options['lower_bounds']
-    theta_ub = options['upper_bounds']
+    theta_lb = problem.lb
+    theta_ub = problem.ub
 
-    # default parameter names
-    if noex_param_name: # for now: it does not exist, so create param names
-        param_names = []
-        for i_param in range(0,np.shape(arr_param)[1]):
-            param_names = np.append(param_names,'par' + str(i_param))
+    # # default parameter names
+    # if noex_param_name: # for now: it does not exist, so create param names
+    #     param_names = []
+    #     for i_param in range(0,np.shape(arr_param)[1]):
+    #         param_names = np.append(param_names,'par' + str(i_param))
+    param_names = problem.x_names
 
     # transform nparray to pandas for the use of seaborn
     pd_params = pd.DataFrame(arr_param, columns=param_names)
     pd_fval = pd.DataFrame(data=np.transpose(arr_fval),
                            columns=['logPosterior'])
 
+    #TODO: change: result.sample_result['n_fval']+1 !
     pd_iter = \
-        pd.DataFrame(data=np.transpose(np.arange(burn_in+1, options['n_samples']+1, n_steps)),
+        pd.DataFrame(data=np.transpose(np.arange(burn_in+1, result.sample_result['n_fval'], n_steps)),
          columns=['iteration'])
     params_fval = pd.concat([pd_params,pd_fval,pd_iter],
                             axis=1, ignore_index=False)
@@ -69,7 +71,7 @@ def get_data_to_plot(result, options, i_chain, burn_in, n_steps, noex_param_name
     return nr_params, params_fval, theta_lb, theta_ub
 
 
-def sampling_fval(result, options, i_chain=0, burn_in=0, n_steps=1, figsize=None, fs = 12):
+def sampling_fval(result, problem, i_chain=0, burn_in=0, n_steps=1, figsize=None, fs = 12):
     """
     Plot logPosterior over iterations.
 
@@ -77,8 +79,7 @@ def sampling_fval(result, options, i_chain=0, burn_in=0, n_steps=1, figsize=None
     ----------
     result: dict
         sampling specific results object
-    options: dict
-        sampling options
+    problem:
     i_chain: int
         which chain/temperature should be plotted. Default: First Chain
     burn_in: int
@@ -97,11 +98,10 @@ def sampling_fval(result, options, i_chain=0, burn_in=0, n_steps=1, figsize=None
     """
     # get data which should be plotted
     _, params_fval, _, _= get_data_to_plot(result,
-                                           options,
+                                           problem,
                                            i_chain,
                                            burn_in,
-                                           n_steps,
-                                           noex_param_name=True)
+                                           n_steps)
 
     fig, ax = plt.subplots(figsize =figsize)
 
@@ -116,7 +116,7 @@ def sampling_fval(result, options, i_chain=0, burn_in=0, n_steps=1, figsize=None
     ax.set_xlabel('number of iterations', fontsize = fs)
     ax.set_ylabel('log Posterior', fontsize = fs)
     ax.set_title('Temperature chain: ' + str(i_chain))
-    ax.set_xlim([burn_in,options['n_samples']+2])
+    ax.set_xlim([burn_in,result.sample_result.n_fval +2])
     # ax.tick_params(axis='both', which='major', labelsize=fs)
 
     sns.despine()
@@ -159,7 +159,7 @@ def sampling_parameters(result,
     """
     # get data which should be plotted
     nr_params, params_fval, theta_lb, theta_ub = \
-        get_data_to_plot(result, options, i_chain,burn_in, n_steps, noex_param_name=True)
+        get_data_to_plot(result, problem, i_chain, burn_in, n_steps)
     param_names = params_fval.columns.values[0:nr_params]
 
     # compute, how many rows and columns we need for the subplots
@@ -228,7 +228,7 @@ def sampling_parameter_corr(result,
 
     # get data which should be plotted
     nr_params, params_fval, theta_lb, theta_ub = \
-        get_data_to_plot(result, options, i_chain,burn_in, n_steps,  noex_param_name=True)
+        get_data_to_plot(result, problem, i_chain, burn_in, n_steps)
 
     sns.set(style="ticks")
 
@@ -264,7 +264,7 @@ def sampling_marginal(result, options, i_chain=0, bw=0.3, figsize=None, fs=12):
     """
     # get data which should be plotted
     nr_params, params_fval, theta_lb, theta_ub = \
-        get_data_to_plot(result, options, i_chain, burn_in=0, n_steps=1, noex_param_name=True)
+        get_data_to_plot(result, problem, i_chain, burn_in, n_steps)
     param_names = params_fval.columns.values[0:nr_params]
 
     # compute, how many rows and columns we need for the subplots
