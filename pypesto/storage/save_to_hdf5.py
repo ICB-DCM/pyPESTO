@@ -5,6 +5,14 @@ from ..result import Result
 
 
 class ProblemHDF5Writer:
+    """
+    Writer of the HDF5 problem files.
+
+    Attributes
+    ---------
+    storage_filename:
+        HDF5 result file name
+    """
     LB = 'lb'
     UB = 'ub'
     LB_FULL = 'lb_full'
@@ -15,7 +23,7 @@ class ProblemHDF5Writer:
     DIM = 'dim'
     DIM_FULL = 'dim_full'
 
-    def __init__(self, storage_filename):
+    def __init__(self, storage_filename: str):
         self.storage_filename = storage_filename
 
     def write(self, problem, overwrite: bool = False):
@@ -47,8 +55,16 @@ class ProblemHDF5Writer:
 
 
 class OptimizationResultHDF5Writer:
+    """
+    Writer of the HDF5 result files.
 
-    def __init__(self, storage_filename):
+    Attributes
+    ---------
+    storage_filename:
+        HDF5 result file name
+    """
+
+    def __init__(self, storage_filename: str):
         self.storage_filename = storage_filename
 
     def write(self, result: Result, overwrite=False):
@@ -68,7 +84,7 @@ class OptimizationResultHDF5Writer:
             results_grp = optimization_grp.create_group("results")
             for i, start in enumerate(result.optimize_result.list):
                 start_grp = results_grp.create_group(str(i))
-
+                start['trace'] = None # temporary fix
                 for key in start.keys():
                     if isinstance(start[key], np.ndarray):
                         write_float_array(start_grp, key, start[key])
