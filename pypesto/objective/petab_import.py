@@ -371,6 +371,10 @@ class PetabAmiciObjective(AmiciObjective):
                 {'amici_model', 'amici_solver', 'edatas'}:
             state[key] = self.__dict__[key]
 
+        amici_solver_file = tempfile.mkstemp()[1]
+        amici.writeSolverSettingsToHDF5(self.amici_solver, amici_solver_file)
+        state['amici_solver'] = amici_solver_file
+
         return state
 
     def __setstate__(self, state: Dict) -> None:
@@ -381,6 +385,9 @@ class PetabAmiciObjective(AmiciObjective):
         model = petab_importer.create_model()
         solver = petab_importer.create_solver(model)
         edatas = petab_importer.create_edatas(model)
+
+        amici.readSolverSettingsFromHDF5(state['amici_solver'], solver)
+        os.remove(state['amici_solver'])
 
         self.amici_model = model
         self.amici_solver = solver

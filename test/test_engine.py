@@ -87,9 +87,8 @@ class EngineTest(unittest.TestCase):
             == objective2.amici_model.getParameterIds()
         assert objective.amici_solver.getSensitivityOrder() \
             == objective2.amici_solver.getSensitivityOrder()
-        # TODO Pickling does not preserve attributes yet, see #248
-        # assert objective.amici_solver.getSensitivityMethod() \
-        #     == objective2.amici_solver.getSensitivityMethod()
+        assert objective.amici_solver.getSensitivityMethod() \
+            == objective2.amici_solver.getSensitivityMethod()
         assert len(objective.edatas) == len(objective2.edatas)
 
 
