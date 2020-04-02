@@ -18,7 +18,7 @@ class AdaptiveMetropolisSampler(Sampler):
     -------------
     ```python
     sampler = AdaptiveMetropolisSampler(settings=settings)
-    sampler.sample(100) # burn in
+    sampler.sample(100) # generate 100 samples
     sampler.save_state(filename)
     first_set_of_samples = sampler.sample(1000) # will be 1100 samples
     sampler.load_state(filename)

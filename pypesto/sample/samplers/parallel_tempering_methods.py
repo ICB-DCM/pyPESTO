@@ -1,7 +1,7 @@
 from typing import Callable, Tuple, Sequence, Dict
 from ..sampler_v1 import Sampler
 import numpy as np
-#import copy
+import copy
 
 
 def initialize_reciprocal_temperature(
@@ -56,30 +56,29 @@ def swapping_adjacent_chains(
     acc_swap = tempering_variables['acc_swap']
     prop_swap = tempering_variables['prop_swap']
     a_bool = tempering_variables['a_bool']
-    p_acc_swap = tempering_variables['p_acc_swap']
 
     # Number of parameters
     n_temperatures = len(beta)
 
     d_beta = beta[:-1] - beta[1:]
     for n_T in reversed(range(1, n_temperatures)):
-        p_acc_swap[0, n_T - 1] = np.multiply(d_beta[n_T - 1],
+        p_acc_swap = np.multiply(d_beta[n_T - 1],
                                              np.transpose(
                                                  samplers[n_T].get_last_sample('samples_log_posterior') - samplers[
                                                      n_T - 1].get_last_sample('samples_log_posterior')
                                              ))
-        a_bool[0, n_T - 1] = np.less(np.log(float(np.random.uniform(0, 1, 1))),
-                                     p_acc_swap[0, n_T - 1]
-                                     )
+
+        a_bool[0, n_T - 1] = float(np.less(np.log(float(np.random.uniform(0, 1, 1))),
+                                     p_acc_swap))
         prop_swap[0, n_T - 1] = prop_swap[0, n_T - 1] + 1
         acc_swap[0, n_T - 1] = acc_swap[0, n_T - 1] + a_bool[0, n_T - 1]
+
         # As usually implemented when using PT
         if a_bool[0, n_T - 1]:
-            samplers[n_T - 1], samplers[n_T] = Sampler.swap_last_samples(samplers[n_T],
+            samplers[n_T], samplers[n_T - 1] = Sampler.swap_last_samples(samplers[n_T],
                                                                          samplers[n_T - 1]
                                                                          )
-
-        return (samplers, tempering_variables)
+    return (samplers, tempering_variables)
 
 
 def adaptation_temperature_values(
@@ -176,11 +175,10 @@ def sample_parallel_tempering(
 
     # Initialize tempering variables
     tempering_variables = {
-        'beta': beta,
-        'acc_swap': np.full([1, n_temperatures - 1], np.nan),
-        'prop_swap': np.full([1, n_temperatures - 1], np.nan),
-        'a_bool': np.full([1, n_temperatures - 1], np.nan),
-        'p_acc_swap': np.full([1, n_temperatures - 1], np.nan)}
+        'beta': copy.copy(beta),
+        'acc_swap': np.full([1, n_temperatures - 1], 0.),
+        'prop_swap': np.full([1, n_temperatures - 1], 0.),
+        'a_bool': np.full([1, n_temperatures - 1], 0.)}
 
     # Initialize result object
     result = {
@@ -196,15 +194,16 @@ def sample_parallel_tempering(
     for i in range(n_samples):
         # Do MCMC step for each temperature
         for n_T in range(n_temperatures):
-            samplers[n_T].sample(1)
+            samplers[n_T].sample(1,
+                                 beta=tempering_variables['beta'][n_T])
 
         # Swaps between all adjacent chains
         # and adaptation of the temperature values
         if n_temperatures > 1:
-            swapping_and_adaptation(samplers,
-                                    tempering_variables,
-                                    i,
-                                    settings)
+            samplers, tempering_variables = swapping_and_adaptation(samplers,
+                                                                    tempering_variables,
+                                                                    i,
+                                                                    settings)
         # Update results
         for n_T in range(n_temperatures):
             result['samples'][n_T, :, i] = samplers[n_T].get_last_sample('samples')
