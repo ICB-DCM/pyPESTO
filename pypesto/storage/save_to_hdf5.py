@@ -9,7 +9,7 @@ class ProblemHDF5Writer:
     Writer of the HDF5 problem files.
 
     Attributes
-    ---------
+    -------------
     storage_filename:
         HDF5 result file name
     """
@@ -24,10 +24,19 @@ class ProblemHDF5Writer:
     DIM_FULL = 'dim_full'
 
     def __init__(self, storage_filename: str):
+        """
+        Parameters
+        ----------
+
+        storage_filename: str
+            HDF5 problem file name
+        """
         self.storage_filename = storage_filename
 
     def write(self, problem, overwrite: bool = False):
-
+        """
+        Write HDF5 problem file from pyPESTO problem object.
+        """
         with h5py.File(self.storage_filename, "a") as f:
             if "problem" in f:
                 if overwrite:
@@ -59,16 +68,25 @@ class OptimizationResultHDF5Writer:
     Writer of the HDF5 result files.
 
     Attributes
-    ---------
+    -------------
     storage_filename:
         HDF5 result file name
     """
 
     def __init__(self, storage_filename: str):
+        """
+        Parameters
+        ----------
+
+        storage_filename: str
+            HDF5 result file name
+        """
         self.storage_filename = storage_filename
 
     def write(self, result: Result, overwrite=False):
-
+        """
+        Write HDF5 result file from pyPESTO result object.
+        """
         with h5py.File(self.storage_filename, "a") as f:
             if "optimization" in f:
                 if overwrite:

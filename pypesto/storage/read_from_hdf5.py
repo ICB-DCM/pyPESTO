@@ -11,7 +11,7 @@ def read_hdf5_optimization(f: h5py.File,
     Read HDF5 results per start.
 
     Parameters
-    ----------
+    -------------
     f:
         The HDF5 result file
     opt_id:
@@ -37,15 +37,22 @@ class ProblemHDF5Reader:
     by class ProblemHDF5Writer.
 
     Attributes
-    ---------
+    -------------
     storage_filename:
-        HDF5 result file name
+        HDF5 problem file name
     """
     def __init__(self, storage_filename: str):
+        """
+        Parameters
+        ----------
+
+        storage_filename: str
+            HDF5 problem file name
+        """
         self.storage_filename = storage_filename
         self.problem = Problem(Objective(), [], [])
 
-    def read(self) -> 'Problem':
+    def read(self) -> Problem:
         """
         Read HDF5 problem file and return pyPESTO problem object.
         """
@@ -65,15 +72,22 @@ class OptimizationResultHDF5Reader:
     by class OptimizationResultHDF5Writer.
 
     Attributes
-    ---------
+    -------------
     storage_filename:
         HDF5 result file name
     """
     def __init__(self, storage_filename: str):
+        """
+        Parameters
+        ----------
+
+        storage_filename: str
+            HDF5 result file name
+        """
         self.storage_filename = storage_filename
         self.results = Result()
 
-    def read(self) -> 'Result':
+    def read(self) -> Result:
         """
         Read HDF5 result file and return pyPESTO result object.
         """

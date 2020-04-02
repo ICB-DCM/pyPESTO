@@ -11,7 +11,7 @@ def write_string_array(f: h5py.Group,
     Write string array to hdf5
 
     Parameters
-    ----------
+    -------------
     f:
         h5py.File
     path:
@@ -33,7 +33,7 @@ def write_float_array(f: h5py.Group,
     Write float array to hdf5
 
     Parameters
-    ----------
+    -------------
     f:
         h5py.File
     path:
@@ -56,7 +56,7 @@ def write_int_array(f: h5py.Group,
     Write integer array to hdf5
 
     Parameters
-    ----------
+    -------------
     f:
         h5py.File
     path:
