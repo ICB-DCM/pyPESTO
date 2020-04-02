@@ -15,7 +15,7 @@ def update_statistics(
 ) -> Tuple[Sequence[float], np.ndarray]:
     '''
     Update sampling statistics.
-    
+
     Parameters
     ----------
     mean:
@@ -99,7 +99,7 @@ def regularize_covariance(
 
     regularization_factor:
         Larger values result in stronger regularization.
-    
+
     n_parameters:
         Number of parameters in the sample.
 
@@ -125,11 +125,12 @@ def regularize_covariance(
 # remove log_transformation_backward/forward?
 # Is the description for log_acceptance in Returns correct?
 def test_sample(
-    log_posterior_callable: Callable,
-    sample: Sequence[float],
-    sample0_log_posterior: float,
-    lower_bounds: Sequence[float],
-    upper_bounds: Sequence[float]
+        log_posterior_callable: Callable,
+        sample: Sequence[float],
+        sample0_log_posterior: float,
+        lower_bounds: Sequence[float],
+        upper_bounds: Sequence[float],
+        beta: float
 ) -> Dict:
     '''
     Determines whether to accept the proposed sample.
@@ -150,6 +151,9 @@ def test_sample(
 
     lower_bounds (respectively, upper_bounds):
         The lower (respectively, upper) bounds sample parameters.
+
+    beta:
+        Value from parallel tempering.
 
     Returns
     -------
@@ -175,7 +179,8 @@ def test_sample(
             # next three lines?
             log_transformation_forward = 1 # magic number
             log_transformation_backward = 1 # magic number
-            log_acceptance = (sample_log_posterior - sample0_log_posterior
+            log_acceptance = (beta
+                *(sample_log_posterior - sample0_log_posterior)
                 + log_transformation_backward - log_transformation_forward)
             if np.isnan(log_acceptance): # possible if log_posterior_callable
                                          # has numerical issues
@@ -206,13 +211,14 @@ def test_sample(
 # debug values for covariance (covariance_scaling_factor, covariance_history)
 # irrelevant here?
 def try_sampling(
-    log_posterior_callable: Callable,
-    sample0: Sequence[float],
-    sample0_log_posterior: float,
-    covariance: np.ndarray,
-    lower_bounds: Sequence[float],
-    upper_bounds: Sequence[float],
-    debug: bool
+        log_posterior_callable: Callable,
+        sample0: Sequence[float],
+        sample0_log_posterior: float,
+        covariance: np.ndarray,
+        lower_bounds: Sequence[float],
+        upper_bounds: Sequence[float],
+        debug: bool,
+        beta: float = 1
 ):
     '''
     Propose a new sample, and determine whether to accept the proposal.
@@ -233,12 +239,15 @@ def try_sampling(
 
     covariance:
         Estimated covariance matrix of the sample.
-        
+
     lower_bounds (respectively, upper_bounds):
         The lower (respectively, upper) bounds of the sample parameters.
 
     debug;
         If true, returns additional information.
+
+    beta:
+        Value from parallel tempering.
 
     Returns
     -------
@@ -264,7 +273,8 @@ def try_sampling(
             sample,
             sample0_log_posterior,
             lower_bounds,
-            upper_bounds
+            upper_bounds,
+            beta
     )
 
     result['log_acceptance'] = sample_proposal_result['log_acceptance']
@@ -321,7 +331,7 @@ def estimate_covariance(
     regularization_factor:
         Factor used to regularize the estimated covariance matrix. Larger
         values result in stronger regularization.
-    
+
     n_parameters:
         Number of parameters in the sample.
 

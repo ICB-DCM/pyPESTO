@@ -255,7 +255,7 @@ class AdaptiveMetropolisSampler(Sampler):
                                  'before requesting addition samples.')
 
     @staticmethod
-    def sampling_loop(state: SamplerState, index: int) -> SamplerState:
+    def sampling_loop(state: SamplerState, index: int, beta: float) -> SamplerState:
         sampling_result = adaptive_metropolis_sampler_methods.try_sampling(
             state.log_posterior_callable,
             state.sample,
@@ -302,7 +302,7 @@ class AdaptiveMetropolisSampler(Sampler):
 
         return state
 
-    def sample(self, n_samples: int = 0):
+    def sample(self, n_samples: int = 0, beta: float = 1):
         '''
         Produces samples and stores sampling results in the chain.
 
@@ -310,6 +310,8 @@ class AdaptiveMetropolisSampler(Sampler):
         ---------
         n_samples:
             The number of samples to generate.
+        beta:
+            Value from parallel tempering.
 
         Returns
         -------
@@ -324,7 +326,7 @@ class AdaptiveMetropolisSampler(Sampler):
         #n_samples = n_samples if n_samples > 0 else state.n_samples
         #print((state.n_sample, n_samples))
         for index in range(state.n_sample, self.state.n_samples):
-            state = AdaptiveMetropolisSampler.sampling_loop(state, index)
+            state = AdaptiveMetropolisSampler.sampling_loop(state, index, beta)
 
             #self.last
 
