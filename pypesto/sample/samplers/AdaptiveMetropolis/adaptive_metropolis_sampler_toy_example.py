@@ -25,23 +25,23 @@ settings = {
     'sample': sample,
 }
 
-# Setup "burn-in"
+# Setup initial sampling
 from adaptive_metropolis_sampler import AdaptiveMetropolisSampler
 sampler = AdaptiveMetropolisSampler(settings=settings)
 print('first 1000')
 chains = sampler.sample()
-# Save "burn-in"
+# Save initial sampling
 sampler.save_state('checkpoint.pickle')
 print(sampler.get_state('chain')['samples_log_posterior'])
 
-# Generate 100 samples with "burn-in"
-# These 100 samples will be in addition to the "burn-in" samples
+# Generate 100 samples with initial sampling
+# These 100 samples will be in addition to the initial samples
 # Hence, the chain will contain 200 samples
 print('first a further 1000, for a total of 2000 samples')
 chains = sampler.sample(1000)
 print(sampler.get_state('chain')['samples_log_posterior'])
 
-# Generate another 100 samples with "burn-in", by reading
+# Generate another 100 samples with the initial sampling, by reading
 # in the saved file. Again, the chain will contain 200 samples.
 sampler.load_state('checkpoint.pickle')
 print('reload first 1000 samples, find another 1000 samples, for a total of 2000')
