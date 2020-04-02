@@ -22,7 +22,6 @@ def write_string_array(f: h5py.Group,
     dt = h5py.special_dtype(vlen=str)
     dset = f.create_dataset(path, (len(strings),), dtype=dt)
     dset[:] = [s.encode('utf8') for s in strings]
-    dset.file.flush()
 
 
 def write_float_array(f: h5py.Group,
@@ -45,7 +44,6 @@ def write_float_array(f: h5py.Group,
     """
     dset = f.create_dataset(path, (len(values),), dtype=dtype)
     dset[:] = values
-    dset.flush()
 
 
 def write_int_array(f: h5py.Group,
@@ -68,4 +66,3 @@ def write_int_array(f: h5py.Group,
     """
     dset = f.create_dataset(path, (len(values),), dtype=dtype)
     dset[:] = values
-    dset.flush()
