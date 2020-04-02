@@ -31,9 +31,9 @@ class McmcPtResult(dict):
     """
 
     def __init__(self,
-                 trace_x: Iterable[Iterable[np.ndarray]],
-                 trace_fval: Iterable[Iterable[float]],
-                 trace_grad: Iterable[Iterable[Union[np.ndarray, None]]],
+                 trace_x: np.ndarray,
+                 trace_fval: np.ndarray,
+                 trace_grad: np.ndarray,
                  temperatures: Iterable[float],
                  time: float = 0.0,
                  n_fval: int = 0,
