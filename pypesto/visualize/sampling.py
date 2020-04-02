@@ -33,6 +33,20 @@ import seaborn as sns
 
 
 def get_data_to_plot(result, problem, i_chain, burn_in, n_steps):
+    '''
+    get the respective data as pandas dataframe which should be plotted.
+    Parameters
+    ----------
+    result:
+    problem:
+    i_chain: int
+        which chain should be plotted
+    burn_in: int
+        last index of burn_in phase
+    n_steps: int
+        defines a subset of values which should be plotted, every n_steps
+        value is plotted
+    '''
 
     # get parameters and fval results as numpy-arrays
     arr_param = np.array(result.sample_result['trace_x'][i_chain])
@@ -127,7 +141,7 @@ def sampling_fval(result, problem, i_chain=0, burn_in=0, n_steps=1, figsize=None
 
 
 def sampling_parameters(result,
-                        options,
+                        problem,
                         i_chain=0,
                         burn_in=0,
                         n_steps=1,
@@ -139,8 +153,7 @@ def sampling_parameters(result,
     ----------
     result: dict
         sampling specific results object
-    options: dict
-        sampling options
+    problem:
     i_chain: int
         which chain/temperature should be plotted. Default: First Chain
     burn_in: int
@@ -184,7 +197,7 @@ def sampling_parameters(result,
         ax.set_ylim([theta_lb[idx],theta_ub[idx]])
         # ax.tick_params(axis='both', which='major', labelsize=fs)
 
-    ax.set_xlim([burn_in, options['n_samples'] + 2])
+    ax.set_xlim([burn_in, result.sample_result.n_fval + 2])
     ax.set_title('Temperature chain: ' + str(i_chain))
     fig.tight_layout()
     sns.despine()
@@ -194,7 +207,7 @@ def sampling_parameters(result,
 
 
 def sampling_parameter_corr(result,
-                            options,
+                            problem,
                             i_chain=0,
                             burn_in=0,
                             n_steps=1,
@@ -207,8 +220,7 @@ def sampling_parameter_corr(result,
     ----------
     result: dict
         sampling specific results object
-    options: dict
-        sampling options
+    problem:
     i_chain: int
         which chain/temperature should be plotted. Default: First Chain
     burn_in: int
@@ -239,7 +251,7 @@ def sampling_parameter_corr(result,
     return ax
 
 
-def sampling_marginal(result, options, i_chain=0, bw=0.3, figsize=None, fs=12):
+def sampling_marginal(result, problem, i_chain=0, bw=0.3, figsize=None, fs=12):
     """
     Plot Marginals.
 
@@ -247,8 +259,7 @@ def sampling_marginal(result, options, i_chain=0, bw=0.3, figsize=None, fs=12):
     ----------
     result: dict
         sampling specific results object
-    options: dict
-        sampling options
+    problem:
     i_chain: int
         which chain/temperature should be plotted. Default: First Chain
     bw: float
