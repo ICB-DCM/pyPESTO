@@ -75,7 +75,6 @@ def get_data_to_plot(result, problem, i_chain, burn_in, n_steps):
          columns=['iteration'])
     params_fval = pd.concat([pd_params,pd_fval,pd_iter],
                             axis=1, ignore_index=False)
-    print(params_fval)
 
 #
     # some global parameters
@@ -198,7 +197,9 @@ def sampling_parameters(result,
         # ax.tick_params(axis='both', which='major', labelsize=fs)
 
     ax.set_xlim([burn_in, result.sample_result.n_fval + 2])
-    ax.set_title('Temperature chain: ' + str(i_chain))
+    # ax.set_title('Temperature chain: ' + str(i_chain))
+    # ax.fig.suptitle('Temperature chain: ' + str(i_chain))
+    fig.suptitle('Temperature chain: ' + str(i_chain))
     fig.tight_layout()
     sns.despine()
     plt.show()
@@ -246,7 +247,9 @@ def sampling_parameter_corr(result,
 
     ax = sns.pairplot(params_fval.drop(['logPosterior', 'iteration'], axis=1))
 
-    plt.title('Temperature chain: ' + str(i_chain), y=1.08)
+    # plt.title('Temperature chain: ' + str(i_chain), y=1.08)
+    ax.fig.suptitle('Temperature chain: ' + str(i_chain))
+    # sns.plt.suptitle('Temperature chain: ' + str(i_chain))
 
     return ax
 
@@ -275,7 +278,7 @@ def sampling_marginal(result, problem, i_chain=0, bw=0.3, figsize=None, fs=12):
     """
     # get data which should be plotted
     nr_params, params_fval, theta_lb, theta_ub = \
-        get_data_to_plot(result, problem, i_chain, burn_in, n_steps)
+        get_data_to_plot(result, problem, i_chain, burn_in=0, n_steps=1)
     param_names = params_fval.columns.values[0:nr_params]
 
     # compute, how many rows and columns we need for the subplots
@@ -296,7 +299,9 @@ def sampling_marginal(result, problem, i_chain=0, bw=0.3, figsize=None, fs=12):
         ax.set_ylabel('Density')
         sns.despine()
 
-    ax.set_title('Temperature chain: ' + str(i_chain))
+    # axes.fig.suptitle('Temperature chain: ' + str(i_chain))
+    # axes.set_title('Temperature chain: ' + str(i_chain))
+    fig.suptitle('Temperature chain: ' + str(i_chain))
     fig.tight_layout()
     plt.show()
 
