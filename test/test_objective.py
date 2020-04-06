@@ -9,14 +9,23 @@ import pytest
 import pypesto
 
 
-def test_evaluate():
+@pytest.fixture(params=[True, False])
+def integrated(request):
+    return request.param
+
+
+@pytest.fixture(params=[2, 1, 0])
+def max_sensi_order(request):
+    return request.param
+
+
+def test_evaluate(integrated):
     """
     Test if values are computed correctly.
     """
-    for integrated in [True, False]:
-        for struct in [rosen_for_sensi(2, integrated, [0, 1]),
-                       poly_for_sensi(2, True, 0.5)]:
-            _test_evaluate(struct)
+    for struct in [rosen_for_sensi(2, integrated, [0, 1]),
+                   poly_for_sensi(2, True, 0.5)]:
+        _test_evaluate(struct)
 
 
 def _test_evaluate(struct):
@@ -56,17 +65,15 @@ def _test_evaluate(struct):
         assert np.isclose(hess, hess_true).all()
 
 
-def test_return_type():
+def test_return_type(integrated, max_sensi_order):
     """
     Test if the output format is correct.
     """
-    for integrated in [True, False]:
-        for max_sensi_order in [2, 1, 0]:
-            for struct in [rosen_for_sensi(max_sensi_order,
-                                           integrated, [0, 1]),
-                           poly_for_sensi(max_sensi_order,
-                                          integrated, 0)]:
-                _test_return_type(struct)
+    for struct in [rosen_for_sensi(max_sensi_order,
+                                   integrated, [0, 1]),
+                   poly_for_sensi(max_sensi_order,
+                                  integrated, 0)]:
+        _test_return_type(struct)
 
 
 def _test_return_type(struct):
@@ -88,17 +95,15 @@ def _test_return_type(struct):
         assert len(ret) == 2
 
 
-def test_sensis():
+def test_sensis(integrated, max_sensi_order):
     """
     Test output when not all sensitivities can be computed.
     """
-    for integrated in [True, False]:
-        for max_sensi_order in [2, 1, 0]:
-            for struct in [rosen_for_sensi(max_sensi_order,
-                                           integrated, [0, 1]),
-                           poly_for_sensi(max_sensi_order,
-                                          integrated, 0)]:
-                _test_sensis(struct)
+    for struct in [rosen_for_sensi(max_sensi_order,
+                                   integrated, [0, 1]),
+                   poly_for_sensi(max_sensi_order,
+                                  integrated, 0)]:
+        _test_sensis(struct)
 
 
 def _test_sensis(struct):
