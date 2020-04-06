@@ -10,12 +10,14 @@ import warnings
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 optimizers = {
-    'scipy': ['Nelder-Mead', 'Powell', 'CG', 'BFGS', 'Newton-CG',
-              'L-BFGS-B', 'TNC', 'COBYLA', 'SLSQP',
-              'trust-ncg', 'trust-exact', 'trust-krylov',
-              'ls_trf', 'ls_dogbox'],
+    'scipy': [
+        'Nelder-Mead', 'Powell', 'CG', 'BFGS', 'Newton-CG',
+        'L-BFGS-B', 'TNC', 'COBYLA', 'SLSQP',
+        'trust-ncg', 'trust-exact', 'trust-krylov',
+        'ls_trf', 'ls_dogbox'],
     # disabled: ,'trust-constr', 'ls_lm', 'dogleg'
-    'dlib': ['default']
+    'dlib': ['default'],
+    'pyswarm': ['']
 }
 
 ATOL = 1e-2
@@ -23,30 +25,27 @@ RTOL = 1e-3
 
 
 class AmiciObjectiveTest(unittest.TestCase):
+
     def runTest(self):
         for example in ['conversion_reaction']:
             objective, model = load_model_objective(example)
-            x0 = list(model.getParameters())
+            x0 = np.array(list(model.getParameters()))
+
             df = objective.check_grad(
-                x0,
-                eps=1e-3,
-                verbosity=0,
-                mode=pypesto.objective.constants.MODE_FUN
-            )
+                x0, eps=1e-3, verbosity=0,
+                mode=pypesto.objective.constants.MODE_FUN)
             print("relative errors MODE_FUN: ", df.rel_err.values)
             print("absolute errors MODE_FUN: ", df.abs_err.values)
-            self.assertTrue(np.all((df.rel_err.values < RTOL) |
-                                   (df.abs_err.values < ATOL)))
+            assert np.all((df.rel_err.values < RTOL) |
+                          (df.abs_err.values < ATOL))
+
             df = objective.check_grad(
-                x0,
-                eps=1e-3,
-                verbosity=0,
-                mode=pypesto.objective.constants.MODE_RES
-            )
+                x0, eps=1e-3, verbosity=0,
+                mode=pypesto.objective.constants.MODE_RES)
             print("relative errors MODE_RES: ", df.rel_err.values)
             print("absolute errors MODE_RES: ", df.rel_err.values)
-            self.assertTrue(np.all((df.rel_err.values < RTOL) |
-                                   (df.abs_err.values < ATOL)))
+            assert np.all((df.rel_err.values < RTOL) |
+                          (df.abs_err.values < ATOL))
 
             for library in optimizers.keys():
                 for method in optimizers[library]:
@@ -57,20 +56,11 @@ class AmiciObjectiveTest(unittest.TestCase):
                             with warnings.catch_warnings():
                                 warnings.simplefilter("ignore")
                                 parameter_estimation(
-                                    objective,
-                                    library,
-                                    method,
-                                    fp,
-                                    2)
+                                    objective, library, method, fp, 2)
 
 
 def parameter_estimation(
-    objective,
-    library,
-    solver,
-    fixed_pars,
-    n_starts,
-):
+        objective, library, solver, fixed_pars, n_starts):
     options = {
         'maxiter': 100
     }
@@ -81,6 +71,8 @@ def parameter_estimation(
     elif library == 'dlib':
         optimizer = pypesto.DlibOptimizer(method=solver,
                                           options=options)
+    elif library == 'pyswarm':
+        optimizer = pypesto.PyswarmOptimizer(options=options)
     else:
         raise ValueError("This code should not be reached")
 
@@ -91,18 +83,14 @@ def parameter_estimation(
     pars = objective.amici_model.getParameters()
     problem = pypesto.Problem(objective, lb, ub,
                               x_fixed_indices=fixed_pars,
-                              x_fixed_vals=[pars[idx] for idx in fixed_pars]
-                              )
+                              x_fixed_vals=[pars[idx] for idx in fixed_pars])
 
     optimize_options = pypesto.OptimizeOptions(
         allow_failed_starts=False,
         startpoint_resample=True,
     )
 
-    results = pypesto.minimize(
-        problem, optimizer, n_starts, options=optimize_options,
-    )
-    results = results.optimize_result.list
+    pypesto.minimize(problem, optimizer, n_starts, options=optimize_options)
 
 
 def load_model_objective(example_name):

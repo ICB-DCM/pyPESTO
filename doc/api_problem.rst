@@ -1,2 +1,4 @@
 .. automodule:: pypesto.problem
-   :special-members: __init__,__call__
+   :members:
+   :inherited-members:
+   :special-members:
