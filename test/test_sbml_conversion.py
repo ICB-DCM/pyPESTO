@@ -10,10 +10,11 @@ import warnings
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 optimizers = {
-    'scipy': ['Nelder-Mead', 'Powell', 'CG', 'BFGS', 'Newton-CG',
-              'L-BFGS-B', 'TNC', 'COBYLA', 'SLSQP',
-              'trust-ncg', 'trust-exact', 'trust-krylov',
-              'ls_trf', 'ls_dogbox'],
+    'scipy': [
+        'Nelder-Mead', 'Powell', 'CG', 'BFGS', 'Newton-CG',
+        'L-BFGS-B', 'TNC', 'COBYLA', 'SLSQP',
+        'trust-ncg', 'trust-exact', 'trust-krylov',
+        'ls_trf', 'ls_dogbox'],
     # disabled: ,'trust-constr', 'ls_lm', 'dogleg'
     'dlib': ['default'],
     'pyswarm': ['']
@@ -82,8 +83,7 @@ def parameter_estimation(
     pars = objective.amici_model.getParameters()
     problem = pypesto.Problem(objective, lb, ub,
                               x_fixed_indices=fixed_pars,
-                              x_fixed_vals=[pars[idx] for idx in fixed_pars]
-                              )
+                              x_fixed_vals=[pars[idx] for idx in fixed_pars])
 
     optimize_options = pypesto.OptimizeOptions(
         allow_failed_starts=False,
