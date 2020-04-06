@@ -23,30 +23,27 @@ RTOL = 1e-3
 
 
 class AmiciObjectiveTest(unittest.TestCase):
+
     def runTest(self):
         for example in ['conversion_reaction']:
             objective, model = load_model_objective(example)
-            x0 = list(model.getParameters())
+            x0 = np.array(list(model.getParameters()))
+
             df = objective.check_grad(
-                x0,
-                eps=1e-3,
-                verbosity=0,
-                mode=pypesto.objective.constants.MODE_FUN
-            )
+                x0, eps=1e-3, verbosity=0,
+                mode=pypesto.objective.constants.MODE_FUN)
             print("relative errors MODE_FUN: ", df.rel_err.values)
             print("absolute errors MODE_FUN: ", df.abs_err.values)
-            self.assertTrue(np.all((df.rel_err.values < RTOL) |
-                                   (df.abs_err.values < ATOL)))
+            assert np.all((df.rel_err.values < RTOL) |
+                          (df.abs_err.values < ATOL))
+
             df = objective.check_grad(
-                x0,
-                eps=1e-3,
-                verbosity=0,
-                mode=pypesto.objective.constants.MODE_RES
-            )
+                x0, eps=1e-3, verbosity=0,
+                mode=pypesto.objective.constants.MODE_RES)
             print("relative errors MODE_RES: ", df.rel_err.values)
             print("absolute errors MODE_RES: ", df.rel_err.values)
-            self.assertTrue(np.all((df.rel_err.values < RTOL) |
-                                   (df.abs_err.values < ATOL)))
+            assert np.all((df.rel_err.values < RTOL) |
+                          (df.abs_err.values < ATOL))
 
             for library in optimizers.keys():
                 for method in optimizers[library]:
@@ -57,20 +54,11 @@ class AmiciObjectiveTest(unittest.TestCase):
                             with warnings.catch_warnings():
                                 warnings.simplefilter("ignore")
                                 parameter_estimation(
-                                    objective,
-                                    library,
-                                    method,
-                                    fp,
-                                    2)
+                                    objective, library, method, fp, 2)
 
 
 def parameter_estimation(
-    objective,
-    library,
-    solver,
-    fixed_pars,
-    n_starts,
-):
+        objective, library, solver, fixed_pars, n_starts):
     options = {
         'maxiter': 100
     }
