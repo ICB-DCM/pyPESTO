@@ -1,15 +1,16 @@
 import matplotlib.pyplot as plt
 from matplotlib.ticker import MaxNLocator
 import numpy as np
+
+from typing import List, Optional, Tuple, Union, Iterable
+
+from ..result import Result
+from ..objective import History
 from .reference_points import create_references, ReferencePoint
 from .clust_color import assign_colors
 from .misc import process_result_list
 from .misc import process_y_limits
 from .misc import process_offset_y
-
-from typing import List, Optional, Tuple, Union, Iterable
-
-from pypesto import Result
 
 
 def optimizer_history(results,
@@ -250,39 +251,43 @@ def get_trace(result: Result,
     """
 
     # get data frames
-    traces = result.optimize_result.get_for_key('trace')
+    histories: List[History] = result.optimize_result.get_for_key('history')
+
     vals = []
     x_label = ''
     y_label = ''
 
-    for trace in traces:
-
+    for history in histories:
+        options = history.options
         if trace_y == 'gradnorm':
             # retrieve gradient trace, if saved
-            if trace['grad'] is None:
-                raise ("No gradient norm trace can be visualized: "
-                       "The pypesto.result object does not contain "
-                       "a gradient trace")
+            if not options.trace_record or not \
+                    options.trace_record_grad:
+                raise ValueError("No gradient trace has been recorded.")
+            grads = history.get_grad_trace()
+            indices = [i for i, val in enumerate(grads)
+                       if val is not None and np.isfinite(val).all()]
 
-            indices = np.argwhere(np.isfinite(
-                trace['grad'].values
-            ).all(axis=1))
-            indices = indices.flatten()
+            grads = np.array([grads[i] for i in indices])
 
             # Get gradient trace, compute norm
-            y_vals = np.linalg.norm(trace['grad'].values[indices, :], axis=1)
+            y_vals = np.linalg.norm(grads, axis=1)
             y_label = 'gradient norm'
 
         else:  # trace_y == 'fval':
-            indices = np.argwhere(np.isfinite(trace['fval'].values[:, 0]))
-            indices = indices.flatten()
+            if not options.trace_record:
+                raise ValueError("No function value trace has been recorded.")
+            fvals = history.get_fval_trace()
+            indices = [i for i, val in enumerate(fvals)
+                       if val is not None and np.isfinite(val)]
 
+            y_vals = np.array([fvals[i] for i in indices])
             y_label = 'objective value'
-            y_vals = trace['fval'].values[indices, 0]
 
         # retrieve values from dataframe
         if trace_x == 'time':
-            x_vals = trace['time'].values[indices, 0]
+            times = np.array(history.get_time_trace())
+            x_vals = times[indices]
             x_label = 'Computation time [s]'
 
         else:  # trace_x == 'steps':

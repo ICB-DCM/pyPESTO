@@ -2,11 +2,10 @@ import numpy as np
 from .util import rescale
 
 
-def uniform(**kwargs):
+def uniform(**kwargs) -> np.ndarray:
     """
     Generate uniform points.
     """
-
     # extract input
     n_starts = kwargs['n_starts']
     lb = kwargs['lb']

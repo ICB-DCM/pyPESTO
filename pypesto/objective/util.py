@@ -1,7 +1,7 @@
 import numpy as np
 
 
-def res_to_chi2(res):
+def res_to_chi2(res: np.ndarray):
     """
     We assume that the residuals res are related to an objective function
     value fval = chi2 via::
@@ -16,7 +16,7 @@ def res_to_chi2(res):
     return 0.5 * np.power(res, 2).sum()
 
 
-def sres_to_schi2(res, sres):
+def sres_to_schi2(res: np.ndarray, sres: np.ndarray):
     """
     In line with the assumptions in res_to_chi2.
     """
@@ -25,7 +25,7 @@ def sres_to_schi2(res, sres):
     return res.dot(sres)
 
 
-def sres_to_fim(sres):
+def sres_to_fim(sres: np.ndarray):
     """
     In line with the assumptions in res_to_chi2.
     """

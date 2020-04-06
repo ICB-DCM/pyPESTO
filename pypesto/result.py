@@ -10,6 +10,8 @@ optimization, profiles, sampling.
 
 import pandas as pd
 import copy
+import pypesto
+from typing import Sequence
 
 
 class OptimizeResult:
@@ -20,7 +22,10 @@ class OptimizeResult:
     def __init__(self):
         self.list = []
 
-    def append(self, optimizer_result):
+    def append(
+            self,
+            optimizer_result: 'pypesto.OptimizerResult'
+    ):
         """
         Append an optimizer result to the result object.
 
@@ -52,7 +57,7 @@ class OptimizeResult:
 
         return df
 
-    def as_list(self, keys=None) -> list:
+    def as_list(self, keys=None) -> Sequence:
         """
         Get as list. If keys is a list,
         return only the specified values.
@@ -95,7 +100,10 @@ class ProfileResult:
         """
         self.list.append([])
 
-    def create_new_profile(self, profiler_result=None):
+    def create_new_profile(
+            self,
+            profiler_result: 'pypesto.ProfilerResult' = None
+    ):
         """
         Append an profiler result to the result object.
 

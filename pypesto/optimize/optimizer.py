@@ -4,13 +4,17 @@ import re
 import abc
 import time
 import logging
+from typing import Dict
 
-from ..objective import res_to_chi2
+from ..objective import (
+    OptimizerHistory, HistoryOptions, res_to_chi2)
+from ..problem import Problem
+from .result import OptimizerResult
 
 try:
-    from pyswarm import pso
+    import pyswarm
 except ImportError:
-    pso = None
+    pyswarm = None
 
 try:
     import dlib
@@ -21,105 +25,37 @@ except ImportError:
 logger = logging.getLogger(__name__)
 
 
-class OptimizerResult(dict):
-    """
-    The result of an optimizer run. Used as a standardized return value to
-    map from the individual result objects returned by the employed
-    optimizers to the format understood by pypesto.
-
-    Can be used like a dict.
-
-    Attributes
-    ----------
-
-    x: ndarray
-        The best found parameters.
-
-    fval: float
-        The best found function value, fun(x).
-
-    grad, hess: ndarray
-        The gradient and Hessian at x.
-
-    n_fval: int
-        Number of function evaluations.
-
-    n_grad: int
-        Number of gradient evaluations.
-
-    n_hess: int
-        Number of Hessian evaluations.
-
-    exitflag: int
-        The exitflag of the optimizer.
-
-    message: str
-        Textual comment on the optimization result.
-
-    Notes
-    -----
-
-    Any field not supported by the optimizer is filled with None. Some
-    fields are filled by pypesto itself.
-    """
-
-    def __init__(self,
-                 x=None,
-                 fval=None,
-                 grad=None,
-                 hess=None,
-                 n_fval=None,
-                 n_grad=None,
-                 n_hess=None,
-                 n_res=None,
-                 n_sres=None,
-                 x0=None,
-                 fval0=None,
-                 trace=None,
-                 exitflag=None,
-                 time=None,
-                 message=None):
-        super().__init__()
-        self.x = np.array(x)
-        self.fval = fval
-        self.grad = np.array(grad) if grad is not None else None
-        self.hess = np.array(hess) if hess is not None else None
-        self.n_fval = n_fval
-        self.n_grad = n_grad
-        self.n_hess = n_hess
-        self.n_res = n_res
-        self.n_sres = n_sres
-        self.x0 = np.array(x0) if x0 is not None else None
-        self.fval0 = fval0
-        self.trace = trace
-        self.exitflag = exitflag
-        self.time = time
-        self.message = message
-
-    def __getattr__(self, key):
-        try:
-            return self[key]
-        except KeyError:
-            raise AttributeError(key)
-
-    __setattr__ = dict.__setitem__
-    __delattr__ = dict.__delitem__
-
-
-def objective_decorator(minimize):
+def history_decorator(minimize):
     """
     Default decorator for the minimize() method to initialize and extract
-    information stored in the objective.
+    information stored in the history.
     """
 
-    def wrapped_minimize(self, problem, x0, index):
-        problem.objective.reset_history(index=index)
-        if hasattr(problem.objective, 'reset_steadystate_guesses'):
-            problem.objective.reset_steadystate_guesses()
-        result = minimize(self, problem, x0, index)
-        problem.objective.finalize_history()
+    def wrapped_minimize(self, problem, x0, id, history_options=None):
+        objective = problem.objective
+
+        # create optimizer history
+        if history_options is None:
+            history_options = HistoryOptions()
+        history = history_options.create_history(
+            id=id, x_names=objective.x_names)
+        optimizer_history = OptimizerHistory(history=history, x0=x0)
+
+        # plug in history for the objective to record it
+        objective.history = optimizer_history
+
+        # TODO this can be prettified
+        if hasattr(objective, 'reset_steadystate_guesses'):
+            objective.reset_steadystate_guesses()
+
+        # perform the actual minimization
+        result = minimize(self, problem, x0, id, history_options)
+
+        objective.history.finalize()
+        result.id = id
         result = fill_result_from_objective_history(
-            result, problem.objective.history)
+            result, objective.history, self.is_least_squares)
+
         return result
     return wrapped_minimize
 
@@ -131,9 +67,9 @@ def time_decorator(minimize):
     the wall-clock time.
     """
 
-    def wrapped_minimize(self, problem, x0, index):
+    def wrapped_minimize(self, problem, x0, id, history_options=None):
         start_time = time.time()
-        result = minimize(self, problem, x0, index)
+        result = minimize(self, problem, x0, id, history_options)
         used_time = time.time() - start_time
         result.time = used_time
         return result
@@ -147,8 +83,11 @@ def fix_decorator(minimize):
     derivatives).
     """
 
-    def wrapped_minimize(self, problem, x0, index):
-        result = minimize(self, problem, x0, index)
+    def wrapped_minimize(self, problem, x0, id, history_options=None):
+        # perform the actual optimization
+        result = minimize(self, problem, x0, id, history_options)
+
+        # vectors to full vectors
         result.x = problem.get_full_vector(result.x, problem.x_fixed_vals)
         result.grad = problem.get_full_vector(result.grad)
         result.hess = problem.get_full_matrix(result.hess)
@@ -162,29 +101,53 @@ def fix_decorator(minimize):
     return wrapped_minimize
 
 
-def fill_result_from_objective_history(result, history):
+def fill_result_from_objective_history(
+        result: OptimizerResult,
+        optimizer_history: OptimizerHistory,
+        is_least_squares: bool):
     """
     Overwrite function values in the result object with the values recorded in
     the history.
     """
+    # best found values
+    if result.fval is not None and \
+            not np.isclose(result.fval, optimizer_history.fval_min) and \
+            not is_least_squares:
+        logger.warning(
+            "Function values from history and optimizer do not match: "
+            f"{optimizer_history.fval_min}, {result.fval}")
 
-    # counters
-    result.n_fval = history.n_fval
-    result.n_grad = history.n_grad
-    result.n_hess = history.n_hess
-    result.n_res = history.n_res
-    result.n_sres = history.n_sres
+    if optimizer_history.x_min is not None and result.x is not None and \
+            not np.allclose(result.x, optimizer_history.x_min):
+        logger.warning(
+            "Parameters obtained from history and optimizer do not match: "
+            f"{optimizer_history.x_min}, {result.x}")
+    else:
+        # override values from history if available
+        result.x = optimizer_history.x_min
+        result.fval = optimizer_history.fval_min
+        if optimizer_history.grad_min is not None:
+            result.grad = optimizer_history.grad_min
+        if optimizer_history.hess_min is not None:
+            result.hess = optimizer_history.hess_min
+        if optimizer_history.res_min is not None:
+            result.res = optimizer_history.res_min
+        if optimizer_history.sres_min is not None:
+            result.sres = optimizer_history.sres_min
 
     # initial values
-    result.x0 = history.x0
-    result.fval0 = history.fval0
+    result.x0 = optimizer_history.x0
+    result.fval0 = optimizer_history.fval0
 
-    # best found values
-    result.x = history.x_min
-    result.fval = history.fval_min
+    # counters
+    result.n_fval = optimizer_history.history.n_fval
+    result.n_grad = optimizer_history.history.n_grad
+    result.n_hess = optimizer_history.history.n_hess
+    result.n_res = optimizer_history.history.n_res
+    result.n_sres = optimizer_history.history.n_sres
 
     # trace
-    result.trace = history.trace
+    result.history = optimizer_history.history
 
     return result
 
@@ -197,9 +160,9 @@ def recover_result(objective, startpoint, err):
     result = OptimizerResult(
         x0=startpoint,
         exitflag=-1,
-        message='{0}'.format(err),
+        message=str(err),
     )
-    fill_result_from_objective_history(result, objective.history)
+    fill_result_from_objective_history(result, objective.history, False)
 
     return result
 
@@ -220,10 +183,27 @@ class Optimizer(abc.ABC):
     @abc.abstractmethod
     @fix_decorator
     @time_decorator
-    @objective_decorator
-    def minimize(self, problem, x0, index):
+    @history_decorator
+    def minimize(
+            self,
+            problem: Problem,
+            x0: np.ndarray,
+            id: str,
+            history_options: HistoryOptions = None,
+    ) -> OptimizerResult:
         """"
         Perform optimization.
+
+        Parameters
+        ----------
+        problem:
+            The problem to find optimal parameters for.
+        x0:
+            The starting parameters.
+        id:
+            Multistart id.
+        history_options:
+            Optimizer history options.
         """
 
     @abc.abstractmethod
@@ -243,7 +223,10 @@ class ScipyOptimizer(Optimizer):
     Use the SciPy optimizers.
     """
 
-    def __init__(self, method='L-BFGS-B', tol=1e-9, options=None):
+    def __init__(self,
+                 method: str = 'L-BFGS-B',
+                 tol: float = 1e-9,
+                 options: Dict = None):
         super().__init__()
 
         self.method = method
@@ -256,8 +239,14 @@ class ScipyOptimizer(Optimizer):
 
     @fix_decorator
     @time_decorator
-    @objective_decorator
-    def minimize(self, problem, x0, index):
+    @history_decorator
+    def minimize(
+            self,
+            problem: Problem,
+            x0: np.ndarray,
+            id: str,
+            history_options: HistoryOptions = None,
+    ) -> OptimizerResult:
         lb = problem.lb
         ub = problem.ub
         objective = problem.objective
@@ -350,15 +339,10 @@ class ScipyOptimizer(Optimizer):
 
         # fill in everything known, although some parts will be overwritten
         optimizer_result = OptimizerResult(
-            x=res.x,
+            x=np.array(res.x),
             fval=fval,
             grad=grad,
             hess=getattr(res, 'hess', None),
-            n_fval=getattr(res, 'nfev', 0),
-            n_grad=getattr(res, 'njev', 0),
-            n_hess=getattr(res, 'nhev', 0),
-            x0=x0,
-            fval0=None,
             exitflag=res.status,
             message=res.message
         )
@@ -379,7 +363,9 @@ class DlibOptimizer(Optimizer):
     Use the Dlib toolbox for optimization.
     """
 
-    def __init__(self, method, options=None):
+    def __init__(self,
+                 method: str,
+                 options: Dict = None):
         super().__init__()
 
         self.method = method
@@ -390,8 +376,14 @@ class DlibOptimizer(Optimizer):
 
     @fix_decorator
     @time_decorator
-    @objective_decorator
-    def minimize(self, problem, x0, index):
+    @history_decorator
+    def minimize(
+            self,
+            problem: Problem,
+            x0: np.ndarray,
+            id: str,
+            history_options: HistoryOptions = None,
+    ) -> OptimizerResult:
 
         lb = problem.lb
         ub = problem.ub
@@ -418,9 +410,7 @@ class DlibOptimizer(Optimizer):
             0.002,
         )
 
-        optimizer_result = OptimizerResult(
-            x0=x0
-        )
+        optimizer_result = OptimizerResult()
 
         return optimizer_result
 
@@ -432,12 +422,13 @@ class DlibOptimizer(Optimizer):
         return {}
 
 
-class GlobalOptimizer(Optimizer):
+class PyswarmOptimizer(Optimizer):
+    """
+    Global optimization using pyswarm.
+    """
 
-    def __init__(self, method='pso', options=None):
+    def __init__(self, options: Dict = None):
         super().__init__()
-
-        self.method = method
 
         if options is None:
             options = {'maxiter': 200}
@@ -445,21 +436,25 @@ class GlobalOptimizer(Optimizer):
 
     @fix_decorator
     @time_decorator
-    @objective_decorator
-    def minimize(self, problem, x0, index):
+    @history_decorator
+    def minimize(
+            self,
+            problem: Problem,
+            x0: np.ndarray,
+            id: str,
+            history_options: HistoryOptions = None,
+    ) -> OptimizerResult:
         lb = problem.lb
         ub = problem.ub
-        if pso is None:
+        if pyswarm is None:
             raise ImportError(
-                "This optimizer requires an installation of pyswarm."
-            )
+                "This optimizer requires an installation of pyswarm.")
 
-        if self.method == 'pso':
-            xopt, fopt = pso(problem.objective.get_fval,
-                             lb, ub, **self.options)
+        xopt, fopt = pyswarm.pso(
+            problem.objective.get_fval, lb, ub, **self.options)
 
         optimizer_result = OptimizerResult(
-            x=xopt,
+            x=np.array(xopt),
             fval=fopt
         )
 

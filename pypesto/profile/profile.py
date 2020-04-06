@@ -1,7 +1,11 @@
 import logging
 import numpy as np
-from pypesto import Result
-from .profiler import ProfilerResult
+from typing import Callable, Dict, Union
+
+from ..optimize import Optimizer
+from ..problem import Problem
+from ..result import Result
+from .result import ProfilerResult
 from .profile_next_guess import next_guess
 
 logger = logging.getLogger(__name__)
@@ -13,54 +17,45 @@ class ProfileOptions(dict):
 
     Parameters
     ----------
-
-    default_step_size: float, optional
+    default_step_size:
         default step size of the profiling routine along the profile path
         (adaptive step lengths algorithms will only use this as a first guess
         and then refine the update)
-
-    min_step_size: float, optional
+    min_step_size:
         lower bound for the step size in adaptive methods
-
-    max_step_size: float, optional
+    max_step_size:
         upper bound for the step size in adaptive methods
-
-    step_size_factor: float, optional
+    step_size_factor:
         Adaptive methods recompute the likelihood at the predicted point and
         try to find a good step length by a sort of line search algorithm.
         This factor controls step handling in this line search
-
-    delta_ratio_max: float, optional
+    delta_ratio_max:
         maximum allowed drop of the posterior ratio between two profile steps
-
-    ratio_min: float, optional
+    ratio_min:
         lower bound for likelihood ratio of the profile, based on inverse
         chi2-distribution.
         The default corresponds to 95% confidence
-
-    reg_points: float, optional
+    reg_points:
         number of profile points used for regression in regression based
         adaptive profile points proposal
-
-    reg_order: float, optional
-        maximum dregee of regriossion polynomial used in regression based
+    reg_order:
+        maximum degree of regression polynomial used in regression based
         adaptive profile points proposal
-
-    magic_factor_obj_value: float, optional
+    magic_factor_obj_value:
         There is this magic factor in the old profiling code which slows down
         profiling at small ratios (must be >= 0 and < 1)
     """
 
     def __init__(self,
-                 default_step_size=0.01,
-                 min_step_size=0.001,
-                 max_step_size=1.,
-                 step_size_factor=1.25,
-                 delta_ratio_max=0.1,
-                 ratio_min=0.145,
-                 reg_points=10,
-                 reg_order=4,
-                 magic_factor_obj_value=0.5):
+                 default_step_size: float = 0.01,
+                 min_step_size: float = 0.001,
+                 max_step_size: float = 1.,
+                 step_size_factor: float = 1.25,
+                 delta_ratio_max: float = 0.1,
+                 ratio_min: float = 0.145,
+                 reg_points: int = 10,
+                 reg_order: int = 4,
+                 magic_factor_obj_value: float = 0.5):
         super().__init__()
 
         self.default_step_size = default_step_size
@@ -83,13 +78,14 @@ class ProfileOptions(dict):
     __delattr__ = dict.__delitem__
 
     @staticmethod
-    def create_instance(maybe_options):
+    def create_instance(
+            maybe_options: Union['ProfileOptions', Dict]
+    ) -> 'ProfileOptions':
         """
         Returns a valid options object.
 
         Parameters
         ----------
-
         maybe_options: ProfileOptions or dict
         """
         if isinstance(maybe_options, ProfileOptions):
@@ -99,52 +95,50 @@ class ProfileOptions(dict):
 
 
 def parameter_profile(
-        problem,
-        result,
-        optimizer,
-        profile_index=None,
-        profile_list=None,
-        result_index=0,
-        next_guess_method=None,
-        profile_options=None) -> Result:
+        problem: Problem,
+        result: Result,
+        optimizer: Optimizer,
+        profile_index: np.ndarray = None,
+        profile_list: int = None,
+        result_index: int = 0,
+        next_guess_method: Callable = None,
+        profile_options: ProfileOptions = None
+) -> Result:
     """
     This is the main function to call to do parameter profiling.
 
     Parameters
     ----------
-
-    problem: pypesto.Problem
+    problem:
         The problem to be solved.
-
-    result: pypesto.Result
+    result:
         A result object to initialize profiling and to append the profiling
         results to. For example, one might append more profiling runs to a
         previous profile, in order to merge these.
         The existence of an optimization result is obligatory.
-
-    optimizer: pypesto.Optimizer
+    optimizer:
         The optimizer to be used along each profile.
-
-    profile_index: ndarray of integers, optional
+    profile_index:
         array with parameter indices, whether a profile should
         be computed (1) or not (0)
         Default is all profiles should be computed
-
-    profile_list: integer, optional
+    profile_list:
         integer which specifies whether a call to the profiler should create
         a new list of profiles (default) or should be added to a specific
         profile list
-
-    result_index: integer, optional
+    result_index:
         index from which optimization result profiling should be started
         (default: global optimum, i.e., index = 0)
-
-    next_guess_method: callable, optional
+    next_guess_method:
         function handle to a method that creates the next starting point for
         optimization in profiling.
-
-    profile_options: pypesto.ProfileOptions, optional
+    profile_options:
         Various options applied to the profile optimization.
+
+    Returns
+    -------
+    result:
+        The profile results are filled into `result.profile_result`.
     """
 
     # Handling defaults
@@ -286,10 +280,10 @@ def walk_along_profile(current_profile,
         # run optimization
         # IMPORTANT: This optimization will need a proper exception
         # handling (coming soon)
-        optimizer_result = optimizer.minimize(problem, startpoint, 0)
+        optimizer_result = optimizer.minimize(problem, startpoint, '0')
         if optimizer_result["grad"] is not None:
             gradnorm = np.linalg.norm(optimizer_result["grad"][
-                                          problem.x_free_indices])
+                                      problem.x_free_indices])
         else:
             gradnorm = None
 
@@ -347,7 +341,8 @@ def initialize_profile(
 
     # Check, whether an optimization result is existing
     if result.optimize_result is None:
-        print("Optimization has to be carried before profiling can be done.")
+        logger.error(
+            "Optimization has to be carried before profiling can be done.")
         return None
 
     tmp_optimize_result = result.optimize_result.as_list()

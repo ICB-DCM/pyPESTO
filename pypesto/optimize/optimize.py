@@ -1,96 +1,64 @@
 import logging
-from pypesto import Result
+from typing import Callable, Iterable, Union
+import numpy as np
+
+from ..engine import OptimizerTask, Engine, SingleCoreEngine
+from ..objective import Objective, HistoryOptions
+from ..problem import Problem
+from ..result import Result
 from ..startpoint import assign_startpoints, uniform
-from .optimizer import OptimizerResult, recover_result, ScipyOptimizer
-from ..engine import OptimizerTask, SingleCoreEngine
+from .optimizer import (
+    OptimizerResult, recover_result, Optimizer, ScipyOptimizer)
+from .options import OptimizeOptions
 
 
 logger = logging.getLogger(__name__)
 
 
-class OptimizeOptions(dict):
-    """
-    Options for the multistart optimization.
-
-    Parameters
-    ----------
-
-    startpoint_resample: bool, optional
-        Flag indicating whether initial points are supposed to be resampled if
-        function evaluation fails at the initial point
-
-    allow_failed_starts: bool, optional
-        Flag indicating whether we tolerate that exceptions are thrown during
-        the minimization process.
-    """
-
-    def __init__(self,
-                 startpoint_resample=False,
-                 allow_failed_starts=False):
-        super().__init__()
-
-        self.startpoint_resample = startpoint_resample
-        self.allow_failed_starts = allow_failed_starts
-
-    def __getattr__(self, key):
-        try:
-            return self[key]
-        except KeyError:
-            raise AttributeError(key)
-
-    __setattr__ = dict.__setitem__
-    __delattr__ = dict.__delitem__
-
-    @staticmethod
-    def assert_instance(maybe_options):
-        """
-        Returns a valid options object.
-
-        Parameters
-        ----------
-
-        maybe_options: OptimizeOptions or dict
-        """
-        if isinstance(maybe_options, OptimizeOptions):
-            return maybe_options
-        options = OptimizeOptions(**maybe_options)
-        return options
-
-
 def minimize(
-        problem,
-        optimizer=None,
-        n_starts=100,
-        startpoint_method=None,
-        result=None,
-        engine=None,
-        options=None) -> Result:
+        problem: Problem,
+        optimizer: Optimizer = None,
+        n_starts: int = 100,
+        ids: Iterable[str] = None,
+        startpoint_method: Union[Callable, bool] = None,
+        result: Result = None,
+        engine: Engine = None,
+        options: OptimizeOptions = None,
+        history_options: HistoryOptions = None,
+) -> Result:
     """
     This is the main function to call to do multistart optimization.
 
     Parameters
     ----------
-
-    problem: pypesto.Problem
+    problem:
         The problem to be solved.
-
-    optimizer: pypesto.Optimizer
+    optimizer:
         The optimizer to be used n_starts times.
-
-    n_starts: int
+    n_starts:
         Number of starts of the optimizer.
-
-    startpoint_method: {callable, False}, optional
+    ids:
+        Ids assigned to the startpoints.
+    startpoint_method:
         Method for how to choose start points. False means the optimizer does
         not require start points, e.g. 'pso' method in 'GlobalOptimizer'
-
-    result: pypesto.Result
+    result:
         A result object to append the optimization results to. For example,
         one might append more runs to a previous optimization. If None,
         a new object is created.
-
-    options: pypesto.OptimizeOptions, optional
+    engine:
+        Parallelization engine. Defaults to sequential execution on a
+        SingleCoreEngine.
+    options:
         Various options applied to the multistart optimization.
+    history_options:
+        Optimizer history options.
+
+    Returns
+    -------
+    result:
+        Result object containing the results of all multistarts in
+        `result.optimize_result`.
     """
 
     # optimizer
@@ -106,9 +74,19 @@ def minimize(
         options = OptimizeOptions()
     options = OptimizeOptions.assert_instance(options)
 
+    if history_options is None:
+        history_options = HistoryOptions()
+    history_options = HistoryOptions.assert_instance(history_options)
+
     # assign startpoints
-    startpoints = assign_startpoints(n_starts, startpoint_method,
-                                     problem, options)
+    startpoints = assign_startpoints(
+        n_starts=n_starts, startpoint_method=startpoint_method,
+        problem=problem, options=options)
+
+    if ids is None:
+        ids = [str(j) for j in range(n_starts)]
+    if len(ids) != n_starts:
+        raise AssertionError("Number of starts and ids must coincide.")
 
     # prepare result
     if result is None:
@@ -120,10 +98,11 @@ def minimize(
 
     # define tasks
     tasks = []
-    for j_start in range(0, n_starts):
-        startpoint = startpoints[j_start, :]
-        task = OptimizerTask(optimizer, problem, startpoint, j_start,
-                             options, handle_exception)
+    for startpoint, id in zip(startpoints, ids):
+        task = OptimizerTask(
+            optimizer=optimizer, problem=problem, x0=startpoint, id=id,
+            options=options, history_options=history_options,
+            handle_exception=handle_exception)
         tasks.append(task)
 
     # do multistart optimization
@@ -140,10 +119,14 @@ def minimize(
 
 
 def handle_exception(
-        objective, startpoint, j_start, err) -> OptimizerResult:
+        objective: Objective,
+        x0: np.ndarray,
+        id: str,
+        err: Exception
+) -> OptimizerResult:
     """
     Handle exception by creating a dummy pypesto.OptimizerResult.
     """
-    logger.error(('start ' + str(j_start) + ' failed: {0}').format(err))
-    optimizer_result = recover_result(objective, startpoint, err)
+    logger.error(('start ' + str(id) + ' failed: {0}').format(err))
+    optimizer_result = recover_result(objective, x0, err)
     return optimizer_result

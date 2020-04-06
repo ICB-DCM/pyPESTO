@@ -3,196 +3,491 @@ import pandas as pd
 import copy
 import time
 import os
+import abc
+from typing import Any, Dict, Iterable, List, Optional, Tuple, Sequence, Union
 
-from .constants import MODE_FUN, MODE_RES, FVAL, GRAD, HESS, RES, SRES
+from .constants import (
+    MODE_FUN, MODE_RES, FVAL, GRAD, HESS, RES, SRES, CHI2, SCHI2, TIME,
+    N_FVAL, N_GRAD, N_HESS, N_RES, N_SRES, X)
 from .util import res_to_chi2, sres_to_schi2, sres_to_fim
-from .options import ObjectiveOptions
 
-from typing import List, Union, Optional, Dict, Tuple, Callable
 ResultType = Dict[str, Union[float, np.ndarray]]
 
 
-class ObjectiveHistory:
+class HistoryOptions(dict):
     """
-    Objective call history. Also handles saving of intermediate results.
+    Options for the objective that are used in optimization, profiles
+    and sampling.
+
+    In addition implements a factory pattern to generate history objects.
 
     Parameters
-    ------------
-
-    options:
-        Values needed for creating a history are extracted.
-
-    Attributes
     ----------
-
-    n_fval, n_grad, n_hess, n_res, n_sres:
-        Counters of function values, gradients and hessians,
-        residuals and residual sensitivities.
-
-    trace:
-        List containing history of function values and parameters if
-        options.tr_record is True.
-
-    start_time:
-        Reference start time.
-
-    fval0, fval_min:
-        Initial and best function value found.
-
-    x0, x_min:
-        Initial and best parameters found.
-
-    x_names:
-        parameter names
-
-    index:
-        Id identifying the history object when called in a multistart
-        setting.
-
-    fval2chi2_offset:
-        conversion constant to convert chi2 values to fvals
-
-    obj:
-        _call_mode_fun of the parent objective (if available)
+    trace_record:
+        Flag indicating whether to record the trace of function calls.
+        The trace_record_* flags only become effective if
+        trace_record is True.
+        Default: False.
+    trace_record_grad:
+        Flag indicating whether to record the gradient in the trace.
+        Default: True.
+    trace_record_hess:
+        Flag indicating whether to record the Hessian in the trace.
+        Default: False.
+    trace_record_res:
+        Flag indicating whether to record the residual in
+        the trace.
+        Default: False.
+    trace_record_sres:
+        Flag indicating whether to record the residual sensitivities in
+        the trace.
+        Default: False.
+    trace_record_chi2:
+        Flag indicating whether to record the chi2 in the trace.
+        Default: True.
+    trace_record_schi2:
+        Flag indicating whether to record the chi2 sensitivities in the
+        trace.
+        Default: True.
+    trace_save_iter:
+        After how many iterations to store the trace.
+    storage_file:
+        File to save the history to. Can be any of None, a
+        "{filename}.csv", or a "{filename}.hdf5" file. Depending on the values,
+        the `create_history` method creates the appropriate object.
+        Occurrences of "{id}" in the file name are replaced by the `id`
+        upon creation of a history, if applicable.
     """
 
     def __init__(self,
-                 options: Optional[ObjectiveOptions] = None,
-                 x_names: Optional[List[str]] = None,
-                 obj: Optional[Callable] = None) -> None:
+                 trace_record: bool = False,
+                 trace_record_grad: bool = True,
+                 trace_record_hess: bool = True,
+                 trace_record_res: bool = True,
+                 trace_record_sres: bool = True,
+                 trace_record_chi2: bool = True,
+                 trace_record_schi2: bool = True,
+                 trace_save_iter: int = 10,
+                 storage_file: str = None):
+        super().__init__()
+        self.trace_record = trace_record
+        self.trace_record_grad = trace_record_grad
+        self.trace_record_hess = trace_record_hess
+        self.trace_record_res = trace_record_res
+        self.trace_record_sres = trace_record_sres
+        self.trace_record_chi2 = trace_record_chi2
+        self.trace_record_schi2 = trace_record_schi2
+        self.trace_save_iter = trace_save_iter
+        self.storage_file = storage_file
 
-        if options is None:
-            options = ObjectiveOptions()
-        self.options: Union[ObjectiveOptions, None] = options
-        self.x_names: Union[List[str], None] = x_names
+    def __getattr__(self, key):
+        try:
+            return self[key]
+        except KeyError:
+            raise AttributeError(key)
 
-        self.n_fval: Union[int, None] = None
-        self.n_grad: Union[int, None] = None
-        self.n_hess: Union[int, None] = None
-        self.n_res: Union[int, None] = None
-        self.n_sres: Union[int, None] = None
+    __setattr__ = dict.__setitem__
+    __delattr__ = dict.__delitem__
 
-        self.trace: pd.Dataframe = None
-
-        self.start_time: Union[float, None] = None
-
-        self.fval_min: Union[float, None] = None
-        self.x_min: Union[np.ndarray, None] = None
-        self.fval0: Union[float, None] = None
-        self.x0: Union[np.ndarray, None] = None
-
-        self.index: Union[str, None] = None
-
-        self.fval2chi2_offset: Union[float, None] = None
-
-        self.obj: Callable = obj
-
-        self.reset()
-
-    def __deepcopy__(self, memodict=None):
+    @staticmethod
+    def assert_instance(
+            maybe_options: Union['HistoryOptions', Dict]
+    ) -> 'HistoryOptions':
         """
-        Custom deepcopy routine to avoid infinite recursion when copying
-        self.obj
+        Returns a valid options object.
+
+        Parameters
+        ----------
+        maybe_options: HistoryOptions or dict
         """
+        if isinstance(maybe_options, HistoryOptions):
+            return maybe_options
+        options = HistoryOptions(**maybe_options)
+        return options
 
-        other = ObjectiveHistory(
-            copy.deepcopy(self.options),
-            copy.deepcopy(self.x_names),
-            self.obj
-        )
+    def create_history(
+            self, id: str, x_names: Iterable[str]
+    ) -> 'History':
+        """Factory method creating a :class:`History` object.
 
-        for attr in self.__dict__:
-            if attr not in ['obj', 'options', 'x_names']:
-                other.__dict__[attr] = copy.deepcopy(self.__dict__[attr])
-        return other
-
-    def reset(self, index: str = None) -> None:
+        Parameters
+        ----------
+        id:
+            Identifier for the history.
+        x_names:
+            Parameter names.
         """
-        Reset all counters, the trace, and start the timer, and create
-        directory for trace file.
-        """
-        self.n_fval = 0
-        self.n_grad = 0
-        self.n_hess = 0
-        self.n_res = 0
-        self.n_sres = 0
+        # create different history types based on the inputs
 
-        self.trace = None
-        self.start_time = time.time()
+        if self.storage_file is None:
+            if self.trace_record:
+                return MemoryHistory(options=self)
+            else:
+                return History(options=self)
 
-        self.fval0 = None
-        self.x0 = None
-        self.fval_min = np.inf
-        self.x_min = None
+        storage_file = self.storage_file.replace("{id}", id)
 
-        self.index = index
+        _, type = os.path.splitext(storage_file)
 
-        # create trace file dirs
-        if self.options.trace_file is not None:
-            dirname = os.path.dirname(self.options.trace_file)
-            if not os.path.exists(dirname):
-                os.makedirs(dirname)
+        if type == '.csv':
+            return CsvHistory(
+                x_names=x_names,
+                file=storage_file, options=self)
+        elif type == '.hdf5':
+            return Hdf5History(id=id, file=storage_file, options=self)
+        else:
+            raise ValueError(
+                "Currently only history storage to '.csv' and '.hdf5'"
+                "is supported")
 
-    def update(self,
-               x: np.ndarray,
-               sensi_orders: Tuple[int],
-               mode: str,
-               result: ResultType) -> None:
-        """
-        Update the history.
+
+class HistoryBase(abc.ABC):
+    """Abstract base class for history objects.
+
+    Can be used as a dummy history, but does not implement any history
+    functionality.
+    """
+
+    def update(
+            self,
+            x: np.ndarray,
+            sensi_orders: Tuple[int, ...],
+            mode: str,
+            result: ResultType
+    ) -> None:
+        """Update history after a function evaluation.
 
         Parameters
         ----------
         x:
-            The current parameter.
+            The parameter vector.
         sensi_orders:
-            The sensitivity orders.
+            The sensitivity orders computed.
         mode:
-            As in constants.MODE_.
+            The objective function mode computed (function value or residuals).
         result:
-            The result for x.
+            The objective function values for parameters `x`, sensitivities
+            `sensi_orders` and mode `mode`.
         """
-        self._update_counts(sensi_orders, mode)
-        self._update_trace(x, sensi_orders, mode, result)
-        self._update_vals(x, sensi_orders, mode, result)
 
     def finalize(self):
+        """Finalize history. Called after a run."""
+
+    @property
+    def n_fval(self) -> int:
+        """Number of function evaluations."""
+        raise NotImplementedError()
+
+    @property
+    def n_grad(self) -> int:
+        """Number of gradient evaluations."""
+        raise NotImplementedError()
+
+    @property
+    def n_hess(self) -> int:
+        """Number of Hessian evaluations."""
+        raise NotImplementedError()
+
+    @property
+    def n_res(self) -> int:
+        """Number of residual evaluations."""
+        raise NotImplementedError()
+
+    @property
+    def n_sres(self) -> int:
+        """Number or residual sensitivity evaluations."""
+        raise NotImplementedError()
+
+    @property
+    def start_time(self) -> float:
+        """Start time."""
+        raise NotImplementedError()
+
+    def get_x_trace(self) -> Sequence[np.ndarray]:
+        """Parameter trace."""
+        raise NotImplementedError()
+
+    def get_fval_trace(self) -> Sequence[float]:
+        """Function value trace."""
+        raise NotImplementedError()
+
+    def get_grad_trace(self) -> Sequence[np.ndarray]:
+        """Gradient trace."""
+        raise NotImplementedError()
+
+    def get_hess_trace(self) -> Sequence[np.ndarray]:
+        """Hessian trace."""
+        raise NotImplementedError()
+
+    def get_res_trace(self) -> Sequence[np.ndarray]:
+        """Residual trace."""
+        raise NotImplementedError()
+
+    def get_sres_trace(self) -> Sequence[np.ndarray]:
+        """Residual sensitivity trace."""
+        raise NotImplementedError()
+
+    def get_chi2_trace(self) -> Sequence[np.ndarray]:
+        """Chi2 value trace."""
+        raise NotImplementedError()
+
+    def get_schi2_trace(self, t: Optional[int] = None) -> Sequence[np.ndarray]:
+        """Chi2 value sensitivity trace."""
+        raise NotImplementedError()
+
+    def get_time_trace(self, t: Optional[int] = None) -> Sequence[np.ndarray]:
+        """Execution time trace."""
+        raise NotImplementedError()
+
+
+class History(HistoryBase):
+    """Tracks numbers of function evaluations only, no trace.
+
+    Parameters
+    ----------
+    options:
+        History options.
+    """
+
+    def __init__(self, options: Union[HistoryOptions, Dict] = None):
+        self._n_fval: int = 0
+        self._n_grad: int = 0
+        self._n_hess: int = 0
+        self._n_res: int = 0
+        self._n_sres: int = 0
+        self._start_time = time.time()
+
+        if options is None:
+            options = HistoryOptions()
+        options = HistoryOptions.assert_instance(options)
+        self.options: HistoryOptions = options
+
+    def update(
+            self,
+            x: np.ndarray,
+            sensi_orders: Tuple[int, ...],
+            mode: str,
+            result: ResultType
+    ) -> None:
+        """Update history after a function evaluation.
+
+        Parameters
+        ----------
+        x:
+            The parameter vector.
+        sensi_orders:
+            The sensitivity orders computed.
+        mode:
+            The objective function mode computed (function value or residuals).
+        result:
+            The objective function values for parameters `x`, sensitivities
+            `sensi_orders` and mode `mode`.
         """
-        Save the trace to file if options.trace_save is True.
-        """
-        self._save_trace(finalize=True)
+        self._update_counts(sensi_orders, mode)
+
+    def finalize(self):
+        pass
 
     def _update_counts(self,
-                       sensi_orders: Tuple[int],
+                       sensi_orders: Tuple[int, ...],
                        mode: str):
         """
         Update the counters.
         """
         if mode == MODE_FUN:
             if 0 in sensi_orders:
-                self.n_fval += 1
+                self._n_fval += 1
             if 1 in sensi_orders:
-                self.n_grad += 1
+                self._n_grad += 1
             if 2 in sensi_orders:
-                self.n_hess += 1
+                self._n_hess += 1
         elif mode == MODE_RES:
             if 0 in sensi_orders:
-                self.n_res += 1
+                self._n_res += 1
             if 1 in sensi_orders:
-                self.n_sres += 1
+                self._n_sres += 1
 
-    def _fval2chi2_offset(self, x: np.ndarray, chi2: float):
+    @property
+    def n_fval(self) -> int:
+        return self._n_fval
+
+    @property
+    def n_grad(self) -> int:
+        return self._n_grad
+
+    @property
+    def n_hess(self) -> int:
+        return self._n_hess
+
+    @property
+    def n_res(self) -> int:
+        return self._n_res
+
+    @property
+    def n_sres(self) -> int:
+        return self._n_sres
+
+    @property
+    def start_time(self) -> float:
+        return self._start_time
+
+
+class MemoryHistory(History):
+    """Tracks numbers of function evaluations and keeps an in-memory
+    trace of function evaluations.
+
+    Parameters
+    ----------
+    options:
+        History options.
+    """
+
+    def __init__(self, options: Union[HistoryOptions, Dict] = None):
+        super().__init__(options=options)
+        self._trace_keys = {X, FVAL, GRAD, HESS, RES, SRES, CHI2, SCHI2, TIME}
+        self._trace: Dict[str, Any] = {key: [] for key in self._trace_keys}
+
+    def update(
+            self,
+            x: np.ndarray,
+            sensi_orders: Tuple[int, ...],
+            mode: str,
+            result: ResultType
+    ) -> None:
+        super().update(x, sensi_orders, mode, result)
+        self._update_trace(x, sensi_orders, mode, result)
+
+    def _update_trace(self, x, sensi_orders, mode, result):
+        """Update internal trace representation."""
+        ret = extract_values(sensi_orders, mode, result, self.options)
+        for key in self._trace_keys - {X, TIME}:
+            self._trace[key].append(ret[key])
+        used_time = time.time() - self._start_time
+        self._trace[X].append(x)
+        self._trace[TIME].append(used_time)
+
+    def get_x_trace(self) -> Sequence[np.ndarray]:
+        return self._trace[X]
+
+    def get_fval_trace(self) -> Sequence[float]:
+        return self._trace[FVAL]
+
+    def get_grad_trace(self) -> Sequence[np.ndarray]:
+        return self._trace[GRAD]
+
+    def get_hess_trace(self) -> Sequence[np.ndarray]:
+        return self._trace[HESS]
+
+    def get_res_trace(self) -> Sequence[np.ndarray]:
+        return self._trace[RES]
+
+    def get_sres_trace(self) -> Sequence[np.ndarray]:
+        return self._trace[SRES]
+
+    def get_chi2_trace(self) -> Sequence[np.ndarray]:
+        return self._trace[CHI2]
+
+    def get_schi2_trace(self, t: Optional[int] = None) -> Sequence[np.ndarray]:
+        return self._trace[SCHI2]
+
+    def get_time_trace(self, t: Optional[int] = None) -> Sequence[np.ndarray]:
+        return self._trace[TIME]
+
+
+class CsvHistory(History):
+    """Stores a representation of the history in a CSV file.
+
+    Parameters
+    ----------
+    file:
+        CSV file name.
+    x_names:
+        Parameter names.
+    options:
+        History options.
+    """
+
+    def __init__(self,
+                 file: str,
+                 x_names: Iterable[str] = None,
+                 options: Union[HistoryOptions, Dict] = None):
+        super().__init__(options=options)
+        self.x_names = x_names
+        self._trace: Union[pd.DataFrame, None] = None
+        self.file = os.path.abspath(file)
+
+        # create trace file dirs
+        if self.file is not None:
+            dirname = os.path.dirname(self.file)
+            os.makedirs(dirname, exist_ok=True)
+
+    def update(
+            self,
+            x: np.ndarray,
+            sensi_orders: Tuple[int, ...],
+            mode: str,
+            result: ResultType
+    ) -> None:
+        super().update(x, sensi_orders, mode, result)
+        self._update_trace(x, sensi_orders, mode, result)
+
+    def finalize(self):
+        """Finalize history. Called after a run."""
+        super().finalize()
+        self._save_trace(finalize=True)
+
+    def _update_trace(self,
+                      x: np.ndarray,
+                      sensi_orders: Tuple[int],
+                      mode: str,
+                      result: ResultType):
         """
-        Initializes the conversion factor between fval and chi2 values,
-        if possible.
+        Update and possibly store the trace.
         """
-        if self.fval2chi2_offset is None:
-            if self.obj is not None:
-                self.fval2chi2_offset = self.obj(x, (0,))[FVAL] - chi2
+        if not self.options.trace_record:
+            return
+
+        # init trace
+        if self._trace is None:
+            self._init_trace(x)
+
+        # extract function values
+        ret = extract_values(sensi_orders, mode, result, self.options)
+
+        used_time = time.time() - self._start_time
+
+        # create table row
+        row = pd.Series(name=len(self._trace),
+                        index=self._trace.columns,
+                        dtype='object')
+
+        values = {
+            TIME: used_time,
+            N_FVAL: self._n_fval,
+            N_GRAD: self._n_grad,
+            N_HESS: self._n_hess,
+            N_RES: self._n_res,
+            N_SRES: self._n_sres,
+            FVAL: ret[FVAL],
+            RES: ret[RES],
+            SRES: ret[SRES],
+            CHI2: ret[CHI2],
+            HESS: ret[HESS],
+        }
+
+        for var, val in values.items():
+            row[(var, float('nan'))] = val
+
+        for var, val in {X: x, GRAD: ret[GRAD], SCHI2: ret[SCHI2]}.items():
+            if var == X or self.options[f'trace_record_{var}']:
+                row[var] = val if val is not None else np.NaN
             else:
-                self.fval2chi2_offset = 0.0
+                row[(var, float('nan'))] = None
 
-        return self.fval2chi2_offset
+        self._trace = self._trace.append(row)
+
+        # save trace to file
+        self._save_trace()
 
     def _init_trace(self, x: np.ndarray):
         """
@@ -203,12 +498,12 @@ class ObjectiveHistory:
 
         columns: List[Tuple] = [
             (c, float('nan')) for c in [
-                'time', 'n_fval', 'n_grad', 'n_hess', 'n_res', 'n_sres',
-                'fval', 'chi2', 'res', 'sres', 'hess',
+                TIME, N_FVAL, N_GRAD, N_HESS, N_RES, N_SRES,
+                FVAL, CHI2, RES, SRES, HESS,
             ]
         ]
 
-        for var in ['x', 'grad', 'schi2']:
+        for var in [X, GRAD, SCHI2]:
             if var == 'x' or self.options[f'trace_record_{var}']:
                 columns.extend([
                     (var, x_name)
@@ -219,140 +514,164 @@ class ObjectiveHistory:
 
         # TODO: multi-index for res, sres, hess
 
-        self.trace = pd.DataFrame(columns=pd.MultiIndex.from_tuples(columns),
-                                  dtype='float64')
+        self._trace = pd.DataFrame(columns=pd.MultiIndex.from_tuples(columns),
+                                   dtype='float64')
 
         # only non-float64
         trace_dtypes = {
-            'res': 'object',
-            'sres': 'object',
-            'hess': 'object',
-            'n_fval': 'int64',
-            'n_grad': 'int64',
-            'n_hess': 'int64',
-            'n_res': 'int64',
-            'n_sres': 'int64',
+            RES: 'object',
+            SRES: 'object',
+            HESS: 'object',
+            N_FVAL: 'int64',
+            N_GRAD: 'int64',
+            N_HESS: 'int64',
+            N_RES: 'int64',
+            N_SRES: 'int64',
         }
 
         for var, dtype in trace_dtypes.items():
-            self.trace[(var, float('nan'))] = \
-                self.trace[(var, float('nan'))].astype(dtype)
-
-    def _update_trace(self,
-                      x: np.ndarray,
-                      sensi_orders: Tuple[int],
-                      mode: str,
-                      result: ResultType):
-        """
-        Update and possibly store the trace.
-        """
-
-        if not self.options.trace_record:
-            return
-
-        # init trace
-        if self.trace is None:
-            self._init_trace(x)
-
-        # extract function values
-        if mode == MODE_FUN:
-            fval = np.NaN if 0 not in sensi_orders \
-                else result.get(FVAL, np.NaN)
-            grad = None if not self.options.trace_record_grad \
-                or 1 not in sensi_orders \
-                else result.get(GRAD, None)
-            hess = None if not self.options.trace_record_hess \
-                or 2 not in sensi_orders \
-                else result.get(HESS, None)
-            res = None
-            sres = None
-            chi2 = np.NaN
-            schi2 = None
-        else:  # mode == MODE_RES
-            res_result = result.get(RES, None)
-            sres_result = result.get(SRES, None)
-            chi2 = np.NaN if not self.options.trace_record_chi2 \
-                or 0 not in sensi_orders \
-                else res_to_chi2(res_result)
-            schi2 = None if not self.options.trace_record_schi2 \
-                or 1 not in sensi_orders \
-                else sres_to_schi2(res_result, sres_result)
-            chi2_offset = self._fval2chi2_offset(x, chi2)
-            fval = np.NaN if 0 not in sensi_orders \
-                else chi2 + chi2_offset
-            grad = None if not self.options.trace_record_grad \
-                or 1 not in sensi_orders \
-                else schi2
-            hess = None if not self.options.trace_record_hess \
-                or 1 not in sensi_orders \
-                else sres_to_fim(sres_result)
-            res = None if not self.options.trace_record_res \
-                or 0 not in sensi_orders \
-                else res_result
-            sres = None if not self.options.trace_record_sres \
-                or 1 not in sensi_orders \
-                else sres_result
-
-        # check whether to append to trace
-        if not self.options.trace_all and fval > self.fval_min:
-            return
-
-        used_time = time.time() - self.start_time
-
-        # create table row
-        row = pd.Series(name=len(self.trace),
-                        index=self.trace.columns,
-                        dtype='object')
-
-        values = {
-            'time': used_time,
-            'n_fval': self.n_fval,
-            'n_grad': self.n_grad,
-            'n_hess': self.n_hess,
-            'n_res': self.n_res,
-            'n_sres': self.n_sres,
-            'fval': fval,
-            'res': res,
-            'sres': sres,
-            'chi2': chi2,
-            'hess': hess,
-        }
-        for var, val in values.items():
-            row[(var, float('nan'))] = val
-
-        for var, val in {'x': x, 'grad': grad, 'schi2': schi2}.items():
-            if var == 'x' or self.options[f'trace_record_{var}']:
-                row[var] = val if val is not None else np.NaN
-            else:
-                row[(var, float('nan'))] = None
-
-        self.trace = self.trace.append(row)
-
-        # save trace to file
-        self._save_trace()
+            self._trace[(var, float('nan'))] = \
+                self._trace[(var, float('nan'))].astype(dtype)
 
     def _save_trace(self, finalize: bool = False):
         """
-        Save to file via pd.DataFrame.to_csv() if options.trace_file is
+        Save to file via pd.DataFrame.to_csv() if `self.storage_file` is
         not None and other conditions apply.
-        Format might be revised when storage is implemented.
+
+        .. note::
+            Format might be revised when storage is implemented.
         """
-        if self.options.trace_file is None:
+        if self.file is None:
             return
 
         if finalize \
-           or (len(self.trace) > 0 and len(self.trace) %
-               self.options.trace_save_iter == 0):
-            filename = self.options.trace_file
-            if self.index is not None:
-                filename = filename.replace("{index}", str(self.index))
+                or (len(self._trace) > 0 and len(self._trace) %
+                    self.options.trace_save_iter == 0):
             # save
-            trace_copy = copy.deepcopy(self.trace)
+            trace_copy = copy.deepcopy(self._trace)
             for field in [('hess', np.NaN), ('res', np.NaN), ('sres', np.NaN)]:
                 trace_copy[field] = trace_copy[field].apply(
                     ndarray2string_full
                 )
-            trace_copy.to_csv(filename)
+            trace_copy.to_csv(self.file)
+
+    def get_fval_trace(self) -> pd.Series:
+        # TODO implement the other methods
+        return self._trace[FVAL]
+
+
+class Hdf5History(History):
+    """Stores a representation of the history in an HDF5 file.
+
+    Parameters
+    ----------
+    id:
+        Id of the history
+    file:
+        HDF5 file name.
+    options:
+        History options.
+    """
+
+    def __init__(self,
+                 id: str,
+                 file: str,
+                 options: Union[HistoryOptions, Dict] = None):
+        super().__init__(options=options)
+        self.id = id
+        self.file = file
+
+    def update(
+            self,
+            x: np.ndarray,
+            sensi_orders: Tuple[int, ...],
+            mode: str,
+            result: ResultType
+    ) -> None:
+        # TODO implement
+        raise NotImplementedError()
+
+    def finalize(self):
+        # TODO implement
+        raise NotImplementedError()
+
+    def get_x_trace(self) -> Sequence[np.ndarray]:
+        # TODO implement
+        raise NotImplementedError()
+
+    def get_fval_trace(self) -> Sequence[float]:
+        # TODO implement
+        raise NotImplementedError()
+
+    def get_grad_trace(self) -> Sequence[np.ndarray]:
+        # TODO implement
+        raise NotImplementedError()
+
+    def get_hess_trace(self) -> Sequence[np.ndarray]:
+        # TODO implement
+        raise NotImplementedError()
+
+    def get_res_trace(self) -> Sequence[np.ndarray]:
+        # TODO implement
+        raise NotImplementedError()
+
+    def get_sres_trace(self) -> Sequence[np.ndarray]:
+        # TODO implement
+        raise NotImplementedError()
+
+    def get_chi2_trace(self) -> Sequence[np.ndarray]:
+        # TODO implement
+        raise NotImplementedError()
+
+    def get_schi2_trace(self, t: Optional[int] = None) -> Sequence[np.ndarray]:
+        # TODO implement
+        raise NotImplementedError()
+
+    def get_time_trace(self, t: Optional[int] = None) -> Sequence[np.ndarray]:
+        # TODO implement
+        raise NotImplementedError()
+
+
+class OptimizerHistory(HistoryBase):
+    """
+    Objective call history. Also handles saving of intermediate results.
+
+    Attributes
+    ----------
+    fval0, fval_min:
+        Initial and best function value found.
+    x0, x_min:
+        Initial and best parameters found.
+    """
+
+    def __init__(self,
+                 history: History,
+                 x0: np.ndarray) -> None:
+        self.history: History = history
+
+        # initial point
+        self.fval0: Union[float, None] = None
+        self.x0: np.ndarray = x0
+
+        # minimum point
+        self.fval_min: float = np.inf
+        self.x_min: Union[np.ndarray, None] = None
+        self.grad_min: Union[np.ndarray, None] = None
+        self.hess_min: Union[np.ndarray, None] = None
+        self.res_min: Union[np.ndarray, None] = None
+        self.sres_min: Union[np.ndarray, None] = None
+
+    def update(self,
+               x: np.ndarray,
+               sensi_orders: Tuple[int],
+               mode: str,
+               result: ResultType) -> None:
+        """Update history and best found value."""
+        self.history.update(x, sensi_orders, mode, result)
+        self._update_vals(x, sensi_orders, mode, result)
+
+    def finalize(self):
+        self.history.finalize()
 
     def _update_vals(self,
                      x: np.ndarray,
@@ -360,33 +679,35 @@ class ObjectiveHistory:
                      mode: str,
                      result: ResultType):
         """
-        Update initial and best function values. Must be called after
-        update_trace().
+        Update initial and best function values.
         """
-
         # update initial point
-        if self.fval0 is None and 0 in sensi_orders:
+        if self.fval0 is None and np.allclose(x, self.x0) \
+                and 0 in sensi_orders:
             if mode == MODE_FUN:
                 self.fval0 = result[FVAL]
                 self.x0 = x
             else:  # mode == MODE_RES:
                 chi2 = res_to_chi2(result[RES])
-                chi2_offset = self._fval2chi2_offset(x, chi2)
-                self.fval0 = chi2 + chi2_offset
+                self.fval0 = result.get(FVAL, chi2)
                 self.x0 = x
 
         # update best point
-        fval = np.inf
         if 0 in sensi_orders:
+            # extract function value
             if mode == MODE_FUN:
                 fval = result[FVAL]
             else:  # mode == MODE_RES:
                 chi2 = res_to_chi2(result[RES])
-                chi2_offset = self._fval2chi2_offset(x, chi2)
-                fval = chi2 + chi2_offset
-        if fval < self.fval_min:
-            self.fval_min = fval
-            self.x_min = x
+                fval = result.get(FVAL, chi2)
+            # store value
+            if fval < self.fval_min:
+                self.fval_min = fval
+                self.x_min = x
+                self.grad_min = result.get(GRAD)
+                self.hess_min = result.get(HESS)
+                self.res_min = result.get(RES)
+                self.sres_min = result.get(SRES)
 
 
 def ndarray2string_full(x: np.ndarray):
@@ -408,3 +729,49 @@ def ndarray2string_full(x: np.ndarray):
         return None
     return np.array2string(x, threshold=len(x), precision=16,
                            max_line_width=np.inf)
+
+
+def extract_values(sensi_orders: Tuple[int, ...],
+                   mode: str,
+                   result: ResultType,
+                   options: HistoryOptions) -> Dict:
+    """Extract values to record from result."""
+    if mode == MODE_FUN:
+        fval = np.NaN if 0 not in sensi_orders \
+            else result.get(FVAL, np.NaN)
+        grad = None if not options.trace_record_grad \
+            or 1 not in sensi_orders \
+            else result.get(GRAD, None)
+        hess = None if not options.trace_record_hess \
+            or 2 not in sensi_orders \
+            else result.get(HESS, None)
+        res = None
+        sres = None
+        chi2 = np.NaN
+        schi2 = None
+    else:  # mode == MODE_RES
+        res_result = result.get(RES, None)
+        sres_result = result.get(SRES, None)
+        chi2 = np.NaN if not options.trace_record_chi2 \
+            or 0 not in sensi_orders \
+            else res_to_chi2(res_result)
+        schi2 = None if not options.trace_record_schi2 \
+            or 1 not in sensi_orders \
+            else sres_to_schi2(res_result, sres_result)
+        fval = np.NaN if 0 not in sensi_orders \
+            else result.get(FVAL, chi2)
+        grad = None if not options.trace_record_grad \
+            or 1 not in sensi_orders \
+            else schi2
+        hess = None if not options.trace_record_hess \
+            or 1 not in sensi_orders \
+            else sres_to_fim(sres_result)
+        res = None if not options.trace_record_res \
+            or 0 not in sensi_orders \
+            else res_result
+        sres = None if not options.trace_record_sres \
+            or 1 not in sensi_orders \
+            else sres_result
+
+    return {FVAL: fval, GRAD: grad, HESS: hess, RES: res, SRES: sres,
+            CHI2: chi2, SCHI2: schi2}

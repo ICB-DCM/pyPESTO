@@ -1,6 +1,6 @@
 import numpy as np
 from copy import deepcopy
-
+from typing import List
 from .objective import Objective
 
 from .constants import RDATAS
@@ -8,20 +8,20 @@ from .constants import RDATAS
 
 class AggregatedObjective(Objective):
     """
-    This class allows to create an aggregateObjective from a list of
-    Objective instances.
+    This class aggregates multiple objectives into one objective.
     """
 
-    def __init__(self, objectives, x_names=None, options=None):
+    def __init__(
+            self,
+            objectives: List[Objective],
+            x_names: List[str] = None):
         """
         Constructor.
 
         Parameters
         ----------
-
         objectives: list
             List of pypesto.objetive instances
-
         """
         # input typechecks
         if not isinstance(objectives, list):
@@ -43,8 +43,7 @@ class AggregatedObjective(Objective):
         # assemble a dict that we can pass as kwargs to the
         # pypesto.Objective constructor
         init_kwargs = {
-            'x_names': x_names,
-            'options': options
+            'x_names': x_names
         }
 
         # check if all objectives consistently accept sensi orders in fun/res
@@ -95,7 +94,6 @@ class AggregatedObjective(Objective):
         other = AggregatedObjective(
             objectives=[deepcopy(objective) for objective in self.objectives],
             x_names=deepcopy(self.x_names),
-            options=deepcopy(self.options),
         )
         return other
 
