@@ -15,7 +15,8 @@ optimizers = {
               'trust-ncg', 'trust-exact', 'trust-krylov',
               'ls_trf', 'ls_dogbox'],
     # disabled: ,'trust-constr', 'ls_lm', 'dogleg'
-    'dlib': ['default']
+    'dlib': ['default'],
+    'pyswarm': ['']
 }
 
 ATOL = 1e-2
@@ -69,6 +70,8 @@ def parameter_estimation(
     elif library == 'dlib':
         optimizer = pypesto.DlibOptimizer(method=solver,
                                           options=options)
+    elif library == 'pyswarm':
+        optimizer = pypesto.PyswarmOptimizer(options=options)
     else:
         raise ValueError("This code should not be reached")
 
@@ -87,10 +90,7 @@ def parameter_estimation(
         startpoint_resample=True,
     )
 
-    results = pypesto.minimize(
-        problem, optimizer, n_starts, options=optimize_options,
-    )
-    results = results.optimize_result.list
+    pypesto.minimize(problem, optimizer, n_starts, options=optimize_options)
 
 
 def load_model_objective(example_name):

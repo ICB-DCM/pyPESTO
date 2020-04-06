@@ -67,7 +67,6 @@ class OptimizerTest(unittest.TestCase):
         elif library == 'dlib':
             optimizer = pypesto.DlibOptimizer(method=solver,
                                               options=options)
-
         elif library == 'pyswarm':
             optimizer = pypesto.PyswarmOptimizer(options=options)
 
