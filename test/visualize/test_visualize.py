@@ -515,7 +515,7 @@ def create_sampling_result():
     trace_x = np.random.randn(n_chain, n_iter, n_par)
     temperatures = np.array([1, 4])
     sample_result = pypesto.McmcPtResult(
-        trace_fval=trace_fval, trace_x=trace_x, temperatures=temperatures)
+        trace_fval=trace_fval, trace_x=trace_x, betas=temperatures)
     result.sample_result = sample_result
 
     return result
