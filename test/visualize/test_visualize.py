@@ -111,6 +111,21 @@ def create_profile_result():
     return result
 
 
+def create_sampling_result():
+    result = create_optimization_result()
+    n_chain = 2
+    n_iter = 100
+    n_par = len(result.optimize_result.get_for_key('x')[0])
+    trace_fval = np.random.randn(n_chain, n_iter)
+    trace_x = np.random.randn(n_chain, n_par, n_iter)
+    temperatures = np.array([1, 4])
+    sample_result = pypesto.McmcPtResult(
+        trace_fval=trace_fval, trace_x=trace_x, temperatures=temperatures)
+    result.sample_result = sample_result
+
+    return result
+
+
 def create_plotting_options():
     # create sets of reference points (from tuple, dict and from list)
     ref1 = ([1., 1.5], 0.2)
@@ -478,3 +493,8 @@ def test_process_result_list():
     pypesto.visualize.process_result_list(res_list)
     res_list.append(result_2)
     pypesto.visualize.process_result_list(res_list)
+
+
+def test_sampling_fval_trace():
+    result = create_sampling_result()
+    pypesto.visualize.sampling_fval_trace(result)

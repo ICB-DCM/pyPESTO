@@ -168,9 +168,6 @@ def sampling_scatter(
         Index after burn-in phase, thus also the burn-in length.
     stepsize:
         Only one in `stepsize` values is plotted.
-    use_problem_bounds:
-        Defines if the y-limits shall be the lower and upper bounds of
-        parameter estimation problem.
     size:
         Figure size in inches.
 
@@ -293,12 +290,13 @@ def get_data_to_plot(
 
     # thin out by stepsize, from the index burn_in until end of vector
     arr_param = arr_param[np.arange(burn_in, len(arr_param), stepsize)]
+    print(arr_param)
     arr_fval = np.array(sample_result.trace_fval[i_chain])
     indices = np.arange(burn_in, len(arr_fval), stepsize)
     arr_fval = arr_fval[indices]
     theta_lb = result.problem.lb
     theta_ub = result.problem.ub
-
+    print(arr_fval.shape, arr_param.shape)
     param_names = result.problem.x_names
 
     # transform ndarray to pandas for the use of seaborn
