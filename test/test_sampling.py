@@ -66,7 +66,7 @@ class SamplingTest(unittest.TestCase):
         result = pypesto.sample(problem, sampler, result=result)
 
         #ax = sampling_fval(result, problem, i_chain=0, burn_in=0, n_steps=1, figsize=None, fs = 12)
-        ax = sampling_fval(result, problem, i_chain=0, n_steps=1, figsize=None, fs = 12)
+        ax = sampling_fval(result, problem, i_chain=0, stepsize=1, size=None, fs = 12)
 
         #result = sampler.sample()
         #test = kstest(result['samples'][0][0], 'norm')
