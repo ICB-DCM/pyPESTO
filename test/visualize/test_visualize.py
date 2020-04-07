@@ -2,6 +2,16 @@ import pypesto
 import pypesto.visualize
 import numpy as np
 import scipy.optimize as so
+import matplotlib.pyplot as plt
+
+
+def close_fig(fun):
+    """Close figure."""
+    def wrapped_fun(*args):
+        ret = fun(*args)
+        plt.close('all')
+        return ret
+    return wrapped_fun
 
 
 # Define some helper functions, to have the test code more readable
@@ -137,6 +147,7 @@ def create_plotting_options():
     return ref1, ref2, ref3, ref4, ref_point
 
 
+@close_fig
 def test_waterfall():
     # create the necessary results
     result_1 = create_optimization_result()
@@ -149,6 +160,7 @@ def test_waterfall():
     pypesto.visualize.waterfall([result_1, result_2])
 
 
+@close_fig
 def test_waterfall_with_nan_inf():
     # create the necessary results, one with nan and inf, one without
     result_1 = create_optimization_result_nan_inf()
@@ -161,6 +173,7 @@ def test_waterfall_with_nan_inf():
     pypesto.visualize.waterfall([result_1, result_2])
 
 
+@close_fig
 def test_waterfall_with_options():
     # create the necessary results
     result_1 = create_optimization_result()
@@ -193,6 +206,7 @@ def test_waterfall_with_options():
                                 y_limits=5.)
 
 
+@close_fig
 def test_waterfall_lowlevel():
     # test empty input
     pypesto.visualize.waterfall_lowlevel([])
@@ -204,6 +218,7 @@ def test_waterfall_lowlevel():
     pypesto.visualize.waterfall_lowlevel(fvals)
 
 
+@close_fig
 def test_parameters():
     # create the necessary results
     result_1 = create_optimization_result()
@@ -216,6 +231,7 @@ def test_parameters():
     pypesto.visualize.parameters([result_1, result_2])
 
 
+@close_fig
 def test_parameters_with_nan_inf():
     # create the necessary results
     result_1 = create_optimization_result_nan_inf()
@@ -228,6 +244,7 @@ def test_parameters_with_nan_inf():
     pypesto.visualize.parameters([result_1, result_2])
 
 
+@close_fig
 def test_parameters_with_options():
     # create the necessary results
     result_1 = create_optimization_result()
@@ -255,6 +272,7 @@ def test_parameters_with_options():
                                  start_indices=3)
 
 
+@close_fig
 def test_parameters_lowlevel():
     # create some dummy results
     (lb, ub) = create_bounds()
@@ -274,6 +292,7 @@ def test_parameters_lowlevel():
     pypesto.visualize.parameters_lowlevel(xs, fvals)
 
 
+@close_fig
 def test_profiles():
     # create the necessary results
     result_1 = create_profile_result()
@@ -286,6 +305,7 @@ def test_profiles():
     pypesto.visualize.profiles([result_1, result_2])
 
 
+@close_fig
 def test_profiles_with_options():
     # create the necessary results
     result = create_profile_result()
@@ -301,6 +321,7 @@ def test_profiles_with_options():
                                colors=[1., .3, .3, 0.5])
 
 
+@close_fig
 def test_profiles_lowlevel():
     # test empty input
     pypesto.visualize.profiles_lowlevel([])
@@ -314,6 +335,7 @@ def test_profiles_lowlevel():
     pypesto.visualize.profiles_lowlevel(fvals)
 
 
+@close_fig
 def test_profile_lowlevel():
     # test empty input
     pypesto.visualize.profile_lowlevel(fvals=[])
@@ -324,6 +346,7 @@ def test_profile_lowlevel():
     pypesto.visualize.profile_lowlevel(fvals=fvals)
 
 
+@close_fig
 def test_optimizer_history():
     # create the necessary results
     result_1 = create_optimization_history()
@@ -337,6 +360,7 @@ def test_optimizer_history():
                                          result_2])
 
 
+@close_fig
 def test_optimizer_history_with_options():
     # create the necessary results
     result_1 = create_optimization_history()
@@ -376,6 +400,7 @@ def test_optimizer_history_with_options():
                                         offset_y=10.)
 
 
+@close_fig
 def test_optimizer_history_lowlevel():
     # test empty input
     pypesto.visualize.optimizer_history_lowlevel([])
