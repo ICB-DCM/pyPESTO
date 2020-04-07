@@ -5,115 +5,123 @@ This is for testing the pypesto.Objective.
 import numpy as np
 import scipy.optimize as so
 import numbers
+import pytest
 import pypesto
-import unittest
 
 
-class ObjectiveTest(unittest.TestCase):
+@pytest.fixture(params=[True, False])
+def integrated(request):
+    return request.param
 
-    def test_evaluate(self):
-        """
-        Test if values are computed correctly.
-        """
-        for integrated in [True, False]:
-            for struct in [rosen_for_sensi(2, integrated, [0, 1]),
-                           poly_for_sensi(2, True, 0.5)]:
-                self._test_evaluate(struct)
 
-    def _test_evaluate(self, struct):
-        obj = struct['obj']
-        x = struct['x']
-        fval_true = struct['fval']
-        grad_true = struct['grad']
-        hess_true = struct['hess']
-        max_sensi_order = struct['max_sensi_order']
+@pytest.fixture(params=[2, 1, 0])
+def max_sensi_order(request):
+    return request.param
 
-        # check function values
-        if max_sensi_order >= 2:
-            fval, grad, hess = obj(x, (0, 1, 2))
-            self.assertTrue(np.isclose(fval, fval_true))
-            self.assertTrue(np.isclose(grad, grad_true).all())
-            self.assertTrue(np.isclose(hess, hess_true).all())
-        elif max_sensi_order >= 1:
-            fval, grad = obj(x, (0, 1))
-            self.assertTrue(np.isclose(fval, fval_true))
-            self.assertTrue(np.isclose(grad, grad_true).all())
-            obj(x, (0, 1, 2))
 
-        # check default argument
-        self.assertTrue(np.isclose(obj(x), fval_true))
+def test_evaluate(integrated):
+    """
+    Test if values are computed correctly.
+    """
+    for struct in [rosen_for_sensi(2, integrated, [0, 1]),
+                   poly_for_sensi(2, True, 0.5)]:
+        _test_evaluate(struct)
 
-        # check convenience functions
-        self.assertTrue(np.isclose(obj.get_fval(x), fval_true))
-        if max_sensi_order >= 1:
-            self.assertTrue(np.isclose(obj.get_grad(x), grad_true).all())
-        if max_sensi_order >= 2:
-            self.assertTrue(np.isclose(obj.get_hess(x), hess_true).all())
 
-        # check different calling types
-        if max_sensi_order >= 2:
-            grad, hess = obj(x, (1, 2))
-            self.assertTrue(np.isclose(grad, grad_true).all())
-            self.assertTrue(np.isclose(hess, hess_true).all())
+def _test_evaluate(struct):
+    obj = struct['obj']
+    x = struct['x']
+    fval_true = struct['fval']
+    grad_true = struct['grad']
+    hess_true = struct['hess']
+    max_sensi_order = struct['max_sensi_order']
 
-    def test_return_type(self):
-        """
-        Test if the output format is correct.
-        """
-        for integrated in [True, False]:
-            for max_sensi_order in [2, 1, 0]:
-                for struct in [rosen_for_sensi(max_sensi_order,
-                                               integrated, [0, 1]),
-                               poly_for_sensi(max_sensi_order,
-                                              integrated, 0)]:
-                    self._test_return_type(struct)
+    # check function values
+    if max_sensi_order >= 2:
+        fval, grad, hess = obj(x, (0, 1, 2))
+        assert np.isclose(fval, fval_true)
+        assert np.isclose(grad, grad_true).all()
+        assert np.isclose(hess, hess_true).all()
+    elif max_sensi_order >= 1:
+        fval, grad = obj(x, (0, 1))
+        assert np.isclose(fval, fval_true)
+        assert np.isclose(grad, grad_true).all()
+        obj(x, (0, 1, 2))
 
-    def _test_return_type(self, struct):
-        obj = struct['obj']
-        x = struct['x']
-        max_sensi_order = struct['max_sensi_order']
+    # check default argument
+    assert np.isclose(obj(x), fval_true)
 
-        ret = obj(x, (0,))
-        self.assertTrue(isinstance(ret, numbers.Number))
-        if max_sensi_order >= 1:
-            ret = obj(x, (1,))
-            self.assertTrue(isinstance(ret, np.ndarray))
-        if max_sensi_order >= 2:
-            ret = obj(x, (2,))
-            self.assertTrue(isinstance(ret, np.ndarray))
-        if max_sensi_order >= 1:
-            ret = obj(x, (0, 1))
-            self.assertTrue(isinstance(ret, tuple))
-            self.assertTrue(len(ret) == 2)
+    # check convenience functions
+    assert np.isclose(obj.get_fval(x), fval_true)
+    if max_sensi_order >= 1:
+        assert np.isclose(obj.get_grad(x), grad_true).all()
+    if max_sensi_order >= 2:
+        assert np.isclose(obj.get_hess(x), hess_true).all()
 
-    def test_sensis(self):
-        """
-        Test output when not all sensitivities can be computed.
-        """
-        for integrated in [True, False]:
-            for max_sensi_order in [2, 1, 0]:
-                for struct in [rosen_for_sensi(max_sensi_order,
-                                               integrated, [0, 1]),
-                               poly_for_sensi(max_sensi_order,
-                                              integrated, 0)]:
-                    self._test_sensis(struct)
+    # check different calling types
+    if max_sensi_order >= 2:
+        grad, hess = obj(x, (1, 2))
+        assert np.isclose(grad, grad_true).all()
+        assert np.isclose(hess, hess_true).all()
 
-    def _test_sensis(self, struct):
-        obj = struct['obj']
-        x = struct['x']
-        max_sensi_order = struct['max_sensi_order']
 
-        obj(x, (0,))
-        if max_sensi_order >= 1:
+def test_return_type(integrated, max_sensi_order):
+    """
+    Test if the output format is correct.
+    """
+    for struct in [rosen_for_sensi(max_sensi_order,
+                                   integrated, [0, 1]),
+                   poly_for_sensi(max_sensi_order,
+                                  integrated, 0)]:
+        _test_return_type(struct)
+
+
+def _test_return_type(struct):
+    obj = struct['obj']
+    x = struct['x']
+    max_sensi_order = struct['max_sensi_order']
+
+    ret = obj(x, (0,))
+    assert isinstance(ret, numbers.Number)
+    if max_sensi_order >= 1:
+        ret = obj(x, (1,))
+        assert isinstance(ret, np.ndarray)
+    if max_sensi_order >= 2:
+        ret = obj(x, (2,))
+        assert isinstance(ret, np.ndarray)
+    if max_sensi_order >= 1:
+        ret = obj(x, (0, 1))
+        assert isinstance(ret, tuple)
+        assert len(ret) == 2
+
+
+def test_sensis(integrated, max_sensi_order):
+    """
+    Test output when not all sensitivities can be computed.
+    """
+    for struct in [rosen_for_sensi(max_sensi_order,
+                                   integrated, [0, 1]),
+                   poly_for_sensi(max_sensi_order,
+                                  integrated, 0)]:
+        _test_sensis(struct)
+
+
+def _test_sensis(struct):
+    obj = struct['obj']
+    x = struct['x']
+    max_sensi_order = struct['max_sensi_order']
+
+    obj(x, (0,))
+    if max_sensi_order >= 1:
+        obj(x, (0, 1))
+    else:
+        with pytest.raises(ValueError):
             obj(x, (0, 1))
-        else:
-            with self.assertRaises(ValueError):
-                obj(x, (0, 1))
-        if max_sensi_order >= 2:
+    if max_sensi_order >= 2:
+        obj(x, (0, 1, 2))
+    else:
+        with pytest.raises(ValueError):
             obj(x, (0, 1, 2))
-        else:
-            with self.assertRaises(ValueError):
-                obj(x, (0, 1, 2))
 
 
 def obj_for_sensi(fun, grad, hess, max_sensi_order, integrated, x):
@@ -187,7 +195,7 @@ def rosen_for_sensi(max_sensi_order, integrated=False, x=None):
                          max_sensi_order, integrated, x)
 
 
-def poly_for_sensi(max_sensi_order, integrated=False, x=0):
+def poly_for_sensi(max_sensi_order, integrated=False, x=0.):
     """
     1-dim polynomial for testing in 1d.
     """
@@ -203,9 +211,3 @@ def poly_for_sensi(max_sensi_order, integrated=False, x=0):
 
     return obj_for_sensi(fun, grad, hess,
                          max_sensi_order, integrated, x)
-
-
-if __name__ == '__main__':
-    suite = unittest.TestSuite()
-    suite.addTest(ObjectiveTest())
-    unittest.main()

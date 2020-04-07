@@ -6,6 +6,34 @@ Release notes
 ..........
 
 
+0.0.12 (2020-04-06)
+-------------------
+
+* Add typehints to global functions and classes.
+* Add `PetabImporter.rdatas_to_simulation_df` function (all #235).
+* Adapt y scale in waterfall plot if convergence was too good (#236).
+* Clarify that `Objective` is of type negative log-posterior, for
+  minimization (#243).
+* Tidy up `AmiciObjective.parameter_mapping` as implemented in AMICI now
+  (#247).
+* Add `MultiThreadEngine` implementing multi-threading aside the
+  `MultiProcessEngine` implementing multi-processing (#254).
+* Fix copying and pickling of `AmiciObjective` (#252, #257).
+* Remove circular dependence history-objective (#254).
+* Fix problem of visualizing results with failed starts (#249).
+* Rework history: make thread-safe, use factory methods, make context-specific
+  (#256).
+* Improve PEtab usage example (#258).
+* Define history base contract, enabling different backends (#260).
+* Store optimization results to HDF5 (#261).
+* Simplify tests (#263).
+
+Breaking changes:
+
+* `HistoryOptions` passed to `pypesto.minimize` instead of `Objective` (#256).
+* `GlobalOptimizer` renamed to `PyswarmOptimizer` (#235).
+
+
 0.0.11 (2020-03-17)
 -------------------
 
