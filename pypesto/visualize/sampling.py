@@ -48,10 +48,7 @@ def sampling_fval_trace(
 
     # set axes and figure
     if ax is None:
-        fig, ax = plt.subplots(figsize=size)
-    else:
-        fig = ax.get_figure()
-
+        _, ax = plt.subplots(figsize=size)
 
     sns.set(style="ticks")
     kwargs = {'edgecolor': "w",  # for edge color
@@ -75,7 +72,7 @@ def sampling_parameters_trace(
         i_chain: int = 0,
         burn_in: int = None,
         stepsize: int = 1,
-        use_problem_bounds: bool = False,
+        use_problem_bounds: bool = True,
         size: Tuple[float, float] = None,
         ax: matplotlib.axes.Axes = None):
     """Plot parameter values over iterations.
@@ -189,6 +186,9 @@ def sampling_scatter(
     ax = sns.pairplot(
         params_fval.drop(['logPosterior', 'iteration'], axis=1))
 
+    if size is not None:
+        ax.fig.set_size_inches(size)
+
     if i_chain > 1:
         ax.fig.suptitle(f'Temperature chain: {i_chain}')
 
@@ -200,7 +200,7 @@ def sampling_1d_marginals(
         i_chain: int = 0,
         burn_in: int = None,
         stepsize: int = 1,
-        hist_or_kde: str = 'both',
+        plot_type: str = 'both',
         bw='scott',
         size=None):
     """
@@ -216,7 +216,7 @@ def sampling_1d_marginals(
         Index after burn-in phase, thus also the burn-in length.
     stepsize:
         Only one in `stepsize` values is plotted.
-    hist_or_kde: {'hist'|'kde'|'both'}
+    plot_type: {'hist'|'kde'|'both'}
         Specify whether to plot a histogram ('hist'), a kernel density estimate
         ('kde'), or both ('both').
     bw: {'scott', 'silverman' | scalar | pair of scalars}
@@ -248,12 +248,12 @@ def sampling_1d_marginals(
 
     # fig, ax = plt.subplots(nr_params, figsize=size)[1]
     for idx, par_id in enumerate(param_names):
-        if hist_or_kde == 'kde':
+        if plot_type == 'kde':
             sns.kdeplot(params_fval[par_id], bw=bw, ax=par_ax[par_id])
-        elif hist_or_kde == 'hist':
+        elif plot_type == 'hist':
             sns.distplot(
                 params_fval[par_id], kde=False, rug=True, ax=par_ax[par_id])
-        elif hist_or_kde == 'both':
+        elif plot_type == 'both':
             sns.distplot(params_fval[par_id], rug=True, ax=par_ax[par_id])
 
         par_ax[par_id].set_xlabel(param_names[idx])
@@ -290,13 +290,13 @@ def get_data_to_plot(
 
     # thin out by stepsize, from the index burn_in until end of vector
     arr_param = arr_param[np.arange(burn_in, len(arr_param), stepsize)]
-    print(arr_param)
+
     arr_fval = np.array(sample_result.trace_fval[i_chain])
     indices = np.arange(burn_in, len(arr_fval), stepsize)
     arr_fval = arr_fval[indices]
     theta_lb = result.problem.lb
     theta_ub = result.problem.ub
-    print(arr_fval.shape, arr_param.shape)
+
     param_names = result.problem.x_names
 
     # transform ndarray to pandas for the use of seaborn

@@ -1,5 +1,5 @@
 import numpy as np
-from typing import Iterable, Union
+from typing import Iterable
 
 
 class McmcPtResult(dict):
@@ -10,7 +10,7 @@ class McmcPtResult(dict):
 
     Parameters
     ----------
-    trace_x: [n_chain, n_par, n_iter]
+    trace_x: [n_chain, n_iter, n_par]
         Parameters
     trace_fval: [n_chain, n_iter]
         Function values.
@@ -26,6 +26,9 @@ class McmcPtResult(dict):
         Number of Hessian evaluations.
     message: str
         Textual comment on the profile result.
+
+    Here, `n_chain` denotes the number of chains, `n_iter` the number of
+    iterations (i.e., the chain length), and `n_par` the number of parameters.
     """
 
     def __init__(self,
