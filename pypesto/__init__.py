@@ -40,8 +40,10 @@ from .profile import (
 from .sample import (
     sample,
     Sampler,
+    TemperableSampler,
     Pymc3Sampler,
     MetropolisSampler,
+    ParallelTemperingSampler,
     McmcPtResult)
 from .engine import (
     SingleCoreEngine,

@@ -14,16 +14,8 @@ class McmcPtResult(dict):
         Parameters
     trace_fval: [n_chain, n_iter]
         Function values.
-    temperatures: [n_chain]
-        The associated temperatures.
-    time:
-        Execution time.
-    n_fval: int
-        Number of function evaluations.
-    n_grad: int
-        Number of gradient evaluations.
-    n_hess: int
-        Number of Hessian evaluations.
+    betas: [n_chain]
+        The associated inverse temperatures.
     message: str
         Textual comment on the profile result.
 
@@ -34,22 +26,25 @@ class McmcPtResult(dict):
     def __init__(self,
                  trace_x: np.ndarray,
                  trace_fval: np.ndarray,
-                 temperatures: Iterable[float],
-                 time: float = 0.0,
-                 n_fval: int = 0,
-                 n_grad: int = 0,
-                 n_hess: int = 0,
+                 betas: Iterable[float],
                  message: str = None):
         super().__init__()
 
         self.trace_x = trace_x
         self.trace_fval = trace_fval
-        self.temperatures = temperatures
-        self.time = time
-        self.n_fval = n_fval
-        self.n_grad = n_grad
-        self.n_hess = n_hess
+        self.betas = betas
         self.message = message
+
+        if trace_x.ndim != 3:
+            raise ValueError(f"trace_x.ndim not as expected: {trace_x.ndim}")
+        if trace_fval.ndim != 2:
+            raise ValueError("trace_fval.ndim not as expected: "
+                             f"{trace_fval.ndim}")
+        if trace_x.shape[0] != trace_fval.shape[0] \
+                or trace_x.shape[1] != trace_fval.shape[1]:
+            raise ValueError("Trace dimensions do not match:"
+                             f"trace_x.shape={trace_x.shape},"
+                             f"trace_fval.shape={trace_fval.shape}")
 
     def __getattr__(self, key):
         try:

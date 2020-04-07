@@ -5,89 +5,87 @@ import time
 from ..objective import Objective
 from ..problem import Problem
 from ..objective import History
-from .sampler import Sampler, InternalSampler
+from .sampler import Sampler, TemperableSampler, InternalSample
 from .result import McmcPtResult
 
 
-class MetropolisSampler(Sampler, InternalSampler):
+class MetropolisSampler(TemperableSampler):
     """Simple Metropolis-Hastings sampler with fixed proposal variance."""
 
-    #def __init__(self, options: Dict = None):
-    #    self.options = MetropolisSampler.translate_options(options)
+    def __init__(self, options: Dict = None):
+        self.options = MetropolisSampler.translate_options(options)
+        self.problem = None
+        self.objective = None
+        self.trace_x = None
+        self.trace_fval = None
 
-    @staticmethod
-    def default_options() -> Dict:
-        '''
-        The default values of all sampler options are specified here.
-
-        Returns
-        -------
-        A dictionary of options.
-        '''
-        defaults = {
-            'n_samples': 1000,
+    @classmethod
+    def translate_options(cls, options):
+        default_options = {
+            'std': 1.,
         }
-        return defaults
+        if options is None:
+            options = {}
+        for key, val in options.items():
+            if key not in default_options:
+                raise KeyError(f"Cannot handle key {key}.")
+            default_options[key] = val
+        return default_options
 
-    #@staticmethod
-    #def translate_options(options):
-    #    default_options = {
-    #        'n_samples': 1000
-    #    }
-    #    if options is None:
-    #        options = {}
-    #    for key, val in options:
-    #        if key not in default_options:
-    #            raise KeyError(f"Cannot handle key {key}.")
-    #        default_options[key] = val
-    #    return default_options
+    def initialize(self, problem: Problem, x0: np.ndarray):
+        self.problem = problem
+        self.objective = problem.objective
+        self.objective.history = History()
+        self.trace_x = [x0]
+        self.trace_fval = [self.objective(x0)]
 
     def sample(
-            self, problem: Problem, x0: np.ndarray = None
-    ) -> Union[McmcPtResult, Any]:
+            self, n_samples: int, beta: float = 1.):
+        objective = self.objective
 
-        # set up objective history
-        objective = problem.objective
-        objective.history = History()
+        x = self.trace_x[-1]
+        llh = - self.trace_fval[-1]
 
-        start_time = time.time()
+        for _ in range(int(n_samples)):
+            x, llh = self._perform_step(x, llh, beta)
 
-        x = x0
-        llh = - objective(x)
-        trace_x = [x]
-        trace_fval = [-llh]
+            self.trace_x.append(x)
+            self.trace_fval.append(-llh)
 
-        for _ in range(self.options['n_samples']-1):
-            x, llh = self.perform_step(x, llh, objective)
-
-            trace_x.append(x)
-            trace_fval.append(-llh)
-
-        result = McmcPtResult(
-            trace_x=np.array([trace_x]),
-            trace_fval=np.array([trace_fval]),
-            temperatures=np.array([1.]),
-            time=time.time()-start_time,
-            n_fval=objective.history.n_fval,
-            n_grad=objective.history.n_grad,
-            n_hess=objective.history.n_hess
-        )
-
-        return result
-
-    def perform_step(self, x: np.ndarray, llh: float, objective: Objective):
-        x_new = x + 0.5 * np.random.randn(len(x))
-        llh_new = - objective(x_new)
+    def _perform_step(self, x: np.ndarray, llh: float, beta: float):
+        x_new: np.ndarray = x + self.options['std'] * np.random.randn(len(x))
+        if any(x_new < self.problem.lb) or any (x_new > self.problem.ub):
+            llh_new = - np.inf
+        else:
+            llh_new = - self.objective(x_new)
 
         u = np.random.uniform(0, 1)
-        if np.log(u) < llh_new - llh:
+        if np.log(u) < beta * (llh_new - llh):
             x = x_new
             llh = llh_new
 
         return x, llh
 
+    def get_last_sample(self) -> InternalSample:
+        return InternalSample(
+            x=self.trace_x[-1],
+            llh=- self.trace_fval[-1]
+        )
+
+    def set_last_sample(self, sample: InternalSample):
+        self.trace_x[-1] = sample.x
+        self.trace_fval[-1] = - sample.llh
+
+    def get_samples(self) -> McmcPtResult:
+        result = McmcPtResult(
+            trace_x=np.array([self.trace_x]),
+            trace_fval=np.array([self.trace_fval]),
+            betas=np.array([1.]),
+        )
+        return result
+
 from .samplers.AdaptiveMetropolis import adaptive_metropolis_sampler_methods
-class AdaptiveMetropolisSampler(Sampler, InternalSampler):
+class AdaptiveMetropolisSampler(TemperableSampler):
     @staticmethod
     def default_options() -> Dict:
         '''
@@ -169,7 +167,7 @@ class AdaptiveMetropolisSampler(Sampler, InternalSampler):
         result = McmcPtResult(
             trace_x=np.array([trace_x]),
             trace_fval=np.array([trace_fval]),
-            temperatures=np.array([1.]),
+            betas=np.array([1.]),
             time=time.time()-start_time,
             n_fval=objective.history.n_fval,
             n_grad=objective.history.n_grad,

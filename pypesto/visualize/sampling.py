@@ -137,8 +137,6 @@ def sampling_parameters_trace(
         if use_problem_bounds:
             ax.set_ylim([theta_lb[idx], theta_ub[idx]])
 
-        ax.set_xlim([burn_in, result.sample_result.n_fval + 2])
-
     if i_chain > 1:
         fig.suptitle('Temperature chain: ' + str(i_chain))
     fig.tight_layout()
