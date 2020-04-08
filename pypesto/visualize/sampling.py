@@ -14,6 +14,7 @@ def sampling_fval_trace(
         i_chain: int = 0,
         burn_in: int = None,
         stepsize: int = 1,
+        title: str = None,
         size: Tuple[float, float] = None,
         ax: matplotlib.axes.Axes = None):
     """Plot log-posterior (=function value) over iterations.
@@ -28,6 +29,8 @@ def sampling_fval_trace(
         Index after burn-in phase, thus also the burn-in length.
     stepsize:
         Only one in `stepsize` values is plotted.
+    title:
+        Axes title.
     size: ndarray
         Figure size in inches.
     ax:
@@ -59,8 +62,9 @@ def sampling_fval_trace(
 
     ax.set_xlabel('iteration index')
     ax.set_ylabel('log-posterior')
-    if i_chain > 1:
-        ax.set_title(f'Temperature chain: {i_chain}')
+
+    if title:
+        ax.set_title(title)
 
     sns.despine()
 
@@ -73,6 +77,7 @@ def sampling_parameters_trace(
         burn_in: int = None,
         stepsize: int = 1,
         use_problem_bounds: bool = True,
+        suptitle: str = None,
         size: Tuple[float, float] = None,
         ax: matplotlib.axes.Axes = None):
     """Plot parameter values over iterations.
@@ -90,6 +95,8 @@ def sampling_parameters_trace(
     use_problem_bounds:
         Defines if the y-limits shall be the lower and upper bounds of
         parameter estimation problem.
+    suptitle:
+        Figure suptitle.
     size:
         Figure size in inches.
     ax:
@@ -137,8 +144,9 @@ def sampling_parameters_trace(
         if use_problem_bounds:
             ax.set_ylim([theta_lb[idx], theta_ub[idx]])
 
-    if i_chain > 1:
-        fig.suptitle('Temperature chain: ' + str(i_chain))
+    if suptitle:
+        fig.suptitle(suptitle)
+
     fig.tight_layout()
     sns.despine()
 
@@ -150,6 +158,7 @@ def sampling_scatter(
         i_chain: int = 0,
         burn_in: int = None,
         stepsize: int = 1,
+        suptitle: str = None,
         size: Tuple[float, float] = None):
     """Parameter scatter plot.
 
@@ -163,6 +172,8 @@ def sampling_scatter(
         Index after burn-in phase, thus also the burn-in length.
     stepsize:
         Only one in `stepsize` values is plotted.
+    suptitle:
+        Figure super title.
     size:
         Figure size in inches.
 
@@ -187,8 +198,8 @@ def sampling_scatter(
     if size is not None:
         ax.fig.set_size_inches(size)
 
-    if i_chain > 1:
-        ax.fig.suptitle(f'Temperature chain: {i_chain}')
+    if suptitle:
+        ax.fig.suptitle(suptitle)
 
     return ax
 
@@ -199,8 +210,9 @@ def sampling_1d_marginals(
         burn_in: int = None,
         stepsize: int = 1,
         plot_type: str = 'both',
-        bw='scott',
-        size=None):
+        bw: str = 'scott',
+        suptitle:str = None,
+        size: Tuple[float, float] = None):
     """
     Plot marginals.
 
@@ -219,6 +231,8 @@ def sampling_1d_marginals(
         ('kde'), or both ('both').
     bw: {'scott', 'silverman' | scalar | pair of scalars}
         Kernel bandwidth method.
+    suptitle:
+        Figure super title.
     size:
         Figure size in inches.
 
@@ -259,8 +273,9 @@ def sampling_1d_marginals(
 
     sns.despine()
 
-    if i_chain > 1:
-        fig.suptitle(f'Temperature chain: {i_chain}')
+    if suptitle:
+        fig.suptitle(suptitle)
+
     fig.tight_layout()
 
     return ax
