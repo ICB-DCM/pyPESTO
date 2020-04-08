@@ -113,9 +113,6 @@ def test_ground_truth():
     # get samples of first chain
     samples = result.sample_result.trace_x[0].flatten()
 
-    pypesto.visualize.sampling_1d_marginals(result)
-    plt.show()
-
     # test against different distributions
 
     statistic, pval = kstest(samples, 'norm')
