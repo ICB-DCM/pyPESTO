@@ -1,8 +1,7 @@
 import abc
 import numpy as np
-from typing import Any, Dict, Tuple, Union
+from typing import Dict
 
-from ..objective import Objective
 from ..problem import Problem
 from .result import McmcPtResult
 
@@ -13,6 +12,9 @@ class Sampler(abc.ABC):
     The sampler maintains an internal chain, which is initialized in
     `initialize`, and updated in `sample`.
     """
+
+    def __init__(self, options: Dict = None):
+        self.options = self.__class__.translate_options(options)
 
     @abc.abstractmethod
     def initialize(self, problem: Problem, x0: np.ndarray):
@@ -44,15 +46,57 @@ class Sampler(abc.ABC):
     def get_samples(self) -> McmcPtResult:
         """Get the generated samples."""
 
+    @classmethod
+    def default_options(cls) -> Dict:
+        """Convenience method to set/get default options.
+
+        Returns
+        -------
+        default_options:
+            Default sampler options.
+        """
+        return {}
+
+    @classmethod
+    def translate_options(cls, options):
+        """Convenience method to translate options and fill in defaults.
+
+        Parameters
+        ----------
+        options:
+            Options configuring the sampler.
+        """
+        used_options = cls.default_options()
+        if options is None:
+            options = {}
+        for key, val in options.items():
+            if key not in used_options:
+                raise KeyError(f"Cannot handle key {key}.")
+            used_options[key] = val
+        return used_options
+
 
 class InternalSample:
+    """
+    This is the exchange object provided and accepted by
+    `InternalSampler.get_last_sample()`, `InternalSampler.set_last_sample()`.
+    It carries all information needed to check whether to swap between chains,
+    and to continue the chain from the updated sample.
+
+    Attributes
+    ----------
+    x:
+        Parameter values.
+    llh:
+        Log-likelihood or log-posterior value (negative function value).
+    """
 
     def __init__(self, x: np.ndarray, llh: float):
         self.x = x
         self.llh = llh
 
 
-class TemperableSampler(Sampler):
+class InternalSampler(Sampler):
     """Sampler to be used inside a parallel tempering sampler.
 
     The last sample can be obtained via `get_last_sample` and set via
@@ -65,6 +109,8 @@ class TemperableSampler(Sampler):
 
         Returns
         -------
+        internal_sample:
+            The last sample in the chain in the exchange format.
         """
 
     @abc.abstractmethod
