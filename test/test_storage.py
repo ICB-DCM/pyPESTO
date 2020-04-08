@@ -1,13 +1,15 @@
 """
-This is for testing the pypesto.Storage.
+This is for testing the pypesto.Storage and history to HDF5.
 """
 import tempfile
 import numpy as np
+import scipy as sp
 from .visualize.test_visualize import create_problem, \
     create_optimization_result
 from pypesto.storage import (
     ProblemHDF5Writer, ProblemHDF5Reader, OptimizationResultHDF5Writer,
     OptimizationResultHDF5Reader)
+import pypesto
 
 
 def test_storage_opt_result():
@@ -48,3 +50,24 @@ def test_storage_problem():
             else:
                 assert problem.__dict__[attr] == \
                        read_problem.__dict__[attr]
+
+
+def test_storage_trace():
+    objective1 = pypesto.Objective(fun=sp.optimize.rosen,
+                                   grad=sp.optimize.rosen_der,
+                                   hess=sp.optimize.rosen_hess)
+    dim_full = 10
+    lb = -5 * np.ones((dim_full, 1))
+    ub = 5 * np.ones((dim_full, 1))
+    problem1 = pypesto.Problem(objective=objective1, lb=lb, ub=ub)
+    optimizer_bfgs = pypesto.ScipyOptimizer(method='l-bfgs-b')
+    n_starts = 20
+
+    with tempfile.TemporaryDirectory(dir=f".") as tmpdirname:
+        _, fn = tempfile.mkstemp(".hdf5", dir=f"{tmpdirname}")
+
+        history_options = pypesto.HistoryOptions(trace_record=True,
+                                                 storage_file=fn)
+        result1_bfgs = pypesto.minimize(
+            problem=problem1, optimizer=optimizer_bfgs,
+            n_starts=n_starts, history_options=history_options)
