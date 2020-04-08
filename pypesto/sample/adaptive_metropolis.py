@@ -109,7 +109,7 @@ def update_history_statistics(
     n_cur_sample:
         Current number of samples.
     decay_constant:
-        Adaption decay, in (0, 1). Higher values result in faster decays, such
+        Adaption decay, in [0, 1]. Higher values result in faster decays, such
         that later iterations influence the adaption more weakly.
 
     Returns
@@ -129,7 +129,7 @@ def update_history_statistics(
     return mean, cov
 
 
-def regularize_covariance(cov: np.ndarray, reg_factor: float):
+def regularize_covariance(cov: np.ndarray, reg_factor: float) -> np.ndarray:
     """
     Regularize the estimated covariance matrix of the sample. Useful if the
     estimated covariance matrix is ill-conditioned.
