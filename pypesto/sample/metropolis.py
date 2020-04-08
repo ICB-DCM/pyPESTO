@@ -1,36 +1,30 @@
 import numpy as np
-from typing import Any, Callable, Dict, Union, Tuple
-import time
+from typing import Dict, Sequence, Union
 
 from ..objective import Objective
 from ..problem import Problem
 from ..objective import History
-from .sampler import Sampler, TemperableSampler, InternalSample
+from .sampler import InternalSample, InternalSampler
 from .result import McmcPtResult
 
 
-class MetropolisSampler(TemperableSampler):
-    """Simple Metropolis-Hastings sampler with fixed proposal variance."""
+class MetropolisSampler(InternalSampler):
+    """
+    Simple Metropolis-Hastings sampler with fixed proposal variance.
+    """
 
     def __init__(self, options: Dict = None):
-        self.options = MetropolisSampler.translate_options(options)
-        self.problem = None
-        self.objective = None
-        self.trace_x = None
-        self.trace_fval = None
+        super().__init__(options)
+        self.problem: Union[Problem, None] = None
+        self.objective: Union[Objective, None] = None
+        self.trace_x: Union[Sequence[np.ndarray], None] = None
+        self.trace_fval: Union[Sequence[float], None] = None
 
     @classmethod
-    def translate_options(cls, options):
-        default_options = {
-            'std': 1.,
+    def default_options(cls):
+        return {
+            'std': 1.,  # the proposal standard deviation
         }
-        if options is None:
-            options = {}
-        for key, val in options.items():
-            if key not in default_options:
-                raise KeyError(f"Cannot handle key {key}.")
-            default_options[key] = val
-        return default_options
 
     def initialize(self, problem: Problem, x0: np.ndarray):
         self.problem = problem
@@ -41,30 +35,59 @@ class MetropolisSampler(TemperableSampler):
 
     def sample(
             self, n_samples: int, beta: float = 1.):
-        objective = self.objective
-
+        # load last recorded particle
         x = self.trace_x[-1]
         llh = - self.trace_fval[-1]
 
+        # loop over iterations
         for _ in range(int(n_samples)):
+            # perform step
             x, llh = self._perform_step(x, llh, beta)
 
+            # record step
             self.trace_x.append(x)
             self.trace_fval.append(-llh)
 
     def _perform_step(self, x: np.ndarray, llh: float, beta: float):
-        x_new: np.ndarray = x + self.options['std'] * np.random.randn(len(x))
-        if any(x_new < self.problem.lb) or any (x_new > self.problem.ub):
+        """
+        Perform a step: Propose new parameter, evaluate and check whether to
+        accept.
+        """
+        # propose step
+        x_new: np.ndarray = self._propose_parameter(x)
+
+        # check if step lies within bounds
+        if any(x_new < self.problem.lb) or any(x_new > self.problem.ub):
+            # will not be accepted
             llh_new = - np.inf
         else:
+            # compute function value
             llh_new = - self.objective(x_new)
 
+        # log acceptance probability
+        log_p_acc = min(beta * (llh_new - llh), 0)
+
+        # flip a coin
         u = np.random.uniform(0, 1)
-        if np.log(u) < beta * (llh_new - llh):
+        # check acceptance
+        if np.log(u) < log_p_acc:
+            # update particle
             x = x_new
             llh = llh_new
 
+        # update proposal
+        self._update_proposal(x, llh, log_p_acc, len(self.trace_fval)+1)
+
         return x, llh
+
+    def _propose_parameter(self, x: np.ndarray):
+        """Propose a step."""
+        x_new: np.ndarray = x + self.options['std'] * np.random.randn(len(x))
+        return x_new
+
+    def _update_proposal(self, x: np.ndarray, llh: float, log_p_acc: float,
+                         n_sample_cur: int):
+        """Update the proposal density. Default: Do nothing."""
 
     def get_last_sample(self) -> InternalSample:
         return InternalSample(
@@ -83,143 +106,3 @@ class MetropolisSampler(TemperableSampler):
             betas=np.array([1.]),
         )
         return result
-
-from .samplers.AdaptiveMetropolis import adaptive_metropolis_sampler_methods
-class AdaptiveMetropolisSampler(TemperableSampler):
-    @staticmethod
-    def default_options() -> Dict:
-        '''
-        The default values of all sampler options are specified here.
-
-        Returns
-        -------
-        A dictionary of options.
-        '''
-        defaults = {
-            'n_samples': 1000,
-            #Adaptive Metropolis settings
-            'debug': False,
-            #'lower_bounds': lower_bounds,
-            #'upper_bounds': upper_bounds,
-            'decay_constant': 0.51,
-            'threshold_sample': 1,
-            'regularization_factor': 1e-6,
-            #'log_posterior_callable': logpdf,
-        }
-        return defaults
-
-    def sample(
-            self,
-            problem: Problem,
-            x0: np.ndarray,
-            cov0: np.ndarray = None
-    ) -> McmcPtResult:
-        #self.additional_samples(n_samples)
-        #state = self.state
-        #state.chain = self.get_chain()
-
-        start_time = time.time()
-
-        if cov0 is None:
-           cov0 = np.eye(len(x0))
-
-        x = x0
-        cov = adaptive_metropolis_sampler_methods.regularize_covariance(
-            cov0,
-            self.options['regularization_factor'],
-            len(x0),
-            MAGIC_DIVIDING_NUMBER = 1000
-        )
-        objective = problem.objective
-        objective.history = History()
-        llh = - objective(x)
-        x_bar = x
-        cov_bar = cov
-        cov_scalf = 1 #rewrite as default option?
-
-        trace_x = [x]
-        trace_fval = [-llh]
-        # uncomment when implementing debug code
-        #trace_mean = [x]
-        #trace_cov = [cov]
-
-        for n_x in range(self.options['n_samples']-1):
-            # if debug, add accepted bool to output list here
-            x, llh, cov, x_bar, cov_bar, cov_scalf = self.perform_step(
-                x,
-                llh,
-                objective,
-                cov,
-                problem,
-                x_bar,
-                cov_bar,
-                cov_scalf,
-                n_x
-            )
-            trace_x.append(x)
-            trace_fval.append(-llh)
-            # uncomment when implementing debug code
-            #n_accepted += accepted
-            #trace_acceptance.append(100*n_accepted/(n_x+1)) #not same kind of trace as other trace_ lists...
-            #trace_cov_scalf.append(cov_scalf)
-            #trace_cov_bar.append(cov_bar)
-
-        result = McmcPtResult(
-            trace_x=np.array([trace_x]),
-            trace_fval=np.array([trace_fval]),
-            betas=np.array([1.]),
-            time=time.time()-start_time,
-            n_fval=objective.history.n_fval,
-            n_grad=objective.history.n_grad,
-            n_hess=objective.history.n_hess
-        )
-
-        return result
-
-    def perform_step(
-            self,
-            x0: np.ndarray,
-            llh0: float,
-            objective: Objective,
-            cov0: np.ndarray,
-            problem: Problem,
-            x_bar0: np.ndarray,
-            cov_bar0: np.ndarray,
-            cov_scalf0: float,
-            n_x,
-            beta: float = 1
-    ):
-        x_result = adaptive_metropolis_sampler_methods.try_sampling(
-            objective,
-            x0,
-            llh0,
-            cov0,
-            problem.lb,
-            problem.ub,
-            self.options['debug'],
-            beta
-        )
-
-        x = x_result['sample']
-        llh = x_result['log_posterior']
-
-        cov_result = adaptive_metropolis_sampler_methods.estimate_covariance(
-            x_bar0,
-            cov_bar0,
-            x,
-            self.options['threshold_sample'],
-            self.options['decay_constant'],
-            cov_scalf0,
-            x_result['log_acceptance'],
-            self.options['regularization_factor'],
-            len(x),
-            n_x
-        )
-
-        x_bar = cov_result['historical_mean']
-        cov_bar = cov_result['historical_covariance']
-        cov_scalf = cov_result['covariance_scaling_factor']
-        cov = cov_result['covariance']
-
-        return x, llh, cov, x_bar, cov_bar, cov_scalf
-
