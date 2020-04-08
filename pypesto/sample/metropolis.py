@@ -33,8 +33,7 @@ class MetropolisSampler(InternalSampler):
         self.trace_x = [x0]
         self.trace_fval = [self.objective(x0)]
 
-    def sample(
-            self, n_samples: int, beta: float = 1.):
+    def sample(self, n_samples: int, beta: float = 1.):
         # load last recorded particle
         x = self.trace_x[-1]
         llh = - self.trace_fval[-1]

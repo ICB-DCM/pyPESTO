@@ -1,4 +1,4 @@
-from typing import Dict, Sequence
+from typing import Dict, List, Sequence, Union
 import numpy as np
 import copy
 
@@ -40,9 +40,16 @@ class ParallelTemperingSampler(Sampler):
             'exponent': 4,
         }
 
-    def initialize(self, problem: Problem, x0: np.ndarray):
+    def initialize(self,
+                   problem: Problem,
+                   x0: Union[np.ndarray, List[np.ndarray]]):
         # initialize all samplers
-        for sampler in self.samplers:
+        n_chains = len(self.samplers)
+        if isinstance(x0, list):
+            x0s = x0
+        else:
+            x0s = [x0 for _ in range(n_chains)]
+        for sampler, x0 in zip(self.samplers, x0s):
             _problem = copy.deepcopy(problem)
             sampler.initialize(_problem, x0)
         self.betas = self.betas0

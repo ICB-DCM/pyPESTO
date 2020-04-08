@@ -1,5 +1,6 @@
 import logging
 import numpy as np
+from typing import List, Union
 
 from ..problem import Problem
 from ..result import Result
@@ -13,7 +14,7 @@ def sample(
         problem: Problem,
         n_samples: int,
         sampler: Sampler = None,
-        x0: np.ndarray = None,
+        x0: Union[np.ndarray, List[np.ndarray]] = None,
         result: Result = None
 ) -> Result:
     """
@@ -31,7 +32,8 @@ def sample(
     x0:
         Initial parameter for the Markov chain. If None, the best parameter
         found in optimization is used. Note that some samplers require an
-        initial parameter, some may ignore it.
+        initial parameter, some may ignore it. x0 can also be a list,
+        to have separate starting points for parallel tempering chains.
     result:
         A result to write to. If None provided, one is created from the
         problem.
@@ -51,6 +53,7 @@ def sample(
         xs = result.optimize_result.get_for_key('x')
         if len(xs) > 0:
             x0 = xs[0]
+        # TODO multiple x0 for PT, #269
 
     # set sampler
     if sampler is None:

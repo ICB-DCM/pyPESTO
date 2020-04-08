@@ -122,3 +122,17 @@ def test_ground_truth():
     statistic, pval = kstest(samples, 'uniform')
     print(statistic, pval)
     assert statistic > 0.1
+
+
+def test_multiple_startpoints():
+    problem = gaussian_problem()
+    x0s = [np.array([0]), np.array([1])]
+    sampler = pypesto.ParallelTemperingSampler(
+        internal_sampler=pypesto.MetropolisSampler(),
+        n_chains=2
+    )
+    result = pypesto.sample(problem, n_samples=10, x0=x0s, sampler=sampler)
+
+    assert result.sample_result.trace_fval.shape[0] == 2
+    assert [result.sample_result.trace_x[0][0],
+            result.sample_result.trace_x[1][0]] == x0s
