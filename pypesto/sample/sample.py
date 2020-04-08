@@ -23,7 +23,7 @@ def sample(
     ----------
     problem:
         The problem to be solved. If None is provided, a
-        :class:`pypesto.Pymc3Sampler` is used.
+        :class:`pypesto.AdaptiveMetropolisSampler` is used.
     n_samples:
         Number of samples to generate.
     sampler:
