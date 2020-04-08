@@ -10,8 +10,8 @@ import pypesto.objective.constants
 import numpy as np
 from test.petab_util import folder_base
 
-ATOL = 1e-6
-RTOL = 1e-6
+ATOL = 1e-5
+RTOL = 1e-5
 
 
 def test_add_sim_grad_to_opt_grad():
