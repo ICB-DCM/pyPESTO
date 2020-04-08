@@ -130,7 +130,7 @@ def near_exponential_decay_betas(
         return np.array([1.])
 
     temperatures = np.linspace(1, max_temp ** (1 / exponent), n_chains) \
-                   ** exponent
+        ** exponent
     betas = 1 / temperatures
 
     return betas

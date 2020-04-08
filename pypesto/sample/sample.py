@@ -4,7 +4,7 @@ import numpy as np
 from ..problem import Problem
 from ..result import Result
 from .sampler import Sampler
-from .pymc3 import Pymc3Sampler
+from .adaptive_metropolis import AdaptiveMetropolisSampler
 
 logger = logging.getLogger(__name__)
 
@@ -54,7 +54,7 @@ def sample(
 
     # set sampler
     if sampler is None:
-        sampler = Pymc3Sampler()
+        sampler = AdaptiveMetropolisSampler()
 
     # initialize sampler to problem
     sampler.initialize(problem=problem, x0=x0)

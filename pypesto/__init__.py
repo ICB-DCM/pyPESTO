@@ -41,7 +41,6 @@ from .sample import (
     sample,
     Sampler,
     InternalSampler,
-    Pymc3Sampler,
     MetropolisSampler,
     AdaptiveMetropolisSampler,
     ParallelTemperingSampler,

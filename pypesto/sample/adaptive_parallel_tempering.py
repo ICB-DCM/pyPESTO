@@ -1,7 +1,6 @@
 from typing import Dict, Sequence
 import numpy as np
 
-from .sampler import InternalSampler
 from .parallel_tempering import ParallelTemperingSampler
 
 

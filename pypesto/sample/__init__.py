@@ -6,7 +6,6 @@ Sample
 
 from .sample import sample
 from .sampler import Sampler, InternalSampler
-from .pymc3 import Pymc3Sampler
 from .metropolis import MetropolisSampler
 from .adaptive_metropolis import AdaptiveMetropolisSampler
 from .parallel_tempering import ParallelTemperingSampler

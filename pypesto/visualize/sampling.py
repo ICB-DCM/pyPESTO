@@ -211,7 +211,7 @@ def sampling_1d_marginals(
         stepsize: int = 1,
         plot_type: str = 'both',
         bw: str = 'scott',
-        suptitle:str = None,
+        suptitle: str = None,
         size: Tuple[float, float] = None):
     """
     Plot marginals.

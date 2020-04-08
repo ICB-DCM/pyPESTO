@@ -124,7 +124,7 @@ def update_history_statistics(
 
     dx = x_new - mean
     cov = (1 - update_rate) * cov + \
-          update_rate * dx.reshape((-1, 1)) @ dx.reshape((1, -1))
+        update_rate * dx.reshape((-1, 1)) @ dx.reshape((1, -1))
 
     return mean, cov
 
