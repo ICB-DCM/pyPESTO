@@ -623,24 +623,24 @@ class Hdf5History(History):
         with h5py.File(self.file, 'a') as f:
             if f'/optimization/results/{self.id}/trace/' not in f:
                 grp = f.create_group(f'/optimization/results/{self.id}/trace/')
-                #f[f'/optimization/results/{self.id}/trace/'].attrs[n_iterations'] = 0
                 grp.attrs['n_iterations'] = 0
 
-            iteration = f[f'/optimization/results/{self.id}/trace/'].attrs['n_iterations']
+            iteration = f[f'/optimization/results/{self.id}/trace/'].attrs[
+                'n_iterations']
             for key in values.keys():
                 if values[key] is not None:
-                    f[f'/optimization/results/{self.id}/trace/{str(iteration)}/{key}'] = values[key]
+                    f[f'/optimization/results/{self.id}/trace/'
+                      f'{str(iteration)}/{key}'] = values[key]
 
-            f[f'/optimization/results/{self.id}/trace/'].attrs['n_iterations'] += 1
+            f[f'/optimization/results/{self.id}/trace/'].attrs[
+                'n_iterations'] += 1
 
     def finalize(self):
         super().finalize()
 
     def _get_hdf5_entries(self,
                           entry_id: str) -> Sequence:
-        """
-        used in all get_{entry_id}_trace functions
-        """
+
         trace_result = []
 
         with h5py.File(self.file, 'r') as f:
