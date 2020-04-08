@@ -25,3 +25,7 @@ from .optimizer_history import (optimizer_history,
 from .profiles import (profiles,
                        profiles_lowlevel,
                        profile_lowlevel)
+from .sampling import (sampling_fval_trace,
+                       sampling_parameters_trace,
+                       sampling_scatter,
+                       sampling_1d_marginals)

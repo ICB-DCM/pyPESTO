@@ -37,6 +37,15 @@ from .profile import (
     parameter_profile,
     ProfileOptions,
     ProfilerResult)
+from .sample import (
+    sample,
+    Sampler,
+    InternalSampler,
+    MetropolisSampler,
+    AdaptiveMetropolisSampler,
+    ParallelTemperingSampler,
+    AdaptiveParallelTemperingSampler,
+    McmcPtResult)
 from .engine import (
     SingleCoreEngine,
     MultiThreadEngine,
