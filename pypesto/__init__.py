@@ -45,6 +45,7 @@ from .sample import (
     AdaptiveMetropolisSampler,
     ParallelTemperingSampler,
     AdaptiveParallelTemperingSampler,
+    Pymc3Sampler,
     McmcPtResult)
 from .engine import (
     SingleCoreEngine,
