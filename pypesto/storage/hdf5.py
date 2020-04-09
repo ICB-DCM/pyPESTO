@@ -2,6 +2,7 @@
 import h5py
 from typing import Collection
 from numbers import Number
+import numpy as np
 
 
 def write_string_array(f: h5py.Group,
@@ -42,7 +43,7 @@ def write_float_array(f: h5py.Group,
     dtype:
         datatype
     """
-    dset = f.create_dataset(path, (len(values),), dtype=dtype)
+    dset = f.create_dataset(path, (np.shape(values)), dtype=dtype)
     dset[:] = values
 
 
