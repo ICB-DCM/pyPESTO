@@ -197,10 +197,13 @@ class PetabImporter:
             model: 'amici.Model' = None,
             solver: 'amici.Solver' = None,
             edatas: Sequence['amici.ExpData'] = None,
-            force_compile: bool = False
+            force_compile: bool = False,
+            **kwargs
     ) -> 'PetabAmiciObjective':
-        """
-        Create a pypesto.PetabAmiciObjective.
+        """Create a :class:`pypesto.PetabAmiciObjective`.
+
+        Parameters
+        ----------
         """
         # get simulation conditions
         simulation_conditions = petab.get_simulation_conditions(
@@ -243,15 +246,16 @@ class PetabImporter:
             petab_importer=self,
             amici_model=model, amici_solver=solver, edatas=edatas,
             x_ids=par_ids, x_names=par_ids,
-            parameter_mapping=parameter_mapping)
+            parameter_mapping=parameter_mapping,
+            **kwargs)
 
         return obj
 
     def create_problem(
-            self, objective: 'PetabAmiciObjective' = None
+            self, objective: 'PetabAmiciObjective' = None, **kwargs
     ) -> Problem:
         if objective is None:
-            objective = self.create_objective()
+            objective = self.create_objective(**kwargs)
 
         problem = Problem(
             objective=objective,
@@ -356,13 +360,17 @@ class PetabAmiciObjective(AmiciObjective):
             edatas: Sequence['amici.ExpData'],
             x_ids: Sequence[str],
             x_names: Sequence[str],
-            parameter_mapping: 'amici.parameter_mapping.ParameterMapping'):
+            parameter_mapping: 'amici.parameter_mapping.ParameterMapping',
+            guess_steadystate: bool = True,
+            n_threads: int = 1):
         super().__init__(
             amici_model=amici_model,
             amici_solver=amici_solver,
             edatas=edatas,
             x_ids=x_ids, x_names=x_names,
-            parameter_mapping=parameter_mapping)
+            parameter_mapping=parameter_mapping,
+            guess_steadystate=guess_steadystate,
+            n_threads=n_threads)
         self.petab_importer = petab_importer
 
     def __getstate__(self) -> dict:
