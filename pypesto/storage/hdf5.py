@@ -4,6 +4,7 @@ from typing import Collection
 from numbers import Number
 import numpy as np
 
+
 def write_string_array(f: h5py.Group,
                        path: str,
                        strings: Collection) -> None:
