@@ -1,5 +1,5 @@
 import numpy as np
-from typing import Any, Dict, Sequence, Union
+from typing import Dict, Union
 import logging
 
 from ..objective import Objective, History
@@ -12,6 +12,7 @@ logger = logging.getLogger(__name__)
 try:
     import pymc3 as pm
     import theano.tensor as tt
+    from theano.gof.null_type import NullType
 except ImportError:
     pass
 
@@ -25,10 +26,18 @@ class Pymc3Sampler(Sampler):
         self.x0: Union[np.ndarray, None] = None
         self.trace: Union[pm.backends.Text, None] = None
 
+    @classmethod
+    def translate_options(cls, options):
+        if options is None:
+            options = {}
+        return options
+
     def initialize(self, problem: Problem, x0: np.ndarray):
         self.problem = problem
         self.x0 = x0
         self.trace = None
+
+        self.problem.objective.history = History()
 
     def sample(
             self, n_samples: int, beta: float = 1.
@@ -37,7 +46,12 @@ class Pymc3Sampler(Sampler):
         llh = TheanoLogLikelihood(problem, beta)
         trace = self.trace
 
-        # use PyMC3 to sampler from log-likelihood
+        x0 = None
+        if self.x0 is not None:
+            x0 = {x_name: val
+                  for x_name, val in zip(self.problem.x_names, self.x0)}
+
+        # use PyMC3 to draw samples
         with pm.Model():
             # uniform prior
             k = [pm.Uniform(x_name, lower=lb, upper=ub)
@@ -51,9 +65,26 @@ class Pymc3Sampler(Sampler):
             pm.DensityDist('likelihood', lambda v: llh(v),
                            observed={'v': theta})
 
-            trace = pm.sample(draws=n_samples, trace=trace, **self.options)
+            trace = pm.sample(
+                draws=int(n_samples), trace=trace, start=x0, **self.options)
 
         self.trace = trace
+
+    def get_samples(self) -> McmcPtResult:
+        trace_x = np.array(
+            [self.trace.get_values(x_name)
+             for x_name in self.problem.x_names]
+        ).T
+
+        # TOOD
+        trace_fval = np.empty(trace_x.shape[0])
+        trace_fval[:] = np.nan
+
+        return McmcPtResult(
+            trace_x=np.array([trace_x]),
+            trace_fval=np.array([trace_fval]),
+            betas=np.array([1.]),
+        )
 
 
 class TheanoLogLikelihood(tt.Op):
@@ -64,14 +95,16 @@ class TheanoLogLikelihood(tt.Op):
     otypes = [tt.dscalar]  # outputs a single scalar value (the log likelihood)
 
     def __init__(self, problem: Problem, beta: float = 1.):
-        self._objective = problem.objective
-        self._objective.history = History()
+        self._objective: Objective = problem.objective
 
         # initialize the llh Op
         self._llh = lambda x: - beta * self._objective(x, sensi_orders=(0,))
 
         # initialize the sllh Op
-        self._sllh = TheanoLogLikelihoodGradient(problem, beta)
+        if problem.objective.has_grad:
+            self._sllh = TheanoLogLikelihoodGradient(problem, beta)
+        else:
+            self._sllh = None
 
     def perform(self, node, inputs, outputs, params=None):
         theta, = inputs
@@ -81,6 +114,8 @@ class TheanoLogLikelihood(tt.Op):
     def grad(self, inputs, g):
         # the method that calculates the gradients - it actually returns the
         # vector-Jacobian product - g[0] is a vector of parameter values
+        if self._sllh is None:
+            return [NullType]
         theta, = inputs
         sllh = self._sllh(theta)
         return [g[0] * sllh]
@@ -96,7 +131,7 @@ class TheanoLogLikelihoodGradient(tt.Op):
     otypes = [tt.dvector]
 
     def __init__(self, problem: Problem, beta: float = 1.):
-        self._objective = problem.objective
+        self._objective: Objective = problem.objective
         self._sllh = lambda x: - beta * self._objective(x, sensi_orders=(1,))
 
     def perform(self, node, inputs, outputs, params=None):
