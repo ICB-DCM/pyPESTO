@@ -102,10 +102,10 @@ def update_history_statistics(
         The estimated mean of the samples, that was calculated in the previous
         iteration.
     cov:
-        The estimated covariance matrix of the sample, that was calculated in
+        The estimated covariance matrix of the sampling, that was calculated in
         the previous iteration.
     x_new:
-        Most recent sample.
+        Most recent sampling.
     n_cur_sample:
         Current number of samples.
     decay_constant:
@@ -116,7 +116,7 @@ def update_history_statistics(
     -------
     mean, cov:
         The updated values for the estimated mean and the estimated covariance
-        matrix of the sample.
+        matrix of the sampling.
     """
     update_rate = n_cur_sample ** (- decay_constant)
 
@@ -131,51 +131,24 @@ def update_history_statistics(
 
 def regularize_covariance(cov: np.ndarray, reg_factor: float) -> np.ndarray:
     """
-    Regularize the estimated covariance matrix of the sample. Useful if the
+    Regularize the estimated covariance matrix of the sampling. Useful if the
     estimated covariance matrix is ill-conditioned.
+    Increments the diagonal a little to ensure positivity.
 
     Parameters
     ----------
     cov:
-        Estimate of the covariance matrix of the sample.
+        Estimate of the covariance matrix of the sampling.
     reg_factor:
         Regularization factor. Larger values result in stronger regularization.
 
     Returns
     -------
     cov:
-        Regularized estimate of the covariance matrix of the sample.
+        Regularized estimate of the covariance matrix of the sampling.
     """
-    n_par = cov.shape[0]
-    if not is_positive_definite(cov):
-        # add regularization factor
-        cov += reg_factor * np.eye(n_par)
-        # make symmetric
-        cov = (cov + cov.T) / 2
-        if not is_positive_definite(cov):
-            # add strong regularization factor
-            cov += cov.max() * np.eye(n_par)
-            # make symmetric
-            cov = (cov + cov.T) / 2
-
+    eig = np.linalg.eigvals(cov)
+    eig_min = min(eig)
+    if eig_min <= 0:
+        cov += (abs(eig_min) + reg_factor) * np.eye(cov.shape[0])
     return cov
-
-
-def is_positive_definite(matrix: np.ndarray) -> bool:
-    """Determines whether a matrix is positive-definite.
-
-    Parameters
-    ----------
-    matrix:
-        The matrix to be checked for positive definiteness.
-
-    Returns
-    -------
-    bool:
-        True if the matrix is positive definite, else False.
-    """
-    try:
-        np.linalg.cholesky(matrix)
-    except np.linalg.LinAlgError:
-        return False
-    return True

@@ -58,7 +58,7 @@ class ParallelTemperingSampler(Sampler):
             self, n_samples: int, beta: float = 1.):
         # loop over iterations
         for i_sample in range(int(n_samples)):
-            # sample
+            # sampling
             for sampler, beta in zip(self.samplers, self.betas):
                 sampler.sample(n_samples=1, beta=beta)
 
