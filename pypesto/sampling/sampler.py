@@ -10,7 +10,7 @@ class Sampler(abc.ABC):
     """Sampler base class, not functional on its own.
 
     The sampler maintains an internal chain, which is initialized in
-    `initialize`, and updated in `sampling`.
+    `initialize`, and updated in `sample`.
     """
 
     def __init__(self, options: Dict = None):
@@ -25,7 +25,7 @@ class Sampler(abc.ABC):
         Parameters
         ----------
         problem:
-            The problem for which to sampling.
+            The problem for which to sample.
         x0:
             Should, but is not required to, be used as initial parameter.
         """
@@ -83,7 +83,7 @@ class InternalSample:
     This is the exchange object provided and accepted by
     `InternalSampler.get_last_sample()`, `InternalSampler.set_last_sample()`.
     It carries all information needed to check whether to swap between chains,
-    and to continue the chain from the updated sampling.
+    and to continue the chain from the updated sample.
 
     Attributes
     ----------
@@ -101,27 +101,27 @@ class InternalSample:
 class InternalSampler(Sampler):
     """Sampler to be used inside a parallel tempering sampler.
 
-    The last sampling can be obtained via `get_last_sample` and set via
+    The last sample can be obtained via `get_last_sample` and set via
     `set_last_sample`.
     """
 
     @abc.abstractmethod
     def get_last_sample(self) -> InternalSample:
-        """Get the last sampling in the chain.
+        """Get the last sample in the chain.
 
         Returns
         -------
         internal_sample:
-            The last sampling in the chain in the exchange format.
+            The last sample in the chain in the exchange format.
         """
 
     @abc.abstractmethod
     def set_last_sample(self, sample: InternalSample):
         """
-        Set the last sampling in the chain to the passed value.
+        Set the last sample in the chain to the passed value.
 
         Parameters
         ----------
         sample:
-            The sampling that will replace the last sampling in the chain.
+            The sample that will replace the last sample in the chain.
         """

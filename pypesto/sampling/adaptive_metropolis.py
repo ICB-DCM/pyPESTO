@@ -102,10 +102,10 @@ def update_history_statistics(
         The estimated mean of the samples, that was calculated in the previous
         iteration.
     cov:
-        The estimated covariance matrix of the sampling, that was calculated in
+        The estimated covariance matrix of the sample, that was calculated in
         the previous iteration.
     x_new:
-        Most recent sampling.
+        Most recent sample.
     n_cur_sample:
         Current number of samples.
     decay_constant:
@@ -116,7 +116,7 @@ def update_history_statistics(
     -------
     mean, cov:
         The updated values for the estimated mean and the estimated covariance
-        matrix of the sampling.
+        matrix of the sample.
     """
     update_rate = n_cur_sample ** (- decay_constant)
 
@@ -131,21 +131,21 @@ def update_history_statistics(
 
 def regularize_covariance(cov: np.ndarray, reg_factor: float) -> np.ndarray:
     """
-    Regularize the estimated covariance matrix of the sampling. Useful if the
+    Regularize the estimated covariance matrix of the sample. Useful if the
     estimated covariance matrix is ill-conditioned.
     Increments the diagonal a little to ensure positivity.
 
     Parameters
     ----------
     cov:
-        Estimate of the covariance matrix of the sampling.
+        Estimate of the covariance matrix of the sample.
     reg_factor:
         Regularization factor. Larger values result in stronger regularization.
 
     Returns
     -------
     cov:
-        Regularized estimate of the covariance matrix of the sampling.
+        Regularized estimate of the covariance matrix of the sample.
     """
     eig = np.linalg.eigvals(cov)
     eig_min = min(eig)
