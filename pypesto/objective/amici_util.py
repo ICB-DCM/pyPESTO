@@ -1,6 +1,9 @@
 import numpy as np
 import numbers
 from typing import Dict, Sequence, Union
+import logging
+
+from .constants import FVAL, GRAD, HESS, RES, SRES, RDATAS
 
 try:
     import amici
@@ -14,6 +17,8 @@ except ImportError:
 AmiciModel = Union['amici.Model', 'amici.ModelPtr']
 AmiciSolver = Union['amici.Solver', 'amici.SolverPtr']
 
+logger = logging.getLogger(__name__)
+
 
 def map_par_opt_to_par_sim(
         condition_map_sim_var: Dict[str, Union[float, str]],
@@ -26,7 +31,6 @@ def map_par_opt_to_par_sim(
 
     Parameters
     ----------
-
     condition_map_sim_var:
         Simulation to optimization parameter mapping.
     x_dct:
@@ -36,7 +40,6 @@ def map_par_opt_to_par_sim(
 
     Returns
     -------
-
     par_sim_vals:
         The simulation parameters vector corresponding to x under the
         specified mapping.
@@ -68,7 +71,6 @@ def create_plist_from_par_opt_to_par_sim(mapping_par_opt_to_par_sim):
 
     Returns
     -------
-
     plist: array-like of float
         List of parameter indices for which the sensitivity needs to be
         computed
@@ -123,7 +125,6 @@ def add_sim_grad_to_opt_grad(
 
     Parameters
     ----------
-
     par_opt_ids:
         The optimization parameter ids. Needed for order.
     par_sim_ids:
@@ -160,7 +161,6 @@ def add_sim_hess_to_opt_hess(
 
     Parameters
     ----------
-
     Same as for add_sim_grad_to_opt_grad, replacing the gradients by hessians.
     """
     for par_sim_id, par_opt_id in condition_map_sim_var.items():
@@ -190,7 +190,6 @@ def sim_sres_to_opt_sres(par_opt_ids: Sequence[str],
 
     Parameters
     ----------
-
     Mostly the same as for add_sim_grad_to_opt_grad, replacing the gradients by
     residual sensitivities.
     """
@@ -206,3 +205,39 @@ def sim_sres_to_opt_sres(par_opt_ids: Sequence[str],
             coefficient * sim_sres[:, par_sim_idx]
 
     return opt_sres
+
+
+def log_simulation(data_ix, rdata):
+    """Log the simulation results."""
+    logger.debug(f"=== DATASET {data_ix} ===")
+    logger.debug(f"status: {rdata['status']}")
+    logger.debug(f"llh: {rdata['llh']}")
+
+    t_steadystate = 't_steadystate'
+    if t_steadystate in rdata and rdata[t_steadystate] != np.nan:
+        logger.debug(f"t_steadystate: {rdata[t_steadystate]}")
+
+    logger.debug(f"res: {rdata['res']}")
+
+
+def get_error_output(
+        amici_model: AmiciModel,
+        edatas: Sequence['amici.ExpData'],
+        rdatas: Sequence['amici.ReturnData'],
+        dim: int):
+    """Default output upon error."""
+    if not amici_model.nt():
+        nt = sum([data.nt() for data in edatas])
+    else:
+        nt = sum([data.nt() if data.nt() else amici_model.nt()
+                  for data in edatas])
+    n_res = nt * amici_model.nytrue
+
+    return {
+        FVAL: np.inf,
+        GRAD: np.nan * np.ones(dim),
+        HESS: np.nan * np.ones([dim, dim]),
+        RES:  np.nan * np.ones(n_res),
+        SRES: np.nan * np.ones([n_res, dim]),
+        RDATAS: rdatas
+    }

@@ -1,6 +1,5 @@
 import numpy as np
 import copy
-import logging
 import tempfile
 import os
 import abc
@@ -12,7 +11,7 @@ from .constants import MODE_FUN, MODE_RES, FVAL, GRAD, HESS, RES, SRES, RDATAS
 from .amici_util import (
     map_par_opt_to_par_sim, create_identity_parameter_mapping,
     add_sim_grad_to_opt_grad, add_sim_hess_to_opt_hess,
-    sim_sres_to_opt_sres)
+    sim_sres_to_opt_sres, log_simulation, get_error_output)
 
 try:
     import amici
@@ -24,8 +23,6 @@ except ImportError:
 
 AmiciModel = Union['amici.Model', 'amici.ModelPtr']
 AmiciSolver = Union['amici.Solver', 'amici.SolverPtr']
-
-logger = logging.getLogger(__name__)
 
 
 class AmiciObjectBuilder(abc.ABC):
@@ -352,7 +349,8 @@ class AmiciObjective(Objective):
 
             # check if the computation failed
             if rdata['status'] < 0.0:
-                return self.get_error_output(rdatas)
+                return get_error_output(
+                    self.amici_model, self.edatas, rdatas, self.dim)
 
             condition_map_sim_var = \
                 self.parameter_mapping[data_ix].map_sim_var
@@ -416,24 +414,6 @@ class AmiciObjective(Objective):
         """Create dict from parameter vector."""
         return OrderedDict(zip(self.x_ids, x))
 
-    def get_error_output(self, rdatas: Sequence['amici.ReturnData']):
-        """Default output upon error."""
-        if not self.amici_model.nt():
-            nt = sum([data.nt() for data in self.edatas])
-        else:
-            nt = sum([data.nt() if data.nt() else self.amici_model.nt()
-                      for data in self.edatas])
-        n_res = nt * self.amici_model.nytrue
-
-        return {
-            FVAL: np.inf,
-            GRAD: np.nan * np.ones(self.dim),
-            HESS: np.nan * np.ones([self.dim, self.dim]),
-            RES:  np.nan * np.ones(n_res),
-            SRES: np.nan * np.ones([n_res, self.dim]),
-            RDATAS: rdatas
-        }
-
     def apply_steadystate_guess(self, condition_ix: int, x_dct: Dict):
         """
         Use the stored steadystate as well as the respective  sensitivity (
@@ -489,16 +469,3 @@ class AmiciObjective(Objective):
         self.steadystate_guesses['fval'] = np.inf
         for condition in self.steadystate_guesses['data']:
             self.steadystate_guesses['data'][condition] = dict()
-
-
-def log_simulation(data_ix, rdata):
-    """Log the simulation results."""
-    logger.debug(f"=== DATASET {data_ix} ===")
-    logger.debug(f"status: {rdata['status']}")
-    logger.debug(f"llh: {rdata['llh']}")
-
-    t_steadystate = 't_steadystate'
-    if t_steadystate in rdata and rdata[t_steadystate] != np.nan:
-        logger.debug(f"t_steadystate: {rdata[t_steadystate]}")
-
-    logger.debug(f"res: {rdata['res']}")
