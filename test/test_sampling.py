@@ -138,7 +138,7 @@ def test_multiple_startpoints():
             result.sample_result.trace_x[1][0]] == x0s
 
 
-def test_regularize_cov():
+def test_regularize_covariance():
     """
     Make sure that `regularize_covariance` renders symmetric matrices
     positive definite.
