@@ -2,6 +2,9 @@ import numpy as np
 import copy
 import logging
 import numbers
+import tempfile
+import os
+import abc
 from typing import Dict, Tuple, Sequence, Union
 from collections import OrderedDict
 
@@ -23,6 +26,27 @@ AmiciSolver = Union['amici.Solver', 'amici.SolverPtr']
 logger = logging.getLogger(__name__)
 
 
+class AmiciObjectBuilder(abc.ABC):
+    """Allows to build AMICI model, solver, and edatas.
+
+    This class is useful for pickling an :class:`pypesto.AmiciObjective`,
+    which is required in some parallelization schemes. Therefore, this
+    class itself must be picklable.
+    """
+
+    @abc.abstractmethod
+    def create_model(self) -> AmiciModel:
+        """Create an AMICI model."""
+
+    @abc.abstractmethod
+    def create_solver(self, model: AmiciModel) -> AmiciSolver:
+        """Create an AMICI solver."""
+
+    @abc.abstractmethod
+    def create_edatas(self, model: AmiciModel) -> Sequence['amici.ExpData']:
+        """Create AMICI experimental data."""
+
+
 class AmiciObjective(Objective):
     """
     This class allows to create an objective directly from an amici model.
@@ -37,13 +61,13 @@ class AmiciObjective(Objective):
                  x_names: Sequence[str] = None,
                  parameter_mapping: 'ParameterMapping' = None,
                  guess_steadystate: bool = True,
-                 n_threads: int = 1):
+                 n_threads: int = 1,
+                 amici_object_builder: AmiciObjectBuilder = None):
         """
         Constructor.
 
         Parameters
         ----------
-
         amici_model:
             The amici model.
         amici_solver:
@@ -73,6 +97,9 @@ class AmiciObjective(Objective):
             Number of threads that are used for parallelization over
             experimental conditions. If amici was not installed with openMP
             support this option will have no effect.
+        amici_object_builder:
+            AMICI object builder. Allows recreating the objective for
+            pickling, required in some parallelization schemes.
         """
         if amici is None:
             raise ImportError(
@@ -166,6 +193,7 @@ class AmiciObjective(Objective):
         self.x_names = x_names
 
         self.n_threads = n_threads
+        self.amici_object_builder = amici_object_builder
 
     def get_bound_fun(self):
         """
@@ -222,6 +250,44 @@ class AmiciObjective(Objective):
         other.rebind_res()
 
         return other
+
+    def __getstate__(self) -> Dict:
+        if self.amici_object_builder is None:
+            raise NotImplementedError(
+                "AmiciObjective does not support __getstate__ without "
+                "an `amici_object_builder`.")
+
+        state = {}
+        for key in set(self.__dict__.keys()) - \
+                {'amici_model', 'amici_solver', 'edatas'}:
+            state[key] = self.__dict__[key]
+
+        amici_solver_file = tempfile.mkstemp()[1]
+        amici.writeSolverSettingsToHDF5(self.amici_solver, amici_solver_file)
+        state['amici_solver_settings'] = amici_solver_file
+
+        return state
+
+    def __setstate__(self, state: Dict):
+        if state['amici_object_builder'] is None:
+            raise NotImplementedError(
+                "AmiciObjective does not support __setstate__ without "
+                "an `amici_object_builder`.")
+
+        self.__dict__.update(state)
+
+        # note: attributes not defined in the builder are lost
+        model = self.amici_object_builder.create_model()
+        solver = self.amici_object_builder.create_solver(model)
+        edatas = self.amici_object_builder.create_edatas(model)
+
+        amici.readSolverSettingsFromHDF5(
+            state['amici_solver_settings'], solver)
+        os.remove(state['amici_solver_settings'])
+
+        self.amici_model = model
+        self.amici_solver = solver
+        self.edatas = edatas
 
     def _call_amici(
             self,

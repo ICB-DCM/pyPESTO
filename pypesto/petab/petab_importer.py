@@ -5,10 +5,10 @@ import importlib
 import shutil
 import logging
 import tempfile
-from typing import Dict, List, Sequence, Union
+from typing import List, Sequence, Union
 
 from ..problem import Problem
-from .amici_objective import AmiciObjective
+from ..objective import AmiciObjective, AmiciObjectBuilder
 
 try:
     import petab
@@ -22,7 +22,7 @@ except ImportError:
 logger = logging.getLogger(__name__)
 
 
-class PetabImporter:
+class PetabImporter(AmiciObjectBuilder):
     MODEL_BASE_DIR = "amici_models"
 
     def __init__(self,
@@ -199,11 +199,26 @@ class PetabImporter:
             edatas: Sequence['amici.ExpData'] = None,
             force_compile: bool = False,
             **kwargs
-    ) -> 'PetabAmiciObjective':
-        """Create a :class:`pypesto.PetabAmiciObjective`.
+    ) -> AmiciObjective:
+        """Create a :class:`pypesto.AmiciObjective`.
 
         Parameters
         ----------
+        model:
+            The AMICI model.
+        solver:
+            The AMICI solver.
+        edatas:
+            The experimental data in AMICI format.
+        force_compile:
+            Whether to force-compile the model if not passed.
+        **kwargs:
+            Additional arguments passed on to the objective.
+
+        Returns
+        -------
+        objective:
+            A :class:`pypesto.AmiciObjective` for the model and the data.
         """
         # get simulation conditions
         simulation_conditions = petab.get_simulation_conditions(
@@ -242,18 +257,33 @@ class PetabImporter:
             amici_model=model)
 
         # create objective
-        obj = PetabAmiciObjective(
-            petab_importer=self,
+        obj = AmiciObjective(
             amici_model=model, amici_solver=solver, edatas=edatas,
             x_ids=par_ids, x_names=par_ids,
             parameter_mapping=parameter_mapping,
+            amici_object_builder=self,
             **kwargs)
 
         return obj
 
     def create_problem(
-            self, objective: 'PetabAmiciObjective' = None, **kwargs
+            self, objective: AmiciObjective = None, **kwargs
     ) -> Problem:
+        """Create a :class:`pypesto.Problem`.
+
+        Parameters
+        ----------
+        objective:
+            Objective as created by `create_objective`.
+        **kwargs:
+            Additional key word arguments passed on to the objective,
+            if not provided.
+
+        Returns
+        -------
+        problem:
+            A :class:`pypesto.Problem` for the objective.
+        """
         if objective is None:
             objective = self.create_objective(**kwargs)
 
@@ -345,58 +375,3 @@ def _find_model_name(output_folder: str) -> str:
     Just re-use the last part of the output folder.
     """
     return os.path.split(os.path.normpath(output_folder))[-1]
-
-
-class PetabAmiciObjective(AmiciObjective):
-    """
-    This is a shallow wrapper around AmiciObjective to make it serializable.
-    """
-
-    def __init__(
-            self,
-            petab_importer: PetabImporter,
-            amici_model: 'amici.Model',
-            amici_solver: 'amici.Solver',
-            edatas: Sequence['amici.ExpData'],
-            x_ids: Sequence[str],
-            x_names: Sequence[str],
-            parameter_mapping: 'amici.parameter_mapping.ParameterMapping',
-            guess_steadystate: bool = True,
-            n_threads: int = 1):
-        super().__init__(
-            amici_model=amici_model,
-            amici_solver=amici_solver,
-            edatas=edatas,
-            x_ids=x_ids, x_names=x_names,
-            parameter_mapping=parameter_mapping,
-            guess_steadystate=guess_steadystate,
-            n_threads=n_threads)
-        self.petab_importer = petab_importer
-
-    def __getstate__(self) -> dict:
-        state = {}
-        for key in set(self.__dict__.keys()) - \
-                {'amici_model', 'amici_solver', 'edatas'}:
-            state[key] = self.__dict__[key]
-
-        amici_solver_file = tempfile.mkstemp()[1]
-        amici.writeSolverSettingsToHDF5(self.amici_solver, amici_solver_file)
-        state['amici_solver'] = amici_solver_file
-
-        return state
-
-    def __setstate__(self, state: Dict) -> None:
-        self.__dict__.update(state)
-        petab_importer = state['petab_importer']
-
-        # note: attributes not defined in the importer are lost
-        model = petab_importer.create_model()
-        solver = petab_importer.create_solver(model)
-        edatas = petab_importer.create_edatas(model)
-
-        amici.readSolverSettingsFromHDF5(state['amici_solver'], solver)
-        os.remove(state['amici_solver'])
-
-        self.amici_model = model
-        self.amici_solver = solver
-        self.edatas = edatas
