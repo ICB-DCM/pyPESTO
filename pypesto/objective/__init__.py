@@ -1,8 +1,6 @@
 """
 Objective
 =========
-
-The :class:`pypesto.Objective` defines the objective function.
 """
 
 from .objective import Objective

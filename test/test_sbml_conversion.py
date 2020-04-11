@@ -62,7 +62,7 @@ class AmiciObjectiveTest(unittest.TestCase):
 def parameter_estimation(
         objective, library, solver, fixed_pars, n_starts):
     options = {
-        'maxiter': 100
+        'maxiter': 10
     }
 
     if library == 'scipy':
@@ -78,8 +78,9 @@ def parameter_estimation(
 
     optimizer.temp_file = os.path.join('test', 'tmp_{index}.csv')
 
-    lb = -2 * np.ones((1, objective.dim))
-    ub = 2 * np.ones((1, objective.dim))
+    dim = len(objective.x_ids)
+    lb = -2 * np.ones((1, dim))
+    ub = 2 * np.ones((1, dim))
     pars = objective.amici_model.getParameters()
     problem = pypesto.Problem(objective, lb, ub,
                               x_fixed_indices=fixed_pars,
