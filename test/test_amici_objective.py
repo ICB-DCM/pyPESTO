@@ -2,7 +2,7 @@
 This is for testing the pypesto.Objective.
 """
 
-from pypesto.objective.amici_objective import add_sim_grad_to_opt_grad
+from pypesto.objective.amici_util import add_sim_grad_to_opt_grad
 
 import petab
 import pypesto

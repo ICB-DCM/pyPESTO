@@ -7,11 +7,10 @@ from typing import Dict, Tuple, Sequence, Union
 from collections import OrderedDict
 
 from .objective import Objective
-from .constants import MODE_FUN, MODE_RES, FVAL, GRAD, HESS, RES, SRES, RDATAS
+from .constants import MODE_FUN, MODE_RES, FVAL, RDATAS
+from .amici_calculator import AmiciCalculator
 from .amici_util import (
-    map_par_opt_to_par_sim, create_identity_parameter_mapping,
-    add_sim_grad_to_opt_grad, add_sim_hess_to_opt_hess,
-    sim_sres_to_opt_sres, log_simulation, get_error_output)
+    map_par_opt_to_par_sim, create_identity_parameter_mapping)
 
 try:
     import amici
@@ -61,7 +60,8 @@ class AmiciObjective(Objective):
                  parameter_mapping: 'ParameterMapping' = None,
                  guess_steadystate: bool = True,
                  n_threads: int = 1,
-                 amici_object_builder: AmiciObjectBuilder = None):
+                 amici_object_builder: AmiciObjectBuilder = None,
+                 calculator: AmiciCalculator = None):
         """
         Constructor.
 
@@ -99,6 +99,9 @@ class AmiciObjective(Objective):
         amici_object_builder:
             AMICI object builder. Allows recreating the objective for
             pickling, required in some parallelization schemes.
+        calculator:
+            Performs the actual calculation of the function values and
+            derivatives.
         """
         if amici is None:
             raise ImportError(
@@ -155,8 +158,6 @@ class AmiciObjective(Objective):
             x_ids = list(self.amici_model.getParameterIds())
         self.x_ids = x_ids
 
-        self.dim = len(self.x_ids)
-
         # mapping of parameters
         if parameter_mapping is None:
             # use identity mapping for each condition
@@ -193,6 +194,10 @@ class AmiciObjective(Objective):
 
         self.n_threads = n_threads
         self.amici_object_builder = amici_object_builder
+
+        if calculator is None:
+            calculator = AmiciCalculator()
+        self.calculator = calculator
 
     def get_bound_fun(self):
         """
@@ -303,96 +308,22 @@ class AmiciObjective(Objective):
         if sensi_order > self.max_sensi_order:
             raise Exception("Sensitivity order not allowed.")
 
-        sensi_method = self.amici_solver.getSensitivityMethod()
-
-        # prepare outputs
-        nllh = 0.0
-        snllh = np.zeros(self.dim)
-        s2nllh = np.zeros([self.dim, self.dim])
-
-        res = np.zeros([0])
-        sres = np.zeros([0, self.dim])
-
-        # set order in solver
-        self.amici_solver.setSensitivityOrder(sensi_order)
-
         x_dct = self.par_arr_to_dct(x)
 
-        # fill in parameters
-        # TODO (#226) use plist to compute only required derivatives
-        amici.parameter_mapping.fill_in_parameters(
-            edatas=self.edatas,
-            problem_parameters=x_dct,
-            scaled_parameters=True,
-            parameter_mapping=self.parameter_mapping,
-            amici_model=self.amici_model
-        )
-
         # update steady state
-        for data_ix, edata in enumerate(self.edatas):
-            if self.guess_steadystate and \
-                    self.steadystate_guesses['fval'] < np.inf:
+        if self.guess_steadystate and \
+                self.steadystate_guesses['fval'] < np.inf:
+            for data_ix, edata in enumerate(self.edatas):
                 self.apply_steadystate_guess(data_ix, x_dct)
 
-        # run amici simulation
-        rdatas = amici.runAmiciSimulations(
-            self.amici_model,
-            self.amici_solver,
-            self.edatas,
-            num_threads=min(self.n_threads, len(self.edatas)),
-        )
+        ret = self.calculator(
+            x_dct=x_dct, sensi_order=sensi_order, mode=mode,
+            amici_model=self.amici_model, amici_solver=self.amici_solver,
+            edatas=self.edatas, n_threads=self.n_threads,
+            x_ids=self.x_ids, parameter_mapping=self.parameter_mapping)
 
-        par_sim_ids = list(self.amici_model.getParameterIds())
-
-        for data_ix, rdata in enumerate(rdatas):
-            log_simulation(data_ix, rdata)
-
-            # check if the computation failed
-            if rdata['status'] < 0.0:
-                return get_error_output(
-                    self.amici_model, self.edatas, rdatas, self.dim)
-
-            condition_map_sim_var = \
-                self.parameter_mapping[data_ix].map_sim_var
-
-            nllh -= rdata['llh']
-
-            # compute objective
-            if mode == MODE_FUN:
-
-                if sensi_order > 0:
-                    add_sim_grad_to_opt_grad(
-                        self.x_ids,
-                        par_sim_ids,
-                        condition_map_sim_var,
-                        rdata['sllh'],
-                        snllh,
-                        coefficient=-1.0
-                    )
-                    if sensi_method == 1:
-                        # TODO Compute the full Hessian, and check here
-                        add_sim_hess_to_opt_hess(
-                            self.x_ids,
-                            par_sim_ids,
-                            condition_map_sim_var,
-                            rdata['FIM'],
-                            s2nllh,
-                            coefficient=+1.0
-                        )
-
-            elif mode == MODE_RES:
-                res = np.hstack([res, rdata['res']]) \
-                    if res.size else rdata['res']
-                if sensi_order > 0:
-                    opt_sres = sim_sres_to_opt_sres(
-                        self.x_ids,
-                        par_sim_ids,
-                        condition_map_sim_var,
-                        rdata['sres'],
-                        coefficient=1.0
-                    )
-                    sres = np.vstack([sres, opt_sres]) \
-                        if sres.size else opt_sres
+        nllh = - ret[FVAL]
+        rdatas = ret[RDATAS]
 
         # check whether we should update data for preequilibration guesses
         if self.guess_steadystate and \
@@ -401,14 +332,7 @@ class AmiciObjective(Objective):
             for data_ix, rdata in enumerate(rdatas):
                 self.store_steadystate_guess(data_ix, x_dct, rdata)
 
-        return {
-            FVAL: nllh,
-            GRAD: snllh,
-            HESS: s2nllh,
-            RES: res,
-            SRES: sres,
-            RDATAS: rdatas
-        }
+        return ret
 
     def par_arr_to_dct(self, x: Sequence[float]) -> Dict[str, float]:
         """Create dict from parameter vector."""

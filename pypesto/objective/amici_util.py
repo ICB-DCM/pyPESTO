@@ -207,19 +207,6 @@ def sim_sres_to_opt_sres(par_opt_ids: Sequence[str],
     return opt_sres
 
 
-def log_simulation(data_ix, rdata):
-    """Log the simulation results."""
-    logger.debug(f"=== DATASET {data_ix} ===")
-    logger.debug(f"status: {rdata['status']}")
-    logger.debug(f"llh: {rdata['llh']}")
-
-    t_steadystate = 't_steadystate'
-    if t_steadystate in rdata and rdata[t_steadystate] != np.nan:
-        logger.debug(f"t_steadystate: {rdata[t_steadystate]}")
-
-    logger.debug(f"res: {rdata['res']}")
-
-
 def get_error_output(
         amici_model: AmiciModel,
         edatas: Sequence['amici.ExpData'],
@@ -241,3 +228,16 @@ def get_error_output(
         SRES: np.nan * np.ones([n_res, dim]),
         RDATAS: rdatas
     }
+
+
+def log_simulation(data_ix, rdata):
+    """Log the simulation results."""
+    logger.debug(f"=== DATASET {data_ix} ===")
+    logger.debug(f"status: {rdata['status']}")
+    logger.debug(f"llh: {rdata['llh']}")
+
+    t_steadystate = 't_steadystate'
+    if t_steadystate in rdata and rdata[t_steadystate] != np.nan:
+        logger.debug(f"t_steadystate: {rdata[t_steadystate]}")
+
+    logger.debug(f"res: {rdata['res']}")
