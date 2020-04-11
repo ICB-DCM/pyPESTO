@@ -1,26 +1,49 @@
 import numpy as np
 import copy
-import logging
-import numbers
+import tempfile
+import os
+import abc
 from typing import Dict, Tuple, Sequence, Union
 from collections import OrderedDict
 
 from .objective import Objective
 from .constants import MODE_FUN, MODE_RES, FVAL, GRAD, HESS, RES, SRES, RDATAS
+from .amici_util import (
+    map_par_opt_to_par_sim, create_identity_parameter_mapping,
+    add_sim_grad_to_opt_grad, add_sim_hess_to_opt_hess,
+    sim_sres_to_opt_sres, log_simulation, get_error_output)
 
 try:
     import amici
     import amici.petab_objective
     import amici.parameter_mapping
-    from amici.parameter_mapping import (
-        ParameterMapping, ParameterMappingForCondition)
+    from amici.parameter_mapping import ParameterMapping
 except ImportError:
     pass
 
 AmiciModel = Union['amici.Model', 'amici.ModelPtr']
 AmiciSolver = Union['amici.Solver', 'amici.SolverPtr']
 
-logger = logging.getLogger(__name__)
+
+class AmiciObjectBuilder(abc.ABC):
+    """Allows to build AMICI model, solver, and edatas.
+
+    This class is useful for pickling an :class:`pypesto.AmiciObjective`,
+    which is required in some parallelization schemes. Therefore, this
+    class itself must be picklable.
+    """
+
+    @abc.abstractmethod
+    def create_model(self) -> AmiciModel:
+        """Create an AMICI model."""
+
+    @abc.abstractmethod
+    def create_solver(self, model: AmiciModel) -> AmiciSolver:
+        """Create an AMICI solver."""
+
+    @abc.abstractmethod
+    def create_edatas(self, model: AmiciModel) -> Sequence['amici.ExpData']:
+        """Create AMICI experimental data."""
 
 
 class AmiciObjective(Objective):
@@ -37,13 +60,13 @@ class AmiciObjective(Objective):
                  x_names: Sequence[str] = None,
                  parameter_mapping: 'ParameterMapping' = None,
                  guess_steadystate: bool = True,
-                 n_threads: int = 1):
+                 n_threads: int = 1,
+                 amici_object_builder: AmiciObjectBuilder = None):
         """
         Constructor.
 
         Parameters
         ----------
-
         amici_model:
             The amici model.
         amici_solver:
@@ -73,6 +96,9 @@ class AmiciObjective(Objective):
             Number of threads that are used for parallelization over
             experimental conditions. If amici was not installed with openMP
             support this option will have no effect.
+        amici_object_builder:
+            AMICI object builder. Allows recreating the objective for
+            pickling, required in some parallelization schemes.
         """
         if amici is None:
             raise ImportError(
@@ -166,6 +192,7 @@ class AmiciObjective(Objective):
         self.x_names = x_names
 
         self.n_threads = n_threads
+        self.amici_object_builder = amici_object_builder
 
     def get_bound_fun(self):
         """
@@ -222,6 +249,44 @@ class AmiciObjective(Objective):
         other.rebind_res()
 
         return other
+
+    def __getstate__(self) -> Dict:
+        if self.amici_object_builder is None:
+            raise NotImplementedError(
+                "AmiciObjective does not support __getstate__ without "
+                "an `amici_object_builder`.")
+
+        state = {}
+        for key in set(self.__dict__.keys()) - \
+                {'amici_model', 'amici_solver', 'edatas'}:
+            state[key] = self.__dict__[key]
+
+        amici_solver_file = tempfile.mkstemp()[1]
+        amici.writeSolverSettingsToHDF5(self.amici_solver, amici_solver_file)
+        state['amici_solver_settings'] = amici_solver_file
+
+        return state
+
+    def __setstate__(self, state: Dict):
+        if state['amici_object_builder'] is None:
+            raise NotImplementedError(
+                "AmiciObjective does not support __setstate__ without "
+                "an `amici_object_builder`.")
+
+        self.__dict__.update(state)
+
+        # note: attributes not defined in the builder are lost
+        model = self.amici_object_builder.create_model()
+        solver = self.amici_object_builder.create_solver(model)
+        edatas = self.amici_object_builder.create_edatas(model)
+
+        amici.readSolverSettingsFromHDF5(
+            state['amici_solver_settings'], solver)
+        os.remove(state['amici_solver_settings'])
+
+        self.amici_model = model
+        self.amici_solver = solver
+        self.edatas = edatas
 
     def _call_amici(
             self,
@@ -284,7 +349,8 @@ class AmiciObjective(Objective):
 
             # check if the computation failed
             if rdata['status'] < 0.0:
-                return self.get_error_output(rdatas)
+                return get_error_output(
+                    self.amici_model, self.edatas, rdatas, self.dim)
 
             condition_map_sim_var = \
                 self.parameter_mapping[data_ix].map_sim_var
@@ -348,24 +414,6 @@ class AmiciObjective(Objective):
         """Create dict from parameter vector."""
         return OrderedDict(zip(self.x_ids, x))
 
-    def get_error_output(self, rdatas: Sequence['amici.ReturnData']):
-        """Default output upon error."""
-        if not self.amici_model.nt():
-            nt = sum([data.nt() for data in self.edatas])
-        else:
-            nt = sum([data.nt() if data.nt() else self.amici_model.nt()
-                      for data in self.edatas])
-        n_res = nt * self.amici_model.nytrue
-
-        return {
-            FVAL: np.inf,
-            GRAD: np.nan * np.ones(self.dim),
-            HESS: np.nan * np.ones([self.dim, self.dim]),
-            RES:  np.nan * np.ones(n_res),
-            SRES: np.nan * np.ones([n_res, self.dim]),
-            RDATAS: rdatas
-        }
-
     def apply_steadystate_guess(self, condition_ix: int, x_dct: Dict):
         """
         Use the stored steadystate as well as the respective  sensitivity (
@@ -421,209 +469,3 @@ class AmiciObjective(Objective):
         self.steadystate_guesses['fval'] = np.inf
         for condition in self.steadystate_guesses['data']:
             self.steadystate_guesses['data'][condition] = dict()
-
-
-def log_simulation(data_ix, rdata):
-    """Log the simulation results."""
-    logger.debug(f"=== DATASET {data_ix} ===")
-    logger.debug(f"status: {rdata['status']}")
-    logger.debug(f"llh: {rdata['llh']}")
-
-    t_steadystate = 't_steadystate'
-    if t_steadystate in rdata and rdata[t_steadystate] != np.nan:
-        logger.debug(f"t_steadystate: {rdata[t_steadystate]}")
-
-    logger.debug(f"res: {rdata['res']}")
-
-
-def map_par_opt_to_par_sim(
-        condition_map_sim_var: Dict[str, Union[float, str]],
-        x_dct: Dict[str, float],
-        amici_model: AmiciModel
-) -> np.ndarray:
-    """
-    From the optimization vector, create the simulation vector according
-    to the mapping.
-
-    Parameters
-    ----------
-
-    condition_map_sim_var:
-        Simulation to optimization parameter mapping.
-    x_dct:
-        The optimization parameters dict.
-    amici_model:
-        The amici model.
-
-    Returns
-    -------
-
-    par_sim_vals:
-        The simulation parameters vector corresponding to x under the
-        specified mapping.
-    """
-    par_sim_vals = [condition_map_sim_var[par_id]
-                    for par_id in amici_model.getParameterIds()]
-
-    # iterate over simulation parameter indices
-    for ix, val in enumerate(par_sim_vals):
-        if not isinstance(val, numbers.Number):
-            # value is optimization parameter id
-            par_sim_vals[ix] = x_dct[val]
-
-    # return the created simulation parameter vector
-    return np.array(par_sim_vals)
-
-
-def create_plist_from_par_opt_to_par_sim(mapping_par_opt_to_par_sim):
-    """
-    From the parameter mapping `mapping_par_opt_to_par_sim`, create the
-    simulation plist according to the mapping `mapping`.
-
-    Parameters
-    ----------
-
-    mapping_par_opt_to_par_sim: array-like of str
-        len == n_par_sim, the entries are either numeric, or
-        optimization parameter ids.
-
-    Returns
-    -------
-
-    plist: array-like of float
-        List of parameter indices for which the sensitivity needs to be
-        computed
-    """
-    plist = []
-
-    # iterate over simulation parameter indices
-    for j_par_sim, val in enumerate(mapping_par_opt_to_par_sim):
-        if not isinstance(val, numbers.Number):
-            plist.append(j_par_sim)
-
-    # return the created simulation parameter vector
-    return plist
-
-
-def create_identity_parameter_mapping(
-        amici_model: AmiciModel, n_conditions: int
-) -> 'ParameterMapping':
-    """Create a dummy identity parameter mapping table.
-
-    This fills in only the dynamic parameters. Values for fixed parameters,
-    both in preequilibration and simulation, are assumed to be provided
-    correctly in model or edatas already.
-    """
-    x_ids = list(amici_model.getParameterIds())
-    x_scales = list(amici_model.getParameterScale())
-    parameter_mapping = ParameterMapping()
-    for _ in range(n_conditions):
-        condition_map_sim_var = {x_id: x_id for x_id in x_ids}
-        condition_scale_map_sim_var = {
-            x_id: amici.parameter_mapping.amici_to_petab_scale(x_scale)
-            for x_id, x_scale in zip(x_ids, x_scales)}
-        # assumes fixed parameters are filled in already
-        mapping_for_condition = ParameterMappingForCondition(
-            map_sim_var=condition_map_sim_var,
-            scale_map_sim_var=condition_scale_map_sim_var)
-
-        parameter_mapping.append(mapping_for_condition)
-    return parameter_mapping
-
-
-def add_sim_grad_to_opt_grad(
-        par_opt_ids: Sequence[str],
-        par_sim_ids: Sequence[str],
-        condition_map_sim_var: Dict[str, Union[float, str]],
-        sim_grad: Sequence[float],
-        opt_grad: Sequence[float],
-        coefficient: float = 1.0):
-    """
-    Sum simulation gradients to objective gradient according to the provided
-    mapping `mapping_par_opt_to_par_sim`.
-
-    Parameters
-    ----------
-
-    par_opt_ids:
-        The optimization parameter ids. Needed for order.
-    par_sim_ids:
-        The simulation parameter ids. Needed for order.
-    condition_map_sim_var:
-        The simulation to optimization parameter mapping.
-    sim_grad:
-        Simulation gradient.
-    opt_grad:
-        The optimization gradient. To which sim_grad is added.
-        Changed in-place.
-    coefficient:
-        Coefficient for sim_grad when adding to opt_grad.
-    """
-    for par_sim, par_opt in condition_map_sim_var.items():
-        if not isinstance(par_opt, str):
-            continue
-        par_sim_idx = par_sim_ids.index(par_sim)
-        par_opt_idx = par_opt_ids.index(par_opt)
-
-        opt_grad[par_opt_idx] += coefficient * sim_grad[par_sim_idx]
-
-
-def add_sim_hess_to_opt_hess(
-        par_opt_ids: Sequence[str],
-        par_sim_ids: Sequence[str],
-        condition_map_sim_var: Dict[str, Union[float, str]],
-        sim_hess: np.ndarray,
-        opt_hess: np.ndarray,
-        coefficient: float = 1.0):
-    """
-    Sum simulation hessians to objective hessian according to the provided
-    mapping `mapping_par_opt_to_par_sim`.
-
-    Parameters
-    ----------
-
-    Same as for add_sim_grad_to_opt_grad, replacing the gradients by hessians.
-    """
-    for par_sim_id, par_opt_id in condition_map_sim_var.items():
-        if not isinstance(par_opt_id, str):
-            continue
-        par_sim_idx = par_sim_ids.index(par_sim_id)
-        par_opt_idx = par_opt_ids.index(par_opt_id)
-
-        for par_sim_id_2, par_opt_id_2 in condition_map_sim_var.items():
-            if not isinstance(par_opt_id_2, str):
-                continue
-            par_sim_idx_2 = par_sim_ids.index(par_sim_id_2)
-            par_opt_idx_2 = par_opt_ids.index(par_opt_id_2)
-
-            opt_hess[par_opt_idx, par_opt_idx_2] += \
-                coefficient * sim_hess[par_sim_idx, par_sim_idx_2]
-
-
-def sim_sres_to_opt_sres(par_opt_ids: Sequence[str],
-                         par_sim_ids: Sequence[str],
-                         condition_map_sim_var: Dict[str, Union[float, str]],
-                         sim_sres: np.ndarray,
-                         coefficient: float = 1.0):
-    """
-    Sum simulation residual sensitivities to objective residual sensitivities
-    according to the provided mapping.
-
-    Parameters
-    ----------
-
-    Mostly the same as for add_sim_grad_to_opt_grad, replacing the gradients by
-    residual sensitivities.
-    """
-    opt_sres = np.zeros((sim_sres.shape[0], len(par_opt_ids)))
-
-    for par_sim_id, par_opt_id in condition_map_sim_var.items():
-        if not isinstance(par_opt_id, str):
-            continue
-
-        par_sim_idx = par_sim_ids.index(par_sim_id)
-        par_opt_idx = par_opt_ids.index(par_opt_id)
-        opt_sres[:, par_opt_idx] += \
-            coefficient * sim_sres[:, par_sim_idx]
-
-    return opt_sres

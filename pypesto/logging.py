@@ -1,3 +1,10 @@
+"""
+Logging
+=======
+
+Logging convenience functions.
+"""
+
 import logging
 
 

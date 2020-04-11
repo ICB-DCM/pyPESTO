@@ -2,6 +2,7 @@
 Sampling
 ========
 
+Draw samples from the distribution, with support for various samplers.
 """
 
 from .sample import sample

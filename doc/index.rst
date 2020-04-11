@@ -49,13 +49,16 @@ Welcome to pyPESTO's documentation!
 
    api_objective
    api_problem
+   api_petab
    api_optimize
    api_profile
    api_sampling
+   api_visualize
    api_result
    api_engine
-   api_visualize
    api_startpoint
+   api_storage
+   api_logging
 
 .. toctree::
    :maxdepth: 2

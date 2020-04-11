@@ -16,9 +16,10 @@ from .objective import (
     Hdf5History,
     OptimizerHistory,
     Objective,
-    AmiciObjective,
-    PetabImporter)
+    AmiciObjective)
 from .problem import Problem
+from .petab import (
+    PetabImporter)
 from . import startpoint
 from .result import (
     Result,
