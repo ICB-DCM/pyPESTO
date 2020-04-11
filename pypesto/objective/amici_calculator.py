@@ -36,7 +36,7 @@ class AmiciCalculator:
                  parameter_mapping: ParameterMapping):
         """Perform the actual AMICI call.
 
-        Called within the :class:`AmiciObjective` call method.
+        Called within the :func:`AmiciObjective.__call__` method.
 
         Parameters
         ----------
