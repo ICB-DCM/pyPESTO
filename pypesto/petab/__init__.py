@@ -2,7 +2,7 @@
 PEtab
 =====
 
-Code related to giving pyPESTO support for the PEtab data format.
+pyPESTO support for the PEtab data format.
 """
 
 # PEtab is an optional dependency
