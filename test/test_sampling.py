@@ -136,3 +136,15 @@ def test_multiple_startpoints():
     assert result.sample_result.trace_fval.shape[0] == 2
     assert [result.sample_result.trace_x[0][0],
             result.sample_result.trace_x[1][0]] == x0s
+
+
+def test_regularize_covariance():
+    """
+    Make sure that `regularize_covariance` renders symmetric matrices
+    positive definite.
+    """
+    matrix = np.array([[-1., -4.], [-4., 1.]])
+    assert np.any(np.linalg.eigvals(matrix) < 0)
+    reg = pypesto.sampling.adaptive_metropolis.regularize_covariance(
+        matrix, 1e-6)
+    assert np.all(np.linalg.eigvals(reg) >= 0)

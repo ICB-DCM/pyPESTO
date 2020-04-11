@@ -6,7 +6,7 @@ import seaborn as sns
 from typing import Tuple
 
 from ..result import Result
-from ..sample import McmcPtResult
+from ..sampling import McmcPtResult
 
 
 def sampling_fval_trace(
