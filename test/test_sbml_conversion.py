@@ -62,7 +62,7 @@ class AmiciObjectiveTest(unittest.TestCase):
 def parameter_estimation(
         objective, library, solver, fixed_pars, n_starts):
     options = {
-        'maxiter': 100
+        'maxiter': 10
     }
 
     if library == 'scipy':
