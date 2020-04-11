@@ -33,7 +33,7 @@ class AmiciCalculator:
                  edatas: List['amici.ExpData'],
                  n_threads: int,
                  x_ids: Sequence[str],
-                 parameter_mapping: ParameterMapping):
+                 parameter_mapping: 'ParameterMapping'):
         """Perform the actual AMICI call.
 
         Called within the :func:`AmiciObjective.__call__` method.
