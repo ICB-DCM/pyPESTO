@@ -38,7 +38,7 @@ from .profile import (
     parameter_profile,
     ProfileOptions,
     ProfilerResult)
-from .sample import (
+from .sampling import (
     sample,
     Sampler,
     InternalSampler,

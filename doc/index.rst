@@ -52,7 +52,7 @@ Welcome to pyPESTO's documentation!
    api_petab
    api_optimize
    api_profile
-   api_sample
+   api_sampling
    api_visualize
    api_result
    api_engine
