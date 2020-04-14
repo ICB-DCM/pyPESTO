@@ -110,7 +110,7 @@ def load_model_objective(example_name):
     try:
         model_module = importlib.import_module(model_name)
         model = model_module.getModel()
-    except Exception:
+    except ModuleNotFoundError:
         # import sbml model, compile and generate amici module
         sbml_importer = amici.SbmlImporter(sbml_file)
         sbml_importer.sbml2amici(model_name,
