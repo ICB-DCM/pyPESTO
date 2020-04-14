@@ -38,7 +38,8 @@ class HierarchicalAmiciCalculator(AmiciCalculator):
         self.inner_problem = inner_problem
 
         if inner_solver is None:
-            inner_solver = NumericalInnerSolver()
+            #inner_solver = NumericalInnerSolver()
+            inner_solver = AnalyticalInnerSolver()
         self.inner_solver = inner_solver
 
     def __call__(self,
@@ -91,7 +92,7 @@ class HierarchicalAmiciCalculator(AmiciCalculator):
         # compute optimal inner parameters
         x_inner_opt = self.inner_solver.solve(
             self.inner_problem, sim, sigma, scaled=True)
-
+        #print(x_inner_opt)
         # fill in optimal values
         x_dct = copy.deepcopy(x_dct)
         for key, val in x_inner_opt.items():

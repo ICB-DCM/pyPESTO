@@ -184,6 +184,9 @@ def ixs_for_measurement_specific_parameters(
     return ixs_for_par
 
 
+#def noise_models_from
+
+
 def ix_matrices_from_arrays(ixs, edatas):
     ix_matrices = {
         id: [np.zeros_like(edata, dtype=bool) for edata in edatas]
