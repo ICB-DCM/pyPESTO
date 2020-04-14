@@ -105,6 +105,9 @@ def load_model_objective(example_name):
     # directory to which the generated model code is written
     model_output_dir = os.path.join('doc', 'example', 'tmp',
                                     model_name)
+
+    if not os.path.exists(model_output_dir):
+        os.makedirs(model_output_dir)
     sys.path.insert(0, os.path.abspath(model_output_dir))
 
     try:
