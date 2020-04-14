@@ -105,17 +105,20 @@ def load_model_objective(example_name):
     # directory to which the generated model code is written
     model_output_dir = os.path.join('doc', 'example', 'tmp',
                                     model_name)
-
-    # import sbml model, compile and generate amici module
-    sbml_importer = amici.SbmlImporter(sbml_file)
-    sbml_importer.sbml2amici(model_name,
-                             model_output_dir,
-                             verbose=False)
-
-    # load amici module (the usual starting point later for the analysis)
     sys.path.insert(0, os.path.abspath(model_output_dir))
-    model_module = importlib.import_module(model_name)
-    model = model_module.getModel()
+
+    try:
+        model_module = importlib.import_module(model_name)
+        model = model_module.getModel()
+    except Exception:
+        # import sbml model, compile and generate amici module
+        sbml_importer = amici.SbmlImporter(sbml_file)
+        sbml_importer.sbml2amici(model_name,
+                                 model_output_dir,
+                                 verbose=False)
+        model_module = importlib.import_module(model_name)
+        model = model_module.getModel()
+
     model.requireSensitivitiesForAllParameters()
     model.setTimepoints(np.linspace(0, 10, 11))
     model.setParameterScale(amici.ParameterScaling_log10)
