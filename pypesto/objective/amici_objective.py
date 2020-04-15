@@ -199,6 +199,11 @@ class AmiciObjective(Objective):
             calculator = AmiciCalculator()
         self.calculator = calculator
 
+    def initialize(self):
+        super().initialize()
+        self.reset_steadystate_guesses()
+        self.calculator.initialize()
+
     def get_bound_fun(self):
         """
         Generate a fun function that calls _call_amici with MODE_FUN. Defining

@@ -24,6 +24,9 @@ class AmiciCalculator:
     function values.
     """
 
+    def initialize(self):
+        """Initialize the calculator. Default: Do nothing."""
+
     def __call__(self,
                  x_dct: Dict,
                  sensi_order: int,

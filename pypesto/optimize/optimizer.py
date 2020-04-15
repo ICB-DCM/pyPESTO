@@ -34,6 +34,9 @@ def history_decorator(minimize):
     def wrapped_minimize(self, problem, x0, id, history_options=None):
         objective = problem.objective
 
+        # initialize the objective
+        objective.initialize()
+
         # create optimizer history
         if history_options is None:
             history_options = HistoryOptions()
@@ -43,10 +46,6 @@ def history_decorator(minimize):
 
         # plug in history for the objective to record it
         objective.history = optimizer_history
-
-        # TODO this can be prettified
-        if hasattr(objective, 'reset_steadystate_guesses'):
-            objective.reset_steadystate_guesses()
 
         # perform the actual minimization
         result = minimize(self, problem, x0, id, history_options)
