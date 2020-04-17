@@ -6,6 +6,7 @@ import pypesto
 import importlib
 import numpy as np
 import warnings
+import re
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
@@ -61,9 +62,15 @@ class AmiciObjectiveTest(unittest.TestCase):
 
 def parameter_estimation(
         objective, library, solver, fixed_pars, n_starts):
-    options = {
-        'maxiter': 10
-    }
+
+    if re.match(r'(?i)^(ls_)', solver):
+        options = {
+            'max_nfev': 10
+        }
+    else:
+        options = {
+            'maxiter': 10
+        }
 
     if library == 'scipy':
         optimizer = pypesto.ScipyOptimizer(method=solver,
