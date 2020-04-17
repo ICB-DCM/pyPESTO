@@ -230,11 +230,17 @@ class ScipyOptimizer(Optimizer):
 
         self.method = method
 
-        self.tol = tol
-
         self.options = options
         if self.options is None:
             self.options = ScipyOptimizer.get_default_options()
+            self.options['ftol'] = tol
+        elif not self.options is None and self.options['ftol'] is None:
+            self.options['ftol'] = tol
+
+        if not self.options is None:
+            self.options['verbose'] = 2 if 'disp' in self.options.keys() \
+                                           and self.options['disp'] else 0
+            self.options.pop('disp')
 
     @fix_decorator
     @time_decorator
@@ -272,12 +278,9 @@ class ScipyOptimizer(Optimizer):
                 method=ls_method,
                 jac=jac,
                 bounds=bounds,
-                ftol=self.tol,
                 tr_solver='exact',
                 loss='linear',
-                verbose=2 if 'disp' in
-                self.options.keys() and self.options['disp']
-                else 0,
+                **self.options
             )
 
         else:
@@ -326,7 +329,6 @@ class ScipyOptimizer(Optimizer):
                 hess=hess,
                 hessp=hessp,
                 bounds=bounds,
-                tol=self.tol,
                 options=self.options,
             )
 
