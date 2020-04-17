@@ -237,11 +237,6 @@ class ScipyOptimizer(Optimizer):
         elif not self.options is None and self.options['ftol'] is None:
             self.options['ftol'] = tol
 
-        if not self.options is None:
-            self.options['verbose'] = 2 if 'disp' in self.options.keys() \
-                                           and self.options['disp'] else 0
-            self.options.pop('disp')
-
     @fix_decorator
     @time_decorator
     @history_decorator
@@ -270,6 +265,11 @@ class ScipyOptimizer(Optimizer):
             fun = objective.get_res
             jac = objective.get_sres if objective.has_sres else '2-point'
             # TODO: pass jac computing methods in options
+
+            if not self.options is None:
+                self.options['verbose'] = 2 if 'disp' in self.options.keys() \
+                                               and self.options['disp'] else 0
+                self.options.pop('disp')
 
             # optimize
             res = scipy.optimize.least_squares(
