@@ -266,7 +266,7 @@ class ScipyOptimizer(Optimizer):
             jac = objective.get_sres if objective.has_sres else '2-point'
             # TODO: pass jac computing methods in options
 
-            if not self.options is None:
+            if self.options is not None:
                 self.options['verbose'] = 2 if 'disp' in self.options.keys() \
                                                and self.options['disp'] else 0
                 self.options.pop('disp')
