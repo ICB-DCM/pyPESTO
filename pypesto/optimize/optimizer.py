@@ -269,7 +269,7 @@ class ScipyOptimizer(Optimizer):
             if self.options is not None:
                 self.options['verbose'] = 2 if 'disp' in self.options.keys() \
                                                and self.options['disp'] else 0
-                self.options.pop('disp')
+                self.options.pop('disp', None)
 
             # optimize
             res = scipy.optimize.least_squares(
