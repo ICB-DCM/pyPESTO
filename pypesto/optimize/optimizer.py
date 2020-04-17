@@ -234,7 +234,7 @@ class ScipyOptimizer(Optimizer):
         if self.options is None:
             self.options = ScipyOptimizer.get_default_options()
             self.options['ftol'] = tol
-        elif not self.options is None and 'ftol' not in self.options:
+        elif self.options is not None and 'ftol' not in self.options:
             self.options['ftol'] = tol
 
     @fix_decorator
