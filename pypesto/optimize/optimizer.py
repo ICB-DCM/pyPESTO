@@ -232,7 +232,7 @@ class ScipyOptimizer(Optimizer):
 
         self.options = options
         if self.options is None:
-            self.options = ScipyOptimizer.get_default_options()
+            self.options = ScipyOptimizer.get_default_options(self)
             self.options['ftol'] = tol
         elif self.options is not None and 'ftol' not in self.options:
             self.options['ftol'] = tol
@@ -376,7 +376,7 @@ class DlibOptimizer(Optimizer):
 
         self.options = options
         if self.options is None:
-            self.options = DlibOptimizer.get_default_options()
+            self.options = DlibOptimizer.get_default_options(self)
 
     @fix_decorator
     @time_decorator
@@ -422,7 +422,7 @@ class DlibOptimizer(Optimizer):
         return False
 
     @staticmethod
-    def get_default_options():
+    def get_default_options(self):
         return {}
 
 
