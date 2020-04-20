@@ -102,7 +102,7 @@ class ResModeHistoryTest(HistoryTest):
     def setUpClass(cls):
         cls.optimizer = pypesto.ScipyOptimizer(
             method='ls_trf',
-            options={'maxiter': 100}
+            options={'max_nfev': 100}
         )
         cls.obj, _ = load_model_objective(
             'conversion_reaction'
