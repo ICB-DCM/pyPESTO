@@ -4,7 +4,6 @@ Visualize
 
 pypesto comes with various visualization routines. To use these,
 import pypesto.visualize.
-
 """
 
 from .reference_points import (ReferencePoint,
@@ -25,3 +24,7 @@ from .optimizer_history import (optimizer_history,
 from .profiles import (profiles,
                        profiles_lowlevel,
                        profile_lowlevel)
+from .sampling import (sampling_fval_trace,
+                       sampling_parameters_trace,
+                       sampling_scatter,
+                       sampling_1d_marginals)

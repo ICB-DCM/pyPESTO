@@ -144,6 +144,13 @@ class Objective:
     # The following has_ properties can be used to find out what values
     # the objective supports.
 
+    def initialize(self):
+        """Initialize the objective function.
+        This function is used at the beginning of an analysis, e.g.
+        optimization, and can e.g. reset the objective memory.
+        By default does nothing.
+        """
+
     @property
     def has_fun(self) -> bool:
         return callable(self.fun)
