@@ -1,0 +1,2 @@
+AMICI_CXXFLAGS=-fopenmp
+AMICI_LDFLAGS=-fopenmp
