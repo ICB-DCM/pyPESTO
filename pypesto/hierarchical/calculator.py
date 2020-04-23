@@ -1,13 +1,15 @@
 from typing import Dict, List, Sequence, Union
 import copy
+import numpy as np
 
 from ..objective.amici_calculator import (
     AmiciCalculator, calculate_function_values)
 from ..objective.amici_util import (
-    get_error_output
-)
+    get_error_output)
+from ..objective.constants import FVAL, GRAD, HESS, RES, SRES, RDATAS
 from .problem import InnerProblem
 from .solver import InnerSolver, AnalyticalInnerSolver, NumericalInnerSolver
+from .util import compute_nllh
 
 try:
     import amici
@@ -41,6 +43,10 @@ class HierarchicalAmiciCalculator(AmiciCalculator):
             #inner_solver = NumericalInnerSolver()
             inner_solver = AnalyticalInnerSolver()
         self.inner_solver = inner_solver
+
+    def initialize(self):
+        super().initialize()
+        self.inner_solver.initialize()
 
     def __call__(self,
                  x_dct: Dict,
@@ -92,6 +98,19 @@ class HierarchicalAmiciCalculator(AmiciCalculator):
         # compute optimal inner parameters
         x_inner_opt = self.inner_solver.solve(
             self.inner_problem, sim, sigma, scaled=True)
+
+        # if sensi_order == 0:
+        #     dim = len(x_ids)
+        #     nllh = compute_nllh(self.inner_problem.data, sim, sigma)
+        #     return {
+        #         FVAL: nllh,
+        #         GRAD: np.zeros(dim),
+        #         HESS: np.zeros([dim, dim]),
+        #         RES: np.zeros([0]),
+        #         SRES: np.zeros([0, dim]),
+        #         RDATAS: rdatas
+        #     }
+
         #print(x_inner_opt)
         # fill in optimal values
         x_dct = copy.deepcopy(x_dct)
