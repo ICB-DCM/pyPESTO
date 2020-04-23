@@ -63,6 +63,14 @@ class ProblemHDF5Writer:
             write_string_array(problem_grp, self.X_NAMES, problem.x_names)
 
 
+def get_group_by_path(f, group_path):
+    if group_path in f:
+        grp = f[group_path]
+    else:
+        grp = f.create_group(group_path)
+    return grp
+
+
 class OptimizationResultHDF5Writer:
     """
     Writer of the HDF5 result files.
@@ -88,21 +96,23 @@ class OptimizationResultHDF5Writer:
         Write HDF5 result file from pyPESTO result object.
         """
         with h5py.File(self.storage_filename, "a") as f:
-            if "optimization" in f:
-                if overwrite:
-                    del f["optimization"]
-                else:
-                    raise Exception("The file already exists and contains "
-                                    "information about optimization result."
-                                    "If you wish to overwrite the file set"
-                                    "overwrite=True.")
-            optimization_grp = f.create_group("optimization")
+            optimization_grp = get_group_by_path(f, "optimization")
             # settings =
             # optimization_grp.create_dataset("settings", settings, dtype=)
-            results_grp = optimization_grp.create_group("results")
-            for i, start in enumerate(result.optimize_result.list):
-                start_grp = results_grp.create_group(str(i))
+            results_grp = get_group_by_path(optimization_grp, "results")
+
+            for start in result.optimize_result.list:
+                start_id = start['id']
+                start_grp = get_group_by_path(results_grp, start_id)
                 start['history'] = None  # TOOD temporary fix
+                if not overwrite:
+                    for key in start.keys():
+                        if key in start_grp.keys() or key in start_grp.attrs:
+                            raise Exception("The file already exists and "
+                                            "contains information about "
+                                            "optimization result. If you wish "
+                                            "to overwrite it, set "
+                                            "overwrite=True.")
                 for key in start.keys():
                     if isinstance(start[key], np.ndarray):
                         write_float_array(start_grp, key, start[key])
