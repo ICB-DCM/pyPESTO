@@ -9,7 +9,8 @@ RUN apt update \
     python3-dev \
     python3-pip \
     swig \
-    git\    
+    git\
+    libhdf5-serial-dev\
     && ln -sf /usr/bin/swig3.0 /usr/bin/swig
     
 RUN pip3 install python-libsbml>=5.17.0
