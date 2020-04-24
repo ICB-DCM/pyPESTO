@@ -10,9 +10,10 @@ describing the problem to be solved.
 import numpy as np
 import pandas as pd
 import copy
-from typing import Iterable, List, Optional, Union
+from typing import Iterable, List, Optional, Union, Dict
 
 from .objective.objective import Objective
+from .objective.priors import Priors
 
 
 class Problem:
@@ -45,6 +46,9 @@ class Problem:
         else the values specified here are used if not None, otherwise
         the variable names are set to ['x0', ... 'x{dim_full}']. The list
         must always be of length dim_full.
+    x_priors_defs:
+        Definitions of priors for parameters. Types of priors, and their
+        required and optional parameters, are described in the `Prior` class.
 
     Attributes
     ----------
@@ -79,7 +83,8 @@ class Problem:
                  x_fixed_indices: Optional[Iterable[int]] = None,
                  x_fixed_vals: Optional[Iterable[float]] = None,
                  x_guesses: Optional[Iterable[float]] = None,
-                 x_names: Optional[Iterable[str]] = None):
+                 x_names: Optional[Iterable[str]] = None,
+                 x_priors_defs: Optional[Iterable[Dict]] = None):
         self.objective = copy.deepcopy(objective)
 
         self.lb = np.array(lb).flatten()
@@ -119,6 +124,9 @@ class Problem:
         elif x_names is None:
             x_names = [f'x{j}' for j in range(0, self.dim_full)]
         self.x_names = x_names
+
+        if x_priors_defs is not None:
+            self.x_priors = Priors(x_priors_defs)
 
         self.normalize_input()
 
