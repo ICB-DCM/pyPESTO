@@ -11,9 +11,11 @@ import numpy as np
 import pandas as pd
 import numbers
 import copy
-from typing import Iterable, List, Optional, Sequence, Union
+
+from typing import Iterable, List, Optional, Union
 
 from .objective import ObjectiveBase
+from .objective.priors import NegLogPriors
 
 
 class Problem:
@@ -46,6 +48,13 @@ class Problem:
         else the values specified here are used if not None, otherwise
         the variable names are set to ['x0', ... 'x{dim_full}']. The list
         must always be of length dim_full.
+    x_scales:
+        Parameter scales can be optionally given and are used e.g. in
+        visualisation and prior generation. Currently the scales 'lin',
+        'log`and 'log10' are supported.
+    x_priors_defs:
+        Definitions of priors for parameters. Types of priors, and their
+        required and optional parameters, are described in the `Prior` class.
 
     Attributes
     ----------
@@ -77,10 +86,13 @@ class Problem:
                  lb: Union[np.ndarray, List[float]],
                  ub: Union[np.ndarray, List[float]],
                  dim_full: Optional[int] = None,
-                 x_fixed_indices: Optional[Sequence[int]] = None,
-                 x_fixed_vals: Optional[Sequence[float]] = None,
-                 x_guesses: Optional[Sequence[float]] = None,
-                 x_names: Optional[Sequence[str]] = None):
+                 x_fixed_indices: Optional[Iterable[int]] = None,
+                 x_fixed_vals: Optional[Iterable[float]] = None,
+                 x_guesses: Optional[Iterable[float]] = None,
+                 x_names: Optional[Iterable[str]] = None,
+                 x_scales: Optional[Iterable[str]] = None,
+                 x_priors_defs: Optional[NegLogPriors] = None):
+
         self.objective = copy.deepcopy(objective)
 
         self.lb = np.array(lb).flatten()
@@ -117,6 +129,12 @@ class Problem:
         elif x_names is None:
             x_names = [f'x{j}' for j in range(0, self.dim_full)]
         self.x_names: List[str] = [name for name in x_names]
+
+        if x_scales is None:
+            x_scales = ['lin'] * self.dim_full
+        self.x_scales = x_scales
+
+        self.x_priors = x_priors_defs
 
         self.normalize_input()
 
@@ -157,6 +175,8 @@ class Problem:
             raise AssertionError("lb_full dimension invalid.")
         if self.ub_full.size != self.dim_full:
             raise AssertionError("ub_full dimension invalid.")
+        if len(self.x_scales) != self.dim_full:
+            raise AssertionError("x_scales dimension invalid.")
         if check_x_guesses:
             if self.x_guesses.shape[1] != self.dim:
                 raise AssertionError("x_guesses form invalid.")
