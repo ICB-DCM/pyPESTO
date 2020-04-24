@@ -647,9 +647,12 @@ class Hdf5History(History):
 
             for iteration in range(f[f'/optimization/results/{self.id}/trace/']
                                            .attrs['n_iterations']):
-
-                entry = np.array(f[f'/optimization/results/{self.id}/trace/{str(iteration)}/{entry_id}'])
-                trace_result.append(entry)
+                try:
+                    entry = np.array(f[f'/optimization/results/{self.id}/trace'
+                                       f'/{str(iteration)}/{entry_id}'])
+                    trace_result.append(entry)
+                except KeyError:
+                    trace_result.append(None)
 
         return trace_result
 
