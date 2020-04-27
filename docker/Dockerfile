@@ -26,7 +26,7 @@ RUN pip3 install -U --upgrade pip wheel \
     && tar -xzf ../amici.tar.gz \
     && cd /tmp/amici/python/sdist \
     && python3 setup.py -v sdist \
-    && pip3 install -v $(ls -t /tmp/amici/python/sdist/dist/amici-*.tar.gz | head -1)[petab] \
+    && pip3 install -v $(ls -t /tmp/amici/python/sdist/dist/amici-*.tar.gz | head -1)[petab,pysb] \
     && rm -rf /tmp && mkdir /tmp
 
 # RUN pip3 install git+https://github.com/ICB-DCM/pyPESTO.git@develop#egg=pypesto
