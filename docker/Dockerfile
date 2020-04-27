@@ -1,4 +1,4 @@
-FROM ubuntu:19.10
+FROM ubuntu:20.04
 
 RUN apt update \
     && apt-get install -y \
@@ -30,4 +30,4 @@ RUN pip3 install -U --upgrade pip wheel \
     && rm -rf /tmp && mkdir /tmp
 
 # RUN pip3 install git+https://github.com/ICB-DCM/pyPESTO.git@develop#egg=pypesto
-RUN pip3 install pyPESTO pySB jupyter pyswarm dlib
+RUN pip3 install pyPESTO jupyter pyswarm dlib
