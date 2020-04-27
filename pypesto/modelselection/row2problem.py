@@ -22,7 +22,7 @@ def row2problem(petab_problem: petab.problem, row: Dict[str, float],
             print(Fore.YELLOW + f'Warning: parameter {par_id} is not defined '
                                 f'in SBML model. It will be ignored.')
             continue
-        if par_id not in petab_problem.get_model_parameters():
+        if par_id not in pypesto_problem.x_names:
             print(Fore.YELLOW + f'Warning: parameter {par_id} was not found '
                                 f'in pyPESTO.problem. It will be ignored.')
             continue
