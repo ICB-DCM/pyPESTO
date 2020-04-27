@@ -6,6 +6,7 @@ import pypesto
 import importlib
 import numpy as np
 import warnings
+import re
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
@@ -61,9 +62,15 @@ class AmiciObjectiveTest(unittest.TestCase):
 
 def parameter_estimation(
         objective, library, solver, fixed_pars, n_starts):
-    options = {
-        'maxiter': 100
-    }
+
+    if re.match(r'(?i)^(ls_)', solver):
+        options = {
+            'max_nfev': 10
+        }
+    else:
+        options = {
+            'maxiter': 10
+        }
 
     if library == 'scipy':
         optimizer = pypesto.ScipyOptimizer(method=solver,
@@ -78,8 +85,9 @@ def parameter_estimation(
 
     optimizer.temp_file = os.path.join('test', 'tmp_{index}.csv')
 
-    lb = -2 * np.ones((1, objective.dim))
-    ub = 2 * np.ones((1, objective.dim))
+    dim = len(objective.x_ids)
+    lb = -2 * np.ones((1, dim))
+    ub = 2 * np.ones((1, dim))
     pars = objective.amici_model.getParameters()
     problem = pypesto.Problem(objective, lb, ub,
                               x_fixed_indices=fixed_pars,
@@ -105,16 +113,22 @@ def load_model_objective(example_name):
     model_output_dir = os.path.join('doc', 'example', 'tmp',
                                     model_name)
 
-    # import sbml model, compile and generate amici module
-    sbml_importer = amici.SbmlImporter(sbml_file)
-    sbml_importer.sbml2amici(model_name,
-                             model_output_dir,
-                             verbose=False)
-
-    # load amici module (the usual starting point later for the analysis)
+    if not os.path.exists(model_output_dir):
+        os.makedirs(model_output_dir)
     sys.path.insert(0, os.path.abspath(model_output_dir))
-    model_module = importlib.import_module(model_name)
-    model = model_module.getModel()
+
+    try:
+        model_module = importlib.import_module(model_name)
+        model = model_module.getModel()
+    except ModuleNotFoundError:
+        # import sbml model, compile and generate amici module
+        sbml_importer = amici.SbmlImporter(sbml_file)
+        sbml_importer.sbml2amici(model_name,
+                                 model_output_dir,
+                                 verbose=False)
+        model_module = importlib.import_module(model_name)
+        model = model_module.getModel()
+
     model.requireSensitivitiesForAllParameters()
     model.setTimepoints(np.linspace(0, 10, 11))
     model.setParameterScale(amici.ParameterScaling_log10)

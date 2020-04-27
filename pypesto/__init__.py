@@ -16,9 +16,10 @@ from .objective import (
     Hdf5History,
     OptimizerHistory,
     Objective,
-    AmiciObjective,
-    PetabImporter)
+    AmiciObjective)
 from .problem import Problem
+from .petab import (
+    PetabImporter)
 from . import startpoint
 from .result import (
     Result,
@@ -37,6 +38,15 @@ from .profile import (
     parameter_profile,
     ProfileOptions,
     ProfilerResult)
+from .sampling import (
+    sample,
+    Sampler,
+    InternalSampler,
+    MetropolisSampler,
+    AdaptiveMetropolisSampler,
+    ParallelTemperingSampler,
+    AdaptiveParallelTemperingSampler,
+    McmcPtResult)
 from .engine import (
     SingleCoreEngine,
     MultiThreadEngine,
