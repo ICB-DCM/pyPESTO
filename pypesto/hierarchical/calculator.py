@@ -7,8 +7,10 @@ from ..objective.amici_util import (
     get_error_output
 )
 from .problem import InnerProblem
-from .solver import InnerSolver, AnalyticalInnerSolver, NumericalInnerSolver, OptimalScalingInnerSolver
-from ..objective.constants import MODE_FUN, MODE_RES, FVAL, GRAD, HESS, RES, SRES, RDATAS
+from .solver import InnerSolver, AnalyticalInnerSolver, NumericalInnerSolver
+from .optimal_scaling_solver import OptimalScalingInnerSolver
+
+from ..objective.constants import FVAL, GRAD, HESS, RES, SRES, RDATAS
 #
 try:
     import amici
