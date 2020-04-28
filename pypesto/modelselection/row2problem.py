@@ -6,6 +6,7 @@ from ..petab import PetabImporter
 from ..objective import Objective
 from ..problem import Problem
 
+from petab.C import PARAMETER_ID
 
 def row2problem(petab_problem: petab.problem, row: Dict[str, float],
                 obj: Objective = None) -> Problem:
