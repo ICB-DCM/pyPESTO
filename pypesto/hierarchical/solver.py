@@ -9,10 +9,6 @@ from .parameter import InnerParameter
 from .problem import InnerProblem, scale_value_dict
 
 
-REDUCED = 'reduced'
-STANDARD = 'standard'
-
-
 class InnerSolver:
 
     def solve(

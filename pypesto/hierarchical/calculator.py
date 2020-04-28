@@ -104,8 +104,10 @@ class HierarchicalAmiciCalculator(AmiciCalculator):
 
         #print(x_inner_opt)
         # fill in optimal values
-        #x_dct = copy.deepcopy(x_dct)
-        #for key, val in x_inner_opt.items():
+        # TODO: x_inner_opt is different for hierarchical and qualitative approach.
+        #  For now I commented the following lines out to make qualitative approach work.
+        # x_dct = copy.deepcopy(x_dct)
+        # for key, val in x_inner_opt.items():
         #    x_dct[key] = val
 
         # fill in parameters
