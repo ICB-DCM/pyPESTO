@@ -358,6 +358,36 @@ class MemoryHistory(History):
         super().update(x, sensi_orders, mode, result)
         self._update_trace(x, sensi_orders, mode, result)
 
+    def to_hdf5_history(self,
+                        file: str) -> 'Hdf5History':
+        """
+        Returns a copy of the MemoryHistory as Hdf5History, that then can be saved.
+        """
+
+        h5history = Hdf5History(self.id,
+                                file,
+                                self.options)
+
+        n_iterations = np.maximum(self.n_res, self.n_fval)
+
+        with h5py.File(h5history.file, 'a') as f:
+
+            if f'/optimization/results/{h5history.id}/trace/' not in f:
+                grp = f.create_group(f'/optimization/results/{h5history.id}/trace/')
+                grp.attrs['n_iterations'] = n_iterations
+
+            for iteration in range(n_iterations):
+
+                values = {k: np.copy(self._trace[k][iteration])
+                          for k in self._trace_keys}
+
+                for key in values.keys():
+                    if values[key] is not None:
+                        f[f'/optimization/results/{h5history.id}/trace/'
+                          f'{str(iteration)}/{key}'] = values[key]
+
+        return h5history
+
     def _update_trace(self, x, sensi_orders, mode, result):
         """Update internal trace representation."""
         ret = extract_values(sensi_orders, mode, result, self.options)
