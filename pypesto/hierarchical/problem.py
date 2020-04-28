@@ -18,6 +18,8 @@ except ImportError:
 logger = logging.getLogger(__name__)
 
 PARAMETER_TYPE = 'parameterType'
+PARAMETER_GROUP = 'parameterGroup'
+PARAMETER_CATEGORY = 'parameterCategory'
 
 
 class InnerProblem:
@@ -44,6 +46,13 @@ class InnerProblem:
 
     def get_xs_for_type(self, type: str):
         return [x for x in self.xs.values() if x.type == type]
+
+    def get_groups_for_xs(self, type: str):
+        groups = [x.group for x in self.xs.values() if x.type == type]
+        return list(set(groups))
+
+    def get_xs_for_group(self, group: int):
+        return [x for x in self.xs.values() if x.group == group]
 
     def get_boring_pars(self, scaled: bool) -> Dict[str, float]:
         return {x.id: scale_value(x.boring_val, x.scale)
@@ -117,6 +126,12 @@ def inner_parameters_from_parameter_df(df: pd.DataFrame):
     if PARAMETER_TYPE not in df:
         df[PARAMETER_TYPE] = None
 
+    if PARAMETER_GROUP not in df:
+        df[PARAMETER_GROUP] = None
+
+    if PARAMETER_CATEGORY not in df:
+        df[PARAMETER_CATEGORY] = None
+
     for _, row in df.iterrows():
         if not row[ESTIMATE]:
             continue
@@ -127,7 +142,9 @@ def inner_parameters_from_parameter_df(df: pd.DataFrame):
             type=row[PARAMETER_TYPE],
             scale=row[PARAMETER_SCALE],
             lb=row[LOWER_BOUND],
-            ub=row[UPPER_BOUND]))
+            ub=row[UPPER_BOUND],
+            category=row[PARAMETER_CATEGORY],
+            group=row[PARAMETER_GROUP]))
 
     return parameters
 

@@ -1,14 +1,15 @@
 from typing import Dict, List, Sequence, Union
 import copy
-
+import numpy as np
 from ..objective.amici_calculator import (
     AmiciCalculator, calculate_function_values)
 from ..objective.amici_util import (
     get_error_output
 )
 from .problem import InnerProblem
-from .solver import InnerSolver, AnalyticalInnerSolver, NumericalInnerSolver
-
+from .solver import InnerSolver, AnalyticalInnerSolver, NumericalInnerSolver, OptimalScalingInnerSolver
+from ..objective.constants import MODE_FUN, MODE_RES, FVAL, GRAD, HESS, RES, SRES, RDATAS
+#
 try:
     import amici
     from amici.parameter_mapping import ParameterMapping
@@ -54,6 +55,12 @@ class HierarchicalAmiciCalculator(AmiciCalculator):
                  parameter_mapping: 'ParameterMapping'):
 
         dim = len(x_ids)
+        nllh = 0.0
+        snllh = np.zeros(dim)
+        s2nllh = np.zeros([dim, dim])
+
+        res = np.zeros([0])
+        sres = np.zeros([0, dim])
 
         # set order in solver to 0
         amici_solver.setSensitivityOrder(0)
@@ -92,11 +99,12 @@ class HierarchicalAmiciCalculator(AmiciCalculator):
         # compute optimal inner parameters
         x_inner_opt = self.inner_solver.solve(
             self.inner_problem, sim, sigma, scaled=True)
+
         #print(x_inner_opt)
         # fill in optimal values
-        x_dct = copy.deepcopy(x_dct)
-        for key, val in x_inner_opt.items():
-            x_dct[key] = val
+        #x_dct = copy.deepcopy(x_dct)
+        #for key, val in x_inner_opt.items():
+        #    x_dct[key] = val
 
         # fill in parameters
         # TODO (#226) use plist to compute only required derivatives
@@ -108,17 +116,26 @@ class HierarchicalAmiciCalculator(AmiciCalculator):
             amici_model=amici_model
         )
 
-        amici_solver.setSensitivityOrder(sensi_order)
+        if sensi_order == 0:
+            return {FVAL: self.inner_solver.calculate_obj_functon(x_inner_opt),
+                    GRAD: snllh,
+                    HESS: s2nllh,
+                    RES: res,
+                    SRES: sres,
+                    RDATAS: rdatas
+                    }
+        else:
+            amici_solver.setSensitivityOrder(sensi_order)
 
-        # resimulate
-        # run amici simulation
-        rdatas = amici.runAmiciSimulations(
-            amici_model,
-            amici_solver,
-            edatas,
-            num_threads=min(n_threads, len(edatas)),
-        )
+            # resimulate
+            # run amici simulation
+            rdatas = amici.runAmiciSimulations(
+                amici_model,
+                amici_solver,
+                edatas,
+                num_threads=min(n_threads, len(edatas)),
+            )
 
-        return calculate_function_values(
-            rdatas, sensi_order, mode, amici_model, amici_solver, edatas,
-            x_ids, parameter_mapping)
+            return calculate_function_values(
+                rdatas, sensi_order, mode, amici_model, amici_solver, edatas,
+                x_ids, parameter_mapping)
