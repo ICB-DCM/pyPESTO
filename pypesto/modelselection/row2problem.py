@@ -1,6 +1,7 @@
 import petab
 from colorama import Fore
 from typing import Dict
+from numpy import isnan
 from ..petab import PetabImporter
 from ..objective import Objective
 from ..problem import Problem
@@ -26,11 +27,12 @@ def row2problem(petab_problem: petab.problem, row: Dict[str, float],
             print(Fore.YELLOW + f'Warning: parameter {par_id} was not found '
                                 f'in pyPESTO.problem. It will be ignored.')
             continue
-        if par_val != float('nan'):
+        if not isnan(par_val):
             x_fixed.append(x_names.index(par_id))
             x_values.append(par_val)
         else:
             x_free.append(x_names.index(par_id))
-    pypesto_problem.x_values = x_values
-    pypesto_problem.x_fixed_indices = x_fixed
+    # pypesto_problem.x_fixed_vals = x_values
+    # pypesto_problem.x_fixed_indices = x_fixed
+    pypesto_problem.fix_parameters(x_fixed, x_values)
     pypesto_problem.x_free_indices = x_free
