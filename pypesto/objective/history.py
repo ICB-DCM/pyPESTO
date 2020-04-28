@@ -611,6 +611,7 @@ class Hdf5History(History):
         super().__init__(options=options)
         self.id = id
         self.file = file
+        self._generate_hdf5_group()
 
     def update(
             self,
@@ -621,6 +622,58 @@ class Hdf5History(History):
     ) -> None:
         super().update(x, sensi_orders, mode, result)
         self._update_trace(x, sensi_orders, mode, result)
+
+    # overwrite _update_counts
+    def _update_counts(self,
+                       sensi_orders: Tuple[int, ...],
+                       mode: str):
+        """
+        Update the counters in the hdf5
+        """
+        with h5py.File(self.file, 'a') as f:
+
+            if mode == MODE_FUN:
+                if 0 in sensi_orders:
+                    f[f'/optimization/results/{self.id}/trace/'].attrs[
+                        'n_fval'] += 1
+                if 1 in sensi_orders:
+                    f[f'/optimization/results/{self.id}/trace/'].attrs[
+                        'n_grad'] += 1
+                if 2 in sensi_orders:
+                    f[f'/optimization/results/{self.id}/trace/'].attrs[
+                        'n_hess'] += 1
+            elif mode == MODE_RES:
+                if 0 in sensi_orders:
+                    f[f'/optimization/results/{self.id}/trace/'].attrs[
+                        'n_res'] += 1
+                if 1 in sensi_orders:
+                    f[f'/optimization/results/{self.id}/trace/'].attrs[
+                        'n_sres'] += 1
+
+    @property
+    def n_fval(self) -> int:
+        with h5py.File(self.file, 'a') as f:
+            return f[f'/optimization/results/{self.id}/trace/'].attrs['n_fval']
+
+    @property
+    def n_grad(self) -> int:
+        with h5py.File(self.file, 'a') as f:
+            return f[f'/optimization/results/{self.id}/trace/'].attrs['n_grad']
+
+    @property
+    def n_hess(self) -> int:
+        with h5py.File(self.file, 'a') as f:
+            return f[f'/optimization/results/{self.id}/trace/'].attrs['n_hess']
+
+    @property
+    def n_res(self) -> int:
+        with h5py.File(self.file, 'a') as f:
+            return f[f'/optimization/results/{self.id}/trace/'].attrs['n_res']
+
+    @property
+    def n_sres(self) -> int:
+        with h5py.File(self.file, 'a') as f:
+            return f[f'/optimization/results/{self.id}/trace/'].attrs['s_res']
 
     def _update_trace(self,
                       x: np.ndarray,
@@ -651,12 +704,10 @@ class Hdf5History(History):
         }
 
         with h5py.File(self.file, 'a') as f:
-            if f'/optimization/results/{self.id}/trace/' not in f:
-                grp = f.create_group(f'/optimization/results/{self.id}/trace/')
-                grp.attrs['n_iterations'] = 0
 
             iteration = f[f'/optimization/results/{self.id}/trace/'].attrs[
                 'n_iterations']
+
             for key in values.keys():
                 if values[key] is not None:
                     f[f'/optimization/results/{self.id}/trace/'
@@ -668,9 +719,20 @@ class Hdf5History(History):
     def finalize(self):
         super().finalize()
 
+    def _generate_hdf5_group(self):
+        """
+        Generates the group in the hdf5 file, if it does not exist yet.
+        """
+        with h5py.File(self.file, 'a') as f:
+            if f'/optimization/results/{self.id}/trace/' not in f:
+                    grp = f.create_group(f'/optimization/results/{self.id}/trace/')
+                    grp.attrs['n_iterations'] = 0
+
     def _get_hdf5_entries(self,
                           entry_id: str) -> Sequence:
-
+        """
+        returns the entries for the key entry_id.
+        """
         trace_result = []
 
         with h5py.File(self.file, 'r') as f:
