@@ -1,0 +1,8 @@
+modelId	SBML	k1	k2	k3	sigma_x2
+M1	model_modelSelection_example.xml	-	-	-	-
+M2	model_modelSelection_example.xml	0	-	-	-
+M3	model_modelSelection_example.xml	-	-	0	-
+M4	model_modelSelection_example.xml	-	0	-	-
+M5	model_modelSelection_example.xml	0	0	-	-
+M6	model_modelSelection_example.xml	-	0	0	-
+M7	model_modelSelection_example.xml	0	-	0	-
