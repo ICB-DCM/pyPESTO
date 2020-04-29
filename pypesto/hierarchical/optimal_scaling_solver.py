@@ -23,7 +23,8 @@ class OptimalScalingInnerSolver(InnerSolver):
         self.options = options
         if self.options is None:
             self.options = OptimalScalingInnerSolver.get_default_options()
-
+        if self.options['method'] == STANDARD and self.options['reparameterized']:
+            raise NotImplementedError('Combining standard approach with reparameterization not implemented.')
         self.x_guesses = None
 
     def solve(
@@ -242,8 +243,6 @@ def get_bounds_for_category(x, optimal_scaling_bounds, interval_gap, options):
 def get_constraints_for_optimization(xs, sim, options):
     num_categories = len(xs)
     interval_range, interval_gap = compute_interval_constraints(xs, sim, options)
-    # A = np.diag(-np.ones(num_categories)) + np.diag(np.ones(num_categories-1),1)
-    # A = A[:-1, :]
     if options['method'] == REDUCED:
         a = np.diag(-np.ones(num_categories), -1) + np.diag(np.ones(num_categories + 1))
         a = a[:-1, :-1]
@@ -260,7 +259,4 @@ def get_constraints_for_optimization(xs, sim, options):
         b[2::2] = interval_gap
     ineq_cons = {'type': 'ineq', 'fun': lambda x: a.dot(x) - b}
 
-    # from scipy.optimize import LinearConstraint
-    # linear_constraint = LinearConstraint(A, b, [np.inf]*len(b))
     return ineq_cons
-    # return linear_constraint
