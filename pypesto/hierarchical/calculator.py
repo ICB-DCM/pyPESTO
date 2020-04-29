@@ -121,7 +121,7 @@ class HierarchicalAmiciCalculator(AmiciCalculator):
         )
 
         if sensi_order == 0:
-            return {FVAL: self.inner_solver.calculate_obj_functon(x_inner_opt),
+            return {FVAL: self.inner_solver.calculate_obj_function(x_inner_opt),
                     GRAD: snllh,
                     HESS: s2nllh,
                     RES: res,
