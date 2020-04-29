@@ -290,8 +290,15 @@ class AmiciObjective(Objective):
         solver = self.amici_object_builder.create_solver(model)
         edatas = self.amici_object_builder.create_edatas(model)
 
-        amici.readSolverSettingsFromHDF5(
-            state['amici_solver_settings'], solver)
+        try:
+            amici.readSolverSettingsFromHDF5(
+                state['amici_solver_settings'], solver)
+        except AttributeError as err:
+            if not err.args:
+                err.args = ('',)
+            err.args = err.args + ("Amici must have been compiled with hdf5 "
+                                   "support",)
+            raise
         os.remove(state['amici_solver_settings'])
 
         self.amici_model = model
