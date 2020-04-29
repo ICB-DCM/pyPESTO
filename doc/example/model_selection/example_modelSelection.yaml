@@ -1,0 +1,12 @@
+format_version: 1
+parameter_file: parameters_example_modelSelection.tsv
+problems:
+- condition_files:
+  - experimentalCondition_example_modelSelection.tsv
+  measurement_files:
+  - measurementData_example_modelSelection.tsv
+  observable_files:
+  - observables_example_modelSelection.tsv
+  sbml_files:
+  - model_example_modelSelection.xml
+ 
