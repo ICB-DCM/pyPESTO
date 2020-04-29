@@ -201,7 +201,10 @@ def ixs_for_measurement_specific_parameters(
     return ixs_for_par
 
 
-#def noise_models_from
+#def noise
+
+#def ixs_for_noise_models_from_observable_df(df: pd.DataFrame):
+
 
 
 def ix_matrices_from_arrays(ixs, edatas):
