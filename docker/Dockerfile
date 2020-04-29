@@ -1,5 +1,8 @@
 FROM ubuntu:20.04
 
+ENV DEBIAN_FRONTEND=noninteractive
+ENV TZ=Europe/Berlin
+
 RUN apt update \
     && apt-get install -y \
     g++ \
