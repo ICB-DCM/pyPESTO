@@ -38,7 +38,8 @@ def history_decorator(minimize):
         if history_options is None:
             history_options = HistoryOptions()
         history = history_options.create_history(
-            id=id, x_names=objective.x_names)
+            id=id, x_names=[problem.x_names[ix]
+                            for ix in problem.x_free_indices])
         optimizer_history = OptimizerHistory(history=history, x0=x0)
 
         # plug in history for the objective to record it
