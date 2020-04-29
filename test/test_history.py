@@ -102,7 +102,7 @@ class ResModeHistoryTest(HistoryTest):
     def setUpClass(cls):
         cls.optimizer = pypesto.ScipyOptimizer(
             method='ls_trf',
-            options={'maxiter': 100}
+            options={'max_nfev': 100}
         )
         cls.obj, _ = load_model_objective(
             'conversion_reaction'
@@ -260,7 +260,13 @@ def test_history_properties(history: pypesto.History):
         assert len(grads) == 10
         assert len(grads[0]) == 7
 
-    if type(history) == pypesto.MemoryHistory:
-        # TODO extend as funcionality is implemented
+    if type(history) in \
+            (pypesto.MemoryHistory,):
+        # TODO extend as functionality is implemented in other histories
+
+        # assert x values are not all the same
+        xs = np.array(history.get_x_trace())
+        assert (xs[:-1] != xs[-1]).all()
+
         ress = history.get_res_trace()
         assert all(res is None for res in ress)

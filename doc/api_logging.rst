@@ -1,4 +1,4 @@
-.. automodule:: pypesto.visualize
+.. automodule:: pypesto.logging
    :members:
    :inherited-members:
    :special-members:

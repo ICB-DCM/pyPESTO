@@ -34,6 +34,9 @@ def history_decorator(minimize):
     def wrapped_minimize(self, problem, x0, id, history_options=None):
         objective = problem.objective
 
+        # initialize the objective
+        objective.initialize()
+
         # create optimizer history
         if history_options is None:
             history_options = HistoryOptions()
@@ -44,10 +47,6 @@ def history_decorator(minimize):
 
         # plug in history for the objective to record it
         objective.history = optimizer_history
-
-        # TODO this can be prettified
-        if hasattr(objective, 'reset_steadystate_guesses'):
-            objective.reset_steadystate_guesses()
 
         # perform the actual minimization
         result = minimize(self, problem, x0, id, history_options)
@@ -232,11 +231,12 @@ class ScipyOptimizer(Optimizer):
 
         self.method = method
 
-        self.tol = tol
-
         self.options = options
         if self.options is None:
-            self.options = ScipyOptimizer.get_default_options()
+            self.options = ScipyOptimizer.get_default_options(self)
+            self.options['ftol'] = tol
+        elif self.options is not None and 'ftol' not in self.options:
+            self.options['ftol'] = tol
 
     @fix_decorator
     @time_decorator
@@ -267,6 +267,11 @@ class ScipyOptimizer(Optimizer):
             jac = objective.get_sres if objective.has_sres else '2-point'
             # TODO: pass jac computing methods in options
 
+            if self.options is not None:
+                self.options['verbose'] = 2 if 'disp' in self.options.keys() \
+                                               and self.options['disp'] else 0
+                self.options.pop('disp', None)
+
             # optimize
             res = scipy.optimize.least_squares(
                 fun=fun,
@@ -274,12 +279,9 @@ class ScipyOptimizer(Optimizer):
                 method=ls_method,
                 jac=jac,
                 bounds=bounds,
-                ftol=self.tol,
                 tr_solver='exact',
                 loss='linear',
-                verbose=2 if 'disp' in
-                self.options.keys() and self.options['disp']
-                else 0,
+                **self.options
             )
 
         else:
@@ -328,7 +330,6 @@ class ScipyOptimizer(Optimizer):
                 hess=hess,
                 hessp=hessp,
                 bounds=bounds,
-                tol=self.tol,
                 options=self.options,
             )
 
@@ -354,8 +355,11 @@ class ScipyOptimizer(Optimizer):
         return re.match(r'(?i)^(ls_)', self.method)
 
     @staticmethod
-    def get_default_options():
-        options = {'maxiter': 1000, 'disp': False}
+    def get_default_options(self):
+        if self.is_least_squares:
+            options = {'max_nfev': 1000, 'disp': False}
+        else:
+            options = {'maxiter': 1000, 'disp': False}
         return options
 
 
@@ -373,7 +377,7 @@ class DlibOptimizer(Optimizer):
 
         self.options = options
         if self.options is None:
-            self.options = DlibOptimizer.get_default_options()
+            self.options = DlibOptimizer.get_default_options(self)
 
     @fix_decorator
     @time_decorator
@@ -419,7 +423,7 @@ class DlibOptimizer(Optimizer):
         return False
 
     @staticmethod
-    def get_default_options():
+    def get_default_options(self):
         return {}
 
 

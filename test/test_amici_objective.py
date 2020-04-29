@@ -2,7 +2,7 @@
 This is for testing the pypesto.Objective.
 """
 
-from pypesto.objective.amici_objective import add_sim_grad_to_opt_grad
+from pypesto.objective.amici_util import add_sim_grad_to_opt_grad
 
 import petab
 import pypesto
@@ -10,8 +10,8 @@ import pypesto.objective.constants
 import numpy as np
 from test.petab_util import folder_base
 
-ATOL = 1e-6
-RTOL = 1e-6
+ATOL = 1e-5
+RTOL = 1e-5
 
 
 def test_add_sim_grad_to_opt_grad():

@@ -144,6 +144,13 @@ class Objective:
     # The following has_ properties can be used to find out what values
     # the objective supports.
 
+    def initialize(self):
+        """Initialize the objective function.
+        This function is used at the beginning of an analysis, e.g.
+        optimization, and can e.g. reset the objective memory.
+        By default does nothing.
+        """
+
     @property
     def has_fun(self) -> bool:
         return callable(self.fun)
@@ -230,6 +237,8 @@ class Objective:
             is flattened). If `return_dict`, then instead a dict is returned
             with function values and derivatives indicated by ids.
         """
+        # copy parameter vector to prevent side effects
+        x = np.array(x).copy()
 
         # check input
         self.check_sensi_orders(sensi_orders, mode)

@@ -2,6 +2,7 @@
 Optimize
 ========
 
+Multistart optimization with support for various optimizers.
 """
 
 from .options import OptimizeOptions

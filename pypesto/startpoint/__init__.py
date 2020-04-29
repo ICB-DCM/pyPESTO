@@ -2,7 +2,7 @@
 Startpoint
 ==========
 
-Method for selecting points that can be used as start points
+Methods for selecting points that can be used as start points
 for multistart optimization. All methods have the form
 
     ``method(**kwargs) -> startpoints``
