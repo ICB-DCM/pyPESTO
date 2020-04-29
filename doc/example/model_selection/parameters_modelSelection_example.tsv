@@ -1,0 +1,5 @@
+parameterId	parameterName	parameterScale	lowerBound	upperBound	nominalValue	estimate
+k1	k_{1}	lin	0	1.00E+03	0.2	1
+k2	k_{2}	lin	0	1.00E+03	0.1	1
+k3	k_{3}	lin	0	1.00E+03	0	1
+sigma_x2	\sigma_{x2}	lin	1.00E-05	1.00E+03	0.15	1
