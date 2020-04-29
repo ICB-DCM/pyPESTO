@@ -12,7 +12,8 @@ STANDARD = 'standard'
 
 class OptimalScalingInnerSolver(InnerSolver):
     """
-    Solve the inner subproblem of the optimal scaling approach for ordinal data.
+    Solve the inner subproblem of the
+    optimal scaling approach for ordinal data.
     """
 
     def __init__(self, n_starts: int = 1, n_records: int = 1,
@@ -23,8 +24,12 @@ class OptimalScalingInnerSolver(InnerSolver):
         self.options = options
         if self.options is None:
             self.options = OptimalScalingInnerSolver.get_default_options()
-        if self.options['method'] == STANDARD and self.options['reparameterized']:
-            raise NotImplementedError('Combining standard approach with reparameterization not implemented.')
+        if self.options['method'] == STANDARD \
+                and self.options['reparameterized']:
+            raise NotImplementedError(
+                'Combining standard approach with '
+                'reparameterization not implemented.'
+            )
         self.x_guesses = None
 
     def solve(
@@ -38,18 +43,23 @@ class OptimalScalingInnerSolver(InnerSolver):
         # x_names = [x.id for x in pars]
         # data = problem.data
 
-        optimal_surrogate = compute_optimal_surrogate_data(problem, sim, self.options)
+        optimal_surrogate = \
+            compute_optimal_surrogate_data(problem, sim, self.options)
 
         return optimal_surrogate
 
     @staticmethod
     def calculate_obj_function(x_inner_opt):
-        obj = np.sum([x_inner_opt[idx]['fun'] for idx in range(len(x_inner_opt))])
+        obj = np.sum(
+            [x_inner_opt[idx]['fun'] for idx in range(len(x_inner_opt))]
+        )
         return obj
 
     @staticmethod
     def get_default_options():
-        options = {'method': 'reduced', 'reparameterized': True, 'intervalConstraints': 'max'}
+        options = {'method': 'reduced',
+                   'reparameterized': True,
+                   'intervalConstraints': 'max'}
         return options
 
 
@@ -59,7 +69,6 @@ def compute_optimal_surrogate_data(problem, sim, options):
     for gr in problem.get_groups_for_xs(InnerParameter.OPTIMALSCALING):
         xs = problem.get_xs_for_group(gr)
         surrogate_opt_results = optimize_surrogate_data(xs, sim, options)
-        # write_surrogate_to_edatas_reduced(surrogate_opt_results, xs, edatas, sim, problem)
         optimal_surrogates.append(surrogate_opt_results)
     return optimal_surrogates
 
@@ -67,13 +76,16 @@ def compute_optimal_surrogate_data(problem, sim, options):
 def optimize_surrogate_data(xs, sim, options):
     from scipy.optimize import minimize
 
-    interval_range, interval_gap = compute_interval_constraints(xs, sim, options)
+    interval_range, interval_gap = \
+        compute_interval_constraints(xs, sim, options)
     w = get_weight_for_surrogate(xs, sim)
 
-    obj_surr = lambda x: obj_surrogate_data(xs, x, sim, interval_gap,
+    def obj_surr(x):
+        return obj_surrogate_data(xs, x, sim, interval_gap,
                                             interval_range, w, options)
 
-    inner_options = get_inner_options(options, xs, sim, interval_range, interval_gap)
+    inner_options = \
+        get_inner_options(options, xs, sim, interval_range, interval_gap)
 
     results = minimize(obj_surr, **inner_options)
     return results
@@ -85,12 +97,18 @@ def get_inner_options(options, xs, sim, interval_range, interval_gap):
     min_all, max_all = get_min_max(xs, sim)
     if options['method'] == REDUCED:
         parameter_length = len(xs)
-        x0 = np.linspace(np.max([min_all, interval_range]), max_all + interval_range, parameter_length)
+        x0 = np.linspace(
+            np.max([min_all, interval_range]),
+            max_all + interval_range,
+            parameter_length
+        )
     elif options['method'] == STANDARD:
         parameter_length = 2 * len(xs)
         x0 = np.linspace(0, max_all + interval_range, parameter_length)
     else:
-        raise NotImplementedError(f"Unkown optimal scaling method {options['method']}")
+        raise NotImplementedError(
+            f"Unkown optimal scaling method {options['method']}"
+        )
 
     if options['reparameterized']:
         x0 = y2xi(x0, xs, interval_gap, interval_range)
@@ -139,7 +157,8 @@ def get_weight_for_surrogate(xs, sim):
 
 
 def compute_interval_constraints(xs, sim, options):
-    # compute constraints on interval size and interval gap size similar to Pargett et al. (2014)
+    # compute constraints on interval size and interval gap size
+    # similar to Pargett et al. (2014)
     if 'minGap' not in options:
         eps = 1e-16
     else:
@@ -148,13 +167,18 @@ def compute_interval_constraints(xs, sim, options):
     min_simulation, max_simulation = get_min_max(xs, sim)
 
     if options['intervalConstraints'] == 'max-min':
-        interval_range = (max_simulation - min_simulation) / (2 * len(xs) + 1)
-        interval_gap = (max_simulation - min_simulation) / (4 * (len(xs) - 1) + 1)
+        interval_range = \
+            (max_simulation - min_simulation) / (2 * len(xs) + 1)
+        interval_gap = \
+            (max_simulation - min_simulation) / (4 * (len(xs) - 1) + 1)
     elif options['intervalConstraints'] == 'max':
         interval_range = max_simulation / (2 * len(xs) + 1)
         interval_gap = max_simulation / (4 * (len(xs) - 1) + 1)
     else:
-        raise ValueError(f"intervalConstraints = {options['intervalConstraints']} not implemented.")
+        raise ValueError(
+            f"intervalConstraints = "
+            f"{options['intervalConstraints']} not implemented."
+        )
     if interval_gap < eps:
         interval_gap = eps
     return interval_range, interval_gap
@@ -168,30 +192,34 @@ def y2xi(optimal_scaling_bounds, xs, interval_gap, interval_range):
         x_category = int(x.category)
         if x_category == 1:
             optimal_scaling_bounds_reparameterized[x_category - 1] = \
-                optimal_scaling_bounds[x_category - 1]\
+                optimal_scaling_bounds[x_category - 1] \
                 - interval_range
         else:
             optimal_scaling_bounds_reparameterized[x_category - 1] = \
-                optimal_scaling_bounds[x_category - 1]\
-                - optimal_scaling_bounds[x_category - 2]\
+                optimal_scaling_bounds[x_category - 1] \
+                - optimal_scaling_bounds[x_category - 2] \
                 - interval_gap - interval_range
 
     return optimal_scaling_bounds_reparameterized
 
 
-def xi2y(optimal_scaling_bounds_reparameterized, xs, interval_gap, interval_range):
-    # TODO: optimal scaling parameters in parameter sheet have to be ordered at the moment
-    optimal_scaling_bounds = np.full(shape=(np.shape(optimal_scaling_bounds_reparameterized)),
-                                     fill_value=np.nan)
+def xi2y(
+        optimal_scaling_bounds_reparameterized, xs,
+        interval_gap, interval_range):
+    # TODO: optimal scaling parameters in
+    #  parameter sheet have to be ordered at the moment
+    optimal_scaling_bounds = \
+        np.full(shape=(np.shape(optimal_scaling_bounds_reparameterized)),
+                fill_value=np.nan)
     for x in xs:
         x_category = int(x.category)
         if x_category == 1:
             optimal_scaling_bounds[x_category - 1] = \
                 interval_range + optimal_scaling_bounds_reparameterized[
-                x_category - 1]
+                    x_category - 1]
         else:
             optimal_scaling_bounds[x_category - 1] = \
-                optimal_scaling_bounds_reparameterized[x_category - 1] +\
+                optimal_scaling_bounds_reparameterized[x_category - 1] + \
                 interval_gap + interval_range + optimal_scaling_bounds[
                     x_category - 2]
     return optimal_scaling_bounds
@@ -202,10 +230,14 @@ def obj_surrogate_data(xs, optimal_scaling_bounds, sim, interval_gap,
     # compute optimal scaling objective function
     obj = 0.0
     if options['reparameterized']:
-        optimal_scaling_bounds = xi2y(optimal_scaling_bounds, xs, interval_gap, interval_range)
+        optimal_scaling_bounds = \
+            xi2y(optimal_scaling_bounds, xs, interval_gap, interval_range)
 
     for x in xs:
-        x_upper, x_lower = get_bounds_for_category(x, optimal_scaling_bounds, interval_gap, options)
+        x_upper, x_lower = \
+            get_bounds_for_category(
+                x, optimal_scaling_bounds, interval_gap, options
+            )
         for sim_i, mask_i in \
                 zip(sim, x.ixs):
             if mask_i.any():
@@ -236,21 +268,26 @@ def get_bounds_for_category(x, optimal_scaling_bounds, interval_gap, options):
         x_lower = optimal_scaling_bounds[2 * x_category - 2]
         x_upper = optimal_scaling_bounds[2 * x_category - 1]
     else:
-        raise NotImplementedError(f"Unkown optimal scaling method {options['method']}")
+        raise NotImplementedError(
+            f"Unkown optimal scaling method {options['method']}"
+        )
     return x_upper, x_lower
 
 
 def get_constraints_for_optimization(xs, sim, options):
     num_categories = len(xs)
-    interval_range, interval_gap = compute_interval_constraints(xs, sim, options)
+    interval_range, interval_gap = \
+        compute_interval_constraints(xs, sim, options)
     if options['method'] == REDUCED:
-        a = np.diag(-np.ones(num_categories), -1) + np.diag(np.ones(num_categories + 1))
+        a = np.diag(-np.ones(num_categories), -1) \
+            + np.diag(np.ones(num_categories + 1))
         a = a[:-1, :-1]
         b = np.empty((num_categories,))
         b[0] = interval_range
         b[1:] = interval_range + interval_gap
     elif options['method'] == STANDARD:
-        a = np.diag(-np.ones(2 * num_categories), -1) + np.diag(np.ones(2 * num_categories + 1))
+        a = np.diag(-np.ones(2 * num_categories), -1) \
+            + np.diag(np.ones(2 * num_categories + 1))
         a = a[:-1, :]
         a = a[:, :-1]
         b = np.empty((2 * num_categories,))

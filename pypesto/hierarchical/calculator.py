@@ -41,7 +41,7 @@ class HierarchicalAmiciCalculator(AmiciCalculator):
         self.inner_problem = inner_problem
 
         if inner_solver is None:
-            #inner_solver = NumericalInnerSolver()
+            # inner_solver = NumericalInnerSolver()
             inner_solver = AnalyticalInnerSolver()
         self.inner_solver = inner_solver
 
@@ -101,11 +101,13 @@ class HierarchicalAmiciCalculator(AmiciCalculator):
         # compute optimal inner parameters
         x_inner_opt = self.inner_solver.solve(
             self.inner_problem, sim, sigma, scaled=True)
+        nllh = self.inner_solver.calculate_obj_function(x_inner_opt)
 
-        #print(x_inner_opt)
+        # print(x_inner_opt)
         # fill in optimal values
-        # TODO: x_inner_opt is different for hierarchical and qualitative approach.
-        #  For now I commented the following lines out to make qualitative approach work.
+        # TODO: x_inner_opt is different for hierarchical and
+        #  qualitative approach. For now I commented the following
+        #  lines out to make qualitative approach work.
         # x_dct = copy.deepcopy(x_dct)
         # for key, val in x_inner_opt.items():
         #    x_dct[key] = val
@@ -121,7 +123,7 @@ class HierarchicalAmiciCalculator(AmiciCalculator):
         )
 
         if sensi_order == 0:
-            return {FVAL: self.inner_solver.calculate_obj_function(x_inner_opt),
+            return {FVAL: nllh,
                     GRAD: snllh,
                     HESS: s2nllh,
                     RES: res,
