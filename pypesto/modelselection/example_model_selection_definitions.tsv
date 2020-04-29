@@ -1,0 +1,4 @@
+modelId	SBML	parameterId1	parameterId2
+M1	SBML1.xml	0	0
+M2	SBML1.xml	1	0
+M3	SBML2.xml	0;1;-	0;1
