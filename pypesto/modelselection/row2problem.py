@@ -1,29 +1,36 @@
 import petab
 from colorama import Fore
-from typing import Dict, Union
+from typing import Union
 import numpy as np
 from ..petab import PetabImporter
 from ..objective import Objective
 from ..problem import Problem
+import pandas as pd
 
-from petab.C import PARAMETER_ID
+from petab.C import NOMINAL_VALUE, ESTIMATE
+
+YAML_FILENAME_COLUMN = "SBML"
+MODEL_NAME_COLUMN = "ModelId"
 
 
-def row2problem(petab_problem: Union[petab.problem, str],
-                row: Dict[str, float],
+def row2problem(row: pd.Series,
+                petab_problem: Union[petab.Problem, str] = None,
                 obj: Objective = None) -> Problem:
     """
-    Create a pypesto.problem from a single, unambiguous model selection row
-    and a petab.problem
+    Create a pypesto.Problem from a single, unambiguous model selection row.
+    Optional petab.Problem and objective function can be provided to overwrite
+    model selection yaml entry and default PetabImporter objective
+    respectively.
     """
     # overwrite petab_problem by problem in case it refers to yaml
+    if petab_problem is None:
+        petab_problem = row[YAML_FILENAME_COLUMN].str
     if isinstance(petab_problem, str):
-        petab_problem = petab.load_yaml(petab_problem)
+        petab_problem = petab.Problem.from_yaml(petab_problem)
     importer = PetabImporter(petab_problem)
-    # chose standard objective in case none is provided
-    if Objective is None:
-        obj = importer.create_objective()
-    pypesto_problem = importer.create_problem(obj)
+
+    # drop row entries not referring to parameters
+    row.drop(labels=[YAML_FILENAME_COLUMN, MODEL_NAME_COLUMN], inplace=True)
 
     for par_id, par_val in row.items():
         if par_id not in petab_problem.x_ids:
@@ -31,15 +38,16 @@ def row2problem(petab_problem: Union[petab.problem, str],
                                 f'in PETab model. It will be ignored.')
             continue
         if not np.isnan(par_val):
-            petab_problem.parameter_df.estimate.loc[par_id] = 0
-            petab_problem.parameter_df.nominalValue.loc[par_id] = par_val
+            petab_problem.parameter_df[ESTIMATE].loc[par_id] = 0
+            petab_problem.parameter_df[NOMINAL_VALUE].loc[par_id] = par_val
             # petab_problem.parameter_df.lowerBound.loc[par_id] = float("NaN")
             # petab_problem.parameter_df.upperBound.loc[par_id] = float("NaN")
         else:
-            petab_problem.parameter_df.estimate.loc[par_id]= 1
+            petab_problem.parameter_df[ESTIMATE].loc[par_id] = 1
             # petab_problem.parameter_df.nominalValue.loc[par_id] = float(
             # "NaN")
 
+    # chose standard objective in case none is provided
     importer = PetabImporter(petab_problem)
     if Objective is None:
         obj = importer.create_objective()
