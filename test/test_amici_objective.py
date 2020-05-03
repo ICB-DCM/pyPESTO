@@ -10,8 +10,8 @@ import pypesto.objective.constants
 import numpy as np
 from test.petab_util import folder_base
 
-ATOL = 1e-3
-RTOL = 1e-3
+ATOL = 1e-2
+RTOL = 1e-2
 
 
 def test_add_sim_grad_to_opt_grad():
@@ -55,12 +55,13 @@ def test_preeq_guesses():
     importer = pypesto.PetabImporter(petab_problem)
     obj = importer.create_objective()
     problem = importer.create_problem(obj)
-    optimizer = pypesto.ScipyOptimizer('ls_trf', options={'max_nfev': 100})
+    optimizer = pypesto.ScipyOptimizer('ls_trf', options={'max_nfev': 50})
 
+    # assert that initial guess is uninformative
     assert problem.objective.steadystate_guesses['fval'] == np.inf
 
     result = pypesto.minimize(
-        problem=problem, optimizer=optimizer, n_starts=2,
+        problem=problem, optimizer=optimizer, n_starts=1,
     )
 
     assert problem.objective.steadystate_guesses['fval'] < np.inf
@@ -75,3 +76,7 @@ def test_preeq_guesses():
     print("relative errors MODE_FUN: ", df.rel_err.values)
     print("absolute errors MODE_FUN: ", df.abs_err.values)
     assert np.all((df.rel_err.values < RTOL) | (df.abs_err.values < ATOL))
+
+    # assert that resetting works
+    problem.objective.initialize()
+    assert problem.objective.steadystate_guesses['fval'] == np.inf
