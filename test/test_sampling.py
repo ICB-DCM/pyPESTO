@@ -90,7 +90,7 @@ def test_pipeline(sampler, problem):
 
     # sampling
     result = pypesto.sample(
-        problem, sampler=sampler, n_samples=20, result=result)
+        problem, sampler=sampler, n_samples=100, result=result)
 
     # some plot
     pypesto.visualize.sampling_1d_marginals(result)
