@@ -13,7 +13,7 @@ YAML_FILENAME_COLUMN = "SBML"
 MODEL_NAME_COLUMN = "ModelId"
 
 
-def row2problem(row: pd.Series,
+def row2problem(row: dict,
                 petab_problem: Union[petab.Problem, str] = None,
                 obj: Objective = None) -> Problem:
     """
@@ -21,6 +21,20 @@ def row2problem(row: pd.Series,
     Optional petab.Problem and objective function can be provided to overwrite
     model selection yaml entry and default PetabImporter objective
     respectively.
+    
+    Parameters
+    ----------
+    row:
+        A single, unambiguous model selection row.
+    petab_problem:
+        The petab problem for which to perform model selection.
+    obj:
+        The objective to modify for model selection.
+    
+    Returns
+    -------
+    problem:
+        The problem containing correctly fixed parameter values.
     """
     # overwrite petab_problem by problem in case it refers to yaml
     if petab_problem is None:
@@ -54,4 +68,3 @@ def row2problem(row: pd.Series,
     pypesto_problem = importer.create_problem(obj)
 
     return pypesto_problem
-
