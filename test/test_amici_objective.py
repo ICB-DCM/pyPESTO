@@ -55,7 +55,9 @@ def test_preeq_guesses():
     importer = pypesto.PetabImporter(petab_problem)
     obj = importer.create_objective()
     problem = importer.create_problem(obj)
-    optimizer = pypesto.ScipyOptimizer('ls_trf', options={'max_nfev': 10})
+    optimizer = pypesto.ScipyOptimizer('ls_trf', options={'max_nfev': 100})
+
+    assert problem.objective.steadystate_guesses['fval'] == np.inf
 
     result = pypesto.minimize(
         problem=problem, optimizer=optimizer, n_starts=2,
