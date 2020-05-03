@@ -44,7 +44,8 @@ def row2problem(row: dict,
     importer = PetabImporter(petab_problem)
 
     # drop row entries not referring to parameters
-    row.drop(labels=[YAML_FILENAME_COLUMN, MODEL_NAME_COLUMN], inplace=True)
+    for key in [YAML_FILENAME_COLUMN, MODEL_NAME_COLUMN]:
+        row.pop(key)
 
     for par_id, par_val in row.items():
         if par_id not in petab_problem.x_ids:
