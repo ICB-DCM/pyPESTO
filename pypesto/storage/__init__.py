@@ -1,7 +1,8 @@
 """
 Storage
-======
+=======
 
+Saving and loading traces and results objects.
 """
 
 from .save_to_hdf5 import ProblemHDF5Writer, OptimizationResultHDF5Writer
