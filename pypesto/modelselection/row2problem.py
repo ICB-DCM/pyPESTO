@@ -64,7 +64,7 @@ def row2problem(row: dict,
 
     # chose standard objective in case none is provided
     importer = PetabImporter(petab_problem)
-    if Objective is None:
+    if obj is None:
         obj = importer.create_objective()
     pypesto_problem = importer.create_problem(obj)
 
