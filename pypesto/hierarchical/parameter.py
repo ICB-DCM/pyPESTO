@@ -10,7 +10,7 @@ class InnerParameter:
     SCALING = 'scaling'
     OFFSET = 'offset'
     SIGMA = 'sigma'
-    OPTIMALSCALING = 'optimalScaling'
+    OPTIMALSCALING = 'qualitative_scaling'
 
     def __init__(self,
                  id: str,
