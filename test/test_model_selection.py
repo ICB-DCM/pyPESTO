@@ -3,22 +3,20 @@ This is for testing the pypesto.model_selection.
 """
 import tempfile
 import numpy as np
-#from pypesto.model_selection import (ModelSelectionProblem, ModelSelection)
-
 from pypesto.model_selection import (
     ModelSelector,
     ModelSelectionProblem,
     unpack_file
 )
 
-#def test_model_selection():
+# def test_model_selection():
 #    # model_selection.tsv
 #    petab_problem = None
 #    model_selection = ModelSelection(petab_problem, 'model_selection.tsv')
 #    # sm = model_selection.get_smallest_order_problem()
 #    res = model_selection.forward_selection()
-#
-#def test_select_model():
+
+# def test_select_model():
 #    petab_problem = None
 #    model_specification_file = 'model_selection.tsv'
 #    selector = ModelSelector(petab_problem, model_specification_file)
@@ -46,14 +44,25 @@ m3_0\tsbml2.xml\tnan\t0\tnan
 m3_1\tsbml2.xml\tnan\t2\tnan
 '''
 
-def test_get_next_step_candidates():
+
+def test_ms_file_unpacking():
     ms_file = tempfile.NamedTemporaryFile(mode='r+', delete=False)
     with open(ms_file.name, 'w') as f:
         f.write(ms_file_text)
     ms_file_unpacked = unpack_file(ms_file.name)
     print(ms_file_unpacked.read())
     print(ms_file_text_unpacked)
-    #assert str(ms_file_unpacked.read()) == ms_file_text_unpacked
+    # assert str(ms_file_unpacked.read()) == ms_file_text_unpacked
     selector = ModelSelector(None, ms_file_unpacked.name)
-    #assert False, selector.header
+    # assert False, selector.header
+
+
+def test_get_next_step_candidates():
+    ms_file = tempfile.NamedTemporaryFile(mode='r+', delete=False)
+    with open(ms_file.name, 'w') as f:
+        f.write(ms_file_text)
+    selector = ModelSelector(None, ms_file.name)
+    model_list = [model for model in selector.model_generator()]
+    result, selection_history = selector.select('forward', 'AIC')
+    print(selection_history)
 
