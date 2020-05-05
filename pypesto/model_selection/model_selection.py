@@ -225,16 +225,9 @@ class ModelSelector:
         column headers in the model specification file, and the values are the
         respective column values in a row of the model specification file.
         """
-        # If index is specified, return the specific model
-        # 1+index to skip the header row
-        if index is not None:
-            self.specification_file.seek(1+index)
-            return dict(zip(self.header,
-                            line2row(next(self.specification_file))))
+        self.specification_file.seek(0)
+        self.specification_file.readline()
 
-        # Go to start of file, after header
-        # self.specification_file.seek(1)
-        # readline() in ModelSelector.__init__ skips header
         for line in self.specification_file:
             yield dict(zip(self.header, line2row(line)))
 
@@ -384,9 +377,10 @@ class ForwardSelector(ModelSelectorMethod):
             if not model_candidate_indices and not ms_problem.valid:
                 raise Exception('No valid candidate models found.')
             for ind in model_candidate_indices:
+                row = next(itertools.islice(self.model_generator(), ind, None))
                 candidate_model = ModelSelectionProblem(
                     self.petab_problem,
-                    self.model_generator(ind))
+                    row)
 
                 self.selection_history[candidate_model.model_id] = {
                     'AIC': candidate_model.AIC,
