@@ -10,6 +10,7 @@ class InnerParameter:
     SCALING = 'scaling'
     OFFSET = 'offset'
     SIGMA = 'sigma'
+    OPTIMALSCALING = 'qualitative_scaling'
 
     def __init__(self,
                  id: str,
@@ -18,7 +19,9 @@ class InnerParameter:
                  lb: float = -np.inf,
                  ub: float = np.inf,
                  ixs: Any = None,
-                 boring_val: float = None):
+                 boring_val: float = None,
+                 category: int = None,
+                 group: int = None):
         """
         Parameters
         ----------
@@ -35,6 +38,14 @@ class InnerParameter:
             raise ValueError("Scale not recognized.")
         self.scale = scale
 
+        if type == InnerParameter.OPTIMALSCALING:
+            if group is None:
+                raise ValueError("No Parameter group provided.")
+            if category is None:
+                raise ValueError("No Category provided.")
+        self.group = group
+        self.category = category
+
         self.lb = lb
         self.ub = ub
         self.ixs: Any = ixs
@@ -46,6 +57,8 @@ class InnerParameter:
                 boring_val = 0.0
             elif type == InnerParameter.SIGMA:
                 boring_val = 1.0
+            elif type == InnerParameter.OPTIMALSCALING:
+                boring_val = category
             else:
                 raise ValueError("Could not deduce boring value for parameter "
                                  f"{id} of type {type}.")
