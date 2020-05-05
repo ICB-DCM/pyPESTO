@@ -24,6 +24,7 @@ ESTIMATE_SYMBOL_UI = '-'
 # actual internal symbol is float('nan')
 ESTIMATE_SYMBOL_INTERNAL = 'nan'
 
+
 class ModelSelectionProblem:
     """
 
@@ -32,9 +33,8 @@ class ModelSelectionProblem:
                  petab_problem: petab.problem,
                  row: Dict[str, float],
                  valid: bool = True,
-                 autorun: bool = True
-    ):
-        '''
+                 autorun: bool = True):
+        """
         Arguments
         ---------
         petab_problem:
@@ -50,7 +50,7 @@ class ModelSelectionProblem:
             users to manually call pypesto.minimize with custom options, then
             `set_result()`.
         TODO: constraints
-        '''
+        """
         self.petab_problem = petab_problem
         self.row = row
         self.valid = valid
@@ -63,7 +63,7 @@ class ModelSelectionProblem:
                                     for header, p in row.items()
                                     if header not in [MODEL_ID,
                                                       SBML_FILENAME]])
-            self.n_edata = None #TODO for BIC
+            self.n_edata = None  # TODO for BIC
             self.model_id = row[MODEL_ID]
             self.SBML_filename = row[SBML_FILENAME]
 
@@ -72,9 +72,9 @@ class ModelSelectionProblem:
             self.minimize_result = None
 
             if autorun:
-                self.set_result(pypesto.minimize(self.pypesto_problem))
+                self.set_result(minimize(self.pypesto_problem))
 
-    def set_result(result: Result):
+    def set_result(self, result: Result):
         self.minimize_result = result
         self.AIC = self.calculate_AIC()
         self.BIC = self.calculate_BIC()
@@ -91,14 +91,15 @@ class ModelSelectionProblem:
         return self.n_estimated*math.log(self.n_data) - \
             2*math.log(self.minimize_result[0].fval)
 
-    #def calibrate(self):
-    #    # TODO
-    #    # self.get_aic()
-    #    # self.get_bic()
-    #    self.AIC = self.configuration['AIC']
+    def calibrate(self):
+        # TODO settings?
+        # 100 starts, SingleCoreEngine, ScipyOptimizer
+        result = minimize(self.pypesto_problem)
+        self.set_result(result)
+
 
 def _replace_estimate_symbol(parameter_definition: List[str]) -> List:
-    '''
+    """
     Converts the user-friendly symbol for estimated parameters, to the internal
     symbol.
 
@@ -113,12 +114,13 @@ def _replace_estimate_symbol(parameter_definition: List[str]) -> List:
     -------
     The parameter definition, with the user-friendly estimate symbol
     substituted for the internal symbol.
-    '''
+    """
     return [ESTIMATE_SYMBOL_INTERNAL if p == ESTIMATE_SYMBOL_UI else p
             for p in parameter_definition]
 
+
 def unpack_file(file_name: str):
-    '''
+    """
     Unpacks a model specification file into a new temporary file, which is
     returned.
 
@@ -138,7 +140,7 @@ def unpack_file(file_name: str):
           selected parameters? Generate a set of PEtab files with the
           chosen SBML file and the parameters specified in a parameter or
           condition file?
-    '''
+    """
     expanded_models_file = tempfile.NamedTemporaryFile(mode='r+',
                                                        delete=False)
     with open(file_name) as fh:
@@ -167,8 +169,9 @@ def unpack_file(file_name: str):
                     ms_f.write(line)
     return expanded_models_file
 
+
 def line2row(line: str, delimiter: str = '\t') -> List:
-    '''
+    """
     Convert a line from the model specifications file, to a list of column
     values. No header information is returned.
 
@@ -183,8 +186,9 @@ def line2row(line: str, delimiter: str = '\t') -> List:
     Returns
     -------
     A list of column values.
-    '''
+    """
     return line.strip().split(delimiter)
+
 
 class ModelSelector:
     def __init__(
@@ -205,7 +209,7 @@ class ModelSelector:
         self.results = {}
 
     def model_generator(self, index: int = None) -> Iterator[Dict[str, str]]:
-        '''
+        """
         Generates models from a model specification file.
 
         Argument
@@ -220,7 +224,7 @@ class ModelSelector:
         Models, one model at a time, as a dictionary, where the keys are the
         column headers in the model specification file, and the values are the
         respective column values in a row of the model specification file.
-        '''
+        """
         # If index is specified, return the specific model
         # 1+index to skip the header row
         if index is not None:
@@ -229,14 +233,15 @@ class ModelSelector:
                             line2row(next(self.specification_file))))
 
         # Go to start of file, after header
-        self.specification_file.seek(1)
+        # self.specification_file.seek(1)
+        # readline() in ModelSelector.__init__ skips header
         for line in self.specification_file:
             yield dict(zip(self.header, line2row(line)))
 
     def select(self, method: str, criterion: str):
-        '''
+        """
         Runs a model selection algorithm. The result is the selected model for
-        the current run, indepedent of previous `select()` calls.
+        the current run, independent of previous `select()` calls.
 
         Arguments
         ---------
@@ -246,7 +251,7 @@ class ModelSelector:
         criterion:
             The criterion used by `ModelSelectorMethod.compare()`, in which
             currently implemented criterion can be found.
-        '''
+        """
         if method == 'forward':
             selector = ForwardSelector(self.petab_problem,
                                        self.model_generator,
@@ -270,13 +275,13 @@ class ModelSelector:
         # manually.
         return result, self.selection_history
 
+
 class ModelSelectorMethod:
     # the calling child class should have self.criterion defined
     def compare(self,
                 old: ModelSelectionProblem,
-                new: ModelSelectionProblem
-    ) -> bool:
-        '''
+                new: ModelSelectionProblem) -> bool:
+        """
         Compares models by criterion.
 
         Arguments
@@ -289,7 +294,7 @@ class ModelSelectorMethod:
         Returns
         -------
         `True`, if `new` is superior to `old` by the criterion, else `False`.
-        '''
+        """
         if self.criterion == 'AIC':
             return new.get_AIC() < old.get_AIC()
         elif self.criterion == 'BIC':
@@ -297,6 +302,7 @@ class ModelSelectorMethod:
         else:
             raise NotImplementedError('Model selection criterion: '
                                       f'{self.criterion}.')
+
 
 class ForwardSelector(ModelSelectorMethod):
     """
@@ -317,7 +323,7 @@ class ForwardSelector(ModelSelectorMethod):
         self.reverse = reverse
 
     def new_direction_problem(self) -> ModelSelectionProblem:
-        '''
+        """
         Produces a virtual initial model that can be used to identify
         models in `self.model_generator()` that are relatively more (or less,
         if `self.reverse` is `True` to indicate backward selection) complex
@@ -336,30 +342,24 @@ class ForwardSelector(ModelSelectorMethod):
             fail gracefully if no models are selected after the selection
             algorithm is run with this initial model, so this model is never
             reported as a possible model.
-        '''
-        #
+        """
         if self.reverse:
+            # TODO ESTIMATE_SYMBOL_INTERNAL
             return ModelSelectionProblem(
                 self.petab_problem,
-                dict(zip(
-                    self.parameter_ids,
-                    [ESTIMATE_SYMBOL_INTERNAL for _ in len(self.parameter_ids)]
-                )),
+                dict(zip(self.parameter_ids,
+                         [float("NaN")]*len(self.parameter_ids),)),
                 valid=False
             )
         else:
             return ModelSelectionProblem(
                 self.petab_problem,
-                # Could be [0]*len(self.parameter_ids)
-                dict(zip(
-                    self.parameter_ids,
-                    [0 for _ in len(self.parameter_ids)],
-                )),
+                dict(zip(self.parameter_ids, [0]*len(self.parameter_ids),)),
                 valid=False
             )
 
     def __call__(self):
-        '''
+        """
         Runs the forward (or backward, if `self.reverse=True`) selection
         algorithm.
 
@@ -370,8 +370,8 @@ class ForwardSelector(ModelSelectorMethod):
         describes the tested models, where the keys are model Ids, and the
         values are dictionaries with the keys 'AIC', 'BIC', and
         'compared_model_id'.
-        '''
-        self.setup_direction(self.direction)
+        """
+        # self.setup_direction(self.direction)
         ms_problem = self.new_direction_problem()
         proceed = True
 
@@ -383,18 +383,14 @@ class ForwardSelector(ModelSelectorMethod):
             # all models have already been tested
             if not model_candidate_indices and not ms_problem.valid:
                 raise Exception('No valid candidate models found.')
-            better_model_id = None
             for ind in model_candidate_indices:
                 candidate_model = ModelSelectionProblem(
                     self.petab_problem,
                     self.model_generator(ind))
-                    #self.petab_problem, self.unpacked_ms_conf[ind])
-                #candidate_model.calibrate()
 
-                #self.selection_history.append(candidate_model.model_id)
                 self.selection_history[candidate_model.model_id] = {
-                    'AIC': candidate_model.get_AIC(),
-                    'BIC': candidate_model.get_BIC(),
+                    'AIC': candidate_model.AIC,
+                    'BIC': candidate_model.BIC,
                     'compared_model_id': (
                         'PYPESTO_INITIAL_MODEL' if not ms_problem.valid
                         else ms_problem.model_id
@@ -405,29 +401,27 @@ class ForwardSelector(ModelSelectorMethod):
                 # for complexity comparison, and is not a real model.
                 if not ms_problem.valid:
                     ms_problem = candidate_model
-                    better_model_id = candidate_model.model_id
                     proceed = True
                     continue
 
                 if self.compare(ms_problem, candidate_model):
                     ms_problem = candidate_model
-                    better_model_id = candidate_model.model_id
                     proceed = True
 
         return ms_problem, self.selection_history
 
     def relative_complexity(self, old: float, new: float) -> int:
-        '''
+        """
         Currently, non-zero fixed values are considered equal in complexity to
         estimated values.
-        '''
+        """
         # if both parameters are equal "complexity", e.g. both are zero,
         # both are estimated, or both are non-zero values.
         if (old == new == 0) or \
            (math.isnan(old) and math.isnan(new)) or (
-               not math.isnan(old) and \
-               not math.isnan(new) and \
-               old != 0 and \
+               not math.isnan(old) and
+               not math.isnan(new) and
+               old != 0 and
                new != 0
            ):
             return 0
@@ -442,10 +436,9 @@ class ForwardSelector(ModelSelectorMethod):
 
     def get_next_step_candidates(self,
                                  old_model: Dict,
-                                 strict = True
+                                 strict=True) -> List[int]:
                                  #conf_dict: Dict[str, float],
                                  #direction=0
-    ) -> List[int]:
         """
         Identifies models are have minimal changes in complexity compared to
         `old_model`. Note: models that should be ignored are assigned a
@@ -476,12 +469,12 @@ class ForwardSelector(ModelSelectorMethod):
         for model in self.model_generator():
             rel_complexities.append(0)
             # Skip models that have already been tested
-            if model.model_id in self.selection_history:
+            if model[MODEL_ID] in self.selection_history:
                 continue
             for par in self.parameter_ids:
-                rel_par_complexity = relative_complexity(
+                rel_par_complexity = self.relative_complexity(
                     old_model[par],
-                    model[par]
+                    float(model[par])
                 )
                 # Skip models that can not be described as a strict addition
                 # (forward selection) or removal (backward selection) of
