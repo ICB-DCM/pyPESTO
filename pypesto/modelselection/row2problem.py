@@ -5,12 +5,9 @@ import numpy as np
 from ..petab import PetabImporter
 from ..objective import Objective
 from ..problem import Problem
-import pandas as pd
+from .constants import MODEL_NAME_COLUMN, YAML_FILENAME_COLUMN
 
 from petab.C import NOMINAL_VALUE, ESTIMATE
-
-YAML_FILENAME_COLUMN = "SBML"
-MODEL_NAME_COLUMN = "ModelId"
 
 
 def row2problem(row: dict,
@@ -37,7 +34,7 @@ def row2problem(row: dict,
         The problem containing correctly fixed parameter values.
     """
     # overwrite petab_problem by problem in case it refers to yaml
-    if petab_problem is None:
+    if petab_problem is None and YAML_FILENAME_COLUMN in row.keys():
         petab_problem = row[YAML_FILENAME_COLUMN].str
     if isinstance(petab_problem, str):
         petab_problem = petab.Problem.from_yaml(petab_problem)
@@ -45,7 +42,8 @@ def row2problem(row: dict,
 
     # drop row entries not referring to parameters
     for key in [YAML_FILENAME_COLUMN, MODEL_NAME_COLUMN]:
-        row.pop(key)
+        if key in row.keys():
+            row.pop(key)
 
     for par_id, par_val in row.items():
         if par_id not in petab_problem.x_ids:
