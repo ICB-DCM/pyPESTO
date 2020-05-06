@@ -39,8 +39,6 @@ def plot_modelselection(
                       columns=df_cols,
                       index=range(len(selection_history)), dtype=float)
     for ind, i_k in enumerate(selection_history):
-        print(i_k)
-        print(ind)
         df.iloc[ind, df_cols.index('AIC')] = selection_history[i_k]['AIC']
         df.iloc[ind, df_cols.index('BIC')] = selection_history[i_k]['BIC']
         df.iloc[ind, df_cols.index('xlabel')] = \
@@ -108,37 +106,37 @@ def plot_modelselection(
 
 # -----------------------------------------------------
 # example
-selection_history = {
-    'm0_0': {
-        'AIC': 5,
-        'BIC': 3,
-        'compared_model_id': 'm1_0'
-    },
-    'm0_1': {
-        'AIC': 7,
-        'BIC': 6,
-        'compared_model_id': 'PYPESTO_INITIAL_MODEL'
-    },
-    'm1_0': {
-        'AIC': 5.5,
-        'BIC': 5,
-        'compared_model_id': 'PYPESTO_INITIAL_MODEL'
-    },
-    'm2_0': {
-        'AIC': 2,
-        'BIC': 1,
-        'compared_model_id': 'm1_0'
-    },
-    'm2_1': {
-        'AIC': 1,
-        'BIC': 0.8,
-        'compared_model_id': 'm2_0'
-    },
-}
-
-ax = plot_modelselection(selection_history,
-                         aic_or_bic='AIC',
-                         option='absolute')
-ax = plot_modelselection(selection_history,
-                         aic_or_bic='AIC',
-                         option='delta')
+# selection_history = {
+#     'm0_0': {
+#         'AIC': 5,
+#         'BIC': 3,
+#         'compared_model_id': 'm1_0'
+#     },
+#     'm0_1': {
+#         'AIC': 7,
+#         'BIC': 6,
+#         'compared_model_id': 'PYPESTO_INITIAL_MODEL'
+#     },
+#     'm1_0': {
+#         'AIC': 5.5,
+#         'BIC': 5,
+#         'compared_model_id': 'PYPESTO_INITIAL_MODEL'
+#     },
+#     'm2_0': {
+#         'AIC': 2,
+#         'BIC': 1,
+#         'compared_model_id': 'm1_0'
+#     },
+#     'm2_1': {
+#         'AIC': 1,
+#         'BIC': 0.8,
+#         'compared_model_id': 'm2_0'
+#     },
+# }
+#
+# ax = plot_modelselection(selection_history,
+#                          aic_or_bic='AIC',
+#                          option='absolute')
+# ax = plot_modelselection(selection_history,
+#                          aic_or_bic='AIC',
+#                          option='delta')
