@@ -20,9 +20,18 @@ class HistoryTest(unittest.TestCase):
     obj: pypesto.Objective = None
     ub: np.ndarray = None
     lb: np.ndarray = None
+    x_fixed_indices = None
+    x_fixed_vals = None
 
     def check_history(self):
-        self.problem = pypesto.Problem(self.obj, self.lb, self.ub)
+        self.problem = pypesto.Problem(self.obj, self.lb, self.ub,
+                                       x_fixed_indices=self.x_fixed_indices,
+                                       x_fixed_vals=self.x_fixed_indices)
+
+        def xfull(x_trace):
+            return self.problem.get_full_vector(
+                x_trace, self.problem.x_fixed_vals
+            )
 
         optimize_options = pypesto.OptimizeOptions(
             allow_failed_starts=False
@@ -52,10 +61,10 @@ class HistoryTest(unittest.TestCase):
                 np.isnan(trace['fval'].values)
             ))[0][0])
             self.assertTrue(np.isclose(
-                trace['x'].values[0, :], start.x0
+                xfull(trace['x'].values[0, :]), start.x0
             ).all())
             self.assertTrue(np.isclose(
-                trace['x'].values[it_final, :], start.x
+                xfull(trace['x'].values[it_final, :]), start.x
             ).all())
             self.assertTrue(np.isclose(
                 trace['fval'].values[it_start, 0], start.fval0
@@ -76,25 +85,38 @@ class HistoryTest(unittest.TestCase):
             }
             for var, fun in funs.items():
                 for it in range(5):
+                    x_full = xfull(trace['x'].values[it, :])
                     if var in ['fval', 'chi2']:
                         if not np.isnan(trace[var].values[it, 0]):
                             self.assertTrue(np.isclose(
-                                trace[var].values[it, 0],
-                                fun(trace['x'].values[it, :])
+                                trace[var].values[it, 0], fun(x_full)
                             ))
-                    elif var in ['hess', 'sres', 'res']:
+                    elif var in ['res']:
+                        if trace[var].values[it, 0] is not None:
+                            self.assertTrue(np.isclose(
+                                trace[var].values[it, 0], fun(x_full)
+                            ).all())
+                    elif var in ['sres']:
                         if trace[var].values[it, 0] is not None:
                             self.assertTrue(np.isclose(
                                 trace[var].values[it, 0],
-                                fun(trace['x'].values[it, :])
+                                fun(x_full)[:, self.problem.x_free_indices]
                             ).all())
-                    elif self.obj.history.options[f'trace_record_{var}'] \
-                            and not \
-                            np.isnan(trace[var].values[it, :]).all():
-                        self.assertTrue(np.isclose(
-                            trace[var].values[it, :],
-                            fun(trace['x'].values[it, :])
-                        ).all())
+                    elif var in ['grad', 'schi2']:
+                        if not np.isnan(trace[var].values[it, :]).all():
+                            self.assertTrue(np.isclose(
+                                trace[var].values[it, :],
+                                self.problem.get_reduced_vector(fun(x_full))
+                            ).all())
+                    elif var in ['hess']:
+                        if not trace[var].values[it, 0] is None and \
+                                not np.isnan(trace[var].values[it, :]).all():
+                            self.assertTrue(np.isclose(
+                                trace[var].values[it, :],
+                                self.problem.get_reduced_matrix(fun(x_full))
+                            ).all())
+                    else:
+                        raise RuntimeError('missing test implementation')
 
 
 class ResModeHistoryTest(HistoryTest):
@@ -110,6 +132,8 @@ class ResModeHistoryTest(HistoryTest):
 
         cls.lb = -2 * np.ones((1, 2))
         cls.ub = 2 * np.ones((1, 2))
+        cls.x_fixed_indices = [0]
+        cls.x_fixed_vals = [-0.3]
 
     def test_trace_chi2(self):
         self.obj.history.options = pypesto.HistoryOptions(
@@ -171,6 +195,8 @@ class FunModeHistoryTest(HistoryTest):
 
         cls.lb = 0 * np.ones((1, 2))
         cls.ub = 1 * np.ones((1, 2))
+        cls.x_fixed_indices = [0]
+        cls.x_fixed_vals = [0.0]
 
     def test_trace_grad(self):
         self.obj = rosen_for_sensi(
