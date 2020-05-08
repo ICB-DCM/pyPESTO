@@ -64,9 +64,9 @@ class ModelSelectionProblem:
         self.BIC = None
 
         if self.valid:
-            self.n_estimated = sum([1 if is_estimated(p) else 0 \
-                                    for header, p in self.row.items() \
-                                    if header not in [MODEL_ID, \
+            self.n_estimated = sum([1 if is_estimated(p) else 0
+                                    for header, p in self.row.items()
+                                    if header not in [MODEL_ID,
                                                       SBML_FILENAME]])
             self.n_edata = None  # TODO for BIC
             self.model_id = self.row[MODEL_ID]
@@ -110,8 +110,10 @@ class ModelSelectionProblem:
         result = minimize(self.pypesto_problem)
         self.set_result(result)
 
+
 def is_estimated(p: str) -> bool:
     return math.isnan(p)
+
 
 def _replace_estimate_symbol(parameter_definition: List[str]) -> List:
     """
@@ -186,6 +188,7 @@ def unpack_file(file_name: str):
                 else:
                     ms_f.write(line)
     return expanded_models_file
+
 
 def line2row(line: str,
              delimiter: str = '\t',
@@ -516,23 +519,20 @@ class ForwardSelector(ModelSelectorMethod):
         Currently, non-zero fixed values are considered equal in complexity to
         estimated values.
         """
-        # if both parameters are equal "complexity", e.g. both are zero,
-        # both are estimated, or both are non-zero values.
-        if (old == new == 0) or \
-           (math.isnan(old) and math.isnan(new)) or (
+        # if both parameters are equal "complexity", e.g. both are fixed,
+        # both are estimated.
+        if (math.isnan(old) and math.isnan(new)) or (
                not math.isnan(old) and
-               not math.isnan(new) and
-               old != 0 and
-               new != 0
+               not math.isnan(new)
            ):
             return 0
-        # return 1 if the new parameter is fixed or estimated, and the old
-        # parameter is 0
-        elif old == 0 and new != 0:
+        # return 1 if the new parameter is estimated, and the old
+        # parameter is fixed
+        elif not math.isnan(old) and math.isnan(new):
             return 1
-        # return -1 if the new parameter is 0, and the old parameter is fixed
-        # or estimated
-        elif old != 0 and new == 0:
+        # return -1 if the new parameter is fixed, and the old parameter is
+        # estimated
+        elif math.isnan(old) and not math.isnan(new):
             return -1
 
     def relative_complexity_models(self,
