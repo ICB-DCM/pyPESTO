@@ -15,6 +15,10 @@ from pypesto.objective.util import sres_to_schi2, res_to_chi2
 from pypesto.objective import CsvHistory
 from pypesto.optimize.optimizer import read_result_from_csv
 
+from pypesto.objective.constants import (
+    FVAL, GRAD, HESS, RES, SRES, CHI2, SCHI2, TIME,
+    N_FVAL, N_GRAD, N_HESS, N_RES, N_SRES, X)
+
 
 class HistoryTest(unittest.TestCase):
     problem: pypesto.Problem = None
@@ -99,11 +103,9 @@ class HistoryTest(unittest.TestCase):
                 if key not in ['history', 'message', 'exitflag', 'time']
             ]
             for attr in result_attributes:
-                record_bool = f'trace_record_{attr}'
                 # if we didn't record we cant recover the value
-                if record_bool in dir(history_options):
-                    if not getattr(history_options, record_bool):
-                        continue
+                if not history_options.get(f'trace_record_{attr}', True):
+                    continue
 
                 # note that we can expect slight deviations in grad when using
                 # a ls optimizer since history computes this from res
@@ -128,59 +130,64 @@ class HistoryTest(unittest.TestCase):
             # verify consistency of stored values
             trace = start.history._trace
 
-            it_final = int(trace[('fval', np.NaN)].idxmin())
+            it_final = int(trace[(FVAL, np.NaN)].idxmin())
             it_start = int(np.where(np.logical_not(
-                np.isnan(trace['fval'].values)
+                np.isnan(trace[FVAL].values)
             ))[0][0])
-            assert np.allclose(xfull(trace['x'].values[0, :]), start.x0)
-            assert np.allclose(xfull(trace['x'].values[it_final, :]), start.x)
-            assert np.isclose(trace['fval'].values[it_start, 0], start.fval0)
+            assert np.allclose(xfull(trace[X].values[0, :]), start.x0)
+            assert np.allclose(xfull(trace[X].values[it_final, :]), start.x)
+            assert np.isclose(trace[FVAL].values[it_start, 0], start.fval0)
 
             funs = {
-                'fval': self.obj.get_fval,
-                'grad': self.obj.get_grad,
-                'hess': self.obj.get_hess,
-                'res': self.obj.get_res,
-                'sres': self.obj.get_sres,
-                'chi2': lambda x: res_to_chi2(self.obj.get_res(x)),
-                'schi2': lambda x: sres_to_schi2(*self.obj(
+                FVAL: self.obj.get_fval,
+                GRAD: self.obj.get_grad,
+                HESS: self.obj.get_hess,
+                RES: self.obj.get_res,
+                SRES: self.obj.get_sres,
+                CHI2: lambda x: res_to_chi2(self.obj.get_res(x)),
+                SCHI2: lambda x: sres_to_schi2(*self.obj(
                     x,
                     (0, 1,),
                     pypesto.objective.constants.MODE_RES
                 ))
             }
             for var, fun in funs.items():
+                if not var == FVAL and not getattr(history_options,
+                                                   f'trace_record_{var}'):
+                    continue
                 for it in range(5):
-                    x_full = xfull(trace['x'].values[it, :])
-                    if var in ['fval', 'chi2']:
-                        if not np.isnan(trace[var].values[it, 0]):
-                            assert np.isclose(
-                                trace[var].values[it, 0], fun(x_full)
-                            ), var
-                    elif var in ['res']:
-                        if trace[var].values[it, 0] is not None:
-                            assert np.allclose(
-                                trace[var].values[it, 0], fun(x_full)
-                            ), var
-                    elif var in ['sres']:
-                        if trace[var].values[it, 0] is not None:
-                            assert np.allclose(
-                                trace[var].values[it, 0],
-                                fun(x_full)[:, self.problem.x_free_indices]
-                            ), var
-                    elif var in ['grad', 'schi2']:
-                        if not np.isnan(trace[var].values[it, :]).all():
-                            assert np.allclose(
-                                trace[var].values[it, :],
-                                self.problem.get_reduced_vector(fun(x_full))
-                            ), var
-                    elif var in ['hess']:
-                        if not trace[var].values[it, 0] is None and \
-                                not np.isnan(trace[var].values[it, :]).all():
-                            assert np.allclose(
-                                trace[var].values[it, :],
-                                self.problem.get_reduced_matrix(fun(x_full))
-                            ), var
+                    x_full = xfull(trace[X].values[it, :])
+                    if var in [FVAL, CHI2, RES, SRES]:
+                        val = trace[var].values[it, 0]
+                    else:
+                        val = trace[var].values[it, :]
+                    if np.all(np.isnan(val)):
+                        continue
+                    if var in [FVAL, CHI2]:
+                        assert np.isclose(
+                            val, fun(x_full),
+                            equal_nan=True
+                        ), var
+                    elif var in [RES]:
+                        assert np.allclose(
+                            val, fun(x_full),
+                            equal_nan=True
+                        ), var
+                    elif var in [SRES]:
+                        assert np.allclose(
+                            val, fun(x_full)[:, self.problem.x_free_indices],
+                            equal_nan=True
+                        ), var
+                    elif var in [GRAD, SCHI2]:
+                        assert np.allclose(
+                            val, self.problem.get_reduced_vector(fun(x_full)),
+                            equal_nan=True
+                        ), var
+                    elif var in [HESS]:
+                        assert np.allclose(
+                            val, self.problem.get_reduced_matrix(fun(x_full)),
+                            equal_nan=True
+                        ), var
                     else:
                         raise RuntimeError('missing test implementation')
 
@@ -360,4 +367,4 @@ def test_history_properties(history: pypesto.History):
         assert np.all(xs[:-1] != xs[-1])
 
         ress = history.get_res_trace()
-        assert all(res is None for res in ress)
+        assert all(np.isnan(res) for res in ress)

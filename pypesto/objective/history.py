@@ -567,15 +567,6 @@ class CsvHistory(History):
             for col in trace.columns:
                 # transform strings to np.ndarrays
                 trace[col] = trace[col].apply(string2ndarray)
-                if trace[col].apply(
-                        lambda x: isinstance(x, float) and np.isnan(x)
-                ).all():
-                    # replace np.NAN with None where appropriate
-                    trace[col] = None
-                if col in [('res', np.NaN), ('sres', np.NaN),
-                           ('hess', np.NaN)]:
-                    trace.loc[trace[col].apply(lambda x: isinstance(x, float)),
-                              col] = None
 
             self._trace = trace
             self.x_names = list(trace['x'].columns)
@@ -646,13 +637,13 @@ class CsvHistory(History):
         }
 
         for var, val in values.items():
-            row[(var, float('nan'))] = val
+            row[(var, float('nan'))] = val if val is not None else np.NaN
 
         for var, val in {X: x, GRAD: ret[GRAD], SCHI2: ret[SCHI2]}.items():
             if var == X or self.options[f'trace_record_{var}']:
                 row[var] = val if val is not None else np.NaN
             else:
-                row[(var, float('nan'))] = None
+                row[(var, float('nan'))] = np.NaN
 
         self._trace = self._trace.append(row)
 
@@ -914,8 +905,13 @@ class OptimizerHistory:
                 self.sres_min = result.get(SRES)
 
     def _compute_vals_from_trace(self):
-        if np.allclose(self.history.get_x_trace()[0], self.x0):
-            self.fval0 = self.history.get_fval_trace()[0]
+        # some optimizers may evaluate hess+grad first to compute trust region
+        # etc
+        for it in range(3):
+            fval0_candidate = self.history.get_fval(it)
+            if not np.isnan(fval0_candidate) \
+                    and np.allclose(self.history.get_x(it), self.x0):
+                self.fval0 = fval0_candidate
 
         iter_min = np.nanargmin(self.history.get_fval_trace())
         if not isinstance(iter_min, np.int64):
