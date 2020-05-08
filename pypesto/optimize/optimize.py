@@ -119,7 +119,7 @@ def minimize(
 
 
 def handle_exception(
-        objective: Objective,
+        problem: Problem,
         x0: np.ndarray,
         id: str,
         err: Exception
@@ -128,5 +128,6 @@ def handle_exception(
     Handle exception by creating a dummy pypesto.OptimizerResult.
     """
     logger.error(('start ' + str(id) + ' failed: {0}').format(err))
-    optimizer_result = recover_result(objective, x0, err)
+    optimizer_result = recover_result(problem.objective, x0, err)
+    optimizer_result.update_to_full(problem)
     return optimizer_result

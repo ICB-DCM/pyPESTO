@@ -81,7 +81,7 @@ class OptimizerTask(Task):
         except Exception as err:
             if self.options.allow_failed_starts:
                 optimizer_result = self.handle_exception(
-                    self.problem.objective, self.x0, self.id, err)
+                    self.problem, self.x0, self.id, err)
             else:
                 raise
 
