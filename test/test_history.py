@@ -5,7 +5,6 @@ This is for testing the pypesto.History.
 import numpy as np
 import pytest
 import pypesto
-from pypesto.objective.constants import FVAL, GRAD
 import unittest
 import tempfile
 
