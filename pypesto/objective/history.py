@@ -4,7 +4,7 @@ import copy
 import time
 import os
 import abc
-from typing import Any, Dict, Iterable, List, Tuple, Sequence, Union
+from typing import Any, Dict, List, Tuple, Sequence, Union
 
 from .constants import (
     MODE_FUN, MODE_RES, FVAL, GRAD, HESS, RES, SRES, CHI2, SCHI2, TIME,
@@ -106,7 +106,7 @@ class HistoryOptions(dict):
         return options
 
     def create_history(
-            self, id: str, x_names: Iterable[str]
+            self, id: str, x_names: Sequence[str]
     ) -> 'History':
         """Factory method creating a :class:`History` object.
 
@@ -543,7 +543,7 @@ class CsvHistory(History):
 
     def __init__(self,
                  file: str,
-                 x_names: Iterable[str] = None,
+                 x_names: Sequence[str] = None,
                  options: Union[HistoryOptions, Dict] = None,
                  load_from_file: bool = False):
         super().__init__(options=options)
@@ -569,7 +569,7 @@ class CsvHistory(History):
                 trace[col] = trace[col].apply(string2ndarray)
 
             self._trace = trace
-            self.x_names = list(trace['x'].columns)
+            self.x_names = trace[X].columns
             self._update_counts_from_trace()
 
     def __len__(self):
@@ -921,7 +921,9 @@ class OptimizerHistory:
         if self.history.options.trace_record_grad:
             self.grad_min = self.history.get_grad(iter_min)
             if np.isnan(self.grad_min).all() \
-                    and iter_min + 1 < len(self.history):
+                    and iter_min + 1 < len(self.history) \
+                    and np.allclose(self.history.get_x(iter_min),
+                                    self.history.get_x(iter_min + 1)):
                 # gradient typically evaluated on the next call
                 self.grad_min = self.history.get_grad(iter_min + 1)
 
@@ -931,7 +933,9 @@ class OptimizerHistory:
         if self.history.options.trace_record_sres:
             self.sres_min = self.history.get_sres(iter_min)
             if np.isnan(self.sres_min).all() \
-                    and iter_min + 1 < len(self.history):
+                    and iter_min + 1 < len(self.history) \
+                    and np.allclose(self.history.get_x(iter_min),
+                                    self.history.get_x(iter_min + 1)):
                 # sres typically evaluated on the next call
                 self.sres_min = self.history.get_sres(iter_min + 1)
 
@@ -953,7 +957,7 @@ def ndarray2string_full(x: Union[np.ndarray, None]) -> Union[str, None]:
     """
     if not isinstance(x, np.ndarray):
         return x
-    return np.array2string(x, threshold=len(x), precision=16,
+    return np.array2string(x, threshold=x.size, precision=16,
                            max_line_width=np.inf)
 
 

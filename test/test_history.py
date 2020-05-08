@@ -27,11 +27,20 @@ class HistoryTest(unittest.TestCase):
     lb: np.ndarray = None
     x_fixed_indices = None
     x_fixed_vals = None
+    fix_pars = True
 
     def check_history(self):
-        self.problem = pypesto.Problem(self.obj, self.lb, self.ub,
-                                       x_fixed_indices=self.x_fixed_indices,
-                                       x_fixed_vals=self.x_fixed_indices)
+        kwargs = {
+            'objective': self.obj,
+            'ub': self.ub,
+            'lb': self.lb,
+        }
+        if self.fix_pars:
+            kwargs = {**kwargs, **{
+                'x_fixed_indices': self.x_fixed_indices,
+                'x_fixed_vals': self.x_fixed_indices
+            }}
+        self.problem = pypesto.Problem(**kwargs)
 
         def xfull(x_trace):
             return self.problem.get_full_vector(
@@ -66,6 +75,8 @@ class HistoryTest(unittest.TestCase):
             # verify we can reconstruct history objects from csv files
             reconst_history = CsvHistory(
                 file=storage_file.format(id=str(istart)),
+                x_names=[self.problem.x_names[ix]
+                         for ix in self.problem.x_free_indices],
                 options=history_options,
                 load_from_file=True
             )
@@ -74,7 +85,7 @@ class HistoryTest(unittest.TestCase):
                 if not a.startswith('__')
                 and not callable(getattr(start.history, a))
                 and a not in ['options', '_abc_impl', '_start_time',
-                              'start_time', '_trace']
+                              'start_time', '_trace', 'x_names']
             ]
             for attr in history_attributes:
                 assert getattr(start.history, attr) == \
@@ -258,6 +269,7 @@ class ResModeHistoryTest(HistoryTest):
         ))
         self.obj.history = history
 
+        self.fix_pars = False
         self.check_history()
 
 
@@ -317,7 +329,7 @@ class FunModeHistoryTest(HistoryTest):
             trace_record_chi2=True,
             trace_record_schi2=True,
         )
-
+        self.fix_pars = False
         self.check_history()
 
 
