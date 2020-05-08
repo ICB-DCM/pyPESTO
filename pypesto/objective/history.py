@@ -920,7 +920,8 @@ class OptimizerHistory:
         self.x_min = self.history.get_x(iter_min)
         if self.history.options.trace_record_grad:
             self.grad_min = self.history.get_grad(iter_min)
-            if np.isnan(self.grad_min).all() and iter_min < len(self.history):
+            if np.isnan(self.grad_min).all() \
+                    and iter_min < len(self.history) + 1:
                 # gradient typically evaluated on the next call
                 self.grad_min = self.history.get_grad(iter_min + 1)
 
@@ -929,7 +930,8 @@ class OptimizerHistory:
 
         if self.history.options.trace_record_sres:
             self.sres_min = self.history.get_sres(iter_min)
-            if np.isnan(self.sres_min).all() and iter_min < len(self.history):
+            if np.isnan(self.sres_min).all() \
+                    and iter_min < len(self.history) + 1:
                 # sres typically evaluated on the next call
                 self.sres_min = self.history.get_sres(iter_min + 1)
 
