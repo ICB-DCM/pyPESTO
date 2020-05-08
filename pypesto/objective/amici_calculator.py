@@ -169,11 +169,16 @@ def calculate_function_values(rdatas,
                 sres = np.vstack([sres, opt_sres]) \
                     if sres.size else opt_sres
 
-    return {
+    ret = {
         FVAL: nllh,
         GRAD: snllh,
         HESS: s2nllh,
         RES: res,
         SRES: sres,
         RDATAS: rdatas
+    }
+    return {
+        key: val
+        for key, val in ret.items()
+        if val is not None
     }

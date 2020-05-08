@@ -460,11 +460,11 @@ class MemoryHistory(History):
             result: ResultType
     ) -> None:
         super().update(x, sensi_orders, mode, result)
-        self._update_trace(x, sensi_orders, mode, result)
+        self._update_trace(x, mode, result)
 
-    def _update_trace(self, x, sensi_orders, mode, result):
+    def _update_trace(self, x, mode, result):
         """Update internal trace representation."""
-        ret = extract_values(sensi_orders, mode, result, self.options)
+        ret = extract_values( mode, result, self.options)
         for key in self._trace_keys - {X, TIME}:
             self._trace[key].append(ret[key])
         used_time = time.time() - self._start_time
@@ -590,7 +590,7 @@ class CsvHistory(History):
             result: ResultType
     ) -> None:
         super().update(x, sensi_orders, mode, result)
-        self._update_trace(x, sensi_orders, mode, result)
+        self._update_trace(x, mode, result)
 
     def finalize(self):
         """Finalize history. Called after a run."""
@@ -599,7 +599,6 @@ class CsvHistory(History):
 
     def _update_trace(self,
                       x: np.ndarray,
-                      sensi_orders: Tuple[int],
                       mode: str,
                       result: ResultType):
         """
@@ -613,7 +612,7 @@ class CsvHistory(History):
             self._init_trace(x)
 
         # extract function values
-        ret = extract_values(sensi_orders, mode, result, self.options)
+        ret = extract_values(mode, result, self.options)
 
         used_time = time.time() - self._start_time
 
@@ -637,11 +636,11 @@ class CsvHistory(History):
         }
 
         for var, val in values.items():
-            row[(var, float('nan'))] = val if val is not None else np.NaN
+            row[(var, float('nan'))] = val
 
         for var, val in {X: x, GRAD: ret[GRAD], SCHI2: ret[SCHI2]}.items():
             if var == X or self.options[f'trace_record_{var}']:
-                row[var] = val if val is not None else np.NaN
+                row[var] = val
             else:
                 row[(var, float('nan'))] = np.NaN
 
@@ -981,47 +980,31 @@ def string2ndarray(x: Union[str, float]) -> Union[np.ndarray, float]:
         return np.fromstring(x[1:-1], sep=' ')
 
 
-def extract_values(sensi_orders: Tuple[int, ...],
-                   mode: str,
+def extract_values(mode: str,
                    result: ResultType,
                    options: HistoryOptions) -> Dict:
     """Extract values to record from result."""
-    if mode == MODE_FUN:
-        fval = np.NaN if 0 not in sensi_orders \
-            else result.get(FVAL, np.NaN)
-        grad = None if not options.trace_record_grad \
-            or 1 not in sensi_orders \
-            else result.get(GRAD, None)
-        hess = None if not options.trace_record_hess \
-            or 2 not in sensi_orders \
-            else result.get(HESS, None)
-        res = None
-        sres = None
-        chi2 = np.NaN
-        schi2 = None
-    else:  # mode == MODE_RES
+    ret = dict()
+    ret_vars = [FVAL, GRAD, HESS, RES, SRES, CHI2, SCHI2]
+    for var in ret_vars:
+        if options.get(f'trace_record_{var}', True) and var in result:
+            ret[var] = result[var]
+
+    # write values that weren't set yet with alternative methods
+    if mode == MODE_RES:
         res_result = result.get(RES, None)
         sres_result = result.get(SRES, None)
-        chi2 = np.NaN if not options.trace_record_chi2 \
-            or 0 not in sensi_orders \
-            else res_to_chi2(res_result)
-        schi2 = None if not options.trace_record_schi2 \
-            or 1 not in sensi_orders \
-            else sres_to_schi2(res_result, sres_result)
-        fval = np.NaN if 0 not in sensi_orders \
-            else result.get(FVAL, chi2)
-        grad = None if not options.trace_record_grad \
-            or 1 not in sensi_orders \
-            else schi2
-        hess = None if not options.trace_record_hess \
-            or 1 not in sensi_orders \
-            else sres_to_fim(sres_result)
-        res = None if not options.trace_record_res \
-            or 0 not in sensi_orders \
-            else res_result
-        sres = None if not options.trace_record_sres \
-            or 1 not in sensi_orders \
-            else sres_result
+        chi2 = res_to_chi2(res_result)
+        schi2 = sres_to_schi2(res_result, sres_result)
+        fim = sres_to_fim(sres_result)
+        alt_values = {CHI2: chi2, SCHI2: schi2, GRAD: schi2, HESS: fim}
+        for var, val in alt_values.items():
+            if val is not None:
+                ret[var] = ret.get(var, val)
 
-    return {FVAL: fval, GRAD: grad, HESS: hess, RES: res, SRES: sres,
-            CHI2: chi2, SCHI2: schi2}
+    # set everything missing to NaN
+    for var in ret_vars:
+        if var not in ret:
+            ret[var] = np.NaN
+
+    return ret

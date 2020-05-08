@@ -16,8 +16,8 @@ from pypesto.objective import CsvHistory
 from pypesto.optimize.optimizer import read_result_from_csv
 
 from pypesto.objective.constants import (
-    FVAL, GRAD, HESS, RES, SRES, CHI2, SCHI2, TIME,
-    N_FVAL, N_GRAD, N_HESS, N_RES, N_SRES, X)
+    FVAL, GRAD, HESS, RES, SRES, CHI2, SCHI2, X
+)
 
 
 class HistoryTest(unittest.TestCase):
