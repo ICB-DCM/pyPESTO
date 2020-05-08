@@ -107,7 +107,7 @@ class AggregatedObjective(Objective):
         result = {
             key: sum(rval[key] for rval in rvals)
             for key in ['fval', 'grad', 'hess']
-            if key in rvals[0]
+            if rvals[0].get(key, None) is not None
         }
 
         # extract rdatas and flatten
