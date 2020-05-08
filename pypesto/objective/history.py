@@ -930,7 +930,7 @@ class OptimizerHistory:
 
         if self.history.options.trace_record_sres:
             self.sres_min = self.history.get_sres(iter_min)
-            if self.sres_min is None:
+            if np.isnan(self.sres_min).all() and iter_min < len(self.history):
                 # sres typically evaluated on the next call
                 self.sres_min = self.history.get_sres(iter_min + 1)
 
