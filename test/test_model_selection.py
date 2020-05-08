@@ -3,6 +3,7 @@ This is for testing the pypesto.model_selection.
 """
 import tempfile
 import numpy as np
+from pypesto import PetabImporter, minimize
 from pypesto.model_selection import (
     ModelSelector,
     ModelSelectionProblem,
@@ -103,6 +104,7 @@ def test_pipeline_forward():
         'doc/example/model_selection/'
         'modelSelectionSpecification_example_modelSelection.tsv')
     petab_problem = petab.Problem.from_yaml(petab_problem_yaml)
+
     selector = ModelSelector(petab_problem, model_specifications_file)
     model_list = [model for model in selector.model_generator()]
     result, selection_history = selector.select('forward', 'AIC')
@@ -111,11 +113,11 @@ def test_pipeline_forward():
     print(models_compared_with(INITIAL_VIRTUAL_MODEL, selection_history))
     assert models_compared_with(INITIAL_VIRTUAL_MODEL, selection_history) == \
         {'M5_0', 'M6_0', 'M7_0'}
-    # M5_0 is selected after PYPESTO_INITIAL_MODEL by virtue of being the first
-    # in the specifications file (M5_0, M6_0, and M7_0 all have the same AIC)
-    print(models_compared_with('M5_0', selection_history))
-    assert models_compared_with('M5_0', selection_history) == \
-        {'M2_0', 'M4_0'}
+
+    print(models_compared_with('M6_0', selection_history))
+    assert models_compared_with('M6_0', selection_history) == \
+        {'M3_0', 'M4_0'}
+
 
 def test_pipeline_backward():
     petab_problem_yaml = \
