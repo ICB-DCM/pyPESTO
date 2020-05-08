@@ -906,7 +906,7 @@ class OptimizerHistory:
     def _compute_vals_from_trace(self):
         # some optimizers may evaluate hess+grad first to compute trust region
         # etc
-        for it in range(3):
+        for it in range(min(len(self.history), 3)):
             fval0_candidate = self.history.get_fval(it)
             if not np.isnan(fval0_candidate) \
                     and np.allclose(self.history.get_x(it), self.x0):
