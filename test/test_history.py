@@ -168,9 +168,13 @@ class HistoryTest(unittest.TestCase):
                             equal_nan=True
                         ), var
                     elif var in [RES]:
+                        # note that we can expect slight deviations here since
+                        # this res is computed without sensitivities while the
+                        # result here may be computed with with sensitivies
+                        # activated. If this fails to often, increase atol/rtol
                         assert np.allclose(
                             val, fun(x_full),
-                            equal_nan=True
+                            equal_nan=True, rtol=1e-3, atol=1e-4
                         ), var
                     elif var in [SRES]:
                         assert np.allclose(

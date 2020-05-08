@@ -507,13 +507,13 @@ class MemoryHistory(History):
     def get_sres(self, iteration) -> np.ndarray:
         return self._trace[SRES][iteration]
 
-    def get_chi2_trace(self) -> Sequence[np.ndarray]:
+    def get_chi2_trace(self) -> Sequence[float]:
         return self._trace[CHI2]
 
     def get_chi2(self, iteration) -> float:
         return self._trace[CHI2][iteration]
 
-    def get_schi2_trace(self) -> Sequence[float]:
+    def get_schi2_trace(self) -> Sequence[np.ndarray]:
         return self._trace[SCHI2]
 
     def get_schi2(self, iteration) -> np.ndarray:
