@@ -74,25 +74,21 @@ class HistoryTest(unittest.TestCase):
                               'start_time', '_trace']
             ]
             for attr in history_attributes:
-                self.assertEqual(
-                    getattr(start.history, attr),
-                    getattr(reconst_history, attr)
-                )
+                assert getattr(start.history, attr) == \
+                       getattr(reconst_history, attr), attr
 
-            self.assertEqual(len(start.history._trace),
-                             len(reconst_history._trace))
+            assert len(start.history._trace) == len(reconst_history._trace)
             self.assertListEqual(start.history._trace.columns.to_list(),
                                  reconst_history._trace.columns.to_list())
             for col in start.history._trace.columns:
                 for true_val, reconst_val in zip(start.history._trace[col],
                                                  reconst_history._trace[col]):
                     if true_val is None:
-                        self.assertIsNone(reconst_val)
+                        assert reconst_val is None, col
                     elif isinstance(true_val, float) and np.isnan(true_val):
-                        self.assertTrue(np.isnan(reconst_val))
+                        assert np.isnan(reconst_val), col
                     else:
-                        self.assertTrue(np.isclose(true_val,
-                                                   reconst_val).all())
+                        assert np.isclose(true_val, reconst_val).all(), col
 
             # verify we can reconstitute OptimizerResult from csv file
             rstart = read_result_from_csv(self.problem, history_options,
@@ -117,19 +113,17 @@ class HistoryTest(unittest.TestCase):
                 if start[attr] is None:
                     continue  # reconstituted may carry more information
                 elif isinstance(start[attr], np.ndarray):
-                    self.assertTrue(np.allclose(
+                    assert np.allclose(
                         start[attr], rstart[attr],
                         equal_nan=True, atol=1e-3
-                    ))
+                    ), attr
                 elif isinstance(start[attr], float):
-                    self.assertTrue(np.isclose(
+                    assert np.isclose(
                         start[attr], rstart[attr],
                         equal_nan=True
-                    ))
+                    ), attr
                 else:
-                    self.assertEqual(
-                        start[attr], rstart[attr]
-                    )
+                    assert start[attr] == rstart[attr], attr
 
             # verify consistency of stored values
             trace = start.history._trace
@@ -138,15 +132,9 @@ class HistoryTest(unittest.TestCase):
             it_start = int(np.where(np.logical_not(
                 np.isnan(trace['fval'].values)
             ))[0][0])
-            self.assertTrue(np.allclose(
-                xfull(trace['x'].values[0, :]), start.x0
-            ))
-            self.assertTrue(np.allclose(
-                xfull(trace['x'].values[it_final, :]), start.x
-            ))
-            self.assertTrue(np.isclose(
-                trace['fval'].values[it_start, 0], start.fval0
-            ))
+            assert np.allclose(xfull(trace['x'].values[0, :]), start.x0)
+            assert np.allclose(xfull(trace['x'].values[it_final, :]), start.x)
+            assert np.isclose(trace['fval'].values[it_start, 0], start.fval0)
 
             funs = {
                 'fval': self.obj.get_fval,
@@ -166,33 +154,33 @@ class HistoryTest(unittest.TestCase):
                     x_full = xfull(trace['x'].values[it, :])
                     if var in ['fval', 'chi2']:
                         if not np.isnan(trace[var].values[it, 0]):
-                            self.assertTrue(np.isclose(
+                            assert np.isclose(
                                 trace[var].values[it, 0], fun(x_full)
-                            ))
+                            ), var
                     elif var in ['res']:
                         if trace[var].values[it, 0] is not None:
-                            self.assertTrue(np.allclose(
+                            assert np.allclose(
                                 trace[var].values[it, 0], fun(x_full)
-                            ))
+                            ), var
                     elif var in ['sres']:
                         if trace[var].values[it, 0] is not None:
-                            self.assertTrue(np.allclose(
+                            assert np.allclose(
                                 trace[var].values[it, 0],
                                 fun(x_full)[:, self.problem.x_free_indices]
-                            ))
+                            ), var
                     elif var in ['grad', 'schi2']:
                         if not np.isnan(trace[var].values[it, :]).all():
-                            self.assertTrue(np.allclose(
+                            assert np.allclose(
                                 trace[var].values[it, :],
                                 self.problem.get_reduced_vector(fun(x_full))
-                            ))
+                            ), var
                     elif var in ['hess']:
                         if not trace[var].values[it, 0] is None and \
                                 not np.isnan(trace[var].values[it, :]).all():
-                            self.assertTrue(np.allclose(
+                            assert np.allclose(
                                 trace[var].values[it, :],
                                 self.problem.get_reduced_matrix(fun(x_full))
-                            ))
+                            ), var
                     else:
                         raise RuntimeError('missing test implementation')
 
@@ -355,7 +343,7 @@ def test_history_properties(history: pypesto.History):
         assert all(np.isfinite(fvals))
 
     if type(history) in \
-            (pypesto.History, pypesto.CsvHistory, pypesto.Hdf5History):
+            (pypesto.History, pypesto.Hdf5History):
         # TODO update as functionality is implemented
         with pytest.raises(NotImplementedError):
             history.get_grad_trace()
@@ -364,13 +352,12 @@ def test_history_properties(history: pypesto.History):
         assert len(grads) == 10
         assert len(grads[0]) == 7
 
-    if type(history) in \
-            (pypesto.MemoryHistory,):
+    if isinstance(history, (pypesto.MemoryHistory, pypesto.CsvHistory)):
         # TODO extend as functionality is implemented in other histories
 
         # assert x values are not all the same
         xs = np.array(history.get_x_trace())
-        assert (xs[:-1] != xs[-1]).all()
+        assert np.all(xs[:-1] != xs[-1])
 
         ress = history.get_res_trace()
         assert all(res is None for res in ress)
