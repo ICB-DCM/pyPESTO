@@ -120,7 +120,6 @@ def calculate_function_values(rdatas,
         if sensi_order > 0:
             sres = np.zeros([0, dim])
 
-
     par_sim_ids = list(amici_model.getParameterIds())
     sensi_method = amici_solver.getSensitivityMethod()
 

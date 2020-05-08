@@ -4,7 +4,7 @@ import copy
 import time
 import os
 import abc
-from typing import Any, Dict, Iterable, List, Optional, Tuple, Sequence, Union
+from typing import Any, Dict, Iterable, List, Tuple, Sequence, Union
 
 from .constants import (
     MODE_FUN, MODE_RES, FVAL, GRAD, HESS, RES, SRES, CHI2, SCHI2, TIME,
@@ -464,7 +464,7 @@ class MemoryHistory(History):
 
     def _update_trace(self, x, mode, result):
         """Update internal trace representation."""
-        ret = extract_values( mode, result, self.options)
+        ret = extract_values(mode, result, self.options)
         for key in self._trace_keys - {X, TIME}:
             self._trace[key].append(ret[key])
         used_time = time.time() - self._start_time
