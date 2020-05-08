@@ -7,7 +7,7 @@ import logging
 from typing import Dict
 
 from ..objective import (
-    OptimizerHistory, HistoryOptions, res_to_chi2)
+    OptimizerHistory, HistoryOptions, CsvHistory)
 from ..problem import Problem
 from .result import OptimizerResult
 
@@ -88,10 +88,7 @@ def fix_decorator(minimize):
         result = minimize(self, problem, x0, id, history_options)
 
         # vectors to full vectors
-        result.x = problem.get_full_vector(result.x, problem.x_fixed_vals)
-        result.grad = problem.get_full_vector(result.grad)
-        result.hess = problem.get_full_matrix(result.hess)
-        result.x0 = problem.get_full_vector(result.x0, problem.x_fixed_vals)
+        result.update_to_full(problem)
 
         logger.info(f"Final fval={result.fval:.4f}, "
                     f"time={result.time:.4f}s, "
@@ -163,6 +160,34 @@ def recover_result(objective, startpoint, err):
         message=str(err),
     )
     fill_result_from_objective_history(result, objective.history, False)
+
+    return result
+
+
+def read_result_from_csv(problem: Problem, history_options: HistoryOptions,
+                         identifier: str):
+    history = CsvHistory(
+        file=history_options.storage_file.format(id=identifier),
+        options=history_options,
+        load_from_file=True
+    )
+
+    opt_hist = OptimizerHistory(
+        history, history.get_x(0),
+        generate_from_history=True
+    )
+
+    result = OptimizerResult(
+        id=identifier,
+        message='loaded from csv',
+        exitflag=-99,
+        time=max(history.get_time_trace())
+    )
+    result.id = identifier
+    result = fill_result_from_objective_history(
+        result, opt_hist, True
+    )
+    result.update_to_full(problem)
 
     return result
 
@@ -336,8 +361,7 @@ class ScipyOptimizer(Optimizer):
         # some fields are not filled by all optimizers, then fill in None
         grad = getattr(res, 'grad', None) if self.is_least_squares() \
             else getattr(res, 'jac', None)
-        fval = res_to_chi2(res.fun) if self.is_least_squares() \
-            else res.fun
+        fval = None if self.is_least_squares() else res.fun
 
         # fill in everything known, although some parts will be overwritten
         optimizer_result = OptimizerResult(

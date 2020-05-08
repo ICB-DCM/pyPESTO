@@ -12,6 +12,8 @@ import tempfile
 from test.test_objective import rosen_for_sensi
 from test.test_sbml_conversion import load_model_objective
 from pypesto.objective.util import sres_to_schi2, res_to_chi2
+from pypesto.objective import CsvHistory
+from pypesto.optimize.optimizer import read_result_from_csv
 
 
 class HistoryTest(unittest.TestCase):
@@ -37,11 +39,12 @@ class HistoryTest(unittest.TestCase):
             allow_failed_starts=False
         )
 
+        storage_file = 'tmp/traces/conversion_example_{id}.csv'
         history_options = pypesto.HistoryOptions(
             trace_record=True,
             trace_record_hess=False,
             trace_save_iter=1,
-            storage_file='tmp/traces/conversion_example_{id}.csv',
+            storage_file=storage_file,
         )
 
         result = pypesto.minimize(
@@ -52,20 +55,95 @@ class HistoryTest(unittest.TestCase):
             options=optimize_options,
             history_options=history_options
         )
+
         # disable trace from here on
         self.obj.history.options.trace_record = False
-        for start in result.optimize_result.list:
+        for istart, start in enumerate(result.optimize_result.list):
+
+            # verify we can reconstruct history objects from csv files
+            reconst_history = CsvHistory(
+                file=storage_file.format(id=str(istart)),
+                options=history_options,
+                load_from_file=True
+            )
+            history_attributes = [
+                a for a in dir(start.history)
+                if not a.startswith('__')
+                and not callable(getattr(start.history, a))
+                and a not in ['options', '_abc_impl', '_start_time',
+                              'start_time', '_trace']
+            ]
+            for attr in history_attributes:
+                self.assertEqual(
+                    getattr(start.history, attr),
+                    getattr(reconst_history, attr)
+                )
+
+            self.assertEqual(len(start.history._trace),
+                             len(reconst_history._trace))
+            self.assertListEqual(start.history._trace.columns.to_list(),
+                                 reconst_history._trace.columns.to_list())
+            for col in start.history._trace.columns:
+                for true_val, reconst_val in zip(start.history._trace[col],
+                                                 reconst_history._trace[col]):
+                    if true_val is None:
+                        self.assertIsNone(reconst_val)
+                    elif isinstance(true_val, float) and np.isnan(true_val):
+                        self.assertTrue(np.isnan(reconst_val))
+                    else:
+                        self.assertTrue(np.isclose(true_val,
+                                                   reconst_val).all())
+
+            # verify we can reconstitute OptimizerResult from csv file
+            rstart = read_result_from_csv(self.problem, history_options,
+                                          str(istart))
+
+            result_attributes = [
+                key for key in start.keys()
+                if key not in ['history', 'message', 'exitflag', 'time']
+            ]
+            for attr in result_attributes:
+                record_bool = f'trace_record_{attr}'
+                # if we didn't record we cant recover the value
+                if record_bool in dir(history_options):
+                    if not getattr(history_options, record_bool):
+                        continue
+
+                # note that we can expect slight deviations in grad when using
+                # a ls optimizer since history computes this from res
+                # with sensitivies activated while the optimizer uses a res
+                # without sensitivities activated. If this fails to often,
+                # increase atol
+                if start[attr] is None:
+                    continue  # reconstituted may carry more information
+                elif isinstance(start[attr], np.ndarray):
+                    self.assertTrue(np.allclose(
+                        start[attr], rstart[attr],
+                        equal_nan=True, atol=1e-3
+                    ))
+                elif isinstance(start[attr], float):
+                    self.assertTrue(np.isclose(
+                        start[attr], rstart[attr],
+                        equal_nan=True
+                    ))
+                else:
+                    self.assertEqual(
+                        start[attr], rstart[attr]
+                    )
+
+            # verify consistency of stored values
             trace = start.history._trace
+
             it_final = int(trace[('fval', np.NaN)].idxmin())
             it_start = int(np.where(np.logical_not(
                 np.isnan(trace['fval'].values)
             ))[0][0])
-            self.assertTrue(np.isclose(
+            self.assertTrue(np.allclose(
                 xfull(trace['x'].values[0, :]), start.x0
-            ).all())
-            self.assertTrue(np.isclose(
+            ))
+            self.assertTrue(np.allclose(
                 xfull(trace['x'].values[it_final, :]), start.x
-            ).all())
+            ))
             self.assertTrue(np.isclose(
                 trace['fval'].values[it_start, 0], start.fval0
             ))
@@ -93,28 +171,28 @@ class HistoryTest(unittest.TestCase):
                             ))
                     elif var in ['res']:
                         if trace[var].values[it, 0] is not None:
-                            self.assertTrue(np.isclose(
+                            self.assertTrue(np.allclose(
                                 trace[var].values[it, 0], fun(x_full)
-                            ).all())
+                            ))
                     elif var in ['sres']:
                         if trace[var].values[it, 0] is not None:
-                            self.assertTrue(np.isclose(
+                            self.assertTrue(np.allclose(
                                 trace[var].values[it, 0],
                                 fun(x_full)[:, self.problem.x_free_indices]
-                            ).all())
+                            ))
                     elif var in ['grad', 'schi2']:
                         if not np.isnan(trace[var].values[it, :]).all():
-                            self.assertTrue(np.isclose(
+                            self.assertTrue(np.allclose(
                                 trace[var].values[it, :],
                                 self.problem.get_reduced_vector(fun(x_full))
-                            ).all())
+                            ))
                     elif var in ['hess']:
                         if not trace[var].values[it, 0] is None and \
                                 not np.isnan(trace[var].values[it, :]).all():
-                            self.assertTrue(np.isclose(
+                            self.assertTrue(np.allclose(
                                 trace[var].values[it, :],
                                 self.problem.get_reduced_matrix(fun(x_full))
-                            ).all())
+                            ))
                     else:
                         raise RuntimeError('missing test implementation')
 

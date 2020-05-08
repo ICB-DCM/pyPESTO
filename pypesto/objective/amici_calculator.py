@@ -106,11 +106,20 @@ def calculate_function_values(rdatas,
 
     # prepare outputs
     nllh = 0.0
-    snllh = np.zeros(dim)
-    s2nllh = np.zeros([dim, dim])
 
-    res = np.zeros([0])
-    sres = np.zeros([0, dim])
+    snllh = None
+    s2nllh = None
+    if mode == MODE_FUN and sensi_order > 0:
+        snllh = np.zeros(dim)
+        s2nllh = np.zeros([dim, dim])
+
+    res = None
+    sres = None
+    if mode == MODE_RES:
+        res = np.zeros([0])
+        if sensi_order > 0:
+            sres = np.zeros([0, dim])
+
 
     par_sim_ids = list(amici_model.getParameterIds())
     sensi_method = amici_solver.getSensitivityMethod()

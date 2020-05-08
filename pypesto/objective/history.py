@@ -148,6 +148,9 @@ class HistoryBase(abc.ABC):
     functionality.
     """
 
+    def __len__(self):
+        raise NotImplementedError()
+
     def update(
             self,
             x: np.ndarray,
@@ -205,38 +208,137 @@ class HistoryBase(abc.ABC):
 
     def get_x_trace(self) -> Sequence[np.ndarray]:
         """Parameter trace."""
+        return [self.get_x(iteration)
+                for iteration in range(len(self))]
+
+    def get_x(self, iteration: int) -> np.ndarray:
+        """Parameter value at iteration
+
+        Parameters
+        ----------
+        iteration:
+            iteration index
+        """
         raise NotImplementedError()
 
     def get_fval_trace(self) -> Sequence[float]:
         """Function value trace."""
+        return [self.get_fval(iteration)
+                for iteration in range(len(self))]
+
+    def get_fval(self, iteration: int) -> float:
+        """Function value at iteration
+
+        Parameters
+        ----------
+        iteration:
+            iteration index
+        """
         raise NotImplementedError()
 
     def get_grad_trace(self) -> Sequence[np.ndarray]:
         """Gradient trace."""
+        return [self.get_grad(iteration)
+                for iteration in range(len(self))]
+
+    def get_grad(self, iteration: int) -> np.ndarray:
+        """Gradient at iteration
+
+        Parameters
+        ----------
+        iteration:
+            iteration index
+        """
         raise NotImplementedError()
 
     def get_hess_trace(self) -> Sequence[np.ndarray]:
         """Hessian trace."""
+        return [self.get_hess(iteration)
+                for iteration in range(len(self))]
+
+    def get_hess(self, iteration: int) -> np.ndarray:
+        """Hessian at iteration
+
+        Parameters
+        ----------
+        iteration:
+            iteration index
+        """
         raise NotImplementedError()
 
     def get_res_trace(self) -> Sequence[np.ndarray]:
         """Residual trace."""
+        return [self.get_res(iteration)
+                for iteration in range(len(self))]
+
+    def get_res(self, iteration: int) -> np.ndarray:
+        """Residual at iteration
+
+        Parameters
+        ----------
+        iteration:
+            iteration index
+        """
         raise NotImplementedError()
 
     def get_sres_trace(self) -> Sequence[np.ndarray]:
         """Residual sensitivity trace."""
+        return [self.get_sres(iteration)
+                for iteration in range(len(self))]
+
+    def get_sres(self, iteration: int) -> np.ndarray:
+        """Residual sensitivity at iteration
+
+        Parameters
+        ----------
+        iteration:
+            iteration index
+        """
         raise NotImplementedError()
 
-    def get_chi2_trace(self) -> Sequence[np.ndarray]:
+    def get_chi2_trace(self) -> Sequence[float]:
         """Chi2 value trace."""
+        return [self.get_chi2(iteration)
+                for iteration in range(len(self))]
+
+    def get_chi2(self, iteration: int) -> float:
+        """Chi2 value at iteration
+
+        Parameters
+        ----------
+        iteration:
+            iteration index
+        """
         raise NotImplementedError()
 
-    def get_schi2_trace(self, t: Optional[int] = None) -> Sequence[np.ndarray]:
+    def get_schi2_trace(self) -> Sequence[np.ndarray]:
         """Chi2 value sensitivity trace."""
+        return [self.get_schi2(iteration)
+                for iteration in range(len(self))]
+
+    def get_schi2(self, iteration: int) -> np.ndarray:
+        """Chi2 value sensitivity at iteration
+
+        Parameters
+        ----------
+        iteration:
+            iteration index
+        """
         raise NotImplementedError()
 
-    def get_time_trace(self, t: Optional[int] = None) -> Sequence[np.ndarray]:
+    def get_time_trace(self) -> Sequence[float]:
         """Execution time trace."""
+        return [self.get_time(iteration)
+                for iteration in range(len(self))]
+
+    def get_time(self, iteration: int) -> float:
+        """Execution time at iteration
+
+        Parameters
+        ----------
+        iteration:
+            iteration index
+        """
         raise NotImplementedError()
 
 
@@ -347,6 +449,9 @@ class MemoryHistory(History):
         self._trace_keys = {X, FVAL, GRAD, HESS, RES, SRES, CHI2, SCHI2, TIME}
         self._trace: Dict[str, Any] = {key: [] for key in self._trace_keys}
 
+    def __len__(self):
+        return len(self._trace[TIME])
+
     def update(
             self,
             x: np.ndarray,
@@ -369,29 +474,56 @@ class MemoryHistory(History):
     def get_x_trace(self) -> Sequence[np.ndarray]:
         return self._trace[X]
 
+    def get_x(self, iteration) -> np.ndarray:
+        return self._trace[X][iteration]
+
     def get_fval_trace(self) -> Sequence[float]:
         return self._trace[FVAL]
+
+    def get_fval(self, iteration) -> float:
+        return self._trace[FVAL][iteration]
 
     def get_grad_trace(self) -> Sequence[np.ndarray]:
         return self._trace[GRAD]
 
+    def get_grad(self, iteration) -> np.ndarray:
+        return self._trace[GRAD][iteration]
+
     def get_hess_trace(self) -> Sequence[np.ndarray]:
         return self._trace[HESS]
+
+    def get_hess(self, iteration) -> np.ndarray:
+        return self._trace[HESS][iteration]
 
     def get_res_trace(self) -> Sequence[np.ndarray]:
         return self._trace[RES]
 
+    def get_res(self, iteration) -> np.ndarray:
+        return self._trace[RES][iteration]
+
     def get_sres_trace(self) -> Sequence[np.ndarray]:
         return self._trace[SRES]
+
+    def get_sres(self, iteration) -> np.ndarray:
+        return self._trace[SRES][iteration]
 
     def get_chi2_trace(self) -> Sequence[np.ndarray]:
         return self._trace[CHI2]
 
-    def get_schi2_trace(self, t: Optional[int] = None) -> Sequence[np.ndarray]:
+    def get_chi2(self, iteration) -> float:
+        return self._trace[CHI2][iteration]
+
+    def get_schi2_trace(self) -> Sequence[float]:
         return self._trace[SCHI2]
 
-    def get_time_trace(self, t: Optional[int] = None) -> Sequence[np.ndarray]:
+    def get_schi2(self, iteration) -> np.ndarray:
+        return self._trace[SCHI2][iteration]
+
+    def get_time_trace(self) -> Sequence[float]:
         return self._trace[TIME]
+
+    def get_time(self, iteration) -> float:
+        return self._trace[TIME][iteration]
 
 
 class CsvHistory(History):
@@ -405,12 +537,15 @@ class CsvHistory(History):
         Parameter names.
     options:
         History options.
+    load_from_file:
+        If True, history will be initialized from data in the specified file
     """
 
     def __init__(self,
                  file: str,
                  x_names: Iterable[str] = None,
-                 options: Union[HistoryOptions, Dict] = None):
+                 options: Union[HistoryOptions, Dict] = None,
+                 load_from_file: bool = False):
         super().__init__(options=options)
         self.x_names = x_names
         self._trace: Union[pd.DataFrame, None] = None
@@ -420,6 +555,41 @@ class CsvHistory(History):
         if self.file is not None:
             dirname = os.path.dirname(self.file)
             os.makedirs(dirname, exist_ok=True)
+
+        if load_from_file:
+            trace = pd.read_csv(self.file, header=[0, 1], index_col=0)
+            # replace 'nan' in cols with np.NAN
+            cols = pd.DataFrame(trace.columns.to_list())
+            cols[cols == 'nan'] = np.NaN
+            trace.columns = pd.MultiIndex.from_tuples(
+                cols.to_records(index=False).tolist()
+            )
+            for col in trace.columns:
+                # transform strings to np.ndarrays
+                trace[col] = trace[col].apply(string2ndarray)
+                if trace[col].apply(
+                        lambda x: isinstance(x, float) and np.isnan(x)
+                ).all():
+                    # replace np.NAN with None where appropriate
+                    trace[col] = None
+                if col in [('res', np.NaN), ('sres', np.NaN),
+                           ('hess', np.NaN)]:
+                    trace.loc[trace[col].apply(lambda x: isinstance(x, float)),
+                              col] = None
+
+            self._trace = trace
+            self.x_names = list(trace['x'].columns)
+            self._update_counts_from_trace()
+
+    def __len__(self):
+        return len(self._trace)
+
+    def _update_counts_from_trace(self):
+        self._n_fval = self._trace[('n_fval', np.NaN)].max()
+        self._n_grad = self._trace[('n_grad', np.NaN)].max()
+        self._n_hess = self._trace[('n_hess', np.NaN)].max()
+        self._n_res = self._trace[('n_res', np.NaN)].max()
+        self._n_sres = self._trace[('n_sres', np.NaN)].max()
 
     def update(
             self,
@@ -530,16 +700,13 @@ class CsvHistory(History):
         }
 
         for var, dtype in trace_dtypes.items():
-            self._trace[(var, float('nan'))] = \
-                self._trace[(var, float('nan'))].astype(dtype)
+            self._trace[(var, np.NaN)] = \
+                self._trace[(var, np.NaN)].astype(dtype)
 
     def _save_trace(self, finalize: bool = False):
         """
         Save to file via pd.DataFrame.to_csv() if `self.storage_file` is
         not None and other conditions apply.
-
-        .. note::
-            Format might be revised when storage is implemented.
         """
         if self.file is None:
             return
@@ -555,9 +722,41 @@ class CsvHistory(History):
                 )
             trace_copy.to_csv(self.file)
 
-    def get_fval_trace(self) -> pd.Series:
-        # TODO implement the other methods
-        return self._trace[FVAL]
+    def get_x(self, iteration) -> np.ndarray:
+        return self._trace[X].values[iteration, :]
+
+    def get_fval_trace(self) -> Sequence[float]:
+        return self._trace[(FVAL, np.NaN)].values
+
+    def get_fval(self, iteration) -> float:
+        return self._trace.loc[iteration, (FVAL, np.NaN)]
+
+    def get_grad(self, iteration) -> np.ndarray:
+        return self._trace[GRAD].values[iteration, :]
+
+    def get_hess(self, iteration) -> np.ndarray:
+        return self._trace[(HESS, np.NaN)].values[iteration]
+
+    def get_res(self, iteration) -> np.ndarray:
+        return self._trace[(RES, np.NaN)].values[iteration]
+
+    def get_sres(self, iteration) -> np.ndarray:
+        return self._trace[(SRES, np.NaN)].values[iteration]
+
+    def get_chi2_trace(self) -> Sequence[np.ndarray]:
+        return self._trace[(CHI2, np.NaN)].values
+
+    def get_chi2(self, iteration) -> float:
+        return self._trace.loc[iteration, (CHI2, np.NaN)]
+
+    def get_schi2(self, iteration) -> np.ndarray:
+        return self._trace[SCHI2].values[iteration, :]
+
+    def get_time_trace(self) -> Sequence[float]:
+        return self._trace[(TIME, np.NaN)].values
+
+    def get_time(self, iteration) -> float:
+        return self._trace.loc[iteration, (TIME, np.NaN)]
 
 
 class Hdf5History(History):
@@ -623,18 +822,19 @@ class Hdf5History(History):
         # TODO implement
         raise NotImplementedError()
 
-    def get_schi2_trace(self, t: Optional[int] = None) -> Sequence[np.ndarray]:
+    def get_schi2_trace(self) -> Sequence[np.ndarray]:
         # TODO implement
         raise NotImplementedError()
 
-    def get_time_trace(self, t: Optional[int] = None) -> Sequence[np.ndarray]:
+    def get_time_trace(self) -> Sequence[np.ndarray]:
         # TODO implement
         raise NotImplementedError()
 
 
-class OptimizerHistory(HistoryBase):
+class OptimizerHistory:
     """
-    Objective call history. Also handles saving of intermediate results.
+    Objective call history. Container around a History object, which keeps
+    track of optimal values.
 
     Attributes
     ----------
@@ -646,7 +846,8 @@ class OptimizerHistory(HistoryBase):
 
     def __init__(self,
                  history: History,
-                 x0: np.ndarray) -> None:
+                 x0: np.ndarray,
+                 generate_from_history: bool = False) -> None:
         self.history: History = history
 
         # initial point
@@ -660,6 +861,9 @@ class OptimizerHistory(HistoryBase):
         self.hess_min: Union[np.ndarray, None] = None
         self.res_min: Union[np.ndarray, None] = None
         self.sres_min: Union[np.ndarray, None] = None
+
+        if generate_from_history:
+            self._compute_vals_from_trace()
 
     def update(self,
                x: np.ndarray,
@@ -709,8 +913,33 @@ class OptimizerHistory(HistoryBase):
                 self.res_min = result.get(RES)
                 self.sres_min = result.get(SRES)
 
+    def _compute_vals_from_trace(self):
+        if np.allclose(self.history.get_x_trace()[0], self.x0):
+            self.fval0 = self.history.get_fval_trace()[0]
 
-def ndarray2string_full(x: np.ndarray):
+        iter_min = np.nanargmin(self.history.get_fval_trace())
+        if not isinstance(iter_min, np.int64):
+            iter_min = iter_min[0]
+
+        self.fval_min = self.history.get_fval(iter_min)
+        self.x_min = self.history.get_x(iter_min)
+        if self.history.options.trace_record_grad:
+            self.grad_min = self.history.get_grad(iter_min)
+            if np.isnan(self.grad_min).all() and iter_min < len(self.history):
+                # gradient typically evaluated on the next call
+                self.grad_min = self.history.get_grad(iter_min + 1)
+
+        if self.history.options.trace_record_res:
+            self.res_min = self.history.get_res(iter_min)
+
+        if self.history.options.trace_record_sres:
+            self.sres_min = self.history.get_sres(iter_min)
+            if self.sres_min is None:
+                # sres typically evaluated on the next call
+                self.sres_min = self.history.get_sres(iter_min + 1)
+
+
+def ndarray2string_full(x: Union[np.ndarray, None]) -> Union[str, None]:
     """
     Helper function that converts numpy arrays to string with 16 digit
     numerical precision and no truncation for large arrays
@@ -725,10 +954,35 @@ def ndarray2string_full(x: np.ndarray):
     x:
         array as string
     """
-    if x is None:
-        return None
+    if not isinstance(x, np.ndarray):
+        return x
     return np.array2string(x, threshold=len(x), precision=16,
                            max_line_width=np.inf)
+
+
+def string2ndarray(x: Union[str, float]) -> Union[np.ndarray, float]:
+    """
+    Helper function that converts string to numpy arrays
+
+    Parameters
+    ----------
+    x:
+        array to convert
+
+    Returns
+    -------
+    x:
+        array as np.ndarray
+    """
+    if not isinstance(x, str):
+        return x
+    if x.startswith('[['):
+        return np.vstack([
+            np.fromstring(xx, sep=' ')
+            for xx in x[2:-2].split(']\n [')
+        ])
+    else:
+        return np.fromstring(x[1:-1], sep=' ')
 
 
 def extract_values(sensi_orders: Tuple[int, ...],
