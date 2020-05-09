@@ -101,8 +101,7 @@ def minimize(
     for startpoint, id in zip(startpoints, ids):
         task = OptimizerTask(
             optimizer=optimizer, problem=problem, x0=startpoint, id=id,
-            options=options, history_options=history_options,
-            handle_exception=handle_exception)
+            options=options, history_options=history_options)
         tasks.append(task)
 
     # do multistart optimization
@@ -116,18 +115,3 @@ def minimize(
     result.optimize_result.sort()
 
     return result
-
-
-def handle_exception(
-        problem: Problem,
-        x0: np.ndarray,
-        id: str,
-        err: Exception
-) -> OptimizerResult:
-    """
-    Handle exception by creating a dummy pypesto.OptimizerResult.
-    """
-    logger.error(('start ' + str(id) + ' failed: {0}').format(err))
-    optimizer_result = recover_result(problem.objective, x0, err)
-    optimizer_result.update_to_full(problem)
-    return optimizer_result

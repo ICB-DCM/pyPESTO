@@ -32,7 +32,8 @@ def history_decorator(minimize):
     information stored in the history.
     """
 
-    def wrapped_minimize(self, problem, x0, id, history_options=None):
+    def wrapped_minimize(self, problem, x0, id, allow_failed_starts,
+                         history_options=None):
         objective = problem.objective
 
         # initialize the objective
@@ -50,12 +51,18 @@ def history_decorator(minimize):
         objective.history = optimizer_history
 
         # perform the actual minimization
-        result = minimize(self, problem, x0, id, history_options)
-
-        objective.history.finalize()
-        result.id = id
-        result = fill_result_from_objective_history(
-            result, objective.history, self.is_least_squares)
+        try:
+            result = minimize(self, problem, x0, id, history_options)
+            objective.history.finalize()
+            result.id = id
+            result = fill_result_from_objective_history(
+                result, objective.history, self.is_least_squares)
+        except Exception as err:
+            if allow_failed_starts:
+                logger.error(f'start {id} failed: {err}')
+                result = recover_result(problem.objective, x0, err)
+            else:
+                raise
 
         return result
     return wrapped_minimize
@@ -68,9 +75,11 @@ def time_decorator(minimize):
     the wall-clock time.
     """
 
-    def wrapped_minimize(self, problem, x0, id, history_options=None):
+    def wrapped_minimize(self, problem, x0, id, allow_failed_starts,
+                         history_options=None):
         start_time = time.time()
-        result = minimize(self, problem, x0, id, history_options)
+        result = minimize(self, problem, x0, id, allow_failed_starts,
+                          history_options)
         used_time = time.time() - start_time
         result.time = used_time
         return result
@@ -84,9 +93,11 @@ def fix_decorator(minimize):
     derivatives).
     """
 
-    def wrapped_minimize(self, problem, x0, id, history_options=None):
+    def wrapped_minimize(self, problem, x0, id, allow_failed_starts,
+                         history_options=None):
         # perform the actual optimization
-        result = minimize(self, problem, x0, id, history_options)
+        result = minimize(self, problem, x0, id, allow_failed_starts,
+                          history_options)
 
         # vectors to full vectors
         result.update_to_full(problem)
