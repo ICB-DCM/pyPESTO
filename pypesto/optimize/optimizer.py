@@ -122,12 +122,15 @@ def fill_result_from_objective_history(
     Overwrite function values in the result object with the values recorded in
     the history.
     """
+    update_vals = False
     # best found values
     if result.fval is not None and \
             not np.isclose(result.fval, optimizer_history.fval_min):
         logger.warning(
             "Function values from history and optimizer do not match: "
             f"{optimizer_history.fval_min}, {result.fval}")
+    else:
+        update_vals = True
 
     if optimizer_history.x_min is not None and result.x is not None and \
             not np.allclose(result.x, optimizer_history.x_min):
@@ -135,6 +138,9 @@ def fill_result_from_objective_history(
             "Parameters obtained from history and optimizer do not match: "
             f"{optimizer_history.x_min}, {result.x}")
     else:
+        update_vals = True
+
+    if update_vals:
         # override values from history if available
         result.x = optimizer_history.x_min
         result.fval = optimizer_history.fval_min
