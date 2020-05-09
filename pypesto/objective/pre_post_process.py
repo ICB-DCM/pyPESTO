@@ -100,17 +100,17 @@ class FixedParametersProcessor(PrePostProcessor):
         """Constrain results to optimization parameter dimensions."""
         result = super().postprocess(result)
 
-        if GRAD in result:
+        if result.get(GRAD, None) is not None:
             grad = result[GRAD]
             if grad.size == self.dim_full:
                 grad = grad[self.x_free_indices]
                 result[GRAD] = grad
-        if HESS in result:
+        if result.get(HESS, None) is not None:
             hess = result[HESS]
             if hess.shape[0] == self.dim_full:
                 hess = hess[np.ix_(self.x_free_indices, self.x_free_indices)]
                 result[HESS] = hess
-        if SRES in result:
+        if result.get(SRES, None) is not None:
             sres = result[SRES]
             if sres.shape[-1] == self.dim_full:
                 sres = sres[..., self.x_free_indices]
