@@ -21,6 +21,7 @@ try:
 except ImportError:
     dlib = None
 
+EXITFLAG_LOADED_FROM_FILE = -99
 
 logger = logging.getLogger(__name__)
 
@@ -164,13 +165,16 @@ def recover_result(objective, startpoint, err):
     return result
 
 
-def read_result_from_csv(problem: Problem, history_options: HistoryOptions,
-                         identifier: str):
-    history = CsvHistory(
-        file=history_options.storage_file.format(id=identifier),
-        options=history_options,
-        load_from_file=True
-    )
+def read_result_from_file(problem: Problem, history_options: HistoryOptions,
+                          identifier: str):
+    if history_options.storage_file.endswith('.csv'):
+        history = CsvHistory(
+            file=history_options.storage_file.format(id=identifier),
+            options=history_options,
+            load_from_file=True
+        )
+    else:
+        raise NotImplementedError()
 
     opt_hist = OptimizerHistory(
         history, history.get_x(0),
@@ -179,8 +183,8 @@ def read_result_from_csv(problem: Problem, history_options: HistoryOptions,
 
     result = OptimizerResult(
         id=identifier,
-        message='loaded from csv',
-        exitflag=-99,
+        message='loaded from file',
+        exitflag=EXITFLAG_LOADED_FROM_FILE,
         time=max(history.get_time_trace())
     )
     result.id = identifier
