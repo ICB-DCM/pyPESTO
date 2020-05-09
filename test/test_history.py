@@ -11,7 +11,7 @@ import tempfile
 from test.test_objective import rosen_for_sensi
 from test.test_sbml_conversion import load_model_objective
 from pypesto.objective.util import sres_to_schi2, res_to_chi2
-from pypesto.objective import CsvHistory, HistoryOptions
+from pypesto.objective import CsvHistory, HistoryOptions, MemoryHistory
 from pypesto.optimize.optimizer import read_result_from_file, OptimizerResult
 
 from pypesto.objective.constants import (
@@ -47,26 +47,33 @@ class HistoryTest(unittest.TestCase):
             allow_failed_starts=False
         )
 
-        self.history_options.storage_file = \
-            'tmp/traces/conversion_example_{id}.csv'
         self.history_options.trace_save_iter = 1
 
-        result = pypesto.minimize(
-            problem=self.problem,
-            optimizer=self.optimizer,
-            n_starts=1,
-            startpoint_method=pypesto.startpoint.uniform,
-            options=optimize_options,
-            history_options=self.history_options
-        )
+        for storage_file in ['tmp/traces/conversion_example_{id}.csv', None]:
+            self.history_options.storage_file = storage_file
 
-        for istart, start in enumerate(result.optimize_result.list):
-            self.check_reconstruct_history(start, str(istart))
-            self.check_load_from_file(start, str(istart))
-            self.check_history_consistency(start)
+            result = pypesto.minimize(
+                problem=self.problem,
+                optimizer=self.optimizer,
+                n_starts=1,
+                startpoint_method=pypesto.startpoint.uniform,
+                options=optimize_options,
+                history_options=self.history_options
+            )
+
+            for istart, start in enumerate(result.optimize_result.list):
+                self.check_reconstruct_history(start, str(istart))
+                self.check_load_from_file(start, str(istart))
+                self.check_history_consistency(start)
 
     def check_load_from_file(self, start: OptimizerResult, id: str):
         """Verify we can reconstitute OptimizerResult from csv file"""
+
+        if isinstance(start.history, MemoryHistory):
+            return
+
+        # TODO other implementations
+        assert isinstance(start.history, CsvHistory)
 
         rstart = read_result_from_file(self.problem, self.history_options, id)
 
@@ -103,6 +110,10 @@ class HistoryTest(unittest.TestCase):
 
     def check_reconstruct_history(self, start: OptimizerResult, id: str):
         """verify we can reconstruct history objects from csv files"""
+
+        if isinstance(start.history, MemoryHistory):
+            return
+
         # TODO other implementations
         assert isinstance(start.history, CsvHistory)
 
@@ -140,23 +151,23 @@ class HistoryTest(unittest.TestCase):
     def check_history_consistency(self, start: OptimizerResult):
 
         # TODO other implementations
-        assert isinstance(start.history, CsvHistory)
+        assert isinstance(start.history, (CsvHistory, MemoryHistory))
 
         def xfull(x_trace):
             return self.problem.get_full_vector(
                 x_trace, self.problem.x_fixed_vals
             )
 
-        assert isinstance(start.history, CsvHistory)
-        trace = start.history._trace
-
-        it_final = int(trace[(FVAL, np.NaN)].idxmin())
-        it_start = int(np.where(np.logical_not(
-            np.isnan(trace[FVAL].values)
-        ))[0][0])
-        assert np.allclose(xfull(trace[X].values[0, :]), start.x0)
-        assert np.allclose(xfull(trace[X].values[it_final, :]), start.x)
-        assert np.isclose(trace[FVAL].values[it_start, 0], start.fval0)
+        if isinstance(start.history, CsvHistory):
+            it_final = np.nanargmin(start.history.get_fval_trace())
+            if isinstance(it_final, np.ndarray):
+                it_final = it_final[0]
+            it_start = int(np.where(np.logical_not(
+                np.isnan(start.history.get_fval_trace())
+            ))[0][0])
+            assert np.allclose(xfull(start.history.get_x(it_start)), start.x0)
+            assert np.allclose(xfull(start.history.get_x(it_final)), start.x)
+            assert np.isclose(start.history.get_fval(it_start), start.fval0)
 
         funs = {
             FVAL: self.obj.get_fval,
@@ -175,11 +186,8 @@ class HistoryTest(unittest.TestCase):
                                                f'trace_record_{var}'):
                 continue
             for it in range(5):
-                x_full = xfull(trace[X].values[it, :])
-                if var in [FVAL, CHI2, RES, SRES, HESS]:
-                    val = trace[var].values[it, 0]
-                else:
-                    val = trace[var].values[it, :]
+                x_full = xfull(start.history.get_x(it))
+                val = getattr(start.history, f'get_{var}')(it)
                 if np.all(np.isnan(val)):
                     continue
                 if var in [FVAL, CHI2]:
