@@ -960,12 +960,12 @@ class OptimizerHistory:
         if self.history.options.trace_record_res:
             self.extract_from_history('res', ix_min)
 
-        for var in ['grad', 'sres']:
+        for var in ['grad', 'sres', 'hess']:
             target = f'{var}_min'  # attribute in self we want to set
             ix_try = ix_min + 1  # index we try after ix_min doesnt work
             if getattr(self.history.options, f'trace_record_{var}'):
                 self.extract_from_history(var, ix_min)
-                if np.all(np.isnan(getattr(self, target))) \
+                if getattr(self, target) is None \
                         and ix_try < len(self.history) \
                         and np.allclose(self.history.get_x(ix_min),
                                         self.history.get_x(ix_try)):
@@ -975,7 +975,9 @@ class OptimizerHistory:
                     self.extract_from_history(var, ix_try)
 
     def extract_from_history(self, var, ix):
-        setattr(self, f'{var}_min', getattr(self.history, f'get_{var}')(ix))
+        val = getattr(self.history, f'get_{var}')(ix)
+        if not np.all(np.isnan(val)):
+            setattr(self, f'{var}_min', val)
 
 
 def ndarray2string_full(x: Union[np.ndarray, None]) -> Union[str, None]:

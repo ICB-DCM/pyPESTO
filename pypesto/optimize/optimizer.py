@@ -6,8 +6,8 @@ import time
 import logging
 from typing import Dict
 
-from ..objective import (
-    OptimizerHistory, HistoryOptions, CsvHistory)
+from ..objective import (OptimizerHistory, HistoryOptions, CsvHistory)
+from ..objective.history import HistoryBase
 from ..problem import Problem
 from .result import OptimizerResult
 
@@ -68,6 +68,9 @@ def history_decorator(minimize):
                 raise
 
         result = fill_result_from_objective_history(result, objective.history)
+
+        # clean up, history is available from result
+        objective.history = HistoryBase()
 
         return result
     return wrapped_minimize
