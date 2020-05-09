@@ -831,6 +831,8 @@ class OptimizerHistory:
     ----------
     fval0, fval_min:
         Initial and best function value found.
+    chi20, chi2_min:
+        Initial and best chi2 value found.
     x0, x_min:
         Initial and best parameters found.
     grad_min:
@@ -882,89 +884,85 @@ class OptimizerHistory:
                result: ResultType) -> None:
         """Update history and best found value."""
         self.history.update(x, sensi_orders, mode, result)
-        self._update_vals(x, sensi_orders, mode, result)
+        self._update_vals(x, result)
 
     def finalize(self):
         self.history.finalize()
 
     def _update_vals(self,
                      x: np.ndarray,
-                     sensi_orders: Tuple[int],
-                     mode: str,
                      result: ResultType):
         """
         Update initial and best function values.
         """
         # update initial point
-        if self.fval0 is None and np.allclose(x, self.x0) \
-                and 0 in sensi_orders:
-            if mode == MODE_FUN:
-                self.fval0 = result[FVAL]
-                self.x0 = x
-            else:  # mode == MODE_RES:
-                chi2 = res_to_chi2(result[RES])
-                self.fval0 = result.get(FVAL, chi2)
-                self.x0 = x
+        if np.allclose(x, self.x0):
+            if self.fval0 is None:
+                self.fval0 = result.get(FVAL, None)
+
+            self.x0 = x
 
         # update best point
-        if 0 in sensi_orders:
-            # extract function value
-            if mode == MODE_FUN:
-                fval = result[FVAL]
-            else:  # mode == MODE_RES:
-                chi2 = res_to_chi2(result[RES])
-                fval = result.get(FVAL, chi2)
-            # store value
-            if fval < self.fval_min:
-                self.fval_min = fval
-                self.x_min = x
-                self.grad_min = result.get(GRAD)
-                self.hess_min = result.get(HESS)
-                self.res_min = result.get(RES)
-                self.sres_min = result.get(SRES)
+        fval = result.get(FVAL, None)
+        if fval is not None and fval < self.fval_min:
+            self.fval_min = fval
+            self.x_min = x
+            self.grad_min = result.get(GRAD)
+            self.hess_min = result.get(HESS)
+            self.res_min = result.get(RES)
+            self.sres_min = result.get(SRES)
 
     def _compute_vals_from_trace(self):
         # some optimizers may evaluate hess+grad first to compute trust region
         # etc
-        for it in range(min(len(self.history), 3)):
-            fval0_candidate = self.history.get_fval(it)
-            if not np.isnan(fval0_candidate) \
+        max_init_iter = 3
+        for var in ['fval', 'chi2']:
+            for it in range(min(len(self.history), max_init_iter)):
+                candidate = getattr(self.history, f'get_{var}')(it)
+                if not np.isnan(candidate) \
+                        and np.allclose(self.history.get_x(it), self.x0):
+                    setattr(self, f'{var}0', candidate)
+                    break
+
+        for it in range(min(len(self.history), max_init_iter)):
+            chi20_candidate = self.history.get_chi2(it)
+            if not np.isnan(chi20_candidate) \
                     and np.allclose(self.history.get_x(it), self.x0):
-                self.fval0 = fval0_candidate
+                self.chi20 = chi20_candidate
                 break
 
-        iter_min = np.nanargmin(self.history.get_fval_trace())
+        # we prioritize fval over chi2 as fval is written whenever possible
+        if not np.all(np.isnan(self.history.get_fval_trace())):
+            ix_min = np.nanargmin(self.history.get_fval_trace())
+        else:
+            ix_min = np.nanargmin(self.history.get_chi2_trace())
         # np.argmin returns ndarray when multiple minimal values are found, we
         # generally want the first occurence
-        if isinstance(iter_min, np.ndarray):
-            iter_min = iter_min[0]
+        if isinstance(ix_min, np.ndarray):
+            ix_min = ix_min[0]
 
-        self.fval_min = self.history.get_fval(iter_min)
-        self.x_min = self.history.get_x(iter_min)
-        if self.history.options.trace_record_grad:
-            self.grad_min = self.history.get_grad(iter_min)
-            if np.isnan(self.grad_min).all() \
-                    and iter_min + 1 < len(self.history) \
-                    and np.allclose(self.history.get_x(iter_min),
-                                    self.history.get_x(iter_min + 1)):
-                # gradient typically evaluated on the next call
-                # so we check if x remains the same and if yes try to
-                # extract from the next
-                self.grad_min = self.history.get_grad(iter_min + 1)
+        for var in ['fval', 'chi2', 'x']:
+            self.extract_from_history(var, ix_min)
 
         if self.history.options.trace_record_res:
-            self.res_min = self.history.get_res(iter_min)
+            self.extract_from_history('res', ix_min)
 
-        if self.history.options.trace_record_sres:
-            self.sres_min = self.history.get_sres(iter_min)
-            if np.isnan(self.sres_min).all() \
-                    and iter_min + 1 < len(self.history) \
-                    and np.allclose(self.history.get_x(iter_min),
-                                    self.history.get_x(iter_min + 1)):
-                # sres typically evaluated on the next call
-                # so we check if x remains the same and if yes try to
-                # extract from the next
-                self.sres_min = self.history.get_sres(iter_min + 1)
+        for var in ['grad', 'sres']:
+            target = f'{var}_min'  # attribute in self we want to set
+            ix_try = ix_min + 1  # index we try after ix_min doesnt work
+            if getattr(self.history.options, f'trace_record_{var}'):
+                self.extract_from_history(var, ix_min)
+                if np.all(np.isnan(getattr(self, target))) \
+                        and ix_try < len(self.history) \
+                        and np.allclose(self.history.get_x(ix_min),
+                                        self.history.get_x(ix_try)):
+                    # gradient/sres typically evaluated on the next call
+                    # so we check if x remains the same and if yes try to
+                    # extract from the next
+                    self.extract_from_history(var, ix_try)
+
+    def extract_from_history(self, var, ix):
+        setattr(self, f'{var}_min', getattr(self.history, f'get_{var}')(ix))
 
 
 def ndarray2string_full(x: Union[np.ndarray, None]) -> Union[str, None]:

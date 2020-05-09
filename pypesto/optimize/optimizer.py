@@ -67,8 +67,7 @@ def history_decorator(minimize):
             else:
                 raise
 
-        result = fill_result_from_objective_history(
-            result, objective.history, self.is_least_squares)
+        result = fill_result_from_objective_history(result, objective.history)
 
         return result
     return wrapped_minimize
@@ -118,16 +117,14 @@ def fix_decorator(minimize):
 
 def fill_result_from_objective_history(
         result: OptimizerResult,
-        optimizer_history: OptimizerHistory,
-        is_least_squares: bool):
+        optimizer_history: OptimizerHistory):
     """
     Overwrite function values in the result object with the values recorded in
     the history.
     """
     # best found values
     if result.fval is not None and \
-            not np.isclose(result.fval, optimizer_history.fval_min) and \
-            not is_least_squares:
+            not np.isclose(result.fval, optimizer_history.fval_min):
         logger.warning(
             "Function values from history and optimizer do not match: "
             f"{optimizer_history.fval_min}, {result.fval}")
@@ -190,9 +187,7 @@ def read_result_from_file(problem: Problem, history_options: HistoryOptions,
         time=max(history.get_time_trace())
     )
     result.id = identifier
-    result = fill_result_from_objective_history(
-        result, opt_hist, True
-    )
+    result = fill_result_from_objective_history(result, opt_hist)
     result.update_to_full(problem)
 
     return result
