@@ -55,14 +55,20 @@ def history_decorator(minimize):
             result = minimize(self, problem, x0, id, history_options)
             objective.history.finalize()
             result.id = id
-            result = fill_result_from_objective_history(
-                result, objective.history, self.is_least_squares)
         except Exception as err:
             if allow_failed_starts:
                 logger.error(f'start {id} failed: {err}')
-                result = recover_result(problem.objective, x0, err)
+                result = OptimizerResult(
+                    x0=x0,
+                    exitflag=-1,
+                    message=str(err),
+                    id=id
+                )
             else:
                 raise
+
+        result = fill_result_from_objective_history(
+            result, objective.history, self.is_least_squares)
 
         return result
     return wrapped_minimize
@@ -157,21 +163,6 @@ def fill_result_from_objective_history(
 
     # trace
     result.history = optimizer_history.history
-
-    return result
-
-
-def recover_result(objective, startpoint, err):
-    """
-    Upon an error, recover from the objective history whatever available,
-    and indicate in exitflag and message that an error occurred.
-    """
-    result = OptimizerResult(
-        x0=startpoint,
-        exitflag=-1,
-        message=str(err),
-    )
-    fill_result_from_objective_history(result, objective.history, False)
 
     return result
 

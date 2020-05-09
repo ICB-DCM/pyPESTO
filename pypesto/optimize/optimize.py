@@ -1,14 +1,12 @@
 import logging
 from typing import Callable, Iterable, Union
-import numpy as np
 
 from ..engine import OptimizerTask, Engine, SingleCoreEngine
 from ..objective import Objective, HistoryOptions
 from ..problem import Problem
 from ..result import Result
 from ..startpoint import assign_startpoints, uniform
-from .optimizer import (
-    OptimizerResult, recover_result, Optimizer, ScipyOptimizer)
+from .optimizer import Optimizer, ScipyOptimizer
 from .options import OptimizeOptions
 
 

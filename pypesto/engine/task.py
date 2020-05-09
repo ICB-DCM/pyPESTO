@@ -1,7 +1,6 @@
 import logging
 import abc
 import numpy as np
-from typing import Callable
 
 from ..problem import Problem
 from ..objective import HistoryOptions
