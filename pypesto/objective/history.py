@@ -907,35 +907,24 @@ class OptimizerHistory:
         if fval is not None and fval < self.fval_min:
             self.fval_min = fval
             self.x_min = x
-            self.grad_min = result.get(GRAD)
-            self.hess_min = result.get(HESS)
-            self.res_min = result.get(RES)
-            self.sres_min = result.get(SRES)
+            self.grad_min = result.get(GRAD, None)
+            self.hess_min = result.get(HESS, None)
+            self.res_min = result.get(RES, None)
+            self.sres_min = result.get(SRES, None)
 
     def _compute_vals_from_trace(self):
         # some optimizers may evaluate hess+grad first to compute trust region
         # etc
         max_init_iter = 3
-        for var in ['fval', 'chi2']:
-            for it in range(min(len(self.history), max_init_iter)):
-                candidate = getattr(self.history, f'get_{var}')(it)
-                if not np.isnan(candidate) \
-                        and np.allclose(self.history.get_x(it), self.x0):
-                    setattr(self, f'{var}0', candidate)
-                    break
-
         for it in range(min(len(self.history), max_init_iter)):
-            chi20_candidate = self.history.get_chi2(it)
-            if not np.isnan(chi20_candidate) \
+            candidate = self.history.get_fval(it)
+            if not np.isnan(candidate) \
                     and np.allclose(self.history.get_x(it), self.x0):
-                self.chi20 = chi20_candidate
+                self.fval0 = candidate
                 break
 
         # we prioritize fval over chi2 as fval is written whenever possible
-        if not np.all(np.isnan(self.history.get_fval_trace())):
-            ix_min = np.nanargmin(self.history.get_fval_trace())
-        else:
-            ix_min = np.nanargmin(self.history.get_chi2_trace())
+        ix_min = np.nanargmin(self.history.get_fval_trace())
         # np.argmin returns ndarray when multiple minimal values are found, we
         # generally want the first occurence
         if isinstance(ix_min, np.ndarray):
