@@ -1,7 +1,9 @@
 import numpy as np
 from typing import Dict, List, Sequence, Union
 
-from .constants import MODE_FUN, MODE_RES, FVAL, GRAD, HESS, RES, SRES, RDATAS
+from .constants import (
+    MODE_FUN, MODE_RES, FVAL, GRAD, HESS, RES, SRES, RDATAS, CHI2
+)
 from .amici_util import (
     add_sim_grad_to_opt_grad, add_sim_hess_to_opt_hess,
     sim_sres_to_opt_sres, log_simulation, get_error_output)
@@ -23,6 +25,7 @@ class AmiciCalculator:
     Class to perform the actual call to AMICI and obtain requested objective
     function values.
     """
+    _known_least_squares_safe = False
 
     def initialize(self):
         """Initialize the calculator. Default: Do nothing."""
@@ -82,6 +85,17 @@ class AmiciCalculator:
             edatas,
             num_threads=min(n_threads, len(edatas)),
         )
+        if not self._known_least_squares_safe and mode == MODE_RES and \
+                sensi_order > 0:
+            if any(
+                ((r['ssigmay'] is not None and np.any(r['ssigmay']))
+                 or
+                 (r['ssigmaz'] is not None and np.any(r['ssigmaz'])))
+                for r in rdatas
+            ):
+                raise RuntimeError('Cannot use least squares solver with'
+                                   'parameter dependent sigma!')
+            self._known_least_squares_safe = True  # don't check this again
 
         return calculate_function_values(
             rdatas, sensi_order, mode, amici_model, amici_solver, edatas,
@@ -95,8 +109,7 @@ def calculate_function_values(rdatas,
                               amici_solver: AmiciSolver,
                               edatas: List['amici.ExpData'],
                               x_ids: Sequence[str],
-                              parameter_mapping: 'ParameterMapping'
-                              ):
+                              parameter_mapping: 'ParameterMapping'):
     # full optimization problem dimension (including fixed parameters)
     dim = len(x_ids)
 
@@ -106,16 +119,17 @@ def calculate_function_values(rdatas,
 
     # prepare outputs
     nllh = 0.0
-
     snllh = None
     s2nllh = None
     if mode == MODE_FUN and sensi_order > 0:
         snllh = np.zeros(dim)
         s2nllh = np.zeros([dim, dim])
 
+    chi2 = None
     res = None
     sres = None
     if mode == MODE_RES:
+        chi2 = 0.0
         res = np.zeros([0])
         if sensi_order > 0:
             sres = np.zeros([0, dim])
@@ -133,7 +147,6 @@ def calculate_function_values(rdatas,
 
         # compute objective
         if mode == MODE_FUN:
-
             if sensi_order > 0:
                 add_sim_grad_to_opt_grad(
                     x_ids,
@@ -155,6 +168,7 @@ def calculate_function_values(rdatas,
                     )
 
         elif mode == MODE_RES:
+            chi2 += rdata['chi2']
             res = np.hstack([res, rdata['res']]) \
                 if res.size else rdata['res']
             if sensi_order > 0:
@@ -170,6 +184,7 @@ def calculate_function_values(rdatas,
 
     ret = {
         FVAL: nllh,
+        CHI2: chi2,
         GRAD: snllh,
         HESS: s2nllh,
         RES: res,
