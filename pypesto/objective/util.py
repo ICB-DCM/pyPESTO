@@ -13,7 +13,7 @@ def res_to_chi2(res: np.ndarray):
     """
     if res is None:
         return None
-    return 0.5 * np.power(res, 2).sum()
+    return np.dot(res, res)
 
 
 def sres_to_schi2(res: np.ndarray, sres: np.ndarray):
@@ -22,7 +22,7 @@ def sres_to_schi2(res: np.ndarray, sres: np.ndarray):
     """
     if res is None or sres is None:
         return None
-    return res.dot(sres)
+    return 2 * res.dot(sres)
 
 
 def sres_to_fim(sres: np.ndarray):

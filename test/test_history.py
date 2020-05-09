@@ -172,8 +172,7 @@ class HistoryTest(unittest.TestCase):
             SRES: self.obj.get_sres,
             CHI2: lambda x: res_to_chi2(self.obj.get_res(x)),
             SCHI2: lambda x: sres_to_schi2(*self.obj(
-                x,
-                (0, 1,),
+                x, (0, 1,),
                 pypesto.objective.constants.MODE_RES
             ))
         }
@@ -192,7 +191,6 @@ class HistoryTest(unittest.TestCase):
                 if var in [FVAL, CHI2]:
                     assert np.isclose(
                         val, fun(x_full),
-                        equal_nan=True
                     ), var
                 elif var in [RES]:
                     # note that we can expect slight deviations here since
@@ -201,22 +199,19 @@ class HistoryTest(unittest.TestCase):
                     # activated. If this fails to often, increase atol/rtol
                     assert np.allclose(
                         val, fun(x_full),
-                        equal_nan=True, rtol=1e-3, atol=1e-4
+                        rtol=1e-3, atol=1e-4
                     ), var
                 elif var in [SRES]:
                     assert np.allclose(
                         val, fun(x_full)[:, self.problem.x_free_indices],
-                        equal_nan=True
                     ), var
                 elif var in [GRAD, SCHI2]:
                     assert np.allclose(
                         val, self.problem.get_reduced_vector(fun(x_full)),
-                        equal_nan=True
                     ), var
                 elif var in [HESS]:
                     assert np.allclose(
                         val, self.problem.get_reduced_matrix(fun(x_full)),
-                        equal_nan=True
                     ), var
                 else:
                     raise RuntimeError('missing test implementation')

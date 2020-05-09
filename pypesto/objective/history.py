@@ -904,13 +904,37 @@ class OptimizerHistory:
 
         # update best point
         fval = result.get(FVAL, None)
+        grad = result.get(GRAD, None)
+        hess = result.get(HESS, None)
+        res = result.get(RES, None)
+        sres = result.get(SRES, None)
         if fval is not None and fval < self.fval_min:
             self.fval_min = fval
             self.x_min = x
-            self.grad_min = result.get(GRAD, None)
-            self.hess_min = result.get(HESS, None)
-            self.res_min = result.get(RES, None)
-            self.sres_min = result.get(SRES, None)
+            self.grad_min = grad
+            self.hess_min = hess
+            self.res_min = res
+            self.sres_min = sres
+
+        x_same = False
+        if self.grad_min is None and grad is not None and \
+                np.all(self.x_min == x):
+            self.grad_min = grad
+            x_same = True
+
+        if self.hess_min is None and hess is not None and \
+                (x_same or np.all(self.x_min == x)):
+            self.hess_min = hess
+            x_same = True
+
+        if self.res_min is None and res is not None and \
+                (x_same or np.all(self.x_min == x)):
+            self.res_min = res
+            x_same = True
+
+        if self.sres_min is None and sres is not None and \
+                (x_same or np.all(self.x_min == x)):
+            self.sres_min = sres
 
     def _compute_vals_from_trace(self):
         # some optimizers may evaluate hess+grad first to compute trust region
@@ -1017,7 +1041,9 @@ def extract_values(mode: str,
         chi2 = res_to_chi2(res_result)
         schi2 = sres_to_schi2(res_result, sres_result)
         fim = sres_to_fim(sres_result)
-        alt_values = {CHI2: chi2, SCHI2: schi2, GRAD: schi2, HESS: fim}
+        alt_values = {CHI2: chi2, SCHI2: schi2, HESS: fim}
+        if schi2 is not None:
+            alt_values[GRAD] = 0.5 * schi2
         for var, val in alt_values.items():
             if val is not None:
                 ret[var] = ret.get(var, val)
