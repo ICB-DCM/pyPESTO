@@ -22,8 +22,11 @@ class AggregatedObjective(Objective):
         ----------
         objectives: list
             List of pypesto.objetive instances
+        x_names: List
+            List of names of the (optimized) parameters.
+            (Details see documentation of x_names in Objective)
         """
-        # input typechecks
+        # input type checks
         if not isinstance(objectives, list):
             raise TypeError(f'Objectives must be a list, '
                             f'was {type(objectives)}.')
@@ -54,15 +57,13 @@ class AggregatedObjective(Objective):
 
         # check if all objectives consistently accept sensi orders in fun/res
         # and adopt the same behaviour in aggregate
-        for attr in [
-            'fun', 'grad', 'hess', 'hessp', 'res', 'sres'
-        ]:
-            if any(
-                getattr(objective, attr) is None
-                for objective in objectives
-            ):
+        for attr in ['fun', 'grad', 'hess', 'hessp', 'res', 'sres']:
+
+            if any(getattr(objective, attr) is None for objective in objectives):
+
                 _check_none_value_consistent(objectives, attr)
                 init_kwargs[attr] = None
+
             elif all(
                 isinstance(getattr(objective, attr), bool)
                 for objective in objectives
@@ -74,9 +75,8 @@ class AggregatedObjective(Objective):
                 for objective in objectives
             ):
                 aggregate_fun = f'aggregate_{attr}'
-                if (
-                        attr == 'fun'
-                        and init_kwargs['fun_accept_sensi_orders']
+                if (attr == 'fun'
+                    and init_kwargs['fun_accept_sensi_orders']
                 ) or (
                         attr == 'res'
                         and init_kwargs['res_accept_sensi_orders']
@@ -98,6 +98,11 @@ class AggregatedObjective(Objective):
         return other
 
     def aggregate_fun_sensi_orders(self, x, sensi_orders):
+        """
+        Returns a dict with aggregated (= summed up) fval, grad,
+        hessian and RDATAS values (for the corresponding sensi_orders).
+        (Format {'fval': ..., 'grad': ..., 'hess': ..., RDATAS: ...})
+        """
         rvals = [
             objective.fun(x, sensi_orders)
             for objective in self.objectives
@@ -119,6 +124,11 @@ class AggregatedObjective(Objective):
         return result
 
     def aggregate_res_sensi_orders(self, x, sensi_orders):
+        """
+        Returns a dict with aggregated (= summed up) res, sres
+        and RDATAS values (for the corresponding sensi_orders).
+        (Format {'res': ..., 'sres': ..., 'rdatas': ...})
+        """
         result = dict()
 
         # initialize res and sres
@@ -158,6 +168,9 @@ class AggregatedObjective(Objective):
         return result
 
     def aggregate_res(self, x):
+        """
+        Sums up the individual residual values.
+        """
         if self.sres is True:  # integrated mode
             res = self.objectives[0].res(x)[0]
         else:
@@ -172,6 +185,9 @@ class AggregatedObjective(Objective):
         return res
 
     def aggregate_sres(self, x):
+        """
+        Sums up the individual residual sensitivities.
+        """
         sres = self.objectives[0].sres(x)
         for iobj in range(1, len(self.objectives)):
             sres = np.vstack([sres, np.asarray(self.objectives[iobj].sres(x))])
@@ -179,6 +195,9 @@ class AggregatedObjective(Objective):
         return sres
 
     def aggregate_fun(self, x):
+        """
+        Sums up the individual function values.
+        """
         if self.grad is True:  # integrated mode
             return tuple(
                 sum(objective.fun(x)[idx] for objective in self.objectives)
@@ -188,12 +207,21 @@ class AggregatedObjective(Objective):
             return sum(objective.fun(x) for objective in self.objectives)
 
     def aggregate_grad(self, x):
+        """
+        Sums up the individual gradients.
+        """
         return sum(objective.grad(x) for objective in self.objectives)
 
     def aggregate_hess(self, x):
+        """
+        Sums up the individual residual hessians.
+        """
         return sum(objective.hess(x) for objective in self.objectives)
 
     def aggregate_hessp(self, x):
+        """
+        Sums up the individual hessian vector products.
+        """
         return sum(objective.hessp(x) for objective in self.objectives)
 
     def reset_steadystate_guesses(self):
@@ -207,6 +235,9 @@ class AggregatedObjective(Objective):
 
 
 def _check_boolean_value_consistent(objectives, attr):
+    """
+    Checks if all objectives have consistently True/False for attribute attr.
+    """
     values = set(
         getattr(objective, attr)
         for objective in objectives
@@ -217,6 +248,9 @@ def _check_boolean_value_consistent(objectives, attr):
 
 
 def _check_none_value_consistent(objectives, attr):
+    """
+    Checks if all objectives have a None value for attribute attr.
+    """
     is_none = (
         getattr(objective, attr) is None
         for objective in objectives

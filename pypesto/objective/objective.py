@@ -7,7 +7,6 @@ from typing import Callable, Dict, List, Tuple, Union
 from .constants import MODE_FUN, MODE_RES, FVAL, GRAD, HESS, RES, SRES
 from .history import HistoryBase
 from .pre_post_process import PrePostProcessor, FixedParametersProcessor
-from .priors import Priors # this is just for a typehint in Objective.__call__
 
 logger = logging.getLogger(__name__)
 
@@ -204,8 +203,7 @@ class Objective:
             x: np.ndarray,
             sensi_orders: Tuple[int, ...] = (0, ),
             mode: str = MODE_FUN,
-            return_dict: bool = False,
-            x_priors: Priors = None
+            return_dict: bool = False
     ) -> Union[float, np.ndarray, Tuple, Dict]:
         """
         Method to obtain arbitrary sensitivities. This is the central method
@@ -248,15 +246,6 @@ class Objective:
 
         # compute result
         result = self._call_unprocessed(x_full, sensi_orders, mode)
-
-        if x_priors is not None:
-            priors_result = x_priors(x, sensi_orders)
-            if mode == MODE_FUN:
-                if FVAL in result:
-                    result[FVAL] -= sum(priors_result[FVAL])
-                ## implement GRAD
-                if GRAD in result:
-                    result[GRAD] -= sum(priors_result[GRAD])
 
         # post-process
         result = self.pre_post_processor.postprocess(result)

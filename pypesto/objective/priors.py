@@ -4,250 +4,254 @@ from typing import Optional, Union, Iterable, Dict, Callable, List, Tuple
 import copy
 import math
 
-from .constants import FVAL, GRAD
+from .objective import Objective
+from .aggregated import AggregatedObjective
+from .constants import FVAL, GRAD, HESS
 
-class Priors:
-    '''
-    Handles parameter prior distributions.
 
-    This includes producing parameter-specific prior distribution functions
-    based on specified prior hyperparameters.
+class Priors(AggregatedObjective):
+    """
+    Handles prior distributions.
 
-    TODO: Rewrite such that prior definitions are a named dictionary, with
-          parameter Id's as the keys?
-    '''
+    Consists basically of a list of individual priors,
+    given in self.objectives.
+    """
 
-    def __init__(
-            self,
-            x_priors_defs: Iterable[Dict]
-    ) -> List['Priors']:
-        '''
+    def __init__(self,
+                 prior_list: List[Objective],
+                 x_names: List[str] = None):
 
-        Arguments
-        ---------
-        x_priors_defs:
-            A list of dictionaries, where each dictionary defines the prior for
-            the parameter with the same index in `dim_full` (see the `Problem`
-            class description), with prior type-specific keys, and the
-            following non-specific keys:
-            'type':
-                The type of prior. Currently support types are described
-                in the `Prior` class.
-            Parameters without priors (such as fixed parameters) should have
-            `None` at their respective indicies.
-        '''
-        self.priors_callables = []
-        for x_prior_def in x_priors_defs:
-            if x_prior_def is None:
-                self.priors_callables += [None]
-            elif Prior.check_requirements(x_prior_def):
-                self.priors_callables += [Prior.get_callables(x_prior_def)]
+        super().__init__(prior_list, x_names)
+
+
+class ParameterPriors(Objective):
+    """
+    Single Parameter Prior.
+
+
+    prior_list has to contain dicts of the format format
+    {'index': [int], 'density_fun': [Callable], 'density_dx': [Callable], 'density_ddx': [Callable]}
+
+
+    Note:
+    -----
+    All callables should correspond to (log)densities and are internally
+    multiplied by -1, since pyPESTO performs minimization...
+    """
+
+    def __init__(self,
+                 prior_list: list):
+
+        self.prior_list = prior_list
+
+        super().__init__(fun=self.density_for_full_parameter_vector,
+                         grad=self.gradient_for_full_parameter_vector,
+                         hess=self.hessian_for_full_parameter_vector,
+                         hessp=self.hessian_vp_for_full_parameter_vector)
+
+    def density_for_full_parameter_vector(self, x):
+
+        density_val = 0
+        for prior in self.prior_list:
+            density_val -= prior['density_fun'](x[prior['index']])
+
+        return density_val
+
+    def gradient_for_full_parameter_vector(self, x):
+
+        grad = np.zeros_like(x)
+
+        for prior in self.prior_list:
+            grad[prior['index']] -= prior['density_dx'](x[prior['index']])
+
+        return grad
+
+    def hessian_for_full_parameter_vector(self, x):
+
+        hessian = np.zeros((len(x), len(x)))
+
+        for prior in self.prior_list:
+            hessian[prior['index'], prior['index']] -= \
+                prior['density_ddx'](x[prior['index']])
+
+        return hessian
+
+    def hessian_vp_for_full_parameter_vector(self, x, p):
+
+        h_dot_p = np.zeros_like(p)
+
+        for prior in self.prior_list:
+            h_dot_p[prior['index']] -= \
+                prior['density_ddx'](x[prior['index']]) * p[prior['index']]
+
+        return h_dot_p
+
+
+def get_parameter_prior_dict(index: int,
+                             prior_type: str,
+                             prior_parameters: np.ndarray,
+                             parameter_scale: str = 'lin'):
+
+    """
+    Returns the prior dict used to define priors for some default priors.
+
+    index:
+        index of the parameter in x_full
+
+    prior_type: str
+        Prior is defined in LINEAR parameter space! prior_type can from
+        {uniform, normal, laplace, logUniform, logNormal, logLaplace}
+
+    prior_parameters:
+        Parameters of the priors. Parameters are defined in linear scale.
+
+    parameter_scale:
+        scale, in which parameter is defined (since a parameter can be
+        log-transformed, while the prior is always defined in the linear space)
+    """
+
+    log_f, d_log_f_dx, dd_log_f_ddx = \
+        _prior_densities(prior_type, prior_parameters)
+
+    if parameter_scale is 'lin':
+
+        return {'index': index,
+                'density_fun': log_f,
+                'density_dx': d_log_f_dx,
+                'density_ddx': dd_log_f_ddx}
+
+    elif parameter_scale is 'log':
+
+        def log_f_log(x_log):
+            """log-prior for log-parameters"""
+            return log_f(math.exp(x_log)) + x_log
+
+        def d_log_f_log(x_log):
+            """derivative of log-prior w.r.t. log-parameters"""
+            return d_log_f_dx(math.exp(x_log)) * math.exp(x_log) + 1
+
+        def dd_log_f_log(x_log):
+            """second derivative of log-prior w.r.t. log-parameters"""
+            return math.exp(x_log) * \
+                   (d_log_f_dx(math.exp(x_log)) + dd_log_f_ddx(math.exp(x_log)))
+
+        return {'index': index,
+                'density_fun': log_f_log,
+                'density_dx': d_log_f_log,
+                'density_ddx': dd_log_f_log}
+
+    elif parameter_scale is 'log10':
+
+        log10 = math.log(10)
+
+        def log_f_log10(x_log10):
+            """log-prior for log10-parameters"""
+            return log_f(10**x_log10) + math.log(log10) + x_log10 * log10
+
+        def d_log_f_log10(x_log10):
+            """derivative of log-prior w.r.t. log10-parameters"""
+            return d_log_f_dx(10**x_log10) * log10 * 10**x_log10 + log10
+
+        def dd_log_f_log10(x_log10):
+            """second derivative of log-prior w.r.t. log10-parameters"""
+            return log10 * 10**x_log10 * \
+                   (dd_log_f_ddx(10**x_log10) + d_log_f_dx(10**x_log10) * log10)
+
+        return {'index': index,
+                'density_fun': log_f_log10,
+                'density_dx': d_log_f_log10,
+                'density_ddx': dd_log_f_log10}
+
+    else:
+        raise ValueError(f"Priors in parameters in scale {parameter_scale}"
+                         f" are currently not supported.")
+
+
+def _prior_densities(prior_type: str,
+                     prior_parameters: np.array) -> [Callable, Callable, Callable]:
+    """
+    Returns a tuple of Callables of the (log-)density (in linear scale),
+    together with their first + second derivative (= senisis) w.r.t x
+    """
+
+    if prior_type is 'uniform':
+
+        log_f = _get_constant_function(1/(prior_parameters[1] - prior_parameters[0]))
+        d_log_f_dx = _get_constant_function(0)
+        dd_log_f_ddx = _get_constant_function(0)
+
+        return log_f, d_log_f_dx, dd_log_f_ddx
+
+    elif prior_type is 'normal':
+
+        sigma2 = prior_parameters[1]**2
+
+        def log_f(x):
+            return -math.log(2*math.pi*sigma2)/2 - \
+                   (x-prior_parameters[0])**2/(2*sigma2)
+
+        d_log_f_dx = _get_linear_function(-1/sigma2, prior_parameters[0]/sigma2)
+        dd_log_f_ddx = _get_constant_function(-1/sigma2)
+
+        return log_f, d_log_f_dx, dd_log_f_ddx
+
+    elif prior_type is 'laplace':
+        log_2_sigma = math.log(2*prior_parameters[1])
+
+        def log_f(x):
+            return -log_2_sigma - abs(x-prior_parameters[0])/prior_parameters[1]
+
+        def d_log_f_dx(x):
+            if x > prior_parameters[0]:
+                return 1/prior_parameters[1]
             else:
-                raise Exception('An error occurred while processing required '
-                                'prior hyperparameters, for the prior '
-                                'definition:\n'
-                                f'{x_prior_def}')
+                return -1/prior_parameters[1]
 
-    def __call__(
-            self,
-            x: np.ndarray,
-            sensi_orders: Tuple[int, ...]
-    ) -> Dict:
-        '''
-        TODO: Check that it actually returns np.ndarray...
-        '''
-        priors_results = {FVAL: [], GRAD: []}
-        if 0 in sensi_orders:
-            priors_results[FVAL] = []
-        if 1 in sensi_orders:
-            priors_results[GRAD] = []
-        for index, x_i in enumerate(x):
-            if self.priors_callables[index] is not None:
-                if 0 in sensi_orders:
-                    priors_results[FVAL] += \
-                        [self.priors_callables[index][FVAL](x_i)]
-                if 1 in sensi_orders:
-                    priors_results[GRAD] += \
-                        [self.priors_callables[index][GRAD](x_i)]
-        return {k: np.array(v) for k, v in priors_results.items()}
+        dd_log_f_ddx = _get_constant_function(0)
 
-class Prior:
-    '''
-    Describes supported prior distributions.
-    Provides methods to
-    - ensure priors are specified appropriately,
-    - produce parameter-specific prior distributions as callables
+        return log_f, d_log_f_dx, dd_log_f_ddx
 
-    Some of the methods in this class involve identical arguments. These are
-    described here.
+    elif prior_type is 'logUniform':
+        raise NotImplementedError
+    elif prior_type is 'logNormal':
 
-    Arguments
-    ---------
-    prior_type:
-        The name of the prior distribution. Supports prior distributions
-        are indicated in the `_requirements` method.
-    x_prior_def:
-        A dictionary with keys that should match the requirements for the
-        specified prior type.
+        sigma2 = prior_parameters[1]**2
+        sqrt2_pi = math.sqrt(2*math.pi)
 
-    TODO: Could replace `scipy` functions with the subset of functions supported
-          by `jax` (https://github.com/google/jax), and then use automatic
-          differentiation, instead of `scipy.misc.derivative`.
-    '''
-    @staticmethod
-    def _describe(prior_type: str) -> Dict:
-        '''
-        Returns information about the prior.
+        def log_f(x):
+            return - math.log(sqrt2_pi * prior_parameters[1] * x) \
+                   - (math.log(x) - prior_parameters[0])**2/(2*sigma2)
 
-        Returns
-        -------
-        A dictionary with the following keys.
-        'requirements':
-            The required hyperparameters for the prior distribution.
-        'translation':
-            A translation of specified hyperparameters into required
-            hyperparameters (for example, facilitates the translation of
-            `mean` into `loc`). Possibly unnecessary, certainly optional.
-        'package':
-            The python package that contains the prior distribution. This is
-            useful to specify, because package-dependent code can then be used
-            to simplify things (for example `scipy.stats` functions generally
-            provide `logpdf` functions).
-        'callable':
-            The generic probability distribution function of the prior, with
-            unspecified hyperparameters. Note that the hyperparameters
-            in the `'requirements'` entry (after translation) must be named
-            arguments to this callable, and the parameter should be an unnamed
-            argument.
-        #'callable_grad':
-        #    A function that takes a parameter value argument, as well as the
-        #    required hyperparameters (see `'requirements'`), and returns the
-        #    gradient of `callable` at the parameter value.
+        def d_log_f_dx(x):
+            return - 1/x - (math.log(x) - prior_parameters[0])/(sigma2 * x)
 
-        Returns the list of required hyperparameters for priors. This and the
-        `check_type` methods are possibly unnecessary (useful for debugging).
-        '''
-        requirements = []
-        translations = []
-        package = 'custom'
-        prior_callable = None
-        prior_callable_grad = None
-        if prior_type == 'normal':
-            requirements = ['loc', 'scale']
-            translations = [('mean', 'loc'),
-                           ('std', 'scale')]
-            package = 'scipy'
-            prior_callable = scipy.stats.norm.logpdf
-            #prior_callable_grad = lambda x0, loc, scale: scipy.misc.derivative(
-            #    lambda x: prior_callable(x, loc, scale), x0
-            #)
-        elif prior_type == 'lognormal':
-            requirements = ['loc', 'scale']
-            translations = [('mean', 'loc'),
-                           ('std', 'scale')]
-            package = 'scipy'
-            prior_callable = scipy.stats.lognorm.logpdf
-            #prior_callable_grad = lambda x0, loc, scale: scipy.misc.derivative(
-            #    lambda x: prior_callable(x, loc, scale), x0
-            #)
-        else:
-            raise NameError(f'"{prior_type}" priors are not supported.')
+        def dd_log_f_ddx(x):
+            return 1/(x**2) - (1 - math.log(x) - prior_parameters[0])/(sigma2 * x**2)
 
-        return {
-            'requirements': requirements,
-            'translations': dict(translations),
-            'package': package,
-            'callable': prior_callable,
-            #'callable_grad': prior_callable_grad
-        }
+        return log_f, d_log_f_dx, dd_log_f_ddx
 
-    @staticmethod
-    def check_requirements(x_prior_def: Dict) -> bool:
-        '''
-        Returns True if the prior definition contains the required prior
-        hyperparameters for the specified prior type, else returns `False`.
-        '''
-        # TODO: Ensure that, for example, both `mean` and `loc` are not
-        # specified in requirements (as `mean` translated to `loc` for scipy
-        # distributions)?
-        prior_type = x_prior_def['type']
-        prior_description = Prior._describe(prior_type)
-        #requirements = copy.copy(prior_description['requirements'])
-        #requirements = copy.copy(prior_description['requirements'])
-        #translations = copy.copy(Prior._describe(prior_type['translations'])
-        for translation in prior_description['translations']:
-            if translation[0] in x_prior_def['hyperparameters']:
-                prior_description['requirements'][
-                    prior_description['requirements'].index(translation[1])] = \
-                    translation[0]
-        return all([r in x_prior_def['hyperparameters']
-                    for r in prior_description['requirements']])
-        #return all([r in x_prior_def
-        #            for r in Prior._describe(prior_type)['requirements'] + \
-        #            list(dict(
-        #                Prior._describe(prior_type)['translations']
-        #            ).keys())])
+    elif prior_type is 'logLaplace':
+        raise NotImplementedError
+    else:
+        ValueError(f'Priors of type {prior_type} are currently not supported')
 
-    @staticmethod
-    def _translate_requirements(prior_description: Dict,
-                               x_prior_def: Dict) -> Dict:
-        translated = {}
-        #prior_description = self._describe(prior_type)
-        translations = dict(prior_description['translations'])
-        requirements = prior_description['requirements']
-        for hyperparameter, value in x_prior_def['hyperparameters'].items():
-            if hyperparameter in translations:
-                translated[translations[hyperparameter]] = value
-            elif hyperparameter in requirements:
-                translated[hyperparameter] = value
-            else:
-                # If this occurs, possible cause is described in the TODO
-                # comment in the `check_requirements` method.
-                raise NameError('Unrecognised prior distribution '
-                                f'hyperparameter: {hyperparameter}, for prior '
-                                f'of type {x_prior_def["type"]}')
-        return translated
 
-    @staticmethod
-    def _scale(scale: str, x: float) -> float:
-        if scale == 'lin' or scale == None:
-            return x
-        elif scale == 'log':
-            return math.exp(x)
-        elif scale == 'log10':
-            return 10**x
-        else:
-            raise NameError(f'Unrecognised scale: {scale}.')
+def _get_linear_function(slope: float,
+                         intercept: float = 0):
+    """
+    Returns a linear function
+    """
+    def function(x):
+        return slope * x + intercept
+    return function
 
-    @staticmethod
-    def get_callables(x_prior_def: Dict) -> Callable:
-        '''
-        Returns the appropriate prior distribution as a callable, which is
-        customised with hyperparameters that are specified in the definition.
-        Also returns the derivative function of the callable.
 
-        TODO: Implement sensi_orders here, to only return gradient function if
-              required. Would require passing sensi_orders from Problem class??
-        '''
-        prior_type = x_prior_def['type']
-        prior_description = Prior._describe(prior_type)
-        # translated hyperparameters
-        kwargs = Prior._translate_requirements(prior_description, x_prior_def)
+def _get_constant_function(constant: float):
+    """
+    Defines a callable, that returns a callable, that returns
+    the constant, regardless of the input
+    """
+    def function(x):
+        return constant
+    return function
 
-        function = None
-        gradient = None
-        if prior_description['package'] == 'scipy':
-            scale = prior_description['scale'] \
-                if 'scale' in prior_description else None
-            function = lambda x: prior_description['callable'](
-                Prior._scale(scale, x),
-                **kwargs
-            )
-            gradient = lambda x0: scipy.misc.derivative(
-                lambda x: callable_fun(Prior._scale(scale, x)),
-                Prior._scale(scale, x0)
-            )
-        return {
-            FVAL: function,
-            GRAD: gradient
-        }
