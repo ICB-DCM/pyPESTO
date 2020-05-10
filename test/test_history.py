@@ -15,7 +15,7 @@ from pypesto.objective import CsvHistory, HistoryOptions, MemoryHistory
 from pypesto.optimize.optimizer import read_result_from_file, OptimizerResult
 
 from pypesto.objective.constants import (
-    FVAL, GRAD, HESS, RES, SRES, CHI2, SCHI2, X
+    FVAL, GRAD, HESS, RES, SRES, CHI2, SCHI2
 )
 
 
