@@ -916,25 +916,20 @@ class OptimizerHistory:
             self.res_min = res
             self.sres_min = sres
 
-        x_same = False
-        if self.grad_min is None and grad is not None and \
-                np.all(self.x_min == x):
-            self.grad_min = grad
-            x_same = True
+        # sometimes sensitivities are evaluated on subsequent calls. We can
+        # identify this situation by checking that x hasn't changed
+        if np.all(self.x_min == x):
+            if self.grad_min is None and grad is not None:
+                self.grad_min = grad
 
-        if self.hess_min is None and hess is not None and \
-                (x_same or np.all(self.x_min == x)):
-            self.hess_min = hess
-            x_same = True
+            if self.hess_min is None and hess is not None:
+                self.hess_min = hess
 
-        if self.res_min is None and res is not None and \
-                (x_same or np.all(self.x_min == x)):
-            self.res_min = res
-            x_same = True
+            if self.res_min is None and res is not None:
+                self.res_min = res
 
-        if self.sres_min is None and sres is not None and \
-                (x_same or np.all(self.x_min == x)):
-            self.sres_min = sres
+            if self.sres_min is None and sres is not None:
+                self.sres_min = sres
 
     def _compute_vals_from_trace(self):
         # some optimizers may evaluate hess+grad first to compute trust region

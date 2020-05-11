@@ -25,7 +25,9 @@ class AmiciCalculator:
     Class to perform the actual call to AMICI and obtain requested objective
     function values.
     """
-    _known_least_squares_safe = False
+
+    def __init__(self):
+        _known_least_squares_safe = False
 
     def initialize(self):
         """Initialize the calculator. Default: Do nothing."""

@@ -4,12 +4,12 @@ import numpy as np
 def res_to_chi2(res: np.ndarray):
     """
     We assume that the residuals res are related to an objective function
-    value fval = chi2 via::
+    value chi2 via::
 
-        fval = 0.5 * sum(res**2)
+        chi2 = sum(res**2)
 
-    which is the 'Linear' formulation in scipy.
-
+    which is consistent with the AMICI definition but NOT the 'Linear'
+    formulation in scipy.
     """
     if res is None:
         return None
