@@ -6,8 +6,8 @@ import time
 import logging
 from typing import Dict
 
-from ..objective import (
-    OptimizerHistory, HistoryOptions, CsvHistory)
+from ..objective import (OptimizerHistory, HistoryOptions, CsvHistory)
+from ..objective.history import HistoryBase
 from ..problem import Problem
 from .result import OptimizerResult
 
@@ -32,7 +32,8 @@ def history_decorator(minimize):
     information stored in the history.
     """
 
-    def wrapped_minimize(self, problem, x0, id, history_options=None):
+    def wrapped_minimize(self, problem, x0, id, allow_failed_starts,
+                         history_options=None):
         objective = problem.objective
 
         # initialize the objective
@@ -50,12 +51,26 @@ def history_decorator(minimize):
         objective.history = optimizer_history
 
         # perform the actual minimization
-        result = minimize(self, problem, x0, id, history_options)
+        try:
+            result = minimize(self, problem, x0, id, history_options)
+            objective.history.finalize()
+            result.id = id
+        except Exception as err:
+            if allow_failed_starts:
+                logger.error(f'start {id} failed: {err}')
+                result = OptimizerResult(
+                    x0=x0,
+                    exitflag=-1,
+                    message=str(err),
+                    id=id
+                )
+            else:
+                raise
 
-        objective.history.finalize()
-        result.id = id
-        result = fill_result_from_objective_history(
-            result, objective.history, self.is_least_squares)
+        result = fill_result_from_objective_history(result, objective.history)
+
+        # clean up, history is available from result
+        objective.history = HistoryBase()
 
         return result
     return wrapped_minimize
@@ -68,9 +83,11 @@ def time_decorator(minimize):
     the wall-clock time.
     """
 
-    def wrapped_minimize(self, problem, x0, id, history_options=None):
+    def wrapped_minimize(self, problem, x0, id, allow_failed_starts,
+                         history_options=None):
         start_time = time.time()
-        result = minimize(self, problem, x0, id, history_options)
+        result = minimize(self, problem, x0, id, allow_failed_starts,
+                          history_options)
         used_time = time.time() - start_time
         result.time = used_time
         return result
@@ -84,9 +101,11 @@ def fix_decorator(minimize):
     derivatives).
     """
 
-    def wrapped_minimize(self, problem, x0, id, history_options=None):
+    def wrapped_minimize(self, problem, x0, id, allow_failed_starts,
+                         history_options=None):
         # perform the actual optimization
-        result = minimize(self, problem, x0, id, history_options)
+        result = minimize(self, problem, x0, id, allow_failed_starts,
+                          history_options)
 
         # vectors to full vectors
         result.update_to_full(problem)
@@ -101,19 +120,20 @@ def fix_decorator(minimize):
 
 def fill_result_from_objective_history(
         result: OptimizerResult,
-        optimizer_history: OptimizerHistory,
-        is_least_squares: bool):
+        optimizer_history: OptimizerHistory):
     """
     Overwrite function values in the result object with the values recorded in
     the history.
     """
+    update_vals = False
     # best found values
     if result.fval is not None and \
-            not np.isclose(result.fval, optimizer_history.fval_min) and \
-            not is_least_squares:
+            not np.isclose(result.fval, optimizer_history.fval_min):
         logger.warning(
             "Function values from history and optimizer do not match: "
             f"{optimizer_history.fval_min}, {result.fval}")
+    else:
+        update_vals = True
 
     if optimizer_history.x_min is not None and result.x is not None and \
             not np.allclose(result.x, optimizer_history.x_min):
@@ -121,6 +141,9 @@ def fill_result_from_objective_history(
             "Parameters obtained from history and optimizer do not match: "
             f"{optimizer_history.x_min}, {result.x}")
     else:
+        update_vals = True
+
+    if update_vals:
         # override values from history if available
         result.x = optimizer_history.x_min
         result.fval = optimizer_history.fval_min
@@ -150,21 +173,6 @@ def fill_result_from_objective_history(
     return result
 
 
-def recover_result(objective, startpoint, err):
-    """
-    Upon an error, recover from the objective history whatever available,
-    and indicate in exitflag and message that an error occurred.
-    """
-    result = OptimizerResult(
-        x0=startpoint,
-        exitflag=-1,
-        message=str(err),
-    )
-    fill_result_from_objective_history(result, objective.history, False)
-
-    return result
-
-
 def read_result_from_file(problem: Problem, history_options: HistoryOptions,
                           identifier: str):
     if history_options.storage_file.endswith('.csv'):
@@ -188,9 +196,7 @@ def read_result_from_file(problem: Problem, history_options: HistoryOptions,
         time=max(history.get_time_trace())
     )
     result.id = identifier
-    result = fill_result_from_objective_history(
-        result, opt_hist, True
-    )
+    result = fill_result_from_objective_history(result, opt_hist)
     result.update_to_full(problem)
 
     return result
