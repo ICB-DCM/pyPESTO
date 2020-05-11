@@ -51,7 +51,7 @@ def plot_modelselection(
     df['delta_BIC'] = df['BIC'] - df['BIC'].min()
 
     # how many models shall be plotted on the x-axis
-    nr_models =int((len(selection_history)+1)/2)
+    nr_models = int((len(selection_history)+1)/2)
     # dataframe of values which shall be plotted
     df_to_plot = pd.DataFrame([],
                               columns=df_cols,
