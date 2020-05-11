@@ -1,6 +1,7 @@
 import itertools
 import tempfile
-from typing import Dict, Generator, Iterator, List, Tuple, Union
+from typing import Dict, Iterable, List, Set, Tuple, Union
+from colorama import Fore
 
 import petab
 import numpy as np
@@ -8,26 +9,16 @@ import math
 from ..problem import Problem
 from ..optimize import minimize
 from ..result import Result
+from ..petab import PetabImporter
+from ..objective import Objective
 
-from .row2problem import row2problem
+#from .row2problem import row2problem
 
-# TODO move to constants file
-MODEL_ID = "modelId"
-SBML_FILENAME = "SBML"
-# Zero-indexed column indices
-MODEL_NAME_COLUMN = 0
-SBML_FILENAME_COLUMN = 1
-# It is assumed that all columns after PARAMETER_DEFINITIONS_START contain
-# parameter Ids.
-PARAMETER_DEFINITIONS_START = 2
-HEADER_ROW = 0
-PARAMETER_VALUE_DELIMITER = ';'
-ESTIMATE_SYMBOL_UI = '-'
-# here, 'nan' is a string as it will be written to a (temporary) file. The
-# actual internal symbol is float('nan'). Equality to this symbol should be
-# checked with a function like `math.isnan()` (not ` == float('nan')`).
-ESTIMATE_SYMBOL_INTERNAL = 'nan'
-INITIAL_VIRTUAL_MODEL = 'PYPESTO_INITIAL_MODEL'
+# TODO replace * with constant names
+#from .constants import MODEL_NAME_COLUMN, YAML_FILENAME_COLUMN
+from .constants import *
+
+from petab.C import NOMINAL_VALUE, ESTIMATE
 
 
 class ModelSelectionProblem:
@@ -35,44 +26,65 @@ class ModelSelectionProblem:
 
     """
     def __init__(self,
-                 petab_problem: petab.problem,
                  row: Dict[str, float],
+                 petab_problem: petab.problem,
                  valid: bool = True,
-                 autorun: bool = True):
+                 autorun: bool = True,
+                 x_fixed_estimated: Set[str] = None
+    ):
         """
         Arguments
         ---------
-        petab_problem:
-            A petab problem that includes the parameters defined in the model
-            specification file.
         row:
             A single row from the model specification file, in the format that
             is returned by `ModelSelector.model_generator()`.
+        petab_problem:
+            A petab problem that includes the parameters defined in the model
+            specification file.
         valid:
             If `False`, the model will not be tested.
         autorun:
             If `False`, the model parameters will not be estimated. Allows
             users to manually call pypesto.minimize with custom options, then
             `set_result()`.
+        fixed_estimated:
+            Parameters that can be fixed to different values can be considered
+            estimated, as the "best" fixed parameter will be preferred. Note,
+            the preference is implemented as comparison of different models
+            with `ModelSelectionMethod.compare()`, unlike normal estimation,
+            which occurs within the same model with `pypesto.minimize`.
         TODO: constraints
         """
-        self.petab_problem = petab_problem
         self.row = row
+        self.petab_problem = petab_problem
         self.valid = valid
 
-        self.AIC = None
+        if x_fixed_estimated is None:
+            x_fixed_estimated = set()
+        else:
+            # TODO remove parameters that are zero
+            pass
+
+        self.model_ID = self.row[MODEL_ID]
+
+        #self.AIC = None
         self.BIC = None
 
         if self.valid:
-            self.n_estimated = sum([1 if is_estimated(p) else 0
-                                    for header, p in self.row.items()
-                                    if header not in [MODEL_ID,
-                                                      SBML_FILENAME]])
-            self.n_edata = None  # TODO for BIC
-            self.model_id = self.row[MODEL_ID]
-            self.SBML_filename = self.row[SBML_FILENAME]
-
             self.pypesto_problem = row2problem(row, petab_problem)
+
+            # TODO warning/error if x_fixed_estimated is not a parameter ID in
+            # the PEtab parameter table. A warning is currently produced in
+            # `row2problem` above.
+            # Could move to a separate method that is only called when a
+            # criterion that requires the number of estimated parameters is
+            # called.
+            self.estimated = x_fixed_estimated | set(
+                self.petab_problem.parameter_df.query(f'{ESTIMATE} == 1').index
+            )
+            self.n_estimated = len(self.estimated)
+            # TODO for BIC. Could move to `calculate_BIC()` to save time.
+            self.n_edata = None
 
             self.minimize_result = None
 
@@ -82,18 +94,13 @@ class ModelSelectionProblem:
     def set_result(self, result: Result):
         self.minimize_result = result
         self.optimized_model = self.minimize_result.optimize_result.list[0]
-        self.AIC = self.calculate_AIC()
-        #self.BIC = self.calculate_BIC()
 
-    def calculate_AIC(self):
-        # TODO: test, get objective fval for best parameter estimates from
-        # minimize_result
-        #breakpoint()
-        #self.minimize_result.optimize_result.list[i]['fval']
-
-        # TODO double check that fval is negative log likelihood
-        return 2*(self.n_estimated + self.optimized_model.fval)
-        #return 2*(self.n_estimated - math.log(self.optimized_model.fval))
+    @property
+    def AIC(self):
+        if '_AIC' not in dir(self):
+            self._AIC = calculate_AIC(self.n_estimated,
+                                      self.optimized_model.fval)
+        return self._AIC
 
     def calculate_BIC(self):
         # TODO: test, implement self.n_data in `__init__`
@@ -104,15 +111,678 @@ class ModelSelectionProblem:
             2*self.minimize_result[0].fval
             #-2*math.log(self.minimize_result[0].fval)
 
-    def calibrate(self):
-        # TODO settings?
-        # 100 starts, SingleCoreEngine, ScipyOptimizer
-        result = minimize(self.pypesto_problem)
-        self.set_result(result)
+    #def calibrate(self):
+    #    # TODO settings?
+    #    # 100 starts, SingleCoreEngine, ScipyOptimizer
+    #    result = minimize(self.pypesto_problem)
+    #    self.set_result(result)
 
 
-def is_estimated(p: str) -> bool:
-    return math.isnan(p)
+class ModelSelector:
+    def __init__(
+            self,
+            petab_problem: petab.problem,
+            specification_filename: str,
+            #constraints_filename: str
+    ):
+        self.petab_problem = petab_problem
+        # TODO remove duplicates from specification_file
+        self.specification_file = unpack_file(specification_filename)
+        self.header = line2row(self.specification_file.readline(),
+                               convert_parameters_to_float=False)
+        self.parameter_IDs = self.header[PARAMETER_DEFINITIONS_START:]
+
+
+        #self.apply_constraints(
+        #    self.parse_constraints_file[constraints_filename])
+
+        self.selection_history = {}
+
+        # Dictionary of method names as keys, with a dictionary as the values.
+        # In the dictionary, keys will be modelId, criterion value
+        # TODO unused
+        self.results = {}
+
+    def delete_models(self,
+                      model_IDs: Set[str] = None,
+                      constraints: Set[Tuple[str, str]] = None):
+        '''
+        TODO method to remove model rows from `self.specification_file` if the
+        model matches some constraints
+
+        Arguments
+        ---------
+        models_ids:
+            Rows with these model IDs will be removed.
+
+        constraints:
+            Rows that fail any constaints will be removed. The constraints
+            be specified as a set of constraints, where each constraint is a
+            2-tuple, where the first element is condition that determines
+            whether a model should be tested, and the second element is the
+            condition that tested models must pass.
+        '''
+        pass
+
+    def parse_constraints_file(
+            constraints_filename: str
+    ) -> Iterable[Tuple[str, str]]:
+        # TODO
+        pass
+
+    def apply_constraints(self, constraints: List[Tuple[str, str]]):
+        # TODO possible by importing model (also possible petab symbols) into
+        # namespace then bool check with sympy
+        for model in self.model_generator():
+            for constraint_if, constraint_then in constraints:
+                pass
+        pass
+
+    def model_generator(self,
+                        #index: int = None,
+                        exclude_history: bool = True,
+                        exclusions: List[str] = None
+    ) -> Iterable[Dict[str, Union[str, float]]]:
+        """
+        A generator for the models described by the model specification file.
+
+        Argument
+        --------
+        #index:
+        #    If None, all models from the model specification file are yielded.
+        #    If not None, only the model at line number `index` is returned.
+
+        exclude_history:
+            If `True`, models with Id's in `self.selection_history` are not
+            yielded.
+
+        exclusions:
+            A list of model Id's to avoid yielding.
+
+        Yields
+        ------
+        Models, one model at a time, as a dictionary, where the keys are the
+        column headers in the model specification file, and the values are the
+        respective column values in a row of the model specification file.
+        """
+        # Go to the start of model specification rows, after the header.
+        self.specification_file.seek(0)
+        self.specification_file.readline()
+
+        if exclusions is None:
+            exclusions = []
+        if exclude_history:
+            exclusions += self.selection_history.keys()
+
+        for line in self.specification_file:
+            model_dict = dict(zip(self.header, line2row(line)))
+            # Exclusion of history makes sense here, to avoid duplicated code
+            # in specific selectors. However, the selection history of this
+            # class is only updated when a `selector.__call__` returns, so
+            # the exclusion of a model tested twice within the same selector
+            # call is not excluded here. Could be implemented by decorating
+            # `model_generator` in `ModelSelectorMethod` to include the
+            # call selection history as `exclusions` (TODO).
+            if model_dict[MODEL_ID] in exclusions:
+                continue
+            yield model_dict
+
+    def select(self, method: str, criterion: str):
+        """
+        Runs a model selection algorithm. The result is the selected model for
+        the current run, independent of previous `select()` calls.
+
+        Arguments
+        ---------
+        method:
+            The model selection algorithm.
+
+        criterion:
+            The criterion used by `ModelSelectorMethod.compare()`, in which
+            currently implemented criterion can be found.
+        """
+        if method == 'forward':
+            selector = ForwardSelector(self.petab_problem,
+                                       self.model_generator,
+                                       criterion,
+                                       self.parameter_IDs,
+                                       self.selection_history)
+            result, self.selection_history = selector()
+        elif method == 'backward':
+            selector = ForwardSelector(self.petab_problem,
+                                       self.model_generator,
+                                       criterion,
+                                       self.parameter_IDs,
+                                       self.selection_history,
+                                       reverse=True)
+            result, self.selection_history = selector()
+        else:
+            raise NotImplementedError(f'Model selection algorithm: {method}.')
+
+        # TODO: Reconsider return value. `result` could be stored in attribute,
+        # then no values need to be returned, and users can request values
+        # manually.
+        return result, self.selection_history
+
+
+class ModelSelectorMethod:
+    # the calling child class should have self.criterion defined
+    def compare(self,
+                old: ModelSelectionProblem,
+                new: ModelSelectionProblem) -> bool:
+        """
+        Compares models by criterion.
+
+        Arguments
+        ---------
+        old:
+            A `ModelSelectionProblem` that has already been optimized.
+        new:
+            See `old`.
+
+        Returns
+        -------
+        `True`, if `new` is superior to `old` by the criterion, else `False`.
+        """
+        if self.criterion == 'AIC':
+            return new.AIC < old.AIC
+        elif self.criterion == 'BIC':
+            return new.BIC < old.BIC
+        else:
+            raise NotImplementedError('Model selection criterion: '
+                                      f'{self.criterion}.')
+
+    def new_model_problem(self,
+                          row: Dict[str, float],
+                          petab_problem: petab.problem = None,
+                          valid: bool = True,
+                          autorun: bool = True) -> ModelSelectionProblem:
+        if petab_problem is None:
+            petab_problem = self.petab_problem
+        return ModelSelectionProblem(
+            row,
+            self.petab_problem,
+            valid=valid,
+            autorun=autorun
+        )
+
+    # possibly erroneous now that `ModelSelector.model_generator()` can exclude
+    # models, which would change the index of yielded models.
+    #def model_by_index(self, index: int) -> Dict[str, Union[str, float]]:
+    #    # alternative:
+    #    # 
+    #    return next(itertools.islice(self.model_generator(), index, None))
+    #    #return next(self.model_generator(index=index))
+
+    #def set_exclusions(self, exclusions: List[str])
+
+    #def excluded_models(self,
+    #                    exclude_history: bool = True,
+    #)
+
+    #def setup_model_generator(self,
+    #                          base_model_generator: Generator[
+    #                              Dict[str, Union[str, float]],
+    #                              None,
+    #                              None
+    #                          ],
+    #) -> None:
+    #    self.base_model_generator = base_model_generator
+
+    #def model_generator(self,
+    #                    exclude_history: bool = True,
+    #                    exclusions: List[str] = None
+    #) -> Generator[Dict[str, Union[str, float]], None, None]:
+    #    for model in self.base_model_generator():
+    #        model_dict = dict(zip(self.header, line2row(line)))
+    #        # Exclusion of history makes sense here, to avoid duplicated code
+    #        # in specific selectors. However, the selection history of this
+    #        # class is only updated when a `selector.__call__` returns, so
+    #        # the exclusion of a model tested twice within the same selector
+    #        # call is not excluded here. Could be implemented by decorating
+    #        # `model_generator` in `ModelSelectorMethod` to include the
+    #        # call selection history as `exclusions` (TODO).
+    #        if model_dict[MODEL_ID] in exclusions or (
+    #                exclude_history and
+    #                model_dict[MODEL_ID] in self.selection_history):
+    #            continue
+
+
+class ForwardSelector(ModelSelectorMethod):
+    """
+    here it is assumed that that there is only one petab_problem
+    TODO rewrite `__call__()` here? unsure of intended purpose of separate
+    call method that can be called independently/multiple times after
+    initialisation...
+    """
+    def __init__(self,
+                 petab_problem: petab.problem,
+                 model_generator: Iterable[Dict[str, Union[str, float]]],
+                 criterion: str,
+                 parameter_IDs: List[str],
+                 selection_history: Dict[str, Dict],
+                 reverse: bool = False):
+        # TODO rename to `default_petab_problem`? There may be multiple petab
+        # problems for a single model selection run, defined by the future
+        # YAML column
+        self.petab_problem = petab_problem
+        self.model_generator = model_generator
+        self.criterion = criterion
+        self.parameter_IDs = parameter_IDs
+        self.selection_history = selection_history
+        self.reverse = reverse
+
+        # TODO move to `self.new_direction_problem()`?
+        self.initial_model = True
+
+    def new_direction_problem(self) -> ModelSelectionProblem:
+        """
+        Produces a virtual initial model that can be used to identify
+        models in `self.model_generator()` that are relatively more (or less,
+        if `self.reverse` is `True` to indicate backward selection) complex
+        compared to the initial model.
+
+        Returns
+        -------
+        If `self.reverse` is `True`, returns a model with all parameters
+        estimated (the initial model for backward selection), else returns a
+        model with all parameters zero (the initial model for forward
+        selection). Models are returned as a `ModelSelectionProblem`.
+        The returned model will have `ModelSelectionProblem.valid=False`, to
+        ensure that the model is not considered for selection. TODO valid
+        attribute not used at the moment, as `self.initial_model` is now
+        implemented.
+
+        TODO:
+            fail gracefully if no models are selected after the selection
+            algorithm is run with this initial model, so this model is never
+            reported as a possible model.
+        """
+
+        if self.reverse:
+            # TODO ESTIMATE_SYMBOL_INTERNAL
+            parameters = dict(zip(self.parameter_IDs,
+                                  [float("NaN")]*len(self.parameter_IDs)))
+            #return ModelSelectionProblem(
+            #    self.petab_problem,
+            #    dict(zip(self.parameter_ids,
+            #             [float("NaN")]*len(self.parameter_ids),)),
+            #    valid=False
+            #)
+        else:
+            parameters = dict(zip(self.parameter_IDs,
+                                  [0]*len(self.parameter_IDs)))
+            #return ModelSelectionProblem(
+            #    self.petab_problem,
+            #    dict(zip(self.parameter_ids, [0]*len(self.parameter_ids),)),
+            #    valid=False
+            #)
+
+        model_ID = {MODEL_ID: INITIAL_VIRTUAL_MODEL}
+
+        return self.new_model_problem({**model_ID, **parameters}, valid=False)
+        #return ModelSelectionProblem(
+        #    self.petab_problem,
+        #    {**model_ID, **parameters},
+        #    valid=False
+        #)
+
+    def __call__(self):
+        """
+        Runs the forward (or backward, if `self.reverse=True`) selection
+        algorithm.
+
+        Returns
+        -------
+        A tuple, where the first element is the selected model, as a
+        `ModelSelectionProblem`, and the second element is a dictionary that
+        describes the tested models, where the keys are model Ids, and the
+        values are dictionaries with the keys 'AIC', 'BIC', and
+        'compared_model_ID'.
+        """
+        # self.setup_direction(self.direction)
+        model = self.new_direction_problem()
+        proceed = True
+
+        while proceed:
+            proceed = False
+            # TODO how should initial models for different `__call__()`s be
+            # distinguished (or, different `ModelSelector.select()` calls...)
+            # Set here as `model` changes if a better model is found. TODO no
+            # longer necessary if "first better test model is chosen" is the
+            # only algorithm, not "all test models are compared, best test
+            # model is chosen".
+            compared_model_ID = model.model_ID
+            test_models = self.get_test_models(model)
+            # Error if no valid test models are found. May occur if
+            # all models have already been tested. `Exception` may be a bad way
+            # to handle this... a warning?
+            # Currently, not `ModelSelectionProblem.valid` is not used now that
+            # `self.initial_model` is implemented; however, `valid` may be used
+            # later and replace `self.initial_model` here (assuming
+            # `self.initial_model.valid == False`)
+            if not test_models and self.initial_model:
+                raise Exception('No valid models found.')
+            # TODO consider `self.minimize_models(List[ModelSelectionProblem])`
+            # and `self.set_minimize_method(List[ModelSelectionProblem])`
+            # methods, to allow customisation of the minimize method. The
+            # `ModelSelectionProblem` class already has the `autorun` flag
+            # to help facilitate this.
+            for test_model_dict in test_models:
+                #test_model = ModelSelectionProblem(self.petab_problem,
+                #                                   test_model_dict)
+                test_model = self.new_model_problem(test_model_dict)
+                    #self.model_generator(ind)
+                    #row)
+
+                self.selection_history[test_model.model_ID] = {
+                    'AIC': test_model.AIC,
+                    'BIC': test_model.BIC,
+                    'compared_model_ID': compared_model_ID
+                }
+
+                # The initial model from self.new_direction_problem() is only
+                # for complexity comparison, and is not a real model.
+                if self.initial_model:
+                    model = test_model
+                    self.initial_model = False
+                    proceed = True
+                    continue
+
+                # at the moment, if multiple models have the "best" criterion
+                # value, then the model with the lowest index in
+                # ModelSelector.model_generator() is chosen...
+                # TODO: this might make visualisation difficult, need a way to
+                # predictably select the next model from a set of models that
+                # are equivalent by criteria. Alphabetically?
+                if self.compare(model, test_model):
+                    model = test_model
+                    proceed = True
+
+        return model, self.selection_history
+
+    def relative_complexity_parameters(self, old: float, new: float) -> int:
+        """
+        Currently, non-zero fixed values are considered equal in complexity to
+        estimated values.
+
+        TODO: rewrite to use self.estimated_parameters to determine whether
+              parameters with fixed values should be considered estimated
+        """
+        # if both parameters are equal "complexity", e.g. both are fixed,
+        # both are estimated.
+        if (math.isnan(old) and math.isnan(new)) or (
+               not math.isnan(old) and
+               not math.isnan(new)
+           ):
+            return 0
+        # return 1 if the new parameter is estimated, and the old
+        # parameter is fixed
+        elif not math.isnan(old) and math.isnan(new):
+            return 1
+        # return -1 if the new parameter is fixed, and the old parameter is
+        # estimated
+        elif math.isnan(old) and not math.isnan(new):
+            return -1
+
+    def relative_complexity_models(self,
+                                   model0: Dict[str, Union[str, dict]],
+                                   model: Dict[str, Union[str, dict]],
+                                   strict: bool = True) -> float:
+        """
+        Calculates the relative different in complexity between two models.
+        Models should be in the format returns by
+        `ModelSelector.model_generator()`.
+
+        Arguments
+        ---------
+        model0:
+            The model to be compared against.
+
+        model:
+            The model to compare.
+
+        strict:
+            If `True`, then `float('nan')` is returned if `model` is not a
+            a strict increase (for forward selection), or decrease (for
+            backward selection), in complexity compared to `model0`. If
+            `False`, then only requires a net increase (or decrease) in
+            complexity across all parameters. Exception: returns 0 if models
+            are equal in complexity.
+            TODO: could be used to instead implement bidirectional selection?
+        """
+        rel_complexity = 0
+        for par in self.parameter_IDs:
+            rel_par_complexity = self.relative_complexity_parameters(
+                model0[par],
+                model[par]
+            )
+            rel_complexity += rel_par_complexity
+            # Skip models that can not be described as a strict addition
+            # (forward selection) or removal (backward selection) of
+            # parameters compared to `model0`.
+            # Complexity is set to float('nan') as this value appears to
+            # always evaluate to false for comparisons such as a < b.
+            # TODO check float('nan') python documentation to confirm
+            if strict:
+                if self.reverse and rel_par_complexity > 0:
+                    return float('nan')
+                elif not self.reverse and rel_par_complexity < 0:
+                    return float('nan')
+        return rel_complexity
+
+    def get_test_models(self,
+                        #model0: Dict,
+                        model0_problem: 'ModelSelectionProblem',
+                        strict=True) -> List[int]:
+                        #conf_dict: Dict[str, float],
+                        #direction=0
+        """
+        Identifies models are have minimal changes in complexity compared to
+        `model0`. Note: models that should be ignored are assigned a
+        complexity of `float('nan')`.
+
+        Parameters
+        ----------
+        model0_problem:
+            The model that will be used to calculate the relative complexity of
+            other models. TODO: remove the following text after testing new
+            implementation: Note: not a `ModelSelectionProblem`, but a
+            dictionary in the format that is returned by
+            `ModelSelector.model_generator()`.
+        strict:
+            If `True`, only models that strictly add (for forward selection) or
+            remove (for backward selection) parameters compared to `model0`
+            will be returned.
+            TODO: Is `strict=False` useful?
+
+        Returns
+        -------
+        A list of indices from `self.model_generator()`, of models that are
+        minimally more (for forward selection) or less (for backward selection)
+        complex compared to the model described by `model0`.
+        """
+
+        '''
+        Alternatives
+        a) Currently: a list is generated that contains an element
+        for each model in model_generator, where the element value is the
+        relative complexity of that model compared to model0. Then, the
+        set of indices, of elements with the minimal complexity, in this list
+        is returned.
+        b) loop through models in model generator and keep track of the current
+        minimal complexity change, as well as a list of indices in
+        enumerate(self.model_generator()) that match this minimal complexity.
+        If the next model has a smaller minimal complexity, then replace the
+        current minimal complexity, and replace the list of indices with a list
+        just containing the new model. After the loop, return the list.
+        '''
+        # method alternative (b)
+        # TODO rewrite all `model0` and `model` to be `model0_dict` and
+        # `model_dict`, then change input argument to `model0`
+        minimal_complexity = float('nan')
+        test_models = []
+        # TODO rewrite `row` attribute to be named `spec` or `specification`
+        model0 = model0_problem.row
+
+        # If there exist models that are equal in complexity to the initial
+        # model, return them.
+        if self.initial_model:
+            for model in self.model_generator():
+                # less efficient than just checking equality in parameters
+                # between `model0` and `model`, with `self.parameter_IDs`
+                if self.relative_complexity_models(model0, model) == 0:
+                    test_models += [model]
+            if test_models:
+                return test_models
+
+        # TODO allow for exclusion of already tested models at this point?
+        # e.g. if model[MODEL_ID] not in self.selection history. or make new
+        # attribute in ModelSelector.model_generator(exclusions: Sequence[str])
+        # and call with
+        # self.model_generator(exclusions=self.selection_history.keys())
+        # then implement exclusion in the generator function...
+        for model in self.model_generator():
+            model_complexity = self.relative_complexity_models(model0, model)
+            # if model does not represent a valid forward/backward selection
+            # option. `isnan` for models with a complexity change in the wrong
+            # direction, `not` for models with equivalent complexity.
+            if math.isnan(model_complexity) or not model_complexity:
+                continue
+            elif math.isnan(minimal_complexity):
+                minimal_complexity = model_complexity
+                test_models = [model]
+            # `abs()` to account for negative complexities in the case of
+            # backward selection.
+            elif abs(model_complexity) < abs(minimal_complexity):
+                minimal_complexity = model_complexity
+                test_models = [model]
+            elif model_complexity == minimal_complexity:
+                test_models += [model]
+            else:
+                # TODO remove `continue` after self.initial_model and related
+                # code is implemented
+                continue
+                raise ValueError('Unknown error while calculating relative '
+                                 'model complexities.')
+        return test_models
+
+
+        ## method alternative (a)
+        ## the nth element in this list is the relative complexity for the nth
+        ## model
+        #rel_complexities = []
+        #for model in self.model_generator():
+        #    rel_complexities.append(0)
+        #    # Skip models that have already been tested
+        #    if model[MODEL_ID] in self.selection_history:
+        #        continue
+        #    for par in self.parameter_ids:
+        #        rel_par_complexity = self.relative_complexity(
+        #            model0[par],
+        #            model[par]
+        #        )
+        #        # Skip models that can not be described as a strict addition
+        #        # (forward selection) or removal (backward selection) of
+        #        # parameters compared to `model0`.
+        #        if strict:
+        #            if self.reverse and rel_par_complexity > 0:
+        #                rel_complexities[-1] = float('nan')
+        #                break
+        #            elif not self.reverse and rel_par_complexity < 0:
+        #                rel_complexities[-1] = float('nan')
+        #                break
+        #        rel_complexities[-1] += rel_par_complexity
+        ## If `strict=False` is removed as an option (i.e. `strict` is always
+        ## `True`), then the comparisons `if i < 0` and `if i > 0` could be
+        ## removed from the following code.
+        #if self.reverse:
+        #    next_complexity = max(i for i in rel_complexities if i < 0)
+        #else:
+        #    next_complexity = min(i for i in rel_complexities if i > 0)
+        #return [i for i, complexity in enumerate(rel_complexities) if
+        #        complexity == next_complexity]
+
+def row2problem(row: dict,
+                petab_problem: Union[petab.Problem, str] = None,
+                obj: Objective = None) -> Problem:
+    """
+    Create a pypesto.Problem from a single, unambiguous model selection row.
+    Optional petab.Problem and objective function can be provided to overwrite
+    model selection yaml entry and default PetabImporter objective
+    respectively.
+
+    Parameters
+    ----------
+    row:
+        A single, unambiguous model selection row.
+    petab_problem:
+        The petab problem for which to perform model selection.
+    obj:
+        The objective to modify for model selection.
+
+    Returns
+    -------
+    problem:
+        The problem containing correctly fixed parameter values.
+    """
+    # overwrite petab_problem by problem in case it refers to yaml
+    # TODO if yaml is specified in the model spec file, then a new problem
+    # might be created for each model row. This may be undesirable as the same
+    # model might be compiled for each model row with the same YAML value
+    if petab_problem is None and YAML_FILENAME in row.keys():
+        raise NotImplementedError()
+        # TODO untested
+        # YAML_FILENAME_COLUMN is not currently specified in the model
+        # specifications file (instead, the SBML .xml file is)
+        petab_problem = row[YAML_FILENAME]
+    if isinstance(petab_problem, str):
+        petab_problem = petab.Problem.from_yaml(petab_problem)
+
+    # drop row entries not referring to parameters
+    # TODO switch to just YAML_FILENAME
+    for key in [YAML_FILENAME, SBML_FILENAME, MODEL_ID]:
+        if key in row.keys():
+            row.pop(key)
+
+    for par_id, par_val in row.items():
+        if par_id not in petab_problem.x_ids:
+            print(Fore.YELLOW + f'Warning: parameter {par_id} is not defined '
+                                f'in PETab model. It will be ignored.')
+            continue
+        if not np.isnan(par_val):
+            petab_problem.parameter_df[ESTIMATE].loc[par_id] = 0
+            petab_problem.parameter_df[NOMINAL_VALUE].loc[par_id] = par_val
+            # petab_problem.parameter_df.lowerBound.loc[par_id] = float("NaN")
+            # petab_problem.parameter_df.upperBound.loc[par_id] = float("NaN")
+        else:
+            petab_problem.parameter_df[ESTIMATE].loc[par_id] = 1
+            # petab_problem.parameter_df.nominalValue.loc[par_id] = float(
+            # "NaN")
+
+    # chose standard objective in case none is provided
+    importer = PetabImporter(petab_problem)
+    if obj is None:
+        obj = importer.create_objective()
+    pypesto_problem = importer.create_problem(obj)
+
+    return pypesto_problem
+
+
+def calculate_AIC(n_estimated: int, nllh: float) -> float:
+    '''
+    Calculate the Akaike information criterion for a model.
+
+    Arguments
+    ---------
+    n_estimated:
+        The number of estimated parameters in the model.
+
+    nllh:
+        The negative log likelihood (e.g. the `optimize_result.list[0].fval`
+        attribute of the return value of `pypesto.minimize`.
+    '''
+    return 2*(n_estimated + nllh)
 
 
 def _replace_estimate_symbol(parameter_definition: List[str]) -> List:
@@ -221,487 +891,16 @@ def line2row(line: str,
         parameters = columns[PARAMETER_DEFINITIONS_START:]
     return metadata + parameters
 
-#def seek_to_line(file_object,
-#                 line_number: int = 0,
-#                 skip_header = True,
-#                 relative = False):
-#    '''
-#    Changes the file pointer to the beginning of a specific line number, either
-#    relative to the beginning of the file, or the current line that the file
-#    is pointing to.
-#
-#    Arguments
-#    ---------
-#    file_object:
-#        An open file object that has read access.
-#
-#    line_number:
-#        The requested line number to seek to.
-#
-#    skip_header:
-#        If `True` and `relative == false`, the first line is ignored.
-#
-#    relative:
-#        If `True`, then the current line is considered line 0, otherwise the
-#        first line is considered line 0.
-#    '''
-#    if not relative:
-#        file_object.seek(0)
-#        if skip_header:
-#            file_object.readline()
-#    for _ in range(line_number):
-#        file_object.readline()
 
+def get_x_fixed_estimated(
+        x_IDs: Set[str],
+        model_generator: Iterable[Dict[str, Union[str, float]]]) -> Set[str]:
+    '''
+    Get parameters that are fixed in at least one model, but should be
+    considered estimated. This may not be a feature worth supporting.
+    TODO Consider instead a single float, or `-`, as the two valid parameter
+    specification symbols, where only `-` represents an estimated parameter,
+    don't support specification of multiple possible float values.
+    '''
+    pass
 
-class ModelSelector:
-    def __init__(
-            self,
-            petab_problem: petab.problem,
-            specification_filename: str
-    ):
-        self.petab_problem = petab_problem
-        self.specification_file = unpack_file(specification_filename)
-        self.header = line2row(self.specification_file.readline(),
-                               convert_parameters_to_float=False)
-        self.parameter_ids = self.header[PARAMETER_DEFINITIONS_START:]
-
-        self.selection_history = {}
-
-        # Dictionary of method names as keys, with a dictionary as the values.
-        # In the dictionary, keys will be modelId, criterion value
-        # TODO
-        self.results = {}
-
-    def model_generator(self,
-                        index: int = None
-#    ) -> Union[Dict[str, str], Iterator[Dict[str, str]]]:
-    ) -> Generator[Dict[str, Union[str, float]], None, None]:
-        """
-        A generator for the models described by the model specification file.
-
-        Argument
-        --------
-        index:
-            If None, all models from the model specification file are yielded.
-            If not None, only the model at line number `index` is returned.
-        specification is returned.
-
-        Returns
-        -------
-        Models, one model at a time, as a dictionary, where the keys are the
-        column headers in the model specification file, and the values are the
-        respective column values in a row of the model specification file.
-        """
-        #self.specification_file.seek(0)
-        #seek_to_line(self.specification_file, 0 if index is None else index)
-        #self.specification_file.readline()
-
-        # 1+index to skip the header row
-        #seek_to_line(self.specification_file, 0 if index is None else index)
-        #print(f'Index in_func: {index}')
-
-        # Go to the start of model specification rows, after the header.
-        self.specification_file.seek(0)
-        self.specification_file.readline()
-
-        #if index is not None:
-        #    print('dictionary:')
-        #    print (dict(zip(self.header,
-        #                    line2row(self.specification_file.readline()))))
-        #    return dict(zip(self.header,
-        #                    line2row(self.specification_file.readline())))
-
-        for line in self.specification_file:
-            yield dict(zip(self.header, line2row(line)))
-
-    def select(self, method: str, criterion: str):
-        """
-        Runs a model selection algorithm. The result is the selected model for
-        the current run, independent of previous `select()` calls.
-
-        Arguments
-        ---------
-        method:
-            The model selection algorithm.
-
-        criterion:
-            The criterion used by `ModelSelectorMethod.compare()`, in which
-            currently implemented criterion can be found.
-        """
-        if method == 'forward':
-            selector = ForwardSelector(self.petab_problem,
-                                       self.model_generator,
-                                       criterion,
-                                       self.parameter_ids,
-                                       self.selection_history)
-            result, self.selection_history = selector()
-        elif method == 'backward':
-            selector = ForwardSelector(self.petab_problem,
-                                       self.model_generator,
-                                       criterion,
-                                       self.parameter_ids,
-                                       self.selection_history,
-                                       reverse=True)
-            result, self.selection_history = selector()
-        else:
-            raise NotImplementedError(f'Model selection algorithm: {method}.')
-
-        # TODO: Reconsider return value. `result` could be stored in attribute,
-        # then no values need to be returned, and users can request values
-        # manually.
-        return result, self.selection_history
-
-
-class ModelSelectorMethod:
-    # the calling child class should have self.criterion defined
-    def compare(self,
-                old: ModelSelectionProblem,
-                new: ModelSelectionProblem) -> bool:
-        """
-        Compares models by criterion.
-
-        Arguments
-        ---------
-        old:
-            A `ModelSelectionProblem` that has already been optimized.
-        new:
-            See `old`.
-
-        Returns
-        -------
-        `True`, if `new` is superior to `old` by the criterion, else `False`.
-        """
-        if self.criterion == 'AIC':
-            return new.AIC < old.AIC
-        elif self.criterion == 'BIC':
-            return new.BIC < old.BIC
-        else:
-            raise NotImplementedError('Model selection criterion: '
-                                      f'{self.criterion}.')
-
-    def model_by_index(self, index: int) -> Dict[str, Union[str, float]]:
-        # alternative:
-        # 
-        return next(itertools.islice(self.model_generator(), index, None))
-        #return next(self.model_generator(index=index))
-
-
-class ForwardSelector(ModelSelectorMethod):
-    """
-    here it is assumed that that there is only one petab_problem
-    """
-    def __init__(self,
-                 petab_problem: petab.problem,
-                 #model_generator: Iterator[Dict[str, Union[str, float]]],
-                 model_generator: Generator[Dict[str, Union[str, float]],
-                                            None,
-                                            None],
-                 criterion: str,
-                 parameter_ids: List[str],
-                 selection_history: Dict[str, Dict],
-                 reverse: bool = False):
-        self.petab_problem = petab_problem
-        self.model_generator = model_generator
-        self.criterion = criterion
-        self.parameter_ids = parameter_ids
-        self.selection_history = selection_history
-        self.reverse = reverse
-
-    def new_direction_problem(self) -> ModelSelectionProblem:
-        """
-        Produces a virtual initial model that can be used to identify
-        models in `self.model_generator()` that are relatively more (or less,
-        if `self.reverse` is `True` to indicate backward selection) complex
-        compared to the initial model.
-
-        Returns
-        -------
-        If `self.reverse` is `True`, returns a model with all parameters
-        estimated (the initial model for backward selection), else returns a
-        model with all parameters zero (the initial model for forward
-        selection). Models are returned as a `ModelSelectionProblem`.
-        The returned model will have `ModelSelectionProblem.valid=False`, to
-        ensure that the model is not considered for selection.
-
-        TODO:
-            fail gracefully if no models are selected after the selection
-            algorithm is run with this initial model, so this model is never
-            reported as a possible model.
-        """
-        if self.reverse:
-            # TODO ESTIMATE_SYMBOL_INTERNAL
-            return ModelSelectionProblem(
-                self.petab_problem,
-                dict(zip(self.parameter_ids,
-                         [float("NaN")]*len(self.parameter_ids),)),
-                valid=False
-            )
-        else:
-            return ModelSelectionProblem(
-                self.petab_problem,
-                dict(zip(self.parameter_ids, [0]*len(self.parameter_ids),)),
-                valid=False
-            )
-
-    def __call__(self):
-        """
-        Runs the forward (or backward, if `self.reverse=True`) selection
-        algorithm.
-
-        Returns
-        -------
-        A tuple, where the first element is the selected model, as a
-        `ModelSelectionProblem`, and the second element is a dictionary that
-        describes the tested models, where the keys are model Ids, and the
-        values are dictionaries with the keys 'AIC', 'BIC', and
-        'compared_model_id'.
-        """
-        # self.setup_direction(self.direction)
-        model = self.new_direction_problem()
-        proceed = True
-
-        while proceed:
-            proceed = False
-            # TODO rewrite to use `self.initial_model` later. also consider
-            # how initial models for different `__call__()`s should be
-            # distinguished.
-            # Set here as `model` changes if a better model is found.
-            compared_model_id = (INITIAL_VIRTUAL_MODEL
-                                 if not model.valid
-                                 else model.model_id)
-            test_model_indices = self.get_next_step_candidates(model)
-            # Error if no valid test models are found. May occur if
-            # all models have already been tested
-            # TODO rewrite to use a `self.initial_model:bool` attribute
-            # or `len(self.selection_history) == 0`. Although,
-            # `self.selection_history` may be non-zero from a previously
-            # completed `ForwardSelector.__call__()`.
-            if not test_model_indices and not model.valid:
-                raise Exception('No valid candidate models found.')
-            # TODO consider `self.minimize_models(List[ModelSelectionProblem])`
-            # and `self.set_minimize_method(List[ModelSelectionProblem])`
-            # methods, to allow customisation of the minimize method. The
-            # `ModelSelectionProblem` class already has the `autorun` flag
-            # to help facilitate this.
-            for index in test_model_indices:
-                test_model = ModelSelectionProblem(self.petab_problem,
-                                                   self.model_by_index(index))
-                    #self.model_generator(ind)
-                    #row)
-
-                self.selection_history[test_model.model_id] = {
-                    'AIC': test_model.AIC,
-                    'BIC': test_model.BIC,
-                    'compared_model_id': compared_model_id
-                }
-
-                # The initial model from self.new_direction_problem() is only
-                # for complexity comparison, and is not a real model.
-                if not model.valid:
-                    model = test_model
-                    proceed = True
-                    continue
-
-                # at the moment, if multiple models have the "best" criterion
-                # value, then the model with the lowest index in
-                # ModelSelector.model_generator() is chosen...
-                # TODO: this might make visualisation difficult, need a way to
-                # predictably select the next model from a set of models that
-                # are equivalent by criteria. Alphabetically?
-                if self.compare(model, test_model):
-                    model = test_model
-                    proceed = True
-
-        return model, self.selection_history
-
-    def relative_complexity_parameters(self, old: float, new: float) -> int:
-        """
-        Currently, non-zero fixed values are considered equal in complexity to
-        estimated values.
-        """
-        # if both parameters are equal "complexity", e.g. both are fixed,
-        # both are estimated.
-        if (math.isnan(old) and math.isnan(new)) or (
-               not math.isnan(old) and
-               not math.isnan(new)
-           ):
-            return 0
-        # return 1 if the new parameter is estimated, and the old
-        # parameter is fixed
-        elif not math.isnan(old) and math.isnan(new):
-            return 1
-        # return -1 if the new parameter is fixed, and the old parameter is
-        # estimated
-        elif math.isnan(old) and not math.isnan(new):
-            return -1
-
-    def relative_complexity_models(self,
-                                   model0: Dict[str, Union[str, dict]],
-                                   model: Dict[str, Union[str, dict]],
-                                   strict: bool = True) -> float:
-        """
-        Calculates the relative different in complexity between two models.
-        Models should be in the format returns by
-        `ModelSelector.model_generator()`.
-
-        Arguments
-        ---------
-        model0:
-            The model to be compared against.
-
-        model:
-            The model to compare.
-
-        strict:
-            If `True`, then `float('nan')` is returned if `model` is not a
-            a strict increase (for forward selection), or decrease (for
-            backward selection), in complexity compared to `model0`. If
-            `False`, then only requires a net increase (or decrease) in
-            complexity across all parameters. Exception: returns 0 if models
-            are equal in complexity.
-            TODO: could be used to instead implement bidirectional selection?
-        """
-        rel_complexity = 0
-        for par in self.parameter_ids:
-            rel_par_complexity = self.relative_complexity_parameters(
-                model0[par],
-                model[par]
-            )
-            rel_complexity += rel_par_complexity
-            # Skip models that can not be described as a strict addition
-            # (forward selection) or removal (backward selection) of
-            # parameters compared to `model0`.
-            # Complexity is set to float('nan') as this value appears to
-            # always evaluate to false for comparisons such as a < b.
-            # TODO check float('nan') python documentation to confirm
-            if strict:
-                if self.reverse and rel_par_complexity > 0:
-                    return float('nan')
-                elif not self.reverse and rel_par_complexity < 0:
-                    return float('nan')
-        return rel_complexity
-
-    def get_next_step_candidates(self,
-                                 #model0: Dict,
-                                 model0_problem: 'ModelSelectionProblem',
-                                 strict=True) -> List[int]:
-                                 #conf_dict: Dict[str, float],
-                                 #direction=0
-        """
-        Identifies models are have minimal changes in complexity compared to
-        `model0`. Note: models that should be ignored are assigned a
-        complexity of `float('nan')`.
-
-        Parameters
-        ----------
-        model0_problem:
-            The model that will be used to calculate the relative complexity of
-            other models. TODO: remove the following text after testing new
-            implementation: Note: not a `ModelSelectionProblem`, but a
-            dictionary in the format that is returned by
-            `ModelSelector.model_generator()`.
-        strict:
-            If `True`, only models that strictly add (for forward selection) or
-            remove (for backward selection) parameters compared to `model0`
-            will be returned.
-            TODO: Is `strict=False` useful?
-
-        Returns
-        -------
-        A list of indices from `self.model_generator()`, of models that are
-        minimally more (for forward selection) or less (for backward selection)
-        complex compared to the model described by `model0`.
-        """
-
-        '''
-        Alternatives
-        a) Currently: a list is generated that contains an element
-        for each model in model_generator, where the element value is the
-        relative complexity of that model compared to model0. Then, the
-        set of indices, of elements with the minimal complexity, in this list
-        is returned.
-        b) loop through models in model generator and keep track of the current
-        minimal complexity change, as well as a list of indices in
-        enumerate(self.model_generator()) that match this minimal complexity.
-        If the next model has a smaller minimal complexity, then replace the
-        current minimal complexity, and replace the list of indices with a list
-        just containing the new model. After the loop, return the list.
-        '''
-        # method alternative (b)
-        # TODO rewrite all `model0` and `model` to be `model0_dict` and
-        # `model_dict`, then change input argument to `model0`
-        minimal_complexity = float('nan')
-        model_indices = []
-        # TODO rewrite `row` attribute to be named `spec` or `specification`
-        model0 = model0_problem.row
-
-        # TODO add code here to return any models in model_generator that
-        # match the PYPESTO_INITIAL_MODEL, after self.initial_model is
-        # implemented, and skip "next model" testing
-
-        # TODO allow for exclusion of already tested models at this point?
-        # e.g. if model[MODEL_ID] not in self.selection history. or make new
-        # attribute in ModelSelector.model_generator(exclusions: Sequence[str])
-        # and call with
-        # self.model_generator(exclusions=self.selection_history.keys())
-        # then implement exclusion in the generator function...
-        for model_index, model in enumerate(self.model_generator()):
-            model_complexity = self.relative_complexity_models(model0, model)
-            # if model does not represent a valid forward/backward selection
-            # option. `isnan` for models with a complexity change in the wrong
-            # direction, `not` for models with equivalent complexity.
-            if math.isnan(model_complexity) or not model_complexity:
-                continue
-            elif math.isnan(minimal_complexity):
-                minimal_complexity = model_complexity
-                model_indices = [model_index]
-            # `abs()` to account for negative complexities in the case of
-            # backward selection.
-            elif abs(model_complexity) < abs(minimal_complexity):
-                minimal_complexity = model_complexity
-                model_indices = [model_index]
-            elif model_complexity == minimal_complexity:
-                model_indices += [model_index]
-            else:
-                # TODO remove `continue` after self.initial_model and related
-                # code is implemented
-                continue
-                raise ValueError('Unknown error while calculating relative '
-                                 'model complexities.')
-        return model_indices
-
-
-        # method alternative (a)
-        # the nth element in this list is the relative complexity for the nth
-        # model
-        rel_complexities = []
-        for model in self.model_generator():
-            rel_complexities.append(0)
-            # Skip models that have already been tested
-            if model[MODEL_ID] in self.selection_history:
-                continue
-            for par in self.parameter_ids:
-                rel_par_complexity = self.relative_complexity(
-                    model0[par],
-                    model[par]
-                )
-                # Skip models that can not be described as a strict addition
-                # (forward selection) or removal (backward selection) of
-                # parameters compared to `model0`.
-                if strict:
-                    if self.reverse and rel_par_complexity > 0:
-                        rel_complexities[-1] = float('nan')
-                        break
-                    elif not self.reverse and rel_par_complexity < 0:
-                        rel_complexities[-1] = float('nan')
-                        break
-                rel_complexities[-1] += rel_par_complexity
-        # If `strict=False` is removed as an option (i.e. `strict` is always
-        # `True`), then the comparisons `if i < 0` and `if i > 0` could be
-        # removed from the following code.
-        if self.reverse:
-            next_complexity = max(i for i in rel_complexities if i < 0)
-        else:
-            next_complexity = min(i for i in rel_complexities if i > 0)
-        return [i for i, complexity in enumerate(rel_complexities) if
-                complexity == next_complexity]
