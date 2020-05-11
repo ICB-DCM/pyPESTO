@@ -8,7 +8,7 @@ from typing import Tuple
 def plot_modelselection(
         selection_history : dict,
         aic_or_bic : str = 'AIC',
-        option : str = 'delta',
+        mode : str = 'delta',
         fz : int = 14,
         size : Tuple[float, float] = [5,4]):
     """
@@ -21,7 +21,7 @@ def plot_modelselection(
         pyPESTO result of model selection pipeline.
     aic_or_bic: 'AIC'|'BIC'
         plot AIC or BIC
-    option: 'delta'|'absolute'
+    mode: 'delta'|'absolute'
         plot delta AIC (BIC) => e.g., AIC - min(AIC), or absolute AIC (BIC)
         values
     fz: int
@@ -74,16 +74,16 @@ def plot_modelselection(
 
     # define what to plot and set y-label
     if aic_or_bic == 'AIC':
-        if option == 'delta':
+        if mode == 'delta':
             col_to_plot = 'delta_AIC'
-            option = '$\Delta$'
-        elif option == 'absolute':
+            mode = '$\Delta$'
+        elif mode == 'absolute':
             col_to_plot = 'AIC'
     elif aic_or_bic == 'BIC':
-        if option == 'delta':
+        if mode == 'delta':
             col_to_plot = 'delta_BIC'
-            option = '$\Delta$'
-        elif option == 'absolute':
+            mode = '$\Delta$'
+        elif mode == 'absolute':
             col_to_plot = 'BIC'
 
     # FIGURE
@@ -94,7 +94,7 @@ def plot_modelselection(
 
     ax.get_xticks()
     ax.set_xticks(df_to_plot.index.values)
-    ax.set_ylabel(option + ' ' + aic_or_bic, fontsize = fz)
+    ax.set_ylabel(mode + ' ' + aic_or_bic, fontsize = fz)
     ax.set_xticklabels(df_to_plot.xlabel.values, fontsize = fz-2)
     for tick in ax.yaxis.get_major_ticks():
         tick.label.set_fontsize(fz-2)
@@ -139,7 +139,7 @@ def plot_modelselection(
 #
 # ax = plot_modelselection(selection_history,
 #                          aic_or_bic='AIC',
-#                          option='absolute')
+#                          mode='absolute')
 # ax = plot_modelselection(selection_history,
 #                          aic_or_bic='AIC',
-#                          option='delta')
+#                          mode='delta')
