@@ -20,6 +20,7 @@ class ProblemHDF5Writer:
     UB_FULL = 'ub_full'
     X_FIXED_VALS = 'x_fixed_vals'
     X_FIXED_INDICES = 'x_fixed_indices'
+    X_FREE_INDICES = 'x_free_indices'
     X_NAMES = 'x_names'
     DIM = 'dim'
     DIM_FULL = 'dim_full'
@@ -61,6 +62,8 @@ class ProblemHDF5Writer:
                               problem.x_fixed_vals)
             write_int_array(problem_grp, self.X_FIXED_INDICES,
                             problem.x_fixed_indices)
+            write_int_array(problem_grp, self.X_FREE_INDICES,
+                            problem.x_free_indices)
             write_string_array(problem_grp, self.X_NAMES, problem.x_names)
 
 
