@@ -11,18 +11,20 @@ def plot_modelselection(
         option : str = 'delta',
         fz : int = 14,
         size : Tuple[float, float] = [5,4]):
-    """Plot log-posterior (=function value) over iterations.
+    """
+    Plot AIC or BIC for different models selected during model selection
+    routine.
 
     Parameters
     ----------
     selection_history: dict
-        PyPESTO result of model selection pipeline.
+        pyPESTO result of model selection pipeline.
     aic_or_bic: 'AIC'|'BIC'
         plot AIC or BIC
     option: 'delta'|'absolute'
         plot delta AIC (BIC) => e.g., AIC - min(AIC), or absolute AIC (BIC)
         values
-    fz:
+    fz: int
         fontsize
     size: ndarray
         Figure size in inches.
@@ -70,7 +72,7 @@ def plot_modelselection(
         # get next model
         which_model = df.iloc[idx_min_AIC1, df_cols.index('chosen_model')]
 
-    # FIGURE
+    # define what to plot and set y-label
     if aic_or_bic == 'AIC':
         if option == 'delta':
             col_to_plot = 'delta_AIC'
@@ -84,6 +86,7 @@ def plot_modelselection(
         elif option == 'absolute':
             col_to_plot = 'BIC'
 
+    # FIGURE
     fig, ax = plt.subplots(figsize=size)
     width = 0.75
     ax.bar(df_to_plot.index.values, df_to_plot[col_to_plot].values,
