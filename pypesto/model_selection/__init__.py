@@ -9,7 +9,7 @@ Model Selection
 from .model_selection import (
     ModelSelectionProblem,
     ModelSelector,
-    unpack_file
+    unpack_file,
     #ModelSelectorMethod,
-    #ForwardSelector,
+    ForwardSelector,
 )
