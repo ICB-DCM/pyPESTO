@@ -27,7 +27,7 @@ class AmiciCalculator:
     """
 
     def __init__(self):
-        _known_least_squares_safe = False
+        self._known_least_squares_safe = False
 
     def initialize(self):
         """Initialize the calculator. Default: Do nothing."""
