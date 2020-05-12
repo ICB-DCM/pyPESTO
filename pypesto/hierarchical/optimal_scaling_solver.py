@@ -1,6 +1,6 @@
 import numpy as np
 from typing import Dict, List, Tuple
-
+import warnings
 
 from ..optimize import Optimizer
 from .parameter import InnerParameter
@@ -75,9 +75,13 @@ class OptimalScalingInnerSolver(InnerSolver):
             List of optimization results
         """
 
-        obj = np.sum(
-            [x_inner_opt[idx]['fun'] for idx in range(len(x_inner_opt))]
-        )
+        if False in [x_inner_opt[idx]['success'] for idx in range(len(x_inner_opt))]:
+            obj = np.nan
+            warnings.warn(f"Inner optimization failed.")
+        else:
+            obj = np.sum(
+                [x_inner_opt[idx]['fun'] for idx in range(len(x_inner_opt))]
+            )
         return obj
 
     @staticmethod
