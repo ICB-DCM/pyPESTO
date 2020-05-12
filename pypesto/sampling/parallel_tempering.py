@@ -29,6 +29,8 @@ class ParallelTemperingSampler(Sampler):
             raise ValueError("The first chain must have beta=1.0")
         self.betas0 = np.array(betas)
         self.betas = None
+        
+        self.temper_lpost = self.options['temper_log_posterior']
 
         self.samplers = [copy.deepcopy(internal_sampler)
                          for _ in range(len(self.betas0))]
@@ -38,6 +40,7 @@ class ParallelTemperingSampler(Sampler):
         return {
             'max_temp': 5e4,
             'exponent': 4,
+            'temper_log_posterior': False,
         }
 
     def initialize(self,
@@ -55,12 +58,12 @@ class ParallelTemperingSampler(Sampler):
         self.betas = self.betas0
 
     def sample(
-            self, n_samples: int, beta: float = 1.):
+            self, n_samples: int, beta: float = 1., temper_lpost: bool = False):
         # loop over iterations
         for i_sample in range(int(n_samples)):
             # sample
-            for sampler, beta in zip(self.samplers, self.betas):
-                sampler.sample(n_samples=1, beta=beta)
+            for sampler, beta, temper_lpost in zip(self.samplers, self.betas, self.temper_lpost):
+                sampler.sample(n_samples=1, beta=beta, temper_lpost=temper_lpost)
 
             # swap samples
             swapped = self.swap_samples()
