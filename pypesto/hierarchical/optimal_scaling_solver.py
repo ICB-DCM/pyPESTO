@@ -1,5 +1,5 @@
 import numpy as np
-from typing import Dict, List
+from typing import Dict, List, Tuple
 
 from ..optimize import Optimizer
 from .parameter import InnerParameter
@@ -8,6 +8,8 @@ from .solver import InnerSolver
 
 REDUCED = 'reduced'
 STANDARD = 'standard'
+MAXMIN = 'max-min'
+MAX = 'max'
 
 
 class OptimalScalingInnerSolver(InnerSolver):
@@ -62,14 +64,15 @@ class OptimalScalingInnerSolver(InnerSolver):
         return obj
 
     @staticmethod
-    def get_default_options():
+    def get_default_options() -> Dict:
         """
         Return default options for solving the inner problem,
         if no options provided
          """
         options = {'method': 'reduced',
                    'reparameterized': True,
-                   'intervalConstraints': 'max'}
+                   'intervalConstraints': 'max',
+                   'minGap': 1e-16}
         return options
 
 
@@ -85,7 +88,9 @@ def compute_optimal_surrogate_data(problem: InnerProblem,
     return optimal_surrogates
 
 
-def optimize_surrogate_data(xs, sim: List[np.ndarray], options: Dict):
+def optimize_surrogate_data(xs: List[InnerParameter],
+                            sim: List[np.ndarray],
+                            options: Dict):
     """Run optimization for inner problem"""
     from scipy.optimize import minimize
 
@@ -105,10 +110,10 @@ def optimize_surrogate_data(xs, sim: List[np.ndarray], options: Dict):
 
 
 def get_inner_options(options: Dict,
-                      xs,
+                      xs: List[InnerParameter],
                       sim: List[np.ndarray],
-                      interval_range,
-                      interval_gap) -> Dict:
+                      interval_range: float,
+                      interval_gap: float) -> Dict:
     """Return default otpions for scipy optimizer"""
     from scipy.optimize import Bounds
 
@@ -125,7 +130,8 @@ def get_inner_options(options: Dict,
         x0 = np.linspace(0, max_all + interval_range, parameter_length)
     else:
         raise NotImplementedError(
-            f"Unkown optimal scaling method {options['method']}"
+            f"Unkown optimal scaling method {options['method']}. "
+            f"Please use {STANDARD} or {REDUCED}."
         )
 
     if options['reparameterized']:
@@ -144,7 +150,8 @@ def get_inner_options(options: Dict,
     return inner_options
 
 
-def get_min_max(xs, sim: List[np.ndarray]):
+def get_min_max(xs: List[InnerParameter],
+                sim: List[np.ndarray]) -> Tuple[float, float]:
     """Return minimal and maximal simulation value"""
     sim_all = get_sim_all(xs, sim)
 
@@ -166,7 +173,8 @@ def get_sim_all(xs, sim: List[np.ndarray]) -> list:
     return sim_all
 
 
-def get_weight_for_surrogate(xs, sim: List[np.ndarray]):
+def get_weight_for_surrogate(xs: List[InnerParameter],
+                             sim: List[np.ndarray]) -> float:
     """Calculate weights for objective function"""
     sim_x_all = get_sim_all(xs, sim)
     eps = 1e-10
@@ -177,9 +185,9 @@ def get_weight_for_surrogate(xs, sim: List[np.ndarray]):
     return w ** 2
 
 
-def compute_interval_constraints(xs,
+def compute_interval_constraints(xs: List[InnerParameter],
                                  sim: List[np.ndarray],
-                                 options: Dict):
+                                 options: Dict) -> Tuple[float, float]:
     """Compute minimal interval range and gap"""
     # compute constraints on interval size and interval gap size
     # similar to Pargett et al. (2014)
@@ -190,28 +198,29 @@ def compute_interval_constraints(xs,
 
     min_simulation, max_simulation = get_min_max(xs, sim)
 
-    if options['intervalConstraints'] == 'max-min':
+    if options['intervalConstraints'] == MAXMIN:
         interval_range = \
             (max_simulation - min_simulation) / (2 * len(xs) + 1)
         interval_gap = \
             (max_simulation - min_simulation) / (4 * (len(xs) - 1) + 1)
-    elif options['intervalConstraints'] == 'max':
+    elif options['intervalConstraints'] == MAX:
         interval_range = max_simulation / (2 * len(xs) + 1)
         interval_gap = max_simulation / (4 * (len(xs) - 1) + 1)
     else:
         raise ValueError(
             f"intervalConstraints = "
-            f"{options['intervalConstraints']} not implemented."
+            f"{options['intervalConstraints']} not implemented. "
+            f"Please use {MAX} or {MAXMIN}."
         )
     if interval_gap < eps:
         interval_gap = eps
     return interval_range, interval_gap
 
 
-def y2xi(optimal_scaling_bounds,
-         xs,
-         interval_gap,
-         interval_range) -> np.ndarray:
+def y2xi(optimal_scaling_bounds: np.ndarray,
+         xs: List[InnerParameter],
+         interval_gap: float,
+         interval_range: float) -> np.ndarray:
     """Get optimal scaling bounds and return reparameterized parameters"""
     optimal_scaling_bounds_reparameterized = \
         np.full(shape=(np.shape(optimal_scaling_bounds)), fill_value=np.nan)
@@ -232,10 +241,10 @@ def y2xi(optimal_scaling_bounds,
 
 
 def xi2y(
-        optimal_scaling_bounds_reparameterized,
-        xs,
-        interval_gap,
-        interval_range) -> np.ndarray:
+        optimal_scaling_bounds_reparameterized: np.ndarray,
+        xs: List[InnerParameter],
+        interval_gap: float,
+        interval_range: float) -> np.ndarray:
     """
     Get reparameterized parameters and
     return original optimal scaling bounds
@@ -259,13 +268,13 @@ def xi2y(
     return optimal_scaling_bounds
 
 
-def obj_surrogate_data(xs,
-                       optimal_scaling_bounds,
+def obj_surrogate_data(xs: List[InnerParameter],
+                       optimal_scaling_bounds: np.ndarray,
                        sim: List[np.ndarray],
-                       interval_gap,
-                       interval_range,
-                       w,
-                       options: Dict):
+                       interval_gap: float,
+                       interval_range: float,
+                       w: float,
+                       options: Dict) -> float:
     """compute optimal scaling objective function"""
     obj = 0.0
     if options['reparameterized']:
@@ -292,10 +301,10 @@ def obj_surrogate_data(xs,
     return obj
 
 
-def get_bounds_for_category(x,
-                            optimal_scaling_bounds,
-                            interval_gap,
-                            options: Dict):
+def get_bounds_for_category(x: InnerParameter,
+                            optimal_scaling_bounds: np.ndarray,
+                            interval_gap: float,
+                            options: Dict) -> Tuple[float, float]:
     """Return upper and lower bound for a specific category x"""
     x_category = int(x.category)
 
@@ -312,12 +321,13 @@ def get_bounds_for_category(x,
         x_upper = optimal_scaling_bounds[2 * x_category - 1]
     else:
         raise NotImplementedError(
-            f"Unkown optimal scaling method {options['method']}"
+            f"Unkown optimal scaling method {options['method']}. "
+            f"Please use {REDUCED} or {STANDARD}."
         )
     return x_upper, x_lower
 
 
-def get_constraints_for_optimization(xs,
+def get_constraints_for_optimization(xs: List[InnerParameter],
                                      sim: List[np.ndarray],
                                      options: Dict) -> Dict:
     """Return constrained for inner optimizatiion"""
