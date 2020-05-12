@@ -304,7 +304,7 @@ def get_data_to_plot(
     # thin out by stepsize, from the index burn_in until end of vector
     arr_param = arr_param[np.arange(burn_in, len(arr_param), stepsize)]
 
-    arr_fval = np.array(sample_result.trace_fval[i_chain])
+    arr_fval = - np.array(sample_result.trace_fval[i_chain]) # invert sign for log posterior values
     indices = np.arange(burn_in, len(arr_fval), stepsize)
     arr_fval = arr_fval[indices]
     theta_lb = result.problem.lb
