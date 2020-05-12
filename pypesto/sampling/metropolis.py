@@ -80,7 +80,7 @@ class MetropolisSampler(InternalSampler):
             # log acceptance probability (temper only likelihood)
             log_p_acc = min(beta * (llh_new - llh) + (lprior_new - lprior), 0)
         else:
-            # log acceptance probability (temper full posterior)
+            # log acceptance probability (temper the posterior)
             log_p_acc = min(beta * (lpost_new - lpost), 0)
 
         # flip a coin
