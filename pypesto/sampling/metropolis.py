@@ -38,7 +38,7 @@ class MetropolisSampler(InternalSampler):
         self.trace_neglogpost = [self.neglogpost(x0)]
         self.trace_neglogprior = [self.neglogprior(x0)]
 
-    def sample(self, n_samples: int, beta: float = 1.):
+    def sample(self, n_samples: int, beta: float = 1., temper_lpost: bool = False):
         # load last recorded particle
         x = self.trace_x[-1]
         lpost = - self.trace_neglogpost[-1]
@@ -47,14 +47,14 @@ class MetropolisSampler(InternalSampler):
         # loop over iterations
         for _ in range(int(n_samples)):
             # perform step
-            x, lpost, lprior = self._perform_step(x, lpost, lprior, beta)
+            x, lpost, lprior = self._perform_step(x, lpost, lprior, beta, temper_lpost)
 
             # record step
             self.trace_x.append(x)
             self.trace_neglogpost.append(-lpost)
             self.trace_neglogprior.append(-lprior)
 
-    def _perform_step(self, x: np.ndarray, lpost: float, lprior: float, beta: float):
+    def _perform_step(self, x: np.ndarray, lpost: float, lprior: float, beta: float, temper_lpost: bool):
         """
         Perform a step: Propose new parameter, evaluate and check whether to
         accept.
@@ -72,18 +72,16 @@ class MetropolisSampler(InternalSampler):
             lpost_new = - self.neglogpost(x_new)
             lprior_new = - self.neglogprior(x_new)
 
-        # TODO temper the full posterior (as if statement
-        # extract current likelihood value
-        llh = lpost - lprior
-
-        # extract proposed likelihood value
-        llh_new = lpost_new - lprior_new
-
-        # log acceptance probability (temper only likelihood)
-        log_p_acc = min(beta * (llh_new - llh) + (lprior_new - lprior), 0)
-
-        # else TODO
-        # log_p_acc = min(beta * (llh_new - llh) + (lprior_new - lprior), 0)
+        if not temper_lpost:
+            # extract current likelihood value
+            llh = lpost - lprior
+            # extract proposed likelihood value
+            llh_new = lpost_new - lprior_new
+            # log acceptance probability (temper only likelihood)
+            log_p_acc = min(beta * (llh_new - llh) + (lprior_new - lprior), 0)
+        else:
+            # log acceptance probability (temper full posterior)
+            log_p_acc = min(beta * (lpost_new - lpost), 0)
 
         # flip a coin
         u = np.random.uniform(0, 1)
