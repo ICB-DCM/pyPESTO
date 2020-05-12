@@ -2,6 +2,7 @@ import numpy as np
 from typing import Dict, Sequence, Union
 
 from ..objective import Objective
+from ..objective import Priors
 from ..problem import Problem
 from ..objective import History
 from .sampler import InternalSample, InternalSampler
@@ -16,9 +17,11 @@ class MetropolisSampler(InternalSampler):
     def __init__(self, options: Dict = None):
         super().__init__(options)
         self.problem: Union[Problem, None] = None
-        self.objective: Union[Objective, None] = None
+        self.neglogpost: Union[Objective, None] = None
+        self.neglogprior: Union[Priors, None] = None
         self.trace_x: Union[Sequence[np.ndarray], None] = None
-        self.trace_fval: Union[Sequence[float], None] = None
+        self.trace_neglogpost: Union[Sequence[float], None] = None
+        self.trace_neglogprior: Union[Sequence[float], None] = None
 
     @classmethod
     def default_options(cls):
@@ -28,26 +31,30 @@ class MetropolisSampler(InternalSampler):
 
     def initialize(self, problem: Problem, x0: np.ndarray):
         self.problem = problem
-        self.objective = problem.objective
-        self.objective.history = History()
+        self.neglogpost = problem.objective
+        self.neglogprior = problem.x_priors
+        self.neglogpost.history = History()
         self.trace_x = [x0]
-        self.trace_fval = [self.objective(x0)]
+        self.trace_neglogpost = [self.neglogpost(x0)]
+        self.trace_neglogprior = [self.neglogprior(x0)]
 
     def sample(self, n_samples: int, beta: float = 1.):
         # load last recorded particle
         x = self.trace_x[-1]
-        lpost = - self.trace_fval[-1]
+        lpost = - self.trace_neglogpost[-1]
+        lprior = - self.trace_neglogprior[-1]
 
         # loop over iterations
         for _ in range(int(n_samples)):
             # perform step
-            x, lpost = self._perform_step(x, lpost, beta)
+            x, lpost, lprior = self._perform_step(x, lpost, lprior, beta)
 
             # record step
             self.trace_x.append(x)
-            self.trace_fval.append(-lpost)
+            self.trace_neglogpost.append(-lpost)
+            self.trace_neglogprior.append(-lprior)
 
-    def _perform_step(self, x: np.ndarray, lpost: float, beta: float):
+    def _perform_step(self, x: np.ndarray, lpost: float, lprior: float, beta: float):
         """
         Perform a step: Propose new parameter, evaluate and check whether to
         accept.
@@ -58,30 +65,40 @@ class MetropolisSampler(InternalSampler):
         # check if step lies within bounds
         if any(x_new < self.problem.lb) or any(x_new > self.problem.ub):
             # will not be accepted
-            llh_new = - np.inf
-            prior_new = - np.inf
+            lpost_new = - np.inf
+            lprior_new = - np.inf
         else:
             # compute likelihood value
-            llh_new = - self.objective(x_new)
-            prior_new = - self.objective(x_new) # TODO
+            lpost_new = - self.neglogpost(x_new)
+            lprior_new = - self.neglogprior(x_new)
 
+        # TODO temper the full posterior (as if statement
         # extract current likelihood value
-        llh = lpost - prior # TODO
+        llh = lpost - lprior
+
+        # extract proposed likelihood value
+        llh_new = lpost_new - lprior_new
+
         # log acceptance probability (temper only likelihood)
-        log_p_acc = min(beta * (llh_new - llh) + (prior_new - prior), 0)
+        log_p_acc = min(beta * (llh_new - llh) + (lprior_new - lprior), 0)
+
+        # else TODO
+        # log_p_acc = min(beta * (llh_new - llh) + (lprior_new - lprior), 0)
+
         # flip a coin
         u = np.random.uniform(0, 1)
+
         # check acceptance
         if np.log(u) < log_p_acc:
             # update particle
             x = x_new
-            # llh = llh_new
-            lpost = llh_new + prior # TODO
+            lpost = lpost_new
+            lprior = lprior_new
 
         # update proposal
         self._update_proposal(x, log_p_acc, len(self.trace_fval)+1)
 
-        return x, lpost
+        return x, lpost, lprior
 
     def _propose_parameter(self, x: np.ndarray):
         """Propose a step."""
@@ -95,17 +112,20 @@ class MetropolisSampler(InternalSampler):
     def get_last_sample(self) -> InternalSample:
         return InternalSample(
             x=self.trace_x[-1],
-            lpost=- self.trace_fval[-1]
+            lpost=- self.trace_neglogpost[-1]
+            lprior=- self.trace_neglogprior[-1]
         )
 
     def set_last_sample(self, sample: InternalSample):
         self.trace_x[-1] = sample.x
-        self.trace_fval[-1] = - sample.lpost
+        self.trace_neglogpost[-1] =- sample.lpost
+        self.trace_neglogprior[-1] =- sample.lprior
 
     def get_samples(self) -> McmcPtResult:
         result = McmcPtResult(
             trace_x=np.array([self.trace_x]),
-            trace_fval=np.array([self.trace_fval]),
+            trace_neglogpost=np.array([self.trace_neglogpost]),
+            trace_neglogprior=np.array([self.trace_neglogprior]),
             betas=np.array([1.]),
         )
         return result
