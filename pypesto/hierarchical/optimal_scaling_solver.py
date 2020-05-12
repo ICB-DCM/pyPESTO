@@ -41,11 +41,26 @@ class OptimalScalingInnerSolver(InnerSolver):
             sigma: List[np.ndarray],
             scaled: bool,
     ) -> list:
+        """
+        Get results for every group (inner optimization problem)
 
-        optimal_surrogate = \
-            compute_optimal_surrogate_data(problem, sim, self.options)
-
-        return optimal_surrogate
+        Parameters
+        ----------
+        problem:
+            InnerProblem from pyPESTO hierarchical
+        sim:
+            Simulations from AMICI
+        sigma:
+            List of sigmas (not needed for this approach)
+        scaled:
+            ...
+        """
+        optimal_surrogates = []
+        for gr in problem.get_groups_for_xs(InnerParameter.OPTIMALSCALING):
+            xs = problem.get_xs_for_group(gr)
+            surrogate_opt_results = optimize_surrogate_data(xs, sim, self.options)
+            optimal_surrogates.append(surrogate_opt_results)
+        return optimal_surrogates
 
     @staticmethod
     def calculate_obj_function(x_inner_opt: list):
@@ -74,18 +89,6 @@ class OptimalScalingInnerSolver(InnerSolver):
                    'intervalConstraints': 'max',
                    'minGap': 1e-16}
         return options
-
-
-def compute_optimal_surrogate_data(problem: InnerProblem,
-                                   sim: List[np.ndarray],
-                                   options: Dict) -> list:
-    """compute optimal surrogate data for every group"""
-    optimal_surrogates = []
-    for gr in problem.get_groups_for_xs(InnerParameter.OPTIMALSCALING):
-        xs = problem.get_xs_for_group(gr)
-        surrogate_opt_results = optimize_surrogate_data(xs, sim, options)
-        optimal_surrogates.append(surrogate_opt_results)
-    return optimal_surrogates
 
 
 def optimize_surrogate_data(xs: List[InnerParameter],
