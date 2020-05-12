@@ -72,10 +72,12 @@ class ParallelTemperingSampler(Sampler):
         """Concatenate all chains."""
         results = [sampler.get_samples() for sampler in self.samplers]
         trace_x = np.array([result.trace_x[0] for result in results])
-        trace_fval = np.array([result.trace_fval[0] for result in results])
+        trace_neglogpost = np.array([result.trace_neglogpost[0] for result in results])
+        trace_neglogprior = np.array([result.trace_neglogprior[0] for result in results])
         return McmcPtResult(
             trace_x=trace_x,
-            trace_fval=trace_fval,
+            trace_neglogpost=trace_neglogpost,
+            trace_neglogprior=trace_neglogprior,
             betas=self.betas
         )
 
@@ -98,8 +100,12 @@ class ParallelTemperingSampler(Sampler):
             sample1 = sampler1.get_last_sample()
             sample2 = sampler2.get_last_sample()
 
+            # extract log likelihood values
+            sample1_llh = sample1.lpost - sample1.lprior
+            sample2_llh = sample2.lpost - sample2.lprior
+
             # swapping probability
-            p_acc_swap = dbeta * (sample2.llh - sample1.llh)
+            p_acc_swap = dbeta * (sample2_llh - sample1_llh)
 
             # flip a coin
             u = np.random.uniform(0, 1)
