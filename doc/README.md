@@ -1,6 +1,6 @@
-# pyPESTO Documentation
+# Documentation
 
-This folder contains files for building the documentation of this package.
+The `doc/` folder contains the files for building the pyPESTO documentation.
 
 
 ## Requirements
