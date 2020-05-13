@@ -29,9 +29,14 @@ install:
   - pip3 install https://github.com/petab-dev/petab/archive/develop.zip
   - pip3 install -e
       git+https://github.com/icb-dcm/amici.git@develop#egg=amici\&subdirectory=python/sdist
-  - git clone --depth 1
-      https://github.com/petab-dev/petab_test_suite tmp/petab_test_suite
-  - pip3 install -e tmp/petab_test_suite
+  - if [ "$TRAVIS_PULL_REQUEST" = "false" ]; then
+      git clone --depth 1
+        https://github.com/petab-dev/petab_test_suite tmp/petab_test_suite;
+      pip3 install -e tmp/petab_test_suite;
+    fi 
+  - if [ "$TRAVIS_PULL_REQUEST" != "false" ]; then
+      pip install -r .rtd_pip_reqs.txt;
+    fi
 
 # run tests
 script:
