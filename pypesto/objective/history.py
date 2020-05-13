@@ -899,7 +899,6 @@ class OptimizerHistory:
         if np.allclose(x, self.x0):
             if self.fval0 is None:
                 self.fval0 = result.get(FVAL, None)
-
             self.x0 = x
 
         # update best point
@@ -908,6 +907,7 @@ class OptimizerHistory:
         hess = result.get(HESS, None)
         res = result.get(RES, None)
         sres = result.get(SRES, None)
+
         if fval is not None and fval < self.fval_min:
             self.fval_min = fval
             self.x_min = x
@@ -921,13 +921,10 @@ class OptimizerHistory:
         if np.all(self.x_min == x):
             if self.grad_min is None and grad is not None:
                 self.grad_min = grad
-
             if self.hess_min is None and hess is not None:
                 self.hess_min = hess
-
             if self.res_min is None and res is not None:
                 self.res_min = res
-
             if self.sres_min is None and sres is not None:
                 self.sres_min = sres
 
