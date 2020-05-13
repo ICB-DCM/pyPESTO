@@ -1,6 +1,9 @@
+import os
+from typing import Union
+
 import h5py
 import numpy as np
-from typing import Union
+
 from .hdf5 import write_string_array, write_int_array, write_float_array
 from ..result import Result
 
@@ -39,6 +42,13 @@ class ProblemHDF5Writer:
         """
         Write HDF5 problem file from pyPESTO problem object.
         """
+
+        # Create destination directory
+        if isinstance(self.storage_filename, str):
+            basedir = os.path.dirname(self.storage_filename)
+            if basedir:
+                os.makedirs(basedir, exist_ok=True)
+
         with h5py.File(self.storage_filename, "a") as f:
             if "problem" in f:
                 if overwrite:
@@ -115,6 +125,13 @@ class OptimizationResultHDF5Writer:
         """
         Write HDF5 result file from pyPESTO result object.
         """
+
+        # Create destination directory
+        if isinstance(self.storage_filename, str):
+            basedir = os.path.dirname(self.storage_filename)
+            if basedir:
+                os.makedirs(basedir, exist_ok=True)
+
         with h5py.File(self.storage_filename, "a") as f:
             optimization_grp = get_or_create_group(f, "optimization")
             # settings =
