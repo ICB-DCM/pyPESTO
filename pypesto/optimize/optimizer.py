@@ -59,11 +59,7 @@ def history_decorator(minimize):
             if allow_failed_starts:
                 logger.error(f'start {id} failed: {err}')
                 result = OptimizerResult(
-                    x0=x0,
-                    exitflag=-1,
-                    message=str(err),
-                    id=id
-                )
+                    x0=x0, exitflag=-1, message=str(err), id=id)
             else:
                 raise
 
@@ -125,24 +121,27 @@ def fill_result_from_objective_history(
     Overwrite function values in the result object with the values recorded in
     the history.
     """
-    update_vals = False
-    # best found values
-    if result.fval is not None and \
-            not np.isclose(result.fval, optimizer_history.fval_min):
+    update_vals = True
+    # check history for better values
+    # value could be different e.g. if constraints violated
+    if optimizer_history.fval_min is not None and result.fval is not None \
+            and not np.isclose(optimizer_history.fval_min, result.fval):
         logger.warning(
             "Function values from history and optimizer do not match: "
             f"{optimizer_history.fval_min}, {result.fval}")
-    else:
-        update_vals = True
+        # do not use value from history
+        update_vals = False
 
-    if optimizer_history.x_min is not None and result.x is not None and \
-            not np.allclose(result.x, optimizer_history.x_min):
+    if optimizer_history.x_min is not None and result.x is not None \
+            and not np.allclose(result.x, optimizer_history.x_min):
         logger.warning(
             "Parameters obtained from history and optimizer do not match: "
             f"{optimizer_history.x_min}, {result.x}")
-    else:
-        update_vals = True
+        # do not use value from history
+        update_vals = False
 
+    # update optimal values from history if reported function values
+    # and parameters coincide
     if update_vals:
         # override values from history if available
         result.x = optimizer_history.x_min
@@ -161,6 +160,7 @@ def fill_result_from_objective_history(
     result.fval0 = optimizer_history.fval0
 
     # counters
+    # we only use our own counters here as optimizers may report differently
     result.n_fval = optimizer_history.history.n_fval
     result.n_grad = optimizer_history.history.n_grad
     result.n_hess = optimizer_history.history.n_hess
