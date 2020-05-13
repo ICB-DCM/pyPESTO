@@ -43,7 +43,10 @@ def write_float_array(f: h5py.Group,
     dtype:
         datatype
     """
-    dset = f.create_dataset(path, (np.shape(values)), dtype=dtype)
+    if path not in f:
+        dset = f.create_dataset(path, (np.shape(values)), dtype=dtype)
+    else:
+        dset = f[path]
     dset[:] = values
 
 

@@ -237,6 +237,8 @@ class Objective:
             is flattened). If `return_dict`, then instead a dict is returned
             with function values and derivatives indicated by ids.
         """
+        # copy parameter vector to prevent side effects
+        x = np.array(x).copy()
 
         # check input
         self.check_sensi_orders(sensi_orders, mode)

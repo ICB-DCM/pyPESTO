@@ -271,9 +271,14 @@ class AmiciObjective(Objective):
                 {'amici_model', 'amici_solver', 'edatas'}:
             state[key] = self.__dict__[key]
 
+        # write amici solver settings to file
         amici_solver_file = tempfile.mkstemp()[1]
         amici.writeSolverSettingsToHDF5(self.amici_solver, amici_solver_file)
-        state['amici_solver_settings'] = amici_solver_file
+        # read in byte stream
+        amici_solver_settings = open(amici_solver_file, 'rb').read()
+        state['amici_solver_settings'] = amici_solver_settings
+        # remove temporary file
+        os.remove(amici_solver_file)
 
         return state
 
@@ -290,9 +295,21 @@ class AmiciObjective(Objective):
         solver = self.amici_object_builder.create_solver(model)
         edatas = self.amici_object_builder.create_edatas(model)
 
-        amici.readSolverSettingsFromHDF5(
-            state['amici_solver_settings'], solver)
-        os.remove(state['amici_solver_settings'])
+        try:
+            # write solver settings to temporary file
+            _file = tempfile.mkstemp()[1]
+            with open(_file, 'wb') as f:
+                f.write(state['amici_solver_settings'])
+            # read in solver settings
+            amici.readSolverSettingsFromHDF5(_file, solver)
+            # remove temporary file
+            os.remove(_file)
+        except AttributeError as err:
+            if not err.args:
+                err.args = ('',)
+            err.args = err.args + ("Amici must have been compiled with hdf5 "
+                                   "support",)
+            raise
 
         self.amici_model = model
         self.amici_solver = solver

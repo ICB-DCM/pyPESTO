@@ -5,96 +5,218 @@ This is for testing the pypesto.History.
 import numpy as np
 import pytest
 import pypesto
-from pypesto.objective.constants import FVAL, GRAD
 import unittest
 import tempfile
 
 from test.test_objective import rosen_for_sensi
 from test.test_sbml_conversion import load_model_objective
 from pypesto.objective.util import sres_to_schi2, res_to_chi2
+from pypesto.objective import CsvHistory, HistoryOptions, MemoryHistory
+from pypesto.optimize.optimizer import read_result_from_file, OptimizerResult
+
+from pypesto.objective.constants import (
+    FVAL, GRAD, HESS, RES, SRES, CHI2, SCHI2
+)
 
 
 class HistoryTest(unittest.TestCase):
     problem: pypesto.Problem = None
     optimizer: pypesto.Optimizer = None
     obj: pypesto.Objective = None
+    history_options: HistoryOptions = None
     ub: np.ndarray = None
     lb: np.ndarray = None
+    x_fixed_indices = None
+    x_fixed_vals = None
+    fix_pars = True
 
     def check_history(self):
-        self.problem = pypesto.Problem(self.obj, self.lb, self.ub)
+        kwargs = {
+            'objective': self.obj,
+            'ub': self.ub,
+            'lb': self.lb,
+        }
+        if self.fix_pars:
+            kwargs = {**kwargs, **{
+                'x_fixed_indices': self.x_fixed_indices,
+                'x_fixed_vals': self.x_fixed_indices
+            }}
+        self.problem = pypesto.Problem(**kwargs)
 
         optimize_options = pypesto.OptimizeOptions(
             allow_failed_starts=False
         )
 
-        history_options = pypesto.HistoryOptions(
-            trace_record=True,
-            trace_record_hess=False,
-            trace_save_iter=1,
-            storage_file='tmp/traces/conversion_example_{id}.csv',
-        )
+        self.history_options.trace_save_iter = 1
 
-        result = pypesto.minimize(
-            problem=self.problem,
-            optimizer=self.optimizer,
-            n_starts=1,
-            startpoint_method=pypesto.startpoint.uniform,
-            options=optimize_options,
-            history_options=history_options
+        for storage_file in ['tmp/traces/conversion_example_{id}.csv', None]:
+            self.history_options.storage_file = storage_file
+
+            result = pypesto.minimize(
+                problem=self.problem,
+                optimizer=self.optimizer,
+                n_starts=1,
+                startpoint_method=pypesto.startpoint.uniform,
+                options=optimize_options,
+                history_options=self.history_options
+            )
+
+            for istart, start in enumerate(result.optimize_result.list):
+                self.check_reconstruct_history(start, str(istart))
+                self.check_load_from_file(start, str(istart))
+                self.check_history_consistency(start)
+
+    def check_load_from_file(self, start: OptimizerResult, id: str):
+        """Verify we can reconstitute OptimizerResult from csv file"""
+
+        if isinstance(start.history, MemoryHistory):
+            return
+
+        # TODO other implementations
+        assert isinstance(start.history, CsvHistory)
+
+        rstart = read_result_from_file(self.problem, self.history_options, id)
+
+        result_attributes = [
+            key for key in start.keys()
+            if key not in ['history', 'message', 'exitflag', 'time']
+        ]
+        for attr in result_attributes:
+            # if we didn't record we cant recover the value
+            if not self.history_options.get(f'trace_record_{attr}', True):
+                continue
+
+            # note that we can expect slight deviations in grad when using
+            # a ls optimizer since history computes this from res
+            # with sensitivies activated while the optimizer uses a res
+            # without sensitivities activated. If this fails to often,
+            # increase atol
+            if start[attr] is None:
+                continue  # reconstituted may carry more information
+            if attr in ['sres', 'grad', 'hess'] and rstart[attr] is None:
+                continue  # may not always recover those
+            elif isinstance(start[attr], np.ndarray):
+                assert np.allclose(
+                    start[attr], rstart[attr],
+                    equal_nan=True, atol=1e-3
+                ), attr
+            elif isinstance(start[attr], float):
+                assert np.isclose(
+                    start[attr], rstart[attr],
+                    equal_nan=True
+                ), attr
+            else:
+                assert start[attr] == rstart[attr], attr
+
+    def check_reconstruct_history(self, start: OptimizerResult, id: str):
+        """verify we can reconstruct history objects from csv files"""
+
+        if isinstance(start.history, MemoryHistory):
+            return
+
+        # TODO other implementations
+        assert isinstance(start.history, CsvHistory)
+
+        reconst_history = CsvHistory(
+            file=self.history_options.storage_file.format(id=id),
+            x_names=[self.problem.x_names[ix]
+                     for ix in self.problem.x_free_indices],
+            options=self.history_options,
+            load_from_file=True
         )
-        # disable trace from here on
-        self.obj.history.options.trace_record = False
-        for start in result.optimize_result.list:
-            trace = start.history._trace
-            it_final = int(trace[('fval', np.NaN)].idxmin())
+        history_attributes = [
+            a for a in dir(start.history)
+            if not a.startswith('__')
+            and not callable(getattr(start.history, a))
+            and a not in ['options', '_abc_impl', '_start_time',
+                          'start_time', '_trace', 'x_names']
+        ]
+        for attr in history_attributes:
+            assert getattr(start.history, attr) == \
+                   getattr(reconst_history, attr), attr
+
+        assert len(start.history._trace) == len(reconst_history._trace)
+        self.assertListEqual(start.history._trace.columns.to_list(),
+                             reconst_history._trace.columns.to_list())
+        for col in start.history._trace.columns:
+            for true_val, reconst_val in zip(start.history._trace[col],
+                                             reconst_history._trace[col]):
+                if true_val is None:
+                    assert reconst_val is None, col
+                elif isinstance(true_val, float) and np.isnan(true_val):
+                    assert np.isnan(reconst_val), col
+                else:
+                    assert np.isclose(true_val, reconst_val).all(), col
+
+    def check_history_consistency(self, start: OptimizerResult):
+
+        # TODO other implementations
+        assert isinstance(start.history, (CsvHistory, MemoryHistory))
+
+        def xfull(x_trace):
+            return self.problem.get_full_vector(
+                x_trace, self.problem.x_fixed_vals
+            )
+
+        if isinstance(start.history, CsvHistory):
+            it_final = np.nanargmin(start.history.get_fval_trace())
+            if isinstance(it_final, np.ndarray):
+                it_final = it_final[0]
             it_start = int(np.where(np.logical_not(
-                np.isnan(trace['fval'].values)
+                np.isnan(start.history.get_fval_trace())
             ))[0][0])
-            self.assertTrue(np.isclose(
-                trace['x'].values[0, :], start.x0
-            ).all())
-            self.assertTrue(np.isclose(
-                trace['x'].values[it_final, :], start.x
-            ).all())
-            self.assertTrue(np.isclose(
-                trace['fval'].values[it_start, 0], start.fval0
-            ))
+            assert np.allclose(xfull(start.history.get_x(it_start)), start.x0)
+            assert np.allclose(xfull(start.history.get_x(it_final)), start.x)
+            assert np.isclose(start.history.get_fval(it_start), start.fval0)
 
-            funs = {
-                'fval': self.obj.get_fval,
-                'grad': self.obj.get_grad,
-                'hess': self.obj.get_hess,
-                'res': self.obj.get_res,
-                'sres': self.obj.get_sres,
-                'chi2': lambda x: res_to_chi2(self.obj.get_res(x)),
-                'schi2': lambda x: sres_to_schi2(*self.obj(
-                    x,
-                    (0, 1,),
-                    pypesto.objective.constants.MODE_RES
-                ))
-            }
-            for var, fun in funs.items():
-                for it in range(5):
-                    if var in ['fval', 'chi2']:
-                        if not np.isnan(trace[var].values[it, 0]):
-                            self.assertTrue(np.isclose(
-                                trace[var].values[it, 0],
-                                fun(trace['x'].values[it, :])
-                            ))
-                    elif var in ['hess', 'sres', 'res']:
-                        if trace[var].values[it, 0] is not None:
-                            self.assertTrue(np.isclose(
-                                trace[var].values[it, 0],
-                                fun(trace['x'].values[it, :])
-                            ).all())
-                    elif self.obj.history.options[f'trace_record_{var}'] \
-                            and not \
-                            np.isnan(trace[var].values[it, :]).all():
-                        self.assertTrue(np.isclose(
-                            trace[var].values[it, :],
-                            fun(trace['x'].values[it, :])
-                        ).all())
+        funs = {
+            FVAL: self.obj.get_fval,
+            GRAD: self.obj.get_grad,
+            HESS: self.obj.get_hess,
+            RES: self.obj.get_res,
+            SRES: self.obj.get_sres,
+            CHI2: lambda x: res_to_chi2(self.obj.get_res(x)),
+            SCHI2: lambda x: sres_to_schi2(*self.obj(
+                x, (0, 1,),
+                pypesto.objective.constants.MODE_RES
+            ))
+        }
+        for var, fun in funs.items():
+            if not var == FVAL and not getattr(self.history_options,
+                                               f'trace_record_{var}'):
+                continue
+            for it in range(5):
+                x_full = xfull(start.history.get_x(it))
+                val = getattr(start.history, f'get_{var}')(it)
+                if np.all(np.isnan(val)):
+                    continue
+                if var in [FVAL, CHI2]:
+                    assert np.isclose(
+                        val, fun(x_full),
+                    ), var
+                elif var in [RES]:
+                    # note that we can expect slight deviations here since
+                    # this res is computed without sensitivities while the
+                    # result here may be computed with with sensitivies
+                    # activated. If this fails to often, increase atol/rtol
+                    assert np.allclose(
+                        val, fun(x_full),
+                        rtol=1e-3, atol=1e-4
+                    ), var
+                elif var in [SRES]:
+                    assert np.allclose(
+                        val, fun(x_full)[:, self.problem.x_free_indices],
+                    ), var
+                elif var in [GRAD, SCHI2]:
+                    assert np.allclose(
+                        val, self.problem.get_reduced_vector(fun(x_full)),
+                    ), var
+                elif var in [HESS]:
+                    assert np.allclose(
+                        val, self.problem.get_reduced_matrix(fun(x_full)),
+                    ), var
+                else:
+                    raise RuntimeError('missing test implementation')
 
 
 class ResModeHistoryTest(HistoryTest):
@@ -102,7 +224,7 @@ class ResModeHistoryTest(HistoryTest):
     def setUpClass(cls):
         cls.optimizer = pypesto.ScipyOptimizer(
             method='ls_trf',
-            options={'maxiter': 100}
+            options={'max_nfev': 100}
         )
         cls.obj, _ = load_model_objective(
             'conversion_reaction'
@@ -110,9 +232,11 @@ class ResModeHistoryTest(HistoryTest):
 
         cls.lb = -2 * np.ones((1, 2))
         cls.ub = 2 * np.ones((1, 2))
+        cls.x_fixed_indices = [0]
+        cls.x_fixed_vals = [-0.3]
 
     def test_trace_chi2(self):
-        self.obj.history.options = pypesto.HistoryOptions(
+        self.history_options = HistoryOptions(
             trace_record=True,
             trace_record_chi2=True,
             trace_record_schi2=False,
@@ -121,7 +245,7 @@ class ResModeHistoryTest(HistoryTest):
         self.check_history()
 
     def test_trace_chi2_schi2(self):
-        self.obj.history.options = pypesto.HistoryOptions(
+        self.history_options = HistoryOptions(
             trace_record=True,
             trace_record_chi2=True,
             trace_record_schi2=True,
@@ -130,7 +254,7 @@ class ResModeHistoryTest(HistoryTest):
         self.check_history()
 
     def test_trace_schi2(self):
-        self.obj.history.options = pypesto.HistoryOptions(
+        self.history_options = HistoryOptions(
             trace_record=True,
             trace_record_chi2=True,
             trace_record_schi2=False,
@@ -139,7 +263,7 @@ class ResModeHistoryTest(HistoryTest):
         self.check_history()
 
     def test_trace_grad(self):
-        self.obj.history.options = pypesto.HistoryOptions(
+        self.history_options = HistoryOptions(
             trace_record=True,
             trace_record_grad=True,
         )
@@ -147,7 +271,7 @@ class ResModeHistoryTest(HistoryTest):
         self.check_history()
 
     def test_trace_all(self):
-        history = pypesto.MemoryHistory(options=pypesto.HistoryOptions(
+        self.history_options = HistoryOptions(
             trace_record=True,
             trace_record_grad=True,
             trace_record_hess=True,
@@ -155,9 +279,9 @@ class ResModeHistoryTest(HistoryTest):
             trace_record_sres=True,
             trace_record_chi2=True,
             trace_record_schi2=True,
-        ))
-        self.obj.history = history
+        )
 
+        self.fix_pars = False
         self.check_history()
 
 
@@ -171,6 +295,8 @@ class FunModeHistoryTest(HistoryTest):
 
         cls.lb = 0 * np.ones((1, 2))
         cls.ub = 1 * np.ones((1, 2))
+        cls.x_fixed_indices = [0]
+        cls.x_fixed_vals = [0.0]
 
     def test_trace_grad(self):
         self.obj = rosen_for_sensi(
@@ -178,7 +304,7 @@ class FunModeHistoryTest(HistoryTest):
             integrated=False
         )['obj']
 
-        self.obj.history.options = pypesto.objective.HistoryOptions(
+        self.history_options = HistoryOptions(
             trace_record=True,
             trace_record_grad=True,
             trace_record_hess=False,
@@ -192,7 +318,7 @@ class FunModeHistoryTest(HistoryTest):
             integrated=True
         )['obj']
 
-        self.obj.history.options = pypesto.objective.HistoryOptions(
+        self.history_options = HistoryOptions(
             trace_record=True,
             trace_record_grad=True,
             trace_record_hess=False,
@@ -206,7 +332,7 @@ class FunModeHistoryTest(HistoryTest):
             integrated=True
         )['obj']
 
-        self.obj.history.options = pypesto.objective.HistoryOptions(
+        self.history_options = HistoryOptions(
             trace_record=True,
             trace_record_grad=True,
             trace_record_hess=True,
@@ -215,7 +341,7 @@ class FunModeHistoryTest(HistoryTest):
             trace_record_chi2=True,
             trace_record_schi2=True,
         )
-
+        self.fix_pars = False
         self.check_history()
 
 
@@ -251,7 +377,7 @@ def test_history_properties(history: pypesto.History):
         assert all(np.isfinite(fvals))
 
     if type(history) in \
-            (pypesto.History, pypesto.CsvHistory, pypesto.Hdf5History):
+            (pypesto.History, pypesto.Hdf5History):
         # TODO update as functionality is implemented
         with pytest.raises(NotImplementedError):
             history.get_grad_trace()
@@ -260,7 +386,12 @@ def test_history_properties(history: pypesto.History):
         assert len(grads) == 10
         assert len(grads[0]) == 7
 
-    if type(history) == pypesto.MemoryHistory:
-        # TODO extend as funcionality is implemented
+    if isinstance(history, (pypesto.MemoryHistory, pypesto.CsvHistory)):
+        # TODO extend as functionality is implemented in other histories
+
+        # assert x values are not all the same
+        xs = np.array(history.get_x_trace())
+        assert np.all(xs[:-1] != xs[-1])
+
         ress = history.get_res_trace()
-        assert all(res is None for res in ress)
+        assert all(np.isnan(res) for res in ress)

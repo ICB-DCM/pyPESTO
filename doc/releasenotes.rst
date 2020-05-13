@@ -6,6 +6,32 @@ Release notes
 ..........
 
 
+0.0.13 (2020-05-03)
+-------------------
+
+* Tidy up and speed up tests (#265 and others).
+* Basic self-implemented Adaptive Metropolis and Adaptive Parallel Tempering
+  sampling routines (#268).
+* Fix namespace sample -> sampling (#275).
+* Fix covariance matrix regularization (#275).
+* Fix circular dependency `PetabImporter` - `PetabAmiciObjective` via
+  `AmiciObjectBuilder`, `PetabAmiciObjective` becomes obsolete (#274).
+* Define `AmiciCalculator` to separate the AMICI call logic (required for
+  hierarchical optimization) (#277).
+* Define initialize function for resetting steady states in `AmiciObjective`
+  (#281).
+* Fix scipy least squares options (#283).
+* Allow failed starts by default (#280).
+* Always copy parameter vector in objective to avoid side effects (#291).
+* Add Dockerfile (#288).
+* Fix header names in CSV history (#299).
+
+Documentation:
+
+* Use imported members in autodoc (#270).
+* Enable python syntax highlighting in notebooks (#271).
+
+
 0.0.12 (2020-04-06)
 -------------------
 
