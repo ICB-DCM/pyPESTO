@@ -90,8 +90,17 @@ class AmiciCalculator:
             edatas,
             num_threads=min(n_threads, len(edatas)),
         )
-        if not self._known_least_squares_safe and mode == MODE_RES and \
-                sensi_order > 0:
+
+        self._check_least_squares(sensi_order, mode, rdatas)
+
+        return calculate_function_values(
+            rdatas, sensi_order, mode, amici_model, amici_solver, edatas,
+            x_ids, parameter_mapping)
+
+    def _check_least_squares(
+            self, sensi_order: int, mode: str, rdatas: List['amici.ExpData']):
+        if not self._known_least_squares_safe and sensi_order > 0 \
+                and mode == MODE_RES:
             if any(
                 ((r['ssigmay'] is not None and np.any(r['ssigmay']))
                  or
@@ -101,10 +110,6 @@ class AmiciCalculator:
                 raise RuntimeError('Cannot use least squares solver with'
                                    'parameter dependent sigma!')
             self._known_least_squares_safe = True  # don't check this again
-
-        return calculate_function_values(
-            rdatas, sensi_order, mode, amici_model, amici_solver, edatas,
-            x_ids, parameter_mapping)
 
 
 def calculate_function_values(rdatas,
