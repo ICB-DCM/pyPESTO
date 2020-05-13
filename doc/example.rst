@@ -11,7 +11,7 @@ The following examples cover typical use cases and should help get a better idea
    example/fixed_parameters.ipynb
    example/boehm_JProteomeRes2014.ipynb
    example/petab_import.ipynb
-   example/hdf5_storage_result.ipynb
+   example/storage.ipynb
    example/sampler_study.ipynb
 
 Download the examples as notebooks
@@ -22,7 +22,7 @@ Download the examples as notebooks
 * :download:`Fixed parameters <example/fixed_parameters.ipynb>`
 * :download:`Boehm model <example/boehm_JProteomeRes2014.ipynb>`
 * :download:`Petab import <example/petab_import.ipynb>`
-* :download:`HDF5 storage <example/hdf5_storage_result.ipynb>`
+* :download:`Storage <example/storage.ipynb>`
 * :download:`Sampler study <example/sampler_study.ipynb>`
 
 .. Note::
