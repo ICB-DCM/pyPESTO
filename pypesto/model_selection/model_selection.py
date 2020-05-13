@@ -1,36 +1,49 @@
 import itertools
 import tempfile
-from typing import Dict, Iterable, List, Set, Tuple, Union
+from typing import Dict, Iterable, List, Sequence, Set, Tuple, Union
 from colorama import Fore
-
-import petab
+import abc
 import numpy as np
 import math
+
+import petab
 from ..problem import Problem
 from ..optimize import minimize
 from ..result import Result
 from ..petab import PetabImporter
 from ..objective import Objective
 
-#from .row2problem import row2problem
-
-# TODO replace * with constant names
-#from .constants import MODEL_NAME_COLUMN, YAML_FILENAME_COLUMN
-from .constants import *
+from .constants import (COMPARED_MODEL_ID,
+                        ESTIMATE_SYMBOL_INTERNAL,
+                        ESTIMATE_SYMBOL_UI,
+                        HEADER_ROW,
+                        INITIAL_VIRTUAL_MODEL,
+                        MODEL_ID,
+                        MODEL_ID_COLUMN,
+                        NOT_PARAMETERS,
+                        PARAMETER_DEFINITIONS_START,
+                        PARAMETER_VALUE_DELIMITER,
+                        YAML_FILENAME,
+                        YAML_FILENAME_COLUMN,)
 
 from petab.C import NOMINAL_VALUE, ESTIMATE
 
 
 class ModelSelectionProblem:
     """
-
+    Handles the creation, estimation, and evaluation of a model. Here, a model
+    is a PEtab problem that is patched with a dictionary of custom parameter
+    values (which may specify that the parameter should be estimated).
+    Evaluation refers to criterion values such as AIC.
     """
     def __init__(self,
                  row: Dict[str, Union[str, float]],
                  petab_problem: petab.problem,
                  valid: bool = True,
                  autorun: bool = True,
-                 x_fixed_estimated: Set[str] = None
+                 x_guess: List[float] = None,
+                 x_fixed_estimated: Set[str] = None,
+                 minimize_options: Dict = None
     ):
         """
         Arguments
@@ -38,16 +51,21 @@ class ModelSelectionProblem:
         row:
             A single row from the model specification file, in the format that
             is returned by `ModelSelector.model_generator()`.
+
         petab_problem:
             A petab problem that includes the parameters defined in the model
             specification file.
+
         valid:
             If `False`, the model will not be tested.
+
         autorun:
             If `False`, the model parameters will not be estimated. Allows
             users to manually call pypesto.minimize with custom options, then
             `set_result()`.
+
         x_fixed_estimated:
+            TODO not implemented
             Parameters that can be fixed to different values can be considered
             estimated, as the "best" fixed parameter will be preferred. Note,
             the preference is implemented as comparison of different models
@@ -59,37 +77,51 @@ class ModelSelectionProblem:
         self.petab_problem = petab_problem
         self.valid = valid
 
+        # TODO may not actually be necessary
         if x_fixed_estimated is None:
             x_fixed_estimated = set()
         else:
             # TODO remove parameters that are zero
             pass
 
+        if minimize_options is None:
+            self.minimize_options = {}
+        else:
+            self.minimize_options = minimize_options
+
         self.model_id = self.row[MODEL_ID]
 
-        #self.AIC = None
-        self.BIC = None
+        self._AIC = None
+        self._BIC = None
 
         if self.valid:
-            self.pypesto_problem = row2problem(row, petab_problem)
-
             # TODO warning/error if x_fixed_estimated is not a parameter ID in
             # the PEtab parameter table. A warning is currently produced in
             # `row2problem` above.
             # Could move to a separate method that is only called when a
             # criterion that requires the number of estimated parameters is
-            # called.
+            # called (same for self.n_measurements).
             self.estimated = x_fixed_estimated | set(
                 self.petab_problem.parameter_df.query(f'{ESTIMATE} == 1').index
             )
             self.n_estimated = len(self.estimated)
-            # TODO for BIC. Could move to `calculate_BIC()` to save time.
-            self.n_edata = None
+            self.n_measurements = len(petab_problem.measurement_df)
+
+            self.pypesto_problem = row2problem(row,
+                                               petab_problem,
+                                               x_guess=x_guess)
 
             self.minimize_result = None
 
+            # TODO autorun may be unnecessary now that the `minimize_options`
+            # argument is implemented.
             if autorun:
-                self.set_result(minimize(self.pypesto_problem))
+                if minimize_options:
+                    self.set_result(minimize(self.pypesto_problem,
+                                             **minimize_options))
+                else:
+                    self.set_result(minimize(self.pypesto_problem))
+
 
     def set_result(self, result: Result):
         self.minimize_result = result
@@ -100,29 +132,26 @@ class ModelSelectionProblem:
 
     @property
     def AIC(self):
-        if '_AIC' not in dir(self):
+        if self._AIC is None:
             self._AIC = calculate_AIC(self.n_estimated,
                                       self.optimized_model.fval)
         return self._AIC
 
-    def calculate_BIC(self):
-        # TODO: implement similarly to @property AIC() method.
-        # TODO: test, implement self.n_data in `__init__`
-        # TODO: find out how to get size of experimental data
-        #       petab.problem
-        raise NotImplementedError
-        return self.n_estimated*math.log(self.n_data) + \
-            2*self.minimize_result[0].fval
-            #-2*math.log(self.minimize_result[0].fval)
-
-    #def calibrate(self):
-    #    # TODO settings?
-    #    # 100 starts, SingleCoreEngine, ScipyOptimizer
-    #    result = minimize(self.pypesto_problem)
-    #    self.set_result(result)
+    @property
+    def BIC(self):
+        if self._BIC is None:
+            self._BIC = calculate_BIC(self.n_estimated,
+                                      self.n_measurements,
+                                      self.optimized_model.fval)
+        return self._BIC
 
 
 class ModelSelector:
+    """
+    Handles model selection. Usage involves initialisation with a model
+    specifications file, and then calling the `select()` method to perform
+    model selection with a specified algorithm and criterion.
+    """
     def __init__(
             self,
             petab_problem: petab.problem,
@@ -147,10 +176,10 @@ class ModelSelector:
         # TODO unused
         self.results = {}
 
-    def delete_models(self,
-                      model_ids: Set[str] = None,
-                      constraints: Set[Tuple[str, str]] = None):
-        '''
+    def delete_if_constraints_fail(self,
+                                   model_ids: Set[str] = None,
+                                   constraints: Set[Tuple[str, str]] = None):
+        """
         TODO method to remove model rows from `self.specification_file` if the
         model matches some constraints
 
@@ -165,7 +194,7 @@ class ModelSelector:
             2-tuple, where the first element is condition that determines
             whether a model should be tested, and the second element is the
             condition that tested models must pass.
-        '''
+        """
         pass
 
     def parse_constraints_file(
@@ -183,7 +212,6 @@ class ModelSelector:
         pass
 
     def model_generator(self,
-                        #index: int = None,
                         exclude_history: bool = True,
                         exclusions: List[str] = None
     ) -> Iterable[Dict[str, Union[str, float]]]:
@@ -192,10 +220,6 @@ class ModelSelector:
 
         Argument
         --------
-        #index:
-        #    If None, all models from the model specification file are yielded.
-        #    If not None, only the model at line number `index` is returned.
-
         exclude_history:
             If `True`, models with Id's in `self.selection_history` are not
             yielded.
@@ -234,7 +258,10 @@ class ModelSelector:
     def select(self,
                method: str,
                criterion: str,
-               initial_model: Dict[str, Union[str, float]] = None):
+               initial_model: Dict[str, Union[str, float]] = None,
+               select_first_improvement: bool = False,
+               startpoint_latest_mle: bool = False,
+               minimize_options: Dict = None):
         """
         Runs a model selection algorithm. The result is the selected model for
         the current run, independent of previous `select()` calls.
@@ -254,26 +281,32 @@ class ModelSelector:
             initial model generation into `ModelSelectionMethod`? Currently,
             `new_model_problem` is there, could be sufficient.
             TODO: reconsider whether input type (dict/ModelSelectionProblem)
+
+        select_first_improvement:
+            In forward or backward selection, all models of equally minimally
+            greater or less, respectively, complexity compared to the current
+            model are optimized, with the best model then selected. If this
+            argument is `True`, then the first model that is optimized and
+            returns a better criterion value compared to the current model is
+            selected, and the other models are not optimized.
+
+        startpoint_latest_mle:
+            Specify whether one of the startpoints of the multistart
+            optimisation should include the optimized parameters in the current
+            model.
         """
-        if method == 'forward':
+        if method == 'forward' or method == 'backward':
+            reverse = True if method == 'backward' else False
             selector = ForwardSelector(self.petab_problem,
                                        self.model_generator,
                                        criterion,
                                        self.parameter_ids,
                                        self.selection_history,
-                                       initial_model=initial_model)
-            result = selector()
-            selected_models = result[0]
-            local_selection_history = result[1]
-            self.selection_history = result[2]
-        elif method == 'backward':
-            selector = ForwardSelector(self.petab_problem,
-                                       self.model_generator,
-                                       criterion,
-                                       self.parameter_ids,
-                                       self.selection_history,
-                                       initial_model=initial_model,
-                                       reverse=True)
+                                       initial_model,
+                                       reverse,
+                                       select_first_improvement,
+                                       startpoint_latest_mle,
+                                       minimize_options)
             result = selector()
             selected_models = result[0]
             local_selection_history = result[1]
@@ -289,8 +322,11 @@ class ModelSelector:
                                            criterion,
                                            self.parameter_ids,
                                            self.selection_history,
-                                           initial_model=initial_model,
-                                           reverse=reverse)
+                                           initial_model,
+                                           reverse,
+                                           select_first_improvement,
+                                           startpoint_latest_mle,
+                                           minimize_options)
                 try:
                     result = selector()
                 except EOFError:
@@ -322,7 +358,18 @@ class ModelSelector:
         return selected_models, local_selection_history, self.selection_history
 
 
-class ModelSelectorMethod:
+class ModelSelectorMethod(abc.ABC):
+    """
+    Contains methods that are common to more than one model selection
+    algorithm. This is the parent class of model selection algorithms, and
+    should not be instantiated.
+
+    Required attributes of child classes are `self.criterion` and
+    `self.petab_problem`. `self.minimize_options` should also be set, but can
+    be `None`.
+
+    TODO remove `self.petab_problem` once the YAML column rewrite is completed.
+    """
     # the calling child class should have self.criterion defined
     def compare(self,
                 old: ModelSelectionProblem,
@@ -349,18 +396,62 @@ class ModelSelectorMethod:
             raise NotImplementedError('Model selection criterion: '
                                       f'{self.criterion}.')
 
-    def new_model_problem(self,
-                          row: Dict[str, Union[str, float]],
-                          petab_problem: petab.problem = None,
-                          valid: bool = True,
-                          autorun: bool = True) -> ModelSelectionProblem:
+    def new_model_problem(
+            self,
+            row: Dict[str, Union[str, float]],
+            petab_problem: petab.problem = None,
+            valid: bool = True,
+            autorun: bool = True,
+            compared_model_id: str = None,
+            compared_model_dict: str = None,
+    ) -> ModelSelectionProblem:
+        """
+        Creates a ModelSelectionProblem.
+
+        Arguments
+        _________
+        row:
+            A dictionary describing the model, in the format returned by
+            `ModelSelector.model_generator()`.
+        petab_problem:
+            The PEtab problem of the model.
+        valid:
+            Whether the model should be considered a valid model. If it is not
+            valid, it will not be optimized.
+        autorun:
+            Whether the model should be optimized upon creation.
+        compared_model_id:
+            The model that new model was compared to. Used to pass the maximum
+            likelihood estimate parameters from model `compared_model_id` to
+            the current model.
+        """
         if petab_problem is None:
             petab_problem = self.petab_problem
+
+        if compared_model_id in self.selection_history:
+            # TODO reconsider, might be a bad idea. also removing parameters
+            # for x_guess that are not estimated in the new model (as is done)
+            # in `row2problem` might also be a bad idea. Both if these would
+            # result in x_guess not actually being the latest MLE.
+            #if compared_model_dict is None:
+            #    raise KeyError('For `startpoint_latest_mle`, the information '
+            #                   'of the model that corresponds to the MLE '
+            #                   'must be provided. This is to ensure only '
+            #                   'estimated parameter values are used in the '
+            #                   'startpoint, and all other values are taken '
+            #                   'from the PEtab parameter table or the model '
+            #                   'specification file.')
+            x_guess = self.selection_history[compared_model_id]['MLE']
+        else:
+            x_guess = None
+
         return ModelSelectionProblem(
             row,
             self.petab_problem,
             valid=valid,
-            autorun=autorun
+            autorun=autorun,
+            x_guess=x_guess,
+            minimize_options=self.minimize_options
         )
 
     # possibly erroneous now that `ModelSelector.model_generator()` can exclude
@@ -418,8 +509,12 @@ class ForwardSelector(ModelSelectorMethod):
                  criterion: str,
                  parameter_ids: List[str],
                  selection_history: Dict[str, Dict],
-                 initial_model: Dict[str, Union[str, float]] = None,
-                 reverse: bool = False):
+                 initial_model: Dict[str, Union[str, float]],
+                 reverse: bool,
+                 select_first_improvement: bool,
+                 startpoint_latest_mle: bool,
+                 minimize_options: Dict = None
+    ):
         # TODO rename to `default_petab_problem`? There may be multiple petab
         # problems for a single model selection run, defined by the future
         # YAML column
@@ -430,6 +525,9 @@ class ForwardSelector(ModelSelectorMethod):
         self.selection_history = selection_history
         self.initial_model = initial_model
         self.reverse = reverse
+        self.select_first_improvement = select_first_improvement
+        self.startpoint_latest_mle = startpoint_latest_mle
+        self.minimize_options = minimize_options
 
     def new_direction_problem(self) -> ModelSelectionProblem:
         """
@@ -514,14 +612,25 @@ class ForwardSelector(ModelSelectorMethod):
                 MODEL_ID: model.model_id,
                 'AIC': model.AIC,
                 'BIC': model.BIC,
-                COMPARED_MODEL_ID: None
+                # Should this be PYPESTO_INITIAL_MODEL or None? Setting it to
+                # PYPESTO_INITIAL_MODEL helps when plotting the directed graph
+                # of the selection history
+                COMPARED_MODEL_ID: INITIAL_VIRTUAL_MODEL,
+                'row': model.row,
+                # list, or dict, or zip (iterable)? dict does not preserve
+                # order, so is undesirable for use as x_guesses in
+                # `pypesto.problem()` (if self.startpoint_latest_mle)
+                'MLE': list(zip(
+                    model.petab_problem.parameter_df.index,
+                    model.optimized_model['x']
+                ))
             }
             self.selection_history.update(local_selection_history)
             selected_models.append(local_selection_history[model.model_id])
         proceed = True
 
 
-        # TODO: parallelisation
+        # TODO parallelisation (not sensible if self.select_first_improvement)
         # TODO rename `proceed` to `improved_criterion`
         while proceed:
             proceed = False
@@ -532,6 +641,7 @@ class ForwardSelector(ModelSelectorMethod):
             # only algorithm, not "all test models are compared, best test
             # model is chosen".
             compared_model_id = model.model_id
+            #compared_model_dict = model.row
             test_models = self.get_test_models(model)
             # Error if no valid test models are found. May occur if
             # all models have already been tested. `Exception` may be a bad way
@@ -554,21 +664,26 @@ class ForwardSelector(ModelSelectorMethod):
             # TODO rewrite loop to select first model that betters the previous
             # model, then move on?
             for test_model_dict in test_models:
-                #test_model = ModelSelectionProblem(self.petab_problem,
-                #                                   test_model_dict)
-                test_model = self.new_model_problem(test_model_dict)
-                    #self.model_generator(ind)
-                    #row)
+                # TODO if the start point of the test model is customised to
+                # include MLE from the previous best model, check whether 0
+                # will be an issue, since 0 is usually not in the bounds of
+                # estimation?
+                test_model = self.new_model_problem(
+                    test_model_dict,
+                    compared_model_id=compared_model_id,
+                    #compared_model_dict=compared_model_dict
+                )
 
                 local_selection_history[test_model.model_id] = {
-                    # TODO reconsider whether specifying model_id here is
-                    # necessary. currently used for the `selected_models`
-                    # list of dicts.
                     MODEL_ID: test_model.model_id,
                     'AIC': test_model.AIC,
                     'BIC': test_model.BIC,
                     COMPARED_MODEL_ID: compared_model_id,
-                    'row': test_model_dict
+                    'row': test_model_dict,
+                    'MLE': list(zip(
+                        test_model.petab_problem.parameter_df.index,
+                        test_model.optimized_model['x']
+                    ))
                 }
 
                 # TODO necessary to do here? used to exclude models in
@@ -606,6 +721,8 @@ class ForwardSelector(ModelSelectorMethod):
                 if self.compare(model, test_model):
                     model = test_model
                     proceed = True
+                    if self.select_first_improvement:
+                        break
 
             # could move this to start of loop and check against `model.valid`
             # TODO might be better
@@ -620,8 +737,12 @@ class ForwardSelector(ModelSelectorMethod):
 
     def relative_complexity_parameters(self, old: float, new: float) -> int:
         """
-        Currently, non-zero fixed values are considered equal in complexity to
-        estimated values.
+        Calculates the relative difference in complexity between two
+        parameters. Currently this is as simple as:
+        -  0 if both parameters are estimated
+        -  0 if both parameters are not estimated
+        -  1 if `new` is estimated and `old` is not
+        - -1 if `old` is estimated and `new` is not
 
         TODO: rewrite to use self.estimated_parameters to determine whether
               parameters with fixed values should be considered estimated
@@ -690,7 +811,7 @@ class ForwardSelector(ModelSelectorMethod):
 
     def get_test_models(self,
                         #model0: Dict,
-                        model0_problem: 'ModelSelectionProblem',
+                        model0_problem: ModelSelectionProblem,
                         strict=True) -> List[int]:
                         #conf_dict: Dict[str, float],
                         #direction=0
@@ -822,7 +943,8 @@ class ForwardSelector(ModelSelectorMethod):
 
 def row2problem(row: dict,
                 petab_problem: Union[petab.Problem, str] = None,
-                obj: Objective = None) -> Problem:
+                obj: Objective = None,
+                x_guess: Sequence[float] = None) -> Problem:
     """
     Create a pypesto.Problem from a single, unambiguous model selection row.
     Optional petab.Problem and objective function can be provided to overwrite
@@ -833,10 +955,18 @@ def row2problem(row: dict,
     ----------
     row:
         A single, unambiguous model selection row.
+
     petab_problem:
         The petab problem for which to perform model selection.
+
     obj:
         The objective to modify for model selection.
+
+    x_guess:
+        A startpoint to be used in the multistart optimization. For example,
+        this could be the maximum likelihood estimate from another model.
+        Values in `x_guess` for parameters that are not estimated will be
+        ignored.
 
     Returns
     -------
@@ -879,17 +1009,39 @@ def row2problem(row: dict,
             # petab_problem.parameter_df.nominalValue.loc[par_id] = float(
             # "NaN")
 
+    # Any parameter values in `x_guess` for parameters that are not estimated
+    # should be filtered out and replaced with
+    # - their corresponding values in `row` if possible, else
+    # - their corresponding nominal values in the `petab_problem.parameter_df`.
+    # TODO reconsider whether filtering is a good idea (x_guess is no longer
+    # the latest MLE then). Similar todo exists in
+    # `ModelSelectorMethod.new_model_problem`.
+    if x_guess is not None:
+        filtered_x_guess = []
+        for par_id, par_val in x_guess:
+            if petab_problem.parameter_df[ESTIMATE].loc[par_id] == 1:
+                filtered_x_guess.append(par_val)
+            else:
+                if par_id in row_parameters:
+                    filtered_x_guess.append(row_parameters[par_id])
+                else:
+                    filtered_x_guess.append(
+                        petab_problem.parameter_df[NOMINAL_VALUE].loc[par_id])
+        x_guesses = [filtered_x_guess]
+    else:
+        x_guesses = None
+
     # chose standard objective in case none is provided
     importer = PetabImporter(petab_problem)
     if obj is None:
         obj = importer.create_objective()
-    pypesto_problem = importer.create_problem(obj)
+    pypesto_problem = importer.create_problem(obj, x_guesses=x_guesses)
 
     return pypesto_problem
 
 
 def calculate_AIC(n_estimated: int, nllh: float) -> float:
-    '''
+    """
     Calculate the Akaike information criterion for a model.
 
     Arguments
@@ -899,9 +1051,30 @@ def calculate_AIC(n_estimated: int, nllh: float) -> float:
 
     nllh:
         The negative log likelihood (e.g. the `optimize_result.list[0].fval`
-        attribute of the return value of `pypesto.minimize`.
-    '''
+        attribute of the return value of `pypesto.minimize`).
+    """
     return 2*(n_estimated + nllh)
+
+
+def calculate_BIC(n_estimated: int, n_measurements: int, nllh: float):
+    """
+    Calculate the Bayesian information criterion for a model.
+    TODO untested
+
+    Arguments
+    ---------
+    n_estimated:
+        The number of estimated parameters in the model.
+
+    n_observations:
+        The number of measurements used in the objective function of the model
+        (e.g. `len(petab_problem.measurement_df)`).
+
+    nllh:
+        The negative log likelihood (e.g. the `optimize_result.list[0].fval`
+        attribute of the return value of `pypesto.minimize`).
+    """
+    return n_estimated*math.log(n_measurements) + 2*nllh
 
 
 def _replace_estimate_symbol(parameter_definition: List[str]) -> List:
@@ -972,10 +1145,12 @@ def unpack_file(file_name: str):
                     for index, selection in enumerate(itertools.product(
                             *parameter_definitions
                     )):
+                        # TODO change MODEL_ID_COLUMN and YAML_ID_COLUMN
+                        # to just MODEL_ID and YAML_FILENAME?
                         ms_f.write(
                             '\t'.join([
-                                columns[MODEL_NAME_COLUMN]+f'_{index}',
-                                columns[SBML_FILENAME_COLUMN],
+                                columns[MODEL_ID_COLUMN]+f'_{index}',
+                                columns[YAML_FILENAME_COLUMN],
                                 *selection
                             ]) + '\n'
                         )
