@@ -44,11 +44,12 @@ def create_optimization_result():
     result = pypesto.Result(problem=problem)
     for j in range(0, 3):
         optimizer_result = pypesto.OptimizerResult(
-            fval=j * 0.01, x=np.array([j + 0.1, j + 1]))
+            id=str(j), fval=j * 0.01, x=np.array([j + 0.1, j + 1]))
         result.optimize_result.append(optimizer_result=optimizer_result)
     for j in range(0, 4):
         optimizer_result = pypesto.OptimizerResult(
-            fval=10 + j * 0.01, x=np.array([2.5 + j + 0.1, 2 + j + 1]))
+            id=str(j+3), fval=10 + j * 0.01,
+            x=np.array([2.5 + j + 0.1, 2 + j + 1]))
         result.optimize_result.append(optimizer_result=optimizer_result)
 
     return result

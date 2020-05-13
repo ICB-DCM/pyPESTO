@@ -34,6 +34,27 @@ def test_storage_opt_result():
                            read_result.optimize_result.list[i][key]
 
 
+def test_storage_opt_result_update():
+    minimize_result = create_optimization_result()
+    minimize_result_2 = create_optimization_result()
+    with tempfile.TemporaryDirectory(dir=f".") as tmpdirname:
+        _, fn = tempfile.mkstemp(".hdf5", dir=f"{tmpdirname}")
+        opt_result_writer = OptimizationResultHDF5Writer(fn)
+        opt_result_writer.write(minimize_result)
+        opt_result_writer.write(minimize_result_2, overwrite=True)
+        opt_result_reader = OptimizationResultHDF5Reader(fn)
+        read_result = opt_result_reader.read()
+        for i, opt_res in enumerate(minimize_result_2.optimize_result.list):
+            for key in opt_res:
+                if isinstance(opt_res[key], np.ndarray):
+                    np.testing.assert_array_equal(
+                        opt_res[key],
+                        read_result.optimize_result.list[i][key])
+                else:
+                    assert opt_res[key] == \
+                           read_result.optimize_result.list[i][key]
+
+
 def test_storage_problem():
     problem = create_problem()
     with tempfile.TemporaryDirectory(dir=f".") as tmpdirname:

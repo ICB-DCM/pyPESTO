@@ -1,14 +1,12 @@
 import logging
 from typing import Callable, Iterable, Union
-import numpy as np
 
 from ..engine import OptimizerTask, Engine, SingleCoreEngine
-from ..objective import Objective, HistoryOptions
+from ..objective import HistoryOptions
 from ..problem import Problem
 from ..result import Result
 from ..startpoint import assign_startpoints, uniform
-from .optimizer import (
-    OptimizerResult, recover_result, Optimizer, ScipyOptimizer)
+from .optimizer import Optimizer, ScipyOptimizer
 from .options import OptimizeOptions
 
 
@@ -101,8 +99,7 @@ def minimize(
     for startpoint, id in zip(startpoints, ids):
         task = OptimizerTask(
             optimizer=optimizer, problem=problem, x0=startpoint, id=id,
-            options=options, history_options=history_options,
-            handle_exception=handle_exception)
+            options=options, history_options=history_options)
         tasks.append(task)
 
     # do multistart optimization
@@ -116,17 +113,3 @@ def minimize(
     result.optimize_result.sort()
 
     return result
-
-
-def handle_exception(
-        objective: Objective,
-        x0: np.ndarray,
-        id: str,
-        err: Exception
-) -> OptimizerResult:
-    """
-    Handle exception by creating a dummy pypesto.OptimizerResult.
-    """
-    logger.error(('start ' + str(id) + ' failed: {0}').format(err))
-    optimizer_result = recover_result(objective, x0, err)
-    return optimizer_result
