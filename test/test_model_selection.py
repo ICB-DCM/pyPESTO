@@ -72,7 +72,7 @@ def test_get_test_models():
         None,
         selector.model_generator,
         None,
-        selector.parameter_IDs,
+        selector.parameter_ids,
         {}
     )
     forward_selector.initial_model = False
@@ -140,7 +140,7 @@ def test_relative_complexity_models_forward():
         ('nan', [    2,     0, 'nan']),
     ]
 
-    # `headers` is only `parameter_IDs` here. Normally also contains 'modelId'
+    # `headers` is only `parameter_ids` here. Normally also contains 'modelId'
     # and 'SBML'
     selector = ForwardSelector(None, None, None, headers, None)
     for expected_complexity_untyped, model_values_untyped in tests:
@@ -159,13 +159,13 @@ def test_relative_complexity_models_forward():
             ) == expected_complexity
 
 
-def models_compared_with(model_ID0: str,
+def models_compared_with(model_id0: str,
                          selection_history: Dict[str, Dict])-> Set[str]:
-    model_IDs = set()
-    for model_ID, model_info in selection_history.items():
-        if model_info['compared_model_ID'] == model_ID0:
-            model_IDs.add(model_ID)
-    return model_IDs
+    model_ids = set()
+    for model_id, model_info in selection_history.items():
+        if model_info[COMPARED_MODEL_ID] == model_id0:
+            model_ids.add(model_id)
+    return model_ids
 
 
 def test_pipeline_forward():
@@ -174,13 +174,14 @@ def test_pipeline_forward():
     selector = ModelSelector(petab_problem, EXAMPLE_MODELS)
     model_list = [model for model in selector.model_generator()]
     
-    result, selection_history = selector.select('forward', 'AIC')
+    selected_models, _, selection_history = selector.select('forward', 'AIC')
     assert models_compared_with(INITIAL_VIRTUAL_MODEL, selection_history) == \
         {'M5_0', 'M6_0', 'M7_0'}
     assert models_compared_with('M6_0', selection_history) == \
         {'M3_0', 'M4_0'}
 
-    result, selection_history = selector.select('forward', 'AIC')
+    selected_models, local_selection_history, selection_history = \
+        selector.select('forward', 'AIC')
     # includes models compared to `INITIAL_VIRTUAL_MODEL` in first run, as
     # `selection_history` includes them (they were not retested)
     assert models_compared_with(INITIAL_VIRTUAL_MODEL, selection_history) == \
@@ -200,7 +201,7 @@ def test_pipeline_backward():
     selector = ModelSelector(petab_problem, EXAMPLE_MODELS)
     model_list = [model for model in selector.model_generator()]
 
-    result, selection_history = selector.select('backward', 'AIC')
+    selected_models, _, selection_history = selector.select('backward', 'AIC')
     assert models_compared_with(INITIAL_VIRTUAL_MODEL, selection_history) == \
         {'M1_0'}
     assert models_compared_with('M1_0', selection_history) == \
@@ -208,7 +209,8 @@ def test_pipeline_backward():
     assert models_compared_with('M3_0', selection_history) == \
         {'M6_0', 'M7_0'}
 
-    result, selection_history = selector.select('backward', 'AIC')
+    selected_models, local_selection_history, selection_history = \
+        selector.select('backward', 'AIC')
     # includes models compared to `INITIAL_VIRTUAL_MODEL` in first run, as
     # `selection_history` includes them (they were not retested)
     assert models_compared_with(INITIAL_VIRTUAL_MODEL, selection_history) == \
@@ -219,3 +221,7 @@ def test_pipeline_backward():
         selector.select('forward', 'AIC')
     for s in selection_history:
         print(selection_history[s])
+
+@pytest.mark.skip
+def test_custom_initial_model():
+    pass

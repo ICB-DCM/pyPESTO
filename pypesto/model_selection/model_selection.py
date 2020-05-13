@@ -26,7 +26,7 @@ class ModelSelectionProblem:
 
     """
     def __init__(self,
-                 row: Dict[str, float],
+                 row: Dict[str, Union[str, float]],
                  petab_problem: petab.problem,
                  valid: bool = True,
                  autorun: bool = True,
@@ -47,7 +47,7 @@ class ModelSelectionProblem:
             If `False`, the model parameters will not be estimated. Allows
             users to manually call pypesto.minimize with custom options, then
             `set_result()`.
-        fixed_estimated:
+        x_fixed_estimated:
             Parameters that can be fixed to different values can be considered
             estimated, as the "best" fixed parameter will be preferred. Note,
             the preference is implemented as comparison of different models
@@ -65,7 +65,7 @@ class ModelSelectionProblem:
             # TODO remove parameters that are zero
             pass
 
-        self.model_ID = self.row[MODEL_ID]
+        self.model_id = self.row[MODEL_ID]
 
         #self.AIC = None
         self.BIC = None
@@ -93,6 +93,9 @@ class ModelSelectionProblem:
 
     def set_result(self, result: Result):
         self.minimize_result = result
+        # TODO extract best parameter estimates, to use as start point for
+        # subsequent models in model selection, for parameters in those models
+        # that were estimated in this model.
         self.optimized_model = self.minimize_result.optimize_result.list[0]
 
     @property
@@ -103,6 +106,7 @@ class ModelSelectionProblem:
         return self._AIC
 
     def calculate_BIC(self):
+        # TODO: implement similarly to @property AIC() method.
         # TODO: test, implement self.n_data in `__init__`
         # TODO: find out how to get size of experimental data
         #       petab.problem
@@ -130,7 +134,7 @@ class ModelSelector:
         self.specification_file = unpack_file(specification_filename)
         self.header = line2row(self.specification_file.readline(),
                                convert_parameters_to_float=False)
-        self.parameter_IDs = self.header[PARAMETER_DEFINITIONS_START:]
+        self.parameter_ids = self.header[PARAMETER_DEFINITIONS_START:]
 
 
         #self.apply_constraints(
@@ -144,7 +148,7 @@ class ModelSelector:
         self.results = {}
 
     def delete_models(self,
-                      model_IDs: Set[str] = None,
+                      model_ids: Set[str] = None,
                       constraints: Set[Tuple[str, str]] = None):
         '''
         TODO method to remove model rows from `self.specification_file` if the
@@ -227,7 +231,10 @@ class ModelSelector:
                 continue
             yield model_dict
 
-    def select(self, method: str, criterion: str):
+    def select(self,
+               method: str,
+               criterion: str,
+               initial_model: Dict[str, Union[str, float]] = None):
         """
         Runs a model selection algorithm. The result is the selected model for
         the current run, independent of previous `select()` calls.
@@ -240,29 +247,79 @@ class ModelSelector:
         criterion:
             The criterion used by `ModelSelectorMethod.compare()`, in which
             currently implemented criterion can be found.
+
+        initial_model:
+            Specify the initial model for the model selection algorithm. If
+            `None`, then the algorithm generates an initial model. TODO move
+            initial model generation into `ModelSelectionMethod`? Currently,
+            `new_model_problem` is there, could be sufficient.
+            TODO: reconsider whether input type (dict/ModelSelectionProblem)
         """
         if method == 'forward':
             selector = ForwardSelector(self.petab_problem,
                                        self.model_generator,
                                        criterion,
-                                       self.parameter_IDs,
-                                       self.selection_history)
-            result, self.selection_history = selector()
+                                       self.parameter_ids,
+                                       self.selection_history,
+                                       initial_model=initial_model)
+            result = selector()
+            selected_models = result[0]
+            local_selection_history = result[1]
+            self.selection_history = result[2]
         elif method == 'backward':
             selector = ForwardSelector(self.petab_problem,
                                        self.model_generator,
                                        criterion,
-                                       self.parameter_IDs,
+                                       self.parameter_ids,
                                        self.selection_history,
+                                       initial_model=initial_model,
                                        reverse=True)
-            result, self.selection_history = selector()
+            result = selector()
+            selected_models = result[0]
+            local_selection_history = result[1]
+            self.selection_history = result[2]
+        elif method == 'zigzag':
+            # TODO untested
+            reverse = False
+            selected_models = []
+            local_selection_history = {}
+            while True:
+                selector = ForwardSelector(self.petab_problem,
+                                           self.model_generator,
+                                           criterion,
+                                           self.parameter_ids,
+                                           self.selection_history,
+                                           initial_model=initial_model,
+                                           reverse=reverse)
+                try:
+                    result = selector()
+                except EOFError:
+                    break
+
+                selected_models += result[0]
+                local_selection_history.update(result[1])
+                self.selection_history.update(result[2])
+                # TODO ensure correct functionality with breakpoint here
+                breakpoint()
+                # TODO consider not setting initial_model to last best model.
+                # Then, forward selections from all(theta=0), followed by
+                # backward selection from all(theta=estimated), would be
+                # repeated until the entire model space is exhausted?
+                # TODO include best parameter estimates in initial_model
+                # data, for use as startpoint in future tested models
+                initial_model = result[0][-1]['row']
+                reverse = False if reverse else True
+        elif method == 'all':
+            raise NotImplementedError('Testing of all models is not yet '
+                                      'implemented.')
         else:
             raise NotImplementedError(f'Model selection algorithm: {method}.')
 
         # TODO: Reconsider return value. `result` could be stored in attribute,
         # then no values need to be returned, and users can request values
         # manually.
-        return result, self.selection_history
+        #return result, self.selection_history
+        return selected_models, local_selection_history, self.selection_history
 
 
 class ModelSelectorMethod:
@@ -293,7 +350,7 @@ class ModelSelectorMethod:
                                       f'{self.criterion}.')
 
     def new_model_problem(self,
-                          row: Dict[str, float],
+                          row: Dict[str, Union[str, float]],
                           petab_problem: petab.problem = None,
                           valid: bool = True,
                           autorun: bool = True) -> ModelSelectionProblem:
@@ -359,8 +416,9 @@ class ForwardSelector(ModelSelectorMethod):
                  petab_problem: petab.problem,
                  model_generator: Iterable[Dict[str, Union[str, float]]],
                  criterion: str,
-                 parameter_IDs: List[str],
+                 parameter_ids: List[str],
                  selection_history: Dict[str, Dict],
+                 initial_model: Dict[str, Union[str, float]] = None,
                  reverse: bool = False):
         # TODO rename to `default_petab_problem`? There may be multiple petab
         # problems for a single model selection run, defined by the future
@@ -368,12 +426,10 @@ class ForwardSelector(ModelSelectorMethod):
         self.petab_problem = petab_problem
         self.model_generator = model_generator
         self.criterion = criterion
-        self.parameter_IDs = parameter_IDs
+        self.parameter_ids = parameter_ids
         self.selection_history = selection_history
+        self.initial_model = initial_model
         self.reverse = reverse
-
-        # TODO move to `self.new_direction_problem()`?
-        self.initial_model = True
 
     def new_direction_problem(self) -> ModelSelectionProblem:
         """
@@ -401,8 +457,8 @@ class ForwardSelector(ModelSelectorMethod):
 
         if self.reverse:
             # TODO ESTIMATE_SYMBOL_INTERNAL
-            parameters = dict(zip(self.parameter_IDs,
-                                  [float("NaN")]*len(self.parameter_IDs)))
+            parameters = dict(zip(self.parameter_ids,
+                                  [float("NaN")]*len(self.parameter_ids)))
             #return ModelSelectionProblem(
             #    self.petab_problem,
             #    dict(zip(self.parameter_ids,
@@ -410,17 +466,17 @@ class ForwardSelector(ModelSelectorMethod):
             #    valid=False
             #)
         else:
-            parameters = dict(zip(self.parameter_IDs,
-                                  [0]*len(self.parameter_IDs)))
+            parameters = dict(zip(self.parameter_ids,
+                                  [0]*len(self.parameter_ids)))
             #return ModelSelectionProblem(
             #    self.petab_problem,
             #    dict(zip(self.parameter_ids, [0]*len(self.parameter_ids),)),
             #    valid=False
             #)
 
-        model_ID = {MODEL_ID: INITIAL_VIRTUAL_MODEL}
+        model_id = {MODEL_ID: INITIAL_VIRTUAL_MODEL}
 
-        return self.new_model_problem({**model_ID, **parameters}, valid=False)
+        return self.new_model_problem({**model_id, **parameters}, valid=False)
         #return ModelSelectionProblem(
         #    self.petab_problem,
         #    {**model_ID, **parameters},
@@ -438,12 +494,35 @@ class ForwardSelector(ModelSelectorMethod):
         `ModelSelectionProblem`, and the second element is a dictionary that
         describes the tested models, where the keys are model Ids, and the
         values are dictionaries with the keys 'AIC', 'BIC', and
-        'compared_model_ID'.
+        COMPARED_MODEL_ID.
         """
+        selected_models = []
+        local_selection_history = {}
         # self.setup_direction(self.direction)
-        model = self.new_direction_problem()
+        # TODO rewrite so this is in `__init__()`, and this method saves the
+        # latest "best" model as `self.model`. Would allow for continuation of
+        # from `self.model` by jumping two complexities level above it
+        # (assuming forward selection, and that the previous `__call__()`
+        # terminated because models that were one complexity above did not
+        # produce a better criterion value.
+        if self.initial_model is None:
+            model = self.new_direction_problem()
+        else:
+            model = self.new_model_problem(self.initial_model)
+            # copied from for loop -- move into separate function?
+            local_selection_history[model.model_id] = {
+                MODEL_ID: model.model_id,
+                'AIC': model.AIC,
+                'BIC': model.BIC,
+                COMPARED_MODEL_ID: None
+            }
+            self.selection_history.update(local_selection_history)
+            selected_models.append(local_selection_history[model.model_id])
         proceed = True
 
+
+        # TODO: parallelisation
+        # TODO rename `proceed` to `improved_criterion`
         while proceed:
             proceed = False
             # TODO how should initial models for different `__call__()`s be
@@ -452,7 +531,7 @@ class ForwardSelector(ModelSelectorMethod):
             # longer necessary if "first better test model is chosen" is the
             # only algorithm, not "all test models are compared, best test
             # model is chosen".
-            compared_model_ID = model.model_ID
+            compared_model_id = model.model_id
             test_models = self.get_test_models(model)
             # Error if no valid test models are found. May occur if
             # all models have already been tested. `Exception` may be a bad way
@@ -461,13 +540,19 @@ class ForwardSelector(ModelSelectorMethod):
             # `self.initial_model` is implemented; however, `valid` may be used
             # later and replace `self.initial_model` here (assuming
             # `self.initial_model.valid == False`)
-            if not test_models and self.initial_model:
-                raise Exception('No valid models found.')
+            # TODO now that initial models can be specified, rename
+            # self.initial_model to self.initial_virtual_model? Also, need to
+            # change this check to be whether any models were successfully
+            # selected.
+            if not test_models and self.initial_model is None:
+                raise EOFError('No valid models found.')
             # TODO consider `self.minimize_models(List[ModelSelectionProblem])`
             # and `self.set_minimize_method(List[ModelSelectionProblem])`
             # methods, to allow customisation of the minimize method. The
             # `ModelSelectionProblem` class already has the `autorun` flag
             # to help facilitate this.
+            # TODO rewrite loop to select first model that betters the previous
+            # model, then move on?
             for test_model_dict in test_models:
                 #test_model = ModelSelectionProblem(self.petab_problem,
                 #                                   test_model_dict)
@@ -475,16 +560,39 @@ class ForwardSelector(ModelSelectorMethod):
                     #self.model_generator(ind)
                     #row)
 
-                self.selection_history[test_model.model_ID] = {
+                local_selection_history[test_model.model_id] = {
+                    # TODO reconsider whether specifying model_id here is
+                    # necessary. currently used for the `selected_models`
+                    # list of dicts.
+                    MODEL_ID: test_model.model_id,
                     'AIC': test_model.AIC,
                     'BIC': test_model.BIC,
-                    'compared_model_ID': compared_model_ID
+                    COMPARED_MODEL_ID: compared_model_id,
+                    'row': test_model_dict
                 }
+
+                # TODO necessary to do here? used to exclude models in
+                # `ModelSelector.model_generator()`; however, (for example)
+                # forward selection would already exclude all models in the
+                # `local_selection_history` for being lesser or equal in
+                # "complexity" compared to the current best model.
+                # Move to after the loop/above the return statement.
+                self.selection_history.update(local_selection_history)
+
+                #self.selection_history[test_model.model_id] = {
+                #    'AIC': test_model.AIC,
+                #    'BIC': test_model.BIC,
+                #    'compared_model_id': compared_model_id
+                #}
 
                 # The initial model from self.new_direction_problem() is only
                 # for complexity comparison, and is not a real model.
-                if self.initial_model:
+                if self.initial_model is None:
                     model = test_model
+                    # TODO reconsider whether `False` is appropriate, after
+                    # refactor that changed self.initial_model to be None if
+                    # no initial model (as a dict) is specified. Could change
+                    # to empty dict()?
                     self.initial_model = False
                     proceed = True
                     continue
@@ -499,7 +607,16 @@ class ForwardSelector(ModelSelectorMethod):
                     model = test_model
                     proceed = True
 
-        return model, self.selection_history
+            # could move this to start of loop and check against `model.valid`
+            # TODO might be better
+            if proceed:
+                selected_models.append(local_selection_history[model.model_id])
+
+        # TODO consider changing `selected_models` return value to be a list
+        # of the corresponding `ModelSelectionProblem` objects. Might be too
+        # memory-intensive, as these objects also contain PEtab and pypesto
+        # problem objects.
+        return selected_models, local_selection_history, self.selection_history
 
     def relative_complexity_parameters(self, old: float, new: float) -> int:
         """
@@ -552,7 +669,7 @@ class ForwardSelector(ModelSelectorMethod):
             TODO: could be used to instead implement bidirectional selection?
         """
         rel_complexity = 0
-        for par in self.parameter_IDs:
+        for par in self.parameter_ids:
             rel_par_complexity = self.relative_complexity_parameters(
                 model0[par],
                 model[par]
@@ -627,10 +744,10 @@ class ForwardSelector(ModelSelectorMethod):
 
         # If there exist models that are equal in complexity to the initial
         # model, return them.
-        if self.initial_model:
+        if self.initial_model is None:
             for model in self.model_generator():
                 # less efficient than just checking equality in parameters
-                # between `model0` and `model`, with `self.parameter_IDs`
+                # between `model0` and `model`, with `self.parameter_ids`
                 if self.relative_complexity_models(model0, model) == 0:
                     test_models += [model]
             if test_models:
@@ -739,13 +856,15 @@ def row2problem(row: dict,
     if isinstance(petab_problem, str):
         petab_problem = petab.Problem.from_yaml(petab_problem)
 
-    # drop row entries not referring to parameters
-    # TODO switch to just YAML_FILENAME
-    for key in [YAML_FILENAME, SBML_FILENAME, MODEL_ID]:
-        if key in row.keys():
-            row.pop(key)
+    ## drop row entries not referring to parameters
+    ## TODO switch to just YAML_FILENAME
+    #for key in [YAML_FILENAME, SBML_FILENAME, MODEL_ID]:
+    #    if key in row.keys():
+    #        row.pop(key)
+    row_parameters = {k: row[k] for k in row if k not in NOT_PARAMETERS}
 
-    for par_id, par_val in row.items():
+    for par_id, par_val in row_parameters.items():
+    #for par_id, par_val in row.items():
         if par_id not in petab_problem.x_ids:
             print(Fore.YELLOW + f'Warning: parameter {par_id} is not defined '
                                 f'in PETab model. It will be ignored.')
@@ -828,6 +947,8 @@ def unpack_file(file_name: str):
           chosen SBML file and the parameters specified in a parameter or
           condition file?
         - Don't "unpack" file if it is already in the unpacked format
+        - Sort file after unpacking
+        - Remove duplicates?
     """
     expanded_models_file = tempfile.NamedTemporaryFile(mode='r+',
                                                        delete=False)
@@ -836,6 +957,9 @@ def unpack_file(file_name: str):
             # could replace `else` condition with ms_f.readline() here, and
             # remove `if` statement completely
             for line_index, line in enumerate(fh):
+                # Skip empty/whitespace-only lines
+                if not line.strip():
+                    continue
                 if line_index != HEADER_ROW:
                     columns = line2row(line, unpacked=False)
                     parameter_definitions = [
@@ -893,7 +1017,7 @@ def line2row(line: str,
 
 
 def get_x_fixed_estimated(
-        x_IDs: Set[str],
+        x_ids: Set[str],
         model_generator: Iterable[Dict[str, Union[str, float]]]) -> Set[str]:
     '''
     Get parameters that are fixed in at least one model, but should be
