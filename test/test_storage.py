@@ -12,7 +12,7 @@ from pypesto.storage import (
 
 def test_storage_opt_result():
     minimize_result = create_optimization_result()
-    with tempfile.TemporaryDirectory(dir=f".") as tmpdirname:
+    with tempfile.TemporaryDirectory(dir=".") as tmpdirname:
         _, fn = tempfile.mkstemp(".hdf5", dir=f"{tmpdirname}")
         opt_result_writer = OptimizationResultHDF5Writer(fn)
         opt_result_writer.write(minimize_result)
@@ -32,7 +32,7 @@ def test_storage_opt_result():
 def test_storage_opt_result_update():
     minimize_result = create_optimization_result()
     minimize_result_2 = create_optimization_result()
-    with tempfile.TemporaryDirectory(dir=f".") as tmpdirname:
+    with tempfile.TemporaryDirectory(dir=".") as tmpdirname:
         _, fn = tempfile.mkstemp(".hdf5", dir=f"{tmpdirname}")
         opt_result_writer = OptimizationResultHDF5Writer(fn)
         opt_result_writer.write(minimize_result)
@@ -52,7 +52,7 @@ def test_storage_opt_result_update():
 
 def test_storage_problem():
     problem = create_problem()
-    with tempfile.TemporaryDirectory(dir=f".") as tmpdirname:
+    with tempfile.TemporaryDirectory(dir=".") as tmpdirname:
         _, fn = tempfile.mkstemp(".hdf5", dir=f"{tmpdirname}")
         problem_writer = ProblemHDF5Writer(fn)
         problem_writer.write(problem)
