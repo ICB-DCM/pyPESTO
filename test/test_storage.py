@@ -1,22 +1,25 @@
 """
 This is for testing the pypesto.Storage.
 """
+import os
 import tempfile
+
 import numpy as np
-from .visualize.test_visualize import create_problem, \
-    create_optimization_result
+
 from pypesto.storage import (
     ProblemHDF5Writer, ProblemHDF5Reader, OptimizationResultHDF5Writer,
     OptimizationResultHDF5Reader)
+from .visualize.test_visualize import create_problem, \
+    create_optimization_result
 
 
 def test_storage_opt_result():
     minimize_result = create_optimization_result()
     with tempfile.TemporaryDirectory(dir=".") as tmpdirname:
-        _, fn = tempfile.mkstemp(".hdf5", dir=f"{tmpdirname}")
-        opt_result_writer = OptimizationResultHDF5Writer(fn)
+        result_file_name = os.path.join(tmpdirname, "a", "b", "result.h5")
+        opt_result_writer = OptimizationResultHDF5Writer(result_file_name)
         opt_result_writer.write(minimize_result)
-        opt_result_reader = OptimizationResultHDF5Reader(fn)
+        opt_result_reader = OptimizationResultHDF5Reader(result_file_name)
         read_result = opt_result_reader.read()
         for i, opt_res in enumerate(minimize_result.optimize_result.list):
             for key in opt_res:
@@ -33,11 +36,11 @@ def test_storage_opt_result_update():
     minimize_result = create_optimization_result()
     minimize_result_2 = create_optimization_result()
     with tempfile.TemporaryDirectory(dir=".") as tmpdirname:
-        _, fn = tempfile.mkstemp(".hdf5", dir=f"{tmpdirname}")
-        opt_result_writer = OptimizationResultHDF5Writer(fn)
+        result_file_name = os.path.join(tmpdirname, "a", "b", "result.h5")
+        opt_result_writer = OptimizationResultHDF5Writer(result_file_name)
         opt_result_writer.write(minimize_result)
         opt_result_writer.write(minimize_result_2, overwrite=True)
-        opt_result_reader = OptimizationResultHDF5Reader(fn)
+        opt_result_reader = OptimizationResultHDF5Reader(result_file_name)
         read_result = opt_result_reader.read()
         for i, opt_res in enumerate(minimize_result_2.optimize_result.list):
             for key in opt_res:
