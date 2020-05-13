@@ -26,5 +26,6 @@ def GewekeTest(result: Result, zscore: float = 2.):
     chain = np.array(result.sample_result['trace_x'][0])
 
     burn_in = burnInBySequentialGeweke(chain=chain, zscore=zscore)
+    print('Geweke Burn-in index: '+str(burn_in))
 
     return burn_in
