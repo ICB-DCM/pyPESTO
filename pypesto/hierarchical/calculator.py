@@ -8,15 +8,8 @@ from ..objective.amici_util import (
     get_error_output)
 from ..objective.constants import FVAL, GRAD, HESS, RES, SRES, RDATAS
 from .problem import InnerProblem
-from .solver import InnerSolver, AnalyticalInnerSolver, NumericalInnerSolver
+from .solver import InnerSolver, AnalyticalInnerSolver
 
-from .optimal_scaling_solver import OptimalScalingInnerSolver
-
-from .util import compute_nllh
-
-
-from ..objective.constants import FVAL, GRAD, HESS, RES, SRES, RDATAS
-#
 try:
     import amici
     from amici.parameter_mapping import ParameterMapping
@@ -43,6 +36,8 @@ class HierarchicalAmiciCalculator(AmiciCalculator):
         """
         Initialize the calculator from the given problem.
         """
+        super().__init__()
+
         self.inner_problem = inner_problem
 
         if inner_solver is None:
@@ -99,6 +94,8 @@ class HierarchicalAmiciCalculator(AmiciCalculator):
             edatas,
             num_threads=min(n_threads, len(edatas)),
         )
+
+        self._check_least_squares(self, sensi_order, mode, rdatas)
 
         # check if any simulation failed
         if any([rdata['status'] < 0.0 for rdata in rdatas]):
