@@ -353,7 +353,7 @@ def get_bounds_for_category(x: InnerParameter,
 def get_constraints_for_optimization(xs: List[InnerParameter],
                                      sim: List[np.ndarray],
                                      options: Dict) -> Dict:
-    """Return constrained for inner optimizatiion"""
+    """Return constraints for inner optimization"""
 
     num_categories = len(xs)
     interval_range, interval_gap = \
