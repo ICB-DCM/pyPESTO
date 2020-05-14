@@ -71,6 +71,9 @@ def profiles(results, ax=None, profile_indices=None, size=(18.5, 6.5),
         fvals = handle_inputs(result, profile_indices=profile_indices,
                               profile_list_id=profile_list_id)
 
+        if x_labels is None:
+            x_labels = [f'Value of {name}' for name, fval in
+                        zip(result.problem.x_names, fvals) if fval is not None]
         # call lowlevel routine
         ax = profiles_lowlevel(fvals=fvals, ax=ax, size=size,
                                color=colors[j], legend_text=legends[j],
