@@ -34,7 +34,8 @@ def spectrum(x, nfft=None, nw=None):
     for i in range(k):
         xw = np.multiply(w, x[index])
         index += (nw - noverlap)
-        Xx = np.absolute(np.fft.fft(xw, nfft)) ** 2
+        # Xx = np.absolute(np.fft.fft(xw, nfft)) ** 2
+        Xx = np.transpose(np.absolute(np.fft.fft(np.transpose(xw), nfft))) ** 2
         y += Xx
 
     y = y * (1 / kmu)  # normalize
