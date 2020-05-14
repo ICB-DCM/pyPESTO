@@ -28,6 +28,7 @@ notebook, and the API documentation for the `pypesto.objective.history` and
   - dim_full [int]
   - x_fixed_values [float (n_par_full-n_par)]
   - x_fixed_indices [int (n_par_full-n_par)]
+  - x_free_indices [int n_par]
   - x_names [str n_par_full]
 ```
 
