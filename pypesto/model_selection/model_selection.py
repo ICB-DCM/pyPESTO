@@ -261,7 +261,8 @@ class ModelSelector:
                initial_model: Dict[str, Union[str, float]] = None,
                select_first_improvement: bool = False,
                startpoint_latest_mle: bool = False,
-               minimize_options: Dict = None):
+               minimize_options: Dict = None,
+               criterion_threshold: float = 0):
         """
         Runs a model selection algorithm. The result is the selected model for
         the current run, independent of previous `select()` calls.
@@ -306,7 +307,8 @@ class ModelSelector:
                                        reverse,
                                        select_first_improvement,
                                        startpoint_latest_mle,
-                                       minimize_options)
+                                       minimize_options,
+                                       criterion_threshold)
             result = selector()
             selected_models = result[0]
             local_selection_history = result[1]
@@ -326,7 +328,8 @@ class ModelSelector:
                                            reverse,
                                            select_first_improvement,
                                            startpoint_latest_mle,
-                                           minimize_options)
+                                           minimize_options,
+                                           criterion_threshold)
                 try:
                     result = selector()
                 except EOFError:
@@ -365,8 +368,8 @@ class ModelSelectorMethod(abc.ABC):
     should not be instantiated.
 
     Required attributes of child classes are `self.criterion` and
-    `self.petab_problem`. `self.minimize_options` should also be set, but can
-    be `None`.
+    `self.petab_problem`. `self.minimize_options` should be set, but can be
+    `None`. `self.criterion_threshold` should be set, but can be zero.
 
     TODO remove `self.petab_problem` once the YAML column rewrite is completed.
     """
@@ -389,9 +392,18 @@ class ModelSelectorMethod(abc.ABC):
         `True`, if `new` is superior to `old` by the criterion, else `False`.
         """
         if self.criterion == 'AIC':
-            return new.AIC < old.AIC
+            #print(f'Comparing models {old.model_id} and {new.model_id} by AIC'
+            #      f'Old: (AIC: {old.AIC:.3f}), New: {new.AIC:.3f} with '
+            #      f'test model {new.model_id} (AIC: ). ', end='')
+            print(f'{old.model_id}\t{new.model_id}\tAIC\t{old.AIC:.3f}\t'
+                  f'{new.AIC:.3f}\t'
+                  f'{new.AIC-old.AIC:.3f}\t', end='')
+            return new.AIC + self.criterion_threshold < old.AIC
         elif self.criterion == 'BIC':
-            return new.BIC < old.BIC
+            print(f'{old.model_id}\t{new.model_id}\tBIC\t{old.BIC:.3f}\t'
+                  f'{new.BIC:.3f}\t'
+                  f'{new.BIC-old.BIC:.3f}\t', end='')
+            return new.BIC + self.criterion_threshold < old.BIC
         else:
             raise NotImplementedError('Model selection criterion: '
                                       f'{self.criterion}.')
@@ -513,7 +525,8 @@ class ForwardSelector(ModelSelectorMethod):
                  reverse: bool,
                  select_first_improvement: bool,
                  startpoint_latest_mle: bool,
-                 minimize_options: Dict = None
+                 minimize_options: Dict = None,
+                 criterion_threshold: float = 0
     ):
         # TODO rename to `default_petab_problem`? There may be multiple petab
         # problems for a single model selection run, defined by the future
@@ -528,6 +541,7 @@ class ForwardSelector(ModelSelectorMethod):
         self.select_first_improvement = select_first_improvement
         self.startpoint_latest_mle = startpoint_latest_mle
         self.minimize_options = minimize_options
+        self.criterion_threshold = criterion_threshold
 
     def new_direction_problem(self) -> ModelSelectionProblem:
         """
@@ -596,6 +610,7 @@ class ForwardSelector(ModelSelectorMethod):
         """
         selected_models = []
         local_selection_history = {}
+        print('----------------------New Selection---------------------')
         # self.setup_direction(self.direction)
         # TODO rewrite so this is in `__init__()`, and this method saves the
         # latest "best" model as `self.model`. Would allow for continuation of
@@ -607,6 +622,8 @@ class ForwardSelector(ModelSelectorMethod):
             model = self.new_direction_problem()
         else:
             model = self.new_model_problem(self.initial_model)
+            print(f'Starting with model: {model.model_id}\n')
+            print('Old ID\tNew ID\tCrit\tOld\tNew\tDiff\tResult')
             # copied from for loop -- move into separate function?
             local_selection_history[model.model_id] = {
                 MODEL_ID: model.model_id,
@@ -628,7 +645,6 @@ class ForwardSelector(ModelSelectorMethod):
             self.selection_history.update(local_selection_history)
             selected_models.append(local_selection_history[model.model_id])
         proceed = True
-
 
         # TODO parallelisation (not sensible if self.select_first_improvement)
         # TODO rename `proceed` to `improved_criterion`
@@ -703,7 +719,17 @@ class ForwardSelector(ModelSelectorMethod):
                 # The initial model from self.new_direction_problem() is only
                 # for complexity comparison, and is not a real model.
                 if self.initial_model is None:
+                    # TODO bug: if `model` is changed here to `test_model`
+                    # then the remaining models will be compared to
+                    # `test_model` and not `model`. This will still result in
+                    # the correct model being selected, unless
+                    # self.criterion_threshold is non-zero, in which case other
+                    # models will be required to overcome the threshold
+                    # relative to test_model, which may mean models that are
+                    # better than this test_model are rejected.
                     model = test_model
+                    print(f'Starting with model: {model.model_id}\n')
+                    print('Old ID\tNew ID\tCrit\tOld\tNew\tDiff\tResult')
                     # TODO reconsider whether `False` is appropriate, after
                     # refactor that changed self.initial_model to be None if
                     # no initial model (as a dict) is specified. Could change
@@ -719,10 +745,14 @@ class ForwardSelector(ModelSelectorMethod):
                 # predictably select the next model from a set of models that
                 # are equivalent by criteria. Alphabetically?
                 if self.compare(model, test_model):
+                    print(f'Accepted')
+                    # TODO bug, see bug described in above if statement
                     model = test_model
                     proceed = True
                     if self.select_first_improvement:
                         break
+                else:
+                    print(f'Rejected')
 
             # could move this to start of loop and check against `model.valid`
             # TODO might be better

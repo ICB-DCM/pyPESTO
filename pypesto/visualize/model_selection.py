@@ -5,7 +5,9 @@ import numpy as np
 import pandas as pd
 from typing import Dict, List, Tuple
 
-from pypesto.model_selection.constants import MODEL_ID, INITIAL_VIRTUAL_MODEL
+from pypesto.model_selection.constants import (COMPARED_MODEL_ID,
+                                               INITIAL_VIRTUAL_MODEL,
+                                               MODEL_ID)
 
 def plot_selected_models(
         selected_models: List[Dict],
@@ -71,7 +73,11 @@ def plot_selected_models(
     ax.spines['right'].set_visible(False)
     return ax
 
-def plot_history_digraph(selection_history: Dict, options: Dict = None):
+def plot_history_digraph(selection_history: Dict,
+                         criterion: str = 'AIC',
+                         optimal_distance: float = 1,
+                         relative: bool = True,
+                         options: Dict = None):
     """
     Plots all visited models in the model space, as a directed graph.
 
@@ -84,19 +90,46 @@ def plot_history_digraph(selection_history: Dict, options: Dict = None):
         The values to be used for the optional keyword arguments in the
         `networkx.draw_networkx()` method.
     """
+
+    if relative:
+        criterions = [v[criterion] for k, v in selection_history.items()]
+        zero = min(criterions)
+    else:
+        zero = 0
+
     G = nx.DiGraph()
-    edges = [(node_data['compared_modelId'], node)
-             for node, node_data in selection_history.items()]
+    edges = []
+    for node, node_data in selection_history.items():
+        from_ = node_data[COMPARED_MODEL_ID]
+        # may only not be the case for
+        # COMPARED_MODEL_ID == INITIAL_VIRTUAL_MODEL
+        if node_data[COMPARED_MODEL_ID] in selection_history:
+            compared_model = selection_history[node_data[COMPARED_MODEL_ID]]
+            from_ += '\n' + f'{compared_model[criterion] - zero:.2f}'
+        to = node + '\n' + f'{node_data[criterion] - zero:.2f}'
+        edges.append((from_, to))
+
+    #edges = [(node_data['compared_modelId'], node)
+    #         for node, node_data in selection_history.items()]
     G.add_edges_from(edges)
     default_options = {
         'node_color': 'lightgrey',
         'arrowstyle': '-|>',
-        #'node_size': 1000,
+        'node_shape': 's',
+        'node_size': 2500,
         #'width': 2,
         #'arrowsize': 10,
        }
     if options is not None:
         default_options.update(options)
     plt.figure(figsize=(12,12))
-    nx.draw_networkx(G, **default_options)
+
+    pos = nx.spring_layout(G, k=optimal_distance, iterations=20)
+    nx.draw_networkx(G, pos, **default_options)
+    #if optimal_distance is not None:
+    #    pos = nx.spring_layout(G, k=optimal_distance, iterations=20)
+    #    nx.draw_networkx(G, pos, **default_options)
+    #else:
+    #    nx.draw_networkx(G, **default_options)
+        
     plt.show()
