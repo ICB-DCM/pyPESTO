@@ -99,6 +99,11 @@ class AmiciCalculator:
 
     def _check_least_squares(
             self, sensi_order: int, mode: str, rdatas: List['amici.ExpData']):
+        """
+        Check whether residual sensitivity based least squares optimization is
+        applicable. This is not the case if the noise model depends on
+        estimated parameters.
+        """
         if not self._known_least_squares_safe and sensi_order > 0 \
                 and mode == MODE_RES:
             if any(
