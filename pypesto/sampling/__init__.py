@@ -12,4 +12,4 @@ from .adaptive_metropolis import AdaptiveMetropolisSampler
 from .parallel_tempering import ParallelTemperingSampler
 from .adaptive_parallel_tempering import AdaptiveParallelTemperingSampler
 from .result import McmcPtResult
-from .diagnostics import GewekeTest, ChainAutoCorrelation
+from .diagnostics import GewekeTest, ChainAutoCorrelation, EffectiveSampleSize

@@ -55,3 +55,32 @@ def ChainAutoCorrelation(result: Result, burn_in: int = 0):
     tau = auto_correlation(chain=chain)
 
     return tau
+
+def EffectiveSampleSize(result: Result, burn_in: int = 0):
+    ''' Calculates the effective sample size of the MCMC chains.
+
+        Parameters
+        ----------
+        result:
+            The pyPESTO result object with filled sample result.
+        burn_in:
+            The burn in index obtained from convergence tests,
+            e.g. Geweke. Default 0.
+
+        Returns
+        -------
+        ess:
+            Effective sample size.
+
+        '''
+    # get parameters and fval results as numpy arrays
+    # discarding warm up phase
+    chain = np.array(result.sample_result['trace_x'][0][burn_in:, :])
+
+    # Calculate chain auto-correlation
+    tau = auto_correlation(chain=chain)
+    ac = np.max(tau)
+    # Calculate effective sample size
+    ess = chain.shape[0] / (1. + ac)
+
+    return ess
