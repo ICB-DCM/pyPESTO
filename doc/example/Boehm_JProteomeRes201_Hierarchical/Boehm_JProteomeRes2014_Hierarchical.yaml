@@ -4,9 +4,9 @@ problems:
 - condition_files:
   - experimentalCondition_Boehm_JProteomeRes2014.tsv
   measurement_files:
-  - measurementData_Boehm_JProteomeRes2014.tsv
+  - measurementData_Boehm_JProteomeRes2014_Hierarchical.tsv
   observable_files:
-  - observables_Boehm_JProteomeRes2014.tsv
+  - observables_Boehm_JProteomeRes2014_Hierarchical.tsv
   sbml_files:
   - model_Boehm_JProteomeRes2014.xml
   visualization_files:
