@@ -72,7 +72,7 @@ def profiles(results, ax=None, profile_indices=None, size=(18.5, 6.5),
                               profile_list_id=profile_list_id)
 
         if x_labels is None:
-            x_labels = [f'Value of {name}' for name, fval in
+            x_labels = [name for name, fval in
                         zip(result.problem.x_names, fvals) if fval is not None]
         # call lowlevel routine
         ax = profiles_lowlevel(fvals=fvals, ax=ax, size=size,
