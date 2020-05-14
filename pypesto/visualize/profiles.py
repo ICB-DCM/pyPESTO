@@ -180,7 +180,7 @@ def profiles_lowlevel(fvals, ax=None, size=(18.5, 6.5), color=None,
 
             # labels
             if x_labels is None:
-                ax[counter].set_xlabel(f'Parameter {i_plot} value')
+                ax[counter].set_xlabel(f'Parameter {i_plot}')
             else:
                 ax[counter].set_xlabel(x_labels[counter])
 
