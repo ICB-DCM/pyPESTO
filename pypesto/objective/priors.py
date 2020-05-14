@@ -124,11 +124,11 @@ def get_parameter_prior_dict(index: int,
 
         def log_f_log(x_log):
             """log-prior for log-parameters"""
-            return log_f(math.exp(x_log)) + x_log
+            return log_f(math.exp(x_log))
 
         def d_log_f_log(x_log):
             """derivative of log-prior w.r.t. log-parameters"""
-            return d_log_f_dx(math.exp(x_log)) * math.exp(x_log) + 1
+            return d_log_f_dx(math.exp(x_log)) * math.exp(x_log)
 
         def dd_log_f_log(x_log):
             """second derivative of log-prior w.r.t. log-parameters"""
@@ -147,11 +147,11 @@ def get_parameter_prior_dict(index: int,
 
         def log_f_log10(x_log10):
             """log-prior for log10-parameters"""
-            return log_f(10**x_log10) + math.log(log10) + x_log10 * log10
+            return log_f(10**x_log10)
 
         def d_log_f_log10(x_log10):
             """derivative of log-prior w.r.t. log10-parameters"""
-            return d_log_f_dx(10**x_log10) * log10 * 10**x_log10 + log10
+            return d_log_f_dx(10**x_log10) * log10 * 10**x_log10
 
         def dd_log_f_log10(x_log10):
             """second derivative of log-prior w.r.t. log10-parameters"""
