@@ -84,7 +84,7 @@ class Problem:
                  x_fixed_vals: Optional[Iterable[float]] = None,
                  x_guesses: Optional[Iterable[float]] = None,
                  x_names: Optional[Iterable[str]] = None,
-                 x_priors_defs: Optional[Iterable[Dict]] = None):
+                 x_priors_defs: Optional[Priors] = None):
         self.objective = copy.deepcopy(objective)
 
         self.lb = np.array(lb).flatten()
@@ -126,7 +126,7 @@ class Problem:
         self.x_names = x_names
 
         if x_priors_defs is not None:
-            self.x_priors = Priors(x_priors_defs)
+            self.x_priors = x_priors_defs
 
         self.normalize_input()
 

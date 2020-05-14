@@ -89,7 +89,7 @@ class ParameterPriors(Objective):
 
 def get_parameter_prior_dict(index: int,
                              prior_type: str,
-                             prior_parameters: np.ndarray,
+                             prior_parameters: list,
                              parameter_scale: str = 'lin'):
 
     """
@@ -113,14 +113,14 @@ def get_parameter_prior_dict(index: int,
     log_f, d_log_f_dx, dd_log_f_ddx = \
         _prior_densities(prior_type, prior_parameters)
 
-    if parameter_scale is 'lin':
+    if parameter_scale == 'lin':
 
         return {'index': index,
                 'density_fun': log_f,
                 'density_dx': d_log_f_dx,
                 'density_ddx': dd_log_f_ddx}
 
-    elif parameter_scale is 'log':
+    elif parameter_scale == 'log':
 
         def log_f_log(x_log):
             """log-prior for log-parameters"""
@@ -133,14 +133,15 @@ def get_parameter_prior_dict(index: int,
         def dd_log_f_log(x_log):
             """second derivative of log-prior w.r.t. log-parameters"""
             return math.exp(x_log) * \
-                   (d_log_f_dx(math.exp(x_log)) + dd_log_f_ddx(math.exp(x_log)))
+                (d_log_f_dx(math.exp(x_log)) +
+                    math.exp(x_log) * dd_log_f_ddx(math.exp(x_log)))
 
         return {'index': index,
                 'density_fun': log_f_log,
                 'density_dx': d_log_f_log,
                 'density_ddx': dd_log_f_log}
 
-    elif parameter_scale is 'log10':
+    elif parameter_scale == 'log10':
 
         log10 = math.log(10)
 
@@ -154,8 +155,9 @@ def get_parameter_prior_dict(index: int,
 
         def dd_log_f_log10(x_log10):
             """second derivative of log-prior w.r.t. log10-parameters"""
-            return log10 * 10**x_log10 * \
-                   (dd_log_f_ddx(10**x_log10) + d_log_f_dx(10**x_log10) * log10)
+            return log10**2 * 10**x_log10 * \
+                   (dd_log_f_ddx(10**x_log10) * 10**x_log10
+                    + d_log_f_dx(10**x_log10))
 
         return {'index': index,
                 'density_fun': log_f_log10,
@@ -174,7 +176,7 @@ def _prior_densities(prior_type: str,
     together with their first + second derivative (= senisis) w.r.t x
     """
 
-    if prior_type is 'uniform':
+    if prior_type == 'uniform':
 
         log_f = _get_constant_function(1/(prior_parameters[1] - prior_parameters[0]))
         d_log_f_dx = _get_constant_function(0)
@@ -182,7 +184,7 @@ def _prior_densities(prior_type: str,
 
         return log_f, d_log_f_dx, dd_log_f_ddx
 
-    elif prior_type is 'normal':
+    elif prior_type == 'normal':
 
         sigma2 = prior_parameters[1]**2
 
@@ -195,7 +197,7 @@ def _prior_densities(prior_type: str,
 
         return log_f, d_log_f_dx, dd_log_f_ddx
 
-    elif prior_type is 'laplace':
+    elif prior_type == 'laplace':
         log_2_sigma = math.log(2*prior_parameters[1])
 
         def log_f(x):
@@ -203,17 +205,17 @@ def _prior_densities(prior_type: str,
 
         def d_log_f_dx(x):
             if x > prior_parameters[0]:
-                return 1/prior_parameters[1]
-            else:
                 return -1/prior_parameters[1]
+            else:
+                return 1/prior_parameters[1]
 
         dd_log_f_ddx = _get_constant_function(0)
 
         return log_f, d_log_f_dx, dd_log_f_ddx
 
-    elif prior_type is 'logUniform':
+    elif prior_type == 'logUniform':
         raise NotImplementedError
-    elif prior_type is 'logNormal':
+    elif prior_type == 'logNormal':
 
         sigma2 = prior_parameters[1]**2
         sqrt2_pi = math.sqrt(2*math.pi)
@@ -226,11 +228,11 @@ def _prior_densities(prior_type: str,
             return - 1/x - (math.log(x) - prior_parameters[0])/(sigma2 * x)
 
         def dd_log_f_ddx(x):
-            return 1/(x**2) - (1 - math.log(x) - prior_parameters[0])/(sigma2 * x**2)
+            return 1/(x**2) - (1 - math.log(x) + prior_parameters[0])/(sigma2 * x**2)
 
         return log_f, d_log_f_dx, dd_log_f_ddx
 
-    elif prior_type is 'logLaplace':
+    elif prior_type == 'logLaplace':
         raise NotImplementedError
     else:
         ValueError(f'Priors of type {prior_type} are currently not supported')
