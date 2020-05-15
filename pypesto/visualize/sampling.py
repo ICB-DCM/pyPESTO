@@ -12,7 +12,7 @@ from ..sampling import McmcPtResult
 def sampling_fval_trace(
         result: Result,
         i_chain: int = 0,
-        burn_in: int = 0,
+        full_trace: bool = False,
         stepsize: int = 1,
         title: str = None,
         size: Tuple[float, float] = None,
@@ -25,8 +25,6 @@ def sampling_fval_trace(
         The pyPESTO result object with filled sample result.
     i_chain:
         Which chain to plot. Default: First chain.
-    burn_in:
-        Index after burn-in phase, thus also the burn-in length.
     stepsize:
         Only one in `stepsize` values is plotted.
     title:
@@ -71,9 +69,9 @@ def sampling_fval_trace(
 def sampling_parameters_trace(
         result: Result,
         i_chain: int = 0,
-        burn_in: int = 0,
         stepsize: int = 1,
         use_problem_bounds: bool = True,
+        full_trace: bool = False,
         suptitle: str = None,
         size: Tuple[float, float] = None,
         ax: matplotlib.axes.Axes = None):
@@ -85,8 +83,6 @@ def sampling_parameters_trace(
         The pyPESTO result object with filled sample result.
     i_chain:
         Which chain to plot. Default: First chain.
-    burn_in:
-        Index after burn-in phase, thus also the burn-in length.
     stepsize:
         Only one in `stepsize` values is plotted.
     use_problem_bounds:
@@ -150,7 +146,6 @@ def sampling_parameters_trace(
 def sampling_scatter(
         result: Result,
         i_chain: int = 0,
-        burn_in: int = 0,
         stepsize: int = 1,
         suptitle: str = None,
         size: Tuple[float, float] = None):
@@ -162,8 +157,6 @@ def sampling_scatter(
         The pyPESTO result object with filled sample result.
     i_chain:
         Which chain to plot. Default: First chain.
-    burn_in:
-        Index after burn-in phase, thus also the burn-in length.
     stepsize:
         Only one in `stepsize` values is plotted.
     suptitle:
@@ -198,7 +191,6 @@ def sampling_scatter(
 def sampling_1d_marginals(
         result: Result,
         i_chain: int = 0,
-        burn_in: int = 0,
         stepsize: int = 1,
         plot_type: str = 'both',
         bw: str = 'scott',
@@ -213,8 +205,6 @@ def sampling_1d_marginals(
         The pyPESTO result object with filled sample result.
     i_chain:
         Which chain to plot. Default: First chain.
-    burn_in:
-        Index after burn-in phase, thus also the burn-in length.
     stepsize:
         Only one in `stepsize` values is plotted.
     plot_type: {'hist'|'kde'|'both'}
