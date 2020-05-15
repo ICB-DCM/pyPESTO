@@ -91,7 +91,7 @@ def spectrum0(x: np.array):
     return spectral_density_zero
 
 
-def gewekeTest(chain: np.array,
+def geweke_test(chain: np.array,
                a: float = 0.1,
                b: float = 0.5):
     '''
@@ -153,7 +153,7 @@ def gewekeTest(chain: np.array,
     return z_score, p
 
 
-def burnInBySequentialGeweke(chain: np.array,
+def burn_in_by_sequential_geweke(chain: np.array,
                              zscore: float = 2.):
     '''
     Calculates the burn-in of MCMC chains.
@@ -186,7 +186,7 @@ def burnInBySequentialGeweke(chain: np.array,
     z = np.zeros((len(ii), npar))
     for i in range(len(ii)):
         # Calculate z-score
-        z[i, :], _ = gewekeTest(chain[ii[i]:, :])
+        z[i, :], _ = geweke_test(chain[ii[i]:, :])
 
     # Sort z-score for Bonferroni-Holm inverse
     # to sorting p-values

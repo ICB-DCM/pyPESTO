@@ -5,7 +5,7 @@ from .geweke_test import burnInBySequentialGeweke
 from .auto_correlation import auto_correlation
 
 
-def GewekeTest(result: Result,
+def geweke_test(result: Result,
                zscore: float = 2.):
     ''' Calculates the burn-in of MCMC chains.
 
@@ -27,7 +27,7 @@ def GewekeTest(result: Result,
     chain = np.array(result.sample_result['trace_x'][0])
 
     # Calculate burn in index
-    burn_in = burnInBySequentialGeweke(chain=chain,
+    burn_in = burn_in_by_sequential_geweke(chain=chain,
                                        zscore=zscore)
     print('Geweke Burn-in index: '+str(burn_in))
 
@@ -36,7 +36,7 @@ def GewekeTest(result: Result,
     return result
 
 
-def ChainAutoCorrelation(result: Result):
+def chain_auto_correlation(result: Result):
     ''' Calculates the auto-correlation of the MCMC samples.
 
     Parameters
@@ -65,7 +65,7 @@ def ChainAutoCorrelation(result: Result):
     return tau
 
 
-def EffectiveSampleSize(result: Result):
+def effective_sample_size(result: Result):
     ''' Calculates the effective sample size of the MCMC samples.
 
         Parameters
