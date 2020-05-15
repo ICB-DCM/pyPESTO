@@ -30,7 +30,7 @@ class McmcPtResult(dict):
                  trace_fval: np.ndarray,
                  betas: Iterable[float],
                  burn_in: int = 0,
-                 elapsed_time: float = 0.,
+                 time: float = 0.,
                  message: str = None):
         super().__init__()
 
@@ -38,7 +38,7 @@ class McmcPtResult(dict):
         self.trace_fval = trace_fval
         self.betas = betas
         self.burn_in = burn_in
-        self.elapsed_time = elapsed_time
+        self.time = time
         self.message = message
 
         if trace_x.ndim != 3:
