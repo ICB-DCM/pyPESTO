@@ -53,7 +53,7 @@ def ChainAutoCorrelation(result: Result):
     '''
 
     # Burn in index
-    result.sample_result['burn_in'] = burn_in
+    burn_in = result.sample_result['burn_in']
 
     # Get parameter samples as numpy arrays
     # and discarding warm up phase
@@ -82,8 +82,8 @@ def EffectiveSampleSize(result: Result):
         '''
 
     # Burn in index
-    result.sample_result['burn_in'] = burn_in
-    
+    burn_in = result.sample_result['burn_in']
+
     # Get parameter samples as numpy arrays
     # and discarding warm up phase
     chain = np.array(result.sample_result['trace_x'][0][burn_in:, :])
