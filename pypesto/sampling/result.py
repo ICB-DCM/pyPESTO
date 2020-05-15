@@ -11,11 +11,13 @@ class McmcPtResult(dict):
     Parameters
     ----------
     trace_x: [n_chain, n_iter, n_par]
-        Parameters
+        Parameters.
     trace_fval: [n_chain, n_iter]
         Function values.
     betas: [n_chain]
         The associated inverse temperatures.
+    burn_in: [n_chain]
+        The burn in index.
     message: str
         Textual comment on the profile result.
 
@@ -27,12 +29,16 @@ class McmcPtResult(dict):
                  trace_x: np.ndarray,
                  trace_fval: np.ndarray,
                  betas: Iterable[float],
+                 burn_in: int = 0,
+                 elapsed_time: float = 0.,
                  message: str = None):
         super().__init__()
 
         self.trace_x = trace_x
         self.trace_fval = trace_fval
         self.betas = betas
+        self.burn_in = burn_in
+        self.elapsed_time = elapsed_time
         self.message = message
 
         if trace_x.ndim != 3:

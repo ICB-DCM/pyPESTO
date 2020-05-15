@@ -27,23 +27,22 @@ def GewekeTest(result: Result,
     chain = np.array(result.sample_result['trace_x'][0])
 
     # Calculate burn in index
-    burn_in = burnInBySequentialGeweke(chain=chain, zscore=zscore)
+    burn_in = burnInBySequentialGeweke(chain=chain,
+                                       zscore=zscore)
     print('Geweke Burn-in index: '+str(burn_in))
 
-    return burn_in
+    result.sample_result['burn_in'] = burn_in
+
+    return result
 
 
-def ChainAutoCorrelation(result: Result,
-                         burn_in: int = 0):
+def ChainAutoCorrelation(result: Result):
     ''' Calculates the auto-correlation of the MCMC samples.
 
     Parameters
     ----------
     result:
         The pyPESTO result object with filled sample result.
-    burn_in:
-        The burn in index obtained from convergence tests,
-        e.g. Geweke. Default 0.
 
     Returns
     -------
@@ -52,6 +51,10 @@ def ChainAutoCorrelation(result: Result,
         dimension. We suggest taking the maximum over all components.
 
     '''
+
+    # Burn in index
+    result.sample_result['burn_in'] = burn_in
+
     # Get parameter samples as numpy arrays
     # and discarding warm up phase
     chain = np.array(result.sample_result['trace_x'][0][burn_in:, :])
@@ -62,17 +65,13 @@ def ChainAutoCorrelation(result: Result,
     return tau
 
 
-def EffectiveSampleSize(result: Result,
-                        burn_in: int = 0):
+def EffectiveSampleSize(result: Result):
     ''' Calculates the effective sample size of the MCMC samples.
 
         Parameters
         ----------
         result:
             The pyPESTO result object with filled sample result.
-        burn_in:
-            The burn in index obtained from convergence tests,
-            e.g. Geweke. Default 0.
 
         Returns
         -------
@@ -82,6 +81,9 @@ def EffectiveSampleSize(result: Result,
             thinning the signal by tau.
         '''
 
+    # Burn in index
+    result.sample_result['burn_in'] = burn_in
+    
     # Get parameter samples as numpy arrays
     # and discarding warm up phase
     chain = np.array(result.sample_result['trace_x'][0][burn_in:, :])
