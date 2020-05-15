@@ -25,6 +25,8 @@ def sampling_fval_trace(
         The pyPESTO result object with filled sample result.
     i_chain:
         Which chain to plot. Default: First chain.
+    full_trace:
+        Plot the full trace including warm up. Default: False.
     stepsize:
         Only one in `stepsize` values is plotted.
     title:
@@ -41,8 +43,10 @@ def sampling_fval_trace(
     """
 
     # get data which should be plotted
-    _, params_fval, _, _ = get_data_to_plot(
-        result=result, i_chain=i_chain, stepsize=stepsize)
+    _, params_fval, _, _ = get_data_to_plot(result=result,
+                                            i_chain=i_chain,
+                                            stepsize=stepsize,
+                                            full_trace=full_trace)
 
     # set axes and figure
     if ax is None:
@@ -52,8 +56,18 @@ def sampling_fval_trace(
     kwargs = {'edgecolor': "w",  # for edge color
               'linewidth': 0.3,
               's': 10}
+    if full_trace:
+        kwargs['hue'] = "converged"
+        kwargs['palette'] = ["#868686", "#477ccd"]
+        kwargs['legend'] = False
+
     sns.scatterplot(x="iteration", y="logPosterior", data=params_fval,
                     ax=ax, **kwargs)
+
+    if full_trace and result.sample_result['burn_in'] > 0:
+        ax.axvline(result.sample_result['burn_in']+1,
+                   linestyle='--', linewidth=1.5,
+                   color='k')
 
     ax.set_xlabel('iteration index')
     ax.set_ylabel('log-posterior')
@@ -69,9 +83,9 @@ def sampling_fval_trace(
 def sampling_parameters_trace(
         result: Result,
         i_chain: int = 0,
+        full_trace: bool = False,
         stepsize: int = 1,
         use_problem_bounds: bool = True,
-        full_trace: bool = False,
         suptitle: str = None,
         size: Tuple[float, float] = None,
         ax: matplotlib.axes.Axes = None):
@@ -83,6 +97,8 @@ def sampling_parameters_trace(
         The pyPESTO result object with filled sample result.
     i_chain:
         Which chain to plot. Default: First chain.
+    full_trace:
+        Plot the full trace including warm up. Default: False.
     stepsize:
         Only one in `stepsize` values is plotted.
     use_problem_bounds:
@@ -103,7 +119,8 @@ def sampling_parameters_trace(
 
     # get data which should be plotted
     nr_params, params_fval, theta_lb, theta_ub = get_data_to_plot(
-        result=result, i_chain=i_chain, stepsize=stepsize)
+        result=result, i_chain=i_chain, stepsize=stepsize,
+        full_trace=full_trace)
 
     param_names = params_fval.columns.values[0:nr_params]
 
@@ -124,10 +141,21 @@ def sampling_parameters_trace(
               'linewidth': 0.3,
               's': 10}
 
+    if full_trace:
+        kwargs['hue'] = "converged"
+        kwargs['palette'] = ["#868686", "#477ccd"]
+        kwargs['legend'] = False
+
     for idx, plot_id in enumerate(param_names):
         ax = axes[plot_id]
-        ax = sns.scatterplot(x="iteration", y=plot_id, data=params_fval, ax=ax,
-                             **kwargs)
+
+        ax = sns.scatterplot(x="iteration", y=plot_id, data=params_fval,
+                             ax=ax, **kwargs)
+
+        if full_trace and result.sample_result['burn_in'] > 0:
+            ax.axvline(result.sample_result['burn_in']+1,
+                       linestyle='--', linewidth=1.5,
+                       color='k')
 
         ax.set_xlabel('iteration index')
         ax.set_ylabel(param_names[idx])
@@ -260,7 +288,7 @@ def sampling_1d_marginals(
 
 
 def get_data_to_plot(
-        result: Result, i_chain: int, stepsize: int):
+        result: Result, i_chain: int, stepsize: int, full_trace: bool = False):
     """Get the data which should be plotted as a pandas.DataFrame.
 
     Parameters
@@ -271,19 +299,25 @@ def get_data_to_plot(
         Which chain to plot.
     stepsize:
         Only one in `stepsize` values is plotted.
+    full_trace:
+        Keep the full lenght of the chain. Default: False.
     """
     # get parameters and fval results as numpy arrays
     arr_param = np.array(result.sample_result['trace_x'][i_chain])
 
     # Burn in index
-    burn_in = result.sample_result['burn_in']
+    if full_trace is False:
+        burn_in = result.sample_result['burn_in']
+    else:
+        burn_in = 0
 
     sample_result: McmcPtResult = result.sample_result
 
     # thin out by stepsize, from the index burn_in until end of vector
     arr_param = arr_param[np.arange(burn_in, len(arr_param), stepsize)]
 
-    arr_fval = - np.array(sample_result.trace_fval[i_chain]) # invert sign for log posterior values
+    # invert sign for log posterior values
+    arr_fval = - np.array(sample_result.trace_fval[i_chain])
     indices = np.arange(burn_in, len(arr_fval), stepsize)
     arr_fval = arr_fval[indices]
     theta_lb = result.problem.lb
@@ -296,8 +330,17 @@ def get_data_to_plot(
     pd_fval = pd.DataFrame(data=arr_fval, columns=['logPosterior'])
 
     pd_iter = pd.DataFrame(data=indices, columns=['iteration'])
-    params_fval = pd.concat(
-        [pd_params, pd_fval, pd_iter], axis=1, ignore_index=False)
+
+    if full_trace:
+        converged = np.zeros((len(arr_fval)))
+        converged[result.sample_result['burn_in']+1:] = 1
+        pd_conv = pd.DataFrame(data=converged, columns=['converged'])
+
+        params_fval = pd.concat(
+            [pd_params, pd_fval, pd_iter, pd_conv], axis=1, ignore_index=False)
+    else:
+        params_fval = pd.concat(
+            [pd_params, pd_fval, pd_iter], axis=1, ignore_index=False)
 
     # some global parameters
     nr_params = arr_param.shape[1]  # number of parameters
