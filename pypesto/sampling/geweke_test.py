@@ -5,7 +5,7 @@ from scipy.stats import norm
 def spectrum(x: np.array,
              nfft: int = None,
              nw: int = None):
-    '''
+    """
     Power spectral density using Hanning window.
 
     Parameters
@@ -23,7 +23,7 @@ def spectrum(x: np.array,
     spectral_density:
         The spectral density.
 
-    '''
+    """
 
     if nfft is None:
         nfft = np.min(len(x), 256)
@@ -67,7 +67,7 @@ def spectrum(x: np.array,
 
 
 def spectrum0(x: np.array):
-    '''
+    """
     Calculates the spectral density at frequency zero.
 
     Parameters
@@ -80,7 +80,7 @@ def spectrum0(x: np.array):
     spectral_density_zero:
         Spectral density at zero.
 
-    '''
+    """
 
     n_samples, n_par = x.shape
     spectral_density_zero = np.zeros((1, n_par))
@@ -94,7 +94,7 @@ def spectrum0(x: np.array):
 def geweke_test(chain: np.array,
                 a: float = 0.1,
                 b: float = 0.5):
-    '''
+    """
     Performs a Geweke test on a chain using the first
     "a" fraction and the last "b" fraction of it for
     comparison. Test for equality of the means of the
@@ -120,7 +120,7 @@ def geweke_test(chain: np.array,
     p:
         Significance level of the Geweke test.
 
-    '''
+    """
 
     nsimu, _ = chain.shape
 
@@ -155,7 +155,7 @@ def geweke_test(chain: np.array,
 
 def burn_in_by_sequential_geweke(chain: np.array,
                                  zscore: float = 2.):
-    '''
+    """
     Calculates the burn-in of MCMC chains.
 
     Parameters
@@ -172,7 +172,7 @@ def burn_in_by_sequential_geweke(chain: np.array,
         of the chain do not differ significantly
         regarding Geweke test.
 
-    '''
+    """
 
     nsimu, npar = chain.shape
     # number of fragments

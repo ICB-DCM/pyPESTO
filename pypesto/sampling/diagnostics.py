@@ -7,7 +7,8 @@ from .auto_correlation import auto_correlation
 
 def geweke_test(result: Result,
                 zscore: float = 2.):
-    ''' Calculates the burn-in of MCMC chains.
+    """
+    Calculates the burn-in of MCMC chains.
 
     Parameters
     ----------
@@ -22,7 +23,7 @@ def geweke_test(result: Result,
         Iteration where the first and the last fraction of the chain
         do not differ significantly regarding Geweke test -> Burn-In
 
-    '''
+    """
     # Get parameter samples as numpy arrays
     chain = np.array(result.sample_result['trace_x'][0])
 
@@ -37,7 +38,8 @@ def geweke_test(result: Result,
 
 
 def chain_auto_correlation(result: Result):
-    ''' Calculates the auto-correlation of the MCMC samples.
+    """
+    Calculates the auto-correlation of the MCMC samples.
 
     Parameters
     ----------
@@ -50,7 +52,7 @@ def chain_auto_correlation(result: Result):
         Array with the auto-correlation time tau for each parameter
         dimension. We suggest taking the maximum over all components.
 
-    '''
+    """
 
     # Burn in index
     burn_in = result.sample_result['burn_in']
@@ -66,20 +68,21 @@ def chain_auto_correlation(result: Result):
 
 
 def effective_sample_size(result: Result):
-    ''' Calculates the effective sample size of the MCMC samples.
+    """
+    Calculates the effective sample size of the MCMC samples.
 
-        Parameters
-        ----------
-        result:
-            The pyPESTO result object with filled sample result.
+    Parameters
+    ----------
+    result:
+        The pyPESTO result object with filled sample result.
 
-        Returns
-        -------
-        ess:
-            Effective sample size. The effective sample size
-            is determined counting the remaining points after
-            thinning the signal by tau.
-        '''
+    Returns
+    -------
+    ess:
+        Effective sample size. The effective sample size
+        is determined counting the remaining points after
+        thinning the signal by tau.
+    """
 
     # Burn in index
     burn_in = result.sample_result['burn_in']

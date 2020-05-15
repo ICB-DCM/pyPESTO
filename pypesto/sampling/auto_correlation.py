@@ -2,7 +2,7 @@ import numpy as np
 
 
 def auto_correlation(chain: np.array):
-    '''
+    """
     This function estimates the integrated autocorrelation time
     using Sokal's adaptive truncated periodogram estimator.
 
@@ -19,7 +19,7 @@ def auto_correlation(chain: np.array):
         Array with the auto-correlation time tau for each parameter
         dimension. We suggest taking the maximum over all components.
 
-    '''
+    """
 
     nsimu, npar = chain.shape
     tau = np.zeros((npar))
