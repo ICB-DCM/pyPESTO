@@ -92,8 +92,8 @@ def spectrum0(x: np.array):
 
 
 def geweke_test(chain: np.array,
-               a: float = 0.1,
-               b: float = 0.5):
+                a: float = 0.1,
+                b: float = 0.5):
     '''
     Performs a Geweke test on a chain using the first
     "a" fraction and the last "b" fraction of it for
@@ -154,7 +154,7 @@ def geweke_test(chain: np.array,
 
 
 def burn_in_by_sequential_geweke(chain: np.array,
-                             zscore: float = 2.):
+                                 zscore: float = 2.):
     '''
     Calculates the burn-in of MCMC chains.
 
