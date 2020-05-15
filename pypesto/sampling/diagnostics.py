@@ -5,7 +5,7 @@ from .geweke_test import burnInBySequentialGeweke
 from .auto_correlation import auto_correlation
 
 
-def GewekeTest(result: Result,
+def geweke_test(result: Result,
                zscore: float = 2.):
     ''' Calculates the burn-in of MCMC chains.
 
