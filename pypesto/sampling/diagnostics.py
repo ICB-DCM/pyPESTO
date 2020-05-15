@@ -6,7 +6,7 @@ from .auto_correlation import auto_correlation
 
 
 def geweke_test(result: Result,
-               zscore: float = 2.):
+                zscore: float = 2.):
     ''' Calculates the burn-in of MCMC chains.
 
     Parameters
@@ -28,7 +28,7 @@ def geweke_test(result: Result,
 
     # Calculate burn in index
     burn_in = burn_in_by_sequential_geweke(chain=chain,
-                                       zscore=zscore)
+                                           zscore=zscore)
     print('Geweke Burn-in index: '+str(burn_in))
 
     result.sample_result['burn_in'] = burn_in
