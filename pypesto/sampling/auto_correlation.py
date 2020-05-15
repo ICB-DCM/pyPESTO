@@ -11,7 +11,7 @@ def auto_correlation(chain: np.array):
     chain:
         The MCMC parameter samples without warm up phase.
         In case of sampling with parallel tempering, the
-        chain with the lowest temperature will be passed.
+        chain with the lowest temperature T=1 should be passed.
 
     Returns
     -------
