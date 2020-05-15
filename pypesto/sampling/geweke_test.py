@@ -180,8 +180,8 @@ def burnInBySequentialGeweke(chain: np.array,
     # round each element to the nearest integer
     # toward zero
     e = int(5 * nsimu / 5)
-    l = int(e / n)
-    ii = np.arange(0, e - 1, l)
+    step = int(e / n)
+    ii = np.arange(0, e - 1, step)
 
     z = np.zeros((len(ii), npar))
     for i in range(len(ii)):
@@ -199,7 +199,7 @@ def burnInBySequentialGeweke(chain: np.array,
                           (len(ii) - np.where(idxs == i)[0] + 1)
 
     if np.where(alpha2 > max_z)[0].size != 0:
-        burn_in = (np.where(alpha2 > max_z)[0][0]) * l
+        burn_in = (np.where(alpha2 > max_z)[0][0]) * step
     else:
         burn_in = nsimu
 

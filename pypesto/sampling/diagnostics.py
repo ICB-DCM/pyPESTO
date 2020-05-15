@@ -1,10 +1,9 @@
-from typing import Dict, List, Sequence, Union
 import numpy as np
 
 from ..result import Result
-from .result import McmcPtResult
 from .geweke_test import burnInBySequentialGeweke
 from .auto_correlation import auto_correlation
+
 
 def GewekeTest(result: Result,
                zscore: float = 2.):
@@ -33,6 +32,7 @@ def GewekeTest(result: Result,
 
     return burn_in
 
+
 def ChainAutoCorrelation(result: Result,
                          burn_in: int = 0):
     ''' Calculates the auto-correlation of the MCMC samples.
@@ -54,12 +54,13 @@ def ChainAutoCorrelation(result: Result,
     '''
     # Get parameter samples as numpy arrays
     # and discarding warm up phase
-    chain = np.array(result.sample_result['trace_x'][0][burn_in:,:])
+    chain = np.array(result.sample_result['trace_x'][0][burn_in:, :])
 
     # Calculate chain auto-correlation
     tau = auto_correlation(chain=chain)
 
     return tau
+
 
 def EffectiveSampleSize(result: Result,
                         burn_in: int = 0):
