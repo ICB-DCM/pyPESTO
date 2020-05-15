@@ -12,7 +12,7 @@ from ..sampling import McmcPtResult
 def sampling_fval_trace(
         result: Result,
         i_chain: int = 0,
-        burn_in: int = None,
+        burn_in: int = 0,
         stepsize: int = 1,
         title: str = None,
         size: Tuple[float, float] = None,
@@ -41,13 +41,10 @@ def sampling_fval_trace(
     ax:
         The plot axes.
     """
-    # TODO: get burn_in from results object
-    if burn_in is None:
-        burn_in = 0
 
     # get data which should be plotted
     _, params_fval, _, _ = get_data_to_plot(
-        result=result, i_chain=i_chain, burn_in=burn_in, stepsize=stepsize)
+        result=result, i_chain=i_chain, stepsize=stepsize)
 
     # set axes and figure
     if ax is None:
@@ -74,7 +71,7 @@ def sampling_fval_trace(
 def sampling_parameters_trace(
         result: Result,
         i_chain: int = 0,
-        burn_in: int = None,
+        burn_in: int = 0,
         stepsize: int = 1,
         use_problem_bounds: bool = True,
         suptitle: str = None,
@@ -107,13 +104,10 @@ def sampling_parameters_trace(
     ax:
         The plot axes.
     """
-    # TODO: get burn_in from results object
-    if burn_in is None:
-        burn_in = 0
 
     # get data which should be plotted
     nr_params, params_fval, theta_lb, theta_ub = get_data_to_plot(
-        result=result, i_chain=i_chain, burn_in=burn_in, stepsize=stepsize)
+        result=result, i_chain=i_chain, stepsize=stepsize)
 
     param_names = params_fval.columns.values[0:nr_params]
 
@@ -156,7 +150,7 @@ def sampling_parameters_trace(
 def sampling_scatter(
         result: Result,
         i_chain: int = 0,
-        burn_in: int = None,
+        burn_in: int = 0,
         stepsize: int = 1,
         suptitle: str = None,
         size: Tuple[float, float] = None):
@@ -182,13 +176,10 @@ def sampling_scatter(
     ax:
         The plot axes.
     """
-    # TODO: get burn_in from results object
-    if burn_in is None:
-        burn_in = 0
 
     # get data which should be plotted
     nr_params, params_fval, theta_lb, theta_ub = get_data_to_plot(
-        result=result, i_chain=i_chain, burn_in=burn_in, stepsize=stepsize)
+        result=result, i_chain=i_chain, stepsize=stepsize)
 
     sns.set(style="ticks")
 
@@ -207,7 +198,7 @@ def sampling_scatter(
 def sampling_1d_marginals(
         result: Result,
         i_chain: int = 0,
-        burn_in: int = None,
+        burn_in: int = 0,
         stepsize: int = 1,
         plot_type: str = 'both',
         bw: str = 'scott',
@@ -240,13 +231,10 @@ def sampling_1d_marginals(
     --------
     ax: matplotlib-axes
     """
-    # TODO: get burn_in from results object
-    if burn_in is None:
-        burn_in = 0
 
     # get data which should be plotted
     nr_params, params_fval, theta_lb, theta_ub = get_data_to_plot(
-        result=result, i_chain=i_chain, burn_in=burn_in, stepsize=stepsize)
+        result=result, i_chain=i_chain, stepsize=stepsize)
     param_names = params_fval.columns.values[0:nr_params]
 
     # compute, how many rows and columns we need for the subplots
@@ -282,7 +270,7 @@ def sampling_1d_marginals(
 
 
 def get_data_to_plot(
-        result: Result, i_chain: int, burn_in: int, stepsize: int):
+        result: Result, i_chain: int, stepsize: int):
     """Get the data which should be plotted as a pandas.DataFrame.
 
     Parameters
@@ -291,13 +279,14 @@ def get_data_to_plot(
         The pyPESTO result object with filled sample result.
     i_chain:
         Which chain to plot.
-    burn_in:
-        Index after burn-in phase, thus also the burn-in length.
     stepsize:
         Only one in `stepsize` values is plotted.
     """
     # get parameters and fval results as numpy arrays
     arr_param = np.array(result.sample_result['trace_x'][i_chain])
+
+    # Burn in index
+    burn_in = result.sample_result['burn_in']
 
     sample_result: McmcPtResult = result.sample_result
 
