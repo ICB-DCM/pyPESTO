@@ -1,7 +1,7 @@
 import numpy as np
 
 from ..result import Result
-from .geweke_test import burnInBySequentialGeweke
+from .geweke_test import burn_in_by_sequential_geweke
 from .auto_correlation import auto_correlation
 
 
