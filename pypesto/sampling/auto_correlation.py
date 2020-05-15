@@ -1,14 +1,25 @@
 import numpy as np
 
 
-def auto_correlation(chain):
-    '''Published & implemented by Marko Laine (2006) - used by Ballnus et al.
-    (2016). This function calculates the auto-correlation time tau for one parameter
-    dimension. We suggest taking the maximum over all components. The
-    effective sample size is determined counting the remaining points after
-    thinning the signal by tau.
+def auto_correlation(chain: np.array):
+    '''
     This function estimates the integrated autocorrelation time
-    using Sokal's adaptive truncated periodogram estimator.'''
+    using Sokal's adaptive truncated periodogram estimator.
+
+    Parameters
+    ----------
+    chain:
+        The MCMC parameter samples without warm up phase.
+        In case of sampling with parallel tempering, the
+        chain with the lowest temperature will be passed.
+
+    Returns
+    -------
+    tau:
+        Array with the auto-correlation time tau for each parameter
+        dimension. We suggest taking the maximum over all components.
+
+    '''
 
     nsimu, npar = chain.shape
     tau = np.zeros((npar))
@@ -20,9 +31,12 @@ def auto_correlation(chain):
     x_imag = x.imag
     x_real = x_real**2+x_imag**2
     x_real[0,:] = 0.
+    # Fast fourier transform of the real part
     x_real = np.transpose((np.fft.fft(np.transpose(x_real)))).real
+    # Variance
     var = x_real[0,:]/(nsimu+1)/(nsimu)
 
+    # Loop over parameters
     for j in range(npar):
         if var[j] == 0:
             continue
