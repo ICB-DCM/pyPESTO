@@ -165,9 +165,12 @@ class HistoryTest(unittest.TestCase):
             it_start = int(np.where(np.logical_not(
                 np.isnan(start.history.get_fval_trace())
             ))[0][0])
-            assert np.allclose(xfull(start.history.get_x(it_start)), start.x0)
-            assert np.allclose(xfull(start.history.get_x(it_final)), start.x)
-            assert np.isclose(start.history.get_fval(it_start), start.fval0)
+            assert np.allclose(
+                xfull(start.history.get_x_trace(it_start)), start.x0)
+            assert np.allclose(
+                xfull(start.history.get_x_trace(it_final)), start.x)
+            assert np.isclose(
+                start.history.get_fval_trace(it_start), start.fval0)
 
         funs = {
             FVAL: self.obj.get_fval,
@@ -186,8 +189,8 @@ class HistoryTest(unittest.TestCase):
                                                f'trace_record_{var}'):
                 continue
             for it in range(5):
-                x_full = xfull(start.history.get_x(it))
-                val = getattr(start.history, f'get_{var}')(it)
+                x_full = xfull(start.history.get_x_trace(it))
+                val = getattr(start.history, f'get_{var}_trace')(it)
                 if np.all(np.isnan(val)):
                     continue
                 if var in [FVAL, CHI2]:
@@ -395,3 +398,14 @@ def test_history_properties(history: pypesto.History):
 
         ress = history.get_res_trace()
         assert all(np.isnan(res) for res in ress)
+
+
+def test_trace_subset(history: pypesto.History):
+    """Test whether selecting only a trace subset works."""
+    if isinstance(history, (pypesto.MemoryHistory, pypesto.CsvHistory)):
+        arr = list(range(0, len(history), 2))
+        # fval, exemplarily
+        full_trace = history.get_fval_trace()
+        partial_trace = history.get_fval_trace(arr)
+        assert len(partial_trace) == len(arr)
+        assert [full_trace[i] for i in arr] == list(partial_trace)
