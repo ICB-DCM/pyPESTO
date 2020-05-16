@@ -22,7 +22,7 @@ def trace_wrap(f):
     """
     def wrapped_f(
             self, ix: Union[Sequence[int], int, None] = None
-    ) -> Union[Sequence[Any], Any]:
+    ) -> Union[Sequence[Union[float, np.ndarray]], Union[float, np.ndarray]]:
         # whether to reduce the output
         reduce = isinstance(ix, numbers.Integral)
         # default: full list
