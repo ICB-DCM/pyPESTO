@@ -698,55 +698,55 @@ class CsvHistory(History):
     def get_x_trace(
             self, ix: Union[int, Sequence[int], None] = None
     ) -> Union[Sequence[np.ndarray], np.ndarray]:
-        return self._trace[X].values[ix]
+        return list(self._trace[X].values[ix])
 
     @trace_wrap
     def get_fval_trace(
             self, ix: Union[int, Sequence[int], None]
     ) -> Union[Sequence[float], float]:
-        return self._trace[(FVAL, np.nan)].values[ix]
+        return list(self._trace[(FVAL, np.nan)].values[ix])
 
     @trace_wrap
     def get_grad_trace(
             self, ix: Union[int, Sequence[int], None] = None
     ) -> Union[Sequence[np.ndarray], np.ndarray]:
-        return self._trace[GRAD].values[ix]
+        return list(self._trace[GRAD].values[ix])
 
     @trace_wrap
     def get_hess_trace(
             self, ix: Union[int, Sequence[int], None] = None
     ) -> Union[Sequence[np.ndarray], np.ndarray]:
-        return self._trace[(HESS, np.nan)].values[ix]
+        return list(self._trace[(HESS, np.nan)].values[ix])
 
     @trace_wrap
     def get_res_trace(
             self, ix: Union[int, Sequence[int], None] = None
     ) -> Union[Sequence[np.ndarray], np.ndarray]:
-        return self._trace[(RES, np.nan)].values[ix]
+        return list(self._trace[(RES, np.nan)].values[ix])
 
     @trace_wrap
     def get_sres_trace(
             self, ix: Union[int, Sequence[int], None] = None
     ) -> Union[Sequence[np.ndarray], np.ndarray]:
-        return self._trace[(SRES, np.nan)].values[ix]
+        return list(self._trace[(SRES, np.nan)].values[ix])
 
     @trace_wrap
     def get_chi2_trace(
             self, ix: Union[int, Sequence[int], None] = None
     ) -> Union[Sequence[np.ndarray], np.ndarray]:
-        return self._trace[(CHI2, np.nan)].values[ix]
+        return list(self._trace[(CHI2, np.nan)].values[ix])
 
     @trace_wrap
     def get_schi2_trace(
             self, ix: Union[int, Sequence[int], None] = None
     ) -> Union[Sequence[np.ndarray], np.ndarray]:
-        return self._trace[SCHI2].values[ix]
+        return list(self._trace[SCHI2].values[ix])
 
     @trace_wrap
     def get_time_trace(
             self, ix: Union[int, Sequence[int], None] = None
     ) -> Union[Sequence[float], float]:
-        return self._trace[(TIME, np.nan)].values[ix]
+        return list(self._trace[(TIME, np.nan)].values[ix])
 
 
 class Hdf5History(History):
