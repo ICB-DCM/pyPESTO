@@ -18,6 +18,7 @@ from pypesto.objective.constants import (
     FVAL, GRAD, HESS, RES, SRES, CHI2, SCHI2
 )
 
+from typing import Sequence
 
 class HistoryTest(unittest.TestCase):
     problem: pypesto.Problem = None
@@ -409,3 +410,16 @@ def test_trace_subset(history: pypesto.History):
         partial_trace = history.get_fval_trace(arr)
         assert len(partial_trace) == len(arr)
         assert [full_trace[i] for i in arr] == list(partial_trace)
+
+        for var in ['fval', 'grad', 'hess', 'res', 'sres', 'chi2',
+                    'schi2', 'x', 'time']:
+            getter = getattr(history, f'get_{var}_trace')
+            assert isinstance(getter(), Sequence)
+            assert isinstance(getter(arr), Sequence)
+
+            val = getter(0)
+            if var in ['fval', 'chi2', 'time']:
+                assert isinstance(val, float)
+            else:
+                assert isinstance(val, np.ndarray) or np.isnan(val)
+
