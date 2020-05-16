@@ -1,5 +1,5 @@
 import numpy as np
-from typing import Dict, List
+from typing import Dict, Sequence
 
 from .constants import GRAD, HESS, RES, SRES
 
@@ -75,14 +75,14 @@ class FixedParametersProcessor(PrePostProcessor):
 
     def __init__(self,
                  dim_full: int,
-                 x_free_indices: List[int],
-                 x_fixed_indices: List[int],
-                 x_fixed_vals: List[float]):
+                 x_free_indices: Sequence[int],
+                 x_fixed_indices: Sequence[int],
+                 x_fixed_vals: Sequence[float]):
         super().__init__()
         self.dim_full = dim_full
-        self.x_free_indices = x_free_indices
-        self.x_fixed_indices = x_fixed_indices
-        self.x_fixed_vals = x_fixed_vals
+        self.x_free_indices: np.ndarray = np.array(x_free_indices, dtype=int)
+        self.x_fixed_indices: np.ndarray = np.array(x_fixed_indices, dtype=int)
+        self.x_fixed_vals: np.ndarray = np.array(x_fixed_vals, dtype=float)
 
     def preprocess(self, x: np.ndarray) -> np.ndarray:
         """Embed optimization vector to full vector with all simulation
