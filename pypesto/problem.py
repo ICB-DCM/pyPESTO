@@ -9,7 +9,7 @@ describing the problem to be solved.
 
 import numpy as np
 import pandas as pd
-from numbers import Real
+import numbers
 import copy
 from typing import Iterable, List, Optional, Sequence, Union
 
@@ -74,8 +74,8 @@ class Problem:
 
     def __init__(self,
                  objective: Objective,
-                 lb: Union[np.ndarray, List[Real]],
-                 ub: Union[np.ndarray, List[Real]],
+                 lb: Union[np.ndarray, List[float]],
+                 ub: Union[np.ndarray, List[float]],
                  dim_full: Optional[int] = None,
                  x_fixed_indices: Optional[Sequence[int]] = None,
                  x_fixed_vals: Optional[Sequence[float]] = None,
@@ -99,7 +99,7 @@ class Problem:
         # or remove values during profile computation
         if x_fixed_vals is None:
             x_fixed_vals = []
-        if isinstance(x_fixed_vals, Real):
+        if isinstance(x_fixed_vals, numbers.Real):
             x_fixed_vals = [x_fixed_vals]
         self.x_fixed_vals: List[float] = [float(x) for x in x_fixed_vals]
 
