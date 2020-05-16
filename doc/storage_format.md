@@ -1,4 +1,15 @@
-# HDF5 data format
+# Storage
+
+It is important to be able to store analysis results efficiently, easily
+accessible, and portable across systems. For this aim, pyPESTO allows to
+store results in efficient, portable
+[HDF5](https://www.hdfgroup.org/solutions/hdf5/) files. Further, optimization
+trajectories can be stored using various backends, including HDF5 and CSV.
+
+In the following, describe the file formats.
+For detailed information on usage, consult the `doc/example/hdf5_storage.ipynb`
+notebook, and the API documentation for the `pypesto.objective.history` and
+`pypesto.storage` modules.
 
 ## pyPESTO Problem
 
@@ -16,20 +27,24 @@
   - dim_full [int]
   - x_fixed_values [float (n_par_full-n_par)]
   - x_fixed_indices [int (n_par_full-n_par)]
+  - x_free_indices [int n_par]
   - x_names [str n_par_full]
 ```
 
 ## Parameter estimation
 
-
 ### Parameter estimation settings
+
 Parameter estimation settings are saved in `/optimization/settings`.
 
 ### Parameter estimation results
+
 Parameter estimation results are saved in `/optimization/results/`.
 
 #### Results per local optimization
+
 Results of the `$n`'th multistart a saved in the format
+
 ```
 + /optimization/results/$n/
   - fval: [float]
@@ -54,8 +69,12 @@ Results of the `$n`'th multistart a saved in the format
   - time: [float] Execution time
   - message: [str] Some exit message
 ```
+
 #### Trace per local optimization
-The history is saved under `/optimization/results/$n/trace/`
+
+When objective function call histories are saved to HDF5, they are under
+`/optimization/results/$n/trace/`.
+
 ```
 + /optimization/results/$n/trace/
   - fval: [float n_iter]
@@ -73,7 +92,6 @@ The history is saved under `/optimization/results/$n/trace/`
 
 ## Sampling
 
-
 ### Sampling results
 
 Sampling results are saved in `/sampling/chains/`.
@@ -81,9 +99,11 @@ Sampling results are saved in `/sampling/chains/`.
 + /sampling/chains/$n/
 ```
 
+TODO
 
 ## Profiling
 
+TODO
 
 ### Profiling results
 

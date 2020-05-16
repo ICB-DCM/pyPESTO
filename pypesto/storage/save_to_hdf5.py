@@ -1,6 +1,9 @@
+import os
+from typing import Union
+
 import h5py
 import numpy as np
-from typing import Union
+
 from .hdf5 import write_string_array, write_int_array, write_float_array
 from ..result import Result
 
@@ -20,6 +23,7 @@ class ProblemHDF5Writer:
     UB_FULL = 'ub_full'
     X_FIXED_VALS = 'x_fixed_vals'
     X_FIXED_INDICES = 'x_fixed_indices'
+    X_FREE_INDICES = 'x_free_indices'
     X_NAMES = 'x_names'
     DIM = 'dim'
     DIM_FULL = 'dim_full'
@@ -38,6 +42,13 @@ class ProblemHDF5Writer:
         """
         Write HDF5 problem file from pyPESTO problem object.
         """
+
+        # Create destination directory
+        if isinstance(self.storage_filename, str):
+            basedir = os.path.dirname(self.storage_filename)
+            if basedir:
+                os.makedirs(basedir, exist_ok=True)
+
         with h5py.File(self.storage_filename, "a") as f:
             if "problem" in f:
                 if overwrite:
@@ -61,6 +72,8 @@ class ProblemHDF5Writer:
                               problem.x_fixed_vals)
             write_int_array(problem_grp, self.X_FIXED_INDICES,
                             problem.x_fixed_indices)
+            write_int_array(problem_grp, self.X_FREE_INDICES,
+                            problem.x_free_indices)
             write_string_array(problem_grp, self.X_NAMES, problem.x_names)
 
 
@@ -112,6 +125,13 @@ class OptimizationResultHDF5Writer:
         """
         Write HDF5 result file from pyPESTO result object.
         """
+
+        # Create destination directory
+        if isinstance(self.storage_filename, str):
+            basedir = os.path.dirname(self.storage_filename)
+            if basedir:
+                os.makedirs(basedir, exist_ok=True)
+
         with h5py.File(self.storage_filename, "a") as f:
             optimization_grp = get_or_create_group(f, "optimization")
             # settings =
