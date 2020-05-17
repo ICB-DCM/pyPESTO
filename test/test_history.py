@@ -406,18 +406,28 @@ def test_trace_subset(history: pypesto.History):
     """Test whether selecting only a trace subset works."""
     if isinstance(history, (pypesto.MemoryHistory, pypesto.CsvHistory)):
         arr = list(range(0, len(history), 2))
-        # fval, exemplarily
-        full_trace = history.get_fval_trace()
-        partial_trace = history.get_fval_trace(arr)
-        assert len(partial_trace) == len(arr)
-        assert [full_trace[i] for i in arr] == list(partial_trace)
 
         for var in ['fval', 'grad', 'hess', 'res', 'sres', 'chi2',
                     'schi2', 'x', 'time']:
             getter = getattr(history, f'get_{var}_trace')
-            assert isinstance(getter(), Sequence)
-            assert isinstance(getter(arr), Sequence)
+            full_trace = getter()
+            partial_trace = getter(arr)
 
+            # check partial traces coincide
+            assert len(partial_trace) == len(arr)
+            for a, b in zip(partial_trace, [full_trace[i] for i in arr]):
+                print(var, a, b)
+                if var != 'schi2':
+                    assert np.all(a == b) or np.isnan(a) and np.isnan(b)
+                else:
+                    assert np.all(a == b) or np.all(np.isnan(a)) \
+                        and np.all(np.isnan(b))
+
+            # check sequence type
+            assert isinstance(full_trace, Sequence)
+            assert isinstance(partial_trace, Sequence)
+
+            # check individual type
             val = getter(0)
             if var in ['fval', 'chi2', 'time']:
                 assert isinstance(val, float)
