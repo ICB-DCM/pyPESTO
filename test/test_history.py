@@ -20,6 +20,7 @@ from pypesto.objective.constants import (
 
 from typing import Sequence
 
+
 class HistoryTest(unittest.TestCase):
     problem: pypesto.Problem = None
     optimizer: pypesto.Optimizer = None
@@ -422,4 +423,3 @@ def test_trace_subset(history: pypesto.History):
                 assert isinstance(val, float)
             else:
                 assert isinstance(val, np.ndarray) or np.isnan(val)
-
