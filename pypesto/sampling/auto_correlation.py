@@ -35,7 +35,7 @@ def auto_correlation(chain: np.array):
     # Fast fourier transform of the real part
     x_real = np.fft.fft(x_real, axis=0).real
     # Variance
-    var = x_real[0, :]/(nsimu+1)/(nsimu)
+    var = x_real[0, :]/(nsimu)/(nsimu-1)
 
     # Loop over parameters
     for j in range(npar):
