@@ -56,6 +56,9 @@ def chain_auto_correlation(result: Result):
 
     # Burn in index
     burn_in = result.sample_result.burn_in
+    if burn_in is None:
+        raise ValueError("Burn in index has to be computed first, "
+                         "e.g. via 'pypesto.sampling.geweke_test'")
 
     # Get parameter samples as numpy arrays
     # and discarding warm up phase
@@ -86,6 +89,9 @@ def effective_sample_size(result: Result):
 
     # Burn in index
     burn_in = result.sample_result.burn_in
+    if burn_in is None:
+        raise ValueError("Burn in index has to be computed first, "
+                         "e.g. via 'pypesto.sampling.geweke_test'")
 
     # Get parameter samples as numpy arrays
     # and discarding warm up phase

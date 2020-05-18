@@ -29,7 +29,7 @@ class McmcPtResult(dict):
                  trace_x: np.ndarray,
                  trace_fval: np.ndarray,
                  betas: Iterable[float],
-                 burn_in: int = 0,
+                 burn_in: int = None,
                  time: float = 0.,
                  message: str = None):
         super().__init__()
