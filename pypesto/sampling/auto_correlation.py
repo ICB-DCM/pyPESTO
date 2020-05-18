@@ -7,7 +7,11 @@ def sum_fast(nsimu: int,
              x: np.array,
              tau: float = 0.,
              sum: float = -1/3):
+    """
+    Fast summation in for loop using numba.
+    """
 
+    # Loop over simulations
     for i in range(nsimu):
         sum = sum + x[i] - 1/6
         if sum < 0:
