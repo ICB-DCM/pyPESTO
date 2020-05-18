@@ -1,4 +1,20 @@
 import numpy as np
+from numba import jit
+
+
+@jit
+def sum_fast(nsimu: int,
+             x: np.array,
+             tau: float = 0.,
+             sum: float = -1/3):
+
+    for i in range(nsimu):
+        sum = sum + x[i] - 1/6
+        if sum < 0:
+            tau = 2 * (sum + i/6)
+            break
+
+    return tau
 
 
 def auto_correlation(chain: np.array):
@@ -42,10 +58,6 @@ def auto_correlation(chain: np.array):
         if var[j] == 0:
             continue
         x_real[:, j] = x_real[:, j]/x_real[0, j]
-        sum = -1/3  # initialize
-        for i in range(nsimu):
-            sum = sum + x_real[i, j]-1/6
-            if sum < 0:
-                tau[j] = 2*(sum+i/6)
-                break
+        tau[j] = sum_fast(nsimu, x_real[:, j])
+
     return tau
