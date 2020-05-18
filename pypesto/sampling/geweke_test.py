@@ -35,7 +35,7 @@ def spectrum(x: np.array,
 
     # Hanning window
     w = .5 * (1 - np.cos(
-        2 * np.pi * np.transpose(np.arange(1,nw+1)) /
+        2 * np.pi * np.transpose(np.arange(1, nw+1)) /
         (nw + 1)))
     n = len(x)
     if n < nw:
