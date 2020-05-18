@@ -14,9 +14,9 @@ def spectrum(x: np.array,
         Fraction/fragment of one single parameter
         of the MCMC chain.
     nfft:
-        Something.
+        The n-point discrete Fourier Transform.
     nw:
-        Something.
+        Number of windows.
 
     Returns
     -------
