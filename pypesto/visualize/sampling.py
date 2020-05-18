@@ -64,8 +64,8 @@ def sampling_fval_trace(
     sns.scatterplot(x="iteration", y="logPosterior", data=params_fval,
                     ax=ax, **kwargs)
 
-    if full_trace and result.sample_result['burn_in'] > 0:
-        ax.axvline(result.sample_result['burn_in']+1,
+    if full_trace and result.sample_result.burn_in > 0:
+        ax.axvline(result.sample_result.burn_in+1,
                    linestyle='--', linewidth=1.5,
                    color='k')
 
@@ -152,8 +152,8 @@ def sampling_parameters_trace(
         ax = sns.scatterplot(x="iteration", y=plot_id, data=params_fval,
                              ax=ax, **kwargs)
 
-        if full_trace and result.sample_result['burn_in'] > 0:
-            ax.axvline(result.sample_result['burn_in']+1,
+        if full_trace and result.sample_result.burn_in > 0:
+            ax.axvline(result.sample_result.burn_in+1,
                        linestyle='--', linewidth=1.5,
                        color='k')
 
@@ -303,11 +303,11 @@ def get_data_to_plot(
         Keep the full lenght of the chain. Default: False.
     """
     # get parameters and fval results as numpy arrays
-    arr_param = np.array(result.sample_result['trace_x'][i_chain])
+    arr_param = np.array(result.sample_result.trace_x[i_chain])
 
     # Burn in index
     if full_trace is False:
-        burn_in = result.sample_result['burn_in']
+        burn_in = result.sample_result.burn_in
     else:
         burn_in = 0
 
@@ -333,7 +333,7 @@ def get_data_to_plot(
 
     if full_trace:
         converged = np.zeros((len(arr_fval)))
-        converged[result.sample_result['burn_in']+1:] = 1
+        converged[result.sample_result.burn_in+1:] = 1
         pd_conv = pd.DataFrame(data=converged, columns=['converged'])
 
         params_fval = pd.concat(
