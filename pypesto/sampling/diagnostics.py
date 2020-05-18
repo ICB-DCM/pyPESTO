@@ -25,14 +25,14 @@ def geweke_test(result: Result,
 
     """
     # Get parameter samples as numpy arrays
-    chain = np.array(result.sample_result['trace_x'][0])
+    chain = np.array(result.sample_result.trace_x[0])
 
     # Calculate burn in index
     burn_in = burn_in_by_sequential_geweke(chain=chain,
                                            zscore=zscore)
     print('Geweke Burn-in index: '+str(burn_in))
 
-    result.sample_result['burn_in'] = burn_in
+    result.sample_result.burn_in = burn_in
 
     return result
 
@@ -55,11 +55,11 @@ def chain_auto_correlation(result: Result):
     """
 
     # Burn in index
-    burn_in = result.sample_result['burn_in']
+    burn_in = result.sample_result.burn_in
 
     # Get parameter samples as numpy arrays
     # and discarding warm up phase
-    chain = np.array(result.sample_result['trace_x'][0][burn_in:, :])
+    chain = np.array(result.sample_result.trace_x[0][burn_in:, :])
 
     # Calculate chain auto-correlation
     tau = auto_correlation(chain=chain)
@@ -85,11 +85,11 @@ def effective_sample_size(result: Result):
     """
 
     # Burn in index
-    burn_in = result.sample_result['burn_in']
+    burn_in = result.sample_result.burn_in
 
     # Get parameter samples as numpy arrays
     # and discarding warm up phase
-    chain = np.array(result.sample_result['trace_x'][0][burn_in:, :])
+    chain = np.array(result.sample_result.trace_x[0][burn_in:, :])
 
     # Calculate chain auto-correlation
     tau = auto_correlation(chain=chain)
