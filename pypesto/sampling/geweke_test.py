@@ -35,7 +35,7 @@ def spectrum(x: np.array,
 
     # Hanning window
     w = .5 * (1 - np.cos(
-        2 * np.pi * np.transpose(np.arange(nw)) /
+        2 * np.pi * np.transpose(np.arange(1,nw+1)) /
         (nw + 1)))
     n = len(x)
     if n < nw:
@@ -47,6 +47,7 @@ def spectrum(x: np.array,
     index = np.arange(nw)
     # Normalizing scale factor
     kmu = k * np.linalg.norm(w) ** 2
+    print(w)
     spectral_density = np.zeros((nfft))
 
     for i in range(k):
