@@ -18,6 +18,8 @@ from pypesto.objective.constants import (
     FVAL, GRAD, HESS, RES, SRES, CHI2, SCHI2
 )
 
+from typing import Sequence
+
 
 class HistoryTest(unittest.TestCase):
     problem: pypesto.Problem = None
@@ -165,9 +167,12 @@ class HistoryTest(unittest.TestCase):
             it_start = int(np.where(np.logical_not(
                 np.isnan(start.history.get_fval_trace())
             ))[0][0])
-            assert np.allclose(xfull(start.history.get_x(it_start)), start.x0)
-            assert np.allclose(xfull(start.history.get_x(it_final)), start.x)
-            assert np.isclose(start.history.get_fval(it_start), start.fval0)
+            assert np.allclose(
+                xfull(start.history.get_x_trace(it_start)), start.x0)
+            assert np.allclose(
+                xfull(start.history.get_x_trace(it_final)), start.x)
+            assert np.isclose(
+                start.history.get_fval_trace(it_start), start.fval0)
 
         funs = {
             FVAL: self.obj.get_fval,
@@ -186,8 +191,8 @@ class HistoryTest(unittest.TestCase):
                                                f'trace_record_{var}'):
                 continue
             for it in range(5):
-                x_full = xfull(start.history.get_x(it))
-                val = getattr(start.history, f'get_{var}')(it)
+                x_full = xfull(start.history.get_x_trace(it))
+                val = getattr(start.history, f'get_{var}_trace')(it)
                 if np.all(np.isnan(val)):
                     continue
                 if var in [FVAL, CHI2]:
@@ -395,3 +400,36 @@ def test_history_properties(history: pypesto.History):
 
         ress = history.get_res_trace()
         assert all(np.isnan(res) for res in ress)
+
+
+def test_trace_subset(history: pypesto.History):
+    """Test whether selecting only a trace subset works."""
+    if isinstance(history, (pypesto.MemoryHistory, pypesto.CsvHistory)):
+        arr = list(range(0, len(history), 2))
+
+        for var in ['fval', 'grad', 'hess', 'res', 'sres', 'chi2',
+                    'schi2', 'x', 'time']:
+            getter = getattr(history, f'get_{var}_trace')
+            full_trace = getter()
+            partial_trace = getter(arr)
+
+            # check partial traces coincide
+            assert len(partial_trace) == len(arr)
+            for a, b in zip(partial_trace, [full_trace[i] for i in arr]):
+                print(var, a, b)
+                if var != 'schi2':
+                    assert np.all(a == b) or np.isnan(a) and np.isnan(b)
+                else:
+                    assert np.all(a == b) or np.all(np.isnan(a)) \
+                        and np.all(np.isnan(b))
+
+            # check sequence type
+            assert isinstance(full_trace, Sequence)
+            assert isinstance(partial_trace, Sequence)
+
+            # check individual type
+            val = getter(0)
+            if var in ['fval', 'chi2', 'time']:
+                assert isinstance(val, float)
+            else:
+                assert isinstance(val, np.ndarray) or np.isnan(val)

@@ -185,7 +185,7 @@ def read_result_from_file(problem: Problem, history_options: HistoryOptions,
         raise NotImplementedError()
 
     opt_hist = OptimizerHistory(
-        history, history.get_x(0),
+        history, history.get_x_trace(0),
         generate_from_history=True
     )
 
