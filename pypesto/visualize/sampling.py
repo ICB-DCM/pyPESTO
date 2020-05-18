@@ -320,7 +320,7 @@ def get_data_to_plot(
 
     if result.sample_result.burn_in is None:
         logger.warning("Burn in index not found in the results, "
-                       "the full trace will be shown.\n"
+                       "the full chain will be shown.\n"
                        "You may want to use, e.g., "
                        "'pypesto.sampling.geweke_test'.")
         _burn_in = 0
