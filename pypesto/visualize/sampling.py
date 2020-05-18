@@ -1,3 +1,4 @@
+import logging
 import matplotlib.pyplot as plt
 import matplotlib.axes
 import numpy as np
@@ -7,6 +8,8 @@ from typing import Tuple
 
 from ..result import Result
 from ..sampling import McmcPtResult
+
+logger = logging.getLogger(__name__)
 
 
 def sampling_fval_trace(
@@ -64,8 +67,13 @@ def sampling_fval_trace(
     sns.scatterplot(x="iteration", y="logPosterior", data=params_fval,
                     ax=ax, **kwargs)
 
-    if full_trace and result.sample_result.burn_in > 0:
-        ax.axvline(result.sample_result.burn_in+1,
+    if result.sample_result.burn_in is None:
+        _burn_in = 0
+    else:
+        _burn_in = result.sample_result.burn_in
+
+    if full_trace and _burn_in > 0:
+        ax.axvline(_burn_in+1,
                    linestyle='--', linewidth=1.5,
                    color='k')
 
@@ -146,14 +154,19 @@ def sampling_parameters_trace(
         kwargs['palette'] = ["#868686", "#477ccd"]
         kwargs['legend'] = False
 
+    if result.sample_result.burn_in is None:
+        _burn_in = 0
+    else:
+        _burn_in = result.sample_result.burn_in
+
     for idx, plot_id in enumerate(param_names):
         ax = axes[plot_id]
 
         ax = sns.scatterplot(x="iteration", y=plot_id, data=params_fval,
                              ax=ax, **kwargs)
 
-        if full_trace and result.sample_result.burn_in > 0:
-            ax.axvline(result.sample_result.burn_in+1,
+        if full_trace and _burn_in > 0:
+            ax.axvline(_burn_in+1,
                        linestyle='--', linewidth=1.5,
                        color='k')
 
@@ -300,14 +313,23 @@ def get_data_to_plot(
     stepsize:
         Only one in `stepsize` values is plotted.
     full_trace:
-        Keep the full lenght of the chain. Default: False.
+        Keep the full length of the chain. Default: False.
     """
     # get parameters and fval results as numpy arrays
     arr_param = np.array(result.sample_result.trace_x[i_chain])
 
+    if result.sample_result.burn_in is None:
+        logger.warning("Burn in index not found in the results, "
+                       "the full trace will be shown.\n"
+                       "You may want to use, e.g., "
+                       "'pypesto.sampling.geweke_test'.")
+        _burn_in = 0
+    else:
+        _burn_in = result.sample_result.burn_in
+
     # Burn in index
     if full_trace is False:
-        burn_in = result.sample_result.burn_in
+        burn_in = _burn_in
     else:
         burn_in = 0
 
@@ -333,7 +355,7 @@ def get_data_to_plot(
 
     if full_trace:
         converged = np.zeros((len(arr_fval)))
-        converged[result.sample_result.burn_in+1:] = 1
+        converged[_burn_in+1:] = 1
         pd_conv = pd.DataFrame(data=converged, columns=['converged'])
 
         params_fval = pd.concat(
