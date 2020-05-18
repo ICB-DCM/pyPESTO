@@ -24,7 +24,8 @@ def auto_correlation(chain: np.array):
     nsimu, npar = chain.shape
     tau = np.zeros((npar))
 
-    x = np.transpose(np.fft.fft(np.transpose(chain)))
+    # Fast fourier transform
+    x = np.fft.fft(chain, axis=0)
     # Take real part
     x_real = x.real
     # Take imaginary part
@@ -32,7 +33,7 @@ def auto_correlation(chain: np.array):
     x_real = x_real**2+x_imag**2
     x_real[0, :] = 0.
     # Fast fourier transform of the real part
-    x_real = np.transpose((np.fft.fft(np.transpose(x_real)))).real
+    x_real = np.fft.fft(x_real, axis=0).real
     # Variance
     var = x_real[0, :]/(nsimu+1)/(nsimu)
 
