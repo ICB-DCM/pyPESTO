@@ -1,9 +1,11 @@
 import numpy as np
 from copy import deepcopy
-from typing import List
+from typing import Sequence, Dict, Union
 from .objective import Objective
 
 from .constants import RDATAS, FVAL, CHI2, SCHI2, RES, SRES, GRAD, HESS, HESSP
+
+ResultDict = Dict[str, Union[float, np.ndarray, Dict]]
 
 
 class AggregatedObjective(Objective):
@@ -13,8 +15,8 @@ class AggregatedObjective(Objective):
 
     def __init__(
             self,
-            objectives: List[Objective],
-            x_names: List[str] = None):
+            objectives: Sequence[Objective],
+            x_names: Sequence[str] = None):
         """
         Constructor.
 
@@ -24,7 +26,7 @@ class AggregatedObjective(Objective):
             List of pypesto.objetive instances
         """
         # input typechecks
-        if not isinstance(objectives, list):
+        if not isinstance(objectives, Sequence):
             raise TypeError(f'Objectives must be a list, '
                             f'was {type(objectives)}.')
 
@@ -161,7 +163,17 @@ class AggregatedObjective(Objective):
                 objective.reset_steadystate_guesses()
 
 
-def aggregate_results(rvals):
+def aggregate_results(rvals: Sequence[ResultDict]) -> ResultDict:
+
+    """
+    Aggregrate the results from the provided sequence of ResultDicts into a
+    single ResultDict. Format of ResultDict is defined in
+
+    Parameters
+    ----------
+    rvals:
+        results to aggregate
+    """
 
     # sum over fval/grad/hess
     result = {
