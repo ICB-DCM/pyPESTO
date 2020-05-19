@@ -181,9 +181,9 @@ def burn_in_by_sequential_geweke(chain: np.array,
     ii = np.arange(0, e, step)
 
     z = np.zeros((len(ii), npar))
-    for i in range(len(ii)):
+    for i, indices in enumerate(ii):
         # Calculate z-score
-        z[i, :], _ = calculate_zscore(chain[ii[i]:, :])
+        z[i, :], _ = calculate_zscore(chain[indices:, :])
 
     # Sort z-score for Bonferroni-Holm inverse
     # to sorting p-values
