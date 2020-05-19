@@ -195,7 +195,7 @@ def burn_in_by_sequential_geweke(chain: np.array,
 
     for i in range(len(max_z)):
         alpha2[idxs[i]] = (alpha2[idxs[i]] /
-            (len(fragments) - np.where(idxs == i)[0] + 1))
+                           (len(fragments) - np.where(idxs == i)[0] + 1))
 
     if np.any(alpha2 > max_z):
         burn_in = (np.where(alpha2 > max_z)[0][0]) * step
