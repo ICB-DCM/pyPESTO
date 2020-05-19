@@ -50,7 +50,7 @@ def spectrum(x: np.array,
     spectral_density = np.zeros((nfft))
 
     for i in range(k):
-        xw = np.multiply(w, x[index])
+        xw = w * x[index]
         index += (nw - n_overlap)
         Xx = np.absolute(np.fft.fft(xw, n=nfft, axis=0)) ** 2
         spectral_density += Xx
