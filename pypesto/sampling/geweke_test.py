@@ -129,7 +129,9 @@ def calculate_zscore(chain: np.array,
 
     # Check if appropiate indexes
     if (index_a + index_b - 1) / nsimu > 1:
-        raise ValueError('Sample size too small to meaningfully extract subsets for Geweke's test.')
+        raise ValueError("Sample size too small to "
+                         "meaningfully extract subsets "
+                         "for Geweke's test.")
 
     # Mean of First fraction
     mean_a = np.mean(chain[0:index_a, :], axis=0)
