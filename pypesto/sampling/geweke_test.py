@@ -5,7 +5,7 @@ from scipy.stats import norm
 
 def spectrum(x: np.array,
              nfft: int = None,
-             nw: int = None):
+             nw: int = None) -> np.ndarray:
     """
     Power spectral density using Hanning window.
 
@@ -64,7 +64,7 @@ def spectrum(x: np.array,
     return spectral_density
 
 
-def spectrum0(x: np.array):
+def spectrum0(x: np.array) -> np.ndarray:
     """
     Calculates the spectral density at frequency zero.
 
