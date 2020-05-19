@@ -1,3 +1,4 @@
+from typing import Tuple
 import numpy as np
 from scipy.stats import norm
 
@@ -22,7 +23,6 @@ def spectrum(x: np.array,
     -------
     spectral_density:
         The spectral density.
-
     """
 
     if nfft is None:
@@ -77,7 +77,6 @@ def spectrum0(x: np.array):
     -------
     spectral_density_zero:
         Spectral density at zero.
-
     """
 
     n_samples, n_par = x.shape
@@ -117,7 +116,6 @@ def calculate_zscore(chain: np.array,
         Z-score of the Geweke test.
     p:
         Significance level of the Geweke test.
-
     """
 
     nsimu, _ = chain.shape
@@ -171,7 +169,6 @@ def burn_in_by_sequential_geweke(chain: np.array,
         Iteration where the first and the last fraction
         of the chain do not differ significantly
         regarding Geweke test.
-
     """
 
     nsimu, npar = chain.shape
