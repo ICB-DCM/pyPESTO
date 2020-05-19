@@ -187,12 +187,13 @@ class HistoryTest(unittest.TestCase):
             ))
         }
         for var, fun in funs.items():
-            if not var == FVAL and not getattr(self.history_options,
-                                               f'trace_record_{var}'):
-                continue
             for it in range(5):
                 x_full = xfull(start.history.get_x_trace(it))
                 val = getattr(start.history, f'get_{var}_trace')(it)
+                if not getattr(self.history_options, f'trace_record_{var}',
+                               True):
+                    assert np.isnan(val)
+                    continue
                 if np.all(np.isnan(val)):
                     continue
                 if var in [FVAL, CHI2]:
