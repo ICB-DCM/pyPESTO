@@ -3,7 +3,7 @@ from copy import deepcopy
 from typing import List
 from .objective import Objective
 
-from .constants import RDATAS
+from .constants import RDATAS, FVAL, CHI2, SCHI2, RES, SRES, GRAD, HESS, HESSP
 
 
 class AggregatedObjective(Objective):
@@ -103,59 +103,14 @@ class AggregatedObjective(Objective):
             for objective in self.objectives
         ]
 
-        # sum over fval/grad/hess
-        result = {
-            key: sum(rval[key] for rval in rvals)
-            for key in ['fval', 'grad', 'hess']
-            if rvals[0].get(key, None) is not None
-        }
-
-        # extract rdatas and flatten
-        result[RDATAS] = []
-        for rval in rvals:
-            if RDATAS in rval:
-                result[RDATAS].extend(rval[RDATAS])
-
-        return result
+        return aggregate_results(rvals)
 
     def aggregate_res_sensi_orders(self, x, sensi_orders):
-        result = dict()
-
-        # initialize res and sres
-        rval0 = self.objectives[0].res(x, sensi_orders)
-        if 'res' in rval0:
-            res = np.asarray(rval0['res'])
-        else:
-            res = None
-
-        if 'sres' in rval0:
-            sres = np.asarray(rval0['sres'])
-        else:
-            sres = None
-
-        if RDATAS in rval0:
-            result[RDATAS] = rval0[RDATAS]
-        else:
-            result[RDATAS] = []
-
-        # skip iobj=0 after initialization, stack matrices
-        for iobj in range(1, len(self.objectives)):
-            rval = self.objectives[iobj].res(x, sensi_orders)
-            if res is not None:
-                res = np.hstack([res, np.asarray(rval['res'])])
-            if sres is not None:
-                sres = np.vstack([sres, np.asarray(rval['sres'])])
-            if RDATAS in rval:
-                result[RDATAS].extend(rval[RDATAS])
-
-        # transform results to dict
-
-        if res is not None:
-            result['res'] = res
-        if sres is not None:
-            result['sres'] = sres
-
-        return result
+        rvals = [
+            objective.res(x, sensi_orders)
+            for objective in self.objectives
+        ]
+        return aggregate_results(rvals)
 
     def aggregate_res(self, x):
         if self.sres is True:  # integrated mode
@@ -204,6 +159,48 @@ class AggregatedObjective(Objective):
         for objective in self.objectives:
             if hasattr(objective, 'reset_steadystate_guesses'):
                 objective.reset_steadystate_guesses()
+
+
+def aggregate_results(rvals):
+
+    # sum over fval/grad/hess
+    result = {
+        key: sum(rval[key] for rval in rvals)
+        for key in [FVAL, CHI2, SCHI2, GRAD, HESS, HESSP]
+        if rvals[0].get(key, None) is not None
+    }
+
+    # extract rdatas and flatten
+    result[RDATAS] = []
+    for rval in rvals:
+        if RDATAS in rval:
+            result[RDATAS].extend(rval[RDATAS])
+
+    # initialize res and sres
+    if RES in rvals[0]:
+        res = np.asarray(rvals[0][RES])
+    else:
+        res = None
+
+    if SRES in rvals[0]:
+        sres = np.asarray(rvals[0][SRES])
+    else:
+        sres = None
+
+    # skip iobj=0 after initialization, stack matrices
+    for rval in rvals[1:]:
+        if res is not None:
+            res = np.hstack([res, np.asarray(rval[RES])])
+        if sres is not None:
+            sres = np.vstack([sres, np.asarray(rval[SRES])])
+
+    # transform results to dict
+    if res is not None:
+        result[RES] = res
+    if sres is not None:
+        result[SRES] = sres
+
+    return result
 
 
 def _check_boolean_value_consistent(objectives, attr):

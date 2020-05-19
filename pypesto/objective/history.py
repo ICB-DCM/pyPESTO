@@ -656,7 +656,6 @@ class CsvHistory(History):
                 columns.extend([(var,)])
 
         # TODO: multi-index for res, sres, hess
-
         self._trace = pd.DataFrame(columns=pd.MultiIndex.from_tuples(columns),
                                    dtype='float64')
 
