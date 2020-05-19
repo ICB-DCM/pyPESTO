@@ -91,7 +91,7 @@ def spectrum0(x: np.array):
 
 def calculate_zscore(chain: np.array,
                      a: float = 0.1,
-                     b: float = 0.5):
+                     b: float = 0.5) -> Tuple[float, float]:
     """
     Performs a Geweke test on a chain using the first
     "a" fraction and the last "b" fraction of it for
