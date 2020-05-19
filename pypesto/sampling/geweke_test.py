@@ -89,9 +89,9 @@ def spectrum0(x: np.array):
     return spectral_density_zero
 
 
-def geweke_test(chain: np.array,
-                a: float = 0.1,
-                b: float = 0.5):
+def calculate_zscore(chain: np.array,
+                     a: float = 0.1,
+                     b: float = 0.5):
     """
     Performs a Geweke test on a chain using the first
     "a" fraction and the last "b" fraction of it for
@@ -184,7 +184,7 @@ def burn_in_by_sequential_geweke(chain: np.array,
     z = np.zeros((len(ii), npar))
     for i in range(len(ii)):
         # Calculate z-score
-        z[i, :], _ = geweke_test(chain[ii[i]:, :])
+        z[i, :], _ = calculate_zscore(chain[ii[i]:, :])
 
     # Sort z-score for Bonferroni-Holm inverse
     # to sorting p-values
