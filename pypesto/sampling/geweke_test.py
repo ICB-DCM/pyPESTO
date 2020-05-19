@@ -1,6 +1,9 @@
+import logging
 from typing import Tuple
 import numpy as np
 from scipy.stats import norm
+
+logger = logging.getLogger(__name__)
 
 
 def spectrum(x: np.array,
@@ -198,5 +201,10 @@ def burn_in_by_sequential_geweke(chain: np.array,
         burn_in = (np.where(alpha2 > max_z)[0][0]) * step
     else:
         burn_in = nsimu
+        logger.warning("Burn in index coincides with chain "
+                       "length. The chain seems that has not "
+                       "converged yet.\n"
+                       "You may want to use a larger number "
+                       "of samples.")
 
     return burn_in
