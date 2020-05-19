@@ -4,9 +4,9 @@ from numba import jit
 
 @jit
 def _sum_fast(nsimu: int,
-             x: np.array,
-             tau: float = 0.,
-             sum: float = -1/3):
+              x: np.array,
+              tau: float = 0.,
+              sum: float = -1/3):
     """
     Fast summation in for loop using numba.
     """
