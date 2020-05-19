@@ -29,9 +29,9 @@ def spectrum(x: np.array,
         nfft = np.min(len(x), 256)
 
     if nw is None:
-        nw = np.floor(nfft / 4)
+        nw = int(nfft / 4)
 
-    n_overlap = np.floor(nw / 2)
+    n_overlap = int(nw / 2)
 
     # Hanning window
     w = .5 * (1 - np.cos(
@@ -43,7 +43,7 @@ def spectrum(x: np.array,
         n = nw
 
     # Number of windows
-    k = np.floor((n - n_overlap) / (nw - n_overlap))
+    k = int((n - n_overlap) / (nw - n_overlap))
     index = np.arange(nw)
     # Normalizing scale factor
     kmu = k * np.linalg.norm(w) ** 2
@@ -58,7 +58,7 @@ def spectrum(x: np.array,
     # Normalize
     spectral_density = spectral_density * (1 / kmu)
 
-    n2 = np.floor(nfft / 2)
+    n2 = int(nfft / 2)
     spectral_density = spectral_density[0:n2]
 
     return spectral_density
@@ -123,9 +123,9 @@ def calculate_zscore(chain: np.array,
     nsimu, _ = chain.shape
 
     # Define First fraction
-    index_a = np.floor(a * nsimu)
+    index_a = int(a * nsimu)
     # Define Second fraction
-    index_b = nsimu - np.floor(b * nsimu) + 1
+    index_b = nsimu - int(b * nsimu) + 1
 
     # Check if appropiate indexes
     if (index_a + index_b) / nsimu > 1:
@@ -179,8 +179,8 @@ def burn_in_by_sequential_geweke(chain: np.array,
     n = 20
     # round each element to the nearest integer
     # toward zero
-    e = np.floor(5 * nsimu / 5)
-    step = np.floor(e / n)
+    e = int(5 * nsimu / 5)
+    step = int(e / n)
     ii = np.arange(0, e - 1, step)
 
     z = np.zeros((len(ii), npar))
