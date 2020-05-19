@@ -72,7 +72,7 @@ def sample(
     sampler_result = sampler.get_samples()
 
     # record time
-    sampler_result['time'] = t_elapsed
+    sampler_result.time = t_elapsed
 
     # record results
     result.sample_result = sampler_result
