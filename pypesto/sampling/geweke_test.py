@@ -154,7 +154,7 @@ def calculate_zscore(chain: np.array,
 
 
 def burn_in_by_sequential_geweke(chain: np.array,
-                                 zscore: float = 2.):
+                                 zscore: float = 2.) -> int:
     """
     Calculates the burn-in of MCMC chains.
 
