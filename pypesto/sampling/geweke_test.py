@@ -178,7 +178,7 @@ def burn_in_by_sequential_geweke(chain: np.array,
     # toward zero
     e = np.floor(5 * nsimu / 5).astype(int)
     step = np.floor(e / n).astype(int)
-    ii = np.arange(0, e - 1, step)
+    ii = np.arange(0, e, step)
 
     z = np.zeros((len(ii), npar))
     for i in range(len(ii)):
