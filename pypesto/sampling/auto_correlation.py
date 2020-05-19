@@ -3,7 +3,7 @@ from numba import jit
 
 
 @jit
-def sum_fast(nsimu: int,
+def _sum_fast(nsimu: int,
              x: np.array,
              tau: float = 0.,
              sum: float = -1/3):
