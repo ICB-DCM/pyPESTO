@@ -177,7 +177,7 @@ def burn_in_by_sequential_geweke(chain: np.array,
     # round each element to the nearest integer
     # toward zero
     step = np.floor(nsimu / n).astype(int)
-    fragments = np.arange(0, nsimu, step)
+    fragments = np.arange(0, nsimu-1, step)
 
     z = np.zeros((len(fragments), npar))
     for i, indices in enumerate(fragments):
@@ -191,10 +191,10 @@ def burn_in_by_sequential_geweke(chain: np.array,
     alpha2 = zscore * np.ones((len(idxs)))
 
     for i in range(len(max_z)):
-        alpha2[idxs[i]] = alpha2[idxs[i]] / \
-                          (len(fragments) - np.where(idxs == i)[0] + 1)
+        alpha2[idxs[i]] = (alpha2[idxs[i]] /
+            (len(fragments) - np.where(idxs == i)[0] + 1))
 
-    if np.where(alpha2 > max_z)[0].size != 0:
+    if np.any(alpha2 > max_z):
         burn_in = (np.where(alpha2 > max_z)[0][0]) * step
     else:
         burn_in = nsimu
