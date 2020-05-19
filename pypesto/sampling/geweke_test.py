@@ -128,7 +128,7 @@ def calculate_zscore(chain: np.array,
     index_b = nsimu - np.floor(b * nsimu) + 1
 
     # Check if appropiate indexes
-    if (index_a + index_b - 1) / nsimu > 1:
+    if (index_a + index_b) / nsimu > 1:
         raise ValueError("Sample size too small to "
                          "meaningfully extract subsets "
                          "for Geweke's test.")
