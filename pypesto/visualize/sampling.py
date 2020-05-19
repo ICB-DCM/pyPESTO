@@ -73,7 +73,7 @@ def sampling_fval_trace(
         _burn_in = result.sample_result.burn_in
 
     if full_trace and _burn_in > 0:
-        ax.axvline(_burn_in+1,
+        ax.axvline(_burn_in,
                    linestyle='--', linewidth=1.5,
                    color='k')
 
@@ -166,7 +166,7 @@ def sampling_parameters_trace(
                              ax=ax, **kwargs)
 
         if full_trace and _burn_in > 0:
-            ax.axvline(_burn_in+1,
+            ax.axvline(_burn_in,
                        linestyle='--', linewidth=1.5,
                        color='k')
 
@@ -355,7 +355,7 @@ def get_data_to_plot(
 
     if full_trace:
         converged = np.zeros((len(arr_fval)))
-        converged[_burn_in+1:] = 1
+        converged[_burn_in:] = 1
         pd_conv = pd.DataFrame(data=converged, columns=['converged'])
 
         params_fval = pd.concat(
