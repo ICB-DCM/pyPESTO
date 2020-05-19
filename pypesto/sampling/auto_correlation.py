@@ -62,6 +62,6 @@ def auto_correlation(chain: np.array):
         if var[j] == 0:
             continue
         x_real[:, j] = x_real[:, j]/x_real[0, j]
-        tau[j] = sum_fast(nsimu, x_real[:, j])
+        tau[j] = _sum_fast(nsimu, x_real[:, j])
 
     return tau
