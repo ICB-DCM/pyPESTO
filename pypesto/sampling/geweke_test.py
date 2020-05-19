@@ -188,7 +188,7 @@ def burn_in_by_sequential_geweke(chain: np.array,
     # to sorting p-values
     max_z = np.max(np.absolute(z), axis=1)
     idxs = max_z.argsort()[::-1]  # sort descend
-    alpha2 = zscore + np.zeros((len(idxs)))
+    alpha2 = zscore * np.ones((len(idxs)))
 
     for i in range(len(max_z)):
         alpha2[idxs[i]] = alpha2[idxs[i]] / \
