@@ -5,6 +5,31 @@ from numbers import Number
 import numpy as np
 
 
+def write_array(f: h5py.Group,
+                path: str,
+                values: Collection) -> None:
+    """
+    Write array to hdf5
+
+    Parameters
+    -------------
+    f:
+        h5py.File
+    path:
+        path of the dataset to create
+    values:
+        array to write
+    """
+
+    if all(isinstance(x, int) for x in values):
+        write_int_array(f, path, values)
+    elif all(isinstance(x, float) for x in values):
+        write_float_array(f, path, values)
+    elif all(isinstance(x, str) for x in values):
+        write_string_array(f, path,
+                           values)
+
+
 def write_string_array(f: h5py.Group,
                        path: str,
                        strings: Collection) -> None:
