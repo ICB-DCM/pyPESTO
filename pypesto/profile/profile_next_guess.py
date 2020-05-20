@@ -161,7 +161,7 @@ def adaptive_step(x, par_index, par_direction, options, current_profile,
     # check whether we must make a minimum step anyway, since we're close to
     # the next bound
     min_delta_x = x[par_index] + par_direction * options.min_step_size
-    if par_direction is -1:
+    if par_direction == -1:
         if min_delta_x < problem.lb_full[par_index]:
             step_length = problem.lb_full[par_index] - x[par_index]
             return x + step_length * delta_x_dir
