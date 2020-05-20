@@ -8,7 +8,7 @@ import unittest
 import test.test_objective as test_objective
 import warnings
 
-from pypesto.objective import Objective
+from pypesto.objective.objective import Objective
 
 
 class ProfilerTest(unittest.TestCase):

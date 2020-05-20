@@ -25,9 +25,9 @@ def create_bounds():
 
 def create_problem():
     # define a pypesto objective
-    objective = pypesto.Objective(fun=so.rosen,
-                                  grad=so.rosen_der,
-                                  hess=so.rosen_hess)
+    objective = pypesto.FunctionObjective(fun=so.rosen,
+                                          grad=so.rosen_der,
+                                          hess=so.rosen_hess)
 
     # define a pypesto problem
     (lb, ub) = create_bounds()
