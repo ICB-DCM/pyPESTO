@@ -250,7 +250,7 @@ class AmiciObjective(Objective):
         self.amici_solver = solver
         self.edatas = edatas
 
-    def _check_sensi_orders(self, sensi_orders, mode) -> None:
+    def check_sensi_orders(self, sensi_orders, mode) -> bool:
         sensi_order = self._get_amici_sensi_order(sensi_orders)
 
         if self.max_sensi_order is None:
@@ -261,15 +261,16 @@ class AmiciObjective(Objective):
         else:
             max_sensi_order = self.max_sensi_order
 
-        if sensi_order > max_sensi_order:
-            raise ValueError(f"Objective cannot be called with sensi_orders="
-                             f"{sensi_orders} and mode={mode}")
+        return sensi_order <= max_sensi_order
 
     def _get_amici_sensi_order(self, sensi_orders: Tuple[int, ...]) -> int:
         # amici is built such that only the maximum sensitivity is required,
         # the lower orders are then automatically computed
         # order 2 currently not implemented, we are using the FIM
         return min(max(sensi_orders), 1)
+
+    def check_mode(self, mode) -> bool:
+        return mode in [MODE_FUN, MODE_RES]
 
     def call_unprocessed(
             self,

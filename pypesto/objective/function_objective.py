@@ -89,16 +89,32 @@ class FunctionObjective(Objective):
         self.sres = sres
         super().__init__(x_names)
 
-    def _check_sensi_orders(self, sensi_orders, mode) -> None:
-        """
-        Check if the objective is able to compute the requested
-        sensitivities. If not, throw an exception.
+    @property
+    def has_fun(self) -> bool:
+        return callable(self.fun)
 
-        Raises
-        ------
-        ValueError if the objective function cannot be called as
-        requested.
-        """
+    @property
+    def has_grad(self) -> bool:
+        return callable(self.grad) or self.grad is True
+
+    @property
+    def has_hess(self) -> bool:
+        return callable(self.hess) or self.hess is True
+
+    @property
+    def has_hessp(self) -> bool:
+        # Not supported yet
+        return False
+
+    @property
+    def has_res(self) -> bool:
+        return callable(self.res)
+
+    @property
+    def has_sres(self) -> bool:
+        return callable(self.sres) or self.sres is True
+
+    def check_sensi_orders(self, sensi_orders, mode) -> bool:
         if (mode is MODE_FUN and
             (0 in sensi_orders and not self.has_fun
              or 1 in sensi_orders and not self.has_grad
@@ -107,9 +123,18 @@ class FunctionObjective(Objective):
                   (0 in sensi_orders and not self.has_res
                    or 1 in sensi_orders and not self.has_sres)
                   ):
-            raise ValueError(
-                f"Objective cannot be called with sensi_orders={sensi_orders}"
-                f" and mode={mode}")
+            return False
+
+        return True
+
+    def check_mode(self, mode) -> bool:
+        if mode == MODE_FUN and not self.has_fun:
+            return False
+
+        if mode == MODE_RES and not self.has_res:
+            return False
+
+        return True
 
     def call_unprocessed(
             self,

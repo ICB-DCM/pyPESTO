@@ -1,10 +1,10 @@
+import numpy as np
+
 from copy import deepcopy
 from typing import Sequence, Dict
-from .objective import Objective
+from .objective import Objective, ResultDict
 
 from .constants import RDATAS, FVAL, CHI2, SCHI2, RES, SRES, GRAD, HESS, HESSP
-
-ResultDict = Dict[str, Union[float, np.ndarray, Dict]]
 
 
 class AggregatedObjective(Objective):
@@ -50,9 +50,17 @@ class AggregatedObjective(Objective):
         )
         return other
 
-    def _check_sensi_orders(self, sensi_orders, mode) -> None:
-        for objective in self._objectives:
-            objective._check_sensi_orders(sensi_orders, mode)
+    def check_mode(self, mode) -> bool:
+        return all(
+            objective.check_mode(mode)
+            for objective in self._objectives
+        )
+
+    def check_sensi_orders(self, sensi_orders, mode) -> bool:
+        return all(
+            objective.check_sensi_orders(sensi_orders, mode)
+            for objective in self._objectives
+        )
 
     def call_unprocessed(self, x, sensi_orders, mode) -> Dict:
         return aggregate_results([

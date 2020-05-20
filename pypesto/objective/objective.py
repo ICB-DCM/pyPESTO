@@ -8,6 +8,8 @@ from .constants import MODE_FUN, MODE_RES, FVAL, GRAD, HESS, RES, SRES
 from .history import HistoryBase
 from .pre_post_process import PrePostProcessor, FixedParametersProcessor
 
+ResultDict = Dict[str, Union[float, np.ndarray, Dict]]
+
 logger = logging.getLogger(__name__)
 
 
@@ -46,32 +48,24 @@ class Objective:
         self.history = HistoryBase()
 
     def __deepcopy__(self, memodict=None) -> 'Objective':
-        other = Objective()
+        other = type(self)()  # maintain type for derived classes
         for attr in self.__dict__:
             other.__dict__[attr] = copy.deepcopy(self.__dict__[attr])
         return other
 
     # The following has_ properties can be used to find out what values
     # the objective supports.
-
-    def initialize(self):
-        """Initialize the objective function.
-        This function is used at the beginning of an analysis, e.g.
-        optimization, and can e.g. reset the objective memory.
-        By default does nothing.
-        """
-
     @property
     def has_fun(self) -> bool:
-        return callable(self.fun)
+        return self.check_sensi_orders((0,), MODE_FUN)
 
     @property
     def has_grad(self) -> bool:
-        return callable(self.grad) or self.grad is True
+        return self.check_sensi_orders((1,), MODE_FUN)
 
     @property
     def has_hess(self) -> bool:
-        return callable(self.hess) or self.hess is True
+        return self.check_sensi_orders((2,), MODE_FUN)
 
     @property
     def has_hessp(self) -> bool:
@@ -80,36 +74,18 @@ class Objective:
 
     @property
     def has_res(self) -> bool:
-        return callable(self.res)
+        return self.check_sensi_orders((0,), MODE_RES)
 
     @property
     def has_sres(self) -> bool:
-        return callable(self.sres) or self.sres is True
+        return self.check_sensi_orders((1,), MODE_RES)
 
-    def _check_sensi_orders(self, sensi_orders, mode) -> None:
+    def initialize(self):
+        """Initialize the objective function.
+        This function is used at the beginning of an analysis, e.g.
+        optimization, and can e.g. reset the objective memory.
+        By default does nothing.
         """
-        Check if the objective is able to compute the requested
-        sensitivities. If not, throw an exception.
-
-        Raises
-        ------
-        ValueError if the objective function cannot be called as
-        requested.
-        """
-        raise NotImplementedError()
-
-    @staticmethod
-    def _check_mode(mode) -> None:
-        """
-        Check if the objective is able to compute in the requested mode
-
-        Raises
-        ------
-        ValueError if the objective function cannot be called as
-        requested.
-        """
-        if mode not in [MODE_FUN, MODE_RES]:
-            raise ValueError("This mode is not supported.")
 
     def __call__(
             self,
@@ -117,7 +93,7 @@ class Objective:
             sensi_orders: Tuple[int, ...] = (0, ),
             mode: str = MODE_FUN,
             return_dict: bool = False
-    ) -> Union[float, np.ndarray, Tuple, Dict]:
+    ) -> Union[float, np.ndarray, Tuple, ResultDict]:
         """
         Method to obtain arbitrary sensitivities. This is the central method
         which is always called, also by the get_* methods.
@@ -154,8 +130,12 @@ class Objective:
         x = np.array(x).copy()
 
         # check input
-        self._check_mode(mode)
-        self._check_sensi_orders(sensi_orders, mode)
+        if not self.check_mode(mode):
+            raise ValueError(f"This Objective cannot be called with mode"
+                             f"={mode}.")
+        if not self.check_sensi_orders(sensi_orders, mode):
+            raise ValueError(f"This Objective cannot be called with "
+                             f"sensi_orders= {sensi_orders} and mode={mode}.")
 
         # pre-process
         x_full = self.pre_post_processor.preprocess(x)
@@ -180,7 +160,7 @@ class Objective:
             x: np.ndarray,
             sensi_orders: Tuple[int, ...],
             mode: str
-    ) -> Dict:
+    ) -> ResultDict:
         """
         Call objective function without pre- or post-processing and
         formatting. Abstract method to be implemented by derived classes.
@@ -201,9 +181,36 @@ class Objective:
         """
         raise NotImplementedError()
 
+    def check_sensi_orders(self, sensi_orders, mode) -> bool:
+        """
+        Check if the objective is able to compute the requested
+        sensitivities. If not, throw an exception.
+        Abstract method to be implemented by derived classes.
+
+        Parameters
+        ----------
+        sensi_orders:
+            Specifies which sensitivities to compute, e.g. (0,1) -> fval, grad.
+        mode:
+            Whether to compute function values or residuals.
+        """
+        raise NotImplementedError()
+
+    def check_mode(self, mode) -> bool:
+        """
+        Check if the objective is able to compute in the requested mode.
+        Abstract method to be implemented by derived classes.
+
+        Parameters
+        ----------
+        mode:
+            Whether to compute function values or residuals.
+        """
+        raise NotImplementedError()
+
     @staticmethod
     def output_to_tuple(
-            sensi_orders: Tuple[int, ...], mode: str, **kwargs
+            sensi_orders: Tuple[int, ...], mode: str, **kwargs: ResultDict
     ) -> Tuple:
         """
         Return values as requested by the caller, since usually only a subset
@@ -344,10 +351,6 @@ class Objective:
         if x_indices is None:
             x_indices = list(range(len(x)))
 
-        if hasattr(self.history, 'options'):
-            tmp_trace_record = self.history.options.trace_record
-            self.history.options.trace_record = False
-
         # function value and objective gradient
         fval, grad = self(x, (0, 1), mode)
 
@@ -420,8 +423,5 @@ class Objective:
         # log full result
         if verbosity > 0:
             logger.info(result)
-
-        if hasattr(self.history, 'options'):
-            self.history.options.trace_record = tmp_trace_record
 
         return result

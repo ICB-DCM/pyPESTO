@@ -12,6 +12,7 @@ from test.test_objective import rosen_for_sensi
 from test.test_sbml_conversion import load_model_objective
 from pypesto.objective.util import sres_to_schi2, res_to_chi2
 from pypesto.objective import CsvHistory, HistoryOptions, MemoryHistory
+from pypesto.objective.objective import Objective
 from pypesto.optimize.optimizer import read_result_from_file, OptimizerResult
 
 from pypesto.objective.constants import (
@@ -24,7 +25,7 @@ from typing import Sequence
 class HistoryTest(unittest.TestCase):
     problem: pypesto.Problem = None
     optimizer: pypesto.Optimizer = None
-    obj: pypesto.Objective = None
+    obj: Objective = None
     history_options: HistoryOptions = None
     ub: np.ndarray = None
     lb: np.ndarray = None

@@ -173,7 +173,7 @@ def obj_for_sensi(fun, grad, hess, max_sensi_order, integrated, x):
         else:
             arg_grad = None
         arg_fun = fun
-    obj = pypesto.Objective(fun=arg_fun, grad=arg_grad, hess=arg_hess)
+    obj = pypesto.FunctionObjective(fun=arg_fun, grad=arg_grad, hess=arg_hess)
     return {'obj': obj,
             'max_sensi_order': max_sensi_order,
             'x': x,
