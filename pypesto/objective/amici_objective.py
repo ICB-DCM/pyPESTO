@@ -6,7 +6,7 @@ import abc
 from typing import Dict, Tuple, Sequence, Union
 from collections import OrderedDict
 
-from .objective import Objective
+from .objective import ObjectiveBase
 from .constants import MODE_FUN, MODE_RES, FVAL, RDATAS
 from .amici_calculator import AmiciCalculator
 from .amici_util import (
@@ -45,7 +45,7 @@ class AmiciObjectBuilder(abc.ABC):
         """Create AMICI experimental data."""
 
 
-class AmiciObjective(Objective):
+class AmiciObjective(ObjectiveBase):
     """
     This class allows to create an objective directly from an amici model.
     """

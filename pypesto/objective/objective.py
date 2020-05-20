@@ -13,7 +13,7 @@ ResultDict = Dict[str, Union[float, np.ndarray, Dict]]
 logger = logging.getLogger(__name__)
 
 
-class Objective:
+class ObjectiveBase:
     """
     The objective class is a simple wrapper around the objective function,
     giving a standardized way of calling. Apart from that, it manages several
@@ -47,7 +47,7 @@ class Objective:
         self.pre_post_processor = PrePostProcessor()
         self.history = HistoryBase()
 
-    def __deepcopy__(self, memodict=None) -> 'Objective':
+    def __deepcopy__(self, memodict=None) -> 'ObjectiveBase':
         other = type(self)()  # maintain type for derived classes
         for attr in self.__dict__:
             other.__dict__[attr] = copy.deepcopy(self.__dict__[attr])
@@ -151,7 +151,7 @@ class Objective:
 
         # map to output format
         if not return_dict:
-            result = Objective.output_to_tuple(sensi_orders, mode, **result)
+            result = ObjectiveBase.output_to_tuple(sensi_orders, mode, **result)
 
         return result
 

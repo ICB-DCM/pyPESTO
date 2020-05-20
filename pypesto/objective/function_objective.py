@@ -1,12 +1,12 @@
 import numpy as np
 
-from .objective import Objective
+from .objective import ObjectiveBase
 from typing import Callable, Dict, Sequence, Tuple, Union
 
 from .constants import MODE_FUN, MODE_RES, FVAL, GRAD, HESS, RES, SRES
 
 
-class FunctionObjective(Objective):
+class Objective(ObjectiveBase):
     """
     The objective class is a simple wrapper around the objective function,
     giving a standardized way of calling. Apart from that, it manages several

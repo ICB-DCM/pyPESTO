@@ -2,7 +2,7 @@ import h5py
 from ..result import Result
 from ..optimize.result import OptimizerResult
 from ..problem import Problem
-from ..objective.objective import Objective
+from ..objective.objective import ObjectiveBase
 
 
 def read_hdf5_optimization(f: h5py.File,
@@ -51,7 +51,7 @@ class ProblemHDF5Reader:
         """
         self.storage_filename = storage_filename
 
-    def read(self, objective: Objective) -> Problem:
+    def read(self, objective: ObjectiveBase) -> Problem:
         """
         Read HDF5 problem file and return pyPESTO problem object.
 

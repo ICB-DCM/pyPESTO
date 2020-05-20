@@ -2,19 +2,19 @@ import numpy as np
 
 from copy import deepcopy
 from typing import Sequence, Dict
-from .objective import Objective, ResultDict
+from .objective import ObjectiveBase, ResultDict
 
 from .constants import RDATAS, FVAL, CHI2, SCHI2, RES, SRES, GRAD, HESS, HESSP
 
 
-class AggregatedObjective(Objective):
+class AggregatedObjective(ObjectiveBase):
     """
     This class aggregates multiple objectives into one objective.
     """
 
     def __init__(
             self,
-            objectives: Sequence[Objective],
+            objectives: Sequence[ObjectiveBase],
             x_names: Sequence[str] = None):
         """
         Constructor.
@@ -30,7 +30,7 @@ class AggregatedObjective(Objective):
                             f'was {type(objectives)}.')
 
         if not all(
-                isinstance(objective, Objective)
+                isinstance(objective, ObjectiveBase)
                 for objective in objectives
         ):
             raise TypeError('Objectives must only contain elements of type'
