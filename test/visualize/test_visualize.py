@@ -516,7 +516,8 @@ def create_sampling_result():
     trace_x = np.random.randn(n_chain, n_iter, n_par)
     betas = np.array([1, .1])
     sample_result = pypesto.McmcPtResult(
-        trace_fval=trace_fval, trace_x=trace_x, betas=betas)
+        trace_fval=trace_fval, trace_x=trace_x, betas=betas,
+        burn_in=10)
     result.sample_result = sample_result
 
     return result
@@ -529,7 +530,7 @@ def test_sampling_fval_trace():
     pypesto.visualize.sampling_fval_trace(result)
     # call with custom arguments
     pypesto.visualize.sampling_fval_trace(
-        result, i_chain=1, burn_in=10, stepsize=5, size=(10, 10))
+        result, i_chain=1, stepsize=5, size=(10, 10))
 
 
 @close_fig
@@ -539,7 +540,7 @@ def test_sampling_parameters_trace():
     pypesto.visualize.sampling_parameters_trace(result)
     # call with custom arguments
     pypesto.visualize.sampling_parameters_trace(
-        result, i_chain=1, burn_in=10, stepsize=5, size=(10, 10),
+        result, i_chain=1, stepsize=5, size=(10, 10),
         use_problem_bounds=False)
 
 
@@ -550,7 +551,7 @@ def test_sampling_scatter():
     pypesto.visualize.sampling_scatter(result)
     # call with custom arguments
     pypesto.visualize.sampling_scatter(
-        result, i_chain=1, burn_in=10, stepsize=5, size=(10, 10))
+        result, i_chain=1, stepsize=5, size=(10, 10))
 
 
 @close_fig
@@ -560,7 +561,7 @@ def test_sampling_1d_marginals():
     pypesto.visualize.sampling_1d_marginals(result)
     # call with custom arguments
     pypesto.visualize.sampling_1d_marginals(
-        result, i_chain=1, burn_in=10, stepsize=5, size=(10, 10))
+        result, i_chain=1, stepsize=5, size=(10, 10))
     # call with other modes
     pypesto.visualize.sampling_1d_marginals(result, plot_type='hist')
     pypesto.visualize.sampling_1d_marginals(
