@@ -656,7 +656,6 @@ class CsvHistory(History):
                 columns.extend([(var,)])
 
         # TODO: multi-index for res, sres, hess
-
         self._trace = pd.DataFrame(columns=pd.MultiIndex.from_tuples(columns),
                                    dtype='float64')
 
@@ -1002,6 +1001,13 @@ def extract_values(mode: str,
         alt_values = {CHI2: chi2, SCHI2: schi2, HESS: fim}
         if schi2 is not None:
             alt_values[GRAD] = 0.5 * schi2
+
+        # filter according to options
+        alt_values = {
+            key: val
+            for key, val in alt_values.items()
+            if options.get(f'trace_record_{key}', True)
+        }
         for var, val in alt_values.items():
             if val is not None:
                 ret[var] = ret.get(var, val)

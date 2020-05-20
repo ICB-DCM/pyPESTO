@@ -187,12 +187,13 @@ class HistoryTest(unittest.TestCase):
             ))
         }
         for var, fun in funs.items():
-            if not var == FVAL and not getattr(self.history_options,
-                                               f'trace_record_{var}'):
-                continue
             for it in range(5):
                 x_full = xfull(start.history.get_x_trace(it))
                 val = getattr(start.history, f'get_{var}_trace')(it)
+                if not getattr(self.history_options, f'trace_record_{var}',
+                               True):
+                    assert np.isnan(val)
+                    continue
                 if np.all(np.isnan(val)):
                     continue
                 if var in [FVAL, CHI2]:
@@ -289,6 +290,21 @@ class ResModeHistoryTest(HistoryTest):
         self.fix_pars = False
         self.check_history()
 
+    def test_trace_all_aggregated(self):
+        self.history_options = HistoryOptions(
+            trace_record=True,
+            trace_record_grad=True,
+            trace_record_hess=True,
+            trace_record_res=True,
+            trace_record_sres=True,
+            trace_record_chi2=True,
+            trace_record_schi2=True,
+        )
+
+        self.obj = pypesto.objective.AggregatedObjective([self.obj, self.obj])
+        self.fix_pars = False
+        self.check_history()
+
 
 class FunModeHistoryTest(HistoryTest):
     @classmethod
@@ -346,6 +362,25 @@ class FunModeHistoryTest(HistoryTest):
             trace_record_chi2=True,
             trace_record_schi2=True,
         )
+        self.fix_pars = False
+        self.check_history()
+
+    def test_trace_all_aggregated(self):
+        self.obj = rosen_for_sensi(
+            max_sensi_order=2,
+            integrated=True
+        )['obj']
+
+        self.history_options = HistoryOptions(
+            trace_record=True,
+            trace_record_grad=True,
+            trace_record_hess=True,
+            trace_record_res=True,
+            trace_record_sres=True,
+            trace_record_chi2=True,
+            trace_record_schi2=True,
+        )
+        self.obj = pypesto.objective.AggregatedObjective([self.obj, self.obj])
         self.fix_pars = False
         self.check_history()
 
