@@ -90,8 +90,9 @@ def aggregate_results(rvals: Sequence[ResultDict]) -> ResultDict:
         results to aggregate
     """
 
-    # rvals are guaranteed to be consistent as _check_sensi_orders checks whether 
-    # each objective can be called with the respective sensi_orders/mode
+    # rvals are guaranteed to be consistent as _check_sensi_orders checks
+    # whether each objective can be called with the respective
+    # sensi_orders/mode
 
     # sum over fval/grad/hess
     result = {

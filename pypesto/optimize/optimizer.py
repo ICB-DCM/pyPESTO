@@ -10,7 +10,6 @@ from ..objective import (OptimizerHistory, HistoryOptions, CsvHistory)
 from ..objective.history import HistoryBase
 from ..problem import Problem
 from .result import OptimizerResult
-from ..objective.constants import MODE_RES, MODE_FUN
 
 
 try:

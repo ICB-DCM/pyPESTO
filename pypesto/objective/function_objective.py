@@ -246,4 +246,3 @@ class FunctionObjective(Objective):
             raise ValueError("These sensitivity orders are not supported.")
 
         return result
-
