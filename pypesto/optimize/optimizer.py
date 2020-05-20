@@ -139,7 +139,7 @@ def fill_result_from_objective_history(
             "Parameters obtained from history and optimizer do not match: "
             f"{optimizer_history.x_min}, {result.x}")
         # do not use value from history
-        update_vals = False
+        update_vals = result.fval is None
 
     # update optimal values from history if reported function values
     # and parameters coincide
@@ -319,7 +319,10 @@ class ScipyOptimizer(Optimizer):
                 loss='linear',
                 **self.options
             )
-
+            # extract fval/grad from result, note that fval is not available
+            # from least squares solvers
+            grad = getattr(res, 'grad', None)
+            fval = None
         else:
             # is an fval based optimization method
 
@@ -368,11 +371,9 @@ class ScipyOptimizer(Optimizer):
                 bounds=bounds,
                 options=self.options,
             )
-
-        # some fields are not filled by all optimizers, then fill in None
-        grad = getattr(res, 'grad', None) if self.is_least_squares() \
-            else getattr(res, 'jac', None)
-        fval = None if self.is_least_squares() else res.fun
+            # extract fval/grad from result
+            grad = getattr(res, 'jac', None)
+            fval = res.fun
 
         # fill in everything known, although some parts will be overwritten
         optimizer_result = OptimizerResult(
