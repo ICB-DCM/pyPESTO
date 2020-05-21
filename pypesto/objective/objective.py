@@ -151,7 +151,8 @@ class ObjectiveBase:
 
         # map to output format
         if not return_dict:
-            result = ObjectiveBase.output_to_tuple(sensi_orders, mode, **result)
+            result = ObjectiveBase.output_to_tuple(sensi_orders, mode,
+                                                   **result)
 
         return result
 
