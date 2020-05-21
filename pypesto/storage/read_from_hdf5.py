@@ -3,6 +3,7 @@ from ..result import Result
 from ..optimize.result import OptimizerResult
 from ..problem import Problem
 from ..objective.objective import ObjectiveBase
+from ..objective import Objective
 
 
 def read_hdf5_optimization(f: h5py.File,
@@ -65,6 +66,8 @@ class ProblemHDF5Reader:
             A problem instance with all attributes read in.
         """
         # create empty problem
+        if objective is None:
+            objective = Objective()
         problem = Problem(objective, [], [])
 
         with h5py.File(self.storage_filename, 'r') as f:
