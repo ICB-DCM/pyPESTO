@@ -165,19 +165,19 @@ def process_y_limits(ax, y_limits):
         elif y_limits.size > 1:
             y_limits = [y_limits[0], y_limits[1]]
 
-    # check validity of bounds if plotting in log-scale
-    if ax.get_yscale() == 'log' and y_limits[0] <= 0.:
-        tmp_y_limits = ax.get_ylim()
-        if y_limits[1] <= 0.:
-            y_limits = tmp_y_limits
-            warnings.warn("Invalid bounds for waterfall plot in "
-                          "log-scale. Using defaults bounds.")
-        else:
-            y_limits = [tmp_y_limits[0], y_limits]
-            warnings.warn("Invalid lower bound for waterfall plot in "
-                          "log-scale. Using only upper bound.")
+        # check validity of bounds if plotting in log-scale
+        if ax.get_yscale() == 'log' and y_limits[0] <= 0.:
+            tmp_y_limits = ax.get_ylim()
+            if y_limits[1] <= 0.:
+                y_limits = tmp_y_limits
+                warnings.warn("Invalid bounds for waterfall plot in "
+                              "log-scale. Using defaults bounds.")
+            else:
+                y_limits = [tmp_y_limits[0], y_limits[1]]
+                warnings.warn("Invalid lower bound for waterfall plot in "
+                              "log-scale. Using only upper bound.")
 
-        # set limits
-        ax.set_ylim(y_limits)
+            # set limits
+            ax.set_ylim(y_limits)
 
     return ax
