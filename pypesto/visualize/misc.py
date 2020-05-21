@@ -154,11 +154,28 @@ def process_y_limits(ax, y_limits):
     # apply y-limits, if they were specified by the user
     if y_limits is not None:
         y_limits = np.array(y_limits)
-        if y_limits.size == 1:
+
+        # check validity of bounds
+        if y_limits.size == 0:
+            y_limits = np.array(ax.get_ylim())
+        elif y_limits.size == 1:
+            # if the user specified only an upper bound
             tmp_y_limits = ax.get_ylim()
             y_limits = [tmp_y_limits[0], y_limits]
-        else:
+        elif y_limits.size > 1:
             y_limits = [y_limits[0], y_limits[1]]
+
+    # check validity of bounds if plotting in log-scale
+    if ax.get_yscale() == 'log' and y_limits[0] <= 0.:
+        tmp_y_limits = ax.get_ylim()
+        if y_limits[1] <= 0.:
+            y_limits = tmp_y_limits
+            warnings.warn("Invalid bounds for waterfall plot in "
+                          "log-scale. Using defaults bounds.")
+        else:
+            y_limits = [tmp_y_limits[0], y_limits]
+            warnings.warn("Invalid lower bound for waterfall plot in "
+                          "log-scale. Using only upper bound.")
 
         # set limits
         ax.set_ylim(y_limits)
