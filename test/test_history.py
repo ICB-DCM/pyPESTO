@@ -198,8 +198,14 @@ class HistoryTest(unittest.TestCase):
                 if np.all(np.isnan(val)):
                     continue
                 if var in [FVAL, CHI2]:
+                    # note that we can expect slight deviations here since
+                    # this fval/chi2 may be computed without sensitivities
+                    # while the result here may be computed with with
+                    # sensitivies activated. If this fails to often,
+                    # increase atol/rtol
                     assert np.isclose(
                         val, fun(x_full),
+                        rtol=1e-3, atol=1e-4
                     ), var
                 elif var in [RES]:
                     # note that we can expect slight deviations here since

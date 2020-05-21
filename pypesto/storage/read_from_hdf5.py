@@ -51,7 +51,7 @@ class ProblemHDF5Reader:
         """
         self.storage_filename = storage_filename
 
-    def read(self, objective: ObjectiveBase) -> Problem:
+    def read(self, objective: ObjectiveBase = None) -> Problem:
         """
         Read HDF5 problem file and return pyPESTO problem object.
 
