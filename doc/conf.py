@@ -33,13 +33,16 @@ sys.path.insert(0, os.path.abspath('../'))
 # ones.
 extensions = ['sphinx.ext.autodoc',
               'sphinx.ext.napoleon',
-              'nbsphinx']
+              'IPython.sphinxext.ipython_console_highlighting',
+              'nbsphinx',
+              'recommonmark']
 
 # default autodoc options
 # list for special-members seems not to be possible before 1.8
 autodoc_default_flags = ['members',
                          'undoc-members',
-                         'show-inheritance']
+                         'show-inheritance',
+                         'imported-members']
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ['_templates']

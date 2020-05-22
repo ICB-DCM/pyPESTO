@@ -93,7 +93,7 @@ def test_pipeline(sampler, problem):
 
     # sampling
     result = pypesto.sample(
-        problem, sampler=sampler, n_samples=20, result=result)
+        problem, sampler=sampler, n_samples=100, result=result)
 
     # some plot
     pypesto.visualize.sampling_1d_marginals(result)
@@ -139,3 +139,25 @@ def test_multiple_startpoints():
     assert result.sample_result.trace_fval.shape[0] == 2
     assert [result.sample_result.trace_x[0][0],
             result.sample_result.trace_x[1][0]] == x0s
+
+
+def test_regularize_covariance():
+    """
+    Make sure that `regularize_covariance` renders symmetric matrices
+    positive definite.
+    """
+    matrix = np.array([[-1., -4.], [-4., 1.]])
+    assert np.any(np.linalg.eigvals(matrix) < 0)
+    reg = pypesto.sampling.adaptive_metropolis.regularize_covariance(
+        matrix, 1e-6)
+    assert np.all(np.linalg.eigvals(reg) >= 0)
+
+
+def test_geweke_test():
+    """Check geweke test returns expected burn in index."""
+    warm_up = np.zeros((100, 2))
+    converged = np.ones((901, 2))
+    chain = np.concatenate((warm_up, converged), axis=0)
+    burn_in = pypesto.sampling.diagnostics.burn_in_by_sequential_geweke(
+        chain=chain)
+    assert burn_in == 100

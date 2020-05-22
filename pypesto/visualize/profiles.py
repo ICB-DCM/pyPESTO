@@ -7,7 +7,8 @@ from .misc import process_result_list
 
 
 def profiles(results, ax=None, profile_indices=None, size=(18.5, 6.5),
-             reference=None, colors=None, legends=None, profile_list_id=0):
+             reference=None, colors=None, legends=None, x_labels=None,
+             profile_list_id=0):
     """
     Plot classical 1D profile plot (using the posterior, e.g. Gaussian like
     profile)
@@ -40,6 +41,9 @@ def profiles(results, ax=None, profile_indices=None, size=(18.5, 6.5),
     legends: list or str, optional
         Labels for line plots, one label per result object
 
+    x_labels: list of str
+        Labels for parameter value axes (e.g. parameter names)
+
     profile_list_id: int, optional
         index of the profile list to be used for profiling
 
@@ -67,9 +71,13 @@ def profiles(results, ax=None, profile_indices=None, size=(18.5, 6.5),
         fvals = handle_inputs(result, profile_indices=profile_indices,
                               profile_list_id=profile_list_id)
 
+        if x_labels is None:
+            x_labels = [name for name, fval in
+                        zip(result.problem.x_names, fvals) if fval is not None]
         # call lowlevel routine
         ax = profiles_lowlevel(fvals=fvals, ax=ax, size=size,
-                               color=colors[j], legend_text=legends[j])
+                               color=colors[j], legend_text=legends[j],
+                               x_labels=x_labels)
 
     # parse and apply plotting options
     ref = create_references(references=reference)
@@ -77,11 +85,13 @@ def profiles(results, ax=None, profile_indices=None, size=(18.5, 6.5),
     # plot reference points
     ax = handle_reference_points(ref, ax, fvals)
 
+    plt.tight_layout()
+
     return ax
 
 
 def profiles_lowlevel(fvals, ax=None, size=(18.5, 6.5), color=None,
-                      legend_text=None):
+                      legend_text=None, x_labels=None):
     """
     Lowlevel routine for profile plotting, working with a list of arrays
     only, opening different axes objects in case
@@ -107,6 +117,9 @@ def profiles_lowlevel(fvals, ax=None, size=(18.5, 6.5), color=None,
         color for profiles in plot.
 
     legend_text: str
+        Label for line plots
+
+    legend_text: List[str]
         Label for line plots
 
     Returns
@@ -152,7 +165,6 @@ def profiles_lowlevel(fvals, ax=None, size=(18.5, 6.5), color=None,
             tmp_legend = legend_text
         else:
             tmp_legend = None
-
         # plot if data
         if fval is not None:
             # create or choose an axes object
@@ -167,7 +179,11 @@ def profiles_lowlevel(fvals, ax=None, size=(18.5, 6.5), color=None,
                                            legend_text=tmp_legend)
 
             # labels
-            ax[counter].set_xlabel(f'Parameter {i_plot} value')
+            if x_labels is None:
+                ax[counter].set_xlabel(f'Parameter {i_plot}')
+            else:
+                ax[counter].set_xlabel(x_labels[counter])
+
             if counter % columns == 0:
                 ax[counter].set_ylabel('Log-posterior ratio')
             else:

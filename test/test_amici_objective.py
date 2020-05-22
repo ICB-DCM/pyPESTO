@@ -2,16 +2,17 @@
 This is for testing the pypesto.Objective.
 """
 
-from pypesto.objective.amici_objective import add_sim_grad_to_opt_grad
+from pypesto.objective.amici_util import add_sim_grad_to_opt_grad
 
 import petab
 import pypesto
 import pypesto.objective.constants
+import pytest
 import numpy as np
 from test.petab_util import folder_base
 
-ATOL = 1e-5
-RTOL = 1e-5
+ATOL = 1e-2
+RTOL = 1e-2
 
 
 def test_add_sim_grad_to_opt_grad():
@@ -43,11 +44,27 @@ def test_add_sim_grad_to_opt_grad():
     assert expected == opt_grad
 
 
+def test_error_leastsquares_with_ssigma():
+    petab_problem = petab.Problem.from_yaml(
+        folder_base + "Zheng_PNAS2012/Zheng_PNAS2012.yaml")
+    petab_problem.model_name = "Zheng_PNAS2012"
+    importer = pypesto.PetabImporter(petab_problem)
+    obj = importer.create_objective()
+    problem = importer.create_problem(obj)
+
+    optimizer = pypesto.ScipyOptimizer('ls_trf', options={'max_nfev': 50})
+    with pytest.raises(RuntimeError):
+        pypesto.minimize(
+            problem=problem, optimizer=optimizer, n_starts=1,
+            options=pypesto.OptimizeOptions(allow_failed_starts=False)
+        )
+
+
 def test_preeq_guesses():
     """
     Test whether optimization with preequilibration guesses works, asserts
     that steadystate guesses are written and checks that gradient is still
-    correct with guesses set
+    correct with guesses set.
     """
     petab_problem = petab.Problem.from_yaml(
         folder_base + "Zheng_PNAS2012/Zheng_PNAS2012.yaml")
@@ -55,10 +72,13 @@ def test_preeq_guesses():
     importer = pypesto.PetabImporter(petab_problem)
     obj = importer.create_objective()
     problem = importer.create_problem(obj)
-    optimizer = pypesto.ScipyOptimizer('ls_trf')
 
+    # assert that initial guess is uninformative
+    assert problem.objective.steadystate_guesses['fval'] == np.inf
+
+    optimizer = pypesto.ScipyOptimizer('L-BFGS-B', options={'maxiter': 50})
     result = pypesto.minimize(
-        problem=problem, optimizer=optimizer, n_starts=2,
+        problem=problem, optimizer=optimizer, n_starts=1,
     )
 
     assert problem.objective.steadystate_guesses['fval'] < np.inf
@@ -73,3 +93,7 @@ def test_preeq_guesses():
     print("relative errors MODE_FUN: ", df.rel_err.values)
     print("absolute errors MODE_FUN: ", df.abs_err.values)
     assert np.all((df.rel_err.values < RTOL) | (df.abs_err.values < ATOL))
+
+    # assert that resetting works
+    problem.objective.initialize()
+    assert problem.objective.steadystate_guesses['fval'] == np.inf

@@ -6,8 +6,8 @@ import time
 import logging
 from typing import Dict
 
-from ..objective import (
-    OptimizerHistory, HistoryOptions, res_to_chi2)
+from ..objective import (OptimizerHistory, HistoryOptions, CsvHistory)
+from ..objective.history import HistoryBase
 from ..problem import Problem
 from .result import OptimizerResult
 
@@ -21,6 +21,7 @@ try:
 except ImportError:
     dlib = None
 
+EXITFLAG_LOADED_FROM_FILE = -99
 
 logger = logging.getLogger(__name__)
 
@@ -31,30 +32,41 @@ def history_decorator(minimize):
     information stored in the history.
     """
 
-    def wrapped_minimize(self, problem, x0, id, history_options=None):
+    def wrapped_minimize(self, problem, x0, id, allow_failed_starts,
+                         history_options=None):
         objective = problem.objective
+
+        # initialize the objective
+        objective.initialize()
 
         # create optimizer history
         if history_options is None:
             history_options = HistoryOptions()
         history = history_options.create_history(
-            id=id, x_names=objective.x_names)
+            id=id, x_names=[problem.x_names[ix]
+                            for ix in problem.x_free_indices])
         optimizer_history = OptimizerHistory(history=history, x0=x0)
 
         # plug in history for the objective to record it
         objective.history = optimizer_history
 
-        # TODO this can be prettified
-        if hasattr(objective, 'reset_steadystate_guesses'):
-            objective.reset_steadystate_guesses()
-
         # perform the actual minimization
-        result = minimize(self, problem, x0, id, history_options)
+        try:
+            result = minimize(self, problem, x0, id, history_options)
+            objective.history.finalize()
+            result.id = id
+        except Exception as err:
+            if allow_failed_starts:
+                logger.error(f'start {id} failed: {err}')
+                result = OptimizerResult(
+                    x0=x0, exitflag=-1, message=str(err), id=id)
+            else:
+                raise
 
-        objective.history.finalize()
-        result.id = id
-        result = fill_result_from_objective_history(
-            result, objective.history, self.is_least_squares)
+        result = fill_result_from_objective_history(result, objective.history)
+
+        # clean up, history is available from result
+        objective.history = HistoryBase()
 
         return result
     return wrapped_minimize
@@ -67,9 +79,11 @@ def time_decorator(minimize):
     the wall-clock time.
     """
 
-    def wrapped_minimize(self, problem, x0, id, history_options=None):
+    def wrapped_minimize(self, problem, x0, id, allow_failed_starts,
+                         history_options=None):
         start_time = time.time()
-        result = minimize(self, problem, x0, id, history_options)
+        result = minimize(self, problem, x0, id, allow_failed_starts,
+                          history_options)
         used_time = time.time() - start_time
         result.time = used_time
         return result
@@ -83,15 +97,14 @@ def fix_decorator(minimize):
     derivatives).
     """
 
-    def wrapped_minimize(self, problem, x0, id, history_options=None):
+    def wrapped_minimize(self, problem, x0, id, allow_failed_starts,
+                         history_options=None):
         # perform the actual optimization
-        result = minimize(self, problem, x0, id, history_options)
+        result = minimize(self, problem, x0, id, allow_failed_starts,
+                          history_options)
 
         # vectors to full vectors
-        result.x = problem.get_full_vector(result.x, problem.x_fixed_vals)
-        result.grad = problem.get_full_vector(result.grad)
-        result.hess = problem.get_full_matrix(result.hess)
-        result.x0 = problem.get_full_vector(result.x0, problem.x_fixed_vals)
+        result.update_to_full(problem)
 
         logger.info(f"Final fval={result.fval:.4f}, "
                     f"time={result.time:.4f}s, "
@@ -103,26 +116,33 @@ def fix_decorator(minimize):
 
 def fill_result_from_objective_history(
         result: OptimizerResult,
-        optimizer_history: OptimizerHistory,
-        is_least_squares: bool):
+        optimizer_history: OptimizerHistory):
     """
     Overwrite function values in the result object with the values recorded in
     the history.
     """
-    # best found values
-    if result.fval is not None and \
-            not np.isclose(result.fval, optimizer_history.fval_min) and \
-            not is_least_squares:
+    update_vals = True
+    # check history for better values
+    # value could be different e.g. if constraints violated
+    if optimizer_history.fval_min is not None and result.fval is not None \
+            and not np.isclose(optimizer_history.fval_min, result.fval):
         logger.warning(
             "Function values from history and optimizer do not match: "
             f"{optimizer_history.fval_min}, {result.fval}")
+        # do not use value from history
+        update_vals = False
 
-    if optimizer_history.x_min is not None and result.x is not None and \
-            not np.allclose(result.x, optimizer_history.x_min):
+    if optimizer_history.x_min is not None and result.x is not None \
+            and not np.allclose(result.x, optimizer_history.x_min):
         logger.warning(
             "Parameters obtained from history and optimizer do not match: "
             f"{optimizer_history.x_min}, {result.x}")
-    else:
+        # do not use value from history
+        update_vals = False
+
+    # update optimal values from history if reported function values
+    # and parameters coincide
+    if update_vals:
         # override values from history if available
         result.x = optimizer_history.x_min
         result.fval = optimizer_history.fval_min
@@ -140,6 +160,7 @@ def fill_result_from_objective_history(
     result.fval0 = optimizer_history.fval0
 
     # counters
+    # we only use our own counters here as optimizers may report differently
     result.n_fval = optimizer_history.history.n_fval
     result.n_grad = optimizer_history.history.n_grad
     result.n_hess = optimizer_history.history.n_hess
@@ -152,17 +173,31 @@ def fill_result_from_objective_history(
     return result
 
 
-def recover_result(objective, startpoint, err):
-    """
-    Upon an error, recover from the objective history whatever available,
-    and indicate in exitflag and message that an error occurred.
-    """
-    result = OptimizerResult(
-        x0=startpoint,
-        exitflag=-1,
-        message=str(err),
+def read_result_from_file(problem: Problem, history_options: HistoryOptions,
+                          identifier: str):
+    if history_options.storage_file.endswith('.csv'):
+        history = CsvHistory(
+            file=history_options.storage_file.format(id=identifier),
+            options=history_options,
+            load_from_file=True
+        )
+    else:
+        raise NotImplementedError()
+
+    opt_hist = OptimizerHistory(
+        history, history.get_x_trace(0),
+        generate_from_history=True
     )
-    fill_result_from_objective_history(result, objective.history, False)
+
+    result = OptimizerResult(
+        id=identifier,
+        message='loaded from file',
+        exitflag=EXITFLAG_LOADED_FROM_FILE,
+        time=max(history.get_time_trace())
+    )
+    result.id = identifier
+    result = fill_result_from_objective_history(result, opt_hist)
+    result.update_to_full(problem)
 
     return result
 
@@ -231,11 +266,12 @@ class ScipyOptimizer(Optimizer):
 
         self.method = method
 
-        self.tol = tol
-
         self.options = options
         if self.options is None:
-            self.options = ScipyOptimizer.get_default_options()
+            self.options = ScipyOptimizer.get_default_options(self)
+            self.options['ftol'] = tol
+        elif self.options is not None and 'ftol' not in self.options:
+            self.options['ftol'] = tol
 
     @fix_decorator
     @time_decorator
@@ -266,6 +302,11 @@ class ScipyOptimizer(Optimizer):
             jac = objective.get_sres if objective.has_sres else '2-point'
             # TODO: pass jac computing methods in options
 
+            if self.options is not None:
+                self.options['verbose'] = 2 if 'disp' in self.options.keys() \
+                                               and self.options['disp'] else 0
+                self.options.pop('disp', None)
+
             # optimize
             res = scipy.optimize.least_squares(
                 fun=fun,
@@ -273,12 +314,9 @@ class ScipyOptimizer(Optimizer):
                 method=ls_method,
                 jac=jac,
                 bounds=bounds,
-                ftol=self.tol,
                 tr_solver='exact',
                 loss='linear',
-                verbose=2 if 'disp' in
-                self.options.keys() and self.options['disp']
-                else 0,
+                **self.options
             )
 
         else:
@@ -327,15 +365,13 @@ class ScipyOptimizer(Optimizer):
                 hess=hess,
                 hessp=hessp,
                 bounds=bounds,
-                tol=self.tol,
                 options=self.options,
             )
 
         # some fields are not filled by all optimizers, then fill in None
         grad = getattr(res, 'grad', None) if self.is_least_squares() \
             else getattr(res, 'jac', None)
-        fval = res_to_chi2(res.fun) if self.is_least_squares() \
-            else res.fun
+        fval = None if self.is_least_squares() else res.fun
 
         # fill in everything known, although some parts will be overwritten
         optimizer_result = OptimizerResult(
@@ -353,8 +389,11 @@ class ScipyOptimizer(Optimizer):
         return re.match(r'(?i)^(ls_)', self.method)
 
     @staticmethod
-    def get_default_options():
-        options = {'maxiter': 1000, 'disp': False}
+    def get_default_options(self):
+        if self.is_least_squares:
+            options = {'max_nfev': 1000, 'disp': False}
+        else:
+            options = {'maxiter': 1000, 'disp': False}
         return options
 
 
@@ -372,7 +411,7 @@ class DlibOptimizer(Optimizer):
 
         self.options = options
         if self.options is None:
-            self.options = DlibOptimizer.get_default_options()
+            self.options = DlibOptimizer.get_default_options(self)
 
     @fix_decorator
     @time_decorator
@@ -418,7 +457,7 @@ class DlibOptimizer(Optimizer):
         return False
 
     @staticmethod
-    def get_default_options():
+    def get_default_options(self):
         return {}
 
 

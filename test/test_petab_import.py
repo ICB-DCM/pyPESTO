@@ -62,7 +62,7 @@ class PetabImportTest(unittest.TestCase):
         for obj_edatas, importer in \
                 zip(self.obj_edatas, self.petab_importers):
             obj = obj_edatas[0]
-            optimizer = pypesto.ScipyOptimizer()
+            optimizer = pypesto.ScipyOptimizer(options={'maxiter': 10})
             problem = importer.create_problem(obj)
             result = pypesto.minimize(
                 problem=problem, optimizer=optimizer, n_starts=2)

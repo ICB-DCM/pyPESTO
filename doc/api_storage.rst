@@ -1,4 +1,4 @@
-.. automodule:: pypesto.sample
+.. automodule:: pypesto.storage
    :members:
    :inherited-members:
    :special-members:

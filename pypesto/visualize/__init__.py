@@ -4,7 +4,6 @@ Visualize
 
 pypesto comes with various visualization routines. To use these,
 import pypesto.visualize.
-
 """
 
 from .reference_points import (ReferencePoint,

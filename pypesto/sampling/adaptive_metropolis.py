@@ -133,6 +133,7 @@ def regularize_covariance(cov: np.ndarray, reg_factor: float) -> np.ndarray:
     """
     Regularize the estimated covariance matrix of the sample. Useful if the
     estimated covariance matrix is ill-conditioned.
+    Increments the diagonal a little to ensure positivity.
 
     Parameters
     ----------
@@ -146,36 +147,8 @@ def regularize_covariance(cov: np.ndarray, reg_factor: float) -> np.ndarray:
     cov:
         Regularized estimate of the covariance matrix of the sample.
     """
-    n_par = cov.shape[0]
-    if not is_positive_definite(cov):
-        # add regularization factor
-        cov += reg_factor * np.eye(n_par)
-        # make symmetric
-        cov = (cov + cov.T) / 2
-        if not is_positive_definite(cov):
-            # add strong regularization factor
-            cov += cov.max() * np.eye(n_par)
-            # make symmetric
-            cov = (cov + cov.T) / 2
-
+    eig = np.linalg.eigvals(cov)
+    eig_min = min(eig)
+    if eig_min <= 0:
+        cov += (abs(eig_min) + reg_factor) * np.eye(cov.shape[0])
     return cov
-
-
-def is_positive_definite(matrix: np.ndarray) -> bool:
-    """Determines whether a matrix is positive-definite.
-
-    Parameters
-    ----------
-    matrix:
-        The matrix to be checked for positive definiteness.
-
-    Returns
-    -------
-    bool:
-        True if the matrix is positive definite, else False.
-    """
-    try:
-        np.linalg.cholesky(matrix)
-    except np.linalg.LinAlgError:
-        return False
-    return True

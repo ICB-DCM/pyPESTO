@@ -32,7 +32,8 @@ Welcome to pyPESTO's documentation!
    :caption: User's guide
 
    install
-   examples
+   example
+   storage_format.md
 
 
 .. toctree::
@@ -41,6 +42,7 @@ Welcome to pyPESTO's documentation!
 
    contribute
    deploy
+   README.md
 
 
 .. toctree::
@@ -49,13 +51,16 @@ Welcome to pyPESTO's documentation!
 
    api_objective
    api_problem
+   api_petab
    api_optimize
    api_profile
-   api_sample
+   api_sampling
+   api_visualize
    api_result
    api_engine
-   api_visualize
    api_startpoint
+   api_storage
+   api_logging
 
 .. toctree::
    :maxdepth: 2
