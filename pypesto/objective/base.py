@@ -2,6 +2,7 @@ import numpy as np
 import pandas as pd
 import copy
 import logging
+import abc
 from typing import Dict, Sequence, Tuple, Union
 
 from .constants import MODE_FUN, MODE_RES, FVAL, GRAD, HESS, RES, SRES
@@ -13,7 +14,7 @@ ResultDict = Dict[str, Union[float, np.ndarray, Dict]]
 logger = logging.getLogger(__name__)
 
 
-class ObjectiveBase:
+class ObjectiveBase(abc.ABC):
     """
     The objective class is a simple wrapper around the objective function,
     giving a standardized way of calling. Apart from that, it manages several
@@ -156,6 +157,7 @@ class ObjectiveBase:
 
         return result
 
+    @abc.abstractmethod
     def call_unprocessed(
             self,
             x: np.ndarray,
@@ -164,7 +166,7 @@ class ObjectiveBase:
     ) -> ResultDict:
         """
         Call objective function without pre- or post-processing and
-        formatting. Abstract method to be implemented by derived classes.
+        formatting.
 
         Parameters
         ----------
@@ -182,11 +184,11 @@ class ObjectiveBase:
         """
         raise NotImplementedError()
 
+    @abc.abstractmethod
     def check_sensi_orders(self, sensi_orders, mode) -> bool:
         """
         Check if the objective is able to compute the requested
-        sensitivities. If not, throw an exception.
-        Abstract method to be implemented by derived classes.
+        sensitivities.
 
         Parameters
         ----------
@@ -194,24 +196,35 @@ class ObjectiveBase:
             Specifies which sensitivities to compute, e.g. (0,1) -> fval, grad.
         mode:
             Whether to compute function values or residuals.
+
+        Returns
+        -------
+        flag:
+            Boolean indicating whether combination of sensi_orders and mode
+            is supported
         """
         raise NotImplementedError()
 
+    @abc.abstractmethod
     def check_mode(self, mode) -> bool:
         """
         Check if the objective is able to compute in the requested mode.
-        Abstract method to be implemented by derived classes.
 
         Parameters
         ----------
         mode:
             Whether to compute function values or residuals.
+        Returns
+        -------
+        flag:
+            Boolean indicating whether mode is supported
         """
         raise NotImplementedError()
 
     @staticmethod
     def output_to_tuple(
-            sensi_orders: Tuple[int, ...], mode: str, **kwargs: ResultDict
+            sensi_orders: Tuple[int, ...], mode: str,
+            **kwargs: Union[float, np.ndarray]
     ) -> Tuple:
         """
         Return values as requested by the caller, since usually only a subset

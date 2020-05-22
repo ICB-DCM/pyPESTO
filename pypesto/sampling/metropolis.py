@@ -1,8 +1,7 @@
 import numpy as np
 from typing import Dict, Sequence, Union
 
-from ..objective import History
-from ..objective.objective import ObjectiveBase
+from ..objective import History, ObjectiveBase
 from ..problem import Problem
 from .sampler import InternalSample, InternalSampler
 from .result import McmcPtResult

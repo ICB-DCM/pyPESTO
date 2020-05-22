@@ -2,8 +2,7 @@ import h5py
 from ..result import Result
 from ..optimize.result import OptimizerResult
 from ..problem import Problem
-from ..objective.objective import ObjectiveBase
-from ..objective import Objective
+from ..objective import Objective, ObjectiveBase
 
 
 def read_hdf5_optimization(f: h5py.File,

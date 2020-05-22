@@ -6,7 +6,7 @@ import abc
 from typing import Dict, Tuple, Sequence, Union
 from collections import OrderedDict
 
-from .objective import ObjectiveBase
+from .base import ObjectiveBase, ResultDict
 from .constants import MODE_FUN, MODE_RES, FVAL, RDATAS
 from .amici_calculator import AmiciCalculator
 from .amici_util import (
@@ -269,16 +269,10 @@ class AmiciObjective(ObjectiveBase):
         # order 2 currently not implemented, we are using the FIM
         return min(max(sensi_orders), 1)
 
-    def check_mode(self, mode) -> bool:
+    def check_mode(self, mode):
         return mode in [MODE_FUN, MODE_RES]
 
-    def call_unprocessed(
-            self,
-            x: np.ndarray,
-            sensi_orders: Tuple[int, ...],
-            mode: str
-    ) -> Dict:
-
+    def call_unprocessed(self, x, sensi_orders, mode):
         sensi_order = self._get_amici_sensi_order(sensi_orders)
 
         x_dct = self.par_arr_to_dct(x)

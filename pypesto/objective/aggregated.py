@@ -2,7 +2,7 @@ import numpy as np
 
 from copy import deepcopy
 from typing import Sequence, Dict
-from .objective import ObjectiveBase, ResultDict
+from .base import ObjectiveBase, ResultDict
 
 from .constants import RDATAS, FVAL, CHI2, SCHI2, RES, SRES, GRAD, HESS, HESSP
 
@@ -22,7 +22,7 @@ class AggregatedObjective(ObjectiveBase):
         Parameters
         ----------
         objectives:
-            Sequence of pypesto.objetive instances
+            Sequence of pypesto.ObjectiveBase instances
         """
         # input typechecks
         if not isinstance(objectives, Sequence):
@@ -62,27 +62,21 @@ class AggregatedObjective(ObjectiveBase):
             for objective in self._objectives
         )
 
-    def call_unprocessed(self, x, sensi_orders, mode) -> Dict:
+    def call_unprocessed(self, x, sensi_orders, mode) -> ResultDict:
         return aggregate_results([
             objective.call_unprocessed(x, sensi_orders, mode)
             for objective in self._objectives
         ])
 
-    def reset_steadystate_guesses(self):
-        """
-        Propagates reset_steadystate_guesses() to child objectives if available
-        (currently only applies for amici_objective)
-        """
+    def initialize(self):
         for objective in self._objectives:
-            if hasattr(objective, 'reset_steadystate_guesses'):
-                objective.reset_steadystate_guesses()
+            objective.initialize()
 
 
 def aggregate_results(rvals: Sequence[ResultDict]) -> ResultDict:
-
     """
     Aggregrate the results from the provided sequence of ResultDicts into a
-    single ResultDict. Format of ResultDict is defined in
+    single ResultDict.
 
     Parameters
     ----------
@@ -125,7 +119,7 @@ def aggregate_results(rvals: Sequence[ResultDict]) -> ResultDict:
         if sres is not None:
             sres = np.vstack([sres, np.asarray(rval[SRES])])
 
-    # transform results to dict
+    # fill res, sres into result
     if res is not None:
         result[RES] = res
     if sres is not None:

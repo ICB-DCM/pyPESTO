@@ -1,23 +1,16 @@
 import numpy as np
 
-from .objective import ObjectiveBase
-from typing import Callable, Dict, Sequence, Tuple, Union
+from .base import ObjectiveBase, ResultDict
+from typing import Callable, Sequence, Tuple, Union
 
 from .constants import MODE_FUN, MODE_RES, FVAL, GRAD, HESS, RES, SRES
 
 
 class Objective(ObjectiveBase):
     """
-    The objective class is a simple wrapper around the objective function,
-    giving a standardized way of calling. Apart from that, it manages several
-    things including fixing of parameters and history.
-
-    The objective function is assumed to be in the format of a cost function,
-    log-likelihood function, or log-posterior function. These functions are
-    subject to minimization. For profiling and sampling, the sign is internally
-    flipped, all returned and stored values are however given as returned
-    by this objective function. If maximization is to be performed, the sign
-    should be flipped before creating the objective function.
+    The objective class allows the user explicitely specify functions that
+    compute the function value and/or residuals as well as respective
+    derivatives.
 
     Parameters
     ----------
@@ -114,7 +107,7 @@ class Objective(ObjectiveBase):
     def has_sres(self) -> bool:
         return callable(self.sres) or self.sres is True
 
-    def check_sensi_orders(self, sensi_orders, mode) -> bool:
+    def check_sensi_orders(self, sensi_orders, mode):
         if (mode is MODE_FUN and
             (0 in sensi_orders and not self.has_fun
              or 1 in sensi_orders and not self.has_grad
@@ -127,7 +120,7 @@ class Objective(ObjectiveBase):
 
         return True
 
-    def check_mode(self, mode) -> bool:
+    def check_mode(self, mode):
         if mode == MODE_FUN and not self.has_fun:
             return False
 
@@ -136,12 +129,7 @@ class Objective(ObjectiveBase):
 
         return True
 
-    def call_unprocessed(
-            self,
-            x: np.ndarray,
-            sensi_orders: Tuple[int, ...],
-            mode: str
-    ) -> Dict:
+    def call_unprocessed(self, x, sensi_orders, mode):
         """
         Call objective function without pre- or post-processing and
         formatting.
@@ -161,7 +149,7 @@ class Objective(ObjectiveBase):
 
     def _call_mode_fun(
             self, x: np.ndarray, sensi_orders: Tuple[int, ...]
-    ) -> Dict:
+    ) -> ResultDict:
         if sensi_orders == (0,):
             if self.grad is True:
                 fval = self.fun(x)[0]
@@ -220,7 +208,7 @@ class Objective(ObjectiveBase):
 
     def _call_mode_res(
             self, x: np.ndarray, sensi_orders: Tuple[int, ...]
-    ) -> Dict:
+    ) -> ResultDict:
         if sensi_orders == (0,):
             if self.sres is True:
                 res = self.res(x)[0]
