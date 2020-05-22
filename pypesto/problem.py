@@ -13,7 +13,7 @@ import numbers
 import copy
 from typing import Iterable, List, Optional, Sequence, Union
 
-from .objective.objective import ObjectiveBase
+from .objective import ObjectiveBase
 
 
 class Problem:

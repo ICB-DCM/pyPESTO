@@ -1,7 +1,7 @@
 import numpy as np
 
 from copy import deepcopy
-from typing import Sequence, Dict
+from typing import Sequence
 from .base import ObjectiveBase, ResultDict
 
 from .constants import RDATAS, FVAL, CHI2, SCHI2, RES, SRES, GRAD, HESS, HESSP

@@ -6,7 +6,7 @@ import abc
 from typing import Dict, Tuple, Sequence, Union
 from collections import OrderedDict
 
-from .base import ObjectiveBase, ResultDict
+from .base import ObjectiveBase
 from .constants import MODE_FUN, MODE_RES, FVAL, RDATAS
 from .amici_calculator import AmiciCalculator
 from .amici_util import (
