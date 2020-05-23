@@ -19,7 +19,16 @@ except ImportError:
 
 
 class Pymc3Sampler(Sampler):
-    """Wrapper around Pymc3 samplers."""
+    """Wrapper around Pymc3 samplers.
+
+    Parameters
+    ----------
+    step_function:
+        A pymc3 step function, e.g. NUTS, Slice. If not specified, pymc3
+        determines one automatically (preferable).
+    **options:
+        Options are directly passed on to `pymc3.sample`.
+    """
 
     def __init__(self, step_function=None, **options):
         super().__init__(options)
