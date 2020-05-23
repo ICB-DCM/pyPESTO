@@ -13,7 +13,7 @@ import numbers
 import copy
 from typing import Iterable, List, Optional, Sequence, Union
 
-from .objective.objective import Objective
+from .objective import ObjectiveBase
 
 
 class Problem:
@@ -73,7 +73,7 @@ class Problem:
     """
 
     def __init__(self,
-                 objective: Objective,
+                 objective: ObjectiveBase,
                  lb: Union[np.ndarray, List[float]],
                  ub: Union[np.ndarray, List[float]],
                  dim_full: Optional[int] = None,
