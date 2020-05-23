@@ -1,5 +1,5 @@
 import numpy as np
-from typing import Dict, Union
+from typing import Union
 import logging
 
 from ..objective import Objective, History
@@ -13,6 +13,7 @@ try:
     import pymc3 as pm
     import theano.tensor as tt
     from theano.gof.null_type import NullType
+    import arviz as az
 except ImportError:
     pass
 
@@ -20,11 +21,13 @@ except ImportError:
 class Pymc3Sampler(Sampler):
     """Wrapper around Pymc3 samplers."""
 
-    def __init__(self, options: Dict = None):
+    def __init__(self, step_function=None, **options):
         super().__init__(options)
+        self.step_function = step_function
         self.problem: Union[Problem, None] = None
         self.x0: Union[np.ndarray, None] = None
         self.trace: Union[pm.backends.Text, None] = None
+        self.data: Union[az.InferenceData, None] = None
 
     @classmethod
     def translate_options(cls, options):
@@ -36,6 +39,7 @@ class Pymc3Sampler(Sampler):
         self.problem = problem
         self.x0 = x0
         self.trace = None
+        self.data = None
 
         self.problem.objective.history = History()
 
@@ -51,39 +55,57 @@ class Pymc3Sampler(Sampler):
             x0 = {x_name: val
                   for x_name, val in zip(self.problem.x_names, self.x0)}
 
-        # use PyMC3 to draw samples
-        with pm.Model():
+        # create model context
+        with pm.Model() as model:
             # uniform prior
             k = [pm.Uniform(x_name, lower=lb, upper=ub)
                  for x_name, lb, ub in
                  zip(problem.x_names, problem.lb, problem.ub)]
 
-            # convert m and c to a tensor vector
+            # convert to tensor vector
             theta = tt.as_tensor_variable(k)
 
             # use a DensityDist (use a lambda function to "call" the Op)
-            pm.DensityDist('likelihood', lambda v: llh(v),
+            pm.DensityDist('likelihood', logp=lambda v: llh(v),
                            observed={'v': theta})
 
+            # step, by default automatically determined by pymc3
+            step = None
+            if self.step_function:
+                step = self.step_function()
+
+            # perform the actual sampling
             trace = pm.sample(
-                draws=int(n_samples), trace=trace, start=x0, **self.options)
+                draws=int(n_samples), trace=trace, start=x0, step=step,
+                **self.options)
+
+            # convert trace to inference data object
+            data = az.from_pymc3(trace=trace, model=model)
 
         self.trace = trace
+        self.data = data
 
     def get_samples(self) -> McmcPtResult:
-        trace_x = np.array(
-            [self.trace.get_values(x_name)
-             for x_name in self.problem.x_names]
-        ).T
+        # extract
+        trace_x = np.asarray(
+            self.data.posterior.to_array()).transpose((1, 2, 0))
 
-        # TOOD
-        trace_fval = np.empty(trace_x.shape[0])
-        trace_fval[:] = np.nan
+        # TODO this is only the log-likelihood
+        trace_fval = np.asarray(self.data.log_likelihood.to_array())
+        # remove trailing dimensions
+        trace_fval = np.reshape(trace_fval, trace_fval.shape[1:-1])
+        # flip sign
+        trace_fval = - trace_fval
+
+        if trace_x.shape[0] != trace_fval.shape[0] \
+                or trace_x.shape[1] != trace_fval.shape[1] \
+                or trace_x.shape[2] != len(self.problem.x_names):
+            raise ValueError("Trace dimensions are inconsistent")
 
         return McmcPtResult(
-            trace_x=np.array([trace_x]),
-            trace_fval=np.array([trace_fval]),
-            betas=np.array([1.]),
+            trace_x=np.array(trace_x),
+            trace_fval=np.array(trace_fval),
+            betas=np.array([1.] * trace_x.shape[0]),
         )
 
 
