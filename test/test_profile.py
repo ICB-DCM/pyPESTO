@@ -8,14 +8,14 @@ import unittest
 import test.test_objective as test_objective
 import warnings
 
-from pypesto.objective import Objective
+from pypesto import ObjectiveBase
 
 
 class ProfilerTest(unittest.TestCase):
 
     @classmethod
     def setUp(cls):
-        cls.objective: Objective = test_objective.rosen_for_sensi(
+        cls.objective: ObjectiveBase = test_objective.rosen_for_sensi(
             max_sensi_order=2, integrated=True
         )['obj']
 

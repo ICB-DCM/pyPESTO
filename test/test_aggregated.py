@@ -123,11 +123,6 @@ def test_exceptions():
             rosen_for_sensi(2, False, [0, 1])['obj'])
     with pytest.raises(TypeError):
         pypesto.objective.AggregatedObjective([0.5])
-    with pytest.raises(ValueError):
-        pypesto.objective.AggregatedObjective([
-            rosen_for_sensi(2, False, [0, 1])['obj'],
-            rosen_for_sensi(2, True, [0, 1])['obj']
-        ])
 
     with pytest.raises(ValueError):
         pypesto.objective.AggregatedObjective([])
