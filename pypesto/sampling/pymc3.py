@@ -75,7 +75,7 @@ class Pymc3Sampler(Sampler):
             theta = tt.as_tensor_variable(k)
 
             # use a DensityDist (use a lambda function to "call" the Op)
-            pm.DensityDist('likelihood', logp=lambda v: llh(v),
+            pm.DensityDist('llh', logp=lambda v: llh(v),
                            observed={'v': theta})
 
             # step, by default automatically determined by pymc3
@@ -95,7 +95,7 @@ class Pymc3Sampler(Sampler):
         self.data = data
 
     def get_samples(self) -> McmcPtResult:
-        # extract
+        # parameter values
         trace_x = np.asarray(
             self.data.posterior.to_array()).transpose((1, 2, 0))
 
