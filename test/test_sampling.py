@@ -72,7 +72,7 @@ def sampler(request):
             internal_sampler=pypesto.AdaptiveMetropolisSampler(),
             n_chains=5)
     elif request.param == 'Pymc3':
-        return pypesto.Pymc3Sampler({'tune': 5})
+        return pypesto.Pymc3Sampler(tune=5)
 
 
 @pytest.fixture(params=['gaussian', 'gaussian_mixture', 'rosenbrock'])
