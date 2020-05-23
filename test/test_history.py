@@ -11,7 +11,7 @@ import tempfile
 from test.test_objective import rosen_for_sensi
 from test.test_sbml_conversion import load_model_objective
 from pypesto.objective.util import sres_to_schi2, res_to_chi2
-from pypesto.objective import CsvHistory, HistoryOptions, MemoryHistory
+from pypesto import CsvHistory, HistoryOptions, MemoryHistory, ObjectiveBase
 from pypesto.optimize.optimizer import read_result_from_file, OptimizerResult
 
 from pypesto.objective.constants import (
@@ -24,7 +24,7 @@ from typing import Sequence
 class HistoryTest(unittest.TestCase):
     problem: pypesto.Problem = None
     optimizer: pypesto.Optimizer = None
-    obj: pypesto.Objective = None
+    obj: ObjectiveBase = None
     history_options: HistoryOptions = None
     ub: np.ndarray = None
     lb: np.ndarray = None
@@ -187,17 +187,24 @@ class HistoryTest(unittest.TestCase):
             ))
         }
         for var, fun in funs.items():
-            if not var == FVAL and not getattr(self.history_options,
-                                               f'trace_record_{var}'):
-                continue
             for it in range(5):
                 x_full = xfull(start.history.get_x_trace(it))
                 val = getattr(start.history, f'get_{var}_trace')(it)
+                if not getattr(self.history_options, f'trace_record_{var}',
+                               True):
+                    assert np.isnan(val)
+                    continue
                 if np.all(np.isnan(val)):
                     continue
                 if var in [FVAL, CHI2]:
+                    # note that we can expect slight deviations here since
+                    # this fval/chi2 may be computed without sensitivities
+                    # while the result here may be computed with with
+                    # sensitivies activated. If this fails to often,
+                    # increase atol/rtol
                     assert np.isclose(
                         val, fun(x_full),
+                        rtol=1e-3, atol=1e-4
                     ), var
                 elif var in [RES]:
                     # note that we can expect slight deviations here since
@@ -289,6 +296,21 @@ class ResModeHistoryTest(HistoryTest):
         self.fix_pars = False
         self.check_history()
 
+    def test_trace_all_aggregated(self):
+        self.history_options = HistoryOptions(
+            trace_record=True,
+            trace_record_grad=True,
+            trace_record_hess=True,
+            trace_record_res=True,
+            trace_record_sres=True,
+            trace_record_chi2=True,
+            trace_record_schi2=True,
+        )
+
+        self.obj = pypesto.objective.AggregatedObjective([self.obj, self.obj])
+        self.fix_pars = False
+        self.check_history()
+
 
 class FunModeHistoryTest(HistoryTest):
     @classmethod
@@ -346,6 +368,25 @@ class FunModeHistoryTest(HistoryTest):
             trace_record_chi2=True,
             trace_record_schi2=True,
         )
+        self.fix_pars = False
+        self.check_history()
+
+    def test_trace_all_aggregated(self):
+        self.obj = rosen_for_sensi(
+            max_sensi_order=2,
+            integrated=True
+        )['obj']
+
+        self.history_options = HistoryOptions(
+            trace_record=True,
+            trace_record_grad=True,
+            trace_record_hess=True,
+            trace_record_res=True,
+            trace_record_sres=True,
+            trace_record_chi2=True,
+            trace_record_schi2=True,
+        )
+        self.obj = pypesto.objective.AggregatedObjective([self.obj, self.obj])
         self.fix_pars = False
         self.check_history()
 

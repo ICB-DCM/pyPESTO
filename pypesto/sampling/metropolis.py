@@ -1,9 +1,8 @@
 import numpy as np
 from typing import Dict, Sequence, Union
 
-from ..objective import Objective
+from ..objective import History, ObjectiveBase
 from ..problem import Problem
-from ..objective import History
 from .sampler import InternalSample, InternalSampler
 from .result import McmcPtResult
 
@@ -16,7 +15,7 @@ class MetropolisSampler(InternalSampler):
     def __init__(self, options: Dict = None):
         super().__init__(options)
         self.problem: Union[Problem, None] = None
-        self.objective: Union[Objective, None] = None
+        self.objective: Union[ObjectiveBase, None] = None
         self.trace_x: Union[Sequence[np.ndarray], None] = None
         self.trace_fval: Union[Sequence[float], None] = None
 
