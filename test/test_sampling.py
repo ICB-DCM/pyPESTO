@@ -151,7 +151,7 @@ def test_regularize_covariance():
 
 
 def test_geweke_test():
-    """ Check geweke test returns expected burn in index."""
+    """Check geweke test returns expected burn in index."""
     warm_up = np.zeros((100, 2))
     converged = np.ones((901, 2))
     chain = np.concatenate((warm_up, converged), axis=0)

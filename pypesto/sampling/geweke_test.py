@@ -1,10 +1,14 @@
+import logging
+from typing import Tuple
 import numpy as np
 from scipy.stats import norm
+
+logger = logging.getLogger(__name__)
 
 
 def spectrum(x: np.array,
              nfft: int = None,
-             nw: int = None):
+             nw: int = None) -> np.ndarray:
     """
     Power spectral density using Hanning window.
 
@@ -22,7 +26,6 @@ def spectrum(x: np.array,
     -------
     spectral_density:
         The spectral density.
-
     """
 
     if nfft is None:
@@ -64,7 +67,7 @@ def spectrum(x: np.array,
     return spectral_density
 
 
-def spectrum0(x: np.array):
+def spectrum0(x: np.array) -> np.ndarray:
     """
     Calculates the spectral density at frequency zero.
 
@@ -77,7 +80,6 @@ def spectrum0(x: np.array):
     -------
     spectral_density_zero:
         Spectral density at zero.
-
     """
 
     n_samples, n_par = x.shape
@@ -91,7 +93,7 @@ def spectrum0(x: np.array):
 
 def calculate_zscore(chain: np.array,
                      a: float = 0.1,
-                     b: float = 0.5):
+                     b: float = 0.5) -> Tuple[float, float]:
     """
     Performs a Geweke test on a chain using the first
     "a" fraction and the last "b" fraction of it for
@@ -117,7 +119,6 @@ def calculate_zscore(chain: np.array,
         Z-score of the Geweke test.
     p:
         Significance level of the Geweke test.
-
     """
 
     nsimu, _ = chain.shape
@@ -154,7 +155,7 @@ def calculate_zscore(chain: np.array,
 
 
 def burn_in_by_sequential_geweke(chain: np.array,
-                                 zscore: float = 2.):
+                                 zscore: float = 2.) -> int:
     """
     Calculates the burn-in of MCMC chains.
 
@@ -171,7 +172,6 @@ def burn_in_by_sequential_geweke(chain: np.array,
         Iteration where the first and the last fraction
         of the chain do not differ significantly
         regarding Geweke test.
-
     """
 
     nsimu, npar = chain.shape
@@ -179,28 +179,31 @@ def burn_in_by_sequential_geweke(chain: np.array,
     n = 20
     # round each element to the nearest integer
     # toward zero
-    e = np.floor(5 * nsimu / 5).astype(int)
-    step = np.floor(e / n).astype(int)
-    ii = np.arange(0, e - 1, step)
+    step = np.floor(nsimu / n).astype(int)
+    fragments = np.arange(0, nsimu-1, step)
 
-    z = np.zeros((len(ii), npar))
-    for i in range(len(ii)):
+    z = np.zeros((len(fragments), npar))
+    for i, indices in enumerate(fragments):
         # Calculate z-score
-        z[i, :], _ = calculate_zscore(chain[ii[i]:, :])
+        z[i, :], _ = calculate_zscore(chain[indices:, :])
 
     # Sort z-score for Bonferroni-Holm inverse
     # to sorting p-values
     max_z = np.max(np.absolute(z), axis=1)
     idxs = max_z.argsort()[::-1]  # sort descend
-    alpha2 = zscore + np.zeros((len(idxs)))
+    alpha2 = zscore * np.ones((len(idxs)))
 
     for i in range(len(max_z)):
-        alpha2[idxs[i]] = alpha2[idxs[i]] / \
-                          (len(ii) - np.where(idxs == i)[0] + 1)
+        alpha2[idxs[i]] = (alpha2[idxs[i]] /
+                           (len(fragments) - np.where(idxs == i)[0] + 1))
 
-    if np.where(alpha2 > max_z)[0].size != 0:
+    if np.any(alpha2 > max_z):
         burn_in = (np.where(alpha2 > max_z)[0][0]) * step
     else:
         burn_in = nsimu
-
+        logger.warning("Burn in index coincides with chain "
+                       "length. The chain seems that has not "
+                       "converged yet.\n"
+                       "You may want to use a larger number "
+                       "of samples.")
     return burn_in
