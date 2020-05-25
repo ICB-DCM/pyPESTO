@@ -105,4 +105,3 @@ def effective_sample_size(result: Result):
     ess = chain.shape[0] / (1. + ac)
 
     return ess
-
