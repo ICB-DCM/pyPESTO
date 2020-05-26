@@ -9,10 +9,12 @@ describing the problem to be solved.
 
 import numpy as np
 import pandas as pd
+import numbers
 import copy
-from typing import Iterable, List, Optional, Union, Dict
 
-from .objective.objective import Objective
+from typing import Iterable, List, Optional, Sequence, Union
+
+from .objective import ObjectiveBase
 from .objective.priors import Priors
 
 
@@ -80,7 +82,7 @@ class Problem:
     """
 
     def __init__(self,
-                 objective: Objective,
+                 objective: ObjectiveBase,
                  lb: Union[np.ndarray, List[float]],
                  ub: Union[np.ndarray, List[float]],
                  dim_full: Optional[int] = None,
@@ -90,7 +92,7 @@ class Problem:
                  x_names: Optional[Iterable[str]] = None,
                  x_scales: Optional[Iterable[str]] = None,
                  x_priors_defs: Optional[Priors] = None):
-
+        
         self.objective = copy.deepcopy(objective)
 
         self.lb = np.array(lb).flatten()
@@ -103,33 +105,30 @@ class Problem:
 
         if x_fixed_indices is None:
             x_fixed_indices = []
-        self.x_fixed_indices: List[int] = [int(i) for i in x_fixed_indices]
+        self.x_fixed_indices: List[int] = [int(ix) for ix in x_fixed_indices]
 
         # We want the fixed values to be a list, since we might need to add
         # or remove values during profile computation
         if x_fixed_vals is None:
             x_fixed_vals = []
-        if not isinstance(x_fixed_vals, list):
+        if isinstance(x_fixed_vals, numbers.Real):
             x_fixed_vals = [x_fixed_vals]
-
-        self.x_fixed_vals = x_fixed_vals
+        self.x_fixed_vals: List[float] = [float(x) for x in x_fixed_vals]
 
         self.dim: int = self.dim_full - len(self.x_fixed_indices)
 
-        self.x_free_indices = [
-            int(i) for i in
-            set(range(0, self.dim_full)) - set(self.x_fixed_indices)
-        ]
+        self.x_free_indices: List[int] = sorted(list(
+            set(range(0, self.dim_full)) - set(self.x_fixed_indices)))
 
         if x_guesses is None:
             x_guesses = np.zeros((0, self.dim))
-        self.x_guesses = np.array(x_guesses)
+        self.x_guesses: np.ndarray = np.array(x_guesses)
 
         if objective.x_names is not None:
             x_names = objective.x_names
         elif x_names is None:
             x_names = [f'x{j}' for j in range(0, self.dim_full)]
-        self.x_names = x_names
+        self.x_names: List[str] = [name for name in x_names]
 
         if x_scales is None:
             x_scales = ['lin'] * dim_full
@@ -249,7 +248,7 @@ class Problem:
         self.lb = self.lb_full[self.x_free_indices]
         self.ub = self.ub_full[self.x_free_indices]
 
-        self.normalize_input(False)
+        self.normalize_input(check_x_guesses=False)
 
     def get_full_vector(
             self,

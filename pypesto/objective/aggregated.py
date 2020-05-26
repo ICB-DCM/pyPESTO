@@ -1,25 +1,27 @@
 import numpy as np
+
 from copy import deepcopy
-from typing import List
-from .objective import Objective
+from typing import Sequence
+from .base import ObjectiveBase, ResultDict
 
-from .constants import RDATAS
+from .constants import RDATAS, FVAL, CHI2, SCHI2, RES, SRES, GRAD, HESS, HESSP
 
 
-class AggregatedObjective(Objective):
+class AggregatedObjective(ObjectiveBase):
     """
     This class aggregates multiple objectives into one objective.
     """
 
     def __init__(
             self,
-            objectives: List[Objective],
-            x_names: List[str] = None):
+            objectives: Sequence[ObjectiveBase],
+            x_names: Sequence[str] = None):
         """
         Constructor.
 
         Parameters
         ----------
+<<<<<<< HEAD
         objectives: list
             List of pypesto.objetive instances
         x_names: List
@@ -29,18 +31,27 @@ class AggregatedObjective(Objective):
         # input type checks
         if not isinstance(objectives, list):
             raise TypeError(f'Objectives must be a list, '
+=======
+        objectives:
+            Sequence of pypesto.ObjectiveBase instances
+        """
+        # input typechecks
+        if not isinstance(objectives, Sequence):
+            raise TypeError(f'Objectives must be a Sequence, '
+>>>>>>> remotes/origin/develop
                             f'was {type(objectives)}.')
 
         if not all(
-                isinstance(objective, Objective)
+                isinstance(objective, ObjectiveBase)
                 for objective in objectives
         ):
             raise TypeError('Objectives must only contain elements of type'
                             'pypesto.Objective')
 
-        if not len(objectives):
+        if not objectives:
             raise ValueError('Length of objectives must be at least one')
 
+<<<<<<< HEAD
         self.objectives = objectives
 
         # assemble a dict that we can pass as kwargs to the
@@ -89,14 +100,20 @@ class AggregatedObjective(Objective):
                                  f'instances!')
 
         super().__init__(**init_kwargs)
+=======
+        self._objectives = objectives
+
+        super().__init__(x_names=x_names)
+>>>>>>> remotes/origin/develop
 
     def __deepcopy__(self, memodict=None):
         other = AggregatedObjective(
-            objectives=[deepcopy(objective) for objective in self.objectives],
+            objectives=[deepcopy(objective) for objective in self._objectives],
             x_names=deepcopy(self.x_names),
         )
         return other
 
+<<<<<<< HEAD
     def aggregate_fun_sensi_orders(self, x, sensi_orders):
         """
         Returns a dict with aggregated (= summed up) fval, grad,
@@ -159,10 +176,76 @@ class AggregatedObjective(Objective):
                 result[RDATAS].extend(rval[RDATAS])
 
         # transform results to dict
+=======
+    def check_mode(self, mode) -> bool:
+        return all(
+            objective.check_mode(mode)
+            for objective in self._objectives
+        )
 
+    def check_sensi_orders(self, sensi_orders, mode) -> bool:
+        return all(
+            objective.check_sensi_orders(sensi_orders, mode)
+            for objective in self._objectives
+        )
+
+    def call_unprocessed(self, x, sensi_orders, mode) -> ResultDict:
+        return aggregate_results([
+            objective.call_unprocessed(x, sensi_orders, mode)
+            for objective in self._objectives
+        ])
+
+    def initialize(self):
+        for objective in self._objectives:
+            objective.initialize()
+>>>>>>> remotes/origin/develop
+
+
+def aggregate_results(rvals: Sequence[ResultDict]) -> ResultDict:
+    """
+    Aggregrate the results from the provided sequence of ResultDicts into a
+    single ResultDict.
+
+    Parameters
+    ----------
+    rvals:
+        results to aggregate
+    """
+
+    # rvals are guaranteed to be consistent as _check_sensi_orders checks
+    # whether each objective can be called with the respective
+    # sensi_orders/mode
+
+    # sum over fval/grad/hess
+    result = {
+        key: sum(rval[key] for rval in rvals)
+        for key in [FVAL, CHI2, SCHI2, GRAD, HESS, HESSP]
+        if rvals[0].get(key, None) is not None
+    }
+
+    # extract rdatas and flatten
+    result[RDATAS] = []
+    for rval in rvals:
+        if RDATAS in rval:
+            result[RDATAS].extend(rval[RDATAS])
+
+    # initialize res and sres
+    if RES in rvals[0]:
+        res = np.asarray(rvals[0][RES])
+    else:
+        res = None
+
+    if SRES in rvals[0]:
+        sres = np.asarray(rvals[0][SRES])
+    else:
+        sres = None
+
+    # skip iobj=0 after initialization, stack matrices
+    for rval in rvals[1:]:
         if res is not None:
-            result['res'] = res
+            res = np.hstack([res, np.asarray(rval[RES])])
         if sres is not None:
+<<<<<<< HEAD
             result['sres'] = sres
 
         return result
@@ -258,3 +341,14 @@ def _check_none_value_consistent(objectives, attr):
     if not all(is_none):
         raise ValueError(f'{attr} of all objectives must have a consistent '
                          f'value!')
+=======
+            sres = np.vstack([sres, np.asarray(rval[SRES])])
+
+    # fill res, sres into result
+    if res is not None:
+        result[RES] = res
+    if sres is not None:
+        result[SRES] = sres
+
+    return result
+>>>>>>> remotes/origin/develop

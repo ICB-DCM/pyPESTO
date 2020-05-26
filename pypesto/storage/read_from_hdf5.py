@@ -2,7 +2,7 @@ import h5py
 from ..result import Result
 from ..optimize.result import OptimizerResult
 from ..problem import Problem
-from ..objective import Objective
+from ..objective import Objective, ObjectiveBase
 
 
 def read_hdf5_optimization(f: h5py.File,
@@ -50,20 +50,40 @@ class ProblemHDF5Reader:
             HDF5 problem file name
         """
         self.storage_filename = storage_filename
-        self.problem = Problem(Objective(), [], [])
 
-    def read(self) -> Problem:
+    def read(self, objective: ObjectiveBase = None) -> Problem:
         """
         Read HDF5 problem file and return pyPESTO problem object.
+
+        Parameters
+        ----------
+        objective:
+            Objective function which is currently not save to storage.
+        Returns
+        -------
+        problem:
+            A problem instance with all attributes read in.
         """
+        # create empty problem
+        if objective is None:
+            objective = Objective()
+        problem = Problem(objective, [], [])
+
         with h5py.File(self.storage_filename, 'r') as f:
             for problem_key in f['/problem']:
-                setattr(self.problem, problem_key,
+                setattr(problem, problem_key,
                         f[f'/problem/{problem_key}'][:])
             for problem_attr in f['/problem'].attrs:
-                setattr(self.problem, problem_attr,
+                setattr(problem, problem_attr,
                         f['/problem'].attrs[problem_attr])
-        return self.problem
+
+        # h5 uses numpy for everything; convert to lists where necessary
+        problem.x_fixed_vals = [float(val) for val in problem.x_fixed_vals]
+        problem.x_fixed_indices = [int(ix) for ix in problem.x_fixed_indices]
+        problem.x_free_indices = [int(ix) for ix in problem.x_free_indices]
+        problem.x_names = [str(name) for name in problem.x_names]
+
+        return problem
 
 
 class OptimizationResultHDF5Reader:
