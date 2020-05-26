@@ -48,7 +48,8 @@ from .sampling import (
     ParallelTemperingSampler,
     AdaptiveParallelTemperingSampler,
     Pymc3Sampler,
-    McmcPtResult)
+    McmcPtResult,
+    geweke_test)
 from .engine import (
     SingleCoreEngine,
     MultiThreadEngine,
