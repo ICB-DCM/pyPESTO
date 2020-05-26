@@ -62,6 +62,7 @@ def spectrum(x: np.array,
     spectral_density = spectral_density * (1 / kmu)
 
     n2 = np.floor(nfft / 2).astype(int)
+
     spectral_density = spectral_density[0:n2]
 
     return spectral_density

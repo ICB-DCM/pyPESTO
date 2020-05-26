@@ -40,8 +40,8 @@ class Pymc3Sampler(Sampler):
 
     @classmethod
     def translate_options(cls, options):
-        if options is None:
-            options = {}
+        if not options:
+            options = {'chains': 1}
         return options
 
     def initialize(self, problem: Problem, x0: np.ndarray):
@@ -56,7 +56,7 @@ class Pymc3Sampler(Sampler):
             self, n_samples: int, beta: float = 1.
     ):
         problem = self.problem
-        llh = TheanoLogLikelihood(problem, beta)
+        log_post = TheanoLogProbability(problem, beta)
         trace = self.trace
 
         x0 = None
@@ -66,7 +66,7 @@ class Pymc3Sampler(Sampler):
 
         # create model context
         with pm.Model() as model:
-            # uniform prior
+            # uniform bounds
             k = [pm.Uniform(x_name, lower=lb, upper=ub)
                  for x_name, lb, ub in
                  zip(problem.x_names, problem.lb, problem.ub)]
@@ -74,9 +74,9 @@ class Pymc3Sampler(Sampler):
             # convert to tensor vector
             theta = tt.as_tensor_variable(k)
 
-            # use a DensityDist (use a lambda function to "call" the Op)
-            pm.DensityDist('llh', logp=lambda v: llh(v),
-                           observed={'v': theta})
+            # use a DensityDist for the log-posterior
+            log_post = pm.DensityDist(
+                'log_post', logp=lambda v: log_post(v), observed={'v': theta})
 
             # step, by default automatically determined by pymc3
             step = None
@@ -99,7 +99,7 @@ class Pymc3Sampler(Sampler):
         trace_x = np.asarray(
             self.data.posterior.to_array()).transpose((1, 2, 0))
 
-        # TODO this is only the log-likelihood
+        # TODO this is only the negative objective values
         trace_fval = np.asarray(self.data.log_likelihood.to_array())
         # remove trailing dimensions
         trace_fval = np.reshape(trace_fval, trace_fval.shape[1:-1])
@@ -118,55 +118,74 @@ class Pymc3Sampler(Sampler):
         )
 
 
-class TheanoLogLikelihood(tt.Op):
+class TheanoLogProbability(tt.Op):
     """
-    Theano wrapper around the log-likelihood function.
+    Theano wrapper around a (non-normalized) log-probability function.
+
+    Parameters
+    ----------
+    problem:
+        The `pypesto.Problem` to analyze.
+    beta:
+        Inverse temperature (e.g. in parallel tempering).
     """
+
     itypes = [tt.dvector]  # expects a vector of parameter values when called
-    otypes = [tt.dscalar]  # outputs a single scalar value (the log likelihood)
+    otypes = [tt.dscalar]  # outputs a single scalar value (the log prob)
 
     def __init__(self, problem: Problem, beta: float = 1.):
         self._objective: Objective = problem.objective
 
-        # initialize the llh Op
-        self._llh = lambda x: - beta * self._objective(x, sensi_orders=(0,))
+        # initialize the log probability Op
+        self._log_prob = \
+            lambda x: - beta * self._objective(x, sensi_orders=(0,))
 
-        # initialize the sllh Op
+        # initialize the sensitivity Op
         if problem.objective.has_grad:
-            self._sllh = TheanoLogLikelihoodGradient(problem, beta)
+            self._log_prob_grad = TheanoLogProbabilityGradient(problem, beta)
         else:
-            self._sllh = None
+            self._log_prob_grad = None
 
     def perform(self, node, inputs, outputs, params=None):
         theta, = inputs
-        llh = self._llh(theta)
-        outputs[0][0] = np.array(llh)
+        log_prob = self._log_prob(theta)
+        outputs[0][0] = np.array(log_prob)
 
     def grad(self, inputs, g):
         # the method that calculates the gradients - it actually returns the
         # vector-Jacobian product - g[0] is a vector of parameter values
-        if self._sllh is None:
+        if self._log_prob_grad is None:
+            # indicates gradient not available
             return [NullType]
         theta, = inputs
-        sllh = self._sllh(theta)
-        return [g[0] * sllh]
+        log_prob_grad = self._log_prob_grad(theta)
+        return [g[0] * log_prob_grad]
 
 
-class TheanoLogLikelihoodGradient(tt.Op):
+class TheanoLogProbabilityGradient(tt.Op):
     """
-    Theano wrapper around the log-likelihood gradient function.
+    Theano wrapper around a (non-normalized) log-probability gradient function.
     This Op will be called with a vector of values and also return a vector of
     values - the gradients in each dimension.
+
+    Parameters
+    ----------
+    problem:
+        The `pypesto.Problem` to analyze.
+    beta:
+        Inverse temperature (e.g. in parallel tempering).
     """
-    itypes = [tt.dvector]
-    otypes = [tt.dvector]
+
+    itypes = [tt.dvector]  # expects a vector of parameter values when called
+    otypes = [tt.dvector]  # outputs a vector (the log prob grad)
 
     def __init__(self, problem: Problem, beta: float = 1.):
         self._objective: Objective = problem.objective
-        self._sllh = lambda x: - beta * self._objective(x, sensi_orders=(1,))
+        self._log_prob_grad = \
+            lambda x: - beta * self._objective(x, sensi_orders=(1,))
 
     def perform(self, node, inputs, outputs, params=None):
         theta, = inputs
         # calculate gradients
-        sllh = self._sllh(theta)
-        outputs[0][0] = sllh
+        log_prob_grad = self._log_prob_grad(theta)
+        outputs[0][0] = log_prob_grad
