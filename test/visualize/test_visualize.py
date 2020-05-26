@@ -3,6 +3,7 @@ import pypesto.visualize
 import numpy as np
 import scipy.optimize as so
 import matplotlib.pyplot as plt
+import pytest
 
 
 def close_fig(fun):
@@ -169,22 +170,28 @@ def test_waterfall_with_options():
     (_, _, ref3, _, ref_point) = create_plotting_options()
     alt_fig_size = (9.0, 8.0)
 
-    # Test with y-limits as vector
-    pypesto.visualize.waterfall(result_1,
-                                reference=ref_point,
-                                y_limits=[-0.5, 2.5],
-                                start_indices=[0, 1, 4, 11],
-                                size=alt_fig_size,
-                                colors=[1., .3, .3, 0.5])
+    with pytest.warns(UserWarning, match="Invalid lower bound"):
+        # Test with y-limits as vector and invalid lower bound
+        pypesto.visualize.waterfall(result_1,
+                                    reference=ref_point,
+                                    y_limits=[-0.5, 2.5],
+                                    start_indices=[0, 1, 4, 11],
+                                    size=alt_fig_size,
+                                    colors=[1., .3, .3, 0.5])
 
-    # Test with linear scale
-    pypesto.visualize.waterfall([result_1, result_2],
-                                reference=ref3,
-                                offset_y=-2.5,
-                                start_indices=3,
-                                y_limits=5.)
+    # Test with fully invalid bounds
+    with pytest.warns(UserWarning, match="Invalid bounds"):
+        pypesto.visualize.waterfall(result_1, y_limits=[-1.5, 0.])
 
     # Test with y-limits as float
+    with pytest.warns(UserWarning, match="Offset specified by user"):
+        pypesto.visualize.waterfall([result_1, result_2],
+                                    reference=ref3,
+                                    offset_y=-2.5,
+                                    start_indices=3,
+                                    y_limits=5.)
+
+    # Test with linear scale
     pypesto.visualize.waterfall(result_1,
                                 reference=ref3,
                                 scale_y='lin',
@@ -357,15 +364,16 @@ def test_optimizer_history_with_options():
     alt_fig_size = (9.0, 8.0)
 
     # Test with y-limits as vector
-    pypesto.visualize.optimizer_history(result_1,
-                                        y_limits=[-0.5, 2.5],
-                                        start_indices=[0, 1, 4, 11],
-                                        reference=ref_point,
-                                        size=alt_fig_size,
-                                        trace_x='steps',
-                                        trace_y='fval',
-                                        offset_y=-10.,
-                                        colors=[1., .3, .3, 0.5])
+    with pytest.warns(UserWarning, match="Invalid lower bound"):
+        pypesto.visualize.optimizer_history(result_1,
+                                            y_limits=[-0.5, 2.5],
+                                            start_indices=[0, 1, 4, 11],
+                                            reference=ref_point,
+                                            size=alt_fig_size,
+                                            trace_x='steps',
+                                            trace_y='fval',
+                                            offset_y=-10.,
+                                            colors=[1., .3, .3, 0.5])
 
     # Test with linear scale
     pypesto.visualize.optimizer_history([result_1,

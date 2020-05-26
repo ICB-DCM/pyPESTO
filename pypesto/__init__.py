@@ -15,8 +15,9 @@ from .objective import (
     CsvHistory,
     Hdf5History,
     OptimizerHistory,
+    AmiciObjective,
     Objective,
-    AmiciObjective)
+    ObjectiveBase)
 from .problem import Problem
 from .petab import (
     PetabImporter)
