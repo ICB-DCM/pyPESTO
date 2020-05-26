@@ -37,6 +37,7 @@ install:
   - if [ "$TRAVIS_PULL_REQUEST" != "false" ]; then
       pip install -r .rtd_pip_reqs.txt;
     fi
+  - pip3 install sympy==1.5.1  # TODO remove when AMICI is adapted
 
 # run tests
 script:
