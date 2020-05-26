@@ -6,7 +6,6 @@ import math
 
 from .objective import Objective
 from .aggregated import AggregatedObjective
-from .constants import FVAL, GRAD, HESS
 
 
 class Priors(AggregatedObjective):
@@ -214,6 +213,7 @@ def _prior_densities(prior_type: str,
         return log_f, d_log_f_dx, dd_log_f_ddx
 
     elif prior_type == 'logUniform':
+        # when implementing: add to tests
         raise NotImplementedError
     elif prior_type == 'logNormal':
 
@@ -233,6 +233,7 @@ def _prior_densities(prior_type: str,
         return log_f, d_log_f_dx, dd_log_f_ddx
 
     elif prior_type == 'logLaplace':
+        # when implementing: add to tests
         raise NotImplementedError
     else:
         ValueError(f'Priors of type {prior_type} are currently not supported')

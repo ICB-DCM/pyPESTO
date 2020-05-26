@@ -3,14 +3,110 @@
 This is for testing priors.
 """
 
-import os
-import unittest
+import pytest
+import math
+import itertools
 import numpy as np
+import scipy.optimize as opt
 
-import petab
 import pypesto
-from test.petab_util import folder_base
+from pypesto.objective import ParameterPriors
+from pypesto.objective.priors import get_parameter_prior_dict
 
 
-class PriorTest(unittest.TestCase):
-    pass
+def test_mode():
+    """
+    Tests the maximum/optimum for priors in different scales...
+    """
+
+    scales = ['lin', 'log', 'log10']
+    prior_types = ['normal', 'laplace',
+                   'logNormal']
+
+    problem_dict = {'lin': {'lb': [0], 'ub': [10], 'opt': [1]},
+                    'log': {'lb': [-3], 'ub': [3], 'opt': [0]},
+                    'log10': {'lb': [-3], 'ub': [2], 'opt': [0]}}
+
+    for prior_type, scale in itertools.product(prior_types, scales):
+        prior_list = [get_parameter_prior_dict(
+            0, prior_type, [1, 1], scale)]
+
+        test_prior = ParameterPriors(prior_list)
+        test_problem = pypesto.Problem(test_prior,
+                                       lb=problem_dict[scale]['lb'],
+                                       ub=problem_dict[scale]['ub'],
+                                       dim_full=1,
+                                       x_scales=[scale])
+
+        optimizer = pypesto.ScipyOptimizer(method='BFGS')
+
+        result = pypesto.minimize(problem=test_problem,
+                                  optimizer=optimizer,
+                                  n_starts=10)
+
+        assert np.isclose(result.optimize_result.list[0]['fval'],
+                          problem_dict[scale]['opt'])
+
+    # test uniform distribution:
+    for scale in scales:
+        prior_dict = get_parameter_prior_dict(
+            0, 'uniform', [-1, 1], scale)
+
+        assert abs(prior_dict['density_fun'](-1) - math.log(1/2)) < 1e-8
+        assert abs(prior_dict['density_fun'](1) - math.log(1/2)) < 1e-8
+
+
+def test_derivatives():
+    """
+    Tests the finite gradients and second order gradients.
+    """
+
+    scales = ['lin', 'log', 'log10']
+    prior_types = ['uniform', 'normal', 'laplace', 'logNormal']
+
+    for prior_type, scale in itertools.product(prior_types, scales):
+
+        prior_dict = get_parameter_prior_dict(
+            0, prior_type, [1, 1], scale)
+
+        # use this x0, since it is a moderate value both in linear
+        # and in log scale...
+        x0 = np.array([0.5])
+
+        err_grad = opt.check_grad(prior_dict['density_fun'],
+                                  prior_dict['density_dx'], x0)
+        err_hes = opt.check_grad(prior_dict['density_dx'],
+                                 prior_dict['density_ddx'], x0)
+
+        assert err_grad < 1e-3
+        assert err_hes < 1e-3
+
+
+def scaled_to_lin(x: float,
+                  scale: str):
+    """
+    transforms x to linear scale
+    """
+    if scale == 'lin':
+        return x
+    elif scale == 'log':
+        return math.log(x)
+    elif scale == 'log10':
+        return math.log10(x)
+    else:
+        ValueError(f'Unknown scale {scale}')
+
+
+def lin_to_scaled(x: float,
+                  scale: str):
+    """
+    transforms x to scale
+    """
+    if scale == 'lin':
+        return x
+    elif scale == 'log':
+        return math.exp(x)
+    elif scale == 'log10':
+        return 10**x
+    else:
+        ValueError(f'Unknown scale {scale}')

@@ -16,6 +16,7 @@ from .objective import (
     Hdf5History,
     OptimizerHistory,
     Objective,
+    Priors,
     AmiciObjective)
 from .problem import Problem
 from .petab import (

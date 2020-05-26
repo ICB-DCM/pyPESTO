@@ -285,7 +285,10 @@ class PetabImporter(AmiciObjectBuilder):
                 prior_type_entry = \
                     self.petab_problem.parameter_df.loc[id, petab.OBJECTIVE_PRIOR_TYPE]
 
-                if not np.isnan(prior_type_entry):
+                # TODO: Change the hardcoded "uninformative" to
+                #  petab.UNINFORMATIVE, if corresponding PEtab PR is merged
+                if not (np.isnan(prior_type_entry)
+                        or prior_type_entry == 'uninformative'):
 
                     prior_params = [float(param) for param in
                                     self.petab_problem.parameter_df.
@@ -337,6 +340,7 @@ class PetabImporter(AmiciObjectBuilder):
             x_fixed_indices=self.petab_problem.x_fixed_indices,
             x_fixed_vals=self.petab_problem.x_nominal_fixed_scaled,
             x_names=self.petab_problem.x_ids,
+            x_scales=self.petab_problem.get_optimization_parameter_scales(),
             x_priors_defs=prior)
 
         return problem
