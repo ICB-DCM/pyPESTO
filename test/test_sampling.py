@@ -98,6 +98,7 @@ def test_pipeline(sampler, problem):
 
 
 def test_ground_truth():
+    """Test whether we actually retrieve correct distributions."""
     # use best self-implemented sampler, which has a chance of correctly
     # sampling from the distribution
     sampler = pypesto.AdaptiveParallelTemperingSampler(
@@ -150,7 +151,7 @@ def test_regularize_covariance():
     assert np.all(np.linalg.eigvals(reg) >= 0)
 
 
-def test_geweke_test():
+def test_geweke_test_switch():
     """Check geweke test returns expected burn in index."""
     warm_up = np.zeros((100, 2))
     converged = np.ones((901, 2))
@@ -158,3 +159,20 @@ def test_geweke_test():
     burn_in = pypesto.sampling.diagnostics.burn_in_by_sequential_geweke(
         chain=chain)
     assert burn_in == 100
+
+
+def test_geweke_test_unconverged():
+    """Check that the geweke test reacts nicely to small sample numbers."""
+    problem = gaussian_problem()
+
+    sampler = pypesto.MetropolisSampler()
+
+    # optimization
+    result = pypesto.minimize(problem, n_starts=3)
+
+    # sampling
+    result = pypesto.sample(
+        problem, sampler=sampler, n_samples=100, result=result)
+
+    # run geweke test (should not fail!)
+    pypesto.sampling.geweke_test(result)
