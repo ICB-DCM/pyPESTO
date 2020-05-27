@@ -7,7 +7,7 @@ try:
     import theano.tensor as tt
     from theano.gof.null_type import NullType
 except ImportError:
-    tt = None
+    tt = NullType = None
 
 
 class TheanoLogProbability(tt.Op):

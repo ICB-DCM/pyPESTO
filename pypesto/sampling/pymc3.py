@@ -14,9 +14,7 @@ try:
     import arviz as az
     import theano.tensor as tt
 except ImportError:
-    pm = None
-    az = None
-    tt = None
+    pm = az = tt = None
 
 try:
     from .theano import TheanoLogProbability
