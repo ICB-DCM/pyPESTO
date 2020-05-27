@@ -10,9 +10,19 @@ from .result import McmcPtResult
 logger = logging.getLogger(__name__)
 
 try:
-    import pymc3 as pm
-    import theano.tensor as tt
+    from theano.tensor import Op, dvector, dscalar
     from theano.gof.null_type import NullType
+except ImportError:
+    # dummy workaround when theano not installed
+    import abc
+    Op = abc.ABC
+    dvector = dscalar = None
+    pass
+try:
+    import pymc3 as pm
+except ImportError:
+    pass
+try:
     import arviz as az
 except ImportError:
     pass
@@ -119,7 +129,7 @@ class Pymc3Sampler(Sampler):
         )
 
 
-class TheanoLogProbability(tt.Op):
+class TheanoLogProbability(Op):
     """
     Theano wrapper around a (non-normalized) log-probability function.
 
@@ -131,8 +141,8 @@ class TheanoLogProbability(tt.Op):
         Inverse temperature (e.g. in parallel tempering).
     """
 
-    itypes = [tt.dvector]  # expects a vector of parameter values when called
-    otypes = [tt.dscalar]  # outputs a single scalar value (the log prob)
+    itypes = [dvector]  # expects a vector of parameter values when called
+    otypes = [dscalar]  # outputs a single scalar value (the log prob)
 
     def __init__(self, problem: Problem, beta: float = 1.):
         self._objective: Objective = problem.objective
@@ -163,7 +173,7 @@ class TheanoLogProbability(tt.Op):
         return [g[0] * log_prob_grad]
 
 
-class TheanoLogProbabilityGradient(tt.Op):
+class TheanoLogProbabilityGradient(Op):
     """
     Theano wrapper around a (non-normalized) log-probability gradient function.
     This Op will be called with a vector of values and also return a vector of
@@ -177,8 +187,8 @@ class TheanoLogProbabilityGradient(tt.Op):
         Inverse temperature (e.g. in parallel tempering).
     """
 
-    itypes = [tt.dvector]  # expects a vector of parameter values when called
-    otypes = [tt.dvector]  # outputs a vector (the log prob grad)
+    itypes = [dvector]  # expects a vector of parameter values when called
+    otypes = [dvector]  # outputs a vector (the log prob grad)
 
     def __init__(self, problem: Problem, beta: float = 1.):
         self._objective: Objective = problem.objective
