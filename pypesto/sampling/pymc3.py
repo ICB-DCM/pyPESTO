@@ -26,12 +26,12 @@ class Pymc3Sampler(Sampler):
     step_function:
         A pymc3 step function, e.g. NUTS, Slice. If not specified, pymc3
         determines one automatically (preferable).
-    **options:
+    **kwargs:
         Options are directly passed on to `pymc3.sample`.
     """
 
-    def __init__(self, step_function=None, **options):
-        super().__init__(options)
+    def __init__(self, step_function=None, **kwargs):
+        super().__init__(kwargs)
         self.step_function = step_function
         self.problem: Union[Problem, None] = None
         self.x0: Union[np.ndarray, None] = None
@@ -56,7 +56,7 @@ class Pymc3Sampler(Sampler):
             self, n_samples: int, beta: float = 1.
     ):
         problem = self.problem
-        log_post = TheanoLogProbability(problem, beta)
+        log_post_fun = TheanoLogProbability(problem, beta)
         trace = self.trace
 
         x0 = None
@@ -76,7 +76,8 @@ class Pymc3Sampler(Sampler):
 
             # use a DensityDist for the log-posterior
             log_post = pm.DensityDist(
-                'log_post', logp=lambda v: log_post(v), observed={'v': theta})
+                'log_post', logp=lambda v: log_post_fun(v),
+                observed={'v': theta})
 
             # step, by default automatically determined by pymc3
             step = None
