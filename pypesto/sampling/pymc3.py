@@ -2,7 +2,7 @@ import numpy as np
 from typing import Union
 import logging
 
-from ..objective import Objective, History
+from ..objective import History
 from ..problem import Problem
 from .sampler import Sampler
 from .result import McmcPtResult
@@ -11,11 +11,15 @@ logger = logging.getLogger(__name__)
 
 try:
     import pymc3 as pm
-    import theano.tensor as tt
-    from theano.gof.null_type import NullType
     import arviz as az
+    import theano.tensor as tt
 except ImportError:
-    pass
+    pm = az = tt = None
+
+try:
+    from .theano import TheanoLogProbability
+except (AttributeError, ImportError):
+    TheanoLogProbability = None
 
 
 class Pymc3Sampler(Sampler):
@@ -26,12 +30,12 @@ class Pymc3Sampler(Sampler):
     step_function:
         A pymc3 step function, e.g. NUTS, Slice. If not specified, pymc3
         determines one automatically (preferable).
-    **options:
+    **kwargs:
         Options are directly passed on to `pymc3.sample`.
     """
 
-    def __init__(self, step_function=None, **options):
-        super().__init__(options)
+    def __init__(self, step_function=None, **kwargs):
+        super().__init__(kwargs)
         self.step_function = step_function
         self.problem: Union[Problem, None] = None
         self.x0: Union[np.ndarray, None] = None
@@ -56,7 +60,7 @@ class Pymc3Sampler(Sampler):
             self, n_samples: int, beta: float = 1.
     ):
         problem = self.problem
-        log_post = TheanoLogProbability(problem, beta)
+        log_post_fun = TheanoLogProbability(problem, beta)
         trace = self.trace
 
         x0 = None
@@ -75,8 +79,8 @@ class Pymc3Sampler(Sampler):
             theta = tt.as_tensor_variable(k)
 
             # use a DensityDist for the log-posterior
-            log_post = pm.DensityDist(
-                'log_post', logp=lambda v: log_post(v), observed={'v': theta})
+            pm.DensityDist('log_post', logp=lambda v: log_post_fun(v),
+                           observed={'v': theta})
 
             # step, by default automatically determined by pymc3
             step = None
@@ -116,76 +120,3 @@ class Pymc3Sampler(Sampler):
             trace_fval=np.array(trace_fval),
             betas=np.array([1.] * trace_x.shape[0]),
         )
-
-
-class TheanoLogProbability(tt.Op):
-    """
-    Theano wrapper around a (non-normalized) log-probability function.
-
-    Parameters
-    ----------
-    problem:
-        The `pypesto.Problem` to analyze.
-    beta:
-        Inverse temperature (e.g. in parallel tempering).
-    """
-
-    itypes = [tt.dvector]  # expects a vector of parameter values when called
-    otypes = [tt.dscalar]  # outputs a single scalar value (the log prob)
-
-    def __init__(self, problem: Problem, beta: float = 1.):
-        self._objective: Objective = problem.objective
-
-        # initialize the log probability Op
-        self._log_prob = \
-            lambda x: - beta * self._objective(x, sensi_orders=(0,))
-
-        # initialize the sensitivity Op
-        if problem.objective.has_grad:
-            self._log_prob_grad = TheanoLogProbabilityGradient(problem, beta)
-        else:
-            self._log_prob_grad = None
-
-    def perform(self, node, inputs, outputs, params=None):
-        theta, = inputs
-        log_prob = self._log_prob(theta)
-        outputs[0][0] = np.array(log_prob)
-
-    def grad(self, inputs, g):
-        # the method that calculates the gradients - it actually returns the
-        # vector-Jacobian product - g[0] is a vector of parameter values
-        if self._log_prob_grad is None:
-            # indicates gradient not available
-            return [NullType]
-        theta, = inputs
-        log_prob_grad = self._log_prob_grad(theta)
-        return [g[0] * log_prob_grad]
-
-
-class TheanoLogProbabilityGradient(tt.Op):
-    """
-    Theano wrapper around a (non-normalized) log-probability gradient function.
-    This Op will be called with a vector of values and also return a vector of
-    values - the gradients in each dimension.
-
-    Parameters
-    ----------
-    problem:
-        The `pypesto.Problem` to analyze.
-    beta:
-        Inverse temperature (e.g. in parallel tempering).
-    """
-
-    itypes = [tt.dvector]  # expects a vector of parameter values when called
-    otypes = [tt.dvector]  # outputs a vector (the log prob grad)
-
-    def __init__(self, problem: Problem, beta: float = 1.):
-        self._objective: Objective = problem.objective
-        self._log_prob_grad = \
-            lambda x: - beta * self._objective(x, sensi_orders=(1,))
-
-    def perform(self, node, inputs, outputs, params=None):
-        theta, = inputs
-        # calculate gradients
-        log_prob_grad = self._log_prob_grad(theta)
-        outputs[0][0] = log_prob_grad
