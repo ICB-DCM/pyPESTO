@@ -13,8 +13,4 @@ from .parallel_tempering import ParallelTemperingSampler
 from .adaptive_parallel_tempering import AdaptiveParallelTemperingSampler
 from .result import McmcPtResult
 from .diagnostics import geweke_test
-
-try:
-    from .pymc3 import Pymc3Sampler
-except AttributeError:
-    Pymc3Sampler = None
+from .pymc3 import Pymc3Sampler
