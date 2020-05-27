@@ -1,5 +1,5 @@
-ipython
-nbsphinx
-recommonmark
-sphinx_rtd_theme
+ipython>=7.14.0
+nbsphinx>=0.6.0
+recommonmark>=0.6.0
+sphinx_rtd_theme>=0.4.3
 sphinx>=3.0.4
