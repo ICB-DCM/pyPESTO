@@ -10,22 +10,20 @@ from .result import McmcPtResult
 logger = logging.getLogger(__name__)
 
 try:
-    from theano.tensor import Op, dvector, dscalar
+    import theano.tensor as tt
     from theano.gof.null_type import NullType
 except ImportError:
-    # dummy workaround when theano not installed
-    import abc
-    Op = abc.ABC
-    dvector = dscalar = None
-    pass
+    tt = None
+
 try:
     import pymc3 as pm
 except ImportError:
-    pass
+    pm = None
+
 try:
     import arviz as az
 except ImportError:
-    pass
+    az = None
 
 
 class Pymc3Sampler(Sampler):
@@ -85,9 +83,8 @@ class Pymc3Sampler(Sampler):
             theta = tt.as_tensor_variable(k)
 
             # use a DensityDist for the log-posterior
-            log_post = pm.DensityDist(
-                'log_post', logp=lambda v: log_post_fun(v),
-                observed={'v': theta})
+            pm.DensityDist('log_post', logp=lambda v: log_post_fun(v),
+                           observed={'v': theta})
 
             # step, by default automatically determined by pymc3
             step = None
@@ -129,7 +126,7 @@ class Pymc3Sampler(Sampler):
         )
 
 
-class TheanoLogProbability(Op):
+class TheanoLogProbability(tt.Op):
     """
     Theano wrapper around a (non-normalized) log-probability function.
 
@@ -141,8 +138,8 @@ class TheanoLogProbability(Op):
         Inverse temperature (e.g. in parallel tempering).
     """
 
-    itypes = [dvector]  # expects a vector of parameter values when called
-    otypes = [dscalar]  # outputs a single scalar value (the log prob)
+    itypes = [tt.dvector]  # expects a vector of parameter values when called
+    otypes = [tt.dscalar]  # outputs a single scalar value (the log prob)
 
     def __init__(self, problem: Problem, beta: float = 1.):
         self._objective: Objective = problem.objective
@@ -173,7 +170,7 @@ class TheanoLogProbability(Op):
         return [g[0] * log_prob_grad]
 
 
-class TheanoLogProbabilityGradient(Op):
+class TheanoLogProbabilityGradient(tt.Op):
     """
     Theano wrapper around a (non-normalized) log-probability gradient function.
     This Op will be called with a vector of values and also return a vector of
@@ -187,8 +184,8 @@ class TheanoLogProbabilityGradient(Op):
         Inverse temperature (e.g. in parallel tempering).
     """
 
-    itypes = [dvector]  # expects a vector of parameter values when called
-    otypes = [dvector]  # outputs a vector (the log prob grad)
+    itypes = [tt.dvector]  # expects a vector of parameter values when called
+    otypes = [tt.dvector]  # outputs a vector (the log prob grad)
 
     def __init__(self, problem: Problem, beta: float = 1.):
         self._objective: Objective = problem.objective
