@@ -1,10 +1,10 @@
 import scipy.stats
 import numpy as np
 from typing import Optional, Union, Iterable, Dict, Callable, List, Tuple
-import copy
+from copy import deepcopy
 import math
 
-from .objective import Objective
+from .function import Objective
 from .aggregated import AggregatedObjective
 
 
@@ -47,6 +47,10 @@ class ParameterPriors(Objective):
                          grad=self.gradient_for_full_parameter_vector,
                          hess=self.hessian_for_full_parameter_vector,
                          hessp=self.hessian_vp_for_full_parameter_vector)
+
+    def __deepcopy__(self, memodict={}):
+        other = ParameterPriors(deepcopy(self.prior_list))
+        return other
 
     def density_for_full_parameter_vector(self, x):
 
@@ -177,7 +181,7 @@ def _prior_densities(prior_type: str,
 
     if prior_type == 'uniform':
 
-        log_f = _get_constant_function(1/(prior_parameters[1] - prior_parameters[0]))
+        log_f = _get_constant_function(-math.log(prior_parameters[1] - prior_parameters[0]))
         d_log_f_dx = _get_constant_function(0)
         dd_log_f_ddx = _get_constant_function(0)
 

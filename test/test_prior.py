@@ -28,8 +28,9 @@ def test_mode():
                     'log10': {'lb': [-3], 'ub': [2], 'opt': [0]}}
 
     for prior_type, scale in itertools.product(prior_types, scales):
+
         prior_list = [get_parameter_prior_dict(
-            0, prior_type, [1, 1], scale)]
+            0, prior_type, [2, 1], scale)]
 
         test_prior = ParameterPriors(prior_list)
         test_problem = pypesto.Problem(test_prior,
@@ -38,14 +39,14 @@ def test_mode():
                                        dim_full=1,
                                        x_scales=[scale])
 
-        optimizer = pypesto.ScipyOptimizer(method='BFGS')
+        optimizer = pypesto.ScipyOptimizer(method='Nelder-Mead')
 
         result = pypesto.minimize(problem=test_problem,
                                   optimizer=optimizer,
                                   n_starts=10)
 
-        assert np.isclose(result.optimize_result.list[0]['fval'],
-                          problem_dict[scale]['opt'])
+        assert np.isclose(result.optimize_result.list[0]['x'],
+                          problem_dict[scale]['opt'], atol=1e-04)
 
     # test uniform distribution:
     for scale in scales:
@@ -66,8 +67,13 @@ def test_derivatives():
 
     for prior_type, scale in itertools.product(prior_types, scales):
 
+        if prior_type == 'uniform':
+            prior_parameters = [-1, 1]
+        else:
+            prior_parameters = [1, 1]
+
         prior_dict = get_parameter_prior_dict(
-            0, prior_type, [1, 1], scale)
+            0, prior_type, prior_parameters, scale)
 
         # use this x0, since it is a moderate value both in linear
         # and in log scale...

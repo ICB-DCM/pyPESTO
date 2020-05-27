@@ -92,7 +92,7 @@ class Problem:
                  x_names: Optional[Iterable[str]] = None,
                  x_scales: Optional[Iterable[str]] = None,
                  x_priors_defs: Optional[Priors] = None):
-        
+
         self.objective = copy.deepcopy(objective)
 
         self.lb = np.array(lb).flatten()
