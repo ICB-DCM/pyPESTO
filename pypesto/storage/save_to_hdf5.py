@@ -1,5 +1,6 @@
 import os
 from typing import Union
+from numbers import Integral
 
 import h5py
 import numpy as np
@@ -58,7 +59,7 @@ class ProblemHDF5Writer:
                 value = getattr(problem, problem_attr)
                 if isinstance(value, (list, np.ndarray)):
                     write_array(problem_grp, problem_attr, value)
-                elif isinstance(value, int):
+                elif isinstance(value, Integral):
                     problem_grp.attrs[problem_attr] = value
 
 
