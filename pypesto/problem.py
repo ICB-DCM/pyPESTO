@@ -131,7 +131,7 @@ class Problem:
         self.x_names: List[str] = [name for name in x_names]
 
         if x_scales is None:
-            x_scales = ['lin'] * dim_full
+            x_scales = ['lin'] * self.dim_full
         self.x_scales = x_scales
 
         if x_priors_defs is not None:
