@@ -1,11 +1,13 @@
 import numpy as np
+import logging
 
 from ..result import Result
 from .geweke_test import burn_in_by_sequential_geweke
 
+logger = logging.getLogger(__name__)
 
-def geweke_test(result: Result,
-                zscore: float = 2.):
+
+def geweke_test(result: Result, zscore: float = 2.) -> int:
     """
     Calculates the burn-in of MCMC chains.
 
@@ -29,8 +31,11 @@ def geweke_test(result: Result,
     # Calculate burn in index
     burn_in = burn_in_by_sequential_geweke(chain=chain,
                                            zscore=zscore)
-    print('Geweke Burn-in index: '+str(burn_in))
 
+    # Log
+    logger.info(f'Geweke burn-in index: {burn_in}')
+
+    # Fill in burn-in value into result
     result.sample_result.burn_in = burn_in
 
-    return result
+    return burn_in
