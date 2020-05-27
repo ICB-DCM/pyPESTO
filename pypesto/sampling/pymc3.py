@@ -181,7 +181,7 @@ class TheanoLogProbabilityGradient(tt.Op):
         theta, = inputs
 
         cached_theta = self._logp_op._cached_theta
-        if cached_theta is not None and np.all(theta == cached_theta):
+        if cached_theta is not None and np.array_equal(theta, cached_theta):
             dlogp = self._logp_op._cached_dlogp
         else:
             dlogp = self._objective(theta, sensi_orders=(1,))
