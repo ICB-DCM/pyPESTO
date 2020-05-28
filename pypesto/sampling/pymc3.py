@@ -64,7 +64,7 @@ class Pymc3Sampler(Sampler):
         trace = self.trace
 
         x0 = None
-        if self.x0 is not None:
+        if self.x0 is not None and self.trace is None:
             x0 = {x_name: val
                   for x_name, val in zip(self.problem.x_names, self.x0)}
 
