@@ -11,39 +11,28 @@ class ProfilerResult(dict):
 
     Attributes
     ----------
-
-    x_path: ndarray
+    x_path:
         The path of the best found parameters along the profile
         (Dimension: n_par x n_profile_points)
-
-    fval_path: ndarray
+    fval_path:
         The function values, fun(x), along the profile.
-
-    ratio_path: ndarray
+    ratio_path:
         The ratio of the posterior function along the profile.
-
-    gradnorm_path: ndarray
+    gradnorm_path:
         The gradient norm along the profile.
-
-    exitflag_path: ndarray
+    exitflag_path:
         The exitflags of the optimizer along the profile.
-
-    time_path: ndarray
+    time_path:
         The computation time of the optimizer runs along the profile.
-
-    time_total: ndarray
+    time_total:
         The total computation time for the profile.
-
-    n_fval: int
+    n_fval:
         Number of function evaluations.
-
-    n_grad: int
+    n_grad:
         Number of gradient evaluations.
-
-    n_hess: int
+    n_hess:
         Number of Hessian evaluations.
-
-    message: str
+    message:
         Textual comment on the profile result.
 
     Notes
@@ -54,17 +43,17 @@ class ProfilerResult(dict):
     """
 
     def __init__(self,
-                 x_path,
-                 fval_path,
-                 ratio_path,
-                 gradnorm_path=None,
-                 exitflag_path=None,
-                 time_path=None,
-                 time_total=0.,
-                 n_fval=0,
-                 n_grad=0,
-                 n_hess=0,
-                 message=None):
+                 x_path: np.ndarray,
+                 fval_path: np.ndarray,
+                 ratio_path: np.ndarray,
+                 gradnorm_path: np.ndarray = None,
+                 exitflag_path: np.ndarray = None,
+                 time_path: np.ndarray = None,
+                 time_total: float = 0.,
+                 n_fval: int = 0,
+                 n_grad: int = 0,
+                 n_hess: int = 0,
+                 message: str = None):
         super().__init__()
 
         # initialize profile path
