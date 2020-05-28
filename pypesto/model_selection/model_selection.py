@@ -5,6 +5,8 @@ from colorama import Fore
 import abc
 import numpy as np
 import math
+import multiprocessing
+import functools
 
 import petab
 from ..problem import Problem
@@ -28,6 +30,9 @@ from .constants import (COMPARED_MODEL_ID,
 
 from petab.C import NOMINAL_VALUE, ESTIMATE
 
+# TODO test
+import logging
+logger = logging.getLogger(__name__)
 
 class ModelSelectionProblem:
     """
@@ -255,6 +260,32 @@ class ModelSelector:
                 continue
             yield model_dict
 
+    # TODO method that automatically generates initial models, for a specific number of starts
+    # TODO parallelise
+    def multistart_select(self,
+                          method: str,
+                          criterion: str,
+                          initial_models: Sequence[Dict[str, Union[str, float]]] = None,
+                          select_first_improvement: bool = False,
+                          startpoint_latest_mle: bool = False,
+                          minimize_options: Dict = None,
+                          criterion_threshold: float = 0):
+        selected_models = []
+        local_selection_history = []
+        for initial_model in initial_models:
+            selected_models_, local_selection_history_, _ = self.select(
+                method,
+                criterion,
+                initial_model=initial_model,
+                select_first_improvement=select_first_improvement,
+                startpoint_latest_mle=startpoint_latest_mle,
+                minimize_options=minimize_options,
+                criterion_threshold=criterion_threshold)
+            selected_models.append(selected_models_)
+            local_selection_history.append(local_selection_history_)
+
+        return selected_models, local_selection_history, self.selection_history
+
     def select(self,
                method: str,
                criterion: str,
@@ -392,17 +423,14 @@ class ModelSelectorMethod(abc.ABC):
         `True`, if `new` is superior to `old` by the criterion, else `False`.
         """
         if self.criterion == 'AIC':
-            #print(f'Comparing models {old.model_id} and {new.model_id} by AIC'
-            #      f'Old: (AIC: {old.AIC:.3f}), New: {new.AIC:.3f} with '
-            #      f'test model {new.model_id} (AIC: ). ', end='')
-            print(f'{old.model_id}\t{new.model_id}\tAIC\t{old.AIC:.3f}\t'
-                  f'{new.AIC:.3f}\t'
-                  f'{new.AIC-old.AIC:.3f}\t', end='')
+            logger.info(f'{old.model_id}\t{new.model_id}\tAIC\t{old.AIC:.3f}\t'
+                        f'{new.AIC:.3f}\t'
+                        f'{new.AIC-old.AIC:.3f}\t')
             return new.AIC + self.criterion_threshold < old.AIC
         elif self.criterion == 'BIC':
-            print(f'{old.model_id}\t{new.model_id}\tBIC\t{old.BIC:.3f}\t'
-                  f'{new.BIC:.3f}\t'
-                  f'{new.BIC-old.BIC:.3f}\t', end='')
+            logger.info(f'{old.model_id}\t{new.model_id}\tBIC\t{old.BIC:.3f}\t'
+                        f'{new.BIC:.3f}\t'
+                        f'{new.BIC-old.BIC:.3f}\t')
             return new.BIC + self.criterion_threshold < old.BIC
         else:
             raise NotImplementedError('Model selection criterion: '
@@ -610,7 +638,7 @@ class ForwardSelector(ModelSelectorMethod):
         """
         selected_models = []
         local_selection_history = {}
-        print('----------------------New Selection---------------------')
+        logger.info('----------------------New Selection---------------------')
         # self.setup_direction(self.direction)
         # TODO rewrite so this is in `__init__()`, and this method saves the
         # latest "best" model as `self.model`. Would allow for continuation of
@@ -622,8 +650,8 @@ class ForwardSelector(ModelSelectorMethod):
             model = self.new_direction_problem()
         else:
             model = self.new_model_problem(self.initial_model)
-            print(f'Starting with model: {model.model_id}\n')
-            print('Old ID\tNew ID\tCrit\tOld\tNew\tDiff\tResult')
+            logger.info(f'Starting with model: {model.model_id}\n')
+            logger.info('Old ID\tNew ID\tCrit\tOld\tNew\tDiff\tResult')
             # copied from for loop -- move into separate function?
             local_selection_history[model.model_id] = {
                 MODEL_ID: model.model_id,
@@ -728,8 +756,9 @@ class ForwardSelector(ModelSelectorMethod):
                     # relative to test_model, which may mean models that are
                     # better than this test_model are rejected.
                     model = test_model
-                    print(f'Starting with model: {model.model_id}\n')
-                    print('Old ID\tNew ID\tCrit\tOld\tNew\tDiff\tResult')
+                    print('test')
+                    logger.info(f'Starting with model: {model.model_id}\n')
+                    logger.info('Old ID\tNew ID\tCrit\tOld\tNew\tDiff\tResult')
                     # TODO reconsider whether `False` is appropriate, after
                     # refactor that changed self.initial_model to be None if
                     # no initial model (as a dict) is specified. Could change
@@ -745,14 +774,14 @@ class ForwardSelector(ModelSelectorMethod):
                 # predictably select the next model from a set of models that
                 # are equivalent by criteria. Alphabetically?
                 if self.compare(model, test_model):
-                    print(f'Accepted')
+                    logger.info(f'Accepted')
                     # TODO bug, see bug described in above if statement
                     model = test_model
                     proceed = True
                     if self.select_first_improvement:
                         break
                 else:
-                    print(f'Rejected')
+                    logger.info(f'Rejected')
 
             # could move this to start of loop and check against `model.valid`
             # TODO might be better
@@ -1026,7 +1055,7 @@ def row2problem(row: dict,
     for par_id, par_val in row_parameters.items():
     #for par_id, par_val in row.items():
         if par_id not in petab_problem.x_ids:
-            print(Fore.YELLOW + f'Warning: parameter {par_id} is not defined '
+            logger.info(Fore.YELLOW + f'Warning: parameter {par_id} is not defined '
                                 f'in PETab model. It will be ignored.')
             continue
         if not np.isnan(par_val):

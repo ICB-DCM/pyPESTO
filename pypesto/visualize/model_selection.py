@@ -46,17 +46,19 @@ def plot_selected_models(
 
     # FIGURE
     fig, ax = plt.subplots(figsize=size)
-    width = 0.75
+    linewidth = 3
 
     model_ids = [m[MODEL_ID] for m in selected_models]
     criterion_values = [m[criterion] - zero for m in selected_models]
     compared_model_ids = [m[f'compared_{MODEL_ID}'] for m in selected_models]
 
-    ax.bar(model_ids,
-           criterion_values,
-           width,
-           color='lightgrey',
-           edgecolor='k')
+    ax.plot(
+        model_ids,
+        criterion_values,
+        linewidth=linewidth,
+        color='lightgrey',
+        #edgecolor='k'
+    )
 
     ax.get_xticks()
     ax.set_xticks(list(range(len(model_ids))))
