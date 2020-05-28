@@ -160,6 +160,22 @@ def test_profile_with_history():
     )
 
 
+def test_profile_with_fixed_parameters():
+    obj = test_objective.rosen_for_sensi(max_sensi_order=1)['obj']
+
+    lb = -2 * np.ones(5)
+    ub = 2 * np.ones(5)
+    problem = pypesto.Problem(
+        objective=obj, lb=lb, ub=ub,
+        x_fixed_vals=[0.5, -1.8], x_fixed_indices=[0, 3])
+
+    optimizer = pypesto.ScipyOptimizer(options={'maxiter': 50})
+    result = pypesto.minimize(problem=problem, optimizer=optimizer, n_starts=2)
+
+    result = pypesto.parameter_profile(
+        problem=problem, result=result, optimizer=optimizer)
+
+
 def create_optimization_results(objective):
     # create optimizer, pypesto problem and options
     options = {
