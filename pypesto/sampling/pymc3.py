@@ -69,15 +69,16 @@ class Pymc3Sampler(Sampler):
         trace = self.trace
 
         x0 = None
+        x_free_names = [problem.x_names[i] for i in problem.x_free_indices]
         if self.x0 is not None and self.trace is None:
-            x0 = {x_name: val for x_name, val in zip(problem.x_names, self.x0)}
+            x0 = {x_name: val for x_name, val in zip(x_free_names, self.x0)}
 
         # create model context
         with pm.Model() as model:
             # uniform bounds
             k = [pm.Uniform(x_name, lower=lb, upper=ub)
                  for x_name, lb, ub in
-                 zip(problem.x_names, problem.lb, problem.ub)]
+                 zip(x_free_names, problem.lb, problem.ub)]
 
             # convert to tensor vector
             theta = tt.as_tensor_variable(k)
@@ -116,7 +117,7 @@ class Pymc3Sampler(Sampler):
 
         if trace_x.shape[0] != trace_fval.shape[0] \
                 or trace_x.shape[1] != trace_fval.shape[1] \
-                or trace_x.shape[2] != len(self.problem.x_names):
+                or trace_x.shape[2] != len(self.problem.x_free_indices):
             raise ValueError("Trace dimensions are inconsistent")
 
         return McmcPtResult(

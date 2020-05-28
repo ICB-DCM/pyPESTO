@@ -56,6 +56,13 @@ def sample(
             x0 = xs[0]
         # TODO multiple x0 for PT, #269
 
+    # Discard fixed parameters if necessary
+    x0 = np.asarray(x0)
+    if len(x0) == problem.dim_full:
+        x0 = x0[problem.x_free_indices]
+    elif len(x0) != problem.dim:
+        raise ValueError('size of x0 is incompatible with given problem')
+
     # set sampler
     if sampler is None:
         sampler = AdaptiveMetropolisSampler()

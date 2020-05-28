@@ -345,7 +345,8 @@ def get_data_to_plot(
     theta_lb = result.problem.lb
     theta_ub = result.problem.ub
 
-    param_names = result.problem.x_names
+    param_names = [result.problem.x_names[i]
+                       for i in result.problem.x_free_indices]
 
     # transform ndarray to pandas for the use of seaborn
     pd_params = pd.DataFrame(arr_param, columns=param_names)
