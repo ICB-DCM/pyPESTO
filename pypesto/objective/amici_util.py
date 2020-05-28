@@ -234,7 +234,7 @@ def get_error_output(
     n_res = nt * amici_model.nytrue
 
     return {
-        FVAL: np.inf,
+        FVAL: - np.inf,
         GRAD: np.nan * np.ones(dim),
         HESS: np.nan * np.ones([dim, dim]),
         RES:  np.nan * np.ones(n_res),
