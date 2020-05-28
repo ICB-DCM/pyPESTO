@@ -30,7 +30,7 @@ def test_mode():
     for prior_type, scale in itertools.product(prior_types, scales):
 
         prior_list = [get_parameter_prior_dict(
-            0, prior_type, [2, 1], scale)]
+            0, prior_type, [1, 1], scale)]
 
         test_prior = ParameterPriors(prior_list)
         test_problem = pypesto.Problem(test_prior,
