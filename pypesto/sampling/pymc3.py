@@ -41,7 +41,7 @@ class Pymc3Sampler(Sampler):
         self.cache_gradients = cache_gradients
         self.problem: Union[Problem, None] = None
         self.x0: Union[np.ndarray, None] = None
-        self.trace: Union[pm.backends.Text, None] = None
+        self.trace: Union[pm.backends.base.MultiTrace, None] = None
         self.data: Union[az.InferenceData, None] = None
 
     @classmethod
