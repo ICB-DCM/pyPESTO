@@ -17,9 +17,10 @@ except ImportError:
     pm = az = tt = None
 
 try:
-    from .theano import TheanoLogProbability
+    from .theano import TheanoLogProbability, CachedObjective
 except (AttributeError, ImportError):
     TheanoLogProbability = None
+    CachedObjective = None
 
 
 class Pymc3Sampler(Sampler):
@@ -34,9 +35,10 @@ class Pymc3Sampler(Sampler):
         Options are directly passed on to `pymc3.sample`.
     """
 
-    def __init__(self, step_function=None, **kwargs):
+    def __init__(self, step_function=None, cache_gradients: bool = True, **kwargs):
         super().__init__(kwargs)
         self.step_function = step_function
+        self.cache_gradients = cache_gradients
         self.problem: Union[Problem, None] = None
         self.x0: Union[np.ndarray, None] = None
         self.trace: Union[pm.backends.Text, None] = None
@@ -60,13 +62,15 @@ class Pymc3Sampler(Sampler):
             self, n_samples: int, beta: float = 1.
     ):
         problem = self.problem
-        log_post_fun = TheanoLogProbability(problem, beta)
+        objective = problem.objective
+        if objective.has_grad and self.cache_gradients:
+            objective = CachedObjective(objective)
+        log_post_fun = TheanoLogProbability(objective, beta)
         trace = self.trace
 
         x0 = None
         if self.x0 is not None and self.trace is None:
-            x0 = {x_name: val
-                  for x_name, val in zip(self.problem.x_names, self.x0)}
+            x0 = {x_name: val for x_name, val in zip(problem.x_names, self.x0)}
 
         # create model context
         with pm.Model() as model:

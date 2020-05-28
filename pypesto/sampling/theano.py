@@ -1,3 +1,5 @@
+from typing import Union
+
 import numpy as np
 
 from ..objective import Objective
@@ -10,6 +12,65 @@ except ImportError:
     tt = NullType = None
 
 
+class CachedObjective:
+    """
+    Wrapper around an Objective which computes the gradient at each evaluation,
+    caching it for later calls.
+    Caching is only enabled after the first time the gradient is asked for
+    and disabled whenever the cached gradient is not used,
+    in order not to increase computation time for derivative-free samplers.
+
+    Parameters
+    ----------
+    objective:
+        The `pypesto.Objective` to wrap.
+    """
+
+    def __init__(self, objective: Objective):
+        self.objective = objective
+        self.x_cached = None
+        self.fval_cached = None
+        self.grad_cached = None
+        self.grad_has_been_used = False
+
+    def __call__(self, x, sensi_orders):
+        if sensi_orders == (0,) and self.x_cached is None:
+            # The gradient has not been called yet: caching is off
+            return self.objective(x, sensi_orders=sensi_orders)
+        else:
+            # Check if we hit the cache
+            if not np.array_equal(x, self.x_cached):
+                # If the currently cached gradient has never been used,
+                # turn off caching
+                if sensi_orders == (0,) and not self.grad_has_been_used:
+                    self.x_cached = None
+                    return self.objective(x, sensi_orders=sensi_orders)
+                # Repopulate cache
+                fval, grad = self.objective(x, sensi_orders=(0, 1))
+                self.x_cached = x  # NB it seems that at each call x is
+                                   # a different object, so it is safe
+                                   # not to copy it
+                self.fval_cached = fval
+                self.grad_cached = grad
+                self.grad_has_been_used = False
+            # The required values are in the cache
+            if sensi_orders == (0,):
+                return self.fval_cached
+            elif sensi_orders == (1,):
+                self.grad_has_been_used = True
+                return self.grad_cached
+            elif sensi_orders == (0, 1):
+                self.grad_has_been_used = True
+                return self.fval_cached, self.grad_cached
+            else:
+                print(f'sensi_orders = {sensi_orders}')
+                raise NotImplementedError(f'sensi_orders = {sensi_orders}')
+
+    @property
+    def has_grad(self):
+        return self.objective.has_grad
+
+
 class TheanoLogProbability(tt.Op):
     """
     Theano wrapper around a (non-normalized) log-probability function.
@@ -17,7 +78,7 @@ class TheanoLogProbability(tt.Op):
     Parameters
     ----------
     problem:
-        The `pypesto.Problem` to analyze.
+        The `pypesto.Objective` defining the log-probability.
     beta:
         Inverse temperature (e.g. in parallel tempering).
     """
@@ -25,16 +86,16 @@ class TheanoLogProbability(tt.Op):
     itypes = [tt.dvector]  # expects a vector of parameter values when called
     otypes = [tt.dscalar]  # outputs a single scalar value (the log prob)
 
-    def __init__(self, problem: Problem, beta: float = 1.):
-        self._objective: Objective = problem.objective
+    def __init__(self, objective: Union[Objective, CachedObjective], beta: float = 1.):
+        self._objective = objective
 
         # initialize the log probability Op
         self._log_prob = \
             lambda x: - beta * self._objective(x, sensi_orders=(0,))
 
         # initialize the sensitivity Op
-        if problem.objective.has_grad:
-            self._log_prob_grad = TheanoLogProbabilityGradient(problem, beta)
+        if objective.has_grad:
+            self._log_prob_grad = TheanoLogProbabilityGradient(objective, beta)
         else:
             self._log_prob_grad = None
 
@@ -63,7 +124,7 @@ class TheanoLogProbabilityGradient(tt.Op):
     Parameters
     ----------
     problem:
-        The `pypesto.Problem` to analyze.
+        The `pypesto.Objective` defining the log-probability.
     beta:
         Inverse temperature (e.g. in parallel tempering).
     """
@@ -71,8 +132,8 @@ class TheanoLogProbabilityGradient(tt.Op):
     itypes = [tt.dvector]  # expects a vector of parameter values when called
     otypes = [tt.dvector]  # outputs a vector (the log prob grad)
 
-    def __init__(self, problem: Problem, beta: float = 1.):
-        self._objective: Objective = problem.objective
+    def __init__(self, objective: Union[Objective, CachedObjective], beta: float = 1.):
+        self._objective = objective
         self._log_prob_grad = \
             lambda x: - beta * self._objective(x, sensi_orders=(1,))
 
