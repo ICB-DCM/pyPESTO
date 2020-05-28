@@ -63,6 +63,7 @@ def parameter_profile(
     # profiling indices
     if profile_index is None:
         profile_index = np.ones(problem.dim_full)
+        profile_index[problem.x_fixed_indices] = 0
 
     # check profiling options
     if profile_options is None:
@@ -92,15 +93,15 @@ def parameter_profile(
                                     profile_index, profile_list)
 
     # loop over parameters for profiling
-    for i_parameter in range(0, problem.dim_full):
-        if (profile_index[i_parameter] == 0) or (i_parameter in
-                                                 problem.x_fixed_indices):
+    for i_par in range(0, problem.dim_full):
+        if profile_index[i_par] == 0 or i_par in problem.x_fixed_indices:
+            # not requested or fixed -> compute no profile
             continue
 
         # create an instance of ProfilerResult, which will be appended to the
         # result object, when this profile is finished
         current_profile = result.profile_result.get_current_profile(
-            i_parameter)
+            i_par)
 
         # compute profile in descending and ascending direction
         for par_direction in [-1, 1]:
@@ -108,19 +109,19 @@ def parameter_profile(
             current_profile.flip_profile()
 
             # compute the current profile
-            current_profile = walk_along_profile(current_profile,
-                                                 problem,
-                                                 par_direction,
-                                                 optimizer,
-                                                 profile_options,
-                                                 create_next_guess,
-                                                 global_opt,
-                                                 i_parameter)
+            current_profile = walk_along_profile(
+                current_profile=current_profile,
+                problem=problem,
+                par_direction=par_direction,
+                optimizer=optimizer,
+                options=profile_options,
+                create_next_guess=create_next_guess,
+                global_opt=global_opt,
+                i_parameter=i_par)
 
         # add current profile to result.profile_result
         # result.profile_result.add_profile(current_profile, i_parameter)
 
-    # return
     return result
 
 
