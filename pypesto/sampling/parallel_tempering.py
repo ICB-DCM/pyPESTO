@@ -33,6 +33,9 @@ class ParallelTemperingSampler(Sampler):
 
         self.samplers = [copy.deepcopy(internal_sampler)
                          for _ in range(len(self.betas0))]
+        # configure internal samplers
+        for sampler in self.samplers:
+            sampler.make_internal()
 
     @classmethod
     def default_options(cls) -> Dict:
@@ -61,7 +64,7 @@ class ParallelTemperingSampler(Sampler):
         for i_sample in tqdm(range(int(n_samples))):
             # sample
             for sampler, beta in zip(self.samplers, self.betas):
-                sampler.sample(n_samples=1, beta=beta, hide_bar=True)
+                sampler.sample(n_samples=1, beta=beta)
 
             # swap samples
             swapped = self.swap_samples()
