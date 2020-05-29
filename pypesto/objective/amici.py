@@ -289,7 +289,7 @@ class AmiciObjective(ObjectiveBase):
             edatas=self.edatas, n_threads=self.n_threads,
             x_ids=self.x_ids, parameter_mapping=self.parameter_mapping)
 
-        nllh = - ret[FVAL]
+        nllh = ret[FVAL]
         rdatas = ret[RDATAS]
 
         # check whether we should update data for preequilibration guesses
