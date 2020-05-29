@@ -87,15 +87,15 @@ class ProfilerResult(dict):
     __delattr__ = dict.__delitem__
 
     def append_profile_point(self,
-                             x,
-                             fval,
-                             ratio,
-                             gradnorm=np.nan,
-                             exitflag=np.nan,
-                             time=np.nan,
-                             n_fval=0,
-                             n_grad=0,
-                             n_hess=0):
+                             x: np.ndarray,
+                             fval: float,
+                             ratio: float,
+                             gradnorm: float = np.nan,
+                             exitflag: float = np.nan,
+                             time: float = np.nan,
+                             n_fval: int = 0,
+                             n_grad: int = 0,
+                             n_hess: int = 0) -> None:
         """
         This function appends a new OptimizerResult to an existing
         ProfilerResults
@@ -127,7 +127,7 @@ class ProfilerResult(dict):
         self.n_grad += n_grad
         self.n_hess += n_hess
 
-    def flip_profile(self):
+    def flip_profile(self) -> None:
         """
         This function flips the profiling direction (left-right)
         Profiling direction needs to be changed once (if the profile is new)

@@ -2,6 +2,7 @@ import logging
 import numpy as np
 from typing import Any, Callable, Dict
 
+from ..objective.constants import GRAD
 from ..optimize import Optimizer
 from ..problem import Problem
 from ..result import Result, ProfileResult
@@ -76,11 +77,11 @@ def parameter_profile(
 
     # create a function handle that will be called later to get the next point
     if isinstance(next_guess_method, str):
-        def create_next_guess(x, par_index, par_direction, profile_options,
-                              current_profile, problem, global_opt):
-            return next_guess(x, par_index, par_direction, profile_options,
-                              next_guess_method, current_profile, problem,
-                              global_opt)
+        def create_next_guess(x, par_index, par_direction_, profile_options_,
+                              current_profile_, problem_, global_opt_):
+            return next_guess(x, par_index, par_direction_, profile_options_,
+                              next_guess_method, current_profile_, problem_,
+                              global_opt_)
     elif callable(next_guess_method):
         raise Exception('Passing function handles for computation of next '
                         'profiling point is not yet supported.')
@@ -100,8 +101,7 @@ def parameter_profile(
 
         # create an instance of ProfilerResult, which will be appended to the
         # result object, when this profile is finished
-        current_profile = result.profile_result.get_current_profile(
-            i_par)
+        current_profile = result.profile_result.get_current_profile(i_par)
 
         # compute profile in descending and ascending direction
         for par_direction in [-1, 1]:
@@ -117,7 +117,7 @@ def parameter_profile(
                 options=profile_options,
                 create_next_guess=create_next_guess,
                 global_opt=global_opt,
-                i_parameter=i_par)
+                i_par=i_par)
 
         # add current profile to result.profile_result
         # result.profile_result.add_profile(current_profile, i_parameter)
@@ -133,10 +133,12 @@ def walk_along_profile(
         options: ProfileOptions,
         create_next_guess: Callable,
         global_opt: float,
-        i_parameter: int
+        i_par: int
 ) -> ProfilerResult:
     """
-    This is function compute a half-profile
+    This function computes half a profile, by walking ahead in positive
+    direction until some stopping criterion is fulfilled. A two-sided profile
+    is obtained by flipping the profile direction.
 
     Parameters
     ----------
@@ -154,7 +156,7 @@ def walk_along_profile(
         Various options applied to the profile optimization.
     create_next_guess:
         Handle of the method which creates the next profile point proposal
-    i_parameter:
+    i_par:
         index for the current parameter
 
     Returns
@@ -173,26 +175,24 @@ def walk_along_profile(
 
         # check if the next profile point needs to be computed
         if par_direction == -1:
-            stop_profile = (x_now[i_parameter] <= problem.lb_full[[
-                i_parameter]]) or (current_profile.ratio_path[-1] <
-                                   options.ratio_min)
+            stop_profile = (x_now[i_par] <= problem.lb_full[[i_par]]) \
+                or (current_profile.ratio_path[-1] < options.ratio_min)
 
         if par_direction == 1:
-            stop_profile = (x_now[i_parameter] >= problem.ub_full[[
-                i_parameter]]) or (current_profile.ratio_path[-1] <
-                                   options.ratio_min)
+            stop_profile = (x_now[i_par] >= problem.ub_full[[i_par]]) \
+                or (current_profile.ratio_path[-1] < options.ratio_min)
 
         if stop_profile:
             break
 
         # compute the new start point for optimization
-        x_next = create_next_guess(x_now, i_parameter, par_direction,
+        x_next = create_next_guess(x_now, i_par, par_direction,
                                    options, current_profile, problem,
                                    global_opt)
 
         # fix current profiling parameter to current value and set
         # start point
-        problem.fix_parameters(i_parameter, x_next[i_parameter])
+        problem.fix_parameters(i_par, x_next[i_par])
         startpoint = np.array([x_next[i] for i in problem.x_free_indices])
 
         # run optimization
@@ -200,8 +200,8 @@ def walk_along_profile(
         # handling (coming soon)
         optimizer_result = optimizer.minimize(problem, startpoint, '0',
                                               allow_failed_starts=False)
-        if optimizer_result["grad"] is not None:
-            gradnorm = np.linalg.norm(optimizer_result["grad"][
+        if optimizer_result[GRAD] is not None:
+            gradnorm = np.linalg.norm(optimizer_result[GRAD][
                                       problem.x_free_indices])
         else:
             gradnorm = None
@@ -218,7 +218,7 @@ def walk_along_profile(
             optimizer_result.n_hess)
 
     # free the profiling parameter again
-    problem.unfix_parameters(i_parameter)
+    problem.unfix_parameters(i_par)
 
     return current_profile
 
@@ -317,8 +317,8 @@ def fill_profile_list(
         log-posterior at global optimum.
     """
 
-    if optimizer_result["grad"] is not None:
-        gradnorm = np.linalg.norm(optimizer_result["grad"])
+    if optimizer_result[GRAD] is not None:
+        gradnorm = np.linalg.norm(optimizer_result[GRAD])
     else:
         gradnorm = None
 
