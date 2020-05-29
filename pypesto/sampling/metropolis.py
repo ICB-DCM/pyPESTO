@@ -39,7 +39,6 @@ class MetropolisSampler(InternalSampler):
         llh = - self.trace_fval[-1]
 
         # loop over iterations
-
         for _ in tqdm(range(int(n_samples)), disable=hide_bar):
             # perform step
             x, llh = self._perform_step(x, llh, beta)
