@@ -38,6 +38,8 @@ class AdaptiveMetropolisSampler(MetropolisSampler):
             'cov0': None,
             # target acceptance rate
             'target_acceptance_rate': 0.234,
+            # show progress
+            'show_progress': True,
         }
 
     def initialize(self, problem: Problem, x0: np.ndarray):

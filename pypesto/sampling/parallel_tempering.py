@@ -1,4 +1,5 @@
 from typing import Dict, List, Sequence, Union
+from tqdm import tqdm
 import numpy as np
 import copy
 
@@ -32,6 +33,9 @@ class ParallelTemperingSampler(Sampler):
 
         self.samplers = [copy.deepcopy(internal_sampler)
                          for _ in range(len(self.betas0))]
+        # configure internal samplers
+        for sampler in self.samplers:
+            sampler.make_internal()
 
     @classmethod
     def default_options(cls) -> Dict:
@@ -57,7 +61,7 @@ class ParallelTemperingSampler(Sampler):
     def sample(
             self, n_samples: int, beta: float = 1.):
         # loop over iterations
-        for i_sample in range(int(n_samples)):
+        for i_sample in tqdm(range(int(n_samples))):
             # sample
             for sampler, beta in zip(self.samplers, self.betas):
                 sampler.sample(n_samples=1, beta=beta)
