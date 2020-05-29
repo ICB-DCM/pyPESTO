@@ -24,6 +24,7 @@ class MetropolisSampler(InternalSampler):
     def default_options(cls):
         return {
             'std': 1.,  # the proposal standard deviation
+            'show_progress': True,  # whether to show the progress
         }
 
     def initialize(self, problem: Problem, x0: np.ndarray):
@@ -33,19 +34,24 @@ class MetropolisSampler(InternalSampler):
         self.trace_x = [x0]
         self.trace_fval = [self.objective(x0)]
 
-    def sample(self, n_samples: int, beta: float = 1., hide_bar: bool = False):
+    def sample(self, n_samples: int, beta: float = 1.):
         # load last recorded particle
         x = self.trace_x[-1]
         llh = - self.trace_fval[-1]
 
+        show_progress = self.options['show_progress']
+
         # loop over iterations
-        for _ in tqdm(range(int(n_samples)), disable=hide_bar):
+        for _ in tqdm(range(int(n_samples)), disable=not show_progress):
             # perform step
             x, llh = self._perform_step(x, llh, beta)
 
             # record step
             self.trace_x.append(x)
             self.trace_fval.append(-llh)
+
+    def make_internal(self):
+        self.options['show_progress'] = False
 
     def _perform_step(self, x: np.ndarray, llh: float, beta: float):
         """
