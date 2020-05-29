@@ -67,7 +67,6 @@ def sample(
     t_start = process_time()
     sampler.sample(n_samples=n_samples)
     t_elapsed = process_time() - t_start
-
     logger.warning("Elapsed time: "+str(t_elapsed))
 
     # extract results
