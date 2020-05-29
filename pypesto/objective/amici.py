@@ -289,12 +289,13 @@ class AmiciObjective(ObjectiveBase):
             edatas=self.edatas, n_threads=self.n_threads,
             x_ids=self.x_ids, parameter_mapping=self.parameter_mapping)
 
-        nllh = - ret[FVAL]
+        nllh = ret[FVAL]
         rdatas = ret[RDATAS]
 
         # check whether we should update data for preequilibration guesses
         if self.guess_steadystate and \
-                nllh <= self.steadystate_guesses['fval']:
+                nllh <= self.steadystate_guesses['fval'] and \
+                nllh < np.inf:
             self.steadystate_guesses['fval'] = nllh
             for data_ix, rdata in enumerate(rdatas):
                 self.store_steadystate_guess(data_ix, x_dct, rdata)
