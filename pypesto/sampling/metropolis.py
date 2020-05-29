@@ -1,5 +1,6 @@
 import numpy as np
 from typing import Dict, Sequence, Union
+from tqdm import tqdm
 
 from ..objective import History, ObjectiveBase
 from ..problem import Problem
@@ -32,13 +33,14 @@ class MetropolisSampler(InternalSampler):
         self.trace_x = [x0]
         self.trace_fval = [self.objective(x0)]
 
-    def sample(self, n_samples: int, beta: float = 1.):
+    def sample(self, n_samples: int, beta: float = 1., hide_bar: bool = False):
         # load last recorded particle
         x = self.trace_x[-1]
         llh = - self.trace_fval[-1]
 
         # loop over iterations
-        for _ in range(int(n_samples)):
+
+        for _ in tqdm(range(int(n_samples)), disable=hide_bar):
             # perform step
             x, llh = self._perform_step(x, llh, beta)
 

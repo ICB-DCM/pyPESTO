@@ -1,4 +1,5 @@
 from typing import Dict, List, Sequence, Union
+from tqdm import tqdm
 import numpy as np
 import copy
 
@@ -57,10 +58,10 @@ class ParallelTemperingSampler(Sampler):
     def sample(
             self, n_samples: int, beta: float = 1.):
         # loop over iterations
-        for i_sample in range(int(n_samples)):
+        for i_sample in tqdm(range(int(n_samples))):
             # sample
             for sampler, beta in zip(self.samplers, self.betas):
-                sampler.sample(n_samples=1, beta=beta)
+                sampler.sample(n_samples=1, beta=beta, hide_bar=True)
 
             # swap samples
             swapped = self.swap_samples()
