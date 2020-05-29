@@ -1,97 +1,16 @@
 import logging
 import numpy as np
-from typing import Callable, Dict, Union
+from typing import Any, Callable, Dict
 
+from ..objective.constants import GRAD
 from ..optimize import Optimizer
 from ..problem import Problem
-from ..result import Result
+from ..result import Result, ProfileResult
 from .result import ProfilerResult
 from .profile_next_guess import next_guess
+from .options import ProfileOptions
 
 logger = logging.getLogger(__name__)
-
-
-class ProfileOptions(dict):
-    """
-    Options for optimization based profiling.
-
-    Parameters
-    ----------
-    default_step_size:
-        default step size of the profiling routine along the profile path
-        (adaptive step lengths algorithms will only use this as a first guess
-        and then refine the update)
-    min_step_size:
-        lower bound for the step size in adaptive methods
-    max_step_size:
-        upper bound for the step size in adaptive methods
-    step_size_factor:
-        Adaptive methods recompute the likelihood at the predicted point and
-        try to find a good step length by a sort of line search algorithm.
-        This factor controls step handling in this line search
-    delta_ratio_max:
-        maximum allowed drop of the posterior ratio between two profile steps
-    ratio_min:
-        lower bound for likelihood ratio of the profile, based on inverse
-        chi2-distribution.
-        The default corresponds to 95% confidence
-    reg_points:
-        number of profile points used for regression in regression based
-        adaptive profile points proposal
-    reg_order:
-        maximum degree of regression polynomial used in regression based
-        adaptive profile points proposal
-    magic_factor_obj_value:
-        There is this magic factor in the old profiling code which slows down
-        profiling at small ratios (must be >= 0 and < 1)
-    """
-
-    def __init__(self,
-                 default_step_size: float = 0.01,
-                 min_step_size: float = 0.001,
-                 max_step_size: float = 1.,
-                 step_size_factor: float = 1.25,
-                 delta_ratio_max: float = 0.1,
-                 ratio_min: float = 0.145,
-                 reg_points: int = 10,
-                 reg_order: int = 4,
-                 magic_factor_obj_value: float = 0.5):
-        super().__init__()
-
-        self.default_step_size = default_step_size
-        self.min_step_size = min_step_size
-        self.max_step_size = max_step_size
-        self.ratio_min = ratio_min
-        self.step_size_factor = step_size_factor
-        self.delta_ratio_max = delta_ratio_max
-        self.reg_points = reg_points
-        self.reg_order = reg_order
-        self.magic_factor_obj_value = magic_factor_obj_value
-
-    def __getattr__(self, key):
-        try:
-            return self[key]
-        except KeyError:
-            raise AttributeError(key)
-
-    __setattr__ = dict.__setitem__
-    __delattr__ = dict.__delitem__
-
-    @staticmethod
-    def create_instance(
-            maybe_options: Union['ProfileOptions', Dict]
-    ) -> 'ProfileOptions':
-        """
-        Returns a valid options object.
-
-        Parameters
-        ----------
-        maybe_options: ProfileOptions or dict
-        """
-        if isinstance(maybe_options, ProfileOptions):
-            return maybe_options
-        options = ProfileOptions(**maybe_options)
-        return options
 
 
 def parameter_profile(
@@ -145,6 +64,7 @@ def parameter_profile(
     # profiling indices
     if profile_index is None:
         profile_index = np.ones(problem.dim_full)
+        profile_index[problem.x_fixed_indices] = 0
 
     # check profiling options
     if profile_options is None:
@@ -157,11 +77,11 @@ def parameter_profile(
 
     # create a function handle that will be called later to get the next point
     if isinstance(next_guess_method, str):
-        def create_next_guess(x, par_index, par_direction, profile_options,
-                              current_profile, problem, global_opt):
-            return next_guess(x, par_index, par_direction, profile_options,
-                              next_guess_method, current_profile, problem,
-                              global_opt)
+        def create_next_guess(x, par_index, par_direction_, profile_options_,
+                              current_profile_, problem_, global_opt_):
+            return next_guess(x, par_index, par_direction_, profile_options_,
+                              next_guess_method, current_profile_, problem_,
+                              global_opt_)
     elif callable(next_guess_method):
         raise Exception('Passing function handles for computation of next '
                         'profiling point is not yet supported.')
@@ -174,15 +94,14 @@ def parameter_profile(
                                     profile_index, profile_list)
 
     # loop over parameters for profiling
-    for i_parameter in range(0, problem.dim_full):
-        if (profile_index[i_parameter] == 0) or (i_parameter in
-                                                 problem.x_fixed_indices):
+    for i_par in range(0, problem.dim_full):
+        if profile_index[i_par] == 0 or i_par in problem.x_fixed_indices:
+            # not requested or fixed -> compute no profile
             continue
 
         # create an instance of ProfilerResult, which will be appended to the
         # result object, when this profile is finished
-        current_profile = result.profile_result.get_current_profile(
-            i_parameter)
+        current_profile = result.profile_result.get_current_profile(i_par)
 
         # compute profile in descending and ascending direction
         for par_direction in [-1, 1]:
@@ -190,59 +109,60 @@ def parameter_profile(
             current_profile.flip_profile()
 
             # compute the current profile
-            current_profile = walk_along_profile(current_profile,
-                                                 problem,
-                                                 par_direction,
-                                                 optimizer,
-                                                 profile_options,
-                                                 create_next_guess,
-                                                 global_opt,
-                                                 i_parameter)
+            current_profile = walk_along_profile(
+                current_profile=current_profile,
+                problem=problem,
+                par_direction=par_direction,
+                optimizer=optimizer,
+                options=profile_options,
+                create_next_guess=create_next_guess,
+                global_opt=global_opt,
+                i_par=i_par)
 
         # add current profile to result.profile_result
         # result.profile_result.add_profile(current_profile, i_parameter)
 
-    # return
     return result
 
 
-def walk_along_profile(current_profile,
-                       problem,
-                       par_direction,
-                       optimizer,
-                       options,
-                       create_next_guess,
-                       global_opt,
-                       i_parameter):
+def walk_along_profile(
+        current_profile: ProfilerResult,
+        problem: Problem,
+        par_direction: int,
+        optimizer: Optimizer,
+        options: ProfileOptions,
+        create_next_guess: Callable,
+        global_opt: float,
+        i_par: int
+) -> ProfilerResult:
     """
-    This is function compute a half-profile
+    This function computes half a profile, by walking ahead in positive
+    direction until some stopping criterion is fulfilled. A two-sided profile
+    is obtained by flipping the profile direction.
 
     Parameters
     ----------
-
-    current_profile: pypesto.ProfilerResults
+    current_profile:
         The profile which should be computed
-
-    problem: pypesto.Problem
+    problem:
         The problem to be solved.
-
-    par_direction: integer
+    par_direction:
         Indicates profiling direction (+1, -1: ascending, descending)
-
-    optimizer: pypesto.Optimizer
+    optimizer:
         The optimizer to be used along each profile.
-
-    global_opt: float
+    global_opt:
         log-posterior value of the global optimum
-
-    options: pypesto.ProfileOptions
+    options:
         Various options applied to the profile optimization.
-
-    create_next_guess: callable
+    create_next_guess:
         Handle of the method which creates the next profile point proposal
-
-    i_parameter: integer
+    i_par:
         index for the current parameter
+
+    Returns
+    -------
+    current_profile:
+        The current profile, modified in-place.
     """
 
     # create variables which are needed during iteration
@@ -255,26 +175,24 @@ def walk_along_profile(current_profile,
 
         # check if the next profile point needs to be computed
         if par_direction == -1:
-            stop_profile = (x_now[i_parameter] <= problem.lb_full[[
-                i_parameter]]) or (current_profile.ratio_path[-1] <
-                                   options.ratio_min)
+            stop_profile = (x_now[i_par] <= problem.lb_full[[i_par]]) \
+                or (current_profile.ratio_path[-1] < options.ratio_min)
 
         if par_direction == 1:
-            stop_profile = (x_now[i_parameter] >= problem.ub_full[[
-                i_parameter]]) or (current_profile.ratio_path[-1] <
-                                   options.ratio_min)
+            stop_profile = (x_now[i_par] >= problem.ub_full[[i_par]]) \
+                or (current_profile.ratio_path[-1] < options.ratio_min)
 
         if stop_profile:
             break
 
         # compute the new start point for optimization
-        x_next = create_next_guess(x_now, i_parameter, par_direction,
+        x_next = create_next_guess(x_now, i_par, par_direction,
                                    options, current_profile, problem,
                                    global_opt)
 
         # fix current profiling parameter to current value and set
         # start point
-        problem.fix_parameters(i_parameter, x_next[i_parameter])
+        problem.fix_parameters(i_par, x_next[i_par])
         startpoint = np.array([x_next[i] for i in problem.x_free_indices])
 
         # run optimization
@@ -282,8 +200,8 @@ def walk_along_profile(current_profile,
         # handling (coming soon)
         optimizer_result = optimizer.minimize(problem, startpoint, '0',
                                               allow_failed_starts=False)
-        if optimizer_result["grad"] is not None:
-            gradnorm = np.linalg.norm(optimizer_result["grad"][
+        if optimizer_result[GRAD] is not None:
+            gradnorm = np.linalg.norm(optimizer_result[GRAD][
                                       problem.x_free_indices])
         else:
             gradnorm = None
@@ -300,51 +218,50 @@ def walk_along_profile(current_profile,
             optimizer_result.n_hess)
 
     # free the profiling parameter again
-    problem.unfix_parameters(i_parameter)
+    problem.unfix_parameters(i_par)
 
     return current_profile
 
 
 def initialize_profile(
-        problem,
-        result,
-        result_index,
-        profile_index,
-        profile_list):
+        problem: Problem,
+        result: Result,
+        result_index: int,
+        profile_index: np.ndarray,
+        profile_list: int
+) -> float:
     """
-    This is function initializes profiling based on a previous optimization.
+    This function initializes profiling based on a previous optimization.
 
     Parameters
     ----------
-
-    problem: pypesto.Problem
+    problem:
         The problem to be solved.
-
-    result: pypesto.Result
+    result:
         A result object to initialize profiling and to append the profiling
         results to. For example, one might append more profiling runs to a
         previous profile, in order to merge these.
         The existence of an optimization result is obligatory.
-
-    result_index: integer
+    result_index:
         index from which optimization result profiling should be started
-
-    profile_index: ndarray of integers, optional
+    profile_index:
         array with parameter indices, whether a profile should
         be computed (1) or not (0)
         Default is all profiles should be computed
-
-    profile_list: integer, optional
+    profile_list:
         integer which specifies whether a call to the profiler should create
         a new list of profiles (default) or should be added to a specific
         profile list
-    """
 
-    # Check, whether an optimization result is existing
+    Returns
+    -------
+    global_opt:
+        log-posterior at global optimum.
+    """
+    # Check whether an optimization result is existing
     if result.optimize_result is None:
-        logger.error(
+        raise ValueError(
             "Optimization has to be carried before profiling can be done.")
-        return None
 
     tmp_optimize_result = result.optimize_result.as_list()
 
@@ -356,12 +273,13 @@ def initialize_profile(
     global_opt = tmp_optimize_result[0]["fval"]
 
     # fill the list with optimization results where necessary
-    fill_profile_list(result.profile_result,
-                      tmp_optimize_result[result_index],
-                      profile_index,
-                      profile_list,
-                      problem.dim_full,
-                      global_opt)
+    fill_profile_list(
+        profile_result=result.profile_result,
+        optimizer_result=tmp_optimize_result[result_index],
+        profile_index=profile_index,
+        profile_list=profile_list,
+        problem_dimension=problem.dim_full,
+        global_opt=global_opt)
 
     # return the log-posterior of the global optimum (needed in order to
     # compute the log-posterior-ratio)
@@ -369,59 +287,54 @@ def initialize_profile(
 
 
 def fill_profile_list(
-        profile_result,
-        optimize_result,
-        profile_index,
-        profile_list,
-        problem_dimension,
-        global_opt):
-    """
-        This is a helper function for initialize_profile
-
-        Parameters
-        ----------
-
-        problem: pypesto.Problem
-            The problem to be solved.
-
-        profile_result: list of ProfilerResult objects
-            A list of profiler result objects
-
-        profile_index: ndarray of integers, optional
-            array with parameter indices, whether a profile should
-            be computed (1) or not (0)
-            Default is all profiles should be computed
-
-        profile_list: integer, optional
-            integer which specifies whether a call to the profiler should
-            create a new list of profiles (default) or should be added to a
-            specific profile list
-
-        problem_dimension: integer
-            number of parameters in the unreduced problem
-
+        profile_result: ProfileResult,
+        optimizer_result: Dict[str, Any],
+        profile_index: np.ndarray,
+        profile_list: int,
+        problem_dimension: int,
         global_opt: float
-            log-posterior at global optimum
-        """
+) -> None:
+    """
+    This is a helper function for initialize_profile
 
-    if optimize_result["grad"] is not None:
-        gradnorm = np.linalg.norm(optimize_result["grad"])
+    Parameters
+    ----------
+    profile_result:
+        A list of profiler result objects.
+    optimizer_result:
+        A local optimization result.
+    profile_index:
+        array with parameter indices, whether a profile should
+        be computed (1) or not (0).
+        Default is all profiles should be computed.
+    profile_list:
+        integer which specifies whether a call to the profiler should
+        create a new list of profiles (default) or should be added to a
+        specific profile list.
+    problem_dimension:
+        number of parameters in the unreduced problem.
+    global_opt:
+        log-posterior at global optimum.
+    """
+
+    if optimizer_result[GRAD] is not None:
+        gradnorm = np.linalg.norm(optimizer_result[GRAD])
     else:
         gradnorm = None
 
-    # create blanko profile
+    # create blank profile
     new_profile = ProfilerResult(
-        optimize_result["x"],
-        np.array([optimize_result["fval"]]),
-        np.array([np.exp(global_opt - optimize_result["fval"])]),
-        gradnorm,
-        optimize_result["exitflag"],
-        np.array([0.]),
-        np.array([0.]),
-        np.array([0]),
-        np.array([0]),
-        np.array([0]),
-        None)
+        x_path=optimizer_result["x"],
+        fval_path=np.array([optimizer_result["fval"]]),
+        ratio_path=np.array([np.exp(global_opt - optimizer_result["fval"])]),
+        gradnorm_path=gradnorm,
+        exitflag_path=optimizer_result["exitflag"],
+        time_path=np.array([0.]),
+        time_total=0.,
+        n_fval=0,
+        n_grad=0,
+        n_hess=0,
+        message=None)
 
     if profile_list is None:
         # All profiles have to be created from scratch
@@ -438,7 +351,7 @@ def fill_profile_list(
             # We append to an existing list
             if profile_index[i_parameter] > 0:
                 # Do we have to create a new profile?
-                create_new = (profile_result.list[profile_list][i_parameter] is
-                              None) and (profile_index[i_parameter] > 0)
+                create_new = (profile_result.list[profile_list][i_parameter]
+                              is None) and (profile_index[i_parameter] > 0)
                 if create_new:
                     profile_result.add_profile(new_profile, i_parameter)
