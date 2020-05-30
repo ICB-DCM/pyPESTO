@@ -86,69 +86,76 @@ class OptimizeResult:
 class ProfileResult:
     """
     Result of the profile() function.
+
+    It holds a list of profile lists. Each profile list consists of a list of
+    `ProfilerResult`s, one for each parameter.
     """
 
     def __init__(self):
         self.list = []
 
-    def create_new_profile_list(self):
-        """
-        Append an profiler result to the result object.
+    def append_empty_profile_list(self) -> int:
+        """Append an empty profile list to the list of profile lists.
 
-        Parameters
-        ----------
+        Returns
+        -------
+        index: The index of the created profile list.
         """
         self.list.append([])
+        return len(self.list) - 1
 
-    def create_new_profile(
+    def append_profiler_result(
             self,
-            profiler_result: 'pypesto.ProfilerResult' = None
-    ):
-        """
-        Append an profiler result to the result object.
+            profiler_result: 'pypesto.ProfilerResult' = None,
+            profile_list: int = -1) -> None:
+        """Append the profiler result to the profile list.
 
         Parameters
         ----------
         profiler_result:
-            The result of one (local) profiler run or None, if to be left empty
-
-        profile_list: integer
-            index specifying the list of profiles, to which we want to append
+            The result of one profiler run for a parameter, or None if to be
+            left empty.
+        profile_list:
+            Index specifying the profile list to which we want to append.
+            Defaults to the last list.
         """
+        profiler_result = copy.deepcopy(profiler_result)
+        self.list[profile_list].append(profiler_result)
 
-        current_profile = len(self.list)
-        new_profile = copy.deepcopy(profiler_result)
-        self.list[current_profile - 1].append(new_profile)
-
-    def add_profile(self, profiler_result, i_parameter):
-        """
-        Writes a profiler result to the result object at i_parameter.
+    def set_profiler_result(
+            self,
+            profiler_result: 'pypesto.ProfilerResult',
+            i_par: int,
+            profile_list: int = -1) -> None:
+        """Write a profiler result to the result object at `i_par` of profile
+        list `profile_list`.
 
         Parameters
         ----------
         profiler_result:
             The result of one (local) profiler run.
-
-        i_parameter:
-            integer specifying the parameter index
+        i_par:
+            Integer specifying the parameter index.
+        profile_list:
+            Index specifying the profile list. Defaults to the last list.
         """
+        self.list[profile_list][i_par] = copy.deepcopy(profiler_result)
 
-        current_profile = len(self.list)
-        self.list[current_profile - 1][i_parameter] = \
-            copy.deepcopy(profiler_result)
-
-    def get_current_profile(self, i_parameter):
+    def get_profiler_result(
+            self, i_par: int, profile_list: int = -1
+    ) -> 'pypesto.ProfilerResult':
         """
-        Append an profiler result to the result object.
+        Get theprofiler result at parameter index `i_par` of profile list
+        `profile_list`.
 
         Parameters
         ----------
-        i_parameter:
-            integer specifying the profile index
+        i_par:
+            Integer specifying the profile index.
+        profile_list:
+            Index specifying the profile list. Defaults to the last list.
         """
-
-        current_profile = len(self.list)
-        return self.list[current_profile - 1][i_parameter]
+        return self.list[profile_list][i_par]
 
 
 class SampleResult:

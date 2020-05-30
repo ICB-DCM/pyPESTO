@@ -88,7 +88,7 @@ def parameter_profile(
     else:
         raise Exception('Unsupported input for next_guess_method.')
 
-    # create the profile result object (retrieve global optimum) ar append to
+    # create the profile result object (retrieve global optimum) or append to
     # existing list of profiles
     global_opt = initialize_profile(problem, result, result_index,
                                     profile_index, profile_list)
@@ -101,7 +101,7 @@ def parameter_profile(
 
         # create an instance of ProfilerResult, which will be appended to the
         # result object, when this profile is finished
-        current_profile = result.profile_result.get_current_profile(i_par)
+        current_profile = result.profile_result.get_profiler_result(i_par)
 
         # compute profile in descending and ascending direction
         for par_direction in [-1, 1]:
@@ -207,15 +207,15 @@ def walk_along_profile(
             gradnorm = None
 
         current_profile.append_profile_point(
-            optimizer_result.x,
-            optimizer_result.fval,
-            np.exp(global_opt - optimizer_result.fval),
-            gradnorm,
-            optimizer_result.exitflag,
-            optimizer_result.time,
-            optimizer_result.n_fval,
-            optimizer_result.n_grad,
-            optimizer_result.n_hess)
+            x=optimizer_result.x,
+            fval=optimizer_result.fval,
+            ratio=np.exp(global_opt - optimizer_result.fval),
+            gradnorm=gradnorm,
+            time=optimizer_result.time,
+            exitflag=optimizer_result.exitflag,
+            n_fval=optimizer_result.n_fval,
+            n_grad=optimizer_result.n_grad,
+            n_hess=optimizer_result.n_hess)
 
     # free the profiling parameter again
     problem.unfix_parameters(i_par)
@@ -261,13 +261,13 @@ def initialize_profile(
     # Check whether an optimization result is existing
     if result.optimize_result is None:
         raise ValueError(
-            "Optimization has to be carried before profiling can be done.")
+            "Optimization has to be carried out before profiling can be done.")
 
     tmp_optimize_result = result.optimize_result.as_list()
 
     # Check if new profile_list is to be created
     if profile_list is None:
-        result.profile_result.create_new_profile_list()
+        result.profile_result.append_empty_profile_list()
 
     # get the log-posterior of the global optimum
     global_opt = tmp_optimize_result[0]["fval"]
@@ -341,10 +341,10 @@ def fill_profile_list(
         for i_parameter in range(0, problem_dimension):
             if profile_index[i_parameter] > 0:
                 # Should we create a profile for this index?
-                profile_result.create_new_profile(new_profile)
+                profile_result.append_profiler_result(new_profile)
             else:
                 # if no profile should be computed for this parameter
-                profile_result.create_new_profile()
+                profile_result.append_profiler_result(None)
 
     else:
         for i_parameter in range(0, problem_dimension):
@@ -354,4 +354,5 @@ def fill_profile_list(
                 create_new = (profile_result.list[profile_list][i_parameter]
                               is None) and (profile_index[i_parameter] > 0)
                 if create_new:
-                    profile_result.add_profile(new_profile, i_parameter)
+                    profile_result.set_profiler_result(
+                        new_profile, i_parameter)

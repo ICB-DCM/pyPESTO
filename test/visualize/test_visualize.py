@@ -116,9 +116,9 @@ def create_profile_result():
     tmp_result_2 = pypesto.ProfilerResult(x_path_2, fval_path_2, ratio_path_2)
 
     # use pypesto function to write the numeric values into the results
-    result.profile_result.create_new_profile_list()
-    result.profile_result.create_new_profile(tmp_result_1)
-    result.profile_result.create_new_profile(tmp_result_2)
+    result.profile_result.append_empty_profile_list()
+    result.profile_result.append_profiler_result(tmp_result_1)
+    result.profile_result.append_profiler_result(tmp_result_2)
 
     return result
 

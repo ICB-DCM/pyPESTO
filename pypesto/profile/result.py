@@ -65,12 +65,12 @@ class ProfilerResult(dict):
             self.x_path = np.zeros((x_shape[0], x_shape[1]))
             self.x_path[:, :] = x_path[:, :]
 
-        self.fval_path = np.array(fval_path)
-        self.ratio_path = np.array(ratio_path)
-        self.gradnorm_path = np.array(gradnorm_path) \
+        self.fval_path = np.asarray(fval_path)
+        self.ratio_path = np.asarray(ratio_path)
+        self.gradnorm_path = np.asarray(gradnorm_path) \
             if gradnorm_path is not None else None
-        self.exitflag_path = np.array(exitflag_path)
-        self.time_path = np.array(time_path)
+        self.exitflag_path = np.asarray(exitflag_path)
+        self.time_path = np.asarray(time_path)
         self.time_total = time_total
         self.n_fval = n_fval
         self.n_grad = n_grad
@@ -91,14 +91,36 @@ class ProfilerResult(dict):
                              fval: float,
                              ratio: float,
                              gradnorm: float = np.nan,
-                             exitflag: float = np.nan,
                              time: float = np.nan,
+                             exitflag: float = np.nan,
                              n_fval: int = 0,
                              n_grad: int = 0,
                              n_hess: int = 0) -> None:
         """
-        This function appends a new OptimizerResult to an existing
-        ProfilerResults
+        This function appends a new point to the profile path.
+
+        Parameters
+        ----------
+        x:
+            The parameter values.
+        fval:
+            The function value at `x`.
+        ratio:
+            The ratio of the function value at `x` by the optimal function
+            value.
+        gradnorm:
+            The gradient norm at `x`.
+        time:
+            The computation time to find `x`.
+        exitflag:
+            The exitflag of the optimizer (useful if an optimization was
+            performed to find `x`).
+        n_fval:
+            Number of function evaluations performed to find `x`.
+        n_grad:
+            Number of gradient evaluations performed to find `x`.
+        n_hess:
+            Number of Hessian evaluations performed to find `x`.
         """
 
         # short function to append to numpy vectors
@@ -130,8 +152,10 @@ class ProfilerResult(dict):
     def flip_profile(self) -> None:
         """
         This function flips the profiling direction (left-right)
-        Profiling direction needs to be changed once (if the profile is new)
-        and twice, if we append to an existing profile
+        Profiling direction needs to be changed once (if the profile is new),
+        or twice if we append to an existing profile.
+
+        All profiling paths are flipped in-place.
         """
 
         self.x_path = np.fliplr(self.x_path)
