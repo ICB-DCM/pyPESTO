@@ -97,7 +97,8 @@ def parameter_profile(
 
         # create an instance of ProfilerResult, which will be appended to the
         # result object, when this profile is finished
-        current_profile = result.profile_result.get_profiler_result(i_par)
+        current_profile = result.profile_result.get_profiler_result(
+            i_par=i_par, profile_list=profile_list)
 
         # compute profile in descending and ascending direction
         for par_direction in [-1, 1]:

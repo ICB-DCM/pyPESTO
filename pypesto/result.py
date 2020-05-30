@@ -107,7 +107,7 @@ class ProfileResult:
     def append_profiler_result(
             self,
             profiler_result: 'pypesto.ProfilerResult' = None,
-            profile_list: int = -1) -> None:
+            profile_list: int = None) -> None:
         """Append the profiler result to the profile list.
 
         Parameters
@@ -119,6 +119,8 @@ class ProfileResult:
             Index specifying the profile list to which we want to append.
             Defaults to the last list.
         """
+        if profile_list is None:
+            profile_list = -1  # last
         profiler_result = copy.deepcopy(profiler_result)
         self.list[profile_list].append(profiler_result)
 
@@ -126,7 +128,7 @@ class ProfileResult:
             self,
             profiler_result: 'pypesto.ProfilerResult',
             i_par: int,
-            profile_list: int = -1) -> None:
+            profile_list: int = None) -> None:
         """Write a profiler result to the result object at `i_par` of profile
         list `profile_list`.
 
@@ -139,10 +141,12 @@ class ProfileResult:
         profile_list:
             Index specifying the profile list. Defaults to the last list.
         """
+        if profile_list is None:
+            profile_list = -1  # last
         self.list[profile_list][i_par] = copy.deepcopy(profiler_result)
 
     def get_profiler_result(
-            self, i_par: int, profile_list: int = -1
+            self, i_par: int, profile_list: int = None
     ) -> 'pypesto.ProfilerResult':
         """
         Get theprofiler result at parameter index `i_par` of profile list
@@ -155,6 +159,8 @@ class ProfileResult:
         profile_list:
             Index specifying the profile list. Defaults to the last list.
         """
+        if profile_list is None:
+            profile_list = -1  # last
         return self.list[profile_list][i_par]
 
 
