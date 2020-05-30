@@ -26,9 +26,9 @@ class ProfilerTest(unittest.TestCase):
 
     def test_default_profiling(self):
         # loop over  methods for creating new initial guesses
-        method_list = [None, 'fixed_step', 'adaptive_step_order_0',
+        method_list = ['fixed_step', 'adaptive_step_order_0',
                        'adaptive_step_order_1', 'adaptive_step_regression']
-        for method in method_list:
+        for i_run, method in enumerate(method_list):
             # run profiling
             result = pypesto.parameter_profile(problem=self.problem,
                                                result=self.result,
@@ -37,11 +37,13 @@ class ProfilerTest(unittest.TestCase):
 
             # check result
             self.assertTrue(
-                isinstance(result.profile_result.list[0][0],
+                isinstance(result.profile_result.list[i_run][0],
                            pypesto.ProfilerResult))
+            self.assertEqual(len(result.profile_result.list), i_run+1)
+            self.assertEqual(len(result.profile_result.list[i_run]), 2)
 
             # check whether profiling needed maybe too many steps
-            steps = result.profile_result.list[0][0]['ratio_path'].size
+            steps = result.profile_result.list[i_run][0]['ratio_path'].size
             if method == 'adaptive_step_regression':
                 self.assertTrue(steps < 20, 'Profiling with regression based '
                                             'proposal needed too many steps.')
