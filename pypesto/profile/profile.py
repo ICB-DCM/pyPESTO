@@ -1,6 +1,6 @@
 import logging
 import numpy as np
-from typing import Callable
+from typing import Callable, Union
 
 from ..objective.constants import GRAD
 from ..optimize import Optimizer
@@ -21,7 +21,7 @@ def parameter_profile(
         profile_index: np.ndarray = None,
         profile_list: int = None,
         result_index: int = 0,
-        next_guess_method: Callable = None,
+        next_guess_method: Union[Callable, str] = 'adaptive_step_regression',
         profile_options: ProfileOptions = None
 ) -> Result:
     """
@@ -70,10 +70,6 @@ def parameter_profile(
     if profile_options is None:
         profile_options = ProfileOptions()
     profile_options = ProfileOptions.create_instance(profile_options)
-
-    # profile startpoint method
-    if next_guess_method is None:
-        next_guess_method = 'adaptive_step_regression'
 
     # create a function handle that will be called later to get the next point
     if isinstance(next_guess_method, str):
