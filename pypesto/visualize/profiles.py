@@ -15,41 +15,31 @@ def profiles(results, ax=None, profile_indices=None, size=(18.5, 6.5),
 
     Parameters
     ----------
-
     results: list or pypesto.Result
-        list of pypesto.Result or single pypesto.Result
-
+        List of or single `pypesto.Result`.
     ax: list of matplotlib.Axes, optional
         List of axes objects to use.
-
     profile_indices: list of integer values
-        list of integer values specifying which profiles should be plotted
-
+        List of integer values specifying which profiles should be plotted.
     size: tuple, optional
         Figure size (width, height) in inches. Is only applied when no ax
-        object is specified
-
+        object is specified.
     reference: list, optional
         List of reference points for optimization results, containing et
-        least a function value fval
-
+        least a function value fval.
     colors: list, or RGBA, optional
-        list of colors, or single color
+        List of colors, or single color
         color or list of colors for plotting. If not set, clustering is done
-        and colors are assigned automatically
-
+        and colors are assigned automatically.
     legends: list or str, optional
-        Labels for line plots, one label per result object
-
+        Labels for line plots, one label per result object.
     x_labels: list of str
-        Labels for parameter value axes (e.g. parameter names)
-
+        Labels for parameter value axes (e.g. parameter names).
     profile_list_id: int, optional
-        index of the profile list to be used for profiling
+        Index of the profile list to be used for profiling.
 
     Returns
     -------
-
     ax: matplotlib.Axes
         The plot axes.
     """
@@ -98,33 +88,25 @@ def profiles_lowlevel(fvals, ax=None, size=(18.5, 6.5), color=None,
 
     Parameters
     ----------
-
     fvals: numeric list or array
-        Including values need to be plotted.
-
+        Values to plot.
     ax: list of matplotlib.Axes, optional
-        list of axes object to use.
-
+        List of axes object to use.
     size: tuple, optional
         Figure size (width, height) in inches. Is only applied when no ax
-        object is specified
-
+        object is specified.
     size: tuple, optional
         Figure size (width, height) in inches. Is only applied when no ax
-        object is specified
-
+        object is specified.
     color: RGBA, optional
-        color for profiles in plot.
-
+        Color for profiles in plot.
     legend_text: str
-        Label for line plots
-
+        Label for line plots.
     legend_text: List[str]
-        Label for line plots
+        Label for line plots.
 
     Returns
     -------
-
     ax: matplotlib.Axes
         The plot axes.
     """
@@ -203,26 +185,20 @@ def profile_lowlevel(fvals, ax=None, size=(18.5, 6.5), color=None,
 
     Parameters
     ----------
-
     fvals: numeric list or array
-        Including values need to be plotted.
-
+        Values to plot.
     ax: matplotlib.Axes, optional
         Axes object to use.
-
     size: tuple, optional
         Figure size (width, height) in inches. Is only applied when no ax
-        object is specified
-
+        object is specified.
     color: RGBA, optional
-        color for profiles in plot.
-
+        Color for profiles in plot.
     legend_text: str
-        Label for line plots
+        Label for line plots.
 
     Returns
     -------
-
     ax: matplotlib.Axes
         The plot axes.
     """
@@ -258,13 +234,13 @@ def handle_reference_points(ref, ax, fvals):
 
     Parameters
     ----------
-
     ref: list, optional
         List of reference points for optimization results, containing et
         least a function value fval
-
     ax: matplotlib.Axes, optional
         Axes object to use.
+    fvals: numeric list or array
+        Values to plot.
     """
 
     if len(ref) > 0:
@@ -295,21 +271,17 @@ def handle_inputs(result, profile_indices, profile_list_id=0):
 
     Parameters
     ----------
-
     result: pypesto.Result
-        Profile result obtained by 'profile.py'
-
+        Profile result obtained by 'profile.py'.
     profile_indices: list of integer values
-        list of integer values specifying which profiles should be plotted
-
+        List of integer values specifying which profiles should be plotted.
     profile_list_id: int, optional
-        index of the profile list to be used for profiling
+        Index of the profile list to be used for profiling.
 
     Returns
     -------
-
     fvals: numeric list
-        Including values need to be plotted.
+        Including values that need to be plotted.
     """
 
     # extract ratio values values from result
