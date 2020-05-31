@@ -1,10 +1,33 @@
 import numpy as np
+import scipy.stats
 from typing import Any, Dict
 
 from ..objective.constants import GRAD
 from ..problem import Problem
 from ..result import Result, ProfileResult
 from .result import ProfilerResult
+
+
+def chi2_quantile_to_ratio(alpha: float = 0.95, df: int = 1):
+    """
+    Transform lower tail probability `alpha` for a chi2 distribution with `df`
+    degrees of freedom to a profile likelihood ratio threshold.
+
+    Parameters
+    ----------
+    alpha:
+        Lower tail probability, defaults to 95% interval.
+    df:
+        Degrees of freedom. Defaults to 1.
+
+    Returns
+    -------
+    ratio:
+        Corresponds to a likelihood ratio.
+    """
+    quantile = scipy.stats.chi2.ppf(alpha, df=1)
+    ratio = np.exp(-quantile / 2)
+    return ratio
 
 
 def initialize_profile(
