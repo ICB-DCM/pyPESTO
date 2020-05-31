@@ -86,7 +86,7 @@ class Pymc3Sampler(Sampler):
                           trace=self.trace, model=model, **self.options)
 
         # Convert trace to inference data object
-        data = az.from_pymc3(trace=trace, model=model)
+        data = pymc3_to_arviz(model, trace)
 
         self.trace = trace
         self.data = data
@@ -119,6 +119,7 @@ def create_pymc3_model(problem: Problem,
                        testval: Union[np.ndarray, None] = None,
                        beta: float = 1., *,
                        cache_gradients: bool = True,
+                       vectorize: bool = False,
                        lerp: str = 'convex',
                        verbose: bool = False):
         with pm.Model() as model:
@@ -159,7 +160,16 @@ def create_pymc3_model(problem: Problem,
                             testval[i] = np.nextafter(ub, lb)
 
             # Create a uniform bounded variable for each parameter
-            if testval is None:
+            if vectorize:
+                if testval is None:
+                    theta = BetterUniform(pymc3_vector_parname(problem),
+                                          lerp=lerp,
+                                          lower=problem.lb, upper=problem.ub)
+                else:
+                    theta = BetterUniform(pymc3_vector_parname(problem),
+                                          lerp=lerp, testval=testval,
+                                          lower=problem.lb, upper=problem.ub)
+            elif testval is None:
                 k = [BetterUniform(x_name, lower=lb, upper=ub, lerp=lerp)
                          for x_name, lb, ub in
                          zip(x_free_names, problem.lb, problem.ub)]
@@ -169,7 +179,8 @@ def create_pymc3_model(problem: Problem,
                          zip(x_free_names, testval, problem.lb, problem.ub)]
 
             # Convert to tensor vector
-            theta = tt.as_tensor_variable(k)
+            if not vectorize:
+                theta = tt.as_tensor_variable(k)
 
             # Use a DensityDist for the log-posterior
             pm.DensityDist('log_post', logp=log_post_fun, observed=theta)
@@ -181,7 +192,40 @@ def create_pymc3_model(problem: Problem,
         return model
 
 
-def BetterUniform(name, *, testval, lower, upper, lerp):
+def pymc3_vector_parname(problem: Problem):
+    if 'theta' in problem.x_names:
+        if 'free_parameters' in problem.x_names:
+            if 'pymc3_free_parameters' in problem.x_names:
+                raise Exception('cannot find a name for the compacted parameters')
+            else:
+                return 'pymc3_free_parameters'
+        else:
+            return 'free_parameters'
+    else:
+        return 'theta'
+
+
+def pymc3_to_arviz(model: pm.Model, trace: pm.backends.base.MultiTrace, problem: Problem = None, vectorize: bool = False):
+    kwargs = {}
+    if vectorize:
+        if problem is None:
+            raise ValueError('if vectorize is True, ' \
+                             'a problem must be given')
+        x_free_names = [problem.x_names[i] for i in problem.x_free_indices]
+        kwargs['coords'] = {"free_parameter": x_free_names}
+        kwargs['dims'] = {pymc3_vector_parname(problem): ["free_parameter"]}
+
+    return az.from_pymc3(
+        trace=trace,
+        model=model,
+        log_likelihood=False,  # NB at the moment we do not separate prior
+                               # from posterior, thus computing likelihood
+                               # from pymc3 model is meaningless
+        **kwargs
+    )
+
+
+def BetterUniform(name, *, lower, upper, lerp='convex', **kwargs):
     """
     A uniform bounded random variable whose behaviour near the boundary of
     the domain is better than the native `pymc3.Uniform`.
@@ -200,26 +244,52 @@ def BetterUniform(name, *, testval, lower, upper, lerp):
     (which has log-posterior 0) and removing the term `log(ub - lb)` from
     the interval transformation jacobian.
     """
+    if 'shape' not in kwargs.keys():
+        if 'testval' in kwargs.keys():
+            shape = np.broadcast(lower, upper, kwargs['testval']).shape
+        else:
+            shape = np.broadcast(lower, upper).shape
+        kwargs['shape'] = shape
+    scalar = (len(kwargs['shape']) == 0)
+
+    if 'transform' in kwargs.keys():
+        raise Exception('if specifying a custom transform, ' \
+                        'please use pymc3.Uniform')
+
     BoundedFlat = pm.Bound(pm.Flat, lower=lower, upper=upper)
-    transform = BetterInterval(lower, upper, lerp)
-    return BoundedFlat(name, testval=testval, transform=transform)
+
+    transform = BetterInterval(lower, upper, lerp, scalar=scalar)
+
+    return BoundedFlat(name, transform=transform, **kwargs)
 
     # In the case we start from pm.Uniform,
     # we need to comment the jacobian out of BetterInterval
-    # transform = BetterInterval(lower, upper)
-    # return pm.Uniform(name, lower=lower, upper=upper, testval=testval, transform=transform)
+    # transform = BetterInterval(lower, upper, lerp, scalar=scalar)
+    # return pm.Uniform(name, lower=lower, upper=upper, transform=transform, **kwargs)
 
 
 class BetterInterval(pm.distributions.transforms.Interval):
     name = "betterinterval"
-    def __init__(self, a, b, lerp):
+    def __init__(self, a, b, lerp, *, scalar=True):
         super().__init__(a, b)
+
+        scalar_bounds = isinstance(a, float) and isinstance(b, float)
+        assert scalar_bounds or not scalar
+
+        if not scalar:
+            allowed_lerp = ('convex', 'clipped', 'auto') if scalar_bounds \
+                           else ('convex', 'clipped')
+            if lerp not in allowed_lerp:
+                raise NotImplementedError(f'lerp method {lerp} is unsupported' \
+                                           ' when using a vector of parameters')
+
         if lerp == 'auto':
             # Could possibly be improved by comparing orders of magnitude
             if (a <= 0 and b >= 0) or (a >= 0 and b <= 0):
                 lerp = 'convex'
             else:
                 lerp = 'clipped'
+
         self.lerp_method = lerp
 
     def backward(self, x):
