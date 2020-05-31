@@ -11,3 +11,4 @@ gitpython
 sphinx
 nbsphinx
 sphinx_rtd_theme
+cython
