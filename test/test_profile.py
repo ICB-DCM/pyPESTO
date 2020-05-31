@@ -6,6 +6,7 @@ import numpy as np
 import pypesto
 import unittest
 import test.test_objective as test_objective
+from copy import deepcopy
 import warnings
 
 from pypesto import ObjectiveBase
@@ -138,6 +139,7 @@ class ProfilerTest(unittest.TestCase):
     def test_approximate_profiles(self):
         """Test for the approximate profile function."""
         n_steps = 50
+        assert self.result.optimize_result.list[0].hess is None
         result = pypesto.profile.approximate_parameter_profile(
             problem=self.problem, result=self.result, profile_index=[0, 1],
             n_steps=n_steps)
@@ -147,6 +149,13 @@ class ProfilerTest(unittest.TestCase):
         assert np.isclose(profile_list[1].ratio_path.max(), 1)
         assert len(profile_list[1].ratio_path) == n_steps
         assert profile_list[1].x_path.shape == (2, n_steps)
+
+        # with pre-defined hessian
+        result = deepcopy(self.result)
+        result.optimize_result.list[0].hess = np.array([[2, 0], [0, 1]])
+        result = pypesto.profile.approximate_parameter_profile(
+            problem=self.problem, result=result, profile_index=[0, 1],
+            n_steps=n_steps)
 
 
 # dont make this a class method such that we dont optimize twice
