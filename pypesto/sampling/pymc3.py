@@ -14,8 +14,9 @@ try:
     import pymc3 as pm
     import arviz as az
     import theano.tensor as tt
+    from theano.ifelse import ifelse
 except ImportError:
-    pm = az = tt = None
+    pm = az = tt = ifelse = None
 
 try:
     from .theano import TheanoLogProbability, CachedObjective
@@ -118,6 +119,7 @@ def create_pymc3_model(problem: Problem,
                        testval: Union[np.ndarray, None] = None,
                        beta: float = 1., *,
                        cache_gradients: bool = True,
+                       lerp: str = 'convex',
                        verbose: bool = False):
         with pm.Model() as model:
             # Wrap objective in a theno op (applying caching if needed)
@@ -158,11 +160,11 @@ def create_pymc3_model(problem: Problem,
 
             # Create a uniform bounded variable for each parameter
             if testval is None:
-                k = [BetterUniform(x_name, lower=lb, upper=ub)
+                k = [BetterUniform(x_name, lower=lb, upper=ub, lerp=lerp)
                          for x_name, lb, ub in
                          zip(x_free_names, problem.lb, problem.ub)]
             else:
-                k = [BetterUniform(x_name, testval=x, lower=lb, upper=ub)
+                k = [BetterUniform(x_name, testval=x, lower=lb, upper=ub, lerp=lerp)
                          for x_name, x, lb, ub in
                          zip(x_free_names, testval, problem.lb, problem.ub)]
 
@@ -180,7 +182,7 @@ def create_pymc3_model(problem: Problem,
         return model
 
 
-def BetterUniform(name, *, testval, lower, upper):
+def BetterUniform(name, *, testval, lower, upper, lerp):
     """
     A uniform bounded random variable whose behaviour near the boundary of
     the domain is better than the native `pymc3.Uniform`.
@@ -200,7 +202,7 @@ def BetterUniform(name, *, testval, lower, upper):
     the interval transformation jacobian.
     """
     BoundedFlat = pm.Bound(pm.Flat, lower=lower, upper=upper)
-    transform = BetterInterval(lower, upper)
+    transform = BetterInterval(lower, upper, lerp)
     return BoundedFlat(name, testval=testval, transform=transform)
 
     # In the case we start from pm.Uniform,
@@ -211,10 +213,44 @@ def BetterUniform(name, *, testval, lower, upper):
 
 class BetterInterval(pm.distributions.transforms.Interval):
     name = "better_interval"
+    def __init__(self, a, b, lerp):
+        super().__init__(a, b)
+        if lerp == 'auto':
+            # Could possibly be improved by comparing orders of magnitude
+            if (a <= 0 and b >= 0) or (a >= 0 and b <= 0):
+                lerp = 'convex'
+            else:
+                lerp = 'clipped'
+        self.lerp_method = lerp
+
     def backward(self, x):
         a, b = self.a, self.b
         f = tt.nnet.sigmoid(x)
-        return f * b + (1 - f) * a
+        return self.lerp(f, a, b)
+
+    if pm.__version__ == '3.8':
+        def backward_val(self, x):
+            a, b = self.a_, self.b_
+            f = 1 / (1 + np.exp(-x))
+            return self.lerp(f, a, b)
+
     def jacobian_det(self, x):
         s = tt.nnet.softplus(-x)
         return -2 * s - x
+
+    def lerp(self, f, a, b):
+        if self.lerp_method == 'convex':
+            return f * b + (1 - f) * a
+            # Fastest, but slighlty less precise in common situations
+        elif self.lerp_method == 'clipped':
+            return tt.minimum(a + f * (b - a), b)
+            # A bit more precise, except when a and b have different sign
+            # See lerp == 'auto'
+        elif self.lerp_method == 'piecewise':
+            return ifelse(f < 0.5, a + f * (b - a), b - (1 - f) * (b - a))
+            # Better than the clipped formula,
+            # except when a and b have different sign
+            # Not sure if when computing the gradient,
+            # theano can simplify the branch
+        else:
+            raise ValueError(f'unknown lerp method {self.lerp_method}')
