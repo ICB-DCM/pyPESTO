@@ -211,7 +211,7 @@ def BetterUniform(name, *, testval, lower, upper, lerp):
 
 
 class BetterInterval(pm.distributions.transforms.Interval):
-    name = "better_interval"
+    name = "betterinterval"
     def __init__(self, a, b, lerp):
         super().__init__(a, b)
         if lerp == 'auto':
