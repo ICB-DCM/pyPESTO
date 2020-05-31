@@ -25,7 +25,7 @@ def profiles(results, ax=None, profile_indices=None, size=(18.5, 6.5),
         Figure size (width, height) in inches. Is only applied when no ax
         object is specified.
     reference: list, optional
-        List of reference points for optimization results, containing et
+        List of reference points for optimization results, containing at
         least a function value fval.
     colors: list, or RGBA, optional
         List of colors, or single color
@@ -204,7 +204,7 @@ def profile_lowlevel(fvals, ax=None, size=(18.5, 6.5), color=None,
     """
 
     # parse input
-    fvals = np.array(fvals)
+    fvals = np.asarray(fvals)
 
     # get colors
     color = assign_colors([1.], color)
