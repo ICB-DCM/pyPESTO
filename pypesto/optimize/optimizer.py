@@ -405,9 +405,14 @@ class IpoptOptimizer(Optimizer):
     """Use IpOpt (https://pypi.org/project/ipopt/) for optimization."""
 
     def __init__(
-            self, tol: float = None, options: Dict = None):
+            self, options: Dict = None):
+        """
+        Parameters
+        ----------
+        options:
+            Options are directly passed on to `ipopt.minimize_ipopt`.
+        """
         super().__init__()
-        self.tol = tol
         self.options = options
 
     @fix_decorator
@@ -432,7 +437,7 @@ class IpoptOptimizer(Optimizer):
             hess=None,  # ipopt does not support Hessian yet
             hessp=None,  # ipopt does not support Hessian vector product yet
             bounds=bounds,
-            tol=self.tol,
+            tol=None,  # can be set via options
             options=self.options,
         )
 
