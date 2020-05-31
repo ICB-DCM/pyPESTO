@@ -39,18 +39,18 @@ def parameter_profile(
     optimizer:
         The optimizer to be used along each profile.
     profile_index:
-        array with parameter indices, whether a profile should
+        Array with parameter indices, whether a profile should
         be computed (1) or not (0).
         Default is all profiles should be computed.
     profile_list:
-        integer which specifies whether a call to the profiler should create
+        Integer which specifies whether a call to the profiler should create
         a new list of profiles (default) or should be added to a specific
         profile list.
     result_index:
-        index from which optimization result profiling should be started
+        Index from which optimization result profiling should be started
         (default: global optimum, i.e., index = 0).
     next_guess_method:
-        function handle to a method that creates the next starting point for
+        Function handle to a method that creates the next starting point for
         optimization in profiling.
     profile_options:
         Various options applied to the profile optimization.
@@ -115,9 +115,6 @@ def parameter_profile(
                 create_next_guess=create_next_guess,
                 global_opt=global_opt,
                 i_par=i_par)
-
-        # add current profile to result.profile_result
-        # result.profile_result.add_profile(current_profile, i_parameter)
 
     return result
 

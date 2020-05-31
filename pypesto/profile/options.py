@@ -24,7 +24,8 @@ class ProfileOptions(dict):
     ratio_min:
         Lower bound for likelihood ratio of the profile, based on inverse
         chi2-distribution.
-        The default corresponds to 95% confidence.
+        The default 0.145 is slightly lower than the 95% quantile 0.1465 of a
+        chi2 distribution with one degree of freedom.
     reg_points:
         Number of profile points used for regression in regression based
         adaptive profile points proposal.
