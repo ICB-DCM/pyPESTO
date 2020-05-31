@@ -340,6 +340,15 @@ def test_profile_lowlevel():
 
 
 @close_fig
+def test_profile_cis():
+    """Test the profile approximate confidence interval visualization."""
+    result = create_profile_result()
+    pypesto.visualize.profile_cis(result, confidence_level=0.99)
+    pypesto.visualize.profile_cis(
+        result, show_bounds=True, profile_indices=[0])
+
+
+@close_fig
 def test_optimizer_history():
     # create the necessary results
     result_1 = create_optimization_history()
