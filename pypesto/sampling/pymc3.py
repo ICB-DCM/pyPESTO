@@ -172,8 +172,7 @@ def create_pymc3_model(problem: Problem,
             theta = tt.as_tensor_variable(k)
 
             # Use a DensityDist for the log-posterior
-            pm.DensityDist('log_post', logp=lambda v: log_post_fun(v),
-                              observed={'v': theta})
+            pm.DensityDist('log_post', logp=log_post_fun, observed=theta)
 
         if verbose:
             print('Evaluating log-posterior at test point')

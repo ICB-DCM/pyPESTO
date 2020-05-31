@@ -87,10 +87,7 @@ class TheanoLogProbability(tt.Op):
 
     def __init__(self, objective: Union[ObjectiveBase, CachedObjective], beta: float = 1.):
         self._objective = objective
-
-        # initialize the log probability Op
-        self._log_prob = \
-            lambda x: - beta * self._objective(x, sensi_orders=(0,))
+        self._beta = beta
 
         # initialize the sensitivity Op
         if objective.has_grad:
@@ -100,7 +97,7 @@ class TheanoLogProbability(tt.Op):
 
     def perform(self, node, inputs, outputs, params=None):
         theta, = inputs
-        log_prob = self._log_prob(theta)
+        log_prob = -self._beta * self._objective(theta, sensi_orders=(0,))
         outputs[0][0] = np.array(log_prob)
 
     def grad(self, inputs, g):
@@ -133,11 +130,10 @@ class TheanoLogProbabilityGradient(tt.Op):
 
     def __init__(self, objective: Union[ObjectiveBase, CachedObjective], beta: float = 1.):
         self._objective = objective
-        self._log_prob_grad = \
-            lambda x: - beta * self._objective(x, sensi_orders=(1,))
+        self._beta = beta
 
     def perform(self, node, inputs, outputs, params=None):
         theta, = inputs
         # calculate gradients
-        log_prob_grad = self._log_prob_grad(theta)
+        log_prob_grad = -self._beta * self._objective(theta, sensi_orders=(1,))
         outputs[0][0] = log_prob_grad
