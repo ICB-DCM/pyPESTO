@@ -117,8 +117,8 @@ class ProfilerTest(unittest.TestCase):
                                            next_guess_method='fixed_step')
 
         # set new bounds (knowing that one parameter stopped at the bounds
-        self.problem.lb = -4 * np.ones((1, 2))
-        self.problem.ub = 4 * np.ones((1, 2))
+        self.problem.lb = -4 * np.ones(2)
+        self.problem.ub = 4 * np.ones(2)
 
         # re-run profiling using new bounds
         result = pypesto.parameter_profile(problem=self.problem,
@@ -134,6 +134,19 @@ class ProfilerTest(unittest.TestCase):
         self.assertTrue(
             isinstance(result.profile_result.list[0][1],
                        pypesto.ProfilerResult))
+
+    def test_approximate_profiles(self):
+        """Test for the approximate profile function."""
+        n_steps = 50
+        result = pypesto.profile.approximate_parameter_profile(
+            problem=self.problem, result=self.result, profile_index=[0, 1],
+            n_steps=n_steps)
+        profile_list = result.profile_result.list[-1]
+        assert profile_list[0] is None
+        assert isinstance(profile_list[1], pypesto.profile.ProfilerResult)
+        assert np.isclose(profile_list[1].ratio_path.max(), 1)
+        assert len(profile_list[1].ratio_path) == n_steps
+        assert profile_list[1].x_path.shape == (2, n_steps)
 
 
 # dont make this a class method such that we dont optimize twice
@@ -170,8 +183,8 @@ def create_optimization_results(objective):
     optimizer = pypesto.ScipyOptimizer(method='TNC',
                                        options=options)
 
-    lb = -2 * np.ones((1, 2))
-    ub = 2 * np.ones((1, 2))
+    lb = -2 * np.ones(2)
+    ub = 2 * np.ones(2)
     problem = pypesto.Problem(objective, lb, ub)
 
     optimize_options = pypesto.OptimizeOptions(allow_failed_starts=True)
@@ -186,3 +199,9 @@ def create_optimization_results(objective):
     )
 
     return problem, result, optimizer
+
+
+def test_chi2_quantile_to_ratio():
+    """Tests the chi2 quantile to ratio convenience function."""
+    ratio = pypesto.profile.chi2_quantile_to_ratio()
+    assert np.isclose(ratio, 0.1465)
