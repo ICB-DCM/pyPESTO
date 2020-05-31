@@ -11,5 +11,3 @@ gitpython
 sphinx
 nbsphinx
 sphinx_rtd_theme
-dlib>=19.19.0
-ipopt>=0.1.9
