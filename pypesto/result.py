@@ -31,7 +31,6 @@ class OptimizeResult:
 
         Parameters
         ----------
-
         optimizer_result:
             The result of one (local) optimizer run.
         """
@@ -88,7 +87,7 @@ class ProfileResult:
     Result of the profile() function.
 
     It holds a list of profile lists. Each profile list consists of a list of
-    `ProfilerResult`s, one for each parameter.
+    `ProfilerResult` objects, one for each parameter.
     """
 
     def __init__(self):
@@ -99,7 +98,8 @@ class ProfileResult:
 
         Returns
         -------
-        index: The index of the created profile list.
+        index:
+            The index of the created profile list.
         """
         self.list.append([])
         return len(self.list) - 1
