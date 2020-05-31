@@ -125,3 +125,10 @@ class InternalSampler(Sampler):
         sample:
             The sample that will replace the last sample in the chain.
         """
+
+    def make_internal(self):
+        """
+        This function can be called by parallel tempering samplers during
+        initialization to allow the inner samplers to adjust to them
+        being used as inner samplers. Default: Do nothing.
+        """
