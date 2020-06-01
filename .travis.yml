@@ -21,6 +21,7 @@ addons:
       - lcov
       - swig3.0
       - pandoc
+      - coinor-libipopt-dev
 
 install:
   - mkdir -p ~/bin/ && ln -s /usr/bin/swig3.0 ~/bin/swig && export PATH=~/bin/:$PATH
