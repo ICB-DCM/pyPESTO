@@ -8,32 +8,33 @@ class ProfileOptions(dict):
     Parameters
     ----------
     default_step_size:
-        default step size of the profiling routine along the profile path
+        Default step size of the profiling routine along the profile path
         (adaptive step lengths algorithms will only use this as a first guess
-        and then refine the update)
+        and then refine the update).
     min_step_size:
-        lower bound for the step size in adaptive methods
+        Lower bound for the step size in adaptive methods.
     max_step_size:
-        upper bound for the step size in adaptive methods
+        Upper bound for the step size in adaptive methods.
     step_size_factor:
         Adaptive methods recompute the likelihood at the predicted point and
         try to find a good step length by a sort of line search algorithm.
-        This factor controls step handling in this line search
+        This factor controls step handling in this line search.
     delta_ratio_max:
-        maximum allowed drop of the posterior ratio between two profile steps
+        Maximum allowed drop of the posterior ratio between two profile steps.
     ratio_min:
-        lower bound for likelihood ratio of the profile, based on inverse
+        Lower bound for likelihood ratio of the profile, based on inverse
         chi2-distribution.
-        The default corresponds to 95% confidence
+        The default 0.145 is slightly lower than the 95% quantile 0.1465 of a
+        chi2 distribution with one degree of freedom.
     reg_points:
-        number of profile points used for regression in regression based
-        adaptive profile points proposal
+        Number of profile points used for regression in regression based
+        adaptive profile points proposal.
     reg_order:
-        maximum degree of regression polynomial used in regression based
-        adaptive profile points proposal
+        Maximum degree of regression polynomial used in regression based
+        adaptive profile points proposal.
     magic_factor_obj_value:
         There is this magic factor in the old profiling code which slows down
-        profiling at small ratios (must be >= 0 and < 1)
+        profiling at small ratios (must be >= 0 and < 1).
     """
 
     def __init__(self,

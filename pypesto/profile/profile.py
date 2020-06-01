@@ -1,14 +1,15 @@
 import logging
 import numpy as np
-from typing import Any, Callable, Dict
+from typing import Callable, Union
 
 from ..objective.constants import GRAD
 from ..optimize import Optimizer
 from ..problem import Problem
-from ..result import Result, ProfileResult
+from ..result import Result
 from .result import ProfilerResult
 from .profile_next_guess import next_guess
 from .options import ProfileOptions
+from .util import initialize_profile
 
 logger = logging.getLogger(__name__)
 
@@ -20,7 +21,7 @@ def parameter_profile(
         profile_index: np.ndarray = None,
         profile_list: int = None,
         result_index: int = 0,
-        next_guess_method: Callable = None,
+        next_guess_method: Union[Callable, str] = 'adaptive_step_regression',
         profile_options: ProfileOptions = None
 ) -> Result:
     """
@@ -38,18 +39,18 @@ def parameter_profile(
     optimizer:
         The optimizer to be used along each profile.
     profile_index:
-        array with parameter indices, whether a profile should
-        be computed (1) or not (0)
-        Default is all profiles should be computed
+        Array with parameter indices, whether a profile should
+        be computed (1) or not (0).
+        Default is all profiles should be computed.
     profile_list:
-        integer which specifies whether a call to the profiler should create
+        Integer which specifies whether a call to the profiler should create
         a new list of profiles (default) or should be added to a specific
-        profile list
+        profile list.
     result_index:
-        index from which optimization result profiling should be started
-        (default: global optimum, i.e., index = 0)
+        Index from which optimization result profiling should be started
+        (default: global optimum, i.e., index = 0).
     next_guess_method:
-        function handle to a method that creates the next starting point for
+        Function handle to a method that creates the next starting point for
         optimization in profiling.
     profile_options:
         Various options applied to the profile optimization.
@@ -59,7 +60,6 @@ def parameter_profile(
     result:
         The profile results are filled into `result.profile_result`.
     """
-
     # Handling defaults
     # profiling indices
     if profile_index is None:
@@ -70,10 +70,6 @@ def parameter_profile(
     if profile_options is None:
         profile_options = ProfileOptions()
     profile_options = ProfileOptions.create_instance(profile_options)
-
-    # profile startpoint method
-    if next_guess_method is None:
-        next_guess_method = 'adaptive_step_regression'
 
     # create a function handle that will be called later to get the next point
     if isinstance(next_guess_method, str):
@@ -88,7 +84,7 @@ def parameter_profile(
     else:
         raise Exception('Unsupported input for next_guess_method.')
 
-    # create the profile result object (retrieve global optimum) ar append to
+    # create the profile result object (retrieve global optimum) or append to
     # existing list of profiles
     global_opt = initialize_profile(problem, result, result_index,
                                     profile_index, profile_list)
@@ -101,7 +97,8 @@ def parameter_profile(
 
         # create an instance of ProfilerResult, which will be appended to the
         # result object, when this profile is finished
-        current_profile = result.profile_result.get_current_profile(i_par)
+        current_profile = result.profile_result.get_profiler_result(
+            i_par=i_par, profile_list=profile_list)
 
         # compute profile in descending and ascending direction
         for par_direction in [-1, 1]:
@@ -118,9 +115,6 @@ def parameter_profile(
                 create_next_guess=create_next_guess,
                 global_opt=global_opt,
                 i_par=i_par)
-
-        # add current profile to result.profile_result
-        # result.profile_result.add_profile(current_profile, i_parameter)
 
     return result
 
@@ -207,151 +201,17 @@ def walk_along_profile(
             gradnorm = None
 
         current_profile.append_profile_point(
-            optimizer_result.x,
-            optimizer_result.fval,
-            np.exp(global_opt - optimizer_result.fval),
-            gradnorm,
-            optimizer_result.exitflag,
-            optimizer_result.time,
-            optimizer_result.n_fval,
-            optimizer_result.n_grad,
-            optimizer_result.n_hess)
+            x=optimizer_result.x,
+            fval=optimizer_result.fval,
+            ratio=np.exp(global_opt - optimizer_result.fval),
+            gradnorm=gradnorm,
+            time=optimizer_result.time,
+            exitflag=optimizer_result.exitflag,
+            n_fval=optimizer_result.n_fval,
+            n_grad=optimizer_result.n_grad,
+            n_hess=optimizer_result.n_hess)
 
     # free the profiling parameter again
     problem.unfix_parameters(i_par)
 
     return current_profile
-
-
-def initialize_profile(
-        problem: Problem,
-        result: Result,
-        result_index: int,
-        profile_index: np.ndarray,
-        profile_list: int
-) -> float:
-    """
-    This function initializes profiling based on a previous optimization.
-
-    Parameters
-    ----------
-    problem:
-        The problem to be solved.
-    result:
-        A result object to initialize profiling and to append the profiling
-        results to. For example, one might append more profiling runs to a
-        previous profile, in order to merge these.
-        The existence of an optimization result is obligatory.
-    result_index:
-        index from which optimization result profiling should be started
-    profile_index:
-        array with parameter indices, whether a profile should
-        be computed (1) or not (0)
-        Default is all profiles should be computed
-    profile_list:
-        integer which specifies whether a call to the profiler should create
-        a new list of profiles (default) or should be added to a specific
-        profile list
-
-    Returns
-    -------
-    global_opt:
-        log-posterior at global optimum.
-    """
-    # Check whether an optimization result is existing
-    if result.optimize_result is None:
-        raise ValueError(
-            "Optimization has to be carried before profiling can be done.")
-
-    tmp_optimize_result = result.optimize_result.as_list()
-
-    # Check if new profile_list is to be created
-    if profile_list is None:
-        result.profile_result.create_new_profile_list()
-
-    # get the log-posterior of the global optimum
-    global_opt = tmp_optimize_result[0]["fval"]
-
-    # fill the list with optimization results where necessary
-    fill_profile_list(
-        profile_result=result.profile_result,
-        optimizer_result=tmp_optimize_result[result_index],
-        profile_index=profile_index,
-        profile_list=profile_list,
-        problem_dimension=problem.dim_full,
-        global_opt=global_opt)
-
-    # return the log-posterior of the global optimum (needed in order to
-    # compute the log-posterior-ratio)
-    return global_opt
-
-
-def fill_profile_list(
-        profile_result: ProfileResult,
-        optimizer_result: Dict[str, Any],
-        profile_index: np.ndarray,
-        profile_list: int,
-        problem_dimension: int,
-        global_opt: float
-) -> None:
-    """
-    This is a helper function for initialize_profile
-
-    Parameters
-    ----------
-    profile_result:
-        A list of profiler result objects.
-    optimizer_result:
-        A local optimization result.
-    profile_index:
-        array with parameter indices, whether a profile should
-        be computed (1) or not (0).
-        Default is all profiles should be computed.
-    profile_list:
-        integer which specifies whether a call to the profiler should
-        create a new list of profiles (default) or should be added to a
-        specific profile list.
-    problem_dimension:
-        number of parameters in the unreduced problem.
-    global_opt:
-        log-posterior at global optimum.
-    """
-
-    if optimizer_result[GRAD] is not None:
-        gradnorm = np.linalg.norm(optimizer_result[GRAD])
-    else:
-        gradnorm = None
-
-    # create blank profile
-    new_profile = ProfilerResult(
-        x_path=optimizer_result["x"],
-        fval_path=np.array([optimizer_result["fval"]]),
-        ratio_path=np.array([np.exp(global_opt - optimizer_result["fval"])]),
-        gradnorm_path=gradnorm,
-        exitflag_path=optimizer_result["exitflag"],
-        time_path=np.array([0.]),
-        time_total=0.,
-        n_fval=0,
-        n_grad=0,
-        n_hess=0,
-        message=None)
-
-    if profile_list is None:
-        # All profiles have to be created from scratch
-        for i_parameter in range(0, problem_dimension):
-            if profile_index[i_parameter] > 0:
-                # Should we create a profile for this index?
-                profile_result.create_new_profile(new_profile)
-            else:
-                # if no profile should be computed for this parameter
-                profile_result.create_new_profile()
-
-    else:
-        for i_parameter in range(0, problem_dimension):
-            # We append to an existing list
-            if profile_index[i_parameter] > 0:
-                # Do we have to create a new profile?
-                create_new = (profile_result.list[profile_list][i_parameter]
-                              is None) and (profile_index[i_parameter] > 0)
-                if create_new:
-                    profile_result.add_profile(new_profile, i_parameter)
