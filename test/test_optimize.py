@@ -23,7 +23,7 @@ optimizers = [
         'trust-ncg', 'trust-exact', 'trust-krylov',
         'ls_trf', 'ls_dogbox']],
     # disabled: ,'trust-constr', 'ls_lm', 'dogleg'
-    # ('ipopt', ''),
+    ('ipopt', ''),
     ('dlib', 'default'),
     ('pyswarm', ''),
 ]
