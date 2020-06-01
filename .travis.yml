@@ -21,12 +21,11 @@ addons:
       - lcov
       - swig3.0
       - pandoc
-      - coinor-libipopt-dev
 
 install:
   - mkdir -p ~/bin/ && ln -s /usr/bin/swig3.0 ~/bin/swig && export PATH=~/bin/:$PATH
   - pip3 install -r ./.travis_pip_reqs.txt
-  - pip3 install .[ipopt,dlib,pymc3]
+  - pip3 install .[dlib,pyswarm,pymc3]
   - pip3 install https://github.com/petab-dev/petab/archive/develop.zip
   - pip3 install -e
       git+https://github.com/icb-dcm/amici.git@develop#egg=amici\&subdirectory=python/sdist

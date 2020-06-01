@@ -6,9 +6,7 @@ pytest
 pytest-cov
 coverage
 flake8
-pyswarm
 gitpython
 sphinx
 nbsphinx
 sphinx_rtd_theme
-cython
