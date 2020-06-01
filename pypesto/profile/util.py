@@ -1,6 +1,6 @@
 import numpy as np
 import scipy.stats
-from typing import Any, Dict
+from typing import Any, Dict, Tuple
 
 from ..objective.constants import GRAD
 from ..problem import Problem
@@ -25,9 +25,55 @@ def chi2_quantile_to_ratio(alpha: float = 0.95, df: int = 1):
     ratio:
         Corresponds to a likelihood ratio.
     """
-    quantile = scipy.stats.chi2.ppf(alpha, df=1)
+    quantile = scipy.stats.chi2.ppf(alpha, df=df)
     ratio = np.exp(-quantile / 2)
     return ratio
+
+
+def calculate_approximate_ci(
+        xs: np.ndarray, ratios: np.ndarray, confidence_ratio: float
+) -> Tuple[float, float]:
+    """
+    Calculate approximate confidence interval based on profile. Interval
+    bounds are linerly interpolated.
+
+    Parameters
+    ----------
+    xs:
+        The ordered parameter values along the profile for the coordinate of
+        interest.
+    ratios:
+        The likelihood ratios corresponding to the parameter values.
+    confidence_ratio:
+        Minimum confidence ratio to base the confidence interval upon, as
+        obtained via `pypesto.profile.chi2_quantile_to_ratio`.
+
+    Returns
+    -------
+    lb, ub:
+        Bounds of the approximate confidence interval.
+    """
+    # extract indices where the ratio is larger than the minimum ratio
+    indices, = np.where(ratios >= confidence_ratio)
+    l_ind, u_ind = indices[0], indices[-1]
+
+    # lower bound
+    if l_ind == 0:
+        lb = xs[l_ind]
+    else:
+        # linear interpolation with next smaller value
+        ind = [l_ind - 1, l_ind]
+        lb = np.interp(confidence_ratio, ratios[ind], xs[ind])
+
+    # upper bound
+    if u_ind == len(ratios) - 1:
+        ub = xs[u_ind]
+    else:
+        # linear interpolation with next larger value
+        ind = [u_ind + 1, u_ind]  # flipped as interp expects increasing xs
+        ub = np.interp(confidence_ratio, ratios[ind], xs[ind])
+
+    return lb, ub
 
 
 def initialize_profile(

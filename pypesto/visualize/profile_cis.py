@@ -4,7 +4,7 @@ from typing import Sequence, Union
 import numpy as np
 
 from ..result import Result
-from ..profile import chi2_quantile_to_ratio
+from ..profile import chi2_quantile_to_ratio, calculate_approximate_ci
 
 
 def profile_cis(
@@ -60,11 +60,11 @@ def profile_cis(
             continue
         xs = profile_list[i_par].x_path[i_par]
         ratios = profile_list[i_par].ratio_path
-        indices, = np.where(ratios > confidence_ratio)
-        lb, ub = xs[indices[0]], xs[indices[-1]]
+        lb, ub = calculate_approximate_ci(
+            xs=xs, ratios=ratios, confidence_ratio=confidence_ratio)
         intervals.append((lb, ub))
 
-    x_names = problem.get_reduced_vector(problem.x_names)
+    x_names = [problem.x_names[ix] for ix in profile_indices]
 
     for ix, (lb, ub) in enumerate(intervals):
         ax.plot([lb, ub], [ix+1, ix+1], marker='|', color=color)

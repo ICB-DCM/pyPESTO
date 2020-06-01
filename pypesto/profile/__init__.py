@@ -12,4 +12,5 @@ from .options import (
 from .result import (
     ProfilerResult)
 from .util import (
-    chi2_quantile_to_ratio)
+    chi2_quantile_to_ratio,
+    calculate_approximate_ci)

@@ -214,3 +214,31 @@ def test_chi2_quantile_to_ratio():
     """Tests the chi2 quantile to ratio convenience function."""
     ratio = pypesto.profile.chi2_quantile_to_ratio()
     assert np.isclose(ratio, 0.1465)
+
+
+def test_approximate_ci():
+    xs = np.array([-3, -1, 1, 3, 5, 7, 9])
+
+    ratios = np.array([0.2, 0.3, 1, 0.27, 0.15, 0.15, 0.1])
+
+    lb, ub = pypesto.profile.calculate_approximate_ci(
+        xs=xs, ratios=ratios, confidence_ratio=0.27)
+
+    # correct interpolation
+    assert np.isclose(lb, -3 + (-1 - (-3)) * 0.7)
+
+    # exact pick
+    assert np.isclose(ub, 3)
+
+    lb, ub = pypesto.profile.calculate_approximate_ci(
+        xs=xs, ratios=ratios, confidence_ratio=0.15)
+
+    # double value
+    assert np.isclose(ub, 7)
+
+    lb, ub = pypesto.profile.calculate_approximate_ci(
+        xs=xs, ratios=ratios, confidence_ratio=0.1)
+
+    # bound value
+    assert np.isclose(lb, -3)
+    assert np.isclose(ub, 9)
