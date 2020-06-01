@@ -16,48 +16,37 @@ def parameters(results, ax=None, free_indices_only=True, lb=None, ub=None,
 
     Parameters
     ----------
-
     results: pypesto.Result or list
         Optimization result obtained by 'optimize.py' or list of those
-
     ax: matplotlib.Axes, optional
         Axes object to use.
-
     free_indices_only: bool, optional
         If True, only free parameters are shown. If
         False, also the fixed parameters are shown.
-
     lb, ub: ndarray, optional
         If not None, override result.problem.lb, problem.problem.ub.
         Dimension either result.problem.dim or result.problem.dim_full.
-
     size: tuple, optional
         Figure size (width, height) in inches. Is only applied when no ax
         object is specified
-
     reference: list, optional
         List of reference points for optimization results, containing et
         least a function value fval
-
     colors: list, or RGBA, optional
         list of colors, or single color
         color or list of colors for plotting. If not set, clustering is done
         and colors are assigned automatically
-
     legends: list or str
         Labels for line plots, one label per result object
-
     balance_alpha: bool (optional)
         Flag indicating whether alpha for large clusters should be reduced to
         avoid overplotting (default: True)
-
     start_indices: list or int
         list of integers specifying the multistarts to be plotted or
         int specifying up to which start index should be plotted
 
     Returns
     -------
-
     ax: matplotlib.Axes
         The plot axes.
     """
@@ -194,7 +183,7 @@ def parameters_lowlevel(xs, fvals, lb=None, ub=None, x_labels=None,
         ax.plot(ub.flatten(), parameters_ind, 'k--', marker='+')
 
     ax.set_xlabel('Parameter value')
-    ax.set_ylabel('Parameter index')
+    ax.set_ylabel('Parameter')
     ax.set_title('Estimated parameters')
     if legend_text is not None:
         ax.legend()

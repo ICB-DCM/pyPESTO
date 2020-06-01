@@ -25,21 +25,21 @@ def next_guess(
     Parameters
     ----------
     x:
-       The current position of the profiler
+        The current position of the profiler.
     par_index:
-        The index of the parameter of the current profile
+        The index of the parameter of the current profile.
     par_direction:
-        The direction, in which the profiling is done (1 or -1)
+        The direction, in which the profiling is done (1 or -1).
     profile_options:
         Various options applied to the profile optimization.
     update_type:
-        type of update for next profile point
+        Type of update for next profile point.
     current_profile:
-        The profile which should be computed
+        The profile which should be computed.
     problem:
         The problem to be solved.
     global_opt:
-        log-posterior value of the global optimum
+        Log-posterior value of the global optimum.
 
     Returns
     -------
@@ -238,7 +238,7 @@ def handle_profile_history(
     """
     Computes the very first step direction update guesses, check whether
     enough steps have been taken for applying regression, computes
-    regression or simple extrapolation
+    regression or simple extrapolation.
     """
 
     # set the update direction
@@ -338,7 +338,7 @@ def do_line_seach(
     """
     Performs the line search based on the objective function we want to
     reach, based on the current position in parameter space and on the
-    first guess for the proposal
+    first guess for the proposal.
     """
     # Was the initial step too big or too small?
     if direction == 'increase':
@@ -356,9 +356,9 @@ def do_line_seach(
 
         # Check if we hit the bounds
         hit_bounds = (direction == 'decrease' and step_size_guess ==
-                      options.min_step_size) or (direction == 'increase' and
-                                                 step_size_guess ==
-                                                 options.max_step_size)
+                      options.min_step_size) or (
+                direction == 'increase' and step_size_guess ==
+                options.max_step_size)
 
         if hit_bounds:
             return next_x
