@@ -333,6 +333,23 @@ class Problem:
 
         return x
 
+    def full_index_to_free_index(self, full_index: int):
+        """Calculate index in reduced vector from index in full vector.
+
+        Parameters
+        ----------
+        full_index: The index in the full vector.
+
+        Returns
+        -------
+        free_index: The index in the free vector.
+        """
+        fixed_indices = np.asarray(self.x_fixed_indices)
+        if full_index in fixed_indices:
+            raise ValueError(
+                "Cannot compute index in free vector: Index is fixed.")
+        return full_index - sum(fixed_indices < full_index)
+
     def print_parameter_summary(self) -> None:
         """
         Prints a summary of what parameters are being optimized and
