@@ -15,7 +15,7 @@ import copy
 from typing import Iterable, List, Optional, Union
 
 from .objective import ObjectiveBase
-from .objective.priors import Priors
+from .objective.priors import NegLogPriors
 
 
 class Problem:
@@ -91,7 +91,7 @@ class Problem:
                  x_guesses: Optional[Iterable[float]] = None,
                  x_names: Optional[Iterable[str]] = None,
                  x_scales: Optional[Iterable[str]] = None,
-                 x_priors_defs: Optional[Priors] = None):
+                 x_priors_defs: Optional[NegLogPriors] = None):
 
         self.objective = copy.deepcopy(objective)
 

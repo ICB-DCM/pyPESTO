@@ -9,7 +9,7 @@ import numpy as np
 import scipy.optimize as opt
 
 import pypesto
-from pypesto.objective import ParameterPriors
+from pypesto.objective import NegativeLogParameterPriors
 from pypesto.objective.priors import get_parameter_prior_dict
 
 
@@ -31,7 +31,7 @@ def test_mode():
         prior_list = [get_parameter_prior_dict(
             0, prior_type, [1, 1], scale)]
 
-        test_prior = ParameterPriors(prior_list)
+        test_prior = NegativeLogParameterPriors(prior_list)
         test_problem = pypesto.Problem(test_prior,
                                        lb=problem_dict[scale]['lb'],
                                        ub=problem_dict[scale]['ub'],

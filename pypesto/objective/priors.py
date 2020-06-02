@@ -1,24 +1,29 @@
 import numpy as np
-from typing import Sequence, Callable
+from typing import Callable, Dict, Sequence, Tuple, Union
 from copy import deepcopy
 import math
 
 from .function import ObjectiveBase
 from .aggregated import AggregatedObjective
+from .constants import MODE_FUN, MODE_RES, FVAL, GRAD, HESS
+
+ResultDict = Dict[str, Union[float, np.ndarray, Dict]]
 
 
-class Priors(AggregatedObjective):
+class NegLogPriors(AggregatedObjective):
     """
     Handles prior distributions.
 
-    Consists basically of a list of individual priors,
+    Consists basically of a list of individual _negative log-_priors,
     given in self.objectives.
     """
 
 
-class ParameterPriors(ObjectiveBase):
+class NegativeLogParameterPriors(ObjectiveBase):
     """
-    Single Parameter Prior.
+    Negative Log Priors for Parameters.
+
+    Contains a prior list
 
 
     prior_list has to contain dicts of the format format
@@ -33,19 +38,53 @@ class ParameterPriors(ObjectiveBase):
     """
 
     def __init__(self,
-                 prior_list: list,
+                 prior_list: List[Dict],
                  x_names: Sequence[str] = None):
 
         self.prior_list = prior_list
-
-        super().__init__(fun=self.density_for_full_parameter_vector,
-                         grad=self.gradient_for_full_parameter_vector,
-                         hess=self.hessian_for_full_parameter_vector,
-                         hessp=self.hessian_vp_for_full_parameter_vector)
+        super().__init__(x_names)
 
     def __deepcopy__(self, memodict={}):
-        other = ParameterPriors(deepcopy(self.prior_list))
+        other = NegativeLogParameterPriors(deepcopy(self.prior_list))
         return other
+
+    def call_unprocessed(
+            self,
+            x: np.ndarray,
+            sensi_orders: Tuple[int, ...],
+            mode: str
+    ) -> ResultDict:
+
+        res = dict()
+
+        for order in sensi_orders:
+            if order == 0:
+                res[FVAL] = self.density_for_full_parameter_vector(x)
+            elif order == 1:
+                res[GRAD] = self.gradient_for_full_parameter_vector(x)
+            elif order == 2:
+                res[HESS] = self.hessian_for_full_parameter_vector(x)
+            else:
+                ValueError(f'Invalid sensi order {order}.')
+
+        return res
+
+    def check_sensi_orders(self,
+                           sensi_orders: Tuple[int, ...],
+                           mode: str) -> bool:
+        for order in sensi_orders:
+            if not (0 <= order <=2):
+                return False
+        return True
+
+    def check_mode(self, mode) -> bool:
+        if mode == MODE_FUN:
+            return True
+        elif mode == MODE_RES:
+            return False
+        else:
+            ValueError(f'Invalid input: Expected mode {MODE_FUN} or'
+                       f' {MODE_RES}, received {mode} instead.')
 
     def density_for_full_parameter_vector(self, x):
 
@@ -163,7 +202,7 @@ def get_parameter_prior_dict(index: int,
                 'density_ddx': dd_log_f_log10}
 
     else:
-        raise ValueError(f"Priors in parameters in scale {parameter_scale}"
+        raise ValueError(f"NegLogPriors in parameters in scale {parameter_scale}"
                          f" are currently not supported.")
 
 
@@ -241,7 +280,7 @@ def _prior_densities(prior_type: str,
         # when implementing: add to tests
         raise NotImplementedError
     else:
-        ValueError(f'Priors of type {prior_type} are currently not supported')
+        ValueError(f'NegLogPriors of type {prior_type} are currently not supported')
 
 
 def _get_linear_function(slope: float,
