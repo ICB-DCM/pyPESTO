@@ -33,6 +33,7 @@ from .optimize import (
     OptimizerResult,
     Optimizer,
     ScipyOptimizer,
+    IpoptOptimizer,
     DlibOptimizer,
     PyswarmOptimizer)
 from .profile import (
@@ -47,7 +48,9 @@ from .sampling import (
     AdaptiveMetropolisSampler,
     ParallelTemperingSampler,
     AdaptiveParallelTemperingSampler,
-    McmcPtResult)
+    Pymc3Sampler,
+    McmcPtResult,
+    geweke_test)
 from .engine import (
     SingleCoreEngine,
     MultiThreadEngine,

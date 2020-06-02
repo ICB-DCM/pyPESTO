@@ -11,6 +11,7 @@ from .optimize import (
 from .optimizer import (
     Optimizer,
     ScipyOptimizer,
+    IpoptOptimizer,
     DlibOptimizer,
     PyswarmOptimizer)
 from .result import OptimizerResult
