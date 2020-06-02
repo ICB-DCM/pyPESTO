@@ -65,10 +65,12 @@ def test_storage_problem():
                          vars(ProblemHDF5Writer).items() if
                          not name.startswith('_') and not callable(value)]
         for attr in problem_attrs:
-            if isinstance(read_problem.__dict__[attr], np.ndarray):
+            if isinstance(problem.__dict__[attr], np.ndarray):
                 np.testing.assert_array_equal(
                     problem.__dict__[attr],
                     read_problem.__dict__[attr])
+                assert isinstance(read_problem.__dict__[attr], np.ndarray)
             else:
                 assert problem.__dict__[attr] == \
                        read_problem.__dict__[attr]
+                assert not isinstance(read_problem.__dict__[attr], np.ndarray)

@@ -11,18 +11,20 @@ import tempfile
 from test.test_objective import rosen_for_sensi
 from test.test_sbml_conversion import load_model_objective
 from pypesto.objective.util import sres_to_schi2, res_to_chi2
-from pypesto.objective import CsvHistory, HistoryOptions, MemoryHistory
+from pypesto import CsvHistory, HistoryOptions, MemoryHistory, ObjectiveBase
 from pypesto.optimize.optimizer import read_result_from_file, OptimizerResult
 
 from pypesto.objective.constants import (
     FVAL, GRAD, HESS, RES, SRES, CHI2, SCHI2
 )
 
+from typing import Sequence
+
 
 class HistoryTest(unittest.TestCase):
     problem: pypesto.Problem = None
     optimizer: pypesto.Optimizer = None
-    obj: pypesto.Objective = None
+    obj: ObjectiveBase = None
     history_options: HistoryOptions = None
     ub: np.ndarray = None
     lb: np.ndarray = None
@@ -165,9 +167,12 @@ class HistoryTest(unittest.TestCase):
             it_start = int(np.where(np.logical_not(
                 np.isnan(start.history.get_fval_trace())
             ))[0][0])
-            assert np.allclose(xfull(start.history.get_x(it_start)), start.x0)
-            assert np.allclose(xfull(start.history.get_x(it_final)), start.x)
-            assert np.isclose(start.history.get_fval(it_start), start.fval0)
+            assert np.allclose(
+                xfull(start.history.get_x_trace(it_start)), start.x0)
+            assert np.allclose(
+                xfull(start.history.get_x_trace(it_final)), start.x)
+            assert np.isclose(
+                start.history.get_fval_trace(it_start), start.fval0)
 
         funs = {
             FVAL: self.obj.get_fval,
@@ -182,17 +187,24 @@ class HistoryTest(unittest.TestCase):
             ))
         }
         for var, fun in funs.items():
-            if not var == FVAL and not getattr(self.history_options,
-                                               f'trace_record_{var}'):
-                continue
             for it in range(5):
-                x_full = xfull(start.history.get_x(it))
-                val = getattr(start.history, f'get_{var}')(it)
+                x_full = xfull(start.history.get_x_trace(it))
+                val = getattr(start.history, f'get_{var}_trace')(it)
+                if not getattr(self.history_options, f'trace_record_{var}',
+                               True):
+                    assert np.isnan(val)
+                    continue
                 if np.all(np.isnan(val)):
                     continue
                 if var in [FVAL, CHI2]:
+                    # note that we can expect slight deviations here since
+                    # this fval/chi2 may be computed without sensitivities
+                    # while the result here may be computed with with
+                    # sensitivies activated. If this fails to often,
+                    # increase atol/rtol
                     assert np.isclose(
                         val, fun(x_full),
+                        rtol=1e-3, atol=1e-4
                     ), var
                 elif var in [RES]:
                     # note that we can expect slight deviations here since
@@ -284,6 +296,21 @@ class ResModeHistoryTest(HistoryTest):
         self.fix_pars = False
         self.check_history()
 
+    def test_trace_all_aggregated(self):
+        self.history_options = HistoryOptions(
+            trace_record=True,
+            trace_record_grad=True,
+            trace_record_hess=True,
+            trace_record_res=True,
+            trace_record_sres=True,
+            trace_record_chi2=True,
+            trace_record_schi2=True,
+        )
+
+        self.obj = pypesto.objective.AggregatedObjective([self.obj, self.obj])
+        self.fix_pars = False
+        self.check_history()
+
 
 class FunModeHistoryTest(HistoryTest):
     @classmethod
@@ -344,6 +371,25 @@ class FunModeHistoryTest(HistoryTest):
         self.fix_pars = False
         self.check_history()
 
+    def test_trace_all_aggregated(self):
+        self.obj = rosen_for_sensi(
+            max_sensi_order=2,
+            integrated=True
+        )['obj']
+
+        self.history_options = HistoryOptions(
+            trace_record=True,
+            trace_record_grad=True,
+            trace_record_hess=True,
+            trace_record_res=True,
+            trace_record_sres=True,
+            trace_record_chi2=True,
+            trace_record_schi2=True,
+        )
+        self.obj = pypesto.objective.AggregatedObjective([self.obj, self.obj])
+        self.fix_pars = False
+        self.check_history()
+
 
 @pytest.fixture(params=["", "memory", "csv"])
 def history(request) -> pypesto.History:
@@ -395,3 +441,36 @@ def test_history_properties(history: pypesto.History):
 
         ress = history.get_res_trace()
         assert all(np.isnan(res) for res in ress)
+
+
+def test_trace_subset(history: pypesto.History):
+    """Test whether selecting only a trace subset works."""
+    if isinstance(history, (pypesto.MemoryHistory, pypesto.CsvHistory)):
+        arr = list(range(0, len(history), 2))
+
+        for var in ['fval', 'grad', 'hess', 'res', 'sres', 'chi2',
+                    'schi2', 'x', 'time']:
+            getter = getattr(history, f'get_{var}_trace')
+            full_trace = getter()
+            partial_trace = getter(arr)
+
+            # check partial traces coincide
+            assert len(partial_trace) == len(arr)
+            for a, b in zip(partial_trace, [full_trace[i] for i in arr]):
+                print(var, a, b)
+                if var != 'schi2':
+                    assert np.all(a == b) or np.isnan(a) and np.isnan(b)
+                else:
+                    assert np.all(a == b) or np.all(np.isnan(a)) \
+                        and np.all(np.isnan(b))
+
+            # check sequence type
+            assert isinstance(full_trace, Sequence)
+            assert isinstance(partial_trace, Sequence)
+
+            # check individual type
+            val = getter(0)
+            if var in ['fval', 'chi2', 'time']:
+                assert isinstance(val, float)
+            else:
+                assert isinstance(val, np.ndarray) or np.isnan(val)

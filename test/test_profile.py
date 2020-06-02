@@ -6,16 +6,17 @@ import numpy as np
 import pypesto
 import unittest
 import test.test_objective as test_objective
+from copy import deepcopy
 import warnings
 
-from pypesto.objective import Objective
+from pypesto import ObjectiveBase
 
 
 class ProfilerTest(unittest.TestCase):
 
     @classmethod
     def setUp(cls):
-        cls.objective: Objective = test_objective.rosen_for_sensi(
+        cls.objective: ObjectiveBase = test_objective.rosen_for_sensi(
             max_sensi_order=2, integrated=True
         )['obj']
 
@@ -26,9 +27,9 @@ class ProfilerTest(unittest.TestCase):
 
     def test_default_profiling(self):
         # loop over  methods for creating new initial guesses
-        method_list = [None, 'fixed_step', 'adaptive_step_order_0',
+        method_list = ['fixed_step', 'adaptive_step_order_0',
                        'adaptive_step_order_1', 'adaptive_step_regression']
-        for method in method_list:
+        for i_run, method in enumerate(method_list):
             # run profiling
             result = pypesto.parameter_profile(problem=self.problem,
                                                result=self.result,
@@ -37,11 +38,13 @@ class ProfilerTest(unittest.TestCase):
 
             # check result
             self.assertTrue(
-                isinstance(result.profile_result.list[0][0],
+                isinstance(result.profile_result.list[i_run][0],
                            pypesto.ProfilerResult))
+            self.assertEqual(len(result.profile_result.list), i_run+1)
+            self.assertEqual(len(result.profile_result.list[i_run]), 2)
 
             # check whether profiling needed maybe too many steps
-            steps = result.profile_result.list[0][0]['ratio_path'].size
+            steps = result.profile_result.list[i_run][0]['ratio_path'].size
             if method == 'adaptive_step_regression':
                 self.assertTrue(steps < 20, 'Profiling with regression based '
                                             'proposal needed too many steps.')
@@ -115,8 +118,8 @@ class ProfilerTest(unittest.TestCase):
                                            next_guess_method='fixed_step')
 
         # set new bounds (knowing that one parameter stopped at the bounds
-        self.problem.lb = -4 * np.ones((1, 2))
-        self.problem.ub = 4 * np.ones((1, 2))
+        self.problem.lb = -4 * np.ones(2)
+        self.problem.ub = 4 * np.ones(2)
 
         # re-run profiling using new bounds
         result = pypesto.parameter_profile(problem=self.problem,
@@ -132,6 +135,27 @@ class ProfilerTest(unittest.TestCase):
         self.assertTrue(
             isinstance(result.profile_result.list[0][1],
                        pypesto.ProfilerResult))
+
+    def test_approximate_profiles(self):
+        """Test for the approximate profile function."""
+        n_steps = 50
+        assert self.result.optimize_result.list[0].hess is None
+        result = pypesto.profile.approximate_parameter_profile(
+            problem=self.problem, result=self.result, profile_index=[0, 1],
+            n_steps=n_steps)
+        profile_list = result.profile_result.list[-1]
+        assert profile_list[0] is None
+        assert isinstance(profile_list[1], pypesto.profile.ProfilerResult)
+        assert np.isclose(profile_list[1].ratio_path.max(), 1)
+        assert len(profile_list[1].ratio_path) == n_steps
+        assert profile_list[1].x_path.shape == (2, n_steps)
+
+        # with pre-defined hessian
+        result = deepcopy(self.result)
+        result.optimize_result.list[0].hess = np.array([[2, 0], [0, 1]])
+        result = pypesto.profile.approximate_parameter_profile(
+            problem=self.problem, result=result, profile_index=[0, 1],
+            n_steps=n_steps)
 
 
 # dont make this a class method such that we dont optimize twice
@@ -168,8 +192,8 @@ def create_optimization_results(objective):
     optimizer = pypesto.ScipyOptimizer(method='TNC',
                                        options=options)
 
-    lb = -2 * np.ones((1, 2))
-    ub = 2 * np.ones((1, 2))
+    lb = -2 * np.ones(2)
+    ub = 2 * np.ones(2)
     problem = pypesto.Problem(objective, lb, ub)
 
     optimize_options = pypesto.OptimizeOptions(allow_failed_starts=True)
@@ -184,3 +208,37 @@ def create_optimization_results(objective):
     )
 
     return problem, result, optimizer
+
+
+def test_chi2_quantile_to_ratio():
+    """Tests the chi2 quantile to ratio convenience function."""
+    ratio = pypesto.profile.chi2_quantile_to_ratio()
+    assert np.isclose(ratio, 0.1465)
+
+
+def test_approximate_ci():
+    xs = np.array([-3, -1, 1, 3, 5, 7, 9])
+
+    ratios = np.array([0.2, 0.3, 1, 0.27, 0.15, 0.15, 0.1])
+
+    lb, ub = pypesto.profile.calculate_approximate_ci(
+        xs=xs, ratios=ratios, confidence_ratio=0.27)
+
+    # correct interpolation
+    assert np.isclose(lb, -3 + (-1 - (-3)) * 0.7)
+
+    # exact pick
+    assert np.isclose(ub, 3)
+
+    lb, ub = pypesto.profile.calculate_approximate_ci(
+        xs=xs, ratios=ratios, confidence_ratio=0.15)
+
+    # double value
+    assert np.isclose(ub, 7)
+
+    lb, ub = pypesto.profile.calculate_approximate_ci(
+        xs=xs, ratios=ratios, confidence_ratio=0.1)
+
+    # bound value
+    assert np.isclose(lb, -3)
+    assert np.isclose(ub, 9)

@@ -15,8 +15,9 @@ from .objective import (
     CsvHistory,
     Hdf5History,
     OptimizerHistory,
+    AmiciObjective,
     Objective,
-    AmiciObjective)
+    ObjectiveBase)
 from .problem import Problem
 from .petab import (
     PetabImporter)
@@ -46,7 +47,9 @@ from .sampling import (
     AdaptiveMetropolisSampler,
     ParallelTemperingSampler,
     AdaptiveParallelTemperingSampler,
-    McmcPtResult)
+    Pymc3Sampler,
+    McmcPtResult,
+    geweke_test)
 from .engine import (
     SingleCoreEngine,
     MultiThreadEngine,

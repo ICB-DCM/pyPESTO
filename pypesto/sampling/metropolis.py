@@ -1,9 +1,9 @@
 import numpy as np
 from typing import Dict, Sequence, Union
+from tqdm import tqdm
 
-from ..objective import Objective
+from ..objective import History, ObjectiveBase
 from ..problem import Problem
-from ..objective import History
 from .sampler import InternalSample, InternalSampler
 from .result import McmcPtResult
 
@@ -16,7 +16,7 @@ class MetropolisSampler(InternalSampler):
     def __init__(self, options: Dict = None):
         super().__init__(options)
         self.problem: Union[Problem, None] = None
-        self.objective: Union[Objective, None] = None
+        self.objective: Union[ObjectiveBase, None] = None
         self.trace_x: Union[Sequence[np.ndarray], None] = None
         self.trace_fval: Union[Sequence[float], None] = None
 
@@ -24,6 +24,7 @@ class MetropolisSampler(InternalSampler):
     def default_options(cls):
         return {
             'std': 1.,  # the proposal standard deviation
+            'show_progress': True,  # whether to show the progress
         }
 
     def initialize(self, problem: Problem, x0: np.ndarray):
@@ -38,14 +39,19 @@ class MetropolisSampler(InternalSampler):
         x = self.trace_x[-1]
         llh = - self.trace_fval[-1]
 
+        show_progress = self.options['show_progress']
+
         # loop over iterations
-        for _ in range(int(n_samples)):
+        for _ in tqdm(range(int(n_samples)), disable=not show_progress):
             # perform step
             x, llh = self._perform_step(x, llh, beta)
 
             # record step
             self.trace_x.append(x)
             self.trace_fval.append(-llh)
+
+    def make_internal(self):
+        self.options['show_progress'] = False
 
     def _perform_step(self, x: np.ndarray, llh: float, beta: float):
         """

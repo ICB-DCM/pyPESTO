@@ -1,10 +1,11 @@
 import os
 from typing import Union
+from numbers import Integral
 
 import h5py
 import numpy as np
 
-from .hdf5 import write_string_array, write_int_array, write_float_array
+from .hdf5 import write_array, write_float_array
 from ..result import Result
 
 
@@ -17,15 +18,6 @@ class ProblemHDF5Writer:
     storage_filename:
         HDF5 result file name
     """
-    LB = 'lb'
-    UB = 'ub'
-    LB_FULL = 'lb_full'
-    UB_FULL = 'ub_full'
-    X_FIXED_VALS = 'x_fixed_vals'
-    X_FIXED_INDICES = 'x_fixed_indices'
-    X_NAMES = 'x_names'
-    DIM = 'dim'
-    DIM_FULL = 'dim_full'
 
     def __init__(self, storage_filename: str):
         """
@@ -57,21 +49,18 @@ class ProblemHDF5Writer:
                                     "information about optimization result."
                                     "If you wish to overwrite the file set"
                                     "overwrite=True.")
+            attrs_to_save = [a for a in dir(problem) if not a.startswith('__')
+                             and not callable(getattr(problem, a))]
 
             problem_grp = f.create_group("problem")
             # problem_grp.attrs['config'] = objective.get_config()
-            problem_grp.attrs[self.DIM] = problem.dim
-            problem_grp.attrs[self.DIM_FULL] = problem.dim_full
 
-            write_float_array(problem_grp, self.LB, problem.lb)
-            write_float_array(problem_grp, self.UB, problem.ub)
-            write_float_array(problem_grp, self.LB_FULL, problem.lb_full)
-            write_float_array(problem_grp, self.UB_FULL, problem.ub_full)
-            write_float_array(problem_grp, self.X_FIXED_VALS,
-                              problem.x_fixed_vals)
-            write_int_array(problem_grp, self.X_FIXED_INDICES,
-                            problem.x_fixed_indices)
-            write_string_array(problem_grp, self.X_NAMES, problem.x_names)
+            for problem_attr in attrs_to_save:
+                value = getattr(problem, problem_attr)
+                if isinstance(value, (list, np.ndarray)):
+                    write_array(problem_grp, problem_attr, value)
+                elif isinstance(value, Integral):
+                    problem_grp.attrs[problem_attr] = value
 
 
 def get_or_create_group(f: Union[h5py.File, h5py.Group],

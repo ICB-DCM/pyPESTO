@@ -1,6 +1,7 @@
 import logging
 import numpy as np
 from typing import List, Union
+from time import process_time
 
 from ..problem import Problem
 from ..result import Result
@@ -62,11 +63,17 @@ def sample(
     # initialize sampler to problem
     sampler.initialize(problem=problem, x0=x0)
 
-    # perform the sampling
+    # perform the sampling and track time
+    t_start = process_time()
     sampler.sample(n_samples=n_samples)
+    t_elapsed = process_time() - t_start
+    logger.info("Elapsed time: "+str(t_elapsed))
 
     # extract results
     sampler_result = sampler.get_samples()
+
+    # record time
+    sampler_result.time = t_elapsed
 
     # record results
     result.sample_result = sampler_result
