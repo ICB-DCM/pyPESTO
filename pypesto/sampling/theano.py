@@ -5,11 +5,8 @@ import numpy as np
 from ..objective import ObjectiveBase
 from ..problem import Problem
 
-try:
-    import theano.tensor as tt
-    from theano.gof.null_type import NullType
-except ImportError:
-    tt = NullType = None
+import theano.tensor as tt
+from theano.gof.null_type import NullType
 
 
 class CachedObjective:
