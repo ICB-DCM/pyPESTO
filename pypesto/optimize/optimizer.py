@@ -395,7 +395,7 @@ class ScipyOptimizer(Optimizer):
 
     def get_default_options(self):
         if self.is_least_squares:
-            options = {'max_nfev': 1000, 'disp': False}
+            options = {'maxiter': 1000, 'disp': False}
         else:
             options = {'maxiter': 1000, 'disp': False}
         return options
