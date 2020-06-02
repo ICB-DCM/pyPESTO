@@ -85,14 +85,21 @@ class Pymc3Sampler(Sampler):
                                 '\nLog-posterior at test point is\n' + \
                                 str(model.check_test_point()))
 
-        # step, by default automatically determined by pymc3
-        step = None
-        if self.step_function:
-            step = self.step_function(model=model)
+        with model:
+            # step, by default automatically determined by pymc3
+            step = None
+            if self.step_function:
+                step = self.step_function()
 
-        # Sample from mmodel
-        trace = pm.sample(draws=int(n_samples), start=None, step=step,
-                          trace=self.trace, model=model, **self.options)
+            # Sample from model
+            trace = pm.sample(draws=int(n_samples), start=None, step=step,
+                              trace=self.trace, **self.options)
+
+            # NB in theory we could just pass model as a keyword argument
+            #    to both sample and step_function, but if step_function is None
+            #    and NUTS cannot be assigned, the creation of a new default
+            #    step method fails because there is no active model
+            #    (probably a bug in pymc 3.8)
 
         # Convert trace to inference data object
         data = pymc3_to_arviz(model, trace)
@@ -103,7 +110,7 @@ class Pymc3Sampler(Sampler):
     def get_samples(self) -> McmcPtResult:
         # parameter values
         trace_x = np.asarray(self.data.posterior.to_array())
-        if self.vectorize:
+        if self.vectorize and len(self.problem.x_free_indices) > 1:
             # array dimensions are ordered as
             # (variable, chain, draw, variable coordinates)
             assert trace_x.shape[0] == 1  # all free variables have been packed

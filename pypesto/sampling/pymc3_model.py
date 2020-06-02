@@ -17,6 +17,15 @@ def create_pymc3_model(problem: Problem,
                        vectorize: bool = False,
                        lerp: str = 'convex',
                        verbose: bool = False):
+        # Extract the names of the free parameters
+        x_free_names = [problem.x_names[i] for i in problem.x_free_indices]
+
+        # If there is only one free parameter, then we should not vectorize
+        if len(x_free_names) == 0:
+            raise Exception('Cannot sample: no free parameters')
+        elif len(x_free_names) == 1:
+            vectorize = False
+
         with pm.Model() as model:
             # Wrap objective in a theno op (applying caching if needed)
             objective = problem.objective
@@ -25,7 +34,6 @@ def create_pymc3_model(problem: Problem,
             log_post_fun = TheanoLogProbability(objective, beta)
 
             # If a test value is given, check its size
-            x_free_names = [problem.x_names[i] for i in problem.x_free_indices]
             if testval is not None and len(testval) != len(x_free_names):
                 raise ValueError('The size of the test value must be equal ' \
                                  'to the number of free parameters')
@@ -139,6 +147,7 @@ def BetterUniform(name, *, lower, upper, lerp='convex', **kwargs):
     the interval transformation jacobian.
     """
     if 'shape' not in kwargs.keys():
+        # Derive the shape of the random variable by broadcast
         if 'testval' in kwargs.keys():
             shape = np.broadcast(lower, upper, kwargs['testval']).shape
         else:
@@ -167,7 +176,7 @@ class BetterInterval(pm.distributions.transforms.Interval):
     def __init__(self, a, b, lerp, *, scalar=True):
         super().__init__(a, b)
 
-        scalar_bounds = isinstance(a, float) and isinstance(b, float)
+        scalar_bounds = np.shape(a) == () and np.shape(b) == ()
         assert scalar_bounds or not scalar
 
         if not scalar:
