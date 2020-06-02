@@ -18,7 +18,7 @@ addons:
       - build-essential
       - coinor-libipopt1v5
       - coinor-libipopt-dev
-      - cython3
+      - cython
       - lcov
       - libatlas-base-dev
       - libhdf5-serial-dev
