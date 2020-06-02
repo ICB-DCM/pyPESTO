@@ -163,6 +163,17 @@ def test_geweke_test_switch():
         chain=chain)
     assert burn_in == 100
 
+    
+def test_geweke_test_switch_short():
+    """Check geweke test returns expected burn in index
+    for small sample numbers."""
+    warm_up = np.zeros((25, 2))
+    converged = np.ones((75, 2))
+    chain = np.concatenate((warm_up, converged), axis=0)
+    burn_in = pypesto.sampling.diagnostics.burn_in_by_sequential_geweke(
+        chain=chain)
+    assert burn_in == 25
+
 
 def test_geweke_test_unconverged():
     """Check that the geweke test reacts nicely to small sample numbers."""
