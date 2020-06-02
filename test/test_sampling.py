@@ -163,7 +163,7 @@ def test_geweke_test_switch():
         chain=chain)
     assert burn_in == 100
 
-    
+
 def test_geweke_test_switch_short():
     """Check geweke test returns expected burn in index
     for small sample numbers."""
