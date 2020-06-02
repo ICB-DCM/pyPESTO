@@ -61,7 +61,10 @@ def sampling_fval_trace(
               's': 10}
     if full_trace:
         kwargs['hue'] = "converged"
-        kwargs['palette'] = ["#868686", "#477ccd"]
+        if len(params_fval[kwargs['hue']].unique()) == 1:
+            kwargs['palette'] = ["#477ccd"]
+        elif len(params_fval[kwargs['hue']].unique()) == 2:
+            kwargs['palette'] = ["#868686", "#477ccd"]
         kwargs['legend'] = False
 
     sns.scatterplot(x="iteration", y="logPosterior", data=params_fval,
