@@ -1,4 +1,5 @@
 import logging
+import warnings
 from typing import Tuple
 import numpy as np
 from scipy.stats import norm
@@ -87,8 +88,9 @@ def spectrum0(x: np.array) -> np.ndarray:
     spectral_density_zero = np.zeros((1, n_par))
 
     for i in range(n_par):
-        spectral_density_zero[:, i] = \
-            spectrum(x[:, i], n_samples)[0]
+        _spectral_density_zero = spectrum(x[:, i], n_samples)
+        if len(_spectral_density_zero) > 0:
+            spectral_density_zero[:, i] = _spectral_density_zero[0]
     return spectral_density_zero
 
 
@@ -135,10 +137,13 @@ def calculate_zscore(chain: np.array,
                          "meaningfully extract subsets "
                          "for Geweke's test.")
 
-    # Mean of First fraction
-    mean_a = np.mean(chain[0:index_a, :], axis=0)
-    # Mean of Second fraction
-    mean_b = np.mean(chain[index_b:, :], axis=0)
+    # Expect to see RuntimeWarnings in this block for short chains
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore", category=RuntimeWarning)
+        # Mean of First fraction
+        mean_a = np.mean(chain[0:index_a, :], axis=0)
+        # Mean of Second fraction
+        mean_b = np.mean(chain[index_b:, :], axis=0)
 
     # Spectral estimates for variance
     spectrum_a = spectrum0(chain[0:index_a, :])
