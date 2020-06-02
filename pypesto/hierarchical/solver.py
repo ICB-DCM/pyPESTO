@@ -1,5 +1,6 @@
 import numpy as np
 import copy
+
 from typing import Dict, List
 
 from ..objective import Objective

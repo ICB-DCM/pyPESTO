@@ -78,7 +78,6 @@ class HierarchicalAmiciCalculator(AmiciCalculator):
             x_dct[key] = val
 
         # fill in parameters
-        # TODO (#226) use plist to compute only required derivatives
         amici.parameter_mapping.fill_in_parameters(
             edatas=edatas,
             problem_parameters=x_dct,
@@ -95,7 +94,7 @@ class HierarchicalAmiciCalculator(AmiciCalculator):
             num_threads=min(n_threads, len(edatas)),
         )
 
-        self._check_least_squares(self, sensi_order, mode, rdatas)
+        self._check_least_squares(sensi_order, mode, rdatas)
 
         # check if any simulation failed
         if any([rdata['status'] < 0.0 for rdata in rdatas]):
