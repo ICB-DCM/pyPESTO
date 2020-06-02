@@ -57,11 +57,19 @@ def sample(
         # TODO multiple x0 for PT, #269
 
     # Discard fixed parameters if necessary
-    x0 = np.asarray(x0)
-    if len(x0) == problem.dim_full:
-        x0 = x0[problem.x_free_indices]
-    elif len(x0) != problem.dim:
-        raise ValueError('size of x0 is incompatible with given problem')
+    if isinstance(x0, np.ndarray):
+        if len(x0) == problem.dim_full:
+            x0 = x0[problem.x_free_indices]
+        elif len(x0) != problem.dim:
+            raise ValueError('size of x0 is incompatible with given problem')
+    else:
+        x0 = x0.copy()
+        for i in range(len(x0)):
+            if len(x0[i]) == problem.dim_full:
+                x0[i] = x0[i][problem.x_free_indices]
+            elif len(x0[i]) != problem.dim:
+                raise ValueError('one of the starting points in x0 ' \
+                                 'has a size incompatible with given problem')
 
     # set sampler
     if sampler is None:
