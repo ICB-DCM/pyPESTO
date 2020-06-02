@@ -12,7 +12,7 @@ import pandas as pd
 import numbers
 import copy
 
-from typing import Iterable, List, Optional, Sequence, Union
+from typing import Iterable, List, Optional, Union
 
 from .objective import ObjectiveBase
 from .objective.priors import Priors

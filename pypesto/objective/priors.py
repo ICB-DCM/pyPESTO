@@ -1,10 +1,9 @@
-import scipy.stats
 import numpy as np
-from typing import Optional, Union, Iterable, Dict, Callable, List, Tuple
+from typing import Sequence, Callable
 from copy import deepcopy
 import math
 
-from .function import Objective
+from .function import ObjectiveBase
 from .aggregated import AggregatedObjective
 
 
@@ -16,20 +15,15 @@ class Priors(AggregatedObjective):
     given in self.objectives.
     """
 
-    def __init__(self,
-                 prior_list: List[Objective],
-                 x_names: List[str] = None):
 
-        super().__init__(prior_list, x_names)
-
-
-class ParameterPriors(Objective):
+class ParameterPriors(ObjectiveBase):
     """
     Single Parameter Prior.
 
 
     prior_list has to contain dicts of the format format
-    {'index': [int], 'density_fun': [Callable], 'density_dx': [Callable], 'density_ddx': [Callable]}
+    {'index': [int], 'density_fun': [Callable],
+    'density_dx': [Callable], 'density_ddx': [Callable]}
 
 
     Note:
@@ -39,7 +33,8 @@ class ParameterPriors(Objective):
     """
 
     def __init__(self,
-                 prior_list: list):
+                 prior_list: list,
+                 x_names: Sequence[str] = None):
 
         self.prior_list = prior_list
 
@@ -159,7 +154,7 @@ def get_parameter_prior_dict(index: int,
         def dd_log_f_log10(x_log10):
             """second derivative of log-prior w.r.t. log10-parameters"""
             return log10**2 * 10**x_log10 * \
-                   (dd_log_f_ddx(10**x_log10) * 10**x_log10
+                (dd_log_f_ddx(10**x_log10) * 10**x_log10
                     + d_log_f_dx(10**x_log10))
 
         return {'index': index,
@@ -173,7 +168,9 @@ def get_parameter_prior_dict(index: int,
 
 
 def _prior_densities(prior_type: str,
-                     prior_parameters: np.array) -> [Callable, Callable, Callable]:
+                     prior_parameters: np.array) -> [Callable,
+                                                     Callable,
+                                                     Callable]:
     """
     Returns a tuple of Callables of the (log-)density (in linear scale),
     together with their first + second derivative (= senisis) w.r.t x
@@ -181,7 +178,8 @@ def _prior_densities(prior_type: str,
 
     if prior_type == 'uniform':
 
-        log_f = _get_constant_function(-math.log(prior_parameters[1] - prior_parameters[0]))
+        log_f = _get_constant_function(
+            - math.log(prior_parameters[1] - prior_parameters[0]))
         d_log_f_dx = _get_constant_function(0)
         dd_log_f_ddx = _get_constant_function(0)
 
@@ -195,7 +193,8 @@ def _prior_densities(prior_type: str,
             return -math.log(2*math.pi*sigma2)/2 - \
                    (x-prior_parameters[0])**2/(2*sigma2)
 
-        d_log_f_dx = _get_linear_function(-1/sigma2, prior_parameters[0]/sigma2)
+        d_log_f_dx = _get_linear_function(-1/sigma2,
+                                          prior_parameters[0]/sigma2)
         dd_log_f_ddx = _get_constant_function(-1/sigma2)
 
         return log_f, d_log_f_dx, dd_log_f_ddx
@@ -204,7 +203,8 @@ def _prior_densities(prior_type: str,
         log_2_sigma = math.log(2*prior_parameters[1])
 
         def log_f(x):
-            return -log_2_sigma - abs(x-prior_parameters[0])/prior_parameters[1]
+            return -log_2_sigma -\
+                   abs(x-prior_parameters[0])/prior_parameters[1]
 
         def d_log_f_dx(x):
             if x > prior_parameters[0]:
@@ -232,7 +232,8 @@ def _prior_densities(prior_type: str,
             return - 1/x - (math.log(x) - prior_parameters[0])/(sigma2 * x)
 
         def dd_log_f_ddx(x):
-            return 1/(x**2) - (1 - math.log(x) + prior_parameters[0])/(sigma2 * x**2)
+            return 1/(x**2) \
+                   - (1 - math.log(x) + prior_parameters[0])/(sigma2 * x**2)
 
         return log_f, d_log_f_dx, dd_log_f_ddx
 
@@ -261,4 +262,3 @@ def _get_constant_function(constant: float):
     def function(x):
         return constant
     return function
-

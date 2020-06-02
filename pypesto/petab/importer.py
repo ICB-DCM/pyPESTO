@@ -268,7 +268,7 @@ class PetabImporter(AmiciObjectBuilder):
 
         return obj
 
-    def create_prior(self)->ParameterPriors:
+    def create_prior(self) -> ParameterPriors:
         """
         Creates a prior from the parameter table. Returns None, if no priors
         are defined.
@@ -282,8 +282,8 @@ class PetabImporter(AmiciObjectBuilder):
 
                 id = self.petab_problem.x_ids[i]
 
-                prior_type_entry = \
-                    self.petab_problem.parameter_df.loc[id, petab.OBJECTIVE_PRIOR_TYPE]
+                prior_type_entry = self.petab_problem.\
+                    parameter_df.loc[id, petab.OBJECTIVE_PRIOR_TYPE]
 
                 # TODO: Change the hardcoded "uninformative" to
                 #  petab.UNINFORMATIVE, if corresponding PEtab PR is merged
@@ -292,15 +292,17 @@ class PetabImporter(AmiciObjectBuilder):
 
                     prior_params = [float(param) for param in
                                     self.petab_problem.parameter_df.
-                                        loc[id, petab.OBJECTIVE_PRIOR_PARAMETERS]
-                                        .split(';')]
+                                    loc[id, petab.OBJECTIVE_PRIOR_PARAMETERS]
+                                    .split(';')]
 
-                    scale = self.petab_problem.parameter_df.loc[id, petab.PARAMETER_SCALE]
+                    scale = self.petab_problem.\
+                        parameter_df.loc[id, petab.PARAMETER_SCALE]
 
-                    prior_list.append(get_parameter_prior_dict(i,
-                                                               prior_type_entry,
-                                                               prior_params,
-                                                               scale))
+                    prior_list.append(
+                        get_parameter_prior_dict(i,
+                                                 prior_type_entry,
+                                                 prior_params,
+                                                 scale))
 
         if len(prior_list):
             return ParameterPriors(prior_list)

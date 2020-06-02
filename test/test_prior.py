@@ -3,7 +3,6 @@
 This is for testing priors.
 """
 
-import pytest
 import math
 import itertools
 import numpy as np
