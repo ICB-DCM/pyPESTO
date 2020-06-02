@@ -151,7 +151,10 @@ def sampling_parameters_trace(
 
     if full_trace:
         kwargs['hue'] = "converged"
-        kwargs['palette'] = ["#868686", "#477ccd"]
+        if len(params_fval[kwargs['hue']].unique()) == 1:
+            kwargs['palette'] = ["#477ccd"]
+        elif len(params_fval[kwargs['hue']].unique()) == 2:
+            kwargs['palette'] = ["#868686", "#477ccd"]
         kwargs['legend'] = False
 
     if result.sample_result.burn_in is None:
