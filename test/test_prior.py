@@ -58,7 +58,7 @@ def test_mode():
 
 def test_derivatives():
     """
-    Tests the finite gradients and second order gradients.
+    Tests the finite gradients and second order derivatives.
     """
 
     scales = ['lin', 'log', 'log10']

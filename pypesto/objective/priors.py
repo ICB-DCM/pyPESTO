@@ -1,7 +1,6 @@
 import numpy as np
-from typing import Callable, Dict, Sequence, Tuple, Union
+from typing import Callable, Dict, List, Sequence, Tuple, Union
 from copy import deepcopy
-import math
 
 from .function import ObjectiveBase
 from .aggregated import AggregatedObjective
@@ -136,8 +135,8 @@ def get_parameter_prior_dict(index: int,
         index of the parameter in x_full
 
     prior_type: str
-        Prior is defined in LINEAR parameter space! prior_type can from
-        {uniform, normal, laplace, logUniform, logNormal, logLaplace}
+        Prior is defined in LINEAR=untransformed parameter space! prior_type
+        can from {uniform, normal, laplace, logUniform, logNormal, logLaplace}
 
     prior_parameters:
         Parameters of the priors. Parameters are defined in linear scale.
@@ -161,17 +160,17 @@ def get_parameter_prior_dict(index: int,
 
         def log_f_log(x_log):
             """log-prior for log-parameters"""
-            return log_f(math.exp(x_log))
+            return log_f(np.exp(x_log))
 
         def d_log_f_log(x_log):
             """derivative of log-prior w.r.t. log-parameters"""
-            return d_log_f_dx(math.exp(x_log)) * math.exp(x_log)
+            return d_log_f_dx(np.exp(x_log)) * np.exp(x_log)
 
         def dd_log_f_log(x_log):
             """second derivative of log-prior w.r.t. log-parameters"""
-            return math.exp(x_log) * \
-                (d_log_f_dx(math.exp(x_log)) +
-                    math.exp(x_log) * dd_log_f_ddx(math.exp(x_log)))
+            return np.exp(x_log) * \
+                (d_log_f_dx(np.exp(x_log)) +
+                    np.exp(x_log) * dd_log_f_ddx(np.exp(x_log)))
 
         return {'index': index,
                 'density_fun': log_f_log,
@@ -180,7 +179,7 @@ def get_parameter_prior_dict(index: int,
 
     elif parameter_scale == 'log10':
 
-        log10 = math.log(10)
+        log10 = np.log(10)
 
         def log_f_log10(x_log10):
             """log-prior for log10-parameters"""
@@ -211,14 +210,42 @@ def _prior_densities(prior_type: str,
                                                      Callable,
                                                      Callable]:
     """
-    Returns a tuple of Callables of the (log-)density (in linear scale),
-    together with their first + second derivative (= senisis) w.r.t x
+    Returns a tuple of Callables of the (log-)density (in untransformed =
+    linear scale), together with their first + second derivative
+    (= senisis) w.r.t. x.
+
+
+    Currently the following distributions are supported:
+
+    * uniform:
+        prior_parameters[0] and prior_parameters[1] give the lower and upper
+        boundary.
+    * normal:
+        normal distribution, with mean prior_parameters[0] and
+        standard deviation prior_parameters[1]
+    * laplace:
+        laplace distribution, with location prior_parameters[0] and
+        scale prior_parameters[1]
+    * logNormal:
+        logNormal distribution, where prior_parameters are mean and
+        standard deviation of the exp(X).
+
+    Currently not supported, but eventually planed are the
+    following distributions:
+
+    * logUniform
+    * logLaplace
+
     """
 
     if prior_type == 'uniform':
 
-        log_f = _get_constant_function(
-            - math.log(prior_parameters[1] - prior_parameters[0]))
+        def log_f(x):
+            if prior_parameters[0] <= x <= prior_parameters[1]:
+                return - np.log(prior_parameters[1] - prior_parameters[0])
+            else:
+                return 0
+
         d_log_f_dx = _get_constant_function(0)
         dd_log_f_ddx = _get_constant_function(0)
 
@@ -226,30 +253,34 @@ def _prior_densities(prior_type: str,
 
     elif prior_type == 'normal':
 
+        mean = prior_parameters[0]
         sigma2 = prior_parameters[1]**2
 
         def log_f(x):
-            return -math.log(2*math.pi*sigma2)/2 - \
-                   (x-prior_parameters[0])**2/(2*sigma2)
+            return -np.log(2*np.pi*sigma2)/2 - \
+                   (x-mean)**2/(2*sigma2)
 
         d_log_f_dx = _get_linear_function(-1/sigma2,
-                                          prior_parameters[0]/sigma2)
+                                          mean/sigma2)
         dd_log_f_ddx = _get_constant_function(-1/sigma2)
 
         return log_f, d_log_f_dx, dd_log_f_ddx
 
     elif prior_type == 'laplace':
-        log_2_sigma = math.log(2*prior_parameters[1])
+
+        mean = prior_parameters[0]
+        scale = prior_parameters[1]
+        log_2_sigma = np.log(2*prior_parameters[1])
 
         def log_f(x):
             return -log_2_sigma -\
-                   abs(x-prior_parameters[0])/prior_parameters[1]
+                   abs(x-mean)/scale
 
         def d_log_f_dx(x):
             if x > prior_parameters[0]:
-                return -1/prior_parameters[1]
+                return -1/scale
             else:
-                return 1/prior_parameters[1]
+                return 1/scale
 
         dd_log_f_ddx = _get_constant_function(0)
 
@@ -260,19 +291,21 @@ def _prior_densities(prior_type: str,
         raise NotImplementedError
     elif prior_type == 'logNormal':
 
-        sigma2 = prior_parameters[1]**2
-        sqrt2_pi = math.sqrt(2*math.pi)
+        # TODO check again :)
+        mean = prior_parameters[0]
+        sigma = prior_parameters[1]
+        sqrt2_pi = np.sqrt(2*np.pi)
 
         def log_f(x):
-            return - math.log(sqrt2_pi * prior_parameters[1] * x) \
-                   - (math.log(x) - prior_parameters[0])**2/(2*sigma2)
+            return - np.log(sqrt2_pi * sigma * x) \
+                   - (np.log(x) - mean)**2/(2*sigma**2)
 
         def d_log_f_dx(x):
-            return - 1/x - (math.log(x) - prior_parameters[0])/(sigma2 * x)
+            return - 1/x - (np.log(x) - mean)/(sigma**2 * x)
 
         def dd_log_f_ddx(x):
             return 1/(x**2) \
-                   - (1 - math.log(x) + prior_parameters[0])/(sigma2 * x**2)
+                   - (1 - np.log(x) + mean)/(sigma**2 * x**2)
 
         return log_f, d_log_f_dx, dd_log_f_ddx
 
@@ -295,8 +328,7 @@ def _get_linear_function(slope: float,
 
 def _get_constant_function(constant: float):
     """
-    Defines a callable, that returns a callable, that returns
-    the constant, regardless of the input
+    Defines a callable, that returns the constant, regardless of the input.
     """
     def function(x):
         return constant

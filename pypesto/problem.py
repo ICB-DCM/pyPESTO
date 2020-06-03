@@ -49,7 +49,7 @@ class Problem:
         the variable names are set to ['x0', ... 'x{dim_full}']. The list
         must always be of length dim_full.
     x_scales:
-        Parameter scales can be optionally given and are used e.g in
+        Parameter scales can be optionally given and are used e.g. in
         visualisation and prior generation. Currently the scales 'lin',
         'log`and 'log10' are supported.
     x_priors_defs:
@@ -134,8 +134,7 @@ class Problem:
             x_scales = ['lin'] * self.dim_full
         self.x_scales = x_scales
 
-        if x_priors_defs is not None:
-            self.x_priors = x_priors_defs
+        self.x_priors = x_priors_defs
 
         self.normalize_input()
 

@@ -278,12 +278,10 @@ class PetabImporter(AmiciObjectBuilder):
 
         if petab.OBJECTIVE_PRIOR_TYPE in self.petab_problem.parameter_df:
 
-            for i in range(len(self.petab_problem.x_ids)):
-
-                id = self.petab_problem.x_ids[i]
+            for i, x_id in enumerate(self.petab_problem.x_ids):
 
                 prior_type_entry = self.petab_problem.\
-                    parameter_df.loc[id, petab.OBJECTIVE_PRIOR_TYPE]
+                    parameter_df.loc[x_id, petab.OBJECTIVE_PRIOR_TYPE]
 
                 # TODO: Change the hardcoded "uninformative" to
                 #  petab.UNINFORMATIVE, if corresponding PEtab PR is merged
@@ -292,11 +290,11 @@ class PetabImporter(AmiciObjectBuilder):
 
                     prior_params = [float(param) for param in
                                     self.petab_problem.parameter_df.
-                                    loc[id, petab.OBJECTIVE_PRIOR_PARAMETERS]
+                                    loc[x_id, petab.OBJECTIVE_PRIOR_PARAMETERS]
                                     .split(';')]
 
                     scale = self.petab_problem.\
-                        parameter_df.loc[id, petab.PARAMETER_SCALE]
+                        parameter_df.loc[x_id, petab.PARAMETER_SCALE]
 
                     prior_list.append(
                         get_parameter_prior_dict(i,
