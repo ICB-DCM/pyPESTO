@@ -50,10 +50,17 @@ def test_mode():
     # test uniform distribution:
     for scale in scales:
         prior_dict = get_parameter_prior_dict(
-            0, 'uniform', [-1, 1], scale)
+            0, 'uniform', [1, 2], scale)
 
-        assert abs(prior_dict['density_fun'](-1) - math.log(1/2)) < 1e-8
-        assert abs(prior_dict['density_fun'](1) - math.log(1/2)) < 1e-8
+        # check inside and outside of interval
+        assert abs(prior_dict['density_fun'](lin_to_scaled(.5, scale))
+                   - 0) < 1e-8
+
+        assert abs(prior_dict['density_fun'](lin_to_scaled(1.5, scale))
+                   - math.log(1)) < 1e-8
+
+        assert abs(prior_dict['density_fun'](lin_to_scaled(2.5, scale))
+                   - 0) < 1e-8
 
 
 def test_derivatives():
@@ -87,7 +94,7 @@ def test_derivatives():
         assert err_hes < 1e-3
 
 
-def scaled_to_lin(x: float,
+def lin_to_scaled(x: float,
                   scale: str):
     """
     transforms x to linear scale
@@ -102,7 +109,7 @@ def scaled_to_lin(x: float,
         ValueError(f'Unknown scale {scale}')
 
 
-def lin_to_scaled(x: float,
+def scaled_to_lin(x: float,
                   scale: str):
     """
     transforms x to scale

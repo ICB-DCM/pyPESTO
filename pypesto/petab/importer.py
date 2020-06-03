@@ -10,7 +10,8 @@ from typing import List, Sequence, Union
 
 from ..problem import Problem
 from ..objective import AmiciObjective, AmiciObjectBuilder, AggregatedObjective
-from ..objective.priors import NegativeLogParameterPriors, get_parameter_prior_dict
+from ..objective.priors import NegativeLogParameterPriors, \
+    get_parameter_prior_dict
 
 try:
     import petab

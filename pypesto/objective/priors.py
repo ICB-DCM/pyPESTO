@@ -11,9 +11,12 @@ ResultDict = Dict[str, Union[float, np.ndarray, Dict]]
 
 class NegLogPriors(AggregatedObjective):
     """
-    Handles prior distributions.
+    Aggregates different forms of negative log-prior distributions.
 
-    Consists basically of a list of individual _negative log-_priors,
+    Allows to distinguish priors from the likelihood by testing the type of
+    an objective.
+
+    Consists basically of a list of individual negative log-priors,
     given in self.objectives.
     """
 
@@ -72,7 +75,7 @@ class NegativeLogParameterPriors(ObjectiveBase):
                            sensi_orders: Tuple[int, ...],
                            mode: str) -> bool:
         for order in sensi_orders:
-            if not (0 <= order <=2):
+            if not (0 <= order <= 2):
                 return False
         return True
 
@@ -201,8 +204,8 @@ def get_parameter_prior_dict(index: int,
                 'density_ddx': dd_log_f_log10}
 
     else:
-        raise ValueError(f"NegLogPriors in parameters in scale {parameter_scale}"
-                         f" are currently not supported.")
+        raise ValueError(f"NegLogPriors in parameters in scale "
+                         f"{parameter_scale} are currently not supported.")
 
 
 def _prior_densities(prior_type: str,
@@ -313,7 +316,8 @@ def _prior_densities(prior_type: str,
         # when implementing: add to tests
         raise NotImplementedError
     else:
-        ValueError(f'NegLogPriors of type {prior_type} are currently not supported')
+        ValueError(f'NegLogPriors of type {prior_type} are currently '
+                   f'not supported')
 
 
 def _get_linear_function(slope: float,
