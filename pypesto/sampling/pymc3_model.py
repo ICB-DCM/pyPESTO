@@ -1,4 +1,4 @@
-from typing import Union, Tuple
+from typing import Union, Tuple, List
 import numpy as np
 
 import pymc3 as pm
@@ -19,18 +19,19 @@ def create_pymc3_model(problem: Problem,
                        lerp: str = 'convex',
                        verbose: bool = False):
         # Extract the names of the free parameters
-        x_free_names = [problem.x_names[i] for i in problem.x_free_indices]
+        x_names = [problem.x_names[i] for i in problem.x_free_indices]
+        assert len(x_names) == problem.dim
 
         # If there is only one free parameter, then we should not vectorize
-        if len(x_free_names) == 0:
+        if problem.dim == 0:
             raise Exception('Cannot sample: no free parameters')
-        elif len(x_free_names) == 1:
+        elif problem.dim == 1:
             vectorize = False
 
         # Overwrite lower and upper bounds
         if support is not None:
             lbs, ubs = support
-            if len(lbs) != len(x_free_names) or len(ubs) != len(x_free_names):
+            if len(lbs) != problem.dim or len(ubs) != problem.dim:
                 raise ValueError('length of lower/upper bounds '
                                  'must be equal to number of free parameters')
         else:
@@ -49,7 +50,7 @@ def create_pymc3_model(problem: Problem,
             log_post_fun = TheanoLogProbability(objective, beta)
 
             # If a test value is given, check its size
-            if testval is not None and len(testval) != len(x_free_names):
+            if testval is not None and len(testval) != problem.dim:
                 raise ValueError('The size of the test value must be equal ' \
                                  'to the number of free parameters')
 
@@ -59,7 +60,7 @@ def create_pymc3_model(problem: Problem,
             # to the whole real line.
             # see issue #365 at https://github.com/ICB-DCM/pyPESTO/issues/365
             if testval is not None:
-                for i in range(len(x_free_names)):
+                for i in range(problem.dim):
                     lb, ub = lbs[i], ubs[i]
                     x = testval[i]
                     if lb < x < ub:
@@ -80,27 +81,28 @@ def create_pymc3_model(problem: Problem,
             # Create a uniform bounded variable for each parameter
             if vectorize:
                 if testval is None:
-                    theta = BetterUniform(pymc3_vector_parname(problem),
+                    theta = BetterUniform(pymc3_vector_parname(x_names),
                                           lerp=lerp, lower=lbs, upper=ubs)
                 else:
-                    theta = BetterUniform(pymc3_vector_parname(problem),
+                    theta = BetterUniform(pymc3_vector_parname(x_names),
                                           lerp=lerp, testval=testval,
                                           lower=lbs, upper=ubs)
             elif testval is None:
                 k = [BetterUniform(x_name, lower=lb, upper=ub, lerp=lerp)
                          for x_name, lb, ub in
-                         zip(x_free_names, lbs, ubs)]
+                         zip(x_names, lbs, ubs)]
             else:
                 k = [BetterUniform(x_name, testval=x, lower=lb, upper=ub, lerp=lerp)
                          for x_name, x, lb, ub in
-                         zip(x_free_names, testval, lbs, ubs)]
+                         zip(x_names, testval, lbs, ubs)]
 
             # Convert to tensor vector
             if not vectorize:
                 theta = tt.as_tensor_variable(k)
 
             # Use a DensityDist for the log-posterior
-            pm.DensityDist('log_post', logp=log_post_fun, observed=theta)
+            pm.DensityDist(pymc3_logp_parname(x_names),
+                           logp=log_post_fun, observed=theta)
 
         if verbose:
             print('Evaluating log-posterior at test point')
@@ -109,11 +111,11 @@ def create_pymc3_model(problem: Problem,
         return model
 
 
-def pymc3_vector_parname(problem: Problem):
-    if 'theta' in problem.x_names:
-        if 'free_parameters' in problem.x_names:
-            if 'pymc3_free_parameters' in problem.x_names:
-                raise Exception('cannot find a name for the compacted parameters')
+def pymc3_vector_parname(x_names: List[str]):
+    if 'theta' in x_names:
+        if 'free_parameters' in x_names:
+            if 'pymc3_free_parameters' in x_names:
+                raise Exception('cannot find a name for the parameter vector')
             else:
                 return 'pymc3_free_parameters'
         else:
@@ -122,15 +124,32 @@ def pymc3_vector_parname(problem: Problem):
         return 'theta'
 
 
-def pymc3_to_arviz(model: pm.Model, trace: pm.backends.base.MultiTrace, problem: Problem = None, vectorize: bool = False):
+def pymc3_logp_parname(x_names: List[str]):
+    if 'log_post' in x_names:
+        if 'pymc3_log_post' in x_names:
+            raise Exception('cannot find a name for the log-posterior')
+        else:
+            return 'pymc3_log_post'
+    else:
+        return 'log_post'
+
+
+def pymc3_to_arviz(model: pm.Model, trace: pm.backends.base.MultiTrace,
+                   *, problem: Problem = None, x_names: List[str] = None,
+                   vectorize: bool = False):
+    if problem is not None and x_names is not None:
+        raise ValueError('the problem and x_names keyword arguments '
+                         'cannot both be given.')
+
     kwargs = {}
     if vectorize:
-        if problem is None:
-            raise ValueError('if vectorize is True, ' \
-                             'a problem must be given')
-        x_free_names = [problem.x_names[i] for i in problem.x_free_indices]
-        kwargs['coords'] = {"free_parameter": x_free_names}
-        kwargs['dims'] = {pymc3_vector_parname(problem): ["free_parameter"]}
+        if problem is None and x_names is None:
+            raise ValueError('if vectorize is True, one of the problem '
+                              'or x_names keyword arguments must be given.')
+        if x_names is None:
+            x_names = [problem.x_names[i] for i in problem.x_free_indices]
+        kwargs['coords'] = {"free_parameter": x_names}
+        kwargs['dims'] = {pymc3_vector_parname(x_names): ["free_parameter"]}
 
     return az.from_pymc3(
         trace=trace,

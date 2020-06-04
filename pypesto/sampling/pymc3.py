@@ -91,8 +91,21 @@ class Pymc3Sampler(Sampler):
             if self.step_function:
                 step = self.step_function()
 
+            # select start point
+            # NB if start is None and the NUTS algorithm is auto-assigned,
+            #    the start point will be set by init_nuts.
+            #    Thus we specify it explicitly.
+            if self.trace is None:
+                start = model.test_point
+            else:
+                raise NotImplementedError('resuming a pymc3 chain '
+                                          'is currently not implemented')
+                # TODO to implement this case, we should copy the auto-assign
+                #      code from pymc3 inside pypesto, so that we have a
+                #      reference to the step_method that gets tuned
+
             # Sample from model
-            trace = pm.sample(draws=int(n_samples), start=None, step=step,
+            trace = pm.sample(draws=int(n_samples), start=start, step=step,
                               trace=self.trace, **self.options)
 
             # NB in theory we could just pass model as a keyword argument
