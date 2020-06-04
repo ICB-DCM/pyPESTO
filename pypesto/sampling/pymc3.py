@@ -92,11 +92,12 @@ class Pymc3Sampler(Sampler):
                 step = self.step_function()
 
             # select start point
-            # NB if start is None and the NUTS algorithm is auto-assigned,
-            #    the start point will be set by init_nuts.
-            #    Thus we specify it explicitly.
             if self.trace is None:
-                start = model.test_point
+                start = None
+                # NB the start point will be based on the model test point,
+                #    but may be modified if NUTS is auto-assigned (e.g. jitter).
+                #    If we want to be sure that the test point is exaclty used,
+                #    the init='adapt_diag' or init='adapt_full' should be used
             else:
                 raise NotImplementedError('resuming a pymc3 chain '
                                           'is currently not implemented')
