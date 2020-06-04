@@ -23,21 +23,26 @@ class NegLogPriors(AggregatedObjective):
 
 class NegativeLogParameterPriors(ObjectiveBase):
     """
-    Negative Log Priors for Parameters.
+    This class implements Negative Log Priors on Parameters.
 
-    Contains a prior list
+    Contains a list of prior dictionaries for the individual parameters
+    of the format format
 
+    {'index': [int],
+    'density_fun': [Callable],
+    'density_dx': [Callable],
+    'density_ddx': [Callable]}
 
-    prior_list has to contain dicts of the format format
-    {'index': [int], 'density_fun': [Callable],
-    'density_dx': [Callable], 'density_ddx': [Callable]}
-
+    A prior instance can be added to e.g. an objective, that gives the
+    likelihood, by an AggregatedObjective.
 
     Notes
     -----
 
-    All callables should correspond to (log)densities and are internally
-    multiplied by -1, since pyPESTO performs minimization...
+    All callables should correspond to log-densities. That is, they return
+    log-densities and their corresponding derivatives.
+    Internally, values are multiplied by -1, since pyPESTO expects the
+    Objective function to be of a negative log-density type.
     """
 
     def __init__(self,
@@ -46,10 +51,6 @@ class NegativeLogParameterPriors(ObjectiveBase):
 
         self.prior_list = prior_list
         super().__init__(x_names)
-
-    def __deepcopy__(self, memodict={}):
-        other = NegativeLogParameterPriors(deepcopy(self.prior_list))
-        return other
 
     def call_unprocessed(
             self,
@@ -216,7 +217,7 @@ def _prior_densities(prior_type: str,
     """
     Returns a tuple of Callables of the (log-)density (in untransformed =
     linear scale), together with their first + second derivative
-    (= senisis) w.r.t. x.
+    (= sensis) w.r.t. x.
 
 
     Currently the following distributions are supported:
