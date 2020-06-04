@@ -1,8 +1,9 @@
 import h5py
+import os.path
 from ..result import Result
 from ..optimize.result import OptimizerResult
 from ..problem import Problem
-from ..objective import Objective
+from ..objective import Objective, History
 
 
 def read_hdf5_optimization(f: h5py.File,
@@ -11,7 +12,7 @@ def read_hdf5_optimization(f: h5py.File,
     Read HDF5 results per start.
 
     Parameters
-    -------------
+    ----------
     f:
         The HDF5 result file
     opt_id:
@@ -21,7 +22,13 @@ def read_hdf5_optimization(f: h5py.File,
     result = OptimizerResult()
 
     for optimization_key in result.keys():
-        if optimization_key in f[f'/optimization/results/{opt_id}']:
+        if optimization_key is 'history':
+            if f[f'/optimization/results/{opt_id}'].attrs['history']:
+                history_path = os.path.abspath(
+                    f[f'/optimization/results/{opt_id}'].attrs['history'])
+                result[optimization_key] = History.load(opt_id, history_path)
+
+        elif optimization_key in f[f'/optimization/results/{opt_id}']:
             result[optimization_key] = \
                 f[f'/optimization/results/{opt_id}/{optimization_key}'][:]
         elif optimization_key in \

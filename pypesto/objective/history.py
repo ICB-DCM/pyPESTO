@@ -5,6 +5,7 @@ import copy
 import time
 import os
 import abc
+import warnings
 from typing import Any, Dict, Iterable, List, Optional, Tuple, Sequence, Union
 
 from .constants import (
@@ -174,6 +175,16 @@ class HistoryBase(abc.ABC):
     def finalize(self):
         """Finalize history. Called after a run."""
 
+    def get_history_directory(self):
+        """Returns directory, where the History is stored."""
+        raise NotImplementedError()
+
+    @staticmethod
+    def load(id: str,
+             file: str):
+        """Loads the History object from memory."""
+        raise NotImplementedError()
+
     @property
     def n_fval(self) -> int:
         """Number of function evaluations."""
@@ -289,6 +300,11 @@ class History(HistoryBase):
     def finalize(self):
         pass
 
+    def get_history_directory(self):
+        warnings.warn('Saving History objects is currently only supported for'
+                      'Hdf5History and CsvHistory objects.')
+        return None
+
     def _update_counts(self,
                        sensi_orders: Tuple[int, ...],
                        mode: str):
@@ -307,6 +323,23 @@ class History(HistoryBase):
                 self._n_res += 1
             if 1 in sensi_orders:
                 self._n_sres += 1
+
+    @staticmethod
+    def load(id: str,
+             file: str):
+        """Loads the History object from memory."""
+
+        _, type = os.path.splitext(file)
+
+        if type == '.csv':
+            return CsvHistory(file=file)
+        elif type == '.hdf5':
+            print('hoho')
+            return Hdf5History(id=id, file=file)
+        else:
+            raise ValueError(
+                "Currently only history storage to '.csv' and '.hdf5'"
+                "is supported")
 
     @property
     def n_fval(self) -> int:
@@ -358,6 +391,13 @@ class MemoryHistory(History):
         super().update(x, sensi_orders, mode, result)
         self._update_trace(x, sensi_orders, mode, result)
 
+    def get_history_directory(self):
+        warnings.warn('Saving History objects is currently only supported for'
+                      'Hdf5History and CsvHistory objects. Consider converting '
+                      'the MemoryHistory object to a Hdf5History object via '
+                      'the to_hdf5_history function.')
+        return None
+
     def to_hdf5_history(self,
                         file: str) -> 'Hdf5History':
         """
@@ -366,7 +406,9 @@ class MemoryHistory(History):
 
         h5history = Hdf5History(self.id,
                                 file,
-                                self.options)
+                                self.options.copy())
+
+        h5history.options.storage_file = file
 
         n_iterations = np.maximum(self.n_res, self.n_fval)
 
@@ -396,6 +438,12 @@ class MemoryHistory(History):
         used_time = time.time() - self._start_time
         self._trace[X].append(x)
         self._trace[TIME].append(used_time)
+
+    @staticmethod
+    def load(id: str,
+             file: str):
+        """Loads the History object from memory."""
+        raise NotImplementedError()
 
     def get_x_trace(self) -> Sequence[np.ndarray]:
         return self._trace[X]
@@ -461,6 +509,9 @@ class CsvHistory(History):
     ) -> None:
         super().update(x, sensi_orders, mode, result)
         self._update_trace(x, sensi_orders, mode, result)
+
+    def get_history_directory(self):
+        return self.file
 
     def finalize(self):
         """Finalize history. Called after a run."""
@@ -586,6 +637,12 @@ class CsvHistory(History):
                 )
             trace_copy.to_csv(self.file)
 
+    @staticmethod
+    def load(id: str,
+             file: str):
+        """Loads the History object from memory."""
+        raise NotImplementedError()
+
     def get_fval_trace(self) -> Sequence[float]:
         # TODO implement the other methods
         return self._trace[FVAL]
@@ -622,6 +679,20 @@ class Hdf5History(History):
     ) -> None:
         super().update(x, sensi_orders, mode, result)
         self._update_trace(x, sensi_orders, mode, result)
+
+    def get_history_directory(self):
+        return self.file
+
+    def finalize(self):
+        super().finalize()
+
+    @staticmethod
+    def load(id: str,
+             file: str):
+        """Loads the History object from memory."""
+
+        loaded_h5history = Hdf5History(id, file)
+        return loaded_h5history
 
     # overwrite _update_counts
     def _update_counts(self,
@@ -673,7 +744,7 @@ class Hdf5History(History):
     @property
     def n_sres(self) -> int:
         with h5py.File(self.file, 'a') as f:
-            return f[f'/optimization/results/{self.id}/trace/'].attrs['s_res']
+            return f[f'/optimization/results/{self.id}/trace/'].attrs['n_sres']
 
     def _update_trace(self,
                       x: np.ndarray,
@@ -716,9 +787,6 @@ class Hdf5History(History):
             f[f'/optimization/results/{self.id}/trace/'].attrs[
                 'n_iterations'] += 1
 
-    def finalize(self):
-        super().finalize()
-
     def _generate_hdf5_group(self):
         """
         Generates the group in the hdf5 file, if it does not exist yet.
@@ -727,9 +795,13 @@ class Hdf5History(History):
             if f'/optimization/results/{self.id}/trace/' not in f:
                     grp = f.create_group(f'/optimization/results/{self.id}/trace/')
                     grp.attrs['n_iterations'] = 0
+                    grp.attrs['n_fval'] = 0
+                    grp.attrs['n_grad'] = 0
+                    grp.attrs['n_hess'] = 0
+                    grp.attrs['n_res'] = 0
+                    grp.attrs['n_sres'] = 0
 
-    def _get_hdf5_entries(self,
-                          entry_id: str) -> Sequence:
+    def _get_hdf5_entries(self, entry_id: str) -> Sequence:
         """
         returns the entries for the key entry_id.
         """

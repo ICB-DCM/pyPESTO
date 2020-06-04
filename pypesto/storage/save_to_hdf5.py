@@ -1,7 +1,10 @@
 import h5py
 import numpy as np
+import os.path
+import warnings
 from .hdf5 import write_string_array, write_int_array, write_float_array
 from ..result import Result
+from ..objective.history import HistoryBase
 
 
 class ProblemHDF5Writer:
@@ -88,7 +91,9 @@ class OptimizationResultHDF5Writer:
         Write HDF5 result file from pyPESTO result object.
         """
         with h5py.File(self.storage_filename, "a") as f:
+
             if "optimization" in f:
+
                 if overwrite:
                     del f["optimization"]
                 else:
@@ -96,16 +101,26 @@ class OptimizationResultHDF5Writer:
                                     "information about optimization result."
                                     "If you wish to overwrite the file set"
                                     "overwrite=True.")
+
             optimization_grp = f.create_group("optimization")
-            # settings =
-            # optimization_grp.create_dataset("settings", settings, dtype=)
             results_grp = optimization_grp.create_group("results")
+
             for i, start in enumerate(result.optimize_result.list):
+
                 start_grp = results_grp.create_group(str(i))
-                start['history'] = None  # TOOD temporary fix
-                for key in start.keys():
+
+                for key in start.keys() - {'history'}:
+
                     if isinstance(start[key], np.ndarray):
                         write_float_array(start_grp, key, start[key])
                     elif start[key] is not None:
                         start_grp.attrs[key] = start[key]
+
+                # save history object
+                # if isinstance(start['history'], HistoryBase):
+                if start['history'] is not None:
+                    start_grp.attrs['history'] = \
+                        os.path.relpath(start['history'].get_history_directory(),
+                                        start=self.storage_filename)
+
                 f.flush()
