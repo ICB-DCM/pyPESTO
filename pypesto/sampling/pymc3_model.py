@@ -1,4 +1,4 @@
-from typing import Union
+from typing import Union, Tuple
 import numpy as np
 
 import pymc3 as pm
@@ -13,8 +13,9 @@ from .theano import TheanoLogProbability, CachedObjective
 def create_pymc3_model(problem: Problem,
                        testval: Union[np.ndarray, None] = None,
                        beta: float = 1., *,
+                       support: Union[Tuple[np.ndarray, np.ndarray], None]=None,
                        cache_gradients: bool = True,
-                       vectorize: bool = False,
+                       vectorize: bool = True,
                        lerp: str = 'convex',
                        verbose: bool = False):
         # Extract the names of the free parameters
@@ -24,6 +25,20 @@ def create_pymc3_model(problem: Problem,
         if len(x_free_names) == 0:
             raise Exception('Cannot sample: no free parameters')
         elif len(x_free_names) == 1:
+            vectorize = False
+
+        # Overwrite lower and upper bounds
+        if support is not None:
+            lb, ub = support
+            if len(lb) != len(x_free_names) or len(ub) != len(x_free_names):
+                raise ValueError('length of lower/upper bounds '
+                                 'must be equal to number of free parameters')
+        else:
+            lb, ub = problem.lb, problem.ub
+
+        # Disable vectorize if there are non-finite bounds
+        # TODO implement vectorize for this case too
+        if np.isinf(lb).any() or np.isinf(ub).any():
             vectorize = False
 
         with pm.Model() as model:
@@ -146,6 +161,8 @@ def BetterUniform(name, *, lower, upper, lerp='convex', **kwargs):
     (which has log-posterior 0) and removing the term `log(ub - lb)` from
     the interval transformation jacobian.
     """
+    lower, upper = np.asarray(lower), np.asarray(upper)
+
     if 'shape' not in kwargs.keys():
         # Derive the shape of the random variable by broadcast
         if 'testval' in kwargs.keys():
@@ -159,16 +176,37 @@ def BetterUniform(name, *, lower, upper, lerp='convex', **kwargs):
         raise Exception('if specifying a custom transform, ' \
                         'please use pymc3.Uniform')
 
-    BoundedFlat = pm.Bound(pm.Flat, lower=lower, upper=upper)
+    # Check bounds ordering
+    if not (lower <= upper).all():
+        raise ValueError('each lower bound should be smaller than '
+                         'the corresponding upper bound')
 
-    transform = BetterInterval(lower, upper, lerp, scalar=scalar)
-
-    return BoundedFlat(name, transform=transform, **kwargs)
-
-    # In the case we start from pm.Uniform,
-    # we need to comment the jacobian out of BetterInterval
-    # transform = BetterInterval(lower, upper, lerp, scalar=scalar)
-    # return pm.Uniform(name, lower=lower, upper=upper, transform=transform, **kwargs)
+    # Depending on the bounds, choose the transformation
+    if np.isfinite(lower).all() and np.isfinite(upper).all():
+        BoundedFlat = pm.Bound(pm.Flat, lower=lower, upper=upper)
+        transform = BetterInterval(lower, upper, lerp, scalar=scalar)
+        return BoundedFlat(name, transform=transform, **kwargs)
+        # In the case we start from pm.Uniform,
+        # we need to comment the jacobian out of BetterInterval
+        # transform = BetterInterval(lower, upper, lerp, scalar=scalar)
+        # return pm.Uniform(name, lower=lower, upper=upper, transform=transform, **kwargs)
+    elif shape == ():
+        if lower == -np.inf:
+            if upper == np.inf:
+                return pm.Flat(name, **kwargs)
+            else:
+                BoundedFlat = pm.Bound(pm.Flat, upper=upper)
+                return BoundedFlat(name, **kwargs)
+        else:
+            assert upper == np.inf
+            if lower == 0:
+                return pm.HalfFlat(name, **kwargs)
+            else:
+                BoundedFlat = pm.Bound(pm.Flat, lower=lower)
+                return BoundedFlat(name, **kwargs)
+    else:
+        raise NotImplementedError('in the non-scalar case, unbounded supports '
+                                  'have not been implemented yet.')
 
 
 class BetterInterval(pm.distributions.transforms.Interval):
