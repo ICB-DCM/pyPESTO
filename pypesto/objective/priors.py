@@ -33,8 +33,9 @@ class NegativeLogParameterPriors(ObjectiveBase):
     'density_dx': [Callable], 'density_ddx': [Callable]}
 
 
-    Note:
+    Notes
     -----
+
     All callables should correspond to (log)densities and are internally
     multiplied by -1, since pyPESTO performs minimization...
     """
