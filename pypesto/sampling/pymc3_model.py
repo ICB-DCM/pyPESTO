@@ -29,16 +29,16 @@ def create_pymc3_model(problem: Problem,
 
         # Overwrite lower and upper bounds
         if support is not None:
-            lb, ub = support
-            if len(lb) != len(x_free_names) or len(ub) != len(x_free_names):
+            lbs, ubs = support
+            if len(lbs) != len(x_free_names) or len(ubs) != len(x_free_names):
                 raise ValueError('length of lower/upper bounds '
                                  'must be equal to number of free parameters')
         else:
-            lb, ub = problem.lb, problem.ub
+            lbs, ubs = problem.lb, problem.ub
 
         # Disable vectorize if there are non-finite bounds
         # TODO implement vectorize for this case too
-        if np.isinf(lb).any() or np.isinf(ub).any():
+        if np.isinf(lbs).any() or np.isinf(ubs).any():
             vectorize = False
 
         with pm.Model() as model:
@@ -60,7 +60,7 @@ def create_pymc3_model(problem: Problem,
             # see issue #365 at https://github.com/ICB-DCM/pyPESTO/issues/365
             if testval is not None:
                 for i in range(len(x_free_names)):
-                    lb, ub = problem.lb[i], problem.ub[i]
+                    lb, ub = lbs[i], ubs[i]
                     x = testval[i]
                     if lb < x < ub:
                         # Inside bounds, OK
@@ -81,20 +81,19 @@ def create_pymc3_model(problem: Problem,
             if vectorize:
                 if testval is None:
                     theta = BetterUniform(pymc3_vector_parname(problem),
-                                          lerp=lerp,
-                                          lower=problem.lb, upper=problem.ub)
+                                          lerp=lerp, lower=lbs, upper=ubs)
                 else:
                     theta = BetterUniform(pymc3_vector_parname(problem),
                                           lerp=lerp, testval=testval,
-                                          lower=problem.lb, upper=problem.ub)
+                                          lower=lbs, upper=ubs)
             elif testval is None:
                 k = [BetterUniform(x_name, lower=lb, upper=ub, lerp=lerp)
                          for x_name, lb, ub in
-                         zip(x_free_names, problem.lb, problem.ub)]
+                         zip(x_free_names, lbs, ubs)]
             else:
                 k = [BetterUniform(x_name, testval=x, lower=lb, upper=ub, lerp=lerp)
                          for x_name, x, lb, ub in
-                         zip(x_free_names, testval, problem.lb, problem.ub)]
+                         zip(x_free_names, testval, lbs, ubs)]
 
             # Convert to tensor vector
             if not vectorize:
