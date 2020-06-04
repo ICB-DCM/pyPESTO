@@ -116,9 +116,9 @@ def create_profile_result():
     tmp_result_2 = pypesto.ProfilerResult(x_path_2, fval_path_2, ratio_path_2)
 
     # use pypesto function to write the numeric values into the results
-    result.profile_result.create_new_profile_list()
-    result.profile_result.create_new_profile(tmp_result_1)
-    result.profile_result.create_new_profile(tmp_result_2)
+    result.profile_result.append_empty_profile_list()
+    result.profile_result.append_profiler_result(tmp_result_1)
+    result.profile_result.append_profiler_result(tmp_result_2)
 
     return result
 
@@ -337,6 +337,15 @@ def test_profile_lowlevel():
     fvals = np.array([[2., 2.1, 2.3, 2.5, 2.7, 2.9, 3.],
                       [0.15, 0.25, 0.7, 1., 0.8, 0.35, 0.15]])
     pypesto.visualize.profile_lowlevel(fvals=fvals)
+
+
+@close_fig
+def test_profile_cis():
+    """Test the profile approximate confidence interval visualization."""
+    result = create_profile_result()
+    pypesto.visualize.profile_cis(result, confidence_level=0.99)
+    pypesto.visualize.profile_cis(
+        result, show_bounds=True, profile_indices=[0])
 
 
 @close_fig
