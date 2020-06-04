@@ -53,8 +53,8 @@ class NegativeLogParameterPriors(ObjectiveBase):
         super().__init__(x_names)
 
     def __deepcopy__(self, memodict={}):
-         other = NegativeLogParameterPriors(deepcopy(self.prior_list))
-         return other
+        other = NegativeLogParameterPriors(deepcopy(self.prior_list))
+        return other
 
     def call_unprocessed(
             self,
