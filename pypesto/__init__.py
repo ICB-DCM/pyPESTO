@@ -34,6 +34,7 @@ from .optimize import (
     OptimizerResult,
     Optimizer,
     ScipyOptimizer,
+    IpoptOptimizer,
     DlibOptimizer,
     PyswarmOptimizer)
 from .profile import (
