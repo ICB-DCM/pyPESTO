@@ -1,12 +1,12 @@
 import numpy as np
-from typing import Callable, Dict, List, Sequence, Tuple, Union
+from typing import Callable, Dict, List, Sequence, Tuple
 from copy import deepcopy
 
 from .function import ObjectiveBase
 from .aggregated import AggregatedObjective
 from .constants import MODE_FUN, MODE_RES, FVAL, GRAD, HESS
 
-ResultDict = Dict[str, Union[float, np.ndarray, Dict]]
+from .base import ResultDict
 
 
 class NegLogPriors(AggregatedObjective):
@@ -21,12 +21,12 @@ class NegLogPriors(AggregatedObjective):
     """
 
 
-class NegativeLogParameterPriors(ObjectiveBase):
+class NegLogParameterPriors(ObjectiveBase):
     """
     This class implements Negative Log Priors on Parameters.
 
     Contains a list of prior dictionaries for the individual parameters
-    of the format format
+    of the format
 
     {'index': [int],
     'density_fun': [Callable],
@@ -48,12 +48,25 @@ class NegativeLogParameterPriors(ObjectiveBase):
     def __init__(self,
                  prior_list: List[Dict],
                  x_names: Sequence[str] = None):
+        """
+        Constructor
+
+        Parameters
+        ----------
+
+        prior_list:
+            List of dicts containing the individual parameter priors.
+            Format see above.
+
+        x_names:
+            Sequence of parameter names (optional).
+        """
 
         self.prior_list = prior_list
         super().__init__(x_names)
 
     def __deepcopy__(self, memodict={}):
-        other = NegativeLogParameterPriors(deepcopy(self.prior_list))
+        other = NegLogParameterPriors(deepcopy(self.prior_list))
         return other
 
     def call_unprocessed(
@@ -67,11 +80,11 @@ class NegativeLogParameterPriors(ObjectiveBase):
 
         for order in sensi_orders:
             if order == 0:
-                res[FVAL] = self.density_for_full_parameter_vector(x)
+                res[FVAL] = self.neg_log_density(x)
             elif order == 1:
-                res[GRAD] = self.gradient_for_full_parameter_vector(x)
+                res[GRAD] = self.gradient_neg_log_density(x)
             elif order == 2:
-                res[HESS] = self.hessian_for_full_parameter_vector(x)
+                res[HESS] = self.hessian_neg_log_density(x)
             else:
                 ValueError(f'Invalid sensi order {order}.')
 
@@ -94,16 +107,22 @@ class NegativeLogParameterPriors(ObjectiveBase):
             ValueError(f'Invalid input: Expected mode {MODE_FUN} or'
                        f' {MODE_RES}, received {mode} instead.')
 
-    def density_for_full_parameter_vector(self, x):
-
+    def neg_log_density(self, x):
+        """
+        Computes the negative log-density for a parameter
+        vector x.
+        """
         density_val = 0
         for prior in self.prior_list:
             density_val -= prior['density_fun'](x[prior['index']])
 
         return density_val
 
-    def gradient_for_full_parameter_vector(self, x):
-
+    def gradient_neg_log_density(self, x):
+        """
+        Computes the gradient of the negative log-density for a parameter
+        vector x.
+        """
         grad = np.zeros_like(x)
 
         for prior in self.prior_list:
@@ -111,8 +130,11 @@ class NegativeLogParameterPriors(ObjectiveBase):
 
         return grad
 
-    def hessian_for_full_parameter_vector(self, x):
-
+    def hessian_neg_log_density(self, x):
+        """
+        Computes the hessian of the negative log-density for a parameter
+        vector x.
+        """
         hessian = np.zeros((len(x), len(x)))
 
         for prior in self.prior_list:
@@ -121,8 +143,11 @@ class NegativeLogParameterPriors(ObjectiveBase):
 
         return hessian
 
-    def hessian_vp_for_full_parameter_vector(self, x, p):
-
+    def hessian_vp_neg_log_density(self, x, p):
+        """
+        Computes the hessian vector product of the hessian of the
+        negative log-density for a parameter vector x with a vector p.
+        """
         h_dot_p = np.zeros_like(p)
 
         for prior in self.prior_list:
@@ -323,7 +348,7 @@ def _prior_densities(prior_type: str,
         raise NotImplementedError
     else:
         ValueError(f'NegLogPriors of type {prior_type} are currently '
-                   f'not supported')
+                   'not supported')
 
 
 def _get_linear_function(slope: float,

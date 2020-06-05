@@ -10,7 +10,7 @@ from typing import List, Sequence, Union
 
 from ..problem import Problem
 from ..objective import AmiciObjective, AmiciObjectBuilder, AggregatedObjective
-from ..objective.priors import NegativeLogParameterPriors, \
+from ..objective.priors import NegLogParameterPriors, \
     get_parameter_prior_dict
 
 try:
@@ -269,7 +269,7 @@ class PetabImporter(AmiciObjectBuilder):
 
         return obj
 
-    def create_prior(self) -> NegativeLogParameterPriors:
+    def create_prior(self) -> NegLogParameterPriors:
         """
         Creates a prior from the parameter table. Returns None, if no priors
         are defined.
@@ -304,7 +304,7 @@ class PetabImporter(AmiciObjectBuilder):
                                                  scale))
 
         if len(prior_list):
-            return NegativeLogParameterPriors(prior_list)
+            return NegLogParameterPriors(prior_list)
         else:
             return None
 

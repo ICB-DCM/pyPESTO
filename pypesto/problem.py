@@ -175,6 +175,8 @@ class Problem:
             raise AssertionError("lb_full dimension invalid.")
         if self.ub_full.size != self.dim_full:
             raise AssertionError("ub_full dimension invalid.")
+        if self.x_scales.size != self.dim_full:
+            raise AssertionError("x_scales dimension invalid.")
         if check_x_guesses:
             if self.x_guesses.shape[1] != self.dim:
                 raise AssertionError("x_guesses form invalid.")
