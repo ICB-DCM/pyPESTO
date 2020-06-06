@@ -334,9 +334,9 @@ class PetabImporter(AmiciObjectBuilder):
         if prior is not None:
             objective = AggregatedObjective([objective, prior])
 
-        x_scales = [self.petab_problem.parameter_df.loc[x_id,
-                                                        petab.PARAMETER_SCALE]
-                    for x_id in self.petab_problem.x_ids]
+        x_scales = \
+            [self.petab_problem.parameter_df.loc[x_id, petab.PARAMETER_SCALE]
+                for x_id in self.petab_problem.x_ids]
 
         problem = Problem(
             objective=objective,
