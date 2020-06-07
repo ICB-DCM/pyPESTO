@@ -11,7 +11,7 @@ import pytest
 import numpy as np
 from test.petab_util import folder_base
 
-ATOL = 1e-1
+ATOL = 1e-2
 RTOL = 1e-1
 
 
