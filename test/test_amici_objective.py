@@ -11,8 +11,11 @@ import pytest
 import numpy as np
 from test.petab_util import folder_base
 
-ATOL = 1e-2
-RTOL = 1e-2
+ATOL = 1e-3
+RTOL = 1e-3
+
+# this test can safely be seeded
+np.random.seed(0)
 
 
 def test_add_sim_grad_to_opt_grad():
