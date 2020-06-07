@@ -114,10 +114,9 @@ class PetabImporter(AmiciObjectBuilder):
         the model.
         """
         # load moduĺe
-        model_module = importlib.import_module(self.model_name)
-
-        # import model
-        model = model_module.getModel()
+        module = amici.import_model_module(module_name=self.model_name,
+                                           module_path=self.output_folder)
+        model = module.getModel()
 
         return model
 
