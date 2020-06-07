@@ -11,8 +11,8 @@ import pytest
 import numpy as np
 from test.petab_util import folder_base
 
-ATOL = 1e-3
-RTOL = 1e-3
+ATOL = 1e-1
+RTOL = 1e-1
 
 
 def test_add_sim_grad_to_opt_grad():
@@ -66,9 +66,6 @@ def test_preeq_guesses():
     that steadystate guesses are written and checks that gradient is still
     correct with guesses set.
     """
-    # this test can safely be seeded
-    np.random.seed(0)
-
     petab_problem = petab.Problem.from_yaml(
         folder_base + "Zheng_PNAS2012/Zheng_PNAS2012.yaml")
     petab_problem.model_name = "Zheng_PNAS2012"
