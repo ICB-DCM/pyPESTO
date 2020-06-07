@@ -21,8 +21,14 @@ class AggregatedObjective(ObjectiveBase):
 
         Parameters
         ----------
+
         objectives:
             Sequence of pypesto.ObjectiveBase instances
+
+        x_names:
+            Sequence of names of the (optimized) parameters.
+            (Details see documentation of x_names in
+            :class:`pypesto.ObjectiveBase`)
         """
         # input typechecks
         if not isinstance(objectives, Sequence):
