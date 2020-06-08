@@ -17,7 +17,6 @@ from .objective import (
     OptimizerHistory,
     AmiciObjective,
     Objective,
-    NegLogPriors,
     ObjectiveBase)
 from .problem import Problem
 from .petab import (
