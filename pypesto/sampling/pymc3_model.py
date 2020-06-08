@@ -289,7 +289,7 @@ class BetterInterval(pm.distributions.transforms.Interval):
                              'jitter_scale cannot be given')
 
         if not is_pymc3_version_newer_than_3_8():
-            self._alpha = BetterInterval.compute_alpha(self._a, self._b,
+            self._alpha = BetterInterval.compute_alpha(self.a_, self.b_,
                                                        testval, jitter_scale)
 
         self.alpha = BetterInterval.compute_alpha(self.a, self.b,
