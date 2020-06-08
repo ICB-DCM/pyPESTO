@@ -1,4 +1,4 @@
-from typing import Union, Tuple, List
+from typing import Union, Tuple, List, Optional
 import numpy as np
 
 import pymc3 as pm
@@ -11,13 +11,19 @@ from .theano import TheanoLogProbability, CachedObjective
 
 
 def create_pymc3_model(problem: Problem,
-                       testval: Union[np.ndarray, None] = None,
+                       testval: Optional[np.ndarray] = None,
                        beta: float = 1., *,
-                       support: Union[Tuple[np.ndarray, np.ndarray], None]=None,
+                       support: Optional[Tuple[np.ndarray, np.ndarray]] = None,
+                       jitter_scales: Optional[np.ndarray] = None,
                        cache_gradients: bool = True,
                        vectorize: bool = True,
-                       lerp: str = 'convex',
+                       lerp_method: str = 'convex',
                        verbose: bool = False):
+        # Check consistency of arguments
+        if jitter_scales is not None and testval is None:
+            raise ValueError('if testval is not given, '
+                             'jitter_scales cannot be given')
+
         # Extract the names of the free parameters
         x_names = [problem.x_names[i] for i in problem.x_free_indices]
         assert len(x_names) == problem.dim
@@ -82,19 +88,30 @@ def create_pymc3_model(problem: Problem,
             if vectorize:
                 if testval is None:
                     theta = BetterUniform(pymc3_vector_parname(x_names),
-                                          lerp=lerp, lower=lbs, upper=ubs)
+                                          lower=lbs, upper=ubs,
+                                          lerp_method=lerp_method)
                 else:
                     theta = BetterUniform(pymc3_vector_parname(x_names),
-                                          lerp=lerp, testval=testval,
-                                          lower=lbs, upper=ubs)
+                                          lower=lbs, upper=ubs,
+                                          testval=testval,
+                                          jitter_scale=jitter_scales,
+                                          lerp_method=lerp_method)
             elif testval is None:
-                k = [BetterUniform(x_name, lower=lb, upper=ub, lerp=lerp)
+                k = [BetterUniform(x_name, lower=lb, upper=ub,
+                                   lerp_method=lerp_method)
                          for x_name, lb, ub in
                          zip(x_names, lbs, ubs)]
-            else:
-                k = [BetterUniform(x_name, testval=x, lower=lb, upper=ub, lerp=lerp)
+            elif jitter_scales is None:
+                k = [BetterUniform(x_name, lower=lb, upper=ub, testval=x,
+                                   lerp_method=lerp_method)
                          for x_name, x, lb, ub in
                          zip(x_names, testval, lbs, ubs)]
+            else:
+                k = [BetterUniform(x_name, lower=lb, upper=ub, testval=x,
+                                   jitter_scale=jitter_scale,
+                                   lerp_method=lerp_method)
+                         for x_name, x, lb, ub, jitter_scale in
+                         zip(x_names, testval, lbs, ubs, jitter_scales)]
 
             # Convert to tensor vector
             if not vectorize:
@@ -160,7 +177,8 @@ def pymc3_to_arviz(model: pm.Model, trace: pm.backends.base.MultiTrace,
     )
 
 
-def BetterUniform(name, *, lower, upper, lerp='convex', **kwargs):
+def BetterUniform(name, *, lower, upper, jitter_scale=None,
+                  lerp_method='convex', **kwargs):
     """
     A uniform bounded random variable whose behaviour near the boundary of
     the domain is better than the native `pymc3.Uniform`.
@@ -194,6 +212,10 @@ def BetterUniform(name, *, lower, upper, lerp='convex', **kwargs):
         raise Exception('if specifying a custom transform, ' \
                         'please use pymc3.Uniform')
 
+    if jitter_scale is not None and kwargs.get('testval', None) is None:
+            raise ValueError('if testval is not given, '
+                             'jitter_scale cannot be given')
+
     # Check bounds ordering
     if not (lower <= upper).all():
         raise ValueError('each lower bound should be smaller than '
@@ -202,12 +224,20 @@ def BetterUniform(name, *, lower, upper, lerp='convex', **kwargs):
     # Depending on the bounds, choose the transformation
     if np.isfinite(lower).all() and np.isfinite(upper).all():
         BoundedFlat = pm.Bound(pm.Flat, lower=lower, upper=upper)
-        transform = BetterInterval(lower, upper, lerp, scalar=scalar)
+        transform = BetterInterval(lower, upper,
+                                   testval=kwargs.get('testval', None),
+                                   jitter_scale=jitter_scale,
+                                   lerp_method=lerp_method, scalar=scalar)
         return BoundedFlat(name, transform=transform, **kwargs)
         # In the case we start from pm.Uniform,
         # we need to comment the jacobian out of BetterInterval
-        # transform = BetterInterval(lower, upper, lerp, scalar=scalar)
-        # return pm.Uniform(name, lower=lower, upper=upper, transform=transform, **kwargs)
+        # transform = BetterInterval(lower, upper,
+        #                            lerp_method=lerp_method, scalar=scalar)
+        # return pm.Uniform(name, lower=lower, upper=upper,
+        #                   transform=transform, **kwargs)
+    elif jitter_scale is not None:
+        raise NotImplementedError('jitter_scale for unbounded supports '
+                                  'has not been implemented yet.')
     elif shape == ():
         if lower == -np.inf:
             if upper == np.inf:
@@ -226,10 +256,14 @@ def BetterUniform(name, *, lower, upper, lerp='convex', **kwargs):
         raise NotImplementedError('in the non-scalar case, unbounded supports '
                                   'have not been implemented yet.')
 
+def is_pymc3_version_newer_than_3_8():
+    return hasattr(pm.parallel_sampling, 'progress_bar')
 
 class BetterInterval(pm.distributions.transforms.Interval):
     name = "betterinterval"
-    def __init__(self, a, b, lerp, *, scalar=True):
+    def __init__(self, a, b, *,
+                 jitter_scale=None, testval=None,
+                 lerp_method='convex', scalar=True):
         super().__init__(a, b)
 
         scalar_bounds = np.shape(a) == () and np.shape(b) == ()
@@ -238,33 +272,89 @@ class BetterInterval(pm.distributions.transforms.Interval):
         if not scalar:
             allowed_lerp = ('convex', 'clipped', 'auto') if scalar_bounds \
                            else ('convex', 'clipped')
-            if lerp not in allowed_lerp:
-                raise NotImplementedError(f'lerp method {lerp} is unsupported' \
-                                           ' when using a vector of parameters')
+            if lerp_method not in allowed_lerp:
+                raise NotImplementedError(f'lerp method {lerp_method} is ' \
+                                           'unsupported when using a vector ' \
+                                           'of parameters')
 
-        if lerp == 'auto':
+        if lerp_method == 'auto':
             # Could possibly be improved by comparing orders of magnitude
             if (a <= 0 and b >= 0) or (a >= 0 and b <= 0):
-                lerp = 'convex'
+                lerp_method = 'convex'
             else:
-                lerp = 'clipped'
+                lerp_method = 'clipped'
 
-        self.lerp_method = lerp
+        if jitter_scale is not None and testval is None:
+            raise ValueError('if testval is not given, '
+                             'jitter_scale cannot be given')
+
+        if not is_pymc3_version_newer_than_3_8():
+            self._alpha = BetterInterval.compute_alpha(self._a, self._b,
+                                                       testval, jitter_scale)
+
+        self.alpha = BetterInterval.compute_alpha(self.a, self.b,
+                                                  testval, jitter_scale)
+
+        self.lerp_method = lerp_method
+
+    @staticmethod
+    def compute_alpha(a, b, testval, jitter_scale, alphamin=1e-6):
+        if jitter_scale is None:
+            return None
+        else:
+            if not isinstance(a, np.ndarray):
+                testval = tt.as_tensor_variable(testval)
+                jitter_scale = tt.as_tensor_variable(jitter_scale)
+            alpha = (testval - a) * (b - testval) / (jitter_scale * (b - a))
+            if alphamin > 0:
+                # NB if testval is very close to the boundary,
+                #    alpha may become very small, which can lead
+                #    to -inf log-probabilities or tuning problems.
+                #    For this reason it is best to choose a sensible lower limit
+                #    TODO which lower limit is sensible?
+                if isinstance(a, np.ndarray):
+                    return np.maximum(alpha, alphamin)
+                else:
+                    alphamin = tt.as_tensor_variable(alphamin)
+                    return tt.maximum(alpha, alphamin)
+            else:
+                return alpha
+
+    def forward(self, x):
+        y = super().forward(x)
+        return y if self.alpha is None else self.alpha * y
+
+    def forward_val(self, x, point=None):
+        y = super().forward_val(x, point)
+        if self._alpha is None:
+            return y
+        else:
+            return np.multiply(self._alpha, y, dtype=y.dtype)
 
     def backward(self, x):
         a, b = self.a, self.b
+        if self.alpha is not None:
+            x = x / self.alpha
         f = tt.nnet.sigmoid(x)
         return self.lerp(f, a, b)
 
-    if pm.__version__ == '3.8':
+    if not is_pymc3_version_newer_than_3_8():
         def backward_val(self, x):
             a, b = self.a_, self.b_
+            if self._alpha is not None:
+                x = np.asarray(x)
+                x = np.divide(x, self._alpha, dtype=x.dtype)
             f = 1 / (1 + np.exp(-x))
             return self.lerp(f, a, b)
 
     def jacobian_det(self, x):
+        if self.alpha is not None:
+            x = x / self.alpha
         s = tt.nnet.softplus(-x)
-        return -2 * s - x
+        J = -2 * s - x
+        if self.alpha is not None:
+            J = J - tt.log(self.alpha)
+        return J
 
     def lerp(self, f, a, b):
         if self.lerp_method == 'convex':
