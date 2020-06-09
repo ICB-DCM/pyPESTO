@@ -57,17 +57,17 @@ class McmcPtResult(dict):
                 or trace_x.shape[1] != trace_neglogpost.shape[1]:
             raise ValueError("Trace dimensions do not match:"
                              f"trace_x.shape={trace_x.shape},"
-                             f"trace_neglogpost.shape={trace_neglogpost.shape}")
+                             f"trace_neglogpost.shape={trace_neglogpost.shape}") # noqa
         if trace_x.shape[0] != trace_neglogprior.shape[0] \
                 or trace_x.shape[1] != trace_neglogprior.shape[1]:
             raise ValueError("Trace dimensions do not match:"
                              f"trace_x.shape={trace_x.shape},"
-                             f"trace_neglogprior.shape={trace_neglogprior.shape}")
+                             f"trace_neglogprior.shape={trace_neglogprior.shape}") # noqa
         if trace_neglogpost.shape[0] != trace_neglogprior.shape[0] \
                 or trace_neglogpost.shape[1] != trace_neglogprior.shape[1]:
             raise ValueError("Trace dimensions do not match:"
-                             f"trace_neglogpost.shape={trace_neglogpost.shape},"
-                             f"trace_neglogprior.shape={trace_neglogprior.shape}")
+                             f"trace_neglogpost.shape={trace_neglogpost.shape}," # noqa
+                             f"trace_neglogprior.shape={trace_neglogprior.shape}") # noqa
 
     def __getattr__(self, key):
         try:

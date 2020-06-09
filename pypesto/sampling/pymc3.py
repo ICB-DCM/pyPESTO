@@ -106,7 +106,8 @@ class Pymc3Sampler(Sampler):
         # TODO this is only the negative objective values
         trace_neglogpost = np.asarray(self.data.log_likelihood.to_array())
         # remove trailing dimensions
-        trace_neglogpost = np.reshape(trace_neglogpost, trace_neglogpost.shape[1:-1])
+        trace_neglogpost = np.reshape(trace_neglogpost,
+                                      trace_neglogpost.shape[1:-1])
         # flip sign
         trace_neglogpost = - trace_neglogpost
 

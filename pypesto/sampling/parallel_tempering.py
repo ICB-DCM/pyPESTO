@@ -65,12 +65,13 @@ class ParallelTemperingSampler(Sampler):
             self, n_samples: int, beta: float = 1.,
             temper_lpost: bool = False):
         # loop over iterations
-        for i_sample in tqdm(range(int(n_samples))): # TODO test
+        for i_sample in tqdm(range(int(n_samples))):  # TODO test
             # sample
             for sampler, beta, temper_lpost in zip(self.samplers,
                                                    self.betas,
                                                    self.temper_lpost):
-                sampler.sample(n_samples=1, beta=beta, temper_lpost=temper_lpost)
+                sampler.sample(n_samples=1, beta=beta,
+                               temper_lpost=temper_lpost)
 
             # swap samples
             swapped = self.swap_samples()
@@ -82,8 +83,10 @@ class ParallelTemperingSampler(Sampler):
         """Concatenate all chains."""
         results = [sampler.get_samples() for sampler in self.samplers]
         trace_x = np.array([result.trace_x[0] for result in results])
-        trace_neglogpost = np.array([result.trace_neglogpost[0] for result in results])
-        trace_neglogprior = np.array([result.trace_neglogprior[0] for result in results])
+        trace_neglogpost = np.array([result.trace_neglogpost[0]
+                                     for result in results])
+        trace_neglogprior = np.array([result.trace_neglogprior[0]
+                                      for result in results])
         return McmcPtResult(
             trace_x=trace_x,
             trace_neglogpost=trace_neglogpost,
