@@ -119,5 +119,6 @@ class Pymc3Sampler(Sampler):
         return McmcPtResult(
             trace_x=np.array(trace_x),
             trace_neglogpost=np.array(trace_neglogpost),
+            trace_neglogprior=np.full(trace_neglogpost.shape, np.nan),
             betas=np.array([1.] * trace_x.shape[0]),
         )
