@@ -12,6 +12,8 @@ ub = 3 * np.ones(dim)
 def test_uniform():
     xs = pypesto.startpoint.uniform(n_starts=n_starts, lb=lb, ub=ub)
     assert xs.shape == (5, 2)
+    assert np.all(xs >= lb)
+    assert np.all(xs <= ub)
 
 
 def test_latin_hypercube():

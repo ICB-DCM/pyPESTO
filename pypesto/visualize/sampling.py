@@ -61,7 +61,10 @@ def sampling_fval_trace(
               's': 10}
     if full_trace:
         kwargs['hue'] = "converged"
-        kwargs['palette'] = ["#868686", "#477ccd"]
+        if len(params_fval[kwargs['hue']].unique()) == 1:
+            kwargs['palette'] = ["#477ccd"]
+        elif len(params_fval[kwargs['hue']].unique()) == 2:
+            kwargs['palette'] = ["#868686", "#477ccd"]
         kwargs['legend'] = False
 
     sns.scatterplot(x="iteration", y="logPosterior", data=params_fval,
@@ -151,7 +154,10 @@ def sampling_parameters_trace(
 
     if full_trace:
         kwargs['hue'] = "converged"
-        kwargs['palette'] = ["#868686", "#477ccd"]
+        if len(params_fval[kwargs['hue']].unique()) == 1:
+            kwargs['palette'] = ["#477ccd"]
+        elif len(params_fval[kwargs['hue']].unique()) == 2:
+            kwargs['palette'] = ["#868686", "#477ccd"]
         kwargs['legend'] = False
 
     if result.sample_result.burn_in is None:
@@ -345,8 +351,7 @@ def get_data_to_plot(
     theta_lb = result.problem.lb
     theta_ub = result.problem.ub
 
-    param_names = [result.problem.x_names[i]
-                       for i in result.problem.x_free_indices]
+    param_names = result.problem.x_names
 
     # transform ndarray to pandas for the use of seaborn
     pd_params = pd.DataFrame(arr_param, columns=param_names)
