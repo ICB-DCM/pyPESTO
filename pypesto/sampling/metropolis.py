@@ -34,7 +34,7 @@ class MetropolisSampler(InternalSampler):
         self.neglogpost = problem.objective
         self.neglogpost.history = History()
         if problem.x_priors is None:
-            self.neglogprior = lambda x: 0.
+            self.neglogprior = lambda x: -0.
         else:
             self.neglogprior = problem.x_priors
         self.trace_x = [x0]
@@ -77,11 +77,12 @@ class MetropolisSampler(InternalSampler):
         if any(x_new < self.problem.lb) or any(x_new > self.problem.ub):
             # will not be accepted
             lpost_new = - np.inf
-            lprior_new = - np.inf
         else:
-            # compute log posterior and log prior
+            # compute log posterior
             lpost_new = - self.neglogpost(x_new)
-            lprior_new = - self.neglogprior(x_new)
+
+        # compute log prior
+        lprior_new = - self.neglogprior(x_new)
 
         if not temper_lpost:
             # extract current log likelihood value

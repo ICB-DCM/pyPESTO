@@ -67,11 +67,9 @@ class ParallelTemperingSampler(Sampler):
         # loop over iterations
         for i_sample in tqdm(range(int(n_samples))):  # TODO test
             # sample
-            for sampler, beta, temper_lpost in zip(self.samplers,
-                                                   self.betas,
-                                                   self.temper_lpost):
+            for sampler, beta in zip(self.samplers, self.betas):
                 sampler.sample(n_samples=1, beta=beta,
-                               temper_lpost=temper_lpost)
+                               temper_lpost=self.temper_lpost)
 
             # swap samples
             swapped = self.swap_samples()
