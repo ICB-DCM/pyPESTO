@@ -89,13 +89,13 @@ class InternalSample:
     ----------
     x:
         Parameter values.
-    llh:
+    lpost:
         Log-likelihood or log-posterior value (negative function value).
     """
 
-    def __init__(self, x: np.ndarray, llh: float):
+    def __init__(self, x: np.ndarray, lpost: float):
         self.x = x
-        self.llh = llh
+        self.lpost = lpost
 
 
 class InternalSampler(Sampler):

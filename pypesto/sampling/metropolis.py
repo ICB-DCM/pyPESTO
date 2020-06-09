@@ -37,23 +37,23 @@ class MetropolisSampler(InternalSampler):
     def sample(self, n_samples: int, beta: float = 1.):
         # load last recorded particle
         x = self.trace_x[-1]
-        llh = - self.trace_neglogpost[-1]
+        lpost = - self.trace_neglogpost[-1]
 
         show_progress = self.options['show_progress']
 
         # loop over iterations
         for _ in tqdm(range(int(n_samples)), disable=not show_progress):
             # perform step
-            x, llh = self._perform_step(x, llh, beta)
+            x, lpost = self._perform_step(x, lpost, beta)
 
             # record step
             self.trace_x.append(x)
-            self.trace_neglogpost.append(-llh)
+            self.trace_neglogpost.append(-lpost)
 
     def make_internal(self):
         self.options['show_progress'] = False
 
-    def _perform_step(self, x: np.ndarray, llh: float, beta: float):
+    def _perform_step(self, x: np.ndarray, lpost: float, beta: float):
         """
         Perform a step: Propose new parameter, evaluate and check whether to
         accept.
@@ -64,13 +64,13 @@ class MetropolisSampler(InternalSampler):
         # check if step lies within bounds
         if any(x_new < self.problem.lb) or any(x_new > self.problem.ub):
             # will not be accepted
-            llh_new = - np.inf
+            lpost_new = - np.inf
         else:
             # compute function value
-            llh_new = - self.objective(x_new)
+            lpost_new = - self.objective(x_new)
 
         # log acceptance probability
-        log_p_acc = min(beta * (llh_new - llh), 0)
+        log_p_acc = min(beta * (lpost_new - lpost), 0)
 
         # flip a coin
         u = np.random.uniform(0, 1)
@@ -78,31 +78,31 @@ class MetropolisSampler(InternalSampler):
         if np.log(u) < log_p_acc:
             # update particle
             x = x_new
-            llh = llh_new
+            lpost = lpost_new
 
         # update proposal
-        self._update_proposal(x, llh, log_p_acc, len(self.trace_neglogpost)+1)
+        self._update_proposal(x, lpost, log_p_acc, len(self.trace_neglogpost)+1)
 
-        return x, llh
+        return x, lpost
 
     def _propose_parameter(self, x: np.ndarray):
         """Propose a step."""
         x_new: np.ndarray = x + self.options['std'] * np.random.randn(len(x))
         return x_new
 
-    def _update_proposal(self, x: np.ndarray, llh: float, log_p_acc: float,
+    def _update_proposal(self, x: np.ndarray, lpost: float, log_p_acc: float,
                          n_sample_cur: int):
         """Update the proposal density. Default: Do nothing."""
 
     def get_last_sample(self) -> InternalSample:
         return InternalSample(
             x=self.trace_x[-1],
-            llh=- self.trace_neglogpost[-1]
+            lpost=- self.trace_neglogpost[-1]
         )
 
     def set_last_sample(self, sample: InternalSample):
         self.trace_x[-1] = sample.x
-        self.trace_neglogpost[-1] = - sample.llh
+        self.trace_neglogpost[-1] = - sample.lpost
 
     def get_samples(self) -> McmcPtResult:
         result = McmcPtResult(

@@ -103,7 +103,7 @@ class ParallelTemperingSampler(Sampler):
             sample2 = sampler2.get_last_sample()
 
             # swapping probability
-            p_acc_swap = dbeta * (sample2.llh - sample1.llh)
+            p_acc_swap = dbeta * (sample2.lpost - sample1.lpost)
 
             # flip a coin
             u = np.random.uniform(0, 1)
