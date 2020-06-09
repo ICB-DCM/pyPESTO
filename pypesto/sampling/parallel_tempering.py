@@ -31,6 +31,8 @@ class ParallelTemperingSampler(Sampler):
         self.betas0 = np.array(betas)
         self.betas = None
 
+        self.temper_lpost = self.options['temper_log_posterior']
+
         self.samplers = [copy.deepcopy(internal_sampler)
                          for _ in range(len(self.betas0))]
         # configure internal samplers
@@ -42,6 +44,7 @@ class ParallelTemperingSampler(Sampler):
         return {
             'max_temp': 5e4,
             'exponent': 4,
+            'temper_log_posterior': False,
         }
 
     def initialize(self,
@@ -59,12 +62,15 @@ class ParallelTemperingSampler(Sampler):
         self.betas = self.betas0
 
     def sample(
-            self, n_samples: int, beta: float = 1.):
+            self, n_samples: int, beta: float = 1.,
+            temper_lpost: bool = False):
         # loop over iterations
-        for i_sample in tqdm(range(int(n_samples))):
+        for i_sample in tqdm(range(int(n_samples))): # TODO test
             # sample
-            for sampler, beta in zip(self.samplers, self.betas):
-                sampler.sample(n_samples=1, beta=beta)
+            for sampler, beta, temper_lpost in zip(self.samplers,
+                                                   self.betas,
+                                                   self.temper_lpost):
+                sampler.sample(n_samples=1, beta=beta, temper_lpost=temper_lpost)
 
             # swap samples
             swapped = self.swap_samples()
@@ -77,9 +83,11 @@ class ParallelTemperingSampler(Sampler):
         results = [sampler.get_samples() for sampler in self.samplers]
         trace_x = np.array([result.trace_x[0] for result in results])
         trace_neglogpost = np.array([result.trace_neglogpost[0] for result in results])
+        trace_neglogprior = np.array([result.trace_neglogprior[0] for result in results])
         return McmcPtResult(
             trace_x=trace_x,
             trace_neglogpost=trace_neglogpost,
+            trace_neglogprior=trace_neglogprior,
             betas=self.betas
         )
 
@@ -102,8 +110,12 @@ class ParallelTemperingSampler(Sampler):
             sample1 = sampler1.get_last_sample()
             sample2 = sampler2.get_last_sample()
 
+            # extract log likelihood values
+            sample1_llh = sample1.lpost - sample1.lprior
+            sample2_llh = sample2.lpost - sample2.lprior
+
             # swapping probability
-            p_acc_swap = dbeta * (sample2.lpost - sample1.lpost)
+            p_acc_swap = dbeta * (sample2_llh - sample1_llh)
 
             # flip a coin
             u = np.random.uniform(0, 1)
