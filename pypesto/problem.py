@@ -134,8 +134,7 @@ class Problem:
             x_scales = ['lin'] * self.dim_full
         self.x_scales = x_scales
 
-        if x_priors_defs is None:
-            self.x_priors = 0.
+        self.x_priors = x_priors_defs
 
         self.normalize_input()
 
