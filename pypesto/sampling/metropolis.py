@@ -33,7 +33,10 @@ class MetropolisSampler(InternalSampler):
         self.problem = problem
         self.neglogpost = problem.objective
         self.neglogpost.history = History()
-        self.neglogprior = problem.x_priors
+        if problem.x_priors is None:
+            self.neglogprior = lambda x: 0.
+        else:
+            self.neglogprior = problem.x_priors
         self.trace_x = [x0]
         self.trace_neglogpost = [self.neglogpost(x0)]
         self.trace_neglogprior = [self.neglogprior(x0)]
