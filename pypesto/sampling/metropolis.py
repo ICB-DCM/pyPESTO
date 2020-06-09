@@ -18,7 +18,7 @@ class MetropolisSampler(InternalSampler):
         self.problem: Union[Problem, None] = None
         self.objective: Union[ObjectiveBase, None] = None
         self.trace_x: Union[Sequence[np.ndarray], None] = None
-        self.trace_fval: Union[Sequence[float], None] = None
+        self.trace_neglogpost: Union[Sequence[float], None] = None
 
     @classmethod
     def default_options(cls):
@@ -32,12 +32,12 @@ class MetropolisSampler(InternalSampler):
         self.objective = problem.objective
         self.objective.history = History()
         self.trace_x = [x0]
-        self.trace_fval = [self.objective(x0)]
+        self.trace_neglogpost = [self.objective(x0)]
 
     def sample(self, n_samples: int, beta: float = 1.):
         # load last recorded particle
         x = self.trace_x[-1]
-        llh = - self.trace_fval[-1]
+        llh = - self.trace_neglogpost[-1]
 
         show_progress = self.options['show_progress']
 
@@ -48,7 +48,7 @@ class MetropolisSampler(InternalSampler):
 
             # record step
             self.trace_x.append(x)
-            self.trace_fval.append(-llh)
+            self.trace_neglogpost.append(-llh)
 
     def make_internal(self):
         self.options['show_progress'] = False
@@ -81,7 +81,7 @@ class MetropolisSampler(InternalSampler):
             llh = llh_new
 
         # update proposal
-        self._update_proposal(x, llh, log_p_acc, len(self.trace_fval)+1)
+        self._update_proposal(x, llh, log_p_acc, len(self.trace_neglogpost)+1)
 
         return x, llh
 
@@ -97,17 +97,17 @@ class MetropolisSampler(InternalSampler):
     def get_last_sample(self) -> InternalSample:
         return InternalSample(
             x=self.trace_x[-1],
-            llh=- self.trace_fval[-1]
+            llh=- self.trace_neglogpost[-1]
         )
 
     def set_last_sample(self, sample: InternalSample):
         self.trace_x[-1] = sample.x
-        self.trace_fval[-1] = - sample.llh
+        self.trace_neglogpost[-1] = - sample.llh
 
     def get_samples(self) -> McmcPtResult:
         result = McmcPtResult(
             trace_x=np.array([self.trace_x]),
-            trace_fval=np.array([self.trace_fval]),
+            trace_neglogpost=np.array([self.trace_neglogpost]),
             betas=np.array([1.]),
         )
         return result

@@ -76,10 +76,10 @@ class ParallelTemperingSampler(Sampler):
         """Concatenate all chains."""
         results = [sampler.get_samples() for sampler in self.samplers]
         trace_x = np.array([result.trace_x[0] for result in results])
-        trace_fval = np.array([result.trace_fval[0] for result in results])
+        trace_neglogpost = np.array([result.trace_neglogpost[0] for result in results])
         return McmcPtResult(
             trace_x=trace_x,
-            trace_fval=trace_fval,
+            trace_neglogpost=trace_neglogpost,
             betas=self.betas
         )
 

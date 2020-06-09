@@ -12,7 +12,7 @@ class McmcPtResult(dict):
     ----------
     trace_x: [n_chain, n_iter, n_par]
         Parameters.
-    trace_fval: [n_chain, n_iter]
+    trace_neglogpost: [n_chain, n_iter]
         Function values.
     betas: [n_chain]
         The associated inverse temperatures.
@@ -27,7 +27,7 @@ class McmcPtResult(dict):
 
     def __init__(self,
                  trace_x: np.ndarray,
-                 trace_fval: np.ndarray,
+                 trace_neglogpost: np.ndarray,
                  betas: Iterable[float],
                  burn_in: int = None,
                  time: float = 0.,
@@ -35,7 +35,7 @@ class McmcPtResult(dict):
         super().__init__()
 
         self.trace_x = trace_x
-        self.trace_fval = trace_fval
+        self.trace_neglogpost = trace_neglogpost
         self.betas = betas
         self.burn_in = burn_in
         self.time = time
@@ -43,14 +43,14 @@ class McmcPtResult(dict):
 
         if trace_x.ndim != 3:
             raise ValueError(f"trace_x.ndim not as expected: {trace_x.ndim}")
-        if trace_fval.ndim != 2:
-            raise ValueError("trace_fval.ndim not as expected: "
-                             f"{trace_fval.ndim}")
-        if trace_x.shape[0] != trace_fval.shape[0] \
-                or trace_x.shape[1] != trace_fval.shape[1]:
+        if trace_neglogpost.ndim != 2:
+            raise ValueError("trace_neglogpost.ndim not as expected: "
+                             f"{trace_neglogpost.ndim}")
+        if trace_x.shape[0] != trace_neglogpost.shape[0] \
+                or trace_x.shape[1] != trace_neglogpost.shape[1]:
             raise ValueError("Trace dimensions do not match:"
                              f"trace_x.shape={trace_x.shape},"
-                             f"trace_fval.shape={trace_fval.shape}")
+                             f"trace_neglogpost.shape={trace_neglogpost.shape}")
 
     def __getattr__(self, key):
         try:

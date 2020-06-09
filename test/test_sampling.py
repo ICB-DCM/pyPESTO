@@ -137,7 +137,7 @@ def test_multiple_startpoints():
     )
     result = pypesto.sample(problem, n_samples=10, x0=x0s, sampler=sampler)
 
-    assert result.sample_result.trace_fval.shape[0] == 2
+    assert result.sample_result.trace_neglogpost.shape[0] == 2
     assert [result.sample_result.trace_x[0][0],
             result.sample_result.trace_x[1][0]] == x0s
 
