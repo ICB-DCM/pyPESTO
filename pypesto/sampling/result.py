@@ -13,7 +13,9 @@ class McmcPtResult(dict):
     trace_x: [n_chain, n_iter, n_par]
         Parameters.
     trace_neglogpost: [n_chain, n_iter]
-        Function values.
+        Negative log posterior values.
+    trace_neglogprior: [n_chain, n_iter]
+        Negative log prior values.
     betas: [n_chain]
         The associated inverse temperatures.
     burn_in: [n_chain]
@@ -28,6 +30,7 @@ class McmcPtResult(dict):
     def __init__(self,
                  trace_x: np.ndarray,
                  trace_neglogpost: np.ndarray,
+                 trace_neglogprior: np.ndarray,
                  betas: Iterable[float],
                  burn_in: int = None,
                  time: float = 0.,
@@ -36,6 +39,7 @@ class McmcPtResult(dict):
 
         self.trace_x = trace_x
         self.trace_neglogpost = trace_neglogpost
+        self.trace_neglogprior = trace_neglogprior
         self.betas = betas
         self.burn_in = burn_in
         self.time = time
@@ -46,11 +50,24 @@ class McmcPtResult(dict):
         if trace_neglogpost.ndim != 2:
             raise ValueError("trace_neglogpost.ndim not as expected: "
                              f"{trace_neglogpost.ndim}")
+        if trace_neglogprior.ndim != 2:
+            raise ValueError("trace_neglogprior.ndim not as expected: "
+                             f"{trace_neglogprior.ndim}")
         if trace_x.shape[0] != trace_neglogpost.shape[0] \
                 or trace_x.shape[1] != trace_neglogpost.shape[1]:
             raise ValueError("Trace dimensions do not match:"
                              f"trace_x.shape={trace_x.shape},"
                              f"trace_neglogpost.shape={trace_neglogpost.shape}")
+        if trace_x.shape[0] != trace_neglogprior.shape[0] \
+                or trace_x.shape[1] != trace_neglogprior.shape[1]:
+            raise ValueError("Trace dimensions do not match:"
+                             f"trace_x.shape={trace_x.shape},"
+                             f"trace_neglogprior.shape={trace_neglogprior.shape}")
+        if trace_neglogpost.shape[0] != trace_neglogprior.shape[0] \
+                or trace_neglogpost.shape[1] != trace_neglogprior.shape[1]:
+            raise ValueError("Trace dimensions do not match:"
+                             f"trace_neglogpost.shape={trace_neglogpost.shape},"
+                             f"trace_neglogprior.shape={trace_neglogprior.shape}")
 
     def __getattr__(self, key):
         try:
