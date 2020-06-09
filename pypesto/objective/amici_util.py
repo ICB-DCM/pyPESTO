@@ -225,7 +225,11 @@ def get_error_output(
         edatas: Sequence['amici.ExpData'],
         rdatas: Sequence['amici.ReturnData'],
         dim: int):
-    """Default output upon error."""
+    """Default output upon error.
+
+    Returns values indicative of an error, that is with nan entries in all
+    vectors, and a function value, i.e. nllh, of `np.inf`.
+    """
     if not amici_model.nt():
         nt = sum([data.nt() for data in edatas])
     else:

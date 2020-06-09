@@ -17,6 +17,7 @@ from .objective import (
     OptimizerHistory,
     AmiciObjective,
     Objective,
+    NegLogPriors,
     ObjectiveBase)
 from .problem import Problem
 from .petab import (
@@ -33,6 +34,7 @@ from .optimize import (
     OptimizerResult,
     Optimizer,
     ScipyOptimizer,
+    IpoptOptimizer,
     DlibOptimizer,
     PyswarmOptimizer)
 from .profile import (
