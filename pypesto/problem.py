@@ -132,7 +132,7 @@ class Problem:
 
         self.x_priors = x_priors_defs
 
-        self.normalize_input()
+        self.normalize()
 
     @property
     def lb(self):
@@ -146,7 +146,7 @@ class Problem:
     def x_guesses(self):
         return self.x_guesses_full[:, self.x_free_indices]
 
-    def normalize_input(self) -> None:
+    def normalize(self) -> None:
         """
         Reduce all vectors to dimension dim and have the objective accept
         vectors of dimension dim.
@@ -222,7 +222,7 @@ class Problem:
         self.x_free_indices: List[int] = sorted(list(
             set(range(0, self.dim_full)) - set(self.x_fixed_indices)))
 
-        self.normalize_input()
+        self.normalize()
 
     def unfix_parameters(
             self,
@@ -246,7 +246,7 @@ class Problem:
         self.x_free_indices: List[int] = sorted(list(
             set(range(0, self.dim_full)) - set(self.x_fixed_indices)))
 
-        self.normalize_input()
+        self.normalize()
 
     def get_full_vector(
             self,
