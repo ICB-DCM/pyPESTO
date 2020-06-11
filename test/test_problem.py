@@ -14,6 +14,35 @@ def problem():
     return problem
 
 
+def test_dim_vs_dim_full():
+    objective = pypesto.Objective()
+
+    # define problem with bounds including fixed parameters
+    pypesto.Problem(
+        objective=objective, lb=[-1] * 4, ub=[1] * 4, dim_full=4,
+        x_fixed_indices=[0, 3], x_fixed_vals=[42, 43]
+    )
+
+    # define problem with incomplete bounds
+    pypesto.Problem(
+        objective=objective, lb=[-1] * 2, ub=[1] * 2, dim_full=4,
+        x_fixed_indices=[0, 3], x_fixed_vals=[42, 43]
+    )
+
+
+def test_fix_parameters(problem):
+    problem.fix_parameters(2, 45)
+    assert problem.x_fixed_indices == [0, 1, 5, 2]
+    assert problem.x_fixed_vals == [42, 43, 44, 45]
+    assert problem.x_free_indices == [3, 4, 6, 7, 8, 9]
+
+    problem.unfix_parameters(2)
+    assert problem.x_fixed_indices == [0, 1, 5]
+    assert problem.x_fixed_vals == [42, 43, 44]
+    assert problem.x_free_indices == [2, 3, 4, 6, 7, 8, 9]
+
+
+
 def test_full_index_to_free_index(problem):
     assert problem.full_index_to_free_index(2) == 0
     assert problem.full_index_to_free_index(6) == 3

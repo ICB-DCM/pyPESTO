@@ -17,6 +17,7 @@ from typing import Iterable, List, Optional, Union
 from .objective import ObjectiveBase
 from .objective.priors import NegLogPriors
 
+
 class Problem:
     """
     The problem formulation. A problem specifies the objective function,
@@ -93,13 +94,10 @@ class Problem:
                  x_priors_defs: Optional[NegLogPriors] = None):
         self.objective = copy.deepcopy(objective)
 
-        self.lb = np.array(lb).flatten()
-        self.ub = np.array(ub).flatten()
-
         self.lb_full = np.array(lb).flatten()
         self.ub_full = np.array(ub).flatten()
 
-        self.dim_full = dim_full if dim_full is not None else self.lb.size
+        self.dim_full = dim_full if dim_full is not None else self.lb_full.size
 
         if x_fixed_indices is None:
             x_fixed_indices = []
@@ -119,8 +117,8 @@ class Problem:
             set(range(0, self.dim_full)) - set(self.x_fixed_indices)))
 
         if x_guesses is None:
-            x_guesses = np.zeros((0, self.dim))
-        self.x_guesses: np.ndarray = np.array(x_guesses)
+            x_guesses = np.zeros((0, self.dim_full))
+        self.x_guesses_full: np.ndarray = np.array(x_guesses)
 
         if objective.x_names is not None:
             x_names = objective.x_names
@@ -136,26 +134,43 @@ class Problem:
 
         self.normalize_input()
 
+    @property
+    def lb(self):
+        return self.lb_full[self.x_free_indices]
+
+    @property
+    def ub(self):
+        return self.ub_full[self.x_free_indices]
+
+    @property
+    def x_guesses(self):
+        return self.x_guesses_full[:, self.x_free_indices]
+
     def normalize_input(self, check_x_guesses: bool = True) -> None:
         """
         Reduce all vectors to dimension dim and have the objective accept
         vectors of dimension dim.
         """
 
-        if self.lb.size == self.dim_full:
-            self.lb = self.lb[self.x_free_indices]
-        elif self.lb.size == 1:
-            self.lb = self.lb * np.ones(self.dim)
-            self.lb_full = self.lb * np.ones(self.dim_full)
+        if self.lb_full.size == 1:
+            self.lb_full = self.lb_full * np.ones(self.dim_full)
+        elif self.lb_full.size != self.dim_full:
+            self.lb_full = np.empty(self.dim_full)
+            self.lb_full[self.x_free_indices] = self.lb
+            self.lb_full[self.x_fixed_indices] = self.x_fixed_vals
 
-        if self.ub.size == self.dim_full:
-            self.ub = self.ub[self.x_free_indices]
-        elif self.ub.size == 1:
-            self.ub = self.ub * np.ones(self.dim)
-            self.ub_full = self.ub * np.ones(self.dim_full)
+        if self.ub_full.size == 1:
+            self.ub_full = self.ub_full * np.ones(self.dim_full)
+        elif self.ub_full.size != self.dim_full:
+            self.ub_full = np.empty(self.dim_full)
+            self.ub_full[self.x_free_indices] = self.ub
+            self.ub_full[self.x_fixed_indices] = self.x_fixed_vals
 
-        if self.x_guesses.shape[1] == self.dim_full:
-            self.x_guesses = self.x_guesses[:, self.x_free_indices]
+        if self.x_guesses_full.shape[1] != self.dim_full:
+            x_guesses = np.empty((self.x_guesses_full.shape[0], self.dim_full))
+            x_guesses[:] = np.nan
+            x_guesses[:, self.x_free_indices] = self.x_guesses_full
+            self.x_guesses_full = x_guesses
 
         # make objective aware of fixed parameters
         self.objective.update_from_problem(
@@ -165,10 +180,6 @@ class Problem:
             x_fixed_vals=self.x_fixed_vals)
 
         # sanity checks
-        if self.lb.size != self.dim:
-            raise AssertionError("lb dimension invalid.")
-        if self.ub.size != self.dim:
-            raise AssertionError("ub dimension invalid.")
         if self.lb_full.size != self.dim_full:
             raise AssertionError("lb_full dimension invalid.")
         if self.ub_full.size != self.dim_full:
@@ -176,7 +187,7 @@ class Problem:
         if len(self.x_scales) != self.dim_full:
             raise AssertionError("x_scales dimension invalid.")
         if check_x_guesses:
-            if self.x_guesses.shape[1] != self.dim:
+            if self.x_guesses_full.shape[1] != self.dim_full:
                 raise AssertionError("x_guesses form invalid.")
         if len(self.x_names) != self.dim_full:
             raise AssertionError("x_names must be of length dim_full.")
@@ -198,7 +209,7 @@ class Problem:
         if not isinstance(parameter_vals, list):
             parameter_vals = [parameter_vals]
 
-        # first clean to be fixed indices to avoid redundancies
+        # first clean to-be-fixed indices to avoid redundancies
         for i_index, i_parameter in enumerate(parameter_indices):
             # check if parameter was already fixed, otherwise add it to the
             # fixed parameters
@@ -211,11 +222,8 @@ class Problem:
                 self.x_fixed_vals.append(parameter_vals[i_index])
 
         self.dim = self.dim_full - len(self.x_fixed_indices)
-
-        self.x_free_indices = [
-            int(i) for i in
-            set(range(0, self.dim_full)) - set(self.x_fixed_indices)
-        ]
+        self.x_free_indices: List[int] = sorted(list(
+            set(range(0, self.dim_full)) - set(self.x_fixed_indices)))
 
         self.normalize_input()
 
@@ -230,22 +238,16 @@ class Problem:
         if not isinstance(parameter_indices, list):
             parameter_indices = [parameter_indices]
 
-        # first clean to be freed indices
-        for i_index, i_parameter in enumerate(parameter_indices):
+        # first clean to-be-freed indices
+        for i_parameter in parameter_indices:
             if i_parameter in self.x_fixed_indices:
+                i_index = self.x_fixed_indices.index(i_parameter)
                 self.x_fixed_indices.pop(i_index)
                 self.x_fixed_vals.pop(i_index)
 
         self.dim = self.dim_full - len(self.x_fixed_indices)
-
-        self.x_free_indices = [
-            int(i) for i in
-            set(range(0, self.dim_full)) - set(self.x_fixed_indices)
-        ]
-
-        # readapt bounds
-        self.lb = self.lb_full[self.x_free_indices]
-        self.ub = self.ub_full[self.x_free_indices]
+        self.x_free_indices: List[int] = sorted(list(
+            set(range(0, self.dim_full)) - set(self.x_fixed_indices)))
 
         self.normalize_input(check_x_guesses=False)
 

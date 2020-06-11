@@ -118,8 +118,8 @@ class ProfilerTest(unittest.TestCase):
                                            next_guess_method='fixed_step')
 
         # set new bounds (knowing that one parameter stopped at the bounds
-        self.problem.lb = -4 * np.ones(2)
-        self.problem.ub = 4 * np.ones(2)
+        self.problem.lb_full = -4 * np.ones(2)
+        self.problem.ub_full = 4 * np.ones(2)
 
         # re-run profiling using new bounds
         result = pypesto.parameter_profile(problem=self.problem,
@@ -153,7 +153,7 @@ class ProfilerTest(unittest.TestCase):
         # with pre-defined hessian
         result = deepcopy(self.result)
         result.optimize_result.list[0].hess = np.array([[2, 0], [0, 1]])
-        result = pypesto.profile.approximate_parameter_profile(
+        pypesto.profile.approximate_parameter_profile(
             problem=self.problem, result=result, profile_index=[0, 1],
             n_steps=n_steps)
 
@@ -196,7 +196,7 @@ def test_profile_with_fixed_parameters():
     optimizer = pypesto.ScipyOptimizer(options={'maxiter': 50})
     result = pypesto.minimize(problem=problem, optimizer=optimizer, n_starts=2)
 
-    result = pypesto.parameter_profile(
+    pypesto.parameter_profile(
         problem=problem, result=result, optimizer=optimizer)
 
 
