@@ -185,12 +185,15 @@ def adaptive_step(
         if np.isnan(order) and n_profile_points > 2:
             x_step_tmp = []
             # loop over parameters, extrapolate each one
-            for i_par in range(len(problem.x_free_indices) + 1):
-                if i_par == pos_ind_red:
+            #for i_par in range(len(problem.x_free_indices) + 1):
+            for i_par in range(problem.dim_full):
+                if i_par == par_index:
                     # if we meet the profiling parameter, just increase,
                     # don't extrapolate
                     x_step_tmp.append(x[par_index] + step_length *
                                       par_direction)
+                elif i_par in problem.x_fixed_indices:
+                    x_step_tmp.append(np.nan)
                 else:
                     # extrapolate
                     cur_par_extrapol = np.poly1d(reg_par[i_par])
@@ -306,10 +309,9 @@ def get_reg_polynomial(
 
     # set up matrix of regression parameters
     reg_par = []
-    for i_par in range(len(problem.x_free_indices) + 1):
-        if i_par == pos_ind_red:
-            # if we meet the current profiling parameter, there is nothing
-            # to do, so pass an np.nan
+    #for i_par in range(len(problem.x_free_indices) + 1):
+    for i_par in range(problem.dim_full):
+        if i_par in problem.x_fixed_indices:
             reg_par.append(np.nan)
         else:
             # Do polynomial interpolation of profile path
