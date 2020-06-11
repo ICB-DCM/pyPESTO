@@ -215,7 +215,8 @@ def adaptive_step(
 
     # compute objective at the guessed point
     problem.fix_parameters(par_index, next_x[par_index])
-    next_obj = problem.objective(reduce_x(next_x, par_index))
+    next_obj = problem.objective(
+        problem.get_reduced_vector(next_x))
 
     # iterate until good step size is found
     if next_obj_target < next_obj:
@@ -376,7 +377,8 @@ def do_line_seach(
             # compute new objective value
             problem.fix_parameters(par_index, next_x[par_index])
             last_obj = copy.copy(next_obj)
-            next_obj = problem.objective(reduce_x(next_x, par_index))
+            next_obj = problem.objective(
+                problem.get_reduced_vector(next_x))
 
             # check for root crossing and compute correct step size in case
             if direction == 'decrease' and next_obj_target >= next_obj:
@@ -403,15 +405,6 @@ def next_x_interpolate(
 
     # fix final guess and return
     return last_x + add_x
-
-
-def reduce_x(next_x: np.ndarray, par_index: int) -> np.ndarray:
-    """
-    Reduce step proposal to non-fixed parameters.
-    """
-    red_ind = list(range(len(next_x)))
-    red_ind.pop(par_index)
-    return np.array([next_x[ip] for ip in red_ind])
 
 
 def clip(
