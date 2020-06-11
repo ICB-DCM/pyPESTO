@@ -6,7 +6,7 @@ import importlib
 import shutil
 import logging
 import tempfile
-from typing import List, Sequence, Union
+from typing import Iterable, List, Optional, Sequence, Union
 
 from ..problem import Problem
 from ..objective import AmiciObjective, AmiciObjectBuilder, AggregatedObjective
@@ -308,7 +308,11 @@ class PetabImporter(AmiciObjectBuilder):
             return None
 
     def create_problem(
-            self, objective: AmiciObjective = None, **kwargs
+            self,
+            objective: AmiciObjective = None,
+            # Correct typing? Maybe Optional[Iterable[Iterable[Float]]]?
+            x_guesses: Optional[Iterable[float]] = None,
+            **kwargs
     ) -> Problem:
         """Create a :class:`pypesto.Problem`.
 
@@ -343,6 +347,7 @@ class PetabImporter(AmiciObjectBuilder):
             ub=self.petab_problem.ub_scaled,
             x_fixed_indices=self.petab_problem.x_fixed_indices,
             x_fixed_vals=self.petab_problem.x_nominal_fixed_scaled,
+            x_guesses=x_guesses,
             x_names=self.petab_problem.x_ids,
             x_scales=x_scales,
             x_priors_defs=prior)

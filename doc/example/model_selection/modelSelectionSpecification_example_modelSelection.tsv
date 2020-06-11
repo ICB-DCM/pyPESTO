@@ -1,0 +1,10 @@
+modelId	YAML	k1	k2	k3
+M1_0	example_modelSelection.yaml	0	0	0
+M1_1	example_modelSelection.yaml	0.2	0.1	-
+M1_2	example_modelSelection.yaml	0.2	-	0
+M1_3	example_modelSelection.yaml	-	0.1	0
+M1_4	example_modelSelection.yaml	0.2	-	-
+M1_5	example_modelSelection.yaml	-	0.1	-
+M1_6	example_modelSelection.yaml	-	-	0
+M1_7	example_modelSelection.yaml	-	-	-
+

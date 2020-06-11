@@ -56,4 +56,7 @@ from .engine import (
     SingleCoreEngine,
     MultiThreadEngine,
     MultiProcessEngine)
+from .model_selection import (
+    ModelSelector
+)
 from . import visualize
