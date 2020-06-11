@@ -197,8 +197,10 @@ def test_profile_with_fixed_parameters():
     optimizer = pypesto.ScipyOptimizer(options={'maxiter': 50})
     result = pypesto.minimize(problem=problem, optimizer=optimizer, n_starts=2)
 
-    pypesto.parameter_profile(
-        problem=problem, result=result, optimizer=optimizer)
+    for next_guess_method in ['fixed_step', 'adaptive_step_regression']:
+        pypesto.parameter_profile(
+            problem=problem, result=result, optimizer=optimizer,
+            next_guess_method=next_guess_method)
 
 
 def create_optimization_results(objective):

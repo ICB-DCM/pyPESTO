@@ -77,7 +77,7 @@ def fixed_step(
     Parameters
     ----------
     x:
-       The current position of the profiler
+       The current position of the profiler, size `dim_full`.
     par_index:
         The index of the parameter of the current profile
     par_direction:
@@ -86,6 +86,11 @@ def fixed_step(
         Various options applied to the profile optimization.
     problem:
         The problem to be solved.
+
+    Returns
+    -------
+    x_new:
+        The updated parameter vector, of size `dim_full`.
     """
     delta_x = np.zeros(len(x))
     delta_x[par_index] = par_direction * options.default_step_size
@@ -117,26 +122,31 @@ def adaptive_step(
 
     Parameters
     ----------
-     x:
-         The current position of the profiler
-     par_index:
-         The index of the parameter of the current profile
-     par_direction:
-         The direction, in which the profiling is done (1 or -1)
-     options:
-         Various options applied to the profile optimization.
-     current_profile:
-         The profile which should be computed
-     problem:
-         The problem to be solved.
-     global_opt:
-         log-posterior value of the global optimum
-     order:
-         Specifies the precise algorithm for extrapolation: can be 0 (
-         just one parameter is updated), 1 (last two points used to
-         extrapolate all parameters), and np.nan (indicates that a more
-         complex regression should be used)
-     """
+    x:
+        The current position of the profiler, size `dim_full`.
+    par_index:
+        The index of the parameter of the current profile
+    par_direction:
+        The direction, in which the profiling is done (1 or -1)
+    options:
+        Various options applied to the profile optimization.
+    current_profile:
+        The profile which should be computed
+    problem:
+        The problem to be solved.
+    global_opt:
+        log-posterior value of the global optimum
+    order:
+        Specifies the precise algorithm for extrapolation: can be 0 (
+        just one parameter is updated), 1 (last two points used to
+        extrapolate all parameters), and np.nan (indicates that a more
+        complex regression should be used)
+
+    Returns
+    -------
+    x_new:
+        The updated parameter vector, of size `dim_full`.
+    """
     # restrict step proposal to minimum and maximum step size
     def clip_to_minmax(step_size_proposal):
         return clip(step_size_proposal, options.min_step_size,
