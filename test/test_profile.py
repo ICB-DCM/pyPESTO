@@ -185,6 +185,7 @@ def test_profile_with_history():
 
 
 def test_profile_with_fixed_parameters():
+    """Test using profiles with fixed parameters."""
     obj = test_objective.rosen_for_sensi(max_sensi_order=1)['obj']
 
     lb = -2 * np.ones(5)

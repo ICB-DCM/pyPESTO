@@ -11,7 +11,6 @@ from ..objective.history import HistoryBase
 from ..problem import Problem
 from .result import OptimizerResult
 
-
 try:
     import ipopt
 except ImportError:

@@ -120,7 +120,6 @@ def profiles_lowlevel(
         Lower bound.
     ub_full:
         Upper bound.
-
     legend_text: List[str]
         Label for line plots
 
