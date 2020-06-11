@@ -117,8 +117,8 @@ class Problem:
 
         self.dim: int = self.dim_full - len(self.x_fixed_indices)
 
-        self.x_free_indices: List[int] = sorted(list(
-            set(range(0, self.dim_full)) - set(self.x_fixed_indices)))
+        self.x_free_indices: List[int] = sorted(
+            set(range(0, self.dim_full)) - set(self.x_fixed_indices))
 
         if x_guesses is None:
             x_guesses = np.zeros((0, self.dim))
@@ -128,7 +128,7 @@ class Problem:
             x_names = objective.x_names
         elif x_names is None:
             x_names = [f'x{j}' for j in range(0, self.dim_full)]
-        self.x_names: List[str] = [name for name in x_names]
+        self.x_names: List[str] = list(x_names)
 
         if x_scales is None:
             x_scales = ['lin'] * self.dim_full
@@ -373,18 +373,16 @@ class Problem:
     def print_parameter_summary(self) -> None:
         """
         Prints a summary of what parameters are being optimized and
-        what parameter boundaries are
+        parameter boundaries.
         """
-        print(
+        print(  # noqa: T001 (print)
             pd.DataFrame(
                 index=self.x_names,
                 data={
-                    'free': [
-                        idx not in self.x_fixed_indices
-                        for idx in range(self.dim_full)
-                    ],
-                    'lb': self.lb_full,
-                    'ub': self.ub_full
+                    'free': [idx in self.x_free_indices
+                             for idx in range(self.dim_full)],
+                    'lb_full': self.lb_full,
+                    'ub_full': self.ub_full
                 }
             )
         )
