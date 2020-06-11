@@ -53,7 +53,7 @@ def spectrum(x: np.array,
     kmu = k * np.linalg.norm(w) ** 2
     spectral_density = np.zeros((nfft))
 
-    for i in range(k):
+    for _ in range(k):
         xw = w * x[index]
         index += (nw - n_overlap)
         Xx = np.absolute(np.fft.fft(xw, n=nfft, axis=0)) ** 2
