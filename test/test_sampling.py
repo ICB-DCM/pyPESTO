@@ -190,4 +190,3 @@ def test_geweke_test_unconverged():
 
     # run geweke test (should not fail!)
     pypesto.sampling.geweke_test(result)
-

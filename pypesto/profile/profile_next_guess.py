@@ -158,13 +158,12 @@ def adaptive_step(
 
     # check if this is the first step
     n_profile_points = len(current_profile.fval_path)
-    pos_ind_red = len([ip for ip in problem.x_free_indices if ip < par_index])
     problem.fix_parameters(par_index, x[par_index])
 
     # Get update directions and first step size guesses
     (step_size_guess, delta_x_dir, reg_par, delta_obj_value) = \
         handle_profile_history(x, par_index, par_direction, n_profile_points,
-                               pos_ind_red, global_opt, order,
+                               global_opt, order,
                                current_profile, problem, options)
 
     # check whether we must make a minimum step anyway, since we're close to
@@ -185,7 +184,6 @@ def adaptive_step(
         if np.isnan(order) and n_profile_points > 2:
             x_step_tmp = []
             # loop over parameters, extrapolate each one
-            #for i_par in range(len(problem.x_free_indices) + 1):
             for i_par in range(problem.dim_full):
                 if i_par == par_index:
                     # if we meet the profiling parameter, just increase,
@@ -193,6 +191,7 @@ def adaptive_step(
                     x_step_tmp.append(x[par_index] + step_length *
                                       par_direction)
                 elif i_par in problem.x_fixed_indices:
+                    # common fixed parameter: will be ignored anyway later
                     x_step_tmp.append(np.nan)
                 else:
                     # extrapolate
@@ -218,8 +217,7 @@ def adaptive_step(
 
     # compute objective at the guessed point
     problem.fix_parameters(par_index, next_x[par_index])
-    next_obj = problem.objective(
-        problem.get_reduced_vector(next_x))
+    next_obj = problem.objective(problem.get_reduced_vector(next_x))
 
     # iterate until good step size is found
     if next_obj_target < next_obj:
@@ -242,7 +240,6 @@ def handle_profile_history(
         par_index: int,
         par_direction: int,
         n_profile_points: int,
-        pos_ind_red: int,
         global_opt: float,
         order: int,
         current_profile: ProfilerResult,
@@ -282,7 +279,7 @@ def handle_profile_history(
         elif np.isnan(order):
             # compute the regression polynomial for parameter extrapolation
 
-            reg_par = get_reg_polynomial(n_profile_points, pos_ind_red,
+            reg_par = get_reg_polynomial(n_profile_points,
                                          par_index, current_profile,
                                          problem, options)
 
@@ -291,7 +288,6 @@ def handle_profile_history(
 
 def get_reg_polynomial(
         n_profile_points: int,
-        pos_ind_red: int,
         par_index: int,
         current_profile: ProfilerResult,
         problem: Problem,
@@ -309,9 +305,10 @@ def get_reg_polynomial(
 
     # set up matrix of regression parameters
     reg_par = []
-    #for i_par in range(len(problem.x_free_indices) + 1):
     for i_par in range(problem.dim_full):
         if i_par in problem.x_fixed_indices:
+            # if we meet the current profiling parameter or a fixed parameter,
+            # there is nothing to do, so pass an np.nan
             reg_par.append(np.nan)
         else:
             # Do polynomial interpolation of profile path
@@ -379,8 +376,7 @@ def do_line_seach(
             # compute new objective value
             problem.fix_parameters(par_index, next_x[par_index])
             last_obj = copy.copy(next_obj)
-            next_obj = problem.objective(
-                problem.get_reduced_vector(next_x))
+            next_obj = problem.objective(problem.get_reduced_vector(next_x))
 
             # check for root crossing and compute correct step size in case
             if direction == 'decrease' and next_obj_target >= next_obj:

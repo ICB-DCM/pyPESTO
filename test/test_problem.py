@@ -5,6 +5,7 @@ import pypesto
 
 @pytest.fixture
 def problem():
+    """A very basic problem."""
     lb = [-5] * 10
     ub = [6] * 10
     objective = pypesto.Objective()
@@ -15,6 +16,7 @@ def problem():
 
 
 def test_dim_vs_dim_full():
+    """Test passing arrays in the full or reduced dimension."""
     objective = pypesto.Objective()
 
     # define problem with bounds including fixed parameters
@@ -31,6 +33,7 @@ def test_dim_vs_dim_full():
 
 
 def test_fix_parameters(problem):
+    """Test the dynamic problem parameter fixing functions."""
     problem.fix_parameters(2, 45)
     assert problem.x_fixed_indices == [0, 1, 5, 2]
     assert problem.x_fixed_vals == [42, 43, 44, 45]
@@ -42,8 +45,8 @@ def test_fix_parameters(problem):
     assert problem.x_free_indices == [2, 3, 4, 6, 7, 8, 9]
 
 
-
 def test_full_index_to_free_index(problem):
+    """Test problem.full_index_to_free_index."""
     assert problem.full_index_to_free_index(2) == 0
     assert problem.full_index_to_free_index(6) == 3
     with pytest.raises(ValueError):
