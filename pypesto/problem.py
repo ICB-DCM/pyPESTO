@@ -146,7 +146,7 @@ class Problem:
     def x_guesses(self):
         return self.x_guesses_full[:, self.x_free_indices]
 
-    def normalize_input(self, check_x_guesses: bool = True) -> None:
+    def normalize_input(self) -> None:
         """
         Reduce all vectors to dimension dim and have the objective accept
         vectors of dimension dim.
@@ -186,9 +186,6 @@ class Problem:
             raise AssertionError("ub_full dimension invalid.")
         if len(self.x_scales) != self.dim_full:
             raise AssertionError("x_scales dimension invalid.")
-        if check_x_guesses:
-            if self.x_guesses_full.shape[1] != self.dim_full:
-                raise AssertionError("x_guesses form invalid.")
         if len(self.x_names) != self.dim_full:
             raise AssertionError("x_names must be of length dim_full.")
         if len(self.x_fixed_indices) != len(self.x_fixed_vals):
@@ -249,7 +246,7 @@ class Problem:
         self.x_free_indices: List[int] = sorted(list(
             set(range(0, self.dim_full)) - set(self.x_fixed_indices)))
 
-        self.normalize_input(check_x_guesses=False)
+        self.normalize_input()
 
     def get_full_vector(
             self,
