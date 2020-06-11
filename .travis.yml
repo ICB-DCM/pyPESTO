@@ -47,7 +47,7 @@ install:
 # run tests
 script:
   - if [ "$TRAVIS_PULL_REQUEST" = "false" ]; then
-      ./run_flake8.sh
+      ./run_flake8.sh;
     fi
   - if [ "$TRAVIS_PULL_REQUEST" = "false" ]; then
       travis_wait 20 python3 -m pytest --cov=pypesto ./test/test_*;
