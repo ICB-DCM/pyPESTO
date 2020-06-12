@@ -157,7 +157,7 @@ class AmiciObjective(ObjectiveBase):
             self.steadystate_guesses = {
                 'fval': np.inf,
                 'data': {
-                    iexp: dict()
+                    iexp: {}
                     for iexp, edata in enumerate(self.edatas)
                     if len(edata.fixedParametersPreequilibration) or
                     self.amici_solver.getPreequilibration()
@@ -280,7 +280,7 @@ class AmiciObjective(ObjectiveBase):
         # update steady state
         if self.guess_steadystate and \
                 self.steadystate_guesses['fval'] < np.inf:
-            for data_ix, edata in enumerate(self.edatas):
+            for data_ix in range(len(self.edatas)):
                 self.apply_steadystate_guess(data_ix, x_dct)
 
         ret = self.calculator(
@@ -360,4 +360,4 @@ class AmiciObjective(ObjectiveBase):
 
         self.steadystate_guesses['fval'] = np.inf
         for condition in self.steadystate_guesses['data']:
-            self.steadystate_guesses['data'][condition] = dict()
+            self.steadystate_guesses['data'][condition] = {}
