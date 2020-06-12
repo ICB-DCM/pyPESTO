@@ -219,8 +219,8 @@ class Problem:
                 self.x_fixed_vals.append(parameter_vals[i_index])
 
         self.dim = self.dim_full - len(self.x_fixed_indices)
-        self.x_free_indices: List[int] = sorted(list(
-            set(range(0, self.dim_full)) - set(self.x_fixed_indices)))
+        self.x_free_indices: List[int] = sorted(
+            set(range(0, self.dim_full)) - set(self.x_fixed_indices))
 
         self.normalize()
 
@@ -243,8 +243,8 @@ class Problem:
                 self.x_fixed_vals.pop(i_index)
 
         self.dim = self.dim_full - len(self.x_fixed_indices)
-        self.x_free_indices: List[int] = sorted(list(
-            set(range(0, self.dim_full)) - set(self.x_fixed_indices)))
+        self.x_free_indices: List[int] = sorted(
+            set(range(0, self.dim_full)) - set(self.x_fixed_indices))
 
         self.normalize()
 
