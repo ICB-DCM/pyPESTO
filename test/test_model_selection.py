@@ -1,22 +1,33 @@
 """
-This is for testing the pypesto.model_selection.
+Test pypesto.model_selection.
 """
-import tempfile
+import itertools
+import math
 import numpy as np
-from pypesto import PetabImporter, minimize
-from pypesto.model_selection import (
-    ModelSelector,
-    ModelSelectionProblem,
-    unpack_file,
-    ForwardSelector
-)
-from pypesto.model_selection.constants import *
+import pandas as pd
+import pytest
+import tempfile
+from typing import Dict, List, Sequence, Set, Union
 
 import petab
-import math
-import pytest
-from typing import Dict, Set
+from pypesto import minimize, PetabImporter
 
+from pypesto.model_selection import (
+    ForwardSelector,
+    ModelSelectionProblem,
+    ModelSelector,
+    ModelSelectorMethod,
+    row2problem,
+    unpack_file,
+)
+from pypesto.model_selection.constants import (
+    COMPARED_MODEL_ID,
+    ESTIMATE_SYMBOL_INTERNAL,
+    ESTIMATE_SYMBOL_UI,
+    INITIAL_VIRTUAL_MODEL,
+    MODEL_ID,
+    NOT_PARAMETERS,
+)
 
 EXAMPLE_YAML = 'doc/example/model_selection/example_modelSelection.yaml'
 EXAMPLE_MODELS = ('doc/example/model_selection/'
@@ -64,36 +75,166 @@ def test_unpack_file():
 # than the real AIC by some constant value (assuming all models use the same
 # PEtab parameters file -- not the case when the YAML column is implemented).
 
-def test_get_test_models():
-    selector = ModelSelector(None, EXAMPLE_MODELS)
-    #model0 = selector.new_direction_problem()
+def get_test_model_tree_flat(
+        model: ModelSelectionProblem,
+        selector: ModelSelectorMethod,
+        expected_test_model_ids: Dict[str, Set[str]],
+        initial_virtual_model: bool = False
+) -> List[str]:
+    test_model_tree_flat = [model.model_id]
+    result = selector.get_test_models(model)
+    if initial_virtual_model:
+        selector.initial_model = False
+    assert {m[MODEL_ID] for m in result} == \
+        expected_test_model_ids[model.model_id]
+    for test_model_row in result:
+        test_model = selector.new_model_problem(
+            test_model_row,
+            compared_model_id=model.model_id, # unnecessary?
+            valid=False
+        )
+        test_model_tree_flat += get_test_model_tree_flat(
+            test_model,
+            selector,
+            expected_test_model_ids
+        )
+    return sorted(test_model_tree_flat)
 
-    forward_selector = ForwardSelector(
+
+def directional_get_test_models(expected_test_model_ids: Dict[str, Set[str]],
+                                expected_test_model_tree_flat: List[str],
+                                reverse: bool):
+    model_selector = ModelSelector(None, EXAMPLE_MODELS)
+    selector = ForwardSelector(
         None,
-        selector.model_generator,
+        model_selector.model_generator,
         None,
-        selector.parameter_ids,
-        {}
+        model_selector.parameter_ids,
+        {},
+        None,
+        reverse,
+        False,
+        False,
+        None,
+        0
     )
-    forward_selector.initial_model = False
+    initial_virtual_model = selector.new_direction_problem()
+    test_model_tree_flat = get_test_model_tree_flat(initial_virtual_model,
+                                                    selector,
+                                                    expected_test_model_ids,
+                                                    initial_virtual_model=True)
+    print(test_model_tree_flat)
+    print(expected_test_model_tree_flat)
+    assert test_model_tree_flat == expected_test_model_tree_flat
 
-    model0 = forward_selector.new_direction_problem()
-    result0 = forward_selector.get_test_models(model0)
-    assert {model[MODEL_ID] for model in result0} == {'M5_0', 'M6_0', 'M7_0'}
 
-    model_M5 = forward_selector.new_model_problem(
-        next(model for model in result0 if model[MODEL_ID] == 'M5_0'),
-        valid = False
-    )
-    result_M5 = forward_selector.get_test_models(model_M5)
-    assert {model[MODEL_ID] for model in result_M5} == {'M2_0', 'M4_0'}
+def test_forward_selector_get_test_models():
+    # TODO redo with networkx
+    # get_test_model(model_id) for all model IDs as model_id
+    expected_test_model_ids = {
+        INITIAL_VIRTUAL_MODEL: {'M1_0_0'},
+        'M1_0_0': {'M1_1_0', 'M1_2_0', 'M1_3_0'},
+        'M1_1_0': {'M1_4_0', 'M1_5_0'},
+        'M1_2_0': {'M1_4_0', 'M1_6_0'},
+        'M1_3_0': {'M1_5_0', 'M1_6_0'},
+        'M1_4_0': {'M1_7_0'},
+        'M1_5_0': {'M1_7_0'},
+        'M1_6_0': {'M1_7_0'},
+        'M1_7_0': set(),
+    }
 
-    model_M2 = forward_selector.new_model_problem(
-        next(model for model in result_M5 if model[MODEL_ID] == 'M2_0'),
-        valid = False
-    )
-    result_M2 = forward_selector.get_test_models(model_M2)
-    assert {model[MODEL_ID] for model in result_M2} == {'M1_0'}
+    # returned test model IDs for a recursive call to get_test_model()
+    # starting at INITIAL_VIRTUAL_MODEL. e.g.: sort and flatten the tree of
+    # model IDs described by expected_test_model_ids, where the base of the
+    # tree is M1_0_0.
+    expected_test_model_tree_flat = sorted([
+        INITIAL_VIRTUAL_MODEL,
+        # INITIAL_VIRTUAL_MODEL
+        'M1_0_0',
+        # M1_0_0
+        'M1_1_0',
+        'M1_2_0',
+        'M1_3_0',
+        # M1_1_0
+        'M1_4_0',
+        'M1_5_0',
+        # M1_2_0
+        'M1_4_0',
+        'M1_6_0',
+        # M1_3_0
+        'M1_5_0',
+        'M1_6_0',
+        # M1_4_0 from M1_1_0
+        'M1_7_0',
+        # M1_4_0 from M1_2_0
+        'M1_7_0',
+        # M1_5_0 from M1_1_0
+        'M1_7_0',
+        # M1_5_0 from M1_3_0
+        'M1_7_0',
+        # M1_6_0 from M1_2_0
+        'M1_7_0',
+        # M1_6_0 from M1_6_0
+        'M1_7_0',
+    ])
+
+    directional_get_test_models(expected_test_model_ids,
+                                expected_test_model_tree_flat,
+                                reverse=False)
+
+
+def test_backward_selector_get_test_models():
+    # get_test_model(model_id) for all model IDs as model_id
+    expected_test_model_ids = {
+        INITIAL_VIRTUAL_MODEL: {'M1_7_0'},
+        'M1_0_0': set(),
+        'M1_1_0': {'M1_0_0'},
+        'M1_2_0': {'M1_0_0'},
+        'M1_3_0': {'M1_0_0'},
+        'M1_4_0': {'M1_1_0', 'M1_2_0'},
+        'M1_5_0': {'M1_1_0', 'M1_3_0'},
+        'M1_6_0': {'M1_2_0', 'M1_3_0'},
+        'M1_7_0': {'M1_4_0', 'M1_5_0', 'M1_6_0'},
+    }
+
+    # returned test model IDs for a recursive call to get_test_model()
+    # starting at INITIAL_VIRTUAL_MODEL. e.g.: sort and flatten the tree of
+    # model IDs described by expected_test_model_ids, where the base of the
+    # tree is M1_0_0.
+    expected_test_model_tree_flat = sorted([
+        INITIAL_VIRTUAL_MODEL,
+        # INITIAL_VIRTUAL_MODEL
+        'M1_7_0',
+        # M1_7_0
+        'M1_4_0',
+        'M1_5_0',
+        'M1_6_0',
+        # M1_4_0
+        'M1_1_0',
+        'M1_2_0',
+        # M1_5_0
+        'M1_1_0',
+        'M1_3_0',
+        # M1_6_0
+        'M1_2_0',
+        'M1_3_0',
+        # M1_1_0 from M1_4_0
+        'M1_0_0',
+        # M1_1_0 from M1_5_0
+        'M1_0_0',
+        # M1_2_0 from M1_4_0
+        'M1_0_0',
+        # M1_2_0 from M1_6_0
+        'M1_0_0',
+        # M1_3_0 from M1_5_0
+        'M1_0_0',
+        # M1_3_0 from M1_6_0
+        'M1_0_0',
+    ])
+
+    directional_get_test_models(expected_test_model_ids,
+                                expected_test_model_tree_flat,
+                                reverse=True)
 
 
 def test_relative_complexity_parameters():
@@ -112,7 +253,8 @@ def test_relative_complexity_parameters():
         ('nan', 'nan',  0)
     ]
 
-    selector = ForwardSelector(None, None, None, None, None)
+    #selector = ForwardSelector(None, None, None, None, None)
+    selector = ForwardSelector(*([None]*11))
     for test in tests:
         old, new, expected_complexity = (float(p) for p in test)
         assert selector.relative_complexity_parameters(old, new) == \
@@ -142,7 +284,7 @@ def test_relative_complexity_models_forward():
 
     # `headers` is only `parameter_ids` here. Normally also contains 'modelId'
     # and 'SBML'
-    selector = ForwardSelector(None, None, None, headers, None)
+    selector = ForwardSelector(*([None]*3), headers, *([None]*7))
     for expected_complexity_untyped, model_values_untyped in tests:
         expected_complexity = float(expected_complexity_untyped)
         model_values = [float(p) for p in model_values_untyped]
@@ -169,25 +311,29 @@ def models_compared_with(model_id0: str,
 
 
 def test_pipeline_forward():
+    # TODO rewrite with networkx
+    # TODO test may fail, depending on pypesto.minimise outcome for each model.
+    # rewrite such that tests are predictable
     petab_problem = petab.Problem.from_yaml(EXAMPLE_YAML)
-
     selector = ModelSelector(petab_problem, EXAMPLE_MODELS)
     model_list = [model for model in selector.model_generator()]
     
     selected_models, _, selection_history = selector.select('forward', 'AIC')
     assert models_compared_with(INITIAL_VIRTUAL_MODEL, selection_history) == \
-        {'M5_0', 'M6_0', 'M7_0'}
-    assert models_compared_with('M6_0', selection_history) == \
-        {'M3_0', 'M4_0'}
+        {'M1_0_0'}
+    assert models_compared_with('M1_0_0', selection_history) == \
+        {'M1_1_0', 'M1_2_0', 'M1_3_0'}
+    assert models_compared_with('M1_1_0', selection_history) == \
+        {'M1_4_0', 'M1_5_0'}
 
     selected_models, local_selection_history, selection_history = \
         selector.select('forward', 'AIC')
     # includes models compared to `INITIAL_VIRTUAL_MODEL` in first run, as
     # `selection_history` includes them (they were not retested)
     assert models_compared_with(INITIAL_VIRTUAL_MODEL, selection_history) == \
-        {'M5_0', 'M6_0', 'M7_0', 'M2_0'}
-    assert models_compared_with('M2_0', selection_history) == \
-        {'M1_0'}
+        {'M1_0_0', 'M1_6_0'}
+    assert models_compared_with('M1_6_0', selection_history) == \
+        {'M1_7_0'}
 
     with pytest.raises(Exception):
         # TODO ensure correct exception is raised?
@@ -203,24 +349,82 @@ def test_pipeline_backward():
 
     selected_models, _, selection_history = selector.select('backward', 'AIC')
     assert models_compared_with(INITIAL_VIRTUAL_MODEL, selection_history) == \
-        {'M1_0'}
-    assert models_compared_with('M1_0', selection_history) == \
-        {'M2_0', 'M3_0', 'M4_0'}
-    assert models_compared_with('M3_0', selection_history) == \
-        {'M6_0', 'M7_0'}
+        {'M1_7_0'}
+    assert models_compared_with('M1_7_0', selection_history) == \
+        {'M1_4_0', 'M1_5_0', 'M1_6_0'}
+    assert models_compared_with('M1_6_0', selection_history) == \
+        {'M1_2_0', 'M1_3_0'}
+    assert models_compared_with('M1_3_0', selection_history) == \
+        {'M1_0_0'}
 
     selected_models, local_selection_history, selection_history = \
         selector.select('backward', 'AIC')
     # includes models compared to `INITIAL_VIRTUAL_MODEL` in first run, as
     # `selection_history` includes them (they were not retested)
     assert models_compared_with(INITIAL_VIRTUAL_MODEL, selection_history) == \
-        {'M1_0', 'M5_0'}
+        {'M1_7_0', 'M1_1_0'}
 
     with pytest.raises(Exception):
         # TODO ensure correct exception is raised?
-        selector.select('forward', 'AIC')
+        selector.select('backward', 'AIC')
     for s in selection_history:
         print(selection_history[s])
+
+
+def test_row2problem_yaml_string():
+    petab_problem = petab.Problem.from_yaml(EXAMPLE_YAML)
+    importer = PetabImporter(petab_problem)
+    obj = importer.create_objective()
+    expected_problem = importer.create_problem(obj)
+
+    problem = row2problem({}, EXAMPLE_YAML)
+    assert (problem.x_names         == expected_problem.x_names and
+            problem.x_free_indices  == expected_problem.x_free_indices and
+            problem.x_fixed_indices == expected_problem.x_fixed_indices and
+            problem.x_fixed_vals    == expected_problem.x_fixed_vals)
+
+
+def test_row2problem_setting_pars():
+    models_df = pd.read_csv(EXAMPLE_MODELS, sep='\t')
+    for _, row in models_df.iterrows():
+        for key, val in row.items():
+            if key not in NOT_PARAMETERS:
+                row[key] = float(ESTIMATE_SYMBOL_INTERNAL) \
+                    if val == ESTIMATE_SYMBOL_UI else float(val)
+
+        problem = row2problem(dict(row), EXAMPLE_YAML)
+
+        petab_problem = petab.Problem.from_yaml(EXAMPLE_YAML)
+        parameter_df_x_ids = tuple(petab_problem.parameter_df.index)
+
+        for key in NOT_PARAMETERS:
+            row.pop(key)
+
+        x_free_indices = []
+        x_fixed_indices = []
+        x_fixed_vals = []
+        for x_id, x_val in row.items():
+            if np.isnan(x_val):
+                x_free_indices.append(parameter_df_x_ids.index(x_id))
+            else:
+                x_fixed_indices.append(parameter_df_x_ids.index(x_id))
+                x_fixed_vals.append(x_val)
+
+        # Need to remove parameters that are in the PEtab parameters table
+        # but not in the model spec file.
+        mask = [True if x_id in row.keys() else False
+                for x_id in parameter_df_x_ids]
+        test_x_free_indices = [x_index for x_index in problem.x_free_indices
+                               if mask[x_index]]
+        test_x_fixed_indices = [x_index for x_index in problem.x_fixed_indices
+                                if mask[x_index]]
+        test_x_fixed_vals = [x_index for index, x_index
+                             in enumerate(problem.x_fixed_vals)
+                             if mask[problem.x_fixed_indices[index]]]
+        assert (test_x_free_indices == x_free_indices and
+                test_x_fixed_indices == x_fixed_indices and
+                test_x_fixed_vals == x_fixed_vals)
+
 
 @pytest.mark.skip
 def test_custom_initial_model():
