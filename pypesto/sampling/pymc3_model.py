@@ -3,6 +3,7 @@ import numpy as np
 
 import pymc3 as pm
 import arviz as az
+from arviz import InferenceData
 import theano.tensor as tt
 from theano.ifelse import ifelse
 
@@ -152,13 +153,13 @@ def pymc3_logp_parname(x_names: List[str]):
 
 
 def pymc3_to_arviz(model: pm.Model, trace: pm.backends.base.MultiTrace, *,
-                   problem: Problem = None, x_names: List[str] = None):
+                   problem: Problem = None, x_names: List[str] = None,
+                   **kwargs):
     if problem is not None and x_names is not None:
         raise ValueError('the problem and x_names keyword arguments '
                          'cannot both be given.')
 
     # Determine if free parameters were vectorized
-    kwargs = {}
     if len(model.free_RVs) == 1:
         theta = model.free_RVs[0]
         if len(theta.distribution.shape) > 0:
@@ -172,13 +173,47 @@ def pymc3_to_arviz(model: pm.Model, trace: pm.backends.base.MultiTrace, *,
             kwargs['coords'] = {"free_parameter": x_names}
             kwargs['dims'] = {pymc3_vector_parname(x_names): ["free_parameter"]}
 
-    return az.from_pymc3(
+    # NB when the observed data is a random variable,
+    #    the standard conversion to arviz by arviz.from_pymc3
+    #    results in an InferenceData object that cannot be saved to disk
+    #    (can be worked with by saving the trace
+    #     and recreating the InferenceData each time,
+    #     but probably not what the user expects)
+    # TODO try to eliminate the need for the log_post variable
+    #      it should be easy in the vectorized case
+    return CustomPyMC3Converter(
         trace=trace,
         model=model,
         log_likelihood=True,  # pymc3 log-likelihood == negative obj. value
                               #                      == real model's posterior
         **kwargs
-    )
+    ).to_inference_data()
+    # return az.from_pymc3(
+    #     trace=trace,
+    #     model=model,
+    #     log_likelihood=True,  # pymc3 log-likelihood == negative obj. value
+    #                           #                      == real model's posterior
+    #     **kwargs
+    # )
+
+
+class CustomPyMC3Converter(az.data.io_pymc3.PyMC3Converter):
+    # NB this function is as in arviz, except for one line
+    def to_inference_data(self):
+        id_dict = {
+            "posterior": self.posterior_to_xarray(),
+            "sample_stats": self.sample_stats_to_xarray(),
+            "log_likelihood": self.log_likelihood_to_xarray(),
+            "posterior_predictive": self.posterior_predictive_to_xarray(),
+            "predictions": self.predictions_to_xarray(),
+            **self.priors_to_xarray(),
+            # "observed_data": self.observed_data_to_xarray(), # COMMENTED OUT
+        }
+        if self.predictions:
+            id_dict["predictions_constant_data"] = self.constant_data_to_xarray()
+        else:
+            id_dict["constant_data"] = self.constant_data_to_xarray()
+        return InferenceData(save_warmup=self.save_warmup, **id_dict)
 
 
 def BetterUniform(name, *, lower, upper, jitter_scale=None,
