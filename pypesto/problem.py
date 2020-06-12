@@ -55,10 +55,6 @@ class Problem:
     x_priors_defs:
         Definitions of priors for parameters. Types of priors, and their
         required and optional parameters, are described in the `Prior` class.
-
-    Attributes
-    ----------
-
     dim:
         The number of non-fixed parameters.
         Computed from the other values.
