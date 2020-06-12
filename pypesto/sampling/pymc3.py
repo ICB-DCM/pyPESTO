@@ -116,7 +116,7 @@ class Pymc3Sampler(Sampler):
             #    (probably a bug in pymc 3.8)
 
         # Convert trace to inference data object
-        data = pymc3_to_arviz(model, trace)
+        data = pymc3_to_arviz(model, trace, problem=self.problem)
 
         self.trace = trace
         self.data = data

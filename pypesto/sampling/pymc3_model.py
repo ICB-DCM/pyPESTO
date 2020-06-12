@@ -151,22 +151,26 @@ def pymc3_logp_parname(x_names: List[str]):
         return 'log_post'
 
 
-def pymc3_to_arviz(model: pm.Model, trace: pm.backends.base.MultiTrace,
-                   *, problem: Problem = None, x_names: List[str] = None,
-                   vectorize: bool = False):
+def pymc3_to_arviz(model: pm.Model, trace: pm.backends.base.MultiTrace, *,
+                   problem: Problem = None, x_names: List[str] = None):
     if problem is not None and x_names is not None:
         raise ValueError('the problem and x_names keyword arguments '
                          'cannot both be given.')
 
+    # Determine if free parameters were vectorized
     kwargs = {}
-    if vectorize:
-        if problem is None and x_names is None:
-            raise ValueError('if vectorize is True, one of the problem '
-                              'or x_names keyword arguments must be given.')
-        if x_names is None:
-            x_names = [problem.x_names[i] for i in problem.x_free_indices]
-        kwargs['coords'] = {"free_parameter": x_names}
-        kwargs['dims'] = {pymc3_vector_parname(x_names): ["free_parameter"]}
+    if len(model.free_RVs) == 1:
+        theta = model.free_RVs[0]
+        if len(theta.distribution.shape) > 0:
+            # theta is a tensor variable
+            assert len(theta.distribution.shape) == 1  # should only be vector
+            if problem is None and x_names is None:
+                raise ValueError('if vectorize is True, one of the problem '
+                                 'or x_names keyword arguments must be given.')
+            if x_names is None:
+                x_names = [problem.x_names[i] for i in problem.x_free_indices]
+            kwargs['coords'] = {"free_parameter": x_names}
+            kwargs['dims'] = {pymc3_vector_parname(x_names): ["free_parameter"]}
 
     return az.from_pymc3(
         trace=trace,
