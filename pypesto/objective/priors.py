@@ -65,7 +65,7 @@ class NegLogParameterPriors(ObjectiveBase):
         self.prior_list = prior_list
         super().__init__(x_names)
 
-    def __deepcopy__(self, memodict={}):
+    def __deepcopy__(self, memodict=None):
         other = NegLogParameterPriors(deepcopy(self.prior_list))
         return other
 
@@ -76,7 +76,7 @@ class NegLogParameterPriors(ObjectiveBase):
             mode: str
     ) -> ResultDict:
 
-        res = dict()
+        res = {}
 
         for order in sensi_orders:
             if order == 0:

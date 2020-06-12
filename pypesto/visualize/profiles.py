@@ -58,8 +58,8 @@ def profiles(results, ax=None, profile_indices=None, size=(18.5, 6.5),
     if profile_indices is None:
         profile_indices = []
         for result in results:
-            tmp_indices = [ind for ind in range(len(
-                result.profile_result.list[profile_list_id]))]
+            tmp_indices = list(range(len(
+                result.profile_result.list[profile_list_id])))
             profile_indices = list(set().union(profile_indices, tmp_indices))
 
     # loop over results

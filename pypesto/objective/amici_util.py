@@ -231,10 +231,10 @@ def get_error_output(
     vectors, and a function value, i.e. nllh, of `np.inf`.
     """
     if not amici_model.nt():
-        nt = sum([data.nt() for data in edatas])
+        nt = sum(data.nt() for data in edatas)
     else:
-        nt = sum([data.nt() if data.nt() else amici_model.nt()
-                  for data in edatas])
+        nt = sum(data.nt() if data.nt() else amici_model.nt()
+                 for data in edatas)
     n_res = nt * amici_model.nytrue
 
     return {
