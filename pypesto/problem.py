@@ -149,8 +149,7 @@ class Problem:
 
     @property
     def x_free_indices(self) -> List[int]:
-        return sorted(
-            set(range(0, self.dim_full)) - set(self.x_fixed_indices))
+        return sorted(set(range(0, self.dim_full)) - set(self.x_fixed_indices))
 
     def normalize(self) -> None:
         """
