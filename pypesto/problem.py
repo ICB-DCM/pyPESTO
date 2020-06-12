@@ -111,10 +111,7 @@ class Problem:
             x_fixed_vals = [x_fixed_vals]
         self.x_fixed_vals: List[float] = [float(x) for x in x_fixed_vals]
 
-        self.dim: int = self.dim_full - len(self.x_fixed_indices)
-
-        self.x_free_indices: List[int] = sorted(
-            set(range(0, self.dim_full)) - set(self.x_fixed_indices))
+        self._x_free_indices: Union[List[int], None] = None
 
         if x_guesses is None:
             x_guesses = np.zeros((0, self.dim_full))
@@ -135,16 +132,25 @@ class Problem:
         self.normalize()
 
     @property
-    def lb(self):
+    def lb(self) -> np.ndarray:
         return self.lb_full[self.x_free_indices]
 
     @property
-    def ub(self):
+    def ub(self) -> np.ndarray:
         return self.ub_full[self.x_free_indices]
 
     @property
-    def x_guesses(self):
+    def x_guesses(self) -> np.ndarray:
         return self.x_guesses_full[:, self.x_free_indices]
+
+    @property
+    def dim(self) -> int:
+        return self.dim_full - len(self.x_fixed_indices)
+
+    @property
+    def x_free_indices(self) -> List[int]:
+        return sorted(
+            set(range(0, self.dim_full)) - set(self.x_fixed_indices))
 
     def normalize(self) -> None:
         """
@@ -218,10 +224,6 @@ class Problem:
                 self.x_fixed_indices.append(i_parameter)
                 self.x_fixed_vals.append(parameter_vals[i_index])
 
-        self.dim = self.dim_full - len(self.x_fixed_indices)
-        self.x_free_indices: List[int] = sorted(
-            set(range(0, self.dim_full)) - set(self.x_fixed_indices))
-
         self.normalize()
 
     def unfix_parameters(
@@ -241,10 +243,6 @@ class Problem:
                 i_index = self.x_fixed_indices.index(i_parameter)
                 self.x_fixed_indices.pop(i_index)
                 self.x_fixed_vals.pop(i_index)
-
-        self.dim = self.dim_full - len(self.x_fixed_indices)
-        self.x_free_indices: List[int] = sorted(
-            set(range(0, self.dim_full)) - set(self.x_fixed_indices))
 
         self.normalize()
 
