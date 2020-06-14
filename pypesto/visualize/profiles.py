@@ -2,6 +2,7 @@ import matplotlib.pyplot as plt
 from matplotlib.ticker import MaxNLocator
 import numpy as np
 from typing import Sequence, Tuple
+from warnings import warn
 
 from ..result import Result
 from .reference_points import create_references
@@ -53,14 +54,28 @@ def profiles(results, ax=None, profile_indices=None, size=(18.5, 6.5),
     # parse input
     (results, colors, legends) = process_result_list(results, colors, legends)
 
-    # get the correct number of parameter indices, even if not the same in
-    # all result objects
+    # get all parameter indices, for which profiles were computed
+    plottable_indices = set()
+    for result in results:
+        # get parameter indices, for which profiles were computed
+        tmp_indices = [
+            par_id for par_id, prof in
+            enumerate(result.profile_result.list[profile_list_id])
+            if prof is not None]
+        # profile_indices should contain all parameter indices,
+        # for which in at least one of the results a profile exists
+        plottable_indices.update(tmp_indices)
+    plottable_indices = sorted(plottable_indices)
+
+    # get the profiles, which should be plotted and sanitize, if not plottable
     if profile_indices is None:
-        profile_indices = []
-        for result in results:
-            tmp_indices = list(range(len(
-                result.profile_result.list[profile_list_id])))
-            profile_indices = list(set().union(profile_indices, tmp_indices))
+        profile_indices = plottable_indices
+    else:
+        for ind in profile_indices:
+            if ind not in plottable_indices:
+                profile_indices.remove(ind)
+                warn('Requested to plot profile for parameter index %i, '
+                     'but profile has not been computed.' % ind)
 
     # loop over results
     for j, result in enumerate(results):
@@ -326,7 +341,8 @@ def handle_inputs(
     # extract ratio values values from result
     fvals = []
     for i_par in range(0, len(result.profile_result.list[profile_list])):
-        if i_par in profile_indices:
+        if i_par in profile_indices and \
+                result.profile_result.list[profile_list][i_par] is not None:
             xs = result.profile_result.list[profile_list][i_par]\
                 .x_path[i_par, :]
             ratios = result.profile_result.list[profile_list][i_par]\

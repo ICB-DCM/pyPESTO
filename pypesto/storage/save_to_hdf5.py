@@ -50,7 +50,8 @@ class ProblemHDF5Writer:
                                     "If you wish to overwrite the file set"
                                     "overwrite=True.")
             attrs_to_save = [a for a in dir(problem) if not a.startswith('__')
-                             and not callable(getattr(problem, a))]
+                             and not callable(getattr(problem, a))
+                             and not hasattr(type(problem), a)]
 
             problem_grp = f.create_group("problem")
             # problem_grp.attrs['config'] = objective.get_config()
