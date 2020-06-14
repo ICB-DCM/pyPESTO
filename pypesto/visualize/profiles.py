@@ -56,11 +56,13 @@ def profiles(results, ax=None, profile_indices=None, size=(18.5, 6.5),
     # get the correct number of parameter indices, even if not the same in
     # all result objects
     if profile_indices is None:
-        profile_indices = []
+        profile_indices = set()
         for result in results:
-            tmp_indices = list(range(len(
-                result.profile_result.list[profile_list_id])))
-            profile_indices = list(set().union(profile_indices, tmp_indices))
+            ixs = [ix for ix, val in enumerate(
+                result.profile_result.list[profile_list_id])
+                   if val is not None]
+            profile_indices.update(ixs)
+        profile_indices = sorted(profile_indices)
 
     # loop over results
     for j, result in enumerate(results):

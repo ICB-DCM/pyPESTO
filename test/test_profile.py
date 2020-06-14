@@ -10,6 +10,7 @@ from copy import deepcopy
 import warnings
 
 from pypesto import ObjectiveBase
+from .visualize import close_fig
 
 
 class ProfilerTest(unittest.TestCase):
@@ -25,6 +26,7 @@ class ProfilerTest(unittest.TestCase):
             (cls.problem, cls.result, cls.optimizer) = \
                 create_optimization_results(cls.objective)
 
+    @close_fig
     def test_default_profiling(self):
         # loop over  methods for creating new initial guesses
         method_list = ['fixed_step', 'adaptive_step_order_0',
@@ -60,6 +62,10 @@ class ProfilerTest(unittest.TestCase):
                                              'proposal needed too many steps.')
                 self.assertTrue(steps > 1, 'Profiling with 0th order based '
                                            'proposal needed not enough steps.')
+
+            # standard plotting
+            pypesto.visualize.profiles(result, profile_list_id=i_run)
+            pypesto.visualize.profile_cis(result, profile_list=i_run)
 
     def test_selected_profiling(self):
         # create options in order to ensure a short computation time
@@ -184,6 +190,7 @@ def test_profile_with_history():
     )
 
 
+@close_fig
 def test_profile_with_fixed_parameters():
     """Test using profiles with fixed parameters."""
     obj = test_objective.rosen_for_sensi(max_sensi_order=1)['obj']
@@ -197,13 +204,18 @@ def test_profile_with_fixed_parameters():
     optimizer = pypesto.ScipyOptimizer(options={'maxiter': 50})
     result = pypesto.minimize(problem=problem, optimizer=optimizer, n_starts=2)
 
-    for next_guess_method in [
+    for i_method, next_guess_method in enumerate([
             'fixed_step', 'adaptive_step_order_0',
-            'adaptive_step_order_1', 'adaptive_step_regression']:
+            'adaptive_step_order_1', 'adaptive_step_regression']):
         print(next_guess_method)
         pypesto.parameter_profile(
             problem=problem, result=result, optimizer=optimizer,
             next_guess_method=next_guess_method)
+
+        # standard plotting
+        axes = pypesto.visualize.profiles(result, profile_list_id=i_method)
+        assert len(axes) == 3
+        pypesto.visualize.profile_cis(result, profile_list=i_method)
 
 
 def create_optimization_results(objective):
