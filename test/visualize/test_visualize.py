@@ -314,7 +314,7 @@ def test_profiles_with_options():
                                size=alt_fig_size,
                                profile_list_ids=[0, 1],
                                legends=['profile list 0', 'profile list 1'],
-                               colors=[[1.,.3,.3,.5], [.5,.9,.4,.3]])
+                               colors=[[1., .3, .3, .5], [.5, .9, .4, .3]])
 
 
 @close_fig

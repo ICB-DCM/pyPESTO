@@ -57,7 +57,7 @@ def profiles(results, ax=None, profile_indices=None, size=(18.5, 6.5),
 
     # get the parameter ids to be plotted
     profile_indices = process_profile_indices(results, profile_indices,
-        profile_list_ids)
+                                              profile_list_ids)
 
     # loop over results
     for j, result in enumerate(results):
@@ -299,15 +299,10 @@ def handle_reference_points(ref, ax, profile_indices):
     """
 
     if len(ref) > 0:
-        # get the parameters which have profiles plotted
-        par_indices = []
-        for i_plot, profile_ind in enumerate(profile_indices):
-            par_indices.append(profile_ind)
-
         # loop over axes objects
         for i_par, i_ax in enumerate(ax):
             for i_ref in ref:
-                current_x = i_ref['x'][par_indices[i_par]]
+                current_x = i_ref['x'][profile_indices[i_par]]
                 i_ax.plot([current_x, current_x], [0., 1.],
                           color=i_ref.color, label=i_ref.legend)
 
