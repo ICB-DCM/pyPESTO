@@ -75,7 +75,7 @@ class MetropolisSampler(InternalSampler):
         # Initialize log posterior and log prior values
         lpost = kwargs['lpost']
         lprior = kwargs['lprior']
-        
+
         # propose step
         x_new: np.ndarray = self._propose_parameter(x)
 
