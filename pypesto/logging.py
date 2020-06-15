@@ -8,7 +8,7 @@ Logging convenience functions.
 import logging
 
 def log(name: str = 'pypesto',
-        level: int = None,
+        level: int = logging.DEBUG,
         console: bool = False,
         filename: str = ''):
     '''
@@ -29,9 +29,6 @@ def log(name: str = 'pypesto',
     filename:
         If specified, messages are logged to a file with this name.
     '''
-    if level is None:
-        level = logging.DEBUG
-
     logger = logging.getLogger(name)
     logger.setLevel(level)
 
@@ -45,7 +42,7 @@ def log(name: str = 'pypesto',
         fh.setLevel(level)
         logger.addHandler(fh)
 
-def log_to_console(level: int = None):
+def log_to_console(level: int = logging.DEBUG):
     """
     Log to console.
 
@@ -56,7 +53,8 @@ def log_to_console(level: int = None):
     log(level=level, console=True)
 
 
-def log_to_file(level: int = None, filename: str = None):
+def log_to_file(level: int = logging.DEBUG,
+                filename: str = '.pypesto_logging.log'):
     """
     Log to file.
 
@@ -64,6 +62,4 @@ def log_to_file(level: int = None, filename: str = None):
     ----------
     See the `log` method.
     """
-    if filename is None:
-        filename = ".pypesto_logging.log"
     log(level=level, filename=filename)
