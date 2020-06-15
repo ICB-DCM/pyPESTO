@@ -32,7 +32,7 @@ class Sampler(abc.ABC):
 
     @abc.abstractmethod
     def sample(
-            self, n_samples: int, beta: float = 1.
+            self, n_samples: int, beta: float = 1., temper_lpost: bool = False
     ):
         """Perform sampling.
 
@@ -42,6 +42,8 @@ class Sampler(abc.ABC):
             Number of samples to generate.
         beta:
             Inverse of the temperature to which the system is elevated.
+        temper_lpost:
+            Temper the log posterior (True) or the log likelihood (False).
         """
 
     @abc.abstractmethod
