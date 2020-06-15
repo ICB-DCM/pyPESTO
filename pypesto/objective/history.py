@@ -985,7 +985,7 @@ def extract_values(mode: str,
                    result: ResultDict,
                    options: HistoryOptions) -> Dict:
     """Extract values to record from result."""
-    ret = dict()
+    ret = {}
     ret_vars = [FVAL, GRAD, HESS, RES, SRES, CHI2, SCHI2]
     for var in ret_vars:
         if options.get(f'trace_record_{var}', True) and var in result:
