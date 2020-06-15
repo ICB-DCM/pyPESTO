@@ -1,7 +1,7 @@
 import matplotlib.pyplot as plt
 from matplotlib.ticker import MaxNLocator
 import numpy as np
-from typing import Sequence, Tuple
+from typing import Sequence, Tuple, Union
 from warnings import warn
 
 from ..result import Result
@@ -12,7 +12,7 @@ from .misc import process_result_list
 
 def profiles(results, ax=None, profile_indices=None, size=(18.5, 6.5),
              reference=None, colors=None, legends=None, x_labels=None,
-             profile_list_id=0, ratio_min: float = 0.,
+             profile_list_ids=0, ratio_min: float = 0.,
              show_bounds: bool = False):
     """
     Plot classical 1D profile plot (using the posterior, e.g. Gaussian like
@@ -38,8 +38,8 @@ def profiles(results, ax=None, profile_indices=None, size=(18.5, 6.5),
         Labels for line plots, one label per result object.
     x_labels: list of str
         Labels for parameter value axes (e.g. parameter names).
-    profile_list_id: int, optional
-        Index of the profile list to be used for profiling.
+    profile_list_ids: int or list of ints, optional
+        Index or list of indices of the profile lists to be used for profiling.
     ratio_min:
         Minimum ratio below which to cut off.
     show_bounds:
@@ -52,45 +52,32 @@ def profiles(results, ax=None, profile_indices=None, size=(18.5, 6.5),
     """
 
     # parse input
-    (results, colors, legends) = process_result_list(results, colors, legends)
+    results, profile_list_ids, colors, legends = process_result_list_profiles(
+        results, profile_list_ids, colors, legends)
+    (=, profile_list_ids, colors, legends) = process_result_list(
+        results, colors, legends)
 
-    # get all parameter indices, for which profiles were computed
-    plottable_indices = set()
-    for result in results:
-        # get parameter indices, for which profiles were computed
-        tmp_indices = [
-            par_id for par_id, prof in
-            enumerate(result.profile_result.list[profile_list_id])
-            if prof is not None]
-        # profile_indices should contain all parameter indices,
-        # for which in at least one of the results a profile exists
-        plottable_indices.update(tmp_indices)
-    plottable_indices = sorted(plottable_indices)
-
-    # get the profiles, which should be plotted and sanitize, if not plottable
-    if profile_indices is None:
-        profile_indices = plottable_indices
-    else:
-        for ind in profile_indices:
-            if ind not in plottable_indices:
-                profile_indices.remove(ind)
-                warn('Requested to plot profile for parameter index %i, '
-                     'but profile has not been computed.' % ind)
+    # get the parameter ids to be plotted
+    profile_indices = process_profile_indices(results, profile_indices,
+        profile_list_ids)
 
     # loop over results
     for j, result in enumerate(results):
-        fvals = handle_inputs(result, profile_indices=profile_indices,
-                              profile_list=profile_list_id,
-                              ratio_min=ratio_min)
+        for profile_list_id in profile_list_ids:
+            fvals = handle_inputs(result, profile_indices=profile_indices,
+                                  profile_list=profile_list_id,
+                                  ratio_min=ratio_min)
 
-        if x_labels is None:
-            x_labels = [name for name, fval in
-                        zip(result.problem.x_names, fvals) if fval is not None]
-        # call lowlevel routine
-        ax = profiles_lowlevel(
-            fvals=fvals, ax=ax, size=size, color=colors[j],
-            legend_text=legends[j], x_labels=x_labels, show_bounds=show_bounds,
-            lb_full=result.problem.lb_full, ub_full=result.problem.ub_full)
+            if x_labels is None:
+                x_labels = [name for name, fval in
+                            zip(result.problem.x_names, fvals)
+                            if fval is not None]
+            # call lowlevel routine
+            ax = profiles_lowlevel(
+                fvals=fvals, ax=ax, size=size, color=colors[j],
+                legend_text=legends[j], x_labels=x_labels,
+                show_bounds=show_bounds, lb_full=result.problem.lb_full,
+                ub_full=result.problem.ub_full)
 
     # parse and apply plotting options
     ref = create_references(references=reference)
@@ -359,3 +346,109 @@ def handle_inputs(
         fvals.append(fvals_for_par)
 
     return fvals
+
+
+def process_result_list_profiles(results, profile_list_ids, colors, legends):
+    """
+    assigns colors and legends to a list of results while taking care of the
+    special cases for profile plotting
+
+    Parameters
+    ----------
+
+    results: list or pypesto.Result
+        list of pypesto.Result objects or a single pypesto.Result
+    profile_list_ids: int or list of ints, optional
+        Index or list of indices of the profile lists to be used for profiling.
+    colors: list, optional
+        list of RGBA colors
+    legends: str or list
+        labels for line plots
+
+    Returns
+    -------
+    results: list of pypesto.Result
+       list of pypesto.Result objects
+    profile_list_ids:
+        List of indices of the profile lists to be used for profiling.
+    colors: list of RGBA
+        One for each element in 'results'.
+    legends: list of str
+        labels for line plots
+    """
+
+    # check if we have a single result
+    single_result = False
+    if isinstance(results, list):
+        if len(results) == 1:
+            single_result = True
+    else:
+        single_result = True
+        results = [results]
+
+    # ensure list of ids
+    if isinstance(profile_list_ids, int):
+        profile_list_ids = [profile_list_ids]
+
+    # If we have a single result, we may still have multiple profile_list_ids.
+    # Hence, multiple colors and legends would be fine.
+    if single_result:
+        pass
+    else:
+        # if we have no single result, then use the standard api
+        results, colors, legends = process_result_list(
+            results, colors, legends)
+
+    return results, profile_list_ids, colors, legends
+
+
+def process_profile_indices(
+        results: Sequence[Result],
+        profile_indices: Sequence[int],
+        profile_list_ids: Union[int, Sequence[int]]):
+    """
+    Retrieves the indices of the parameter for which profiles should be
+    plotted later from a list of pypesto.ProfileResult objects
+
+    Parameters
+    ----------
+    results: list or pypesto.Result
+        List of or single `pypesto.Result` after profiling.
+    profile_indices: list of integer values
+        List of integer values specifying which profiles should be plotted.
+    profile_list_ids: int or list of ints, optional
+        Index or list of indices of the profile lists to be used for profiling.
+
+    Returns
+    -------
+    profile_indices: list of integer values
+        corrected list of integer values specifying which profiles should be
+        plotted.
+    """
+
+    # get all parameter indices, for which profiles were computed
+    plottable_indices = set()
+    for result in results:
+        for profile_list_id in profile_list_ids:
+            # get parameter indices, for which profiles were computed
+            if profile_list_id < len(result.profile_result.list):
+                tmp_indices = [
+                    par_id for par_id, prof in
+                    enumerate(result.profile_result.list[profile_list_id])
+                    if prof is not None]
+                # profile_indices should contain all parameter indices,
+                # for which in at least one of the results a profile exists
+                plottable_indices.update(tmp_indices)
+    plottable_indices = sorted(plottable_indices)
+
+    # get the profiles, which should be plotted and sanitize, if not plottable
+    if profile_indices is None:
+        profile_indices = list(plottable_indices)
+    else:
+        for ind in profile_indices:
+            if ind not in plottable_indices:
+                profile_indices.remove(ind)
+                warn('Requested to plot profile for parameter index %i, '
+                     'but profile has not been computed.' % ind)
+
+    return profile_indices
