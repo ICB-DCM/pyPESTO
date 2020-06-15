@@ -7,6 +7,7 @@ Logging convenience functions.
 
 import logging
 
+
 def log(name: str = 'pypesto',
         level: int = logging.DEBUG,
         console: bool = False,
@@ -41,6 +42,7 @@ def log(name: str = 'pypesto',
         fh = logging.FileHandler(filename)
         fh.setLevel(level)
         logger.addHandler(fh)
+
 
 def log_to_console(level: int = logging.DEBUG):
     """
