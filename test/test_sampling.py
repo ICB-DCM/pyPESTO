@@ -3,7 +3,7 @@ This is for testing optimization of the pypesto.Objective.
 """
 
 import numpy as np
-from scipy.stats import multivariate_normal, norm, kstest
+from scipy.stats import multivariate_normal, norm, kstest, ks_2samp
 import scipy.optimize as so
 import matplotlib.pyplot as plt
 import pytest
@@ -37,6 +37,23 @@ def gaussian_mixture_problem():
 
     objective = pypesto.Objective(fun=nllh)
     problem = pypesto.Problem(objective=objective, lb=[-10], ub=[10],
+                              x_names=['x'])
+    return problem
+
+
+def gaussian_mixture_separated_modes_llh(x):
+    return np.log(
+        0.5*multivariate_normal.pdf(x, mean=-1., cov=0.7)
+        + 0.5*multivariate_normal.pdf(x, mean=100., cov=0.8))
+
+
+def gaussian_mixture_separated_modes_problem():
+    """Problem based on a mixture of gaussians with separated modes."""
+    def nllh(x):
+        return - gaussian_mixture_separated_modes_llh(x)
+
+    objective = pypesto.Objective(fun=nllh)
+    problem = pypesto.Problem(objective=objective, lb=[-100], ub=[200],
                               x_names=['x'])
     return problem
 
@@ -126,6 +143,73 @@ def test_ground_truth():
     statistic, pval = kstest(samples, 'uniform')
     print(statistic, pval)
     assert statistic > 0.1
+
+
+def test_ground_truth_separated_modes():
+    """Test whether we actually retrieve correct distributions."""
+    # use best self-implemented sampler, which has a chance of correctly
+    # sampling from the distribution
+    sampler = pypesto.AdaptiveParallelTemperingSampler(
+        internal_sampler=pypesto.AdaptiveMetropolisSampler(), n_chains=3)
+
+    problem = gaussian_mixture_separated_modes_problem()
+
+    result = pypesto.sample(problem, n_samples=10000,
+                            sampler=sampler,
+                            x0=np.array([0.]))
+
+    # get samples of first chain
+    samples = result.sample_result.trace_x[0, :, 0]
+
+    # generate ground-truth samples
+    rvs1 = norm.rvs(size=5000, loc=-1., scale=np.sqrt(0.7))
+    rvs2 = norm.rvs(size=5001, loc=100., scale=np.sqrt(0.8))
+
+    # test
+    statistic, pval = ks_2samp(np.concatenate([rvs1, rvs2]),
+                               samples)
+    print(statistic, pval)
+    assert statistic < 0.1
+
+    sampler = pypesto.AdaptiveMetropolisSampler()
+    result = pypesto.sample(problem, n_samples=1e4,
+                            sampler=sampler,
+                            x0=np.array([-2.]))
+
+    # get samples of first chain
+    samples = result.sample_result.trace_x[0, :, 0]
+
+    # test
+    statistic, pval = ks_2samp(np.concatenate([rvs1, rvs2]),
+                               samples)
+
+    print(statistic, pval)
+    assert statistic > 0.1
+
+    statistic, pval = ks_2samp(rvs1, samples)
+
+    print(statistic, pval)
+    assert statistic < 0.1
+
+    sampler = pypesto.AdaptiveMetropolisSampler()
+    result = pypesto.sample(problem, n_samples=1e4,
+                            sampler=sampler,
+                            x0=np.array([120.]))
+
+    # get samples of first chain
+    samples = result.sample_result.trace_x[0, :, 0]
+
+    # test
+    statistic, pval = ks_2samp(np.concatenate([rvs1, rvs2]),
+                               samples)
+
+    print(statistic, pval)
+    assert statistic > 0.1
+
+    statistic, pval = ks_2samp(rvs2, samples)
+
+    print(statistic, pval)
+    assert statistic < 0.1
 
 
 def test_multiple_startpoints():
