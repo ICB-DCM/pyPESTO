@@ -47,9 +47,7 @@ install:
 # run tests
 script:
   - if [ "$TRAVIS_PULL_REQUEST" = "false" ]; then
-      python3 -m flake8
-        --exclude=build,doc,example,tmp,amici_models
-        --per-file-ignores='*/__init__.py:F401';
+      ./run_flake8.sh;
     fi
   - if [ "$TRAVIS_PULL_REQUEST" = "false" ]; then
       travis_wait 20 python3 -m pytest --cov=pypesto ./test/test_*;
