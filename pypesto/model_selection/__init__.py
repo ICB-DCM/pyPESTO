@@ -1,15 +1,17 @@
 """
 Model Selection
 ===============
-
-
+TODO make import optional
+    - remove from pypesto/__init__.py
+    - import with `import pypesto.model_selection as ms`?
 """
 
-from .model_selection import (
-    ForwardSelector,
-    ModelSelectionProblem,
-    ModelSelector,
-    ModelSelectorMethod,
-    row2problem,
-    unpack_file,
-)
+from .method_stepwise import ForwardSelector
+from .method import ModelSelectorMethod
+from .misc import row2problem, unpack_file
+from .selector import ModelSelector
+#from .misc import (
+#    calculate_AIC,
+#    calculate_BIC,
+#)
+from .problem import ModelSelectionProblem

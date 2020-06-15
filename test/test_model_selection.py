@@ -20,6 +20,7 @@ from pypesto.model_selection import (
     row2problem,
     unpack_file,
 )
+
 from pypesto.model_selection.constants import (
     COMPARED_MODEL_ID,
     ESTIMATE_SYMBOL_INTERNAL,
