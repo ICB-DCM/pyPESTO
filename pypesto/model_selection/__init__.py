@@ -10,8 +10,4 @@ from .method_stepwise import ForwardSelector
 from .method import ModelSelectorMethod
 from .misc import row2problem, unpack_file
 from .selector import ModelSelector
-#from .misc import (
-#    calculate_AIC,
-#    calculate_BIC,
-#)
 from .problem import ModelSelectionProblem

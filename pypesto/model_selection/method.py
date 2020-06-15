@@ -5,7 +5,6 @@ import petab
 
 from .problem import ModelSelectionProblem
 
-# TODO test
 import logging
 logger = logging.getLogger(__name__)
 
@@ -40,15 +39,19 @@ class ModelSelectorMethod(abc.ABC):
         `True`, if `new` is superior to `old` by the criterion, else `False`.
         """
         if self.criterion == 'AIC':
+            result = new.AIC + self.criterion_threshold < old.AIC
             logger.info(f'{old.model_id}\t{new.model_id}\tAIC\t{old.AIC:.3f}\t'
                         f'{new.AIC:.3f}\t'
-                        f'{new.AIC-old.AIC:.3f}\t')
-            return new.AIC + self.criterion_threshold < old.AIC
+                        f'{new.AIC-old.AIC:.3f}\t'
+                        f'{"Accepted" if result else "Rejected"}')
+            return result
         elif self.criterion == 'BIC':
+            result = new.BIC + self.criterion_threshold < old.BIC
             logger.info(f'{old.model_id}\t{new.model_id}\tBIC\t{old.BIC:.3f}\t'
                         f'{new.BIC:.3f}\t'
-                        f'{new.BIC-old.BIC:.3f}\t')
-            return new.BIC + self.criterion_threshold < old.BIC
+                        f'{new.BIC-old.BIC:.3f}\t'
+                        f'{"Accepted" if result else "Rejected"}')
+            return result
         else:
             raise NotImplementedError('Model selection criterion: '
                                       f'{self.criterion}.')

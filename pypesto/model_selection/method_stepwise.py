@@ -12,7 +12,6 @@ from .constants import (
     MODEL_ID,
 )
 
-# TODO test
 import logging
 logger = logging.getLogger(__name__)
 
@@ -236,7 +235,6 @@ class ForwardSelector(ModelSelectorMethod):
                     # relative to test_model, which may mean models that are
                     # better than this test_model are rejected.
                     model = test_model
-                    print('test')
                     logger.info(f'Starting with model: {model.model_id}\n')
                     logger.info('Old ID\tNew ID\tCrit\tOld\tNew\tDiff\tResult')
                     # TODO reconsider whether `False` is appropriate, after
@@ -254,14 +252,11 @@ class ForwardSelector(ModelSelectorMethod):
                 # predictably select the next model from a set of models that
                 # are equivalent by criteria. Alphabetically?
                 if self.compare(model, test_model):
-                    logger.info(f'Accepted')
                     # TODO bug, see bug described in above if statement
                     model = test_model
                     proceed = True
                     if self.select_first_improvement:
                         break
-                else:
-                    logger.info(f'Rejected')
 
             # could move this to start of loop and check against `model.valid`
             # TODO might be better

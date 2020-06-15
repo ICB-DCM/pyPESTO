@@ -24,7 +24,6 @@ from .constants import (
     YAML_FILENAME_COLUMN,
 )
 
-# TODO test
 import logging
 logger = logging.getLogger(__name__)
 
