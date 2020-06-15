@@ -21,7 +21,7 @@ def log(name: str = 'pypesto',
         The name of the logger.
 
     level:
-        The output level to use. Default: logging.DEBUG.
+        The output level to use.
 
     console:
         If True, messages are logged to console.
