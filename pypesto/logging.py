@@ -11,7 +11,7 @@ def log(name: str = 'pypesto',
         level: int = logging.DEBUG,
         console: bool = False,
         filename: str = ''):
-    '''
+    """
     Log messages from a specified name with a specified level to any
     combination of console and file.
 
@@ -28,7 +28,7 @@ def log(name: str = 'pypesto',
 
     filename:
         If specified, messages are logged to a file with this name.
-    '''
+    """
     logger = logging.getLogger(name)
     logger.setLevel(level)
 
