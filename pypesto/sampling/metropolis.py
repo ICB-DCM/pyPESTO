@@ -52,9 +52,12 @@ class MetropolisSampler(InternalSampler):
 
         # loop over iterations
         for _ in tqdm(range(int(n_samples)), disable=not show_progress):
+            kwargs = {'lpost': lpost,
+                      'lprior': lprior}
             # perform step
-            x, lpost, lprior = self._perform_step(x, lpost, lprior,
-                                                  beta, temper_lpost)
+            x, lpost, lprior = self._perform_step(x, beta,
+                                                  temper_lpost,
+                                                  **kwargs)
             # record step
             self.trace_x.append(x)
             self.trace_neglogpost.append(-lpost)
@@ -64,12 +67,15 @@ class MetropolisSampler(InternalSampler):
         self.options['show_progress'] = False
 
     def _perform_step(self, x: np.ndarray,
-                      lpost: float, lprior: float,
-                      beta: float, temper_lpost: bool):
+                      beta: float, temper_lpost: bool, **kwargs):
         """
         Perform a step: Propose new parameter, evaluate and check whether to
         accept.
         """
+        # Initialize log posterior and log prior values
+        lpost = kwargs['lpost']
+        lprior = kwargs['lprior']
+        
         # propose step
         x_new: np.ndarray = self._propose_parameter(x)
 
