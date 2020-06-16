@@ -20,7 +20,7 @@ class ParallelTemperingSampler(Sampler):
         super().__init__(options)
 
         # set betas
-        if (betas is None) + (n_chains is None) != 1:
+        if (betas is None) == (n_chains is None):
             raise ValueError("Set either betas or n_chains.")
         if betas is None:
             betas = near_exponential_decay_betas(
