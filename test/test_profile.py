@@ -64,7 +64,7 @@ class ProfilerTest(unittest.TestCase):
                                            'proposal needed not enough steps.')
 
             # standard plotting
-            pypesto.visualize.profiles(result, profile_list_id=i_run)
+            pypesto.visualize.profiles(result, profile_list_ids=i_run)
             pypesto.visualize.profile_cis(result, profile_list=i_run)
 
     def test_selected_profiling(self):
@@ -213,7 +213,7 @@ def test_profile_with_fixed_parameters():
             next_guess_method=next_guess_method)
 
         # standard plotting
-        axes = pypesto.visualize.profiles(result, profile_list_id=i_method)
+        axes = pypesto.visualize.profiles(result, profile_list_ids=i_method)
         assert len(axes) == 3
         pypesto.visualize.profile_cis(result, profile_list=i_method)
 
