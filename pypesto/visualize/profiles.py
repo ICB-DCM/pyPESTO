@@ -5,14 +5,21 @@ from typing import Sequence, Tuple, Union
 from warnings import warn
 
 from ..result import Result
-from .reference_points import create_references
+from .reference_points import create_references, ReferencePoint
 from .clust_color import assign_colors
 from .misc import process_result_list
 
 
-def profiles(results, ax=None, profile_indices=None, size=(18.5, 6.5),
-             reference=None, colors=None, legends=None, x_labels=None,
-             profile_list_ids=0, ratio_min: float = 0.,
+def profiles(results: Union[Result, Sequence[Result]],
+             ax=None,
+             profile_indices: Sequence[int] = None,
+             size: Sequence[float] = (18.5, 6.5),
+             reference: Union[ReferencePoint, Sequence[ReferencePoint]] = None,
+             colors=None,
+             legends: Sequence[str] = None,
+             x_labels: Sequence[str] = None,
+             profile_list_ids: Union[int, Sequence[int]] = 0,
+             ratio_min: float = 0.,
              show_bounds: bool = False):
     """
     Plot classical 1D profile plot (using the posterior, e.g. Gaussian like
@@ -60,21 +67,25 @@ def profiles(results, ax=None, profile_indices=None, size=(18.5, 6.5),
                                               profile_list_ids)
 
     # loop over results
-    for j, result in enumerate(results):
-        for k, profile_list_id in enumerate(profile_list_ids):
+    for i_result, result in enumerate(results):
+        for i_profile_list, profile_list_id in enumerate(profile_list_ids):
             fvals = handle_inputs(result, profile_indices=profile_indices,
                                   profile_list=profile_list_id,
                                   ratio_min=ratio_min)
 
+            # add x_labels for parameters
             if x_labels is None:
                 x_labels = [name for name, fval in
                             zip(result.problem.x_names, fvals)
                             if fval is not None]
 
+            # plot multiple results or profile runs into one figure?
             if len(results) == 1 and len(profile_list_ids) > 1:
-                color_ind = k
+                # multiple profile runs per axes object
+                color_ind = i_profile_list
             else:
-                color_ind = j
+                # multiple results per axes object
+                color_ind = i_result
 
             # call lowlevel routine
             ax = profiles_lowlevel(
@@ -360,33 +371,30 @@ def handle_inputs(
     return fvals
 
 
-def process_result_list_profiles(results, profile_list_ids, colors, legends):
+def process_result_list_profiles(results: Result,
+                                 profile_list_ids: Sequence[int],
+                                 colors: Sequence[np.array],
+                                 legends: Union[str, list]) -> Sequence[int]:
     """
     assigns colors and legends to a list of results while taking care of the
     special cases for profile plotting
 
     Parameters
     ----------
-
     results: list or pypesto.Result
-        list of pypesto.Result objects or a single pypesto.Result
+        List of or single `pypesto.Result` after profiling.
     profile_list_ids: int or list of ints, optional
         Index or list of indices of the profile lists to be used for profiling.
-    colors: list, optional
-        list of RGBA colors
-    legends: str or list
-        labels for line plots
+    colors: list of RGBA colors
+        colors for
+    legends: list of str
+        Legends for plotting
 
     Returns
     -------
-    results: list of pypesto.Result
-       list of pypesto.Result objects
-    profile_list_ids:
-        List of indices of the profile lists to be used for profiling.
-    colors: list of RGBA
-        One for each element in 'results'.
-    legends: list of str
-        labels for line plots
+    profile_indices: list of integer values
+        corrected list of integer values specifying which profiles should be
+        plotted.
     """
 
     # ensure list of ids
@@ -419,21 +427,6 @@ def process_profile_indices(
     """
     Retrieves the indices of the parameter for which profiles should be
     plotted later from a list of pypesto.ProfileResult objects
-
-    Parameters
-    ----------
-    results: list or pypesto.Result
-        List of or single `pypesto.Result` after profiling.
-    profile_indices: list of integer values
-        List of integer values specifying which profiles should be plotted.
-    profile_list_ids: int or list of ints, optional
-        Index or list of indices of the profile lists to be used for profiling.
-
-    Returns
-    -------
-    profile_indices: list of integer values
-        corrected list of integer values specifying which profiles should be
-        plotted.
     """
 
     # get all parameter indices, for which profiles were computed
