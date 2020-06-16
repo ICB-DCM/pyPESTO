@@ -55,9 +55,9 @@ class MetropolisSampler(InternalSampler):
             kwargs = {'lpost': lpost,
                       'lprior': lprior}
             # perform step
-            x, lpost, lprior = self._perform_step(x, beta,
-                                                  temper_lpost,
-                                                  **kwargs)
+            x, lpost, lprior = self._perform_step(
+                x=x, lpost=lpost, lprior=lprior, beta=beta,
+                temper_lpost=temper_lpost)
             # record step
             self.trace_x.append(x)
             self.trace_neglogpost.append(-lpost)
