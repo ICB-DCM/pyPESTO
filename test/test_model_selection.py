@@ -242,13 +242,13 @@ def test_relative_complexity_parameters():
     # 3-tuples: old parameter value, new parameter value, relative complexity
     # change
     tests = [
-        (    0,     0,  0),
-        (    0,     1,  0),
-        (    0,    -5,  0),
-        (    0, 'nan',  1),
-        (    1,     0,  0),
-        (    1,    -3,  0),
-        (    1, 'nan',  1),
+        (0,         0,  0),
+        (0,         1,  0),
+        (0,        -5,  0),
+        (0,     'nan',  1),
+        (1,         0,  0),
+        (1,        -3,  0),
+        (1,     'nan',  1),
         ('nan',     0, -1),
         ('nan',    -2, -1),
         ('nan', 'nan',  0)
@@ -269,8 +269,8 @@ def test_relative_complexity_models_forward():
     # TODO move MODEL_ID to constants file, change some headers in this list to
     # the constants
     # ignoring 'modelId', 'SBML' headers for now.
-    headers = ['p1',         'p2',         'p3']
-    model0_values  = [float('nan'), float(0),     float(3)]
+    headers = ['p1', 'p2', 'p3']
+    model0_values = [float('nan'), float(0), float(3)]
 
     # List of 2-tuples, first value is expected complexity of model compared to
     # `model0`, second value is the model, in the same format as
@@ -279,18 +279,18 @@ def test_relative_complexity_models_forward():
         ('nan', ['nan',     2,     3]),
         (1,     ['nan', 'nan',     3]),
         (1,     ['nan', 'nan',     0]),
-        ('nan', [    0, 'nan',     3]),
-        ('nan', [    2,     0, 'nan']),
+        ('nan', [0,     'nan',     3]),
+        ('nan', [2,         0, 'nan']),
     ]
 
     # TODO implement tests, and code for self.strict in ForwardSelector
-    tests_strict_false = [
-        (0,     ['nan',     2,     3]),
-        (1,     ['nan', 'nan',     3]),
-        (1,     ['nan', 'nan',     0]),
-        ('nan', [    0, 'nan',     3]),
-        ('nan', [    2,     0, 'nan']),
-    ]
+    # tests_strict_false = [
+    #     (0,     ['nan',     2,     3]),
+    #     (1,     ['nan', 'nan',     3]),
+    #     (1,     ['nan', 'nan',     0]),
+    #     ('nan', [    0, 'nan',     3]),
+    #     ('nan', [    2,     0, 'nan']),
+    # ]
 
     # `headers` is only `parameter_ids` here. Normally also contains 'modelId'
     # and 'SBML'
@@ -389,10 +389,10 @@ def test_row2problem_yaml_string():
     expected_problem = importer.create_problem(obj)
 
     problem = row2problem({}, EXAMPLE_YAML)
-    assert (problem.x_names         == expected_problem.x_names and
-            problem.x_free_indices  == expected_problem.x_free_indices and
+    assert (problem.x_names == expected_problem.x_names and
+            problem.x_free_indices == expected_problem.x_free_indices and
             problem.x_fixed_indices == expected_problem.x_fixed_indices and
-            problem.x_fixed_vals    == expected_problem.x_fixed_vals)
+            problem.x_fixed_vals == expected_problem.x_fixed_vals)
 
 
 def test_row2problem_setting_pars():
