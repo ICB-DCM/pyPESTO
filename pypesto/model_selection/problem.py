@@ -13,6 +13,7 @@ from .misc import (
     row2problem,
 )
 
+
 class ModelSelectionProblem(object):
     """
     Handles the creation, estimation, and evaluation of a model. Here, a model
@@ -20,14 +21,15 @@ class ModelSelectionProblem(object):
     values (which may specify that the parameter should be estimated).
     Evaluation refers to criterion values such as AIC.
     """
-    def __init__(self,
-                 row: Dict[str, Union[str, float]],
-                 petab_problem: petab.problem,
-                 valid: bool = True,
-                 autorun: bool = True,
-                 x_guess: List[float] = None,
-                 x_fixed_estimated: Set[str] = None,
-                 minimize_options: Dict = None
+    def __init__(
+            self,
+            row: Dict[str, Union[str, float]],
+            petab_problem: petab.problem,
+            valid: bool = True,
+            autorun: bool = True,
+            x_guess: List[float] = None,
+            x_fixed_estimated: Set[str] = None,
+            minimize_options: Dict = None,
     ):
         """
         Arguments
@@ -106,7 +108,6 @@ class ModelSelectionProblem(object):
                 else:
                     self.set_result(minimize(self.pypesto_problem))
 
-
     def set_result(self, result: Result):
         self.minimize_result = result
         # TODO extract best parameter estimates, to use as start point for
@@ -116,6 +117,7 @@ class ModelSelectionProblem(object):
 
     @property
     def AIC(self):
+        # TODO check naming conflicts, rename to lowercase
         if self._AIC is None:
             self._AIC = aic(self.n_estimated,
                             self.optimized_model.fval)

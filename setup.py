@@ -41,6 +41,7 @@ setup(name='pypesto',
                       'pyswarm': ['pyswarm>=0.6'],
                       'pymc3': ['arviz>=0.8.1',
                                 'theano>=1.0.4',
-                                'pymc3>=3.8']},
+                                'pymc3>=3.8'],
+                      'networkx': ['networkx>=2.3'],},
       python_requires='>=3.6',
       )

@@ -27,6 +27,7 @@ from .constants import (
 import logging
 logger = logging.getLogger(__name__)
 
+
 def row2problem(row: dict,
                 petab_problem: Union[petab.Problem, str] = None,
                 obj: Objective = None,
@@ -72,18 +73,22 @@ def row2problem(row: dict,
     if isinstance(petab_problem, str):
         petab_problem = petab.Problem.from_yaml(petab_problem)
 
-    ## drop row entries not referring to parameters
-    ## TODO switch to just YAML_FILENAME
-    #for key in [YAML_FILENAME, SBML_FILENAME, MODEL_ID]:
-    #    if key in row.keys():
-    #        row.pop(key)
+    # # drop row entries not referring to parameters
+    # # TODO switch to just YAML_FILENAME
+    # for key in [YAML_FILENAME, SBML_FILENAME, MODEL_ID]:
+    #     if key in row.keys():
+    #         row.pop(key)
     row_parameters = {k: row[k] for k in row if k not in NOT_PARAMETERS}
 
+    # for par_id, par_val in row.items():
     for par_id, par_val in row_parameters.items():
-    #for par_id, par_val in row.items():
         if par_id not in petab_problem.x_ids:
-            logger.info(Fore.YELLOW + f'Warning: parameter {par_id} is not defined '
-                                f'in PETab model. It will be ignored.')
+            logger.info('%sWarning: parameter %s is not defined '
+                        'in PETab model. It will be ignored.',
+                        Fore.YELLOW,
+                        par_id)
+            # logger.info(Fore.YELLOW + f'Warning: parameter {par_id} is not '
+            #             'defined in PETab model. It will be ignored.')
             continue
         if not np.isnan(par_val):
             petab_problem.parameter_df[ESTIMATE].loc[par_id] = 0

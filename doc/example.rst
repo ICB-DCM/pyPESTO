@@ -14,6 +14,7 @@ The following examples cover typical use cases and should help get a better idea
    example/storage.ipynb
    example/sampler_study.ipynb
    example/sampling_diagnostics.ipynb
+   example/model_selection.ipynb
 
 Download the examples as notebooks
 ----------------------------------
@@ -26,6 +27,7 @@ Download the examples as notebooks
 * :download:`Storage <example/storage.ipynb>`
 * :download:`Sampler study <example/sampler_study.ipynb>`
 * :download:`Sampling diagnostics <example/sampling_diagnostics.ipynb>`
+* :download:`Model selection <example/model_selection.ipynb>`
 
 .. Note::
    Some of the notebooks have extra dependencies.

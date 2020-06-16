@@ -1,16 +1,15 @@
 """
 Test pypesto.model_selection.
 """
-import itertools
 import math
 import numpy as np
 import pandas as pd
 import pytest
 import tempfile
-from typing import Dict, List, Sequence, Set, Union
+from typing import Dict, List, Set
 
 import petab
-from pypesto import minimize, PetabImporter
+from pypesto import PetabImporter
 
 from pypesto.model_selection import (
     ForwardSelector,
@@ -34,7 +33,7 @@ EXAMPLE_YAML = 'doc/example/model_selection/example_modelSelection.yaml'
 EXAMPLE_MODELS = ('doc/example/model_selection/'
                   'modelSelectionSpecification_example_modelSelection.tsv')
 
-ms_file_text = f'''ModelId\tSBML\tp1\tp2\tp3
+ms_file_text = '''ModelId\tSBML\tp1\tp2\tp3
 m0\tsbml1.xml\t0;5;-\t0;-\t-
 m1\tsbml1.xml\t0\t-\t-
 m2\tsbml2.xml\t3;-\t-\t-
@@ -76,6 +75,7 @@ def test_unpack_file():
 # than the real AIC by some constant value (assuming all models use the same
 # PEtab parameters file -- not the case when the YAML column is implemented).
 
+
 def get_test_model_tree_flat(
         model: ModelSelectionProblem,
         selector: ModelSelectorMethod,
@@ -91,7 +91,7 @@ def get_test_model_tree_flat(
     for test_model_row in result:
         test_model = selector.new_model_problem(
             test_model_row,
-            compared_model_id=model.model_id, # unnecessary?
+            compared_model_id=model.model_id,  # unnecessary?
             valid=False
         )
         test_model_tree_flat += get_test_model_tree_flat(
@@ -254,7 +254,7 @@ def test_relative_complexity_parameters():
         ('nan', 'nan',  0)
     ]
 
-    #selector = ForwardSelector(None, None, None, None, None)
+    # selector = ForwardSelector(None, None, None, None, None)
     selector = ForwardSelector(*([None]*11))
     for test in tests:
         old, new, expected_complexity = (float(p) for p in test)
@@ -262,7 +262,7 @@ def test_relative_complexity_parameters():
             expected_complexity
 
 
-#from pypesto.model_selection import ForwardSelector
+# from pypesto.model_selection import ForwardSelector
 def test_relative_complexity_models_forward():
     # TODO in `model_selection.py`, consider how to handle models that are
     # equivalent and chosen as the next step candidates
@@ -275,7 +275,16 @@ def test_relative_complexity_models_forward():
     # List of 2-tuples, first value is expected complexity of model compared to
     # `model0`, second value is the model, in the same format as
     # `x = ModelSelector.model_generator(); x = x.values()`
-    tests = [
+    tests_strict_true = [
+        ('nan', ['nan',     2,     3]),
+        (1,     ['nan', 'nan',     3]),
+        (1,     ['nan', 'nan',     0]),
+        ('nan', [    0, 'nan',     3]),
+        ('nan', [    2,     0, 'nan']),
+    ]
+
+    # TODO implement tests, and code for self.strict in ForwardSelector
+    tests_strict_false = [
         (0,     ['nan',     2,     3]),
         (1,     ['nan', 'nan',     3]),
         (1,     ['nan', 'nan',     0]),
@@ -286,7 +295,8 @@ def test_relative_complexity_models_forward():
     # `headers` is only `parameter_ids` here. Normally also contains 'modelId'
     # and 'SBML'
     selector = ForwardSelector(*([None]*3), headers, *([None]*7))
-    for expected_complexity_untyped, model_values_untyped in tests:
+    selector.reverse = False
+    for expected_complexity_untyped, model_values_untyped in tests_strict_true:
         expected_complexity = float(expected_complexity_untyped)
         model_values = [float(p) for p in model_values_untyped]
         if math.isnan(expected_complexity):
@@ -303,7 +313,7 @@ def test_relative_complexity_models_forward():
 
 
 def models_compared_with(model_id0: str,
-                         selection_history: Dict[str, Dict])-> Set[str]:
+                         selection_history: Dict[str, Dict]) -> Set[str]:
     model_ids = set()
     for model_id, model_info in selection_history.items():
         if model_info[COMPARED_MODEL_ID] == model_id0:
@@ -317,8 +327,8 @@ def test_pipeline_forward():
     # rewrite such that tests are predictable
     petab_problem = petab.Problem.from_yaml(EXAMPLE_YAML)
     selector = ModelSelector(petab_problem, EXAMPLE_MODELS)
-    model_list = [model for model in selector.model_generator()]
-    
+    # model_list = [model for model in selector.model_generator()]
+
     selected_models, _, selection_history = selector.select('forward', 'AIC')
     assert models_compared_with(INITIAL_VIRTUAL_MODEL, selection_history) == \
         {'M1_0_0'}
@@ -346,7 +356,7 @@ def test_pipeline_forward():
 def test_pipeline_backward():
     petab_problem = petab.Problem.from_yaml(EXAMPLE_YAML)
     selector = ModelSelector(petab_problem, EXAMPLE_MODELS)
-    model_list = [model for model in selector.model_generator()]
+    # model_list = [model for model in selector.model_generator()]
 
     selected_models, _, selection_history = selector.select('backward', 'AIC')
     assert models_compared_with(INITIAL_VIRTUAL_MODEL, selection_history) == \

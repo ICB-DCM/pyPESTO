@@ -14,6 +14,7 @@ from .misc import (
     unpack_file,
 )
 
+
 class ModelSelector:
     """
     Handles model selection. Usage involves initialisation with a model
@@ -24,7 +25,7 @@ class ModelSelector:
             self,
             petab_problem: petab.problem,
             specification_filename: str,
-            #constraints_filename: str
+            # constraints_filename: str
     ):
         self.petab_problem = petab_problem
         # TODO remove duplicates from specification_file
@@ -33,9 +34,8 @@ class ModelSelector:
                                convert_parameters_to_float=False)
         self.parameter_ids = self.header[PARAMETER_DEFINITIONS_START:]
 
-
-        #self.apply_constraints(
-        #    self.parse_constraints_file[constraints_filename])
+        # self.apply_constraints(
+        #     self.parse_constraints_file[constraints_filename])
 
         self.selection_history = {}
 
@@ -68,7 +68,9 @@ class ModelSelector:
     def parse_constraints_file(
             constraints_filename: str
     ) -> Iterable[Tuple[str, str]]:
-        # TODO
+        """
+        TODO implement and move to misc.py?
+        """
         pass
 
     def apply_constraints(self, constraints: List[Tuple[str, str]]):
@@ -79,9 +81,10 @@ class ModelSelector:
                 pass
         pass
 
-    def model_generator(self,
-                        exclude_history: bool = True,
-                        exclusions: List[str] = None
+    def model_generator(
+            self,
+            exclude_history: bool = True,
+            exclusions: List[str] = None
     ) -> Iterable[Dict[str, Union[str, float]]]:
         """
         A generator for the models described by the model specification file.
@@ -123,16 +126,21 @@ class ModelSelector:
                 continue
             yield model_dict
 
-    # TODO method that automatically generates initial models, for a specific number of starts
-    # TODO parallelise
-    def multistart_select(self,
-                          method: str,
-                          criterion: str,
-                          initial_models: Sequence[Dict[str, Union[str, float]]] = None,
-                          select_first_improvement: bool = False,
-                          startpoint_latest_mle: bool = False,
-                          minimize_options: Dict = None,
-                          criterion_threshold: float = 0):
+    # TODO method that automatically generates initial models, for a specific
+    # number of starts. TODO parallelise
+    def multistart_select(
+            self,
+            method: str,
+            criterion: str,
+            initial_models: Sequence[Dict[str, Union[str, float]]] = None,
+            select_first_improvement: bool = False,
+            startpoint_latest_mle: bool = False,
+            minimize_options: Dict = None,
+            criterion_threshold: float = 0
+    ):
+        """
+        TODO docstring
+        """
         selected_models = []
         local_selection_history = []
         for initial_model in initial_models:
@@ -167,8 +175,7 @@ class ModelSelector:
             The model selection algorithm.
 
         criterion:
-            The criterion used by `ModelSelectorMethod.compare()`, in which
-            currently implemented criterion can be found.
+            The criterion by which models will be compared.
 
         initial_model:
             Specify the initial model for the model selection algorithm. If
@@ -189,8 +196,18 @@ class ModelSelector:
             Specify whether one of the startpoints of the multistart
             optimisation should include the optimized parameters in the current
             model.
+
+        minimize_options:
+            A dictionary that will be passed to `pypesto.minimize` as keyword
+            arguments for model optimization.
+
+        criterion_threshold:
+            The minimum improvement in criterion that a test model must score
+            to be selected. The comparison is made according to the method. For
+            example, in `ForwardSelector`, test models are compared to the
+            previously selected model.
         """
-        if method == 'forward' or method == 'backward':
+        if method in ('forward', 'backward'):
             reverse = True if method == 'backward' else False
             selector = ForwardSelector(self.petab_problem,
                                        self.model_generator,
@@ -241,7 +258,8 @@ class ModelSelector:
                 # TODO include best parameter estimates in initial_model
                 # data, for use as startpoint in future tested models
                 initial_model = result[0][-1]['row']
-                reverse = False if reverse else True
+                # reverse = False if reverse else True
+                reverse = not reverse
         elif method == 'all':
             raise NotImplementedError('Testing of all models is not yet '
                                       'implemented.')
@@ -251,5 +269,5 @@ class ModelSelector:
         # TODO: Reconsider return value. `result` could be stored in attribute,
         # then no values need to be returned, and users can request values
         # manually.
-        #return result, self.selection_history
+        # return result, self.selection_history
         return selected_models, local_selection_history, self.selection_history

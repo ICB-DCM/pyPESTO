@@ -15,6 +15,7 @@ from .constants import (
 import logging
 logger = logging.getLogger(__name__)
 
+
 class ForwardSelector(ModelSelectorMethod):
     """
     here it is assumed that that there is only one petab_problem
@@ -22,18 +23,19 @@ class ForwardSelector(ModelSelectorMethod):
     call method that can be called independently/multiple times after
     initialisation...
     """
-    def __init__(self,
-                 petab_problem: petab.problem,
-                 model_generator: Iterable[Dict[str, Union[str, float]]],
-                 criterion: str,
-                 parameter_ids: List[str],
-                 selection_history: Dict[str, Dict],
-                 initial_model: Dict[str, Union[str, float]],
-                 reverse: bool,
-                 select_first_improvement: bool,
-                 startpoint_latest_mle: bool,
-                 minimize_options: Dict = None,
-                 criterion_threshold: float = 0
+    def __init__(
+            self,
+            petab_problem: petab.problem,
+            model_generator: Iterable[Dict[str, Union[str, float]]],
+            criterion: str,
+            parameter_ids: List[str],
+            selection_history: Dict[str, Dict],
+            initial_model: Dict[str, Union[str, float]],
+            reverse: bool,
+            select_first_improvement: bool,
+            startpoint_latest_mle: bool,
+            minimize_options: Dict = None,
+            criterion_threshold: float = 0,
     ):
         # TODO rename to `default_petab_problem`? There may be multiple petab
         # problems for a single model selection run, defined by the future
@@ -78,29 +80,29 @@ class ForwardSelector(ModelSelectorMethod):
             # TODO ESTIMATE_SYMBOL_INTERNAL
             parameters = dict(zip(self.parameter_ids,
                                   [float("NaN")]*len(self.parameter_ids)))
-            #return ModelSelectionProblem(
-            #    self.petab_problem,
-            #    dict(zip(self.parameter_ids,
-            #             [float("NaN")]*len(self.parameter_ids),)),
-            #    valid=False
-            #)
+            # return ModelSelectionProblem(
+            #     self.petab_problem,
+            #     dict(zip(self.parameter_ids,
+            #              [float("NaN")]*len(self.parameter_ids),)),
+            #     valid=False
+            # )
         else:
             parameters = dict(zip(self.parameter_ids,
                                   [0]*len(self.parameter_ids)))
-            #return ModelSelectionProblem(
-            #    self.petab_problem,
-            #    dict(zip(self.parameter_ids, [0]*len(self.parameter_ids),)),
-            #    valid=False
-            #)
+            # return ModelSelectionProblem(
+            #     self.petab_problem,
+            #     dict(zip(self.parameter_ids, [0]*len(self.parameter_ids),)),
+            #     valid=False
+            # )
 
         model_id = {MODEL_ID: INITIAL_VIRTUAL_MODEL}
 
         return self.new_model_problem({**model_id, **parameters}, valid=False)
-        #return ModelSelectionProblem(
-        #    self.petab_problem,
-        #    {**model_ID, **parameters},
-        #    valid=False
-        #)
+        # return ModelSelectionProblem(
+        #     self.petab_problem,
+        #     {**model_ID, **parameters},
+        #     valid=False
+        # )
 
     def __call__(self):
         """
@@ -117,7 +119,7 @@ class ForwardSelector(ModelSelectorMethod):
         """
         selected_models = []
         local_selection_history = {}
-        logger.info('----------------------New Selection---------------------')
+        logger.info('%sNew Selection%s', '-'*22, '-'*21)
         # self.setup_direction(self.direction)
         # TODO rewrite so this is in `__init__()`, and this method saves the
         # latest "best" model as `self.model`. Would allow for continuation of
@@ -129,7 +131,7 @@ class ForwardSelector(ModelSelectorMethod):
             model = self.new_direction_problem()
         else:
             model = self.new_model_problem(self.initial_model)
-            logger.info(f'Starting with model: {model.model_id}\n')
+            logger.info('Starting with model: %s\n', model.model_id)
             logger.info('Old ID\tNew ID\tCrit\tOld\tNew\tDiff\tResult')
             # copied from for loop -- move into separate function?
             local_selection_history[model.model_id] = {
@@ -164,7 +166,7 @@ class ForwardSelector(ModelSelectorMethod):
             # only algorithm, not "all test models are compared, best test
             # model is chosen".
             compared_model_id = model.model_id
-            #compared_model_dict = model.row
+            # compared_model_dict = model.row
             test_models = self.get_test_models(model)
             # Error if no valid test models are found. May occur if
             # all models have already been tested. `Exception` may be a bad way
@@ -194,7 +196,7 @@ class ForwardSelector(ModelSelectorMethod):
                 test_model = self.new_model_problem(
                     test_model_dict,
                     compared_model_id=compared_model_id,
-                    #compared_model_dict=compared_model_dict
+                    # compared_model_dict=compared_model_dict
                 )
 
                 local_selection_history[test_model.model_id] = {
@@ -217,11 +219,11 @@ class ForwardSelector(ModelSelectorMethod):
                 # Move to after the loop/above the return statement.
                 self.selection_history.update(local_selection_history)
 
-                #self.selection_history[test_model.model_id] = {
-                #    'AIC': test_model.AIC,
-                #    'BIC': test_model.BIC,
-                #    'compared_model_id': compared_model_id
-                #}
+                # self.selection_history[test_model.model_id] = {
+                #     'AIC': test_model.AIC,
+                #     'BIC': test_model.BIC,
+                #     'compared_model_id': compared_model_id
+                # }
 
                 # The initial model from self.new_direction_problem() is only
                 # for complexity comparison, and is not a real model.
@@ -235,7 +237,7 @@ class ForwardSelector(ModelSelectorMethod):
                     # relative to test_model, which may mean models that are
                     # better than this test_model are rejected.
                     model = test_model
-                    logger.info(f'Starting with model: {model.model_id}\n')
+                    logger.info('Starting with model: %s\n', model.model_id)
                     logger.info('Old ID\tNew ID\tCrit\tOld\tNew\tDiff\tResult')
                     # TODO reconsider whether `False` is appropriate, after
                     # refactor that changed self.initial_model to be None if
@@ -278,24 +280,26 @@ class ForwardSelector(ModelSelectorMethod):
         -  1 if `new` is estimated and `old` is not
         - -1 if `old` is estimated and `new` is not
 
-        TODO: rewrite to use self.estimated_parameters to determine whether
-              parameters with fixed values should be considered estimated
+        TODO rewrite to use self.estimated_parameters to determine whether
+             parameters with fixed values should be considered estimated
+        TODO "method could be a function"
         """
-        # if both parameters are equal "complexity", e.g. both are fixed,
-        # both are estimated.
-        if (math.isnan(old) and math.isnan(new)) or (
-               not math.isnan(old) and
-               not math.isnan(new)
-           ):
-            return 0
-        # return 1 if the new parameter is estimated, and the old
-        # parameter is fixed
-        elif not math.isnan(old) and math.isnan(new):
-            return 1
-        # return -1 if the new parameter is fixed, and the old parameter is
-        # estimated
-        elif math.isnan(old) and not math.isnan(new):
-            return -1
+        return math.isnan(new) - math.isnan(old)
+        # # if both parameters are equal "complexity", e.g. both are fixed,
+        # # both are estimated.
+        # if (math.isnan(old) and math.isnan(new)) or (
+        #        not math.isnan(old) and
+        #        not math.isnan(new)
+        #    ):
+        #     return 0
+        # # return 1 if the new parameter is estimated, and the old
+        # # parameter is fixed
+        # elif not math.isnan(old) and math.isnan(new):
+        #     return 1
+        # # return -1 if the new parameter is fixed, and the old parameter is
+        # # estimated
+        # elif math.isnan(old) and not math.isnan(new):
+        #     return -1
 
     def relative_complexity_models(self,
                                    model0: Dict[str, Union[str, dict]],
@@ -315,20 +319,21 @@ class ForwardSelector(ModelSelectorMethod):
             The model to compare.
 
         strict:
-            If `True`, then `float('nan')` is returned if `model` is not a
-            a strict increase (for forward selection), or decrease (for
-            backward selection), in complexity compared to `model0`. If
-            `False`, then only requires a net increase (or decrease) in
-            complexity across all parameters. Exception: returns 0 if models
-            are equal in complexity.
+            If `True`, then `float('nan')` is returned if the change in the
+            "complexity" of any parameter is in the wrong direction, or there
+            is no difference in the complexity of the models.
+            If `False`, then `float('nan')` is returned if the relative change
+            in complexity of the model is in the wrong direction.
             TODO: could be used to instead implement bidirectional selection?
         """
         rel_complexity = 0
         for par in self.parameter_ids:
-            rel_par_complexity = self.relative_complexity_parameters(
-                model0[par],
-                model[par]
-            )
+            rel_par_complexity = math.isnan(model[par])-math.isnan(model0[par])
+            # TODO code review: replacement of below code with above code
+            # rel_par_complexity = self.relative_complexity_parameters(
+            #     model0[par],
+            #     model[par]
+            # )
             rel_complexity += rel_par_complexity
             # Skip models that can not be described as a strict addition
             # (forward selection) or removal (backward selection) of
@@ -336,19 +341,23 @@ class ForwardSelector(ModelSelectorMethod):
             # Complexity is set to float('nan') as this value appears to
             # always evaluate to false for comparisons such as a < b.
             # TODO check float('nan') python documentation to confirm
-            if strict:
-                if self.reverse and rel_par_complexity > 0:
-                    return float('nan')
-                elif not self.reverse and rel_par_complexity < 0:
-                    return float('nan')
+            # TODO code review: which if statement is preferred?
+            if self.reverse is None:
+                breakpoint()
+            if strict and (self.reverse - 0.5)*rel_par_complexity > 0:
+                return float('nan')
+            # if strict:
+            #     if self.reverse and rel_par_complexity > 0:
+            #         return float('nan')
+            #     elif not self.reverse and rel_par_complexity < 0:
+            #         return float('nan')
+        if strict and not rel_complexity:
+            return float('nan')
         return rel_complexity
 
     def get_test_models(self,
-                        #model0: Dict,
                         model0_problem: ModelSelectionProblem,
                         strict=True) -> List[int]:
-                        #conf_dict: Dict[str, float],
-                        #direction=0
         """
         Identifies models are have minimal changes in complexity compared to
         `model0`. Note: models that should be ignored are assigned a
@@ -366,7 +375,8 @@ class ForwardSelector(ModelSelectorMethod):
             If `True`, only models that strictly add (for forward selection) or
             remove (for backward selection) parameters compared to `model0`
             will be returned.
-            TODO: Is `strict=False` useful?
+            TODO Is `strict=False` useful?
+            TODO test strict=False implementation (not implemented)
 
         Returns
         -------
@@ -375,20 +385,18 @@ class ForwardSelector(ModelSelectorMethod):
         complex compared to the model described by `model0`.
         """
 
-        '''
-        Alternatives
-        a) Currently: a list is generated that contains an element
-        for each model in model_generator, where the element value is the
-        relative complexity of that model compared to model0. Then, the
-        set of indices, of elements with the minimal complexity, in this list
-        is returned.
-        b) loop through models in model generator and keep track of the current
-        minimal complexity change, as well as a list of indices in
-        enumerate(self.model_generator()) that match this minimal complexity.
-        If the next model has a smaller minimal complexity, then replace the
-        current minimal complexity, and replace the list of indices with a list
-        just containing the new model. After the loop, return the list.
-        '''
+        # Alternatives
+        # a) Currently: a list is generated that contains an element
+        # for each model in model_generator, where the element value is the
+        # relative complexity of that model compared to model0. Then, the
+        # set of indices, of elements with the minimal complexity, in this list
+        # is returned.
+        # b) loop through models in model generator and keep track of the
+        # current minimal complexity change, as well as a list of indices in
+        # enumerate(self.model_generator()) that match this minimal complexity.
+        # If the next model has a smaller minimal complexity, then replace the
+        # current minimal complexity, and replace the list of indices with a
+        # list just containing the new model. After the loop, return the list.
         # method alternative (b)
         # TODO rewrite all `model0` and `model` to be `model0_dict` and
         # `model_dict`, then change input argument to `model0`
@@ -403,7 +411,10 @@ class ForwardSelector(ModelSelectorMethod):
             for model in self.model_generator():
                 # less efficient than just checking equality in parameters
                 # between `model0` and `model`, with `self.parameter_ids`
-                if self.relative_complexity_models(model0, model) == 0:
+                if self.relative_complexity_models(
+                        model0,
+                        model,
+                        strict=False) == 0:
                     test_models += [model]
             if test_models:
                 return test_models
@@ -415,62 +426,65 @@ class ForwardSelector(ModelSelectorMethod):
         # self.model_generator(exclusions=self.selection_history.keys())
         # then implement exclusion in the generator function...
         for model in self.model_generator():
-            model_complexity = self.relative_complexity_models(model0, model)
+            model_complexity = self.relative_complexity_models(model0,
+                                                               model,
+                                                               strict)
+            # TODO fix comment after cleanup
             # if model does not represent a valid forward/backward selection
             # option. `isnan` for models with a complexity change in the wrong
             # direction, `not` for models with equivalent complexity.
-            if math.isnan(model_complexity) or not model_complexity:
-                continue
-            elif math.isnan(minimal_complexity):
-                minimal_complexity = model_complexity
-                test_models = [model]
+            # if math.isnan(model_complexity) or not model_complexity:
+            if not math.isnan(model_complexity):
+                # continue
+                if math.isnan(minimal_complexity):
+                    minimal_complexity = model_complexity
+                    test_models = [model]
             # `abs()` to account for negative complexities in the case of
             # backward selection.
-            elif abs(model_complexity) < abs(minimal_complexity):
-                minimal_complexity = model_complexity
-                test_models = [model]
-            elif model_complexity == minimal_complexity:
-                test_models += [model]
-            else:
-                # TODO remove `continue` after self.initial_model and related
-                # code is implemented
-                continue
-                raise ValueError('Unknown error while calculating relative '
-                                 'model complexities.')
+                elif abs(model_complexity) < abs(minimal_complexity):
+                    minimal_complexity = model_complexity
+                    test_models = [model]
+                elif model_complexity == minimal_complexity:
+                    test_models += [model]
+                else:
+                    # TODO remove `continue` after self.initial_model and
+                    # related code is implemented
+                    continue
+                    raise ValueError('Unknown error while calculating '
+                                     'relative model complexities.')
         return test_models
 
-
-        ## method alternative (a)
-        ## the nth element in this list is the relative complexity for the nth
-        ## model
-        #rel_complexities = []
-        #for model in self.model_generator():
-        #    rel_complexities.append(0)
-        #    # Skip models that have already been tested
-        #    if model[MODEL_ID] in self.selection_history:
-        #        continue
-        #    for par in self.parameter_ids:
-        #        rel_par_complexity = self.relative_complexity(
-        #            model0[par],
-        #            model[par]
-        #        )
-        #        # Skip models that can not be described as a strict addition
-        #        # (forward selection) or removal (backward selection) of
-        #        # parameters compared to `model0`.
-        #        if strict:
-        #            if self.reverse and rel_par_complexity > 0:
-        #                rel_complexities[-1] = float('nan')
-        #                break
-        #            elif not self.reverse and rel_par_complexity < 0:
-        #                rel_complexities[-1] = float('nan')
-        #                break
-        #        rel_complexities[-1] += rel_par_complexity
-        ## If `strict=False` is removed as an option (i.e. `strict` is always
-        ## `True`), then the comparisons `if i < 0` and `if i > 0` could be
-        ## removed from the following code.
-        #if self.reverse:
-        #    next_complexity = max(i for i in rel_complexities if i < 0)
-        #else:
-        #    next_complexity = min(i for i in rel_complexities if i > 0)
-        #return [i for i, complexity in enumerate(rel_complexities) if
-        #        complexity == next_complexity]
+        # # method alternative (a)
+        # # the nth element in this list is the relative complexity for the nth
+        # # model
+        # rel_complexities = []
+        # for model in self.model_generator():
+        #     rel_complexities.append(0)
+        #     # Skip models that have already been tested
+        #     if model[MODEL_ID] in self.selection_history:
+        #         continue
+        #     for par in self.parameter_ids:
+        #         rel_par_complexity = self.relative_complexity(
+        #             model0[par],
+        #             model[par]
+        #         )
+        #         # Skip models that can not be described as a strict addition
+        #         # (forward selection) or removal (backward selection) of
+        #         # parameters compared to `model0`.
+        #         if strict:
+        #             if self.reverse and rel_par_complexity > 0:
+        #                 rel_complexities[-1] = float('nan')
+        #                 break
+        #             elif not self.reverse and rel_par_complexity < 0:
+        #                 rel_complexities[-1] = float('nan')
+        #                 break
+        #         rel_complexities[-1] += rel_par_complexity
+        # # If `strict=False` is removed as an option (i.e. `strict` is always
+        # # `True`), then the comparisons `if i < 0` and `if i > 0` could be
+        # # removed from the following code.
+        # if self.reverse:
+        #     next_complexity = max(i for i in rel_complexities if i < 0)
+        # else:
+        #     next_complexity = min(i for i in rel_complexities if i > 0)
+        # return [i for i, complexity in enumerate(rel_complexities) if
+        #         complexity == next_complexity]
