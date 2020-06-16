@@ -76,9 +76,9 @@ class ModelSelector:
     def apply_constraints(self, constraints: List[Tuple[str, str]]):
         # TODO possible by importing model (also possible petab symbols) into
         # namespace then bool check with sympy
-        for model in self.model_generator():
-            for constraint_if, constraint_then in constraints:
-                pass
+        # for model in self.model_generator():
+        #     for constraint_if, constraint_then in constraints:
+        #         pass
         pass
 
     def model_generator(

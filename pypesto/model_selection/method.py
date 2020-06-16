@@ -1,4 +1,4 @@
-from abc import ABC, abstractmethod
+import abc
 from typing import Dict, Union
 
 import petab
@@ -9,7 +9,7 @@ import logging
 logger = logging.getLogger(__name__)
 
 
-class ModelSelectorMethod(ABC):
+class ModelSelectorMethod(abc.ABC):
     """
     Contains methods that are common to more than one model selection
     algorithm. This is the parent class of model selection algorithms, and
