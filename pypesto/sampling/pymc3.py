@@ -57,8 +57,7 @@ class Pymc3Sampler(Sampler):
         self.problem.objective.history = History()
 
     def sample(
-            self, n_samples: int, beta: float = 1.
-    ):
+            self, n_samples: int, beta: float = 1.):
         problem = self.problem
         log_post_fun = TheanoLogProbability(problem, beta)
         trace = self.trace

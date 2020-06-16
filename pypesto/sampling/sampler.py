@@ -32,7 +32,7 @@ class Sampler(abc.ABC):
 
     @abc.abstractmethod
     def sample(
-            self, n_samples: int, beta: float = 1., temper_lpost: bool = False
+            self, n_samples: int, beta: float = 1.,
     ):
         """Perform sampling.
 
@@ -42,8 +42,6 @@ class Sampler(abc.ABC):
             Number of samples to generate.
         beta:
             Inverse of the temperature to which the system is elevated.
-        temper_lpost:
-            Temper the log posterior (True) or the log likelihood (False).
         """
 
     @abc.abstractmethod
@@ -131,9 +129,14 @@ class InternalSampler(Sampler):
             The sample that will replace the last sample in the chain.
         """
 
-    def make_internal(self):
+    def make_internal(self, temper_lpost: bool):
         """
         This function can be called by parallel tempering samplers during
         initialization to allow the inner samplers to adjust to them
         being used as inner samplers. Default: Do nothing.
+
+        Parameters
+        ----------
+        tamper_lpost:
+            Whether to temperate the posterior or only the likelihood.
         """

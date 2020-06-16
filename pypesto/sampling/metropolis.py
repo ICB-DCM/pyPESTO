@@ -21,6 +21,7 @@ class MetropolisSampler(InternalSampler):
         self.trace_x: Union[Sequence[np.ndarray], None] = None
         self.trace_neglogpost: Union[Sequence[float], None] = None
         self.trace_neglogprior: Union[Sequence[float], None] = None
+        self.temper_lpost: bool = False
 
     @classmethod
     def default_options(cls):
@@ -41,8 +42,7 @@ class MetropolisSampler(InternalSampler):
         self.trace_neglogpost = [self.neglogpost(x0)]
         self.trace_neglogprior = [self.neglogprior(x0)]
 
-    def sample(self, n_samples: int, beta: float = 1.,
-               temper_lpost: bool = False):
+    def sample(self, n_samples: int, beta: float = 1.):
         # load last recorded particle
         x = self.trace_x[-1]
         lpost = - self.trace_neglogpost[-1]
@@ -54,19 +54,18 @@ class MetropolisSampler(InternalSampler):
         for _ in tqdm(range(int(n_samples)), disable=not show_progress):
             # perform step
             x, lpost, lprior = self._perform_step(
-                x=x, lpost=lpost, lprior=lprior, beta=beta,
-                temper_lpost=temper_lpost)
+                x=x, lpost=lpost, lprior=lprior, beta=beta)
             # record step
             self.trace_x.append(x)
             self.trace_neglogpost.append(-lpost)
             self.trace_neglogprior.append(-lprior)
 
-    def make_internal(self):
+    def make_internal(self, temper_lpost: bool):
         self.options['show_progress'] = False
+        self.temper_lpost = temper_lpost
 
-    def _perform_step(self, x: np.ndarray,
-                      lpost: np.ndarray, lprior: np.ndarray,
-                      beta: float, temper_lpost: bool):
+    def _perform_step(self, x: np.ndarray, lpost: np.ndarray,
+                      lprior: np.ndarray, beta: float):
         """
         Perform a step: Propose new parameter, evaluate and check whether to
         accept.
@@ -86,7 +85,7 @@ class MetropolisSampler(InternalSampler):
         # compute log prior
         lprior_new = - self.neglogprior(x_new)
 
-        if not temper_lpost:
+        if not self.temper_lpost:
             # extract current log likelihood value
             llh = lpost - lprior
             # extract proposed log likelihood value
