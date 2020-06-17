@@ -34,7 +34,8 @@ sys.path.insert(0, os.path.abspath('../'))
 extensions = ['sphinx.ext.autodoc',
               'sphinx.ext.napoleon',
               'IPython.sphinxext.ipython_console_highlighting',
-              'nbsphinx']
+              'nbsphinx',
+              'recommonmark']
 
 # default autodoc options
 # list for special-members seems not to be possible before 1.8

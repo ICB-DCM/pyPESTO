@@ -1,5 +1,5 @@
 import numpy as np
-from typing import Dict, List
+from typing import Dict, Sequence
 
 from .constants import GRAD, HESS, RES, SRES
 
@@ -75,14 +75,14 @@ class FixedParametersProcessor(PrePostProcessor):
 
     def __init__(self,
                  dim_full: int,
-                 x_free_indices: List[int],
-                 x_fixed_indices: List[int],
-                 x_fixed_vals: List[float]):
+                 x_free_indices: Sequence[int],
+                 x_fixed_indices: Sequence[int],
+                 x_fixed_vals: Sequence[float]):
         super().__init__()
         self.dim_full = dim_full
-        self.x_free_indices = x_free_indices
-        self.x_fixed_indices = x_fixed_indices
-        self.x_fixed_vals = x_fixed_vals
+        self.x_free_indices: np.ndarray = np.array(x_free_indices, dtype=int)
+        self.x_fixed_indices: np.ndarray = np.array(x_fixed_indices, dtype=int)
+        self.x_fixed_vals: np.ndarray = np.array(x_fixed_vals, dtype=float)
 
     def preprocess(self, x: np.ndarray) -> np.ndarray:
         """Embed optimization vector to full vector with all simulation
@@ -100,17 +100,17 @@ class FixedParametersProcessor(PrePostProcessor):
         """Constrain results to optimization parameter dimensions."""
         result = super().postprocess(result)
 
-        if GRAD in result:
+        if result.get(GRAD, None) is not None:
             grad = result[GRAD]
             if grad.size == self.dim_full:
                 grad = grad[self.x_free_indices]
                 result[GRAD] = grad
-        if HESS in result:
+        if result.get(HESS, None) is not None:
             hess = result[HESS]
             if hess.shape[0] == self.dim_full:
                 hess = hess[np.ix_(self.x_free_indices, self.x_free_indices)]
                 result[HESS] = hess
-        if SRES in result:
+        if result.get(SRES, None) is not None:
             sres = result[SRES]
             if sres.shape[-1] == self.dim_full:
                 sres = sres[..., self.x_free_indices]

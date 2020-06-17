@@ -1,8 +1,8 @@
 import numpy as np
-import copy
 import pandas as pd
+import copy
 import logging
-from typing import Callable, Dict, List, Tuple, Union
+from typing import Callable, Dict, Sequence, Tuple, Union
 
 from .constants import MODE_FUN, MODE_RES, FVAL, GRAD, HESS, RES, SRES
 from .history import HistoryBase
@@ -120,7 +120,7 @@ class Objective:
                  sres: Union[Callable, bool] = None,
                  fun_accept_sensi_orders: bool = False,
                  res_accept_sensi_orders: bool = False,
-                 x_names: List[str] = None):
+                 x_names: Sequence[str] = None):
         self.fun = fun
         self.grad = grad
         self.hess = hess
@@ -237,6 +237,8 @@ class Objective:
             is flattened). If `return_dict`, then instead a dict is returned
             with function values and derivatives indicated by ids.
         """
+        # copy parameter vector to prevent side effects
+        x = np.array(x).copy()
 
         # check input
         self.check_sensi_orders(sensi_orders, mode)
@@ -476,9 +478,9 @@ class Objective:
     def update_from_problem(
             self,
             dim_full: int,
-            x_free_indices: List[int],
-            x_fixed_indices: List[int],
-            x_fixed_vals: List[int]):
+            x_free_indices: Sequence[int],
+            x_fixed_indices: Sequence[int],
+            x_fixed_vals: Sequence[float]):
         """
         Handle fixed parameters. Later, the objective will be given parameter
         vectors x of dimension dim, which have to be filled up with fixed
@@ -518,7 +520,7 @@ class Objective:
     def check_grad(
             self,
             x: np.ndarray,
-            x_indices: List[int] = None,
+            x_indices: Sequence[int] = None,
             eps: float = 1e-5,
             verbosity: int = 1,
             mode: str = MODE_FUN
@@ -532,7 +534,7 @@ class Objective:
         x:
             The parameters for which to evaluate the gradient.
         x_indices:
-            List of index values for which to compute gradients. Default: all.
+            Indices for which to compute gradients. Default: all.
         eps:
             Finite differences step size. Default: 1e-5.
         verbosity:

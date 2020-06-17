@@ -1,7 +1,6 @@
 import logging
 import abc
 import numpy as np
-from typing import Callable
 
 from ..problem import Problem
 from ..objective import HistoryOptions
@@ -40,8 +39,7 @@ class OptimizerTask(Task):
             x0: np.ndarray,
             id: str,
             options: 'pypesto.OptimizeOptions',
-            history_options: HistoryOptions,
-            handle_exception: Callable):
+            history_options: HistoryOptions):
         """
         Create the task object.
 
@@ -59,8 +57,6 @@ class OptimizerTask(Task):
             Options object applying to optimization.
         history_options:
             Optimizer history options.
-        handle_exception:
-            Callable to apply when the optimization fails.
         """
         super().__init__()
 
@@ -70,19 +66,12 @@ class OptimizerTask(Task):
         self.id = id
         self.options = options
         self.history_options = history_options
-        self.handle_exception = handle_exception
 
     def execute(self) -> 'pypesto.OptimizerResult':
         logger.info(f"Executing task {self.id}.")
-        try:
-            optimizer_result = self.optimizer.minimize(
-                problem=self.problem, x0=self.x0, id=self.id,
-                history_options=self.history_options)
-        except Exception as err:
-            if self.options.allow_failed_starts:
-                optimizer_result = self.handle_exception(
-                    self.problem.objective, self.x0, self.id, err)
-            else:
-                raise
+        optimizer_result = self.optimizer.minimize(
+            problem=self.problem, x0=self.x0, id=self.id,
+            allow_failed_starts=self.options.allow_failed_starts,
+            history_options=self.history_options)
 
         return optimizer_result
