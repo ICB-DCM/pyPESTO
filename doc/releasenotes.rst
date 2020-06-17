@@ -10,14 +10,15 @@ Release notes
 -------------------
 
 Objective
+
 * Write solver settings to stream to enable serialization for distributed
   systems (#308)
 * Refactor objective function (#347)
   * Removes necessity for all of the nasty binding/undbinding in AmiciObjective
   * Substantially reduces the complexity of the AggregatedObjective class
   * Aggregation of functions with inconsistent sensi_order/mode support
-  * Makes Objective an abstract class and moves all previously implemented
-    functionality to the new class FunctionObjective
+  * Introduce ObjectiveBase as an abstract Objective class
+  * Introduce FunctionObjective for objectives from functions
 * Implement priors with gradients, integrate with PEtab (#357)
 * Fix minus sign in AmiciObjective.get_error_output (#361)
 * Implement a prior class, derivatives for standard models, interface with
@@ -25,17 +26,21 @@ Objective
 * Use `amici.import_model_module` to resolve module loading failure (#384)
 
 Problem
+
 * Tidy up problem vectors using properties (#393)
 
 Optimization
+
 * Interface IpOpt optimizer (#373)
 
 Profiles
+
 * Tidy up profiles (#356)
 * Refactor profiles; add locally approximated profiles (#369)
 * Fix profiling and visualization with fixed parameters (#393)
 
 Sampling
+
 * Geweke test for sampling convergence (#339)
 * Implement basic Pymc3 sampler (#351)
 * Make theano for pymc3 an optional dependency (allows using pypesto without
@@ -46,6 +51,7 @@ Sampling
   (#396)
 
 History and storage
+
 * Allow storing results in a pre-filled hdf5 file (#290)
 * Various fixes of the history (reduced vs. full parameters, read-in from file,
   chi2 values) (#315)
@@ -58,15 +64,18 @@ History and storage
 * Save really all attributes of a Problem to hdf5 (#342)
 
 Visualization
+
 * Customizable xLabels and tight layout for profile plots (#331)
 * Fix non-positive bottom ylim on a log-scale axis in waterfall plots (#348)
 * Fix "palette list has the wrong number of colors" in sampling plots (#372)
 * Allow to plot multiple profiles from one result (#399)
 
 Logging
+
 * Allow easier specification of only logging for submodules (#398)
 
 Tests
+
 * Speed up travis build (#329)
 * Update travis test system to latest ubuntu and python 3.8 (#330)
 * Additional code quality checks, minor simplifications (#395)
