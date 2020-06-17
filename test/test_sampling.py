@@ -48,7 +48,7 @@ def gaussian_mixture_separated_modes_llh(x):
 
 
 def gaussian_mixture_separated_modes_problem():
-    """Problem based on a mixture of gaussians with separated modes."""
+    """Problem based on a mixture of gaussians with far/separated modes."""
     def nllh(x):
         return - gaussian_mixture_separated_modes_llh(x)
 
@@ -149,6 +149,8 @@ def test_ground_truth_separated_modes():
     """Test whether we actually retrieve correct distributions."""
     # use best self-implemented sampler, which has a chance of correctly
     # sampling from the distribution
+
+    # First use parallel tempering with 3 chains
     sampler = pypesto.AdaptiveParallelTemperingSampler(
         internal_sampler=pypesto.AdaptiveMetropolisSampler(), n_chains=3)
 
@@ -161,16 +163,22 @@ def test_ground_truth_separated_modes():
     # get samples of first chain
     samples = result.sample_result.trace_x[0, :, 0]
 
-    # generate ground-truth samples
+    # generate bimodal ground-truth samples
+    # "first" mode centered at -1
     rvs1 = norm.rvs(size=5000, loc=-1., scale=np.sqrt(0.7))
+    # "second" mode centered at 100
     rvs2 = norm.rvs(size=5001, loc=100., scale=np.sqrt(0.8))
 
-    # test
+    # test for distribution similarity
     statistic, pval = ks_2samp(np.concatenate([rvs1, rvs2]),
                                samples)
+
+    # only parallel tempering finds both modes
     print(statistic, pval)
     assert statistic < 0.1
 
+    # sample using adaptive metropolis (single-chain)
+    # initiated around the "first" mode of the distribution
     sampler = pypesto.AdaptiveMetropolisSampler()
     result = pypesto.sample(problem, n_samples=1e4,
                             sampler=sampler,
@@ -179,18 +187,22 @@ def test_ground_truth_separated_modes():
     # get samples of first chain
     samples = result.sample_result.trace_x[0, :, 0]
 
-    # test
+    # test for distribution similarity
     statistic, pval = ks_2samp(np.concatenate([rvs1, rvs2]),
                                samples)
 
+    # single-chain adaptive metropolis does not find both modes
     print(statistic, pval)
     assert statistic > 0.1
 
+    # actually centered at the "first" mode
     statistic, pval = ks_2samp(rvs1, samples)
 
     print(statistic, pval)
     assert statistic < 0.1
 
+    # sample using adaptive metropolis (single-chain)
+    # initiated around the "second" mode of the distribution
     sampler = pypesto.AdaptiveMetropolisSampler()
     result = pypesto.sample(problem, n_samples=1e4,
                             sampler=sampler,
@@ -199,13 +211,15 @@ def test_ground_truth_separated_modes():
     # get samples of first chain
     samples = result.sample_result.trace_x[0, :, 0]
 
-    # test
+    # test for distribution similarity
     statistic, pval = ks_2samp(np.concatenate([rvs1, rvs2]),
                                samples)
 
+    # single-chain adaptive metropolis does not find both modes
     print(statistic, pval)
     assert statistic > 0.1
 
+    # actually centered at the "second" mode
     statistic, pval = ks_2samp(rvs2, samples)
 
     print(statistic, pval)
