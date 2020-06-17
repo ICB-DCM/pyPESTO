@@ -245,7 +245,6 @@ class AmiciObjective(ObjectiveBase):
             err.args = err.args + ("Amici must have been compiled with hdf5 "
                                    "support",)
             raise
-
         self.amici_model = model
         self.amici_solver = solver
         self.edatas = edatas
