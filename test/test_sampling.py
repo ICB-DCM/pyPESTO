@@ -3,12 +3,13 @@ This is for testing optimization of the pypesto.Objective.
 """
 
 import numpy as np
-from scipy.stats import multivariate_normal, norm, kstest, ks_2samp
+from scipy.stats import multivariate_normal, norm, kstest, ks_2samp, uniform
 import scipy.optimize as so
 import matplotlib.pyplot as plt
 import pytest
 
 import pypesto
+from pypesto.objective import NegLogPriors
 
 
 def gaussian_llh(x):
@@ -68,6 +69,22 @@ def rosenbrock_problem():
 
     problem = pypesto.Problem(objective=objective, lb=lb, ub=ub)
     return problem
+
+
+def prior(x):
+    return multivariate_normal.pdf(x, mean=-1., cov=0.7)
+
+
+def likelihood(x):
+    return uniform.pdf(x, loc=-10., scale=20.)[0]
+
+
+def negative_log_posterior(x):
+    return - np.log(likelihood(x)) - np.log(prior(x))
+
+
+def negative_log_prior(x):
+    return - np.log(prior(x))
 
 
 @pytest.fixture(params=['Metropolis',
@@ -156,7 +173,7 @@ def test_ground_truth_separated_modes():
 
     problem = gaussian_mixture_separated_modes_problem()
 
-    result = pypesto.sample(problem, n_samples=10000,
+    result = pypesto.sample(problem, n_samples=1e4,
                             sampler=sampler,
                             x0=np.array([0.]))
 
@@ -180,7 +197,7 @@ def test_ground_truth_separated_modes():
     # sample using adaptive metropolis (single-chain)
     # initiated around the "first" mode of the distribution
     sampler = pypesto.AdaptiveMetropolisSampler()
-    result = pypesto.sample(problem, n_samples=1e4,
+    result = pypesto.sample(problem, n_samples=1e3,
                             sampler=sampler,
                             x0=np.array([-2.]))
 
@@ -204,7 +221,7 @@ def test_ground_truth_separated_modes():
     # sample using adaptive metropolis (single-chain)
     # initiated around the "second" mode of the distribution
     sampler = pypesto.AdaptiveMetropolisSampler()
-    result = pypesto.sample(problem, n_samples=1e4,
+    result = pypesto.sample(problem, n_samples=1e3,
                             sampler=sampler,
                             x0=np.array([120.]))
 
@@ -288,3 +305,68 @@ def test_geweke_test_unconverged():
 
     # run geweke test (should not fail!)
     pypesto.sampling.geweke_test(result)
+
+
+def test_empty_prior():
+    """Check that priors are zero when none are defined."""
+    # define negative log posterior
+    posterior_fun = pypesto.Objective(fun=negative_log_posterior)
+
+    # define pypesto problem without prior object
+    test_problem = pypesto.Problem(objective=posterior_fun,
+                                   lb=-10, ub=10,
+                                   x_names=['x'])
+
+    sampler = pypesto.AdaptiveMetropolisSampler()
+
+    result = pypesto.sample(test_problem, n_samples=1e3,
+                            sampler=sampler,
+                            x0=np.array([0.]))
+
+    # get log prior values of first chain
+    logprior_trace = -result.sample_result.trace_neglogprior[0, :]
+
+    # check that all entries are zero
+    assert (logprior_trace == 0.).all()
+
+
+def test_prior():
+    """Check that priors are defined in sampling."""
+    # define negative log posterior
+    posterior_fun = pypesto.Objective(fun=negative_log_posterior)
+
+    # define negative log prior
+    prior_fun = pypesto.Objective(fun=negative_log_prior)
+
+    # define pypesto prior object
+    prior_object = NegLogPriors(objectives=[prior_fun])
+
+    # define pypesto problem using prior object
+    test_problem = pypesto.Problem(objective=posterior_fun,
+                                   x_priors_defs=prior_object,
+                                   lb=-10, ub=10,
+                                   x_names=['x'])
+
+    sampler = pypesto.AdaptiveMetropolisSampler()
+
+    result = pypesto.sample(test_problem, n_samples=1e3,
+                            sampler=sampler,
+                            x0=np.array([0.]))
+
+    # get log prior values of first chain
+    logprior_trace = -result.sample_result.trace_neglogprior[0, :]
+
+    # check that not all entries are zero
+    assert not (logprior_trace == 0.).all()
+
+    # get samples of first chain
+    samples = result.sample_result.trace_x[0, :, 0]
+
+    # generate bimodal ground-truth samples
+    rvs = norm.rvs(size=5000, loc=-1., scale=np.sqrt(0.7))
+
+    # check sample distribution agreement with the ground-truth
+    statistic, pval = ks_2samp(rvs, samples)
+    print(statistic, pval)
+
+    assert statistic < 0.1
