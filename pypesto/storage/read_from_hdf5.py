@@ -80,7 +80,6 @@ class ProblemHDF5Reader:
         # h5 uses numpy for everything; convert to lists where necessary
         problem.x_fixed_vals = [float(val) for val in problem.x_fixed_vals]
         problem.x_fixed_indices = [int(ix) for ix in problem.x_fixed_indices]
-        problem.x_free_indices = [int(ix) for ix in problem.x_free_indices]
         problem.x_names = [str(name) for name in problem.x_names]
 
         return problem

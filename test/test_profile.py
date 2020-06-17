@@ -10,6 +10,7 @@ from copy import deepcopy
 import warnings
 
 from pypesto import ObjectiveBase
+from .visualize import close_fig
 
 
 class ProfilerTest(unittest.TestCase):
@@ -25,6 +26,7 @@ class ProfilerTest(unittest.TestCase):
             (cls.problem, cls.result, cls.optimizer) = \
                 create_optimization_results(cls.objective)
 
+    @close_fig
     def test_default_profiling(self):
         # loop over  methods for creating new initial guesses
         method_list = ['fixed_step', 'adaptive_step_order_0',
@@ -60,6 +62,10 @@ class ProfilerTest(unittest.TestCase):
                                              'proposal needed too many steps.')
                 self.assertTrue(steps > 1, 'Profiling with 0th order based '
                                            'proposal needed not enough steps.')
+
+            # standard plotting
+            pypesto.visualize.profiles(result, profile_list_ids=i_run)
+            pypesto.visualize.profile_cis(result, profile_list=i_run)
 
     def test_selected_profiling(self):
         # create options in order to ensure a short computation time
@@ -118,8 +124,8 @@ class ProfilerTest(unittest.TestCase):
                                            next_guess_method='fixed_step')
 
         # set new bounds (knowing that one parameter stopped at the bounds
-        self.problem.lb = -4 * np.ones(2)
-        self.problem.ub = 4 * np.ones(2)
+        self.problem.lb_full = -4 * np.ones(2)
+        self.problem.ub_full = 4 * np.ones(2)
 
         # re-run profiling using new bounds
         result = pypesto.parameter_profile(problem=self.problem,
@@ -153,7 +159,7 @@ class ProfilerTest(unittest.TestCase):
         # with pre-defined hessian
         result = deepcopy(self.result)
         result.optimize_result.list[0].hess = np.array([[2, 0], [0, 1]])
-        result = pypesto.profile.approximate_parameter_profile(
+        pypesto.profile.approximate_parameter_profile(
             problem=self.problem, result=result, profile_index=[0, 1],
             n_steps=n_steps)
 
@@ -182,6 +188,34 @@ def test_profile_with_history():
         result_index=0,
         profile_options=profile_options
     )
+
+
+@close_fig
+def test_profile_with_fixed_parameters():
+    """Test using profiles with fixed parameters."""
+    obj = test_objective.rosen_for_sensi(max_sensi_order=1)['obj']
+
+    lb = -2 * np.ones(5)
+    ub = 2 * np.ones(5)
+    problem = pypesto.Problem(
+        objective=obj, lb=lb, ub=ub,
+        x_fixed_vals=[0.5, -1.8], x_fixed_indices=[0, 3])
+
+    optimizer = pypesto.ScipyOptimizer(options={'maxiter': 50})
+    result = pypesto.minimize(problem=problem, optimizer=optimizer, n_starts=2)
+
+    for i_method, next_guess_method in enumerate([
+            'fixed_step', 'adaptive_step_order_0',
+            'adaptive_step_order_1', 'adaptive_step_regression']):
+        print(next_guess_method)
+        pypesto.parameter_profile(
+            problem=problem, result=result, optimizer=optimizer,
+            next_guess_method=next_guess_method)
+
+        # standard plotting
+        axes = pypesto.visualize.profiles(result, profile_list_ids=i_method)
+        assert len(axes) == 3
+        pypesto.visualize.profile_cis(result, profile_list=i_method)
 
 
 def create_optimization_results(objective):
