@@ -302,6 +302,7 @@ def test_profiles():
 def test_profiles_with_options():
     # create the necessary results
     result = create_profile_result()
+    result.profile_result.list.append([result.profile_result.list[0][1], None])
 
     # alternative figure size and plotting options
     (_, _, _, _, ref_point) = create_plotting_options()
@@ -311,7 +312,9 @@ def test_profiles_with_options():
     pypesto.visualize.profiles(result,
                                reference=ref_point,
                                size=alt_fig_size,
-                               colors=[1., .3, .3, 0.5])
+                               profile_list_ids=[0, 1],
+                               legends=['profile list 0', 'profile list 1'],
+                               colors=[[1., .3, .3, .5], [.5, .9, .4, .3]])
 
 
 @close_fig
