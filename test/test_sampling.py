@@ -362,7 +362,7 @@ def test_prior():
     # get samples of first chain
     samples = result.sample_result.trace_x[0, :, 0]
 
-    # generate bimodal ground-truth samples
+    # generate ground-truth samples
     rvs = norm.rvs(size=5000, loc=-1., scale=np.sqrt(0.7))
 
     # check sample distribution agreement with the ground-truth
