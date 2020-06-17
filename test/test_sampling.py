@@ -197,7 +197,7 @@ def test_ground_truth_separated_modes():
     # sample using adaptive metropolis (single-chain)
     # initiated around the "first" mode of the distribution
     sampler = pypesto.AdaptiveMetropolisSampler()
-    result = pypesto.sample(problem, n_samples=1e3,
+    result = pypesto.sample(problem, n_samples=1e4,
                             sampler=sampler,
                             x0=np.array([-2.]))
 
@@ -221,7 +221,7 @@ def test_ground_truth_separated_modes():
     # sample using adaptive metropolis (single-chain)
     # initiated around the "second" mode of the distribution
     sampler = pypesto.AdaptiveMetropolisSampler()
-    result = pypesto.sample(problem, n_samples=1e3,
+    result = pypesto.sample(problem, n_samples=1e4,
                             sampler=sampler,
                             x0=np.array([120.]))
 
@@ -349,7 +349,7 @@ def test_prior():
 
     sampler = pypesto.AdaptiveMetropolisSampler()
 
-    result = pypesto.sample(test_problem, n_samples=1e3,
+    result = pypesto.sample(test_problem, n_samples=1e4,
                             sampler=sampler,
                             x0=np.array([0.]))
 
