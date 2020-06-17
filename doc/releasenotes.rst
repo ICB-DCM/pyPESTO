@@ -2,12 +2,12 @@ Release notes
 =============
 
 
-0.0 series
+0.1 series
 ..........
 
 
-0.0.14 (2020-06-17)
--------------------
+0.1.0 (2020-06-17)
+------------------
 
 Objective
 
@@ -79,6 +79,10 @@ Tests
 * Speed up travis build (#329)
 * Update travis test system to latest ubuntu and python 3.8 (#330)
 * Additional code quality checks, minor simplifications (#395)
+
+
+0.0 series
+..........
 
 
 0.0.13 (2020-05-03)
