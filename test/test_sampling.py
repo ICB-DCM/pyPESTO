@@ -319,7 +319,7 @@ def test_empty_prior():
 
     sampler = pypesto.AdaptiveMetropolisSampler()
 
-    result = pypesto.sample(test_problem, n_samples=1e3,
+    result = pypesto.sample(test_problem, n_samples=50,
                             sampler=sampler,
                             x0=np.array([0.]))
 
@@ -357,7 +357,7 @@ def test_prior():
     logprior_trace = -result.sample_result.trace_neglogprior[0, :]
 
     # check that not all entries are zero
-    assert not (logprior_trace == 0.).all()
+    assert (logprior_trace != 0.).any()
 
     # get samples of first chain
     samples = result.sample_result.trace_x[0, :, 0]
