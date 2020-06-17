@@ -137,6 +137,6 @@ class InternalSampler(Sampler):
 
         Parameters
         ----------
-        tamper_lpost:
+        temper_lpost:
             Whether to temperate the posterior or only the likelihood.
         """
