@@ -7,11 +7,12 @@ from pypesto.objective.amici_util import add_sim_grad_to_opt_grad
 import petab
 import pypesto
 import pypesto.objective.constants
+import pytest
 import numpy as np
 from test.petab_util import folder_base
 
 ATOL = 1e-2
-RTOL = 1e-2
+RTOL = 1e-1
 
 
 def test_add_sim_grad_to_opt_grad():
@@ -43,6 +44,22 @@ def test_add_sim_grad_to_opt_grad():
     assert expected == opt_grad
 
 
+def test_error_leastsquares_with_ssigma():
+    petab_problem = petab.Problem.from_yaml(
+        folder_base + "Zheng_PNAS2012/Zheng_PNAS2012.yaml")
+    petab_problem.model_name = "Zheng_PNAS2012"
+    importer = pypesto.PetabImporter(petab_problem)
+    obj = importer.create_objective()
+    problem = importer.create_problem(obj)
+
+    optimizer = pypesto.ScipyOptimizer('ls_trf', options={'max_nfev': 50})
+    with pytest.raises(RuntimeError):
+        pypesto.minimize(
+            problem=problem, optimizer=optimizer, n_starts=1,
+            options=pypesto.OptimizeOptions(allow_failed_starts=False)
+        )
+
+
 def test_preeq_guesses():
     """
     Test whether optimization with preequilibration guesses works, asserts
@@ -55,11 +72,11 @@ def test_preeq_guesses():
     importer = pypesto.PetabImporter(petab_problem)
     obj = importer.create_objective()
     problem = importer.create_problem(obj)
-    optimizer = pypesto.ScipyOptimizer('ls_trf', options={'max_nfev': 50})
 
     # assert that initial guess is uninformative
     assert problem.objective.steadystate_guesses['fval'] == np.inf
 
+    optimizer = pypesto.ScipyOptimizer('L-BFGS-B', options={'maxiter': 50})
     result = pypesto.minimize(
         problem=problem, optimizer=optimizer, n_starts=1,
     )

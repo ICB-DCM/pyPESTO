@@ -32,7 +32,8 @@ Welcome to pyPESTO's documentation!
    :caption: User's guide
 
    install
-   examples
+   example
+   storage_format.md
 
 
 .. toctree::
@@ -41,6 +42,7 @@ Welcome to pyPESTO's documentation!
 
    contribute
    deploy
+   README.md
 
 
 .. toctree::

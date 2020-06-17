@@ -11,11 +11,15 @@ class McmcPtResult(dict):
     Parameters
     ----------
     trace_x: [n_chain, n_iter, n_par]
-        Parameters
-    trace_fval: [n_chain, n_iter]
-        Function values.
+        Parameters.
+    trace_neglogpost: [n_chain, n_iter]
+        Negative log posterior values.
+    trace_neglogprior: [n_chain, n_iter]
+        Negative log prior values.
     betas: [n_chain]
         The associated inverse temperatures.
+    burn_in: [n_chain]
+        The burn in index.
     message: str
         Textual comment on the profile result.
 
@@ -25,26 +29,45 @@ class McmcPtResult(dict):
 
     def __init__(self,
                  trace_x: np.ndarray,
-                 trace_fval: np.ndarray,
+                 trace_neglogpost: np.ndarray,
+                 trace_neglogprior: np.ndarray,
                  betas: Iterable[float],
+                 burn_in: int = None,
+                 time: float = 0.,
                  message: str = None):
         super().__init__()
 
         self.trace_x = trace_x
-        self.trace_fval = trace_fval
+        self.trace_neglogpost = trace_neglogpost
+        self.trace_neglogprior = trace_neglogprior
         self.betas = betas
+        self.burn_in = burn_in
+        self.time = time
         self.message = message
 
         if trace_x.ndim != 3:
             raise ValueError(f"trace_x.ndim not as expected: {trace_x.ndim}")
-        if trace_fval.ndim != 2:
-            raise ValueError("trace_fval.ndim not as expected: "
-                             f"{trace_fval.ndim}")
-        if trace_x.shape[0] != trace_fval.shape[0] \
-                or trace_x.shape[1] != trace_fval.shape[1]:
+        if trace_neglogpost.ndim != 2:
+            raise ValueError("trace_neglogpost.ndim not as expected: "
+                             f"{trace_neglogpost.ndim}")
+        if trace_neglogprior.ndim != 2:
+            raise ValueError("trace_neglogprior.ndim not as expected: "
+                             f"{trace_neglogprior.ndim}")
+        if trace_x.shape[0] != trace_neglogpost.shape[0] \
+                or trace_x.shape[1] != trace_neglogpost.shape[1]:
             raise ValueError("Trace dimensions do not match:"
                              f"trace_x.shape={trace_x.shape},"
-                             f"trace_fval.shape={trace_fval.shape}")
+                             f"trace_neglogpost.shape={trace_neglogpost.shape}") # noqa
+        if trace_x.shape[0] != trace_neglogprior.shape[0] \
+                or trace_x.shape[1] != trace_neglogprior.shape[1]:
+            raise ValueError("Trace dimensions do not match:"
+                             f"trace_x.shape={trace_x.shape},"
+                             f"trace_neglogprior.shape={trace_neglogprior.shape}") # noqa
+        if trace_neglogpost.shape[0] != trace_neglogprior.shape[0] \
+                or trace_neglogpost.shape[1] != trace_neglogprior.shape[1]:
+            raise ValueError("Trace dimensions do not match:"
+                             f"trace_neglogpost.shape={trace_neglogpost.shape}," # noqa
+                             f"trace_neglogprior.shape={trace_neglogprior.shape}") # noqa
 
     def __getattr__(self, key):
         try:

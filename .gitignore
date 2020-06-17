@@ -83,6 +83,10 @@ coverage_py.xml
 doc/example/tmp
 doc/example/amici_models/*
 
+# storage
+*.hdf5
+*.csv
+
 # general
 data/.snakemake
 data/.spyderproject

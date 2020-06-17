@@ -1,11 +1,11 @@
 language: python
 python:
-  - "3.6"
+  - "3.8"
 
 os:
   - linux
 dist:
-  - xenial
+  - bionic
 compiler:
   - gcc
 
@@ -15,39 +15,56 @@ addons:
   apt:
     update: true
     packages:
-      - libhdf5-serial-dev
-      - zlib1g-dev
-      - libatlas-base-dev
+      - build-essential
+      - coinor-libipopt1v5
+      - coinor-libipopt-dev
+      - gfortran
       - lcov
-      - swig3.0
+      - libatlas-base-dev
+      - libhdf5-serial-dev
       - pandoc
+      - pkg-config
+      - python-dev
+      - swig3.0
+      - zlib1g-dev
 
 install:
   - mkdir -p ~/bin/ && ln -s /usr/bin/swig3.0 ~/bin/swig && export PATH=~/bin/:$PATH
-  - pip3 install --upgrade -r ./.travis_pip_reqs.txt
-  - pip3 install .
+  - pip3 install -r ./.travis_pip_reqs.txt
+  - pip3 install .[ipopt,dlib,pyswarm,pymc3]
   - pip3 install https://github.com/petab-dev/petab/archive/develop.zip
   - pip3 install -e
       git+https://github.com/icb-dcm/amici.git@develop#egg=amici\&subdirectory=python/sdist
-  - git clone --depth 1
-      https://github.com/petab-dev/petab_test_suite tmp/petab_test_suite
-  - pip3 install -e tmp/petab_test_suite
+  - if [ "$TRAVIS_PULL_REQUEST" = "false" ]; then
+      git clone --depth 1
+        https://github.com/petab-dev/petab_test_suite tmp/petab_test_suite;
+      pip3 install -e tmp/petab_test_suite;
+    fi
+  - if [ "$TRAVIS_PULL_REQUEST" != "false" ]; then
+      pip install -r .rtd_pip_reqs.txt;
+    fi
 
 # run tests
 script:
-  - python3 -m flake8
-      --exclude=build,doc,example,tmp,amici_models
-      --per-file-ignores='*/__init__.py:F401'
-  - travis_wait 20 python3 -m pytest --cov=pypesto ./test/test_*
-  - travis_wait 20 xvfb-run -a python3 -m pytest
-      --cov=pypesto --cov-append ./test/visualize/test_*
+  - if [ "$TRAVIS_PULL_REQUEST" = "false" ]; then
+      ./run_flake8.sh;
+    fi
+  - if [ "$TRAVIS_PULL_REQUEST" = "false" ]; then
+      travis_wait 20 python3 -m pytest --cov=pypesto ./test/test_*;
+    fi
+  - if [ "$TRAVIS_PULL_REQUEST" = "false" ]; then
+      travis_wait 20 xvfb-run -a python3 -m pytest
+        --cov=pypesto --cov-append ./test/visualize/test_*;
+    fi
   - if [ "$TRAVIS_PULL_REQUEST" != "false" ]; then
       sphinx-build -W -b html -d doc/_build/html doc/ doc/_build/html;
     fi
   - if [ "$TRAVIS_PULL_REQUEST" != "false" ]; then
       test/run_notebook.sh doc/example/;
     fi
-  - coverage xml
+  - if [ "$TRAVIS_PULL_REQUEST" = "false" ]; then
+      coverage xml;
+    fi
 
 after_success:
   - bash <(curl -s https://codecov.io/bash)

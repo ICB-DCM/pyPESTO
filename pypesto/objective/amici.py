@@ -6,7 +6,7 @@ import abc
 from typing import Dict, Tuple, Sequence, Union
 from collections import OrderedDict
 
-from .objective import Objective
+from .base import ObjectiveBase
 from .constants import MODE_FUN, MODE_RES, FVAL, RDATAS
 from .amici_calculator import AmiciCalculator
 from .amici_util import (
@@ -45,7 +45,7 @@ class AmiciObjectBuilder(abc.ABC):
         """Create AMICI experimental data."""
 
 
-class AmiciObjective(Objective):
+class AmiciObjective(ObjectiveBase):
     """
     This class allows to create an objective directly from an amici model.
     """
@@ -114,29 +114,6 @@ class AmiciObjective(Objective):
             # otherwise 1 can be guaranteed
             max_sensi_order = 2 if amici_model.o2mode else 1
 
-        fun = self.get_bound_fun()
-
-        if max_sensi_order > 0:
-            grad = True
-            hess = True
-        else:
-            grad = None
-            hess = None
-
-        res = self.get_bound_res()
-
-        if max_sensi_order > 0:
-            sres = True
-        else:
-            sres = None
-
-        super().__init__(
-            fun=fun, grad=grad, hess=hess, hessp=None,
-            res=res, sres=sres,
-            fun_accept_sensi_orders=True,
-            res_accept_sensi_orders=True,
-        )
-
         self.amici_model = amici.ModelPtr(amici_model.clone())
         self.amici_solver = amici.SolverPtr(amici_solver.clone())
 
@@ -180,7 +157,7 @@ class AmiciObjective(Objective):
             self.steadystate_guesses = {
                 'fval': np.inf,
                 'data': {
-                    iexp: dict()
+                    iexp: {}
                     for iexp, edata in enumerate(self.edatas)
                     if len(edata.fixedParametersPreequilibration) or
                     self.amici_solver.getPreequilibration()
@@ -190,7 +167,6 @@ class AmiciObjective(Objective):
         if x_names is None:
             # use ids as names
             x_names = x_ids
-        self.x_names = x_names
 
         self.n_threads = n_threads
         self.amici_object_builder = amici_object_builder
@@ -198,49 +174,12 @@ class AmiciObjective(Objective):
         if calculator is None:
             calculator = AmiciCalculator()
         self.calculator = calculator
+        super().__init__(x_names=x_names)
 
     def initialize(self):
         super().initialize()
         self.reset_steadystate_guesses()
         self.calculator.initialize()
-
-    def get_bound_fun(self):
-        """
-        Generate a fun function that calls _call_amici with MODE_FUN. Defining
-        a non-class function that references self as a local variable will bind
-        the function to a copy of the current self object and will
-        accordingly not take future changes to self into account.
-        """
-        def fun(x, sensi_orders):
-            return self._call_amici(x, sensi_orders, MODE_FUN)
-
-        return fun
-
-    def get_bound_res(self):
-        """
-        Generate a res function that calls _call_amici with MODE_RES. Defining
-        a non-class function that references self as a local variable will bind
-        the function to a copy of the current self object and will
-        accordingly not take future changes to self into account.
-        """
-        def res(x, sensi_orders):
-            return self._call_amici(x, sensi_orders, MODE_RES)
-
-        return res
-
-    def rebind_fun(self):
-        """
-        Replace the current fun function with one that is bound to the current
-        instance
-        """
-        self.fun = self.get_bound_fun()
-
-    def rebind_res(self):
-        """
-        Replace the current res function with one that is bound to the current
-        instance
-        """
-        self.res = self.get_bound_res()
 
     def __deepcopy__(self, memodict: Dict = None) -> 'AmiciObjective':
         other = self.__class__.__new__(self.__class__)
@@ -253,10 +192,6 @@ class AmiciObjective(Objective):
         other.amici_model = amici.ModelPtr(self.amici_model.clone())
         other.amici_solver = amici.SolverPtr(self.amici_solver.clone())
         other.edatas = [amici.ExpData(data) for data in self.edatas]
-
-        # rebind functions for __call__
-        other.rebind_fun()
-        other.rebind_res()
 
         return other
 
@@ -271,9 +206,14 @@ class AmiciObjective(Objective):
                 {'amici_model', 'amici_solver', 'edatas'}:
             state[key] = self.__dict__[key]
 
+        # write amici solver settings to file
         amici_solver_file = tempfile.mkstemp()[1]
         amici.writeSolverSettingsToHDF5(self.amici_solver, amici_solver_file)
-        state['amici_solver_settings'] = amici_solver_file
+        # read in byte stream
+        amici_solver_settings = open(amici_solver_file, 'rb').read()
+        state['amici_solver_settings'] = amici_solver_settings
+        # remove temporary file
+        os.remove(amici_solver_file)
 
         return state
 
@@ -291,41 +231,55 @@ class AmiciObjective(Objective):
         edatas = self.amici_object_builder.create_edatas(model)
 
         try:
-            amici.readSolverSettingsFromHDF5(
-                state['amici_solver_settings'], solver)
+            # write solver settings to temporary file
+            _file = tempfile.mkstemp()[1]
+            with open(_file, 'wb') as f:
+                f.write(state['amici_solver_settings'])
+            # read in solver settings
+            amici.readSolverSettingsFromHDF5(_file, solver)
+            # remove temporary file
+            os.remove(_file)
         except AttributeError as err:
             if not err.args:
                 err.args = ('',)
             err.args = err.args + ("Amici must have been compiled with hdf5 "
                                    "support",)
             raise
-        os.remove(state['amici_solver_settings'])
-
         self.amici_model = model
         self.amici_solver = solver
         self.edatas = edatas
 
-    def _call_amici(
-            self,
-            x: np.ndarray,
-            sensi_orders: Tuple[int, ...],
-            mode: str
-    ) -> Dict:
+    def check_sensi_orders(self, sensi_orders, mode) -> bool:
+        sensi_order = self._get_amici_sensi_order(sensi_orders)
+
+        if self.max_sensi_order is None:
+            if mode == MODE_FUN:
+                max_sensi_order = 1 + self.amici_model.o2mode
+            else:
+                max_sensi_order = 1
+        else:
+            max_sensi_order = self.max_sensi_order
+
+        return sensi_order <= max_sensi_order
+
+    def _get_amici_sensi_order(self, sensi_orders: Tuple[int, ...]) -> int:
         # amici is built such that only the maximum sensitivity is required,
         # the lower orders are then automatically computed
-        sensi_order = min(max(sensi_orders), 1)
         # order 2 currently not implemented, we are using the FIM
+        return min(max(sensi_orders), 1)
 
-        # check if the requested sensitivities can be computed
-        if sensi_order > self.max_sensi_order:
-            raise Exception("Sensitivity order not allowed.")
+    def check_mode(self, mode):
+        return mode in [MODE_FUN, MODE_RES]
+
+    def call_unprocessed(self, x, sensi_orders, mode):
+        sensi_order = self._get_amici_sensi_order(sensi_orders)
 
         x_dct = self.par_arr_to_dct(x)
 
         # update steady state
         if self.guess_steadystate and \
                 self.steadystate_guesses['fval'] < np.inf:
-            for data_ix, edata in enumerate(self.edatas):
+            for data_ix in range(len(self.edatas)):
                 self.apply_steadystate_guess(data_ix, x_dct)
 
         ret = self.calculator(
@@ -334,12 +288,13 @@ class AmiciObjective(Objective):
             edatas=self.edatas, n_threads=self.n_threads,
             x_ids=self.x_ids, parameter_mapping=self.parameter_mapping)
 
-        nllh = - ret[FVAL]
+        nllh = ret[FVAL]
         rdatas = ret[RDATAS]
 
         # check whether we should update data for preequilibration guesses
         if self.guess_steadystate and \
-                nllh <= self.steadystate_guesses['fval']:
+                nllh <= self.steadystate_guesses['fval'] and \
+                nllh < np.inf:
             self.steadystate_guesses['fval'] = nllh
             for data_ix, rdata in enumerate(rdatas):
                 self.store_steadystate_guess(data_ix, x_dct, rdata)
@@ -404,4 +359,4 @@ class AmiciObjective(Objective):
 
         self.steadystate_guesses['fval'] = np.inf
         for condition in self.steadystate_guesses['data']:
-            self.steadystate_guesses['data'][condition] = dict()
+            self.steadystate_guesses['data'][condition] = {}

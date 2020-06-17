@@ -23,6 +23,7 @@ optimizers = [
         'trust-ncg', 'trust-exact', 'trust-krylov',
         'ls_trf', 'ls_dogbox']],
     # disabled: ,'trust-constr', 'ls_lm', 'dogleg'
+    ('ipopt', ''),
     ('dlib', 'default'),
     ('pyswarm', ''),
 ]
@@ -67,6 +68,8 @@ def check_minimize(objective, library, solver, allow_failed_starts=False):
     if library == 'scipy':
         optimizer = pypesto.ScipyOptimizer(method=solver,
                                            options=options)
+    elif library == 'ipopt':
+        optimizer = pypesto.IpoptOptimizer()
     elif library == 'dlib':
         optimizer = pypesto.DlibOptimizer(method=solver,
                                           options=options)

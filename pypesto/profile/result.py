@@ -11,39 +11,28 @@ class ProfilerResult(dict):
 
     Attributes
     ----------
-
-    x_path: ndarray
+    x_path:
         The path of the best found parameters along the profile
         (Dimension: n_par x n_profile_points)
-
-    fval_path: ndarray
+    fval_path:
         The function values, fun(x), along the profile.
-
-    ratio_path: ndarray
+    ratio_path:
         The ratio of the posterior function along the profile.
-
-    gradnorm_path: ndarray
+    gradnorm_path:
         The gradient norm along the profile.
-
-    exitflag_path: ndarray
+    exitflag_path:
         The exitflags of the optimizer along the profile.
-
-    time_path: ndarray
+    time_path:
         The computation time of the optimizer runs along the profile.
-
-    time_total: ndarray
+    time_total:
         The total computation time for the profile.
-
-    n_fval: int
+    n_fval:
         Number of function evaluations.
-
-    n_grad: int
+    n_grad:
         Number of gradient evaluations.
-
-    n_hess: int
+    n_hess:
         Number of Hessian evaluations.
-
-    message: str
+    message:
         Textual comment on the profile result.
 
     Notes
@@ -54,17 +43,17 @@ class ProfilerResult(dict):
     """
 
     def __init__(self,
-                 x_path,
-                 fval_path,
-                 ratio_path,
-                 gradnorm_path=None,
-                 exitflag_path=None,
-                 time_path=None,
-                 time_total=0.,
-                 n_fval=0,
-                 n_grad=0,
-                 n_hess=0,
-                 message=None):
+                 x_path: np.ndarray,
+                 fval_path: np.ndarray,
+                 ratio_path: np.ndarray,
+                 gradnorm_path: np.ndarray = None,
+                 exitflag_path: np.ndarray = None,
+                 time_path: np.ndarray = None,
+                 time_total: float = 0.,
+                 n_fval: int = 0,
+                 n_grad: int = 0,
+                 n_hess: int = 0,
+                 message: str = None):
         super().__init__()
 
         # initialize profile path
@@ -76,12 +65,12 @@ class ProfilerResult(dict):
             self.x_path = np.zeros((x_shape[0], x_shape[1]))
             self.x_path[:, :] = x_path[:, :]
 
-        self.fval_path = np.array(fval_path)
-        self.ratio_path = np.array(ratio_path)
-        self.gradnorm_path = np.array(gradnorm_path) \
+        self.fval_path = np.asarray(fval_path)
+        self.ratio_path = np.asarray(ratio_path)
+        self.gradnorm_path = np.asarray(gradnorm_path) \
             if gradnorm_path is not None else None
-        self.exitflag_path = np.array(exitflag_path)
-        self.time_path = np.array(time_path)
+        self.exitflag_path = np.asarray(exitflag_path)
+        self.time_path = np.asarray(time_path)
         self.time_total = time_total
         self.n_fval = n_fval
         self.n_grad = n_grad
@@ -98,18 +87,40 @@ class ProfilerResult(dict):
     __delattr__ = dict.__delitem__
 
     def append_profile_point(self,
-                             x,
-                             fval,
-                             ratio,
-                             gradnorm=np.nan,
-                             exitflag=np.nan,
-                             time=np.nan,
-                             n_fval=0,
-                             n_grad=0,
-                             n_hess=0):
+                             x: np.ndarray,
+                             fval: float,
+                             ratio: float,
+                             gradnorm: float = np.nan,
+                             time: float = np.nan,
+                             exitflag: float = np.nan,
+                             n_fval: int = 0,
+                             n_grad: int = 0,
+                             n_hess: int = 0) -> None:
         """
-        This function appends a new OptimizerResult to an existing
-        ProfilerResults
+        This function appends a new point to the profile path.
+
+        Parameters
+        ----------
+        x:
+            The parameter values.
+        fval:
+            The function value at `x`.
+        ratio:
+            The ratio of the function value at `x` by the optimal function
+            value.
+        gradnorm:
+            The gradient norm at `x`.
+        time:
+            The computation time to find `x`.
+        exitflag:
+            The exitflag of the optimizer (useful if an optimization was
+            performed to find `x`).
+        n_fval:
+            Number of function evaluations performed to find `x`.
+        n_grad:
+            Number of gradient evaluations performed to find `x`.
+        n_hess:
+            Number of Hessian evaluations performed to find `x`.
         """
 
         # short function to append to numpy vectors
@@ -138,11 +149,13 @@ class ProfilerResult(dict):
         self.n_grad += n_grad
         self.n_hess += n_hess
 
-    def flip_profile(self):
+    def flip_profile(self) -> None:
         """
         This function flips the profiling direction (left-right)
-        Profiling direction needs to be changed once (if the profile is new)
-        and twice, if we append to an existing profile
+        Profiling direction needs to be changed once (if the profile is new),
+        or twice if we append to an existing profile.
+
+        All profiling paths are flipped in-place.
         """
 
         self.x_path = np.fliplr(self.x_path)

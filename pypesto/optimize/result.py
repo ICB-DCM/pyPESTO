@@ -1,6 +1,7 @@
 import numpy as np
 
 from ..objective import History
+from ..problem import Problem
 
 
 class OptimizerResult(dict):
@@ -103,3 +104,18 @@ class OptimizerResult(dict):
 
     __setattr__ = dict.__setitem__
     __delattr__ = dict.__delitem__
+
+    def update_to_full(self, problem: Problem) -> None:
+        """
+        Updates values to full vectors/matrices
+
+        Parameters
+        ----------
+        problem:
+            problem which contains info about how to convert to full vectors
+            or matrices
+        """
+        self.x = problem.get_full_vector(self.x, problem.x_fixed_vals)
+        self.grad = problem.get_full_vector(self.grad)
+        self.hess = problem.get_full_matrix(self.hess)
+        self.x0 = problem.get_full_vector(self.x0, problem.x_fixed_vals)

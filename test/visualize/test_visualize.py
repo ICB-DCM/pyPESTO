@@ -3,6 +3,7 @@ import pypesto.visualize
 import numpy as np
 import scipy.optimize as so
 import matplotlib.pyplot as plt
+import pytest
 
 
 def close_fig(fun):
@@ -44,11 +45,12 @@ def create_optimization_result():
     result = pypesto.Result(problem=problem)
     for j in range(0, 3):
         optimizer_result = pypesto.OptimizerResult(
-            fval=j * 0.01, x=np.array([j + 0.1, j + 1]))
+            id=str(j), fval=j * 0.01, x=np.array([j + 0.1, j + 1]))
         result.optimize_result.append(optimizer_result=optimizer_result)
     for j in range(0, 4):
         optimizer_result = pypesto.OptimizerResult(
-            fval=10 + j * 0.01, x=np.array([2.5 + j + 0.1, 2 + j + 1]))
+            id=str(j+3), fval=10 + j * 0.01,
+            x=np.array([2.5 + j + 0.1, 2 + j + 1]))
         result.optimize_result.append(optimizer_result=optimizer_result)
 
     return result
@@ -114,9 +116,9 @@ def create_profile_result():
     tmp_result_2 = pypesto.ProfilerResult(x_path_2, fval_path_2, ratio_path_2)
 
     # use pypesto function to write the numeric values into the results
-    result.profile_result.create_new_profile_list()
-    result.profile_result.create_new_profile(tmp_result_1)
-    result.profile_result.create_new_profile(tmp_result_2)
+    result.profile_result.append_empty_profile_list()
+    result.profile_result.append_profiler_result(tmp_result_1)
+    result.profile_result.append_profiler_result(tmp_result_2)
 
     return result
 
@@ -168,22 +170,28 @@ def test_waterfall_with_options():
     (_, _, ref3, _, ref_point) = create_plotting_options()
     alt_fig_size = (9.0, 8.0)
 
-    # Test with y-limits as vector
-    pypesto.visualize.waterfall(result_1,
-                                reference=ref_point,
-                                y_limits=[-0.5, 2.5],
-                                start_indices=[0, 1, 4, 11],
-                                size=alt_fig_size,
-                                colors=[1., .3, .3, 0.5])
+    with pytest.warns(UserWarning, match="Invalid lower bound"):
+        # Test with y-limits as vector and invalid lower bound
+        pypesto.visualize.waterfall(result_1,
+                                    reference=ref_point,
+                                    y_limits=[-0.5, 2.5],
+                                    start_indices=[0, 1, 4, 11],
+                                    size=alt_fig_size,
+                                    colors=[1., .3, .3, 0.5])
 
-    # Test with linear scale
-    pypesto.visualize.waterfall([result_1, result_2],
-                                reference=ref3,
-                                offset_y=-2.5,
-                                start_indices=3,
-                                y_limits=5.)
+    # Test with fully invalid bounds
+    with pytest.warns(UserWarning, match="Invalid bounds"):
+        pypesto.visualize.waterfall(result_1, y_limits=[-1.5, 0.])
 
     # Test with y-limits as float
+    with pytest.warns(UserWarning, match="Offset specified by user"):
+        pypesto.visualize.waterfall([result_1, result_2],
+                                    reference=ref3,
+                                    offset_y=-2.5,
+                                    start_indices=3,
+                                    y_limits=5.)
+
+    # Test with linear scale
     pypesto.visualize.waterfall(result_1,
                                 reference=ref3,
                                 scale_y='lin',
@@ -294,6 +302,7 @@ def test_profiles():
 def test_profiles_with_options():
     # create the necessary results
     result = create_profile_result()
+    result.profile_result.list.append([result.profile_result.list[0][1], None])
 
     # alternative figure size and plotting options
     (_, _, _, _, ref_point) = create_plotting_options()
@@ -303,7 +312,9 @@ def test_profiles_with_options():
     pypesto.visualize.profiles(result,
                                reference=ref_point,
                                size=alt_fig_size,
-                               colors=[1., .3, .3, 0.5])
+                               profile_list_ids=[0, 1],
+                               legends=['profile list 0', 'profile list 1'],
+                               colors=[[1., .3, .3, .5], [.5, .9, .4, .3]])
 
 
 @close_fig
@@ -332,6 +343,15 @@ def test_profile_lowlevel():
 
 
 @close_fig
+def test_profile_cis():
+    """Test the profile approximate confidence interval visualization."""
+    result = create_profile_result()
+    pypesto.visualize.profile_cis(result, confidence_level=0.99)
+    pypesto.visualize.profile_cis(
+        result, show_bounds=True, profile_indices=[0])
+
+
+@close_fig
 def test_optimizer_history():
     # create the necessary results
     result_1 = create_optimization_history()
@@ -356,15 +376,16 @@ def test_optimizer_history_with_options():
     alt_fig_size = (9.0, 8.0)
 
     # Test with y-limits as vector
-    pypesto.visualize.optimizer_history(result_1,
-                                        y_limits=[-0.5, 2.5],
-                                        start_indices=[0, 1, 4, 11],
-                                        reference=ref_point,
-                                        size=alt_fig_size,
-                                        trace_x='steps',
-                                        trace_y='fval',
-                                        offset_y=-10.,
-                                        colors=[1., .3, .3, 0.5])
+    with pytest.warns(UserWarning, match="Invalid lower bound"):
+        pypesto.visualize.optimizer_history(result_1,
+                                            y_limits=[-0.5, 2.5],
+                                            start_indices=[0, 1, 4, 11],
+                                            reference=ref_point,
+                                            size=alt_fig_size,
+                                            trace_x='steps',
+                                            trace_y='fval',
+                                            offset_y=-10.,
+                                            colors=[1., .3, .3, 0.5])
 
     # Test with linear scale
     pypesto.visualize.optimizer_history([result_1,
@@ -511,11 +532,15 @@ def create_sampling_result():
     n_chain = 2
     n_iter = 100
     n_par = len(result.optimize_result.get_for_key('x')[0])
-    trace_fval = np.random.randn(n_chain, n_iter)
+    trace_neglogpost = np.random.randn(n_chain, n_iter)
+    trace_neglogprior = np.zeros((n_chain, n_iter))
     trace_x = np.random.randn(n_chain, n_iter, n_par)
     betas = np.array([1, .1])
     sample_result = pypesto.McmcPtResult(
-        trace_fval=trace_fval, trace_x=trace_x, betas=betas)
+        trace_neglogpost=trace_neglogpost,
+        trace_neglogprior=trace_neglogprior,
+        trace_x=trace_x, betas=betas,
+        burn_in=10)
     result.sample_result = sample_result
 
     return result
@@ -528,7 +553,7 @@ def test_sampling_fval_trace():
     pypesto.visualize.sampling_fval_trace(result)
     # call with custom arguments
     pypesto.visualize.sampling_fval_trace(
-        result, i_chain=1, burn_in=10, stepsize=5, size=(10, 10))
+        result, i_chain=1, stepsize=5, size=(10, 10))
 
 
 @close_fig
@@ -538,7 +563,7 @@ def test_sampling_parameters_trace():
     pypesto.visualize.sampling_parameters_trace(result)
     # call with custom arguments
     pypesto.visualize.sampling_parameters_trace(
-        result, i_chain=1, burn_in=10, stepsize=5, size=(10, 10),
+        result, i_chain=1, stepsize=5, size=(10, 10),
         use_problem_bounds=False)
 
 
@@ -549,7 +574,7 @@ def test_sampling_scatter():
     pypesto.visualize.sampling_scatter(result)
     # call with custom arguments
     pypesto.visualize.sampling_scatter(
-        result, i_chain=1, burn_in=10, stepsize=5, size=(10, 10))
+        result, i_chain=1, stepsize=5, size=(10, 10))
 
 
 @close_fig
@@ -559,7 +584,7 @@ def test_sampling_1d_marginals():
     pypesto.visualize.sampling_1d_marginals(result)
     # call with custom arguments
     pypesto.visualize.sampling_1d_marginals(
-        result, i_chain=1, burn_in=10, stepsize=5, size=(10, 10))
+        result, i_chain=1, stepsize=5, size=(10, 10))
     # call with other modes
     pypesto.visualize.sampling_1d_marginals(result, plot_type='hist')
     pypesto.visualize.sampling_1d_marginals(
