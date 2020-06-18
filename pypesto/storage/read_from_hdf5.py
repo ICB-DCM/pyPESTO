@@ -7,7 +7,8 @@ from ..objective import Objective, History
 
 
 def read_hdf5_optimization(f: h5py.File,
-                           opt_id: h5py.Group) -> 'OptimizerResult':
+                           opt_id: h5py.Group,
+                           h5_dir: str) -> 'OptimizerResult':
     """
     Read HDF5 results per start.
 
@@ -17,6 +18,8 @@ def read_hdf5_optimization(f: h5py.File,
         The HDF5 result file
     opt_id:
         Specifies the start that is read from the HDF5 file
+    h5_dir:
+        directory of hdf5 file
     """
 
     result = OptimizerResult()
@@ -24,8 +27,8 @@ def read_hdf5_optimization(f: h5py.File,
     for optimization_key in result.keys():
         if optimization_key is 'history':
             if f[f'/optimization/results/{opt_id}'].attrs['history']:
-                history_path = os.path.abspath(
-                    f[f'/optimization/results/{opt_id}'].attrs['history'])
+                history_path = os.path.normpath(
+                    os.path.join(h5_dir, f[f'/optimization/results/{opt_id}'].attrs['history']))
                 result[optimization_key] = History.load(opt_id, history_path)
 
         elif optimization_key in f[f'/optimization/results/{opt_id}']:
@@ -124,7 +127,8 @@ class OptimizationResultHDF5Reader:
                 self.results.problem = problem_reader.read()
 
             for opt_id in f['/optimization/results']:
-                result = read_hdf5_optimization(f, opt_id)
+                result = read_hdf5_optimization(f, opt_id,
+                                                h5_dir=self.storage_filename)
                 self.results.optimize_result.append(result)
             self.results.optimize_result.sort()
         return self.results

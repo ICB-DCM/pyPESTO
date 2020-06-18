@@ -143,7 +143,7 @@ class OptimizationResultHDF5Writer:
             for start in result.optimize_result.list:
                 start_id = start['id']
                 start_grp = get_or_create_group(results_grp, start_id)
-                start['history'] = None  # TOOD temporary fix
+                # start['history'] = None  # TOOD temporary fix
                 if not overwrite:
                     for key in start.keys():
                         if key in start_grp.keys() or key in start_grp.attrs:
@@ -153,7 +153,9 @@ class OptimizationResultHDF5Writer:
                                             "to overwrite it, set "
                                             "overwrite=True.")
                 for key in start.keys():
-                    if isinstance(start[key], np.ndarray):
+                    if key is 'history':
+                        continue
+                    elif isinstance(start[key], np.ndarray):
                         write_float_array(start_grp, key, start[key])
                     elif start[key] is not None:
                         start_grp.attrs[key] = start[key]

@@ -437,8 +437,7 @@ class History(HistoryBase):
         if type == '.csv':
             return CsvHistory(file=file)
         elif type == '.hdf5':
-            print('hoho')
-            return Hdf5History(id=id, file=file)
+            return Hdf5History.load(id=id, file=file)
         else:
             raise ValueError(
                 "Currently only history storage to '.csv' and '.hdf5'"
@@ -549,7 +548,8 @@ class MemoryHistory(History):
     def load(id: str,
              file: str):
         """Loads the History object from memory."""
-        raise NotImplementedError()
+        loaded_csv_history = CsvHistory(file=file)
+        return loaded_csv_history
 
     def get_x_trace(self) -> Sequence[np.ndarray]:
         return self._trace[X]
@@ -881,9 +881,49 @@ class Hdf5History(History):
     def load(id: str,
              file: str):
         """Loads the History object from memory."""
-
         loaded_h5history = Hdf5History(id, file)
+        print(loaded_h5history.options)
+        loaded_h5history._recover_options(file)
+        print(loaded_h5history.options)
         return loaded_h5history
+
+    def _recover_options(self, file: str):
+        """
+        Recovers options when loading the hdf5 history from memory
+        by testing which entries were recorded.
+        """
+        trace_record = self._check_for_not_nan_entries(X)
+        trace_record_grad = self._check_for_not_nan_entries(GRAD)
+        trace_record_hess = self._check_for_not_nan_entries(HESS)
+        trace_record_res = self._check_for_not_nan_entries(RES)
+        trace_record_sres = self._check_for_not_nan_entries(SRES)
+        trace_record_chi2 = self._check_for_not_nan_entries(CHI2)
+        trace_record_schi2 = self._check_for_not_nan_entries(SCHI2)
+        trace_save_iter = None  # TODO
+        storage_file = file
+
+        restored_history_options = \
+            HistoryOptions(trace_record=trace_record,
+                           trace_record_grad=trace_record_grad,
+                           trace_record_hess=trace_record_hess,
+                           trace_record_res=trace_record_res,
+                           trace_record_sres=trace_record_sres,
+                           trace_record_chi2=trace_record_chi2,
+                           trace_record_schi2=trace_record_schi2,
+                           trace_save_iter=trace_save_iter,
+                           storage_file=storage_file)
+
+        self.options = restored_history_options
+
+    def _check_for_not_nan_entries(self, hdf5_group: str)-> bool:
+        """Checks if there exist not-nan entries stored for a given group"""
+        group = self._get_hdf5_entries(hdf5_group)
+
+        for entry in group:
+            if not (entry is None or np.all(np.isnan(entry))):
+                return True
+
+        return False
 
     # overwrite _update_counts
     def _update_counts(self,
@@ -950,7 +990,7 @@ class Hdf5History(History):
             return
 
         # extract function values
-        ret = extract_values(sensi_orders, mode, result, self.options)
+        ret = extract_values(mode, result, self.options)
 
         used_time = time.time() - self._start_time
 
