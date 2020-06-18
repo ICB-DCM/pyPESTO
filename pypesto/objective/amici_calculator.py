@@ -41,7 +41,8 @@ class AmiciCalculator:
                  edatas: List['amici.ExpData'],
                  n_threads: int,
                  x_ids: Sequence[str],
-                 parameter_mapping: 'ParameterMapping'):
+                 parameter_mapping: 'ParameterMapping',
+                 fim_for_hess: bool):
         """Perform the actual AMICI call.
 
         Called within the :func:`AmiciObjective.__call__` method.
@@ -66,9 +67,16 @@ class AmiciCalculator:
             Ids of optimization parameters.
         parameter_mapping:
             Mapping of optimization to simulation parameters.
+        fim_for_hess:
+            Whether to use the FIM (if available) instead of the Hessian (if
+            requested).
         """
         # set order in solver
-        amici_solver.setSensitivityOrder(sensi_order)
+        if sensi_order == 2 and fim_for_hess:
+            # we use the FIM
+            amici_solver.setSensitivityOrder(sensi_order-1)
+        else:
+            amici_solver.setSensitivityOrder(sensi_order)
 
         # fill in parameters
         # TODO (#226) use plist to compute only required derivatives
@@ -100,8 +108,10 @@ class AmiciCalculator:
             self._known_least_squares_safe = True  # don't check this again
 
         return calculate_function_values(
-            rdatas, sensi_order, mode, amici_model, amici_solver, edatas,
-            x_ids, parameter_mapping)
+            rdatas=rdatas, sensi_order=sensi_order, mode=mode,
+            amici_model=amici_model, amici_solver=amici_solver, edatas=edatas,
+            x_ids=x_ids, parameter_mapping=parameter_mapping,
+            fim_for_hess=fim_for_hess)
 
 
 def calculate_function_values(rdatas,
@@ -111,7 +121,8 @@ def calculate_function_values(rdatas,
                               amici_solver: AmiciSolver,
                               edatas: List['amici.ExpData'],
                               x_ids: Sequence[str],
-                              parameter_mapping: 'ParameterMapping'):
+                              parameter_mapping: 'ParameterMapping',
+                              fim_for_hess: bool):
     # full optimization problem dimension (including fixed parameters)
     dim = len(x_ids)
 
@@ -139,17 +150,19 @@ def calculate_function_values(rdatas,
     par_sim_ids = list(amici_model.getParameterIds())
     sensi_method = amici_solver.getSensitivityMethod()
 
+    # iterate over return data
     for data_ix, rdata in enumerate(rdatas):
         log_simulation(data_ix, rdata)
 
         condition_map_sim_var = \
             parameter_mapping[data_ix].map_sim_var
 
+        # add objective value
         nllh -= rdata['llh']
 
-        # compute objective
         if mode == MODE_FUN:
             if sensi_order > 0:
+                # add gradient
                 add_sim_grad_to_opt_grad(
                     x_ids,
                     par_sim_ids,
@@ -158,16 +171,22 @@ def calculate_function_values(rdatas,
                     snllh,
                     coefficient=-1.0
                 )
-                if sensi_method == 1:
-                    # TODO Compute the full Hessian, and check here
-                    add_sim_hess_to_opt_hess(
-                        x_ids,
-                        par_sim_ids,
-                        condition_map_sim_var,
-                        rdata['FIM'],
-                        s2nllh,
-                        coefficient=+1.0
-                    )
+
+                # Hessian
+                if sensi_order > 1:
+                    if sensi_method == amici.SensitivityMethod_forward \
+                            and fim_for_hess:
+                        # add FIM for Hessian
+                        add_sim_hess_to_opt_hess(
+                            x_ids,
+                            par_sim_ids,
+                            condition_map_sim_var,
+                            rdata['FIM'],
+                            s2nllh,
+                            coefficient=+1.0
+                        )
+                    else:
+                        raise ValueError("AMICI cannot compute Hessians yet.")
 
         elif mode == MODE_RES:
             chi2 += rdata['chi2']
