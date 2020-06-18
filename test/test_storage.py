@@ -102,7 +102,7 @@ def test_storage_trace():
     optimizer1 = pypesto.ScipyOptimizer()
     optimizer2 = pypesto.ScipyOptimizer()
 
-    with tempfile.TemporaryDirectory(dir=f".") as tmpdirname:
+    with tempfile.TemporaryDirectory(dir=".") as tmpdirname:
         _, fn = tempfile.mkstemp(".hdf5", dir=f"{tmpdirname}")
 
         history_options_hdf5 = pypesto.HistoryOptions(trace_record=True,
