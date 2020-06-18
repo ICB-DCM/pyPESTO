@@ -881,9 +881,7 @@ class Hdf5History(History):
              file: str):
         """Loads the History object from memory."""
         loaded_h5history = Hdf5History(id, file)
-        print(loaded_h5history.options)
         loaded_h5history._recover_options(file)
-        print(loaded_h5history.options)
         return loaded_h5history
 
     def _recover_options(self, file: str):
