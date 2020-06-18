@@ -351,7 +351,8 @@ def get_data_to_plot(
     theta_lb = result.problem.lb
     theta_ub = result.problem.ub
 
-    param_names = result.problem.x_names
+    # get parameter names from all non-fixed parameters
+    param_names = result.problem.get_reduced_vector(result.problem.x_names)
 
     # transform ndarray to pandas for the use of seaborn
     pd_params = pd.DataFrame(arr_param, columns=param_names)
