@@ -351,7 +351,10 @@ def get_data_to_plot(
     theta_lb = result.problem.lb
     theta_ub = result.problem.ub
 
-    param_names = result.problem.x_names
+    # get parameter names from all non-fixed parameters
+    to_exclude = result.problem.x_fixed_indices
+    all_parameters = result.problem.x_names
+    param_names = [element for i, element in enumerate(all_parameters) if i not in to_exclude]
 
     # transform ndarray to pandas for the use of seaborn
     pd_params = pd.DataFrame(arr_param, columns=param_names)
