@@ -910,7 +910,7 @@ class Hdf5History(History):
                            trace_record_sres=trace_record_sres,
                            trace_record_chi2=trace_record_chi2,
                            trace_record_schi2=trace_record_schi2,
-                           trace_save_iter=trace_save_iter,
+                           trace_save_iter=self.trace_save_iter,
                            storage_file=storage_file)
 
         self.options = restored_history_options
@@ -977,6 +977,11 @@ class Hdf5History(History):
         with h5py.File(self.file, 'a') as f:
             return f[f'/optimization/results/{self.id}/trace/'].attrs['n_sres']
 
+    @property
+    def trace_save_iter(self):
+        with h5py.File(self.file, 'a') as f:
+            return f[f'/optimization/results/{self.id}/trace/'].attrs['trace_save_iter']
+
     def _update_trace(self,
                       x: np.ndarray,
                       sensi_orders: Tuple[int],
@@ -1024,13 +1029,15 @@ class Hdf5History(History):
         """
         with h5py.File(self.file, 'a') as f:
             if f'/optimization/results/{self.id}/trace/' not in f:
-                    grp = f.create_group(f'/optimization/results/{self.id}/trace/')
+                    grp = f.create_group(f'/optimization/'
+                                         f'results/{self.id}/trace/')
                     grp.attrs['n_iterations'] = 0
                     grp.attrs['n_fval'] = 0
                     grp.attrs['n_grad'] = 0
                     grp.attrs['n_hess'] = 0
                     grp.attrs['n_res'] = 0
                     grp.attrs['n_sres'] = 0
+                    grp.attrs['trace_save_iter'] = self.options.trace_save_iter
 
     def _get_hdf5_entries(self, entry_id: str) -> Sequence:
         """
