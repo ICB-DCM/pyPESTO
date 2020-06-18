@@ -66,7 +66,7 @@ script:
       coverage xml;
     fi
   - if [ "$TRAVIS_PULL_REQUEST" = "false" ]; then
-      ./test/check_git_size.sh
+      ./test/check_git_size.sh;
     fi
 
 after_success:
