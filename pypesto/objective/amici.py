@@ -215,8 +215,8 @@ class AmiciObjective(ObjectiveBase):
             amici.writeSolverSettingsToHDF5(
                 self.amici_solver, amici_solver_file)
         except AttributeError as e:
-            e.args += "Pickling the AmiciObjective requires an AMICI " \
-                      "installation with HDF5 support."
+            e.args += ("Pickling the AmiciObjective requires an AMICI "
+                       "installation with HDF5 support.",)
             raise
 
         # read in byte stream
