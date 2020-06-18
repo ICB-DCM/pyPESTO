@@ -9,6 +9,7 @@ import matplotlib.pyplot as plt
 import pytest
 
 import pypesto
+import pypesto.optimize
 from pypesto.objective import NegLogPriors
 
 
@@ -122,8 +123,9 @@ def problem(request):
 def test_pipeline(sampler, problem):
     """Check that a typical pipeline runs through."""
     # optimization
-    optimizer = pypesto.ScipyOptimizer(options={'maxiter': 10})
-    result = pypesto.minimize(problem, n_starts=3, optimizer=optimizer)
+    optimizer = pypesto.optimize.ScipyOptimizer(options={'maxiter': 10})
+    result = pypesto.optimize.minimize(
+        problem, n_starts=3, optimizer=optimizer)
 
     # sampling
     result = pypesto.sample(
@@ -143,7 +145,7 @@ def test_ground_truth():
 
     problem = gaussian_problem()
 
-    result = pypesto.minimize(problem)
+    result = pypesto.optimize.minimize(problem)
 
     result = pypesto.sample(problem, n_samples=10000,
                             result=result, sampler=sampler)
@@ -297,7 +299,7 @@ def test_geweke_test_unconverged():
     sampler = pypesto.MetropolisSampler()
 
     # optimization
-    result = pypesto.minimize(problem, n_starts=3)
+    result = pypesto.optimize.minimize(problem, n_starts=3)
 
     # sampling
     result = pypesto.sample(

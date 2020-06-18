@@ -28,19 +28,6 @@ from .result import (
     OptimizeResult,
     ProfileResult,
     SampleResult)
-from .optimize import (
-    minimize,
-    OptimizeOptions,
-    OptimizerResult,
-    Optimizer,
-    ScipyOptimizer,
-    IpoptOptimizer,
-    DlibOptimizer,
-    PyswarmOptimizer)
-from .profile import (
-    parameter_profile,
-    ProfileOptions,
-    ProfilerResult)
 from .sampling import (
     sample,
     Sampler,

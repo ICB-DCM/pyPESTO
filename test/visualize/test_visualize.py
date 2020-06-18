@@ -1,5 +1,7 @@
 import pypesto
+import pypesto.optimize
 import pypesto.visualize
+
 import numpy as np
 import scipy.optimize as so
 import matplotlib.pyplot as plt
@@ -44,11 +46,11 @@ def create_optimization_result():
     # write some dummy results for optimization
     result = pypesto.Result(problem=problem)
     for j in range(0, 3):
-        optimizer_result = pypesto.OptimizerResult(
+        optimizer_result = pypesto.optimize.OptimizerResult(
             id=str(j), fval=j * 0.01, x=np.array([j + 0.1, j + 1]))
         result.optimize_result.append(optimizer_result=optimizer_result)
     for j in range(0, 4):
-        optimizer_result = pypesto.OptimizerResult(
+        optimizer_result = pypesto.optimize.OptimizerResult(
             id=str(j+3), fval=10 + j * 0.01,
             x=np.array([2.5 + j + 0.1, 2 + j + 1]))
         result.optimize_result.append(optimizer_result=optimizer_result)
@@ -64,10 +66,10 @@ def create_optimization_result_nan_inf():
     result = create_optimization_result()
 
     # append nan and inf
-    optimizer_result = pypesto.OptimizerResult(
+    optimizer_result = pypesto.optimize.OptimizerResult(
         fval=float('nan'), x=np.array([float('nan'), float('nan')]))
     result.optimize_result.append(optimizer_result=optimizer_result)
-    optimizer_result = pypesto.OptimizerResult(
+    optimizer_result = pypesto.optimize.OptimizerResult(
         fval=-float('inf'), x=np.array([-float('inf'), -float('inf')]))
     result.optimize_result.append(optimizer_result=optimizer_result)
 
@@ -80,14 +82,16 @@ def create_optimization_history():
 
     # create optimizer
     optimizer_options = {'maxiter': 200}
-    optimizer = pypesto.ScipyOptimizer(method='TNC', options=optimizer_options)
+    optimizer = pypesto.optimize.ScipyOptimizer(
+        method='TNC', options=optimizer_options)
 
     history_options = pypesto.HistoryOptions(
         trace_record=True, trace_save_iter=1)
 
     # run optimization
-    optimize_options = pypesto.OptimizeOptions(allow_failed_starts=True)
-    result_with_trace = pypesto.minimize(
+    optimize_options = pypesto.optimize.OptimizeOptions(
+        allow_failed_starts=True)
+    result_with_trace = pypesto.optimize.minimize(
         problem=problem,
         optimizer=optimizer,
         n_starts=5,

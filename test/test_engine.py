@@ -3,6 +3,7 @@ import copy
 import cloudpickle as pickle
 
 import pypesto
+import pypesto.optimize
 import test.test_objective as test_objective
 from test.petab_util import folder_base
 import amici
@@ -21,8 +22,8 @@ def _test_basic(engine):
     lb = 0 * np.ones((1, 2))
     ub = 1 * np.ones((1, 2))
     problem = pypesto.Problem(objective, lb, ub)
-    optimizer = pypesto.ScipyOptimizer(options={'maxiter': 10})
-    result = pypesto.minimize(
+    optimizer = pypesto.optimize.ScipyOptimizer(options={'maxiter': 10})
+    result = pypesto.optimize.minimize(
         problem=problem, n_starts=5, engine=engine, optimizer=optimizer)
     assert len(result.optimize_result.as_list()) == 5
 
@@ -39,8 +40,8 @@ def _test_petab(engine):
         folder_base + "Zheng_PNAS2012/Zheng_PNAS2012.yaml")
     objective = petab_importer.create_objective()
     problem = petab_importer.create_problem(objective)
-    optimizer = pypesto.ScipyOptimizer(options={'maxiter': 10})
-    result = pypesto.minimize(
+    optimizer = pypesto.optimize.ScipyOptimizer(options={'maxiter': 10})
+    result = pypesto.optimize.minimize(
         problem=problem, n_starts=3, engine=engine, optimizer=optimizer)
     assert len(result.optimize_result.as_list()) == 3
 

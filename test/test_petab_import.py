@@ -10,6 +10,7 @@ import pytest
 import amici
 import petab
 import pypesto
+import pypesto.optimize
 from test.petab_util import folder_base
 
 
@@ -63,9 +64,10 @@ class PetabImportTest(unittest.TestCase):
         for obj_edatas, importer in \
                 zip(self.obj_edatas, self.petab_importers):
             obj = obj_edatas[0]
-            optimizer = pypesto.ScipyOptimizer(options={'maxiter': 10})
+            optimizer = pypesto.optimize.ScipyOptimizer(
+                options={'maxiter': 10})
             problem = importer.create_problem(obj)
-            result = pypesto.minimize(
+            result = pypesto.optimize.minimize(
                 problem=problem, optimizer=optimizer, n_starts=2)
 
             self.assertTrue(np.isfinite(
