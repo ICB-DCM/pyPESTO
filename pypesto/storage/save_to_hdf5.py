@@ -153,7 +153,7 @@ class OptimizationResultHDF5Writer:
                                             "to overwrite it, set "
                                             "overwrite=True.")
                 for key in start.keys():
-                    if key is 'history':
+                    if key == 'history':
                         continue
                     elif isinstance(start[key], np.ndarray):
                         write_float_array(start_grp, key, start[key])
@@ -164,7 +164,8 @@ class OptimizationResultHDF5Writer:
                 # if isinstance(start['history'], HistoryBase):
                 if start['history'] is not None:
                     start_grp.attrs['history'] = \
-                        os.path.relpath(start['history'].get_history_directory(),
-                                        start=self.storage_filename)
+                        os.path.relpath(
+                            start['history'].get_history_directory(),
+                            start=self.storage_filename)
 
                 f.flush()

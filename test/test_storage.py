@@ -5,7 +5,6 @@ import os
 import tempfile
 import pytest
 import numpy as np
-import scipy as sp
 import scipy.optimize as so
 import pypesto
 from pypesto.objective.constants import (X, FVAL, GRAD, HESS, RES, SRES, CHI2,
@@ -121,12 +120,12 @@ def test_storage_trace():
 
         history_entries = [X, FVAL, GRAD, HESS, RES, SRES, CHI2, SCHI2, TIME]
         assert len(result_memory.optimize_result.list) == \
-               len(result_memory.optimize_result.list)
+            len(result_memory.optimize_result.list)
         for mem_res in result_memory.optimize_result.list:
             for hdf_res in result_hdf5.optimize_result.list:
                 if mem_res['id'] == hdf_res['id']:
                     for entry in history_entries:
-                        np.testing.assert_array_equal(getattr(mem_res[
-                                                                  'history'],
-                            f'get_{entry}_trace')(), getattr(
-                            hdf_res['history'], f'get_{entry}_trace')())
+                        np.testing.assert_array_equal(
+                            getattr(mem_res['history'],
+                                    f'get_{entry}_trace')(), getattr(
+                                hdf_res['history'], f'get_{entry}_trace')())

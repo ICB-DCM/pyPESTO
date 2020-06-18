@@ -6,7 +6,7 @@ import time
 import os
 import abc
 import warnings
-from typing import Any, Dict, Iterable, List, Optional, Tuple, Sequence, Union
+from typing import Any, Dict, List, Optional, Tuple, Sequence, Union
 
 from .constants import (
     MODE_FUN, MODE_RES, FVAL, GRAD, HESS, RES, SRES, CHI2, SCHI2, TIME,
@@ -497,18 +497,16 @@ class MemoryHistory(History):
         self._update_trace(x, mode, result)
 
     def get_history_directory(self):
-        warnings.warn('Saving History objects is currently only supported for'
-                      'Hdf5History and CsvHistory objects. Consider converting '
-                      'the MemoryHistory object to a Hdf5History object via '
-                      'the to_hdf5_history function.')
+        warnings.warn('Saving History objects is currently only supported '
+                      'for Hdf5History and CsvHistory objects. Consider '
+                      'converting the MemoryHistory object to a Hdf5History '
+                      'object via the to_hdf5_history function.')
         return None
 
     def to_hdf5_history(self,
                         file: str) -> 'Hdf5History':
-        """
-        Returns a copy of the MemoryHistory as Hdf5History, that then can be saved.
-        """
-
+        """ Returns a copy of the MemoryHistory as Hdf5History,
+        that then can be saved."""
         h5history = Hdf5History(self.id,
                                 file,
                                 self.options.copy())
@@ -520,7 +518,9 @@ class MemoryHistory(History):
         with h5py.File(h5history.file, 'a') as f:
 
             if f'/optimization/results/{h5history.id}/trace/' not in f:
-                grp = f.create_group(f'/optimization/results/{h5history.id}/trace/')
+
+                grp = f.create_group(f'/optimization/results/'
+                                     f'{h5history.id}/trace/')
                 grp.attrs['n_iterations'] = n_iterations
 
             for iteration in range(n_iterations):
@@ -795,7 +795,6 @@ class CsvHistory(History):
                 )
             trace_copy.to_csv(self.file)
 
-
     @staticmethod
     def load(id: str,
              file: str):
@@ -899,7 +898,6 @@ class Hdf5History(History):
         trace_record_sres = self._check_for_not_nan_entries(SRES)
         trace_record_chi2 = self._check_for_not_nan_entries(CHI2)
         trace_record_schi2 = self._check_for_not_nan_entries(SCHI2)
-        trace_save_iter = None  # TODO
         storage_file = file
 
         restored_history_options = \
@@ -915,7 +913,7 @@ class Hdf5History(History):
 
         self.options = restored_history_options
 
-    def _check_for_not_nan_entries(self, hdf5_group: str)-> bool:
+    def _check_for_not_nan_entries(self, hdf5_group: str) -> bool:
         """Checks if there exist not-nan entries stored for a given group"""
         group = self._get_hdf5_entries(hdf5_group)
 
@@ -980,7 +978,8 @@ class Hdf5History(History):
     @property
     def trace_save_iter(self):
         with h5py.File(self.file, 'a') as f:
-            return f[f'/optimization/results/{self.id}/trace/'].attrs['trace_save_iter']
+            return f[f'/optimization/results/{self.id}/trace/']\
+                .attrs['trace_save_iter']
 
     def _update_trace(self,
                       x: np.ndarray,
@@ -1029,15 +1028,14 @@ class Hdf5History(History):
         """
         with h5py.File(self.file, 'a') as f:
             if f'/optimization/results/{self.id}/trace/' not in f:
-                    grp = f.create_group(f'/optimization/'
-                                         f'results/{self.id}/trace/')
-                    grp.attrs['n_iterations'] = 0
-                    grp.attrs['n_fval'] = 0
-                    grp.attrs['n_grad'] = 0
-                    grp.attrs['n_hess'] = 0
-                    grp.attrs['n_res'] = 0
-                    grp.attrs['n_sres'] = 0
-                    grp.attrs['trace_save_iter'] = self.options.trace_save_iter
+                grp = f.create_group(f'/optimization/results/{self.id}/trace/')
+                grp.attrs['n_iterations'] = 0
+                grp.attrs['n_fval'] = 0
+                grp.attrs['n_grad'] = 0
+                grp.attrs['n_hess'] = 0
+                grp.attrs['n_res'] = 0
+                grp.attrs['n_sres'] = 0
+                grp.attrs['trace_save_iter'] = self.options.trace_save_iter
 
     def _get_hdf5_entries(self, entry_id: str) -> Sequence:
         """
@@ -1047,8 +1045,10 @@ class Hdf5History(History):
 
         with h5py.File(self.file, 'r') as f:
 
-            for iteration in range(f[f'/optimization/results/{self.id}/trace/']
-                                           .attrs['n_iterations']):
+            n_iterations = f[f'/optimization/results/'
+                             f'{self.id}/trace/'].attrs['n_iterations']
+
+            for iteration in range(n_iterations):
                 try:
                     entry = np.array(f[f'/optimization/results/{self.id}/trace'
                                        f'/{str(iteration)}/{entry_id}'])
