@@ -164,7 +164,7 @@ class HistoryOptions(dict):
             return Hdf5History(id=id, file=storage_file, options=self)
         else:
             raise ValueError(
-                "Currently only history store to '.csv' and '.hdf5'"
+                "Currently, only history storage to '.csv' and '.hdf5'"
                 "is supported")
 
 
