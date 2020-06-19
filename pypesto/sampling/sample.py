@@ -52,7 +52,8 @@ def sample(
     if x0 is None:
         result.optimize_result.sort()
         if len(result.optimize_result.list) > 0:
-            x0 = problem.get_reduced_vector(result.optimize_result.list[0]['x'])
+            x0 = problem.get_reduced_vector(
+                result.optimize_result.list[0]['x'])
         # TODO multiple x0 for PT, #269
 
     # set sampler
