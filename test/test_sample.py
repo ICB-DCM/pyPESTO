@@ -339,7 +339,7 @@ def test_empty_prior():
 
 
 def test_prior():
-    """Check that priors are defined in sample."""
+    """Check that priors are defined for sampling."""
     # define negative log posterior
     posterior_fun = pypesto.Objective(fun=negative_log_posterior)
 
