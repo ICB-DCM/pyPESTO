@@ -44,7 +44,7 @@ def trace_wrap(f):
 class HistoryOptions(dict):
     """
     Options for the objective that are used in optimization, profiles
-    and sample.
+    and sampling.
 
     In addition implements a factory pattern to generate history objects.
 
