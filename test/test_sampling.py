@@ -61,14 +61,22 @@ def gaussian_mixture_separated_modes_problem():
 
 
 def rosenbrock_problem():
-    """Problem based on rosenbrock objective."""
+    """Problem based on rosenbrock objective.
+
+    Features
+    --------
+    * 3-dim
+    * has fixed parameters
+    """
     objective = pypesto.Objective(fun=so.rosen)
 
     dim_full = 2
     lb = -5 * np.ones((dim_full, 1))
     ub = 5 * np.ones((dim_full, 1))
 
-    problem = pypesto.Problem(objective=objective, lb=lb, ub=ub)
+    problem = pypesto.Problem(
+            objective=objective, lb=lb, ub=ub,
+            x_fixed_indices=[1], x_fixed_vals=[2])
     return problem
 
 

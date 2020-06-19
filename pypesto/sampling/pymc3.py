@@ -50,6 +50,9 @@ class Pymc3Sampler(Sampler):
 
     def initialize(self, problem: Problem, x0: np.ndarray):
         self.problem = problem
+        if x0 is not None:
+            if len(x0) != problem.dim:
+                x0 = problem.get_reduced_vector(x0)
         self.x0 = x0
         self.trace = None
         self.data = None
@@ -72,7 +75,8 @@ class Pymc3Sampler(Sampler):
             # uniform bounds
             k = [pm.Uniform(x_name, lower=lb, upper=ub)
                  for x_name, lb, ub in
-                 zip(problem.x_names, problem.lb, problem.ub)]
+                 zip(problem.get_reduced_vector(problem.x_names),
+                     problem.lb, problem.ub)]
 
             # convert to tensor vector
             theta = tt.as_tensor_variable(k)
@@ -112,7 +116,7 @@ class Pymc3Sampler(Sampler):
 
         if trace_x.shape[0] != trace_neglogpost.shape[0] \
                 or trace_x.shape[1] != trace_neglogpost.shape[1] \
-                or trace_x.shape[2] != len(self.problem.x_names):
+                or trace_x.shape[2] != self.problem.dim:
             raise ValueError("Trace dimensions are inconsistent")
 
         return McmcPtResult(

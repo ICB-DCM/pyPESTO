@@ -211,7 +211,14 @@ class AmiciObjective(ObjectiveBase):
 
         # write amici solver settings to file
         amici_solver_file = tempfile.mkstemp()[1]
-        amici.writeSolverSettingsToHDF5(self.amici_solver, amici_solver_file)
+        try:
+            amici.writeSolverSettingsToHDF5(
+                self.amici_solver, amici_solver_file)
+        except AttributeError as e:
+            e.args += ("Pickling the AmiciObjective requires an AMICI "
+                       "installation with HDF5 support.",)
+            raise
+
         # read in byte stream
         amici_solver_settings = open(amici_solver_file, 'rb').read()
         state['amici_solver_settings'] = amici_solver_settings
