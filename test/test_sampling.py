@@ -3,12 +3,13 @@ This is for testing optimization of the pypesto.Objective.
 """
 
 import numpy as np
-from scipy.stats import multivariate_normal, norm, kstest
+from scipy.stats import multivariate_normal, norm, kstest, ks_2samp, uniform
 import scipy.optimize as so
 import matplotlib.pyplot as plt
 import pytest
 
 import pypesto
+from pypesto.objective import NegLogPriors
 
 
 def gaussian_llh(x):
@@ -41,16 +42,57 @@ def gaussian_mixture_problem():
     return problem
 
 
+def gaussian_mixture_separated_modes_llh(x):
+    return np.log(
+        0.5*multivariate_normal.pdf(x, mean=-1., cov=0.7)
+        + 0.5*multivariate_normal.pdf(x, mean=100., cov=0.8))
+
+
+def gaussian_mixture_separated_modes_problem():
+    """Problem based on a mixture of gaussians with far/separated modes."""
+    def nllh(x):
+        return - gaussian_mixture_separated_modes_llh(x)
+
+    objective = pypesto.Objective(fun=nllh)
+    problem = pypesto.Problem(objective=objective, lb=[-100], ub=[200],
+                              x_names=['x'])
+    return problem
+
+
 def rosenbrock_problem():
-    """Problem based on rosenbrock objective."""
+    """Problem based on rosenbrock objective.
+
+    Features
+    --------
+    * 3-dim
+    * has fixed parameters
+    """
     objective = pypesto.Objective(fun=so.rosen)
 
     dim_full = 2
     lb = -5 * np.ones((dim_full, 1))
     ub = 5 * np.ones((dim_full, 1))
 
-    problem = pypesto.Problem(objective=objective, lb=lb, ub=ub)
+    problem = pypesto.Problem(
+            objective=objective, lb=lb, ub=ub,
+            x_fixed_indices=[1], x_fixed_vals=[2])
     return problem
+
+
+def prior(x):
+    return multivariate_normal.pdf(x, mean=-1., cov=0.7)
+
+
+def likelihood(x):
+    return uniform.pdf(x, loc=-10., scale=20.)[0]
+
+
+def negative_log_posterior(x):
+    return - np.log(likelihood(x)) - np.log(prior(x))
+
+
+def negative_log_prior(x):
+    return - np.log(prior(x))
 
 
 @pytest.fixture(params=['Metropolis',
@@ -128,6 +170,87 @@ def test_ground_truth():
     assert statistic > 0.1
 
 
+def test_ground_truth_separated_modes():
+    """Test whether we actually retrieve correct distributions."""
+    # use best self-implemented sampler, which has a chance of correctly
+    # sampling from the distribution
+
+    # First use parallel tempering with 3 chains
+    sampler = pypesto.AdaptiveParallelTemperingSampler(
+        internal_sampler=pypesto.AdaptiveMetropolisSampler(), n_chains=3)
+
+    problem = gaussian_mixture_separated_modes_problem()
+
+    result = pypesto.sample(problem, n_samples=1e4,
+                            sampler=sampler,
+                            x0=np.array([0.]))
+
+    # get samples of first chain
+    samples = result.sample_result.trace_x[0, :, 0]
+
+    # generate bimodal ground-truth samples
+    # "first" mode centered at -1
+    rvs1 = norm.rvs(size=5000, loc=-1., scale=np.sqrt(0.7))
+    # "second" mode centered at 100
+    rvs2 = norm.rvs(size=5001, loc=100., scale=np.sqrt(0.8))
+
+    # test for distribution similarity
+    statistic, pval = ks_2samp(np.concatenate([rvs1, rvs2]),
+                               samples)
+
+    # only parallel tempering finds both modes
+    print(statistic, pval)
+    assert statistic < 0.1
+
+    # sample using adaptive metropolis (single-chain)
+    # initiated around the "first" mode of the distribution
+    sampler = pypesto.AdaptiveMetropolisSampler()
+    result = pypesto.sample(problem, n_samples=1e4,
+                            sampler=sampler,
+                            x0=np.array([-2.]))
+
+    # get samples of first chain
+    samples = result.sample_result.trace_x[0, :, 0]
+
+    # test for distribution similarity
+    statistic, pval = ks_2samp(np.concatenate([rvs1, rvs2]),
+                               samples)
+
+    # single-chain adaptive metropolis does not find both modes
+    print(statistic, pval)
+    assert statistic > 0.1
+
+    # actually centered at the "first" mode
+    statistic, pval = ks_2samp(rvs1, samples)
+
+    print(statistic, pval)
+    assert statistic < 0.1
+
+    # sample using adaptive metropolis (single-chain)
+    # initiated around the "second" mode of the distribution
+    sampler = pypesto.AdaptiveMetropolisSampler()
+    result = pypesto.sample(problem, n_samples=1e4,
+                            sampler=sampler,
+                            x0=np.array([120.]))
+
+    # get samples of first chain
+    samples = result.sample_result.trace_x[0, :, 0]
+
+    # test for distribution similarity
+    statistic, pval = ks_2samp(np.concatenate([rvs1, rvs2]),
+                               samples)
+
+    # single-chain adaptive metropolis does not find both modes
+    print(statistic, pval)
+    assert statistic > 0.1
+
+    # actually centered at the "second" mode
+    statistic, pval = ks_2samp(rvs2, samples)
+
+    print(statistic, pval)
+    assert statistic < 0.1
+
+
 def test_multiple_startpoints():
     problem = gaussian_problem()
     x0s = [np.array([0]), np.array([1])]
@@ -137,7 +260,7 @@ def test_multiple_startpoints():
     )
     result = pypesto.sample(problem, n_samples=10, x0=x0s, sampler=sampler)
 
-    assert result.sample_result.trace_fval.shape[0] == 2
+    assert result.sample_result.trace_neglogpost.shape[0] == 2
     assert [result.sample_result.trace_x[0][0],
             result.sample_result.trace_x[1][0]] == x0s
 
@@ -190,3 +313,68 @@ def test_geweke_test_unconverged():
 
     # run geweke test (should not fail!)
     pypesto.sampling.geweke_test(result)
+
+
+def test_empty_prior():
+    """Check that priors are zero when none are defined."""
+    # define negative log posterior
+    posterior_fun = pypesto.Objective(fun=negative_log_posterior)
+
+    # define pypesto problem without prior object
+    test_problem = pypesto.Problem(objective=posterior_fun,
+                                   lb=-10, ub=10,
+                                   x_names=['x'])
+
+    sampler = pypesto.AdaptiveMetropolisSampler()
+
+    result = pypesto.sample(test_problem, n_samples=50,
+                            sampler=sampler,
+                            x0=np.array([0.]))
+
+    # get log prior values of first chain
+    logprior_trace = -result.sample_result.trace_neglogprior[0, :]
+
+    # check that all entries are zero
+    assert (logprior_trace == 0.).all()
+
+
+def test_prior():
+    """Check that priors are defined in sampling."""
+    # define negative log posterior
+    posterior_fun = pypesto.Objective(fun=negative_log_posterior)
+
+    # define negative log prior
+    prior_fun = pypesto.Objective(fun=negative_log_prior)
+
+    # define pypesto prior object
+    prior_object = NegLogPriors(objectives=[prior_fun])
+
+    # define pypesto problem using prior object
+    test_problem = pypesto.Problem(objective=posterior_fun,
+                                   x_priors_defs=prior_object,
+                                   lb=-10, ub=10,
+                                   x_names=['x'])
+
+    sampler = pypesto.AdaptiveMetropolisSampler()
+
+    result = pypesto.sample(test_problem, n_samples=1e4,
+                            sampler=sampler,
+                            x0=np.array([0.]))
+
+    # get log prior values of first chain
+    logprior_trace = -result.sample_result.trace_neglogprior[0, :]
+
+    # check that not all entries are zero
+    assert (logprior_trace != 0.).any()
+
+    # get samples of first chain
+    samples = result.sample_result.trace_x[0, :, 0]
+
+    # generate ground-truth samples
+    rvs = norm.rvs(size=5000, loc=-1., scale=np.sqrt(0.7))
+
+    # check sample distribution agreement with the ground-truth
+    statistic, pval = ks_2samp(rvs, samples)
+    print(statistic, pval)
+
+    assert statistic < 0.1

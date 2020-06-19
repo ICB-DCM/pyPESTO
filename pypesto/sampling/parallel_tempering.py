@@ -20,7 +20,7 @@ class ParallelTemperingSampler(Sampler):
         super().__init__(options)
 
         # set betas
-        if (betas is None) + (n_chains is None) != 1:
+        if (betas is None) == (n_chains is None):
             raise ValueError("Set either betas or n_chains.")
         if betas is None:
             betas = near_exponential_decay_betas(
@@ -31,17 +31,20 @@ class ParallelTemperingSampler(Sampler):
         self.betas0 = np.array(betas)
         self.betas = None
 
+        self.temper_lpost = self.options['temper_log_posterior']
+
         self.samplers = [copy.deepcopy(internal_sampler)
                          for _ in range(len(self.betas0))]
         # configure internal samplers
         for sampler in self.samplers:
-            sampler.make_internal()
+            sampler.make_internal(temper_lpost=self.temper_lpost)
 
     @classmethod
     def default_options(cls) -> Dict:
         return {
             'max_temp': 5e4,
             'exponent': 4,
+            'temper_log_posterior': False,
         }
 
     def initialize(self,
@@ -61,7 +64,7 @@ class ParallelTemperingSampler(Sampler):
     def sample(
             self, n_samples: int, beta: float = 1.):
         # loop over iterations
-        for i_sample in tqdm(range(int(n_samples))):
+        for i_sample in tqdm(range(int(n_samples))):  # TODO test
             # sample
             for sampler, beta in zip(self.samplers, self.betas):
                 sampler.sample(n_samples=1, beta=beta)
@@ -76,10 +79,14 @@ class ParallelTemperingSampler(Sampler):
         """Concatenate all chains."""
         results = [sampler.get_samples() for sampler in self.samplers]
         trace_x = np.array([result.trace_x[0] for result in results])
-        trace_fval = np.array([result.trace_fval[0] for result in results])
+        trace_neglogpost = np.array([result.trace_neglogpost[0]
+                                     for result in results])
+        trace_neglogprior = np.array([result.trace_neglogprior[0]
+                                      for result in results])
         return McmcPtResult(
             trace_x=trace_x,
-            trace_fval=trace_fval,
+            trace_neglogpost=trace_neglogpost,
+            trace_neglogprior=trace_neglogprior,
             betas=self.betas
         )
 
@@ -102,8 +109,12 @@ class ParallelTemperingSampler(Sampler):
             sample1 = sampler1.get_last_sample()
             sample2 = sampler2.get_last_sample()
 
+            # extract log likelihood values
+            sample1_llh = sample1.lpost - sample1.lprior
+            sample2_llh = sample2.lpost - sample2.lprior
+
             # swapping probability
-            p_acc_swap = dbeta * (sample2.llh - sample1.llh)
+            p_acc_swap = dbeta * (sample2_llh - sample1_llh)
 
             # flip a coin
             u = np.random.uniform(0, 1)

@@ -345,13 +345,14 @@ def get_data_to_plot(
     arr_param = arr_param[np.arange(burn_in, len(arr_param), stepsize)]
 
     # invert sign for log posterior values
-    arr_fval = - np.array(sample_result.trace_fval[i_chain])
+    arr_fval = - np.array(sample_result.trace_neglogpost[i_chain])
     indices = np.arange(burn_in, len(arr_fval), stepsize)
     arr_fval = arr_fval[indices]
     theta_lb = result.problem.lb
     theta_ub = result.problem.ub
 
-    param_names = result.problem.x_names
+    # get parameter names from all non-fixed parameters
+    param_names = result.problem.get_reduced_vector(result.problem.x_names)
 
     # transform ndarray to pandas for the use of seaborn
     pd_params = pd.DataFrame(arr_param, columns=param_names)

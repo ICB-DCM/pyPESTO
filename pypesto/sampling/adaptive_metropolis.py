@@ -60,7 +60,7 @@ class AdaptiveMetropolisSampler(MetropolisSampler):
         x_new = np.random.multivariate_normal(x, self._cov)
         return x_new
 
-    def _update_proposal(self, x: np.ndarray, llh: float, log_p_acc: float,
+    def _update_proposal(self, x: np.ndarray, lpost: float, log_p_acc: float,
                          n_sample_cur: int):
         # parse options
         decay_constant = self.options['decay_constant']

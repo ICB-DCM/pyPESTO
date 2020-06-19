@@ -532,11 +532,14 @@ def create_sampling_result():
     n_chain = 2
     n_iter = 100
     n_par = len(result.optimize_result.get_for_key('x')[0])
-    trace_fval = np.random.randn(n_chain, n_iter)
+    trace_neglogpost = np.random.randn(n_chain, n_iter)
+    trace_neglogprior = np.zeros((n_chain, n_iter))
     trace_x = np.random.randn(n_chain, n_iter, n_par)
     betas = np.array([1, .1])
     sample_result = pypesto.McmcPtResult(
-        trace_fval=trace_fval, trace_x=trace_x, betas=betas,
+        trace_neglogpost=trace_neglogpost,
+        trace_neglogprior=trace_neglogprior,
+        trace_x=trace_x, betas=betas,
         burn_in=10)
     result.sample_result = sample_result
 
