@@ -6,6 +6,7 @@
 # large files have been included.
 
 size=$(du -s .git | cut -f1);
+# reference: 45140 2020-06-19
 
 if [ "$size" -gt 50000 ]; then
   echo "Git history is suspiciously large: $size";
