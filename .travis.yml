@@ -65,6 +65,9 @@ script:
   - if [ "$TRAVIS_PULL_REQUEST" = "false" ]; then
       coverage xml;
     fi
+  - if [ "$TRAVIS_PULL_REQUEST" = "false" ]; then
+      ./test/check_git_size.sh;
+    fi
 
 after_success:
   - bash <(curl -s https://codecov.io/bash)
