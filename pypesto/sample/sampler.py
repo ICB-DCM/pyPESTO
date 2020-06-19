@@ -34,7 +34,7 @@ class Sampler(abc.ABC):
     def sample(
             self, n_samples: int, beta: float = 1.,
     ):
-        """Perform sample.
+        """Perform sampling.
 
         Parameters
         ----------

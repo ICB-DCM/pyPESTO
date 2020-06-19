@@ -96,7 +96,7 @@ def update_history_statistics(
         decay_constant: float
 ) -> Tuple[np.ndarray, np.ndarray]:
     """
-    Update sample statistics.
+    Update sampling statistics.
 
     Parameters
     ----------

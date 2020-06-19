@@ -19,7 +19,7 @@ def sample(
         result: Result = None
 ) -> Result:
     """
-    This is the main function to call to do parameter sample.
+    This is the main function to call to do parameter sampling.
 
     Parameters
     ----------
@@ -29,7 +29,7 @@ def sample(
     n_samples:
         Number of samples to generate.
     sampler:
-        The sampler to perform the actual sample.
+        The sampler to perform the actual sampling.
     x0:
         Initial parameter for the Markov chain. If None, the best parameter
         found in optimization is used. Note that some samplers require an
@@ -63,7 +63,7 @@ def sample(
     # initialize sampler to problem
     sampler.initialize(problem=problem, x0=x0)
 
-    # perform the sample and track time
+    # perform the sampling and track time
     t_start = process_time()
     sampler.sample(n_samples=n_samples)
     t_elapsed = process_time() - t_start
