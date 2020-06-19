@@ -23,7 +23,7 @@ class OptimizeResult:
 
     def append(
             self,
-            optimizer_result,
+            optimizer_result: 'optimize.OptimizerResult',  # noqa: F821
     ):
         """
         Append an optimizer result to the result object.
@@ -105,7 +105,7 @@ class ProfileResult:
 
     def append_profiler_result(
             self,
-            profiler_result=None,
+            profiler_result: 'profile.ProfilerResult' = None,  # noqa: F821
             profile_list: int = None) -> None:
         """Append the profiler result to the profile list.
 
@@ -125,7 +125,7 @@ class ProfileResult:
 
     def set_profiler_result(
             self,
-            profiler_result,
+            profiler_result: 'profile.ProfilerResult',  # noqa: F821
             i_par: int,
             profile_list: int = None) -> None:
         """Write a profiler result to the result object at `i_par` of profile
