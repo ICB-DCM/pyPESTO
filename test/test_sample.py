@@ -175,7 +175,7 @@ def test_ground_truth():
 
 def test_ground_truth_separated_modes():
     """Test whether we actually retrieve correct distributions."""
-    # use best self-implemented sampler, which has a chance of correctly
+    # use best self-implemented sampler, which has a chance to correctly
     # sample from the distribution
 
     # First use parallel tempering with 3 chains
