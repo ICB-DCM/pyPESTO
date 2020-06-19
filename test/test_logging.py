@@ -2,7 +2,6 @@ import logging
 import os
 import pypesto
 import pypesto.optimize
-import pypesto.logging
 
 
 def test_optimize():

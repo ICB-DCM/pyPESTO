@@ -58,7 +58,7 @@ class ProblemHDF5Reader:
         Parameters
         ----------
         objective:
-            Objective function which is currently not save to storage.
+            Objective function which is currently not save to store.
         Returns
         -------
         problem:

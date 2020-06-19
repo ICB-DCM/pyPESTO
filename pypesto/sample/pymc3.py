@@ -90,7 +90,7 @@ class Pymc3Sampler(Sampler):
             if self.step_function:
                 step = self.step_function()
 
-            # perform the actual sampling
+            # perform the actual sample
             trace = pm.sample(
                 draws=int(n_samples), trace=trace, start=x0, step=step,
                 **self.options)

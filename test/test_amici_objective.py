@@ -12,7 +12,7 @@ import pytest
 import numpy as np
 from test.petab_util import folder_base
 
-ATOL = 1e-2
+ATOL = 1e-1
 RTOL = 1e-0
 
 
@@ -49,7 +49,7 @@ def test_error_leastsquares_with_ssigma():
     petab_problem = petab.Problem.from_yaml(
         folder_base + "Zheng_PNAS2012/Zheng_PNAS2012.yaml")
     petab_problem.model_name = "Zheng_PNAS2012"
-    importer = pypesto.PetabImporter(petab_problem)
+    importer = pypesto.petab.PetabImporter(petab_problem)
     obj = importer.create_objective()
     problem = importer.create_problem(obj)
 
@@ -71,7 +71,7 @@ def test_preeq_guesses():
     petab_problem = petab.Problem.from_yaml(
         folder_base + "Zheng_PNAS2012/Zheng_PNAS2012.yaml")
     petab_problem.model_name = "Zheng_PNAS2012"
-    importer = pypesto.PetabImporter(petab_problem)
+    importer = pypesto.petab.PetabImporter(petab_problem)
     obj = importer.create_objective()
     problem = importer.create_problem(obj)
 

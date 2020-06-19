@@ -10,9 +10,9 @@ import amici
 
 
 def test_basic():
-    for engine in [pypesto.SingleCoreEngine(),
-                   pypesto.MultiProcessEngine(n_procs=2),
-                   pypesto.MultiThreadEngine(n_threads=8)]:
+    for engine in [pypesto.engine.SingleCoreEngine(),
+                   pypesto.engine.MultiProcessEngine(n_procs=2),
+                   pypesto.engine.MultiThreadEngine(n_threads=8)]:
         _test_basic(engine)
 
 
@@ -29,14 +29,14 @@ def _test_basic(engine):
 
 
 def test_petab():
-    for engine in [pypesto.SingleCoreEngine(),
-                   pypesto.MultiProcessEngine(n_procs=2),
-                   pypesto.MultiThreadEngine(n_threads=4)]:
+    for engine in [pypesto.engine.SingleCoreEngine(),
+                   pypesto.engine.MultiProcessEngine(n_procs=2),
+                   pypesto.engine.MultiThreadEngine(n_threads=4)]:
         _test_petab(engine)
 
 
 def _test_petab(engine):
-    petab_importer = pypesto.PetabImporter.from_yaml(
+    petab_importer = pypesto.petab.PetabImporter.from_yaml(
         folder_base + "Zheng_PNAS2012/Zheng_PNAS2012.yaml")
     objective = petab_importer.create_objective()
     problem = petab_importer.create_problem(objective)
@@ -48,7 +48,7 @@ def _test_petab(engine):
 
 def test_deepcopy_objective():
     """Test copying objectives (needed for MultiProcessEngine)."""
-    petab_importer = pypesto.PetabImporter.from_yaml(
+    petab_importer = pypesto.petab.PetabImporter.from_yaml(
         folder_base + "Zheng_PNAS2012/Zheng_PNAS2012.yaml")
     objective = petab_importer.create_objective()
 
@@ -74,7 +74,7 @@ def test_deepcopy_objective():
 
 def test_pickle_objective():
     """Test serializing objectives (needed for MultiThreadEngine)."""
-    petab_importer = pypesto.PetabImporter.from_yaml(
+    petab_importer = pypesto.petab.PetabImporter.from_yaml(
         folder_base + "Zheng_PNAS2012/Zheng_PNAS2012.yaml")
     objective = petab_importer.create_objective()
 

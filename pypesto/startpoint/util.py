@@ -2,7 +2,6 @@ import numpy as np
 from typing import Callable
 
 from ..problem import Problem
-import pypesto
 
 
 def rescale(points, lb: np.ndarray, ub: np.ndarray) -> np.ndarray:
@@ -24,10 +23,10 @@ def assign_startpoints(
         n_starts: int,
         startpoint_method: Callable,
         problem: Problem,
-        options: 'pypesto.OptimizeOptions'
+        startpoint_resample: bool,
 ) -> np.ndarray:
     """
-    Assign startpoints.
+    Assign start points.
     """
     # check if startpoints needed
     if startpoint_method is False:
@@ -60,7 +59,7 @@ def assign_startpoints(
     startpoints[n_guessed_points:n_starts, :] = x_sampled
 
     # resample startpoints
-    if options.startpoint_resample:
+    if startpoint_resample:
         startpoints = resample_startpoints(
             startpoints=startpoints,
             problem=problem,

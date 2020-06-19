@@ -33,7 +33,7 @@ class PetabImportTest(unittest.TestCase):
 
     def test_1_compile(self):
         for petab_problem in self.petab_problems:
-            importer = pypesto.PetabImporter(petab_problem)
+            importer = pypesto.petab.PetabImporter(petab_problem)
             self.petab_importers.append(importer)
 
             # check model
@@ -78,7 +78,7 @@ def test_max_sensi_order():
     """Test that the AMICI objective created via PEtab exposes derivatives
     correctly."""
     model_name = "Boehm_JProteomeRes2014"
-    problem = pypesto.PetabImporter.from_yaml(
+    problem = pypesto.petab.PetabImporter.from_yaml(
         os.path.join(folder_base, model_name, model_name + '.yaml'))
 
     # define test parameter

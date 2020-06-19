@@ -10,7 +10,7 @@ import warnings
 import re
 
 import pypesto
-import pypesto.optimize
+import pypesto.optimize as optimize
 
 
 @pytest.fixture(params=['separated', 'integrated'])
@@ -68,24 +68,22 @@ def check_minimize(objective, library, solver, allow_failed_starts=False):
     optimizer = None
 
     if library == 'scipy':
-        optimizer = pypesto.optimize.ScipyOptimizer(
-            method=solver, options=options)
+        optimizer = optimize.ScipyOptimizer(method=solver, options=options)
     elif library == 'ipopt':
-        optimizer = pypesto.optimize.IpoptOptimizer()
+        optimizer = optimize.IpoptOptimizer()
     elif library == 'dlib':
-        optimizer = pypesto.optimize.DlibOptimizer(
-            method=solver, options=options)
+        optimizer = optimize.DlibOptimizer(method=solver, options=options)
     elif library == 'pyswarm':
-        optimizer = pypesto.optimize.PyswarmOptimizer(options=options)
+        optimizer = optimize.PyswarmOptimizer(options=options)
 
     lb = 0 * np.ones((1, 2))
     ub = 1 * np.ones((1, 2))
     problem = pypesto.Problem(objective, lb, ub)
 
-    optimize_options = pypesto.optimize.OptimizeOptions(
+    optimize_options = optimize.OptimizeOptions(
         allow_failed_starts=allow_failed_starts)
 
-    result = pypesto.optimize.minimize(
+    result = optimize.minimize(
         problem=problem,
         optimizer=optimizer,
         n_starts=1,

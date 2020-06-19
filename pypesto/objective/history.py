@@ -44,7 +44,7 @@ def trace_wrap(f):
 class HistoryOptions(dict):
     """
     Options for the objective that are used in optimization, profiles
-    and sampling.
+    and sample.
 
     In addition implements a factory pattern to generate history objects.
 
@@ -164,7 +164,7 @@ class HistoryOptions(dict):
             return Hdf5History(id=id, file=storage_file, options=self)
         else:
             raise ValueError(
-                "Currently only history storage to '.csv' and '.hdf5'"
+                "Currently only history store to '.csv' and '.hdf5'"
                 "is supported")
 
 
@@ -811,7 +811,7 @@ class OptimizerHistory:
     ----------
     history:
         History object to attach to this container. This history object
-        implements the storage of the actual history.
+        implements the store of the actual history.
     x0:
         Initial values for optimization
     generate_from_history:

@@ -5,8 +5,10 @@ pyPESTO
 Parameter Estimation TOolbox for python.
 """
 
-
+# make version available
 from .version import __version__
+
+# import basic objects into global namespace
 from .objective import (
     HistoryOptions,
     HistoryBase,
@@ -20,27 +22,16 @@ from .objective import (
     NegLogPriors,
     ObjectiveBase)
 from .problem import Problem
-from .petab import (
-    PetabImporter)
-from . import startpoint
 from .result import (
     Result,
     OptimizeResult,
     ProfileResult,
     SampleResult)
-from .sampling import (
-    sample,
-    Sampler,
-    InternalSampler,
-    MetropolisSampler,
-    AdaptiveMetropolisSampler,
-    ParallelTemperingSampler,
-    AdaptiveParallelTemperingSampler,
-    Pymc3Sampler,
-    McmcPtResult,
-    geweke_test)
-from .engine import (
-    SingleCoreEngine,
-    MultiThreadEngine,
-    MultiProcessEngine)
+
+# import simple modules as submodules
+from . import engine
+from . import logging
+from . import petab
+from . import startpoint
+from . import store
 from . import visualize
