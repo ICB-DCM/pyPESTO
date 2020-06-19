@@ -175,7 +175,7 @@ def test_ground_truth():
 
 def test_ground_truth_separated_modes():
     """Test whether we actually retrieve correct distributions."""
-    # use best self-implemented sampler, which has a chance of correctly
+    # use best self-implemented sampler, which has a chance to correctly
     # sample from the distribution
 
     # First use parallel tempering with 3 chains
@@ -339,7 +339,7 @@ def test_empty_prior():
 
 
 def test_prior():
-    """Check that priors are defined in sample."""
+    """Check that priors are defined for sampling."""
     # define negative log posterior
     posterior_fun = pypesto.Objective(fun=negative_log_posterior)
 
