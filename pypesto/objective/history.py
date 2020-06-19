@@ -811,7 +811,7 @@ class OptimizerHistory:
     ----------
     history:
         History object to attach to this container. This history object
-        implements the store of the actual history.
+        implements the storage of the actual history.
     x0:
         Initial values for optimization
     generate_from_history:
