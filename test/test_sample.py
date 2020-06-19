@@ -135,7 +135,7 @@ def test_pipeline(sampler, problem):
     result = pypesto.optimize.minimize(
         problem, n_starts=3, optimizer=optimizer)
 
-    # sampling
+    # sample
     result = pypesto.sample(
         problem, sampler=sampler, n_samples=100, result=result)
 
@@ -147,7 +147,7 @@ def test_pipeline(sampler, problem):
 def test_ground_truth():
     """Test whether we actually retrieve correct distributions."""
     # use best self-implemented sampler, which has a chance of correctly
-    # sampling from the distribution
+    # sample from the distribution
     sampler = pypesto.AdaptiveParallelTemperingSampler(
         internal_sampler=pypesto.AdaptiveMetropolisSampler(), n_chains=5)
 
@@ -175,7 +175,7 @@ def test_ground_truth():
 def test_ground_truth_separated_modes():
     """Test whether we actually retrieve correct distributions."""
     # use best self-implemented sampler, which has a chance of correctly
-    # sampling from the distribution
+    # sample from the distribution
 
     # First use parallel tempering with 3 chains
     sampler = pypesto.AdaptiveParallelTemperingSampler(
@@ -309,7 +309,7 @@ def test_geweke_test_unconverged():
     # optimization
     result = pypesto.optimize.minimize(problem, n_starts=3)
 
-    # sampling
+    # sample
     result = pypesto.sample(
         problem, sampler=sampler, n_samples=100, result=result)
 
@@ -341,7 +341,7 @@ def test_empty_prior():
 
 
 def test_prior():
-    """Check that priors are defined in sampling."""
+    """Check that priors are defined in sample."""
     # define negative log posterior
     posterior_fun = pypesto.Objective(fun=negative_log_posterior)
 
