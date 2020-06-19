@@ -71,6 +71,20 @@ def rosenbrock_problem():
     return problem
 
 
+def rosenbrock_fixed_problem():
+    """Problem based on rosenbrock objective with fixed parameters."""
+    objective = pypesto.Objective(fun=so.rosen)
+
+    dim_full = 2
+    lb = -5 * np.ones((dim_full, 1))
+    ub = 5 * np.ones((dim_full, 1))
+
+    # rosenbrock with one fixed parameter
+    problem = pypesto.Problem(objective=objective, lb=lb, ub=ub,
+                              x_fixed_indices=[1], x_fixed_vals=[42])
+    return problem
+
+
 def prior(x):
     return multivariate_normal.pdf(x, mean=-1., cov=0.7)
 
@@ -124,6 +138,29 @@ def test_pipeline(sampler, problem):
     # optimization
     optimizer = pypesto.ScipyOptimizer(options={'maxiter': 10})
     result = pypesto.minimize(problem, n_starts=3, optimizer=optimizer)
+
+    # sampling
+    result = pypesto.sample(
+        problem, sampler=sampler, n_samples=100, result=result)
+
+    # some plot
+    pypesto.visualize.sampling_1d_marginals(result)
+    plt.close()
+
+
+def test_fixed_parameters():
+    """Check that pipeline runs with fixed parameters."""
+
+    # define problem
+    problem = rosenbrock_fixed_problem()
+
+    # optimization
+    optimizer = pypesto.ScipyOptimizer(options={'maxiter': 10})
+    result = pypesto.minimize(problem, n_starts=3, optimizer=optimizer)
+
+    # define sampler
+    sampler = pypesto.AdaptiveParallelTemperingSampler(
+        internal_sampler=pypesto.AdaptiveMetropolisSampler(), n_chains=5)
 
     # sampling
     result = pypesto.sample(
