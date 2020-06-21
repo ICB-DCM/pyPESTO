@@ -31,7 +31,6 @@ from .result import (
 # import simple modules as submodules
 from . import engine
 from . import logging
-from . import petab
 from . import startpoint
 from . import store
 from . import visualize

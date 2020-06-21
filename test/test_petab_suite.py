@@ -2,6 +2,7 @@
 
 import petabtests
 import pypesto
+import pypesto.petab
 
 import sys
 import os

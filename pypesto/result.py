@@ -7,10 +7,13 @@ the pypesto components. It contains sub-results for
 optimization, profiling, sampling.
 
 """
-
 import pandas as pd
 import copy
-from typing import Sequence
+from typing import Sequence, TYPE_CHECKING
+
+if TYPE_CHECKING:
+    import pypesto.optimize as optimize
+    import pypesto.profile as profile
 
 
 class OptimizeResult:
@@ -23,7 +26,7 @@ class OptimizeResult:
 
     def append(
             self,
-            optimizer_result: 'optimize.OptimizerResult',  # noqa: F821
+            optimizer_result: 'optimize.OptimizerResult',
     ):
         """
         Append an optimizer result to the result object.
@@ -105,7 +108,7 @@ class ProfileResult:
 
     def append_profiler_result(
             self,
-            profiler_result: 'profile.ProfilerResult' = None,  # noqa: F821
+            profiler_result: 'profile.ProfilerResult' = None,
             profile_list: int = None) -> None:
         """Append the profiler result to the profile list.
 
@@ -125,7 +128,7 @@ class ProfileResult:
 
     def set_profiler_result(
             self,
-            profiler_result: 'profile.ProfilerResult',  # noqa: F821
+            profiler_result: 'profile.ProfilerResult',
             i_par: int,
             profile_list: int = None) -> None:
         """Write a profiler result to the result object at `i_par` of profile
