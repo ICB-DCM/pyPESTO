@@ -9,7 +9,9 @@ import matplotlib.pyplot as plt
 import pytest
 
 import pypesto
-from pypesto.objective import NegLogPriors
+import pypesto.optimize as optimize
+import pypesto.sample as sample
+import pypesto.visualize as visualize
 
 
 def gaussian_llh(x):
@@ -102,19 +104,19 @@ def negative_log_prior(x):
                         'Pymc3'])
 def sampler(request):
     if request.param == 'Metropolis':
-        return pypesto.MetropolisSampler()
+        return sample.MetropolisSampler()
     elif request.param == 'AdaptiveMetropolis':
-        return pypesto.AdaptiveMetropolisSampler()
+        return sample.AdaptiveMetropolisSampler()
     elif request.param == 'ParallelTempering':
-        return pypesto.ParallelTemperingSampler(
-            internal_sampler=pypesto.MetropolisSampler(),
+        return sample.ParallelTemperingSampler(
+            internal_sampler=sample.MetropolisSampler(),
             betas=[1, 1e-2, 1e-4])
     elif request.param == 'AdaptiveParallelTempering':
-        return pypesto.AdaptiveParallelTemperingSampler(
-            internal_sampler=pypesto.AdaptiveMetropolisSampler(),
+        return sample.AdaptiveParallelTemperingSampler(
+            internal_sampler=sample.AdaptiveMetropolisSampler(),
             n_chains=5)
     elif request.param == 'Pymc3':
-        return pypesto.Pymc3Sampler(tune=5)
+        return sample.Pymc3Sampler(tune=5)
 
 
 @pytest.fixture(params=['gaussian', 'gaussian_mixture', 'rosenbrock'])
@@ -130,31 +132,32 @@ def problem(request):
 def test_pipeline(sampler, problem):
     """Check that a typical pipeline runs through."""
     # optimization
-    optimizer = pypesto.ScipyOptimizer(options={'maxiter': 10})
-    result = pypesto.minimize(problem, n_starts=3, optimizer=optimizer)
+    optimizer = optimize.ScipyOptimizer(options={'maxiter': 10})
+    result = optimize.minimize(
+        problem, n_starts=3, optimizer=optimizer)
 
-    # sampling
-    result = pypesto.sample(
+    # sample
+    result = sample.sample(
         problem, sampler=sampler, n_samples=100, result=result)
 
     # some plot
-    pypesto.visualize.sampling_1d_marginals(result)
+    visualize.sampling_1d_marginals(result)
     plt.close()
 
 
 def test_ground_truth():
     """Test whether we actually retrieve correct distributions."""
     # use best self-implemented sampler, which has a chance of correctly
-    # sampling from the distribution
-    sampler = pypesto.AdaptiveParallelTemperingSampler(
-        internal_sampler=pypesto.AdaptiveMetropolisSampler(), n_chains=5)
+    # sample from the distribution
+    sampler = sample.AdaptiveParallelTemperingSampler(
+        internal_sampler=sample.AdaptiveMetropolisSampler(), n_chains=5)
 
     problem = gaussian_problem()
 
-    result = pypesto.minimize(problem)
+    result = optimize.minimize(problem)
 
-    result = pypesto.sample(problem, n_samples=10000,
-                            result=result, sampler=sampler)
+    result = sample.sample(problem, n_samples=10000,
+                           result=result, sampler=sampler)
 
     # get samples of first chain
     samples = result.sample_result.trace_x[0].flatten()
@@ -172,18 +175,18 @@ def test_ground_truth():
 
 def test_ground_truth_separated_modes():
     """Test whether we actually retrieve correct distributions."""
-    # use best self-implemented sampler, which has a chance of correctly
-    # sampling from the distribution
+    # use best self-implemented sampler, which has a chance to correctly
+    # sample from the distribution
 
     # First use parallel tempering with 3 chains
-    sampler = pypesto.AdaptiveParallelTemperingSampler(
-        internal_sampler=pypesto.AdaptiveMetropolisSampler(), n_chains=3)
+    sampler = sample.AdaptiveParallelTemperingSampler(
+        internal_sampler=sample.AdaptiveMetropolisSampler(), n_chains=3)
 
     problem = gaussian_mixture_separated_modes_problem()
 
-    result = pypesto.sample(problem, n_samples=1e4,
-                            sampler=sampler,
-                            x0=np.array([0.]))
+    result = sample.sample(problem, n_samples=1e4,
+                           sampler=sampler,
+                           x0=np.array([0.]))
 
     # get samples of first chain
     samples = result.sample_result.trace_x[0, :, 0]
@@ -204,10 +207,10 @@ def test_ground_truth_separated_modes():
 
     # sample using adaptive metropolis (single-chain)
     # initiated around the "first" mode of the distribution
-    sampler = pypesto.AdaptiveMetropolisSampler()
-    result = pypesto.sample(problem, n_samples=1e4,
-                            sampler=sampler,
-                            x0=np.array([-2.]))
+    sampler = sample.AdaptiveMetropolisSampler()
+    result = sample.sample(problem, n_samples=1e4,
+                           sampler=sampler,
+                           x0=np.array([-2.]))
 
     # get samples of first chain
     samples = result.sample_result.trace_x[0, :, 0]
@@ -228,10 +231,9 @@ def test_ground_truth_separated_modes():
 
     # sample using adaptive metropolis (single-chain)
     # initiated around the "second" mode of the distribution
-    sampler = pypesto.AdaptiveMetropolisSampler()
-    result = pypesto.sample(problem, n_samples=1e4,
-                            sampler=sampler,
-                            x0=np.array([120.]))
+    sampler = sample.AdaptiveMetropolisSampler()
+    result = sample.sample(problem, n_samples=1e4, sampler=sampler,
+                           x0=np.array([120.]))
 
     # get samples of first chain
     samples = result.sample_result.trace_x[0, :, 0]
@@ -254,11 +256,11 @@ def test_ground_truth_separated_modes():
 def test_multiple_startpoints():
     problem = gaussian_problem()
     x0s = [np.array([0]), np.array([1])]
-    sampler = pypesto.ParallelTemperingSampler(
-        internal_sampler=pypesto.MetropolisSampler(),
+    sampler = sample.ParallelTemperingSampler(
+        internal_sampler=sample.MetropolisSampler(),
         n_chains=2
     )
-    result = pypesto.sample(problem, n_samples=10, x0=x0s, sampler=sampler)
+    result = sample.sample(problem, n_samples=10, x0=x0s, sampler=sampler)
 
     assert result.sample_result.trace_neglogpost.shape[0] == 2
     assert [result.sample_result.trace_x[0][0],
@@ -272,7 +274,7 @@ def test_regularize_covariance():
     """
     matrix = np.array([[-1., -4.], [-4., 1.]])
     assert np.any(np.linalg.eigvals(matrix) < 0)
-    reg = pypesto.sampling.adaptive_metropolis.regularize_covariance(
+    reg = sample.adaptive_metropolis.regularize_covariance(
         matrix, 1e-6)
     assert np.all(np.linalg.eigvals(reg) >= 0)
 
@@ -282,7 +284,7 @@ def test_geweke_test_switch():
     warm_up = np.zeros((100, 2))
     converged = np.ones((901, 2))
     chain = np.concatenate((warm_up, converged), axis=0)
-    burn_in = pypesto.sampling.diagnostics.burn_in_by_sequential_geweke(
+    burn_in = sample.diagnostics.burn_in_by_sequential_geweke(
         chain=chain)
     assert burn_in == 100
 
@@ -293,7 +295,7 @@ def test_geweke_test_switch_short():
     warm_up = np.zeros((25, 2))
     converged = np.ones((75, 2))
     chain = np.concatenate((warm_up, converged), axis=0)
-    burn_in = pypesto.sampling.diagnostics.burn_in_by_sequential_geweke(
+    burn_in = sample.diagnostics.burn_in_by_sequential_geweke(
         chain=chain)
     assert burn_in == 25
 
@@ -302,17 +304,17 @@ def test_geweke_test_unconverged():
     """Check that the geweke test reacts nicely to small sample numbers."""
     problem = gaussian_problem()
 
-    sampler = pypesto.MetropolisSampler()
+    sampler = sample.MetropolisSampler()
 
     # optimization
-    result = pypesto.minimize(problem, n_starts=3)
+    result = optimize.minimize(problem, n_starts=3)
 
-    # sampling
-    result = pypesto.sample(
+    # sample
+    result = sample.sample(
         problem, sampler=sampler, n_samples=100, result=result)
 
     # run geweke test (should not fail!)
-    pypesto.sampling.geweke_test(result)
+    sample.geweke_test(result)
 
 
 def test_empty_prior():
@@ -321,15 +323,13 @@ def test_empty_prior():
     posterior_fun = pypesto.Objective(fun=negative_log_posterior)
 
     # define pypesto problem without prior object
-    test_problem = pypesto.Problem(objective=posterior_fun,
-                                   lb=-10, ub=10,
+    test_problem = pypesto.Problem(objective=posterior_fun, lb=-10, ub=10,
                                    x_names=['x'])
 
-    sampler = pypesto.AdaptiveMetropolisSampler()
+    sampler = sample.AdaptiveMetropolisSampler()
 
-    result = pypesto.sample(test_problem, n_samples=50,
-                            sampler=sampler,
-                            x0=np.array([0.]))
+    result = sample.sample(test_problem, n_samples=50, sampler=sampler,
+                           x0=np.array([0.]))
 
     # get log prior values of first chain
     logprior_trace = -result.sample_result.trace_neglogprior[0, :]
@@ -339,7 +339,7 @@ def test_empty_prior():
 
 
 def test_prior():
-    """Check that priors are defined in sampling."""
+    """Check that priors are defined for sampling."""
     # define negative log posterior
     posterior_fun = pypesto.Objective(fun=negative_log_posterior)
 
@@ -347,7 +347,7 @@ def test_prior():
     prior_fun = pypesto.Objective(fun=negative_log_prior)
 
     # define pypesto prior object
-    prior_object = NegLogPriors(objectives=[prior_fun])
+    prior_object = pypesto.NegLogPriors(objectives=[prior_fun])
 
     # define pypesto problem using prior object
     test_problem = pypesto.Problem(objective=posterior_fun,
@@ -355,11 +355,10 @@ def test_prior():
                                    lb=-10, ub=10,
                                    x_names=['x'])
 
-    sampler = pypesto.AdaptiveMetropolisSampler()
+    sampler = sample.AdaptiveMetropolisSampler()
 
-    result = pypesto.sample(test_problem, n_samples=1e4,
-                            sampler=sampler,
-                            x0=np.array([0.]))
+    result = sample.sample(test_problem, n_samples=1e4, sampler=sampler,
+                           x0=np.array([0.]))
 
     # get log prior values of first chain
     logprior_trace = -result.sample_result.trace_neglogprior[0, :]

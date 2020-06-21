@@ -1,12 +1,14 @@
 import os
 import sys
 import unittest
-import amici
-import pypesto
 import importlib
 import numpy as np
 import warnings
 import re
+
+import amici
+import pypesto
+import pypesto.optimize
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
@@ -73,13 +75,13 @@ def parameter_estimation(
         }
 
     if library == 'scipy':
-        optimizer = pypesto.ScipyOptimizer(method=solver,
-                                           options=options)
+        optimizer = pypesto.optimize.ScipyOptimizer(method=solver,
+                                                    options=options)
     elif library == 'dlib':
-        optimizer = pypesto.DlibOptimizer(method=solver,
-                                          options=options)
+        optimizer = pypesto.optimize.DlibOptimizer(method=solver,
+                                                   options=options)
     elif library == 'pyswarm':
-        optimizer = pypesto.PyswarmOptimizer(options=options)
+        optimizer = pypesto.optimize.PyswarmOptimizer(options=options)
     else:
         raise ValueError("This code should not be reached")
 
@@ -93,12 +95,13 @@ def parameter_estimation(
                               x_fixed_indices=fixed_pars,
                               x_fixed_vals=[pars[idx] for idx in fixed_pars])
 
-    optimize_options = pypesto.OptimizeOptions(
+    optimize_options = pypesto.optimize.OptimizeOptions(
         allow_failed_starts=False,
         startpoint_resample=True,
     )
 
-    pypesto.minimize(problem, optimizer, n_starts, options=optimize_options)
+    pypesto.optimize.minimize(
+        problem, optimizer, n_starts, options=optimize_options)
 
 
 def load_model_objective(example_name):
