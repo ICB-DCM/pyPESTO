@@ -73,7 +73,7 @@ doc/_build
 data/raw
 data/figures
 
-# osx 
+# osx
 .DS_Store
 
 # coverage
@@ -83,7 +83,7 @@ coverage_py.xml
 doc/example/tmp
 doc/example/amici_models/*
 
-# storage
+# store
 *.hdf5
 *.csv
 
@@ -107,4 +107,3 @@ amici_models/*
 *.txt
 test/doc/example/tmp/benchmark-models/
 test/amici_models/*
-

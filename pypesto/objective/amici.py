@@ -3,7 +3,7 @@ import copy
 import tempfile
 import os
 import abc
-from typing import Dict, Tuple, Sequence, Union
+from typing import Dict, Sequence, Union
 from collections import OrderedDict
 
 from .base import ObjectiveBase
@@ -60,6 +60,7 @@ class AmiciObjective(ObjectiveBase):
                  parameter_mapping: 'ParameterMapping' = None,
                  guess_steadystate: bool = True,
                  n_threads: int = 1,
+                 fim_for_hess: bool = True,
                  amici_object_builder: AmiciObjectBuilder = None,
                  calculator: AmiciCalculator = None):
         """
@@ -96,6 +97,12 @@ class AmiciObjective(ObjectiveBase):
             Number of threads that are used for parallelization over
             experimental conditions. If amici was not installed with openMP
             support this option will have no effect.
+        fim_for_hess:
+            Whether to use the FIM whenever the Hessian is requested. This only
+            applies with forward sensitivities.
+            With adjoint sensitivities, the true Hessian will be used,
+            if available.
+            FIM or Hessian will only be exposed if `max_sensi_order>1`.
         amici_object_builder:
             AMICI object builder. Allows recreating the objective for
             pickling, required in some parallelization schemes.
@@ -108,11 +115,6 @@ class AmiciObjective(ObjectiveBase):
                 "This objective requires an installation of amici "
                 "(https://github.com/icb-dcm/amici). "
                 "Install via `pip3 install amici`.")
-
-        if max_sensi_order is None:
-            # 2 if model was compiled with second orders,
-            # otherwise 1 can be guaranteed
-            max_sensi_order = 2 if amici_model.o2mode else 1
 
         self.amici_model = amici.ModelPtr(amici_model.clone())
         self.amici_solver = amici.SolverPtr(amici_solver.clone())
@@ -169,6 +171,7 @@ class AmiciObjective(ObjectiveBase):
             x_names = x_ids
 
         self.n_threads = n_threads
+        self.fim_for_hess = fim_for_hess
         self.amici_object_builder = amici_object_builder
 
         if calculator is None:
@@ -208,7 +211,14 @@ class AmiciObjective(ObjectiveBase):
 
         # write amici solver settings to file
         amici_solver_file = tempfile.mkstemp()[1]
-        amici.writeSolverSettingsToHDF5(self.amici_solver, amici_solver_file)
+        try:
+            amici.writeSolverSettingsToHDF5(
+                self.amici_solver, amici_solver_file)
+        except AttributeError as e:
+            e.args += ("Pickling the AmiciObjective requires an AMICI "
+                       "installation with HDF5 support.",)
+            raise
+
         # read in byte stream
         amici_solver_settings = open(amici_solver_file, 'rb').read()
         state['amici_solver_settings'] = amici_solver_settings
@@ -222,7 +232,6 @@ class AmiciObjective(ObjectiveBase):
             raise NotImplementedError(
                 "AmiciObjective does not support __setstate__ without "
                 "an `amici_object_builder`.")
-
         self.__dict__.update(state)
 
         # note: attributes not defined in the builder are lost
@@ -242,38 +251,35 @@ class AmiciObjective(ObjectiveBase):
         except AttributeError as err:
             if not err.args:
                 err.args = ('',)
-            err.args = err.args + ("Amici must have been compiled with hdf5 "
-                                   "support",)
+            err.args += ("Amici must have been compiled with hdf5 support",)
             raise
-
         self.amici_model = model
         self.amici_solver = solver
         self.edatas = edatas
 
     def check_sensi_orders(self, sensi_orders, mode) -> bool:
-        sensi_order = self._get_amici_sensi_order(sensi_orders)
+        sensi_order = max(sensi_orders)
 
-        if self.max_sensi_order is None:
-            if mode == MODE_FUN:
-                max_sensi_order = 1 + self.amici_model.o2mode
-            else:
-                max_sensi_order = 1
-        else:
-            max_sensi_order = self.max_sensi_order
+        # dynamically obtain maximum allowed sensitivity order
+        max_sensi_order = self.max_sensi_order
+        if max_sensi_order is None:
+            max_sensi_order = 1
+            # check whether it is ok to request 2nd order
+            sensi_mthd = self.amici_solver.getSensitivityMethod()
+            mthd_fwd = amici.SensitivityMethod_forward
+            if mode == MODE_FUN and (
+                    self.amici_model.o2mode or (
+                    sensi_mthd == mthd_fwd and self.fim_for_hess)):
+                max_sensi_order = 2
 
+        # evaluate sensitivity order
         return sensi_order <= max_sensi_order
-
-    def _get_amici_sensi_order(self, sensi_orders: Tuple[int, ...]) -> int:
-        # amici is built such that only the maximum sensitivity is required,
-        # the lower orders are then automatically computed
-        # order 2 currently not implemented, we are using the FIM
-        return min(max(sensi_orders), 1)
 
     def check_mode(self, mode):
         return mode in [MODE_FUN, MODE_RES]
 
     def call_unprocessed(self, x, sensi_orders, mode):
-        sensi_order = self._get_amici_sensi_order(sensi_orders)
+        sensi_order = max(sensi_orders)
 
         x_dct = self.par_arr_to_dct(x)
 
@@ -287,7 +293,9 @@ class AmiciObjective(ObjectiveBase):
             x_dct=x_dct, sensi_order=sensi_order, mode=mode,
             amici_model=self.amici_model, amici_solver=self.amici_solver,
             edatas=self.edatas, n_threads=self.n_threads,
-            x_ids=self.x_ids, parameter_mapping=self.parameter_mapping)
+            x_ids=self.x_ids, parameter_mapping=self.parameter_mapping,
+            fim_for_hess=self.fim_for_hess,
+        )
 
         nllh = ret[FVAL]
         rdatas = ret[RDATAS]

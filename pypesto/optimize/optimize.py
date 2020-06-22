@@ -1,13 +1,14 @@
 import logging
 from typing import Callable, Iterable, Union
 
-from ..engine import OptimizerTask, Engine, SingleCoreEngine
+from ..engine import Engine, SingleCoreEngine
 from ..objective import HistoryOptions
 from ..problem import Problem
 from ..result import Result
 from ..startpoint import assign_startpoints, uniform
 from .optimizer import Optimizer, ScipyOptimizer
 from .options import OptimizeOptions
+from .task import OptimizerTask
 
 
 logger = logging.getLogger(__name__)
@@ -79,7 +80,7 @@ def minimize(
     # assign startpoints
     startpoints = assign_startpoints(
         n_starts=n_starts, startpoint_method=startpoint_method,
-        problem=problem, options=options)
+        problem=problem, startpoint_resample=options.startpoint_resample)
 
     if ids is None:
         ids = [str(j) for j in range(n_starts)]

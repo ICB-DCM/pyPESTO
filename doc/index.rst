@@ -54,12 +54,12 @@ Welcome to pyPESTO's documentation!
    api_petab
    api_optimize
    api_profile
-   api_sampling
-   api_visualize
+   api_sample
    api_result
+   api_visualize
    api_engine
    api_startpoint
-   api_storage
+   api_store
    api_logging
 
 .. toctree::

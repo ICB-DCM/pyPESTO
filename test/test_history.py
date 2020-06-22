@@ -4,12 +4,13 @@ This is for testing the pypesto.History.
 
 import numpy as np
 import pytest
-import pypesto
 import unittest
 import tempfile
 
 from test.test_objective import rosen_for_sensi
 from test.test_sbml_conversion import load_model_objective
+
+import pypesto
 from pypesto.objective.util import sres_to_schi2, res_to_chi2
 from pypesto import CsvHistory, HistoryOptions, MemoryHistory, ObjectiveBase
 from pypesto.optimize.optimizer import read_result_from_file, OptimizerResult
@@ -23,7 +24,7 @@ from typing import Sequence
 
 class HistoryTest(unittest.TestCase):
     problem: pypesto.Problem = None
-    optimizer: pypesto.Optimizer = None
+    optimizer: pypesto.optimize.Optimizer = None
     obj: ObjectiveBase = None
     history_options: HistoryOptions = None
     ub: np.ndarray = None
@@ -45,7 +46,7 @@ class HistoryTest(unittest.TestCase):
             }}
         self.problem = pypesto.Problem(**kwargs)
 
-        optimize_options = pypesto.OptimizeOptions(
+        optimize_options = pypesto.optimize.OptimizeOptions(
             allow_failed_starts=False
         )
 
@@ -54,7 +55,7 @@ class HistoryTest(unittest.TestCase):
         for storage_file in ['tmp/traces/conversion_example_{id}.csv', None]:
             self.history_options.storage_file = storage_file
 
-            result = pypesto.minimize(
+            result = pypesto.optimize.minimize(
                 problem=self.problem,
                 optimizer=self.optimizer,
                 n_starts=1,
@@ -234,7 +235,7 @@ class HistoryTest(unittest.TestCase):
 class ResModeHistoryTest(HistoryTest):
     @classmethod
     def setUpClass(cls):
-        cls.optimizer = pypesto.ScipyOptimizer(
+        cls.optimizer = pypesto.optimize.ScipyOptimizer(
             method='ls_trf',
             options={'max_nfev': 100}
         )
@@ -315,7 +316,7 @@ class ResModeHistoryTest(HistoryTest):
 class FunModeHistoryTest(HistoryTest):
     @classmethod
     def setUpClass(cls):
-        cls.optimizer = pypesto.ScipyOptimizer(
+        cls.optimizer = pypesto.optimize.ScipyOptimizer(
             method='trust-exact',
             options={'maxiter': 100}
         )
