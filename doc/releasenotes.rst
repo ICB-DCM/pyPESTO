@@ -21,7 +21,7 @@ Minor:
   * visualization (#405)
   * PEtab import (#403)
   * Hessian computation (#390)
-* Imporove hdf5 error output (#409)
+* Improve hdf5 error output (#409)
 * Outlaw large new files in GitHub commits (#388)
 
 
