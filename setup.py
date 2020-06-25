@@ -42,6 +42,6 @@ setup(name='pypesto',
                       'pymc3': ['arviz>=0.8.1',
                                 'theano>=1.0.4',
                                 'packaging>=20.0',
-                                'pymc3>=3.8']},
+                                'pymc3>=3.9.1']},
       python_requires='>=3.6',
       )

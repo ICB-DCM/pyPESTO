@@ -1,6 +1,5 @@
-import math
 import numpy as np
-from typing import Union
+from typing import Union, Optional, Dict
 import logging
 
 from ..objective import History
@@ -12,7 +11,15 @@ logger = logging.getLogger(__name__)
 
 try:
     import pymc3 as pm
-    from .pymc3_model import create_pymc3_model, pymc3_to_arviz
+    from .pymc3_interface import (
+        create_pymc3_model,
+        pymc3_to_arviz,
+        arviz_to_pypesto,
+        filter_create_step_method_kwargs,
+        create_step_method,
+        init_random_seed
+    )
+    import arviz as az
 except ImportError:
     pm = None
 
@@ -35,36 +42,57 @@ class Pymc3Sampler(Sampler):
         inside the `pymc3.Model` object. This results in a small speed-up,
         especially if the objective computation time is small or if simpler
         step functions (such as `pymc3.Metropolis`) are used.
+    remap_to_reals:
+        If `True`, parameters will be remapped to the whole real line for
+        use in PyMC3 (this is required by the NUTS sampler). If not specified,
+        it will be set to `True` if NUTS is used and to `False` otherwise.
     **kwargs:
         Options are directly passed on to `pymc3.sample`.
     """
 
-    def __init__(self, step_function=None, cache_gradients: bool = True,
-                 vectorize: bool = True, **kwargs):
+    def __init__(self, cache_gradients: bool = True,
+                       vectorize: bool = True,
+                       remap_to_reals: Optional[bool] = None, **kwargs):
+
         if pm is None:
             raise Exception('Please install the pymc3 package ' \
                             'in order to use the Pymc3Sampler sampler.')
+
         super().__init__(kwargs)
-        self.step_function = step_function
+
         self.problem: Union[Problem, None] = None
         self.x0: Union[np.ndarray, None] = None
         self.trace: Union[pm.backends.base.MultiTrace, None] = None
         self.data: Union[az.InferenceData, None] = None
-        # pymc3 model options
+
         self.cache_gradients = cache_gradients
         self.vectorize = vectorize
+        self.remap_to_reals = remap_to_reals
 
     @classmethod
     def translate_options(cls, options):
         if not options:
             options = {}
         options.setdefault('chains', 1)
+        # No jittering by default:
+        # safer in the case the objective fails often
+        # for points far from the starting one
+        options.setdefault('init', 'adapt_diag')
+        options.setdefault('tune', 1000)  # as pymc3
+        options.setdefault('discard_tuned_samples', True)  # as pymc3
+        # Initialize random seed, so that the same seed is used both
+        # for creating the step_method and the sampling
+        options['random_seed'] = init_random_seed(
+            options.get('random_seed', None), options['chains']
+        )
         return options
 
     def initialize(self, problem: Problem, x0: np.ndarray):
         self.problem = problem
         if x0 is not None:
-            if len(x0) != problem.dim:
+            if len(x0) == problem.dim:
+                x0 = np.asarray(x0)
+            else:
                 x0 = problem.get_reduced_vector(x0)
         self.x0 = x0
         self.trace = None
@@ -73,127 +101,66 @@ class Pymc3Sampler(Sampler):
         self.problem.objective.history = History()
 
     def sample(self, n_samples: int, beta: float = 1.):
+        if self.trace is not None:
+            raise Exception('PyMC3 sampling cannot be resumed '
+                            'using the pyPESTO interface. '
+                            'Consider using the lower level interface '
+                            'in pypesto.sample.pymc3_interface.')
+
         # Create PyMC3 model
+        remap_to_reals = True if self.remap_to_reals is None \
+                         else self.remap_to_reals
         model = create_pymc3_model(self.problem, self.x0, beta,
                                    cache_gradients=self.cache_gradients,
-                                   vectorize=self.vectorize)
+                                   vectorize=self.vectorize,
+                                   remap_to_reals=remap_to_reals)
 
-        # Check posterior at starting point
-        if self.trace is None:
-            logps = [RV.logp(model.test_point) for RV in model.basic_RVs]
-            if not all(math.isfinite(logp) for logp in logps):
-                raise Exception('Log-posterior of same basic random variables' \
-                                ' is not finite. Please report this issue at ' \
-                                'https://github.com/ICB-DCM/pyPESTO/issues' \
-                                '\nLog-posterior at test point is\n' + \
-                                str(model.check_test_point()))
+        # Create the step method
+        step_kwargs = filter_create_step_method_kwargs(self.options)
+        step, start = create_step_method(model, **step_kwargs)
+        # NB the start point will be based on the model test point,
+        #    but may be modified if NUTS is auto-assigned (e.g. by jitter).
+        #    If we want to be sure that the test point is exactly used,
+        #    the init='adapt_diag' or init='adapt_full' should be used
 
+        # Automatic choice of remap_to_reals
+        if not isinstance(step, pm.NUTS):
+            if __debug__:
+                if isinstance(step, pm.step_methods.CompoundStep):
+                    assert all(not isinstance(m, pm.NUTS) for m in step.methods)
+                else:
+                    assert isinstance(step,
+                                      pm.step_methods.arraystep.BlockedStep)
+            if self.remap_to_reals is None:
+                # Rebuild problem with remap_to_reals = False
+                model = create_pymc3_model(self.problem, self.x0, beta,
+                                           cache_gradients=self.cache_gradients,
+                                           vectorize=self.vectorize,
+                                           remap_to_reals=False)
+                # Rebuild stepper (exclude NUTS so that no messages are printed)
+                step, start = create_step_method(model,
+                                                 **dict(step_kwargs, init=None))
+
+        # Keyword arguments for sampling functions
+        sample_kwargs = self.options.copy()
+        sample_kwargs['step'] = step
+
+        # Sampling
+        draws = int(n_samples)
         with model:
-
-    # def sample(
-    #         self, n_samples: int, beta: float = 1.):
-    #     problem = self.problem
-    #     log_post_fun = TheanoLogProbability(problem, beta)
-    #     trace = self.trace
-    #
-    #     x0 = None
-    #     if self.x0 is not None:
-    #         x0 = {x_name: val
-    #               for x_name, val in zip(self.problem.x_names, self.x0)}
-    #
-    #     # create model context
-    #     with pm.Model() as model:
-    #         # uniform bounds
-    #         k = [pm.Uniform(x_name, lower=lb, upper=ub)
-    #              for x_name, lb, ub in
-    #              zip(problem.get_reduced_vector(problem.x_names),
-    #                  problem.lb, problem.ub)]
-    #
-    #         # convert to tensor vector
-    #         theta = tt.as_tensor_variable(k)
-    #
-    #         # use a DensityDist for the log-posterior
-    #         pm.DensityDist('log_post', logp=lambda v: log_post_fun(v),
-    #                        observed={'v': theta})
-
-            # step, by default automatically determined by pymc3
-            step = None
-            if self.step_function:
-                step = self.step_function()
-
-            # select start point
-            if self.trace is None:
-                start = None
-                # NB the start point will be based on the model test point,
-                #    but may be modified if NUTS is auto-assigned (e.g. jitter).
-                #    If we want to be sure that the test point is exaclty used,
-                #    the init='adapt_diag' or init='adapt_full' should be used
-            else:
-                raise NotImplementedError('resuming a pymc3 chain '
-                                          'is currently not implemented')
-                # TODO to implement this case, we should copy the auto-assign
-                #      code from pymc3 inside pypesto, so that we have a
-                #      reference to the step_method that gets tuned
-
-            # Sample from model
-            trace = pm.sample(draws=int(n_samples), start=start, step=step,
-                              trace=self.trace, **self.options)
-
-            # NB in theory we could just pass model as a keyword argument
-            #    to both sample and step_function, but if step_function is None
-            #    and NUTS cannot be assigned, the creation of a new default
-            #    step method fails because there is no active model
-            #    (probably a bug in pymc 3.8)
+            trace = pm.sample(draws=draws, start=start, **sample_kwargs)
 
         # Convert trace to inference data object
-        data = pymc3_to_arviz(model, trace, problem=self.problem)
+        data = pymc3_to_arviz(model, trace,
+                              problem=self.problem, save_warmup=True)
 
         self.trace = trace
         self.data = data
 
     def get_samples(self) -> McmcPtResult:
-        # parameter values
-        trace_x = np.asarray(self.data.posterior.to_array())
-        if self.vectorize and len(self.problem.x_free_indices) > 1:
-            # array dimensions are ordered as
-            # (variable, chain, draw, variable coordinates)
-            assert trace_x.shape[0] == 1  # all free variables have been packed
-                                          # in a single vector variable
-            trace_x = np.squeeze(trace_x, axis=0)
+        if self.options['discard_tuned_samples'] and self.options['tune'] > 0:
+            burn_in = 0  # Tuning samples have been drawn and discarded
         else:
-            # array dimensions are ordered as
-            # (variable, chain, draw)
-            trace_x = trace_x.transpose((1, 2, 0))
-
-        # NB samplers like AdaptiveMetropolisSampler include the starting point
-        #    in the trace. Since pymc3 has a tuning process, it makes no sense
-        #    to include the starting point in this case
-
-        # Since the priors in the pymc3 model are artificial
-        # and since pypesto objective include the real prior,
-        # the log-likelihood of the pymc3 model
-        # is actually the real model's log-posterior
-        # (i.e., the negative objective value)
-        # TODO this is only the negative objective values
-        trace_neglogpost = np.asarray(self.data.log_likelihood.to_array())
-        # remove trailing dimensions
-        trace_neglogpost = np.reshape(trace_neglogpost,
-                                      trace_neglogpost.shape[1:-1])
-        # flip sign
-        trace_neglogpost = - trace_neglogpost
-
-        if trace_x.shape[0] != trace_fval.shape[0] \
-                or trace_x.shape[1] != trace_fval.shape[1] \
-                or trace_x.shape[2] != len(self.problem.x_free_indices):
-        # if trace_x.shape[0] != trace_neglogpost.shape[0] \
-        #         or trace_x.shape[1] != trace_neglogpost.shape[1] \
-        #         or trace_x.shape[2] != self.problem.dim:
-
-            raise ValueError("Trace dimensions are inconsistent")
-
-        return McmcPtResult(
-            trace_x=np.array(trace_x),
-            trace_neglogpost=np.array(trace_neglogpost),
-            trace_neglogprior=np.full(trace_neglogpost.shape, np.nan),
-            betas=np.array([1.] * trace_x.shape[0]),
-        )
+            burn_in = 'auto'  # Determine burn-in from warm-up data (if present)
+        return arviz_to_pypesto(self.problem, self.data,
+                                save_warmup=True, burn_in=burn_in, full=False)

@@ -1,9 +1,13 @@
+"""
+Theano wrapper for pyPESTO objectives.
+"""
+
 from typing import Union
 
 import numpy as np
 
-from ..objective import ObjectiveBase
-from ..problem import Problem
+from ...objective import ObjectiveBase
+from ...problem import Problem
 
 import theano.tensor as tt
 from theano.gof.null_type import NullType
