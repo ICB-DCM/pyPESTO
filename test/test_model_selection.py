@@ -9,7 +9,7 @@ import tempfile
 from typing import Dict, List, Set
 
 import petab
-from pypesto import PetabImporter
+from pypesto.petab import PetabImporter
 
 from pypesto.model_selection import (
     ForwardSelector,
