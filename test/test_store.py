@@ -6,7 +6,7 @@ import tempfile
 
 import numpy as np
 
-from pypesto.storage import (
+from pypesto.store import (
     ProblemHDF5Writer, ProblemHDF5Reader, OptimizationResultHDF5Writer,
     OptimizationResultHDF5Reader)
 from .visualize.test_visualize import create_problem, \
