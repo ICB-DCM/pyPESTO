@@ -11,7 +11,7 @@ Release notes
 
 Major:
 
-* Modularize Import, to import optimization, sampling and profiling
+* Modularize import, to import optimization, sampling and profiling
   separately (#413)
 
 Minor:
