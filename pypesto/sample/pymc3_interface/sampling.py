@@ -4,6 +4,7 @@ resumable and checkpointable sampler
 """
 
 import sys
+import time
 import os
 import shutil
 import pickle
@@ -137,8 +138,15 @@ class ResumablePymc3Sampler:
         self._strace = strace
         self._progressbar = bool(progressbar)
         self._keep_hdf5_open = bool(keep_hdf5_open)
+        self._sampling_time = 0.0  # must be written to the report
+                                   # in order for arviz conversion to succeed
         self._cur_point = Point(start, model=self.model)
         # NB Point just filters unnecessary keys and returns a dictionary
+
+        # Ensure that the trace is in a loadable state:
+        # if we save before drawing even a sample,
+        # we need the sampler_vars to be saved in the trace
+        self._setup_trace()
 
     @staticmethod
     def _vars_from_varnames(model, varnames):
@@ -171,6 +179,7 @@ class ResumablePymc3Sampler:
         report = trace.report
         report._n_draws = max(self.num_samples - self.num_tuning_samples, 0)
         report._n_tune = min(self.num_tuning_samples, self.num_samples)
+        report._t_sampling = self._sampling_time
         return trace
 
     @property
@@ -212,16 +221,27 @@ class ResumablePymc3Sampler:
         if not tune:
             step.stop_tuning()
 
-    def tune(self, *, quiet: bool = False):
-        if self.num_samples < self.num_tuning_samples:
+    def tune(self, min_samples: Optional[int] = None, *, quiet: bool = False):
+
+        tuning_samples_left = self.num_tuning_samples - self.num_samples
+
+        if min_samples is not None:
+            if tuning_samples_left < min_samples:
+                self.increase_tuning_samples(min_samples - tuning_samples_left)
+                assert self.num_tuning_samples - self.num_samples == min_samples
+                tuning_samples_left = min_samples
+
+        if tuning_samples_left > 0:
             self._init_step(True)
-            self._sample(self.num_tuning_samples - self.num_samples, True)
-        elif self.num_samples == self.num_tuning_samples:
+            self._sample(tuning_samples_left, True)
+
+        elif tuning_samples_left == 0:
             if not quiet:
                 print('WARNING: tuning already completed. '
                       'If additional tuning is required, '
                       'call .increase_tuning_samples(samples) '
                       'before the fist call to .sample(draws)', file=sys.stderr)
+
         elif not quiet:
             raise Exception('Tuning already completed. '
                             'Since .sample(draws) has already been called, '
@@ -241,24 +261,28 @@ class ResumablePymc3Sampler:
         else:
             self.__sample(draws, tuning)
 
+    def _setup_trace(self, draws=0, chain=0):
+        step, strace = self._step, self._strace
+        if step.generates_stats and strace.supports_sampler_stats:
+            strace.setup(draws, chain, step.stats_dtypes)
+        else:
+            strace.setup(draws, chain)
+
     def __sample(self, draws: int, tuning: bool):
         assert draws >= 1
-        chain = 0
         point = self._cur_point
         step, strace = self._step, self._strace
         divergences = 0
 
         # Allocate space for the new samples
-        if step.generates_stats and strace.supports_sampler_stats:
-            strace.setup(draws, chain, step.stats_dtypes)
-        else:
-            strace.setup(draws, chain)
+        self._setup_trace(draws)
 
         iterator = range(draws)
         if self._progressbar:
             from tqdm import tqdm
             iterator = tqdm(iterator)
 
+        t0 = time.perf_counter()
         try:
             for i in iterator:
                 if step.generates_stats:
@@ -288,12 +312,13 @@ class ResumablePymc3Sampler:
         #        * warnings like non-convergence do not refer to
         #          specific samples: can we allow more than one per chain?
         except:
-            strace.close()
             self._cur_point = None  # invalidate current point
         else:
             assert strace.draw_idx == strace.draws
-            strace.close()  # under the above condition this should be a no-op
             self._cur_point = point
+        finally:
+            strace.close()  # if no error occured this should be a no-op
+            self._sampling_time += time.perf_counter() - t0
 
     @staticmethod
     def load_HDF5(path, model, outvars, chain):
@@ -341,9 +366,9 @@ class CheckpointablePymc3Sampler:
             raise NotImplementedError('Only the HDF5 backend is implemented.')
         if os.path.exists(folder):
             if overwrite:
-                raise FileExistsError(f'path {folder} already exists!')
-            else:
                 shutil.rmtree(folder)
+            else:
+                raise FileExistsError(f'path {folder} already exists!')
         self._folder = os.path.abspath(folder)
         self._cur_branch_file = os.path.join(self.folder, 'current_branch.txt')
         self._cur_branch = 'root'
@@ -355,6 +380,7 @@ class CheckpointablePymc3Sampler:
         )
         with open(self._cur_branch_file, 'w') as f:
             f.write('root')
+        self.flush()
 
     @property
     def folder(self):
@@ -389,7 +415,8 @@ class CheckpointablePymc3Sampler:
         self._sampler.save(self.branch_pickle(self.cur_branch))
 
     def load_branch(self, branch):
-        self._load_branch(branch)
+        if self.cur_branch != branch:
+            self._load_branch(branch)
 
     def _load_branch(self, branch, flush: bool = True, write: bool = True):
         if flush:
@@ -484,10 +511,16 @@ class CheckpointablePymc3Sampler:
         return self._sampler.num_tuning_samples
 
     def increase_tuning_samples(self, samples: int):
-        return self._sampler.increase_tuning_samples(samples)
+        retval = self._sampler.increase_tuning_samples(samples)
+        self.flush()
+        return retval
 
-    def tune(self, *, quiet: bool = False):
-        return self._sampler.tune(quiet=quiet)
+    def tune(self, min_samples: Optional[int] = None, *, quiet: bool = False):
+        retval = self._sampler.tune(min_samples, quiet=quiet)
+        self.flush()
+        return retval
 
     def sample(self, draws: int):
-        return self._sampler.sample(draws)
+        retval = self._sampler.sample(draws)
+        self.flush()  # TODO has any real effect here?
+        return retval
