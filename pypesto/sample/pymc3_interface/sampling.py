@@ -202,6 +202,10 @@ class ResumablePymc3Sampler:
         # NB we cannot use self.trace.point(-1),
         #    because we may be saving only a subset of the variables
 
+    @property
+    def is_tuning(self):
+        return self.num_tuning_samples - self.num_samples >= 0
+
     def increase_tuning_samples(self, samples: int):
         if samples < 0:
             raise ValueError("Argument `samples` must be non-negative.")
