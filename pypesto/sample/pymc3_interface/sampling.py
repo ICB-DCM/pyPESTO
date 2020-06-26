@@ -514,6 +514,10 @@ class CheckpointablePymc3Sampler:
     def num_tuning_samples(self):
         return self._sampler.num_tuning_samples
 
+    @property
+    def is_tuning(self):
+        return self._sampler.is_tuning
+
     def increase_tuning_samples(self, samples: int):
         retval = self._sampler.increase_tuning_samples(samples)
         self.flush()
