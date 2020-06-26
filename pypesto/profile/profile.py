@@ -18,7 +18,8 @@ def parameter_profile(
         problem: Problem,
         result: Result,
         optimizer: Optimizer,
-        profile_index: np.ndarray = None,
+        profile_index: Union[np.ndarray, list[int]] = None,
+        profile_index_advanced: Union[np.ndarray, list[int]] = None,
         profile_list: int = None,
         result_index: int = 0,
         next_guess_method: Union[Callable, str] = 'adaptive_step_regression',
@@ -39,9 +40,11 @@ def parameter_profile(
     optimizer:
         The optimizer to be used along each profile.
     profile_index:
+        List with the profile indices to be computed (by default all of them).
+    profile_index_advanced:
         Array with parameter indices, whether a profile should
-        be computed (1) or not (0).
-        Default is all profiles should be computed.
+        be computed (1) or not (0), will later also allow for profile
+        integration (2) instead of optimization (1). Overwrites profile_index.
     profile_list:
         Integer which specifies whether a call to the profiler should create
         a new list of profiles (default) or should be added to a specific
@@ -63,7 +66,12 @@ def parameter_profile(
     # Handling defaults
     # profiling indices
     if profile_index is None:
-        profile_index = np.ones(problem.dim_full)
+        list(range(problem.dim_full))
+
+    # check if more detailed options were passed
+    if profile_index_advanced is None:
+        profile_index_advanced = np.array([0] * problem.dim_full)
+        profile_index_advanced[profile_index] = 1
         profile_index[problem.x_fixed_indices] = 0
 
     # check profiling options
