@@ -177,8 +177,8 @@ class ResumablePymc3Sampler:
             raise Exception('invalid trace state (not trimmed)')
         trace = MultiTrace([self._strace])
         report = trace.report
-        report._n_draws = max(self.num_samples - self.num_tuning_samples, 0)
-        report._n_tune = min(self.num_tuning_samples, self.num_samples)
+        report._n_draws = self.num_draws
+        report._n_tune = self.num_tune
         report._t_sampling = self._sampling_time
         return trace
 
@@ -191,8 +191,16 @@ class ResumablePymc3Sampler:
         return len(self._strace)
 
     @property
-    def num_tuning_samples(self):
+    def target_tune(self):
         return self._tune
+
+    @property
+    def num_draws(self):
+        return max(self.num_samples - self.target_tune, 0)
+
+    @property
+    def num_tune(self):
+        return min(self.target_tune, self.num_samples)
 
     @property
     def cur_point(self):
@@ -204,12 +212,12 @@ class ResumablePymc3Sampler:
 
     @property
     def is_tuning(self):
-        return self.num_tuning_samples - self.num_samples >= 0
+        return self.target_tune - self.num_samples >= 0
 
     def increase_tuning_samples(self, samples: int):
         if samples < 0:
             raise ValueError("Argument `samples` must be non-negative.")
-        if self.num_samples > self.num_tuning_samples:
+        if self.num_samples > self.target_tune:
             raise Exception('.sample(draws) has already been called: '
                             'tuning is no longer possible.')
         self._tune += samples
@@ -227,12 +235,12 @@ class ResumablePymc3Sampler:
 
     def tune(self, min_samples: Optional[int] = None, *, quiet: bool = False):
 
-        tuning_samples_left = self.num_tuning_samples - self.num_samples
+        tuning_samples_left = self.target_tune - self.num_samples
 
         if min_samples is not None:
             if tuning_samples_left < min_samples:
                 self.increase_tuning_samples(min_samples - tuning_samples_left)
-                assert self.num_tuning_samples - self.num_samples == min_samples
+                assert self.target_tune - self.num_samples == min_samples
                 tuning_samples_left = min_samples
 
         if tuning_samples_left > 0:
@@ -255,6 +263,7 @@ class ResumablePymc3Sampler:
         if draws < 1:
             raise ValueError("Argument `draws` must be greater than 0.")
         self.tune(quiet=True)
+        assert self.target_tune == self.num_tune
         self._init_step(False)
         self._sample(draws, False)
 
@@ -364,7 +373,7 @@ class ResumablePymc3Sampler:
 
 
 class CheckpointablePymc3Sampler:
-    def __init__(self, folder: str, *args,
+    def __init__(self, folder: str, *args, start_branch: str = 'root',
                  backend: str = 'hdf5', overwrite: bool = False, **kwargs):
         if backend.lower() != 'hdf5':
             raise NotImplementedError('Only the HDF5 backend is implemented.')
@@ -375,15 +384,15 @@ class CheckpointablePymc3Sampler:
                 raise FileExistsError(f'path {folder} already exists!')
         self._folder = os.path.abspath(folder)
         self._cur_branch_file = os.path.join(self.folder, 'current_branch.txt')
-        self._cur_branch = 'root'
-        self._make_branch_folder('root')
+        self._cur_branch = start_branch
+        self._make_branch_folder(start_branch)
         self._sampler = ResumablePymc3Sampler(
             *args,
-            backend=self.branch_trace('root'),
+            backend=self.branch_trace(start_branch),
             **kwargs
         )
         with open(self._cur_branch_file, 'w') as f:
-            f.write('root')
+            f.write(start_branch)
         self.flush()
 
     @property
@@ -394,7 +403,7 @@ class CheckpointablePymc3Sampler:
     def branches(self):
         return set([
             name for name in os.listdir(self.folder)
-            if name != 'current_branch.txt' and not name.startswith('.')
+            if os.path.isdir(os.path.join(self.folder, name)) and not name.startswith('.')
         ])
 
     @property
@@ -471,7 +480,7 @@ class CheckpointablePymc3Sampler:
             candidates.remove(branch)
             if len(candidates) == 0:
                 raise Exception('cannot remove the only branch present')
-            new_branch = 'root' if 'root' in candidates else candidates.pop()
+            new_branch = candidates.pop()
             print('WARNING: deleting current branch; '
                   f'switching to {new_branch} branch', file=sys.stderr)
             self._load_branch(new_branch, flush=False)  # no need to flush
@@ -511,12 +520,24 @@ class CheckpointablePymc3Sampler:
         return self._sampler.num_samples
 
     @property
-    def num_tuning_samples(self):
-        return self._sampler.num_tuning_samples
+    def target_tune(self):
+        return self._sampler.target_tune
+
+    @property
+    def num_draws(self):
+        return self._sampler.num_draws
+
+    @property
+    def num_tune(self):
+        return self._sampler.num_tune
 
     @property
     def is_tuning(self):
         return self._sampler.is_tuning
+
+    @property
+    def cur_point(self):
+        return self._sampler.cur_point
 
     def increase_tuning_samples(self, samples: int):
         retval = self._sampler.increase_tuning_samples(samples)
