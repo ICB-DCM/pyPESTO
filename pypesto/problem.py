@@ -194,46 +194,58 @@ class Problem:
                 "x_fixed_indices and x_fixed_vals musti have the same length."
             )
 
-    def fix_parameters(
-            self,
-            parameter_indices: Union[Iterable[int], int],
-            parameter_vals: Union[Iterable[float], float]) -> None:
+    def fix_parameters(self,
+                       parameter_indices: Union[Iterable[int], int],
+                       parameter_vals: Union[Iterable[float], float]) -> None:
         """
         Fix specified parameters to specified values
         """
-        if not isinstance(parameter_indices, list):
+        if isinstance(parameter_indices, int) and \
+                isinstance(parameter_vals, float):
             parameter_indices = [parameter_indices]
-
-        if not isinstance(parameter_vals, list):
             parameter_vals = [parameter_vals]
 
         # first clean to-be-fixed indices to avoid redundancies
         for i_index, i_parameter in enumerate(parameter_indices):
             # check if parameter was already fixed, otherwise add it to the
             # fixed parameters
+            if not isinstance(i_parameter, int):
+                raise ValueError(
+                    f'All indices must be of type int. Found '
+                    f'{type(i_parameter)} at index {i_index}'
+                )
+            val = parameter_vals[i_index]
+            if not isinstance(val, float):
+                raise ValueError(
+                    f'All values must be of type float. Found '
+                    f'{type(val)} at index {i_index}'
+                )
             if i_parameter in self.x_fixed_indices:
                 self.x_fixed_vals[
-                    self.x_fixed_indices.index(i_parameter)] = \
-                    parameter_vals[i_index]
+                    self.x_fixed_indices.index(i_parameter)] = val
             else:
                 self.x_fixed_indices.append(i_parameter)
-                self.x_fixed_vals.append(parameter_vals[i_index])
+                self.x_fixed_vals.append(val)
 
         self.normalize()
 
-    def unfix_parameters(
-            self,
-            parameter_indices: Union[Iterable[int], int]) -> None:
+    def unfix_parameters(self,
+                         parameter_indices: Union[Iterable[int], int]) -> None:
         """
         Free specified parameters
         """
 
         # check and adapt input
-        if not isinstance(parameter_indices, list):
+        if isinstance(parameter_indices, int):
             parameter_indices = [parameter_indices]
 
         # first clean to-be-freed indices
         for i_parameter in parameter_indices:
+            if not isinstance(i_parameter, int):
+                raise ValueError(
+                    f'All indices must be of type int. {i_parameter} is of '
+                    f'type {type(i_parameter)}'
+                )
             if i_parameter in self.x_fixed_indices:
                 i_index = self.x_fixed_indices.index(i_parameter)
                 self.x_fixed_indices.pop(i_index)
