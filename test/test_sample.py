@@ -317,6 +317,46 @@ def test_geweke_test_unconverged():
     sample.geweke_test(result)
 
 
+def test_autocorrelation_mixture():
+    """Check that the autocorrelation is the same for the same chain
+    with different scalings."""
+    chain = np.array(np.random.randn(101, 2))
+
+    auto_correlation_1 = sample.diagnostics.autocorrelation_sokal(chain=chain)
+    auto_correlation_2 = sample.diagnostics.autocorrelation_sokal(
+                               chain=2*chain)
+    auto_correlation_3 = sample.diagnostics.autocorrelation_sokal(
+                               chain=-3*chain)
+
+    assert (abs(auto_correlation_1-auto_correlation_2) < 1e-15).all()
+    assert (abs(auto_correlation_2-auto_correlation_3) < 1e-15).all()
+    assert (abs(auto_correlation_1-auto_correlation_3) < 1e-15).all()
+
+
+def test_autocorrelation_dim():
+    """Check that the autocorrelation returns as
+    many entries as parameters."""
+    # Loop over different sizes of parameter vectors
+    for n in range(4):
+        # create the chain for n parameters
+        chain = np.array(np.random.randn(101, n+1))
+        # calculate the autocorrelation
+        auto_correlation = sample.diagnostics.autocorrelation_sokal(
+                              chain=chain)
+        assert len(auto_correlation) == (n+1)
+
+
+def test_autocorrelation_high():
+    """Check that the autocorrelation is high for a not well-mixed chain."""
+    # there should be always need to be some variability
+    chain = np.concatenate((np.ones((50, 1)), 2*np.ones((35, 1)),
+                            np.ones((25, 1))))
+
+    auto_correlation = sample.diagnostics.autocorrelation_sokal(chain=chain)
+
+    assert auto_correlation > 10
+
+
 def test_empty_prior():
     """Check that priors are zero when none are defined."""
     # define negative log posterior
