@@ -471,7 +471,8 @@ class CheckpointablePymc3Sampler:
         if load:
             self.load_branch(new_branch)
 
-    def delete_branch(self, branch: Optional[str] = None):
+    def delete_branch(self, branch: Optional[str] = None, *,
+                      verbose: bool = True):
         if branch is None:
             branch = self.cur_branch
         # If deleting the current branch, switch to a different one
@@ -481,8 +482,9 @@ class CheckpointablePymc3Sampler:
             if len(candidates) == 0:
                 raise Exception('cannot remove the only branch present')
             new_branch = candidates.pop()
-            print('WARNING: deleting current branch; '
-                  f'switching to {new_branch} branch', file=sys.stderr)
+            if verbose:
+                print('WARNING: deleting current branch; '
+                      f'switching to {new_branch} branch', file=sys.stderr)
             self._load_branch(new_branch, flush=False)  # no need to flush
         # Delete the branch
         shutil.rmtree(self.branch_folder(branch))
