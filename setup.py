@@ -34,7 +34,6 @@ setup(name='pypesto',
       tests_require=['pytest>=5.4.2',
                      'flake8>=3.7.2',
                      'gitpython>=3.1.2'],
-
       extras_require={'amici': ['amici>=0.11.1'],
                       'petab': ['petab>=0.1.7'],
                       'ipopt': ['ipopt>=0.1.9'],
