@@ -43,7 +43,7 @@ def trace_wrap(f):
 
 class HistoryOptions(dict):
     """
-    Options for the objective that are used in optimization, profiles
+    Options for the objective that are used in optimization, profiling
     and sampling.
 
     In addition implements a factory pattern to generate history objects.
@@ -164,7 +164,7 @@ class HistoryOptions(dict):
             return Hdf5History(id=id, file=storage_file, options=self)
         else:
             raise ValueError(
-                "Currently only history storage to '.csv' and '.hdf5'"
+                "Currently, only history storage to '.csv' and '.hdf5'"
                 "is supported")
 
 
@@ -985,7 +985,7 @@ def extract_values(mode: str,
                    result: ResultDict,
                    options: HistoryOptions) -> Dict:
     """Extract values to record from result."""
-    ret = dict()
+    ret = {}
     ret_vars = [FVAL, GRAD, HESS, RES, SRES, CHI2, SCHI2]
     for var in ret_vars:
         if options.get(f'trace_record_{var}', True) and var in result:

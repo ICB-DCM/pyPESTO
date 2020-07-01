@@ -50,6 +50,9 @@ class Pymc3Sampler(Sampler):
 
     def initialize(self, problem: Problem, x0: np.ndarray):
         self.problem = problem
+        if x0 is not None:
+            if len(x0) != problem.dim:
+                x0 = problem.get_reduced_vector(x0)
         self.x0 = x0
         self.trace = None
         self.data = None
@@ -57,8 +60,7 @@ class Pymc3Sampler(Sampler):
         self.problem.objective.history = History()
 
     def sample(
-            self, n_samples: int, beta: float = 1.
-    ):
+            self, n_samples: int, beta: float = 1.):
         problem = self.problem
         log_post_fun = TheanoLogProbability(problem, beta)
         trace = self.trace
@@ -73,7 +75,8 @@ class Pymc3Sampler(Sampler):
             # uniform bounds
             k = [pm.Uniform(x_name, lower=lb, upper=ub)
                  for x_name, lb, ub in
-                 zip(problem.x_names, problem.lb, problem.ub)]
+                 zip(problem.get_reduced_vector(problem.x_names),
+                     problem.lb, problem.ub)]
 
             # convert to tensor vector
             theta = tt.as_tensor_variable(k)
@@ -104,19 +107,21 @@ class Pymc3Sampler(Sampler):
             self.data.posterior.to_array()).transpose((1, 2, 0))
 
         # TODO this is only the negative objective values
-        trace_fval = np.asarray(self.data.log_likelihood.to_array())
+        trace_neglogpost = np.asarray(self.data.log_likelihood.to_array())
         # remove trailing dimensions
-        trace_fval = np.reshape(trace_fval, trace_fval.shape[1:-1])
+        trace_neglogpost = np.reshape(trace_neglogpost,
+                                      trace_neglogpost.shape[1:-1])
         # flip sign
-        trace_fval = - trace_fval
+        trace_neglogpost = - trace_neglogpost
 
-        if trace_x.shape[0] != trace_fval.shape[0] \
-                or trace_x.shape[1] != trace_fval.shape[1] \
-                or trace_x.shape[2] != len(self.problem.x_names):
+        if trace_x.shape[0] != trace_neglogpost.shape[0] \
+                or trace_x.shape[1] != trace_neglogpost.shape[1] \
+                or trace_x.shape[2] != self.problem.dim:
             raise ValueError("Trace dimensions are inconsistent")
 
         return McmcPtResult(
             trace_x=np.array(trace_x),
-            trace_fval=np.array(trace_fval),
+            trace_neglogpost=np.array(trace_neglogpost),
+            trace_neglogprior=np.full(trace_neglogpost.shape, np.nan),
             betas=np.array([1.] * trace_x.shape[0]),
         )

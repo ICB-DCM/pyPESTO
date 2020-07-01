@@ -6,6 +6,10 @@ pytest
 pytest-cov
 coverage
 flake8
+flake8-bugbear
+flake8-bandit
+flake8-print
+flake8-comprehensions
 gitpython
 sphinx
 nbsphinx

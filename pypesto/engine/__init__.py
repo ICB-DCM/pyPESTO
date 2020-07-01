@@ -11,4 +11,4 @@ from .base import Engine
 from .single_core import SingleCoreEngine
 from .multi_thread import MultiThreadEngine
 from .multi_process import MultiProcessEngine
-from .task import OptimizerTask
+from .task import Task

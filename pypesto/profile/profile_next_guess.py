@@ -77,7 +77,7 @@ def fixed_step(
     Parameters
     ----------
     x:
-       The current position of the profiler
+       The current position of the profiler, size `dim_full`.
     par_index:
         The index of the parameter of the current profile
     par_direction:
@@ -86,6 +86,11 @@ def fixed_step(
         Various options applied to the profile optimization.
     problem:
         The problem to be solved.
+
+    Returns
+    -------
+    x_new:
+        The updated parameter vector, of size `dim_full`.
     """
     delta_x = np.zeros(len(x))
     delta_x[par_index] = par_direction * options.default_step_size
@@ -117,26 +122,31 @@ def adaptive_step(
 
     Parameters
     ----------
-     x:
-         The current position of the profiler
-     par_index:
-         The index of the parameter of the current profile
-     par_direction:
-         The direction, in which the profiling is done (1 or -1)
-     options:
-         Various options applied to the profile optimization.
-     current_profile:
-         The profile which should be computed
-     problem:
-         The problem to be solved.
-     global_opt:
-         log-posterior value of the global optimum
-     order:
-         Specifies the precise algorithm for extrapolation: can be 0 (
-         just one parameter is updated), 1 (last two points used to
-         extrapolate all parameters), and np.nan (indicates that a more
-         complex regression should be used)
-     """
+    x:
+        The current position of the profiler, size `dim_full`.
+    par_index:
+        The index of the parameter of the current profile
+    par_direction:
+        The direction, in which the profiling is done (1 or -1)
+    options:
+        Various options applied to the profile optimization.
+    current_profile:
+        The profile which should be computed
+    problem:
+        The problem to be solved.
+    global_opt:
+        log-posterior value of the global optimum
+    order:
+        Specifies the precise algorithm for extrapolation: can be 0 (
+        just one parameter is updated), 1 (last two points used to
+        extrapolate all parameters), and np.nan (indicates that a more
+        complex regression should be used)
+
+    Returns
+    -------
+    x_new:
+        The updated parameter vector, of size `dim_full`.
+    """
     # restrict step proposal to minimum and maximum step size
     def clip_to_minmax(step_size_proposal):
         return clip(step_size_proposal, options.min_step_size,
@@ -148,13 +158,12 @@ def adaptive_step(
 
     # check if this is the first step
     n_profile_points = len(current_profile.fval_path)
-    pos_ind_red = len([ip for ip in problem.x_free_indices if ip < par_index])
     problem.fix_parameters(par_index, x[par_index])
 
     # Get update directions and first step size guesses
     (step_size_guess, delta_x_dir, reg_par, delta_obj_value) = \
         handle_profile_history(x, par_index, par_direction, n_profile_points,
-                               pos_ind_red, global_opt, order,
+                               global_opt, order,
                                current_profile, problem, options)
 
     # check whether we must make a minimum step anyway, since we're close to
@@ -175,12 +184,15 @@ def adaptive_step(
         if np.isnan(order) and n_profile_points > 2:
             x_step_tmp = []
             # loop over parameters, extrapolate each one
-            for i_par in range(len(problem.x_free_indices) + 1):
-                if i_par == pos_ind_red:
+            for i_par in range(problem.dim_full):
+                if i_par == par_index:
                     # if we meet the profiling parameter, just increase,
                     # don't extrapolate
                     x_step_tmp.append(x[par_index] + step_length *
                                       par_direction)
+                elif i_par in problem.x_fixed_indices:
+                    # common fixed parameter: will be ignored anyway later
+                    x_step_tmp.append(np.nan)
                 else:
                     # extrapolate
                     cur_par_extrapol = np.poly1d(reg_par[i_par])
@@ -205,7 +217,7 @@ def adaptive_step(
 
     # compute objective at the guessed point
     problem.fix_parameters(par_index, next_x[par_index])
-    next_obj = problem.objective(reduce_x(next_x, par_index))
+    next_obj = problem.objective(problem.get_reduced_vector(next_x))
 
     # iterate until good step size is found
     if next_obj_target < next_obj:
@@ -228,7 +240,6 @@ def handle_profile_history(
         par_index: int,
         par_direction: int,
         n_profile_points: int,
-        pos_ind_red: int,
         global_opt: float,
         order: int,
         current_profile: ProfilerResult,
@@ -268,7 +279,7 @@ def handle_profile_history(
         elif np.isnan(order):
             # compute the regression polynomial for parameter extrapolation
 
-            reg_par = get_reg_polynomial(n_profile_points, pos_ind_red,
+            reg_par = get_reg_polynomial(n_profile_points,
                                          par_index, current_profile,
                                          problem, options)
 
@@ -277,7 +288,6 @@ def handle_profile_history(
 
 def get_reg_polynomial(
         n_profile_points: int,
-        pos_ind_red: int,
         par_index: int,
         current_profile: ProfilerResult,
         problem: Problem,
@@ -295,10 +305,10 @@ def get_reg_polynomial(
 
     # set up matrix of regression parameters
     reg_par = []
-    for i_par in range(len(problem.x_free_indices) + 1):
-        if i_par == pos_ind_red:
-            # if we meet the current profiling parameter, there is nothing
-            # to do, so pass an np.nan
+    for i_par in range(problem.dim_full):
+        if i_par in problem.x_fixed_indices:
+            # if we meet the current profiling parameter or a fixed parameter,
+            # there is nothing to do, so pass an np.nan
             reg_par.append(np.nan)
         else:
             # Do polynomial interpolation of profile path
@@ -366,7 +376,7 @@ def do_line_seach(
             # compute new objective value
             problem.fix_parameters(par_index, next_x[par_index])
             last_obj = copy.copy(next_obj)
-            next_obj = problem.objective(reduce_x(next_x, par_index))
+            next_obj = problem.objective(problem.get_reduced_vector(next_x))
 
             # check for root crossing and compute correct step size in case
             if direction == 'decrease' and next_obj_target >= next_obj:
@@ -393,15 +403,6 @@ def next_x_interpolate(
 
     # fix final guess and return
     return last_x + add_x
-
-
-def reduce_x(next_x: np.ndarray, par_index: int) -> np.ndarray:
-    """
-    Reduce step proposal to non-fixed parameters.
-    """
-    red_ind = list(range(len(next_x)))
-    red_ind.pop(par_index)
-    return np.array([next_x[ip] for ip in red_ind])
 
 
 def clip(
