@@ -542,16 +542,19 @@ class CheckpointablePymc3Sampler:
         return self._sampler.cur_point
 
     def increase_tuning_samples(self, samples: int):
-        retval = self._sampler.increase_tuning_samples(samples)
-        self.flush()
-        return retval
+        try:
+            return self._sampler.increase_tuning_samples(samples)
+        finally:
+            self.flush()
 
     def tune(self, min_samples: Optional[int] = None, *, quiet: bool = False):
-        retval = self._sampler.tune(min_samples, quiet=quiet)
-        self.flush()
-        return retval
+        try:
+            return self._sampler.tune(min_samples, quiet=quiet)
+        finally:
+            self.flush()
 
     def sample(self, draws: int):
-        retval = self._sampler.sample(draws)
-        self.flush()  # TODO has any real effect here?
-        return retval
+        try:
+            return self._sampler.sample(draws)
+        finally:
+            self.flush()
