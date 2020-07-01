@@ -17,7 +17,7 @@ class OptimizeOptions(dict):
 
     def __init__(self,
                  startpoint_resample: bool = False,
-                 allow_failed_starts: bool = False):
+                 allow_failed_starts: bool = True):
         super().__init__()
 
         self.startpoint_resample: bool = startpoint_resample

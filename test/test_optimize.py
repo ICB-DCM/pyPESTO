@@ -4,11 +4,13 @@ This is for testing optimization of the pypesto.Objective.
 
 
 import numpy as np
-import pypesto
 import pytest
 import test.test_objective as test_objective
 import warnings
 import re
+
+import pypesto
+import pypesto.optimize as optimize
 
 
 @pytest.fixture(params=['separated', 'integrated'])
@@ -23,6 +25,7 @@ optimizers = [
         'trust-ncg', 'trust-exact', 'trust-krylov',
         'ls_trf', 'ls_dogbox']],
     # disabled: ,'trust-constr', 'ls_lm', 'dogleg'
+    ('ipopt', ''),
     ('dlib', 'default'),
     ('pyswarm', ''),
 ]
@@ -65,22 +68,22 @@ def check_minimize(objective, library, solver, allow_failed_starts=False):
     optimizer = None
 
     if library == 'scipy':
-        optimizer = pypesto.ScipyOptimizer(method=solver,
-                                           options=options)
+        optimizer = optimize.ScipyOptimizer(method=solver, options=options)
+    elif library == 'ipopt':
+        optimizer = optimize.IpoptOptimizer()
     elif library == 'dlib':
-        optimizer = pypesto.DlibOptimizer(method=solver,
-                                          options=options)
+        optimizer = optimize.DlibOptimizer(method=solver, options=options)
     elif library == 'pyswarm':
-        optimizer = pypesto.PyswarmOptimizer(options=options)
+        optimizer = optimize.PyswarmOptimizer(options=options)
 
     lb = 0 * np.ones((1, 2))
     ub = 1 * np.ones((1, 2))
     problem = pypesto.Problem(objective, lb, ub)
 
-    optimize_options = pypesto.OptimizeOptions(
+    optimize_options = optimize.OptimizeOptions(
         allow_failed_starts=allow_failed_starts)
 
-    result = pypesto.minimize(
+    result = optimize.minimize(
         problem=problem,
         optimizer=optimizer,
         n_starts=1,

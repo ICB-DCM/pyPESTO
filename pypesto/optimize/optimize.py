@@ -1,15 +1,14 @@
 import logging
 from typing import Callable, Iterable, Union
-import numpy as np
 
-from ..engine import OptimizerTask, Engine, SingleCoreEngine
-from ..objective import Objective, HistoryOptions
+from ..engine import Engine, SingleCoreEngine
+from ..objective import HistoryOptions
 from ..problem import Problem
 from ..result import Result
 from ..startpoint import assign_startpoints, uniform
-from .optimizer import (
-    OptimizerResult, recover_result, Optimizer, ScipyOptimizer)
+from .optimizer import Optimizer, ScipyOptimizer
 from .options import OptimizeOptions
+from .task import OptimizerTask
 
 
 logger = logging.getLogger(__name__)
@@ -81,7 +80,7 @@ def minimize(
     # assign startpoints
     startpoints = assign_startpoints(
         n_starts=n_starts, startpoint_method=startpoint_method,
-        problem=problem, options=options)
+        problem=problem, startpoint_resample=options.startpoint_resample)
 
     if ids is None:
         ids = [str(j) for j in range(n_starts)]
@@ -101,8 +100,7 @@ def minimize(
     for startpoint, id in zip(startpoints, ids):
         task = OptimizerTask(
             optimizer=optimizer, problem=problem, x0=startpoint, id=id,
-            options=options, history_options=history_options,
-            handle_exception=handle_exception)
+            options=options, history_options=history_options)
         tasks.append(task)
 
     # do multistart optimization
@@ -116,17 +114,3 @@ def minimize(
     result.optimize_result.sort()
 
     return result
-
-
-def handle_exception(
-        objective: Objective,
-        x0: np.ndarray,
-        id: str,
-        err: Exception
-) -> OptimizerResult:
-    """
-    Handle exception by creating a dummy pypesto.OptimizerResult.
-    """
-    logger.error(('start ' + str(id) + ' failed: {0}').format(err))
-    optimizer_result = recover_result(objective, x0, err)
-    return optimizer_result

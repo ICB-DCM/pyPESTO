@@ -8,50 +8,60 @@ Logging convenience functions.
 import logging
 
 
-def log_to_console(level=None):
+def log(name: str = 'pypesto',
+        level: int = logging.DEBUG,
+        console: bool = False,
+        filename: str = ''):
+    """
+    Log messages from a specified name with a specified level to any
+    combination of console and file.
+
+    Parameters
+    ----------
+    name:
+        The name of the logger.
+
+    level:
+        The output level to use.
+
+    console:
+        If True, messages are logged to console.
+
+    filename:
+        If specified, messages are logged to a file with this name.
+    """
+    logger = logging.getLogger(name)
+    logger.setLevel(level)
+
+    if console:
+        ch = logging.StreamHandler()
+        ch.setLevel(level)
+        logger.addHandler(ch)
+
+    if filename:
+        fh = logging.FileHandler(filename)
+        fh.setLevel(level)
+        logger.addHandler(fh)
+
+
+def log_to_console(level: int = logging.DEBUG):
     """
     Log to console.
 
     Parameters
     ----------
-
-    level: int
-        The output level to use. Default: logging.DEBUG.
-
+    See the `log` method.
     """
-    if level is None:
-        level = logging.DEBUG
-
-    logger = logging.getLogger('pypesto')
-    logger.setLevel(level)
-    ch = logging.StreamHandler()
-    ch.setLevel(level)
-    logger.addHandler(ch)
+    log(level=level, console=True)
 
 
-def log_to_file(level=None, filename=None):
+def log_to_file(level: int = logging.DEBUG,
+                filename: str = '.pypesto_logging.log'):
     """
     Log to file.
 
     Parameters
     ----------
-
-    level: int
-        The output level to use. Default: logging.DEBUG.
-
-    filename: str
-        The name of the file to append to.
-        Default: .pypesto_logging.log.
+    See the `log` method.
     """
-
-    if level is None:
-        level = logging.DEBUG
-
-    if filename is None:
-        filename = ".pypesto_logging.log"
-
-    logger = logging.getLogger('pypesto')
-    logger.setLevel(level)
-    fh = logging.FileHandler(filename)
-    fh.setLevel(level)
-    logger.addHandler(fh)
+    log(level=level, filename=filename)

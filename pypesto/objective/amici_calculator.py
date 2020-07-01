@@ -1,7 +1,9 @@
 import numpy as np
 from typing import Dict, List, Sequence, Union
 
-from .constants import MODE_FUN, MODE_RES, FVAL, GRAD, HESS, RES, SRES, RDATAS
+from .constants import (
+    MODE_FUN, MODE_RES, FVAL, GRAD, HESS, RES, SRES, RDATAS, CHI2
+)
 from .amici_util import (
     add_sim_grad_to_opt_grad, add_sim_hess_to_opt_hess,
     sim_sres_to_opt_sres, log_simulation, get_error_output)
@@ -24,6 +26,9 @@ class AmiciCalculator:
     function values.
     """
 
+    def __init__(self):
+        self._known_least_squares_safe = False
+
     def initialize(self):
         """Initialize the calculator. Default: Do nothing."""
 
@@ -36,7 +41,8 @@ class AmiciCalculator:
                  edatas: List['amici.ExpData'],
                  n_threads: int,
                  x_ids: Sequence[str],
-                 parameter_mapping: 'ParameterMapping'):
+                 parameter_mapping: 'ParameterMapping',
+                 fim_for_hess: bool):
         """Perform the actual AMICI call.
 
         This function is called inside :func:`pypesto.AmiciObjective.__call__`
@@ -64,9 +70,16 @@ class AmiciCalculator:
             Ids of optimization parameters.
         parameter_mapping:
             Mapping of optimization to simulation parameters.
+        fim_for_hess:
+            Whether to use the FIM (if available) instead of the Hessian (if
+            requested).
         """
         # set order in solver
-        amici_solver.setSensitivityOrder(sensi_order)
+        if sensi_order == 2 and fim_for_hess:
+            # we use the FIM
+            amici_solver.setSensitivityOrder(sensi_order-1)
+        else:
+            amici_solver.setSensitivityOrder(sensi_order)
 
         # fill in parameters
         # TODO (#226) use plist to compute only required derivatives
@@ -85,10 +98,44 @@ class AmiciCalculator:
             edatas,
             num_threads=min(n_threads, len(edatas)),
         )
+        if not self._known_least_squares_safe and mode == MODE_RES and \
+                sensi_order > 0:
+            if any(
+                ((r['ssigmay'] is not None and np.any(r['ssigmay']))
+                 or
+                 (r['ssigmaz'] is not None and np.any(r['ssigmaz'])))
+                for r in rdatas
+            ):
+                raise RuntimeError('Cannot use least squares solver with'
+                                   'parameter dependent sigma!')
+            self._known_least_squares_safe = True  # don't check this again
+
+        self._check_least_squares(sensi_order, mode, rdatas)
 
         return calculate_function_values(
-            rdatas, sensi_order, mode, amici_model, amici_solver, edatas,
-            x_ids, parameter_mapping)
+            rdatas=rdatas, sensi_order=sensi_order, mode=mode,
+            amici_model=amici_model, amici_solver=amici_solver, edatas=edatas,
+            x_ids=x_ids, parameter_mapping=parameter_mapping,
+            fim_for_hess=fim_for_hess)
+
+    def _check_least_squares(
+            self, sensi_order: int, mode: str, rdatas: List['amici.ExpData']):
+        """
+        Check whether residual sensitivity based least squares optimization is
+        applicable. This is not the case if the noise model depends on
+        estimated parameters.
+        """
+        if not self._known_least_squares_safe and sensi_order > 0 \
+                and mode == MODE_RES:
+            if any(
+                ((r['ssigmay'] is not None and np.any(r['ssigmay']))
+                 or
+                 (r['ssigmaz'] is not None and np.any(r['ssigmaz'])))
+                for r in rdatas
+            ):
+                raise RuntimeError('Cannot use least squares solver with'
+                                   'parameter dependent sigma!')
+            self._known_least_squares_safe = True  # don't check this again
 
 
 def calculate_function_values(rdatas,
@@ -98,8 +145,8 @@ def calculate_function_values(rdatas,
                               amici_solver: AmiciSolver,
                               edatas: List['amici.ExpData'],
                               x_ids: Sequence[str],
-                              parameter_mapping: 'ParameterMapping'
-                              ):
+                              parameter_mapping: 'ParameterMapping',
+                              fim_for_hess: bool):
     # full optimization problem dimension (including fixed parameters)
     dim = len(x_ids)
 
@@ -109,27 +156,37 @@ def calculate_function_values(rdatas,
 
     # prepare outputs
     nllh = 0.0
-    snllh = np.zeros(dim)
-    s2nllh = np.zeros([dim, dim])
+    snllh = None
+    s2nllh = None
+    if mode == MODE_FUN and sensi_order > 0:
+        snllh = np.zeros(dim)
+        s2nllh = np.zeros([dim, dim])
 
-    res = np.zeros([0])
-    sres = np.zeros([0, dim])
+    chi2 = None
+    res = None
+    sres = None
+    if mode == MODE_RES:
+        chi2 = 0.0
+        res = np.zeros([0])
+        if sensi_order > 0:
+            sres = np.zeros([0, dim])
 
     par_sim_ids = list(amici_model.getParameterIds())
     sensi_method = amici_solver.getSensitivityMethod()
 
+    # iterate over return data
     for data_ix, rdata in enumerate(rdatas):
         log_simulation(data_ix, rdata)
 
         condition_map_sim_var = \
             parameter_mapping[data_ix].map_sim_var
 
+        # add objective value
         nllh -= rdata['llh']
 
-        # compute objective
         if mode == MODE_FUN:
-
             if sensi_order > 0:
+                # add gradient
                 add_sim_grad_to_opt_grad(
                     x_ids,
                     par_sim_ids,
@@ -138,18 +195,25 @@ def calculate_function_values(rdatas,
                     snllh,
                     coefficient=-1.0
                 )
-                if sensi_method == 1:
-                    # TODO Compute the full Hessian, and check here
-                    add_sim_hess_to_opt_hess(
-                        x_ids,
-                        par_sim_ids,
-                        condition_map_sim_var,
-                        rdata['FIM'],
-                        s2nllh,
-                        coefficient=+1.0
-                    )
+
+                # Hessian
+                if sensi_order > 1:
+                    if sensi_method == amici.SensitivityMethod_forward \
+                            and fim_for_hess:
+                        # add FIM for Hessian
+                        add_sim_hess_to_opt_hess(
+                            x_ids,
+                            par_sim_ids,
+                            condition_map_sim_var,
+                            rdata['FIM'],
+                            s2nllh,
+                            coefficient=+1.0
+                        )
+                    else:
+                        raise ValueError("AMICI cannot compute Hessians yet.")
 
         elif mode == MODE_RES:
+            chi2 += rdata['chi2']
             res = np.hstack([res, rdata['res']]) \
                 if res.size else rdata['res']
             if sensi_order > 0:
@@ -163,11 +227,18 @@ def calculate_function_values(rdatas,
                 sres = np.vstack([sres, opt_sres]) \
                     if sres.size else opt_sres
 
-    return {
+    ret = {
         FVAL: nllh,
+        CHI2: chi2,
         GRAD: snllh,
         HESS: s2nllh,
         RES: res,
         SRES: sres,
         RDATAS: rdatas
+    }
+
+    return {
+        key: val
+        for key, val in ret.items()
+        if val is not None
     }

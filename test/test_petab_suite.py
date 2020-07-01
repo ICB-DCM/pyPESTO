@@ -2,6 +2,7 @@
 
 import petabtests
 import pypesto
+import pypesto.petab
 
 import sys
 import os
@@ -78,7 +79,7 @@ def _execute_case(case):
     output_folder = f'amici_models/model_{case}'
 
     # import and create objective function
-    importer = pypesto.PetabImporter.from_yaml(
+    importer = pypesto.petab.PetabImporter.from_yaml(
         yaml_file, output_folder=output_folder)
     model = importer.create_model()
     obj = importer.create_objective(model=model)

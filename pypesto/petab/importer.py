@@ -1,5 +1,6 @@
 import numpy as np
 import pandas as pd
+import numpy as np
 import os
 import sys
 import importlib
@@ -9,9 +10,11 @@ import tempfile
 from typing import List, Sequence, Union
 
 from ..problem import Problem
-from ..objective import AmiciObjective, AmiciObjectBuilder
+from ..objective import AmiciObjective, AmiciObjectBuilder, AggregatedObjective
 from ..hierarchical.problem import InnerProblem
 from ..hierarchical.calculator import HierarchicalAmiciCalculator
+from ..objective.priors import NegLogParameterPriors, \
+    get_parameter_prior_dict
 
 try:
     import petab
@@ -114,10 +117,9 @@ class PetabImporter(AmiciObjectBuilder):
         the model.
         """
         # load moduĺe
-        model_module = importlib.import_module(self.model_name)
-
-        # import model
-        model = model_module.getModel()
+        module = amici.import_model_module(module_name=self.model_name,
+                                           module_path=self.output_folder)
+        model = module.getModel()
 
         return model
 
@@ -138,7 +140,7 @@ class PetabImporter(AmiciObjectBuilder):
         try:
             # importing will already raise an exception if version wrong
             importlib.import_module(self.model_name)
-        except RuntimeError:
+        except ModuleNotFoundError:
             return True
 
         # no need to (re-)compile
@@ -278,6 +280,45 @@ class PetabImporter(AmiciObjectBuilder):
 
         return obj
 
+    def create_prior(self) -> NegLogParameterPriors:
+        """
+        Creates a prior from the parameter table. Returns None, if no priors
+        are defined.
+        """
+
+        prior_list = []
+
+        if petab.OBJECTIVE_PRIOR_TYPE in self.petab_problem.parameter_df:
+
+            for i, x_id in enumerate(self.petab_problem.x_ids):
+
+                prior_type_entry = self.petab_problem.\
+                    parameter_df.loc[x_id, petab.OBJECTIVE_PRIOR_TYPE]
+
+                # TODO: Change the hardcoded "uninformative" to
+                #  petab.UNINFORMATIVE, if corresponding PEtab PR is merged
+                if not (np.isnan(prior_type_entry)
+                        or prior_type_entry == 'uninformative'):
+
+                    prior_params = [float(param) for param in
+                                    self.petab_problem.parameter_df.
+                                    loc[x_id, petab.OBJECTIVE_PRIOR_PARAMETERS]
+                                    .split(';')]
+
+                    scale = self.petab_problem.\
+                        parameter_df.loc[x_id, petab.PARAMETER_SCALE]
+
+                    prior_list.append(
+                        get_parameter_prior_dict(i,
+                                                 prior_type_entry,
+                                                 prior_params,
+                                                 scale))
+
+        if len(prior_list):
+            return NegLogParameterPriors(prior_list)
+        else:
+            return None
+
     def create_problem(
             self,
             objective: AmiciObjective = None,
@@ -312,13 +353,24 @@ class PetabImporter(AmiciObjectBuilder):
                     x_fixed_indices.append(x_ids.index(inner_x_id))
                     x_fixed_vals.append(np.nan)
 
+        prior = self.create_prior()
+
+        if prior is not None:
+            objective = AggregatedObjective([objective, prior])
+
+        x_scales = \
+            [self.petab_problem.parameter_df.loc[x_id, petab.PARAMETER_SCALE]
+                for x_id in self.petab_problem.x_ids]
+
         problem = Problem(
             objective=objective,
             lb=self.petab_problem.lb_scaled,
             ub=self.petab_problem.ub_scaled,
             x_fixed_indices=x_fixed_indices,
             x_fixed_vals=x_fixed_vals,
-            x_names=x_ids)
+            x_names=self.petab_problem.x_ids,
+            x_scales=x_scales,
+            x_priors_defs=prior)
 
         return problem
 

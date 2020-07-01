@@ -9,10 +9,12 @@ describing the problem to be solved.
 
 import numpy as np
 import pandas as pd
+import numbers
 import copy
 from typing import Iterable, List, Optional, Union
 
-from .objective.objective import Objective
+from .objective import ObjectiveBase
+from .objective.priors import NegLogPriors
 
 
 class Problem:
@@ -45,10 +47,13 @@ class Problem:
         else the values specified here are used if not None, otherwise
         the variable names are set to ['x0', ... 'x{dim_full}']. The list
         must always be of length dim_full.
-
-    Attributes
-    ----------
-
+    x_scales:
+        Parameter scales can be optionally given and are used e.g. in
+        visualisation and prior generation. Currently the scales 'lin',
+        'log`and 'log10' are supported.
+    x_priors_defs:
+        Definitions of priors for parameters. Types of priors, and their
+        required and optional parameters, are described in the `Prior` class.
     dim:
         The number of non-fixed parameters.
         Computed from the other values.
@@ -72,76 +77,100 @@ class Problem:
     """
 
     def __init__(self,
-                 objective: Objective,
+                 objective: ObjectiveBase,
                  lb: Union[np.ndarray, List[float]],
                  ub: Union[np.ndarray, List[float]],
                  dim_full: Optional[int] = None,
                  x_fixed_indices: Optional[Iterable[int]] = None,
                  x_fixed_vals: Optional[Iterable[float]] = None,
                  x_guesses: Optional[Iterable[float]] = None,
-                 x_names: Optional[Iterable[str]] = None):
+                 x_names: Optional[Iterable[str]] = None,
+                 x_scales: Optional[Iterable[str]] = None,
+                 x_priors_defs: Optional[NegLogPriors] = None):
         self.objective = copy.deepcopy(objective)
-
-        self.lb = np.array(lb).flatten()
-        self.ub = np.array(ub).flatten()
 
         self.lb_full = np.array(lb).flatten()
         self.ub_full = np.array(ub).flatten()
 
-        self.dim_full = dim_full if dim_full is not None else self.lb.size
+        self.dim_full = dim_full if dim_full is not None else self.lb_full.size
 
         if x_fixed_indices is None:
             x_fixed_indices = []
-        self.x_fixed_indices: List[int] = [int(i) for i in x_fixed_indices]
+        self.x_fixed_indices: List[int] = [int(ix) for ix in x_fixed_indices]
 
         # We want the fixed values to be a list, since we might need to add
         # or remove values during profile computation
         if x_fixed_vals is None:
             x_fixed_vals = []
-        if not isinstance(x_fixed_vals, list):
+        if isinstance(x_fixed_vals, numbers.Real):
             x_fixed_vals = [x_fixed_vals]
+        self.x_fixed_vals: List[float] = [float(x) for x in x_fixed_vals]
 
-        self.x_fixed_vals = x_fixed_vals
-
-        self.dim: int = self.dim_full - len(self.x_fixed_indices)
-
-        self.x_free_indices = [
-            int(i) for i in
-            set(range(0, self.dim_full)) - set(self.x_fixed_indices)
-        ]
+        self._x_free_indices: Union[List[int], None] = None
 
         if x_guesses is None:
-            x_guesses = np.zeros((0, self.dim))
-        self.x_guesses = np.array(x_guesses)
+            x_guesses = np.zeros((0, self.dim_full))
+        self.x_guesses_full: np.ndarray = np.array(x_guesses)
 
         if objective.x_names is not None:
             x_names = objective.x_names
         elif x_names is None:
             x_names = [f'x{j}' for j in range(0, self.dim_full)]
-        self.x_names = x_names
+        self.x_names: List[str] = list(x_names)
 
-        self.normalize_input()
+        if x_scales is None:
+            x_scales = ['lin'] * self.dim_full
+        self.x_scales = x_scales
 
-    def normalize_input(self, check_x_guesses: bool = True) -> None:
+        self.x_priors = x_priors_defs
+
+        self.normalize()
+
+    @property
+    def lb(self) -> np.ndarray:
+        return self.lb_full[self.x_free_indices]
+
+    @property
+    def ub(self) -> np.ndarray:
+        return self.ub_full[self.x_free_indices]
+
+    @property
+    def x_guesses(self) -> np.ndarray:
+        return self.x_guesses_full[:, self.x_free_indices]
+
+    @property
+    def dim(self) -> int:
+        return self.dim_full - len(self.x_fixed_indices)
+
+    @property
+    def x_free_indices(self) -> List[int]:
+        return sorted(set(range(0, self.dim_full)) - set(self.x_fixed_indices))
+
+    def normalize(self) -> None:
         """
         Reduce all vectors to dimension dim and have the objective accept
         vectors of dimension dim.
         """
 
-        if self.lb.size == self.dim_full:
-            self.lb = self.lb[self.x_free_indices]
-        elif self.lb.size == 1:
-            self.lb = self.lb * np.ones(self.dim)
-            self.lb_full = self.lb * np.ones(self.dim_full)
+        if self.lb_full.size == 1:
+            self.lb_full = self.lb_full * np.ones(self.dim_full)
+        elif self.lb_full.size != self.dim_full:
+            self.lb_full = np.empty(self.dim_full)
+            self.lb_full[self.x_free_indices] = self.lb
+            self.lb_full[self.x_fixed_indices] = self.x_fixed_vals
 
-        if self.ub.size == self.dim_full:
-            self.ub = self.ub[self.x_free_indices]
-        elif self.ub.size == 1:
-            self.ub = self.ub * np.ones(self.dim)
-            self.ub_full = self.ub * np.ones(self.dim_full)
+        if self.ub_full.size == 1:
+            self.ub_full = self.ub_full * np.ones(self.dim_full)
+        elif self.ub_full.size != self.dim_full:
+            self.ub_full = np.empty(self.dim_full)
+            self.ub_full[self.x_free_indices] = self.ub
+            self.ub_full[self.x_fixed_indices] = self.x_fixed_vals
 
-        if self.x_guesses.shape[1] == self.dim_full:
-            self.x_guesses = self.x_guesses[:, self.x_free_indices]
+        if self.x_guesses_full.shape[1] != self.dim_full:
+            x_guesses = np.empty((self.x_guesses_full.shape[0], self.dim_full))
+            x_guesses[:] = np.nan
+            x_guesses[:, self.x_free_indices] = self.x_guesses_full
+            self.x_guesses_full = x_guesses
 
         # make objective aware of fixed parameters
         self.objective.update_from_problem(
@@ -151,17 +180,12 @@ class Problem:
             x_fixed_vals=self.x_fixed_vals)
 
         # sanity checks
-        if self.lb.size != self.dim:
-            raise AssertionError("lb dimension invalid.")
-        if self.ub.size != self.dim:
-            raise AssertionError("ub dimension invalid.")
         if self.lb_full.size != self.dim_full:
             raise AssertionError("lb_full dimension invalid.")
         if self.ub_full.size != self.dim_full:
             raise AssertionError("ub_full dimension invalid.")
-        if check_x_guesses:
-            if self.x_guesses.shape[1] != self.dim:
-                raise AssertionError("x_guesses form invalid.")
+        if len(self.x_scales) != self.dim_full:
+            raise AssertionError("x_scales dimension invalid.")
         if len(self.x_names) != self.dim_full:
             raise AssertionError("x_names must be of length dim_full.")
         if len(self.x_fixed_indices) != len(self.x_fixed_vals):
@@ -182,7 +206,7 @@ class Problem:
         if not isinstance(parameter_vals, list):
             parameter_vals = [parameter_vals]
 
-        # first clean to be fixed indices to avoid redundancies
+        # first clean to-be-fixed indices to avoid redundancies
         for i_index, i_parameter in enumerate(parameter_indices):
             # check if parameter was already fixed, otherwise add it to the
             # fixed parameters
@@ -194,14 +218,7 @@ class Problem:
                 self.x_fixed_indices.append(i_parameter)
                 self.x_fixed_vals.append(parameter_vals[i_index])
 
-        self.dim = self.dim_full - len(self.x_fixed_indices)
-
-        self.x_free_indices = [
-            int(i) for i in
-            set(range(0, self.dim_full)) - set(self.x_fixed_indices)
-        ]
-
-        self.normalize_input()
+        self.normalize()
 
     def unfix_parameters(
             self,
@@ -214,24 +231,14 @@ class Problem:
         if not isinstance(parameter_indices, list):
             parameter_indices = [parameter_indices]
 
-        # first clean to be freed indices
-        for i_index, i_parameter in enumerate(parameter_indices):
+        # first clean to-be-freed indices
+        for i_parameter in parameter_indices:
             if i_parameter in self.x_fixed_indices:
+                i_index = self.x_fixed_indices.index(i_parameter)
                 self.x_fixed_indices.pop(i_index)
                 self.x_fixed_vals.pop(i_index)
 
-        self.dim = self.dim_full - len(self.x_fixed_indices)
-
-        self.x_free_indices = [
-            int(i) for i in
-            set(range(0, self.dim_full)) - set(self.x_fixed_indices)
-        ]
-
-        # readapt bounds
-        self.lb = self.lb_full[self.x_free_indices]
-        self.ub = self.ub_full[self.x_free_indices]
-
-        self.normalize_input(False)
+        self.normalize()
 
     def get_full_vector(
             self,
@@ -335,21 +342,36 @@ class Problem:
 
         return x
 
+    def full_index_to_free_index(self, full_index: int):
+        """Calculate index in reduced vector from index in full vector.
+
+        Parameters
+        ----------
+        full_index: The index in the full vector.
+
+        Returns
+        -------
+        free_index: The index in the free vector.
+        """
+        fixed_indices = np.asarray(self.x_fixed_indices)
+        if full_index in fixed_indices:
+            raise ValueError(
+                "Cannot compute index in free vector: Index is fixed.")
+        return full_index - sum(fixed_indices < full_index)
+
     def print_parameter_summary(self) -> None:
         """
         Prints a summary of what parameters are being optimized and
-        what parameter boundaries are
+        parameter boundaries.
         """
-        print(
+        print(  # noqa: T001 (print)
             pd.DataFrame(
                 index=self.x_names,
                 data={
-                    'free': [
-                        idx not in self.x_fixed_indices
-                        for idx in range(self.dim_full)
-                    ],
-                    'lb': self.lb_full,
-                    'ub': self.ub_full
+                    'free': [idx in self.x_free_indices
+                             for idx in range(self.dim_full)],
+                    'lb_full': self.lb_full,
+                    'ub_full': self.ub_full
                 }
             )
         )
