@@ -58,7 +58,8 @@ class HierarchicalAmiciCalculator(AmiciCalculator):
                  edatas: List['amici.ExpData'],
                  n_threads: int,
                  x_ids: Sequence[str],
-                 parameter_mapping: 'ParameterMapping'):
+                 parameter_mapping: 'ParameterMapping',
+                 fim_for_hess: bool):
 
         dim = len(x_ids)
         nllh = 0.0
@@ -163,4 +164,4 @@ class HierarchicalAmiciCalculator(AmiciCalculator):
 
             return calculate_function_values(
                 rdatas, sensi_order, mode, amici_model, amici_solver, edatas,
-                x_ids, parameter_mapping)
+                x_ids, parameter_mapping,fim_for_hess)

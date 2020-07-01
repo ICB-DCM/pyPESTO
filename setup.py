@@ -34,16 +34,11 @@ setup(name='pypesto',
       tests_require=['pytest>=5.4.2',
                      'flake8>=3.7.2',
                      'gitpython>=3.1.2'],
-<<<<<<< HEAD
-      extras_require={'amici': ['amici>=0.10.21'],
-                      'petab': ['petab>=0.1.7'],
-=======
       extras_require={'amici': ['amici>=0.11.1'],
                       'petab': ['petab>=0.1.7'],
                       'ipopt': ['ipopt>=0.1.9'],
                       'dlib': ['dlib>=19.19.0'],
                       'pyswarm': ['pyswarm>=0.6'],
->>>>>>> develop
                       'pymc3': ['arviz>=0.8.1',
                                 'theano>=1.0.4',
                                 'packaging>=20.0',
