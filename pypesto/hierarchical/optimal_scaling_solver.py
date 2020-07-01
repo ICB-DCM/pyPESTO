@@ -110,7 +110,7 @@ def optimize_surrogate_data(xs: List[InnerParameter],
 
     def obj_surr(x):
         return obj_surrogate_data(xs, x, sim, interval_gap,
-                                            interval_range, w, options)
+                                  interval_range, w, options)
 
     inner_options = \
         get_inner_options(options, xs, sim, interval_range, interval_gap)
@@ -124,7 +124,7 @@ def get_inner_options(options: Dict,
                       sim: List[np.ndarray],
                       interval_range: float,
                       interval_gap: float) -> Dict:
-    """Return default otpions for scipy optimizer"""
+    """Return default options for scipy optimizer"""
 
     from scipy.optimize import Bounds
 
@@ -172,6 +172,7 @@ def get_min_max(xs: List[InnerParameter],
     max_all = np.max(sim_all)
 
     return min_all, max_all
+
 
 def get_sim_all(xs, sim: List[np.ndarray]) -> list:
     """"Get list of all simulations for all xs"""
