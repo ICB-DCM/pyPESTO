@@ -1,3 +1,0 @@
-observableId	observableName	observableFormula	noiseFormula	observableTransformation	noiseDistribution
-Activity	Activity	R_R+RIR	noiseParameter1_Activity	lin	normal
-Ybar	Ybar	(RI+RIR+2*RIRI)/Rtot	noiseParameter1_Ybar	lin	normal

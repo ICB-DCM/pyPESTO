@@ -6,7 +6,6 @@ K5	K5	log10	1E-05	100000	0.1	1			0
 K4	K4	lin	-5	5	8	0			0			
 K6	K6	lin	-5	5	0.04	0			0			
 Itot	Itot	lin	-5	5	30	0			0			
-init_I	init_I	lin	-5	5	30	0			0			
 Dimerize_k2	Dimerize_k2	lin	-5	5	1	0			0			
 Dimerize_RI_k2	Dimerize_RI_k2	lin	-5	5	1	0			0			
 Inhibit_k2	Inhibit_k2	lin	-5	5	1	0			0			
