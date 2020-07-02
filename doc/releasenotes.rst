@@ -11,7 +11,7 @@ Release notes
 
 Major:
 
-* Modularize Import, to import optimization, sampling and profiling
+* Modularize import, to import optimization, sampling and profiling
   separately (#413)
 
 Minor:
@@ -21,7 +21,7 @@ Minor:
   * visualization (#405)
   * PEtab import (#403)
   * Hessian computation (#390)
-* Imporove hdf5 error output (#409)
+* Improve hdf5 error output (#409)
 * Outlaw large new files in GitHub commits (#388)
 
 
