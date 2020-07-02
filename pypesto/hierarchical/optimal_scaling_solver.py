@@ -82,6 +82,7 @@ class OptimalScalingInnerSolver(InnerSolver):
             obj = np.sum(
                 [x_inner_opt[idx]['fun'] for idx in range(len(x_inner_opt))]
             )
+        print(obj)
         return obj
 
     @staticmethod
@@ -126,7 +127,6 @@ def get_inner_options(options: Dict,
                       interval_gap: float) -> Dict:
 
     """Return default options for scipy optimizer"""
-
 
     from scipy.optimize import Bounds
 
@@ -174,9 +174,6 @@ def get_min_max(xs: List[InnerParameter],
     max_all = np.max(sim_all)
 
     return min_all, max_all
-
-def get_sim_all(xs, sim: List[np.ndarray]) -> list:
-    """"Get list of all simulations for all xs"""
 
 
 def get_sim_all(xs, sim: List[np.ndarray]) -> list:
