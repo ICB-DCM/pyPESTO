@@ -9,6 +9,7 @@ import numpy as np
 import scipy.optimize as opt
 
 import pypesto
+import pypesto.optimize
 from pypesto.objective import NegLogParameterPriors
 from pypesto.objective.priors import get_parameter_prior_dict
 
@@ -38,11 +39,10 @@ def test_mode():
                                        dim_full=1,
                                        x_scales=[scale])
 
-        optimizer = pypesto.ScipyOptimizer(method='Nelder-Mead')
+        optimizer = pypesto.optimize.ScipyOptimizer(method='Nelder-Mead')
 
-        result = pypesto.minimize(problem=test_problem,
-                                  optimizer=optimizer,
-                                  n_starts=10)
+        result = pypesto.optimize.minimize(
+            problem=test_problem, optimizer=optimizer, n_starts=10)
 
         assert np.isclose(result.optimize_result.list[0]['x'],
                           problem_dict[scale]['opt'], atol=1e-04)
