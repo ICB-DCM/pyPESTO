@@ -1,4 +1,5 @@
 import matplotlib.pyplot as plt
+import matplotlib.axes
 from matplotlib.ticker import MaxNLocator
 import numpy as np
 import numbers
@@ -6,7 +7,7 @@ import numbers
 from typing import Iterable, List, Optional, Sequence, Tuple, Union
 
 from ..result import Result
-from .reference_points import create_references
+from .reference_points import create_references, ReferencePoint
 from .clust_color import assign_colors
 from .clust_color import delete_nan_inf
 from .misc import process_result_list
@@ -14,17 +15,17 @@ from .misc import process_result_list
 
 def parameters(
         results: Union[Result, Sequence[Result]],
-        ax: Optional['matplotlib.Axes'] = None,
+        ax: Optional[matplotlib.axes.Axes] = None,
         parameter_indices: Union[str, Sequence[int]] = 'free_only',
         lb: Optional[Union[np.ndarray, List[float]]] = None,
         ub: Optional[Union[np.ndarray, List[float]]] = None,
         size: Optional[Tuple[float, float]] = None,
-        reference: Optional[List['ReferencePoint']] = None,
+        reference: Optional[List[ReferencePoint]] = None,
         colors: Optional[Union[List[float], List[List[float]]]] = None,
         legends: Optional[Union[str, List[str]]] = None,
         balance_alpha: bool = True,
         start_indices: Optional[Union[int, Iterable[int]]] = None
-) -> 'matplotlib.Axes':
+) -> matplotlib.axes.Axes:
     """
     Plot parameter values.
 
@@ -116,18 +117,18 @@ def parameters(
 
 
 def parameters_lowlevel(
-        xs: Sequence[np.ndarray],
+        xs: Sequence[Union[np.ndarray, List[float]]],
         fvals: Union[np.ndarray, List[float]],
         lb: Optional[Union[np.ndarray, List[float]]] = None,
         ub: Optional[Union[np.ndarray, List[float]]] = None,
         x_labels: Optional[Iterable[str]] = None,
-        ax: Optional['matplotlib.Axes'] = None,
+        ax: Optional[matplotlib.axes.Axes] = None,
         size: Optional[Tuple[float, float]] = None,
         colors: Optional[Sequence[Union[np.ndarray, List[float]]]] = None,
         linestyle: str = '-',
         legend_text: Optional[str] = None,
         balance_alpha: bool = True
-) -> 'matplotlib.Axes':
+) -> matplotlib.axes.Axes:
 
     """
     Plot parameters plot using list of parameters.
@@ -302,7 +303,8 @@ def handle_inputs(
     # handle fixed and free indices
     if len(parameter_indices) < result.problem.dim_full:
         for ix, x in enumerate(xs_out):
-            xs_out[ix] = result.problem.get_reduced_vector(x, parameter_indices)
+            xs_out[ix] = result.problem.get_reduced_vector(x,
+                                                           parameter_indices)
         lb = result.problem.get_reduced_vector(lb, parameter_indices)
         ub = result.problem.get_reduced_vector(ub, parameter_indices)
         x_labels = [x_labels[int(i)] for i in parameter_indices]
