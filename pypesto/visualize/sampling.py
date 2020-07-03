@@ -276,7 +276,7 @@ def sampling_1d_marginals(
     # get data which should be plotted
     nr_params, params_fval, theta_lb, theta_ub = get_data_to_plot(
         result=result, i_chain=i_chain, stepsize=stepsize)
-    
+
     if par_indices is not None:
         param_names = params_fval.columns.values[par_indices]
         nr_params = len(par_indices)
