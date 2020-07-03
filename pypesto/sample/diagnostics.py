@@ -27,7 +27,7 @@ def geweke_test(result: Result, zscore: float = 2.) -> int:
 
     """
     # Get parameter samples as numpy arrays
-    chain = np.array(result.sample_result.trace_x[0])
+    chain = np.asarray(result.sample_result.trace_x[0])
 
     # Calculate burn in index
     burn_in = burn_in_by_sequential_geweke(chain=chain,
@@ -57,16 +57,74 @@ def auto_correlation(result: Result) -> float:
         Estimate of the integrated autocorrelation time of
         the MCMC chains.
     """
-    # Get parameter samples as numpy arrays
-    chain = np.array(result.sample_result.trace_x[0])
+    # Check if burn in index is available
+    if result.sample_result.burn_in is None:
+        geweke_test(result)
+
+    # Get burn in index
+    burn_in = result.sample_result.burn_in
+
+    # Get converged parameter samples as numpy arrays
+    chain = np.asarray(result.sample_result.trace_x[0, burn_in:, :])
 
     # Calculate autocorrelation
-    auto_correlation = autocorrelation_sokal(chain=chain)
+    auto_correlation_vector = autocorrelation_sokal(chain=chain)
+
+    # Take the maximum over all components
+    _auto_correlation = max(auto_correlation_vector)
 
     # Log
-    logger.info(f'Estimated chain autocorrelation: {auto_correlation}')
+    logger.info(f'Estimated chain autocorrelation: {_auto_correlation}')
 
     # Fill in autocorrelation value into result
-    result.sample_result.auto_correlation = auto_correlation
+    result.sample_result.auto_correlation = _auto_correlation
 
-    return auto_correlation
+    return _auto_correlation
+
+
+def effective_sample_size(result: Result) -> float:
+    """
+    Calculates the effective sample size of the MCMC chains.
+
+    Parameters
+    ----------
+    result:
+        The pyPESTO result object with filled sample result.
+
+    Returns
+    -------
+    ess:
+        Estimate of the effective sample size of
+        the MCMC chains.
+    """
+    # Check if burn in index is available
+    if result.sample_result.burn_in is None:
+        geweke_test(result)
+
+    # Get burn in index
+    burn_in = result.sample_result.burn_in
+
+    # Check if autocorrelation is available
+    if result.sample_result.auto_correlation is None:
+        # Calculate autocorrelation
+        auto_correlation(result)
+
+    # Get estimated chain autocorrelation
+    _auto_correlation = result.sample_result.auto_correlation
+
+    # Get converged parameter samples as numpy arrays
+    chain = np.asarray(result.sample_result.trace_x[0, burn_in:, :])
+
+    # Get length of the converged chain
+    N = chain.shape[0]
+
+    # Calculate effective sample size
+    ess = N / (1 + _auto_correlation)
+
+    # Log
+    logger.info(f'Estimated effective sample size: {ess}')
+
+    # Fill in effective sample size value into result
+    result.sample_result.effective_sample_size = ess
+
+    return ess
