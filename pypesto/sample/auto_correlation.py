@@ -5,7 +5,15 @@ def autocorrelation_sokal(chain: np.ndarray) -> np.ndarray:
     """
     Estimate the integrated autocorrelation time of a MCMC chain
     using Sokal's adaptive truncated periodogram estimator.
-    `Sokal's notes <http://www.stat.unc.edu/faculty/cji/Sokal.pdf>`
+
+    - Haario, H., Laine, M., Mira, A. et al. DRAM: Efficient
+    adaptive MCMC. Stat Comput 16, 339–354 (2006).
+    https://doi.org/10.1007/s11222-006-9438-0
+
+    - Sokal A. (1997) Monte Carlo Methods in Statistical Mechanics:
+    Foundations and New Algorithms. In: DeWitt-Morette C.,
+    Cartier P., Folacci A. (eds) Functional Integration.
+    NATO ASI Series (Series B: Physics), vol 361. Springer, Boston, MA
 
     Parameters
     ----------
