@@ -95,7 +95,7 @@ def auto_correlation(result: Result) -> float:
 
 def effective_sample_size(result: Result) -> float:
     """
-    Calculates the effective sample size of the MCMC chains.
+    Calculate the effective sample size of the MCMC chains.
 
     Parameters
     ----------
