@@ -332,13 +332,13 @@ def test_autocorrelation_pipeline():
 
     # run auto-correlation with previous geweke
     sample.geweke_test(result)
-    print(result.sample_result.burn_in)
+
     ac1 = sample.auto_correlation(result)
 
     # run auto-correlation without previous geweke
     result.sample_result.burn_in = None
     ac2 = sample.auto_correlation(result)
-    print(result.sample_result.burn_in)
+
     assert ac1 == ac2
 
     # run effective sample size with previous geweke
@@ -347,13 +347,9 @@ def test_autocorrelation_pipeline():
 
     # run effective sample size without previous geweke
     # and autocorrelation
-    print(result.sample_result.burn_in)
-    print(result.sample_result.auto_correlation)
     result.sample_result.burn_in = None
     result.sample_result.auto_correlation = None
     ess2 = sample.effective_sample_size(result)
-    print(result.sample_result.burn_in)
-    print(result.sample_result.auto_correlation)
 
     assert ess1 == ess2
 
