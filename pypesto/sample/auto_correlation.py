@@ -15,28 +15,38 @@ def autocorrelation_sokal(chain):
         the MCMC chain.
     """
 
-    mx, nx = chain.shape
-    tau_est = np.zeros((nx))
-    m = np.zeros((nx))
+    nsamples, npar = chain.shape
+    tau_est = np.zeros((npar))
 
+    # Calculate the fast Fourier transform
     x = np.fft.fft(chain, axis=0)
+    # Get the real part
     xr = np.real(x)
+    # Get the imaginary part
     xi = np.imag(x)
-    xr = xr**2 + xi**2
-    xr[0, :] = 0.
-    xr = np.real(np.fft.fft(xr, axis=0))
-    var = xr[0]/mx/(mx-1)
 
-    for j in range(nx):
+    xr = xr**2 + xi**2
+    # First value to zero
+    xr[0, :] = 0.
+    # Calculate the fast Fourier transform
+    # of the transformation
+    xr = np.real(np.fft.fft(xr, axis=0))
+    # Calculate the variance
+    var = xr[0]/nsamples/(nsamples-1)
+
+    # Loop over parameters
+    for j in range(npar):
         if var[j] == 0.:
             continue
+        # Normalize by the first value
         xr[:, j] = xr[:, j]/xr[0, j]
-        sum = -1/3
-        for i in range(mx):
-            sum = sum + xr[i, j] - 1/6
-            if sum < 0.:
-                tau_est[j] = 2 * (sum + i/6)
-                m[j] = i
+        # Initiate variable
+        _sum = -1/3
+        # Loop over samples
+        for i in range(nsamples):
+            _sum = _sum + xr[i, j] - 1/6
+            if _sum < 0.:
+                tau_est[j] = 2 * (_sum + i/6)
                 break
 
     return tau_est
