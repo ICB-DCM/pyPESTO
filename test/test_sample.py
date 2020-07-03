@@ -317,6 +317,76 @@ def test_geweke_test_unconverged():
     sample.geweke_test(result)
 
 
+def test_autocorrelation_pipeline():
+    """Check that the autocorrelation test works."""
+    problem = gaussian_problem()
+
+    sampler = sample.MetropolisSampler()
+
+    # optimization
+    result = optimize.minimize(problem, n_starts=3)
+
+    # sample
+    result = sample.sample(
+        problem, sampler=sampler, n_samples=1000, result=result)
+
+    # run auto-correlation with previous geweke
+    sample.geweke_test(result)
+    print(result.sample_result.burn_in)
+    ac1 = sample.auto_correlation(result)
+
+    # run auto-correlation without previous geweke
+    result.sample_result.burn_in = None
+    ac2 = sample.auto_correlation(result)
+    print(result.sample_result.burn_in)
+    assert ac1 == ac2
+
+    # run effective sample size with previous geweke
+    # and autocorrelation
+    ess1 = sample.effective_sample_size(result)
+
+    # run effective sample size without previous geweke
+    # and autocorrelation
+    print(result.sample_result.burn_in)
+    print(result.sample_result.auto_correlation)
+    result.sample_result.burn_in = None
+    result.sample_result.auto_correlation = None
+    ess2 = sample.effective_sample_size(result)
+    print(result.sample_result.burn_in)
+    print(result.sample_result.auto_correlation)
+
+    assert ess1 == ess2
+
+
+def test_autocorrelation_short_chain():
+    """Check that the autocorrelation
+    reacts nicely to small sample numbers."""
+    problem = gaussian_problem()
+
+    sampler = sample.MetropolisSampler()
+
+    # optimization
+    result = optimize.minimize(problem, n_starts=3)
+
+    # sample
+    result = sample.sample(
+        problem, sampler=sampler, n_samples=10, result=result)
+
+    # manually set burn in to chain length (only for testing!!)
+    chain_length = result.sample_result.trace_x.shape[1]
+    result.sample_result.burn_in = chain_length
+
+    # run auto-correlation
+    ac = sample.auto_correlation(result)
+
+    assert ac is None
+
+    # run effective sample size
+    ess = sample.effective_sample_size(result)
+
+    assert ess is None
+
+
 def test_autocorrelation_mixture():
     """Check that the autocorrelation is the same for the same chain
     with different scalings."""

@@ -64,6 +64,17 @@ def auto_correlation(result: Result) -> float:
     # Get burn in index
     burn_in = result.sample_result.burn_in
 
+    # Get chain length
+    chain_length = result.sample_result.trace_x.shape[1]
+
+    if burn_in == chain_length:
+        logger.warning("The autocorrelation can not "
+                       "be estimated. The chain seems "
+                       "that has not converged yet.\n"
+                       "You may want to use a larger number "
+                       "of samples.")
+        return None
+
     # Get converged parameter samples as numpy arrays
     chain = np.asarray(result.sample_result.trace_x[0, burn_in:, :])
 
@@ -97,20 +108,20 @@ def effective_sample_size(result: Result) -> float:
         Estimate of the effective sample size of
         the MCMC chains.
     """
-    # Check if burn in index is available
-    if result.sample_result.burn_in is None:
-        geweke_test(result)
-
-    # Get burn in index
-    burn_in = result.sample_result.burn_in
 
     # Check if autocorrelation is available
     if result.sample_result.auto_correlation is None:
         # Calculate autocorrelation
         auto_correlation(result)
 
+    # Get burn in index
+    burn_in = result.sample_result.burn_in
+
     # Get estimated chain autocorrelation
     _auto_correlation = result.sample_result.auto_correlation
+
+    if _auto_correlation is None:
+        return None
 
     # Get converged parameter samples as numpy arrays
     chain = np.asarray(result.sample_result.trace_x[0, burn_in:, :])
