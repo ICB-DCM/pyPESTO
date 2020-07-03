@@ -1,7 +1,7 @@
 import numpy as np
 
 
-def autocorrelation_sokal(chain):
+def autocorrelation_sokal(chain: np.array):
     """
     Estimate the integrated autocorrelation time of a MCMC chain
     using Sokal's adaptive truncated periodogram estimator.
