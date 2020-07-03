@@ -69,8 +69,8 @@ def auto_correlation(result: Result) -> float:
 
     if burn_in == chain_length:
         logger.warning("The autocorrelation can not "
-                       "be estimated. The chain seems "
-                       "that has not converged yet.\n"
+                       "be estimated. The chain seems to "
+                       "not have converged yet.\n"
                        "You may want to use a larger number "
                        "of samples.")
         return None

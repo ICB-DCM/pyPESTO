@@ -208,7 +208,7 @@ def burn_in_by_sequential_geweke(chain: np.ndarray,
     else:
         burn_in = nsamples
         logger.warning("Burn in index coincides with chain "
-                       "length. The chain seems that has not "
+                       "length. The chain seems to not have "
                        "converged yet.\n"
                        "You may want to use a larger number "
                        "of samples.")
