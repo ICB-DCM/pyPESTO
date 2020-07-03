@@ -20,6 +20,12 @@ class McmcPtResult(dict):
         The associated inverse temperatures.
     burn_in: [n_chain]
         The burn in index.
+    time: [n_chain]
+        The computation time.
+    auto_correlation: [n_chain]
+        The estimated chain autcorrelation.
+    effective_sample_size: [n_chain]
+        The estimated effective sample size.
     message: str
         Textual comment on the profile result.
 
