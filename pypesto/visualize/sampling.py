@@ -4,7 +4,7 @@ import matplotlib.axes
 import numpy as np
 import pandas as pd
 import seaborn as sns
-from typing import Tuple
+from typing import Sequence, Tuple
 
 from ..result import Result
 from ..sample import McmcPtResult
@@ -238,6 +238,7 @@ def sampling_scatter(
 def sampling_1d_marginals(
         result: Result,
         i_chain: int = 0,
+        par_indices: Sequence[int] = None,
         stepsize: int = 1,
         plot_type: str = 'both',
         bw: str = 'scott',
@@ -252,6 +253,9 @@ def sampling_1d_marginals(
         The pyPESTO result object with filled sample result.
     i_chain:
         Which chain to plot. Default: First chain.
+    par_indices: list of integer values
+        List of integer values specifying which parameters to plot.
+        Default: All parameters are shown.
     stepsize:
         Only one in `stepsize` values is plotted.
     plot_type: {'hist'|'kde'|'both'}
@@ -272,7 +276,12 @@ def sampling_1d_marginals(
     # get data which should be plotted
     nr_params, params_fval, theta_lb, theta_ub = get_data_to_plot(
         result=result, i_chain=i_chain, stepsize=stepsize)
-    param_names = params_fval.columns.values[0:nr_params]
+    
+    if par_indices is not None:
+        param_names = params_fval.columns.values[par_indices]
+        nr_params = len(par_indices)
+    else:
+        param_names = params_fval.columns.values[0:nr_params]
 
     # compute, how many rows and columns we need for the subplots
     num_row = int(np.round(np.sqrt(nr_params)))
