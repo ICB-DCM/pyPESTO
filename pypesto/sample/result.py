@@ -34,6 +34,8 @@ class McmcPtResult(dict):
                  betas: Iterable[float],
                  burn_in: int = None,
                  time: float = 0.,
+                 auto_correlation: float = None,
+                 effective_sample_size: float = None,
                  message: str = None):
         super().__init__()
 
@@ -43,6 +45,8 @@ class McmcPtResult(dict):
         self.betas = betas
         self.burn_in = burn_in
         self.time = time
+        self.auto_correlation = auto_correlation
+        self.effective_sample_size = effective_sample_size
         self.message = message
 
         if trace_x.ndim != 3:
