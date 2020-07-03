@@ -7,7 +7,7 @@ from scipy.stats import norm
 logger = logging.getLogger(__name__)
 
 
-def spectrum(x: np.array,
+def spectrum(x: np.ndarray,
              nfft: int = None,
              nw: int = None) -> np.ndarray:
     """
@@ -69,7 +69,7 @@ def spectrum(x: np.array,
     return spectral_density
 
 
-def spectrum0(x: np.array) -> np.ndarray:
+def spectrum0(x: np.ndarray) -> np.ndarray:
     """
     Calculates the spectral density at frequency zero.
 
@@ -94,7 +94,7 @@ def spectrum0(x: np.array) -> np.ndarray:
     return spectral_density_zero
 
 
-def calculate_zscore(chain: np.array,
+def calculate_zscore(chain: np.ndarray,
                      a: float = 0.1,
                      b: float = 0.5) -> Tuple[float, float]:
     """
@@ -160,7 +160,7 @@ def calculate_zscore(chain: np.array,
     return z_score, p
 
 
-def burn_in_by_sequential_geweke(chain: np.array,
+def burn_in_by_sequential_geweke(chain: np.ndarray,
                                  zscore: float = 2.) -> int:
     """
     Calculates the burn-in of MCMC chains.
