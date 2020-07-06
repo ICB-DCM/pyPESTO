@@ -2,6 +2,29 @@ Release notes
 =============
 
 
+0.2 series
+..........
+
+
+0.2.0 (2020-06-17)
+------------------
+
+Major:
+
+* Modularize import, to import optimization, sampling and profiling
+  separately (#413)
+
+Minor:
+
+* Bug fixes in
+  * sampling (#412)
+  * visualization (#405)
+  * PEtab import (#403)
+  * Hessian computation (#390)
+* Improve hdf5 error output (#409)
+* Outlaw large new files in GitHub commits (#388)
+
+
 0.1 series
 ..........
 
