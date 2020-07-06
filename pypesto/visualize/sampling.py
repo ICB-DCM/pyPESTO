@@ -46,10 +46,10 @@ def sampling_fval_trace(
     """
 
     # get data which should be plotted
-    _, params_fval, _, _ = get_data_to_plot(result=result,
-                                            i_chain=i_chain,
-                                            stepsize=stepsize,
-                                            full_trace=full_trace)
+    _, params_fval, _, _, _ = get_data_to_plot(result=result,
+                                               i_chain=i_chain,
+                                               stepsize=stepsize,
+                                               full_trace=full_trace)
 
     # set axes and figure
     if ax is None:
@@ -94,6 +94,7 @@ def sampling_fval_trace(
 def sampling_parameters_trace(
         result: Result,
         i_chain: int = 0,
+        par_indices: Sequence[int] = None,
         full_trace: bool = False,
         stepsize: int = 1,
         use_problem_bounds: bool = True,
@@ -108,6 +109,9 @@ def sampling_parameters_trace(
         The pyPESTO result object with filled sample result.
     i_chain:
         Which chain to plot. Default: First chain.
+    par_indices: list of integer values
+        List of integer values specifying which parameters to plot.
+        Default: All parameters are shown.
     full_trace:
         Plot the full trace including warm up. Default: False.
     stepsize:
@@ -129,11 +133,9 @@ def sampling_parameters_trace(
     """
 
     # get data which should be plotted
-    nr_params, params_fval, theta_lb, theta_ub = get_data_to_plot(
+    nr_params, params_fval, theta_lb, theta_ub, param_names = get_data_to_plot(
         result=result, i_chain=i_chain, stepsize=stepsize,
-        full_trace=full_trace)
-
-    param_names = params_fval.columns.values[0:nr_params]
+        full_trace=full_trace, par_indices=par_indices)
 
     # compute, how many rows and columns we need for the subplots
     num_row = int(np.round(np.sqrt(nr_params)))
@@ -218,7 +220,7 @@ def sampling_scatter(
     """
 
     # get data which should be plotted
-    nr_params, params_fval, theta_lb, theta_ub = get_data_to_plot(
+    nr_params, params_fval, theta_lb, theta_ub, _ = get_data_to_plot(
         result=result, i_chain=i_chain, stepsize=stepsize)
 
     sns.set(style="ticks")
@@ -274,14 +276,9 @@ def sampling_1d_marginals(
     """
 
     # get data which should be plotted
-    nr_params, params_fval, theta_lb, theta_ub = get_data_to_plot(
-        result=result, i_chain=i_chain, stepsize=stepsize)
-
-    if par_indices is not None:
-        param_names = params_fval.columns.values[par_indices]
-        nr_params = len(par_indices)
-    else:
-        param_names = params_fval.columns.values[0:nr_params]
+    nr_params, params_fval, theta_lb, theta_ub, param_names = get_data_to_plot(
+        result=result, i_chain=i_chain,
+        stepsize=stepsize, par_indices=par_indices)
 
     # compute, how many rows and columns we need for the subplots
     num_row = int(np.round(np.sqrt(nr_params)))
@@ -316,7 +313,8 @@ def sampling_1d_marginals(
 
 
 def get_data_to_plot(
-        result: Result, i_chain: int, stepsize: int, full_trace: bool = False):
+        result: Result, i_chain: int, stepsize: int,
+        full_trace: bool = False, par_indices: Sequence[int] = None):
     """Get the data which should be plotted as a pandas.DataFrame.
 
     Parameters
@@ -329,6 +327,22 @@ def get_data_to_plot(
         Only one in `stepsize` values is plotted.
     full_trace:
         Keep the full length of the chain. Default: False.
+    par_indices: list of integer values
+        List of integer values specifying which parameters to plot.
+        Default: All parameters are shown.
+
+    Returns
+    -------
+    nr_params:
+        Number of parameters to be plotted.
+    params_fval:
+        Log posterior values to be plotted.
+    theta_lb:
+        Parameter lower bounds to be plotted.
+    theta_ub:
+        Parameter upper bounds to be plotted.
+    param_names:
+        Parameter names to be plotted.
     """
     # get parameters and fval results as numpy arrays
     arr_param = np.array(result.sample_result.trace_x[i_chain])
@@ -383,4 +397,10 @@ def get_data_to_plot(
     # some global parameters
     nr_params = arr_param.shape[1]  # number of parameters
 
-    return nr_params, params_fval, theta_lb, theta_ub
+    if par_indices is not None:
+        param_names = params_fval.columns.values[par_indices]
+        nr_params = len(par_indices)
+    else:
+        param_names = params_fval.columns.values[0:nr_params]
+
+    return nr_params, params_fval, theta_lb, theta_ub, param_names
