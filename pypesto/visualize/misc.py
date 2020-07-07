@@ -3,7 +3,8 @@ import warnings
 from .clust_color import assign_colors
 from .clust_color import assign_colors_for_result_list
 
-from typing import Optional
+from numbers import Number
+from typing import Iterable, Optional, Union
 
 
 def process_result_list(results, colors=None, legends=None):
@@ -141,9 +142,6 @@ def process_y_limits(ax, y_limits):
     y_limits: ndarray
        y_limits, minimum and maximum, for current axes object
 
-    min_val: float
-        Smallest value to be plotted
-
     Returns
     -------
 
@@ -181,3 +179,31 @@ def process_y_limits(ax, y_limits):
             ax.set_ylim(y_limits)
 
     return ax
+
+
+def process_start_indices(start_indices: Union[int, Iterable[int]],
+                          max_index: int) -> np.ndarray:
+    """
+    helper function that processes the start_indices and
+    creates an array of indices if a number was provided and checks that the
+    indices do not exceed the max_index
+
+    Parameters
+    ----------
+    start_indices:
+        list of indices or int specifying an endpoint of the sequence of
+        indices
+    max_index:
+        maximum possible index for the start_indices
+    """
+    # TODO: use also in waterfall and parameters plots
+    if isinstance(start_indices, Number):
+        start_indices = range(int(start_indices))
+
+    start_indices = np.array(start_indices, dtype=int)
+
+    # check, whether index set is not too big
+    existing_indices = np.array(range(max_index))
+    start_indices = np.intersect1d(start_indices, existing_indices)
+
+    return start_indices

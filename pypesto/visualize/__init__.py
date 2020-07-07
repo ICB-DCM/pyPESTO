@@ -21,6 +21,7 @@ from .parameters import (parameters,
                          parameters_lowlevel)
 from .optimizer_history import (optimizer_history,
                                 optimizer_history_lowlevel)
+from .optimization_stats import number_of_steps, optimization_time
 from .profiles import (profiles,
                        profiles_lowlevel,
                        profile_lowlevel)

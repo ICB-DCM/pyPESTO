@@ -433,6 +433,55 @@ def test_optimizer_history_lowlevel():
     visualize.optimizer_history_lowlevel(vals)
 
 
+@close_fig
+def test_optimization_stats():
+    """ Test pypesto.visualize.optimization_stats """
+
+    # create the pypesto problem
+    problem = create_problem()
+
+    # create optimizer
+    optimizer_options = {'maxiter': 200}
+    optimizer = optimize.ScipyOptimizer(
+        method='TNC', options=optimizer_options)
+
+    # run optimization
+    result_1 = optimize.minimize(
+        problem=problem,
+        optimizer=optimizer,
+        n_starts=5,
+        startpoint_method=pypesto.startpoint.uniform,
+    )
+
+    result_2 = optimize.minimize(
+        problem=problem,
+        optimizer=optimizer,
+        n_starts=5,
+        startpoint_method=pypesto.startpoint.uniform,
+    )
+
+    visualize.number_of_steps(result_1, legends='best result')
+
+    visualize.number_of_steps(result_1, plot_type='hist', legends='best result')
+
+    visualize.number_of_steps(result_2)
+
+    # test plotting of lists
+    visualize.number_of_steps([result_1, result_2],
+                              legends=['result1', 'result2'],
+                              plot_type='line')
+
+    visualize.optimization_time(result_1)
+
+    visualize.optimization_time(result_1, plot_type='hist',
+                                legends='best result')
+
+    visualize.optimization_time([result_1, result_2],
+                                colors=[[.5, .9, .9, .3], [.9, .7, .8, .5]],
+                                legends=['result1', 'result2'],
+                                plot_type='hist')
+
+
 def test_assign_clusters():
     # test empty input
     visualize.assign_clusters([])

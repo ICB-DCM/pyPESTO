@@ -6,7 +6,7 @@ from typing import List
 class ReferencePoint(dict):
     """
     Reference point for plotting. Should contain a parameter value and an
-    objective function value, may alos contain a color and a legend.
+    objective function value, may also contain a color and a legend.
 
     Can be used like a dict.
 
@@ -76,12 +76,12 @@ class ReferencePoint(dict):
             if x is not None:
                 self.x = np.array(x)
             else:
-                raise ('Parameter vector x not passed, but is a manadatory '
+                raise ('Parameter vector x not passed, but is a mandatory '
                        'input when creating a reference point. Stopping.')
             if fval is not None:
                 self.fval = fval
             else:
-                raise ('Objective value fval not passed, but is a manadatory '
+                raise ('Objective value fval not passed, but is a mandatory '
                        'input when creating a reference point. Stopping.')
             if color is not None:
                 self.color = color
