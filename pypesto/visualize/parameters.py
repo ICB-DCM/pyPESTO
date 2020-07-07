@@ -50,8 +50,7 @@ def parameters(
         least a function value fval
     colors:
         list of RGBA colors, or single RGBA color
-        color or list of colors for plotting. If not set, clustering is done
-        and colors are assigned automatically
+        If not set, clustering is done and colors are assigned automatically
     legends:
         Labels for line plots, one label per result object
     balance_alpha:

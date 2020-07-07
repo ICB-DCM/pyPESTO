@@ -268,7 +268,7 @@ def test_parameters_with_options():
                          start_indices=(0, 1, 4))
 
     visualize.parameters([result_1, result_2],
-                         parameter_indices='all',
+                         parameter_indices='free_only',
                          start_indices=3)
 
 
