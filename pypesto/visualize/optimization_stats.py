@@ -60,7 +60,7 @@ def number_of_steps(
                             start_indices, colors[j], legends[j], plot_type)
 
     ax.set_title('Number of steps per optimizer run')
-    if sum([l is not None for l in legends]) > 0:
+    if sum((legend is not None for legend in legends)) > 0:
         ax.legend()
 
     return ax
@@ -119,7 +119,7 @@ def optimization_time(
                             start_indices, colors[j], legends[j], plot_type)
 
     ax.set_title('Wall-clock time per optimizer run')
-    if sum([l is not None for l in legends]) > 0:
+    if sum((legend is not None for legend in legends)) > 0:
         ax.legend()
 
     return ax

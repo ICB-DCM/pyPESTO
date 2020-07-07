@@ -462,7 +462,8 @@ def test_optimization_stats():
 
     visualize.number_of_steps(result_1, legends='best result')
 
-    visualize.number_of_steps(result_1, plot_type='hist', legends='best result')
+    visualize.number_of_steps(result_1, plot_type='hist',
+                              legends='best result')
 
     visualize.number_of_steps(result_2)
 
