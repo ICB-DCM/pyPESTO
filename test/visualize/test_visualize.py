@@ -256,19 +256,19 @@ def test_parameters_with_options():
 
     # test calls with specific options
     visualize.parameters(result_1,
-                         free_indices_only=False,
+                         parameter_indices='all',
                          reference=ref_point,
                          size=alt_fig_size,
                          colors=[1., .3, .3, 0.5])
 
     visualize.parameters([result_1, result_2],
-                         free_indices_only=False,
+                         parameter_indices='all',
                          reference=ref_point,
                          balance_alpha=False,
                          start_indices=(0, 1, 4))
 
     visualize.parameters([result_1, result_2],
-                         free_indices_only=True,
+                         parameter_indices='free_only',
                          start_indices=3)
 
 
