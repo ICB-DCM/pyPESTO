@@ -230,8 +230,8 @@ class Problem:
 
         self.normalize()
 
-    def unfix_parameters(self,
-                         parameter_indices: SupportsIntIterableOrValue) -> None:
+    def unfix_parameters(self, parameter_indices: SupportsIntIterableOrValue
+                         ) -> None:
         """
         Free specified parameters
         """
@@ -410,14 +410,18 @@ def _type_conversion_with_check(index: int,
                                 value: Union[SupportsFloat, SupportsInt],
                                 valuename: str,
                                 convtype: str) -> Union[float, int]:
+    """
+    Converts values to the requested type, raises and appropriate error if
+    not possible.
+    """
 
     if convtype not in _convtypes:
         raise ValueError(f'Unsupported type {convtype}')
 
     if not hasattr(value, _convtypes[convtype]['attr']):
         raise ValueError(
-            f'All {valuename} must support conversion to {convtype}. Found type'
-            f'{type(value)} at index {index}, which cannot '
+            f'All {valuename} must support conversion to {convtype}. Found '
+            f'type {type(value)} at index {index}, which cannot '
             f'be converted to {convtype}.'
         )
 
@@ -428,6 +432,9 @@ def _make_iterable_if_value(value: Union[SupportsFloatIterableOrValue,
                                          SupportsIntIterableOrValue],
                             convtype: str) -> Union[Iterable[SupportsFloat],
                                                     Iterable[SupportsInt]]:
+    """
+    Converts scalar values to iterables if input is scalar, may update type
+    """
 
     if convtype not in _convtypes:
         raise ValueError(f'Unsupported type {convtype}')
