@@ -209,17 +209,17 @@ class Problem:
         for i_index, i_parameter in enumerate(parameter_indices):
             # check if parameter was already fixed, otherwise add it to the
             # fixed parameters
-            if not hasattr(parameter_indices, '__int__'):
+            if not hasattr(i_index, '__int__'):
                 raise ValueError(
                     f'All indices must support conversion to int. Found type'
-                    f'{type(i_parameter)} at index {i_index}, which cannot '
+                    f'{type(i_index)} at index {i_index}, which cannot '
                     f'be converted to int.'
                 )
             val = parameter_vals[int(i_index)]
-            if not hasattr(parameter_indices, '__float__'):
+            if not hasattr(i_parameter, '__float__'):
                 raise ValueError(
                     f'All values must support conversion to float. Found type'
-                    f'{type(val)} at index {i_index}, which cannot be '
+                    f'{type(i_parameter)} at index {i_index}, which cannot be '
                     f'converted to float.'
                 )
             if i_parameter in self.x_fixed_indices:
