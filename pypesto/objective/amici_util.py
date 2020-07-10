@@ -3,7 +3,9 @@ import numbers
 from typing import Dict, Sequence, Union
 import logging
 
-from .constants import FVAL, GRAD, HESS, RES, SRES, RDATAS
+from .constants import (
+    FVAL, CHI2, GRAD, HESS, RES, SRES, RDATAS, MODE_FUN, MODE_RES
+)
 
 try:
     import amici
@@ -224,6 +226,8 @@ def get_error_output(
         amici_model: AmiciModel,
         edatas: Sequence['amici.ExpData'],
         rdatas: Sequence['amici.ReturnData'],
+        sensi_order: int,
+        mode: str,
         dim: int):
     """Default output upon error.
 
@@ -237,11 +241,33 @@ def get_error_output(
                  for data in edatas)
     n_res = nt * amici_model.nytrue
 
-    return {
-        FVAL: np.inf,
-        GRAD: np.nan * np.ones(dim),
-        HESS: np.nan * np.ones([dim, dim]),
-        RES:  np.nan * np.ones(n_res),
-        SRES: np.nan * np.ones([n_res, dim]),
+    nllh = np.inf
+    snllh = None
+    s2nllh = None
+    if mode == MODE_FUN and sensi_order > 0:
+        snllh = np.nan * np.ones(dim)
+        s2nllh = np.nan * np.ones([dim, dim])
+
+    chi2 = None
+    res = None
+    sres = None
+    if mode == MODE_RES:
+        chi2 = np.inf
+        res = np.nan * np.ones(n_res)
+        if sensi_order > 0:
+            sres = np.nan * np.ones([n_res, dim])
+
+    ret = {
+        FVAL: nllh,
+        CHI2: chi2,
+        GRAD: snllh,
+        HESS: s2nllh,
+        RES: res,
+        SRES: sres,
         RDATAS: rdatas
+    }
+    return {
+        key: val
+        for key, val in ret.items()
+        if val is not None
     }

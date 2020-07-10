@@ -128,7 +128,8 @@ def calculate_function_values(rdatas,
 
     # check if the simulation failed
     if any(rdata['status'] < 0.0 for rdata in rdatas):
-        return get_error_output(amici_model, edatas, rdatas, dim)
+        return get_error_output(amici_model, edatas, rdatas,
+                                sensi_order, mode, dim)
 
     # prepare outputs
     nllh = 0.0
