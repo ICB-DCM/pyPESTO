@@ -315,23 +315,30 @@ class Problem:
         return x_full
 
     def get_reduced_vector(
-            self, x_full: Union[np.ndarray, None]
+            self, x_full: Union[np.ndarray, None],
+            x_indices: Optional[List[int]] = None
     ) -> Union[np.ndarray, None]:
         """
-        Map vector from dim_full to dim, i.e. delete fixed indices.
+        Keep only those elements, which indices are specified in x_indices
+        If x_indices is not provided, delete fixed indices.
 
         Parameters
         ----------
         x_full: array_like, ndim=1
             The vector in dimension dim_full.
+        x_indices:
+            indices of x_full that should remain
         """
         if x_full is None:
             return None
 
-        if len(x_full) == self.dim:
+        if x_indices is None:
+            x_indices = self.x_free_indices
+
+        if len(x_full) == len(x_indices):
             return x_full
 
-        x = [x_full[idx] for idx in self.x_free_indices]
+        x = [x_full[idx] for idx in x_indices]
         return np.array(x)
 
     def get_reduced_matrix(

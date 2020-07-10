@@ -7,7 +7,7 @@ from scipy.stats import norm
 logger = logging.getLogger(__name__)
 
 
-def spectrum(x: np.array,
+def spectrum(x: np.ndarray,
              nfft: int = None,
              nw: int = None) -> np.ndarray:
     """
@@ -69,7 +69,7 @@ def spectrum(x: np.array,
     return spectral_density
 
 
-def spectrum0(x: np.array) -> np.ndarray:
+def spectrum0(x: np.ndarray) -> np.ndarray:
     """
     Calculates the spectral density at frequency zero.
 
@@ -94,7 +94,7 @@ def spectrum0(x: np.array) -> np.ndarray:
     return spectral_density_zero
 
 
-def calculate_zscore(chain: np.array,
+def calculate_zscore(chain: np.ndarray,
                      a: float = 0.1,
                      b: float = 0.5) -> Tuple[float, float]:
     """
@@ -124,15 +124,15 @@ def calculate_zscore(chain: np.array,
         Significance level of the Geweke test.
     """
 
-    nsimu, _ = chain.shape
+    nsamples, _ = chain.shape
 
     # Define First fraction
-    index_a = np.floor(a * nsimu).astype(int)
+    index_a = np.floor(a * nsamples).astype(int)
     # Define Second fraction
-    index_b = nsimu - np.floor(b * nsimu).astype(int) + 1
+    index_b = nsamples - np.floor(b * nsamples).astype(int) + 1
 
     # Check if appropiate indexes
-    if (index_a + index_b) / nsimu > 1:
+    if (index_a + index_b) / nsamples > 1:
         raise ValueError("Sample size too small to "
                          "meaningfully extract subsets "
                          "for Geweke's test.")
@@ -152,7 +152,7 @@ def calculate_zscore(chain: np.array,
     # Calculate z-score
     z_score = (mean_a - mean_b) / (np.sqrt(
         spectrum_a / index_a + spectrum_b /
-        (nsimu - index_b + 1)
+        (nsamples - index_b + 1)
     ))
     # Calculate significance (p value)
     p = 2 * (1 - norm.cdf(np.absolute(z_score)))
@@ -160,7 +160,7 @@ def calculate_zscore(chain: np.array,
     return z_score, p
 
 
-def burn_in_by_sequential_geweke(chain: np.array,
+def burn_in_by_sequential_geweke(chain: np.ndarray,
                                  zscore: float = 2.) -> int:
     """
     Calculates the burn-in of MCMC chains.
@@ -180,13 +180,13 @@ def burn_in_by_sequential_geweke(chain: np.array,
         regarding Geweke test.
     """
 
-    nsimu, npar = chain.shape
+    nsamples, npar = chain.shape
     # number of fragments
     n = 20
     # round each element to the nearest integer
     # toward zero
-    step = np.floor(nsimu / n).astype(int)
-    fragments = np.arange(0, nsimu-1, step)
+    step = np.floor(nsamples / n).astype(int)
+    fragments = np.arange(0, nsamples-1, step)
 
     z = np.zeros((len(fragments), npar))
     for i, indices in enumerate(fragments):
@@ -206,9 +206,9 @@ def burn_in_by_sequential_geweke(chain: np.array,
     if np.any(alpha2 > max_z):
         burn_in = (np.where(alpha2 > max_z)[0][0]) * step
     else:
-        burn_in = nsimu
+        burn_in = nsamples
         logger.warning("Burn in index coincides with chain "
-                       "length. The chain seems that has not "
+                       "length. The chain seems to not have "
                        "converged yet.\n"
                        "You may want to use a larger number "
                        "of samples.")

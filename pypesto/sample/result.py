@@ -20,6 +20,12 @@ class McmcPtResult(dict):
         The associated inverse temperatures.
     burn_in: [n_chain]
         The burn in index.
+    time: [n_chain]
+        The computation time.
+    auto_correlation: [n_chain]
+        The estimated chain autcorrelation.
+    effective_sample_size: [n_chain]
+        The estimated effective sample size.
     message: str
         Textual comment on the profile result.
 
@@ -34,6 +40,8 @@ class McmcPtResult(dict):
                  betas: Iterable[float],
                  burn_in: int = None,
                  time: float = 0.,
+                 auto_correlation: float = None,
+                 effective_sample_size: float = None,
                  message: str = None):
         super().__init__()
 
@@ -43,6 +51,8 @@ class McmcPtResult(dict):
         self.betas = betas
         self.burn_in = burn_in
         self.time = time
+        self.auto_correlation = auto_correlation
+        self.effective_sample_size = effective_sample_size
         self.message = message
 
         if trace_x.ndim != 3:
