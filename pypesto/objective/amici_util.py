@@ -266,6 +266,11 @@ def get_error_output(
         SRES: sres,
         RDATAS: rdatas
     }
+    return filter_return_dict(ret)
+
+
+def filter_return_dict(ret):
+    """Filters return dict for non-None values"""
     return {
         key: val
         for key, val in ret.items()

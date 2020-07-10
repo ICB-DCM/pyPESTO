@@ -6,7 +6,7 @@ from .constants import (
 )
 from .amici_util import (
     add_sim_grad_to_opt_grad, add_sim_hess_to_opt_hess,
-    sim_sres_to_opt_sres, log_simulation, get_error_output)
+    sim_sres_to_opt_sres, log_simulation, get_error_output, filter_return_dict)
 
 try:
     import amici
@@ -213,8 +213,4 @@ def calculate_function_values(rdatas,
         SRES: sres,
         RDATAS: rdatas
     }
-    return {
-        key: val
-        for key, val in ret.items()
-        if val is not None
-    }
+    return filter_return_dict(ret)
