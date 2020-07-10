@@ -200,8 +200,8 @@ class Problem:
         """
         Fix specified parameters to specified values
         """
-        if isinstance(parameter_indices, int) and \
-                isinstance(parameter_vals, float):
+        if hasattr(parameter_indices, '__int__') and \
+                hasattr(parameter_vals, '__float__'):
             parameter_indices = [parameter_indices]
             parameter_vals = [parameter_vals]
 
@@ -209,23 +209,25 @@ class Problem:
         for i_index, i_parameter in enumerate(parameter_indices):
             # check if parameter was already fixed, otherwise add it to the
             # fixed parameters
-            if not isinstance(i_parameter, int):
+            if not hasattr(parameter_indices, '__int__'):
                 raise ValueError(
-                    f'All indices must be of type int. Found '
-                    f'{type(i_parameter)} at index {i_index}'
+                    f'All indices must support conversion to int. Found type'
+                    f'{type(i_parameter)} at index {i_index}, which cannot '
+                    f'be converted to int.'
                 )
-            val = parameter_vals[i_index]
-            if not isinstance(val, float):
+            val = parameter_vals[int(i_index)]
+            if not hasattr(parameter_indices, '__float__'):
                 raise ValueError(
-                    f'All values must be of type float. Found '
-                    f'{type(val)} at index {i_index}'
+                    f'All values must support conversion to float. Found type'
+                    f'{type(val)} at index {i_index}, which cannot be '
+                    f'converted to float.'
                 )
             if i_parameter in self.x_fixed_indices:
                 self.x_fixed_vals[
-                    self.x_fixed_indices.index(i_parameter)] = val
+                    self.x_fixed_indices.index(i_parameter)] = float(val)
             else:
                 self.x_fixed_indices.append(i_parameter)
-                self.x_fixed_vals.append(val)
+                self.x_fixed_vals.append(float(val))
 
         self.normalize()
 
