@@ -12,7 +12,7 @@ import pandas as pd
 import numbers
 import copy
 
-from typing import Iterable, List, Optional, Union
+from typing import Iterable, List, Optional, Union, SupportsFloat, SupportsInt
 
 from .objective import ObjectiveBase
 from .objective.priors import NegLogPriors
@@ -195,8 +195,10 @@ class Problem:
             )
 
     def fix_parameters(self,
-                       parameter_indices: Union[Iterable[int], int],
-                       parameter_vals: Union[Iterable[float], float]) -> None:
+                       parameter_indices: Union[Iterable[SupportsInt],
+                                                SupportsInt],
+                       parameter_vals: Union[Iterable[SupportsFloat], 
+                                             SupportsFloat]) -> None:
         """
         Fix specified parameters to specified values
         """
