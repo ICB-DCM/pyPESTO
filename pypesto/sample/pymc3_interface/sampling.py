@@ -15,6 +15,8 @@ import numpy as np
 from ...problem import Problem
 from .model import pypesto_varnames
 
+import arviz
+
 from pymc3 import Model, Point
 from pymc3.model import FreeRV, modelcontext
 # from pymc3.backends import HDF5
@@ -22,6 +24,11 @@ from .hdf5 import HDF5  # Bugfixes
 from pymc3.backends.base import MultiTrace
 from pymc3.sampling import _choose_backend
 from pymc3.util import update_start_vals
+
+# Logging
+import warnings
+from pymc3.backends.report import logger as pymc3_log
+from pymc3.backends.report import _LEVELS as PYMC3_LOG_LEVELS
 
 
 # This function is extracted from pymc3.sample
@@ -233,7 +240,8 @@ class ResumablePymc3Sampler:
         if not tune:
             step.stop_tuning()
 
-    def tune(self, min_samples: Optional[int] = None, *, quiet: bool = False):
+    def tune(self, min_samples: Optional[int] = None, *,
+             quiet: bool = False, warn: bool = True):
 
         tuning_samples_left = self.target_tune - self.num_samples
 
@@ -245,7 +253,7 @@ class ResumablePymc3Sampler:
 
         if tuning_samples_left > 0:
             self._init_step(True)
-            self._sample(tuning_samples_left, True)
+            self._sample(tuning_samples_left, True, warn)
 
         elif tuning_samples_left == 0:
             if not quiet:
@@ -259,20 +267,20 @@ class ResumablePymc3Sampler:
                             'Since .sample(draws) has already been called, '
                             'no additional tuning is possible')
 
-    def sample(self, draws: int):
+    def sample(self, draws: int, *, warn: bool = True):
         if draws < 1:
             raise ValueError("Argument `draws` must be greater than 0.")
         self.tune(quiet=True)
         assert self.target_tune == self.num_tune
         self._init_step(False)
-        self._sample(draws, False)
+        self._sample(draws, False, warn)
 
-    def _sample(self, draws: int, tuning: bool):
+    def _sample(self, draws: int, tuning: bool, warn: bool):
         if self._keep_hdf5_open and isinstance(self._strace, HDF5):
             with self._strace.activate_file:
-                self.__sample(draws, tuning)
+                self.__sample(draws, tuning, warn)
         else:
-            self.__sample(draws, tuning)
+            self.__sample(draws, tuning, warn)
 
     def _setup_trace(self, draws=0, chain=0):
         step, strace = self._step, self._strace
@@ -281,7 +289,7 @@ class ResumablePymc3Sampler:
         else:
             strace.setup(draws, chain)
 
-    def __sample(self, draws: int, tuning: bool):
+    def __sample(self, draws: int, tuning: bool, warn: bool):
         assert draws >= 1
         point = self._cur_point
         step, strace = self._step, self._strace
@@ -324,6 +332,8 @@ class ResumablePymc3Sampler:
         #        * they are not saved to disk
         #        * warnings like non-convergence do not refer to
         #          specific samples: can we allow more than one per chain?
+        #        * if we add multiple times warnings to the strace,
+        #          will we get many duplicates?
         except:
             self._cur_point = None  # invalidate current point
         else:
@@ -332,6 +342,30 @@ class ResumablePymc3Sampler:
         finally:
             strace.close()  # if no error occured this should be a no-op
             self._sampling_time += time.perf_counter() - t0
+            if warn:
+                self.log_sampler_warnings()
+
+    def log_sampler_warnings(self):
+        if hasattr(self._step, "warnings"):
+            for warn in self._step.warnings():
+                level = PYMC3_LOG_LEVELS[warn.level]
+                pymc3_log.log(level, warn.message)
+
+    # NB since at the moment we only run one chain,
+    #    the standard PyMC3 convergence checks are meaningless
+    # def log_convergence_checks(self):
+    #     if self.num_draws < 100:
+    #         warnings.warn(
+    #             "The number of samples is too small "
+    #             "to check convergence reliably."
+    #         )
+    #     else:
+    #         trace = self.trace  # NB self.trace is generated on demand
+    #         idata = arviz.from_pymc3(
+    #             trace, model=self.model, save_warmup=False
+    #         )
+    #         trace.report._run_convergence_checks(idata, self.model)
+    #         trace.report._log_summary()
 
     @staticmethod
     def load_HDF5(path, model, outvars, chain):
@@ -403,7 +437,8 @@ class CheckpointablePymc3Sampler:
     def branches(self):
         return set([
             name for name in os.listdir(self.folder)
-            if os.path.isdir(os.path.join(self.folder, name)) and not name.startswith('.')
+            if os.path.isdir(os.path.join(self.folder, name)) \
+               and not name.startswith('.')
         ])
 
     @property
@@ -547,14 +582,21 @@ class CheckpointablePymc3Sampler:
         finally:
             self.flush()
 
-    def tune(self, min_samples: Optional[int] = None, *, quiet: bool = False):
+    def tune(self, min_samples: Optional[int] = None, *,
+             quiet: bool = False, warn: bool = False):
         try:
-            return self._sampler.tune(min_samples, quiet=quiet)
+            return self._sampler.tune(min_samples, quiet=quiet, warn=warn)
         finally:
             self.flush()
 
-    def sample(self, draws: int):
+    def sample(self, draws: int, *, warn: bool = False):
         try:
-            return self._sampler.sample(draws)
+            return self._sampler.sample(draws, warn=warn)
         finally:
             self.flush()
+
+    def log_sampler_warnings(self):
+        return self._sampler.log_sampler_warnings()
+
+    # def log_convergence_checks(self):
+    #     return self._sampler.log_convergence_checks()

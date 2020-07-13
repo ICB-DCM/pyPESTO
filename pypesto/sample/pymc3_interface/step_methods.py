@@ -9,11 +9,9 @@ import pymc3 as pm
 from pymc3.model import all_continuous
 from pymc3.step_methods import CompoundStep
 from pymc3.sampling import assign_step_methods, init_nuts
+from pymc3.backends.report import logger as pymc3_log
 
 from theano.gradient import NullTypeGradError
-
-
-pymc3_log = logging.getLogger("pymc3")
 
 
 # Looking at pymc3.sample,
