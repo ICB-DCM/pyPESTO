@@ -309,7 +309,7 @@ class ScipyOptimizer(Optimizer):
             if self.options is not None:
                 ls_options = self.options.copy()
                 ls_options['verbose'] = 2 if 'disp' in ls_options.keys() \
-                                        and ls_options['disp'] else 0
+                                             and ls_options['disp'] else 0
                 ls_options.pop('disp', None)
             else:
                 ls_options = {}
