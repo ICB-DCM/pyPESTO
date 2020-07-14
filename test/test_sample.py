@@ -317,6 +317,112 @@ def test_geweke_test_unconverged():
     sample.geweke_test(result)
 
 
+def test_autocorrelation_pipeline():
+    """Check that the autocorrelation test works."""
+    problem = gaussian_problem()
+
+    sampler = sample.MetropolisSampler()
+
+    # optimization
+    result = optimize.minimize(problem, n_starts=3)
+
+    # sample
+    result = sample.sample(
+        problem, sampler=sampler, n_samples=1000, result=result)
+
+    # run auto-correlation with previous geweke
+    sample.geweke_test(result)
+
+    ac1 = sample.auto_correlation(result)
+
+    # run auto-correlation without previous geweke
+    result.sample_result.burn_in = None
+    ac2 = sample.auto_correlation(result)
+
+    assert ac1 == ac2
+
+    # run effective sample size with previous geweke
+    # and autocorrelation
+    ess1 = sample.effective_sample_size(result)
+
+    # run effective sample size without previous geweke
+    # and autocorrelation
+    result.sample_result.burn_in = None
+    result.sample_result.auto_correlation = None
+    ess2 = sample.effective_sample_size(result)
+
+    assert ess1 == ess2
+
+
+def test_autocorrelation_short_chain():
+    """Check that the autocorrelation
+    reacts nicely to small sample numbers."""
+    problem = gaussian_problem()
+
+    sampler = sample.MetropolisSampler()
+
+    # optimization
+    result = optimize.minimize(problem, n_starts=3)
+
+    # sample
+    result = sample.sample(
+        problem, sampler=sampler, n_samples=10, result=result)
+
+    # manually set burn in to chain length (only for testing!!)
+    chain_length = result.sample_result.trace_x.shape[1]
+    result.sample_result.burn_in = chain_length
+
+    # run auto-correlation
+    ac = sample.auto_correlation(result)
+
+    assert ac is None
+
+    # run effective sample size
+    ess = sample.effective_sample_size(result)
+
+    assert ess is None
+
+
+def test_autocorrelation_mixture():
+    """Check that the autocorrelation is the same for the same chain
+    with different scalings."""
+    chain = np.array(np.random.randn(101, 2))
+
+    auto_correlation_1 = sample.diagnostics.autocorrelation_sokal(chain=chain)
+    auto_correlation_2 = sample.diagnostics.autocorrelation_sokal(
+                               chain=2*chain)
+    auto_correlation_3 = sample.diagnostics.autocorrelation_sokal(
+                               chain=-3*chain)
+
+    assert (abs(auto_correlation_1-auto_correlation_2) < 1e-15).all()
+    assert (abs(auto_correlation_2-auto_correlation_3) < 1e-15).all()
+    assert (abs(auto_correlation_1-auto_correlation_3) < 1e-15).all()
+
+
+def test_autocorrelation_dim():
+    """Check that the autocorrelation returns as
+    many entries as parameters."""
+    # Loop over different sizes of parameter vectors
+    for n in range(4):
+        # create the chain for n parameters
+        chain = np.array(np.random.randn(101, n+1))
+        # calculate the autocorrelation
+        auto_correlation = sample.diagnostics.autocorrelation_sokal(
+                              chain=chain)
+        assert len(auto_correlation) == (n+1)
+
+
+def test_autocorrelation_high():
+    """Check that the autocorrelation is high for a not well-mixed chain."""
+    # there should be always need to be some variability
+    chain = np.concatenate((np.ones((50, 1)), 2*np.ones((35, 1)),
+                            np.ones((25, 1))))
+
+    auto_correlation = sample.diagnostics.autocorrelation_sokal(chain=chain)
+
+    assert auto_correlation > 10
+
+
 def test_empty_prior():
     """Check that priors are zero when none are defined."""
     # define negative log posterior
