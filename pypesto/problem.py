@@ -418,10 +418,17 @@ def _type_conversion_with_check(index: int,
     if convtype not in _convtypes:
         raise ValueError(f'Unsupported type {convtype}')
 
-    if not hasattr(value, _convtypes[convtype]['attr']):
+    can_convert = hasattr(value, _convtypes[convtype]['attr'])
+    # this may fail for weird custom ypes that can be converted to int but
+    # not float, but we probably don't want those as indiced anyways
+    lossless_conversion = not convtype == 'int' \
+        or (hasattr(value, _convtypes['float']['attr'])
+            and (float(value) - int(value) == 0.0))
+
+    if not can_convert or not lossless_conversion:
         raise ValueError(
-            f'All {valuename} must support conversion to {convtype}. Found '
-            f'type {type(value)} at index {index}, which cannot '
+            f'All {valuename} must support lossless conversion to {convtype}. '
+            f'Found type {type(value)} at index {index}, which cannot '
             f'be converted to {convtype}.'
         )
 
@@ -439,7 +446,7 @@ def _make_iterable_if_value(value: Union[SupportsFloatIterableOrValue,
     if convtype not in _convtypes:
         raise ValueError(f'Unsupported type {convtype}')
 
-    if hasattr(value, _convtypes[convtype]['attr']):
-        return [_convtypes[convtype]['conv'](value)]
+    if not hasattr(value, '__iter__'):
+        return [_type_conversion_with_check(0, value, 'values', convtype)]
     else:
         return value
