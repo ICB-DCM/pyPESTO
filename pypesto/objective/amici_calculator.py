@@ -6,7 +6,9 @@ from .constants import (
 )
 from .amici_util import (
     add_sim_grad_to_opt_grad, add_sim_hess_to_opt_hess,
-    sim_sres_to_opt_sres, log_simulation, get_error_output, filter_return_dict)
+    sim_sres_to_opt_sres, log_simulation, get_error_output, filter_return_dict,
+    init_return_values
+)
 
 try:
     import amici
@@ -131,22 +133,8 @@ def calculate_function_values(rdatas,
         return get_error_output(amici_model, edatas, rdatas,
                                 sensi_order, mode, dim)
 
-    # prepare outputs
-    nllh = 0.0
-    snllh = None
-    s2nllh = None
-    if mode == MODE_FUN and sensi_order > 0:
-        snllh = np.zeros(dim)
-        s2nllh = np.zeros([dim, dim])
-
-    chi2 = None
-    res = None
-    sres = None
-    if mode == MODE_RES:
-        chi2 = 0.0
-        res = np.zeros([0])
-        if sensi_order > 0:
-            sres = np.zeros([0, dim])
+    nllh, snllh, s2nllh, chi2, res, sres = init_return_values(sensi_order,
+                                                              mode, dim)
 
     par_sim_ids = list(amici_model.getParameterIds())
     sensi_method = amici_solver.getSensitivityMethod()

@@ -241,21 +241,12 @@ def get_error_output(
                  for data in edatas)
     n_res = nt * amici_model.nytrue
 
-    nllh = np.inf
-    snllh = None
-    s2nllh = None
-    if mode == MODE_FUN and sensi_order > 0:
-        snllh = np.nan * np.ones(dim)
-        s2nllh = np.nan * np.ones([dim, dim])
-
-    chi2 = None
-    res = None
-    sres = None
-    if mode == MODE_RES:
-        chi2 = np.inf
+    nllh, snllh, s2nllh, chi2, res, sres = init_return_values(sensi_order,
+                                                              mode, dim, True)
+    if res is not None:
         res = np.nan * np.ones(n_res)
-        if sensi_order > 0:
-            sres = np.nan * np.ones([n_res, dim])
+    if sres is not None:
+        sres = np.nan * np.ones([n_res, dim])
 
     ret = {
         FVAL: nllh,
@@ -267,6 +258,33 @@ def get_error_output(
         RDATAS: rdatas
     }
     return filter_return_dict(ret)
+
+
+def init_return_values(sensi_order, mode, dim, error=False):
+    if error:
+        fval = np.inf
+        sval = np.nan
+    else:
+        fval = sval = 0.0
+
+    nllh = fval
+    snllh = None
+    s2nllh = None
+    if mode == MODE_FUN and sensi_order > 0:
+        snllh = sval * np.ones(dim)
+        if sensi_order > 1:
+            s2nllh = sval * np.ones([dim, dim])
+
+    chi2 = None
+    res = None
+    sres = None
+    if mode == MODE_RES:
+        chi2 = fval
+        res = np.zeros([0])
+        if sensi_order > 0:
+            sres = np.zeros([0, dim])
+
+    return nllh, snllh, s2nllh, chi2, res, sres
 
 
 def filter_return_dict(ret):
