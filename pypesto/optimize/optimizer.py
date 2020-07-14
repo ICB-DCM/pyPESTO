@@ -307,9 +307,12 @@ class ScipyOptimizer(Optimizer):
             # TODO: pass jac computing methods in options
 
             if self.options is not None:
-                self.options['verbose'] = 2 if 'disp' in self.options.keys() \
-                                               and self.options['disp'] else 0
-                self.options.pop('disp', None)
+                ls_options = self.options.copy()
+                ls_options['verbose'] = 2 if 'disp' in ls_options.keys() \
+                                             and ls_options['disp'] else 0
+                ls_options.pop('disp', None)
+            else:
+                ls_options = {}
 
             # optimize
             res = scipy.optimize.least_squares(
@@ -320,7 +323,7 @@ class ScipyOptimizer(Optimizer):
                 bounds=bounds,
                 tr_solver='exact',
                 loss='linear',
-                **self.options
+                **ls_options
             )
             # extract fval/grad from result, note that fval is not available
             # from least squares solvers
