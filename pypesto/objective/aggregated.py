@@ -18,8 +18,6 @@ class AggregatedObjective(ObjectiveBase):
             x_names: Sequence[str] = None):
         """
         Constructor.
-
-
         Parameters
         ----------
         objectives:
@@ -56,60 +54,6 @@ class AggregatedObjective(ObjectiveBase):
         )
         return other
 
-<<<<<<< HEAD
-    def aggregate_fun_sensi_orders(self, x, sensi_orders):
-        rvals = [
-            objective.fun(x, sensi_orders)
-            for objective in self.objectives
-        ]
-
-        # sum over fval/grad/hess
-        result = {
-            key: sum(rval[key] for rval in rvals)
-            for key in ['fval', 'grad', 'hess']
-            if rvals[0].get(key, None) is not None
-        }
-
-        # extract rdatas and flatten
-        result[RDATAS] = []
-        for rval in rvals:
-            if RDATAS in rval:
-                result[RDATAS].extend(rval[RDATAS])
-
-        return result
-
-    def aggregate_res_sensi_orders(self, x, sensi_orders):
-        result = dict()
-
-        # initialize res and sres
-        rval0 = self.objectives[0].res(x, sensi_orders)
-        if 'res' in rval0:
-            res = np.asarray(rval0['res'])
-        else:
-            res = None
-
-        if 'sres' in rval0:
-            sres = np.asarray(rval0['sres'])
-        else:
-            sres = None
-
-        if RDATAS in rval0:
-            result[RDATAS] = rval0[RDATAS]
-        else:
-            result[RDATAS] = []
-
-        # skip iobj=0 after initialization, stack matrices
-        for iobj in range(1, len(self.objectives)):
-            rval = self.objectives[iobj].res(x, sensi_orders)
-            if res is not None:
-                res = np.hstack([res, np.asarray(rval['res'])])
-            if sres is not None:
-                sres = np.vstack([sres, np.asarray(rval['sres'])])
-            if RDATAS in rval:
-                result[RDATAS].extend(rval[RDATAS])
-
-        # transform results to dict
-=======
     def check_mode(self, mode) -> bool:
         return all(
             objective.check_mode(mode)
@@ -127,7 +71,6 @@ class AggregatedObjective(ObjectiveBase):
             objective.call_unprocessed(x, sensi_orders, mode)
             for objective in self._objectives
         ])
->>>>>>> origin/develop
 
     def initialize(self):
         for objective in self._objectives:
@@ -138,7 +81,6 @@ def aggregate_results(rvals: Sequence[ResultDict]) -> ResultDict:
     """
     Aggregrate the results from the provided sequence of ResultDicts into a
     single ResultDict.
-
     Parameters
     ----------
     rvals:

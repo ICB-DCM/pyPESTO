@@ -46,9 +46,7 @@ class AmiciCalculator:
                  parameter_mapping: 'ParameterMapping',
                  fim_for_hess: bool):
         """Perform the actual AMICI call.
-
         Called within the :func:`AmiciObjective.__call__` method.
-
         Parameters
         ----------
         x_dct:
@@ -123,43 +121,18 @@ def calculate_function_values(rdatas,
                               amici_solver: AmiciSolver,
                               edatas: List['amici.ExpData'],
                               x_ids: Sequence[str],
-<<<<<<< HEAD
-                              parameter_mapping: 'ParameterMapping'):
-=======
                               parameter_mapping: 'ParameterMapping',
                               fim_for_hess: bool):
->>>>>>> origin/develop
     # full optimization problem dimension (including fixed parameters)
     dim = len(x_ids)
 
     # check if the simulation failed
     if any(rdata['status'] < 0.0 for rdata in rdatas):
-<<<<<<< HEAD
-        return get_error_output(amici_model, edatas, rdatas, dim)
-
-    # prepare outputs
-    nllh = 0.0
-    snllh = None
-    s2nllh = None
-    if mode == MODE_FUN and sensi_order > 0:
-        snllh = np.zeros(dim)
-        s2nllh = np.zeros([dim, dim])
-
-    chi2 = None
-    res = None
-    sres = None
-    if mode == MODE_RES:
-        chi2 = 0.0
-        res = np.zeros([0])
-        if sensi_order > 0:
-            sres = np.zeros([0, dim])
-=======
         return get_error_output(amici_model, edatas, rdatas,
                                 sensi_order, mode, dim)
 
     nllh, snllh, s2nllh, chi2, res, sres = init_return_values(sensi_order,
                                                               mode, dim)
->>>>>>> origin/develop
 
     par_sim_ids = list(amici_model.getParameterIds())
     sensi_method = amici_solver.getSensitivityMethod()
@@ -226,12 +199,4 @@ def calculate_function_values(rdatas,
         SRES: sres,
         RDATAS: rdatas
     }
-<<<<<<< HEAD
-    return {
-        key: val
-        for key, val in ret.items()
-        if val is not None
-    }
-=======
     return filter_return_dict(ret)
->>>>>>> origin/develop

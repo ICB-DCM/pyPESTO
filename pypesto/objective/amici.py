@@ -26,7 +26,6 @@ AmiciSolver = Union['amici.Solver', 'amici.SolverPtr']
 
 class AmiciObjectBuilder(abc.ABC):
     """Allows to build AMICI model, solver, and edatas.
-
     This class is useful for pickling an :class:`pypesto.AmiciObjective`,
     which is required in some parallelization schemes. Therefore, this
     class itself must be picklable.
@@ -65,7 +64,6 @@ class AmiciObjective(ObjectiveBase):
                  calculator: AmiciCalculator = None):
         """
         Constructor.
-
         Parameters
         ----------
         amici_model:
@@ -211,9 +209,6 @@ class AmiciObjective(ObjectiveBase):
 
         # write amici solver settings to file
         amici_solver_file = tempfile.mkstemp()[1]
-<<<<<<< HEAD:pypesto/objective/amici_objective.py
-        amici.writeSolverSettingsToHDF5(self.amici_solver, amici_solver_file)
-=======
         try:
             amici.writeSolverSettingsToHDF5(
                 self.amici_solver, amici_solver_file)
@@ -222,7 +217,6 @@ class AmiciObjective(ObjectiveBase):
                        "installation with HDF5 support.",)
             raise
 
->>>>>>> origin/develop:pypesto/objective/amici.py
         # read in byte stream
         amici_solver_settings = open(amici_solver_file, 'rb').read()
         state['amici_solver_settings'] = amici_solver_settings
@@ -257,10 +251,6 @@ class AmiciObjective(ObjectiveBase):
                 err.args = ('',)
             err.args += ("Amici must have been compiled with hdf5 support",)
             raise
-<<<<<<< HEAD:pypesto/objective/amici_objective.py
-
-=======
->>>>>>> origin/develop:pypesto/objective/amici.py
         self.amici_model = model
         self.amici_solver = solver
         self.edatas = edatas

@@ -1,20 +1,15 @@
 import numpy as np
 import pandas as pd
-<<<<<<< HEAD
+
 import h5py
-=======
 import numbers
->>>>>>> origin/develop
 import copy
 import time
 import os
 import abc
-<<<<<<< HEAD
 import warnings
 from typing import Any, Dict, List, Optional, Tuple, Sequence, Union
-=======
 from typing import Any, Dict, List, Tuple, Sequence, Union
->>>>>>> origin/develop
 
 from .constants import (
     MODE_FUN, MODE_RES, FVAL, GRAD, HESS, RES, SRES, CHI2, SCHI2, TIME,

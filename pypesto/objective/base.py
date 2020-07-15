@@ -2,12 +2,8 @@ import numpy as np
 import pandas as pd
 import copy
 import logging
-<<<<<<< HEAD:pypesto/objective/objective.py
-from typing import Callable, Dict, Sequence, Tuple, Union
-=======
 import abc
 from typing import Dict, Sequence, Tuple, Union
->>>>>>> origin/develop:pypesto/objective/base.py
 
 from .constants import MODE_FUN, MODE_RES, FVAL, GRAD, HESS, RES, SRES
 from .history import HistoryBase
@@ -23,49 +19,24 @@ class ObjectiveBase(abc.ABC):
     The objective class is a simple wrapper around the objective function,
     giving a standardized way of calling. Apart from that, it manages several
     things including fixing of parameters and history.
-
     The objective function is assumed to be in the format of a cost function,
     log-likelihood function, or log-posterior function. These functions are
     subject to minimization. For profiling and sampling, the sign is internally
     flipped, all returned and stored values are however given as returned
     by this objective function. If maximization is to be performed, the sign
     should be flipped before creating the objective function.
-
     Attributes
     ----------
-
     history:
         For storing the call history. Initialized by the methods, e.g. the
         optimizer, in `initialize_history()`.
-
     pre_post_processor:
         Preprocess input values to and postprocess output values from
         __call__. Configured in `update_from_problem()`.
-
     """
 
     def __init__(self,
-<<<<<<< HEAD:pypesto/objective/objective.py
-                 fun: Callable = None,
-                 grad: Union[Callable, bool] = None,
-                 hess: Callable = None,
-                 hessp: Callable = None,
-                 res: Callable = None,
-                 sres: Union[Callable, bool] = None,
-                 fun_accept_sensi_orders: bool = False,
-                 res_accept_sensi_orders: bool = False,
                  x_names: Sequence[str] = None):
-        self.fun = fun
-        self.grad = grad
-        self.hess = hess
-        self.hessp = hessp
-        self.res = res
-        self.sres = sres
-        self.fun_accept_sensi_orders = fun_accept_sensi_orders
-        self.res_accept_sensi_orders = res_accept_sensi_orders
-=======
-                 x_names: Sequence[str] = None):
->>>>>>> origin/develop:pypesto/objective/base.py
 
         self.x_names = x_names
 
@@ -122,13 +93,11 @@ class ObjectiveBase(abc.ABC):
         """
         Method to obtain arbitrary sensitivities. This is the central method
         which is always called, also by the get_* methods.
-
         There are different ways in which an optimizer calls the objective
         function, and in how the objective function provides information
         (e.g. derivatives via separate functions or along with the function
         values). The different calling modes increase efficiency in space
         and time and make the objective flexible.
-
         Parameters
         ----------
         x:
@@ -142,7 +111,6 @@ class ObjectiveBase(abc.ABC):
             in the requested order. Tuples of length one are flattened.
             If True, instead a dict is returned which can carry further
             information.
-
         Returns
         -------
         result:
@@ -191,7 +159,6 @@ class ObjectiveBase(abc.ABC):
         """
         Call objective function without pre- or post-processing and
         formatting.
-
         Parameters
         ----------
         x:
@@ -200,7 +167,6 @@ class ObjectiveBase(abc.ABC):
             Specifies which sensitivities to compute, e.g. (0,1) -> fval, grad.
         mode:
             Whether to compute function values or residuals.
-
         Returns
         -------
         result:
@@ -213,14 +179,12 @@ class ObjectiveBase(abc.ABC):
         """
         Check if the objective is able to compute the requested
         sensitivities.
-
         Parameters
         ----------
         sensi_orders:
             Specifies which sensitivities to compute, e.g. (0,1) -> fval, grad.
         mode:
             Whether to compute function values or residuals.
-
         Returns
         -------
         flag:
@@ -233,7 +197,6 @@ class ObjectiveBase(abc.ABC):
     def check_mode(self, mode) -> bool:
         """
         Check if the objective is able to compute in the requested mode.
-
         Parameters
         ----------
         mode:
@@ -320,13 +283,10 @@ class ObjectiveBase(abc.ABC):
         parameter values to form a vector of dimension dim_full >= dim.
         This vector is then used to compute function value and derivatives.
         The derivatives must later be reduced again to dimension dim.
-
         This is so as to make the fixing of parameters transparent to the
         caller.
-
         The methods preprocess, postprocess are overwritten for the above
         functionality, respectively.
-
         Parameters
         ----------
         dim_full:
@@ -361,7 +321,6 @@ class ObjectiveBase(abc.ABC):
         """
         Compare gradient evaluation: Firstly approximate via finite
         differences, and secondly use the objective gradient.
-
         Parameters
         ----------
         x:
@@ -379,7 +338,6 @@ class ObjectiveBase(abc.ABC):
         mode:
             Residual (MODE_RES) or objective function value
             (MODE_FUN, default) computation mode.
-
         Returns
         ----------
         result:
