@@ -8,12 +8,10 @@ import pytest
 import numpy as np
 import scipy.optimize as so
 import pypesto
-from pypesto.objective.constants import (X, FVAL, GRAD, HESS, RES, SRES, CHI2,
+from pypesto.objective.constants import (X, FVAL, GRAD, HESS, RES, SRES, CHI2, SCHI2, TIME)
 
-
-from pypesto.store import (
-    ProblemHDF5Writer, ProblemHDF5Reader, OptimizationResultHDF5Writer,
-    OptimizationResultHDF5Reader)
+from pypesto.store import (ProblemHDF5Writer, ProblemHDF5Reader, OptimizationResultHDF5Writer,
+                           OptimizationResultHDF5Reader)
 
 from .visualize.test_visualize import create_problem, \
     create_optimization_result

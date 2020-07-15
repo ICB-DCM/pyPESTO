@@ -29,12 +29,6 @@ setup(name='pypesto',
                         'matplotlib>=2.2.3',
                         'seaborn>=0.10.0',
                         'cloudpickle>=0.7.0',
-<<<<<<< HEAD
-                        'h5py>=2.10.0'],
-      tests_require=['pytest', 'flake8>=3.7.1', 'gitpython'],
-      extras_require={'amici': ['amici>=0.10.21'],
-                      'petab': ['petab>=0.1.7']},
-=======
                         'h5py>=2.10.0',
                         'tqdm>=4.46.0'],
       tests_require=['pytest>=5.4.2',
@@ -49,6 +43,5 @@ setup(name='pypesto',
                                 'theano>=1.0.4',
                                 'packaging>=20.0',
                                 'pymc3>=3.8, <3.9.2']},
->>>>>>> origin/develop
       python_requires='>=3.6',
       )
