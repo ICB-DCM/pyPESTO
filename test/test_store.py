@@ -3,23 +3,18 @@ This is for testing the pypesto.Storage and history to HDF5.
 """
 import os
 import tempfile
-<<<<<<< HEAD:test/test_storage.py
+
 import pytest
 import numpy as np
 import scipy.optimize as so
 import pypesto
 from pypesto.objective.constants import (X, FVAL, GRAD, HESS, RES, SRES, CHI2,
-                                         SCHI2, TIME)
 
-from pypesto.storage import (
-=======
-
-import numpy as np
 
 from pypesto.store import (
->>>>>>> origin/develop:test/test_store.py
     ProblemHDF5Writer, ProblemHDF5Reader, OptimizationResultHDF5Writer,
     OptimizationResultHDF5Reader)
+
 from .visualize.test_visualize import create_problem, \
     create_optimization_result
 
@@ -85,7 +80,6 @@ def test_storage_problem():
                 assert problem.__dict__[attr] == \
                        read_problem.__dict__[attr]
                 assert not isinstance(read_problem.__dict__[attr], np.ndarray)
-<<<<<<< HEAD:test/test_storage.py
 
 
 @pytest.mark.skip(reason="strange error in memory history")
@@ -137,5 +131,3 @@ def test_storage_trace():
                             getattr(mem_res['history'],
                                     f'get_{entry}_trace')(), getattr(
                                 hdf_res['history'], f'get_{entry}_trace')())
-=======
->>>>>>> origin/develop:test/test_store.py
