@@ -4,25 +4,44 @@ This is for testing the pypesto.History.
 
 import numpy as np
 import pytest
+<<<<<<< HEAD
 import pypesto
+=======
+>>>>>>> origin/develop
 import unittest
 import tempfile
 
 from test.test_objective import rosen_for_sensi
 from test.test_sbml_conversion import load_model_objective
+
+import pypesto
 from pypesto.objective.util import sres_to_schi2, res_to_chi2
+<<<<<<< HEAD
 from pypesto.objective import CsvHistory, HistoryOptions, MemoryHistory
+=======
+from pypesto import CsvHistory, HistoryOptions, MemoryHistory, ObjectiveBase
+>>>>>>> origin/develop
 from pypesto.optimize.optimizer import read_result_from_file, OptimizerResult
 
 from pypesto.objective.constants import (
     FVAL, GRAD, HESS, RES, SRES, CHI2, SCHI2
 )
+<<<<<<< HEAD
+=======
+
+from typing import Sequence
+>>>>>>> origin/develop
 
 
 class HistoryTest(unittest.TestCase):
     problem: pypesto.Problem = None
+<<<<<<< HEAD
     optimizer: pypesto.Optimizer = None
     obj: pypesto.Objective = None
+=======
+    optimizer: pypesto.optimize.Optimizer = None
+    obj: ObjectiveBase = None
+>>>>>>> origin/develop
     history_options: HistoryOptions = None
     ub: np.ndarray = None
     lb: np.ndarray = None
@@ -43,7 +62,11 @@ class HistoryTest(unittest.TestCase):
             }}
         self.problem = pypesto.Problem(**kwargs)
 
+<<<<<<< HEAD
         optimize_options = pypesto.OptimizeOptions(
+=======
+        optimize_options = pypesto.optimize.OptimizeOptions(
+>>>>>>> origin/develop
             allow_failed_starts=False
         )
 
@@ -52,7 +75,11 @@ class HistoryTest(unittest.TestCase):
         for storage_file in ['tmp/traces/conversion_example_{id}.csv', None]:
             self.history_options.storage_file = storage_file
 
+<<<<<<< HEAD
             result = pypesto.minimize(
+=======
+            result = pypesto.optimize.minimize(
+>>>>>>> origin/develop
                 problem=self.problem,
                 optimizer=self.optimizer,
                 n_starts=1,
@@ -165,9 +192,18 @@ class HistoryTest(unittest.TestCase):
             it_start = int(np.where(np.logical_not(
                 np.isnan(start.history.get_fval_trace())
             ))[0][0])
+<<<<<<< HEAD
             assert np.allclose(xfull(start.history.get_x(it_start)), start.x0)
             assert np.allclose(xfull(start.history.get_x(it_final)), start.x)
             assert np.isclose(start.history.get_fval(it_start), start.fval0)
+=======
+            assert np.allclose(
+                xfull(start.history.get_x_trace(it_start)), start.x0)
+            assert np.allclose(
+                xfull(start.history.get_x_trace(it_final)), start.x)
+            assert np.isclose(
+                start.history.get_fval_trace(it_start), start.fval0)
+>>>>>>> origin/develop
 
         funs = {
             FVAL: self.obj.get_fval,
@@ -182,6 +218,7 @@ class HistoryTest(unittest.TestCase):
             ))
         }
         for var, fun in funs.items():
+<<<<<<< HEAD
             if not var == FVAL and not getattr(self.history_options,
                                                f'trace_record_{var}'):
                 continue
@@ -193,6 +230,26 @@ class HistoryTest(unittest.TestCase):
                 if var in [FVAL, CHI2]:
                     assert np.isclose(
                         val, fun(x_full),
+=======
+            for it in range(5):
+                x_full = xfull(start.history.get_x_trace(it))
+                val = getattr(start.history, f'get_{var}_trace')(it)
+                if not getattr(self.history_options, f'trace_record_{var}',
+                               True):
+                    assert np.isnan(val)
+                    continue
+                if np.all(np.isnan(val)):
+                    continue
+                if var in [FVAL, CHI2]:
+                    # note that we can expect slight deviations here since
+                    # this fval/chi2 may be computed without sensitivities
+                    # while the result here may be computed with with
+                    # sensitivies activated. If this fails to often,
+                    # increase atol/rtol
+                    assert np.isclose(
+                        val, fun(x_full),
+                        rtol=1e-3, atol=1e-4
+>>>>>>> origin/develop
                     ), var
                 elif var in [RES]:
                     # note that we can expect slight deviations here since
@@ -222,7 +279,7 @@ class HistoryTest(unittest.TestCase):
 class ResModeHistoryTest(HistoryTest):
     @classmethod
     def setUpClass(cls):
-        cls.optimizer = pypesto.ScipyOptimizer(
+        cls.optimizer = pypesto.optimize.ScipyOptimizer(
             method='ls_trf',
             options={'max_nfev': 100}
         )
@@ -272,6 +329,8 @@ class ResModeHistoryTest(HistoryTest):
 
     def test_trace_all(self):
         self.history_options = HistoryOptions(
+<<<<<<< HEAD
+=======
             trace_record=True,
             trace_record_grad=True,
             trace_record_hess=True,
@@ -284,11 +343,30 @@ class ResModeHistoryTest(HistoryTest):
         self.fix_pars = False
         self.check_history()
 
+    def test_trace_all_aggregated(self):
+        self.history_options = HistoryOptions(
+>>>>>>> origin/develop
+            trace_record=True,
+            trace_record_grad=True,
+            trace_record_hess=True,
+            trace_record_res=True,
+            trace_record_sres=True,
+            trace_record_chi2=True,
+            trace_record_schi2=True,
+        )
+
+<<<<<<< HEAD
+=======
+        self.obj = pypesto.objective.AggregatedObjective([self.obj, self.obj])
+>>>>>>> origin/develop
+        self.fix_pars = False
+        self.check_history()
+
 
 class FunModeHistoryTest(HistoryTest):
     @classmethod
     def setUpClass(cls):
-        cls.optimizer = pypesto.ScipyOptimizer(
+        cls.optimizer = pypesto.optimize.ScipyOptimizer(
             method='trust-exact',
             options={'maxiter': 100}
         )
@@ -342,6 +420,28 @@ class FunModeHistoryTest(HistoryTest):
             trace_record_schi2=True,
         )
         self.fix_pars = False
+<<<<<<< HEAD
+=======
+        self.check_history()
+
+    def test_trace_all_aggregated(self):
+        self.obj = rosen_for_sensi(
+            max_sensi_order=2,
+            integrated=True
+        )['obj']
+
+        self.history_options = HistoryOptions(
+            trace_record=True,
+            trace_record_grad=True,
+            trace_record_hess=True,
+            trace_record_res=True,
+            trace_record_sres=True,
+            trace_record_chi2=True,
+            trace_record_schi2=True,
+        )
+        self.obj = pypesto.objective.AggregatedObjective([self.obj, self.obj])
+        self.fix_pars = False
+>>>>>>> origin/develop
         self.check_history()
 
 
@@ -395,3 +495,39 @@ def test_history_properties(history: pypesto.History):
 
         ress = history.get_res_trace()
         assert all(np.isnan(res) for res in ress)
+<<<<<<< HEAD
+=======
+
+
+def test_trace_subset(history: pypesto.History):
+    """Test whether selecting only a trace subset works."""
+    if isinstance(history, (pypesto.MemoryHistory, pypesto.CsvHistory)):
+        arr = list(range(0, len(history), 2))
+
+        for var in ['fval', 'grad', 'hess', 'res', 'sres', 'chi2',
+                    'schi2', 'x', 'time']:
+            getter = getattr(history, f'get_{var}_trace')
+            full_trace = getter()
+            partial_trace = getter(arr)
+
+            # check partial traces coincide
+            assert len(partial_trace) == len(arr)
+            for a, b in zip(partial_trace, [full_trace[i] for i in arr]):
+                print(var, a, b)
+                if var != 'schi2':
+                    assert np.all(a == b) or np.isnan(a) and np.isnan(b)
+                else:
+                    assert np.all(a == b) or np.all(np.isnan(a)) \
+                        and np.all(np.isnan(b))
+
+            # check sequence type
+            assert isinstance(full_trace, Sequence)
+            assert isinstance(partial_trace, Sequence)
+
+            # check individual type
+            val = getter(0)
+            if var in ['fval', 'chi2', 'time']:
+                assert isinstance(val, float)
+            else:
+                assert isinstance(val, np.ndarray) or np.isnan(val)
+>>>>>>> origin/develop

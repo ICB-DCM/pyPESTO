@@ -1,5 +1,5 @@
-import logging
 import abc
+<<<<<<< HEAD
 import numpy as np
 
 from ..problem import Problem
@@ -8,6 +8,8 @@ import pypesto
 
 
 logger = logging.getLogger(__name__)
+=======
+>>>>>>> origin/develop
 
 
 class Task(abc.ABC):
@@ -21,10 +23,11 @@ class Task(abc.ABC):
         pass
 
     @abc.abstractmethod
-    def execute(self) -> 'pypesto.OptimizerResult':  # noqa: R0201
+    def execute(self):
         """
         Execute the task and return its results.
         """
+<<<<<<< HEAD
 
 
 class OptimizerTask(Task):
@@ -75,3 +78,5 @@ class OptimizerTask(Task):
             history_options=self.history_options)
 
         return optimizer_result
+=======
+>>>>>>> origin/develop

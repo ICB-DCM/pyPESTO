@@ -1,6 +1,7 @@
 import logging
 import numpy as np
 from typing import List, Union
+from time import process_time
 
 from ..problem import Problem
 from ..result import Result
@@ -50,9 +51,9 @@ def sample(
     # try to find initial parameters
     if x0 is None:
         result.optimize_result.sort()
-        xs = result.optimize_result.get_for_key('x')
-        if len(xs) > 0:
-            x0 = xs[0]
+        if len(result.optimize_result.list) > 0:
+            x0 = problem.get_reduced_vector(
+                result.optimize_result.list[0]['x'])
         # TODO multiple x0 for PT, #269
 
     # set sampler
@@ -62,11 +63,17 @@ def sample(
     # initialize sampler to problem
     sampler.initialize(problem=problem, x0=x0)
 
-    # perform the sampling
+    # perform the sampling and track time
+    t_start = process_time()
     sampler.sample(n_samples=n_samples)
+    t_elapsed = process_time() - t_start
+    logger.info("Elapsed time: "+str(t_elapsed))
 
     # extract results
     sampler_result = sampler.get_samples()
+
+    # record time
+    sampler_result.time = t_elapsed
 
     # record results
     result.sample_result = sampler_result

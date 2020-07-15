@@ -15,17 +15,23 @@ addons:
   apt:
     update: true
     packages:
-      - libhdf5-serial-dev
-      - zlib1g-dev
-      - libatlas-base-dev
+      - build-essential
+      - coinor-libipopt1v5
+      - coinor-libipopt-dev
+      - gfortran
       - lcov
-      - swig3.0
+      - libatlas-base-dev
+      - libhdf5-serial-dev
       - pandoc
+      - pkg-config
+      - python-dev
+      - swig3.0
+      - zlib1g-dev
 
 install:
   - mkdir -p ~/bin/ && ln -s /usr/bin/swig3.0 ~/bin/swig && export PATH=~/bin/:$PATH
-  - pip3 install --upgrade -r ./.travis_pip_reqs.txt
-  - pip3 install .
+  - pip3 install -r ./.travis_pip_reqs.txt
+  - pip3 install .[ipopt,dlib,pyswarm,pymc3]
   - pip3 install https://github.com/petab-dev/petab/archive/develop.zip
   - pip3 install -e
       git+https://github.com/icb-dcm/amici.git@develop#egg=amici\&subdirectory=python/sdist
@@ -33,7 +39,7 @@ install:
       git clone --depth 1
         https://github.com/petab-dev/petab_test_suite tmp/petab_test_suite;
       pip3 install -e tmp/petab_test_suite;
-    fi 
+    fi
   - if [ "$TRAVIS_PULL_REQUEST" != "false" ]; then
       pip install -r .rtd_pip_reqs.txt;
     fi
@@ -41,9 +47,7 @@ install:
 # run tests
 script:
   - if [ "$TRAVIS_PULL_REQUEST" = "false" ]; then
-      python3 -m flake8 
-        --exclude=build,doc,example,tmp,amici_models
-        --per-file-ignores='*/__init__.py:F401';
+      ./run_flake8.sh;
     fi
   - if [ "$TRAVIS_PULL_REQUEST" = "false" ]; then
       travis_wait 20 python3 -m pytest --cov=pypesto ./test/test_*;
@@ -60,6 +64,9 @@ script:
     fi
   - if [ "$TRAVIS_PULL_REQUEST" = "false" ]; then
       coverage xml;
+    fi
+  - if [ "$TRAVIS_PULL_REQUEST" = "false" ]; then
+      ./test/check_git_size.sh;
     fi
 
 after_success:

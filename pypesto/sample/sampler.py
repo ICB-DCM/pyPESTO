@@ -32,7 +32,7 @@ class Sampler(abc.ABC):
 
     @abc.abstractmethod
     def sample(
-            self, n_samples: int, beta: float = 1.
+            self, n_samples: int, beta: float = 1.,
     ):
         """Perform sampling.
 
@@ -89,13 +89,16 @@ class InternalSample:
     ----------
     x:
         Parameter values.
-    llh:
-        Log-likelihood or log-posterior value (negative function value).
+    lpost:
+        Log-posterior value (negative function value).
+    lprior:
+        Log-prior value (negative function value).
     """
 
-    def __init__(self, x: np.ndarray, llh: float):
+    def __init__(self, x: np.ndarray, lpost: float, lprior: float):
         self.x = x
-        self.llh = llh
+        self.lpost = lpost
+        self.lprior = lprior
 
 
 class InternalSampler(Sampler):
@@ -124,4 +127,16 @@ class InternalSampler(Sampler):
         ----------
         sample:
             The sample that will replace the last sample in the chain.
+        """
+
+    def make_internal(self, temper_lpost: bool):
+        """
+        This function can be called by parallel tempering samplers during
+        initialization to allow the inner samplers to adjust to them
+        being used as inner samplers. Default: Do nothing.
+
+        Parameters
+        ----------
+        temper_lpost:
+            Whether to temperate the posterior or only the likelihood.
         """

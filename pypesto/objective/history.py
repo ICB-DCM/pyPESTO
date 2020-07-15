@@ -1,24 +1,58 @@
 import numpy as np
 import pandas as pd
+<<<<<<< HEAD
 import h5py
+=======
+import numbers
+>>>>>>> origin/develop
 import copy
 import time
 import os
 import abc
+<<<<<<< HEAD
 import warnings
 from typing import Any, Dict, List, Optional, Tuple, Sequence, Union
+=======
+from typing import Any, Dict, List, Tuple, Sequence, Union
+>>>>>>> origin/develop
 
 from .constants import (
     MODE_FUN, MODE_RES, FVAL, GRAD, HESS, RES, SRES, CHI2, SCHI2, TIME,
     N_FVAL, N_GRAD, N_HESS, N_RES, N_SRES, X)
 from .util import res_to_chi2, sres_to_schi2, sres_to_fim
 
-ResultType = Dict[str, Union[float, np.ndarray]]
+ResultDict = Dict[str, Union[float, np.ndarray]]
+MaybeArray = Union[np.ndarray, 'np.nan']
+
+
+def trace_wrap(f):
+    """
+    Wrapper around trace getters that transforms input `ix` vectors to a valid
+    index list, and reduces for integer `ix` the output to a single value.
+    """
+    def wrapped_f(
+            self, ix: Union[Sequence[int], int, None] = None
+    ) -> Union[Sequence[Union[float, MaybeArray]], Union[float, MaybeArray]]:
+        # whether to reduce the output
+        reduce = isinstance(ix, numbers.Integral)
+        # default: full list
+        if ix is None:
+            ix = np.arange(0, len(self), dtype=int)
+        # turn every input into an index list
+        if reduce:
+            ix = np.array([ix], dtype=int)
+        # obtain the trace
+        trace = f(self, ix)
+        # reduce the output
+        if reduce:
+            trace = trace[0]
+        return trace
+    return wrapped_f
 
 
 class HistoryOptions(dict):
     """
-    Options for the objective that are used in optimization, profiles
+    Options for the objective that are used in optimization, profiling
     and sampling.
 
     In addition implements a factory pattern to generate history objects.
@@ -139,7 +173,7 @@ class HistoryOptions(dict):
             return Hdf5History(id=id, file=storage_file, options=self)
         else:
             raise ValueError(
-                "Currently only history storage to '.csv' and '.hdf5'"
+                "Currently, only history storage to '.csv' and '.hdf5'"
                 "is supported")
 
 
@@ -159,7 +193,7 @@ class HistoryBase(abc.ABC):
             x: np.ndarray,
             sensi_orders: Tuple[int, ...],
             mode: str,
-            result: ResultType
+            result: ResultDict
     ) -> None:
         """Update history after a function evaluation.
 
@@ -219,6 +253,7 @@ class HistoryBase(abc.ABC):
         """Start time."""
         raise NotImplementedError()
 
+<<<<<<< HEAD
     def get_x_trace(self) -> Sequence[np.ndarray]:
         """Parameter trace."""
         return [self.get_x(ix)
@@ -351,6 +386,95 @@ class HistoryBase(abc.ABC):
         ----------
         ix:
             iteration index
+=======
+    def get_x_trace(
+            self, ix: Union[int, Sequence[int], None] = None
+    ) -> Union[Sequence[np.ndarray], np.ndarray]:
+        """Parameters.
+
+        Takes as parameter an index or indices and returns corresponding trace
+        values. If only a single value is requested, the list is flattened.
+        """
+        raise NotImplementedError()
+
+    def get_fval_trace(
+            self, ix: Union[int, Sequence[int], None] = None
+    ) -> Union[Sequence[float], float]:
+        """Function values.
+
+        Takes as parameter an index or indices and returns corresponding trace
+        values. If only a single value is requested, the list is flattened.
+        """
+        raise NotImplementedError()
+
+    def get_grad_trace(
+            self, ix: Union[int, Sequence[int], None] = None
+    ) -> Union[Sequence[MaybeArray], MaybeArray]:
+        """Gradients.
+
+        Takes as parameter an index or indices and returns corresponding trace
+        values. If only a single value is requested, the list is flattened.
+        """
+        raise NotImplementedError()
+
+    def get_hess_trace(
+            self, ix: Union[int, Sequence[int], None] = None
+    ) -> Union[Sequence[MaybeArray], MaybeArray]:
+        """Hessians.
+
+        Takes as parameter an index or indices and returns corresponding trace
+        values. If only a single value is requested, the list is flattened.
+        """
+        raise NotImplementedError()
+
+    def get_res_trace(
+            self, ix: Union[int, Sequence[int], None] = None
+    ) -> Union[Sequence[MaybeArray], MaybeArray]:
+        """Residuals.
+
+        Takes as parameter an index or indices and returns corresponding trace
+        values. If only a single value is requested, the list is flattened.
+        """
+        raise NotImplementedError()
+
+    def get_sres_trace(
+            self, ix: Union[int, Sequence[int], None] = None
+    ) -> Union[Sequence[MaybeArray], MaybeArray]:
+        """Residual sensitivities.
+
+        Takes as parameter an index or indices and returns corresponding trace
+        values. If only a single value is requested, the list is flattened.
+        """
+        raise NotImplementedError()
+
+    def get_chi2_trace(
+            self, ix: Union[int, Sequence[int], None] = None
+    ) -> Union[Sequence[float], float]:
+        """Chi2 values.
+
+        Takes as parameter an index or indices and returns corresponding trace
+        values. If only a single value is requested, the list is flattened.
+        """
+        raise NotImplementedError()
+
+    def get_schi2_trace(
+            self, ix: Union[int, Sequence[int], None] = None
+    ) -> Union[Sequence[MaybeArray], MaybeArray]:
+        """Chi2 sensitivities.
+
+        Takes as parameter an index or indices and returns corresponding trace
+        values. If only a single value is requested, the list is flattened.
+        """
+        raise NotImplementedError()
+
+    def get_time_trace(
+            self, ix: Union[int, Sequence[int], None] = None
+    ) -> Union[Sequence[float], float]:
+        """Cumulative execution times.
+
+        Takes as parameter an index or indices and returns corresponding trace
+        values. If only a single value is requested, the list is flattened.
+>>>>>>> origin/develop
         """
         raise NotImplementedError()
 
@@ -382,7 +506,7 @@ class History(HistoryBase):
             x: np.ndarray,
             sensi_orders: Tuple[int, ...],
             mode: str,
-            result: ResultType
+            result: ResultDict
     ) -> None:
         """Update history after a function evaluation.
 
@@ -491,11 +615,12 @@ class MemoryHistory(History):
             x: np.ndarray,
             sensi_orders: Tuple[int, ...],
             mode: str,
-            result: ResultType
+            result: ResultDict
     ) -> None:
         super().update(x, sensi_orders, mode, result)
         self._update_trace(x, mode, result)
 
+<<<<<<< HEAD
     def get_history_directory(self):
         warnings.warn('Saving History objects is currently only supported '
                       'for Hdf5History and CsvHistory objects. Consider '
@@ -535,6 +660,8 @@ class MemoryHistory(History):
 
         return h5history
 
+=======
+>>>>>>> origin/develop
     def _update_trace(self, x, mode, result):
         """Update internal trace representation."""
         ret = extract_values(mode, result, self.options)
@@ -544,6 +671,7 @@ class MemoryHistory(History):
         self._trace[X].append(x)
         self._trace[TIME].append(used_time)
 
+<<<<<<< HEAD
     @staticmethod
     def load(id: str,
              file: str):
@@ -601,6 +729,61 @@ class MemoryHistory(History):
 
     def get_time_trace(self) -> Sequence[float]:
         return self._trace[TIME]
+=======
+    @trace_wrap
+    def get_x_trace(
+            self, ix: Union[int, Sequence[int], None] = None
+    ) -> Union[Sequence[np.ndarray], np.ndarray]:
+        return [self._trace[X][i] for i in ix]
+
+    @trace_wrap
+    def get_fval_trace(
+            self, ix: Union[int, Sequence[int], None] = None
+    ) -> Union[Sequence[float], float]:
+        return [self._trace[FVAL][i] for i in ix]
+
+    @trace_wrap
+    def get_grad_trace(
+            self, ix: Union[int, Sequence[int], None] = None
+    ) -> Union[Sequence[MaybeArray], MaybeArray]:
+        return [self._trace[GRAD][i] for i in ix]
+
+    @trace_wrap
+    def get_hess_trace(
+            self, ix: Union[int, Sequence[int], None] = None
+    ) -> Union[Sequence[MaybeArray], MaybeArray]:
+        return [self._trace[HESS][i] for i in ix]
+
+    @trace_wrap
+    def get_res_trace(
+            self, ix: Union[int, Sequence[int], None] = None
+    ) -> Union[Sequence[MaybeArray], MaybeArray]:
+        return [self._trace[RES][i] for i in ix]
+
+    @trace_wrap
+    def get_sres_trace(
+            self, ix: Union[int, Sequence[int], None] = None
+    ) -> Union[Sequence[MaybeArray], MaybeArray]:
+        return [self._trace[SRES][i] for i in ix]
+
+    @trace_wrap
+    def get_chi2_trace(
+            self, ix: Union[int, Sequence[int], None] = None
+    ) -> Union[Sequence[float], float]:
+        return [self._trace[CHI2][i] for i in ix]
+
+    @trace_wrap
+    def get_schi2_trace(
+            self, ix: Union[int, Sequence[int], None] = None
+    ) -> Union[Sequence[MaybeArray], MaybeArray]:
+        return [self._trace[SCHI2][i] for i in ix]
+
+    @trace_wrap
+    def get_time_trace(
+            self, ix: Union[int, Sequence[int], None] = None
+    ) -> Union[Sequence[float], float]:
+        return [self._trace[TIME][i] for i in ix]
+>>>>>>> origin/develop
 
     def get_time(self, ix) -> float:
         return self._trace[TIME][ix]
@@ -667,13 +850,16 @@ class CsvHistory(History):
             x: np.ndarray,
             sensi_orders: Tuple[int, ...],
             mode: str,
-            result: ResultType
+            result: ResultDict
     ) -> None:
         super().update(x, sensi_orders, mode, result)
         self._update_trace(x, mode, result)
+<<<<<<< HEAD
 
     def get_history_directory(self):
         return self.file
+=======
+>>>>>>> origin/develop
 
     def finalize(self):
         """Finalize history. Called after a run."""
@@ -683,7 +869,7 @@ class CsvHistory(History):
     def _update_trace(self,
                       x: np.ndarray,
                       mode: str,
-                      result: ResultType):
+                      result: ResultDict):
         """
         Update and possibly store the trace.
         """
@@ -756,7 +942,6 @@ class CsvHistory(History):
                 columns.extend([(var,)])
 
         # TODO: multi-index for res, sres, hess
-
         self._trace = pd.DataFrame(columns=pd.MultiIndex.from_tuples(columns),
                                    dtype='float64')
 
@@ -795,6 +980,7 @@ class CsvHistory(History):
                 )
             trace_copy.to_csv(self.file)
 
+<<<<<<< HEAD
     @staticmethod
     def load(id: str,
              file: str):
@@ -836,6 +1022,61 @@ class CsvHistory(History):
 
     def get_time(self, ix) -> float:
         return self._trace.loc[ix, (TIME, np.NaN)]
+=======
+    @trace_wrap
+    def get_x_trace(
+            self, ix: Union[int, Sequence[int], None] = None
+    ) -> Union[Sequence[np.ndarray], np.ndarray]:
+        return list(self._trace[X].values[ix])
+
+    @trace_wrap
+    def get_fval_trace(
+            self, ix: Union[int, Sequence[int], None]
+    ) -> Union[Sequence[float], float]:
+        return list(self._trace[(FVAL, np.nan)].values[ix])
+
+    @trace_wrap
+    def get_grad_trace(
+            self, ix: Union[int, Sequence[int], None] = None
+    ) -> Union[Sequence[MaybeArray], MaybeArray]:
+        return list(self._trace[GRAD].values[ix])
+
+    @trace_wrap
+    def get_hess_trace(
+            self, ix: Union[int, Sequence[int], None] = None
+    ) -> Union[Sequence[MaybeArray], MaybeArray]:
+        return list(self._trace[(HESS, np.nan)].values[ix])
+
+    @trace_wrap
+    def get_res_trace(
+            self, ix: Union[int, Sequence[int], None] = None
+    ) -> Union[Sequence[MaybeArray], MaybeArray]:
+        return list(self._trace[(RES, np.nan)].values[ix])
+
+    @trace_wrap
+    def get_sres_trace(
+            self, ix: Union[int, Sequence[int], None] = None
+    ) -> Union[Sequence[MaybeArray], MaybeArray]:
+        return list(self._trace[(SRES, np.nan)].values[ix])
+
+    @trace_wrap
+    def get_chi2_trace(
+            self, ix: Union[int, Sequence[int], None] = None
+    ) -> Union[Sequence[float], float]:
+        return list(self._trace[(CHI2, np.nan)].values[ix])
+
+    @trace_wrap
+    def get_schi2_trace(
+            self, ix: Union[int, Sequence[int], None] = None
+    ) -> Union[Sequence[MaybeArray], MaybeArray]:
+        return list(self._trace[SCHI2].values[ix])
+
+    @trace_wrap
+    def get_time_trace(
+            self, ix: Union[int, Sequence[int], None] = None
+    ) -> Union[Sequence[float], float]:
+        return list(self._trace[(TIME, np.nan)].values[ix])
+>>>>>>> origin/develop
 
 
 class Hdf5History(History):
@@ -865,7 +1106,7 @@ class Hdf5History(History):
             x: np.ndarray,
             sensi_orders: Tuple[int, ...],
             mode: str,
-            result: ResultType
+            result: ResultDict
     ) -> None:
         super().update(x, sensi_orders, mode, result)
         self._update_trace(x, sensi_orders, mode, result)
@@ -1056,6 +1297,7 @@ class Hdf5History(History):
 
         return trace_result
 
+<<<<<<< HEAD
     def get_x_trace(self) -> Sequence[np.ndarray]:
         return self._get_hdf5_entries(X)
 
@@ -1084,6 +1326,9 @@ class Hdf5History(History):
         return self._get_hdf5_entries(TIME)
 
 
+=======
+
+>>>>>>> origin/develop
 class OptimizerHistory:
     """
     Objective call history. Container around a History object, which keeps
@@ -1143,7 +1388,7 @@ class OptimizerHistory:
                x: np.ndarray,
                sensi_orders: Tuple[int],
                mode: str,
-               result: ResultType) -> None:
+               result: ResultDict) -> None:
         """Update history and best found value."""
         self.history.update(x, sensi_orders, mode, result)
         self._update_vals(x, result)
@@ -1153,7 +1398,11 @@ class OptimizerHistory:
 
     def _update_vals(self,
                      x: np.ndarray,
+<<<<<<< HEAD
                      result: ResultType):
+=======
+                     result: ResultDict):
+>>>>>>> origin/develop
         """
         Update initial and best function values.
         """
@@ -1195,9 +1444,15 @@ class OptimizerHistory:
         # etc
         max_init_iter = 3
         for it in range(min(len(self.history), max_init_iter)):
+<<<<<<< HEAD
             candidate = self.history.get_fval(it)
             if not np.isnan(candidate) \
                     and np.allclose(self.history.get_x(it), self.x0):
+=======
+            candidate = self.history.get_fval_trace(it)
+            if not np.isnan(candidate) \
+                    and np.allclose(self.history.get_x_trace(it), self.x0):
+>>>>>>> origin/develop
                 self.fval0 = candidate
                 break
 
@@ -1221,15 +1476,24 @@ class OptimizerHistory:
                 self.extract_from_history(var, ix_min)
                 if getattr(self, target) is None \
                         and ix_try < len(self.history) \
+<<<<<<< HEAD
                         and np.allclose(self.history.get_x(ix_min),
                                         self.history.get_x(ix_try)):
+=======
+                        and np.allclose(self.history.get_x_trace(ix_min),
+                                        self.history.get_x_trace(ix_try)):
+>>>>>>> origin/develop
                     # gradient/sres typically evaluated on the next call
                     # so we check if x remains the same and if yes try to
                     # extract from the next
                     self.extract_from_history(var, ix_try)
 
     def extract_from_history(self, var, ix):
+<<<<<<< HEAD
         val = getattr(self.history, f'get_{var}')(ix)
+=======
+        val = getattr(self.history, f'get_{var}_trace')(ix)
+>>>>>>> origin/develop
         if not np.all(np.isnan(val)):
             setattr(self, f'{var}_min', val)
 
@@ -1281,10 +1545,17 @@ def string2ndarray(x: Union[str, float]) -> Union[np.ndarray, float]:
 
 
 def extract_values(mode: str,
+<<<<<<< HEAD
                    result: ResultType,
                    options: HistoryOptions) -> Dict:
     """Extract values to record from result."""
     ret = dict()
+=======
+                   result: ResultDict,
+                   options: HistoryOptions) -> Dict:
+    """Extract values to record from result."""
+    ret = {}
+>>>>>>> origin/develop
     ret_vars = [FVAL, GRAD, HESS, RES, SRES, CHI2, SCHI2]
     for var in ret_vars:
         if options.get(f'trace_record_{var}', True) and var in result:
@@ -1300,6 +1571,16 @@ def extract_values(mode: str,
         alt_values = {CHI2: chi2, SCHI2: schi2, HESS: fim}
         if schi2 is not None:
             alt_values[GRAD] = 0.5 * schi2
+<<<<<<< HEAD
+=======
+
+        # filter according to options
+        alt_values = {
+            key: val
+            for key, val in alt_values.items()
+            if options.get(f'trace_record_{key}', True)
+        }
+>>>>>>> origin/develop
         for var, val in alt_values.items():
             if val is not None:
                 ret[var] = ret.get(var, val)

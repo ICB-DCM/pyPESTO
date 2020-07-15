@@ -3,7 +3,11 @@ import os.path
 from ..result import Result
 from ..optimize.result import OptimizerResult
 from ..problem import Problem
+<<<<<<< HEAD:pypesto/storage/read_from_hdf5.py
 from ..objective import Objective, History
+=======
+from ..objective import Objective, ObjectiveBase
+>>>>>>> origin/develop:pypesto/store/read_from_hdf5.py
 
 
 def read_hdf5_optimization(f: h5py.File,
@@ -62,22 +66,36 @@ class ProblemHDF5Reader:
         """
         self.storage_filename = storage_filename
 
+<<<<<<< HEAD:pypesto/storage/read_from_hdf5.py
     def read(self, objective: Objective = None) -> Problem:
+=======
+    def read(self, objective: ObjectiveBase = None) -> Problem:
+>>>>>>> origin/develop:pypesto/store/read_from_hdf5.py
         """
         Read HDF5 problem file and return pyPESTO problem object.
 
         Parameters
         ----------
         objective:
+<<<<<<< HEAD:pypesto/storage/read_from_hdf5.py
             Objective function which is currently not save to storage.
+=======
+            Objective function which is currently not saved to storage.
+>>>>>>> origin/develop:pypesto/store/read_from_hdf5.py
         Returns
         -------
         problem:
             A problem instance with all attributes read in.
         """
+<<<<<<< HEAD:pypesto/storage/read_from_hdf5.py
         if objective is None:
             objective = Objective()
         # create empty problem
+=======
+        # create empty problem
+        if objective is None:
+            objective = Objective()
+>>>>>>> origin/develop:pypesto/store/read_from_hdf5.py
         problem = Problem(objective, [], [])
 
         with h5py.File(self.storage_filename, 'r') as f:
@@ -91,7 +109,10 @@ class ProblemHDF5Reader:
         # h5 uses numpy for everything; convert to lists where necessary
         problem.x_fixed_vals = [float(val) for val in problem.x_fixed_vals]
         problem.x_fixed_indices = [int(ix) for ix in problem.x_fixed_indices]
+<<<<<<< HEAD:pypesto/storage/read_from_hdf5.py
         problem.x_free_indices = [int(ix) for ix in problem.x_free_indices]
+=======
+>>>>>>> origin/develop:pypesto/store/read_from_hdf5.py
         problem.x_names = [str(name) for name in problem.x_names]
 
         return problem

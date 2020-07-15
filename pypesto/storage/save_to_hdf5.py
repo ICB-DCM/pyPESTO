@@ -5,7 +5,7 @@ import h5py
 import numpy as np
 import os.path
 
-from .hdf5 import write_string_array, write_int_array, write_float_array
+from .storage import write_string_array, write_int_array, write_float_array
 from ..result import Result
 
 

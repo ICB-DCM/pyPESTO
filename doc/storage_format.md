@@ -11,6 +11,10 @@ For detailed information on usage, consult the `doc/example/hdf5_storage.ipynb`
 notebook, and the API documentation for the `pypesto.objective.history` and
 `pypesto.storage` modules.
 
+<<<<<<< HEAD
+=======
+
+>>>>>>> origin/develop
 ## pyPESTO Problem
 
 ```
@@ -92,6 +96,10 @@ When objective function call histories are saved to HDF5, they are under
 
 ## Sampling
 
+<<<<<<< HEAD
+=======
+
+>>>>>>> origin/develop
 ### Sampling results
 
 Sampling results are saved in `/sampling/chains/`.

@@ -12,15 +12,23 @@ from ..problem import Problem
 from .result import OptimizerResult
 
 try:
-    import pyswarm
+    import ipopt
 except ImportError:
-    pyswarm = None
+    ipopt = None
 
 try:
     import dlib
 except ImportError:
     dlib = None
 
+<<<<<<< HEAD
+=======
+try:
+    import pyswarm
+except ImportError:
+    pyswarm = None
+
+>>>>>>> origin/develop
 EXITFLAG_LOADED_FROM_FILE = -99
 
 logger = logging.getLogger(__name__)
@@ -138,7 +146,11 @@ def fill_result_from_objective_history(
             "Parameters obtained from history and optimizer do not match: "
             f"{optimizer_history.x_min}, {result.x}")
         # do not use value from history
+<<<<<<< HEAD
         update_vals = False
+=======
+        update_vals = result.fval is None
+>>>>>>> origin/develop
 
     # update optimal values from history if reported function values
     # and parameters coincide
@@ -185,7 +197,11 @@ def read_result_from_file(problem: Problem, history_options: HistoryOptions,
         raise NotImplementedError()
 
     opt_hist = OptimizerHistory(
+<<<<<<< HEAD
         history, history.get_x(0),
+=======
+        history, history.get_x_trace(0),
+>>>>>>> origin/develop
         generate_from_history=True
     )
 
@@ -245,8 +261,7 @@ class Optimizer(abc.ABC):
     def is_least_squares(self):
         return False
 
-    @staticmethod
-    def get_default_options():
+    def get_default_options(self):
         """
         Create default options specific for the optimizer.
         """
@@ -303,9 +318,12 @@ class ScipyOptimizer(Optimizer):
             # TODO: pass jac computing methods in options
 
             if self.options is not None:
-                self.options['verbose'] = 2 if 'disp' in self.options.keys() \
-                                               and self.options['disp'] else 0
-                self.options.pop('disp', None)
+                ls_options = self.options.copy()
+                ls_options['verbose'] = 2 if 'disp' in ls_options.keys() \
+                                             and ls_options['disp'] else 0
+                ls_options.pop('disp', None)
+            else:
+                ls_options = {}
 
             # optimize
             res = scipy.optimize.least_squares(
@@ -316,9 +334,12 @@ class ScipyOptimizer(Optimizer):
                 bounds=bounds,
                 tr_solver='exact',
                 loss='linear',
-                **self.options
+                **ls_options
             )
-
+            # extract fval/grad from result, note that fval is not available
+            # from least squares solvers
+            grad = getattr(res, 'grad', None)
+            fval = None
         else:
             # is an fval based optimization method
 
@@ -367,11 +388,17 @@ class ScipyOptimizer(Optimizer):
                 bounds=bounds,
                 options=self.options,
             )
+<<<<<<< HEAD
 
         # some fields are not filled by all optimizers, then fill in None
         grad = getattr(res, 'grad', None) if self.is_least_squares() \
             else getattr(res, 'jac', None)
         fval = None if self.is_least_squares() else res.fun
+=======
+            # extract fval/grad from result
+            grad = getattr(res, 'jac', None)
+            fval = res.fun
+>>>>>>> origin/develop
 
         # fill in everything known, although some parts will be overwritten
         optimizer_result = OptimizerResult(
@@ -388,13 +415,63 @@ class ScipyOptimizer(Optimizer):
     def is_least_squares(self):
         return re.match(r'(?i)^(ls_)', self.method)
 
-    @staticmethod
     def get_default_options(self):
         if self.is_least_squares:
             options = {'max_nfev': 1000, 'disp': False}
         else:
             options = {'maxiter': 1000, 'disp': False}
         return options
+
+
+class IpoptOptimizer(Optimizer):
+    """Use IpOpt (https://pypi.org/project/ipopt/) for optimization."""
+
+    def __init__(
+            self, options: Dict = None):
+        """
+        Parameters
+        ----------
+        options:
+            Options are directly passed on to `ipopt.minimize_ipopt`.
+        """
+        super().__init__()
+        self.options = options
+
+    @fix_decorator
+    @time_decorator
+    @history_decorator
+    def minimize(
+            self,
+            problem: Problem,
+            x0: np.ndarray,
+            id: str,
+            history_options: HistoryOptions = None,
+    ) -> OptimizerResult:
+        objective = problem.objective
+
+        bounds = np.array([problem.lb, problem.ub]).T
+
+        ret = ipopt.minimize_ipopt(
+            fun=objective.get_fval,
+            x0=x0,
+            method=None,  # ipopt does not use this argument for anything
+            jac=objective.get_grad,
+            hess=None,  # ipopt does not support Hessian yet
+            hessp=None,  # ipopt does not support Hessian vector product yet
+            bounds=bounds,
+            tol=None,  # can be set via options
+            options=self.options,
+        )
+
+        # the ipopt return object is a scipy.optimize.OptimizeResult
+        return OptimizerResult(
+            x=ret.x,
+            exitflag=ret.status,
+            message=ret.message
+        )
+
+    def is_least_squares(self):
+        return False
 
 
 class DlibOptimizer(Optimizer):
@@ -456,7 +533,6 @@ class DlibOptimizer(Optimizer):
     def is_least_squares(self):
         return False
 
-    @staticmethod
     def get_default_options(self):
         return {}
 
