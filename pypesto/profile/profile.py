@@ -89,8 +89,8 @@ def parameter_profile(
 
     # loop over parameters for profiling
     for i_par in profile_index:
+        # not requested or fixed -> compute no profile
         if i_par in problem.x_fixed_indices:
-            # not requested or fixed -> compute no profile
             continue
 
         # create an instance of ProfilerResult, which will be appended to the

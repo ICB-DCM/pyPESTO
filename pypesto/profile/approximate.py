@@ -34,9 +34,7 @@ def approximate_parameter_profile(
         previous profile, in order to merge these.
         The existence of an optimization result is obligatory.
     profile_index:
-        Array with parameter indices, whether a profile should
-        be computed (1) or not (0).
-        Default is all profiles should be computed.
+        List with the profile indices to be computed (by default all of them).
     profile_list:
         Integer which specifies whether a call to the profiler should create
         a new list of profiles (default) or should be added to a specific
@@ -54,9 +52,9 @@ def approximate_parameter_profile(
     """
     # Handling defaults
     # profiling indices
+    # profiling indices
     if profile_index is None:
-        profile_index = np.ones(problem.dim_full)
-        profile_index[problem.x_fixed_indices] = 0
+        profile_index = problem.x_free_indices
 
     # create the profile result object (retrieve global optimum) or append to
     # existing list of profiles
@@ -86,9 +84,9 @@ def approximate_parameter_profile(
     xs = np.linspace(problem.lb_full, problem.ub_full, n_steps).T
 
     # loop over parameters for profiling
-    for i_par in range(0, problem.dim_full):
+    for i_par in profile_index:
         # not requested or fixed -> compute no profile
-        if i_par in problem.x_fixed_indices or profile_index[i_par] == 0:
+        if i_par in problem.x_fixed_indices:
             continue
 
         i_free_par = problem.full_index_to_free_index(i_par)

@@ -188,6 +188,8 @@ def test_profile_with_history():
                                              default_step_size=0.005,
                                              ratio_min=0.03)
 
+    problem.fix_parameters([0, 3], [result.optimize_result.list[0].x[0],
+                                    result.optimize_result.list[0].x[3]])
     problem.objective.history = pypesto.MemoryHistory({'trace_record': True})
     profile.parameter_profile(
         problem=problem,
