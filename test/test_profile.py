@@ -156,7 +156,7 @@ class ProfilerTest(unittest.TestCase):
         n_steps = 50
         assert self.result.optimize_result.list[0].hess is None
         result = profile.approximate_parameter_profile(
-            problem=self.problem, result=self.result, profile_index=[0, 1],
+            problem=self.problem, result=self.result, profile_index=[1],
             n_steps=n_steps)
         profile_list = result.profile_result.list[-1]
         assert profile_list[0] is None
@@ -169,7 +169,7 @@ class ProfilerTest(unittest.TestCase):
         result = deepcopy(self.result)
         result.optimize_result.list[0].hess = np.array([[2, 0], [0, 1]])
         profile.approximate_parameter_profile(
-            problem=self.problem, result=result, profile_index=[0, 1],
+            problem=self.problem, result=result, profile_index=[1],
             n_steps=n_steps)
 
 
@@ -181,7 +181,7 @@ def test_profile_with_history():
     with warnings.catch_warnings():
         warnings.simplefilter("ignore")
         (problem, result, optimizer) = \
-            create_optimization_results(objective)
+            create_optimization_results(objective, dim_full=5)
 
     profile_options = profile.ProfileOptions(min_step_size=0.0005,
                                              delta_ratio_max=0.05,
@@ -193,7 +193,7 @@ def test_profile_with_history():
         problem=problem,
         result=result,
         optimizer=optimizer,
-        profile_index=np.array([0, 1, 2, 5, 7]),
+        profile_index=np.array([0, 2, 4]),
         result_index=0,
         profile_options=profile_options
     )
@@ -228,15 +228,15 @@ def test_profile_with_fixed_parameters():
         visualize.profile_cis(result, profile_list=i_method)
 
 
-def create_optimization_results(objective):
+def create_optimization_results(objective, dim_full=2):
     # create optimizer, pypesto problem and options
     options = {
         'maxiter': 200
     }
-    optimizer = optimize.ScipyOptimizer(method='TNC', options=options)
+    optimizer = optimize.ScipyOptimizer(method='l-bfgs-b', options=options)
 
-    lb = -2 * np.ones(2)
-    ub = 2 * np.ones(2)
+    lb = -2 * np.ones(dim_full)
+    ub = 2 * np.ones(dim_full)
     problem = pypesto.Problem(objective, lb, ub)
 
     optimize_options = optimize.OptimizeOptions(allow_failed_starts=True)
