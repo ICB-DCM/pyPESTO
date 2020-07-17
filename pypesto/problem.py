@@ -9,13 +9,15 @@ describing the problem to be solved.
 
 import numpy as np
 import pandas as pd
-import numbers
 import copy
 
-from typing import Iterable, List, Optional, Union
+from typing import Iterable, List, Optional, Union, SupportsFloat, SupportsInt
 
 from .objective import ObjectiveBase
 from .objective.priors import NegLogPriors
+
+SupportsFloatIterableOrValue = Union[Iterable[SupportsFloat], SupportsFloat]
+SupportsIntIterableOrValue = Union[Iterable[SupportsInt], SupportsInt]
 
 
 class Problem:
@@ -82,8 +84,8 @@ class Problem:
                  lb: Union[np.ndarray, List[float]],
                  ub: Union[np.ndarray, List[float]],
                  dim_full: Optional[int] = None,
-                 x_fixed_indices: Optional[Iterable[int]] = None,
-                 x_fixed_vals: Optional[Iterable[float]] = None,
+                 x_fixed_indices: Optional[SupportsIntIterableOrValue] = None,
+                 x_fixed_vals: Optional[SupportsFloatIterableOrValue] = None,
                  x_guesses: Optional[Iterable[float]] = None,
                  x_names: Optional[Iterable[str]] = None,
                  x_scales: Optional[Iterable[str]] = None,
@@ -97,15 +99,21 @@ class Problem:
 
         if x_fixed_indices is None:
             x_fixed_indices = []
-        self.x_fixed_indices: List[int] = [int(ix) for ix in x_fixed_indices]
+        x_fixed_indices = _make_iterable_if_value(x_fixed_indices, 'int')
+        self.x_fixed_indices: List[int] = [
+            _type_conversion_with_check(idx, ix, 'fixed indices', 'int')
+            for idx, ix in enumerate(x_fixed_indices)
+        ]
 
         # We want the fixed values to be a list, since we might need to add
         # or remove values during profile computation
         if x_fixed_vals is None:
             x_fixed_vals = []
-        if isinstance(x_fixed_vals, numbers.Real):
-            x_fixed_vals = [x_fixed_vals]
-        self.x_fixed_vals: List[float] = [float(x) for x in x_fixed_vals]
+        x_fixed_vals = _make_iterable_if_value(x_fixed_vals, 'float')
+        self.x_fixed_vals: List[float] = [
+            _type_conversion_with_check(idx, x, 'fixed values', 'float')
+            for idx, x in enumerate(x_fixed_vals)
+        ]
 
         self._x_free_indices: Union[List[int], None] = None
 
@@ -194,50 +202,51 @@ class Problem:
                 "x_fixed_indices and x_fixed_vals musti have the same length."
             )
 
-    def fix_parameters(
-            self,
-            parameter_indices: Union[Iterable[int], int],
-            parameter_vals: Union[Iterable[float], float]) -> None:
+    def fix_parameters(self,
+                       parameter_indices: SupportsIntIterableOrValue,
+                       parameter_vals: SupportsFloatIterableOrValue) -> None:
         """
         Fix specified parameters to specified values
         """
-        if not isinstance(parameter_indices, list):
-            parameter_indices = [parameter_indices]
-
-        if not isinstance(parameter_vals, list):
-            parameter_vals = [parameter_vals]
+        parameter_indices = _make_iterable_if_value(parameter_indices, 'int')
+        parameter_vals = _make_iterable_if_value(parameter_vals, 'float')
 
         # first clean to-be-fixed indices to avoid redundancies
-        for i_index, i_parameter in enumerate(parameter_indices):
+        for iter_index, (x_index, x_value) in enumerate(
+                zip(parameter_indices, parameter_vals)
+        ):
             # check if parameter was already fixed, otherwise add it to the
             # fixed parameters
-            if i_parameter in self.x_fixed_indices:
+            index = _type_conversion_with_check(iter_index, x_index,
+                                                'indices', 'int')
+            val = _type_conversion_with_check(iter_index, x_value,
+                                              'values', 'float')
+            if index in self.x_fixed_indices:
                 self.x_fixed_vals[
-                    self.x_fixed_indices.index(i_parameter)] = \
-                    parameter_vals[i_index]
+                    self.x_fixed_indices.index(index)] = val
             else:
-                self.x_fixed_indices.append(i_parameter)
-                self.x_fixed_vals.append(parameter_vals[i_index])
+                self.x_fixed_indices.append(index)
+                self.x_fixed_vals.append(val)
 
         self.normalize()
 
-    def unfix_parameters(
-            self,
-            parameter_indices: Union[Iterable[int], int]) -> None:
+    def unfix_parameters(self, parameter_indices: SupportsIntIterableOrValue
+                         ) -> None:
         """
         Free specified parameters
         """
 
         # check and adapt input
-        if not isinstance(parameter_indices, list):
-            parameter_indices = [parameter_indices]
+        parameter_indices = _make_iterable_if_value(parameter_indices, 'int')
 
         # first clean to-be-freed indices
-        for i_parameter in parameter_indices:
-            if i_parameter in self.x_fixed_indices:
-                i_index = self.x_fixed_indices.index(i_parameter)
-                self.x_fixed_indices.pop(i_index)
-                self.x_fixed_vals.pop(i_index)
+        for iter_index, x_index in enumerate(parameter_indices):
+            index = _type_conversion_with_check(iter_index, x_index,
+                                                'indices', 'int')
+            if index in self.x_fixed_indices:
+                fixed_x_index = self.x_fixed_indices.index(index)
+                self.x_fixed_indices.pop(fixed_x_index)
+                self.x_fixed_vals.pop(fixed_x_index)
 
         self.normalize()
 
@@ -303,23 +312,30 @@ class Problem:
         return x_full
 
     def get_reduced_vector(
-            self, x_full: Union[np.ndarray, None]
+            self, x_full: Union[np.ndarray, None],
+            x_indices: Optional[List[int]] = None
     ) -> Union[np.ndarray, None]:
         """
-        Map vector from dim_full to dim, i.e. delete fixed indices.
+        Keep only those elements, which indices are specified in x_indices
+        If x_indices is not provided, delete fixed indices.
 
         Parameters
         ----------
         x_full: array_like, ndim=1
             The vector in dimension dim_full.
+        x_indices:
+            indices of x_full that should remain
         """
         if x_full is None:
             return None
 
-        if len(x_full) == self.dim:
+        if x_indices is None:
+            x_indices = self.x_free_indices
+
+        if len(x_full) == len(x_indices):
             return x_full
 
-        x = [x_full[idx] for idx in self.x_free_indices]
+        x = [x_full[idx] for idx in x_indices]
         return np.array(x)
 
     def get_reduced_matrix(
@@ -376,3 +392,61 @@ class Problem:
                 }
             )
         )
+
+
+_convtypes = {
+    'float': {
+        'attr': '__float__',
+        'conv': float
+    },
+    'int': {
+        'attr': '__int__',
+        'conv': int
+    }
+}
+
+
+def _type_conversion_with_check(index: int,
+                                value: Union[SupportsFloat, SupportsInt],
+                                valuename: str,
+                                convtype: str) -> Union[float, int]:
+    """
+    Converts values to the requested type, raises and appropriate error if
+    not possible.
+    """
+
+    if convtype not in _convtypes:
+        raise ValueError(f'Unsupported type {convtype}')
+
+    can_convert = hasattr(value, _convtypes[convtype]['attr'])
+    # this may fail for weird custom ypes that can be converted to int but
+    # not float, but we probably don't want those as indiced anyways
+    lossless_conversion = not convtype == 'int' \
+        or (hasattr(value, _convtypes['float']['attr'])
+            and (float(value) - int(value) == 0.0))
+
+    if not can_convert or not lossless_conversion:
+        raise ValueError(
+            f'All {valuename} must support lossless conversion to {convtype}. '
+            f'Found type {type(value)} at index {index}, which cannot '
+            f'be converted to {convtype}.'
+        )
+
+    return _convtypes[convtype]['conv'](value)
+
+
+def _make_iterable_if_value(value: Union[SupportsFloatIterableOrValue,
+                                         SupportsIntIterableOrValue],
+                            convtype: str) -> Union[Iterable[SupportsFloat],
+                                                    Iterable[SupportsInt]]:
+    """
+    Converts scalar values to iterables if input is scalar, may update type
+    """
+
+    if convtype not in _convtypes:
+        raise ValueError(f'Unsupported type {convtype}')
+
+    if not hasattr(value, '__iter__'):
+        return [_type_conversion_with_check(0, value, 'values', convtype)]
+    else:
+        return value
