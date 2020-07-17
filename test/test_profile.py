@@ -88,7 +88,7 @@ class ProfilerTest(unittest.TestCase):
             problem=self.problem,
             result=self.result,
             optimizer=self.optimizer,
-            profile_index=np.array([0, 1]),
+            profile_index=np.array([1]),
             next_guess_method='fixed_step',
             result_index=1,
             profile_options=options)
@@ -103,7 +103,7 @@ class ProfilerTest(unittest.TestCase):
             problem=self.problem,
             result=result,
             optimizer=self.optimizer,
-            profile_index=np.array([1, 0]),
+            profile_index=np.array([0]),
             result_index=2,
             profile_list=0,
             profile_options=options)
@@ -117,7 +117,7 @@ class ProfilerTest(unittest.TestCase):
             result=result,
             optimizer=self.optimizer,
             next_guess_method='fixed_step',
-            profile_index=np.array([1, 0]),
+            profile_index=np.array([0]),
             profile_options=options)
         # check result
         self.assertIsInstance(result.profile_result.list[1][0],
@@ -141,7 +141,7 @@ class ProfilerTest(unittest.TestCase):
                                            result=result,
                                            optimizer=self.optimizer,
                                            next_guess_method='fixed_step',
-                                           profile_index=np.array([0, 1]),
+                                           profile_index=np.array([1]),
                                            profile_list=0)
         # check result
         self.assertTrue(
@@ -193,7 +193,7 @@ def test_profile_with_history():
         problem=problem,
         result=result,
         optimizer=optimizer,
-        profile_index=np.array([1, 1, 1, 0, 0, 1, 0, 1, 0, 0, 0]),
+        profile_index=np.array([0, 1, 2, 5, 7]),
         result_index=0,
         profile_options=profile_options
     )
