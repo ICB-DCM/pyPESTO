@@ -34,7 +34,8 @@ def approximate_parameter_profile(
         previous profile, in order to merge these.
         The existence of an optimization result is obligatory.
     profile_index:
-        List with the profile indices to be computed (by default all of them).
+        List with the profile indices to be computed
+        (by default all of the free parameters).
     profile_list:
         Integer which specifies whether a call to the profiler should create
         a new list of profiles (default) or should be added to a specific
