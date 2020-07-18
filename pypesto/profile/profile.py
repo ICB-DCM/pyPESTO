@@ -19,7 +19,6 @@ def parameter_profile(
         result: Result,
         optimizer: Optimizer,
         profile_index: Union[np.ndarray, list] = None,
-        profile_index_advanced: Union[np.ndarray, list] = None,
         profile_list: int = None,
         result_index: int = 0,
         next_guess_method: Union[Callable, str] = 'adaptive_step_regression',
@@ -40,7 +39,7 @@ def parameter_profile(
     optimizer:
         The optimizer to be used along each profile.
     profile_index:
-        List with the profile indices to be computed (by default all of them).
+        List with the parameter indices to be profiled (by default all of them).
     profile_list:
         Integer which specifies whether a call to the profiler should create
         a new list of profiles (default) or should be added to a specific
