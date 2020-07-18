@@ -39,7 +39,8 @@ def parameter_profile(
     optimizer:
         The optimizer to be used along each profile.
     profile_index:
-        List with the parameter indices to be profiled (by default all of them).
+        List with the parameter indices to be profiled
+        (by default all of them).
     profile_list:
         Integer which specifies whether a call to the profiler should create
         a new list of profiles (default) or should be added to a specific
