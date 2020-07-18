@@ -192,12 +192,13 @@ def walk_along_profile(
         # handling (coming soon)
         if startpoint.size > 0:
             optimizer_result = optimizer.minimize(problem, startpoint, '0',
-                                                allow_failed_starts=False)
+                                                  allow_failed_starts=False)
         else:
+            # if too many parameters are fixed, there is nothing to do...
             fval = problem.objective([])
-            optimizer_result = OptimizerResult(id='0', x=np.ndarray([]),
-                fval=fval, n_fval=0, n_grad=0, n_hess=0, n_res=0, n_sres=0,
-                x0=[], fval0=fval, time=0)
+            optimizer_result = OptimizerResult(
+                id='0', x=np.ndarray([]), fval=fval, n_fval=0, n_grad=0,
+                n_hess=0, n_res=0, n_sres=0, x0=[], fval0=fval, time=0)
 
         if optimizer_result[GRAD] is not None:
             gradnorm = np.linalg.norm(optimizer_result[GRAD][
