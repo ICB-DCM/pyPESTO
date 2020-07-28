@@ -15,6 +15,7 @@ from ...problem import Problem
 from ...result import Result
 from ..result import McmcPtResult
 from .model import pymc3_vector_parname
+from .theano import CachedObjective
 
 
 def pymc3_to_arviz(model: pm.Model, trace: pm.backends.base.MultiTrace, *,
@@ -57,6 +58,57 @@ def pymc3_to_arviz(model: pm.Model, trace: pm.backends.base.MultiTrace, *,
 
 
 class CustomPyMC3Converter(az.data.io_pymc3.PyMC3Converter):
+    # NB if we want to save only the untrasformed variables,
+    #    we cannot rely on PyMC3 to compute the objective function
+    def _extract_log_likelihood(self, trace):
+        if self.log_likelihood is not True:
+            raise ValueError('expected log_likelihood to be True!')
+        if self.model is None:
+            raise ValueError('expected model not to be None!')
+        if trace is None:
+            raise ValueError('expected trace not to be None!')
+        if len(self.model.observed_RVs) != 1:
+            raise ValueError('expected number of observed RVs to be one!')
+        # Get pyPESTO objective
+        var = self.model.observed_RVs[0]
+        obj = var.distribution.logp._objective
+        if isinstance(obj, CachedObjective):
+            obj = obj.objective
+        # Create trace for log-likelihoods
+        try:
+            log_likelihood_dict = self.pymc3.sampling._DefaultTrace(  # pylint: disable=protected-access
+                len(trace.chains)
+            )
+        except AttributeError:
+            raise AttributeError(
+                "Installed version of ArviZ requires PyMC3>=3.8. Please upgrade with "
+                "`pip install pymc3>=3.8` or `conda install -c conda-forge pymc3>=3.8`."
+            )
+        # Determine if parameters are stored as a vector or separately
+        # and create a function mapping a point from a PyMC3 chain
+        # to a pyPESTO vector of parameters
+        to_params = lambda point : [float(point[name]) for name in obj.x_names]
+        if len(self.model.free_RVs) == 1:
+            theta = self.model.free_RVs[0]
+            theta_shape = theta.distribution.shape
+            if len(theta_shape) > 0:
+                # theta is a tensor variable
+                assert len(theta_shape) == 1  # should only be vector
+                theta_name = pymc3_vector_parname(obj.x_names)
+                # NB it may be that theta_name != theta.name
+                #    The reason is that theta may be
+                #    a transformed version of the real parameter vector
+                to_params = lambda point : point[theta_name]
+        # Compute objective values
+        # NB PyMC3 log-likelihood == negative obj. value
+        #                         == real model's posterior
+        for chain in trace.chains:
+            log_like_chain = [
+                [-obj(to_params(point))] for point in trace.points([chain])
+            ]
+            log_likelihood_dict.insert(var.name, np.stack(log_like_chain), chain)
+        return log_likelihood_dict.trace_dict
+
     # NB this function is as in arviz, except for one line
     def to_inference_data(self):
         id_dict = {
