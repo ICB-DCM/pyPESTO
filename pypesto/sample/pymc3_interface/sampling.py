@@ -525,20 +525,34 @@ class CheckpointablePymc3Sampler:
         shutil.rmtree(self.branch_folder(branch))
 
     @classmethod
-    def load(cls, folder: str):
+    def load(cls, folder: str, branch: Optional[str] = None):
         if not os.path.exists(folder):
             raise FileNotFoundError(f'folder {folder} does not exist')
         cur_branch_file = os.path.join(folder, 'current_branch.txt')
         if not os.path.exists(cur_branch_file):
             raise FileNotFoundError('current branch file not found '
                                     f'inside folder {folder}')
-        with open(cur_branch_file, 'r') as f:
-            cur_branch = f.read().strip()
+        if branch is None:
+            with open(cur_branch_file, 'r') as f:
+                branch = f.read().strip()
         self = object.__new__(cls)
         self._folder = os.path.abspath(folder)
         self._cur_branch_file = os.path.abspath(cur_branch_file)
-        self._load_branch(cur_branch, flush=False, write=False)
+        self._load_branch(branch, flush=False, write=False)
         return self
+
+    @staticmethod
+    def load_single_branch(folder: str, branch: str):
+        if not os.path.exists(folder):
+            raise FileNotFoundError(f'folder {folder} does not exist')
+        branch_folder = os.path.join(folder, branch)
+        if not os.path.exists(branch_folder):
+            raise FileNotFoundError(f'branch {branch} does not exist')
+        path = os.path.join(branch_folder, 'sampler.pickle')
+        datapath = os.path.join(branch_folder, 'trace.h5')
+        if not os.path.exists(path) or not os.path.exists(datapath):
+            raise FileNotFoundError(f'sampler data for branch {folder} does not exist')
+        return ResumablePymc3Sampler._load(path, datapath)
 
     @property
     def model(self):
