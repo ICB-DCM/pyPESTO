@@ -30,7 +30,12 @@ class DesignResult(dict):
 
         return [d[criteria] for d in self.single_runs[run]]
 
-    def get_best_conditions(self, key: str = None, run: int = 0, n_best: int = 1, maximize: bool = True) -> (List[float], List[int]):
+    def get_best_conditions(self,
+                            key: str = None,
+                            run: int = 0,
+                            n_best: int = 1,
+                            maximize: bool = True) \
+            -> (List[float], List[int]):
 
         if key is None:
             key = self.design_problem.chosen_criteria
@@ -38,8 +43,10 @@ class DesignResult(dict):
         values = [d[key] for d in self.single_runs[run]]
 
         if maximize:
-            best_indices, best_values = map(list, zip(*nlargest(n_best, enumerate(values), key=lambda x: x[1])))
+            best_indices, best_values = map(list, zip(
+                *nlargest(n_best, enumerate(values), key=lambda x: x[1])))
         else:
-            best_indices, best_values = map(list, zip(*nsmallest(n_best, enumerate(values), key=lambda x: x[1])))
+            best_indices, best_values = map(list, zip(
+                *nsmallest(n_best, enumerate(values), key=lambda x: x[1])))
 
         return best_values, best_indices

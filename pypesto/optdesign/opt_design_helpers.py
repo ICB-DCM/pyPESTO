@@ -1,22 +1,21 @@
 import numpy as np
 from ..petab import PetabImporter
-from .optimize import ScipyOptimizer
 import amici
 from .design_problem import DesignProblem
 from ..objective import AmiciObjective
 from ..result import Result
-from ..problem import Problem
-from .result import DesignResult
 from copy import deepcopy
 from typing import Optional
 
 
 # make this more readable
-def get_hess(obj: AmiciObjective, result: Optional[Result] = None, x: Optional[np.ndarray] = None):
+def get_hess(obj: AmiciObjective, result: Optional[Result] = None,
+             x: Optional[np.ndarray] = None):
     # if both result and x are passed, use x
     # get hess from function call instead of reading it from result
     if result is None and x is None:
-        raise RuntimeError("you have to pass either the result-object or the exact parameters where you want to "
+        raise RuntimeError("you have to pass either the result-object or the "
+                           "exact parameters where you want to "
                            "evaluate the hessian")
     hess = None
     message = None
@@ -71,7 +70,8 @@ def add_to_hess(hess: np.ndarray, const: float):
 
 
 # TODO put the treshhold in design_problem
-def get_criteria(criteria: str, hess: np.ndarray, eigvals: np.ndarray, tresh: float = 10 ** (-4)):
+def get_criteria(criteria: str, hess: np.ndarray, eigvals: np.ndarray,
+                 tresh: float = 10 ** (-4)):
     if criteria == 'det':
         value = np.linalg.det(hess)
     elif criteria == 'trace':
@@ -94,10 +94,15 @@ def get_criteria(criteria: str, hess: np.ndarray, eigvals: np.ndarray, tresh: fl
 
 # TODO split this up into subparts
 # should the criteria be implemented as properties ?
-def get_design_result(design_problem: DesignProblem, candidate: Optional[dict] = None, fn: Optional[str] = None,
-                      result: Optional[Result] = None, x: Optional[np.ndarray] = None):
-    dict = {'candidate': candidate, 'fn': fn, 'petab_problem': deepcopy(design_problem.petab_problem)}
-    hess, message = get_hess(obj=design_problem.problem.objective, result=design_problem.result, x=x)
+def get_design_result(design_problem: DesignProblem,
+                      candidate: Optional[dict] = None,
+                      fn: Optional[str] = None,
+                      result: Optional[Result] = None,
+                      x: Optional[np.ndarray] = None):
+    dict = {'candidate': candidate, 'fn': fn,
+            'petab_problem': deepcopy(design_problem.petab_problem)}
+    hess, message = get_hess(obj=design_problem.problem.objective,
+                             result=design_problem.result, x=x)
     eigvals = get_eigvals(hess=hess)
     dict['hess'] = hess
     dict['eigvals'] = eigvals
@@ -105,19 +110,25 @@ def get_design_result(design_problem: DesignProblem, candidate: Optional[dict] =
         dict[criteria] = get_criteria(criteria, hess, eigvals)
 
     if design_problem.const_for_hess:
-        hess_modified = add_to_hess(hess=hess, const=design_problem.const_for_hess)
+        hess_modified = add_to_hess(hess=hess,
+                                    const=design_problem.const_for_hess)
         eigvals_modified = get_eigvals(hess=hess_modified)
         dict['hess_modified'] = hess_modified
         dict['eigvals_modified'] = eigvals_modified
         for criteria in design_problem.criteria_list:
-            dict[criteria + '_modified'] = get_criteria(criteria, hess_modified, eigvals_modified)
+            dict[criteria + '_modified'] = get_criteria(criteria,
+                                                        hess_modified,
+                                                        eigvals_modified)
 
     if design_problem.profiles:
-        raise NotImplementedError("profile based criteria are not supported yet")
+        raise NotImplementedError(
+            "profile based criteria are not supported yet")
         # problem = design_problem.problem
         # result = get_profiles(result=design_problem.result, problem=problem)
-        # dict['conf_interval'] = get_conf_intervals(result=result, problem=problem)
-        # dict['conf_interval_criteria'] = get_conf_interval_criteria(result=result, problem=problem)
+        # dict['conf_interval'] = get_conf_intervals(result=result,
+        # problem=problem)
+        # dict['conf_interval_criteria'] = get_conf_interval_criteria(
+        # result=result, problem=problem)
 
     dict['result'] = result
     dict['constant_for_hessian'] = design_problem.const_for_hess
@@ -157,10 +168,12 @@ def get_conf_interval_criteria(result: Result, problem: Problem):
     return np.sum(lengths)
 
 
-def plot_profile(result: Result, problem: Problem, obj: AmiciObjective, index: int = 0):
-    ref = pypesto.visualize.create_references(x=result.optimize_result.as_list(['x'])[index]['x'],
-                                              fval=obj(result.optimize_result.as_list(['x'])[index]['x']))
-    pypesto.visualize.profiles(result, profile_indices=range(len(problem.x_free_indices)),
+def plot_profile(result: Result, problem: Problem, obj: AmiciObjective,
+                 index: int = 0):
+    ref = pypesto.visualize.create_references(
+        x=result.optimize_result.as_list(['x'])[index]['x'],
+        fval=obj(result.optimize_result.as_list(['x'])[index]['x']))
+    pypesto.visualize.profiles(result, profile_indices=range(
+        len(problem.x_free_indices)),
                                reference=ref, profile_list_ids=0)
-
 """
