@@ -87,16 +87,17 @@ class DesignProblem(dict):
         if not self.problem_list:
             raise ValueError('you need to pass a nonempty list of candidates')
         for dict in self.problem_list:
-            if len(dict['condition_df']) != len(
-                    self.petab_problem.condition_df.reset_index().columns):
+            if len(dict['condition_df'].columns) != len(
+                    self.petab_problem.condition_df.columns):
                 raise ValueError(
                     'condition dataframe in given candidates has wrong length')
-            if dict['observable_df'] and len(dict['observable_df']) != len(
-                    self.petab_problem.observable_df.reset_index().columns):
+            if dict['observable_df'] is not None and len(
+                    dict['observable_df'].columns) != len(
+                    self.petab_problem.observable_df.columns):
                 raise ValueError(
                     'observable dataframe in given candidates has wrong '
                     'length')
-            if len(dict['measurement_df']) != len(
+            if len(dict['measurement_df'].columns) != len(
                     self.petab_problem.measurement_df.columns):
                 raise ValueError(
                     'measurement dataframe in given candidates has wrong '

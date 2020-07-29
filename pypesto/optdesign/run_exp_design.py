@@ -3,13 +3,11 @@ from .result import DesignResult
 from .opt_design_helpers import update_pypesto_from_petab, get_design_result
 from .change_dataframe import add_candidate_to_dfs, delete_candidate_from_dfs
 from .optimize import optimization
-from typing import List
 
 
-# TODO keep track of changes to design_problem
 def single_design_algo(design_problem: DesignProblem,
                        design_result: DesignResult
-                       ) -> (DesignResult, List[float]):
+                       ) -> DesignResult:
     """
     Algorithm to find the single best condition to be added.
     For all candidates in design_problem.problem_list measurements are
@@ -34,15 +32,13 @@ def single_design_algo(design_problem: DesignProblem,
     artificial_data:
         the measurement values which where simulated
     """
-    artificial_data = []
     runs_for_this_round = []
 
     for candidate in design_problem.problem_list:
 
-        design_problem, written_values = add_candidate_to_dfs(
+        design_problem = add_candidate_to_dfs(
             design_problem=design_problem, candidate=candidate,
             x=design_problem.result.optimize_result.as_list(['x'])[0]['x'])
-        artificial_data.append(written_values)
 
         design_problem = update_pypesto_from_petab(design_problem)
 
@@ -59,8 +55,7 @@ def single_design_algo(design_problem: DesignProblem,
             # plot_profile(result=result, problem=problem, obj=obj, index=0)
 
     design_result.single_runs.append(runs_for_this_round)
-    # TODO do we need to return and save 'artificial_data' ?
-    return design_result, artificial_data
+    return design_result
 
 
 def run_exp_design(design_problem: DesignProblem) -> DesignResult:
@@ -84,8 +79,8 @@ def run_exp_design(design_problem: DesignProblem) -> DesignResult:
     # loop for how many conditions we want to add in general
     # only works for one right now
     for run_index in range(design_problem.n_cond_to_add):
-        design_result, artificial_data = single_design_algo(
-            design_problem=design_problem, design_result=design_result)
+        design_result = single_design_algo(design_problem=design_problem,
+                                           design_result=design_result)
 
         # TODO store best conditions for each round in a reasonable way
         best_value, best_index = design_result.get_best_conditions(
