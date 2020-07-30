@@ -148,7 +148,8 @@ def add_candidate_to_dfs(design_problem: DesignProblem, candidate: dict,
     return design_problem
 
 
-def delete_candidate_from_dfs(design_problem: DesignProblem, candidate: dict):
+def delete_candidate_from_dfs(design_problem: DesignProblem, candidate: dict) \
+        -> DesignProblem:
     """
     delete the new rows which where temporarily added to the observable,
     condition and measurement dataframe
@@ -177,7 +178,9 @@ def delete_candidate_from_dfs(design_problem: DesignProblem, candidate: dict):
         cond_id = measurement_df['simulationConditionId'][
             len(measurement_df) - len(candidate['measurement_df']) + row_index]
         id_to_be_deleted.append(measurement_df['simulationConditionId'][
-            measurement_df['simulationConditionId'] == cond_id].index.tolist())
+                                    measurement_df[
+                                        'simulationConditionId'] ==
+                                    cond_id].index.tolist())
     flat_list = [item for sublist in id_to_be_deleted for item in sublist]
     measurement_df = measurement_df.drop(flat_list)
     design_problem.petab_problem.measurement_df = measurement_df

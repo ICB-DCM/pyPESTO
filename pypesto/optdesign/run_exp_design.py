@@ -1,3 +1,5 @@
+import pandas as pd
+from itertools import combinations
 from .design_problem import DesignProblem
 from .result import DesignResult
 from .opt_design_helpers import update_pypesto_from_petab, get_design_result
@@ -29,8 +31,6 @@ def single_design_algo(design_problem: DesignProblem,
     -------
     design_result:
         the altered design_result
-    artificial_data:
-        the measurement values which where simulated
     """
     runs_for_this_round = []
 
@@ -58,10 +58,47 @@ def single_design_algo(design_problem: DesignProblem,
     return design_result
 
 
+def do_combinatorics(design_problem: DesignProblem) -> DesignProblem:
+    index_combinations = list(combinations(range(len(
+        design_problem.problem_list)), 2))
+    new_problem_list = []
+    for indices in index_combinations:
+        candidates = [design_problem.problem_list[i] for i in indices]
+
+        new_conditions = [dict['condition_df'] for dict in candidates]
+        if all(v is None for v in new_conditions):
+            new_conditions = None
+        else:
+            new_conditions = pd.concat(new_conditions)
+            new_conditions = new_conditions.reset_index().drop_duplicates(
+            ).set_index('conditionId')
+
+        new_observables = [dict['observable_df'] for dict in candidates]
+        if all(v is None for v in new_observables):
+            new_observables = None
+        else:
+            new_observables = pd.concat(new_observables)
+            new_observables = new_observables.reset_index().drop_duplicates(
+            ).set_index('observableId')
+
+        new_measurements = [dict['measurement_df'] for dict in candidates]
+        new_measurements = pd.concat(new_measurements, ignore_index=True)
+        new_measurements = new_measurements.drop_duplicates()
+
+        new_dict = {'id': [dict['id'] for dict in candidates],
+                    'condition_df': new_conditions,
+                    'observable_df': new_observables,
+                    'measurement_df': new_measurements}
+        new_problem_list.append(new_dict)
+
+    design_problem.problem_list = new_problem_list
+    return design_problem
+
+
 def run_exp_design(design_problem: DesignProblem) -> DesignResult:
     """
     The main method for experimental design.
-    Repeatedly searches for the single best condition to be added
+
 
     Parameters
     ----------
@@ -76,13 +113,12 @@ def run_exp_design(design_problem: DesignProblem) -> DesignResult:
     """
     design_result = DesignResult(design_problem=design_problem)
 
-    # loop for how many conditions we want to add in general
-    # only works for one right now
-    for run_index in range(design_problem.n_cond_to_add):
-        design_result = single_design_algo(design_problem=design_problem,
-                                           design_result=design_result)
+    if design_problem.n_cond_to_add > 1:
+        design_problem = do_combinatorics(design_problem=design_problem)
 
-        # TODO store best conditions for each round in a reasonable way
-        best_value, best_index = design_result.get_best_conditions(
-            run=run_index)
+    design_result = single_design_algo(design_problem=design_problem,
+                                       design_result=design_result)
+
+    # TODO store best conditions for each round in a reasonable way
+    best_value, best_index = design_result.get_best_conditions()
     return design_result

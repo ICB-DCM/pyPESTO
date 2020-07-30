@@ -49,4 +49,6 @@ class DesignResult(dict):
             best_indices, best_values = map(list, zip(
                 *nsmallest(n_best, enumerate(values), key=lambda x: x[1])))
 
-        return best_values, best_indices
+        best_combination = [self.single_runs[run][i]['candidate']['id'] for i
+                            in best_indices]
+        return best_values, best_combination
