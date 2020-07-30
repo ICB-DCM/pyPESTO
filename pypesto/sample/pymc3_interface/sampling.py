@@ -342,6 +342,8 @@ class ResumablePymc3Sampler:
         finally:
             strace.close()  # if no error occured this should be a no-op
             self._sampling_time += time.perf_counter() - t0
+            sys.stdout.flush() # Flush progress bar output
+            sys.stderr.flush()
             if warn:
                 self.log_sampler_warnings()
 
