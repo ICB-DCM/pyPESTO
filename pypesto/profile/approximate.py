@@ -53,7 +53,6 @@ def approximate_parameter_profile(
     """
     # Handling defaults
     # profiling indices
-    # profiling indices
     if profile_index is None:
         profile_index = problem.x_free_indices
 
