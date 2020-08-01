@@ -196,9 +196,9 @@ def walk_along_profile(
         else:
             # if too many parameters are fixed, there is nothing to do ...
             fval = problem.objective([])
-            optimizer_result = OptimizerResult(id='0', x=np.array([]),
-                fval=fval, n_fval=0, n_grad=0, n_hess=0, n_res=0, n_sres=0,
-                x0=np.array([]), fval0=fval, time=0)
+            optimizer_result = OptimizerResult(
+                id='0', x=np.array([]), fval=fval, n_fval=0, n_grad=0, n_hess=0,
+                n_res=0, n_sres=0, x0=np.array([]), fval0=fval, time=0)
             optimizer_result.update_to_full(problem=problem)
 
         if optimizer_result[GRAD] is not None:
