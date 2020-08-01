@@ -229,6 +229,13 @@ def test_profile_with_fixed_parameters():
         assert len(axes) == 3
         visualize.profile_cis(result, profile_list=i_method)
 
+    # test profiling with all parameters fixed but one
+    problem.fix_parameters([0, 1, 2, 3],
+                           result.optimize_result.list[0]['x'][0:4])
+    profile.parameter_profile(
+        problem=problem, result=result, optimizer=optimizer,
+        next_guess_method='adaptive_step_regression')
+
 
 def create_optimization_results(objective, dim_full=2):
     # create optimizer, pypesto problem and options

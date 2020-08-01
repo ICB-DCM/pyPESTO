@@ -1,6 +1,6 @@
 import logging
 import numpy as np
-from typing import Callable, Union
+from typing import Callable, Union, Iterable
 
 from ..objective.constants import GRAD
 from ..optimize import Optimizer, OptimizerResult
@@ -18,7 +18,7 @@ def parameter_profile(
         problem: Problem,
         result: Result,
         optimizer: Optimizer,
-        profile_index: Union[np.ndarray, list] = None,
+        profile_index: Iterable[int] = None,
         profile_list: int = None,
         result_index: int = 0,
         next_guess_method: Union[Callable, str] = 'adaptive_step_regression',
@@ -40,7 +40,7 @@ def parameter_profile(
         The optimizer to be used along each profile.
     profile_index:
         List with the parameter indices to be profiled
-        (by default all of them).
+        (by default all free indices).
     profile_list:
         Integer which specifies whether a call to the profiler should create
         a new list of profiles (default) or should be added to a specific
@@ -89,7 +89,7 @@ def parameter_profile(
 
     # loop over parameters for profiling
     for i_par in profile_index:
-        # not requested or fixed -> compute no profile
+        # only compute profiles for free parameters
         if i_par in problem.x_fixed_indices:
             continue
 
@@ -194,11 +194,11 @@ def walk_along_profile(
             optimizer_result = optimizer.minimize(problem, startpoint, '0',
                                                   allow_failed_starts=False)
         else:
-            # if too many parameters are fixed, there is nothing to do...
+            # if too many parameters are fixed, there is nothing to do ...
             fval = problem.objective([])
-            optimizer_result = OptimizerResult(
-                id='0', x=np.ndarray([]), fval=fval, n_fval=0, n_grad=0,
-                n_hess=0, n_res=0, n_sres=0, x0=[], fval0=fval, time=0)
+            optimizer_result = OptimizerResult(id='0', x=np.ndarray([]),
+                fval=fval, n_fval=0, n_grad=0, n_hess=0, n_res=0, n_sres=0,
+                x0=np.array([]), fval0=fval, time=0)
 
         if optimizer_result[GRAD] is not None:
             gradnorm = np.linalg.norm(optimizer_result[GRAD][
