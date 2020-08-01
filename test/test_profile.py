@@ -230,8 +230,8 @@ def test_profile_with_fixed_parameters():
         visualize.profile_cis(result, profile_list=i_method)
 
     # test profiling with all parameters fixed but one
-    problem.fix_parameters([0, 1, 2, 3],
-                           result.optimize_result.list[0]['x'][0:4])
+    problem.fix_parameters([2, 3, 4],
+                           result.optimize_result.list[0]['x'][2:5])
     profile.parameter_profile(
         problem=problem, result=result, optimizer=optimizer,
         next_guess_method='adaptive_step_regression')

@@ -1,6 +1,6 @@
 import numpy as np
 import scipy.stats
-from typing import Any, Dict, Tuple
+from typing import Any, Dict, Tuple, Iterable
 
 from ..objective.constants import GRAD
 from ..problem import Problem
@@ -80,7 +80,7 @@ def initialize_profile(
         problem: Problem,
         result: Result,
         result_index: int,
-        profile_index: np.ndarray,
+        profile_index: Iterable[int],
         profile_list: int
 ) -> float:
     """
@@ -142,7 +142,7 @@ def initialize_profile(
 def fill_profile_list(
         profile_result: ProfileResult,
         optimizer_result: Dict[str, Any],
-        profile_index: np.ndarray,
+        profile_index: Iterable[int],
         profile_list: int,
         problem_dimension: int,
         global_opt: float
