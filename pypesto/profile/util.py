@@ -1,6 +1,6 @@
 import numpy as np
 import scipy.stats
-from typing import Any, Dict, Tuple
+from typing import Any, Dict, Tuple, Iterable
 
 from ..objective.constants import GRAD
 from ..problem import Problem
@@ -80,7 +80,7 @@ def initialize_profile(
         problem: Problem,
         result: Result,
         result_index: int,
-        profile_index: np.ndarray,
+        profile_index: Iterable[int],
         profile_list: int
 ) -> float:
     """
@@ -142,7 +142,7 @@ def initialize_profile(
 def fill_profile_list(
         profile_result: ProfileResult,
         optimizer_result: Dict[str, Any],
-        profile_index: np.ndarray,
+        profile_index: Iterable[int],
         profile_list: int,
         problem_dimension: int,
         global_opt: float
@@ -192,7 +192,7 @@ def fill_profile_list(
     if profile_list is None:
         # All profiles have to be created from scratch
         for i_parameter in range(0, problem_dimension):
-            if profile_index[i_parameter] > 0:
+            if i_parameter in profile_index:
                 # Should we create a profile for this index?
                 profile_result.append_profiler_result(new_profile)
             else:
@@ -202,10 +202,10 @@ def fill_profile_list(
     else:
         for i_parameter in range(0, problem_dimension):
             # We append to an existing list
-            if profile_index[i_parameter] > 0:
+            if i_parameter in profile_index:
                 # Do we have to create a new profile?
                 create_new = (profile_result.list[profile_list][i_parameter]
-                              is None) and (profile_index[i_parameter] > 0)
+                              is None)
                 if create_new:
                     profile_result.set_profiler_result(
                         new_profile, i_parameter)
