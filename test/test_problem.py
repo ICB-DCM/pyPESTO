@@ -44,6 +44,17 @@ def test_fix_parameters(problem):
     assert problem.x_fixed_vals == [42, 43, 44]
     assert problem.x_free_indices == [2, 3, 4, 6, 7, 8, 9]
 
+    # [0, 1, 5] were already fixed, but values should be changed, 5 keeps value
+    problem.fix_parameters(range(5), range(5))
+    assert problem.x_fixed_indices == [0, 1, 5, 2, 3, 4]
+    assert problem.x_fixed_vals == [0, 1, 44, 2, 3, 4]
+
+    with pytest.raises(ValueError):
+        problem.fix_parameters(3.5, 2)
+
+    with pytest.raises(ValueError):
+        problem.fix_parameters(1, '2')
+
 
 def test_full_index_to_free_index(problem):
     """Test problem.full_index_to_free_index."""
