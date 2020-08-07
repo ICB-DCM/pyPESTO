@@ -1,10 +1,8 @@
 import numpy as np
 from ..petab import PetabImporter
-import amici
 from .design_problem import DesignProblem
 from ..objective import AmiciObjective
 from ..result import Result
-from copy import deepcopy
 from typing import Optional
 
 
@@ -52,13 +50,6 @@ def get_best_parameters(number: int, result: Result):
 def update_pypesto_from_petab(design_problem: DesignProblem):
     importer = PetabImporter(design_problem.petab_problem)
     obj = importer.create_objective(model=design_problem.model)
-    obj.amici_solver.setSensitivityMethod(amici.SensitivityMethod.forward)
-    obj.amici_solver.setAbsoluteToleranceFSA(1e-7)
-    obj.amici_solver.setRelativeToleranceFSA(1e-7)
-    obj.amici_solver.setAbsoluteTolerance(1e-7)
-    obj.amici_solver.setRelativeTolerance(1e-7)
-    obj.amici_model.setSteadyStateSensitivityMode(
-        amici.SteadyStateSensitivityMode.simulationFSA)
     problem = importer.create_problem(obj)
     design_problem.problem = problem
     return design_problem
@@ -73,13 +64,14 @@ def add_to_hess(hess: np.ndarray, const: float):
 def get_criteria(criteria: str, hess: np.ndarray, eigvals: np.ndarray,
                  tresh: float = 10 ** (-4)):
     if criteria == 'det':
-        value = np.linalg.det(hess)
+        value = np.prod(eigvals)
     elif criteria == 'trace':
         value = np.sum(eigvals)
     elif criteria == 'rank':
         value = np.linalg.matrix_rank(hess)
     elif criteria == 'trace_log':
-        value = 3
+        log_eigvals = np.log(np.absolute(eigvals))
+        value = np.sum(log_eigvals)
     elif criteria == 'ratio':
         value = np.amin(eigvals) / np.amax(eigvals)
     elif criteria == 'eigmin':
@@ -96,14 +88,12 @@ def get_criteria(criteria: str, hess: np.ndarray, eigvals: np.ndarray,
 # should the criteria be implemented as properties ?
 def get_design_result(design_problem: DesignProblem,
                       candidate: Optional[dict] = None,
-                      fn: Optional[str] = None,
-                      result: Optional[Result] = None,
-                      x: Optional[np.ndarray] = None):
-    dict = {'candidate': candidate, 'fn': fn,
-            'petab_problem': deepcopy(design_problem.petab_problem)}
+                      result: Optional[Result] = None):
+    dict = {'candidate': candidate}
     hess, message = get_hess(obj=design_problem.problem.objective,
-                             result=design_problem.result, x=x)
+                             result=design_problem.result, x=design_problem.x)
     eigvals = get_eigvals(hess=hess)
+    dict['x'] = design_problem.x
     dict['hess'] = hess
     dict['eigvals'] = eigvals
     for criteria in design_problem.criteria_list:
@@ -113,8 +103,6 @@ def get_design_result(design_problem: DesignProblem,
         hess_modified = add_to_hess(hess=hess,
                                     const=design_problem.const_for_hess)
         eigvals_modified = get_eigvals(hess=hess_modified)
-        dict['hess_modified'] = hess_modified
-        dict['eigvals_modified'] = eigvals_modified
         for criteria in design_problem.criteria_list:
             dict[criteria + '_modified'] = get_criteria(criteria,
                                                         hess_modified,

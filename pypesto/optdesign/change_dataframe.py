@@ -1,23 +1,57 @@
 import numpy as np
-from .opt_design_helpers import update_pypesto_from_petab
 from .design_problem import DesignProblem
-from typing import List
+from petab.C import OBSERVABLE_ID, TIME, NOISE_PARAMETERS, \
+    MEASUREMENT, SIMULATION_CONDITION_ID, NORMAL, LAPLACE
 import amici
+from .opt_design_helpers import update_pypesto_from_petab
+from amici.petab_objective import simulate_petab
+from amici.petab_objective import rdatas_to_simulation_df
 
 
-# TODO choosing of time points is arbitrary, switch to the other method for
-#  simulating forward
-def simulate_forward(x: np.ndarray, model: amici.ModelPtr,
-                     condition_entries: List[float],
+# TODO how to choose settings here?
+def simulate_forward(petab_problem,
+                     x: np.ndarray, model: amici.ModelPtr,
+                     condition_name: str,
                      last_timepoint: float) -> amici.ReturnDataView:
+    """
+    performs a forward simulation with x as parameter and condition
+    'condition_name' until 'last_timepoint'
+    looks up the names of fixed parameters of the model, goes into
+    petab_problem.condition_df and sets the values there for the condition
+    'condition_name' as fixed parameters of the model for the simulation
+
+    Parameters
+    ----------
+    petab_problem:
+        the petab problem
+    x:
+        the parameter to be used for the simulation
+    model:
+        the amici model
+    condition_name:
+        the name of the condition for which we want to simulate
+    last_timepoint:
+        the time point we are interested in, we will simulate until that time
+
+    Returns
+    -------
+    rdata:
+        amici.ReturnDataView which in particular contains the values at
+        last_timepoint
+    """
     solver = model.getSolver()
-    solver.setSensitivityMethod(amici.SensitivityMethod_forward)
-    solver.setSensitivityOrder(amici.SensitivityOrder_first)
+    # solver.setSensitivityMethod(amici.SensitivityMethod_forward)
+    # solver.setSensitivityOrder(amici.SensitivityOrder_first)
 
     # max is for timepoints<1
     model.setTimepoints(amici.DoubleVector(
         np.linspace(0, last_timepoint, max(int(last_timepoint + 1), 2))))
-    model.setFixedParameters(amici.DoubleVector(condition_entries))
+    # find entries for conditions and map correctly
+    all_fixed_params = []
+    for fixed_par in model.getFixedParameterIds():
+        all_fixed_params.append(
+            petab_problem.condition_df[fixed_par].loc[condition_name])
+    model.setFixedParameters(amici.DoubleVector(all_fixed_params))
     model.setParameterScale(amici.ParameterScaling_log10)
     temp = x
     # these may be noise parameters for which we have explicit values
@@ -30,46 +64,22 @@ def simulate_forward(x: np.ndarray, model: amici.ModelPtr,
     return rdata
 
 
-def simulate(design_problem: DesignProblem, x: np.ndarray) \
-        -> List[amici.ReturnDataView]:
-    # update objective, otherwise 'ret' doesn't contain the new condition
-    design_problem = update_pypesto_from_petab(design_problem)
-    ret = design_problem.problem.objective(x, return_dict=True)
-    return ret['rdatas']
-
-
 def add_candidate_to_dfs(design_problem: DesignProblem, candidate: dict,
-                         x: np.ndarray) \
+                         x: np.ndarray = None) \
         -> DesignProblem:
     """
     changes design_problem.petab_problem
-    adds a new row to condition_df, measurement_df and if specified
-    observable_df
+    adds new rows to measurement_df
     the new measurement in measurement_df is computed via forward simulation
     with x as parameter
     noise is added
     """
 
     # TODO this only works with fixed numbers as noise not with estimated
-    #  parameters right now
+    # parameters right now
 
-    # add new row to observable df
-    if candidate['observable_df'] is not None:
-        observable_df = design_problem.petab_problem.observable_df \
-            .reset_index()
-        observable_df = observable_df.append(
-            candidate['observable_df'].reset_index())
-        observable_df = observable_df.set_index('observableId')
-        design_problem.petab_problem.observable_df = observable_df
-
-    # doesn't do anything at the moment. because of the way we simulate forward
-    # may still be useful
-    # add new row to condition df
-    condition_df = design_problem.petab_problem.condition_df.reset_index()
-    condition_df = condition_df.append(
-        candidate['condition_df'].reset_index())
-    condition_df = condition_df.set_index('conditionId')
-    design_problem.petab_problem.condition_df = condition_df
+    if x is None:
+        x = design_problem.x
 
     # add new row to measurement df
     measurement_df = design_problem.petab_problem.measurement_df
@@ -77,37 +87,43 @@ def add_candidate_to_dfs(design_problem: DesignProblem, candidate: dict,
                                            ignore_index=True)
     design_problem.petab_problem.measurement_df = measurement_df
 
-    # TODO change the way we simulate data / add noise to make it more general
-    """
-    from amici.petab_objective import simulate_petab
-    from amici.petab_objective import rdatas_to_simulation_df
-    from ..petab import PetabImporter
+    # using 'simulate_petab'
+    # is slower than other method
+    # design_problem = write_measurement_alternative(
+    # design_problem=design_problem, x=x)
 
-    # method using rdatas_to..
-    rdatas_from_ret = simulate(design_problem=design_problem, x=x)
-    importer = PetabImporter(design_problem.petab_problem,
-                             model_name=design_problem.model.getName())
-    """
+    # using explicit simulation by hand
+    design_problem = write_measurement(design_problem=design_problem,
+                                       candidate=candidate,
+                                       x=x)
 
-    # write correct new measurement into the new row
+    return design_problem
+
+
+def write_measurement(design_problem: DesignProblem, candidate: dict,
+                      x: np.ndarray = None) -> DesignProblem:
+    if x is None:
+        x = design_problem.x
+
+    measurement_df = design_problem.petab_problem.measurement_df
+
     for row_index in range(len(candidate['measurement_df'])):
-        measurement_time = candidate['measurement_df']['time'][row_index]
-
-        # candidate['condition_df'][2:] since we skip the names for the
-        # condition
+        measurement_time = candidate['measurement_df'][TIME][row_index]
+        condition_name = candidate['measurement_df'][SIMULATION_CONDITION_ID][
+            row_index]
         rdata = simulate_forward(
-            x=design_problem.result.optimize_result.as_list(['x'])[0]['x'],
+            petab_problem=design_problem.petab_problem,
+            x=x,
             model=design_problem.model,
-            condition_entries=candidate['condition_df'][2:],
+            condition_name=condition_name,
             last_timepoint=measurement_time)
 
-        # TODO i hope this chooses the correct noise model
-        have_noise = "noiseParameters" in \
-                     design_problem.petab_problem.measurement_df.columns
+        have_noise = NOISE_PARAMETERS in design_problem.petab_problem. \
+            measurement_df.columns
 
         if have_noise:
-            noise = candidate['measurement_df']['noiseParameters'][row_index]
-            if isinstance(noise, float):
+            noise = candidate['measurement_df'][NOISE_PARAMETERS][row_index]
+            if isinstance(noise, (int, float)):
                 expdata = amici.ExpData(rdata, noise, 0)
             elif isinstance(noise, str):
                 raise NotImplementedError(
@@ -121,12 +137,11 @@ def add_candidate_to_dfs(design_problem: DesignProblem, candidate: dict,
                 # expdata = amici.ExpData(rdata, x[noise_index], 0)
             else:
                 raise Exception(
-                    "noise in measurement table has to be float or the name "
-                    "of an estimated parameter")
+                    "noise in measurement table has to be a number or the "
+                    "name of an estimated parameter")
 
-        # TODO i don't know how to create expData without adding noise...
         time_index = list(rdata['t']).index(measurement_time)
-        observable_str = candidate['measurement_df']["observableId"][row_index]
+        observable_str = candidate['measurement_df'][OBSERVABLE_ID][row_index]
         observable_index = design_problem.model.getObservableIds().index(
             observable_str)
 
@@ -139,7 +154,7 @@ def add_candidate_to_dfs(design_problem: DesignProblem, candidate: dict,
         else:
             measurement_with_noise = rdata['y'][index][0]
 
-        measurement_df['measurement'][len(measurement_df) - len(
+        measurement_df[MEASUREMENT][len(measurement_df) - len(
             candidate['measurement_df']) + row_index] = measurement_with_noise
 
     # save into problem
@@ -151,23 +166,9 @@ def add_candidate_to_dfs(design_problem: DesignProblem, candidate: dict,
 def delete_candidate_from_dfs(design_problem: DesignProblem, candidate: dict) \
         -> DesignProblem:
     """
-    delete the new rows which where temporarily added to the observable,
-    condition and measurement dataframe
+    delete the new rows which where temporarily added to the measurement
+    dataframe
     """
-    # delete the observable row
-    # use observableID as unique identifier
-    if candidate['observable_df'] is not None:
-        observable_names = candidate['observable_df'].index
-        observable_df = design_problem.petab_problem.observable_df
-        observable_df = observable_df.drop(observable_names)
-        design_problem.petab_problem.observable_df = observable_df
-
-    # delete the condition row
-    # the condition_id should always be the first entry
-    condition_names = candidate['condition_df'].index
-    condition_df = design_problem.petab_problem.condition_df
-    condition_df = condition_df.drop(condition_names)
-    design_problem.petab_problem.condition_df = condition_df
 
     # delete the measurement row
     # use condition_id as unique identifier
@@ -175,14 +176,95 @@ def delete_candidate_from_dfs(design_problem: DesignProblem, candidate: dict) \
 
     id_to_be_deleted = []
     for row_index in range(len(candidate['measurement_df'])):
-        cond_id = measurement_df['simulationConditionId'][
+        cond_id = measurement_df[SIMULATION_CONDITION_ID][
             len(measurement_df) - len(candidate['measurement_df']) + row_index]
-        id_to_be_deleted.append(measurement_df['simulationConditionId'][
+        id_to_be_deleted.append(measurement_df[SIMULATION_CONDITION_ID][
                                     measurement_df[
-                                        'simulationConditionId'] ==
+                                        SIMULATION_CONDITION_ID] ==
                                     cond_id].index.tolist())
     flat_list = [item for sublist in id_to_be_deleted for item in sublist]
     measurement_df = measurement_df.drop(flat_list)
     design_problem.petab_problem.measurement_df = measurement_df
 
     return design_problem
+
+# alternative to get the new measurement value
+# is slower than the other one
+
+# def write_measurement_alternative(design_problem: DesignProblem,
+#                                   x: np.ndarray = None) -> DesignProblem:
+#     """
+#     takes design_problem.measurement_df and searches for all rows where the
+#     measurement is still float('NaN').
+#     Simulates the measurement value for this and adds normal or laplace noise
+#
+#     Parameters
+#     ----------
+#     design_problem
+#     x
+#
+#     Returns
+#     -------
+#
+#     """
+#     if x is None:
+#         x = design_problem.x
+#
+#     simulation_conditions = design_problem.petab_problem \
+#         .get_simulation_conditions_from_measurement_df()
+#
+#     dict_x = {name: x[i] for i, name in
+#               enumerate(design_problem.petab_problem.parameter_df.index)}
+#     rdata_sim_petab = simulate_petab(
+#         petab_problem=design_problem.petab_problem,
+#         amici_model=design_problem.model,
+#         simulation_conditions=simulation_conditions,
+#         problem_parameters=dict_x,
+#         scaled_parameters=True)
+#
+#     measurement_df = design_problem.petab_problem.measurement_df
+#     observable_df = design_problem.petab_problem.observable_df
+#
+#     sim_df = rdatas_to_simulation_df(rdatas=rdata_sim_petab['rdatas'],
+#                                      model=design_problem.model,
+#                                      measurement_df=measurement_df)
+#     bool_array = pd.isna(measurement_df.measurement)
+#     indices_to_replace = np.where(bool_array)[0]
+#
+#     for index in indices_to_replace:
+#         measurement_df.measurement[index] = sim_df.simulation[index]
+#         # add noise
+#         noise_distributions_dict = amici.petab_import.get_observation_model(
+#             observable_df)[1]
+#         observable = measurement_df[OBSERVABLE_ID][index]
+#         noise_distribution = noise_distributions_dict[observable]
+#
+#         noise_value = measurement_df[NOISE_PARAMETERS][index]
+#         # TODO log scale ?
+#         if noise_distribution == NORMAL or noise_distribution ==
+#         'lin-normal':
+#             measurement_df.measurement[index] = measurement_df.measurement[
+#                                                     index] +
+#                                                     np.random.normal(
+#                 0, noise_value)
+#         elif noise_distribution == LAPLACE or noise_distribution == \
+#                 'lin-laplace':
+#             measurement_df.measurement[index] = measurement_df.measurement[
+#                                                     index] +
+#                                                     np.random.laplace(
+#                 0, noise_value)
+#         else:
+#             raise ValueError("Unknown noise distribution. Only 'normal' and "
+#                              "'laplace' are supported")
+#
+#     # save into problem
+#     design_problem.petab_problem.measurement_df = measurement_df
+#     return design_problem
+
+
+# def simulate(design_problem: DesignProblem, x: np.ndarray) \
+#         -> List[amici.ReturnDataView]:
+#     # update objective, otherwise 'ret' doesn't contain the new condition
+#     design_problem = update_pypesto_from_petab(design_problem)
+#     ret = design_problem.problem.objective(x, return_dict=True)
+#     return ret['rdatas']

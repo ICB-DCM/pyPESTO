@@ -1,8 +1,12 @@
 import petab
 import amici
+import pandas as pd
 from typing import Union, Optional, Iterable, List
 from ..problem import Problem
 from ..result import Result
+from ..petab import PetabImporter
+from petab.C import OBSERVABLE_ID, CONDITION_ID
+from amici.petab_import import _create_model_output_dir_name
 
 
 # should we specify Optimizer here?
@@ -12,11 +16,15 @@ class DesignProblem(dict):
 
     Parameters
     ----------
-    problem_list:
-        list of dicts, each dict with entries 'condition_df', 'observable_df',
-        'measurement_df' which specify rows to add to the existing dataframes
+    experiment_list:
+        list of dicts, each dict with entries 'id' and 'measurement_df'.
+        Entries 'condition_df', 'observable_df' are optional.
+        Each row in 'measurement_df' specifies one conditions to add to the
+        existing dataframes
     model:
-        the amici model
+        the amici model,
+        if new observable are defined in 'experiment_list' a new amici_model
+        is created which contains all new observables
     problem:
         the pypesto problem for the initial setting
     result:
@@ -30,7 +38,8 @@ class DesignProblem(dict):
         the number of multistart optimization runs to be done after a new
         condition has been added
     n_cond_to_add:
-        how many new conditions should be added in the end
+        if greater than 1, will search in the full combinatorical space of
+        that many combinations
     criteria_list:
         list of criteria names, specifies which criteria values should be
         computed
@@ -47,7 +56,7 @@ class DesignProblem(dict):
     """
 
     def __init__(self,
-                 problem_list: list,
+                 experiment_list: list,
                  model: Union['amici.Model', 'amici.ModelPtr'],
                  problem: Problem,
                  result: Result,
@@ -57,7 +66,7 @@ class DesignProblem(dict):
                  n_cond_to_add: int = 1,
                  criteria_list: List[str] = None,
                  chosen_criteria: str = 'det',
-                 const_for_hess: float = 10 ** (-4),
+                 const_for_hess: float = None,
                  profiles: bool = False,
                  number_of_measurements: int = 3):
 
@@ -66,11 +75,14 @@ class DesignProblem(dict):
         if criteria_list is None:
             criteria_list = ['det', 'trace', 'ratio', 'rank', 'eigmin',
                              'number_good_eigvals']
-        self.problem_list = problem_list
-        self.model = model
+        if x is None:
+            x = result.optimize_result.as_list(['x'])[0]['x']
+
+        self.experiment_list = experiment_list
         self.problem = problem
         self.result = result
         self.petab_problem = petab_problem
+        self.model = self.get_super_model(model)
         self.x = x
         self.n_optimize_runs = n_optimize_runs
         self.n_cond_to_add = n_cond_to_add
@@ -80,20 +92,25 @@ class DesignProblem(dict):
         self.profiles = profiles
         self.number_of_measurements = number_of_measurements
 
-        # TODO x, profiles, number_of_measurements are not actively used in
+        # TODO profiles, number_of_measurements are not actively used in
         #  the code right now
 
-        # sanity checks for lengths of df in problem_list
-        if not self.problem_list:
+        # update condition_df to include all new conditions
+        # (observable was already done when getting the model)
+        self.write_super_condition_df()
+
+        # sanity checks for lengths of df in experiment_list
+        if not self.experiment_list:
             raise ValueError('you need to pass a nonempty list of candidates')
-        for dict in self.problem_list:
-            if len(dict['condition_df'].columns) != len(
-                    self.petab_problem.condition_df.columns):
+        for dict in self.experiment_list:
+            if 'condition_df' in dict and dict['condition_df'] is not None \
+                    and len(dict['condition_df'].columns) \
+                    != len(self.petab_problem.condition_df.columns):
                 raise ValueError(
                     'condition dataframe in given candidates has wrong length')
-            if dict['observable_df'] is not None and len(
-                    dict['observable_df'].columns) != len(
-                    self.petab_problem.observable_df.columns):
+            if 'observable_df' in dict and dict['observable_df'] is not None \
+                    and len(dict['observable_df'].columns) != \
+                    len(self.petab_problem.observable_df.columns):
                 raise ValueError(
                     'observable dataframe in given candidates has wrong '
                     'length')
@@ -111,3 +128,94 @@ class DesignProblem(dict):
 
     __setattr__ = dict.__setitem__
     __delattr__ = dict.__delitem__
+
+    def get_super_model(self, model: Union['amici.Model', 'amici.ModelPtr']):
+        """
+        create the amici model which contains all newly defined observables
+        which we can use throughout the experimental design process
+        if no new observables are defined in 'experiment_list', return the
+        original model
+        If new observables are defined they must have different Ids (for
+        each candidate) to distinguish them or be completely the identical!
+        """
+        list_of_new_dfs = [dict['observable_df'] for dict in
+                           self.experiment_list if 'observable_df' in dict
+                           and dict['observable_df'] is not None]
+
+        if not list_of_new_dfs:
+            return model
+        else:
+            # merge them
+            new_conditions = pd.concat(list_of_new_dfs)
+
+            # remove duplicates
+            new_conditions = new_conditions.reset_index().drop_duplicates(
+            ).set_index(OBSERVABLE_ID)
+
+            observable_df = self.petab_problem.observable_df.reset_index()
+            observable_df = observable_df.append(new_conditions.reset_index())
+            observable_df = observable_df.set_index(OBSERVABLE_ID)
+            self.petab_problem.observable_df = observable_df
+
+            output_dir = _create_model_output_dir_name(
+                self.petab_problem.sbml_model) + '_super'
+            importer = PetabImporter(self.petab_problem,
+                                     output_folder=output_dir,
+                                     model_name=self.petab_problem.
+                                     sbml_model.getId() + '_super')
+            problem = importer.create_problem()
+            super_model = problem.objective.amici_model
+
+            # super_model = import_petab_problem(self.petab_problem,
+            #                                    model_output_dir=output_dir,
+            #                                    model_name=self.petab_problem.
+            #                                    sbml_model.getId() + '_super')
+            return super_model
+
+    def write_super_condition_df(self):
+        """
+        if new conditions are defined in 'experiment_list' add all of them to
+        the petab_problem
+        """
+        list_of_new_dfs = [dict['condition_df'] for dict in
+                           self.experiment_list if 'condition_df' in dict
+                           and dict['condition_df'] is not None]
+
+        if not list_of_new_dfs:
+            return
+        else:
+            # merge them
+            new_conditions = pd.concat(list_of_new_dfs)
+
+            # remove duplicates
+            new_conditions = new_conditions.reset_index().drop_duplicates(
+            ).set_index(CONDITION_ID)
+
+            condition_df = self.petab_problem.condition_df.reset_index()
+            condition_df = condition_df.append(new_conditions.reset_index())
+            condition_df = condition_df.set_index(CONDITION_ID)
+            self.petab_problem.condition_df = condition_df
+            return
+
+    """
+    def write_super_observable_df(self):
+    list_of_new_dfs = [dict['observable_df'] for dict in
+                           self.experiment_list if 'observable_df' in dict
+                           and dict['observable_df'] is not None]
+
+    if not list_of_new_dfs:
+        return
+    else:
+        # merge them
+        new_conditions = pd.concat(list_of_new_dfs)
+
+        # remove duplicates
+        new_conditions = new_conditions.reset_index().drop_duplicates(
+        ).set_index(OBSERVABLE_ID)
+
+        observable_df = self.petab_problem.observable_df.reset_index()
+        observable_df = observable_df.append(new_conditions.reset_index())
+        observable_df = observable_df.set_index(OBSERVABLE_ID)
+        self.petab_problem.observable_df = observable_df
+        return
+    """
