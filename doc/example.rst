@@ -14,6 +14,7 @@ The following examples cover typical use cases and should help get a better idea
    example/store.ipynb
    example/sampler_study.ipynb
    example/sampling_diagnostics.ipynb
+   example/prior_definition.ipynb
    example/model_selection.ipynb
 
 Download the examples as notebooks
@@ -27,6 +28,7 @@ Download the examples as notebooks
 * :download:`Storage <example/store.ipynb>`
 * :download:`Sampler study <example/sampler_study.ipynb>`
 * :download:`Sampling diagnostics <example/sampling_diagnostics.ipynb>`
+* :download:`Prior definition <example/prior_definition.ipynb>`
 * :download:`Model selection <example/model_selection.ipynb>`
 
 .. Note::
