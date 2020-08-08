@@ -147,7 +147,7 @@ def aic(n_estimated: int, nllh: float) -> float:
     return 2*(n_estimated + nllh)
 
 
-def bic(n_estimated: int, n_measurements: int, nllh: float):
+def bic(n_estimated: int, nllh: float, n_measurements: int, n_priors: int):
     """
     Calculate the Bayesian information criterion for a model.
     TODO untested
@@ -165,7 +165,7 @@ def bic(n_estimated: int, n_measurements: int, nllh: float):
         The negative log likelihood (e.g. the `optimize_result.list[0].fval`
         attribute of the return value of `pypesto.minimize`).
     """
-    return n_estimated*math.log(n_measurements) + 2*nllh
+    return n_estimated*math.log(n_measurements + n_priors) + 2*nllh
 
 
 def _replace_estimate_symbol(parameter_definition: List[str]) -> List:

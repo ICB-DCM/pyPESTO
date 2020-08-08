@@ -126,7 +126,13 @@ class ModelSelectionProblem(object):
     @property
     def BIC(self):
         if self._BIC is None:
+            # TODO this is probably not how number of priors is meant to be
+            #      calculated... also untested
+            n_priors = (len(self.pypesto_problem.x_priors._objectives)
+                        if self.pypesto_problem.x_priors is not None
+                        else 0)
             self._BIC = bic(self.n_estimated,
+                            self.optimized_model.fval,
                             self.n_measurements,
-                            self.optimized_model.fval)
+                            n_priors)
         return self._BIC
