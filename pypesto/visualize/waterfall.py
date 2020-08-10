@@ -300,10 +300,11 @@ def process_offset_for_list(results: Iterable[Result],
         offset for the y-axis
     """
 
-    fvals = np.array([np.array(result.optimize_result.get_for_key('fval'))
-                      for result in results])
-    fvals.flatten()
-    min_val = np.nanmin(fvals[fvals != -np.inf])
+    fvals = np.concatenate([
+        np.array(result.optimize_result.get_for_key('fval'))
+        for result in results
+    ])
+    min_val = np.nanmin(fvals[np.isfinite(fvals)])
     offset_y = process_offset_y(None, scale_y, float(min_val))
 
     return offset_y
