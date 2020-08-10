@@ -75,6 +75,10 @@ def waterfall(results,
     # parse input
     (results, colors, legends) = process_result_list(results, colors, legends)
 
+    # precompute y-offset, if needed and if a list of results was passed
+    if offset_y is None and len(results) > 1 and scale_y == 'log10':
+        offset_y = process_offset_for_list(results, scale_y)
+
     # plotting routine needs the maximum number of multistarts
     max_len_fvals = np.array([0])
 
@@ -264,7 +268,7 @@ def get_fvals(result: Result,
     min_val = np.nanmin(fvals[fvals != -np.inf])
 
     # check, whether offset can be used with this data
-    offset_y = process_offset_y(offset_y, scale_y, min_val)
+    offset_y = process_offset_y(offset_y, scale_y, float(min_val))
 
     # apply offset
     if offset_y != 0.:
@@ -272,6 +276,37 @@ def get_fvals(result: Result,
 
     # get only the indices which the user asked for
     return fvals, offset_y
+
+
+def process_offset_for_list(results: Iterable[Result],
+                            scale_y: str) -> float:
+    """
+    If we have a list of results, all should use the same offset_y,
+    which is computed ny this function.
+
+    Parameters
+    ----------
+
+    results: list of pypesto.Result
+        list of Optimization results obtained by 'optimize.py'
+
+    scale_y: str, optional
+        May be logarithmic or linear ('log10' or 'lin')
+
+    Returns
+    -------
+
+    offset_y:
+        offset for the y-axis
+    """
+
+    fvals = np.array([np.array(result.optimize_result.get_for_key('fval'))
+                      for result in results])
+    fvals.flatten()
+    min_val = np.nanmin(fvals[fvals != -np.inf])
+    offset_y = process_offset_y(None, scale_y, float(min_val))
+
+    return offset_y
 
 
 def handle_options(ax, max_len_fvals, ref, y_limits, offset_y):
