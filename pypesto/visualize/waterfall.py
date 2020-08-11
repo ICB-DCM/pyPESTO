@@ -282,7 +282,7 @@ def process_offset_for_list(results: Iterable[Result],
                             scale_y: str) -> float:
     """
     If we have a list of results, all should use the same offset_y,
-    which is computed ny this function.
+    which is computed by this function.
 
     Parameters
     ----------
