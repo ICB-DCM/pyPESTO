@@ -37,8 +37,11 @@ def optimizer_convergence(result,
         fig.set_size_inches(*size)
 
     fvals = result.optimize_result.get_for_key('fval')
+    # ideally use problem.get_reduced_vector here, but checking for nans
+    # should also do the trick.
     grads = [
-        np.linalg.norm(grad, 2) if grad is not None else np.NaN
+        np.linalg.norm(np.asarray([g for g in grad if not np.isnan(g)]), 2)
+        if grad is not None else np.NaN
         for grad in result.optimize_result.get_for_key('grad')
     ]
     msgs = result.optimize_result.get_for_key('message')
