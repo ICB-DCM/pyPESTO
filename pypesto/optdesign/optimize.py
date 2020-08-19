@@ -2,6 +2,7 @@ from ..optimize import minimize, ScipyOptimizer
 from .design_problem import DesignProblem
 from ..petab import PetabImporter
 from ..result import Result
+import numpy as np
 
 
 def optimization(design_problem: DesignProblem) -> Result:
@@ -27,8 +28,12 @@ def optimization(design_problem: DesignProblem) -> Result:
     dicts = design_problem.result.optimize_result.as_list(['x'])[
             0:design_problem.n_optimize_runs]
     importer = PetabImporter(design_problem.petab_problem)
+
+    # TODO is there a possibility to pass x_guesses while creating the problem?
     design_problem.problem = importer.create_problem(
-        design_problem.problem.objective, x_guesses=[d['x'] for d in dicts])
+       design_problem.problem.objective)
+    design_problem.problem.x_guesses_full = np.array([d['x'] for d in dicts])
+
     # TODO optimizer should be chosen somewhere in the beginning
     optimizer = ScipyOptimizer()
     # engine = optimize.SingleCoreEngine()

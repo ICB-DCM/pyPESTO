@@ -61,29 +61,30 @@ class DesignProblem(dict):
                  problem: Problem,
                  result: Result,
                  petab_problem: petab.Problem,
-                 x: Optional[Iterable[float]] = None,
+                 initial_x: Optional[Iterable[float]] = None,
                  n_optimize_runs: int = 10,
                  n_cond_to_add: int = 1,
                  criteria_list: List[str] = None,
                  chosen_criteria: str = 'det',
                  const_for_hess: float = None,
                  profiles: bool = False,
-                 number_of_measurements: int = 3):
+                 number_of_measurements: int = 3,
+                 run_optimization: bool = True):
 
         super().__init__()
 
         if criteria_list is None:
             criteria_list = ['det', 'trace', 'ratio', 'rank', 'eigmin',
                              'number_good_eigvals']
-        if x is None:
-            x = result.optimize_result.as_list(['x'])[0]['x']
+        if initial_x is None:
+            initial_x = result.optimize_result.as_list(['x'])[0]['x']
 
         self.experiment_list = experiment_list
         self.problem = problem
         self.result = result
         self.petab_problem = petab_problem
         self.model = self.get_super_model(model)
-        self.x = x
+        self.initial_x = initial_x
         self.n_optimize_runs = n_optimize_runs
         self.n_cond_to_add = n_cond_to_add
         self.criteria_list = criteria_list
@@ -91,6 +92,7 @@ class DesignProblem(dict):
         self.const_for_hess = const_for_hess
         self.profiles = profiles
         self.number_of_measurements = number_of_measurements
+        self.run_optimization = run_optimization
 
         # TODO profiles, number_of_measurements are not actively used in
         #  the code right now
@@ -100,25 +102,25 @@ class DesignProblem(dict):
         self.write_super_condition_df()
 
         # sanity checks for lengths of df in experiment_list
-        if not self.experiment_list:
-            raise ValueError('you need to pass a nonempty list of candidates')
-        for dict in self.experiment_list:
-            if 'condition_df' in dict and dict['condition_df'] is not None \
-                    and len(dict['condition_df'].columns) \
-                    != len(self.petab_problem.condition_df.columns):
-                raise ValueError(
-                    'condition dataframe in given candidates has wrong length')
-            if 'observable_df' in dict and dict['observable_df'] is not None \
-                    and len(dict['observable_df'].columns) != \
-                    len(self.petab_problem.observable_df.columns):
-                raise ValueError(
-                    'observable dataframe in given candidates has wrong '
-                    'length')
-            if len(dict['measurement_df'].columns) != len(
-                    self.petab_problem.measurement_df.columns):
-                raise ValueError(
-                    'measurement dataframe in given candidates has wrong '
-                    'length')
+        # if not self.experiment_list:
+        #     raise ValueError('you need to pass a nonempty list of candidates')
+        # for dict in self.experiment_list:
+        #     if 'condition_df' in dict and dict['condition_df'] is not None \
+        #             and len(dict['condition_df'].columns) \
+        #             != len(self.petab_problem.condition_df.columns):
+        #         raise ValueError(
+        #             'condition dataframe in given candidates has wrong length')
+        #     if 'observable_df' in dict and dict['observable_df'] is not None \
+        #             and len(dict['observable_df'].columns) != \
+        #             len(self.petab_problem.observable_df.columns):
+        #         raise ValueError(
+        #             'observable dataframe in given candidates has wrong '
+        #             'length')
+        #     if len(dict['measurement_df'].columns) != len(
+        #             self.petab_problem.measurement_df.columns):
+        #         raise ValueError(
+        #             'measurement dataframe in given candidates has wrong '
+        #             'length')
 
     def __getattr__(self, key):
         try:

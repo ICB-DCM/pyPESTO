@@ -1,6 +1,7 @@
 from typing import List
 from .design_problem import DesignProblem
 from heapq import nlargest, nsmallest
+import numpy as np
 
 
 class DesignResult(dict):
@@ -60,10 +61,18 @@ class DesignResult(dict):
 
         values = [d[key] for d in self.single_runs]
 
+        # some criteria values may be None if the simulation failed etc
+        # write -inf, +inf respectively for the code to work
+        none_ind = np.where(np.array(values) == None)[0].tolist()
+
         if maximize:
+            values = [float('-inf') if i in none_ind else value for i,\
+                      value in enumerate(values)]
             best_indices, best_values = map(list, zip(
                 *nlargest(n_best, enumerate(values), key=lambda x: x[1])))
         else:
+            values = [float('inf') if i in none_ind else value for i, \
+                      value in enumerate(values)]
             best_indices, best_values = map(list, zip(
                 *nsmallest(n_best, enumerate(values), key=lambda x: x[1])))
 

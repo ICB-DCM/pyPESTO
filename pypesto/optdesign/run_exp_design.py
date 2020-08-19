@@ -33,20 +33,27 @@ def single_design_algo(design_problem: DesignProblem,
     design_result:
         the altered design_result
     """
-
     for candidate in design_problem.experiment_list:
-
         design_problem = add_candidate_to_dfs(
             design_problem=design_problem, candidate=candidate,
-            x=design_problem.x)
+            x=design_problem.initial_x)
 
         design_problem = update_pypesto_from_petab(design_problem)
 
-        result = optimization(design_problem=design_problem)
+        if design_problem.run_optimization:
+            result = optimization(design_problem=design_problem)
 
-        design_result.single_runs.append(
-            get_design_result(design_problem=design_problem,
-                              candidate=candidate, result=result))
+            design_result.single_runs.append(
+                get_design_result(design_problem=design_problem,
+                                  candidate=candidate,
+                                  x=result.optimize_result.as_list(
+                                      ['x'])[0]['x']))
+        else:
+            design_result.single_runs.append(
+                get_design_result(design_problem=design_problem,
+                                  candidate=candidate,
+                                  x=design_problem.initial_x))
+
         delete_candidate_from_dfs(design_problem=design_problem,
                                   candidate=candidate)
 
@@ -66,7 +73,8 @@ def do_combinatorics(design_problem: DesignProblem) -> DesignProblem:
     for indices in index_combinations:
         candidates = [design_problem.experiment_list[i] for i in indices]
 
-        new_conditions = [dict['condition_df'] for dict in candidates]
+        new_conditions = [dict['condition_df'] for dict in candidates
+                          if 'condition_df' in dict]
         if all(v is None for v in new_conditions):
             new_conditions = None
         else:
@@ -74,7 +82,8 @@ def do_combinatorics(design_problem: DesignProblem) -> DesignProblem:
             new_conditions = new_conditions.reset_index().drop_duplicates(
             ).set_index(CONDITION_ID)
 
-        new_observables = [dict['observable_df'] for dict in candidates]
+        new_observables = [dict['observable_df'] for dict in candidates if
+                           'observable_df' in dict]
         if all(v is None for v in new_observables):
             new_observables = None
         else:
@@ -86,6 +95,8 @@ def do_combinatorics(design_problem: DesignProblem) -> DesignProblem:
         new_measurements = pd.concat(new_measurements, ignore_index=True)
         new_measurements = new_measurements.drop_duplicates()
 
+        # TODO if condition_df, observable_df was not given, do not include
+        #  it here
         new_dict = {'id': [dict['id'] for dict in candidates],
                     'condition_df': new_conditions,
                     'observable_df': new_observables,

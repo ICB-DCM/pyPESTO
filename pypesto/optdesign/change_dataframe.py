@@ -3,16 +3,19 @@ from .design_problem import DesignProblem
 from petab.C import OBSERVABLE_ID, TIME, NOISE_PARAMETERS, \
     MEASUREMENT, SIMULATION_CONDITION_ID, NORMAL, LAPLACE
 import amici
+import petab
 from .opt_design_helpers import update_pypesto_from_petab
 from amici.petab_objective import simulate_petab
 from amici.petab_objective import rdatas_to_simulation_df
 
 
 # TODO how to choose settings here?
-def simulate_forward(petab_problem,
-                     x: np.ndarray, model: amici.ModelPtr,
+def simulate_forward(petab_problem: petab.Problem,
+                     x: np.ndarray,
+                     model: amici.ModelPtr,
                      condition_name: str,
-                     last_timepoint: float) -> amici.ReturnDataView:
+                     last_timepoint: float,
+                     candidate: dict) -> amici.ReturnDataView:
     """
     performs a forward simulation with x as parameter and condition
     'condition_name' until 'last_timepoint'
@@ -48,10 +51,15 @@ def simulate_forward(petab_problem,
         np.linspace(0, last_timepoint, max(int(last_timepoint + 1), 2))))
     # find entries for conditions and map correctly
     all_fixed_params = []
+
     for fixed_par in model.getFixedParameterIds():
-        all_fixed_params.append(
-            petab_problem.condition_df[fixed_par].loc[condition_name])
-    model.setFixedParameters(amici.DoubleVector(all_fixed_params))
+        if 'condition_df' in candidate:
+            all_fixed_params.append(
+                candidate['condition_df'][fixed_par].loc[condition_name])
+        else:
+            all_fixed_params.append(
+                petab_problem.condition_df[fixed_par].loc[condition_name])
+    model.setFixedParameters(amici.DoubleVector(np.array(all_fixed_params)))
     model.setParameterScale(amici.ParameterScaling_log10)
     temp = x
     # these may be noise parameters for which we have explicit values
@@ -79,7 +87,7 @@ def add_candidate_to_dfs(design_problem: DesignProblem, candidate: dict,
     # parameters right now
 
     if x is None:
-        x = design_problem.x
+        x = design_problem.initial_x
 
     # add new row to measurement df
     measurement_df = design_problem.petab_problem.measurement_df
@@ -103,7 +111,7 @@ def add_candidate_to_dfs(design_problem: DesignProblem, candidate: dict,
 def write_measurement(design_problem: DesignProblem, candidate: dict,
                       x: np.ndarray = None) -> DesignProblem:
     if x is None:
-        x = design_problem.x
+        x = design_problem.initial_x
 
     measurement_df = design_problem.petab_problem.measurement_df
 
@@ -116,7 +124,8 @@ def write_measurement(design_problem: DesignProblem, candidate: dict,
             x=x,
             model=design_problem.model,
             condition_name=condition_name,
-            last_timepoint=measurement_time)
+            last_timepoint=measurement_time,
+            candidate=candidate)
 
         have_noise = NOISE_PARAMETERS in design_problem.petab_problem. \
             measurement_df.columns

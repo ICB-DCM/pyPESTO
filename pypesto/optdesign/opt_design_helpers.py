@@ -7,36 +7,28 @@ from typing import Optional
 
 
 # make this more readable
-def get_hess(obj: AmiciObjective, result: Optional[Result] = None,
-             x: Optional[np.ndarray] = None):
-    # if both result and x are passed, use x
-    # get hess from function call instead of reading it from result
-    if result is None and x is None:
-        raise RuntimeError("you have to pass either the result-object or the "
-                           "exact parameters where you want to "
-                           "evaluate the hessian")
-    hess = None
-    message = None
+def get_hess(obj: AmiciObjective, x: np.ndarray,
+             fallback: np.ndarray):
 
-    if x is not None:
-        hess = obj.get_hess(x)
-        message = 'got hess via objective from specified parameters'
-    elif result is not None:
-        hess = obj.get_hess(result.optimize_result.as_list()[0]['x'])
+    hess = obj.get_hess(x)
+    message = 'got hess via objective from specified parameters'
 
     if hess is None:
         raise RuntimeError("could not get hessian")
 
     # TODO properly handle this case
-    if np.isnan(hess[0][0]):
+    if np.isnan(hess).any():
         print("hess is NaN.")
-        message = 'hessian is evaluated at result.problem.x_guesses[0]'
-        hess = obj.get_hess(result.problem.x_guesses[0])
-
+        message = 'hessian is evaluated at the initial best parameter'
+        hess = obj.get_hess(fallback)
+        if np.isnan(hess).any():
+            hess = None
     return hess, message
 
 
 def get_eigvals(hess: np.ndarray):
+    if hess is None:
+        return None
     v = np.linalg.eigvals(hess)
     return v
 
@@ -56,6 +48,8 @@ def update_pypesto_from_petab(design_problem: DesignProblem):
 
 
 def add_to_hess(hess: np.ndarray, const: float):
+    if hess is None:
+        return None
     modified_hess = hess + const * np.eye(len(hess))
     return modified_hess
 
@@ -63,6 +57,9 @@ def add_to_hess(hess: np.ndarray, const: float):
 # TODO put the treshhold in design_problem
 def get_criteria(criteria: str, hess: np.ndarray, eigvals: np.ndarray,
                  tresh: float = 10 ** (-4)):
+    if hess is None:
+        return None
+
     if criteria == 'det':
         value = np.prod(eigvals)
     elif criteria == 'trace':
@@ -87,13 +84,21 @@ def get_criteria(criteria: str, hess: np.ndarray, eigvals: np.ndarray,
 # TODO split this up into subparts
 # should the criteria be implemented as properties ?
 def get_design_result(design_problem: DesignProblem,
-                      candidate: Optional[dict] = None,
-                      result: Optional[Result] = None):
+                      x: np.ndarray,
+                      candidate: Optional[dict] = None
+                      ):
     dict = {'candidate': candidate}
-    hess, message = get_hess(obj=design_problem.problem.objective,
-                             result=design_problem.result, x=design_problem.x)
+
+    # check if the forward simulation failed
+    if candidate is None or ~np.isnan(
+            design_problem.petab_problem.measurement_df.measurement).any():
+        hess, message = get_hess(obj=design_problem.problem.objective,
+                                 x=x, fallback=design_problem.initial_x)
+    else:
+        message = "Simulation failed. Simulated measurement is NaN"
+        hess = None
     eigvals = get_eigvals(hess=hess)
-    dict['x'] = design_problem.x
+    dict['x'] = x
     dict['hess'] = hess
     dict['eigvals'] = eigvals
     for criteria in design_problem.criteria_list:
@@ -104,9 +109,8 @@ def get_design_result(design_problem: DesignProblem,
                                     const=design_problem.const_for_hess)
         eigvals_modified = get_eigvals(hess=hess_modified)
         for criteria in design_problem.criteria_list:
-            dict[criteria + '_modified'] = get_criteria(criteria,
-                                                        hess_modified,
-                                                        eigvals_modified)
+            dict[''.join([criteria, '_modified'])] = \
+                get_criteria(criteria, hess_modified, eigvals_modified)
 
     if design_problem.profiles:
         raise NotImplementedError(
@@ -118,7 +122,7 @@ def get_design_result(design_problem: DesignProblem,
         # dict['conf_interval_criteria'] = get_conf_interval_criteria(
         # result=result, problem=problem)
 
-    dict['result'] = result
+    # dict['result'] = result
     dict['constant_for_hessian'] = design_problem.const_for_hess
     return dict
 
