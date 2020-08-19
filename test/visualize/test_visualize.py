@@ -432,6 +432,14 @@ def test_optimizer_history_lowlevel():
     # test with a list of arrays
     visualize.optimizer_history_lowlevel(vals)
 
+@close_fig
+def test_optimize_convergence():
+    result = create_optimization_result()
+    result_nan = create_optimization_result_nan_inf()
+
+    visualize.optimizer_convergence(result)
+    visualize.optimizer_convergence(result_nan)
+
 
 def test_assign_clusters():
     # test empty input
