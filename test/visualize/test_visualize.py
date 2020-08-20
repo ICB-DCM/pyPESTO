@@ -432,6 +432,7 @@ def test_optimizer_history_lowlevel():
     # test with a list of arrays
     visualize.optimizer_history_lowlevel(vals)
 
+
 @close_fig
 def test_optimize_convergence():
     result = create_optimization_result()

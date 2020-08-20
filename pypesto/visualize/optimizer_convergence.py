@@ -51,7 +51,7 @@ def optimizer_convergence(result,
         'exit message': msgs
     })
     sns.scatterplot(x='fval', y='grad', hue='exit message',
-                         data=conv_data, ax=ax)
+                    data=conv_data, ax=ax)
     ax.set_yscale('log')
     ax.set_xscale('log')
     return ax
