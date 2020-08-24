@@ -27,9 +27,9 @@ except ImportError:
     pyswarm = None
 
 try:
-    import cmaes
+    import cma
 except ImportError:
-    cmaes = None
+    cma = None
 
 EXITFLAG_LOADED_FROM_FILE = -99
 
@@ -567,8 +567,12 @@ class CmaesOptimizer(Optimizer):
     Global optimization using cma-es.
     """
 
-    def __init__(self):
+    def __init__(self, options: Dict = None):
         super().__init__()
+
+        if options is None:
+            options = {'maxfevals': 200}
+        self.options = options
 
     @fix_decorator
     @time_decorator
@@ -582,17 +586,20 @@ class CmaesOptimizer(Optimizer):
     ) -> OptimizerResult:
         lb = problem.lb
         ub = problem.ub
-        if pyswarm is None:
+        sigma0 = 0.25 * np.median(ub)
+        if cma is None:
             raise ImportError(
-                "This optimizer requires an installation of cma-es.")
+                "This optimizer requires an installation of cma.")
 
-        xopt, fopt = pyswarm.pso(
-            problem.objective.get_fval, lb, ub, **self.options)
+        xopt, fopt = cma.fmin_con(
+            problem.objective.get_fval, x0, sigma0, lb, ub)#, **self.options)
 
         optimizer_result = OptimizerResult(
             x=np.array(xopt),
             fval=fopt
         )
+
+        return optimizer_result
 
     def is_least_squares(self):
         return False
