@@ -26,6 +26,11 @@ try:
 except ImportError:
     pyswarm = None
 
+try:
+    import cmaes
+except ImportError:
+    cmaes = None
+
 EXITFLAG_LOADED_FROM_FILE = -99
 
 logger = logging.getLogger(__name__)
