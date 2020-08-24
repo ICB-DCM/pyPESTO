@@ -560,3 +560,39 @@ class PyswarmOptimizer(Optimizer):
 
     def is_least_squares(self):
         return False
+
+
+class CmaesOptimizer(Optimizer):
+    """
+    Global optimization using cma-es.
+    """
+
+    def __init__(self):
+        super().__init__()
+
+    @fix_decorator
+    @time_decorator
+    @history_decorator
+    def minimize(
+            self,
+            problem: Problem,
+            x0: np.ndarray,
+            id: str,
+            history_options: HistoryOptions = None,
+    ) -> OptimizerResult:
+        lb = problem.lb
+        ub = problem.ub
+        if pyswarm is None:
+            raise ImportError(
+                "This optimizer requires an installation of cma-es.")
+
+        xopt, fopt = pyswarm.pso(
+            problem.objective.get_fval, lb, ub, **self.options)
+
+        optimizer_result = OptimizerResult(
+            x=np.array(xopt),
+            fval=fopt
+        )
+
+    def is_least_squares(self):
+        return False
