@@ -8,9 +8,10 @@ def optimizer_convergence(result,
                           ax=None,
                           size=(18.5, 10.5)):
     """
-    Plot history of optimizer. Can plot either the history of the cost
-    function or of the gradient norm, over either the optimizer steps or
-    the computation time.
+    Scatter plot of function values and gradient values at the end of
+    optimization. Optimizer exit-message is encoded in color. Can help
+    identifying convergence issues in optimization and guide tolerance
+    refinement etc.
 
     Parameters
     ----------
