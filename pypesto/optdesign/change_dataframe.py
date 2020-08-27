@@ -9,6 +9,66 @@ from amici.petab_objective import simulate_petab
 from amici.petab_objective import rdatas_to_simulation_df
 
 
+def get_fim_addition(design_problem: DesignProblem, candidate):
+    model = design_problem.model
+
+    solver = model.getSolver()
+    solver.setSensitivityOrder(amici.SensitivityOrder_first)
+
+    #
+    # solver.setMaxSteps(100000)
+    #
+    model.setParameterScale(amici.ParameterScaling_log10)
+    temp = design_problem.initial_x
+
+    # these may be noise parameters for which we have explicit values
+    missing_params = len(model.getParameterIds()) - len(temp)
+    for i in range(missing_params):
+        temp = np.append(temp, 0)
+    model.setParameters(amici.DoubleVector(temp))
+
+    total_addition = 0
+
+    for row_index in range(len(candidate['measurement_df'])):
+        # set correct timepoint
+        model.setTimepoints(
+            amici.DoubleVector([candidate['measurement_df'].time[row_index]]))
+
+        # set fixed params for correct condition
+        condition_name = candidate['measurement_df'].simulationConditionId[
+            row_index]
+        all_fixed_params = []
+
+        for fixed_par in model.getFixedParameterIds():
+            if 'condition_df' in candidate:
+                all_fixed_params.append(
+                    candidate['condition_df'][fixed_par].loc[condition_name])
+            else:
+                all_fixed_params.append(
+                    design_problem.petab_problem.condition_df[fixed_par].loc[
+                        condition_name])
+        model.setFixedParameters(
+            amici.DoubleVector(np.array(all_fixed_params)))
+
+        rdata = amici.runAmiciSimulation(model, solver, None)
+
+        vec = rdata['sy']
+
+        # vec[0] to get the first (and only) timepoint
+        # skip ie fixed noise parameters
+
+        position = model.getObservableIds().index(
+            candidate['measurement_df'].observableId[row_index])
+        yo = vec[0][0:len(vec[0]) - missing_params, position]
+        # TODO include here number of measurements
+        single_addition = np.outer(yo, yo) / (candidate[
+                                           'measurement_df'].noiseParameters[
+                                            row_index] ** 2)
+        total_addition = total_addition + single_addition
+
+    return total_addition
+
+
 # TODO how to choose settings here?
 def simulate_forward(petab_problem: petab.Problem,
                      x: np.ndarray,
@@ -25,6 +85,8 @@ def simulate_forward(petab_problem: petab.Problem,
 
     Parameters
     ----------
+    candidate:
+
     petab_problem:
         the petab problem
     x:
@@ -172,7 +234,8 @@ def write_measurement(design_problem: DesignProblem, candidate: dict,
     return design_problem
 
 
-def delete_candidate_from_dfs(design_problem: DesignProblem, candidate: dict) \
+def delete_candidate_from_dfs(design_problem: DesignProblem, candidate:
+dict, n_meas_origin: int) \
         -> DesignProblem:
     """
     delete the new rows which where temporarily added to the measurement
@@ -183,18 +246,21 @@ def delete_candidate_from_dfs(design_problem: DesignProblem, candidate: dict) \
     # use condition_id as unique identifier
     measurement_df = design_problem.petab_problem.measurement_df
 
-    id_to_be_deleted = []
-    for row_index in range(len(candidate['measurement_df'])):
-        cond_id = measurement_df[SIMULATION_CONDITION_ID][
-            len(measurement_df) - len(candidate['measurement_df']) + row_index]
-        id_to_be_deleted.append(measurement_df[SIMULATION_CONDITION_ID][
-                                    measurement_df[
-                                        SIMULATION_CONDITION_ID] ==
-                                    cond_id].index.tolist())
-    flat_list = [item for sublist in id_to_be_deleted for item in sublist]
-    measurement_df = measurement_df.drop(flat_list)
-    design_problem.petab_problem.measurement_df = measurement_df
+    # id_to_be_deleted = []
+    # for row_index in range(len(candidate['measurement_df'])):
+    #     cond_id = measurement_df[SIMULATION_CONDITION_ID][
+    #         len(measurement_df) - len(candidate['measurement_df']) + row_index]
+    #     id_to_be_deleted.append(measurement_df[SIMULATION_CONDITION_ID][
+    #                                 measurement_df[
+    #                                     SIMULATION_CONDITION_ID] ==
+    #                                 cond_id].index.tolist())
+    # flat_list = [item for sublist in id_to_be_deleted for item in sublist]
+    # measurement_df = measurement_df.drop(flat_list)
+    # design_problem.petab_problem.measurement_df = measurement_df
 
+    measurement_df = measurement_df.drop(
+        list(range(n_meas_origin, len(measurement_df))))
+    design_problem.petab_problem.measurement_df = measurement_df
     return design_problem
 
 # alternative to get the new measurement value

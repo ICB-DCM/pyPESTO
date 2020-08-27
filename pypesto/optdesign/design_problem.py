@@ -34,12 +34,6 @@ class DesignProblem(dict):
     x:
         the parameter to be used for the forward simulation to generate new
         data
-    n_optimize_runs:
-        the number of multistart optimization runs to be done after a new
-        condition has been added
-    n_cond_to_add:
-        if greater than 1, will search in the full combinatorical space of
-        that many combinations
     criteria_list:
         list of criteria names, specifies which criteria values should be
         computed
@@ -53,6 +47,13 @@ class DesignProblem(dict):
         how many new measurements (with different noise added) are to be
         added to the measurement dataframe after finding the exact value via
         the forward simulation
+    list_of_combinations:
+        if None only the conditions in 'experiment_list' are checked
+        can specify a list of combinations of experiments from 'experiment_list'
+        which are then checked and the result will be saved in
+        design_result.combi_runs
+        if it is an integer n, the program will consider the full
+        combinatorical space of n many combinations from experiment_list
     """
 
     def __init__(self,
@@ -62,14 +63,11 @@ class DesignProblem(dict):
                  result: Result,
                  petab_problem: petab.Problem,
                  initial_x: Optional[Iterable[float]] = None,
-                 n_optimize_runs: int = 10,
-                 n_cond_to_add: int = 1,
                  criteria_list: List[str] = None,
                  chosen_criteria: str = 'det',
                  const_for_hess: float = None,
                  profiles: bool = False,
-                 number_of_measurements: int = 3,
-                 run_optimization: bool = True):
+                 number_of_measurements: int = 3):
 
         super().__init__()
 
@@ -77,7 +75,7 @@ class DesignProblem(dict):
             criteria_list = ['det', 'trace', 'ratio', 'rank', 'eigmin',
                              'number_good_eigvals']
         if initial_x is None:
-            initial_x = result.optimize_result.as_list(['x'])[0]['x']
+            initial_x = result.optimize_result.get_for_key('x')[0]
 
         self.experiment_list = experiment_list
         self.problem = problem
@@ -85,14 +83,11 @@ class DesignProblem(dict):
         self.petab_problem = petab_problem
         self.model = self.get_super_model(model)
         self.initial_x = initial_x
-        self.n_optimize_runs = n_optimize_runs
-        self.n_cond_to_add = n_cond_to_add
         self.criteria_list = criteria_list
         self.chosen_criteria = chosen_criteria
         self.const_for_hess = const_for_hess
         self.profiles = profiles
         self.number_of_measurements = number_of_measurements
-        self.run_optimization = run_optimization
 
         # TODO profiles, number_of_measurements are not actively used in
         #  the code right now

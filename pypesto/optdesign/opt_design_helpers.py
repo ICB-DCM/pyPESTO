@@ -85,17 +85,25 @@ def get_criteria(criteria: str, hess: np.ndarray, eigvals: np.ndarray,
 # should the criteria be implemented as properties ?
 def get_design_result(design_problem: DesignProblem,
                       x: np.ndarray,
-                      candidate: Optional[dict] = None
+                      candidate: Optional[dict] = None,
+                      hess: np.ndarray = None
                       ):
     dict = {'candidate': candidate}
 
+    # used when we check different combinations in the end thus checking
+    # different FIMs
+    if hess is not None:
+        pass
     # check if the forward simulation failed
-    if candidate is None or ~np.isnan(
-            design_problem.petab_problem.measurement_df.measurement).any():
+    # also used in the first initial check (hence 'if candidate is None')
+    elif candidate is None: # or ~np.isnan(
+            # design_problem.petab_problem.measurement_df.measurement).any()
+
         hess, message = get_hess(obj=design_problem.problem.objective,
                                  x=x, fallback=design_problem.initial_x)
     else:
         message = "Simulation failed. Simulated measurement is NaN"
+        print("Simulation failed. Simulated measurement is NaN")
         hess = None
     eigvals = get_eigvals(hess=hess)
     dict['x'] = x

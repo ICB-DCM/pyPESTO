@@ -4,8 +4,10 @@ from .design_problem import DesignProblem
 from .result import DesignResult
 from .opt_design_helpers import update_pypesto_from_petab, get_design_result
 from petab.C import CONDITION_ID, OBSERVABLE_ID
-from .change_dataframe import add_candidate_to_dfs, delete_candidate_from_dfs
+from .change_dataframe import add_candidate_to_dfs, \
+    delete_candidate_from_dfs, get_fim_addition
 from .optimize import optimization
+import numpy as np
 
 
 def single_design_algo(design_problem: DesignProblem,
@@ -33,29 +35,33 @@ def single_design_algo(design_problem: DesignProblem,
     design_result:
         the altered design_result
     """
-    for candidate in design_problem.experiment_list:
-        design_problem = add_candidate_to_dfs(
-            design_problem=design_problem, candidate=candidate,
-            x=design_problem.initial_x)
+    n_meas_origin = len(design_problem.petab_problem.measurement_df)
+    initial_result = get_design_result(design_problem=design_problem,
+                                       candidate=None,
+                                       x=design_problem.initial_x)
+    design_result.initial_result = initial_result
+    for cand_ind, candidate in enumerate(design_problem.experiment_list):
 
-        design_problem = update_pypesto_from_petab(design_problem)
+        fim_addition = get_fim_addition(design_problem, candidate, )
 
-        if design_problem.run_optimization:
-            result = optimization(design_problem=design_problem)
-
+        if np.isnan(fim_addition).any():
             design_result.single_runs.append(
                 get_design_result(design_problem=design_problem,
                                   candidate=candidate,
-                                  x=result.optimize_result.as_list(
-                                      ['x'])[0]['x']))
+                                  x=design_problem.initial_x,
+                                  hess=None))
         else:
             design_result.single_runs.append(
                 get_design_result(design_problem=design_problem,
                                   candidate=candidate,
-                                  x=design_problem.initial_x))
+                                  x=design_problem.initial_x,
+                                  hess=initial_result['hess'] + fim_addition))
 
-        delete_candidate_from_dfs(design_problem=design_problem,
-                                  candidate=candidate)
+        design_result.single_runs[cand_ind]['fim_addition'] = fim_addition
+        design_result.single_runs[cand_ind]['fim_added'] = initial_result[
+                                                               'hess'] \
+                                                           + \
+                                                           fim_addition
 
         if design_problem.profiles:
             raise NotImplementedError
@@ -107,6 +113,24 @@ def do_combinatorics(design_problem: DesignProblem) -> DesignProblem:
     return design_problem
 
 
+def get_combi_run_result(design_result: DesignResult,
+                         list_of_combinations: list):
+    combi_result = []
+    for combi in list_of_combinations:
+        new_hess = design_result.initial_result['hess']
+        for index in combi:
+            new_hess = new_hess + design_result.single_runs[index][
+                'fim_addition']
+        new_result = get_design_result(
+            design_problem=design_result.design_problem,
+            candidate=None,
+            x=design_result.design_problem.initial_x,
+            hess=new_hess)
+        combi_result.append(new_result)
+
+    return combi_result
+
+
 def run_exp_design(design_problem: DesignProblem) -> DesignResult:
     """
     The main method for experimental design.
@@ -124,9 +148,7 @@ def run_exp_design(design_problem: DesignProblem) -> DesignResult:
     """
     design_result = DesignResult(design_problem=design_problem)
 
-    if design_problem.n_cond_to_add > 1:
-        design_problem = do_combinatorics(design_problem=design_problem)
-
     design_result = single_design_algo(design_problem=design_problem,
                                        design_result=design_result)
+
     return design_result
