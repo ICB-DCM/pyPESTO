@@ -571,7 +571,7 @@ class CmaesOptimizer(Optimizer):
         super().__init__()
 
         if options is None:
-            options = {'maxfevals': 200}
+            options = {'maxiter': 10000}
         self.options = options
 
     @fix_decorator
@@ -591,21 +591,25 @@ class CmaesOptimizer(Optimizer):
             raise ImportError(
                 "This optimizer requires an installation of cma.")
 
+        '''
         xopt, fopt = cma.fmin_con(
-            problem.objective.get_fval, x0, sigma0, g=lambda x: [lb[0]], h=lambda x: [ub[0]])#, **self.options)
+            problem.objective.get_fval, x0, sigma0, g=lambda x: [lb[0]], h=lambda x: [ub[0]], options=self.options
+        )
         # Warning: these functions g,h for lower and upper bound only work properly, if all elements in lb and up are equal!
+        '''
 
         res = cma.fmin(
-            problem.objective.get_fval, x0, sigma0)
+            problem.objective.get_fval, x0, sigma0, options=self.options
+        )
         print('fopt: ' + str(res[-2].result.fbest))
 
         # Problem: fopt is not a value but a cma object with multiple attributes!
         optimizer_result = OptimizerResult(
             x=np.array(res[0]),
             #x=np.array(xopt),
-            fval=res[-2].result.fbest      # or maybe fopt.best.f ...
+            fval=res[-2].result.fbest                           # or maybe fopt.best.f ...
             #fval=fopt.objective_function_complements[0].f      # or maybe fopt.best.f ...
-        )                                                      # it doesn't fit optimizer_history.fval_min!
+        )                                                       # it doesn't fit optimizer_history.fval_min!
 
         return optimizer_result
 
