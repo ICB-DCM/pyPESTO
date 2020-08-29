@@ -595,11 +595,11 @@ class CmaesOptimizer(Optimizer):
             problem.objective.get_fval, x0, sigma0, g=lambda x: [lb[0]], h=lambda x: [ub[0]])#, **self.options)
         # Warning: these functions g,h for lower and upper bound only work properly, if all elements in lb and up are equal!
 
-
+        # Problem: fopt is not a value but a cma object with multiple attributes!
         optimizer_result = OptimizerResult(
             x=np.array(xopt),
-            fval=fopt
-        )
+            fval=fopt.objective_function_complements[0].f      # or maybe fopt.best.f ...
+        )                                                      # it doesn't fit optimizer_history.fval_min!
 
         return optimizer_result
 
