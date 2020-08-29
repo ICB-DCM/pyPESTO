@@ -592,7 +592,9 @@ class CmaesOptimizer(Optimizer):
                 "This optimizer requires an installation of cma.")
 
         xopt, fopt = cma.fmin_con(
-            problem.objective.get_fval, x0, sigma0, lb, ub)#, **self.options)
+            problem.objective.get_fval, x0, sigma0, g=lambda x: [lb[0]], h=lambda x: [ub[0]])#, **self.options)
+        # Warning: these functions g,h for lower and upper bound only work properly, if all elements in lb and up are equal!
+
 
         optimizer_result = OptimizerResult(
             x=np.array(xopt),
