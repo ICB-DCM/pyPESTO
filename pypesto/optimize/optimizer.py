@@ -592,10 +592,10 @@ class CmaesOptimizer(Optimizer):
                 "This optimizer requires an installation of cma.")
 
         '''
-        xopt, fopt = cma.fmin_con(
+        xopt, es_opt = cma.fmin_con(
             problem.objective.get_fval, x0, sigma0, g=lambda x: [lb[0]], h=lambda x: [ub[0]], options=self.options
         )
-        # Warning: these functions g,h for lower and upper bound only work properly, if all elements in lb and up are equal!
+        # Warning: these functions g,h seem not to work as intended!
         '''
 
         res = cma.fmin(
@@ -607,8 +607,8 @@ class CmaesOptimizer(Optimizer):
         optimizer_result = OptimizerResult(
             x=np.array(res[0]),
             #x=np.array(xopt),
-            fval=res[-2].result.fbest                           # or maybe fopt.best.f ...
-            #fval=fopt.objective_function_complements[0].f      # or maybe fopt.best.f ...
+            fval=res[-2].result.fbest                           # or maybe es_opt.best.f ...
+            #fval=es_opt.objective_function_complements[0].f      # or maybe es_opt.best.f ...
         )                                                       # it doesn't fit optimizer_history.fval_min!
 
         return optimizer_result
