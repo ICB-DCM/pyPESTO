@@ -587,29 +587,22 @@ class CmaesOptimizer(Optimizer):
         lb = problem.lb
         ub = problem.ub
         sigma0 = 0.25 * np.median(ub)
+
+        # take the smallest lower bound and the biggest upper bound as default parameter bounds
+        self.options['bounds'] = [sorted(lb)[0], sorted(ub, reverse=True)[0]]
+
         if cma is None:
             raise ImportError(
                 "This optimizer requires an installation of cma.")
 
-        '''
-        xopt, es_opt = cma.fmin_con(
-            problem.objective.get_fval, x0, sigma0, g=lambda x: [lb[0]], h=lambda x: [ub[0]], options=self.options
-        )
-        # Warning: these functions g,h seem not to work as intended!
-        '''
+        result = cma.CMAEvolutionStrategy(
+            x0, sigma0, inopts=self.options
+        ).optimize(problem.objective.get_fval).result
 
-        res = cma.fmin(
-            problem.objective.get_fval, x0, sigma0, options=self.options
-        )
-        print('fopt: ' + str(res[-2].result.fbest))
-
-        # Problem: fopt is not a value but a cma object with multiple attributes!
         optimizer_result = OptimizerResult(
-            x=np.array(res[0]),
-            #x=np.array(xopt),
-            fval=res[-2].result.fbest                           # or maybe es_opt.best.f ...
-            #fval=es_opt.objective_function_complements[0].f      # or maybe es_opt.best.f ...
-        )                                                       # it doesn't fit optimizer_history.fval_min!
+            x=np.array(result[0]),
+            fval=result[1]
+        )
 
         return optimizer_result
 
