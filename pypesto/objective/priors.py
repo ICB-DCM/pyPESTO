@@ -77,10 +77,12 @@ class NegLogParameterPriors(ObjectiveBase):
     ) -> ResultDict:
 
         res = {}
+        
+        res[FVAL] = self.neg_log_density(x)
 
         for order in sensi_orders:
             if order == 0:
-                res[FVAL] = self.neg_log_density(x)
+                continue
             elif order == 1:
                 res[GRAD] = self.gradient_neg_log_density(x)
             elif order == 2:
