@@ -40,6 +40,10 @@ class DesignProblem(dict):
     const_for_hess:
         a constant that can be added to the eigenvalues before computing the
         criteria values
+    n_save_combi_result:
+        if the full combinatorial space is checked for the best
+        combination of candidates from 'experiment_list' only the best
+        'n_save_combi_result' many will be saved (for each criteria)
     profiles:
         if a criteria based on profiles eg length of confidence interval
         should be computed
@@ -47,13 +51,6 @@ class DesignProblem(dict):
         how many new measurements (with different noise added) are to be
         added to the measurement dataframe after finding the exact value via
         the forward simulation
-    list_of_combinations:
-        if None only the conditions in 'experiment_list' are checked
-        can specify a list of combinations of experiments from 'experiment_list'
-        which are then checked and the result will be saved in
-        design_result.combi_runs
-        if it is an integer n, the program will consider the full
-        combinatorical space of n many combinations from experiment_list
     """
 
     def __init__(self,
@@ -66,6 +63,7 @@ class DesignProblem(dict):
                  criteria_list: List[str] = None,
                  chosen_criteria: str = 'det',
                  const_for_hess: float = None,
+                 n_save_combi_result: int = None,
                  profiles: bool = False,
                  number_of_measurements: int = 3):
 
@@ -74,8 +72,12 @@ class DesignProblem(dict):
         if criteria_list is None:
             criteria_list = ['det', 'trace', 'ratio', 'rank', 'eigmin',
                              'number_good_eigvals']
+            # include the modified versions here?
         if initial_x is None:
             initial_x = result.optimize_result.get_for_key('x')[0]
+
+        if n_save_combi_result is None:
+            n_save_combi_result = 20
 
         self.experiment_list = experiment_list
         self.problem = problem
@@ -88,6 +90,7 @@ class DesignProblem(dict):
         self.const_for_hess = const_for_hess
         self.profiles = profiles
         self.number_of_measurements = number_of_measurements
+        self.n_save_combi_result = n_save_combi_result
 
         # TODO profiles, number_of_measurements are not actively used in
         #  the code right now

@@ -1,15 +1,15 @@
 import numpy as np
+from scipy.linalg import eigvalsh
 from ..petab import PetabImporter
 from .design_problem import DesignProblem
 from ..objective import AmiciObjective
 from ..result import Result
-from typing import Optional
+from typing import Optional, Union
 
 
 # make this more readable
 def get_hess(obj: AmiciObjective, x: np.ndarray,
              fallback: np.ndarray):
-
     hess = obj.get_hess(x)
     message = 'got hess via objective from specified parameters'
 
@@ -29,7 +29,7 @@ def get_hess(obj: AmiciObjective, x: np.ndarray,
 def get_eigvals(hess: np.ndarray):
     if hess is None:
         return None
-    v = np.linalg.eigvals(hess)
+    v = eigvalsh(hess)
     return v
 
 
@@ -85,7 +85,7 @@ def get_criteria(criteria: str, hess: np.ndarray, eigvals: np.ndarray,
 # should the criteria be implemented as properties ?
 def get_design_result(design_problem: DesignProblem,
                       x: np.ndarray,
-                      candidate: Optional[dict] = None,
+                      candidate: Optional[Union[list, dict]] = None,
                       hess: np.ndarray = None
                       ):
     dict = {'candidate': candidate}
@@ -133,6 +133,16 @@ def get_design_result(design_problem: DesignProblem,
     # dict['result'] = result
     dict['constant_for_hessian'] = design_problem.const_for_hess
     return dict
+
+
+def combinations_gen(elements, length):
+    for i in range(len(elements)):
+        if length == 1:
+            yield [elements[i], ]
+        else:
+            for next in combinations_gen(elements[i + 1:len(elements)],
+                                         length - 1):
+                yield [elements[i], ] + next
 
 
 # profiles
