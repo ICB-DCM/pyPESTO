@@ -136,14 +136,12 @@ def arviz_to_pypesto(problem: Problem, azdata: az.InferenceData,
                      result: Optional[Result] = None,
                      full: bool = True):
 
-    trace_x, trace_neglogpost = \
-        _extract_trace(problem, azdata.posterior, azdata.log_likelihood)
+    trace_x, trace_neglogpost = _extract_trace(problem, azdata, warmup=False)
 
     # Append the warm-up trace, if present and requested to
     if save_warmup and hasattr(azdata, 'warmup_posterior'):
         warmup_trace_x, warmup_trace_neglogpost = \
-            _extract_trace(problem, azdata.warmup_posterior,
-                           azdata.warmup_log_likelihood)
+            _extract_trace(problem, azdata, warmup=True)
 
         if burn_in == 'auto':
             burn_in = warmup_trace_neglogpost.shape[1]
@@ -174,8 +172,9 @@ def arviz_to_pypesto(problem: Problem, azdata: az.InferenceData,
         return mcmc_result
 
 
-def _extract_trace(problem: Problem, posterior, log_likelihood):
+def _extract_trace(problem: Problem, azdata: az.InferenceData, *, warmup: bool):
     # Parameter values
+    posterior = azdata.warmup_posterior if warmup else azdata.posterior
     trace_x = np.asarray(posterior.to_array())
     if len(trace_x.shape) == 4:
         # vectorized parameters
@@ -195,13 +194,25 @@ def _extract_trace(problem: Problem, posterior, log_likelihood):
     # the log-likelihood of the pymc3 model
     # is actually the real model's log-posterior
     # (i.e., the negative objective value)
-    # TODO this is only the negative objective values
-    trace_neglogpost = np.asarray(log_likelihood.to_array())
-    # Remove trailing dimensions
-    trace_neglogpost = np.reshape(trace_neglogpost,
-                                  trace_neglogpost.shape[1:-1])
-    # Flip sign
-    trace_neglogpost = - trace_neglogpost
+    # If missing (reason still unclear), recompute it using the problem's
+    # objective function.
+    log_likelihood = 'warmup_log_likelihood' if warmup else 'log_likelihood'
+    if hasattr(azdata, log_likelihood):
+        log_likelihood = getattr(azdata, log_likelihood)
+        trace_neglogpost = np.asarray(log_likelihood.to_array())
+        # Remove trailing dimensions
+        trace_neglogpost = np.reshape(trace_neglogpost,
+                                      trace_neglogpost.shape[1:-1])
+        # Flip sign
+        trace_neglogpost = - trace_neglogpost
+    else:
+        trace_neglogpost = np.apply_along_axis(
+            lambda x: problem.objective(x, sensi_orders=(0,)),
+            2, trace_x
+        )
+
+    assert len(trace_x.shape) == 3
+    assert len(trace_neglogpost.shape) == 2
 
     if trace_x.shape[0] != trace_neglogpost.shape[0] \
             or trace_x.shape[1] != trace_neglogpost.shape[1] \

@@ -2,18 +2,20 @@
 Theano wrapper for pyPESTO objectives.
 """
 
-from typing import Union
+from typing import Union, Tuple
 
+import copy
 import numpy as np
 
-from ...objective import ObjectiveBase
+from pypesto.objective.base import ObjectiveBase, ResultDict
+from pypesto.objective.constants import MODE_FUN, FVAL, GRAD
 from ...problem import Problem
 
 import theano.tensor as tt
 from theano.gof.null_type import NullType
 
 
-class CachedObjective:
+class CachedObjective(ObjectiveBase):
     """
     Wrapper around an ObjectiveBase which computes the gradient at each evaluation,
     caching it for later calls.
@@ -28,16 +30,37 @@ class CachedObjective:
     """
 
     def __init__(self, objective: ObjectiveBase):
+        if not objective.check_mode(MODE_FUN):
+            raise NotImplementedError(f'objective must support mode={MODE_FUN}')
+        super().__init__(objective.x_names)
+        self.pre_post_processor = objective.pre_post_processor
         self.objective = objective
         self.x_cached = None
         self.fval_cached = None
         self.grad_cached = None
         self.grad_has_been_used = False
 
-    def __call__(self, x, sensi_orders):
+    def __deepcopy__(self, memodict=None) -> 'CachedObjective':
+        return CachedObjective(copy.deepcopy(self.objective))
+
+    def initialize(self):
+        self.objective.initialize()
+        self.x_cached = None
+        self.fval_cached = None
+        self.grad_cached = None
+        self.grad_has_been_used = False
+
+    def call_unprocessed(
+            self,
+            x: np.ndarray,
+            sensi_orders: Tuple[int, ...],
+            mode: str
+        ) -> ResultDict:
+
         if sensi_orders == (0,) and self.x_cached is None:
             # The gradient has not been called yet: caching is off
-            return self.objective(x, sensi_orders=sensi_orders)
+            return self.objective.call_unprocessed(x, sensi_orders, mode)
+
         else:
             # Check if we hit the cache
             if not np.array_equal(x, self.x_cached):
@@ -45,30 +68,35 @@ class CachedObjective:
                 # turn off caching
                 if sensi_orders == (0,) and not self.grad_has_been_used:
                     self.x_cached = None
-                    return self.objective(x, sensi_orders=sensi_orders)
+                    return self.objective.call_unprocessed(x, sensi_orders, mode)
                 # Repopulate cache
-                fval, grad = self.objective(x, sensi_orders=(0, 1))
+                retval = self.objective.call_unprocessed(x, (0, 1), mode)
                 self.x_cached = x  # NB it seems that at each call x is
                                    # a different object, so it is safe
                                    # not to copy it
-                self.fval_cached = fval
-                self.grad_cached = grad
+                self.fval_cached = retval[FVAL]
+                self.grad_cached = retval[GRAD]
                 self.grad_has_been_used = False
+
             # The required values are in the cache
             if sensi_orders == (0,):
-                return self.fval_cached
+                return {FVAL: self.fval_cached}
             elif sensi_orders == (1,):
                 self.grad_has_been_used = True
-                return self.grad_cached
-            elif sensi_orders == (0, 1):
-                self.grad_has_been_used = True
-                return self.fval_cached, self.grad_cached
+                return {GRAD: self.grad_cached}
             else:
-                raise NotImplementedError(f'sensi_orders = {sensi_orders}')
+                assert sensi_orders == (0, 1)  # this should be ensured by check_sensi_orders
+                self.grad_has_been_used = True
+                return {FVAL: self.fval_cached, GRAD: self.grad_cached}
 
-    @property
-    def has_grad(self):
-        return self.objective.has_grad
+    def check_mode(self, mode) -> bool:
+        return mode == MODE_FUN
+
+    def check_sensi_orders(self, sensi_orders, mode) -> bool:
+        if max(sensi_orders) > 1 or mode != MODE_FUN:
+            return False
+        else:
+            return self.objective.check_sensi_orders(sensi_orders, mode)
 
 
 class TheanoLogProbability(tt.Op):
@@ -86,7 +114,7 @@ class TheanoLogProbability(tt.Op):
     itypes = [tt.dvector]  # expects a vector of parameter values when called
     otypes = [tt.dscalar]  # outputs a single scalar value (the log prob)
 
-    def __init__(self, objective: Union[ObjectiveBase, CachedObjective], beta: float = 1.):
+    def __init__(self, objective: ObjectiveBase, beta: float = 1.):
         self._objective = objective
         self._beta = beta
 
@@ -129,7 +157,7 @@ class TheanoLogProbabilityGradient(tt.Op):
     itypes = [tt.dvector]  # expects a vector of parameter values when called
     otypes = [tt.dvector]  # outputs a vector (the log prob grad)
 
-    def __init__(self, objective: Union[ObjectiveBase, CachedObjective], beta: float = 1.):
+    def __init__(self, objective: ObjectiveBase, beta: float = 1.):
         self._objective = objective
         self._beta = beta
 
