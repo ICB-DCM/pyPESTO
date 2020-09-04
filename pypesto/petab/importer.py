@@ -1,5 +1,4 @@
 import pandas as pd
-import numpy as np
 import os
 import sys
 import importlib
@@ -283,8 +282,8 @@ class PetabImporter(AmiciObjectBuilder):
                 prior_type_entry = self.petab_problem.\
                     parameter_df.loc[x_id, petab.OBJECTIVE_PRIOR_TYPE]
 
-                if (not isinstance(prior_type_entry, str)
-                        or prior_type_entry == petab.PARAMETER_SCALE_UNIFORM):
+                if (isinstance(prior_type_entry, str)
+                        and prior_type_entry != petab.PARAMETER_SCALE_UNIFORM):
 
                     prior_params = [float(param) for param in
                                     self.petab_problem.parameter_df.
