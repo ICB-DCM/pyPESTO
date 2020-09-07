@@ -78,15 +78,17 @@ class NegLogParameterPriors(ObjectiveBase):
 
         res = {}
 
+        res[FVAL] = self.neg_log_density(x)
+
         for order in sensi_orders:
             if order == 0:
-                res[FVAL] = self.neg_log_density(x)
+                continue
             elif order == 1:
                 res[GRAD] = self.gradient_neg_log_density(x)
             elif order == 2:
                 res[HESS] = self.hessian_neg_log_density(x)
             else:
-                ValueError(f'Invalid sensi order {order}.')
+                raise ValueError(f'Invalid sensi order {order}.')
 
         return res
 
@@ -104,8 +106,8 @@ class NegLogParameterPriors(ObjectiveBase):
         elif mode == MODE_RES:
             return False
         else:
-            ValueError(f'Invalid input: Expected mode {MODE_FUN} or'
-                       f' {MODE_RES}, received {mode} instead.')
+            raise ValueError(f'Invalid input: Expected mode {MODE_FUN} or'
+                             f' {MODE_RES}, received {mode} instead.')
 
     def neg_log_density(self, x):
         """
@@ -347,8 +349,8 @@ def _prior_densities(prior_type: str,
         # when implementing: add to tests
         raise NotImplementedError
     else:
-        ValueError(f'NegLogPriors of type {prior_type} are currently '
-                   'not supported')
+        raise ValueError(f'NegLogPriors of type {prior_type} are currently '
+                         'not supported')
 
 
 def _get_linear_function(slope: float,
