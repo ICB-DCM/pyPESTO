@@ -10,7 +10,7 @@ Release notes
 
 * Example Notebook for prior functionality (#438)
 * changed parameter indexing in profiling routines (#419)
-* basic sanity checking for parameter fixing (#420)
+* Basic sanity checking for parameter fixing (#420)
 * Bug fixes in:
   * displaying of multi start optimization (#430)
   * AMICI error output (#428)
