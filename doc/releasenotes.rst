@@ -12,7 +12,7 @@ Release notes
 * changed parameter indexing in profiling routines (#419)
 * Basic sanity checking for parameter fixing (#420)
 * Bug fixes in:
-  * displaying of multi start optimization (#430)
+  * Displaying of multi start optimization (#430)
   * AMICI error output (#428)
   * Axes scaling/limits in waterfall plots (#441)
   * Priors (PEtab impor, error handling) (#448, #452, #454)
