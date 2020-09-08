@@ -28,6 +28,7 @@ optimizers = [
     ('ipopt', ''),
     ('dlib', 'default'),
     ('pyswarm', ''),
+    ('cma', ''),
 ]
 
 
@@ -75,6 +76,8 @@ def check_minimize(objective, library, solver, allow_failed_starts=False):
         optimizer = optimize.DlibOptimizer(method=solver, options=options)
     elif library == 'pyswarm':
         optimizer = optimize.PyswarmOptimizer(options=options)
+    elif library == 'cma':
+        optimizer = optimize.CmaesOptimizer(options=options)
 
     lb = 0 * np.ones((1, 2))
     ub = 1 * np.ones((1, 2))
