@@ -180,4 +180,25 @@ def process_y_limits(ax, y_limits):
             # set limits
             ax.set_ylim(y_limits)
 
+    else:
+        # No limits passed, but if we have a result list: check the limits
+        ax_limits = np.array(ax.get_ylim())
+        data_limits = ax.dataLim.ymin, ax.dataLim.ymax
+
+        # Check if data fits to axes and adapt limits, if necessary
+        if ax_limits[0] > data_limits[0] or ax_limits[1] < data_limits[1]:
+            # Get range of data
+            data_range = data_limits[1] - data_limits[0]
+            if ax.get_yscale() == 'log':
+                data_range = np.log10(data_range)
+                new_limits = (
+                    np.power(10, np.log10(data_limits[0]) - 0.02 * data_range),
+                    np.power(10, np.log10(data_limits[1]) + 0.02 * data_range))
+            else:
+                new_limits = (data_limits[0] - 0.02 * data_range,
+                              data_limits[1] + 0.02 * data_range)
+
+            # set limits
+            ax.set_ylim(new_limits)
+
     return ax
