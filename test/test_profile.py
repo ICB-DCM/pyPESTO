@@ -88,7 +88,7 @@ class ProfilerTest(unittest.TestCase):
             problem=self.problem,
             result=self.result,
             optimizer=self.optimizer,
-            profile_index=np.array([0, 1]),
+            profile_index=np.array([1]),
             next_guess_method='fixed_step',
             result_index=1,
             profile_options=options)
@@ -103,7 +103,7 @@ class ProfilerTest(unittest.TestCase):
             problem=self.problem,
             result=result,
             optimizer=self.optimizer,
-            profile_index=np.array([1, 0]),
+            profile_index=np.array([0]),
             result_index=2,
             profile_list=0,
             profile_options=options)
@@ -117,7 +117,7 @@ class ProfilerTest(unittest.TestCase):
             result=result,
             optimizer=self.optimizer,
             next_guess_method='fixed_step',
-            profile_index=np.array([1, 0]),
+            profile_index=np.array([0]),
             profile_options=options)
         # check result
         self.assertIsInstance(result.profile_result.list[1][0],
@@ -141,7 +141,7 @@ class ProfilerTest(unittest.TestCase):
                                            result=result,
                                            optimizer=self.optimizer,
                                            next_guess_method='fixed_step',
-                                           profile_index=np.array([0, 1]),
+                                           profile_index=np.array([1]),
                                            profile_list=0)
         # check result
         self.assertTrue(
@@ -156,7 +156,7 @@ class ProfilerTest(unittest.TestCase):
         n_steps = 50
         assert self.result.optimize_result.list[0].hess is None
         result = profile.approximate_parameter_profile(
-            problem=self.problem, result=self.result, profile_index=[0, 1],
+            problem=self.problem, result=self.result, profile_index=[1],
             n_steps=n_steps)
         profile_list = result.profile_result.list[-1]
         assert profile_list[0] is None
@@ -169,7 +169,7 @@ class ProfilerTest(unittest.TestCase):
         result = deepcopy(self.result)
         result.optimize_result.list[0].hess = np.array([[2, 0], [0, 1]])
         profile.approximate_parameter_profile(
-            problem=self.problem, result=result, profile_index=[0, 1],
+            problem=self.problem, result=result, profile_index=[1],
             n_steps=n_steps)
 
 
@@ -181,19 +181,21 @@ def test_profile_with_history():
     with warnings.catch_warnings():
         warnings.simplefilter("ignore")
         (problem, result, optimizer) = \
-            create_optimization_results(objective)
+            create_optimization_results(objective, dim_full=5)
 
     profile_options = profile.ProfileOptions(min_step_size=0.0005,
                                              delta_ratio_max=0.05,
                                              default_step_size=0.005,
                                              ratio_min=0.03)
 
+    problem.fix_parameters([0, 3], [result.optimize_result.list[0].x[0],
+                                    result.optimize_result.list[0].x[3]])
     problem.objective.history = pypesto.MemoryHistory({'trace_record': True})
     profile.parameter_profile(
         problem=problem,
         result=result,
         optimizer=optimizer,
-        profile_index=np.array([1, 1, 1, 0, 0, 1, 0, 1, 0, 0, 0]),
+        profile_index=np.array([0, 2, 4]),
         result_index=0,
         profile_options=profile_options
     )
@@ -227,16 +229,23 @@ def test_profile_with_fixed_parameters():
         assert len(axes) == 3
         visualize.profile_cis(result, profile_list=i_method)
 
+    # test profiling with all parameters fixed but one
+    problem.fix_parameters([2, 3, 4],
+                           result.optimize_result.list[0]['x'][2:5])
+    profile.parameter_profile(
+        problem=problem, result=result, optimizer=optimizer,
+        next_guess_method='adaptive_step_regression')
 
-def create_optimization_results(objective):
+
+def create_optimization_results(objective, dim_full=2):
     # create optimizer, pypesto problem and options
     options = {
         'maxiter': 200
     }
-    optimizer = optimize.ScipyOptimizer(method='TNC', options=options)
+    optimizer = optimize.ScipyOptimizer(method='l-bfgs-b', options=options)
 
-    lb = -2 * np.ones(2)
-    ub = 2 * np.ones(2)
+    lb = -2 * np.ones(dim_full)
+    ub = 2 * np.ones(dim_full)
     problem = pypesto.Problem(objective, lb, ub)
 
     optimize_options = optimize.OptimizeOptions(allow_failed_starts=True)

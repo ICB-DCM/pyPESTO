@@ -148,7 +148,7 @@ class AmiciObjective(ObjectiveBase):
         # need to do preequilibration
         if self.guess_steadystate:
             if self.amici_model.ncl() > 0:
-                raise ValueError('Steadystate prediciton is not supported for'
+                raise ValueError('Steadystate prediction is not supported for '
                                  'models with conservation laws!')
 
             if self.amici_model.getSteadyStateSensitivityMode() == \
