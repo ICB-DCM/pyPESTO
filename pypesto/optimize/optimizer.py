@@ -587,9 +587,7 @@ class CmaesOptimizer(Optimizer):
         lb = problem.lb
         ub = problem.ub
         sigma0 = 0.25 * np.median(ub)
-
-        # take the smallest lower bound and the biggest upper bound as default parameter bounds
-        self.options['bounds'] = [sorted(lb)[0], sorted(ub, reverse=True)[0]]
+        self.options['bounds'] = [lb, ub]
 
         if cma is None:
             raise ImportError(
