@@ -48,9 +48,8 @@ class DesignProblem(dict):
         if a criteria based on profiles eg length of confidence interval
         should be computed
     number_of_measurements:
-        how many new measurements (with different noise added) are to be
-        added to the measurement dataframe after finding the exact value via
-        the forward simulation
+        how many new measurements are to be added for one candidate from
+        experiment_list
     """
 
     def __init__(self,
@@ -65,7 +64,7 @@ class DesignProblem(dict):
                  const_for_hess: float = None,
                  n_save_combi_result: int = None,
                  profiles: bool = False,
-                 number_of_measurements: int = 3):
+                 number_of_measurements: int = 1):
 
         super().__init__()
 
@@ -92,8 +91,7 @@ class DesignProblem(dict):
         self.number_of_measurements = number_of_measurements
         self.n_save_combi_result = n_save_combi_result
 
-        # TODO profiles, number_of_measurements are not actively used in
-        #  the code right now
+        # TODO profiles not actively used in the code right now
 
         # update condition_df to include all new conditions
         # (observable was already done when getting the model)
@@ -136,7 +134,7 @@ class DesignProblem(dict):
         if no new observables are defined in 'experiment_list', return the
         original model
         If new observables are defined they must have different Ids (for
-        each candidate) to distinguish them or be completely the identical!
+        each candidate) to distinguish them or be completely identical!
         """
         list_of_new_dfs = [dict['observable_df'] for dict in
                            self.experiment_list if 'observable_df' in dict

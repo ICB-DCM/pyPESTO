@@ -1,9 +1,7 @@
 import numpy as np
 from scipy.linalg import eigvalsh
-from ..petab import PetabImporter
 from .design_problem import DesignProblem
 from ..objective import AmiciObjective
-from ..result import Result
 from typing import Optional, Union
 
 
@@ -31,20 +29,6 @@ def get_eigvals(hess: np.ndarray):
         return None
     v = eigvalsh(hess)
     return v
-
-
-def get_best_parameters(number: int, result: Result):
-    dicts = result.optimize_result.as_list(['x'])[0:number]
-    return [d['x'] for d in dicts]
-
-
-# TODO which settings to choose here?
-def update_pypesto_from_petab(design_problem: DesignProblem):
-    importer = PetabImporter(design_problem.petab_problem)
-    obj = importer.create_objective(model=design_problem.model)
-    problem = importer.create_problem(obj)
-    design_problem.problem = problem
-    return design_problem
 
 
 def add_to_hess(hess: np.ndarray, const: float):
@@ -108,6 +92,7 @@ def get_design_result(design_problem: DesignProblem,
     eigvals = get_eigvals(hess=hess)
     dict['x'] = x
     dict['hess'] = hess
+    dict['message'] = message
     dict['eigvals'] = eigvals
     for criteria in design_problem.criteria_list:
         dict[criteria] = get_criteria(criteria, hess, eigvals)
@@ -143,47 +128,3 @@ def combinations_gen(elements, length):
             for next in combinations_gen(elements[i + 1:len(elements)],
                                          length - 1):
                 yield [elements[i], ] + next
-
-
-# profiles
-"""
-def get_profiles(result: Result, problem: Problem, result_index: int = 0):
-    optimizer = ScipyOptimizer()
-    result = pypesto.profile.parameter_profile(
-        problem=problem,
-        result=result,
-        optimizer=optimizer,
-        profile_index=np.ones(len(problem.x_free_indices)),
-        result_index=result_index)
-    return result
-
-
-def get_conf_intervals(result: Result, problem: Problem, log: bool = True):
-    # Do we want to include sigma_length ?
-    # since we add artificial noise which may influence it ?
-    lengths = np.nan * np.ones(len(problem.x_free_indices))
-    for i in range(len(problem.x_free_indices)):
-        xmaxlog = result.profile_result.list[0][i]['x_path'][i][-1]
-        xminlog = result.profile_result.list[0][i]['x_path'][i][0]
-        if log:
-            lengths[i] = xmaxlog - xminlog
-        else:
-            lengths[i] = 10 ** xmaxlog - 10 ** xminlog
-    return lengths
-
-
-def get_conf_interval_criteria(result: Result, problem: Problem):
-    # add lengths of confidence intervals FOR LOG PARAMETERS
-    lengths = get_conf_intervals(result, problem, log=True)
-    return np.sum(lengths)
-
-
-def plot_profile(result: Result, problem: Problem, obj: AmiciObjective,
-                 index: int = 0):
-    ref = pypesto.visualize.create_references(
-        x=result.optimize_result.as_list(['x'])[index]['x'],
-        fval=obj(result.optimize_result.as_list(['x'])[index]['x']))
-    pypesto.visualize.profiles(result, profile_indices=range(
-        len(problem.x_free_indices)),
-                               reference=ref, profile_list_ids=0)
-"""
