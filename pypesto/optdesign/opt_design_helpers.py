@@ -72,6 +72,7 @@ def get_design_result(design_problem: DesignProblem,
                       candidate: Optional[Union[list, dict]] = None,
                       hess: np.ndarray = None
                       ):
+    message = None
     dict = {'candidate': candidate}
 
     # used when we check different combinations in the end thus checking
