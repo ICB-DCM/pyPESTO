@@ -573,6 +573,7 @@ class CmaesOptimizer(Optimizer):
         if options is None:
             options = {'maxiter': 10000}
         self.options = options
+        self.parameter_sigma0 = 0.25
 
     @fix_decorator
     @time_decorator
@@ -586,7 +587,7 @@ class CmaesOptimizer(Optimizer):
     ) -> OptimizerResult:
         lb = problem.lb
         ub = problem.ub
-        sigma0 = 0.25 * np.median(ub)
+        sigma0 = self.parameter_sigma0 * np.median(ub)
         self.options['bounds'] = [lb, ub]
 
         if cma is None:
