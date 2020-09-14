@@ -570,13 +570,13 @@ class CmaesOptimizer(Optimizer):
     Global optimization using cma-es.
     """
 
-    def __init__(self, options: Dict = None):
+    def __init__(self, par_sigma0: float = 0.25, options: Dict = None):
         super().__init__()
 
         if options is None:
             options = {'maxiter': 10000}
         self.options = options
-        self.parameter_sigma0 = 0.25
+        self.par_sigma0 = 0.25
 
     @fix_decorator
     @time_decorator
@@ -590,21 +590,20 @@ class CmaesOptimizer(Optimizer):
     ) -> OptimizerResult:
         lb = problem.lb
         ub = problem.ub
-        sigma0 = self.parameter_sigma0 * np.median(ub)
+        sigma0 = self.par_sigma0 * np.median(ub - lb)
         self.options['bounds'] = [lb, ub]
 
         if cma is None:
             raise ImportError(
                 "This optimizer requires an installation of cma.")
 
-        result = cma.CMAEvolutionStrategy(
-            x0, sigma0, inopts=self.options
-        ).optimize(problem.objective.get_fval).result
+        result = cma.CMAEvolutionStrategy(x0,
+                                          sigma0,
+                                          inopts=self.options
+                                          ).optimize(problem.objective.get_fval).result
 
-        optimizer_result = OptimizerResult(
-            x=np.array(result[0]),
-            fval=result[1]
-        )
+        optimizer_result = OptimizerResult(x=np.array(result[0]),
+                                           fval=result[1])
 
         return optimizer_result
 
