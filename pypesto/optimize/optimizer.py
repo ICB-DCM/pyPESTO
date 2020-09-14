@@ -568,9 +568,20 @@ class PyswarmOptimizer(Optimizer):
 class CmaesOptimizer(Optimizer):
     """
     Global optimization using cma-es.
+    Package homepage: https://pypi.org/project/cma-es/
     """
 
     def __init__(self, par_sigma0: float = 0.25, options: Dict = None):
+        """
+                Parameters
+                ----------
+                par_sigma0:
+                    scalar, initial standard deviation in each coordinate.
+                    par_sigma0 should be about 1/4th of the search domain width (where the optimum is to be expected)
+                options:
+                    Optimizer options that are directly passed on to cma.
+                """
+
         super().__init__()
 
         if options is None:
