@@ -576,7 +576,7 @@ class CmaesOptimizer(Optimizer):
         if options is None:
             options = {'maxiter': 10000}
         self.options = options
-        self.par_sigma0 = 0.25
+        self.par_sigma0 = par_sigma0
 
     @fix_decorator
     @time_decorator
