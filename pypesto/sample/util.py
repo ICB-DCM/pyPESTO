@@ -1,5 +1,6 @@
 import numpy as np
 import logging
+from typing import Tuple
 
 from ..result import Result
 from .diagnostics import geweke_test
@@ -28,6 +29,9 @@ def calculate_samples_ci(
     # Check if burn in index is available
     if result.sample_result.burn_in is None:
         geweke_test(result)
+
+    # Get burn in index
+    burn_in = result.sample_result.burn_in
 
     # Get converged parameter samples as numpy arrays
     chain = np.asarray(result.sample_result.trace_x[0, burn_in:, :])
