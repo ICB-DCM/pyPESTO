@@ -483,3 +483,39 @@ def test_prior():
     print(statistic, pval)
 
     assert statistic < 0.1
+
+
+def test_samples_cis():
+    # load problem
+    problem = gaussian_problem()
+
+    # set a sampler
+    sampler = sample.MetropolisSampler()
+
+    # optimization
+    result = optimize.minimize(problem, n_starts=3)
+
+    # sample
+    result = sample.sample(
+        problem, sampler=sampler, n_samples=2000, result=result)
+
+    # run geweke test
+    sample.geweke_test(result)
+
+    # get converged chain
+    converged_chain = np.asarray(
+        result.sample_result.trace_x[0, result.sample_result.burn_in:, :])
+
+    # set confidence levels
+    alpha_values = [0.99, 0.95, 0.68]
+
+    # loop over confidence levels
+    for alpha in alpha_values:
+        # calculate parameter samples confidence intervals
+        lb, ub = sample.calculate_samples_ci(result, alpha=alpha)
+        # get corresponding percentiles to alpha
+        percentiles = 100 * np.array([(1-alpha)/2, 1-(1-alpha)/2])
+        # check result agreement
+        diff = np.percentile(converged_chain, percentiles, axis=0)-[lb, ub]
+
+        assert (diff == 0).all()
