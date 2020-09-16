@@ -2,11 +2,16 @@ import matplotlib.pyplot as plt
 import pandas as pd
 import seaborn as sns
 import numpy as np
+import pypesto
+
+from typing import Optional, Tuple
 
 
-def optimizer_convergence(result,
-                          ax=None,
-                          size=(18.5, 10.5)):
+def optimizer_convergence(result: pypesto.Result,
+                          ax: Optional[plt.Axes] = None,
+                          xscale: str = 'log',
+                          yscale: str = 'log',
+                          size: Tuple[float] = (18.5, 10.5)) -> plt.Axes:
     """
     Scatter plot of function values and gradient values at the end of
     optimization. Optimizer exit-message is encoded in color. Can help
@@ -16,15 +21,21 @@ def optimizer_convergence(result,
     Parameters
     ----------
 
-    result: pypesto.Result
+    result:
         Optimization result obtained by 'optimize.py'
 
-    ax: matplotlib.Axes, optional
+    ax:
         Axes object to use.
 
-    size: tuple, optional
+    size:
         Figure size (width, height) in inches. Is only applied when no ax
         object is specified
+
+    xscale:
+        Scale for x-axis
+
+    yscale:
+        Scale for y-axis
 
     Returns
     -------
@@ -33,9 +44,7 @@ def optimizer_convergence(result,
         The plot axes.
     """
     if ax is None:
-        ax = plt.subplots()[1]
-        fig = plt.gcf()
-        fig.set_size_inches(*size)
+        ax = plt.subplots(figsize=size)[1]
 
     fvals = result.optimize_result.get_for_key('fval')
     grads = [
@@ -55,6 +64,6 @@ def optimizer_convergence(result,
     })
     sns.scatterplot(x='fval', y='grad', hue='exit message',
                     data=conv_data, ax=ax)
-    ax.set_yscale('log')
-    ax.set_xscale('log')
+    ax.set_yscale(yscale)
+    ax.set_xscale(xscale)
     return ax
