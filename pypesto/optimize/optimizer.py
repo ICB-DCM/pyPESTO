@@ -79,6 +79,7 @@ def history_decorator(minimize):
         objective.history = HistoryBase()
 
         return result
+
     return wrapped_minimize
 
 
@@ -97,6 +98,7 @@ def time_decorator(minimize):
         used_time = time.time() - start_time
         result.time = used_time
         return result
+
     return wrapped_minimize
 
 
@@ -121,6 +123,7 @@ def fix_decorator(minimize):
                     f"n_fval={result.n_fval}.")
 
         return result
+
     return wrapped_minimize
 
 
@@ -348,14 +351,14 @@ class ScipyOptimizer(Optimizer):
             #        'dogleg', 'trust-ncg']
             # TODO: is it more efficient to have tuple as output of fun?
             method_supports_grad = self.method.lower() in \
-                ['cg', 'bfgs', 'newton-cg', 'l-bfgs-b', 'tnc', 'slsqp',
-                 'dogleg', 'trust-ncg', 'trust-krylov', 'trust-exact',
-                 'trust-constr']
+                                   ['cg', 'bfgs', 'newton-cg', 'l-bfgs-b', 'tnc', 'slsqp',
+                                    'dogleg', 'trust-ncg', 'trust-krylov', 'trust-exact',
+                                    'trust-constr']
             method_supports_hess = self.method.lower() in \
-                ['newton-cg', 'dogleg', 'trust-ncg', 'trust-krylov',
-                 'trust-exact', 'trust-constr']
+                                   ['newton-cg', 'dogleg', 'trust-ncg', 'trust-krylov',
+                                    'trust-exact', 'trust-constr']
             method_supports_hessp = self.method.lower() in \
-                ['newton-cg', 'trust-ncg', 'trust-krylov', 'trust-constr']
+                                    ['newton-cg', 'trust-ncg', 'trust-krylov', 'trust-constr']
 
             fun = objective.get_fval
             jac = objective.get_grad \
@@ -608,14 +611,13 @@ class CmaesOptimizer(Optimizer):
             raise ImportError(
                 "This optimizer requires an installation of cma.")
 
-        result = cma.CMAEvolutionStrategy(
-            x0, sigma0, inopts=self.options
-        ).optimize(problem.objective.get_fval).result
+        result = cma.CMAEvolutionStrategy(x0,
+                                          sigma0,
+                                          inopts=self.options
+                                          ).optimize(problem.objective.get_fval).result
 
-        optimizer_result = OptimizerResult(
-            x=np.array(result[0]),
-            fval=result[1]
-        )
+        optimizer_result = OptimizerResult(x=np.array(result[0]),
+                                           fval=result[1])
 
         return optimizer_result
 
