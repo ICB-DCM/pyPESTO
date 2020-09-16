@@ -29,6 +29,7 @@ optimizers = [
     ('dlib', 'default'),
     ('pyswarm', ''),
     ('cmaes', ''),
+    ('ScipyDifferentialEvolutionOptimizer', '')
 ]
 
 
@@ -78,6 +79,8 @@ def check_minimize(objective, library, solver, allow_failed_starts=False):
         optimizer = optimize.PyswarmOptimizer(options=options)
     elif library == 'cmaes':
         optimizer = optimize.CmaesOptimizer(options=options)
+    elif library == 'ScipyDifferentialEvolutionOptimizer':
+        optimizer = optimize.ScipyDifferentialEvolutionOptimizer(options=options)
 
     lb = 0 * np.ones((1, 2))
     ub = 1 * np.ones((1, 2))
