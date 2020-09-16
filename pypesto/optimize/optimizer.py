@@ -350,12 +350,15 @@ class ScipyOptimizer(Optimizer):
             #    ['cg', 'bfgs', 'newton-cg', 'l-bfgs-b', 'tnc', 'slsqp',
             #        'dogleg', 'trust-ncg']
             # TODO: is it more efficient to have tuple as output of fun?
-            method_supports_grad = self.method.lower() in ['cg', 'bfgs', 'newton-cg', 'l-bfgs-b', 'tnc',
-                                                           'slsqp', 'dogleg', 'trust-ncg', 'trust-krylov',
-                                                           'trust-exact', 'trust-constr']
-            method_supports_hess = self.method.lower() in ['newton-cg', 'dogleg', 'trust-ncg',
-                                                           'trust-krylov', 'trust-exact', 'trust-constr']
-            method_supports_hessp = self.method.lower() in ['newton-cg', 'trust-ncg', 'trust-krylov', 'trust-constr']
+            method_supports_grad = self.method.lower() in \
+                ['cg', 'bfgs', 'newton-cg', 'l-bfgs-b', 'tnc', 'slsqp',
+                 'dogleg', 'trust-ncg', 'trust-krylov', 'trust-exact',
+                 'trust-constr']
+            method_supports_hess = self.method.lower() in \
+                ['newton-cg', 'dogleg', 'trust-ncg', 'trust-krylov',
+                 'trust-exact', 'trust-constr']
+            method_supports_hessp = self.method.lower() in \
+                ['newton-cg', 'trust-ncg', 'trust-krylov', 'trust-constr']
 
             fun = objective.get_fval
             jac = objective.get_grad \
@@ -609,10 +612,9 @@ class CmaesOptimizer(Optimizer):
             raise ImportError(
                 "This optimizer requires an installation of cma.")
 
-        result = cma.CMAEvolutionStrategy(x0,
-                                          sigma0,
-                                          inopts=self.options
-                                          ).optimize(problem.objective.get_fval).result
+        result = cma.CMAEvolutionStrategy(
+            x0, sigma0, inopts=self.options,
+        ).optimize(problem.objective.get_fval).result
 
         optimizer_result = OptimizerResult(x=np.array(result[0]),
                                            fval=result[1])
