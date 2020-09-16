@@ -31,6 +31,11 @@ try:
 except ImportError:
     cma = None
 
+try:
+    import scipy
+except ImportError:
+    scipy = None
+
 EXITFLAG_LOADED_FROM_FILE = -99
 
 logger = logging.getLogger(__name__)
@@ -573,14 +578,14 @@ class CmaesOptimizer(Optimizer):
 
     def __init__(self, par_sigma0: float = 0.25, options: Dict = None):
         """
-                Parameters
-                ----------
-                par_sigma0:
-                    scalar, initial standard deviation in each coordinate.
-                    par_sigma0 should be about 1/4th of the search domain width (where the optimum is to be expected)
-                options:
-                    Optimizer options that are directly passed on to cma.
-                """
+        Parameters
+        ----------
+        par_sigma0:
+            scalar, initial standard deviation in each coordinate.
+            par_sigma0 should be about 1/4th of the search domain width (where the optimum is to be expected)
+        options:
+            Optimizer options that are directly passed on to cma.
+        """
 
         super().__init__()
 
@@ -608,10 +613,53 @@ class CmaesOptimizer(Optimizer):
             raise ImportError(
                 "This optimizer requires an installation of cma.")
 
-        result = cma.CMAEvolutionStrategy(x0,
-                                          sigma0,
-                                          inopts=self.options
-                                          ).optimize(problem.objective.get_fval).result
+        result = cma.CMAEvolutionStrategy(
+            x0, sigma0, inopts=self.options
+        ).optimize(problem.objective.get_fval).result
+
+        optimizer_result = OptimizerResult(x=np.array(result[0]),
+                                           fval=result[1])
+
+        return optimizer_result
+
+    def is_least_squares(self):
+        return False
+
+
+class ScipyDifferentialEvolutionOptimizer(Optimizer):
+    """
+    Global optimization using scipy's differential evolution optimizer.
+    Package homepage: https://scipy.org
+    """
+
+    def __init__(self, options: Dict = None):
+        super().__init__()
+
+        if options is None:
+            options = {'maxiter': 200}
+        self.options = options
+
+    @fix_decorator
+    @time_decorator
+    @history_decorator
+    def minimize(
+            self,
+            problem: Problem,
+            x0: np.ndarray,
+            id: str,
+            history_options: HistoryOptions = None,
+    ) -> OptimizerResult:
+        lb = problem.lb
+        ub = problem.ub
+        bounds = []
+        for iNumBounds in range(0, len(lb)):
+            bounds.append((lb[iNumBounds], ub[iNumBounds]))
+
+        if ScipyDifferentialEvolutionOptimizer is None:
+            raise ImportError(
+                "This optimizer requires an installation of scypi.")
+
+        result = scipy.optimize.differential_evolution(x0, bounds, self.options)
 
         optimizer_result = OptimizerResult(x=np.array(result[0]),
                                            fval=result[1])
