@@ -636,7 +636,7 @@ class ScipyDifferentialEvolutionOptimizer(Optimizer):
         super().__init__()
 
         if options is None:
-            options = {'maxiter': 200}
+            options = {'maxiter': 1000}
         self.options = options
 
     @fix_decorator
@@ -659,10 +659,12 @@ class ScipyDifferentialEvolutionOptimizer(Optimizer):
             raise ImportError(
                 "This optimizer requires an installation of scypi.")
 
-        result = scipy.optimize.differential_evolution(x0, bounds, self.options)
+        result = scipy.optimize.differential_evolution(problem.objective.get_fval, bounds, **self.options)
+        #result2 = scipy.optimize.differential_evolution(problem.objective.get_fval, bounds)
+        #result3 = scipy.optimize.differential_evolution(problem.objective.get_fval, bounds, maxiter=self.options['maxiter'])
 
-        optimizer_result = OptimizerResult(x=np.array(result[0]),
-                                           fval=result[1])
+        optimizer_result = OptimizerResult(x=np.array(result.x),
+                                           fval=result.fun)
 
         return optimizer_result
 
