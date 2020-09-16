@@ -350,15 +350,9 @@ class ScipyOptimizer(Optimizer):
             #    ['cg', 'bfgs', 'newton-cg', 'l-bfgs-b', 'tnc', 'slsqp',
             #        'dogleg', 'trust-ncg']
             # TODO: is it more efficient to have tuple as output of fun?
-            method_supports_grad = self.method.lower() in \
-                                   ['cg', 'bfgs', 'newton-cg', 'l-bfgs-b', 'tnc', 'slsqp',
-                                    'dogleg', 'trust-ncg', 'trust-krylov', 'trust-exact',
-                                    'trust-constr']
-            method_supports_hess = self.method.lower() in \
-                                   ['newton-cg', 'dogleg', 'trust-ncg', 'trust-krylov',
-                                    'trust-exact', 'trust-constr']
-            method_supports_hessp = self.method.lower() in \
-                                    ['newton-cg', 'trust-ncg', 'trust-krylov', 'trust-constr']
+            method_supports_grad = self.method.lower() in ['cg', 'bfgs', 'newton-cg', 'l-bfgs-b', 'tnc', 'slsqp', 'dogleg', 'trust-ncg', 'trust-krylov', 'trust-exact', 'trust-constr']
+            method_supports_hess = self.method.lower() in ['newton-cg', 'dogleg', 'trust-ncg', 'trust-krylov', 'trust-exact', 'trust-constr']
+            method_supports_hessp = self.method.lower() in ['newton-cg', 'trust-ncg', 'trust-krylov', 'trust-constr']
 
             fun = objective.get_fval
             jac = objective.get_grad \
