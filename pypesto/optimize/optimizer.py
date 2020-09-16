@@ -350,8 +350,11 @@ class ScipyOptimizer(Optimizer):
             #    ['cg', 'bfgs', 'newton-cg', 'l-bfgs-b', 'tnc', 'slsqp',
             #        'dogleg', 'trust-ncg']
             # TODO: is it more efficient to have tuple as output of fun?
-            method_supports_grad = self.method.lower() in ['cg', 'bfgs', 'newton-cg', 'l-bfgs-b', 'tnc', 'slsqp', 'dogleg', 'trust-ncg', 'trust-krylov', 'trust-exact', 'trust-constr']
-            method_supports_hess = self.method.lower() in ['newton-cg', 'dogleg', 'trust-ncg', 'trust-krylov', 'trust-exact', 'trust-constr']
+            method_supports_grad = self.method.lower() in ['cg', 'bfgs', 'newton-cg', 'l-bfgs-b', 'tnc',
+                                                           'slsqp', 'dogleg', 'trust-ncg', 'trust-krylov',
+                                                           'trust-exact', 'trust-constr']
+            method_supports_hess = self.method.lower() in ['newton-cg', 'dogleg', 'trust-ncg',
+                                                           'trust-krylov', 'trust-exact', 'trust-constr']
             method_supports_hessp = self.method.lower() in ['newton-cg', 'trust-ncg', 'trust-krylov', 'trust-constr']
 
             fun = objective.get_fval
@@ -574,7 +577,8 @@ class CmaesOptimizer(Optimizer):
         ----------
         par_sigma0:
             scalar, initial standard deviation in each coordinate.
-            par_sigma0 should be about 1/4th of the search domain width (where the optimum is to be expected)
+            par_sigma0 should be about 1/4th of the search domain width
+            (where the optimum is to be expected)
         options:
             Optimizer options that are directly passed on to cma.
         """
