@@ -573,14 +573,14 @@ class CmaesOptimizer(Optimizer):
 
     def __init__(self, par_sigma0: float = 0.25, options: Dict = None):
         """
-                Parameters
-                ----------
-                par_sigma0:
-                    scalar, initial standard deviation in each coordinate.
-                    par_sigma0 should be about 1/4th of the search domain width (where the optimum is to be expected)
-                options:
-                    Optimizer options that are directly passed on to cma.
-                """
+        Parameters
+        ----------
+        par_sigma0:
+            scalar, initial standard deviation in each coordinate.
+            par_sigma0 should be about 1/4th of the search domain width (where the optimum is to be expected)
+        options:
+            Optimizer options that are directly passed on to cma.
+        """
 
         super().__init__()
 
@@ -608,13 +608,14 @@ class CmaesOptimizer(Optimizer):
             raise ImportError(
                 "This optimizer requires an installation of cma.")
 
-        result = cma.CMAEvolutionStrategy(x0,
-                                          sigma0,
-                                          inopts=self.options
-                                          ).optimize(problem.objective.get_fval).result
+        result = cma.CMAEvolutionStrategy(
+            x0, sigma0, inopts=self.options
+        ).optimize(problem.objective.get_fval).result
 
-        optimizer_result = OptimizerResult(x=np.array(result[0]),
-                                           fval=result[1])
+        optimizer_result = OptimizerResult(
+            x=np.array(result[0]),
+            fval=result[1]
+        )
 
         return optimizer_result
 
