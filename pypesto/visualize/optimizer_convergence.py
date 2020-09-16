@@ -14,7 +14,7 @@ def optimizer_convergence(result: pypesto.Result,
                           size: Tuple[float] = (18.5, 10.5)) -> plt.Axes:
     """
     Scatter plot of function values and gradient values at the end of
-    optimization. Optimizer exit-message is encoded in color. Can help
+    optimization. Optimizer exit-message is encoded by color. Can help
     identifying convergence issues in optimization and guide tolerance
     refinement etc.
 
