@@ -9,7 +9,7 @@ from typing import Optional, Tuple
 
 def optimizer_convergence(result: pypesto.Result,
                           ax: Optional[plt.Axes] = None,
-                          xscale: str = 'log',
+                          xscale: str = 'symlog',
                           yscale: str = 'log',
                           size: Tuple[float] = (18.5, 10.5)) -> plt.Axes:
     """
@@ -47,7 +47,7 @@ def optimizer_convergence(result: pypesto.Result,
         ax = plt.subplots(figsize=size)[1]
 
     fvals = result.optimize_result.get_for_key('fval')
-    grads = [
+    grad_norms = [
         np.linalg.norm(
             result.problem.get_reduced_vector(grad,
                                               result.problem.x_free_indices),
@@ -59,10 +59,10 @@ def optimizer_convergence(result: pypesto.Result,
     msgs = result.optimize_result.get_for_key('message')
     conv_data = pd.DataFrame({
         'fval': fvals,
-        'grad': grads,
+        'gradient norm': grad_norms,
         'exit message': msgs
     })
-    sns.scatterplot(x='fval', y='grad', hue='exit message',
+    sns.scatterplot(x='fval', y='gradient norm', hue='exit message',
                     data=conv_data, ax=ax)
     ax.set_yscale(yscale)
     ax.set_xscale(xscale)
