@@ -582,7 +582,8 @@ class CmaesOptimizer(Optimizer):
         ----------
         par_sigma0:
             scalar, initial standard deviation in each coordinate.
-            par_sigma0 should be about 1/4th of the search domain width (where the optimum is to be expected)
+            par_sigma0 should be about 1/4th of the search domain width
+            (where the optimum is to be expected)
         options:
             Optimizer options that are directly passed on to cma.
         """
@@ -659,7 +660,9 @@ class ScipyDifferentialEvolutionOptimizer(Optimizer):
             raise ImportError(
                 "This optimizer requires an installation of scypi.")
 
-        result = scipy.optimize.differential_evolution(problem.objective.get_fval, bounds, **self.options)
+        result = scipy.optimize.differential_evolution(
+            problem.objective.get_fval, bounds, **self.options
+        )
 
         optimizer_result = OptimizerResult(x=np.array(result.x),
                                            fval=result.fun)
