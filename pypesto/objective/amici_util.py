@@ -129,6 +129,14 @@ def par_index_slices(
         The simulation parameter ids. Needed for order.
     condition_map_sim_var:
         The simulation to optimization parameter mapping.
+
+    Returns
+    ----------
+    par_sim_slice:
+        array of simulation parameter indices
+
+    par_opt_slic:
+        array of simulation parameter indices
     """
     par_sim_slice, par_opt_slice = list(zip(
         *[(par_sim_ids.index(par_sim_id), par_opt_ids.index(par_opt_id))
