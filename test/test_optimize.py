@@ -81,7 +81,6 @@ def check_minimize(objective, library, solver, allow_failed_starts=False):
         optimizer = optimize.ScipyDifferentialEvolutionOptimizer(
             options=options)
 
-
     lb = 0 * np.ones((1, 2))
     ub = 1 * np.ones((1, 2))
     problem = pypesto.Problem(objective, lb, ub)
