@@ -36,6 +36,7 @@ try:
 except ImportError:
     scipy = None
 
+
 EXITFLAG_LOADED_FROM_FILE = -99
 
 logger = logging.getLogger(__name__)
@@ -84,6 +85,7 @@ def history_decorator(minimize):
         objective.history = HistoryBase()
 
         return result
+
     return wrapped_minimize
 
 
@@ -102,6 +104,7 @@ def time_decorator(minimize):
         used_time = time.time() - start_time
         result.time = used_time
         return result
+
     return wrapped_minimize
 
 
@@ -126,6 +129,7 @@ def fix_decorator(minimize):
                     f"n_fval={result.n_fval}.")
 
         return result
+
     return wrapped_minimize
 
 
