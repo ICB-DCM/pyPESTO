@@ -660,8 +660,6 @@ class ScipyDifferentialEvolutionOptimizer(Optimizer):
                 "This optimizer requires an installation of scypi.")
 
         result = scipy.optimize.differential_evolution(problem.objective.get_fval, bounds, **self.options)
-        #result2 = scipy.optimize.differential_evolution(problem.objective.get_fval, bounds)
-        #result3 = scipy.optimize.differential_evolution(problem.objective.get_fval, bounds, maxiter=self.options['maxiter'])
 
         optimizer_result = OptimizerResult(x=np.array(result.x),
                                            fval=result.fun)
