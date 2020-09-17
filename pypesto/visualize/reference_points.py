@@ -1,6 +1,6 @@
 import numpy as np
 
-from typing import List, Union
+from typing import List
 
 
 class ReferencePoint(dict):
@@ -39,8 +39,8 @@ class ReferencePoint(dict):
         super().__init__()
 
         if (reference is not None) and ((x is not None) or (fval is not None)):
-            raise ValueError("Please specify either an argument for reference or for x "
-                             "and fval, but not both.")
+            raise ValueError("Please specify either an argument for reference "
+                             "or for x and fval, but not both.")
 
         # assign legend, may be None
         self.legend = legend
