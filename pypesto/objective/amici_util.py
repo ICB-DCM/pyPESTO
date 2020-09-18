@@ -178,7 +178,7 @@ def add_sim_grad_to_opt_grad(
                                                     condition_map_sim_var)
 
     opt_grad[par_opt_slice] += \
-        coefficient * sim_grad[np.asarray(par_sim_slice)]
+        coefficient * sim_grad[par_sim_slice]
 
 
 def add_sim_hess_to_opt_hess(

@@ -30,9 +30,9 @@ def test_add_sim_grad_to_opt_grad():
     }
     par_sim_ids = ['sim_par_1', 'sim_par_2', 'sim_par_3']
 
-    sim_grad = [1.0, 3.0, 5.0]
-    opt_grad = [1.0, 1.0, 1.0]
-    expected = [3.0, 1.0, 17.0]
+    sim_grad = np.asarray([1.0, 3.0, 5.0])
+    opt_grad = np.asarray([1.0, 1.0, 1.0])
+    expected = np.asarray([3.0, 1.0, 17.0])
 
     add_sim_grad_to_opt_grad(
         par_opt_ids,
