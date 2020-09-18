@@ -452,32 +452,35 @@ class ObjectiveBase(abc.ABC):
                 std_check_list.append(std_check_ix)
                 mean_check_list.append(mean_check_ix)
 
-        # create dataframe
+        # create data dictionary for dataframe
+        data = {
+            'grad': grad_list,
+            'fd_f': fd_f_list,
+            'fd_b': fd_b_list,
+            'fd_c': fd_c_list,
+            'fd_err': fd_err_list,
+            'abs_err': abs_err_list,
+            'rel_err': rel_err_list,
+        }
+
+        # update data dictionary if detailed output is requested
         if detailed:
-            result = pd.DataFrame(data={
+            prefix_data = {
                 'fval': [fval]*len(x_indices),
                 'fval_p': fval_p_list,
                 'fval_m': fval_m_list,
-                'grad': grad_list,
-                'fd_f': fd_f_list,
-                'fd_b': fd_b_list,
-                'fd_c': fd_c_list,
-                'fd_err': fd_err_list,
-                'abs_err': abs_err_list,
-                'rel_err': rel_err_list,
-                '(grad-fd_c)/std({fd_f,fd_b,fd_c})': std_check_list,
-                '|grad-fd_c|/mean(|fd_f-fd_b|,|fd_f-fd_c|,|fd_b-fd_c|)': mean_check_list,
-            })
-        else:
-            result = pd.DataFrame(data={
-                'grad': grad_list,
-                'fd_f': fd_f_list,
-                'fd_b': fd_b_list,
-                'fd_c': fd_c_list,
-                'fd_err': fd_err_list,
-                'abs_err': abs_err_list,
-                'rel_err': rel_err_list,
-            })
+
+            }
+            std_str = '(grad-fd_c)/std({fd_f,fd_b,fd_c})'
+            mean_str = '|grad-fd_c|/mean(|fd_f-fd_b|,|fd_f-fd_c|,|fd_b-fd_c|)'
+            postfix_data = {
+                std_str: std_check_list,
+                mean_str: mean_check_list,
+            }
+            data = {**prefix_data, **data, **postfix_data}
+
+        # create dataframe
+        result = pd.DataFrame(data=data)
 
         # log full result
         if verbosity > 0:
