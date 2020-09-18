@@ -356,6 +356,11 @@ class ObjectiveBase(abc.ABC):
         mode:
             Residual (MODE_RES) or objective function value
             (MODE_FUN, default) computation mode.
+        detailed:
+            Toggle whether additional values are returned.
+            - Function values.
+            - Central difference weighted by difference in output from all
+              methods (standard deviation and mean).
 
         Returns
         ----------
