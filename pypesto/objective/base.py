@@ -332,7 +332,8 @@ class ObjectiveBase(abc.ABC):
             x_indices: Sequence[int] = None,
             eps: float = 1e-5,
             verbosity: int = 1,
-            mode: str = MODE_FUN
+            mode: str = MODE_FUN,
+            detailed: bool = False
     ) -> pd.DataFrame:
         """
         Compare gradient evaluation: Firstly approximate via finite
@@ -376,6 +377,12 @@ class ObjectiveBase(abc.ABC):
         abs_err_list = []
         rel_err_list = []
 
+        if detailed:
+            fval_p_list = []
+            fval_m_list = []
+            std_check_list = []
+            mean_check_list = []
+
         # loop over indices
         for ix in x_indices:
             # forward (plus) point
@@ -401,6 +408,18 @@ class ObjectiveBase(abc.ABC):
             abs_err_ix = abs(grad_ix - fd_c_ix)
             rel_err_ix = abs(abs_err_ix / (fd_c_ix + eps))
 
+            if detailed:
+                std_check_ix = (grad_ix - fd_c_ix)/np.std([
+                    fd_f_ix,
+                    fd_b_ix,
+                    fd_c_ix
+                ])
+                mean_check_ix = abs(grad_ix - fd_c_ix)/np.mean([
+                    abs(fd_f_ix - fd_b_ix),
+                    abs(fd_f_ix - fd_c_ix),
+                    abs(fd_b_ix - fd_c_ix),
+                ])
+
             # log for dimension ix
             if verbosity > 1:
                 logger.info(
@@ -422,17 +441,38 @@ class ObjectiveBase(abc.ABC):
             fd_err_list.append(np.mean(fd_err_ix))
             abs_err_list.append(np.mean(abs_err_ix))
             rel_err_list.append(np.mean(rel_err_ix))
+            if detailed:
+                fval_p_list.append(fval_p)
+                fval_m_list.append(fval_m)
+                std_check_list.append(std_check_ix)
+                mean_check_list.append(mean_check_ix)
 
         # create dataframe
-        result = pd.DataFrame(data={
-            'grad': grad_list,
-            'fd_f': fd_f_list,
-            'fd_b': fd_b_list,
-            'fd_c': fd_c_list,
-            'fd_err': fd_err_list,
-            'abs_err': abs_err_list,
-            'rel_err': rel_err_list,
-        })
+        if detailed:
+            result = pd.DataFrame(data={
+                'fval': [fval]*len(x_indices),
+                'fval_p': fval_p_list,
+                'fval_m': fval_m_list,
+                'grad': grad_list,
+                'fd_f': fd_f_list,
+                'fd_b': fd_b_list,
+                'fd_c': fd_c_list,
+                'fd_err': fd_err_list,
+                'abs_err': abs_err_list,
+                'rel_err': rel_err_list,
+                '(grad-fd_c)/std({fd_f,fd_b,fd_c})': std_check_list,
+                '|grad-fd_c|/mean(|fd_f-fd_b|,|fd_f-fd_c|,|fd_b-fd_c|)': mean_check_list,
+            })
+        else:
+            result = pd.DataFrame(data={
+                'grad': grad_list,
+                'fd_f': fd_f_list,
+                'fd_b': fd_b_list,
+                'fd_c': fd_c_list,
+                'fd_err': fd_err_list,
+                'abs_err': abs_err_list,
+                'rel_err': rel_err_list,
+            })
 
         # log full result
         if verbosity > 0:
