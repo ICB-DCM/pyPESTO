@@ -587,12 +587,13 @@ class CmaesOptimizer(Optimizer):
             (where the optimum is to be expected)
         options:
             Optimizer options that are directly passed on to cma.
+            maxfevals: maximual number of function evaluations
         """
 
         super().__init__()
 
         if options is None:
-            options = {'maxiter': 10000}
+            options = {'maxfevals': 10000}
         self.options = options
         self.par_sigma0 = par_sigma0
 
@@ -633,13 +634,20 @@ class ScipyDifferentialEvolutionOptimizer(Optimizer):
     Global optimization using scipy's differential evolution optimizer.
     Package homepage: https://docs.scipy.org/doc/scipy/reference/generated
                         /scipy.optimize.differential_evolution.html
+    Parameters
+        ----------
+        maxiter: used to calculate the maximal number of funcion evaluations by
+                 maxfevals = (maxiter + 1) * popsize * len(x)
+        popsize: default value 15
+        len(x): length of the argument of the function to be optimized
+                in the form of a 1-D array
     """
 
     def __init__(self, options: Dict = None):
         super().__init__()
 
         if options is None:
-            options = {'maxiter': 10000}
+            options = {'maxiter': 66}
         self.options = options
 
     @fix_decorator
