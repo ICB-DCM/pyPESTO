@@ -269,7 +269,8 @@ class Optimizer(abc.ABC):
 class ScipyOptimizer(Optimizer):
     """
     Use the SciPy optimizers.
-    Package: https://docs.scipy.org/doc/scipy/reference/generated/scipy.optimize.minimize.html#scipy.optimize.minimize
+    Package: https://docs.scipy.org/doc/scipy/reference/generated/scipy.
+                optimize.minimize.html#scipy.optimize.minimize
     """
 
     def __init__(self,
@@ -537,7 +538,7 @@ class PyswarmOptimizer(Optimizer):
         super().__init__()
 
         if options is None:
-            options = {'maxiter': 200}
+            options = {'maxiter': 10000}
         self.options = options
 
     @fix_decorator
@@ -630,14 +631,15 @@ class CmaesOptimizer(Optimizer):
 class ScipyDifferentialEvolutionOptimizer(Optimizer):
     """
     Global optimization using scipy's differential evolution optimizer.
-    Package homepage: https://docs.scipy.org/doc/scipy/reference/generated/scipy.optimize.differential_evolution.html
+    Package homepage: https://docs.scipy.org/doc/scipy/reference/generated
+                        /scipy.optimize.differential_evolution.html
     """
 
     def __init__(self, options: Dict = None):
         super().__init__()
 
         if options is None:
-            options = {'maxiter': 1000}
+            options = {'maxiter': 10000}
         self.options = options
 
     @fix_decorator
