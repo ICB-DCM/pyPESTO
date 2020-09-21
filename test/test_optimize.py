@@ -2,7 +2,6 @@
 This is for testing optimization of the pypesto.Objective.
 """
 
-
 import numpy as np
 import pytest
 import test.test_objective as test_objective
@@ -28,6 +27,7 @@ optimizers = [
     ('ipopt', ''),
     ('dlib', 'default'),
     ('pyswarm', ''),
+    ('cmaes', ''),
 ]
 
 
@@ -60,7 +60,6 @@ def test_optimization(mode, optimizer):
 
 
 def check_minimize(objective, library, solver, allow_failed_starts=False):
-
     options = {
         'maxiter': 100
     }
@@ -75,6 +74,8 @@ def check_minimize(objective, library, solver, allow_failed_starts=False):
         optimizer = optimize.DlibOptimizer(method=solver, options=options)
     elif library == 'pyswarm':
         optimizer = optimize.PyswarmOptimizer(options=options)
+    elif library == 'cmaes':
+        optimizer = optimize.CmaesOptimizer(options=options)
 
     lb = 0 * np.ones((1, 2))
     ub = 1 * np.ones((1, 2))
