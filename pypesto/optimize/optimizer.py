@@ -31,11 +31,6 @@ try:
 except ImportError:
     cma = None
 
-try:
-    import scipy
-except ImportError:
-    scipy = None
-
 
 EXITFLAG_LOADED_FROM_FILE = -99
 
@@ -274,6 +269,7 @@ class Optimizer(abc.ABC):
 class ScipyOptimizer(Optimizer):
     """
     Use the SciPy optimizers.
+    Package: https://docs.scipy.org/doc/scipy/reference/generated/scipy.optimize.minimize.html#scipy.optimize.minimize
     """
 
     def __init__(self,
@@ -619,7 +615,7 @@ class CmaesOptimizer(Optimizer):
                 "This optimizer requires an installation of cma.")
 
         result = cma.CMAEvolutionStrategy(
-            x0, sigma0, inopts=self.options
+            x0, sigma0, inopts=self.options,
         ).optimize(problem.objective.get_fval).result
 
         optimizer_result = OptimizerResult(x=np.array(result[0]),
@@ -634,7 +630,7 @@ class CmaesOptimizer(Optimizer):
 class ScipyDifferentialEvolutionOptimizer(Optimizer):
     """
     Global optimization using scipy's differential evolution optimizer.
-    Package homepage: https://scipy.org
+    Package homepage: https://docs.scipy.org/doc/scipy/reference/generated/scipy.optimize.differential_evolution.html
     """
 
     def __init__(self, options: Dict = None):
@@ -657,12 +653,8 @@ class ScipyDifferentialEvolutionOptimizer(Optimizer):
         lb = problem.lb
         ub = problem.ub
         bounds = []
-        for iNumBounds in range(0, len(lb)):
-            bounds.append((lb[iNumBounds], ub[iNumBounds]))
-
-        if ScipyDifferentialEvolutionOptimizer is None:
-            raise ImportError(
-                "This optimizer requires an installation of scypi.")
+        for NumBounds in range(0, len(lb)):
+            bounds.append((lb[NumBounds], ub[NumBounds]))
 
         result = scipy.optimize.differential_evolution(
             problem.objective.get_fval, bounds, **self.options
