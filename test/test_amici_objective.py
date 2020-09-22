@@ -32,7 +32,7 @@ def test_add_sim_grad_to_opt_grad():
 
     sim_grad = np.asarray([1.0, 3.0, 5.0])
     opt_grad = np.asarray([1.0, 1.0, 1.0])
-    expected = np.asarray([3.0, 1.0, 17.0])
+    expected = np.asarray([3.0, 1.0, 11.0])
 
     add_sim_grad_to_opt_grad(
         par_opt_ids,
@@ -42,7 +42,7 @@ def test_add_sim_grad_to_opt_grad():
         opt_grad,
         coefficient=2.0)
 
-    assert expected == opt_grad
+    assert np.all(expected == opt_grad)
 
 
 def test_error_leastsquares_with_ssigma():
