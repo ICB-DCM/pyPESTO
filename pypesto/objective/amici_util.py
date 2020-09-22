@@ -177,8 +177,16 @@ def add_sim_grad_to_opt_grad(
     par_sim_slice, par_opt_slice = par_index_slices(par_opt_ids, par_sim_ids,
                                                     condition_map_sim_var)
 
-    opt_grad[par_opt_slice] += \
-        coefficient * sim_grad[par_sim_slice]
+    par_opt_slice_unique, unique_index = np.unique(par_opt_slice,
+                                                   return_index=True)
+    opt_grad[par_opt_slice_unique] += \
+        coefficient * sim_grad[par_sim_slice[unique_index]]
+
+    if par_opt_slice_unique.size < par_opt_slice.size:
+        for idx in range(len(par_opt_slice)):
+            if idx not in unique_index:
+                opt_grad[par_opt_slice[idx]] += \
+                    coefficient * sim_grad[par_sim_slice[idx]]
 
 
 def add_sim_hess_to_opt_hess(
@@ -200,8 +208,27 @@ def add_sim_hess_to_opt_hess(
     par_sim_slice, par_opt_slice = par_index_slices(par_opt_ids, par_sim_ids,
                                                     condition_map_sim_var)
 
-    opt_hess[np.ix_(par_opt_slice, par_opt_slice)] += \
-        coefficient * sim_hess[np.ix_(par_sim_slice, par_sim_slice)]
+    par_opt_slice_unique, unique_index = np.unique(par_opt_slice,
+                                                   return_index=True)
+
+    opt_hess[np.ix_(par_opt_slice_unique, par_opt_slice_unique)] += \
+        coefficient * sim_hess[np.ix_(par_sim_slice[unique_index],
+                                      par_sim_slice[unique_index])]
+
+    if par_opt_slice_unique.size < par_opt_slice.size:
+        for idx in range(len(par_opt_slice)):
+            if idx not in unique_index:
+                opt_hess[par_opt_slice[idx], par_opt_slice_unique] += \
+                    coefficient * sim_hess[par_sim_slice[idx],
+                                           par_sim_slice[unique_index]]
+                opt_hess[par_opt_slice_unique, par_opt_slice[idx]] += \
+                    coefficient * sim_hess[par_sim_slice[unique_index],
+                                           par_sim_slice[idx]]
+                for jdx in range(len(par_opt_slice)):
+                    if jdx not in unique_index:
+                        opt_hess[par_opt_slice[idx], par_opt_slice[jdx]] += \
+                            coefficient * sim_hess[par_sim_slice[idx],
+                                                   par_sim_slice[jdx]]
 
 
 def sim_sres_to_opt_sres(par_opt_ids: Sequence[str],
@@ -223,8 +250,16 @@ def sim_sres_to_opt_sres(par_opt_ids: Sequence[str],
     par_sim_slice, par_opt_slice = par_index_slices(par_opt_ids, par_sim_ids,
                                                     condition_map_sim_var)
 
-    opt_sres[:, par_opt_slice] += \
-        coefficient * sim_sres[:, par_sim_slice]
+    par_opt_slice_unique, unique_index = np.unique(par_opt_slice,
+                                                   return_index=True)
+    opt_sres[:, par_opt_slice_unique] += \
+        coefficient * sim_sres[:, par_sim_slice[unique_index]]
+
+    if par_opt_slice_unique.size < par_opt_slice.size:
+        for idx in range(len(par_opt_slice)):
+            if idx not in unique_index:
+                opt_sres[:, par_opt_slice[idx]] += \
+                    coefficient * sim_sres[:, par_sim_slice[idx]]
 
     return opt_sres
 
