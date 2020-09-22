@@ -211,24 +211,25 @@ def add_sim_hess_to_opt_hess(
     par_opt_slice_unique, unique_index = np.unique(par_opt_slice,
                                                    return_index=True)
 
+    non_unique_indices = [idx for idx in range(len(par_opt_slice))
+                          if idx not in unique_index]
+
     opt_hess[np.ix_(par_opt_slice_unique, par_opt_slice_unique)] += \
         coefficient * sim_hess[np.ix_(par_sim_slice[unique_index],
                                       par_sim_slice[unique_index])]
 
     if par_opt_slice_unique.size < par_opt_slice.size:
-        for idx in range(len(par_opt_slice)):
-            if idx not in unique_index:
-                opt_hess[par_opt_slice[idx], par_opt_slice_unique] += \
+        for idx in non_unique_indices:
+            opt_hess[par_opt_slice[idx], par_opt_slice_unique] += \
+                coefficient * sim_hess[par_sim_slice[idx],
+                                       par_sim_slice[unique_index]]
+            opt_hess[par_opt_slice_unique, par_opt_slice[idx]] += \
+                coefficient * sim_hess[par_sim_slice[unique_index],
+                                       par_sim_slice[idx]]
+            for jdx in non_unique_indices:
+                opt_hess[par_opt_slice[idx], par_opt_slice[jdx]] += \
                     coefficient * sim_hess[par_sim_slice[idx],
-                                           par_sim_slice[unique_index]]
-                opt_hess[par_opt_slice_unique, par_opt_slice[idx]] += \
-                    coefficient * sim_hess[par_sim_slice[unique_index],
-                                           par_sim_slice[idx]]
-                for jdx in range(len(par_opt_slice)):
-                    if jdx not in unique_index:
-                        opt_hess[par_opt_slice[idx], par_opt_slice[jdx]] += \
-                            coefficient * sim_hess[par_sim_slice[idx],
-                                                   par_sim_slice[jdx]]
+                                           par_sim_slice[jdx]]
 
 
 def sim_sres_to_opt_sres(par_opt_ids: Sequence[str],
