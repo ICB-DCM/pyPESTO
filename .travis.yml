@@ -60,7 +60,7 @@ script:
       sphinx-build -W -b html -d doc/_build/html doc/ doc/_build/html;
     fi
   - if [ "$TRAVIS_PULL_REQUEST" != "false" ]; then
-      test/run_notebook.sh doc/example/;
+      travis_wait 20 test/run_notebook.sh doc/example/;
     fi
   - if [ "$TRAVIS_PULL_REQUEST" = "false" ]; then
       coverage xml;
