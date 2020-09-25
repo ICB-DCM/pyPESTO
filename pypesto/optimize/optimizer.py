@@ -475,11 +475,8 @@ class DlibOptimizer(Optimizer):
     """
 
     def __init__(self,
-                 method: str,
                  options: Dict = None):
         super().__init__()
-
-        self.method = method
 
         self.options = options
         if self.options is None:
