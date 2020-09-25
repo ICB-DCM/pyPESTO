@@ -78,8 +78,7 @@ def parameter_estimation(
         optimizer = pypesto.optimize.ScipyOptimizer(method=solver,
                                                     options=options)
     elif library == 'dlib':
-        optimizer = pypesto.optimize.DlibOptimizer(method=solver,
-                                                   options=options)
+        optimizer = pypesto.optimize.DlibOptimizer(options=options)
     elif library == 'pyswarm':
         optimizer = pypesto.optimize.PyswarmOptimizer(options=options)
     else:
