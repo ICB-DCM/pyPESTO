@@ -436,6 +436,12 @@ class IpoptOptimizer(Optimizer):
             id: str,
             history_options: HistoryOptions = None,
     ) -> OptimizerResult:
+
+        if ipopt is None:
+            raise ImportError(
+                "This optimizer requires an installation of ipopt."
+            )
+
         objective = problem.objective
 
         bounds = np.array([problem.lb, problem.ub]).T
@@ -600,6 +606,7 @@ class CmaesOptimizer(Optimizer):
             id: str,
             history_options: HistoryOptions = None,
     ) -> OptimizerResult:
+
         lb = problem.lb
         ub = problem.ub
         sigma0 = self.par_sigma0 * np.median(ub - lb)
