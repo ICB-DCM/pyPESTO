@@ -40,7 +40,7 @@ def minimize(
         Ids assigned to the startpoints.
     startpoint_method:
         Method for how to choose start points. False means the optimizer does
-        not require start points, e.g. 'pso' method in 'GlobalOptimizer'
+        not require start points, e.g. for the 'PyswarmOptimizer'.
     result:
         A result object to append the optimization results to. For example,
         one might append more runs to a previous optimization. If None,
