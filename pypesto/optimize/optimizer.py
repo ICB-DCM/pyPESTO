@@ -440,6 +440,12 @@ class IpoptOptimizer(Optimizer):
             id: str,
             history_options: HistoryOptions = None,
     ) -> OptimizerResult:
+
+        if ipopt is None:
+            raise ImportError(
+                "This optimizer requires an installation of ipopt."
+            )
+
         objective = problem.objective
 
         bounds = np.array([problem.lb, problem.ub]).T
@@ -473,11 +479,8 @@ class DlibOptimizer(Optimizer):
     """
 
     def __init__(self,
-                 method: str,
                  options: Dict = None):
         super().__init__()
-
-        self.method = method
 
         self.options = options
         if self.options is None:
@@ -607,6 +610,7 @@ class CmaesOptimizer(Optimizer):
             id: str,
             history_options: HistoryOptions = None,
     ) -> OptimizerResult:
+
         lb = problem.lb
         ub = problem.ub
         sigma0 = self.par_sigma0 * np.median(ub - lb)

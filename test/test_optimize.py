@@ -25,7 +25,7 @@ optimizers = [
         'ls_trf', 'ls_dogbox']],
     # disabled: ,'trust-constr', 'ls_lm', 'dogleg'
     ('ipopt', ''),
-    ('dlib', 'default'),
+    ('dlib', ''),
     ('pyswarm', ''),
     ('cmaes', ''),
     ('ScipyDifferentialEvolutionOptimizer', '')
@@ -72,7 +72,7 @@ def check_minimize(objective, library, solver, allow_failed_starts=False):
     elif library == 'ipopt':
         optimizer = optimize.IpoptOptimizer()
     elif library == 'dlib':
-        optimizer = optimize.DlibOptimizer(method=solver, options=options)
+        optimizer = optimize.DlibOptimizer(options=options)
     elif library == 'pyswarm':
         optimizer = optimize.PyswarmOptimizer(options=options)
     elif library == 'cmaes':
