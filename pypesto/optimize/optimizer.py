@@ -483,7 +483,7 @@ class DlibOptimizer(Optimizer):
             self.options = DlibOptimizer.get_default_options(self)
         elif 'maxiter' not in self.options:
             raise KeyError('Dlib options are missing the key word '
-                                 'maxiter.')
+                           'maxiter.')
 
     @fix_decorator
     @time_decorator
