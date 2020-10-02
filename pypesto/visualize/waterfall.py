@@ -342,9 +342,6 @@ def handle_options(ax, max_len_fvals, ref, y_limits, offset_y):
         The plot axes.
     """
 
-    # handle y-limits
-    ax = process_y_limits(ax, y_limits)
-
     # handle reference points
     for i_ref in ref:
         # plot reference point as line
@@ -355,5 +352,8 @@ def handle_options(ax, max_len_fvals, ref, y_limits, offset_y):
         # create legend for reference points
         if i_ref.legend is not None:
             ax.legend()
+
+    # handle y-limits
+    ax = process_y_limits(ax, y_limits)
 
     return ax
