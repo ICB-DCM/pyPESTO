@@ -481,6 +481,9 @@ class DlibOptimizer(Optimizer):
         self.options = options
         if self.options is None:
             self.options = DlibOptimizer.get_default_options(self)
+        elif 'maxiter' not in self.options:
+            raise KeyError('Dlib options are missing the key word '
+                           'maxiter.')
 
     @fix_decorator
     @time_decorator
@@ -526,7 +529,7 @@ class DlibOptimizer(Optimizer):
         return False
 
     def get_default_options(self):
-        return {}
+        return {'maxiter': 10000}
 
 
 class PyswarmOptimizer(Optimizer):
