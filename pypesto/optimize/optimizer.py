@@ -436,6 +436,12 @@ class IpoptOptimizer(Optimizer):
             id: str,
             history_options: HistoryOptions = None,
     ) -> OptimizerResult:
+
+        if ipopt is None:
+            raise ImportError(
+                "This optimizer requires an installation of ipopt."
+            )
+
         objective = problem.objective
 
         bounds = np.array([problem.lb, problem.ub]).T
@@ -469,15 +475,15 @@ class DlibOptimizer(Optimizer):
     """
 
     def __init__(self,
-                 method: str,
                  options: Dict = None):
         super().__init__()
-
-        self.method = method
 
         self.options = options
         if self.options is None:
             self.options = DlibOptimizer.get_default_options(self)
+        elif 'maxiter' not in self.options:
+            raise KeyError('Dlib options are missing the key word '
+                           'maxiter.')
 
     @fix_decorator
     @time_decorator
@@ -523,7 +529,7 @@ class DlibOptimizer(Optimizer):
         return False
 
     def get_default_options(self):
-        return {}
+        return {'maxiter': 10000}
 
 
 class PyswarmOptimizer(Optimizer):
@@ -603,6 +609,7 @@ class CmaesOptimizer(Optimizer):
             id: str,
             history_options: HistoryOptions = None,
     ) -> OptimizerResult:
+
         lb = problem.lb
         ub = problem.ub
         sigma0 = self.par_sigma0 * np.median(ub - lb)
