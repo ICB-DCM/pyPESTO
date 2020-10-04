@@ -387,21 +387,20 @@ class ObjectiveBase(abc.ABC):
         x_indices:
             Indices for which to compute gradients. Default: all.
         eps:
-            Finite differences step size. Default: 1e-5.
+            Finite differences step size.
         verbosity:
             Level of verbosity for function output.
-            * 0: no output,
-            * 1: summary for all parameters,
-            * 2: summary for individual parameters.
-            Default: 1.
+            0: no output,
+            1: summary for all parameters,
+            2: summary for individual parameters.
         mode:
-            Residual (MODE_RES) or objective function value
-            (MODE_FUN, default) computation mode.
+            Residual (MODE_RES) or objective function value (MODE_FUN)
+            computation mode.
         detailed:
-            Toggle whether additional values are returned.
-            - Function values.
-            - Central difference weighted by difference in output from all
-              methods (standard deviation and mean).
+            Toggle whether additional values are returned. Additional values
+            are function values, and the central difference weighted by the
+            difference in output from all methods (standard deviation and
+            mean).
 
         Returns
         ----------
