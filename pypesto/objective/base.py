@@ -3,7 +3,7 @@ import pandas as pd
 import copy
 import logging
 import abc
-from typing import Dict, Sequence, Tuple, Union
+from typing import AbstractSet, Dict, Sequence, Tuple, Union
 
 from .constants import MODE_FUN, MODE_RES, FVAL, GRAD, HESS, RES, SRES
 from .history import HistoryBase
@@ -325,6 +325,47 @@ class ObjectiveBase(abc.ABC):
             x_fixed_vals=x_fixed_vals)
 
         self.pre_post_processor = pre_post_processor
+
+    def check_grad_multi_eps(
+            self,
+            *args,
+            multi_eps: AbstractSet = None,
+            label: str = 'rel_err',
+            **kwargs,
+    ):
+        """
+        Equivalent to the `ObjectiveBase.check_grad` method, except multiple
+        finite difference step sizes are tested. The result contains the
+        lowest finite difference for each parameter, and the corresponding
+        finite difference step size.
+
+        Parameters
+        ----------
+        All `ObjectiveBase.check_grad` method parameters.
+        multi_eps:
+            The finite difference step sizes to be tested.
+        label:
+            The label of the column that will be minimized for each parameter.
+            Valid options are the column labels of the dataframe returned by
+            the `ObjectiveBase.check_grad` method.
+        """
+        if multi_eps is None:
+            multi_eps = {1e-1, 1e-3, 1e-5, 1e-7, 1e-9}
+
+        results = {}
+        for eps in multi_eps:
+            results[eps] = self.check_grad(*args, **kwargs, eps=eps)
+
+        combined_result = None
+        for eps, result in results.items():
+            result['eps'] = eps
+            if combined_result is None:
+                combined_result = result
+                continue
+            improvements = result[label] < combined_result[label]
+            combined_result[improvements] = result[improvements]
+
+        return combined_result
 
     def check_grad(
             self,
