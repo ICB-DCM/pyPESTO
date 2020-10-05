@@ -197,6 +197,7 @@ def sampling_scatter(
         i_chain: int = 0,
         stepsize: int = 1,
         suptitle: str = None,
+        diag_kind: str = "kde",
         size: Tuple[float, float] = None):
     """Parameter scatter plot.
 
@@ -210,6 +211,8 @@ def sampling_scatter(
         Only one in `stepsize` values is plotted.
     suptitle:
         Figure super title.
+    diag_kind:
+        Visualization mode for marginal densities {‘auto’, ‘hist’, ‘kde’, None}
     size:
         Figure size in inches.
 
@@ -226,7 +229,8 @@ def sampling_scatter(
     sns.set(style="ticks")
 
     ax = sns.pairplot(
-        params_fval.drop(['logPosterior', 'iteration'], axis=1))
+        params_fval.drop(['logPosterior', 'iteration'], axis=1),
+        diag_kind=diag_kind)
 
     if size is not None:
         ax.fig.set_size_inches(size)

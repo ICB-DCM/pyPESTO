@@ -116,8 +116,8 @@ class AmiciObjective(ObjectiveBase):
                 "(https://github.com/icb-dcm/amici). "
                 "Install via `pip3 install amici`.")
 
-        self.amici_model = amici.ModelPtr(amici_model.clone())
-        self.amici_solver = amici.SolverPtr(amici_solver.clone())
+        self.amici_model = amici_model.clone()
+        self.amici_solver = amici_solver.clone()
 
         # make sure the edatas are a list of edata objects
         if isinstance(edatas, amici.amici.ExpData):
@@ -192,8 +192,8 @@ class AmiciObjective(ObjectiveBase):
             other.__dict__[key] = copy.deepcopy(self.__dict__[key])
 
         # copy objects that do not have __deepcopy__
-        other.amici_model = amici.ModelPtr(self.amici_model.clone())
-        other.amici_solver = amici.SolverPtr(self.amici_solver.clone())
+        other.amici_model = self.amici_model.clone()
+        other.amici_solver = self.amici_solver.clone()
         other.edatas = [amici.ExpData(data) for data in self.edatas]
 
         return other
