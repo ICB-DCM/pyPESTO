@@ -3,7 +3,7 @@ import pandas as pd
 import copy
 import logging
 import abc
-from typing import AbstractSet, Dict, Sequence, Tuple, Union
+from typing import Dict, Iterable, Sequence, Tuple, Union
 
 from .constants import MODE_FUN, MODE_RES, FVAL, GRAD, HESS, RES, SRES
 from .history import HistoryBase
@@ -329,7 +329,7 @@ class ObjectiveBase(abc.ABC):
     def check_grad_multi_eps(
             self,
             *args,
-            multi_eps: AbstractSet = None,
+            multi_eps: Iterable = None,
             label: str = 'rel_err',
             **kwargs,
     ):
@@ -362,8 +362,11 @@ class ObjectiveBase(abc.ABC):
             if combined_result is None:
                 combined_result = result
                 continue
-            improvements = result[label] < combined_result[label]
-            combined_result[improvements] = result[improvements]
+            # Replace rows in `combined_result` with corresponding rows
+            # in `result` that have an improved value in column `label`.
+            mask_improvements = result[label] < combined_result[label]
+            combined_result.loc[mask_improvements, :] = \
+                    result.loc[mask_improvements, :]
 
         return combined_result
 
