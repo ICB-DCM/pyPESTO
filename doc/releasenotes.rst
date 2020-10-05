@@ -5,6 +5,7 @@ Release notes
 0.2 series
 ..........
 
+
 0.2.2 (2020-10-05)
 ------------------
 
@@ -20,6 +21,7 @@ Release notes
   * Add maxiter as default option of dlib (#474)
 * Numpy based subindexing in amici_util (#462)
 * Check amici/PEtab installation (#477)
+
 
 0.2.1 (2020-09-07)
 ------------------
