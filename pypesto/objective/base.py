@@ -368,7 +368,7 @@ class ObjectiveBase(abc.ABC):
             # in `result` that have an improved value in column `label`.
             mask_improvements = result[label] < combined_result[label]
             combined_result.loc[mask_improvements, :] = \
-                    result.loc[mask_improvements, :]
+                result.loc[mask_improvements, :]
 
         return combined_result
 
