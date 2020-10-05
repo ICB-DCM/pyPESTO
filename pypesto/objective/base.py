@@ -356,7 +356,7 @@ class ObjectiveBase(abc.ABC):
         for eps in multi_eps:
             results[eps] = self.check_grad(*args, **kwargs, eps=eps)
 
-        # The combined result is, for each parameter, the gradient check with
+        # The combined result is, for each parameter, the gradient check from
         # the step size (`eps`) that produced the smallest error (`label`).
         combined_result = None
         for eps, result in results.items():
