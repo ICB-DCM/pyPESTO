@@ -247,4 +247,4 @@ def test_finite_difference_checks():
     result_multi_eps = \
         objective.check_grad_multi_eps([theta], multi_eps=multi_eps)
     assert result_multi_eps['rel_err'].squeeze() == \
-        min([rel_err(_eps) for _eps in multi_eps])
+        min(rel_err(_eps) for _eps in multi_eps)
