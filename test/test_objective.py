@@ -4,6 +4,7 @@ This is for testing the pypesto.Objective.
 
 import numpy as np
 import scipy.optimize as so
+import sympy as sp
 import numbers
 import pytest
 import pypesto
@@ -211,3 +212,39 @@ def poly_for_sensi(max_sensi_order, integrated=False, x=0.):
 
     return obj_for_sensi(fun, grad, hess,
                          max_sensi_order, integrated, x)
+
+
+def test_finite_difference_checks():
+    """
+    Test the finite difference gradient check methods by expected relative
+    error.
+    """
+    x = sp.Symbol('x')
+
+    # Setup single-parameter objective function
+    fun_expr = x**10
+    grad_expr = fun_expr.diff()
+    theta = 0.1
+
+    fun = sp.lambdify(x, fun_expr)
+    grad = sp.lambdify(x, grad_expr)
+
+    objective = pypesto.Objective(fun=fun, grad=grad)
+
+    def rel_err(eps):
+        """Expected relative error."""
+        central_difference = (fun(theta + eps) - fun(theta - eps))/(2*eps)
+        return abs(
+                (grad(theta) - central_difference)/(central_difference + eps))
+
+    # Test the single step size `check_grad` method.
+    eps = 1e-5
+    result_single_eps = objective.check_grad([theta], eps=eps)
+    assert result_single_eps['rel_err'].squeeze() == rel_err(eps)
+
+    # Test the multiple step size `check_grad_multi_eps` method.
+    multi_eps = {1e-1, 1e-3, 1e-5, 1e-7, 1e-9}
+    result_multi_eps = \
+        objective.check_grad_multi_eps([theta], multi_eps=multi_eps)
+    assert result_multi_eps['rel_err'].squeeze() == \
+        min(rel_err(_eps) for _eps in multi_eps)
