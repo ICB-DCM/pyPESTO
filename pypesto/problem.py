@@ -63,6 +63,9 @@ class Problem:
     x_free_indices: array_like of int
         Vector containing the indices (zero-based) of free parameters
         (complimentary to x_fixed_indices).
+    copy_objective:
+        Whethter to generate a deep copy of the objective function before
+        potential modification the problem class performs on it.
 
     Notes
     -----
@@ -89,8 +92,11 @@ class Problem:
                  x_guesses: Optional[Iterable[float]] = None,
                  x_names: Optional[Iterable[str]] = None,
                  x_scales: Optional[Iterable[str]] = None,
-                 x_priors_defs: Optional[NegLogPriors] = None):
-        self.objective = copy.deepcopy(objective)
+                 x_priors_defs: Optional[NegLogPriors] = None,
+                 copy_objective: bool = True):
+        if copy_objective:
+            objective = copy.deepcopy(objective)
+        self.objective = objective
 
         self.lb_full = np.array(lb).flatten()
         self.ub_full = np.array(ub).flatten()
