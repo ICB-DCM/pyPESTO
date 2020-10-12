@@ -31,9 +31,11 @@ class DesignProblem(dict):
         the pypesto result for the initial setting
     petab_problem:
         the petab problem for the initial setting
-    x:
-        the parameter to be used for the forward simulation to generate new
-        data
+    initial_x:
+        can be either a list of the parameters to be used for the forward
+        simulation, or a list of multiple parameter sets. If multiple are
+        passed the code will return averaged values over all parameter sets in
+        the end.
     criteria_list:
         list of criteria names, specifies which criteria values should be
         computed
@@ -44,9 +46,6 @@ class DesignProblem(dict):
         if the full combinatorial space is checked for the best
         combination of candidates from 'experiment_list' only the best
         'n_save_combi_result' many will be saved (for each criteria)
-    profiles:
-        if a criteria based on profiles eg length of confidence interval
-        should be computed
     number_of_measurements:
         how many new measurements are to be added for one candidate from
         experiment_list
@@ -56,23 +55,30 @@ class DesignProblem(dict):
                  experiment_list: list,
                  model: Union['amici.Model', 'amici.ModelPtr'],
                  problem: Problem,
-                 result: Result,
                  petab_problem: petab.Problem,
-                 initial_x: Optional[Iterable[float]] = None,
+                 result: Optional[Result] = None,
+                 initial_x: Optional[Iterable] = None,
                  criteria_list: List[str] = None,
                  chosen_criteria: str = 'det',
                  const_for_hess: float = None,
                  n_save_combi_result: int = None,
-                 profiles: bool = False,
                  number_of_measurements: int = 1):
 
         super().__init__()
 
         if criteria_list is None:
             criteria_list = ['det', 'trace', 'ratio', 'rank', 'eigmin',
-                             'number_good_eigvals']
-            # include the modified versions here?
+                             'number_good_eigvals',
+                             'det_modified', 'trace_modified',
+                             'ratio_modified', 'rank_modified',
+                             'eigmin_modified',
+                             'number_good_eigvals_modified',
+                             ]
+
         if initial_x is None:
+            if result is None:
+                ValueError("You have to pass either the parameters x or the "
+                           "pypesto result")
             initial_x = result.optimize_result.get_for_key('x')[0]
 
         if n_save_combi_result is None:
@@ -87,11 +93,21 @@ class DesignProblem(dict):
         self.criteria_list = criteria_list
         self.chosen_criteria = chosen_criteria
         self.const_for_hess = const_for_hess
-        self.profiles = profiles
         self.number_of_measurements = number_of_measurements
         self.n_save_combi_result = n_save_combi_result
 
-        # TODO profiles not actively used in the code right now
+        self.modified_criteria = [crit for ind, crit in
+                                  enumerate(self.criteria_list) if
+                                  '_modified' in crit]
+        self.non_modified_criteria = [crit for ind, crit in
+                                      enumerate(self.criteria_list) if
+                                      crit not in self.modified_criteria]
+        # self.modified_criteria will contain only the criteria names,
+        # not the "_modified" at the end
+        self.modified_criteria = [crit_modified.replace("_modified", "")
+                                  for crit_modified in self.modified_criteria]
+
+        self.check_criteria()
 
         # update condition_df to include all new conditions
         # (observable was already done when getting the model)
@@ -99,14 +115,17 @@ class DesignProblem(dict):
 
         # sanity checks for lengths of df in experiment_list
         # if not self.experiment_list:
-        #     raise ValueError('you need to pass a nonempty list of candidates')
+        #     raise ValueError('you need to pass a nonempty list of
+        #     candidates')
         # for dict in self.experiment_list:
         #     if 'condition_df' in dict and dict['condition_df'] is not None \
         #             and len(dict['condition_df'].columns) \
         #             != len(self.petab_problem.condition_df.columns):
         #         raise ValueError(
-        #             'condition dataframe in given candidates has wrong length')
-        #     if 'observable_df' in dict and dict['observable_df'] is not None \
+        #             'condition dataframe in given candidates has wrong
+        #             length')
+        #     if 'observable_df' in dict and dict['observable_df'] is not
+        #     None \
         #             and len(dict['observable_df'].columns) != \
         #             len(self.petab_problem.observable_df.columns):
         #         raise ValueError(
@@ -194,6 +213,24 @@ class DesignProblem(dict):
             condition_df = condition_df.set_index(CONDITION_ID)
             self.petab_problem.condition_df = condition_df
             return
+
+    def check_criteria(self):
+        """
+        check if the requested criteria are supported
+        """
+        okay_criteria = ['det', 'det_modified', 'eigmin', 'eigmin_modified',
+                         'trace', 'trace_modified', 'ratio',
+                         'ratio_modified',
+                         'rank', 'rank_modified', 'number_of_good_eigvals',
+                         'number_of_good_eigvals_modified', 'trace_log',
+                         'trace_log_modified']
+        if not set(self.criteria_list).issubset(set(okay_criteria)):
+            raise KeyError("one of the specified criteria is not supported")
+
+        # should we have a standard value here? or throw an error?
+        if self.modified_criteria and self.const_for_hess is None:
+            self.const_for_hess = 10 ** (-4)
+        return
 
     """
     def write_super_observable_df(self):
