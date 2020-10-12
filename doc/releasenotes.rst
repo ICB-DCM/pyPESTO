@@ -6,6 +6,38 @@ Release notes
 ..........
 
 
+0.2.2 (2020-10-05)
+------------------
+
+* New optimizer: CMA-ES (#457)
+* New plot: Optimizer convergence summary (#446)
+* Fixes in visualization:
+  * Type checks for reference points (#460)
+  * y_limits in waterfall plots with multiple results (#475)
+* Support of new amici release (#469)
+* Multiple fixes in optimization code:
+  * Remove unused argument for dlib optimizer (#466)
+  * Add check for installation of ipopt (#470)
+  * Add maxiter as default option of dlib (#474)
+* Numpy based subindexing in amici_util (#462)
+* Check amici/PEtab installation (#477)
+
+
+0.2.1 (2020-09-07)
+------------------
+
+* Example Notebook for prior functionality (#438)
+* Changed parameter indexing in profiling routines (#419)
+* Basic sanity checking for parameter fixing (#420)
+* Bug fixes in:
+  * Displaying of multi start optimization (#430)
+  * AMICI error output (#428)
+  * Axes scaling/limits in waterfall plots (#441)
+  * Priors (PEtab import, error handling) (#448, #452, #454)
+* Improved sampling diagnostics (e.g. effective samples size) (#426)
+* Improvements and bug fixes in parameter plots (#425)
+
+
 0.2.0 (2020-06-17)
 ------------------
 
