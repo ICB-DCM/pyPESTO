@@ -34,7 +34,7 @@ install:
   - pip3 install .[ipopt,dlib,pyswarm,pymc3,cmaes]
   - pip3 install https://github.com/petab-dev/petab/archive/develop.zip
   - pip3 install -e
-      git+https://github.com/icb-dcm/amici.git@develop#egg=amici\&subdirectory=python/sdist
+      git+https://github.com/icb-dcm/amici.git@refactor_sbml_import_round_two#egg=amici\&subdirectory=python/sdist
   - if [ "$TRAVIS_PULL_REQUEST" = "false" ]; then
       git clone --depth 1
         https://github.com/petab-dev/petab_test_suite tmp/petab_test_suite;
