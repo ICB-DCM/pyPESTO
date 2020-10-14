@@ -31,7 +31,8 @@ setup(name='pypesto',
                         'cloudpickle>=0.7.0',
                         'h5py>=2.10.0',
                         'amici @ git+https://github.com/amici-dev/amici'
-                        '@develop#egg=amici&subdirectory=python/sdist',
+                        '@refactor_sbml_import_round_two#egg=amici'
+                        '&subdirectory=python/sdist',
                         'tqdm>=4.46.0'],
       tests_require=['pytest>=5.4.2',
                      'flake8>=3.7.2',
