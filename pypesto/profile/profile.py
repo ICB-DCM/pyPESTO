@@ -1,9 +1,9 @@
 import logging
 import numpy as np
-from typing import Callable, Union
+from typing import Callable, Union, Iterable
 
 from ..objective.constants import GRAD
-from ..optimize import Optimizer
+from ..optimize import Optimizer, OptimizerResult
 from ..problem import Problem
 from ..result import Result
 from .result import ProfilerResult
@@ -18,7 +18,7 @@ def parameter_profile(
         problem: Problem,
         result: Result,
         optimizer: Optimizer,
-        profile_index: np.ndarray = None,
+        profile_index: Iterable[int] = None,
         profile_list: int = None,
         result_index: int = 0,
         next_guess_method: Union[Callable, str] = 'adaptive_step_regression',
@@ -39,9 +39,8 @@ def parameter_profile(
     optimizer:
         The optimizer to be used along each profile.
     profile_index:
-        Array with parameter indices, whether a profile should
-        be computed (1) or not (0).
-        Default is all profiles should be computed.
+        List with the parameter indices to be profiled
+        (by default all free indices).
     profile_list:
         Integer which specifies whether a call to the profiler should create
         a new list of profiles (default) or should be added to a specific
@@ -63,8 +62,7 @@ def parameter_profile(
     # Handling defaults
     # profiling indices
     if profile_index is None:
-        profile_index = np.ones(problem.dim_full)
-        profile_index[problem.x_fixed_indices] = 0
+        profile_index = problem.x_free_indices
 
     # check profiling options
     if profile_options is None:
@@ -90,9 +88,9 @@ def parameter_profile(
                                     profile_index, profile_list)
 
     # loop over parameters for profiling
-    for i_par in range(0, problem.dim_full):
-        if profile_index[i_par] == 0 or i_par in problem.x_fixed_indices:
-            # not requested or fixed -> compute no profile
+    for i_par in profile_index:
+        # only compute profiles for free parameters
+        if i_par in problem.x_fixed_indices:
             continue
 
         # create an instance of ProfilerResult, which will be appended to the
@@ -192,8 +190,17 @@ def walk_along_profile(
         # run optimization
         # IMPORTANT: This optimization will need a proper exception
         # handling (coming soon)
-        optimizer_result = optimizer.minimize(problem, startpoint, '0',
-                                              allow_failed_starts=False)
+        if startpoint.size > 0:
+            optimizer_result = optimizer.minimize(problem, startpoint, '0',
+                                                  allow_failed_starts=False)
+        else:
+            # if too many parameters are fixed, there is nothing to do ...
+            fval = problem.objective([])
+            optimizer_result = OptimizerResult(
+                id='0', x=np.array([]), fval=fval, n_fval=0, n_grad=0, n_res=0,
+                n_hess=0, n_sres=0, x0=np.array([]), fval0=fval, time=0)
+            optimizer_result.update_to_full(problem=problem)
+
         if optimizer_result[GRAD] is not None:
             gradnorm = np.linalg.norm(optimizer_result[GRAD][
                                       problem.x_free_indices])

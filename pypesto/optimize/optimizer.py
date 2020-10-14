@@ -26,6 +26,11 @@ try:
 except ImportError:
     pyswarm = None
 
+try:
+    import cma
+except ImportError:
+    cma = None
+
 EXITFLAG_LOADED_FROM_FILE = -99
 
 logger = logging.getLogger(__name__)
@@ -74,6 +79,7 @@ def history_decorator(minimize):
         objective.history = HistoryBase()
 
         return result
+
     return wrapped_minimize
 
 
@@ -92,6 +98,7 @@ def time_decorator(minimize):
         used_time = time.time() - start_time
         result.time = used_time
         return result
+
     return wrapped_minimize
 
 
@@ -116,6 +123,7 @@ def fix_decorator(minimize):
                     f"n_fval={result.n_fval}.")
 
         return result
+
     return wrapped_minimize
 
 
@@ -307,9 +315,12 @@ class ScipyOptimizer(Optimizer):
             # TODO: pass jac computing methods in options
 
             if self.options is not None:
-                self.options['verbose'] = 2 if 'disp' in self.options.keys() \
-                                               and self.options['disp'] else 0
-                self.options.pop('disp', None)
+                ls_options = self.options.copy()
+                ls_options['verbose'] = 2 if 'disp' in ls_options.keys() \
+                                             and ls_options['disp'] else 0
+                ls_options.pop('disp', None)
+            else:
+                ls_options = {}
 
             # optimize
             res = scipy.optimize.least_squares(
@@ -320,7 +331,7 @@ class ScipyOptimizer(Optimizer):
                 bounds=bounds,
                 tr_solver='exact',
                 loss='linear',
-                **self.options
+                **ls_options
             )
             # extract fval/grad from result, note that fval is not available
             # from least squares solvers
@@ -425,6 +436,12 @@ class IpoptOptimizer(Optimizer):
             id: str,
             history_options: HistoryOptions = None,
     ) -> OptimizerResult:
+
+        if ipopt is None:
+            raise ImportError(
+                "This optimizer requires an installation of ipopt."
+            )
+
         objective = problem.objective
 
         bounds = np.array([problem.lb, problem.ub]).T
@@ -458,15 +475,15 @@ class DlibOptimizer(Optimizer):
     """
 
     def __init__(self,
-                 method: str,
                  options: Dict = None):
         super().__init__()
-
-        self.method = method
 
         self.options = options
         if self.options is None:
             self.options = DlibOptimizer.get_default_options(self)
+        elif 'maxiter' not in self.options:
+            raise KeyError('Dlib options are missing the key word '
+                           'maxiter.')
 
     @fix_decorator
     @time_decorator
@@ -512,7 +529,7 @@ class DlibOptimizer(Optimizer):
         return False
 
     def get_default_options(self):
-        return {}
+        return {'maxiter': 10000}
 
 
 class PyswarmOptimizer(Optimizer):
@@ -550,6 +567,64 @@ class PyswarmOptimizer(Optimizer):
             x=np.array(xopt),
             fval=fopt
         )
+
+        return optimizer_result
+
+    def is_least_squares(self):
+        return False
+
+
+class CmaesOptimizer(Optimizer):
+    """
+    Global optimization using cma-es.
+    Package homepage: https://pypi.org/project/cma-es/
+    """
+
+    def __init__(self, par_sigma0: float = 0.25, options: Dict = None):
+        """
+        Parameters
+        ----------
+        par_sigma0:
+            scalar, initial standard deviation in each coordinate.
+            par_sigma0 should be about 1/4th of the search domain width
+            (where the optimum is to be expected)
+        options:
+            Optimizer options that are directly passed on to cma.
+        """
+
+        super().__init__()
+
+        if options is None:
+            options = {'maxiter': 10000}
+        self.options = options
+        self.par_sigma0 = par_sigma0
+
+    @fix_decorator
+    @time_decorator
+    @history_decorator
+    def minimize(
+            self,
+            problem: Problem,
+            x0: np.ndarray,
+            id: str,
+            history_options: HistoryOptions = None,
+    ) -> OptimizerResult:
+
+        lb = problem.lb
+        ub = problem.ub
+        sigma0 = self.par_sigma0 * np.median(ub - lb)
+        self.options['bounds'] = [lb, ub]
+
+        if cma is None:
+            raise ImportError(
+                "This optimizer requires an installation of cma.")
+
+        result = cma.CMAEvolutionStrategy(
+            x0, sigma0, inopts=self.options,
+        ).optimize(problem.objective.get_fval).result
+
+        optimizer_result = OptimizerResult(x=np.array(result[0]),
+                                           fval=result[1])
 
         return optimizer_result
 

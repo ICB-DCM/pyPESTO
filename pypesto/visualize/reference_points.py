@@ -39,10 +39,10 @@ class ReferencePoint(dict):
         super().__init__()
 
         if (reference is not None) and ((x is not None) or (fval is not None)):
-            raise ("Please specify either an argument for reference or for x "
-                   "and fval, but not both.")
+            raise ValueError("Please specify either an argument for reference "
+                             "or for x and fval, but not both.")
 
-        # assign legend, my be None
+        # assign legend, may be None
         self.legend = legend
         if isinstance(reference, dict) or \
                 isinstance(reference, ReferencePoint):
@@ -76,13 +76,15 @@ class ReferencePoint(dict):
             if x is not None:
                 self.x = np.array(x)
             else:
-                raise ('Parameter vector x not passed, but is a mandatory '
-                       'input when creating a reference point. Stopping.')
+                raise ValueError('Parameter vector x not passed, but is a '
+                                 'mandatory input when creating a reference '
+                                 'point. Stopping.')
             if fval is not None:
                 self.fval = fval
             else:
-                raise ('Objective value fval not passed, but is a mandatory '
-                       'input when creating a reference point. Stopping.')
+                raise ValueError('Objective value fval not passed, but is a '
+                                 'mandatory input when creating a reference '
+                                 'point. Stopping.')
             if color is not None:
                 self.color = color
                 self.auto_color = False

@@ -13,5 +13,6 @@ from .optimizer import (
     ScipyOptimizer,
     IpoptOptimizer,
     DlibOptimizer,
-    PyswarmOptimizer)
+    PyswarmOptimizer,
+    CmaesOptimizer)
 from .result import OptimizerResult
