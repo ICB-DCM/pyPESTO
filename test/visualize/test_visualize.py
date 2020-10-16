@@ -451,38 +451,49 @@ def test_optimization_stats():
     result_1 = optimize.minimize(
         problem=problem,
         optimizer=optimizer,
-        n_starts=5,
+        n_starts=10,
         startpoint_method=pypesto.startpoint.uniform,
     )
 
     result_2 = optimize.minimize(
         problem=problem,
         optimizer=optimizer,
-        n_starts=5,
+        n_starts=10,
         startpoint_method=pypesto.startpoint.uniform,
     )
 
-    visualize.number_of_steps(result_1, legends='best result')
+    visualize.optimization_run_property_per_multistart(result_1, 'n_fval',
+                                                       legends='best result')
 
-    visualize.number_of_steps(result_1, plot_type='hist',
-                              legends='best result')
+    visualize.optimization_run_property_per_multistart(result_1, 'n_fval',
+                                                       plot_type='hist',
+                                                       legends='best result')
 
-    visualize.number_of_steps(result_2)
+    visualize.optimization_run_property_per_multistart(result_2, 'n_fval')
 
     # test plotting of lists
-    visualize.number_of_steps([result_1, result_2],
-                              legends=['result1', 'result2'],
-                              plot_type='line')
+    visualize.optimization_run_property_per_multistart(
+        [result_1, result_2], 'n_fval',
+        legends=['result1', 'result2'],
+        plot_type='line')
 
-    visualize.optimization_time(result_1)
+    visualize.optimization_run_property_per_multistart(
+        result_1, 'time', plot_type='hist', legends='best result')
 
-    visualize.optimization_time(result_1, plot_type='hist',
-                                legends='best result')
+    visualize.optimization_run_property_per_multistart(
+        [result_1, result_2],
+        'time',
+        colors=[[.5, .9, .9, .3], [.9, .7, .8, .5]],
+        legends=['result1', 'result2'],
+        plot_type='hist')
 
-    visualize.optimization_time([result_1, result_2],
-                                colors=[[.5, .9, .9, .3], [.9, .7, .8, .5]],
-                                legends=['result1', 'result2'],
-                                plot_type='hist')
+    visualize.optimization_run_properties_per_multistart([result_1, result_2])
+
+    visualize.optimization_run_properties_one_plot(result_1, ['time'])
+
+    visualize.optimization_run_properties_one_plot(result_1, ['n_fval',
+                                                              'n_grad',
+                                                              'n_hess'])
 
 
 @close_fig

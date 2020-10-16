@@ -1,5 +1,5 @@
 from scipy import cluster
-from typing import Tuple
+from typing import Iterable, List, Tuple, Optional, Union
 import matplotlib.cm as cm
 import numpy as np
 
@@ -207,32 +207,36 @@ def assign_colors(vals, colors=None, balance_alpha=True,
                'one single [r, g, b, alpha] color.')
 
 
-def assign_colors_for_result_list(num_results, colors=None):
+def assign_colors_for_list(num_entries: int,
+                           colors: Optional[Union[List[float],
+                                                  List[List[float]],
+                                                  np.ndarray]] = None
+                           ) -> Union[List[List[float]], np.ndarray]:
     """
-    Creates a list of colors for a list of pypesto.Result objects or checks
+    Creates a list of colors for a list of items or checks
     a user-provided list of colors and uses this if everything is ok
 
     Parameters
     ----------
 
-    num_results: int
+    num_entries:
         number of results in list
 
-    colors: list, or RGBA, optional
+    colors:
         list of colors, or single color
 
     Returns
     -------
 
-    colors: list of RGBA
-        One for each element in 'vals'.
+    colors:
+        List of RGBA, one for each element in 'vals'.
     """
 
     # if the user did not specify any colors:
     if colors is None:
         # default colors will be used, on for each entry in the result list.
         # Colors are created from assign_colors, which needs a dummy list
-        dummy_clusters = np.array(list(range(num_results)) * 2)
+        dummy_clusters = np.array(list(range(num_entries)) * 2)
 
         # we don't want alpha levels for all plotting routines in this case...
         colors = assign_colors(dummy_clusters, balance_alpha=False,
@@ -243,10 +247,10 @@ def assign_colors_for_result_list(num_results, colors=None):
         return colors[real_indices]
 
     # if the user specified color lies does not match the number of results
-    if len(colors) != num_results:
+    if len(colors) != num_entries:
         raise ('Incorrect color input. Colors must be specified either as '
                'list of [r, g, b, alpha] with length equal to function '
-               'values Number of function (here: ' + str(num_results) + '), '
+               'values Number of function (here: ' + str(num_entries) + '), '
                'or as one single [r, g, b, alpha] color.')
 
     return colors
