@@ -1,7 +1,7 @@
 import numpy as np
 import warnings
 from .clust_color import assign_colors
-from .clust_color import assign_colors_for_result_list
+from .clust_color import assign_colors_for_list
 
 from numbers import Number
 from typing import Iterable, Optional, Union
@@ -58,7 +58,7 @@ def process_result_list(results, colors=None, legends=None):
             legends = [legends]
     else:
         # if more than one result is passed, we use one color per result
-        colors = assign_colors_for_result_list(len(results), colors)
+        colors = assign_colors_for_list(len(results), colors)
 
         # check whether list of legends has the correct length
         if legends is None:
@@ -76,8 +76,8 @@ def process_result_list(results, colors=None, legends=None):
 
     # size of legend list and size of results does not match
     if legend_error:
-        raise ('List of results passed and list of labels do not have the'
-               ' same length but should. Stopping.')
+        raise ValueError('List of results passed and list of labels do '
+                         'not have the same length but should. Stopping.')
 
     return results, colors, legends
 
@@ -228,3 +228,55 @@ def process_start_indices(start_indices: Union[int, Iterable[int]],
     start_indices = np.intersect1d(start_indices, existing_indices)
 
     return start_indices
+
+
+# def create_figure(
+#         uni_plot_ids: np.ndarray,
+#         plots_to_file: bool) -> Tuple[plt.Figure,
+#                                       Union[Dict[str, plt.Subplot],
+#                                             'np.ndarray[plt.Subplot]']]:
+#     """
+#     Helper function for plotting data and simulations, open figure and axes
+#
+#     Parameters
+#     ----------
+#     uni_plot_ids:
+#         Array with unique plot indices
+#     plots_to_file:
+#         Indicator if plots are saved to file
+#
+#     Returns
+#     -------
+#     fig: Figure object of the created plot.
+#     ax: Axis object of the created plot.
+#     """
+#
+#     # Set Options for plots
+#     # possible options: see: plt.rcParams.keys()
+#     plt.rcParams['font.size'] = 10
+#     plt.rcParams['axes.titlesize'] = 10
+#     plt.rcParams['figure.figsize'] = [20, 10]
+#     plt.rcParams['errorbar.capsize'] = 2
+#
+#     # Set Colormap
+#     sns.set(style="ticks", palette="colorblind")
+#
+#     # Check if plots are saved to file and return single subplot axis
+#     if plots_to_file:
+#         num_subplot = 1
+#     else:
+#         num_subplot = len(uni_plot_ids)
+#
+#     # compute, how many rows and columns we need for the subplots
+#     num_row = int(np.round(np.sqrt(num_subplot)))
+#     num_col = int(np.ceil(num_subplot / num_row))
+#
+#     fig, axes = plt.subplots(num_row, num_col, squeeze=False)
+#
+#     if not plots_to_file:
+#         for ax in axes.flat[num_subplot:]:
+#             ax.remove()
+#
+#         axes = dict(zip(uni_plot_ids, axes.flat))
+#
+#     return fig, axes

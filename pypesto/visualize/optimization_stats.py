@@ -163,7 +163,7 @@ def optimization_run_properties_per_multistart(
     num_col = int(np.ceil(num_subplot / num_row))
     fig, axes = plt.subplots(num_row, num_col, squeeze=False)
     fig.set_size_inches(*size)
-    
+
     for ax in axes.flat[num_subplot:]:
         ax.remove()
     axes = dict(zip(range(num_subplot), axes.flat))
