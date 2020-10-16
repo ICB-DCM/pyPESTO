@@ -115,6 +115,66 @@ def parameters(
     return ax
 
 
+def parameter_hist(
+        result: Result,
+        parameter_name: str,
+        bins: Union[int, str] = 'auto',
+        ax: Optional['matplotlib.Axes'] = None,
+        size: Optional[Tuple[float]] = (18.5, 10.5),
+        color: Optional[List[float]] = None,
+        start_indices: Optional[Union[int, List[int]]] = None):
+    """
+    Plot parameter values as a histogram.
+
+    Parameters
+    ----------
+    result:
+        Optimization result obtained by 'optimize.py' or list of those
+    parameter_name:
+        The name of the parameter that should be plotted
+    bins:
+        Specifies bins of the histogram
+    ax:
+        Axes object to use
+    size:
+        Figure size (width, height) in inches. Is only applied when no ax
+        object is specified
+    color:
+        RGBA color.
+    start_indices:
+        List of integers specifying the multistarts to be plotted or
+        int specifying up to which start index should be plotted
+
+
+    Returns
+    -------
+    ax:
+    The plot axes.
+
+    """
+
+    if ax is None:
+        ax = plt.subplots()[1]
+        fig = plt.gcf()
+        fig.set_size_inches(*size)
+
+    xs = result.optimize_result.get_for_key('x')
+
+    # reduce number of displayed results
+    if start_indices is not None:
+        xs = [xs[ind] for ind in start_indices]
+
+    parameter_index = result.problem.x_names.index(parameter_name)
+    parameter_values = [x[parameter_index] for x in xs]
+
+    ax.hist(parameter_values, color=color, bins=bins)
+    ax.set_xlabel(parameter_name)
+    ax.set_ylabel("counts")
+    ax.set_title(f"Parameter {parameter_name}")
+
+    return ax
+
+
 def parameters_lowlevel(
         xs: Sequence[Union[np.ndarray, List[float]]],
         fvals: Union[np.ndarray, List[float]],
