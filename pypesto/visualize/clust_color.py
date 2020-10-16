@@ -1,5 +1,5 @@
 from scipy import cluster
-from typing import Iterable, List, Tuple, Optional, Union
+from typing import List, Tuple, Optional, Union
 import matplotlib.cm as cm
 import numpy as np
 
