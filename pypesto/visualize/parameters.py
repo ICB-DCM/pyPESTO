@@ -161,7 +161,9 @@ def parameter_hist(
     xs = result.optimize_result.get_for_key('x')
 
     # reduce number of displayed results
-    if start_indices is not None:
+    if isinstance(start_indices, int):
+        xs = xs[:start_indices]
+    elif start_indices is not None:
         xs = [xs[ind] for ind in start_indices]
 
     parameter_index = result.problem.x_names.index(parameter_name)
