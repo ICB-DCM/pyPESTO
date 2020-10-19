@@ -16,8 +16,7 @@ def optimization_run_properties_one_plot(
     start_indices: Optional[Union[int, Iterable[int]]] = None,
     colors: Optional[Union[List[float], List[List[float]]]] = None,
     legends: Optional[Union[str, List[str]]] = None,
-    plot_type: str = 'line',
-    output_dir: str = None
+    plot_type: str = 'line'
 ) -> matplotlib.axes.Axes:
     """
     Plot stats for all optimization properties specified  in properties_to_plot
@@ -43,8 +42,6 @@ def optimization_run_properties_one_plot(
         Labels for line plots, one label per result object
     plot_type:
         Specifies plot type. Possible values: 'line' and 'hist'
-    output_dir:
-        Plots are saved if the output dir is provided TODO
 
     Returns
     -------
@@ -94,8 +91,7 @@ def optimization_run_properties_per_multistart(
         start_indices: Optional[Union[int, Iterable[int]]] = None,
         colors: Optional[Union[List[float], List[List[float]]]] = None,
         legends: Optional[Union[str, List[str]]] = None,
-        plot_type: str = 'line',
-        output_dir: str = None
+        plot_type: str = 'line'
 ) -> Dict[str, plt.Subplot]:
     """
     One plot per optimization property in properties_to_plot.
@@ -120,8 +116,6 @@ def optimization_run_properties_per_multistart(
         Labels for line plots, one label per result object
     plot_type:
         Specifies plot type. Possible values: 'line' and 'hist'
-    output_dir:
-        Plots are saved if the output dir is provided TODO
 
     Returns
     -------
@@ -178,7 +172,7 @@ def optimization_run_properties_per_multistart(
 def optimization_run_property_per_multistart(
         results: Union[Result, Sequence[Result]],
         opt_run_property: str,
-        ax: Optional[matplotlib.axes.Axes] = None,
+        axes: Optional[matplotlib.axes.Axes] = None,
         size: Tuple[float, float] = (18.5, 10.5),
         start_indices: Optional[Union[int, Iterable[int]]] = None,
         colors: Optional[Union[List[float], List[List[float]]]] = None,
@@ -198,7 +192,7 @@ def optimization_run_property_per_multistart(
         One of the 'time', 'n_fval', 'n_grad', 'n_hess', 'n_res', 'n_sres'
     results:
         Optimization result obtained by 'optimize.py' or list of those
-    ax:
+    axes:
         Axes object to use
     size:
         Figure size (width, height) in inches. Is only applied when no ax
@@ -213,7 +207,7 @@ def optimization_run_property_per_multistart(
     legends:
         Labels for line plots, one label per result object
     plot_type:
-        Specifies plot type. Possible values: 'line' and 'hist'
+        Specifies plot type. Possible values: 'line', 'hist', 'both'
 
     Returns
     -------
@@ -222,7 +216,7 @@ def optimization_run_property_per_multistart(
     """
 
     supported_properties = {
-        'time': 'Wall-clock time',
+        'time': 'Wall-clock time (seconds)',
         'n_fval': 'Number of function evaluations',
         'n_grad': 'Number of gradient evaluations',
         'n_hess': 'Number of Hessian evaluations',
@@ -239,28 +233,48 @@ def optimization_run_property_per_multistart(
     (results, colors, legends) = process_result_list(results, colors, legends)
 
     # axes
-    if ax is None:
-        ax = plt.subplots()[1]
-        fig = plt.gcf()
+    if axes is None:
+        ncols = 2 if plot_type == 'both' else 1
+        fig, axes = plt.subplots(1, ncols)
         fig.set_size_inches(*size)
+        fig.suptitle(
+            f'{supported_properties[opt_run_property]} per optimizer run')
+    else:
+        axes.set_title(
+            f'{supported_properties[opt_run_property]} per optimizer run')
 
     # loop over results
     for j, result in enumerate(results):
-        ax = stats_lowlevel(result, opt_run_property,
-                            supported_properties[opt_run_property], ax,
-                            start_indices, colors[j], legends[j], plot_type)
+        if plot_type == 'both':
+            axes[0] = stats_lowlevel(result, opt_run_property,
+                                     supported_properties[opt_run_property],
+                                     axes[0], start_indices, colors[j],
+                                     legends[j])
 
-    ax.set_title(f'{supported_properties[opt_run_property]} per optimizer run')
+            axes[1] = stats_lowlevel(result, opt_run_property,
+                                     supported_properties[opt_run_property],
+                                     axes[1], start_indices, colors[j],
+                                     legends[j], plot_type='hist')
+        else:
+            axes = stats_lowlevel(result, opt_run_property,
+                                  supported_properties[opt_run_property], axes,
+                                  start_indices, colors[j], legends[j],
+                                  plot_type)
+
     if sum((legend is not None for legend in legends)) > 0:
-        ax.legend()
+        if plot_type == 'both':
+            for ax in axes:
+                ax.legend()
+        else:
+            axes.legend()
 
-    return ax
+    return axes
 
 
 def stats_lowlevel(result: Result,
                    property_name: str,
                    axis_label: str,
-                   ax: Optional[matplotlib.axes.Axes] = None,
+                   ax: matplotlib.axes.Axes,
                    start_indices: Optional[Union[int, Iterable[int]]] = None,
                    color: Union[str, List[float], List[List[float]]] = 'C0',
                    legend: Optional[Union[str, List[str]]] = None,

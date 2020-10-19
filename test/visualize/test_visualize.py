@@ -495,6 +495,13 @@ def test_optimization_stats():
                                                               'n_grad',
                                                               'n_hess'])
 
+    visualize.optimization_run_property_per_multistart(
+        [result_1, result_2],
+        'time',
+        colors=[[.5, .9, .9, .3], [.9, .7, .8, .5]],
+        legends=['result1', 'result2'],
+        plot_type='both')
+
 
 @close_fig
 def test_optimize_convergence():
