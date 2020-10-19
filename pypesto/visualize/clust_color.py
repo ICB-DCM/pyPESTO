@@ -3,6 +3,9 @@ from typing import List, Tuple, Optional, Union
 import matplotlib.cm as cm
 import numpy as np
 
+# for typehints
+RGBA = List[float, float, float, float]
+
 
 def assign_clusters(vals):
     """
@@ -207,11 +210,10 @@ def assign_colors(vals, colors=None, balance_alpha=True,
                'one single [r, g, b, alpha] color.')
 
 
-def assign_colors_for_list(num_entries: int,
-                           colors: Optional[Union[List[float],
-                                                  List[List[float]],
-                                                  np.ndarray]] = None
-                           ) -> Union[List[List[float]], np.ndarray]:
+def assign_colors_for_list(
+        num_entries: int,
+        colors: Optional[Union[RGBA, List[RGBA], np.ndarray]] = None
+) -> Union[List[List[float]], np.ndarray]:
     """
     Creates a list of colors for a list of items or checks
     a user-provided list of colors and uses this if everything is ok
