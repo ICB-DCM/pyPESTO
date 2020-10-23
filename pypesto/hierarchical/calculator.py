@@ -9,6 +9,7 @@ from ..objective.amici_util import (
 from ..objective.constants import FVAL, GRAD, HESS, RES, SRES, RDATAS
 from .problem import InnerProblem
 from .solver import InnerSolver, AnalyticalInnerSolver
+from .util import compute_nllh
 
 try:
     import amici
@@ -99,7 +100,7 @@ class HierarchicalAmiciCalculator(AmiciCalculator):
 
         # check if any simulation failed
         if any([rdata['status'] < 0.0 for rdata in rdatas]):
-            return get_error_output(amici_model, edatas, rdatas, dim)
+            return get_error_output(amici_model, edatas, rdatas, sensi_order, mode, dim)
 
         sim = [rdata['y'] for rdata in rdatas]
         sigma = [rdata['sigmay'] for rdata in rdatas]
@@ -108,7 +109,7 @@ class HierarchicalAmiciCalculator(AmiciCalculator):
         x_inner_opt = self.inner_solver.solve(
             self.inner_problem, sim, sigma, scaled=True)
 
-        nllh = self.inner_solver.calculate_obj_function(x_inner_opt)
+        # nllh = self.inner_solver.calculate_obj_function(x_inner_opt)
 
         # print(x_inner_opt)
 
@@ -128,9 +129,9 @@ class HierarchicalAmiciCalculator(AmiciCalculator):
         # TODO: x_inner_opt is different for hierarchical and
         #  qualitative approach. For now I commented the following
         #  lines out to make qualitative approach work.
-        # x_dct = copy.deepcopy(x_dct)
-        # for key, val in x_inner_opt.items():
-        #    x_dct[key] = val
+        x_dct = copy.deepcopy(x_dct)
+        for key, val in x_inner_opt.items():
+           x_dct[key] = val
 
         # fill in parameters
         # TODO (#226) use plist to compute only required derivatives
@@ -143,12 +144,14 @@ class HierarchicalAmiciCalculator(AmiciCalculator):
         )
 
         if sensi_order == 0:
+            nllh = compute_nllh(self.inner_problem.data, sim, sigma)
             return {FVAL: nllh,
                     GRAD: snllh,
                     HESS: s2nllh,
                     RES: res,
                     SRES: sres,
-                    RDATAS: rdatas
+                    RDATAS: rdatas,
+                    'inner_parameters': x_inner_opt
                     }
         else:
             amici_solver.setSensitivityOrder(sensi_order)
@@ -164,4 +167,4 @@ class HierarchicalAmiciCalculator(AmiciCalculator):
 
             return calculate_function_values(
                 rdatas, sensi_order, mode, amici_model, amici_solver, edatas,
-                x_ids, parameter_mapping,fim_for_hess)
+                x_ids, parameter_mapping, fim_for_hess)
