@@ -1,5 +1,5 @@
 format_version: 1
-parameter_file: parameters_Boehm_JProteomeRes2014.tsv
+parameter_file: parameters_Boehm_JProteomeRes2014_Hierarchical.tsv
 problems:
 - condition_files:
   - experimentalCondition_Boehm_JProteomeRes2014.tsv
