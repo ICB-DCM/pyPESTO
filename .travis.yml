@@ -31,7 +31,7 @@ addons:
 install:
   - mkdir -p ~/bin/ && ln -s /usr/bin/swig3.0 ~/bin/swig && export PATH=~/bin/:$PATH
   - pip3 install -r ./.travis_pip_reqs.txt
-  - pip3 install .[ipopt,dlib,pyswarm,pymc3]
+  - pip3 install .[ipopt,dlib,pyswarm,pymc3,cmaes]
   - pip3 install https://github.com/petab-dev/petab/archive/develop.zip
   - pip3 install -e
       git+https://github.com/icb-dcm/amici.git@develop#egg=amici\&subdirectory=python/sdist
@@ -60,7 +60,7 @@ script:
       sphinx-build -W -b html -d doc/_build/html doc/ doc/_build/html;
     fi
   - if [ "$TRAVIS_PULL_REQUEST" != "false" ]; then
-      test/run_notebook.sh doc/example/;
+      travis_wait 20 test/run_notebook.sh doc/example/;
     fi
   - if [ "$TRAVIS_PULL_REQUEST" = "false" ]; then
       coverage xml;

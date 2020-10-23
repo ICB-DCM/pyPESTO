@@ -19,6 +19,7 @@ RTOL = 1e-0
 def test_add_sim_grad_to_opt_grad():
     """
     Test gradient mapping/summation works as expected.
+    17 = 1 + 2*5 + 2*3
     """
     par_opt_ids = ['opt_par_1',
                    'opt_par_2',
@@ -30,9 +31,9 @@ def test_add_sim_grad_to_opt_grad():
     }
     par_sim_ids = ['sim_par_1', 'sim_par_2', 'sim_par_3']
 
-    sim_grad = [1.0, 3.0, 5.0]
-    opt_grad = [1.0, 1.0, 1.0]
-    expected = [3.0, 1.0, 17.0]
+    sim_grad = np.asarray([1.0, 3.0, 5.0])
+    opt_grad = np.asarray([1.0, 1.0, 1.0])
+    expected = np.asarray([3.0, 1.0, 17.0])
 
     add_sim_grad_to_opt_grad(
         par_opt_ids,
@@ -42,7 +43,7 @@ def test_add_sim_grad_to_opt_grad():
         opt_grad,
         coefficient=2.0)
 
-    assert expected == opt_grad
+    assert np.allclose(expected, opt_grad)
 
 
 def test_error_leastsquares_with_ssigma():
