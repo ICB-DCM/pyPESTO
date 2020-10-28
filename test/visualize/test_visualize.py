@@ -607,3 +607,13 @@ def test_sampling_1d_marginals():
     visualize.sampling_1d_marginals(result, plot_type='hist')
     visualize.sampling_1d_marginals(
         result, plot_type='kde', bw='silverman')
+
+
+@close_fig
+def test_sampling_parameters_cis():
+    """Test pypesto.visualize.sampling_1d_marginals"""
+    result = create_sampling_result()
+    visualize.sampling_parameters_cis(result)
+    # call with custom arguments
+    visualize.sampling_parameters_cis(
+        result, alpha=[99, 68], step=0.1, size=(10, 10))

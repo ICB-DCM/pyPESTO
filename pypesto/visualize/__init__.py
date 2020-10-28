@@ -29,4 +29,5 @@ from .profile_cis import (profile_cis)
 from .sampling import (sampling_fval_trace,
                        sampling_parameters_trace,
                        sampling_scatter,
-                       sampling_1d_marginals)
+                       sampling_1d_marginals,
+                       sampling_parameters_cis)
