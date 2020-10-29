@@ -243,7 +243,7 @@ def sampling_parameters_cis(
     """
     if alpha is None:
         alpha = [95]
-    
+
     # automatically sort values in decreasing order
     alpha_sorted = sorted(alpha, reverse=True)
     # define colormap
