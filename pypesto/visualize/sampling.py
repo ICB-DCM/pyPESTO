@@ -132,10 +132,10 @@ def sampling_prediction_profiles(result: Result,
     evaluation = evaluate_samples(result, stepsize)
 
     # automatically sort values in decreasing order
-    alpha = sorted(alpha, reverse=True)
+    alpha_sorted = sorted(alpha, reverse=True)
 
     # define colormap
-    evenly_spaced_interval = np.linspace(0, 1, len(alpha) + 1)
+    evenly_spaced_interval = np.linspace(0, 1, len(alpha_sorted) + 1)
     colors = [plt.cm.Blues_r(x) for x in evenly_spaced_interval]
 
     if plot_type == 'states':
@@ -162,7 +162,7 @@ def sampling_prediction_profiles(result: Result,
 
     axes = dict(zip(ynames, ax.flat))
 
-    for i, level in enumerate(alpha):
+    for i, level in enumerate(alpha_sorted):
 
         # Get upper and lower bounds for the confidence level
         lb, ub = calculate_prediction_profiles(values, alpha=level / 100)
@@ -240,9 +240,9 @@ def sampling_parameters_cis(
         The plot axes.
     """
     # automatically sort values in decreasing order
-    alpha = sorted(alpha, reverse=True)
+    alpha_sorted = sorted(alpha, reverse=True)
     # define colormap
-    evenly_spaced_interval = np.linspace(0, 1, len(alpha))
+    evenly_spaced_interval = np.linspace(0, 1, len(alpha_sorted))
     colors = [plt.cm.tab20c_r(x) for x in evenly_spaced_interval]
     # number of sampled parameters
     n_pars = result.sample_result.trace_x.shape[-1]
@@ -256,7 +256,7 @@ def sampling_parameters_cis(
         # initialize height of boxes
         _step = step
         # loop over confidence levels
-        for n, level in enumerate(alpha):
+        for n, level in enumerate(alpha_sorted):
             # extract percentile-based confidence intervals
             lb, ub = calculate_samples_ci(result=result, alpha=level / 100)
 
@@ -270,7 +270,7 @@ def sampling_parameters_cis(
                     label=str(level) + '% CI')
 
             if show_median:
-                if n == len(alpha) - 1:
+                if n == len(alpha_sorted) - 1:
                     burn_in = result.sample_result.burn_in
                     converged = result.sample_result.trace_x[0, burn_in:, npar]
                     _median = np.median(converged)
