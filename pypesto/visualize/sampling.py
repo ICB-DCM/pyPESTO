@@ -7,7 +7,8 @@ import seaborn as sns
 from typing import Sequence, Tuple
 
 from ..result import Result
-from ..sample import McmcPtResult, calculate_samples_ci
+from ..sample import McmcPtResult, calculate_samples_ci, \
+    evaluate_samples, calculate_prediction_profiles
 
 logger = logging.getLogger(__name__)
 
@@ -91,6 +92,120 @@ def sampling_fval_trace(
     return ax
 
 
+def sampling_prediction_profiles(result: Result,
+                                 alpha: Sequence[int] = [95],
+                                 stepsize: int = 1,
+                                 plot_type: str = 'states',
+                                 title: str = None,
+                                 size: Tuple[float, float] = None,
+                                 ax: matplotlib.axes.Axes = None):
+    """Plot MCMC-based prediction confidence intervals for the
+    model states or observables. One or various confidence levels
+    can be depicted.
+
+    Parameters
+    ----------
+    result:
+        The pyPESTO result object with filled sample result.
+    alpha:
+        List of lower tail probabilities, defaults to 95% interval.
+    stepsize:
+        Only one in `stepsize` values is simulated for the intervals
+        generation. Recommended for long MCMC chains. Defaults to 1.
+    plot_type:
+        Visualization mode for prediction intervals {‘states’, ‘observables’}.
+        Defaults to ‘states’.
+    title:
+        Axes title.
+    size: ndarray
+        Figure size in inches.
+    ax:
+        Axes object to use.
+
+    Returns
+    -------
+    axes:
+        The plot axes.
+    """
+
+    # Evaluate prediction uncertainties
+    evaluation = evaluate_samples(result, stepsize)
+
+    # automatically sort values in decreasing order
+    alpha = sorted(alpha, reverse=True)
+
+    # define colormap
+    evenly_spaced_interval = np.linspace(0, 1, len(alpha) + 1)
+    colors = [plt.cm.Blues_r(x) for x in evenly_spaced_interval]
+
+    if plot_type == 'states':
+        values = evaluation[1]
+        yname = 'X'
+
+    elif plot_type == 'observables':
+        values = evaluation[0]
+        yname = 'Y'
+
+    # Number of observables/states
+    nr_variables = values.shape[-1]
+    ynames = [f'dummy_{i}' for i in range(nr_variables)]
+
+    # set axes and figure
+    if ax is None:
+        # compute, how many rows and columns we need for the subplots
+        num_row = int(np.round(np.sqrt(nr_variables)))
+        num_col = int(np.ceil(nr_variables / num_row))
+
+        fig, ax = plt.subplots(num_row, num_col, squeeze=False, figsize=size)
+    else:
+        fig = ax.get_figure()
+
+    axes = dict(zip(ynames, ax.flat))
+
+    for i, level in enumerate(alpha):
+
+        # Get upper and lower bounds for the confidence level
+        lb, ub = calculate_prediction_profiles(values, alpha=level / 100)
+
+        # Get the median
+        _median = np.percentile(values, 50, axis=1)
+
+        n_timepoints = _median.shape[1]
+        n_conditions = _median.shape[0]
+
+        # Loop over observables/states
+        for j, iplot in enumerate(ynames):
+            # Create array for X axis
+            t = np.arange(n_timepoints)
+            # Loop over experimental conditions
+            for k in range(n_conditions):
+                # Plot confidence region
+                axes[iplot].fill_between(t,
+                                         ub[k, :, j],
+                                         lb[k, :, j],
+                                         facecolor=colors[i],
+                                         alpha=0.9,
+                                         label=str(level) + '% CI')
+                # Plot median
+                axes[iplot].plot(t, _median[k, :, j],
+                                 'k-', label='MCMC median')
+                axes[iplot].set_ylabel(yname + '_' + str(j + 1))
+                # Update X axis array
+                t += n_timepoints
+
+    if title:
+        fig.suptitle(title)
+
+    # create legend
+    fig.tight_layout()
+    handles, labels = plt.gca().get_legend_handles_labels()
+    by_label = dict(zip(labels, handles))
+    axes[iplot].legend(by_label.values(), by_label.keys(),
+                       bbox_to_anchor=(1.05, 1))
+
+    return axes
+
+
 def sampling_parameters_cis(
         result: Result,
         alpha: Sequence[int] = [95],
@@ -99,7 +214,8 @@ def sampling_parameters_cis(
         title: str = None,
         size: Tuple[float, float] = None,
         ax: matplotlib.axes.Axes = None):
-    """Plot log-posterior (=function value) over iterations.
+    """Plot MCMC-based parameter confidence intervals for
+    one or various confidence levels.
 
     Parameters
     ----------
@@ -148,6 +264,7 @@ def sampling_parameters_cis(
             x1 = [lb[npar], ub[npar]]
             y1 = [npar + _step, npar + _step]
             y2 = [npar - _step, npar - _step]
+            # Plot boxes
             ax.fill(np.append(x1, x1[::-1]),
                     np.append(y1, y2[::-1]), color=colors[n],
                     label=str(level) + '% CI')

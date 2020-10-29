@@ -23,4 +23,6 @@ from .diagnostics import (
     auto_correlation,
     effective_sample_size)
 from .util import (
-    calculate_samples_ci)
+    calculate_samples_ci,
+    evaluate_samples,
+    calculate_prediction_profiles)
