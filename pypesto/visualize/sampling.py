@@ -93,7 +93,7 @@ def sampling_fval_trace(
 
 
 def sampling_prediction_profiles(result: Result,
-                                 alpha: Sequence[int] = [95],
+                                 alpha: Sequence[int] = None,
                                  stepsize: int = 1,
                                  plot_type: str = 'states',
                                  title: str = None,
@@ -127,6 +127,8 @@ def sampling_prediction_profiles(result: Result,
     axes:
         The plot axes.
     """
+    if alpha is None:
+        alpha = [95]
 
     # Evaluate prediction uncertainties
     evaluation = evaluate_samples(result, stepsize)
@@ -208,7 +210,7 @@ def sampling_prediction_profiles(result: Result,
 
 def sampling_parameters_cis(
         result: Result,
-        alpha: Sequence[int] = [95],
+        alpha: Sequence[int] = None,
         step: float = 0.05,
         show_median: bool = True,
         title: str = None,
@@ -239,6 +241,9 @@ def sampling_parameters_cis(
     ax:
         The plot axes.
     """
+    if alpha is None:
+        alpha = [95]
+    
     # automatically sort values in decreasing order
     alpha_sorted = sorted(alpha, reverse=True)
     # define colormap
