@@ -668,11 +668,11 @@ class NLoptOptimizer(Optimizer):
         super().__init__()
 
         if options is None:
-            options = dict()
+            options = {}
         elif 'maxiter' in options:
             options['maxeval'] = options.pop('maxiter')
         if local_options is None:
-            local_options = dict()
+            local_options = {}
         self.options = options
         self.local_options = local_options
         if nlopt is None:
