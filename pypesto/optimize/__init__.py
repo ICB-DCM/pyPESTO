@@ -14,5 +14,7 @@ from .optimizer import (
     IpoptOptimizer,
     DlibOptimizer,
     PyswarmOptimizer,
-    CmaesOptimizer)
+    CmaesOptimizer,
+    NLoptOptimizer
+)
 from .result import OptimizerResult

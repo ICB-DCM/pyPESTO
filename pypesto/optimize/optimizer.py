@@ -10,6 +10,7 @@ from ..objective import (OptimizerHistory, HistoryOptions, CsvHistory)
 from ..objective.history import HistoryBase
 from ..problem import Problem
 from .result import OptimizerResult
+from ..objective.constants import MODE_FUN, FVAL, GRAD
 
 try:
     import ipopt
@@ -30,6 +31,11 @@ try:
     import cma
 except ImportError:
     cma = None
+
+try:
+    import nlopt
+except ImportError:
+    nlopt = None
 
 EXITFLAG_LOADED_FROM_FILE = -99
 
@@ -625,6 +631,160 @@ class CmaesOptimizer(Optimizer):
 
         optimizer_result = OptimizerResult(x=np.array(result[0]),
                                            fval=result[1])
+
+        return optimizer_result
+
+    def is_least_squares(self):
+        return False
+
+
+class NLoptOptimizer(Optimizer):
+    """
+    Global/Local optimization using NLopt.
+    Package homepage: https://nlopt.readthedocs.io/en/latest/
+    """
+
+    def __init__(self, method=None, local_method=None, options: Dict = None,
+                 local_options: Dict = None):
+        """
+        Parameters
+        ----------
+        method:
+            Local or global Optimizer to use for minimization.
+
+        local_method:
+            Local method to use in combination with the global optimizer (
+            for the MLSL family of solvers) or to solve a subproblem (for the
+            AUGLAG family of solvers)
+
+        options:
+            Optimizer options. scipy option `maxiter` is automatically
+            transformed into `maxeval` and takes precedence.
+
+        local_options:
+            Optimizer options for the local method
+        """
+
+        super().__init__()
+
+        if options is None:
+            options = {}
+        elif 'maxiter' in options:
+            options['maxeval'] = options.pop('maxiter')
+        if local_options is None:
+            local_options = {}
+        self.options = options
+        self.local_options = local_options
+        if nlopt is None:
+            raise ImportError(
+                "This optimizer requires an installation of NLopt. You can "
+                "install NLopt via pip install nlopt.")
+
+        if method is None:
+            method = nlopt.LD_LBFGS
+
+        needs_local_method = [
+            nlopt.G_MLSL, nlopt.G_MLSL_LDS, nlopt.GD_MLSL, nlopt.GD_MLSL_LDS,
+            nlopt.AUGLAG, nlopt.AUGLAG_EQ
+        ]
+
+        if local_method is None and method in needs_local_method:
+            local_method = nlopt.LD_LBFGS
+
+        if local_method is not None and method not in needs_local_method:
+            raise ValueError(f'Method "{method}" does not allow a local '
+                             f'method. Please set `local_method` to None.')
+
+        local_methods = [
+            nlopt.LD_VAR1, nlopt.LD_VAR1, nlopt.LD_TNEWTON_PRECOND_RESTART,
+            nlopt.LD_TNEWTON_PRECOND, nlopt.LD_TNEWTON_RESTART,
+            nlopt.LD_TNEWTON, nlopt.LD_LBFGS,
+            nlopt.LD_SLSQP, nlopt.LD_CCSAQ, nlopt.LD_MMA, nlopt.LN_SBPLX,
+            nlopt.LN_NELDERMEAD, nlopt.LN_PRAXIS, nlopt.LN_NEWUOA,
+            nlopt.LN_NEWUOA_BOUND, nlopt.LN_BOBYQA, nlopt.LN_COBYLA,
+        ]
+        global_methods = [
+            nlopt.GN_ESCH, nlopt.GN_ISRES, nlopt.GN_AGS, nlopt.GD_STOGO,
+            nlopt.GD_STOGO_RAND, nlopt.G_MLSL, nlopt.G_MLSL_LDS, nlopt.GD_MLSL,
+            nlopt.GD_MLSL_LDS, nlopt.GN_CRS2_LM, nlopt.GN_ORIG_DIRECT,
+            nlopt.GN_ORIG_DIRECT_L, nlopt.GN_DIRECT, nlopt.GN_DIRECT_L,
+            nlopt.GN_DIRECT_L_NOSCAL, nlopt.GN_DIRECT_L_RAND,
+            nlopt.GN_DIRECT_L_RAND_NOSCAL,
+        ]
+        hybrid_methods = [
+            nlopt.AUGLAG, nlopt.AUGLAG_EQ
+        ]
+        methods = local_methods + global_methods + hybrid_methods
+
+        if method not in methods:
+            raise ValueError(f'"{method}" is not a valid method. Valid '
+                             f'methods are: {methods}')
+
+        self.method = method
+
+        if local_method is not None and local_method not in local_methods:
+            raise ValueError(f'"{local_method}" is not a valid method. Valid '
+                             f'methods are: {local_methods}')
+
+        self.local_method = local_method
+
+    @fix_decorator
+    @time_decorator
+    @history_decorator
+    def minimize(
+            self,
+            problem: Problem,
+            x0: np.ndarray,
+            id: str,
+            history_options: HistoryOptions = None,
+    ) -> OptimizerResult:
+
+        opt = nlopt.opt(self.method, problem.dim)
+
+        valid_options = ['ftol_abs', 'ftol_rel', 'xtol_abs', 'xtol_rel',
+                         'stopval', 'x_weights', 'maxeval', 'maxtime',
+                         'initial_step']
+
+        def set_options(o, options):
+            for option, value in options.items():
+                if option not in valid_options:
+                    raise ValueError(
+                        f'"{option}" is not a valid option. Valid '
+                        f'options are: {valid_options}')
+                getattr(o, f'set_{option}')(value)
+
+        if self.local_method is not None:
+            local_opt = nlopt.opt(self.local_method, problem.dim)
+            set_options(local_opt, self.local_options)
+            opt.set_local_optimizer(local_opt)
+
+        opt.set_lower_bounds(problem.lb)
+        opt.set_upper_bounds(problem.ub)
+
+        def nlopt_objective(x, grad):
+            if grad.size > 0:
+                sensi_orders = (0, 1)
+            else:
+                sensi_orders = (0,)
+            r = problem.objective(x, sensi_orders, MODE_FUN, True)
+            if grad.size > 0:
+                grad[:] = r[GRAD]  # note that this must be inplace
+            return r[FVAL]
+
+        opt.set_min_objective(nlopt_objective)
+
+        set_options(opt, self.options)
+        try:
+            result = opt.optimize(x0)
+            msg = 'Finished Successfully.'
+        except (nlopt.RoundoffLimited, nlopt.ForcedStop, ValueError,
+                RuntimeError, MemoryError) as e:
+            result = None
+            msg = str(e)
+        optimizer_result = OptimizerResult(x=result,
+                                           fval=opt.last_optimum_value(),
+                                           message=msg,
+                                           exitflag=opt.last_optimize_result())
 
         return optimizer_result
 
