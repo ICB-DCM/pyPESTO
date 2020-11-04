@@ -739,11 +739,6 @@ class NLoptOptimizer(Optimizer):
             history_options: HistoryOptions = None,
     ) -> OptimizerResult:
 
-        if nlopt is None:
-            raise ImportError(
-                "This optimizer requires an installation of NLopt. You can "
-                "install NLopt via pip install nlopt.")
-
         opt = nlopt.opt(self.method, problem.dim)
 
         valid_options = ['ftol_abs', 'ftol_rel', 'xtol_abs', 'xtol_rel',
