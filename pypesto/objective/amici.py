@@ -210,7 +210,7 @@ class AmiciObjective(ObjectiveBase):
             state[key] = self.__dict__[key]
 
         # write amici solver settings to file
-        amici_solver_file = tempfile.mkstemp()[1]
+        fd, amici_solver_file = tempfile.mkstemp()
         try:
             amici.writeSolverSettingsToHDF5(
                 self.amici_solver, amici_solver_file)
@@ -222,7 +222,8 @@ class AmiciObjective(ObjectiveBase):
         # read in byte stream
         amici_solver_settings = open(amici_solver_file, 'rb').read()
         state['amici_solver_settings'] = amici_solver_settings
-        # remove temporary file
+        # close file descriptor and remove temporary file
+        os.close(fd)
         os.remove(amici_solver_file)
 
         return state
@@ -241,12 +242,13 @@ class AmiciObjective(ObjectiveBase):
 
         try:
             # write solver settings to temporary file
-            _file = tempfile.mkstemp()[1]
+            _fd, _file = tempfile.mkstemp()
             with open(_file, 'wb') as f:
                 f.write(state['amici_solver_settings'])
             # read in solver settings
             amici.readSolverSettingsFromHDF5(_file, solver)
-            # remove temporary file
+            # close file descriptor and remove temporary file
+            os.close(_fd)
             os.remove(_file)
         except AttributeError as err:
             if not err.args:
