@@ -30,7 +30,7 @@ optimizers = [
     ('pyswarm', ''),
     ('cmaes', ''),
     *[('nlopt', method) for method in [
-        nlopt.LD_VAR1, nlopt.LD_VAR1, nlopt.LD_TNEWTON_PRECOND_RESTART,
+        nlopt.LD_VAR1, nlopt.LD_VAR2, nlopt.LD_TNEWTON_PRECOND_RESTART,
         nlopt.LD_TNEWTON_PRECOND, nlopt.LD_TNEWTON_RESTART,
         nlopt.LD_TNEWTON, nlopt.LD_LBFGS,
         nlopt.LD_SLSQP, nlopt.LD_CCSAQ, nlopt.LD_MMA, nlopt.LN_SBPLX,
