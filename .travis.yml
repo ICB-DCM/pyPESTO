@@ -39,7 +39,6 @@ install:
       git clone --depth 1
         https://github.com/petab-dev/petab_test_suite tmp/petab_test_suite;
       pip3 install -e tmp/petab_test_suite;
-      # PEtab *PYSB* tests
       wget -O /tmp/z.$$ https://codeload.github.com/FFroehlich/petab_test_suite/zip/pysb && unzip -d tmp/ /tmp/z.$$ && rm /tmp/z.$$;
     fi
   - if [ "$TRAVIS_PULL_REQUEST" != "false" ]; then
