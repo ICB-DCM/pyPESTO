@@ -33,6 +33,7 @@ install:
   - pip3 install -r ./.travis_pip_reqs.txt
   - pip3 install .[ipopt,dlib,pyswarm,pymc3,cmaes,nlopt]
   - pip3 install https://github.com/petab-dev/petab/archive/develop.zip
+  - pip3 install pysb
   - pip3 install -e
       git+https://github.com/icb-dcm/amici.git@develop#egg=amici\&subdirectory=python/sdist
   - if [ "$TRAVIS_PULL_REQUEST" = "false" ]; then
