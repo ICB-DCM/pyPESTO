@@ -29,7 +29,7 @@ addons:
       - zlib1g-dev
 
 env:
-  - BNGPATH=$(pwd)/BioNetGen-2.3.2
+  - BNGPATH=/home/travis/build/ICB-DCM/pyPESTO/BioNetGen-2.3.2
 
 install:
   - mkdir -p ~/bin/ && ln -s /usr/bin/swig3.0 ~/bin/swig && export PATH=~/bin/:$PATH
