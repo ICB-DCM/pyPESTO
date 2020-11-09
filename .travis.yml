@@ -28,6 +28,9 @@ addons:
       - swig3.0
       - zlib1g-dev
 
+env:
+  - BNGPATH=$(pwd)/BioNetGen-2.3.2
+
 install:
   - mkdir -p ~/bin/ && ln -s /usr/bin/swig3.0 ~/bin/swig && export PATH=~/bin/:$PATH
   - pip3 install -r ./.travis_pip_reqs.txt
@@ -41,6 +44,7 @@ install:
         https://github.com/petab-dev/petab_test_suite tmp/petab_test_suite;
       pip3 install -e tmp/petab_test_suite;
       wget -O /tmp/z.$$ https://codeload.github.com/FFroehlich/petab_test_suite/zip/pysb && unzip -d tmp/ /tmp/z.$$ && rm /tmp/z.$$;
+      wget -q -O bionetgen.tar.gz https://bintray.com/jczech/bionetgen/download_file?file_path=BioNetGen-2.3.2-linux.tar.gz && tar -xzf bionetgen.tar.gz
     fi
   - if [ "$TRAVIS_PULL_REQUEST" != "false" ]; then
       pip install -r .rtd_pip_reqs.txt;
