@@ -295,6 +295,28 @@ def test_parameters_lowlevel():
 
 
 @close_fig
+def test_parameters_hist():
+    # create the pypesto problem
+    problem = create_problem()
+
+    # create optimizer
+    optimizer_options = {'maxiter': 200}
+    optimizer = optimize.ScipyOptimizer(
+        method='TNC', options=optimizer_options)
+
+    # run optimization
+    result_1 = optimize.minimize(
+        problem=problem,
+        optimizer=optimizer,
+        n_starts=10,
+        startpoint_method=pypesto.startpoint.uniform,
+    )
+
+    visualize.parameter_hist(result_1, 'x1')
+    visualize.parameter_hist(result_1, 'x1', start_indices=list(range(10)))
+
+
+@close_fig
 def test_profiles():
     # create the necessary results
     result_1 = create_profile_result()
