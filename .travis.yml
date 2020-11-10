@@ -28,17 +28,23 @@ addons:
       - swig3.0
       - zlib1g-dev
 
+env:
+  - BNGPATH=/home/travis/build/ICB-DCM/pyPESTO/BioNetGen-2.3.2
+
 install:
   - mkdir -p ~/bin/ && ln -s /usr/bin/swig3.0 ~/bin/swig && export PATH=~/bin/:$PATH
   - pip3 install -r ./.travis_pip_reqs.txt
-  - pip3 install .[ipopt,dlib,pyswarm,pymc3,cmaes]
+  - pip3 install .[ipopt,dlib,pyswarm,pymc3,cmaes,nlopt]
   - pip3 install https://github.com/petab-dev/petab/archive/develop.zip
+  - pip3 install -e git+https://github.com/pysb/pysb.git@c434f6ab98301beee1bf9d2a5093f0c79da78824#egg=pysb
   - pip3 install -e
       git+https://github.com/icb-dcm/amici.git@develop#egg=amici\&subdirectory=python/sdist
   - if [ "$TRAVIS_PULL_REQUEST" = "false" ]; then
       git clone --depth 1
         https://github.com/petab-dev/petab_test_suite tmp/petab_test_suite;
       pip3 install -e tmp/petab_test_suite;
+      wget -O /tmp/z.$$ https://codeload.github.com/FFroehlich/petab_test_suite/zip/pysb && unzip -d tmp/ /tmp/z.$$ && rm /tmp/z.$$;
+      wget -q -O bionetgen.tar.gz https://bintray.com/jczech/bionetgen/download_file?file_path=BioNetGen-2.3.2-linux.tar.gz && tar -xzf bionetgen.tar.gz;
     fi
   - if [ "$TRAVIS_PULL_REQUEST" != "false" ]; then
       pip install -r .rtd_pip_reqs.txt;
