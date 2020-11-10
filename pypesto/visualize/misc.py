@@ -4,7 +4,7 @@ from .clust_color import assign_colors
 from .clust_color import assign_colors_for_list
 
 from numbers import Number
-from typing import Iterable, Optional, Union
+from typing import Iterable, List, Optional, Union
 
 
 def process_result_list(results, colors=None, legends=None):
@@ -203,7 +203,7 @@ def process_y_limits(ax, y_limits):
 
 
 def process_start_indices(start_indices: Union[int, Iterable[int]],
-                          max_index: int) -> np.ndarray:
+                          max_length: int) -> List[int]:
     """
     helper function that processes the start_indices and
     creates an array of indices if a number was provided and checks that the
@@ -214,17 +214,17 @@ def process_start_indices(start_indices: Union[int, Iterable[int]],
     start_indices:
         list of indices or int specifying an endpoint of the sequence of
         indices
-    max_index:
+    max_length:
         maximum possible index for the start_indices
     """
-    # TODO: use also in waterfall and parameters plots
+
     if isinstance(start_indices, Number):
         start_indices = range(int(start_indices))
 
     start_indices = np.array(start_indices, dtype=int)
 
     # check, whether index set is not too big
-    existing_indices = np.array(range(max_index))
-    start_indices = np.intersect1d(start_indices, existing_indices)
+    start_indices = [start_index for start_index in start_indices if
+                     start_index < max_length]
 
     return start_indices

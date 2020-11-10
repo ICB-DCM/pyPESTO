@@ -35,7 +35,7 @@ def optimization_run_properties_one_plot(
         List of integers specifying the multistarts to be plotted or
         int specifying up to which start index should be plotted
     colors:
-        List of RGBA colors (one color per result in results),
+        List of RGBA colors (one color per property in properties_to_plot),
         or single RGBA color. If not set and one result, clustering is done
         and colors are assigned automatically
     legends:

@@ -10,7 +10,7 @@ from ..result import Result
 from .reference_points import create_references, ReferencePoint
 from .clust_color import assign_colors
 from .clust_color import delete_nan_inf
-from .misc import process_result_list
+from .misc import process_result_list, process_start_indices
 
 
 def parameters(
@@ -276,11 +276,7 @@ def handle_inputs(
 
     # parse indices which should be plotted
     if start_indices is not None:
-        # handle, if only a number was passed
-        if isinstance(start_indices, numbers.Number):
-            start_indices = range(int(start_indices))
-
-        start_indices = np.array(start_indices, dtype=int)
+        start_indices = process_start_indices(start_indices, len(fvals))
 
         # reduce number of displayed results
         xs_out = [xs[ind] for ind in start_indices]
