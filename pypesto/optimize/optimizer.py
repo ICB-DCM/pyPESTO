@@ -840,16 +840,14 @@ class FidesOptimizer(Optimizer):
             history_options: HistoryOptions = None,
     ) -> OptimizerResult:
 
+        args = {'mode': MODE_FUN}
         if self.hessian_update is None:
-            def fun(x):
-                return problem.objective(x, sensi_orders=(0, 1, 2),
-                                         mode=MODE_FUN)
+            args['sensi_orders'] = (0, 1, 2)
         else:
-            def fun(x):
-                return problem.objective(x, sensi_orders=(0, 1), mode=MODE_FUN)
+            args['sensi_orders'] = (0, 1)
 
         opt = fides.Optimizer(
-            fun=fun, ub=problem.ub, lb=problem.lb,
+            fun=problem.objective, funargs=args, ub=problem.ub, lb=problem.lb,
             verbose=self.options.get('verbose', logging.INFO),
             hessian_update=self.hessian_update, options=self.options
         )
