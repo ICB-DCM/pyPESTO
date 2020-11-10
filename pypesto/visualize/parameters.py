@@ -2,7 +2,6 @@ import matplotlib.pyplot as plt
 import matplotlib.axes
 from matplotlib.ticker import MaxNLocator
 import numpy as np
-import numbers
 
 from typing import Iterable, List, Optional, Sequence, Tuple, Union
 

@@ -1,3 +1,4 @@
+from numbers import Real
 from typing import Dict, Iterable, List, Optional, Sequence, Tuple, Union
 
 import matplotlib.axes
@@ -39,7 +40,7 @@ def optimization_run_properties_one_plot(
         or single RGBA color. If not set and one result, clustering is done
         and colors are assigned automatically
     legends:
-        Labels for line plots, one label per result object
+        Labels, one label per optimization property
     plot_type:
         Specifies plot type. Possible values: 'line' and 'hist'
 
@@ -64,11 +65,21 @@ def optimization_run_properties_one_plot(
 
     if colors is None:
         colors = assign_colors_for_list(len(properties_to_plot))
+    elif len(colors) == 4 and isinstance(colors[0], Real):
+        colors = [colors]
+
+    if len(colors) != len(properties_to_plot):
+        raise ValueError('Number of RGBA colors should be the same as number '
+                         'of optimization properties to plot')
 
     if legends is None:
         legends = properties_to_plot
+    elif not isinstance(legends, list):
+        legends = [legends]
 
-    # TODO: check color and legend shape
+    if len(legends) != len(properties_to_plot):
+        raise ValueError('Number of legends should be the same as number of '
+                         'optimization properties to plot')
 
     ax = plt.subplots()[1]
     fig = plt.gcf()
@@ -148,8 +159,6 @@ def optimization_run_properties_per_multistart(
     if properties_to_plot is None:
         properties_to_plot = ['time', 'n_fval', 'n_grad', 'n_hess', 'n_res',
                               'n_sres']
-
-    # TODO: check color and legend shape
 
     num_subplot = len(properties_to_plot)
     # compute, how many rows and columns we need for the subplots
@@ -277,7 +286,7 @@ def stats_lowlevel(result: Result,
                    ax: matplotlib.axes.Axes,
                    start_indices: Optional[Union[int, Iterable[int]]] = None,
                    color: Union[str, List[float], List[List[float]]] = 'C0',
-                   legend: Optional[Union[str, List[str]]] = None,
+                   legend: Optional[str] = None,
                    plot_type: str = 'line'):
     """
     Plot values of the optimization run property specified by property name
@@ -303,7 +312,7 @@ def stats_lowlevel(result: Result,
         If not set, then for the line plot clustering is done and
         colors are assigned automatically
     legend:
-        Labels for line plots, one label per result object
+        Label describing the result
     plot_type:
         Specifies plot type. Possible values: 'line' and 'hist'
 
