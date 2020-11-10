@@ -8,6 +8,7 @@ import test.test_objective as test_objective
 import warnings
 import re
 import nlopt
+import fides
 
 import pypesto
 import pypesto.optimize as optimize
@@ -42,7 +43,9 @@ optimizers = [
         nlopt.GN_ORIG_DIRECT_L, nlopt.GN_DIRECT, nlopt.GN_DIRECT_L,
         nlopt.GN_DIRECT_L_NOSCAL, nlopt.GN_DIRECT_L_RAND,
         nlopt.GN_DIRECT_L_RAND_NOSCAL, nlopt.AUGLAG, nlopt.AUGLAG_EQ
-    ]]
+    ]],
+    *[('fides', hupdate) for hupdate in [None, fides.SR1, fides.BFGS,
+                                         fides.DFP]]
 ]
 
 
@@ -93,6 +96,11 @@ def check_minimize(objective, library, solver, allow_failed_starts=False):
         optimizer = optimize.CmaesOptimizer(options=options)
     elif library == 'nlopt':
         optimizer = optimize.NLoptOptimizer(method=solver, options=options)
+    elif library == 'fides':
+        if solver is not None:
+            solver = solver(2)
+        optimizer = optimize.FidesOptimizer(options=options,
+                                            hessian_update=solver)
 
     lb = 0 * np.ones((1, 2))
     ub = 1 * np.ones((1, 2))
