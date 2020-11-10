@@ -129,7 +129,7 @@ def parameter_hist(
     Parameters
     ----------
     result:
-        Optimization result obtained by 'optimize.py' or list of those
+        Optimization result obtained by 'optimize.py'
     parameter_name:
         The name of the parameter that should be plotted
     bins:
