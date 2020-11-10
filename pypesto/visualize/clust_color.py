@@ -282,17 +282,6 @@ def delete_nan_inf(fvals: np.ndarray, x: np.ndarray = None) -> \
     fvals: np.array
         array of fval without nan or inf
     """
-
-    ind_delete = []
-    for fval_ind, fval_value in enumerate(fvals):
-        if not np.isfinite(fval_value):
-            if len(ind_delete) == 0:
-                ind_delete = [fval_ind]
-            else:
-                ind_delete.append(fval_ind)
-
-    fvals = np.delete(fvals, ind_delete)
     if x is not None:
-        x = np.delete(x, ind_delete, axis=0)
-
-    return x, fvals
+        x = x[np.isfinite(fvals)]
+    return x, fvals[np.isfinite(fvals)]
