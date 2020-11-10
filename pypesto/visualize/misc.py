@@ -1,9 +1,10 @@
 import numpy as np
 import warnings
 from .clust_color import assign_colors
-from .clust_color import assign_colors_for_result_list
+from .clust_color import assign_colors_for_list
 
-from typing import Optional
+from numbers import Number
+from typing import Iterable, List, Optional, Union
 
 
 def process_result_list(results, colors=None, legends=None):
@@ -57,7 +58,7 @@ def process_result_list(results, colors=None, legends=None):
             legends = [legends]
     else:
         # if more than one result is passed, we use one color per result
-        colors = assign_colors_for_result_list(len(results), colors)
+        colors = assign_colors_for_list(len(results), colors)
 
         # check whether list of legends has the correct length
         if legends is None:
@@ -75,8 +76,8 @@ def process_result_list(results, colors=None, legends=None):
 
     # size of legend list and size of results does not match
     if legend_error:
-        raise ('List of results passed and list of labels do not have the'
-               ' same length but should. Stopping.')
+        raise ValueError('List of results passed and list of labels do '
+                         'not have the same length but should. Stopping.')
 
     return results, colors, legends
 
@@ -141,9 +142,6 @@ def process_y_limits(ax, y_limits):
     y_limits: ndarray
        y_limits, minimum and maximum, for current axes object
 
-    min_val: float
-        Smallest value to be plotted
-
     Returns
     -------
 
@@ -202,3 +200,31 @@ def process_y_limits(ax, y_limits):
             ax.set_ylim(new_limits)
 
     return ax
+
+
+def process_start_indices(start_indices: Union[int, Iterable[int]],
+                          max_length: int) -> List[int]:
+    """
+    helper function that processes the start_indices and
+    creates an array of indices if a number was provided and checks that the
+    indices do not exceed the max_index
+
+    Parameters
+    ----------
+    start_indices:
+        list of indices or int specifying an endpoint of the sequence of
+        indices
+    max_length:
+        maximum possible index for the start_indices
+    """
+
+    if isinstance(start_indices, Number):
+        start_indices = range(int(start_indices))
+
+    start_indices = np.array(start_indices, dtype=int)
+
+    # check, whether index set is not too big
+    start_indices = [start_index for start_index in start_indices if
+                     start_index < max_length]
+
+    return start_indices

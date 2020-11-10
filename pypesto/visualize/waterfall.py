@@ -4,12 +4,12 @@ import numpy as np
 from .reference_points import create_references
 from .clust_color import assign_colors
 from .clust_color import delete_nan_inf
-from .misc import process_result_list
+from .misc import process_result_list, process_start_indices
 from .misc import process_y_limits
 from .misc import process_offset_y
 
 from pypesto import Result
-from typing import Iterable, Optional
+from typing import Iterable, Optional, Union
 
 
 def waterfall(results,
@@ -216,7 +216,7 @@ def waterfall_lowlevel(fvals, scale_y='log10', offset_y=0., ax=None,
 def get_fvals(result: Result,
               scale_y: str,
               offset_y: float,
-              start_indices: Optional[Iterable[int]] = None):
+              start_indices: Optional[Union[int, Iterable[int]]] = None):
     """
     Get function values to be plotted later from results.
 
@@ -253,12 +253,7 @@ def get_fvals(result: Result,
     if start_indices is None:
         start_indices = np.array(range(len(fvals)))
     else:
-        # check whether list or maximum value
-        start_indices = np.array(start_indices)
-
-        # check, whether index set is not too big
-        existing_indices = np.array(range(len(fvals)))
-        start_indices = np.intersect1d(start_indices, existing_indices)
+        start_indices = process_start_indices(start_indices, len(fvals))
 
     # reduce to indices for which the user asked
     fvals = fvals[start_indices]
