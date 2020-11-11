@@ -283,5 +283,5 @@ def delete_nan_inf(fvals: np.ndarray, x: np.ndarray = None) -> \
         array of fval without nan or inf
     """
     if x is not None:
-        x = x[np.isfinite(fvals)]
+        x = x[np.isfinite(fvals),:]
     return x, fvals[np.isfinite(fvals)]
