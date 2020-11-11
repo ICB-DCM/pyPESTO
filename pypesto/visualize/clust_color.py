@@ -245,7 +245,7 @@ def assign_colors_for_list(
                                highlight_global=False)
 
         # dummy cluster had twice as many entries as really there. Reduce.
-        real_indices = list(range(int(colors.shape[0] / 2)))
+        real_indices = np.arange(int(colors.shape[0] / 2))
         return colors[real_indices]
 
     # if the user specified color lies does not match the number of results
@@ -258,8 +258,9 @@ def assign_colors_for_list(
     return colors
 
 
-def delete_nan_inf(fvals: np.ndarray, x: np.ndarray = None) -> \
-        Tuple[np.ndarray, np.ndarray]:
+def delete_nan_inf(fvals: np.ndarray,
+                   x: Optional[np.ndarray] = None) -> Tuple[np.ndarray,
+                                                            np.ndarray]:
     """
     Delete nan and inf values in fvals. If parameters 'x' are passend, also
     the corresponding entries are deleted.
@@ -276,23 +277,13 @@ def delete_nan_inf(fvals: np.ndarray, x: np.ndarray = None) -> \
     Returns
     -------
 
-    x: np.array
+    x:
         array of parameters without nan or inf
 
-    fvals: np.array
+    fvals:
         array of fval without nan or inf
     """
-
-    ind_delete = []
-    for fval_ind, fval_value in enumerate(fvals):
-        if not np.isfinite(fval_value):
-            if len(ind_delete) == 0:
-                ind_delete = [fval_ind]
-            else:
-                ind_delete.append(fval_ind)
-
-    fvals = np.delete(fvals, ind_delete)
+    fvals = np.asarray(fvals)
     if x is not None:
-        x = np.delete(x, ind_delete, axis=0)
-
-    return x, fvals
+        x = np.vstack(np.take(x, np.where(np.isfinite(fvals))[0], axis=0))
+    return x, fvals[np.isfinite(fvals)]
