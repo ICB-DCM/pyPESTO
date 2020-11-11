@@ -285,7 +285,5 @@ def delete_nan_inf(fvals: np.ndarray,
     """
     fvals = np.asarray(fvals)
     if x is not None:
-        x = np.take(x, np.where(np.isfinite(fvals))[0], axis=0)
-        if x.dtype == np.object:
-            x = np.vstack(x)
+        x = np.vstack(np.take(x, np.where(np.isfinite(fvals))[0], axis=0))
     return x, fvals[np.isfinite(fvals)]
