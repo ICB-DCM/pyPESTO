@@ -4,7 +4,7 @@ import re
 import abc
 import time
 import logging
-from typing import Dict
+from typing import Dict, Optional
 
 from ..objective import (OptimizerHistory, HistoryOptions, CsvHistory)
 from ..objective.history import HistoryBase
@@ -36,6 +36,11 @@ try:
     import nlopt
 except ImportError:
     nlopt = None
+
+try:
+    import fides
+except ImportError:
+    fides = None
 
 EXITFLAG_LOADED_FROM_FILE = -99
 
@@ -785,6 +790,83 @@ class NLoptOptimizer(Optimizer):
                                            fval=opt.last_optimum_value(),
                                            message=msg,
                                            exitflag=opt.last_optimize_result())
+
+        return optimizer_result
+
+    def is_least_squares(self):
+        return False
+
+
+class FidesOptimizer(Optimizer):
+    """
+    Global/Local optimization using the trust region optimizer fides.
+    Package Homepage: https://fides-optimizer.readthedocs.io/en/latest
+    """
+
+    def __init__(self,
+                 hessian_update: Optional[fides.HessianApproximation] =
+                 None,
+                 options: Optional[Dict] = None):
+        """
+        Parameters
+        ----------
+        options:
+            Optimizer options.
+
+        hessian_update:
+            Hessian update strategy. If this is None, Hessian (approximation)
+            computed by problem.objective will be used (default).
+        """
+
+        super().__init__()
+
+        if hessian_update is not None and \
+                not isinstance(hessian_update, fides.HessianApproximation):
+            raise ValueError('Incompatible type for hessian update, '
+                             'must be fides.HessianApproximation, '
+                             f'was {type(hessian_update)}.')
+        if options is None:
+            options = {}
+
+        self.options = options
+        self.hessian_update = hessian_update
+
+    @fix_decorator
+    @time_decorator
+    @history_decorator
+    def minimize(
+            self,
+            problem: Problem,
+            x0: np.ndarray,
+            id: str,
+            history_options: HistoryOptions = None,
+    ) -> OptimizerResult:
+
+        args = {'mode': MODE_FUN}
+        if self.hessian_update is None:
+            args['sensi_orders'] = (0, 1, 2)
+        else:
+            args['sensi_orders'] = (0, 1)
+
+        opt = fides.Optimizer(
+            fun=problem.objective, funargs=args, ub=problem.ub, lb=problem.lb,
+            verbose=self.options.get('verbose', logging.INFO),
+            hessian_update=self.hessian_update, options=self.options
+        )
+
+        try:
+            opt.minimize(x0)
+            if opt.converged:
+                msg = 'Finished Successfully.'
+            else:
+                msg = 'Failed to converge'
+        except RuntimeError as err:
+            msg = str(err)
+
+        optimizer_result = OptimizerResult(
+            x=opt.x, fval=opt.fval, grad=opt.grad, hess=opt.hess, message=msg,
+            exitflag=int(opt.converged)
+        )
 
         return optimizer_result
 
