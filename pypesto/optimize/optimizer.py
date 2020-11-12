@@ -834,7 +834,6 @@ class FidesOptimizer(Optimizer):
         self.options = options
         self.hessian_update = hessian_update
 
-
     @fix_decorator
     @time_decorator
     @history_decorator
