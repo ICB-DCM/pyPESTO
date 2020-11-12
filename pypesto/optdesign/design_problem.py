@@ -221,8 +221,8 @@ class DesignProblem(dict):
         okay_criteria = ['det', 'det_modified', 'eigmin', 'eigmin_modified',
                          'trace', 'trace_modified', 'ratio',
                          'ratio_modified',
-                         'rank', 'rank_modified', 'number_of_good_eigvals',
-                         'number_of_good_eigvals_modified', 'trace_log',
+                         'rank', 'rank_modified', 'number_good_eigvals',
+                         'number_good_eigvals_modified', 'trace_log',
                          'trace_log_modified']
         if not set(self.criteria_list).issubset(set(okay_criteria)):
             raise KeyError("one of the specified criteria is not supported")
