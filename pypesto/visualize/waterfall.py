@@ -9,19 +9,19 @@ from .misc import (
 )
 
 from pypesto import Result
-from typing import Iterable, Optional, Union, Sequence, Tuple, List
+from typing import Optional, Union, Sequence, Tuple, List
 
 
 def waterfall(results: Union[Result, Sequence[Result]],
-              ax: Optional[plt.Axes]=None,
-              size: Optional[Tuple[float]]=(18.5, 10.5),
+              ax: Optional[plt.Axes] = None,
+              size: Optional[Tuple[float]] = (18.5, 10.5),
               y_limits: Optional[Tuple[float]] = None,
               scale_y: Optional[str] = 'log10',
               offset_y: Optional[float] = None,
-              start_indices: Optional[Union[Sequence[int],int]] = None,
+              start_indices: Optional[Union[Sequence[int], int]] = None,
               reference: Optional[Sequence[ReferencePoint]] = None,
-              colors: Optional[Union[RGBA,Sequence[RGBA]]] = None,
-              legends: Optional[Union[Sequence[str],str]] = None):
+              colors: Optional[Union[RGBA, Sequence[RGBA]]] = None,
+              legends: Optional[Union[Sequence[str], str]] = None):
     """
     Plot waterfall plot.
 
@@ -230,6 +230,11 @@ def process_offset_for_list(
 
     scale_y:
         May be logarithmic or linear ('log10' or 'lin')
+
+    start_indices:
+        Integers specifying the multistart to be plotted or int specifying
+        up to which start index should be plotted
+
 
     references:
         Reference points that will be plotted along with the results
