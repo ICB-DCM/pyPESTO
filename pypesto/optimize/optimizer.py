@@ -852,11 +852,18 @@ class FidesOptimizer(Optimizer):
             hessian_update=self.hessian_update, options=self.options
         )
 
-        opt.minimize(x0)
-        msg = 'Finished Successfully.'
+        try:
+            opt.minimize(x0)
+            if opt.converged:
+                msg = 'Finished Successfully.'
+            else:
+                msg = 'Failed to converge'
+        except RuntimeError as err:
+            msg = str(err)
 
         optimizer_result = OptimizerResult(
             x=opt.x, fval=opt.fval, grad=opt.grad, hess=opt.hess, message=msg,
+            exitflag=int(opt.converged)
         )
 
         return optimizer_result
