@@ -800,6 +800,7 @@ class NLoptOptimizer(Optimizer):
 class FidesOptimizer(Optimizer):
     """
     Global/Local optimization using the trust region optimizer fides.
+    Package Homepage: https://fides-optimizer.readthedocs.io/en/latest
     """
 
     def __init__(self,
@@ -813,7 +814,8 @@ class FidesOptimizer(Optimizer):
             Optimizer options.
 
         hessian_update:
-            Hessian update strategy
+            Hessian update strategy. If this is None, Hessian (approximation)
+            computed by problem.objective will be used (default).
         """
 
         super().__init__()
