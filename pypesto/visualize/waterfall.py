@@ -305,6 +305,8 @@ def process_offset_for_list(
         np.array(result.optimize_result.get_for_key('fval'))
         for result in results
     ])
+    # if none of the fvals are finite, set default value to zero as
+    # np.nanmin will error for an empty array
     if np.isfinite(fvals).any():
         min_val = np.nanmin(fvals[np.isfinite(fvals)])
     else:
