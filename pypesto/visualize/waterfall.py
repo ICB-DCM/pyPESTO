@@ -1,66 +1,65 @@
 import matplotlib.pyplot as plt
 from matplotlib.ticker import MaxNLocator
 import numpy as np
-from .reference_points import create_references
-from .clust_color import assign_colors
-from .clust_color import delete_nan_inf
-from .misc import process_result_list, process_start_indices
-from .misc import process_y_limits
-from .misc import process_offset_y
+from .reference_points import create_references, ReferencePoint
+from .clust_color import assign_colors, delete_nan_inf, RGBA
+from .misc import (
+    process_result_list, process_start_indices, process_y_limits,
+    process_offset_y
+)
 
 from pypesto import Result
-from typing import Iterable, Optional, Union
+from typing import Iterable, Optional, Union, Sequence, Tuple
 
 
-def waterfall(results,
-              ax=None,
-              size=(18.5, 10.5),
-              y_limits=None,
-              scale_y='log10',
-              offset_y=None,
-              start_indices=None,
-              reference=None,
-              colors=None,
-              legends=None):
+def waterfall(results: Union[Result, Sequence[Result]],
+              ax: Optional[plt.Axes]=None,
+              size: Optional[Tuple[float]]=(18.5, 10.5),
+              y_limits: Optional[Tuple[float]] = None,
+              scale_y: Optional[str] = 'log10',
+              offset_y: Optional[float] = None,
+              start_indices: Optional[Union[Sequence[int],int]] = None,
+              reference: Optional[Sequence[ReferencePoint]] = None,
+              colors: Optional[Union[RGBA,Sequence[RGBA]]] = None,
+              legends: Optional[Union[Sequence[str],str]] = None):
     """
     Plot waterfall plot.
 
     Parameters
     ----------
 
-    results: pypesto.Result or list
+    results:
         Optimization result obtained by 'optimize.py' or list of those
 
     ax: matplotlib.Axes, optional
         Axes object to use.
 
-    size: tuple, optional
+    size:
         Figure size (width, height) in inches. Is only applied when no ax
         object is specified
 
     y_limits: float or ndarray, optional
         maximum value to be plotted on the y-axis, or y-limits
 
-    scale_y: str, optional
+    scale_y:
         May be logarithmic or linear ('log10' or 'lin')
 
     offset_y:
         offset for the y-axis, if it is supposed to be in log10-scale
 
-    start_indices: list or int
-        list of integers specifying the multistart to be plotted or
-        int specifying up to which start index should be plotted
+    start_indices:
+        Integers specifying the multistart to be plotted or int specifying
+        up to which start index should be plotted
 
-    reference: list, optional
-        List of reference points for optimization results, containing et
-        least a function value fval
+    reference:
+        Reference points for optimization results, containing at least a
+        function value fval
 
-    colors: list, or RGBA, optional
-        list of colors, or single color
-        color or list of colors for plotting. If not set, clustering is done
+    colors:
+        Colors or single color  for plotting. If not set, clustering is done
         and colors are assigned automatically
 
-    legends: list or str
+    legends:
         Labels for line plots, one label per result object
 
     Returns
@@ -75,9 +74,10 @@ def waterfall(results,
     # parse input
     (results, colors, legends) = process_result_list(results, colors, legends)
 
+    refs = create_references(references=reference)
+
     # precompute y-offset, if needed and if a list of results was passed
-    if offset_y is None and len(results) > 1 and scale_y == 'log10':
-        offset_y = process_offset_for_list(results, scale_y)
+    offset_y = process_offset_for_list(results, scale_y, refs)
 
     # plotting routine needs the maximum number of multistarts
     max_len_fvals = np.array([0])
@@ -94,10 +94,10 @@ def waterfall(results,
                                 colors=colors[j], legend_text=legends[j])
 
     # parse and apply plotting options
-    ref = create_references(references=reference)
+
 
     # apply changes specified be the user to the axis object
-    ax = handle_options(ax, max_len_fvals, ref, y_limits, offset_y)
+    ax = handle_options(ax, max_len_fvals, refs, y_limits, offset_y)
 
     return ax
 
@@ -273,8 +273,11 @@ def get_fvals(result: Result,
     return fvals, offset_y
 
 
-def process_offset_for_list(results: Iterable[Result],
-                            scale_y: str) -> float:
+def process_offset_for_list(
+        results: Sequence[Result],
+        scale_y: Optional[str],
+        references: Optional[Sequence[ReferencePoint]] = None
+) -> float:
     """
     If we have a list of results, all should use the same offset_y,
     which is computed by this function.
@@ -282,11 +285,14 @@ def process_offset_for_list(results: Iterable[Result],
     Parameters
     ----------
 
-    results: list of pypesto.Result
+    results:
         list of Optimization results obtained by 'optimize.py'
 
-    scale_y: str, optional
+    scale_y:
         May be logarithmic or linear ('log10' or 'lin')
+
+    references:
+        Reference points that will be plotted along with the results
 
     Returns
     -------
@@ -299,7 +305,13 @@ def process_offset_for_list(results: Iterable[Result],
         np.array(result.optimize_result.get_for_key('fval'))
         for result in results
     ])
-    min_val = np.nanmin(fvals[np.isfinite(fvals)])
+    if np.isfinite(fvals).any():
+        min_val = np.nanmin(fvals[np.isfinite(fvals)])
+    else:
+        min_val = 0.0
+    if references is not None:
+        min_val = min(min_val, np.nanmin([r['fval'] for r in references]))
+
     offset_y = process_offset_y(None, scale_y, float(min_val))
 
     return offset_y
