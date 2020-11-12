@@ -262,7 +262,7 @@ def delete_nan_inf(fvals: np.ndarray,
                    x: Optional[np.ndarray] = None,
                    xdim: Optional[int] = 1) -> Tuple[np.ndarray, np.ndarray]:
     """
-    Delete nan and inf values in fvals. If parameters 'x' are passend, also
+    Delete nan and inf values in fvals. If parameters 'x' are passed, also
     the corresponding entries are deleted.
 
     Parameters
@@ -288,6 +288,13 @@ def delete_nan_inf(fvals: np.ndarray,
     """
     fvals = np.asarray(fvals)
     if x is not None:
+        # if we start out with a list of x, the x corresponding to
+        # to finite fvals may be None, so we cannot stack the x before taking
+        # subindexing
+        # If none of the fvals are finite, np.vstack will fail and np.take
+        # will not yield the correct dimension, so we try to construct an
+        # empty np.ndarray with the correct dimension (other functions rely
+        # on x.shape[1] to be of correct dimension)
         if np.isfinite(fvals).any():
             x = np.vstack(np.take(x, np.where(np.isfinite(fvals))[0], axis=0))
         else:
