@@ -9,7 +9,7 @@ from .misc import (
 )
 
 from pypesto import Result
-from typing import Iterable, Optional, Union, Sequence, Tuple
+from typing import Iterable, Optional, Union, Sequence, Tuple, List
 
 
 def waterfall(results: Union[Result, Sequence[Result]],
@@ -68,8 +68,6 @@ def waterfall(results: Union[Result, Sequence[Result]],
     ax: matplotlib.Axes
         The plot axes.
     """
-    if isinstance(start_indices, int):
-        start_indices = list(range(start_indices))
 
     # parse input
     (results, colors, legends) = process_result_list(results, colors, legends)
@@ -77,24 +75,21 @@ def waterfall(results: Union[Result, Sequence[Result]],
     refs = create_references(references=reference)
 
     # precompute y-offset, if needed and if a list of results was passed
-    offset_y = process_offset_for_list(results, scale_y, refs)
+    fvals_all, offset_y = process_offset_for_list(offset_y, results, scale_y,
+                                                  start_indices, refs)
 
     # plotting routine needs the maximum number of multistarts
     max_len_fvals = np.array([0])
 
     # loop over results
-    for j, result in enumerate(results):
+    for j, fvals in enumerate(fvals_all):
         # extract specific cost function values from result
-        (fvals, offset_y) = get_fvals(result, scale_y, offset_y, start_indices)
         max_len_fvals = np.max([max_len_fvals, len(fvals)])
 
         # call lowlevel plot routine
         ax = waterfall_lowlevel(fvals=fvals, scale_y=scale_y,
                                 offset_y=offset_y, ax=ax, size=size,
                                 colors=colors[j], legend_text=legends[j])
-
-    # parse and apply plotting options
-
 
     # apply changes specified be the user to the axis object
     ax = handle_options(ax, max_len_fvals, refs, y_limits, offset_y)
@@ -213,80 +208,25 @@ def waterfall_lowlevel(fvals, scale_y='log10', offset_y=0., ax=None,
     return ax
 
 
-def get_fvals(result: Result,
-              scale_y: str,
-              offset_y: float,
-              start_indices: Optional[Union[int, Iterable[int]]] = None):
-    """
-    Get function values to be plotted later from results.
-
-    Parameters
-    ----------
-
-    result: pypesto.Result
-        Optimization result obtained by 'optimize.py'
-
-    scale_y: str, optional
-        May be logarithmic or linear ('log10' or 'lin')
-
-    offset_y:
-        offset for the y-axis, if it is supposed to be in log10-scale
-
-    start_indices:
-        list of integers specifying the multistart to be plotted or
-        int specifying up to which start index should be plotted
-
-    Returns
-    -------
-
-    fvals: ndarray
-        function values
-
-    offset_y:
-        offset for the y-axis, if this is supposed to be in log10-scale
-    """
-
-    # extract cost function values from result
-    fvals = np.array(result.optimize_result.get_for_key('fval'))
-
-    # get list of indices
-    if start_indices is None:
-        start_indices = np.array(range(len(fvals)))
-    else:
-        start_indices = process_start_indices(start_indices, len(fvals))
-
-    # reduce to indices for which the user asked
-    fvals = fvals[start_indices]
-
-    # get the minimal value which should be plotted,
-    # avoid the value being -inf or nan
-    min_val = np.nanmin(fvals[fvals != -np.inf])
-
-    # check, whether offset can be used with this data
-    offset_y = process_offset_y(offset_y, scale_y, float(min_val))
-
-    # apply offset
-    if offset_y != 0.:
-        fvals += offset_y * np.ones(fvals.shape)
-
-    # get only the indices which the user asked for
-    return fvals, offset_y
-
-
 def process_offset_for_list(
+        offset_y: float,
         results: Sequence[Result],
         scale_y: Optional[str],
-        references: Optional[Sequence[ReferencePoint]] = None
-) -> float:
+        start_indices: Optional[Sequence[int]] = None,
+        references: Optional[Sequence[ReferencePoint]] = None,
+) -> Tuple[List[np.ndarray], float]:
     """
     If we have a list of results, all should use the same offset_y,
-    which is computed by this function.
+    which is computed by this function and added to the fvals
 
     Parameters
     ----------
 
+    offset_y:
+        User provided offset_y
+
     results:
-        list of Optimization results obtained by 'optimize.py'
+        Optimization results obtained by 'optimize.py'
 
     scale_y:
         May be logarithmic or linear ('log10' or 'lin')
@@ -297,26 +237,38 @@ def process_offset_for_list(
     Returns
     -------
 
+    fvals:
+        List of arrays of function values for each result
+
     offset_y:
         offset for the y-axis
     """
+    min_val = 0.0
+    fvals_all = []
+    for result in results:
+        fvals = np.asarray([
+            np.array(result.optimize_result.get_for_key('fval'))
+        ])
+        if start_indices is None:
+            start_indices = np.array(range(len(fvals)))
+        else:
+            start_indices = process_start_indices(start_indices, len(fvals))
+        fvals = fvals[start_indices]
+        # if none of the fvals are finite, set default value to zero as
+        # np.nanmin will error for an empty array
+        if np.isfinite(fvals).any():
+            min_val = min(min_val, np.nanmin(fvals[np.isfinite(fvals)]))
 
-    fvals = np.concatenate([
-        np.array(result.optimize_result.get_for_key('fval'))
-        for result in results
-    ])
-    # if none of the fvals are finite, set default value to zero as
-    # np.nanmin will error for an empty array
-    if np.isfinite(fvals).any():
-        min_val = np.nanmin(fvals[np.isfinite(fvals)])
-    else:
-        min_val = 0.0
-    if references is not None:
+        fvals_all.append(fvals)
+
+    # if there are references, also account for those
+    if references:
         min_val = min(min_val, np.nanmin([r['fval'] for r in references]))
 
-    offset_y = process_offset_y(None, scale_y, float(min_val))
+    offset_y = process_offset_y(offset_y, scale_y, float(min_val))
 
-    return offset_y
+    # return offsetted values
+    return [fvals + offset_y for fvals in fvals_all], offset_y
 
 
 def handle_options(ax, max_len_fvals, ref, y_limits, offset_y):

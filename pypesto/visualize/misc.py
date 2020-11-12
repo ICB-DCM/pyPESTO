@@ -116,17 +116,14 @@ def process_offset_y(offset_y: Optional[float],
             warnings.warn("Offset specified by user is insufficient. "
                           "Ignoring specified offset and using " +
                           str(np.abs(min_val) + 1.) + " instead.")
-            offset_y = 1. - min_val
+
     else:
         # check whether scaling is lin or log10
         if scale_y == 'lin':
             # linear scaling doesn't need any offset
-            offset_y = 0.
-        else:
-            # log10 scaling does need offset
-            offset_y = 1. - min_val
+            return 0.
 
-    return offset_y
+    return 1. - min_val
 
 
 def process_y_limits(ax, y_limits):
