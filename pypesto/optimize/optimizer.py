@@ -803,10 +803,12 @@ class FidesOptimizer(Optimizer):
     Package Homepage: https://fides-optimizer.readthedocs.io/en/latest
     """
 
-    def __init__(self,
-                 hessian_update: Optional[fides.HessianApproximation] =
-                 None,
-                 options: Optional[Dict] = None):
+    def __init__(
+            self,
+            hessian_update: Optional[fides.HessianApproximation] = None,
+            options: Optional[Dict] = None,
+            verbose: Optional[int] = logging.INFO
+    ):
         """
         Parameters
         ----------
@@ -828,8 +830,10 @@ class FidesOptimizer(Optimizer):
         if options is None:
             options = {}
 
+        self.verbose = verbose
         self.options = options
         self.hessian_update = hessian_update
+
 
     @fix_decorator
     @time_decorator
@@ -850,7 +854,7 @@ class FidesOptimizer(Optimizer):
 
         opt = fides.Optimizer(
             fun=problem.objective, funargs=args, ub=problem.ub, lb=problem.lb,
-            verbose=self.options.get('verbose', logging.INFO),
+            verbose=self.verbose,
             hessian_update=self.hessian_update, options=self.options
         )
 

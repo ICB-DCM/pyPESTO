@@ -259,8 +259,8 @@ def assign_colors_for_list(
 
 
 def delete_nan_inf(fvals: np.ndarray,
-                   x: Optional[np.ndarray] = None) -> Tuple[np.ndarray,
-                                                            np.ndarray]:
+                   x: Optional[np.ndarray] = None,
+                   xdim: Optional[int] = 1) -> Tuple[np.ndarray, np.ndarray]:
     """
     Delete nan and inf values in fvals. If parameters 'x' are passend, also
     the corresponding entries are deleted.
@@ -274,6 +274,9 @@ def delete_nan_inf(fvals: np.ndarray,
     fvals:
         array of fval
 
+    xdim:
+        dimension of x, in case x dimension cannot be inferred
+
     Returns
     -------
 
@@ -285,5 +288,11 @@ def delete_nan_inf(fvals: np.ndarray,
     """
     fvals = np.asarray(fvals)
     if x is not None:
-        x = np.vstack(np.take(x, np.where(np.isfinite(fvals))[0], axis=0))
+        if np.isfinite(fvals).any():
+            x = np.vstack(np.take(x, np.where(np.isfinite(fvals))[0], axis=0))
+        else:
+            x = np.empty((0,
+                          x.shape[1] if x.ndim == 2
+                          else x[0].shape[0] if x[0] is not None
+                          else xdim))
     return x, fvals[np.isfinite(fvals)]

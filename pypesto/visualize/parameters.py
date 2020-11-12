@@ -239,7 +239,7 @@ def parameters_lowlevel(
     xs = np.array(xs)
     fvals = np.array(fvals)
     # remove nan or inf values in fvals and xs
-    xs, fvals = delete_nan_inf(fvals, xs)
+    xs, fvals = delete_nan_inf(fvals, xs, len(ub) if ub is not None else 1)
 
     if size is None:
         # 0.5 inch height per parameter
