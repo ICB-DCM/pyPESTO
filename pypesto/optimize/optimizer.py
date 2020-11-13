@@ -867,8 +867,8 @@ class FidesOptimizer(Optimizer):
             msg = str(err)
 
         optimizer_result = OptimizerResult(
-            x=opt.x, fval=opt.fval, grad=opt.grad, hess=opt.hess, message=msg,
-            exitflag=int(opt.converged)
+            x=opt.x_min, fval=opt.fval_min, grad=opt.grad_min, hess=opt.hess,
+            message=msg, exitflag=opt.exitflag
         )
 
         return optimizer_result
