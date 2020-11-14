@@ -46,7 +46,7 @@ optimizers = [
         nlopt.GN_DIRECT_L_RAND_NOSCAL, nlopt.AUGLAG, nlopt.AUGLAG_EQ
     ]],
     *[('fides', solver) for solver in itt.product(
-        [None, fides.SR1, fides.BFGS, fides.DFP],
+        [None, fides.SR1(), fides.BFGS(), fides.DFP()],
         [fides.SubSpaceDim.FULL, fides.SubSpaceDim.TWO]
     )]
 ]
@@ -101,12 +101,8 @@ def check_minimize(objective, library, solver, allow_failed_starts=False):
         optimizer = optimize.NLoptOptimizer(method=solver, options=options)
     elif library == 'fides':
         options[fides.Options.SUBSPACE_DIM] = solver[1]
-        hupdate = solver[0]
-        if hupdate is not None:
-            hupdate = hupdate(2)
-
         optimizer = optimize.FidesOptimizer(options=options,
-                                            hessian_update=hupdate)
+                                            hessian_update=solver[0])
 
     lb = 0 * np.ones((1, 2))
     ub = 1 * np.ones((1, 2))
