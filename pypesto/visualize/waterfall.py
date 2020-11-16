@@ -84,7 +84,7 @@ def waterfall(results: Union[Result, Sequence[Result]],
     # loop over results
     for j, fvals in enumerate(fvals_all):
         # extract specific cost function values from result
-        max_len_fvals = np.max([max_len_fvals, len(fvals)])
+        max_len_fvals = np.max([max_len_fvals, *fvals.shape])
 
         # call lowlevel plot routine
         ax = waterfall_lowlevel(fvals=fvals, scale_y=scale_y,
