@@ -86,7 +86,8 @@ def rosenbrock_problem():
 
 def create_petab_problem():
     current_path = os.path.dirname(os.path.realpath(__file__))
-    dir_path = os.path.abspath(os.path.join(current_path, '..', 'doc', 'example'))
+    dir_path = os.path.abspath(os.path.join(current_path,
+                                            '..', 'doc', 'example'))
     # import to petab
     petab_problem = petab.Problem.from_yaml(
         dir_path+"/conversion_reaction/conversion_reaction.yaml")
