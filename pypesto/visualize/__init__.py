@@ -18,9 +18,13 @@ from .misc import (process_result_list,
 from .waterfall import (waterfall,
                         waterfall_lowlevel)
 from .parameters import (parameters,
-                         parameters_lowlevel)
+                         parameters_lowlevel,
+                         parameter_hist)
 from .optimizer_history import (optimizer_history,
                                 optimizer_history_lowlevel)
+from .optimization_stats import (optimization_run_properties_per_multistart,
+                                 optimization_run_property_per_multistart,
+                                 optimization_run_properties_one_plot)
 from .optimizer_convergence import optimizer_convergence
 from .profiles import (profiles,
                        profiles_lowlevel,
