@@ -9,9 +9,9 @@ from .diagnostics import geweke_test
 logger = logging.getLogger(__name__)
 
 
-def calculate_samples_ci(result: Result,
-                         alpha: float = 0.95
-                         ) -> Tuple[np.ndarray, np.ndarray]:
+def calculate_ci(result: Result,
+                 alpha: float = 0.95
+                 ) -> Tuple[np.ndarray, np.ndarray]:
     """
     Calculate parameter confidence intervals based on MCMC samples.
 

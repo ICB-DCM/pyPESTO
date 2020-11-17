@@ -7,7 +7,7 @@ import seaborn as sns
 from typing import Sequence, Tuple
 
 from ..result import Result
-from ..sample import McmcPtResult, calculate_samples_ci, \
+from ..sample import McmcPtResult, calculate_ci, \
     evaluate_samples, calculate_prediction_profiles
 
 logger = logging.getLogger(__name__)
@@ -263,7 +263,7 @@ def sampling_parameters_cis(
         # loop over confidence levels
         for n, level in enumerate(alpha_sorted):
             # extract percentile-based confidence intervals
-            lb, ub = calculate_samples_ci(result=result, alpha=level / 100)
+            lb, ub = calculate_ci(result=result, alpha=level / 100)
 
             # assemble boxes for projectile plot
             x1 = [lb[npar], ub[npar]]
