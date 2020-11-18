@@ -805,7 +805,7 @@ class FidesOptimizer(Optimizer):
 
     def __init__(
             self,
-            hessian_update: Optional[fides.HessianApproximation] = None,
+            hessian_update: Optional['fides.HessianApproximation'] = None,
             options: Optional[Dict] = None,
             verbose: Optional[int] = logging.INFO
     ):
