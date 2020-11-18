@@ -17,7 +17,7 @@ from amici.petab_import_pysb import PysbPetabProblem
 def test_petab_pysb_optimization():
     test_case = '0001'
     repo_base = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..")
-    test_case_dir = os.path.join(repo_base, 'tmp', 'petab_test_suite-pysb',
+    test_case_dir = os.path.join(repo_base, 'tmp', 'petab_test_suite',
                                  'cases', 'pysb', test_case)
     petab_yaml = os.path.join(test_case_dir, f'_{test_case}.yaml')
     soution_yaml = os.path.join(test_case_dir, f'_{test_case}_solution.yaml')
