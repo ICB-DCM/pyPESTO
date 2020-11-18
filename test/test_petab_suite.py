@@ -64,7 +64,7 @@ def _execute_case(case):
     case_dir = os.path.join(petabtests.CASES_DIR, case)
 
     # load solution
-    solution = petabtests.load_solution(case)
+    solution = petabtests.load_solution(case, 'sbml')
     gt_chi2 = solution[petabtests.CHI2]
     gt_llh = solution[petabtests.LLH]
     gt_simulation_dfs = solution[petabtests.SIMULATION_DFS]
