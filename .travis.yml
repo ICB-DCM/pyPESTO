@@ -43,7 +43,6 @@ install:
       git clone --depth 1
         https://github.com/petab-dev/petab_test_suite tmp/petab_test_suite;
       pip3 install -e tmp/petab_test_suite;
-      wget -O /tmp/z.$$ https://codeload.github.com/FFroehlich/petab_test_suite/zip/pysb && unzip -d tmp/ /tmp/z.$$ && rm /tmp/z.$$;
       wget -q -O bionetgen.tar.gz https://bintray.com/jczech/bionetgen/download_file?file_path=BioNetGen-2.3.2-linux.tar.gz && tar -xzf bionetgen.tar.gz;
     fi
   - if [ "$TRAVIS_PULL_REQUEST" != "false" ]; then
