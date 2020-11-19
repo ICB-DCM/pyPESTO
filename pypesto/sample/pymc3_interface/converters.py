@@ -3,9 +3,11 @@ Utilities for converting pymc3.MultiTrace results to
 arviz.InferenceData and pypesto.McmcPtResult.
 """
 
-from typing import List, Optional, Union
+import sys
+from typing import List, Optional, Union, Dict
 
 import numpy as np
+import xarray
 
 import pymc3 as pm
 import arviz as az
@@ -125,6 +127,96 @@ class CustomPyMC3Converter(az.data.io_pymc3.PyMC3Converter):
         else:
             id_dict["constant_data"] = self.constant_data_to_xarray()
         return InferenceData(save_warmup=self.save_warmup, **id_dict)
+
+
+def drop_arviz_chains(azdata: az.InferenceData, chains):
+    chains_to_keep = np.ones(azdata.posterior.dims['chain'], dtype=bool)
+    chains_to_keep[chains] = False
+    return _keep_arviz_chains(azdata, chains_to_keep)
+
+
+def keep_arviz_chains(azdata: az.InferenceData, chains):
+    chains_to_keep = np.zeros(azdata.posterior.dims['chain'], dtype=bool)
+    chains_to_keep[chains] = True
+    return _keep_arviz_chains(azdata, chains_to_keep)
+
+
+def _keep_arviz_chains(azdata: az.InferenceData, mask):
+    kwargs = {}
+    for attr in ['posterior', 'log_likelihood', 'sample_stats', 'warmup_posterior', 'warmup_log_likelihood', 'warmup_sample_stats']:
+        if hasattr(azdata, attr):
+            kwargs[attr] = getattr(azdata, attr)[dict(chain=mask)]
+    return az.InferenceData(**kwargs)
+
+
+def expand_arviz_coords_to_variables(azdata: az.InferenceData):
+    kwargs = {}
+    for attr in ['log_likelihood', 'sample_stats', 'warmup_log_likelihood', 'warmup_sample_stats']:
+        if hasattr(azdata, attr):
+            kwargs[attr] = getattr(azdata, attr)
+    for attr in ['posterior', 'warmup_posterior']:
+        if hasattr(azdata, attr):
+            kwargs[attr] = _expand_arviz_coords_to_variables(getattr(azdata, attr))
+    return az.InferenceData(**kwargs)
+
+
+def _expand_arviz_coords_to_variables(data):
+    data = data.to_array()
+    variables = {}
+    for var in np.asarray(data.coords['free_parameter']):
+        slice = data.loc[dict(variable='theta', free_parameter=var)]
+        variables[var] = xarray.DataArray(
+            np.asarray(slice),  # forget attributes
+                                # (they are stored at the Dataset level)
+            coords=[
+                ('chain', slice.coords['chain']),
+                ('draw',  slice.coords['draw']),
+            ]
+        )
+    return xarray.Dataset(variables, attrs=data.attrs)
+
+
+def unscale_arviz_variables(azdata: az.InferenceData, scales: Dict[str, str]):
+    print('WARNING: at the moment pypesto does not apply any correction to the likelihood to account for parameter scales, so unscale_arviz_variables() does not either.', file=sys.stderr, flush=True)
+    # Convert scale in the posterior arrays and rebuild the InferenceData object
+    kwargs = {}
+    for attr in ['log_likelihood', 'sample_stats', 'warmup_log_likelihood', 'warmup_sample_stats']:
+        if hasattr(azdata, attr):
+            kwargs[attr] = getattr(azdata, attr)
+    for attr in ['posterior', 'warmup_posterior']:
+        if hasattr(azdata, attr):
+            kwargs[attr] = _unscale_arviz_variables(getattr(azdata, attr), scales)
+    return az.InferenceData(**kwargs)
+
+
+def _unscale_arviz_variables(data, scales: Dict[str, str]):
+    # Preprocess and check scales
+    var_names = set(data.variables.keys())
+    var_names.difference_update(['chain', 'draw'])
+    scale_names = set(scales.keys())
+    if scale_names != var_names:
+        raise ValueError(f'Keys of scales dictionary differ from variable names [missing = {var_names.difference(scale_names)} unknown = {scale_names.difference(var_names)}]!')
+    # Rescale each variable
+    variables = {}
+    for name in var_names:
+        fun = _scale_ufunc(scales[name])
+        if fun is None:
+            variables[name] = data[name]
+        else:
+            variables[name] = xarray.apply_ufunc(fun, data[name])
+    # Rebuild Dataset object
+    return xarray.Dataset(variables, attrs=data.attrs)
+
+
+def _scale_ufunc(scale):
+    if scale == 'lin':
+        return None
+    elif scale == 'log10':
+        return lambda x : 10**x
+    elif scale == 'log':
+        return np.exp
+    else:
+        raise Exception(f'unknown scale {scale}')
 
 
 # NB samplers like AdaptiveMetropolisSampler include the starting point
