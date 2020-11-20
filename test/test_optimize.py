@@ -7,6 +7,9 @@ import pytest
 import test.test_objective as test_objective
 import warnings
 import re
+import nlopt
+import fides
+import itertools as itt
 
 import pypesto
 import pypesto.optimize as optimize
@@ -28,6 +31,24 @@ optimizers = [
     ('dlib', ''),
     ('pyswarm', ''),
     ('cmaes', ''),
+    *[('nlopt', method) for method in [
+        nlopt.LD_VAR1, nlopt.LD_VAR2, nlopt.LD_TNEWTON_PRECOND_RESTART,
+        nlopt.LD_TNEWTON_PRECOND, nlopt.LD_TNEWTON_RESTART,
+        nlopt.LD_TNEWTON, nlopt.LD_LBFGS,
+        nlopt.LD_SLSQP, nlopt.LD_CCSAQ, nlopt.LD_MMA, nlopt.LN_SBPLX,
+        nlopt.LN_NELDERMEAD, nlopt.LN_PRAXIS, nlopt.LN_NEWUOA,
+        nlopt.LN_NEWUOA_BOUND, nlopt.LN_BOBYQA, nlopt.LN_COBYLA,
+        nlopt.GN_ESCH, nlopt.GN_ISRES, nlopt.GN_AGS, nlopt.GD_STOGO,
+        nlopt.GD_STOGO_RAND, nlopt.G_MLSL, nlopt.G_MLSL_LDS, nlopt.GD_MLSL,
+        nlopt.GD_MLSL_LDS, nlopt.GN_CRS2_LM, nlopt.GN_ORIG_DIRECT,
+        nlopt.GN_ORIG_DIRECT_L, nlopt.GN_DIRECT, nlopt.GN_DIRECT_L,
+        nlopt.GN_DIRECT_L_NOSCAL, nlopt.GN_DIRECT_L_RAND,
+        nlopt.GN_DIRECT_L_RAND_NOSCAL, nlopt.AUGLAG, nlopt.AUGLAG_EQ
+    ]],
+    *[('fides', solver) for solver in itt.product(
+        [None, fides.SR1(), fides.BFGS(), fides.DFP()],
+        [fides.SubSpaceDim.FULL, fides.SubSpaceDim.TWO]
+    )]
 ]
 
 
@@ -49,7 +70,7 @@ def test_optimization(mode, optimizer):
 
     with warnings.catch_warnings():
         warnings.simplefilter("ignore")
-        if re.match(r'^(?i)(ls_)', method):
+        if isinstance(method, str) and re.match(r'^(?i)(ls_)', method):
             # obj has no residuals
             with pytest.raises(Exception):
                 check_minimize(obj, library, method)
@@ -76,6 +97,12 @@ def check_minimize(objective, library, solver, allow_failed_starts=False):
         optimizer = optimize.PyswarmOptimizer(options=options)
     elif library == 'cmaes':
         optimizer = optimize.CmaesOptimizer(options=options)
+    elif library == 'nlopt':
+        optimizer = optimize.NLoptOptimizer(method=solver, options=options)
+    elif library == 'fides':
+        options[fides.Options.SUBSPACE_DIM] = solver[1]
+        optimizer = optimize.FidesOptimizer(options=options,
+                                            hessian_update=solver[0])
 
     lb = 0 * np.ones((1, 2))
     ub = 1 * np.ones((1, 2))

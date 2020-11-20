@@ -2,7 +2,6 @@ import matplotlib.pyplot as plt
 import matplotlib.axes
 from matplotlib.ticker import MaxNLocator
 import numpy as np
-import numbers
 
 from typing import Iterable, List, Optional, Sequence, Tuple, Union
 
@@ -10,7 +9,7 @@ from ..result import Result
 from .reference_points import create_references, ReferencePoint
 from .clust_color import assign_colors
 from .clust_color import delete_nan_inf
-from .misc import process_result_list
+from .misc import process_result_list, process_start_indices
 
 
 def parameters(
@@ -115,6 +114,68 @@ def parameters(
     return ax
 
 
+def parameter_hist(
+        result: Result,
+        parameter_name: str,
+        bins: Union[int, str] = 'auto',
+        ax: Optional['matplotlib.Axes'] = None,
+        size: Optional[Tuple[float]] = (18.5, 10.5),
+        color: Optional[List[float]] = None,
+        start_indices: Optional[Union[int, List[int]]] = None):
+    """
+    Plot parameter values as a histogram.
+
+    Parameters
+    ----------
+    result:
+        Optimization result obtained by 'optimize.py'
+    parameter_name:
+        The name of the parameter that should be plotted
+    bins:
+        Specifies bins of the histogram
+    ax:
+        Axes object to use
+    size:
+        Figure size (width, height) in inches. Is only applied when no ax
+        object is specified
+    color:
+        RGBA color.
+    start_indices:
+        List of integers specifying the multistarts to be plotted or
+        int specifying up to which start index should be plotted
+
+
+    Returns
+    -------
+    ax:
+    The plot axes.
+
+    """
+
+    if ax is None:
+        ax = plt.subplots()[1]
+        fig = plt.gcf()
+        fig.set_size_inches(*size)
+
+    xs = result.optimize_result.get_for_key('x')
+
+    # reduce number of displayed results
+    if isinstance(start_indices, int):
+        xs = xs[:start_indices]
+    elif start_indices is not None:
+        xs = [xs[ind] for ind in start_indices]
+
+    parameter_index = result.problem.x_names.index(parameter_name)
+    parameter_values = [x[parameter_index] for x in xs]
+
+    ax.hist(parameter_values, color=color, bins=bins)
+    ax.set_xlabel(parameter_name)
+    ax.set_ylabel("counts")
+    ax.set_title(f"Parameter {parameter_name}")
+
+    return ax
+
+
 def parameters_lowlevel(
         xs: Sequence[Union[np.ndarray, List[float]]],
         fvals: Union[np.ndarray, List[float]],
@@ -178,7 +239,7 @@ def parameters_lowlevel(
     xs = np.array(xs)
     fvals = np.array(fvals)
     # remove nan or inf values in fvals and xs
-    xs, fvals = delete_nan_inf(fvals, xs)
+    xs, fvals = delete_nan_inf(fvals, xs, len(ub) if ub is not None else 1)
 
     if size is None:
         # 0.5 inch height per parameter
@@ -276,11 +337,7 @@ def handle_inputs(
 
     # parse indices which should be plotted
     if start_indices is not None:
-        # handle, if only a number was passed
-        if isinstance(start_indices, numbers.Number):
-            start_indices = range(int(start_indices))
-
-        start_indices = np.array(start_indices, dtype=int)
+        start_indices = process_start_indices(start_indices, len(fvals))
 
         # reduce number of displayed results
         xs_out = [xs[ind] for ind in start_indices]
