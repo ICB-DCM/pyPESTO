@@ -44,7 +44,7 @@ def get_fim_addition(design_problem: DesignProblem,
             row_index]
         deriv_cond = deriv_dict[cond_name]
 
-        # ie fixed noise parameters
+        # eg fixed noise parameters
         missing_params = len(model.getParameterIds()) - len(
             design_problem.initial_x[0])
 
@@ -53,15 +53,14 @@ def get_fim_addition(design_problem: DesignProblem,
         time_position = dict_of_timepoints_cond[cond_name].index(
             candidate['measurement_df'].time[row_index])
         jac = deriv_cond[time_position][0:len(deriv_cond[0]) - missing_params,
-              obs_position]
+                                        obs_position]
 
         # in design_problem.number_of_measurements one can specify how many
         # measurements should be taken, this effectively reduces the noise
         # value
         A[:, row_index] = jac * np.sqrt(
             design_problem.number_of_measurements) \
-                          / candidate['measurement_df'].noiseParameters[
-                              row_index]
+            / candidate['measurement_df'].noiseParameters[row_index]
 
         # single_addition = np.outer(jac, jac) / (
         #         candidate['measurement_df'].noiseParameters[
@@ -74,7 +73,7 @@ def get_fim_addition(design_problem: DesignProblem,
 
 def get_derivatives(design_problem: DesignProblem,
                     dict_of_timepoints_cond: dict,
-                    x: Iterable):
+                    x: Iterable) -> dict:
     """
     does a forward simulation for all experimental conditions and returns a
     dictionary of the parameter derivatives of observables for each condition
@@ -129,7 +128,7 @@ def get_combi_run_result(relevant_single_runs: List[dict],
                          design_problem: DesignProblem,
                          combi: list,
                          x: Iterable) \
-        -> List[dict]:
+        -> dict:
     """
     computes the new criteria values etc in a dict after adding the new
     addition to the FIM
@@ -162,15 +161,11 @@ def get_combi_run_result(relevant_single_runs: List[dict],
                                            relevant_single_runs[index][
                                                'hess_additional']))
 
-    # TODO skip, dict_min etc for faster criteria computations have to be
-    #  handled here
     result = get_design_result(
         design_problem=design_problem,
         candidate=combi,
         x=x,
         hess=initial_result['hess'],
-        hess_additional=total_hess_additional,
-        initial_result=initial_result,
-        skip=True)
+        hess_additional=total_hess_additional)
 
     return result

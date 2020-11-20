@@ -1,15 +1,8 @@
-from typing import List, Union, Iterable
+from typing import List, Union
 from .design_problem import DesignProblem
 from heapq import nlargest, nsmallest, heappush, heappushpop
-from .opt_design_helpers import get_design_result, combinations_gen, \
-    get_average_result_dict, divide_dict, add_to_dict
-import numpy as np
+from .opt_design_helpers import combinations_gen, divide_dict, add_to_dict
 from .change_dataframe import get_combi_run_result
-
-from functools import partial
-# from .task import combi_task
-from ..engine import MultiThreadEngine, SingleCoreEngine
-from multiprocessing import Manager, Pool
 
 
 class CombiRes:
@@ -49,7 +42,7 @@ class DesignResult(dict):
     def __init__(self,
                  design_problem: DesignProblem,
                  single_runs: List[dict] = None,
-                 combi_runs: List[dict] = None,
+                 combi_runs: dict = None,
                  initial_result: List[dict] = None):
 
         super().__init__()
@@ -104,7 +97,11 @@ class DesignResult(dict):
                 x_index = 0
         if runs == 'single_runs':
             if isinstance(x_index, int):
-                result = [d[criteria] for d in self.single_runs[x_index]]
+                if x_index not in self.good_initial_x_indices:
+                    print("The simulation for the index ", x_index, "failed. "
+                          "Could not get criteria values")
+                else:
+                    result = [d[criteria] for d in self.single_runs[x_index]]
             elif x_index == 'average':
                 result = [d[criteria] for d in self.single_runs_average]
             else:
@@ -156,6 +153,7 @@ class DesignResult(dict):
             else:
                 index = 0
         if runs == 'single_runs':
+            # TODO also check here if the computation for this index has failed
             if isinstance(index, int):
                 values = [d[criteria] for d in self.single_runs[index]]
             elif index == 'average':
@@ -182,9 +180,7 @@ class DesignResult(dict):
         # some criteria values may be None if the simulation failed etc
         # write -inf, +inf respectively for the code to work
 
-        # note '== None' and 'is None' behave differently here
-        # TODO change this so flake8 won't complain
-        none_ind = np.where(np.array(values) == None)[0].tolist()
+        none_ind = [i for i in range(len(values)) if values[i] is None]
 
         # all currently used criteria are to be maximized
         # just in case there is also a routine to minimize
@@ -209,65 +205,8 @@ class DesignResult(dict):
                              "conditions from")
         return best_values, best_combination
 
-    # this function was outsourced to "change_dataframe.py" so it it not a
-    # method of the DesignResult anymore, so it can be called in case of
-    # parallelization with one shared DesignResult
-
-    # def get_combi_run_result(self,
-    #                          list_of_combinations: list,
-    #                          x: Iterable,
-    #                          x_index: int,
-    #                          criteria_min) \
-    #         -> List[dict]:
-    #     """
-    #     computes the new criteria values etc in a dict after adding the new
-    #     addition to the fim
-    #
-    #     Parameters
-    #     ----------
-    #     list_of_combinations:
-    #     criteria_min: dict which has all criteria as keys. for each criteria
-    #     save the lowest value of the n_save_combi_result that we save
-    #     x: current set of parameters used
-    #     x_index: index of x in design_problem.initial_x
-    #
-    #     Returns
-    #     -------
-    #
-    #     """
-    #
-    #     combi_runs = []
-    #     # shouldn't this list always have only a single element?
-    #     # eg.[[0,1,4]] when adding combis of three measurements?
-    #     for combi in list_of_combinations:
-    #         total_hess_additional = np.zeros(self.single_runs[0][0][
-    #                                              'hess_additional'].shape)
-    #         # new_hess = self.initial_result['hess']
-    #         for index in combi:
-    #             total_hess_additional = np.hstack((total_hess_additional,
-    #                                                self.single_runs[x_index][
-    #                                                    index][
-    #                                                    'hess_additional']))
-    #
-    #             # new_hess = new_hess + self.single_runs[x_index][index][
-    #             #     'hess_additional']
-    #
-    #         new_result = get_design_result(
-    #             design_problem=self.design_problem,
-    #             candidate=combi,
-    #             x=x,
-    #             hess=self.initial_result[x_index]['hess'],
-    #             hess_additional=total_hess_additional,
-    #             initial_result=self.initial_result[x_index],
-    #             combi_runs=self.combi_runs,
-    #             skip=True,
-    #             criteria_min=criteria_min)
-    #         combi_runs.append(new_result)
-    #
-    #     return combi_runs
-
     def get_best_combi_index_pairs(self,
-                                   criteria: str):
+                                   criteria: str) -> List[List[int]]:
         """
         returns a list where each entry is a list of indices. Each list of
         indices describes a tested combination
@@ -277,9 +216,9 @@ class DesignResult(dict):
         return list_of_combinations
 
     def get_best_combi_index(self,
-                             criteria: str):
+                             criteria: str) -> List[List[int]]:
         """
-        similar to 'get_best_combi_index_pairs' but doesn't return a multiple
+        similar to 'get_best_combi_index_pairs' but doesn't return multiple
         lists of combinations but a list for all first entries, a list for
         all second entries etc.
         """
@@ -289,14 +228,28 @@ class DesignResult(dict):
                            i in range(len(list_of_combinations[0]))]
         return list_of_indices
 
-    def get_average_design_result(self, combi):
+    def get_average_design_result(self, combi: List[int]) -> dict:
+        """
+        takes a candidate to check and computes the result for this
+        candidates as an average across the different parameter sets in
+        design_problem.initial_x
 
+        Parameters
+        ----------
+        combi: a list of indices specifying which candidates from
+               design_problem.experiment_list should be combined
+
+        Returns
+        -------
+        average_design_result: a dictionary with information about the
+        result for a candidate measurement, criteria values etc
+
+        """
         average_design_result = get_combi_run_result(
             relevant_single_runs=self.single_runs[
                 self.good_initial_x_indices[0]],
             combi=combi,
-            x=self.design_problem.initial_x[
-                self.good_initial_x_indices[0]],
+            x=self.design_problem.initial_x[self.good_initial_x_indices[0]],
             initial_result=self.initial_result[
                 self.good_initial_x_indices[0]],
             design_problem=self.design_problem)
@@ -351,32 +304,6 @@ class DesignResult(dict):
                 length=list_of_combinations)
         else:
             generator = (element for element in list_of_combinations)
-
-        # func = partial(combi_task, self)
-        #
-        # crit_min = Manager().dict()
-        # combi_runs = Manager().dict()
-        #
-        # for crit in self.design_problem.non_modified_criteria:
-        #     crit_min[crit] = float("inf")
-        # if self.design_problem.modified_criteria:
-        #     for crit in self.design_problem.modified_criteria:
-        #         crit_min[crit + '_modified'] = float("inf")
-        #
-        # for key in self.design_problem.non_modified_criteria:
-        #     combi_runs[key] = Manager().list()
-        # if self.design_problem.modified_criteria:
-        #     for crit in self.design_problem.modified_criteria:
-        #         combi_runs[crit + '_modified'] = Manager().list()
-        #
-        # p = Pool(None, combi_task_init, [crit_min, combi_runs])
-        #
-        # p.imap(func, generator, chunksize=100)
-        # p.close()
-        # p.join()
-        # print(combi_runs)
-        # print(crit_min)
-        # self.combi_runs = combi_runs
 
         for combi in generator:
 

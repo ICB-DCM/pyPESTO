@@ -3,7 +3,7 @@ from .result import DesignResult
 from .opt_design_helpers import get_design_result, get_average_result_dict
 from .change_dataframe import get_fim_addition, get_derivatives
 import numpy as np
-from typing import Iterable
+from typing import Iterable, Union, List
 from .task import ExpDesignSingleTask
 from ..engine import Engine, MultiProcessEngine, SingleCoreEngine
 
@@ -11,7 +11,7 @@ from ..engine import Engine, MultiProcessEngine, SingleCoreEngine
 def single_design_algo(design_result: DesignResult,
                        x: Iterable[float],
                        index: int
-                       ) -> DesignResult:
+                       ) -> Union[str, List[dict]]:
     """
     Algorithm to find the single best condition to be added.
     This function is called once for every parameter set specified in
@@ -48,7 +48,7 @@ def single_design_algo(design_result: DesignResult,
         for ind, cond in enumerate(measurement_df.simulationConditionId):
             dict_of_timepoints_cond[cond].append(measurement_df.time[ind])
 
-    # can the efficiency be  improved here?
+    # can the efficiency be improved here?
     for cond in dict_of_timepoints_cond:
         dict_of_timepoints_cond[cond] = sorted(
             list(set(dict_of_timepoints_cond[cond])))
@@ -71,14 +71,6 @@ def single_design_algo(design_result: DesignResult,
 
         if np.isnan(A).any():
             bad_sample = True
-            # TODO we don't have to append anything here, right?
-            this_single_run.append(
-                get_design_result(design_problem=design_problem,
-                                  candidate=candidate,
-                                  x=x,
-                                  hess=None,
-                                  initial_result=design_result.initial_result[
-                                      index]))
             break
         else:
             this_single_run.append(
@@ -87,9 +79,7 @@ def single_design_algo(design_result: DesignResult,
                                   x=x,
                                   hess=design_result.initial_result[index][
                                       'hess'],
-                                  hess_additional=A,
-                                  initial_result=design_result.initial_result[
-                                      index]))
+                                  hess_additional=A))
 
         this_single_run[cand_ind]['hess_additional'] = A
 
@@ -100,6 +90,10 @@ def single_design_algo(design_result: DesignResult,
 
 
 def single_design_average(design_result: DesignResult):
+    """
+    computes and returns an average of the results for each parameter set (for
+    each single experiment).
+    """
     average_design_result = []
 
     for i in range(len(design_result.single_runs[0])):
@@ -112,7 +106,12 @@ def single_design_average(design_result: DesignResult):
 
 
 def get_initial_results(design_result: DesignResult) -> DesignResult:
-    # TODO decide how to handle the faster methods for some criteria here
+    """
+    calls "get_design_result" for each parameter set in
+    design_result.initial_result, since no candidate is given init_res is
+    the result without adding any new experiments evaluated for the
+    different parameters
+    """
 
     design_problem = design_result.design_problem
 
@@ -121,30 +120,7 @@ def get_initial_results(design_result: DesignResult) -> DesignResult:
         init_res = get_design_result(design_problem=design_problem,
                                      candidate=None,
                                      x=x)
-        # inverse of the FIM might be used for the computation of the det
-        # TODO for faster det computation, handle case of FIM is not invertible
-        try:
-            init_res['hess_inv'] = np.linalg.inv(init_res['hess'])
-        except np.linalg.LinAlgError:
-            print("can't invert FIM for parameter set:", i)
 
-        if design_problem.modified_criteria:
-            try:
-                hess_mod = init_res['hess'] + \
-                           design_problem.const_for_hess * np.eye(
-                    len(init_res['hess']))
-                init_res['hess_inv_modified'] = np.linalg.inv(hess_mod)
-            except TypeError:
-                hess_mod = None
-                init_res['hess_inv_modified'] = None
-
-        # TODO can be made optional
-        # eigenvalue decomposition (including eigenvectors as this is needed for
-        # eigmin estimates
-        try:
-            init_res['eigen_decomposition'] = np.linalg.eigh(init_res['hess'])
-        except np.linalg.LinAlgError:
-            init_res['eigen_decomposition'] = None
         design_result.initial_result.append(init_res)
 
     return design_result
@@ -181,7 +157,6 @@ def run_exp_design(design_problem: DesignProblem,
     # compute the results for each candidate specified in
     # design_problem.experimental_list for each x in design_problem.initial_x
     # save result in a list in design_result.single_runs
-
     tasks = []
     for i, x in enumerate(design_problem.initial_x):
         task = ExpDesignSingleTask(design_result=design_result,
@@ -189,12 +164,11 @@ def run_exp_design(design_problem: DesignProblem,
                                    index=i)
         tasks.append(task)
 
-    # if engine is None:
-    #     engine = SingleCoreEngine()
-    engine = MultiProcessEngine()
+    if engine is None:
+        engine = SingleCoreEngine()
+    # engine = MultiProcessEngine()
 
     design_result.single_runs = engine.execute(tasks)
-
     print("Finished single_runs")
 
     # the simulation may fail for some parameter sets, in this case we

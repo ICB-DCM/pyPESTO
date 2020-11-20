@@ -7,6 +7,9 @@ from typing import Optional, Union, List, Iterable
 
 # make this more readable
 def get_hess(obj: AmiciObjective, x: np.ndarray):
+    """
+    computes the hessian for parameter x
+    """
     hess = obj.get_hess(x)
     message = 'got hess via objective from specified parameters'
 
@@ -107,32 +110,22 @@ def get_design_result(design_problem: DesignProblem,
                       candidate: Optional[Union[list, dict]] = None,
                       hess: np.ndarray = None,
                       hess_additional: np.ndarray = None,
-                      initial_result: dict = None,
-                      skip: bool = None,
                       ) \
         -> dict:
     """
 
     Parameters
     ----------
-    design_problem
-    x
-    candidate
-    hess
-    hess_additional
-    initial_result
-    combi_runs
-    skip: bool, used right now to indicate if we want to use the fast
-        implementation to compute eigmin, which only works when checking
-        combinations
-    criteria_min: dict which has all criteria as keys. for each criteria
-        save the lowest value of the n_save_combi_result that we save
-        -> used to check if the upper bound on eigmin is lower
-        -> then skip the computation
-
-    Returns
-    -------
-
+    design_problem: the problem formulation
+    x: the set of parameters for which criteria will be computed
+    candidate: is a dict if we compute the result for a single experiment
+               is a list of indices of we compute the result for a
+               combination of experiments
+               can be 'None', in this case, compute the initial results
+               without adding new experiments
+    hess: the hessian
+    hess_additional: a matrix M st M*M^T will be added to the hessian
+                     before any computation
     """
     message = None
     if isinstance(candidate, dict):
@@ -140,26 +133,14 @@ def get_design_result(design_problem: DesignProblem,
     else:
         dictionary = {'candidate': candidate}
 
-    # used when we check different combinations in the end thus checking
-    # different FIMs
-    if hess is not None:
-        pass
-    # check if the forward simulation failed
-    # also used in the first initial check (hence 'if candidate is None')
-    elif candidate is None:  # or ~np.isnan(
-        # design_problem.petab_problem.measurement_df.measurement).any()
-
+    if hess is None and candidate is None:
         hess, message = get_hess(obj=design_problem.problem.objective,
                                  x=x)
-    else:
-        message = "Simulation failed. Simulated measurement is NaN"
-        # print("Simulation failed. Simulated measurement is NaN")
-        hess = None
+    # elif candidate is not None and hess is None:
+    #     print("?")
 
     # this means we don't check hess, but
     # hess + hess_additional*hess_additional^T
-
-    # TODO is this correct?
     if hess_additional is not None and hess is not None:
         hess = hess + np.matmul(hess_additional, hess_additional.transpose())
 
@@ -167,108 +148,12 @@ def get_design_result(design_problem: DesignProblem,
     dictionary['hess'] = hess
     dictionary['message'] = message
 
-    # use matrix-determinant-lemma
-    # 'hess_additional is not None' to exclude the evaluataion of the initial
-    # result
-    # 'skip is only True when we check combinations
-
-    # # TODO this is only for testing right now and has to be completely
-    #  reworked
-    # if (design_problem.non_modified_criteria == ['det'] or
-    #     set(design_problem.non_modified_criteria) == {'eigmin', 'det',
-    #                                                   'ratio'} or
-    #     design_problem.non_modified_criteria == ['eigmin']) \
-    #         and hess_additional is not None \
-    #         and skip is True:
-    #
-    #     if 'det' in design_problem.non_modified_criteria:
-    #         dictionary['det'] = np.linalg.det(
-    #             np.eye(len(hess_additional[0])) + np.matmul(
-    #                 hess_additional.transpose(),
-    #                 np.matmul(initial_result['hess_inv'],
-    #                 hess_additional))) \
-    #                       * initial_result['det']
-    #
-    #     if 'eigmin' and 'ratio' in design_problem.non_modified_criteria:
-    #         eigmin_upper_b = get_eigmin_estimate(
-    #             hess_additional=hess_additional,
-    #             initial_result=initial_result)
-    #         ratio_upper_b = get_ratio_estimate(
-    #             eigmin_upper_bound=eigmin_upper_b,
-    #             initial_result=initial_result)
-    #
-    #         if n_saved_eigmin < \
-    #                 design_problem.n_save_combi_result \
-    #                 or n_saved_ratio < design_problem.n_save_combi_result \
-    #                 or eigmin_upper_b >= smallest_greatest_eigmin \
-    #                 or ratio_upper_b >= smallest_greatest_eigmin:
-    #             # compute only the smallest eigenvalue
-    #
-    #             # not sure if actually faster
-    #             # eigmin = eigvalsh(hess, eigvals=(0, 0))[0]
-    #             eigvals = eigvalsh(hess)
-    #             eigmin = eigvals[0]
-    #             eigmax = eigvals[-1]
-    #             dictionary['eigmin'] = eigmin
-    #             # eigmax saving only needed for ratio_modified
-    #             if 'ratio' in design_problem.modified_criteria:
-    #                 dictionary['eigmax'] = eigmax
-    #             dictionary['ratio'] = eigmin / eigmax
-    #
-    #         else:
-    #             dictionary['eigmin'] = np.NINF
-    #             dictionary['ratio'] = np.NINF
-    #             pass
-    #
-    # else:
-
-    # 'old' method where we compute all eigenvalues and then each criteria
     eigvals = get_eigvals(hess=hess)
     dictionary['eigvals'] = eigvals
     for criteria in design_problem.non_modified_criteria:
         dictionary[criteria] = get_criteria(criteria, hess, eigvals)
 
     if design_problem.modified_criteria:
-        # if (design_problem.modified_criteria == ['det'] or
-        #     set(design_problem.modified_criteria) == {'eigmin', 'det',
-        #     'ratio'} or
-        #     set(design_problem.modified_criteria) == {'det', 'ratio'} or
-        #     design_problem.modified_criteria == ['eigmin'] or
-        #     design_problem.modified_criteria == ['ratio']
-        # ) \
-        #         and hess_additional is not None \
-        #         and skip is True:
-        #     if 'det' in design_problem.modified_criteria:
-        #         dictionary['det_modified'] = np.linalg.det(
-        #             np.eye(len(hess_additional[
-        #                            0]))
-        #             + np.matmul(
-        #                 hess_additional.transpose(),
-        #                 np.matmul(initial_result['hess_inv_modified'],
-        #                           hess_additional))) * initial_result[
-        #                                    'det_modified']
-        #
-        #     if 'eigmin' in design_problem.modified_criteria:
-        #         dictionary['eigmin_modified'] = dictionary['eigmin'] + \
-        #                                   design_problem.const_for_hess
-        #     if 'ratio' in design_problem.modified_criteria:
-        #         try:
-        #             eigmax = dictionary['eigmax']
-        #         except:
-        #             eigvals = eigvalsh(hess)
-        #             eigmax = eigvals[-1]
-        #
-        #         dictionary['ratio_modified'] = (dictionary['eigmin'] + \
-        #                                   design_problem.const_for_hess) / (
-        #                  eigmax + design_problem.const_for_hess)
-        #
-        #         # super bad hacky stuff
-        #         try:
-        #             dictionary.pop('eigmax')
-        #         except:
-        #             pass
-        #
-        # else:
         hess_modified = add_to_hess(hess=hess,
                                     const=design_problem.const_for_hess)
         eigvals_modified = get_eigvals(hess=hess_modified)
@@ -313,7 +198,6 @@ def get_average_result_dict(list_of_dicts: List[dict]) \
                     'constant_for_hessian']}
 
     for key in list_of_dicts[0].keys() - ave_dict.keys():
-        # do we need to check if something is None?
         ave_dict[key] = sum(d[key] for d in list_of_dicts) / len(
             list_of_dicts)
 
@@ -336,7 +220,6 @@ def add_to_dict(dict_1: dict, dict_2: dict) \
                 'constant_for_hessian': dict_1['constant_for_hessian']}
 
     for key in dict_1.keys() - sum_dict.keys():
-        # do we need to check if something is None?
         sum_dict[key] = dict_1[key] + dict_2[key]
 
     return sum_dict
@@ -350,7 +233,6 @@ def divide_dict(dict: dict, div: float) \
     no_keys = ['candidate', 'x', 'hess', 'message', 'eigvals', 'fim_addition',
                'fim_added', 'constant_for_hessian']
     for key in dict.keys() - no_keys:
-        # do we need to check if something is None?
         dict[key] = dict[key] / div
 
     return dict

@@ -9,7 +9,6 @@ from petab.C import OBSERVABLE_ID, CONDITION_ID
 from amici.petab_import import _create_model_output_dir_name
 
 
-# should we specify Optimizer here?
 class DesignProblem(dict):
     """
     The problem formulation for an experimental design setting
@@ -113,30 +112,6 @@ class DesignProblem(dict):
         # (observable was already done when getting the model)
         self.write_super_condition_df()
 
-        # sanity checks for lengths of df in experiment_list
-        # if not self.experiment_list:
-        #     raise ValueError('you need to pass a nonempty list of
-        #     candidates')
-        # for dict in self.experiment_list:
-        #     if 'condition_df' in dict and dict['condition_df'] is not None \
-        #             and len(dict['condition_df'].columns) \
-        #             != len(self.petab_problem.condition_df.columns):
-        #         raise ValueError(
-        #             'condition dataframe in given candidates has wrong
-        #             length')
-        #     if 'observable_df' in dict and dict['observable_df'] is not
-        #     None \
-        #             and len(dict['observable_df'].columns) != \
-        #             len(self.petab_problem.observable_df.columns):
-        #         raise ValueError(
-        #             'observable dataframe in given candidates has wrong '
-        #             'length')
-        #     if len(dict['measurement_df'].columns) != len(
-        #             self.petab_problem.measurement_df.columns):
-        #         raise ValueError(
-        #             'measurement dataframe in given candidates has wrong '
-        #             'length')
-
     def __getattr__(self, key):
         try:
             return self[key]
@@ -227,30 +202,8 @@ class DesignProblem(dict):
         if not set(self.criteria_list).issubset(set(okay_criteria)):
             raise KeyError("one of the specified criteria is not supported")
 
+        # TODO
         # should we have a standard value here? or throw an error?
         if self.modified_criteria and self.const_for_hess is None:
             self.const_for_hess = 10 ** (-4)
         return
-
-    """
-    def write_super_observable_df(self):
-    list_of_new_dfs = [dict['observable_df'] for dict in
-                           self.experiment_list if 'observable_df' in dict
-                           and dict['observable_df'] is not None]
-
-    if not list_of_new_dfs:
-        return
-    else:
-        # merge them
-        new_conditions = pd.concat(list_of_new_dfs)
-
-        # remove duplicates
-        new_conditions = new_conditions.reset_index().drop_duplicates(
-        ).set_index(OBSERVABLE_ID)
-
-        observable_df = self.petab_problem.observable_df.reset_index()
-        observable_df = observable_df.append(new_conditions.reset_index())
-        observable_df = observable_df.set_index(OBSERVABLE_ID)
-        self.petab_problem.observable_df = observable_df
-        return
-    """
