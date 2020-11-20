@@ -1,16 +1,19 @@
-import numpy as np
-import scipy.optimize
-import re
 import abc
+import os
+import re
 import time
 import logging
 from typing import Dict, Optional
+
+import numpy as np
+import scipy.optimize
 
 from ..objective import (OptimizerHistory, HistoryOptions, CsvHistory)
 from ..objective.history import HistoryBase
 from ..problem import Problem
 from .result import OptimizerResult
 from ..objective.constants import MODE_FUN, FVAL, GRAD
+from ..result import OptimizeResult
 
 try:
     import ipopt
@@ -197,33 +200,71 @@ def fill_result_from_objective_history(
     return result
 
 
-def read_result_from_file(problem: Problem, history_options: HistoryOptions,
-                          identifier: str):
+def read_result_from_files(problem: Problem, history_options: HistoryOptions,
+                           identifier: Optional[str] = None) -> OptimizeResult:
+    """
+    Read OptimizeResult result from history files
+
+    Parameters
+    ----------
+    problem:
+        problem which contains info about how to convert to full vectors
+        or matrices
+    history_options:
+        history options
+    identifier:
+        id of a history file. If not provided results will be collected
+        from all history files corresponding to
+        history_options.storage_file
+
+    Returns
+    -------
+        optimization result
+    """
+
     if history_options.storage_file.endswith('.csv'):
-        history = CsvHistory(
-            file=history_options.storage_file.format(id=identifier),
-            options=history_options,
-            load_from_file=True
-        )
+        if not identifier:
+            folder_path = os.path.dirname(history_options.storage_file)
+            name_pattern = re.sub(
+                '{id}', '\\\d+',
+                os.path.basename(history_options.storage_file))
+
+            histories = []
+            for filename in os.listdir(folder_path):
+                if re.match(name_pattern, filename):
+                    histories.append(CsvHistory(
+                        file=os.path.join(folder_path, filename),
+                        options=history_options,
+                        load_from_file=True))
+        else:
+            histories = [CsvHistory(
+                file=history_options.storage_file.format(id=identifier),
+                options=history_options,
+                load_from_file=True
+            )]
     else:
         raise NotImplementedError()
 
-    opt_hist = OptimizerHistory(
-        history, history.get_x_trace(0),
-        generate_from_history=True
-    )
+    results = OptimizeResult()
+    for history in histories:
+        opt_hist = OptimizerHistory(
+            history, history.get_x_trace(0),
+            generate_from_history=True
+        )
 
-    result = OptimizerResult(
-        id=identifier,
-        message='loaded from file',
-        exitflag=EXITFLAG_LOADED_FROM_FILE,
-        time=max(history.get_time_trace())
-    )
-    result.id = identifier
-    result = fill_result_from_objective_history(result, opt_hist)
-    result.update_to_full(problem)
+        result = OptimizerResult(
+            id=identifier,
+            message='loaded from file',
+            exitflag=EXITFLAG_LOADED_FROM_FILE,
+            time=max(history.get_time_trace())
+        )
+        result.id = identifier
+        result = fill_result_from_objective_history(result, opt_hist)
+        result.update_to_full(problem)
+        results.append(result)
+    results.sort()
 
-    return result
+    return results
 
 
 class Optimizer(abc.ABC):

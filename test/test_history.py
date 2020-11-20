@@ -13,7 +13,7 @@ from test.test_sbml_conversion import load_model_objective
 import pypesto
 from pypesto.objective.util import sres_to_schi2, res_to_chi2
 from pypesto import CsvHistory, HistoryOptions, MemoryHistory, ObjectiveBase
-from pypesto.optimize.optimizer import read_result_from_file, OptimizerResult
+from pypesto.optimize.optimizer import read_result_from_files, OptimizerResult
 
 from pypesto.objective.constants import (
     FVAL, GRAD, HESS, RES, SRES, CHI2, SCHI2
@@ -78,7 +78,7 @@ class HistoryTest(unittest.TestCase):
         # TODO other implementations
         assert isinstance(start.history, CsvHistory)
 
-        rstart = read_result_from_file(self.problem, self.history_options, id)
+        rstart = read_result_from_files(self.problem, self.history_options, id).list[0]
 
         result_attributes = [
             key for key in start.keys()
