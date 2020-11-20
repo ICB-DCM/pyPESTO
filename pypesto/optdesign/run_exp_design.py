@@ -1,7 +1,7 @@
 from .design_problem import DesignProblem
 from .result import DesignResult
 from .opt_design_helpers import get_design_result, get_average_result_dict
-from .change_dataframe import get_fim_addition, get_derivatives
+from .FIM_computations import get_fim_addition, get_derivatives
 import numpy as np
 from typing import Iterable, Union, List
 from .task import ExpDesignSingleTask

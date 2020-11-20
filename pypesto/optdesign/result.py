@@ -2,7 +2,7 @@ from typing import List, Union
 from .design_problem import DesignProblem
 from heapq import nlargest, nsmallest, heappush, heappushpop
 from .opt_design_helpers import combinations_gen, divide_dict, add_to_dict
-from .change_dataframe import get_combi_run_result
+from .FIM_computations import get_combi_run_result
 
 
 class CombiRes:
