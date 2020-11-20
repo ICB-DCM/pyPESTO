@@ -97,16 +97,18 @@ class AmiciCalculator:
             edatas,
             num_threads=min(n_threads, len(edatas)),
         )
-        if not self._known_least_squares_safe and mode == MODE_RES and \
-                sensi_order > 0:
+        if not self._known_least_squares_safe and \
+                ((mode == MODE_RES and sensi_order > 0) or
+                 (mode == MODE_FUN and sensi_order > 1)):
             if any(
                 ((r['ssigmay'] is not None and np.any(r['ssigmay']))
                  or
                  (r['ssigmaz'] is not None and np.any(r['ssigmaz'])))
                 for r in rdatas
             ):
-                raise RuntimeError('Cannot use least squares solver with'
-                                   'parameter dependent sigma!')
+                raise RuntimeError('Cannot use least squares solver or FIM '
+                                   'approximation with parameter dependent '
+                                   'sigma!')
             self._known_least_squares_safe = True  # don't check this again
 
         return calculate_function_values(
