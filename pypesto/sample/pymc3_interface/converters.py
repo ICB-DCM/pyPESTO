@@ -23,9 +23,16 @@ from .theano import CachedObjective
 def pymc3_to_arviz(model: pm.Model, trace: pm.backends.base.MultiTrace, *,
                    problem: Problem = None, x_names: List[str] = None,
                    save_warmup: bool = True, **kwargs):
+    if problem is None and x_names is None:
+        raise ValueError(
+            'one of the problem or x_names keyword arguments must be given.'
+        )
     if problem is not None and x_names is not None:
-        raise ValueError('the problem and x_names keyword arguments '
-                         'cannot both be given.')
+        raise ValueError(
+            'the problem and x_names keyword arguments cannot both be given.'
+        )
+    if problem is not None and x_names is None:
+        x_names = [problem.x_names[i] for i in problem.x_free_indices]
 
     # Determine if free parameters were vectorized
     if len(model.free_RVs) == 1:
@@ -33,11 +40,6 @@ def pymc3_to_arviz(model: pm.Model, trace: pm.backends.base.MultiTrace, *,
         if len(theta.distribution.shape) > 0:
             # theta is a tensor variable
             assert len(theta.distribution.shape) == 1  # should only be vector
-            if problem is None and x_names is None:
-                raise ValueError('if vectorize is True, one of the problem '
-                                 'or x_names keyword arguments must be given.')
-            if x_names is None:
-                x_names = [problem.x_names[i] for i in problem.x_free_indices]
             kwargs['coords'] = {"free_parameter": x_names}
             kwargs['dims'] = {pymc3_vector_parname(x_names): ["free_parameter"]}
 
@@ -50,6 +52,7 @@ def pymc3_to_arviz(model: pm.Model, trace: pm.backends.base.MultiTrace, *,
     # TODO try to eliminate the need for the log_post variable
     #      it should be easy in the vectorized case
     return CustomPyMC3Converter(
+        x_names,
         trace=trace,
         model=model,
         log_likelihood=True,  # pymc3 log-likelihood == negative obj. value
@@ -60,6 +63,11 @@ def pymc3_to_arviz(model: pm.Model, trace: pm.backends.base.MultiTrace, *,
 
 
 class CustomPyMC3Converter(az.data.io_pymc3.PyMC3Converter):
+    def __init__(self, x_names: List[str], *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        assert not hasattr(self, 'pypesto_names')
+        self.pypesto_names = x_names
+
     # NB if we want to save only the untrasformed variables,
     #    we cannot rely on PyMC3 to compute the objective function
     def _extract_log_likelihood(self, trace):
@@ -89,7 +97,7 @@ class CustomPyMC3Converter(az.data.io_pymc3.PyMC3Converter):
         # Determine if parameters are stored as a vector or separately
         # and create a function mapping a point from a PyMC3 chain
         # to a pyPESTO vector of parameters
-        to_params = lambda point : [float(point[name]) for name in obj.x_names]
+        to_params = lambda point : [float(point[name]) for name in self.pypesto_names]
         if len(self.model.free_RVs) == 1:
             theta = self.model.free_RVs[0]
             theta_shape = theta.distribution.shape
