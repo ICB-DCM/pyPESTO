@@ -117,7 +117,6 @@ class Problem:
 
         self._x_free_indices: Union[List[int], None] = None
 
-        # check if lower bounds are not nan
 
         if x_guesses is None:
             x_guesses = np.zeros((0, self.dim_full))
