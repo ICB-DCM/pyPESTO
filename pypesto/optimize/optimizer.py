@@ -844,10 +844,12 @@ class FidesOptimizer(Optimizer):
     Package Homepage: https://fides-optimizer.readthedocs.io/en/latest
     """
 
-    def __init__(self,
-                 hessian_update: Optional[fides.HessianApproximation] =
-                 None,
-                 options: Optional[Dict] = None):
+    def __init__(
+            self,
+            hessian_update: Optional['fides.HessianApproximation'] = None,
+            options: Optional[Dict] = None,
+            verbose: Optional[int] = logging.INFO
+    ):
         """
         Parameters
         ----------
@@ -869,6 +871,7 @@ class FidesOptimizer(Optimizer):
         if options is None:
             options = {}
 
+        self.verbose = verbose
         self.options = options
         self.hessian_update = hessian_update
 
@@ -891,7 +894,7 @@ class FidesOptimizer(Optimizer):
 
         opt = fides.Optimizer(
             fun=problem.objective, funargs=args, ub=problem.ub, lb=problem.lb,
-            verbose=self.options.get('verbose', logging.INFO),
+            verbose=self.verbose,
             hessian_update=self.hessian_update, options=self.options
         )
 
@@ -905,8 +908,8 @@ class FidesOptimizer(Optimizer):
             msg = str(err)
 
         optimizer_result = OptimizerResult(
-            x=opt.x, fval=opt.fval, grad=opt.grad, hess=opt.hess, message=msg,
-            exitflag=int(opt.converged)
+            x=opt.x_min, fval=opt.fval_min, grad=opt.grad_min, hess=opt.hess,
+            message=msg, exitflag=opt.exitflag
         )
 
         return optimizer_result
