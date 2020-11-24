@@ -96,7 +96,16 @@ def test_unbounded_minimize(optimizer):
     if isinstance(optimizer[1], str) and re.match(r'^(?i)(ls_)', optimizer[1]):
         return
 
-    if optimizer in [('dlib', ''), ('pyswarm', ''), ('cmaes', '')]:
+    if optimizer in [('dlib', ''), ('pyswarm', ''), ('cmaes', ''),
+                     *[('nlopt', method) for method in [
+                         nlopt.GN_ESCH, nlopt.GN_ISRES, nlopt.GN_AGS,
+                         nlopt.GD_STOGO, nlopt.GD_STOGO_RAND, nlopt.G_MLSL,
+                         nlopt.G_MLSL_LDS, nlopt.GD_MLSL, nlopt.GD_MLSL_LDS,
+                         nlopt.GN_CRS2_LM, nlopt.GN_ORIG_DIRECT,
+                         nlopt.GN_ORIG_DIRECT_L, nlopt.GN_DIRECT,
+                         nlopt.GN_DIRECT_L, nlopt.GN_DIRECT_L_NOSCAL,
+                         nlopt.GN_DIRECT_L_RAND,
+                         nlopt.GN_DIRECT_L_RAND_NOSCAL]]]:
         with pytest.raises(ValueError):
             optimize.minimize(
                 problem=problem,
@@ -122,8 +131,7 @@ def test_unbounded_minimize(optimizer):
     # check that result is not in bounds, optimum is at (1,1), so you would
     # hope that any reasonable optimizer manage to finish with x < ub,
     # but I guess some are pretty terrible
-    assert result.optimize_result.list[0]['x'] is None or \
-        np.any(result.optimize_result.list[0]['x'] < lb) or \
+    assert np.any(result.optimize_result.list[0]['x'] < lb) or \
         np.any(result.optimize_result.list[0]['x'] > ub)
 
 

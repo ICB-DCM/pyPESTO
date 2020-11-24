@@ -712,7 +712,7 @@ class NLoptOptimizer(Optimizer):
             raise ValueError(f'Method "{method}" does not allow a local '
                              f'method. Please set `local_method` to None.')
 
-        local_methods = [
+        self.local_methods = [
             nlopt.LD_VAR1, nlopt.LD_VAR2, nlopt.LD_TNEWTON_PRECOND_RESTART,
             nlopt.LD_TNEWTON_PRECOND, nlopt.LD_TNEWTON_RESTART,
             nlopt.LD_TNEWTON, nlopt.LD_LBFGS,
@@ -720,7 +720,7 @@ class NLoptOptimizer(Optimizer):
             nlopt.LN_NELDERMEAD, nlopt.LN_PRAXIS, nlopt.LN_NEWUOA,
             nlopt.LN_NEWUOA_BOUND, nlopt.LN_BOBYQA, nlopt.LN_COBYLA,
         ]
-        global_methods = [
+        self.global_methods = [
             nlopt.GN_ESCH, nlopt.GN_ISRES, nlopt.GN_AGS, nlopt.GD_STOGO,
             nlopt.GD_STOGO_RAND, nlopt.G_MLSL, nlopt.G_MLSL_LDS, nlopt.GD_MLSL,
             nlopt.GD_MLSL_LDS, nlopt.GN_CRS2_LM, nlopt.GN_ORIG_DIRECT,
@@ -728,10 +728,11 @@ class NLoptOptimizer(Optimizer):
             nlopt.GN_DIRECT_L_NOSCAL, nlopt.GN_DIRECT_L_RAND,
             nlopt.GN_DIRECT_L_RAND_NOSCAL,
         ]
-        hybrid_methods = [
+        self.hybrid_methods = [
             nlopt.AUGLAG, nlopt.AUGLAG_EQ
         ]
-        methods = local_methods + global_methods + hybrid_methods
+        methods = self.local_methods + self.global_methods + \
+                  self.hybrid_methods
 
         if method not in methods:
             raise ValueError(f'"{method}" is not a valid method. Valid '
@@ -739,9 +740,9 @@ class NLoptOptimizer(Optimizer):
 
         self.method = method
 
-        if local_method is not None and local_method not in local_methods:
+        if local_method is not None and local_method not in self.local_methods:
             raise ValueError(f'"{local_method}" is not a valid method. Valid '
-                             f'methods are: {local_methods}')
+                             f'methods are: {self.local_methods}')
 
         self.local_method = local_method
 
@@ -774,6 +775,9 @@ class NLoptOptimizer(Optimizer):
             local_opt = nlopt.opt(self.local_method, problem.dim)
             set_options(local_opt, self.local_options)
             opt.set_local_optimizer(local_opt)
+
+        if self.method in self.global_methods:
+            check_finite_bounds(problem.ub, problem.lb)
 
         opt.set_lower_bounds(problem.lb)
         opt.set_upper_bounds(problem.ub)
