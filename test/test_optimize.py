@@ -80,11 +80,57 @@ def test_optimization(mode, optimizer):
             check_minimize(obj, library, method)
 
 
-def check_minimize(objective, library, solver, allow_failed_starts=False):
+def test_unbounded_minimize(optimizer):
+    lb = 1.1 * np.ones((1, 2))
+    ub = 1.11 * np.ones((1, 2))
+    og_lb = lb.copy()
+    og_ub = ub.copy()
+    problem = pypesto.Problem(
+        test_objective.rosen_for_sensi(max_sensi_order=2)['obj'], lb, ub
+    )
+    opt = get_optimizer(*optimizer)
+
+    options = optimize.OptimizeOptions(unbounded_optimization=True,
+                                       allow_failed_starts=False)
+
+    if isinstance(optimizer[1], str) and re.match(r'^(?i)(ls_)', optimizer[1]):
+        return
+
+    if optimizer in [('dlib', ''), ('pyswarm', ''), ('cmaes', '')]:
+        with pytest.raises(ValueError):
+            optimize.minimize(
+                problem=problem,
+                optimizer=opt,
+                n_starts=1,
+                startpoint_method=pypesto.startpoint.uniform,
+                options=options
+            )
+        return
+    else:
+        result = optimize.minimize(
+            problem=problem,
+            optimizer=opt,
+            n_starts=1,
+            startpoint_method=pypesto.startpoint.uniform,
+            options=options
+        )
+
+    # check that ub/lb were reverted
+    assert np.equal(og_lb, problem.lb_full).all()
+    assert np.equal(og_ub, problem.ub_full).all()
+    assert isinstance(result.optimize_result.list[0]['fval'], float)
+    # check that result is not in bounds, optimum is at (1,1), so you would
+    # hope that any reasonable optimizer manage to finish with x < ub,
+    # but I guess some are pretty terrible
+    assert result.optimize_result.list[0]['x'] is None or \
+        np.any(result.optimize_result.list[0]['x'] < lb) or \
+        np.any(result.optimize_result.list[0]['x'] > ub)
+
+
+def get_optimizer(library, solver):
     options = {
         'maxiter': 100
     }
-
     optimizer = None
 
     if library == 'scipy':
@@ -104,12 +150,18 @@ def check_minimize(objective, library, solver, allow_failed_starts=False):
         optimizer = optimize.FidesOptimizer(options=options,
                                             hessian_update=solver[0])
 
+    return optimizer
+
+
+def check_minimize(objective, library, solver, allow_failed_starts=False):
+    optimizer = get_optimizer(library, solver)
     lb = 0 * np.ones((1, 2))
     ub = 1 * np.ones((1, 2))
     problem = pypesto.Problem(objective, lb, ub)
 
     optimize_options = optimize.OptimizeOptions(
-        allow_failed_starts=allow_failed_starts)
+        allow_failed_starts=allow_failed_starts
+    )
 
     result = optimize.minimize(
         problem=problem,

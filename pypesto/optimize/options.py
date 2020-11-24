@@ -10,18 +10,23 @@ class OptimizeOptions(dict):
     startpoint_resample:
         Flag indicating whether initial points are supposed to be resampled if
         function evaluation fails at the initial point
-    allow_failed_starts: bool, optional
+    allow_failed_starts:
         Flag indicating whether we tolerate that exceptions are thrown during
         the minimization process.
+    unbounded_optimization:
+        Flag indicating whether optimization problem should be constrained by
+        specified bounds (starting points will still be subject to bounds)
     """
 
     def __init__(self,
                  startpoint_resample: bool = False,
-                 allow_failed_starts: bool = True):
+                 allow_failed_starts: bool = True,
+                 unbounded_optimization: bool = False):
         super().__init__()
 
         self.startpoint_resample: bool = startpoint_resample
         self.allow_failed_starts: bool = allow_failed_starts
+        self.unbounded_optimization: bool = unbounded_optimization
 
     def __getattr__(self, key):
         try:

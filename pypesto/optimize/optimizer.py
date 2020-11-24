@@ -276,6 +276,12 @@ class Optimizer(abc.ABC):
         return None
 
 
+def check_finite_bounds(lb, ub):
+    if not np.isfinite(lb).all() or not np.isfinite(ub).all():
+        raise ValueError('Selected optimizer cannot work with unconstrained '
+                         'optimization problems.')
+
+
 class ScipyOptimizer(Optimizer):
     """
     Use the SciPy optimizers.
@@ -509,6 +515,7 @@ class DlibOptimizer(Optimizer):
 
         lb = problem.lb
         ub = problem.ub
+        check_finite_bounds(lb, ub)
         objective = problem.objective
 
         if dlib is None:
@@ -517,8 +524,8 @@ class DlibOptimizer(Optimizer):
             )
 
         if not objective.has_fun:
-            raise Exception("For this optimizer, the objective must "
-                            "be able to return function values.")
+            raise ValueError("For this optimizer, the objective must "
+                             "be able to return function values.")
 
         # dlib requires variable length arguments
         def get_fval_vararg(*x):
@@ -570,6 +577,8 @@ class PyswarmOptimizer(Optimizer):
         if pyswarm is None:
             raise ImportError(
                 "This optimizer requires an installation of pyswarm.")
+
+        check_finite_bounds(lb, ub)
 
         xopt, fopt = pyswarm.pso(
             problem.objective.get_fval, lb, ub, **self.options)
@@ -623,6 +632,9 @@ class CmaesOptimizer(Optimizer):
 
         lb = problem.lb
         ub = problem.ub
+
+        check_finite_bounds(lb, ub)
+
         sigma0 = self.par_sigma0 * np.median(ub - lb)
         self.options['bounds'] = [lb, ub]
 
