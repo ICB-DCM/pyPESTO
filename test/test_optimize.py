@@ -80,7 +80,19 @@ def test_optimization(mode, optimizer):
             check_minimize(obj, library, method)
 
 
-def test_unbounded_minimize(optimizer):
+engines = [
+    pypesto.engine.SingleCoreEngine,
+    pypesto.engine.MultiThreadEngine,
+    pypesto.engine.MultiProcessEngine,
+]
+
+
+@pytest.fixture(params=engines)
+def engine(request):
+    return request.param
+
+
+def test_unbounded_minimize(optimizer, engine):
     lb = 1.1 * np.ones((1, 2))
     ub = 1.11 * np.ones((1, 2))
     og_lb = lb.copy()
@@ -110,7 +122,8 @@ def test_unbounded_minimize(optimizer):
             optimize.minimize(
                 problem=problem,
                 optimizer=opt,
-                n_starts=1,
+                n_starts=2,
+                engine=engine,
                 startpoint_method=pypesto.startpoint.uniform,
                 options=options
             )
