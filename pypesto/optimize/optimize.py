@@ -1,6 +1,5 @@
 import logging
 from typing import Callable, Iterable, Union
-from contextlib import AbstractContextManager
 
 import numpy as np
 
@@ -14,29 +13,6 @@ from .options import OptimizeOptions
 from .task import OptimizerTask
 
 logger = logging.getLogger(__name__)
-
-
-class ConstraintRemover(AbstractContextManager):
-    def __init__(self, problem, unconstrained):
-        super(ConstraintRemover, self).__init__()
-        self.unconstrained = unconstrained
-        self.og_ub = problem.ub_full.copy()
-        self.og_lb = problem.lb_full.copy()
-        self.problem = problem
-
-    def __enter__(self):
-        if self.unconstrained:
-            # inplace editing
-            self.problem.ub_full[:] = np.asarray([
-                np.inf for _ in self.problem.ub_full
-            ])
-            self.problem.lb_full[:] = np.asarray([
-                -np.inf for _ in self.problem.lb_full
-            ])
-
-    def __exit__(self, exc_type, exc_val, exc_tb):
-        self.problem.ub_full[:] = self.og_ub
-        self.problem.lb_full[:] = self.og_lb
 
 
 def minimize(
@@ -120,21 +96,20 @@ def minimize(
     if engine is None:
         engine = SingleCoreEngine()
 
-    with ConstraintRemover(problem, options.unbounded_optimization):
-        # define tasks
-        tasks = []
-        for startpoint, id in zip(startpoints, ids):
-            task = OptimizerTask(
-                optimizer=optimizer, problem=problem, x0=startpoint, id=id,
-                options=options, history_options=history_options)
-            tasks.append(task)
+    # define tasks
+    tasks = []
+    for startpoint, id in zip(startpoints, ids):
+        task = OptimizerTask(
+            optimizer=optimizer, problem=problem, x0=startpoint, id=id,
+            options=options, history_options=history_options)
+        tasks.append(task)
 
-        # do multistart optimization
-        ret = engine.execute(tasks)
+    # do multistart optimization
+    ret = engine.execute(tasks)
 
-        # aggregate results
-        for optimizer_result in ret:
-            result.optimize_result.append(optimizer_result)
+    # aggregate results
+    for optimizer_result in ret:
+        result.optimize_result.append(optimizer_result)
 
     # sort by best fval
     result.optimize_result.sort()
