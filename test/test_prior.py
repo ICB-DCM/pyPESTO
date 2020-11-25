@@ -13,19 +13,20 @@ import pypesto.optimize
 from pypesto.objective import NegLogParameterPriors
 from pypesto.objective.priors import get_parameter_prior_dict
 
+scales = ['lin', 'log', 'log10']
+
 
 def test_mode():
     """
     Tests the maximum/optimum for priors in different scales...
     """
 
-    scales = ['lin', 'log', 'log10']
-    prior_types = ['normal', 'laplace',
-                   'logNormal']
-
     problem_dict = {'lin': {'lb': [0], 'ub': [10], 'opt': [1]},
                     'log': {'lb': [-3], 'ub': [3], 'opt': [0]},
                     'log10': {'lb': [-3], 'ub': [2], 'opt': [0]}}
+
+    prior_types = ['normal', 'laplace', 'logNormal',
+                   'parameterScaleNormal', 'parameterScaleLaplace']
 
     for prior_type, scale in itertools.product(prior_types, scales):
 
@@ -43,9 +44,12 @@ def test_mode():
 
         result = pypesto.optimize.minimize(
             problem=test_problem, optimizer=optimizer, n_starts=10)
-
-        assert np.isclose(result.optimize_result.list[0]['x'],
-                          problem_dict[scale]['opt'], atol=1e-04)
+        if prior_type.startswith('parameterScale'):
+            assert np.isclose(result.optimize_result.list[0]['x'],
+                              problem_dict['lin']['opt'], atol=1e-04)
+        else:
+            assert np.isclose(result.optimize_result.list[0]['x'],
+                              problem_dict[scale]['opt'], atol=1e-04)
 
     # test uniform distribution:
     for scale in scales:
@@ -68,8 +72,8 @@ def test_derivatives():
     Tests the finite gradients and second order derivatives.
     """
 
-    scales = ['lin', 'log', 'log10']
-    prior_types = ['uniform', 'normal', 'laplace', 'logNormal']
+    prior_types = ['normal', 'laplace', 'logNormal', 'parameterScaleUniform', 
+                   'parameterScaleNormal', 'parameterScaleLaplace']
 
     for prior_type, scale in itertools.product(prior_types, scales):
 
