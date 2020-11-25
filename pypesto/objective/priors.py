@@ -278,7 +278,7 @@ def _prior_densities(prior_type: str,
 
     """
 
-    if prior_type == 'uniform':
+    if prior_type in['uniform', 'parameterScaleUniform']:
 
         def log_f(x):
             if prior_parameters[0] <= x <= prior_parameters[1]:
@@ -306,7 +306,7 @@ def _prior_densities(prior_type: str,
 
         return log_f, d_log_f_dx, dd_log_f_ddx
 
-    elif prior_type == ['laplace', 'parameterScaleLaplace']:
+    elif prior_type in ['laplace', 'parameterScaleLaplace']:
 
         mean = prior_parameters[0]
         scale = prior_parameters[1]
