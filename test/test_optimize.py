@@ -129,6 +129,9 @@ def test_unbounded_minimize(optimizer):
 
     # check that ub/lb were reverted
     assert isinstance(result.optimize_result.list[0]['fval'], float)
+    if optimizer not in [('scipy', 'ls_trf'), ('scipy', 'ls_dogbox')]:
+        assert np.isfinite(result.optimize_result.list[0]['fval'])
+        assert result.optimize_result.list[0]['x'] is not None
     # check that result is not in bounds, optimum is at (1,1), so you would
     # hope that any reasonable optimizer manage to finish with x < ub,
     # but I guess some are pretty terrible
@@ -137,6 +140,8 @@ def test_unbounded_minimize(optimizer):
 
 
 def get_optimizer(library, solver):
+    """Constructs Optimizer given and optimization library and optimization
+    solver specification"""
     options = {
         'maxiter': 100
     }
@@ -163,6 +168,8 @@ def get_optimizer(library, solver):
 
 
 def check_minimize(objective, library, solver, allow_failed_starts=False):
+    """Runs a single run of optimization according to the provided inputs
+    and checks whether optimization yielded a solution."""
     optimizer = get_optimizer(library, solver)
     lb = 0 * np.ones((1, 2))
     ub = 1 * np.ones((1, 2))
@@ -181,3 +188,6 @@ def check_minimize(objective, library, solver, allow_failed_starts=False):
     )
 
     assert isinstance(result.optimize_result.list[0]['fval'], float)
+    if (library, solver) not in [('scipy', 'ls_trf'), ('scipy', 'ls_dogbox')]:
+        assert np.isfinite(result.optimize_result.list[0]['fval'])
+        assert result.optimize_result.list[0]['x'] is not None

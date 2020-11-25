@@ -1,8 +1,6 @@
 import logging
 from typing import Callable, Iterable, Union
 
-import numpy as np
-
 from ..engine import Engine, SingleCoreEngine
 from ..objective import HistoryOptions
 from ..problem import Problem
