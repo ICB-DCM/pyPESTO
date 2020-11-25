@@ -247,8 +247,8 @@ def _prior_densities(prior_type: str,
                                                      Callable]:
     """
     Returns a tuple of Callables of the (log-)density (in untransformed =
-    linear scale), together with their first + second derivative
-    (= sensis) w.r.t. x.
+    linear scale), except for prior_types starting with `parameterScale`,
+    together with their first + second derivative (= sensis) w.r.t. x.
 
 
     Currently the following distributions are supported:
@@ -259,9 +259,13 @@ def _prior_densities(prior_type: str,
     * normal:
         normal distribution, with mean prior_parameters[0] and
         standard deviation prior_parameters[1]
+    * parameterScaleNormal:
+        normal distribution on original parameter scale.
     * laplace:
         laplace distribution, with location prior_parameters[0] and
         scale prior_parameters[1]
+    * parameterScaleLaplace:
+        normal distribution on original parameter scale.
     * logNormal:
         logNormal distribution, where prior_parameters are mean and
         standard deviation of the exp(X).
