@@ -72,7 +72,7 @@ def test_derivatives():
     Tests the finite gradients and second order derivatives.
     """
 
-    prior_types = ['normal', 'laplace', 'logNormal', 'parameterScaleUniform', 
+    prior_types = ['normal', 'laplace', 'logNormal', 'parameterScaleUniform',
                    'parameterScaleNormal', 'parameterScaleLaplace']
 
     for prior_type, scale in itertools.product(prior_types, scales):
