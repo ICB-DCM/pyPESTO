@@ -185,7 +185,7 @@ def get_parameter_prior_dict(index: int,
     log_f, d_log_f_dx, dd_log_f_ddx = \
         _prior_densities(prior_type, prior_parameters)
 
-    if parameter_scale == 'lin':
+    if parameter_scale == 'lin' or prior_type.startswith('parameterScale'):
 
         return {'index': index,
                 'density_fun': log_f,
@@ -287,7 +287,7 @@ def _prior_densities(prior_type: str,
 
         return log_f, d_log_f_dx, dd_log_f_ddx
 
-    elif prior_type == 'normal':
+    elif prior_type in ['normal', 'parameterScaleNormal']:
 
         mean = prior_parameters[0]
         sigma2 = prior_parameters[1]**2
@@ -302,7 +302,7 @@ def _prior_densities(prior_type: str,
 
         return log_f, d_log_f_dx, dd_log_f_ddx
 
-    elif prior_type == 'laplace':
+    elif prior_type == ['laplace', 'parameterScaleLaplace']:
 
         mean = prior_parameters[0]
         scale = prior_parameters[1]
