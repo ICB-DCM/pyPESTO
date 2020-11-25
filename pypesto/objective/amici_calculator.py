@@ -204,7 +204,6 @@ def calculate_function_values(rdatas,
                 sres = np.vstack([sres, opt_sres]) \
                     if sres.size else opt_sres
 
-
     ret = {
         FVAL: nllh,
         CHI2: chi2,
