@@ -81,6 +81,9 @@ def test_optimization(mode, optimizer):
 
 
 def test_unbounded_minimize(optimizer):
+    """
+    Test unbounded optimization using various optimizers and objective modes.
+    """
     lb_init = 1.1 * np.ones((1, 2))
     lb = -np.inf * np.ones(lb_init.shape)
     ub_init = 1.11 * np.ones((1, 2))

@@ -18,6 +18,7 @@ def spmethod(request):
 
 
 def test_uniform():
+    """ Test startpoint generation using uniform sampling  """
     xs = pypesto.startpoint.uniform(n_starts=n_starts, lb=lb, ub=ub)
     assert xs.shape == (5, 2)
     assert np.all(xs >= lb)
@@ -25,6 +26,7 @@ def test_uniform():
 
 
 def test_latin_hypercube():
+    """ Test startpoint generation using lhs sampling  """
     xs = pypesto.startpoint.latin_hypercube(
         n_starts=n_starts, lb=lb, ub=ub)
     assert xs.shape == (5, 2)
@@ -42,6 +44,7 @@ def test_latin_hypercube():
 
 
 def test_ubounded_startpoints(spmethod):
+    """ Test Exceptions for non-finite lb/ub """
     for lb_, ub_ in [
         (-np.inf * np.ones(lb.shape), ub),
         (lb, np.inf * np.ones(ub.shape)),
