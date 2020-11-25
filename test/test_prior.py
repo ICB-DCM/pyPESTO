@@ -79,6 +79,8 @@ def test_mode(scale, prior_type):
         ) < 1e-8
 
     else:
+        # flat functions don't have local minima, so dont check this for
+        # uniform priors
         assert np.isclose(result.optimize_result.list[0]['x'],
                           problem_dict[scale]['opt'], atol=1e-04)
 
