@@ -278,7 +278,7 @@ def _prior_densities(prior_type: str,
 
     """
 
-    if prior_type in['uniform', 'parameterScaleUniform']:
+    if prior_type in ['uniform', 'parameterScaleUniform']:
 
         def log_f(x):
             if prior_parameters[0] <= x <= prior_parameters[1]:
