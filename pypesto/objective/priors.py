@@ -253,30 +253,52 @@ def _prior_densities(prior_type: str,
 
     Currently the following distributions are supported:
 
-    * uniform:
-        prior_parameters[0] and prior_parameters[1] give the lower and upper
-        boundary.
-    * parameterScaleUniform:
-        uniform distribution on original parameter scale.
-    * normal:
-        normal distribution, with mean prior_parameters[0] and
-        standard deviation prior_parameters[1]
-    * parameterScaleNormal:
-        normal distribution on original parameter scale.
-    * laplace:
-        Laplace distribution, with location prior_parameters[0] and
-        scale prior_parameters[1]
-    * parameterScaleLaplace:
-        Laplace distribution on original parameter scale.
-    * logNormal:
-        logNormal distribution, where prior_parameters are mean and
-        standard deviation of the exp(X).
+    Parameters
+    ----------
 
-    Currently not supported, but eventually planned are the
-    following distributions:
+    prior_type:
+        string identifier indicating the distribution to be used
 
-    * logUniform
-    * logLaplace
+        * uniform:
+            Uniform distribution on transformed parameter scale.
+        * parameterScaleUniform:
+            Uniform distribution on original parameter scale.
+        * normal:
+            Normal distribution on transformed parameter scale.
+        * parameterScaleNormal:
+            Normal distribution on original parameter scale.
+        * laplace:
+            Laplace distribution on transformed parameter scale
+        * parameterScaleLaplace:
+            Laplace distribution on original parameter scale.
+        * logNormal:
+            LogNormal distribution on transformed parameter scale
+
+        Currently not supported, but eventually planned are the
+        following distributions:
+
+        * logUniform
+        * logLaplace
+
+    prior_parameters:
+        parameters for the distribution
+
+        * uniform/parameterScaleUniform:
+            - prior_parameters[0]: lower bound
+            - prior_parameters[1]: upper bound
+
+        * laplace/parameterScaleLaplace:
+            - prior_parameters[0]: location parameter
+            - prior_parameters[1]: scale parameter
+
+        * normal/parameterScaleNormal:
+            - prior_parameters[0]: mean
+            - prior_parameters[1]: standard deviation
+
+        * logNormal:
+            - prior_parameters[0]: mean of log-parameters
+            - prior_parameters[1]: standard deviation of log-parameters
+
 
     """
 
