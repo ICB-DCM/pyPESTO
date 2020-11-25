@@ -171,15 +171,19 @@ def get_parameter_prior_dict(index: int,
         index of the parameter in x_full
 
     prior_type: str
-        Prior is defined in LINEAR=untransformed parameter space! prior_type
-        can from {uniform, normal, laplace, logUniform, logNormal, logLaplace}
+        Prior is defined in LINEAR=untransformed parameter space,
+        unless it starts with "parameterScale"! prior_type
+        can be from {"uniform", "normal", "laplace", "logUniform", "logNormal",
+        "logLaplace", "parameterScaleUniform", "parameterScaleNormal",
+        "parameterScaleLaplace"}
 
     prior_parameters:
         Parameters of the priors. Parameters are defined in linear scale.
 
     parameter_scale:
         scale, in which parameter is defined (since a parameter can be
-        log-transformed, while the prior is always defined in the linear space)
+        log-transformed, while the prior is always defined in the linear
+        space, unless it starts with "parameterScale")
     """
 
     log_f, d_log_f_dx, dd_log_f_ddx = \
@@ -247,7 +251,7 @@ def _prior_densities(prior_type: str,
                                                      Callable]:
     """
     Returns a tuple of Callables of the (log-)density (in untransformed =
-    linear scale), except if prior_types starts with "parameterScale",
+    linear scale), unless prior_types starts with "parameterScale",
     together with their first + second derivative (= sensis) w.r.t.
     the parameters.
 
