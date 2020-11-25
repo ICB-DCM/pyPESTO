@@ -32,7 +32,10 @@ class Problem:
         The objective function for minimization. Note that a shallow copy
         is created.
     lb, ub:
-        The lower and upper bounds. For unbounded directions set to inf.
+        The lower and upper bounds for optimization. For unbounded directions
+        set to +-inf.
+    lb_init, ub_init:
+        The lower and upper bounds for initialization.
     dim_full:
         The full dimension of the problem, including fixed parameters.
     x_fixed_indices:
@@ -57,12 +60,6 @@ class Problem:
     x_priors_defs:
         Definitions of priors for parameters. Types of priors, and their
         required and optional parameters, are described in the `Prior` class.
-    dim:
-        The number of non-fixed parameters.
-        Computed from the other values.
-    x_free_indices: array_like of int
-        Vector containing the indices (zero-based) of free parameters
-        (complimentary to x_fixed_indices).
 
     Notes
     -----
@@ -89,13 +86,22 @@ class Problem:
                  x_guesses: Optional[Iterable[float]] = None,
                  x_names: Optional[Iterable[str]] = None,
                  x_scales: Optional[Iterable[str]] = None,
-                 x_priors_defs: Optional[NegLogPriors] = None):
+                 x_priors_defs: Optional[NegLogPriors] = None,
+                 lb_init: Union[np.ndarray, List[float], None] = None,
+                 ub_init: Union[np.ndarray, List[float], None] = None):
         self.objective = copy.deepcopy(objective)
 
-        self.lb_full = np.array(lb).flatten()
-        self.ub_full = np.array(ub).flatten()
+        self.lb_full: np.ndarray = np.array(lb).flatten()
+        self.ub_full: np.ndarray = np.array(ub).flatten()
+        if lb_init is None:
+            lb_init = lb
+        self.lb_init_full: np.ndarray = np.array(lb_init).flatten()
+        if ub_init is None:
+            ub_init = ub
+        self.ub_init_full: np.ndarray = np.array(ub_init).flatten()
 
-        self.dim_full = dim_full if dim_full is not None else self.lb_full.size
+        self.dim_full: int = dim_full if dim_full is not None else \
+            self.lb_full.size
 
         if x_fixed_indices is None:
             x_fixed_indices = []
@@ -142,6 +148,14 @@ class Problem:
     @property
     def ub(self) -> np.ndarray:
         return self.ub_full[self.x_free_indices]
+
+    @property
+    def lb_init(self) -> np.ndarray:
+        return self.lb_init_full[self.x_free_indices]
+
+    @property
+    def ub_init(self) -> np.ndarray:
+        return self.ub_init_full[self.x_free_indices]
 
     @property
     def x_guesses(self) -> np.ndarray:

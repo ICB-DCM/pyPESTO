@@ -80,30 +80,18 @@ def test_optimization(mode, optimizer):
             check_minimize(obj, library, method)
 
 
-engines = [
-    pypesto.engine.SingleCoreEngine,
-    pypesto.engine.MultiThreadEngine,
-    pypesto.engine.MultiProcessEngine,
-]
-
-
-@pytest.fixture(params=engines)
-def engine(request):
-    return request.param
-
-
-def test_unbounded_minimize(optimizer, engine):
-    lb = 1.1 * np.ones((1, 2))
-    ub = 1.11 * np.ones((1, 2))
-    og_lb = lb.copy()
-    og_ub = ub.copy()
+def test_unbounded_minimize(optimizer):
+    lb_init = 1.1 * np.ones((1, 2))
+    lb = -np.inf * np.ones(lb_init.shape)
+    ub_init = 1.11 * np.ones((1, 2))
+    ub = np.inf * np.ones(ub_init.shape)
     problem = pypesto.Problem(
-        test_objective.rosen_for_sensi(max_sensi_order=2)['obj'], lb, ub
+        test_objective.rosen_for_sensi(max_sensi_order=2)['obj'],
+        lb, ub, lb_init=lb_init, ub_init=ub_init
     )
     opt = get_optimizer(*optimizer)
 
-    options = optimize.OptimizeOptions(unbounded_optimization=True,
-                                       allow_failed_starts=False)
+    options = optimize.OptimizeOptions(allow_failed_starts=False)
 
     if isinstance(optimizer[1], str) and re.match(r'^(?i)(ls_)', optimizer[1]):
         return
@@ -122,8 +110,7 @@ def test_unbounded_minimize(optimizer, engine):
             optimize.minimize(
                 problem=problem,
                 optimizer=opt,
-                n_starts=2,
-                engine=engine,
+                n_starts=1,
                 startpoint_method=pypesto.startpoint.uniform,
                 options=options
             )
@@ -138,14 +125,12 @@ def test_unbounded_minimize(optimizer, engine):
         )
 
     # check that ub/lb were reverted
-    assert np.equal(og_lb, problem.lb_full).all()
-    assert np.equal(og_ub, problem.ub_full).all()
     assert isinstance(result.optimize_result.list[0]['fval'], float)
     # check that result is not in bounds, optimum is at (1,1), so you would
     # hope that any reasonable optimizer manage to finish with x < ub,
     # but I guess some are pretty terrible
-    assert np.any(result.optimize_result.list[0]['x'] < lb) or \
-        np.any(result.optimize_result.list[0]['x'] > ub)
+    assert np.any(result.optimize_result.list[0]['x'] < lb_init) or \
+        np.any(result.optimize_result.list[0]['x'] > ub_init)
 
 
 def get_optimizer(library, solver):

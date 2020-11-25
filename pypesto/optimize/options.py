@@ -13,20 +13,15 @@ class OptimizeOptions(dict):
     allow_failed_starts:
         Flag indicating whether we tolerate that exceptions are thrown during
         the minimization process.
-    unbounded_optimization:
-        Flag indicating whether optimization problem should be constrained by
-        specified bounds (starting points will still be subject to bounds)
     """
 
     def __init__(self,
                  startpoint_resample: bool = False,
-                 allow_failed_starts: bool = True,
-                 unbounded_optimization: bool = False):
+                 allow_failed_starts: bool = True):
         super().__init__()
 
         self.startpoint_resample: bool = startpoint_resample
         self.allow_failed_starts: bool = allow_failed_starts
-        self.unbounded_optimization: bool = unbounded_optimization
 
     def __getattr__(self, key):
         try:
