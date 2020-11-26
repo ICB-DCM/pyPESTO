@@ -170,11 +170,11 @@ def get_parameter_prior_dict(index: int,
     index:
         index of the parameter in x_full
 
-    prior_type: str
+    prior_type:
         Prior is defined in LINEAR=untransformed parameter space,
         unless it starts with "parameterScale". prior_type
-        can be any of {"uniform", "normal", "laplace", "logUniform", "logNormal",
-        "logLaplace", "parameterScaleUniform", "parameterScaleNormal",
+        can be any of {"uniform", "normal", "laplace", "logNormal",
+        "parameterScaleUniform", "parameterScaleNormal",
         "parameterScaleLaplace"}
 
     prior_parameters:
@@ -261,7 +261,13 @@ def _prior_densities(prior_type: str,
     ----------
 
     prior_type:
-        string identifier indicating the distribution to be used
+        string identifier indicating the distribution to be used. Here
+        "transformed" parameter scale refers to the scale in which
+        optimization is performed. For example, for parameters with scale
+        "log", "parameterScaleNormal" will apply a normally distributed prior
+        to logarithmic parameters, while "normal" will apply a normally
+        distributed prior to linear parameters. For parameters with scale
+        "lin", "parameterScaleNormal" and "norma" are equivalent.
 
         * uniform:
             Uniform distribution on transformed parameter scale.
