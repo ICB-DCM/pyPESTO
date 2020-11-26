@@ -172,8 +172,8 @@ def get_parameter_prior_dict(index: int,
 
     prior_type: str
         Prior is defined in LINEAR=untransformed parameter space,
-        unless it starts with "parameterScale"! prior_type
-        can be from {"uniform", "normal", "laplace", "logUniform", "logNormal",
+        unless it starts with "parameterScale". prior_type
+        can be any of {"uniform", "normal", "laplace", "logUniform", "logNormal",
         "logLaplace", "parameterScaleUniform", "parameterScaleNormal",
         "parameterScaleLaplace"}
 
@@ -181,7 +181,7 @@ def get_parameter_prior_dict(index: int,
         Parameters of the priors. Parameters are defined in linear scale.
 
     parameter_scale:
-        scale, in which parameter is defined (since a parameter can be
+        scale in which the parameter is defined (since a parameter can be
         log-transformed, while the prior is always defined in the linear
         space, unless it starts with "parameterScale")
     """
