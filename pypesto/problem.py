@@ -35,7 +35,9 @@ class Problem:
         The lower and upper bounds for optimization. For unbounded directions
         set to +-inf.
     lb_init, ub_init:
-        The lower and upper bounds for initialization.
+        The lower and upper bounds for initialization, typically for defining
+        search start points.
+        If not set, set to lb, ub.
     dim_full:
         The full dimension of the problem, including fixed parameters.
     x_fixed_indices:

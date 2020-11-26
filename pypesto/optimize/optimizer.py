@@ -277,6 +277,7 @@ class Optimizer(abc.ABC):
 
 
 def check_finite_bounds(lb, ub):
+    """Raise if bounds are not finite."""
     if not np.isfinite(lb).all() or not np.isfinite(ub).all():
         raise ValueError('Selected optimizer cannot work with unconstrained '
                          'optimization problems.')
