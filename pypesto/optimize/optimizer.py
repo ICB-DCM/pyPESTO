@@ -647,8 +647,6 @@ class ScipyDifferentialEvolutionOptimizer(Optimizer):
         maxiter: used to calculate the maximal number of funcion evaluations by
                  maxfevals = (maxiter + 1) * popsize * len(x)
         popsize: population size, default value 15
-        len(x): length of the argument of the function to be optimized
-                in the form of a 1-D array
     """
 
     def __init__(self, options: Dict = None):
@@ -668,11 +666,7 @@ class ScipyDifferentialEvolutionOptimizer(Optimizer):
             id: str,
             history_options: HistoryOptions = None,
     ) -> OptimizerResult:
-        lb = problem.lb
-        ub = problem.ub
-        bounds = []
-        for NumBounds in range(0, len(lb)):
-            bounds.append((lb[NumBounds], ub[NumBounds]))
+        bounds = list(zip(problem.lb, problem.ub))
 
         result = scipy.optimize.differential_evolution(
             problem.objective.get_fval, bounds, **self.options
