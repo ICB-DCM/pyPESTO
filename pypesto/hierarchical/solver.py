@@ -130,7 +130,7 @@ class NumericalInnerSolver(InnerSolver):
         pypesto_problem = Problem(objective, lb=lb, ub=ub, x_names=x_names)
 
         if self.x_guesses is not None:
-            pypesto_problem.x_guesses = self.x_guesses
+            pypesto_problem.x_guesses_full = self.x_guesses[:,pypesto_problem.x_free_indices]
 
         # perform the actual optimization
         result = minimize(pypesto_problem, n_starts=self.n_starts)
