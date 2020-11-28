@@ -1,6 +1,6 @@
 #!/bin/sh
 
-pip install wheel
+pip install wheel cython
 
 # general
 sudo apt-get install \
