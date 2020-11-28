@@ -28,8 +28,8 @@ jobs:
 
     - name: Install dependencies
       run: |
-        .github/workflows/install_deps.sh ipopt pysb
-        pip install -e .[test,ipopt,dlib,pyswarm,pymc3,cmaes,nlopt,fides]
+        .github/workflows/install_deps.sh petab pysb
+        pip install -e .[test,amici,petab,pymc3]
 
     - name: Run tests
       timeout-minutes: 20
@@ -71,8 +71,8 @@ jobs:
 
     - name: Install dependencies
       run: |
-        .github/workflows/install_deps.sh petab ipopt pysb
-        pip install -e .[test,petab,amici,ipopt,pymc3]
+        .github/workflows/install_deps.sh ipopt
+        pip install -e .[test,ipopt,dlib,pyswarm,cmaes,nlopt,fides]
 
     - name: Run tests
       timeout-minutes: 20
