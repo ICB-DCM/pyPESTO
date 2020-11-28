@@ -42,6 +42,10 @@ jobs:
         token: ${{ secrets.CODECOV_TOKEN }}
         file: ./coverage.xml
 
+    - name: Repository size
+      run: |
+        ./test/check_git_size.sh
+
   quality:
     runs-on: ubuntu-latest
     strategy:
