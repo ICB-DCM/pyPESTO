@@ -40,7 +40,7 @@ for par in "$@"; do
 
     pysb)
       # pysb
-      pip install \
+      pip install --no-cache \
         git+https://github.com/pysb/pysb.git@c434f6ab98301beee1bf9d2a5093f0c79da78824#egg=pysb
 
       # bionetgen

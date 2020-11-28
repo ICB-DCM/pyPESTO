@@ -20,7 +20,6 @@ optimizers = {
         'trust-ncg', 'trust-exact', 'trust-krylov',
         'ls_trf', 'ls_dogbox'],
     # disabled: ,'trust-constr', 'ls_lm', 'dogleg'
-    'dlib': ['default'],
     'pyswarm': ['']
 }
 
@@ -78,8 +77,6 @@ def parameter_estimation(
     if library == 'scipy':
         optimizer = pypesto.optimize.ScipyOptimizer(method=solver,
                                                     options=options)
-    elif library == 'dlib':
-        optimizer = pypesto.optimize.DlibOptimizer(options=options)
     elif library == 'pyswarm':
         optimizer = pypesto.optimize.PyswarmOptimizer(options=options)
     else:

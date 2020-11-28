@@ -24,7 +24,7 @@ jobs:
       with:
         path: ~/.cache
         key: ${{ runner.os }}-ci-base
-        restore-keys: ${{ runner.os }}-base
+        restore-keys: ${{ runner.os }}-
 
     - name: Install dependencies
       run: |
