@@ -1,14 +1,15 @@
 import os
 import sys
 import unittest
-import importlib
 import numpy as np
 import warnings
 import re
 
-import amici
 import pypesto
 import pypesto.optimize
+
+from ..util import load_amici_objective
+
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
@@ -31,7 +32,7 @@ class AmiciObjectiveTest(unittest.TestCase):
 
     def runTest(self):
         for example in ['conversion_reaction']:
-            objective, model = load_model_objective(example)
+            objective, model = load_amici_objective(example)
             x0 = np.array(list(model.getParameters()))
 
             df = objective.check_grad(
@@ -101,50 +102,6 @@ def parameter_estimation(
 
     pypesto.optimize.minimize(
         problem, optimizer, n_starts, options=optimize_options)
-
-
-def load_model_objective(example_name):
-    # name of the model that will also be the name of the python module
-    model_name = 'model_' + example_name
-
-    # sbml file
-    sbml_file = os.path.join('doc', 'example', example_name,
-                             model_name + '.xml')
-
-    # directory to which the generated model code is written
-    model_output_dir = os.path.join('doc', 'example', 'tmp',
-                                    model_name)
-
-    if not os.path.exists(model_output_dir):
-        os.makedirs(model_output_dir)
-    sys.path.insert(0, os.path.abspath(model_output_dir))
-
-    try:
-        model_module = importlib.import_module(model_name)
-        model = model_module.getModel()
-    except ModuleNotFoundError:
-        # import sbml model, compile and generate amici module
-        sbml_importer = amici.SbmlImporter(sbml_file)
-        sbml_importer.sbml2amici(model_name,
-                                 model_output_dir,
-                                 verbose=False)
-        model_module = importlib.import_module(model_name)
-        model = model_module.getModel()
-
-    model.requireSensitivitiesForAllParameters()
-    model.setTimepoints(np.linspace(0, 10, 11))
-    model.setParameterScale(amici.ParameterScaling_log10)
-    model.setParameters([-0.3, -0.7])
-    solver = model.getSolver()
-    solver.setSensitivityMethod(amici.SensitivityMethod_forward)
-    solver.setSensitivityOrder(amici.SensitivityOrder_first)
-
-    # generate experimental data
-    rdata = amici.runAmiciSimulation(model, solver, None)
-    edata = amici.ExpData(rdata, 0.05, 0.0)
-
-    return (pypesto.AmiciObjective(model, solver, [edata], 2),
-            model)
 
 
 if __name__ == '__main__':

@@ -6,20 +6,16 @@ import numpy as np
 import pytest
 import unittest
 import tempfile
-
-from test.test_objective import rosen_for_sensi
-from test.test_sbml_conversion import load_model_objective
+from typing import Sequence
 
 import pypesto
 from pypesto.objective.util import sres_to_schi2, res_to_chi2
 from pypesto import CsvHistory, HistoryOptions, MemoryHistory, ObjectiveBase
 from pypesto.optimize.optimizer import read_result_from_file, OptimizerResult
-
 from pypesto.objective.constants import (
-    FVAL, GRAD, HESS, RES, SRES, CHI2, SCHI2
-)
+    FVAL, GRAD, HESS, RES, SRES, CHI2, SCHI2)
 
-from typing import Sequence
+from ..util import rosen_for_sensi, load_amici_objective
 
 
 class HistoryTest(unittest.TestCase):
@@ -239,7 +235,7 @@ class ResModeHistoryTest(HistoryTest):
             method='ls_trf',
             options={'max_nfev': 100}
         )
-        cls.obj, _ = load_model_objective(
+        cls.obj, _ = load_amici_objective(
             'conversion_reaction'
         )
 

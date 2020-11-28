@@ -9,8 +9,7 @@ import numpy as np
 from pypesto.store import (
     ProblemHDF5Writer, ProblemHDF5Reader, OptimizationResultHDF5Writer,
     OptimizationResultHDF5Reader)
-from .visualize.test_visualize import create_problem, \
-    create_optimization_result
+from ..visualize import create_problem, create_optimization_result
 
 
 def test_storage_opt_result():

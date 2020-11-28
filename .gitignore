@@ -109,3 +109,4 @@ test/doc/example/tmp/benchmark-models/
 test/amici_models/*
 *.hdf5
 *.dat
+/BioNetGen-2.3.2
