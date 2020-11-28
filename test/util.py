@@ -7,7 +7,11 @@ import numpy as np
 import scipy.optimize as so
 import importlib
 import pypesto
-import amici
+
+try:
+    import amici
+except ImportError:
+    pass
 
 
 def obj_for_sensi(fun, grad, hess, max_sensi_order, integrated, x):

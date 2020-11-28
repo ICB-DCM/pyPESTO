@@ -1,7 +1,7 @@
 #!/bin/sh
 
 # Base packages that don't hurt
-pip install wheel cython numpy
+pip install wheel cython
 
 for par in "$@"; do
   case $par in
@@ -34,7 +34,8 @@ for par in "$@"; do
 	build-essential \
         coinor-libipopt1v5 coinor-libipopt-dev \
         gfortran lcov pkg-config python-dev zlib1g-dev
-      pip install six
+      # ipopt does stuff during pip install
+      pip install numpy six
     ;;
 
     pysb)
