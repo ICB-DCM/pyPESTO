@@ -34,6 +34,7 @@ for par in "$@"; do
 	build-essential \
         coinor-libipopt1v5 coinor-libipopt-dev \
         gfortran lcov pkg-config python-dev zlib1g-dev
+      pip install six
     ;;
 
     pysb)
