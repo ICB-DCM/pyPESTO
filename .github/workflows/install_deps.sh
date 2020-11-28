@@ -25,7 +25,7 @@ for par in "$@"; do
         git+https://github.com/amici-dev/amici.git@develop#egg=amici\&subdirectory=python/sdist
 
       # petabtests
-      pip install petabtests
+      pip install petabtests>=0.0.0a6
     ;;
 
     ipopt)
