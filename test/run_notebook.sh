@@ -16,17 +16,19 @@ nbs_2=(
 
 nbs_all=("${nbs_1[@]}" "${nbs_2[@]}")
 
+# Select which notebooks to run
 if [ $# -eq 0 ]; then
-  nbs=$nbs_all
+  nbs=("${nbs_all[@]}")
 elif [ $1 -eq 1 ]; then
-  nbs=$nbs_1
+  nbs=("${nbs_1[@]}")
 elif [ $1 -eq 2 ]; then
-  nbs=$nbs_2
+  nbs=("${nbs_2[@]}")
 else
   echo "Unexpected input: $1"
 fi
 
 run_notebook () {
+  # Run a notebook
   tempfile=$(tempfile)
   jupyter nbconvert \
     --ExecutePreprocessor.timeout=-1 --debug --stdout --execute \

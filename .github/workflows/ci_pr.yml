@@ -23,7 +23,7 @@ jobs:
       uses: actions/cache@v1
       with:
         path: ~/.cache
-        key: ${{ runner.os }}-ci-notebooks
+        key: ${{ runner.os }}-ci-notebooks1
 
     - name: Install dependencies
       run: |
@@ -55,7 +55,7 @@ jobs:
       uses: actions/cache@v1
       with:
         path: ~/.cache
-        key: ${{ runner.os }}-ci-notebooks
+        key: ${{ runner.os }}-ci-notebooks2
 
     - name: Install dependencies
       run: |
