@@ -1,6 +1,7 @@
 #!/bin/sh
 
-pip install wheel cython
+# Base packages that don't hurt
+pip install wheel cython numpy
 
 for par in "$@"; do
   case $par in
