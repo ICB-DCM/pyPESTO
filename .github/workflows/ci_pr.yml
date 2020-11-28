@@ -59,7 +59,7 @@ jobs:
 
     - name: Install dependencies
       run: |
-        .github/workflows/install_depx.sh docs
+        .github/workflows/install_deps.sh docs
         pip install -e .[docs]
 
     - name: Build docs
