@@ -29,7 +29,7 @@ jobs:
       run: |
         .github/workflows/install_deps.sh petab ipopt
         pip install jupyter
-        pip install -e .[ipopt,dlib,pyswarm,pymc3,cmaes,nlopt,fides]
+        pip install -e .[petab,amici,ipopt,pyswarm,pymc3,cmaes,nlopt,fides]
 
     - name: Run notebooks
       timeout-minutes: 20

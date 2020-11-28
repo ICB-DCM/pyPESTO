@@ -37,7 +37,11 @@ for par in "$@"; do
     ;;
 
     pysb)
-      # download pysb
+      # pysb
+      pip install \
+        git+https://github.com/pysb/pysb.git@c434f6ab98301beee1bf9d2a5093f0c79da78824#egg=pysb
+
+      # bionetgen
       wget -q -O bionetgen.tar.gz \
         https://bintray.com/jczech/bionetgen/download_file?file_path=BioNetGen-2.3.2-linux.tar.gz
       tar -xzf bionetgen.tar.gz
