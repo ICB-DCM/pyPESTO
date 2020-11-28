@@ -2,10 +2,6 @@
 
 pip install wheel cython
 
-# general
-sudo apt-get install \
-  build-essential gfortran lcov
-
 for par in "$@"; do
   case $par in
     docs)
@@ -24,6 +20,9 @@ for par in "$@"; do
       pip install \
         git+https://github.com/amici-dev/amici.git@develop#egg=amici\&subdirectory=python/sdist
 
+      # petab dev
+      pip install https://github.com/petab-dev/petab/archive/develop.zip
+
       # petabtests
       pip install petabtests>=0.0.0a6
     ;;
@@ -33,7 +32,7 @@ for par in "$@"; do
       sudo apt-get install \
 	build-essential \
         coinor-libipopt1v5 coinor-libipopt-dev \
-        gfortran lcov zlib1g-dev
+        gfortran lcov pkg-config python-dev zlib1g-dev
     ;;
 
     pysb)

@@ -42,7 +42,7 @@ jobs:
         token: ${{ secrets.CODECOV_TOKEN }}
         file: ./coverage.xml
 
-    - name: Repository size
+    - name: Check repository size
       run: |
         ./test/check_git_size.sh
 
