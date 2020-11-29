@@ -60,6 +60,6 @@ done
 # Run all notebooks
 for nb in "${nbs[@]}"; do
   echo $base_dir/$nb
-  run_notebook $base_dir/$nb
+  time run_notebook $base_dir/$nb
 done
 exit 0

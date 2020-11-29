@@ -19,6 +19,10 @@ jobs:
       with:
         python-version: ${{ matrix.python-version }}
 
+    - name: Check repository size
+      run: |
+        ./test/check_git_size.sh
+
     - name: Cache
       uses: actions/cache@v1
       with:
@@ -29,13 +33,52 @@ jobs:
     - name: Install dependencies
       run: |
         .github/workflows/install_deps.sh petab pysb
-        pip install -e .[test,amici,petab,pymc3,pyswarm]
+        pip install -e .[test,amici,petab,pymc3]
 
     - name: Run tests
       timeout-minutes: 20
       run: |
         python -m pytest --cov=pypesto --cov-report=xml \
-          test/base test/petab test/profile test/sample test/visualize
+          test/base test/profile test/sample test/visualize
+
+    - name: Coverage
+      uses: codecov/codecov-action@v1
+      with:
+        token: ${{ secrets.CODECOV_TOKEN }}
+        file: ./coverage.xml
+  
+  petab:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: [3.8]
+
+    steps:
+    - name: Check out repository
+      uses: actions/checkout@v2
+
+    - name: Prepare python ${{ matrix.python-version }}
+      uses: actions/setup-python@v1
+      with:
+        python-version: ${{ matrix.python-version }}
+
+    - name: Cache
+      uses: actions/cache@v1
+      with:
+        path: ~/.cache
+        key: ${{ runner.os }}-ci-petab
+        restore-keys: ${{ runner.os }}-
+
+    - name: Install dependencies
+      run: |
+        .github/workflows/install_deps.sh petab pysb
+        pip install -e .[test,amici,petab,pyswarm]
+
+    - name: Run tests
+      timeout-minutes: 20
+      run: |
+        python -m pytest --cov=pypesto --cov-report=xml \
+          test/petab
 
     - name: Coverage
       uses: codecov/codecov-action@v1
@@ -43,10 +86,6 @@ jobs:
         token: ${{ secrets.CODECOV_TOKEN }}
         file: ./coverage.xml
 
-    - name: Check repository size
-      run: |
-        ./test/check_git_size.sh
-  
   optimize:
     runs-on: ubuntu-latest
     strategy:
