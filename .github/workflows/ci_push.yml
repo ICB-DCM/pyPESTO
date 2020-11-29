@@ -32,7 +32,7 @@ jobs:
 
     - name: Install dependencies
       run: |
-        .github/workflows/install_deps.sh petab pysb
+        .github/workflows/install_deps.sh petab
         pip install -e .[test,amici,petab,pymc3]
 
     - name: Run tests
