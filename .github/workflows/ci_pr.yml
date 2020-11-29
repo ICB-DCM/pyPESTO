@@ -91,7 +91,7 @@ jobs:
 
     - name: Install dependencies
       run: |
-        .github/workflows/install_deps.sh docs
+        .github/workflows/install_deps.sh petab docs
         pip install -e .[amici,petab,docs]
 
     - name: Build docs
