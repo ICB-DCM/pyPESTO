@@ -92,7 +92,7 @@ jobs:
     - name: Install dependencies
       run: |
         .github/workflows/install_deps.sh docs
-        pip install -e .[docs]
+        pip install -e .[petab,docs]
 
     - name: Build docs
       timeout-minutes: 10
