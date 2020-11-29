@@ -1,5 +1,7 @@
 #!/bin/sh
 
+# Install CI dependencies, arguments specify what is required
+
 # Base packages that don't hurt
 pip install wheel cython
 

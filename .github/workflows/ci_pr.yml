@@ -1,6 +1,5 @@
 name: CI
 
-# trigger
 on: [pull_request]
 
 jobs:

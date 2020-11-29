@@ -1,19 +1,27 @@
 #!/bin/bash
 
 # Run notebooks
+#  Arguments 1, 2 specify a part of the models to run.
+#  If nothing is specified, all are run.
+
+# When adding notebooks, make sure the load is balanced.
 
 base_dir='doc/example'
 
-# Split notebooks up to parallel execution
+# Split notebooks up to parallelize execution
+
+# Various topics notebooks
 nbs_1=(
   'amici_import.ipynb' 'conversion_reaction.ipynb'
   'fixed_parameters.ipynb' 'petab_import.ipynb'
   'prior_definition.ipynb' 'rosenbrock.ipynb'
   'store.ipynb' 'synthetic_data.ipynb')
 
+# Sampling notebooks
 nbs_2=(
   'sampler_study.ipynb' 'sampling_diagnostics.ipynb')
 
+# All tested notebooks
 nbs_all=("${nbs_1[@]}" "${nbs_2[@]}")
 
 # Select which notebooks to run
