@@ -97,7 +97,7 @@ class HistoryTest(unittest.TestCase):
             elif isinstance(start[attr], np.ndarray):
                 assert np.allclose(
                     start[attr], rstart[attr],
-                    equal_nan=True, atol=1e-3
+                    equal_nan=True, atol=1e-2,
                 ), attr
             elif isinstance(start[attr], float):
                 assert np.isclose(
