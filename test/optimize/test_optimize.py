@@ -79,11 +79,71 @@ def test_optimization(mode, optimizer):
             check_minimize(obj, library, method)
 
 
-def check_minimize(objective, library, solver, allow_failed_starts=False):
+def test_unbounded_minimize(optimizer):
+    """
+    Test unbounded optimization using various optimizers and objective modes.
+    """
+    lb_init = 1.1 * np.ones((1, 2))
+    lb = -np.inf * np.ones(lb_init.shape)
+    ub_init = 1.11 * np.ones((1, 2))
+    ub = np.inf * np.ones(ub_init.shape)
+    problem = pypesto.Problem(
+        rosen_for_sensi(max_sensi_order=2)['obj'],
+        lb, ub, lb_init=lb_init, ub_init=ub_init
+    )
+    opt = get_optimizer(*optimizer)
+
+    options = optimize.OptimizeOptions(allow_failed_starts=False)
+
+    if isinstance(optimizer[1], str) and re.match(r'^(?i)(ls_)', optimizer[1]):
+        return
+
+    if optimizer in [('dlib', ''), ('pyswarm', ''), ('cmaes', ''),
+                     *[('nlopt', method) for method in [
+                         nlopt.GN_ESCH, nlopt.GN_ISRES, nlopt.GN_AGS,
+                         nlopt.GD_STOGO, nlopt.GD_STOGO_RAND, nlopt.G_MLSL,
+                         nlopt.G_MLSL_LDS, nlopt.GD_MLSL, nlopt.GD_MLSL_LDS,
+                         nlopt.GN_CRS2_LM, nlopt.GN_ORIG_DIRECT,
+                         nlopt.GN_ORIG_DIRECT_L, nlopt.GN_DIRECT,
+                         nlopt.GN_DIRECT_L, nlopt.GN_DIRECT_L_NOSCAL,
+                         nlopt.GN_DIRECT_L_RAND,
+                         nlopt.GN_DIRECT_L_RAND_NOSCAL]]]:
+        with pytest.raises(ValueError):
+            optimize.minimize(
+                problem=problem,
+                optimizer=opt,
+                n_starts=1,
+                startpoint_method=pypesto.startpoint.uniform,
+                options=options
+            )
+        return
+    else:
+        result = optimize.minimize(
+            problem=problem,
+            optimizer=opt,
+            n_starts=1,
+            startpoint_method=pypesto.startpoint.uniform,
+            options=options
+        )
+
+    # check that ub/lb were reverted
+    assert isinstance(result.optimize_result.list[0]['fval'], float)
+    if optimizer not in [('scipy', 'ls_trf'), ('scipy', 'ls_dogbox')]:
+        assert np.isfinite(result.optimize_result.list[0]['fval'])
+        assert result.optimize_result.list[0]['x'] is not None
+    # check that result is not in bounds, optimum is at (1,1), so you would
+    # hope that any reasonable optimizer manage to finish with x < ub,
+    # but I guess some are pretty terrible
+    assert np.any(result.optimize_result.list[0]['x'] < lb_init) or \
+        np.any(result.optimize_result.list[0]['x'] > ub_init)
+
+
+def get_optimizer(library, solver):
+    """Constructs Optimizer given and optimization library and optimization
+    solver specification"""
     options = {
         'maxiter': 100
     }
-
     optimizer = None
 
     if library == 'scipy':
@@ -103,12 +163,20 @@ def check_minimize(objective, library, solver, allow_failed_starts=False):
         optimizer = optimize.FidesOptimizer(options=options,
                                             hessian_update=solver[0])
 
+    return optimizer
+
+
+def check_minimize(objective, library, solver, allow_failed_starts=False):
+    """Runs a single run of optimization according to the provided inputs
+    and checks whether optimization yielded a solution."""
+    optimizer = get_optimizer(library, solver)
     lb = 0 * np.ones((1, 2))
     ub = 1 * np.ones((1, 2))
     problem = pypesto.Problem(objective, lb, ub)
 
     optimize_options = optimize.OptimizeOptions(
-        allow_failed_starts=allow_failed_starts)
+        allow_failed_starts=allow_failed_starts
+    )
 
     result = optimize.minimize(
         problem=problem,
@@ -119,3 +187,6 @@ def check_minimize(objective, library, solver, allow_failed_starts=False):
     )
 
     assert isinstance(result.optimize_result.list[0]['fval'], float)
+    if (library, solver) not in [('scipy', 'ls_trf'), ('scipy', 'ls_dogbox')]:
+        assert np.isfinite(result.optimize_result.list[0]['fval'])
+        assert result.optimize_result.list[0]['x'] is not None

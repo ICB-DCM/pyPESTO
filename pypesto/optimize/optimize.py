@@ -10,7 +10,6 @@ from .optimizer import Optimizer, ScipyOptimizer
 from .options import OptimizeOptions
 from .task import OptimizerTask
 
-
 logger = logging.getLogger(__name__)
 
 
