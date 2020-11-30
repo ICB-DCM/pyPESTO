@@ -10,11 +10,8 @@ import pytest
 from _pytest.outcomes import Skipped
 import logging
 
-try:
-    import petab
-    import amici.petab_objective
-except ImportError:
-    pass
+import petab
+import amici.petab_objective
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
