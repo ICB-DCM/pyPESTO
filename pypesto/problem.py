@@ -177,23 +177,18 @@ class Problem:
         vectors of dimension dim.
         """
 
-        if self.lb_full.size == 1:
-            self.lb_full = self.lb_full * np.ones(self.dim_full)
-        elif self.lb_full.size != self.dim_full:
-            # in this case self.lb_full currently only holds the values of the
-            # reduced bounds.
-            lb_full = np.empty(self.dim_full)
-            lb_full[self.x_free_indices] = self.lb_full
-            lb_full[self.x_fixed_indices] = self.x_fixed_vals
-            self.lb_full = lb_full
+        for attr in ['lb_full', 'lb_init_full', 'ub_full', 'ub_init_full']:
+            value = self.__getattribute__(attr)
+            if value.size == 1:
+                self.__setattr__(attr, value * np.ones(self.dim_full))
+            elif value.size == self.dim:
+                # in this case the bounds only holds the values of the
+                # reduced bounds.
+                self.__setattr__(attr, self.get_full_vector(value,
+                                                            self.x_fixed_vals))
 
-        if self.ub_full.size == 1:
-            self.ub_full = self.ub_full * np.ones(self.dim_full)
-        elif self.ub_full.size != self.dim_full:
-            ub_full = np.empty(self.dim_full)
-            ub_full[self.x_free_indices] = self.ub_full
-            ub_full[self.x_fixed_indices] = self.x_fixed_vals
-            self.ub_full = ub_full
+            if self.__getattribute__(attr).size != self.dim_full:
+                raise AssertionError(f"{attr} dimension invalid.")
 
         if self.x_guesses_full.shape[1] != self.dim_full:
             x_guesses = np.empty((self.x_guesses_full.shape[0], self.dim_full))
@@ -209,10 +204,6 @@ class Problem:
             x_fixed_vals=self.x_fixed_vals)
 
         # sanity checks
-        if self.lb_full.size != self.dim_full:
-            raise AssertionError("lb_full dimension invalid.")
-        if self.ub_full.size != self.dim_full:
-            raise AssertionError("ub_full dimension invalid.")
         if len(self.x_scales) != self.dim_full:
             raise AssertionError("x_scales dimension invalid.")
         if len(self.x_names) != self.dim_full:
