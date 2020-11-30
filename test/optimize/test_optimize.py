@@ -88,7 +88,7 @@ def test_unbounded_minimize(optimizer):
     ub_init = 1.11 * np.ones((1, 2))
     ub = np.inf * np.ones(ub_init.shape)
     problem = pypesto.Problem(
-        test_objective.rosen_for_sensi(max_sensi_order=2)['obj'],
+        rosen_for_sensi(max_sensi_order=2)['obj'],
         lb, ub, lb_init=lb_init, ub_init=ub_init
     )
     opt = get_optimizer(*optimizer)
