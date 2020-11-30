@@ -4,7 +4,6 @@ This is for testing optimization of the pypesto.Objective.
 
 import numpy as np
 import pytest
-import test.test_objective as test_objective
 import warnings
 import re
 import nlopt
@@ -13,6 +12,8 @@ import itertools as itt
 
 import pypesto
 import pypesto.optimize as optimize
+
+from ..util import rosen_for_sensi
 
 
 @pytest.fixture(params=['separated', 'integrated'])
@@ -60,11 +61,9 @@ def optimizer(request):
 def test_optimization(mode, optimizer):
     """Test optimization using various optimizers and objective modes."""
     if mode == 'separated':
-        obj = test_objective.rosen_for_sensi(max_sensi_order=2,
-                                             integrated=False)['obj']
+        obj = rosen_for_sensi(max_sensi_order=2, integrated=False)['obj']
     else:  # mode == 'integrated':
-        obj = test_objective.rosen_for_sensi(max_sensi_order=2,
-                                             integrated=True)['obj']
+        obj = rosen_for_sensi(max_sensi_order=2, integrated=True)['obj']
 
     library, method = optimizer
 
