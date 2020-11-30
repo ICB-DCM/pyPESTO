@@ -1,0 +1,156 @@
+name: CI
+
+# trigger
+on: [push]
+
+jobs:
+  base:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: [3.8]
+
+    steps:
+    - name: Check out repository
+      uses: actions/checkout@v2
+
+    - name: Prepare python ${{ matrix.python-version }}
+      uses: actions/setup-python@v1
+      with:
+        python-version: ${{ matrix.python-version }}
+
+    - name: Check repository size
+      run: |
+        ./test/check_git_size.sh
+
+    - name: Cache
+      uses: actions/cache@v1
+      with:
+        path: ~/.cache
+        key: ${{ runner.os }}-ci-base
+        restore-keys: ${{ runner.os }}-
+
+    - name: Install dependencies
+      run: |
+        .github/workflows/install_deps.sh petab
+        pip install -e .[test,amici,petab,pymc3]
+
+    - name: Run tests
+      timeout-minutes: 20
+      run: |
+        python -m pytest --cov=pypesto --cov-report=xml \
+          test/base test/profile test/sample test/visualize
+
+    - name: Coverage
+      uses: codecov/codecov-action@v1
+      with:
+        token: ${{ secrets.CODECOV_TOKEN }}
+        file: ./coverage.xml
+  
+  petab:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: [3.8]
+
+    steps:
+    - name: Check out repository
+      uses: actions/checkout@v2
+
+    - name: Prepare python ${{ matrix.python-version }}
+      uses: actions/setup-python@v1
+      with:
+        python-version: ${{ matrix.python-version }}
+
+    - name: Cache
+      uses: actions/cache@v1
+      with:
+        path: ~/.cache
+        key: ${{ runner.os }}-ci-petab
+        restore-keys: ${{ runner.os }}-
+
+    - name: Install dependencies
+      run: |
+        .github/workflows/install_deps.sh petab pysb
+        pip install -e .[test,amici,petab,pyswarm]
+
+    - name: Run tests
+      timeout-minutes: 20
+      run: |
+        python -m pytest --cov=pypesto --cov-report=xml \
+          test/petab
+
+    - name: Coverage
+      uses: codecov/codecov-action@v1
+      with:
+        token: ${{ secrets.CODECOV_TOKEN }}
+        file: ./coverage.xml
+
+  optimize:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: [3.8]
+
+    steps:
+    - name: Check out repository
+      uses: actions/checkout@v2
+
+    - name: Prepare python ${{ matrix.python-version }}
+      uses: actions/setup-python@v1
+      with:
+        python-version: ${{ matrix.python-version }}
+
+    - name: Cache
+      uses: actions/cache@v1
+      with:
+        path: ~/.cache
+        key: ${{ runner.os }}-ci-optimize
+        restore-keys: ${{ runner.os }}-
+
+    - name: Install dependencies
+      run: |
+        .github/workflows/install_deps.sh ipopt
+        pip install -e .[test,ipopt,dlib,pyswarm,cmaes,nlopt,fides]
+
+    - name: Run tests
+      timeout-minutes: 20
+      run: |
+        python -m pytest --cov=pypesto --cov-report=xml \
+          test/optimize
+
+    - name: Coverage
+      uses: codecov/codecov-action@v1
+      with:
+        token: ${{ secrets.CODECOV_TOKEN }}
+        file: ./coverage.xml
+
+  quality:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: [3.8]
+
+    steps:
+    - name: Check out repository
+      uses: actions/checkout@v2
+
+    - name: Prepare python ${{ matrix.python-version }}
+      uses: actions/setup-python@v1
+      with:
+        python-version: ${{ matrix.python-version }}
+
+    - name: Cache
+      uses: actions/cache@v1
+      with:
+        path: ~/.cache
+        key: ${{ runner.os }}-ci-quality
+        restore-keys: ${{ runner.os }}-
+
+    - name: Install dependencies
+      run: |
+        pip install -e .[quality]
+
+    - name: Run flake8
+      timeout-minutes: 1
+      run: ./run_flake8.sh
