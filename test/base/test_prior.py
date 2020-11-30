@@ -57,22 +57,11 @@ def test_mode(scale, prior_type):
 
     # test uniform distribution:
     if prior_type in ['uniform', 'parameterScaleUniform']:
-
-        if prior_type == 'parameterScaleUniform':
-            scale = 'lin'
-
         # check inside and outside of interval
-        assert abs(prior_list[0]['density_fun'](
-            lin_to_scaled(.5, scale)) - 0
-        ) < 1e-8
-
-        assert abs(prior_list[0]['density_fun'](
-            lin_to_scaled(1.5, scale)) - math.log(1)
-        ) < 1e-8
-
-        assert abs(prior_list[0]['density_fun'](
-            lin_to_scaled(2.5, scale)) - 0
-        ) < 1e-8
+        prior = prior_list[0]['density_fun']
+        assert np.isclose(prior(lin_to_scaled(.5, scale)), 0)
+        assert np.isclose(prior(lin_to_scaled(1.5, scale)), math.log(1))
+        assert np.isclose(prior(lin_to_scaled(2.5, scale)), 0)
 
     else:
         # flat functions don't have local minima, so dont check this for
