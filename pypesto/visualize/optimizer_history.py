@@ -174,9 +174,9 @@ def optimizer_history_lowlevel(vals, scale_y='log10', colors=None, ax=None,
         # convert to a list of numpy arrays
         vals = np.array(vals)
         if vals.shape[0] != 2 or vals.ndim != 2:
-            raise ValueError(
-                'If numpy array is passed directly to lowlevel routine of '
-                'optimizer_history, shape needs to be 2 x n.')
+            raise ValueError('If numpy array is passed directly to lowlevel '
+                             'routine of optimizer_history, shape needs to '
+                             'be 2 x n.')
         fvals = [vals[1, -1]]
         vals = [vals]
     n_fvals = len(fvals)
