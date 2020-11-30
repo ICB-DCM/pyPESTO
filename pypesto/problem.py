@@ -164,16 +164,20 @@ class Problem:
         if self.lb_full.size == 1:
             self.lb_full = self.lb_full * np.ones(self.dim_full)
         elif self.lb_full.size != self.dim_full:
-            self.lb_full = np.empty(self.dim_full)
-            self.lb_full[self.x_free_indices] = self.lb
-            self.lb_full[self.x_fixed_indices] = self.x_fixed_vals
+            # in this case self.lb_full currently only holds the values of the
+            # reduced bounds.
+            lb_full = np.empty(self.dim_full)
+            lb_full[self.x_free_indices] = self.lb_full
+            lb_full[self.x_fixed_indices] = self.x_fixed_vals
+            self.lb_full = lb_full
 
         if self.ub_full.size == 1:
             self.ub_full = self.ub_full * np.ones(self.dim_full)
         elif self.ub_full.size != self.dim_full:
-            self.ub_full = np.empty(self.dim_full)
-            self.ub_full[self.x_free_indices] = self.ub
-            self.ub_full[self.x_fixed_indices] = self.x_fixed_vals
+            ub_full = np.empty(self.dim_full)
+            ub_full[self.x_free_indices] = self.ub_full
+            ub_full[self.x_fixed_indices] = self.x_fixed_vals
+            self.ub_full = ub_full
 
         if self.x_guesses_full.shape[1] != self.dim_full:
             x_guesses = np.empty((self.x_guesses_full.shape[0], self.dim_full))
@@ -199,8 +203,14 @@ class Problem:
             raise AssertionError("x_names must be of length dim_full.")
         if len(self.x_fixed_indices) != len(self.x_fixed_vals):
             raise AssertionError(
-                "x_fixed_indices and x_fixed_vals musti have the same length."
+                "x_fixed_indices and x_fixed_vals must have the same length."
             )
+        if np.isnan(self.lb).any():
+            raise ValueError('lb must not contain nan values')
+        if np.isnan(self.ub).any():
+            raise ValueError('ub must not contain nan values')
+        if np.any(self.lb >= self.ub):
+            raise ValueError('lb<ub not fulfilled.')
 
     def fix_parameters(self,
                        parameter_indices: SupportsIntIterableOrValue,

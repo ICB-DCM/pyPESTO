@@ -1,7 +1,4 @@
-
-"""
-This is for testing priors.
-"""
+"""Test priors."""
 
 import math
 import itertools

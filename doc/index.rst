@@ -6,9 +6,8 @@
 Welcome to pyPESTO's documentation!
 ===================================
 
-
-.. image:: https://travis-ci.com/ICB-DCM/pyPESTO.svg?branch=master
-   :target: https://travis-ci.com/ICB-DCM/pyPESTO
+.. image:: https://github.com/ICB-DCM/pyPESTO/workflows/CI/badge.svg
+   :target: https://github.com/ICB-DCM/pyPESTO/actions
    :alt: Build status
 .. image:: https://codecov.io/gh/ICB-DCM/pyPESTO/branch/master/graph/badge.svg
    :target: https://codecov.io/gh/ICB-DCM/pyPESTO
