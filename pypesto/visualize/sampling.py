@@ -219,13 +219,14 @@ def sampling_prediction_profiles(result: Result,
 def sampling_prediction_profiles_conditions(
         result: Result,
         ci_levels: Union[int, Sequence[int]] = 95,
-        stepsize: int = 1,
+        step_size: int = 1,
         plot_type: str = 'states',
         title: str = None,
         size: Tuple[float, float] = None,
         ax: matplotlib.axes.Axes = None,
         y_names: Sequence[str] = None,
         n_procs: int = 1,
+        axis_label_padding: int = 30,
 ):
     """Plot MCMC-based prediction confidence intervals for the
     model states or observables. One or various confidence levels
@@ -237,8 +238,8 @@ def sampling_prediction_profiles_conditions(
         The pyPESTO result object with filled sample result.
     ci_levels:
         List of lower tail probabilities, e.g. 95 for a 95% interval.
-    stepsize:
-        Only one in `stepsize` values is simulated for the intervals
+    step_size:
+        Only one in `step_size` values is simulated for the intervals
         generation. Recommended for long MCMC chains.
     plot_type:
         Visualization mode for prediction intervals.
@@ -254,6 +255,8 @@ def sampling_prediction_profiles_conditions(
     n_procs:
         The number of processors to use, to parallelize the evaluation of
         samples.
+    axis_label_padding:
+        Pixels between axis labels and plots.
 
     Returns
     -------
@@ -266,13 +269,18 @@ def sampling_prediction_profiles_conditions(
     ci_levels_opacity = sorted(
         # min 30%, max 100%, opacity
         np.linspace(0.3 * RGBA_MAX, RGBA_MAX, len(ci_levels)),
+        reverse=True,
     )
     if ax is not None:
         fig = ax.get_figure()
+        if not isinstance(ax, np.ndarray):
+            ax = np.array([[ax]])
     cmap = plt.cm.viridis
+    cmap_min = RGBA_MIN
+    cmap_max = 0.85*(RGBA_MAX - RGBA_MIN) + RGBA_MIN  # exclude yellows
 
     # Evaluate prediction uncertainties
-    evaluation = evaluate_samples(result, stepsize, n_procs=n_procs)
+    evaluation = evaluate_samples(result, step_size, n_procs=n_procs)
 
     values_options = {
         'observables': 0,
@@ -282,14 +290,14 @@ def sampling_prediction_profiles_conditions(
     n_variables = values.shape[-1]
 
     if y_names is None:
-        y_names = [f'dummy_{i}' for i in range(n_variables)]
+        y_names = [f'{plot_type}_{i}' for i in range(n_variables)]
     else:
         assert len(y_names) == n_variables
 
     # define colormap
     variables_color = [
         list(cmap(v))[:LEN_RGB]
-        for v in np.linspace(RGBA_MIN, RGBA_MAX, n_variables)
+        for v in np.linspace(cmap_min, cmap_max, n_variables)
     ]
 
     for i, level in enumerate(ci_levels):
@@ -303,7 +311,7 @@ def sampling_prediction_profiles_conditions(
         if ax is None:
             n_row = int(np.round(np.sqrt(n_conditions)))
             n_col = int(np.ceil(n_conditions / n_row))
-            fig, ax = plt.subplots(n_row, n_col, figsize=size)
+            fig, ax = plt.subplots(n_row, n_col, figsize=size, squeeze=False)
 
         for k in range(n_conditions):
             for j, y_name in enumerate(y_names):
@@ -314,6 +322,7 @@ def sampling_prediction_profiles_conditions(
                     facecolor=rgba2rgb(
                         variables_color[j] + [ci_levels_opacity[i]]),
                     label=f'{y_name}: MCMC {level} % CI',
+                    lw=0,
                 )
                 ax.flat[k].plot(
                     t,
@@ -351,7 +360,9 @@ def sampling_prediction_profiles_conditions(
     ] + [['Median', Line2D(*fake_data, color=RGBA_BLACK)]]
     )
 
-    artist_padding = 0.05
+    artist_padding = (
+        axis_label_padding / (plt.gcf().get_size_inches()*fig.dpi)[0]
+    )
 
     # CI level, and variable name, legends.
     legend_options_top_right = {
@@ -391,7 +402,7 @@ def sampling_prediction_profiles_conditions(
     plt.text(
         xmin - artist_padding,
         0.5,
-        'Observables Values',
+        f'{plot_type.capitalize()} Values',
         ha='center',
         va='center',
         transform=fig.transFigure,
