@@ -733,7 +733,7 @@ class NLoptOptimizer(Optimizer):
             nlopt.AUGLAG, nlopt.AUGLAG_EQ
         ]
         methods = self.local_methods + self.global_methods + \
-                  self.hybrid_methods
+            self.hybrid_methods
 
         if method not in methods:
             raise ValueError(f'"{method}" is not a valid method. Valid '
