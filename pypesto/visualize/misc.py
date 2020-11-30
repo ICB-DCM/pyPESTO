@@ -4,7 +4,7 @@ from .clust_color import assign_colors
 from .clust_color import assign_colors_for_list
 
 from numbers import Number
-from typing import Iterable, List, Optional, Union
+from typing import Iterable, List, Optional, Tuple, Union
 
 
 def process_result_list(results, colors=None, legends=None):
@@ -225,3 +225,57 @@ def process_start_indices(start_indices: Union[int, Iterable[int]],
                      start_index < max_length]
 
     return start_indices
+
+
+LEN_RGB = 3
+LEN_RGBA = 4
+TYPING_RGB = Tuple[(float,) * LEN_RGB]
+TYPING_RGBA = Tuple[(float,) * LEN_RGBA]
+TYPING_RGB_RGBA = Union[TYPING_RGB, TYPING_RGBA]
+RGBA_MIN = 0  # min value for an RGBA element
+RGBA_MAX = 1  # max value for an RGBA element
+RGBA_ALPHA = 3  # zero-indexed fourth element in RGBA
+RGBA_WHITE = (RGBA_MAX, RGBA_MAX, RGBA_MAX, RGBA_MAX)
+RGBA_BLACK = (RGBA_MIN, RGBA_MIN, RGBA_MIN, RGBA_MAX)
+
+
+def rgba2rgb(fg: TYPING_RGB_RGBA, bg: TYPING_RGB_RGBA = None) -> TYPING_RGB:
+    """Combine two colors, removing transparency.
+
+    Parameters
+    ----------
+    fg:
+        Foreground color.
+    bg:
+        Background color.
+
+    Returns
+    -------
+    The combined color.
+    """
+    if bg is None:
+        bg = RGBA_WHITE
+    if len(bg) == LEN_RGBA:
+        # return foreground if background is fully transparent
+        if bg[RGBA_ALPHA] == RGBA_MIN:
+            return fg
+    else:
+        assert len(bg) == LEN_RGB
+        bg = (*bg, RGBA_MAX)
+
+    # return the foreground color if has no transparency
+    if len(fg) == LEN_RGB or fg[RGBA_ALPHA] == RGBA_MAX:
+        return fg
+    assert len(fg) == LEN_RGBA
+
+    def apparent_color(fg_i: float, bg_i: float) -> float:
+        """Porter and Duff equations."""
+        return (
+            fg_i * fg[RGBA_ALPHA] +
+            bg_i * bg[RGBA_ALPHA] * (RGBA_MAX - fg[RGBA_ALPHA])
+        ) / (fg[RGBA_ALPHA] + bg[RGBA_ALPHA] * (RGBA_MAX - fg[RGBA_ALPHA]))
+
+    return [
+        apparent_color(fg[i], bg[i])
+        for i in range(LEN_RGB)
+    ]

@@ -1,11 +1,19 @@
 import logging
 import matplotlib.pyplot as plt
 import matplotlib.axes
+from matplotlib.lines import Line2D
 import numpy as np
 import pandas as pd
 import seaborn as sns
-from typing import Sequence, Tuple
+from typing import Sequence, Tuple, Union
 
+from .misc import (
+    rgba2rgb,
+    LEN_RGB,
+    RGBA_BLACK,
+    RGBA_MIN,
+    RGBA_MAX,
+)
 from ..result import Result
 from ..sample import McmcPtResult, calculate_ci, \
     evaluate_samples, calculate_prediction_profiles
@@ -206,6 +214,192 @@ def sampling_prediction_profiles(result: Result,
                        bbox_to_anchor=(1.05, 1))
 
     return axes
+
+
+def sampling_prediction_profiles_conditions(
+        result: Result,
+        ci_levels: Union[int, Sequence[int]] = 95,
+        stepsize: int = 1,
+        plot_type: str = 'states',
+        title: str = None,
+        size: Tuple[float, float] = None,
+        ax: matplotlib.axes.Axes = None,
+        y_names: Sequence[str] = None,
+        n_procs: int = 1,
+):
+    """Plot MCMC-based prediction confidence intervals for the
+    model states or observables. One or various confidence levels
+    can be depicted. Plots are grouped by condition.
+
+    Parameters
+    ----------
+    result:
+        The pyPESTO result object with filled sample result.
+    ci_levels:
+        List of lower tail probabilities, e.g. 95 for a 95% interval.
+    stepsize:
+        Only one in `stepsize` values is simulated for the intervals
+        generation. Recommended for long MCMC chains.
+    plot_type:
+        Visualization mode for prediction intervals.
+        Options: `'states'`, `'observables'`.
+    title:
+        Axes title.
+    size: ndarray
+        Figure size in inches.
+    ax:
+        Axes object to use.
+    y_names:
+        Names for the plotted dependent variables.
+    n_procs:
+        The number of processors to use, to parallelize the evaluation of
+        samples.
+
+    Returns
+    -------
+    axes:
+        The plot axes.
+    """
+    if isinstance(ci_levels, int):
+        ci_levels = [ci_levels]
+    ci_levels = sorted(ci_levels, reverse=True)
+    ci_levels_opacity = sorted(
+        # min 30%, max 100%, opacity
+        np.linspace(0.3 * RGBA_MAX, RGBA_MAX, len(ci_levels)),
+    )
+    if ax is not None:
+        fig = ax.get_figure()
+    cmap = plt.cm.viridis
+
+    # Evaluate prediction uncertainties
+    evaluation = evaluate_samples(result, stepsize, n_procs=n_procs)
+
+    values_options = {
+        'observables': 0,
+        'states': 1,
+    }
+    values = evaluation[values_options[plot_type]]
+    n_variables = values.shape[-1]
+
+    if y_names is None:
+        y_names = [f'dummy_{i}' for i in range(n_variables)]
+    else:
+        assert len(y_names) == n_variables
+
+    # define colormap
+    variables_color = [
+        list(cmap(v))[:LEN_RGB]
+        for v in np.linspace(RGBA_MIN, RGBA_MAX, n_variables)
+    ]
+
+    for i, level in enumerate(ci_levels):
+        # Get upper and lower bounds for the CI level
+        lb, ub = calculate_prediction_profiles(values, alpha=level/100)
+        median = np.percentile(values, 50, axis=1)
+
+        t = np.arange(median.shape[1])
+        n_conditions = median.shape[0]
+
+        if ax is None:
+            n_row = int(np.round(np.sqrt(n_conditions)))
+            n_col = int(np.ceil(n_conditions / n_row))
+            fig, ax = plt.subplots(n_row, n_col, figsize=size)
+
+        for k in range(n_conditions):
+            for j, y_name in enumerate(y_names):
+                ax.flat[k].fill_between(
+                    t,
+                    ub[k, :, j],
+                    lb[k, :, j],
+                    facecolor=rgba2rgb(
+                        variables_color[j] + [ci_levels_opacity[i]]),
+                    label=f'{y_name}: MCMC {level} % CI',
+                )
+                ax.flat[k].plot(
+                    t,
+                    median[k, :, j],
+                    'k-',
+                    label=f'{y_name}: MCMC median'
+                )
+
+    if title:
+        fig.suptitle(title)
+
+    # Fake plots for legend line styles
+    fake_data = [[0], [0]]
+    lines_variables = np.array([
+        # Assumes that the color for a variable is always the same, with
+        # different opacity for different confidence interval levels.
+        [y_name, Line2D(*fake_data, color=variables_color[index], lw=4)]
+        for index, y_name in enumerate(y_names)
+    ])
+    lines_levels = np.array([
+        # Assumes that different CI levels are represented as
+        # difference opacities of the same color.
+        [
+            f'{level}% CI',
+            Line2D(
+                *fake_data,
+                color=rgba2rgb([
+                    *RGBA_BLACK[:LEN_RGB],
+                    ci_levels_opacity[index]
+                ]),
+                lw=4
+            )
+        ]
+        for index, level in enumerate(ci_levels)
+    ] + [['Median', Line2D(*fake_data, color=RGBA_BLACK)]]
+    )
+
+    artist_padding = 0.05
+
+    # CI level, and variable name, legends.
+    legend_options_top_right = {
+        'bbox_to_anchor': (1 + artist_padding, 1),
+        'loc': 'upper left',
+    }
+    legend_options_bottom_right = {
+        'bbox_to_anchor': (1 + artist_padding, 0),
+        'loc': 'lower left',
+    }
+    legend_variables = ax.flat[n_col-1].legend(
+        lines_variables[:, 1],
+        lines_variables[:, 0],
+        **legend_options_top_right,
+        title=plot_type.capitalize(),
+    )
+    # Legend for CI levels
+    ax.flat[-1].legend(
+        lines_levels[:, 1],
+        lines_levels[:, 0],
+        **legend_options_bottom_right,
+        title='MCMC',
+    )
+    fig.add_artist(legend_variables)
+
+    # X and Y labels
+    xmin = min(_ax.get_position().xmin for _ax in ax.flat)
+    ymin = min(_ax.get_position().ymin for _ax in ax.flat)
+    plt.text(
+        0.5,
+        ymin - artist_padding,
+        'Time',
+        ha='center',
+        va='center',
+        transform=fig.transFigure
+    )
+    plt.text(
+        xmin - artist_padding,
+        0.5,
+        'Observables Values',
+        ha='center',
+        va='center',
+        transform=fig.transFigure,
+        rotation='vertical'
+    )
+
+    plt.tight_layout()
+    return ax
 
 
 def sampling_parameters_cis(

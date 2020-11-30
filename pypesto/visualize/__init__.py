@@ -35,4 +35,5 @@ from .sampling import (sampling_fval_trace,
                        sampling_scatter,
                        sampling_1d_marginals,
                        sampling_parameters_cis,
-                       sampling_prediction_profiles)
+                       sampling_prediction_profiles,
+                       sampling_prediction_profiles_conditions,)
