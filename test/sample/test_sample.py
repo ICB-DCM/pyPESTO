@@ -7,11 +7,8 @@ from scipy.stats import multivariate_normal, norm, kstest, ks_2samp, uniform
 import scipy.optimize as so
 import matplotlib.pyplot as plt
 import pytest
-import petab
-import os
 
 import pypesto
-import pypesto.petab
 import pypesto.optimize as optimize
 import pypesto.sample as sample
 import pypesto.visualize as visualize
@@ -82,32 +79,6 @@ def rosenbrock_problem():
             objective=objective, lb=lb, ub=ub,
             x_fixed_indices=[1], x_fixed_vals=[2])
     return problem
-
-
-def create_petab_problem():
-    current_path = os.path.dirname(os.path.realpath(__file__))
-    dir_path = os.path.abspath(os.path.join(current_path,
-                                            '..', 'doc', 'example'))
-    # import to petab
-    petab_problem = petab.Problem.from_yaml(
-        dir_path+"/conversion_reaction/conversion_reaction.yaml")
-    # import to pypesto
-    importer = pypesto.petab.PetabImporter(petab_problem)
-    # create problem
-    problem = importer.create_problem()
-
-    return problem
-
-
-def sample_petab_problem():
-    # create problem
-    problem = create_petab_problem()
-
-    sampler = sample.AdaptiveMetropolisSampler()
-    result = sample.sample(problem, n_samples=1000,
-                           sampler=sampler,
-                           x0=np.array([3, -4]))
-    return result
 
 
 def prior(x):
@@ -512,102 +483,3 @@ def test_prior():
     print(statistic, pval)
 
     assert statistic < 0.1
-
-
-def test_samples_cis():
-    # load problem
-    problem = gaussian_problem()
-
-    # set a sampler
-    sampler = sample.MetropolisSampler()
-
-    # optimization
-    result = optimize.minimize(problem, n_starts=3)
-
-    # sample
-    result = sample.sample(
-        problem, sampler=sampler, n_samples=2000, result=result)
-
-    # run geweke test
-    sample.geweke_test(result)
-
-    # get converged chain
-    converged_chain = np.asarray(
-        result.sample_result.trace_x[0, result.sample_result.burn_in:, :])
-
-    # set confidence levels
-    alpha_values = [0.99, 0.95, 0.68]
-
-    # loop over confidence levels
-    for alpha in alpha_values:
-        # calculate parameter samples confidence intervals
-        lb, ub = sample.calculate_ci(result, alpha=alpha)
-        # get corresponding percentiles to alpha
-        percentiles = 100 * np.array([(1-alpha)/2, 1-(1-alpha)/2])
-        # check result agreement
-        diff = np.percentile(converged_chain, percentiles, axis=0)-[lb, ub]
-
-        assert (diff == 0).all()
-        # check if lower bound is smaller than upper bound
-        assert (lb < ub).all()
-        # check if dimmensions agree
-        assert lb.shape == ub.shape
-
-
-def test_calculate_prediction_profiles():
-    result = sample_petab_problem()
-    # Evaluate prediction uncertainties
-    evaluation = sample.evaluate_samples(result, stepsize=10)
-    evaluation_observables, evaluation_states = evaluation
-
-    # Get burn in index
-    burn_in = result.sample_result.burn_in
-    # Get converged parameter samples as numpy arrays
-    chain = np.asarray(result.sample_result.trace_x[0, burn_in:, :])
-    # Evaluate median of MCMC samples
-    _res = result.problem.objective(np.median(chain),
-                                    return_dict=True)['rdatas']
-    n_conditions = len(_res)
-    # for states
-    n_timepoints_for_states = _res[0].x.shape[0]
-    n_states = _res[0].x.shape[1]
-
-    # for observables
-    n_timepoints_for_obs = _res[0].y.shape[0]
-    n_obs = _res[0].y.shape[1]
-
-    # check if dimmensions agree
-    assert evaluation_observables.shape[0] == n_conditions
-    assert evaluation_observables.shape[2] == n_timepoints_for_obs
-    assert evaluation_observables.shape[3] == n_obs
-
-    assert evaluation_states.shape[0] == n_conditions
-    assert evaluation_states.shape[2] == n_timepoints_for_states
-    assert evaluation_states.shape[3] == n_states
-
-    # check if same number of conditions is evaluated
-    assert evaluation_states.shape[0] == evaluation_states.shape[0]
-    # check if same number of samples is evaluated
-    assert evaluation_states.shape[1] == evaluation_states.shape[1]
-
-    # Calculate prediction profiles for model observables
-    lb, ub = sample.calculate_prediction_profiles(evaluation_observables,
-                                                  alpha=0.99)
-    # check if dimmensions agree
-    assert lb.shape == ub.shape
-    assert lb.shape[0] == n_conditions
-    assert lb.shape[1] == n_timepoints_for_obs
-    assert lb.shape[2] == n_obs
-    # check if lower bound is smaller than upper bound
-    assert not (lb > ub).all()
-
-    # Calculate prediction profiles for model states
-    lb, ub = sample.calculate_prediction_profiles(evaluation_states,
-                                                  alpha=0.99)
-    # check if dimmensions agree
-    assert lb.shape == ub.shape
-    assert lb.shape[0] == n_conditions
-    assert lb.shape[1] == n_timepoints_for_states
-    assert lb.shape[2] == n_states
-    # check if lower bound is smaller than upper bound
-    assert not (lb > ub).all()
