@@ -6,8 +6,6 @@ import amici
 from typing import Iterable, List
 
 
-# TODO rename this file to something like "FIM_computations.py" or similar
-
 def get_fim_addition(design_problem: DesignProblem,
                      candidate: dict,
                      deriv_dict: dict,
@@ -55,20 +53,40 @@ def get_fim_addition(design_problem: DesignProblem,
         jac = deriv_cond[time_position][0:len(deriv_cond[0]) - missing_params,
                                         obs_position]
 
+        # first look in measurement_df for noise, if nothing is there,
+        # look up the noise value for the observable
+        try:
+            noise_value = candidate['measurement_df'].noiseParameters[
+                row_index]
+        except AttributeError:
+            obs_name = candidate['measurement_df'].observableId[row_index]
+            noise_value = design_problem.petab_problem.observable_df. \
+                noiseFormula[obs_name]
+
         # in design_problem.number_of_measurements one can specify how many
         # measurements should be taken, this effectively reduces the noise
         # value
         A[:, row_index] = jac * np.sqrt(
-            design_problem.number_of_measurements) \
-            / candidate['measurement_df'].noiseParameters[row_index]
-
-        # single_addition = np.outer(jac, jac) / (
-        #         candidate['measurement_df'].noiseParameters[
-        #             row_index] ** 2)
-        # total_addition = total_addition + (
-        #         design_problem.number_of_measurements *
-        #         single_addition)
+            design_problem.number_of_measurements) / noise_value
     return A
+
+
+def get_parameter_scale(scales: np.ndarray) -> int:
+    """
+    takes an array with entries 'lin', 'log' or 'log10' and returns the
+    appropriate format for this as an amici ParameterScaling
+    """
+    if not np.all(scales == scales[0]):
+        raise ValueError("Parameter scales are not the same")
+    if scales[0] == 'lin':
+        scale = amici.ParameterScaling_none
+    elif scales[0] == 'log':
+        scale = amici.ParameterScaling_ln
+    elif scales[0] == 'log10':
+        scale = amici.ParameterScaling_log10
+    else:
+        raise ValueError("Unknown parameter scale in Petab parameter table")
+    return scale
 
 
 def get_derivatives(design_problem: DesignProblem,
@@ -91,9 +109,13 @@ def get_derivatives(design_problem: DesignProblem,
     """
     deriv_dict = {}
     model = design_problem.problem.objective.amici_model
+    # TODO make it possible to pass solver and other settings to use
     solver = model.getSolver()
     solver.setSensitivityOrder(amici.SensitivityOrder_first)
-    model.setParameterScale(amici.ParameterScaling_log10)
+
+    scales = design_problem.petab_problem.parameter_df.parameterScale.values
+    scale = get_parameter_scale(scales)
+    model.setParameterScale(scale)
     temp = x
 
     # these may be noise parameters for which we have explicit values
