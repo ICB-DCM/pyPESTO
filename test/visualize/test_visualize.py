@@ -700,4 +700,3 @@ def test_sampling_1d_marginals():
     visualize.sampling_1d_marginals(result, plot_type='hist')
     visualize.sampling_1d_marginals(
         result, plot_type='kde', bw='silverman')
-
