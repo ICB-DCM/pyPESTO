@@ -92,7 +92,7 @@ class ProfilerTest(unittest.TestCase):
                 engine=engine,)
 
         # check results
-        for count, engine in enumerate(engines):
+        for count, _engine in enumerate(engines):
             for j in range(len(self.result.profile_result.list[0])):
                 assert_almost_equal(
                     self.result.profile_result.list[0][j]['x_path'],
