@@ -17,5 +17,5 @@ try:
     import amici
 except ImportError:
     raise ImportError("PEtab import requires an installation of amici "
-                      "(https://github.com/icb-dcm/amici). "
+                      "(https://github.com/AMICI-dev/AMICI). "
                       "Install via `pip3 install amici`.")
