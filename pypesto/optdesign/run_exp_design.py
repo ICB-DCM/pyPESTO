@@ -5,7 +5,7 @@ from .FIM_computations import get_fim_addition, get_derivatives
 import numpy as np
 from typing import Iterable, Union, List
 from .task import ExpDesignSingleTask
-from ..engine import Engine, MultiProcessEngine, SingleCoreEngine
+from ..engine import Engine, SingleCoreEngine
 
 
 def single_design_algo(design_result: DesignResult,
@@ -166,7 +166,6 @@ def run_exp_design(design_problem: DesignProblem,
 
     if engine is None:
         engine = SingleCoreEngine()
-    # engine = MultiProcessEngine()
 
     design_result.single_runs = engine.execute(tasks)
     print("Finished single_runs")

@@ -58,7 +58,6 @@ class DesignProblem(dict):
                  result: Optional[Result] = None,
                  initial_x: Optional[Iterable] = None,
                  criteria_list: List[str] = None,
-                 chosen_criteria: str = 'det',
                  const_for_hess: float = None,
                  n_save_combi_result: int = None,
                  number_of_measurements: int = 1):
@@ -90,7 +89,6 @@ class DesignProblem(dict):
         self.model = self.get_super_model(model)
         self.initial_x = initial_x
         self.criteria_list = criteria_list
-        self.chosen_criteria = chosen_criteria
         self.const_for_hess = const_for_hess
         self.number_of_measurements = number_of_measurements
         self.n_save_combi_result = n_save_combi_result

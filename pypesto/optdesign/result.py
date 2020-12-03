@@ -263,8 +263,7 @@ class DesignResult(dict):
                 design_problem=self.design_problem)
             average_design_result = add_to_dict(average_design_result, add)
 
-        average_design_result = divide_dict(average_design_result, len(
-            self.good_initial_x_indices))
+        divide_dict(average_design_result, len(self.good_initial_x_indices))
         return average_design_result
 
     def check_combinations(self,

@@ -229,6 +229,7 @@ def divide_dict(dict: dict, div: float) \
         -> dict:
     """
     divides relevant values in dict by div
+    changes the passed dict
     """
     no_keys = ['candidate', 'x', 'hess', 'message', 'eigvals', 'fim_addition',
                'fim_added', 'constant_for_hessian']
