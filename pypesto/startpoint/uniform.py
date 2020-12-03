@@ -11,6 +11,10 @@ def uniform(**kwargs) -> np.ndarray:
     lb = kwargs['lb']
     ub = kwargs['ub']
 
+    if not np.isfinite(ub).all() or not np.isfinite(lb).all():
+        raise ValueError('Cannot use uniform startpoint method with '
+                         'non-finite boundaries.')
+
     # parse
     dim = lb.size
     lb = lb.reshape((1, -1))

@@ -276,6 +276,13 @@ class Optimizer(abc.ABC):
         return None
 
 
+def check_finite_bounds(lb, ub):
+    """Raise if bounds are not finite."""
+    if not np.isfinite(lb).all() or not np.isfinite(ub).all():
+        raise ValueError('Selected optimizer cannot work with unconstrained '
+                         'optimization problems.')
+
+
 class ScipyOptimizer(Optimizer):
     """
     Use the SciPy optimizers.
@@ -509,6 +516,7 @@ class DlibOptimizer(Optimizer):
 
         lb = problem.lb
         ub = problem.ub
+        check_finite_bounds(lb, ub)
         objective = problem.objective
 
         if dlib is None:
@@ -517,8 +525,8 @@ class DlibOptimizer(Optimizer):
             )
 
         if not objective.has_fun:
-            raise Exception("For this optimizer, the objective must "
-                            "be able to return function values.")
+            raise ValueError("For this optimizer, the objective must "
+                             "be able to return function values.")
 
         # dlib requires variable length arguments
         def get_fval_vararg(*x):
@@ -570,6 +578,8 @@ class PyswarmOptimizer(Optimizer):
         if pyswarm is None:
             raise ImportError(
                 "This optimizer requires an installation of pyswarm.")
+
+        check_finite_bounds(lb, ub)
 
         xopt, fopt = pyswarm.pso(
             problem.objective.get_fval, lb, ub, **self.options)
@@ -623,6 +633,9 @@ class CmaesOptimizer(Optimizer):
 
         lb = problem.lb
         ub = problem.ub
+
+        check_finite_bounds(lb, ub)
+
         sigma0 = self.par_sigma0 * np.median(ub - lb)
         self.options['bounds'] = [lb, ub]
 
@@ -700,7 +713,7 @@ class NLoptOptimizer(Optimizer):
             raise ValueError(f'Method "{method}" does not allow a local '
                              f'method. Please set `local_method` to None.')
 
-        local_methods = [
+        self.local_methods = [
             nlopt.LD_VAR1, nlopt.LD_VAR2, nlopt.LD_TNEWTON_PRECOND_RESTART,
             nlopt.LD_TNEWTON_PRECOND, nlopt.LD_TNEWTON_RESTART,
             nlopt.LD_TNEWTON, nlopt.LD_LBFGS,
@@ -708,7 +721,7 @@ class NLoptOptimizer(Optimizer):
             nlopt.LN_NELDERMEAD, nlopt.LN_PRAXIS, nlopt.LN_NEWUOA,
             nlopt.LN_NEWUOA_BOUND, nlopt.LN_BOBYQA, nlopt.LN_COBYLA,
         ]
-        global_methods = [
+        self.global_methods = [
             nlopt.GN_ESCH, nlopt.GN_ISRES, nlopt.GN_AGS, nlopt.GD_STOGO,
             nlopt.GD_STOGO_RAND, nlopt.G_MLSL, nlopt.G_MLSL_LDS, nlopt.GD_MLSL,
             nlopt.GD_MLSL_LDS, nlopt.GN_CRS2_LM, nlopt.GN_ORIG_DIRECT,
@@ -716,10 +729,11 @@ class NLoptOptimizer(Optimizer):
             nlopt.GN_DIRECT_L_NOSCAL, nlopt.GN_DIRECT_L_RAND,
             nlopt.GN_DIRECT_L_RAND_NOSCAL,
         ]
-        hybrid_methods = [
+        self.hybrid_methods = [
             nlopt.AUGLAG, nlopt.AUGLAG_EQ
         ]
-        methods = local_methods + global_methods + hybrid_methods
+        methods = self.local_methods + self.global_methods + \
+            self.hybrid_methods
 
         if method not in methods:
             raise ValueError(f'"{method}" is not a valid method. Valid '
@@ -727,9 +741,9 @@ class NLoptOptimizer(Optimizer):
 
         self.method = method
 
-        if local_method is not None and local_method not in local_methods:
+        if local_method is not None and local_method not in self.local_methods:
             raise ValueError(f'"{local_method}" is not a valid method. Valid '
-                             f'methods are: {local_methods}')
+                             f'methods are: {self.local_methods}')
 
         self.local_method = local_method
 
@@ -762,6 +776,9 @@ class NLoptOptimizer(Optimizer):
             local_opt = nlopt.opt(self.local_method, problem.dim)
             set_options(local_opt, self.local_options)
             opt.set_local_optimizer(local_opt)
+
+        if self.method in self.global_methods:
+            check_finite_bounds(problem.ub, problem.lb)
 
         opt.set_lower_bounds(problem.lb)
         opt.set_upper_bounds(problem.ub)
@@ -805,7 +822,7 @@ class FidesOptimizer(Optimizer):
 
     def __init__(
             self,
-            hessian_update: Optional[fides.HessianApproximation] = None,
+            hessian_update: Optional['fides.HessianApproximation'] = None,
             options: Optional[Dict] = None,
             verbose: Optional[int] = logging.INFO
     ):

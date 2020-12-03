@@ -1,16 +1,14 @@
+import numpy as np
+import scipy.optimize as so
+import matplotlib.pyplot as plt
+import pytest
+
 import pypesto
 import pypesto.petab
 import pypesto.optimize as optimize
 import pypesto.profile as profile
 import pypesto.sample as sample
 import pypesto.visualize as visualize
-
-import numpy as np
-import scipy.optimize as so
-import matplotlib.pyplot as plt
-import pytest
-import os
-import petab
 
 
 def close_fig(fun):
@@ -25,6 +23,8 @@ def close_fig(fun):
 
 
 # Define some helper functions, to have the test code more readable
+
+
 def create_bounds():
     # define bounds for a pypesto problem
     lb = -7 * np.ones((1, 2))
@@ -44,34 +44,6 @@ def create_problem():
     problem = pypesto.Problem(objective=objective, lb=lb, ub=ub)
 
     return problem
-
-
-def create_petab_problem():
-    current_path = os.path.dirname(os.path.realpath(__file__))
-    dir_path = os.path.abspath(os.path.join(current_path,
-                                            '..', '..',
-                                            'doc', 'example'))
-
-    # import to petab
-    petab_problem = petab.Problem.from_yaml(
-        dir_path + "/conversion_reaction/conversion_reaction.yaml")
-    # import to pypesto
-    importer = pypesto.petab.PetabImporter(petab_problem)
-    # create problem
-    problem = importer.create_problem()
-
-    return problem
-
-
-def sample_petab_problem():
-    # create problem
-    problem = create_petab_problem()
-
-    sampler = sample.AdaptiveMetropolisSampler()
-    result = sample.sample(problem, n_samples=1000,
-                           sampler=sampler,
-                           x0=np.array([3, -4]))
-    return result
 
 
 def create_optimization_result():
@@ -729,23 +701,3 @@ def test_sampling_1d_marginals():
     visualize.sampling_1d_marginals(
         result, plot_type='kde', bw='silverman')
 
-
-@close_fig
-def test_sampling_parameters_cis():
-    """Test pypesto.visualize.sampling_parameters_cis"""
-    result = create_sampling_result()
-    visualize.sampling_parameters_cis(result)
-    # call with custom arguments
-    visualize.sampling_parameters_cis(
-        result, alpha=[99, 68], step=0.1, size=(10, 10))
-
-
-@close_fig
-def test_sampling_prediction_profiles():
-    """Test pypesto.visualize.sampling_prediction_profiles"""
-    result = sample_petab_problem()
-    visualize.sampling_prediction_profiles(result)
-    # call with custom arguments
-    visualize.sampling_prediction_profiles(
-        result, alpha=[99, 68], stepsize=10, size=(10, 10),
-        plot_type='observables')
