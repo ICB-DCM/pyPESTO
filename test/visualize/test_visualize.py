@@ -4,7 +4,6 @@ import matplotlib.pyplot as plt
 import pytest
 
 import pypesto
-import pypesto.petab
 import pypesto.optimize as optimize
 import pypesto.profile as profile
 import pypesto.sample as sample
