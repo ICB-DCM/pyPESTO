@@ -310,7 +310,8 @@ class PetabImporter(AmiciObjectBuilder):
         initializationPrior. Returns None, if no initializationPrior
         is specified.
         """
-        if petab.INITIALIZATION_PRIOR_TYPE not in self.petab_problem.parameter_df:
+        if petab.INITIALIZATION_PRIOR_TYPE \
+                not in self.petab_problem.parameter_df:
             return None
         else:
             def startpoint_method(n_samples: int, **kwargs):

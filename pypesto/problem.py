@@ -11,7 +11,8 @@ import numpy as np
 import pandas as pd
 import copy
 
-from typing import Iterable, List, Optional, Union, SupportsFloat, SupportsInt, Callable
+from typing import Iterable, List, Optional, Union, SupportsFloat, \
+    SupportsInt, Callable
 
 from .objective import ObjectiveBase
 from .objective.priors import NegLogPriors
@@ -88,7 +89,7 @@ class Problem:
                  x_fixed_indices: Optional[SupportsIntIterableOrValue] = None,
                  x_fixed_vals: Optional[SupportsFloatIterableOrValue] = None,
                  x_guesses: Optional[Iterable[float]] = None,
-                 startpoint_method: Optional[Calllable] = None,
+                 startpoint_method: Optional[Callable] = None,
                  x_names: Optional[Iterable[str]] = None,
                  x_scales: Optional[Iterable[str]] = None,
                  x_priors_defs: Optional[NegLogPriors] = None,
