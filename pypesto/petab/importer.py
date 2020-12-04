@@ -313,15 +313,15 @@ class PetabImporter(AmiciObjectBuilder):
         if petab.INITIALIZATION_PRIOR_TYPE \
                 not in self.petab_problem.parameter_df:
             return None
-        else:
-            def startpoint_method(n_samples: int, **kwargs):
-                samples = petab.sample_parameter_startpoints(
-                    self.petab_problem.parameter_df,
-                    n_starts=n_samples)
 
-                return samples[:, self.petab_problem.x_free_indices]
+        def startpoint_method(n_samples: int, **kwargs):
+            samples = petab.sample_parameter_startpoints(
+                self.petab_problem.parameter_df,
+                n_starts=n_samples)
 
-            return startpoint_method
+            return samples[:, self.petab_problem.x_free_indices]
+
+        return startpoint_method
 
     def create_problem(
             self, objective: AmiciObjective = None,

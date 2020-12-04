@@ -51,7 +51,8 @@ class Problem:
         Guesses for the parameter values, shape (g, dim), where g denotes the
         number of guesses. These are used as start points in the optimization.
     startpoint_method:
-        Method used for generating initial values for the optimization.
+        Callable. `startpoint_method(n_starts)` returns a
+        n_starts x n_free_indices array of initial values for the optimization.
     x_names:
         Parameter names that can be optionally used e.g. in visualizations.
         If objective.get_x_names() is not None, those values are used,
