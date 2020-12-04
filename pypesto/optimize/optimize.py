@@ -64,7 +64,14 @@ def minimize(
         optimizer = ScipyOptimizer()
 
     # startpoint method
-    if startpoint_method is None:
+    if (startpoint_method is not None) \
+            and (problem.startpoint_method is not None):
+        raise ValueError('It is not allowed to specify a startpoint method '
+                         'via startpoint_method & problem.startpoint_method. '
+                         'Decide for one option.')
+    elif problem.startpoint_method is not None:
+        startpoint_method = problem.startpoint_method
+    elif startpoint_method is None:
         startpoint_method = uniform
 
     # check options

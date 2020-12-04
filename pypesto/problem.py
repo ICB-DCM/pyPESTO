@@ -11,7 +11,7 @@ import numpy as np
 import pandas as pd
 import copy
 
-from typing import Iterable, List, Optional, Union, SupportsFloat, SupportsInt
+from typing import Iterable, List, Optional, Union, SupportsFloat, SupportsInt, Callable
 
 from .objective import ObjectiveBase
 from .objective.priors import NegLogPriors
@@ -49,6 +49,8 @@ class Problem:
     x_guesses:
         Guesses for the parameter values, shape (g, dim), where g denotes the
         number of guesses. These are used as start points in the optimization.
+    startpoint_method:
+        Method used for generating initial values for the optimization.
     x_names:
         Parameter names that can be optionally used e.g. in visualizations.
         If objective.get_x_names() is not None, those values are used,
@@ -86,6 +88,7 @@ class Problem:
                  x_fixed_indices: Optional[SupportsIntIterableOrValue] = None,
                  x_fixed_vals: Optional[SupportsFloatIterableOrValue] = None,
                  x_guesses: Optional[Iterable[float]] = None,
+                 startpoint_method: Optional[Calllable] = None,
                  x_names: Optional[Iterable[str]] = None,
                  x_scales: Optional[Iterable[str]] = None,
                  x_priors_defs: Optional[NegLogPriors] = None,
@@ -128,6 +131,8 @@ class Problem:
         if x_guesses is None:
             x_guesses = np.zeros((0, self.dim_full))
         self.x_guesses_full: np.ndarray = np.array(x_guesses)
+
+        self.startpoint_method = startpoint_method
 
         if objective.x_names is not None:
             x_names = objective.x_names
