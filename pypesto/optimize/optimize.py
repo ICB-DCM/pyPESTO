@@ -66,9 +66,9 @@ def minimize(
     # startpoint method
     if (startpoint_method is not None) \
             and (problem.startpoint_method is not None):
-        raise ValueError('It is not allowed to specify a startpoint method '
-                         'via startpoint_method & problem.startpoint_method. '
-                         'Decide for one option.')
+        raise Warning('Problem.startpoint_method will be ignored. Start '
+                      'points will be generated using the startpoint method '
+                      'given as an argument to the minimize function.')
     elif problem.startpoint_method is not None:
         startpoint_method = problem.startpoint_method
     elif startpoint_method is None:
