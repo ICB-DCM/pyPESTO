@@ -304,6 +304,25 @@ class PetabImporter(AmiciObjectBuilder):
         else:
             return None
 
+    def create_startpoint_method(self):
+        """
+        Creates a startpoint method, if the PEtab problem specifies an
+        initializationPrior. Returns None, if no initializationPrior
+        is specified.
+        """
+        if petab.INITIALIZATION_PRIOR_TYPE \
+                not in self.petab_problem.parameter_df:
+            return None
+
+        def startpoint_method(n_samples: int, **kwargs):
+            samples = petab.sample_parameter_startpoints(
+                self.petab_problem.parameter_df,
+                n_starts=n_samples)
+
+            return samples[:, self.petab_problem.x_free_indices]
+
+        return startpoint_method
+
     def create_problem(
             self, objective: AmiciObjective = None,
             x_guesses: Optional[Iterable[float]] = None, **kwargs
@@ -346,6 +365,7 @@ class PetabImporter(AmiciObjectBuilder):
             x_fixed_indices=self.petab_problem.x_fixed_indices,
             x_fixed_vals=self.petab_problem.x_nominal_fixed_scaled,
             x_guesses=x_guesses,
+            startpoint_method=self.create_startpoint_method(),
             x_names=self.petab_problem.x_ids,
             x_scales=x_scales,
             x_priors_defs=prior)
