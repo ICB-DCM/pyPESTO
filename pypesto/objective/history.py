@@ -160,7 +160,7 @@ class HistoryOptions(dict):
             return CsvHistory(
                 x_names=x_names,
                 file=storage_file, options=self)
-        elif type == '.hdf5':
+        elif type in ['.hdf5', '.h5']:
             return Hdf5History(id=id, file=storage_file, options=self)
         else:
             raise ValueError(
