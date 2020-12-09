@@ -315,11 +315,9 @@ class PetabImporter(AmiciObjectBuilder):
             return None
 
         def startpoint_method(n_starts: int, **kwargs):
-            samples = petab.sample_parameter_startpoints(
+            return petab.sample_parameter_startpoints(
                 self.petab_problem.parameter_df,
                 n_starts=n_starts)
-
-            return samples[:, self.petab_problem.x_free_indices]
 
         return startpoint_method
 
