@@ -1,6 +1,6 @@
 import numpy as np
 import numbers
-from typing import Dict, Sequence, Union
+from typing import Dict, Sequence, Union, Tuple
 import logging
 
 from .constants import (
@@ -114,12 +114,44 @@ def create_identity_parameter_mapping(
     return parameter_mapping
 
 
+def par_index_slices(
+        par_opt_ids: Sequence[str], par_sim_ids: Sequence[str],
+        condition_map_sim_var: Dict[str, Union[float, str]]
+) -> Tuple[np.ndarray, np.ndarray]:
+    """
+    Generate numpy arrays for indexing based on `mapping_par_opt_to_par_sim`.
+
+    Parameters
+    ----------
+    par_opt_ids:
+        The optimization parameter ids. Needed for order.
+    par_sim_ids:
+        The simulation parameter ids. Needed for order.
+    condition_map_sim_var:
+        The simulation to optimization parameter mapping.
+
+    Returns
+    ----------
+    par_sim_slice:
+        array of simulation parameter indices
+
+    par_opt_slic:
+        array of simulation parameter indices
+    """
+    par_sim_slice, par_opt_slice = list(zip(
+        *[(par_sim_ids.index(par_sim_id), par_opt_ids.index(par_opt_id))
+          for par_sim_id, par_opt_id in condition_map_sim_var.items()
+          if isinstance(par_opt_id, str)]
+    ))
+    return np.asarray(par_sim_slice), np.asarray(par_opt_slice)
+
+
 def add_sim_grad_to_opt_grad(
         par_opt_ids: Sequence[str],
         par_sim_ids: Sequence[str],
         condition_map_sim_var: Dict[str, Union[float, str]],
-        sim_grad: Sequence[float],
-        opt_grad: Sequence[float],
+        sim_grad: np.ndarray,
+        opt_grad: np.ndarray,
         coefficient: float = 1.0):
     """
     Sum simulation gradients to objective gradient according to the provided
@@ -141,13 +173,20 @@ def add_sim_grad_to_opt_grad(
     coefficient:
         Coefficient for sim_grad when adding to opt_grad.
     """
-    for par_sim, par_opt in condition_map_sim_var.items():
-        if not isinstance(par_opt, str):
-            continue
-        par_sim_idx = par_sim_ids.index(par_sim)
-        par_opt_idx = par_opt_ids.index(par_opt)
 
-        opt_grad[par_opt_idx] += coefficient * sim_grad[par_sim_idx]
+    par_sim_slice, par_opt_slice = par_index_slices(par_opt_ids, par_sim_ids,
+                                                    condition_map_sim_var)
+
+    par_opt_slice_unique, unique_index = np.unique(par_opt_slice,
+                                                   return_index=True)
+    opt_grad[par_opt_slice_unique] += \
+        coefficient * sim_grad[par_sim_slice[unique_index]]
+
+    if par_opt_slice_unique.size < par_opt_slice.size:
+        for idx in range(len(par_opt_slice)):
+            if idx not in unique_index:
+                opt_grad[par_opt_slice[idx]] += \
+                    coefficient * sim_grad[par_sim_slice[idx]]
 
 
 def add_sim_hess_to_opt_hess(
@@ -165,20 +204,32 @@ def add_sim_hess_to_opt_hess(
     ----------
     Same as for add_sim_grad_to_opt_grad, replacing the gradients by hessians.
     """
-    for par_sim_id, par_opt_id in condition_map_sim_var.items():
-        if not isinstance(par_opt_id, str):
-            continue
-        par_sim_idx = par_sim_ids.index(par_sim_id)
-        par_opt_idx = par_opt_ids.index(par_opt_id)
 
-        for par_sim_id_2, par_opt_id_2 in condition_map_sim_var.items():
-            if not isinstance(par_opt_id_2, str):
-                continue
-            par_sim_idx_2 = par_sim_ids.index(par_sim_id_2)
-            par_opt_idx_2 = par_opt_ids.index(par_opt_id_2)
+    par_sim_slice, par_opt_slice = par_index_slices(par_opt_ids, par_sim_ids,
+                                                    condition_map_sim_var)
 
-            opt_hess[par_opt_idx, par_opt_idx_2] += \
-                coefficient * sim_hess[par_sim_idx, par_sim_idx_2]
+    par_opt_slice_unique, unique_index = np.unique(par_opt_slice,
+                                                   return_index=True)
+
+    non_unique_indices = [idx for idx in range(len(par_opt_slice))
+                          if idx not in unique_index]
+
+    opt_hess[np.ix_(par_opt_slice_unique, par_opt_slice_unique)] += \
+        coefficient * sim_hess[np.ix_(par_sim_slice[unique_index],
+                                      par_sim_slice[unique_index])]
+
+    if par_opt_slice_unique.size < par_opt_slice.size:
+        for idx in non_unique_indices:
+            opt_hess[par_opt_slice[idx], par_opt_slice_unique] += \
+                coefficient * sim_hess[par_sim_slice[idx],
+                                       par_sim_slice[unique_index]]
+            opt_hess[par_opt_slice_unique, par_opt_slice[idx]] += \
+                coefficient * sim_hess[par_sim_slice[unique_index],
+                                       par_sim_slice[idx]]
+            for jdx in non_unique_indices:
+                opt_hess[par_opt_slice[idx], par_opt_slice[jdx]] += \
+                    coefficient * sim_hess[par_sim_slice[idx],
+                                           par_sim_slice[jdx]]
 
 
 def sim_sres_to_opt_sres(par_opt_ids: Sequence[str],
@@ -197,14 +248,19 @@ def sim_sres_to_opt_sres(par_opt_ids: Sequence[str],
     """
     opt_sres = np.zeros((sim_sres.shape[0], len(par_opt_ids)))
 
-    for par_sim_id, par_opt_id in condition_map_sim_var.items():
-        if not isinstance(par_opt_id, str):
-            continue
+    par_sim_slice, par_opt_slice = par_index_slices(par_opt_ids, par_sim_ids,
+                                                    condition_map_sim_var)
 
-        par_sim_idx = par_sim_ids.index(par_sim_id)
-        par_opt_idx = par_opt_ids.index(par_opt_id)
-        opt_sres[:, par_opt_idx] += \
-            coefficient * sim_sres[:, par_sim_idx]
+    par_opt_slice_unique, unique_index = np.unique(par_opt_slice,
+                                                   return_index=True)
+    opt_sres[:, par_opt_slice_unique] += \
+        coefficient * sim_sres[:, par_sim_slice[unique_index]]
+
+    if par_opt_slice_unique.size < par_opt_slice.size:
+        for idx in range(len(par_opt_slice)):
+            if idx not in unique_index:
+                opt_sres[:, par_opt_slice[idx]] += \
+                    coefficient * sim_sres[:, par_sim_slice[idx]]
 
     return opt_sres
 
