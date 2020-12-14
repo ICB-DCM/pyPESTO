@@ -18,6 +18,7 @@ from .objective import (
     Hdf5History,
     OptimizerHistory,
     AmiciObjective,
+    AmiciPrediction,
     Objective,
     NegLogPriors,
     ObjectiveBase)

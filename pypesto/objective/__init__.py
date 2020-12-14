@@ -4,7 +4,7 @@ Objective
 """
 
 from .amici_calculator import AmiciCalculator
-from .amici import AmiciObjective, AmiciObjectBuilder
+from .amici import AmiciObjective, AmiciObjectBuilder, AmiciPrediction
 from .function import Objective
 from .aggregated import AggregatedObjective
 from .priors import NegLogPriors, NegLogParameterPriors

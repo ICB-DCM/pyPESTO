@@ -461,8 +461,9 @@ class AmiciPrediction():
         result:
             (Potentially tuple of) list of ndarrays containing results
         """
-        rdatas = self.amici_objective(x=x, sensi_orders=sensi_orders,
-                                      mode=mode)
+        ret = self.amici_objective(x=x, sensi_orders=sensi_orders,
+                                   mode=mode, return_dict=True)
+        rdatas = ret['rdatas']
 
         if 2 in sensi_orders:
             raise Exception('Prediction simulation does currently not support '
