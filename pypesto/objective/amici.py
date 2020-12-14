@@ -3,7 +3,7 @@ import copy
 import tempfile
 import os
 import abc
-from typing import Dict, Sequence, Union
+from typing import Dict, Sequence, Union, Callable, Tuple
 from collections import OrderedDict
 
 from .base import ObjectiveBase
@@ -369,3 +369,121 @@ class AmiciObjective(ObjectiveBase):
         self.steadystate_guesses['fval'] = np.inf
         for condition in self.steadystate_guesses['data']:
             self.steadystate_guesses['data'][condition] = {}
+
+
+class AmiciPrediction():
+    """
+    This class allows to perform forward simulation via an amici model.
+    These simulation can either be exactly those from amici, or they can be
+    post-processed after simulation.
+    If a post-processing method is applied, also the sensitivities of the amici
+    model must be post-processed, if a gradient of the forward simulation is
+    requested. This responsibility is EXPLICITLY currently left to the user.
+    """
+    def __init__(self,
+                 amici_objective: AmiciObjective,
+                 post_processing: Union[Callable, None] = None,
+                 post_processing_sensi: Union[Callable, None] = None,
+                 max_num_conditions: int = 0):
+        """
+        Constructor.
+
+        Parameters
+        ----------
+        amici_objective:
+            An objective object, which will be used to get model simulations
+        post_processing:
+            A callable function which applies postprocessing to the simulation
+            results. Default are the observables of the amici model.
+        post_processing_sensi:
+            A callable function which applies postprocessing to the
+            sensitivities of the simulation results. Default are the
+            observable sensitivities of the amici model.
+        max_num_conditions:
+            In some cases, we don't want to compute all predictions at once
+            when calling the prediction function, as this might not fit into
+            the memory for large datasets and models.
+            Here, the user can specify a maximum number of conditions, which
+            should be simulated at a time.
+            Default is 0 meaning that all conditions will be simulated.
+            Other values are only applicable, if an output file is specified.
+        """
+        # save settings
+        self.amici_objective = amici_objective
+        self.max_num_conditions = max_num_conditions
+        if post_processing is None:
+            self.post_processing = self.default_post_processing
+        if post_processing_sensi is None:
+            self.post_processing_sensi = self.default_post_processing_sensi
+
+    def __call__(
+            self,
+            x: np.ndarray,
+            sensi_orders: Tuple[int, ...] = (0, ),
+            mode: str = MODE_FUN,
+            output_file: str = '',
+            max_num_conditions: int = 0,
+            return_format: str = 'DataFrame'
+    ) -> Union[Sequence[np.ndarray], Tuple]:
+        """
+        Method to obtain arbitrary sensitivities. This is the central method
+        which is always called, also by the get_* methods.
+
+        There are different ways in which an optimizer calls the objective
+        function, and in how the objective function provides information
+        (e.g. derivatives via separate functions or along with the function
+        values). The different calling modes increase efficiency in space
+        and time and make the objective flexible.
+
+        Parameters
+        ----------
+        x:
+            The parameters for which to evaluate the objective function.
+        sensi_orders:
+            Specifies which sensitivities to compute, e.g. (0,1) -> fval, grad.
+        mode:
+            Whether to compute function values or residuals.
+        output_file:
+            Path to an output file.
+        max_num_conditions:
+            In some cases, we don't want to compute all predictions at once
+            when calling the prediction function, as this might not fit into
+            the memory for large datasets and models.
+            Here, the user can specify a maximum number of conditions, which
+            should be simulated at a time. Default is self.max_num_conditions.
+        return_format:
+            Either 'csv', 'h5'. If an output file is specified, this routine
+            will return a csv file, created from a DataFrame, or an h5 file,
+            created from a dict.
+
+        Returns
+        -------
+        result:
+            (Potentially tuple of) list of ndarrays containing results
+        """
+        rdatas = self.amici_objective(x=x, sensi_orders=sensi_orders,
+                                      mode=mode)
+
+        if 2 in sensi_orders:
+            raise Exception('Prediction simulation does currently not support '
+                            'second order output.')
+
+        if sensi_orders == (0, 1):
+            return  self.post_processing(rdatas), \
+                    self.post_processing_sensi(rdatas)
+        elif sensi_orders == (0,):
+            return  self.post_processing(rdatas)
+        elif sensi_orders == (1,):
+            return self.post_processing_sensi(rdatas)
+        else:
+            raise Exception('Prediction simulation called with unsupported '
+                            'input for sensi_orders:', sensi_orders)
+
+
+    @staticmethod
+    def default_post_processing(rdatas) -> Sequence[np.ndarray]:
+        return [rdata['y'] for rdata in rdatas]
+
+    @staticmethod
+    def default_post_processing_sensi(rdatas) -> Sequence[np.ndarray]:
+        return [rdata['sy'] for rdata in rdatas]
