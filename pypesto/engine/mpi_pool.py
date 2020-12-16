@@ -2,10 +2,8 @@ from multiprocessing import Pool
 from mpi4py.futures import MPIPoolExecutor
 from mpi4py import MPI
 import cloudpickle as pickle
-import os
 import logging
 from typing import List
-import numpy as np
 
 from .base import Engine
 from .task import Task
@@ -46,8 +44,9 @@ class MPIPoolEngine(Engine):
         """Pickle tasks and distribute work over nodes."""
 
         pickled_tasks = [pickle.dumps(task) for task in tasks]
-        #put the tasks in batchsizes of the number of cores used
-        chunks = [pickled_tasks[x:x+self.chunksize] for x in range(0,len(pickled_tasks),self.chunksize)]
+        # put the tasks in batchsizes of the number of cores used
+        chunks = [pickled_tasks[x:x+self.chunksize]
+                  for x in range(0, len(pickled_tasks), self.chunksize)]
 
         n_procs = MPI.COMM_WORLD.Get_size()   # Size of communicator
         logger.info(f"Performing parallel task execution on {n_procs} "
