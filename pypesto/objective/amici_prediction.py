@@ -31,7 +31,7 @@ class AmiciPrediction():
                  amici_objective: AmiciObjective,
                  post_processing: Union[Callable, None] = None,
                  post_processing_sensi: Union[Callable, None] = None,
-                 max_num_conditions: int = int('inf')):
+                 max_num_conditions: int = 0):
         """
         Constructor.
 
@@ -52,7 +52,7 @@ class AmiciPrediction():
             the memory for large datasets and models.
             Here, the user can specify a maximum number of conditions, which
             should be simulated at a time.
-            Default is 'inf' meaning that all conditions will be simulated.
+            Default is 0 meaning that all conditions will be simulated.
             Other values are only applicable, if an output file is specified.
         """
         # save settings
@@ -158,11 +158,16 @@ class AmiciPrediction():
         datasets are used
         """
 
-        n_simulations = 1 + int(len(self.amici_objective.edatas) /
-                                self.max_num_conditions)
+        if self.max_num_conditions == 0:
+            n_simulations = len(self.amici_objective.edatas)
+        else:
+            n_simulations = 1 + int(len(self.amici_objective.edatas) /
+                                    self.max_num_conditions)
+
         for i_sim in range(n_simulations):
             ids = slice(i_sim * self.max_num_conditions,
-                        (i_sim + 1) * self.max_num_conditions)
+                        max((i_sim + 1) * self.max_num_conditions,
+                            n_simulations))
 
             ret = self.amici_objective(x=x, sensi_orders=sensi_orders,
                                        edatas=self.amici_objective.edatas[ids],

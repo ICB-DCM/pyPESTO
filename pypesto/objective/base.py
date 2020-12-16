@@ -93,7 +93,8 @@ class ObjectiveBase(abc.ABC):
             x: np.ndarray,
             sensi_orders: Tuple[int, ...] = (0, ),
             mode: str = MODE_FUN,
-            return_dict: bool = False
+            return_dict: bool = False,
+            **kwargs
     ) -> Union[float, np.ndarray, Tuple, ResultDict]:
         """
         Method to obtain arbitrary sensitivities. This is the central method
@@ -142,7 +143,7 @@ class ObjectiveBase(abc.ABC):
         x_full = self.pre_post_processor.preprocess(x)
 
         # compute result
-        result = self.call_unprocessed(x_full, sensi_orders, mode)
+        result = self.call_unprocessed(x_full, sensi_orders, mode, **kwargs)
 
         # post-process
         result = self.pre_post_processor.postprocess(result)
@@ -162,7 +163,8 @@ class ObjectiveBase(abc.ABC):
             self,
             x: np.ndarray,
             sensi_orders: Tuple[int, ...],
-            mode: str
+            mode: str,
+            **kwrgs
     ) -> ResultDict:
         """
         Call objective function without pre- or post-processing and
