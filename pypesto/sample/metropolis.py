@@ -82,6 +82,11 @@ class MetropolisSampler(InternalSampler):
             # compute log posterior
             lpost_new = - self.neglogpost(x_new)
 
+        # check posterior evaluation is successful
+        if np.isnan(lpost_new):
+            # will not be accepted
+            lpost_new = - np.inf
+
         # compute log prior
         lprior_new = - self.neglogprior(x_new)
 

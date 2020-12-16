@@ -10,7 +10,6 @@ from .optimizer import Optimizer, ScipyOptimizer
 from .options import OptimizeOptions
 from .task import OptimizerTask
 
-
 logger = logging.getLogger(__name__)
 
 
@@ -65,7 +64,14 @@ def minimize(
         optimizer = ScipyOptimizer()
 
     # startpoint method
-    if startpoint_method is None:
+    if (startpoint_method is not None) \
+            and (problem.startpoint_method is not None):
+        raise Warning('Problem.startpoint_method will be ignored. Start '
+                      'points will be generated using the startpoint method '
+                      'given as an argument to the minimize function.')
+    elif problem.startpoint_method is not None:
+        startpoint_method = problem.startpoint_method
+    elif startpoint_method is None:
         startpoint_method = uniform
 
     # check options

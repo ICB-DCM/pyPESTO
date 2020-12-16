@@ -1,13 +1,13 @@
+import numpy as np
+import scipy.optimize as so
+import matplotlib.pyplot as plt
+import pytest
+
 import pypesto
 import pypesto.optimize as optimize
 import pypesto.profile as profile
 import pypesto.sample as sample
 import pypesto.visualize as visualize
-
-import numpy as np
-import scipy.optimize as so
-import matplotlib.pyplot as plt
-import pytest
 
 
 def close_fig(fun):
@@ -22,6 +22,8 @@ def close_fig(fun):
 
 
 # Define some helper functions, to have the test code more readable
+
+
 def create_bounds():
     # define bounds for a pypesto problem
     lb = -7 * np.ones((1, 2))
@@ -295,6 +297,28 @@ def test_parameters_lowlevel():
 
 
 @close_fig
+def test_parameters_hist():
+    # create the pypesto problem
+    problem = create_problem()
+
+    # create optimizer
+    optimizer_options = {'maxiter': 200}
+    optimizer = optimize.ScipyOptimizer(
+        method='TNC', options=optimizer_options)
+
+    # run optimization
+    result_1 = optimize.minimize(
+        problem=problem,
+        optimizer=optimizer,
+        n_starts=10,
+        startpoint_method=pypesto.startpoint.uniform,
+    )
+
+    visualize.parameter_hist(result_1, 'x1')
+    visualize.parameter_hist(result_1, 'x1', start_indices=list(range(10)))
+
+
+@close_fig
 def test_profiles():
     # create the necessary results
     result_1 = create_profile_result()
@@ -433,6 +457,74 @@ def test_optimizer_history_lowlevel():
 
     # test with a list of arrays
     visualize.optimizer_history_lowlevel(vals)
+
+
+@close_fig
+def test_optimization_stats():
+    """ Test pypesto.visualize.optimization_stats """
+
+    # create the pypesto problem
+    problem = create_problem()
+
+    # create optimizer
+    optimizer_options = {'maxiter': 200}
+    optimizer = optimize.ScipyOptimizer(
+        method='TNC', options=optimizer_options)
+
+    # run optimization
+    result_1 = optimize.minimize(
+        problem=problem,
+        optimizer=optimizer,
+        n_starts=10,
+        startpoint_method=pypesto.startpoint.uniform,
+    )
+
+    result_2 = optimize.minimize(
+        problem=problem,
+        optimizer=optimizer,
+        n_starts=10,
+        startpoint_method=pypesto.startpoint.uniform,
+    )
+
+    visualize.optimization_run_property_per_multistart(result_1, 'n_fval',
+                                                       legends='best result')
+
+    visualize.optimization_run_property_per_multistart(result_1, 'n_fval',
+                                                       plot_type='hist',
+                                                       legends='best result')
+
+    visualize.optimization_run_property_per_multistart(result_2, 'n_fval')
+
+    # test plotting of lists
+    visualize.optimization_run_property_per_multistart(
+        [result_1, result_2], 'n_fval',
+        legends=['result1', 'result2'],
+        plot_type='line')
+
+    visualize.optimization_run_property_per_multistart(
+        result_1, 'time', plot_type='hist', legends='best result')
+
+    visualize.optimization_run_property_per_multistart(
+        [result_1, result_2],
+        'time',
+        colors=[[.5, .9, .9, .3], [.9, .7, .8, .5]],
+        legends=['result1', 'result2'],
+        plot_type='hist')
+
+    visualize.optimization_run_properties_per_multistart([result_1, result_2])
+
+    visualize.optimization_run_properties_one_plot(result_1, ['time'])
+
+    visualize.optimization_run_properties_one_plot(result_1, ['n_fval',
+                                                              'n_grad',
+                                                              'n_hess'])
+
+    visualize.optimization_run_property_per_multistart(
+        [result_1, result_2],
+        'time',
+        colors=[[.5, .9, .9, .3], [.9, .7, .8, .5]],
+        legends=['result1', 'result2'],
+        plot_type='both')
 
 
 @close_fig

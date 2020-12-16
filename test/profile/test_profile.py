@@ -4,7 +4,6 @@ This is for testing profiling of the pypesto.Objective.
 
 import numpy as np
 import unittest
-import test.test_objective as test_objective
 from copy import deepcopy
 import warnings
 
@@ -13,14 +12,16 @@ import pypesto.optimize as optimize
 import pypesto.profile as profile
 import pypesto.visualize as visualize
 from pypesto import ObjectiveBase
-from .visualize import close_fig
+
+from ..visualize import close_fig
+from ..util import rosen_for_sensi
 
 
 class ProfilerTest(unittest.TestCase):
 
     @classmethod
     def setUp(cls):
-        cls.objective: ObjectiveBase = test_objective.rosen_for_sensi(
+        cls.objective: ObjectiveBase = rosen_for_sensi(
             max_sensi_order=2, integrated=True
         )['obj']
 
@@ -175,8 +176,8 @@ class ProfilerTest(unittest.TestCase):
 
 # dont make this a class method such that we dont optimize twice
 def test_profile_with_history():
-    objective = test_objective.rosen_for_sensi(max_sensi_order=2,
-                                               integrated=False)['obj']
+    objective = rosen_for_sensi(max_sensi_order=2,
+                                integrated=False)['obj']
 
     with warnings.catch_warnings():
         warnings.simplefilter("ignore")
@@ -204,7 +205,7 @@ def test_profile_with_history():
 @close_fig
 def test_profile_with_fixed_parameters():
     """Test using profiles with fixed parameters."""
-    obj = test_objective.rosen_for_sensi(max_sensi_order=1)['obj']
+    obj = rosen_for_sensi(max_sensi_order=1)['obj']
 
     lb = -2 * np.ones(5)
     ub = 2 * np.ones(5)

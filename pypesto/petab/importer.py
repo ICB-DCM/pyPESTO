@@ -5,7 +5,7 @@ import importlib
 import shutil
 import logging
 import tempfile
-from typing import List, Sequence, Union
+from typing import Iterable, List, Optional, Sequence, Union
 
 from ..problem import Problem
 from ..objective import AmiciObjective, AmiciObjectBuilder, AggregatedObjective
@@ -304,8 +304,26 @@ class PetabImporter(AmiciObjectBuilder):
         else:
             return None
 
+    def create_startpoint_method(self):
+        """
+        Creates a startpoint method, if the PEtab problem specifies an
+        initializationPrior. Returns None, if no initializationPrior
+        is specified.
+        """
+        if petab.INITIALIZATION_PRIOR_TYPE \
+                not in self.petab_problem.parameter_df:
+            return None
+
+        def startpoint_method(n_starts: int, **kwargs):
+            return petab.sample_parameter_startpoints(
+                self.petab_problem.parameter_df,
+                n_starts=n_starts)
+
+        return startpoint_method
+
     def create_problem(
-            self, objective: AmiciObjective = None, **kwargs
+            self, objective: AmiciObjective = None,
+            x_guesses: Optional[Iterable[float]] = None, **kwargs
     ) -> Problem:
         """Create a :class:`pypesto.Problem`.
 
@@ -313,6 +331,10 @@ class PetabImporter(AmiciObjectBuilder):
         ----------
         objective:
             Objective as created by `create_objective`.
+        x_guesses:
+            Guesses for the parameter values, shape (g, dim), where g denotes
+            the number of guesses. These are used as start points in the
+            optimization.
         **kwargs:
             Additional key word arguments passed on to the objective,
             if not provided.
@@ -340,6 +362,8 @@ class PetabImporter(AmiciObjectBuilder):
             ub=self.petab_problem.ub_scaled,
             x_fixed_indices=self.petab_problem.x_fixed_indices,
             x_fixed_vals=self.petab_problem.x_nominal_fixed_scaled,
+            x_guesses=x_guesses,
+            startpoint_method=self.create_startpoint_method(),
             x_names=self.petab_problem.x_ids,
             x_scales=x_scales,
             x_priors_defs=prior)
