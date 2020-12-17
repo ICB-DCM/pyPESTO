@@ -56,6 +56,5 @@ class MPIPoolEngine(Engine):
 
         results_flat = []
         for results in results_list:
-            for result in results:
-                results_flat.append(result)
+            results_flat.extend(results)
         return results_flat
