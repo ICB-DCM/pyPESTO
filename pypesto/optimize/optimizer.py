@@ -784,7 +784,7 @@ class NLoptOptimizer(Optimizer):
             r = problem.objective(x, sensi_orders, MODE_FUN, True)
             if grad.size > 0:
                 grad[:] = r[GRAD]  # note that this must be inplace
-    return r[FVAL]
+            return r[FVAL]
 
         opt.set_min_objective(nlopt_objective)
 
