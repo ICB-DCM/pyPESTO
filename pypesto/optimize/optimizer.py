@@ -664,7 +664,7 @@ class ScipyDifferentialEvolutionOptimizer(Optimizer):
     """
     Global optimization using scipy's differential evolution optimizer.
     Package homepage: https://docs.scipy.org/doc/scipy/reference/generated\
-        /scipy.optimize.differential_evolution.html
+    /scipy.optimize.differential_evolution.html
     Parameters
         ----------
         options:
