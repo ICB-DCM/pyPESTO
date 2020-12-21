@@ -19,6 +19,9 @@ except ImportError:
     pass
 
 
+# class PredictionResult():
+
+
 class AmiciPrediction():
     """
     This class allows to perform forward simulation via an amici model.
@@ -33,7 +36,9 @@ class AmiciPrediction():
                  amici_objective: AmiciObjective,
                  post_processing: Union[Callable, None] = None,
                  post_processing_sensi: Union[Callable, None] = None,
-                 max_num_conditions: int = 0):
+                 post_processing_timepoints: Union[Callable, None] = None,
+                 max_num_conditions: int = 0,
+                 observables: Sequence[str] = None):
         """
         Constructor.
 
@@ -44,12 +49,19 @@ class AmiciPrediction():
         post_processing:
             A callable function which applies postprocessing to the simulation
             results. Default are the observables of the amici model.
-            This method must take a list of amici ReturnData objects as input.
+            This method takes a list of ndarrays (as returned in the field
+            ['y'] of amici ReturnData objects) as input.
         post_processing_sensi:
             A callable function which applies postprocessing to the
             sensitivities of the simulation results. Default are the
             observable sensitivities of the amici model.
-            This method must take a list of amici ReturnData objects as input.
+            This method takes two lists of ndarrays (as returned in the
+            fields ['y'] and ['sy'] of amici ReturnData objects) as input.
+        post_processing_timepoints:
+            A callable function which applies postprocessing to the timepoints
+            of the simulations. Default are the timepoints of the amici model.
+            This method takes a list of ndarrays (as returned in the field
+            ['t'] of amici ReturnData objects) as input.
         max_num_conditions:
             In some cases, we don't want to compute all predictions at once
             when calling the prediction function, as this might not fit into
@@ -58,14 +70,20 @@ class AmiciPrediction():
             should be simulated at a time.
             Default is 0 meaning that all conditions will be simulated.
             Other values are only applicable, if an output file is specified.
+        observables:
+            IDs of observables, if post-processing is used
         """
         # save settings and objective
         self.amici_objective = amici_objective
         self.max_num_conditions = max_num_conditions
-        if post_processing is None:
-            self.post_processing = self.default_post_processing
-        if post_processing_sensi is None:
-            self.post_processing_sensi = self.default_post_processing_sensi
+        self.post_processing = post_processing
+        self.post_processing_sensi = post_processing_sensi
+        self.post_processing_timepoints = post_processing_timepoints
+
+        if observables is None:
+            self.observables = amici_objective.amici_model.getObservableIds()
+        else:
+            self.observables = observables
 
     def __call__(
             self,
@@ -116,13 +134,27 @@ class AmiciPrediction():
                             'second order output.')
 
         # prepare for storing the results
-        outputs = []
-        outputs_sensi = []
-        timepoints = []
+        amici_y = []
+        amici_sy = []
+        amici_t = []
 
         # simulate the model and get the output
-        self._get_model_outputs(outputs, outputs_sensi, timepoints,
-                                x, sensi_orders, mode)
+        self._get_model_outputs(amici_y, amici_sy, amici_t, x,
+                                sensi_orders, mode)
+
+        # postprocess
+        if self.post_processing is not None:
+            outputs = self.post_processing(amici_y)
+        else:
+            outputs = amici_y
+        if self.post_processing_sensi is not None:
+            outputs_sensi = self.post_processing_sensi(amici_y, amici_sy)
+        else:
+            outputs_sensi = amici_sy
+        if self.post_processing_timepoints is not None:
+            timepoints = self.post_processing_timepoints(amici_t)
+        else:
+            timepoints = amici_t
 
         # Should the results be saved to a file?
         if output_file != '':
@@ -130,14 +162,14 @@ class AmiciPrediction():
             if output_format == 'csv':
                 self._write_to_csv(outputs=outputs,
                                    outputs_sensi=outputs_sensi,
-                                   output_file=output_file,
-                                   timepoints=timepoints)
+                                   timepoints=timepoints,
+                                   output_file=output_file)
             # Do we want an h5 file?
             elif output_format == 'h5':
                 self._write_to_h5(outputs=outputs,
                                   outputs_sensi=outputs_sensi,
-                                  output_file=output_file,
-                                  timepoints=timepoints)
+                                  timepoints=timepoints,
+                                  output_file=output_file)
             else:
                 raise Exception(f'Call to unknown format {output_format} for '
                                 f'output of pyPESTO prediction.')
@@ -154,9 +186,9 @@ class AmiciPrediction():
                             'input for sensi_orders:', sensi_orders)
 
     def _get_model_outputs(self,
-                           outputs,
-                           outputs_sensi,
-                           timepoints,
+                           amici_y,
+                           amici_sy,
+                           amici_t,
                            x,
                            sensi_orders,
                            mode):
@@ -168,13 +200,12 @@ class AmiciPrediction():
 
         Parameters
         ----------
-        outputs:
-            List of postprocessed outputs (ndarrays), to which results will
-            be appended
-        outputs_sensi:
-            List of sensitivities of postprocessed outputs (ndarrays),
-            to which results will be appended
-        timepoints:
+        amici_y:
+            List of raw outputs (ndarrays), to which results will be appended
+        amici_sy:
+            List of sensitivities of raw outputs (ndarrays), to which results
+            will be appended
+        amici_t:
             List of output timepoints (ndarrays), to which simulation
             timepoints will be appended
         x:
@@ -186,9 +217,10 @@ class AmiciPrediction():
         """
 
         # Do we have a maximum number of simulations allowed?
+        n_edatas = len(self.amici_objective.edatas)
         if self.max_num_conditions == 0:
             # simulate all conditions at once
-            n_simulations = len(self.amici_objective.edatas)
+            n_simulations = 1
         else:
             # simulate only a subset of conditions
             n_simulations = 1 + int(len(self.amici_objective.edatas) /
@@ -196,42 +228,42 @@ class AmiciPrediction():
 
         for i_sim in range(n_simulations):
             # slice out the conditions we actually want
-            ids = slice(i_sim * self.max_num_conditions,
-                        max((i_sim + 1) * self.max_num_conditions,
-                            n_simulations))
+            if self.max_num_conditions == 0:
+                ids = slice(0, n_edatas)
+            else:
+                ids = slice(i_sim * self.max_num_conditions,
+                            min((i_sim + 1) * self.max_num_conditions,
+                                n_edatas))
 
             # call amici
             ret = self.amici_objective(x=x, sensi_orders=sensi_orders,
                                        edatas=self.amici_objective.edatas[ids],
                                        mode=mode, return_dict=True)
             # post process
-            timepoints += [rdata['t'] for rdata in ret['rdatas']]
+            amici_t += [rdata['t'] for rdata in ret['rdatas']]
             if 0 in sensi_orders:
-                outputs += self.post_processing(ret['rdatas'])
+                amici_y += [rdata['y'] for rdata in ret['rdatas']]
             if 1 in sensi_orders:
-                outputs_sensi += self.post_processing_sensi(ret['rdatas'])
+                amici_sy += [rdata['sy'] for rdata in ret['rdatas']]
 
     def _write_to_csv(self,
                       outputs: Sequence[np.ndarray],
                       outputs_sensi: Sequence[np.ndarray],
-                      output_file: str,
-                      timepoints: Sequence):
+                      timepoints: Sequence,
+                      output_file: str):
         """
         This method saves predictions from an amici model to a csv file.
 
         Parameters
         ----------
         outputs:
-            List of postprocessed outputs (ndarrays), to which results will
-            be appended
+            List of postprocessed outputs (ndarrays)
         outputs_sensi:
-            List of sensitivities of postprocessed outputs (ndarrays),
-            to which results will be appended
+            List of sensitivities of postprocessed outputs (ndarrays)
+        timepoints:
+            List of output timepoints (ndarrays)
         output_file:
             path to file/folder to which results will be written
-        timepoints:
-            List of output timepoints (ndarrays), to which simulation
-            timepoints will be appended
         """
         def _prepare_csv_output(output_file):
             """
@@ -272,25 +304,23 @@ class AmiciPrediction():
         output_path, output_file_dummy, output_file_suffix = \
             _prepare_csv_output(output_file)
 
-        # get observables as column names
-        observables = self.amici_objective.amici_model.getObservableIds()
-
         if outputs:
             # loop over conditions (i.e., amici edata objects)
             for i_out, output in enumerate(outputs):
-                i_timepoints = timepoints[i_out]
+                i_timepoints = pd.Series(name='time', data=timepoints[i_out])
                 # create filename for this condition
                 tmp_filename = os.path.join(output_path,
                     output_file_dummy + f'_{i_out}.' + output_file_suffix)
                 # create DataFrame and write to file
-                result = pd.DataFrame(index=i_timepoints, columns=observables,
+                result = pd.DataFrame(index=i_timepoints,
+                                      columns=self.observables,
                                       data=output)
                 result.to_csv(tmp_filename, sep='\t')
 
         if outputs_sensi:
             # loop over conditions (i.e., amici edata objects)
             for i_out, output_sensi in enumerate(outputs_sensi):
-                i_timepoints = timepoints[i_out]
+                i_timepoints = pd.Series(name='time', data=timepoints[i_out])
                 # loop over parameters
                 for i_par in range(output_sensi[i_out].shape[1]):
                     # create filename for this condition and parameter
@@ -299,38 +329,32 @@ class AmiciPrediction():
                                                 output_file_suffix)
                     # create DataFrame and write to file
                     result = pd.DataFrame(index=i_timepoints,
-                                          columns=observables,
-                                          data=output_sensi[:,i_par,:])
+                                          columns=self.observables,
+                                          data=output_sensi[:,:,i_par])
                     result.to_csv(tmp_filename, sep='\t')
 
     def _write_to_h5(self,
                      outputs: Sequence[np.ndarray],
                      outputs_sensi: Sequence[np.ndarray],
-                     output_file: str,
-                     timepoints: Sequence):
+                     timepoints: Sequence,
+                     output_file: str):
         """
         This method saves predictions from an amici model to a h5 file.
 
         Parameters
         ----------
         outputs:
-            List of postprocessed outputs (ndarrays), to which results will
-            be appended
+            List of postprocessed outputs (ndarrays)
         outputs_sensi:
-            List of sensitivities of postprocessed outputs (ndarrays),
-            to which results will be appended
+            List of sensitivities of postprocessed outputs (ndarrays)
+        timepoints:
+            List of output timepoints (ndarrays)
         output_file:
             path to file/folder to which results will be written
-        timepoints:
-            List of output timepoints (ndarrays), to which simulation
-            timepoints will be appended
         """
-        observables = self.amici_objective.amici_model.getObservableIds()
-
-        # create file
         with h5py.File(output_file, 'w') as f:
             # save observable IDs
-            f.create_dataset('observableIds', data=observables)
+            f.create_dataset('observableIds', data=self.observables)
 
             # loop over conditions (i.e., amici edata objects)
             n_groups = max(len(outputs), len(outputs_sensi))
@@ -344,17 +368,3 @@ class AmiciPrediction():
                 if outputs_sensi:
                     f.create_dataset(f'{i_out}/sim_sensi',
                                      data=outputs_sensi[i_out])
-
-    @staticmethod
-    def default_post_processing(rdatas) -> Sequence[np.ndarray]:
-        """
-        Default simulation output: Just amici observables
-        """
-        return [rdata['y'] for rdata in rdatas]
-
-    @staticmethod
-    def default_post_processing_sensi(rdatas) -> Sequence[np.ndarray]:
-        """
-        Default simulation output sensis: Just amici observable sensitivities
-        """
-        return [rdata['sy'] for rdata in rdatas]
