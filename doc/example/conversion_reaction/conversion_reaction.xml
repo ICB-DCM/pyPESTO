@@ -1,0 +1,75 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<sbml xmlns="http://www.sbml.org/sbml/level2/version4" level="2" version="4">
+  <model id="conversion_reaction" name="conversion_reaction">
+    <listOfCompartments>
+      <compartment id="compartment" name="compartment" spatialDimensions="3" size="1" constant="true" />
+    </listOfCompartments>
+    <listOfSpecies>
+      <species id="A" name="A" compartment="compartment" initialConcentration="2" boundaryCondition="false" constant="false" />
+      <species id="B" name="B" compartment="compartment" initialConcentration="0" boundaryCondition="false" constant="false" />
+    </listOfSpecies>
+    <listOfParameters>
+      <parameter id="k1" name="k1" value="5"/>
+      <parameter id="k2" name="k2" value="0.5"/>
+      <parameter id="A0" name="A0" value="2"/>
+      <parameter id="B0" name="B0" value="0"/>
+      <parameter id="observable_A" name="observable_A" constant="false"/>
+      <parameter id="observable_B" name="observable_B" constant="false"/>
+    </listOfParameters>
+    <listOfInitialAssignments>
+      <initialAssignment symbol="A">
+        <math xmlns="http://www.w3.org/1998/Math/MathML">
+          <ci> A0 </ci>
+        </math>
+      </initialAssignment>
+      <initialAssignment symbol="B">
+        <math xmlns="http://www.w3.org/1998/Math/MathML">
+          <ci> B0 </ci>
+        </math>
+      </initialAssignment>
+    </listOfInitialAssignments>
+    <listOfRules>
+      <assignmentRule variable="observable_A">
+        <math xmlns="http://www.w3.org/1998/Math/MathML">
+          <ci> A </ci>
+        </math>
+      </assignmentRule>
+      <assignmentRule variable="observable_B">
+        <math xmlns="http://www.w3.org/1998/Math/MathML">
+          <ci> B </ci>
+        </math>
+      </assignmentRule>
+    </listOfRules>
+    <listOfReactions>
+      <reaction id="conversion" name="conversion" reversible="true">
+        <listOfReactants>
+          <speciesReference species="A" stoichiometry="1"/>
+        </listOfReactants>
+        <listOfProducts>
+          <speciesReference species="B" stoichiometry="1"/>
+        </listOfProducts>
+        <kineticLaw>
+          <math xmlns="http://www.w3.org/1998/Math/MathML">
+            <apply>
+              <times/>
+              <ci> compartment </ci>
+              <apply>
+                <minus/>
+                <apply>
+                  <times/>
+                  <ci> k1 </ci>
+                  <ci> A </ci>
+                </apply>
+                <apply>
+                  <times/>
+                  <ci> k2 </ci>
+                  <ci> B </ci>
+                </apply>
+              </apply>
+            </apply>
+          </math>
+        </kineticLaw>
+      </reaction>
+    </listOfReactions>
+  </model>
+</sbml>
