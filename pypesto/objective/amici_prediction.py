@@ -2,7 +2,7 @@ import numpy as np
 import os
 import pandas as pd
 import h5py
-from typing import Sequence, Union, Callable, Tuple
+from typing import Sequence, Union, Callable, Tuple, Dict
 from warnings import warn
 from time import time
 
@@ -19,10 +19,74 @@ except ImportError:
     pass
 
 
-# class PredictionResult():
+class PredictionConditionResult:
+    """
+    This class is a light-weight wrapper for the prediction of one simulation
+    condition of an amici model. It should provide a common api how amici
+    predictions should look like in pyPESTO.
+    """
+    def __init__(self,
+                 timepoints: np.ndarray,
+                 observables: Sequence[str],
+                 output: np.ndarray = None,
+                 output_sensi: np.ndarray = None,
+                 parameters: Sequence[str] = None):
+        """
+        Constructor.
+
+        Parameters
+        ----------
+        timepoints:
+            timepoints when output is given for this simulation condition
+        observables:
+            IDs of observables for this simulation condition
+        """
+        self.timepoints = timepoints
+        self.observables = observables
+        self.output = output
+        self.output_sensi = output_sensi
+        if parameters is None and output_sensi is not None:
+            self.parameters = [f'parameter_{i_par}' for i_par in
+                               range(output_sensi.shape[2])]
+        else:
+            self.parameters = None
 
 
-class AmiciPrediction():
+class PredictionResult:
+    """
+    This class is a light-weight wrapper around predictions from pyPESTO made
+    via an amici model. It's only purpose is to have fixed format/api, how
+    prediction results should be stored, read, and handled: as predictions are
+    a very flexible format anyway, they should at least have a common
+    definition, which allows to work with them in a reasonable way.
+    """
+    def __init__(self,
+                 conditions: Sequence[Union[PredictionConditionResult, Dict]],
+                 conditionIds: Sequence[str] = None):
+        """
+        Constructor.
+
+        Parameters
+        ----------
+        conditions:
+            A list of PredictionConditionResult objects or dicts
+        conditionIds:
+            IDs or names of the simulation conditions, which belong to this
+            prediction (e.g., PEtab uses tuples of preequilibration condition
+            and simulation conditions)
+        """
+        # cast the result per condition
+        self.conditions = [cond if isinstance(cond, PredictionConditionResult)
+                           else PredictionConditionResult(**cond)
+                           for cond in conditions]
+
+        if conditionIds is not None:
+            self.conditionIds = conditionIds
+        else:
+            self.conditionIds = [f'condition_{i_cond}'
+                                 for i_cond in range(len(conditions))]
+
+class AmiciPrediction:
     """
     This class allows to perform forward simulation via an amici model.
     These simulations can either be exactly those from amici, or they can be
@@ -93,7 +157,7 @@ class AmiciPrediction():
             output_file: str = '',
             output_format: str = 'csv',
             max_num_conditions: int = 0,
-    ) -> Union[Sequence[np.ndarray], Tuple]:
+    ) -> PredictionResult:
         """
         Method to simulate a model for a certain prediction function.
         This method relies on the AmiciObjective, which is underlying, but
@@ -156,6 +220,19 @@ class AmiciPrediction():
         else:
             timepoints = amici_t
 
+        condition_results = []
+        for i_cond in range(len(timepoints)):
+            result = {'timepoints': timepoints[i_cond],
+                      'observables': self.observables}
+            if outputs:
+                result['output'] = outputs[i_cond]
+            if outputs_sensi:
+                result['output_sensi'] = outputs_sensi[i_cond]
+
+            condition_results.append(result)
+
+        results = PredictionResult(condition_results)
+
         # Should the results be saved to a file?
         if output_file != '':
             # Do we want a pandas dataframe like format?
@@ -175,15 +252,7 @@ class AmiciPrediction():
                                 f'output of pyPESTO prediction.')
 
         # return dependent on sensitivity order
-        if sensi_orders == (0, 1):
-            return outputs, outputs_sensi
-        elif sensi_orders == (0,):
-            return outputs
-        elif sensi_orders == (1,):
-            return outputs_sensi
-        else:
-            raise Exception('Prediction simulation called with unsupported '
-                            'input for sensi_orders:', sensi_orders)
+        return results
 
     def _get_model_outputs(self,
                            amici_y,

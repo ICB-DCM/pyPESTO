@@ -19,6 +19,8 @@ from .objective import (
     OptimizerHistory,
     AmiciObjective,
     AmiciPrediction,
+    PredictionResult,
+    PredictionConditionResult,
     Objective,
     NegLogPriors,
     ObjectiveBase)

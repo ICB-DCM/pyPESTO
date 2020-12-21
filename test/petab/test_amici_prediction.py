@@ -11,6 +11,8 @@ import sys
 import numpy as np
 import shutil
 import pytest
+from pypesto.objective.amici_prediction import (PredictionResult,
+                                                PredictionConditionResult)
 
 
 def create_testmodel():
@@ -75,27 +77,23 @@ def edata_objects():
 
 
 def check_outputs(predicted, out, n_cond, n_timepoints, n_obs, n_par):
-    # correct number of outputs?
-    assert isinstance(predicted, tuple)
-    assert len(predicted) == len(out)
-
+    # correct output type?
+    assert isinstance(predicted, PredictionResult)
     # correct number of predictions?
-    for pred in predicted:
-        assert len(pred) == n_cond
+    assert len(predicted.conditions) == n_cond
+
     # correct shape for outputs?
     if 0 in out:
-        for cond in predicted[0]:
-            assert isinstance(cond, np.ndarray)
-            assert cond.shape == (n_timepoints, n_obs)
+        for cond in predicted.conditions:
+            assert isinstance(cond, PredictionConditionResult)
+            assert isinstance(cond.output, np.ndarray)
+            assert cond.output.shape == (n_timepoints, n_obs)
     # correct shape for output sensitivities?
-    if 0 in out and 1 in out:
-        for cond in predicted[1]:
-            assert isinstance(cond, np.ndarray)
-            assert cond.shape == (n_timepoints, n_obs, n_par)
-    elif 1 in out:
-        for cond in predicted[0]:
-            assert isinstance(cond, np.ndarray)
-            assert cond.shape == (n_timepoints, n_obs, n_par)
+    if 1 in out:
+        for cond in predicted.conditions:
+            assert isinstance(cond, PredictionConditionResult)
+            assert isinstance(cond.output_sensi, np.ndarray)
+            assert cond.output_sensi.shape == (n_timepoints, n_obs, n_par)
 
 def test_simple_prediction(edata_objects):
     """
@@ -111,15 +109,15 @@ def test_simple_prediction(edata_objects):
     x = np.array([3., 0.5])
 
     # assert output is what it should look like when running in efault mode
-    p = (default_prediction(x),)
+    p = default_prediction(x)
     check_outputs(p, out=(0,), n_cond=1, n_timepoints=10, n_obs=2, n_par=2)
 
     # assert folder is there with all files
     # remove file is already existing
     if os.path.exists('deleteme'):
         shutil.rmtree('deleteme')
-    p = (default_prediction(x, output_file='deleteme.csv', sensi_orders=(1,),
-                            output_format='csv'),)
+    p = default_prediction(x, output_file='deleteme.csv', sensi_orders=(1,),
+                           output_format='csv')
     check_outputs(p, out=(1,), n_cond=1, n_timepoints=10, n_obs=2, n_par=2)
     # check created files
     assert os.path.exists('deleteme')
@@ -128,7 +126,7 @@ def test_simple_prediction(edata_objects):
     shutil.rmtree('deleteme')
 
     # assert h5 file is there
-    p =(default_prediction(x, output_file='deleteme.h5', output_format='h5'),)
+    p = default_prediction(x, output_file='deleteme.h5', output_format='h5')
     check_outputs(p, out=(0,), n_cond=1, n_timepoints=10, n_obs=2, n_par=2)
     assert os.path.exists('deleteme.h5')
     os.remove('deleteme.h5')
