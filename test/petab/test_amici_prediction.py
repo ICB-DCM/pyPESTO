@@ -2,8 +2,6 @@
 This is for testing the pypesto.objective.AmiciPrediction.
 """
 
-import libsbml
-import importlib
 import amici
 import pypesto
 import os
@@ -17,9 +15,9 @@ from pypesto.objective.amici_prediction import (PredictionResult,
 
 def create_testmodel():
     # read in sbml file
-    sbml_file = '../../doc/example/conversion_reaction/conversion_reaction.xml'
+    sbml_file = '../../doc/example/conversion_reaction/model_conversion_reaction.xml'
     model_name = 'conversion_reaction'
-    model_output_dir = '../../doc/example/tmp/conversion_reaction'
+    model_output_dir = '../../doc/example/tmp/conversion_reaction_enhanced'
 
     # try to import the exisiting model, if possible
     try:
@@ -28,7 +26,28 @@ def create_testmodel():
         model = model_module.getModel()
     except:
         # read in and adapt the sbml slightly
+        if os.path.abspath(model_output_dir) in sys.path:
+            sys.path.remove(os.path.abspath(model_output_dir))
         sbml_importer = amici.SbmlImporter(sbml_file)
+
+        # add observables to sbml model
+        def create_observable(sbml_model, obs_id):
+            # create a parameter, which will get a rule assignmed as observable
+            parameter = sbml_model.createParameter()
+            parameter.setId(f'observable_{obs_id}')
+            parameter.setName(f'observable_{obs_id}')
+            parameter.constant = True
+
+            rule = sbml_importer.sbml.createAssignmentRule()
+            rule.setId(f'observable_{obs_id}')
+            rule.setName(f'observable_{obs_id}')
+            rule.setVariable(f'observable_{obs_id}')
+            rule.setFormula(obs_id)
+
+        create_observable(sbml_importer.sbml, 'A')
+        create_observable(sbml_importer.sbml, 'B')
+
+        # add constant parameters and observables to AMICI model
         constantParameters = ['A0', 'B0']
         observables = amici.assignmentRules2observables(
             sbml_importer.sbml,  # the libsbml model object

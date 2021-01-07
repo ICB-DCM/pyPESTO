@@ -32,7 +32,24 @@
       </parameter>
       <parameter id="k2" name="k2" value="0" constant="true">
       </parameter>
+      <parameter id="A0" name="A0" value="1" constant="true">
+      </parameter>
+      <parameter id="B0" name="B0" value="0" constant="true">
+      </parameter>
     </listOfParameters>
+
+    <listOfInitialAssignments>
+      <initialAssignment symbol="A">
+        <math xmlns="http://www.w3.org/1998/Math/MathML">
+          <ci> A0 </ci>
+        </math>
+      </initialAssignment>
+      <initialAssignment symbol="B">
+        <math xmlns="http://www.w3.org/1998/Math/MathML">
+          <ci> B0 </ci>
+        </math>
+      </initialAssignment>
+    </listOfInitialAssignments>
 
     <listOfReactions>
       <reaction id="fwd" name="fwd" reversible="false">
