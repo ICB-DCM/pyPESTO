@@ -10,15 +10,6 @@ from .constants import MODE_FUN
 from .amici import AmiciObjective
 
 
-try:
-    import amici
-    import amici.petab_objective
-    import amici.parameter_mapping
-    from amici.parameter_mapping import ParameterMapping
-except ImportError:
-    pass
-
-
 class PredictionConditionResult:
     """
     This class is a light-weight wrapper for the prediction of one simulation
@@ -88,15 +79,17 @@ class PredictionResult:
         self.condition_ids = condition_ids
         if self.condition_ids is None:
             self.condition_ids = [f'condition_{i_cond}'
-                                 for i_cond in range(len(condition_ids))]
+                                  for i_cond in range(len(conditions))]
+
 
 class AmiciPrediction:
     """
-    Do forward simulations (predictions) with parameter vectors, for an AMICI model.
-    The user may supply post-processing methods.
-    If post-processing methods are supplied, and a gradient of the forward simulation
-    is requested, then the sensitivities of the AMICI model must also be post-processed.
-    There are no checks here to ensure that the sensitivity is correctly post-processed.
+    Do forward simulations (predictions) with parameter vectors,
+    for an AMICI model. The user may supply post-processing methods.
+    If post-processing methods are supplied, and a gradient of the prediction
+    is requested, then the sensitivities of the AMICI model must also be
+    post-processed. There are no checks here to ensure that the sensitivities
+    are correctly post-processed, this is explicitly left to the user.
     """
     def __init__(self,
                  amici_objective: AmiciObjective,
@@ -204,16 +197,14 @@ class AmiciPrediction:
 
         # postprocess
         outputs = amici_y
+        outputs_sensi = amici_sy
+        timepoints = amici_t
         if self.post_processing is not None:
             outputs = self.post_processing(outputs)
         if self.post_processing_sensi is not None:
             outputs_sensi = self.post_processing_sensi(amici_y, amici_sy)
-        else:
-            outputs_sensi = amici_sy
         if self.post_processing_timepoints is not None:
             timepoints = self.post_processing_timepoints(amici_t)
-        else:
-            timepoints = amici_t
 
         condition_results = []
         for i_cond in range(len(timepoints)):
@@ -349,7 +340,7 @@ class AmiciPrediction:
             if '/' in output_file_path:
                 tmp = output_file_path.split('/')[-1]
             else:
-                tmp = [output_file_path,]
+                tmp = [output_file_path, ]
 
             output_file_dummy = tmp[-1]
             output_path = os.path.join(*tmp)
@@ -365,7 +356,7 @@ class AmiciPrediction:
             return output_path, output_file_dummy, output_file_suffix
 
         # process the name of the output file, create a folder
-        output_path, output_file_dummy, output_file_suffix = \
+        output_path, output_file_dummy, output_suffix = \
             _prepare_csv_output(output_file)
 
         if outputs:
@@ -373,8 +364,8 @@ class AmiciPrediction:
             for i_out, output in enumerate(outputs):
                 i_timepoints = pd.Series(name='time', data=timepoints[i_out])
                 # create filename for this condition
-                tmp_filename = os.path.join(output_path,
-                    output_file_dummy + f'_{i_out}.' + output_file_suffix)
+                tmp_filename = output_file_dummy + f'_{i_out}.' + output_suffix
+                tmp_filename = os.path.join(output_path, tmp_filename)
                 # create DataFrame and write to file
                 result = pd.DataFrame(index=i_timepoints,
                                       columns=self.observable_ids,
@@ -388,9 +379,9 @@ class AmiciPrediction:
                 # loop over parameters
                 for i_par in range(output_sensi[i_out].shape[0]):
                     # create filename for this condition and parameter
-                    tmp_filename = os.path.join(output_path, output_file_dummy +
-                                                f'_{i_out}__s{i_par}.' +
-                                                output_file_suffix)
+                    tmp_filename = output_file_dummy + f'_{i_out}__s{i_par}.' \
+                                   + output_suffix
+                    tmp_filename = os.path.join(output_path, tmp_filename)
                     # create DataFrame and write to file
                     result = pd.DataFrame(index=i_timepoints,
                                           columns=self.observable_ids,

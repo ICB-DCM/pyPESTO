@@ -274,7 +274,7 @@ class PetabImporter(AmiciObjectBuilder):
                           post_processing_sensi: Union[Callable, None] = None,
                           post_processing_timepoints: Union[Callable, None] = None,
                           max_num_conditions: int = 0,
-                          observables: Sequence[str] = None
+                          observable_ids: Sequence[str] = None
         ) -> AmiciPrediction:
         """Create a :class:`pypesto.AmiciPrediction`.
 
@@ -306,7 +306,7 @@ class PetabImporter(AmiciObjectBuilder):
             should be simulated at a time.
             Default is 0 meaning that all conditions will be simulated.
             Other values are only applicable, if an output file is specified.
-        observables:
+        observable_ids:
             IDs of observables, if post-processing is used
 
         Returns
@@ -327,7 +327,7 @@ class PetabImporter(AmiciObjectBuilder):
             post_processing_sensi=post_processing_sensi,
             post_processing_timepoints=post_processing_timepoints,
             max_num_conditions=max_num_conditions,
-            observables=observables)
+            observable_ids=observable_ids)
 
         return prediction
 
