@@ -391,7 +391,7 @@ class AmiciPrediction:
             for i_out, output_sensi in enumerate(outputs_sensi):
                 i_timepoints = pd.Series(name='time', data=timepoints[i_out])
                 # loop over parameters
-                for i_par in range(output_sensi[i_out].shape[1]):
+                for i_par in range(output_sensi[i_out].shape[0]):
                     # create filename for this condition and parameter
                     tmp_filename = os.path.join(output_path, output_file_dummy +
                                                 f'_{i_out}__s{i_par}.' +
@@ -399,7 +399,7 @@ class AmiciPrediction:
                     # create DataFrame and write to file
                     result = pd.DataFrame(index=i_timepoints,
                                           columns=self.observables,
-                                          data=output_sensi[:,:,i_par])
+                                          data=output_sensi[:, i_par, :])
                     result.to_csv(tmp_filename, sep='\t')
 
     def _write_to_h5(self,

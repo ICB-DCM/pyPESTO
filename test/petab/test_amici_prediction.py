@@ -4,13 +4,16 @@ This is for testing the pypesto.objective.AmiciPrediction.
 
 import amici
 import pypesto
+import pypesto.petab
 import os
 import sys
 import numpy as np
 import shutil
 import pytest
+import petab
 from pypesto.objective.amici_prediction import (PredictionResult,
                                                 PredictionConditionResult)
+from .petab_util import folder_base
 
 
 def create_testmodel():
@@ -112,7 +115,7 @@ def check_outputs(predicted, out, n_cond, n_timepoints, n_obs, n_par):
         for cond in predicted.conditions:
             assert isinstance(cond, PredictionConditionResult)
             assert isinstance(cond.output_sensi, np.ndarray)
-            assert cond.output_sensi.shape == (n_timepoints, n_obs, n_par)
+            assert cond.output_sensi.shape == (n_timepoints, n_par, n_obs)
 
 def test_simple_prediction(edata_objects):
     """
@@ -177,28 +180,28 @@ def test_complex_prediction(edata_objects):
     def pps_out(amici_y, amici_sy):
         # compute ratios of simulations across conditions (yes, I know this is
         # symbolically wrong, but we only check the shape of the outputs atm...)
-        s_outs1 = np.zeros((10, 5, 2))
-        s_outs1[:,0,:] = \
+        s_outs1 = np.zeros((10, 2, 5))
+        s_outs1[:, :, 0] = \
             amici_sy[0][:, 1, :] / np.tile(amici_y[0][:, 0], (2,1)).transpose()
-        s_outs1[:,1,:] = \
+        s_outs1[:, :, 1] = \
             amici_sy[0][:, 1, :] / np.tile(amici_y[0][:, 0], (2,1)).transpose()
-        s_outs1[:,2,:] = \
+        s_outs1[:, :, 2] = \
             amici_sy[0][:, 1, :] / np.tile(amici_y[0][:, 0], (2,1)).transpose()
-        s_outs1[:,3,:] = \
+        s_outs1[:, :, 3] = \
             amici_sy[0][:, 1, :] / np.tile(amici_y[0][:, 0], (2,1)).transpose()
-        s_outs1[:,4,:] = \
+        s_outs1[:, :, 4] = \
             amici_sy[0][:, 1, :] / np.tile(amici_y[0][:, 0], (2,1)).transpose()
 
-        s_outs2 = np.zeros((10, 5, 2))
-        s_outs2[:, 0, :] = \
+        s_outs2 = np.zeros((10, 2, 5))
+        s_outs2[:, :, 0] = \
             amici_sy[0][:, 1, :] / np.tile(amici_y[0][:, 0], (2,1)).transpose()
-        s_outs2[:, 1, :] = \
+        s_outs2[:, :, 1] = \
             amici_sy[0][:, 1, :] / np.tile(amici_y[1][:, 0], (2,1)).transpose()
-        s_outs2[:, 2, :] = \
+        s_outs2[:, :, 2] = \
             amici_sy[1][:, 1, :] / np.tile(amici_y[1][:, 0], (2,1)).transpose()
-        s_outs2[:, 3, :] = \
+        s_outs2[:, :, 3] = \
             amici_sy[2][:, 1, :] / np.tile(amici_y[1][:, 0], (2,1)).transpose()
-        s_outs2[:, 4, :] = \
+        s_outs2[:, :, 4] = \
             amici_sy[2][:, 1, :] / np.tile(amici_y[2][:, 0], (2,1)).transpose()
         return [s_outs1, s_outs2]
 
@@ -245,3 +248,15 @@ def test_complex_prediction(edata_objects):
     check_outputs(p, out=(0,1), n_cond=2, n_timepoints=10, n_obs=5, n_par=2)
     assert os.path.exists('deleteme.h5')
     os.remove('deleteme.h5')
+
+
+def test_petab_prediction():
+    yaml_file = '../../doc/example/conversion_reaction/conversion_reaction.yaml'
+    petab_problem = petab.Problem.from_yaml(yaml_file)
+    petab_problem.model_name = "conversion_reaction_petab"
+    importer = pypesto.petab.PetabImporter(petab_problem)
+    prediction = importer.create_prediction()
+
+    p = prediction(np.array(petab_problem.x_nominal_free_scaled),
+                   sensi_orders=(0,1))
+    check_outputs(p, out=(0,1), n_cond=1, n_timepoints=10, n_obs=1, n_par=2)
