@@ -27,29 +27,34 @@ class PredictionConditionResult:
     """
     def __init__(self,
                  timepoints: np.ndarray,
-                 observables: Sequence[str],
+                 observable_ids: Sequence[str],
                  output: np.ndarray = None,
                  output_sensi: np.ndarray = None,
-                 parameters: Sequence[str] = None):
+                 parameter_ids: Sequence[str] = None):
         """
         Constructor.
 
         Parameters
         ----------
         timepoints:
-            timepoints when output is given for this simulation condition
-        observables:
+            Output timepoints for this simulation condition
+        observable_ids:
             IDs of observables for this simulation condition
+        outputs:
+            Postprocessed outputs (ndarray)
+        outputs_sensi:
+            Sensitivities of postprocessed outputs (ndarray)
+        parameter_ids:
+            IDs of model parameter w.r.t to which sensitivities were computed
         """
         self.timepoints = timepoints
-        self.observables = observables
+        self.observable_ids = observable_ids
         self.output = output
         self.output_sensi = output_sensi
-        if parameters is None and output_sensi is not None:
-            self.parameters = [f'parameter_{i_par}' for i_par in
-                               range(output_sensi.shape[2])]
-        else:
-            self.parameters = None
+        self.parameter_ids = parameter_ids
+        if parameter_ids is None and output_sensi is not None:
+            self.parameter_ids = [f'parameter_{i_par}' for i_par in
+                                  range(output_sensi.shape[1])]
 
 
 class PredictionResult:
@@ -62,7 +67,7 @@ class PredictionResult:
     """
     def __init__(self,
                  conditions: Sequence[Union[PredictionConditionResult, Dict]],
-                 conditionIds: Sequence[str] = None):
+                 condition_ids: Sequence[str] = None):
         """
         Constructor.
 
@@ -70,7 +75,7 @@ class PredictionResult:
         ----------
         conditions:
             A list of PredictionConditionResult objects or dicts
-        conditionIds:
+        condition_ids:
             IDs or names of the simulation conditions, which belong to this
             prediction (e.g., PEtab uses tuples of preequilibration condition
             and simulation conditions)
@@ -80,11 +85,11 @@ class PredictionResult:
                            else PredictionConditionResult(**cond)
                            for cond in conditions]
 
-        if conditionIds is not None:
-            self.conditionIds = conditionIds
+        if condition_ids is not None:
+            self.condition_ids = condition_ids
         else:
-            self.conditionIds = [f'condition_{i_cond}'
-                                 for i_cond in range(len(conditions))]
+            self.condition_ids = [f'condition_{i_cond}'
+                                  for i_cond in range(len(conditions))]
 
 class AmiciPrediction:
     """
@@ -145,9 +150,10 @@ class AmiciPrediction:
         self.post_processing_timepoints = post_processing_timepoints
 
         if observable_ids is None:
-            self.observables = amici_objective.amici_model.getObservableIds()
+            self.observable_ids = \
+                amici_objective.amici_model.getObservableIds()
         else:
-            self.observables = observable_ids
+            self.observable_ids = observable_ids
 
     def __call__(
             self,
@@ -156,7 +162,6 @@ class AmiciPrediction:
             mode: str = MODE_FUN,
             output_file: str = '',
             output_format: str = 'csv',
-            max_num_conditions: int = 0,
     ) -> PredictionResult:
         """
         Method to simulate a model for a certain prediction function.
@@ -174,12 +179,6 @@ class AmiciPrediction:
             Whether to compute function values or residuals.
         output_file:
             Path to an output file.
-        max_num_conditions:
-            In some cases, we don't want to compute all predictions at once
-            when calling the prediction function, as this might not fit into
-            the memory for large datasets and models.
-            Here, the user can specify a maximum number of conditions, which
-            should be simulated at a time. Default is self.max_num_conditions.
         output_format:
             Either 'csv', 'h5'. If an output file is specified, this routine
             will return a csv file, created from a DataFrame, or an h5 file,
@@ -223,7 +222,7 @@ class AmiciPrediction:
         condition_results = []
         for i_cond in range(len(timepoints)):
             result = {'timepoints': timepoints[i_cond],
-                      'observables': self.observables}
+                      'observable_ids': self.observable_ids}
             if outputs:
                 result['output'] = outputs[i_cond]
             if outputs_sensi:
@@ -382,7 +381,7 @@ class AmiciPrediction:
                     output_file_dummy + f'_{i_out}.' + output_file_suffix)
                 # create DataFrame and write to file
                 result = pd.DataFrame(index=i_timepoints,
-                                      columns=self.observables,
+                                      columns=self.observable_ids,
                                       data=output)
                 result.to_csv(tmp_filename, sep='\t')
 
@@ -398,7 +397,7 @@ class AmiciPrediction:
                                                 output_file_suffix)
                     # create DataFrame and write to file
                     result = pd.DataFrame(index=i_timepoints,
-                                          columns=self.observables,
+                                          columns=self.observable_ids,
                                           data=output_sensi[:, i_par, :])
                     result.to_csv(tmp_filename, sep='\t')
 
@@ -423,7 +422,7 @@ class AmiciPrediction:
         """
         with h5py.File(output_file, 'w') as f:
             # save observable IDs
-            f.create_dataset('observableIds', data=self.observables)
+            f.create_dataset('observableIds', data=self.observable_ids)
 
             # loop over conditions (i.e., amici edata objects)
             n_groups = max(len(outputs), len(outputs_sensi))
