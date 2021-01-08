@@ -73,9 +73,8 @@ def create_testmodel():
 
 
 @pytest.fixture()
-def edata_objects():
-
-    testmodel = create_testmodel()
+def edata_objects(conversion_reaction_model):
+    testmodel = conversion_reaction_model
 
     # set timepoints for which we want to simulate the model
     testmodel.setTimepoints(np.linspace(0, 4, 10))

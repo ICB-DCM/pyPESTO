@@ -164,7 +164,7 @@ class ObjectiveBase(abc.ABC):
             x: np.ndarray,
             sensi_orders: Tuple[int, ...],
             mode: str,
-            **kwrgs
+            **kwargs
     ) -> ResultDict:
         """
         Call objective function without pre- or post-processing and

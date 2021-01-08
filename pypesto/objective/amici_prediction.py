@@ -85,21 +85,18 @@ class PredictionResult:
                            else PredictionConditionResult(**cond)
                            for cond in conditions]
 
-        if condition_ids is not None:
-            self.condition_ids = condition_ids
-        else:
+        self.condition_ids = condition_ids
+        if self.condition_ids is None:
             self.condition_ids = [f'condition_{i_cond}'
-                                  for i_cond in range(len(conditions))]
+                                 for i_cond in range(len(condition_ids))]
 
 class AmiciPrediction:
     """
-    This class allows to perform forward simulation via an amici model.
-    These simulations can either be exactly those from amici, or they can be
-    post-processed after simulation.
-    If a post-processing method is applied, also the sensitivities of the amici
-    model must be post-processed, if a gradient of the forward simulation is
-    requested. This responsibility for correctness of this sensitivity
-    post-processing is EXPLICITLY left to the user.
+    Do forward simulations (predictions) with parameter vectors, for an AMICI model.
+    The user may supply post-processing methods.
+    If post-processing methods are supplied, and a gradient of the forward simulation
+    is requested, then the sensitivities of the AMICI model must also be post-processed.
+    There are no checks here to ensure that the sensitivity is correctly post-processed.
     """
     def __init__(self,
                  amici_objective: AmiciObjective,
@@ -164,7 +161,7 @@ class AmiciPrediction:
             output_format: str = 'csv',
     ) -> PredictionResult:
         """
-        Method to simulate a model for a certain prediction function.
+        Simulate a model for a certain prediction function.
         This method relies on the AmiciObjective, which is underlying, but
         allows the user to apply any post-processing of the results and the
         sensitivities.
@@ -206,10 +203,9 @@ class AmiciPrediction:
                                 sensi_orders, mode)
 
         # postprocess
+        outputs = amici_y
         if self.post_processing is not None:
-            outputs = self.post_processing(amici_y)
-        else:
-            outputs = amici_y
+            outputs = self.post_processing(outputs)
         if self.post_processing_sensi is not None:
             outputs_sensi = self.post_processing_sensi(amici_y, amici_sy)
         else:
@@ -233,7 +229,7 @@ class AmiciPrediction:
         results = PredictionResult(condition_results)
 
         # Should the results be saved to a file?
-        if output_file != '':
+        if output_file:
             # Do we want a pandas dataframe like format?
             if output_format == 'csv':
                 self._write_to_csv(outputs=outputs,
