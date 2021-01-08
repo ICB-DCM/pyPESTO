@@ -270,30 +270,30 @@ class PetabImporter(AmiciObjectBuilder):
 
     def create_prediction(self,
                           objective: AmiciObjective = None,
-                          post_processing: Union[Callable, None] = None,
-                          post_processing_sensi: Union[Callable, None] = None,
-                          post_processing_timepoints: Union[Callable, None] = None,
+                          post_processor: Union[Callable, None] = None,
+                          post_processor_sensi: Union[Callable, None] = None,
+                          post_processor_time: Union[Callable, None] = None,
                           max_num_conditions: int = 0,
                           observable_ids: Sequence[str] = None
-        ) -> AmiciPrediction:
+                          ) -> AmiciPrediction:
         """Create a :class:`pypesto.AmiciPrediction`.
 
         Parameters
         ----------
         amici_objective:
             An objective object, which will be used to get model simulations
-        post_processing:
+        post_processor:
             A callable function which applies postprocessing to the simulation
             results. Default are the observables of the amici model.
             This method takes a list of ndarrays (as returned in the field
             ['y'] of amici ReturnData objects) as input.
-        post_processing_sensi:
+        post_processor_sensi:
             A callable function which applies postprocessing to the
             sensitivities of the simulation results. Default are the
             observable sensitivities of the amici model.
             This method takes two lists of ndarrays (as returned in the
             fields ['y'] and ['sy'] of amici ReturnData objects) as input.
-        post_processing_timepoints:
+        post_processor_time:
             A callable function which applies postprocessing to the timepoints
             of the simulations. Default are the timepoints of the amici model.
             This method takes a list of ndarrays (as returned in the field
@@ -323,9 +323,9 @@ class PetabImporter(AmiciObjectBuilder):
         # wrap around AmiciPrediction
         prediction = AmiciPrediction(
             amici_objective=objective,
-            post_processing=post_processing,
-            post_processing_sensi=post_processing_sensi,
-            post_processing_timepoints=post_processing_timepoints,
+            post_processor=post_processor,
+            post_processor_sensi=post_processor_sensi,
+            post_processor_time=post_processor_time,
             max_num_conditions=max_num_conditions,
             observable_ids=observable_ids)
 

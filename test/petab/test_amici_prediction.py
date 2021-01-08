@@ -217,8 +217,8 @@ def test_complex_prediction(edata_objects):
     objective = pypesto.AmiciObjective(model, solver, edatas, 1)
     # now create a prediction object
     complex_prediction = pypesto.AmiciPrediction(
-        objective, max_num_conditions=2, post_processing=pp_out,
-        post_processing_sensi=pps_out, post_processing_timepoints=ppt_out,
+        objective, max_num_conditions=2, post_processor=pp_out,
+        post_processor_sensi=pps_out, post_processor_time=ppt_out,
         observable_ids=[f'ratio_{i_obs}' for i_obs in range(5)])
     # let's set the parameter vector
     x = np.array([3., 0.5])

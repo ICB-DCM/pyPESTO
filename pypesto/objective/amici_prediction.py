@@ -93,9 +93,9 @@ class AmiciPrediction:
     """
     def __init__(self,
                  amici_objective: AmiciObjective,
-                 post_processing: Union[Callable, None] = None,
-                 post_processing_sensi: Union[Callable, None] = None,
-                 post_processing_timepoints: Union[Callable, None] = None,
+                 post_processor: Union[Callable, None] = None,
+                 post_processor_sensi: Union[Callable, None] = None,
+                 post_processor_time: Union[Callable, None] = None,
                  max_num_conditions: int = 0,
                  observable_ids: Sequence[str] = None):
         """
@@ -105,18 +105,18 @@ class AmiciPrediction:
         ----------
         amici_objective:
             An objective object, which will be used to get model simulations
-        post_processing:
+        post_processor:
             A callable function which applies postprocessing to the simulation
             results. Default are the observables of the amici model.
             This method takes a list of ndarrays (as returned in the field
             ['y'] of amici ReturnData objects) as input.
-        post_processing_sensi:
+        post_processor_sensi:
             A callable function which applies postprocessing to the
             sensitivities of the simulation results. Default are the
             observable sensitivities of the amici model.
             This method takes two lists of ndarrays (as returned in the
             fields ['y'] and ['sy'] of amici ReturnData objects) as input.
-        post_processing_timepoints:
+        post_processor_time:
             A callable function which applies postprocessing to the timepoints
             of the simulations. Default are the timepoints of the amici model.
             This method takes a list of ndarrays (as returned in the field
@@ -135,9 +135,9 @@ class AmiciPrediction:
         # save settings and objective
         self.amici_objective = amici_objective
         self.max_num_conditions = max_num_conditions
-        self.post_processing = post_processing
-        self.post_processing_sensi = post_processing_sensi
-        self.post_processing_timepoints = post_processing_timepoints
+        self.post_processor = post_processor
+        self.post_processor_sensi = post_processor_sensi
+        self.post_processor_time = post_processor_time
 
         if observable_ids is None:
             self.observable_ids = \
@@ -199,12 +199,12 @@ class AmiciPrediction:
         outputs = amici_y
         outputs_sensi = amici_sy
         timepoints = amici_t
-        if self.post_processing is not None:
-            outputs = self.post_processing(outputs)
-        if self.post_processing_sensi is not None:
-            outputs_sensi = self.post_processing_sensi(amici_y, amici_sy)
-        if self.post_processing_timepoints is not None:
-            timepoints = self.post_processing_timepoints(amici_t)
+        if self.post_processor is not None:
+            outputs = self.post_processor(outputs)
+        if self.post_processor_sensi is not None:
+            outputs_sensi = self.post_processor_sensi(amici_y, amici_sy)
+        if self.post_processor_time is not None:
+            timepoints = self.post_processor_time(amici_t)
 
         condition_results = []
         for i_cond in range(len(timepoints)):
