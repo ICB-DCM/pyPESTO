@@ -102,7 +102,7 @@ class AmiciPrediction:
                  post_processing_sensi: Union[Callable, None] = None,
                  post_processing_timepoints: Union[Callable, None] = None,
                  max_num_conditions: int = 0,
-                 observables: Sequence[str] = None):
+                 observable_ids: Sequence[str] = None):
         """
         Constructor.
 
@@ -134,7 +134,7 @@ class AmiciPrediction:
             should be simulated at a time.
             Default is 0 meaning that all conditions will be simulated.
             Other values are only applicable, if an output file is specified.
-        observables:
+        observable_ids:
             IDs of observables, if post-processing is used
         """
         # save settings and objective
@@ -144,10 +144,10 @@ class AmiciPrediction:
         self.post_processing_sensi = post_processing_sensi
         self.post_processing_timepoints = post_processing_timepoints
 
-        if observables is None:
+        if observable_ids is None:
             self.observables = amici_objective.amici_model.getObservableIds()
         else:
-            self.observables = observables
+            self.observables = observable_ids
 
     def __call__(
             self,
