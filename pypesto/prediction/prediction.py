@@ -2,7 +2,7 @@ import numpy as np
 from typing import Sequence, Union, Dict
 
 
-class PredictionConditionResult:
+class PredictionConditionResult(dict):
     """
     This class is a light-weight wrapper for the prediction of one simulation
     condition of an amici model. It should provide a common api how amici
@@ -13,7 +13,7 @@ class PredictionConditionResult:
                  observable_ids: Sequence[str],
                  output: np.ndarray = None,
                  output_sensi: np.ndarray = None,
-                 parameter_ids: Sequence[str] = None):
+                 x_names: Sequence[str] = None):
         """
         Constructor.
 
@@ -27,20 +27,22 @@ class PredictionConditionResult:
             Postprocessed outputs (ndarray)
         outputs_sensi:
             Sensitivities of postprocessed outputs (ndarray)
-        parameter_ids:
+        x_names:
             IDs of model parameter w.r.t to which sensitivities were computed
         """
         self.timepoints = timepoints
         self.observable_ids = observable_ids
         self.output = output
         self.output_sensi = output_sensi
-        self.parameter_ids = parameter_ids
-        if parameter_ids is None and output_sensi is not None:
-            self.parameter_ids = [f'parameter_{i_par}' for i_par in
-                                  range(output_sensi.shape[1])]
+        self.x_names = x_names
+        if x_names is None and output_sensi is not None:
+            self.x_names = [f'parameter_{i_par}' for i_par in
+                            range(output_sensi.shape[1])]
+
+        super().__init__()
 
 
-class PredictionResult:
+class PredictionResult(dict):
     """
     This class is a light-weight wrapper around predictions from pyPESTO made
     via an amici model. It's only purpose is to have fixed format/api, how
@@ -72,3 +74,5 @@ class PredictionResult:
         if self.condition_ids is None:
             self.condition_ids = [f'condition_{i_cond}'
                                   for i_cond in range(len(conditions))]
+
+        super().__init__()

@@ -6,7 +6,8 @@ from typing import Sequence, Union, Callable, Tuple
 from warnings import warn
 from time import time
 
-from .constants import MODE_FUN
+from .constants import (MODE_FUN, OBSERVABLE_IDS, TIMEPOINTS, OUTPUT,
+                        OUTPUT_SENSI, TIME, CSV, H5, T, Y, SY, RDATAS)
 from .prediction import PredictionResult
 from ..objective import AmiciObjective
 
@@ -80,7 +81,7 @@ class AmiciPredictor:
             sensi_orders: Tuple[int, ...] = (0, ),
             mode: str = MODE_FUN,
             output_file: str = '',
-            output_format: str = 'csv',
+            output_format: str = CSV,
     ) -> PredictionResult:
         """
         Simulate a model for a certain prediction function.
@@ -137,12 +138,12 @@ class AmiciPredictor:
 
         condition_results = []
         for i_cond in range(len(timepoints)):
-            result = {'timepoints': timepoints[i_cond],
-                      'observable_ids': self.observable_ids}
+            result = {TIMEPOINTS: timepoints[i_cond],
+                      OBSERVABLE_IDS: self.observable_ids}
             if outputs:
-                result['output'] = outputs[i_cond]
+                result[OUTPUT] = outputs[i_cond]
             if outputs_sensi:
-                result['output_sensi'] = outputs_sensi[i_cond]
+                result[OUTPUT_SENSI] = outputs_sensi[i_cond]
 
             condition_results.append(result)
 
@@ -151,13 +152,13 @@ class AmiciPredictor:
         # Should the results be saved to a file?
         if output_file:
             # Do we want a pandas dataframe like format?
-            if output_format == 'csv':
+            if output_format == CSV:
                 self._write_to_csv(outputs=outputs,
                                    outputs_sensi=outputs_sensi,
                                    timepoints=timepoints,
                                    output_file=output_file)
             # Do we want an h5 file?
-            elif output_format == 'h5':
+            elif output_format == H5:
                 self._write_to_h5(outputs=outputs,
                                   outputs_sensi=outputs_sensi,
                                   timepoints=timepoints,
@@ -224,11 +225,11 @@ class AmiciPredictor:
                                        edatas=self.amici_objective.edatas[ids],
                                        mode=mode, return_dict=True)
             # post process
-            amici_t += [rdata['t'] for rdata in ret['rdatas']]
+            amici_t += [rdata[T] for rdata in ret[RDATAS]]
             if 0 in sensi_orders:
-                amici_y += [rdata['y'] for rdata in ret['rdatas']]
+                amici_y += [rdata[Y] for rdata in ret[RDATAS]]
             if 1 in sensi_orders:
-                amici_sy += [rdata['sy'] for rdata in ret['rdatas']]
+                amici_sy += [rdata[SY] for rdata in ret[RDATAS]]
 
     def _write_to_csv(self,
                       outputs: Sequence[np.ndarray],
@@ -263,7 +264,7 @@ class AmiciPredictor:
                 output_file_path, output_file_suffix = output_file.split('.')
             else:
                 output_file_path = output_file
-                output_file_suffix = 'csv'
+                output_file_suffix = CSV
 
             # parse path
             if '/' in output_file_path:
@@ -276,7 +277,7 @@ class AmiciPredictor:
 
             # create folder with files contianing the return values
             if os.path.exists(output_path):
-                output_path += str(int(time() * 1000))
+                output_path += '__' + str(int(time() * 1000))
                 warn('Output folder already existed! Changed the name of the '
                      'output folder by appending the unix timestampp to make '
                      'it unique!')
@@ -291,7 +292,7 @@ class AmiciPredictor:
         if outputs:
             # loop over conditions (i.e., amici edata objects)
             for i_out, output in enumerate(outputs):
-                i_timepoints = pd.Series(name='time', data=timepoints[i_out])
+                i_timepoints = pd.Series(name=TIME, data=timepoints[i_out])
                 # create filename for this condition
                 tmp_filename = output_file_dummy + f'_{i_out}.' + output_suffix
                 tmp_filename = os.path.join(output_path, tmp_filename)
@@ -304,7 +305,7 @@ class AmiciPredictor:
         if outputs_sensi:
             # loop over conditions (i.e., amici edata objects)
             for i_out, output_sensi in enumerate(outputs_sensi):
-                i_timepoints = pd.Series(name='time', data=timepoints[i_out])
+                i_timepoints = pd.Series(name=TIME, data=timepoints[i_out])
                 # loop over parameters
                 for i_par in range(output_sensi[i_out].shape[0]):
                     # create filename for this condition and parameter
@@ -336,9 +337,17 @@ class AmiciPredictor:
         output_file:
             path to file/folder to which results will be written
         """
+        if os.path.exists(output_file):
+            tmp = output_file.split('.')
+            file_name = '.'.join(tmp[:-1]) + '__' + str(int(time() * 1000))
+            output_file = file_name + '.' + tmp[-1]
+            warn('Output folder already existed! Changed the name of the '
+                 'output folder by appending the unix timestampp to make '
+                 'it unique!')
+
         with h5py.File(output_file, 'w') as f:
             # save observable IDs
-            f.create_dataset('observableIds', data=self.observable_ids)
+            f.create_dataset(OBSERVABLE_IDS, data=self.observable_ids)
 
             # loop over conditions (i.e., amici edata objects)
             n_groups = max(len(outputs), len(outputs_sensi))
@@ -346,9 +355,10 @@ class AmiciPredictor:
                 # each conditions gets a group of its own
                 f.create_group(str(i_out))
                 # save timepoints, outputs, and sensitivities of outputs
-                f.create_dataset(f'{i_out}/timepoints', data=timepoints[i_out])
+                f.create_dataset(f'{i_out}/{TIMEPOINTS}',
+                                 data=timepoints[i_out])
                 if outputs:
-                    f.create_dataset(f'{i_out}/sim', data=outputs[i_out])
+                    f.create_dataset(f'{i_out}/{OUTPUT}', data=outputs[i_out])
                 if outputs_sensi:
-                    f.create_dataset(f'{i_out}/sim_sensi',
+                    f.create_dataset(f'{i_out}/{OUTPUT_SENSI}',
                                      data=outputs_sensi[i_out])
