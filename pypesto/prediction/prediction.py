@@ -1,5 +1,5 @@
 import numpy as np
-from typing import Sequence, Union, Callable, Tuple, Dict
+from typing import Sequence, Union, Dict
 
 
 class PredictionConditionResult:
