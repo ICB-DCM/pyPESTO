@@ -1,5 +1,5 @@
 """
-This is for testing the pypesto.objective.AmiciPrediction.
+This is for testing the pypesto.prediction.AmiciPredictor.
 """
 
 import amici
@@ -11,8 +11,7 @@ import numpy as np
 import shutil
 import pytest
 import petab
-from pypesto.objective.amici_prediction import (PredictionResult,
-                                                PredictionConditionResult)
+from pypesto.prediction import PredictionResult, PredictionConditionResult
 
 
 @pytest.fixture()
@@ -126,7 +125,7 @@ def test_simple_prediction(edata_objects):
     model, solver, edatas = edata_objects
     objective = pypesto.AmiciObjective(model, solver, edatas[0], 1)
     # now create a prediction object
-    default_prediction = pypesto.AmiciPrediction(objective)
+    default_prediction = pypesto.AmiciPredictor(objective)
     # let's set the parameter vector
     x = np.array([3., 0.5])
 
@@ -216,7 +215,7 @@ def test_complex_prediction(edata_objects):
     model, solver, edatas = edata_objects
     objective = pypesto.AmiciObjective(model, solver, edatas, 1)
     # now create a prediction object
-    complex_prediction = pypesto.AmiciPrediction(
+    complex_prediction = pypesto.AmiciPredictor(
         objective, max_num_conditions=2, post_processor=pp_out,
         post_processor_sensi=pps_out, post_processor_time=ppt_out,
         observable_ids=[f'ratio_{i_obs}' for i_obs in range(5)])

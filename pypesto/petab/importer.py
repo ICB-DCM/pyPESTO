@@ -8,8 +8,8 @@ import tempfile
 from typing import Iterable, List, Optional, Sequence, Union, Callable
 
 from ..problem import Problem
-from ..objective import AmiciObjective, AmiciObjectBuilder, \
-    AggregatedObjective, AmiciPrediction
+from ..objective import AmiciObjective, AmiciObjectBuilder, AggregatedObjective
+from ..prediction import AmiciPredictor
 from ..objective.priors import NegLogParameterPriors, \
     get_parameter_prior_dict
 
@@ -275,8 +275,8 @@ class PetabImporter(AmiciObjectBuilder):
                           post_processor_time: Union[Callable, None] = None,
                           max_num_conditions: int = 0,
                           observable_ids: Sequence[str] = None
-                          ) -> AmiciPrediction:
-        """Create a :class:`pypesto.AmiciPrediction`.
+                          ) -> AmiciPredictor:
+        """Create a :class:`pypesto.prediction.AmiciPredictor`.
 
         Parameters
         ----------
@@ -312,16 +312,16 @@ class PetabImporter(AmiciObjectBuilder):
         Returns
         -------
         prediction:
-            A :class:`pypesto.AmiciPrediction` for the model, using the
-            observables of the Amici model and the timepoints from the PEtab
-            data
+            A :class:`pypesto.prediction.AmiciPredictor` for the model, using
+            the observables of the Amici model and the timepoints from the
+            PEtab data
         """
         # if the user didn't pass an objective function, we create it first
         if objective is None:
             objective = self.create_objective()
 
-        # wrap around AmiciPrediction
-        prediction = AmiciPrediction(
+        # wrap around AmiciPredictor
+        prediction = AmiciPredictor(
             amici_objective=objective,
             post_processor=post_processor,
             post_processor_sensi=post_processor_sensi,
