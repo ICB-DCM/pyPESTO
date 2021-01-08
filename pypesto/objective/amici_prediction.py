@@ -204,10 +204,9 @@ class AmiciPrediction:
                                 sensi_orders, mode)
 
         # postprocess
+        outputs = amici_y
         if self.post_processing is not None:
-            outputs = self.post_processing(amici_y)
-        else:
-            outputs = amici_y
+            outputs = self.post_processing(outputs)
         if self.post_processing_sensi is not None:
             outputs_sensi = self.post_processing_sensi(amici_y, amici_sy)
         else:
