@@ -291,7 +291,7 @@ class AmiciObjective(ObjectiveBase):
             for data_ix in range(len(self.edatas)):
                 self.apply_steadystate_guess(data_ix, x_dct)
 
-        if not edatas:
+        if edatas is None:
             edatas = self.edatas
         ret = self.calculator(
             x_dct=x_dct, sensi_order=sensi_order, mode=mode,
