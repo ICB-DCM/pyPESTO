@@ -230,7 +230,7 @@ class AmiciPrediction:
         results = PredictionResult(condition_results)
 
         # Should the results be saved to a file?
-        if output_file != '':
+        if output_file:
             # Do we want a pandas dataframe like format?
             if output_format == 'csv':
                 self._write_to_csv(outputs=outputs,
