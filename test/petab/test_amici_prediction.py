@@ -13,21 +13,21 @@ import pytest
 import petab
 from pypesto.objective.amici_prediction import (PredictionResult,
                                                 PredictionConditionResult)
-from .petab_util import folder_base
 
 
-def create_testmodel():
+@pytest.fixture()
+def conversion_reaction_model():
     # read in sbml file
-    sbml_file = '../../doc/example/conversion_reaction/model_conversion_reaction.xml'
     model_name = 'conversion_reaction'
-    model_output_dir = '../../doc/example/tmp/conversion_reaction_enhanced'
+    sbml_file = f'../../doc/example/{model_name}/model_{model_name}.xml'
+    model_output_dir = f'../../doc/example/tmp/{model_name}_enhanced'
 
     # try to import the exisiting model, if possible
     try:
         sys.path.insert(0, os.path.abspath(model_output_dir))
         model_module = amici.import_model_module(model_name, model_output_dir)
         model = model_module.getModel()
-    except:
+    except ValueError:
         # read in and adapt the sbml slightly
         if os.path.abspath(model_output_dir) in sys.path:
             sys.path.remove(os.path.abspath(model_output_dir))
@@ -116,6 +116,7 @@ def check_outputs(predicted, out, n_cond, n_timepoints, n_obs, n_par):
             assert isinstance(cond.output_sensi, np.ndarray)
             assert cond.output_sensi.shape == (n_timepoints, n_par, n_obs)
 
+
 def test_simple_prediction(edata_objects):
     """
     Test prediction without using PEtab, using default postprocessing first
@@ -178,30 +179,30 @@ def test_complex_prediction(edata_objects):
 
     def pps_out(amici_y, amici_sy):
         # compute ratios of simulations across conditions (yes, I know this is
-        # symbolically wrong, but we only check the shape of the outputs atm...)
+        # symbolically wrong, but we only check the shape of the outputs...)
         s_outs1 = np.zeros((10, 2, 5))
-        s_outs1[:, :, 0] = \
-            amici_sy[0][:, 1, :] / np.tile(amici_y[0][:, 0], (2,1)).transpose()
-        s_outs1[:, :, 1] = \
-            amici_sy[0][:, 1, :] / np.tile(amici_y[0][:, 0], (2,1)).transpose()
-        s_outs1[:, :, 2] = \
-            amici_sy[0][:, 1, :] / np.tile(amici_y[0][:, 0], (2,1)).transpose()
-        s_outs1[:, :, 3] = \
-            amici_sy[0][:, 1, :] / np.tile(amici_y[0][:, 0], (2,1)).transpose()
-        s_outs1[:, :, 4] = \
-            amici_sy[0][:, 1, :] / np.tile(amici_y[0][:, 0], (2,1)).transpose()
+        s_outs1[:, :, 0] = amici_sy[0][:, 1, :] \
+            / np.tile(amici_y[0][:, 0], (2, 1)).transpose()
+        s_outs1[:, :, 1] = amici_sy[0][:, 1, :] \
+            / np.tile(amici_y[0][:, 0], (2, 1)).transpose()
+        s_outs1[:, :, 2] = amici_sy[0][:, 1, :] \
+            / np.tile(amici_y[0][:, 0], (2, 1)).transpose()
+        s_outs1[:, :, 3] = amici_sy[0][:, 1, :] \
+            / np.tile(amici_y[0][:, 0], (2, 1)).transpose()
+        s_outs1[:, :, 4] = amici_sy[0][:, 1, :] \
+            / np.tile(amici_y[0][:, 0], (2, 1)).transpose()
 
         s_outs2 = np.zeros((10, 2, 5))
-        s_outs2[:, :, 0] = \
-            amici_sy[0][:, 1, :] / np.tile(amici_y[0][:, 0], (2,1)).transpose()
-        s_outs2[:, :, 1] = \
-            amici_sy[0][:, 1, :] / np.tile(amici_y[1][:, 0], (2,1)).transpose()
-        s_outs2[:, :, 2] = \
-            amici_sy[1][:, 1, :] / np.tile(amici_y[1][:, 0], (2,1)).transpose()
-        s_outs2[:, :, 3] = \
-            amici_sy[2][:, 1, :] / np.tile(amici_y[1][:, 0], (2,1)).transpose()
-        s_outs2[:, :, 4] = \
-            amici_sy[2][:, 1, :] / np.tile(amici_y[2][:, 0], (2,1)).transpose()
+        s_outs2[:, :, 0] = amici_sy[0][:, 1, :] \
+            / np.tile(amici_y[0][:, 0], (2, 1)).transpose()
+        s_outs2[:, :, 1] = amici_sy[0][:, 1, :] \
+            / np.tile(amici_y[1][:, 0], (2, 1)).transpose()
+        s_outs2[:, :, 2] = amici_sy[1][:, 1, :] \
+            / np.tile(amici_y[1][:, 0], (2, 1)).transpose()
+        s_outs2[:, :, 3] = amici_sy[2][:, 1, :] \
+            / np.tile(amici_y[1][:, 0], (2, 1)).transpose()
+        s_outs2[:, :, 4] = amici_sy[2][:, 1, :] \
+            / np.tile(amici_y[2][:, 0], (2, 1)).transpose()
         return [s_outs1, s_outs2]
 
     def ppt_out(amici_t):
@@ -215,24 +216,24 @@ def test_complex_prediction(edata_objects):
     model, solver, edatas = edata_objects
     objective = pypesto.AmiciObjective(model, solver, edatas, 1)
     # now create a prediction object
-    complex_prediction = pypesto.AmiciPrediction(objective,
-        max_num_conditions=2, post_processing=pp_out,
+    complex_prediction = pypesto.AmiciPrediction(
+        objective, max_num_conditions=2, post_processing=pp_out,
         post_processing_sensi=pps_out, post_processing_timepoints=ppt_out,
-        observables=[f'ratio_{i_obs}' for i_obs in range(5)])
+        observable_ids=[f'ratio_{i_obs}' for i_obs in range(5)])
     # let's set the parameter vector
     x = np.array([3., 0.5])
 
     # assert output is what it should look like when running in efault mode
-    p = complex_prediction(x, sensi_orders=(0,1))
-    check_outputs(p, out=(0,1), n_cond=2, n_timepoints=10, n_obs=5, n_par=2)
+    p = complex_prediction(x, sensi_orders=(0, 1))
+    check_outputs(p, out=(0, 1), n_cond=2, n_timepoints=10, n_obs=5, n_par=2)
 
     # assert folder is there with all files
     # remove file is already existing
     if os.path.exists('deleteme'):
         shutil.rmtree('deleteme')
-    p = complex_prediction(x, output_file='deleteme.csv', sensi_orders=(0,1),
+    p = complex_prediction(x, output_file='deleteme.csv', sensi_orders=(0, 1),
                            output_format='csv')
-    check_outputs(p, out=(0,1), n_cond=2, n_timepoints=10, n_obs=5, n_par=2)
+    check_outputs(p, out=(0, 1), n_cond=2, n_timepoints=10, n_obs=5, n_par=2)
     # check created files
     assert os.path.exists('deleteme')
     expected_files = {'deleteme_0.csv', 'deleteme_0__s0.csv',
@@ -242,20 +243,21 @@ def test_complex_prediction(edata_objects):
     shutil.rmtree('deleteme')
 
     # assert h5 file is there
-    p = complex_prediction(x, output_file='deleteme.h5', sensi_orders=(0,1),
+    p = complex_prediction(x, output_file='deleteme.h5', sensi_orders=(0, 1),
                            output_format='h5')
-    check_outputs(p, out=(0,1), n_cond=2, n_timepoints=10, n_obs=5, n_par=2)
+    check_outputs(p, out=(0, 1), n_cond=2, n_timepoints=10, n_obs=5, n_par=2)
     assert os.path.exists('deleteme.h5')
     os.remove('deleteme.h5')
 
 
 def test_petab_prediction():
-    yaml_file = '../../doc/example/conversion_reaction/conversion_reaction.yaml'
+    yaml_file = '../../doc/example/conversion_reaction/' \
+                'conversion_reaction.yaml'
     petab_problem = petab.Problem.from_yaml(yaml_file)
     petab_problem.model_name = "conversion_reaction_petab"
     importer = pypesto.petab.PetabImporter(petab_problem)
     prediction = importer.create_prediction()
 
     p = prediction(np.array(petab_problem.x_nominal_free_scaled),
-                   sensi_orders=(0,1))
-    check_outputs(p, out=(0,1), n_cond=1, n_timepoints=10, n_obs=1, n_par=2)
+                   sensi_orders=(0, 1))
+    check_outputs(p, out=(0, 1), n_cond=1, n_timepoints=10, n_obs=1, n_par=2)
