@@ -80,10 +80,9 @@ class PredictionResult:
                            else PredictionConditionResult(**cond)
                            for cond in conditions]
 
-        if conditionIds is not None:
-            self.conditionIds = conditionIds
-        else:
-            self.conditionIds = [f'condition_{i_cond}'
+        self.condition_ids = condition_ids
+        if self.condition_ids is None:
+            self.condition_ids = [f'condition_{i_cond}'
                                  for i_cond in range(len(conditions))]
 
 class AmiciPrediction:
