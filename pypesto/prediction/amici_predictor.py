@@ -7,7 +7,7 @@ from warnings import warn
 from time import time
 
 from .constants import MODE_FUN
-from .amici import AmiciObjective
+from ..objective import AmiciObjective
 
 
 class PredictionConditionResult:
@@ -82,7 +82,7 @@ class PredictionResult:
                                   for i_cond in range(len(conditions))]
 
 
-class AmiciPrediction:
+class AmiciPredictor:
     """
     Do forward simulations (predictions) with parameter vectors,
     for an AMICI model. The user may supply post-processing methods.
