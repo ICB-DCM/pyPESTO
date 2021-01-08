@@ -10,6 +10,7 @@ import sys
 import numpy as np
 import shutil
 import pytest
+import libsbml
 import petab
 from pypesto.prediction import PredictionResult, PredictionConditionResult
 
@@ -46,8 +47,23 @@ def conversion_reaction_model():
             rule.setVariable(f'observable_{obs_id}')
             rule.setFormula(obs_id)
 
-        create_observable(sbml_importer.sbml, 'A')
-        create_observable(sbml_importer.sbml, 'B')
+        # add initial assignments to sbml model
+        def create_intial_assignment(sbml_model, spec_id):
+            # create a parameter, which will get a rule assignmed as observable
+            parameter = sbml_model.createParameter()
+            parameter.setId(f'{spec_id}0')
+            parameter.setName(f'{spec_id}0')
+            parameter.constant = True
+
+            assignment = sbml_importer.sbml.createInitialAssignment()
+            assignment.setSymbol(f'{spec_id}')
+            math = '<math xmlns="http://www.w3.org/1998/Math/MathML"><ci>' \
+                   f'{spec_id}0</ci></math>'
+            assignment.setMath(libsbml.readMathMLFromString(math))
+
+        for spec in ('A', 'B'):
+            create_observable(sbml_importer.sbml, spec)
+            create_intial_assignment(sbml_importer.sbml, spec)
 
         # add constant parameters and observables to AMICI model
         constantParameters = ['A0', 'B0']
