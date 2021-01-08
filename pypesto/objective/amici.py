@@ -280,7 +280,7 @@ class AmiciObjective(ObjectiveBase):
     def check_mode(self, mode):
         return mode in [MODE_FUN, MODE_RES]
 
-    def call_unprocessed(self, x, sensi_orders, mode, edatas=()):
+    def call_unprocessed(self, x, sensi_orders, mode, edatas=None):
         sensi_order = max(sensi_orders)
 
         x_dct = self.par_arr_to_dct(x)
