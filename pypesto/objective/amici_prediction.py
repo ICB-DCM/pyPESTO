@@ -87,13 +87,11 @@ class PredictionResult:
 
 class AmiciPrediction:
     """
-    This class allows to perform forward simulation via an amici model.
-    These simulations can either be exactly those from amici, or they can be
-    post-processed after simulation.
-    If a post-processing method is applied, also the sensitivities of the amici
-    model must be post-processed, if a gradient of the forward simulation is
-    requested. This responsibility for correctness of this sensitivity
-    post-processing is EXPLICITLY left to the user.
+    Do forward simulations (predictions) with parameter vectors, for an AMICI model.
+    The user may supply post-processing methods.
+    If post-processing methods are supplied, and a gradient of the forward simulation
+    is requested, then the sensitivities of the AMICI model must also be post-processed.
+    There are no checks here to ensure that the sensitivity is correctly post-processed.
     """
     def __init__(self,
                  amici_objective: AmiciObjective,
