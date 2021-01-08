@@ -156,7 +156,7 @@ class AmiciPrediction:
             max_num_conditions: int = 0,
     ) -> PredictionResult:
         """
-        Method to simulate a model for a certain prediction function.
+        Simulate a model for a certain prediction function.
         This method relies on the AmiciObjective, which is underlying, but
         allows the user to apply any post-processing of the results and the
         sensitivities.
