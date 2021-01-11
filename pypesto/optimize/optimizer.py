@@ -665,15 +665,22 @@ class ScipyDifferentialEvolutionOptimizer(Optimizer):
     Global optimization using scipy's differential evolution optimizer.
     Package homepage: https://docs.scipy.org/doc/scipy/reference/generated\
         /scipy.optimize.differential_evolution.html
+
     Parameters
     ----------
     options:
         Optimizer options that are directly passed on to scipys' optimizer
 
-    Examples of arguments that can be passed to options:
-        maxiter: used to calculate the maximal number of funcion evaluations by
-                 maxfevals = (maxiter + 1) * popsize * len(x)
-        popsize: population size, default value 15
+
+    Examples
+    --------
+    Arguments that can be passed to options:
+
+    maxiter:
+        used to calculate the maximal number of funcion evaluations by
+        maxfevals = (maxiter + 1) * popsize * len(x)
+    popsize:
+        population size, default value 15
     """
 
     def __init__(self, options: Dict = None):
