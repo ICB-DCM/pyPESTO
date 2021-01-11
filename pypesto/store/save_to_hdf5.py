@@ -59,7 +59,9 @@ class ProblemHDF5Writer:
             for problem_attr in attrs_to_save:
                 value = getattr(problem, problem_attr)
                 if isinstance(value, (list, np.ndarray)):
-                    write_array(problem_grp, problem_attr, value)
+                    value = np.asarray(value)
+                    if value.size:
+                        write_array(problem_grp, problem_attr, value)
                 elif isinstance(value, Integral):
                     problem_grp.attrs[problem_attr] = value
 
