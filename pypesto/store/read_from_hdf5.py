@@ -10,7 +10,7 @@ import numpy as np
 
 def read_hdf5_profile(f: h5py.File,
                       profile_id: h5py.Group,
-                      parameter_id: h5py.Group) -> 'OptimizerResult':
+                      parameter_id: h5py.Group) -> 'ProfilerResult':
     """
     Read HDF5 results per start.
 
@@ -36,7 +36,7 @@ def read_hdf5_profile(f: h5py.File,
 
 
 def read_hdf5_optimization(f: h5py.File,
-                           opt_id: h5py.Group) -> 'ProfilerResult':
+                           opt_id: h5py.Group) -> 'OptimizerResult':
     """
     Read HDF5 results per start.
 
