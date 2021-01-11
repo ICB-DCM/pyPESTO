@@ -1,13 +1,23 @@
+import os
 import numpy as np
+import pandas as pd
+import h5py
+from warnings import warn
+from time import time
 from typing import Sequence, Union, Dict
+from pathlib import Path
+
+from .constants import (OBSERVABLE_IDS, PARAMETER_IDS, TIMEPOINTS, OUTPUT,
+                        OUTPUT_SENSI, TIME, CSV)
 
 
-class PredictionConditionResult(dict):
+class PredictionConditionResult():
     """
     This class is a light-weight wrapper for the prediction of one simulation
     condition of an amici model. It should provide a common api how amici
     predictions should look like in pyPESTO.
     """
+
     def __init__(self,
                  timepoints: np.ndarray,
                  observable_ids: Sequence[str],
@@ -39,10 +49,15 @@ class PredictionConditionResult(dict):
             self.x_names = [f'parameter_{i_par}' for i_par in
                             range(output_sensi.shape[1])]
 
-        super().__init__()
+    def __iter__(self):
+        yield 'timepoints', self.timepoints
+        yield 'observable_ids', self.observable_ids
+        yield 'x_names', self.x_names
+        yield 'output', self.output
+        yield 'output_sensi', self.output_sensi
 
 
-class PredictionResult(dict):
+class PredictionResult():
     """
     This class is a light-weight wrapper around predictions from pyPESTO made
     via an amici model. It's only purpose is to have fixed format/api, how
@@ -50,6 +65,7 @@ class PredictionResult(dict):
     a very flexible format anyway, they should at least have a common
     definition, which allows to work with them in a reasonable way.
     """
+
     def __init__(self,
                  conditions: Sequence[Union[PredictionConditionResult, Dict]],
                  condition_ids: Sequence[str] = None):
@@ -75,4 +91,129 @@ class PredictionResult(dict):
             self.condition_ids = [f'condition_{i_cond}'
                                   for i_cond in range(len(conditions))]
 
-        super().__init__()
+    def __iter__(self):
+        parameter_ids = None
+        if self.conditions:
+            parameter_ids = self.conditions[0].x_names
+
+        yield 'conditions', [dict(cond) for cond in self.conditions]
+        yield 'condition_ids', self.condition_ids
+        yield 'parameter_ids', parameter_ids
+
+    def write_to_csv(self, output_file: str):
+        """
+        This method saves predictions to a csv file.
+
+        Parameters
+        ----------
+        output_file:
+            path to file/folder to which results will be written
+        """
+
+        def _prepare_csv_output(output_file):
+            """
+            If a csv is requested, this routine will create a folder for it,
+            with a suiting name: csv's are by default 2-dimensional, but the
+            output will have the format n_conditions x n_timepoints x n_outputs
+            For sensitivities, we even have x n_parameters. This makes it
+            necessary to create multiple files and hence, a folder of its own
+            makes sense. Returns a pathlib.Path object of the output.
+            """
+            # allow entering with names with and without file type endings
+            if '.' in output_file:
+                output_path, output_suffix = output_file.split('.')
+            else:
+                output_path = output_file
+                output_suffix = CSV
+
+            # parse path and check whether the file exists
+            output_path = Path(output_path)
+            self._check_existence(output_path)
+
+            # create
+            output_path.mkdir(parents=True, exist_ok=False)
+            # add the suffix
+            output_dummy = Path(output_path.stem).with_suffix(
+                f'.{output_suffix}')
+
+            return output_path, output_dummy
+
+        # process the name of the output file, create a folder
+        output_path, output_dummy = _prepare_csv_output(output_file)
+
+        # loop over conditions (i.e., amici edata objects)
+        for i_cond, cond in enumerate(self.conditions):
+
+            timepoints = pd.Series(name=TIME, data=cond.timepoints)
+            # handle outputs, if computed
+            if cond.output is not None:
+                # create filename for this condition
+                filename = output_path.joinpath(
+                    output_dummy.stem + f'_{i_cond}' + output_dummy.suffix)
+                # create DataFrame and write to file
+                result = pd.DataFrame(index=timepoints,
+                                      columns=cond.observable_ids,
+                                      data=cond.output)
+                result.to_csv(filename, sep='\t')
+
+            # handle output sensitivities, if computed
+            if cond.output_sensi is not None:
+                # loop over parameters
+                for i_par in range(cond.output_sensi.shape[1]):
+                    # create filename for this condition and parameter
+                    filename = output_path.joinpath(
+                        output_dummy.stem + f'_{i_cond}__s{i_par}' +
+                        output_dummy.suffix)
+                    # create DataFrame and write to file
+                    result = pd.DataFrame(index=timepoints,
+                                          columns=cond.observable_ids,
+                                          data=cond.output_sensi[:, i_par, :])
+                    result.to_csv(filename, sep='\t')
+
+    def write_to_h5(self,
+                    output_file: str):
+        """
+        This method saves predictions to an h5 file.
+
+        Parameters
+        ----------
+        output_file:
+            path to file/folder to which results will be written
+        """
+        output_path = Path(output_file).with_suffix('.h5')
+        self._check_existence(output_path)
+
+        with h5py.File(output_path, 'w') as f:
+            # loop over conditions (i.e., amici edata objects)
+            if self.conditions and self.conditions[0].x_names is not None:
+                f.create_dataset(PARAMETER_IDS,
+                                 data=self.conditions[0].x_names)
+            for i_cond, cond in enumerate(self.conditions):
+                # each conditions gets a group of its own
+                f.create_group(str(i_cond))
+                # save observable IDs
+                f.create_dataset(f'{i_cond}/{OBSERVABLE_IDS}',
+                                 data=cond.observable_ids)
+                # save timepoints, outputs, and sensitivities of outputs
+                f.create_dataset(f'{i_cond}/{TIMEPOINTS}',
+                                 data=cond.timepoints)
+                if cond.output is not None:
+                    f.create_dataset(f'{i_cond}/{OUTPUT}', data=cond.output)
+                if cond.output_sensi is not None:
+                    f.create_dataset(f'{i_cond}/{OUTPUT_SENSI}',
+                                     data=cond.output_sensi)
+
+    @staticmethod
+    def _check_existence(output_path):
+        """
+        Checks whether a file or a folder already exists and appends a
+        timestamp if this is the case
+        """
+        output_path_out = output_path
+        while output_path_out.exists():
+            output_path_out = output_path_out.with_name(
+                output_path_out.stem + f'_{round(time() * 1000)}')
+            warn('Output name already existed! Changed the name of the output '
+                 'by appending the unix timestampp to make it unique!')
+
+        return output_path_out

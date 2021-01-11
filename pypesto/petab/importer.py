@@ -273,7 +273,7 @@ class PetabImporter(AmiciObjectBuilder):
                           post_processor: Union[Callable, None] = None,
                           post_processor_sensi: Union[Callable, None] = None,
                           post_processor_time: Union[Callable, None] = None,
-                          max_num_conditions: int = 0,
+                          max_chunk_size: Union[int, None] = None,
                           observable_ids: Sequence[str] = None
                           ) -> AmiciPredictor:
         """Create a :class:`pypesto.prediction.AmiciPredictor`.
@@ -298,7 +298,7 @@ class PetabImporter(AmiciObjectBuilder):
             of the simulations. Default are the timepoints of the amici model.
             This method takes a list of ndarrays (as returned in the field
             ['t'] of amici ReturnData objects) as input.
-        max_num_conditions:
+        max_chunk_size:
             In some cases, we don't want to compute all predictions at once
             when calling the prediction function, as this might not fit into
             the memory for large datasets and models.
@@ -326,7 +326,7 @@ class PetabImporter(AmiciObjectBuilder):
             post_processor=post_processor,
             post_processor_sensi=post_processor_sensi,
             post_processor_time=post_processor_time,
-            max_num_conditions=max_num_conditions,
+            max_chunk_size=max_chunk_size,
             observable_ids=observable_ids)
 
         return prediction

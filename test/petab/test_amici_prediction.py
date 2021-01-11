@@ -118,6 +118,13 @@ def check_outputs(predicted, out, n_cond, n_timepoints, n_obs, n_par):
     # correct number of predictions?
     assert len(predicted.conditions) == n_cond
 
+    # check whether conversion to dict worked well
+    preDict = dict(predicted)
+    assert isinstance(preDict, dict)
+    assert len(preDict['conditions']) == n_cond
+    for cond in preDict['conditions']:
+        assert isinstance(cond, dict)
+
     # correct shape for outputs?
     if 0 in out:
         for cond in predicted.conditions:
@@ -232,7 +239,7 @@ def test_complex_prediction(edata_objects):
     objective = pypesto.AmiciObjective(model, solver, edatas, 1)
     # now create a prediction object
     complex_prediction = pypesto.AmiciPredictor(
-        objective, max_num_conditions=2, post_processor=pp_out,
+        objective, max_chunk_size=2, post_processor=pp_out,
         post_processor_sensi=pps_out, post_processor_time=ppt_out,
         observable_ids=[f'ratio_{i_obs}' for i_obs in range(5)])
     # let's set the parameter vector
