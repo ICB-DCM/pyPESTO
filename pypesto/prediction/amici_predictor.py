@@ -1,8 +1,8 @@
 import numpy as np
-from typing import Sequence, Union, Callable, Tuple
+from typing import Sequence, Union, Callable, Tuple, List
 
 from .constants import (MODE_FUN, OBSERVABLE_IDS, TIMEPOINTS, OUTPUT,
-                        OUTPUT_SENSI, CSV, H5, T, Y, SY, RDATAS)
+                        OUTPUT_SENSI, CSV, H5, T, X, SX, Y, SY, RDATAS)
 from .prediction import PredictionResult
 from ..objective import AmiciObjective
 
@@ -113,26 +113,11 @@ class AmiciPredictor:
             raise Exception('Prediction simulation does currently not support '
                             'second order output.')
 
-        # prepare for storing the results
-        amici_y = []
-        amici_sy = []
-        amici_t = []
-
         # simulate the model and get the output
-        self._get_model_outputs(amici_y, amici_sy, amici_t, x,
-                                sensi_orders, mode)
+        timepoints, outputs, outputs_sensi = self._get_outputs(x, sensi_orders,
+                                                               mode)
 
-        # postprocess
-        outputs = amici_y
-        outputs_sensi = amici_sy
-        timepoints = amici_t
-        if self.post_processor is not None:
-            outputs = self.post_processor(outputs)
-        if self.post_processor_sensi is not None:
-            outputs_sensi = self.post_processor_sensi(amici_y, amici_sy)
-        if self.post_processor_time is not None:
-            timepoints = self.post_processor_time(amici_t)
-
+        # group results by condition, prepare PredictionConditionResult output
         condition_results = []
         for i_cond in range(len(timepoints)):
             result = {TIMEPOINTS: timepoints[i_cond],
@@ -143,7 +128,7 @@ class AmiciPredictor:
                 result[OUTPUT_SENSI] = outputs_sensi[i_cond]
 
             condition_results.append(result)
-
+        # create result object
         results = PredictionResult(condition_results)
 
         # Should the results be saved to a file?
@@ -161,35 +146,35 @@ class AmiciPredictor:
         # return dependent on sensitivity order
         return results
 
-    def _get_model_outputs(self,
-                           amici_y,
-                           amici_sy,
-                           amici_t,
-                           x,
-                           sensi_orders,
-                           mode):
+    def _get_outputs(self, x, sensi_orders, mode) -> Tuple[List, List, List]:
         """
-        The main purpose of this function is to encapsulate the call to amici:
-        This allows to use variable scoping as a mean to clean up the memory
-        after calling amici, which is beneficial if large models with large
-        datasets are used.
+        This function splits the calls to amici into smaller chunks, as too
+        large ReturnData objects from amici including many simulations can be
+        problematic in terms of memory
 
         Parameters
         ----------
-        amici_y:
-            List of raw outputs (ndarrays), to which results will be appended
-        amici_sy:
-            List of sensitivities of raw outputs (ndarrays), to which results
-            will be appended
-        amici_t:
-            List of output timepoints (ndarrays), to which simulation
-            timepoints will be appended
+        amici_outputs:
+            List of Dicts with the fields 't', 'x', 'sx', 'y', and 'sy' as
+            returned by an amici simulation
         x:
             The parameters for which to evaluate the prediction function.
         sensi_orders:
             Specifies which sensitivities to compute, e.g. (0,1) -> fval, grad.
         mode:
             Whether to compute function values or residuals.
+
+        Returns:
+        --------
+        timepoints:
+            List of np.ndarrays, every entry includes the output timepoints of
+            the respective condition
+        outputs:
+            List of np.ndarrays, every entry includes the postprocessed outputs
+            of the respective condition
+        outputs_sensi:
+            List of np.ndarrays, every entry includes the postprocessed output
+            sensitivities of the respective condition
         """
 
         # Do we have a maximum number of simulations allowed?
@@ -199,8 +184,11 @@ class AmiciPredictor:
             n_simulations = 1
         else:
             # simulate only a subset of conditions
-            n_simulations = 1 + int(len(self.amici_objective.edatas) /
-                                    self.max_chunk_size)
+            n_simulations = int(np.ceil(len(self.amici_objective.edatas) /
+                                        self.max_chunk_size))
+
+        # prepare result
+        amici_outputs = []
 
         for i_sim in range(n_simulations):
             # slice out the conditions we actually want
@@ -208,16 +196,43 @@ class AmiciPredictor:
                 ids = slice(0, n_edatas)
             else:
                 ids = slice(i_sim * self.max_chunk_size,
-                            min((i_sim + 1) * self.max_chunk_size,
-                                n_edatas))
+                            min((i_sim + 1) * self.max_chunk_size, n_edatas))
 
             # call amici
-            ret = self.amici_objective(x=x, sensi_orders=sensi_orders,
-                                       edatas=self.amici_objective.edatas[ids],
-                                       mode=mode, return_dict=True)
-            # post process
-            amici_t += [rdata[T] for rdata in ret[RDATAS]]
-            if 0 in sensi_orders:
-                amici_y += [rdata[Y] for rdata in ret[RDATAS]]
-            if 1 in sensi_orders:
-                amici_sy += [rdata[SY] for rdata in ret[RDATAS]]
+            self._wrap_call_to_amici(amici_outputs=amici_outputs,
+                x=x, sensi_orders=sensi_orders, mode=mode,
+                edatas=self.amici_objective.edatas[ids])
+
+        # declare the default output
+        outputs = []
+        outputs_sensi = []
+        timepoints = [outputs['t'] for outputs in amici_outputs]
+        # add outputs and sensitivities if requested
+        if 0 in sensi_orders:
+            outputs = [outputs['y'] for outputs in amici_outputs]
+        if 1 in sensi_orders:
+            outputs_sensi = [outputs['sy'] for outputs in amici_outputs]
+
+        # postprocess
+        if self.post_processor is not None:
+            outputs = self.post_processor(amici_outputs)
+        if self.post_processor_sensi is not None:
+            outputs_sensi = self.post_processor_sensi(amici_outputs)
+        if self.post_processor_time is not None:
+            timepoints = self.post_processor_time(amici_outputs)
+
+        return timepoints, outputs, outputs_sensi
+
+    def _wrap_call_to_amici(self, amici_outputs, x, sensi_orders, mode,
+                            edatas):
+        """
+        The only purpose of this function is to encapsulate the call to amici:
+        This allows to use variable scoping as a mean to clean up the memory
+        after calling amici, which is beneficial if large models with large
+        datasets are used.
+        """
+        chunk = self.amici_objective(x=x, sensi_orders=sensi_orders, mode=mode,
+                                     edatas=edatas,  return_dict=True)
+        for rdata in chunk[RDATAS]:
+            amici_outputs.append({T: rdata[T], X: rdata[X], SX: rdata[SX],
+                                  Y: rdata[Y], SY: rdata[SY]})

@@ -184,8 +184,9 @@ def test_complex_prediction(edata_objects):
     Test prediction without using PEtab, using user-defined postprocessing
     """
 
-    def pp_out(amici_y):
+    def pp_out(raw_outputs):
         # compute ratios of simulations across conditions
+        amici_y = [raw_output['y'] for raw_output in raw_outputs]
         outs1 = np.array([
             amici_y[0][:, 1] / amici_y[0][:, 0],
             amici_y[1][:, 1] / amici_y[0][:, 0],
@@ -202,7 +203,9 @@ def test_complex_prediction(edata_objects):
         ]).transpose()
         return [outs1, outs2]
 
-    def pps_out(amici_y, amici_sy):
+    def pps_out(raw_outputs):
+        amici_y = [raw_output['y'] for raw_output in raw_outputs]
+        amici_sy = [raw_output['sy'] for raw_output in raw_outputs]
         # compute ratios of simulations across conditions (yes, I know this is
         # symbolically wrong, but we only check the shape of the outputs...)
         s_outs1 = np.zeros((10, 2, 5))
@@ -230,7 +233,8 @@ def test_complex_prediction(edata_objects):
             / np.tile(amici_y[2][:, 0], (2, 1)).transpose()
         return [s_outs1, s_outs2]
 
-    def ppt_out(amici_t):
+    def ppt_out(raw_outputs):
+        amici_t = [raw_output['t'] for raw_output in raw_outputs]
         # compute ratios of simulations across conditions
         t_out1 = amici_t[0]
         t_out2 = amici_t[1]

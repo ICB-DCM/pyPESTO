@@ -14,6 +14,8 @@ OUTPUT_SENSI = 'output_sensi'  # field in the return dict of AmiciPredictor
 
 RDATAS = 'rdatas'  # return field of call to pypesto objective
 T = 't'  # return field in amici simulation result
+X = 'x'  # return field in amici simulation result
+SX = 'sx'  # return field in amici simulation result
 Y = 'y'  # return field in amici simulation result
 SY = 'sy'  # return field in amici simulation result
 
