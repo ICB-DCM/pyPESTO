@@ -199,9 +199,9 @@ class AmiciPredictor:
                             min((i_sim + 1) * self.max_chunk_size, n_edatas))
 
             # call amici
-            self._wrap_call_to_amici(amici_outputs=amici_outputs,
-                x=x, sensi_orders=sensi_orders, mode=mode,
-                edatas=self.amici_objective.edatas[ids])
+            self._wrap_call_to_amici(
+                amici_outputs=amici_outputs, x=x, sensi_orders=sensi_orders,
+                mode=mode, edatas=self.amici_objective.edatas[ids])
 
         # declare the default output
         outputs = []
