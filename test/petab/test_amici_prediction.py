@@ -19,8 +19,11 @@ from pypesto.prediction import PredictionResult, PredictionConditionResult
 def conversion_reaction_model():
     # read in sbml file
     model_name = 'conversion_reaction'
-    sbml_file = f'../../doc/example/{model_name}/model_{model_name}.xml'
-    model_output_dir = f'../../doc/example/tmp/{model_name}_enhanced'
+    example_dir = os.path.dirname('../../doc/example/')
+    sbml_file = os.path.join(example_dir, model_name,
+                             f'model_{model_name}.xml')
+    model_output_dir = os.path.join(example_dir, 'tmp',
+                                    f'{model_name}_enhanced')
 
     # try to import the exisiting model, if possible
     try:
