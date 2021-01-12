@@ -280,7 +280,7 @@ class PetabImporter(AmiciObjectBuilder):
 
         Parameters
         ----------
-        amici_objective:
+        objective:
             An objective object, which will be used to get model simulations
         post_processor:
             A callable function which applies postprocessing to the simulation
