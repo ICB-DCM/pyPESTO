@@ -154,9 +154,6 @@ class AmiciPredictor:
 
         Parameters
         ----------
-        amici_outputs:
-            List of Dicts with the fields 't', 'x', 'sx', 'y', and 'sy' as
-            returned by an amici simulation
         x:
             The parameters for which to evaluate the prediction function.
         sensi_orders:
