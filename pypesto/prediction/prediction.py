@@ -180,7 +180,7 @@ class PredictionResult():
             path to file/folder to which results will be written
         """
         output_path = Path(output_file).with_suffix('.h5')
-        self._check_existence(output_path)
+        output_path = self._check_existence(output_path)
 
         with h5py.File(output_path, 'w') as f:
             # loop over conditions (i.e., amici edata objects)
