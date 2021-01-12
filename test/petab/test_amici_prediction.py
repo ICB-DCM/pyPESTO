@@ -19,8 +19,7 @@ from pypesto.prediction import PredictionResult, PredictionConditionResult
 def conversion_reaction_model():
     # read in sbml file
     model_name = 'conversion_reaction'
-    example_dir = os.path.join('..', '..', 'doc', 'example',
-                               os.path.dirname(__file__))
+    example_dir = os.path.join(os.path.dirname(__file__), '..', '..', 'doc', 'example')
     sbml_file = os.path.join(example_dir, model_name,
                              f'model_{model_name}.xml')
     model_output_dir = os.path.join(example_dir, 'tmp',
