@@ -285,7 +285,7 @@ def test_petab_prediction():
     Test prediction via PEtab
     """
     model_name = 'conversion_reaction'
-    
+
     # get the PEtab model
     yaml_file = os.path.join(os.path.dirname(__file__), '..', '..', 'doc',
                              'example', model_name, f'{model_name}.yaml')
