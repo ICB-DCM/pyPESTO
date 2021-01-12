@@ -169,8 +169,8 @@ def test_simple_prediction(edata_objects):
     check_outputs(p, out=(1,), n_cond=1, n_timepoints=10, n_obs=2, n_par=2)
     # check created files
     assert os.path.exists('deleteme')
-    assert os.listdir('deleteme') == ['deleteme_0__s0.csv',
-                                      'deleteme_0__s1.csv']
+    assert set(os.listdir('deleteme')) == {'deleteme_0__s0.csv',
+                                           'deleteme_0__s1.csv'}
     shutil.rmtree('deleteme')
 
     # assert h5 file is there
@@ -281,13 +281,22 @@ def test_complex_prediction(edata_objects):
 
 
 def test_petab_prediction():
-    yaml_file = '../../doc/example/conversion_reaction/' \
-                'conversion_reaction.yaml'
+    """
+    Test prediction via PEtab
+    """
+    model_name = 'conversion_reaction'
+    
+    # get the PEtab model
+    yaml_file = os.path.join(os.path.dirname(__file__), '..', '..', 'doc',
+                             'example', model_name, f'{model_name}.yaml')
     petab_problem = petab.Problem.from_yaml(yaml_file)
-    petab_problem.model_name = "conversion_reaction_petab"
+    # import PEtab problem
+    petab_problem.model_name = f'{model_name}_petab'
     importer = pypesto.petab.PetabImporter(petab_problem)
+    # create prediction via PAteb
     prediction = importer.create_prediction()
 
+    # run test
     p = prediction(np.array(petab_problem.x_nominal_free_scaled),
                    sensi_orders=(0, 1))
     check_outputs(p, out=(0, 1), n_cond=1, n_timepoints=10, n_obs=1, n_par=2)
