@@ -127,7 +127,7 @@ class PredictionResult():
 
             # parse path and check whether the file exists
             output_path = Path(output_path)
-            self._check_existence(output_path)
+            output_path = self._check_existence(output_path)
 
             # create
             output_path.mkdir(parents=True, exist_ok=False)
