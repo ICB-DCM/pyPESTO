@@ -21,7 +21,7 @@ class AmiciPredictor:
     observables are returned. As the AmiciPredictor is agnostic about the
     dimension of the postprocessor and also the dimension of the postprocessed
     output, these checks are also left to the user. An example for such a check
-    is provided in the default output.
+    is provided in the default output (see _default_output()).
     """
     def __init__(self,
                  amici_objective: AmiciObjective,
