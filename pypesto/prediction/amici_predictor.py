@@ -2,7 +2,8 @@ import numpy as np
 from typing import Sequence, Union, Callable, Tuple, List
 
 from .constants import (MODE_FUN, OBSERVABLE_IDS, TIMEPOINTS, OUTPUT,
-                        OUTPUT_SENSI, CSV, H5, T, X, SX, Y, SY, RDATAS)
+                        OUTPUT_SENSI, CSV, H5, AMICI_T, AMICI_X, AMICI_SX,
+                        AMICI_Y, AMICI_SY, RDATAS)
 from .prediction import PredictionResult
 from ..objective import AmiciObjective
 
@@ -119,7 +120,11 @@ class AmiciPredictor:
 
         # group results by condition, prepare PredictionConditionResult output
         condition_results = []
-        for i_cond in range(len(timepoints)):
+        # timepoints, outputs, outputs_sensi are lists with the number of
+        # simulation conditions. While outputs and outputs_sensi are optional,
+        # timepoints must exist, so we use this as a dummy
+        n_cond = len(timepoints)
+        for i_cond in range(n_cond):
             result = {TIMEPOINTS: timepoints[i_cond],
                       OBSERVABLE_IDS: self.observable_ids}
             if outputs:
@@ -146,7 +151,10 @@ class AmiciPredictor:
         # return dependent on sensitivity order
         return results
 
-    def _get_outputs(self, x, sensi_orders, mode) -> Tuple[List, List, List]:
+    def _get_outputs(self,
+                     x: np.ndarray,
+                     sensi_orders: Tuple[int, ...],
+                     mode: str = MODE_FUN) -> Tuple[List, List, List]:
         """
         This function splits the calls to amici into smaller chunks, as too
         large ReturnData objects from amici including many simulations can be
@@ -203,14 +211,15 @@ class AmiciPredictor:
         # declare the default output
         outputs = []
         outputs_sensi = []
-        timepoints = [outputs['t'] for outputs in amici_outputs]
+        timepoints = [output_amici[AMICI_T] for output_amici in amici_outputs]
         # add outputs and sensitivities if requested
         if 0 in sensi_orders:
-            outputs = [outputs['y'] for outputs in amici_outputs]
+            outputs = [output_amici[AMICI_Y] for output_amici in amici_outputs]
         if 1 in sensi_orders:
-            outputs_sensi = [outputs['sy'] for outputs in amici_outputs]
+            outputs_sensi = [output_amici[AMICI_SY]
+                             for output_amici in amici_outputs]
 
-        # postprocess
+        # postprocess (use original Amici outputs)
         if self.post_processor is not None:
             outputs = self.post_processor(amici_outputs)
         if self.post_processor_sensi is not None:
@@ -231,5 +240,8 @@ class AmiciPredictor:
         chunk = self.amici_objective(x=x, sensi_orders=sensi_orders, mode=mode,
                                      edatas=edatas,  return_dict=True)
         for rdata in chunk[RDATAS]:
-            amici_outputs.append({T: rdata[T], X: rdata[X], SX: rdata[SX],
-                                  Y: rdata[Y], SY: rdata[SY]})
+            amici_outputs.append({AMICI_T: rdata[AMICI_T],
+                                  AMICI_X: rdata[AMICI_X],
+                                  AMICI_SX: rdata[AMICI_SX],
+                                  AMICI_Y: rdata[AMICI_Y],
+                                  AMICI_SY: rdata[AMICI_SY]})

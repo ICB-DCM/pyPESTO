@@ -13,11 +13,11 @@ OUTPUT = 'output'  # field in the return dict of AmiciPredictor
 OUTPUT_SENSI = 'output_sensi'  # field in the return dict of AmiciPredictor
 
 RDATAS = 'rdatas'  # return field of call to pypesto objective
-T = 't'  # return field in amici simulation result
-X = 'x'  # return field in amici simulation result
-SX = 'sx'  # return field in amici simulation result
-Y = 'y'  # return field in amici simulation result
-SY = 'sy'  # return field in amici simulation result
+AMICI_T = 't'  # return field in amici simulation result
+AMICI_X = 'x'  # return field in amici simulation result
+AMICI_SX = 'sx'  # return field in amici simulation result
+AMICI_Y = 'y'  # return field in amici simulation result
+AMICI_SY = 'sy'  # return field in amici simulation result
 
 CSV = 'csv'  # return file format
 H5 = 'h5'  # return file format
