@@ -18,6 +18,7 @@ AMICI_X = 'x'  # return field in amici simulation result
 AMICI_SX = 'sx'  # return field in amici simulation result
 AMICI_Y = 'y'  # return field in amici simulation result
 AMICI_SY = 'sy'  # return field in amici simulation result
+AMICI_STATUS = 'status'  # return field in amici simulation result
 
 CSV = 'csv'  # return file format
 H5 = 'h5'  # return file format

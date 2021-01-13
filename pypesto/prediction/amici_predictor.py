@@ -3,7 +3,7 @@ from typing import Sequence, Union, Callable, Tuple, List
 
 from .constants import (MODE_FUN, OBSERVABLE_IDS, TIMEPOINTS, OUTPUT,
                         OUTPUT_SENSI, CSV, H5, AMICI_T, AMICI_X, AMICI_SX,
-                        AMICI_Y, AMICI_SY, RDATAS)
+                        AMICI_Y, AMICI_SY, AMICI_STATUS, RDATAS)
 from .prediction import PredictionResult
 from ..objective import AmiciObjective
 
@@ -16,6 +16,12 @@ class AmiciPredictor:
     is requested, then the sensitivities of the AMICI model must also be
     post-processed. There are no checks here to ensure that the sensitivities
     are correctly post-processed, this is explicitly left to the user.
+    There are also no safeguards if the postprocessor routines fail. This may
+    happen if, e.g., a call to Amici fails, and no timepoints, states or
+    observables are returned. As the AmiciPredictor is agnostic about the
+    dimension of the postprocessor and also the dimension of the postprocessed
+    output, these checks are also left to the user. An example for such a check
+    is provided in the default output.
     """
     def __init__(self,
                  amici_objective: AmiciObjective,
@@ -37,18 +43,21 @@ class AmiciPredictor:
             the amici model. Default are the observables of the amici model.
             This method takes a list of dicts (with the returned fields ['t'],
             ['x'], and ['y'] of the amici ReturnData objects) as input.
+            Safeguards for, e.g., failure of Amici are left to the user.
         post_processor_sensi:
             A callable function which applies postprocessing to the
             sensitivities of the simulation results. Defaults to the
             observable sensitivities of the amici model.
             This method takes a list of dicts (with the returned fields ['t'],
             ['x'], ['y'], ['sx'], and ['sy'] of the amici ReturnData objects)
-            as input.
+            as input. Safeguards for, e.g., failure of Amici are left to the
+            user.
         post_processor_time:
             A callable function which applies postprocessing to the timepoints
             of the simulations. Defaults to the timepoints of the amici model.
             This method takes a list of dicts (with the returned field ['t'] of
-            the amici ReturnData objects) as input.
+            the amici ReturnData objects) as input. Safeguards for, e.g.,
+            failure of Amici are left to the user.
         max_chunk_size:
             In some cases, we don't want to compute all predictions at once
             when calling the prediction function, as this might not fit into
@@ -208,16 +217,42 @@ class AmiciPredictor:
                 amici_outputs=amici_outputs, x=x, sensi_orders=sensi_orders,
                 mode=mode, edatas=self.amici_objective.edatas[ids])
 
-        # declare the default output
-        outputs = []
-        outputs_sensi = []
-        timepoints = [output_amici[AMICI_T] for output_amici in amici_outputs]
-        # add outputs and sensitivities if requested
-        if 0 in sensi_orders:
-            outputs = [output_amici[AMICI_Y] for output_amici in amici_outputs]
-        if 1 in sensi_orders:
-            outputs_sensi = [output_amici[AMICI_SY]
-                             for output_amici in amici_outputs]
+        def _default_output(amici_outputs):
+            """
+            Default output of prediction, equals to observables of Amici model.
+            We need to check that call to Amici was successful (status == 0),
+            before writing the output
+            """
+            amici_nt = [len(edata.getTimepoints())
+                        for edata in self.amici_objective.edatas]
+            amici_ny = len(self.observable_ids)
+            amici_np = len(self.amici_objective.x_names)
+
+            outputs = []
+            outputs_sensi = []
+            timepoints = [
+                amici_output[AMICI_T] if amici_output[AMICI_STATUS] == 0
+                else np.full((amici_nt[i_condition], ), np.nan)
+                for i_condition, amici_output in enumerate(amici_outputs)
+            ]
+            # add outputs and sensitivities if requested
+            if 0 in sensi_orders:
+                outputs = [
+                    amici_output[AMICI_Y] if amici_output[AMICI_STATUS] == 0
+                    else np.full((amici_nt, amici_ny), np.nan)
+                    for amici_output in amici_outputs
+                ]
+            if 1 in sensi_orders:
+                outputs_sensi = [
+                    amici_output[AMICI_SY] if amici_output[AMICI_STATUS] == 0
+                    else np.full((amici_nt, amici_np, amici_ny), np.nan)
+                    for amici_output in amici_outputs
+                ]
+
+            return timepoints, outputs, outputs_sensi
+
+        # Get default output
+        timepoints, outputs, outputs_sensi = _default_output(amici_outputs)
 
         # postprocess (use original Amici outputs)
         if self.post_processor is not None:
@@ -240,7 +275,8 @@ class AmiciPredictor:
         chunk = self.amici_objective(x=x, sensi_orders=sensi_orders, mode=mode,
                                      edatas=edatas,  return_dict=True)
         for rdata in chunk[RDATAS]:
-            amici_outputs.append({AMICI_T: rdata[AMICI_T],
+            amici_outputs.append({AMICI_STATUS: rdata[AMICI_STATUS],
+                                  AMICI_T: rdata[AMICI_T],
                                   AMICI_X: rdata[AMICI_X],
                                   AMICI_SX: rdata[AMICI_SX],
                                   AMICI_Y: rdata[AMICI_Y],
