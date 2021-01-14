@@ -523,7 +523,7 @@ class DlibOptimizer(Optimizer):
         if dlib is None:
             raise ImportError(
                 "This optimizer requires an installation of dlib. You can "
-                "install dlib via pip install dlib."
+                "install dlib via `pip install dlib`."
             )
 
         if not objective.has_fun:
