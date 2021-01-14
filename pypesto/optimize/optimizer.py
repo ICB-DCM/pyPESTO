@@ -458,7 +458,7 @@ class IpoptOptimizer(Optimizer):
         if ipopt is None:
             raise ImportError(
                 "This optimizer requires an installation of ipopt. You can "
-                "install ipopt via pip install ipopt."
+                "install ipopt via `pip install ipopt`."
             )
 
         objective = problem.objective
