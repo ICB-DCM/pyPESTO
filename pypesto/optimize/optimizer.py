@@ -872,7 +872,7 @@ class FidesOptimizer(Optimizer):
         if fides is None:
             raise ImportError(
                 "This optimizer requires an installation of fides. You can "
-                "install fides via pip install fides."
+                "install fides via `pip install fides`."
             )
 
         args = {'mode': MODE_FUN}
