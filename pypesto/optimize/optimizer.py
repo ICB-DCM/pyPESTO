@@ -580,7 +580,7 @@ class PyswarmOptimizer(Optimizer):
         if pyswarm is None:
             raise ImportError(
                 "This optimizer requires an installation of pyswarm.You can "
-                "install pyswarm via pip install pyswarm."
+                "install pyswarm via `pip install pyswarm."
             )
 
         check_finite_bounds(lb, ub)
@@ -646,7 +646,7 @@ class CmaesOptimizer(Optimizer):
         if cma is None:
             raise ImportError(
                 "This optimizer requires an installation of cma. You can "
-                "install cma via pip install cma."
+                "install cma via `pip install cma."
             )
 
         result = cma.CMAEvolutionStrategy(
@@ -703,7 +703,7 @@ class NLoptOptimizer(Optimizer):
         if nlopt is None:
             raise ImportError(
                 "This optimizer requires an installation of NLopt. You can "
-                "install NLopt via pip install nlopt.")
+                "install NLopt via `pip install nlopt`.")
 
         if method is None:
             method = nlopt.LD_LBFGS
