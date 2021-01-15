@@ -118,7 +118,8 @@ def parameter_profile(
     ret = engine.execute(tasks)
 
     # fill in the ProfilerResults at the right index
-    for r in ret:
-        result.profile_result.list[-1][r['par_ind']] = r['prof']
+    for indexed_profile in indexed_profiles:
+        result.profile_result.list[-1][indexed_profile['index']] = \
+            indexed_profile['profile']
 
     return result
