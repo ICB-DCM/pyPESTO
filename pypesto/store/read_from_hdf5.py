@@ -200,9 +200,8 @@ class SamplingResultHDF5Reader:
             self.results.sample_result = McmcPtResult(**sample_result)
         except ValueError:
             logger.warning(
-                "Could not create a McmcPtResult from sample_result."
+                "Could not create a McmcPtResult from sample_result. "
                 "Will continue with a list.")
-            pass
 
         return self.results
 
