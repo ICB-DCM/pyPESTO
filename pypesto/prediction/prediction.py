@@ -10,7 +10,7 @@ from .constants import (OBSERVABLE_IDS, PARAMETER_IDS, TIMEPOINTS, OUTPUT,
                         OUTPUT_SENSI, TIME, CSV)
 
 
-class PredictionConditionResult():
+class PredictionConditionResult:
     """
     This class is a light-weight wrapper for the prediction of one simulation
     condition of an amici model. It should provide a common api how amici
@@ -56,7 +56,7 @@ class PredictionConditionResult():
         yield 'output_sensi', self.output_sensi
 
 
-class PredictionResult():
+class PredictionResult:
     """
     This class is a light-weight wrapper around predictions from pyPESTO made
     via an amici model. It's only purpose is to have fixed format/api, how
