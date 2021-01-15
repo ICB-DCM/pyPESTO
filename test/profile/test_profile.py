@@ -15,6 +15,7 @@ from pypesto import ObjectiveBase
 
 from ..visualize import close_fig
 from ..util import rosen_for_sensi
+from numpy.testing import assert_almost_equal
 
 
 class ProfilerTest(unittest.TestCase):
@@ -71,6 +72,33 @@ class ProfilerTest(unittest.TestCase):
             # standard plotting
             visualize.profiles(result, profile_list_ids=i_run)
             visualize.profile_cis(result, profile_list=i_run)
+
+    def test_engine_profiling(self):
+        # loop over all possible engines
+        # engine=None will be used for comparison
+        engines = [None,
+                   pypesto.engine.SingleCoreEngine(),
+                   pypesto.engine.MultiProcessEngine(),
+                   pypesto.engine.MultiThreadEngine()
+                   ]
+        for engine in engines:
+            # run profiling, profile results get appended
+            # in self.result.profile_result
+            profile.parameter_profile(
+                problem=self.problem,
+                result=self.result,
+                optimizer=self.optimizer,
+                next_guess_method='fixed_step',
+                engine=engine,)
+
+        # check results
+        for count, _engine in enumerate(engines[1:]):
+            for j in range(len(self.result.profile_result.list[0])):
+                assert_almost_equal(
+                    self.result.profile_result.list[0][j]['x_path'],
+                    self.result.profile_result.list[count][j]['x_path'],
+                    err_msg='The values of the profiles for'
+                            ' the different engines do not match')
 
     def test_selected_profiling(self):
         # create options in order to ensure a short computation time
