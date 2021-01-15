@@ -12,9 +12,7 @@ logger = logging.getLogger(__name__)
 
 
 class ProfilerTask(Task):
-    """
-    A multistart optimization task, performed in `pypesto.minimize`.
-    """
+    """A parameter likelihood profiling task."""
 
     def __init__(
             self,
