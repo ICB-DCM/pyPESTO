@@ -73,4 +73,4 @@ class ProfilerTask(Task):
                 i_par=self.i_par)
 
         # return the ProfilerResult and the index of the parameter profiled
-        return {'prof': self.current_profile, 'par_ind': self.i_par}
+        return {'profile': self.current_profile, 'index': self.i_par}
