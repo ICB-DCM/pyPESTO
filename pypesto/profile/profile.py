@@ -115,7 +115,7 @@ def parameter_profile(
         tasks.append(task)
 
     # execute the tasks with Engine
-    ret = engine.execute(tasks)
+    indexed_profiles = engine.execute(tasks)
 
     # fill in the ProfilerResults at the right index
     for indexed_profile in indexed_profiles:
