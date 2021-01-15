@@ -65,7 +65,7 @@ class ProblemHDF5Writer:
                 os.makedirs(basedir, exist_ok=True)
 
         with h5py.File(self.storage_filename, "a") as f:
-            check_overwrite(f,overwrite, 'problem')
+            check_overwrite(f, overwrite, 'problem')
             attrs_to_save = [a for a in dir(problem) if not a.startswith('__')
                              and not callable(getattr(problem, a))
                              and not hasattr(type(problem), a)]
