@@ -457,7 +457,8 @@ class IpoptOptimizer(Optimizer):
 
         if ipopt is None:
             raise ImportError(
-                "This optimizer requires an installation of ipopt."
+                "This optimizer requires an installation of ipopt. You can "
+                "install ipopt via `pip install ipopt`."
             )
 
         objective = problem.objective
@@ -521,7 +522,8 @@ class DlibOptimizer(Optimizer):
 
         if dlib is None:
             raise ImportError(
-                "This optimizer requires an installation of dlib."
+                "This optimizer requires an installation of dlib. You can "
+                "install dlib via `pip install dlib`."
             )
 
         if not objective.has_fun:
@@ -577,7 +579,9 @@ class PyswarmOptimizer(Optimizer):
         ub = problem.ub
         if pyswarm is None:
             raise ImportError(
-                "This optimizer requires an installation of pyswarm.")
+                "This optimizer requires an installation of pyswarm.You can "
+                "install pyswarm via `pip install pyswarm."
+            )
 
         check_finite_bounds(lb, ub)
 
@@ -641,7 +645,9 @@ class CmaesOptimizer(Optimizer):
 
         if cma is None:
             raise ImportError(
-                "This optimizer requires an installation of cma.")
+                "This optimizer requires an installation of cma. You can "
+                "install cma via `pip install cma."
+            )
 
         result = cma.CMAEvolutionStrategy(
             x0, sigma0, inopts=self.options,
@@ -693,10 +699,11 @@ class NLoptOptimizer(Optimizer):
             local_options = {}
         self.options = options
         self.local_options = local_options
+
         if nlopt is None:
             raise ImportError(
                 "This optimizer requires an installation of NLopt. You can "
-                "install NLopt via pip install nlopt.")
+                "install NLopt via `pip install nlopt`.")
 
         if method is None:
             method = nlopt.LD_LBFGS
@@ -861,6 +868,12 @@ class FidesOptimizer(Optimizer):
             id: str,
             history_options: HistoryOptions = None,
     ) -> OptimizerResult:
+
+        if fides is None:
+            raise ImportError(
+                "This optimizer requires an installation of fides. You can "
+                "install fides via `pip install fides`."
+            )
 
         args = {'mode': MODE_FUN}
         if self.hessian_update is None:

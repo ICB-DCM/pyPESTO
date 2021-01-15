@@ -50,6 +50,7 @@ Welcome to pyPESTO's documentation!
 
    api_objective
    api_problem
+   api_prediction
    api_petab
    api_optimize
    api_profile
