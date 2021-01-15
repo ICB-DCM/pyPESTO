@@ -13,8 +13,8 @@ logger = logging.getLogger(__name__)
 
 
 def read_hdf5_profile(f: h5py.File,
-                      profile_id: h5py.Group,
-                      parameter_id: h5py.Group) -> 'ProfilerResult':
+                      profile_id: str,
+                      parameter_id: str) -> 'ProfilerResult':
     """
     Read HDF5 results per start.
 
@@ -44,7 +44,7 @@ def read_hdf5_profile(f: h5py.File,
 
 
 def read_hdf5_optimization(f: h5py.File,
-                           opt_id: h5py.Group) -> 'OptimizerResult':
+                           opt_id: str) -> 'OptimizerResult':
     """
     Read HDF5 results per start.
 
@@ -196,12 +196,7 @@ class SamplingResultHDF5Reader:
             for key in f['/sampling/results'].attrs:
                 sample_result[key] = \
                     f['/sampling/results'].attrs[key]
-        try:
-            self.results.sample_result = McmcPtResult(**sample_result)
-        except ValueError:
-            logger.warning(
-                "Could not create a McmcPtResult from sample_result. "
-                "Will continue with a list.")
+        self.results.sample_result = McmcPtResult(**sample_result)
 
         return self.results
 

@@ -9,6 +9,30 @@ from .hdf5 import write_array, write_float_array
 from ..result import Result
 
 
+def check_overwrite(f: Union[h5py.File, h5py.Group],
+                    overwrite: bool,
+                    target: str):
+    """
+    Checks whether target already exists. Sends a warning if
+    overwrite=False, deletes the target if overwrite=True.
+
+    Attributes
+    -------------
+    f: file or group where existence of a group with the path group_path
+       should be checked
+    target: name of the group, whose existence is checked
+    overwrite: if overwrite is true, it deltes the target in f
+    """
+    if target in f:
+        if overwrite:
+            del f[target]
+        else:
+            raise Exception(f"The file already exists and contains "
+                            f"information about {target} result."
+                            f"If you wish to overwrite the file set"
+                            f"overwrite=True.")
+
+
 class ProblemHDF5Writer:
     """
     Writer of the HDF5 problem files.
@@ -41,14 +65,7 @@ class ProblemHDF5Writer:
                 os.makedirs(basedir, exist_ok=True)
 
         with h5py.File(self.storage_filename, "a") as f:
-            if "problem" in f:
-                if overwrite:
-                    del f["problem"]
-                else:
-                    raise Exception("The file already exists and contains "
-                                    "information about optimization result."
-                                    "If you wish to overwrite the file set"
-                                    "overwrite=True.")
+            check_overwrite(f,overwrite, 'problem')
             attrs_to_save = [a for a in dir(problem) if not a.startswith('__')
                              and not callable(getattr(problem, a))
                              and not hasattr(type(problem), a)]
@@ -126,19 +143,12 @@ class OptimizationResultHDF5Writer:
             # settings =
             # optimization_grp.create_dataset("settings", settings, dtype=)
             results_grp = get_or_create_group(optimization_grp, "results")
+            check_overwrite(f, overwrite, 'optimization')
 
             for start in result.optimize_result.list:
                 start_id = start['id']
                 start_grp = get_or_create_group(results_grp, start_id)
                 start['history'] = None  # TOOD temporary fix
-                if not overwrite:
-                    for key in start.keys():
-                        if key in start_grp.keys() or key in start_grp.attrs:
-                            raise Exception("The file already exists and "
-                                            "contains information about "
-                                            "optimization result. If you wish "
-                                            "to overwrite it, set "
-                                            "overwrite=True.")
                 for key in start.keys():
                     if isinstance(start[key], np.ndarray):
                         write_float_array(start_grp, key, start[key])
@@ -147,7 +157,7 @@ class OptimizationResultHDF5Writer:
                 f.flush()
 
 
-class SamplingResultHDF5Writer():
+class SamplingResultHDF5Writer:
     """
     Writer of the HDF5 sampling files.
 
@@ -180,17 +190,9 @@ class SamplingResultHDF5Writer():
 
         with h5py.File(self.storage_filename, "a") as f:
             sampling_grp = get_or_create_group(f, "sampling")
-
+            check_overwrite(f, overwrite, 'sampling')
             results_grp = get_or_create_group(sampling_grp, "results")
 
-            if not overwrite:
-                for key in result.sample_result.keys():
-                    if key in results_grp.keys() or key in results_grp.attrs:
-                        raise Exception("The file already exists and "
-                                        "contains information about "
-                                        "optimization result. If you wish "
-                                        "to overwrite it, set "
-                                        "overwrite=True.")
             for key in result.sample_result.keys():
                 if isinstance(result.sample_result[key], np.ndarray):
                     write_float_array(results_grp,
@@ -201,7 +203,7 @@ class SamplingResultHDF5Writer():
             f.flush()
 
 
-class ProfileResultHDF5Writer():
+class ProfileResultHDF5Writer:
     """
     Writer of the HDF5 result files.
 
@@ -234,6 +236,7 @@ class ProfileResultHDF5Writer():
 
         with h5py.File(self.storage_filename, "a") as f:
             profiling_grp = get_or_create_group(f, "profiling")
+            check_overwrite(f, overwrite, 'profiling')
 
             for profile_id, profile in enumerate(result.profile_result.list):
                 profile_grp = get_or_create_group(profiling_grp,
@@ -246,16 +249,6 @@ class ProfileResultHDF5Writer():
                         result_grp.attrs['IsNone'] = True
                         continue
                     result_grp.attrs['IsNone'] = False
-                    if not overwrite:
-                        for key in parameter_profile.keys():
-                            if (key in result_grp.keys()
-                                    or key in result_grp.attrs):
-                                raise Exception("The file already exists"
-                                                " and contains information"
-                                                " about optimization"
-                                                " result. If you wish"
-                                                " to overwrite it, set"
-                                                " overwrite=True.")
                     for key in parameter_profile.keys():
                         if isinstance(parameter_profile[key], np.ndarray):
                             write_float_array(result_grp,
