@@ -6,6 +6,10 @@ from ..sample.result import McmcPtResult
 from ..problem import Problem
 from ..objective import Objective, ObjectiveBase
 import numpy as np
+import logging
+
+
+logger = logging.getLogger(__name__)
 
 
 def read_hdf5_profile(f: h5py.File,
@@ -18,8 +22,12 @@ def read_hdf5_profile(f: h5py.File,
     -------------
     f:
         The HDF5 result file
-    opt_id:
-        Specifies the start that is read from the HDF5 file
+    profile_id:
+        specifies the profile start that is read
+        from the HDF5 file
+    parameter_id:
+        specifies the profile index that is read
+        from the HDF5 file
     """
 
     result = ProfilerResult(np.array([]), np.array([]), np.array([]))
@@ -177,21 +185,23 @@ class SamplingResultHDF5Reader:
         """
         Read HDF5 result file and return pyPESTO result object.
         """
-        sampleResult = {}
+        sample_result = {}
         with h5py.File(self.storage_filename, "r") as f:
             if '/problem' in f['/']:
                 problem_reader = ProblemHDF5Reader(self.storage_filename)
                 self.results.problem = problem_reader.read()
             for key in f['/sampling/results']:
-                sampleResult[key] = \
+                sample_result[key] = \
                     f[f'/sampling/results/{key}'][:]
             for key in f['/sampling/results'].attrs:
-                sampleResult[key] = \
+                sample_result[key] = \
                     f['/sampling/results'].attrs[key]
         try:
-            self.results.sample_result = McmcPtResult(**sampleResult)
+            self.results.sample_result = McmcPtResult(**sample_result)
         except ValueError:
-            # TODO : Warning here
+            logger.warning(
+                "Could not create a McmcPtResult from sample_result."
+                "Will continue with a list.")
             pass
 
         return self.results

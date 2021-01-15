@@ -167,7 +167,7 @@ class SamplingResultHDF5Writer():
         """
         self.storage_filename = storage_filename
 
-    def write(self, result: Result, overwrite=False):
+    def write(self, result: Result, overwrite: bool = False):
         """
         Write HDF5 sampling file from pyPESTO result object.
         """
@@ -221,7 +221,7 @@ class ProfileResultHDF5Writer():
         """
         self.storage_filename = storage_filename
 
-    def write(self, result: Result, overwrite=False):
+    def write(self, result: Result, overwrite: bool = False):
         """
         Write HDF5 result file from pyPESTO result object.
         """
@@ -241,25 +241,26 @@ class ProfileResultHDF5Writer():
                 for parameter_id, parameter_profile in enumerate(profile):
                     result_grp = get_or_create_group(profile_grp,
                                                      str(parameter_id))
+
                     if parameter_profile is None:
                         result_grp.attrs['IsNone'] = True
-                    else:
-                        result_grp.attrs['IsNone'] = False
-                        if not overwrite:
-                            for key in parameter_profile.keys():
-                                if (key in result_grp.keys()
-                                        or key in result_grp.attrs):
-                                    raise Exception("The file already exists"
-                                                    " and contains information"
-                                                    " about optimization"
-                                                    " result. If you wish"
-                                                    " to overwrite it, set"
-                                                    " overwrite=True.")
+                        continue
+                    result_grp.attrs['IsNone'] = False
+                    if not overwrite:
                         for key in parameter_profile.keys():
-                            if isinstance(parameter_profile[key], np.ndarray):
-                                write_float_array(result_grp,
-                                                  key,
-                                                  parameter_profile[key])
-                            elif parameter_profile[key] is not None:
-                                result_grp.attrs[key] = parameter_profile[key]
+                            if (key in result_grp.keys()
+                                    or key in result_grp.attrs):
+                                raise Exception("The file already exists"
+                                                " and contains information"
+                                                " about optimization"
+                                                " result. If you wish"
+                                                " to overwrite it, set"
+                                                " overwrite=True.")
+                    for key in parameter_profile.keys():
+                        if isinstance(parameter_profile[key], np.ndarray):
+                            write_float_array(result_grp,
+                                              key,
+                                              parameter_profile[key])
+                        elif parameter_profile[key] is not None:
+                            result_grp.attrs[key] = parameter_profile[key]
             f.flush()
