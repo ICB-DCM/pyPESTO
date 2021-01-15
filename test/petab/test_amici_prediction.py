@@ -5,6 +5,7 @@ This is for testing the pypesto.prediction.AmiciPredictor.
 import amici
 import pypesto
 import pypesto.petab
+import pypesto.collections
 import os
 import sys
 import numpy as np
@@ -13,6 +14,7 @@ import pytest
 import libsbml
 import petab
 from pypesto.prediction import PredictionResult, PredictionConditionResult
+
 
 
 @pytest.fixture()
@@ -300,3 +302,12 @@ def test_petab_prediction():
     p = prediction(np.array(petab_problem.x_nominal_free_scaled),
                    sensi_orders=(0, 1))
     check_outputs(p, out=(0, 1), n_cond=1, n_timepoints=10, n_obs=1, n_par=2)
+
+    # run test for an ensemble
+    # read a set of ensemble vectors from the csv
+    ensemble_file =  os.path.join(os.path.dirname(__file__), '..', '..', 'doc',
+                             'example', model_name, 'parameter_ensemble.tsv')
+    ensemble = pypesto.collections.read_from_csv(ensemble_file)
+    ensemble_prediction = ensemble.predict(predictor=prediction)
+
+    print(ensemble_prediction)

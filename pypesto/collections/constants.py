@@ -6,6 +6,8 @@ This is for (string) constants used in the collections module.
 from enum import Enum
 
 
+MODE_FUN = 'mode_fun'  # mode for function values
+
 OBSERVABLE_IDS = 'observable_ids'  # data member in PredictionConditionResult
 PARAMETER_IDS = 'parameter_ids'  # data member in PredictionConditionResult
 TIMEPOINTS = 'timepoints'  # data member in PredictionConditionResult
@@ -16,6 +18,7 @@ PREDICTOR = 'predictor'
 PREDICTION_ID = 'prediction_id'
 PREDICTION_RESULTS = 'predction_results'
 PREDICTION_ARRAY = 'rediction_array'
+PREDICTION_SUMMARY = 'prediction_summary'
 
 X_NAMES = 'x_names'
 NX = 'n_x'
