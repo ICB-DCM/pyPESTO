@@ -3,10 +3,7 @@ import pandas as pd
 from typing import Sequence, Tuple, Callable
 
 from ..prediction import PredictionResult
-from .constants import (X_NAMES, NX, X_VECTOR, NVECTORS, VECTOR_TAGS, MODE_FUN,
-                        COLLECTION_TYPE, PREDICTIONS, PREDICTION_ID, PREDICTOR,
-                        PREDICTION_RESULTS, PREDICTION_ARRAY,
-                        PREDICTION_SUMMARY, CollectionType as ct)
+from .constants import *
 
 
 class CollectionPrediction:
@@ -15,6 +12,7 @@ class CollectionPrediction:
     vectors and their identifiers such as a sample or an ensemble, and a
     prediction function. It can be attached to a collection-type object
     """
+
     def __init__(self,
                  predictor: Callable,
                  prediction_id: str = None,
@@ -37,7 +35,7 @@ class CollectionPrediction:
         if prediction_results is None:
             self.prediction_results = []
 
-        self.prediction_array = None
+        self.prediction_arrays = None
         self.prediction_summary = {'mean': None,
                                    'std': None,
                                    'median': None}
@@ -46,24 +44,60 @@ class CollectionPrediction:
         yield PREDICTOR, self.predictor
         yield PREDICTION_ID, self.prediction_id
         yield PREDICTION_RESULTS, self.prediction_results
-        yield PREDICTION_ARRAY, self.prediction_array
+        yield PREDICTION_ARRAYS, self.prediction_arrays
         yield PREDICTION_SUMMARY, self.prediction_summary
 
-
-    def condense_to_array(self):
+    def condense_to_arrays(self):
         """
         This functions reshapes the predictions results to an array
         """
-        raise NotImplementedError("Condensation to an array is not yet "
-                                  "implemetned.")
+        # prepare for storing results over all predictions
+        output = []
+        output_sensi = []
+        timepoints = []
 
-    def compute_summary(self):
+        for result in self.prediction_results:
+            # stack outputs, output sensitivities and timepoints to one array
+            # use first element as dummy, to see if outputs ahve been computed
+            if result.conditions[0].output is not None:
+                output.append(np.concatenate(
+                    [cond.output for cond in result.conditions], axis=0))
+            else:
+                output = None
+
+            if result.conditions[0].output_sensi is not None:
+                output_sensi.append(np.concatenate(
+                    [cond.output_sensi for cond in result.conditions], axis=0))
+            else:
+                output_sensi = None
+
+            timepoints.append(np.concatenate(
+                [cond.timepoints for cond in result.conditions], axis=0))
+
+        # stack results in third dimension
+        if output is not None:
+            output = np.stack(output, axis=2)
+        if output_sensi is not None:
+            output_sensi = np.stack(output_sensi, axis=3)
+        # formulate as dict
+        self.prediction_arrays = {
+            OUTPUT: output,
+            OUTPUT_SENSI: output_sensi,
+            TIMEPOINTS: np.stack(timepoints, axis=-1)
+        }
+
+    def compute_summary(self, confidence_levels=(5, 20, 80, 95)):
         """
         This function computes the mean, the median, the standard deviation
         and possibly percentiles from the collection prediction results.
         """
-        raise NotImplementedError("Computation of summary statistics is not "
-                                  "yet implemetned.")
+        # check if prediction results are available
+        if not self.prediction_results:
+            raise ArithmeticError('Cannot compute summary statistics from '
+                                  'empty prediction results.')
+
+        n_conditions = len(self.prediction_results[0].conditions)
+
 
 
 class Collection:
@@ -75,8 +109,8 @@ class Collection:
                  x_vectors: np.ndarray,
                  x_names: Sequence[str] = None,
                  vector_tags: Tuple[int, int] = None,
-                 coll_type: ct = None,
-                 predictions: Sequence[CollectionPrediction] = None,):
+                 coll_type: CollectionType = None,
+                 predictions: Sequence[CollectionPrediction] = None, ):
         """
         Constructor.
 
@@ -103,8 +137,8 @@ class Collection:
 
         # handle parameter vectors and sizes
         self.x_vectors = x_vectors
-        self.n_x = x_vectors.size[0]
-        self.n_vectors = x_vectors.size[1]
+        self.n_x = x_vectors.shape[0]
+        self.n_vectors = x_vectors.shape[1]
         self.vector_tags = vector_tags
 
         # handle parameter names
@@ -114,7 +148,7 @@ class Collection:
             self.x_names = [f'x_{ix}' for ix in range(self.n_x)]
 
         # Do we have a representative sample or just random ensemble?
-        self.coll_type = ct.ensemble
+        self.coll_type = CollectionType.ensemble
         if coll_type is not None:
             self.coll_type = coll_type
 
@@ -136,7 +170,7 @@ class Collection:
                 predictor: Callable,
                 prediction_id: str = None,
                 sensi_orders: Tuple = (0,),
-                mode: str = MODE_FUN,):
+                mode: str = MODE_FUN, ):
         """
         Convenience function to run predictions for a full ensemble
         """
@@ -144,7 +178,7 @@ class Collection:
         prediction_results = []
 
         for ix in range(self.n_vectors):
-            x = self.x_vectors[:,ix]
+            x = self.x_vectors[:, ix]
             prediction_results.append(predictor(x, sensi_orders, mode))
 
         return CollectionPrediction(predictor=predictor,
@@ -156,7 +190,7 @@ def read_from_csv(path: str,
                   sep: str = '\t',
                   index_col: int = 0,
                   headline_parser: Callable = None,
-                  coll_type: ct = None):
+                  coll_type: CollectionType = None):
     """
     function for creating an ensemble from a csv file
     """
@@ -168,7 +202,7 @@ def read_from_csv(path: str,
         vector_tags = headline_parser(list(collection_df.columns))
     # set the type of the collection
     if coll_type is None:
-        coll_type = ct.ensemble
+        coll_type = CollectionType.ensemble
 
     return Collection(x_vectors=collection_df.values,
                       x_names=list(collection_df.index),

@@ -4,4 +4,4 @@ Collections
 """
 
 
-from .collections import Collection, read_from_csv
+from .collections import Collection, CollectionPrediction, read_from_csv

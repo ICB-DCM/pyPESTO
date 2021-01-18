@@ -309,5 +309,7 @@ def test_petab_prediction():
                              'example', model_name, 'parameter_ensemble.tsv')
     ensemble = pypesto.collections.read_from_csv(ensemble_file)
     ensemble_prediction = ensemble.predict(predictor=prediction)
-
+    ensemble_prediction.condense_to_arrays()
+    ensemble_prediction.compute_summary(percentiles=[5, 10, 20, 25, 50,
+                                                     75, 80, 90, 95])
     print(ensemble_prediction)

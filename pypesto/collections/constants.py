@@ -17,7 +17,7 @@ OUTPUT_SENSI = 'output_sensi'  # field in the return dict of AmiciPredictor
 PREDICTOR = 'predictor'
 PREDICTION_ID = 'prediction_id'
 PREDICTION_RESULTS = 'predction_results'
-PREDICTION_ARRAY = 'rediction_array'
+PREDICTION_ARRAYS = 'prediction_arrays'
 PREDICTION_SUMMARY = 'prediction_summary'
 
 X_NAMES = 'x_names'
