@@ -20,7 +20,7 @@ Release notes
   * Predictions (#544)
   * Move tests to GitHub Actions (#524)
   * Parallelize profile calculation (#532)
-  * Save `x_guesses` in `pypesto.problem (#494)
+  * Save `x_guesses` in `pypesto.problem` (#494)
   * Improved finite difference gradients (#464)
   * Support of unconstrained optimization (#519)
   * Additional NaN check for fval, grad and hessian (#521)
