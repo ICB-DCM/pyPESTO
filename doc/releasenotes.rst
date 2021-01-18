@@ -13,14 +13,14 @@ Release notes
   * NLopt (#493)
 * Extended PEtab support:
   * PySB import (#437)
-  * Support of PEtabs initializationPriors (#535)
-  * Support of priors parameterScale{Normal,Laplace}  (#520)
-  * Example notebook  for synthetic data generation (#482)
+  * Support of PEtab's initializationPriors (#535)
+  * Support of prior parameterScale{Normal,Laplace}  (#520)
+  * Example notebook for synthetic data generation (#482)
 * General new and improved functionality:
   * Predictions (#544)
   * Move tests to GitHub Actions (#524)
   * Parallelize profile calculation (#532)
-  * Save x_guesses in `pypesto.problem (#494)
+  * Save `x_guesses` in `pypesto.problem (#494)
   * Improved finite difference gradients (#464)
   * Support of unconstrained optimization (#519)
   * Additional NaN check for fval, grad and hessian (#521)
