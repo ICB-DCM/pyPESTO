@@ -5,10 +5,11 @@ import importlib
 import shutil
 import logging
 import tempfile
-from typing import Iterable, List, Optional, Sequence, Union
+from typing import Iterable, List, Optional, Sequence, Union, Callable
 
 from ..problem import Problem
 from ..objective import AmiciObjective, AmiciObjectBuilder, AggregatedObjective
+from ..prediction import AmiciPredictor
 from ..objective.priors import NegLogParameterPriors, \
     get_parameter_prior_dict
 
@@ -266,6 +267,69 @@ class PetabImporter(AmiciObjectBuilder):
             **kwargs)
 
         return obj
+
+    def create_prediction(self,
+                          objective: AmiciObjective = None,
+                          post_processor: Union[Callable, None] = None,
+                          post_processor_sensi: Union[Callable, None] = None,
+                          post_processor_time: Union[Callable, None] = None,
+                          max_chunk_size: Union[int, None] = None,
+                          observable_ids: Sequence[str] = None
+                          ) -> AmiciPredictor:
+        """Create a :class:`pypesto.prediction.AmiciPredictor`.
+
+        Parameters
+        ----------
+        objective:
+            An objective object, which will be used to get model simulations
+        post_processor:
+            A callable function which applies postprocessing to the simulation
+            results. Default are the observables of the amici model.
+            This method takes a list of ndarrays (as returned in the field
+            ['y'] of amici ReturnData objects) as input.
+        post_processor_sensi:
+            A callable function which applies postprocessing to the
+            sensitivities of the simulation results. Default are the
+            observable sensitivities of the amici model.
+            This method takes two lists of ndarrays (as returned in the
+            fields ['y'] and ['sy'] of amici ReturnData objects) as input.
+        post_processor_time:
+            A callable function which applies postprocessing to the timepoints
+            of the simulations. Default are the timepoints of the amici model.
+            This method takes a list of ndarrays (as returned in the field
+            ['t'] of amici ReturnData objects) as input.
+        max_chunk_size:
+            In some cases, we don't want to compute all predictions at once
+            when calling the prediction function, as this might not fit into
+            the memory for large datasets and models.
+            Here, the user can specify a maximum number of conditions, which
+            should be simulated at a time.
+            Default is 0 meaning that all conditions will be simulated.
+            Other values are only applicable, if an output file is specified.
+        observable_ids:
+            IDs of observables, if post-processing is used
+
+        Returns
+        -------
+        prediction:
+            A :class:`pypesto.prediction.AmiciPredictor` for the model, using
+            the observables of the Amici model and the timepoints from the
+            PEtab data
+        """
+        # if the user didn't pass an objective function, we create it first
+        if objective is None:
+            objective = self.create_objective()
+
+        # wrap around AmiciPredictor
+        prediction = AmiciPredictor(
+            amici_objective=objective,
+            post_processor=post_processor,
+            post_processor_sensi=post_processor_sensi,
+            post_processor_time=post_processor_time,
+            max_chunk_size=max_chunk_size,
+            observable_ids=observable_ids)
+
+        return prediction
 
     def create_prior(self) -> NegLogParameterPriors:
         """
