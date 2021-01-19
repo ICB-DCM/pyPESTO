@@ -29,10 +29,12 @@ Release notes
   * Additional NaN check for fval, grad and hessian (#521)
   * Add sanity checks for optimizer bounds (#516)
 
-* Improvements in saving the history:
+* Improvements in storage:
   * Fix hdf5 export of optimizer history (#536)
   * Fix reading `x_names` from hdf5 history (#528)
   * Storage does not save empty arrays (#489)
+  * hdf5 storage sampling (#546)
+  * hdf5 storage parameter profiles (#546)
 
 * Improvements in the visualization routines:
   * Plot parameter values as histogram (#485)
