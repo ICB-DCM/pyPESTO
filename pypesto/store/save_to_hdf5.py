@@ -139,11 +139,11 @@ class OptimizationResultHDF5Writer:
                 os.makedirs(basedir, exist_ok=True)
 
         with h5py.File(self.storage_filename, "a") as f:
+            check_overwrite(f, overwrite, 'optimization')
             optimization_grp = get_or_create_group(f, "optimization")
             # settings =
             # optimization_grp.create_dataset("settings", settings, dtype=)
             results_grp = get_or_create_group(optimization_grp, "results")
-            check_overwrite(f, overwrite, 'optimization')
 
             for start in result.optimize_result.list:
                 start_id = start['id']
@@ -189,8 +189,8 @@ class SamplingResultHDF5Writer:
                 os.makedirs(basedir, exist_ok=True)
 
         with h5py.File(self.storage_filename, "a") as f:
-            sampling_grp = get_or_create_group(f, "sampling")
             check_overwrite(f, overwrite, 'sampling')
+            sampling_grp = get_or_create_group(f, "sampling")
             results_grp = get_or_create_group(sampling_grp, "results")
 
             for key in result.sample_result.keys():
