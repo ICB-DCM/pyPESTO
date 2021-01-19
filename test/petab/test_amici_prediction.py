@@ -14,6 +14,7 @@ import pytest
 import libsbml
 import petab
 from pypesto.prediction import PredictionResult, PredictionConditionResult
+from pypesto.collections import Collection, CollectionPrediction
 
 
 
@@ -298,18 +299,41 @@ def test_petab_prediction():
     # create prediction via PAteb
     prediction = importer.create_prediction()
 
-    # run test
+    # ===== run test for prediction ===========================================
     p = prediction(np.array(petab_problem.x_nominal_free_scaled),
                    sensi_orders=(0, 1))
     check_outputs(p, out=(0, 1), n_cond=1, n_timepoints=10, n_obs=1, n_par=2)
 
-    # run test for an ensemble
+    # ===== run test for ensemble prediction ==================================
     # read a set of ensemble vectors from the csv
-    ensemble_file =  os.path.join(os.path.dirname(__file__), '..', '..', 'doc',
-                             'example', model_name, 'parameter_ensemble.tsv')
+    ensemble_file =  os.path.join(
+        os.path.dirname(__file__), '..', '..', 'doc', 'example', model_name,
+        'parameter_ensemble.tsv')
     ensemble = pypesto.collections.read_from_csv(ensemble_file)
+    isinstance(ensemble, Collection)
+
+    # perform a prediction for the ensemble
     ensemble_prediction = ensemble.predict(predictor=prediction)
+
+    # check some of the basic functionality: compressing output to large arrays
     ensemble_prediction.condense_to_arrays()
-    ensemble_prediction.compute_summary(percentiles=[5, 10, 20, 25, 50,
-                                                     75, 80, 90, 95])
-    print(ensemble_prediction)
+    for field in ('timepoints', 'output', 'output_sensi'):
+        isinstance(ensemble_prediction.prediction_arrays[field], np.ndarray)
+
+    # computing summaries
+    ensemble_prediction.compute_summary(percentiles_list=[5, 20, 80, 95])
+    isinstance(ensemble_prediction, CollectionPrediction)
+
+    # define some short hands
+    pred = ensemble_prediction.prediction_summary
+    keyset = {'mean', 'std', 'median', 'percentile 5', 'percentile 20',
+              'percentile 80', 'percentile 95'}
+    # check some properties
+    assert set(pred.keys()) == keyset
+    for key in keyset:
+        assert pred[key].comment == key
+
+    # check some particular properties of this example
+    assert pred['mean'].conditions[0].output[0,0] == 1.
+    assert pred['median'].conditions[0].output[0, 0] == 1.
+    assert pred['std'].conditions[0].output[0, 0] == 0.
