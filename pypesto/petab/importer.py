@@ -5,10 +5,11 @@ import importlib
 import shutil
 import logging
 import tempfile
-from typing import List, Sequence, Union
+from typing import Iterable, List, Optional, Sequence, Union, Callable
 
 from ..problem import Problem
 from ..objective import AmiciObjective, AmiciObjectBuilder, AggregatedObjective
+from ..prediction import AmiciPredictor
 from ..objective.priors import NegLogParameterPriors, \
     get_parameter_prior_dict
 
@@ -267,6 +268,69 @@ class PetabImporter(AmiciObjectBuilder):
 
         return obj
 
+    def create_prediction(self,
+                          objective: AmiciObjective = None,
+                          post_processor: Union[Callable, None] = None,
+                          post_processor_sensi: Union[Callable, None] = None,
+                          post_processor_time: Union[Callable, None] = None,
+                          max_chunk_size: Union[int, None] = None,
+                          observable_ids: Sequence[str] = None
+                          ) -> AmiciPredictor:
+        """Create a :class:`pypesto.prediction.AmiciPredictor`.
+
+        Parameters
+        ----------
+        objective:
+            An objective object, which will be used to get model simulations
+        post_processor:
+            A callable function which applies postprocessing to the simulation
+            results. Default are the observables of the amici model.
+            This method takes a list of ndarrays (as returned in the field
+            ['y'] of amici ReturnData objects) as input.
+        post_processor_sensi:
+            A callable function which applies postprocessing to the
+            sensitivities of the simulation results. Default are the
+            observable sensitivities of the amici model.
+            This method takes two lists of ndarrays (as returned in the
+            fields ['y'] and ['sy'] of amici ReturnData objects) as input.
+        post_processor_time:
+            A callable function which applies postprocessing to the timepoints
+            of the simulations. Default are the timepoints of the amici model.
+            This method takes a list of ndarrays (as returned in the field
+            ['t'] of amici ReturnData objects) as input.
+        max_chunk_size:
+            In some cases, we don't want to compute all predictions at once
+            when calling the prediction function, as this might not fit into
+            the memory for large datasets and models.
+            Here, the user can specify a maximum number of conditions, which
+            should be simulated at a time.
+            Default is 0 meaning that all conditions will be simulated.
+            Other values are only applicable, if an output file is specified.
+        observable_ids:
+            IDs of observables, if post-processing is used
+
+        Returns
+        -------
+        prediction:
+            A :class:`pypesto.prediction.AmiciPredictor` for the model, using
+            the observables of the Amici model and the timepoints from the
+            PEtab data
+        """
+        # if the user didn't pass an objective function, we create it first
+        if objective is None:
+            objective = self.create_objective()
+
+        # wrap around AmiciPredictor
+        prediction = AmiciPredictor(
+            amici_objective=objective,
+            post_processor=post_processor,
+            post_processor_sensi=post_processor_sensi,
+            post_processor_time=post_processor_time,
+            max_chunk_size=max_chunk_size,
+            observable_ids=observable_ids)
+
+        return prediction
+
     def create_prior(self) -> NegLogParameterPriors:
         """
         Creates a prior from the parameter table. Returns None, if no priors
@@ -304,8 +368,26 @@ class PetabImporter(AmiciObjectBuilder):
         else:
             return None
 
+    def create_startpoint_method(self):
+        """
+        Creates a startpoint method, if the PEtab problem specifies an
+        initializationPrior. Returns None, if no initializationPrior
+        is specified.
+        """
+        if petab.INITIALIZATION_PRIOR_TYPE \
+                not in self.petab_problem.parameter_df:
+            return None
+
+        def startpoint_method(n_starts: int, **kwargs):
+            return petab.sample_parameter_startpoints(
+                self.petab_problem.parameter_df,
+                n_starts=n_starts)
+
+        return startpoint_method
+
     def create_problem(
-            self, objective: AmiciObjective = None, **kwargs
+            self, objective: AmiciObjective = None,
+            x_guesses: Optional[Iterable[float]] = None, **kwargs
     ) -> Problem:
         """Create a :class:`pypesto.Problem`.
 
@@ -313,6 +395,10 @@ class PetabImporter(AmiciObjectBuilder):
         ----------
         objective:
             Objective as created by `create_objective`.
+        x_guesses:
+            Guesses for the parameter values, shape (g, dim), where g denotes
+            the number of guesses. These are used as start points in the
+            optimization.
         **kwargs:
             Additional key word arguments passed on to the objective,
             if not provided.
@@ -340,6 +426,8 @@ class PetabImporter(AmiciObjectBuilder):
             ub=self.petab_problem.ub_scaled,
             x_fixed_indices=self.petab_problem.x_fixed_indices,
             x_fixed_vals=self.petab_problem.x_nominal_fixed_scaled,
+            x_guesses=x_guesses,
+            startpoint_method=self.create_startpoint_method(),
             x_names=self.petab_problem.x_ids,
             x_scales=x_scales,
             x_priors_defs=prior)
