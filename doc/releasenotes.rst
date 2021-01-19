@@ -6,6 +6,38 @@ Release notes
 ..........
 
 
+0.2.2 (2021-01-18)
+------------------
+
+* New Optimizers:
+  * FIDES (#506, #503 # 500)
+  * NLopt (#493)
+* Extended PEtab support:
+  * PySB import (#437)
+  * Support of PEtab's initializationPriors (#535)
+  * Support of prior parameterScale{Normal,Laplace}  (#520)
+  * Example notebook for synthetic data generation (#482)
+* General new and improved functionality:
+  * Predictions (#544)
+  * Move tests to GitHub Actions (#524)
+  * Parallelize profile calculation (#532)
+  * Save `x_guesses` in `pypesto.problem` (#494)
+  * Improved finite difference gradients (#464)
+  * Support of unconstrained optimization (#519)
+  * Additional NaN check for fval, grad and hessian (#521)
+  * Add sanity checks for optimizer bounds (#516)
+* Improvements in saving the history:
+  * Fix hdf5 export of optimizer history (#536)
+  * Fix reading `x_names` from hdf5 history (#528)
+  * Storage does not save empty arrays (#489)
+* Improvements in the visualization routines:
+  * Plot parameter values as histogram (#485)
+  * Fix y axis limits in waterfall plots (#503)
+  * Fix color scheme in visualization (#498)
+  * Improved visualization of optimization results (#486)
+* Several small bug fixes (#547, #541, #538, #533, #512, #508)
+
+
 0.2.2 (2020-10-05)
 ------------------
 
