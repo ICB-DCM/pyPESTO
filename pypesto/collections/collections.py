@@ -3,7 +3,11 @@ import pandas as pd
 from typing import Sequence, Tuple, Callable
 
 from ..prediction import PredictionResult, PredictionConditionResult
-from .constants import *
+from .constants import (PREDICTOR, PREDICTION_ID, PREDICTION_RESULTS,
+                        PREDICTION_ARRAYS, PREDICTION_SUMMARY, OUTPUT,
+                        OUTPUT_SENSI, TIMEPOINTS, X_VECTOR, NX, X_NAMES,
+                        NVECTORS, VECTOR_TAGS, PREDICTIONS, MODE_FUN,
+                        CollectionType, COLLECTION_TYPE)
 
 
 class CollectionPrediction:

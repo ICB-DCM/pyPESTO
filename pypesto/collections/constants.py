@@ -32,6 +32,7 @@ CSV = 'csv'  # return file format
 H5 = 'h5'  # return file format
 TIME = 'time'  # column name in returned csv
 
+
 class CollectionType(Enum):
     ensemble = 1
     sample = 2
