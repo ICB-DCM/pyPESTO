@@ -9,6 +9,7 @@ import pypesto.collections
 import os
 import sys
 import numpy as np
+import pandas as pd
 import shutil
 import pytest
 import libsbml
@@ -309,12 +310,23 @@ def test_petab_prediction():
     ensemble_file =  os.path.join(
         os.path.dirname(__file__), '..', '..', 'doc', 'example', model_name,
         'parameter_ensemble.tsv')
-    ensemble = pypesto.collections.read_from_csv(ensemble_file)
+    ensemble = pypesto.collections.read_from_csv(
+        ensemble_file, lower_bound=petab_problem.get_lb(),
+        upper_bound=petab_problem.get_ub())
     isinstance(ensemble, Collection)
+
+    # check summary creation and identifiability analysis
+    summary = ensemble.compute_summary(percentiles_list=[10, 25, 75, 90])
+    assert isinstance(summary, dict)
+    assert set(summary.keys()) == {'mean', 'std', 'median', 'percentile 10',
+                                   'percentile 25', 'percentile 75',
+                                   'percentile 90'}
+
+    parameter_identifiability = ensemble.check_identifiability()
+    assert isinstance(parameter_identifiability, pd.DataFrame)
 
     # perform a prediction for the ensemble
     ensemble_prediction = ensemble.predict(predictor=prediction)
-
     # check some of the basic functionality: compressing output to large arrays
     ensemble_prediction.condense_to_arrays()
     for field in ('timepoints', 'output', 'output_sensi'):

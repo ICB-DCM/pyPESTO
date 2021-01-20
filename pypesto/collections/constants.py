@@ -20,6 +20,12 @@ PREDICTION_RESULTS = 'predction_results'
 PREDICTION_ARRAYS = 'prediction_arrays'
 PREDICTION_SUMMARY = 'prediction_summary'
 
+MEAN = 'mean'
+MEDIAN = 'median'
+STANDARD_DEVIATION = 'std'
+PERCENTILE = 'percentile'
+SUMMARY = 'summary'
+
 X_NAMES = 'x_names'
 NX = 'n_x'
 X_VECTOR = 'x_vectors'
@@ -27,6 +33,9 @@ NVECTORS = 'n_vectors'
 VECTOR_TAGS = 'vector_tags'
 COLLECTION_TYPE = 'coll_type'
 PREDICTIONS = 'predictions'
+
+LOWER_BOUND = 'lower_bound'
+UPPER_BOUND = 'upper_bound'
 
 CSV = 'csv'  # return file format
 H5 = 'h5'  # return file format

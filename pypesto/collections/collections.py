@@ -1,13 +1,15 @@
 import numpy as np
 import pandas as pd
-from typing import Sequence, Tuple, Callable
+from typing import Sequence, Tuple, Callable, Dict
 
 from ..prediction import PredictionResult, PredictionConditionResult
 from .constants import (PREDICTOR, PREDICTION_ID, PREDICTION_RESULTS,
                         PREDICTION_ARRAYS, PREDICTION_SUMMARY, OUTPUT,
                         OUTPUT_SENSI, TIMEPOINTS, X_VECTOR, NX, X_NAMES,
                         NVECTORS, VECTOR_TAGS, PREDICTIONS, MODE_FUN,
-                        CollectionType, COLLECTION_TYPE)
+                        CollectionType, COLLECTION_TYPE, MEAN, MEDIAN,
+                        STANDARD_DEVIATION, PERCENTILE, SUMMARY, LOWER_BOUND,
+                        UPPER_BOUND)
 
 
 class CollectionPrediction:
@@ -20,7 +22,9 @@ class CollectionPrediction:
     def __init__(self,
                  predictor: Callable,
                  prediction_id: str = None,
-                 prediction_results: Sequence[PredictionResult] = None):
+                 prediction_results: Sequence[PredictionResult] = None,
+                 lower_bound: Sequence[np.ndarray] = None,
+                 upper_bound: Sequence[np.ndarray] = None):
         """
         Constructor.
 
@@ -32,6 +36,13 @@ class CollectionPrediction:
             Identifier for the predictions
         prediction_results:
             List of Prediction results
+        lower_bound:
+            array of potential lower bounds for the parameters, should have the
+            same shape as the output of the predictions, i.e., a list of numpy
+            array (one list entry per condition), with the arrays having the
+            shape of n_timpoints x n_outputs for each condition
+        upper_bound:
+            array of potential upper bounds for the parameters
         """
         self.predictor = predictor
         self.prediction_id = prediction_id
@@ -39,10 +50,14 @@ class CollectionPrediction:
         if prediction_results is None:
             self.prediction_results = []
 
+        # handle bounds
+        self.lower_bound = lower_bound
+        self.upper_bound = upper_bound
+
         self.prediction_arrays = None
-        self.prediction_summary = {'mean': None,
-                                   'std': None,
-                                   'median': None}
+        self.prediction_summary = {MEAN: None,
+                                   STANDARD_DEVIATION: None,
+                                   MEDIAN: None}
 
     def __iter__(self):
         yield PREDICTOR, self.predictor
@@ -50,6 +65,8 @@ class CollectionPrediction:
         yield PREDICTION_RESULTS, self.prediction_results
         yield PREDICTION_ARRAYS, self.prediction_arrays
         yield PREDICTION_SUMMARY, self.prediction_summary
+        yield LOWER_BOUND, self.lower_bound
+        yield UPPER_BOUND, self.upper_bound
 
     def condense_to_arrays(self):
         """
@@ -93,7 +110,8 @@ class CollectionPrediction:
         }
 
     def compute_summary(self,
-                        percentiles_list: Sequence[int] = (5, 20, 80, 95)):
+                        percentiles_list: Sequence[int] = (5, 20, 80, 95)
+        ) -> Dict:
         """
         This function computes the mean, the median, the standard deviation
         and possibly percentiles from the collection prediction results.
@@ -104,6 +122,12 @@ class CollectionPrediction:
         ----------
         percentiles_list:
             List or tuple of percent numbers for the percentiles
+
+        Returns
+        -------
+        summary:
+            dictionary of predictions results with the keys mean, std, median,
+            percentiles, ...
         """
         # check if prediction results are available
         if not self.prediction_results:
@@ -147,22 +171,18 @@ class CollectionPrediction:
             requested percentiles for a set of stacked simulations
             """
             summary = {}
-            summary['mean'] = np.mean(tmp_array, axis=-1)
-            summary['std'] = np.std(tmp_array, axis=-1)
-            summary['median'] = np.median(tmp_array, axis=-1)
+            summary[MEAN] = np.mean(tmp_array, axis=-1)
+            summary[STANDARD_DEVIATION] = np.std(tmp_array, axis=-1)
+            summary[MEDIAN] = np.median(tmp_array, axis=-1)
             for perc in percentiles_list:
-                summary[f'percentile {perc}'] = np.percentile(tmp_array,
-                                                              perc, axis=-1)
+                summary[f'{PERCENTILE} {perc}'] = np.percentile(tmp_array,
+                                                                perc, axis=-1)
             return summary
 
         # preallocate for results
-        cond_lists = {
-            'mean': [],
-            'std': [],
-            'median': []
-        }
+        cond_lists = {MEAN: [], STANDARD_DEVIATION: [], MEDIAN: []}
         for perc in percentiles_list:
-            cond_lists[f'percentile {perc}'] = []
+            cond_lists[f'{PERCENTILE} {perc}'] = []
 
         # iterate over conditions, compute summary
         for i_cond in range(n_conditions):
@@ -206,6 +226,9 @@ class CollectionPrediction:
             for i_key in cond_lists.keys()
         }
 
+        # also return the object
+        return self.prediction_summary
+
 
 class Collection:
     """
@@ -217,7 +240,9 @@ class Collection:
                  x_names: Sequence[str] = None,
                  vector_tags: Tuple[int, int] = None,
                  coll_type: CollectionType = None,
-                 predictions: Sequence[CollectionPrediction] = None, ):
+                 predictions: Sequence[CollectionPrediction] = None,
+                 lower_bound: np.ndarray = None,
+                 upper_bound: np.ndarray = None):
         """
         Constructor.
 
@@ -227,7 +252,7 @@ class Collection:
             parameter vectors of the collection, in the format
             n_parameter x n_vectors
         x_names:
-            Nmes or identifiers of the parameters
+            Names or identifiers of the parameters
         vector_tags:
             Additional tag, which adds information about the the parameter
             vectors of the form (optimization_run, optimization_step) if the
@@ -240,6 +265,10 @@ class Collection:
             collection of parameters
         predictions:
             List of CollectionPrediction objects
+        lower_bound:
+            array of potential lower bounds for the parameters
+        upper_bound:
+            array of potential upper bounds for the parameters
         """
 
         # handle parameter vectors and sizes
@@ -247,6 +276,15 @@ class Collection:
         self.n_x = x_vectors.shape[0]
         self.n_vectors = x_vectors.shape[1]
         self.vector_tags = vector_tags
+        self.summary = None
+
+        # store bounds
+        self.lower_bound = np.full((self.n_x,),np.nan)
+        if lower_bound is not None:
+            self.lower_bound = lower_bound
+        self.upper_bound = np.full((self.n_x,), np.nan)
+        if upper_bound is not None:
+            self.upper_bound = upper_bound
 
         # handle parameter names
         if x_names is not None:
@@ -272,6 +310,9 @@ class Collection:
         yield VECTOR_TAGS, self.vector_tags
         yield COLLECTION_TYPE, self.coll_type
         yield PREDICTIONS, self.predictions
+        yield SUMMARY, self.summary
+        yield LOWER_BOUND, self.lower_bound
+        yield UPPER_BOUND, self.upper_bound
 
     def predict(self,
                 predictor: Callable,
@@ -311,12 +352,93 @@ class Collection:
                                     prediction_id=prediction_id,
                                     prediction_results=prediction_results)
 
+    def compute_summary(self,
+                        percentiles_list: Sequence[int] = (5, 20, 80, 95)):
+        """
+        This function computes the mean, the median, the standard deviation
+        and possibly percentiles for the parameters of the collection.
+        Those summary results are added as a data member to the
+        CollectionPrediction object.
+
+        Parameters
+        ----------
+        percentiles_list:
+            List or tuple of percent numbers for the percentiles
+
+        Returns
+        -------
+        summary:
+            Dict with mean, std, median, and percentiles of parameter vectors
+        """
+        # compute summaries based on parameters
+        summary = {MEAN: np.mean(self.x_vectors, axis=1),
+                   STANDARD_DEVIATION: np.std(self.x_vectors, axis=1),
+                   MEDIAN: np.median(self.x_vectors, axis=1)}
+        for perc in percentiles_list:
+            summary[f'{PERCENTILE} {perc}'] = np.percentile(self.x_vectors,
+                                                            perc, axis=1)
+        # store and return results
+        self.summary = summary
+        return summary
+
+    def check_identifiability(self) -> pd.DataFrame:
+        """
+        This functions uses ensemble mean and standard deviation to assess
+        (in a rudimentary way) whether or not parameters are identifiable.
+        It returns a dataframe with tuples, which specify whether or not the
+        lower and the upper bound are violated
+
+        Returns
+        -------
+        parameter_identifiability:
+            DataFrame indicating parameter identifiability based on mean
+            plus/minus standard deviations and parameter bounds
+        """
+        # first check if summary was computed. If not, do so
+        if self.summary is None:
+            self.compute_summary()
+
+        # check identifiability for each parameter
+        parameter_identifiability = []
+        for ix, x_name in enumerate(self.x_names):
+            # define some short hands
+            lb = self.lower_bound[ix]
+            ub = self.upper_bound[ix]
+            mean = self.summary[MEAN][ix]
+            std = self.summary[STANDARD_DEVIATION][ix]
+            median = self.summary[MEAN][ix]
+
+            # create dict of identifiability
+            parameter_identifiability.append({
+                'parameterId': x_name,
+                'lowerBound': lb,
+                'upperBound': ub,
+                'collection_mean': mean,
+                'collection_std': std,
+                'collection_median': median,
+                'within lb: 1 std': lb < mean - std,
+                'within ub: 1 std': ub > mean + std,
+                'within lb: 2 std': lb < mean - 2 * std,
+                'within ub: 2 std': ub > mean + 2 * std,
+                'within lb: 3 std': lb < mean - 3 * std,
+                'within ub: 3 std': ub > mean + 3 * std,
+            })
+
+        # create DataFrame
+        parameter_identifiability = pd.DataFrame(parameter_identifiability)
+        parameter_identifiability.index = \
+            parameter_identifiability['parameterId']
+
+        return parameter_identifiability
+
 
 def read_from_csv(path: str,
                   sep: str = '\t',
                   index_col: int = 0,
                   headline_parser: Callable = None,
-                  coll_type: CollectionType = None):
+                  coll_type: CollectionType = None,
+                  lower_bound: np.ndarray = None,
+                  upper_bound: np.ndarray = None):
     """
     function for creating an ensemble from a csv file
 
@@ -333,6 +455,10 @@ def read_from_csv(path: str,
         into vector_tags (see constructor of Collection for more details)
     coll_type:
         Collection type: representative sample or random ensemble
+    lower_bound:
+        array of potential lower bounds for the parameters
+    upper_bound:
+        array of potential upper bounds for the parameters
 
     Returns
     -------
@@ -352,4 +478,6 @@ def read_from_csv(path: str,
     return Collection(x_vectors=collection_df.values,
                       x_names=list(collection_df.index),
                       vector_tags=vector_tags,
-                      coll_type=coll_type)
+                      coll_type=coll_type,
+                      lower_bound=lower_bound,
+                      upper_bound=upper_bound)
