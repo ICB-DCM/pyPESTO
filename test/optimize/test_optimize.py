@@ -187,6 +187,9 @@ def check_minimize(objective, library, solver, allow_failed_starts=False):
     )
 
     assert isinstance(result.optimize_result.list[0]['fval'], float)
-    if (library, solver) not in [('scipy', 'ls_trf'), ('scipy', 'ls_dogbox')]:
+    if (library, solver) not in [
+            ('scipy', 'ls_trf'),
+            ('scipy', 'ls_dogbox'),
+            ('nlopt', 9)]:
         assert np.isfinite(result.optimize_result.list[0]['fval'])
         assert result.optimize_result.list[0]['x'] is not None
