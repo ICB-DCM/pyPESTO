@@ -1,66 +1,65 @@
 import matplotlib.pyplot as plt
 from matplotlib.ticker import MaxNLocator
 import numpy as np
-from .reference_points import create_references
-from .clust_color import assign_colors
-from .clust_color import delete_nan_inf
-from .misc import process_result_list
-from .misc import process_y_limits
-from .misc import process_offset_y
+from .reference_points import create_references, ReferencePoint
+from .clust_color import assign_colors, delete_nan_inf, RGBA
+from .misc import (
+    process_result_list, process_start_indices, process_y_limits,
+    process_offset_y
+)
 
 from pypesto import Result
-from typing import Iterable, Optional
+from typing import Optional, Union, Sequence, Tuple, List
 
 
-def waterfall(results,
-              ax=None,
-              size=(18.5, 10.5),
-              y_limits=None,
-              scale_y='log10',
-              offset_y=None,
-              start_indices=None,
-              reference=None,
-              colors=None,
-              legends=None):
+def waterfall(results: Union[Result, Sequence[Result]],
+              ax: Optional[plt.Axes] = None,
+              size: Optional[Tuple[float]] = (18.5, 10.5),
+              y_limits: Optional[Tuple[float]] = None,
+              scale_y: Optional[str] = 'log10',
+              offset_y: Optional[float] = None,
+              start_indices: Optional[Union[Sequence[int], int]] = None,
+              reference: Optional[Sequence[ReferencePoint]] = None,
+              colors: Optional[Union[RGBA, Sequence[RGBA]]] = None,
+              legends: Optional[Union[Sequence[str], str]] = None):
     """
     Plot waterfall plot.
 
     Parameters
     ----------
 
-    results: pypesto.Result or list
+    results:
         Optimization result obtained by 'optimize.py' or list of those
 
     ax: matplotlib.Axes, optional
         Axes object to use.
 
-    size: tuple, optional
+    size:
         Figure size (width, height) in inches. Is only applied when no ax
         object is specified
 
     y_limits: float or ndarray, optional
         maximum value to be plotted on the y-axis, or y-limits
 
-    scale_y: str, optional
+    scale_y:
         May be logarithmic or linear ('log10' or 'lin')
 
     offset_y:
         offset for the y-axis, if it is supposed to be in log10-scale
 
-    start_indices: list or int
-        list of integers specifying the multistart to be plotted or
-        int specifying up to which start index should be plotted
+    start_indices:
+        Integers specifying the multistart to be plotted or int specifying
+        up to which start index should be plotted
 
-    reference: list, optional
-        List of reference points for optimization results, containing et
-        least a function value fval
+    reference:
+        Reference points for optimization results, containing at least a
+        function value fval
 
-    colors: list, or RGBA, optional
-        list of colors, or single color
-        color or list of colors for plotting. If not set, clustering is done
+    colors:
+        Colors or single color  for plotting. If not set, clustering is done
         and colors are assigned automatically
 
-    legends: list or str
+    legends:
         Labels for line plots, one label per result object
 
     Returns
@@ -69,35 +68,31 @@ def waterfall(results,
     ax: matplotlib.Axes
         The plot axes.
     """
-    if isinstance(start_indices, int):
-        start_indices = list(range(start_indices))
 
     # parse input
     (results, colors, legends) = process_result_list(results, colors, legends)
 
+    refs = create_references(references=reference)
+
     # precompute y-offset, if needed and if a list of results was passed
-    if offset_y is None and len(results) > 1 and scale_y == 'log10':
-        offset_y = process_offset_for_list(results, scale_y)
+    fvals_all, offset_y = process_offset_for_list(offset_y, results, scale_y,
+                                                  start_indices, refs)
 
     # plotting routine needs the maximum number of multistarts
     max_len_fvals = np.array([0])
 
     # loop over results
-    for j, result in enumerate(results):
+    for j, fvals in enumerate(fvals_all):
         # extract specific cost function values from result
-        (fvals, offset_y) = get_fvals(result, scale_y, offset_y, start_indices)
-        max_len_fvals = np.max([max_len_fvals, len(fvals)])
+        max_len_fvals = np.max([max_len_fvals, *fvals.shape])
 
         # call lowlevel plot routine
         ax = waterfall_lowlevel(fvals=fvals, scale_y=scale_y,
                                 offset_y=offset_y, ax=ax, size=size,
                                 colors=colors[j], legend_text=legends[j])
 
-    # parse and apply plotting options
-    ref = create_references(references=reference)
-
     # apply changes specified be the user to the axis object
-    ax = handle_options(ax, max_len_fvals, ref, y_limits, offset_y)
+    ax = handle_options(ax, max_len_fvals, refs, y_limits, offset_y)
 
     return ax
 
@@ -213,101 +208,72 @@ def waterfall_lowlevel(fvals, scale_y='log10', offset_y=0., ax=None,
     return ax
 
 
-def get_fvals(result: Result,
-              scale_y: str,
-              offset_y: float,
-              start_indices: Optional[Iterable[int]] = None):
-    """
-    Get function values to be plotted later from results.
-
-    Parameters
-    ----------
-
-    result: pypesto.Result
-        Optimization result obtained by 'optimize.py'
-
-    scale_y: str, optional
-        May be logarithmic or linear ('log10' or 'lin')
-
-    offset_y:
-        offset for the y-axis, if it is supposed to be in log10-scale
-
-    start_indices:
-        list of integers specifying the multistart to be plotted or
-        int specifying up to which start index should be plotted
-
-    Returns
-    -------
-
-    fvals: ndarray
-        function values
-
-    offset_y:
-        offset for the y-axis, if this is supposed to be in log10-scale
-    """
-
-    # extract cost function values from result
-    fvals = np.array(result.optimize_result.get_for_key('fval'))
-
-    # get list of indices
-    if start_indices is None:
-        start_indices = np.array(range(len(fvals)))
-    else:
-        # check whether list or maximum value
-        start_indices = np.array(start_indices)
-
-        # check, whether index set is not too big
-        existing_indices = np.array(range(len(fvals)))
-        start_indices = np.intersect1d(start_indices, existing_indices)
-
-    # reduce to indices for which the user asked
-    fvals = fvals[start_indices]
-
-    # get the minimal value which should be plotted,
-    # avoid the value being -inf or nan
-    min_val = np.nanmin(fvals[fvals != -np.inf])
-
-    # check, whether offset can be used with this data
-    offset_y = process_offset_y(offset_y, scale_y, float(min_val))
-
-    # apply offset
-    if offset_y != 0.:
-        fvals += offset_y * np.ones(fvals.shape)
-
-    # get only the indices which the user asked for
-    return fvals, offset_y
-
-
-def process_offset_for_list(results: Iterable[Result],
-                            scale_y: str) -> float:
+def process_offset_for_list(
+        offset_y: float,
+        results: Sequence[Result],
+        scale_y: Optional[str],
+        start_indices: Optional[Sequence[int]] = None,
+        references: Optional[Sequence[ReferencePoint]] = None,
+) -> Tuple[List[np.ndarray], float]:
     """
     If we have a list of results, all should use the same offset_y,
-    which is computed by this function.
+    which is computed by this function and added to the fvals
 
     Parameters
     ----------
 
-    results: list of pypesto.Result
-        list of Optimization results obtained by 'optimize.py'
+    offset_y:
+        User provided offset_y
 
-    scale_y: str, optional
+    results:
+        Optimization results obtained by 'optimize.py'
+
+    scale_y:
         May be logarithmic or linear ('log10' or 'lin')
+
+    start_indices:
+        Integers specifying the multistart to be plotted or int specifying
+        up to which start index should be plotted
+
+
+    references:
+        Reference points that will be plotted along with the results
 
     Returns
     -------
+
+    fvals:
+        List of arrays of function values for each result
 
     offset_y:
         offset for the y-axis
     """
+    min_val = 0.0
+    fvals_all = []
+    for result in results:
+        fvals = np.asarray([
+            np.array(result.optimize_result.get_for_key('fval'))
+        ])
+        if start_indices is None:
+            start_indices = np.array(range(len(fvals)))
+        else:
+            start_indices = process_start_indices(start_indices, len(fvals))
+        fvals = fvals[start_indices]
+        # if none of the fvals are finite, set default value to zero as
+        # np.nanmin will error for an empty array
+        if np.isfinite(fvals).any():
+            min_val = min(min_val, np.nanmin(fvals[np.isfinite(fvals)]))
 
-    fvals = np.concatenate([
-        np.array(result.optimize_result.get_for_key('fval'))
-        for result in results
-    ])
-    min_val = np.nanmin(fvals[np.isfinite(fvals)])
-    offset_y = process_offset_y(None, scale_y, float(min_val))
+        fvals_all.append(fvals)
 
-    return offset_y
+    # if there are references, also account for those
+    if references:
+        min_val = min(min_val, np.nanmin([r['fval'] for r in references]))
+
+    offset_y = process_offset_y(offset_y, scale_y, float(min_val))
+
+    # return offsetted values
+    return [fvals + offset_y for fvals in fvals_all], offset_y
 
 
 def handle_options(ax, max_len_fvals, ref, y_limits, offset_y):
