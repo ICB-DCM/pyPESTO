@@ -64,7 +64,8 @@ class CollectionPrediction:
         yield PREDICTION_ID, self.prediction_id
         yield PREDICTION_RESULTS, self.prediction_results
         yield PREDICTION_ARRAYS, self.prediction_arrays
-        yield PREDICTION_SUMMARY, self.prediction_summary
+        yield PREDICTION_SUMMARY, {i_key: dict(self.prediction_summary[i_key])
+                                   for i_key in self.prediction_summary.keys()}
         yield LOWER_BOUND, self.lower_bound
         yield UPPER_BOUND, self.upper_bound
 
@@ -309,7 +310,7 @@ class Collection:
         yield NVECTORS, self.n_vectors
         yield VECTOR_TAGS, self.vector_tags
         yield COLLECTION_TYPE, self.coll_type
-        yield PREDICTIONS, dict(self.predictions)
+        yield PREDICTIONS, self.predictions
         yield SUMMARY, self.summary
         yield LOWER_BOUND, self.lower_bound
         yield UPPER_BOUND, self.upper_bound
