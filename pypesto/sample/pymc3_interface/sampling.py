@@ -253,7 +253,7 @@ class ResumablePymc3Sampler:
 
         if tuning_samples_left > 0:
             self._init_step(True)
-            self._sample(tuning_samples_left, True, warn)
+            self._sample(tuning_samples_left, True, warn, False)
 
         elif tuning_samples_left == 0:
             if not quiet:
@@ -267,20 +267,20 @@ class ResumablePymc3Sampler:
                             'Since .sample(draws) has already been called, '
                             'no additional tuning is possible')
 
-    def sample(self, draws: int, *, warn: bool = True):
+    def sample(self, draws: int, *, warn: bool = True, rethrow: bool = False):
         if draws < 1:
             raise ValueError("Argument `draws` must be greater than 0.")
         self.tune(quiet=True)
         assert self.target_tune == self.num_tune
         self._init_step(False)
-        self._sample(draws, False, warn)
+        self._sample(draws, False, warn, rethrow)
 
-    def _sample(self, draws: int, tuning: bool, warn: bool):
+    def _sample(self, draws: int, tuning: bool, warn: bool, rethrow: bool):
         if self._keep_hdf5_open and isinstance(self._strace, HDF5):
             with self._strace.activate_file:
-                self.__sample(draws, tuning, warn)
+                self.__sample(draws, tuning, warn, rethrow)
         else:
-            self.__sample(draws, tuning, warn)
+            self.__sample(draws, tuning, warn, rethrow)
 
     def _setup_trace(self, draws=0, chain=0):
         step, strace = self._step, self._strace
@@ -289,7 +289,7 @@ class ResumablePymc3Sampler:
         else:
             strace.setup(draws, chain)
 
-    def __sample(self, draws: int, tuning: bool, warn: bool):
+    def __sample(self, draws: int, tuning: bool, warn: bool, rethrow: bool):
         assert draws >= 1
         point = self._cur_point
         step, strace = self._step, self._strace
@@ -336,6 +336,8 @@ class ResumablePymc3Sampler:
         #          will we get many duplicates?
         except:
             self._cur_point = None  # invalidate current point
+            if rethrow:
+                raise
         else:
             assert strace.draw_idx == strace.draws
             self._cur_point = point
