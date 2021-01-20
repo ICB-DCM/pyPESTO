@@ -309,7 +309,7 @@ class Collection:
         yield NVECTORS, self.n_vectors
         yield VECTOR_TAGS, self.vector_tags
         yield COLLECTION_TYPE, self.coll_type
-        yield PREDICTIONS, self.predictions
+        yield PREDICTIONS, dict(self.predictions)
         yield SUMMARY, self.summary
         yield LOWER_BOUND, self.lower_bound
         yield UPPER_BOUND, self.upper_bound

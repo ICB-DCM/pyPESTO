@@ -3,7 +3,7 @@ from typing import Sequence, Union, Callable, Tuple, List
 
 from .constants import (MODE_FUN, OBSERVABLE_IDS, TIMEPOINTS, OUTPUT,
                         OUTPUT_SENSI, CSV, H5, AMICI_T, AMICI_X, AMICI_SX,
-                        AMICI_Y, AMICI_SY, AMICI_STATUS, RDATAS)
+                        AMICI_Y, AMICI_SY, AMICI_STATUS, RDATAS, PARAMETER_IDS)
 from .prediction import PredictionResult
 from ..objective import AmiciObjective
 
@@ -135,7 +135,8 @@ class AmiciPredictor:
         n_cond = len(timepoints)
         for i_cond in range(n_cond):
             result = {TIMEPOINTS: timepoints[i_cond],
-                      OBSERVABLE_IDS: self.observable_ids}
+                      OBSERVABLE_IDS: self.observable_ids,
+                      PARAMETER_IDS: self.amici_objective.x_names}
             if outputs:
                 result[OUTPUT] = outputs[i_cond]
             if outputs_sensi:
