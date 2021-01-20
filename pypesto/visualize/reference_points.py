@@ -77,13 +77,13 @@ class ReferencePoint(dict):
                 self.x = np.array(x)
             else:
                 raise ValueError('Parameter vector x not passed, but is a '
-                                 'manadatory input when creating a reference '
+                                 'mandatory input when creating a reference '
                                  'point. Stopping.')
             if fval is not None:
                 self.fval = fval
             else:
                 raise ValueError('Objective value fval not passed, but is a '
-                                 'manadatory input when creating a reference '
+                                 'mandatory input when creating a reference '
                                  'point. Stopping.')
             if color is not None:
                 self.color = color

@@ -11,7 +11,8 @@ import numpy as np
 import pandas as pd
 import copy
 
-from typing import Iterable, List, Optional, Union, SupportsFloat, SupportsInt
+from typing import Iterable, List, Optional, Union, SupportsFloat, \
+    SupportsInt, Callable
 
 from .objective import ObjectiveBase
 from .objective.priors import NegLogPriors
@@ -32,7 +33,12 @@ class Problem:
         The objective function for minimization. Note that a shallow copy
         is created.
     lb, ub:
-        The lower and upper bounds. For unbounded directions set to inf.
+        The lower and upper bounds for optimization. For unbounded directions
+        set to +-inf.
+    lb_init, ub_init:
+        The lower and upper bounds for initialization, typically for defining
+        search start points.
+        If not set, set to lb, ub.
     dim_full:
         The full dimension of the problem, including fixed parameters.
     x_fixed_indices:
@@ -44,6 +50,9 @@ class Problem:
     x_guesses:
         Guesses for the parameter values, shape (g, dim), where g denotes the
         number of guesses. These are used as start points in the optimization.
+    startpoint_method:
+        Callable. `startpoint_method(n_starts)` returns a
+        n_starts x n_free_indices array of initial values for the optimization.
     x_names:
         Parameter names that can be optionally used e.g. in visualizations.
         If objective.get_x_names() is not None, those values are used,
@@ -57,12 +66,6 @@ class Problem:
     x_priors_defs:
         Definitions of priors for parameters. Types of priors, and their
         required and optional parameters, are described in the `Prior` class.
-    dim:
-        The number of non-fixed parameters.
-        Computed from the other values.
-    x_free_indices: array_like of int
-        Vector containing the indices (zero-based) of free parameters
-        (complimentary to x_fixed_indices).
 
     Notes
     -----
@@ -87,15 +90,25 @@ class Problem:
                  x_fixed_indices: Optional[SupportsIntIterableOrValue] = None,
                  x_fixed_vals: Optional[SupportsFloatIterableOrValue] = None,
                  x_guesses: Optional[Iterable[float]] = None,
+                 startpoint_method: Optional[Callable] = None,
                  x_names: Optional[Iterable[str]] = None,
                  x_scales: Optional[Iterable[str]] = None,
-                 x_priors_defs: Optional[NegLogPriors] = None):
+                 x_priors_defs: Optional[NegLogPriors] = None,
+                 lb_init: Union[np.ndarray, List[float], None] = None,
+                 ub_init: Union[np.ndarray, List[float], None] = None):
         self.objective = copy.deepcopy(objective)
 
-        self.lb_full = np.array(lb).flatten()
-        self.ub_full = np.array(ub).flatten()
+        self.lb_full: np.ndarray = np.array(lb).flatten()
+        self.ub_full: np.ndarray = np.array(ub).flatten()
+        if lb_init is None:
+            lb_init = lb
+        self.lb_init_full: np.ndarray = np.array(lb_init).flatten()
+        if ub_init is None:
+            ub_init = ub
+        self.ub_init_full: np.ndarray = np.array(ub_init).flatten()
 
-        self.dim_full = dim_full if dim_full is not None else self.lb_full.size
+        self.dim_full: int = dim_full if dim_full is not None else \
+            self.lb_full.size
 
         if x_fixed_indices is None:
             x_fixed_indices = []
@@ -121,6 +134,8 @@ class Problem:
             x_guesses = np.zeros((0, self.dim_full))
         self.x_guesses_full: np.ndarray = np.array(x_guesses)
 
+        self.startpoint_method = startpoint_method
+
         if objective.x_names is not None:
             x_names = objective.x_names
         elif x_names is None:
@@ -144,6 +159,14 @@ class Problem:
         return self.ub_full[self.x_free_indices]
 
     @property
+    def lb_init(self) -> np.ndarray:
+        return self.lb_init_full[self.x_free_indices]
+
+    @property
+    def ub_init(self) -> np.ndarray:
+        return self.ub_init_full[self.x_free_indices]
+
+    @property
     def x_guesses(self) -> np.ndarray:
         return self.x_guesses_full[:, self.x_free_indices]
 
@@ -161,19 +184,18 @@ class Problem:
         vectors of dimension dim.
         """
 
-        if self.lb_full.size == 1:
-            self.lb_full = self.lb_full * np.ones(self.dim_full)
-        elif self.lb_full.size != self.dim_full:
-            self.lb_full = np.empty(self.dim_full)
-            self.lb_full[self.x_free_indices] = self.lb
-            self.lb_full[self.x_fixed_indices] = self.x_fixed_vals
+        for attr in ['lb_full', 'lb_init_full', 'ub_full', 'ub_init_full']:
+            value = self.__getattribute__(attr)
+            if value.size == 1:
+                self.__setattr__(attr, value * np.ones(self.dim_full))
+            elif value.size == self.dim:
+                # in this case the bounds only holds the values of the
+                # reduced bounds.
+                self.__setattr__(attr, self.get_full_vector(value,
+                                                            self.x_fixed_vals))
 
-        if self.ub_full.size == 1:
-            self.ub_full = self.ub_full * np.ones(self.dim_full)
-        elif self.ub_full.size != self.dim_full:
-            self.ub_full = np.empty(self.dim_full)
-            self.ub_full[self.x_free_indices] = self.ub
-            self.ub_full[self.x_fixed_indices] = self.x_fixed_vals
+            if self.__getattribute__(attr).size != self.dim_full:
+                raise AssertionError(f"{attr} dimension invalid.")
 
         if self.x_guesses_full.shape[1] != self.dim_full:
             x_guesses = np.empty((self.x_guesses_full.shape[0], self.dim_full))
@@ -189,18 +211,20 @@ class Problem:
             x_fixed_vals=self.x_fixed_vals)
 
         # sanity checks
-        if self.lb_full.size != self.dim_full:
-            raise AssertionError("lb_full dimension invalid.")
-        if self.ub_full.size != self.dim_full:
-            raise AssertionError("ub_full dimension invalid.")
         if len(self.x_scales) != self.dim_full:
             raise AssertionError("x_scales dimension invalid.")
         if len(self.x_names) != self.dim_full:
             raise AssertionError("x_names must be of length dim_full.")
         if len(self.x_fixed_indices) != len(self.x_fixed_vals):
             raise AssertionError(
-                "x_fixed_indices and x_fixed_vals musti have the same length."
+                "x_fixed_indices and x_fixed_vals must have the same length."
             )
+        if np.isnan(self.lb).any():
+            raise ValueError('lb must not contain nan values')
+        if np.isnan(self.ub).any():
+            raise ValueError('ub must not contain nan values')
+        if np.any(self.lb >= self.ub):
+            raise ValueError('lb<ub not fulfilled.')
 
     def fix_parameters(self,
                        parameter_indices: SupportsIntIterableOrValue,

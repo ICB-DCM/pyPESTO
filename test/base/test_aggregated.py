@@ -7,15 +7,14 @@ import pypesto
 import pytest
 from pypesto.objective.constants import MODE_RES
 
-from .test_objective import poly_for_sensi, rosen_for_sensi
-from .test_sbml_conversion import load_model_objective
+from ..util import poly_for_sensi, rosen_for_sensi, load_amici_objective
 
 ATOL = 1e-6
 RTOL = 1e-4
 
 
 def convreact_for_funmode(max_sensi_order, x=None):
-    obj = load_model_objective('conversion_reaction')[0]
+    obj = load_amici_objective('conversion_reaction')[0]
     return {'obj': obj,
             'max_sensi_order': max_sensi_order,
             'x': x,
@@ -25,7 +24,7 @@ def convreact_for_funmode(max_sensi_order, x=None):
 
 
 def convreact_for_resmode(max_sensi_order, x=None):
-    obj = load_model_objective('conversion_reaction')[0]
+    obj = load_amici_objective('conversion_reaction')[0]
     return {'obj': obj,
             'max_sensi_order': max_sensi_order,
             'x': x,

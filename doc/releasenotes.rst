@@ -5,17 +5,79 @@ Release notes
 0.2 series
 ..........
 
+
+0.2.3 (2021-01-18)
+------------------
+
+* New Optimizers:
+    * FIDES (#506, #503 # 500)
+    * NLopt (#493)
+
+* Extended PEtab support:
+    * PySB import (#437)
+    * Support of PEtab's initializationPriors (#535)
+    * Support of prior parameterScale{Normal,Laplace}  (#520)
+    * Example notebook for synthetic data generation (#482)
+
+* General new and improved functionality:
+    * Predictions (#544)
+    * Move tests to GitHub Actions (#524)
+    * Parallelize profile calculation (#532)
+    * Save `x_guesses` in `pypesto.problem` (#494)
+    * Improved finite difference gradients (#464)
+    * Support of unconstrained optimization (#519)
+    * Additional NaN check for fval, grad and hessian (#521)
+    * Add sanity checks for optimizer bounds (#516)
+
+* Improvements in storage:
+    * Fix hdf5 export of optimizer history (#536)
+    * Fix reading `x_names` from hdf5 history (#528)
+    * Storage does not save empty arrays (#489)
+    * hdf5 storage sampling (#546)
+    * hdf5 storage parameter profiles (#546)
+
+* Improvements in the visualization routines:
+    * Plot parameter values as histogram (#485)
+    * Fix y axis limits in waterfall plots (#503)
+    * Fix color scheme in visualization (#498)
+    * Improved visualization of optimization results (#486)
+
+* Several small bug fixes (#547, #541, #538, #533, #512, #508)
+
+
+0.2.2 (2020-10-05)
+------------------
+
+* New optimizer: CMA-ES (#457)
+* New plot: Optimizer convergence summary (#446)
+
+* Fixes in visualization:
+    * Type checks for reference points (#460)
+    * y_limits in waterfall plots with multiple results (#475)
+* Support of new amici release (#469)
+
+* Multiple fixes in optimization code:
+    * Remove unused argument for dlib optimizer (#466)
+    * Add check for installation of ipopt (#470)
+    * Add maxiter as default option of dlib (#474)
+
+* Numpy based subindexing in amici_util (#462)
+* Check amici/PEtab installation (#477)
+
+
 0.2.1 (2020-09-07)
 ------------------
 
 * Example Notebook for prior functionality (#438)
 * Changed parameter indexing in profiling routines (#419)
 * Basic sanity checking for parameter fixing (#420)
+
 * Bug fixes in:
-  * Displaying of multi start optimization (#430)
-  * AMICI error output (#428)
-  * Axes scaling/limits in waterfall plots (#441)
-  * Priors (PEtab impor, error handling) (#448, #452, #454)
+    * Displaying of multi start optimization (#430)
+    * AMICI error output (#428)
+    * Axes scaling/limits in waterfall plots (#441)
+    * Priors (PEtab import, error handling) (#448, #452, #454)
+
 * Improved sampling diagnostics (e.g. effective samples size) (#426)
 * Improvements and bug fixes in parameter plots (#425)
 
@@ -31,10 +93,11 @@ Major:
 Minor:
 
 * Bug fixes in
-  * sampling (#412)
-  * visualization (#405)
-  * PEtab import (#403)
-  * Hessian computation (#390)
+    * sampling (#412)
+    * visualization (#405)
+    * PEtab import (#403)
+    * Hessian computation (#390)
+
 * Improve hdf5 error output (#409)
 * Outlaw large new files in GitHub commits (#388)
 
@@ -50,12 +113,14 @@ Objective
 
 * Write solver settings to stream to enable serialization for distributed
   systems (#308)
+
 * Refactor objective function (#347)
-  * Removes necessity for all of the nasty binding/undbinding in AmiciObjective
-  * Substantially reduces the complexity of the AggregatedObjective class
-  * Aggregation of functions with inconsistent sensi_order/mode support
-  * Introduce ObjectiveBase as an abstract Objective class
-  * Introduce FunctionObjective for objectives from functions
+    * Removes necessity for all of the nasty binding/undbinding in AmiciObjective
+    * Substantially reduces the complexity of the AggregatedObjective class
+    * Aggregation of functions with inconsistent sensi_order/mode support
+    * Introduce ObjectiveBase as an abstract Objective class
+    * Introduce FunctionObjective for objectives from functions
+
 * Implement priors with gradients, integrate with PEtab (#357)
 * Fix minus sign in AmiciObjective.get_error_output (#361)
 * Implement a prior class, derivatives for standard models, interface with

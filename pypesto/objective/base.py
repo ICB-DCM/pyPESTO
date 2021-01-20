@@ -3,7 +3,7 @@ import pandas as pd
 import copy
 import logging
 import abc
-from typing import Dict, Sequence, Tuple, Union
+from typing import Dict, Iterable, Sequence, Tuple, Union
 
 from .constants import MODE_FUN, MODE_RES, FVAL, GRAD, HESS, RES, SRES
 from .history import HistoryBase
@@ -93,7 +93,8 @@ class ObjectiveBase(abc.ABC):
             x: np.ndarray,
             sensi_orders: Tuple[int, ...] = (0, ),
             mode: str = MODE_FUN,
-            return_dict: bool = False
+            return_dict: bool = False,
+            **kwargs
     ) -> Union[float, np.ndarray, Tuple, ResultDict]:
         """
         Method to obtain arbitrary sensitivities. This is the central method
@@ -142,7 +143,7 @@ class ObjectiveBase(abc.ABC):
         x_full = self.pre_post_processor.preprocess(x)
 
         # compute result
-        result = self.call_unprocessed(x_full, sensi_orders, mode)
+        result = self.call_unprocessed(x_full, sensi_orders, mode, **kwargs)
 
         # post-process
         result = self.pre_post_processor.postprocess(result)
@@ -162,7 +163,8 @@ class ObjectiveBase(abc.ABC):
             self,
             x: np.ndarray,
             sensi_orders: Tuple[int, ...],
-            mode: str
+            mode: str,
+            **kwargs
     ) -> ResultDict:
         """
         Call objective function without pre- or post-processing and
@@ -326,13 +328,60 @@ class ObjectiveBase(abc.ABC):
 
         self.pre_post_processor = pre_post_processor
 
+    def check_grad_multi_eps(
+            self,
+            *args,
+            multi_eps: Iterable = None,
+            label: str = 'rel_err',
+            **kwargs,
+    ):
+        """
+        Equivalent to the `ObjectiveBase.check_grad` method, except multiple
+        finite difference step sizes are tested. The result contains the
+        lowest finite difference for each parameter, and the corresponding
+        finite difference step size.
+
+        Parameters
+        ----------
+        All `ObjectiveBase.check_grad` method parameters.
+        multi_eps:
+            The finite difference step sizes to be tested.
+        label:
+            The label of the column that will be minimized for each parameter.
+            Valid options are the column labels of the dataframe returned by
+            the `ObjectiveBase.check_grad` method.
+        """
+        if multi_eps is None:
+            multi_eps = {1e-1, 1e-3, 1e-5, 1e-7, 1e-9}
+
+        results = {}
+        for eps in multi_eps:
+            results[eps] = self.check_grad(*args, **kwargs, eps=eps)
+
+        # The combined result is, for each parameter, the gradient check from
+        # the step size (`eps`) that produced the smallest error (`label`).
+        combined_result = None
+        for eps, result in results.items():
+            result['eps'] = eps
+            if combined_result is None:
+                combined_result = result
+                continue
+            # Replace rows in `combined_result` with corresponding rows
+            # in `result` that have an improved value in column `label`.
+            mask_improvements = result[label] < combined_result[label]
+            combined_result.loc[mask_improvements, :] = \
+                result.loc[mask_improvements, :]
+
+        return combined_result
+
     def check_grad(
             self,
             x: np.ndarray,
             x_indices: Sequence[int] = None,
             eps: float = 1e-5,
             verbosity: int = 1,
-            mode: str = MODE_FUN
+            mode: str = MODE_FUN,
+            detailed: bool = False
     ) -> pd.DataFrame:
         """
         Compare gradient evaluation: Firstly approximate via finite
@@ -345,16 +394,20 @@ class ObjectiveBase(abc.ABC):
         x_indices:
             Indices for which to compute gradients. Default: all.
         eps:
-            Finite differences step size. Default: 1e-5.
+            Finite differences step size.
         verbosity:
             Level of verbosity for function output.
-            * 0: no output,
-            * 1: summary for all parameters,
-            * 2: summary for individual parameters.
-            Default: 1.
+            0: no output,
+            1: summary for all parameters,
+            2: summary for individual parameters.
         mode:
-            Residual (MODE_RES) or objective function value
-            (MODE_FUN, default) computation mode.
+            Residual (MODE_RES) or objective function value (MODE_FUN)
+            computation mode.
+        detailed:
+            Toggle whether additional values are returned. Additional values
+            are function values, and the central difference weighted by the
+            difference in output from all methods (standard deviation and
+            mean).
 
         Returns
         ----------
@@ -375,6 +428,12 @@ class ObjectiveBase(abc.ABC):
         fd_err_list = []
         abs_err_list = []
         rel_err_list = []
+
+        if detailed:
+            fval_p_list = []
+            fval_m_list = []
+            std_check_list = []
+            mean_check_list = []
 
         # loop over indices
         for ix in x_indices:
@@ -401,6 +460,18 @@ class ObjectiveBase(abc.ABC):
             abs_err_ix = abs(grad_ix - fd_c_ix)
             rel_err_ix = abs(abs_err_ix / (fd_c_ix + eps))
 
+            if detailed:
+                std_check_ix = (grad_ix - fd_c_ix)/np.std([
+                    fd_f_ix,
+                    fd_b_ix,
+                    fd_c_ix
+                ])
+                mean_check_ix = abs(grad_ix - fd_c_ix)/np.mean([
+                    abs(fd_f_ix - fd_b_ix),
+                    abs(fd_f_ix - fd_c_ix),
+                    abs(fd_b_ix - fd_c_ix),
+                ])
+
             # log for dimension ix
             if verbosity > 1:
                 logger.info(
@@ -422,9 +493,14 @@ class ObjectiveBase(abc.ABC):
             fd_err_list.append(np.mean(fd_err_ix))
             abs_err_list.append(np.mean(abs_err_ix))
             rel_err_list.append(np.mean(rel_err_ix))
+            if detailed:
+                fval_p_list.append(fval_p)
+                fval_m_list.append(fval_m)
+                std_check_list.append(std_check_ix)
+                mean_check_list.append(mean_check_ix)
 
-        # create dataframe
-        result = pd.DataFrame(data={
+        # create data dictionary for dataframe
+        data = {
             'grad': grad_list,
             'fd_f': fd_f_list,
             'fd_b': fd_b_list,
@@ -432,7 +508,26 @@ class ObjectiveBase(abc.ABC):
             'fd_err': fd_err_list,
             'abs_err': abs_err_list,
             'rel_err': rel_err_list,
-        })
+        }
+
+        # update data dictionary if detailed output is requested
+        if detailed:
+            prefix_data = {
+                'fval': [fval]*len(x_indices),
+                'fval_p': fval_p_list,
+                'fval_m': fval_m_list,
+
+            }
+            std_str = '(grad-fd_c)/std({fd_f,fd_b,fd_c})'
+            mean_str = '|grad-fd_c|/mean(|fd_f-fd_b|,|fd_f-fd_c|,|fd_b-fd_c|)'
+            postfix_data = {
+                std_str: std_check_list,
+                mean_str: mean_check_list,
+            }
+            data = {**prefix_data, **data, **postfix_data}
+
+        # create dataframe
+        result = pd.DataFrame(data=data)
 
         # log full result
         if verbosity > 0:

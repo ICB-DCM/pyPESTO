@@ -170,22 +170,26 @@ def get_parameter_prior_dict(index: int,
     index:
         index of the parameter in x_full
 
-    prior_type: str
-        Prior is defined in LINEAR=untransformed parameter space! prior_type
-        can from {uniform, normal, laplace, logUniform, logNormal, logLaplace}
+    prior_type:
+        Prior is defined in LINEAR=untransformed parameter space,
+        unless it starts with "parameterScale". prior_type
+        can be any of {"uniform", "normal", "laplace", "logNormal",
+        "parameterScaleUniform", "parameterScaleNormal",
+        "parameterScaleLaplace"}
 
     prior_parameters:
         Parameters of the priors. Parameters are defined in linear scale.
 
     parameter_scale:
-        scale, in which parameter is defined (since a parameter can be
-        log-transformed, while the prior is always defined in the linear space)
+        scale in which the parameter is defined (since a parameter can be
+        log-transformed, while the prior is always defined in the linear
+        space, unless it starts with "parameterScale")
     """
 
     log_f, d_log_f_dx, dd_log_f_ddx = \
         _prior_densities(prior_type, prior_parameters)
 
-    if parameter_scale == 'lin':
+    if parameter_scale == 'lin' or prior_type.startswith('parameterScale'):
 
         return {'index': index,
                 'density_fun': log_f,
@@ -247,34 +251,68 @@ def _prior_densities(prior_type: str,
                                                      Callable]:
     """
     Returns a tuple of Callables of the (log-)density (in untransformed =
-    linear scale), together with their first + second derivative
-    (= sensis) w.r.t. x.
-
+    linear scale), unless prior_types starts with "parameterScale",
+    together with their first + second derivative (= sensis) w.r.t.
+    the parameters.
 
     Currently the following distributions are supported:
 
-    * uniform:
-        prior_parameters[0] and prior_parameters[1] give the lower and upper
-        boundary.
-    * normal:
-        normal distribution, with mean prior_parameters[0] and
-        standard deviation prior_parameters[1]
-    * laplace:
-        laplace distribution, with location prior_parameters[0] and
-        scale prior_parameters[1]
-    * logNormal:
-        logNormal distribution, where prior_parameters are mean and
-        standard deviation of the exp(X).
+    Parameters
+    ----------
 
-    Currently not supported, but eventually planed are the
-    following distributions:
+    prior_type:
+        string identifier indicating the distribution to be used. Here
+        "transformed" parameter scale refers to the scale in which
+        optimization is performed. For example, for parameters with scale
+        "log", "parameterScaleNormal" will apply a normally distributed prior
+        to logarithmic parameters, while "normal" will apply a normally
+        distributed prior to linear parameters. For parameters with scale
+        "lin", "parameterScaleNormal" and "norma" are equivalent.
 
-    * logUniform
-    * logLaplace
+        * uniform:
+            Uniform distribution on transformed parameter scale.
+        * parameterScaleUniform:
+            Uniform distribution on original parameter scale.
+        * normal:
+            Normal distribution on transformed parameter scale.
+        * parameterScaleNormal:
+            Normal distribution on original parameter scale.
+        * laplace:
+            Laplace distribution on transformed parameter scale
+        * parameterScaleLaplace:
+            Laplace distribution on original parameter scale.
+        * logNormal:
+            LogNormal distribution on transformed parameter scale
+
+        Currently not supported, but eventually planned are the
+        following distributions:
+
+        * logUniform
+        * logLaplace
+
+    prior_parameters:
+        parameters for the distribution
+
+        * uniform/parameterScaleUniform:
+            - prior_parameters[0]: lower bound
+            - prior_parameters[1]: upper bound
+
+        * laplace/parameterScaleLaplace:
+            - prior_parameters[0]: location parameter
+            - prior_parameters[1]: scale parameter
+
+        * normal/parameterScaleNormal:
+            - prior_parameters[0]: mean
+            - prior_parameters[1]: standard deviation
+
+        * logNormal:
+            - prior_parameters[0]: mean of log-parameters
+            - prior_parameters[1]: standard deviation of log-parameters
+
 
     """
 
-    if prior_type == 'uniform':
+    if prior_type in ['uniform', 'parameterScaleUniform']:
 
         def log_f(x):
             if prior_parameters[0] <= x <= prior_parameters[1]:
@@ -287,7 +325,7 @@ def _prior_densities(prior_type: str,
 
         return log_f, d_log_f_dx, dd_log_f_ddx
 
-    elif prior_type == 'normal':
+    elif prior_type in ['normal', 'parameterScaleNormal']:
 
         mean = prior_parameters[0]
         sigma2 = prior_parameters[1]**2
@@ -302,7 +340,7 @@ def _prior_densities(prior_type: str,
 
         return log_f, d_log_f_dx, dd_log_f_ddx
 
-    elif prior_type == 'laplace':
+    elif prior_type in ['laplace', 'parameterScaleLaplace']:
 
         mean = prior_parameters[0]
         scale = prior_parameters[1]
