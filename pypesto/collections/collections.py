@@ -111,7 +111,7 @@ class CollectionPrediction:
 
     def compute_summary(self,
                         percentiles_list: Sequence[int] = (5, 20, 80, 95)
-        ) -> Dict:
+                        ) -> Dict:
         """
         This function computes the mean, the median, the standard deviation
         and possibly percentiles from the collection prediction results.
@@ -279,7 +279,7 @@ class Collection:
         self.summary = None
 
         # store bounds
-        self.lower_bound = np.full((self.n_x,),np.nan)
+        self.lower_bound = np.full((self.n_x,), np.nan)
         if lower_bound is not None:
             self.lower_bound = lower_bound
         self.upper_bound = np.full((self.n_x,), np.nan)

@@ -18,7 +18,6 @@ from pypesto.prediction import PredictionResult, PredictionConditionResult
 from pypesto.collections import Collection, CollectionPrediction
 
 
-
 @pytest.fixture()
 def conversion_reaction_model():
     # read in sbml file
@@ -307,7 +306,7 @@ def test_petab_prediction():
 
     # ===== run test for ensemble prediction ==================================
     # read a set of ensemble vectors from the csv
-    ensemble_file =  os.path.join(
+    ensemble_file = os.path.join(
         os.path.dirname(__file__), '..', '..', 'doc', 'example', model_name,
         'parameter_ensemble.tsv')
     ensemble = pypesto.collections.read_from_csv(
@@ -346,6 +345,6 @@ def test_petab_prediction():
         assert pred[key].comment == key
 
     # check some particular properties of this example
-    assert pred['mean'].conditions[0].output[0,0] == 1.
+    assert pred['mean'].conditions[0].output[0, 0] == 1.
     assert pred['median'].conditions[0].output[0, 0] == 1.
     assert pred['std'].conditions[0].output[0, 0] == 0.
