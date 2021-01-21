@@ -4,9 +4,11 @@ import cloudpickle as pickle
 
 import pypesto
 import pypesto.optimize
-import test.test_objective as test_objective
-from test.petab_util import folder_base
+import pypesto.petab
 import amici
+
+from ..petab.petab_util import folder_base
+from ..util import rosen_for_sensi
 
 
 def test_basic():
@@ -18,7 +20,7 @@ def test_basic():
 
 def _test_basic(engine):
     # set up problem
-    objective = test_objective.rosen_for_sensi(max_sensi_order=2)['obj']
+    objective = rosen_for_sensi(max_sensi_order=2)['obj']
     lb = 0 * np.ones((1, 2))
     ub = 1 * np.ones((1, 2))
     problem = pypesto.Problem(objective, lb, ub)

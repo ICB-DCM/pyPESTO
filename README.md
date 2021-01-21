@@ -5,10 +5,11 @@
 **pyPESTO** is a widely applicable and highly customizable toolbox for
 parameter estimation.
 
-[![PyPI version](https://badge.fury.io/py/pypesto.svg)](https://badge.fury.io/py/pypesto)
-[![Build Status](https://travis-ci.com/ICB-DCM/pyPESTO.svg?branch=master)](https://travis-ci.com/ICB-DCM/pyPESTO)
-[![Code coverage](https://codecov.io/gh/ICB-DCM/pyPESTO/branch/master/graph/badge.svg)](https://codecov.io/gh/ICB-DCM/pyPESTO) [![Code quality](https://api.codacy.com/project/badge/Grade/134432ddad0e464b8494587ff370f661)](https://www.codacy.com/app/dweindl/pyPESTO?utm_source=github.com&amp;utm_medium=referral&amp;utm_content=ICB-DCM/pyPESTO&amp;utm_campaign=Badge_Grade)
-[![Documentation Status](https://readthedocs.org/projects/pypesto/badge/?version=latest)](https://pypesto.readthedocs.io)
+[![PyPI](https://badge.fury.io/py/pypesto.svg)](https://badge.fury.io/py/pypesto)
+[![CI](https://github.com/ICB-DCM/pyPESTO/workflows/CI/badge.svg)](https://github.com/ICB-DCM/pyPESTO/actions)
+[![Coverage](https://codecov.io/gh/ICB-DCM/pyPESTO/branch/master/graph/badge.svg)](https://codecov.io/gh/ICB-DCM/pyPESTO)
+[![Quality](https://api.codacy.com/project/badge/Grade/134432ddad0e464b8494587ff370f661)](https://www.codacy.com/app/dweindl/pyPESTO?utm_source=github.com&amp;utm_medium=referral&amp;utm_content=ICB-DCM/pyPESTO&amp;utm_campaign=Badge_Grade)
+[![Documentation](https://readthedocs.org/projects/pypesto/badge/?version=latest)](https://pypesto.readthedocs.io)
 [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.2600850.svg)](https://zenodo.org/record/2600850#.XVuwkHduJfF)
 
 ## Feature overview
