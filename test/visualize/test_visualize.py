@@ -1,16 +1,16 @@
-import pypesto
-import pypesto.petab
-import pypesto.optimize as optimize
-import pypesto.profile as profile
-import pypesto.sample as sample
-import pypesto.visualize as visualize
-
 import numpy as np
 import scipy.optimize as so
 import matplotlib.pyplot as plt
 import pytest
 import os
 import petab
+
+import pypesto
+import pypesto.petab
+import pypesto.optimize as optimize
+import pypesto.profile as profile
+import pypesto.sample as sample
+import pypesto.visualize as visualize
 
 
 def close_fig(fun):
@@ -25,6 +25,8 @@ def close_fig(fun):
 
 
 # Define some helper functions, to have the test code more readable
+
+
 def create_bounds():
     # define bounds for a pypesto problem
     lb = -7 * np.ones((1, 2))

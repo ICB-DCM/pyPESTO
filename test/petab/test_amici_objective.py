@@ -6,11 +6,12 @@ from pypesto.objective.amici_util import add_sim_grad_to_opt_grad
 
 import petab
 import pypesto
+import pypesto.petab
 import pypesto.optimize
 import pypesto.objective.constants
 import pytest
 import numpy as np
-from test.petab_util import folder_base
+from .petab_util import folder_base
 
 ATOL = 1e-1
 RTOL = 1e-0

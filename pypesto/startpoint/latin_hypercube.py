@@ -12,6 +12,10 @@ def latin_hypercube(**kwargs) -> np.ndarray:
     ub = kwargs['ub']
     smooth = kwargs.get('smooth', True)
 
+    if not np.isfinite(ub).all() or not np.isfinite(lb).all():
+        raise ValueError('Cannot use latin hypercube startpoint method with '
+                         'non-finite boundaries.')
+
     # parse
     dim = lb.size
     lb = lb.reshape((1, -1))
