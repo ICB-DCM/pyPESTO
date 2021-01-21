@@ -525,7 +525,7 @@ class PetabImporter(AmiciObjectBuilder):
 
         return self.rdatas_to_measurement_df(rdatas, model)
 
-    def petab_prediction_simulation_df(
+    def petab_prediction_to_simulation_df(
             self,
             prediction: PredictionResult,
             predictor: AmiciPredictor = None
