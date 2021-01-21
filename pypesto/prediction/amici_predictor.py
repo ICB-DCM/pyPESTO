@@ -29,7 +29,9 @@ class AmiciPredictor:
                  post_processor_sensi: Union[Callable, None] = None,
                  post_processor_time: Union[Callable, None] = None,
                  max_chunk_size: Union[int, None] = None,
-                 observable_ids: Union[Sequence[str], None] = None):
+                 observable_ids: Union[Sequence[str], None] = None,
+                 condition_ids: Union[Sequence[str], None] = None
+                 ):
         """
         Constructor.
 
@@ -69,6 +71,9 @@ class AmiciPredictor:
             IDs of observables, as post-processing allows the creation of
             customizable observables, which may not coincide with those from
             the amici model (defaults to amici observables).
+        condition_ids:
+            List of identifiers for the conditions of the edata objects of the
+            amici objective, will be passed to the PredictionResult at call.
         """
         # save settings and objective
         self.amici_objective = amici_objective
@@ -76,6 +81,7 @@ class AmiciPredictor:
         self.post_processor = post_processor
         self.post_processor_sensi = post_processor_sensi
         self.post_processor_time = post_processor_time
+        self.condition_ids = condition_ids
 
         if observable_ids is None:
             self.observable_ids = \
@@ -89,7 +95,7 @@ class AmiciPredictor:
             sensi_orders: Tuple[int, ...] = (0, ),
             mode: str = MODE_FUN,
             output_file: str = '',
-            output_format: str = CSV,
+            output_format: str = CSV
     ) -> PredictionResult:
         """
         Simulate a model for a certain prediction function.
@@ -144,7 +150,8 @@ class AmiciPredictor:
 
             condition_results.append(result)
         # create result object
-        results = PredictionResult(condition_results)
+        results = PredictionResult(condition_results,
+                                   condition_ids=self.condition_ids)
 
         # Should the results be saved to a file?
         if output_file:

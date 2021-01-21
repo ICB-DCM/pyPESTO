@@ -9,7 +9,7 @@ from typing import Iterable, List, Optional, Sequence, Union, Callable
 
 from ..problem import Problem
 from ..objective import AmiciObjective, AmiciObjectBuilder, AggregatedObjective
-from ..prediction import AmiciPredictor
+from ..prediction import AmiciPredictor, PredictionResult
 from ..objective.priors import NegLogParameterPriors, \
     get_parameter_prior_dict
 
@@ -311,7 +311,7 @@ class PetabImporter(AmiciObjectBuilder):
 
         Returns
         -------
-        prediction:
+        predictor:
             A :class:`pypesto.prediction.AmiciPredictor` for the model, using
             the observables of the Amici model and the timepoints from the
             PEtab data
@@ -320,16 +320,31 @@ class PetabImporter(AmiciObjectBuilder):
         if objective is None:
             objective = self.create_objective()
 
+        # create a identifiers of preequilibration and simulation condition ids
+        # which can then be stored in the prediction result
+        edata_conditions = objective.amici_object_builder.petab_problem.\
+            get_simulation_conditions_from_measurement_df()
+        if 'preequilibrationConditionId' not in list(edata_conditions.columns):
+            preeq_dummy = [''] * edata_conditions.shape[0]
+            edata_conditions['preequilibrationConditionId'] = preeq_dummy
+        edata_conditions.drop_duplicates(inplace=True)
+        condition_ids = [
+            edata_conditions.loc[id, 'preequilibrationConditionId'] + '::' +
+            edata_conditions.loc[id, 'simulationConditionId']
+            for id in edata_conditions.index
+        ]
+
         # wrap around AmiciPredictor
-        prediction = AmiciPredictor(
+        predictor = AmiciPredictor(
             amici_objective=objective,
             post_processor=post_processor,
             post_processor_sensi=post_processor_sensi,
             post_processor_time=post_processor_time,
             max_chunk_size=max_chunk_size,
-            observable_ids=observable_ids)
+            observable_ids=observable_ids,
+            condition_ids=condition_ids)
 
-        return prediction
+        return predictor
 
     def create_prior(self) -> NegLogParameterPriors:
         """
@@ -473,6 +488,54 @@ class PetabImporter(AmiciObjectBuilder):
         dataframe is created, i.e. the measurement column label is adjusted.
         """
         return self.rdatas_to_measurement_df(rdatas, model).rename(
+            {petab.MEASUREMENT: petab.SIMULATION})
+
+    def petab_prediction_to_measurement_df(
+            self,
+            prediction: PredictionResult,
+            predictor: AmiciPredictor = None
+    ) -> pd.DataFrame:
+        """
+        If a PEtab problem is simulated without post-processing, then the
+        result can be cast into a PEtab measurement or simulation dataframe
+
+        Parameters
+        ----------
+        prediction:
+            A prediction resul as produced created by an AmiciPredictor
+        predictor:
+            The AmiciPredictor function
+
+        Returns
+        -------
+        measurement_df:
+            A dataframe built from the rdatas in the format as in
+            self.petab_problem.measurement_df.
+        """
+        # create rdata-like dicts from the prediction result
+        rdatas = []
+        for condition in prediction.conditions:
+            rdatas.append({'t': condition.timepoints,
+                           'y': condition.output})
+
+        # add an AMICI model, if possible
+        model = None
+        if predictor is not None:
+            model = predictor.amici_objective.amici_model
+
+        return self.rdatas_to_measurement_df(rdatas, model)
+
+    def petab_prediction_simulation_df(
+            self,
+            prediction: PredictionResult,
+            predictor: AmiciPredictor = None
+    ) -> pd.DataFrame:
+        """Same as `petab_prediction_to_measurement_df`, execpt a petab
+        simulation dataframe is created, i.e. the measurement column label is
+        adjusted.
+        """
+        return self.petab_prediction_to_measurement_df(
+            prediction, predictor).rename(
             {petab.MEASUREMENT: petab.SIMULATION})
 
 
