@@ -139,7 +139,7 @@ class CollectionPrediction:
         def _stack_outputs(ic: int):
             """
             This function groups outputs for different parameter vectors of
-            one ensemble together, if the belong to the same simulation
+            one ensemble together, if they belong to the same simulation
             condition, and stacks them in one array
             """
             # Were outputs computed
