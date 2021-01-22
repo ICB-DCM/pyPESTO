@@ -37,10 +37,10 @@ class CollectionPrediction:
         prediction_results:
             List of Prediction results
         lower_bound:
-            array of potential lower bounds for the parameters, should have the
+            Array of potential lower bounds for the predictions, should have the
             same shape as the output of the predictions, i.e., a list of numpy
             array (one list entry per condition), with the arrays having the
-            shape of n_timpoints x n_outputs for each condition
+            shape of n_timepoints x n_outputs for each condition.
         upper_bound:
             array of potential upper bounds for the parameters
         """
@@ -81,7 +81,7 @@ class CollectionPrediction:
 
         for result in self.prediction_results:
             # stack outputs, output sensitivities and timepoints to one array
-            # use first element as dummy, to see if outputs ahve been computed
+            # use first element as dummy, to see if outputs have been computed
             if result.conditions[0].output is not None:
                 output.append(np.concatenate(
                     [cond.output for cond in result.conditions], axis=0))
@@ -139,7 +139,7 @@ class CollectionPrediction:
         def _stack_outputs(ic: int):
             """
             This function groups outputs for different parameter vectors of
-            one ensemble together, if the belong to the same simulation
+            one ensemble together, if they belong to the same simulation
             condition, and stacks them in one array
             """
             # Were outputs computed
@@ -233,13 +233,13 @@ class CollectionPrediction:
 
 class Collection:
     """
-    A collection is of a thin wrapper around an numpy array.
+    A collection is a thin wrapper around an numpy array.
     """
 
     def __init__(self,
                  x_vectors: np.ndarray,
                  x_names: Sequence[str] = None,
-                 vector_tags: Tuple[int, int] = None,
+                 vector_tags: Sequence[Tuple[int, int]] = None,
                  coll_type: CollectionType = None,
                  predictions: Sequence[CollectionPrediction] = None,
                  lower_bound: np.ndarray = None,
