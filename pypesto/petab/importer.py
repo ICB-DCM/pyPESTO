@@ -525,16 +525,16 @@ class PetabImporter(AmiciObjectBuilder):
 
         return self.rdatas_to_measurement_df(rdatas, model)
 
-    def petab_prediction_to_simulation_df(
+    def prediction_to_petab_simulation_df(
             self,
             prediction: PredictionResult,
             predictor: AmiciPredictor = None
     ) -> pd.DataFrame:
-        """Same as `petab_prediction_to_measurement_df`, execpt a petab
+        """Same as `prediction_to_petab_measurement_df`, except a PEtab
         simulation dataframe is created, i.e. the measurement column label is
         adjusted.
         """
-        return self.petab_prediction_to_measurement_df(
+        return self.prediction_to_petab_measurement_df(
             prediction, predictor).rename(
             {petab.MEASUREMENT: petab.SIMULATION})
 
