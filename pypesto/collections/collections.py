@@ -408,9 +408,13 @@ class Collection:
             mean = self.summary[MEAN][ix]
             std = self.summary[STANDARD_DEVIATION][ix]
             median = self.summary[MEAN][ix]
+            perc_list = [int(i_key[11:]) for i_key in self.summary.keys()
+                         if i_key[0:4] == 'perc']
+            perc_lower = [perc for perc in perc_list if perc < 50]
+            perc_upper = [perc for perc in perc_list if perc > 50]
 
             # create dict of identifiability
-            parameter_identifiability.append({
+            tmp_identifiability = {
                 'parameterId': x_name,
                 'lowerBound': lb,
                 'upperBound': ub,
@@ -423,7 +427,16 @@ class Collection:
                 'within ub: 2 std': ub > mean + 2 * std,
                 'within lb: 3 std': lb < mean - 3 * std,
                 'within ub: 3 std': ub > mean + 3 * std,
-            })
+            }
+            # handle percentiles
+            for perc in perc_lower:
+                tmp_identifiability[f'within lb: perc {perc}'] = \
+                    lb < self.summary[f'{PERCENTILE} {perc}'][ix]
+            for perc in perc_upper:
+                tmp_identifiability[f'within ub: perc {perc}'] = \
+                    ub > self.summary[f'{PERCENTILE} {perc}'][ix]
+
+            parameter_identifiability.append(tmp_identifiability)
 
         # create DataFrame
         parameter_identifiability = pd.DataFrame(parameter_identifiability)

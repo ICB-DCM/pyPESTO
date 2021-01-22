@@ -319,6 +319,11 @@ def test_parameters_hist():
 
 
 @close_fig
+def test_ensemble_identifiability():
+    problem = create_problem()
+    ensemble = np.random.rand()
+
+@close_fig
 def test_profiles():
     # create the necessary results
     result_1 = create_profile_result()

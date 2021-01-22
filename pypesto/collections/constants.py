@@ -41,7 +41,11 @@ CSV = 'csv'  # return file format
 H5 = 'h5'  # return file format
 TIME = 'time'  # column name in returned csv
 
+COLOR_HIT_BOTH_BOUNDS = [0.6, 0., 0., 0.9]
+COLOR_HIT_ONE_BOUND = [0.95, 0.6, 0., 0.9]
+COLOR_HIT_NO_BOUNDS = [0., 0.8, 0., 0.9]
 
 class CollectionType(Enum):
     ensemble = 1
     sample = 2
+    unprocessed_chain = 3
