@@ -304,8 +304,8 @@ def test_petab_prediction():
                    sensi_orders=(0, 1))
     check_outputs(p, out=(0, 1), n_cond=1, n_timepoints=10, n_obs=1, n_par=2)
     # check outputs for simulation and measurement dataframes
-    importer.petab_prediction_to_measurement_df(p, prediction)
-    importer.petab_prediction_to_simulation_df(p, prediction)
+    importer.prediction_to_petab_measurement_df(p, prediction)
+    importer.prediction_to_petab_simulation_df(p, prediction)
 
     # ===== run test for ensemble prediction ==================================
     # read a set of ensemble vectors from the csv
