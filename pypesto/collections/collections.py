@@ -81,7 +81,7 @@ class CollectionPrediction:
 
         for result in self.prediction_results:
             # stack outputs, output sensitivities and timepoints to one array
-            # use first element as dummy, to see if outputs ahve been computed
+            # use first element as dummy, to see if outputs have been computed
             if result.conditions[0].output is not None:
                 output.append(np.concatenate(
                     [cond.output for cond in result.conditions], axis=0))
