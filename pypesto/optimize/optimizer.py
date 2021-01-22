@@ -675,7 +675,7 @@ class ScipyDifferentialEvolutionOptimizer(Optimizer):
     Parameters
     ----------
     options:
-        Optimizer options that are directly passed on to scipys' optimizer
+        Optimizer options that are directly passed on to scipy's optimizer.
 
 
     Examples
@@ -685,6 +685,7 @@ class ScipyDifferentialEvolutionOptimizer(Optimizer):
     maxiter:
         used to calculate the maximal number of funcion evaluations by
         maxfevals = (maxiter + 1) * popsize * len(x)
+        Default: 100
     popsize:
         population size, default value 15
     """
@@ -693,7 +694,7 @@ class ScipyDifferentialEvolutionOptimizer(Optimizer):
         super().__init__()
 
         if options is None:
-            options = {'maxiter': 66}
+            options = {'maxiter': 100}
         self.options = options
 
     @fix_decorator
