@@ -100,7 +100,7 @@ def test_unbounded_minimize(optimizer):
         return
 
     if optimizer in [('dlib', ''), ('pyswarm', ''), ('cmaes', ''),
-		     ('scipydiffevolopt', ''),
+		             ('scipydiffevolopt', ''),
                      *[('nlopt', method) for method in [
                          nlopt.GN_ESCH, nlopt.GN_ISRES, nlopt.GN_AGS,
                          nlopt.GD_STOGO, nlopt.GD_STOGO_RAND, nlopt.G_MLSL,
@@ -159,7 +159,7 @@ def get_optimizer(library, solver):
     elif library == 'cmaes':
         optimizer = optimize.CmaesOptimizer(options=options)
     elif library == 'scipydiffevolopt':
-	optimizer = optimize.ScipyDifferentialEvolutionOptimizer(options=options)
+        optimizer = optimize.ScipyDifferentialEvolutionOptimizer(options=options)
     elif library == 'nlopt':
         optimizer = optimize.NLoptOptimizer(method=solver, options=options)
     elif library == 'fides':
