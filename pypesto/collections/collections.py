@@ -239,7 +239,7 @@ class Collection:
     def __init__(self,
                  x_vectors: np.ndarray,
                  x_names: Sequence[str] = None,
-                 vector_tags: Tuple[int, int] = None,
+                 vector_tags: Sequence[Tuple[int, int]] = None,
                  coll_type: CollectionType = None,
                  predictions: Sequence[CollectionPrediction] = None,
                  lower_bound: np.ndarray = None,
