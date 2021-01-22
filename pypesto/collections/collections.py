@@ -37,10 +37,10 @@ class CollectionPrediction:
         prediction_results:
             List of Prediction results
         lower_bound:
-            array of potential lower bounds for the parameters, should have the
+            Array of potential lower bounds for the predictions, should have the
             same shape as the output of the predictions, i.e., a list of numpy
             array (one list entry per condition), with the arrays having the
-            shape of n_timpoints x n_outputs for each condition
+            shape of n_timepoints x n_outputs for each condition.
         upper_bound:
             array of potential upper bounds for the parameters
         """
