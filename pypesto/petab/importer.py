@@ -502,7 +502,7 @@ class PetabImporter(AmiciObjectBuilder):
         Parameters
         ----------
         prediction:
-            A prediction resul as produced created by an AmiciPredictor
+            A prediction result as produced by an AmiciPredictor
         predictor:
             The AmiciPredictor function
 
