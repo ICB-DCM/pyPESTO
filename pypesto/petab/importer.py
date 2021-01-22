@@ -324,13 +324,13 @@ class PetabImporter(AmiciObjectBuilder):
         # which can then be stored in the prediction result
         edata_conditions = objective.amici_object_builder.petab_problem.\
             get_simulation_conditions_from_measurement_df()
-        if 'preequilibrationConditionId' not in list(edata_conditions.columns):
+        if PREEQUILIBRATION_CONDITION_ID not in list(edata_conditions.columns):
             preeq_dummy = [''] * edata_conditions.shape[0]
-            edata_conditions['preequilibrationConditionId'] = preeq_dummy
+            edata_conditions[PREEQUILIBRATION_CONDITION_ID] = preeq_dummy
         edata_conditions.drop_duplicates(inplace=True)
         condition_ids = [
-            edata_conditions.loc[id, 'preequilibrationConditionId'] + '::' +
-            edata_conditions.loc[id, 'simulationConditionId']
+            edata_conditions.loc[id, PREEQUILIBRATION_CONDITION_ID] + '::' +
+            edata_conditions.loc[id, SIMULATION_CONDITION_ID]
             for id in edata_conditions.index
         ]
 
