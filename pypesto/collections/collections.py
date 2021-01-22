@@ -233,7 +233,7 @@ class CollectionPrediction:
 
 class Collection:
     """
-    A collection is of a thin wrapper around an numpy array.
+    A collection is a thin wrapper around an numpy array.
     """
 
     def __init__(self,
