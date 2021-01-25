@@ -255,10 +255,10 @@ def process_offset_for_list(
             np.array(result.optimize_result.get_for_key('fval'))
         ])
         if start_indices is None:
-            start_indices = np.array(range(len(fvals)))
+            start_indices = np.array(range(fvals.size))
         else:
-            start_indices = process_start_indices(start_indices, len(fvals))
-        fvals = fvals[start_indices]
+            start_indices = process_start_indices(start_indices, fvals.size)
+        fvals = fvals[:, start_indices]
         # if none of the fvals are finite, set default value to zero as
         # np.nanmin will error for an empty array
         if np.isfinite(fvals).any():

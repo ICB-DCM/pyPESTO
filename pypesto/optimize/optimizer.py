@@ -230,7 +230,6 @@ def read_result_from_file(problem: Problem, history_options: HistoryOptions,
 class Optimizer(abc.ABC):
     """
     This is the optimizer base class, not functional on its own.
-
     An optimizer takes a problem, and possibly a start point, and then
     performs an optimization. It returns an OptimizerResult.
     """
@@ -253,7 +252,6 @@ class Optimizer(abc.ABC):
     ) -> OptimizerResult:
         """"
         Perform optimization.
-
         Parameters
         ----------
         problem:
@@ -735,16 +733,13 @@ class NLoptOptimizer(Optimizer):
         ----------
         method:
             Local or global Optimizer to use for minimization.
-
         local_method:
             Local method to use in combination with the global optimizer (
             for the MLSL family of solvers) or to solve a subproblem (for the
             AUGLAG family of solvers)
-
         options:
             Optimizer options. scipy option `maxiter` is automatically
             transformed into `maxeval` and takes precedence.
-
         local_options:
             Optimizer options for the local method
         """
@@ -898,7 +893,6 @@ class FidesOptimizer(Optimizer):
         ----------
         options:
             Optimizer options.
-
         hessian_update:
             Hessian update strategy. If this is None, Hessian (approximation)
             computed by problem.objective will be used (default).
