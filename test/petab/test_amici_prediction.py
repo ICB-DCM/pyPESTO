@@ -177,7 +177,7 @@ def test_simple_prediction(edata_objects):
     shutil.rmtree('deleteme')
 
     # assert h5 file is there
-    p = default_prediction(x, output_file='deleteme.h5', output_format='h5')
+    p = default_predictor(x, output_file='deleteme.h5', output_format='h5')
     check_outputs(p, out=(0,), n_cond=1, n_timepoints=10, n_obs=2, n_par=2)
     assert os.path.exists('deleteme.h5')
     os.remove('deleteme.h5')
@@ -301,7 +301,7 @@ def test_petab_prediction():
 
     # ===== run test for prediction ===========================================
     p = predictor(np.array(petab_problem.x_nominal_free_scaled),
-                   sensi_orders=(0, 1))
+                  sensi_orders=(0, 1))
     check_outputs(p, out=(0, 1), n_cond=1, n_timepoints=10, n_obs=1, n_par=2)
     # check outputs for simulation and measurement dataframes
     importer.prediction_to_petab_measurement_df(p, predictor)
