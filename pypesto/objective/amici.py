@@ -147,7 +147,7 @@ class AmiciObjective(ObjectiveBase):
         # preallocate guesses, construct a dict for every edata for which we
         # need to do preequilibration
         if self.guess_steadystate:
-            if self.amici_model.ncl() > 0:
+            if self.amici_model.nx_solver_reinit > 0:
                 raise ValueError('Steadystate prediction is not supported for '
                                  'models with conservation laws!')
 
