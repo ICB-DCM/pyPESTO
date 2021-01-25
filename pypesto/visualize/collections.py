@@ -15,11 +15,10 @@ def identifiability_overview(collection: Collection,
                              ax: Optional[plt.Axes] = None,
                              size: Optional[Tuple[float]] = (12, 6)):
     """
-    Plot an overview about how many parameters hit the parameter bounds with
-    up to a certain level of confidence. This routine is particularly suited
-    for model with many parameters and allows get a quick (rough) impression
-    of the overall identifiability of the model parameters. It expects (atm)
-    a collection object as input.
+    Plots an overview about how many parameters hit the parameter bounds based
+    on a collection of parameters. confidence intervals/credible ranges are
+    computed via the collection mean plus/minus 1 standard deviation.
+    This highlevel routine expects (atm) a collection object as input.
 
     Parameters
     ----------
@@ -61,9 +60,11 @@ def identifiability_overview_lowlevel(none_hit: np.ndarray,
                                       ax: Optional[plt.Axes] = None,
                                       size: Optional[Tuple[float]] = (16, 10)):
     """
-    Plot an overview about how many parameters hit the parameter bounds with
-    up to a certain level of confidence from numpy arrays which define the
-    confidence intervals/credible ranges of each parameter.
+    Plots an overview about how many parameters hit the parameter bounds based
+    on a collection of parameters. confidence intervals/credible ranges are
+    computed via the collection mean plus/minus 1 standard deviation.
+    This lowlevel routine works with numpy arrays which define the confidence
+    intervals/credible ranges of each parameter.
 
     Parameters
     ----------
@@ -166,10 +167,11 @@ def identifiability_overview_lowlevel(none_hit: np.ndarray,
 def _prepare_identifiability_plot(id_df: pd.DataFrame):
     """
     This routine groups model parameters based on a collection object into
-    four categories: Parameters that hit oth bounds, parameters that hit the
-    lower [or upper] bound, and parameters that hit no bounds. It returns them
-    as four numpy arrays, together with their confidence intervals/credible
-    ranges.
+    four categories, based on the mean of the parameter collection plus/minus
+    1 standard deviation: Parameters that hit both bounds, parameters that hit
+    only the lower [or upper] bound, and parameters that hit no bounds.
+    It returns them as four numpy arrays, together with their confidence
+    intervals/credible ranges.
 
     Parameters
     ----------
@@ -210,30 +212,30 @@ def _prepare_identifiability_plot(id_df: pd.DataFrame):
         val_u = par_info['collection_mean'] + par_info['collection_std']
         # check if parameter confidence intervals/credible ranges hit bound
         if val_l <= lb:
-            l = 0.
+            lower_val = 0.
         else:
-            l = (val_l - lb) / (ub - lb)
+            lower_val = (val_l - lb) / (ub - lb)
         if val_u >= ub:
-            u = 1.
+            upper_val = 1.
         else:
-            u = (val_u - lb) / (ub - lb)
+            upper_val = (val_u - lb) / (ub - lb)
 
-        return l, u
+        return lower_val, upper_val
 
     for par_id in list(id_df.index):
         # check which of the parameters seems to be identifiable and group them
         if id_df.loc[par_id, 'within lb: 1 std'] and \
                 id_df.loc[par_id, 'within ub: 1 std']:
-            none_hit.append(_affine_transform(id_df.loc[par_id,:]))
+            none_hit.append(_affine_transform(id_df.loc[par_id, :]))
         elif id_df.loc[par_id, 'within lb: 1 std']:
-            ub_hit.append(_affine_transform(id_df.loc[par_id,:]))
+            ub_hit.append(_affine_transform(id_df.loc[par_id, :]))
         elif id_df.loc[par_id, 'within ub: 1 std']:
-            lb_hit.append(_affine_transform(id_df.loc[par_id,:]))
+            lb_hit.append(_affine_transform(id_df.loc[par_id, :]))
         else:
-            both_hit.append(_affine_transform(id_df.loc[par_id,:]))
+            both_hit.append(_affine_transform(id_df.loc[par_id, :]))
 
-    return np.array(none_hit), np.array(lb_hit), \
-           np.array(ub_hit), np.array(both_hit)
+    return np.array(none_hit), np.array(lb_hit), np.array(ub_hit), \
+        np.array(both_hit)
 
 
 def _create_patches(none_hit: np.ndarray,
@@ -285,42 +287,47 @@ def _create_patches(none_hit: np.ndarray,
     n_par = sum([none_hit.shape[0], lb_hit.shape[0],
                  ub_hit.shape[0], both_hit.shape[0]])
 
-    # creates paths for parameters which hit both bounds
+    # creates patches for parameters which hit both bounds
     patches_both_hit = []
+    # start patches at the left end and increment by h = 1/n_par
     x = 0.
     h = 1. / n_par
     for _ in both_hit:
+        # create a list of rectangles
         patches_both_hit.append(Rectangle((x, 0.), h, 1.))
         x += h
     patches_both_hit = PatchCollection(patches_both_hit,
                                        facecolors=COLOR_HIT_BOTH_BOUNDS)
 
-    # creates paths for parameters which hit lower bound
+    # creates patches for parameters which hit lower bound
     patches_lb_hit = []
     # sort by normalizes length of confidence interval/credible range
-    tmp_lb = np.sort(lb_hit[:,1])[::-1]
+    tmp_lb = np.sort(lb_hit[:, 1])[::-1]
     for lb_par in tmp_lb:
+        # create a list of rectangles
         patches_lb_hit.append(Rectangle((x, 0.), h, lb_par))
         x += h
     patches_lb_hit = PatchCollection(patches_lb_hit,
                                      facecolors=COLOR_HIT_ONE_BOUND)
 
-    # creates paths for parameters which hit upper bound
+    # creates patches for parameters which hit upper bound
     patches_ub_hit = []
     # sort by normalizes length of confidence interval/credible range
     tmp_ub = np.sort(ub_hit[:, 0])
     for ub_par in tmp_ub:
+        # create a list of rectangles
         patches_ub_hit.append(Rectangle((x, ub_par), h, 1. - ub_par))
         x += h
     patches_ub_hit = PatchCollection(patches_ub_hit,
                                      facecolors=COLOR_HIT_ONE_BOUND)
 
-    # creates paths for parameters which hit no bounds
+    # creates patches for parameters which hit no bounds
     patches_none_hit = []
     # sort by normalizes length of confidence interval/credible range
     tmp_none = np.argsort(none_hit[:, 1] - none_hit[:, 0])[::-1]
     for none_par in tmp_none:
         patches_none_hit.append(
+            # create a list of rectangles
             Rectangle((x, none_hit[none_par, 0]), h,
                       none_hit[none_par, 1] - none_hit[none_par, 0]))
         x += h
