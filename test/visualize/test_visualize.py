@@ -8,6 +8,7 @@ import pypesto.optimize as optimize
 import pypesto.profile as profile
 import pypesto.sample as sample
 import pypesto.visualize as visualize
+import pypesto.collections as collections
 
 
 def close_fig(fun):
@@ -24,7 +25,7 @@ def close_fig(fun):
 # Define some helper functions, to have the test code more readable
 
 
-def create_bounds():
+def create_bounds(n_parameters: int = 2):
     # define bounds for a pypesto problem
     lb = -7 * np.ones((1, 2))
     ub = 7 * np.ones((1, 2))
@@ -32,14 +33,14 @@ def create_bounds():
     return lb, ub
 
 
-def create_problem():
+def create_problem(n_parameters: int = 2):
     # define a pypesto objective
     objective = pypesto.Objective(fun=so.rosen,
                                   grad=so.rosen_der,
                                   hess=so.rosen_hess)
 
     # define a pypesto problem
-    (lb, ub) = create_bounds()
+    (lb, ub) = create_bounds(n_parameters)
     problem = pypesto.Problem(objective=objective, lb=lb, ub=ub)
 
     return problem
@@ -319,9 +320,27 @@ def test_parameters_hist():
 
 
 @close_fig
-def test_ensemble_identifiability():
-    problem = create_problem()
-    ensemble = np.random.rand()
+def test_identifiability_overview():
+    # creates a test problem
+    problem = create_problem(n_parameters=100)
+
+    ensemble = []
+    # some magical numbers which create a reasonable plot. Please don't change!
+    std = (1, 1, 2, 2, 2.5, 3, 3, 4, 5, 7, 6, 6, 10, 8, 10, 15, 15, 25, 35, 50)
+    offset = (1, 1, 0, 0, -1, -1, -7, -7, 5, 4,
+              -10, -10, -12, 0, 1, -13, 0, -15, -18, -20)
+    # create a collection/an ensemble based on these magic numbers
+    for _ in range(5):
+        for ip in range(len(std)):
+            ensemble.append(std[ip] * np.random.rand(40) + offset[ip])
+    ensemble = np.array(ensemble)
+    ensemble = collections.Collection(ensemble,
+                                      lower_bound=problem.lb,
+                                      upper_bound=problem.ub)
+
+    # test plotting from a collection object
+    visualize.identifiability_overview(ensemble)
+
 
 @close_fig
 def test_profiles():
