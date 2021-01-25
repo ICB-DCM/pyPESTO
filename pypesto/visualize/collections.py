@@ -1,7 +1,6 @@
 import matplotlib.pyplot as plt
 from matplotlib.collections import PatchCollection
 from matplotlib.patches import Rectangle
-from matplotlib.ticker import MaxNLocator
 import numpy as np
 
 from typing import Iterable, List, Optional, Sequence, Tuple, Union
@@ -9,25 +8,26 @@ from typing import Iterable, List, Optional, Sequence, Tuple, Union
 from ..collections import Collection
 from ..collections.constants import (
     COLOR_HIT_BOTH_BOUNDS, COLOR_HIT_ONE_BOUND, COLOR_HIT_NO_BOUNDS)
-from .reference_points import create_references, ReferencePoint
-from .clust_color import assign_colors
-from .clust_color import delete_nan_inf
-from .misc import process_result_list, process_start_indices
 
 
 def collection_identifiability(collection: Collection):
+    # first get the data to check identifiability
     id_df = collection.check_identifiability()
-    none_hit, lb_hit, ub_hit, both_hit = _prepare_identifiability_plot(id_df)
-    n_par = id_df.shape[0]
-    n_both = len(both_hit) / n_par
-    n_lb = len(lb_hit) / n_par
-    n_ub = len(ub_hit) / n_par
 
-    ax = plt.subplot(111)
+    # check how many bounds are actually hit and which ones
+    none_hit, lb_hit, ub_hit, both_hit = _prepare_identifiability_plot(id_df)
+
+    # define some short hands for later plotting
+    n_par = id_df.shape[0]
+    x_both = len(both_hit) / n_par
+    x_lb = len(lb_hit) / n_par
+    x_ub = len(ub_hit) / n_par
+    x_none = 1. - x_both - x_ub - x_lb
+
     patches_both_hit = []
     x = 0.
     h = 1. / n_par
-    for hit in both_hit:
+    for _ in both_hit:
         patches_both_hit.append(Rectangle((x, 0.), h, 1.))
         x += h
     patches_both_hit = PatchCollection(patches_both_hit,
@@ -59,21 +59,51 @@ def collection_identifiability(collection: Collection):
     patches_none_hit = PatchCollection(patches_none_hit,
                                        facecolors=COLOR_HIT_NO_BOUNDS)
 
-
+    # create axes object and add patch collections
+    ax = plt.subplot(111)
     ax.add_collection(patches_both_hit)
     ax.add_collection(patches_lb_hit)
     ax.add_collection(patches_ub_hit)
     ax.add_collection(patches_none_hit)
 
-    tmp = n_both
-    ax.plot([tmp, tmp], [0, 1], 'k--', linewidth=1.)
-    tmp += n_lb
-    ax.plot([tmp, tmp], [0, 1], 'k--', linewidth=1.)
-    tmp += n_ub
-    ax.plot([tmp, tmp], [0, 1], 'k--', linewidth=1.)
-    ax.plot([0, 0], [0, 1], 'k-', linewidth=1.)
-    ax.plot([1, 1], [0, 1], 'k-', linewidth=1.)
+    # plot dashed lines indicating the number rof non-identifiable parameters
+    vert = [-.05, 1.05]
+    ax.plot([x_both, x_both], vert, 'k--', linewidth=1.5)
+    ax.plot([x_both + x_lb, x_both + x_lb], vert, 'k--', linewidth=1.5)
+    ax.plot([x_both + x_lb + x_ub, x_both + x_lb + x_ub], vert,
+            'k--', linewidth=1.5)
 
+    # plot frame
+    ax.plot([0, 0], vert, 'k-', linewidth=1.5)
+    ax.plot([1, 1], vert, 'k-', linewidth=1.5)
+
+    # plot upper and lower bounds
+    ax.text(-.03, 1., 'upper\nbound', ha='right', va='center')
+    ax.text(-.03, 0., 'lower\nbound', ha='right', va='center')
+    ax.plot([-.02, 1.03], [0, 0], 'k:', linewidth=1.5)
+    ax.plot([-.02, 1.03], [1, 1], 'k:', linewidth=1.5)
+    plt.xticks([])
+    plt.yticks([])
+    
+    ax.text(x_both / 2, -.05, 'both bounds hit', color=COLOR_HIT_BOTH_BOUNDS,
+            rotation=-90, va='top', ha='center')
+    ax.text(x_both + x_lb / 2, -.05, 'lower bound hit',
+            color=COLOR_HIT_ONE_BOUND, rotation=-90, va='top', ha='center')
+    ax.text(x_both + x_lb + x_ub / 2, -.05, 'upper bound hit',
+            color=COLOR_HIT_ONE_BOUND, rotation=-90, va='top', ha='center')
+    ax.text(1 - x_none / 2, -.05, 'no bounds hit',
+            color=COLOR_HIT_NO_BOUNDS, rotation=-90, va='top', ha='center')
+    ax.text(0, -.7, 'identifiable parameters: {:4.1f}%'.format(x_none * 100),
+            va='top')
+
+    plt.xlim((-.15, 1.1))
+    plt.ylim((-.78, 1.15))
+    ax.spines['right'].set_visible(False)
+    ax.spines['left'].set_visible(False)
+    ax.spines['bottom'].set_visible(False)
+    ax.spines['top'].set_visible(False)
+
+    plt.tight_layout()
     plt.show()
 
 

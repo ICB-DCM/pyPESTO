@@ -155,20 +155,20 @@ def test_simple_prediction(edata_objects):
     model, solver, edatas = edata_objects
     objective = pypesto.AmiciObjective(model, solver, edatas[0], 1)
     # now create a prediction object
-    default_prediction = pypesto.AmiciPredictor(objective)
+    default_predictor = pypesto.AmiciPredictor(objective)
     # let's set the parameter vector
     x = np.array([3., 0.5])
 
     # assert output is what it should look like when running in efault mode
-    p = default_prediction(x)
+    p = default_predictor(x)
     check_outputs(p, out=(0,), n_cond=1, n_timepoints=10, n_obs=2, n_par=2)
 
     # assert folder is there with all files
     # remove file is already existing
     if os.path.exists('deleteme'):
         shutil.rmtree('deleteme')
-    p = default_prediction(x, output_file='deleteme.csv', sensi_orders=(1,),
-                           output_format='csv')
+    p = default_predictor(x, output_file='deleteme.csv', sensi_orders=(1,),
+                          output_format='csv')
     check_outputs(p, out=(1,), n_cond=1, n_timepoints=10, n_obs=2, n_par=2)
     # check created files
     assert os.path.exists('deleteme')
@@ -249,7 +249,7 @@ def test_complex_prediction(edata_objects):
     model, solver, edatas = edata_objects
     objective = pypesto.AmiciObjective(model, solver, edatas, 1)
     # now create a prediction object
-    complex_prediction = pypesto.AmiciPredictor(
+    complex_predictor = pypesto.AmiciPredictor(
         objective, max_chunk_size=2, post_processor=pp_out,
         post_processor_sensi=pps_out, post_processor_time=ppt_out,
         observable_ids=[f'ratio_{i_obs}' for i_obs in range(5)])
@@ -257,15 +257,15 @@ def test_complex_prediction(edata_objects):
     x = np.array([3., 0.5])
 
     # assert output is what it should look like when running in efault mode
-    p = complex_prediction(x, sensi_orders=(0, 1))
+    p = complex_predictor(x, sensi_orders=(0, 1))
     check_outputs(p, out=(0, 1), n_cond=2, n_timepoints=10, n_obs=5, n_par=2)
 
     # assert folder is there with all files
     # remove file is already existing
     if os.path.exists('deleteme'):
         shutil.rmtree('deleteme')
-    p = complex_prediction(x, output_file='deleteme.csv', sensi_orders=(0, 1),
-                           output_format='csv')
+    p = complex_predictor(x, output_file='deleteme.csv', sensi_orders=(0, 1),
+                          output_format='csv')
     check_outputs(p, out=(0, 1), n_cond=2, n_timepoints=10, n_obs=5, n_par=2)
     # check created files
     assert os.path.exists('deleteme')
@@ -276,8 +276,8 @@ def test_complex_prediction(edata_objects):
     shutil.rmtree('deleteme')
 
     # assert h5 file is there
-    p = complex_prediction(x, output_file='deleteme.h5', sensi_orders=(0, 1),
-                           output_format='h5')
+    p = complex_predictor(x, output_file='deleteme.h5', sensi_orders=(0, 1),
+                          output_format='h5')
     check_outputs(p, out=(0, 1), n_cond=2, n_timepoints=10, n_obs=5, n_par=2)
     assert os.path.exists('deleteme.h5')
     os.remove('deleteme.h5')
@@ -297,15 +297,15 @@ def test_petab_prediction():
     petab_problem.model_name = f'{model_name}_petab'
     importer = pypesto.petab.PetabImporter(petab_problem)
     # create prediction via PAteb
-    prediction = importer.create_prediction()
+    predictor = importer.create_prediction()
 
     # ===== run test for prediction ===========================================
-    p = prediction(np.array(petab_problem.x_nominal_free_scaled),
+    p = predictor(np.array(petab_problem.x_nominal_free_scaled),
                    sensi_orders=(0, 1))
     check_outputs(p, out=(0, 1), n_cond=1, n_timepoints=10, n_obs=1, n_par=2)
     # check outputs for simulation and measurement dataframes
-    importer.prediction_to_petab_measurement_df(p, prediction)
-    importer.prediction_to_petab_simulation_df(p, prediction)
+    importer.prediction_to_petab_measurement_df(p, predictor)
+    importer.prediction_to_petab_simulation_df(p, predictor)
 
     # ===== run test for ensemble prediction ==================================
     # read a set of ensemble vectors from the csv
@@ -328,7 +328,7 @@ def test_petab_prediction():
     assert isinstance(parameter_identifiability, pd.DataFrame)
 
     # perform a prediction for the ensemble
-    ensemble_prediction = ensemble.predict(predictor=prediction)
+    ensemble_prediction = ensemble.predict(predictor=predictor)
     # check some of the basic functionality: compressing output to large arrays
     ensemble_prediction.condense_to_arrays()
     for field in ('timepoints', 'output', 'output_sensi'):

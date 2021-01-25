@@ -15,6 +15,7 @@ from ..objective.priors import NegLogParameterPriors, \
 
 try:
     import petab
+    from petab.C import PREEQUILIBRATION_CONDITION_ID, SIMULATION_CONDITION_ID
     import amici
     import amici.petab_import
     import amici.petab_objective
