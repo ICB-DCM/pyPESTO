@@ -1,5 +1,5 @@
 """
-This is for (string) constants used in the collections module.
+This is for (string) constants used in the ensemble module.
 """
 
 
@@ -20,8 +20,6 @@ PREDICTION_RESULTS = 'predction_results'
 PREDICTION_ARRAYS = 'prediction_arrays'
 PREDICTION_SUMMARY = 'prediction_summary'
 
-CONDITION_SEP = '::'
-
 MEAN = 'mean'
 MEDIAN = 'median'
 STANDARD_DEVIATION = 'std'
@@ -33,7 +31,7 @@ NX = 'n_x'
 X_VECTOR = 'x_vectors'
 NVECTORS = 'n_vectors'
 VECTOR_TAGS = 'vector_tags'
-COLLECTION_TYPE = 'coll_type'
+ENSEMBLE_TYPE = 'ensemble_type'
 PREDICTIONS = 'predictions'
 
 LOWER_BOUND = 'lower_bound'
@@ -50,7 +48,7 @@ COLOR_HIT_ONE_BOUND = [0.95, 0.6, 0., 0.9]
 COLOR_HIT_NO_BOUNDS = [0., 0.8, 0., 0.9]
 
 
-class CollectionType(Enum):
+class EnsembleType(Enum):
     ensemble = 1
     sample = 2
     unprocessed_chain = 3

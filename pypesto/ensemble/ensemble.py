@@ -7,16 +7,16 @@ from .constants import (PREDICTOR, PREDICTION_ID, PREDICTION_RESULTS,
                         PREDICTION_ARRAYS, PREDICTION_SUMMARY, OUTPUT,
                         OUTPUT_SENSI, TIMEPOINTS, X_VECTOR, NX, X_NAMES,
                         NVECTORS, VECTOR_TAGS, PREDICTIONS, MODE_FUN,
-                        CollectionType, COLLECTION_TYPE, MEAN, MEDIAN,
+                        EnsembleType, ENSEMBLE_TYPE, MEAN, MEDIAN,
                         STANDARD_DEVIATION, PERCENTILE, SUMMARY, LOWER_BOUND,
                         UPPER_BOUND)
 
 
-class CollectionPrediction:
+class EnsemblePrediction:
     """
-    A collection prediction consists of a collection, i.e., a set of parameter
-    vectors and their identifiers such as a sample or an ensemble, and a
-    prediction function. It can be attached to a collection-type object
+    A ensemble prediction consists of an ensemble, i.e., a set of parameter
+    vectors and their identifiers such as a sample, and a prediction function.
+    It can be attached to a ensemble-type object
     """
 
     def __init__(self,
@@ -76,7 +76,7 @@ class CollectionPrediction:
     def condense_to_arrays(self):
         """
         This functions reshapes the predictions results to an array and adds
-        them as a member to the CollectionPrediction objects.
+        them as a member to the EnsemblePrediction objects.
         """
         # prepare for storing results over all predictions
         output = []
@@ -119,9 +119,9 @@ class CollectionPrediction:
                         ) -> Dict:
         """
         This function computes the mean, the median, the standard deviation
-        and possibly percentiles from the collection prediction results.
+        and possibly percentiles from the ensemble prediction results.
         Those summary results are added as a data member to the
-        CollectionPrediction object.
+        EnsemblePrediction object.
 
         Parameters
         ----------
@@ -235,7 +235,7 @@ class CollectionPrediction:
         return self.prediction_summary
 
 
-class Collection:
+class Ensemble:
     """
     A ensemble is a thin wrapper around an numpy array. It comes with some
     convenience functionality: It allows to map parameter values via
@@ -249,8 +249,8 @@ class Collection:
                  x_vectors: np.ndarray,
                  x_names: Sequence[str] = None,
                  vector_tags: Sequence[Tuple[int, int]] = None,
-                 coll_type: CollectionType = None,
-                 predictions: Sequence[CollectionPrediction] = None,
+                 ensemble_type: EnsembleType = None,
+                 predictions: Sequence[EnsemblePrediction] = None,
                  lower_bound: np.ndarray = None,
                  upper_bound: np.ndarray = None):
         """
@@ -259,22 +259,22 @@ class Collection:
         Parameters
         ----------
         x_vectors:
-            parameter vectors of the collection, in the format
+            parameter vectors of the ensemble, in the format
             n_parameter x n_vectors
         x_names:
             Names or identifiers of the parameters
         vector_tags:
             Additional tag, which adds information about the the parameter
             vectors of the form (optimization_run, optimization_step) if the
-            collection is created from an optimization result or
-            (sampling_chain, sampling_step) if the collection is created from a
+            ensemble is created from an optimization result or
+            (sampling_chain, sampling_step) if the ensemble is created from a
             sampling result.
-        coll_type:
-            Type of collection: Ensemble (default) or sample
+        ensemble_type:
+            Type of ensemble: Ensemble (default), sample, or unprocessed_chain
             Samples are meant to be representative, ensembles can be any
-            collection of parameters
+            ensemble of parameters, and unprocessed chains still have burn-ins
         predictions:
-            List of CollectionPrediction objects
+            List of EnsemblePrediction objects
         lower_bound:
             array of potential lower bounds for the parameters
         upper_bound:
@@ -303,9 +303,9 @@ class Collection:
             self.x_names = [f'x_{ix}' for ix in range(self.n_x)]
 
         # Do we have a representative sample or just random ensemble?
-        self.coll_type = CollectionType.ensemble
-        if coll_type is not None:
-            self.coll_type = coll_type
+        self.ensemble_type = EnsembleType.ensemble
+        if ensemble_type is not None:
+            self.ensemble_type = ensemble_type
 
         # Do we have predictions for this ensemble?
         self.predictions = []
@@ -322,7 +322,7 @@ class Collection:
         yield X_NAMES, self.x_names
         yield NVECTORS, self.n_vectors
         yield VECTOR_TAGS, self.vector_tags
-        yield COLLECTION_TYPE, self.coll_type
+        yield ENSEMBLE_TYPE, self.ensemble_type
         yield PREDICTIONS, self.predictions
         yield SUMMARY, self.summary
         yield LOWER_BOUND, self.lower_bound
@@ -336,7 +336,7 @@ class Collection:
         """
         Convenience function to run predictions for a full ensemble:
         User needs to hand over a predictor function and settings, then all
-        results are grouped as CollectionPrediction for the whole ensemble
+        results are grouped as EnsemblePrediction for the whole ensemble
 
         Parameters
         ----------
@@ -352,8 +352,7 @@ class Collection:
         Returns
         -------
         result:
-            CollectionPrediction of the collection object for the predictor
-            function
+            EnsemblePrediction of the ensemble for the predictor function
         """
         # preallocate
         prediction_results = []
@@ -362,17 +361,17 @@ class Collection:
             x = self.x_vectors[:, ix]
             prediction_results.append(predictor(x, sensi_orders, mode))
 
-        return CollectionPrediction(predictor=predictor,
-                                    prediction_id=prediction_id,
-                                    prediction_results=prediction_results)
+        return EnsemblePrediction(predictor=predictor,
+                                  prediction_id=prediction_id,
+                                  prediction_results=prediction_results)
 
     def compute_summary(self,
                         percentiles_list: Sequence[int] = (5, 20, 80, 95)):
         """
         This function computes the mean, the median, the standard deviation
-        and possibly percentiles for the parameters of the collection.
+        and possibly percentiles for the parameters of the ensemble.
         Those summary results are added as a data member to the
-        CollectionPrediction object.
+        EnsemblePrediction object.
 
         Parameters
         ----------
@@ -430,9 +429,9 @@ class Collection:
                 'parameterId': x_name,
                 'lowerBound': lb,
                 'upperBound': ub,
-                'collection_mean': mean,
-                'collection_std': std,
-                'collection_median': median,
+                'ensemble_mean': mean,
+                'ensemble_std': std,
+                'ensemble_median': median,
                 'within lb: 1 std': lb < mean - std,
                 'within ub: 1 std': ub > mean + std,
                 'within lb: 2 std': lb < mean - 2 * std,
@@ -462,7 +461,7 @@ def read_from_csv(path: str,
                   sep: str = '\t',
                   index_col: int = 0,
                   headline_parser: Callable = None,
-                  coll_type: CollectionType = None,
+                  ensemble_type: EnsembleType = None,
                   lower_bound: np.ndarray = None,
                   upper_bound: np.ndarray = None):
     """
@@ -471,16 +470,16 @@ def read_from_csv(path: str,
     Parameters
     ----------
     path:
-        path to csv file to read in parameter collection/ensemble
+        path to csv file to read in parameter ensemble
     sep:
         separator in csv file
     index_col:
         index column in csv file
     headline_parser:
         A function which reads in the headline of the csv file and converts it
-        into vector_tags (see constructor of Collection for more details)
-    coll_type:
-        Collection type: representative sample or random ensemble
+        into vector_tags (see constructor of Ensemble for more details)
+    ensemble_type:
+        Ensemble type: representative sample or random ensemble
     lower_bound:
         array of potential lower bounds for the parameters
     upper_bound:
@@ -489,21 +488,21 @@ def read_from_csv(path: str,
     Returns
     -------
     result:
-        Collection object of parameter vectors
+        Ensemble object of parameter vectors
     """
     # get the data from the csv
-    collection_df = pd.read_csv(path, sep=sep, index_col=index_col)
+    ensemble_df = pd.read_csv(path, sep=sep, index_col=index_col)
     # if we have a parser to make vector_tags from column names, we use it
     vector_tags = None
     if headline_parser is not None:
-        vector_tags = headline_parser(list(collection_df.columns))
-    # set the type of the collection
-    if coll_type is None:
-        coll_type = CollectionType.ensemble
+        vector_tags = headline_parser(list(ensemble_df.columns))
+    # set the type of the ensemble
+    if ensemble_type is None:
+        ensemble_type = EnsembleType.ensemble
 
-    return Collection(x_vectors=collection_df.values,
-                      x_names=list(collection_df.index),
-                      vector_tags=vector_tags,
-                      coll_type=coll_type,
-                      lower_bound=lower_bound,
-                      upper_bound=upper_bound)
+    return Ensemble(x_vectors=ensemble_df.values,
+                    x_names=list(ensemble_df.index),
+                    vector_tags=vector_tags,
+                    ensemble_type=ensemble_type,
+                    lower_bound=lower_bound,
+                    upper_bound=upper_bound)

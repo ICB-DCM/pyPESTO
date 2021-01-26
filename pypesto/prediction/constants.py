@@ -12,6 +12,10 @@ TIMEPOINTS = 'timepoints'  # data member in PredictionConditionResult
 OUTPUT = 'output'  # field in the return dict of AmiciPredictor
 OUTPUT_SENSI = 'output_sensi'  # field in the return dict of AmiciPredictor
 
+# separator in the conditions_ids betweeen preequilibration and simulation
+# condition
+CONDITION_SEP = '::'
+
 RDATAS = 'rdatas'  # return field of call to pypesto objective
 AMICI_T = 't'  # return field in amici simulation result
 AMICI_X = 'x'  # return field in amici simulation result

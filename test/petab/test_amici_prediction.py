@@ -5,7 +5,7 @@ This is for testing the pypesto.prediction.AmiciPredictor.
 import amici
 import pypesto
 import pypesto.petab
-import pypesto.collections
+import pypesto.ensemble
 import os
 import sys
 import numpy as np
@@ -15,7 +15,6 @@ import pytest
 import libsbml
 import petab
 from pypesto.prediction import PredictionResult, PredictionConditionResult
-from pypesto.collections import Collection, CollectionPrediction
 
 
 @pytest.fixture()
@@ -312,10 +311,10 @@ def test_petab_prediction():
     ensemble_file = os.path.join(
         os.path.dirname(__file__), '..', '..', 'doc', 'example', model_name,
         'parameter_ensemble.tsv')
-    ensemble = pypesto.collections.read_from_csv(
+    ensemble = pypesto.ensemble.read_from_csv(
         ensemble_file, lower_bound=petab_problem.get_lb(),
         upper_bound=petab_problem.get_ub())
-    isinstance(ensemble, Collection)
+    isinstance(ensemble, pypesto.ensemble.Ensemble)
 
     # check summary creation and identifiability analysis
     summary = ensemble.compute_summary(percentiles_list=[10, 25, 75, 90])
@@ -336,7 +335,7 @@ def test_petab_prediction():
 
     # computing summaries
     ensemble_prediction.compute_summary(percentiles_list=[5, 20, 80, 95])
-    isinstance(ensemble_prediction, CollectionPrediction)
+    isinstance(ensemble_prediction, pypesto.ensemble.EnsemblePrediction)
 
     # define some short hands
     pred = ensemble_prediction.prediction_summary

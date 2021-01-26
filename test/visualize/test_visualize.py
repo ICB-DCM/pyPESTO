@@ -8,7 +8,7 @@ import pypesto.optimize as optimize
 import pypesto.profile as profile
 import pypesto.sample as sample
 import pypesto.visualize as visualize
-import pypesto.collections as collections
+import pypesto.ensemble as ensemble
 
 
 def close_fig(fun):
@@ -320,11 +320,11 @@ def test_parameters_hist():
 
 
 @close_fig
-def test_identifiability_overview():
+def test_ensemble_identifiability():
     # creates a test problem
     problem = create_problem(n_parameters=100)
 
-    ensemble = []
+    my_ensemble = []
     # some magical numbers which create a reasonable plot. Please don't change!
     std = (1, 1, 2, 2, 2.5, 3, 3, 4, 5, 7, 6, 6, 10, 8, 10, 15, 15, 25, 35, 50)
     offset = (1, 1, 0, 0, -1, -1, -7, -7, 5, 4,
@@ -332,14 +332,14 @@ def test_identifiability_overview():
     # create a collection/an ensemble based on these magic numbers
     for _ in range(5):
         for ip in range(len(std)):
-            ensemble.append(std[ip] * np.random.rand(500) + offset[ip])
-    ensemble = np.array(ensemble)
-    ensemble = collections.Collection(ensemble,
-                                      lower_bound=problem.lb,
-                                      upper_bound=problem.ub)
+            my_ensemble.append(std[ip] * np.random.rand(500) + offset[ip])
+    my_ensemble = np.array(my_ensemble)
+    my_ensemble = ensemble.Ensemble(my_ensemble,
+                                    lower_bound=problem.lb,
+                                    upper_bound=problem.ub)
 
     # test plotting from a collection object
-    visualize.identifiability_overview(ensemble)
+    visualize.ensemble_identifiability(my_ensemble)
 
 
 @close_fig

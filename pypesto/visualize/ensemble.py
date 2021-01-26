@@ -6,25 +6,25 @@ import pandas as pd
 
 from typing import Optional, Tuple
 
-from ..collections import Collection
-from ..collections.constants import (
+from ..ensemble import Ensemble
+from ..ensemble.constants import (
     COLOR_HIT_BOTH_BOUNDS, COLOR_HIT_ONE_BOUND, COLOR_HIT_NO_BOUNDS)
 
 
-def identifiability_overview(collection: Collection,
+def ensemble_identifiability(ensemble: Ensemble,
                              ax: Optional[plt.Axes] = None,
                              size: Optional[Tuple[float]] = (12, 6)):
     """
     Plots an overview about how many parameters hit the parameter bounds based
-    on a collection of parameters. confidence intervals/credible ranges are
-    computed via the collection mean plus/minus 1 standard deviation.
-    This highlevel routine expects a collection object as input.
+    on a ensemble of parameters. confidence intervals/credible ranges are
+    computed via the ensemble mean plus/minus 1 standard deviation.
+    This highlevel routine expects a ensemble object as input.
 
     Parameters
     ----------
 
-    collection:
-        collections of parameter vectors (from pypesto.collections)
+    ensemble:
+        ensemble of parameter vectors (from pypesto.ensemble)
 
     ax:
         Axes object to use.
@@ -41,19 +41,19 @@ def identifiability_overview(collection: Collection,
     """
 
     # first get the data to check identifiability
-    id_df = collection.check_identifiability()
+    id_df = ensemble.check_identifiability()
 
     # check how many bounds are actually hit and which ones
     none_hit, lb_hit, ub_hit, both_hit = _prepare_identifiability_plot(id_df)
 
     # call lowlevel routine whick works with np arrays only
-    ax = identifiability_overview_lowlevel(none_hit, lb_hit, ub_hit, both_hit,
+    ax = ensemble_identifiability_lowlevel(none_hit, lb_hit, ub_hit, both_hit,
                                            ax, size)
 
     return ax
 
 
-def identifiability_overview_lowlevel(none_hit: np.ndarray,
+def ensemble_identifiability_lowlevel(none_hit: np.ndarray,
                                       lb_hit: np.ndarray,
                                       ub_hit: np.ndarray,
                                       both_hit: np.ndarray,
@@ -61,8 +61,8 @@ def identifiability_overview_lowlevel(none_hit: np.ndarray,
                                       size: Optional[Tuple[float]] = (16, 10)):
     """
     Plots an overview about how many parameters hit the parameter bounds based
-    on a collection of parameters. Confidence intervals/credible ranges are
-    computed via the collection mean plus/minus 1 standard deviation.
+    on a ensemble of parameters. Confidence intervals/credible ranges are
+    computed via the ensemble mean plus/minus 1 standard deviation.
     This lowlevel routine works with numpy arrays which define the confidence
     intervals/credible ranges of each parameter.
 
@@ -166,8 +166,8 @@ def identifiability_overview_lowlevel(none_hit: np.ndarray,
 
 def _prepare_identifiability_plot(id_df: pd.DataFrame):
     """
-    This routine groups model parameters based on a collection object into
-    four categories, based on the mean of the parameter collection plus/minus
+    This routine groups model parameters based on a ensemble object into
+    four categories, based on the mean of the parameter ensemble plus/minus
     1 standard deviation: Parameters that hit both bounds, parameters that hit
     only the lower [or upper] bound, and parameters that hit no bounds.
     It returns them as four numpy arrays, together with their confidence
@@ -177,7 +177,7 @@ def _prepare_identifiability_plot(id_df: pd.DataFrame):
     ----------
     id_df:
         Pandas dataframe with information about parameter identifiability,
-        as created by pypesto.collections.check_identifiability()
+        as created by pypesto.ensemble.check_identifiability()
 
     Returns
     -------
@@ -208,8 +208,8 @@ def _prepare_identifiability_plot(id_df: pd.DataFrame):
         # rescale parameters to bounds
         lb = par_info['lowerBound']
         ub = par_info['upperBound']
-        val_l = par_info['collection_mean'] - par_info['collection_std']
-        val_u = par_info['collection_mean'] + par_info['collection_std']
+        val_l = par_info['ensemble_mean'] - par_info['ensemble_std']
+        val_u = par_info['ensemble_mean'] + par_info['ensemble_std']
         # check if parameter confidence intervals/credible ranges hit bound
         if val_l <= lb:
             lower_val = 0.
@@ -269,19 +269,19 @@ def _create_patches(none_hit: np.ndarray,
     -------
     patches_both_hit:
         patches showing parameters which hit both parameter bounds in the
-        collection (and are hence non-identifiable)
+        ensemble (and are hence non-identifiable)
 
     patches_lb_hit:
         patches showing parameters which hit only the lower parameter bounds
-        in the collection (and are hence non-identifiable)
+        in the ensemble (and are hence non-identifiable)
 
     patches_ub_hit:
         patches showing parameters which hit only the lower parameter bounds
-        in the collection (and are hence non-identifiable)
+        in the ensemble (and are hence non-identifiable)
 
     patches_none_hit
         patches showing parameters which hit no parameter bounds in the
-        collection (and are hence identifiable)
+        ensemble (and are hence identifiable)
     """
     # get total number of parameters
     n_par = sum([none_hit.shape[0], lb_hit.shape[0],
