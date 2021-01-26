@@ -3,7 +3,7 @@ import copy
 import tempfile
 import os
 import abc
-from typing import Dict, Sequence, Union
+from typing import Dict, Sequence, Union, Optional
 from collections import OrderedDict
 
 from .base import ObjectiveBase
@@ -58,7 +58,7 @@ class AmiciObjective(ObjectiveBase):
                  x_ids: Sequence[str] = None,
                  x_names: Sequence[str] = None,
                  parameter_mapping: 'ParameterMapping' = None,
-                 guess_steadystate: bool = True,
+                 guess_steadystate: Optional[bool] = None,
                  n_threads: int = 1,
                  fim_for_hess: bool = True,
                  amici_object_builder: AmiciObjectBuilder = None,
@@ -144,18 +144,26 @@ class AmiciObjective(ObjectiveBase):
                 amici_model, len(edatas))
         self.parameter_mapping = parameter_mapping
 
-        # preallocate guesses, construct a dict for every edata for which we
-        # need to do preequilibration
-        if self.guess_steadystate:
+        # If supported, enable `guess_steadystate` by default. If not
+        #  supported, disable by default. If requested but unsupported, raise.
+        if self.guess_steadystate is not False:
             if self.amici_model.ncl() > 0:
-                raise ValueError('Steadystate prediction is not supported for '
-                                 'models with conservation laws!')
+                if self.guess_steadystate:
+                    raise ValueError('Steadystate prediction is not supported '
+                                     'for models with conservation laws!')
+                self.guess_steadystate = False
 
             if self.amici_model.getSteadyStateSensitivityMode() == \
                     amici.SteadyStateSensitivityMode_simulationFSA:
-                raise ValueError('Steadystate guesses cannot be enabled when'
-                                 ' `simulationFSA` as '
-                                 'SteadyStateSensitivityMode!')
+                if self.guess_steadystate:
+                    raise ValueError('Steadystate guesses cannot be enabled '
+                                     'when `simulationFSA` as '
+                                     'SteadyStateSensitivityMode!')
+                self.guess_steadystate = False
+
+        if self.guess_steadystate:
+            # preallocate guesses, construct a dict for every edata for which
+            #  we need to do preequilibration
             self.steadystate_guesses = {
                 'fval': np.inf,
                 'data': {
