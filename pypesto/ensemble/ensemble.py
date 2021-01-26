@@ -20,7 +20,7 @@ class EnsemblePrediction:
     """
 
     def __init__(self,
-                 predictor: Callable[[Sequence, ...], PredictionResult],
+                 predictor: Callable[[Sequence], PredictionResult],
                  prediction_id: str = None,
                  prediction_results: Sequence[PredictionResult] = None,
                  lower_bound: Sequence[np.ndarray] = None,
