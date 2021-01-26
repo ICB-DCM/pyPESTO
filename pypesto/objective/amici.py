@@ -146,20 +146,22 @@ class AmiciObjective(ObjectiveBase):
 
         # If supported, enable `guess_steadystate` by default. If not
         #  supported, disable by default. If requested but unsupported, raise.
-        if self.guess_steadystate is not False:
-            if self.amici_model.ncl() > 0:
-                if self.guess_steadystate:
-                    raise ValueError('Steadystate prediction is not supported '
-                                     'for models with conservation laws!')
-                self.guess_steadystate = False
+        if self.guess_steadystate is not False and self.amici_model.ncl() > 0:
+            if self.guess_steadystate:
+                raise ValueError('Steadystate prediction is not supported '
+                                 'for models with conservation laws!')
+            self.guess_steadystate = False
 
-            if self.amici_model.getSteadyStateSensitivityMode() == \
-                    amici.SteadyStateSensitivityMode_simulationFSA:
-                if self.guess_steadystate:
-                    raise ValueError('Steadystate guesses cannot be enabled '
-                                     'when `simulationFSA` as '
-                                     'SteadyStateSensitivityMode!')
+        if self.guess_steadystate is not False and \
+                self.amici_model.getSteadyStateSensitivityMode() == \
+                amici.SteadyStateSensitivityMode_simulationFSA:
+            if self.guess_steadystate:
+                raise ValueError('Steadystate guesses cannot be enabled '
+                                 'when `simulationFSA` as '
+                                 'SteadyStateSensitivityMode!')
                 self.guess_steadystate = False
+        else:
+            self.guess_steadystate = True
 
         if self.guess_steadystate:
             # preallocate guesses, construct a dict for every edata for which
