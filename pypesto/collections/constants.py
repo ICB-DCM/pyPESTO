@@ -20,6 +20,8 @@ PREDICTION_RESULTS = 'predction_results'
 PREDICTION_ARRAYS = 'prediction_arrays'
 PREDICTION_SUMMARY = 'prediction_summary'
 
+CONDITION_SEP = '::'
+
 MEAN = 'mean'
 MEDIAN = 'median'
 STANDARD_DEVIATION = 'std'

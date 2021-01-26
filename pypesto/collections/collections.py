@@ -60,6 +60,10 @@ class CollectionPrediction:
                                    MEDIAN: None}
 
     def __iter__(self):
+        """
+        __iter__ makes the instances of the class iterable objects, allowing to
+        apply functions such as __dict__ to them.
+        """
         yield PREDICTOR, self.predictor
         yield PREDICTION_ID, self.prediction_id
         yield PREDICTION_RESULTS, self.prediction_results
@@ -233,7 +237,12 @@ class CollectionPrediction:
 
 class Collection:
     """
-    A collection is a thin wrapper around an numpy array.
+    A ensemble is a thin wrapper around an numpy array. It comes with some
+    convenience functionality: It allows to map parameter values via
+    identifiers to the correct parameters, it allows to compute summaries of
+    the parameter vectors (mean, standard deviation, median, percentiles) more
+    easily, and it can store predictions made by pyPESTO, such that the
+    parameter ensemble and the predictions are linked to each other.
     """
 
     def __init__(self,
@@ -304,6 +313,10 @@ class Collection:
             self.predictions = predictions
 
     def __iter__(self):
+        """
+        __iter__ makes the instances of the class iterable objects, allowing to
+        apply functions such as __dict__ to them.
+        """
         yield X_VECTOR, self.x_vectors
         yield NX, self.n_x
         yield X_NAMES, self.x_names
@@ -395,9 +408,8 @@ class Collection:
             DataFrame indicating parameter identifiability based on mean
             plus/minus standard deviations and parameter bounds
         """
-        # first check if summary was computed. If not, do so
-        if self.summary is None:
-            self.compute_summary()
+        # Recompute the summary, maybe the ensemble objects has been changed.
+        self.compute_summary()
 
         # check identifiability for each parameter
         parameter_identifiability = []

@@ -10,6 +10,7 @@ from typing import Iterable, List, Optional, Sequence, Union, Callable
 from ..problem import Problem
 from ..objective import AmiciObjective, AmiciObjectBuilder, AggregatedObjective
 from ..prediction import AmiciPredictor, PredictionResult
+from ..prediction.constants import CONDITION_SEP
 from ..objective.priors import NegLogParameterPriors, \
     get_parameter_prior_dict
 
@@ -330,8 +331,8 @@ class PetabImporter(AmiciObjectBuilder):
             edata_conditions[PREEQUILIBRATION_CONDITION_ID] = preeq_dummy
         edata_conditions.drop_duplicates(inplace=True)
         condition_ids = [
-            edata_conditions.loc[id, PREEQUILIBRATION_CONDITION_ID] + '::' +
-            edata_conditions.loc[id, SIMULATION_CONDITION_ID]
+            edata_conditions.loc[id, PREEQUILIBRATION_CONDITION_ID] +
+            CONDITION_SEP + edata_conditions.loc[id, SIMULATION_CONDITION_ID]
             for id in edata_conditions.index
         ]
 

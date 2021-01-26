@@ -27,8 +27,8 @@ def close_fig(fun):
 
 def create_bounds(n_parameters: int = 2):
     # define bounds for a pypesto problem
-    lb = -7 * np.ones((1, 2))
-    ub = 7 * np.ones((1, 2))
+    lb = -7 * np.ones((1, n_parameters))
+    ub = 7 * np.ones((1, n_parameters))
 
     return lb, ub
 
@@ -332,7 +332,7 @@ def test_identifiability_overview():
     # create a collection/an ensemble based on these magic numbers
     for _ in range(5):
         for ip in range(len(std)):
-            ensemble.append(std[ip] * np.random.rand(40) + offset[ip])
+            ensemble.append(std[ip] * np.random.rand(500) + offset[ip])
     ensemble = np.array(ensemble)
     ensemble = collections.Collection(ensemble,
                                       lower_bound=problem.lb,

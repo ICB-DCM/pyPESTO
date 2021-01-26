@@ -18,7 +18,7 @@ def identifiability_overview(collection: Collection,
     Plots an overview about how many parameters hit the parameter bounds based
     on a collection of parameters. confidence intervals/credible ranges are
     computed via the collection mean plus/minus 1 standard deviation.
-    This highlevel routine expects (atm) a collection object as input.
+    This highlevel routine expects a collection object as input.
 
     Parameters
     ----------
@@ -61,7 +61,7 @@ def identifiability_overview_lowlevel(none_hit: np.ndarray,
                                       size: Optional[Tuple[float]] = (16, 10)):
     """
     Plots an overview about how many parameters hit the parameter bounds based
-    on a collection of parameters. confidence intervals/credible ranges are
+    on a collection of parameters. Confidence intervals/credible ranges are
     computed via the collection mean plus/minus 1 standard deviation.
     This lowlevel routine works with numpy arrays which define the confidence
     intervals/credible ranges of each parameter.
