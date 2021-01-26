@@ -146,7 +146,8 @@ class AmiciObjective(ObjectiveBase):
 
         # If supported, enable `guess_steadystate` by default. If not
         #  supported, disable by default. If requested but unsupported, raise.
-        if self.guess_steadystate is not False and self.amici_model.ncl() > 0:
+        if self.guess_steadystate is not False and \
+                self.amici_model.nx_solver_reinit > 0:
             if self.guess_steadystate:
                 raise ValueError('Steadystate prediction is not supported '
                                  'for models with conservation laws!')
