@@ -209,14 +209,6 @@ class PredictionResult:
                     f.create_dataset(f'{i_cond}/{OUTPUT_SENSI}',
                                      data=cond.output_sensi)
 
-    def write_to_petab_file(self,
-                            output_file: str,
-                            measurement_df: pd.DataFrame):
-        """
-        This function writes prediction results to a petab simulation file,
-        which is shaped similarly to the measurement DataFrame, which is passed
-        """
-
     @staticmethod
     def _check_existence(output_path):
         """

@@ -20,7 +20,7 @@ class EnsemblePrediction:
     """
 
     def __init__(self,
-                 predictor: Callable,
+                 predictor: Callable[[Sequence, ...], PredictionResult],
                  prediction_id: str = None,
                  prediction_results: Sequence[PredictionResult] = None,
                  lower_bound: Sequence[np.ndarray] = None,
@@ -31,7 +31,8 @@ class EnsemblePrediction:
         Parameters
         ----------
         predictor:
-            Prediction function, e.g., an AmiciPredictor
+            Prediction function, e.g., an AmiciPredictor, which takes a
+            parameter vector as input and outputs a PredictionResult object
         prediction_id:
             Identifier for the predictions
         prediction_results:
@@ -76,7 +77,10 @@ class EnsemblePrediction:
     def condense_to_arrays(self):
         """
         This functions reshapes the predictions results to an array and adds
-        them as a member to the EnsemblePrediction objects.
+        them as a member to the EnsemblePrediction objects. It's meant to be
+        used only if all conditions of a prediction have the same observables,
+        as this is often the case for large-scale data sets taken from online
+        databases or similar.
         """
         # prepare for storing results over all predictions
         output = []
@@ -118,10 +122,9 @@ class EnsemblePrediction:
                         percentiles_list: Sequence[int] = (5, 20, 80, 95)
                         ) -> Dict:
         """
-        This function computes the mean, the median, the standard deviation
-        and possibly percentiles from the ensemble prediction results.
-        Those summary results are added as a data member to the
-        EnsemblePrediction object.
+        Compute the mean, the median, the standard deviation and possibly
+        percentiles from the ensemble prediction results. Those summary results
+        are added as a data member to the EnsemblePrediction object.
 
         Parameters
         ----------
@@ -142,9 +145,9 @@ class EnsemblePrediction:
 
         def _stack_outputs(ic: int):
             """
-            This function groups outputs for different parameter vectors of
-            one ensemble together, if they belong to the same simulation
-            condition, and stacks them in one array
+            Group outputs for different parameter vectors of one ensemble
+            together, if they belong to the same simulation condition, and
+            stacks them in one array
             """
             # Were outputs computed
             if self.prediction_results[0].conditions[ic].output is None:
@@ -157,9 +160,9 @@ class EnsemblePrediction:
 
         def _stack_outputs_sensi(ic: int):
             """
-            This function groups output sensitivities for different parameter
-            vectors of one ensemble together, if the belong to the same
-            simulation condition, and stacks them in one array
+            Group output sensitivities for different parameter vectors of one
+            ensemble together, if the belong to the same simulation condition,
+            and stacks them in one array
             """
             # Were output sensitivitiess computed
             if self.prediction_results[0].conditions[ic].output_sensi is None:
@@ -172,8 +175,8 @@ class EnsemblePrediction:
 
         def _compute_summary(tmp_array, percentiles_list):
             """
-            This function computes means, standard deviation, median, and
-            requested percentiles for a set of stacked simulations
+            Computes means, standard deviation, median, and requested
+            percentiles for a set of stacked simulations
             """
             summary = {}
             summary[MEAN] = np.mean(tmp_array, axis=-1)
@@ -237,7 +240,7 @@ class EnsemblePrediction:
 
 class Ensemble:
     """
-    A ensemble is a thin wrapper around an numpy array. It comes with some
+    A ensemble is a wrapper around an numpy array. It comes with some
     convenience functionality: It allows to map parameter values via
     identifiers to the correct parameters, it allows to compute summaries of
     the parameter vectors (mean, standard deviation, median, percentiles) more
@@ -396,10 +399,10 @@ class Ensemble:
 
     def check_identifiability(self) -> pd.DataFrame:
         """
-        This functions uses ensemble mean and standard deviation to assess
-        (in a rudimentary way) whether or not parameters are identifiable.
-        It returns a dataframe with tuples, which specify whether or not the
-        lower and the upper bound are violated
+        Use ensemble mean and standard deviation to assess (in a rudimentary
+        way) whether or not parameters are identifiable. Returns a dataframe
+        with tuples, which specify whether or not the lower and the upper
+        bounds are violated.
 
         Returns
         -------
