@@ -61,11 +61,11 @@ def read_hdf5_optimization(f: h5py.File,
 
     for optimization_key in result.keys():
         if optimization_key == 'history':
-            # breakpoint()
-            result['history'] = Hdf5History(id = opt_id,
-                                            file = file_name)
-            result['history']._recover_options(file_name)
-            continue
+            if optimization_key in f:
+                result['history'] = Hdf5History(id = opt_id,
+                                                file = file_name)
+                result['history']._recover_options(file_name)
+                continue
         if optimization_key in f[f'/optimization/results/{opt_id}']:
             result[optimization_key] = \
                 f[f'/optimization/results/{opt_id}/{optimization_key}'][:]
