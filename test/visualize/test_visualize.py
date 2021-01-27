@@ -324,6 +324,8 @@ def test_ensemble_identifiability():
     # creates a test problem
     problem = create_problem(n_parameters=100)
 
+    # =========================================================================
+    # test ensemble identifiability if some bounds are hit and some aren't
     my_ensemble = []
     # some magical numbers which create a reasonable plot. Please don't change!
     std = (1, 1, 2, 2, 2.5, 3, 3, 4, 5, 7, 6, 6, 10, 8, 10, 15, 15, 25, 35, 50)
@@ -335,6 +337,18 @@ def test_ensemble_identifiability():
             my_ensemble.append(std[ip] * np.random.rand(500) + offset[ip])
     my_ensemble = np.array(my_ensemble)
     my_ensemble = ensemble.Ensemble(my_ensemble,
+                                    lower_bound=problem.lb,
+                                    upper_bound=problem.ub)
+
+    # test plotting from a collection object
+    visualize.ensemble_identifiability(my_ensemble)
+
+    # =========================================================================
+    # test ensemble identifiability if no bounds are hit
+    # create an ensemble within tight bounds
+    my_ensemble = [(1 + np.cos(ix)**2) * np.random.rand(500) - 1. + np.sin(ix)
+                   for ix in range(100)]
+    my_ensemble = ensemble.Ensemble(np.array(my_ensemble),
                                     lower_bound=problem.lb,
                                     upper_bound=problem.ub)
 
