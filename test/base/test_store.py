@@ -3,6 +3,7 @@ This is for testing the pypesto.Storage.
 """
 import os
 import tempfile
+import pypesto
 
 import numpy as np
 
@@ -73,3 +74,64 @@ def test_storage_problem():
                 assert problem.__dict__[attr] == \
                        read_problem.__dict__[attr]
                 assert not isinstance(read_problem.__dict__[attr], np.ndarray)
+
+def test_storage_trace():
+    objective1 = pypesto.Objective(fun=so.rosen,
+                                   grad=so.rosen_der,
+                                   hess=so.rosen_hess)
+    objective2 = pypesto.Objective(fun=so.rosen,
+                                   grad=so.rosen_der,
+                                   hess=so.rosen_hess)
+    dim_full = 10
+    lb = -5 * np.ones((dim_full, 1))
+    ub = 5 * np.ones((dim_full, 1))
+    n_starts = 5
+    startpoints = pypesto.startpoint.latin_hypercube(n_starts=n_starts,
+                                                     lb=lb,
+                                                     ub=ub)
+    problem1 = pypesto.Problem(objective=objective1, lb=lb, ub=ub,
+                               x_guesses=startpoints)
+    problem2 = pypesto.Problem(objective=objective2, lb=lb, ub=ub,
+                               x_guesses=startpoints)
+
+    optimizer1 = pypesto.optimize.ScipyOptimizer(options={'maxiter': 100})
+    optimizer2 = pypesto.optimize.ScipyOptimizer(options={'maxiter': 100})
+
+    with tempfile.TemporaryDirectory(dir=".") as tmpdirname:
+        _, fn = tempfile.mkstemp(".hdf5", dir=f"{tmpdirname}")
+
+        history_options_hdf5 = pypesto.HistoryOptions(trace_record=True,
+                                                      storage_file=fn)
+        # optimize with history saved to hdf5
+        result_hdf5 = pypesto.optimize.minimize(
+            problem=problem1, optimizer=optimizer1,
+            n_starts=n_starts, history_options=history_options_hdf5)
+
+        # optimizing with history saved in memory
+        history_options_memory = pypesto.HistoryOptions(trace_record=True)
+        result_memory = pypesto.optimize.minimize(
+            problem=problem2, optimizer=optimizer2,
+            n_starts=n_starts, history_options=history_options_memory)
+
+        history_entries = [X, FVAL, GRAD, HESS, RES, SRES, CHI2, SCHI2, TIME]
+        assert len(result_hdf5.optimize_result.list) == \
+            len(result_memory.optimize_result.list)
+        for mem_res in result_memory.optimize_result.list:
+            for hdf_res in result_hdf5.optimize_result.list:
+                if mem_res['id'] == hdf_res['id']:
+                    for entry in history_entries:
+                        hdf5_entry_trace = getattr(hdf_res['history'],
+                                                   f'get_{entry}_trace')()
+                        for iteration in range(len(hdf5_entry_trace)):
+                            print(hdf5_entry_trace[iteration])
+                            # comparing nan and None difficult
+                            if hdf5_entry_trace[iteration] is None or np.isnan(
+                                    hdf5_entry_trace[iteration]).all():
+                                continue
+                            print(getattr(mem_res['history'],
+                                        f'get_{entry}_trace')()[iteration])
+                            print(entry, iteration)
+                            np.testing.assert_array_equal(
+                                getattr(mem_res['history'],
+                                        f'get_{entry}_trace')()[iteration],
+                                hdf5_entry_trace[iteration])
