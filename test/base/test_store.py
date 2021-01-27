@@ -5,6 +5,9 @@ import os
 import tempfile
 import pypesto
 
+from pypesto.objective.constants import (X, FVAL, GRAD, HESS, RES, SRES, CHI2, SCHI2, TIME)
+import scipy.optimize as so
+
 import numpy as np
 
 from pypesto.store import (
@@ -113,7 +116,7 @@ def test_storage_trace():
             problem=problem2, optimizer=optimizer2,
             n_starts=n_starts, history_options=history_options_memory)
 
-        history_entries = [X, FVAL, GRAD, HESS, RES, SRES, CHI2, SCHI2, TIME]
+        history_entries = [X, FVAL, GRAD, HESS, RES, SRES, CHI2, SCHI2]
         assert len(result_hdf5.optimize_result.list) == \
             len(result_memory.optimize_result.list)
         for mem_res in result_memory.optimize_result.list:
