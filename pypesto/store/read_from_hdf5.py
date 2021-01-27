@@ -4,7 +4,7 @@ from ..optimize.result import OptimizerResult
 from ..profile.result import ProfilerResult
 from ..sample.result import McmcPtResult
 from ..problem import Problem
-from ..objective import Objective, ObjectiveBase
+from ..objective import Objective, ObjectiveBase, Hdf5History
 import numpy as np
 import logging
 
@@ -44,6 +44,7 @@ def read_hdf5_profile(f: h5py.File,
 
 
 def read_hdf5_optimization(f: h5py.File,
+                           file_name: str,
                            opt_id: str) -> 'OptimizerResult':
     """
     Read HDF5 results per start.
@@ -59,6 +60,12 @@ def read_hdf5_optimization(f: h5py.File,
     result = OptimizerResult()
 
     for optimization_key in result.keys():
+        if optimization_key == 'history':
+            # breakpoint()
+            result['history'] = Hdf5History(id = opt_id,
+                                            file = file_name)
+            result['history']._recover_options(file_name)
+            continue
         if optimization_key in f[f'/optimization/results/{opt_id}']:
             result[optimization_key] = \
                 f[f'/optimization/results/{opt_id}/{optimization_key}'][:]
@@ -154,7 +161,7 @@ class OptimizationResultHDF5Reader:
                 self.results.problem = problem_reader.read()
 
             for opt_id in f['/optimization/results']:
-                result = read_hdf5_optimization(f, opt_id)
+                result = read_hdf5_optimization(f, self.storage_filename, opt_id)
                 self.results.optimize_result.append(result)
             self.results.optimize_result.sort()
         return self.results
