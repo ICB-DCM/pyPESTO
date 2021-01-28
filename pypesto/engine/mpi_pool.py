@@ -20,13 +20,6 @@ def work(pickled_task):
 class MPIPoolEngine(Engine):
     """
     Parallelize the task execution using multiprocessing.
-
-    Parameters
-    ----------
-    chunksize:
-        The chunksize the MPIPoolExecutor uses.
-        Default is two, but should always be set to
-        the number of cores used in each node.
     """
 
     def __init__(self):
