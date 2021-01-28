@@ -34,3 +34,4 @@ from .sampling import (sampling_fval_trace,
                        sampling_parameters_trace,
                        sampling_scatter,
                        sampling_1d_marginals)
+from .ensemble import ensemble_identifiability

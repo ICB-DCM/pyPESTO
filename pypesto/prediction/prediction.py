@@ -10,7 +10,7 @@ from .constants import (OBSERVABLE_IDS, PARAMETER_IDS, TIMEPOINTS, OUTPUT,
                         OUTPUT_SENSI, TIME, CSV)
 
 
-class PredictionConditionResult():
+class PredictionConditionResult:
     """
     This class is a light-weight wrapper for the prediction of one simulation
     condition of an amici model. It should provide a common api how amici
@@ -56,7 +56,7 @@ class PredictionConditionResult():
         yield 'output_sensi', self.output_sensi
 
 
-class PredictionResult():
+class PredictionResult:
     """
     This class is a light-weight wrapper around predictions from pyPESTO made
     via an amici model. It's only purpose is to have fixed format/api, how
@@ -67,7 +67,8 @@ class PredictionResult():
 
     def __init__(self,
                  conditions: Sequence[Union[PredictionConditionResult, Dict]],
-                 condition_ids: Sequence[str] = None):
+                 condition_ids: Sequence[str] = None,
+                 comment: str = None):
         """
         Constructor.
 
@@ -79,6 +80,8 @@ class PredictionResult():
             IDs or names of the simulation conditions, which belong to this
             prediction (e.g., PEtab uses tuples of preequilibration condition
             and simulation conditions)
+        comment:
+            An additional note, which can be attached to this prediction
         """
         # cast the result per condition
         self.conditions = [cond if isinstance(cond, PredictionConditionResult)
@@ -90,6 +93,9 @@ class PredictionResult():
             self.condition_ids = [f'condition_{i_cond}'
                                   for i_cond in range(len(conditions))]
 
+        # add a comment to this prediction if available
+        self.comment = comment
+
     def __iter__(self):
         parameter_ids = None
         if self.conditions:
@@ -97,6 +103,7 @@ class PredictionResult():
 
         yield 'conditions', [dict(cond) for cond in self.conditions]
         yield 'condition_ids', self.condition_ids
+        yield 'comment', self.comment
         yield 'parameter_ids', parameter_ids
 
     def write_to_csv(self, output_file: str):

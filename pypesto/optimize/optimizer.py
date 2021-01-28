@@ -42,6 +42,7 @@ try:
 except ImportError:
     fides = None
 
+
 EXITFLAG_LOADED_FROM_FILE = -99
 
 logger = logging.getLogger(__name__)
@@ -284,6 +285,9 @@ def check_finite_bounds(lb, ub):
 class ScipyOptimizer(Optimizer):
     """
     Use the SciPy optimizers.
+    Find details on the optimizer and configuration options at:
+    https://docs.scipy.org/doc/scipy/reference/generated/scipy.\
+        optimize.minimize.html#scipy.optimize.minimize
     """
 
     def __init__(self,
@@ -653,6 +657,62 @@ class CmaesOptimizer(Optimizer):
 
         optimizer_result = OptimizerResult(x=np.array(result[0]),
                                            fval=result[1])
+
+        return optimizer_result
+
+    def is_least_squares(self):
+        return False
+
+
+class ScipyDifferentialEvolutionOptimizer(Optimizer):
+    """
+    Global optimization using scipy's differential evolution optimizer.
+    Package homepage: https://docs.scipy.org/doc/scipy/reference/generated\
+        /scipy.optimize.differential_evolution.html
+
+    Parameters
+    ----------
+    options:
+        Optimizer options that are directly passed on to scipy's optimizer.
+
+
+    Examples
+    --------
+    Arguments that can be passed to options:
+
+    maxiter:
+        used to calculate the maximal number of funcion evaluations by
+        maxfevals = (maxiter + 1) * popsize * len(x)
+        Default: 100
+    popsize:
+        population size, default value 15
+    """
+
+    def __init__(self, options: Dict = None):
+        super().__init__()
+
+        if options is None:
+            options = {'maxiter': 100}
+        self.options = options
+
+    @fix_decorator
+    @time_decorator
+    @history_decorator
+    def minimize(
+            self,
+            problem: Problem,
+            x0: np.ndarray,
+            id: str,
+            history_options: HistoryOptions = None,
+    ) -> OptimizerResult:
+        bounds = list(zip(problem.lb, problem.ub))
+
+        result = scipy.optimize.differential_evolution(
+            problem.objective.get_fval, bounds, **self.options
+        )
+
+        optimizer_result = OptimizerResult(x=np.array(result.x),
+                                           fval=result.fun)
 
         return optimizer_result
 
