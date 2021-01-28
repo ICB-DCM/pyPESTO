@@ -5,7 +5,9 @@ import os
 import tempfile
 import pypesto
 
-from pypesto.objective.constants import (X, FVAL, GRAD, HESS, RES, SRES, CHI2, SCHI2, TIME)
+from pypesto.objective.constants import (X, FVAL, GRAD,
+                                         HESS, RES, SRES,
+                                         CHI2, SCHI2)
 import scipy.optimize as so
 
 import numpy as np
@@ -78,6 +80,7 @@ def test_storage_problem():
                        read_problem.__dict__[attr]
                 assert not isinstance(read_problem.__dict__[attr], np.ndarray)
 
+
 def test_storage_trace():
     objective1 = pypesto.Objective(fun=so.rosen,
                                    grad=so.rosen_der,
@@ -132,7 +135,7 @@ def test_storage_trace():
                                     hdf5_entry_trace[iteration]).all():
                                 continue
                             print(getattr(mem_res['history'],
-                                        f'get_{entry}_trace')()[iteration])
+                                          f'get_{entry}_trace')()[iteration])
                             print(entry, iteration)
                             np.testing.assert_array_equal(
                                 getattr(mem_res['history'],

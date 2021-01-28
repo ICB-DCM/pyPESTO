@@ -62,8 +62,8 @@ def read_hdf5_optimization(f: h5py.File,
     for optimization_key in result.keys():
         if optimization_key == 'history':
             if optimization_key in f:
-                result['history'] = Hdf5History(id = opt_id,
-                                                file = file_name)
+                result['history'] = Hdf5History(id=opt_id,
+                                                file=file_name)
                 result['history']._recover_options(file_name)
                 continue
         if optimization_key in f[f'/optimization/results/{opt_id}']:
@@ -161,7 +161,9 @@ class OptimizationResultHDF5Reader:
                 self.results.problem = problem_reader.read()
 
             for opt_id in f['/optimization/results']:
-                result = read_hdf5_optimization(f, self.storage_filename, opt_id)
+                result = read_hdf5_optimization(f,
+                                                self.storage_filename,
+                                                opt_id)
                 self.results.optimize_result.append(result)
             self.results.optimize_result.sort()
         return self.results
