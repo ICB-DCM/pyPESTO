@@ -276,7 +276,8 @@ class PetabImporter(AmiciObjectBuilder):
                           post_processor_sensi: Union[Callable, None] = None,
                           post_processor_time: Union[Callable, None] = None,
                           max_chunk_size: Union[int, None] = None,
-                          observable_ids: Sequence[str] = None
+                          observable_ids: Sequence[str] = None,
+                          condition_ids: Sequence[str] = None
                           ) -> AmiciPredictor:
         """Create a :class:`pypesto.prediction.AmiciPredictor`.
 
@@ -330,11 +331,13 @@ class PetabImporter(AmiciObjectBuilder):
             preeq_dummy = [''] * edata_conditions.shape[0]
             edata_conditions[PREEQUILIBRATION_CONDITION_ID] = preeq_dummy
         edata_conditions.drop_duplicates(inplace=True)
-        condition_ids = [
-            edata_conditions.loc[id, PREEQUILIBRATION_CONDITION_ID] +
-            CONDITION_SEP + edata_conditions.loc[id, SIMULATION_CONDITION_ID]
-            for id in edata_conditions.index
-        ]
+
+        if condition_ids is None:
+            condition_ids = [
+                edata_conditions.loc[id, PREEQUILIBRATION_CONDITION_ID] +
+                CONDITION_SEP + edata_conditions.loc[id, SIMULATION_CONDITION_ID]
+                for id in edata_conditions.index
+            ]
 
         # wrap around AmiciPredictor
         predictor = AmiciPredictor(

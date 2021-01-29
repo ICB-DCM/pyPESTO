@@ -319,6 +319,38 @@ def test_parameters_hist():
     visualize.parameter_hist(result_1, 'x1', start_indices=list(range(10)))
 
 
+# @close_fig
+def test_ensemble_dimension_reduction():
+    # creates a test problem
+    problem = create_problem(n_parameters=20)
+
+    # =========================================================================
+    # test ensemble identifiability if some bounds are hit and some aren't
+    my_ensemble = []
+    # some magical numbers which create a reasonable plot. Please don't change!
+    std = (1, 1, 2, 2, 2.5, 3, 3, 4, 5, 7, 6, 6, 10, 8, 10, 15, 15, 25, 35, 50)
+    offset = (1, 1, 0, 0, -1, -1, -7, -7, 5, 4,
+              -10, -10, -12, 0, 1, -13, 0, -15, -18, -20)
+    # create a collection/an ensemble based on these magic numbers
+    for ip in range(len(std)):
+        my_ensemble.append(std[ip] * np.random.rand(100) + offset[ip])
+    my_ensemble = ensemble.Ensemble(np.array(my_ensemble),
+                                    lower_bound=problem.lb,
+                                    upper_bound=problem.ub)
+
+    # test plotting from a collection object
+    umap_components, umap_embedding = \
+        ensemble.get_umap_representation_parameters(my_ensemble)
+
+    visualize.projection_scatter_lowlevel(umap_components)
+
+    umap_components, umap_embedding = \
+        ensemble.get_umap_representation_parameters(
+            my_ensemble, normalize_data=True, n_components=7)
+
+    visualize.projection_scatter_lowlevel(umap_components)
+
+
 @close_fig
 def test_ensemble_identifiability():
     # creates a test problem

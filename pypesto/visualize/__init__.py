@@ -35,3 +35,4 @@ from .sampling import (sampling_fval_trace,
                        sampling_scatter,
                        sampling_1d_marginals)
 from .ensemble import ensemble_identifiability
+from .dimension_reduction import scatter_lowlevel
