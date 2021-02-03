@@ -119,5 +119,35 @@ def write_ensemble_prediction_to_h5(ensemble_prediction: EnsemblePrediction,
         result.write_to_h5(output_file, base_path=base_path)
     f.close()
 
-def write_ensemble_to_h5():
-    pass
+
+def get_prediction_dataset(ens: Union[Ensemble, EnsemblePrediction],
+                           prediction_index: int = 0) -> np.ndarray:
+    """
+    Extract an array of prediction from either an Ensemble object which
+    contains a list of predictions of from an EnsemblePrediction object.
+
+    Parameters
+    ==========
+    ens:
+        Ensemble objects containing a set of parameter vectors and a set of
+        predictions or EnsemblePrediction object containing only predictions
+
+    prediction_index:
+        index telling which prediction from the list should be analyzed
+
+    Returns
+    =======
+    dataset:
+        numpy array containing the ensemble predictions
+    """
+
+    if isinstance(ens, Ensemble):
+        dataset = ens.predictions[prediction_index]
+    elif isinstance(ens, EnsemblePrediction):
+        ens.condense_to_arrays()
+        dataset = ens.prediction_arrays[OUTPUT].transpose()
+    else:
+        raise Exception('Need either an Ensemble object with predictions or '
+                        'an EnsemblePrediction object as input. Stopping.')
+
+    return dataset

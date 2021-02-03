@@ -3,6 +3,7 @@ from typing import Callable, Union, Tuple
 
 from .ensemble import Ensemble, EnsemblePrediction
 from .constants import OUTPUT
+from .utils import get_prediction_dataset
 
 try:
     import sklearn.decomposition
@@ -86,7 +87,7 @@ def get_umap_representation_predictions(
 
     # extract the an array of predictions from either an Ensemble object or an
     # EnsemblePrediction object
-    dataset = _get_prediction_dataset(ens, prediction_index)
+    dataset = get_prediction_dataset(ens, prediction_index)
 
     # call lowlevel routine using the prediction ensemble
     return _get_umap_representation_lowlevel(
@@ -183,7 +184,7 @@ def get_pca_representation_predictions(
 
     # extract the an array of predictions from either an Ensemble object or an
     # EnsemblePrediction object
-    dataset = _get_prediction_dataset(ens, prediction_index)
+    dataset = get_prediction_dataset(ens, prediction_index)
 
     # call lowlevel routine using the prediction ensemble
     return _get_pca_representation_lowlevel(
@@ -192,39 +193,6 @@ def get_pca_representation_predictions(
         rescale_data=rescale_data,
         rescaler=rescaler
     )
-
-
-def _get_prediction_dataset(ens: Union[Ensemble, EnsemblePrediction],
-                            prediction_index: int = 0) -> np.ndarray:
-    """
-    Extract an array of prediction from either an Ensemble object which
-    contains a list of predictions of from an EnsemblePrediction object.
-
-    Parameters
-    ==========
-    ens:
-        Ensemble objects containing a set of parameter vectors and a set of
-        predictions or EnsemblePrediction object containing only predictions
-
-    prediction_index:
-        index telling which prediction from the list should be analyzed
-
-    Returns
-    =======
-    dataset:
-        numpy array containing the ensemble predictions
-    """
-
-    if isinstance(ens, Ensemble):
-        dataset = ens.predictions[prediction_index]
-    elif isinstance(ens, EnsemblePrediction):
-        ens.condense_to_arrays()
-        dataset = ens.prediction_arrays[OUTPUT].transpose()
-    else:
-        raise Exception('Need either an Ensemble object with predictions or '
-                        'an EnsemblePrediction object as input. Stopping.')
-
-    return dataset
 
 
 def _get_umap_representation_lowlevel(
