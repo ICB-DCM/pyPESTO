@@ -294,10 +294,16 @@ class Ensemble:
         # store bounds
         self.lower_bound = np.full((self.n_x,), np.nan)
         if lower_bound is not None:
-            self.lower_bound = lower_bound
+            if np.array(lower_bound).size == 1:
+                self.lower_bound = np.full((x_vectors.shape[0],), lower_bound)
+            else:
+                self.lower_bound = lower_bound
         self.upper_bound = np.full((self.n_x,), np.nan)
         if upper_bound is not None:
-            self.upper_bound = upper_bound
+            if np.array(upper_bound).size == 1:
+                self.upper_bound = np.full((x_vectors.shape[0],), upper_bound)
+            else:
+                self.upper_bound = upper_bound
 
         # handle parameter names
         if x_names is not None:
@@ -331,10 +337,31 @@ class Ensemble:
         yield LOWER_BOUND, self.lower_bound
         yield UPPER_BOUND, self.upper_bound
 
+    def _map_parameters_by_objective(self,
+                                     predictor: Callable,
+                                     default_value: float = float('nan')):
+        """
+        The parameters of the ensemble don't need to have the same ordering as
+        in the predictor. This functions maps them onto each other
+        """
+        # create short hands
+        parameter_ids_objective = predictor.amici_objective.x_names
+        parameter_ids_ensemble = self.x_names
+        # map and fill if not found
+        mapping = [
+            parameter_ids_ensemble.index(parameter_id_objective)
+            if parameter_id_objective in parameter_ids_ensemble
+            else default_value
+            for parameter_id_objective in parameter_ids_objective
+        ]
+
+        return mapping
+
     def predict(self,
                 predictor: Callable,
                 prediction_id: str = None,
                 sensi_orders: Tuple = (0,),
+                default_parameter_value = float('nan'),
                 mode: str = MODE_FUN, ):
         """
         Convenience function to run predictions for a full ensemble:
@@ -360,8 +387,12 @@ class Ensemble:
         # preallocate
         prediction_results = []
 
+        # get the correct parameter mapping
+        mapping = self._map_parameters_by_objective(
+            predictor, default_value=default_parameter_value)
+
         for ix in range(self.n_vectors):
-            x = self.x_vectors[:, ix]
+            x = self.x_vectors[mapping, ix]
             prediction_results.append(predictor(x, sensi_orders, mode))
 
         return EnsemblePrediction(predictor=predictor,
@@ -458,54 +489,3 @@ class Ensemble:
             parameter_identifiability['parameterId']
 
         return parameter_identifiability
-
-
-def read_from_csv(path: str,
-                  sep: str = '\t',
-                  index_col: int = 0,
-                  headline_parser: Callable = None,
-                  ensemble_type: EnsembleType = None,
-                  lower_bound: np.ndarray = None,
-                  upper_bound: np.ndarray = None):
-    """
-    function for creating an ensemble from a csv file
-
-    Parameters
-    ----------
-    path:
-        path to csv file to read in parameter ensemble
-    sep:
-        separator in csv file
-    index_col:
-        index column in csv file
-    headline_parser:
-        A function which reads in the headline of the csv file and converts it
-        into vector_tags (see constructor of Ensemble for more details)
-    ensemble_type:
-        Ensemble type: representative sample or random ensemble
-    lower_bound:
-        array of potential lower bounds for the parameters
-    upper_bound:
-        array of potential upper bounds for the parameters
-
-    Returns
-    -------
-    result:
-        Ensemble object of parameter vectors
-    """
-    # get the data from the csv
-    ensemble_df = pd.read_csv(path, sep=sep, index_col=index_col)
-    # if we have a parser to make vector_tags from column names, we use it
-    vector_tags = None
-    if headline_parser is not None:
-        vector_tags = headline_parser(list(ensemble_df.columns))
-    # set the type of the ensemble
-    if ensemble_type is None:
-        ensemble_type = EnsembleType.ensemble
-
-    return Ensemble(x_vectors=ensemble_df.values,
-                    x_names=list(ensemble_df.index),
-                    vector_tags=vector_tags,
-                    ensemble_type=ensemble_type,
-                    lower_bound=lower_bound,
-                    upper_bound=upper_bound)

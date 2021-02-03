@@ -11,7 +11,7 @@ except ImportError:
     pass
 
 def projection_scatter_umap(umap_coordinates: np.ndarray,
-                            components: Tuple = (0, 1),
+                            components: Sequence[int] = (0, 1),
                             **kwargs):
     """
     Plot a scatter plots for UMAP coordinates. Creates either one or multiple
@@ -60,7 +60,7 @@ def projection_scatter_umap(umap_coordinates: np.ndarray,
 
 def projection_scatter_umap_original(umap_object: umap.umap_.UMAP,
                                      color_by: Sequence[float] = None,
-                                     components: Tuple = (0, 1),
+                                     components: Sequence[int] = (0, 1),
                                      **kwargs):
     """
     Wrapper around umap.plot.points. Similar to projection_scatter_umap, but
@@ -93,7 +93,7 @@ def projection_scatter_umap_original(umap_object: umap.umap_.UMAP,
 
 
 def projection_scatter_pca(pca_coordinates: np.ndarray,
-                           components: Tuple = (0, 1),
+                           components: Sequence[int] = (0, 1),
                            **kwargs):
     """
     Plot a scatter plots for PCA coordinates. Creates either one or multiple

@@ -340,15 +340,26 @@ def test_ensemble_dimension_reduction():
 
     # test plotting from a collection object
     umap_components, umap_embedding = \
-        ensemble.get_umap_representation_parameters(my_ensemble)
+        ensemble.get_umap_representation_parameters(my_ensemble,
+                                                    n_components=3)
 
-    visualize.projection_scatter_lowlevel(umap_components)
+    # test call via high-level routine
+    visualize.projection_scatter_umap(umap_components, components=(0, 1, 2))
 
-    umap_components, umap_embedding = \
-        ensemble.get_umap_representation_parameters(
-            my_ensemble, normalize_data=True, n_components=7)
+    # test call via low-level routine 1
+    visualize.ensemble_crosstab_scatter_lowlevel(
+        umap_components, component_labels=('A', 'B', 'C'))
 
-    visualize.projection_scatter_lowlevel(umap_components)
+    pca_components, pca_object = \
+        ensemble.get_pca_representation_parameters(
+            my_ensemble, rescale_data=True, n_components=6)
+
+    # test call via high-level routine
+    visualize.projection_scatter_pca(pca_components, components=range(4))
+    visualize.projection_scatter_pca(pca_components)
+
+    # test call via lowlevel routine
+    visualize.ensemble_scatter_lowlevel(pca_components[:, 0:2])
 
 
 @close_fig

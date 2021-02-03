@@ -5,6 +5,7 @@ from warnings import warn
 from time import time
 from typing import Sequence, Union, Dict
 from pathlib import Path
+import os
 
 from .constants import (OBSERVABLE_IDS, PARAMETER_IDS, TIMEPOINTS, OUTPUT,
                         OUTPUT_SENSI, TIME, CSV)
@@ -177,36 +178,52 @@ class PredictionResult:
                     result.to_csv(filename, sep='\t')
 
     def write_to_h5(self,
-                    output_file: str):
+                    output_file: str,
+                    base_path: str = None):
         """
-        This method saves predictions to an h5 file.
+        This method saves predictions to an h5 file. It appends to the file if
+        the file already exists.
 
         Parameters
         ----------
         output_file:
             path to file/folder to which results will be written
-        """
-        output_path = Path(output_file).with_suffix('.h5')
-        output_path = self._check_existence(output_path)
 
-        with h5py.File(output_path, 'w') as f:
+        base_path:
+            base path in the h5 file
+        """
+        # check if the file exists and append to it in case it does
+        output_path = Path(output_file).with_suffix('.h5')
+        filemode = 'w'
+        if os.path.exists(output_path):
+            filemode = 'r+'
+
+        if base_path is not None:
+            base = base_path
+            if base_path[-1] != '/':
+                base = base_path + '/'
+        else:
+            base = ''
+
+        with h5py.File(output_path, filemode) as f:
             # loop over conditions (i.e., amici edata objects)
             if self.conditions and self.conditions[0].x_names is not None:
-                f.create_dataset(PARAMETER_IDS,
+                f.create_dataset(base + PARAMETER_IDS,
                                  data=self.conditions[0].x_names)
             for i_cond, cond in enumerate(self.conditions):
                 # each conditions gets a group of its own
-                f.create_group(str(i_cond))
+                f.create_group(base + str(i_cond))
                 # save observable IDs
-                f.create_dataset(f'{i_cond}/{OBSERVABLE_IDS}',
+                f.create_dataset(base + f'{i_cond}/{OBSERVABLE_IDS}',
                                  data=cond.observable_ids)
                 # save timepoints, outputs, and sensitivities of outputs
-                f.create_dataset(f'{i_cond}/{TIMEPOINTS}',
+                f.create_dataset(base + f'{i_cond}/{TIMEPOINTS}',
                                  data=cond.timepoints)
                 if cond.output is not None:
-                    f.create_dataset(f'{i_cond}/{OUTPUT}', data=cond.output)
+                    f.create_dataset(base + f'{i_cond}/{OUTPUT}',
+                                     data=cond.output)
                 if cond.output_sensi is not None:
-                    f.create_dataset(f'{i_cond}/{OUTPUT_SENSI}',
+                    f.create_dataset(base + f'{i_cond}/{OUTPUT_SENSI}',
                                      data=cond.output_sensi)
 
     @staticmethod
