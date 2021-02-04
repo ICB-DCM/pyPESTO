@@ -7,8 +7,9 @@ from .clust_color import RGBA
 try:
     import umap
     import umap.plot
+    UmapObject = umap.umap_.UMAP
 except ImportError:
-    pass
+    UmapTypeObject = None
 
 
 def projection_scatter_umap(umap_coordinates: np.ndarray,
@@ -59,7 +60,7 @@ def projection_scatter_umap(umap_coordinates: np.ndarray,
                                                   **kwargs)
 
 
-def projection_scatter_umap_original(umap_object: umap.umap_.UMAP,
+def projection_scatter_umap_original(umap_object: UmapTypeObject,
                                      color_by: Sequence[float] = None,
                                      components: Sequence[int] = (0, 1),
                                      **kwargs):
