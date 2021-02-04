@@ -7,7 +7,7 @@ from .clust_color import RGBA
 try:
     import umap
     import umap.plot
-    UmapObject = umap.umap_.UMAP
+    UmapTypeObject = umap.umap_.UMAP
 except ImportError:
     UmapTypeObject = None
 
