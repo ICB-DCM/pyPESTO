@@ -70,8 +70,7 @@ def projection_scatter_umap_original(umap_object: UmapTypeObject,
     Parameters
     ----------
     umap_object:
-        umap object from umap.UMAP(), returned as second output by
-        ensemble.dimension_reduction.get_umap_representation_...()
+        umap object (returned as second output by get_umap_representation) 
         to be shown as scatter plot
 
     color_by:
