@@ -59,6 +59,8 @@ setup(name='pypesto',
                                   'flake8-bandit>=2.1.2'
                                   'flake8-print>=3.1.4'
                                   'flake8-comprehensions>=3.2.3'],
+                      'mltools': ['umap-learn',
+                                  'sklearn']
                       },
       python_requires='>=3.6',
       )
