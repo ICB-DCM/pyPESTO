@@ -339,7 +339,7 @@ class Ensemble:
 
     def _map_parameters_by_objective(self,
                                      predictor: Callable,
-                                     default_value: float = float('nan')):
+                                     fill_in_value: float = float('nan')):
         """
         The parameters of the ensemble don't need to have the same ordering as
         in the predictor. This functions maps them onto each other
@@ -361,7 +361,7 @@ class Ensemble:
                 predictor: Callable,
                 prediction_id: str = None,
                 sensi_orders: Tuple = (0,),
-                default_parameter_value: float = float('nan'),
+                fill_in_value: float = float('nan'),
                 mode: str = MODE_FUN):
         """
         Convenience function to run predictions for a full ensemble:
@@ -379,7 +379,7 @@ class Ensemble:
         sensi_orders:
             Specifies which sensitivities to compute, e.g. (0,1) -> fval, grad
 
-        default_parameter_value:
+        fill_in_value:
             If parameters are needed in the mapping, which are not found in the
             parameter source, it can make sense to fill them up with this
             default value in some cases (to be used with caution though).
@@ -397,7 +397,7 @@ class Ensemble:
 
         # get the correct parameter mapping
         mapping = self._map_parameters_by_objective(
-            predictor, default_value=default_parameter_value)
+            predictor, fill_in_value=fill_in_value)
 
         for ix in range(self.n_vectors):
             x = self.x_vectors[mapping, ix]
