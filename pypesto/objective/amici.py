@@ -160,7 +160,7 @@ class AmiciObjective(ObjectiveBase):
                 raise ValueError('Steadystate guesses cannot be enabled '
                                  'when `simulationFSA` as '
                                  'SteadyStateSensitivityMode!')
-                self.guess_steadystate = False
+            self.guess_steadystate = False
         else:
             self.guess_steadystate = True
 
