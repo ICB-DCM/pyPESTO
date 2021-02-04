@@ -22,9 +22,8 @@ def projection_scatter_umap(umap_coordinates: np.ndarray,
     Parameters
     ----------
     umap_coordinates:
-        array of pca coordinates returned as first output by
-        ensemble.dimension_reduction.get_umap_representation_...()
-        to be shown as scatter plot
+        array of umap coordinates (returned as first output by the routine
+        get_umap_representation) to be shown as scatter plot
 
     components:
         Components to be plotted (corresponds to columns of umap_coordinates)
@@ -104,9 +103,8 @@ def projection_scatter_pca(pca_coordinates: np.ndarray,
     Parameters
     ----------
     pca_coordinates:
-        array of pca coordinates returned as first output by
-        ensemble.dimension_reduction.get_pca_representation_...()
-        to be shown as scatter plot
+        array of pca coordinates (returned as first output by the routine
+        get_pca_representation) to be shown as scatter plot
 
     components:
         Components to be plotted (corresponds to columns of pca_coordinates)
