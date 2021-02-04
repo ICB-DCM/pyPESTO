@@ -351,7 +351,7 @@ class Ensemble:
         mapping = [
             parameter_ids_ensemble.index(parameter_id_objective)
             if parameter_id_objective in parameter_ids_ensemble
-            else default_value
+            else fill_in_value
             for parameter_id_objective in parameter_ids_objective
         ]
 
