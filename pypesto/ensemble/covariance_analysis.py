@@ -1,16 +1,7 @@
 import numpy as np
-import pandas as pd
-from typing import Sequence, Tuple, Callable, Dict
+from typing import Union
 
-from ..prediction import PredictionResult, PredictionConditionResult
-from ..ensemble import Ensemble
-from .constants import (PREDICTOR, PREDICTION_ID, PREDICTION_RESULTS,
-                        PREDICTION_ARRAYS, PREDICTION_SUMMARY, OUTPUT,
-                        OUTPUT_SENSI, TIMEPOINTS, X_VECTOR, NX, X_NAMES,
-                        NVECTORS, VECTOR_TAGS, PREDICTIONS, MODE_FUN,
-                        EnsembleType, ENSEMBLE_TYPE, MEAN, MEDIAN,
-                        STANDARD_DEVIATION, PERCENTILE, SUMMARY, LOWER_BOUND,
-                        UPPER_BOUND)
+from ..ensemble import Ensemble, EnsemblePrediction
 from .utils import get_prediction_dataset
 
 
@@ -265,26 +256,27 @@ def get_spectral_decomposition_lowlevel(
     rel_eigen_vals = eigen_vals / np.max(eigen_vals)
 
     # If no filtering is wanted, we can return
-    if not only_identifiable_dirs and not only_separable_directions:
+    if not only_identifiable_directions and not only_separable_directions:
         # apply normlization
         if normalize:
             eigen_vals = rel_eigen_vals
         return eigen_vals, eigen_vectors
 
-    if only_identifiable_directions and only_separable_dirs:
+    if only_identifiable_directions and only_identifiable_directions:
         raise Exception('Asking for only identiafiable and only separable '
                         'directions at the same time makes no sense. The '
                         'applied filters are mutually exclusive.')
 
     # Separable directions are wanted: an upper pass filtering is needed
     if only_separable_directions:
-        if absolute_cutoff is not None and relative_cutoff is not None:
+        if lower_absolute_cutoff is not None and \
+                lower_relative_cutoff is not None:
             above_cutoff = np.array([
                 eigen_vals[i_eig] > lower_absolute_cutoff and
                 rel_eigen_vals[i_eig] > lower_relative_cutoff
                 for i_eig in range(len(eigen_vals))
             ])
-        elif absolute_cutoff is not None:
+        elif lower_absolute_cutoff is not None:
             above_cutoff = eigen_vals > lower_absolute_cutoff
         elif lower_relative_cutoff is not None:
             above_cutoff = rel_eigen_vals > lower_relative_cutoff
@@ -302,7 +294,6 @@ def get_spectral_decomposition_lowlevel(
 
     # Identifiable directions are wanted: an filtering of the inverse
     # eigenvalues is needed (upper pass of inverse = lower pass of original)
-    minimal_eigenvalue = np.min(eigen_vals)
     if inv_upper_absolute_cutoff is not None and \
             inv_upper_relative_cutoff is not None:
         below_cutoff = np.array([
@@ -310,13 +301,13 @@ def get_spectral_decomposition_lowlevel(
             1 / rel_eigen_vals[i_eig] > inv_upper_relative_cutoff
             for i_eig in range(len(eigen_vals))
         ])
-    elif absolute_cutoff is not None:
+    elif inv_upper_absolute_cutoff is not None:
         below_cutoff = 1 / eigen_vals > inv_upper_absolute_cutoff
     elif lower_relative_cutoff is not None:
         below_cutoff = 1 / rel_eigen_vals > inv_upper_relative_cutoff
     else:
         raise Exception('Need an inverse upper cutoff (aboslute or relative, '
-                        'e.g., 1e-15, to compute identifable directions.')
+                        'e.g., 1e-15, to compute identifiable directions.')
 
     # restrict to those below cutoff
     eigen_vals = eigen_vals[below_cutoff]

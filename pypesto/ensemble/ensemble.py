@@ -361,8 +361,8 @@ class Ensemble:
                 predictor: Callable,
                 prediction_id: str = None,
                 sensi_orders: Tuple = (0,),
-                default_parameter_value = float('nan'),
-                mode: str = MODE_FUN, ):
+                default_parameter_value: float = float('nan'),
+                mode: str = MODE_FUN):
         """
         Convenience function to run predictions for a full ensemble:
         User needs to hand over a predictor function and settings, then all
@@ -372,10 +372,18 @@ class Ensemble:
         ----------
         predictor:
             Prediction function, e.g., an AmiciPredictor
+
         prediction_id:
             Identifier for the predictions
+
         sensi_orders:
-            Specifies which sensitivities to compute, e.g. (0,1) -> fval, grad.
+            Specifies which sensitivities to compute, e.g. (0,1) -> fval, grad
+
+        default_parameter_value:
+            If parameters are needed in the mapping, which are not found in the
+            parameter source, it can make sense to fill them up with this
+            default value in some cases (to be used with caution though).
+
         mode:
             Whether to compute function values or residuals.
 

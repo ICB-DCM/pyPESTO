@@ -360,3 +360,9 @@ def test_petab_prediction():
     assert pred['mean'].conditions[0].output[0, 0] == 1.
     assert pred['median'].conditions[0].output[0, 0] == 1.
     assert pred['std'].conditions[0].output[0, 0] == 0.
+
+    # check writing to h5
+    pypesto.ensemble.write_ensemble_prediction_to_h5(ensemble_prediction,
+                                                     'deleteme_ensemble.h5')
+    assert os.path.exists('deleteme_ensemble.h5')
+    os.remove('deleteme_ensemble.h5')

@@ -2,7 +2,6 @@ import numpy as np
 from typing import Callable, Union, Tuple
 
 from .ensemble import Ensemble, EnsemblePrediction
-from .constants import OUTPUT
 from .utils import get_prediction_dataset
 
 try:

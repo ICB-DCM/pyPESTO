@@ -10,6 +10,7 @@ try:
 except ImportError:
     pass
 
+
 def projection_scatter_umap(umap_coordinates: np.ndarray,
                             components: Sequence[int] = (0, 1),
                             **kwargs):

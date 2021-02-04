@@ -335,7 +335,8 @@ class PetabImporter(AmiciObjectBuilder):
         if condition_ids is None:
             condition_ids = [
                 edata_conditions.loc[id, PREEQUILIBRATION_CONDITION_ID] +
-                CONDITION_SEP + edata_conditions.loc[id, SIMULATION_CONDITION_ID]
+                CONDITION_SEP + edata_conditions.loc[id,
+                                                     SIMULATION_CONDITION_ID]
                 for id in edata_conditions.index
             ]
 
