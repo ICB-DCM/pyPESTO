@@ -339,7 +339,7 @@ class Ensemble:
 
     def _map_parameters_by_objective(self,
                                      predictor: Callable,
-                                     fill_in_value: float = float('nan')):
+                                     fill_in_value: float = np.nan):
         """
         The parameters of the ensemble don't need to have the same ordering as
         in the predictor. This functions maps them onto each other
@@ -361,7 +361,7 @@ class Ensemble:
                 predictor: Callable,
                 prediction_id: str = None,
                 sensi_orders: Tuple = (0,),
-                fill_in_value: float = float('nan'),
+                fill_in_value: float = np.nan,
                 mode: str = MODE_FUN):
         """
         Convenience function to run predictions for a full ensemble:
