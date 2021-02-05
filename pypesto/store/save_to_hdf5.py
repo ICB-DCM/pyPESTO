@@ -235,8 +235,8 @@ class ProfileResultHDF5Writer:
                 os.makedirs(basedir, exist_ok=True)
 
         with h5py.File(self.storage_filename, "a") as f:
-            profiling_grp = get_or_create_group(f, "profiling")
             check_overwrite(f, overwrite, 'profiling')
+            profiling_grp = get_or_create_group(f, "profiling")
 
             for profile_id, profile in enumerate(result.profile_result.list):
                 profile_grp = get_or_create_group(profiling_grp,
