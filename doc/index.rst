@@ -61,6 +61,7 @@ Welcome to pyPESTO's documentation!
    api_startpoint
    api_store
    api_logging
+   api_ensemble
 
 .. toctree::
    :maxdepth: 2

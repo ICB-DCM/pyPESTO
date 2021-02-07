@@ -37,3 +37,4 @@ from .sampling import (sampling_fval_trace,
                        sampling_parameters_cis,
                        sampling_prediction_profiles,
                        sampling_prediction_profiles_conditions,)
+from .ensemble import ensemble_identifiability
