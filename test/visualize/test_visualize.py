@@ -11,6 +11,7 @@ import pypesto.optimize as optimize
 import pypesto.profile as profile
 import pypesto.sample as sample
 import pypesto.visualize as visualize
+import pypesto.ensemble as ensemble
 
 
 def close_fig(fun):
@@ -27,22 +28,22 @@ def close_fig(fun):
 # Define some helper functions, to have the test code more readable
 
 
-def create_bounds():
+def create_bounds(n_parameters: int = 2):
     # define bounds for a pypesto problem
-    lb = -7 * np.ones((1, 2))
-    ub = 7 * np.ones((1, 2))
+    lb = -7 * np.ones((1, n_parameters))
+    ub = 7 * np.ones((1, n_parameters))
 
     return lb, ub
 
 
-def create_problem():
+def create_problem(n_parameters: int = 2):
     # define a pypesto objective
     objective = pypesto.Objective(fun=so.rosen,
                                   grad=so.rosen_der,
                                   hess=so.rosen_hess)
 
     # define a pypesto problem
-    (lb, ub) = create_bounds()
+    (lb, ub) = create_bounds(n_parameters)
     problem = pypesto.Problem(objective=objective, lb=lb, ub=ub)
 
     return problem
@@ -347,6 +348,29 @@ def test_parameters_hist():
 
     visualize.parameter_hist(result_1, 'x1')
     visualize.parameter_hist(result_1, 'x1', start_indices=list(range(10)))
+
+
+@close_fig
+def test_ensemble_identifiability():
+    # creates a test problem
+    problem = create_problem(n_parameters=100)
+
+    my_ensemble = []
+    # some magical numbers which create a reasonable plot. Please don't change!
+    std = (1, 1, 2, 2, 2.5, 3, 3, 4, 5, 7, 6, 6, 10, 8, 10, 15, 15, 25, 35, 50)
+    offset = (1, 1, 0, 0, -1, -1, -7, -7, 5, 4,
+              -10, -10, -12, 0, 1, -13, 0, -15, -18, -20)
+    # create a collection/an ensemble based on these magic numbers
+    for _ in range(5):
+        for ip in range(len(std)):
+            my_ensemble.append(std[ip] * np.random.rand(500) + offset[ip])
+    my_ensemble = np.array(my_ensemble)
+    my_ensemble = ensemble.Ensemble(my_ensemble,
+                                    lower_bound=problem.lb,
+                                    upper_bound=problem.ub)
+
+    # test plotting from a collection object
+    visualize.ensemble_identifiability(my_ensemble)
 
 
 @close_fig
