@@ -257,7 +257,7 @@ def get_spectral_decomposition_lowlevel(
 
     # If no filtering is wanted, we can return
     if not only_identifiable_directions and not only_separable_directions:
-        # apply normlization
+        # apply normalization
         if normalize:
             eigen_vals = rel_eigen_vals
         return eigen_vals, eigen_vectors
