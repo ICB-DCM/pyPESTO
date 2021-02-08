@@ -169,7 +169,7 @@ def ensemble_crosstab_scatter_lowlevel(dataset: np.ndarray,
     # wo don't even try to plot this into an existing axes object.
     # Overplotting a multi-axes figure is asking for trouble...
     if 'ax' in kwargs.keys():
-        kwargs.__delitem__('ax')
+        del kwargs['ax']
 
     for x_comp in range(0, n_components - 1):
         for y_comp in range(x_comp + 1, n_components):
