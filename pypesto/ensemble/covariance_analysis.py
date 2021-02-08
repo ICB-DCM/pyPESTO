@@ -203,7 +203,7 @@ def get_spectral_decomposition_lowlevel(
         only_identifiable_directions: bool = False,
         only_separable_directions: bool = False):
     """
-    Compute the spectral docmposition of ensemble parameters or predictions.
+    Compute the spectral decomposition of ensemble parameters or predictions.
 
     Parameters
     ==========
