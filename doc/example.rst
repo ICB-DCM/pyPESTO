@@ -30,6 +30,8 @@ Download the examples as notebooks
 * :download:`Sampling diagnostics <example/sampling_diagnostics.ipynb>`
 * :download:`Synthetic data <example/synthetic_data.ipynb>`
 * :download:`Prior definition <example/prior_definition.ipynb>`
+* :download:`hdf5 storage <example/hdf5_storage.ipynb>`
+
 
 .. Note::
    Some of the notebooks have extra dependencies.
