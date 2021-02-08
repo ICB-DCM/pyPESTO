@@ -281,7 +281,7 @@ def get_spectral_decomposition_lowlevel(
         elif lower_relative_cutoff is not None:
             above_cutoff = rel_eigen_vals > lower_relative_cutoff
         else:
-            raise Exception('Need a lower cutoff (aboslute or relative, '
+            raise Exception('Need a lower cutoff (absolute or relative, '
                             'e.g., 1e-15, to compute separable directions.')
 
         # restrict to those above cutoff
