@@ -124,7 +124,7 @@ def get_spectral_decomposition_predictions(
         only_identifiable_directions: bool = False,
         only_separable_directions: bool = False):
     """
-    Compute the spectral docmposition of ensemble predictions.
+    Compute the spectral decomposition of ensemble predictions.
 
     Parameters
     ==========
