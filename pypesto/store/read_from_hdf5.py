@@ -53,6 +53,8 @@ def read_hdf5_optimization(f: h5py.File,
     -------------
     f:
         The HDF5 result file
+    file_name:
+        The name of the HDF5 file, needed to create HDF5History
     opt_id:
         Specifies the start that is read from the HDF5 file
     """
