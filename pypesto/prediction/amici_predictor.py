@@ -6,7 +6,6 @@ from .constants import (MODE_FUN, OBSERVABLE_IDS, TIMEPOINTS, OUTPUT,
                         AMICI_Y, AMICI_SY, AMICI_STATUS, RDATAS, PARAMETER_IDS)
 from .prediction import PredictionResult
 from ..objective import AmiciObjective
-from ..engine import Engine, SingleCoreEngine
 
 
 class AmiciPredictor:
