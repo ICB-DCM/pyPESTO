@@ -89,6 +89,16 @@ def conversion_reaction_model():
         sys.path.insert(0, os.path.abspath(model_output_dir))
         model_module = amici.import_model_module(model_name, model_output_dir)
         model = model_module.getModel()
+    except RuntimeError as err:
+        print('pyPESTO unit test ran into an error importing the conversion '
+              'reaction enhanced model. This may happen due to an old version '
+              'of this model being present in your python path (e.g., '
+              'incorrect AMICI version comparing to the installed one). '
+              'Delete the conversion_reaction_enhanced model from your python '
+              'path and retry. Your python path is currently:')
+        print(sys.path)
+        print('Original error message:')
+        raise err
 
     return model
 
@@ -350,3 +360,9 @@ def test_petab_prediction():
     assert pred['mean'].conditions[0].output[0, 0] == 1.
     assert pred['median'].conditions[0].output[0, 0] == 1.
     assert pred['std'].conditions[0].output[0, 0] == 0.
+
+    # check writing to h5
+    pypesto.ensemble.write_ensemble_prediction_to_h5(ensemble_prediction,
+                                                     'deleteme_ensemble.h5')
+    assert os.path.exists('deleteme_ensemble.h5')
+    os.remove('deleteme_ensemble.h5')

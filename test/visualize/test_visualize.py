@@ -319,11 +319,56 @@ def test_parameters_hist():
     visualize.parameter_hist(result_1, 'x1', start_indices=list(range(10)))
 
 
+# @close_fig
+def test_ensemble_dimension_reduction():
+    # creates a test problem
+    problem = create_problem(n_parameters=20)
+
+    # =========================================================================
+    # test ensemble identifiability if some bounds are hit and some aren't
+    my_ensemble = []
+    # some magical numbers which create a reasonable plot. Please don't change!
+    std = (1, 1, 2, 2, 2.5, 3, 3, 4, 5, 7, 6, 6, 10, 8, 10, 15, 15, 25, 35, 50)
+    offset = (1, 1, 0, 0, -1, -1, -7, -7, 5, 4,
+              -10, -10, -12, 0, 1, -13, 0, -15, -18, -20)
+    # create a collection/an ensemble based on these magic numbers
+    for ip in range(len(std)):
+        my_ensemble.append(std[ip] * np.random.rand(100) + offset[ip])
+    my_ensemble = ensemble.Ensemble(np.array(my_ensemble),
+                                    lower_bound=problem.lb,
+                                    upper_bound=problem.ub)
+
+    # test plotting from a collection object
+    umap_components, umap_embedding = \
+        ensemble.get_umap_representation_parameters(my_ensemble,
+                                                    n_components=3)
+
+    # test call via high-level routine
+    visualize.projection_scatter_umap(umap_components, components=(0, 1, 2))
+
+    # test call via low-level routine 1
+    visualize.ensemble_crosstab_scatter_lowlevel(
+        umap_components, component_labels=('A', 'B', 'C'))
+
+    pca_components, pca_object = \
+        ensemble.get_pca_representation_parameters(
+            my_ensemble, rescale_data=True, n_components=6)
+
+    # test call via high-level routine
+    visualize.projection_scatter_pca(pca_components, components=range(4))
+    visualize.projection_scatter_pca(pca_components)
+
+    # test call via lowlevel routine
+    visualize.ensemble_scatter_lowlevel(pca_components[:, 0:2])
+
+
 @close_fig
 def test_ensemble_identifiability():
     # creates a test problem
     problem = create_problem(n_parameters=100)
 
+    # =========================================================================
+    # test ensemble identifiability if some bounds are hit and some aren't
     my_ensemble = []
     # some magical numbers which create a reasonable plot. Please don't change!
     std = (1, 1, 2, 2, 2.5, 3, 3, 4, 5, 7, 6, 6, 10, 8, 10, 15, 15, 25, 35, 50)
@@ -335,6 +380,18 @@ def test_ensemble_identifiability():
             my_ensemble.append(std[ip] * np.random.rand(500) + offset[ip])
     my_ensemble = np.array(my_ensemble)
     my_ensemble = ensemble.Ensemble(my_ensemble,
+                                    lower_bound=problem.lb,
+                                    upper_bound=problem.ub)
+
+    # test plotting from a collection object
+    visualize.ensemble_identifiability(my_ensemble)
+
+    # =========================================================================
+    # test ensemble identifiability if no bounds are hit
+    # create an ensemble within tight bounds
+    my_ensemble = [(1 + np.cos(ix)**2) * np.random.rand(500) - 1. + np.sin(ix)
+                   for ix in range(100)]
+    my_ensemble = ensemble.Ensemble(np.array(my_ensemble),
                                     lower_bound=problem.lb,
                                     upper_bound=problem.ub)
 
