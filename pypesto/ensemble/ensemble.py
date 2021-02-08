@@ -298,7 +298,7 @@ class Ensemble:
                 self.lower_bound = np.full((x_vectors.shape[0],), lower_bound)
             else:
                 self.lower_bound = lower_bound
-        self.upper_bound = np.full((self.n_x,), np.nan)
+        self.upper_bound = np.full(self.n_x, np.nan)
         if upper_bound is not None:
             if np.array(upper_bound).size == 1:
                 self.upper_bound = np.full(x_vectors.shape[0], upper_bound)
