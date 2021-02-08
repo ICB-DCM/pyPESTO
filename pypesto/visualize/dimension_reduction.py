@@ -185,7 +185,7 @@ def ensemble_crosstab_scatter_lowlevel(dataset: np.ndarray,
             tmp_dataset = dataset[:, [x_comp, y_comp]]
 
             # call lowlevel routine
-            _ = ensemble_scatter_lowlevel(tmp_dataset,
+            ensemble_scatter_lowlevel(tmp_dataset,
                                           x_label=x_label,
                                           y_label=y_label,
                                           ax=axs[(x_comp, y_comp)],
