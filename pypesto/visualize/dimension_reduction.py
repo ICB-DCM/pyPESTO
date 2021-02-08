@@ -186,10 +186,10 @@ def ensemble_crosstab_scatter_lowlevel(dataset: np.ndarray,
 
             # call lowlevel routine
             ensemble_scatter_lowlevel(tmp_dataset,
-                                          x_label=x_label,
-                                          y_label=y_label,
-                                          ax=axs[(x_comp, y_comp)],
-                                          **kwargs)
+                                      x_label=x_label,
+                                      y_label=y_label,
+                                      ax=axs[(x_comp, y_comp)],
+                                      **kwargs)
     # return dict of axes
     return axs
 

@@ -83,7 +83,6 @@ class AmiciPredictor:
         self.post_processor_sensi = post_processor_sensi
         self.post_processor_time = post_processor_time
         self.condition_ids = condition_ids
-        self.engine = SingleCoreEngine()
 
         if observable_ids is None:
             self.observable_ids = \
