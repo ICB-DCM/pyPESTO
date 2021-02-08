@@ -16,6 +16,7 @@ The following examples cover typical use cases and should help get a better idea
    example/sampling_diagnostics.ipynb
    example/synthetic_data.ipynb
    example/prior_definition.ipynb
+   example/hdf5_storage.ipynb
 
 Download the examples as notebooks
 ----------------------------------
