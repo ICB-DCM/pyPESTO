@@ -254,8 +254,7 @@ def ensemble_scatter_lowlevel(dataset,
     # first get the data to check identifiability
     # axes
     if ax is None:
-        ax = plt.subplots()[1]
-        fig = plt.gcf()
+        fig, ax = plt.subplots()
         fig.set_size_inches(*size)
     plt.sca(ax)
 
