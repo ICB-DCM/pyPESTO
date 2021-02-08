@@ -14,7 +14,6 @@ from .dimension_reduction import (get_umap_representation_parameters,
                                   get_pca_representation_predictions)
 from .covariance_analysis import (get_covariance_matrix_parameters,
                                   get_covariance_matrix_predictions,
-                                  get_covariance_matrix_lowlevel,
                                   get_spectral_decomposition_parameters,
                                   get_spectral_decomposition_predictions,
                                   get_spectral_decomposition_lowlevel)

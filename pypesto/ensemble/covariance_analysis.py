@@ -1,11 +1,11 @@
 import numpy as np
-from typing import Union
+from typing import Union, Tuple
 
 from ..ensemble import Ensemble, EnsemblePrediction
 from .utils import get_prediction_dataset
 
 
-def get_covariance_matrix_parameters(ens: Ensemble):
+def get_covariance_matrix_parameters(ens: Ensemble) -> np.ndarray:
     """
     Compute the covariance of ensemble parameters.
 
@@ -21,7 +21,7 @@ def get_covariance_matrix_parameters(ens: Ensemble):
     """
 
     # call lowlevel routine using the parameter ensemble
-    return get_covariance_matrix_lowlevel(dataset=ens.x_vectors.transpose())
+    return np.cov(ens.x_vectors.transpose())
 
 
 def get_covariance_matrix_predictions(
@@ -50,18 +50,19 @@ def get_covariance_matrix_predictions(
     dataset = get_prediction_dataset(ens, prediction_index)
 
     # call lowlevel routine using the prediction ensemble
-    return get_covariance_matrix_lowlevel(dataset=dataset)
+    return np.cov(dataset)
 
 
 def get_spectral_decomposition_parameters(
         ens: Ensemble,
         normalize: bool = False,
-        lower_absolute_cutoff: float = None,
-        lower_relative_cutoff: float = None,
-        inv_upper_absolute_cutoff: float = None,
-        inv_upper_relative_cutoff: float = None,
+        only_separable_directions: bool = False,
+        cutoff_absolute_separable: float = 1e-16,
+        cutoff_relative_separable: float = 1e-16,
         only_identifiable_directions: bool = False,
-        only_separable_directions: bool = False):
+        cutoff_absolute_identifiable: float = 1e-16,
+        cutoff_relative_identifiable: float = 1e-16
+) -> Tuple[np.ndarray, np.ndarray]:
     """
     Compute the spectral decomposition of ensemble parameters.
 
@@ -74,55 +75,65 @@ def get_spectral_decomposition_parameters(
         flag indicating whether the returned Eigenvalues should be normalized
         with respect to the largest Eigenvalue
 
-    lower_absolute_cutoff:
+    only_separable_directions:
+        return only separable directions according to
+        cutoff_[absolute/relative]_separable
+
+    cutoff_absolute_separable:
         Consider only eigenvalues of the covariance matrix above this cutoff
         (only applied when only_separable_directions is True)
 
-    lower_relative_cutoff:
+    cutoff_relative_separable:
         Consider only eigenvalues of the covariance matrix above this cutoff,
         when rescaled with the largest eigenvalue
         (only applied when only_separable_directions is True)
 
-    inv_upper_absolute_cutoff:
+    only_identifiable_directions:
+        return only identifiable directions according to
+        cutoff_[absolute/relative]_identifiable
+
+    cutoff_absolute_identifiable:
         Consider only low eigenvalues of the covariance matrix with inverses
         above of this cutoff
         (only applied when only_identifiable_directions is True)
 
-    inv_upper_relative_cutoff:
+    cutoff_relative_identifiable:
         Consider only low eigenvalues of the covariance matrix when rescaled
         with the largest eigenvalue with inverses above of this cutoff
         (only applied when only_identifiable_directions is True)
 
-    only_identifiable_directions:
-        return only identifiable directions according to inv_upper_cutoff
-
-    only_separable_directions:
-        return only separable directions according to lower_cutoff
-
     Returns
     =======
-    eigen_values:
+    eigenvalues:
         Eigenvalues of the covariance matrix
 
-    eigen_vectors:
-        eigenvectors of the covariance matrix
+    eigenvectors:
+        Eigenvectors of the covariance matrix
     """
+    # check inputs
+    assert sum([only_identifiable_directions, only_separable_directions]) < 2
+
     covariance = get_covariance_matrix_parameters(ens)
     return get_spectral_decomposition_lowlevel(
-        covariance, normalize, lower_absolute_cutoff, lower_relative_cutoff,
-        inv_upper_absolute_cutoff, inv_upper_relative_cutoff,
-        only_identifiable_directions, only_separable_directions)
+        matrix=covariance, normalize=normalize,
+        only_separable_directions=only_separable_directions,
+        cutoff_absolute_separable=cutoff_absolute_separable,
+        cutoff_relative_separable=cutoff_relative_separable,
+        only_identifiable_directions=only_identifiable_directions,
+        cutoff_absolute_identifiable=cutoff_absolute_identifiable,
+        cutoff_relative_identifiable=cutoff_relative_identifiable)
 
 
 def get_spectral_decomposition_predictions(
         ens: Ensemble,
         normalize: bool = False,
-        lower_absolute_cutoff: float = None,
-        lower_relative_cutoff: float = None,
-        inv_upper_absolute_cutoff: float = None,
-        inv_upper_relative_cutoff: float = None,
+        only_separable_directions: bool = False,
+        cutoff_absolute_separable: float = 1e-16,
+        cutoff_relative_separable: float = 1e-16,
         only_identifiable_directions: bool = False,
-        only_separable_directions: bool = False):
+        cutoff_absolute_identifiable: float = 1e-16,
+        cutoff_relative_identifiable: float = 1e-16
+) -> Tuple[np.ndarray, np.ndarray]:
     """
     Compute the spectral decomposition of ensemble predictions.
 
@@ -136,78 +147,68 @@ def get_spectral_decomposition_predictions(
         flag indicating whether the returned Eigenvalues should be normalized
         with respect to the largest Eigenvalue
 
-    lower_absolute_cutoff:
+    only_separable_directions:
+        return only separable directions according to
+        cutoff_[absolute/relative]_separable
+
+    cutoff_absolute_separable:
         Consider only eigenvalues of the covariance matrix above this cutoff
         (only applied when only_separable_directions is True)
 
-    lower_relative_cutoff:
+    cutoff_relative_separable:
         Consider only eigenvalues of the covariance matrix above this cutoff,
         when rescaled with the largest eigenvalue
         (only applied when only_separable_directions is True)
 
-    inv_upper_absolute_cutoff:
+    only_identifiable_directions:
+        return only identifiable directions according to
+        cutoff_[absolute/relative]_identifiable
+
+    cutoff_absolute_identifiable:
         Consider only low eigenvalues of the covariance matrix with inverses
         above of this cutoff
         (only applied when only_identifiable_directions is True)
 
-    inv_upper_relative_cutoff:
+    cutoff_relative_identifiable:
         Consider only low eigenvalues of the covariance matrix when rescaled
         with the largest eigenvalue with inverses above of this cutoff
         (only applied when only_identifiable_directions is True)
 
-    only_identifiable_directions:
-        return only identifiable directions according to inv_upper_cutoff
-
-    only_separable_directions:
-        return only separable directions according to lower_cutoff
-
     Returns
     =======
-    eigen_values:
+    eigenvalues:
         Eigenvalues of the covariance matrix
 
-    eigen_vectors:
-        eigenvectors of the covariance matrix
+    eigenvectors:
+        Eigenvectors of the covariance matrix
     """
     covariance = get_covariance_matrix_predictions(ens)
     return get_spectral_decomposition_lowlevel(
-        covariance, normalize, lower_absolute_cutoff, lower_relative_cutoff,
-        inv_upper_absolute_cutoff, inv_upper_relative_cutoff,
-        only_identifiable_directions, only_separable_directions)
-
-
-def get_covariance_matrix_lowlevel(dataset):
-    """
-    Compute the covariance of ensemble parameters or predictions.
-
-    Parameters
-    ==========
-    dataset:
-        numpy array of ensemble parameters or predictions
-
-    Returns
-    =======
-    covariance_matrix:
-        covariance matrix of the dataset
-    """
-    return np.cov(dataset)
+        matrix=covariance, normalize=normalize,
+        only_separable_directions=only_separable_directions,
+        cutoff_absolute_separable=cutoff_absolute_separable,
+        cutoff_relative_separable=cutoff_relative_separable,
+        only_identifiable_directions=only_identifiable_directions,
+        cutoff_absolute_identifiable=cutoff_absolute_identifiable,
+        cutoff_relative_identifiable=cutoff_relative_identifiable)
 
 
 def get_spectral_decomposition_lowlevel(
-        matrix_to_analyze: np.ndarray,
+        matrix: np.ndarray,
         normalize: bool = False,
-        lower_absolute_cutoff: float = None,
-        lower_relative_cutoff: float = None,
-        inv_upper_absolute_cutoff: float = None,
-        inv_upper_relative_cutoff: float = None,
+        only_separable_directions: bool = False,
+        cutoff_absolute_separable: float = 1e-16,
+        cutoff_relative_separable: float = 1e-16,
         only_identifiable_directions: bool = False,
-        only_separable_directions: bool = False):
+        cutoff_absolute_identifiable: float = 1e-16,
+        cutoff_relative_identifiable: float = 1e-16
+) -> Tuple[np.ndarray, np.ndarray]:
     """
     Compute the spectral decomposition of ensemble parameters or predictions.
 
     Parameters
     ==========
-    matrix_to_analyze:
+    matrix:
         symmetric matrix (typically a covariance matrix) of parameters or
         predictions
 
@@ -215,104 +216,101 @@ def get_spectral_decomposition_lowlevel(
         flag indicating whether the returned Eigenvalues should be normalized
         with respect to the largest Eigenvalue
 
-    lower_absolute_cutoff:
+    only_separable_directions:
+        return only separable directions according to
+        cutoff_[absolute/relative]_separable
+
+    cutoff_absolute_separable:
         Consider only eigenvalues of the covariance matrix above this cutoff
         (only applied when only_separable_directions is True)
 
-    lower_relative_cutoff:
+    cutoff_relative_separable:
         Consider only eigenvalues of the covariance matrix above this cutoff,
         when rescaled with the largest eigenvalue
         (only applied when only_separable_directions is True)
 
-    inv_upper_absolute_cutoff:
+    only_identifiable_directions:
+        return only identifiable directions according to
+        cutoff_[absolute/relative]_identifiable
+
+    cutoff_absolute_identifiable:
         Consider only low eigenvalues of the covariance matrix with inverses
         above of this cutoff
         (only applied when only_identifiable_directions is True)
 
-    inv_upper_relative_cutoff:
+    cutoff_relative_identifiable:
         Consider only low eigenvalues of the covariance matrix when rescaled
         with the largest eigenvalue with inverses above of this cutoff
         (only applied when only_identifiable_directions is True)
 
-    only_identifiable_directions:
-        return only identifiable directions according to inv_upper_cutoff
-
-    only_separable_directions:
-        return only separable directions according to lower_cutoff
-
     Returns
     =======
-    eigen_values:
+    eigenvalues:
         Eigenvalues of the covariance matrix
 
-    eigen_vectors:
-        eigenvectors of the covariance matrix
+    eigenvectors:
+        Eigenvectors of the covariance matrix
     """
 
     # get the eigenvalue decomposition
-    eigen_vals, eigen_vectors = np.linalg.eigh(matrix_to_analyze)
+    eigenvalues, eigenvectors = np.linalg.eigh(matrix)
 
     # get a normalized version
-    rel_eigen_vals = eigen_vals / np.max(eigen_vals)
+    rel_eigenvalues = eigenvalues / np.max(eigenvalues)
 
     # If no filtering is wanted, we can return
     if not only_identifiable_directions and not only_separable_directions:
         # apply normalization
         if normalize:
-            eigen_vals = rel_eigen_vals
-        return eigen_vals, eigen_vectors
-
-    if only_identifiable_directions and only_identifiable_directions:
-        raise Exception('Asking for only identiafiable and only separable '
-                        'directions at the same time makes no sense. The '
-                        'applied filters are mutually exclusive.')
+            eigenvalues = rel_eigenvalues
+        return eigenvalues, eigenvectors
 
     # Separable directions are wanted: an upper pass filtering is needed
     if only_separable_directions:
-        if lower_absolute_cutoff is not None and \
-                lower_relative_cutoff is not None:
+        if cutoff_absolute_separable is not None and \
+                cutoff_relative_separable is not None:
             above_cutoff = np.array([
-                eigen_vals[i_eig] > lower_absolute_cutoff and
-                rel_eigen_vals[i_eig] > lower_relative_cutoff
-                for i_eig in range(len(eigen_vals))
+                i_eig_abs > cutoff_absolute_separable and
+                i_eig_rel > cutoff_relative_separable
+                for i_eig_abs, i_eig_rel in zip(eigenvalues, rel_eigenvalues)
             ])
-        elif lower_absolute_cutoff is not None:
-            above_cutoff = eigen_vals > lower_absolute_cutoff
-        elif lower_relative_cutoff is not None:
-            above_cutoff = rel_eigen_vals > lower_relative_cutoff
+        elif cutoff_absolute_separable is not None:
+            above_cutoff = eigenvalues > cutoff_absolute_separable
+        elif cutoff_relative_separable is not None:
+            above_cutoff = rel_eigenvalues > cutoff_relative_separable
         else:
             raise Exception('Need a lower cutoff (absolute or relative, '
-                            'e.g., 1e-15, to compute separable directions.')
+                            'e.g., 1e-16, to compute separable directions.')
 
         # restrict to those above cutoff
-        eigen_vals = eigen_vals[above_cutoff]
-        eigen_vectors = eigen_vectors[:, above_cutoff]
+        eigenvalues = eigenvalues[above_cutoff]
+        eigenvectors = eigenvectors[:, above_cutoff]
         # apply normlization
         if normalize:
-            eigen_vals = rel_eigen_vals
-        return eigen_vals, eigen_vectors
+            eigenvalues = rel_eigenvalues[above_cutoff]
+        return eigenvalues, eigenvectors
 
     # Identifiable directions are wanted: an filtering of the inverse
     # eigenvalues is needed (upper pass of inverse = lower pass of original)
-    if inv_upper_absolute_cutoff is not None and \
-            inv_upper_relative_cutoff is not None:
+    if cutoff_absolute_identifiable is not None and \
+            cutoff_relative_identifiable is not None:
         below_cutoff = np.array([
-            eigen_vals[i_eig] < 1 / eigen_vals > inv_upper_absolute_cutoff and
-            1 / rel_eigen_vals[i_eig] > inv_upper_relative_cutoff
-            for i_eig in range(len(eigen_vals))
+            1 / i_eig_abs > cutoff_absolute_identifiable and
+            1 / i_eig_rel > cutoff_relative_identifiable
+            for i_eig_abs, i_eig_rel in zip(eigenvalues, rel_eigenvalues)
         ])
-    elif inv_upper_absolute_cutoff is not None:
-        below_cutoff = 1 / eigen_vals > inv_upper_absolute_cutoff
-    elif lower_relative_cutoff is not None:
-        below_cutoff = 1 / rel_eigen_vals > inv_upper_relative_cutoff
+    elif cutoff_absolute_identifiable is not None:
+        below_cutoff = 1 / eigenvalues > cutoff_absolute_identifiable
+    elif cutoff_relative_identifiable is not None:
+        below_cutoff = 1 / rel_eigenvalues > cutoff_relative_identifiable
     else:
-        raise Exception('Need an inverse upper cutoff (aboslute or relative, '
-                        'e.g., 1e-15, to compute identifiable directions.')
+        raise Exception('Need an inverse upper cutoff (absolute or relative, '
+                        'e.g., 1e-16, to compute identifiable directions.')
 
     # restrict to those below cutoff
-    eigen_vals = eigen_vals[below_cutoff]
-    eigen_vectors = eigen_vectors[:, below_cutoff]
+    eigenvalues = eigenvalues[below_cutoff]
+    eigenvectors = eigenvectors[:, below_cutoff]
     # apply normlization
     if normalize:
-        eigen_vals = rel_eigen_vals
-    return eigen_vals, eigen_vectors
+        eigenvalues = rel_eigenvalues[below_cutoff]
+    return eigenvalues, eigenvectors

@@ -198,32 +198,31 @@ class PredictionResult:
         if os.path.exists(output_path):
             filemode = 'r+'
 
+        base = Path('.')
         if base_path is not None:
-            base = base_path
-            if base_path[-1] != '/':
-                base = base_path + '/'
-        else:
-            base = ''
+            base = Path(base_path)
 
         with h5py.File(output_path, filemode) as f:
             # loop over conditions (i.e., amici edata objects)
             if self.conditions and self.conditions[0].x_names is not None:
-                f.create_dataset(base + PARAMETER_IDS,
+                f.create_dataset(os.path.join(base, PARAMETER_IDS),
                                  data=self.conditions[0].x_names)
             for i_cond, cond in enumerate(self.conditions):
                 # each conditions gets a group of its own
-                f.create_group(base + str(i_cond))
+                f.create_group(os.path.join(base, str(i_cond)))
                 # save observable IDs
-                f.create_dataset(base + f'{i_cond}/{OBSERVABLE_IDS}',
+                f.create_dataset(os.path.join(base, str(i_cond),
+                                              OBSERVABLE_IDS),
                                  data=cond.observable_ids)
                 # save timepoints, outputs, and sensitivities of outputs
-                f.create_dataset(base + f'{i_cond}/{TIMEPOINTS}',
+                f.create_dataset(os.path.join(base, str(i_cond), TIMEPOINTS),
                                  data=cond.timepoints)
                 if cond.output is not None:
-                    f.create_dataset(base + f'{i_cond}/{OUTPUT}',
+                    f.create_dataset(os.path.join(base, str(i_cond), OUTPUT),
                                      data=cond.output)
                 if cond.output_sensi is not None:
-                    f.create_dataset(base + f'{i_cond}/{OUTPUT_SENSI}',
+                    f.create_dataset(os.path.join(base, str(i_cond),
+                                                  OUTPUT_SENSI),
                                      data=cond.output_sensi)
 
     @staticmethod
