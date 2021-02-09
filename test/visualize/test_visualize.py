@@ -791,7 +791,7 @@ def test_sampling_parameters_cis():
 def test_sampling_prediction_trajectories():
     """Test pypesto.visualize.sampling_prediction_trajectories"""
     result = sample_petab_problem()
-    post_processor_amici_x = partial(
+    post_processor_amici_x = functools.partial(
         post_processor,
         output_type=prediction.AMICI_X,
         observable_ids=result.problem.objective.amici_model.getStateIds(),
