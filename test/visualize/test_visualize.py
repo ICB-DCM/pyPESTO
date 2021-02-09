@@ -8,6 +8,7 @@ import petab
 import pypesto
 import pypesto.petab
 import pypesto.optimize as optimize
+import pypesto.prediction as prediction
 import pypesto.profile as profile
 import pypesto.sample as sample
 import pypesto.visualize as visualize
@@ -175,6 +176,25 @@ def create_plotting_options():
     ref_point = visualize.create_references(ref4)
 
     return ref1, ref2, ref3, ref4, ref_point
+
+
+def post_processor(
+        amici_outputs,
+        output_type=output_type,
+        observable_ids=observable_ids
+):
+    # This post_processor will transform the output of the simulation tool
+    # such that the output is compatible with the next steps.
+    outputs = [
+        amici_output[output_type]
+        if amici_output[prediction.AMICI_STATUS] == 0
+        else np.full(
+            (len(amici_output[prediction.AMICI_T]), len(observable_ids)),
+            np.nan
+        )
+        for amici_output in amici_outputs
+    ]
+    return outputs
 
 
 @close_fig
@@ -767,11 +787,34 @@ def test_sampling_parameters_cis():
 
 
 @close_fig
-def test_sampling_prediction_profiles():
-    """Test pypesto.visualize.sampling_prediction_profiles"""
+def test_sampling_prediction_trajectories():
+    """Test pypesto.visualize.sampling_prediction_trajectories"""
     result = sample_petab_problem()
-    visualize.sampling_prediction_profiles(result)
+    predictor = AmiciPredictor(
+        result.problem.objective,
+        post_processor=post_processor,
+        observable_ids=result.problem.objective.amici_model.getStateIds(),
+    )
+
+    vectors = result.sample_result.trace_x[0]
+    _ensemble = ensemble.Ensemble(
+        vectors,
+        x_names=result.problem.x_names,
+        ensemble_type=ensemble.EnsembleType.sample,
+        lower_bound=result.problem.lb,
+        upper_bound=result.problem.ub,
+    )
+
+    ensemble_prediction = ensemble.predict(
+        predictor,
+        prediction_id=prediction.constants.AMICI_X,
+    )
+
+    visualize.sampling_prediction_trajectories(result)
     # call with custom arguments
-    visualize.sampling_prediction_profiles(
-        result, alpha=[99, 68], stepsize=10, size=(10, 10),
-        plot_type='observables')
+    visualize.sampling_prediction_trajectories(
+        ensemble_prediction,
+        percentiles=[99, 68],
+        size=(10, 10),
+        groupby='observable',
+    )

@@ -1,14 +1,13 @@
 """A set of helper functions"""
 import numpy as np
 import logging
-import os
-from tqdm import tqdm
 from typing import Tuple
 
 from ..result import Result
 from .diagnostics import geweke_test
 
 logger = logging.getLogger(__name__)
+
 
 def calculate_ci(result: Result,
                  alpha: float = 0.95
