@@ -790,6 +790,7 @@ def test_sampling_parameters_cis():
 @close_fig
 def test_sampling_prediction_trajectories():
     """Test pypesto.visualize.sampling_prediction_trajectories"""
+    percentiles = [99, 68]
     result = sample_petab_problem()
     post_processor_amici_x = functools.partial(
         post_processor,
@@ -816,11 +817,14 @@ def test_sampling_prediction_trajectories():
         prediction_id=prediction.constants.AMICI_X,
     )
 
-    visualize.sampling_prediction_trajectories(result)
+    visualize.sampling_prediction_trajectories(
+        ensemble_prediction,
+        percentiles=percentiles,
+    )
     # call with custom arguments
     visualize.sampling_prediction_trajectories(
         ensemble_prediction,
-        percentiles=[99, 68],
+        percentiles=percentiles,
         size=(10, 10),
         groupby='observable',
     )
