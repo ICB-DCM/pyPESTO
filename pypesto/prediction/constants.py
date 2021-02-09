@@ -27,3 +27,9 @@ AMICI_STATUS = 'status'  # return field in amici simulation result
 CSV = 'csv'  # return file format
 H5 = 'h5'  # return file format
 TIME = 'time'  # column name in returned csv
+
+CONDITION_IDS = 'condition_ids'
+
+
+def get_condition_label(condition_id: str) -> str:
+    return f'condition_{condition_id}'

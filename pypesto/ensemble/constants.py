@@ -52,3 +52,7 @@ class EnsembleType(Enum):
     ensemble = 1
     sample = 2
     unprocessed_chain = 3
+
+
+def get_percentile_label(percentile: float):
+    return f'{PERCENTILE} {percentile}'

@@ -5,7 +5,7 @@ from matplotlib.lines import Line2D
 import numpy as np
 import pandas as pd
 import seaborn as sns
-from typing import Sequence, Tuple, Union
+from typing import Dict, Sequence, Tuple, Union
 
 from .misc import (
     rgba2rgb,
@@ -15,10 +15,22 @@ from .misc import (
     RGBA_MAX,
 )
 from ..result import Result
-from ..sample import McmcPtResult, calculate_ci, \
-    evaluate_samples, calculate_prediction_profiles
+from ..sample import McmcPtResult, calculate_ci
+
+from ..ensemble import (
+    get_percentile_label,
+    EnsemblePrediction,
+    MEDIAN,
+)
 
 logger = logging.getLogger(__name__)
+
+
+# TODO observable here refers to the output of an ensemble prediction, which
+#      means that observable can refer to either model state or observable
+#      (user-specified).
+OBSERVABLE = 'observable'
+CONDITION = 'condition'
 
 
 def sampling_fval_trace(
@@ -100,199 +112,125 @@ def sampling_fval_trace(
     return ax
 
 
-def sampling_prediction_profiles(result: Result,
-                                 alpha: Sequence[int] = None,
-                                 stepsize: int = 1,
-                                 plot_type: str = 'states',
-                                 title: str = None,
-                                 size: Tuple[float, float] = None,
-                                 ax: matplotlib.axes.Axes = None):
-    """Plot MCMC-based prediction confidence intervals for the
-    model states or observables. One or various confidence levels
-    can be depicted.
-
-    Parameters
-    ----------
-    result:
-        The pyPESTO result object with filled sample result.
-    alpha:
-        List of lower tail probabilities, defaults to 95% interval.
-    stepsize:
-        Only one in `stepsize` values is simulated for the intervals
-        generation. Recommended for long MCMC chains. Defaults to 1.
-    plot_type:
-        Visualization mode for prediction intervals {‘states’, ‘observables’}.
-        Defaults to ‘states’.
-    title:
-        Axes title.
-    size: ndarray
-        Figure size in inches.
-    ax:
-        Axes object to use.
-
-    Returns
-    -------
-    axes:
-        The plot axes.
-    """
-    if alpha is None:
-        alpha = [95]
-
-    # Evaluate prediction uncertainties
-    evaluation = evaluate_samples(result, stepsize)
-
-    # automatically sort values in decreasing order
-    alpha_sorted = sorted(alpha, reverse=True)
-
-    # define colormap
-    evenly_spaced_interval = np.linspace(0, 1, len(alpha_sorted) + 1)
-    colors = [plt.cm.Blues_r(x) for x in evenly_spaced_interval]
-
-    if plot_type == 'states':
-        values = evaluation[1]
-        yname = 'X'
-
-    elif plot_type == 'observables':
-        values = evaluation[0]
-        yname = 'Y'
-
-    # Number of observables/states
-    nr_variables = values.shape[-1]
-    ynames = [f'dummy_{i}' for i in range(nr_variables)]
-
-    # set axes and figure
-    if ax is None:
-        # compute, how many rows and columns we need for the subplots
-        num_row = int(np.round(np.sqrt(nr_variables)))
-        num_col = int(np.ceil(nr_variables / num_row))
-
-        fig, ax = plt.subplots(num_row, num_col, squeeze=False, figsize=size)
-    else:
-        fig = ax.get_figure()
-
-    axes = dict(zip(ynames, ax.flat))
-
-    for i, level in enumerate(alpha_sorted):
-
-        # Get upper and lower bounds for the confidence level
-        lb, ub = calculate_prediction_profiles(values, alpha=level / 100)
-
-        # Get the median
-        _median = np.percentile(values, 50, axis=1)
-
-        n_timepoints = _median.shape[1]
-        n_conditions = _median.shape[0]
-
-        # Loop over observables/states
-        for j, iplot in enumerate(ynames):
-            # Create array for X axis
-            t = np.arange(n_timepoints)
-            # Loop over experimental conditions
-            for k in range(n_conditions):
-                # Plot confidence region
-                axes[iplot].fill_between(t,
-                                         ub[k, :, j],
-                                         lb[k, :, j],
-                                         facecolor=colors[i],
-                                         alpha=0.9,
-                                         label=str(level) + '% CI')
-                # Plot median
-                axes[iplot].plot(t, _median[k, :, j],
-                                 'k-', label='MCMC median')
-                axes[iplot].set_ylabel(yname + '_' + str(j + 1))
-                # Update X axis array
-                t += n_timepoints
-
-    if title:
-        fig.suptitle(title)
-
-    # create legend
-    fig.tight_layout()
-    handles, labels = plt.gca().get_legend_handles_labels()
-    by_label = dict(zip(labels, handles))
-    axes[iplot].legend(by_label.values(), by_label.keys(),
-                       bbox_to_anchor=(1.05, 1))
-
-    return axes
+def _get_percentile_cutoffs(percentiles: float):
+    half_difference = (100 - percentiles)/2
+    return {'lower': half_difference, 'upper': 100 - half_difference}
 
 
-def sampling_prediction_profiles_conditions(
-        result: Result,
-        ci_levels: Union[int, Sequence[int]] = 95,
-        step_size: int = 1,
-        plot_type: str = 'states',
+def sampling_prediction_trajectories(
+        ensemble_prediction: EnsemblePrediction,
+        percentiles: Union[float, Sequence[float]],
         title: str = None,
         size: Tuple[float, float] = None,
-        ax: matplotlib.axes.Axes = None,
-        y_names: Sequence[str] = None,
-        n_procs: int = 1,
+        axes: matplotlib.axes.Axes = None,
+        labels: Dict[str, str] = None,
         axis_label_padding: int = 30,
+        groupby: str = CONDITION,
+        condition_gap: float = 0.01,
 ):
     """Plot MCMC-based prediction confidence intervals for the
     model states or observables. One or various confidence levels
     can be depicted. Plots are grouped by condition.
 
+    Note that references to observables here corresponds to the meaning of an
+    observable in the pyPESTO predictions code, which means an observable could
+    refer to many things, including model states or observables, dependent on
+    how the prediction is processed. FIXME rename
+
     Parameters
     ----------
     result:
         The pyPESTO result object with filled sample result.
-    ci_levels:
-        List of lower tail probabilities, e.g. 95 for a 95% interval.
-    step_size:
-        Only one in `step_size` values is simulated for the intervals
-        generation. Recommended for long MCMC chains.
-    plot_type:
-        Visualization mode for prediction intervals.
-        Options: `'states'`, `'observables'`.
+    percentiles:
+        Lower tail probabilities, e.g. `[95]` for a 95% credibility interval.
     title:
         Axes title.
     size: ndarray
         Figure size in inches.
-    ax:
+    axes:
         Axes object to use.
-    y_names:
-        Names for the plotted dependent variables.
-    n_procs:
-        The number of processors to use, to parallelize the evaluation of
-        samples.
+    labels:
+        Keys should be ensemble observable IDs, values should be the desired
+        label for that observable. Defaults to observable IDs.
     axis_label_padding:
         Pixels between axis labels and plots.
+    groupby:
+        Group plots by `OBSERVABLE` or `CONDITION`. TODO single constants file?
+    condition_gap:
+        Gap between conditions when `groupby == CONDITION`.
 
     Returns
     -------
     axes:
         The plot axes.
     """
-    if isinstance(ci_levels, int):
-        ci_levels = [ci_levels]
-    ci_levels = sorted(ci_levels, reverse=True)
-    ci_levels_opacity = sorted(
+    if labels is None:
+        labels = {}
+    if len(list(percentiles)) == 1:
+        percentiles = list(percentiles)
+    percentiles = sorted(percentiles, reverse=True)
+    percentiles_cutoffs_mapping = {
+        p: _get_percentile_cutoffs(p)
+        for p in percentiles
+    }
+    percentile_cutoffs = [
+        cutoff
+        for pair in percentiles_cutoffs_mapping.values()
+        for cutoff in pair.values()
+    ]
+
+    ensemble_prediction.compute_summary(percentiles_list=percentile_cutoffs)
+
+    summary = ensemble_prediction.prediction_summary
+
+    all_condition_ids = [
+        prediction.condition_ids
+        for prediction in ensemble_prediction.prediction_summary.values()
+    ]
+    # All prediction results must predict for the same set of conditions.
+    # Can support different conditions later.
+    assert np.array([
+        set(condition_ids) == set(all_condition_ids[0])
+        for condition_ids in all_condition_ids
+    ]).all()
+    condition_ids = all_condition_ids[0]
+
+    observable_ids = sorted({
+        observable_id
+        for prediction in ensemble_prediction.prediction_summary.values()
+        for condition in prediction.conditions
+        for observable_id in condition.observable_ids
+    })
+
+    # Set default labels.
+    labels = {
+        k: (labels[k] if k in labels else k)
+        for k in condition_ids + observable_ids
+    }
+
+    if groupby == CONDITION:
+        n_variables = len(observable_ids)
+        y_names = observable_ids
+        n_subplots = len(condition_ids)
+    elif groupby == OBSERVABLE:
+        n_variables = len(condition_ids)
+        y_names = condition_ids
+        n_subplots = len(observable_ids)
+    else:
+        raise ValueError(f'Unsupported groupby value: {groupby}')
+
+    percentiles_opacity = sorted(
         # min 30%, max 100%, opacity
-        np.linspace(0.3 * RGBA_MAX, RGBA_MAX, len(ci_levels)),
+        np.linspace(0.3 * RGBA_MAX, RGBA_MAX, len(percentiles)),
         reverse=True,
     )
-    if ax is not None:
-        fig = ax.get_figure()
-        if not isinstance(ax, np.ndarray):
-            ax = np.array([[ax]])
+    if axes is not None:
+        fig = axes.get_figure()
+        if not isinstance(axes, np.ndarray):
+            axes = np.array([[axes]])
     cmap = plt.cm.viridis
     cmap_min = RGBA_MIN
     cmap_max = 0.85*(RGBA_MAX - RGBA_MIN) + RGBA_MIN  # exclude yellows
-
-    # Evaluate prediction uncertainties
-    evaluation = evaluate_samples(result, step_size, n_procs=n_procs)
-
-    values_options = {
-        'observables': 0,
-        'states': 1,
-    }
-    values = evaluation[values_options[plot_type]]
-    n_variables = values.shape[-1]
-
-    if y_names is None:
-        y_names = [f'{plot_type}_{i}' for i in range(n_variables)]
-    else:
-        assert len(y_names) == n_variables
 
     # define colormap
     variables_color = [
@@ -300,36 +238,130 @@ def sampling_prediction_profiles_conditions(
         for v in np.linspace(cmap_min, cmap_max, n_variables)
     ]
 
-    for i, level in enumerate(ci_levels):
-        # Get upper and lower bounds for the CI level
-        lb, ub = calculate_prediction_profiles(values, alpha=level/100)
-        median = np.percentile(values, 50, axis=1)
+    if axes is None:
+        n_row = int(np.round(np.sqrt(n_subplots)))
+        n_col = int(np.ceil(n_subplots / n_row))
+        fig, axes = plt.subplots(n_row, n_col, figsize=size, squeeze=False)
+    elif len(axes.flat) < n_subplots:
+        raise ValueError(
+            'Provided `ax` contains insufficient subplots. At least '
+            f'{n_subplots} are required.'
+        )
 
-        t = np.arange(median.shape[1])
-        n_conditions = median.shape[0]
+    def get_statistic_data(
+            statistic: str,
+            condition_index: int,
+            observable_index: int,
+    ):
+        condition_result = summary[statistic].conditions[condition_index]
+        t = condition_result.timepoints
+        y = condition_result.output[:, observable_index]
+        return (t, y)
 
-        if ax is None:
-            n_row = int(np.round(np.sqrt(n_conditions)))
-            n_col = int(np.ceil(n_conditions / n_row))
-            fig, ax = plt.subplots(n_row, n_col, figsize=size, squeeze=False)
-
-        for k in range(n_conditions):
-            for j, y_name in enumerate(y_names):
-                ax.flat[k].fill_between(
-                    t,
-                    ub[k, :, j],
-                    lb[k, :, j],
-                    facecolor=rgba2rgb(
-                        variables_color[j] + [ci_levels_opacity[i]]),
-                    label=f'{y_name}: MCMC {level} % CI',
-                    lw=0,
-                )
-                ax.flat[k].plot(
-                    t,
-                    median[k, :, j],
+    if groupby == CONDITION:
+        # Each subplot has all data for a single condition.
+        for condition_index, condition_id in enumerate(condition_ids):
+            ax = axes.flat[condition_index]
+            ax.set_title(f'Condition: {labels[condition_id]}')
+            # Each subplot has all data for all condition-specific observables.
+            for observable_index, observable_id in enumerate(observable_ids):
+                ax.plot(
+                    *get_statistic_data(
+                        MEDIAN,
+                        condition_index,
+                        observable_index
+                    ),
                     'k-',
-                    label=f'{y_name}: MCMC median'
                 )
+                for percentile_index, percentile in enumerate(percentiles):
+                    lower_label = get_percentile_label(
+                        percentiles_cutoffs_mapping[percentile]['lower']
+                    )
+                    upper_label = get_percentile_label(
+                        percentiles_cutoffs_mapping[percentile]['upper']
+                    )
+                    t1, lower_data = get_statistic_data(
+                        lower_label,
+                        condition_index,
+                        observable_index,
+                    )
+                    _, upper_data = get_statistic_data(
+                        upper_label,
+                        condition_index,
+                        observable_index,
+                    )
+                    ax.fill_between(
+                        t1,
+                        lower_data,
+                        upper_data,
+                        facecolor=rgba2rgb(
+                            variables_color[observable_index]
+                            + [percentiles_opacity[percentile_index]]
+                        ),
+                        lw=0,
+                    )
+    elif groupby == OBSERVABLE:
+        # Each subplot has all data for a single observable.
+        for observable_index, observable_id in enumerate(observable_ids):
+            t0 = 0
+            ax = axes.flat[observable_index]
+            ax.set_title(f'Trajectory: {labels[observable_id]}')
+            # Each subplot is divided by conditions, with vertical lines.
+            for condition_index, condition_id in enumerate(condition_ids):
+                if condition_index != 0:
+                    ax.axvline(
+                        t0,
+                        linewidth=2,
+                        color='k',
+                    )
+
+                t_max = t0
+                t_median, y_median = get_statistic_data(
+                    MEDIAN,
+                    condition_index,
+                    observable_index
+                )
+                t_median_shifted = t_median + t0
+                ax.plot(
+                    t_median_shifted,
+                    y_median,
+                    'k-',
+                )
+                t_max = max(t_max, *t_median_shifted)
+                for percentile_index, percentile in enumerate(percentiles):
+                    lower_label = get_percentile_label(
+                        percentiles_cutoffs_mapping[percentile]['lower']
+                    )
+                    upper_label = get_percentile_label(
+                        percentiles_cutoffs_mapping[percentile]['upper']
+                    )
+                    t_lower, lower_data = get_statistic_data(
+                        lower_label,
+                        condition_index,
+                        observable_index,
+                    )
+                    t_upper, upper_data = get_statistic_data(
+                        upper_label,
+                        condition_index,
+                        observable_index,
+                    )
+                    t_lower_shifted = t_lower + t0
+                    t_upper_shifted = t_upper + t0
+                    # Timepoints must match, or `upper_data` will be plotted at
+                    # some incorrect time points.
+                    assert (np.array(t_lower) == np.array(t_upper)).all()
+                    ax.fill_between(
+                        t_lower_shifted,
+                        lower_data,
+                        upper_data,
+                        facecolor=rgba2rgb(
+                            variables_color[condition_index]
+                            + [percentiles_opacity[percentile_index]]
+                        ),
+                        lw=0,
+                    )
+                    t_max = max(t_max, *t_lower_shifted, *t_upper_shifted)
+                t0 = t_max
 
     if title:
         fig.suptitle(title)
@@ -339,24 +371,27 @@ def sampling_prediction_profiles_conditions(
     lines_variables = np.array([
         # Assumes that the color for a variable is always the same, with
         # different opacity for different confidence interval levels.
-        [y_name, Line2D(*fake_data, color=variables_color[index], lw=4)]
+        [
+            labels[y_name],
+            Line2D(*fake_data, color=variables_color[index], lw=4)
+        ]
         for index, y_name in enumerate(y_names)
     ])
     lines_levels = np.array([
         # Assumes that different CI levels are represented as
-        # difference opacities of the same color.
+        # different opacities of the same color.
         [
             f'{level}% CI',
             Line2D(
                 *fake_data,
                 color=rgba2rgb([
                     *RGBA_BLACK[:LEN_RGB],
-                    ci_levels_opacity[index]
+                    percentiles_opacity[index]
                 ]),
                 lw=4
             )
         ]
-        for index, level in enumerate(ci_levels)
+        for index, level in enumerate(percentiles)
     ] + [['Median', Line2D(*fake_data, color=RGBA_BLACK)]]
     )
 
@@ -373,14 +408,18 @@ def sampling_prediction_profiles_conditions(
         'bbox_to_anchor': (1 + artist_padding, 0),
         'loc': 'lower left',
     }
-    legend_variables = ax.flat[n_col-1].legend(
+    legend_titles = {
+        OBSERVABLE: 'Conditions',
+        CONDITION: 'Trajectories',
+    }
+    legend_variables = axes.flat[n_col-1].legend(
         lines_variables[:, 1],
         lines_variables[:, 0],
         **legend_options_top_right,
-        title=plot_type.capitalize(),
+        title=legend_titles[groupby],
     )
     # Legend for CI levels
-    ax.flat[-1].legend(
+    axes.flat[-1].legend(
         lines_levels[:, 1],
         lines_levels[:, 0],
         **legend_options_bottom_right,
@@ -389,8 +428,8 @@ def sampling_prediction_profiles_conditions(
     fig.add_artist(legend_variables)
 
     # X and Y labels
-    xmin = min(_ax.get_position().xmin for _ax in ax.flat)
-    ymin = min(_ax.get_position().ymin for _ax in ax.flat)
+    xmin = min(ax.get_position().xmin for ax in axes.flat)
+    ymin = min(ax.get_position().ymin for ax in axes.flat)
     plt.text(
         0.5,
         ymin - artist_padding,
@@ -402,15 +441,15 @@ def sampling_prediction_profiles_conditions(
     plt.text(
         xmin - artist_padding,
         0.5,
-        f'{plot_type.capitalize()} Values',
+        'Simulated values',
         ha='center',
         va='center',
         transform=fig.transFigure,
         rotation='vertical'
     )
 
-    plt.tight_layout()
-    return ax
+    # plt.tight_layout()  # Ruins layout for `groupby == OBSERVABLE`.
+    return axes
 
 
 def sampling_parameters_cis(
