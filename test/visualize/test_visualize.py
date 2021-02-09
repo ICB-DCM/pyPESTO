@@ -796,7 +796,7 @@ def test_sampling_prediction_trajectories():
         output_type=prediction.AMICI_X,
         observable_ids=result.problem.objective.amici_model.getStateIds(),
     )
-    predictor = AmiciPredictor(
+    predictor = prediction.AmiciPredictor(
         result.problem.objective,
         post_processor=post_processor_amici_x,
         observable_ids=result.problem.objective.amici_model.getStateIds(),
