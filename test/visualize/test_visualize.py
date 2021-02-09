@@ -1,3 +1,4 @@
+import functools
 import numpy as np
 import scipy.optimize as so
 import matplotlib.pyplot as plt
@@ -180,8 +181,8 @@ def create_plotting_options():
 
 def post_processor(
         amici_outputs,
-        output_type=output_type,
-        observable_ids=observable_ids
+        output_type,
+        observable_ids,
 ):
     # This post_processor will transform the output of the simulation tool
     # such that the output is compatible with the next steps.
@@ -790,14 +791,19 @@ def test_sampling_parameters_cis():
 def test_sampling_prediction_trajectories():
     """Test pypesto.visualize.sampling_prediction_trajectories"""
     result = sample_petab_problem()
+    post_processor_amici_x = partial(
+        post_processor,
+        output_type=prediction.AMICI_X,
+        observable_ids=result.problem.objective.amici_model.getStateIds(),
+    )
     predictor = AmiciPredictor(
         result.problem.objective,
-        post_processor=post_processor,
+        post_processor=post_processor_amici_x,
         observable_ids=result.problem.objective.amici_model.getStateIds(),
     )
 
     vectors = result.sample_result.trace_x[0]
-    _ensemble = ensemble.Ensemble(
+    sample_ensemble = ensemble.Ensemble(
         vectors,
         x_names=result.problem.x_names,
         ensemble_type=ensemble.EnsembleType.sample,
@@ -805,7 +811,7 @@ def test_sampling_prediction_trajectories():
         upper_bound=result.problem.ub,
     )
 
-    ensemble_prediction = ensemble.predict(
+    ensemble_prediction = sample_ensemble.predict(
         predictor,
         prediction_id=prediction.constants.AMICI_X,
     )
