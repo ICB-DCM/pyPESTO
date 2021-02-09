@@ -10,7 +10,8 @@ from typing import Sequence
 
 import pypesto
 from pypesto.objective.util import sres_to_schi2, res_to_chi2
-from pypesto import CsvHistory, HistoryOptions, MemoryHistory, ObjectiveBase, Hdf5History
+from pypesto import CsvHistory, HistoryOptions,\
+    MemoryHistory, ObjectiveBase, Hdf5History
 from pypesto.optimize.optimizer import read_result_from_file, OptimizerResult
 from pypesto.objective.constants import (
     FVAL, GRAD, HESS, RES, SRES, CHI2, SCHI2)
@@ -157,7 +158,9 @@ class HistoryTest(unittest.TestCase):
     def check_history_consistency(self, start: OptimizerResult):
 
         # TODO other implementations
-        assert isinstance(start.history, (CsvHistory, MemoryHistory, Hdf5History))
+        assert isinstance(start.history, (CsvHistory,
+                                          MemoryHistory,
+                                          Hdf5History))
 
         def xfull(x_trace):
             return self.problem.get_full_vector(
@@ -449,7 +452,9 @@ def test_history_properties(history: pypesto.History):
 
 def test_trace_subset(history: pypesto.History):
     """Test whether selecting only a trace subset works."""
-    if isinstance(history, (pypesto.MemoryHistory, pypesto.CsvHistory, Hdf5History)):
+    if isinstance(history, (pypesto.MemoryHistory,
+                            pypesto.CsvHistory,
+                            Hdf5History)):
         arr = list(range(0, len(history), 2))
 
         for var in ['fval', 'grad', 'hess', 'res', 'sres', 'chi2',
