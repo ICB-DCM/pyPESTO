@@ -117,10 +117,14 @@ def ensemble_identifiability_lowlevel(none_hit: np.ndarray,
         fig.set_size_inches(*size)
 
     # create axes object and add patch collections
-    ax.add_collection(patches_both_hit)
-    ax.add_collection(patches_lb_hit)
-    ax.add_collection(patches_ub_hit)
-    ax.add_collection(patches_none_hit)
+    if patches_both_hit:
+        ax.add_collection(patches_both_hit)
+    if patches_lb_hit:
+        ax.add_collection(patches_lb_hit)
+    if patches_ub_hit:
+        ax.add_collection(patches_ub_hit)
+    if patches_none_hit:
+        ax.add_collection(patches_none_hit)
 
     # plot dashed lines indicating the number rof non-identifiable parameters
     vert = [-.05, 1.05]
@@ -130,14 +134,19 @@ def ensemble_identifiability_lowlevel(none_hit: np.ndarray,
             'k--', linewidth=1.5)
 
     # add text
-    ax.text(x_both / 2, -.05, 'both bounds hit', color=COLOR_HIT_BOTH_BOUNDS,
-            rotation=-90, va='top', ha='center')
-    ax.text(x_both + x_lb / 2, -.05, 'lower bound hit',
-            color=COLOR_HIT_ONE_BOUND, rotation=-90, va='top', ha='center')
-    ax.text(x_both + x_lb + x_ub / 2, -.05, 'upper bound hit',
-            color=COLOR_HIT_ONE_BOUND, rotation=-90, va='top', ha='center')
-    ax.text(1 - x_none / 2, -.05, 'no bounds hit',
-            color=COLOR_HIT_NO_BOUNDS, rotation=-90, va='top', ha='center')
+    if patches_both_hit:
+        ax.text(x_both / 2, -.05, 'both bounds hit',
+                color=COLOR_HIT_BOTH_BOUNDS,
+                rotation=-90, va='top', ha='center')
+    if patches_lb_hit:
+        ax.text(x_both + x_lb / 2, -.05, 'lower bound hit',
+                color=COLOR_HIT_ONE_BOUND, rotation=-90, va='top', ha='center')
+    if patches_ub_hit:
+        ax.text(x_both + x_lb + x_ub / 2, -.05, 'upper bound hit',
+                color=COLOR_HIT_ONE_BOUND, rotation=-90, va='top', ha='center')
+    if patches_none_hit:
+        ax.text(1 - x_none / 2, -.05, 'no bounds hit',
+                color=COLOR_HIT_NO_BOUNDS, rotation=-90, va='top', ha='center')
     ax.text(0, -.7, 'identifiable parameters: {:4.1f}%'.format(x_none * 100),
             va='top')
 
@@ -287,51 +296,56 @@ def _create_patches(none_hit: np.ndarray,
     n_par = sum([none_hit.shape[0], lb_hit.shape[0],
                  ub_hit.shape[0], both_hit.shape[0]])
 
-    # creates patches for parameters which hit both bounds
-    patches_both_hit = []
     # start patches at the left end and increment by h = 1/n_par
     x = 0.
     h = 1. / n_par
-    for _ in both_hit:
-        # create a list of rectangles
-        patches_both_hit.append(Rectangle((x, 0.), h, 1.))
-        x += h
-    patches_both_hit = PatchCollection(patches_both_hit,
-                                       facecolors=COLOR_HIT_BOTH_BOUNDS)
+
+    # creates patches for parameters which hit both bounds
+    patches_both_hit = []
+    if both_hit.size > 0:
+        for _ in both_hit:
+            # create a list of rectangles
+            patches_both_hit.append(Rectangle((x, 0.), h, 1.))
+            x += h
+        patches_both_hit = PatchCollection(patches_both_hit,
+                                           facecolors=COLOR_HIT_BOTH_BOUNDS)
 
     # creates patches for parameters which hit lower bound
     patches_lb_hit = []
     # sort by normalizes length of confidence interval/credible range
-    tmp_lb = np.sort(lb_hit[:, 1])[::-1]
-    for lb_par in tmp_lb:
-        # create a list of rectangles
-        patches_lb_hit.append(Rectangle((x, 0.), h, lb_par))
-        x += h
-    patches_lb_hit = PatchCollection(patches_lb_hit,
-                                     facecolors=COLOR_HIT_ONE_BOUND)
+    if lb_hit.size > 0:
+        tmp_lb = np.sort(lb_hit[:, 1])[::-1]
+        for lb_par in tmp_lb:
+            # create a list of rectangles
+            patches_lb_hit.append(Rectangle((x, 0.), h, lb_par))
+            x += h
+        patches_lb_hit = PatchCollection(patches_lb_hit,
+                                         facecolors=COLOR_HIT_ONE_BOUND)
 
     # creates patches for parameters which hit upper bound
     patches_ub_hit = []
     # sort by normalizes length of confidence interval/credible range
-    tmp_ub = np.sort(ub_hit[:, 0])
-    for ub_par in tmp_ub:
-        # create a list of rectangles
-        patches_ub_hit.append(Rectangle((x, ub_par), h, 1. - ub_par))
-        x += h
-    patches_ub_hit = PatchCollection(patches_ub_hit,
-                                     facecolors=COLOR_HIT_ONE_BOUND)
+    if ub_hit.size > 0:
+        tmp_ub = np.sort(ub_hit[:, 0])
+        for ub_par in tmp_ub:
+            # create a list of rectangles
+            patches_ub_hit.append(Rectangle((x, ub_par), h, 1. - ub_par))
+            x += h
+        patches_ub_hit = PatchCollection(patches_ub_hit,
+                                         facecolors=COLOR_HIT_ONE_BOUND)
 
     # creates patches for parameters which hit no bounds
     patches_none_hit = []
     # sort by normalizes length of confidence interval/credible range
-    tmp_none = np.argsort(none_hit[:, 1] - none_hit[:, 0])[::-1]
-    for none_par in tmp_none:
-        patches_none_hit.append(
-            # create a list of rectangles
-            Rectangle((x, none_hit[none_par, 0]), h,
-                      none_hit[none_par, 1] - none_hit[none_par, 0]))
-        x += h
-    patches_none_hit = PatchCollection(patches_none_hit,
-                                       facecolors=COLOR_HIT_NO_BOUNDS)
+    if none_hit.size > 0:
+        tmp_none = np.argsort(none_hit[:, 1] - none_hit[:, 0])[::-1]
+        for none_par in tmp_none:
+            patches_none_hit.append(
+                # create a list of rectangles
+                Rectangle((x, none_hit[none_par, 0]), h,
+                          none_hit[none_par, 1] - none_hit[none_par, 0]))
+            x += h
+        patches_none_hit = PatchCollection(patches_none_hit,
+                                           facecolors=COLOR_HIT_NO_BOUNDS)
 
     return patches_both_hit, patches_lb_hit, patches_ub_hit, patches_none_hit
