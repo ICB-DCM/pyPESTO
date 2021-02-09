@@ -247,14 +247,15 @@ class AmiciPredictor:
             if 0 in sensi_orders:
                 outputs = [
                     amici_output[AMICI_Y] if amici_output[AMICI_STATUS] == 0
-                    else np.full((amici_nt, amici_ny), np.nan)
-                    for amici_output in amici_outputs
+                    else np.full((amici_nt[i_condition], amici_ny), np.nan)
+                    for i_condition, amici_output in enumerate(amici_outputs)
                 ]
             if 1 in sensi_orders:
                 outputs_sensi = [
                     amici_output[AMICI_SY] if amici_output[AMICI_STATUS] == 0
-                    else np.full((amici_nt, amici_np, amici_ny), np.nan)
-                    for amici_output in amici_outputs
+                    else np.full((amici_nt[i_condition], amici_np, amici_ny),
+                                 np.nan)
+                    for i_condition, amici_output in enumerate(amici_outputs)
                 ]
 
             return timepoints, outputs, outputs_sensi
