@@ -339,15 +339,18 @@ class ResumablePymc3Sampler:
         #          specific samples: can we allow more than one per chain?
         #        * if we add multiple times warnings to the strace,
         #          will we get many duplicates?
-        except:
+        except Exception as ex:
             self._cur_point = None  # invalidate current point
             if rethrow:
                 raise
+            else:
+                print('Sampling interrupted by exception:', ex)
         else:
             assert strace.draw_idx == strace.draws
             self._cur_point = point
         finally:
             strace.close()  # if no error occured this should be a no-op
+            assert strace.draw_idx == strace.draws
             self._sampling_time += time.perf_counter() - t0
             sys.stdout.flush() # Flush progress bar output
             sys.stderr.flush()
