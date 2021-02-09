@@ -181,7 +181,12 @@ class ResumablePymc3Sampler:
     @property
     def trace(self):
         if self._strace.draws != self._strace.draw_idx:
-            raise Exception('invalid trace state (not trimmed)')
+            raise Exception(
+                'invalid trace state '
+                f'(draws = {self._strace.draws}, '
+                f'draw_idx = {self._strace.draw_idx}, '
+                'chain has not been trimmed?)'
+            )
         trace = MultiTrace([self._strace])
         report = trace.report
         report._n_draws = self.num_draws
