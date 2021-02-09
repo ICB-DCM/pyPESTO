@@ -189,10 +189,13 @@ def sampling_prediction_trajectories(
     ]
     # All prediction results must predict for the same set of conditions.
     # Can support different conditions later.
-    assert np.array([
-        set(condition_ids) == set(all_condition_ids[0])
-        for condition_ids in all_condition_ids
-    ]).all()
+    if not (
+            np.array([
+                set(condition_ids) == set(all_condition_ids[0])
+                for condition_ids in all_condition_ids
+            ]).all()
+    ):
+        raise KeyError('All predictions must have the same set of conditions.')
     condition_ids = all_condition_ids[0]
 
     observable_ids = sorted({
@@ -251,10 +254,11 @@ def sampling_prediction_trajectories(
     def get_statistic_data(
             statistic: str,
             condition_index: int,
-            observable_index: int,
+            observable_id: int,
     ):
         condition_result = summary[statistic].conditions[condition_index]
         t = condition_result.timepoints
+        observable_index = condition_result.observable_ids.index(observable_id)
         y = condition_result.output[:, observable_index]
         return (t, y)
 
@@ -269,7 +273,7 @@ def sampling_prediction_trajectories(
                     *get_statistic_data(
                         MEDIAN,
                         condition_index,
-                        observable_index
+                        observable_id
                     ),
                     'k-',
                 )
@@ -283,12 +287,12 @@ def sampling_prediction_trajectories(
                     t1, lower_data = get_statistic_data(
                         lower_label,
                         condition_index,
-                        observable_index,
+                        observable_id,
                     )
                     _, upper_data = get_statistic_data(
                         upper_label,
                         condition_index,
-                        observable_index,
+                        observable_id,
                     )
                     ax.fill_between(
                         t1,
@@ -307,7 +311,7 @@ def sampling_prediction_trajectories(
             ax = axes.flat[observable_index]
             ax.set_title(f'Trajectory: {labels[observable_id]}')
             # Each subplot is divided by conditions, with vertical lines.
-            for condition_index, condition_id in enumerate(condition_ids):
+            for condition_index, _condition_id in enumerate(condition_ids):
                 if condition_index != 0:
                     ax.axvline(
                         t0,
@@ -319,7 +323,7 @@ def sampling_prediction_trajectories(
                 t_median, y_median = get_statistic_data(
                     MEDIAN,
                     condition_index,
-                    observable_index
+                    observable_id,
                 )
                 t_median_shifted = t_median + t0
                 ax.plot(
@@ -338,12 +342,12 @@ def sampling_prediction_trajectories(
                     t_lower, lower_data = get_statistic_data(
                         lower_label,
                         condition_index,
-                        observable_index,
+                        observable_id,
                     )
                     t_upper, upper_data = get_statistic_data(
                         upper_label,
                         condition_index,
-                        observable_index,
+                        observable_id,
                     )
                     t_lower_shifted = t_lower + t0
                     t_upper_shifted = t_upper + t0

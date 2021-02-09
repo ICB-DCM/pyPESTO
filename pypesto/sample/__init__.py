@@ -24,5 +24,4 @@ from .diagnostics import (
     effective_sample_size)
 from .util import (
     calculate_ci,
-    evaluate_samples,
     calculate_prediction_profiles)
