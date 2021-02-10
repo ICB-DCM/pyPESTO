@@ -114,7 +114,6 @@ class HistoryTest(unittest.TestCase):
         if isinstance(start.history, MemoryHistory):
             return
 
-        # TODO other implementations
         assert isinstance(start.history, (CsvHistory, Hdf5History))
 
         if isinstance(start.history, CsvHistory):
@@ -157,17 +156,12 @@ class HistoryTest(unittest.TestCase):
 
     def check_history_consistency(self, start: OptimizerResult):
 
-        # TODO other implementations
-        assert isinstance(start.history, (CsvHistory,
-                                          MemoryHistory,
-                                          Hdf5History))
-
         def xfull(x_trace):
             return self.problem.get_full_vector(
                 x_trace, self.problem.x_fixed_vals
             )
 
-        if isinstance(start.history, CsvHistory):
+        if isinstance(start.history, (CsvHistory, Hdf5History)):
             it_final = np.nanargmin(start.history.get_fval_trace())
             if isinstance(it_final, np.ndarray):
                 it_final = it_final[0]
@@ -429,9 +423,7 @@ def test_history_properties(history: pypesto.History):
         assert len(fvals) == 10
         assert all(np.isfinite(fvals))
 
-    if type(history) in \
-            (pypesto.History, Hdf5History):
-        # TODO update as functionality is implemented
+    if type(history) == pypesto.History:
         with pytest.raises(NotImplementedError):
             history.get_grad_trace()
     else:
@@ -439,10 +431,8 @@ def test_history_properties(history: pypesto.History):
         assert len(grads) == 10
         assert len(grads[0]) == 7
 
-    if isinstance(history, (pypesto.MemoryHistory, pypesto.CsvHistory)):
-        # TODO extend as functionality is implemented in other histories
-
-        # assert x values are not all the same
+    # assert x values are not all the same
+    if type(history) != pypesto.History:
         xs = np.array(history.get_x_trace())
         assert np.all(xs[:-1] != xs[-1])
 
@@ -452,9 +442,7 @@ def test_history_properties(history: pypesto.History):
 
 def test_trace_subset(history: pypesto.History):
     """Test whether selecting only a trace subset works."""
-    if isinstance(history, (pypesto.MemoryHistory,
-                            pypesto.CsvHistory,
-                            Hdf5History)):
+    if type(history) != pypesto.History:
         arr = list(range(0, len(history), 2))
 
         for var in ['fval', 'grad', 'hess', 'res', 'sres', 'chi2',
