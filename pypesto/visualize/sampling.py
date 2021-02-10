@@ -254,8 +254,27 @@ def sampling_prediction_trajectories(
     def get_statistic_data(
             statistic: str,
             condition_index: int,
-            observable_id: int,
-    ):
+            observable_id: str,
+    ) -> Tuple[Sequence[float], Sequence[float]]:
+        """Get statistic-, condition-, and observable-specific data.
+
+        Parameters
+        ----------
+        statistic:
+            The predicted statistic, e.g. `MEDIAN` or
+            `get_percentile_label(95)`.
+        condition_index:
+            Select data for a specific condition by its index in a
+            `PredictionResult.condition_ids` object.
+        observable_id:
+            Select data for a specific observable by its ID.
+
+        Returns
+        -------
+        Predicted values and their corresponding time points. A tuple of two
+        sequences, where the first sequence is time points, and the second
+        sequence is predicted values at the corresponding time points.
+        """
         condition_result = summary[statistic].conditions[condition_index]
         t = condition_result.timepoints
         observable_index = condition_result.observable_ids.index(observable_id)
