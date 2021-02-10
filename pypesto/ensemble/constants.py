@@ -54,5 +54,28 @@ class EnsembleType(Enum):
     unprocessed_chain = 3
 
 
-def get_percentile_label(percentile: float):
-    return f'{PERCENTILE} {percentile}'
+def get_percentile_label(percentile: float) -> str:
+    """Convert a percentile to a label.
+
+    Labels for percentiles are used at different locations (e.g. ensemble
+    prediction code, and visualization code). This method ensures that the same
+    percentile is labeled identically everywhere.
+
+    The percentile is rounded to two decimal places in the label representation
+    if it is specified to more decimal places. This is for readability in
+    plotting routines, and to avoid float to string conversion issues related
+    to float precision.
+
+    Parameters
+    ----------
+    percentile:
+        The percentile value that will be used to generate a label.
+
+    Returns
+    -------
+    The label of the (possibly rounded) percentile.
+    """
+    rounded_percentile = round(percentile, 2)
+    # Add `...` to the label if the percentile value changed when rounded.
+    suffix = '' if rounded_percentile == percentile else '...'
+    return f'{PERCENTILE} {rounded_percentile}{suffix}'
