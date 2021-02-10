@@ -142,7 +142,10 @@ def sampling_prediction_trajectories(
     result:
         The pyPESTO result object with filled sample result.
     percentiles:
-        Lower tail probabilities, e.g. `[95]` for a 95% credibility interval.
+        Credibility levels, e.g. `[95]` for a 95% credibility interval. These
+        are split symmetrically, e.g. [95] corresponds to plotting values
+        between the 2.5% and 97.5% percentiles, and are equivalent to highest
+        density regions.
     title:
         Axes title.
     size: ndarray
