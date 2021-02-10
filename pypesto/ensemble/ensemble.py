@@ -371,11 +371,11 @@ class Ensemble:
 
         tasks = [
             PredictorTask(
-                predictor,
-                self.x_vectors[:, ix],
-                sensi_orders,
-                mode,
-                ix,
+                predictor=predictor,
+                x=self.x_vectors[:, ix],
+                sensi_orders=sensi_orders,
+                mode=mode,
+                id=ix,
             )
             for ix in range(self.n_vectors)
         ]
