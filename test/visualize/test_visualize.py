@@ -817,14 +817,15 @@ def test_sampling_prediction_trajectories():
         prediction_id=prediction.constants.AMICI_X,
     )
 
+    # Plot by
     visualize.sampling_prediction_trajectories(
         ensemble_prediction,
         percentiles=percentiles,
+        groupby=visualize.sampling.CONDITION,
     )
-    # call with custom arguments
     visualize.sampling_prediction_trajectories(
         ensemble_prediction,
         percentiles=percentiles,
         size=(10, 10),
-        groupby='observable',
+        groupby=visualize.sampling.OBSERVABLE,
     )

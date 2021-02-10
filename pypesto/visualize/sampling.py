@@ -13,15 +13,17 @@ from .misc import (
     RGBA_BLACK,
     RGBA_MIN,
     RGBA_MAX,
+    TYPING_RGB,
 )
-from ..result import Result
-from ..sample import McmcPtResult, calculate_ci
-
 from ..ensemble import (
     get_percentile_label,
     EnsemblePrediction,
     MEDIAN,
 )
+from ..prediction import PredictionResult
+from ..result import Result
+from ..sample import McmcPtResult, calculate_ci
+
 
 logger = logging.getLogger(__name__)
 
@@ -112,9 +114,221 @@ def sampling_fval_trace(
     return ax
 
 
-def _get_percentile_cutoffs(percentiles: float):
-    half_difference = (100 - percentiles)/2
-    return {'lower': half_difference, 'upper': 100 - half_difference}
+def _get_percentile_cutoffs(percentiles: float) -> Tuple[float, float]:
+    """Convert credibility interval percentiles to cutoff percentiles.
+
+    Similar to highest-density regions of a Normal distribution.
+
+    For example, an input percentile of 95 will be converted to (2.5, 97.5).
+
+    Parameters
+    ----------
+    percentile:
+        The percentile to calculate the cutoffs for.
+
+    Returns
+    -------
+    The percentile cutoffs, with the lower cutoff first.
+    """
+    half_difference = (100 - percentiles) / 2
+    return half_difference, 100 - half_difference
+
+
+def _get_statistic_data(
+        summary: Dict[str, PredictionResult],
+        statistic: str,
+        condition_index: int,
+        observable_id: str,
+) -> Tuple[Sequence[float], Sequence[float]]:
+    """Get statistic-, condition-, and observable-specific data.
+
+    Parameters
+    ----------
+    summary:
+        A `pypesto.ensemble.EnsemblePrediction.prediction_summary`, used as the
+        source of annotated data to subset.
+    statistic:
+        The predicted statistic, e.g. `MEDIAN` or
+        `get_percentile_label(95)`.
+    condition_index:
+        Select data for a specific condition by its index in a
+        `PredictionResult.condition_ids` object.
+    observable_id:
+        Select data for a specific observable by its ID.
+
+    Returns
+    -------
+    Predicted values and their corresponding time points. A tuple of two
+    sequences, where the first sequence is time points, and the second
+    sequence is predicted values at the corresponding time points.
+    """
+    condition_result = summary[statistic].conditions[condition_index]
+    t = condition_result.timepoints
+    observable_index = condition_result.observable_ids.index(observable_id)
+    y = condition_result.output[:, observable_index]
+    return (t, y)
+
+
+def _plot_trajectories_by_condition(
+        summary: Dict[str, PredictionResult],
+        condition_ids: Sequence[str],
+        observable_ids: Sequence[str],
+        axes: matplotlib.axes.Axes,
+        percentiles: Sequence[float],
+        percentiles_opacity: Dict[int, float],
+        labels: Dict[str, str],
+        variables_color: Sequence[TYPING_RGB],
+):
+    """Plot predicted trajectories, with subplots grouped by condition.
+
+    Parameters
+    ----------
+    summary:
+        A `pypesto.ensemble.EnsemblePrediction.prediction_summary`, used as the
+        source of annotated data to plot.
+    condition_ids:
+        The IDs of conditions to be plot.
+    observable_ids:
+        The IDs of observables to be plot.
+    axes:
+        The axes to plot with. Should contain atleast `len(observable_ids)`
+        subplots.
+    percentiles:
+        Credibility levels, e.g. `[95]` for a 95% credibility interval. These
+        are split symmetrically, e.g. [95] corresponds to plotting values
+        between the 2.5% and 97.5% percentiles, and are equivalent to highest-
+        density regions for a Normal distribution.
+    percentiles_opacity:
+        A mapping from the percentiles to the opacities that they should be
+        plotted with. Opacity is the only thing that differentiates percentiles
+        in the resulting plot.
+    labels:
+        Keys should be ensemble observable IDs, values should be the desired
+        label for that observable. Defaults to observable IDs.
+    variables_color:
+        Colors used to differentiate plotted observables. The order should
+        correspond to `observable_ids`.
+    """
+    # Each subplot has all data for a single condition.
+    for condition_index, condition_id in enumerate(condition_ids):
+        ax = axes.flat[condition_index]
+        ax.set_title(f'Condition: {labels[condition_id]}')
+        # Each subplot has all data for all condition-specific observables.
+        for observable_index, observable_id in enumerate(observable_ids):
+            ax.plot(
+                *_get_statistic_data(
+                    summary,
+                    MEDIAN,
+                    condition_index,
+                    observable_id
+                ),
+                'k-',
+            )
+            for percentile_index, percentile in enumerate(percentiles):
+                lower_label, upper_label = [
+                    get_percentile_label(cutoff)
+                    for cutoff in _get_percentile_cutoffs(percentile)
+                ]
+                t1, lower_data = _get_statistic_data(
+                    summary,
+                    lower_label,
+                    condition_index,
+                    observable_id,
+                )
+                _, upper_data = _get_statistic_data(
+                    summary,
+                    upper_label,
+                    condition_index,
+                    observable_id,
+                )
+                ax.fill_between(
+                    t1,
+                    lower_data,
+                    upper_data,
+                    facecolor=rgba2rgb(
+                        variables_color[observable_index]
+                        + [percentiles_opacity[percentile_index]]
+                    ),
+                    lw=0,
+                )
+
+
+def _plot_trajectories_by_observable(
+        summary: Dict[str, PredictionResult],
+        condition_ids: Sequence[str],
+        observable_ids: Sequence[str],
+        axes: matplotlib.axes.Axes,
+        percentiles: Sequence[float],
+        percentiles_opacity: Dict[int, float],
+        labels: Dict[str, str],
+        variables_color: Sequence[TYPING_RGB],
+):
+    """Plot predicted trajectories, with subplots grouped by observable.
+
+    See :py:func:`_plot_trajectories_by_condition` for parameter descriptions.
+    """
+    # Each subplot has all data for a single observable.
+    for observable_index, observable_id in enumerate(observable_ids):
+        t0 = 0
+        ax = axes.flat[observable_index]
+        ax.set_title(f'Trajectory: {labels[observable_id]}')
+        # Each subplot is divided by conditions, with vertical lines.
+        for condition_index, _condition_id in enumerate(condition_ids):
+            if condition_index != 0:
+                ax.axvline(
+                    t0,
+                    linewidth=2,
+                    color='k',
+                )
+
+            t_max = t0
+            t_median, y_median = _get_statistic_data(
+                summary,
+                MEDIAN,
+                condition_index,
+                observable_id,
+            )
+            t_median_shifted = t_median + t0
+            ax.plot(
+                t_median_shifted,
+                y_median,
+                'k-',
+            )
+            t_max = max(t_max, *t_median_shifted)
+            for percentile_index, percentile in enumerate(percentiles):
+                lower_label, upper_label = [
+                    get_percentile_label(cutoff)
+                    for cutoff in _get_percentile_cutoffs(percentile)
+                ]
+                t_lower, lower_data = _get_statistic_data(
+                    summary,
+                    lower_label,
+                    condition_index,
+                    observable_id,
+                )
+                t_upper, upper_data = _get_statistic_data(
+                    summary,
+                    upper_label,
+                    condition_index,
+                    observable_id,
+                )
+                t_lower_shifted = t_lower + t0
+                t_upper_shifted = t_upper + t0
+                # Timepoints must match, or `upper_data` will be plotted at
+                # some incorrect time points.
+                assert (np.array(t_lower) == np.array(t_upper)).all()
+                ax.fill_between(
+                    t_lower_shifted,
+                    lower_data,
+                    upper_data,
+                    facecolor=rgba2rgb(
+                        variables_color[condition_index]
+                        + [percentiles_opacity[percentile_index]]
+                    ),
+                    lw=0,
+                )
+                t_max = max(t_max, *t_lower_shifted, *t_upper_shifted)
+            t0 = t_max
 
 
 def sampling_prediction_trajectories(
@@ -144,8 +358,8 @@ def sampling_prediction_trajectories(
     percentiles:
         Credibility levels, e.g. `[95]` for a 95% credibility interval. These
         are split symmetrically, e.g. [95] corresponds to plotting values
-        between the 2.5% and 97.5% percentiles, and are equivalent to highest
-        density regions.
+        between the 2.5% and 97.5% percentiles, and are equivalent to highest-
+        density regions for a Normal distribution.
     title:
         Axes title.
     size: ndarray
@@ -172,14 +386,10 @@ def sampling_prediction_trajectories(
     if len(list(percentiles)) == 1:
         percentiles = list(percentiles)
     percentiles = sorted(percentiles, reverse=True)
-    percentiles_cutoffs_mapping = {
-        p: _get_percentile_cutoffs(p)
-        for p in percentiles
-    }
     percentile_cutoffs = [
         cutoff
-        for pair in percentiles_cutoffs_mapping.values()
-        for cutoff in pair.values()
+        for percentile in percentiles
+        for cutoff in _get_percentile_cutoffs(percentile)
     ]
 
     ensemble_prediction.compute_summary(percentiles_list=percentile_cutoffs)
@@ -254,140 +464,28 @@ def sampling_prediction_trajectories(
             f'{n_subplots} are required.'
         )
 
-    def get_statistic_data(
-            statistic: str,
-            condition_index: int,
-            observable_id: str,
-    ) -> Tuple[Sequence[float], Sequence[float]]:
-        """Get statistic-, condition-, and observable-specific data.
-
-        Parameters
-        ----------
-        statistic:
-            The predicted statistic, e.g. `MEDIAN` or
-            `get_percentile_label(95)`.
-        condition_index:
-            Select data for a specific condition by its index in a
-            `PredictionResult.condition_ids` object.
-        observable_id:
-            Select data for a specific observable by its ID.
-
-        Returns
-        -------
-        Predicted values and their corresponding time points. A tuple of two
-        sequences, where the first sequence is time points, and the second
-        sequence is predicted values at the corresponding time points.
-        """
-        condition_result = summary[statistic].conditions[condition_index]
-        t = condition_result.timepoints
-        observable_index = condition_result.observable_ids.index(observable_id)
-        y = condition_result.output[:, observable_index]
-        return (t, y)
-
     if groupby == CONDITION:
-        # Each subplot has all data for a single condition.
-        for condition_index, condition_id in enumerate(condition_ids):
-            ax = axes.flat[condition_index]
-            ax.set_title(f'Condition: {labels[condition_id]}')
-            # Each subplot has all data for all condition-specific observables.
-            for observable_index, observable_id in enumerate(observable_ids):
-                ax.plot(
-                    *get_statistic_data(
-                        MEDIAN,
-                        condition_index,
-                        observable_id
-                    ),
-                    'k-',
-                )
-                for percentile_index, percentile in enumerate(percentiles):
-                    lower_label = get_percentile_label(
-                        percentiles_cutoffs_mapping[percentile]['lower']
-                    )
-                    upper_label = get_percentile_label(
-                        percentiles_cutoffs_mapping[percentile]['upper']
-                    )
-                    t1, lower_data = get_statistic_data(
-                        lower_label,
-                        condition_index,
-                        observable_id,
-                    )
-                    _, upper_data = get_statistic_data(
-                        upper_label,
-                        condition_index,
-                        observable_id,
-                    )
-                    ax.fill_between(
-                        t1,
-                        lower_data,
-                        upper_data,
-                        facecolor=rgba2rgb(
-                            variables_color[observable_index]
-                            + [percentiles_opacity[percentile_index]]
-                        ),
-                        lw=0,
-                    )
+        _plot_trajectories_by_condition(
+            summary=summary,
+            condition_ids=condition_ids,
+            observable_ids=observable_ids,
+            axes=axes,
+            percentiles=percentiles,
+            percentiles_opacity=percentiles_opacity,
+            labels=labels,
+            variables_color=variables_color,
+        )
     elif groupby == OBSERVABLE:
-        # Each subplot has all data for a single observable.
-        for observable_index, observable_id in enumerate(observable_ids):
-            t0 = 0
-            ax = axes.flat[observable_index]
-            ax.set_title(f'Trajectory: {labels[observable_id]}')
-            # Each subplot is divided by conditions, with vertical lines.
-            for condition_index, _condition_id in enumerate(condition_ids):
-                if condition_index != 0:
-                    ax.axvline(
-                        t0,
-                        linewidth=2,
-                        color='k',
-                    )
-
-                t_max = t0
-                t_median, y_median = get_statistic_data(
-                    MEDIAN,
-                    condition_index,
-                    observable_id,
-                )
-                t_median_shifted = t_median + t0
-                ax.plot(
-                    t_median_shifted,
-                    y_median,
-                    'k-',
-                )
-                t_max = max(t_max, *t_median_shifted)
-                for percentile_index, percentile in enumerate(percentiles):
-                    lower_label = get_percentile_label(
-                        percentiles_cutoffs_mapping[percentile]['lower']
-                    )
-                    upper_label = get_percentile_label(
-                        percentiles_cutoffs_mapping[percentile]['upper']
-                    )
-                    t_lower, lower_data = get_statistic_data(
-                        lower_label,
-                        condition_index,
-                        observable_id,
-                    )
-                    t_upper, upper_data = get_statistic_data(
-                        upper_label,
-                        condition_index,
-                        observable_id,
-                    )
-                    t_lower_shifted = t_lower + t0
-                    t_upper_shifted = t_upper + t0
-                    # Timepoints must match, or `upper_data` will be plotted at
-                    # some incorrect time points.
-                    assert (np.array(t_lower) == np.array(t_upper)).all()
-                    ax.fill_between(
-                        t_lower_shifted,
-                        lower_data,
-                        upper_data,
-                        facecolor=rgba2rgb(
-                            variables_color[condition_index]
-                            + [percentiles_opacity[percentile_index]]
-                        ),
-                        lw=0,
-                    )
-                    t_max = max(t_max, *t_lower_shifted, *t_upper_shifted)
-                t0 = t_max
+        _plot_trajectories_by_observable(
+            summary=summary,
+            condition_ids=condition_ids,
+            observable_ids=observable_ids,
+            axes=axes,
+            percentiles=percentiles,
+            percentiles_opacity=percentiles_opacity,
+            labels=labels,
+            variables_color=variables_color,
+        )
 
     if title:
         fig.suptitle(title)

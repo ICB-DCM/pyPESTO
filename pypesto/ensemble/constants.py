@@ -4,6 +4,7 @@ This is for (string) constants used in the ensemble module.
 
 
 from enum import Enum
+from typing import Union
 
 
 MODE_FUN = 'mode_fun'  # mode for function values
@@ -54,7 +55,7 @@ class EnsembleType(Enum):
     unprocessed_chain = 3
 
 
-def get_percentile_label(percentile: float) -> str:
+def get_percentile_label(percentile: Union[float, str]) -> str:
     """Convert a percentile to a label.
 
     Labels for percentiles are used at different locations (e.g. ensemble
@@ -75,6 +76,7 @@ def get_percentile_label(percentile: float) -> str:
     -------
     The label of the (possibly rounded) percentile.
     """
+    percentile = float(percentile)
     rounded_percentile = round(percentile, 2)
     # Add `...` to the label if the percentile value changed when rounded.
     suffix = '' if rounded_percentile == percentile else '...'
