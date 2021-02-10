@@ -4,9 +4,9 @@ Ensemble
 """
 
 
-from .constants import *  # noqa: F401, F403
+from .constants import *  # noqa: F403
 
-from .ensemble import (  # noqa: F401
+from .ensemble import (
     Ensemble,
     EnsemblePrediction,
     read_from_csv,
