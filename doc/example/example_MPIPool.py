@@ -30,29 +30,16 @@ if __name__ == '__main__':
     problem1 = pypesto.Problem(objective=objective1, lb=lb, ub=ub,
                                x_guesses=startpoints)
 
-    x = np.arange(-2, 2, 0.1)
-    y = np.arange(-2, 2, 0.1)
-    x, y = np.meshgrid(x, y)
-    z = np.zeros_like(x)
-    for j in range(0, x.shape[0]):
-        for k in range(0, x.shape[1]):
-            z[j, k] = objective1([x[j, k], y[j, k]], (0,))
-
     # create different optimizers
     optimizer = optimize.FidesOptimizer()
-
-    # save optimizer trace
-    history_options = pypesto.HistoryOptions(trace_record=True)
 
     # result2 is the way to call the optimization with MPIPoolEngine.
     result1 = optimize.minimize(
             problem=problem1, optimizer=optimizer,
             n_starts=n_starts, engine=pypesto.engine.MultiProcessEngine())
-    print('\n done with MultiProcessEngine \n')
     result2 = optimize.minimize(
             problem=problem1, optimizer=optimizer,
             n_starts=n_starts, engine=MPIPoolEngine())
-    print('i am done with optimization')
 
     # starting here are the tests (not needed in your code)
     if(result1.optimize_result.list[0]['id'] ==
@@ -74,4 +61,4 @@ if __name__ == '__main__':
                             result2.optimize_result.list[0]['x'],
                             err_msg='The final parameter values '
                                     'do not agree for the engines.')
-    print('also done with tests')
+    assert_almost_equal(2,3, err_msg='Test failed')
