@@ -9,6 +9,7 @@ import re
 import nlopt
 import fides
 import itertools as itt
+import os
 import subprocess
 
 import pypesto
