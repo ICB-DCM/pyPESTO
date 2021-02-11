@@ -1,14 +1,7 @@
 import pypesto
-import pypesto.visualize as visualize
 import numpy as np
 import scipy as sp
-import matplotlib.pyplot as plt
-from mpl_toolkits.mplot3d import Axes3D
-import pypesto.profile as profile
 import pypesto.optimize as optimize
-import time
-import timeit
-from datetime import timedelta
 # you need to manually import the MPIPoolEninge
 from pypesto.engine.mpi_pool import MPIPoolEngine
 # the below is needed for testing purposes.
@@ -43,9 +36,7 @@ if __name__ == '__main__':
     z = np.zeros_like(x)
     for j in range(0, x.shape[0]):
         for k in range(0, x.shape[1]):
-            z[j,k] = objective1([x[j,k], y[j,k]], (0,))
-
-
+            z[j, k] = objective1([x[j, k], y[j, k]], (0,))
 
     # create different optimizers
     optimizer = optimize.FidesOptimizer()
@@ -64,20 +55,23 @@ if __name__ == '__main__':
     print('i am done with optimization')
 
     # starting here are the tests (not needed in your code)
-    if(result1.optimize_result.list[0]['id'] == result2.optimize_result.list[0]['id']):
-        assert_almost_equal(result1.optimize_result.list[0]['x'], result2.optimize_result.list[0]['x'],
-                            err_msg='The final parameter values do not agree for the engines.')
-        assert_almost_equal(result1.optimize_result.list[1]['x'], result2.optimize_result.list[1]['x'],
-                            err_msg='The final parameter values do not agree for the engines.')
+    if(result1.optimize_result.list[0]['id'] ==
+            result2.optimize_result.list[0]['id']):
+        assert_almost_equal(result1.optimize_result.list[0]['x'],
+                            result2.optimize_result.list[0]['x'],
+                            err_msg='The final parameter values '
+                                    'do not agree for the engines.')
+        assert_almost_equal(result1.optimize_result.list[1]['x'],
+                            result2.optimize_result.list[1]['x'],
+                            err_msg='The final parameter values '
+                                    'do not agree for the engines.')
     else:
-        assert_almost_equal(result1.optimize_result.list[0]['x'], result2.optimize_result.list[1]['x'],
-                            err_msg='The final parameter values do not agree for the engines.')
-        assert_almost_equal(result1.optimize_result.list[1]['x'], result2.optimize_result.list[0]['x'],
-                            err_msg='The final parameter values do not agree for the engines.')
+        assert_almost_equal(result1.optimize_result.list[0]['x'],
+                            result2.optimize_result.list[1]['x'],
+                            err_msg='The final parameter values '
+                                    'do not agree for the engines.')
+        assert_almost_equal(result1.optimize_result.list[1]['x'],
+                            result2.optimize_result.list[0]['x'],
+                            err_msg='The final parameter values '
+                                    'do not agree for the engines.')
     print('also done with tests')
-
-
-
-
-
-    
