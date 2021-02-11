@@ -55,7 +55,7 @@ class EnsembleType(Enum):
     unprocessed_chain = 3
 
 
-def get_percentile_label(percentile: Union[float, str]) -> str:
+def get_percentile_label(percentile: Union[float, int, str]) -> str:
     """Convert a percentile to a label.
 
     Labels for percentiles are used at different locations (e.g. ensemble
@@ -76,8 +76,16 @@ def get_percentile_label(percentile: Union[float, str]) -> str:
     -------
     The label of the (possibly rounded) percentile.
     """
-    percentile = float(percentile)
-    rounded_percentile = round(percentile, 2)
-    # Add `...` to the label if the percentile value changed when rounded.
-    suffix = '' if rounded_percentile == percentile else '...'
-    return f'{PERCENTILE} {rounded_percentile}{suffix}'
+    if isinstance(percentile, str):
+        percentile = float(percentile)
+        if percentile == round(percentile):
+            percentile = round(percentile)
+    if isinstance(percentile, float):
+        precision = 2
+        rounded_percentile = round(percentile, precision)
+        # Add `...` to the label if the percentile value changed when rounded.
+        if rounded_percentile == percentile:
+            percentile = f'{rounded_percentile:.{precision}f}'
+        else:
+            percentile = f'{rounded_percentile:.{precision}f}...'
+    return f'{PERCENTILE} {percentile}'
