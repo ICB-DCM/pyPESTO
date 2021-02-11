@@ -66,4 +66,3 @@ if __name__ == '__main__':
                             result2.optimize_result.list[0]['x'],
                             err_msg='The final parameter values '
                                     'do not agree for the engines.')
-    assert_almost_equal(2,3, err_msg='Test failed')
