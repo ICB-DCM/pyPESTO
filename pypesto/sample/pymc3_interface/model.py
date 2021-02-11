@@ -150,7 +150,8 @@ def create_pymc3_model(problem: Problem,
                              for x_name, x, lb, ub, jitter_scale in
                              zip(x_names, testval, lbs, ubs, jitter_scales)]
             elif testval is None:
-                k = [pm.Uniform(x_name, lower=lb, upper=ub, transform=None)
+                k = [pm.Uniform(x_name, lower=lb, upper=ub, transform=None,
+                                testval=_reasonable_testval(lb, ub))
                          for x_name, lb, ub in
                          zip(x_names, lbs, ubs)]
             else:
@@ -187,6 +188,10 @@ def create_pymc3_model(problem: Problem,
             print(model.check_test_point())
 
         return model
+
+
+def _reasonable_testval(lb, ub):
+    return np.where(np.isinf(lb), np.where(np.isinf(ub), 0.0, ub - 1.0), np.where(np.isinf(ub), lb + 1.0, (lb + ub) / 2))
 
 
 def pymc3_vector_parname(x_names: List[str]):
