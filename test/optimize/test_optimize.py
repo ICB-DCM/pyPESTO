@@ -9,6 +9,7 @@ import re
 import nlopt
 import fides
 import itertools as itt
+import os
 
 import pypesto
 import pypesto.optimize as optimize
@@ -199,3 +200,12 @@ def check_minimize(objective, library, solver, allow_failed_starts=False):
     ]:
         assert np.isfinite(result.optimize_result.list[0]['fval'])
         assert result.optimize_result.list[0]['x'] is not None
+
+def test_MPIPool_Engine():
+    """
+    Test the MPIPoolEngine by calling an example script with mpiexec.
+    """
+    #get the path to this file:
+    path = os.path.dirname(__file__)
+    #run the example file.
+    os.system(f"mpiexec -np 2 python -m mpi4py.futures {path}../../doc/example/example_MPIPool.py")
