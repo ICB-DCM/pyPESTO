@@ -10,7 +10,8 @@ from typing import Sequence
 
 import pypesto
 from pypesto.objective.util import sres_to_schi2, res_to_chi2
-from pypesto import CsvHistory, HistoryOptions, MemoryHistory, ObjectiveBase
+from pypesto import CsvHistory, HistoryOptions,\
+    MemoryHistory, ObjectiveBase, Hdf5History
 from pypesto.optimize.optimizer import read_result_from_file, OptimizerResult
 from pypesto.objective.constants import (
     FVAL, GRAD, HESS, RES, SRES, CHI2, SCHI2)
@@ -72,7 +73,7 @@ class HistoryTest(unittest.TestCase):
             return
 
         # TODO other implementations
-        assert isinstance(start.history, CsvHistory)
+        assert isinstance(start.history, (CsvHistory, Hdf5History))
 
         rstart = read_result_from_file(self.problem, self.history_options, id)
 
@@ -108,21 +109,27 @@ class HistoryTest(unittest.TestCase):
                 assert start[attr] == rstart[attr], attr
 
     def check_reconstruct_history(self, start: OptimizerResult, id: str):
-        """verify we can reconstruct history objects from csv files"""
+        """verify we can reconstruct history objects from csv/hdf5 files"""
 
         if isinstance(start.history, MemoryHistory):
             return
 
-        # TODO other implementations
-        assert isinstance(start.history, CsvHistory)
+        assert isinstance(start.history, (CsvHistory, Hdf5History))
 
-        reconst_history = CsvHistory(
-            file=self.history_options.storage_file.format(id=id),
-            x_names=[self.problem.x_names[ix]
-                     for ix in self.problem.x_free_indices],
-            options=self.history_options,
-            load_from_file=True
-        )
+        if isinstance(start.history, CsvHistory):
+            reconst_history = CsvHistory(
+                file=self.history_options.storage_file.format(id=id),
+                x_names=[self.problem.x_names[ix]
+                         for ix in self.problem.x_free_indices],
+                options=self.history_options,
+                load_from_file=True
+            )
+        else:
+            reconst_history = Hdf5History(
+                file=self.history_options.storage_file.format(id=id),
+                id=id,
+                options=self.history_options
+            )
         history_attributes = [
             a for a in dir(start.history)
             if not a.startswith('__')
@@ -149,15 +156,12 @@ class HistoryTest(unittest.TestCase):
 
     def check_history_consistency(self, start: OptimizerResult):
 
-        # TODO other implementations
-        assert isinstance(start.history, (CsvHistory, MemoryHistory))
-
         def xfull(x_trace):
             return self.problem.get_full_vector(
                 x_trace, self.problem.x_fixed_vals
             )
 
-        if isinstance(start.history, CsvHistory):
+        if isinstance(start.history, (CsvHistory, Hdf5History)):
             it_final = np.nanargmin(start.history.get_fval_trace())
             if isinstance(it_final, np.ndarray):
                 it_final = it_final[0]
@@ -388,7 +392,7 @@ class FunModeHistoryTest(HistoryTest):
         self.check_history()
 
 
-@pytest.fixture(params=["", "memory", "csv"])
+@pytest.fixture(params=["", "memory", "csv", "hdf5"])
 def history(request) -> pypesto.History:
     if request.param == "memory":
         history = pypesto.MemoryHistory(options={'trace_record': True})
@@ -419,9 +423,7 @@ def test_history_properties(history: pypesto.History):
         assert len(fvals) == 10
         assert all(np.isfinite(fvals))
 
-    if type(history) in \
-            (pypesto.History, pypesto.Hdf5History):
-        # TODO update as functionality is implemented
+    if type(history) == pypesto.History:
         with pytest.raises(NotImplementedError):
             history.get_grad_trace()
     else:
@@ -429,10 +431,8 @@ def test_history_properties(history: pypesto.History):
         assert len(grads) == 10
         assert len(grads[0]) == 7
 
-    if isinstance(history, (pypesto.MemoryHistory, pypesto.CsvHistory)):
-        # TODO extend as functionality is implemented in other histories
-
-        # assert x values are not all the same
+    # assert x values are not all the same
+    if type(history) != pypesto.History:
         xs = np.array(history.get_x_trace())
         assert np.all(xs[:-1] != xs[-1])
 
@@ -442,7 +442,7 @@ def test_history_properties(history: pypesto.History):
 
 def test_trace_subset(history: pypesto.History):
     """Test whether selecting only a trace subset works."""
-    if isinstance(history, (pypesto.MemoryHistory, pypesto.CsvHistory)):
+    if type(history) != pypesto.History:
         arr = list(range(0, len(history), 2))
 
         for var in ['fval', 'grad', 'hess', 'res', 'sres', 'chi2',

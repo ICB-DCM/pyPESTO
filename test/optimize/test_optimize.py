@@ -32,6 +32,7 @@ optimizers = [
     ('dlib', ''),
     ('pyswarm', ''),
     ('cmaes', ''),
+    ('scipydiffevolopt', ''),
     *[('nlopt', method) for method in [
         nlopt.LD_VAR1, nlopt.LD_VAR2, nlopt.LD_TNEWTON_PRECOND_RESTART,
         nlopt.LD_TNEWTON_PRECOND, nlopt.LD_TNEWTON_RESTART,
@@ -99,6 +100,7 @@ def test_unbounded_minimize(optimizer):
         return
 
     if optimizer in [('dlib', ''), ('pyswarm', ''), ('cmaes', ''),
+                     ('scipydiffevolopt', ''),
                      *[('nlopt', method) for method in [
                          nlopt.GN_ESCH, nlopt.GN_ISRES, nlopt.GN_AGS,
                          nlopt.GD_STOGO, nlopt.GD_STOGO_RAND, nlopt.G_MLSL,
@@ -156,6 +158,9 @@ def get_optimizer(library, solver):
         optimizer = optimize.PyswarmOptimizer(options=options)
     elif library == 'cmaes':
         optimizer = optimize.CmaesOptimizer(options=options)
+    elif library == 'scipydiffevolopt':
+        optimizer = optimize.ScipyDifferentialEvolutionOptimizer(
+            options=options)
     elif library == 'nlopt':
         optimizer = optimize.NLoptOptimizer(method=solver, options=options)
     elif library == 'fides':
@@ -187,6 +192,10 @@ def check_minimize(objective, library, solver, allow_failed_starts=False):
     )
 
     assert isinstance(result.optimize_result.list[0]['fval'], float)
-    if (library, solver) not in [('scipy', 'ls_trf'), ('scipy', 'ls_dogbox')]:
+    if (library, solver) not in [
+            ('scipy', 'ls_trf'),
+            ('scipy', 'ls_dogbox'),
+            ('nlopt', nlopt.GD_STOGO_RAND)  # id 9, fails in 40% of cases
+    ]:
         assert np.isfinite(result.optimize_result.list[0]['fval'])
         assert result.optimize_result.list[0]['x'] is not None

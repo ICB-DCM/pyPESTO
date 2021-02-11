@@ -42,6 +42,7 @@ try:
 except ImportError:
     fides = None
 
+
 EXITFLAG_LOADED_FROM_FILE = -99
 
 logger = logging.getLogger(__name__)
@@ -229,7 +230,6 @@ def read_result_from_file(problem: Problem, history_options: HistoryOptions,
 class Optimizer(abc.ABC):
     """
     This is the optimizer base class, not functional on its own.
-
     An optimizer takes a problem, and possibly a start point, and then
     performs an optimization. It returns an OptimizerResult.
     """
@@ -252,7 +252,6 @@ class Optimizer(abc.ABC):
     ) -> OptimizerResult:
         """"
         Perform optimization.
-
         Parameters
         ----------
         problem:
@@ -286,6 +285,9 @@ def check_finite_bounds(lb, ub):
 class ScipyOptimizer(Optimizer):
     """
     Use the SciPy optimizers.
+    Find details on the optimizer and configuration options at:
+    https://docs.scipy.org/doc/scipy/reference/generated/scipy.\
+        optimize.minimize.html#scipy.optimize.minimize
     """
 
     def __init__(self,
@@ -457,7 +459,8 @@ class IpoptOptimizer(Optimizer):
 
         if ipopt is None:
             raise ImportError(
-                "This optimizer requires an installation of ipopt."
+                "This optimizer requires an installation of ipopt. You can "
+                "install ipopt via `pip install ipopt`."
             )
 
         objective = problem.objective
@@ -521,7 +524,8 @@ class DlibOptimizer(Optimizer):
 
         if dlib is None:
             raise ImportError(
-                "This optimizer requires an installation of dlib."
+                "This optimizer requires an installation of dlib. You can "
+                "install dlib via `pip install dlib`."
             )
 
         if not objective.has_fun:
@@ -577,7 +581,9 @@ class PyswarmOptimizer(Optimizer):
         ub = problem.ub
         if pyswarm is None:
             raise ImportError(
-                "This optimizer requires an installation of pyswarm.")
+                "This optimizer requires an installation of pyswarm.You can "
+                "install pyswarm via `pip install pyswarm."
+            )
 
         check_finite_bounds(lb, ub)
 
@@ -641,7 +647,9 @@ class CmaesOptimizer(Optimizer):
 
         if cma is None:
             raise ImportError(
-                "This optimizer requires an installation of cma.")
+                "This optimizer requires an installation of cma. You can "
+                "install cma via `pip install cma."
+            )
 
         result = cma.CMAEvolutionStrategy(
             x0, sigma0, inopts=self.options,
@@ -649,6 +657,62 @@ class CmaesOptimizer(Optimizer):
 
         optimizer_result = OptimizerResult(x=np.array(result[0]),
                                            fval=result[1])
+
+        return optimizer_result
+
+    def is_least_squares(self):
+        return False
+
+
+class ScipyDifferentialEvolutionOptimizer(Optimizer):
+    """
+    Global optimization using scipy's differential evolution optimizer.
+    Package homepage: https://docs.scipy.org/doc/scipy/reference/generated\
+        /scipy.optimize.differential_evolution.html
+
+    Parameters
+    ----------
+    options:
+        Optimizer options that are directly passed on to scipy's optimizer.
+
+
+    Examples
+    --------
+    Arguments that can be passed to options:
+
+    maxiter:
+        used to calculate the maximal number of funcion evaluations by
+        maxfevals = (maxiter + 1) * popsize * len(x)
+        Default: 100
+    popsize:
+        population size, default value 15
+    """
+
+    def __init__(self, options: Dict = None):
+        super().__init__()
+
+        if options is None:
+            options = {'maxiter': 100}
+        self.options = options
+
+    @fix_decorator
+    @time_decorator
+    @history_decorator
+    def minimize(
+            self,
+            problem: Problem,
+            x0: np.ndarray,
+            id: str,
+            history_options: HistoryOptions = None,
+    ) -> OptimizerResult:
+        bounds = list(zip(problem.lb, problem.ub))
+
+        result = scipy.optimize.differential_evolution(
+            problem.objective.get_fval, bounds, **self.options
+        )
+
+        optimizer_result = OptimizerResult(x=np.array(result.x),
+                                           fval=result.fun)
 
         return optimizer_result
 
@@ -669,16 +733,13 @@ class NLoptOptimizer(Optimizer):
         ----------
         method:
             Local or global Optimizer to use for minimization.
-
         local_method:
             Local method to use in combination with the global optimizer (
             for the MLSL family of solvers) or to solve a subproblem (for the
             AUGLAG family of solvers)
-
         options:
             Optimizer options. scipy option `maxiter` is automatically
             transformed into `maxeval` and takes precedence.
-
         local_options:
             Optimizer options for the local method
         """
@@ -693,10 +754,11 @@ class NLoptOptimizer(Optimizer):
             local_options = {}
         self.options = options
         self.local_options = local_options
+
         if nlopt is None:
             raise ImportError(
                 "This optimizer requires an installation of NLopt. You can "
-                "install NLopt via pip install nlopt.")
+                "install NLopt via `pip install nlopt`.")
 
         if method is None:
             method = nlopt.LD_LBFGS
@@ -831,7 +893,6 @@ class FidesOptimizer(Optimizer):
         ----------
         options:
             Optimizer options.
-
         hessian_update:
             Hessian update strategy. If this is None, Hessian (approximation)
             computed by problem.objective will be used (default).
@@ -861,6 +922,12 @@ class FidesOptimizer(Optimizer):
             id: str,
             history_options: HistoryOptions = None,
     ) -> OptimizerResult:
+
+        if fides is None:
+            raise ImportError(
+                "This optimizer requires an installation of fides. You can "
+                "install fides via `pip install fides`."
+            )
 
         args = {'mode': MODE_FUN}
         if self.hessian_update is None:
