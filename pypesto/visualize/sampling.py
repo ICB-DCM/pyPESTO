@@ -7,14 +7,6 @@ import pandas as pd
 import seaborn as sns
 from typing import Dict, Sequence, Tuple, Union
 
-from .misc import (
-    rgba2rgb,
-    LEN_RGB,
-    RGBA_BLACK,
-    RGBA_MIN,
-    RGBA_MAX,
-    TYPING_RGB,
-)
 from ..ensemble import (
     get_percentile_label,
     EnsemblePrediction,
@@ -23,6 +15,14 @@ from ..ensemble import (
 from ..prediction import PredictionResult
 from ..result import Result
 from ..sample import McmcPtResult, calculate_ci
+from .constants import (
+    LEN_RGB,
+    RGBA_BLACK,
+    RGBA_MIN,
+    RGBA_MAX,
+    RGB,
+)
+from .misc import rgba2rgb
 
 
 logger = logging.getLogger(__name__)
@@ -114,24 +114,30 @@ def sampling_fval_trace(
     return ax
 
 
-def _get_percentile_cutoffs(percentiles: float) -> Tuple[float, float]:
-    """Convert credibility interval percentiles to cutoff percentiles.
+def _get_level_percentiles(level: float) -> Tuple[float, float]:
+    """Convert a credibility level to percentiles.
 
     Similar to highest-density regions of a normal distribution.
 
-    For example, an input percentile of 95 will be converted to (2.5, 97.5).
+    For example, an credibility level of `95` will be converted to
+    `(2.5, 97.5)`.
 
     Parameters
     ----------
-    percentile:
-        The percentile to calculate the cutoffs for.
+    level:
+        The credibility level used to calculate the percentiles. For example,
+        `[95]` for a 95% credibility interval. These levels are split
+        symmetrically, e.g. `95` corresponds to plotting values between the
+        2.5% and 97.5% percentiles, and are equivalent to highest-density
+        regions for a normal distribution. For skewed distributions, asymmetric
+        percentiles may be preferable, but are not yet implemented.
 
     Returns
     -------
-    The percentile cutoffs, with the lower cutoff first.
+    The percentiles, with the lower percentile first.
     """
-    half_difference = (100 - percentiles) / 2
-    return half_difference, 100 - half_difference
+    lower_percentile = (100 - level) / 2
+    return lower_percentile, 100 - lower_percentile
 
 
 def _get_statistic_data(
@@ -174,11 +180,11 @@ def _plot_trajectories_by_condition(
         condition_ids: Sequence[str],
         observable_ids: Sequence[str],
         axes: matplotlib.axes.Axes,
-        percentiles: Sequence[float],
-        percentiles_opacity: Dict[int, float],
+        levels: Sequence[float],
+        levels_opacity: Dict[int, float],
         labels: Dict[str, str],
-        variables_color: Sequence[TYPING_RGB],
-):
+        variables_color: Sequence[RGB],
+) -> None:
     """Plot predicted trajectories, with subplots grouped by condition.
 
     Parameters
@@ -193,15 +199,14 @@ def _plot_trajectories_by_condition(
     axes:
         The axes to plot with. Should contain atleast `len(observable_ids)`
         subplots.
-    percentiles:
-        Credibility levels, e.g. `[95]` for a 95% credibility interval. These
-        are split symmetrically, e.g. [95] corresponds to plotting values
-        between the 2.5% and 97.5% percentiles, and are equivalent to highest-
-        density regions for a normal distribution.
-    percentiles_opacity:
-        A mapping from the percentiles to the opacities that they should be
-        plotted with. Opacity is the only thing that differentiates percentiles
-        in the resulting plot.
+    levels:
+        Credibility levels, e.g. [95] for a 95% credibility interval. See the
+        :py:func:`_get_level_percentiles` method for a description of how these
+        levels are handled, and current limitations.
+    levels_opacity:
+        A mapping from the credibility levels to the opacities that they should
+        be plotted with. Opacity is the only thing that differentiates
+        credibility levels in the resulting plot.
     labels:
         Keys should be ensemble observable IDs, values should be the desired
         label for that observable. Defaults to observable IDs.
@@ -224,10 +229,10 @@ def _plot_trajectories_by_condition(
                 ),
                 'k-',
             )
-            for percentile_index, percentile in enumerate(percentiles):
+            for level_index, level in enumerate(levels):
                 lower_label, upper_label = [
-                    get_percentile_label(cutoff)
-                    for cutoff in _get_percentile_cutoffs(percentile)
+                    get_percentile_label(percentile)
+                    for percentile in _get_level_percentiles(level)
                 ]
                 t1, lower_data = _get_statistic_data(
                     summary,
@@ -247,7 +252,7 @@ def _plot_trajectories_by_condition(
                     upper_data,
                     facecolor=rgba2rgb(
                         variables_color[observable_index]
-                        + [percentiles_opacity[percentile_index]]
+                        + [levels_opacity[level_index]]
                     ),
                     lw=0,
                 )
@@ -258,11 +263,11 @@ def _plot_trajectories_by_observable(
         condition_ids: Sequence[str],
         observable_ids: Sequence[str],
         axes: matplotlib.axes.Axes,
-        percentiles: Sequence[float],
-        percentiles_opacity: Dict[int, float],
+        levels: Sequence[float],
+        levels_opacity: Dict[int, float],
         labels: Dict[str, str],
-        variables_color: Sequence[TYPING_RGB],
-):
+        variables_color: Sequence[RGB],
+) -> None:
     """Plot predicted trajectories, with subplots grouped by observable.
 
     See :py:func:`_plot_trajectories_by_condition` for parameter descriptions.
@@ -295,10 +300,10 @@ def _plot_trajectories_by_observable(
                 'k-',
             )
             t_max = max(t_max, *t_median_shifted)
-            for percentile_index, percentile in enumerate(percentiles):
+            for level_index, level in enumerate(levels):
                 lower_label, upper_label = [
-                    get_percentile_label(cutoff)
-                    for cutoff in _get_percentile_cutoffs(percentile)
+                    get_percentile_label(percentile)
+                    for percentile in _get_level_percentiles(level)
                 ]
                 t_lower, lower_data = _get_statistic_data(
                     summary,
@@ -323,7 +328,7 @@ def _plot_trajectories_by_observable(
                     upper_data,
                     facecolor=rgba2rgb(
                         variables_color[condition_index]
-                        + [percentiles_opacity[percentile_index]]
+                        + [levels_opacity[level_index]]
                     ),
                     lw=0,
                 )
@@ -333,7 +338,7 @@ def _plot_trajectories_by_observable(
 
 def sampling_prediction_trajectories(
         ensemble_prediction: EnsemblePrediction,
-        percentiles: Union[float, Sequence[float]],
+        levels: Union[float, Sequence[float]],
         title: str = None,
         size: Tuple[float, float] = None,
         axes: matplotlib.axes.Axes = None,
@@ -341,7 +346,7 @@ def sampling_prediction_trajectories(
         axis_label_padding: int = 30,
         groupby: str = CONDITION,
         condition_gap: float = 0.01,
-):
+) -> matplotlib.axes.Axes:
     """Plot MCMC-based prediction confidence intervals for the
     model states or observables. One or various confidence levels
     can be depicted. Plots are grouped by condition.
@@ -355,11 +360,10 @@ def sampling_prediction_trajectories(
     ----------
     result:
         The pyPESTO result object with filled sample result.
-    percentiles:
-        Credibility levels, e.g. `[95]` for a 95% credibility interval. These
-        are split symmetrically, e.g. `95` corresponds to plotting values
-        between the 2.5% and 97.5% percentiles, and are equivalent to highest-
-        density regions for a normal distribution.
+    levels:
+        Credibility levels, e.g. [95] for a 95% credibility interval. See the
+        :py:func:`_get_level_percentiles` method for a description of how these
+        levels are handled, and current limitations.
     title:
         Axes title.
     size: ndarray
@@ -383,16 +387,16 @@ def sampling_prediction_trajectories(
     """
     if labels is None:
         labels = {}
-    if len(list(percentiles)) == 1:
-        percentiles = list(percentiles)
-    percentiles = sorted(percentiles, reverse=True)
-    percentile_cutoffs = [
-        cutoff
-        for percentile in percentiles
-        for cutoff in _get_percentile_cutoffs(percentile)
+    if len(list(levels)) == 1:
+        levels = list(levels)
+    levels = sorted(levels, reverse=True)
+    percentiles = [
+        percentile
+        for level in levels
+        for percentile in _get_level_percentiles(level)
     ]
 
-    ensemble_prediction.compute_summary(percentiles_list=percentile_cutoffs)
+    ensemble_prediction.compute_summary(percentiles_list=percentiles)
 
     summary = ensemble_prediction.prediction_summary
 
@@ -435,9 +439,9 @@ def sampling_prediction_trajectories(
     else:
         raise ValueError(f'Unsupported groupby value: {groupby}')
 
-    percentiles_opacity = sorted(
+    levels_opacity = sorted(
         # min 30%, max 100%, opacity
-        np.linspace(0.3 * RGBA_MAX, RGBA_MAX, len(percentiles)),
+        np.linspace(0.3 * RGBA_MAX, RGBA_MAX, len(levels)),
         reverse=True,
     )
     if axes is not None:
@@ -470,8 +474,8 @@ def sampling_prediction_trajectories(
             condition_ids=condition_ids,
             observable_ids=observable_ids,
             axes=axes,
-            percentiles=percentiles,
-            percentiles_opacity=percentiles_opacity,
+            levels=levels,
+            levels_opacity=levels_opacity,
             labels=labels,
             variables_color=variables_color,
         )
@@ -481,8 +485,8 @@ def sampling_prediction_trajectories(
             condition_ids=condition_ids,
             observable_ids=observable_ids,
             axes=axes,
-            percentiles=percentiles,
-            percentiles_opacity=percentiles_opacity,
+            levels=levels,
+            levels_opacity=levels_opacity,
             labels=labels,
             variables_color=variables_color,
         )
@@ -510,12 +514,12 @@ def sampling_prediction_trajectories(
                 *fake_data,
                 color=rgba2rgb([
                     *RGBA_BLACK[:LEN_RGB],
-                    percentiles_opacity[index]
+                    levels_opacity[index]
                 ]),
                 lw=4
             )
         ]
-        for index, level in enumerate(percentiles)
+        for index, level in enumerate(levels)
     ] + [['Median', Line2D(*fake_data, color=RGBA_BLACK)]]
     )
 

@@ -1,3 +1,0 @@
-parameterId	parameterScale	lowerBound	upperBound	nominalValue	estimate
-k1	log	1e-05	100000.0	0.8	1
-k2	log	1e-05	100000.0	0.6	1

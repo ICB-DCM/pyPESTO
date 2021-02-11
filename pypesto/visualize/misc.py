@@ -4,7 +4,18 @@ from .clust_color import assign_colors
 from .clust_color import assign_colors_for_list
 
 from numbers import Number
-from typing import Iterable, List, Optional, Tuple, Union
+from typing import Iterable, List, Optional, Union
+
+from .constants import (
+    LEN_RGB,
+    LEN_RGBA,
+    RGB,
+    RGB_RGBA,
+    RGBA_MIN,
+    RGBA_MAX,
+    RGBA_ALPHA,
+    RGBA_WHITE,
+)
 
 
 def process_result_list(results, colors=None, legends=None):
@@ -227,19 +238,7 @@ def process_start_indices(start_indices: Union[int, Iterable[int]],
     return start_indices
 
 
-LEN_RGB = 3
-LEN_RGBA = 4
-TYPING_RGB = Tuple[(float,) * LEN_RGB]
-TYPING_RGBA = Tuple[(float,) * LEN_RGBA]
-TYPING_RGB_RGBA = Union[TYPING_RGB, TYPING_RGBA]
-RGBA_MIN = 0  # min value for an RGBA element
-RGBA_MAX = 1  # max value for an RGBA element
-RGBA_ALPHA = 3  # zero-indexed fourth element in RGBA
-RGBA_WHITE = (RGBA_MAX, RGBA_MAX, RGBA_MAX, RGBA_MAX)
-RGBA_BLACK = (RGBA_MIN, RGBA_MIN, RGBA_MIN, RGBA_MAX)
-
-
-def rgba2rgb(fg: TYPING_RGB_RGBA, bg: TYPING_RGB_RGBA = None) -> TYPING_RGB:
+def rgba2rgb(fg: RGB_RGBA, bg: RGB_RGBA = None) -> RGB:
     """Combine two colors, removing transparency.
 
     Parameters

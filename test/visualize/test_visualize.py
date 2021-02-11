@@ -184,8 +184,12 @@ def post_processor(
         output_type,
         observable_ids,
 ):
-    # This post_processor will transform the output of the simulation tool
-    # such that the output is compatible with the next steps.
+    """An ensemble prediction post-processor.
+
+    This post_processor will transform the output of the simulation tool such
+    that the output is compatible with other methods, such as plotting
+    routines.
+    """
     outputs = [
         amici_output[output_type]
         if amici_output[prediction.AMICI_STATUS] == 0
@@ -790,7 +794,7 @@ def test_sampling_parameters_cis():
 @close_fig
 def test_sampling_prediction_trajectories():
     """Test pypesto.visualize.sampling_prediction_trajectories"""
-    percentiles = [99, 68]
+    credibility_interval_levels = [99, 68]
     result = sample_petab_problem()
     post_processor_amici_x = functools.partial(
         post_processor,
@@ -820,12 +824,12 @@ def test_sampling_prediction_trajectories():
     # Plot by
     visualize.sampling_prediction_trajectories(
         ensemble_prediction,
-        percentiles=percentiles,
+        levels=credibility_interval_levels,
         groupby=visualize.sampling.CONDITION,
     )
     visualize.sampling_prediction_trajectories(
         ensemble_prediction,
-        percentiles=percentiles,
+        levels=credibility_interval_levels,
         size=(10, 10),
         groupby=visualize.sampling.OBSERVABLE,
     )

@@ -344,7 +344,7 @@ class Ensemble:
             sensi_orders: Tuple = (0,),
             mode: str = MODE_FUN,
             engine: Engine = None,
-    ):
+    ) -> EnsemblePrediction:
         """
         Convenience function to run predictions for a full ensemble:
         User needs to hand over a predictor function and settings, then all
@@ -363,8 +363,7 @@ class Ensemble:
 
         Returns
         -------
-        result:
-            EnsemblePrediction of the ensemble for the predictor function
+        The prediction of the ensemble.
         """
         if engine is None:
             engine = SingleCoreEngine()
