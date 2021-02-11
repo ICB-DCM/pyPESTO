@@ -117,7 +117,7 @@ def sampling_fval_trace(
 def _get_percentile_cutoffs(percentiles: float) -> Tuple[float, float]:
     """Convert credibility interval percentiles to cutoff percentiles.
 
-    Similar to highest-density regions of a Normal distribution.
+    Similar to highest-density regions of a normal distribution.
 
     For example, an input percentile of 95 will be converted to (2.5, 97.5).
 
@@ -197,7 +197,7 @@ def _plot_trajectories_by_condition(
         Credibility levels, e.g. `[95]` for a 95% credibility interval. These
         are split symmetrically, e.g. [95] corresponds to plotting values
         between the 2.5% and 97.5% percentiles, and are equivalent to highest-
-        density regions for a Normal distribution.
+        density regions for a normal distribution.
     percentiles_opacity:
         A mapping from the percentiles to the opacities that they should be
         plotted with. Opacity is the only thing that differentiates percentiles
@@ -357,9 +357,9 @@ def sampling_prediction_trajectories(
         The pyPESTO result object with filled sample result.
     percentiles:
         Credibility levels, e.g. `[95]` for a 95% credibility interval. These
-        are split symmetrically, e.g. [95] corresponds to plotting values
+        are split symmetrically, e.g. `95` corresponds to plotting values
         between the 2.5% and 97.5% percentiles, and are equivalent to highest-
-        density regions for a Normal distribution.
+        density regions for a normal distribution.
     title:
         Axes title.
     size: ndarray

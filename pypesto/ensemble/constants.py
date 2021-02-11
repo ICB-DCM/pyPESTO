@@ -81,11 +81,9 @@ def get_percentile_label(percentile: Union[float, int, str]) -> str:
         if percentile == round(percentile):
             percentile = round(percentile)
     if isinstance(percentile, float):
-        precision = 2
-        rounded_percentile = round(percentile, precision)
-        # Add `...` to the label if the percentile value changed when rounded.
-        if rounded_percentile == percentile:
-            percentile = f'{rounded_percentile:.{precision}f}'
-        else:
-            percentile = f'{rounded_percentile:.{precision}f}...'
+        percentile_str = f'{percentile:.2f}'
+        # Add `...` to the label if the percentile value changed after rounding
+        if float(percentile_str) != percentile:
+            percentile_str += '...'
+        percentile = percentile_str
     return f'{PERCENTILE} {percentile}'
