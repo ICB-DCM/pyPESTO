@@ -1,3 +1,8 @@
+'''
+This file serves as an example how to use MPIPoolEngine
+to optimize across nodes and also as a test for the
+MPIPoolEngine.
+'''
 import pypesto
 import numpy as np
 import scipy as sp
@@ -30,7 +35,7 @@ if __name__ == '__main__':
     problem1 = pypesto.Problem(objective=objective1, lb=lb, ub=ub,
                                x_guesses=startpoints)
 
-    # create different optimizers
+    # create optimizer
     optimizer = optimize.FidesOptimizer()
 
     # result2 is the way to call the optimization with MPIPoolEngine.
