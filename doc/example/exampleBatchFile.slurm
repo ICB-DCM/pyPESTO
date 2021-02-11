@@ -8,7 +8,7 @@
 
 ## Separate output and error messages into 2 files.
 ## NOTE: %u=userID, %x=jobName, %N=nodeID, %j=jobID, %A=arrayID, %a=arrayTaskID
-#SBATCH --output=logBonna/%x-%j-%j.log
+#SBATCH --output=log/%x-%j-%j.log
 ## Specify how much memory your job needs. (2G is the default)
 #SBATCH --mem-per-cpu=5800        # Total memory needed per task (units: K,M,G,T)
 
