@@ -210,6 +210,6 @@ def test_MPIPool_Engine():
     # get the path to this file:
     path = os.path.dirname(__file__)
     # run the example file.
-    subprocess.run('mpiexec','-np', '2', 'python',
+    subprocess.run(['mpiexec','-np', '2', 'python',
                    '-m', 'mpi4py.futures',
-                   f"{path}../../doc/example/example_MPIPool.py")
+                   f"{path}../../doc/example/example_MPIPool.py"])
