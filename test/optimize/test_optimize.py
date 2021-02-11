@@ -10,7 +10,7 @@ import nlopt
 import fides
 import itertools as itt
 import os
-import subprocess
+# import subprocess
 
 import pypesto
 import pypesto.optimize as optimize
