@@ -1,5 +1,6 @@
 import numpy as np
 from typing import Sequence, Union, Callable, Tuple, List
+from copy import deepcopy
 
 from .constants import (MODE_FUN, OBSERVABLE_IDS, TIMEPOINTS, OUTPUT,
                         OUTPUT_SENSI, CSV, H5, AMICI_T, AMICI_X, AMICI_SX,
@@ -223,7 +224,8 @@ class AmiciPredictor:
             # call amici
             self._wrap_call_to_amici(
                 amici_outputs=amici_outputs, x=x, sensi_orders=sensi_orders,
-                mode=mode, edatas=self.amici_objective.edatas[ids])
+                parameter_mapping=self.amici_objective.parameter_mapping[ids],
+                edatas=self.amici_objective.edatas[ids], mode=mode)
 
         def _default_output(amici_outputs):
             """
@@ -274,7 +276,7 @@ class AmiciPredictor:
         return timepoints, outputs, outputs_sensi
 
     def _wrap_call_to_amici(self, amici_outputs, x, sensi_orders, mode,
-                            edatas):
+                            parameter_mapping, edatas):
         """
         The only purpose of this function is to encapsulate the call to amici:
         This allows to use variable scoping as a mean to clean up the memory
@@ -282,11 +284,14 @@ class AmiciPredictor:
         datasets are used.
         """
         chunk = self.amici_objective(x=x, sensi_orders=sensi_orders, mode=mode,
+                                     parameter_mapping=parameter_mapping,
                                      edatas=edatas,  return_dict=True)
         for rdata in chunk[RDATAS]:
-            amici_outputs.append({AMICI_STATUS: rdata[AMICI_STATUS],
-                                  AMICI_T: rdata[AMICI_T],
-                                  AMICI_X: rdata[AMICI_X],
-                                  AMICI_SX: rdata[AMICI_SX],
-                                  AMICI_Y: rdata[AMICI_Y],
-                                  AMICI_SY: rdata[AMICI_SY]})
+            amici_outputs.append({AMICI_STATUS: deepcopy(rdata[AMICI_STATUS]),
+                                  AMICI_T: deepcopy(rdata[AMICI_T]),
+                                  AMICI_X: deepcopy(rdata[AMICI_X]),
+                                  AMICI_SX: deepcopy(rdata[AMICI_SX]),
+                                  AMICI_Y: deepcopy(rdata[AMICI_Y]),
+                                  AMICI_SY: deepcopy(rdata[AMICI_SY])})
+
+        del chunk
