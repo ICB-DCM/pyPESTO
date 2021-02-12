@@ -26,6 +26,7 @@ class AmiciPredictor:
     """
     def __init__(self,
                  amici_objective: AmiciObjective,
+                 amici_output_fields: Union[Sequence[str], None] = None,
                  post_processor: Union[Callable, None] = None,
                  post_processor_sensi: Union[Callable, None] = None,
                  post_processor_time: Union[Callable, None] = None,
@@ -40,6 +41,9 @@ class AmiciPredictor:
         ----------
         amici_objective:
             An objective object, which will be used to get model simulations
+        amici_output_fields:
+            keys which exist in the return data object from Amici, which should
+            be available for the post_processor routines
         post_processor:
             A callable function which applies postprocessing to the simulation
             results and possibly defines different observables than those of
@@ -89,6 +93,11 @@ class AmiciPredictor:
                 amici_objective.amici_model.getObservableIds()
         else:
             self.observable_ids = observable_ids
+
+        if amici_output_fields is None:
+            amici_output_fields = [AMICI_STATUS, AMICI_T, AMICI_X, AMICI_Y,
+                                   AMICI_SX, AMICI_SY]
+        self.amici_output_fields = amici_output_fields
 
     def __call__(
             self,
@@ -287,11 +296,8 @@ class AmiciPredictor:
                                      parameter_mapping=parameter_mapping,
                                      edatas=edatas,  return_dict=True)
         for rdata in chunk[RDATAS]:
-            amici_outputs.append({AMICI_STATUS: deepcopy(rdata[AMICI_STATUS]),
-                                  AMICI_T: deepcopy(rdata[AMICI_T]),
-                                  AMICI_X: deepcopy(rdata[AMICI_X]),
-                                  AMICI_SX: deepcopy(rdata[AMICI_SX]),
-                                  AMICI_Y: deepcopy(rdata[AMICI_Y]),
-                                  AMICI_SY: deepcopy(rdata[AMICI_SY])})
-
+            amici_outputs.append({
+                output_field: deepcopy(rdata[output_field])
+                for output_field in self.amici_output_fields
+            })
         del chunk
