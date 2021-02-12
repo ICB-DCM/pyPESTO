@@ -294,7 +294,7 @@ class Ensemble:
         # store bounds
         self.lower_bound = np.full((self.n_x,), np.nan)
         if lower_bound is not None:
-            if len(lower_bound) == 1:
+            if np.array(lower_bound).size == 1:
                 self.lower_bound = np.full((x_vectors.shape[0],), lower_bound)
             else:
                 self.lower_bound = lower_bound
