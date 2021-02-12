@@ -2,14 +2,20 @@ import numpy as np
 import pandas as pd
 from typing import Sequence, Tuple, Callable, Dict
 
-from ..prediction import PredictionResult, PredictionConditionResult
+from .. import Result
+from ..engine import Engine, SingleCoreEngine
+from ..prediction import (
+    PredictionConditionResult,
+    PredictionResult,
+    PredictorTask,
+)
 from .constants import (PREDICTOR, PREDICTION_ID, PREDICTION_RESULTS,
                         PREDICTION_ARRAYS, PREDICTION_SUMMARY, OUTPUT,
                         OUTPUT_SENSI, TIMEPOINTS, X_VECTOR, NX, X_NAMES,
                         NVECTORS, VECTOR_TAGS, PREDICTIONS, MODE_FUN,
                         EnsembleType, ENSEMBLE_TYPE, MEAN, MEDIAN,
-                        STANDARD_DEVIATION, PERCENTILE, SUMMARY, LOWER_BOUND,
-                        UPPER_BOUND)
+                        STANDARD_DEVIATION, SUMMARY, LOWER_BOUND,
+                        UPPER_BOUND, get_percentile_label)
 
 
 class EnsemblePrediction:
@@ -183,14 +189,14 @@ class EnsemblePrediction:
             summary[STANDARD_DEVIATION] = np.std(tmp_array, axis=-1)
             summary[MEDIAN] = np.median(tmp_array, axis=-1)
             for perc in percentiles_list:
-                summary[f'{PERCENTILE} {perc}'] = np.percentile(tmp_array,
-                                                                perc, axis=-1)
+                summary[get_percentile_label(perc)] = \
+                    np.percentile(tmp_array, perc, axis=-1)
             return summary
 
         # preallocate for results
         cond_lists = {MEAN: [], STANDARD_DEVIATION: [], MEDIAN: []}
         for perc in percentiles_list:
-            cond_lists[f'{PERCENTILE} {perc}'] = []
+            cond_lists[get_percentile_label(perc)] = []
 
         # iterate over conditions, compute summary
         for i_cond in range(n_conditions):
@@ -283,6 +289,10 @@ class Ensemble:
         upper_bound:
             array of potential upper bounds for the parameters
         """
+        # Do we have a representative sample or just random ensemble?
+        self.ensemble_type = EnsembleType.ensemble
+        if ensemble_type is not None:
+            self.ensemble_type = ensemble_type
 
         # handle parameter vectors and sizes
         self.x_vectors = x_vectors
@@ -305,15 +315,15 @@ class Ensemble:
         else:
             self.x_names = [f'x_{ix}' for ix in range(self.n_x)]
 
-        # Do we have a representative sample or just random ensemble?
-        self.ensemble_type = EnsembleType.ensemble
-        if ensemble_type is not None:
-            self.ensemble_type = ensemble_type
-
         # Do we have predictions for this ensemble?
         self.predictions = []
         if predictions is not None:
             self.predictions = predictions
+
+    @staticmethod
+    def from_sample(result: Result, chain_index: int = 0, **kwargs):
+        x_vectors = result.sample_result.trace_x[chain_index].T
+        return Ensemble(x_vectors, **kwargs)
 
     def __iter__(self):
         """
@@ -331,11 +341,14 @@ class Ensemble:
         yield LOWER_BOUND, self.lower_bound
         yield UPPER_BOUND, self.upper_bound
 
-    def predict(self,
-                predictor: Callable,
-                prediction_id: str = None,
-                sensi_orders: Tuple = (0,),
-                mode: str = MODE_FUN, ):
+    def predict(
+            self,
+            predictor: Callable,
+            prediction_id: str = None,
+            sensi_orders: Tuple = (0,),
+            mode: str = MODE_FUN,
+            engine: Engine = None,
+    ) -> EnsemblePrediction:
         """
         Convenience function to run predictions for a full ensemble:
         User needs to hand over a predictor function and settings, then all
@@ -354,15 +367,23 @@ class Ensemble:
 
         Returns
         -------
-        result:
-            EnsemblePrediction of the ensemble for the predictor function
+        The prediction of the ensemble.
         """
-        # preallocate
-        prediction_results = []
+        if engine is None:
+            engine = SingleCoreEngine()
 
-        for ix in range(self.n_vectors):
-            x = self.x_vectors[:, ix]
-            prediction_results.append(predictor(x, sensi_orders, mode))
+        tasks = [
+            PredictorTask(
+                predictor=predictor,
+                x=self.x_vectors[:, ix],
+                sensi_orders=sensi_orders,
+                mode=mode,
+                id=ix,
+            )
+            for ix in range(self.n_vectors)
+        ]
+
+        prediction_results = list(engine.execute(tasks))
 
         return EnsemblePrediction(predictor=predictor,
                                   prediction_id=prediction_id,
@@ -391,8 +412,8 @@ class Ensemble:
                    STANDARD_DEVIATION: np.std(self.x_vectors, axis=1),
                    MEDIAN: np.median(self.x_vectors, axis=1)}
         for perc in percentiles_list:
-            summary[f'{PERCENTILE} {perc}'] = np.percentile(self.x_vectors,
-                                                            perc, axis=1)
+            summary[get_percentile_label(perc)] = \
+                np.percentile(self.x_vectors, perc, axis=1)
         # store and return results
         self.summary = summary
         return summary
@@ -445,10 +466,10 @@ class Ensemble:
             # handle percentiles
             for perc in perc_lower:
                 tmp_identifiability[f'within lb: perc {perc}'] = \
-                    lb < self.summary[f'{PERCENTILE} {perc}'][ix]
+                    lb < self.summary[get_percentile_label(perc)][ix]
             for perc in perc_upper:
                 tmp_identifiability[f'within ub: perc {perc}'] = \
-                    ub > self.summary[f'{PERCENTILE} {perc}'][ix]
+                    ub > self.summary[get_percentile_label(perc)][ix]
 
             parameter_identifiability.append(tmp_identifiability)
 

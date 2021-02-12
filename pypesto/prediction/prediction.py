@@ -6,8 +6,16 @@ from time import time
 from typing import Sequence, Union, Dict
 from pathlib import Path
 
-from .constants import (OBSERVABLE_IDS, PARAMETER_IDS, TIMEPOINTS, OUTPUT,
-                        OUTPUT_SENSI, TIME, CSV)
+from .constants import (
+    get_condition_label,
+    CSV,
+    OBSERVABLE_IDS,
+    OUTPUT,
+    OUTPUT_SENSI,
+    PARAMETER_IDS,
+    TIME,
+    TIMEPOINTS,
+)
 
 
 class PredictionConditionResult:
@@ -90,7 +98,7 @@ class PredictionResult:
 
         self.condition_ids = condition_ids
         if self.condition_ids is None:
-            self.condition_ids = [f'condition_{i_cond}'
+            self.condition_ids = [get_condition_label(i_cond)
                                   for i_cond in range(len(conditions))]
 
         # add a comment to this prediction if available
