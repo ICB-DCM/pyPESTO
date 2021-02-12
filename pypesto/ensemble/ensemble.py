@@ -2,6 +2,7 @@ import numpy as np
 import pandas as pd
 from typing import Sequence, Tuple, Callable, Dict
 
+from .. import Result
 from ..engine import Engine, SingleCoreEngine
 from ..prediction import (
     PredictionConditionResult,
@@ -292,8 +293,6 @@ class Ensemble:
         self.ensemble_type = EnsembleType.ensemble
         if ensemble_type is not None:
             self.ensemble_type = ensemble_type
-            if ensemble_type == EnsembleType.sample:
-                x_vectors = x_vectors.T
 
         # handle parameter vectors and sizes
         self.x_vectors = x_vectors
@@ -320,6 +319,11 @@ class Ensemble:
         self.predictions = []
         if predictions is not None:
             self.predictions = predictions
+
+    @staticmethod
+    def from_sample(result: Result, chain_index: int = 0, **kwargs):
+        x_vectors = result.sample_result.trace_x[chain_index].T
+        return Ensemble(x_vectors, **kwargs)
 
     def __iter__(self):
         """
