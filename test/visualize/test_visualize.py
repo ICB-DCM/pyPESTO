@@ -807,7 +807,6 @@ def test_sampling_prediction_trajectories():
         observable_ids=result.problem.objective.amici_model.getStateIds(),
     )
 
-    #vectors = result.sample_result.trace_x[0]
     sample_ensemble = ensemble.Ensemble.from_sample(
         result,
         x_names=result.problem.x_names,
