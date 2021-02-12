@@ -400,16 +400,22 @@ class Ensemble:
         mode:
             Whether to compute function values or residuals.
 
+        engine:
+            Parallelization engine. Defaults to sequential execution on a
+            `SingleCoreEngine`.
+
         Returns
         -------
         The prediction of the ensemble.
         """
         if engine is None:
             engine = SingleCoreEngine()
-      
+
         # get the correct parameter mapping
         mapping = self._map_parameters_by_objective(
-            predictor, default_value=default_value)
+            predictor,
+            default_value=default_value,
+        )
 
         tasks = [
             PredictorTask(
