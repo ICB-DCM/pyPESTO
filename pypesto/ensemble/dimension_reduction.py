@@ -16,10 +16,12 @@ except ImportError:
 def get_umap_representation_parameters(
         ens: Ensemble,
         n_components: int = 2,
-        normalize_data: bool = False) -> Tuple:
+        normalize_data: bool = False,
+        **kwargs) -> Tuple:
     """
     Compute the representation with reduced dimensionality via umap
     (with a given number of umap components) of the parameter ensemble.
+    Allows to pass on additional keyword arguments to the umap routine.
 
     Parameters
     ==========
@@ -46,7 +48,8 @@ def get_umap_representation_parameters(
     return _get_umap_representation_lowlevel(
         dataset=ens.x_vectors.transpose(),
         n_components=n_components,
-        normalize_data=normalize_data
+        normalize_data=normalize_data,
+        **kwargs
     )
 
 
@@ -54,10 +57,12 @@ def get_umap_representation_predictions(
         ens: Union[Ensemble, EnsemblePrediction],
         prediction_index: int = 0,
         n_components: int = 2,
-        normalize_data: bool = False) -> Tuple:
+        normalize_data: bool = False,
+        **kwargs) -> Tuple:
     """
     Compute the representation with reduced dimensionality via umap
     (with a given number of umap components) of the ensemble predictions.
+    Allows to pass on additional keyword arguments to the umap routine.
 
     Parameters
     ==========
@@ -92,7 +97,8 @@ def get_umap_representation_predictions(
     return _get_umap_representation_lowlevel(
         dataset=dataset,
         n_components=n_components,
-        normalize_data=normalize_data
+        normalize_data=normalize_data,
+        **kwargs
     )
 
 
@@ -197,7 +203,8 @@ def get_pca_representation_predictions(
 def _get_umap_representation_lowlevel(
         dataset: np.ndarray,
         n_components: int = 2,
-        normalize_data: bool = False) -> Tuple:
+        normalize_data: bool = False,
+        **kwargs) -> Tuple:
     """
     Compute the representation with reduced dimensionality via principal
     component analysis (with a given number of principal components) of the
@@ -230,7 +237,7 @@ def _get_umap_representation_lowlevel(
     """
 
     # create a umap object
-    umap_object = umap.UMAP(n_components=n_components)
+    umap_object = umap.UMAP(n_components=n_components, **kwargs)
 
     # normalize data with mean and standard deviation if wanted
     if normalize_data:
