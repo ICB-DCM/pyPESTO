@@ -8,6 +8,7 @@ MODE_RES = 'mode_res'  # mode for residuals
 
 OBSERVABLE_IDS = 'observable_ids'  # data member in PredictionConditionResult
 PARAMETER_IDS = 'x_names'  # data member in PredictionConditionResult
+CONDITION_IDS = 'condition_ids'
 TIMEPOINTS = 'timepoints'  # data member in PredictionConditionResult
 OUTPUT = 'output'  # field in the return dict of AmiciPredictor
 OUTPUT_SENSI = 'output_sensi'  # field in the return dict of AmiciPredictor

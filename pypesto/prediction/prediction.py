@@ -8,7 +8,7 @@ from pathlib import Path
 import os
 
 from .constants import (OBSERVABLE_IDS, PARAMETER_IDS, TIMEPOINTS, OUTPUT,
-                        OUTPUT_SENSI, TIME, CSV)
+                        OUTPUT_SENSI, TIME, CSV, CONDITION_IDS)
 
 
 class PredictionConditionResult:
@@ -207,6 +207,9 @@ class PredictionResult:
             if self.conditions and self.conditions[0].x_names is not None:
                 f.create_dataset(os.path.join(base, PARAMETER_IDS),
                                  data=self.conditions[0].x_names)
+            if self.condition_ids is not None:
+                f.create_dataset(os.path.join(base, CONDITION_IDS),
+                                 data=self.condition_ids)
             for i_cond, cond in enumerate(self.conditions):
                 # each conditions gets a group of its own
                 f.create_group(os.path.join(base, str(i_cond)))
