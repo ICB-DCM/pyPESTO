@@ -9,9 +9,11 @@ from .diagnostics import geweke_test
 logger = logging.getLogger(__name__)
 
 
-def calculate_ci(result: Result,
-                 alpha: float = 0.95
-                 ) -> Tuple[np.ndarray, np.ndarray]:
+def calculate_ci(
+        result: Result,
+        alpha: float = 0.95,
+        exclude_burn_in: bool = True,
+) -> Tuple[np.ndarray, np.ndarray]:
     """
     Calculate parameter confidence intervals based on MCMC samples.
 
@@ -27,12 +29,14 @@ def calculate_ci(result: Result,
     lb, ub:
         Bounds of the MCMC percentile-based confidence interval.
     """
-    # Check if burn in index is available
-    if result.sample_result.burn_in is None:
-        geweke_test(result)
+    burn_in = 0
+    if exclude_burn_in:
+        # Check if burn in index is available
+        if result.sample_result.burn_in is None:
+            geweke_test(result)
 
-    # Get burn in index
-    burn_in = result.sample_result.burn_in
+        # Get burn in index
+        burn_in = result.sample_result.burn_in
 
     # Get converged parameter samples as numpy arrays
     chain = np.asarray(result.sample_result.trace_x[0, burn_in:, :])
@@ -46,9 +50,10 @@ def calculate_ci(result: Result,
     return lb, ub
 
 
-def calculate_prediction_profiles(simulated_values: np.ndarray,
-                                  alpha: float = 0.95
-                                  ) -> Tuple[np.ndarray, np.ndarray]:
+def calculate_prediction_profiles(
+        simulated_values: np.ndarray,
+        alpha: float = 0.95,
+) -> Tuple[np.ndarray, np.ndarray]:
     """
     Calculate prediction confidence intervals based on MCMC samples.
 

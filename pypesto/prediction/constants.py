@@ -1,6 +1,4 @@
-"""
-This is for (string) constants used in the prediction module.
-"""
+"""This is for (string) constants used in the prediction module."""
 
 
 MODE_FUN = 'mode_fun'  # mode for function values
