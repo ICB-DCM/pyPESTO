@@ -10,8 +10,8 @@ import os
 from .constants import (
     get_condition_label,
     CSV,
-    OBSERVABLE_IDS,
     OUTPUT,
+    OUTPUT_IDS,
     OUTPUT_SENSI,
     PARAMETER_IDS,
     TIME,
@@ -28,7 +28,7 @@ class PredictionConditionResult:
 
     def __init__(self,
                  timepoints: np.ndarray,
-                 observable_ids: Sequence[str],
+                 output_ids: Sequence[str],
                  output: np.ndarray = None,
                  output_sensi: np.ndarray = None,
                  x_names: Sequence[str] = None):
@@ -39,8 +39,8 @@ class PredictionConditionResult:
         ----------
         timepoints:
             Output timepoints for this simulation condition
-        observable_ids:
-            IDs of observables for this simulation condition
+        output_ids:
+            IDs of outputs for this simulation condition
         outputs:
             Postprocessed outputs (ndarray)
         outputs_sensi:
@@ -49,7 +49,7 @@ class PredictionConditionResult:
             IDs of model parameter w.r.t to which sensitivities were computed
         """
         self.timepoints = timepoints
-        self.observable_ids = observable_ids
+        self.output_ids = output_ids
         self.output = output
         self.output_sensi = output_sensi
         self.x_names = x_names
@@ -59,7 +59,7 @@ class PredictionConditionResult:
 
     def __iter__(self):
         yield 'timepoints', self.timepoints
-        yield 'observable_ids', self.observable_ids
+        yield 'output_ids', self.output_ids
         yield 'x_names', self.x_names
         yield 'output', self.output
         yield 'output_sensi', self.output_sensi
@@ -167,7 +167,7 @@ class PredictionResult:
                     output_dummy.stem + f'_{i_cond}' + output_dummy.suffix)
                 # create DataFrame and write to file
                 result = pd.DataFrame(index=timepoints,
-                                      columns=cond.observable_ids,
+                                      columns=cond.output_ids,
                                       data=cond.output)
                 result.to_csv(filename, sep='\t')
 
@@ -181,7 +181,7 @@ class PredictionResult:
                         output_dummy.suffix)
                     # create DataFrame and write to file
                     result = pd.DataFrame(index=timepoints,
-                                          columns=cond.observable_ids,
+                                          columns=cond.output_ids,
                                           data=cond.output_sensi[:, i_par, :])
                     result.to_csv(filename, sep='\t')
 
@@ -220,8 +220,8 @@ class PredictionResult:
                 f.create_group(os.path.join(base, str(i_cond)))
                 # save observable IDs
                 f.create_dataset(os.path.join(base, str(i_cond),
-                                              OBSERVABLE_IDS),
-                                 data=cond.observable_ids)
+                                              OUTPUT_IDS),
+                                 data=cond.output_ids)
                 # save timepoints, outputs, and sensitivities of outputs
                 f.create_dataset(os.path.join(base, str(i_cond), TIMEPOINTS),
                                  data=cond.timepoints)

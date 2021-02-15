@@ -1,6 +1,4 @@
-"""
-This is for testing the pypesto.prediction.AmiciPredictor.
-"""
+"""Tests for `pypesto.prediction.AmiciPredictor`."""
 
 import amici
 import pypesto
@@ -14,7 +12,8 @@ import shutil
 import pytest
 import libsbml
 import petab
-from pypesto.prediction import PredictionResult, PredictionConditionResult
+
+from pypesto.predict import PredictionResult, PredictionConditionResult
 
 
 @pytest.fixture()
@@ -261,7 +260,7 @@ def test_complex_prediction(edata_objects):
     complex_predictor = pypesto.AmiciPredictor(
         objective, max_chunk_size=2, post_processor=pp_out,
         post_processor_sensi=pps_out, post_processor_time=ppt_out,
-        observable_ids=[f'ratio_{i_obs}' for i_obs in range(5)])
+        output_ids=[f'ratio_{i_obs}' for i_obs in range(5)])
     # let's set the parameter vector
     x = np.array([3., 0.5])
 
@@ -306,7 +305,7 @@ def test_petab_prediction():
     petab_problem.model_name = f'{model_name}_petab'
     importer = pypesto.petab.PetabImporter(petab_problem)
     # create prediction via PAteb
-    predictor = importer.create_prediction()
+    predictor = importer.create_predictor()
 
     # ===== run test for prediction ===========================================
     p = predictor(np.array(petab_problem.x_nominal_free_scaled),

@@ -12,7 +12,8 @@ from ..ensemble import (
     EnsemblePrediction,
     MEDIAN,
 )
-from ..prediction import PredictionResult
+from ..predict import PredictionResult
+from ..predict.constants import CONDITION, OUTPUT
 from ..result import Result
 from ..sample import McmcPtResult, calculate_ci
 from .constants import (
@@ -26,13 +27,6 @@ from .misc import rgba2rgb
 
 
 logger = logging.getLogger(__name__)
-
-
-# TODO observable here refers to the output of an ensemble prediction, which
-#      means that observable can refer to either model state or observable
-#      (user-specified).
-OBSERVABLE = 'observable'
-CONDITION = 'condition'
 
 
 def sampling_fval_trace(
@@ -144,9 +138,9 @@ def _get_statistic_data(
         summary: Dict[str, PredictionResult],
         statistic: str,
         condition_index: int,
-        observable_id: str,
+        output_id: str,
 ) -> Tuple[Sequence[float], Sequence[float]]:
-    """Get statistic-, condition-, and observable-specific data.
+    """Get statistic-, condition-, and output-specific data.
 
     Parameters
     ----------
@@ -159,8 +153,8 @@ def _get_statistic_data(
     condition_index:
         Select data for a specific condition by its index in a
         `PredictionResult.condition_ids` object.
-    observable_id:
-        Select data for a specific observable by its ID.
+    output_id:
+        Select data for a specific output by its ID.
 
     Returns
     -------
@@ -170,15 +164,15 @@ def _get_statistic_data(
     """
     condition_result = summary[statistic].conditions[condition_index]
     t = condition_result.timepoints
-    observable_index = condition_result.observable_ids.index(observable_id)
-    y = condition_result.output[:, observable_index]
+    output_index = condition_result.output_ids.index(output_id)
+    y = condition_result.output[:, output_index]
     return (t, y)
 
 
 def _plot_trajectories_by_condition(
         summary: Dict[str, PredictionResult],
         condition_ids: Sequence[str],
-        observable_ids: Sequence[str],
+        output_ids: Sequence[str],
         axes: matplotlib.axes.Axes,
         levels: Sequence[float],
         levels_opacity: Dict[int, float],
@@ -193,11 +187,11 @@ def _plot_trajectories_by_condition(
         A `pypesto.ensemble.EnsemblePrediction.prediction_summary`, used as the
         source of annotated data to plot.
     condition_ids:
-        The IDs of conditions to be plot.
-    observable_ids:
-        The IDs of observables to be plot.
+        The IDs of conditions to plot.
+    output_ids:
+        The IDs of outputs to plot.
     axes:
-        The axes to plot with. Should contain atleast `len(observable_ids)`
+        The axes to plot with. Should contain atleast `len(output_ids)`
         subplots.
     levels:
         Credibility levels, e.g. [95] for a 95% credibility interval. See the
@@ -208,24 +202,24 @@ def _plot_trajectories_by_condition(
         be plotted with. Opacity is the only thing that differentiates
         credibility levels in the resulting plot.
     labels:
-        Keys should be ensemble observable IDs, values should be the desired
-        label for that observable. Defaults to observable IDs.
+        Keys should be ensemble output IDs, values should be the desired
+        label for that output. Defaults to output IDs.
     variables_color:
-        Colors used to differentiate plotted observables. The order should
-        correspond to `observable_ids`.
+        Colors used to differentiate plotted outputs. The order should
+        correspond to `output_ids`.
     """
     # Each subplot has all data for a single condition.
     for condition_index, condition_id in enumerate(condition_ids):
         ax = axes.flat[condition_index]
         ax.set_title(f'Condition: {labels[condition_id]}')
-        # Each subplot has all data for all condition-specific observables.
-        for observable_index, observable_id in enumerate(observable_ids):
+        # Each subplot has all data for all condition-specific outputs.
+        for output_index, output_id in enumerate(output_ids):
             ax.plot(
                 *_get_statistic_data(
                     summary,
                     MEDIAN,
                     condition_index,
-                    observable_id
+                    output_id
                 ),
                 'k-',
             )
@@ -238,45 +232,45 @@ def _plot_trajectories_by_condition(
                     summary,
                     lower_label,
                     condition_index,
-                    observable_id,
+                    output_id,
                 )
                 _, upper_data = _get_statistic_data(
                     summary,
                     upper_label,
                     condition_index,
-                    observable_id,
+                    output_id,
                 )
                 ax.fill_between(
                     t1,
                     lower_data,
                     upper_data,
                     facecolor=rgba2rgb(
-                        variables_color[observable_index]
+                        variables_color[output_index]
                         + [levels_opacity[level_index]]
                     ),
                     lw=0,
                 )
 
 
-def _plot_trajectories_by_observable(
+def _plot_trajectories_by_output(
         summary: Dict[str, PredictionResult],
         condition_ids: Sequence[str],
-        observable_ids: Sequence[str],
+        output_ids: Sequence[str],
         axes: matplotlib.axes.Axes,
         levels: Sequence[float],
         levels_opacity: Dict[int, float],
         labels: Dict[str, str],
         variables_color: Sequence[RGB],
 ) -> None:
-    """Plot predicted trajectories, with subplots grouped by observable.
+    """Plot predicted trajectories, with subplots grouped by output.
 
     See :py:func:`_plot_trajectories_by_condition` for parameter descriptions.
     """
-    # Each subplot has all data for a single observable.
-    for observable_index, observable_id in enumerate(observable_ids):
+    # Each subplot has all data for a single output.
+    for output_index, output_id in enumerate(output_ids):
         t0 = 0
-        ax = axes.flat[observable_index]
-        ax.set_title(f'Trajectory: {labels[observable_id]}')
+        ax = axes.flat[output_index]
+        ax.set_title(f'Trajectory: {labels[output_id]}')
         # Each subplot is divided by conditions, with vertical lines.
         for condition_index, _condition_id in enumerate(condition_ids):
             if condition_index != 0:
@@ -291,7 +285,7 @@ def _plot_trajectories_by_observable(
                 summary,
                 MEDIAN,
                 condition_index,
-                observable_id,
+                output_id,
             )
             t_median_shifted = t_median + t0
             ax.plot(
@@ -309,13 +303,13 @@ def _plot_trajectories_by_observable(
                     summary,
                     lower_label,
                     condition_index,
-                    observable_id,
+                    output_id,
                 )
                 t_upper, upper_data = _get_statistic_data(
                     summary,
                     upper_label,
                     condition_index,
-                    observable_id,
+                    output_id,
                 )
                 t_lower_shifted = t_lower + t0
                 t_upper_shifted = t_upper + t0
@@ -348,13 +342,8 @@ def sampling_prediction_trajectories(
         condition_gap: float = 0.01,
 ) -> matplotlib.axes.Axes:
     """Plot MCMC-based prediction confidence intervals for the
-    model states or observables. One or various confidence levels
+    model states or outputs. One or various confidence levels
     can be depicted. Plots are grouped by condition.
-
-    Note that references to observables here corresponds to the meaning of an
-    observable in the pyPESTO predictions code, which means an observable could
-    refer to many things, including model states or observables, dependent on
-    how the prediction is processed. FIXME rename
 
     Parameters
     ----------
@@ -371,14 +360,16 @@ def sampling_prediction_trajectories(
     axes:
         Axes object to use.
     labels:
-        Keys should be ensemble observable IDs, values should be the desired
-        label for that observable. Defaults to observable IDs.
+        Keys should be ensemble output IDs, values should be the desired
+        label for that output. Defaults to output IDs.
     axis_label_padding:
         Pixels between axis labels and plots.
     groupby:
-        Group plots by `OBSERVABLE` or `CONDITION`. TODO single constants file?
+        Group plots by `pypesto.predict.constants.OUTPUT` or
+        `pypesto.predict.constants.CONDITION`.
     condition_gap:
-        Gap between conditions when `groupby == CONDITION`.
+        Gap between conditions when
+        `groupby == pypesto.predict.constants.CONDITION`.
 
     Returns
     -------
@@ -415,27 +406,27 @@ def sampling_prediction_trajectories(
         raise KeyError('All predictions must have the same set of conditions.')
     condition_ids = all_condition_ids[0]
 
-    observable_ids = sorted({
-        observable_id
+    output_ids = sorted({
+        output_id
         for prediction in ensemble_prediction.prediction_summary.values()
         for condition in prediction.conditions
-        for observable_id in condition.observable_ids
+        for output_id in condition.output_ids
     })
 
     # Set default labels.
     labels = {
         k: (labels[k] if k in labels else k)
-        for k in condition_ids + observable_ids
+        for k in condition_ids + output_ids
     }
 
     if groupby == CONDITION:
-        n_variables = len(observable_ids)
-        y_names = observable_ids
+        n_variables = len(output_ids)
+        y_names = output_ids
         n_subplots = len(condition_ids)
-    elif groupby == OBSERVABLE:
+    elif groupby == OUTPUT:
         n_variables = len(condition_ids)
         y_names = condition_ids
-        n_subplots = len(observable_ids)
+        n_subplots = len(output_ids)
     else:
         raise ValueError(f'Unsupported groupby value: {groupby}')
 
@@ -472,18 +463,18 @@ def sampling_prediction_trajectories(
         _plot_trajectories_by_condition(
             summary=summary,
             condition_ids=condition_ids,
-            observable_ids=observable_ids,
+            output_ids=output_ids,
             axes=axes,
             levels=levels,
             levels_opacity=levels_opacity,
             labels=labels,
             variables_color=variables_color,
         )
-    elif groupby == OBSERVABLE:
-        _plot_trajectories_by_observable(
+    elif groupby == OUTPUT:
+        _plot_trajectories_by_output(
             summary=summary,
             condition_ids=condition_ids,
-            observable_ids=observable_ids,
+            output_ids=output_ids,
             axes=axes,
             levels=levels,
             levels_opacity=levels_opacity,
@@ -537,7 +528,7 @@ def sampling_prediction_trajectories(
         'loc': 'lower left',
     }
     legend_titles = {
-        OBSERVABLE: 'Conditions',
+        OUTPUT: 'Conditions',
         CONDITION: 'Trajectories',
     }
     legend_variables = axes.flat[n_col-1].legend(
@@ -576,7 +567,7 @@ def sampling_prediction_trajectories(
         rotation='vertical'
     )
 
-    # plt.tight_layout()  # Ruins layout for `groupby == OBSERVABLE`.
+    # plt.tight_layout()  # Ruins layout for `groupby == OUTPUT`.
     return axes
 
 

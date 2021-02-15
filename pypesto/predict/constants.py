@@ -1,10 +1,10 @@
-"""This is for (string) constants used in the prediction module."""
+"""Constants used in the `pypesto.predict` module."""
 
 
 MODE_FUN = 'mode_fun'  # mode for function values
 MODE_RES = 'mode_res'  # mode for residuals
 
-OBSERVABLE_IDS = 'observable_ids'  # data member in PredictionConditionResult
+OUTPUT_IDS = 'output_ids'  # data member in PredictionConditionResult
 PARAMETER_IDS = 'x_names'  # data member in PredictionConditionResult
 TIMEPOINTS = 'timepoints'  # data member in PredictionConditionResult
 OUTPUT = 'output'  # field in the return dict of AmiciPredictor
@@ -26,6 +26,7 @@ CSV = 'csv'  # return file format
 H5 = 'h5'  # return file format
 TIME = 'time'  # column name in returned csv
 
+CONDITION = 'condition'
 CONDITION_IDS = 'condition_ids'
 
 

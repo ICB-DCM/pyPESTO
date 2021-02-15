@@ -4,7 +4,7 @@ from typing import Sequence, Tuple, Callable, Dict
 
 from .. import Result
 from ..engine import Engine, SingleCoreEngine
-from ..prediction import (
+from ..predict import (
     PredictionConditionResult,
     PredictionResult,
     PredictorTask,
@@ -229,7 +229,7 @@ class EnsemblePrediction:
                         timepoints=current_cond.timepoints,
                         output=output_summary[i_key],
                         output_sensi=output_sensi_summary[i_key],
-                        observable_ids=current_cond.observable_ids
+                        output_ids=current_cond.output_ids
                     )
                 )
 

@@ -9,11 +9,13 @@ from typing import Union
 
 MODE_FUN = 'mode_fun'  # mode for function values
 
-OBSERVABLE_IDS = 'observable_ids'  # data member in PredictionConditionResult
-PARAMETER_IDS = 'parameter_ids'  # data member in PredictionConditionResult
-TIMEPOINTS = 'timepoints'  # data member in PredictionConditionResult
-OUTPUT = 'output'  # field in the return dict of AmiciPredictor
-OUTPUT_SENSI = 'output_sensi'  # field in the return dict of AmiciPredictor
+from ..predict.constants import (
+    OUTPUT_IDS,
+    PARAMETER_IDS,
+    TIMEPOINTS,
+    OUTPUT,
+    OUTPUT_SENSI,
+)
 
 PREDICTOR = 'predictor'
 PREDICTION_ID = 'prediction_id'

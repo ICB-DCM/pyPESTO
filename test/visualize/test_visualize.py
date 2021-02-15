@@ -9,7 +9,7 @@ import petab
 import pypesto
 import pypesto.petab
 import pypesto.optimize as optimize
-import pypesto.prediction as prediction
+import pypesto.predict as predict
 import pypesto.profile as profile
 import pypesto.sample as sample
 import pypesto.visualize as visualize
@@ -182,7 +182,7 @@ def create_plotting_options():
 def post_processor(
         amici_outputs,
         output_type,
-        observable_ids,
+        output_ids,
 ):
     """An ensemble prediction post-processor.
 
@@ -192,9 +192,9 @@ def post_processor(
     """
     outputs = [
         amici_output[output_type]
-        if amici_output[prediction.AMICI_STATUS] == 0
+        if amici_output[predict.constants.AMICI_STATUS] == 0
         else np.full(
-            (len(amici_output[prediction.AMICI_T]), len(observable_ids)),
+            (len(amici_output[predict.constants.AMICI_T]), len(output_ids)),
             np.nan
         )
         for amici_output in amici_outputs
@@ -855,13 +855,13 @@ def test_sampling_prediction_trajectories():
     result = sample_petab_problem()
     post_processor_amici_x = functools.partial(
         post_processor,
-        output_type=prediction.AMICI_X,
-        observable_ids=result.problem.objective.amici_model.getStateIds(),
+        output_type=predict.constants.AMICI_X,
+        output_ids=result.problem.objective.amici_model.getStateIds(),
     )
-    predictor = prediction.AmiciPredictor(
+    predictor = predict.AmiciPredictor(
         result.problem.objective,
         post_processor=post_processor_amici_x,
-        observable_ids=result.problem.objective.amici_model.getStateIds(),
+        output_ids=result.problem.objective.amici_model.getStateIds(),
     )
 
     sample_ensemble = ensemble.Ensemble.from_sample(
@@ -874,18 +874,18 @@ def test_sampling_prediction_trajectories():
 
     ensemble_prediction = sample_ensemble.predict(
         predictor,
-        prediction_id=prediction.constants.AMICI_X,
+        prediction_id=predict.constants.AMICI_X,
     )
 
     # Plot by
     visualize.sampling_prediction_trajectories(
         ensemble_prediction,
         levels=credibility_interval_levels,
-        groupby=visualize.sampling.CONDITION,
+        groupby=predict.constants.CONDITION,
     )
     visualize.sampling_prediction_trajectories(
         ensemble_prediction,
         levels=credibility_interval_levels,
         size=(10, 10),
-        groupby=visualize.sampling.OBSERVABLE,
+        groupby=predict.constants.OUTPUT,
     )

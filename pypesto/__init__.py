@@ -22,7 +22,7 @@ from .objective import (
     ObjectiveBase,
     OptimizerHistory,
 )
-from .prediction import (
+from .predict import (
     AmiciPredictor,
     PredictionConditionResult,
     PredictionResult,
