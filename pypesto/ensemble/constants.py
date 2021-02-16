@@ -9,7 +9,7 @@ from typing import Union
 
 MODE_FUN = 'mode_fun'  # mode for function values
 
-from ..predict.constants import (
+from ..predict.constants import (  # noqa: F401
     OUTPUT_IDS,
     PARAMETER_IDS,
     TIMEPOINTS,

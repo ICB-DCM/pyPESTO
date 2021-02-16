@@ -407,7 +407,7 @@ def _get_condition_and_output_ids(
         for condition in prediction.conditions
         for output_id in condition.output_ids
     })
-    
+
     return condition_ids, output_ids
 
 
@@ -553,7 +553,6 @@ def _handle_colors(
     ]
 
     return level_opacities, variable_colors
-
 
 
 def sampling_prediction_trajectories(

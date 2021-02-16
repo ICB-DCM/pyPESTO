@@ -58,7 +58,7 @@ class AmiciPredictor:
         post_processor_time:
             A callable function which applies postprocessing to the timepoints
             of the simulations. Defaults to the timepoints of the amici model.
-            This method takes a list of dicts (with the returned field 
+            This method takes a list of dicts (with the returned field
             `AMICI_T` of the amici ReturnData objects) as input. Safeguards
             for, e.g., failure of AMICI are left to the user.
         max_chunk_size:
