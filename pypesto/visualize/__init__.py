@@ -47,11 +47,11 @@ from .profiles import (
 )
 from .profile_cis import profile_cis
 from .sampling import (
-    sampling_fval_trace,
-    sampling_parameters_trace,
+    sampling_fval_traces,
+    sampling_parameter_traces,
     sampling_scatter,
     sampling_1d_marginals,
-    sampling_parameters_cis,
+    sampling_parameter_cis,
     sampling_prediction_trajectories,
 )
 from .ensemble import ensemble_identifiability

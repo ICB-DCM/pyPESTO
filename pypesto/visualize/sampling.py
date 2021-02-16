@@ -29,7 +29,16 @@ from .misc import rgba2rgb
 logger = logging.getLogger(__name__)
 
 
-def sampling_fval_trace(
+def sampling_fval_trace(*args, **kwargs):
+    logger.warning(
+        '`sampling_fval_trace` is deprecated in favor of '
+        '`sampling_fval_traces` and will be removed in a future version of '
+        'pyPESTO.'
+    )
+    return sampling_fval_traces(*args, **kwargs)
+
+
+def sampling_fval_traces(
         result: Result,
         i_chain: int = 0,
         full_trace: bool = False,
@@ -175,9 +184,9 @@ def _plot_trajectories_by_condition(
         output_ids: Sequence[str],
         axes: matplotlib.axes.Axes,
         levels: Sequence[float],
-        levels_opacity: Dict[int, float],
+        level_opacities: Dict[int, float],
         labels: Dict[str, str],
-        variables_color: Sequence[RGB],
+        variable_colors: Sequence[RGB],
 ) -> None:
     """Plot predicted trajectories, with subplots grouped by condition.
 
@@ -197,14 +206,14 @@ def _plot_trajectories_by_condition(
         Credibility levels, e.g. [95] for a 95% credibility interval. See the
         :py:func:`_get_level_percentiles` method for a description of how these
         levels are handled, and current limitations.
-    levels_opacity:
+    level_opacities:
         A mapping from the credibility levels to the opacities that they should
         be plotted with. Opacity is the only thing that differentiates
         credibility levels in the resulting plot.
     labels:
         Keys should be ensemble output IDs, values should be the desired
         label for that output. Defaults to output IDs.
-    variables_color:
+    variable_colors:
         Colors used to differentiate plotted outputs. The order should
         correspond to `output_ids`.
     """
@@ -214,6 +223,7 @@ def _plot_trajectories_by_condition(
         ax.set_title(f'Condition: {labels[condition_id]}')
         # Each subplot has all data for all condition-specific outputs.
         for output_index, output_id in enumerate(output_ids):
+            # Plot the median for each output.
             ax.plot(
                 *_get_statistic_data(
                     summary,
@@ -223,30 +233,40 @@ def _plot_trajectories_by_condition(
                 ),
                 'k-',
             )
+            # Plot the regions described by the credibility level,
+            # for each output.
             for level_index, level in enumerate(levels):
+                # Get the percentiles that correspond to the credibility level,
+                # as their labels in the `summary`.
                 lower_label, upper_label = [
                     get_percentile_label(percentile)
                     for percentile in _get_level_percentiles(level)
                 ]
-                t1, lower_data = _get_statistic_data(
+                # Get the data for each percentile.
+                t_lower, lower_data = _get_statistic_data(
                     summary,
                     lower_label,
                     condition_index,
                     output_id,
                 )
-                _, upper_data = _get_statistic_data(
+                t_upper, upper_data = _get_statistic_data(
                     summary,
                     upper_label,
                     condition_index,
                     output_id,
                 )
+                # Timepoints must match, or `upper_data` will be plotted at
+                # some incorrect time points.
+                assert (np.array(t_lower) == np.array(t_upper)).all()
+                # Plot a shaded region between the data that correspond to the
+                # lower and upper percentiles.
                 ax.fill_between(
-                    t1,
+                    t_lower,
                     lower_data,
                     upper_data,
                     facecolor=rgba2rgb(
-                        variables_color[output_index]
-                        + [levels_opacity[level_index]]
+                        variable_colors[output_index]
+                        + [level_opacities[level_index]]
                     ),
                     lw=0,
                 )
@@ -258,16 +278,25 @@ def _plot_trajectories_by_output(
         output_ids: Sequence[str],
         axes: matplotlib.axes.Axes,
         levels: Sequence[float],
-        levels_opacity: Dict[int, float],
+        level_opacities: Dict[int, float],
         labels: Dict[str, str],
-        variables_color: Sequence[RGB],
+        variable_colors: Sequence[RGB],
 ) -> None:
     """Plot predicted trajectories, with subplots grouped by output.
+
+    Each subplot is further divided by conditions, such that all conditions
+    are displayed side-by-side for a single output. Hence, in each subplot, the
+    timepoints of each condition plot are shifted by the the end timepoint of
+    the previous condition plot. For examples of this, see the plots with
+    `groupby=OUTPUT` in the example notebook
+    `doc/example/sampling_diagnostics.ipynb`.
 
     See :py:func:`_plot_trajectories_by_condition` for parameter descriptions.
     """
     # Each subplot has all data for a single output.
     for output_index, output_id in enumerate(output_ids):
+        # Store the end timepoint of the previous condition plot, such that the
+        # next condition plot starts at the end of the previous condition plot.
         t0 = 0
         ax = axes.flat[output_index]
         ax.set_title(f'Trajectory: {labels[output_id]}')
@@ -287,6 +316,8 @@ def _plot_trajectories_by_output(
                 condition_index,
                 output_id,
             )
+            # Shift the timepoints for the median plot to start at the end of
+            # the previous condition plot.
             t_median_shifted = t_median + t0
             ax.plot(
                 t_median_shifted,
@@ -295,10 +326,13 @@ def _plot_trajectories_by_output(
             )
             t_max = max(t_max, *t_median_shifted)
             for level_index, level in enumerate(levels):
+                # Get the percentiles that correspond to the credibility level,
+                # as their labels in the `summary`.
                 lower_label, upper_label = [
                     get_percentile_label(percentile)
                     for percentile in _get_level_percentiles(level)
                 ]
+                # Get the data for each percentile.
                 t_lower, lower_data = _get_statistic_data(
                     summary,
                     lower_label,
@@ -311,23 +345,215 @@ def _plot_trajectories_by_output(
                     condition_index,
                     output_id,
                 )
+                # Shift the timepoints for the `fill_between` plots to start at
+                # the end of the previous condition plot.
                 t_lower_shifted = t_lower + t0
                 t_upper_shifted = t_upper + t0
                 # Timepoints must match, or `upper_data` will be plotted at
                 # some incorrect time points.
                 assert (np.array(t_lower) == np.array(t_upper)).all()
+                # Plot a shaded region between the data that correspond to the
+                # lower and upper percentiles.
                 ax.fill_between(
                     t_lower_shifted,
                     lower_data,
                     upper_data,
                     facecolor=rgba2rgb(
-                        variables_color[condition_index]
-                        + [levels_opacity[level_index]]
+                        variable_colors[condition_index]
+                        + [level_opacities[level_index]]
                     ),
                     lw=0,
                 )
                 t_max = max(t_max, *t_lower_shifted, *t_upper_shifted)
+            # Set t0 to the last plotted timepoint of the current condition
+            # plot.
             t0 = t_max
+
+
+def _get_condition_and_output_ids(
+        summary: Dict[str, PredictionResult]
+) -> Tuple[Sequence[str], Sequence[str]]:
+    """Get all condition and output IDs in a prediction summary.
+
+    Parameters
+    ----------
+    summary:
+        The prediction summary to extract condition and output IDs from.
+
+    Returns
+    -------
+    A 2-tuple, with the following indices and values.
+    - `0`: a list of all condition IDs.
+    - `1`: a list of all output IDs.
+    """
+    # For now, all prediction results must predict for the same set of
+    # conditions. Can support different conditions later.
+    all_condition_ids = [
+        prediction.condition_ids
+        for prediction in summary.values()
+    ]
+    if not (
+            np.array([
+                set(condition_ids) == set(all_condition_ids[0])
+                for condition_ids in all_condition_ids
+            ]).all()
+    ):
+        raise KeyError('All predictions must have the same set of conditions.')
+    condition_ids = all_condition_ids[0]
+
+    output_ids = sorted({
+        output_id
+        for prediction in summary.values()
+        for condition in prediction.conditions
+        for output_id in condition.output_ids
+    })
+    
+    return condition_ids, output_ids
+
+
+def _handle_legends(
+        fig: matplotlib.figure.Figure,
+        axes: matplotlib.axes.Axes,
+        levels: Union[float, Sequence[float]],
+        labels: Dict[str, str],
+        level_opacities: Sequence[float],
+        variable_names: Sequence[str],
+        variable_colors: Sequence[RGB],
+        groupby: str,
+        artist_padding: float,
+        n_col: int,
+) -> None:
+    """Add legends to a sampling prediction trajectories plot.
+
+    Create a dummy plot from fake data such that it can be used to produce
+    appropriate legends.
+
+    Variable here refers to the thing that differs in the plot. For example, if
+    the call to :py:func:`sampling_prediction_trajectories` has
+    `groupby=OUTPUT`, then the variable is `CONDITION`. Similarly, if
+    `groupby=CONDITION`, then the variable is `OUTPUT`.
+
+    Parameters
+    ----------
+    fig:
+        The figure to add the legends to.
+    axes:
+        The axes of the figure to add the legend to.
+    levels:
+        The credibility levels.
+    labels:
+        The labels for the IDs in the plot.
+    level_opacities:
+        The opacity to plot each credibility level with.
+    variable_names:
+        The name of each variable.
+    variable_colors:
+        The color to plot each variable in.
+    groupby:
+        The grouping of data in the subplots.
+    artist_padding:
+        The padding between the figure and the legends.
+    n_col:
+        The number of columns of subplots in the figure.
+    """
+    # Fake plots for legend line styles
+    fake_data = [[0], [0]]
+    variable_lines = np.array([
+        # Assumes that the color for a variable is always the same, with
+        # different opacity for different credibility interval levels.
+        # Create a line object with fake data for each variable value.
+        [
+            labels[variable_name],
+            Line2D(*fake_data, color=variable_colors[index], lw=4)
+        ]
+        for index, variable_name in enumerate(variable_names)
+    ])
+    # Assumes that different CI levels are represented as
+    # different opacities of the same color.
+    # Create a line object with fake data for each credibility level.
+    ci_lines = []
+    for index, level in enumerate(levels):
+        ci_lines.append([
+            f'{level}% CI',
+            Line2D(
+                *fake_data,
+                color=rgba2rgb([
+                    *RGBA_BLACK[:LEN_RGB],
+                    level_opacities[index]
+                ]),
+                lw=4
+            )
+        ])
+    # Create a line object with fake data for the median line.
+    median_line = [['Median', Line2D(*fake_data, color=RGBA_BLACK)]]
+    level_lines = np.array(ci_lines + median_line)
+
+    # CI level, and variable name, legends.
+    legend_options_top_right = {
+        'bbox_to_anchor': (1 + artist_padding, 1),
+        'loc': 'upper left',
+    }
+    legend_options_bottom_right = {
+        'bbox_to_anchor': (1 + artist_padding, 0),
+        'loc': 'lower left',
+    }
+    legend_titles = {
+        OUTPUT: 'Conditions',
+        CONDITION: 'Trajectories',
+    }
+    legend_variables = axes.flat[n_col-1].legend(
+        variable_lines[:, 1],
+        variable_lines[:, 0],
+        **legend_options_top_right,
+        title=legend_titles[groupby],
+    )
+    # Legend for CI levels
+    axes.flat[-1].legend(
+        level_lines[:, 1],
+        level_lines[:, 0],
+        **legend_options_bottom_right,
+        title='MCMC',
+    )
+    fig.add_artist(legend_variables)
+
+
+def _handle_colors(
+        levels: Union[float, Sequence[float]],
+        n_variables: int,
+
+) -> Tuple[Sequence[float], Sequence[RGB]]:
+    """Calculate the colors for the prediction trajectories plot.
+
+    Parameters
+    ----------
+    levels:
+        The credibility levels.
+    n_variables:
+        The maximum possible number of variables per subplot.
+
+    Returns
+    -------
+    A 2-tuple, with the following indices and values.
+    - `0`: a list of opacities, one per level.
+    - `1`: a list of colors, one per variable.
+    """
+    level_opacities = sorted(
+        # min 30%, max 100%, opacity
+        np.linspace(0.3 * RGBA_MAX, RGBA_MAX, len(levels)),
+        reverse=True,
+    )
+    cmap = plt.cm.viridis
+    cmap_min = RGBA_MIN
+    cmap_max = 0.85*(RGBA_MAX - RGBA_MIN) + RGBA_MIN  # exclude yellows
+
+    # define colormap
+    variable_colors = [
+        list(cmap(v))[:LEN_RGB]
+        for v in np.linspace(cmap_min, cmap_max, n_variables)
+    ]
+
+    return level_opacities, variable_colors
+
 
 
 def sampling_prediction_trajectories(
@@ -337,7 +563,7 @@ def sampling_prediction_trajectories(
         size: Tuple[float, float] = None,
         axes: matplotlib.axes.Axes = None,
         labels: Dict[str, str] = None,
-        axis_label_padding: int = 30,
+        axis_label_padding: int = 50,
         groupby: str = CONDITION,
         condition_gap: float = 0.01,
 ) -> matplotlib.axes.Axes:
@@ -381,83 +607,50 @@ def sampling_prediction_trajectories(
     if len(list(levels)) == 1:
         levels = list(levels)
     levels = sorted(levels, reverse=True)
+    # Get the percentiles that correspond to the requested credibility levels.
     percentiles = [
         percentile
         for level in levels
         for percentile in _get_level_percentiles(level)
     ]
 
-    ensemble_prediction.compute_summary(percentiles_list=percentiles)
+    summary = ensemble_prediction.compute_summary(percentiles_list=percentiles)
 
-    summary = ensemble_prediction.prediction_summary
+    condition_ids, output_ids = _get_condition_and_output_ids(summary)
 
-    all_condition_ids = [
-        prediction.condition_ids
-        for prediction in ensemble_prediction.prediction_summary.values()
-    ]
-    # All prediction results must predict for the same set of conditions.
-    # Can support different conditions later.
-    if not (
-            np.array([
-                set(condition_ids) == set(all_condition_ids[0])
-                for condition_ids in all_condition_ids
-            ]).all()
-    ):
-        raise KeyError('All predictions must have the same set of conditions.')
-    condition_ids = all_condition_ids[0]
-
-    output_ids = sorted({
-        output_id
-        for prediction in ensemble_prediction.prediction_summary.values()
-        for condition in prediction.conditions
-        for output_id in condition.output_ids
-    })
-
-    # Set default labels.
-    labels = {
-        k: (labels[k] if k in labels else k)
-        for k in condition_ids + output_ids
-    }
+    # Set default labels for any unspecified labels.
+    labels = {id_: labels.get(id_, id_) for id_ in condition_ids + output_ids}
 
     if groupby == CONDITION:
         n_variables = len(output_ids)
-        y_names = output_ids
+        variable_names = output_ids
         n_subplots = len(condition_ids)
     elif groupby == OUTPUT:
         n_variables = len(condition_ids)
-        y_names = condition_ids
+        variable_names = condition_ids
         n_subplots = len(output_ids)
     else:
         raise ValueError(f'Unsupported groupby value: {groupby}')
 
-    levels_opacity = sorted(
-        # min 30%, max 100%, opacity
-        np.linspace(0.3 * RGBA_MAX, RGBA_MAX, len(levels)),
-        reverse=True,
-    )
-    if axes is not None:
-        fig = axes.get_figure()
-        if not isinstance(axes, np.ndarray):
-            axes = np.array([[axes]])
-    cmap = plt.cm.viridis
-    cmap_min = RGBA_MIN
-    cmap_max = 0.85*(RGBA_MAX - RGBA_MIN) + RGBA_MIN  # exclude yellows
-
-    # define colormap
-    variables_color = [
-        list(cmap(v))[:LEN_RGB]
-        for v in np.linspace(cmap_min, cmap_max, n_variables)
-    ]
+    level_opacities, variable_colors = \
+        _handle_colors(levels=levels, n_variables=n_variables)
 
     if axes is None:
         n_row = int(np.round(np.sqrt(n_subplots)))
         n_col = int(np.ceil(n_subplots / n_row))
         fig, axes = plt.subplots(n_row, n_col, figsize=size, squeeze=False)
-    elif len(axes.flat) < n_subplots:
-        raise ValueError(
-            'Provided `ax` contains insufficient subplots. At least '
-            f'{n_subplots} are required.'
-        )
+    else:
+        fig = axes.get_figure()
+        if not isinstance(axes, np.ndarray):
+            axes = np.array([[axes]])
+        if len(axes.flat) < n_subplots:
+            raise ValueError(
+                'Provided `axes` contains insufficient subplots. At least '
+                f'{n_subplots} are required.'
+            )
+    artist_padding = (
+        axis_label_padding / (plt.gcf().get_size_inches()*fig.dpi)[0]
+    )
 
     if groupby == CONDITION:
         _plot_trajectories_by_condition(
@@ -466,9 +659,9 @@ def sampling_prediction_trajectories(
             output_ids=output_ids,
             axes=axes,
             levels=levels,
-            levels_opacity=levels_opacity,
+            level_opacities=level_opacities,
             labels=labels,
-            variables_color=variables_color,
+            variable_colors=variable_colors,
         )
     elif groupby == OUTPUT:
         _plot_trajectories_by_output(
@@ -477,82 +670,39 @@ def sampling_prediction_trajectories(
             output_ids=output_ids,
             axes=axes,
             levels=levels,
-            levels_opacity=levels_opacity,
+            level_opacities=level_opacities,
             labels=labels,
-            variables_color=variables_color,
+            variable_colors=variable_colors,
         )
 
     if title:
         fig.suptitle(title)
 
-    # Fake plots for legend line styles
-    fake_data = [[0], [0]]
-    lines_variables = np.array([
-        # Assumes that the color for a variable is always the same, with
-        # different opacity for different confidence interval levels.
-        [
-            labels[y_name],
-            Line2D(*fake_data, color=variables_color[index], lw=4)
-        ]
-        for index, y_name in enumerate(y_names)
-    ])
-    lines_levels = np.array([
-        # Assumes that different CI levels are represented as
-        # different opacities of the same color.
-        [
-            f'{level}% CI',
-            Line2D(
-                *fake_data,
-                color=rgba2rgb([
-                    *RGBA_BLACK[:LEN_RGB],
-                    levels_opacity[index]
-                ]),
-                lw=4
-            )
-        ]
-        for index, level in enumerate(levels)
-    ] + [['Median', Line2D(*fake_data, color=RGBA_BLACK)]]
+    _handle_legends(
+        fig=fig,
+        axes=axes,
+        levels=levels,
+        labels=labels,
+        level_opacities=level_opacities,
+        variable_names=variable_names,
+        variable_colors=variable_colors,
+        groupby=groupby,
+        artist_padding=artist_padding,
+        n_col=n_col,
     )
-
-    artist_padding = (
-        axis_label_padding / (plt.gcf().get_size_inches()*fig.dpi)[0]
-    )
-
-    # CI level, and variable name, legends.
-    legend_options_top_right = {
-        'bbox_to_anchor': (1 + artist_padding, 1),
-        'loc': 'upper left',
-    }
-    legend_options_bottom_right = {
-        'bbox_to_anchor': (1 + artist_padding, 0),
-        'loc': 'lower left',
-    }
-    legend_titles = {
-        OUTPUT: 'Conditions',
-        CONDITION: 'Trajectories',
-    }
-    legend_variables = axes.flat[n_col-1].legend(
-        lines_variables[:, 1],
-        lines_variables[:, 0],
-        **legend_options_top_right,
-        title=legend_titles[groupby],
-    )
-    # Legend for CI levels
-    axes.flat[-1].legend(
-        lines_levels[:, 1],
-        lines_levels[:, 0],
-        **legend_options_bottom_right,
-        title='MCMC',
-    )
-    fig.add_artist(legend_variables)
 
     # X and Y labels
     xmin = min(ax.get_position().xmin for ax in axes.flat)
     ymin = min(ax.get_position().ymin for ax in axes.flat)
+    xlabel = (
+        'Cumulative time across all conditions'
+        if groupby == OUTPUT
+        else 'Time'
+    )
     plt.text(
         0.5,
         ymin - artist_padding,
-        'Time',
+        xlabel,
         ha='center',
         va='center',
         transform=fig.transFigure
@@ -571,16 +721,17 @@ def sampling_prediction_trajectories(
     return axes
 
 
-def sampling_parameters_cis(
+def sampling_parameter_cis(
         result: Result,
         alpha: Sequence[int] = None,
         step: float = 0.05,
         show_median: bool = True,
         title: str = None,
         size: Tuple[float, float] = None,
-        ax: matplotlib.axes.Axes = None):
-    """Plot MCMC-based parameter confidence intervals for
-    one or various confidence levels.
+        ax: matplotlib.axes.Axes = None
+) -> matplotlib.axes.Axes:
+    """Plot MCMC-based parameter credibility intervals for one or more
+    credibility levels.
 
     Parameters
     ----------
@@ -656,6 +807,7 @@ def sampling_parameters_cis(
     if title:
         ax.set_title(title)
 
+    # handle legend
     plt.gca().invert_yaxis()
     handles, labels = plt.gca().get_legend_handles_labels()
     by_label = dict(zip(labels, handles))
@@ -664,7 +816,16 @@ def sampling_parameters_cis(
     return ax
 
 
-def sampling_parameters_trace(
+def sampling_parameters_trace(*args, **kwargs):
+    logger.warning(
+        '`sampling_parameters_trace` is deprecated in favor of '
+        '`sampling_parameter_traces` and will be removed in a future version '
+        'of pyPESTO.'
+    )
+    return sampling_parameter_traces(*args, **kwargs)
+
+
+def sampling_parameter_traces(
         result: Result,
         i_chain: int = 0,
         par_indices: Sequence[int] = None,

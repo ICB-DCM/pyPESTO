@@ -794,22 +794,22 @@ def create_sampling_result():
 
 
 @close_fig
-def test_sampling_fval_trace():
-    """Test pypesto.visualize.sampling_fval_trace"""
+def test_sampling_fval_traces():
+    """Test pypesto.visualize.sampling_fval_traces"""
     result = create_sampling_result()
-    visualize.sampling_fval_trace(result)
+    visualize.sampling_fval_traces(result)
     # call with custom arguments
-    visualize.sampling_fval_trace(
+    visualize.sampling_fval_traces(
         result, i_chain=1, stepsize=5, size=(10, 10))
 
 
 @close_fig
-def test_sampling_parameters_trace():
-    """Test pypesto.visualize.sampling_parameters_trace"""
+def test_sampling_parameter_traces():
+    """Test pypesto.visualize.sampling_parameter_traces"""
     result = create_sampling_result()
-    visualize.sampling_parameters_trace(result)
+    visualize.sampling_parameter_traces(result)
     # call with custom arguments
-    visualize.sampling_parameters_trace(
+    visualize.sampling_parameter_traces(
         result, i_chain=1, stepsize=5, size=(10, 10),
         use_problem_bounds=False)
 
@@ -839,12 +839,12 @@ def test_sampling_1d_marginals():
 
 
 @close_fig
-def test_sampling_parameters_cis():
-    """Test pypesto.visualize.sampling_parameters_cis"""
+def test_sampling_parameter_cis():
+    """Test pypesto.visualize.sampling_parameter_cis"""
     result = create_sampling_result()
-    visualize.sampling_parameters_cis(result)
+    visualize.sampling_parameter_cis(result)
     # call with custom arguments
-    visualize.sampling_parameters_cis(
+    visualize.sampling_parameter_cis(
         result, alpha=[99, 68], step=0.1, size=(10, 10))
 
 
