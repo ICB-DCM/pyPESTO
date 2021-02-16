@@ -6,9 +6,6 @@ This is for (string) constants used in the ensemble module.
 from enum import Enum
 from typing import Union
 
-
-MODE_FUN = 'mode_fun'  # mode for function values
-
 from ..predict.constants import (  # noqa: F401
     OUTPUT_IDS,
     PARAMETER_IDS,
@@ -16,6 +13,9 @@ from ..predict.constants import (  # noqa: F401
     OUTPUT,
     OUTPUT_SENSI,
 )
+
+
+MODE_FUN = 'mode_fun'  # mode for function values
 
 PREDICTOR = 'predictor'
 PREDICTION_ID = 'prediction_id'
