@@ -73,7 +73,7 @@ jobs:
       run: |
         .github/workflows/install_deps.sh petab pysb
         pip install -e .[test,amici,petab,pyswarm]
-        brew install mpich
+        sudo apt install libopenmpi-dev
         pip install mpi4py
 
     - name: Run tests
