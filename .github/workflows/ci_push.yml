@@ -73,6 +73,8 @@ jobs:
       run: |
         .github/workflows/install_deps.sh petab pysb
         pip install -e .[test,amici,petab,pyswarm]
+        brew install mpich
+        pip install mpi4py
 
     - name: Run tests
       timeout-minutes: 20
