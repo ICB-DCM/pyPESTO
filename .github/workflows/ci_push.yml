@@ -73,8 +73,6 @@ jobs:
       run: |
         .github/workflows/install_deps.sh petab pysb
         pip install -e .[test,amici,petab,pyswarm]
-        sudo apt install libopenmpi-dev
-        pip install mpi4py
 
     - name: Run tests
       timeout-minutes: 20
@@ -114,6 +112,8 @@ jobs:
       run: |
         .github/workflows/install_deps.sh ipopt
         pip install -e .[test,ipopt,dlib,pyswarm,cmaes,nlopt,fides]
+        sudo apt install libopenmpi-dev
+        pip install mpi4py
 
     - name: Run tests
       timeout-minutes: 20
