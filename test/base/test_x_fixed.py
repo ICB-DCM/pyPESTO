@@ -4,7 +4,7 @@ This is for testing the fixing of parameters feature.
 import numpy as np
 import pypesto
 import pypesto.optimize
-from .test_objective import rosen_for_sensi
+from ..util import rosen_for_sensi
 
 
 def test_problem():

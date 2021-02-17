@@ -12,7 +12,8 @@ import petab
 import pypesto
 import pypesto.optimize
 import pypesto.petab
-from test.petab_util import folder_base
+
+from .petab_util import folder_base
 
 
 class PetabImportTest(unittest.TestCase):

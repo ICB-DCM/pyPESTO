@@ -21,6 +21,10 @@ from .objective import (
     Objective,
     NegLogPriors,
     ObjectiveBase)
+from .prediction import (
+    AmiciPredictor,
+    PredictionResult,
+    PredictionConditionResult)
 from .problem import Problem
 from .result import (
     Result,
