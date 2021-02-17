@@ -72,7 +72,7 @@ jobs:
     - name: Install dependencies
       run: |
         .github/workflows/install_deps.sh petab pysb
-        pip install -e .[test,amici,petab,pyswarm,mpi4py]
+        pip install -e .[test,amici,petab,pyswarm]
 
     - name: Run tests
       timeout-minutes: 20
