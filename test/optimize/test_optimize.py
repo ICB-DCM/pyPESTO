@@ -10,7 +10,6 @@ import nlopt
 import fides
 import itertools as itt
 import os
-import tempfile
 
 import pypesto
 import pypesto.optimize as optimize
@@ -210,7 +209,7 @@ def test_MPIPool_Engine():
     # get the path to this file:
     path = os.path.dirname(__file__)
     # run the example file.
-    ret = os.system(f"mpiexec -np 1 python -m mpi4py.futures "
+    ret = os.system(f"mpiexec -np 2 python -m mpi4py.futures "
                     f"{path}../../doc/example/example_MPIPool.py")
     if ret != 0:
         raise Exception(f"The MPIPoolEngine test failed. ret={ret}")
