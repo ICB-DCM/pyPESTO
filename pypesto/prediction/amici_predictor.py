@@ -88,6 +88,12 @@ class AmiciPredictor:
         self.post_processor_time = post_processor_time
         self.condition_ids = condition_ids
 
+        # If the user takes care of everything we can skip default readouts
+        self.skip_default_outputs = False
+        if post_processor is not None and post_processor_sensi is not None \
+                and post_processor_time is not None:
+            self.skip_default_outputs = True
+
         if observable_ids is None:
             self.observable_ids = \
                 amici_objective.amici_model.getObservableIds()
@@ -272,7 +278,8 @@ class AmiciPredictor:
             return timepoints, outputs, outputs_sensi
 
         # Get default output
-        timepoints, outputs, outputs_sensi = _default_output(amici_outputs)
+        if not self.skip_default_outputs:
+            timepoints, outputs, outputs_sensi = _default_output(amici_outputs)
 
         # postprocess (use original Amici outputs)
         if self.post_processor is not None:
