@@ -210,6 +210,6 @@ def test_MPIPool_Engine():
     path = os.path.dirname(__file__)
     # run the example file.
     ret = os.system(f"mpiexec -np 2 python -m mpi4py.futures "
-                    f"{path}../../doc/example/example_MPIPool.py")
+                    f"{path}/../../doc/example/example_MPIPool.py")
     if ret != 0:
         raise Exception(f"The MPIPoolEngine test failed. ret={ret}")
