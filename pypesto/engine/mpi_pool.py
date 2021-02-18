@@ -20,6 +20,7 @@ def work(pickled_task):
 class MPIPoolEngine(Engine):
     """
     Parallelize the task execution using multiprocessing.
+
     To be called with:
     mpiexec -np #Workers+1 python -m mpi4py.futures YOURFILE.py
     """
