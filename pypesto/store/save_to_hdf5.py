@@ -148,8 +148,9 @@ class OptimizationResultHDF5Writer:
             for start in result.optimize_result.list:
                 start_id = start['id']
                 start_grp = get_or_create_group(results_grp, start_id)
-                start['history'] = None  # TOOD temporary fix
                 for key in start.keys():
+                    if key == 'history':
+                        continue
                     if isinstance(start[key], np.ndarray):
                         write_float_array(start_grp, key, start[key])
                     elif start[key] is not None:
