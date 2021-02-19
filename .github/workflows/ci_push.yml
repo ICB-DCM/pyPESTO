@@ -111,7 +111,7 @@ jobs:
     - name: Install dependencies
       run: |
         .github/workflows/install_deps.sh ipopt
-        pip install -e .[test,ipopt,dlib,pyswarm,cmaes,nlopt,fides, mpi]
+        pip install -e .[test,ipopt,dlib,pyswarm,cmaes,nlopt,fides,mpi]
 
     - name: Run tests
       timeout-minutes: 20
