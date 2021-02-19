@@ -212,7 +212,9 @@ def test_mpipoolengine():
     # get the path to this file:
     path = os.path.dirname(__file__)
     # run the example file.
-    p = subprocess.Popen(['mpiexec', '-np', '2', 'python', '-m', 'mpi4py.futures', 'doc/example/example_MPIPool.py'])
+    p = subprocess.Popen(['mpiexec', '-np', '2', 'python', '-m',
+                          'mpi4py.futures',
+                          f'{path}/doc/example/example_MPIPool.py'])
     p.wait()
 
     # read results
