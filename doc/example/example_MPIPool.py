@@ -9,12 +9,13 @@ from pypesto.store import OptimizationResultHDF5Writer
 # you need to manually import the MPIPoolEninge
 from pypesto.engine.mpi_pool import MPIPoolEngine
 
+
 def setup_rosen_problem(n_starts: int = 10):
     """Set up the Rosenbrock problem and return
     a pypesto.Problem"""
     objective = pypesto.Objective(fun=sp.optimize.rosen,
-                                   grad=sp.optimize.rosen_der,
-                                   hess=sp.optimize.rosen_hess)
+                                  grad=sp.optimize.rosen_der,
+                                  hess=sp.optimize.rosen_hess)
 
     dim_full = 10
     lb = -5 * np.ones((dim_full, 1))
@@ -25,8 +26,9 @@ def setup_rosen_problem(n_starts: int = 10):
                                                      lb=lb,
                                                      ub=ub)
     problem = pypesto.Problem(objective=objective, lb=lb, ub=ub,
-                               x_guesses=startpoints)
+                              x_guesses=startpoints)
     return problem
+
 
 # set all your code into this if condition.
 # This way only one core performs the code
@@ -34,10 +36,10 @@ def setup_rosen_problem(n_starts: int = 10):
 if __name__ == '__main__':
     # set number of starts
     n_starts = 2
-    #create problem
+    # create problem
     problem = setup_rosen_problem()
     # create optimizer
-    optimizer = optimize.FidesOptimizer()
+    optimizer = optimize.FidesOptimizer(verbose=0)
 
     # result2 is the way to call the optimization with MPIPoolEngine.
     result1 = optimize.minimize(

@@ -16,6 +16,7 @@ import pypesto.optimize as optimize
 from pypesto.store import OptimizationResultHDF5Reader
 
 from ..util import rosen_for_sensi
+from numpy.testing import assert_almost_equal
 
 
 @pytest.fixture(params=['separated', 'integrated'])
@@ -210,8 +211,8 @@ def test_mpipoolengine():
     # get the path to this file:
     path = os.path.dirname(__file__)
     # run the example file.
-    ret = os.system(f"mpiexec -np 2 python -m mpi4py.futures "
-                    f"{path}/../../doc/example/example_MPIPool.py")
+    os.system(f"mpiexec -np 2 python -m mpi4py.futures "
+              f"{path}/../../doc/example/example_MPIPool.py")
 
     # read results
     opt_result_reader = OptimizationResultHDF5Reader('temp_result1')
@@ -219,7 +220,6 @@ def test_mpipoolengine():
     opt_result_reader = OptimizationResultHDF5Reader('temp_result2')
     result2 = opt_result_reader.read()
 
-    test
     if(result1.optimize_result.list[0]['id'] ==
             result2.optimize_result.list[0]['id']):
         assert_almost_equal(result1.optimize_result.list[0]['x'],
