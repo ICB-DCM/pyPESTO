@@ -287,8 +287,8 @@ class PetabImporter(AmiciObjectBuilder):
         objective:
             An objective object, which will be used to get model simulations
         amici_output_fields:
-            keys which exist in the return data object from Amici, which should
-            be available for the post_processor routines
+            keys that exist in the return data object from AMICI, which should
+            be available for the post-processors
         post_processor:
             A callable function which applies postprocessing to the simulation
             results. Default are the observables of the amici model.
