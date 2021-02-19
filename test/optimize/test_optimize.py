@@ -243,5 +243,5 @@ def test_mpipoolengine():
                                     'do not agree for the engines.')
 
     # delete data
-    os.system('rm temp_result1.h5')
-    os.system('rm temp_result2.h5')
+    os.remove('temp_result1.h5')
+    os.remove('temp_result2.h5')
