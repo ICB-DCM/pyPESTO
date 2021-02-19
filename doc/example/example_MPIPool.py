@@ -5,13 +5,12 @@ import pypesto
 import numpy as np
 import scipy as sp
 import pypesto.optimize as optimize
+from pypesto.store import OptimizationResultHDF5Writer
 # you need to manually import the MPIPoolEninge
 from pypesto.engine.mpi_pool import MPIPoolEngine
-# the below is needed for testing purposes.
-from numpy.testing import assert_almost_equal
 
 def setup_rosen_problem(n_starts: int = 10):
-    """sets up the rosenbrock problem and return
+    """Set up the Rosenbrock problem and return
     a pypesto.Problem"""
     objective = pypesto.Objective(fun=sp.optimize.rosen,
                                    grad=sp.optimize.rosen_der,
@@ -47,25 +46,10 @@ if __name__ == '__main__':
     result2 = optimize.minimize(
             problem=problem, optimizer=optimizer,
             n_starts=n_starts, engine=MPIPoolEngine())
-
-
-    # starting here are the tests (not needed in your code)
-    if(result1.optimize_result.list[0]['id'] ==
-            result2.optimize_result.list[0]['id']):
-        assert_almost_equal(result1.optimize_result.list[0]['x'],
-                            result2.optimize_result.list[0]['x'],
-                            err_msg='The final parameter values '
-                                    'do not agree for the engines.')
-        assert_almost_equal(result1.optimize_result.list[1]['x'],
-                            result2.optimize_result.list[1]['x'],
-                            err_msg='The final parameter values '
-                                    'do not agree for the engines.')
-    else:
-        assert_almost_equal(result1.optimize_result.list[0]['x'],
-                            result2.optimize_result.list[1]['x'],
-                            err_msg='The final parameter values '
-                                    'do not agree for the engines.')
-        assert_almost_equal(result1.optimize_result.list[1]['x'],
-                            result2.optimize_result.list[0]['x'],
-                            err_msg='The final parameter values '
-                                    'do not agree for the engines.')
+    # saving optimization results to hdf5
+    file_name = 'temp_result1.h5'
+    opt_result_writer = OptimizationResultHDF5Writer(file_name)
+    opt_result_writer.write(result1)
+    file_name = 'temp_result2.h5'
+    opt_result_writer = OptimizationResultHDF5Writer(file_name)
+    opt_result_writer.write(result2)

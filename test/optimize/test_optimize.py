@@ -13,6 +13,7 @@ import os
 
 import pypesto
 import pypesto.optimize as optimize
+from pypesto.store import OptimizationResultHDF5Reader
 
 from ..util import rosen_for_sensi
 
@@ -202,7 +203,7 @@ def check_minimize(objective, library, solver, allow_failed_starts=False):
         assert result.optimize_result.list[0]['x'] is not None
 
 
-def test_MPIPool_Engine():
+def test_mpipoolengine():
     """
     Test the MPIPoolEngine by calling an example script with mpiexec.
     """
@@ -211,5 +212,34 @@ def test_MPIPool_Engine():
     # run the example file.
     ret = os.system(f"mpiexec -np 2 python -m mpi4py.futures "
                     f"{path}/../../doc/example/example_MPIPool.py")
-    if ret != 0:
-        raise Exception(f"The MPIPoolEngine test failed. ret={ret}")
+
+    # read results
+    opt_result_reader = OptimizationResultHDF5Reader('temp_result1')
+    result1 = opt_result_reader.read()
+    opt_result_reader = OptimizationResultHDF5Reader('temp_result2')
+    result2 = opt_result_reader.read()
+
+    test
+    if(result1.optimize_result.list[0]['id'] ==
+            result2.optimize_result.list[0]['id']):
+        assert_almost_equal(result1.optimize_result.list[0]['x'],
+                            result2.optimize_result.list[0]['x'],
+                            err_msg='The final parameter values '
+                                    'do not agree for the engines.')
+        assert_almost_equal(result1.optimize_result.list[1]['x'],
+                            result2.optimize_result.list[1]['x'],
+                            err_msg='The final parameter values '
+                                    'do not agree for the engines.')
+    else:
+        assert_almost_equal(result1.optimize_result.list[0]['x'],
+                            result2.optimize_result.list[1]['x'],
+                            err_msg='The final parameter values '
+                                    'do not agree for the engines.')
+        assert_almost_equal(result1.optimize_result.list[1]['x'],
+                            result2.optimize_result.list[0]['x'],
+                            err_msg='The final parameter values '
+                                    'do not agree for the engines.')
+
+    # delete data
+    os.system(rm 'temp_result1.h5')
+    os.system(rm 'temp_result2.h5')
