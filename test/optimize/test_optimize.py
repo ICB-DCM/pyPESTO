@@ -219,7 +219,7 @@ def test_mpipoolengine():
     # read results
     opt_result_reader = OptimizationResultHDF5Reader('temp_result1.h5')
     result1 = opt_result_reader.read()
-    opt_result_reader = OptimizationResultHDF5Reader('temp_result2')
+    opt_result_reader = OptimizationResultHDF5Reader('temp_result2.h5')
     result2 = opt_result_reader.read()
 
     if(result1.optimize_result.list[0]['id'] ==
