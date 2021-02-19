@@ -8,6 +8,7 @@ import pypesto.optimize as optimize
 from pypesto.store import OptimizationResultHDF5Writer
 # you need to manually import the MPIPoolEninge
 from pypesto.engine.mpi_pool import MPIPoolEngine
+import os
 
 
 def setup_rosen_problem(n_starts: int = 10):
@@ -48,6 +49,7 @@ if __name__ == '__main__':
     result2 = optimize.minimize(
             problem=problem, optimizer=optimizer,
             n_starts=n_starts, engine=MPIPoolEngine())
+    print(os.path.dirname(__file__))
     # saving optimization results to hdf5
     file_name = 'temp_result1.h5'
     opt_result_writer = OptimizationResultHDF5Writer(file_name)
