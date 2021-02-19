@@ -10,6 +10,7 @@ import nlopt
 import fides
 import itertools as itt
 import os
+import subprocess
 
 import pypesto
 import pypesto.optimize as optimize
@@ -211,8 +212,8 @@ def test_mpipoolengine():
     # get the path to this file:
     path = os.path.dirname(__file__)
     # run the example file.
-    os.system(f"mpiexec -np 2 python -m mpi4py.futures "
-              f"{path}/../../doc/example/example_MPIPool.py")
+    p = subprocess.Popen(['mpiexec', '-np', '2', 'python', '-m', 'mpi4py.futures', 'doc/example/example_MPIPool.py'])
+    p.wait()
 
     # read results
     opt_result_reader = OptimizationResultHDF5Reader('temp_result1')
