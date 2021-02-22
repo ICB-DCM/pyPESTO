@@ -9,6 +9,7 @@ from ..predict import (
     PredictionResult,
     PredictorTask,
 )
+from ..sample import geweke_test
 from .constants import (PREDICTOR, PREDICTION_ID, PREDICTION_RESULTS,
                         PREDICTION_ARRAYS, PREDICTION_SUMMARY, OUTPUT,
                         OUTPUT_SENSI, TIMEPOINTS, X_VECTOR, NX, X_NAMES,
@@ -327,8 +328,45 @@ class Ensemble:
             self.predictions = predictions
 
     @staticmethod
-    def from_sample(result: Result, chain_index: int = 0, **kwargs):
-        x_vectors = result.sample_result.trace_x[chain_index].T
+    def from_sample(
+            result: Result,
+            chain_index: int = 0,
+            remove_burn_in: bool = True,
+            chain_slice: slice = None,
+            **kwargs,
+    ):
+        """Construct an ensemble from a sample.
+
+        Parameters
+        ----------
+        result:
+            A pyPESTO result that contains a sample result.
+        chain_index:
+            The chain that parameter vectors will be taken from.
+        remove_burn_in:
+            Exclude parameter vectors from the ensemble if they are in the
+            "burn-in".
+        chain_slice:
+            Subset the chain with a slice. Any "burn-in" removal occurs first.
+
+        Returns
+        -------
+        The ensemble.
+        """
+        x_vectors = result.sample_result.trace_x[chain_index]
+        if remove_burn_in:
+            if result.sample_result.burn_in is None or chain_index != 0:
+                burn_in = geweke_test(
+                    result,
+                    chain_index=chain_index,
+                    in_place=False,
+                )
+            else:
+                burn_in = result.sample_result.burn_in
+            x_vectors = x_vectors[burn_in:]
+        if chain_slice is not None:
+            x_vectors = x_vectors[chain_slice]
+        x_vectors = x_vectors.T
         return Ensemble(x_vectors, **kwargs)
 
     def __iter__(self):
