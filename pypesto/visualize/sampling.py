@@ -799,7 +799,7 @@ def sampling_parameter_cis(
             _step += step
 
     ax.set_yticks(range(n_pars))
-    ax.set_yticklabels(result.problem.x_names)
+    ax.set_yticklabels(result.problem.get_reduced_vector(result.problem.x_names))
     ax.set_xlabel('Parameter value')
     ax.set_ylabel('Parameter name')
 
