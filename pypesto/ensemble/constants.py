@@ -6,12 +6,12 @@ This is for (string) constants used in the ensemble module.
 from enum import Enum
 from typing import Union
 
-from ..predict.constants import (  # noqa: F401
+from ..predict.constants import (
+    OUTPUT,
     OUTPUT_IDS,
+    OUTPUT_SENSI,
     PARAMETER_IDS,
     TIMEPOINTS,
-    OUTPUT,
-    OUTPUT_SENSI,
 )
 
 
