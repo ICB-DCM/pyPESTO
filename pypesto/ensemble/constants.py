@@ -6,7 +6,7 @@ This is for (string) constants used in the ensemble module.
 from enum import Enum
 from typing import Union
 
-from ..predict.constants import (
+from ..predict.constants import (  # noqa: F401
     OUTPUT,
     OUTPUT_IDS,
     OUTPUT_SENSI,
