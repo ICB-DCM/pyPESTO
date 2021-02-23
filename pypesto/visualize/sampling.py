@@ -638,6 +638,8 @@ def sampling_prediction_trajectories(
         n_row = int(np.round(np.sqrt(n_subplots)))
         n_col = int(np.ceil(n_subplots / n_row))
         fig, axes = plt.subplots(n_row, n_col, figsize=size, squeeze=False)
+        for ax in axes.flat[n_subplots:]:
+            ax.remove()
     else:
         fig = axes.get_figure()
         if not isinstance(axes, np.ndarray):
