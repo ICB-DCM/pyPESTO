@@ -330,7 +330,6 @@ class Ensemble:
     @staticmethod
     def from_sample(
             result: Result,
-            chain_index: int = 0,
             remove_burn_in: bool = True,
             chain_slice: slice = None,
             **kwargs,
@@ -341,8 +340,6 @@ class Ensemble:
         ----------
         result:
             A pyPESTO result that contains a sample result.
-        chain_index:
-            The chain that parameter vectors will be taken from.
         remove_burn_in:
             Exclude parameter vectors from the ensemble if they are in the
             "burn-in".
@@ -353,16 +350,11 @@ class Ensemble:
         -------
         The ensemble.
         """
-        x_vectors = result.sample_result.trace_x[chain_index]
+        x_vectors = result.sample_result.trace_x[0]
         if remove_burn_in:
-            if result.sample_result.burn_in is None or chain_index != 0:
-                burn_in = geweke_test(
-                    result,
-                    chain_index=chain_index,
-                    in_place=False,
-                )
-            else:
-                burn_in = result.sample_result.burn_in
+            if result.sample_result.burn_in is None:
+                geweke_test(result)
+            burn_in = result.sample_result.burn_in
             x_vectors = x_vectors[burn_in:]
         if chain_slice is not None:
             x_vectors = x_vectors[chain_slice]

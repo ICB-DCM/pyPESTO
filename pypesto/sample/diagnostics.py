@@ -8,14 +8,9 @@ from .auto_correlation import autocorrelation_sokal
 logger = logging.getLogger(__name__)
 
 
-def geweke_test(
-        result: Result,
-        zscore: float = 2.,
-        chain_index: int = 0,
-        in_place: bool = True,
-) -> int:
+def geweke_test(result: Result, zscore: float = 2.) -> int:
     """
-    Calculates the burn-in of an MCMC chain.
+    Calculates the burn-in of MCMC chains.
 
     Parameters
     ----------
@@ -23,10 +18,6 @@ def geweke_test(
         The pyPESTO result object with filled sample result.
     zscore:
         The Geweke test threshold. Default 2.
-    chain_index:
-        The index of the sample result chain.
-    in_place:
-        Write the "burn-in" directly to the provided result object.
 
     Returns
     -------
@@ -36,7 +27,7 @@ def geweke_test(
 
     """
     # Get parameter samples as numpy arrays
-    chain = np.asarray(result.sample_result.trace_x[chain_index])
+    chain = np.asarray(result.sample_result.trace_x[0])
 
     # Calculate burn in index
     burn_in = burn_in_by_sequential_geweke(chain=chain,
@@ -46,8 +37,7 @@ def geweke_test(
     logger.info(f'Geweke burn-in index: {burn_in}')
 
     # Fill in burn-in value into result
-    if in_place:
-        result.sample_result.burn_in = burn_in
+    result.sample_result.burn_in = burn_in
 
     return burn_in
 
