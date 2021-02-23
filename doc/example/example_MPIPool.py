@@ -11,7 +11,7 @@ from pypesto.engine.mpi_pool import MPIPoolEngine
 import os
 
 
-def setup_rosen_problem(n_starts: int = 10):
+def setup_rosen_problem(n_starts: int = 2):
     """Set up the Rosenbrock problem and return
     a pypesto.Problem"""
     objective = pypesto.Objective(fun=sp.optimize.rosen,
@@ -42,18 +42,12 @@ if __name__ == '__main__':
     # create optimizer
     optimizer = optimize.FidesOptimizer(verbose=0)
 
-    # result2 is the way to call the optimization with MPIPoolEngine.
-    result1 = optimize.minimize(
-            problem=problem, optimizer=optimizer,
-            n_starts=n_starts, engine=pypesto.engine.MultiProcessEngine())
-    result2 = optimize.minimize(
+    # result is the way to call the optimization with MPIPoolEngine.
+    result = optimize.minimize(
             problem=problem, optimizer=optimizer,
             n_starts=n_starts, engine=MPIPoolEngine())
 
     # saving optimization results to hdf5
-    file_name = 'temp_result1.h5'
+    file_name = 'temp_result.h5'
     opt_result_writer = OptimizationResultHDF5Writer(file_name)
-    opt_result_writer.write(result1)
-    file_name = 'temp_result2.h5'
-    opt_result_writer = OptimizationResultHDF5Writer(file_name)
-    opt_result_writer.write(result2)
+    opt_result_writer.write(result)

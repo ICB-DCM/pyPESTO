@@ -217,10 +217,21 @@ def test_mpipoolengine():
                            f'{path}/../../doc/example/example_MPIPool.py'])
 
     # read results
-    opt_result_reader = OptimizationResultHDF5Reader('temp_result1.h5')
+    opt_result_reader = OptimizationResultHDF5Reader('temp_result')
     result1 = opt_result_reader.read()
-    opt_result_reader = OptimizationResultHDF5Reader('temp_result2.h5')
-    result2 = opt_result_reader.read()
+    # set optimizer
+    optimizer = optimize.FidesOptimizer(verbose=0)
+    # initialize problem with x_guesses
+    x_guesses = np.array([result1.optimize_result.list[i]['x0']
+                          for i in range(2)])
+    problem = pypesto.Problem(objective=result1.problem.objective,
+                              ub=result1.problem.ub,
+                              lb=result1.problem.lb,
+                              x_guesses=x_guesses)
+    result2 = optimize.minimize(problem=problem,
+                                optimizer=optimizer,
+                                n_starts=2,
+                                engine=pypesto.engine.MultiProcessEngine())
 
     if(result1.optimize_result.list[0]['id'] ==
             result2.optimize_result.list[0]['id']):
@@ -243,5 +254,5 @@ def test_mpipoolengine():
                                     'do not agree for the engines.')
 
     # delete data
-    os.remove('temp_result1.h5')
-    os.remove('temp_result2.h5')
+    os.remove('temp_result.h5')
+
