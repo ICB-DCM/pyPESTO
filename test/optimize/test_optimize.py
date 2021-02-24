@@ -217,7 +217,7 @@ def test_mpipoolengine():
                            f'{path}/../../doc/example/example_MPIPool.py'])
 
     # read results
-    opt_result_reader = OptimizationResultHDF5Reader('temp_result')
+    opt_result_reader = OptimizationResultHDF5Reader('temp_result.h5')
     result1 = opt_result_reader.read()
     # set optimizer
     optimizer = optimize.FidesOptimizer(verbose=0)
