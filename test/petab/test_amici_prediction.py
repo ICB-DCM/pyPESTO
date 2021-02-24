@@ -5,9 +5,11 @@ This is for testing the pypesto.prediction.AmiciPredictor.
 import amici
 import pypesto
 import pypesto.petab
+import pypesto.ensemble
 import os
 import sys
 import numpy as np
+import pandas as pd
 import shutil
 import pytest
 import libsbml
@@ -87,6 +89,16 @@ def conversion_reaction_model():
         sys.path.insert(0, os.path.abspath(model_output_dir))
         model_module = amici.import_model_module(model_name, model_output_dir)
         model = model_module.getModel()
+    except RuntimeError as err:
+        print('pyPESTO unit test ran into an error importing the conversion '
+              'reaction enhanced model. This may happen due to an old version '
+              'of this model being present in your python path (e.g., '
+              'incorrect AMICI version comparing to the installed one). '
+              'Delete the conversion_reaction_enhanced model from your python '
+              'path and retry. Your python path is currently:')
+        print(sys.path)
+        print('Original error message:')
+        raise err
 
     return model
 
@@ -152,20 +164,20 @@ def test_simple_prediction(edata_objects):
     model, solver, edatas = edata_objects
     objective = pypesto.AmiciObjective(model, solver, edatas[0], 1)
     # now create a prediction object
-    default_prediction = pypesto.AmiciPredictor(objective)
+    default_predictor = pypesto.AmiciPredictor(objective)
     # let's set the parameter vector
     x = np.array([3., 0.5])
 
     # assert output is what it should look like when running in efault mode
-    p = default_prediction(x)
+    p = default_predictor(x)
     check_outputs(p, out=(0,), n_cond=1, n_timepoints=10, n_obs=2, n_par=2)
 
     # assert folder is there with all files
     # remove file is already existing
     if os.path.exists('deleteme'):
         shutil.rmtree('deleteme')
-    p = default_prediction(x, output_file='deleteme.csv', sensi_orders=(1,),
-                           output_format='csv')
+    p = default_predictor(x, output_file='deleteme.csv', sensi_orders=(1,),
+                          output_format='csv')
     check_outputs(p, out=(1,), n_cond=1, n_timepoints=10, n_obs=2, n_par=2)
     # check created files
     assert os.path.exists('deleteme')
@@ -174,7 +186,7 @@ def test_simple_prediction(edata_objects):
     shutil.rmtree('deleteme')
 
     # assert h5 file is there
-    p = default_prediction(x, output_file='deleteme.h5', output_format='h5')
+    p = default_predictor(x, output_file='deleteme.h5', output_format='h5')
     check_outputs(p, out=(0,), n_cond=1, n_timepoints=10, n_obs=2, n_par=2)
     assert os.path.exists('deleteme.h5')
     os.remove('deleteme.h5')
@@ -246,7 +258,7 @@ def test_complex_prediction(edata_objects):
     model, solver, edatas = edata_objects
     objective = pypesto.AmiciObjective(model, solver, edatas, 1)
     # now create a prediction object
-    complex_prediction = pypesto.AmiciPredictor(
+    complex_predictor = pypesto.AmiciPredictor(
         objective, max_chunk_size=2, post_processor=pp_out,
         post_processor_sensi=pps_out, post_processor_time=ppt_out,
         observable_ids=[f'ratio_{i_obs}' for i_obs in range(5)])
@@ -254,15 +266,15 @@ def test_complex_prediction(edata_objects):
     x = np.array([3., 0.5])
 
     # assert output is what it should look like when running in efault mode
-    p = complex_prediction(x, sensi_orders=(0, 1))
+    p = complex_predictor(x, sensi_orders=(0, 1))
     check_outputs(p, out=(0, 1), n_cond=2, n_timepoints=10, n_obs=5, n_par=2)
 
     # assert folder is there with all files
     # remove file is already existing
     if os.path.exists('deleteme'):
         shutil.rmtree('deleteme')
-    p = complex_prediction(x, output_file='deleteme.csv', sensi_orders=(0, 1),
-                           output_format='csv')
+    p = complex_predictor(x, output_file='deleteme.csv', sensi_orders=(0, 1),
+                          output_format='csv')
     check_outputs(p, out=(0, 1), n_cond=2, n_timepoints=10, n_obs=5, n_par=2)
     # check created files
     assert os.path.exists('deleteme')
@@ -273,8 +285,8 @@ def test_complex_prediction(edata_objects):
     shutil.rmtree('deleteme')
 
     # assert h5 file is there
-    p = complex_prediction(x, output_file='deleteme.h5', sensi_orders=(0, 1),
-                           output_format='h5')
+    p = complex_predictor(x, output_file='deleteme.h5', sensi_orders=(0, 1),
+                          output_format='h5')
     check_outputs(p, out=(0, 1), n_cond=2, n_timepoints=10, n_obs=5, n_par=2)
     assert os.path.exists('deleteme.h5')
     os.remove('deleteme.h5')
@@ -294,9 +306,63 @@ def test_petab_prediction():
     petab_problem.model_name = f'{model_name}_petab'
     importer = pypesto.petab.PetabImporter(petab_problem)
     # create prediction via PAteb
-    prediction = importer.create_prediction()
+    predictor = importer.create_prediction()
 
-    # run test
-    p = prediction(np.array(petab_problem.x_nominal_free_scaled),
-                   sensi_orders=(0, 1))
+    # ===== run test for prediction ===========================================
+    p = predictor(np.array(petab_problem.x_nominal_free_scaled),
+                  sensi_orders=(0, 1))
     check_outputs(p, out=(0, 1), n_cond=1, n_timepoints=10, n_obs=1, n_par=2)
+    # check outputs for simulation and measurement dataframes
+    importer.prediction_to_petab_measurement_df(p, predictor)
+    importer.prediction_to_petab_simulation_df(p, predictor)
+
+    # ===== run test for ensemble prediction ==================================
+    # read a set of ensemble vectors from the csv
+    ensemble_file = os.path.join(
+        os.path.dirname(__file__), '..', '..', 'doc', 'example', model_name,
+        'parameter_ensemble.tsv')
+    ensemble = pypesto.ensemble.read_from_csv(
+        ensemble_file, lower_bound=petab_problem.get_lb(),
+        upper_bound=petab_problem.get_ub())
+    isinstance(ensemble, pypesto.ensemble.Ensemble)
+
+    # check summary creation and identifiability analysis
+    summary = ensemble.compute_summary(percentiles_list=[10, 25, 75, 90])
+    assert isinstance(summary, dict)
+    assert set(summary.keys()) == {'mean', 'std', 'median', 'percentile 10',
+                                   'percentile 25', 'percentile 75',
+                                   'percentile 90'}
+
+    parameter_identifiability = ensemble.check_identifiability()
+    assert isinstance(parameter_identifiability, pd.DataFrame)
+
+    # perform a prediction for the ensemble
+    ensemble_prediction = ensemble.predict(predictor=predictor)
+    # check some of the basic functionality: compressing output to large arrays
+    ensemble_prediction.condense_to_arrays()
+    for field in ('timepoints', 'output', 'output_sensi'):
+        isinstance(ensemble_prediction.prediction_arrays[field], np.ndarray)
+
+    # computing summaries
+    ensemble_prediction.compute_summary(percentiles_list=[5, 20, 80, 95])
+    isinstance(ensemble_prediction, pypesto.ensemble.EnsemblePrediction)
+
+    # define some short hands
+    pred = ensemble_prediction.prediction_summary
+    keyset = {'mean', 'std', 'median', 'percentile 5', 'percentile 20',
+              'percentile 80', 'percentile 95'}
+    # check some properties
+    assert set(pred.keys()) == keyset
+    for key in keyset:
+        assert pred[key].comment == key
+
+    # check some particular properties of this example
+    assert pred['mean'].conditions[0].output[0, 0] == 1.
+    assert pred['median'].conditions[0].output[0, 0] == 1.
+    assert pred['std'].conditions[0].output[0, 0] == 0.
+
+    # check writing to h5
+    pypesto.ensemble.write_ensemble_prediction_to_h5(ensemble_prediction,
+                                                     'deleteme_ensemble.h5')
+    assert os.path.exists('deleteme_ensemble.h5')
+    os.remove('deleteme_ensemble.h5')

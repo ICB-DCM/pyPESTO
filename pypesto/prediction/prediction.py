@@ -5,12 +5,13 @@ from warnings import warn
 from time import time
 from typing import Sequence, Union, Dict
 from pathlib import Path
+import os
 
 from .constants import (OBSERVABLE_IDS, PARAMETER_IDS, TIMEPOINTS, OUTPUT,
-                        OUTPUT_SENSI, TIME, CSV)
+                        OUTPUT_SENSI, TIME, CSV, CONDITION_IDS)
 
 
-class PredictionConditionResult():
+class PredictionConditionResult:
     """
     This class is a light-weight wrapper for the prediction of one simulation
     condition of an amici model. It should provide a common api how amici
@@ -56,7 +57,7 @@ class PredictionConditionResult():
         yield 'output_sensi', self.output_sensi
 
 
-class PredictionResult():
+class PredictionResult:
     """
     This class is a light-weight wrapper around predictions from pyPESTO made
     via an amici model. It's only purpose is to have fixed format/api, how
@@ -67,7 +68,8 @@ class PredictionResult():
 
     def __init__(self,
                  conditions: Sequence[Union[PredictionConditionResult, Dict]],
-                 condition_ids: Sequence[str] = None):
+                 condition_ids: Sequence[str] = None,
+                 comment: str = None):
         """
         Constructor.
 
@@ -79,6 +81,8 @@ class PredictionResult():
             IDs or names of the simulation conditions, which belong to this
             prediction (e.g., PEtab uses tuples of preequilibration condition
             and simulation conditions)
+        comment:
+            An additional note, which can be attached to this prediction
         """
         # cast the result per condition
         self.conditions = [cond if isinstance(cond, PredictionConditionResult)
@@ -90,6 +94,9 @@ class PredictionResult():
             self.condition_ids = [f'condition_{i_cond}'
                                   for i_cond in range(len(conditions))]
 
+        # add a comment to this prediction if available
+        self.comment = comment
+
     def __iter__(self):
         parameter_ids = None
         if self.conditions:
@@ -97,6 +104,7 @@ class PredictionResult():
 
         yield 'conditions', [dict(cond) for cond in self.conditions]
         yield 'condition_ids', self.condition_ids
+        yield 'comment', self.comment
         yield 'parameter_ids', parameter_ids
 
     def write_to_csv(self, output_file: str):
@@ -170,36 +178,54 @@ class PredictionResult():
                     result.to_csv(filename, sep='\t')
 
     def write_to_h5(self,
-                    output_file: str):
+                    output_file: str,
+                    base_path: str = None):
         """
-        This method saves predictions to an h5 file.
+        This method saves predictions to an h5 file. It appends to the file if
+        the file already exists.
 
         Parameters
         ----------
         output_file:
             path to file/folder to which results will be written
-        """
-        output_path = Path(output_file).with_suffix('.h5')
-        output_path = self._check_existence(output_path)
 
-        with h5py.File(output_path, 'w') as f:
+        base_path:
+            base path in the h5 file
+        """
+        # check if the file exists and append to it in case it does
+        output_path = Path(output_file).with_suffix('.h5')
+        filemode = 'w'
+        if os.path.exists(output_path):
+            filemode = 'r+'
+
+        base = Path('.')
+        if base_path is not None:
+            base = Path(base_path)
+
+        with h5py.File(output_path, filemode) as f:
             # loop over conditions (i.e., amici edata objects)
             if self.conditions and self.conditions[0].x_names is not None:
-                f.create_dataset(PARAMETER_IDS,
+                f.create_dataset(os.path.join(base, PARAMETER_IDS),
                                  data=self.conditions[0].x_names)
+            if self.condition_ids is not None:
+                f.create_dataset(os.path.join(base, CONDITION_IDS),
+                                 data=self.condition_ids)
             for i_cond, cond in enumerate(self.conditions):
                 # each conditions gets a group of its own
-                f.create_group(str(i_cond))
+                f.create_group(os.path.join(base, str(i_cond)))
                 # save observable IDs
-                f.create_dataset(f'{i_cond}/{OBSERVABLE_IDS}',
+                f.create_dataset(os.path.join(base, str(i_cond),
+                                              OBSERVABLE_IDS),
                                  data=cond.observable_ids)
                 # save timepoints, outputs, and sensitivities of outputs
-                f.create_dataset(f'{i_cond}/{TIMEPOINTS}',
+                f.create_dataset(os.path.join(base, str(i_cond), TIMEPOINTS),
                                  data=cond.timepoints)
                 if cond.output is not None:
-                    f.create_dataset(f'{i_cond}/{OUTPUT}', data=cond.output)
+                    f.create_dataset(os.path.join(base, str(i_cond), OUTPUT),
+                                     data=cond.output)
                 if cond.output_sensi is not None:
-                    f.create_dataset(f'{i_cond}/{OUTPUT_SENSI}',
+                    f.create_dataset(os.path.join(base, str(i_cond),
+                                                  OUTPUT_SENSI),
                                      data=cond.output_sensi)
 
     @staticmethod
