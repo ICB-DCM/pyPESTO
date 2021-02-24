@@ -5,7 +5,8 @@ import pypesto
 import numpy as np
 import scipy as sp
 import pypesto.optimize as optimize
-from pypesto.store import OptimizationResultHDF5Writer
+from pypesto.store import (OptimizationResultHDF5Writer,
+                           ProblemHDF5Writer)
 # you need to manually import the MPIPoolEninge
 from pypesto.engine.mpi_pool import MPIPoolEngine
 import os
@@ -50,4 +51,6 @@ if __name__ == '__main__':
     # saving optimization results to hdf5
     file_name = 'temp_result.h5'
     opt_result_writer = OptimizationResultHDF5Writer(file_name)
+    problem_writer = ProblemHDF5Writer(file_name)
+    problem_writer.write(problem)
     opt_result_writer.write(result)
