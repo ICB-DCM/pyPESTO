@@ -255,4 +255,3 @@ def test_mpipoolengine():
 
     # delete data
     os.remove('temp_result.h5')
-
