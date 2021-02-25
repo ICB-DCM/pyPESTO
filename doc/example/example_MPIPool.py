@@ -9,7 +9,6 @@ from pypesto.store import (OptimizationResultHDF5Writer,
                            ProblemHDF5Writer)
 # you need to manually import the MPIPoolEninge
 from pypesto.engine.mpi_pool import MPIPoolEngine
-import os
 
 
 def setup_rosen_problem(n_starts: int = 2):

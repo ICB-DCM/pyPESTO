@@ -8,6 +8,7 @@ import warnings
 import re
 import nlopt
 import fides
+import scipy as sp
 import itertools as itt
 import os
 import subprocess
