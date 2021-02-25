@@ -20,6 +20,7 @@ import arviz
 from pymc3 import Model, Point
 from pymc3.model import FreeRV, modelcontext
 # from pymc3.backends import HDF5
+from .step_methods import create_step_method
 from .hdf5 import HDF5  # Bugfixes
 from pymc3.backends.base import MultiTrace
 from pymc3.sampling import _choose_backend
@@ -80,7 +81,7 @@ class ResumablePymc3Sampler:
         if step is None:
             step = {}
         if isinstance(step, dict):
-            step.default('init', 'adapt_diag')
+            step.setdefault('init', 'adapt_diag')
             step, _start = create_step_method(model, **step)
             assert isinstance(_start, list) and len(_start) == 1
             _start = _start[0]

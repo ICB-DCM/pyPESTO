@@ -166,10 +166,10 @@ def create_pymc3_model(problem: Problem,
                 theta = tt.as_tensor_variable(k)
 
             # Use a DensityDist for the log-posterior
-            # NB this only works because of a bug in pymc3:
-            #    observed is rejected if it is a FreeRV,
-            #    but not if it is converted to a tensor variable
-            #    or if it is a TransformedRV
+            # TODO PyMC3 does not allow a free variable to be passed as the observed value,
+            #      but tensor variable or TransformedRV are accepted (the latter case is maybe a bug?)
+            #      So this is really unsupported and potentially dangerous behaviour...
+            #      Maybe pymc3.Potential can be a cleaner solution?
             pm.DensityDist(pymc3_logp_parname(x_names),
                            logp=log_post_fun, observed=theta)
 
