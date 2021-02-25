@@ -12,7 +12,7 @@ from pypesto.engine.mpi_pool import MPIPoolEngine
 
 
 def setup_rosen_problem(n_starts: int = 2):
-    """Set up the Rosenbrock problem and return
+    """Set up the rosenbrock problem and return
     a pypesto.Problem"""
     objective = pypesto.Objective(fun=sp.optimize.rosen,
                                   grad=sp.optimize.rosen_der,
