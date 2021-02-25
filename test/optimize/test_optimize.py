@@ -8,12 +8,17 @@ import warnings
 import re
 import nlopt
 import fides
+import scipy as sp
 import itertools as itt
+import os
+import subprocess
 
 import pypesto
 import pypesto.optimize as optimize
+from pypesto.store import OptimizationResultHDF5Reader
 
 from ..util import rosen_for_sensi
+from numpy.testing import assert_almost_equal
 
 
 @pytest.fixture(params=['separated', 'integrated'])
@@ -199,3 +204,58 @@ def check_minimize(objective, library, solver, allow_failed_starts=False):
     ]:
         assert np.isfinite(result.optimize_result.list[0]['fval'])
         assert result.optimize_result.list[0]['x'] is not None
+
+
+def test_mpipoolengine():
+    """
+    Test the MPIPoolEngine by calling an example script with mpiexec.
+    """
+    # get the path to this file:
+    path = os.path.dirname(__file__)
+    # run the example file.
+    subprocess.check_call(['mpiexec', '-np', '2', 'python', '-m',
+                           'mpi4py.futures',
+                           f'{path}/../../doc/example/example_MPIPool.py'])
+
+    # read results
+    opt_result_reader = OptimizationResultHDF5Reader('temp_result.h5')
+    result1 = opt_result_reader.read()
+    # set optimizer
+    optimizer = optimize.FidesOptimizer(verbose=0)
+    # initialize problem with x_guesses and objective
+    objective = pypesto.Objective(fun=sp.optimize.rosen,
+                                  grad=sp.optimize.rosen_der,
+                                  hess=sp.optimize.rosen_hess)
+    x_guesses = np.array([result1.optimize_result.list[i]['x0']
+                          for i in range(2)])
+    problem = pypesto.Problem(objective=objective,
+                              ub=result1.problem.ub,
+                              lb=result1.problem.lb,
+                              x_guesses=x_guesses)
+    result2 = optimize.minimize(problem=problem,
+                                optimizer=optimizer,
+                                n_starts=2,
+                                engine=pypesto.engine.MultiProcessEngine())
+
+    if(result1.optimize_result.list[0]['id'] ==
+            result2.optimize_result.list[0]['id']):
+        assert_almost_equal(result1.optimize_result.list[0]['x'],
+                            result2.optimize_result.list[0]['x'],
+                            err_msg='The final parameter values '
+                                    'do not agree for the engines.')
+        assert_almost_equal(result1.optimize_result.list[1]['x'],
+                            result2.optimize_result.list[1]['x'],
+                            err_msg='The final parameter values '
+                                    'do not agree for the engines.')
+    else:
+        assert_almost_equal(result1.optimize_result.list[0]['x'],
+                            result2.optimize_result.list[1]['x'],
+                            err_msg='The final parameter values '
+                                    'do not agree for the engines.')
+        assert_almost_equal(result1.optimize_result.list[1]['x'],
+                            result2.optimize_result.list[0]['x'],
+                            err_msg='The final parameter values '
+                                    'do not agree for the engines.')
+
+    # delete data
+    os.remove('temp_result.h5')
