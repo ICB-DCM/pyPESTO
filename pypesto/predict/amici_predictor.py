@@ -1,5 +1,6 @@
 import numpy as np
 from typing import Sequence, Union, Callable, Tuple, List
+from copy import deepcopy
 
 from .constants import (MODE_FUN, OUTPUT_IDS, TIMEPOINTS, OUTPUT,
                         OUTPUT_SENSI, CSV, H5, AMICI_T, AMICI_X, AMICI_SX,
@@ -25,6 +26,7 @@ class AmiciPredictor:
     """
     def __init__(self,
                  amici_objective: AmiciObjective,
+                 amici_output_fields: Union[Sequence[str], None] = None,
                  post_processor: Union[Callable, None] = None,
                  post_processor_sensi: Union[Callable, None] = None,
                  post_processor_time: Union[Callable, None] = None,
@@ -39,6 +41,9 @@ class AmiciPredictor:
         ----------
         amici_objective:
             An objective object, which will be used to get model simulations
+        amici_output_fields:
+            keys that exist in the return data object from AMICI, which should
+            be available for the post-processors
         post_processor:
             A callable function which applies postprocessing to the simulation
             results and possibly defines different outputs than those of
@@ -84,11 +89,21 @@ class AmiciPredictor:
         self.post_processor_time = post_processor_time
         self.condition_ids = condition_ids
 
+        # If the user takes care of everything we can skip default readouts
+        self.skip_default_outputs = False
+        if post_processor is not None and post_processor_sensi is not None \
+                and post_processor_time is not None:
+            self.skip_default_outputs = True
+
+        self.output_ids = output_ids
         if output_ids is None:
             self.output_ids = \
                 amici_objective.amici_model.getObservableIds()
-        else:
-            self.output_ids = output_ids
+
+        if amici_output_fields is None:
+            amici_output_fields = [AMICI_STATUS, AMICI_T, AMICI_X, AMICI_Y,
+                                   AMICI_SX, AMICI_SY]
+        self.amici_output_fields = amici_output_fields
 
     def __call__(
             self,
@@ -224,7 +239,8 @@ class AmiciPredictor:
             # call amici
             self._wrap_call_to_amici(
                 amici_outputs=amici_outputs, x=x, sensi_orders=sensi_orders,
-                mode=mode, edatas=self.amici_objective.edatas[ids])
+                parameter_mapping=self.amici_objective.parameter_mapping[ids],
+                edatas=self.amici_objective.edatas[ids], mode=mode)
 
         def _default_output(amici_outputs):
             """
@@ -262,7 +278,8 @@ class AmiciPredictor:
             return timepoints, outputs, outputs_sensi
 
         # Get default output
-        timepoints, outputs, outputs_sensi = _default_output(amici_outputs)
+        if not self.skip_default_outputs:
+            timepoints, outputs, outputs_sensi = _default_output(amici_outputs)
 
         # postprocess (use original Amici outputs)
         if self.post_processor is not None:
@@ -275,7 +292,7 @@ class AmiciPredictor:
         return timepoints, outputs, outputs_sensi
 
     def _wrap_call_to_amici(self, amici_outputs, x, sensi_orders, mode,
-                            edatas):
+                            parameter_mapping, edatas):
         """
         The only purpose of this function is to encapsulate the call to amici:
         This allows to use variable scoping as a mean to clean up the memory
@@ -283,11 +300,11 @@ class AmiciPredictor:
         datasets are used.
         """
         chunk = self.amici_objective(x=x, sensi_orders=sensi_orders, mode=mode,
+                                     parameter_mapping=parameter_mapping,
                                      edatas=edatas,  return_dict=True)
         for rdata in chunk[RDATAS]:
-            amici_outputs.append({AMICI_STATUS: rdata[AMICI_STATUS],
-                                  AMICI_T: rdata[AMICI_T],
-                                  AMICI_X: rdata[AMICI_X],
-                                  AMICI_SX: rdata[AMICI_SX],
-                                  AMICI_Y: rdata[AMICI_Y],
-                                  AMICI_SY: rdata[AMICI_SY]})
+            amici_outputs.append({
+                output_field: deepcopy(rdata[output_field])
+                for output_field in self.amici_output_fields
+            })
+        del chunk

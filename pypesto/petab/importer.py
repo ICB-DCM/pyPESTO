@@ -273,6 +273,7 @@ class PetabImporter(AmiciObjectBuilder):
     def create_predictor(
             self,
             objective: AmiciObjective = None,
+            amici_output_fields: Sequence[str] = None,
             post_processor: Union[Callable, None] = None,
             post_processor_sensi: Union[Callable, None] = None,
             post_processor_time: Union[Callable, None] = None,
@@ -286,6 +287,9 @@ class PetabImporter(AmiciObjectBuilder):
         ----------
         objective:
             An objective object, which will be used to get model simulations
+        amici_output_fields:
+            keys that exist in the return data object from AMICI, which should
+            be available for the post-processors
         post_processor:
             A callable function which applies postprocessing to the simulation
             results. Default are the observables of the AMICI model.
@@ -346,6 +350,7 @@ class PetabImporter(AmiciObjectBuilder):
         # wrap around AmiciPredictor
         predictor = AmiciPredictor(
             amici_objective=objective,
+            amici_output_fields=amici_output_fields,
             post_processor=post_processor,
             post_processor_sensi=post_processor_sensi,
             post_processor_time=post_processor_time,
