@@ -19,10 +19,10 @@ def work(pickled_task):
 
 class MPIPoolEngine(Engine):
     """
-    Parallelize the task execution using 
+    Parallelize the task execution using
     `mpi4py <https://mpi4py.readthedocs.io/en/stable/>`_.
     
-    To be called with: 
+    To be called with:
     ``mpiexec -np #Workers+1 python -m mpi4py.futures YOURFILE.py``
     """
 
