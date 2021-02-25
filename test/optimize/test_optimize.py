@@ -237,8 +237,8 @@ def test_mpipoolengine():
                                 n_starts=2,
                                 engine=pypesto.engine.MultiProcessEngine())
 
-    if(result1.optimize_result.list[0]['x0'] ==
-            result2.optimize_result.list[0]['x0']):
+    if(result1.optimize_result.list[0]['id'] ==
+            result2.optimize_result.list[0]['id']):
         assert_almost_equal(result1.optimize_result.list[0]['x'],
                             result2.optimize_result.list[0]['x'],
                             err_msg='The final parameter values '
