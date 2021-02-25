@@ -146,7 +146,7 @@ def _get_level_percentiles(level: float) -> Tuple[float, float]:
 def _get_statistic_data(
         summary: Dict[str, PredictionResult],
         statistic: str,
-        condition_index: int,
+        condition_id: str,
         output_id: str,
 ) -> Tuple[Sequence[float], Sequence[float]]:
     """Get statistic-, condition-, and output-specific data.
@@ -157,11 +157,10 @@ def _get_statistic_data(
         A `pypesto.ensemble.EnsemblePrediction.prediction_summary`, used as the
         source of annotated data to subset.
     statistic:
-        The predicted statistic, e.g. `MEDIAN` or
+        Select data for a specific statistic by its label, e.g. `MEDIAN` or
         `get_percentile_label(95)`.
-    condition_index:
-        Select data for a specific condition by its index in a
-        `PredictionResult.condition_ids` object.
+    condition_id:
+        Select data for a specific condition by its ID.
     output_id:
         Select data for a specific output by its ID.
 
@@ -171,6 +170,7 @@ def _get_statistic_data(
     sequences, where the first sequence is time points, and the second
     sequence is predicted values at the corresponding time points.
     """
+    condition_index = summary[statistic].condition_ids.index(condition_id)
     condition_result = summary[statistic].conditions[condition_index]
     t = condition_result.timepoints
     output_index = condition_result.output_ids.index(output_id)
@@ -228,7 +228,7 @@ def _plot_trajectories_by_condition(
                 *_get_statistic_data(
                     summary,
                     MEDIAN,
-                    condition_index,
+                    condition_id,
                     output_id
                 ),
                 'k-',
@@ -246,13 +246,13 @@ def _plot_trajectories_by_condition(
                 t_lower, lower_data = _get_statistic_data(
                     summary,
                     lower_label,
-                    condition_index,
+                    condition_id,
                     output_id,
                 )
                 t_upper, upper_data = _get_statistic_data(
                     summary,
                     upper_label,
-                    condition_index,
+                    condition_id,
                     output_id,
                 )
                 # Timepoints must match, or `upper_data` will be plotted at
@@ -301,7 +301,7 @@ def _plot_trajectories_by_output(
         ax = axes.flat[output_index]
         ax.set_title(f'Trajectory: {labels[output_id]}')
         # Each subplot is divided by conditions, with vertical lines.
-        for condition_index, _condition_id in enumerate(condition_ids):
+        for condition_index, condition_id in enumerate(condition_ids):
             if condition_index != 0:
                 ax.axvline(
                     t0,
@@ -313,7 +313,7 @@ def _plot_trajectories_by_output(
             t_median, y_median = _get_statistic_data(
                 summary,
                 MEDIAN,
-                condition_index,
+                condition_id,
                 output_id,
             )
             # Shift the timepoints for the median plot to start at the end of
@@ -336,13 +336,13 @@ def _plot_trajectories_by_output(
                 t_lower, lower_data = _get_statistic_data(
                     summary,
                     lower_label,
-                    condition_index,
+                    condition_id,
                     output_id,
                 )
                 t_upper, upper_data = _get_statistic_data(
                     summary,
                     upper_label,
-                    condition_index,
+                    condition_id,
                     output_id,
                 )
                 # Shift the timepoints for the `fill_between` plots to start at
@@ -565,6 +565,8 @@ def sampling_prediction_trajectories(
         axis_label_padding: int = 50,
         groupby: str = CONDITION,
         condition_gap: float = 0.01,
+        condition_ids: Sequence[str] = None,
+        output_ids: Sequence[str] = None,
 ) -> matplotlib.axes.Axes:
     """Plot MCMC-based prediction confidence intervals for the
     model states or outputs. One or various confidence levels
@@ -595,6 +597,10 @@ def sampling_prediction_trajectories(
     condition_gap:
         Gap between conditions when
         `groupby == pypesto.predict.constants.CONDITION`.
+    condition_ids:
+        If provided, only data for the provided condition IDs will be plotted.
+    output_ids:
+        If provided, only data for the provided output IDs will be plotted.
 
     Returns
     -------
@@ -615,7 +621,11 @@ def sampling_prediction_trajectories(
 
     summary = ensemble_prediction.compute_summary(percentiles_list=percentiles)
 
-    condition_ids, output_ids = _get_condition_and_output_ids(summary)
+    all_condition_ids, all_output_ids = _get_condition_and_output_ids(summary)
+    if condition_ids is None:
+        condition_ids = all_condition_ids
+    if output_ids is None:
+        output_ids = all_output_ids
 
     # Set default labels for any unspecified labels.
     labels = {id_: labels.get(id_, id_) for id_ in condition_ids + output_ids}
