@@ -221,10 +221,13 @@ def test_mpipoolengine():
     result1 = opt_result_reader.read()
     # set optimizer
     optimizer = optimize.FidesOptimizer(verbose=0)
-    # initialize problem with x_guesses
+    # initialize problem with x_guesses and objective
+    objective = pypesto.Objective(fun=sp.optimize.rosen,
+                                  grad=sp.optimize.rosen_der,
+                                  hess=sp.optimize.rosen_hess)
     x_guesses = np.array([result1.optimize_result.list[i]['x0']
                           for i in range(2)])
-    problem = pypesto.Problem(objective=result1.problem.objective,
+    problem = pypesto.Problem(objective=objective,
                               ub=result1.problem.ub,
                               lb=result1.problem.lb,
                               x_guesses=x_guesses)
