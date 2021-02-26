@@ -1,8 +1,13 @@
 name: CI
 
 # trigger
-on: [push]
+on:
+  push:
+    branches:
+    - master
+  pull_request:
 
+# jobs
 jobs:
   base:
     runs-on: ubuntu-latest
@@ -129,7 +134,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: [3.8]
+        python-version: [3.9]
 
     steps:
     - name: Check out repository
@@ -154,3 +159,97 @@ jobs:
     - name: Run flake8
       timeout-minutes: 1
       run: ./run_flake8.sh
+
+  notebooks1:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: [3.8]
+
+    steps:
+    - name: Check out repository
+      uses: actions/checkout@v2
+
+    - name: Prepare python ${{ matrix.python-version }}
+      uses: actions/setup-python@v1
+      with:
+        python-version: ${{ matrix.python-version }}
+
+    - name: Cache
+      uses: actions/cache@v1
+      with:
+        path: ~/.cache
+        key: ${{ runner.os }}-ci-notebooks1
+
+    - name: Install dependencies
+      run: |
+        .github/workflows/install_deps.sh petab ipopt
+        pip install jupyter
+        pip install -e .[petab,amici,ipopt,pyswarm,pymc3,cmaes,nlopt,fides]
+
+    - name: Run notebooks
+      timeout-minutes: 20
+      run: |
+        test/run_notebook.sh 1
+
+  notebooks2:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: [3.8]
+
+    steps:
+    - name: Check out repository
+      uses: actions/checkout@v2
+
+    - name: Prepare python ${{ matrix.python-version }}
+      uses: actions/setup-python@v1
+      with:
+        python-version: ${{ matrix.python-version }}
+
+    - name: Cache
+      uses: actions/cache@v1
+      with:
+        path: ~/.cache
+        key: ${{ runner.os }}-ci-notebooks2
+
+    - name: Install dependencies
+      run: |
+        .github/workflows/install_deps.sh petab
+        pip install jupyter
+        pip install -e .[petab,amici,pymc3]
+
+    - name: Run notebooks
+      timeout-minutes: 20
+      run: |
+        test/run_notebook.sh 2
+
+  docs:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: [3.9]
+
+    steps:
+    - name: Check out repository
+      uses: actions/checkout@v2
+
+    - name: Prepare python ${{ matrix.python-version }}
+      uses: actions/setup-python@v1
+      with:
+        python-version: ${{ matrix.python-version }}
+
+    - name: Cache
+      uses: actions/cache@v1
+      with:
+        path: ~/.cache
+        key: ${{ runner.os }}-ci-docs
+
+    - name: Install dependencies
+      run: |
+        .github/workflows/install_deps.sh petab docs
+        pip install -e .[amici,petab,docs]
+
+    - name: Build docs
+      timeout-minutes: 10
+      run: sphinx-build -W -b html doc/ doc/_build/html
