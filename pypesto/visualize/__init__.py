@@ -34,3 +34,9 @@ from .sampling import (sampling_fval_trace,
                        sampling_parameters_trace,
                        sampling_scatter,
                        sampling_1d_marginals)
+from .ensemble import ensemble_identifiability
+from .dimension_reduction import (projection_scatter_umap,
+                                  projection_scatter_umap_original,
+                                  projection_scatter_pca,
+                                  ensemble_crosstab_scatter_lowlevel,
+                                  ensemble_scatter_lowlevel)

@@ -42,6 +42,7 @@ try:
 except ImportError:
     fides = None
 
+
 EXITFLAG_LOADED_FROM_FILE = -99
 
 logger = logging.getLogger(__name__)
@@ -229,7 +230,6 @@ def read_result_from_file(problem: Problem, history_options: HistoryOptions,
 class Optimizer(abc.ABC):
     """
     This is the optimizer base class, not functional on its own.
-
     An optimizer takes a problem, and possibly a start point, and then
     performs an optimization. It returns an OptimizerResult.
     """
@@ -252,7 +252,6 @@ class Optimizer(abc.ABC):
     ) -> OptimizerResult:
         """"
         Perform optimization.
-
         Parameters
         ----------
         problem:
@@ -276,9 +275,19 @@ class Optimizer(abc.ABC):
         return None
 
 
+def check_finite_bounds(lb, ub):
+    """Raise if bounds are not finite."""
+    if not np.isfinite(lb).all() or not np.isfinite(ub).all():
+        raise ValueError('Selected optimizer cannot work with unconstrained '
+                         'optimization problems.')
+
+
 class ScipyOptimizer(Optimizer):
     """
     Use the SciPy optimizers.
+    Find details on the optimizer and configuration options at:
+    https://docs.scipy.org/doc/scipy/reference/generated/scipy.\
+        optimize.minimize.html#scipy.optimize.minimize
     """
 
     def __init__(self,
@@ -450,7 +459,8 @@ class IpoptOptimizer(Optimizer):
 
         if ipopt is None:
             raise ImportError(
-                "This optimizer requires an installation of ipopt."
+                "This optimizer requires an installation of ipopt. You can "
+                "install ipopt via `pip install ipopt`."
             )
 
         objective = problem.objective
@@ -509,16 +519,18 @@ class DlibOptimizer(Optimizer):
 
         lb = problem.lb
         ub = problem.ub
+        check_finite_bounds(lb, ub)
         objective = problem.objective
 
         if dlib is None:
             raise ImportError(
-                "This optimizer requires an installation of dlib."
+                "This optimizer requires an installation of dlib. You can "
+                "install dlib via `pip install dlib`."
             )
 
         if not objective.has_fun:
-            raise Exception("For this optimizer, the objective must "
-                            "be able to return function values.")
+            raise ValueError("For this optimizer, the objective must "
+                             "be able to return function values.")
 
         # dlib requires variable length arguments
         def get_fval_vararg(*x):
@@ -569,7 +581,11 @@ class PyswarmOptimizer(Optimizer):
         ub = problem.ub
         if pyswarm is None:
             raise ImportError(
-                "This optimizer requires an installation of pyswarm.")
+                "This optimizer requires an installation of pyswarm.You can "
+                "install pyswarm via `pip install pyswarm."
+            )
+
+        check_finite_bounds(lb, ub)
 
         xopt, fopt = pyswarm.pso(
             problem.objective.get_fval, lb, ub, **self.options)
@@ -623,12 +639,17 @@ class CmaesOptimizer(Optimizer):
 
         lb = problem.lb
         ub = problem.ub
+
+        check_finite_bounds(lb, ub)
+
         sigma0 = self.par_sigma0 * np.median(ub - lb)
         self.options['bounds'] = [lb, ub]
 
         if cma is None:
             raise ImportError(
-                "This optimizer requires an installation of cma.")
+                "This optimizer requires an installation of cma. You can "
+                "install cma via `pip install cma."
+            )
 
         result = cma.CMAEvolutionStrategy(
             x0, sigma0, inopts=self.options,
@@ -636,6 +657,62 @@ class CmaesOptimizer(Optimizer):
 
         optimizer_result = OptimizerResult(x=np.array(result[0]),
                                            fval=result[1])
+
+        return optimizer_result
+
+    def is_least_squares(self):
+        return False
+
+
+class ScipyDifferentialEvolutionOptimizer(Optimizer):
+    """
+    Global optimization using scipy's differential evolution optimizer.
+    Package homepage: https://docs.scipy.org/doc/scipy/reference/generated\
+        /scipy.optimize.differential_evolution.html
+
+    Parameters
+    ----------
+    options:
+        Optimizer options that are directly passed on to scipy's optimizer.
+
+
+    Examples
+    --------
+    Arguments that can be passed to options:
+
+    maxiter:
+        used to calculate the maximal number of funcion evaluations by
+        maxfevals = (maxiter + 1) * popsize * len(x)
+        Default: 100
+    popsize:
+        population size, default value 15
+    """
+
+    def __init__(self, options: Dict = None):
+        super().__init__()
+
+        if options is None:
+            options = {'maxiter': 100}
+        self.options = options
+
+    @fix_decorator
+    @time_decorator
+    @history_decorator
+    def minimize(
+            self,
+            problem: Problem,
+            x0: np.ndarray,
+            id: str,
+            history_options: HistoryOptions = None,
+    ) -> OptimizerResult:
+        bounds = list(zip(problem.lb, problem.ub))
+
+        result = scipy.optimize.differential_evolution(
+            problem.objective.get_fval, bounds, **self.options
+        )
+
+        optimizer_result = OptimizerResult(x=np.array(result.x),
+                                           fval=result.fun)
 
         return optimizer_result
 
@@ -656,16 +733,13 @@ class NLoptOptimizer(Optimizer):
         ----------
         method:
             Local or global Optimizer to use for minimization.
-
         local_method:
             Local method to use in combination with the global optimizer (
             for the MLSL family of solvers) or to solve a subproblem (for the
             AUGLAG family of solvers)
-
         options:
             Optimizer options. scipy option `maxiter` is automatically
             transformed into `maxeval` and takes precedence.
-
         local_options:
             Optimizer options for the local method
         """
@@ -680,10 +754,11 @@ class NLoptOptimizer(Optimizer):
             local_options = {}
         self.options = options
         self.local_options = local_options
+
         if nlopt is None:
             raise ImportError(
                 "This optimizer requires an installation of NLopt. You can "
-                "install NLopt via pip install nlopt.")
+                "install NLopt via `pip install nlopt`.")
 
         if method is None:
             method = nlopt.LD_LBFGS
@@ -700,7 +775,7 @@ class NLoptOptimizer(Optimizer):
             raise ValueError(f'Method "{method}" does not allow a local '
                              f'method. Please set `local_method` to None.')
 
-        local_methods = [
+        self.local_methods = [
             nlopt.LD_VAR1, nlopt.LD_VAR2, nlopt.LD_TNEWTON_PRECOND_RESTART,
             nlopt.LD_TNEWTON_PRECOND, nlopt.LD_TNEWTON_RESTART,
             nlopt.LD_TNEWTON, nlopt.LD_LBFGS,
@@ -708,7 +783,7 @@ class NLoptOptimizer(Optimizer):
             nlopt.LN_NELDERMEAD, nlopt.LN_PRAXIS, nlopt.LN_NEWUOA,
             nlopt.LN_NEWUOA_BOUND, nlopt.LN_BOBYQA, nlopt.LN_COBYLA,
         ]
-        global_methods = [
+        self.global_methods = [
             nlopt.GN_ESCH, nlopt.GN_ISRES, nlopt.GN_AGS, nlopt.GD_STOGO,
             nlopt.GD_STOGO_RAND, nlopt.G_MLSL, nlopt.G_MLSL_LDS, nlopt.GD_MLSL,
             nlopt.GD_MLSL_LDS, nlopt.GN_CRS2_LM, nlopt.GN_ORIG_DIRECT,
@@ -716,10 +791,11 @@ class NLoptOptimizer(Optimizer):
             nlopt.GN_DIRECT_L_NOSCAL, nlopt.GN_DIRECT_L_RAND,
             nlopt.GN_DIRECT_L_RAND_NOSCAL,
         ]
-        hybrid_methods = [
+        self.hybrid_methods = [
             nlopt.AUGLAG, nlopt.AUGLAG_EQ
         ]
-        methods = local_methods + global_methods + hybrid_methods
+        methods = self.local_methods + self.global_methods + \
+            self.hybrid_methods
 
         if method not in methods:
             raise ValueError(f'"{method}" is not a valid method. Valid '
@@ -727,9 +803,9 @@ class NLoptOptimizer(Optimizer):
 
         self.method = method
 
-        if local_method is not None and local_method not in local_methods:
+        if local_method is not None and local_method not in self.local_methods:
             raise ValueError(f'"{local_method}" is not a valid method. Valid '
-                             f'methods are: {local_methods}')
+                             f'methods are: {self.local_methods}')
 
         self.local_method = local_method
 
@@ -762,6 +838,9 @@ class NLoptOptimizer(Optimizer):
             local_opt = nlopt.opt(self.local_method, problem.dim)
             set_options(local_opt, self.local_options)
             opt.set_local_optimizer(local_opt)
+
+        if self.method in self.global_methods:
+            check_finite_bounds(problem.ub, problem.lb)
 
         opt.set_lower_bounds(problem.lb)
         opt.set_upper_bounds(problem.ub)
@@ -814,7 +893,6 @@ class FidesOptimizer(Optimizer):
         ----------
         options:
             Optimizer options.
-
         hessian_update:
             Hessian update strategy. If this is None, Hessian (approximation)
             computed by problem.objective will be used (default).
@@ -844,6 +922,12 @@ class FidesOptimizer(Optimizer):
             id: str,
             history_options: HistoryOptions = None,
     ) -> OptimizerResult:
+
+        if fides is None:
+            raise ImportError(
+                "This optimizer requires an installation of fides. You can "
+                "install fides via `pip install fides`."
+            )
 
         args = {'mode': MODE_FUN}
         if self.hessian_update is None:

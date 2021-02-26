@@ -10,7 +10,7 @@ class OptimizeOptions(dict):
     startpoint_resample:
         Flag indicating whether initial points are supposed to be resampled if
         function evaluation fails at the initial point
-    allow_failed_starts: bool, optional
+    allow_failed_starts:
         Flag indicating whether we tolerate that exceptions are thrown during
         the minimization process.
     """
