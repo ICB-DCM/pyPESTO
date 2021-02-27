@@ -659,9 +659,7 @@ def sampling_prediction_trajectories(
                 'Provided `axes` contains insufficient subplots. At least '
                 f'{n_subplots} are required.'
             )
-    artist_padding = (
-        axis_label_padding / (plt.gcf().get_size_inches()*fig.dpi)[0]
-    )
+    artist_padding = axis_label_padding / (fig.get_size_inches()*fig.dpi)[0]
 
     if groupby == CONDITION:
         _plot_trajectories_by_condition(
@@ -710,7 +708,7 @@ def sampling_prediction_trajectories(
         if groupby == OUTPUT
         else 'Time'
     )
-    plt.text(
+    fig.text(
         0.5,
         ymin - artist_padding,
         xlabel,
@@ -718,7 +716,7 @@ def sampling_prediction_trajectories(
         va='center',
         transform=fig.transFigure
     )
-    plt.text(
+    fig.text(
         xmin - artist_padding,
         0.5,
         'Simulated values',
