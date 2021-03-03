@@ -116,7 +116,8 @@ def process_offset_y(offset_y: Optional[float],
             warnings.warn("Offset specified by user is insufficient. "
                           "Ignoring specified offset and using " +
                           str(np.abs(min_val) + 1.) + " instead.")
-
+         else:
+            return offset_y
     else:
         # check whether scaling is lin or log10
         if scale_y == 'lin':
