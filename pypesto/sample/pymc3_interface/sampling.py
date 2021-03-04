@@ -2,7 +2,7 @@
 Utilities for sampling: apply jitter to a starting point;
 resumable and checkpointable sampler
 """
-
+from __future__ import annotations
 import sys
 import time
 import os
@@ -96,11 +96,15 @@ class ResumablePymc3Sampler:
             raise TypeError('starting point start must be a dictionary')
 
         if outvars is not None:
-            # Convert variables given by name
             if not isinstance(outvars, (list, set)):
                 outvars = [outvars]
-            outvars = set(outvars)
-            outvars = ResumablePymc3Sampler._vars_from_varnames(model, outvars)
+            outvars = list(outvars)
+            if len(outvars) == 0:
+                raise ValueError('outvars is a empty list!')
+            elif isinstance(outvars[0], str):
+                # Convert variables given by name
+                outvars = set(outvars)
+                outvars = ResumablePymc3Sampler._vars_from_varnames(model, outvars)
 
         elif problem is not None:
             # Auto-determine variables from pyPESTO problem
@@ -139,6 +143,7 @@ class ResumablePymc3Sampler:
 
         # Save to fields
         self._model = model
+        self._outvars = outvars
         self._varnames = [var.name for var in outvars]
         self._start = start
         self._step = step
@@ -155,6 +160,20 @@ class ResumablePymc3Sampler:
         # if we save before drawing even a sample,
         # we need the sampler_vars to be saved in the trace
         self._setup_trace()
+
+    def copy_and_discard_history(self, **kwargs):
+        """
+        Copies an existing `ResumablePymc3Sampler`,
+        preserving the tuning and the final point
+        but forgetting all history
+        """
+        kwargs.setdefault('progressbar', self._progressbar)
+        return ResumablePymc3Sampler(
+            self.model, self.cur_point,
+            step=self._step,
+            outvars=self._outvars,
+            **kwargs
+        )
 
     @staticmethod
     def _vars_from_varnames(model, varnames):
@@ -219,7 +238,11 @@ class ResumablePymc3Sampler:
     def cur_point(self):
         if self._cur_point is None:
             raise Exception('chain was interrupted by an Exception')
-        return self._cur_point
+        return {
+            key: float(value)
+            for (key, value) in self._cur_point.items()
+        }
+        # NB convert numpy scalars to float
         # NB we cannot use self.trace.point(-1),
         #    because we may be saving only a subset of the variables
 
