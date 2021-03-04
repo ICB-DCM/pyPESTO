@@ -148,8 +148,9 @@ class OptimizationResultHDF5Writer:
             for start in result.optimize_result.list:
                 start_id = start['id']
                 start_grp = get_or_create_group(results_grp, start_id)
-                start['history'] = None  # TOOD temporary fix
                 for key in start.keys():
+                    if key == 'history':
+                        continue
                     if isinstance(start[key], np.ndarray):
                         write_float_array(start_grp, key, start[key])
                     elif start[key] is not None:
@@ -235,8 +236,8 @@ class ProfileResultHDF5Writer:
                 os.makedirs(basedir, exist_ok=True)
 
         with h5py.File(self.storage_filename, "a") as f:
-            profiling_grp = get_or_create_group(f, "profiling")
             check_overwrite(f, overwrite, 'profiling')
+            profiling_grp = get_or_create_group(f, "profiling")
 
             for profile_id, profile in enumerate(result.profile_result.list):
                 profile_grp = get_or_create_group(profiling_grp,

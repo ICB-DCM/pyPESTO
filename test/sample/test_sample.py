@@ -203,7 +203,7 @@ def test_ground_truth_separated_modes():
 
     # only parallel tempering finds both modes
     print(statistic, pval)
-    assert statistic < 0.1
+    assert statistic < 0.2
 
     # sample using adaptive metropolis (single-chain)
     # initiated around the "first" mode of the distribution
