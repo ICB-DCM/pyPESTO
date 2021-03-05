@@ -935,7 +935,7 @@ class FidesOptimizer(Optimizer):
 
         args = {'mode': MODE_FUN}
         if self.hessian_update is None or isinstance(self.hessian_update,
-                                                     fides.Hybrid):
+                                                     fides.HybridUpdate):
             args['sensi_orders'] = (0, 1, 2)
         else:
             args['sensi_orders'] = (0, 1)
