@@ -905,6 +905,10 @@ class FidesOptimizer(Optimizer):
             raise ValueError('Incompatible type for hessian update, '
                              'must be fides.HessianApproximation, '
                              f'was {type(hessian_update)}.')
+
+        if hessian_update is None:
+            hessian_update = fides.HybridUpdate()
+
         if options is None:
             options = {}
 
@@ -930,7 +934,8 @@ class FidesOptimizer(Optimizer):
             )
 
         args = {'mode': MODE_FUN}
-        if self.hessian_update is None:
+        if self.hessian_update is None or isinstance(self.hessian_update,
+                                                     fides.Hybrid):
             args['sensi_orders'] = (0, 1, 2)
         else:
             args['sensi_orders'] = (0, 1)
