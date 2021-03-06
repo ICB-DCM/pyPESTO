@@ -30,8 +30,8 @@ Merge into master
 1. create a pull request from develop to master
 2. check that all tests on travis pass
 3. check that the documentation is up-to-date
-4. adapt the version number in the file ``pesto/version.py`` (see above)
-5. update the release notes in ``doc/releasenotes.rst``
+4. adapt the version number in the file ``pypesto/version.py`` (see above)
+5. update the release notes in ``CHANGELOG.rst``
 6. request a code review
 7. merge into the origin master branch
 
@@ -45,9 +45,9 @@ Creating a release on github
 After merging into master, create a new release on Github.
 In the release form:
 
-* specify a tag with the new version as specified in ``pesto/version.py``,
+* specify a tag with the new version as specified in ``pypesto/version.py``,
   prefixed with ``v`` (e.g. ``v0.0.1``)
-* include the latest additions to ``doc/releasenotes.rst`` in the release
+* include the latest additions to ``CHANGELOG.rst`` in the release
   description
 
 Tagging the release commit will automatically trigger deployment of the new

@@ -111,7 +111,9 @@ def get_spectral_decomposition_parameters(
         Eigenvectors of the covariance matrix
     """
     # check inputs
-    assert sum([only_identifiable_directions, only_separable_directions]) < 2
+    if sum([only_identifiable_directions, only_separable_directions]) >= 2:
+        raise AssertionError(
+            "Specify either only identifiable or only separable directions.")
 
     covariance = get_covariance_matrix_parameters(ens)
     return get_spectral_decomposition_lowlevel(

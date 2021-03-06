@@ -2,12 +2,20 @@
 
 # Install CI dependencies, arguments specify what is required
 
-# Base packages that don't hurt
-pip install wheel cython
+# Base packages
+pip install --upgrade pip
+pip install wheel setuptools
+
+# Needed for some dependencies
+pip install cython
+
+# Used to create local test environments
+pip install cython tox
+
 
 for par in "$@"; do
   case $par in
-    docs)
+    doc)
       # documentation
       sudo apt-get install pandoc
       pip install -r .rtd_pip_reqs.txt
@@ -18,16 +26,6 @@ for par in "$@"; do
       sudo apt-get install \
         swig3.0 libatlas-base-dev libhdf5-serial-dev
       sudo ln -s /usr/bin/Swig3.0 /usr/bin/swig
-
-      # amici dev
-      pip install \
-        git+https://github.com/amici-dev/amici.git@develop#egg=amici\&subdirectory=python/sdist
-
-      # petab dev
-      pip install https://github.com/petab-dev/petab/archive/develop.zip
-
-      # petabtests
-      pip install petabtests>=0.0.0a6
     ;;
 
     ipopt)
@@ -36,7 +34,7 @@ for par in "$@"; do
 	build-essential \
         coinor-libipopt1v5 coinor-libipopt-dev \
         gfortran lcov pkg-config python-dev zlib1g-dev
-      # ipopt does stuff during pip install
+      # ipopt does stuff during pip install otherwise
       pip install numpy six
     ;;
 

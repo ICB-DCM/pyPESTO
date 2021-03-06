@@ -24,10 +24,6 @@ jobs:
       with:
         python-version: ${{ matrix.python-version }}
 
-    - name: Check repository size
-      run: |
-        ./test/check_git_size.sh
-
     - name: Cache
       uses: actions/cache@v1
       with:
@@ -36,15 +32,14 @@ jobs:
         restore-keys: ${{ runner.os }}-
 
     - name: Install dependencies
-      run: |
-        .github/workflows/install_deps.sh petab
-        pip install -e .[test,amici,petab,pymc3,mltools]
+      run: .github/workflows/install_deps.sh petab
 
     - name: Run tests
-      timeout-minutes: 20
-      run: |
-        python -m pytest --cov=pypesto --cov-report=xml \
-          test/base test/profile test/sample test/visualize
+      timeout-minutes: 25
+      run: tox -e base
+
+    - name: Check repository size
+      run: tox -e size
 
     - name: Coverage
       uses: codecov/codecov-action@v1
@@ -75,15 +70,11 @@ jobs:
         restore-keys: ${{ runner.os }}-
 
     - name: Install dependencies
-      run: |
-        .github/workflows/install_deps.sh petab pysb
-        pip install -e .[test,amici,petab,pyswarm]
+      run: .github/workflows/install_deps.sh petab pysb
 
     - name: Run tests
-      timeout-minutes: 20
-      run: |
-        python -m pytest --cov=pypesto --cov-report=xml \
-          test/petab
+      timeout-minutes: 25
+      run: tox -e petab
 
     - name: Coverage
       uses: codecov/codecov-action@v1
@@ -114,15 +105,11 @@ jobs:
         restore-keys: ${{ runner.os }}-
 
     - name: Install dependencies
-      run: |
-        .github/workflows/install_deps.sh ipopt
-        pip install -e .[test,ipopt,dlib,pyswarm,cmaes,nlopt,fides,mpi]
+      run: .github/workflows/install_deps.sh ipopt
 
     - name: Run tests
-      timeout-minutes: 20
-      run: |
-        python -m pytest --cov=pypesto --cov-report=xml \
-          test/optimize
+      timeout-minutes: 25
+      run: tox -e optimize
 
     - name: Coverage
       uses: codecov/codecov-action@v1
@@ -152,13 +139,16 @@ jobs:
         key: ${{ runner.os }}-ci-quality
         restore-keys: ${{ runner.os }}-
 
-    - name: Install dependencies
-      run: |
-        pip install -e .[quality]
+    - name: Run quality checks
+      timeout-minutes: 2
+      run: tox -e project,flake8
 
-    - name: Run flake8
-      timeout-minutes: 1
-      run: ./run_flake8.sh
+    - name: Install doc dependencies
+      run: .github/workflows/install_deps.sh doc amici
+
+    - name: Build doc
+      timeout-minutes: 10
+      run: tox -e doc
 
   notebooks1:
     runs-on: ubuntu-latest
@@ -182,15 +172,11 @@ jobs:
         key: ${{ runner.os }}-ci-notebooks1
 
     - name: Install dependencies
-      run: |
-        .github/workflows/install_deps.sh petab ipopt
-        pip install jupyter
-        pip install -e .[petab,amici,ipopt,pyswarm,pymc3,cmaes,nlopt,fides]
+      run: .github/workflows/install_deps.sh petab ipopt
 
-    - name: Run notebooks
+    - name: Run notebooks 1
       timeout-minutes: 20
-      run: |
-        test/run_notebook.sh 1
+      run: tox -e notebooks1
 
   notebooks2:
     runs-on: ubuntu-latest
@@ -214,42 +200,8 @@ jobs:
         key: ${{ runner.os }}-ci-notebooks2
 
     - name: Install dependencies
-      run: |
-        .github/workflows/install_deps.sh petab
-        pip install jupyter
-        pip install -e .[petab,amici,pymc3]
+      run: .github/workflows/install_deps.sh petab
 
-    - name: Run notebooks
+    - name: Run notebooks 2
       timeout-minutes: 20
-      run: |
-        test/run_notebook.sh 2
-
-  docs:
-    runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        python-version: [3.9]
-
-    steps:
-    - name: Check out repository
-      uses: actions/checkout@v2
-
-    - name: Prepare python ${{ matrix.python-version }}
-      uses: actions/setup-python@v1
-      with:
-        python-version: ${{ matrix.python-version }}
-
-    - name: Cache
-      uses: actions/cache@v1
-      with:
-        path: ~/.cache
-        key: ${{ runner.os }}-ci-docs
-
-    - name: Install dependencies
-      run: |
-        .github/workflows/install_deps.sh petab docs
-        pip install -e .[amici,petab,docs]
-
-    - name: Build docs
-      timeout-minutes: 10
-      run: sphinx-build -W -b html doc/ doc/_build/html
+      run: tox -e notebooks2
