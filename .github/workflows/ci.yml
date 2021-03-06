@@ -35,7 +35,7 @@ jobs:
       run: .github/workflows/install_deps.sh amici
 
     - name: Run tests
-      timeout-minutes: 25
+      timeout-minutes: 10
       run: tox -e base
 
     - name: Coverage
@@ -70,7 +70,7 @@ jobs:
       run: .github/workflows/install_deps.sh amici pysb
 
     - name: Run tests
-      timeout-minutes: 25
+      timeout-minutes: 15
       run: tox -e petab
 
     - name: Coverage
@@ -105,7 +105,7 @@ jobs:
       run: .github/workflows/install_deps.sh ipopt
 
     - name: Run tests
-      timeout-minutes: 25
+      timeout-minutes: 5
       run: tox -e optimize
 
     - name: Coverage
@@ -143,11 +143,11 @@ jobs:
       run: tox -e size
 
     - name: Run quality checks
-      timeout-minutes: 2
+      timeout-minutes: 1
       run: tox -e project,flake8
 
     - name: Build doc
-      timeout-minutes: 10
+      timeout-minutes: 5
       run: tox -e doc
 
   notebooks1:
@@ -175,7 +175,7 @@ jobs:
       run: .github/workflows/install_deps.sh amici ipopt
 
     - name: Run notebooks 1
-      timeout-minutes: 20
+      timeout-minutes: 15
       run: tox -e notebooks1
 
   notebooks2:
@@ -203,5 +203,5 @@ jobs:
       run: .github/workflows/install_deps.sh amici
 
     - name: Run notebooks 2
-      timeout-minutes: 20
+      timeout-minutes: 15
       run: tox -e notebooks2

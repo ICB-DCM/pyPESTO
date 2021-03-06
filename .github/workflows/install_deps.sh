@@ -10,7 +10,7 @@ pip install wheel setuptools
 pip install cython
 
 # Used to create local test environments
-pip install cython tox
+pip install tox
 
 
 for par in "$@"; do
@@ -27,6 +27,10 @@ for par in "$@"; do
       if [ ! -e /usr/bin/swig ]; then
         sudo ln -s /usr/bin/swig3.0 /usr/bin/swig
       fi
+
+      # amici dev
+      pip install \
+        git+https://github.com/amici-dev/amici.git@develop#egg=amici\&subdirectory=python/sdist
     ;;
 
     ipopt)
