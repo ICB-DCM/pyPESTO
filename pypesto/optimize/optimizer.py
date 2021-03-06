@@ -884,7 +884,7 @@ class FidesOptimizer(Optimizer):
 
     def __init__(
             self,
-            hessian_update: Optional['fides.HessianApproximation'] = None,
+            hessian_update: Optional['fides.HessianApproximation'] = 'Hybrid',
             options: Optional[Dict] = None,
             verbose: Optional[int] = logging.INFO
     ):
@@ -895,7 +895,7 @@ class FidesOptimizer(Optimizer):
             Optimizer options.
         hessian_update:
             Hessian update strategy. If this is None, Hessian (approximation)
-            computed by problem.objective will be used (default).
+            computed by problem.objective will be used.
         """
 
         super().__init__()
@@ -906,7 +906,7 @@ class FidesOptimizer(Optimizer):
                              'must be fides.HessianApproximation, '
                              f'was {type(hessian_update)}.')
 
-        if hessian_update is None:
+        if hessian_update == 'Hybrid':
             hessian_update = fides.HybridUpdate()
 
         if options is None:
