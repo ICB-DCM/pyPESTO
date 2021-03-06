@@ -139,12 +139,12 @@ jobs:
         key: ${{ runner.os }}-ci-quality
         restore-keys: ${{ runner.os }}-
 
+    - name: Install doc dependencies
+      run: .github/workflows/install_deps.sh doc amici
+
     - name: Run quality checks
       timeout-minutes: 2
       run: tox -e project,flake8
-
-    - name: Install doc dependencies
-      run: .github/workflows/install_deps.sh doc amici
 
     - name: Build doc
       timeout-minutes: 10
