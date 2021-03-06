@@ -900,14 +900,14 @@ class FidesOptimizer(Optimizer):
 
         super().__init__()
 
+        if hessian_update == 'Hybrid':
+            hessian_update = fides.HybridUpdate()
+
         if hessian_update is not None and \
                 not isinstance(hessian_update, fides.HessianApproximation):
             raise ValueError('Incompatible type for hessian update, '
                              'must be fides.HessianApproximation, '
                              f'was {type(hessian_update)}.')
-
-        if hessian_update == 'Hybrid':
-            hessian_update = fides.HybridUpdate()
 
         if options is None:
             options = {}
