@@ -18,7 +18,6 @@ for par in "$@"; do
     doc)
       # documentation
       sudo apt-get install pandoc
-      pip install -r .rtd_pip_reqs.txt
     ;;
 
     petab)
