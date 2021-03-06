@@ -43,7 +43,7 @@ jobs:
       with:
         token: ${{ secrets.CODECOV_TOKEN }}
         file: ./coverage.xml
-  
+
   petab:
     runs-on: ubuntu-latest
     strategy:

@@ -12,4 +12,4 @@ This package was mainly developed by:
 - Leonard Schmiester
 - Dantong Wang
 - Leonard Schmiester
-- Caro Loos 
+- Caro Loos

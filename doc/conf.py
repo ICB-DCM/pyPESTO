@@ -197,6 +197,3 @@ texinfo_documents = [
      author, 'pyPESTO', 'One line description of project.',
      'Miscellaneous'),
 ]
-
-
-

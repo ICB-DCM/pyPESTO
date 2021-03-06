@@ -73,7 +73,7 @@ doc/_build
 data/raw
 data/figures
 
-# osx 
+# osx
 .DS_Store
 
 # coverage

@@ -23,7 +23,7 @@ Also, there is the possibility to use multiple virtual environments via::
 
     python3 -m virtualenv ENV_NAME
     source ENV_NAME/bin/activate
- 
+
 where ENV_NAME denotes an individual environment name,
 if you do not want to mess up the system environment.
 

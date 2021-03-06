@@ -43,7 +43,7 @@ for par in "$@"; do
         https://bintray.com/jczech/bionetgen/download_file?file_path=BioNetGen-2.3.2-linux.tar.gz
       tar -xzf bionetgen.tar.gz
     ;;
-    
+
     mpi)
       # mpi
       sudo apt install libopenmpi-dev
