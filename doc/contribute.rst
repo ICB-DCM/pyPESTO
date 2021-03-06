@@ -38,6 +38,9 @@ When adding new hooks, consider manually running ``pre-commit run --all-files``
 once as usually only the diff is checked. The configuration is specified in
 ``.pre-commit-config.yaml``.
 
+Should it be necessary to perform commits without pre-commit verification,
+use ``git commit --no-verify`` or the shortform ``-n``.
+
 Tox
 ~~~
 

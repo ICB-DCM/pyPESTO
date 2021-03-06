@@ -136,15 +136,37 @@ jobs:
         key: ${{ runner.os }}-ci-quality
         restore-keys: ${{ runner.os }}-
 
-    - name: Install doc dependencies
-      run: .github/workflows/install_deps.sh doc amici
-
     - name: Check repository size
       run: tox -e size
 
     - name: Run quality checks
       timeout-minutes: 1
       run: tox -e project,flake8
+
+  docs:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: [3.9]
+
+    steps:
+    - name: Check out repository
+      uses: actions/checkout@v2
+
+    - name: Prepare python ${{ matrix.python-version }}
+      uses: actions/setup-python@v1
+      with:
+        python-version: ${{ matrix.python-version }}
+
+    - name: Cache
+      uses: actions/cache@v1
+      with:
+        path: ~/.cache
+        key: ${{ runner.os }}-ci-docs
+        restore-keys: ${{ runner.os }}-
+
+    - name: Install doc dependencies
+      run: .github/workflows/install_deps.sh doc amici
 
     - name: Build doc
       timeout-minutes: 5
