@@ -20,7 +20,7 @@ for par in "$@"; do
       sudo apt-get install pandoc
     ;;
 
-    petab)
+    amici)
       # for amici
       sudo apt-get install \
         swig3.0 libatlas-base-dev libhdf5-serial-dev
@@ -56,7 +56,7 @@ for par in "$@"; do
     ;;
 
     *)
-      echo "Unknown argument" >&2
+      echo "Unknown argument: $par" >&2
       exit 1
     ;;
   esac

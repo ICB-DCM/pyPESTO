@@ -32,7 +32,7 @@ jobs:
         restore-keys: ${{ runner.os }}-
 
     - name: Install dependencies
-      run: .github/workflows/install_deps.sh petab
+      run: .github/workflows/install_deps.sh amici
 
     - name: Run tests
       timeout-minutes: 25
@@ -70,7 +70,7 @@ jobs:
         restore-keys: ${{ runner.os }}-
 
     - name: Install dependencies
-      run: .github/workflows/install_deps.sh petab pysb
+      run: .github/workflows/install_deps.sh amici pysb
 
     - name: Run tests
       timeout-minutes: 25
@@ -172,7 +172,7 @@ jobs:
         key: ${{ runner.os }}-ci-notebooks1
 
     - name: Install dependencies
-      run: .github/workflows/install_deps.sh petab ipopt
+      run: .github/workflows/install_deps.sh amici ipopt
 
     - name: Run notebooks 1
       timeout-minutes: 20
@@ -200,7 +200,7 @@ jobs:
         key: ${{ runner.os }}-ci-notebooks2
 
     - name: Install dependencies
-      run: .github/workflows/install_deps.sh petab
+      run: .github/workflows/install_deps.sh amici
 
     - name: Run notebooks 2
       timeout-minutes: 20
