@@ -29,7 +29,6 @@ jobs:
       with:
         path: ~/.cache
         key: ${{ runner.os }}-ci-base
-        restore-keys: ${{ runner.os }}-
 
     - name: Install dependencies
       run: .github/workflows/install_deps.sh amici
@@ -64,7 +63,6 @@ jobs:
       with:
         path: ~/.cache
         key: ${{ runner.os }}-ci-petab
-        restore-keys: ${{ runner.os }}-
 
     - name: Install dependencies
       run: .github/workflows/install_deps.sh amici pysb
@@ -99,7 +97,6 @@ jobs:
       with:
         path: ~/.cache
         key: ${{ runner.os }}-ci-optimize
-        restore-keys: ${{ runner.os }}-
 
     - name: Install dependencies
       run: .github/workflows/install_deps.sh ipopt
@@ -134,7 +131,6 @@ jobs:
       with:
         path: ~/.cache
         key: ${{ runner.os }}-ci-quality
-        restore-keys: ${{ runner.os }}-
 
     - name: Install dependencies
       run: .github/workflows/install_deps.sh
@@ -166,7 +162,6 @@ jobs:
       with:
         path: ~/.cache
         key: ${{ runner.os }}-ci-docs
-        restore-keys: ${{ runner.os }}-
 
     - name: Install dependencies
       run: .github/workflows/install_deps.sh doc amici
