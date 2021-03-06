@@ -78,6 +78,7 @@ data/figures
 
 # coverage
 coverage_py.xml
+coverage.xml
 
 # examples
 doc/example/tmp
@@ -110,3 +111,4 @@ test/amici_models/*
 *.hdf5
 *.dat
 /BioNetGen-2.3.2
+/bionetgen.tar.gz

@@ -38,9 +38,6 @@ jobs:
       timeout-minutes: 25
       run: tox -e base
 
-    - name: Check repository size
-      run: tox -e size
-
     - name: Coverage
       uses: codecov/codecov-action@v1
       with:
@@ -141,6 +138,9 @@ jobs:
 
     - name: Install doc dependencies
       run: .github/workflows/install_deps.sh doc amici
+
+    - name: Check repository size
+      run: tox -e size
 
     - name: Run quality checks
       timeout-minutes: 2
