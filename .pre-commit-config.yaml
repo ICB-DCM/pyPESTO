@@ -21,9 +21,13 @@ repos:
     description: Check for files that contain merge conflict strings
   - id: check-symlinks
     description: Check for symlinks which do not point to anything
-  - id: trailing-whitespace
-    description: Trim trailing whitespaces
-  - id: end-of-file-fixer
-    description: Fix empty lines at ends of files
+  - id: check-executables-have-shebangs
+    description: Check that (non-binary) executables have shebangs
   - id: detect-private-key
     description: Detects the presence of private keys
+  - id: end-of-file-fixer
+    description: Fix empty lines at ends of files
+  - id: mixed-line-ending
+    description: Replace or check mixed line endings
+  - id: trailing-whitespace
+    description: Trim trailing whitespaces
