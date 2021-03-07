@@ -6,13 +6,10 @@
 pip install --upgrade pip
 pip install wheel setuptools
 
-# Needed for some dependencies
-pip install cython
-
 # Used to create local test environments
 pip install tox
 
-
+# Check arguments
 for par in "$@"; do
   case $par in
     doc)
