@@ -151,7 +151,6 @@ def get_optimizer(library, solver):
     options = {
         'maxiter': 100
     }
-    optimizer = None
 
     if library == 'scipy':
         optimizer = optimize.ScipyOptimizer(method=solver, options=options)
@@ -172,6 +171,8 @@ def get_optimizer(library, solver):
         options[fides.Options.SUBSPACE_DIM] = solver[1]
         optimizer = optimize.FidesOptimizer(options=options,
                                             hessian_update=solver[0])
+    else:
+        raise ValueError(f"Optimizer not recognized: {library}")
 
     return optimizer
 

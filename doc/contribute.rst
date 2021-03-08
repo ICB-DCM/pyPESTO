@@ -25,6 +25,8 @@ via::
 
     pip install -r requirements-dev.txt
 
+This installs the tools described below.
+
 Pre-commit hooks
 ~~~~~~~~~~~~~~~~
 
@@ -55,7 +57,7 @@ with optional ``-e`` options specifying the environments to run, see
 ``tox.ini`` for details.
 
 GitHub Actions
-~~~~~~~~~~~~~~
+--------------
 
 For automatic continuous integration testing, we use GitHub Actions. All tests
 are run there on pull requests and required to pass. The configuration is
