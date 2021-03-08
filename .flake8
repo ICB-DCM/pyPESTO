@@ -1,0 +1,11 @@
+########################
+# Flake8 Configuration #
+########################
+
+[flake8]
+
+per-file-ignores =
+    # Imported but unused
+    */__init__.py:F401
+    # Print and asserts
+    test/*:T001,S101
