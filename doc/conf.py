@@ -30,11 +30,18 @@ needs_sphinx = '3.0.4'
 # Add any Sphinx extension module names here, as strings. They can be
 # extensions coming with Sphinx (named 'sphinx.ext.*') or your custom
 # ones.
-extensions = ['sphinx.ext.autodoc',
-              'sphinx.ext.napoleon',
-              'IPython.sphinxext.ipython_console_highlighting',
-              'nbsphinx',
-              'recommonmark']
+extensions = [
+    'sphinx.ext.autodoc',
+    'sphinx.ext.napoleon',
+    # code highlighting in jupyter cells
+    'IPython.sphinxext.ipython_console_highlighting',
+    'nbsphinx',
+    'recommonmark',
+    # link to code
+    'sphinx.ext.viewcode',
+    # link to other projects' docs
+    'sphinx.ext.intersphinx',
+]
 
 # default autodoc options
 # list for special-members seems not to be possible before 1.8
@@ -44,6 +51,16 @@ autodoc_default_options = {
     'special-members': '__init__, __call__',
     'imported-members': True,
     'show-inheritance': True,
+}
+
+# links for intersphinx
+intersphinx_mapping = {
+    'python': ('https://docs.python.org/3', None),
+    'numpy': ('https://numpy.org/devdocs/', None),
+    'scipy': ('https://docs.scipy.org/doc/scipy/reference/', None),
+    'pandas': ('https://pandas.pydata.org/docs/', None),
+    'petab': ('https://petab.readthedocs.io/en/stable/', None),
+    'amici': ('https://amici.readthedocs.io/en/latest/', None),
 }
 
 # Add any paths that contain templates here, relative to this directory.
@@ -180,6 +197,3 @@ texinfo_documents = [
      author, 'pyPESTO', 'One line description of project.',
      'Miscellaneous'),
 ]
-
-
-
