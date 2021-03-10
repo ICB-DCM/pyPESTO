@@ -1,6 +1,4 @@
-"""
-This is for testing optimization of the pypesto.Objective.
-"""
+"""Tests for `pypesto.sample` methods."""
 
 import numpy as np
 from scipy.stats import multivariate_normal, norm, kstest, ks_2samp, uniform
@@ -516,6 +514,10 @@ def test_prior():
 
 
 def test_samples_cis():
+    """
+    Test whether :py:func:`pypesto.sample.calculate_ci_mcmc_sample` produces
+    percentile-based credibility intervals correctly.
+    """
     # load problem
     problem = gaussian_problem()
 
@@ -542,7 +544,7 @@ def test_samples_cis():
     # loop over confidence levels
     for alpha in alpha_values:
         # calculate parameter samples confidence intervals
-        lb, ub = sample.calculate_ci(result, alpha=alpha)
+        lb, ub = sample.calculate_ci_mcmc_sample(result, ci_level=alpha)
         # get corresponding percentiles to alpha
         percentiles = 100 * np.array([(1-alpha)/2, 1-(1-alpha)/2])
         # check result agreement

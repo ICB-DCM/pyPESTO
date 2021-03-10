@@ -6,6 +6,7 @@ import numpy as np
 import pandas as pd
 import seaborn as sns
 from typing import Dict, Sequence, Tuple, Union
+import warnings
 
 from ..ensemble import (
     get_percentile_label,
@@ -15,7 +16,7 @@ from ..ensemble import (
 from ..predict import PredictionResult
 from ..predict.constants import CONDITION, OUTPUT
 from ..result import Result
-from ..sample import McmcPtResult, calculate_ci
+from ..sample import McmcPtResult, calculate_ci_mcmc_sample
 from .constants import (
     LEN_RGB,
     RGBA_BLACK,
@@ -30,7 +31,7 @@ logger = logging.getLogger(__name__)
 
 
 def sampling_fval_trace(*args, **kwargs):
-    logger.warning(
+    warnings.warn(
         '`sampling_fval_trace` is deprecated in favor of '
         '`sampling_fval_traces` and will be removed in a future version of '
         'pyPESTO.'
@@ -120,7 +121,8 @@ def sampling_fval_traces(
 def _get_level_percentiles(level: float) -> Tuple[float, float]:
     """Convert a credibility level to percentiles.
 
-    Similar to highest-density regions of a normal distribution.
+    Similar to the highest-density region of a symmetric, unimodal distribution
+    (e.g. Gaussian distribution).
 
     For example, an credibility level of `95` will be converted to
     `(2.5, 97.5)`.
@@ -576,8 +578,8 @@ def sampling_prediction_trajectories(
         condition_ids: Sequence[str] = None,
         output_ids: Sequence[str] = None,
 ) -> matplotlib.axes.Axes:
-    """Plot MCMC-based prediction confidence intervals for the
-    model states or outputs. One or various confidence levels
+    """Plot MCMC-based prediction credibility intervals for the
+    model states or outputs. One or various credibility levels
     can be depicted. Plots are grouped by condition.
 
     Parameters
@@ -794,7 +796,10 @@ def sampling_parameter_cis(
         # loop over confidence levels
         for n, level in enumerate(alpha_sorted):
             # extract percentile-based confidence intervals
-            lb, ub = calculate_ci(result=result, alpha=level / 100)
+            lb, ub = calculate_ci_mcmc_sample(
+                result=result,
+                ci_level=level/100,
+            )
 
             # assemble boxes for projectile plot
             x1 = [lb[npar], ub[npar]]
@@ -835,7 +840,7 @@ def sampling_parameter_cis(
 
 
 def sampling_parameters_trace(*args, **kwargs):
-    logger.warning(
+    warnings.warn(
         '`sampling_parameters_trace` is deprecated in favor of '
         '`sampling_parameter_traces` and will be removed in a future version '
         'of pyPESTO.'
@@ -1104,10 +1109,9 @@ def get_data_to_plot(
     arr_param = np.array(result.sample_result.trace_x[i_chain])
 
     if result.sample_result.burn_in is None:
-        logger.warning("Burn in index not found in the results, "
-                       "the full chain will be shown.\n"
-                       "You may want to use, e.g., "
-                       "'pypesto.sample.geweke_test'.")
+        warnings.warn("Burn in index not found in the results, the full chain "
+                      "will be shown.\nYou may want to use, e.g., "
+                      "`pypesto.sample.geweke_test`.")
         _burn_in = 0
     else:
         _burn_in = result.sample_result.burn_in

@@ -9,19 +9,18 @@ from .diagnostics import geweke_test
 logger = logging.getLogger(__name__)
 
 
-def calculate_ci(
+def calculate_ci_mcmc_sample(
         result: Result,
-        alpha: float = 0.95,
+        ci_level: float = 0.95,
         exclude_burn_in: bool = True,
 ) -> Tuple[np.ndarray, np.ndarray]:
-    """
-    Calculate parameter confidence intervals based on MCMC samples.
+    """Calculate parameter credibility intervals based on MCMC samples.
 
     Parameters
     ----------
     result:
         The pyPESTO result object with filled sample result.
-    alpha:
+    ci_level:
         Lower tail probability, defaults to 95% interval.
 
     Returns
@@ -41,27 +40,21 @@ def calculate_ci(
     # Get converged parameter samples as numpy arrays
     chain = np.asarray(result.sample_result.trace_x[0, burn_in:, :])
 
-    # Get percentile values corresponding to alpha
-    percentiles = 100 * np.array([(1-alpha)/2, 1-(1-alpha)/2])
-
-    # Get samples' upper and lower bounds
-    lb, ub = np.percentile(chain, percentiles, axis=0)
-
+    lb, ub = calculate_ci(chain, ci_level=ci_level, axis=0)
     return lb, ub
 
 
-def calculate_prediction_profiles(
+def calculate_ci_mcmc_sample_prediction(
         simulated_values: np.ndarray,
-        alpha: float = 0.95,
+        ci_level: float = 0.95,
 ) -> Tuple[np.ndarray, np.ndarray]:
-    """
-    Calculate prediction confidence intervals based on MCMC samples.
+    """Calculate prediction credibility intervals based on MCMC samples.
 
     Parameters
     ----------
     simulated_values:
         Simulated model states or model observables.
-    alpha:
+    ci_level:
         Lower tail probability, defaults to 95% interval.
 
     Returns
@@ -69,11 +62,33 @@ def calculate_prediction_profiles(
     lb, ub:
         Bounds of the MCMC-based prediction confidence interval.
     """
+    lb, ub = calculate_ci(simulated_values, ci_level=ci_level, axis=1)
+    return lb, ub
 
-    # Get percentile values corresponding to alpha
-    percentiles = 100 * np.array([(1-alpha)/2, 1-(1-alpha)/2])
 
-    # Get samples' upper and lower bounds
-    lb, ub = np.percentile(simulated_values, percentiles, axis=1)
+def calculate_ci(
+        values: np.ndarray,
+        ci_level: float,
+        **kwargs,
+) -> Tuple[np.ndarray, np.ndarray]:
+    """Calculate confidence/credibility levels using percentiles.
 
+    Parameters
+    ----------
+    values:
+        The values used to calculate percentiles.
+    ci_level:
+        Lower tail probability.
+    kwargs:
+        Additional keyword arguments are passed to the `numpy.percentile` call.
+
+    Returns
+    -------
+    lb, ub:
+        Bounds of the confidence/credibility interval.
+    """
+    # Percentile values corresponding to the CI level
+    percentiles = 100 * np.array([(1-ci_level)/2, 1-(1-ci_level)/2])
+    # Upper and lower bounds
+    lb, ub = np.percentile(values, percentiles, **kwargs)
     return lb, ub

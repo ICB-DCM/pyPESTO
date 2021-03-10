@@ -1,6 +1,9 @@
 """
 Prediction
 ==========
+
+Generate predictions from simulations with specified parameter vectors, with
+optional post-processing.
 """
 
 

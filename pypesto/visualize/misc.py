@@ -273,14 +273,39 @@ def rgba2rgb(fg: RGB_RGBA, bg: RGB_RGBA = None) -> RGB:
             'A foreground color of unexpected length was provided: {fg}'
         )
 
-    def apparent_color(fg_i: float, bg_i: float) -> float:
-        """Porter and Duff equations."""
+    def apparent_composite_color_component(
+            fg_component: float,
+            bg_component: float,
+            fg_alpha: float = fg[RGBA_ALPHA],
+            bg_alpha: float = bg[RGBA_ALPHA],
+    ) -> float:
+        """
+        Composite a foreground color component over a background color
+        component.
+
+        Porter and Duff equations are used for alpha compositing.
+
+        Parameters
+        ----------
+        fg_component:
+            The foreground color component.
+        bg_component:
+            The background color component.
+        fg_alpha:
+            The foreground color transparency/alpha component.
+        bg_alpha:
+            The background color transparency/alpha component.
+
+        Returns
+        -------
+        The component of the new color.
+        """
         return (
-            fg_i * fg[RGBA_ALPHA] +
-            bg_i * bg[RGBA_ALPHA] * (RGBA_MAX - fg[RGBA_ALPHA])
-        ) / (fg[RGBA_ALPHA] + bg[RGBA_ALPHA] * (RGBA_MAX - fg[RGBA_ALPHA]))
+            fg_component * fg_alpha +
+            bg_component * bg_alpha * (RGBA_MAX - fg_alpha)
+        ) / (fg_alpha + bg_alpha * (RGBA_MAX - fg_alpha))
 
     return [
-        apparent_color(fg[i], bg[i])
+        apparent_composite_color_component(fg[i], bg[i])
         for i in range(LEN_RGB)
     ]

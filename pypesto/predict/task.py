@@ -7,9 +7,9 @@ logger = logging.getLogger(__name__)
 
 
 class PredictorTask(Task):
-    """Perform a single prediction with `pypesto.engine.Task`.
+    """Perform a single prediction with :class:`pypesto.engine.Task`.
 
-    Designed for use with `pypesto.ensemble.Ensemble`.
+    Designed for use with :class:`pypesto.ensemble.Ensemble`.
 
     Attributes
     ----------

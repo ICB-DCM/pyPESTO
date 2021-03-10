@@ -283,6 +283,9 @@ class PetabImporter(AmiciObjectBuilder):
     ) -> AmiciPredictor:
         """Create a :class:`pypesto.predict.AmiciPredictor`.
 
+        The `AmiciPredictor` facilitates generation of predictions from
+        parameter vectors.
+
         Parameters
         ----------
         objective:
