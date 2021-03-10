@@ -5,6 +5,7 @@ import os
 import tempfile
 import pypesto
 import pypesto.profile as profile
+import pypesto.sample as sample
 
 from pypesto.objective.constants import (X, FVAL, GRAD,
                                          HESS, RES, SRES,
@@ -205,16 +206,17 @@ def test_storage_sampling():
     x_0 = result_optimization.optimize_result.list[0]['x']
     sampler = sample.AdaptiveParallelTemperingSampler(
         internal_sampler=sample.AdaptiveMetropolisSampler(),
-        n_chains=5
+        n_chains=1
     )
     sample_original = sample.sample(problem=problem,
                                     sampler=sampler,
-                                    n_samples=100)
+                                    n_samples=100,
+                                    x0=[x_0])
     with tempfile.TemporaryDirectory(dir=".") as tmpdirname:
         _, fn = tempfile.mkstemp(".hdf5", dir=f"{tmpdirname}")
 
     pypesto_sample_writer = SamplingResultHDF5Writer(fn)
-    pypesto_sample_writer.write(profile_original)
+    pypesto_sample_writer.write(sample_original)
     pypesto_sample_reader = SamplingResultHDF5Reader(fn)
     sample_read = pypesto_sample_reader.read()
 
