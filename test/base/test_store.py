@@ -14,7 +14,9 @@ import numpy as np
 
 from pypesto.store import (
     ProblemHDF5Writer, ProblemHDF5Reader, OptimizationResultHDF5Writer,
-    OptimizationResultHDF5Reader)
+    OptimizationResultHDF5Reader, ProfileResultHDF5Writer,
+    ProfileResultHDF5Reader, SamplingResultHDF5Writer,
+    SamplingResultHDF5Reader)
 from ..visualize import create_problem, create_optimization_result
 
 
@@ -141,3 +143,38 @@ def test_storage_trace():
                                 getattr(mem_res['history'],
                                         f'get_{entry}_trace')()[iteration],
                                 hdf5_entry_trace[iteration])
+def test_storage_profiling():
+    objective = pypesto.Objective(fun=so.rosen,
+                                   grad=so.rosen_der,
+                                   hess=so.rosen_hess)
+    dim_full = 10
+    lb = -5 * np.ones((dim_full, 1))
+    ub = 5 * np.ones((dim_full, 1))
+    n_starts = 5
+    startpoints = pypesto.startpoint.latin_hypercube(n_starts=n_starts,
+                                                     lb=lb,
+                                                     ub=ub)
+    problem = pypesto.Problem(objective=objective, lb=lb, ub=ub,
+                               x_guesses=startpoints)
+
+    optimizer = pypesto.optimize.ScipyOptimizer()
+
+    result_optimization = pypesto.optimize.minimize(
+        problem=problem, optimizer=optimizer,
+        n_starts=n_starts)
+    profile_original = profile.parameter_profile(
+        problem=problem, result=result_optimization,
+        profile_index=[0], optimizer=optimizer)
+    with tempfile.TemporaryDirectory(dir=".") as tmpdirname:
+        _, fn = tempfile.mkstemp(".hdf5", dir=f"{tmpdirname}")
+
+    pypesto_profile_writer = ProfileResultHDF5Writer(fn)
+    pypesto_profile_writer.write(profile_original)
+    pypesto_profile_reader = ProfileResultHDF5Reader(fn)
+    profile_read = pypesto_profile_reader.read()
+
+    # compare the x_paths of both profiles
+    np.testing.assert_array_equal(
+        profile_original.profile_result.list[0][0]['x_path'],
+        profile_read.profile_result.list[0][0]['x_path']
+    )
