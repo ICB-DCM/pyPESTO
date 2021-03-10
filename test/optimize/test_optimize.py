@@ -238,14 +238,11 @@ def test_mpipoolengine():
                                 n_starts=2,
                                 engine=pypesto.engine.MultiProcessEngine())
 
-    assert_almost_equal(result1.optimize_result.list[0]['x'],
-                        result2.optimize_result.list[0]['x'],
-                        err_msg='The final parameter values '
-                                'do not agree for the engines.')
-    assert_almost_equal(result1.optimize_result.list[1]['x'],
-                        result2.optimize_result.list[1]['x'],
-                        err_msg='The final parameter values '
-                                'do not agree for the engines.')
+    for res1, res2 in zip(result1.optimize_result.list,
+                          result2.optimize_result.list):
+        assert_almost_equal(res1['x'], res2['x'],
+                            err_msg='The final parameter values '
+                                    'do not agree for the engines.')
 
     # delete data
     os.remove('temp_result.h5')
