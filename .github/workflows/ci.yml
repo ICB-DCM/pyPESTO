@@ -92,11 +92,11 @@ jobs:
       with:
         python-version: ${{ matrix.python-version }}
 
-    - name: Cache
-      uses: actions/cache@v1
-      with:
-        path: ~/.cache
-        key: ${{ runner.os }}-ci-optimize
+        #- name: Cache
+        #uses: actions/cache@v1
+        #with:
+        #path: ~/.cache
+        #key: ${{ runner.os }}-ci-optimize
 
     - name: Install dependencies
       run: .github/workflows/install_deps.sh ipopt
@@ -185,11 +185,11 @@ jobs:
       with:
         python-version: ${{ matrix.python-version }}
 
-    - name: Cache
-      uses: actions/cache@v1
-      with:
-        path: ~/.cache
-        key: ${{ runner.os }}-ci-notebooks1
+        #- name: Cache
+        #uses: actions/cache@v1
+        #with:
+        #path: ~/.cache
+        #key: ${{ runner.os }}-ci-notebooks1
 
     - name: Install dependencies
       run: .github/workflows/install_deps.sh amici ipopt
