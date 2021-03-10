@@ -16,7 +16,8 @@ import numpy as np
 from pypesto.store import (
     ProblemHDF5Writer, ProblemHDF5Reader, OptimizationResultHDF5Writer,
     OptimizationResultHDF5Reader, ProfileResultHDF5Writer,
-    ProfileResultHDF5Reader)
+    ProfileResultHDF5Reader, SamplingResultHDF5Reader,
+    SamplingResultHDF5Writer)
 from ..visualize import create_problem, create_optimization_result
 
 
@@ -179,4 +180,46 @@ def test_storage_profiling():
     np.testing.assert_array_equal(
         profile_original.profile_result.list[0][0]['x_path'],
         profile_read.profile_result.list[0][0]['x_path']
+    )
+
+
+def test_storage_sampling():
+    objective = pypesto.Objective(fun=so.rosen,
+                                  grad=so.rosen_der,
+                                  hess=so.rosen_hess)
+    dim_full = 10
+    lb = -5 * np.ones((dim_full, 1))
+    ub = 5 * np.ones((dim_full, 1))
+    n_starts = 5
+    startpoints = pypesto.startpoint.latin_hypercube(n_starts=n_starts,
+                                                     lb=lb,
+                                                     ub=ub)
+    problem = pypesto.Problem(objective=objective, lb=lb, ub=ub,
+                              x_guesses=startpoints)
+
+    optimizer = pypesto.optimize.ScipyOptimizer()
+
+    result_optimization = pypesto.optimize.minimize(
+        problem=problem, optimizer=optimizer,
+        n_starts=n_starts)
+    x_0 = result_optimization.optimize_result.list[0]['x']
+    sampler = sample.AdaptiveParallelTemperingSampler(
+        internal_sampler=sample.AdaptiveMetropolisSampler(),
+        n_chains=5
+    )
+    sample_original = sample.sample(problem=problem,
+                                    sampler=sampler,
+                                    n_samples=100)
+    with tempfile.TemporaryDirectory(dir=".") as tmpdirname:
+        _, fn = tempfile.mkstemp(".hdf5", dir=f"{tmpdirname}")
+
+    pypesto_sample_writer = SamplingResultHDF5Writer(fn)
+    pypesto_sample_writer.write(profile_original)
+    pypesto_sample_reader = SamplingResultHDF5Reader(fn)
+    sample_read = pypesto_sample_reader.read()
+
+    # compare the x_paths of both profiles
+    np.testing.assert_array_equal(
+        sample_original.sample_result['trace_x'],
+        sample_read.sample_result['trace_x'],
     )
