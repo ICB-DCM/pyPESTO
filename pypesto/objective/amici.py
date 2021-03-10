@@ -161,7 +161,8 @@ class AmiciObjective(ObjectiveBase):
                                  'when `simulationFSA` as '
                                  'SteadyStateSensitivityMode!')
             self.guess_steadystate = False
-        else:
+
+        if self.guess_steadystate is not False:
             self.guess_steadystate = True
 
         if self.guess_steadystate:
