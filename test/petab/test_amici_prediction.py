@@ -72,7 +72,7 @@ def conversion_reaction_model():
             create_intial_assignment(sbml_importer.sbml, spec)
 
         # add constant parameters and observables to AMICI model
-        constantParameters = ['A0', 'B0']
+        constant_parameters = ['A0', 'B0']
         observables = amici.assignmentRules2observables(
             sbml_importer.sbml,  # the libsbml model object
             filter_function=lambda variable:
@@ -83,7 +83,7 @@ def conversion_reaction_model():
                                  model_output_dir,
                                  verbose=False,
                                  observables=observables,
-                                 constantParameters=constantParameters)
+                                 constant_parameters=constant_parameters)
 
         # Importing the module and loading the model
         sys.path.insert(0, os.path.abspath(model_output_dir))
