@@ -67,7 +67,7 @@ Welcome to pyPESTO's documentation!
    :maxdepth: 2
    :caption: About
 
-   releasenotes
+   changelog
    authors
    contact
    license
