@@ -175,30 +175,35 @@ def test_storage_profiling():
     profile_original = profile.parameter_profile(
         problem=problem, result=result_optimization,
         profile_index=[0], optimizer=optimizer)
-    with tempfile.TemporaryDirectory(dir=".") as tmpdirname:
-        _, fn = tempfile.mkstemp(".hdf5", dir=f"{tmpdirname}")
 
-    pypesto_profile_writer = ProfileResultHDF5Writer(fn)
-    pypesto_profile_writer.write(profile_original)
-    pypesto_profile_reader = ProfileResultHDF5Reader(fn)
-    profile_read = pypesto_profile_reader.read()
+    fn = 'test_file.hdf5'
+    try:
+        pypesto_profile_writer = ProfileResultHDF5Writer(fn)
+        pypesto_profile_writer.write(profile_original)
+        pypesto_profile_reader = ProfileResultHDF5Reader(fn)
+        profile_read = pypesto_profile_reader.read()
 
-    for key in profile_original.profile_result.list[0][0].keys():
-        if profile_original.profile_result.list[0][0].keys is \
-                None or key == 'time_path':
-            continue
-        elif isinstance(
-                profile_original.profile_result.list[0][0][key],
-                np.ndarray):
-            np.testing.assert_array_equal(
-                profile_original.profile_result.list[0][0][key],
-                profile_read.profile_result.list[0][0][key]
-            )
-        elif isinstance(
-                profile_original.profile_result.list[0][0][key],
-                int):
-            assert profile_original.profile_result.list[0][0][key] == \
-                   profile_read.profile_result.list[0][0][key]
+        for key in profile_original.profile_result.list[0][0].keys():
+            if profile_original.profile_result.list[0][0].keys is \
+                    None or key == 'time_path':
+                continue
+            elif isinstance(
+                    profile_original.profile_result.list[0][0][key],
+                    np.ndarray):
+                np.testing.assert_array_equal(
+                    profile_original.profile_result.list[0][0][key],
+                    profile_read.profile_result.list[0][0][key]
+                )
+            elif isinstance(
+                    profile_original.profile_result.list[0][0][key],
+                    int):
+                assert profile_original.profile_result.list[0][0][key] == \
+                       profile_read.profile_result.list[0][0][key]
+    finally:
+        if os.path.exists(fn):
+            os.remove(fn)
+        else:
+            print("The file does not exist")
 
 
 def test_storage_sampling():
@@ -235,25 +240,30 @@ def test_storage_sampling():
                                     sampler=sampler,
                                     n_samples=100,
                                     x0=[x_0])
-    with tempfile.TemporaryDirectory(dir=".") as tmpdirname:
-        _, fn = tempfile.mkstemp(".hdf5", dir=f"{tmpdirname}")
 
-    pypesto_sample_writer = SamplingResultHDF5Writer(fn)
-    pypesto_sample_writer.write(sample_original)
-    pypesto_sample_reader = SamplingResultHDF5Reader(fn)
-    sample_read = pypesto_sample_reader.read()
+    fn = 'test_file.hdf5'
+    try:
+        pypesto_sample_writer = SamplingResultHDF5Writer(fn)
+        pypesto_sample_writer.write(sample_original)
+        pypesto_sample_reader = SamplingResultHDF5Reader(fn)
+        sample_read = pypesto_sample_reader.read()
 
-    for key in sample_original.sample_result.keys():
-        if sample_original.sample_result[key] is None \
-                or key == 'time':
-            continue
-        elif isinstance(sample_original.sample_result[key], np.ndarray):
-            np.testing.assert_array_equal(
-                sample_original.sample_result[key],
-                sample_read.sample_result[key],
-            )
-        elif isinstance(sample_original.sample_result[key], (float, int)):
-            np.testing.assert_almost_equal(
-                sample_original.sample_result[key],
-                sample_read.sample_result[key],
-            )
+        for key in sample_original.sample_result.keys():
+            if sample_original.sample_result[key] is None \
+                    or key == 'time':
+                continue
+            elif isinstance(sample_original.sample_result[key], np.ndarray):
+                np.testing.assert_array_equal(
+                    sample_original.sample_result[key],
+                    sample_read.sample_result[key],
+                )
+            elif isinstance(sample_original.sample_result[key], (float, int)):
+                np.testing.assert_almost_equal(
+                    sample_original.sample_result[key],
+                    sample_read.sample_result[key],
+                )
+    finally:
+        if os.path.exists(fn):
+            os.remove(fn)
+        else:
+            print("The file does not exist")
