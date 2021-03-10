@@ -144,6 +144,7 @@ def test_storage_trace():
                                         f'get_{entry}_trace')()[iteration],
                                 hdf5_entry_trace[iteration])
 
+
 def test_storage_profiling():
     objective = pypesto.Objective(fun=so.rosen,
                                   grad=so.rosen_der,
