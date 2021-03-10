@@ -148,6 +148,12 @@ def test_storage_trace():
 
 
 def test_storage_profiling():
+    """
+    This test tests the saving and loading of profiles
+    into HDF5 through pypesto.store.ProfileResultHDF5Writer
+    and pypesto.store.ProfileResultHDF5Reader.Tests all entries
+    aside from times and message.
+    """
     objective = pypesto.Objective(fun=so.rosen,
                                   grad=so.rosen_der,
                                   hess=so.rosen_hess)
@@ -177,14 +183,31 @@ def test_storage_profiling():
     pypesto_profile_reader = ProfileResultHDF5Reader(fn)
     profile_read = pypesto_profile_reader.read()
 
-    # compare the x_paths of both profiles
-    np.testing.assert_array_equal(
-        profile_original.profile_result.list[0][0]['x_path'],
-        profile_read.profile_result.list[0][0]['x_path']
-    )
+    for key in profile_original.profile_result.list[0][0].keys():
+        if profile_original.profile_result.list[0][0].keys is \
+                None or key == 'time_path':
+            continue
+        elif isinstance(
+                profile_original.profile_result.list[0][0][key],
+                np.ndarray):
+            np.testing.assert_array_equal(
+                profile_original.profile_result.list[0][0][key],
+                profile_read.profile_result.list[0][0][key]
+            )
+        elif isinstance(
+                profile_original.profile_result.list[0][0][key],
+                int):
+            assert profile_original.profile_result.list[0][0][key] == \
+                   profile_read.profile_result.list[0][0][key]
 
 
 def test_storage_sampling():
+    """
+    This test tests the saving and loading of samples
+    into HDF5 through pypesto.store.SamplingResultHDF5Writer
+    and pypesto.store.SamplingResultHDF5Reader. Tests all entries
+    aside from time and message.
+    """
     objective = pypesto.Objective(fun=so.rosen,
                                   grad=so.rosen_der,
                                   hess=so.rosen_hess)
@@ -220,8 +243,17 @@ def test_storage_sampling():
     pypesto_sample_reader = SamplingResultHDF5Reader(fn)
     sample_read = pypesto_sample_reader.read()
 
-    # compare the x_paths of both profiles
-    np.testing.assert_array_equal(
-        sample_original.sample_result['trace_x'],
-        sample_read.sample_result['trace_x'],
-    )
+    for key in sample_original.sample_result.keys():
+        if sample_original.sample_result[key] is None \
+                or key == 'time':
+            continue
+        elif isinstance(sample_original.sample_result[key], np.ndarray):
+            np.testing.assert_array_equal(
+                sample_original.sample_result[key],
+                sample_read.sample_result[key],
+            )
+        elif isinstance(sample_original.sample_result[key], (float, int)):
+            np.testing.assert_almost_equal(
+                sample_original.sample_result[key],
+                sample_read.sample_result[key],
+            )
