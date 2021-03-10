@@ -259,13 +259,19 @@ def rgba2rgb(fg: RGB_RGBA, bg: RGB_RGBA = None) -> RGB:
         if bg[RGBA_ALPHA] == RGBA_MIN:
             return fg
     else:
-        assert len(bg) == LEN_RGB
+        if len(bg) != LEN_RGB:
+            raise IndexError(
+                'A background color of unexpected length was provided: {bg}'
+            )
         bg = (*bg, RGBA_MAX)
 
     # return the foreground color if has no transparency
     if len(fg) == LEN_RGB or fg[RGBA_ALPHA] == RGBA_MAX:
         return fg
-    assert len(fg) == LEN_RGBA
+    if len(fg) != LEN_RGBA:
+        raise IndexError(
+            'A foreground color of unexpected length was provided: {fg}'
+        )
 
     def apparent_color(fg_i: float, bg_i: float) -> float:
         """Porter and Duff equations."""

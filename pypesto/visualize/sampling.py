@@ -257,7 +257,11 @@ def _plot_trajectories_by_condition(
                 )
                 # Timepoints must match, or `upper_data` will be plotted at
                 # some incorrect time points.
-                assert (np.array(t_lower) == np.array(t_upper)).all()
+                if not (np.array(t_lower) == np.array(t_upper)).all():
+                    raise ValueError(
+                        'The timepoints of the data for the upper and lower '
+                        'percentiles do not match.'
+                    )
                 # Plot a shaded region between the data that correspond to the
                 # lower and upper percentiles.
                 ax.fill_between(
@@ -351,7 +355,11 @@ def _plot_trajectories_by_output(
                 t_upper_shifted = t_upper + t0
                 # Timepoints must match, or `upper_data` will be plotted at
                 # some incorrect time points.
-                assert (np.array(t_lower) == np.array(t_upper)).all()
+                if not (np.array(t_lower) == np.array(t_upper)).all():
+                    raise ValueError(
+                        'The timepoints of the data for the upper and lower '
+                        'percentiles do not match.'
+                    )
                 # Plot a shaded region between the data that correspond to the
                 # lower and upper percentiles.
                 ax.fill_between(
