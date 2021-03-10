@@ -4,6 +4,7 @@ This is for testing the pypesto.Storage.
 import os
 import tempfile
 import pypesto
+import pypesto.profile as profile
 
 from pypesto.objective.constants import (X, FVAL, GRAD,
                                          HESS, RES, SRES,
@@ -15,8 +16,7 @@ import numpy as np
 from pypesto.store import (
     ProblemHDF5Writer, ProblemHDF5Reader, OptimizationResultHDF5Writer,
     OptimizationResultHDF5Reader, ProfileResultHDF5Writer,
-    ProfileResultHDF5Reader, SamplingResultHDF5Writer,
-    SamplingResultHDF5Reader)
+    ProfileResultHDF5Reader)
 from ..visualize import create_problem, create_optimization_result
 
 
@@ -143,10 +143,11 @@ def test_storage_trace():
                                 getattr(mem_res['history'],
                                         f'get_{entry}_trace')()[iteration],
                                 hdf5_entry_trace[iteration])
+
 def test_storage_profiling():
     objective = pypesto.Objective(fun=so.rosen,
-                                   grad=so.rosen_der,
-                                   hess=so.rosen_hess)
+                                  grad=so.rosen_der,
+                                  hess=so.rosen_hess)
     dim_full = 10
     lb = -5 * np.ones((dim_full, 1))
     ub = 5 * np.ones((dim_full, 1))
@@ -155,7 +156,7 @@ def test_storage_profiling():
                                                      lb=lb,
                                                      ub=ub)
     problem = pypesto.Problem(objective=objective, lb=lb, ub=ub,
-                               x_guesses=startpoints)
+                              x_guesses=startpoints)
 
     optimizer = pypesto.optimize.ScipyOptimizer()
 
