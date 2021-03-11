@@ -268,9 +268,9 @@ def write_Result(result: Result,
                  profile: bool = True,
                  sample: bool = True,
                  ):
-    """
-    This is a function that saves the whole pypesto.Result object in an
-    HDF5 file. With booleans one can choose more detailed what to save.
+    """Save whole pypesto.Result to hdf5 file.
+    
+    Boolean indicators allow specifying what to save.
 
     Parameters
     ----------
