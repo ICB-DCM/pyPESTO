@@ -269,7 +269,7 @@ def test_storage_all():
     """
     This test tests the functions read_Result and write Result.
     It currently does not test read/write of the problem as this
-    is know to not work completely. Also excludes testing history
+    is known to not work completely. Also excludes testing history
     key in optimization.
     """
     objective = pypesto.Objective(fun=so.rosen,
