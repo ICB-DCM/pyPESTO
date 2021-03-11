@@ -33,6 +33,11 @@ except ImportError:
     cma = None
 
 try:
+    import pyswarms
+except ImportError:
+    pyswarms = None
+
+try:
     import nlopt
 except ImportError:
     nlopt = None
@@ -713,6 +718,84 @@ class ScipyDifferentialEvolutionOptimizer(Optimizer):
 
         optimizer_result = OptimizerResult(x=np.array(result.x),
                                            fval=result.fun)
+
+        return optimizer_result
+
+    def is_least_squares(self):
+        return False
+
+
+class PyswarmsOptimizer(Optimizer):
+    """
+    Global optimization using pyswarms.
+
+    Parameters
+    ----------
+    options:
+        Optimizer options that are directly passed on to pyswarms.
+        c1: cognitive parameter
+        c2: social parameter
+        w: inertia parameter
+    """
+
+    def __init__(self, par_popsize: float = 10, options: Dict = None):
+        super().__init__()
+
+        if options is None:
+            options = {'maxiter': 1000, 'c1': 0.5, 'c2': 0.3, 'w': 0.9}
+        self.options = options
+        self.par_popsize = par_popsize
+
+    @fix_decorator
+    @time_decorator
+    @history_decorator
+    def minimize(
+            self,
+            problem: Problem,
+            x0: np.ndarray,
+            id: str,
+            history_options: HistoryOptions = None,
+    ) -> OptimizerResult:
+        lb = problem.lb
+        ub = problem.ub
+
+        if pyswarms is None:
+            raise ImportError(
+                "This optimizer requires an installation of pyswarms.")
+
+        optimizer = pyswarms.single.global_best.GlobalBestPSO(
+            n_particles=self.par_popsize, dimensions=len(x0), options=self.options,
+            bounds=(lb, ub))
+
+
+        def successively_working_fval(swarm):
+            """Evaluate the function for all parameters in the swarm object.
+
+            Parameters:
+            -----------
+            swarm: np.ndarray, shape (n_particales_in_swarm, n_parameters)
+
+            Returns:
+            --------
+            result: np.ndarray, shape (n_particles_in_swarm)
+            """
+
+            n_particles = swarm.shape[0]
+            result = np.zeros(n_particles)
+            for iPar, par in enumerate(swarm):
+                result[iPar] = problem.objective.get_fval(par)
+
+            return result
+
+
+        cost, pos = optimizer.optimize(
+            successively_working_fval, iters=self.options['maxiter'])
+
+
+        optimizer_result = OptimizerResult(
+            x=pos,
+            fval=np.array(cost)
+        )
 
         return optimizer_result
 

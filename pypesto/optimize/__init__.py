@@ -15,6 +15,7 @@ from .optimizer import (
     DlibOptimizer,
     PyswarmOptimizer,
     CmaesOptimizer,
+    PyswarmsOptimizer,
     ScipyDifferentialEvolutionOptimizer,
     NLoptOptimizer,
     FidesOptimizer,
