@@ -133,7 +133,7 @@ jobs:
         key: ${{ runner.os }}-${{ matrix.python-version }}-ci-quality
 
     - name: Install dependencies
-      run: pip install -r ./requirements-dev.txt
+      run: pip install tox pre-commit
 
     - name: Check repository size
       run: tox -e size
