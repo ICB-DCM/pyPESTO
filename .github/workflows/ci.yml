@@ -102,7 +102,7 @@ jobs:
       run: .github/workflows/install_deps.sh mpi ipopt
 
     - name: Run tests
-      timeout-minutes: 5
+      timeout-minutes: 7
       run: tox -e optimize
 
     - name: Coverage
@@ -133,7 +133,7 @@ jobs:
         key: ${{ runner.os }}-${{ matrix.python-version }}-ci-quality
 
     - name: Install dependencies
-      run: .github/workflows/install_deps.sh
+      run: pip install -r requirements-dev.txt
 
     - name: Check repository size
       run: tox -e size
@@ -141,6 +141,9 @@ jobs:
     - name: Run quality checks
       timeout-minutes: 1
       run: tox -e project,flake8
+
+    - name: Run pre-commits
+      run: pre-commit run --all-files
 
   docs:
     runs-on: ubuntu-latest
