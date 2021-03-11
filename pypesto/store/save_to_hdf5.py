@@ -275,7 +275,7 @@ def write_Result(result: Result,
     Parameters
     ----------
     result:
-        The pypesto.Result object to be saved.
+        The :class:`pypesto.Result` object to be saved.
     filename:
         The HDF5 filename.
     overwrite:
