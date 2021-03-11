@@ -13,9 +13,9 @@ from .result import OptimizerResult
 from ..objective.constants import MODE_FUN, FVAL, GRAD
 
 try:
-    import ipopt
+    import cyipopt
 except ImportError:
-    ipopt = None
+    cyipopt = None
 
 try:
     import dlib
@@ -441,7 +441,7 @@ class IpoptOptimizer(Optimizer):
         Parameters
         ----------
         options:
-            Options are directly passed on to `ipopt.minimize_ipopt`.
+            Options are directly passed on to `cyipopt.minimize_ipopt`.
         """
         super().__init__()
         self.options = options
@@ -457,7 +457,7 @@ class IpoptOptimizer(Optimizer):
             history_options: HistoryOptions = None,
     ) -> OptimizerResult:
 
-        if ipopt is None:
+        if cyipopt is None:
             raise ImportError(
                 "This optimizer requires an installation of ipopt. You can "
                 "install ipopt via `pip install ipopt`."
@@ -467,7 +467,7 @@ class IpoptOptimizer(Optimizer):
 
         bounds = np.array([problem.lb, problem.ub]).T
 
-        ret = ipopt.minimize_ipopt(
+        ret = cyipopt.minimize_ipopt(
             fun=objective.get_fval,
             x0=x0,
             method=None,  # ipopt does not use this argument for anything
