@@ -269,7 +269,7 @@ def write_result(result: Result,
                  sample: bool = True,
                  ):
     """Save whole pypesto.Result to hdf5 file.
-    
+
     Boolean indicators allow specifying what to save.
 
     Parameters
