@@ -6,10 +6,33 @@ Release notes
 ..........
 
 
+0.2.4 (2021-03-12)
+------------------
+
+* General ensemble analysis, visualization, storage (#557, #565, #568)
+
+* Optimization:
+  * New optimizer: SciPy Differential Evolution (#543)
+
+* General:
+  * AMICI: More intuitive default behavior of `guess_steadystate` (#562, #582)
+  * Storage: Save HDF5 history with SingleCoreEngine (#564)
+  * MPI based distributed parallelization (#542)
+
+* CI:
+  * Move GHA CI tests to pull request level for better cooperability (#574)
+  * Streamline test environments using tox and pre-commit hooks (#579)
+  * Test profile and sampling storage (#585)
+  * Update for Ubuntu 20.04, add rerun on failure (#587)
+
+* Minor fixes (release notes #558, nlop tests #559, close files #495,
+  visualization #554, deployment #560, AMICI deepcopy #570, flakiness #570)
+
+
 0.2.3 (2021-01-18)
 ------------------
 
-* New Optimizers:
+* New optimizers:
     * FIDES (#506, #503 # 500)
     * NLopt (#493)
 
