@@ -28,7 +28,7 @@ jobs:
       uses: actions/cache@v1
       with:
         path: ~/.cache
-        key: ${{ runner.os }}-ci-base
+        key: ${{ runner.os }}-${{ matrix.python-version }}-ci-base
 
     - name: Install dependencies
       run: .github/workflows/install_deps.sh amici
@@ -62,7 +62,7 @@ jobs:
       uses: actions/cache@v1
       with:
         path: ~/.cache
-        key: ${{ runner.os }}-ci-petab
+        key: ${{ runner.os }}-${{ matrix.python-version }}-ci-petab
 
     - name: Install dependencies
       run: .github/workflows/install_deps.sh amici pysb
@@ -96,7 +96,7 @@ jobs:
       uses: actions/cache@v1
       with:
         path: ~/.cache
-        key: ${{ runner.os }}-ci-optimize
+        key: ${{ runner.os }}-${{ matrix.python-version }}-ci-optimize
 
     - name: Install dependencies
       run: .github/workflows/install_deps.sh mpi ipopt
@@ -130,7 +130,7 @@ jobs:
       uses: actions/cache@v1
       with:
         path: ~/.cache
-        key: ${{ runner.os }}-ci-quality
+        key: ${{ runner.os }}-${{ matrix.python-version }}-ci-quality
 
     - name: Install dependencies
       run: .github/workflows/install_deps.sh
@@ -161,7 +161,7 @@ jobs:
       uses: actions/cache@v1
       with:
         path: ~/.cache
-        key: ${{ runner.os }}-ci-docs
+        key: ${{ runner.os }}-${{ matrix.python-version }}-ci-docs
 
     - name: Install dependencies
       run: .github/workflows/install_deps.sh doc amici
@@ -189,7 +189,7 @@ jobs:
       uses: actions/cache@v1
       with:
         path: ~/.cache
-        key: ${{ runner.os }}-ci-notebooks1
+        key: ${{ runner.os }}-${{ matrix.python-version }}-ci-notebooks1
 
     - name: Install dependencies
       run: .github/workflows/install_deps.sh amici ipopt
@@ -217,7 +217,7 @@ jobs:
       uses: actions/cache@v1
       with:
         path: ~/.cache
-        key: ${{ runner.os }}-ci-notebooks2
+        key: ${{ runner.os }}-${{ matrix.python-version }}-ci-notebooks2
 
     - name: Install dependencies
       run: .github/workflows/install_deps.sh amici
