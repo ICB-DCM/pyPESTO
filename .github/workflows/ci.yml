@@ -78,7 +78,7 @@ jobs:
         file: ./coverage.xml
 
   optimize:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-18.04
     strategy:
       matrix:
         python-version: [3.8]
@@ -99,7 +99,7 @@ jobs:
         key: ${{ runner.os }}-ci-optimize
 
     - name: Install dependencies
-      run: .github/workflows/install_deps.sh mpi
+      run: .github/workflows/install_deps.sh mpi ipopt
 
     - name: Run tests
       timeout-minutes: 5
@@ -171,7 +171,7 @@ jobs:
       run: tox -e doc
 
   notebooks1:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-18.04
     strategy:
       matrix:
         python-version: [3.8]
