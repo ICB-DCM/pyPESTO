@@ -99,7 +99,7 @@ jobs:
         key: ${{ runner.os }}-${{ matrix.python-version }}-ci-optimize
 
     - name: Install dependencies
-      run: .github/workflows/install_deps.sh mpi ipopt
+      run: .github/workflows/install_deps.sh ipopt
 
     - name: Run tests
       timeout-minutes: 10
