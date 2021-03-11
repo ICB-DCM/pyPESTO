@@ -99,7 +99,7 @@ jobs:
         key: ${{ runner.os }}-ci-optimize
 
     - name: Install dependencies
-      run: .github/workflows/install_deps.sh
+      run: .github/workflows/install_deps.sh mpi
 
     - name: Run tests
       timeout-minutes: 5
