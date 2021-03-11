@@ -9,6 +9,30 @@ from .hdf5 import write_array, write_float_array
 from ..result import Result
 
 
+def check_overwrite(f: Union[h5py.File, h5py.Group],
+                    overwrite: bool,
+                    target: str):
+    """
+    Checks whether target already exists. Sends a warning if
+    overwrite=False, deletes the target if overwrite=True.
+
+    Attributes
+    -------------
+    f: file or group where existence of a group with the path group_path
+       should be checked
+    target: name of the group, whose existence is checked
+    overwrite: if overwrite is true, it deltes the target in f
+    """
+    if target in f:
+        if overwrite:
+            del f[target]
+        else:
+            raise Exception(f"The file already exists and contains "
+                            f"information about {target} result."
+                            f"If you wish to overwrite the file set"
+                            f"overwrite=True.")
+
+
 class ProblemHDF5Writer:
     """
     Writer of the HDF5 problem files.
@@ -41,14 +65,7 @@ class ProblemHDF5Writer:
                 os.makedirs(basedir, exist_ok=True)
 
         with h5py.File(self.storage_filename, "a") as f:
-            if "problem" in f:
-                if overwrite:
-                    del f["problem"]
-                else:
-                    raise Exception("The file already exists and contains "
-                                    "information about optimization result."
-                                    "If you wish to overwrite the file set"
-                                    "overwrite=True.")
+            check_overwrite(f, overwrite, 'problem')
             attrs_to_save = [a for a in dir(problem) if not a.startswith('__')
                              and not callable(getattr(problem, a))
                              and not hasattr(type(problem), a)]
@@ -122,6 +139,7 @@ class OptimizationResultHDF5Writer:
                 os.makedirs(basedir, exist_ok=True)
 
         with h5py.File(self.storage_filename, "a") as f:
+            check_overwrite(f, overwrite, 'optimization')
             optimization_grp = get_or_create_group(f, "optimization")
             # settings =
             # optimization_grp.create_dataset("settings", settings, dtype=)
@@ -130,18 +148,113 @@ class OptimizationResultHDF5Writer:
             for start in result.optimize_result.list:
                 start_id = start['id']
                 start_grp = get_or_create_group(results_grp, start_id)
-                start['history'] = None  # TOOD temporary fix
-                if not overwrite:
-                    for key in start.keys():
-                        if key in start_grp.keys() or key in start_grp.attrs:
-                            raise Exception("The file already exists and "
-                                            "contains information about "
-                                            "optimization result. If you wish "
-                                            "to overwrite it, set "
-                                            "overwrite=True.")
                 for key in start.keys():
+                    if key == 'history':
+                        continue
                     if isinstance(start[key], np.ndarray):
                         write_float_array(start_grp, key, start[key])
                     elif start[key] is not None:
                         start_grp.attrs[key] = start[key]
                 f.flush()
+
+
+class SamplingResultHDF5Writer:
+    """
+    Writer of the HDF5 sampling files.
+
+    Attributes
+    -------------
+    storage_filename:
+        HDF5 result file name
+    """
+
+    def __init__(self, storage_filename: str):
+        """
+        Parameters
+        ----------
+
+        storage_filename: str
+            HDF5 result file name
+        """
+        self.storage_filename = storage_filename
+
+    def write(self, result: Result, overwrite: bool = False):
+        """
+        Write HDF5 sampling file from pyPESTO result object.
+        """
+
+        # Create destination directory
+        if isinstance(self.storage_filename, str):
+            basedir = os.path.dirname(self.storage_filename)
+            if basedir:
+                os.makedirs(basedir, exist_ok=True)
+
+        with h5py.File(self.storage_filename, "a") as f:
+            check_overwrite(f, overwrite, 'sampling')
+            sampling_grp = get_or_create_group(f, "sampling")
+            results_grp = get_or_create_group(sampling_grp, "results")
+
+            for key in result.sample_result.keys():
+                if isinstance(result.sample_result[key], np.ndarray):
+                    write_float_array(results_grp,
+                                      key,
+                                      result.sample_result[key])
+                elif result.sample_result[key] is not None:
+                    results_grp.attrs[key] = result.sample_result[key]
+            f.flush()
+
+
+class ProfileResultHDF5Writer:
+    """
+    Writer of the HDF5 result files.
+
+    Attributes
+    -------------
+    storage_filename:
+        HDF5 result file name
+    """
+
+    def __init__(self, storage_filename: str):
+        """
+        Parameters
+        ----------
+
+        storage_filename: str
+            HDF5 result file name
+        """
+        self.storage_filename = storage_filename
+
+    def write(self, result: Result, overwrite: bool = False):
+        """
+        Write HDF5 result file from pyPESTO result object.
+        """
+
+        # Create destination directory
+        if isinstance(self.storage_filename, str):
+            basedir = os.path.dirname(self.storage_filename)
+            if basedir:
+                os.makedirs(basedir, exist_ok=True)
+
+        with h5py.File(self.storage_filename, "a") as f:
+            check_overwrite(f, overwrite, 'profiling')
+            profiling_grp = get_or_create_group(f, "profiling")
+
+            for profile_id, profile in enumerate(result.profile_result.list):
+                profile_grp = get_or_create_group(profiling_grp,
+                                                  str(profile_id))
+                for parameter_id, parameter_profile in enumerate(profile):
+                    result_grp = get_or_create_group(profile_grp,
+                                                     str(parameter_id))
+
+                    if parameter_profile is None:
+                        result_grp.attrs['IsNone'] = True
+                        continue
+                    result_grp.attrs['IsNone'] = False
+                    for key in parameter_profile.keys():
+                        if isinstance(parameter_profile[key], np.ndarray):
+                            write_float_array(result_grp,
+                                              key,
+                                              parameter_profile[key])
+                        elif parameter_profile[key] is not None:
+                            result_grp.attrs[key] = parameter_profile[key]
+            f.flush()
