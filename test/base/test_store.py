@@ -291,7 +291,6 @@ def test_storage_all():
         problem=problem, result=result,
         profile_index=[0], optimizer=optimizer)
     # Sampling
-    x_0 = result.optimize_result.list[0]['x']
     sampler = sample.AdaptiveMetropolisSampler()
     result = sample.sample(problem=problem,
                            sampler=sampler,
