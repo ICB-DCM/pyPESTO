@@ -142,7 +142,7 @@ jobs:
       timeout-minutes: 1
       run: tox -e project,flake8
 
-    - name: Run pre-commits
+    - name: Run pre-commit hooks
       run: pre-commit run --all-files
 
   docs:
