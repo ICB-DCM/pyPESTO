@@ -78,7 +78,7 @@ jobs:
         file: ./coverage.xml
 
   optimize:
-    runs-on: ubuntu-18.04
+    runs-on: ubuntu-latest
     strategy:
       matrix:
         python-version: [3.8]
