@@ -258,3 +258,50 @@ class ProfileResultHDF5Writer:
                         elif parameter_profile[key] is not None:
                             result_grp.attrs[key] = parameter_profile[key]
             f.flush()
+
+
+def write_Result(result: Result,
+                 filename: str,
+                 overwrite: bool = False,
+                 problem: bool = True,
+                 optimization: bool = True,
+                 profile: bool = True,
+                 sample: bool = True,
+                 ):
+    """
+    This is a function that saves the whole pypesto.Result object in an
+    HDF5 file. With booleans one can choose more detailed what to save.
+
+    Parameters
+    ----------
+    result:
+        The pypesto.Result object to be saved.
+    filename:
+        The HDF5 filename.
+    overwrite:
+        Boolean, whether already existing results should be overwritten.
+    problem:
+        Boolean, whether problem is to be saved or not.
+    optimization:
+        Boolean, whether optimization is to be saved or not.
+    profile:
+        Boolean, whether profile is to be saved or not.
+    sample:
+        Boolean, whether sample is to be saved or not.
+    """
+
+    if problem is True:
+        pypesto_problem_writer = ProblemHDF5Writer(filename)
+        pypesto_problem_writer.write(result.problem, overwrite=overwrite)
+
+    if optimization is True:
+        pypesto_opt_writer = OptimizationResultHDF5Writer(filename)
+        pypesto_opt_writer.write(result, overwrite=overwrite)
+
+    if profile is True:
+        pypesto_profile_writer = ProfileResultHDF5Writer(filename)
+        pypesto_profile_writer.write(result, overwrite=overwrite)
+
+    if sample is True:
+        pypesto_sample_writer = SamplingResultHDF5Writer(filename)
+        pypesto_sample_writer.write(result, overwrite=overwrite)

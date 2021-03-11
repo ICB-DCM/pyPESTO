@@ -256,3 +256,55 @@ class ProfileResultHDF5Reader:
                                               parameter_id=parameter_id))
             self.results.profile_result.list = profiling_list
         return self.results
+
+
+def read_Result(filename: str,
+                problem: bool = True,
+                optimization: bool = True,
+                profile: bool = True,
+                sample: bool = True,
+                ) -> Result:
+    """
+    This is a function that saves the whole pypesto.Result object in an
+    HDF5 file. With booleans one can choose more detailed what to save.
+
+    Parameters
+    ----------
+    filename:
+        The HDF5 filename.
+    problem:
+        Boolean, whether problem is to be read or not.
+    optimization:
+        Boolean, whether optimization is to be read or not.
+    profile:
+        Boolean, whether profile is to be read or not.
+    sample:
+        Boolean, whether sample is to be read or not.
+
+    Returns
+    -------
+    result:
+        Result object containing the results stored in HDF5 file.
+    """
+    result = Result()
+
+    if problem is True:
+        pypesto_problem_reader = ProblemHDF5Reader(filename)
+        result.problem = pypesto_problem_reader.read()
+
+    if optimization is True:
+        pypesto_opt_reader = OptimizationResultHDF5Reader(filename)
+        temp_result = pypesto_opt_reader.read()
+        result.optimize_result = temp_result.optimize_result
+
+    if profile is True:
+        pypesto_profile_reader = ProfileResultHDF5Reader(filename)
+        temp_result = pypesto_profile_reader.read()
+        result.profile_result = temp_result.profile_result
+
+    if sample is True:
+        pypesto_sample_reader = SamplingResultHDF5Reader(filename)
+        temp_result = pypesto_sample_reader.read()
+        result.sample_result = temp_result.sample_result
+
+    return result
