@@ -260,11 +260,11 @@ class ProfileResultHDF5Writer:
             f.flush()
 
 
-def write_Result(result: Result,
+def write_result(result: Result,
                  filename: str,
                  overwrite: bool = False,
                  problem: bool = True,
-                 optimization: bool = True,
+                 optimize: bool = True,
                  profile: bool = True,
                  sample: bool = True,
                  ):
@@ -281,27 +281,27 @@ def write_Result(result: Result,
     overwrite:
         Boolean, whether already existing results should be overwritten.
     problem:
-        Boolean, whether problem is to be saved or not.
-    optimization:
-        Boolean, whether optimization is to be saved or not.
+        Read the problem.
+    optimize:
+        Read the optimize result.
     profile:
-        Boolean, whether profile is to be saved or not.
+        Read the profile result.
     sample:
-        Boolean, whether sample is to be saved or not.
+        Read the sample result.
     """
 
-    if problem is True:
+    if problem:
         pypesto_problem_writer = ProblemHDF5Writer(filename)
         pypesto_problem_writer.write(result.problem, overwrite=overwrite)
 
-    if optimization is True:
+    if optimize:
         pypesto_opt_writer = OptimizationResultHDF5Writer(filename)
         pypesto_opt_writer.write(result, overwrite=overwrite)
 
-    if profile is True:
+    if profile:
         pypesto_profile_writer = ProfileResultHDF5Writer(filename)
         pypesto_profile_writer.write(result, overwrite=overwrite)
 
-    if sample is True:
+    if sample:
         pypesto_sample_writer = SamplingResultHDF5Writer(filename)
         pypesto_sample_writer.write(result, overwrite=overwrite)

@@ -258,9 +258,9 @@ class ProfileResultHDF5Reader:
         return self.results
 
 
-def read_Result(filename: str,
+def read_result(filename: str,
                 problem: bool = True,
-                optimization: bool = True,
+                optimize: bool = True,
                 profile: bool = True,
                 sample: bool = True,
                 ) -> Result:
@@ -273,13 +273,13 @@ def read_Result(filename: str,
     filename:
         The HDF5 filename.
     problem:
-        Boolean, whether problem is to be read or not.
-    optimization:
-        Boolean, whether optimization is to be read or not.
+        Read the problem.
+    optimize:
+        Read the optimize result.
     profile:
-        Boolean, whether profile is to be read or not.
+        Read the profile result.
     sample:
-        Boolean, whether sample is to be read or not.
+        Read the sample result.
 
     Returns
     -------
@@ -288,21 +288,21 @@ def read_Result(filename: str,
     """
     result = Result()
 
-    if problem is True:
+    if problem:
         pypesto_problem_reader = ProblemHDF5Reader(filename)
         result.problem = pypesto_problem_reader.read()
 
-    if optimization is True:
+    if optimize:
         pypesto_opt_reader = OptimizationResultHDF5Reader(filename)
         temp_result = pypesto_opt_reader.read()
         result.optimize_result = temp_result.optimize_result
 
-    if profile is True:
+    if profile:
         pypesto_profile_reader = ProfileResultHDF5Reader(filename)
         temp_result = pypesto_profile_reader.read()
         result.profile_result = temp_result.profile_result
 
-    if sample is True:
+    if sample:
         pypesto_sample_reader = SamplingResultHDF5Reader(filename)
         temp_result = pypesto_sample_reader.read()
         result.sample_result = temp_result.sample_result

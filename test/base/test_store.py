@@ -18,7 +18,7 @@ from pypesto.store import (
     ProblemHDF5Writer, ProblemHDF5Reader, OptimizationResultHDF5Writer,
     OptimizationResultHDF5Reader, ProfileResultHDF5Writer,
     ProfileResultHDF5Reader, SamplingResultHDF5Reader,
-    SamplingResultHDF5Writer, read_Result, write_Result)
+    SamplingResultHDF5Writer, read_result, write_result)
 from ..visualize import create_problem, create_optimization_result
 
 
@@ -266,11 +266,11 @@ def test_storage_sampling():
 
 
 def test_storage_all():
-    """
-    This test tests the functions read_Result and write Result.
+    """Test `read_result` and `write_result`.
+
     It currently does not test read/write of the problem as this
-    is known to not work completely. Also excludes testing history
-    key in optimization.
+    is know to not work completely. Also excludes testing the history
+    key of an optimization result.
     """
     objective = pypesto.Objective(fun=so.rosen,
                                   grad=so.rosen_der,
@@ -292,21 +292,17 @@ def test_storage_all():
         profile_index=[0], optimizer=optimizer)
     # Sampling
     x_0 = result.optimize_result.list[0]['x']
-    sampler = sample.AdaptiveParallelTemperingSampler(
-        internal_sampler=sample.AdaptiveMetropolisSampler(),
-        n_chains=1
-    )
+    sampler = sample.AdaptiveMetropolisSampler()
     result = sample.sample(problem=problem,
                            sampler=sampler,
                            n_samples=100,
-                           x0=[x_0],
                            result=result)
     # Read and write
     filename = 'test_file.hdf5'
     try:
-        write_Result(result=result,
+        write_result(result=result,
                      filename=filename)
-        result_read = read_Result(filename=filename)
+        result_read = read_result(filename=filename)
 
         # test optimize
         for i, opt_res in enumerate(result.optimize_result.list):
