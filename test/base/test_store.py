@@ -4,6 +4,8 @@ This is for testing the pypesto.Storage.
 import os
 import tempfile
 import pypesto
+import pypesto.profile as profile
+import pypesto.sample as sample
 
 from pypesto.objective.constants import (X, FVAL, GRAD,
                                          HESS, RES, SRES,
@@ -14,7 +16,9 @@ import numpy as np
 
 from pypesto.store import (
     ProblemHDF5Writer, ProblemHDF5Reader, OptimizationResultHDF5Writer,
-    OptimizationResultHDF5Reader)
+    OptimizationResultHDF5Reader, ProfileResultHDF5Writer,
+    ProfileResultHDF5Reader, SamplingResultHDF5Reader,
+    SamplingResultHDF5Writer)
 from ..visualize import create_problem, create_optimization_result
 
 
@@ -141,3 +145,121 @@ def test_storage_trace():
                                 getattr(mem_res['history'],
                                         f'get_{entry}_trace')()[iteration],
                                 hdf5_entry_trace[iteration])
+
+
+def test_storage_profiling():
+    """
+    This test tests the saving and loading of profiles
+    into HDF5 through pypesto.store.ProfileResultHDF5Writer
+    and pypesto.store.ProfileResultHDF5Reader. Tests all entries
+    aside from times and message.
+    """
+    objective = pypesto.Objective(fun=so.rosen,
+                                  grad=so.rosen_der,
+                                  hess=so.rosen_hess)
+    dim_full = 10
+    lb = -5 * np.ones((dim_full, 1))
+    ub = 5 * np.ones((dim_full, 1))
+    n_starts = 5
+    startpoints = pypesto.startpoint.latin_hypercube(n_starts=n_starts,
+                                                     lb=lb,
+                                                     ub=ub)
+    problem = pypesto.Problem(objective=objective, lb=lb, ub=ub,
+                              x_guesses=startpoints)
+
+    optimizer = pypesto.optimize.ScipyOptimizer()
+
+    result_optimization = pypesto.optimize.minimize(
+        problem=problem, optimizer=optimizer,
+        n_starts=n_starts)
+    profile_original = profile.parameter_profile(
+        problem=problem, result=result_optimization,
+        profile_index=[0], optimizer=optimizer)
+
+    fn = 'test_file.hdf5'
+    try:
+        pypesto_profile_writer = ProfileResultHDF5Writer(fn)
+        pypesto_profile_writer.write(profile_original)
+        pypesto_profile_reader = ProfileResultHDF5Reader(fn)
+        profile_read = pypesto_profile_reader.read()
+
+        for key in profile_original.profile_result.list[0][0].keys():
+            if profile_original.profile_result.list[0][0].keys is \
+                    None or key == 'time_path':
+                continue
+            elif isinstance(
+                    profile_original.profile_result.list[0][0][key],
+                    np.ndarray):
+                np.testing.assert_array_equal(
+                    profile_original.profile_result.list[0][0][key],
+                    profile_read.profile_result.list[0][0][key]
+                )
+            elif isinstance(
+                    profile_original.profile_result.list[0][0][key],
+                    int):
+                assert profile_original.profile_result.list[0][0][key] == \
+                       profile_read.profile_result.list[0][0][key]
+    finally:
+        if os.path.exists(fn):
+            os.remove(fn)
+
+
+def test_storage_sampling():
+    """
+    This test tests the saving and loading of samples
+    into HDF5 through pypesto.store.SamplingResultHDF5Writer
+    and pypesto.store.SamplingResultHDF5Reader. Tests all entries
+    aside from time and message.
+    """
+    objective = pypesto.Objective(fun=so.rosen,
+                                  grad=so.rosen_der,
+                                  hess=so.rosen_hess)
+    dim_full = 10
+    lb = -5 * np.ones((dim_full, 1))
+    ub = 5 * np.ones((dim_full, 1))
+    n_starts = 5
+    startpoints = pypesto.startpoint.latin_hypercube(n_starts=n_starts,
+                                                     lb=lb,
+                                                     ub=ub)
+    problem = pypesto.Problem(objective=objective, lb=lb, ub=ub,
+                              x_guesses=startpoints)
+
+    optimizer = pypesto.optimize.ScipyOptimizer()
+
+    result_optimization = pypesto.optimize.minimize(
+        problem=problem, optimizer=optimizer,
+        n_starts=n_starts)
+    x_0 = result_optimization.optimize_result.list[0]['x']
+    sampler = sample.AdaptiveParallelTemperingSampler(
+        internal_sampler=sample.AdaptiveMetropolisSampler(),
+        n_chains=1
+    )
+    sample_original = sample.sample(problem=problem,
+                                    sampler=sampler,
+                                    n_samples=100,
+                                    x0=[x_0])
+
+    fn = 'test_file.hdf5'
+    try:
+        pypesto_sample_writer = SamplingResultHDF5Writer(fn)
+        pypesto_sample_writer.write(sample_original)
+        pypesto_sample_reader = SamplingResultHDF5Reader(fn)
+        sample_read = pypesto_sample_reader.read()
+
+        for key in sample_original.sample_result.keys():
+            if sample_original.sample_result[key] is None \
+                    or key == 'time':
+                continue
+            elif isinstance(sample_original.sample_result[key], np.ndarray):
+                np.testing.assert_array_equal(
+                    sample_original.sample_result[key],
+                    sample_read.sample_result[key],
+                )
+            elif isinstance(sample_original.sample_result[key], (float, int)):
+                np.testing.assert_almost_equal(
+                    sample_original.sample_result[key],
+                    sample_read.sample_result[key],
+                )
+    finally:
+        if os.path.exists(fn):
+            os.remove(fn)
