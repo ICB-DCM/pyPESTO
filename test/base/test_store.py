@@ -151,7 +151,7 @@ def test_storage_profiling():
     """
     This test tests the saving and loading of profiles
     into HDF5 through pypesto.store.ProfileResultHDF5Writer
-    and pypesto.store.ProfileResultHDF5Reader.Tests all entries
+    and pypesto.store.ProfileResultHDF5Reader. Tests all entries
     aside from times and message.
     """
     objective = pypesto.Objective(fun=so.rosen,
@@ -202,8 +202,6 @@ def test_storage_profiling():
     finally:
         if os.path.exists(fn):
             os.remove(fn)
-        else:
-            print("The file does not exist")
 
 
 def test_storage_sampling():
@@ -265,5 +263,3 @@ def test_storage_sampling():
     finally:
         if os.path.exists(fn):
             os.remove(fn)
-        else:
-            print("The file does not exist")
