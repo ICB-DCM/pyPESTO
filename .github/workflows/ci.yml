@@ -68,7 +68,7 @@ jobs:
       run: .github/workflows/install_deps.sh amici pysb
 
     - name: Run tests
-      timeout-minutes: 15
+      timeout-minutes: 20
       run: tox -e petab
 
     - name: Coverage
