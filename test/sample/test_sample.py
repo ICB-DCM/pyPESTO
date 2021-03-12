@@ -156,7 +156,7 @@ def test_ground_truth():
 
     result = optimize.minimize(problem)
 
-    result = sample.sample(problem, n_samples=10000,
+    result = sample.sample(problem, n_samples=5000,
                            result=result, sampler=sampler)
 
     # get samples of first chain
@@ -203,7 +203,7 @@ def test_ground_truth_separated_modes():
 
     # only parallel tempering finds both modes
     print(statistic, pval)
-    assert statistic < 0.1
+    assert statistic < 0.2
 
     # sample using adaptive metropolis (single-chain)
     # initiated around the "first" mode of the distribution
@@ -444,6 +444,7 @@ def test_empty_prior():
     assert (logprior_trace == 0.).all()
 
 
+@pytest.mark.flaky(reruns=2)
 def test_prior():
     """Check that priors are defined for sampling."""
     # define negative log posterior

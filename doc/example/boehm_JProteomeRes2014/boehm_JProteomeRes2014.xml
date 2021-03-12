@@ -114,9 +114,9 @@
 	     <cn type='integer'>-1</cn>
 	     <ci>Epo_degradation_BaF3</ci>
 	    </apply>
-            <csymbol encoding="text" definitionURL="http://www.sbml.org/sbml/symbols/time"> 
-            t 
-            </csymbol> 
+            <csymbol encoding="text" definitionURL="http://www.sbml.org/sbml/symbols/time">
+            t
+            </csymbol>
 	   </apply>
 	  </apply>
 	 </apply>

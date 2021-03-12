@@ -19,7 +19,7 @@ notebook, and the API documentation for the `pypesto.objective.history` and
   - Attributes:
     - filled by objective.get_config()
     - ...
-    
+
   - lb [float n_par]
   - ub [float n_par]
   - lb_full [float n_par_full]
