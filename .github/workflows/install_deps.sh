@@ -9,6 +9,9 @@ pip install wheel setuptools
 # Used to create local test environments
 pip install tox
 
+# Update apt
+sudo apt-get update
+
 # Check arguments
 for par in "$@"; do
   case $par in
@@ -43,7 +46,7 @@ for par in "$@"; do
 
     mpi)
       # mpi
-      sudo apt install libopenmpi-dev
+      sudo apt-get install libopenmpi-dev
     ;;
 
     *)
