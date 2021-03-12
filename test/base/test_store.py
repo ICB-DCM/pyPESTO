@@ -18,7 +18,7 @@ from pypesto.store import (
     ProblemHDF5Writer, ProblemHDF5Reader, OptimizationResultHDF5Writer,
     OptimizationResultHDF5Reader, ProfileResultHDF5Writer,
     ProfileResultHDF5Reader, SamplingResultHDF5Reader,
-    SamplingResultHDF5Writer)
+    SamplingResultHDF5Writer, read_result, write_result)
 from ..visualize import create_problem, create_optimization_result
 
 
@@ -263,3 +263,93 @@ def test_storage_sampling():
     finally:
         if os.path.exists(fn):
             os.remove(fn)
+
+
+def test_storage_all():
+    """Test `read_result` and `write_result`.
+
+    It currently does not test read/write of the problem as this
+    is know to not work completely. Also excludes testing the history
+    key of an optimization result.
+    """
+    objective = pypesto.Objective(fun=so.rosen,
+                                  grad=so.rosen_der,
+                                  hess=so.rosen_hess)
+    dim_full = 10
+    lb = -5 * np.ones((dim_full, 1))
+    ub = 5 * np.ones((dim_full, 1))
+    n_starts = 5
+    problem = pypesto.Problem(objective=objective, lb=lb, ub=ub)
+
+    optimizer = pypesto.optimize.ScipyOptimizer()
+    # Optimization
+    result = pypesto.optimize.minimize(
+        problem=problem, optimizer=optimizer,
+        n_starts=n_starts)
+    # Profiling
+    result = profile.parameter_profile(
+        problem=problem, result=result,
+        profile_index=[0], optimizer=optimizer)
+    # Sampling
+
+    sampler = sample.AdaptiveMetropolisSampler()
+    result = sample.sample(problem=problem,
+                           sampler=sampler,
+                           n_samples=100,
+                           result=result)
+    # Read and write
+    filename = 'test_file.hdf5'
+    try:
+        write_result(result=result,
+                     filename=filename)
+        result_read = read_result(filename=filename)
+
+        # test optimize
+        for i, opt_res in enumerate(result.optimize_result.list):
+            for key in opt_res:
+                if key == 'history':
+                    continue
+                if isinstance(opt_res[key], np.ndarray):
+                    np.testing.assert_array_equal(
+                        opt_res[key],
+                        result_read.optimize_result.list[i][key])
+                else:
+                    assert opt_res[key] == \
+                           result_read.optimize_result.list[i][key]
+
+        # test profile
+        for key in result.profile_result.list[0][0].keys():
+            if result.profile_result.list[0][0].keys is \
+                    None or key == 'time_path':
+                continue
+            elif isinstance(
+                    result.profile_result.list[0][0][key],
+                    np.ndarray):
+                np.testing.assert_array_equal(
+                    result.profile_result.list[0][0][key],
+                    result_read.profile_result.list[0][0][key]
+                )
+            elif isinstance(
+                    result.profile_result.list[0][0][key],
+                    int):
+                assert result.profile_result.list[0][0][key] == \
+                       result_read.profile_result.list[0][0][key]
+
+        # test sample
+        for key in result.sample_result.keys():
+            if result.sample_result[key] is None \
+                    or key == 'time':
+                continue
+            elif isinstance(result.sample_result[key], np.ndarray):
+                np.testing.assert_array_equal(
+                    result.sample_result[key],
+                    result_read.sample_result[key],
+                )
+            elif isinstance(result.sample_result[key], (float, int)):
+                np.testing.assert_almost_equal(
+                    result.sample_result[key],
+                    result_read.sample_result[key],
+                )
+    finally:
+        if os.path.exists(filename):
+            os.remove(filename)
