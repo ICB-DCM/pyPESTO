@@ -377,9 +377,11 @@ class Ensemble:
         yield LOWER_BOUND, self.lower_bound
         yield UPPER_BOUND, self.upper_bound
 
-    def _map_parameters_by_objective(self,
-                                     predictor: Callable,
-                                     default_value: float = np.nan):
+    def _map_parameters_by_objective(
+            self,
+            predictor: Callable,
+            default_value: float = None,
+    ):
         """
         The parameters of the ensemble don't need to have the same ordering as
         in the predictor. This functions maps them onto each other
@@ -387,14 +389,16 @@ class Ensemble:
         # create short hands
         parameter_ids_objective = predictor.amici_objective.x_names
         parameter_ids_ensemble = self.x_names
-        # map and fill if not found
-        mapping = [
-            parameter_ids_ensemble.index(parameter_id_objective)
-            if parameter_id_objective in parameter_ids_ensemble
-            else default_value
-            for parameter_id_objective in parameter_ids_objective
-        ]
-
+        # map, and fill with `default_value` if not found and `default_value`
+        # is specified.
+        mapping = []
+        for parameter_id_objective in parameter_ids_objective:
+            if parameter_id_objective in parameter_ids_ensemble:
+                mapping.append(
+                    parameter_ids_ensemble.index(parameter_id_objective)
+                )
+            elif default_value is not None:
+                mapping.append(default_value)
         return mapping
 
     def predict(
@@ -402,7 +406,7 @@ class Ensemble:
             predictor: Callable,
             prediction_id: str = None,
             sensi_orders: Tuple = (0,),
-            default_value: float = np.nan,
+            default_value: float = None,
             mode: str = MODE_FUN,
             engine: Engine = None,
     ) -> EnsemblePrediction:
@@ -425,7 +429,8 @@ class Ensemble:
         default_value:
             If parameters are needed in the mapping, which are not found in the
             parameter source, it can make sense to fill them up with this
-            default value in some cases (to be used with caution though).
+            default value (e.g. `np.nan`) in some cases (to be used with
+            caution though).
 
         mode:
             Whether to compute function values or residuals.
