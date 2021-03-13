@@ -248,7 +248,7 @@ def process_offset_for_list(
     offset_y:
         offset for the y-axis
     """
-    min_val = 0.0
+    min_val = np.inf
     fvals_all = []
     for result in results:
         fvals = np.asarray([
