@@ -1,15 +1,21 @@
+from functools import partial
 import numpy as np
 import pandas as pd
 from typing import Sequence, Tuple, Callable, Dict
 
 from .. import Result
-from ..engine import Engine, SingleCoreEngine
+from ..engine import (
+    Engine,
+    MultiProcessEngine,
+    MultiThreadEngine,
+    SingleCoreEngine,
+)
 from ..predict import (
     PredictionConditionResult,
     PredictionResult,
-    PredictorTask,
 )
 from ..sample import geweke_test
+from .task import EnsembleTask
 from .constants import (PREDICTOR, PREDICTION_ID, PREDICTION_RESULTS,
                         PREDICTION_ARRAYS, PREDICTION_SUMMARY, OUTPUT,
                         OUTPUT_SENSI, TIMEPOINTS, X_VECTOR, NX, X_NAMES,
@@ -446,28 +452,52 @@ class Ensemble:
         if engine is None:
             engine = SingleCoreEngine()
 
-        # get the correct parameter mapping
+        # Vectors are chunked to improve parallization performance.
+        n_chunks = self.n_vectors  # Default is no chunking.
+        if isinstance(engine, MultiProcessEngine):
+            n_chunks = engine.n_procs
+        if isinstance(engine, MultiThreadEngine):
+            n_chunks = engine.n_threads
+        chunks = [
+            (
+                (chunk_i+0) * int(np.floor(self.n_vectors / n_chunks)),
+                (chunk_i+1) * int(np.floor(self.n_vectors / n_chunks)),
+            )
+            for chunk_i in range(n_chunks)
+        ]
+        # Last chunk should contain any remaining vectors that may have
+        # been skipped due to the `floor` method.
+        chunks[-1] = (chunks[-1][0], self.n_vectors)
+
+        # Get the correct parameter mapping.
         mapping = self._map_parameters_by_objective(
             predictor,
             default_value=default_value,
         )
 
+        # Setup the tasks with the prediction method and chunked vectors.
+        method = partial(predictor, sensi_orders=sensi_orders, mode=mode)
         tasks = [
-            PredictorTask(
-                predictor=predictor,
-                x=self.x_vectors[mapping, ix],
-                sensi_orders=sensi_orders,
-                mode=mode,
-                id=ix,
+            EnsembleTask(
+                method=method,
+                vectors=self.x_vectors[mapping, chunk_start:chunk_end],
+                id=chunk_i,
             )
-            for ix in range(self.n_vectors)
+            for chunk_i, (chunk_start, chunk_end) in enumerate(chunks)
         ]
 
-        prediction_results = list(engine.execute(tasks))
+        # Execute tasks and flatten chunked results.
+        prediction_results = [
+            prediction_result
+            for prediction_chunk in engine.execute(tasks)
+            for prediction_result in prediction_chunk
+        ]
 
-        return EnsemblePrediction(predictor=predictor,
-                                  prediction_id=prediction_id,
-                                  prediction_results=prediction_results)
+        return EnsemblePrediction(
+            predictor=predictor,
+            prediction_id=prediction_id,
+            prediction_results=prediction_results,
+        )
 
     def compute_summary(self,
                         percentiles_list: Sequence[int] = (5, 20, 80, 95)):
