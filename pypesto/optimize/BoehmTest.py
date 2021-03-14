@@ -126,22 +126,25 @@ model.requireSensitivitiesForAllParameters()
 solver.setSensitivityMethod(amici.SensitivityMethod_forward)
 solver.setSensitivityOrder(amici.SensitivityOrder_first)
 
-objective = pypesto.AmiciObjective(model, solver, [edata], 1, list(model.getParameterIds()))
+objective = pypesto.AmiciObjective(model, solver, [edata], 1)
 
 # create optimizer object which contains all information for doing the optimization
 optimizer = optimize.PyswarmsOptimizer()
+#optimizer = optimize.PyswarmsOptimizer()
 optimizer.solver = 'pyswarms'
+#optimizer.solver = 'pyswarms'
 
 # create problem object containing all information on the problem to be solved
-x_names = ['x' + str(j) for j in range(0, 10)]
+x_names = ['x' + str(j) for j in range(0, 9)]
 problem = pypesto.Problem(objective=objective,
-                          lb=-5*np.ones((10)), ub=5*np.ones((10)),
+                          lb=-5*np.ones((9)), ub=5*np.ones((9)),
                           x_names=x_names)
 
 # do the optimization
 result_pyswarms = optimize.minimize(problem=problem,
                            optimizer=optimizer,
-                           n_starts=20)
+                           n_starts=5)
 
 # visualize result
 visualize.waterfall(result_pyswarms, size=(15,6))
+visualize.parameters(result_pyswarms, size=(15,6))
