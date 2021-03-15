@@ -7,18 +7,29 @@ Draw samples from the distribution, with support for various samplers.
 
 from .sample import sample
 from .sampler import (
-    Sampler, InternalSampler)
+    InternalSampler,
+    Sampler,
+)
 from .metropolis import (
-    MetropolisSampler)
+    MetropolisSampler,
+)
 from .adaptive_metropolis import (
-    AdaptiveMetropolisSampler)
+    AdaptiveMetropolisSampler,
+)
 from .parallel_tempering import (
-    ParallelTemperingSampler)
+    ParallelTemperingSampler,
+)
 from .adaptive_parallel_tempering import (
-    AdaptiveParallelTemperingSampler)
+    AdaptiveParallelTemperingSampler,
+)
 from .pymc3 import Pymc3Sampler
 from .result import McmcPtResult
 from .diagnostics import (
-    geweke_test,
     auto_correlation,
-    effective_sample_size)
+    effective_sample_size,
+    geweke_test,
+)
+from .util import (
+    calculate_ci_mcmc_sample,
+    calculate_ci_mcmc_sample_prediction,
+)
