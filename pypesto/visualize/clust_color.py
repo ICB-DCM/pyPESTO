@@ -4,7 +4,7 @@ import matplotlib.cm as cm
 import numpy as np
 
 # for typehints
-RGBA = List[float]
+from .constants import RGBA
 
 
 def assign_clusters(vals):

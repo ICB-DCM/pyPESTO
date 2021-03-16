@@ -23,10 +23,7 @@ for par in "$@"; do
     amici)
       # for amici
       sudo apt-get install \
-        swig3.0 libatlas-base-dev libhdf5-serial-dev
-      if [ ! -e /usr/bin/swig ]; then
-        sudo ln -s /usr/bin/swig3.0 /usr/bin/swig
-      fi
+        swig libatlas-base-dev libhdf5-serial-dev
     ;;
 
     ipopt)
