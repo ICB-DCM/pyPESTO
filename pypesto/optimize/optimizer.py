@@ -884,7 +884,7 @@ class FidesOptimizer(Optimizer):
 
     def __init__(
             self,
-            hessian_update: Optional['fides.HessianApproximation'] = None,
+            hessian_update: Optional['fides.HessianApproximation'] = 'Hybrid',
             options: Optional[Dict] = None,
             verbose: Optional[int] = logging.INFO
     ):
@@ -895,16 +895,20 @@ class FidesOptimizer(Optimizer):
             Optimizer options.
         hessian_update:
             Hessian update strategy. If this is None, Hessian (approximation)
-            computed by problem.objective will be used (default).
+            computed by problem.objective will be used.
         """
 
         super().__init__()
+
+        if hessian_update == 'Hybrid':
+            hessian_update = fides.HybridUpdate()
 
         if hessian_update is not None and \
                 not isinstance(hessian_update, fides.HessianApproximation):
             raise ValueError('Incompatible type for hessian update, '
                              'must be fides.HessianApproximation, '
                              f'was {type(hessian_update)}.')
+
         if options is None:
             options = {}
 
@@ -930,7 +934,18 @@ class FidesOptimizer(Optimizer):
             )
 
         args = {'mode': MODE_FUN}
-        if self.hessian_update is None:
+
+        if not problem.objective.has_grad:
+            raise ValueError('Fides cannot be applied to problems '
+                             'with objectives that do not support '
+                             'gradient evaluation.')
+
+        if self.hessian_update is None or isinstance(self.hessian_update,
+                                                     fides.HybridUpdate):
+            if not problem.objective.has_hess:
+                raise ValueError('Specified hessian update scheme cannot be '
+                                 'used with objectives that do not support '
+                                 'Hessian computation.')
             args['sensi_orders'] = (0, 1, 2)
         else:
             args['sensi_orders'] = (0, 1)
