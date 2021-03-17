@@ -20,6 +20,7 @@ Release notes
   * Set fides default to hybrid (#578)
 
 * AMICI:
+
   * Make `guess_steadystate` less restrictive (#561) and have a more
     intuitive default behavior (#562, #582)
   * Customize time points (#490)
