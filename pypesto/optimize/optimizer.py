@@ -934,6 +934,12 @@ class FidesOptimizer(Optimizer):
             )
 
         args = {'mode': MODE_FUN}
+
+        if not problem.objective.has_grad:
+            raise ValueError('Fides cannot be applied to problems '
+                             'with objectives that do not support '
+                             'gradient evaluation.')
+
         if self.hessian_update is None or isinstance(self.hessian_update,
                                                      fides.HybridUpdate):
             if not problem.objective.has_hess:
@@ -942,10 +948,6 @@ class FidesOptimizer(Optimizer):
                                  'Hessian computation.')
             args['sensi_orders'] = (0, 1, 2)
         else:
-            if not problem.objective.has_grad:
-                raise ValueError('Fides cannot be applied to problems '
-                                 'with objectives that do not support '
-                                 'gradient evaluation.')
             args['sensi_orders'] = (0, 1)
 
         opt = fides.Optimizer(
