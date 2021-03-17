@@ -6,10 +6,48 @@ Release notes
 ..........
 
 
+0.2.4 (2021-03-12)
+------------------
+
+* Ensembles/Sampling:
+
+  * General ensemble analysis, visualization, storage (#557, #565, #568)
+  * Calculate and plot MCMC parameter and prediction CIs via ensemble
+    definition, parallelize ensemble predictions (#490)
+
+* Optimization:
+  * New optimizer: SciPy Differential Evolution (#543)
+  * Set fides default to hybrid (#578)
+
+* AMICI:
+  * More intuitive default behavior of `guess_steadystate` (#562, #582)
+  * Customize time points (#490)
+
+* Storage:
+  * Save HDF5 history with SingleCoreEngine (#564)
+
+* Engines:
+  * MPI based distributed parallelization (#542)
+
+* Visualization:
+  * Speed up waterfall plots by resizing scales only once (#577)
+  * Change waterfall default offset to 1 - minimum (#593)
+
+* CI:
+  * Move GHA CI tests to pull request level for better cooperability (#574)
+  * Streamline test environments using tox and pre-commit hooks (#579)
+  * Test profile and sampling storage (#585)
+  * Update for Ubuntu 20.04, add rerun on failure (#587)
+
+* Minor fixes (release notes #558, nlop tests #559, close files #495,
+  visualization #554, deployment #560, AMICI deepcopy #570, flakiness #570,
+  respect user-provided offsets #576, update to SWIG 4 #591)
+
+
 0.2.3 (2021-01-18)
 ------------------
 
-* New Optimizers:
+* New optimizers:
     * FIDES (#506, #503 # 500)
     * NLopt (#493)
 
