@@ -6,6 +6,17 @@ from .clust_color import assign_colors_for_list
 from numbers import Number
 from typing import Iterable, List, Optional, Union
 
+from .constants import (
+    LEN_RGB,
+    LEN_RGBA,
+    RGB,
+    RGB_RGBA,
+    RGBA_MIN,
+    RGBA_MAX,
+    RGBA_ALPHA,
+    RGBA_WHITE,
+)
+
 
 def process_result_list(results, colors=None, legends=None):
     """
@@ -226,3 +237,76 @@ def process_start_indices(start_indices: Union[int, Iterable[int]],
                      start_index < max_length]
 
     return start_indices
+
+
+def rgba2rgb(fg: RGB_RGBA, bg: RGB_RGBA = None) -> RGB:
+    """Combine two colors, removing transparency.
+
+    Parameters
+    ----------
+    fg:
+        Foreground color.
+    bg:
+        Background color.
+
+    Returns
+    -------
+    The combined color.
+    """
+    if bg is None:
+        bg = RGBA_WHITE
+    if len(bg) == LEN_RGBA:
+        # return foreground if background is fully transparent
+        if bg[RGBA_ALPHA] == RGBA_MIN:
+            return fg
+    else:
+        if len(bg) != LEN_RGB:
+            raise IndexError(
+                'A background color of unexpected length was provided: {bg}'
+            )
+        bg = (*bg, RGBA_MAX)
+
+    # return the foreground color if has no transparency
+    if len(fg) == LEN_RGB or fg[RGBA_ALPHA] == RGBA_MAX:
+        return fg
+    if len(fg) != LEN_RGBA:
+        raise IndexError(
+            'A foreground color of unexpected length was provided: {fg}'
+        )
+
+    def apparent_composite_color_component(
+            fg_component: float,
+            bg_component: float,
+            fg_alpha: float = fg[RGBA_ALPHA],
+            bg_alpha: float = bg[RGBA_ALPHA],
+    ) -> float:
+        """
+        Composite a foreground color component over a background color
+        component.
+
+        Porter and Duff equations are used for alpha compositing.
+
+        Parameters
+        ----------
+        fg_component:
+            The foreground color component.
+        bg_component:
+            The background color component.
+        fg_alpha:
+            The foreground color transparency/alpha component.
+        bg_alpha:
+            The background color transparency/alpha component.
+
+        Returns
+        -------
+        The component of the new color.
+        """
+        return (
+            fg_component * fg_alpha +
+            bg_component * bg_alpha * (RGBA_MAX - fg_alpha)
+        ) / (fg_alpha + bg_alpha * (RGBA_MAX - fg_alpha))
+
+    return [
+        apparent_composite_color_component(fg[i], bg[i])
+        for i in range(LEN_RGB)
+    ]
