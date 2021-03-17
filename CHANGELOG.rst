@@ -20,11 +20,13 @@ Release notes
   * Set fides default to hybrid (#578)
 
 * AMICI:
-  * More intuitive default behavior of `guess_steadystate` (#562, #582)
+  * Make `guess_steadystate` less restrictive (#561) and have a more
+    intuitive default behavior (#562, #582)
   * Customize time points (#490)
 
 * Storage:
   * Save HDF5 history with SingleCoreEngine (#564)
+  * Add read/write function for whole results (#589)
 
 * Engines:
   * MPI based distributed parallelization (#542)
@@ -40,8 +42,9 @@ Release notes
   * Update for Ubuntu 20.04, add rerun on failure (#587)
 
 * Minor fixes (release notes #558, nlop tests #559, close files #495,
-  visualization #554, deployment #560, AMICI deepcopy #570, flakiness #570,
-  respect user-provided offsets #576, update to SWIG 4 #591)
+  visualization #554, deployment #560, flakiness #570,
+  aggregated deepcopy #572, respect user-provided offsets #576,
+  update to SWIG 4 #591, check overwrite in profile writing #566)
 
 
 0.2.3 (2021-01-18)
