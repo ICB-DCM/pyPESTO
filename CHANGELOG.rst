@@ -10,6 +10,7 @@ Release notes
 ------------------
 
 * Ensembles/Sampling:
+
   * General ensemble analysis, visualization, storage (#557, #565, #568)
   * Calculate and plot MCMC parameter and prediction CIs via ensemble
     definition, parallelize ensemble predictions (#490)
