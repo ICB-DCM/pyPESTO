@@ -50,7 +50,7 @@ Welcome to pyPESTO's documentation!
 
    api_objective
    api_problem
-   api_prediction
+   api_predict
    api_petab
    api_optimize
    api_profile
@@ -61,12 +61,13 @@ Welcome to pyPESTO's documentation!
    api_startpoint
    api_store
    api_logging
+   api_ensemble
 
 .. toctree::
    :maxdepth: 2
    :caption: About
 
-   releasenotes
+   changelog
    authors
    contact
    license

@@ -8,12 +8,17 @@ import warnings
 import re
 import nlopt
 import fides
+import scipy as sp
 import itertools as itt
+import os
+import subprocess  # noqa: S404
 
 import pypesto
 import pypesto.optimize as optimize
+from pypesto.store import OptimizationResultHDF5Reader
 
 from ..util import rosen_for_sensi
+from numpy.testing import assert_almost_equal
 
 
 @pytest.fixture(params=['separated', 'integrated'])
@@ -32,6 +37,7 @@ optimizers = [
     ('dlib', ''),
     ('pyswarm', ''),
     ('cmaes', ''),
+    ('scipydiffevolopt', ''),
     *[('nlopt', method) for method in [
         nlopt.LD_VAR1, nlopt.LD_VAR2, nlopt.LD_TNEWTON_PRECOND_RESTART,
         nlopt.LD_TNEWTON_PRECOND, nlopt.LD_TNEWTON_RESTART,
@@ -99,6 +105,7 @@ def test_unbounded_minimize(optimizer):
         return
 
     if optimizer in [('dlib', ''), ('pyswarm', ''), ('cmaes', ''),
+                     ('scipydiffevolopt', ''),
                      *[('nlopt', method) for method in [
                          nlopt.GN_ESCH, nlopt.GN_ISRES, nlopt.GN_AGS,
                          nlopt.GD_STOGO, nlopt.GD_STOGO_RAND, nlopt.G_MLSL,
@@ -144,7 +151,6 @@ def get_optimizer(library, solver):
     options = {
         'maxiter': 100
     }
-    optimizer = None
 
     if library == 'scipy':
         optimizer = optimize.ScipyOptimizer(method=solver, options=options)
@@ -156,12 +162,17 @@ def get_optimizer(library, solver):
         optimizer = optimize.PyswarmOptimizer(options=options)
     elif library == 'cmaes':
         optimizer = optimize.CmaesOptimizer(options=options)
+    elif library == 'scipydiffevolopt':
+        optimizer = optimize.ScipyDifferentialEvolutionOptimizer(
+            options=options)
     elif library == 'nlopt':
         optimizer = optimize.NLoptOptimizer(method=solver, options=options)
     elif library == 'fides':
         options[fides.Options.SUBSPACE_DIM] = solver[1]
         optimizer = optimize.FidesOptimizer(options=options,
                                             hessian_update=solver[0])
+    else:
+        raise ValueError(f"Optimizer not recognized: {library}")
 
     return optimizer
 
@@ -187,6 +198,54 @@ def check_minimize(objective, library, solver, allow_failed_starts=False):
     )
 
     assert isinstance(result.optimize_result.list[0]['fval'], float)
-    if (library, solver) not in [('scipy', 'ls_trf'), ('scipy', 'ls_dogbox')]:
+    if (library, solver) not in [
+            ('scipy', 'ls_trf'),
+            ('scipy', 'ls_dogbox'),
+            ('nlopt', nlopt.GD_STOGO_RAND)  # id 9, fails in 40% of cases
+    ]:
         assert np.isfinite(result.optimize_result.list[0]['fval'])
         assert result.optimize_result.list[0]['x'] is not None
+
+
+def test_mpipoolengine():
+    """
+    Test the MPIPoolEngine by calling an example script with mpiexec.
+    """
+    try:
+        # get the path to this file:
+        path = os.path.dirname(__file__)
+        # run the example file.
+        subprocess.check_call(  # noqa: S603,S607
+            ['mpiexec', '-np', '2', 'python', '-m', 'mpi4py.futures',
+             f'{path}/../../doc/example/example_MPIPool.py'])
+
+        # read results
+        opt_result_reader = OptimizationResultHDF5Reader('temp_result.h5')
+        result1 = opt_result_reader.read()
+        # set optimizer
+        optimizer = optimize.FidesOptimizer(verbose=0)
+        # initialize problem with x_guesses and objective
+        objective = pypesto.Objective(fun=sp.optimize.rosen,
+                                      grad=sp.optimize.rosen_der,
+                                      hess=sp.optimize.rosen_hess)
+        x_guesses = np.array([result1.optimize_result.list[i]['x0']
+                              for i in range(2)])
+        problem = pypesto.Problem(objective=objective,
+                                  ub=result1.problem.ub,
+                                  lb=result1.problem.lb,
+                                  x_guesses=x_guesses)
+        result2 = optimize.minimize(problem=problem,
+                                    optimizer=optimizer,
+                                    n_starts=2,
+                                    engine=pypesto.engine.MultiProcessEngine())
+
+        for ix in range(2):
+            assert_almost_equal(result1.optimize_result.list[ix]['x'],
+                                result2.optimize_result.list[ix]['x'],
+                                err_msg='The final parameter values '
+                                        'do not agree for the engines.')
+
+    finally:
+        if os.path.exists('temp_result.h5'):
+            # delete data
+            os.remove('temp_result.h5')

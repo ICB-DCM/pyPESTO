@@ -1,10 +1,11 @@
 import numpy as np
 from typing import Sequence, Union, Callable, Tuple, List
+from copy import deepcopy
 
-from .constants import (MODE_FUN, OBSERVABLE_IDS, TIMEPOINTS, OUTPUT,
+from .constants import (MODE_FUN, OUTPUT_IDS, TIMEPOINTS, OUTPUT,
                         OUTPUT_SENSI, CSV, H5, AMICI_T, AMICI_X, AMICI_SX,
-                        AMICI_Y, AMICI_SY, AMICI_STATUS, RDATAS)
-from .prediction import PredictionResult
+                        AMICI_Y, AMICI_SY, AMICI_STATUS, RDATAS, PARAMETER_IDS)
+from .result import PredictionResult
 from ..objective import AmiciObjective
 
 
@@ -25,11 +26,14 @@ class AmiciPredictor:
     """
     def __init__(self,
                  amici_objective: AmiciObjective,
+                 amici_output_fields: Union[Sequence[str], None] = None,
                  post_processor: Union[Callable, None] = None,
                  post_processor_sensi: Union[Callable, None] = None,
                  post_processor_time: Union[Callable, None] = None,
                  max_chunk_size: Union[int, None] = None,
-                 observable_ids: Union[Sequence[str], None] = None):
+                 output_ids: Union[Sequence[str], None] = None,
+                 condition_ids: Union[Sequence[str], None] = None
+                 ):
         """
         Constructor.
 
@@ -37,27 +41,39 @@ class AmiciPredictor:
         ----------
         amici_objective:
             An objective object, which will be used to get model simulations
+        amici_output_fields:
+            keys that exist in the return data object from AMICI, which should
+            be available for the post-processors
         post_processor:
             A callable function which applies postprocessing to the simulation
-            results and possibly defines different observables than those of
-            the amici model. Default are the observables of the amici model.
-            This method takes a list of dicts (with the returned fields ['t'],
-            ['x'], and ['y'] of the amici ReturnData objects) as input.
-            Safeguards for, e.g., failure of Amici are left to the user.
+            results and possibly defines different outputs than those of
+            the amici model. Default are the observables
+            (`pypesto.predict.constants.AMICI_Y`) of the AMICI model. This
+            method takes a list of dicts (with the returned
+            fields `pypesto.predict.constants.AMICI_T`,
+            `pypesto.predict.constants.AMICI_X`, and
+            `pypesto.predict.constants.AMICI_Y` of the AMICI ReturnData
+            objects) as input. Safeguards for, e.g., failure of AMICI are left
+            to the user.
         post_processor_sensi:
             A callable function which applies postprocessing to the
             sensitivities of the simulation results. Defaults to the
-            observable sensitivities of the amici model.
-            This method takes a list of dicts (with the returned fields ['t'],
-            ['x'], ['y'], ['sx'], and ['sy'] of the amici ReturnData objects)
-            as input. Safeguards for, e.g., failure of Amici are left to the
-            user.
+            observable sensitivities of the AMICI model.
+            This method takes a list of dicts (with the returned fields
+            `pypesto.predict.constants.AMICI_T`,
+            `pypesto.predict.constants.AMICI_X`,
+            `pypesto.predict.constants.AMICI_Y`,
+            `pypesto.predict.constants.AMICI_SX`, and
+            `pypesto.predict.constants.AMICI_SY` of the AMICI ReturnData
+            objects) as input. Safeguards for, e.g., failure of AMICI are left
+            to the user.
         post_processor_time:
             A callable function which applies postprocessing to the timepoints
             of the simulations. Defaults to the timepoints of the amici model.
-            This method takes a list of dicts (with the returned field ['t'] of
-            the amici ReturnData objects) as input. Safeguards for, e.g.,
-            failure of Amici are left to the user.
+            This method takes a list of dicts (with the returned field
+            `pypesto.predict.constants.AMICI_T` of the amici ReturnData
+            objects) as input. Safeguards for, e.g., failure of AMICI are left
+            to the user.
         max_chunk_size:
             In some cases, we don't want to compute all predictions at once
             when calling the prediction function, as this might not fit into
@@ -65,10 +81,13 @@ class AmiciPredictor:
             Here, the user can specify a maximum chunk size of conditions,
             which should be simulated at a time.
             Defaults to None, meaning that all conditions will be simulated.
-        observable_ids:
-            IDs of observables, as post-processing allows the creation of
-            customizable observables, which may not coincide with those from
-            the amici model (defaults to amici observables).
+        output_ids:
+            IDs of outputs, as post-processing allows the creation of
+            customizable outputs, which may not coincide with those from
+            the AMICI model (defaults to AMICI observables).
+        condition_ids:
+            List of identifiers for the conditions of the edata objects of the
+            amici objective, will be passed to the PredictionResult at call.
         """
         # save settings and objective
         self.amici_objective = amici_objective
@@ -76,12 +95,23 @@ class AmiciPredictor:
         self.post_processor = post_processor
         self.post_processor_sensi = post_processor_sensi
         self.post_processor_time = post_processor_time
+        self.condition_ids = condition_ids
 
-        if observable_ids is None:
-            self.observable_ids = \
+        # If the user takes care of everything we can skip default readouts
+        self.skip_default_outputs = False
+        if post_processor is not None and post_processor_sensi is not None \
+                and post_processor_time is not None:
+            self.skip_default_outputs = True
+
+        self.output_ids = output_ids
+        if output_ids is None:
+            self.output_ids = \
                 amici_objective.amici_model.getObservableIds()
-        else:
-            self.observable_ids = observable_ids
+
+        if amici_output_fields is None:
+            amici_output_fields = [AMICI_STATUS, AMICI_T, AMICI_X, AMICI_Y,
+                                   AMICI_SX, AMICI_SY]
+        self.amici_output_fields = amici_output_fields
 
     def __call__(
             self,
@@ -89,7 +119,7 @@ class AmiciPredictor:
             sensi_orders: Tuple[int, ...] = (0, ),
             mode: str = MODE_FUN,
             output_file: str = '',
-            output_format: str = CSV,
+            output_format: str = CSV
     ) -> PredictionResult:
         """
         Simulate a model for a certain prediction function.
@@ -135,7 +165,8 @@ class AmiciPredictor:
         n_cond = len(timepoints)
         for i_cond in range(n_cond):
             result = {TIMEPOINTS: timepoints[i_cond],
-                      OBSERVABLE_IDS: self.observable_ids}
+                      OUTPUT_IDS: self.output_ids,
+                      PARAMETER_IDS: self.amici_objective.x_names}
             if outputs:
                 result[OUTPUT] = outputs[i_cond]
             if outputs_sensi:
@@ -143,7 +174,8 @@ class AmiciPredictor:
 
             condition_results.append(result)
         # create result object
-        results = PredictionResult(condition_results)
+        results = PredictionResult(condition_results,
+                                   condition_ids=self.condition_ids)
 
         # Should the results be saved to a file?
         if output_file:
@@ -215,17 +247,18 @@ class AmiciPredictor:
             # call amici
             self._wrap_call_to_amici(
                 amici_outputs=amici_outputs, x=x, sensi_orders=sensi_orders,
-                mode=mode, edatas=self.amici_objective.edatas[ids])
+                parameter_mapping=self.amici_objective.parameter_mapping[ids],
+                edatas=self.amici_objective.edatas[ids], mode=mode)
 
         def _default_output(amici_outputs):
             """
-            Default output of prediction, equals to observables of Amici model.
-            We need to check that call to Amici was successful (status == 0),
+            Default output of prediction, equals to observables of AMICI model.
+            We need to check that call to AMICI was successful (status == 0),
             before writing the output
             """
             amici_nt = [len(edata.getTimepoints())
                         for edata in self.amici_objective.edatas]
-            amici_ny = len(self.observable_ids)
+            amici_ny = len(self.output_ids)
             amici_np = len(self.amici_objective.x_names)
 
             outputs = []
@@ -239,20 +272,22 @@ class AmiciPredictor:
             if 0 in sensi_orders:
                 outputs = [
                     amici_output[AMICI_Y] if amici_output[AMICI_STATUS] == 0
-                    else np.full((amici_nt, amici_ny), np.nan)
-                    for amici_output in amici_outputs
+                    else np.full((amici_nt[i_condition], amici_ny), np.nan)
+                    for i_condition, amici_output in enumerate(amici_outputs)
                 ]
             if 1 in sensi_orders:
                 outputs_sensi = [
                     amici_output[AMICI_SY] if amici_output[AMICI_STATUS] == 0
-                    else np.full((amici_nt, amici_np, amici_ny), np.nan)
-                    for amici_output in amici_outputs
+                    else np.full((amici_nt[i_condition], amici_np, amici_ny),
+                                 np.nan)
+                    for i_condition, amici_output in enumerate(amici_outputs)
                 ]
 
             return timepoints, outputs, outputs_sensi
 
         # Get default output
-        timepoints, outputs, outputs_sensi = _default_output(amici_outputs)
+        if not self.skip_default_outputs:
+            timepoints, outputs, outputs_sensi = _default_output(amici_outputs)
 
         # postprocess (use original Amici outputs)
         if self.post_processor is not None:
@@ -265,7 +300,7 @@ class AmiciPredictor:
         return timepoints, outputs, outputs_sensi
 
     def _wrap_call_to_amici(self, amici_outputs, x, sensi_orders, mode,
-                            edatas):
+                            parameter_mapping, edatas):
         """
         The only purpose of this function is to encapsulate the call to amici:
         This allows to use variable scoping as a mean to clean up the memory
@@ -273,11 +308,11 @@ class AmiciPredictor:
         datasets are used.
         """
         chunk = self.amici_objective(x=x, sensi_orders=sensi_orders, mode=mode,
+                                     parameter_mapping=parameter_mapping,
                                      edatas=edatas,  return_dict=True)
         for rdata in chunk[RDATAS]:
-            amici_outputs.append({AMICI_STATUS: rdata[AMICI_STATUS],
-                                  AMICI_T: rdata[AMICI_T],
-                                  AMICI_X: rdata[AMICI_X],
-                                  AMICI_SX: rdata[AMICI_SX],
-                                  AMICI_Y: rdata[AMICI_Y],
-                                  AMICI_SY: rdata[AMICI_SY]})
+            amici_outputs.append({
+                output_field: deepcopy(rdata[output_field])
+                for output_field in self.amici_output_fields
+            })
+        del chunk

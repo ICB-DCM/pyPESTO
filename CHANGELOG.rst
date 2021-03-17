@@ -6,41 +6,83 @@ Release notes
 ..........
 
 
+0.2.4 (2021-03-12)
+------------------
+
+* Ensembles/Sampling:
+
+  * General ensemble analysis, visualization, storage (#557, #565, #568)
+  * Calculate and plot MCMC parameter and prediction CIs via ensemble
+    definition, parallelize ensemble predictions (#490)
+
+* Optimization:
+  * New optimizer: SciPy Differential Evolution (#543)
+  * Set fides default to hybrid (#578)
+
+* AMICI:
+
+  * Make `guess_steadystate` less restrictive (#561) and have a more
+    intuitive default behavior (#562, #582)
+  * Customize time points (#490)
+
+* Storage:
+  * Save HDF5 history with SingleCoreEngine (#564)
+  * Add read/write function for whole results (#589)
+
+* Engines:
+  * MPI based distributed parallelization (#542)
+
+* Visualization:
+  * Speed up waterfall plots by resizing scales only once (#577)
+  * Change waterfall default offset to 1 - minimum (#593)
+
+* CI:
+  * Move GHA CI tests to pull request level for better cooperability (#574)
+  * Streamline test environments using tox and pre-commit hooks (#579)
+  * Test profile and sampling storage (#585)
+  * Update for Ubuntu 20.04, add rerun on failure (#587)
+
+* Minor fixes (release notes #558, nlop tests #559, close files #495,
+  visualization #554, deployment #560, flakiness #570,
+  aggregated deepcopy #572, respect user-provided offsets #576,
+  update to SWIG 4 #591, check overwrite in profile writing #566)
+
+
 0.2.3 (2021-01-18)
 ------------------
 
-* New Optimizers:
-  * FIDES (#506, #503 # 500)
-  * NLopt (#493)
+* New optimizers:
+    * FIDES (#506, #503 # 500)
+    * NLopt (#493)
 
 * Extended PEtab support:
-  * PySB import (#437)
-  * Support of PEtab's initializationPriors (#535)
-  * Support of prior parameterScale{Normal,Laplace}  (#520)
-  * Example notebook for synthetic data generation (#482)
+    * PySB import (#437)
+    * Support of PEtab's initializationPriors (#535)
+    * Support of prior parameterScale{Normal,Laplace}  (#520)
+    * Example notebook for synthetic data generation (#482)
 
 * General new and improved functionality:
-  * Predictions (#544)
-  * Move tests to GitHub Actions (#524)
-  * Parallelize profile calculation (#532)
-  * Save `x_guesses` in `pypesto.problem` (#494)
-  * Improved finite difference gradients (#464)
-  * Support of unconstrained optimization (#519)
-  * Additional NaN check for fval, grad and hessian (#521)
-  * Add sanity checks for optimizer bounds (#516)
+    * Predictions (#544)
+    * Move tests to GitHub Actions (#524)
+    * Parallelize profile calculation (#532)
+    * Save `x_guesses` in `pypesto.problem` (#494)
+    * Improved finite difference gradients (#464)
+    * Support of unconstrained optimization (#519)
+    * Additional NaN check for fval, grad and hessian (#521)
+    * Add sanity checks for optimizer bounds (#516)
 
 * Improvements in storage:
-  * Fix hdf5 export of optimizer history (#536)
-  * Fix reading `x_names` from hdf5 history (#528)
-  * Storage does not save empty arrays (#489)
-  * hdf5 storage sampling (#546)
-  * hdf5 storage parameter profiles (#546)
+    * Fix hdf5 export of optimizer history (#536)
+    * Fix reading `x_names` from hdf5 history (#528)
+    * Storage does not save empty arrays (#489)
+    * hdf5 storage sampling (#546)
+    * hdf5 storage parameter profiles (#546)
 
 * Improvements in the visualization routines:
-  * Plot parameter values as histogram (#485)
-  * Fix y axis limits in waterfall plots (#503)
-  * Fix color scheme in visualization (#498)
-  * Improved visualization of optimization results (#486)
+    * Plot parameter values as histogram (#485)
+    * Fix y axis limits in waterfall plots (#503)
+    * Fix color scheme in visualization (#498)
+    * Improved visualization of optimization results (#486)
 
 * Several small bug fixes (#547, #541, #538, #533, #512, #508)
 
@@ -52,14 +94,14 @@ Release notes
 * New plot: Optimizer convergence summary (#446)
 
 * Fixes in visualization:
-  * Type checks for reference points (#460)
-  * y_limits in waterfall plots with multiple results (#475)
+    * Type checks for reference points (#460)
+    * y_limits in waterfall plots with multiple results (#475)
 * Support of new amici release (#469)
 
 * Multiple fixes in optimization code:
-  * Remove unused argument for dlib optimizer (#466)
-  * Add check for installation of ipopt (#470)
-  * Add maxiter as default option of dlib (#474)
+    * Remove unused argument for dlib optimizer (#466)
+    * Add check for installation of ipopt (#470)
+    * Add maxiter as default option of dlib (#474)
 
 * Numpy based subindexing in amici_util (#462)
 * Check amici/PEtab installation (#477)
@@ -73,10 +115,10 @@ Release notes
 * Basic sanity checking for parameter fixing (#420)
 
 * Bug fixes in:
-  * Displaying of multi start optimization (#430)
-  * AMICI error output (#428)
-  * Axes scaling/limits in waterfall plots (#441)
-  * Priors (PEtab import, error handling) (#448, #452, #454)
+    * Displaying of multi start optimization (#430)
+    * AMICI error output (#428)
+    * Axes scaling/limits in waterfall plots (#441)
+    * Priors (PEtab import, error handling) (#448, #452, #454)
 
 * Improved sampling diagnostics (e.g. effective samples size) (#426)
 * Improvements and bug fixes in parameter plots (#425)
@@ -93,10 +135,10 @@ Major:
 Minor:
 
 * Bug fixes in
-  * sampling (#412)
-  * visualization (#405)
-  * PEtab import (#403)
-  * Hessian computation (#390)
+    * sampling (#412)
+    * visualization (#405)
+    * PEtab import (#403)
+    * Hessian computation (#390)
 
 * Improve hdf5 error output (#409)
 * Outlaw large new files in GitHub commits (#388)
@@ -115,11 +157,11 @@ Objective
   systems (#308)
 
 * Refactor objective function (#347)
-  * Removes necessity for all of the nasty binding/undbinding in AmiciObjective
-  * Substantially reduces the complexity of the AggregatedObjective class
-  * Aggregation of functions with inconsistent sensi_order/mode support
-  * Introduce ObjectiveBase as an abstract Objective class
-  * Introduce FunctionObjective for objectives from functions
+    * Removes necessity for all of the nasty binding/undbinding in AmiciObjective
+    * Substantially reduces the complexity of the AggregatedObjective class
+    * Aggregation of functions with inconsistent sensi_order/mode support
+    * Introduce ObjectiveBase as an abstract Objective class
+    * Introduce FunctionObjective for objectives from functions
 
 * Implement priors with gradients, integrate with PEtab (#357)
 * Fix minus sign in AmiciObjective.get_error_output (#361)
@@ -265,7 +307,7 @@ Breaking changes:
 0.0.9 (2019-10-11)
 ------------------
 
-* Update to AMICI 0.10.13, fix API changes (#185). 
+* Update to AMICI 0.10.13, fix API changes (#185).
 * Start using PEtab import from AMICI to be able to import constant species (#184, #185)
 * Require PEtab>=0.0.0a16 (#183)
 
@@ -310,7 +352,7 @@ Breaking changes:
 * Introduce PrePostProcessor to more reliably handle pre- and
   post-processing.
 * Fix problems with simulating for multiple conditions.
-* Add more visualization routines and options for those (colors, 
+* Add more visualization routines and options for those (colors,
   reference points, plotting of lists of result obejcts)
 
 

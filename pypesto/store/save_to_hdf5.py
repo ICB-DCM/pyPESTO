@@ -148,8 +148,9 @@ class OptimizationResultHDF5Writer:
             for start in result.optimize_result.list:
                 start_id = start['id']
                 start_grp = get_or_create_group(results_grp, start_id)
-                start['history'] = None  # TOOD temporary fix
                 for key in start.keys():
+                    if key == 'history':
+                        continue
                     if isinstance(start[key], np.ndarray):
                         write_float_array(start_grp, key, start[key])
                     elif start[key] is not None:
@@ -235,8 +236,8 @@ class ProfileResultHDF5Writer:
                 os.makedirs(basedir, exist_ok=True)
 
         with h5py.File(self.storage_filename, "a") as f:
-            profiling_grp = get_or_create_group(f, "profiling")
             check_overwrite(f, overwrite, 'profiling')
+            profiling_grp = get_or_create_group(f, "profiling")
 
             for profile_id, profile in enumerate(result.profile_result.list):
                 profile_grp = get_or_create_group(profiling_grp,
@@ -257,3 +258,50 @@ class ProfileResultHDF5Writer:
                         elif parameter_profile[key] is not None:
                             result_grp.attrs[key] = parameter_profile[key]
             f.flush()
+
+
+def write_result(result: Result,
+                 filename: str,
+                 overwrite: bool = False,
+                 problem: bool = True,
+                 optimize: bool = True,
+                 profile: bool = True,
+                 sample: bool = True,
+                 ):
+    """Save whole pypesto.Result to hdf5 file.
+
+    Boolean indicators allow specifying what to save.
+
+    Parameters
+    ----------
+    result:
+        The :class:`pypesto.Result` object to be saved.
+    filename:
+        The HDF5 filename.
+    overwrite:
+        Boolean, whether already existing results should be overwritten.
+    problem:
+        Read the problem.
+    optimize:
+        Read the optimize result.
+    profile:
+        Read the profile result.
+    sample:
+        Read the sample result.
+    """
+
+    if problem:
+        pypesto_problem_writer = ProblemHDF5Writer(filename)
+        pypesto_problem_writer.write(result.problem, overwrite=overwrite)
+
+    if optimize:
+        pypesto_opt_writer = OptimizationResultHDF5Writer(filename)
+        pypesto_opt_writer.write(result, overwrite=overwrite)
+
+    if profile:
+        pypesto_profile_writer = ProfileResultHDF5Writer(filename)
+        pypesto_profile_writer.write(result, overwrite=overwrite)
+
+    if sample:
+        pypesto_sample_writer = SamplingResultHDF5Writer(filename)
+        pypesto_sample_writer.write(result, overwrite=overwrite)

@@ -54,6 +54,9 @@ class AggregatedObjective(ObjectiveBase):
             objectives=[deepcopy(objective) for objective in self._objectives],
             x_names=deepcopy(self.x_names),
         )
+        for key in set(self.__dict__.keys()) - {'_objectives', 'x_names'}:
+            other.__dict__[key] = deepcopy(self.__dict__[key])
+
         return other
 
     def check_mode(self, mode) -> bool:
