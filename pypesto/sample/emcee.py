@@ -63,8 +63,6 @@ class EmceeSampler(Sampler):
         problem: Problem,
         x0: Union[np.ndarray, List[np.ndarray]],
     ) -> None:
-        """Initialize the sampler. See base class."""
-
         self.problem = problem
 
         # extract objective for pickling efficiency
@@ -104,15 +102,11 @@ class EmceeSampler(Sampler):
             problem.x_guesses_full = problem.x_guesses_full[x0.shape[0]:]
 
     def sample(self, n_samples: int, beta: float = 1.) -> None:
-        """Perform sampling. See base class."""
-
         # the method returns the most recent sample state
         self.state = self.sampler.run_mcmc(
             self.state, n_samples, **self.run_args)
 
     def get_samples(self) -> McmcPtResult:
-        """Get the generated samples. See base class."""
-
         # all walkers are concatenated, yielding a flat array
         trace_x = np.array([self.sampler.get_chain(flat=True)])
         trace_neglogpost = np.array([- self.sampler.get_log_prob(flat=True)])
