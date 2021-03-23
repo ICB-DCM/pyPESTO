@@ -130,7 +130,7 @@ def negative_log_prior(x):
     'AdaptiveMetropolis',
     'ParallelTempering',
     'AdaptiveParallelTempering',
-    #'Pymc3',
+    'Pymc3',
     'Emcee',
 ])
 def sampler(request):

@@ -1,5 +1,4 @@
-from typing import Dict, List, Union
-import copy
+from typing import List, Union
 import numpy as np
 
 from ..problem import Problem
@@ -89,7 +88,8 @@ class EmceeSampler(Sampler):
             #  extract x0
             x0 = np.asarray(x0)
             if x0.ndim == 1:
-                x0 = np.asarray([x0])
+                x0 = [x0]
+            x0 = np.array([problem.get_full_vector(x) for x in x0])
             #  add x0 to guesses
             problem.x_guesses_full = np.row_stack((x0, problem.x_guesses_full))
 
