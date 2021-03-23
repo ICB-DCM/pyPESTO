@@ -31,16 +31,16 @@ class EmceeSampler(Sampler):
         nwalkers: The number of walkers in the ensemble.
         sampler_args:
             Further keyword arguments that are passed on to
-            `emcee.EnsembleSampler.__init__`.
+            ``emcee.EnsembleSampler.__init__``.
         run_args:
             Further keyword arguments that are passed on to
-            `emcee.EnsembleSampler.run_mcmc`.
+            ``emcee.EnsembleSampler.run_mcmc``.
         """
         # check dependencies
         if emcee is None:
             raise ImportError(
                 "This sampler requires an installation of emcee. Install e.g. "
-                "via `pip install pypesto[emcee]`.")
+                "via ``pip install pypesto[emcee]``.")
 
         super().__init__()
         self.nwalkers: int = nwalkers
