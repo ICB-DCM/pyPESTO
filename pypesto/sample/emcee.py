@@ -65,13 +65,19 @@ class EmceeSampler(Sampler):
     ) -> None:
         self.problem = problem
 
-        # extract objective for pickling efficiency
+        # extract for pickling efficiency
         objective = self.problem.objective
+        lb = self.problem.lb
+        ub = self.problem.ub
+
         # parameter dimenstion
         ndim = len(self.problem.x_free_indices)
 
         def log_prob(x):
-            """Log-probability density function"""
+            """Log-probability density function."""
+            # check if parameter lies within bounds
+            if any(x < lb) or any(x > ub):
+                return - np.inf
             # invert sign
             return - 1. * objective(x)
 
