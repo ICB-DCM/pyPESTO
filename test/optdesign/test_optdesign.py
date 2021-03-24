@@ -4,7 +4,6 @@ This is for testing the pypesto.optdesign.
 import os
 import numpy as np
 import pypesto
-import pypesto.optimize as optimize
 import pypesto.optdesign as op
 import pandas as pd
 from pypesto.optdesign.design_problem import DesignProblem
@@ -34,7 +33,7 @@ def load_design_problem():
 
 def load_result(design_problem):
     optimizer = pypesto.optimize.ScipyOptimizer(
-        'L-BFGS-B', )  # options={'maxiter': 50}
+        'L-BFGS-B')  # options={'maxiter': 50}
     result = pypesto.optimize.minimize(
         problem=design_problem.problem, optimizer=optimizer, n_starts=1,
     )
@@ -76,6 +75,7 @@ def test_run_exp_design():
             assert res.get_best_conditions(criteria=criteria, n_best=10)[1] \
                    == \
                    list(range(0, 10))
+
 
 def test_hess():
     x = [0, 1]

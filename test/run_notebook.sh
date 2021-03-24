@@ -16,7 +16,7 @@ nbs_1=(
   'fixed_parameters.ipynb' 'petab_import.ipynb'
   'prior_definition.ipynb' 'rosenbrock.ipynb'
   'store.ipynb' 'synthetic_data.ipynb'
-  'hdf5_storage.ipynb')
+  'hdf5_storage.ipynb' 'optdesign.ipynb')
 
 # Sampling notebooks
 nbs_2=(

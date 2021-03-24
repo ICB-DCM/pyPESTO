@@ -116,7 +116,7 @@ def get_initial_results(design_result: DesignResult) -> DesignResult:
     design_problem = design_result.design_problem
 
     design_result.initial_result = []
-    for i, x in enumerate(design_problem.initial_x):
+    for x in design_problem.initial_x:
         init_res = get_design_result(design_problem=design_problem,
                                      candidate=None,
                                      x=x)

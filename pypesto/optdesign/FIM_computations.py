@@ -120,7 +120,7 @@ def get_derivatives(design_problem: DesignProblem,
 
     # these may be noise parameters for which we have explicit values
     missing_params = len(model.getParameterIds()) - len(temp)
-    for i in range(missing_params):
+    for _ in range(missing_params):
         temp = np.append(temp, 0)
     model.setParameters(amici.DoubleVector(temp))
 
