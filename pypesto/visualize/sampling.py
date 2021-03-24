@@ -249,8 +249,7 @@ def sampling_1d_marginals(
         plot_type: str = 'both',
         bw: str = 'scott',
         suptitle: str = None,
-        size: Tuple[float, float] = None,
-        use_problem_bounds = False):
+        size: Tuple[float, float] = None):
     """
     Plot marginals.
 
@@ -306,9 +305,6 @@ def sampling_1d_marginals(
 
         par_ax[par_id].set_xlabel(param_names[idx])
         par_ax[par_id].set_ylabel('Density')
-
-        if use_problem_bounds:
-            par_ax[par_id].set_xlim([theta_lb[idx]-0.3, theta_ub[idx]+0.3])
 
     sns.despine()
 
