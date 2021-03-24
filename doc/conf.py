@@ -51,6 +51,7 @@ autodoc_default_options = {
     'special-members': '__init__, __call__',
     'imported-members': True,
     'show-inheritance': True,
+    'autodoc_inherit_docstrings': True,
 }
 
 # links for intersphinx
