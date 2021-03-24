@@ -48,7 +48,7 @@ def assign_startpoints(
     # apply startpoint method
     x_sampled = startpoint_method(
         n_starts=n_required_points,
-        lb=problem.lb, ub=problem.ub,
+        lb=problem.lb_init, ub=problem.ub_init,
         x_guesses=problem.x_guesses,
         objective=problem.objective
     )
@@ -78,8 +78,8 @@ def resample_startpoints(startpoints, problem, method):
 
     n_starts = startpoints.shape[0]
     resampled_startpoints = np.zeros_like(startpoints)
-    lb = problem.lb
-    ub = problem.ub
+    lb = problem.lb_init
+    ub = problem.ub_init
     x_guesses = problem.x_guesses
 
     fvals = np.empty((n_starts,))

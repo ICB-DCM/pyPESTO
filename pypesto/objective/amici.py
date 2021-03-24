@@ -3,7 +3,7 @@ import copy
 import tempfile
 import os
 import abc
-from typing import Dict, Sequence, Union
+from typing import Dict, Sequence, Union, Optional
 from collections import OrderedDict
 
 from .base import ObjectiveBase
@@ -58,7 +58,7 @@ class AmiciObjective(ObjectiveBase):
                  x_ids: Sequence[str] = None,
                  x_names: Sequence[str] = None,
                  parameter_mapping: 'ParameterMapping' = None,
-                 guess_steadystate: bool = True,
+                 guess_steadystate: Optional[bool] = None,
                  n_threads: int = 1,
                  fim_for_hess: bool = True,
                  amici_object_builder: AmiciObjectBuilder = None,
@@ -144,18 +144,29 @@ class AmiciObjective(ObjectiveBase):
                 amici_model, len(edatas))
         self.parameter_mapping = parameter_mapping
 
-        # preallocate guesses, construct a dict for every edata for which we
-        # need to do preequilibration
-        if self.guess_steadystate:
-            if self.amici_model.ncl() > 0:
-                raise ValueError('Steadystate prediction is not supported for '
-                                 'models with conservation laws!')
+        # If supported, enable `guess_steadystate` by default. If not
+        #  supported, disable by default. If requested but unsupported, raise.
+        if self.guess_steadystate is not False and \
+                self.amici_model.nx_solver_reinit > 0:
+            if self.guess_steadystate:
+                raise ValueError('Steadystate prediction is not supported '
+                                 'for models with conservation laws!')
+            self.guess_steadystate = False
 
-            if self.amici_model.getSteadyStateSensitivityMode() == \
-                    amici.SteadyStateSensitivityMode_simulationFSA:
-                raise ValueError('Steadystate guesses cannot be enabled when'
-                                 ' `simulationFSA` as '
+        if self.guess_steadystate is not False and \
+                self.amici_model.getSteadyStateSensitivityMode() == \
+                amici.SteadyStateSensitivityMode_simulationFSA:
+            if self.guess_steadystate:
+                raise ValueError('Steadystate guesses cannot be enabled '
+                                 'when `simulationFSA` as '
                                  'SteadyStateSensitivityMode!')
+            self.guess_steadystate = False
+        else:
+            self.guess_steadystate = True
+
+        if self.guess_steadystate:
+            # preallocate guesses, construct a dict for every edata for which
+            #  we need to do preequilibration
             self.steadystate_guesses = {
                 'fval': np.inf,
                 'data': {
@@ -209,21 +220,23 @@ class AmiciObjective(ObjectiveBase):
                 {'amici_model', 'amici_solver', 'edatas'}:
             state[key] = self.__dict__[key]
 
-        # write amici solver settings to file
-        amici_solver_file = tempfile.mkstemp()[1]
+        _fd, _file = tempfile.mkstemp()
         try:
-            amici.writeSolverSettingsToHDF5(
-                self.amici_solver, amici_solver_file)
-        except AttributeError as e:
-            e.args += ("Pickling the AmiciObjective requires an AMICI "
-                       "installation with HDF5 support.",)
-            raise
-
-        # read in byte stream
-        amici_solver_settings = open(amici_solver_file, 'rb').read()
-        state['amici_solver_settings'] = amici_solver_settings
-        # remove temporary file
-        os.remove(amici_solver_file)
+            # write amici solver settings to file
+            try:
+                amici.writeSolverSettingsToHDF5(
+                    self.amici_solver, _file)
+            except AttributeError as e:
+                e.args += ("Pickling the AmiciObjective requires an AMICI "
+                           "installation with HDF5 support.",)
+                raise
+            # read in byte stream
+            with open(_fd, 'rb', closefd=False) as f:
+                state['amici_solver_settings'] = f.read()
+        finally:
+            # close file descriptor and remove temporary file
+            os.close(_fd)
+            os.remove(_file)
 
         return state
 
@@ -239,20 +252,25 @@ class AmiciObjective(ObjectiveBase):
         solver = self.amici_object_builder.create_solver(model)
         edatas = self.amici_object_builder.create_edatas(model)
 
+        _fd, _file = tempfile.mkstemp()
         try:
             # write solver settings to temporary file
-            _file = tempfile.mkstemp()[1]
-            with open(_file, 'wb') as f:
+            with open(_fd, 'wb', closefd=False) as f:
                 f.write(state['amici_solver_settings'])
             # read in solver settings
-            amici.readSolverSettingsFromHDF5(_file, solver)
-            # remove temporary file
+            try:
+                amici.readSolverSettingsFromHDF5(_file, solver)
+            except AttributeError as err:
+                if not err.args:
+                    err.args = ('',)
+                err.args += ("Unpickling an AmiciObjective requires an AMICI "
+                             "installation with HDF5 support.",)
+                raise
+        finally:
+            # close file descriptor and remove temporary file
+            os.close(_fd)
             os.remove(_file)
-        except AttributeError as err:
-            if not err.args:
-                err.args = ('',)
-            err.args += ("Amici must have been compiled with hdf5 support",)
-            raise
+
         self.amici_model = model
         self.amici_solver = solver
         self.edatas = edatas
@@ -278,7 +296,8 @@ class AmiciObjective(ObjectiveBase):
     def check_mode(self, mode):
         return mode in [MODE_FUN, MODE_RES]
 
-    def call_unprocessed(self, x, sensi_orders, mode):
+    def call_unprocessed(self, x, sensi_orders, mode, edatas=None,
+                         parameter_mapping=None):
         sensi_order = max(sensi_orders)
 
         x_dct = self.par_arr_to_dct(x)
@@ -289,11 +308,15 @@ class AmiciObjective(ObjectiveBase):
             for data_ix in range(len(self.edatas)):
                 self.apply_steadystate_guess(data_ix, x_dct)
 
+        if edatas is None:
+            edatas = self.edatas
+        if parameter_mapping is None:
+            parameter_mapping = self.parameter_mapping
         ret = self.calculator(
             x_dct=x_dct, sensi_order=sensi_order, mode=mode,
             amici_model=self.amici_model, amici_solver=self.amici_solver,
-            edatas=self.edatas, n_threads=self.n_threads,
-            x_ids=self.x_ids, parameter_mapping=self.parameter_mapping,
+            edatas=edatas, n_threads=self.n_threads,
+            x_ids=self.x_ids, parameter_mapping=parameter_mapping,
             fim_for_hess=self.fim_for_hess,
         )
 
