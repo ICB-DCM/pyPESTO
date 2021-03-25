@@ -129,10 +129,15 @@ solver.setSensitivityOrder(amici.SensitivityOrder_first)
 objective = pypesto.AmiciObjective(model, solver, [edata], 1)
 
 # create optimizer object which contains all information for doing the optimization
-optimizer = optimize.PyswarmsOptimizer()
-#optimizer = optimize.PyswarmsOptimizer()
-optimizer.solver = 'pyswarms'
-#optimizer.solver = 'pyswarms'
+optimizer_pyswarms = optimize.PyswarmsOptimizer()
+optimizer_scipydiffevolopt = optimize.ScipyDifferentialEvolutionOptimizer()
+optimizer_cmaes = optimize.CmaesOptimizer()
+optimizer_pyswarm = optimize.PyswarmOptimizer()
+
+optimizer_pyswarms.solver = 'pyswarms'
+optimizer_scipydiffevolopt.solver = 'ScipyDifferentialEvolutionOptimizer'
+optimizer_cmaes.solver = 'cma'
+optimizer_pyswarm.solver = 'pyswarm'
 
 # create problem object containing all information on the problem to be solved
 x_names = ['x' + str(j) for j in range(0, 9)]
@@ -140,11 +145,67 @@ problem = pypesto.Problem(objective=objective,
                           lb=-5*np.ones((9)), ub=5*np.ones((9)),
                           x_names=x_names)
 
-# do the optimization
-result_pyswarms = optimize.minimize(problem=problem,
-                           optimizer=optimizer,
-                           n_starts=5)
+# set number of starts
+n_starts = 20
 
-# visualize result
-visualize.waterfall(result_pyswarms, size=(15,6))
-visualize.parameters(result_pyswarms, size=(15,6))
+# save optimizer trace
+history_options = pypesto.HistoryOptions(trace_record=True)
+
+# run optimizations for different optimizers
+start_pyswarms = time.time()
+result1_pyswarms = optimize.minimize(problem=problem1, optimizer=optimizer_pyswarms,
+    n_starts=n_starts, history_options=history_options)
+end_pyswarms = time.time()
+
+start_scipy = time.time()
+result1_scipydiffevolopt = optimize.minimize(problem=problem1, optimizer=optimizer_scipydiffevolopt,
+    n_starts=n_starts, history_options=history_options)
+end_scipy = time.time()
+
+start_cmaes = time.time()
+result1_cmaes = optimize.minimize(problem=problem1, optimizer=optimizer_cmaes,
+    n_starts=n_starts, history_options=history_options)
+end_cmaes = time.time()
+
+start_pyswarm = time.time()
+result1_pyswarm = optimize.minimize(problem=problem1, optimizer=optimizer_pyswarm,
+    n_starts=n_starts, history_options=history_options)
+end_pyswarm = time.time()
+
+
+#### print times
+print('Pyswarms: ' + '{:5.3f}s'.format(end_pyswarms - start_pyswarms))
+print('Scipy: ' + '{:5.3f}s'.format(end_scipy - start_scipy))
+print('Cmaes: ' + '{:5.3f}s'.format(end_cmaes - start_cmaes))
+print('Pysawrm: ' + '{:5.3f}s'.format(end_pyswarm - start_pyswarm))
+
+
+# Visualize waterfall
+visz = visualize.waterfall([result_pyswarms, result_scipydiffevolopt, result_cmaes, result_pyswarm],
+                    legends=['Pyswarms', 'Scipy_DiffEvol', 'CMA-ES', 'PySwarm'],
+                    scale_y='lin',
+                    colors=[(31/255, 120/255, 180/255, 0.5), (178/255, 223/255, 138/255, 0.5),
+                            (51/255, 160/255, 44/255, 0.5), (166/255, 206/255, 227/255, 0.5)])
+                    #colors=['#1f78b4', '#b2df8a', '#33a02c', '#a6cee3'])
+# change position of the legend
+box = visz.get_position()
+visz.set_position([box.x0, box.y0 + box.height * 0.1, box.width, box.height * 0.9])
+visz.legend(loc='upper center', bbox_to_anchor=(0.5, -0.1), fancybox=True, shadow=True, ncol=4)
+#visz.axhline(y=0, xmin=0, xmax=19, color='black', linestyle='--', alpha=0.75)
+
+
+# Visulaize Parameters
+para = visualize.parameters([result1_pyswarms, result1_scipydiffevolopt, result1_cmaes, result1_pyswarm],
+                     legends=['PySwarms'],
+                     balance_alpha=True,
+                     colors=[(31/255, 120/255, 180/255, 0.5)])
+# change position of the legend
+box = para.get_position()
+para.set_position([box.x0, box.y0 + box.height * 0.1, box.width, box.height * 0.9])
+para.legend(loc='upper center', bbox_to_anchor=(0.5, -0.1), fancybox=True, shadow=True, ncol=4)
+'''                         
+                         , (178/255, 223/255, 138/255, 0.5),
+                             (51/255, 160/255, 44/255, 0.5), (166/255, 206/255, 227/255, 0.5)])
+                     #colors=['#1f78b4', '#b2df8a', '#33a02c', '#a6cee3'])
+'''
+a = 4
