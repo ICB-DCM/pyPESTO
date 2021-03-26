@@ -147,7 +147,7 @@ problem = pypesto.Problem(objective=objective,
                           x_names=x_names)
 
 # set number of starts
-n_starts = 5
+n_starts = 20
 
 # save optimizer trace
 history_options = pypesto.HistoryOptions(trace_record=True)
@@ -210,3 +210,41 @@ para.legend(loc='upper center', bbox_to_anchor=(0.5, -0.1), fancybox=True, shado
                      #colors=['#1f78b4', '#b2df8a', '#33a02c', '#a6cee3'])
 '''
 a = 4
+
+#visz.axhline(y=0, xmin=0, xmax=19, color='black', linestyle='--', alpha=0.75)
+
+# plot correctly estimated resulta from .tssv file
+path_paras = '../../../benchmark-models/hackathon_contributions_new_data_format/Boehm_JProteomeRes2014/parameters_Boehm_JProteomeRes2014.tsv'
+tsv_file = pd.read_csv(path_paras, sep='\t')
+list_paras = tsv_file['nominalValue']
+# delete non estimated values
+list_paras.pop(6,10)
+list_paras.reindex
+
+paras_result = result_pyswarms
+list_1 = paras_result.optimize_result
+for iPar in range(0,20):
+    list_1.list[iPar]['x'] = np.array(list_paras)
+paras_result.optimize_result = list_1
+
+# plot parameters
+para_correct = visualize.parameters([result_pyswarms],
+                     legends=['Correctly estimated paramters'],
+                     balance_alpha=True,
+                     colors=[(0, 0, 0, 0.5)])
+# change position of the legend
+box = para_correct.get_position()
+para_correct.set_position([box.x0, box.y0 + box.height * 0.1, box.width, box.height * 0.9])
+para_correct.legend(loc='upper center', bbox_to_anchor=(0.5, -0.1), fancybox=True, shadow=True, ncol=4)
+
+'''
+# more options
+visz.set_xlabel('Ordered optimizer run', fontsize=20)
+visz.set_ylabel('Functional value', fontsize=20)
+visz.set_title('Waterfall plot', fontdict={'fontsize': 20})
+visz.legend(loc='upper center', bbox_to_anchor=(0.5, -0.1), fontsize=20, fancybox=True, shadow=True, ncol=4)
+para.set_xlabel('Parameter value', fontsize=20)
+para.set_ylabel('Parameter', fontsize=20)
+para.set_title('Estimated parameters', fontdict={'fontsize': 20})
+para.legend(loc='upper center', bbox_to_anchor=(0.5, -0.1), fontsize=20, fancybox=True, shadow=True, ncol=4)
+'''
