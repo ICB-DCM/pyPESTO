@@ -20,7 +20,7 @@ def rosen2(x):
             sp.optimize.rosen_hess(x))
 objective2 = pypesto.Objective(fun=rosen2, grad=True, hess=True)
 
-dim_full = 10
+dim_full = 2
 lb = -5 * np.ones((dim_full, 1))
 ub = 5 * np.ones((dim_full, 1))
 

@@ -11,6 +11,7 @@ import matplotlib.pyplot as plt
 import pypesto.optimize as optimize
 import pypesto.visualize as visualize
 from benchmark_import import DataProvider
+import time
 
 # temporarily add the simulate file
 sys.path.insert(0, 'boehm_JProteomeRes2014')
@@ -52,7 +53,7 @@ sigma_vals = ['sd_pSTAT5A_rel', 'sd_pSTAT5B_rel', 'sd_rSTAT5A_rel']
 observable_names = observables.keys()
 sigmas = dict(zip(list(observable_names), sigma_vals))
 print(sigmas)
-
+'''
 # generate the module
 sbml_importer.sbml2amici(model_name,
                          model_output_dir,
@@ -61,7 +62,7 @@ sbml_importer.sbml2amici(model_name,
                          constantParameters=constantParameters,
                          sigmas=sigmas
   )
-
+'''
 # import and load the module
 sys.path.insert(0, os.path.abspath(model_output_dir))
 model_module = importlib.import_module(model_name)
@@ -146,29 +147,29 @@ problem = pypesto.Problem(objective=objective,
                           x_names=x_names)
 
 # set number of starts
-n_starts = 20
+n_starts = 5
 
 # save optimizer trace
 history_options = pypesto.HistoryOptions(trace_record=True)
 
 # run optimizations for different optimizers
 start_pyswarms = time.time()
-result1_pyswarms = optimize.minimize(problem=problem1, optimizer=optimizer_pyswarms,
+result_pyswarms = optimize.minimize(problem=problem, optimizer=optimizer_pyswarms,
     n_starts=n_starts, history_options=history_options)
 end_pyswarms = time.time()
 
 start_scipy = time.time()
-result1_scipydiffevolopt = optimize.minimize(problem=problem1, optimizer=optimizer_scipydiffevolopt,
+result_scipydiffevolopt = optimize.minimize(problem=problem, optimizer=optimizer_scipydiffevolopt,
     n_starts=n_starts, history_options=history_options)
 end_scipy = time.time()
 
 start_cmaes = time.time()
-result1_cmaes = optimize.minimize(problem=problem1, optimizer=optimizer_cmaes,
+result_cmaes = optimize.minimize(problem=problem, optimizer=optimizer_cmaes,
     n_starts=n_starts, history_options=history_options)
 end_cmaes = time.time()
 
 start_pyswarm = time.time()
-result1_pyswarm = optimize.minimize(problem=problem1, optimizer=optimizer_pyswarm,
+result_pyswarm = optimize.minimize(problem=problem, optimizer=optimizer_pyswarm,
     n_starts=n_starts, history_options=history_options)
 end_pyswarm = time.time()
 
@@ -183,7 +184,7 @@ print('Pysawrm: ' + '{:5.3f}s'.format(end_pyswarm - start_pyswarm))
 # Visualize waterfall
 visz = visualize.waterfall([result_pyswarms, result_scipydiffevolopt, result_cmaes, result_pyswarm],
                     legends=['Pyswarms', 'Scipy_DiffEvol', 'CMA-ES', 'PySwarm'],
-                    scale_y='lin',
+                    scale_y='log10',
                     colors=[(31/255, 120/255, 180/255, 0.5), (178/255, 223/255, 138/255, 0.5),
                             (51/255, 160/255, 44/255, 0.5), (166/255, 206/255, 227/255, 0.5)])
                     #colors=['#1f78b4', '#b2df8a', '#33a02c', '#a6cee3'])
@@ -195,7 +196,7 @@ visz.legend(loc='upper center', bbox_to_anchor=(0.5, -0.1), fancybox=True, shado
 
 
 # Visulaize Parameters
-para = visualize.parameters([result1_pyswarms, result1_scipydiffevolopt, result1_cmaes, result1_pyswarm],
+para = visualize.parameters([result_pyswarms],
                      legends=['PySwarms'],
                      balance_alpha=True,
                      colors=[(31/255, 120/255, 180/255, 0.5)])
