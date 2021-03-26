@@ -45,7 +45,7 @@ class AmiciCalculator:
                  x_ids: Sequence[str],
                  parameter_mapping: 'ParameterMapping',
                  fim_for_hess: bool,
-                 chunk_size: int=None):
+                 chunk_size: int = None):
         """Perform the actual AMICI call.
 
         Called within the :func:`AmiciObjective.__call__` method.
