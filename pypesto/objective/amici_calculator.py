@@ -44,7 +44,8 @@ class AmiciCalculator:
                  n_threads: int,
                  x_ids: Sequence[str],
                  parameter_mapping: 'ParameterMapping',
-                 fim_for_hess: bool):
+                 fim_for_hess: bool,
+                 chunk_size: int=None):
         """Perform the actual AMICI call.
 
         Called within the :func:`AmiciObjective.__call__` method.
@@ -72,6 +73,8 @@ class AmiciCalculator:
         fim_for_hess:
             Whether to use the FIM (if available) instead of the Hessian (if
             requested).
+        chunk_size:
+            Size of chunks the ExpData is sliced into.
         """
         # set order in solver
         if sensi_order == 2 and fim_for_hess:
@@ -89,14 +92,31 @@ class AmiciCalculator:
             parameter_mapping=parameter_mapping,
             amici_model=amici_model
         )
+        rdatas = []
+        # spliting the ExpData in chunks and simulating chunk wise
+        # Do we have a maximum number of simulations allowed?
+        n_edatas = len(edatas)
+        if chunk_size is None:
+            # simulate all conditions at once
+            n_simulations = 1
+        else:
+            # simulate only a subset of conditions
+            n_simulations = int(np.ceil(len(edatas)/chunk_size))
+        for i_sim in range(n_simulations):
+            # slice out the conditions we actually want
+            if chunk_size is None:
+                ids = slice(0, n_edatas)
+            else:
+                ids = slice(i_sim * chunk_size,
+                            min((i_sim + 1) * chunk_size, n_edatas))
+            # run amici simulation
+            rdatas.extend(amici.runAmiciSimulations(
+                amici_model,
+                amici_solver,
+                edatas[ids],
+                num_threads=min(n_threads, len(edatas)),
+            ))
 
-        # run amici simulation
-        rdatas = amici.runAmiciSimulations(
-            amici_model,
-            amici_solver,
-            edatas,
-            num_threads=min(n_threads, len(edatas)),
-        )
         if not self._known_least_squares_safe and mode == MODE_RES and \
                 sensi_order > 0:
             if any(
