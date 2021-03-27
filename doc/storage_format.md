@@ -111,7 +111,7 @@ Sampling results are saved in `/sampling/results/`.
 
 ### Profiling results
 
-Profiling results are saved in `/profiling/$profiling_id/`, where profiling_id indicates the number of profilings done.
+Profiling results are saved in `/profiling/$profiling_id/`, where `profiling_id` indicates the number of profilings done.
 ```
 +/profiling/profiling_id/
   - $parameter_index/
