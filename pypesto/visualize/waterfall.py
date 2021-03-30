@@ -93,7 +93,6 @@ def waterfall(results: Union[Result, Sequence[Result]],
 
     # apply changes specified be the user to the axis object
     ax = handle_options(ax, max_len_fvals, refs, y_limits, offset_y)
-
     return ax
 
 
@@ -146,6 +145,7 @@ def waterfall_lowlevel(fvals, scale_y='log10', offset_y=0., ax=None,
     # remove nan or inf values in fvals
     _, fvals = delete_nan_inf(fvals)
 
+    fvals.sort()
     n_fvals = len(fvals)
     start_ind = range(n_fvals)
 
@@ -153,9 +153,6 @@ def waterfall_lowlevel(fvals, scale_y='log10', offset_y=0., ax=None,
     # note: this has to happen before sorting
     # to get the same colors in different plots
     colors = assign_colors(fvals, colors=colors)
-
-    # sort
-    indices = sorted(range(n_fvals), key=lambda j: fvals[j])
 
     # plot
     ax.xaxis.set_major_locator(MaxNLocator(integer=True))
@@ -168,9 +165,8 @@ def waterfall_lowlevel(fvals, scale_y='log10', offset_y=0., ax=None,
     # plot points
     for j in range(n_fvals):
         # parse data for plotting
-        j_fval = indices[j]
-        color = colors[j_fval]
-        fval = fvals[j_fval]
+        color = colors[j]
+        fval = fvals[j]
         if j == 0:
             tmp_legend = legend_text
         else:
