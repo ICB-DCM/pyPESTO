@@ -92,30 +92,12 @@ class AmiciCalculator:
             parameter_mapping=parameter_mapping,
             amici_model=amici_model
         )
-        rdatas = []
-        # spliting the ExpData in chunks and simulating chunk wise
-        # Do we have a maximum number of simulations allowed?
-        n_edatas = len(edatas)
-        if chunk_size is None:
-            # simulate all conditions at once
-            n_simulations = 1
-        else:
-            # simulate only a subset of conditions
-            n_simulations = int(np.ceil(len(edatas)/chunk_size))
-        for i_sim in range(n_simulations):
-            # slice out the conditions we actually want
-            if chunk_size is None:
-                ids = slice(0, n_edatas)
-            else:
-                ids = slice(i_sim * chunk_size,
-                            min((i_sim + 1) * chunk_size, n_edatas))
-            # run amici simulation
-            rdatas.extend(amici.runAmiciSimulations(
-                amici_model,
-                amici_solver,
-                edatas[ids],
-                num_threads=min(n_threads, len(edatas)),
-            ))
+        rdatas = get_output(edatas=edatas,
+                            amici_model=amici_model,
+                            amici_solver=amici_solver,
+                            chunk_size=chunk_size,
+                            mode=mode,
+                            n_threads=n_threads)
 
         if not self._known_least_squares_safe and mode == MODE_RES and \
                 sensi_order > 0:
@@ -234,3 +216,52 @@ def calculate_function_values(rdatas,
         RDATAS: rdatas
     }
     return filter_return_dict(ret)
+
+def get_output(edatas: List['amici.ExpData'],
+               amici_model: AmiciModel,
+               amici_solver: AmiciSolver,
+               chunk_size: int,
+               mode: str,
+               n_threads: int):
+    rdatas = []
+    # spliting the ExpData in chunks and simulating chunk wise
+    # Do we have a maximum number of simulations allowed?
+    n_edatas = len(edatas)
+    if chunk_size is None:
+        # simulate all conditions at once
+        n_simulations = 1
+    else:
+        # simulate only a subset of conditions
+        n_simulations = int(np.ceil(len(edatas) / chunk_size))
+    # get keys based on mode
+    if mode == MODE_FUN:
+        requested_keys = ['llh', 'sllh', 'status']
+    elif mode == MODE_RES:
+        requested_keys = ['res', 'sres', 'status']
+    else:
+        requested_keys = None
+
+    for i_sim in range(n_simulations):
+        # slice out the conditions we actually want
+        if chunk_size is None:
+            ids = slice(0, n_edatas)
+        else:
+            ids = slice(i_sim * chunk_size,
+                        min((i_sim + 1) * chunk_size, n_edatas))
+
+        chunk = amici.runAmiciSimulations(
+            amici_model,
+            amici_solver,
+            edatas[ids],
+            num_threads=min(n_threads, len(edatas)))
+        if requested_keys is not None:
+            rdatas.extend([{key: bit[key] for key in requested_keys} for bit in chunk])
+        else:
+            # run amici simulation
+            rdatas.extend(amici.runAmiciSimulations(
+                amici_model,
+                amici_solver,
+                edatas[ids],
+                num_threads=min(n_threads, len(edatas)),
+            ))
+        return rdatas
