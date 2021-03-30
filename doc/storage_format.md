@@ -8,8 +8,8 @@ trajectories can be stored using various backends, including HDF5 and CSV.
 
 In the following, describe the file formats.
 For detailed information on usage, consult the `doc/example/hdf5_storage.ipynb`
-notebook, and the API documentation for the `pypesto.objective.history` and
-`pypesto.storage` modules.
+and `doc/example/store.ipynb` notebook, and the API documentation for the
+`pypesto.objective.history` and `pypesto.storage` modules.
 
 
 ## pyPESTO Problem
@@ -96,17 +96,35 @@ When objective function call histories are saved to HDF5, they are under
 
 ### Sampling results
 
-Sampling results are saved in `/sampling/chains/`.
+Sampling results are saved in `/sampling/results/`.
 ```
-+ /sampling/chains/$n/
++ /sampling/results/
+  - betas [float n_chains]
+  - trace_neglogpost [float n_chains x (n_samples+1)]
+  - trace_neglogprior [float n_chains x (n_samples+1)]
+  - trace_x [float n_chains x (n_samples+1) x n_par]
+  - Attributes:
+    - time
 ```
-
-TODO
 
 ## Profiling
 
-TODO
-
 ### Profiling results
 
-TODO
+Profiling results are saved in `/profiling/$profiling_id/`, where `profiling_id` indicates the number of profilings done.
+```
++/profiling/profiling_id/
+  - $parameter_index/
+    - exitflag_path [float n_iter]
+    - fval_path [float n_iter]
+    - gradnorm_path [float n_iter]
+    - ratio_path [float n_iter]
+    - time_path [float n_iter]
+    - x_path [float n_par x n_iter]
+    - Attributes:
+      - time_total
+      - IsNone
+      - n_fval
+      - n_grad
+      - n_hess
+```
