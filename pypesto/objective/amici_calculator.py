@@ -74,7 +74,12 @@ class AmiciCalculator:
             Whether to use the FIM (if available) instead of the Hessian (if
             requested).
         chunk_size:
-            Size of chunks the ExpData is sliced into.
+            In some cases, we don't want to compute all predictions at once
+            when calling the prediction function, as this might not fit into
+            the memory for large datasets and models.
+            Here, the user can specify a maximum chunk size of conditions,
+            which should be simulated at a time.
+            Defaults to None, meaning that all conditions will be simulated.
         """
         # set order in solver
         if sensi_order == 2 and fim_for_hess:
