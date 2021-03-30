@@ -217,6 +217,7 @@ def calculate_function_values(rdatas,
     }
     return filter_return_dict(ret)
 
+
 def get_output(edatas: List['amici.ExpData'],
                amici_model: AmiciModel,
                amici_solver: AmiciSolver,
@@ -255,7 +256,8 @@ def get_output(edatas: List['amici.ExpData'],
             edatas[ids],
             num_threads=min(n_threads, len(edatas)))
         if requested_keys is not None:
-            rdatas.extend([{key: bit[key] for key in requested_keys} for bit in chunk])
+            rdatas.extend([{key: bit[key] for key in requested_keys}
+                           for bit in chunk])
         else:
             # run amici simulation
             rdatas.extend(amici.runAmiciSimulations(
