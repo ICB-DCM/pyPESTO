@@ -298,7 +298,7 @@ class AmiciObjective(ObjectiveBase):
         return mode in [MODE_FUN, MODE_RES]
 
     def call_unprocessed(self, x, sensi_orders, mode, edatas=None,
-                         parameter_mapping=None, chunk_size=None):
+                         parameter_mapping=None):
         sensi_order = max(sensi_orders)
 
         x_dct = self.par_arr_to_dct(x)
@@ -318,8 +318,7 @@ class AmiciObjective(ObjectiveBase):
             amici_model=self.amici_model, amici_solver=self.amici_solver,
             edatas=edatas, n_threads=self.n_threads,
             x_ids=self.x_ids, parameter_mapping=parameter_mapping,
-            fim_for_hess=self.fim_for_hess,
-            chunk_size=chunk_size
+            fim_for_hess=self.fim_for_hess
         )
 
         nllh = ret[FVAL]
