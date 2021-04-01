@@ -12,7 +12,26 @@ import pypesto.optimize as optimize
 import pypesto.visualize as visualize
 from benchmark_import import DataProvider
 import time
+import pandas as pd
 
+
+def Save_Times():
+    # create data frame for time storage
+    column_names = ['PySwarms', 'Scipy_DiffEvol', 'CMA-ES', 'PySwarm']
+    df = pd.DataFrame(columns=column_names, data=[])
+
+    objective = Boehm_Optimization()
+    for iRuns in range(0, 20):
+        print(f'Starting of run: {iRuns}')
+        df = df.append({}, ignore_index=True)
+        times = Actual_optimization(objective)
+        for iOptimizers in range(0, len(times)):
+            df[column_names[iOptimizers]][iRuns] = times[iOptimizers]
+
+    df.to_csv('./Boehm_times.tsv', sep='\t')
+
+
+#def Boehm_Optimization():
 # temporarily add the simulate file
 sys.path.insert(0, 'boehm_JProteomeRes2014')
 
@@ -129,6 +148,10 @@ solver.setSensitivityOrder(amici.SensitivityOrder_first)
 
 objective = pypesto.AmiciObjective(model, solver, [edata], 1)
 
+#return objective
+
+
+#def Actual_optimization(objective):
 # create optimizer object which contains all information for doing the optimization
 optimizer_pyswarms = optimize.PyswarmsOptimizer()
 optimizer_scipydiffevolopt = optimize.ScipyDifferentialEvolutionOptimizer()
@@ -173,6 +196,14 @@ result_pyswarm = optimize.minimize(problem=problem, optimizer=optimizer_pyswarm,
     n_starts=n_starts, history_options=history_options)
 end_pyswarm = time.time()
 
+times = [end_pyswarms - start_pyswarms, end_scipy - start_scipy,
+         end_cmaes - start_cmaes, end_pyswarm - start_pyswarm]
+
+    #return times
+
+
+
+#Save_Times()
 
 #### print times
 print('Pyswarms: ' + '{:5.3f}s'.format(end_pyswarms - start_pyswarms))
@@ -183,30 +214,32 @@ print('Pysawrm: ' + '{:5.3f}s'.format(end_pyswarm - start_pyswarm))
 
 # Visualize waterfall
 visz = visualize.waterfall([result_pyswarms, result_scipydiffevolopt, result_cmaes, result_pyswarm],
-                    legends=['Pyswarms', 'Scipy_DiffEvol', 'CMA-ES', 'PySwarm'],
-                    scale_y='log10',
-                    colors=[(31/255, 120/255, 180/255, 0.5), (178/255, 223/255, 138/255, 0.5),
-                            (51/255, 160/255, 44/255, 0.5), (166/255, 206/255, 227/255, 0.5)])
-                    #colors=['#1f78b4', '#b2df8a', '#33a02c', '#a6cee3'])
+                           legends=['PySwarms', 'Scipy_DiffEvol', 'CMA-ES', 'PySwarm'],
+                           scale_y='log10',
+                           y_limits=(8*10**-1,6*10**2),
+                           colors=[(215/255, 25/255, 28/255, 0.5), (94/255, 60/255, 153/255, 0.5),
+                                   (44/255, 123/255, 182/255, 0.5), (255/255, 153/255, 0/255, 0.5)])
+                            #colors=['#1f78b4', '#b2df8a', '#33a02c', '#a6cee3'])
+visz.axhline(y=1, xmin=0, xmax=19, color='black', linestyle='--', alpha=0.75, label='nominal value')
 # change position of the legend
 box = visz.get_position()
 visz.set_position([box.x0, box.y0 + box.height * 0.1, box.width, box.height * 0.9])
 visz.legend(loc='upper center', bbox_to_anchor=(0.5, -0.1), fancybox=True, shadow=True, ncol=4)
-#visz.axhline(y=0, xmin=0, xmax=19, color='black', linestyle='--', alpha=0.75)
+
 
 
 # Visulaize Parameters
 para = visualize.parameters([result_pyswarms],
-                     legends=['PySwarms'],
-                     balance_alpha=True,
-                     colors=[(31/255, 120/255, 180/255, 0.5)])
+                            legends=['PySwarms'],
+                            balance_alpha=True,
+                            colors=[(31/255, 120/255, 180/255, 0.5)])
 # change position of the legend
 box = para.get_position()
 para.set_position([box.x0, box.y0 + box.height * 0.1, box.width, box.height * 0.9])
 para.legend(loc='upper center', bbox_to_anchor=(0.5, -0.1), fancybox=True, shadow=True, ncol=4)
 '''                         
-                         , (178/255, 223/255, 138/255, 0.5),
-                             (51/255, 160/255, 44/255, 0.5), (166/255, 206/255, 227/255, 0.5)])
+                         , [(215/255, 25/255, 28/255, 0.5), (94/255, 60/255, 153/255, 0.5),
+                            (44/255, 123/255, 182/255, 0.5), (255/255, 153/255, 0/255, 0.5)])
                      #colors=['#1f78b4', '#b2df8a', '#33a02c', '#a6cee3'])
 '''
 a = 4
@@ -221,6 +254,7 @@ list_paras = tsv_file['nominalValue']
 list_paras.pop(6,10)
 list_paras.reindex
 
+result_pyswarms_2 = result_pyswarms
 paras_result = result_pyswarms
 list_1 = paras_result.optimize_result
 for iPar in range(0,20):
@@ -228,8 +262,8 @@ for iPar in range(0,20):
 paras_result.optimize_result = list_1
 
 # plot parameters
-para_correct = visualize.parameters([result_pyswarms],
-                     legends=['Correctly estimated paramters'],
+para_correct = visualize.parameters([paras_result],
+                     legends=['Correctly estimated parameters'],
                      balance_alpha=True,
                      colors=[(0, 0, 0, 0.5)])
 # change position of the legend
@@ -237,14 +271,14 @@ box = para_correct.get_position()
 para_correct.set_position([box.x0, box.y0 + box.height * 0.1, box.width, box.height * 0.9])
 para_correct.legend(loc='upper center', bbox_to_anchor=(0.5, -0.1), fancybox=True, shadow=True, ncol=4)
 
-'''
+
 # more options
 visz.set_xlabel('Ordered optimizer run', fontsize=20)
-visz.set_ylabel('Functional value', fontsize=20)
+visz.set_ylabel('Offsetted function value (relative to best start)', fontsize=20)
 visz.set_title('Waterfall plot', fontdict={'fontsize': 20})
 visz.legend(loc='upper center', bbox_to_anchor=(0.5, -0.1), fontsize=20, fancybox=True, shadow=True, ncol=4)
 para.set_xlabel('Parameter value', fontsize=20)
 para.set_ylabel('Parameter', fontsize=20)
 para.set_title('Estimated parameters', fontdict={'fontsize': 20})
 para.legend(loc='upper center', bbox_to_anchor=(0.5, -0.1), fontsize=20, fancybox=True, shadow=True, ncol=4)
-'''
+
