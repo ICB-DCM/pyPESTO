@@ -86,11 +86,11 @@ class AmiciCalculator:
         # set recording mode:
         if reporting_mode is None:
             if mode == MODE_FUN:
-                reporting_mode = 2
+                reporting_mode = amici.RDataReporting.likelihood
             elif mode == MODE_RES:
-                reporting_mode = 1
+                reporting_mode = amici.RDataReporting.residuals
             else:
-                reporting_mode = 0
+                reporting_mode = amici.RDataReporting.full
         amici_solver.setReturnDataReportingMode(reporting_mode)
         # fill in parameters
         # TODO (#226) use plist to compute only required derivatives
