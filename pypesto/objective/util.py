@@ -31,4 +31,4 @@ def sres_to_fim(sres: np.ndarray):
     """
     if sres is None:
         return None
-    return sres.transpose().dot(sres)
+    return 2 * sres.transpose().dot(sres)
