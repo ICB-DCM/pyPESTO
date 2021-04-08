@@ -104,9 +104,10 @@ def minimize(
 
     # define tasks
     tasks = []
-    if any(string in history_options.storage_file
-           for string in ['.h5', '.hdf5']):
-        fn_merge = check_hdf5_mp(history_options, engine)
+    if history_options.storage_file is not None:
+        if any(string in history_options.storage_file
+               for string in ['.h5', '.hdf5']):
+            fn_merge = check_hdf5_mp(history_options, engine)
 
     for startpoint, id in zip(startpoints, ids):
         task = OptimizerTask(
