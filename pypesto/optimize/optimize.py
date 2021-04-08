@@ -9,6 +9,7 @@ from ..startpoint import assign_startpoints, uniform
 from .optimizer import Optimizer, ScipyOptimizer
 from .options import OptimizeOptions
 from .task import OptimizerTask
+from .util import check_hdf5_mp, fill_hdf5_file
 
 logger = logging.getLogger(__name__)
 
@@ -103,6 +104,10 @@ def minimize(
 
     # define tasks
     tasks = []
+    if any(string in history_options.storage_file
+           for string in ['.h5', '.hdf5']):
+        fn_merge = check_hdf5_mp(history_options, engine)
+
     for startpoint, id in zip(startpoints, ids):
         task = OptimizerTask(
             optimizer=optimizer, problem=problem, x0=startpoint, id=id,
@@ -111,6 +116,9 @@ def minimize(
 
     # do multistart optimization
     ret = engine.execute(tasks)
+
+    if fn_merge is not None:
+        fill_hdf5_file(ret, fn_merge)
 
     # aggregate results
     for optimizer_result in ret:
