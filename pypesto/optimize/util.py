@@ -30,8 +30,8 @@ def check_hdf5_mp(history_options: HistoryOptions,
         file_path = Path(filename)
         # create directory with same name as original file stem
         partial_file_path = (
-                file_path.parent / file_path.stem /
-                (file_path.stem + '_{id}' + file_path.suffix)
+            file_path.parent / file_path.stem /
+            (file_path.stem + '_{id}' + file_path.suffix)
         )
         partial_file_path.parent.mkdir(parents=True, exist_ok=True)
         history_options.storage_file = str(partial_file_path)
