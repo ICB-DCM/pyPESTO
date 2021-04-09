@@ -10,7 +10,8 @@ import h5py
 def check_hdf5_mp(history_options: HistoryOptions,
                   engine: Engine):
     """
-    Create a folder for partial HDF5 files, if a parallelization engine will be used.
+    Create a folder for partial HDF5 files,
+    if a parallelization engine will be used.
 
     Paramters
     ---------
