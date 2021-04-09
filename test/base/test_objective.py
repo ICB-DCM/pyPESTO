@@ -15,6 +15,7 @@ import aesara.tensor as aet
 
 from pypesto.objective.aesara import AesaraLogProbability
 
+
 @pytest.fixture(params=[True, False])
 def integrated(request):
     return request.param
