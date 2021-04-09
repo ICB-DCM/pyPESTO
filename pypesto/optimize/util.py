@@ -28,12 +28,13 @@ def check_hdf5_mp(history_options: HistoryOptions,
     if not isinstance(engine, SingleCoreEngine):
         filename = history_options.storage_file
         file_path = Path(filename)
-        fn = file_path.parent / (file_path.stem)
-        # create directory with same name as original file
-        fn.mkdir(parents=True, exist_ok=True)
-        fn = fn / (file_path.stem + '_{id}' + file_path.suffix)
-        fn = str(fn)
-        history_options.storage_file = fn
+        # create directory with same name as original file stem
+        partial_file_path = (
+                file_path.parent / file_path.stem /
+                (file_path.stem + '_{id}' + file_path.suffix)
+        )
+        partial_file_path.parent.mkdir(parents=True, exist_ok=True)
+        history_options.storage_file = str(partial_file_path)
         # create hdf5 file that gathers the others within history group
         with h5py.File(filename, mode='a') as f:
             get_or_create_group(f, "history")
