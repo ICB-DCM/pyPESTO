@@ -4,18 +4,13 @@ from ..store.save_to_hdf5 import get_or_create_group
 from pathlib import Path
 
 
-import os
 import h5py
 
 
 def check_hdf5_mp(history_options: HistoryOptions,
                   engine: Engine):
     """
-    This function checks whether we use another engine than
-    `SingleCoreEngine` and whether we use a `Hdf5History`. If
-    that is the case, it rephrases the filename to create an hdf5 file
-    per start. Returns filename for later usage in filling hdf5 file
-    otherwise return None.
+    Create a folder for partial HDF5 files, if a parallelization engine will be used.
 
     Paramters
     ---------
@@ -26,8 +21,8 @@ def check_hdf5_mp(history_options: HistoryOptions,
 
     Returns
     -------
-    filename:
-        string containing the original filename.
+    The filename that will be used to combine the partial HDF5 files later.
+    If a parallelization engine is not used, `None` is returned.
     """
     if not isinstance(engine, SingleCoreEngine):
         filename = history_options.storage_file
@@ -48,7 +43,7 @@ def check_hdf5_mp(history_options: HistoryOptions,
 def fill_hdf5_file(ret,
                    filename):
     """
-    This function creates links in `filename` to the
+    Create links in `filename` to the
     history of each start contained in ret, the results
     of the optimization.
 
