@@ -189,6 +189,9 @@ def test_aesara(max_sensi_order, integrated):
         kwargs['hess'] = lambda z: h(z)[0]
 
     obj = pypesto.Objective(**kwargs)
+
+    assert obj(prob['x']) == prob['obj'](np.sinh(prob['x']))
+
     if max_sensi_order > 0:
         df = obj.check_grad(prob['x'])
         assert (df.abs_err < 1e-6).all() & (df.rel_err < 1e-6).all()
