@@ -137,6 +137,6 @@ class AesaraLogProbabilityHessian(Op):
 
     def perform(self, node, inputs, outputs, params=None):
         theta, = inputs
-        # calculate gradients
-        log_prob_grad = self._log_prob_hess(theta)
-        outputs[0][0] = log_prob_grad
+        # calculate Hessian
+        log_prob_hess = self._log_prob_hess(theta)
+        outputs[0][0] = log_prob_hess
