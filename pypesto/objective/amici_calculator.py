@@ -7,7 +7,7 @@ from .constants import (
 from .amici_util import (
     add_sim_grad_to_opt_grad, add_sim_hess_to_opt_hess,
     sim_sres_to_opt_sres, log_simulation, get_error_output, filter_return_dict,
-    init_return_values
+    init_return_values, create_plist_from_par_opt_to_par_sim,
 )
 
 try:
@@ -81,7 +81,6 @@ class AmiciCalculator:
             amici_solver.setSensitivityOrder(sensi_order)
 
         # fill in parameters
-        # TODO (#226) use plist to compute only required derivatives
         amici.parameter_mapping.fill_in_parameters(
             edatas=edatas,
             problem_parameters=x_dct,
@@ -89,6 +88,16 @@ class AmiciCalculator:
             parameter_mapping=parameter_mapping,
             amici_model=amici_model
         )
+
+        # TODO: temp workaround remove after
+        # https://github.com/AMICI-dev/AMICI/pull/1487 is merged
+        for edata, mapping in zip(edatas,
+                                  parameter_mapping.parameter_mappings):
+            if not edata.plist:
+                edata.plist = create_plist_from_par_opt_to_par_sim(
+                    [mapping.map_sim_var[par_id]
+                     for par_id in amici_model.getParameterIds()]
+                )
 
         # run amici simulation
         rdatas = amici.runAmiciSimulations(

@@ -2,6 +2,7 @@ import numpy as np
 import numbers
 from typing import Dict, Sequence, Union, Tuple
 import logging
+import warnings
 
 from .constants import (
     FVAL, CHI2, GRAD, HESS, RES, SRES, RDATAS, MODE_FUN, MODE_RES
@@ -60,6 +61,8 @@ def map_par_opt_to_par_sim(
 
 
 def create_plist_from_par_opt_to_par_sim(mapping_par_opt_to_par_sim):
+    warnings.warn("This function will be removed in future releases. ",
+                  DeprecationWarning)
     """
     From the parameter mapping `mapping_par_opt_to_par_sim`, create the
     simulation plist according to the mapping `mapping`.
@@ -135,17 +138,18 @@ def par_index_slices(
     par_sim_slice:
         array of simulation parameter indices
 
-    par_opt_slic:
+    par_opt_slice:
         array of simulation parameter indices
     """
     # the sum accounts for subindexing according to plist in edata
-    par_sim_slice, par_opt_slice = list(zip(
-        *[(sum(isinstance(condition_map_sim_var[par_id], str)
-               for par_id in par_sim_ids[:par_sim_ids.index(par_sim_id)+1])-1,
-           par_opt_ids.index(par_opt_id))
-          for par_sim_id, par_opt_id in condition_map_sim_var.items()
-          if isinstance(par_opt_id, str)]
-    ))
+    par_sim_slice, par_opt_slice = list(zip(*[
+        (sum(isinstance(condition_map_sim_var[par_id], str)
+             for par_id in
+             par_sim_ids[:par_sim_ids.index(par_sim_id) + 1]) - 1,
+         par_opt_ids.index(par_opt_id))
+        for par_sim_id, par_opt_id in condition_map_sim_var.items()
+        if isinstance(par_opt_id, str)
+    ]))
     return np.asarray(par_sim_slice), np.asarray(par_opt_slice)
 
 
