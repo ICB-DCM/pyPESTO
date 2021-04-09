@@ -138,8 +138,11 @@ def par_index_slices(
     par_opt_slic:
         array of simulation parameter indices
     """
+    # the sum accounts for subindexing according to plist in edata
     par_sim_slice, par_opt_slice = list(zip(
-        *[(par_sim_ids.index(par_sim_id), par_opt_ids.index(par_opt_id))
+        *[(sum(isinstance(condition_map_sim_var[par_id], str)
+               for par_id in par_sim_ids[:par_sim_ids.index(par_sim_id)+1])-1,
+           par_opt_ids.index(par_opt_id))
           for par_sim_id, par_opt_id in condition_map_sim_var.items()
           if isinstance(par_opt_id, str)]
     ))
