@@ -349,7 +349,8 @@ class ScipyOptimizer(Optimizer):
                 method=ls_method,
                 jac=jac,
                 bounds=bounds,
-                tr_solver=ls_options.pop('tr_solver', 'lsmr'),
+                tr_solver=ls_options.pop('tr_solver',
+                                         'lsmr' if len(x0) > 1 else 'exact'),
                 loss='linear',
                 **ls_options
             )
