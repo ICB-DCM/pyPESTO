@@ -168,6 +168,7 @@ def test_finite_difference_checks():
 
 
 def test_aesara(max_sensi_order, integrated):
+    """Test function composition and gradient computation via aesara"""
     prob = rosen_for_sensi(max_sensi_order,
                            integrated, [0, 1])
 
@@ -176,8 +177,10 @@ def test_aesara(max_sensi_order, integrated):
         +np.inf * np.ones_like(prob['x'])),
         beta=-1
     )
+    # create aesara specific symbolic tensor variables
     x = aet.specify_shape(aet.vector('x'), (2,))
-    # compose with sinh
+
+    # compose rosenbrock function with with sinh transformation
     fun = base_objective(aet.sinh(x))
 
     f = aesara.function([x], fun)
@@ -189,16 +192,21 @@ def test_aesara(max_sensi_order, integrated):
         h = aesara.function([x], aesara.gradient.hessian(fun, [x]))
         kwargs['hess'] = lambda z: h(z)[0]
 
+    # apply inverse transformsuch that we evaluate at prob['x']
+    x_ref = np.arcsinh(prob['x'])
+
     obj = pypesto.Objective(**kwargs)
 
-    assert obj(prob['x']) == prob['obj'](np.sinh(prob['x']))
+    # check value against
+    assert obj(x_ref) == prob['fval']
 
     if max_sensi_order > 0:
-        df = obj.check_grad(prob['x'])
-        assert (df.abs_err < 1e-6).all() & (df.rel_err < 1e-6).all()
+        assert (obj(x_ref, sensi_orders=(1,)) ==
+                prob['grad']*np.cosh(x_ref)).all()
 
     if max_sensi_order > 1:
-        hess = obj(prob['x'], sensi_orders=(2,))
-        assert np.isclose(hess[0, 0], -468.08047745752054)
-        assert np.isclose(hess[1, 1], 752.4391382167262)
-        assert hess[0, 1] == hess[1, 0] == 0
+        assert np.allclose(
+            prob['hess'] * (np.diag(np.power(np.cosh(x_ref), 2))) +
+            np.diag(prob['grad'] * np.sinh(x_ref)),
+            obj(x_ref, sensi_orders=(2,))
+        )
