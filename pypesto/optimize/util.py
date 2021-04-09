@@ -33,7 +33,7 @@ def check_hdf5_mp(history_options: HistoryOptions,
         fn.mkdir(parents=True, exist_ok=True)
         fn = fn / (file_path.stem + '_{id}' + file_path.suffix)
         fn = str(fn)
-        history_options.storage_file = fn + type
+        history_options.storage_file = fn
         # create hdf5 file that gathers the others within history group
         with h5py.File(filename, mode='a') as f:
             get_or_create_group(f, "history")
