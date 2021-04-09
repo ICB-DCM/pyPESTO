@@ -91,8 +91,7 @@ class AmiciCalculator:
 
         # TODO: temp workaround remove after
         # https://github.com/AMICI-dev/AMICI/pull/1487 is merged
-        for edata, mapping in zip(edatas,
-                                  parameter_mapping.parameter_mappings):
+        for edata, mapping in zip(edatas, parameter_mapping):
             if not edata.plist:
                 edata.plist = create_plist_from_par_opt_to_par_sim(
                     [mapping.map_sim_var[par_id]
