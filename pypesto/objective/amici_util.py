@@ -139,7 +139,7 @@ def par_index_slices(
         array of simulation parameter indices
 
     par_opt_slice:
-        array of simulation parameter indices
+        array of optimization parameter indices
     """
     # the sum accounts for subindexing according to plist in edata
     par_sim_slice, par_opt_slice = list(zip(*[
