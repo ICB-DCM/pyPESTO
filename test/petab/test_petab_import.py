@@ -79,7 +79,7 @@ class PetabImportTest(unittest.TestCase):
 
 def test_plist_mapping():
     """Test that the AMICI objective created via PEtab correctly maps
-    gradients entries when some parameters are not estimated (realized via
+    gradient entries when some parameters are not estimated (realized via
     edata.plist)."""
     model_name = "Boehm_JProteomeRes2014"
     petab_problem = pypesto.petab.PetabImporter.from_yaml(
