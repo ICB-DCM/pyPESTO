@@ -10,7 +10,7 @@ from .base import ObjectiveBase, ResultDict
 from .constants import MODE_FUN, FVAL, GRAD, HESS
 
 
-from typing import Tuple
+from typing import Tuple, Optional
 
 try:
     import aesara
@@ -44,7 +44,7 @@ class AesaraObjective(ObjectiveBase):
                  objective: ObjectiveBase,
                  aet_x: TensorVariable,
                  aet_fun: TensorVariable,
-                 coeff: float):
+                 coeff: Optional[float] = 1.):
         if not isinstance(objective, ObjectiveBase):
             raise TypeError('objective must be an ObjectiveBase instance')
         if not objective.check_mode(MODE_FUN):
@@ -138,7 +138,7 @@ class AesaraObjectiveOp(Op):
 
     def __init__(self,
                  obj: AesaraObjective,
-                 coeff: float = 1.):
+                 coeff: Optional[float] = 1.):
         self._objective: AesaraObjective = obj
         self._coeff: float = coeff
 
@@ -177,7 +177,9 @@ class AesaraObjectiveGradOp(Op):
     itypes = [aet.dvector]  # expects a vector of parameter values when called
     otypes = [aet.dvector]  # outputs a vector (the log prob grad)
 
-    def __init__(self, obj: AesaraObjective, coeff: float = 1.):
+    def __init__(self,
+                 obj: AesaraObjective,
+                 coeff: Optional[float] = 1.):
         self._objective: AesaraObjective = obj
         self._coeff: float = coeff
 
@@ -216,7 +218,9 @@ class AesaraObjectiveHessOp(Op):
     itypes = [aet.dvector]
     otypes = [aet.dmatrix]
 
-    def __init__(self, obj: AesaraObjective, coeff: float = 1.):
+    def __init__(self, obj:
+                 AesaraObjective,
+                 coeff: Optional[float] = 1.):
         self._objective: AesaraObjective = obj
         self._coeff: float = coeff
 
