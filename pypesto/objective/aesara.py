@@ -32,12 +32,19 @@ class AesaraObjective(ObjectiveBase):
     ----------
     objective:
         The `pypesto.ObjectiveBase` to wrap.
+    aet_x:
+        tensor variables that that define the variables of `aet_fun`
+    aet_fun:
+        aesara function that maps `aet_x` to the variables of `objective`
+    coeff:
+        multiplicative coefficient for objective
     """
 
     def __init__(self,
                  objective: ObjectiveBase,
                  aet_x: TensorVariable,
-                 aet_fun: TensorVariable):
+                 aet_fun: TensorVariable,
+                 coeff: float):
         if not isinstance(objective, ObjectiveBase):
             raise TypeError(f'objective must be an ObjectiveBase instance')
         if not objective.check_mode(MODE_FUN):
@@ -49,27 +56,32 @@ class AesaraObjective(ObjectiveBase):
         self.aet_x = aet_x
         self.aet_fun = aet_fun
 
-        self.obj_op = AesaraObjectiveOp(self)
+        self.obj_op = AesaraObjectiveOp(self, coeff)
 
+        # compiled function
         if objective.has_fun:
             self.afun = aesara.function(
                 [aet_x], self.obj_op(aet_fun)
             )
 
+        # compiled gradient
         if objective.has_grad:
             self.agrad = aesara.function(
                 [aet_x], aesara.grad(self.obj_op(aet_fun), [aet_x])
             )
 
+        # compiled hessian
         if objective.has_hess:
             self.ahess = aesara.function(
                 [aet_x], aesara.gradient.hessian(self.obj_op(aet_fun), [aet_x])
             )
 
+        # compiled input mapping
         self.infun = aesara.function(
             [aet_x], aet_fun
         )
 
+        # temporary storage for evaluation results of objective
         self.inner_ret: ResultDict = {}
 
     def check_mode(self, mode) -> bool:
@@ -115,8 +127,8 @@ class AesaraObjectiveOp(Op):
 
     Parameters
     ----------
-    problem:
-        The `pypesto.Problem` to analyze.
+    obj:
+        Base aseara objective
     coeff:
         multiplicative coefficient for the objective function value
     """
@@ -156,8 +168,8 @@ class AesaraObjectiveGradOp(Op):
 
     Parameters
     ----------
-    problem:
-        The `pypesto.Problem` to analyze.
+    obj:
+        Base aseara objective
     coeff:
         multiplicative coefficient for the objective function value
     """
@@ -195,8 +207,8 @@ class AesaraObjectiveHessOp(Op):
 
     Parameters
     ----------
-    problem:
-        The `pypesto.Problem` to analyze.
+    obj:
+        Base aseara objective
     coeff:
         multiplicative coefficient for the objective function value
     """
