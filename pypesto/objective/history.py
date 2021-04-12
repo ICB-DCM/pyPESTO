@@ -1060,12 +1060,6 @@ class OptimizerHistory:
                mode: str,
                result: ResultDict) -> None:
         """Update history and best found value."""
-
-        res = result.get(RES, None)
-        if res is not None and FVAL not in result:
-            # Update fval for residual based optimizer.
-            result[FVAL] = res_to_chi2(res)
-
         self.history.update(x, sensi_orders, mode, result)
         self._update_vals(x, result)
 
@@ -1215,6 +1209,9 @@ def extract_values(mode: str,
     if mode == MODE_RES:
         res_result = result.get(RES, None)
         sres_result = result.get(SRES, None)
+        if res_result is not None and FVAL not in ret:
+            # no option trace_record_fval
+            ret[FVAL] = res_to_chi2(res_result)
         chi2 = res_to_chi2(res_result)
         schi2 = sres_to_schi2(res_result, sres_result)
         fim = sres_to_fim(sres_result)
