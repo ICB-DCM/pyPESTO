@@ -6,18 +6,110 @@ combination of objective based methods and aeara based backpropagation
 
 import numpy as np
 
-from . import Objective
-from ..problem import Problem
+from .base import ObjectiveBase, ResultDict
+from .constants import MODE_FUN, FVAL, GRAD, HESS
+
+
+from typing import Tuple
 
 try:
+    import aesara
     import aesara.tensor as aet
+    from aesara.tensor.var import TensorVariable
     from aesara.graph.op import Op
-    from aesara.graph.null_type import NullType
 except ImportError:
-    aet = NullType = Op = None
+    aesara = aet = Op = TensorVariable = None
 
 
-class AesaraLogProbability(Op):
+class AesaraObjective(ObjectiveBase):
+    """
+    Wrapper around an ObjectiveBase which computes the gradient at each
+    evaluation, caching it for later calls.
+    Caching is only enabled after the first time the gradient is asked for
+    and disabled whenever the cached gradient is not used,
+    in order not to increase computation time for derivative-free samplers.
+    Parameters
+    ----------
+    objective:
+        The `pypesto.ObjectiveBase` to wrap.
+    """
+
+    def __init__(self,
+                 objective: ObjectiveBase,
+                 aet_x: TensorVariable,
+                 aet_fun: TensorVariable):
+        if not isinstance(objective, ObjectiveBase):
+            raise TypeError(f'objective must be an ObjectiveBase instance')
+        if not objective.check_mode(MODE_FUN):
+            raise NotImplementedError(
+                f'objective must support mode={MODE_FUN}')
+        super().__init__(objective.x_names)
+        self.base_objective = objective
+
+        self.aet_x = aet_x
+        self.aet_fun = aet_fun
+
+        self.obj_op = AesaraObjectiveOp(self)
+
+        if objective.has_fun:
+            self.afun = aesara.function(
+                [aet_x], self.obj_op(aet_fun)
+            )
+
+        if objective.has_grad:
+            self.agrad = aesara.function(
+                [aet_x], aesara.grad(self.obj_op(aet_fun), [aet_x])
+            )
+
+        if objective.has_hess:
+            self.ahess = aesara.function(
+                [aet_x], aesara.gradient.hessian(self.obj_op(aet_fun), [aet_x])
+            )
+
+        self.infun = aesara.function(
+            [aet_x], aet_fun
+        )
+
+        self.inner_ret: ResultDict = {}
+
+    def check_mode(self, mode) -> bool:
+        return mode == MODE_FUN
+
+    def check_sensi_orders(self, sensi_orders, mode) -> bool:
+        if not self.check_mode(mode):
+            return False
+        else:
+            return self.base_objective.check_sensi_orders(sensi_orders, mode)
+
+    def call_unprocessed(
+            self,
+            x: np.ndarray,
+            sensi_orders: Tuple[int, ...],
+            mode: str,
+            **kwargs
+    ) -> ResultDict:
+
+        # hess computation in aesara requires grad
+        if 2 in sensi_orders and 1 not in sensi_orders:
+            sensi_orders = (1, *sensi_orders)
+
+        # this computes all the results from the inner objective, rendering
+        # them accessible to aesara compiled functions
+        self.inner_ret = self.base_objective.call_unprocessed(
+            self.infun(x), sensi_orders, mode, **kwargs
+        )
+        ret = {}
+        if 0 in sensi_orders:
+            ret[FVAL] = float(self.afun(x))
+        if 1 in sensi_orders:
+            ret[GRAD] = self.agrad(x)[0]
+        if 2 in sensi_orders:
+            ret[HESS] = self.ahess(x)[0]
+
+        return ret
+
+
+class AesaraObjectiveOp(Op):
     """
     Aesara wrapper around a (non-normalized) log-probability function.
 
@@ -25,45 +117,38 @@ class AesaraLogProbability(Op):
     ----------
     problem:
         The `pypesto.Problem` to analyze.
-    beta:
-        Inverse temperature (e.g. in parallel tempering).
+    coeff:
+        multiplicative coefficient for the objective function value
     """
 
     itypes = [aet.dvector]  # expects a vector of parameter values when called
     otypes = [aet.dscalar]  # outputs a single scalar value (the log prob)
 
-    def __init__(self, problem: Problem, beta: float = 1.):
-        self._objective: Objective = problem.objective
-
-        def log_prob(x):
-            return - beta * self._objective(x, sensi_orders=(0,))
-
-        # initialize the log probability Op
-        self._log_prob = log_prob
+    def __init__(self,
+                 obj: AesaraObjective,
+                 coeff: float = 1.):
+        self._objective: AesaraObjective = obj
+        self._coeff: float = coeff
 
         # initialize the sensitivity Op
-        if problem.objective.has_grad:
-            self._log_prob_grad = AesaraLogProbabilityGradient(problem, beta)
+        if obj.has_grad:
+            self._log_prob_grad = AesaraObjectiveGradOp(obj, coeff)
         else:
             self._log_prob_grad = None
 
     def perform(self, node, inputs, outputs, params=None):
-        theta, = inputs
-        log_prob = self._log_prob(theta)
+        log_prob = self._coeff * self._objective.inner_ret[FVAL]
         outputs[0][0] = np.array(log_prob)
 
     def grad(self, inputs, g):
         # the method that calculates the gradients - it actually returns the
         # vector-Jacobian product - g[0] is a vector of parameter values
-        if self._log_prob_grad is None:
-            # indicates gradient not available
-            return [NullType]
         theta, = inputs
         log_prob_grad = self._log_prob_grad(theta)
         return [g[0] * log_prob_grad]
 
 
-class AesaraLogProbabilityGradient(Op):
+class AesaraObjectiveGradOp(Op):
     """
     Aesara wrapper around a (non-normalized) log-probability gradient function.
     This Op will be called with a vector of values and also return a vector of
@@ -73,45 +158,36 @@ class AesaraLogProbabilityGradient(Op):
     ----------
     problem:
         The `pypesto.Problem` to analyze.
-    beta:
-        Inverse temperature (e.g. in parallel tempering).
+    coeff:
+        multiplicative coefficient for the objective function value
     """
 
     itypes = [aet.dvector]  # expects a vector of parameter values when called
     otypes = [aet.dvector]  # outputs a vector (the log prob grad)
 
-    def __init__(self, problem: Problem, beta: float = 1.):
-        self._objective: Objective = problem.objective
-        self._nx = problem.dim_full
+    def __init__(self, obj: AesaraObjective, coeff: float = 1.):
+        self._objective: AesaraObjective = obj
+        self._coeff: float = coeff
 
-        def log_prob_grad(x):
-            return - beta * self._objective(x, sensi_orders=(1,))
-
-        self._log_prob_grad = log_prob_grad
-
-        if problem.objective.has_hess:
-            self._log_prob_hess = AesaraLogProbabilityHessian(problem, beta)
+        if obj.has_hess:
+            self._log_prob_hess = AesaraObjectiveHessOp(obj, coeff)
         else:
             self._log_prob_hess = None
 
     def perform(self, node, inputs, outputs, params=None):
-        theta, = inputs
         # calculate gradients
-        log_prob_grad = self._log_prob_grad(theta)
+        log_prob_grad = self._coeff * self._objective.inner_ret[GRAD]
         outputs[0][0] = log_prob_grad
 
     def grad(self, inputs, g):
         # the method that calculates the hessian - it actually returns the
         # vector-hessian product - g[0] is a vector of parameter values
-        if self._log_prob_hess is None:
-            # indicates gradient not available
-            return [NullType]
         theta, = inputs
         log_prob_hess = self._log_prob_hess(theta)
         return [g[0].dot(log_prob_hess)]
 
 
-class AesaraLogProbabilityHessian(Op):
+class AesaraObjectiveHessOp(Op):
     """
     Aesara wrapper around a (non-normalized) log-probability Hessian function.
     This Op will be called with a vector of values and also return a matrix of
@@ -121,23 +197,18 @@ class AesaraLogProbabilityHessian(Op):
     ----------
     problem:
         The `pypesto.Problem` to analyze.
-    beta:
-        Inverse temperature (e.g. in parallel tempering).
+    coeff:
+        multiplicative coefficient for the objective function value
     """
 
     itypes = [aet.dvector]
     otypes = [aet.dmatrix]
 
-    def __init__(self, problem: Problem, beta: float = 1.):
-        self._objective: Objective = problem.objective
-
-        def _log_prob_hess(x):
-            return - beta * self._objective(x, sensi_orders=(2,))
-
-        self._log_prob_hess = _log_prob_hess
+    def __init__(self, obj: AesaraObjective, coeff: float = 1.):
+        self._objective: AesaraObjective = obj
+        self._coeff: float = coeff
 
     def perform(self, node, inputs, outputs, params=None):
-        theta, = inputs
         # calculate Hessian
-        log_prob_hess = self._log_prob_hess(theta)
+        log_prob_hess = self._coeff * self._objective.inner_ret[HESS]
         outputs[0][0] = log_prob_hess
