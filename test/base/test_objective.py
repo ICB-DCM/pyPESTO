@@ -10,7 +10,6 @@ import pypesto
 
 from ..util import rosen_for_sensi, poly_for_sensi
 
-import aesara
 import aesara.tensor as aet
 
 from pypesto.objective.aesara import AesaraObjective

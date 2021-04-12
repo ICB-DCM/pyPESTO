@@ -46,7 +46,7 @@ class AesaraObjective(ObjectiveBase):
                  aet_fun: TensorVariable,
                  coeff: float):
         if not isinstance(objective, ObjectiveBase):
-            raise TypeError(f'objective must be an ObjectiveBase instance')
+            raise TypeError('objective must be an ObjectiveBase instance')
         if not objective.check_mode(MODE_FUN):
             raise NotImplementedError(
                 f'objective must support mode={MODE_FUN}')
