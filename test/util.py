@@ -44,26 +44,38 @@ def obj_for_sensi(fun, grad, hess, max_sensi_order, integrated, x):
             def arg_fun(x):
                 return fun(x), grad(x), hess(x)
             arg_grad = arg_hess = True
+            def arg_res(x):
+                return grad(x), hess(x)
+            arg_sres = True
         elif max_sensi_order == 1:
             def arg_fun(x):
                 return fun(x), grad(x)
             arg_grad = True
             arg_hess = False
+            def arg_res(x):
+                return grad(x)
+            arg_sres = False
         else:
             def arg_fun(x):
                 return fun(x)
             arg_grad = arg_hess = False
+            arg_res = arg_sres = False
     else:  # integrated
         if max_sensi_order >= 2:
             arg_hess = hess
+            arg_sres = hess
         else:
             arg_hess = None
+            arg_sres = None
         if max_sensi_order >= 1:
             arg_grad = grad
+            arg_res = grad
         else:
             arg_grad = None
+            arg_res = None
         arg_fun = fun
-    obj = pypesto.Objective(fun=arg_fun, grad=arg_grad, hess=arg_hess)
+    obj = pypesto.Objective(fun=arg_fun, grad=arg_grad, hess=arg_hess,
+                            res=arg_res, sres=arg_sres)
     return {'obj': obj,
             'max_sensi_order': max_sensi_order,
             'x': x,
