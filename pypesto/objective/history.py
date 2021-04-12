@@ -1062,11 +1062,9 @@ class OptimizerHistory:
         """Update history and best found value."""
 
         res = result.get(RES, None)
-        if res is not None:
-            # Residual based optimizer
-            if FVAL not in result:
-                # Update fval for residual based optimizer.
-                result[FVAL] = res_to_chi2(res)
+        if res is not None and FVAL not in result:
+            # Update fval for residual based optimizer.
+            result[FVAL] = res_to_chi2(res)
 
         self.history.update(x, sensi_orders, mode, result)
         self._update_vals(x, result)
