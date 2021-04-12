@@ -745,7 +745,7 @@ class PyswarmsOptimizer(Optimizer):
     Examples
     --------
     Arguments that can be passed to options:
-    
+
     maxiter:
         used to calculate the maximal number of funcion evaluations.
         Default: 1000
@@ -777,8 +777,8 @@ class PyswarmsOptimizer(Optimizer):
                 "This optimizer requires an installation of pyswarms.")
 
         optimizer = pyswarms.single.global_best.GlobalBestPSO(
-            n_particles=self.par_popsize, dimensions=len(x0), options=self.options,
-            bounds=(lb, ub))
+            n_particles=self.par_popsize, dimensions=len(x0),
+            options=self.options, bounds=(lb, ub))
 
         def successively_working_fval(swarm: np.ndarray) -> np.ndarray:
             """Evaluate the function for all parameters in the swarm object.
