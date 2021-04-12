@@ -174,6 +174,10 @@ def calculate_function_values(rdatas,
         nllh -= rdata['llh']
 
         if mode == MODE_FUN:
+            if not np.isfinite(nllh):
+                return get_error_output(amici_model, edatas, rdatas,
+                                        sensi_order, mode, dim)
+
             if sensi_order > 0:
                 # add gradient
                 add_sim_grad_to_opt_grad(
@@ -184,6 +188,10 @@ def calculate_function_values(rdatas,
                     snllh,
                     coefficient=-1.0
                 )
+
+                if not np.isfinite(snllh).all():
+                    return get_error_output(amici_model, edatas, rdatas,
+                                            sensi_order, mode, dim)
 
                 # Hessian
                 if sensi_order > 1:
@@ -198,6 +206,10 @@ def calculate_function_values(rdatas,
                             s2nllh,
                             coefficient=+1.0
                         )
+                        if not np.isfinite(s2nllh).all():
+                            return get_error_output(amici_model, edatas,
+                                                    rdatas, sensi_order,
+                                                    mode, dim)
                     else:
                         raise ValueError("AMICI cannot compute Hessians yet.")
 

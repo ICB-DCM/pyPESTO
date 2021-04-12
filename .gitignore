@@ -73,11 +73,12 @@ doc/_build
 data/raw
 data/figures
 
-# osx 
+# osx
 .DS_Store
 
 # coverage
 coverage_py.xml
+coverage.xml
 
 # examples
 doc/example/tmp
@@ -104,7 +105,9 @@ venv/*
 tmp/*
 */tmp/*
 amici_models/*
-*.txt
 test/doc/example/tmp/benchmark-models/
 test/amici_models/*
 *.hdf5
+*.dat
+/BioNetGen-2.3.2
+/bionetgen.tar.gz

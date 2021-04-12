@@ -2,14 +2,24 @@ Authors
 =======
 
 
-This package was mainly developed by:
+This package is mainly developed by:
 
-- Jan Hasenauer
 - Yannik Schälte
+- Jakob Vanhoefer
 - Fabian Fröhlich
-- Daniel Weindl
 - Paul Stapor
-- Leonard Schmiester
+
+with major contributions by:
+
 - Dantong Wang
+- Daniel Weindl
+- Polina Lakrisenko
+- Elba Raimúndez
 - Leonard Schmiester
-- Caro Loos 
+- Dilan Pathirana
+- Paul Jonas Jost
+- Lorenzo Contento
+- Erika Dudkin
+- Simon Merkt
+- Carolin Loos
+- Philipp Städter

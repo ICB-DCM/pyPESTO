@@ -1,9 +1,21 @@
 import numpy as np
 import warnings
 from .clust_color import assign_colors
-from .clust_color import assign_colors_for_result_list
+from .clust_color import assign_colors_for_list
 
-from typing import Optional
+from numbers import Number
+from typing import Iterable, List, Optional, Union
+
+from .constants import (
+    LEN_RGB,
+    LEN_RGBA,
+    RGB,
+    RGB_RGBA,
+    RGBA_MIN,
+    RGBA_MAX,
+    RGBA_ALPHA,
+    RGBA_WHITE,
+)
 
 
 def process_result_list(results, colors=None, legends=None):
@@ -57,7 +69,7 @@ def process_result_list(results, colors=None, legends=None):
             legends = [legends]
     else:
         # if more than one result is passed, we use one color per result
-        colors = assign_colors_for_result_list(len(results), colors)
+        colors = assign_colors_for_list(len(results), colors)
 
         # check whether list of legends has the correct length
         if legends is None:
@@ -75,8 +87,8 @@ def process_result_list(results, colors=None, legends=None):
 
     # size of legend list and size of results does not match
     if legend_error:
-        raise ('List of results passed and list of labels do not have the'
-               ' same length but should. Stopping.')
+        raise ValueError('List of results passed and list of labels do '
+                         'not have the same length but should. Stopping.')
 
     return results, colors, legends
 
@@ -115,17 +127,15 @@ def process_offset_y(offset_y: Optional[float],
             warnings.warn("Offset specified by user is insufficient. "
                           "Ignoring specified offset and using " +
                           str(np.abs(min_val) + 1.) + " instead.")
-            offset_y = 1. - min_val
+        else:
+            return offset_y
     else:
         # check whether scaling is lin or log10
         if scale_y == 'lin':
             # linear scaling doesn't need any offset
-            offset_y = 0.
-        else:
-            # log10 scaling does need offset
-            offset_y = 1. - min_val
+            return 0.
 
-    return offset_y
+    return 1. - min_val
 
 
 def process_y_limits(ax, y_limits):
@@ -140,9 +150,6 @@ def process_y_limits(ax, y_limits):
 
     y_limits: ndarray
        y_limits, minimum and maximum, for current axes object
-
-    min_val: float
-        Smallest value to be plotted
 
     Returns
     -------
@@ -202,3 +209,104 @@ def process_y_limits(ax, y_limits):
             ax.set_ylim(new_limits)
 
     return ax
+
+
+def process_start_indices(start_indices: Union[int, Iterable[int]],
+                          max_length: int) -> List[int]:
+    """
+    helper function that processes the start_indices and
+    creates an array of indices if a number was provided and checks that the
+    indices do not exceed the max_index
+
+    Parameters
+    ----------
+    start_indices:
+        list of indices or int specifying an endpoint of the sequence of
+        indices
+    max_length:
+        maximum possible index for the start_indices
+    """
+
+    if isinstance(start_indices, Number):
+        start_indices = range(int(start_indices))
+
+    start_indices = np.array(start_indices, dtype=int)
+
+    # check, whether index set is not too big
+    start_indices = [start_index for start_index in start_indices if
+                     start_index < max_length]
+
+    return start_indices
+
+
+def rgba2rgb(fg: RGB_RGBA, bg: RGB_RGBA = None) -> RGB:
+    """Combine two colors, removing transparency.
+
+    Parameters
+    ----------
+    fg:
+        Foreground color.
+    bg:
+        Background color.
+
+    Returns
+    -------
+    The combined color.
+    """
+    if bg is None:
+        bg = RGBA_WHITE
+    if len(bg) == LEN_RGBA:
+        # return foreground if background is fully transparent
+        if bg[RGBA_ALPHA] == RGBA_MIN:
+            return fg
+    else:
+        if len(bg) != LEN_RGB:
+            raise IndexError(
+                'A background color of unexpected length was provided: {bg}'
+            )
+        bg = (*bg, RGBA_MAX)
+
+    # return the foreground color if has no transparency
+    if len(fg) == LEN_RGB or fg[RGBA_ALPHA] == RGBA_MAX:
+        return fg
+    if len(fg) != LEN_RGBA:
+        raise IndexError(
+            'A foreground color of unexpected length was provided: {fg}'
+        )
+
+    def apparent_composite_color_component(
+            fg_component: float,
+            bg_component: float,
+            fg_alpha: float = fg[RGBA_ALPHA],
+            bg_alpha: float = bg[RGBA_ALPHA],
+    ) -> float:
+        """
+        Composite a foreground color component over a background color
+        component.
+
+        Porter and Duff equations are used for alpha compositing.
+
+        Parameters
+        ----------
+        fg_component:
+            The foreground color component.
+        bg_component:
+            The background color component.
+        fg_alpha:
+            The foreground color transparency/alpha component.
+        bg_alpha:
+            The background color transparency/alpha component.
+
+        Returns
+        -------
+        The component of the new color.
+        """
+        return (
+            fg_component * fg_alpha +
+            bg_component * bg_alpha * (RGBA_MAX - fg_alpha)
+        ) / (fg_alpha + bg_alpha * (RGBA_MAX - fg_alpha))
+
+    return [
+        apparent_composite_color_component(fg[i], bg[i])
+        for i in range(LEN_RGB)
+    ]

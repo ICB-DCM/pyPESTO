@@ -1,7 +1,10 @@
 from scipy import cluster
-from typing import Tuple
+from typing import List, Tuple, Optional, Union
 import matplotlib.cm as cm
 import numpy as np
+
+# for typehints
+from .constants import RGBA
 
 
 def assign_clusters(vals):
@@ -207,55 +210,59 @@ def assign_colors(vals, colors=None, balance_alpha=True,
                'one single [r, g, b, alpha] color.')
 
 
-def assign_colors_for_result_list(num_results, colors=None):
+def assign_colors_for_list(
+        num_entries: int,
+        colors: Optional[Union[RGBA, List[RGBA], np.ndarray]] = None
+) -> Union[List[List[float]], np.ndarray]:
     """
-    Creates a list of colors for a list of pypesto.Result objects or checks
+    Creates a list of colors for a list of items or checks
     a user-provided list of colors and uses this if everything is ok
 
     Parameters
     ----------
 
-    num_results: int
+    num_entries:
         number of results in list
 
-    colors: list, or RGBA, optional
+    colors:
         list of colors, or single color
 
     Returns
     -------
 
-    colors: list of RGBA
-        One for each element in 'vals'.
+    colors:
+        List of RGBA, one for each element in 'vals'.
     """
 
     # if the user did not specify any colors:
     if colors is None:
         # default colors will be used, on for each entry in the result list.
         # Colors are created from assign_colors, which needs a dummy list
-        dummy_clusters = np.array(list(range(num_results)) * 2)
+        dummy_clusters = np.array(list(range(num_entries)) * 2)
 
         # we don't want alpha levels for all plotting routines in this case...
         colors = assign_colors(dummy_clusters, balance_alpha=False,
                                highlight_global=False)
 
         # dummy cluster had twice as many entries as really there. Reduce.
-        real_indices = list(range(int(colors.shape[0] / 2)))
+        real_indices = np.arange(int(colors.shape[0] / 2))
         return colors[real_indices]
 
     # if the user specified color lies does not match the number of results
-    if len(colors) != num_results:
+    if len(colors) != num_entries:
         raise ('Incorrect color input. Colors must be specified either as '
                'list of [r, g, b, alpha] with length equal to function '
-               'values Number of function (here: ' + str(num_results) + '), '
+               'values Number of function (here: ' + str(num_entries) + '), '
                'or as one single [r, g, b, alpha] color.')
 
     return colors
 
 
-def delete_nan_inf(fvals: np.ndarray, x: np.ndarray = None) -> \
-        Tuple[np.ndarray, np.ndarray]:
+def delete_nan_inf(fvals: np.ndarray,
+                   x: Optional[np.ndarray] = None,
+                   xdim: Optional[int] = 1) -> Tuple[np.ndarray, np.ndarray]:
     """
-    Delete nan and inf values in fvals. If parameters 'x' are passend, also
+    Delete nan and inf values in fvals. If parameters 'x' are passed, also
     the corresponding entries are deleted.
 
     Parameters
@@ -267,26 +274,32 @@ def delete_nan_inf(fvals: np.ndarray, x: np.ndarray = None) -> \
     fvals:
         array of fval
 
+    xdim:
+        dimension of x, in case x dimension cannot be inferred
+
     Returns
     -------
 
-    x: np.array
+    x:
         array of parameters without nan or inf
 
-    fvals: np.array
+    fvals:
         array of fval without nan or inf
     """
-
-    ind_delete = []
-    for fval_ind, fval_value in enumerate(fvals):
-        if not np.isfinite(fval_value):
-            if len(ind_delete) == 0:
-                ind_delete = [fval_ind]
-            else:
-                ind_delete.append(fval_ind)
-
-    fvals = np.delete(fvals, ind_delete)
+    fvals = np.asarray(fvals)
     if x is not None:
-        x = np.delete(x, ind_delete, axis=0)
-
-    return x, fvals
+        # if we start out with a list of x, the x corresponding to
+        # to finite fvals may be None, so we cannot stack the x before taking
+        # subindexing
+        # If none of the fvals are finite, np.vstack will fail and np.take
+        # will not yield the correct dimension, so we try to construct an
+        # empty np.ndarray with the correct dimension (other functions rely
+        # on x.shape[1] to be of correct dimension)
+        if np.isfinite(fvals).any():
+            x = np.vstack(np.take(x, np.where(np.isfinite(fvals))[0], axis=0))
+        else:
+            x = np.empty((0,
+                          x.shape[1] if x.ndim == 2
+                          else x[0].shape[0] if x[0] is not None
+                          else xdim))
+    return x, fvals[np.isfinite(fvals)]

@@ -10,23 +10,30 @@ from .version import __version__
 
 # import basic objects into global namespace
 from .objective import (
-    HistoryOptions,
-    HistoryBase,
-    History,
-    MemoryHistory,
+    AmiciObjective,
     CsvHistory,
     Hdf5History,
-    OptimizerHistory,
-    AmiciObjective,
-    Objective,
+    History,
+    HistoryBase,
+    HistoryOptions,
+    MemoryHistory,
     NegLogPriors,
-    ObjectiveBase)
+    Objective,
+    ObjectiveBase,
+    OptimizerHistory,
+)
+from .predict import (
+    AmiciPredictor,
+    PredictionConditionResult,
+    PredictionResult,
+)
 from .problem import Problem
 from .result import (
-    Result,
     OptimizeResult,
     ProfileResult,
-    SampleResult)
+    Result,
+    SampleResult,
+)
 
 # import simple modules as submodules
 from . import engine

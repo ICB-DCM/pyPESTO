@@ -1,54 +1,74 @@
 Deploy
 ======
 
-New features and bug fixes are continuously added to the develop branch. On
-every merge to master, the version number in ``pypesto/version.py``  should
-be incremented as described below.
+New production releases should be created every time the ``main`` branch is
+updated.
 
-Versioning scheme
------------------
+Versions
+--------
 
 For version numbers, we use ``A.B.C``, where
 
 * ``C`` is increased for bug fixes,
 * ``B`` is increased for new features and minor API breaking changes,
-* ``A`` is increased for major API breaking changes.
+* ``A`` is increased for major API breaking changes,
 
+as suggested by the `Python packaging guide <https://packaging.python.org>`_.
 
-Creating a new release
-----------------------
+Create a new release
+--------------------
 
-After new commits have been added to the develop branch, changes can be merged
-to master and a new version of pyPESTO can be released. Every merge to master
-should coincide with an incremented version number and a git tag on the
-respective merge commit.
+After new commits have been added via pull requests to the ``develop`` branch,
+changes can be merged to ``main`` and a new version of pyPESTO can be released.
 
+Merge into main
+~~~~~~~~~~~~~~~
 
-Merge into master
-~~~~~~~~~~~~~~~~~
+1. create a pull request from ``develop`` to ``main``,
+2. check that all code changes are covered by tests and all tests pass,
+3. check that the documentation is up-to-date,
+4. adapt the version number in ``pypesto/version.py`` (see above),
+5. update the release notes in ``CHANGELOG.rst``,
+6. request a code review,
+7. merge into the origin ``main`` branch.
 
-1. create a pull request from develop to master
-2. check that all tests on travis pass
-3. check that the documentation is up-to-date
-4. adapt the version number in the file ``pesto/version.py`` (see above)
-5. update the release notes in ``doc/releasenotes.rst``
-6. request a code review
-7. merge into the origin master branch
+To be able to actually perform the merge, sufficient rights may be required.
+Also, at least one review is required.
 
-To be able to actually perform the merge, sufficient rights may be
-required. Also, at least one review is required.
+Create a release on GitHub
+~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+After merging into ``main``, create a new release on GitHub. This can be done
+either directly on the project GitHub website, or via the CLI as described
+in
+`Git Basics - Tagging <https://git-scm.com/book/en/v2/Git-Basics-Tagging>`_.
+In the release form,
 
-Creating a release on github
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+* specify a tag with the new version as specified in ``pypesto/version.py``,
+* include the latest additions to ``CHANGELOG.rst`` in the release
+  description.
 
-After merging into master, create a new release on Github.
-In the release form:
+Upload to PyPI
+--------------
 
-* specify a tag with the new version as specified in ``pesto/version.py``,
-  prefixed with ``v`` (e.g. ``v0.0.1``)
-* include the latest additions to ``doc/releasenotes.rst`` in the release
-  description
+The upload to the python package index PyPI has been automatized via GitHub
+Actions and is triggered whenever a new release tag is published.
 
-Tagging the release commit will automatically trigger deployment of the new
-version to pypi.
+Should it be necessary to manually upload a new version to PyPI,
+proceed as follows: First, a so called "wheel" is created via::
+
+    python setup.py bdist_wheel
+
+A wheel is essentially a zip archive which contains the source code
+and the binaries (if any).
+
+This archive is uploaded using twine::
+
+    twine upload dist/pypesto-x.y.z-py3-non-any.wheel
+
+replacing x.y.z by the respective version number.
+
+For a more in-depth discussion see also the
+`section on distributing packages
+<https://packaging.python.org/tutorials/distributing-packages>`_
+of the Python packaging guide.
