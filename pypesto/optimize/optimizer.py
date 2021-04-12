@@ -728,14 +728,27 @@ class ScipyDifferentialEvolutionOptimizer(Optimizer):
 class PyswarmsOptimizer(Optimizer):
     """
     Global optimization using pyswarms.
+    Package homepage: https://pyswarms.readthedocs.io/en/latest/index.html
 
     Parameters
     ----------
+    par_popsize:
+        number of particles in the swarm, default value 10
+
     options:
         Optimizer options that are directly passed on to pyswarms.
         c1: cognitive parameter
         c2: social parameter
         w: inertia parameter
+        Default values are (c1,c2,w) = (0.5, 0.3, 0.9)
+
+    Examples
+    --------
+    Arguments that can be passed to options:
+    
+    maxiter:
+        used to calculate the maximal number of funcion evaluations.
+        Default: 1000
     """
 
     def __init__(self, par_popsize: float = 10, options: Dict = None):
@@ -767,8 +780,7 @@ class PyswarmsOptimizer(Optimizer):
             n_particles=self.par_popsize, dimensions=len(x0), options=self.options,
             bounds=(lb, ub))
 
-
-        def successively_working_fval(swarm):
+        def successively_working_fval(swarm: np.ndarray) -> np.ndarray:
             """Evaluate the function for all parameters in the swarm object.
 
             Parameters:
@@ -787,10 +799,8 @@ class PyswarmsOptimizer(Optimizer):
 
             return result
 
-
         cost, pos = optimizer.optimize(
             successively_working_fval, iters=self.options['maxiter'])
-
 
         optimizer_result = OptimizerResult(
             x=pos,
