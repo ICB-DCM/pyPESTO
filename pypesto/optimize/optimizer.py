@@ -309,11 +309,11 @@ class ScipyOptimizer(Optimizer):
     @time_decorator
     @history_decorator
     def minimize(
-            self,
-            problem: Problem,
-            x0: np.ndarray,
-            id: str,
-            history_options: HistoryOptions = None,
+        self,
+        problem: Problem,
+        x0: np.ndarray,
+        id: str,
+        history_options: HistoryOptions = None,
     ) -> OptimizerResult:
         lb = problem.lb
         ub = problem.ub
@@ -350,7 +350,8 @@ class ScipyOptimizer(Optimizer):
                 method=ls_method,
                 jac=jac,
                 bounds=bounds,
-                tr_solver='exact',
+                tr_solver=ls_options.pop('tr_solver',
+                                         'lsmr' if len(x0) > 1 else 'exact'),
                 loss='linear',
                 **ls_options
             )
