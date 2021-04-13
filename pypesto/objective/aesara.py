@@ -34,11 +34,11 @@ class AesaraObjective(ObjectiveBase):
     objective:
         The `pypesto.ObjectiveBase` to wrap.
     aet_x:
-        tensor variables that that define the variables of `aet_fun`
+        Tensor variables that that define the variables of `aet_fun`
     aet_fun:
-        aesara function that maps `aet_x` to the variables of `objective`
+        Aesara function that maps `aet_x` to the variables of `objective`
     coeff:
-        multiplicative coefficient for objective
+        Multiplicative coefficient for objective
     """
 
     def __init__(self,
@@ -140,7 +140,7 @@ class AesaraObjectiveOp(Op):
     obj:
         Base aseara objective
     coeff:
-        multiplicative coefficient for the objective function value
+        Multiplicative coefficient for the objective function value
     """
 
     itypes = [aet.dvector]  # expects a vector of parameter values when called
@@ -159,6 +159,9 @@ class AesaraObjectiveOp(Op):
             self._log_prob_grad = None
 
     def perform(self, node, inputs, outputs, params=None):
+        # note that we use precomputed values from the outer
+        # AesaraObjective.call_unprocessed here, which which means we can
+        # ignore inputs here
         log_prob = self._coeff * self._objective.inner_ret[FVAL]
         outputs[0][0] = np.array(log_prob)
 
@@ -181,7 +184,7 @@ class AesaraObjectiveGradOp(Op):
     obj:
         Base aseara objective
     coeff:
-        multiplicative coefficient for the objective function value
+        Multiplicative coefficient for the objective function value
     """
 
     itypes = [aet.dvector]  # expects a vector of parameter values when called
@@ -199,7 +202,9 @@ class AesaraObjectiveGradOp(Op):
             self._log_prob_hess = None
 
     def perform(self, node, inputs, outputs, params=None):
-        # calculate gradients
+        # note that we use precomputed values from the outer
+        # AesaraObjective.call_unprocessed here, which which means we can
+        # ignore inputs here
         log_prob_grad = self._coeff * self._objective.inner_ret[GRAD]
         outputs[0][0] = log_prob_grad
 
@@ -222,7 +227,7 @@ class AesaraObjectiveHessOp(Op):
     obj:
         Base aseara objective
     coeff:
-        multiplicative coefficient for the objective function value
+        Multiplicative coefficient for the objective function value
     """
 
     itypes = [aet.dvector]
@@ -235,6 +240,8 @@ class AesaraObjectiveHessOp(Op):
         self._coeff: float = coeff
 
     def perform(self, node, inputs, outputs, params=None):
-        # calculate Hessian
+        # note that we use precomputed values from the outer
+        # AesaraObjective.call_unprocessed here, which which means we can
+        # ignore inputs here
         log_prob_hess = self._coeff * self._objective.inner_ret[HESS]
         outputs[0][0] = log_prob_hess
