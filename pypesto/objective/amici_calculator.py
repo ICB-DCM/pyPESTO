@@ -7,7 +7,7 @@ from .constants import (
 from .amici_util import (
     add_sim_grad_to_opt_grad, add_sim_hess_to_opt_hess,
     sim_sres_to_opt_sres, log_simulation, get_error_output, filter_return_dict,
-    init_return_values, create_plist_from_par_opt_to_par_sim,
+    init_return_values,
 )
 
 try:
