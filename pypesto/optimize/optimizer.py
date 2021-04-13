@@ -339,6 +339,7 @@ class ScipyOptimizer(Optimizer):
                 ls_options['verbose'] = 2 if 'disp' in ls_options.keys() \
                                              and ls_options['disp'] else 0
                 ls_options.pop('disp', None)
+                ls_options['max_nfev'] = ls_options.pop('maxiter', None)
             else:
                 ls_options = {}
 
