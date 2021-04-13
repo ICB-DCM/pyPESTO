@@ -13,9 +13,9 @@ from .result import OptimizerResult
 from ..objective.constants import MODE_FUN, FVAL, GRAD
 
 try:
-    import ipopt
+    import cyipopt
 except ImportError:
-    ipopt = None
+    cyipopt = None
 
 try:
     import dlib
@@ -430,7 +430,7 @@ class ScipyOptimizer(Optimizer):
         return re.match(r'(?i)^(ls_)', self.method)
 
     def get_default_options(self):
-        if self.is_least_squares:
+        if self.is_least_squares():
             options = {'max_nfev': 1000, 'disp': False}
         else:
             options = {'maxiter': 1000, 'disp': False}
@@ -446,7 +446,7 @@ class IpoptOptimizer(Optimizer):
         Parameters
         ----------
         options:
-            Options are directly passed on to `ipopt.minimize_ipopt`.
+            Options are directly passed on to `cyipopt.minimize_ipopt`.
         """
         super().__init__()
         self.options = options
@@ -462,7 +462,7 @@ class IpoptOptimizer(Optimizer):
             history_options: HistoryOptions = None,
     ) -> OptimizerResult:
 
-        if ipopt is None:
+        if cyipopt is None:
             raise ImportError(
                 "This optimizer requires an installation of ipopt. You can "
                 "install ipopt via `pip install ipopt`."
@@ -472,7 +472,7 @@ class IpoptOptimizer(Optimizer):
 
         bounds = np.array([problem.lb, problem.ub]).T
 
-        ret = ipopt.minimize_ipopt(
+        ret = cyipopt.minimize_ipopt(
             fun=objective.get_fval,
             x0=x0,
             method=None,  # ipopt does not use this argument for anything
@@ -977,7 +977,7 @@ class FidesOptimizer(Optimizer):
 
     def __init__(
             self,
-            hessian_update: Optional['fides.HessianApproximation'] = None,
+            hessian_update: Optional['fides.HessianApproximation'] = 'Hybrid',
             options: Optional[Dict] = None,
             verbose: Optional[int] = logging.INFO
     ):
@@ -988,16 +988,20 @@ class FidesOptimizer(Optimizer):
             Optimizer options.
         hessian_update:
             Hessian update strategy. If this is None, Hessian (approximation)
-            computed by problem.objective will be used (default).
+            computed by problem.objective will be used.
         """
 
         super().__init__()
+
+        if hessian_update == 'Hybrid':
+            hessian_update = fides.HybridUpdate()
 
         if hessian_update is not None and \
                 not isinstance(hessian_update, fides.HessianApproximation):
             raise ValueError('Incompatible type for hessian update, '
                              'must be fides.HessianApproximation, '
                              f'was {type(hessian_update)}.')
+
         if options is None:
             options = {}
 
@@ -1023,7 +1027,18 @@ class FidesOptimizer(Optimizer):
             )
 
         args = {'mode': MODE_FUN}
-        if self.hessian_update is None:
+
+        if not problem.objective.has_grad:
+            raise ValueError('Fides cannot be applied to problems '
+                             'with objectives that do not support '
+                             'gradient evaluation.')
+
+        if self.hessian_update is None or isinstance(self.hessian_update,
+                                                     fides.HybridUpdate):
+            if not problem.objective.has_hess:
+                raise ValueError('Specified hessian update scheme cannot be '
+                                 'used with objectives that do not support '
+                                 'Hessian computation.')
             args['sensi_orders'] = (0, 1, 2)
         else:
             args['sensi_orders'] = (0, 1)

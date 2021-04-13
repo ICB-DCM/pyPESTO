@@ -14,7 +14,7 @@ with major contributions by:
 - Dantong Wang
 - Daniel Weindl
 - Polina Lakrisenko
-- Elba Raimundez
+- Elba Raimúndez
 - Leonard Schmiester
 - Dilan Pathirana
 - Paul Jonas Jost

@@ -9,6 +9,9 @@ pip install wheel setuptools
 # Used to create local test environments
 pip install tox
 
+# Update apt
+sudo apt-get update
+
 # Check arguments
 for par in "$@"; do
   case $par in
@@ -20,10 +23,7 @@ for par in "$@"; do
     amici)
       # for amici
       sudo apt-get install \
-        swig3.0 libatlas-base-dev libhdf5-serial-dev
-      if [ ! -e /usr/bin/swig ]; then
-        sudo ln -s /usr/bin/swig3.0 /usr/bin/swig
-      fi
+        swig libatlas-base-dev libhdf5-serial-dev
     ;;
 
     ipopt)
@@ -43,7 +43,7 @@ for par in "$@"; do
 
     mpi)
       # mpi
-      sudo apt install libopenmpi-dev
+      sudo apt-get install libopenmpi-dev
     ;;
 
     *)

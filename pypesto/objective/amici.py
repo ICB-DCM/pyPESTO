@@ -393,3 +393,40 @@ class AmiciObjective(ObjectiveBase):
         self.steadystate_guesses['fval'] = np.inf
         for condition in self.steadystate_guesses['data']:
             self.steadystate_guesses['data'][condition] = {}
+
+    def custom_timepoints(
+            self,
+            timepoints: Sequence[Sequence[Union[float, int]]] = None,
+            timepoints_global: Sequence[Union[float, int]] = None,
+    ) -> 'AmiciObjective':
+        """
+        Create a copy of this objective that will be evaluated at custom
+        timepoints.
+
+        The intended use is to aid in predictions at unmeasured timepoints.
+
+        Parameters
+        ----------
+        timepoints:
+            The outer sequence should contain a sequence of timepoints for each
+            experimental condition.
+        timepoints_global:
+            A sequence of timepoints that will be used for all experimental
+            conditions.
+
+        Returns
+        -------
+        The customized copy of this objective.
+        """
+        if timepoints is None and timepoints_global is None:
+            raise KeyError('Timepoints were not specified.')
+
+        amici_objective = copy.deepcopy(self)
+
+        for index in range(len(amici_objective.edatas)):
+            if timepoints_global is not None:
+                amici_objective.edatas[index].setTimepoints(timepoints_global)
+            else:
+                amici_objective.edatas[index].setTimepoints(timepoints[index])
+
+        return amici_objective

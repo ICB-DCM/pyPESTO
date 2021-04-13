@@ -1,8 +1,12 @@
 from .importer import PetabImporter
 import os
 import shutil
-import amici
-import amici.petab_import_pysb
+
+try:
+    import amici
+    import amici.petab_import_pysb
+except ImportError:
+    pass
 
 
 class PetabImporterPysb(PetabImporter):

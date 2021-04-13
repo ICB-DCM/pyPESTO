@@ -6,6 +6,7 @@ from pypesto.objective.amici_util import add_sim_grad_to_opt_grad
 
 import petab
 import pypesto
+import pypesto.petab
 import pypesto.optimize
 import pypesto.objective.constants
 import pytest

@@ -13,7 +13,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: [3.8]
+        python-version: [3.9]
 
     steps:
     - name: Check out repository
@@ -28,7 +28,7 @@ jobs:
       uses: actions/cache@v1
       with:
         path: ~/.cache
-        key: ${{ runner.os }}-ci-base
+        key: ${{ runner.os }}-${{ matrix.python-version }}-ci-base
 
     - name: Install dependencies
       run: .github/workflows/install_deps.sh amici
@@ -47,7 +47,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: [3.8]
+        python-version: [3.9]
 
     steps:
     - name: Check out repository
@@ -62,13 +62,13 @@ jobs:
       uses: actions/cache@v1
       with:
         path: ~/.cache
-        key: ${{ runner.os }}-ci-petab
+        key: ${{ runner.os }}-${{ matrix.python-version }}-ci-petab
 
     - name: Install dependencies
       run: .github/workflows/install_deps.sh amici pysb
 
     - name: Run tests
-      timeout-minutes: 15
+      timeout-minutes: 25
       run: tox -e petab
 
     - name: Coverage
@@ -81,7 +81,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: [3.8]
+        python-version: [3.9]
 
     steps:
     - name: Check out repository
@@ -96,13 +96,13 @@ jobs:
       uses: actions/cache@v1
       with:
         path: ~/.cache
-        key: ${{ runner.os }}-ci-optimize
+        key: ${{ runner.os }}-${{ matrix.python-version }}-ci-optimize
 
     - name: Install dependencies
       run: .github/workflows/install_deps.sh ipopt
 
     - name: Run tests
-      timeout-minutes: 5
+      timeout-minutes: 20
       run: tox -e optimize
 
     - name: Coverage
@@ -130,10 +130,10 @@ jobs:
       uses: actions/cache@v1
       with:
         path: ~/.cache
-        key: ${{ runner.os }}-ci-quality
+        key: ${{ runner.os }}-${{ matrix.python-version }}-ci-quality
 
     - name: Install dependencies
-      run: .github/workflows/install_deps.sh
+      run: pip install tox pre-commit
 
     - name: Check repository size
       run: tox -e size
@@ -141,6 +141,9 @@ jobs:
     - name: Run quality checks
       timeout-minutes: 1
       run: tox -e project,flake8
+
+    - name: Run pre-commit hooks
+      run: pre-commit run --all-files
 
   docs:
     runs-on: ubuntu-latest
@@ -161,7 +164,7 @@ jobs:
       uses: actions/cache@v1
       with:
         path: ~/.cache
-        key: ${{ runner.os }}-ci-docs
+        key: ${{ runner.os }}-${{ matrix.python-version }}-ci-docs
 
     - name: Install dependencies
       run: .github/workflows/install_deps.sh doc amici
@@ -174,7 +177,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: [3.8]
+        python-version: [3.9]
 
     steps:
     - name: Check out repository
@@ -189,7 +192,7 @@ jobs:
       uses: actions/cache@v1
       with:
         path: ~/.cache
-        key: ${{ runner.os }}-ci-notebooks1
+        key: ${{ runner.os }}-${{ matrix.python-version }}-ci-notebooks1
 
     - name: Install dependencies
       run: .github/workflows/install_deps.sh amici ipopt
@@ -202,7 +205,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: [3.8]
+        python-version: [3.9]
 
     steps:
     - name: Check out repository
@@ -217,7 +220,7 @@ jobs:
       uses: actions/cache@v1
       with:
         path: ~/.cache
-        key: ${{ runner.os }}-ci-notebooks2
+        key: ${{ runner.os }}-${{ matrix.python-version }}-ci-notebooks2
 
     - name: Install dependencies
       run: .github/workflows/install_deps.sh amici
