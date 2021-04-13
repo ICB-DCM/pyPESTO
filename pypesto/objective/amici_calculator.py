@@ -7,7 +7,7 @@ from .constants import (
 from .amici_util import (
     add_sim_grad_to_opt_grad, add_sim_hess_to_opt_hess,
     sim_sres_to_opt_sres, log_simulation, get_error_output, filter_return_dict,
-    init_return_values
+    init_return_values,
 )
 
 try:
@@ -84,7 +84,6 @@ class AmiciCalculator:
             amici_solver.setSensitivityOrder(sensi_order)
 
         # fill in parameters
-        # TODO (#226) use plist to compute only required derivatives
         amici.parameter_mapping.fill_in_parameters(
             edatas=edatas,
             problem_parameters=x_dct,
@@ -102,14 +101,16 @@ class AmiciCalculator:
         )
         if not self._known_least_squares_safe and mode == MODE_RES and \
                 sensi_order > 0:
-            if any(
+            if not amici_model.getAddSigmaResiduals() and any(
                 ((r['ssigmay'] is not None and np.any(r['ssigmay']))
                  or
                  (r['ssigmaz'] is not None and np.any(r['ssigmaz'])))
                 for r in rdatas
             ):
                 raise RuntimeError('Cannot use least squares solver with'
-                                   'parameter dependent sigma!')
+                                   'parameter dependent sigma! Support can be '
+                                   'enabled via '
+                                   'amici_model.setAddSigmaResiduals().')
             self._known_least_squares_safe = True  # don't check this again
 
         self._check_least_squares(sensi_order, mode, rdatas)
