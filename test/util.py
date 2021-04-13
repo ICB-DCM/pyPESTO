@@ -44,6 +44,7 @@ def obj_for_sensi(fun, grad, hess, max_sensi_order, integrated, x):
             def arg_fun(x):
                 return fun(x), grad(x), hess(x)
             arg_grad = arg_hess = True
+
             def arg_res(x):
                 return grad(x), hess(x)
             arg_sres = True
@@ -52,6 +53,7 @@ def obj_for_sensi(fun, grad, hess, max_sensi_order, integrated, x):
                 return fun(x), grad(x)
             arg_grad = True
             arg_hess = False
+
             def arg_res(x):
                 return grad(x)
             arg_sres = False
