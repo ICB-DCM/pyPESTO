@@ -369,6 +369,10 @@ class History(HistoryBase):
             The objective function values for parameters `x`, sensitivities
             `sensi_orders` and mode `mode`.
         """
+        res = result.get(RES, None)
+        if res is not None and FVAL not in result:
+            # no option trace_record_fval
+            result[FVAL] = res_to_chi2(res)
         self._update_counts(sensi_orders, mode)
 
     def finalize(self):
