@@ -7,7 +7,7 @@ from .constants import (
 from .amici_util import (
     add_sim_grad_to_opt_grad, add_sim_hess_to_opt_hess,
     sim_sres_to_opt_sres, log_simulation, get_error_output, filter_return_dict,
-    init_return_values
+    init_return_values,
 )
 
 try:
@@ -81,7 +81,6 @@ class AmiciCalculator:
             amici_solver.setSensitivityOrder(sensi_order)
 
         # fill in parameters
-        # TODO (#226) use plist to compute only required derivatives
         amici.parameter_mapping.fill_in_parameters(
             edatas=edatas,
             problem_parameters=x_dct,
