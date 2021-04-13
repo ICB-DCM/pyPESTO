@@ -98,14 +98,16 @@ class AmiciCalculator:
         )
         if not self._known_least_squares_safe and mode == MODE_RES and \
                 sensi_order > 0:
-            if any(
+            if not amici_model.getAddSigmaResiduals() and any(
                 ((r['ssigmay'] is not None and np.any(r['ssigmay']))
                  or
                  (r['ssigmaz'] is not None and np.any(r['ssigmaz'])))
                 for r in rdatas
             ):
                 raise RuntimeError('Cannot use least squares solver with'
-                                   'parameter dependent sigma!')
+                                   'parameter dependent sigma! Support can be '
+                                   'enabled via '
+                                   'amici_model.setAddSigmaResiduals().')
             self._known_least_squares_safe = True  # don't check this again
 
         return calculate_function_values(
