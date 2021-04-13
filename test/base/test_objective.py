@@ -7,6 +7,7 @@ import sympy as sp
 import numbers
 import pytest
 import pypesto
+import copy
 
 from ..util import rosen_for_sensi, poly_for_sensi
 
@@ -193,3 +194,7 @@ def test_aesara(max_sensi_order, integrated):
             np.diag(prob['grad'] * np.sinh(x_ref)),
             obj(x_ref, sensi_orders=(2,))
         )
+
+    # test everything still works after deepcopy
+    cobj = copy.deepcopy(obj)
+    assert cobj(x_ref) == prob['fval']

@@ -5,10 +5,10 @@ combination of objective based methods and aeara based backpropagation
 """
 
 import numpy as np
+import copy
 
 from .base import ObjectiveBase, ResultDict
 from .constants import MODE_FUN, FVAL, GRAD, HESS
-
 
 from typing import Tuple, Optional
 
@@ -55,8 +55,9 @@ class AesaraObjective(ObjectiveBase):
 
         self.aet_x = aet_x
         self.aet_fun = aet_fun
+        self._coeff = coeff
 
-        self.obj_op = AesaraObjectiveOp(self, coeff)
+        self.obj_op = AesaraObjectiveOp(self, self._coeff)
 
         # compiled function
         if objective.has_fun:
@@ -119,6 +120,14 @@ class AesaraObjective(ObjectiveBase):
             ret[HESS] = self.ahess(x)[0]
 
         return ret
+
+    def __deepcopy__(self, memodict=None):
+        other = AesaraObjective(
+            copy.deepcopy(self.base_objective), self.aet_x, self.aet_fun,
+            self._coeff
+        )
+
+        return other
 
 
 class AesaraObjectiveOp(Op):
