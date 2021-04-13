@@ -28,6 +28,7 @@ class AesaraObjective(ObjectiveBase):
     Caching is only enabled after the first time the gradient is asked for
     and disabled whenever the cached gradient is not used,
     in order not to increase computation time for derivative-free samplers.
+
     Parameters
     ----------
     objective:
