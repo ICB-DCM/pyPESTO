@@ -7,13 +7,13 @@ import sympy as sp
 import numbers
 import pytest
 import pypesto
+import copy
 
 from ..util import rosen_for_sensi, poly_for_sensi
 
-import aesara
 import aesara.tensor as aet
 
-from pypesto.objective.aesara import AesaraLogProbability
+from pypesto.objective.aesara import AesaraObjective
 
 
 @pytest.fixture(params=[True, False])
@@ -172,30 +172,14 @@ def test_aesara(max_sensi_order, integrated):
     prob = rosen_for_sensi(max_sensi_order,
                            integrated, [0, 1])
 
-    base_objective = AesaraLogProbability(pypesto.Problem(
-        prob['obj'], -np.inf * np.ones_like(prob['x']),
-        +np.inf * np.ones_like(prob['x'])),
-        beta=-1
-    )
     # create aesara specific symbolic tensor variables
     x = aet.specify_shape(aet.vector('x'), (2,))
 
-    # compose rosenbrock function with with sinh transformation
-    fun = base_objective(aet.sinh(x))
-
-    f = aesara.function([x], fun)
-    kwargs = {'fun': lambda z: float(f(z))}
-    if max_sensi_order > 0:
-        g = aesara.function([x], aesara.grad(fun, [x]))
-        kwargs['grad'] = lambda z: g(z)[0]
-    if max_sensi_order > 1:
-        h = aesara.function([x], aesara.gradient.hessian(fun, [x]))
-        kwargs['hess'] = lambda z: h(z)[0]
-
-    # apply inverse transformsuch that we evaluate at prob['x']
+    # apply inverse transform such that we evaluate at prob['x']
     x_ref = np.arcsinh(prob['x'])
 
-    obj = pypesto.Objective(**kwargs)
+    # compose rosenbrock function with with sinh transformation
+    obj = AesaraObjective(prob['obj'], x, aet.sinh(x))
 
     # check value against
     assert obj(x_ref) == prob['fval']
@@ -210,3 +194,7 @@ def test_aesara(max_sensi_order, integrated):
             np.diag(prob['grad'] * np.sinh(x_ref)),
             obj(x_ref, sensi_orders=(2,))
         )
+
+    # test everything still works after deepcopy
+    cobj = copy.deepcopy(obj)
+    assert cobj(x_ref) == prob['fval']
