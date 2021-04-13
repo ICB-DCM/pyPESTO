@@ -75,14 +75,7 @@ def test_optimization(mode, optimizer):
 
     with warnings.catch_warnings():
         warnings.simplefilter("ignore")
-        if isinstance(method, str) and re.match(r'^(?i)(ls_)', method):
-            # obj has no residuals
-            with pytest.raises(Exception):
-                check_minimize(obj, library, method)
-            # no error when allow failed starts
-            check_minimize(obj, library, method, allow_failed_starts=True)
-        else:
-            check_minimize(obj, library, method)
+        check_minimize(obj, library, method)
 
 
 def test_unbounded_minimize(optimizer):
@@ -199,8 +192,6 @@ def check_minimize(objective, library, solver, allow_failed_starts=False):
 
     assert isinstance(result.optimize_result.list[0]['fval'], float)
     if (library, solver) not in [
-            ('scipy', 'ls_trf'),
-            ('scipy', 'ls_dogbox'),
             ('nlopt', nlopt.GD_STOGO_RAND)  # id 9, fails in 40% of cases
     ]:
         assert np.isfinite(result.optimize_result.list[0]['fval'])
