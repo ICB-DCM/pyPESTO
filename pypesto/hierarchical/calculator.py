@@ -129,12 +129,15 @@ class HierarchicalAmiciCalculator(AmiciCalculator):
         # TODO: x_inner_opt is different for hierarchical and
         #  qualitative approach. For now I commented the following
         #  lines out to make qualitative approach work.
-        x_dct = copy.deepcopy(x_dct)
-        for key, val in x_inner_opt.items():
-           x_dct[key] = val
+
+        # directly writing to parameter mapping ensures that plists do not
+        # include hierarchically computed parameters
+        for mapping in parameter_mapping:
+            for key, val in mapping.map_sim_var.items():
+                if val in x_inner_opt:
+                    mapping.map_sim_var[key] = x_inner_opt[val]
 
         # fill in parameters
-        # TODO (#226) use plist to compute only required derivatives
         amici.parameter_mapping.fill_in_parameters(
             edatas=edatas,
             problem_parameters=x_dct,
