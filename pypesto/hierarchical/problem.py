@@ -113,6 +113,30 @@ def inner_problem_from_petab_problem(
     for par in inner_parameters:
         par.ixs = ix_matrices[par.id]
 
+    par_group_types = par_group_types = {
+        tuple(obs_pars.split(';')): set(
+            petab_problem.parameter_df.loc[obs_par, PARAMETER_TYPE]
+            for obs_par in obs_pars.split(';')
+        )
+        for (obs_id, obs_pars), _ in petab_problem.measurement_df.groupby([
+            petab.OBSERVABLE_ID, petab.OBSERVABLE_PARAMETERS
+        ], dropna=True)
+        if ';' in obs_pars  # prefilter for at least 2 observable parameters
+    }
+
+    coupled_pars = set(
+        par
+        for group, types in par_group_types.items()
+        if InnerParameter.SCALING in types and InnerParameter.OFFSET
+        for par in group
+    )
+
+    for par in inner_parameters:
+        if par.type not in [InnerParameter.SCALING, InnerParameter.OFFSET]:
+            continue
+        if par.id in coupled_pars:
+            par.coupled = True
+
     return InnerProblem(inner_parameters, edatas)
 
 

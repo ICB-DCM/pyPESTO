@@ -32,6 +32,7 @@ class InnerParameter:
             to simulate unscaled observables).
         """
         self.id: str = id
+        self.coupled = False
         self.type: str = type
 
         if scale not in {'lin', 'log', 'log10'}:

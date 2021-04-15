@@ -9,8 +9,9 @@ from ..optimize import minimize, Optimizer
 from .parameter import InnerParameter
 from .problem import InnerProblem, scale_value_dict
 from .util import (
-    compute_optimal_offset, apply_offset, compute_optimal_scaling,
-    apply_scaling, compute_optimal_sigma, apply_sigma, compute_nllh)
+    compute_optimal_offset, compute_optimal_offset_coupled, apply_offset,
+    compute_optimal_scaling, apply_scaling, compute_optimal_sigma,
+    apply_sigma, compute_nllh)
 
 
 class InnerSolver:
@@ -43,18 +44,25 @@ class AnalyticalInnerSolver(InnerSolver):
     ) -> Dict[str, float]:
         x_opt = {}
 
+        data = copy.deepcopy(problem.data)
+
         # compute optimal offsets
         for x in problem.get_xs_for_type(InnerParameter.OFFSET):
-            x_opt[x.id] = compute_optimal_offset(
-                data=problem.data, sim=sim, sigma=sigma, mask=x.ixs)
+            if x.coupled:
+                x_opt[x.id] = compute_optimal_offset_coupled(
+                    data=data, sim=sim, sigma=sigma, mask=x.ixs)
+            else:
+                x_opt[x.id] = compute_optimal_offset(
+                    data=data, sim=sim, sigma=sigma, mask=x.ixs)
         # apply offsets
         for x in problem.get_xs_for_type(InnerParameter.OFFSET):
-            apply_offset(offset_value=x_opt[x.id], sim=sim, mask=x.ixs)
+            apply_offset(offset_value=x_opt[x.id], data=data,
+                         mask=x.ixs)
 
         # compute optimal scalings
         for x in problem.get_xs_for_type(InnerParameter.SCALING):
             x_opt[x.id] = compute_optimal_scaling(
-                data=problem.data, sim=sim, sigma=sigma, mask=x.ixs)
+                data=data, sim=sim, sigma=sigma, mask=x.ixs)
         # apply scalings (TODO not always necessary)
         for x in problem.get_xs_for_type(InnerParameter.SCALING):
             apply_scaling(scaling_value=x_opt[x.id], sim=sim, mask=x.ixs)
@@ -62,7 +70,7 @@ class AnalyticalInnerSolver(InnerSolver):
         # compute optimal sigmas
         for x in problem.get_xs_for_type(InnerParameter.SIGMA):
             x_opt[x.id] = compute_optimal_sigma(
-                data=problem.data, sim=sim, mask=x.ixs)
+                data=data, sim=sim, mask=x.ixs)
         # apply sigmas
         for x in problem.get_xs_for_type(InnerParameter.SIGMA):
             apply_sigma(sigma_value=x_opt[x.id], sigma=sigma, mask=x.ixs)

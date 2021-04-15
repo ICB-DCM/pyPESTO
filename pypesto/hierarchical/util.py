@@ -45,7 +45,7 @@ def compute_optimal_offset(
         sim: List[np.ndarray],
         sigma: List[np.ndarray],
         mask: List[np.ndarray]) -> float:
-    """Compute optimal scaling."""
+    """Compute optimal offset."""
     # numerator, denominator
     num, den = 0.0, 0.0
 
@@ -67,14 +67,52 @@ def compute_optimal_offset(
 
     return float(x_opt)
 
+def compute_optimal_offset_coupled(
+        data: List[np.ndarray],
+        sim: List[np.ndarray],
+        sigma: List[np.ndarray],
+        mask: List[np.ndarray]) -> float:
+    """Compute optimal offset."""
+    # numerator, denominator
+    h, recnoise, yh, y, h2 = 0.0, 0.0, 0.0, 0.0, 0.0
+
+    # iterate over conditions
+    for sim_i, data_i, sigma_i, mask_i in \
+            zip(sim, data, sigma, mask):
+        if mask_i.max() == False:
+            continue
+        # extract relevant values
+        sim_x = sim_i[mask_i]
+        data_x = data_i[mask_i]
+        sigma_x = sigma_i[mask_i]
+        # update statistics
+        s2 = sigma_x ** 2
+        h += np.nansum(sim_x / s2)
+        recnoise += np.nansum(1 / s2)
+        yh += np.nansum((sim_x * data_x) / s2)
+        y += np.nansum(data_x / s2)
+        h2 += np.nansum((sim_x ** 2) / s2)
+
+    r1 = (yh * h) / h2
+    r2 = (h ** 2) / h2
+    num = y - r1
+    den = recnoise - r2
+
+    # compute optimal value
+    x_opt = 0.0  # value doesn't matter
+    if not np.isclose(den, 0.0):
+        x_opt = num / den
+
+    return float(x_opt)
+
 
 def apply_offset(
         offset_value: float,
-        sim: List[np.ndarray],
+        data: List[np.ndarray],
         mask: List[np.ndarray]):
     """Apply offset to simulations (in-place)."""
-    for i in range(len(sim)):
-        sim[i][mask[i]] = sim[i][mask[i]] + offset_value
+    for i in range(len(data)):
+        data[i][mask[i]] = data[i][mask[i]] - offset_value
 
 
 def compute_optimal_sigma(
