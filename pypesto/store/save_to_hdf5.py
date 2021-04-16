@@ -311,8 +311,5 @@ def write_result(result: Result,
         pypesto_profile_writer.write(result, overwrite=overwrite)
 
     if sample:
-        try:
-            pypesto_sample_writer = SamplingResultHDF5Writer(filename)
-            pypesto_sample_writer.write(result, overwrite=overwrite)
-        except:
-            print('stop')
+        pypesto_sample_writer = SamplingResultHDF5Writer(filename)
+        pypesto_sample_writer.write(result, overwrite=overwrite)
