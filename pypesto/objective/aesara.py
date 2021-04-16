@@ -8,7 +8,7 @@ import numpy as np
 import copy
 
 from .base import ObjectiveBase, ResultDict
-from .constants import MODE_FUN, FVAL, GRAD, HESS
+from .constants import MODE_FUN, FVAL, GRAD, HESS, RDATAS
 
 from typing import Tuple, Optional
 
@@ -109,10 +109,17 @@ class AesaraObjective(ObjectiveBase):
 
         # this computes all the results from the inner objective, rendering
         # them accessible to aesara compiled functions
-        self.inner_ret = self.base_objective.call_unprocessed(
-            self.infun(x), sensi_orders, mode, **kwargs
+
+        set_return_dict, return_dict = ('return_dict' in kwargs,
+                                        kwargs.pop('return_dict', False))
+        self.inner_ret = self.base_objective(
+            self.infun(x), sensi_orders, mode, return_dict=True,  **kwargs
         )
+        if set_return_dict:
+            kwargs['return_dict'] = return_dict
         ret = {}
+        if RDATAS in self.inner_ret:
+            ret[RDATAS] = self.inner_ret[RDATAS]
         if 0 in sensi_orders:
             ret[FVAL] = float(self.afun(x))
         if 1 in sensi_orders:
