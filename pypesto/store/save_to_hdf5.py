@@ -185,7 +185,7 @@ class SamplingResultHDF5Writer:
         """
         Write HDF5 sampling file from pyPESTO result object.
         """
-        # if there is no sample available, raise a warning and return
+        # if there is no sample available, log a warning and return
         if(isinstance(result.sample_result, SampleResult)):
             logger.warning("Warning: There is no sampling_result, "
                            "which you tried to save to hdf5.")
