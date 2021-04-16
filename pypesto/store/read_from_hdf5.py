@@ -207,7 +207,11 @@ class SamplingResultHDF5Reader:
             for key in f['/sampling/results'].attrs:
                 sample_result[key] = \
                     f['/sampling/results'].attrs[key]
-        self.results.sample_result = McmcPtResult(**sample_result)
+        try:
+            self.results.sample_result = McmcPtResult(**sample_result)
+        except TypeError:
+            logger.warning("Warning: You tried loading a non existent "
+                           "sampling result.")
 
         return self.results
 

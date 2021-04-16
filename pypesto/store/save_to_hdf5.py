@@ -1,4 +1,5 @@
 import os
+import logging
 from typing import Union
 from numbers import Integral
 
@@ -6,7 +7,9 @@ import h5py
 import numpy as np
 
 from .hdf5 import write_array, write_float_array
-from ..result import Result
+from ..result import Result, SampleResult
+
+logger = logging.getLogger(__name__)
 
 
 def check_overwrite(f: Union[h5py.File, h5py.Group],
@@ -182,6 +185,11 @@ class SamplingResultHDF5Writer:
         """
         Write HDF5 sampling file from pyPESTO result object.
         """
+        # if there is no sample available, raise a warning and return
+        if(isinstance(result.sample_result, SampleResult)):
+            logger.warning("Warning: There is no sampling_result, "
+                           "which you tried to save to hdf5.")
+            return
 
         # Create destination directory
         if isinstance(self.storage_filename, str):
@@ -303,5 +311,8 @@ def write_result(result: Result,
         pypesto_profile_writer.write(result, overwrite=overwrite)
 
     if sample:
-        pypesto_sample_writer = SamplingResultHDF5Writer(filename)
-        pypesto_sample_writer.write(result, overwrite=overwrite)
+        try:
+            pypesto_sample_writer = SamplingResultHDF5Writer(filename)
+            pypesto_sample_writer.write(result, overwrite=overwrite)
+        except:
+            print('stop')
