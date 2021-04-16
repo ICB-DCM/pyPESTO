@@ -7,8 +7,13 @@ import sympy as sp
 import numbers
 import pytest
 import pypesto
+import copy
 
 from ..util import rosen_for_sensi, poly_for_sensi
+
+import aesara.tensor as aet
+
+from pypesto.objective.aesara import AesaraObjective
 
 
 @pytest.fixture(params=[True, False])
@@ -160,3 +165,36 @@ def test_finite_difference_checks():
         objective.check_grad_multi_eps([theta], multi_eps=multi_eps)
     assert result_multi_eps['rel_err'].squeeze() == \
         min(rel_err(_eps) for _eps in multi_eps)
+
+
+def test_aesara(max_sensi_order, integrated):
+    """Test function composition and gradient computation via aesara"""
+    prob = rosen_for_sensi(max_sensi_order,
+                           integrated, [0, 1])
+
+    # create aesara specific symbolic tensor variables
+    x = aet.specify_shape(aet.vector('x'), (2,))
+
+    # apply inverse transform such that we evaluate at prob['x']
+    x_ref = np.arcsinh(prob['x'])
+
+    # compose rosenbrock function with with sinh transformation
+    obj = AesaraObjective(prob['obj'], x, aet.sinh(x))
+
+    # check value against
+    assert obj(x_ref) == prob['fval']
+
+    if max_sensi_order > 0:
+        assert (obj(x_ref, sensi_orders=(1,)) ==
+                prob['grad']*np.cosh(x_ref)).all()
+
+    if max_sensi_order > 1:
+        assert np.allclose(
+            prob['hess'] * (np.diag(np.power(np.cosh(x_ref), 2))) +
+            np.diag(prob['grad'] * np.sinh(x_ref)),
+            obj(x_ref, sensi_orders=(2,))
+        )
+
+    # test everything still works after deepcopy
+    cobj = copy.deepcopy(obj)
+    assert cobj(x_ref) == prob['fval']
