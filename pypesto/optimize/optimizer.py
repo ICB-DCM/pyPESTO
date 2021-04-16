@@ -796,8 +796,9 @@ class PyswarmsOptimizer(Optimizer):
 
             n_particles = swarm.shape[0]
             result = np.zeros(n_particles)
-            for iPar, par in enumerate(swarm):
-                result[iPar] = problem.objective.get_fval(par)
+            # iterate over the particles in the swarm
+            for i_particle, par in enumerate(swarm):
+                result[i_particle] = problem.objective.get_fval(par)
 
             return result
 
