@@ -756,9 +756,11 @@ class PyswarmsOptimizer(Optimizer):
     def __init__(self, par_popsize: float = 10, options: Dict = None):
         super().__init__()
 
+        all_options = {'maxiter': 1000, 'c1': 0.5, 'c2': 0.3, 'w': 0.9}
         if options is None:
-            options = {'maxiter': 1000, 'c1': 0.5, 'c2': 0.3, 'w': 0.9}
-        self.options = options
+            options = {}
+        all_options.update(options)
+        self.options = all_options
         self.par_popsize = par_popsize
 
     @fix_decorator
