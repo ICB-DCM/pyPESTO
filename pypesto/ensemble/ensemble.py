@@ -1,3 +1,5 @@
+import logging
+import math
 from functools import partial
 import numpy as np
 import pandas as pd
@@ -23,6 +25,8 @@ from .constants import (PREDICTOR, PREDICTION_ID, PREDICTION_RESULTS,
                         EnsembleType, ENSEMBLE_TYPE, MEAN, MEDIAN,
                         STANDARD_DEVIATION, SUMMARY, LOWER_BOUND,
                         UPPER_BOUND, get_percentile_label)
+
+logger = logging.getLogger(__name__)
 
 
 class EnsemblePrediction:
@@ -366,6 +370,152 @@ class Ensemble:
             x_vectors = x_vectors[chain_slice]
         x_vectors = x_vectors.T
         return Ensemble(x_vectors, **kwargs)
+
+    @staticmethod
+    def from_optimization(
+            result: Result,
+            cutoff: float,
+            max_size: int,
+            **kwargs,
+    ):
+        """Construct an ensemble from an optimization result.
+
+        Parameters
+        ----------
+        result:
+            A pyPESTO result that contains a sample result.
+        cutoff:
+            Exclude parameters from the optimization if the nllh is higher than the
+            `cutoff`.
+        max_size:
+            The maximum size the ensemble should be.
+
+        Returns
+        -------
+        The ensemble.
+        """
+        x_vectors = []
+        vector_tags = []
+        x_names = result.problem.x_names
+        lb = result.problem.lb_full
+        ub = result.problem.ub_full
+
+        for start in result.optimize_result.list:
+            # add the parameters from the next start as long as we
+            # did not reach maximum size and the next value is still
+            # lower than the cutoff value
+            if start['fval'] < cutoff and len(x_vectors) < max_size:
+                x_vectors.append(start['x'])
+                # the vector tag will be a -1 to indicate it is the last step
+                vector_tags.append((start['id'], -1))
+            else:
+                break
+        # print a warning if there are no vectors within the ensemble
+        if len(x_vectors) == 0:
+            raise ValueError('The ensemble does not contain any vectors.'
+                             'Either the cutoff value was too small or the'
+                             'result.optimize_result object might be empty.')
+        elif len(x_vectors) < max_size:
+            logger.info(f'The ensemble contains {len(x_vectors)} parameter vectors, '
+                        f'which is less than the maximum size. If you want to include more '
+                        f'vectors you can consider raising the cutoff value or including '
+                        f'parameters from the history with the from_history() function.')
+
+        x_vectors = np.stack(x_vectors, axis=1)
+        return Ensemble(x_vectors=x_vectors,
+                        x_names=x_names,
+                        vector_tags=vector_tags,
+                        lower_bound=lb,
+                        upper_bound=ub,
+                        **kwargs)
+
+    @staticmethod
+    def from_history(
+            result: Result,
+            cutoff: float,
+            max_size: int,
+            max_per_start: int = None,
+            **kwargs,
+    ):
+        """Construct an ensemble from the history of an optimization.
+
+        Parameters
+        ----------
+        result:
+            A pyPESTO result that contains a sample result.
+        cutoff:
+            Exclude parameters from the optimization if the nllh is higher than the
+            `cutoff`.
+        max_size:
+            The maximum size the ensemble should be.
+        max_per_start:
+            The maxmimum number of vectors to be included from a single optimization start.
+
+        Returns
+        -------
+        The ensemble.
+        """
+        if not result.optimize_result.list[0].history.options['trace_record']:
+            logger.warning('The optimize result has no trace. The Ensemble will'
+                           ' automatically be created through from_optimization().')
+            return Ensemble.from_optimization(result=result,
+                                              cutoff=cutoff,
+                                              max_size=max_size, **kwargs)
+        x_vectors = []
+        vector_tags = []
+        x_names = result.problem.x_names
+        lb = result.problem.lb_full
+        ub = result.problem.ub_full
+
+        # calculate the number of starts whose final nllh is below cutoff
+        n_starts = 0
+        for start in result.optimize_result.list:
+            if start['fval'] < cutoff:
+                n_starts += 1
+            else:
+                break
+
+        if n_starts*max_per_start > max_size:
+            logger.info(f'The number of starts that can contribute an ensemble '
+                        f'vector muliplied with max_per_start is higher than '
+                        f'max_size. Thus we will lower max_per_start. If you '
+                        f'do not want this to happen consider increasing max_size '
+                        f'to {max_per_start*n_starts} or decrease cutoff.')
+            max_per_start = math.floor(max_size/n_starts)
+
+        for i in range(n_starts):
+            trace_x = result.optimize_result.list[i]['history'].get_x_trace()
+            trace_fval = result.optimize_result.list[i]['history'].get_fval_trace()
+            # calculate number of candidates
+            n_cand = 0
+            for iter_fval in reversed(trace_fval):
+                if iter_fval < cutoff:
+                    n_cand += 1
+                else:
+                    break
+            # calculate distance between the vectors included in ensemble:
+            dist = math.floor((n_cand-1)/(max_per_start-1))
+            # add vectors to ensemble
+            if dist == 0:
+                x_vectors.append(trace_x[-1])
+                vector_tags.append((i,len(trace_x)))
+                continue
+            for i in range(max_per_start):
+                x_vectors.append(trace_x[-1-i*dist])
+                vector_tags.append((i,len(trace_x)-i*dist))
+        # print a warning if there are no vectors within the ensemble
+        if len(x_vectors) == 0:
+            raise ValueError('The ensemble does not contain any vectors.'
+                             'Either the cutoff value was too small or the'
+                             'result.optimize_result object might be empty.')
+
+        x_vectors = np.stack(x_vectors, axis=1)
+        return Ensemble(x_vectors=x_vectors,
+                        x_names=x_names,
+                        vector_tags=vector_tags,
+                        lower_bound=lb,
+                        upper_bound=ub,
+                        **kwargs)
 
     def __iter__(self):
         """
