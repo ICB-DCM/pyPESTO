@@ -290,21 +290,40 @@ def read_result(filename: str,
 
     if problem:
         pypesto_problem_reader = ProblemHDF5Reader(filename)
-        result.problem = pypesto_problem_reader.read()
+        try:
+            result.problem = pypesto_problem_reader.read()
+        except KeyError:
+            logger.warning('Loading the problem failed. It is'
+                           'highly likely that no problem exists.')
 
     if optimize:
         pypesto_opt_reader = OptimizationResultHDF5Reader(filename)
-        temp_result = pypesto_opt_reader.read()
-        result.optimize_result = temp_result.optimize_result
+        try:
+            temp_result = pypesto_opt_reader.read()
+            result.optimize_result = temp_result.optimize_result
+        except KeyError:
+            logger.warning(f'Loading the optimization result failed. It is '
+                           f'highly likely that no optimization result exists '
+                           f'within {filename}.')
 
     if profile:
         pypesto_profile_reader = ProfileResultHDF5Reader(filename)
-        temp_result = pypesto_profile_reader.read()
-        result.profile_result = temp_result.profile_result
+        try:
+            temp_result = pypesto_profile_reader.read()
+            result.profile_result = temp_result.profile_result
+        except KeyError:
+            logger.warning(f'Loading the profiling result failed. It is '
+                           f'highly likely that no profiling result exists '
+                           f'within {filename}.')
 
     if sample:
         pypesto_sample_reader = SamplingResultHDF5Reader(filename)
-        temp_result = pypesto_sample_reader.read()
-        result.sample_result = temp_result.sample_result
+        try:
+            temp_result = pypesto_sample_reader.read()
+            result.sample_result = temp_result.sample_result
+        except KeyError:
+            logger.warning(f'Loading the sampling result failed. It is '
+                           f'highly likely that no sampling result exists '
+                           f'within {filename}')
 
     return result
