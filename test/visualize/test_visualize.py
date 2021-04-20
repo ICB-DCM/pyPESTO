@@ -1,10 +1,15 @@
+import functools
 import numpy as np
 import scipy.optimize as so
 import matplotlib.pyplot as plt
 import pytest
+import os
+import petab
 
 import pypesto
+import pypesto.petab
 import pypesto.optimize as optimize
+import pypesto.predict as predict
 import pypesto.profile as profile
 import pypesto.sample as sample
 import pypesto.visualize as visualize
@@ -44,6 +49,34 @@ def create_problem(n_parameters: int = 2):
     problem = pypesto.Problem(objective=objective, lb=lb, ub=ub)
 
     return problem
+
+
+def create_petab_problem():
+    current_path = os.path.dirname(os.path.realpath(__file__))
+    dir_path = os.path.abspath(os.path.join(current_path,
+                                            '..', '..',
+                                            'doc', 'example'))
+
+    # import to petab
+    petab_problem = petab.Problem.from_yaml(
+        dir_path + "/conversion_reaction/conversion_reaction.yaml")
+    # import to pypesto
+    importer = pypesto.petab.PetabImporter(petab_problem)
+    # create problem
+    problem = importer.create_problem()
+
+    return problem
+
+
+def sample_petab_problem():
+    # create problem
+    problem = create_petab_problem()
+
+    sampler = sample.AdaptiveMetropolisSampler()
+    result = sample.sample(problem, n_samples=1000,
+                           sampler=sampler,
+                           x0=np.array([3, -4]))
+    return result
 
 
 def create_optimization_result():
@@ -144,6 +177,29 @@ def create_plotting_options():
     ref_point = visualize.create_references(ref4)
 
     return ref1, ref2, ref3, ref4, ref_point
+
+
+def post_processor(
+        amici_outputs,
+        output_type,
+        output_ids,
+):
+    """An ensemble prediction post-processor.
+
+    This post_processor will transform the output of the simulation tool such
+    that the output is compatible with other methods, such as plotting
+    routines.
+    """
+    outputs = [
+        amici_output[output_type]
+        if amici_output[predict.constants.AMICI_STATUS] == 0
+        else np.full(
+            (len(amici_output[predict.constants.AMICI_T]), len(output_ids)),
+            np.nan
+        )
+        for amici_output in amici_outputs
+    ]
+    return outputs
 
 
 @close_fig
@@ -738,22 +794,22 @@ def create_sampling_result():
 
 
 @close_fig
-def test_sampling_fval_trace():
-    """Test pypesto.visualize.sampling_fval_trace"""
+def test_sampling_fval_traces():
+    """Test pypesto.visualize.sampling_fval_traces"""
     result = create_sampling_result()
-    visualize.sampling_fval_trace(result)
+    visualize.sampling_fval_traces(result)
     # call with custom arguments
-    visualize.sampling_fval_trace(
+    visualize.sampling_fval_traces(
         result, i_chain=1, stepsize=5, size=(10, 10))
 
 
 @close_fig
-def test_sampling_parameters_trace():
-    """Test pypesto.visualize.sampling_parameters_trace"""
+def test_sampling_parameter_traces():
+    """Test pypesto.visualize.sampling_parameter_traces"""
     result = create_sampling_result()
-    visualize.sampling_parameters_trace(result)
+    visualize.sampling_parameter_traces(result)
     # call with custom arguments
-    visualize.sampling_parameters_trace(
+    visualize.sampling_parameter_traces(
         result, i_chain=1, stepsize=5, size=(10, 10),
         use_problem_bounds=False)
 
@@ -780,3 +836,56 @@ def test_sampling_1d_marginals():
     visualize.sampling_1d_marginals(result, plot_type='hist')
     visualize.sampling_1d_marginals(
         result, plot_type='kde', bw='silverman')
+
+
+@close_fig
+def test_sampling_parameter_cis():
+    """Test pypesto.visualize.sampling_parameter_cis"""
+    result = create_sampling_result()
+    visualize.sampling_parameter_cis(result)
+    # call with custom arguments
+    visualize.sampling_parameter_cis(
+        result, alpha=[99, 68], step=0.1, size=(10, 10))
+
+
+@close_fig
+def test_sampling_prediction_trajectories():
+    """Test pypesto.visualize.sampling_prediction_trajectories"""
+    credibility_interval_levels = [99, 68]
+    result = sample_petab_problem()
+    post_processor_amici_x = functools.partial(
+        post_processor,
+        output_type=predict.constants.AMICI_X,
+        output_ids=result.problem.objective.amici_model.getStateIds(),
+    )
+    predictor = predict.AmiciPredictor(
+        result.problem.objective,
+        post_processor=post_processor_amici_x,
+        output_ids=result.problem.objective.amici_model.getStateIds(),
+    )
+
+    sample_ensemble = ensemble.Ensemble.from_sample(
+        result,
+        x_names=result.problem.x_names,
+        ensemble_type=ensemble.EnsembleType.sample,
+        lower_bound=result.problem.lb,
+        upper_bound=result.problem.ub,
+    )
+
+    ensemble_prediction = sample_ensemble.predict(
+        predictor,
+        prediction_id=predict.constants.AMICI_X,
+    )
+
+    # Plot by
+    visualize.sampling_prediction_trajectories(
+        ensemble_prediction,
+        levels=credibility_interval_levels,
+        groupby=predict.constants.CONDITION,
+    )
+    visualize.sampling_prediction_trajectories(
+        ensemble_prediction,
+        levels=credibility_interval_levels,
+        size=(10, 10),
+        groupby=predict.constants.OUTPUT,
+    )

@@ -207,7 +207,11 @@ class SamplingResultHDF5Reader:
             for key in f['/sampling/results'].attrs:
                 sample_result[key] = \
                     f['/sampling/results'].attrs[key]
-        self.results.sample_result = McmcPtResult(**sample_result)
+        try:
+            self.results.sample_result = McmcPtResult(**sample_result)
+        except TypeError:
+            logger.warning("Warning: You tried loading a non-existent "
+                           "sampling result.")
 
         return self.results
 
@@ -256,3 +260,55 @@ class ProfileResultHDF5Reader:
                                               parameter_id=parameter_id))
             self.results.profile_result.list = profiling_list
         return self.results
+
+
+def read_result(filename: str,
+                problem: bool = True,
+                optimize: bool = True,
+                profile: bool = True,
+                sample: bool = True,
+                ) -> Result:
+    """
+    This is a function that saves the whole pypesto.Result object in an
+    HDF5 file. With booleans one can choose more detailed what to save.
+
+    Parameters
+    ----------
+    filename:
+        The HDF5 filename.
+    problem:
+        Read the problem.
+    optimize:
+        Read the optimize result.
+    profile:
+        Read the profile result.
+    sample:
+        Read the sample result.
+
+    Returns
+    -------
+    result:
+        Result object containing the results stored in HDF5 file.
+    """
+    result = Result()
+
+    if problem:
+        pypesto_problem_reader = ProblemHDF5Reader(filename)
+        result.problem = pypesto_problem_reader.read()
+
+    if optimize:
+        pypesto_opt_reader = OptimizationResultHDF5Reader(filename)
+        temp_result = pypesto_opt_reader.read()
+        result.optimize_result = temp_result.optimize_result
+
+    if profile:
+        pypesto_profile_reader = ProfileResultHDF5Reader(filename)
+        temp_result = pypesto_profile_reader.read()
+        result.profile_result = temp_result.profile_result
+
+    if sample:
+        pypesto_sample_reader = SamplingResultHDF5Reader(filename)
+        temp_result = pypesto_sample_reader.read()
+        result.sample_result = temp_result.sample_result
+
+    return result

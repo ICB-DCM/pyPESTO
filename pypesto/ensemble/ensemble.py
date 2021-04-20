@@ -1,15 +1,28 @@
+from functools import partial
 import numpy as np
 import pandas as pd
 from typing import Sequence, Tuple, Callable, Dict
 
-from ..prediction import PredictionResult, PredictionConditionResult
+from .. import Result
+from ..engine import (
+    Engine,
+    MultiProcessEngine,
+    MultiThreadEngine,
+    SingleCoreEngine,
+)
+from ..predict import (
+    PredictionConditionResult,
+    PredictionResult,
+)
+from ..sample import geweke_test
+from .task import EnsembleTask
 from .constants import (PREDICTOR, PREDICTION_ID, PREDICTION_RESULTS,
                         PREDICTION_ARRAYS, PREDICTION_SUMMARY, OUTPUT,
                         OUTPUT_SENSI, TIMEPOINTS, X_VECTOR, NX, X_NAMES,
                         NVECTORS, VECTOR_TAGS, PREDICTIONS, MODE_FUN,
                         EnsembleType, ENSEMBLE_TYPE, MEAN, MEDIAN,
-                        STANDARD_DEVIATION, PERCENTILE, SUMMARY, LOWER_BOUND,
-                        UPPER_BOUND)
+                        STANDARD_DEVIATION, SUMMARY, LOWER_BOUND,
+                        UPPER_BOUND, get_percentile_label)
 
 
 class EnsemblePrediction:
@@ -183,14 +196,14 @@ class EnsemblePrediction:
             summary[STANDARD_DEVIATION] = np.std(tmp_array, axis=-1)
             summary[MEDIAN] = np.median(tmp_array, axis=-1)
             for perc in percentiles_list:
-                summary[f'{PERCENTILE} {perc}'] = np.percentile(tmp_array,
-                                                                perc, axis=-1)
+                summary[get_percentile_label(perc)] = \
+                    np.percentile(tmp_array, perc, axis=-1)
             return summary
 
         # preallocate for results
         cond_lists = {MEAN: [], STANDARD_DEVIATION: [], MEDIAN: []}
         for perc in percentiles_list:
-            cond_lists[f'{PERCENTILE} {perc}'] = []
+            cond_lists[get_percentile_label(perc)] = []
 
         # iterate over conditions, compute summary
         for i_cond in range(n_conditions):
@@ -223,7 +236,7 @@ class EnsemblePrediction:
                         timepoints=current_cond.timepoints,
                         output=output_summary[i_key],
                         output_sensi=output_sensi_summary[i_key],
-                        observable_ids=current_cond.observable_ids
+                        output_ids=current_cond.output_ids
                     )
                 )
 
@@ -283,6 +296,10 @@ class Ensemble:
         upper_bound:
             array of potential upper bounds for the parameters
         """
+        # Do we have a representative sample or just random ensemble?
+        self.ensemble_type = EnsembleType.ensemble
+        if ensemble_type is not None:
+            self.ensemble_type = ensemble_type
 
         # handle parameter vectors and sizes
         self.x_vectors = x_vectors
@@ -311,15 +328,44 @@ class Ensemble:
         else:
             self.x_names = [f'x_{ix}' for ix in range(self.n_x)]
 
-        # Do we have a representative sample or just random ensemble?
-        self.ensemble_type = EnsembleType.ensemble
-        if ensemble_type is not None:
-            self.ensemble_type = ensemble_type
-
         # Do we have predictions for this ensemble?
         self.predictions = []
         if predictions is not None:
             self.predictions = predictions
+
+    @staticmethod
+    def from_sample(
+            result: Result,
+            remove_burn_in: bool = True,
+            chain_slice: slice = None,
+            **kwargs,
+    ):
+        """Construct an ensemble from a sample.
+
+        Parameters
+        ----------
+        result:
+            A pyPESTO result that contains a sample result.
+        remove_burn_in:
+            Exclude parameter vectors from the ensemble if they are in the
+            "burn-in".
+        chain_slice:
+            Subset the chain with a slice. Any "burn-in" removal occurs first.
+
+        Returns
+        -------
+        The ensemble.
+        """
+        x_vectors = result.sample_result.trace_x[0]
+        if remove_burn_in:
+            if result.sample_result.burn_in is None:
+                geweke_test(result)
+            burn_in = result.sample_result.burn_in
+            x_vectors = x_vectors[burn_in:]
+        if chain_slice is not None:
+            x_vectors = x_vectors[chain_slice]
+        x_vectors = x_vectors.T
+        return Ensemble(x_vectors, **kwargs)
 
     def __iter__(self):
         """
@@ -337,9 +383,11 @@ class Ensemble:
         yield LOWER_BOUND, self.lower_bound
         yield UPPER_BOUND, self.upper_bound
 
-    def _map_parameters_by_objective(self,
-                                     predictor: Callable,
-                                     default_value: float = np.nan):
+    def _map_parameters_by_objective(
+            self,
+            predictor: Callable,
+            default_value: float = None,
+    ):
         """
         The parameters of the ensemble don't need to have the same ordering as
         in the predictor. This functions maps them onto each other
@@ -347,22 +395,27 @@ class Ensemble:
         # create short hands
         parameter_ids_objective = predictor.amici_objective.x_names
         parameter_ids_ensemble = self.x_names
-        # map and fill if not found
-        mapping = [
-            parameter_ids_ensemble.index(parameter_id_objective)
-            if parameter_id_objective in parameter_ids_ensemble
-            else default_value
-            for parameter_id_objective in parameter_ids_objective
-        ]
-
+        # map, and fill with `default_value` if not found and `default_value`
+        # is specified.
+        mapping = []
+        for parameter_id_objective in parameter_ids_objective:
+            if parameter_id_objective in parameter_ids_ensemble:
+                mapping.append(
+                    parameter_ids_ensemble.index(parameter_id_objective)
+                )
+            elif default_value is not None:
+                mapping.append(default_value)
         return mapping
 
-    def predict(self,
-                predictor: Callable,
-                prediction_id: str = None,
-                sensi_orders: Tuple = (0,),
-                default_value: float = np.nan,
-                mode: str = MODE_FUN):
+    def predict(
+            self,
+            predictor: Callable,
+            prediction_id: str = None,
+            sensi_orders: Tuple = (0,),
+            default_value: float = None,
+            mode: str = MODE_FUN,
+            engine: Engine = None,
+    ) -> EnsemblePrediction:
         """
         Convenience function to run predictions for a full ensemble:
         User needs to hand over a predictor function and settings, then all
@@ -382,30 +435,69 @@ class Ensemble:
         default_value:
             If parameters are needed in the mapping, which are not found in the
             parameter source, it can make sense to fill them up with this
-            default value in some cases (to be used with caution though).
+            default value (e.g. `np.nan`) in some cases (to be used with
+            caution though).
 
         mode:
             Whether to compute function values or residuals.
 
+        engine:
+            Parallelization engine. Defaults to sequential execution on a
+            `SingleCoreEngine`.
+
         Returns
         -------
-        result:
-            EnsemblePrediction of the ensemble for the predictor function
+        The prediction of the ensemble.
         """
-        # preallocate
-        prediction_results = []
+        if engine is None:
+            engine = SingleCoreEngine()
 
-        # get the correct parameter mapping
+        # Vectors are chunked to improve parallization performance.
+        n_chunks = self.n_vectors  # Default is no chunking.
+        if isinstance(engine, MultiProcessEngine):
+            n_chunks = engine.n_procs
+        if isinstance(engine, MultiThreadEngine):
+            n_chunks = engine.n_threads
+        chunks = [
+            (
+                (chunk_i+0) * int(np.floor(self.n_vectors / n_chunks)),
+                (chunk_i+1) * int(np.floor(self.n_vectors / n_chunks)),
+            )
+            for chunk_i in range(n_chunks)
+        ]
+        # Last chunk should contain any remaining vectors that may have
+        # been skipped due to the `floor` method.
+        chunks[-1] = (chunks[-1][0], self.n_vectors)
+
+        # Get the correct parameter mapping.
         mapping = self._map_parameters_by_objective(
-            predictor, default_value=default_value)
+            predictor,
+            default_value=default_value,
+        )
 
-        for ix in range(self.n_vectors):
-            x = self.x_vectors[mapping, ix]
-            prediction_results.append(predictor(x, sensi_orders, mode))
+        # Setup the tasks with the prediction method and chunked vectors.
+        method = partial(predictor, sensi_orders=sensi_orders, mode=mode)
+        tasks = [
+            EnsembleTask(
+                method=method,
+                vectors=self.x_vectors[mapping, chunk_start:chunk_end],
+                id=chunk_i,
+            )
+            for chunk_i, (chunk_start, chunk_end) in enumerate(chunks)
+        ]
 
-        return EnsemblePrediction(predictor=predictor,
-                                  prediction_id=prediction_id,
-                                  prediction_results=prediction_results)
+        # Execute tasks and flatten chunked results.
+        prediction_results = [
+            prediction_result
+            for prediction_chunk in engine.execute(tasks)
+            for prediction_result in prediction_chunk
+        ]
+
+        return EnsemblePrediction(
+            predictor=predictor,
+            prediction_id=prediction_id,
+            prediction_results=prediction_results,
+        )
 
     def compute_summary(self,
                         percentiles_list: Sequence[int] = (5, 20, 80, 95)):
@@ -430,8 +522,8 @@ class Ensemble:
                    STANDARD_DEVIATION: np.std(self.x_vectors, axis=1),
                    MEDIAN: np.median(self.x_vectors, axis=1)}
         for perc in percentiles_list:
-            summary[f'{PERCENTILE} {perc}'] = np.percentile(self.x_vectors,
-                                                            perc, axis=1)
+            summary[get_percentile_label(perc)] = \
+                np.percentile(self.x_vectors, perc, axis=1)
         # store and return results
         self.summary = summary
         return summary
@@ -484,10 +576,10 @@ class Ensemble:
             # handle percentiles
             for perc in perc_lower:
                 tmp_identifiability[f'within lb: perc {perc}'] = \
-                    lb < self.summary[f'{PERCENTILE} {perc}'][ix]
+                    lb < self.summary[get_percentile_label(perc)][ix]
             for perc in perc_upper:
                 tmp_identifiability[f'within ub: perc {perc}'] = \
-                    ub > self.summary[f'{PERCENTILE} {perc}'][ix]
+                    ub > self.summary[get_percentile_label(perc)][ix]
 
             parameter_identifiability.append(tmp_identifiability)
 

@@ -1,4 +1,5 @@
 import os
+import logging
 from typing import Union
 from numbers import Integral
 
@@ -6,7 +7,9 @@ import h5py
 import numpy as np
 
 from .hdf5 import write_array, write_float_array
-from ..result import Result
+from ..result import Result, SampleResult
+
+logger = logging.getLogger(__name__)
 
 
 def check_overwrite(f: Union[h5py.File, h5py.Group],
@@ -182,6 +185,13 @@ class SamplingResultHDF5Writer:
         """
         Write HDF5 sampling file from pyPESTO result object.
         """
+        # if there is no sample available, log a warning and return
+        # SampleResult is only a dummy class created by the Result class
+        # and always indicates the lack of a sampling result.
+        if(isinstance(result.sample_result, SampleResult)):
+            logger.warning("Warning: There is no sampling_result, "
+                           "which you tried to save to hdf5.")
+            return
 
         # Create destination directory
         if isinstance(self.storage_filename, str):
@@ -258,3 +268,50 @@ class ProfileResultHDF5Writer:
                         elif parameter_profile[key] is not None:
                             result_grp.attrs[key] = parameter_profile[key]
             f.flush()
+
+
+def write_result(result: Result,
+                 filename: str,
+                 overwrite: bool = False,
+                 problem: bool = True,
+                 optimize: bool = True,
+                 profile: bool = True,
+                 sample: bool = True,
+                 ):
+    """Save whole pypesto.Result to hdf5 file.
+
+    Boolean indicators allow specifying what to save.
+
+    Parameters
+    ----------
+    result:
+        The :class:`pypesto.Result` object to be saved.
+    filename:
+        The HDF5 filename.
+    overwrite:
+        Boolean, whether already existing results should be overwritten.
+    problem:
+        Read the problem.
+    optimize:
+        Read the optimize result.
+    profile:
+        Read the profile result.
+    sample:
+        Read the sample result.
+    """
+
+    if problem:
+        pypesto_problem_writer = ProblemHDF5Writer(filename)
+        pypesto_problem_writer.write(result.problem, overwrite=overwrite)
+
+    if optimize:
+        pypesto_opt_writer = OptimizationResultHDF5Writer(filename)
+        pypesto_opt_writer.write(result, overwrite=overwrite)
+
+    if profile:
+        pypesto_profile_writer = ProfileResultHDF5Writer(filename)
+        pypesto_profile_writer.write(result, overwrite=overwrite)
+
+    if sample:
+        pypesto_sample_writer = SamplingResultHDF5Writer(filename)
+        pypesto_sample_writer.write(result, overwrite=overwrite)

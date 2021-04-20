@@ -11,7 +11,7 @@ import fides
 import scipy as sp
 import itertools as itt
 import os
-import subprocess
+import subprocess  # noqa: S404
 
 import pypesto
 import pypesto.optimize as optimize
@@ -75,14 +75,7 @@ def test_optimization(mode, optimizer):
 
     with warnings.catch_warnings():
         warnings.simplefilter("ignore")
-        if isinstance(method, str) and re.match(r'^(?i)(ls_)', method):
-            # obj has no residuals
-            with pytest.raises(Exception):
-                check_minimize(obj, library, method)
-            # no error when allow failed starts
-            check_minimize(obj, library, method, allow_failed_starts=True)
-        else:
-            check_minimize(obj, library, method)
+        check_minimize(obj, library, method)
 
 
 def test_unbounded_minimize(optimizer):
@@ -151,7 +144,6 @@ def get_optimizer(library, solver):
     options = {
         'maxiter': 100
     }
-    optimizer = None
 
     if library == 'scipy':
         optimizer = optimize.ScipyOptimizer(method=solver, options=options)
@@ -172,6 +164,8 @@ def get_optimizer(library, solver):
         options[fides.Options.SUBSPACE_DIM] = solver[1]
         optimizer = optimize.FidesOptimizer(options=options,
                                             hessian_update=solver[0])
+    else:
+        raise ValueError(f"Optimizer not recognized: {library}")
 
     return optimizer
 
@@ -198,8 +192,6 @@ def check_minimize(objective, library, solver, allow_failed_starts=False):
 
     assert isinstance(result.optimize_result.list[0]['fval'], float)
     if (library, solver) not in [
-            ('scipy', 'ls_trf'),
-            ('scipy', 'ls_dogbox'),
             ('nlopt', nlopt.GD_STOGO_RAND)  # id 9, fails in 40% of cases
     ]:
         assert np.isfinite(result.optimize_result.list[0]['fval'])
@@ -210,52 +202,41 @@ def test_mpipoolengine():
     """
     Test the MPIPoolEngine by calling an example script with mpiexec.
     """
-    # get the path to this file:
-    path = os.path.dirname(__file__)
-    # run the example file.
-    subprocess.check_call(['mpiexec', '-np', '2', 'python', '-m',
-                           'mpi4py.futures',
-                           f'{path}/../../doc/example/example_MPIPool.py'])
+    try:
+        # get the path to this file:
+        path = os.path.dirname(__file__)
+        # run the example file.
+        subprocess.check_call(  # noqa: S603,S607
+            ['mpiexec', '-np', '2', 'python', '-m', 'mpi4py.futures',
+             f'{path}/../../doc/example/example_MPIPool.py'])
 
-    # read results
-    opt_result_reader = OptimizationResultHDF5Reader('temp_result.h5')
-    result1 = opt_result_reader.read()
-    # set optimizer
-    optimizer = optimize.FidesOptimizer(verbose=0)
-    # initialize problem with x_guesses and objective
-    objective = pypesto.Objective(fun=sp.optimize.rosen,
-                                  grad=sp.optimize.rosen_der,
-                                  hess=sp.optimize.rosen_hess)
-    x_guesses = np.array([result1.optimize_result.list[i]['x0']
-                          for i in range(2)])
-    problem = pypesto.Problem(objective=objective,
-                              ub=result1.problem.ub,
-                              lb=result1.problem.lb,
-                              x_guesses=x_guesses)
-    result2 = optimize.minimize(problem=problem,
-                                optimizer=optimizer,
-                                n_starts=2,
-                                engine=pypesto.engine.MultiProcessEngine())
+        # read results
+        opt_result_reader = OptimizationResultHDF5Reader('temp_result.h5')
+        result1 = opt_result_reader.read()
+        # set optimizer
+        optimizer = optimize.FidesOptimizer(verbose=0)
+        # initialize problem with x_guesses and objective
+        objective = pypesto.Objective(fun=sp.optimize.rosen,
+                                      grad=sp.optimize.rosen_der,
+                                      hess=sp.optimize.rosen_hess)
+        x_guesses = np.array([result1.optimize_result.list[i]['x0']
+                              for i in range(2)])
+        problem = pypesto.Problem(objective=objective,
+                                  ub=result1.problem.ub,
+                                  lb=result1.problem.lb,
+                                  x_guesses=x_guesses)
+        result2 = optimize.minimize(problem=problem,
+                                    optimizer=optimizer,
+                                    n_starts=2,
+                                    engine=pypesto.engine.MultiProcessEngine())
 
-    if(result1.optimize_result.list[0]['id'] ==
-            result2.optimize_result.list[0]['id']):
-        assert_almost_equal(result1.optimize_result.list[0]['x'],
-                            result2.optimize_result.list[0]['x'],
-                            err_msg='The final parameter values '
-                                    'do not agree for the engines.')
-        assert_almost_equal(result1.optimize_result.list[1]['x'],
-                            result2.optimize_result.list[1]['x'],
-                            err_msg='The final parameter values '
-                                    'do not agree for the engines.')
-    else:
-        assert_almost_equal(result1.optimize_result.list[0]['x'],
-                            result2.optimize_result.list[1]['x'],
-                            err_msg='The final parameter values '
-                                    'do not agree for the engines.')
-        assert_almost_equal(result1.optimize_result.list[1]['x'],
-                            result2.optimize_result.list[0]['x'],
-                            err_msg='The final parameter values '
-                                    'do not agree for the engines.')
+        for ix in range(2):
+            assert_almost_equal(result1.optimize_result.list[ix]['x'],
+                                result2.optimize_result.list[ix]['x'],
+                                err_msg='The final parameter values '
+                                        'do not agree for the engines.')
 
-    # delete data
-    os.remove('temp_result.h5')
+    finally:
+        if os.path.exists('temp_result.h5'):
+            # delete data
+            os.remove('temp_result.h5')

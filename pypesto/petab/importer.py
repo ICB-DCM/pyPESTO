@@ -9,8 +9,8 @@ from typing import Iterable, List, Optional, Sequence, Union, Callable
 
 from ..problem import Problem
 from ..objective import AmiciObjective, AmiciObjectBuilder, AggregatedObjective
-from ..prediction import AmiciPredictor, PredictionResult
-from ..prediction.constants import CONDITION_SEP
+from ..predict import AmiciPredictor, PredictionResult
+from ..predict.constants import CONDITION_SEP
 from ..objective.priors import NegLogParameterPriors, \
     get_parameter_prior_dict
 
@@ -270,17 +270,21 @@ class PetabImporter(AmiciObjectBuilder):
 
         return obj
 
-    def create_prediction(self,
-                          objective: AmiciObjective = None,
-                          amici_output_fields: Sequence[str] = None,
-                          post_processor: Union[Callable, None] = None,
-                          post_processor_sensi: Union[Callable, None] = None,
-                          post_processor_time: Union[Callable, None] = None,
-                          max_chunk_size: Union[int, None] = None,
-                          observable_ids: Sequence[str] = None,
-                          condition_ids: Sequence[str] = None
-                          ) -> AmiciPredictor:
-        """Create a :class:`pypesto.prediction.AmiciPredictor`.
+    def create_predictor(
+            self,
+            objective: AmiciObjective = None,
+            amici_output_fields: Sequence[str] = None,
+            post_processor: Union[Callable, None] = None,
+            post_processor_sensi: Union[Callable, None] = None,
+            post_processor_time: Union[Callable, None] = None,
+            max_chunk_size: Union[int, None] = None,
+            output_ids: Sequence[str] = None,
+            condition_ids: Sequence[str] = None,
+    ) -> AmiciPredictor:
+        """Create a :class:`pypesto.predict.AmiciPredictor`.
+
+        The `AmiciPredictor` facilitates generation of predictions from
+        parameter vectors.
 
         Parameters
         ----------
@@ -291,13 +295,13 @@ class PetabImporter(AmiciObjectBuilder):
             be available for the post-processors
         post_processor:
             A callable function which applies postprocessing to the simulation
-            results. Default are the observables of the amici model.
+            results. Default are the observables of the AMICI model.
             This method takes a list of ndarrays (as returned in the field
             ['y'] of amici ReturnData objects) as input.
         post_processor_sensi:
             A callable function which applies postprocessing to the
             sensitivities of the simulation results. Default are the
-            observable sensitivities of the amici model.
+            observable sensitivities of the AMICI model.
             This method takes two lists of ndarrays (as returned in the
             fields ['y'] and ['sy'] of amici ReturnData objects) as input.
         post_processor_time:
@@ -313,14 +317,16 @@ class PetabImporter(AmiciObjectBuilder):
             should be simulated at a time.
             Default is 0 meaning that all conditions will be simulated.
             Other values are only applicable, if an output file is specified.
-        observable_ids:
-            IDs of observables, if post-processing is used
+        output_ids:
+            IDs of outputs, if post-processing is used
+        condition_ids:
+            IDs of conditions, if post-processing is used
 
         Returns
         -------
         predictor:
-            A :class:`pypesto.prediction.AmiciPredictor` for the model, using
-            the observables of the Amici model and the timepoints from the
+            A :class:`pypesto.predict.AmiciPredictor` for the model, using
+            the outputs of the AMICI model and the timepoints from the
             PEtab data
         """
         # if the user didn't pass an objective function, we create it first
@@ -352,7 +358,7 @@ class PetabImporter(AmiciObjectBuilder):
             post_processor_sensi=post_processor_sensi,
             post_processor_time=post_processor_time,
             max_chunk_size=max_chunk_size,
-            observable_ids=observable_ids,
+            output_ids=output_ids,
             condition_ids=condition_ids)
 
         return predictor
