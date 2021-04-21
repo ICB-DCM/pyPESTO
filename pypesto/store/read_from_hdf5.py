@@ -293,6 +293,7 @@ def read_result(filename: str,
     result = Result()
 
     if problem:
+        pypesto_problem_reader = ProblemHDF5Reader(filename)
         result.problem = pypesto_problem_reader.read()
 
     if optimize:
