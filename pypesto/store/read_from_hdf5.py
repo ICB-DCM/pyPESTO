@@ -296,7 +296,7 @@ def read_result(filename: str,
         pypesto_problem_reader = ProblemHDF5Reader(filename)
         try:
             result.problem = pypesto_problem_reader.read()
-        except:
+        except Exception:
             logger.warning('Loading the problem failed.')
 
     if optimize:
