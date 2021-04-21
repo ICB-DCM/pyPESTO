@@ -23,6 +23,10 @@ PREDICTION_RESULTS = 'prediction_results'
 PREDICTION_ARRAYS = 'prediction_arrays'
 PREDICTION_SUMMARY = 'prediction_summary'
 
+HISTORY = 'history'
+OPTIMIZATION = 'optimization'
+SAMPLE = 'sample'
+
 MEAN = 'mean'
 MEDIAN = 'median'
 STANDARD_DEVIATION = 'std'

@@ -385,8 +385,8 @@ class Ensemble:
         result:
             A pyPESTO result that contains a sample result.
         cutoff:
-            Exclude parameters from the optimization if the nllh is higher than the
-            `cutoff`.
+            Exclude parameters from the optimization if the
+            nllh is higher than the `cutoff`.
         max_size:
             The maximum size the ensemble should be.
 
@@ -416,10 +416,11 @@ class Ensemble:
                              'Either the cutoff value was too small or the'
                              'result.optimize_result object might be empty.')
         elif len(x_vectors) < max_size:
-            logger.info(f'The ensemble contains {len(x_vectors)} parameter vectors, '
-                        f'which is less than the maximum size. If you want to include more '
-                        f'vectors you can consider raising the cutoff value or including '
-                        f'parameters from the history with the from_history() function.')
+            logger.info(f'The ensemble contains {len(x_vectors)} parameter '
+                        f'vectors, which is less than the maximum size. If '
+                        f'you want to include more vectors you can consider '
+                        f'raising the cutoff value or including parameters '
+                        f'from the history with the from_history() function.')
 
         x_vectors = np.stack(x_vectors, axis=1)
         return Ensemble(x_vectors=x_vectors,
@@ -444,20 +445,22 @@ class Ensemble:
         result:
             A pyPESTO result that contains a sample result.
         cutoff:
-            Exclude parameters from the optimization if the nllh is higher than the
-            `cutoff`.
+            Exclude parameters from the optimization if the nllh
+            is higher than the `cutoff`.
         max_size:
             The maximum size the ensemble should be.
         max_per_start:
-            The maxmimum number of vectors to be included from a single optimization start.
+            The maxmimum number of vectors to be included from a
+            single optimization start.
 
         Returns
         -------
         The ensemble.
         """
         if not result.optimize_result.list[0].history.options['trace_record']:
-            logger.warning('The optimize result has no trace. The Ensemble will'
-                           ' automatically be created through from_optimization().')
+            logger.warning('The optimize result has no trace. The Ensemble '
+                           'will automatically be created through '
+                           'from_optimization().')
             return Ensemble.from_optimization(result=result,
                                               cutoff=cutoff,
                                               max_size=max_size, **kwargs)
@@ -476,16 +479,19 @@ class Ensemble:
                 break
 
         if n_starts*max_per_start > max_size:
-            logger.info(f'The number of starts that can contribute an ensemble '
-                        f'vector muliplied with max_per_start is higher than '
-                        f'max_size. Thus we will lower max_per_start. If you '
-                        f'do not want this to happen consider increasing max_size '
-                        f'to {max_per_start*n_starts} or decrease cutoff.')
+            logger.info(f'The number of starts that can contribute an '
+                        f'ensemble vector muliplied with max_per_start '
+                        f'is higher than max_size. Thus we will lower '
+                        f'max_per_start. If you do not want this to '
+                        f'happen consider increasing max_size to '
+                        f'{max_per_start*n_starts} or decrease cutoff.')
             max_per_start = math.floor(max_size/n_starts)
 
         for i in range(n_starts):
-            trace_x = result.optimize_result.list[i]['history'].get_x_trace()
-            trace_fval = result.optimize_result.list[i]['history'].get_fval_trace()
+            trace_x = \
+                result.optimize_result.list[i]['history'].get_x_trace()
+            trace_fval = \
+                result.optimize_result.list[i]['history'].get_fval_trace()
             # calculate number of candidates
             n_cand = 0
             for iter_fval in reversed(trace_fval):
@@ -498,11 +504,11 @@ class Ensemble:
             # add vectors to ensemble
             if dist == 0:
                 x_vectors.append(trace_x[-1])
-                vector_tags.append((i,len(trace_x)))
+                vector_tags.append((i, len(trace_x)))
                 continue
             for i in range(max_per_start):
                 x_vectors.append(trace_x[-1-i*dist])
-                vector_tags.append((i,len(trace_x)-i*dist))
+                vector_tags.append((i, len(trace_x)-i*dist))
         # print a warning if there are no vectors within the ensemble
         if len(x_vectors) == 0:
             raise ValueError('The ensemble does not contain any vectors.'
