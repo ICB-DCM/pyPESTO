@@ -292,9 +292,8 @@ def read_result(filename: str,
         pypesto_problem_reader = ProblemHDF5Reader(filename)
         try:
             result.problem = pypesto_problem_reader.read()
-        except KeyError:
-            logger.warning('Loading the problem failed. It is'
-                           'highly likely that no problem exists.')
+        except:
+            logger.warning('Loading the problem failed.')
 
     if optimize:
         pypesto_opt_reader = OptimizationResultHDF5Reader(filename)
@@ -302,8 +301,8 @@ def read_result(filename: str,
             temp_result = pypesto_opt_reader.read()
             result.optimize_result = temp_result.optimize_result
         except KeyError:
-            logger.warning(f'Loading the optimization result failed. It is '
-                           f'highly likely that no optimization result exists '
+            logger.warning('Loading the optimization result failed. It is '
+                           'highly likely that no optimization result exists '
                            f'within {filename}.')
 
     if profile:
@@ -312,8 +311,8 @@ def read_result(filename: str,
             temp_result = pypesto_profile_reader.read()
             result.profile_result = temp_result.profile_result
         except KeyError:
-            logger.warning(f'Loading the profiling result failed. It is '
-                           f'highly likely that no profiling result exists '
+            logger.warning('Loading the profiling result failed. It is '
+                           'highly likely that no profiling result exists '
                            f'within {filename}.')
 
     if sample:
@@ -322,8 +321,8 @@ def read_result(filename: str,
             temp_result = pypesto_sample_reader.read()
             result.sample_result = temp_result.sample_result
         except KeyError:
-            logger.warning(f'Loading the sampling result failed. It is '
-                           f'highly likely that no sampling result exists '
-                           f'within {filename}')
+            logger.warning('Loading the sampling result failed. It is '
+                           'highly likely that no sampling result exists '
+                           f'within {filename}.')
 
     return result
