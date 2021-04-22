@@ -406,10 +406,12 @@ class Ensemble:
             # lower than the cutoff value
             if start['fval'] < cutoff and len(x_vectors) < max_size:
                 x_vectors.append(start['x'])
+
                 # the vector tag will be a -1 to indicate it is the last step
                 vector_tags.append((start['id'], -1))
             else:
                 break
+
         # print a warning if there are no vectors within the ensemble
         if len(x_vectors) == 0:
             raise ValueError('The ensemble does not contain any vectors.'
@@ -492,6 +494,7 @@ class Ensemble:
                 result.optimize_result.list[i]['history'].get_x_trace()
             trace_fval = \
                 result.optimize_result.list[i]['history'].get_fval_trace()
+
             # calculate number of candidates
             n_cand = 0
             for iter_fval in reversed(trace_fval):
@@ -499,8 +502,10 @@ class Ensemble:
                     n_cand += 1
                 else:
                     break
+
             # calculate distance between the vectors included in ensemble:
             dist = math.floor((n_cand-1)/(max_per_start-1))
+
             # add vectors to ensemble
             if dist == 0:
                 x_vectors.append(trace_x[-1])
@@ -509,6 +514,7 @@ class Ensemble:
             for i in range(max_per_start):
                 x_vectors.append(trace_x[-1-i*dist])
                 vector_tags.append((i, len(trace_x)-i*dist))
+
         # print a warning if there are no vectors within the ensemble
         if len(x_vectors) == 0:
             raise ValueError('The ensemble does not contain any vectors.'
