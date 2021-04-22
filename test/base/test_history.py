@@ -476,7 +476,7 @@ def test_trace_subset(history: pypesto.History):
 
 
 def test_hdf5_history_mp():
-    """Test whether hdf5-History works with a MultiProcessEngine"""
+    """Test whether hdf5-History works with a MultiProcessEngine."""
     objective1 = pypesto.Objective(fun=so.rosen,
                                    grad=so.rosen_der,
                                    hess=so.rosen_hess)
