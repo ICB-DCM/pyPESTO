@@ -383,7 +383,7 @@ class Ensemble:
         Parameters
         ----------
         result:
-            A pyPESTO result that contains a sample result.
+            A pyPESTO result that contains an optimization result.
         cutoff:
             Exclude parameters from the optimization if the
             nllh is higher than the `cutoff`.
@@ -445,14 +445,14 @@ class Ensemble:
         Parameters
         ----------
         result:
-            A pyPESTO result that contains a sample result.
+            A pyPESTO result that contains an optimization result with history recorded.
         cutoff:
             Exclude parameters from the optimization if the nllh
             is higher than the `cutoff`.
         max_size:
             The maximum size the ensemble should be.
         max_per_start:
-            The maxmimum number of vectors to be included from a
+            The maximum number of vectors to be included from a
             single optimization start.
 
         Returns
@@ -475,17 +475,16 @@ class Ensemble:
         # calculate the number of starts whose final nllh is below cutoff
         n_starts = 0
         for start in result.optimize_result.list:
-            if start['fval'] < cutoff:
-                n_starts += 1
-            else:
+            if start['fval'] > cutoff:
                 break
+            n_starts += 1
 
         if n_starts*max_per_start > max_size:
             logger.info(f'The number of starts that can contribute an '
-                        f'ensemble vector muliplied with max_per_start '
-                        f'is higher than max_size. Thus we will lower '
-                        f'max_per_start. If you do not want this to '
-                        f'happen consider increasing max_size to '
+                        'ensemble vector multiplied with max_per_start '
+                        'is higher than max_size. Thus we will lower '
+                        'max_per_start. If you do not want this to '
+                        'happen consider increasing max_size to '
                         f'{max_per_start*n_starts} or decrease cutoff.')
             max_per_start = math.floor(max_size/n_starts)
 
@@ -515,7 +514,7 @@ class Ensemble:
                 x_vectors.append(trace_x[-1-i*dist])
                 vector_tags.append((i, len(trace_x)-i*dist))
 
-        # print a warning if there are no vectors within the ensemble
+        # raise a `ValueError` if there are no vectors within the ensemble
         if len(x_vectors) == 0:
             raise ValueError('The ensemble does not contain any vectors. '
                              'Either the `cutoff` value was too small or the '
