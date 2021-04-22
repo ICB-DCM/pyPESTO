@@ -1,4 +1,5 @@
 import logging
+from tqdm import tqdm
 from typing import Callable, Iterable, Union
 
 from ..engine import Engine, SingleCoreEngine
@@ -21,6 +22,7 @@ def minimize(
         startpoint_method: Union[Callable, bool] = None,
         result: Result = None,
         engine: Engine = None,
+        progress_bar: bool = True,
         options: OptimizeOptions = None,
         history_options: HistoryOptions = None,
 ) -> Result:
@@ -47,6 +49,8 @@ def minimize(
     engine:
         Parallelization engine. Defaults to sequential execution on a
         SingleCoreEngine.
+    progress_bar:
+        Indicates, whether a progress bar should be displayed. Default is True.
     options:
         Various options applied to the multistart optimization.
     history_options:
@@ -103,6 +107,7 @@ def minimize(
 
     # define tasks
     tasks = []
+
     for startpoint, id in zip(startpoints, ids):
         task = OptimizerTask(
             optimizer=optimizer, problem=problem, x0=startpoint, id=id,
@@ -110,7 +115,7 @@ def minimize(
         tasks.append(task)
 
     # do multistart optimization
-    ret = engine.execute(tasks)
+    ret = engine.execute(tasks, progress_bar=progress_bar)
 
     # aggregate results
     for optimizer_result in ret:

@@ -2,6 +2,9 @@ from mpi4py.futures import MPIPoolExecutor
 from mpi4py import MPI
 import cloudpickle as pickle
 import logging
+import warnings
+from tqdm import tqdm
+
 from typing import List
 
 from .base import Engine
@@ -29,7 +32,7 @@ class MPIPoolEngine(Engine):
     def __init__(self):
         super().__init__()
 
-    def execute(self, tasks: List[Task]):
+    def execute(self, tasks: List[Task], progress_bar: bool = True):
         """Pickle tasks and distribute work to workers."""
 
         pickled_tasks = [pickle.dumps(task) for task in tasks]
@@ -37,6 +40,11 @@ class MPIPoolEngine(Engine):
         n_procs = MPI.COMM_WORLD.Get_size()   # Size of communicator
         logger.info(f"Performing parallel task execution on {n_procs-1} "
                     f"workers with one manager.")
+
         with MPIPoolExecutor() as executor:
-            results = executor.map(work, pickled_tasks)
+            results = executor.map(work,
+                               tqdm(pickled_tasks,
+                                    total=len(tasks),
+                                    disable=not progress_bar)
+                               )
         return results

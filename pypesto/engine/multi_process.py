@@ -2,7 +2,9 @@ from multiprocessing import Pool
 import cloudpickle as pickle
 import os
 import logging
+import warnings
 from typing import List
+from tqdm import tqdm
 
 from .base import Engine
 from .task import Task
@@ -42,7 +44,7 @@ class MultiProcessEngine(Engine):
                 f"appropriate on some systems.")
         self.n_procs: int = n_procs
 
-    def execute(self, tasks: List[Task]):
+    def execute(self, tasks: List[Task], progress_bar: bool = False):
         """Pickle tasks and distribute work over parallel processes."""
         n_tasks = len(tasks)
 
@@ -51,7 +53,12 @@ class MultiProcessEngine(Engine):
         n_procs = min(self.n_procs, n_tasks)
         logger.info(f"Performing parallel task execution on {n_procs} "
                     f"processes.")
+
         with Pool(processes=n_procs) as pool:
-            results = pool.map(work, pickled_tasks)
+            results = pool.map(work,
+                               tqdm(pickled_tasks,
+                                    total=len(tasks),
+                                    disable=not progress_bar)
+                               )
 
         return results

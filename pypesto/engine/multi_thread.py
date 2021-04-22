@@ -2,6 +2,8 @@ from concurrent.futures import ThreadPoolExecutor
 import copy
 import os
 import logging
+import warnings
+from tqdm import tqdm
 from typing import List
 
 from .base import Engine
@@ -41,7 +43,7 @@ class MultiThreadEngine(Engine):
                 f"appropriate on some systems.")
         self.n_threads: int = n_threads
 
-    def execute(self, tasks: List[Task]):
+    def execute(self, tasks: List[Task], progress_bar: bool = True):
         """Deepcopy tasks and distribute work over parallel threads."""
         n_tasks = len(tasks)
 
@@ -50,7 +52,16 @@ class MultiThreadEngine(Engine):
         n_threads = min(self.n_threads, n_tasks)
         logger.info(f"Performing parallel task execution on {n_threads} "
                     f"threads.")
+
+        if progress_bar:
+            warnings.warn('Progress bar currently not supported for tasks '
+                          'using the Multi Thread Engine.')
+
         with ThreadPoolExecutor(max_workers=n_threads) as pool:
-            results = pool.map(work, copied_tasks)
+            results = pool.map(work,
+                               tqdm(copied_tasks,
+                                    total=len(tasks),
+                                    disable=not progress_bar)
+                               )
 
         return results
