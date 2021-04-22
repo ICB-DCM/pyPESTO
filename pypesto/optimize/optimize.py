@@ -105,10 +105,9 @@ def minimize(
     # define tasks
     tasks = []
     filename = None
-    if history_options.storage_file is not None:
-        if any(history_options.storage_file.endswith(suffix)
-               for suffix in ['.h5', '.hdf5']):
-            filename = check_hdf5_mp(history_options, engine)
+    if history_options.storage_file is not None and \
+            history_options.storage_file.endswith(('.h5', '.hdf5')):
+        filename = check_hdf5_mp(history_options, engine)
 
     for startpoint, id in zip(startpoints, ids):
         task = OptimizerTask(

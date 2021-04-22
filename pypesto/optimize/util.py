@@ -25,25 +25,27 @@ def check_hdf5_mp(history_options: HistoryOptions,
     The filename that will be used to combine the partial HDF5 files later.
     If a parallelization engine is not used, `None` is returned.
     """
-    if not isinstance(engine, SingleCoreEngine):
-        filename = history_options.storage_file
-        file_path = Path(filename)
-        # create directory with same name as original file stem
-        partial_file_path = (
-                file_path.parent / file_path.stem /
-                (file_path.stem + '_{id}' + file_path.suffix)
-        )
-        partial_file_path.parent.mkdir(parents=True, exist_ok=True)
-        history_options.storage_file = str(partial_file_path)
-        # create hdf5 file that gathers the others within history group
-        with h5py.File(filename, mode='a') as f:
-            get_or_create_group(f, "history")
-        return filename
-    return None
+    if isinstance(engine, SingleCoreEngine):
+        return None
+    filename = history_options.storage_file
+    file_path = Path(filename)
+
+    # create directory with same name as original file stem
+    partial_file_path = (
+            file_path.parent / file_path.stem /
+            (file_path.stem + '_{id}' + file_path.suffix)
+    )
+    partial_file_path.parent.mkdir(parents=True, exist_ok=True)
+    history_options.storage_file = str(partial_file_path)
+
+    # create hdf5 file that gathers the others within history group
+    with h5py.File(filename, mode='a') as f:
+        get_or_create_group(f, "history")
+    return filename
 
 
-def fill_hdf5_file(ret,
-                   filename):
+def fill_hdf5_file(ret: list,
+                   filename: str):
     """
     Create links in `filename` to the
     history of each start contained in ret, the results

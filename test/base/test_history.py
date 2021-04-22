@@ -8,13 +8,15 @@ import unittest
 import tempfile
 from typing import Sequence
 
+import scipy.optimize as so
 import pypesto
 from pypesto.objective.util import sres_to_schi2, res_to_chi2
 from pypesto import CsvHistory, HistoryOptions,\
     MemoryHistory, ObjectiveBase, Hdf5History
 from pypesto.optimize.optimizer import read_result_from_file, OptimizerResult
 from pypesto.objective.constants import (
-    FVAL, GRAD, HESS, RES, SRES, CHI2, SCHI2)
+    X, FVAL, GRAD, HESS, RES, SRES, CHI2, SCHI2)
+from pypesto.engine import SingleCoreEngine, MultiProcessEngine
 
 from ..util import rosen_for_sensi, load_amici_objective
 
@@ -471,3 +473,65 @@ def test_trace_subset(history: pypesto.History):
                 assert isinstance(val, float)
             else:
                 assert isinstance(val, np.ndarray) or np.isnan(val)
+
+
+def test_hdf5_history_mp():
+    """Test whether hdf5-History works with a MultiProcessEngine"""
+    objective1 = pypesto.Objective(fun=so.rosen,
+                                   grad=so.rosen_der,
+                                   hess=so.rosen_hess)
+    objective2 = pypesto.Objective(fun=so.rosen,
+                                   grad=so.rosen_der,
+                                   hess=so.rosen_hess)
+    dim_full = 10
+    lb = -5 * np.ones((dim_full, 1))
+    ub = 5 * np.ones((dim_full, 1))
+    n_starts = 5
+    startpoints = pypesto.startpoint.latin_hypercube(n_starts=n_starts,
+                                                     lb=lb,
+                                                     ub=ub)
+    problem1 = pypesto.Problem(objective=objective1, lb=lb, ub=ub,
+                               x_guesses=startpoints)
+    problem2 = pypesto.Problem(objective=objective2, lb=lb, ub=ub,
+                               x_guesses=startpoints)
+
+    optimizer1 = pypesto.optimize.ScipyOptimizer(options={'maxiter': 100})
+    optimizer2 = pypesto.optimize.ScipyOptimizer(options={'maxiter': 100})
+
+    with tempfile.TemporaryDirectory(dir=".") as tmpdirname:
+        _, fn = tempfile.mkstemp(".hdf5", dir=f"{tmpdirname}")
+
+        history_options = pypesto.HistoryOptions(trace_record=True,
+                                                 storage_file=fn)
+        # optimize with history saved to hdf5 and SingleCoreEngine
+        result_hdf5_sc = pypesto.optimize.minimize(
+            problem=problem1, optimizer=optimizer1,
+            n_starts=n_starts, history_options=history_options,
+            engine=SingleCoreEngine()
+        )
+
+        # optimizing with history saved in hdf5 and MultiProcessEngine
+        result_memory_mp = pypesto.optimize.minimize(
+            problem=problem2, optimizer=optimizer2,
+            n_starts=n_starts, history_options=history_options,
+            engine=MultiProcessEngine()
+        )
+
+        history_entries = [X, FVAL, GRAD, HESS, RES, SRES, CHI2, SCHI2]
+        assert len(result_hdf5_sc.optimize_result.list) == \
+            len(result_memory_mp.optimize_result.list)
+        for mp_res in result_memory_mp.optimize_result.list:
+            for sp_res in result_hdf5_sc.optimize_result.list:
+                if mp_res['id'] == sp_res['id']:
+                    for entry in history_entries:
+                        hdf5_entry_trace = getattr(sp_res['history'],
+                                                   f'get_{entry}_trace')()
+                        for iteration in range(len(hdf5_entry_trace)):
+                            # comparing nan and None difficult
+                            if hdf5_entry_trace[iteration] is None or np.isnan(
+                                    hdf5_entry_trace[iteration]).all():
+                                continue
+                            np.testing.assert_array_equal(
+                                getattr(mp_res['history'],
+                                        f'get_{entry}_trace')()[iteration],
+                                hdf5_entry_trace[iteration])
