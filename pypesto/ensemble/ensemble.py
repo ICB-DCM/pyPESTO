@@ -414,8 +414,8 @@ class Ensemble:
 
         # print a warning if there are no vectors within the ensemble
         if len(x_vectors) == 0:
-            raise ValueError('The ensemble does not contain any vectors.'
-                             'Either the cutoff value was too small or the'
+            raise ValueError('The ensemble does not contain any vectors. '
+                             'Either the cutoff value was too small or the '
                              'result.optimize_result object might be empty.')
         elif len(x_vectors) < max_size:
             logger.info(f'The ensemble contains {len(x_vectors)} parameter '
