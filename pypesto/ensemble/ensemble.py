@@ -517,9 +517,9 @@ class Ensemble:
 
         # print a warning if there are no vectors within the ensemble
         if len(x_vectors) == 0:
-            raise ValueError('The ensemble does not contain any vectors.'
-                             'Either the cutoff value was too small or the'
-                             'result.optimize_result object might be empty.')
+            raise ValueError('The ensemble does not contain any vectors. '
+                             'Either the `cutoff` value was too small or the '
+                             '`result.optimize_result` object might be empty.')
 
         x_vectors = np.stack(x_vectors, axis=1)
         return Ensemble(x_vectors=x_vectors,
