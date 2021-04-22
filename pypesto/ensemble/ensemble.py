@@ -419,10 +419,10 @@ class Ensemble:
                              'result.optimize_result object might be empty.')
         elif len(x_vectors) < max_size:
             logger.info(f'The ensemble contains {len(x_vectors)} parameter '
-                        f'vectors, which is less than the maximum size. If '
-                        f'you want to include more vectors you can consider '
-                        f'raising the cutoff value or including parameters '
-                        f'from the history with the from_history() function.')
+                        'vectors, which is less than the maximum size. If '
+                        'you want to include more vectors you can consider '
+                        'raising the cutoff value or including parameters '
+                        'from the history with the `from_history` function.')
 
         x_vectors = np.stack(x_vectors, axis=1)
         return Ensemble(x_vectors=x_vectors,
