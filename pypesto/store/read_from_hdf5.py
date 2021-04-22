@@ -207,7 +207,11 @@ class SamplingResultHDF5Reader:
             for key in f['/sampling/results'].attrs:
                 sample_result[key] = \
                     f['/sampling/results'].attrs[key]
-        self.results.sample_result = McmcPtResult(**sample_result)
+        try:
+            self.results.sample_result = McmcPtResult(**sample_result)
+        except TypeError:
+            logger.warning("Warning: You tried loading a non-existent "
+                           "sampling result.")
 
         return self.results
 
@@ -294,17 +298,32 @@ def read_result(filename: str,
 
     if optimize:
         pypesto_opt_reader = OptimizationResultHDF5Reader(filename)
-        temp_result = pypesto_opt_reader.read()
-        result.optimize_result = temp_result.optimize_result
+        try:
+            temp_result = pypesto_opt_reader.read()
+            result.optimize_result = temp_result.optimize_result
+        except KeyError:
+            logger.warning('Loading the optimization result failed. It is '
+                           'highly likely that no optimization result exists '
+                           f'within {filename}.')
 
     if profile:
         pypesto_profile_reader = ProfileResultHDF5Reader(filename)
-        temp_result = pypesto_profile_reader.read()
-        result.profile_result = temp_result.profile_result
+        try:
+            temp_result = pypesto_profile_reader.read()
+            result.profile_result = temp_result.profile_result
+        except KeyError:
+            logger.warning('Loading the profiling result failed. It is '
+                           'highly likely that no profiling result exists '
+                           f'within {filename}.')
 
     if sample:
         pypesto_sample_reader = SamplingResultHDF5Reader(filename)
-        temp_result = pypesto_sample_reader.read()
-        result.sample_result = temp_result.sample_result
+        try:
+            temp_result = pypesto_sample_reader.read()
+            result.sample_result = temp_result.sample_result
+        except KeyError:
+            logger.warning('Loading the sampling result failed. It is '
+                           'highly likely that no sampling result exists '
+                           f'within {filename}.')
 
     return result
