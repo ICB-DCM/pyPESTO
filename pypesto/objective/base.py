@@ -527,7 +527,9 @@ class ObjectiveBase(abc.ABC):
             data = {**prefix_data, **data, **postfix_data}
 
         # create dataframe
-        result = pd.DataFrame(data=data)
+        result = pd.DataFrame(data=data,
+                              index=[self.x_names[ix] for ix in x_indices])
+        )
 
         # log full result
         if verbosity > 0:
