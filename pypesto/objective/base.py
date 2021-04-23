@@ -529,7 +529,6 @@ class ObjectiveBase(abc.ABC):
         # create dataframe
         result = pd.DataFrame(data=data,
                               index=[self.x_names[ix] for ix in x_indices])
-        )
 
         # log full result
         if verbosity > 0:
