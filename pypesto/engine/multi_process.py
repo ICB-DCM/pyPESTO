@@ -2,7 +2,6 @@ from multiprocessing import Pool
 import cloudpickle as pickle
 import os
 import logging
-import warnings
 from typing import List
 from tqdm import tqdm
 

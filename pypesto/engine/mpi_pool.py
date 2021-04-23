@@ -2,7 +2,6 @@ from mpi4py.futures import MPIPoolExecutor
 from mpi4py import MPI
 import cloudpickle as pickle
 import logging
-import warnings
 from tqdm import tqdm
 
 from typing import List
@@ -43,8 +42,8 @@ class MPIPoolEngine(Engine):
 
         with MPIPoolExecutor() as executor:
             results = executor.map(work,
-                               tqdm(pickled_tasks,
-                                    total=len(tasks),
-                                    disable=not progress_bar)
-                               )
+                                   tqdm(pickled_tasks,
+                                        total=len(tasks),
+                                        disable=not progress_bar)
+                                   )
         return results

@@ -1,5 +1,4 @@
 import logging
-from tqdm import tqdm
 from typing import Callable, Iterable, Union
 
 from ..engine import Engine, SingleCoreEngine
