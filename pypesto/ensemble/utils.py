@@ -63,8 +63,8 @@ def read_ensemble_from_hdf5(filename: str,
                             type: str = OPTIMIZATION,
                             remove_burn_in: bool = True,
                             chain_slice: slice = None,
-                            cutoff: float = None,
-                            max_size: int = None
+                            cutoff: float = np.inf,
+                            max_size: int = np.inf
                             ):
     """
     Function for creating an ensemble from hdf5 storage file.
@@ -85,9 +85,6 @@ def read_ensemble_from_hdf5(filename: str,
     # TODO: add option HISTORY. Need to fix
     #  reading history from hdf5.
     if type == OPTIMIZATION:
-        if cutoff is None or max_size is None:
-            raise TypeError('You need to define cutoff and max_size '
-                            'for the ensemble creation to work.')
         result = read_result(filename=filename,
                              profile=False,
                              sample=False)

@@ -374,8 +374,8 @@ class Ensemble:
     @staticmethod
     def from_optimization(
             result: Result,
-            cutoff: float,
-            max_size: int,
+            cutoff: float = np.inf,
+            max_size: int = np.inf,
             **kwargs,
     ):
         """Construct an ensemble from an optimization result.
@@ -435,9 +435,9 @@ class Ensemble:
     @staticmethod
     def from_history(
             result: Result,
-            cutoff: float,
-            max_size: int,
-            max_per_start: int = None,
+            cutoff: float = np.inf,
+            max_size: int = np.inf,
+            max_per_start: int = np.inf,
             **kwargs,
     ):
         """Construct an ensemble from the history of an optimization.
