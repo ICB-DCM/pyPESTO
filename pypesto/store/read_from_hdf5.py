@@ -250,7 +250,6 @@ class ProfileResultHDF5Reader:
                 profiling_list.append([
                     None for _ in range(len(f[f'/profiling/{profile_id}']))
                 ])
-                breakpoint()
                 for parameter_id in f[f'/profiling/{profile_id}']:
                     if f[f'/profiling/{profile_id}/'
                          f'{parameter_id}'].attrs['IsNone']:
