@@ -43,8 +43,16 @@ class MultiProcessEngine(Engine):
                 f"appropriate on some systems.")
         self.n_procs: int = n_procs
 
-    def execute(self, tasks: List[Task], progress_bar: bool = False):
-        """Pickle tasks and distribute work over parallel processes."""
+    def execute(self, tasks: List[Task], progress_bar: bool = True):
+        """Pickle tasks and distribute work over parallel processes.
+
+        Parameters
+        ----------
+        tasks:
+            List of tasks to execute.
+        progress_bar:
+            Whether to display a progress bar.
+        """
         n_tasks = len(tasks)
 
         pickled_tasks = [pickle.dumps(task) for task in tasks]
@@ -56,7 +64,6 @@ class MultiProcessEngine(Engine):
         with Pool(processes=n_procs) as pool:
             results = pool.map(work,
                                tqdm(pickled_tasks,
-                                    total=len(tasks),
                                     disable=not progress_bar)
                                )
 

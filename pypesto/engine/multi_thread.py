@@ -43,7 +43,15 @@ class MultiThreadEngine(Engine):
         self.n_threads: int = n_threads
 
     def execute(self, tasks: List[Task], progress_bar: bool = True):
-        """Deepcopy tasks and distribute work over parallel threads."""
+        """Deepcopy tasks and distribute work over parallel threads.
+
+        Parameters
+        ----------
+        tasks:
+            List of tasks to execute.
+        progress_bar:
+            Whether to display a progress bar.
+        """
         n_tasks = len(tasks)
 
         copied_tasks = [copy.deepcopy(task) for task in tasks]
@@ -55,7 +63,6 @@ class MultiThreadEngine(Engine):
         with ThreadPoolExecutor(max_workers=n_threads) as pool:
             results = pool.map(work,
                                tqdm(copied_tasks,
-                                    total=len(tasks),
                                     disable=not progress_bar)
                                )
 

@@ -32,7 +32,15 @@ class MPIPoolEngine(Engine):
         super().__init__()
 
     def execute(self, tasks: List[Task], progress_bar: bool = True):
-        """Pickle tasks and distribute work to workers."""
+        """Pickle tasks and distribute work to workers.
+
+        Parameters
+        ----------
+        tasks:
+            List of tasks to execute.
+        progress_bar:
+            Whether to display a progress bar.
+        """
 
         pickled_tasks = [pickle.dumps(task) for task in tasks]
 
@@ -43,7 +51,6 @@ class MPIPoolEngine(Engine):
         with MPIPoolExecutor() as executor:
             results = executor.map(work,
                                    tqdm(pickled_tasks,
-                                        total=len(tasks),
                                         disable=not progress_bar)
                                    )
         return results

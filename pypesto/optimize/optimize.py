@@ -49,7 +49,7 @@ def minimize(
         Parallelization engine. Defaults to sequential execution on a
         SingleCoreEngine.
     progress_bar:
-        Indicates, whether a progress bar should be displayed. Default is True.
+        Whether to display a progress bar.
     options:
         Various options applied to the multistart optimization.
     history_options:

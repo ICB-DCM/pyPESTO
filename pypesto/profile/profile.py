@@ -57,7 +57,7 @@ def parameter_profile(
     profile_options:
         Various options applied to the profile optimization.
     progress_bar:
-        Indicates, whether a progress bar should be displayed. Default is True.
+        Whether to display a progress bar.
 
     Returns
     -------
