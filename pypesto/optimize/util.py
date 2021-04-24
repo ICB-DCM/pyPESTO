@@ -2,6 +2,7 @@ from ..engine import Engine, SingleCoreEngine
 from ..objective import HistoryOptions
 from ..store.save_to_hdf5 import get_or_create_group
 from pathlib import Path
+from typing import Union
 
 
 import h5py
