@@ -7,14 +7,16 @@ from pathlib import Path
 import h5py
 
 
-def check_hdf5_mp(history_options: HistoryOptions,
-                  engine: Engine):
+def check_hdf5_mp(
+    history_options: HistoryOptions,
+    engine: Engine,
+) -> Union[str, None]:
     """
     Create a folder for partial HDF5 files,
     if a parallelization engine will be used.
 
-    Paramters
-    ---------
+    Parameters
+    ----------
     engine:
         The Engine which is used in the optimization
     history_options:
@@ -44,8 +46,10 @@ def check_hdf5_mp(history_options: HistoryOptions,
     return filename
 
 
-def fill_hdf5_file(ret: list,
-                   filename: str):
+def fill_hdf5_file(
+    ret: list,
+    filename: str,
+) -> None:
     """
     Create links in `filename` to the
     history of each start contained in ret, the results
