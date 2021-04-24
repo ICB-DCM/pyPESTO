@@ -247,17 +247,19 @@ class ProfileResultHDF5Reader:
                 problem_reader = ProblemHDF5Reader(self.storage_filename)
                 self.results.problem = problem_reader.read()
             for profile_id in f['/profiling']:
-                profiling_list.append([])
+                profiling_list.append([
+                    None for _ in range(len(f[f'/profiling/{profile_id}']))
+                ])
+                breakpoint()
                 for parameter_id in f[f'/profiling/{profile_id}']:
                     if f[f'/profiling/{profile_id}/'
                          f'{parameter_id}'].attrs['IsNone']:
-                        profiling_list[int(profile_id)].append(None)
+                        continue
                     else:
-                        profiling_list[int(profile_id)]\
-                            .append(
+                        profiling_list[int(profile_id)][int(parameter_id)] = \
                             read_hdf5_profile(f,
                                               profile_id=profile_id,
-                                              parameter_id=parameter_id))
+                                              parameter_id=parameter_id)
             self.results.profile_result.list = profiling_list
         return self.results
 
