@@ -33,6 +33,11 @@ except ImportError:
     cma = None
 
 try:
+    import pyswarms
+except ImportError:
+    pyswarms = None
+
+try:
     import nlopt
 except ImportError:
     nlopt = None
@@ -715,6 +720,105 @@ class ScipyDifferentialEvolutionOptimizer(Optimizer):
 
         optimizer_result = OptimizerResult(x=np.array(result.x),
                                            fval=result.fun)
+
+        return optimizer_result
+
+    def is_least_squares(self):
+        return False
+
+
+class PyswarmsOptimizer(Optimizer):
+    """
+    Global optimization using pyswarms.
+    Package homepage: https://pyswarms.readthedocs.io/en/latest/index.html
+
+    Parameters
+    ----------
+    par_popsize:
+        number of particles in the swarm, default value 10
+
+    options:
+        Optimizer options that are directly passed on to pyswarms.
+        c1: cognitive parameter
+        c2: social parameter
+        w: inertia parameter
+        Default values are (c1,c2,w) = (0.5, 0.3, 0.9)
+
+    Examples
+    --------
+    Arguments that can be passed to options:
+
+    maxiter:
+        used to calculate the maximal number of funcion evaluations.
+        Default: 1000
+    """
+
+    def __init__(self, par_popsize: float = 10, options: Dict = None):
+        super().__init__()
+
+        all_options = {'maxiter': 1000, 'c1': 0.5, 'c2': 0.3, 'w': 0.9}
+        if options is None:
+            options = {}
+        all_options.update(options)
+        self.options = all_options
+        self.par_popsize = par_popsize
+
+    @fix_decorator
+    @time_decorator
+    @history_decorator
+    def minimize(
+            self,
+            problem: Problem,
+            x0: np.ndarray,
+            id: str,
+            history_options: HistoryOptions = None,
+    ) -> OptimizerResult:
+        lb = problem.lb
+        ub = problem.ub
+
+        if pyswarms is None:
+            raise ImportError(
+                "This optimizer requires an installation of pyswarms.")
+
+        # check for finite values for the bounds
+        if np.isfinite(lb).all() is np.False_:
+            raise ValueError(
+                "This optimizer can only handle finite lower bounds.")
+        if np.isfinite(ub).all() is np.False_:
+            raise ValueError(
+                "This optimizer can only handle finite upper bounds.")
+
+        optimizer = pyswarms.single.global_best.GlobalBestPSO(
+            n_particles=self.par_popsize, dimensions=len(x0),
+            options=self.options, bounds=(lb, ub))
+
+        def successively_working_fval(swarm: np.ndarray) -> np.ndarray:
+            """Evaluate the function for all parameters in the swarm object.
+
+            Parameters:
+            -----------
+            swarm: np.ndarray, shape (n_particales_in_swarm, n_parameters)
+
+            Returns:
+            --------
+            result: np.ndarray, shape (n_particles_in_swarm)
+            """
+
+            n_particles = swarm.shape[0]
+            result = np.zeros(n_particles)
+            # iterate over the particles in the swarm
+            for i_particle, par in enumerate(swarm):
+                result[i_particle] = problem.objective.get_fval(par)
+
+            return result
+
+        cost, pos = optimizer.optimize(
+            successively_working_fval, iters=self.options['maxiter'])
+
+        optimizer_result = OptimizerResult(
+            x=pos,
+            fval=np.array(cost)
+        )
 
         return optimizer_result
 
