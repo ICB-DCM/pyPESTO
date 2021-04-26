@@ -21,6 +21,7 @@ def minimize(
         startpoint_method: Union[Callable, bool] = None,
         result: Result = None,
         engine: Engine = None,
+        progress_bar: bool = True,
         options: OptimizeOptions = None,
         history_options: HistoryOptions = None,
 ) -> Result:
@@ -47,6 +48,8 @@ def minimize(
     engine:
         Parallelization engine. Defaults to sequential execution on a
         SingleCoreEngine.
+    progress_bar:
+        Whether to display a progress bar.
     options:
         Various options applied to the multistart optimization.
     history_options:
@@ -103,6 +106,7 @@ def minimize(
 
     # define tasks
     tasks = []
+
     for startpoint, id in zip(startpoints, ids):
         task = OptimizerTask(
             optimizer=optimizer, problem=problem, x0=startpoint, id=id,
@@ -110,7 +114,7 @@ def minimize(
         tasks.append(task)
 
     # do multistart optimization
-    ret = engine.execute(tasks)
+    ret = engine.execute(tasks, progress_bar=progress_bar)
 
     # aggregate results
     for optimizer_result in ret:
