@@ -13,13 +13,15 @@ class Engine(abc.ABC):
         pass
 
     @abc.abstractmethod
-    def execute(self, tasks: List[Task]):
+    def execute(self, tasks: List[Task], progress_bar: bool = True):
         """Execute tasks.
 
         Parameters
         ----------
         tasks:
             List of tasks to execute.
+        progress_bar:
+            Whether to display a progress bar.
         """
         raise NotImplementedError(
             "This engine is not intended to be called.")
