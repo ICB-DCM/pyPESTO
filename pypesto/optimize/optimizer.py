@@ -781,7 +781,7 @@ class PyswarmsOptimizer(Optimizer):
                 "This optimizer requires an installation of pyswarms.")
 
         # check for finite values for the bounds
-        if np.isfinite(lb).all() == False
+        if np.isfinite(lb).all() == False:
             raise ValueError(
                 "This optimizer can only handle finite lower bounds.")
         if np.isfinite(ub).all() == False:
