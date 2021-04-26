@@ -16,8 +16,8 @@ import subprocess  # noqa: S404
 import pypesto
 import pypesto.optimize as optimize
 from pypesto.store import OptimizationResultHDF5Reader
-print(os.path.isfile('../util.py'))
-from util import rosen_for_sensi
+
+from ..util import rosen_for_sensi
 from numpy.testing import assert_almost_equal
 
 
@@ -243,4 +243,3 @@ def test_mpipoolengine():
         if os.path.exists('temp_result.h5'):
             # delete data
             os.remove('temp_result.h5')
-test_unbounded_minimize(('pyswarms', ''))
