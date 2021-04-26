@@ -528,7 +528,8 @@ class ObjectiveBase(abc.ABC):
 
         # create dataframe
         result = pd.DataFrame(data=data,
-                              index=[self.x_names[ix] for ix in x_indices])
+                              index=[self.x_names[ix] for ix in x_indices]
+                              if self.x_names is not None else None)
 
         # log full result
         if verbosity > 0:
