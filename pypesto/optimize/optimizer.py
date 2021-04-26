@@ -780,11 +780,6 @@ class PyswarmsOptimizer(Optimizer):
             raise ImportError(
                 "This optimizer requires an installation of pyswarms.")
 
-        # check for finite values for the bounds
-        if not np.isfinite(lb).all() or not np.isfinite(ub).all():
-            raise ValueError(
-                "This optimizer can only handle finite bounds")
-
         optimizer = pyswarms.single.global_best.GlobalBestPSO(
             n_particles=self.par_popsize, dimensions=len(x0),
             options=self.options, bounds=(lb, ub))
