@@ -529,10 +529,8 @@ class ObjectiveBase(abc.ABC):
         # create dataframe
         result = pd.DataFrame(data=data,
                               index=[
-                                  self.x_names[ix]
-                                      if self.x_names is not None
-                                      else f'x_{ix}'
-                                  for ix in x_indices
+                                  self.x_names[ix] if self.x_names is not None
+                                  else f'x_{ix}' for ix in x_indices
                               ])
 
         # log full result
