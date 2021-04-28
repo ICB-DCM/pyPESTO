@@ -7,7 +7,7 @@ from pathlib import Path
 
 from .constants import (EnsembleType, OUTPUT, UPPER_BOUND, LOWER_BOUND,
                         PREDICTION_RESULTS, PREDICTION_ID, SUMMARY,
-                        OPTIMIZATION, SAMPLE)
+                        OPTIMIZE, SAMPLE)
 from .ensemble import (Ensemble, EnsemblePrediction)
 from ..store import read_result
 
@@ -60,7 +60,7 @@ def read_from_csv(path: str,
 
 
 def read_ensemble_from_hdf5(filename: str,
-                            type: str = OPTIMIZATION,
+                            type: str = OPTIMIZE,
                             remove_burn_in: bool = True,
                             chain_slice: slice = None,
                             cutoff: float = np.inf,
@@ -84,13 +84,13 @@ def read_ensemble_from_hdf5(filename: str,
     """
     # TODO: add option HISTORY. Need to fix
     #  reading history from hdf5.
-    if type == OPTIMIZATION:
+    if type == OPTIMIZE:
         result = read_result(filename=filename,
                              profile=False,
                              sample=False)
-        return Ensemble.from_optimization(result=result,
-                                          cutoff=cutoff,
-                                          max_size=max_size)
+        return Ensemble.from_optimization_endpoints(result=result,
+                                                    cutoff=cutoff,
+                                                    max_size=max_size)
     elif type == SAMPLE:
         result = read_result(filename=filename,
                              profile=False,
@@ -99,10 +99,10 @@ def read_ensemble_from_hdf5(filename: str,
                                     remove_burn_in=remove_burn_in,
                                     chain_slice=chain_slice)
     else:
-        raise AssertionError('The type you provided was neither '
-                             '"sample" nor "optimization". Those are '
-                             'currently the only supported types. '
-                             'Please choose one of them.')
+        raise ValueError('The type you provided was neither '
+                         '"sample" nor "optimization". Those are '
+                         'currently the only supported types. '
+                         'Please choose one of them.')
 
 
 def read_from_df(dataframe: pd.DataFrame,

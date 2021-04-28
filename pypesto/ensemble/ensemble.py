@@ -372,7 +372,7 @@ class Ensemble:
         return Ensemble(x_vectors, **kwargs)
 
     @staticmethod
-    def from_optimization(
+    def from_optimization_endpoints(
             result: Result,
             cutoff: float = np.inf,
             max_size: int = np.inf,
@@ -396,9 +396,6 @@ class Ensemble:
         """
         x_vectors = []
         vector_tags = []
-        x_names = result.problem.x_names
-        lb = result.problem.lb_full
-        ub = result.problem.ub_full
 
         for start in result.optimize_result.list:
             # add the parameters from the next start as long as we
@@ -426,10 +423,10 @@ class Ensemble:
 
         x_vectors = np.stack(x_vectors, axis=1)
         return Ensemble(x_vectors=x_vectors,
-                        x_names=x_names,
+                        x_names=result.problem.x_names,
                         vector_tags=vector_tags,
-                        lower_bound=lb,
-                        upper_bound=ub,
+                        lower_bound=result.problem.lb_full,
+                        upper_bound=result.problem.ub_full,
                         **kwargs)
 
     @staticmethod
@@ -445,7 +442,8 @@ class Ensemble:
         Parameters
         ----------
         result:
-            A pyPESTO result that contains an optimization result with history recorded.
+            A pyPESTO result that contains an optimization result
+            with history recorded.
         cutoff:
             Exclude parameters from the optimization if the nllh
             is higher than the `cutoff`.
@@ -463,9 +461,10 @@ class Ensemble:
             logger.warning('The optimize result has no trace. The Ensemble '
                            'will automatically be created through '
                            'from_optimization().')
-            return Ensemble.from_optimization(result=result,
-                                              cutoff=cutoff,
-                                              max_size=max_size, **kwargs)
+            return Ensemble.from_optimization_endpoints(result=result,
+                                                        cutoff=cutoff,
+                                                        max_size=max_size,
+                                                        **kwargs)
         x_vectors = []
         vector_tags = []
         x_names = result.problem.x_names
@@ -497,22 +496,15 @@ class Ensemble:
             # calculate number of candidates
             n_cand = 0
             for iter_fval in reversed(trace_fval):
-                if iter_fval < cutoff:
-                    n_cand += 1
-                else:
+                if iter_fval > cutoff:
                     break
+                n_cand += 1
 
             # calculate distance between the vectors included in ensemble:
-            dist = math.floor((n_cand-1)/(max_per_start-1))
-
-            # add vectors to ensemble
-            if dist == 0:
-                x_vectors.append(trace_x[-1])
-                vector_tags.append((i, len(trace_x)))
-                continue
-            for i in range(max_per_start):
+            dist = max(math.floor(n_cand/max_per_start), 1)
+            for i in range(max(max_per_start, n_cand)):
                 x_vectors.append(trace_x[-1-i*dist])
-                vector_tags.append((i, len(trace_x)-i*dist))
+                vector_tags.append((i, len(trace_x)-1-i*dist))
 
         # raise a `ValueError` if there are no vectors within the ensemble
         if len(x_vectors) == 0:

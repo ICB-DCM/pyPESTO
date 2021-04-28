@@ -24,7 +24,7 @@ PREDICTION_ARRAYS = 'prediction_arrays'
 PREDICTION_SUMMARY = 'prediction_summary'
 
 HISTORY = 'history'
-OPTIMIZATION = 'optimization'
+OPTIMIZE = 'optimization'
 SAMPLE = 'sample'
 
 MEAN = 'mean'
