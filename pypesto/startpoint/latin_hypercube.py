@@ -67,7 +67,7 @@ def _latin_hypercube(n_starts: int,
         hypercube [i/n_starts, (i+1)/n_starts] should be chosen
         (`smooth==True`) or the midpoint of the interval (`smoth==False`).
     """
-    xs = np.nan * np.ones((n_starts, dim))
+    xs = np.empty((n_starts, dim))
 
     for i_dim in range(dim):
         xs[:, i_dim] = np.random.permutation(np.arange(n_starts))
