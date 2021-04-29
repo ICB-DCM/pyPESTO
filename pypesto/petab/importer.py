@@ -47,7 +47,10 @@ class PetabImporter(AmiciObjectBuilder):
         self.petab_problem = petab_problem
 
         if output_folder is None:
-            output_folder = _find_output_folder_name(self.petab_problem)
+            output_folder = _find_output_folder_name(
+                self.petab_problem,
+                model_name=model_name,
+            )
         self.output_folder = output_folder
 
         if model_name is None:
@@ -556,11 +559,14 @@ class PetabImporter(AmiciObjectBuilder):
             {petab.MEASUREMENT: petab.SIMULATION})
 
 
-def _find_output_folder_name(petab_problem: 'petab.Problem') -> str:
+def _find_output_folder_name(
+        petab_problem: 'petab.Problem',
+        model_name: str,
+) -> str:
     """
     Find a name for storing the compiled amici model in. If available,
-    use the sbml model name from the `petab_problem`, otherwise create
-    a unique name.
+    use the sbml model name from the `petab_problem` or the provided
+    `model_name` (latter is given priority), otherwise create a unique name.
     The folder will be located in the `PetabImporter.MODEL_BASE_DIR`
     subdirectory of the current directory.
     """
@@ -577,6 +583,9 @@ def _find_output_folder_name(petab_problem: 'petab.Problem') -> str:
 
     # try sbml model id
     sbml_model_id = petab_problem.sbml_model.getId()
+    if model_name is not None:
+        sbml_model_id = model_name
+
     if sbml_model_id:
         output_folder = os.path.abspath(
             os.path.join(PetabImporter.MODEL_BASE_DIR, sbml_model_id))
