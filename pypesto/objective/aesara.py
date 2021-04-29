@@ -10,7 +10,7 @@ import copy
 from .base import ObjectiveBase, ResultDict
 from .constants import MODE_FUN, FVAL, GRAD, HESS, RDATAS
 
-from typing import Tuple, Optional
+from typing import Tuple, Optional, Sequence
 
 try:
     import aesara
@@ -45,13 +45,14 @@ class AesaraObjective(ObjectiveBase):
                  objective: ObjectiveBase,
                  aet_x: TensorVariable,
                  aet_fun: TensorVariable,
-                 coeff: Optional[float] = 1.):
+                 coeff: Optional[float] = 1.,
+                 x_names: Sequence[str] = None):
         if not isinstance(objective, ObjectiveBase):
             raise TypeError('objective must be an ObjectiveBase instance')
         if not objective.check_mode(MODE_FUN):
             raise NotImplementedError(
                 f'objective must support mode={MODE_FUN}')
-        super().__init__(objective.x_names)
+        super().__init__(x_names)
         self.base_objective = objective
 
         self.aet_x = aet_x

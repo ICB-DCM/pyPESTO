@@ -27,6 +27,13 @@ class ObjectiveBase(abc.ABC):
     by this objective function. If maximization is to be performed, the sign
     should be flipped before creating the objective function.
 
+    Parameters
+    ----------
+    x_names:
+        Parameter names that can be optionally used in, e.g., history or
+        gradient checks
+
+
     Attributes
     ----------
 
