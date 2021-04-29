@@ -415,6 +415,7 @@ class Ensemble:
             default_value: float = None,
             mode: str = MODE_FUN,
             engine: Engine = None,
+            progress_bar: bool = True
     ) -> EnsemblePrediction:
         """
         Convenience function to run predictions for a full ensemble:
@@ -444,6 +445,9 @@ class Ensemble:
         engine:
             Parallelization engine. Defaults to sequential execution on a
             `SingleCoreEngine`.
+
+        progress_bar:
+            Whether to display a progress bar.
 
         Returns
         -------
@@ -489,7 +493,8 @@ class Ensemble:
         # Execute tasks and flatten chunked results.
         prediction_results = [
             prediction_result
-            for prediction_chunk in engine.execute(tasks)
+            for prediction_chunk in engine.execute(
+                tasks, progress_bar=progress_bar)
             for prediction_result in prediction_chunk
         ]
 
