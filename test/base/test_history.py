@@ -501,30 +501,31 @@ def test_hdf5_history_mp():
     with tempfile.TemporaryDirectory(dir=".") as tmpdirname:
         _, fn = tempfile.mkstemp(".hdf5", dir=f"{tmpdirname}")
 
-        history_options = pypesto.HistoryOptions(trace_record=True,
-                                                 storage_file=fn)
-        # optimize with history saved to hdf5 and SingleCoreEngine
-        result_hdf5_sc = pypesto.optimize.minimize(
+        history_options_mp = pypesto.HistoryOptions(trace_record=True,
+                                                    storage_file=fn)
+        history_options_mem = pypesto.HistoryOptions(trace_record=True)
+        # optimize with Memory History
+        result_hdf5_mem = pypesto.optimize.minimize(
             problem=problem1, optimizer=optimizer1,
-            n_starts=n_starts, history_options=history_options,
+            n_starts=n_starts, history_options=history_options_mem,
             engine=SingleCoreEngine()
         )
 
         # optimizing with history saved in hdf5 and MultiProcessEngine
         result_memory_mp = pypesto.optimize.minimize(
             problem=problem2, optimizer=optimizer2,
-            n_starts=n_starts, history_options=history_options,
+            n_starts=n_starts, history_options=history_options_mp,
             engine=MultiProcessEngine()
         )
 
         history_entries = [X, FVAL, GRAD, HESS, RES, SRES, CHI2, SCHI2]
-        assert len(result_hdf5_sc.optimize_result.list) == \
+        assert len(result_hdf5_mem.optimize_result.list) == \
             len(result_memory_mp.optimize_result.list)
         for mp_res in result_memory_mp.optimize_result.list:
-            for sp_res in result_hdf5_sc.optimize_result.list:
-                if mp_res['id'] == sp_res['id']:
+            for mem_res in result_hdf5_mem.optimize_result.list:
+                if mp_res['id'] == mem_res['id']:
                     for entry in history_entries:
-                        hdf5_entry_trace = getattr(sp_res['history'],
+                        hdf5_entry_trace = getattr(mem_res['history'],
                                                    f'get_{entry}_trace')()
                         for iteration in range(len(hdf5_entry_trace)):
                             # comparing nan and None difficult
