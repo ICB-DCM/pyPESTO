@@ -500,7 +500,7 @@ class Ensemble:
             indices = np.round(np.linspace(1, n_cand,
                                            np.min(max_per_start, n_cand)))
             x_vectors.extend([trace_x[-ind] for ind in indices])
-            vector_tags.extend([(i_MS,
+            vector_tags.extend([(i_ms,
                                  len(trace_x) - ind) for ind in indices])
 
         # raise a `ValueError` if there are no vectors within the ensemble
