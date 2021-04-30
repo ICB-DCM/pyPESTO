@@ -21,7 +21,7 @@ def latin_hypercube(**kwargs) -> np.ndarray:
     smooth:
         indicates if a (uniformly chosen) random starting point within the
         hypercube [i/n_starts, (i+1)/n_starts] should be chosen
-        (`smooth==True`) or the midpoint of the interval (`smoth==False`).
+        (True) or the midpoint of the interval (False).
     """
     # extract input
     n_starts = kwargs['n_starts']
