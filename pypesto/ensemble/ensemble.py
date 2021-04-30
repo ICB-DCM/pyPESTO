@@ -487,11 +487,11 @@ class Ensemble:
                         f'{max_per_start*n_starts} or decrease cutoff.')
             max_per_start = math.floor(max_size/n_starts)
 
-        for i in range(n_starts):
+        for i_start in range(n_starts):
             trace_x = \
-                result.optimize_result.list[i]['history'].get_x_trace()
+                result.optimize_result.list[i_start]['history'].get_x_trace()
             trace_fval = \
-                result.optimize_result.list[i]['history'].get_fval_trace()
+                result.optimize_result.list[i_start]['history'].get_fval_trace()
 
             # calculate number of candidates
             n_cand = 0
@@ -502,9 +502,9 @@ class Ensemble:
 
             # calculate distance between the vectors included in ensemble:
             dist = max(math.floor(n_cand/max_per_start), 1)
-            for i in range(max(max_per_start, n_cand)):
-                x_vectors.append(trace_x[-1-i*dist])
-                vector_tags.append((i, len(trace_x)-1-i*dist))
+            for i_iter in range(max(max_per_start, n_cand)):
+                x_vectors.append(trace_x[-1-i_iter*dist])
+                vector_tags.append((i_start, len(trace_x)-1-i_iter*dist))
 
         # raise a `ValueError` if there are no vectors within the ensemble
         if len(x_vectors) == 0:

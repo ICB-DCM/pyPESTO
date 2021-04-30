@@ -60,7 +60,7 @@ def read_from_csv(path: str,
 
 
 def read_ensemble_from_hdf5(filename: str,
-                            type: str = OPTIMIZE,
+                            input_type: str = OPTIMIZE,
                             remove_burn_in: bool = True,
                             chain_slice: slice = None,
                             cutoff: float = np.inf,
@@ -73,7 +73,7 @@ def read_ensemble_from_hdf5(filename: str,
     ----------
     filename:
         Name or path of the HDF5 file.
-    type:
+    input_type:
         Which type of ensemble to create. From History, from
         Optimization or from Sample.
 
@@ -84,14 +84,14 @@ def read_ensemble_from_hdf5(filename: str,
     """
     # TODO: add option HISTORY. Need to fix
     #  reading history from hdf5.
-    if type == OPTIMIZE:
+    if input_type == OPTIMIZE:
         result = read_result(filename=filename,
                              profile=False,
                              sample=False)
         return Ensemble.from_optimization_endpoints(result=result,
                                                     cutoff=cutoff,
                                                     max_size=max_size)
-    elif type == SAMPLE:
+    elif input_type == SAMPLE:
         result = read_result(filename=filename,
                              profile=False,
                              optimize=False)
