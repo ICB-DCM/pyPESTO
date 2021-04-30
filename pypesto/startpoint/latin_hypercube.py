@@ -19,7 +19,7 @@ def latin_hypercube(**kwargs) -> np.ndarray:
         upper bound.
 
     smooth:
-        indicates, if a (uniformly chosen) random starting point within the
+        indicates if a (uniformly chosen) random starting point within the
         hypercube [i/n_starts, (i+1)/n_starts] should be chosen
         (`smooth==True`) or the midpoint of the interval (`smoth==False`).
     """
