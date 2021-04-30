@@ -16,7 +16,7 @@ from pypesto import CsvHistory, HistoryOptions,\
 from pypesto.optimize.optimizer import read_result_from_file, OptimizerResult
 from pypesto.objective.constants import (
     X, FVAL, GRAD, HESS, RES, SRES, CHI2, SCHI2)
-from pypesto.engine import SingleCoreEngine, MultiProcessEngine
+from pypesto.engine import MultiProcessEngine
 
 from ..util import rosen_for_sensi, load_amici_objective
 
@@ -528,7 +528,7 @@ def test_hdf5_history_mp():
                         hdf5_entry_trace = getattr(mp_res['history'],
                                                    f'get_{entry}_trace')()
                         mem_entry_trace = getattr(mem_res['history'],
-                                                   f'get_{entry}_trace')()
+                                                  f'get_{entry}_trace')()
                         for iteration in range(len(hdf5_entry_trace)):
                             # comparing nan and None difficult
                             if hdf5_entry_trace[iteration] is None or np.isnan(
