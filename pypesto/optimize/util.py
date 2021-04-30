@@ -49,7 +49,7 @@ def check_hdf5_mp(
 
 def fill_hdf5_file(
     ret: list,
-    filename: str,
+    filename: str
 ) -> None:
     """
     Create links in `filename` to the
@@ -67,8 +67,6 @@ def fill_hdf5_file(
     with h5py.File(filename, mode='a') as f:
         for result in ret:
             id = result['id']
-            if f'history/{id}' in f:
-                del f[f'history/{id}']
             f[f'history/{id}'] = h5py.ExternalLink(
                 result['history'].file,
                 f'history/{id}'
