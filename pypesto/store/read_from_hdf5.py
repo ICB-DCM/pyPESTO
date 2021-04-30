@@ -264,9 +264,9 @@ class ProfileResultHDF5Reader:
 
 def read_result(filename: str,
                 problem: bool = True,
-                optimize: bool = True,
-                profile: bool = True,
-                sample: bool = True,
+                optimize: bool = False,
+                profile: bool = False,
+                sample: bool = False,
                 ) -> Result:
     """
     This is a function that saves the whole pypesto.Result object in an
@@ -290,6 +290,10 @@ def read_result(filename: str,
     result:
         Result object containing the results stored in HDF5 file.
     """
+    if not any([optimize, profile, sample]):
+        optimize = True
+        profile = True
+        sample = True
     result = Result()
 
     if problem:
