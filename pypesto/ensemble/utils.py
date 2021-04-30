@@ -69,7 +69,7 @@ def read_ensemble_from_hdf5(filename: str,
     """
     Create an ensemble from an HDF5 storage file.
 
-    Parameters:
+    Parameters
     ----------
     filename:
         Name or path of the HDF5 file.
@@ -98,7 +98,7 @@ def read_ensemble_from_hdf5(filename: str,
                                     chain_slice=chain_slice)
     else:
         raise ValueError('The type you provided was neither '
-                         '"sample" nor "optimization". Those are '
+                         f'"{SAMPLE}" nor "{OPTIMIZE}". Those are '
                          'currently the only supported types. '
                          'Please choose one of them.')
 

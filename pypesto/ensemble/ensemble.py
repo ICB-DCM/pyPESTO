@@ -416,7 +416,7 @@ class Ensemble:
         elif len(x_vectors) < max_size:
             logger.info(f'The ensemble contains {len(x_vectors)} parameter '
                         'vectors, which is less than the maximum size. If '
-                        'you want to include more vectors you can consider '
+                        'you want to include more vectors, you can consider '
                         'raising the cutoff value or including parameters '
                         'from the history with the `from_history` function.')
 
@@ -459,7 +459,7 @@ class Ensemble:
         if not result.optimize_result.list[0].history.options['trace_record']:
             logger.warning('The optimize result has no trace. The Ensemble '
                            'will automatically be created through '
-                           'from_optimization().')
+                           'from_optimization_endpoints().')
             return Ensemble.from_optimization_endpoints(result=result,
                                                         cutoff=cutoff,
                                                         max_size=max_size,
@@ -477,7 +477,7 @@ class Ensemble:
                 break
             n_starts += 1
 
-        if n_starts*max_per_start > max_size:
+        if n_starts * max_per_start > max_size:
             logger.info(f'The number of starts that can contribute an '
                         'ensemble vector multiplied with max_per_start '
                         'is higher than max_size. Thus we will lower '
@@ -488,12 +488,12 @@ class Ensemble:
 
         for i_MS in range(n_starts):
             trace_x = \
-                result.optimize_result.list[i_MS]['history'].get_x_trace()
+                result.optimize_result.list[i_ms]['history'].get_x_trace()
             trace_fval = \
-                result.optimize_result.list[i_MS]['history'].get_fval_trace()
+                result.optimize_result.list[i_ms]['history'].get_fval_trace()
 
-            # calculate number of candidates (argmax returns the indice right
-            # before the first time the fval is higher than the cutoff
+            # calculate number of candidates (argmax returns the index right
+            # before the first time the fval is higher than the cutoff)
             n_cand = np.diff(reversed(trace_fval) < cutoff).argmax() + 1
 
             # calculate distance between the vectors included in ensemble:
