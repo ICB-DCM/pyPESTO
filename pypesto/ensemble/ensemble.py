@@ -411,7 +411,7 @@ class Ensemble:
         # print a warning if there are no vectors within the ensemble
         if len(x_vectors) == 0:
             raise ValueError('The ensemble does not contain any vectors. '
-                             'Either the cutoff value was too small or the '
+                             'Either the cutoff value was too small\n or the '
                              'result.optimize_result object might be empty.')
         elif len(x_vectors) < max_size:
             logger.info(f'The ensemble contains {len(x_vectors)} parameter '
@@ -479,9 +479,9 @@ class Ensemble:
 
         if n_starts * max_per_start > max_size:
             logger.info(f'The number of starts that can contribute an '
-                        'ensemble vector multiplied with max_per_start '
+                        'ensemble vector multiplied with \nmax_per_start '
                         'is higher than max_size. Thus we will lower '
-                        'max_per_start. If you do not want this to '
+                        'max_per_start. If you \ndo not want this to '
                         'happen consider increasing max_size to '
                         f'{max_per_start*n_starts} or decrease cutoff.')
             max_per_start = np.floor(max_size/n_starts)
@@ -506,7 +506,7 @@ class Ensemble:
         # raise a `ValueError` if there are no vectors within the ensemble
         if len(x_vectors) == 0:
             raise ValueError('The ensemble does not contain any vectors. '
-                             'Either the `cutoff` value was too small or the '
+                             'Either the `cutoff` value was too \nsmall or the '
                              '`result.optimize_result` object might be empty.')
 
         x_vectors = np.stack(x_vectors, axis=1)
