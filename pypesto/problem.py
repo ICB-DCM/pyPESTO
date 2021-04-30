@@ -136,7 +136,7 @@ class Problem:
 
         self.startpoint_method = startpoint_method
 
-        if objective.x_names is not None:
+        if x_names is None and objective.x_names is not None:
             x_names = objective.x_names
         elif x_names is None:
             x_names = [f'x{j}' for j in range(0, self.dim_full)]
