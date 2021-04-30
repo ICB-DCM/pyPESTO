@@ -1,5 +1,4 @@
 import logging
-import math
 from functools import partial
 import numpy as np
 import pandas as pd
@@ -430,7 +429,7 @@ class Ensemble:
                         **kwargs)
 
     @staticmethod
-    def from_history(
+    def from_optimization_history(
             result: Result,
             cutoff: float = np.inf,
             max_size: int = np.inf,
@@ -485,7 +484,7 @@ class Ensemble:
                         'max_per_start. If you do not want this to '
                         'happen consider increasing max_size to '
                         f'{max_per_start*n_starts} or decrease cutoff.')
-            max_per_start = math.floor(max_size/n_starts)
+            max_per_start = np.floor(max_size/n_starts)
 
         for i_start in range(n_starts):
             trace_x = \
@@ -493,18 +492,14 @@ class Ensemble:
             trace_fval = \
                 result.optimize_result.list[i_start]['history'].get_fval_trace()
 
-            # calculate number of candidates
-            n_cand = 0
-            for iter_fval in reversed(trace_fval):
-                if iter_fval > cutoff:
-                    break
-                n_cand += 1
+            # calculate number of candidates (argmax returns the indice right
+            # before the first time the fval is higher than the cutoff
+            n_cand = np.diff(reversed(trace_fval) < cutoff).argmax() + 1
 
             # calculate distance between the vectors included in ensemble:
-            dist = max(math.floor(n_cand/max_per_start), 1)
-            for i_iter in range(max(max_per_start, n_cand)):
-                x_vectors.append(trace_x[-1-i_iter*dist])
-                vector_tags.append((i_start, len(trace_x)-1-i_iter*dist))
+            indices = np.round(np.linspace(1, n_cand, np.min(max_per_start, n_cand)))
+            x_vectors.extend([trace_x[-ind] for ind in indices])
+            x_tags.extend([(i_start, len(trace_x) - ind) for ind in indices])
 
         # raise a `ValueError` if there are no vectors within the ensemble
         if len(x_vectors) == 0:

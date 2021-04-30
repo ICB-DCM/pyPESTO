@@ -86,15 +86,13 @@ def read_ensemble_from_hdf5(filename: str,
     #  reading history from hdf5.
     if input_type == OPTIMIZE:
         result = read_result(filename=filename,
-                             profile=False,
-                             sample=False)
+                             optimize=True)
         return Ensemble.from_optimization_endpoints(result=result,
                                                     cutoff=cutoff,
                                                     max_size=max_size)
     elif input_type == SAMPLE:
         result = read_result(filename=filename,
-                             profile=False,
-                             optimize=False)
+                             sample=True)
         return Ensemble.from_sample(result=result,
                                     remove_burn_in=remove_burn_in,
                                     chain_slice=chain_slice)
