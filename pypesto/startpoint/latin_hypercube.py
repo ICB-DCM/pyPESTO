@@ -8,20 +8,16 @@ def latin_hypercube(**kwargs) -> np.ndarray:
 
     Parameters
     ----------
-
     n_starts:
         number of starting points to be sampled.
-
     lb:
         lower bound.
-
     ub:
         upper bound.
-
     smooth:
         indicates if a (uniformly chosen) random starting point within the
-        hypercube [i/n_starts, (i+1)/n_starts] should be chosen
-        (True) or the midpoint of the interval (False).
+        hypercube [i/n_starts, (i+1)/n_starts] should be chosen (True) or
+        the midpoint of the interval (False).
     """
     # extract input
     n_starts = kwargs['n_starts']
@@ -47,9 +43,11 @@ def latin_hypercube(**kwargs) -> np.ndarray:
     return xs
 
 
-def _latin_hypercube(n_starts: int,
-                     dim: int,
-                     smooth: bool = True) -> np.ndarray:
+def _latin_hypercube(
+        n_starts: int,
+        dim: int,
+        smooth: bool = True
+) -> np.ndarray:
     """
     Generate simple latin hypercube points in [0, 1].
 
