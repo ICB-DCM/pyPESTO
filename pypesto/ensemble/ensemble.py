@@ -486,7 +486,7 @@ class Ensemble:
                         f'{max_per_start*n_starts} or decrease cutoff.')
             max_per_start = np.floor(max_size/n_starts)
 
-        for i_MS in range(n_starts):
+        for i_ms in range(n_starts):
             trace_x = \
                 result.optimize_result.list[i_ms]['history'].get_x_trace()
             trace_fval = \
