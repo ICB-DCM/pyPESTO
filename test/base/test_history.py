@@ -495,8 +495,8 @@ def test_hdf5_history_mp():
     problem2 = pypesto.Problem(objective=objective2, lb=lb, ub=ub,
                                x_guesses=startpoints)
 
-    optimizer1 = pypesto.optimize.ScipyOptimizer(options={'maxiter': 100})
-    optimizer2 = pypesto.optimize.ScipyOptimizer(options={'maxiter': 100})
+    optimizer1 = pypesto.optimize.ScipyOptimizer(options={'maxiter': 10})
+    optimizer2 = pypesto.optimize.ScipyOptimizer(options={'maxiter': 10})
 
     with tempfile.TemporaryDirectory(dir=".") as tmpdirname:
         _, fn = tempfile.mkstemp(".hdf5", dir=f"{tmpdirname}")
@@ -508,7 +508,7 @@ def test_hdf5_history_mp():
         result_hdf5_mem = pypesto.optimize.minimize(
             problem=problem1, optimizer=optimizer1,
             n_starts=n_starts, history_options=history_options_mem,
-            engine=SingleCoreEngine()
+            engine=MultiProcessEngine()
         )
 
         # optimizing with history saved in hdf5 and MultiProcessEngine
@@ -525,7 +525,9 @@ def test_hdf5_history_mp():
             for mem_res in result_hdf5_mem.optimize_result.list:
                 if mp_res['id'] == mem_res['id']:
                     for entry in history_entries:
-                        hdf5_entry_trace = getattr(mem_res['history'],
+                        hdf5_entry_trace = getattr(mp_res['history'],
+                                                   f'get_{entry}_trace')()
+                        mem_entry_trace = getattr(mem_res['history'],
                                                    f'get_{entry}_trace')()
                         for iteration in range(len(hdf5_entry_trace)):
                             # comparing nan and None difficult
@@ -533,6 +535,5 @@ def test_hdf5_history_mp():
                                     hdf5_entry_trace[iteration]).all():
                                 continue
                             np.testing.assert_array_equal(
-                                getattr(mp_res['history'],
-                                        f'get_{entry}_trace')()[iteration],
+                                mem_entry_trace[iteration],
                                 hdf5_entry_trace[iteration])
