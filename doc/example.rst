@@ -16,6 +16,7 @@ The following examples cover typical use cases and should help get a better idea
    example/sampling_diagnostics.ipynb
    example/synthetic_data.ipynb
    example/prior_definition.ipynb
+   example/hdf5_storage.ipynb
    example/model_selection.ipynb
 
 Download the examples as notebooks
@@ -31,6 +32,7 @@ Download the examples as notebooks
 * :download:`Sampling diagnostics <example/sampling_diagnostics.ipynb>`
 * :download:`Synthetic data <example/synthetic_data.ipynb>`
 * :download:`Prior definition <example/prior_definition.ipynb>`
+* :download:`hdf5 storage <example/hdf5_storage.ipynb>`
 * :download:`Model selection <example/model_selection.ipynb>`
 
 .. Note::

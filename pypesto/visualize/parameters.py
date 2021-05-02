@@ -349,9 +349,9 @@ def handle_inputs(
 
     # get bounds
     if lb is None:
-        lb = result.problem.lb
+        lb = result.problem.lb_full
     if ub is None:
-        ub = result.problem.ub
+        ub = result.problem.ub_full
 
     # get labels
     x_labels = result.problem.x_names

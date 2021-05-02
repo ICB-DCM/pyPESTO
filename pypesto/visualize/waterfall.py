@@ -93,7 +93,6 @@ def waterfall(results: Union[Result, Sequence[Result]],
 
     # apply changes specified be the user to the axis object
     ax = handle_options(ax, max_len_fvals, refs, y_limits, offset_y)
-
     return ax
 
 
@@ -146,6 +145,7 @@ def waterfall_lowlevel(fvals, scale_y='log10', offset_y=0., ax=None,
     # remove nan or inf values in fvals
     _, fvals = delete_nan_inf(fvals)
 
+    fvals.sort()
     n_fvals = len(fvals)
     start_ind = range(n_fvals)
 
@@ -153,9 +153,6 @@ def waterfall_lowlevel(fvals, scale_y='log10', offset_y=0., ax=None,
     # note: this has to happen before sorting
     # to get the same colors in different plots
     colors = assign_colors(fvals, colors=colors)
-
-    # sort
-    indices = sorted(range(n_fvals), key=lambda j: fvals[j])
 
     # plot
     ax.xaxis.set_major_locator(MaxNLocator(integer=True))
@@ -168,32 +165,31 @@ def waterfall_lowlevel(fvals, scale_y='log10', offset_y=0., ax=None,
     # plot points
     for j in range(n_fvals):
         # parse data for plotting
-        j_fval = indices[j]
-        color = colors[j_fval]
-        fval = fvals[j_fval]
+        color = colors[j]
+        fval = fvals[j]
         if j == 0:
             tmp_legend = legend_text
         else:
             tmp_legend = None
 
         # line plot (linear or logarithmic)
-        y_min, y_max = ax.get_ylim()
         if scale_y == 'log10':
             ax.semilogy(j, fval, color=color,
                         marker='o', label=tmp_legend, alpha=1.)
-
-            # check if y-axis has a reasonable scale
-            if np.log10(y_max) - np.log10(y_min) < 1.:
-                y_mean = 0.5 * (np.log10(y_min) + np.log10(y_max))
-                plt.ylim((10.**(y_mean - 0.5), 10.**(y_mean + 0.5)))
         else:
             ax.plot(j, fval, color=color,
                     marker='o', label=tmp_legend, alpha=1.)
 
-            # check if y-axis has a reasonable scale
-            if y_max - y_min < 1.:
-                y_mean = 0.5 * (y_min + y_max)
-                plt.ylim((y_mean - 0.5, y_mean + 0.5))
+    # check if y-axis has a reasonable scale
+    y_min, y_max = ax.get_ylim()
+    if scale_y == 'log10':
+        if np.log10(y_max) - np.log10(y_min) < 1.:
+            y_mean = 0.5 * (np.log10(y_min) + np.log10(y_max))
+            plt.ylim((10. ** (y_mean - 0.5), 10. ** (y_mean + 0.5)))
+    else:
+        if y_max - y_min < 1.:
+            y_mean = 0.5 * (y_min + y_max)
+            plt.ylim((y_mean - 0.5, y_mean + 0.5))
 
     # labels
     ax.set_xlabel('Ordered optimizer run')
@@ -248,17 +244,17 @@ def process_offset_for_list(
     offset_y:
         offset for the y-axis
     """
-    min_val = 0.0
+    min_val = np.inf
     fvals_all = []
     for result in results:
         fvals = np.asarray([
             np.array(result.optimize_result.get_for_key('fval'))
         ])
         if start_indices is None:
-            start_indices = np.array(range(len(fvals)))
+            start_indices = np.array(range(fvals.size))
         else:
-            start_indices = process_start_indices(start_indices, len(fvals))
-        fvals = fvals[start_indices]
+            start_indices = process_start_indices(start_indices, fvals.size)
+        fvals = fvals[:, start_indices]
         # if none of the fvals are finite, set default value to zero as
         # np.nanmin will error for an empty array
         if np.isfinite(fvals).any():

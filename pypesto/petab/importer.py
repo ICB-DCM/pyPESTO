@@ -9,12 +9,14 @@ from typing import Iterable, List, Optional, Sequence, Union, Callable
 
 from ..problem import Problem
 from ..objective import AmiciObjective, AmiciObjectBuilder, AggregatedObjective
-from ..prediction import AmiciPredictor
+from ..predict import AmiciPredictor, PredictionResult
+from ..predict.constants import CONDITION_SEP
 from ..objective.priors import NegLogParameterPriors, \
     get_parameter_prior_dict
 
 try:
     import petab
+    from petab.C import PREEQUILIBRATION_CONDITION_ID, SIMULATION_CONDITION_ID
     import amici
     import amici.petab_import
     import amici.petab_objective
@@ -45,7 +47,10 @@ class PetabImporter(AmiciObjectBuilder):
         self.petab_problem = petab_problem
 
         if output_folder is None:
-            output_folder = _find_output_folder_name(self.petab_problem)
+            output_folder = _find_output_folder_name(
+                self.petab_problem,
+                model_name=model_name,
+            )
         self.output_folder = output_folder
 
         if model_name is None:
@@ -268,29 +273,38 @@ class PetabImporter(AmiciObjectBuilder):
 
         return obj
 
-    def create_prediction(self,
-                          objective: AmiciObjective = None,
-                          post_processor: Union[Callable, None] = None,
-                          post_processor_sensi: Union[Callable, None] = None,
-                          post_processor_time: Union[Callable, None] = None,
-                          max_chunk_size: Union[int, None] = None,
-                          observable_ids: Sequence[str] = None
-                          ) -> AmiciPredictor:
-        """Create a :class:`pypesto.prediction.AmiciPredictor`.
+    def create_predictor(
+            self,
+            objective: AmiciObjective = None,
+            amici_output_fields: Sequence[str] = None,
+            post_processor: Union[Callable, None] = None,
+            post_processor_sensi: Union[Callable, None] = None,
+            post_processor_time: Union[Callable, None] = None,
+            max_chunk_size: Union[int, None] = None,
+            output_ids: Sequence[str] = None,
+            condition_ids: Sequence[str] = None,
+    ) -> AmiciPredictor:
+        """Create a :class:`pypesto.predict.AmiciPredictor`.
+
+        The `AmiciPredictor` facilitates generation of predictions from
+        parameter vectors.
 
         Parameters
         ----------
         objective:
             An objective object, which will be used to get model simulations
+        amici_output_fields:
+            keys that exist in the return data object from AMICI, which should
+            be available for the post-processors
         post_processor:
             A callable function which applies postprocessing to the simulation
-            results. Default are the observables of the amici model.
+            results. Default are the observables of the AMICI model.
             This method takes a list of ndarrays (as returned in the field
             ['y'] of amici ReturnData objects) as input.
         post_processor_sensi:
             A callable function which applies postprocessing to the
             sensitivities of the simulation results. Default are the
-            observable sensitivities of the amici model.
+            observable sensitivities of the AMICI model.
             This method takes two lists of ndarrays (as returned in the
             fields ['y'] and ['sy'] of amici ReturnData objects) as input.
         post_processor_time:
@@ -306,30 +320,51 @@ class PetabImporter(AmiciObjectBuilder):
             should be simulated at a time.
             Default is 0 meaning that all conditions will be simulated.
             Other values are only applicable, if an output file is specified.
-        observable_ids:
-            IDs of observables, if post-processing is used
+        output_ids:
+            IDs of outputs, if post-processing is used
+        condition_ids:
+            IDs of conditions, if post-processing is used
 
         Returns
         -------
-        prediction:
-            A :class:`pypesto.prediction.AmiciPredictor` for the model, using
-            the observables of the Amici model and the timepoints from the
+        predictor:
+            A :class:`pypesto.predict.AmiciPredictor` for the model, using
+            the outputs of the AMICI model and the timepoints from the
             PEtab data
         """
         # if the user didn't pass an objective function, we create it first
         if objective is None:
             objective = self.create_objective()
 
+        # create a identifiers of preequilibration and simulation condition ids
+        # which can then be stored in the prediction result
+        edata_conditions = objective.amici_object_builder.petab_problem.\
+            get_simulation_conditions_from_measurement_df()
+        if PREEQUILIBRATION_CONDITION_ID not in list(edata_conditions.columns):
+            preeq_dummy = [''] * edata_conditions.shape[0]
+            edata_conditions[PREEQUILIBRATION_CONDITION_ID] = preeq_dummy
+        edata_conditions.drop_duplicates(inplace=True)
+
+        if condition_ids is None:
+            condition_ids = [
+                edata_conditions.loc[id, PREEQUILIBRATION_CONDITION_ID] +
+                CONDITION_SEP + edata_conditions.loc[id,
+                                                     SIMULATION_CONDITION_ID]
+                for id in edata_conditions.index
+            ]
+
         # wrap around AmiciPredictor
-        prediction = AmiciPredictor(
+        predictor = AmiciPredictor(
             amici_objective=objective,
+            amici_output_fields=amici_output_fields,
             post_processor=post_processor,
             post_processor_sensi=post_processor_sensi,
             post_processor_time=post_processor_time,
             max_chunk_size=max_chunk_size,
-            observable_ids=observable_ids)
+            output_ids=output_ids,
+            condition_ids=condition_ids)
 
-        return prediction
+        return predictor
 
     def create_prior(self) -> NegLogParameterPriors:
         """
@@ -475,12 +510,63 @@ class PetabImporter(AmiciObjectBuilder):
         return self.rdatas_to_measurement_df(rdatas, model).rename(
             {petab.MEASUREMENT: petab.SIMULATION})
 
+    def prediction_to_petab_measurement_df(
+            self,
+            prediction: PredictionResult,
+            predictor: AmiciPredictor = None
+    ) -> pd.DataFrame:
+        """
+        If a PEtab problem is simulated without post-processing, then the
+        result can be cast into a PEtab measurement or simulation dataframe
 
-def _find_output_folder_name(petab_problem: 'petab.Problem') -> str:
+        Parameters
+        ----------
+        prediction:
+            A prediction result as produced by an AmiciPredictor
+        predictor:
+            The AmiciPredictor function
+
+        Returns
+        -------
+        measurement_df:
+            A dataframe built from the rdatas in the format as in
+            self.petab_problem.measurement_df.
+        """
+        # create rdata-like dicts from the prediction result
+        rdatas = []
+        for condition in prediction.conditions:
+            rdatas.append({'t': condition.timepoints,
+                           'y': condition.output})
+
+        # add an AMICI model, if possible
+        model = None
+        if predictor is not None:
+            model = predictor.amici_objective.amici_model
+
+        return self.rdatas_to_measurement_df(rdatas, model)
+
+    def prediction_to_petab_simulation_df(
+            self,
+            prediction: PredictionResult,
+            predictor: AmiciPredictor = None
+    ) -> pd.DataFrame:
+        """Same as `prediction_to_petab_measurement_df`, except a PEtab
+        simulation dataframe is created, i.e. the measurement column label is
+        adjusted.
+        """
+        return self.prediction_to_petab_measurement_df(
+            prediction, predictor).rename(
+            {petab.MEASUREMENT: petab.SIMULATION})
+
+
+def _find_output_folder_name(
+        petab_problem: 'petab.Problem',
+        model_name: str,
+) -> str:
     """
     Find a name for storing the compiled amici model in. If available,
-    use the sbml model name from the `petab_problem`, otherwise create
-    a unique name.
+    use the sbml model name from the `petab_problem` or the provided
+    `model_name` (latter is given priority), otherwise create a unique name.
     The folder will be located in the `PetabImporter.MODEL_BASE_DIR`
     subdirectory of the current directory.
     """
@@ -497,6 +583,9 @@ def _find_output_folder_name(petab_problem: 'petab.Problem') -> str:
 
     # try sbml model id
     sbml_model_id = petab_problem.sbml_model.getId()
+    if model_name is not None:
+        sbml_model_id = model_name
+
     if sbml_model_id:
         output_folder = os.path.abspath(
             os.path.join(PetabImporter.MODEL_BASE_DIR, sbml_model_id))

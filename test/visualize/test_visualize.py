@@ -1,13 +1,19 @@
+import functools
 import numpy as np
 import scipy.optimize as so
 import matplotlib.pyplot as plt
 import pytest
+import os
+import petab
 
 import pypesto
+import pypesto.petab
 import pypesto.optimize as optimize
+import pypesto.predict as predict
 import pypesto.profile as profile
 import pypesto.sample as sample
 import pypesto.visualize as visualize
+import pypesto.ensemble as ensemble
 
 
 def close_fig(fun):
@@ -24,25 +30,53 @@ def close_fig(fun):
 # Define some helper functions, to have the test code more readable
 
 
-def create_bounds():
+def create_bounds(n_parameters: int = 2):
     # define bounds for a pypesto problem
-    lb = -7 * np.ones((1, 2))
-    ub = 7 * np.ones((1, 2))
+    lb = -7 * np.ones((1, n_parameters))
+    ub = 7 * np.ones((1, n_parameters))
 
     return lb, ub
 
 
-def create_problem():
+def create_problem(n_parameters: int = 2):
     # define a pypesto objective
     objective = pypesto.Objective(fun=so.rosen,
                                   grad=so.rosen_der,
                                   hess=so.rosen_hess)
 
     # define a pypesto problem
-    (lb, ub) = create_bounds()
+    (lb, ub) = create_bounds(n_parameters)
     problem = pypesto.Problem(objective=objective, lb=lb, ub=ub)
 
     return problem
+
+
+def create_petab_problem():
+    current_path = os.path.dirname(os.path.realpath(__file__))
+    dir_path = os.path.abspath(os.path.join(current_path,
+                                            '..', '..',
+                                            'doc', 'example'))
+
+    # import to petab
+    petab_problem = petab.Problem.from_yaml(
+        dir_path + "/conversion_reaction/conversion_reaction.yaml")
+    # import to pypesto
+    importer = pypesto.petab.PetabImporter(petab_problem)
+    # create problem
+    problem = importer.create_problem()
+
+    return problem
+
+
+def sample_petab_problem():
+    # create problem
+    problem = create_petab_problem()
+
+    sampler = sample.AdaptiveMetropolisSampler()
+    result = sample.sample(problem, n_samples=1000,
+                           sampler=sampler,
+                           x0=np.array([3, -4]))
+    return result
 
 
 def create_optimization_result():
@@ -143,6 +177,29 @@ def create_plotting_options():
     ref_point = visualize.create_references(ref4)
 
     return ref1, ref2, ref3, ref4, ref_point
+
+
+def post_processor(
+        amici_outputs,
+        output_type,
+        output_ids,
+):
+    """An ensemble prediction post-processor.
+
+    This post_processor will transform the output of the simulation tool such
+    that the output is compatible with other methods, such as plotting
+    routines.
+    """
+    outputs = [
+        amici_output[output_type]
+        if amici_output[predict.constants.AMICI_STATUS] == 0
+        else np.full(
+            (len(amici_output[predict.constants.AMICI_T]), len(output_ids)),
+            np.nan
+        )
+        for amici_output in amici_outputs
+    ]
+    return outputs
 
 
 @close_fig
@@ -316,6 +373,86 @@ def test_parameters_hist():
 
     visualize.parameter_hist(result_1, 'x1')
     visualize.parameter_hist(result_1, 'x1', start_indices=list(range(10)))
+
+
+# @close_fig
+def test_ensemble_dimension_reduction():
+    # creates a test problem
+    problem = create_problem(n_parameters=20)
+
+    # =========================================================================
+    # test ensemble identifiability if some bounds are hit and some aren't
+    my_ensemble = []
+    # some magical numbers which create a reasonable plot. Please don't change!
+    std = (1, 1, 2, 2, 2.5, 3, 3, 4, 5, 7, 6, 6, 10, 8, 10, 15, 15, 25, 35, 50)
+    offset = (1, 1, 0, 0, -1, -1, -7, -7, 5, 4,
+              -10, -10, -12, 0, 1, -13, 0, -15, -18, -20)
+    # create a collection/an ensemble based on these magic numbers
+    for ip in range(len(std)):
+        my_ensemble.append(std[ip] * np.random.rand(100) + offset[ip])
+    my_ensemble = ensemble.Ensemble(np.array(my_ensemble),
+                                    lower_bound=problem.lb,
+                                    upper_bound=problem.ub)
+
+    # test plotting from a collection object
+    umap_components, umap_embedding = \
+        ensemble.get_umap_representation_parameters(my_ensemble,
+                                                    n_components=3)
+
+    # test call via high-level routine
+    visualize.projection_scatter_umap(umap_components, components=(0, 1, 2))
+
+    # test call via low-level routine 1
+    visualize.ensemble_crosstab_scatter_lowlevel(
+        umap_components, component_labels=('A', 'B', 'C'))
+
+    pca_components, pca_object = \
+        ensemble.get_pca_representation_parameters(
+            my_ensemble, rescale_data=True, n_components=6)
+
+    # test call via high-level routine
+    visualize.projection_scatter_pca(pca_components, components=range(4))
+    visualize.projection_scatter_pca(pca_components)
+
+    # test call via lowlevel routine
+    visualize.ensemble_scatter_lowlevel(pca_components[:, 0:2])
+
+
+@close_fig
+def test_ensemble_identifiability():
+    # creates a test problem
+    problem = create_problem(n_parameters=100)
+
+    # =========================================================================
+    # test ensemble identifiability if some bounds are hit and some aren't
+    my_ensemble = []
+    # some magical numbers which create a reasonable plot. Please don't change!
+    std = (1, 1, 2, 2, 2.5, 3, 3, 4, 5, 7, 6, 6, 10, 8, 10, 15, 15, 25, 35, 50)
+    offset = (1, 1, 0, 0, -1, -1, -7, -7, 5, 4,
+              -10, -10, -12, 0, 1, -13, 0, -15, -18, -20)
+    # create a collection/an ensemble based on these magic numbers
+    for _ in range(5):
+        for ip in range(len(std)):
+            my_ensemble.append(std[ip] * np.random.rand(500) + offset[ip])
+    my_ensemble = np.array(my_ensemble)
+    my_ensemble = ensemble.Ensemble(my_ensemble,
+                                    lower_bound=problem.lb,
+                                    upper_bound=problem.ub)
+
+    # test plotting from a collection object
+    visualize.ensemble_identifiability(my_ensemble)
+
+    # =========================================================================
+    # test ensemble identifiability if no bounds are hit
+    # create an ensemble within tight bounds
+    my_ensemble = [(1 + np.cos(ix)**2) * np.random.rand(500) - 1. + np.sin(ix)
+                   for ix in range(100)]
+    my_ensemble = ensemble.Ensemble(np.array(my_ensemble),
+                                    lower_bound=problem.lb,
+                                    upper_bound=problem.ub)
+
+    # test plotting from a collection object
+    visualize.ensemble_identifiability(my_ensemble)
 
 
 @close_fig
@@ -657,22 +794,22 @@ def create_sampling_result():
 
 
 @close_fig
-def test_sampling_fval_trace():
-    """Test pypesto.visualize.sampling_fval_trace"""
+def test_sampling_fval_traces():
+    """Test pypesto.visualize.sampling_fval_traces"""
     result = create_sampling_result()
-    visualize.sampling_fval_trace(result)
+    visualize.sampling_fval_traces(result)
     # call with custom arguments
-    visualize.sampling_fval_trace(
+    visualize.sampling_fval_traces(
         result, i_chain=1, stepsize=5, size=(10, 10))
 
 
 @close_fig
-def test_sampling_parameters_trace():
-    """Test pypesto.visualize.sampling_parameters_trace"""
+def test_sampling_parameter_traces():
+    """Test pypesto.visualize.sampling_parameter_traces"""
     result = create_sampling_result()
-    visualize.sampling_parameters_trace(result)
+    visualize.sampling_parameter_traces(result)
     # call with custom arguments
-    visualize.sampling_parameters_trace(
+    visualize.sampling_parameter_traces(
         result, i_chain=1, stepsize=5, size=(10, 10),
         use_problem_bounds=False)
 
@@ -699,3 +836,56 @@ def test_sampling_1d_marginals():
     visualize.sampling_1d_marginals(result, plot_type='hist')
     visualize.sampling_1d_marginals(
         result, plot_type='kde', bw='silverman')
+
+
+@close_fig
+def test_sampling_parameter_cis():
+    """Test pypesto.visualize.sampling_parameter_cis"""
+    result = create_sampling_result()
+    visualize.sampling_parameter_cis(result)
+    # call with custom arguments
+    visualize.sampling_parameter_cis(
+        result, alpha=[99, 68], step=0.1, size=(10, 10))
+
+
+@close_fig
+def test_sampling_prediction_trajectories():
+    """Test pypesto.visualize.sampling_prediction_trajectories"""
+    credibility_interval_levels = [99, 68]
+    result = sample_petab_problem()
+    post_processor_amici_x = functools.partial(
+        post_processor,
+        output_type=predict.constants.AMICI_X,
+        output_ids=result.problem.objective.amici_model.getStateIds(),
+    )
+    predictor = predict.AmiciPredictor(
+        result.problem.objective,
+        post_processor=post_processor_amici_x,
+        output_ids=result.problem.objective.amici_model.getStateIds(),
+    )
+
+    sample_ensemble = ensemble.Ensemble.from_sample(
+        result,
+        x_names=result.problem.x_names,
+        ensemble_type=ensemble.EnsembleType.sample,
+        lower_bound=result.problem.lb,
+        upper_bound=result.problem.ub,
+    )
+
+    ensemble_prediction = sample_ensemble.predict(
+        predictor,
+        prediction_id=predict.constants.AMICI_X,
+    )
+
+    # Plot by
+    visualize.sampling_prediction_trajectories(
+        ensemble_prediction,
+        levels=credibility_interval_levels,
+        groupby=predict.constants.CONDITION,
+    )
+    visualize.sampling_prediction_trajectories(
+        ensemble_prediction,
+        levels=credibility_interval_levels,
+        size=(10, 10),
+        groupby=predict.constants.OUTPUT,
+    )

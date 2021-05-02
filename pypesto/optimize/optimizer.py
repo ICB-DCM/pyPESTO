@@ -13,9 +13,9 @@ from .result import OptimizerResult
 from ..objective.constants import MODE_FUN, FVAL, GRAD
 
 try:
-    import ipopt
+    import cyipopt
 except ImportError:
-    ipopt = None
+    cyipopt = None
 
 try:
     import dlib
@@ -33,6 +33,11 @@ except ImportError:
     cma = None
 
 try:
+    import pyswarms
+except ImportError:
+    pyswarms = None
+
+try:
     import nlopt
 except ImportError:
     nlopt = None
@@ -41,6 +46,7 @@ try:
     import fides
 except ImportError:
     fides = None
+
 
 EXITFLAG_LOADED_FROM_FILE = -99
 
@@ -284,6 +290,9 @@ def check_finite_bounds(lb, ub):
 class ScipyOptimizer(Optimizer):
     """
     Use the SciPy optimizers.
+    Find details on the optimizer and configuration options at:
+    https://docs.scipy.org/doc/scipy/reference/generated/scipy.\
+        optimize.minimize.html#scipy.optimize.minimize
     """
 
     def __init__(self,
@@ -305,11 +314,11 @@ class ScipyOptimizer(Optimizer):
     @time_decorator
     @history_decorator
     def minimize(
-            self,
-            problem: Problem,
-            x0: np.ndarray,
-            id: str,
-            history_options: HistoryOptions = None,
+        self,
+        problem: Problem,
+        x0: np.ndarray,
+        id: str,
+        history_options: HistoryOptions = None,
     ) -> OptimizerResult:
         lb = problem.lb
         ub = problem.ub
@@ -335,6 +344,7 @@ class ScipyOptimizer(Optimizer):
                 ls_options['verbose'] = 2 if 'disp' in ls_options.keys() \
                                              and ls_options['disp'] else 0
                 ls_options.pop('disp', None)
+                ls_options['max_nfev'] = ls_options.pop('maxiter', None)
             else:
                 ls_options = {}
 
@@ -345,7 +355,8 @@ class ScipyOptimizer(Optimizer):
                 method=ls_method,
                 jac=jac,
                 bounds=bounds,
-                tr_solver='exact',
+                tr_solver=ls_options.pop('tr_solver',
+                                         'lsmr' if len(x0) > 1 else 'exact'),
                 loss='linear',
                 **ls_options
             )
@@ -421,7 +432,7 @@ class ScipyOptimizer(Optimizer):
         return re.match(r'(?i)^(ls_)', self.method)
 
     def get_default_options(self):
-        if self.is_least_squares:
+        if self.is_least_squares():
             options = {'max_nfev': 1000, 'disp': False}
         else:
             options = {'maxiter': 1000, 'disp': False}
@@ -437,7 +448,7 @@ class IpoptOptimizer(Optimizer):
         Parameters
         ----------
         options:
-            Options are directly passed on to `ipopt.minimize_ipopt`.
+            Options are directly passed on to `cyipopt.minimize_ipopt`.
         """
         super().__init__()
         self.options = options
@@ -453,7 +464,7 @@ class IpoptOptimizer(Optimizer):
             history_options: HistoryOptions = None,
     ) -> OptimizerResult:
 
-        if ipopt is None:
+        if cyipopt is None:
             raise ImportError(
                 "This optimizer requires an installation of ipopt. You can "
                 "install ipopt via `pip install ipopt`."
@@ -463,7 +474,7 @@ class IpoptOptimizer(Optimizer):
 
         bounds = np.array([problem.lb, problem.ub]).T
 
-        ret = ipopt.minimize_ipopt(
+        ret = cyipopt.minimize_ipopt(
             fun=objective.get_fval,
             x0=x0,
             method=None,  # ipopt does not use this argument for anything
@@ -660,6 +671,161 @@ class CmaesOptimizer(Optimizer):
         return False
 
 
+class ScipyDifferentialEvolutionOptimizer(Optimizer):
+    """
+    Global optimization using scipy's differential evolution optimizer.
+    Package homepage: https://docs.scipy.org/doc/scipy/reference/generated\
+        /scipy.optimize.differential_evolution.html
+
+    Parameters
+    ----------
+    options:
+        Optimizer options that are directly passed on to scipy's optimizer.
+
+
+    Examples
+    --------
+    Arguments that can be passed to options:
+
+    maxiter:
+        used to calculate the maximal number of funcion evaluations by
+        maxfevals = (maxiter + 1) * popsize * len(x)
+        Default: 100
+    popsize:
+        population size, default value 15
+    """
+
+    def __init__(self, options: Dict = None):
+        super().__init__()
+
+        if options is None:
+            options = {'maxiter': 100}
+        self.options = options
+
+    @fix_decorator
+    @time_decorator
+    @history_decorator
+    def minimize(
+            self,
+            problem: Problem,
+            x0: np.ndarray,
+            id: str,
+            history_options: HistoryOptions = None,
+    ) -> OptimizerResult:
+        bounds = list(zip(problem.lb, problem.ub))
+
+        result = scipy.optimize.differential_evolution(
+            problem.objective.get_fval, bounds, **self.options
+        )
+
+        optimizer_result = OptimizerResult(x=np.array(result.x),
+                                           fval=result.fun)
+
+        return optimizer_result
+
+    def is_least_squares(self):
+        return False
+
+
+class PyswarmsOptimizer(Optimizer):
+    """
+    Global optimization using pyswarms.
+    Package homepage: https://pyswarms.readthedocs.io/en/latest/index.html
+
+    Parameters
+    ----------
+    par_popsize:
+        number of particles in the swarm, default value 10
+
+    options:
+        Optimizer options that are directly passed on to pyswarms.
+        c1: cognitive parameter
+        c2: social parameter
+        w: inertia parameter
+        Default values are (c1,c2,w) = (0.5, 0.3, 0.9)
+
+    Examples
+    --------
+    Arguments that can be passed to options:
+
+    maxiter:
+        used to calculate the maximal number of funcion evaluations.
+        Default: 1000
+    """
+
+    def __init__(self, par_popsize: float = 10, options: Dict = None):
+        super().__init__()
+
+        all_options = {'maxiter': 1000, 'c1': 0.5, 'c2': 0.3, 'w': 0.9}
+        if options is None:
+            options = {}
+        all_options.update(options)
+        self.options = all_options
+        self.par_popsize = par_popsize
+
+    @fix_decorator
+    @time_decorator
+    @history_decorator
+    def minimize(
+            self,
+            problem: Problem,
+            x0: np.ndarray,
+            id: str,
+            history_options: HistoryOptions = None,
+    ) -> OptimizerResult:
+        lb = problem.lb
+        ub = problem.ub
+
+        if pyswarms is None:
+            raise ImportError(
+                "This optimizer requires an installation of pyswarms.")
+
+        # check for finite values for the bounds
+        if np.isfinite(lb).all() is np.False_:
+            raise ValueError(
+                "This optimizer can only handle finite lower bounds.")
+        if np.isfinite(ub).all() is np.False_:
+            raise ValueError(
+                "This optimizer can only handle finite upper bounds.")
+
+        optimizer = pyswarms.single.global_best.GlobalBestPSO(
+            n_particles=self.par_popsize, dimensions=len(x0),
+            options=self.options, bounds=(lb, ub))
+
+        def successively_working_fval(swarm: np.ndarray) -> np.ndarray:
+            """Evaluate the function for all parameters in the swarm object.
+
+            Parameters:
+            -----------
+            swarm: np.ndarray, shape (n_particales_in_swarm, n_parameters)
+
+            Returns:
+            --------
+            result: np.ndarray, shape (n_particles_in_swarm)
+            """
+
+            n_particles = swarm.shape[0]
+            result = np.zeros(n_particles)
+            # iterate over the particles in the swarm
+            for i_particle, par in enumerate(swarm):
+                result[i_particle] = problem.objective.get_fval(par)
+
+            return result
+
+        cost, pos = optimizer.optimize(
+            successively_working_fval, iters=self.options['maxiter'])
+
+        optimizer_result = OptimizerResult(
+            x=pos,
+            fval=np.array(cost)
+        )
+
+        return optimizer_result
+
+    def is_least_squares(self):
+        return False
+
+
 class NLoptOptimizer(Optimizer):
     """
     Global/Local optimization using NLopt.
@@ -824,7 +990,7 @@ class FidesOptimizer(Optimizer):
 
     def __init__(
             self,
-            hessian_update: Optional['fides.HessianApproximation'] = None,
+            hessian_update: Optional['fides.HessianApproximation'] = 'Hybrid',
             options: Optional[Dict] = None,
             verbose: Optional[int] = logging.INFO
     ):
@@ -835,16 +1001,20 @@ class FidesOptimizer(Optimizer):
             Optimizer options.
         hessian_update:
             Hessian update strategy. If this is None, Hessian (approximation)
-            computed by problem.objective will be used (default).
+            computed by problem.objective will be used.
         """
 
         super().__init__()
+
+        if hessian_update == 'Hybrid':
+            hessian_update = fides.HybridUpdate()
 
         if hessian_update is not None and \
                 not isinstance(hessian_update, fides.HessianApproximation):
             raise ValueError('Incompatible type for hessian update, '
                              'must be fides.HessianApproximation, '
                              f'was {type(hessian_update)}.')
+
         if options is None:
             options = {}
 
@@ -870,7 +1040,18 @@ class FidesOptimizer(Optimizer):
             )
 
         args = {'mode': MODE_FUN}
-        if self.hessian_update is None:
+
+        if not problem.objective.has_grad:
+            raise ValueError('Fides cannot be applied to problems '
+                             'with objectives that do not support '
+                             'gradient evaluation.')
+
+        if self.hessian_update is None or isinstance(self.hessian_update,
+                                                     fides.HybridUpdate):
+            if not problem.objective.has_hess:
+                raise ValueError('Specified hessian update scheme cannot be '
+                                 'used with objectives that do not support '
+                                 'Hessian computation.')
             args['sensi_orders'] = (0, 1, 2)
         else:
             args['sensi_orders'] = (0, 1)

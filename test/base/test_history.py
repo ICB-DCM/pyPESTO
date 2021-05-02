@@ -8,12 +8,15 @@ import unittest
 import tempfile
 from typing import Sequence
 
+import scipy.optimize as so
 import pypesto
 from pypesto.objective.util import sres_to_schi2, res_to_chi2
-from pypesto import CsvHistory, HistoryOptions, MemoryHistory, ObjectiveBase
+from pypesto import CsvHistory, HistoryOptions,\
+    MemoryHistory, ObjectiveBase, Hdf5History
 from pypesto.optimize.optimizer import read_result_from_file, OptimizerResult
 from pypesto.objective.constants import (
-    FVAL, GRAD, HESS, RES, SRES, CHI2, SCHI2)
+    X, FVAL, GRAD, HESS, RES, SRES, CHI2, SCHI2)
+from pypesto.engine import MultiProcessEngine
 
 from ..util import rosen_for_sensi, load_amici_objective
 
@@ -72,7 +75,7 @@ class HistoryTest(unittest.TestCase):
             return
 
         # TODO other implementations
-        assert isinstance(start.history, CsvHistory)
+        assert isinstance(start.history, (CsvHistory, Hdf5History))
 
         rstart = read_result_from_file(self.problem, self.history_options, id)
 
@@ -108,21 +111,27 @@ class HistoryTest(unittest.TestCase):
                 assert start[attr] == rstart[attr], attr
 
     def check_reconstruct_history(self, start: OptimizerResult, id: str):
-        """verify we can reconstruct history objects from csv files"""
+        """verify we can reconstruct history objects from csv/hdf5 files"""
 
         if isinstance(start.history, MemoryHistory):
             return
 
-        # TODO other implementations
-        assert isinstance(start.history, CsvHistory)
+        assert isinstance(start.history, (CsvHistory, Hdf5History))
 
-        reconst_history = CsvHistory(
-            file=self.history_options.storage_file.format(id=id),
-            x_names=[self.problem.x_names[ix]
-                     for ix in self.problem.x_free_indices],
-            options=self.history_options,
-            load_from_file=True
-        )
+        if isinstance(start.history, CsvHistory):
+            reconst_history = CsvHistory(
+                file=self.history_options.storage_file.format(id=id),
+                x_names=[self.problem.x_names[ix]
+                         for ix in self.problem.x_free_indices],
+                options=self.history_options,
+                load_from_file=True
+            )
+        else:
+            reconst_history = Hdf5History(
+                file=self.history_options.storage_file.format(id=id),
+                id=id,
+                options=self.history_options
+            )
         history_attributes = [
             a for a in dir(start.history)
             if not a.startswith('__')
@@ -149,15 +158,12 @@ class HistoryTest(unittest.TestCase):
 
     def check_history_consistency(self, start: OptimizerResult):
 
-        # TODO other implementations
-        assert isinstance(start.history, (CsvHistory, MemoryHistory))
-
         def xfull(x_trace):
             return self.problem.get_full_vector(
                 x_trace, self.problem.x_fixed_vals
             )
 
-        if isinstance(start.history, CsvHistory):
+        if isinstance(start.history, (CsvHistory, Hdf5History)):
             it_final = np.nanargmin(start.history.get_fval_trace())
             if isinstance(it_final, np.ndarray):
                 it_final = it_final[0]
@@ -388,7 +394,7 @@ class FunModeHistoryTest(HistoryTest):
         self.check_history()
 
 
-@pytest.fixture(params=["", "memory", "csv"])
+@pytest.fixture(params=["", "memory", "csv", "hdf5"])
 def history(request) -> pypesto.History:
     if request.param == "memory":
         history = pypesto.MemoryHistory(options={'trace_record': True})
@@ -419,9 +425,7 @@ def test_history_properties(history: pypesto.History):
         assert len(fvals) == 10
         assert all(np.isfinite(fvals))
 
-    if type(history) in \
-            (pypesto.History, pypesto.Hdf5History):
-        # TODO update as functionality is implemented
+    if type(history) == pypesto.History:
         with pytest.raises(NotImplementedError):
             history.get_grad_trace()
     else:
@@ -429,10 +433,8 @@ def test_history_properties(history: pypesto.History):
         assert len(grads) == 10
         assert len(grads[0]) == 7
 
-    if isinstance(history, (pypesto.MemoryHistory, pypesto.CsvHistory)):
-        # TODO extend as functionality is implemented in other histories
-
-        # assert x values are not all the same
+    # assert x values are not all the same
+    if type(history) != pypesto.History:
         xs = np.array(history.get_x_trace())
         assert np.all(xs[:-1] != xs[-1])
 
@@ -442,7 +444,7 @@ def test_history_properties(history: pypesto.History):
 
 def test_trace_subset(history: pypesto.History):
     """Test whether selecting only a trace subset works."""
-    if isinstance(history, (pypesto.MemoryHistory, pypesto.CsvHistory)):
+    if type(history) != pypesto.History:
         arr = list(range(0, len(history), 2))
 
         for var in ['fval', 'grad', 'hess', 'res', 'sres', 'chi2',
@@ -471,3 +473,67 @@ def test_trace_subset(history: pypesto.History):
                 assert isinstance(val, float)
             else:
                 assert isinstance(val, np.ndarray) or np.isnan(val)
+
+
+def test_hdf5_history_mp():
+    """Test whether hdf5-History works with a MultiProcessEngine."""
+    objective1 = pypesto.Objective(fun=so.rosen,
+                                   grad=so.rosen_der,
+                                   hess=so.rosen_hess)
+    objective2 = pypesto.Objective(fun=so.rosen,
+                                   grad=so.rosen_der,
+                                   hess=so.rosen_hess)
+    dim_full = 10
+    lb = -5 * np.ones((dim_full, 1))
+    ub = 5 * np.ones((dim_full, 1))
+    n_starts = 5
+    startpoints = pypesto.startpoint.latin_hypercube(n_starts=n_starts,
+                                                     lb=lb,
+                                                     ub=ub)
+    problem1 = pypesto.Problem(objective=objective1, lb=lb, ub=ub,
+                               x_guesses=startpoints)
+    problem2 = pypesto.Problem(objective=objective2, lb=lb, ub=ub,
+                               x_guesses=startpoints)
+
+    optimizer1 = pypesto.optimize.ScipyOptimizer(options={'maxiter': 10})
+    optimizer2 = pypesto.optimize.ScipyOptimizer(options={'maxiter': 10})
+
+    with tempfile.TemporaryDirectory(dir=".") as tmpdirname:
+        _, fn = tempfile.mkstemp(".hdf5", dir=f"{tmpdirname}")
+
+        history_options_mp = pypesto.HistoryOptions(trace_record=True,
+                                                    storage_file=fn)
+        history_options_mem = pypesto.HistoryOptions(trace_record=True)
+        # optimize with Memory History
+        result_hdf5_mem = pypesto.optimize.minimize(
+            problem=problem1, optimizer=optimizer1,
+            n_starts=n_starts, history_options=history_options_mem,
+            engine=MultiProcessEngine()
+        )
+
+        # optimizing with history saved in hdf5 and MultiProcessEngine
+        result_memory_mp = pypesto.optimize.minimize(
+            problem=problem2, optimizer=optimizer2,
+            n_starts=n_starts, history_options=history_options_mp,
+            engine=MultiProcessEngine()
+        )
+
+        history_entries = [X, FVAL, GRAD, HESS, RES, SRES, CHI2, SCHI2]
+        assert len(result_hdf5_mem.optimize_result.list) == \
+            len(result_memory_mp.optimize_result.list)
+        for mp_res in result_memory_mp.optimize_result.list:
+            for mem_res in result_hdf5_mem.optimize_result.list:
+                if mp_res['id'] == mem_res['id']:
+                    for entry in history_entries:
+                        hdf5_entry_trace = getattr(mp_res['history'],
+                                                   f'get_{entry}_trace')()
+                        mem_entry_trace = getattr(mem_res['history'],
+                                                  f'get_{entry}_trace')()
+                        for iteration in range(len(hdf5_entry_trace)):
+                            # comparing nan and None difficult
+                            if hdf5_entry_trace[iteration] is None or np.isnan(
+                                    hdf5_entry_trace[iteration]).all():
+                                continue
+                            np.testing.assert_array_equal(
+                                mem_entry_trace[iteration],
+                                hdf5_entry_trace[iteration])

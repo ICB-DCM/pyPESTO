@@ -22,7 +22,8 @@ def parameter_profile(
         profile_list: int = None,
         result_index: int = 0,
         next_guess_method: Union[Callable, str] = 'adaptive_step_regression',
-        profile_options: ProfileOptions = None
+        profile_options: ProfileOptions = None,
+        progress_bar: bool = True
 ) -> Result:
     """
     This is the main function to call to do parameter profiling.
@@ -55,6 +56,8 @@ def parameter_profile(
         optimization in profiling.
     profile_options:
         Various options applied to the profile optimization.
+    progress_bar:
+        Whether to display a progress bar.
 
     Returns
     -------
@@ -115,7 +118,7 @@ def parameter_profile(
         tasks.append(task)
 
     # execute the tasks with Engine
-    indexed_profiles = engine.execute(tasks)
+    indexed_profiles = engine.execute(tasks, progress_bar=progress_bar)
 
     # fill in the ProfilerResults at the right index
     for indexed_profile in indexed_profiles:

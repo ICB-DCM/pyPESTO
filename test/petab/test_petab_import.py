@@ -14,6 +14,7 @@ import pypesto.optimize
 import pypesto.petab
 
 from .petab_util import folder_base
+from .test_sbml_conversion import ATOL, RTOL
 
 
 class PetabImportTest(unittest.TestCase):
@@ -74,6 +75,32 @@ class PetabImportTest(unittest.TestCase):
 
             self.assertTrue(np.isfinite(
                 result.optimize_result.get_for_key('fval')[0]))
+
+
+def test_plist_mapping():
+    """Test that the AMICI objective created via PEtab correctly maps
+    gradient entries when some parameters are not estimated (realized via
+    edata.plist)."""
+    model_name = "Boehm_JProteomeRes2014"
+    petab_problem = pypesto.petab.PetabImporter.from_yaml(
+        os.path.join(folder_base, model_name, model_name + '.yaml'))
+
+    # define test parameter
+    par = np.asarray(petab_problem.petab_problem.x_nominal_scaled)
+
+    problem = petab_problem.create_problem()
+    objective = problem.objective
+    objective.amici_solver.setSensitivityMethod(
+        amici.SensitivityMethod_forward)
+    objective.amici_solver.setAbsoluteTolerance(1e-10)
+    objective.amici_solver.setRelativeTolerance(1e-12)
+
+    df = objective.check_grad_multi_eps(par[problem.x_free_indices],
+                                        multi_eps=[1e-3, 1e-4, 1e-5])
+    print("relative errors gradient: ", df.rel_err.values)
+    print("absolute errors gradient: ", df.abs_err.values)
+    assert np.all((df.rel_err.values < RTOL) |
+                  (df.abs_err.values < ATOL))
 
 
 def test_max_sensi_order():
