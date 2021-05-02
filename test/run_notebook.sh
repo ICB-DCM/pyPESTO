@@ -20,6 +20,7 @@ nbs_1=(
 
 # Sampling notebooks
 nbs_2=(
+  'model_selection.ipynb'
   'sampler_study.ipynb' 'sampling_diagnostics.ipynb')
 
 # All tested notebooks
