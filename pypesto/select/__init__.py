@@ -3,7 +3,7 @@ Model Selection
 ===============
 TODO make import optional
     - remove from pypesto/__init__.py
-    - import with `import pypesto.model_selection as ms`?
+    - import with `import pypesto.select as ms`?
 """
 
 from .method_stepwise import ForwardSelector

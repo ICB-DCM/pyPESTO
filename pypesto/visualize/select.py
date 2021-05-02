@@ -3,8 +3,11 @@ import matplotlib.pyplot as plt
 import networkx as nx
 from typing import Dict, List, Tuple
 
-from pypesto.model_selection.constants import (COMPARED_MODEL_ID,
-                                               MODEL_ID)
+from pypesto.select.constants import (
+    COMPARED_MODEL_ID,
+    MODEL_ID,
+)
+
 
 RELATIVE_LABEL_FONTSIZE = -2
 

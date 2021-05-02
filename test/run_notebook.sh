@@ -23,8 +23,12 @@ nbs_2=(
   'model_selection.ipynb'
   'sampler_study.ipynb' 'sampling_diagnostics.ipynb')
 
+# Model selection notebook
+nbs_3=(
+  'model_selection.ipynb')
+
 # All tested notebooks
-nbs_all=("${nbs_1[@]}" "${nbs_2[@]}")
+nbs_all=("${nbs_1[@]}" "${nbs_2[@]}" "${nbs_3[@]}")
 
 # Select which notebooks to run
 if [ $# -eq 0 ]; then
@@ -33,6 +37,8 @@ elif [ $1 -eq 1 ]; then
   nbs=("${nbs_1[@]}")
 elif [ $1 -eq 2 ]; then
   nbs=("${nbs_2[@]}")
+elif [ $1 -eq 3 ]; then
+  nbs=("${nbs_3[@]}")
 else
   echo "Unexpected input: $1"
 fi

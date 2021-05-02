@@ -1,6 +1,4 @@
-"""
-Test pypesto.model_selection.
-"""
+"""Test pypesto.select"""
 import math
 import numpy as np
 import pandas as pd
@@ -11,7 +9,7 @@ from typing import Dict, List, Set
 import petab
 from pypesto.petab import PetabImporter
 
-from pypesto.model_selection import (
+from pypesto.select import (
     ForwardSelector,
     ModelSelectionProblem,
     ModelSelector,
@@ -20,7 +18,7 @@ from pypesto.model_selection import (
     unpack_file,
 )
 
-from pypesto.model_selection.constants import (
+from pypesto.select.constants import (
     COMPARED_MODEL_ID,
     ESTIMATE_SYMBOL_INTERNAL,
     ESTIMATE_SYMBOL_UI,
@@ -262,7 +260,6 @@ def test_relative_complexity_parameters():
             expected_complexity
 
 
-# from pypesto.model_selection import ForwardSelector
 def test_relative_complexity_models_forward():
     # TODO in `model_selection.py`, consider how to handle models that are
     # equivalent and chosen as the next step candidates
