@@ -114,9 +114,11 @@ class ForwardSelector(ModelSelectorMethod):
         A tuple, where the first element is the selected model, as a
         `ModelSelectionProblem`, and the second element is a dictionary that
         describes the tested models, where the keys are model Ids, and the
-        values are dictionaries with the keys 'AIC', 'BIC', and
+        values are dictionaries with the keys 'AIC', 'AICc', 'BIC', and
         COMPARED_MODEL_ID.
         """
+        # FIXME specify criteria as call argument such that not all criteria
+        #       are calculated every time
         selected_models = []
         local_selection_history = {}
         logger.info('%sNew Selection%s', '-'*22, '-'*21)
@@ -136,8 +138,9 @@ class ForwardSelector(ModelSelectorMethod):
             # copied from for loop -- move into separate function?
             local_selection_history[model.model_id] = {
                 MODEL_ID: model.model_id,
-                'AIC': model.AIC,
-                'BIC': model.BIC,
+                'AIC': model.aic,
+                'AICc': model.aicc,
+                'BIC': model.bic,
                 # Should this be PYPESTO_INITIAL_MODEL or None? Setting it to
                 # PYPESTO_INITIAL_MODEL helps when plotting the directed graph
                 # of the selection history
@@ -201,8 +204,9 @@ class ForwardSelector(ModelSelectorMethod):
 
                 local_selection_history[test_model.model_id] = {
                     MODEL_ID: test_model.model_id,
-                    'AIC': test_model.AIC,
-                    'BIC': test_model.BIC,
+                    'AIC': test_model.aic,
+                    'AICc': test_model.aicc,
+                    'BIC': test_model.bic,
                     COMPARED_MODEL_ID: compared_model_id,
                     'row': test_model_dict,
                     'MLE': list(zip(

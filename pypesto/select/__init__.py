@@ -8,6 +8,14 @@ TODO make import optional
 
 from .method_stepwise import ForwardSelector
 from .method import ModelSelectorMethod
-from .misc import row2problem, unpack_file
+from .misc import (
+    row2problem,
+    unpack_file,
+)
 from .selector import ModelSelector
 from .problem import ModelSelectionProblem
+from .criteria import (
+    aic,
+    aicc,
+    bic,
+)

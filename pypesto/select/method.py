@@ -51,14 +51,29 @@ class ModelSelectorMethod(abc.ABC):
         `True`, if `new` is superior to `old` by the criterion, else `False`.
         """
         # TODO implement criterion as @property of ModelSelectorMethod
+        # TODO refactor to reduce repeated code
         if self.criterion == 'AIC':
-            result = new.AIC + self.criterion_threshold < old.AIC
+            result = new.aic + self.criterion_threshold < old.aic
             logger.info('%s\t%s\tAIC\t%.3f\t%.3f\t%.3f\t%s',
                         old.model_id,
                         new.model_id,
-                        old.AIC,
-                        new.AIC,
-                        new.AIC-old.AIC,
+                        old.aic,
+                        new.aic,
+                        new.aic - old.aic,
+                        "Accepted" if result else "Rejected")
+            # logger.info(f'{old.model_id}\t{new.model_id}\tAIC\t{old.AIC:.3f}\t'
+            #             f'{new.AIC:.3f}\t'
+            #             f'{new.AIC-old.AIC:.3f}\t'
+            #             f'{"Accepted" if result else "Rejected"}')
+            # return result
+        elif self.criterion == 'AICc':
+            result = new.aicc + self.criterion_threshold < old.aicc
+            logger.info('%s\t%s\tAICc\t%.3f\t%.3f\t%.3f\t%s',
+                        old.model_id,
+                        new.model_id,
+                        old.aicc,
+                        new.aicc,
+                        new.aicc - old.aicc,
                         "Accepted" if result else "Rejected")
             # logger.info(f'{old.model_id}\t{new.model_id}\tAIC\t{old.AIC:.3f}\t'
             #             f'{new.AIC:.3f}\t'
@@ -66,13 +81,13 @@ class ModelSelectorMethod(abc.ABC):
             #             f'{"Accepted" if result else "Rejected"}')
             # return result
         elif self.criterion == 'BIC':
-            result = new.BIC + self.criterion_threshold < old.BIC
-            logger.info('%s\t%s\tAIC\t%.3f\t%.3f\t%.3f\t%s',
+            result = new.bic + self.criterion_threshold < old.bic
+            logger.info('%s\t%s\tBIC\t%.3f\t%.3f\t%.3f\t%s',
                         old.model_id,
                         new.model_id,
-                        old.BIC,
-                        new.BIC,
-                        new.BIC-old.BIC,
+                        old.bic,
+                        new.bic,
+                        new.bic - old.bic,
                         "Accepted" if result else "Rejected")
             # logger.info(f'{old.model_id}\t{new.model_id}\tBIC\t{old.BIC:.3f}\t'
             #             f'{new.BIC:.3f}\t'

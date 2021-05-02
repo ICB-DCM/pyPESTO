@@ -8,9 +8,13 @@ from ..result import Result
 
 from .constants import MODEL_ID
 from .misc import (
-    aic,
-    bic,
     row2problem,
+)
+
+from .criteria import (
+    calculate_aic,
+    calculate_bic,
+    calculate_aicc,
 )
 
 
@@ -77,8 +81,10 @@ class ModelSelectionProblem(object):
 
         self.model_id = self.row[MODEL_ID]
 
-        self._AIC = None
-        self._BIC = None
+        # Criteria
+        self._aic = None
+        self._aicc = None
+        self._bic = None
 
         if self.valid:
             # TODO warning/error if x_fixed_estimated is not a parameter ID in
@@ -116,23 +122,44 @@ class ModelSelectionProblem(object):
         self.optimized_model = self.minimize_result.optimize_result.list[0]
 
     @property
-    def AIC(self):
+    def aic(self):
         # TODO check naming conflicts, rename to lowercase
-        if self._AIC is None:
-            self._AIC = aic(self.n_estimated,
-                            self.optimized_model.fval)
-        return self._AIC
+        if self._aic is None:
+            self._aic = calculate_aic(
+                self.n_estimated,
+                self.optimized_model.fval,
+            )
+        return self._aic
 
     @property
-    def BIC(self):
-        if self._BIC is None:
+    def aicc(self):
+        # TODO check naming conflicts, rename to lowercase
+        if self._aicc is None:
             # TODO this is probably not how number of priors is meant to be
             #      calculated... also untested
-            n_priors = (len(self.pypesto_problem.x_priors._objectives)
-                        if self.pypesto_problem.x_priors is not None
-                        else 0)
-            self._BIC = bic(self.n_estimated,
-                            self.optimized_model.fval,
-                            self.n_measurements,
-                            n_priors)
-        return self._BIC
+            n_priors = 0
+            if self.pypesto_problem.x_priors is not None:
+                n_priors = len(self.pypesto_problem.x_priors._objectives)
+            self._aicc = calculate_aicc(
+                self.n_estimated,
+                self.optimized_model.fval,
+                self.n_measurements,
+                n_priors,
+            )
+        return self._aicc
+
+    @property
+    def bic(self):
+        if self._bic is None:
+            # TODO this is probably not how number of priors is meant to be
+            #      calculated... also untested
+            n_priors = 0
+            if self.pypesto_problem.x_priors is not None:
+                n_priors = len(self.pypesto_problem.x_priors._objectives)
+            self._bic = calculate_bic(
+                self.n_estimated,
+                self.optimized_model.fval,
+                self.n_measurements,
+                n_priors,
+            )
+        return self._bic
