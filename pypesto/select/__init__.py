@@ -6,16 +6,16 @@ TODO make import optional
     - import with `import pypesto.select as ms`?
 """
 
-from .method_stepwise import ForwardSelector
+from .criteria import (
+    calculate_aic,
+    calculate_aicc,
+    calculate_bic,
+)
 from .method import ModelSelectorMethod
+from .method_stepwise import ForwardSelector
 from .misc import (
     row2problem,
     unpack_file,
 )
-from .selector import ModelSelector
 from .problem import ModelSelectionProblem
-from .criteria import (
-    aic,
-    aicc,
-    bic,
-)
+from .selector import ModelSelector

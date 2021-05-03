@@ -47,9 +47,9 @@ def calculate_aicc(
     """
     # TODO untested
     return (
-        calculate_aic(n_estimated, nllh) +
-        2*n_estimated*(n_estimated + 1)
-          / (n_measurements + n_priors - n_estimated - 1)
+        calculate_aic(n_estimated, nllh)
+        + 2*n_estimated*(n_estimated + 1)
+        / (n_measurements + n_priors - n_estimated - 1)
     )
 
 
