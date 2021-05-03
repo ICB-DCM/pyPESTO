@@ -1,6 +1,5 @@
 from colorama import Fore
 import itertools
-import math
 import numpy as np
 import tempfile
 from typing import Dict, Iterable, List, Sequence, Set, Union
