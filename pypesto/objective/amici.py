@@ -191,6 +191,8 @@ class AmiciObjective(ObjectiveBase):
         self.calculator = calculator
         super().__init__(x_names=x_names)
 
+        # Custom (condition-specific) timepoints. See the
+        # `set_custom_timepoints` method for more information.
         self.custom_timepoints = None
 
     def initialize(self):
@@ -255,13 +257,6 @@ class AmiciObjective(ObjectiveBase):
         solver = self.amici_object_builder.create_solver(model)
         edatas = self.amici_object_builder.create_edatas(model)
 
-        # Set custom timepoints if available
-        if self.custom_timepoints is not None:
-            for index in range(len(edatas)):
-                edatas[index].setTimepoints(
-                    self.custom_timepoints[index]
-                )
-
         _fd, _file = tempfile.mkstemp()
         try:
             # write solver settings to temporary file
@@ -284,6 +279,8 @@ class AmiciObjective(ObjectiveBase):
         self.amici_model = model
         self.amici_solver = solver
         self.edatas = edatas
+
+        self.apply_custom_timepoints()
 
     def check_sensi_orders(self, sensi_orders, mode) -> bool:
         sensi_order = max(sensi_orders)
@@ -403,6 +400,17 @@ class AmiciObjective(ObjectiveBase):
         for condition in self.steadystate_guesses['data']:
             self.steadystate_guesses['data'][condition] = {}
 
+    def apply_custom_timepoints(self):
+        """Apply custom timepoints, if applicable.
+
+        See the `set_custom_timepoints` method for more information.
+        """
+        if self.custom_timepoints is not None:
+            for index in range(len(self.edatas)):
+                self.edatas[index].setTimepoints(
+                    self.custom_timepoints[index]
+                )
+
     def set_custom_timepoints(
             self,
             timepoints: Sequence[Sequence[Union[float, int]]] = None,
@@ -449,10 +457,5 @@ class AmiciObjective(ObjectiveBase):
             ]
 
         amici_objective.custom_timepoints = custom_timepoints
-
-        for index in range(len(amici_objective.edatas)):
-            amici_objective.edatas[index].setTimepoints(
-                amici_objective.custom_timepoints[index]
-            )
-
+        amici_objective.apply_custom_timepoints()
         return amici_objective
