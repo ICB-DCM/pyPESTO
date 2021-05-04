@@ -6,6 +6,46 @@ Release notes
 ..........
 
 
+0.2.5 (2021-05-04)
+------------------
+
+* Objectives:
+    * New Aesara objectve (#623, #629, #635)
+
+* Sampling:
+    * New Emcee sampler (#606)
+    * Fix compatibility to new Theano version (#650)
+
+* Storage:
+    * Improve hdf5 storage documentation (#612)
+    * Hdf5 history for MultiProcessEngine (#650)
+    * Minor fixes (#637, #638, #645, #649)
+
+* Visualization:
+    * Fix bounds of parameter plots (#601)
+    * Fix waterfall plots with multiple results (#611)
+
+* CI:
+    * Move CI tests on GitHub Actions to python 3.9 (#598)
+    * Add issue template (#604)
+    * Update BionetGen Link (#630)
+    * Introduce project.toml (#634)
+
+* General:
+    * Introduce progress bar for optimization, profiles and ensembles (#641)
+    * Extend gradient checking functionality (#644)
+
+* Minor fixes:
+    * Fix installation of ipopt (#599)
+    * Fix Zenodo link (#601)
+    * Fix duplicates in documentation (#603)
+    * Fix least squares optimizers (#617 #631 #632)
+    * Fix trust region options (#616)
+    * Fix slicing for new AMICI release (#621)
+    * Refactor and document latin hypercube sampling (#647)
+    * Fix missing SBML name in PEtab import (#648)
+
+
 0.2.4 (2021-03-12)
 ------------------
 
