@@ -191,6 +191,8 @@ class AmiciObjective(ObjectiveBase):
         self.calculator = calculator
         super().__init__(x_names=x_names)
 
+        self.custom_timepoints = None
+
     def initialize(self):
         super().initialize()
         self.reset_steadystate_guesses()
@@ -252,6 +254,13 @@ class AmiciObjective(ObjectiveBase):
         model = self.amici_object_builder.create_model()
         solver = self.amici_object_builder.create_solver(model)
         edatas = self.amici_object_builder.create_edatas(model)
+
+        # Set custom timepoints if available
+        if self.custom_timepoints is not None:
+            for index in range(len(edatas)):
+                edatas[index].setTimepoints(
+                    self.custom_timepoints[index]
+                )
 
         _fd, _file = tempfile.mkstemp()
         try:
@@ -394,7 +403,7 @@ class AmiciObjective(ObjectiveBase):
         for condition in self.steadystate_guesses['data']:
             self.steadystate_guesses['data'][condition] = {}
 
-    def custom_timepoints(
+    def set_custom_timepoints(
             self,
             timepoints: Sequence[Sequence[Union[float, int]]] = None,
             timepoints_global: Sequence[Union[float, int]] = None,
@@ -423,10 +432,27 @@ class AmiciObjective(ObjectiveBase):
 
         amici_objective = copy.deepcopy(self)
 
+        if timepoints is not None:
+            if len(timepoints) != len(amici_objective.edatas):
+                raise ValueError(
+                    'The number of condition-specific timepoints `timepoints` '
+                    'does not match the number of experimental conditions.\n'
+                    f'Number of provided timepoints: {len(timepoints)}. '
+                    'Number of experimental conditions: '
+                    f'{len(amici_objective.edatas)}.'
+                )
+            custom_timepoints = timepoints
+        else:
+            custom_timepoints = [
+                copy.deepcopy(timepoints_global)
+                for _ in range(len(amici_objective.edatas))
+            ]
+
+        amici_objective.custom_timepoints = custom_timepoints
+
         for index in range(len(amici_objective.edatas)):
-            if timepoints_global is not None:
-                amici_objective.edatas[index].setTimepoints(timepoints_global)
-            else:
-                amici_objective.edatas[index].setTimepoints(timepoints[index])
+            amici_objective.edatas[index].setTimepoints(
+                amici_objective.custom_timepoints[index]
+            )
 
         return amici_objective
