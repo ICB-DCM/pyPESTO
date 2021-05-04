@@ -26,7 +26,7 @@ Release notes
     * Fix waterfall plots with multiple results (#611)
 
 * CI:
-    * Move to GitHub Actions 3.9 (#598)
+    * Move CI tests on GitHub Actions to python 3.9 (#598)
     * Add issue template (#604)
     * Update BionetGen Link (#630)
     * Introduce project.toml (#634)
