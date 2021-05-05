@@ -38,6 +38,7 @@ optimizers = [
     ('pyswarm', ''),
     ('cmaes', ''),
     ('scipydiffevolopt', ''),
+    ('pyswarms', ''),
     *[('nlopt', method) for method in [
         nlopt.LD_VAR1, nlopt.LD_VAR2, nlopt.LD_TNEWTON_PRECOND_RESTART,
         nlopt.LD_TNEWTON_PRECOND, nlopt.LD_TNEWTON_RESTART,
@@ -75,14 +76,7 @@ def test_optimization(mode, optimizer):
 
     with warnings.catch_warnings():
         warnings.simplefilter("ignore")
-        if isinstance(method, str) and re.match(r'^(?i)(ls_)', method):
-            # obj has no residuals
-            with pytest.raises(Exception):
-                check_minimize(obj, library, method)
-            # no error when allow failed starts
-            check_minimize(obj, library, method, allow_failed_starts=True)
-        else:
-            check_minimize(obj, library, method)
+        check_minimize(obj, library, method)
 
 
 def test_unbounded_minimize(optimizer):
@@ -105,7 +99,7 @@ def test_unbounded_minimize(optimizer):
         return
 
     if optimizer in [('dlib', ''), ('pyswarm', ''), ('cmaes', ''),
-                     ('scipydiffevolopt', ''),
+                     ('scipydiffevolopt', ''), ('pyswarms', ''),
                      *[('nlopt', method) for method in [
                          nlopt.GN_ESCH, nlopt.GN_ISRES, nlopt.GN_AGS,
                          nlopt.GD_STOGO, nlopt.GD_STOGO_RAND, nlopt.G_MLSL,
@@ -165,6 +159,8 @@ def get_optimizer(library, solver):
     elif library == 'scipydiffevolopt':
         optimizer = optimize.ScipyDifferentialEvolutionOptimizer(
             options=options)
+    elif library == 'pyswarms':
+        optimizer = optimize.PyswarmsOptimizer(options=options)
     elif library == 'nlopt':
         optimizer = optimize.NLoptOptimizer(method=solver, options=options)
     elif library == 'fides':
@@ -199,8 +195,6 @@ def check_minimize(objective, library, solver, allow_failed_starts=False):
 
     assert isinstance(result.optimize_result.list[0]['fval'], float)
     if (library, solver) not in [
-            ('scipy', 'ls_trf'),
-            ('scipy', 'ls_dogbox'),
             ('nlopt', nlopt.GD_STOGO_RAND)  # id 9, fails in 40% of cases
     ]:
         assert np.isfinite(result.optimize_result.list[0]['fval'])

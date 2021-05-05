@@ -125,11 +125,14 @@ def negative_log_prior(x):
     return - np.log(prior(x))
 
 
-@pytest.fixture(params=['Metropolis',
-                        'AdaptiveMetropolis',
-                        'ParallelTempering',
-                        'AdaptiveParallelTempering',
-                        'Pymc3'])
+@pytest.fixture(params=[
+    'Metropolis',
+    'AdaptiveMetropolis',
+    'ParallelTempering',
+    'AdaptiveParallelTempering',
+    'Pymc3',
+    'Emcee',
+])
 def sampler(request):
     if request.param == 'Metropolis':
         return sample.MetropolisSampler()
@@ -145,6 +148,8 @@ def sampler(request):
             n_chains=5)
     elif request.param == 'Pymc3':
         return sample.Pymc3Sampler(tune=5)
+    elif request.param == 'Emcee':
+        return sample.EmceeSampler(nwalkers=10)
 
 
 @pytest.fixture(params=['gaussian', 'gaussian_mixture', 'rosenbrock'])

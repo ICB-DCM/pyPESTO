@@ -27,6 +27,13 @@ class ObjectiveBase(abc.ABC):
     by this objective function. If maximization is to be performed, the sign
     should be flipped before creating the objective function.
 
+    Parameters
+    ----------
+    x_names:
+        Parameter names that can be optionally used in, e.g., history or
+        gradient checks
+
+
     Attributes
     ----------
 
@@ -527,7 +534,11 @@ class ObjectiveBase(abc.ABC):
             data = {**prefix_data, **data, **postfix_data}
 
         # create dataframe
-        result = pd.DataFrame(data=data)
+        result = pd.DataFrame(data=data,
+                              index=[
+                                  self.x_names[ix] if self.x_names is not None
+                                  else f'x_{ix}' for ix in x_indices
+                              ])
 
         # log full result
         if verbosity > 0:

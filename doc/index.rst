@@ -18,8 +18,8 @@ Welcome to pyPESTO's documentation!
 .. image:: https://readthedocs.org/projects/pypesto/badge/?version=latest
    :target: https://pypesto.readthedocs.io/en/latest/?badge=latest
    :alt: Documentation status
-.. image:: https://zenodo.org/badge/DOI/10.5281/zenodo.2600850.svg
-   :target: https://zenodo.org/record/2600850#.XVuwkHduJfF
+.. image:: https://zenodo.org/badge/DOI/10.5281/zenodo.4614930.svg
+   :target: https://zenodo.org/record/4614930#.YFMRIv4o9I0
    :alt: DOI
 
 | Version: |version|
@@ -33,6 +33,7 @@ Welcome to pyPESTO's documentation!
    install
    example
    storage_format.md
+   api
 
 
 .. toctree::
@@ -41,27 +42,7 @@ Welcome to pyPESTO's documentation!
 
    contribute
    deploy
-   README.md
 
-
-.. toctree::
-   :maxdepth: 2
-   :caption: API reference
-
-   api_objective
-   api_problem
-   api_predict
-   api_petab
-   api_optimize
-   api_profile
-   api_sample
-   api_result
-   api_visualize
-   api_engine
-   api_startpoint
-   api_store
-   api_logging
-   api_ensemble
 
 .. toctree::
    :maxdepth: 2
