@@ -13,7 +13,11 @@ import pytest
 import libsbml
 import petab
 
-from pypesto.predict import PredictionResult, PredictionConditionResult
+from pypesto.predict import (
+    AmiciPredictor,
+    PredictionConditionResult,
+    PredictionResult,
+)
 
 
 @pytest.fixture()
@@ -163,7 +167,7 @@ def test_simple_prediction(edata_objects):
     model, solver, edatas = edata_objects
     objective = pypesto.AmiciObjective(model, solver, edatas[0], 1)
     # now create a prediction object
-    default_predictor = pypesto.AmiciPredictor(objective)
+    default_predictor = AmiciPredictor(objective)
     # let's set the parameter vector
     x = np.array([3., 0.5])
 
@@ -257,7 +261,7 @@ def test_complex_prediction(edata_objects):
     model, solver, edatas = edata_objects
     objective = pypesto.AmiciObjective(model, solver, edatas, 1)
     # now create a prediction object
-    complex_predictor = pypesto.AmiciPredictor(
+    complex_predictor = AmiciPredictor(
         objective, max_chunk_size=2, post_processor=pp_out,
         post_processor_sensi=pps_out, post_processor_time=ppt_out,
         output_ids=[f'ratio_{i_obs}' for i_obs in range(5)])
