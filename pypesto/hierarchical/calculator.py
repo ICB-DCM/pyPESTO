@@ -132,12 +132,12 @@ class HierarchicalAmiciCalculator(AmiciCalculator):
 
         # directly writing to parameter mapping ensures that plists do not
         # include hierarchically computed parameters
-        for mapping in parameter_mapping:
-            for key, val in mapping.map_sim_var.items():
-                if val in x_inner_opt:
-                    mapping.map_sim_var[key] = x_inner_opt[val]
+        x_dct = copy.deepcopy(x_dct)
+        for key, val in x_inner_opt.items():
+            x_dct[key] = val
 
         # fill in parameters
+        # TODO use plist to compute only required derivatives
         amici.parameter_mapping.fill_in_parameters(
             edatas=edatas,
             problem_parameters=x_dct,
