@@ -2,7 +2,7 @@ import logging
 from functools import partial
 import numpy as np
 import pandas as pd
-from typing import Sequence, Tuple, Callable, Dict
+from typing import Sequence, Tuple, Callable, Dict, List
 
 from .. import Result
 from ..engine import (
@@ -434,6 +434,7 @@ class Ensemble:
             cutoff: float = np.inf,
             max_size: int = np.inf,
             max_per_start: int = np.inf,
+            dist_or_best: bool = True,
             **kwargs,
     ):
         """Construct an ensemble from the history of an optimization.
@@ -451,6 +452,10 @@ class Ensemble:
         max_per_start:
             The maximum number of vectors to be included from a
             single optimization start.
+        dist_or_best:
+            Boolean flag, whether the best (False) values from the
+            start should be taken or whether the indices should be
+            more evenly distributed.
 
         Returns
         -------
@@ -471,43 +476,38 @@ class Ensemble:
         ub = result.problem.ub_full
 
         # calculate the number of starts whose final nllh is below cutoff
-        n_starts = 0
-        for start in result.optimize_result.list:
-            if start['fval'] > cutoff:
-                break
-            n_starts += 1
+        n_starts = sum(start['fval'] < cutoff
+                       for start in result.optimize_result.list)
 
-        if n_starts * max_per_start > max_size:
-            logger.info(f'The number of starts that can contribute an '
-                        'ensemble vector multiplied with \nmax_per_start '
-                        'is higher than max_size. Thus we will lower '
-                        'max_per_start. If you \ndo not want this to '
-                        'happen consider increasing max_size to '
-                        f'{max_per_start*n_starts} or decrease cutoff.')
-            max_per_start = np.floor(max_size/n_starts)
+        fval_trace = [
+            result.optimize_result.list[i_ms]['history'].get_fval_trace()
+            for i_ms in range(n_starts)
+        ]
+        trace_x = [
+            result.optimize_result.list[i_ms]['history'].get_x_trace()
+            for i_ms in range(n_starts)
+        ]
 
-        for i_ms in range(n_starts):
-            trace_x = \
-                result.optimize_result.list[i_ms]['history'].get_x_trace()
-            trace_fval = \
-                result.optimize_result.list[i_ms]['history'].get_fval_trace()
-
-            # calculate number of candidates (argmax returns the index right
-            # before the first time the fval is higher than the cutoff)
-            n_cand = np.diff(reversed(trace_fval) < cutoff).argmax() + 1
-
-            # calculate distance between the vectors included in ensemble:
-            indices = np.round(np.linspace(1, n_cand,
-                                           np.min(max_per_start, n_cand)))
-            x_vectors.extend([trace_x[-ind] for ind in indices])
-            vector_tags.extend([(i_ms,
-                                 len(trace_x) - ind) for ind in indices])
+        # calculate the number of iterations included from each start
+        n_per_starts = entries_per_start(fval_trace=fval_trace,
+                                         cutoff=cutoff,
+                                         max_per_start=max_per_start,
+                                         max_size=max_size)
+        # determine x_vectors from each start
+        for start in range(n_starts):
+            indices = indices_per_start(trace_start=fval_trace[start],
+                                        cutoff=cutoff,
+                                        n_per_start=n_per_starts[start],
+                                        dist_or_best=dist_or_best)
+            x_vectors.extend(trace_x[start][indices])
+            vector_tags.extend([(start, ind) for ind in indices])
 
         # raise a `ValueError` if there are no vectors within the ensemble
         if len(x_vectors) == 0:
             raise ValueError('The ensemble does not contain any vectors. '
-                             'Either the `cutoff` value was too \nsmall or the '
-                             '`result.optimize_result` object might be empty.')
+                             'Either the `cutoff` value was too \nsmall '
+                             'or the `result.optimize_result` object might '
+                             'be empty.')
 
         x_vectors = np.stack(x_vectors, axis=1)
         return Ensemble(x_vectors=x_vectors,
@@ -744,3 +744,97 @@ class Ensemble:
             parameter_identifiability['parameterId']
 
         return parameter_identifiability
+
+
+def entries_per_start(fval_trace: List['np.ndarray'],
+                      cutoff: float,
+                      max_size: int,
+                      max_per_start: int,):
+    """
+    Creates the indices of each start that will be included
+    in the ensemble.
+
+    Parameters
+    ----------
+    fval_trace:
+        the fval-trace of each start.
+    cutoff:
+        Exclude parameters from the optimization if the nllh
+        is higher than the `cutoff`.
+    max_size:
+        The maximum size the ensemble should be.
+    max_per_start:
+        The maximum number of vectors to be included from a
+        single optimization start.
+
+    Returns
+    -------
+        A list of number of candidates per start that are to
+        be included in the ensemble.
+
+    """
+    # choose possible candidates
+    ens_ind = [(fval < cutoff).nonzero() for fval in fval_trace]
+
+    # count the number of candidates per start
+    n_per_starts = np.ndarray([len(start) for start in ens_ind])
+
+    # if all possible indices can be included, return
+    if (n_per_starts < max_per_start).all() and sum(n_per_starts) < max_size:
+        return ens_ind
+
+    # trimm down starts that exceed the limit:
+    n_per_starts = [min(n, max_per_start) for n in n_per_starts]
+
+    # trimm down more until it fits the max size
+    decr = 0
+    while(sum(n_per_starts) >= max_size):
+        n_per_starts = [min(n, max_per_start-decr)
+                        for n in n_per_starts]
+        decr += 1
+    # TODO: Possibility. With this implementation we could
+    #  in a scenario, where we have more candidates than
+    #  max size end up with an ensemble of size
+    #  `max_size - len(n_starts)` in the worst case. We could introduce
+    #  a flag which would be `force_max`, that indicates
+    #  whether those remaining free slots should be filled by
+    #  entries from certain starts. This would brng up the
+    #  discussion which starts to choose. One obvious choice
+    #  would be the best starts based on their endpoint.
+
+    return n_per_starts
+
+
+def indices_per_start(trace_start: np.ndarray,
+                      cutoff: float,
+                      n_per_start: int,
+                      dist_or_best: bool,):
+    """
+    Returns the indices to be taken into an ensemble.
+
+    Parameters
+    ----------
+    trace_start:
+        The fval_trace of a single start.
+    cutoff:
+        Exclude parameters from the optimization if the nllh
+        is higher than the `cutoff`.
+    n_per_start:
+        The number of indices to be included from one start.
+    dist_or_best:
+        Boolean flag, whether the best (False) values from the
+        start should be taken or whether the indices should be
+        more evenly distributed.
+
+    Returns
+    -------
+        The indices which to include in the ensemble.
+    """
+
+    candidates = (trace_start < cutoff).nonzero()
+
+    if dist_or_best:
+        indices = np.round(np.linspace(0, len(candidates), n_per_start))
+        return candidates[indices]
+    else:
+        return candidates[:n_per_start]
