@@ -13,7 +13,7 @@ import pytest
 import libsbml
 import petab
 
-from pypesto.prediction import PredictionResult, PredictionConditionResult
+from pypesto.predict import PredictionResult, PredictionConditionResult
 
 
 @pytest.fixture()
