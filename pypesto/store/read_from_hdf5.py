@@ -247,26 +247,26 @@ class ProfileResultHDF5Reader:
                 problem_reader = ProblemHDF5Reader(self.storage_filename)
                 self.results.problem = problem_reader.read()
             for profile_id in f['/profiling']:
-                profiling_list.append([])
+                profiling_list.append([
+                    None for _ in f[f'/profiling/{profile_id}']
+                ])
                 for parameter_id in f[f'/profiling/{profile_id}']:
                     if f[f'/profiling/{profile_id}/'
                          f'{parameter_id}'].attrs['IsNone']:
-                        profiling_list[int(profile_id)].append(None)
-                    else:
-                        profiling_list[int(profile_id)]\
-                            .append(
-                            read_hdf5_profile(f,
-                                              profile_id=profile_id,
-                                              parameter_id=parameter_id))
+                        continue
+                    profiling_list[int(profile_id)][int(parameter_id)] = \
+                        read_hdf5_profile(f,
+                                          profile_id=profile_id,
+                                          parameter_id=parameter_id)
             self.results.profile_result.list = profiling_list
         return self.results
 
 
 def read_result(filename: str,
                 problem: bool = True,
-                optimize: bool = True,
-                profile: bool = True,
-                sample: bool = True,
+                optimize: bool = False,
+                profile: bool = False,
+                sample: bool = False,
                 ) -> Result:
     """
     This is a function that saves the whole pypesto.Result object in an
@@ -290,6 +290,10 @@ def read_result(filename: str,
     result:
         Result object containing the results stored in HDF5 file.
     """
+    if not any([optimize, profile, sample]):
+        optimize = True
+        profile = True
+        sample = True
     result = Result()
 
     if problem:
@@ -298,17 +302,32 @@ def read_result(filename: str,
 
     if optimize:
         pypesto_opt_reader = OptimizationResultHDF5Reader(filename)
-        temp_result = pypesto_opt_reader.read()
-        result.optimize_result = temp_result.optimize_result
+        try:
+            temp_result = pypesto_opt_reader.read()
+            result.optimize_result = temp_result.optimize_result
+        except KeyError:
+            logger.warning('Loading the optimization result failed. It is '
+                           'highly likely that no optimization result exists '
+                           f'within {filename}.')
 
     if profile:
         pypesto_profile_reader = ProfileResultHDF5Reader(filename)
-        temp_result = pypesto_profile_reader.read()
-        result.profile_result = temp_result.profile_result
+        try:
+            temp_result = pypesto_profile_reader.read()
+            result.profile_result = temp_result.profile_result
+        except KeyError:
+            logger.warning('Loading the profiling result failed. It is '
+                           'highly likely that no profiling result exists '
+                           f'within {filename}.')
 
     if sample:
         pypesto_sample_reader = SamplingResultHDF5Reader(filename)
-        temp_result = pypesto_sample_reader.read()
-        result.sample_result = temp_result.sample_result
+        try:
+            temp_result = pypesto_sample_reader.read()
+            result.sample_result = temp_result.sample_result
+        except KeyError:
+            logger.warning('Loading the sampling result failed. It is '
+                           'highly likely that no sampling result exists '
+                           f'within {filename}.')
 
     return result
