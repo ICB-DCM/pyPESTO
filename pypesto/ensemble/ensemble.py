@@ -400,11 +400,11 @@ class Ensemble:
             # add the parameters from the next start as long as we
             # did not reach maximum size and the next value is still
             # lower than the cutoff value
-            if start['fval'] < cutoff and len(x_vectors) < max_size:
+            if start['fval'] <= cutoff and len(x_vectors) < max_size:
                 x_vectors.append(start['x'])
 
                 # the vector tag will be a -1 to indicate it is the last step
-                vector_tags.append((start['id'], -1))
+                vector_tags.append((int(start['id']), -1))
             else:
                 break
 
@@ -476,11 +476,13 @@ class Ensemble:
         ub = result.problem.ub_full
 
         # calculate the number of starts whose final nllh is below cutoff
-        n_starts = sum(start['fval'] < cutoff
+        n_starts = sum(start['fval'] <= cutoff
                        for start in result.optimize_result.list)
 
         fval_trace = [
-            result.optimize_result.list[i_ms]['history'].get_fval_trace()
+            np.array(
+                result.optimize_result.list[i_ms]['history'].get_fval_trace()
+            )
             for i_ms in range(n_starts)
         ]
         trace_x = [
@@ -499,8 +501,11 @@ class Ensemble:
                                         cutoff=cutoff,
                                         n_per_start=n_per_starts[start],
                                         dist_or_best=dist_or_best)
-            x_vectors.extend(trace_x[start][indices])
-            vector_tags.extend([(start, ind) for ind in indices])
+            x_vectors.extend([trace_x[start][ind] for ind in indices])
+            vector_tags.extend([
+                (int(result.optimize_result.list[start]['id']), ind)
+                for ind in indices
+            ])
 
         # raise a `ValueError` if there are no vectors within the ensemble
         if len(x_vectors) == 0:
@@ -774,10 +779,10 @@ def entries_per_start(fval_trace: List['np.ndarray'],
 
     """
     # choose possible candidates
-    ens_ind = [(fval < cutoff).nonzero() for fval in fval_trace]
+    ens_ind = [np.flatnonzero(fval <= cutoff) for fval in fval_trace]
 
     # count the number of candidates per start
-    n_per_starts = np.ndarray([len(start) for start in ens_ind])
+    n_per_starts = np.array([len(start) for start in ens_ind])
 
     # if all possible indices can be included, return
     if (n_per_starts < max_per_start).all() and sum(n_per_starts) < max_size:
@@ -788,7 +793,7 @@ def entries_per_start(fval_trace: List['np.ndarray'],
 
     # trimm down more until it fits the max size
     decr = 0
-    while(sum(n_per_starts) >= max_size):
+    while(sum(n_per_starts) > max_size):
         n_per_starts = [min(n, max_per_start-decr)
                         for n in n_per_starts]
         decr += 1
@@ -831,10 +836,10 @@ def indices_per_start(trace_start: np.ndarray,
         The indices which to include in the ensemble.
     """
 
-    candidates = (trace_start < cutoff).nonzero()
+    candidates = np.flatnonzero(trace_start <= cutoff)
 
     if dist_or_best:
-        indices = np.round(np.linspace(0, len(candidates), n_per_start))
-        return candidates[indices]
+        indices = np.round(np.linspace(0, len(candidates)-1, n_per_start))
+        return candidates[indices.astype(int)]
     else:
         return candidates[:n_per_start]
