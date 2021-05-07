@@ -54,15 +54,13 @@ def validation_profile_significance(
         (False), or a chi^2 value (True).
     """
 
+    if (result_full_data is not None) and (optimizer is not None):
+        raise UserWarning("optimizer will not be used, as a result object "
+                          "for the full data set is provided.")
+
     if result_full_data is None:
 
-        if optimizer is None:
-            raise ValueError("If no result_full_data is provided, an "
-                             "optimizer for refitting the full data problem "
-                             "needs to be provided to "
-                             "profile_based_validation_significance.")
-
-        x_0 = result_training_data.optimize_result.as_list('x')
+        x_0 = result_training_data.optimize_result.get_for_key('x')
 
         # copy problem, in order to not change/overwrite x_guesses
         problem = Problem(
