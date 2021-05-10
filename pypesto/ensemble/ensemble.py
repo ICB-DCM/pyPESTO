@@ -833,7 +833,7 @@ def indices_per_start(trace_start: np.ndarray,
 
     Returns
     -------
-        The indices which to include in the ensemble.
+        The indices to include in the ensemble.
     """
 
     candidates = np.flatnonzero(trace_start <= cutoff)

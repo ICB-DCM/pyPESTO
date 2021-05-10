@@ -6,7 +6,7 @@ import scipy.optimize as so
 
 def test_ensemble_from_optimization():
     """
-    Test, whether reading ensemble from history works as intended.
+    Test reading an ensemble from optimization result.
     """
     objective = pypesto.Objective(fun=so.rosen,
                                   grad=so.rosen_der,
