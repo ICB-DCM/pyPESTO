@@ -58,5 +58,6 @@ def sres_to_fim(sres: np.ndarray):
     """Translate residual sensitivities to FIM.
 
     The FIM is based on the function values, not chi2, i.e. has a normalization
-    of 0.5."""
+    of 0.5.
+    """
     return sres.transpose().dot(sres)
