@@ -776,6 +776,9 @@ class Hdf5History(History):
         self.file = file
         self._generate_hdf5_group()
 
+    def __len__(self):
+        return len(self.get_fval_trace())
+
     def update(
             self,
             x: np.ndarray,
@@ -1114,10 +1117,10 @@ class OptimizerHistory:
         # etc
         max_init_iter = 3
         for it in range(min(len(self.history), max_init_iter)):
-            candidate = self.history.get_fval_trace(it)
+            candidate = self.history.get_fval_trace()[it]
             if not np.isnan(candidate) \
-                    and np.allclose(self.history.get_x_trace(it), self.x0):
-                self.fval0 = candidate
+                    and np.allclose(self.history.get_x_trace()[it], self.x0):
+                self.fval0 = float(candidate)
                 break
 
         # we prioritize fval over chi2 as fval is written whenever possible
@@ -1129,6 +1132,8 @@ class OptimizerHistory:
 
         for var in ['fval', 'chi2', 'x']:
             self.extract_from_history(var, ix_min)
+            if var == 'fval':
+                self.fval_min = float(self.fval_min)
 
         if self.history.options.trace_record_res:
             self.extract_from_history('res', ix_min)
@@ -1140,15 +1145,15 @@ class OptimizerHistory:
                 self.extract_from_history(var, ix_min)
                 if getattr(self, target) is None \
                         and ix_try < len(self.history) \
-                        and np.allclose(self.history.get_x_trace(ix_min),
-                                        self.history.get_x_trace(ix_try)):
+                        and np.allclose(self.history.get_x_trace()[ix_min],
+                                        self.history.get_x_trace()[ix_try]):
                     # gradient/sres typically evaluated on the next call
                     # so we check if x remains the same and if yes try to
                     # extract from the next
                     self.extract_from_history(var, ix_try)
 
     def extract_from_history(self, var, ix):
-        val = getattr(self.history, f'get_{var}_trace')(ix)
+        val = getattr(self.history, f'get_{var}_trace')()[ix]
         if not np.all(np.isnan(val)):
             setattr(self, f'{var}_min', val)
 
