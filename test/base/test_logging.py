@@ -1,3 +1,5 @@
+"""Test the pypesto logging features."""
+
 import logging
 import os
 import pypesto
