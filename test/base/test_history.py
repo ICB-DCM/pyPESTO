@@ -143,7 +143,7 @@ class HistoryTest(unittest.TestCase):
             assert getattr(start.history, attr) == \
                    getattr(reconst_history, attr), attr
 
-        assert len(start.history._trace) == len(reconst_history._trace)
+        assert len(start.history) == len(reconst_history)
         self.assertListEqual(start.history._trace.columns.to_list(),
                              reconst_history._trace.columns.to_list())
         for col in start.history._trace.columns:
