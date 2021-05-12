@@ -963,7 +963,17 @@ class Hdf5History(History):
     def _get_hdf5_entries(self, entry_id: str,
                           ix: Union[int, Sequence[int], None]) -> Sequence:
         """
-        returns the entries for the key entry_id.
+        Parameters
+        ------------
+        entry_id:
+            The key whose trace is returned.
+        ix:
+            Index or list of indices of the iterations that will produce
+            the trace.
+            
+        Returns
+        --------
+        The entries ix for the key entry_id.
         """
         if ix is None:
             ix = range(len(self))
