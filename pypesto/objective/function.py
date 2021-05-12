@@ -8,9 +8,11 @@ from .constants import MODE_FUN, MODE_RES, FVAL, GRAD, HESS, RES, SRES
 
 class Objective(ObjectiveBase):
     """
-    The objective class allows the user explicitely specify functions that
+    The objective class allows the user explicitly specify functions that
     compute the function value and/or residuals as well as respective
     derivatives.
+
+    Denote dimensions `n` = parameters, `m` = residuals.
 
     Parameters
     ----------
@@ -37,7 +39,7 @@ class Objective(ObjectiveBase):
         Method for computing the Hessian matrix. If it is a callable,
         it should be of the form
 
-            ``hess(x) -> array, shape (n,n).``
+            ``hess(x) -> array, shape (n, n).``
 
         If its value is True, then fun should return the gradient as a
         second, and the Hessian as a third output, and grad should be True as
@@ -56,10 +58,10 @@ class Objective(ObjectiveBase):
             ``res(x) -> array_like, shape(m,).``
 
     sres:
-        Method for computing residual sensitivities. If its is a callable,
+        Method for computing residual sensitivities. If it is a callable,
         it should be of the form
 
-            ``sres(x) -> array, shape (m,n).``
+            ``sres(x) -> array, shape (m, n).``
 
         If its value is True, then res should return the residual
         sensitivities as a second output.
@@ -69,11 +71,16 @@ class Objective(ObjectiveBase):
         length dim_full (as in the Problem class). Can be read by the
         problem.
     """
-    def __init__(self, fun: Callable = None,
-                 grad: Union[Callable, bool] = None, hess: Callable = None,
-                 hessp: Callable = None, res: Callable = None,
-                 sres: Union[Callable, bool] = None,
-                 x_names: Sequence[str] = None):
+    def __init__(
+        self,
+        fun: Callable = None,
+        grad: Union[Callable, bool] = None,
+        hess: Callable = None,
+        hessp: Callable = None,
+        res: Callable = None,
+        sres: Union[Callable, bool] = None,
+        x_names: Sequence[str] = None,
+    ):
         self.fun = fun
         self.grad = grad
         self.hess = hess
@@ -107,7 +114,11 @@ class Objective(ObjectiveBase):
     def has_sres(self) -> bool:
         return callable(self.sres) or self.sres is True
 
-    def check_sensi_orders(self, sensi_orders, mode):
+    def check_sensi_orders(
+        self,
+        sensi_orders: Tuple[int, ...],
+        mode: str,
+    ) -> bool:
         if (mode is MODE_FUN and
             (0 in sensi_orders and not self.has_fun
              or 1 in sensi_orders and not self.has_grad
@@ -120,7 +131,7 @@ class Objective(ObjectiveBase):
 
         return True
 
-    def check_mode(self, mode):
+    def check_mode(self, mode: str) -> bool:
         if mode == MODE_FUN and not self.has_fun:
             return False
 
@@ -129,7 +140,13 @@ class Objective(ObjectiveBase):
 
         return True
 
-    def call_unprocessed(self, x, sensi_orders, mode):
+    def call_unprocessed(
+        self,
+        x: np.ndarray,
+        sensi_orders: Tuple[int, ...],
+        mode: str,
+        **kwargs,
+    ) -> ResultDict:
         """
         Call objective function without pre- or post-processing and
         formatting.
@@ -148,7 +165,9 @@ class Objective(ObjectiveBase):
         return result
 
     def _call_mode_fun(
-            self, x: np.ndarray, sensi_orders: Tuple[int, ...]
+        self,
+        x: np.ndarray,
+        sensi_orders: Tuple[int, ...],
     ) -> ResultDict:
         if sensi_orders == (0,):
             if self.grad is True:
@@ -207,7 +226,9 @@ class Objective(ObjectiveBase):
         return result
 
     def _call_mode_res(
-            self, x: np.ndarray, sensi_orders: Tuple[int, ...]
+        self,
+        x: np.ndarray,
+        sensi_orders: Tuple[int, ...],
     ) -> ResultDict:
         if sensi_orders == (0,):
             if self.sres is True:
