@@ -835,7 +835,7 @@ class Hdf5History(History):
 
     def _check_for_not_nan_entries(self, hdf5_group: str) -> bool:
         """Checks if there exist not-nan entries stored for a given group"""
-        group = self._get_hdf5_entries(hdf5_group)
+        group = self._get_hdf5_entries(hdf5_group, ix=None)
 
         for entry in group:
             if not (entry is None or np.all(np.isnan(entry))):
