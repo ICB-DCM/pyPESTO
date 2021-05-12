@@ -127,8 +127,8 @@ class CRProblem:
 
     .. math::
 
-        \frac{dx_0}{dt} = -p_0 \cdot x_0 + p_1 \cdot x_1,\\
-        \frac{dx_1}{dt} = p_0 \cdot x_0 - p_1 \cdot x_1
+        \\frac{dx_0}{dt} = -p_0 \\cdot x_0 + p_1 \\cdot x_1,\\
+        \\frac{dx_1}{dt} = p_0 \\cdot x_0 - p_1 \\cdot x_1
 
     Uses automatic differentiation for derivative calculation.
     """
@@ -217,10 +217,21 @@ class CRProblem:
         return jacobian(self.get_fsnllh())
 
     def get_objective(
-        self, fun: bool = True, res: bool = True, max_sensi_order: int = 2,
+        self,
+        fun: bool = True,
+        res: bool = True,
+        max_sensi_order: int = 2,
         fim_for_hess: bool = False,
     ):
-        """Full pyPESTO objective function."""
+        """Full pyPESTO objective function.
+
+        Parameters
+        ----------
+        fun: Whether the objective can calculate function values.
+        res: Whether the objective can calculate residuals.
+        max_sensi_order: Maximum sensitivity order the function can calculate.
+        fim_for_hess: Whether to use the FIM instead of the Hessian.
+        """
         if fim_for_hess:
             fhess = self.get_ffim()
         else:
