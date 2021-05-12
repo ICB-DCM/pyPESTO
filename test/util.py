@@ -198,7 +198,8 @@ class CRProblem:
     def get_ffim(self):
         """Fisher information matrix."""
         def ffim(p):
-            return pypesto.objective.util.sres_to_fim(self.get_fsres()(p))
+            sres = self.get_fsres()(p)
+            return np.dot(sres.T, sres)
         return ffim
 
     def get_fnllh(self):
