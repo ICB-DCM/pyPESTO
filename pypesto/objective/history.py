@@ -960,7 +960,8 @@ class Hdf5History(History):
         except OSError:
             pass
 
-    def _get_hdf5_entries(self, entry_id: str, ix=None) -> Sequence:
+    def _get_hdf5_entries(self, entry_id: str,
+                          ix: Union[int, Sequence[int], None]) -> Sequence:
         """
         returns the entries for the key entry_id.
         """
