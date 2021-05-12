@@ -1,6 +1,4 @@
-"""
-This is for testing the pypesto.Objective.
-"""
+"""Test the :class:`pypesto.Objective`."""
 
 import numpy as np
 import sympy as sp

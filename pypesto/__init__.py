@@ -22,11 +22,6 @@ from .objective import (
     ObjectiveBase,
     OptimizerHistory,
 )
-from .predict import (
-    AmiciPredictor,
-    PredictionConditionResult,
-    PredictionResult,
-)
 from .problem import Problem
 from .result import (
     OptimizeResult,
