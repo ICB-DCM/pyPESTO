@@ -157,9 +157,11 @@ class HistoryTest(unittest.TestCase):
                 if original_trace[iteration] is None or np.isnan(
                         original_trace[iteration]).all():
                     continue
-                np.testing.assert_array_equal(
+                np.testing.assert_array_almost_equal(
                     reconst_trace[iteration],
-                    original_trace[iteration])
+                    original_trace[iteration],
+                    decimal=15
+                )
 
     def check_history_consistency(self, start: OptimizerResult):
 
