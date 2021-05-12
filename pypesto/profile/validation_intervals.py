@@ -123,13 +123,13 @@ def validation_profile_significance(
     # => survival function chi.sf
     if return_significance:
         if lsq_objective:
-            return chi2.sf(0.5*(nllh_new-nllh_old), 1)
-        else:
             return chi2.sf(nllh_new-nllh_old, 1)
+        else:
+            return chi2.sf(2*(nllh_new-nllh_old), 1)
     # compute the probability, that the validation data set is inside the CI
     # => cumulative density function chi.cdf
     else:
         if lsq_objective:
-            return chi2.cdf(0.5*(nllh_new-nllh_old), 1)
-        else:
             return chi2.cdf(nllh_new-nllh_old, 1)
+        else:
+            return chi2.cdf(2*(nllh_new-nllh_old), 1)
