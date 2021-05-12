@@ -26,9 +26,7 @@ def problem(request) -> pypesto.Problem:
     if request.param == 'cr':
         return CRProblem().get_problem()
     elif 'rosen' in request.param:
-        integrated = False
-        if 'integrated' in request.param:
-            integrated = True
+        integrated = 'integrated' in request.param
         obj = rosen_for_sensi(max_sensi_order=2, integrated=integrated)['obj']
         lb = 0 * np.ones((1, 2))
         ub = 1 * np.ones((1, 2))
