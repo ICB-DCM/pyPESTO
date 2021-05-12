@@ -485,7 +485,7 @@ class Ensemble:
             )
             for i_ms in range(n_starts)
         ]
-        trace_x = [
+        x_trace = [
             result.optimize_result.list[i_ms]['history'].get_x_trace()
             for i_ms in range(n_starts)
         ]
@@ -501,7 +501,7 @@ class Ensemble:
                                          cutoff=cutoff,
                                          n_vectors=n_per_starts[start],
                                          distribute=distribute)
-            x_vectors.extend([trace_x[start][ind] for ind in indices])
+            x_vectors.extend([x_trace[start][ind] for ind in indices])
             vector_tags.extend([
                 (int(result.optimize_result.list[start]['id']), ind)
                 for ind in indices
