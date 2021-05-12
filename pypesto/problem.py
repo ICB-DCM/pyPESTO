@@ -140,6 +140,8 @@ class Problem:
             x_names = objective.x_names
         elif x_names is None:
             x_names = [f'x{j}' for j in range(0, self.dim_full)]
+        if len(set(x_names)) != len(x_names):
+            raise ValueError("Parameter names x_names must be unique")
         self.x_names: List[str] = list(x_names)
 
         if x_scales is None:

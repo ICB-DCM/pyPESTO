@@ -1,6 +1,5 @@
-"""
-This is for testing the pypesto.Storage.
-"""
+"""Test the `pypesto.store` module."""
+
 import os
 import tempfile
 import pypesto
