@@ -1,5 +1,8 @@
+"""Validation intervals."""
+
 import logging
 from typing import Optional
+from copy import deepcopy
 
 from ..engine import Engine
 from ..optimize import Optimizer, minimize
@@ -15,15 +18,30 @@ def validation_profile_significance(
         problem_full_data: Problem,
         result_training_data: Result,
         result_full_data: Optional[Result] = None,
-        n_starts: int = 1,
+        n_starts: Optional[int] = 1,
         optimizer: Optional[Optimizer] = None,
-        engine: Engine = None,
-        lsq_objective: float = False
+        engine: Optional[Engine] = None,
+        lsq_objective: bool = False,
+        return_significance: bool = True,
 ) -> float:
     """
-    Computes the significance of an validation experiment as described in
-    Kreutz et al. BMC Systems Biology 2012.
+    A Validation Interval for significance alpha is a confidence region/
+    interval for a new validation experiment. [#Kreutz]_ et al.
+    (This method per default returns the significance = 1-alpha!)
 
+    The reasoning behind their approach is, that a validation data set
+    is outside the validation interval, if fitting the full data set
+    would lead to a fit $\theta_{new}$, that does not contain the old
+    fit $\theta_{train}$ in their (Profile-Likelihood) based
+    parameter-confidence intervals. (I.e. the old fit would be rejected by
+    the fit of the full data.)
+
+    This method returns the significance of the validation data set (where
+    `result_full_data` is the objective function for fitting both data sets).
+    I.e. the largest alpha, such that there is a validation region/interval
+    such that the validation data set lies outside this Validation
+    Interval with probability alpha. (If one is interested in the opposite,
+    set `return_significance=False`.)
 
     Parameters
     ----------
@@ -35,48 +53,49 @@ def validation_profile_significance(
         result object from the fitting of the training data set only.
 
     result_full_data
-        pypesto.result object, that either contains, or (if fitting was not
-        done beforehand) stores the parameter fitting of training and
-        validation data combined.
+        pypesto.result object that contains the result of fitting
+        training and validation data combined.
 
     n_starts
-        number of starts for fitting the full data set.
+        number of starts for fitting the full data set
+        (if result_full_data is not provided).
 
     optimizer:
         optimizer used for refitting the data (if result_full_data is not
-        provided)
+        provided).
 
     engine
-        engine for refitting.
+        engine for refitting (if result_full_data is not provided).
 
     lsq_objective:
-        indicates, if the objective of problem_full_data corresponds to a nllh
+        indicates if the objective of problem_full_data corresponds to a nllh
         (False), or a chi^2 value (True).
+    return_significance:
+        indicates, if the function should return the significance (True) (i.e.
+        the  probability, that the new data set lies outside the Confidence
+        Interval for the validation experiment, as given by the method), or
+        the largest alpha, such that the validation experiment still lies
+        within the Confidence Interval (False). I.e. alpha = 1-significance.
+
+    .. [#Kreutz] Kreutz, Clemens, Raue, Andreas and Timmer, Jens.
+                "Likelihood based observability analysis and confidence
+                intervals for predictions of dynamic models".
+                BMC Systems Biology, 2012/12,
+                https://doi.org/10.1186/1752-0509-6-120
     """
 
     if (result_full_data is not None) and (optimizer is not None):
         raise UserWarning("optimizer will not be used, as a result object "
                           "for the full data set is provided.")
 
+    # if result for full data is not provided: minimize
     if result_full_data is None:
 
         x_0 = result_training_data.optimize_result.get_for_key('x')
 
         # copy problem, in order to not change/overwrite x_guesses
-        problem = Problem(
-            objective=problem_full_data.objective,
-            lb=problem_full_data.lb,
-            ub=problem_full_data.ub,
-            dim_full=problem_full_data.dim_full,
-            x_fixed_indices=problem_full_data.x_fixed_indices,
-            x_fixed_vals=problem_full_data.x_fixed_vals,
-            x_guesses=x_0,
-            startpoint_method=problem_full_data.startpoint_method,
-            x_names=problem_full_data.x_names,
-            x_scales=problem_full_data.x_scales,
-            x_priors_defs=problem_full_data.x_priors,
-            lb_init=problem_full_data.lb_init,
-            ub_init=problem_full_data.ub_init)
+        problem = deepcopy(problem_full_data)
+        problem.set_x_guesses(x_0)
 
         result_full_data = minimize(problem=problem,
                                     optimizer=optimizer,
@@ -94,13 +113,23 @@ def validation_profile_significance(
                 result_training_data.optimize_result.get_for_key('x')[0]))
 
     if nllh_new > nllh_old:
-        raise RuntimeError("Fitting of the full data set provided a worse fit "
-                           "then the fit only considering the training data. "
-                           "Consider rerunning the not handing over "
-                           "result_full_data or running the fitting from the "
-                           "best parameters found from the training data.")
+        logger.warning("Fitting of the full data set provided a worse fit "
+                       "than the fit only considering the training data. "
+                       "Consider rerunning the not handing over "
+                       "result_full_data or running the fitting from the "
+                       "best parameters found from the training data.")
 
-    if lsq_objective:
-        return chi2.sf(0.5*(nllh_new-nllh_old), 1)
+    # compute the probability, that the validation data set is outside the CI
+    # => survival function chi.sf
+    if return_significance:
+        if lsq_objective:
+            return chi2.sf(0.5*(nllh_new-nllh_old), 1)
+        else:
+            return chi2.sf(nllh_new-nllh_old, 1)
+    # compute the probability, that the validation data set is inside the CI
+    # => cumulative density function chi.cdf
     else:
-        return chi2.sf(nllh_new-nllh_old, 1)
+        if lsq_objective:
+            return chi2.cdf(0.5*(nllh_new-nllh_old), 1)
+        else:
+            return chi2.cdf(nllh_new-nllh_old, 1)

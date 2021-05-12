@@ -37,6 +37,7 @@ class ValidationIntervalTest(unittest.TestCase):
                                                 n_starts=5)
 
     def test_validation_intervals(self):
+        """Test validation profiles."""
 
         # fit with handing over all data
         profile.validation_profile_significance(self.problem_all_data,
@@ -55,7 +56,7 @@ def lsq_residual_objective(d: float):
     f(x) = (x-d)^2
     """
     def f(x):
-        return (x[0]-d)**2
+        return np.sum((x[0]-d)**2)
 
     def grad(x):
         return 2 * (x-d)
