@@ -120,7 +120,15 @@ def poly_for_sensi(max_sensi_order, integrated=False, x=0.):
 
 
 class CRProblem:
-    """ODE model of a conversion reaction A <-> B.
+    """ODE model of a conversion reaction x0 <-> x1.
+
+    Parameters: reaction rate coefficients p0: x0 -> x1, p1: x1 -> x0.
+    Translates to the ODE
+
+    .. math::
+
+        \frac{dx_0}{dt} = -p_0 \cdot x_0 + p_1 \cdot x_1,\\
+        \frac{dx_1}{dt} = p_0 \cdot x_0 - p_1 \cdot x_1
 
     Uses automatic differentiation for derivative calculation.
     """
@@ -130,17 +138,33 @@ class CRProblem:
         p_true: anp.ndarray = None, sigma: float = 0.02,
         lb: anp.ndarray = None, ub: anp.ndarray = None,
     ):
+        """
+        Parameters
+        ----------
+        n_t: Number of time points.
+        max_t: Maximum time point value.
+        x0: Initial state.
+        p_true: True parameter value.
+        sigma: Standard deviation of a normal noise model.
+        lb: Lower bound.
+        ub: Upper bound.
+        """
         self.ts = anp.linspace(0, max_t, n_t)
+
         if x0 is None:
             x0 = anp.array([1., 0.])
         self.x0: anp.ndarray = x0
+
         if p_true is None:
             p_true = anp.array([0.06, 0.08])
         self.p_true: anp.ndarray = p_true
+
         self.sigma: float = sigma
+
         if lb is None:
             lb = anp.array([0., 0.])
         self.lb = lb
+
         if ub is None:
             ub = anp.array([0.5, 0.5])
         self.ub = ub
@@ -151,7 +175,7 @@ class CRProblem:
         self.data = y_true + sigma * rng.normal(size=y_true.shape)
 
     def get_fy(self):
-        """Systems states, fully observed, analytic solution."""
+        """System states, fully observed, analytic solution."""
         def fy(p):
             p0, p1 = p
             e = anp.exp(- (p0 + p1) * self.ts)
