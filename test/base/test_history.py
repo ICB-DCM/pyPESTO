@@ -1,6 +1,4 @@
-"""
-This is for testing the pypesto.History.
-"""
+"""Test the :class:`pypesto.History`."""
 
 import numpy as np
 import pytest

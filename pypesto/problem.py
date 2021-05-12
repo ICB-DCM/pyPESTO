@@ -140,11 +140,13 @@ class Problem:
             x_names = objective.x_names
         elif x_names is None:
             x_names = [f'x{j}' for j in range(0, self.dim_full)]
-        self.x_names: List[str] = list(x_names)
+        if len(set(x_names)) != len(x_names):
+            raise ValueError("Parameter names x_names must be unique")
+        self.x_names_full: List[str] = list(x_names)
 
         if x_scales is None:
             x_scales = ['lin'] * self.dim_full
-        self.x_scales = x_scales
+        self.x_scales_full = x_scales
 
         self.x_priors = x_priors_defs
 
@@ -173,6 +175,14 @@ class Problem:
     @property
     def dim(self) -> int:
         return self.dim_full - len(self.x_fixed_indices)
+
+    @property
+    def x_names(self) -> List[str]:
+        return [self.x_names_full[ix] for ix in self.x_free_indices]
+
+    @property
+    def x_scales(self) -> List[str]:
+        return [self.x_scales_full[ix] for ix in self.x_free_indices]
 
     @property
     def x_free_indices(self) -> List[int]:
@@ -211,9 +221,9 @@ class Problem:
             x_fixed_vals=self.x_fixed_vals)
 
         # sanity checks
-        if len(self.x_scales) != self.dim_full:
+        if len(self.x_scales_full) != self.dim_full:
             raise AssertionError("x_scales dimension invalid.")
-        if len(self.x_names) != self.dim_full:
+        if len(self.x_names_full) != self.dim_full:
             raise AssertionError("x_names must be of length dim_full.")
         if len(self.x_fixed_indices) != len(self.x_fixed_vals):
             raise AssertionError(
