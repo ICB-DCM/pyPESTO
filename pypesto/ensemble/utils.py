@@ -6,8 +6,10 @@ from typing import Callable, Union
 from pathlib import Path
 
 from .constants import (EnsembleType, OUTPUT, UPPER_BOUND, LOWER_BOUND,
-                        PREDICTION_RESULTS, PREDICTION_ID, SUMMARY)
+                        PREDICTION_RESULTS, PREDICTION_ID, SUMMARY,
+                        OPTIMIZE, SAMPLE)
 from .ensemble import (Ensemble, EnsemblePrediction)
+from ..store import read_result
 
 
 def read_from_csv(path: str,
@@ -55,6 +57,50 @@ def read_from_csv(path: str,
                         ensemble_type=ensemble_type,
                         lower_bound=lower_bound,
                         upper_bound=upper_bound)
+
+
+def read_ensemble_from_hdf5(filename: str,
+                            input_type: str = OPTIMIZE,
+                            remove_burn_in: bool = True,
+                            chain_slice: slice = None,
+                            cutoff: float = np.inf,
+                            max_size: int = np.inf
+                            ):
+    """
+    Create an ensemble from an HDF5 storage file.
+
+    Parameters
+    ----------
+    filename:
+        Name or path of the HDF5 file.
+    input_type:
+        Which type of ensemble to create. From History, from
+        Optimization or from Sample.
+
+    Returns:
+    -------
+    ensemble:
+        Ensemble object of parameter vectors
+    """
+    # TODO: add option HISTORY. Need to fix
+    #  reading history from hdf5.
+    if input_type == OPTIMIZE:
+        result = read_result(filename=filename,
+                             optimize=True)
+        return Ensemble.from_optimization_endpoints(result=result,
+                                                    cutoff=cutoff,
+                                                    max_size=max_size)
+    elif input_type == SAMPLE:
+        result = read_result(filename=filename,
+                             sample=True)
+        return Ensemble.from_sample(result=result,
+                                    remove_burn_in=remove_burn_in,
+                                    chain_slice=chain_slice)
+    else:
+        raise ValueError('The type you provided was neither '
+                         f'"{SAMPLE}" nor "{OPTIMIZE}". Those are '
+                         'currently the only supported types. '
+                         'Please choose one of them.')
 
 
 def read_from_df(dataframe: pd.DataFrame,
