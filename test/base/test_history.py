@@ -144,17 +144,22 @@ class HistoryTest(unittest.TestCase):
                    getattr(reconst_history, attr), attr
 
         assert len(start.history) == len(reconst_history)
-        self.assertListEqual(start.history._trace.columns.to_list(),
-                             reconst_history._trace.columns.to_list())
-        for col in start.history._trace.columns:
-            for true_val, reconst_val in zip(start.history._trace[col],
-                                             reconst_history._trace[col]):
-                if true_val is None:
-                    assert reconst_val is None, col
-                elif isinstance(true_val, float) and np.isnan(true_val):
-                    assert np.isnan(reconst_val), col
-                else:
-                    assert np.isclose(true_val, reconst_val).all(), col
+
+        history_entries = [X, FVAL, GRAD, HESS, RES, SRES, CHI2, SCHI2]
+
+        for entry in history_entries:
+            original_trace = getattr(start.history,
+                                     f'get_{entry}_trace')()
+            reconst_trace = getattr(reconst_history,
+                                    f'get_{entry}_trace')()
+            for iteration in range(len(original_trace)):
+                # comparing nan and None difficult
+                if original_trace[iteration] is None or np.isnan(
+                        original_trace[iteration]).all():
+                    continue
+                np.testing.assert_array_equal(
+                    reconst_trace[iteration],
+                    original_trace[iteration])
 
     def check_history_consistency(self, start: OptimizerResult):
 
