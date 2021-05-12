@@ -88,10 +88,8 @@ def test_x_names():
 
     # all fine
     problem = pypesto.Problem(x_names=['a', 'b', 'c'], **kwargs)
-    assert problem.x_names == ['a', 'c']
-    assert problem.x_names_full == ['a', 'b', 'c']
+    assert problem.x_names == ['a', 'b', 'c']
 
     # defaults
     problem = pypesto.Problem(**kwargs)
-    assert problem.x_names == ['x0', 'x2']
-    assert problem.x_names_full == ['x0', 'x1', 'x2']
+    assert problem.x_names == ['x0', 'x1', 'x2']
