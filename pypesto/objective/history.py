@@ -970,7 +970,6 @@ class Hdf5History(History):
         ix:
             Index or list of indices of the iterations that will produce
             the trace.
-            
         Returns
         --------
         The entries ix for the key entry_id.
