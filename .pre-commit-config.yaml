@@ -31,3 +31,11 @@ repos:
     description: Replace or check mixed line endings
   - id: trailing-whitespace
     description: Trim trailing whitespaces
+- repo: local
+  hooks:
+  - id: style
+    name: Check style
+    description: Check style
+    entry: tox -e project,flake8
+    language: python
+    types: [python]

@@ -11,7 +11,8 @@ from typing import Any, Dict, List, Tuple, Sequence, Union
 from .constants import (
     MODE_FUN, MODE_RES, FVAL, GRAD, HESS, RES, SRES, CHI2, SCHI2, TIME,
     N_FVAL, N_GRAD, N_HESS, N_RES, N_SRES, X)
-from .util import res_to_chi2, sres_to_schi2, sres_to_fim
+from .util import (
+    res_to_chi2, res_to_fval, sres_to_schi2, sres_to_fim, schi2_to_grad)
 
 ResultDict = Dict[str, Union[float, np.ndarray]]
 MaybeArray = Union[np.ndarray, 'np.nan']
@@ -372,7 +373,7 @@ class History(HistoryBase):
         res = result.get(RES, None)
         if res is not None and FVAL not in result:
             # no option trace_record_fval
-            result[FVAL] = res_to_chi2(res)
+            result[FVAL] = res_to_fval(res)
         self._update_counts(sensi_orders, mode)
 
     def finalize(self):
@@ -1251,7 +1252,7 @@ def extract_values(mode: str,
         fim = sres_to_fim(sres_result)
         alt_values = {CHI2: chi2, SCHI2: schi2, HESS: fim}
         if schi2 is not None:
-            alt_values[GRAD] = 0.5 * schi2
+            alt_values[GRAD] = schi2_to_grad(schi2)
 
         # filter according to options
         alt_values = {
