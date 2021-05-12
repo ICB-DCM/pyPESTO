@@ -19,7 +19,7 @@ def res_to_chi2(res: np.ndarray) -> Union[float, None]:
 
 @_check_none
 def chi2_to_fval(chi2: float) -> Union[float, None]:
-    """Translate chi2 to function value, `fval = 0.5 * sum(res**2)`.
+    """Translate chi2 to function value, `fval = 0.5*chi2 = 0.5*sum(res**2)`.
 
     Note that for the function value we thus employ a probabilistic
     interpretation, as the log-likelihood of a standard normal noise model.
@@ -30,7 +30,7 @@ def chi2_to_fval(chi2: float) -> Union[float, None]:
 
 @_check_none
 def res_to_fval(res: np.ndarray) -> Union[float, None]:
-    """Translate residuals to function value."""
+    """Translate residuals to function value, `fval = 0.5*sum(res**2)`."""
     return chi2_to_fval(res_to_chi2(res))
 
 
@@ -43,7 +43,9 @@ def sres_to_schi2(res: np.ndarray, sres: np.ndarray):
 @_check_none
 def schi2_to_grad(schi2: np.ndarray) -> np.ndarray:
     """Translate chi2 gradient to function value gradient.
-    See also `chi2_to_fval`."""
+
+    See also :func:`chi2_to_fval`.
+    """
     return 0.5 * schi2
 
 
@@ -58,6 +60,6 @@ def sres_to_fim(sres: np.ndarray):
     """Translate residual sensitivities to FIM.
 
     The FIM is based on the function values, not chi2, i.e. has a normalization
-    of 0.5.
+    of 0.5 as in :func:`res_to_fval`.
     """
     return sres.transpose().dot(sres)
