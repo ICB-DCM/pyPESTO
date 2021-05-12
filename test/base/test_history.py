@@ -160,7 +160,7 @@ class HistoryTest(unittest.TestCase):
                 np.testing.assert_array_almost_equal(
                     reconst_trace[iteration],
                     original_trace[iteration],
-                    decimal=15
+                    decimal=10
                 )
 
     def check_history_consistency(self, start: OptimizerResult):
