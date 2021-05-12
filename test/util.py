@@ -142,7 +142,7 @@ class CRProblem:
             lb = anp.array([0., 0.])
         self.lb = lb
         if ub is None:
-            ub = anp.array([1., 1.])
+            ub = anp.array([0.5, 0.5])
         self.ub = ub
 
         y_true = self.get_fy()(self.p_true)
