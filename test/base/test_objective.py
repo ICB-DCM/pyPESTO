@@ -201,9 +201,18 @@ def test_aesara(max_sensi_order, integrated):
 def test_fds():
     """Test finite differences."""
     problem = CRProblem()
+
+    # reference objective
     obj = problem.get_objective()
+
+    # FDs for everything
     obj_fd = pypesto.FD(obj, grad=True, hess=True, sres=True)
+    # bases Hessian on gradients
+    obj_fd_grad = pypesto.FD(
+        obj, grad=True, hess=True, sres=True, hess_via_fval=False)
+    # does not actually use FDs
     obj_fd_fake = pypesto.FD(obj, grad=None, hess=None, sres=None)
+    # limited outputs, no derivatives
     obj_fd_limited = pypesto.FD(obj, grad=False, hess=False, sres=False)
     p = problem.p_true
 
@@ -211,10 +220,12 @@ def test_fds():
     for attr in ['fval', 'res']:
         val = getattr(obj, f"get_{attr}")(p)
         val_fd = getattr(obj_fd, f"get_{attr}")(p)
+        val_fd_grad = getattr(obj_fd_grad, f"get_{attr}")(p)
         val_fd_fake = getattr(obj_fd_fake, f"get_{attr}")(p)
         val_fd_limited = getattr(obj_fd_limited, f"get_{attr}")(p)
         assert (
-            (val == val_fd).all() and (val == val_fd_fake).all()
+            (val == val_fd).all() and (val == val_fd_grad).all()
+            and (val == val_fd_fake).all()
             and (val == val_fd_limited).all()
         )
 
@@ -223,11 +234,15 @@ def test_fds():
     for attr in ['grad', 'hess', 'sres']:
         val = getattr(obj, f"get_{attr}")(p)
         val_fd = getattr(obj_fd, f"get_{attr}")(p)
+        val_fd_grad = getattr(obj_fd_grad, f"get_{attr}")(p)
         val_fd_fake = getattr(obj_fd_fake, f"get_{attr}")(p)
 
-        assert np.allclose(val, val_fd, atol=atol, rtol=rtol)
-        # cannot completely coincide
-        assert (val != val_fd).any()
+        for v in [val_fd, val_fd_grad]:
+            assert np.allclose(val, v, atol=atol, rtol=rtol)
+            # cannot completely coincide
+            assert (val != v).any()
+        if attr == 'hess':
+            assert (val_fd != val_fd_grad).any()
         # should use available actual functionality
         assert (val == val_fd_fake).all()
 
