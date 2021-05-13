@@ -20,7 +20,7 @@ from .objective import (
     NegLogPriors,
     Objective,
     ObjectiveBase,
-    OptimizerHistory,
+    FD,
 )
 from .problem import Problem
 from .result import (

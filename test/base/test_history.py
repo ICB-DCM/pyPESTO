@@ -5,13 +5,13 @@ import pytest
 import unittest
 import tempfile
 from typing import Sequence
-
 import scipy.optimize as so
+
 import pypesto
 from pypesto.objective.util import sres_to_schi2, res_to_chi2
 from pypesto import CsvHistory, HistoryOptions,\
     MemoryHistory, ObjectiveBase, Hdf5History
-from pypesto.optimize.optimizer import read_result_from_file, OptimizerResult
+from pypesto.optimize import read_result_from_file, OptimizerResult
 from pypesto.objective.constants import (
     X, FVAL, GRAD, HESS, RES, SRES, CHI2, SCHI2)
 from pypesto.engine import MultiProcessEngine
@@ -50,7 +50,6 @@ class HistoryTest(unittest.TestCase):
         self.history_options.trace_save_iter = 1
 
         for storage_file in ['tmp/traces/conversion_example_{id}.csv',
-                             'tmp/traces/conversion_example_{id}.hdf5',
                              None]:
             self.history_options.storage_file = storage_file
 

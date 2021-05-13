@@ -7,7 +7,7 @@ import pytest
 import pypesto
 import copy
 
-from ..util import rosen_for_sensi, poly_for_sensi
+from ..util import rosen_for_sensi, poly_for_sensi, CRProblem
 
 import aesara.tensor as aet
 
@@ -196,3 +196,41 @@ def test_aesara(max_sensi_order, integrated):
     # test everything still works after deepcopy
     cobj = copy.deepcopy(obj)
     assert cobj(x_ref) == prob['fval']
+
+
+def test_fds():
+    """Test finite differences."""
+    problem = CRProblem()
+    obj = problem.get_objective()
+    obj_fd = pypesto.FD(obj, grad=True, hess=True, sres=True)
+    obj_fd_fake = pypesto.FD(obj, grad=None, hess=None, sres=None)
+    obj_fd_limited = pypesto.FD(obj, grad=False, hess=False, sres=False)
+    p = problem.p_true
+
+    # check that function values coincide (call delegated)
+    for attr in ['fval', 'res']:
+        val = getattr(obj, f"get_{attr}")(p)
+        val_fd = getattr(obj_fd, f"get_{attr}")(p)
+        val_fd_fake = getattr(obj_fd_fake, f"get_{attr}")(p)
+        val_fd_limited = getattr(obj_fd_limited, f"get_{attr}")(p)
+        assert (
+            (val == val_fd).all() and (val == val_fd_fake).all()
+            and (val == val_fd_limited).all()
+        )
+
+    # check that derivatives are close
+    atol = rtol = 1e-3
+    for attr in ['grad', 'hess', 'sres']:
+        val = getattr(obj, f"get_{attr}")(p)
+        val_fd = getattr(obj_fd, f"get_{attr}")(p)
+        val_fd_fake = getattr(obj_fd_fake, f"get_{attr}")(p)
+
+        assert np.allclose(val, val_fd, atol=atol, rtol=rtol)
+        # cannot completely coincide
+        assert (val != val_fd).any()
+        # should use available actual functionality
+        assert (val == val_fd_fake).all()
+
+        # cannot be called
+        with pytest.raises(ValueError):
+            getattr(obj_fd_limited, f"get_{attr}")(p)

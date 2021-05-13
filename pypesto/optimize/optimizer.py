@@ -6,12 +6,12 @@ import time
 import logging
 from typing import Dict, Optional
 
-from ..objective import (OptimizerHistory, HistoryOptions,
-                         CsvHistory, Hdf5History)
-from ..objective.history import HistoryBase
+from ..objective import (
+    HistoryOptions, HistoryBase, OptimizerHistory, CsvHistory, Hdf5History,
+)
 from ..problem import Problem
-from .result import OptimizerResult
 from ..objective.constants import MODE_FUN, FVAL, GRAD
+from .result import OptimizerResult
 
 try:
     import cyipopt
@@ -206,9 +206,7 @@ def fill_result_from_objective_history(
 
 def read_result_from_file(problem: Problem, history_options: HistoryOptions,
                           identifier: str):
-    """
-    Fill a OptimizerResult from history.
-    """
+    """Fill a OptimizerResult from history."""
     if history_options.storage_file.endswith('.csv'):
         history = CsvHistory(
             file=history_options.storage_file.format(id=identifier),
