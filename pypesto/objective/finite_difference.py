@@ -1,3 +1,5 @@
+"""Finite differences."""
+
 from typing import List, Tuple, Union
 import numpy as np
 
@@ -52,6 +54,7 @@ class FD(ObjectiveBase):
         hess_via_fval: bool = True,
         delta_fun: Union[float, np.ndarray, str] = 1e-6,
         delta_res: Union[float, np.ndarray, str] = 1e-6,
+        method: str = 'center',
         x_names: List[str] = None,
     ):
         super().__init__(x_names=x_names)
@@ -62,10 +65,15 @@ class FD(ObjectiveBase):
         self.hess_via_fval: bool = hess_via_fval
         self.delta_fun: Union[float, np.ndarray] = delta_fun
         self.delta_res: Union[float, np.ndarray] = delta_res
+        self.method: str = method
 
         if isinstance(delta_fun, str) or isinstance(delta_res, str):
             raise NotImplementedError(
-                "Adaptive FD step sizes are not implemented yet",
+                "Adaptive FD step sizes are not implemented yet.",
+            )
+        if method != 'center':
+            raise NotImplementedError(
+                "Currently only centered finite differences are implemented.",
             )
 
     def get_delta_fun(self, par_ix: int) -> float:
