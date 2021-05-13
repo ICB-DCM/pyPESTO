@@ -289,7 +289,7 @@ class FD(ObjectiveBase):
     ) -> Tuple[Tuple[int, ...], ResultDict]:
         """
         Helper function that calculates from the objective the sensitivities
-        that it is supposed to calculate for residuals.
+        that it is supposed to calculate for function values.
         """
         # define objective sensis
         sensi_orders_obj = []
@@ -315,7 +315,7 @@ class FD(ObjectiveBase):
     ) -> Tuple[Tuple[int, ...], ResultDict]:
         """
         Helper function that calcualtes from the objective the sensitivities
-        that it is supposed to calculate for function values.
+        that it is supposed to calculate for residuals.
         """
         # define objective sensis
         sensi_orders_obj = []
