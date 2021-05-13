@@ -156,32 +156,20 @@ class FD(ObjectiveBase):
         Delegated from `call_unprocessed`.
         """
         # get from objective what it can and should deliver
-
-        #  define objective sensis
-        sensi_orders_obj = []
-        if 0 in sensi_orders:
-            sensi_orders_obj.append(0)
-        if 1 in sensi_orders and self.grad is None and self.obj.has_grad:
-            sensi_orders_obj.append(1)
-        if 2 in sensi_orders and self.hess is None and self.obj.has_hess:
-            sensi_orders_obj.append(2)
-        sensi_orders_obj = tuple(sensi_orders_obj)
-        #  call objective
-        result = {}
-        if sensi_orders_obj:
-            result = self.obj.call_unprocessed(
-                x=x, sensi_orders=sensi_orders_obj, mode=MODE_FUN, **kwargs)
+        sensi_orders_obj, result = self._call_from_obj_fun(
+            x=x, sensi_orders=sensi_orders, **kwargs,
+        )
 
         # remaining sensis via FDs
 
-        # indicate whether gradient and Hessian are intended as FDs
+        # whether gradient and Hessian are intended as FDs
         grad_via_fd = 1 in sensi_orders and 1 not in sensi_orders_obj
         hess_via_fd = 2 in sensi_orders and 2 not in sensi_orders_obj
 
         if not grad_via_fd and not hess_via_fd:
             return result
 
-        # indicate whether the Hessian should be based on 2nd order sensis
+        # whether the Hessian should be based on 2nd order sensis
         hess_via_fd_fval = \
             hess_via_fd and (self.hess_via_fval or not self.obj.has_grad)
 
@@ -189,28 +177,13 @@ class FD(ObjectiveBase):
         n_par = len(x)
 
         # calculate 1d differences
-        diffs_1d = []
-        if grad_via_fd or hess_via_fd:
-            sensis = []
-            if grad_via_fd or hess_via_fd_fval:
-                sensis.append(0)
-            if hess_via_fd and not hess_via_fd_fval:
-                sensis.append(1)
-            sensis = tuple(sensis)
-
-            for ix in range(n_par):
-                delta = self.get_delta_fun(par_ix=ix) * \
-                    unit_vec(dim=n_par, ix=ix)
-
-                ret_p = self.obj.call_unprocessed(
-                    x=x + delta, sensi_orders=sensis, mode=MODE_FUN, **kwargs)
-                ret_m = self.obj.call_unprocessed(
-                    x=x - delta, sensi_orders=sensis, mode=MODE_FUN, **kwargs)
-
-                fp, fm = ret_p.get(FVAL), ret_m.get(FVAL)
-                gp, gm = ret_p.get(GRAD), ret_m.get(GRAD)
-
-                diffs_1d.append(((fp, fm), (gp, gm)))
+        diffs_1d = self._calculate_1d_diffs(
+            x=x,
+            fval=grad_via_fd or hess_via_fd_fval,
+            grad=hess_via_fd and not hess_via_fd_fval,
+            n_par=n_par,
+            **kwargs,
+        )
 
         if grad_via_fd:
             # gradient via FDs
@@ -279,27 +252,18 @@ class FD(ObjectiveBase):
         Delegated from `call_unprocessed`.
         """
         # get from objective what it can and should deliver
-
-        #  define objective sensis
-        sensi_orders_obj = []
-        if 0 in sensi_orders:
-            sensi_orders_obj.append(0)
-        if 1 in sensi_orders and self.sres is None and self.obj.has_sres:
-            sensi_orders_obj.append(1)
-        sensi_orders_obj = tuple(sensi_orders_obj)
-        #  call objective
-        result = {}
-        if sensi_orders_obj:
-            result = self.obj.call_unprocessed(
-                x=x, sensi_orders=sensi_orders_obj, mode=MODE_RES, **kwargs)
+        sensi_orders_obj, result = self._call_from_obj_res(
+            x=x, sensi_orders=sensi_orders, **kwargs,
+        )
 
         if sensi_orders == sensi_orders_obj:
             # all done
             return result
 
+        # parameter dimension
         n_par = len(x)
-        sres = []
 
+        sres = []
         for ix in range(n_par):
             delta_val = self.get_delta_res(par_ix=ix)
             delta = delta_val * unit_vec(dim=n_par, ix=ix)
@@ -316,6 +280,93 @@ class FD(ObjectiveBase):
         result[SRES] = sres
 
         return result
+
+    def _call_from_obj_fun(
+        self,
+        x: np.ndarray,
+        sensi_orders: Tuple[int, ...],
+        **kwargs,
+    ) -> Tuple[Tuple[int, ...], ResultDict]:
+        """
+        Helper function that calculates from the objective the sensitivities
+        that it is supposed to calculate for residuals.
+        """
+        # define objective sensis
+        sensi_orders_obj = []
+        if 0 in sensi_orders:
+            sensi_orders_obj.append(0)
+        if 1 in sensi_orders and self.grad is None and self.obj.has_grad:
+            sensi_orders_obj.append(1)
+        if 2 in sensi_orders and self.hess is None and self.obj.has_hess:
+            sensi_orders_obj.append(2)
+        sensi_orders_obj = tuple(sensi_orders_obj)
+        # call objective
+        result = {}
+        if sensi_orders_obj:
+            result = self.obj.call_unprocessed(
+                x=x, sensi_orders=sensi_orders_obj, mode=MODE_FUN, **kwargs)
+        return sensi_orders_obj, result
+
+    def _call_from_obj_res(
+        self,
+        x: np.ndarray,
+        sensi_orders: Tuple[int, ...],
+        **kwargs,
+    ) -> Tuple[Tuple[int, ...], ResultDict]:
+        """
+        Helper function that calcualtes from the objective the sensitivities
+        that it is supposed to calculate for function values.
+        """
+        # define objective sensis
+        sensi_orders_obj = []
+        if 0 in sensi_orders:
+            sensi_orders_obj.append(0)
+        if 1 in sensi_orders and self.sres is None and self.obj.has_sres:
+            sensi_orders_obj.append(1)
+        sensi_orders_obj = tuple(sensi_orders_obj)
+        #  call objective
+        result = {}
+        if sensi_orders_obj:
+            result = self.obj.call_unprocessed(
+                x=x, sensi_orders=sensi_orders_obj, mode=MODE_RES, **kwargs)
+        return sensi_orders_obj, result
+
+    def _calculate_1d_diffs(
+        self,
+        x: np.ndarray,
+        fval: bool,
+        grad: bool,
+        n_par: int,
+        **kwargs,
+    ):
+        """Helper function to calculate fvals and grads at +/- points."""
+        diffs_1d = []
+        if not fval and not grad:
+            return diffs_1d
+
+        sensis = []
+        if fval:
+            sensis.append(0)
+        if grad:
+            sensis.append(1)
+        sensis = tuple(sensis)
+
+        for ix in range(n_par):
+            delta = self.get_delta_fun(par_ix=ix) * unit_vec(dim=n_par, ix=ix)
+
+            ret_p = self.obj.call_unprocessed(
+                x=x + delta, sensi_orders=sensis, mode=MODE_FUN, **kwargs)
+            ret_m = self.obj.call_unprocessed(
+                x=x - delta, sensi_orders=sensis, mode=MODE_FUN, **kwargs)
+
+            # maybe function values
+            fp, fm = ret_p.get(FVAL), ret_m.get(FVAL)
+            # maybe gradients
+            gp, gm = ret_p.get(GRAD), ret_m.get(GRAD)
+
+            diffs_1d.append(((fp, fm), (gp, gm)))
+
+        return diffs_1d
 
 
 def unit_vec(dim: int, ix: int) -> np.ndarray:
