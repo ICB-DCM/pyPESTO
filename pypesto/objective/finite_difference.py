@@ -40,6 +40,8 @@ class FD(ObjectiveBase):
     delta_res:
         FD step sizes for residual sensitivities.
         Similar to `delta_fun`.
+    method:
+        Method to calculate FDs. Currently, only "center" is supported.
     x_names:
         Parameter names that can be optionally used in, e.g., history or
         gradient checks.
@@ -54,7 +56,7 @@ class FD(ObjectiveBase):
         hess_via_fval: bool = True,
         delta_fun: Union[float, np.ndarray, str] = 1e-6,
         delta_res: Union[float, np.ndarray, str] = 1e-6,
-        method: str = 'center',
+        method: str = "center",
         x_names: List[str] = None,
     ):
         super().__init__(x_names=x_names)
