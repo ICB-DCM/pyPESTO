@@ -218,7 +218,7 @@ def read_result_from_file(problem: Problem, history_options: HistoryOptions,
     elif history_options.storage_file.endswith(('.h5', '.hdf5')):
         history = Hdf5History.load(
             id=identifier,
-            file=history_options.storage_file,
+            file=history_options.storage_file.format(id=identifier),
         )
     else:
         raise NotImplementedError()

@@ -998,7 +998,7 @@ class Hdf5History(History):
 
     @trace_wrap
     def get_fval_trace(
-            self, ix: Union[int, Sequence[int], None]
+            self, ix: Union[int, Sequence[int], None] = None
     ) -> Union[Sequence[float], float]:
         return self._get_hdf5_entries(FVAL, ix)
 
