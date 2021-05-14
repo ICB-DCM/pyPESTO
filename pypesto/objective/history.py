@@ -926,6 +926,7 @@ class Hdf5History(History):
             RES: ret[RES],
             SRES: ret[SRES],
             CHI2: ret[CHI2],
+            SCHI2: ret[SCHI2],
             HESS: ret[HESS],
         }
 
@@ -960,9 +961,13 @@ class Hdf5History(History):
         except OSError:
             pass
 
-    def _get_hdf5_entries(self, entry_id: str,
-                          ix: Union[int, Sequence[int], None]) -> Sequence:
-        """
+    def _get_hdf5_entries(
+        self,
+        entry_id: str,
+        ix: Union[int, Sequence[int], None] = None,
+    ) -> Sequence:
+        """Get entries for field `entry_id` from HDF5 file, for indices `ix`.
+
         Parameters
         ------------
         entry_id:
@@ -998,7 +1003,7 @@ class Hdf5History(History):
 
     @trace_wrap
     def get_fval_trace(
-            self, ix: Union[int, Sequence[int], None]
+            self, ix: Union[int, Sequence[int], None] = None
     ) -> Union[Sequence[float], float]:
         return self._get_hdf5_entries(FVAL, ix)
 
