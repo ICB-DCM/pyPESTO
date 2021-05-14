@@ -50,7 +50,7 @@ class HistoryTest(unittest.TestCase):
         self.history_options.trace_save_iter = 1
 
         for storage_file in ['tmp/traces/conversion_example_{id}.csv',
-                             'tmp/traces/conversion_example_{id}.hdf5',
+                             'tmp/traces/conversion_example.hdf5',
                              None]:
             self.history_options.storage_file = storage_file
 
