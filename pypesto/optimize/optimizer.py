@@ -6,7 +6,8 @@ import time
 import logging
 from typing import Dict, Optional
 
-from ..objective import (OptimizerHistory, HistoryOptions, CsvHistory)
+from ..objective import (OptimizerHistory, HistoryOptions,
+                         CsvHistory, Hdf5History)
 from ..objective.history import HistoryBase
 from ..problem import Problem
 from .result import OptimizerResult
@@ -205,11 +206,19 @@ def fill_result_from_objective_history(
 
 def read_result_from_file(problem: Problem, history_options: HistoryOptions,
                           identifier: str):
+    """
+    Fill a OptimizerResult from history.
+    """
     if history_options.storage_file.endswith('.csv'):
         history = CsvHistory(
             file=history_options.storage_file.format(id=identifier),
             options=history_options,
             load_from_file=True
+        )
+    elif history_options.storage_file.endswith(('.h5', '.hdf5')):
+        history = Hdf5History.load(
+            id=identifier,
+            file=history_options.storage_file.format(id=identifier),
         )
     else:
         raise NotImplementedError()
