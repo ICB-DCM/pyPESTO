@@ -21,6 +21,11 @@ class FD(ObjectiveBase):
     True means that FDs are used in any case, False means that the derivative
     is not exported.
 
+    Note that the step sizes should be carefully chosen. They should be small
+    enough to provide an accurate linear approximation, but large enough to
+    be robust against numerical inaccuracies, in particular if the objective
+    relies on numerical approximations, such as an ODE.
+
     Parameters
     ----------
     grad:
@@ -47,6 +52,11 @@ class FD(ObjectiveBase):
         gradient checks.
     """
 
+    # finite difference types
+    CENTRAL = "central"
+    FORWARD = "forward"
+    BACKWARD = "backward"
+
     def __init__(
         self,
         obj: ObjectiveBase,
@@ -56,7 +66,7 @@ class FD(ObjectiveBase):
         hess_via_fval: bool = True,
         delta_fun: Union[float, np.ndarray, str] = 1e-6,
         delta_res: Union[float, np.ndarray, str] = 1e-6,
-        method: str = "center",
+        method: str = CENTRAL,
         x_names: List[str] = None,
     ):
         super().__init__(x_names=x_names)
@@ -73,9 +83,10 @@ class FD(ObjectiveBase):
             raise NotImplementedError(
                 "Adaptive FD step sizes are not implemented yet.",
             )
-        if method != 'center':
-            raise NotImplementedError(
-                "Currently only centered finite differences are implemented.",
+        methods = [FD.CENTRAL, FD.FORWARD, FD.BACKWARD]
+        if method not in methods:
+            raise ValueError(
+                f"Method must be one of {methods}"
             )
 
     def get_delta_fun(self, par_ix: int) -> float:
@@ -173,71 +184,16 @@ class FD(ObjectiveBase):
         hess_via_fd_fval = \
             hess_via_fd and (self.hess_via_fval or not self.obj.has_grad)
 
-        # parameter dimension
-        n_par = len(x)
-
-        # calculate 1d differences
-        diffs_1d = self._calculate_1d_diffs(
-            x=x,
-            fval=grad_via_fd or hess_via_fd_fval,
-            grad=hess_via_fd and not hess_via_fd_fval,
-            n_par=n_par,
-            **kwargs,
-        )
-
         if grad_via_fd:
-            # gradient via FDs
-            grad = np.nan * np.empty(shape=n_par)
-            for ix, ((fp, fm), _) in enumerate(diffs_1d):
-                grad[ix] = (fp - fm) / (2 * self.get_delta_fun(par_ix=ix))
-            result[GRAD] = grad
+            result[GRAD] = self._grad_via_fd(x=x, f=result.get(FVAL), **kwargs)
 
         if hess_via_fd:
-            # Hessian via FDs
-            hess = np.nan * np.empty(shape=(n_par, n_par))
             if hess_via_fd_fval:
-                # Hessian via 2nd order FDs from function values
-                def f_fval(x):
-                    """Short-hand to get a function value."""
-                    return self.obj.call_unprocessed(
-                        x=x, sensi_orders=(0,), mode=MODE_FUN, **kwargs)[FVAL]
-
-                # needed for diagonal entries
-                f = result.get(FVAL, None)
-                if f is None:
-                    f = f_fval(x)
-
-                for ix1, ((fp, fm), _) in enumerate(diffs_1d):
-                    delta1_val = self.get_delta_fun(par_ix=ix1)
-                    delta1 = delta1_val * unit_vec(dim=n_par, ix=ix1)
-
-                    # diagonal entry
-                    hess[ix1, ix1] = (fp + fm - 2 * f) / delta1_val**2
-
-                    # off-diagonals
-                    for ix2 in range(ix1):
-                        delta2_val = self.get_delta_fun(par_ix=ix2)
-                        delta2 = delta2_val * unit_vec(dim=n_par, ix=ix2)
-
-                        fpp = f_fval(x + delta1 + delta2)
-                        fpm = f_fval(x + delta1 - delta2)
-                        fmp = f_fval(x - delta1 + delta2)
-                        fmm = f_fval(x - delta1 - delta2)
-
-                        hess[ix1, ix2] = \
-                            (fpp - fpm - fmp + fmm) / \
-                            (4 * delta1_val * delta2_val)
-                        hess[ix2, ix1] = hess[ix1, ix2]
-
+                result[HESS] = self._hess_via_fd_fval(
+                    x=x, f=result.get(FVAL), **kwargs)
             else:
-                # Hessian via 1st order FDs from gradients
-                for ix, (_, (gp, gm)) in enumerate(diffs_1d):
-                    hess[:, ix] = \
-                        (gp - gm) / (2 * self.get_delta_fun(par_ix=ix))
-                # make it symmetric
-                hess = 0.5 * (hess + hess.T)
-
-            result[HESS] = hess
+                result[HESS] = self._hess_via_fd_grad(
+                    x=x, f=result.get(FVAL), **kwargs)
 
         return result
 
@@ -260,24 +216,7 @@ class FD(ObjectiveBase):
             # all done
             return result
 
-        # parameter dimension
-        n_par = len(x)
-
-        sres = []
-        for ix in range(n_par):
-            delta_val = self.get_delta_res(par_ix=ix)
-            delta = delta_val * unit_vec(dim=n_par, ix=ix)
-
-            rp = self.obj.call_unprocessed(
-                x=x + delta, sensi_orders=(0,), mode=MODE_RES, **kwargs)[RES]
-            rm = self.obj.call_unprocessed(
-                x=x - delta, sensi_orders=(0,), mode=MODE_RES, **kwargs)[RES]
-
-            sres.append((rp - rm) / (2 * delta_val))
-
-        # sres should have shape (n_res, n_par)
-        sres = np.array(sres).T
-        result[SRES] = sres
+        result[SRES] = self._sres_via_fd(x=x, res=result.get(RES), **kwargs)
 
         return result
 
@@ -330,6 +269,188 @@ class FD(ObjectiveBase):
             result = self.obj.call_unprocessed(
                 x=x, sensi_orders=sensi_orders_obj, mode=MODE_RES, **kwargs)
         return sensi_orders_obj, result
+
+    def _grad_via_fd(self, x: np.ndarray, f: float, **kwargs) -> np.ndarray:
+        """Calculate FD approximation to gradient."""
+        # parameter dimension
+        n_par = len(x)
+
+        def f_fval(x):
+            """Short-hand to get a function value."""
+            return self.obj.call_unprocessed(
+                x=x, sensi_orders=(0,), mode=MODE_FUN, **kwargs)[FVAL]
+
+        # calculate value at x only once if needed
+        if f is None and self.method in [FD.FORWARD, FD.BACKWARD]:
+            f = f_fval(x)
+
+        grad = np.nan * np.empty(shape=n_par)
+        for ix in range(n_par):
+            delta_val = self.get_delta_fun(par_ix=ix)
+            delta = delta_val * unit_vec(dim=n_par, ix=ix)
+
+            if self.method == FD.CENTRAL:
+                fp = f_fval(x + delta / 2)
+                fm = f_fval(x - delta / 2)
+            elif self.method == FD.FORWARD:
+                fp = f_fval(x + delta)
+                fm = f
+            elif self.method == FD.BACKWARD:
+                fp = f
+                fm = f_fval(x - delta)
+            else:
+                raise ValueError("Method not recognized.")
+
+            grad[ix] = (fp - fm) / delta_val
+
+        return grad
+
+    def _hess_via_fd_fval(
+        self, x: np.ndarray, f: float, **kwargs,
+    ) -> np.ndarray:
+        """Calculate 2nd order FD approximation to Hessian."""
+        # parameter dimension
+        n_par = len(x)
+
+        def f_fval(x):
+            """Short-hand to get a function value."""
+            return self.obj.call_unprocessed(
+                x=x, sensi_orders=(0,), mode=MODE_FUN, **kwargs)[FVAL]
+
+        hess = np.nan * np.empty(shape=(n_par, n_par))
+
+        # needed for diagonal entries
+        if f is None:
+            f = f_fval(x)
+
+        for ix1 in range(n_par):
+            delta1_val = self.get_delta_fun(par_ix=ix1)
+            delta1 = delta1_val * unit_vec(dim=n_par, ix=ix1)
+
+            # diagonal entry
+            if self.method == FD.CENTRAL:
+                f2p = f_fval(x + delta1)
+                fc = f
+                f2m = f_fval(x - delta1)
+            elif self.method == FD.FORWARD:
+                f2p = f_fval(x + 2 * delta1)
+                fc = f_fval(x + delta1)
+                f2m = f
+            elif self.method == FD.BACKWARD:
+                f2p = f
+                fc = f_fval(x - delta1)
+                f2m = f_fval(x - 2 * delta1)
+            else:
+                raise ValueError("Method not recognized.")
+
+            hess[ix1, ix1] = (f2p + f2m - 2 * fc) / delta1_val ** 2
+
+            # off-diagonals
+            for ix2 in range(ix1):
+                delta2_val = self.get_delta_fun(par_ix=ix2)
+                delta2 = delta2_val * unit_vec(dim=n_par, ix=ix2)
+
+                if self.method == FD.CENTRAL:
+                    fpp = f_fval(x + delta1 / 2 + delta2 / 2)
+                    fpm = f_fval(x + delta1 / 2 - delta2 / 2)
+                    fmp = f_fval(x - delta1 / 2 + delta2 / 2)
+                    fmm = f_fval(x - delta1 / 2 - delta2 / 2)
+                elif self.method == FD.FORWARD:
+                    fpp = f_fval(x + delta1 + delta2)
+                    fpm = f_fval(x + delta1 + 0)
+                    fmp = f_fval(x + 0 + delta2)
+                    fmm = f
+                elif self.method == FD.BACKWARD:
+                    fpp = f
+                    fpm = f_fval(x + 0 - delta2)
+                    fmp = f_fval(x - delta1 + 0)
+                    fmm = f_fval(x - delta1 - delta2)
+                else:
+                    raise ValueError("Method not recognized.")
+
+                hess[ix1, ix2] = hess[ix2, ix1] = \
+                    (fpp - fpm - fmp + fmm) / (delta1_val * delta2_val)
+
+        return hess
+
+    def _hess_via_fd_grad(self, x: np.ndarray, **kwargs) -> np.ndarray:
+        """Calculate 1st order FD approximation to Hessian via gradients."""
+        # parameter dimension
+        n_par = len(x)
+
+        def f_grad(x):
+            """Short-hand to get a function value."""
+            return self.obj.call_unprocessed(
+                x=x, sensi_orders=(1,), mode=MODE_FUN, **kwargs)[GRAD]
+
+        # calculate value at x only once if needed
+        g = None
+        if self.method in [FD.FORWARD, FD.BACKWARD]:
+            g = f_grad(x)
+
+        hess = np.nan * np.empty(shape=(n_par, n_par))
+
+        for ix in range(n_par):
+            delta_val = self.get_delta_fun(par_ix=ix)
+            delta = delta_val * unit_vec(dim=n_par, ix=ix)
+
+            if self.method == FD.CENTRAL:
+                gp = f_grad(x + delta / 2)
+                gm = f_grad(x - delta / 2)
+            elif self.method == FD.FORWARD:
+                gp = f_grad(x + delta)
+                gm = g
+            elif self.method == FD.BACKWARD:
+                gp = g
+                gm = f_grad(x - delta)
+            else:
+                raise ValueError("Method not recognized.")
+
+            hess[:, ix] = (gp - gm) / delta_val
+        # make it symmetric
+        hess = 0.5 * (hess + hess.T)
+
+        return hess
+
+    def _sres_via_fd(
+        self, x: np.ndarray, res: np.ndarray, **kwargs,
+    ) -> np.ndarray:
+        """Calculate FD approximation to residual sensitivities."""
+        # parameter dimension
+        n_par = len(x)
+
+        def f_res(x):
+            """Short-hand to get a function value."""
+            return self.obj.call_unprocessed(
+                x=x, sensi_orders=(0,), mode=MODE_RES, **kwargs)[RES]
+
+        # calculate value at x only once if needed
+        if res is None and self.method in [FD.FORWARD, FD.BACKWARD]:
+            res = f_res(x)
+
+        sres = []
+        for ix in range(n_par):
+            delta_val = self.get_delta_res(par_ix=ix)
+            delta = delta_val * unit_vec(dim=n_par, ix=ix)
+
+            if self.method == FD.CENTRAL:
+                rp = f_res(x + delta / 2)
+                rm = f_res(x - delta / 2)
+            elif self.method == FD.FORWARD:
+                rp = f_res(x + delta)
+                rm = res
+            elif self.method == FD.BACKWARD:
+                rp = res
+                rm = f_res(x - delta)
+            else:
+                raise ValueError("Method not recognized.")
+
+            sres.append((rp - rm) / delta_val)
+
+        # sres should have shape (n_res, n_par)
+        sres = np.array(sres).T
+
+        return sres
 
     def _calculate_1d_diffs(
         self,
