@@ -206,7 +206,7 @@ def fill_result_from_objective_history(
 
 def read_result_from_file(problem: Problem, history_options: HistoryOptions,
                           identifier: str):
-    """Fill a OptimizerResult from history."""
+    """Fill an OptimizerResult from history."""
     if history_options.storage_file.endswith('.csv'):
         history = CsvHistory(
             file=history_options.storage_file.format(id=identifier),
