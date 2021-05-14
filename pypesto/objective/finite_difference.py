@@ -188,15 +188,16 @@ class FD(ObjectiveBase):
             hess_via_fd and (self.hess_via_fval or not self.obj.has_grad)
 
         if grad_via_fd:
-            result[GRAD] = self._grad_via_fd(x=x, f=result.get(FVAL), **kwargs)
+            result[GRAD] = self._grad_via_fd(
+                x=x, fval=result.get(FVAL), **kwargs)
 
         if hess_via_fd:
             if hess_via_fd_fval:
                 result[HESS] = self._hess_via_fd_fval(
-                    x=x, f=result.get(FVAL), **kwargs)
+                    x=x, fval=result.get(FVAL), **kwargs)
             else:
                 result[HESS] = self._hess_via_fd_grad(
-                    x=x, f=result.get(FVAL), **kwargs)
+                    x=x, fval=result.get(FVAL), **kwargs)
 
         return result
 
@@ -273,7 +274,7 @@ class FD(ObjectiveBase):
                 x=x, sensi_orders=sensi_orders_obj, mode=MODE_RES, **kwargs)
         return sensi_orders_obj, result
 
-    def _grad_via_fd(self, x: np.ndarray, f: float, **kwargs) -> np.ndarray:
+    def _grad_via_fd(self, x: np.ndarray, fval: float, **kwargs) -> np.ndarray:
         """Calculate FD approximation to gradient."""
         # parameter dimension
         n_par = len(x)
@@ -284,8 +285,8 @@ class FD(ObjectiveBase):
                 x=x, sensi_orders=(0,), mode=MODE_FUN, **kwargs)[FVAL]
 
         # calculate value at x only once if needed
-        if f is None and self.method in [FD.FORWARD, FD.BACKWARD]:
-            f = f_fval(x)
+        if fval is None and self.method in [FD.FORWARD, FD.BACKWARD]:
+            fval = f_fval(x)
 
         grad = np.nan * np.empty(shape=n_par)
         for ix in range(n_par):
@@ -297,9 +298,9 @@ class FD(ObjectiveBase):
                 fm = f_fval(x - delta / 2)
             elif self.method == FD.FORWARD:
                 fp = f_fval(x + delta)
-                fm = f
+                fm = fval
             elif self.method == FD.BACKWARD:
-                fp = f
+                fp = fval
                 fm = f_fval(x - delta)
             else:
                 raise ValueError("Method not recognized.")
@@ -309,7 +310,7 @@ class FD(ObjectiveBase):
         return grad
 
     def _hess_via_fd_fval(
-        self, x: np.ndarray, f: float, **kwargs,
+        self, x: np.ndarray, fval: float, **kwargs,
     ) -> np.ndarray:
         """Calculate 2nd order FD approximation to Hessian."""
         # parameter dimension
@@ -322,9 +323,9 @@ class FD(ObjectiveBase):
 
         hess = np.nan * np.empty(shape=(n_par, n_par))
 
-        # needed for diagonal entries
-        if f is None:
-            f = f_fval(x)
+        # needed for diagonal entries at least
+        if fval is None:
+            fval = f_fval(x)
 
         for ix1 in range(n_par):
             delta1_val = self.get_delta_fun(par_ix=ix1)
@@ -333,14 +334,14 @@ class FD(ObjectiveBase):
             # diagonal entry
             if self.method == FD.CENTRAL:
                 f2p = f_fval(x + delta1)
-                fc = f
+                fc = fval
                 f2m = f_fval(x - delta1)
             elif self.method == FD.FORWARD:
                 f2p = f_fval(x + 2 * delta1)
                 fc = f_fval(x + delta1)
-                f2m = f
+                f2m = fval
             elif self.method == FD.BACKWARD:
-                f2p = f
+                f2p = fval
                 fc = f_fval(x - delta1)
                 f2m = f_fval(x - 2 * delta1)
             else:
@@ -362,9 +363,9 @@ class FD(ObjectiveBase):
                     fpp = f_fval(x + delta1 + delta2)
                     fpm = f_fval(x + delta1 + 0)
                     fmp = f_fval(x + 0 + delta2)
-                    fmm = f
+                    fmm = fval
                 elif self.method == FD.BACKWARD:
-                    fpp = f
+                    fpp = fval
                     fpm = f_fval(x + 0 - delta2)
                     fmp = f_fval(x - delta1 + 0)
                     fmm = f_fval(x - delta1 - delta2)
