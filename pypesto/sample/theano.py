@@ -5,7 +5,11 @@ from ..problem import Problem
 
 try:
     import theano.tensor as tt
-    from theano.gof.null_type import NullType
+    try:
+        from theano.graph.null_type import NullType
+    except ImportError:
+        # for older versions of theano
+        from theano.gof.null_type import NullType
 except ImportError:
     tt = NullType = None
 

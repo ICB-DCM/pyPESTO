@@ -1,6 +1,5 @@
-"""
-This is for testing the pypesto.Storage.
-"""
+"""Test the `pypesto.store` module."""
+
 import os
 import tempfile
 import pypesto
@@ -104,8 +103,8 @@ def test_storage_trace():
     problem2 = pypesto.Problem(objective=objective2, lb=lb, ub=ub,
                                x_guesses=startpoints)
 
-    optimizer1 = pypesto.optimize.ScipyOptimizer(options={'maxiter': 100})
-    optimizer2 = pypesto.optimize.ScipyOptimizer(options={'maxiter': 100})
+    optimizer1 = pypesto.optimize.ScipyOptimizer(options={'maxiter': 10})
+    optimizer2 = pypesto.optimize.ScipyOptimizer(options={'maxiter': 10})
 
     with tempfile.TemporaryDirectory(dir=".") as tmpdirname:
         _, fn = tempfile.mkstemp(".hdf5", dir=f"{tmpdirname}")
@@ -133,14 +132,10 @@ def test_storage_trace():
                         hdf5_entry_trace = getattr(hdf_res['history'],
                                                    f'get_{entry}_trace')()
                         for iteration in range(len(hdf5_entry_trace)):
-                            print(hdf5_entry_trace[iteration])
                             # comparing nan and None difficult
                             if hdf5_entry_trace[iteration] is None or np.isnan(
                                     hdf5_entry_trace[iteration]).all():
                                 continue
-                            print(getattr(mem_res['history'],
-                                          f'get_{entry}_trace')()[iteration])
-                            print(entry, iteration)
                             np.testing.assert_array_equal(
                                 getattr(mem_res['history'],
                                         f'get_{entry}_trace')()[iteration],

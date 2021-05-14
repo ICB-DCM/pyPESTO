@@ -27,6 +27,13 @@ class ObjectiveBase(abc.ABC):
     by this objective function. If maximization is to be performed, the sign
     should be flipped before creating the objective function.
 
+    Parameters
+    ----------
+    x_names:
+        Parameter names that can be optionally used in, e.g., history or
+        gradient checks
+
+
     Attributes
     ----------
 
@@ -40,8 +47,10 @@ class ObjectiveBase(abc.ABC):
 
     """
 
-    def __init__(self,
-                 x_names: Sequence[str] = None):
+    def __init__(
+        self,
+        x_names: Sequence[str] = None,
+    ):
 
         self.x_names = x_names
 
@@ -89,12 +98,12 @@ class ObjectiveBase(abc.ABC):
         """
 
     def __call__(
-            self,
-            x: np.ndarray,
-            sensi_orders: Tuple[int, ...] = (0, ),
-            mode: str = MODE_FUN,
-            return_dict: bool = False,
-            **kwargs
+        self,
+        x: np.ndarray,
+        sensi_orders: Tuple[int, ...] = (0, ),
+        mode: str = MODE_FUN,
+        return_dict: bool = False,
+        **kwargs,
     ) -> Union[float, np.ndarray, Tuple, ResultDict]:
         """
         Method to obtain arbitrary sensitivities. This is the central method
@@ -160,11 +169,11 @@ class ObjectiveBase(abc.ABC):
 
     @abc.abstractmethod
     def call_unprocessed(
-            self,
-            x: np.ndarray,
-            sensi_orders: Tuple[int, ...],
-            mode: str,
-            **kwargs
+        self,
+        x: np.ndarray,
+        sensi_orders: Tuple[int, ...],
+        mode: str,
+        **kwargs,
     ) -> ResultDict:
         """
         Call objective function without pre- or post-processing and
@@ -187,7 +196,11 @@ class ObjectiveBase(abc.ABC):
         raise NotImplementedError()
 
     @abc.abstractmethod
-    def check_sensi_orders(self, sensi_orders, mode) -> bool:
+    def check_sensi_orders(
+        self,
+        sensi_orders: Tuple[int, ...],
+        mode: str,
+    ) -> bool:
         """
         Check if the objective is able to compute the requested
         sensitivities.
@@ -208,7 +221,7 @@ class ObjectiveBase(abc.ABC):
         raise NotImplementedError()
 
     @abc.abstractmethod
-    def check_mode(self, mode) -> bool:
+    def check_mode(self, mode: str) -> bool:
         """
         Check if the objective is able to compute in the requested mode.
 
@@ -225,8 +238,9 @@ class ObjectiveBase(abc.ABC):
 
     @staticmethod
     def output_to_tuple(
-            sensi_orders: Tuple[int, ...], mode: str,
-            **kwargs: Union[float, np.ndarray]
+        sensi_orders: Tuple[int, ...],
+        mode: str,
+        **kwargs: Union[float, np.ndarray],
     ) -> Tuple:
         """
         Return values as requested by the caller, since usually only a subset
@@ -287,11 +301,12 @@ class ObjectiveBase(abc.ABC):
         return sres
 
     def update_from_problem(
-            self,
-            dim_full: int,
-            x_free_indices: Sequence[int],
-            x_fixed_indices: Sequence[int],
-            x_fixed_vals: Sequence[float]):
+        self,
+        dim_full: int,
+        x_free_indices: Sequence[int],
+        x_fixed_indices: Sequence[int],
+        x_fixed_vals: Sequence[float],
+    ):
         """
         Handle fixed parameters. Later, the objective will be given parameter
         vectors x of dimension dim, which have to be filled up with fixed
@@ -329,11 +344,11 @@ class ObjectiveBase(abc.ABC):
         self.pre_post_processor = pre_post_processor
 
     def check_grad_multi_eps(
-            self,
-            *args,
-            multi_eps: Iterable = None,
-            label: str = 'rel_err',
-            **kwargs,
+        self,
+        *args,
+        multi_eps: Iterable = None,
+        label: str = 'rel_err',
+        **kwargs,
     ):
         """
         Equivalent to the `ObjectiveBase.check_grad` method, except multiple
@@ -375,13 +390,13 @@ class ObjectiveBase(abc.ABC):
         return combined_result
 
     def check_grad(
-            self,
-            x: np.ndarray,
-            x_indices: Sequence[int] = None,
-            eps: float = 1e-5,
-            verbosity: int = 1,
-            mode: str = MODE_FUN,
-            detailed: bool = False
+        self,
+        x: np.ndarray,
+        x_indices: Sequence[int] = None,
+        eps: float = 1e-5,
+        verbosity: int = 1,
+        mode: str = MODE_FUN,
+        detailed: bool = False,
     ) -> pd.DataFrame:
         """
         Compare gradient evaluation: Firstly approximate via finite
@@ -527,7 +542,13 @@ class ObjectiveBase(abc.ABC):
             data = {**prefix_data, **data, **postfix_data}
 
         # create dataframe
-        result = pd.DataFrame(data=data)
+        result = pd.DataFrame(
+            data=data,
+            index=[
+                self.x_names[ix] if self.x_names is not None
+                else f'x_{ix}' for ix in x_indices
+            ],
+        )
 
         # log full result
         if verbosity > 0:
