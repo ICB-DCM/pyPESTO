@@ -49,9 +49,7 @@ class HistoryTest(unittest.TestCase):
 
         self.history_options.trace_save_iter = 1
 
-        for storage_type in ['.csv',
-                             '.hdf5',
-                             None]:
+        for storage_type in ['.csv', '.hdf5', None]:
             with tempfile.TemporaryDirectory(dir=".") as tmpdirname:
                 _, fn = tempfile.mkstemp(".hdf5", dir=f"{tmpdirname}")
                 if storage_type is None:
