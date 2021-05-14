@@ -31,7 +31,7 @@ def log(name: str = 'pypesto',
         If specified, messages are logged to a file with this name.
     """
     logger = logging.getLogger(name)
-    logger.setLevel(level)
+    logging.basicConfig(level=level)
 
     if console:
         ch = logging.StreamHandler()
