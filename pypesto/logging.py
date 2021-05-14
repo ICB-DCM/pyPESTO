@@ -9,7 +9,7 @@ import logging
 
 
 def log(name: str = 'pypesto',
-        level: int = logging.DEBUG,
+        level: int = logging.INFO,
         console: bool = False,
         filename: str = ''):
     """
