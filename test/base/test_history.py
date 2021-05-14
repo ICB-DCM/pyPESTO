@@ -49,24 +49,28 @@ class HistoryTest(unittest.TestCase):
 
         self.history_options.trace_save_iter = 1
 
-        for storage_file in ['tmp/traces/conversion_example_{id}.csv',
-                             'tmp/traces/conversion_example_{id}.hdf5',
+        for storage_type in ['.csv',
+                             '.hdf5',
                              None]:
-            self.history_options.storage_file = storage_file
+            with tempfile.TemporaryDirectory(dir=".") as tmpdirname:
+                _, fn = tempfile.mkstemp(".hdf5", dir=f"{tmpdirname}")
+                if storage_type is None:
+                    self.history_options.storage_file = None
+                self.history_options.storage_file = fn
 
-            result = pypesto.optimize.minimize(
-                problem=self.problem,
-                optimizer=self.optimizer,
-                n_starts=1,
-                startpoint_method=pypesto.startpoint.uniform,
-                options=optimize_options,
-                history_options=self.history_options
-            )
+                result = pypesto.optimize.minimize(
+                    problem=self.problem,
+                    optimizer=self.optimizer,
+                    n_starts=1,
+                    startpoint_method=pypesto.startpoint.uniform,
+                    options=optimize_options,
+                    history_options=self.history_options
+                )
 
-            for istart, start in enumerate(result.optimize_result.list):
-                self.check_reconstruct_history(start, str(istart))
-                self.check_load_from_file(start, str(istart))
-                self.check_history_consistency(start)
+                for istart, start in enumerate(result.optimize_result.list):
+                    self.check_reconstruct_history(start, str(istart))
+                    self.check_load_from_file(start, str(istart))
+                    self.check_history_consistency(start)
 
     def check_load_from_file(self, start: OptimizerResult, id: str):
         """Verify we can reconstitute OptimizerResult from csv file"""
