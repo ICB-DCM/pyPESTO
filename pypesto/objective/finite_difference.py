@@ -3,7 +3,6 @@
 from typing import List, Tuple, Union
 import numpy as np
 
-
 from .base import ObjectiveBase, ResultDict
 from .constants import (
     MODE_FUN, MODE_RES, FVAL, GRAD, HESS, RES, SRES,
@@ -146,6 +145,9 @@ class FD(ObjectiveBase):
         mode: str,
         **kwargs,
     ) -> ResultDict:
+        # This is the main method to overwrite from the base class, it handles
+        #  and delegates the actual objective evaluation.
+
         if mode == MODE_FUN:
             result = self._call_mode_fun(
                 x=x, sensi_orders=sensi_orders, **kwargs)
@@ -154,6 +156,7 @@ class FD(ObjectiveBase):
                 x=x, sensi_orders=sensi_orders, **kwargs)
         else:
             raise ValueError("This mode is not supported.")
+
         return result
 
     def _call_mode_fun(
