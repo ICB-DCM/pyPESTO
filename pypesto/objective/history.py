@@ -926,6 +926,7 @@ class Hdf5History(History):
             RES: ret[RES],
             SRES: ret[SRES],
             CHI2: ret[CHI2],
+            SCHI2: ret[SCHI2],
             HESS: ret[HESS],
         }
 
