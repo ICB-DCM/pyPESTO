@@ -456,43 +456,6 @@ class FD(ObjectiveBase):
 
         return sres
 
-    def _calculate_1d_diffs(
-        self,
-        x: np.ndarray,
-        fval: bool,
-        grad: bool,
-        n_par: int,
-        **kwargs,
-    ):
-        """Helper function to calculate fvals and grads at +/- points."""
-        diffs_1d = []
-        if not fval and not grad:
-            return diffs_1d
-
-        sensis = []
-        if fval:
-            sensis.append(0)
-        if grad:
-            sensis.append(1)
-        sensis = tuple(sensis)
-
-        for ix in range(n_par):
-            delta = self.get_delta_fun(par_ix=ix) * unit_vec(dim=n_par, ix=ix)
-
-            ret_p = self.obj.call_unprocessed(
-                x=x + delta, sensi_orders=sensis, mode=MODE_FUN, **kwargs)
-            ret_m = self.obj.call_unprocessed(
-                x=x - delta, sensi_orders=sensis, mode=MODE_FUN, **kwargs)
-
-            # maybe function values
-            fp, fm = ret_p.get(FVAL), ret_m.get(FVAL)
-            # maybe gradients
-            gp, gm = ret_p.get(GRAD), ret_m.get(GRAD)
-
-            diffs_1d.append(((fp, fm), (gp, gm)))
-
-        return diffs_1d
-
 
 def unit_vec(dim: int, ix: int) -> np.ndarray:
     """Unit vector of dimension `dim` at coordinate `ix`.
