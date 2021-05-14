@@ -53,10 +53,10 @@ class HistoryTest(unittest.TestCase):
                              '.hdf5',
                              None]:
             with tempfile.TemporaryDirectory(dir=".") as tmpdirname:
-                _, fn = tempfile.mkstemp(".hdf5", dir=f"{tmpdirname}")
+                _, fn = tempfile.mkstemp(storage_type, dir=f"{tmpdirname}")
+                self.history_options.storage_file = fn
                 if storage_type is None:
                     self.history_options.storage_file = None
-                self.history_options.storage_file = fn
 
                 result = pypesto.optimize.minimize(
                     problem=self.problem,
@@ -158,9 +158,10 @@ class HistoryTest(unittest.TestCase):
                                     f'get_{entry}_trace')()
             for iteration in range(len(original_trace)):
                 # comparing nan and None difficult
-                if original_trace[iteration] is None or np.isnan(
-                        original_trace[iteration]).all():
-                    continue
+                if original_trace[iteration] is None:
+                    assert reconst_trace[iteration] is None
+                if np.isnan(original_trace[iteration]).all():
+                    assert np.isnan(reconst_trace[iteration]).all()
                 np.testing.assert_array_almost_equal(
                     reconst_trace[iteration],
                     original_trace[iteration],
@@ -204,6 +205,7 @@ class HistoryTest(unittest.TestCase):
             for it in range(5):
                 x_full = xfull(start.history.get_x_trace(it))
                 val = getattr(start.history, f'get_{var}_trace')(it)
+
                 if not getattr(self.history_options, f'trace_record_{var}',
                                True):
                     assert np.isnan(val)
@@ -282,8 +284,8 @@ class ResModeHistoryTest(HistoryTest):
     def test_trace_schi2(self):
         self.history_options = HistoryOptions(
             trace_record=True,
-            trace_record_chi2=True,
-            trace_record_schi2=False,
+            trace_record_chi2=False,
+            trace_record_schi2=True,
         )
 
         self.check_history()
