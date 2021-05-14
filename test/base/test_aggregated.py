@@ -1,6 +1,4 @@
-"""
-This is for testing the pypesto.Objective.
-"""
+"""Test objective aggregation."""
 
 import numpy as np
 import pypesto
@@ -9,6 +7,7 @@ from pypesto.objective.constants import MODE_RES
 
 from ..util import poly_for_sensi, rosen_for_sensi, load_amici_objective
 
+# absolute and relative test tolerance
 ATOL = 1e-6
 RTOL = 1e-4
 

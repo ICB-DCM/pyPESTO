@@ -1,3 +1,5 @@
+"""Test :class:`pypesto.Problem`."""
+
 import pytest
 
 import pypesto
@@ -62,3 +64,32 @@ def test_full_index_to_free_index(problem):
     assert problem.full_index_to_free_index(6) == 3
     with pytest.raises(ValueError):
         problem.full_index_to_free_index(5)
+
+
+def test_x_names():
+    """Test that `x_names` are handled properly."""
+    kwargs = {
+        'objective': pypesto.Objective(),
+        'lb': [-5] * 3,
+        'ub': [4] * 3,
+        'x_fixed_indices': [1],
+        'x_fixed_vals': [42.],
+    }
+
+    # non-unique values
+    with pytest.raises(ValueError):
+        pypesto.Problem(x_names=['x1', 'x2', 'x2'], **kwargs)
+
+    # too few or too many arguments
+    with pytest.raises(AssertionError):
+        pypesto.Problem(x_names=['x1', 'x2'], **kwargs)
+    with pytest.raises(AssertionError):
+        pypesto.Problem(x_names=['x1', 'x2', 'x3', 'x4'], **kwargs)
+
+    # all fine
+    problem = pypesto.Problem(x_names=['a', 'b', 'c'], **kwargs)
+    assert problem.x_names == ['a', 'b', 'c']
+
+    # defaults
+    problem = pypesto.Problem(**kwargs)
+    assert problem.x_names == ['x0', 'x1', 'x2']

@@ -1,6 +1,4 @@
-"""
-This is for testing the pypesto.History.
-"""
+"""Test the :class:`pypesto.History`."""
 
 import numpy as np
 import pytest
@@ -18,7 +16,7 @@ from pypesto.objective.constants import (
     X, FVAL, GRAD, HESS, RES, SRES, CHI2, SCHI2)
 from pypesto.engine import MultiProcessEngine
 
-from ..util import rosen_for_sensi, load_amici_objective
+from ..util import rosen_for_sensi, load_amici_objective, CRProblem
 
 
 class HistoryTest(unittest.TestCase):
@@ -315,6 +313,42 @@ class ResModeHistoryTest(HistoryTest):
         self.check_history()
 
 
+class CRResModeHistoryTest(HistoryTest):
+    """Residual method test based on the conversion reaction model.
+
+    This is useful to check that everything works also for a simple Objective,
+    not only an AmiciObjective.
+    """
+
+    @classmethod
+    def setUpClass(cls):
+        cls.optimizer = pypesto.optimize.ScipyOptimizer(
+            method='ls_trf',
+            options={'max_nfev': 100}
+        )
+        problem = CRProblem()
+        cls.obj = problem.get_objective(fim_for_hess=True)
+
+        cls.lb = problem.lb
+        cls.ub = problem.ub
+        cls.x_fixed_indices = []
+        cls.x_fixed_vals = []
+
+    def test_trace_all(self):
+        self.history_options = HistoryOptions(
+            trace_record=True,
+            trace_record_grad=True,
+            trace_record_hess=True,
+            trace_record_res=True,
+            trace_record_sres=True,
+            trace_record_chi2=True,
+            trace_record_schi2=True,
+        )
+
+        self.fix_pars = False
+        self.check_history()
+
+
 class FunModeHistoryTest(HistoryTest):
     @classmethod
     def setUpClass(cls):
@@ -390,6 +424,42 @@ class FunModeHistoryTest(HistoryTest):
             trace_record_schi2=True,
         )
         self.obj = pypesto.objective.AggregatedObjective([self.obj, self.obj])
+        self.fix_pars = False
+        self.check_history()
+
+
+class CRFunModeHistoryTest(HistoryTest):
+    """Function method test based on the conversion reaction model.
+
+    This is useful to check that everything works also for a simple Objective,
+    not only an AmiciObjective.
+    """
+
+    @classmethod
+    def setUpClass(cls):
+        cls.optimizer = pypesto.optimize.ScipyOptimizer(
+            method='trust-exact',
+            options={'maxiter': 100}
+        )
+        problem = CRProblem()
+        cls.obj = problem.get_objective(fim_for_hess=True)
+
+        cls.lb = problem.lb
+        cls.ub = problem.ub
+        cls.x_fixed_indices = []
+        cls.x_fixed_vals = []
+
+    def test_trace_all(self):
+        self.history_options = HistoryOptions(
+            trace_record=True,
+            trace_record_grad=True,
+            trace_record_hess=True,
+            trace_record_res=True,
+            trace_record_sres=True,
+            trace_record_chi2=True,
+            trace_record_schi2=True,
+        )
+
         self.fix_pars = False
         self.check_history()
 
