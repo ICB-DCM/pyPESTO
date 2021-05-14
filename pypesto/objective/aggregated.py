@@ -84,7 +84,7 @@ class AggregatedObjective(ObjectiveBase):
         **kwargs,
     ) -> ResultDict:
         return aggregate_results([
-            objective.call_unprocessed(x, sensi_orders, mode)
+            objective.call_unprocessed(x, sensi_orders, mode, **kwargs)
             for objective in self._objectives
         ])
 
