@@ -6,6 +6,11 @@ from numbers import Integral
 import h5py
 import numpy as np
 
+from ..objective.constants import MODE_FUN
+from ..objective import (AmiciObjective,
+                         AggregatedObjective,
+                         AesaraObjective,
+                         Objective)
 from .hdf5 import write_array, write_float_array
 from ..result import Result, SampleResult
 
@@ -74,6 +79,7 @@ class ProblemHDF5Writer:
                              and not hasattr(type(problem), a)]
 
             problem_grp = f.create_group("problem")
+            save_objective_infos(problem.objective, problem_grp)
             # problem_grp.attrs['config'] = objective.get_config()
 
             for problem_attr in attrs_to_save:
@@ -315,3 +321,140 @@ def write_result(result: Result,
     if sample:
         pypesto_sample_writer = SamplingResultHDF5Writer(filename)
         pypesto_sample_writer.write(result, overwrite=overwrite)
+
+
+def save_objective_infos(
+        objective: Union[AesaraObjective,
+                         AmiciObjective,
+                         AggregatedObjective,
+                         Objective],
+        f: h5py.File
+):
+    """
+    Saves the Objective Infos in a Dictonary.
+
+    Parameters
+    ----------
+    objective:
+        The objective whose information is to be stored.
+    f:
+        The h5py.File in which the infos are stored.
+    """
+    if isinstance(objective, AesaraObjective):
+        save_aesara_objective_info(objective, f)
+    elif isinstance(objective, AmiciObjective):
+        save_amici_objective_info(objective, f)
+    elif isinstance(objective, AggregatedObjective):
+        save_aggregated_objective_info(objective, f)
+    else:
+        save_function_objective_info(objective, f)
+
+
+def save_function_objective_info(
+        objective: Objective,
+        f: Union[h5py.File, h5py.Group]
+):
+    """
+    Saves the Function Objective information
+
+    Parameters
+    ----------
+    objective:
+        The pypesto.objective.function.Objective
+    f:
+        The h5py.File or Group in which the infos are stored.
+    """
+    info = {}
+    info['type'] = str(type(objective))
+    info['x_names'] = objective.x_names
+    sensi_order = 0
+    while objective.check_sensi_orders(
+            sensi_orders=(sensi_order,), mode=MODE_FUN):
+        sensi_order += 1
+    info['sensi_order'] = sensi_order-1
+
+    info_grp = get_or_create_group(f, 'objective_info')
+    for key in info.keys():
+        if info[key] is None:
+            continue
+        info_grp[key] = info[key]
+
+
+def save_aesara_objective_info(
+        objective: AesaraObjective,
+        f: Union[h5py.File, h5py.Group]
+):
+    """
+    Saves the AesaraObjective information
+
+    Parameters
+    ----------
+    objective:
+        The pypesto.objective.AesaraObjective
+    f:
+        The h5py.File or Group in which the infos are stored.
+    """
+    info = {}
+
+    info['type'] = str(type(objective))
+    info['x_names'] = objective.x_names
+    info['coeff'] = objective._coeff
+
+    info_grp = get_or_create_group(f, 'objective_infos')
+    for key in info:
+        info_grp[key] = info[key]
+
+
+def save_amici_objective_info(
+        objective: AmiciObjective,
+        f: Union[h5py.File, h5py.Group]
+):
+    """
+    Saves the AmiciObjective information
+
+    Parameters
+    ----------
+    objective:
+        The pypesto.objective.AmiciObjective
+    f:
+        The h5py.File or Group in which the infos are stored.
+    """
+
+    info = {}
+
+    info['type'] = str(type(objective))
+    info['x_names'] = objective.x_names
+    info['model_name'] = objective.amici_model.getName()
+    info['solver'] = type(objective.amici_solver)
+    info['sensi_order'] = objective.max_sensi_order
+
+    info_grp = get_or_create_group(f, 'objective_infos')
+    for key in info:
+        info_grp[key] = info[key]
+
+
+def save_aggregated_objective_info(
+        objective: AggregatedObjective,
+        f: Union[h5py.File, h5py.Group]
+):
+    """
+    Saves the AggregatedObjective information
+
+    Parameters
+    ----------
+    objective:
+        The pypesto.objective.AggregatedObjective
+    f:
+        The h5py.File in which the infos are stored.
+    """
+    info_grp = get_or_create_group(f, 'objective_infos')
+    info_grp['type'] = str(type(objective))
+    for n_obj, obj in enumerate(objective._objectives):
+        obj_grp = get_or_create_group(info_grp,
+                                      f'objective_{n_obj}')
+        if isinstance(obj, AesaraObjective):
+            save_aesara_objective_info(obj, obj_grp)
+        elif isinstance(obj, AmiciObjective):
+            save_amici_objective_info(obj, obj_grp)
+        else:
+            save_function_objective_info(obj, obj_grp)

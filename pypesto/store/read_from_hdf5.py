@@ -111,6 +111,13 @@ class ProblemHDF5Reader:
         problem:
             A problem instance with all attributes read in.
         """
+        # raise warning that problem is not to be used but
+        # only stores information
+        logger.warning('WARNING: You are loading a problem.\nThis problem'
+                       ' is not to be used without a separatly created'
+                       ' objective.\nIn place of problem.objective you can'
+                       ' access the Information\nstored on the objective.\n')
+
         # create empty problem
         if objective is None:
             objective = Objective()
@@ -118,6 +125,10 @@ class ProblemHDF5Reader:
 
         with h5py.File(self.storage_filename, 'r') as f:
             for problem_key in f['/problem']:
+                if problem_key == 'objective_info':
+                    problem.objective = \
+                        load_objective_info(f['/problem/objective_info'])
+                    continue
                 setattr(problem, problem_key,
                         f[f'/problem/{problem_key}'][:])
             for problem_attr in f['/problem'].attrs:
@@ -331,3 +342,22 @@ def read_result(filename: str,
                            f'within {filename}.')
 
     return result
+
+
+def load_objective_info(f: h5py.Group):
+    """
+    Loads the objective Information stored in f
+
+    Parameters
+    ----------
+    f:
+        The h5py.Group in which the information are stored.
+
+    Returns:
+        A dictionary of the information, stored instead of the
+        actual objective in problem.objective.
+    """
+    info = {}
+    for key in f:
+        info[key] = f[key][()]
+    return info

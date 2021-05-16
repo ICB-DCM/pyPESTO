@@ -10,6 +10,7 @@ from .aggregated import AggregatedObjective
 from .priors import NegLogPriors, NegLogParameterPriors
 from .util import res_to_chi2, sres_to_schi2
 from .base import ObjectiveBase
+from .aesara import AesaraObjective
 from .history import (
     HistoryOptions,
     HistoryBase,

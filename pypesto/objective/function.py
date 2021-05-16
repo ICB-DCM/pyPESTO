@@ -119,6 +119,8 @@ class Objective(ObjectiveBase):
         sensi_orders: Tuple[int, ...],
         mode: str,
     ) -> bool:
+        if max(sensi_orders) > 2:
+            return False
         if (mode is MODE_FUN and
             (0 in sensi_orders and not self.has_fun
              or 1 in sensi_orders and not self.has_grad
