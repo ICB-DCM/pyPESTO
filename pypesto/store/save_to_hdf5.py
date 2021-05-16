@@ -9,7 +9,6 @@ import numpy as np
 from ..objective.constants import MODE_FUN
 from ..objective import (AmiciObjective,
                          AggregatedObjective,
-                         AesaraObjective,
                          Objective)
 from .hdf5 import write_array, write_float_array
 from ..result import Result, SampleResult
@@ -324,8 +323,7 @@ def write_result(result: Result,
 
 
 def save_objective_infos(
-        objective: Union[AesaraObjective,
-                         AmiciObjective,
+        objective: Union[AmiciObjective,
                          AggregatedObjective,
                          Objective],
         f: h5py.File
@@ -340,9 +338,7 @@ def save_objective_infos(
     f:
         The h5py.File in which the infos are stored.
     """
-    if isinstance(objective, AesaraObjective):
-        save_aesara_objective_info(objective, f)
-    elif isinstance(objective, AmiciObjective):
+    if isinstance(objective, AmiciObjective):
         save_amici_objective_info(objective, f)
     elif isinstance(objective, AggregatedObjective):
         save_aggregated_objective_info(objective, f)
@@ -377,31 +373,6 @@ def save_function_objective_info(
     for key in info.keys():
         if info[key] is None:
             continue
-        info_grp[key] = info[key]
-
-
-def save_aesara_objective_info(
-        objective: AesaraObjective,
-        f: Union[h5py.File, h5py.Group]
-):
-    """
-    Saves the AesaraObjective information
-
-    Parameters
-    ----------
-    objective:
-        The pypesto.objective.AesaraObjective
-    f:
-        The h5py.File or Group in which the infos are stored.
-    """
-    info = {}
-
-    info['type'] = str(type(objective))
-    info['x_names'] = objective.x_names
-    info['coeff'] = objective._coeff
-
-    info_grp = get_or_create_group(f, 'objective_infos')
-    for key in info:
         info_grp[key] = info[key]
 
 
@@ -452,9 +423,7 @@ def save_aggregated_objective_info(
     for n_obj, obj in enumerate(objective._objectives):
         obj_grp = get_or_create_group(info_grp,
                                       f'objective_{n_obj}')
-        if isinstance(obj, AesaraObjective):
-            save_aesara_objective_info(obj, obj_grp)
-        elif isinstance(obj, AmiciObjective):
+        if isinstance(obj, AmiciObjective):
             save_amici_objective_info(obj, obj_grp)
         else:
             save_function_objective_info(obj, obj_grp)
