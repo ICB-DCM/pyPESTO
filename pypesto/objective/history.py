@@ -6,12 +6,13 @@ import copy
 import time
 import os
 import abc
-from typing import Any, Dict, List, Optional, Tuple, Sequence, Union
+from typing import Any, Dict, List, Tuple, Sequence, Union
 
 from .constants import (
     MODE_FUN, MODE_RES, FVAL, GRAD, HESS, RES, SRES, CHI2, SCHI2, TIME,
     N_FVAL, N_GRAD, N_HESS, N_RES, N_SRES, X)
-from .util import res_to_chi2, sres_to_schi2, sres_to_fim
+from .util import (
+    res_to_chi2, res_to_fval, sres_to_schi2, sres_to_fim, schi2_to_grad)
 
 ResultDict = Dict[str, Union[float, np.ndarray]]
 MaybeArray = Union[np.ndarray, 'np.nan']
@@ -372,7 +373,7 @@ class History(HistoryBase):
         res = result.get(RES, None)
         if res is not None and FVAL not in result:
             # no option trace_record_fval
-            result[FVAL] = res_to_chi2(res)
+            result[FVAL] = res_to_fval(res)
         self._update_counts(sensi_orders, mode)
 
     def finalize(self):
@@ -776,6 +777,11 @@ class Hdf5History(History):
         self.file = file
         self._generate_hdf5_group()
 
+    def __len__(self):
+        with h5py.File(self.file, 'a') as f:
+            return f[f'history/{self.id}/trace/'].attrs[
+                        'n_iterations']
+
     def update(
             self,
             x: np.ndarray,
@@ -829,7 +835,7 @@ class Hdf5History(History):
 
     def _check_for_not_nan_entries(self, hdf5_group: str) -> bool:
         """Checks if there exist not-nan entries stored for a given group"""
-        group = self._get_hdf5_entries(hdf5_group)
+        group = self._get_hdf5_entries(hdf5_group, ix=None)
 
         for entry in group:
             if not (entry is None or np.all(np.isnan(entry))):
@@ -920,6 +926,7 @@ class Hdf5History(History):
             RES: ret[RES],
             SRES: ret[SRES],
             CHI2: ret[CHI2],
+            SCHI2: ret[SCHI2],
             HESS: ret[HESS],
         }
 
@@ -954,18 +961,31 @@ class Hdf5History(History):
         except OSError:
             pass
 
-    def _get_hdf5_entries(self, entry_id: str) -> Sequence:
+    def _get_hdf5_entries(
+        self,
+        entry_id: str,
+        ix: Union[int, Sequence[int], None] = None,
+    ) -> Sequence:
+        """Get entries for field `entry_id` from HDF5 file, for indices `ix`.
+
+        Parameters
+        ------------
+        entry_id:
+            The key whose trace is returned.
+        ix:
+            Index or list of indices of the iterations that will produce
+            the trace.
+        Returns
+        --------
+        The entries ix for the key entry_id.
         """
-        returns the entries for the key entry_id.
-        """
+        if ix is None:
+            ix = range(len(self))
         trace_result = []
 
         with h5py.File(self.file, 'r') as f:
 
-            n_iterations = f[f'history/'
-                             f'{self.id}/trace/'].attrs['n_iterations']
-
-            for iteration in range(n_iterations):
+            for iteration in ix:
                 try:
                     entry = np.array(f[f'history/{self.id}/trace'
                                        f'/{str(iteration)}/{entry_id}'])
@@ -975,32 +995,59 @@ class Hdf5History(History):
 
         return trace_result
 
-    def get_x_trace(self) -> Sequence[np.ndarray]:
-        return self._get_hdf5_entries(X)
+    @trace_wrap
+    def get_x_trace(
+            self, ix: Union[int, Sequence[int], None] = None
+    ) -> Union[Sequence[np.ndarray], np.ndarray]:
+        return self._get_hdf5_entries(X, ix)
 
-    def get_fval_trace(self) -> Sequence[float]:
-        return self._get_hdf5_entries(FVAL)
+    @trace_wrap
+    def get_fval_trace(
+            self, ix: Union[int, Sequence[int], None] = None
+    ) -> Union[Sequence[float], float]:
+        return self._get_hdf5_entries(FVAL, ix)
 
-    def get_grad_trace(self) -> Sequence[np.ndarray]:
-        return self._get_hdf5_entries(GRAD)
+    @trace_wrap
+    def get_grad_trace(
+            self, ix: Union[int, Sequence[int], None] = None
+    ) -> Union[Sequence[MaybeArray], MaybeArray]:
+        return self._get_hdf5_entries(GRAD, ix)
 
-    def get_hess_trace(self) -> Sequence[np.ndarray]:
-        return self._get_hdf5_entries(HESS)
+    @trace_wrap
+    def get_hess_trace(
+            self, ix: Union[int, Sequence[int], None] = None
+    ) -> Union[Sequence[MaybeArray], MaybeArray]:
+        return self._get_hdf5_entries(HESS, ix)
 
-    def get_res_trace(self) -> Sequence[np.ndarray]:
-        return self._get_hdf5_entries(RES)
+    @trace_wrap
+    def get_res_trace(
+            self, ix: Union[int, Sequence[int], None] = None
+    ) -> Union[Sequence[MaybeArray], MaybeArray]:
+        return self._get_hdf5_entries(RES, ix)
 
-    def get_sres_trace(self) -> Sequence[np.ndarray]:
-        return self._get_hdf5_entries(SRES)
+    @trace_wrap
+    def get_sres_trace(
+            self, ix: Union[int, Sequence[int], None] = None
+    ) -> Union[Sequence[MaybeArray], MaybeArray]:
+        return self._get_hdf5_entries(SRES, ix)
 
-    def get_chi2_trace(self) -> Sequence[np.ndarray]:
-        return self._get_hdf5_entries(CHI2)
+    @trace_wrap
+    def get_chi2_trace(
+            self, ix: Union[int, Sequence[int], None] = None
+    ) -> Union[Sequence[float], float]:
+        return self._get_hdf5_entries(CHI2, ix)
 
-    def get_schi2_trace(self, t: Optional[int] = None) -> Sequence[np.ndarray]:
-        return self._get_hdf5_entries(SCHI2)
+    @trace_wrap
+    def get_schi2_trace(
+            self, ix: Union[int, Sequence[int], None] = None
+    ) -> Union[Sequence[MaybeArray], MaybeArray]:
+        return self._get_hdf5_entries(SCHI2, ix)
 
-    def get_time_trace(self, t: Optional[int] = None) -> Sequence[np.ndarray]:
-        return self._get_hdf5_entries(TIME)
+    @trace_wrap
+    def get_time_trace(
+            self, ix: Union[int, Sequence[int], None] = None
+    ) -> Union[Sequence[float], float]:
+        return self._get_hdf5_entries(TIME, ix)
 
 
 class OptimizerHistory:
@@ -1117,7 +1164,7 @@ class OptimizerHistory:
             candidate = self.history.get_fval_trace(it)
             if not np.isnan(candidate) \
                     and np.allclose(self.history.get_x_trace(it), self.x0):
-                self.fval0 = candidate
+                self.fval0 = float(candidate)
                 break
 
         # we prioritize fval over chi2 as fval is written whenever possible
@@ -1129,6 +1176,8 @@ class OptimizerHistory:
 
         for var in ['fval', 'chi2', 'x']:
             self.extract_from_history(var, ix_min)
+            if var == 'fval':
+                self.fval_min = float(self.fval_min)
 
         if self.history.options.trace_record_res:
             self.extract_from_history('res', ix_min)
@@ -1218,7 +1267,7 @@ def extract_values(mode: str,
         fim = sres_to_fim(sres_result)
         alt_values = {CHI2: chi2, SCHI2: schi2, HESS: fim}
         if schi2 is not None:
-            alt_values[GRAD] = 0.5 * schi2
+            alt_values[GRAD] = schi2_to_grad(schi2)
 
         # filter according to options
         alt_values = {

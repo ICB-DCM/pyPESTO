@@ -1,6 +1,4 @@
-"""
-This is for testing the pypesto.Objective.
-"""
+"""Test the :class:`pypesto.Objective`."""
 
 import numpy as np
 import sympy as sp
@@ -9,7 +7,7 @@ import pytest
 import pypesto
 import copy
 
-from ..util import rosen_for_sensi, poly_for_sensi
+from ..util import rosen_for_sensi, poly_for_sensi, CRProblem
 
 import aesara.tensor as aet
 
@@ -198,3 +196,70 @@ def test_aesara(max_sensi_order, integrated):
     # test everything still works after deepcopy
     cobj = copy.deepcopy(obj)
     assert cobj(x_ref) == prob['fval']
+
+
+@pytest.fixture(params=[pypesto.FD.CENTRAL,
+                        pypesto.FD.FORWARD,
+                        pypesto.FD.BACKWARD])
+def fd_method(request) -> str:
+    """Finite difference method."""
+    return request.param
+
+
+def test_fds(fd_method):
+    """Test finite differences."""
+    problem = CRProblem()
+
+    # reference objective
+    obj = problem.get_objective()
+
+    # FDs for everything
+    obj_fd = pypesto.FD(obj, grad=True, hess=True, sres=True, method=fd_method)
+    # bases Hessian on gradients
+    obj_fd_grad = pypesto.FD(
+        obj, grad=True, hess=True, sres=True, hess_via_fval=False,
+        method=fd_method)
+    # does not actually use FDs
+    obj_fd_fake = pypesto.FD(
+        obj, grad=None, hess=None, sres=None, method=fd_method)
+    # limited outputs, no derivatives
+    obj_fd_limited = pypesto.FD(
+        obj, grad=False, hess=False, sres=False, method=fd_method)
+    p = problem.p_true
+
+    # check that function values coincide (call delegated)
+    for attr in ['fval', 'res']:
+        val = getattr(obj, f"get_{attr}")(p)
+        val_fd = getattr(obj_fd, f"get_{attr}")(p)
+        val_fd_grad = getattr(obj_fd_grad, f"get_{attr}")(p)
+        val_fd_fake = getattr(obj_fd_fake, f"get_{attr}")(p)
+        val_fd_limited = getattr(obj_fd_limited, f"get_{attr}")(p)
+        assert (
+            (val == val_fd).all() and (val == val_fd_grad).all()
+            and (val == val_fd_fake).all()
+            and (val == val_fd_limited).all()
+        ), attr
+
+    # check that derivatives are close
+    if fd_method == pypesto.FD.CENTRAL:
+        atol = rtol = 1e-4
+    else:
+        atol = rtol = 1e-2
+    for attr in ['grad', 'hess', 'sres']:
+        val = getattr(obj, f"get_{attr}")(p)
+        val_fd = getattr(obj_fd, f"get_{attr}")(p)
+        val_fd_grad = getattr(obj_fd_grad, f"get_{attr}")(p)
+        val_fd_fake = getattr(obj_fd_fake, f"get_{attr}")(p)
+
+        for v in [val_fd, val_fd_grad]:
+            assert np.allclose(val, v, atol=atol, rtol=rtol), attr
+            # cannot completely coincide
+            assert (val != v).any(), attr
+        if attr == 'hess':
+            assert (val_fd != val_fd_grad).any(), attr
+        # should use available actual functionality
+        assert (val == val_fd_fake).all(), attr
+
+        # cannot be called
+        with pytest.raises(ValueError):
+            getattr(obj_fd_limited, f"get_{attr}")(p)
