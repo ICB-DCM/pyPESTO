@@ -52,6 +52,17 @@ class FD(ObjectiveBase):
     x_names:
         Parameter names that can be optionally used in, e.g., history or
         gradient checks.
+
+    Examples
+    --------
+    Define residuals and objective function, and obtain all derivatives via
+    FDs:
+    >>> import pypesto
+    >>> import numpy as np
+    >>> x_obs = np.array([11, 12, 13])
+    >>> res = lambda x: x - x_obs
+    >>> fun = lambda x: 0.5 * sum(res(x)**2)
+    >>> obj = pypesto.FD(pypesto.Objective(fun=fun, res=res))
     """
 
     # finite difference types
@@ -88,7 +99,7 @@ class FD(ObjectiveBase):
             )
         if method not in FD.METHODS:
             raise ValueError(
-                f"Method must be one of {FD.METHODS}."
+                f"Method must be one of {FD.METHODS}.",
             )
 
     def get_delta_fun(self, par_ix: int) -> float:
