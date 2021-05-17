@@ -59,6 +59,7 @@ class FD(ObjectiveBase):
     --------
     Define residuals and objective function, and obtain all derivatives via
     FDs:
+
     >>> from pypesto import Objective, FD
     >>> import numpy as np
     >>> x_obs = np.array([11, 12, 13])
