@@ -45,7 +45,10 @@ class FD(ObjectiveBase):
         FD step sizes for residual sensitivities.
         Similar to `delta_fun`.
     method:
-        Method to calculate FDs. Currently, only "center" is supported.
+        Method to calculate FDs. Can be any of `FD.METHODS`: central,
+        forward or backward differences. The latter two require only roughly
+        half as many function evaluations, are however less accurate than
+        central (O(x) vs O(x**2)).
     x_names:
         Parameter names that can be optionally used in, e.g., history or
         gradient checks.
@@ -55,6 +58,7 @@ class FD(ObjectiveBase):
     CENTRAL = "central"
     FORWARD = "forward"
     BACKWARD = "backward"
+    METHODS = [CENTRAL, FORWARD, BACKWARD]
 
     def __init__(
         self,
@@ -82,10 +86,9 @@ class FD(ObjectiveBase):
             raise NotImplementedError(
                 "Adaptive FD step sizes are not implemented yet.",
             )
-        methods = [FD.CENTRAL, FD.FORWARD, FD.BACKWARD]
-        if method not in methods:
+        if method not in FD.METHODS:
             raise ValueError(
-                f"Method must be one of {methods}"
+                f"Method must be one of {FD.METHODS}."
             )
 
     def get_delta_fun(self, par_ix: int) -> float:
