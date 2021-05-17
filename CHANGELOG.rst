@@ -6,6 +6,37 @@ Release notes
 ..........
 
 
+0.2.6 (2021-05-17)
+------------------
+
+* Objective:
+    * Basic finite differences (#666)
+    * Fix factor 2 in res/fval values (#619)
+
+* Optimization:
+    * Sort optimization results when appending (#668)
+    * Read optimizer result from HDF5 (previously only CSV) (#663)
+
+* Storage:
+    * Load ensemble from HDF5 (#640)
+
+* CI:
+    * Add flake8 checks as pre-commit hook (#662)
+    * Add efficient biological conversion reaction  test model (#619)
+
+* General:
+    * No automatic import of the predict module (#657)
+    * Assert unique problem parameter names (#665)
+    * Load ensemble from optimization result with and without history usage
+      (#640)
+    * Calculate validation profile significance (#658)
+    * Set pypesto screen logger to "INFO" by default (#667)
+
+Minor fixes:
+    * Fix axis variable overwriting in `visualize.sampling_parameter_traces`
+      (#665)
+
+
 0.2.5 (2021-05-04)
 ------------------
 
