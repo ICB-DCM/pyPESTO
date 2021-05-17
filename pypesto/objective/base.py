@@ -209,13 +209,12 @@ class ObjectiveBase(abc.ABC):
         flag:
             Boolean indicating whether mode is supported
         """
-        if mode == MODE_FUN and not self.has_fun:
-            return False
-
-        if mode == MODE_RES and not self.has_res:
-            return False
-
-        return True
+        if mode == MODE_FUN:
+            return self.has_fun
+        elif mode == MODE_RES:
+            return self.has_res
+        else:
+            raise ValueError(f"Unknown mode {mode}.")
 
     def check_sensi_orders(
         self,

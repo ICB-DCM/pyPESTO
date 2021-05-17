@@ -16,7 +16,7 @@ class FD(ObjectiveBase):
     class allows to flexibly obtain all derivatives calculated via FDs.
 
     For the parameters `grad`, `hess`, `sres`, a value of None means that the
-    objective derivative is used if possible, otherwise resorting to FDs.
+    objective derivative is used if available, otherwise resorting to FDs.
     True means that FDs are used in any case, False means that the derivative
     is not exported.
 
@@ -28,11 +28,11 @@ class FD(ObjectiveBase):
     Parameters
     ----------
     grad:
-        Derivative method for the gradient.
+        Derivative method for the gradient (see above).
     hess:
-        Derivative method for the Hessian
+        Derivative method for the Hessian (see above).
     sres:
-        Derivative method for the residual sensitivities.
+        Derivative method for the residual sensitivities (see above).
     hess_via_fval:
         If the Hessian is to be calculated via finite differences:
         whether to employ 2nd order FDs via fval even if the objective can
@@ -379,7 +379,7 @@ class FD(ObjectiveBase):
                 fc = f_fval(x - delta1)
                 f2m = f_fval(x - 2 * delta1)
             else:
-                raise ValueError("Method not recognized.")
+                raise ValueError(f"Method {self.method} not recognized.")
 
             hess[ix1, ix1] = (f2p + f2m - 2 * fc) / delta1_val ** 2
 
@@ -404,7 +404,7 @@ class FD(ObjectiveBase):
                     fmp = f_fval(x - delta1 + 0)
                     fmm = f_fval(x - delta1 - delta2)
                 else:
-                    raise ValueError("Method not recognized.")
+                    raise ValueError(f"Method {self.method} not recognized.")
 
                 hess[ix1, ix2] = hess[ix2, ix1] = \
                     (fpp - fpm - fmp + fmm) / (delta1_val * delta2_val)
@@ -417,7 +417,7 @@ class FD(ObjectiveBase):
         n_par = len(x)
 
         def f_grad(x):
-            """Short-hand to get a function value."""
+            """Short-hand to get a gradient value."""
             return self.obj.call_unprocessed(
                 x=x, sensi_orders=(1,), mode=MODE_FUN, **kwargs)[GRAD]
 
@@ -442,7 +442,7 @@ class FD(ObjectiveBase):
                 gp = g
                 gm = f_grad(x - delta)
             else:
-                raise ValueError("Method not recognized.")
+                raise ValueError(f"Method {self.method} not recognized.")
 
             hess[:, ix] = (gp - gm) / delta_val
         # make it symmetric
@@ -481,7 +481,7 @@ class FD(ObjectiveBase):
                 rp = res
                 rm = f_res(x - delta)
             else:
-                raise ValueError("Method not recognized.")
+                raise ValueError(f"Method {self.method} not recognized.")
 
             sres.append((rp - rm) / delta_val)
 
