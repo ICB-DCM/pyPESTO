@@ -37,3 +37,5 @@ from . import logging
 from . import startpoint
 from . import store
 from . import visualize
+
+logging.log()
