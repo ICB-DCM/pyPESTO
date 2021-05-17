@@ -254,7 +254,7 @@ def test_fds(fd_method):
         for v in [val_fd, val_fd_grad]:
             assert np.allclose(val, v, atol=atol, rtol=rtol), attr
             # cannot completely coincide
-            assert (val != v).any(), (attr, v)
+            assert (val != v).any(), attr
         if attr == 'hess':
             assert (val_fd != val_fd_grad).any(), attr
         # should use available actual functionality

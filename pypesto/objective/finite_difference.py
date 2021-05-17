@@ -34,16 +34,18 @@ class FD(ObjectiveBase):
     sres:
         Derivative method for the residual sensitivities.
     hess_via_fval:
-        If the Hessian is to be calculated via finite differences, whether
-        to employ 2nd order FDs via fval even if the objective can provide one,
-        or 1st order FDs from gradients if available.
+        If the Hessian is to be calculated via finite differences:
+        whether to employ 2nd order FDs via fval even if the objective can
+        provide a gradient.
     delta_fun:
-        FD step sizes for gradient and Hessian.
+        FD step sizes for function values.
         Can be either a float, or a :class:`np.ndarray` of shape (n_par,)
         for different step sizes for different coordinates.
+    delta_grad:
+        FD step sizes for gradients, if the Hessian is calculated via 1st
+        order sensitivities from the gradients. Similar to `delta_fun`.
     delta_res:
-        FD step sizes for residual sensitivities.
-        Similar to `delta_fun`.
+        FD step sizes for residuals. Similar to `delta_fun`.
     method:
         Method to calculate FDs. Can be any of `FD.METHODS`: central,
         forward or backward differences. The latter two require only roughly
@@ -79,6 +81,7 @@ class FD(ObjectiveBase):
         sres: Union[bool, None] = None,
         hess_via_fval: bool = True,
         delta_fun: Union[float, np.ndarray, str] = 1e-6,
+        delta_grad: Union[float, np.ndarray, str] = 1e-6,
         delta_res: Union[float, np.ndarray, str] = 1e-6,
         method: str = CENTRAL,
         x_names: List[str] = None,
@@ -90,10 +93,12 @@ class FD(ObjectiveBase):
         self.sres: Union[bool, None] = sres
         self.hess_via_fval: bool = hess_via_fval
         self.delta_fun: Union[float, np.ndarray] = delta_fun
+        self.delta_grad: Union[float, np.ndarray] = delta_grad
         self.delta_res: Union[float, np.ndarray] = delta_res
         self.method: str = method
 
-        if isinstance(delta_fun, str) or isinstance(delta_res, str):
+        if any(isinstance(delta, str)
+               for delta in (delta_fun, delta_grad, delta_res)):
             raise NotImplementedError(
                 "Adaptive FD step sizes are not implemented yet.",
             )
@@ -103,7 +108,22 @@ class FD(ObjectiveBase):
             )
 
     def get_delta_fun(self, par_ix: int) -> float:
-        """Get function value epsilon for a given parameter index.
+        """Get function value step size delta for a given parameter index.
+
+        Parameters
+        ----------
+        par_ix: Parameter index.
+
+        Returns
+        -------
+        delta: Delta value.
+        """
+        if isinstance(self.delta_fun, np.ndarray):
+            return self.delta_fun[par_ix]
+        return self.delta_fun
+
+    def get_delta_grad(self, par_ix: int) -> float:
+        """Get gradient step size delta for a given parameter index.
 
         Parameters
         ----------
@@ -118,7 +138,7 @@ class FD(ObjectiveBase):
         return self.delta_fun
 
     def get_delta_res(self, par_ix: int) -> float:
-        """Get residual epsilon for a given parameter index.
+        """Get residual step size delta for a given parameter index.
 
         Parameters
         ----------
@@ -197,7 +217,7 @@ class FD(ObjectiveBase):
         if not grad_via_fd and not hess_via_fd:
             return result
 
-        # whether the Hessian should be based on 2nd order sensis
+        # whether the Hessian should be based on 2nd order FD from fval
         hess_via_fd_fval = \
             hess_via_fd and (self.hess_via_fval or not self.obj.has_grad)
 
@@ -246,7 +266,7 @@ class FD(ObjectiveBase):
     ) -> Tuple[Tuple[int, ...], ResultDict]:
         """
         Helper function that calculates from the objective the sensitivities
-        that it is supposed to calculate for function values.
+        that are supposed to be calculated from the objective and not via FDs.
         """
         # define objective sensis
         sensi_orders_obj = []
@@ -271,8 +291,8 @@ class FD(ObjectiveBase):
         **kwargs,
     ) -> Tuple[Tuple[int, ...], ResultDict]:
         """
-        Helper function that calcualtes from the objective the sensitivities
-        that it is supposed to calculate for residuals.
+        Helper function that calculates from the objective the sensitivities
+        that are supposed to be calculated from the objective and not via FDs.
         """
         # define objective sensis
         sensi_orders_obj = []
@@ -302,7 +322,7 @@ class FD(ObjectiveBase):
         if fval is None and self.method in [FD.FORWARD, FD.BACKWARD]:
             fval = f_fval(x)
 
-        grad = np.nan * np.empty(shape=n_par)
+        grad = np.full(shape=n_par, fill_value=np.nan)
         for ix in range(n_par):
             delta_val = self.get_delta_fun(par_ix=ix)
             delta = delta_val * unit_vec(dim=n_par, ix=ix)
@@ -335,7 +355,7 @@ class FD(ObjectiveBase):
             return self.obj.call_unprocessed(
                 x=x, sensi_orders=(0,), mode=MODE_FUN, **kwargs)[FVAL]
 
-        hess = np.nan * np.empty(shape=(n_par, n_par))
+        hess = np.full(shape=(n_par, n_par), fill_value=np.nan)
 
         # needed for diagonal entries at least
         if fval is None:
@@ -406,10 +426,10 @@ class FD(ObjectiveBase):
         if self.method in [FD.FORWARD, FD.BACKWARD]:
             g = f_grad(x)
 
-        hess = np.nan * np.empty(shape=(n_par, n_par))
+        hess = np.full(shape=(n_par, n_par), fill_value=np.nan)
 
         for ix in range(n_par):
-            delta_val = self.get_delta_fun(par_ix=ix)
+            delta_val = self.get_delta_grad(par_ix=ix)
             delta = delta_val * unit_vec(dim=n_par, ix=ix)
 
             if self.method == FD.CENTRAL:
