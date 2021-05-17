@@ -32,7 +32,7 @@ Release notes
     * Calculate validation profile significance (#658)
     * Set pypesto screen logger to "INFO" by default (#667)
 
-Minor fixes:
+* Minor fixes:
     * Fix axis variable overwriting in `visualize.sampling_parameter_traces`
       (#665)
 
