@@ -57,12 +57,12 @@ class FD(ObjectiveBase):
     --------
     Define residuals and objective function, and obtain all derivatives via
     FDs:
-    >>> import pypesto
+    >>> from pypesto import Objective, FD
     >>> import numpy as np
     >>> x_obs = np.array([11, 12, 13])
     >>> res = lambda x: x - x_obs
     >>> fun = lambda x: 0.5 * sum(res(x)**2)
-    >>> obj = pypesto.FD(pypesto.Objective(fun=fun, res=res))
+    >>> obj = FD(Objective(fun=fun, res=res))
     """
 
     # finite difference types
