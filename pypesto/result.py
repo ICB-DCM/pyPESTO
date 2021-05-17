@@ -38,6 +38,7 @@ class OptimizeResult:
         """
 
         self.list.append(optimizer_result)
+        self.sort()
 
     def sort(self):
         """
