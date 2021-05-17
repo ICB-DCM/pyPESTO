@@ -114,32 +114,6 @@ class Objective(ObjectiveBase):
     def has_sres(self) -> bool:
         return callable(self.sres) or self.sres is True
 
-    def check_sensi_orders(
-        self,
-        sensi_orders: Tuple[int, ...],
-        mode: str,
-    ) -> bool:
-        if (mode is MODE_FUN and
-            (0 in sensi_orders and not self.has_fun
-             or 1 in sensi_orders and not self.has_grad
-             or 2 in sensi_orders and not self.has_hess)
-            ) or (mode is MODE_RES and
-                  (0 in sensi_orders and not self.has_res
-                   or 1 in sensi_orders and not self.has_sres)
-                  ):
-            return False
-
-        return True
-
-    def check_mode(self, mode: str) -> bool:
-        if mode == MODE_FUN and not self.has_fun:
-            return False
-
-        if mode == MODE_RES and not self.has_res:
-            return False
-
-        return True
-
     def call_unprocessed(
         self,
         x: np.ndarray,
@@ -157,9 +131,9 @@ class Objective(ObjectiveBase):
             A dict containing the results.
         """
         if mode == MODE_FUN:
-            result = self._call_mode_fun(x, sensi_orders)
+            result = self._call_mode_fun(x=x, sensi_orders=sensi_orders)
         elif mode == MODE_RES:
-            result = self._call_mode_res(x, sensi_orders)
+            result = self._call_mode_res(x=x, sensi_orders=sensi_orders)
         else:
             raise ValueError("This mode is not supported.")
         return result
