@@ -15,6 +15,9 @@ logger = logging.getLogger(__name__)
 class FDDelta:
     """Finite difference step size with automatic updating.
 
+    Reference implementation:
+    https://github.com/ICB-DCM/PESTO/blob/master/private/getStepSizeFD.m
+
     Parameters
     ----------
     delta:
