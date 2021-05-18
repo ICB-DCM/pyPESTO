@@ -22,7 +22,7 @@ Release notes
 
 * CI:
     * Add flake8 checks as pre-commit hook (#662)
-    * Add efficient biological conversion reaction  test model (#619)
+    * Add efficient biological conversion reaction test model (#619)
 
 * General:
     * No automatic import of the predict module (#657)
