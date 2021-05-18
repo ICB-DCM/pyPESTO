@@ -198,15 +198,28 @@ def test_aesara(max_sensi_order, integrated):
     assert cobj(x_ref) == prob['fval']
 
 
-@pytest.fixture(params=[pypesto.FD.CENTRAL,
-                        pypesto.FD.FORWARD,
-                        pypesto.FD.BACKWARD])
+@pytest.fixture(params=[
+    pypesto.FD.CENTRAL,
+    pypesto.FD.FORWARD,
+    pypesto.FD.BACKWARD
+])
 def fd_method(request) -> str:
     """Finite difference method."""
     return request.param
 
 
-def test_fds(fd_method):
+@pytest.fixture(params=[
+    1e-6,
+    "constant",
+    "space",
+    "steps",
+])
+def fd_delta(request):
+    """Finite differenc step size method."""
+    return request.param
+
+
+def test_fds(fd_method, fd_delta):
     """Test finite differences."""
     problem = CRProblem()
 
@@ -214,11 +227,13 @@ def test_fds(fd_method):
     obj = problem.get_objective()
 
     # FDs for everything
-    obj_fd = pypesto.FD(obj, grad=True, hess=True, sres=True, method=fd_method)
+    obj_fd = pypesto.FD(
+        obj, grad=True, hess=True, sres=True, method=fd_method,
+        delta_fun=fd_delta, delta_grad=fd_delta, delta_res=fd_delta)
     # bases Hessian on gradients
     obj_fd_grad = pypesto.FD(
         obj, grad=True, hess=True, sres=True, hess_via_fval=False,
-        method=fd_method)
+        method=fd_method, delta_fun=fd_delta)
     # does not actually use FDs
     obj_fd_fake = pypesto.FD(
         obj, grad=None, hess=None, sres=None, method=fd_method)
@@ -251,10 +266,14 @@ def test_fds(fd_method):
         val_fd_grad = getattr(obj_fd_grad, f"get_{attr}")(p)
         val_fd_fake = getattr(obj_fd_fake, f"get_{attr}")(p)
 
-        for v in [val_fd, val_fd_grad]:
-            assert np.allclose(val, v, atol=atol, rtol=rtol), attr
-            # cannot completely coincide
-            assert (val != v).any(), attr
+        assert np.allclose(val, val_fd, atol=atol, rtol=rtol), attr
+        # cannot completely coincide
+        assert (val != val_fd).any(), attr
+
+        assert np.allclose(val, val_fd_grad, atol=atol, rtol=rtol), attr
+        # cannot completely coincide
+        assert (val != val_fd_grad).any(), attr
+
         if attr == 'hess':
             assert (val_fd != val_fd_grad).any(), attr
         # should use available actual functionality
