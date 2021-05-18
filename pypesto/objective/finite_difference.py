@@ -12,7 +12,7 @@ from .constants import (
 logger = logging.getLogger(__name__)
 
 
-class Delta:
+class FDDelta:
     """Finite difference step size with automatic updating.
 
     Parameters
@@ -26,15 +26,15 @@ class Delta:
     update_condition:
         A "good" step size may be a local property. Thus, this class allows
         updating the step size if certain criteria are met, in the
-        :func:`pypesto.objective.finite_difference.Delta.update`
+        :func:`pypesto.objective.finite_difference.FDDelta.update`
         function.
-        Delta.CONSTANT means that the step size is only initially selected.
-        Delta.SPACE means that the step size is updated if the current
+        FDDelta.CONSTANT means that the step size is only initially selected.
+        FDDelta.SPACE means that the step size is updated if the current
         evaluation point is sufficiently far away from the last training point.
-        Delta.STEPS means that the step size is updated `max_steps` evaluations
-        after the last update.
+        FDDelta.STEPS means that the step size is updated `max_steps`
+        evaluations after the last update.
     max_steps:
-        Number of steps after which to update in the `Delta.STEPS` update
+        Number of steps after which to update in the `FDDelta.STEPS` update
         condition.
     """
 
@@ -59,10 +59,10 @@ class Delta:
             test_deltas = np.array([10**(-i) for i in range(2, 9)])
         self.test_deltas: np.ndarray = test_deltas
 
-        if update_condition not in Delta.UPDATE_CONDITIONS:
+        if update_condition not in FDDelta.UPDATE_CONDITIONS:
             raise ValueError(
                 f"Update condition {update_condition} must be in "
-                f"{Delta.UPDATE_CONDITIONS}.",
+                f"{FDDelta.UPDATE_CONDITIONS}.",
             )
         self.update_condition: str = update_condition
 
@@ -105,12 +105,12 @@ class Delta:
         # return if no update needed
         if self.delta is not None:
             if (
-                self.update_condition == Delta.SPACE and
+                self.update_condition == FDDelta.SPACE and
                 np.sum((x - self.x0)**2) <= 0.5 * np.sqrt(len(x))
             ):
                 return
             if (
-                self.update_condition == Delta.STEPS and
+                self.update_condition == FDDelta.STEPS and
                 (self.steps-1) % self.max_steps != 0
             ):
                 return
@@ -137,7 +137,7 @@ class Delta:
         parameter, with the best stability properties.
 
         The parameters are the same as for
-        :func:`pypesto.objective.finite_difference.Delta.update`.
+        :func:`pypesto.objective.finite_difference.FDDelta.update`.
         """
 
         # calculate gradients for all deltas for all parameters
@@ -155,7 +155,7 @@ class Delta:
         # shape (n_delta, n_par, ...)
         nablas = np.array(nablas)
 
-        # The stability vector is the the absolute difference of jacobian
+        # The stability vector is the the absolute difference of Jacobian
         #  entries towards smaller and larger deltas, thus indicating the
         #  change in the approximation when changing delta.
         # This is done separately for each parameter. Then, for each the delta
@@ -192,7 +192,7 @@ class Delta:
         return self.delta
 
 
-def to_delta(delta: Union[Delta, np.ndarray, float, str]) -> Delta:
+def to_delta(delta: Union[FDDelta, np.ndarray, float, str]) -> FDDelta:
     """Input to step size delta.
 
     Input can be a vector, float, or an update method type.
@@ -203,12 +203,12 @@ def to_delta(delta: Union[Delta, np.ndarray, float, str]) -> Delta:
         Can be a vector, float, or one of Delta.UPDATE_CONDITIONS. If a
         vector or float, a constant delta is assumed.
     """
-    if isinstance(delta, Delta):
+    if isinstance(delta, FDDelta):
         return delta
     elif isinstance(delta, (np.ndarray, float)):
-        return Delta(delta=delta, update_condition=Delta.CONSTANT)
+        return FDDelta(delta=delta, update_condition=FDDelta.CONSTANT)
     else:
-        return Delta(delta=None, update_condition=delta)
+        return FDDelta(delta=None, update_condition=delta)
 
 
 class FD(ObjectiveBase):
@@ -283,9 +283,9 @@ class FD(ObjectiveBase):
         hess: Union[bool, None] = None,
         sres: Union[bool, None] = None,
         hess_via_fval: bool = True,
-        delta_fun: Union[Delta, np.ndarray, float, str] = 1e-6,
-        delta_grad: Union[Delta, np.ndarray, float, str] = 1e-6,
-        delta_res: Union[float, np.ndarray, str] = 1e-6,
+        delta_fun: Union[FDDelta, np.ndarray, float, str] = 1e-6,
+        delta_grad: Union[FDDelta, np.ndarray, float, str] = 1e-6,
+        delta_res: Union[FDDelta, float, np.ndarray, str] = 1e-6,
         method: str = CENTRAL,
         x_names: List[str] = None,
     ):
@@ -295,9 +295,9 @@ class FD(ObjectiveBase):
         self.hess: Union[bool, None] = hess
         self.sres: Union[bool, None] = sres
         self.hess_via_fval: bool = hess_via_fval
-        self.delta_fun: Delta = to_delta(delta_fun)
-        self.delta_grad: Delta = to_delta(delta_grad)
-        self.delta_res: Delta = to_delta(delta_res)
+        self.delta_fun: FDDelta = to_delta(delta_fun)
+        self.delta_grad: FDDelta = to_delta(delta_grad)
+        self.delta_res: FDDelta = to_delta(delta_res)
         self.method: str = method
 
         if method not in FD.METHODS:

@@ -215,7 +215,7 @@ def fd_method(request) -> str:
     "steps",
 ])
 def fd_delta(request):
-    """Finite differenc step size method."""
+    """Finite difference step size method."""
     return request.param
 
 
@@ -233,13 +233,16 @@ def test_fds(fd_method, fd_delta):
     # bases Hessian on gradients
     obj_fd_grad = pypesto.FD(
         obj, grad=True, hess=True, sres=True, hess_via_fval=False,
-        method=fd_method, delta_fun=fd_delta)
+        method=fd_method,
+        delta_fun=fd_delta, delta_grad=fd_delta, delta_res=fd_delta)
     # does not actually use FDs
     obj_fd_fake = pypesto.FD(
-        obj, grad=None, hess=None, sres=None, method=fd_method)
+        obj, grad=None, hess=None, sres=None, method=fd_method,
+        delta_fun=fd_delta, delta_grad=fd_delta, delta_res=fd_delta)
     # limited outputs, no derivatives
     obj_fd_limited = pypesto.FD(
-        obj, grad=False, hess=False, sres=False, method=fd_method)
+        obj, grad=False, hess=False, sres=False, method=fd_method,
+        delta_fun=fd_delta, delta_grad=fd_delta, delta_res=fd_delta)
     p = problem.p_true
 
     # check that function values coincide (call delegated)
