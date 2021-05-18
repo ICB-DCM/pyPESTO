@@ -966,7 +966,8 @@ class Hdf5History(History):
         entry_id: str,
         ix: Union[int, Sequence[int], None] = None,
     ) -> Sequence:
-        """
+        """Get entries for field `entry_id` from HDF5 file, for indices `ix`.
+
         Parameters
         ------------
         entry_id:

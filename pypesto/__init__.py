@@ -21,6 +21,7 @@ from .objective import (
     Objective,
     ObjectiveBase,
     OptimizerHistory,
+    FD,
 )
 from .problem import Problem
 from .result import (
@@ -36,3 +37,5 @@ from . import logging
 from . import startpoint
 from . import store
 from . import visualize
+
+logging.log()
