@@ -211,7 +211,7 @@ def fd_method(request) -> str:
 @pytest.fixture(params=[
     1e-6,
     pypesto.FDDelta.CONSTANT,
-    pypesto.FDDelta.SPACE,
+    pypesto.FDDelta.DISTANCE,
     pypesto.FDDelta.STEPS,
 ])
 def fd_delta(request):

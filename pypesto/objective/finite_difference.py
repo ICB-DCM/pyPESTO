@@ -32,13 +32,13 @@ class FDDelta:
         :func:`pypesto.objective.finite_difference.FDDelta.update`
         function.
         FDDelta.CONSTANT means that the step size is only initially selected.
-        FDDelta.SPACE means that the step size is updated if the current
+        FDDelta.DISTANCE means that the step size is updated if the current
         evaluation point is sufficiently far away from the last training point.
         FDDelta.STEPS means that the step size is updated `max_steps`
         evaluations after the last update.
-    space_coeff:
+    max_distance:
         Coefficient on the distance between current and reference point beyond
-        which to update, in the `FDDelta.SPACE` update condition.
+        which to update, in the `FDDelta.DISTANCE` update condition.
     max_steps:
         Number of steps after which to update in the `FDDelta.STEPS` update
         condition.
@@ -46,16 +46,16 @@ class FDDelta:
 
     # update conditions
     CONSTANT = "constant"
-    SPACE = "space"
+    DISTANCE = "distance"
     STEPS = "steps"
-    UPDATE_CONDITIONS = [CONSTANT, SPACE, STEPS]
+    UPDATE_CONDITIONS = [CONSTANT, DISTANCE, STEPS]
 
     def __init__(
         self,
         delta: Union[np.ndarray, float, None] = None,
         test_deltas: np.ndarray = None,
         update_condition: str = CONSTANT,
-        space_coeff: float = 0.5,
+        max_distance: float = 0.5,
         max_steps: int = 30,
     ):
         if not isinstance(delta, (np.ndarray, float)) and delta is not None:
@@ -73,7 +73,7 @@ class FDDelta:
             )
         self.update_condition: str = update_condition
 
-        self.space_coeff: float = space_coeff
+        self.max_distance: float = max_distance
         self.max_steps: int = max_steps
 
         # running variables
@@ -117,8 +117,8 @@ class FDDelta:
         # return if no update needed
         if self.delta is not None:
             if (
-                self.update_condition == FDDelta.SPACE and
-                np.sum((x - self.x0)**2) <= self.space_coeff * np.sqrt(len(x))
+                self.update_condition == FDDelta.DISTANCE and
+                np.sum((x - self.x0)**2) <= self.max_distance * np.sqrt(len(x))
             ):
                 return
             if (
