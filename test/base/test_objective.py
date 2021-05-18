@@ -210,9 +210,9 @@ def fd_method(request) -> str:
 
 @pytest.fixture(params=[
     1e-6,
-    "constant",
-    "space",
-    "steps",
+    pypesto.FDDelta.CONSTANT,
+    pypesto.FDDelta.SPACE,
+    pypesto.FDDelta.STEPS,
 ])
 def fd_delta(request):
     """Finite difference step size method."""

@@ -25,7 +25,7 @@ class FDDelta:
         If not None, this is used as initial step size.
     test_deltas:
         Step sizes to try out in step size selection. If None, a range
-        [1e-2, 1e-3, ..., 1e-8] is considered.
+        [1e-1, 1e-3, ..., 1e-8] is considered.
     update_condition:
         A "good" step size may be a local property. Thus, this class allows
         updating the step size if certain criteria are met, in the
@@ -36,6 +36,9 @@ class FDDelta:
         evaluation point is sufficiently far away from the last training point.
         FDDelta.STEPS means that the step size is updated `max_steps`
         evaluations after the last update.
+    space_coeff:
+        Coefficient on the distance between current and reference point beyond
+        which to update, in the `FDDelta.SPACE` update condition.
     max_steps:
         Number of steps after which to update in the `FDDelta.STEPS` update
         condition.
@@ -52,6 +55,7 @@ class FDDelta:
         delta: Union[np.ndarray, float, None] = None,
         test_deltas: np.ndarray = None,
         update_condition: str = CONSTANT,
+        space_coeff: float = 0.5,
         max_steps: int = 30,
     ):
         if not isinstance(delta, (np.ndarray, float)) and delta is not None:
@@ -59,7 +63,7 @@ class FDDelta:
         self.delta: Union[np.ndarray, float, None] = delta
 
         if test_deltas is None:
-            test_deltas = np.array([10**(-i) for i in range(2, 9)])
+            test_deltas = np.array([10**(-i) for i in range(1, 9)])
         self.test_deltas: np.ndarray = test_deltas
 
         if update_condition not in FDDelta.UPDATE_CONDITIONS:
@@ -69,6 +73,7 @@ class FDDelta:
             )
         self.update_condition: str = update_condition
 
+        self.space_coeff: float = space_coeff
         self.max_steps: int = max_steps
 
         # running variables
@@ -102,6 +107,10 @@ class FDDelta:
         # scalar to vector
         if isinstance(self.delta, float):
             self.delta: np.ndarray = self.delta * np.ones(shape=x.shape)
+        elif isinstance(self.delta, np.ndarray):
+            if self.delta.shape != x.shape:
+                # this should not happen
+                raise ValueError("Shape mismatch.")
 
         self.steps += 1
 
@@ -109,12 +118,12 @@ class FDDelta:
         if self.delta is not None:
             if (
                 self.update_condition == FDDelta.SPACE and
-                np.sum((x - self.x0)**2) <= 0.5 * np.sqrt(len(x))
+                np.sum((x - self.x0)**2) <= self.space_coeff * np.sqrt(len(x))
             ):
                 return
             if (
                 self.update_condition == FDDelta.STEPS and
-                (self.steps-1) % self.max_steps != 0
+                (self.steps-1) % self.max_steps != 0 and self.steps > 1
             ):
                 return
 
@@ -165,20 +174,20 @@ class FDDelta:
         #  with the minimal entry and thus the most stable behavior
         #  is selected.
         stab_vec = np.full(shape=nablas.shape, fill_value=np.nan)
-        stab_vec[1:-1] = 0.5 * (
-            np.abs(nablas[2:] - nablas[1:-1]) +
-            np.abs(nablas[1:-1] - nablas[:-2])
-        )
+        stab_vec[1:-1] = np.mean(np.abs(
+            [nablas[2:] - nablas[1:-1],
+             nablas[1:-1] - nablas[:-2]]
+        ), axis=0)
         # on the edge, just take the single neighbor
         stab_vec[0] = np.abs(nablas[1] - nablas[0])
         stab_vec[-1] = np.abs(nablas[-1] - nablas[-2])
 
-        # if the function is tensor-valued, consider the mean over all entries
-        # there may be more intelligent ways
+        # if the function is tensor-valued, consider the maximum over all
+        #  entries, to constrain the worst deviation
         if stab_vec.ndim > 2:
             # flatten all dimensions > 1
             stab_vec = stab_vec.reshape(
-                stab_vec.shape[0], stab_vec.shape[1], -1).mean(axis=2)
+                stab_vec.shape[0], stab_vec.shape[1], -1).max(axis=2)
 
         # minimum delta index for each parameter
         min_ixs = np.argmin(stab_vec, axis=0)
