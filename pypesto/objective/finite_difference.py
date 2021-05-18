@@ -25,7 +25,7 @@ class FDDelta:
         If not None, this is used as initial step size.
     test_deltas:
         Step sizes to try out in step size selection. If None, a range
-        [1e-1, 1e-3, ..., 1e-8] is considered.
+        [1e-1, 1e-2, ..., 1e-8] is considered.
     update_condition:
         A "good" step size may be a local property. Thus, this class allows
         updating the step size if certain criteria are met, in the
