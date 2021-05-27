@@ -46,6 +46,9 @@ class PetabImporter(AmiciObjectBuilder):
         """
         self.petab_problem = petab_problem
 
+        if petab.lint_problem(petab_problem):
+            raise ValueError("Invalid PEtab problem.")
+
         if output_folder is None:
             output_folder = _find_output_folder_name(
                 self.petab_problem,
