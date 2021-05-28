@@ -778,7 +778,7 @@ class Hdf5History(History):
         self._generate_hdf5_group()
 
     def __len__(self):
-        with h5py.File(self.file, 'a') as f:
+        with h5py.File(self.file, 'r') as f:
             return f[f'history/{self.id}/trace/'].attrs[
                         'n_iterations']
 
