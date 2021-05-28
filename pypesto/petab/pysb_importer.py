@@ -24,7 +24,8 @@ class PetabImporterPysb(PetabImporter):
 
         super().__init__(petab_problem,
                          model_name=petab_problem.pysb_model.name,
-                         output_folder=output_folder)
+                         output_folder=output_folder,
+                         validate_petab=False)
 
     def compile_model(self, **kwargs):
         """
