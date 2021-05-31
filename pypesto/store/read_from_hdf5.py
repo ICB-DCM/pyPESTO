@@ -113,10 +113,9 @@ class ProblemHDF5Reader:
         """
         # raise warning that problem is not to be used but
         # only stores information
-        logger.warning('WARNING: You are loading a problem.\nThis problem'
-                       ' is not to be used without a separatly created'
-                       ' objective.\nIn place of problem.objective you can'
-                       ' access the Information\nstored on the objective.\n')
+        logger.info('WARNING: You are loading a problem.\nThis problem'
+                    ' is not to be used without a separately created'
+                    ' objective.')
 
         # create empty problem
         if objective is None:
