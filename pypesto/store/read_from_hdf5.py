@@ -125,9 +125,7 @@ class ProblemHDF5Reader:
 
         with h5py.File(self.storage_filename, 'r') as f:
             for problem_key in f['/problem']:
-                if problem_key == 'objective_info':
-                    problem.objective = \
-                        load_objective_info(f['/problem/objective_info'])
+                if problem_key == 'config':
                     continue
                 setattr(problem, problem_key,
                         f[f'/problem/{problem_key}'][:])
@@ -344,20 +342,32 @@ def read_result(filename: str,
     return result
 
 
-def load_objective_info(f: h5py.Group):
+def load_objective_config(filename: str):
     """
-    Loads the objective Information stored in f
+    Load the objective Information stored in f
 
     Parameters
     ----------
     f:
-        The h5py.Group in which the information are stored.
+        The name of the file in which the information are stored.
 
     Returns:
         A dictionary of the information, stored instead of the
         actual objective in problem.objective.
     """
-    info = {}
-    for key in f:
-        info[key] = f[key][()]
-    return info
+
+    with h5py.File(filename, 'r') as f:
+        info = {}
+        for key in f['problem/config']:
+            if isinstance(f[f'problem/config/{key}'], h5py.Group):
+                info[key] = {}
+                for key_2 in f[f'problem/config/{key}']:
+                    info[key][key_2] = \
+                        f[f'problem/config/{key}/{key_2}'][()]
+                    if isinstance(info[key][key_2], bytes):
+                        info[key][key_2] = info[key][key_2].decode()
+                continue
+            info[key] = f[f'problem/config/{key}'][()]
+            if isinstance(info[key], bytes):
+                info[key] = info[key].decode()
+        return info

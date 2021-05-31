@@ -197,6 +197,17 @@ class AmiciObjective(ObjectiveBase):
         # `set_custom_timepoints` method for more information.
         self.custom_timepoints = None
 
+    def get_config(self):
+        info = {}
+
+        info['type'] = str(type(self))
+        info['x_names'] = self.x_names
+        info['model_name'] = self.amici_model.getName()
+        info['solver'] = str(type(self.amici_solver))
+        info['sensi_order'] = self.max_sensi_order
+
+        return info
+
     def initialize(self):
         super().initialize()
         self.reset_steadystate_guesses()
