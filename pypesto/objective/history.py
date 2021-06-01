@@ -56,28 +56,21 @@ class HistoryOptions(dict):
         Flag indicating whether to record the trace of function calls.
         The trace_record_* flags only become effective if
         trace_record is True.
-        Default: False.
     trace_record_grad:
         Flag indicating whether to record the gradient in the trace.
-        Default: True.
     trace_record_hess:
         Flag indicating whether to record the Hessian in the trace.
-        Default: False.
     trace_record_res:
         Flag indicating whether to record the residual in
         the trace.
-        Default: False.
     trace_record_sres:
         Flag indicating whether to record the residual sensitivities in
         the trace.
-        Default: False.
     trace_record_chi2:
         Flag indicating whether to record the chi2 in the trace.
-        Default: True.
     trace_record_schi2:
         Flag indicating whether to record the chi2 sensitivities in the
         trace.
-        Default: True.
     trace_save_iter:
         After how many iterations to store the trace.
     storage_file:
