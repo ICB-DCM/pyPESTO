@@ -17,7 +17,7 @@ def geweke_test(result: Result, zscore: float = 2.) -> int:
     result:
         The pyPESTO result object with filled sample result.
     zscore:
-        The Geweke test threshold. Default 2.
+        The Geweke test threshold.
 
     Returns
     -------
