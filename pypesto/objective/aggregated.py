@@ -1,7 +1,7 @@
 import numpy as np
 
 from copy import deepcopy
-from typing import Sequence
+from typing import Sequence, Tuple
 from .base import ObjectiveBase, ResultDict
 
 from .constants import RDATAS, FVAL, CHI2, SCHI2, RES, SRES, GRAD, HESS, HESSP
@@ -13,9 +13,10 @@ class AggregatedObjective(ObjectiveBase):
     """
 
     def __init__(
-            self,
-            objectives: Sequence[ObjectiveBase],
-            x_names: Sequence[str] = None):
+        self,
+        objectives: Sequence[ObjectiveBase],
+        x_names: Sequence[str] = None,
+    ):
         """
         Constructor.
 
@@ -59,21 +60,31 @@ class AggregatedObjective(ObjectiveBase):
 
         return other
 
-    def check_mode(self, mode) -> bool:
+    def check_mode(self, mode: str) -> bool:
         return all(
             objective.check_mode(mode)
             for objective in self._objectives
         )
 
-    def check_sensi_orders(self, sensi_orders, mode) -> bool:
+    def check_sensi_orders(
+        self,
+        sensi_orders: Tuple[int, ...],
+        mode: str,
+    ) -> bool:
         return all(
             objective.check_sensi_orders(sensi_orders, mode)
             for objective in self._objectives
         )
 
-    def call_unprocessed(self, x, sensi_orders, mode) -> ResultDict:
+    def call_unprocessed(
+        self,
+        x: np.ndarray,
+        sensi_orders: Tuple[int, ...],
+        mode: str,
+        **kwargs,
+    ) -> ResultDict:
         return aggregate_results([
-            objective.call_unprocessed(x, sensi_orders, mode)
+            objective.call_unprocessed(x, sensi_orders, mode, **kwargs)
             for objective in self._objectives
         ])
 

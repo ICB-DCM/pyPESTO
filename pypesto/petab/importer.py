@@ -33,7 +33,8 @@ class PetabImporter(AmiciObjectBuilder):
     def __init__(self,
                  petab_problem: 'petab.Problem',
                  output_folder: str = None,
-                 model_name: str = None):
+                 model_name: str = None,
+                 validate_petab: bool = True):
         """
         petab_problem:
             Managing access to the model and data.
@@ -43,8 +44,14 @@ class PetabImporter(AmiciObjectBuilder):
         model_name:
             Name of the model, which will in particular be the name of the
             compiled model python module.
+        validate_petab:
+            Flag indicating if the PEtab problem shall be validated.
         """
         self.petab_problem = petab_problem
+
+        if validate_petab:
+            if petab.lint_problem(petab_problem):
+                raise ValueError("Invalid PEtab problem.")
 
         if output_folder is None:
             output_folder = _find_output_folder_name(
