@@ -5,6 +5,14 @@ from ..profile.result import ProfilerResult
 from ..sample.result import McmcPtResult
 from ..problem import Problem
 from ..objective import Objective, ObjectiveBase, Hdf5History
+from ..ensemble.constants import (PREDICTION_ID, PREDICTION_RESULTS,
+                                        LOWER_BOUND, UPPER_BOUND, X_NAMES)
+from ..predict.constants import OUTPUT, OUTPUT_IDS, TIMEPOINTS
+from ..predict import PredictionConditionResult, PredictionResult
+from ..ensemble import EnsemblePrediction
+from typing import Callable, Sequence
+from pathlib import Path
+import os
 import numpy as np
 import logging
 
@@ -331,3 +339,45 @@ def read_result(filename: str,
                            f'within {filename}.')
 
     return result
+    
+    
+def read_ensemble_prediction_from_h5(predictor: Callable[[Sequence], PredictionResult],
+                                     input_file: str,
+                                     base_path: str = None):
+    # ToDo read bounds
+    base = Path('')
+    if base_path is not None:
+        base = Path(base_path)
+
+    # open file
+    f = h5py.File(input_file, 'r')
+
+    prediction_id = str(f[os.path.join(base, PREDICTION_ID)][()], 'utf-8')
+
+    pred_res_list = []
+    for i_pred in range(5): #len(f.keys())-1):
+        x_names = [str(x, 'utf-8') for x in f[f'{PREDICTION_RESULTS}_' \
+                                              f'{i_pred}/{X_NAMES}']]
+
+        pred_cond_res_list = []
+        for i_cond in range(len(f[os.path.join(base,
+                                               f'{PREDICTION_RESULTS}_{i_pred}')].keys())-1):
+            output = f[os.path.join(base, f'{PREDICTION_RESULTS}_{i_pred}/'
+                                           f'{i_cond}/{OUTPUT}')][:]
+            output_ids = [str(x, 'utf-8') for x in f[os.path.join(base,f'{PREDICTION_RESULTS}_{i_pred}/' \
+                           f'{i_cond}/{OUTPUT_IDS}')]]
+            timepoints = f[os.path.join(base,f'{PREDICTION_RESULTS}_{i_pred}/{i_cond}/{TIMEPOINTS}')][:]
+            pred_cond_res_list.append(PredictionConditionResult(
+                                                         timepoints=timepoints,
+                                                         output_ids=output_ids,
+                                                         output=output,
+                                                         x_names=x_names
+                                                         ))
+        pred_res_list.append(PredictionResult(
+                                             conditions=pred_cond_res_list,
+                                             # condition_ids = why not in file?
+                                             ))
+    return EnsemblePrediction(predictor=predictor,
+                              prediction_id=prediction_id,
+                              prediction_results=pred_res_list)
+
