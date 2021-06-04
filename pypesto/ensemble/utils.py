@@ -2,14 +2,15 @@ import h5py
 import numpy as np
 import pandas as pd
 import os
-from typing import Callable, Union
-from pathlib import Path
+from typing import Callable, Union, Sequence
 
 from .constants import (EnsembleType, OUTPUT, UPPER_BOUND, LOWER_BOUND,
                         PREDICTION_RESULTS, PREDICTION_ID, SUMMARY,
                         OPTIMIZE, SAMPLE)
+from ..predict import PredictionConditionResult, PredictionResult
+from pathlib import Path
 from .ensemble import (Ensemble, EnsemblePrediction)
-from ..store import read_result
+from ..store import read_result, get_or_create_group
 
 
 def read_from_csv(path: str,
@@ -155,48 +156,48 @@ def write_ensemble_prediction_to_h5(ensemble_prediction: EnsemblePrediction,
         base = Path(base_path)
 
     # open file
-    f = h5py.File(output_file, 'w')
+    with h5py.File(output_file, 'w') as f:
+        # write prediction ID if available
+        if ensemble_prediction.prediction_id is not None:
+            f.create_dataset(os.path.join(base, PREDICTION_ID),
+                             data=ensemble_prediction.prediction_id)
 
-    # write prediction ID if available
-    if ensemble_prediction.prediction_id is not None:
-        f.create_dataset(os.path.join(base, PREDICTION_ID),
-                         data=ensemble_prediction.prediction_id)
+        # write the single prediction results
+        for i_result, result in \
+                enumerate(ensemble_prediction.prediction_results):
+            tmp_base_path = os.path.join(base,
+                                         f'{PREDICTION_RESULTS}_{i_result}')
+            result.write_to_h5(output_file, base_path=tmp_base_path)
 
-    # write the single prediction results
-    for i_result, result in enumerate(ensemble_prediction.prediction_results):
-        tmp_base_path = os.path.join(base, f'{PREDICTION_RESULTS}_{i_result}')
-        result.write_to_h5(output_file, base_path=tmp_base_path)
+        # write lower bounds per condition, if available
+        if ensemble_prediction.lower_bound is not None:
+            lb_grp = get_or_create_group(f, f'{LOWER_BOUND}s')
+            for i_cond, lower_bounds in \
+                    enumerate(ensemble_prediction.lower_bound):
+                condition_id = \
+                    ensemble_prediction.prediction_results[
+                        0].condition_ids[i_cond]
+                lb_grp.create_dataset(condition_id,
+                                      data=lower_bounds)
 
-    # write lower bounds per condition, if available
-    if ensemble_prediction.lower_bound is not None:
-        f.create_group(os.path.join(base, f'{LOWER_BOUND}s'))
-        for i_cond, lower_bounds in enumerate(ensemble_prediction.lower_bound):
-            condition_id = \
-                ensemble_prediction.prediction_results[0].condition_ids[i_cond]
-            f.create_group(os.path.join(base, condition_id))
-            f.create_dataset(os.path.join(base, condition_id, LOWER_BOUND),
-                             data=lower_bounds)
+        # write upper bounds per condition, if available
+        if ensemble_prediction.upper_bound is not None:
+            ub_grp = get_or_create_group(f, f'{UPPER_BOUND}s')
+            for i_cond, upper_bounds in \
+                    enumerate(ensemble_prediction.upper_bound):
+                condition_id = \
+                    ensemble_prediction.prediction_results[
+                        0].condition_ids[i_cond]
+                ub_grp.create_dataset(condition_id,
+                                      data=upper_bounds)
 
-    # write upper bounds per condition, if available
-    if ensemble_prediction.upper_bound is not None:
-        f.create_group(os.path.join(base, f'{UPPER_BOUND}s'))
-        for i_cond, upper_bounds in enumerate(ensemble_prediction.upper_bound):
-            condition_id = \
-                ensemble_prediction.prediction_results[0].condition_ids[i_cond]
-            f.create_group(os.path.join(base, condition_id))
-            f.create_dataset(os.path.join(base, condition_id, UPPER_BOUND),
-                             data=upper_bounds)
-
-    # write summary statistics to h5 file
-    for i_key in ensemble_prediction.prediction_summary.keys():
-        i_summary = ensemble_prediction.prediction_summary[i_key]
-        if i_summary is not None:
-            tmp_base_path = os.path.join(base, f'{SUMMARY}_{i_key}')
-            f.create_group(tmp_base_path)
-            i_summary.write_to_h5(output_file, base_path=tmp_base_path)
-
-    # close file
-    f.close()
+        # write summary statistics to h5 file
+        for i_key in ensemble_prediction.prediction_summary.keys():
+            i_summary = ensemble_prediction.prediction_summary[i_key]
+            if i_summary is not None:
+                tmp_base_path = os.path.join(base, f'{SUMMARY}_{i_key}')
+                f.create_group(tmp_base_path)
+                i_summary.write_to_h5(output_file, base_path=tmp_base_path)
 
 
 def get_prediction_dataset(ens: Union[Ensemble, EnsemblePrediction],
@@ -230,3 +231,54 @@ def get_prediction_dataset(ens: Union[Ensemble, EnsemblePrediction],
                         'an EnsemblePrediction object as input. Stopping.')
 
     return dataset
+
+
+def read_ensemble_prediction_from_h5(predictor: Callable[[Sequence],
+                                                         PredictionResult],
+                                     input_file: str):
+
+    # open file
+    with h5py.File(input_file, 'r') as f:
+        pred_res_list = []
+        bounds = {}
+        for key in f.keys():
+            if key == 'prediction_id':
+                prediction_id = f[key][()].decode()
+                continue
+            if key in {'lower_bounds', 'upper_bounds'}:
+                bounds[key] = [f[f'{key}/{cond}'][()]
+                               for cond in f[key].keys()]
+                bounds[key] = np.array(bounds[key])
+                continue
+            x_names = decode_array(f[f'{key}/x_names'][()])
+            condition_ids = np.array(decode_array(
+                f[f'{key}/condition_ids'][()]
+            ))
+            pred_cond_res_list = []
+            for id, _ in enumerate(condition_ids):
+                output = f[f'{key}/{id}/output'][:]
+                output_ids = decode_array(f[f'{key}/{id}/output_ids'][:])
+                timepoints = f[f'{key}/{id}/timepoints'][:]
+                pred_cond_res_list.append(PredictionConditionResult(
+                    timepoints=timepoints,
+                    output_ids=output_ids,
+                    output=output,
+                    x_names=x_names
+                ))
+            pred_res_list.append(PredictionResult(
+                conditions=pred_cond_res_list,
+                condition_ids=condition_ids
+            ))
+        return EnsemblePrediction(predictor=predictor,
+                                  prediction_id=prediction_id,
+                                  prediction_results=pred_res_list,
+                                  lower_bound=bounds['lower_bounds'],
+                                  upper_bound=bounds['upper_bounds'],
+                                  )
+
+
+def decode_array(array: np.ndarray) -> np.ndarray:
+    """Decodes array of bytes to string"""
+    for i in range(len(array)):
+        array[i] = array[i].decode()
+    return array

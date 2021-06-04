@@ -657,6 +657,8 @@ class Ensemble:
             predictor=predictor,
             prediction_id=prediction_id,
             prediction_results=prediction_results,
+            lower_bound=self.lower_bound,
+            upper_bound=self.upper_bound
         )
 
     def compute_summary(self,
