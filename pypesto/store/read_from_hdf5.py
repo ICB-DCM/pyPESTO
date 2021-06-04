@@ -6,6 +6,7 @@ from ..sample.result import McmcPtResult
 from ..problem import Problem
 from ..objective import Objective, ObjectiveBase, Hdf5History
 import numpy as np
+import ast
 import logging
 
 
@@ -111,15 +112,14 @@ class ProblemHDF5Reader:
         problem:
             A problem instance with all attributes read in.
         """
-        # raise warning that problem is not to be used but
-        # only stores information
-        logger.info('WARNING: You are loading a problem.\nThis problem'
-                    ' is not to be used without a separately created'
-                    ' objective.')
 
         # create empty problem
         if objective is None:
             objective = Objective()
+            # raise warning that objective is not loaded.
+            logger.info('WARNING: You are loading a problem.\nThis problem'
+                        ' is not to be used without a separately created'
+                        ' objective.')
         problem = Problem(objective, [], [])
 
         with h5py.File(self.storage_filename, 'r') as f:
@@ -356,17 +356,6 @@ def load_objective_config(filename: str):
     """
 
     with h5py.File(filename, 'r') as f:
-        info = {}
-        for key in f['problem/config']:
-            if isinstance(f[f'problem/config/{key}'], h5py.Group):
-                info[key] = {}
-                for key_2 in f[f'problem/config/{key}']:
-                    info[key][key_2] = \
-                        f[f'problem/config/{key}/{key_2}'][()]
-                    if isinstance(info[key][key_2], bytes):
-                        info[key][key_2] = info[key][key_2].decode()
-                continue
-            info[key] = f[f'problem/config/{key}'][()]
-            if isinstance(info[key], bytes):
-                info[key] = info[key].decode()
+        info_str = f['problem/config'][()].decode()
+        info = ast.literal_eval(info_str)
         return info

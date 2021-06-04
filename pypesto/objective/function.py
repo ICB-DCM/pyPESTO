@@ -114,9 +114,8 @@ class Objective(ObjectiveBase):
     def has_sres(self) -> bool:
         return callable(self.sres) or self.sres is True
 
-    def get_config(self):
-        info = {}
-        info['type'] = str(type(self))
+    def get_config(self) -> dict:
+        info = super().get_config()
         info['x_names'] = self.x_names
         sensi_order = 0
         while self.check_sensi_orders(

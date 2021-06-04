@@ -92,9 +92,8 @@ class AggregatedObjective(ObjectiveBase):
         for objective in self._objectives:
             objective.initialize()
 
-    def get_config(self):
-        info = {}
-        info['type'] = str(type(self))
+    def get_config(self) -> dict:
+        info = super().get_config()
         for n_obj, obj in enumerate(self._objectives):
             info[f'objective_{n_obj}'] = obj.get_config()
         return info

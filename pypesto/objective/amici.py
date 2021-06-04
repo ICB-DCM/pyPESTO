@@ -197,10 +197,8 @@ class AmiciObjective(ObjectiveBase):
         # `set_custom_timepoints` method for more information.
         self.custom_timepoints = None
 
-    def get_config(self):
-        info = {}
-
-        info['type'] = str(type(self))
+    def get_config(self) -> dict:
+        info = super().get_config()
         info['x_names'] = self.x_names
         info['model_name'] = self.amici_model.getName()
         info['solver'] = str(type(self.amici_solver))

@@ -98,35 +98,3 @@ def write_int_array(f: h5py.Group,
     """
     dset = f.create_dataset(path, (len(values),), dtype=dtype)
     dset[:] = values
-
-
-def write_dict(
-        f: h5py.Group,
-        path: str,
-        dictionary: dict):
-    """
-    Write a dictionary to hdf5
-
-    Parameters
-    -------------
-    f:
-        h5py.Group where dataset should be created
-    path:
-        path of the dataset to create
-    dictionary:
-        dictionary to write
-    """
-    for key, value in dictionary.items():
-        if value is None:
-            continue
-        if isinstance(value, np.ndarray):
-            write_array(f, path + '/' + key, value)
-        elif isinstance(value, (int, float, str)):
-            f[path + '/' + key] = value
-        elif isinstance(value, dict):
-            write_dict(f, path + '/' + key, value)
-        elif isinstance(value, list):
-            write_array(f, path + '/' + key, np.array(value))
-        else:
-            raise ValueError(f'Saving datatype {type(value)} is '
-                             f'not supported.')

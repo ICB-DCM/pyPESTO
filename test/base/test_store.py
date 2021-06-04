@@ -383,14 +383,8 @@ def test_storage_objective_config():
 
         # compare the different configurations
         for key in config_fun:
-            if config_fun[key] is None or\
-                    isinstance(config_fun[key], list):
-                continue
             assert config_fun[key] == config_fun_r[key]
         for key in config_amici:
-            if config_amici[key] is None or\
-                    isinstance(config_amici[key], list):
-                continue
             assert config_amici[key] == config_amici_r[key]
         for key in config_agg_r:
             if key == 'type':
