@@ -32,6 +32,10 @@ from pymc3.backends.report import logger as pymc3_log
 from pymc3.backends.report import _LEVELS as PYMC3_LOG_LEVELS
 
 
+# To pickle theano objects we need a higher recursion limit
+sys.setrecursionlimit(max(50000, sys.getrecursionlimit()))
+
+
 # This function is extracted from pymc3.sample
 def init_random_seed(random_seed: Union[int, None, List[int]], chains: int = 1):
     if random_seed == -1:
