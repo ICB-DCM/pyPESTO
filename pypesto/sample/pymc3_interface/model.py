@@ -95,7 +95,7 @@ def create_pymc3_model(problem: Problem,
                         # Inside bounds, OK
                         pass
                     elif x < lb or x > ub:
-                        raise ValueError(f'testval[{i}] is out of bounds')
+                        raise ValueError(f'testval[{i}] (parameter: {problem.x_names[i]}) is out of bounds ({lb}, {ub})')
                     else:
                         # Move this parameter inside the interval
                         # by taking the nearest floating point value
