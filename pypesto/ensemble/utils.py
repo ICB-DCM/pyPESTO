@@ -164,33 +164,31 @@ def write_ensemble_prediction_to_h5(ensemble_prediction: EnsemblePrediction,
 
         # write lower bounds per condition, if available
         if ensemble_prediction.lower_bound is not None:
-            if isinstance(ensemble_prediction.lower_bound, list):
+            if isinstance(ensemble_prediction.lower_bound[0], np.ndarray):
                 lb_grp = get_or_create_group(f, f'{LOWER_BOUND}s')
                 for i_cond, lower_bounds in \
                         enumerate(ensemble_prediction.lower_bound):
                     condition_id = \
                         ensemble_prediction.prediction_results[
                             0].condition_ids[i_cond]
-                    lb_grp.create_dataset(condition_id,
-                                          data=lower_bounds)
-            elif isinstance(ensemble_prediction.lower_bound, np.ndarray):
-                write_array(f, f'{LOWER_BOUND}s',
-                            ensemble_prediction.lower_bound)
+                    write_array(lb_grp, condition_id, lower_bounds)
+            elif isinstance(ensemble_prediction.lower_bound[0], float):
+                f.create_dataset(f'{LOWER_BOUND}s',
+                                 data=ensemble_prediction.lower_bound)
 
         # write upper bounds per condition, if available
         if ensemble_prediction.upper_bound is not None:
-            if isinstance(ensemble_prediction.upper_bound, list):
+            if isinstance(ensemble_prediction.upper_bound[0], np.ndarray):
                 ub_grp = get_or_create_group(f, f'{UPPER_BOUND}s')
                 for i_cond, upper_bounds in \
                         enumerate(ensemble_prediction.upper_bound):
                     condition_id = \
                         ensemble_prediction.prediction_results[
                             0].condition_ids[i_cond]
-                    ub_grp.create_dataset(condition_id,
-                                          data=upper_bounds)
-            elif isinstance(ensemble_prediction.upper_bound, np.ndarray):
-                write_array(f, f'{UPPER_BOUND}s',
-                            ensemble_prediction.upper_bound)
+                    write_array(ub_grp, condition_id, upper_bounds)
+            elif isinstance(ensemble_prediction.upper_bound[0], float):
+                f.create_dataset(f'{UPPER_BOUND}s',
+                                 data=ensemble_prediction.upper_bound)
 
         # write summary statistics to h5 file
         for i_key in ensemble_prediction.prediction_summary.keys():
