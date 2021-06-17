@@ -343,7 +343,7 @@ def read_result(filename: str,
 
 def load_objective_config(filename: str):
     """
-    Load the objective Information stored in f
+    Load the objective information stored in f
 
     Parameters
     ----------
