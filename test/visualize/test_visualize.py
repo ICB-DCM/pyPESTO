@@ -14,6 +14,7 @@ import pypesto.profile as profile
 import pypesto.sample as sample
 import pypesto.visualize as visualize
 import pypesto.ensemble as ensemble
+from typing import Sequence
 
 
 def close_fig(fun):
@@ -38,11 +39,13 @@ def create_bounds(n_parameters: int = 2):
     return lb, ub
 
 
-def create_problem(n_parameters: int = 2):
+def create_problem(n_parameters: int = 2,
+                   x_names: Sequence[str] = None):
     # define a pypesto objective
     objective = pypesto.Objective(fun=so.rosen,
                                   grad=so.rosen_der,
-                                  hess=so.rosen_hess)
+                                  hess=so.rosen_hess,
+                                  x_names=x_names)
 
     # define a pypesto problem
     (lb, ub) = create_bounds(n_parameters)

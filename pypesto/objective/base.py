@@ -216,6 +216,14 @@ class ObjectiveBase(abc.ABC):
         else:
             raise ValueError(f"Unknown mode {mode}.")
 
+    def get_config(self) -> dict:
+        """
+        Get the configuration information of the objective
+        function and return it as a dictonary.
+        """
+        info = {'type':  self.__class__.__name__}
+        return info
+
     def check_sensi_orders(
         self,
         sensi_orders: Tuple[int, ...],
@@ -247,12 +255,14 @@ class ObjectiveBase(abc.ABC):
                 0 in sensi_orders and not self.has_fun
                 or 1 in sensi_orders and not self.has_grad
                 or 2 in sensi_orders and not self.has_hess
+                or max(sensi_orders) > 2
             )
         ) or (
             mode == MODE_RES
             and (
                 0 in sensi_orders and not self.has_res
                 or 1 in sensi_orders and not self.has_sres
+                or max(sensi_orders) > 1
             )
         ):
             return False
