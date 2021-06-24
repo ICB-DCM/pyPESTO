@@ -2,7 +2,7 @@ import logging
 from functools import partial
 import numpy as np
 import pandas as pd
-from typing import Sequence, Tuple, Callable, Dict, List
+from typing import Sequence, Tuple, Callable, Dict, List, Union
 
 from .. import Result
 from ..engine import (
@@ -35,12 +35,13 @@ class EnsemblePrediction:
     It can be attached to a ensemble-type object
     """
 
-    def __init__(self,
-                 predictor: Callable[[Sequence], PredictionResult],
-                 prediction_id: str = None,
-                 prediction_results: Sequence[PredictionResult] = None,
-                 lower_bound: Sequence[np.ndarray] = None,
-                 upper_bound: Sequence[np.ndarray] = None):
+    def __init__(
+            self,
+            predictor: Union[Callable[[Sequence], PredictionResult], None],
+            prediction_id: str = None,
+            prediction_results: Sequence[PredictionResult] = None,
+            lower_bound: Sequence[np.ndarray] = None,
+            upper_bound: Sequence[np.ndarray] = None):
         """
         Constructor.
 
@@ -62,6 +63,9 @@ class EnsemblePrediction:
             array of potential upper bounds for the parameters
         """
         self.predictor = predictor
+        if predictor is None:
+            logger.info("This EnsemblePrediction has no predictor."
+                        "Please be aware of that")
         self.prediction_id = prediction_id
         self.prediction_results = prediction_results
         if prediction_results is None:
@@ -788,7 +792,7 @@ def entries_per_start(fval_traces: List['np.ndarray'],
 
     # if all possible indices can be included, return
     if (n_per_start < max_per_start).all() and sum(n_per_start) < max_size:
-        return ens_ind
+        return n_per_start
 
     # trimm down starts that exceed the limit:
     n_per_start = [min(n, max_per_start) for n in n_per_start]
