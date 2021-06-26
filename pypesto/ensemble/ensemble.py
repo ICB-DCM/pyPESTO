@@ -2,7 +2,7 @@ import logging
 from functools import partial
 import numpy as np
 import pandas as pd
-from typing import Sequence, Tuple, Callable, Dict, List, Union
+from typing import Sequence, Tuple, Callable, Dict, List, Optional, Union
 
 from .. import Result
 from ..engine import (
@@ -37,7 +37,7 @@ class EnsemblePrediction:
 
     def __init__(
             self,
-            predictor: Union[Callable[[Sequence], PredictionResult], None],
+            predictor: Optional[Callable[[Sequence], PredictionResult]] = None,
             prediction_id: str = None,
             prediction_results: Sequence[PredictionResult] = None,
             lower_bound: Sequence[np.ndarray] = None,
@@ -64,8 +64,7 @@ class EnsemblePrediction:
         """
         self.predictor = predictor
         if predictor is None:
-            logger.info("This EnsemblePrediction has no predictor."
-                        "Please be aware of that")
+            logger.info("This `EnsemblePrediction` has no predictor.")
         self.prediction_id = prediction_id
         self.prediction_results = prediction_results
         if prediction_results is None:

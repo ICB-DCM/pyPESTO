@@ -159,7 +159,7 @@ def write_ensemble_prediction_to_h5(ensemble_prediction: EnsemblePrediction,
     with h5py.File(output_file, 'a') as f:
         # write prediction ID if available
         if ensemble_prediction.prediction_id is not None:
-            f.create_dataset(os.path.join(base, PREDICTION_ID),
+            f.create_dataset(base / PREDICTION_ID,
                              data=ensemble_prediction.prediction_id)
 
         # write lower bounds per condition, if available
@@ -168,9 +168,11 @@ def write_ensemble_prediction_to_h5(ensemble_prediction: EnsemblePrediction,
                 lb_grp = get_or_create_group(f, f'{LOWER_BOUND}s')
                 for i_cond, lower_bounds in \
                         enumerate(ensemble_prediction.lower_bound):
-                    condition_id = \
-                        ensemble_prediction.prediction_results[
-                            0].condition_ids[i_cond]
+                    condition_id = (
+                        ensemble_prediction
+                        .prediction_results[0]
+                        .condition_ids[i_cond]
+                    )
                     write_array(lb_grp, condition_id, lower_bounds)
             elif isinstance(ensemble_prediction.lower_bound[0], float):
                 f.create_dataset(f'{LOWER_BOUND}s',
@@ -191,12 +193,12 @@ def write_ensemble_prediction_to_h5(ensemble_prediction: EnsemblePrediction,
                                  data=ensemble_prediction.upper_bound)
 
         # write summary statistics to h5 file
-        for i_key in ensemble_prediction.prediction_summary.keys():
-            i_summary = ensemble_prediction.prediction_summary[i_key]
-            if i_summary is not None:
-                tmp_base_path = os.path.join(base, f'{SUMMARY}_{i_key}')
-                f.create_group(tmp_base_path)
-                i_summary.write_to_h5(output_file, base_path=tmp_base_path)
+        for summary_id, summary in ensemble_prediction.prediction_summary.items():
+            if summary is None:
+                continue
+            tmp_base_path = base / f'{SUMMARY}_{summary_id}'
+            f.create_group(tmp_base_path)
+            summary.write_to_h5(output_file, base_path=tmp_base_path)
 
         # write the single prediction results
         for i_result, result in \

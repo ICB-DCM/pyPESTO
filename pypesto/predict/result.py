@@ -142,8 +142,7 @@ class PredictionResult:
         if self.condition_ids != other.condition_ids:
             return False
         for i_cond, _ in enumerate(self.conditions):
-            if self.conditions[i_cond] !=\
-                    other.conditions[i_cond]:
+            if self.conditions[i_cond] != other.conditions[i_cond]:
                 return False
         return True
 
