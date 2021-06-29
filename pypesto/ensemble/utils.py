@@ -159,13 +159,13 @@ def write_ensemble_prediction_to_h5(ensemble_prediction: EnsemblePrediction,
     with h5py.File(output_file, 'a') as f:
         # write prediction ID if available
         if ensemble_prediction.prediction_id is not None:
-            f.create_dataset(base / PREDICTION_ID,
+            f.create_dataset(os.path.join(base, PREDICTION_ID),
                              data=ensemble_prediction.prediction_id)
 
         # write lower bounds per condition, if available
         if ensemble_prediction.lower_bound is not None:
             if isinstance(ensemble_prediction.lower_bound[0], np.ndarray):
-                lb_grp = get_or_create_group(f, f'{LOWER_BOUND}s')
+                lb_grp = get_or_create_group(f, LOWER_BOUND)
                 for i_cond, lower_bounds in \
                         enumerate(ensemble_prediction.lower_bound):
                     condition_id = (
@@ -175,13 +175,13 @@ def write_ensemble_prediction_to_h5(ensemble_prediction: EnsemblePrediction,
                     )
                     write_array(lb_grp, condition_id, lower_bounds)
             elif isinstance(ensemble_prediction.lower_bound[0], float):
-                f.create_dataset(f'{LOWER_BOUND}s',
+                f.create_dataset(LOWER_BOUND,
                                  data=ensemble_prediction.lower_bound)
 
         # write upper bounds per condition, if available
         if ensemble_prediction.upper_bound is not None:
             if isinstance(ensemble_prediction.upper_bound[0], np.ndarray):
-                ub_grp = get_or_create_group(f, f'{UPPER_BOUND}s')
+                ub_grp = get_or_create_group(f, UPPER_BOUND)
                 for i_cond, upper_bounds in \
                         enumerate(ensemble_prediction.upper_bound):
                     condition_id = \
@@ -189,14 +189,14 @@ def write_ensemble_prediction_to_h5(ensemble_prediction: EnsemblePrediction,
                             0].condition_ids[i_cond]
                     write_array(ub_grp, condition_id, upper_bounds)
             elif isinstance(ensemble_prediction.upper_bound[0], float):
-                f.create_dataset(f'{UPPER_BOUND}s',
+                f.create_dataset(UPPER_BOUND,
                                  data=ensemble_prediction.upper_bound)
 
         # write summary statistics to h5 file
         for summary_id, summary in ensemble_prediction.prediction_summary.items():
             if summary is None:
                 continue
-            tmp_base_path = base / f'{SUMMARY}_{summary_id}'
+            tmp_base_path = os.path.join(base, f'{SUMMARY}_{summary_id}')
             f.create_group(tmp_base_path)
             summary.write_to_h5(output_file, base_path=tmp_base_path)
 
@@ -253,7 +253,7 @@ def read_ensemble_prediction_from_h5(
             if key == 'prediction_id':
                 prediction_id = f[key][()].decode()
                 continue
-            if key in {'lower_bounds', 'upper_bounds'}:
+            if key in {LOWER_BOUND, UPPER_BOUND}:
                 if isinstance(f[key], h5py._hl.dataset.Dataset):
                     bounds[key] = f[key][:]
                     continue
@@ -283,8 +283,8 @@ def read_ensemble_prediction_from_h5(
         return EnsemblePrediction(predictor=predictor,
                                   prediction_id=prediction_id,
                                   prediction_results=pred_res_list,
-                                  lower_bound=bounds['lower_bounds'],
-                                  upper_bound=bounds['upper_bounds'],
+                                  lower_bound=bounds[LOWER_BOUND],
+                                  upper_bound=bounds[UPPER_BOUND],
                                   )
 
 
