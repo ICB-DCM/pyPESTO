@@ -786,7 +786,7 @@ def entries_per_start(fval_traces: List['np.ndarray'],
 
     # if all possible indices can be included, return
     if (n_per_start < max_per_start).all() and sum(n_per_start) < max_size:
-        return ens_ind
+        return n_per_start
 
     # trimm down starts that exceed the limit:
     n_per_start = [min(n, max_per_start) for n in n_per_start]
