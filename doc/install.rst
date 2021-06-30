@@ -64,15 +64,15 @@ If you want to upgrade from an existing previous version, replace
 Install optional packages and external dependencies
 ---------------------------------------------------
 
-* This package includes multiple comfort methods simplyfing its use for
+* This package includes multiple comfort methods simplifying its use for
   parameter estimation for models generated using the toolbox
-  `amici <https://www.github.com/icb-dcm/amici>`_.
+  `AMICI <https://github.com/AMICI-dev/AMICI>`_.
   To use AMICI, install it via pip::
 
     pip3 install amici
     
   Or follow the instructions from the
-  `AMICI github <https://github.com/AMICI-dev/AMICI/blob/master/INSTALL.md>`_.
+  `AMICI documentation <https://amici.readthedocs.io/en/latest/python_installation.html>`_.
 
 * This package inherently supports optimization using the dlib toolbox.
   To use it, install dlib via::
@@ -80,4 +80,4 @@ Install optional packages and external dependencies
    pip3 install dlib
    
 * All external dependecies can be installed through
-  `this shell script < https://github.com/ICB-DCM/pyPESTO/blob/main/.github/workflows/install_deps.sh>`_.
+  `this shell script <https://github.com/ICB-DCM/pyPESTO/blob/main/.github/workflows/install_deps.sh>`_.
