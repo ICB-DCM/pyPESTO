@@ -29,6 +29,8 @@ def write_array(f: h5py.Group,
     elif all(isinstance(x, str) for x in values):
         write_string_array(f, path,
                            values)
+    else:
+        f[path] = values
 
 
 def write_string_array(f: h5py.Group,

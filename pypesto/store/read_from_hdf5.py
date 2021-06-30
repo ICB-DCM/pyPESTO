@@ -6,6 +6,7 @@ from ..sample.result import McmcPtResult
 from ..problem import Problem
 from ..objective import Objective, ObjectiveBase, Hdf5History
 import numpy as np
+import ast
 import logging
 
 
@@ -111,13 +112,20 @@ class ProblemHDF5Reader:
         problem:
             A problem instance with all attributes read in.
         """
+
         # create empty problem
         if objective is None:
             objective = Objective()
+            # raise warning that objective is not loaded.
+            logger.info('WARNING: You are loading a problem.\nThis problem'
+                        ' is not to be used without a separately created'
+                        ' objective.')
         problem = Problem(objective, [], [])
 
         with h5py.File(self.storage_filename, 'r') as f:
             for problem_key in f['/problem']:
+                if problem_key == 'config':
+                    continue
                 setattr(problem, problem_key,
                         f[f'/problem/{problem_key}'][:])
             for problem_attr in f['/problem'].attrs:
@@ -331,3 +339,23 @@ def read_result(filename: str,
                            f'within {filename}.')
 
     return result
+
+
+def load_objective_config(filename: str):
+    """
+    Load the objective information stored in f
+
+    Parameters
+    ----------
+    f:
+        The name of the file in which the information are stored.
+
+    Returns:
+        A dictionary of the information, stored instead of the
+        actual objective in problem.objective.
+    """
+
+    with h5py.File(filename, 'r') as f:
+        info_str = f['problem/config'][()].decode()
+        info = ast.literal_eval(info_str)
+        return info

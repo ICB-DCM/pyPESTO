@@ -904,7 +904,7 @@ def sampling_parameter_traces(
     else:
         fig = ax.get_figure()
 
-    axes = dict(zip(param_names, ax.flat))
+    par_ax = dict(zip(param_names, ax.flat))
 
     sns.set(style="ticks")
     kwargs = {'edgecolor': "w",  # for edge color
@@ -925,20 +925,23 @@ def sampling_parameter_traces(
         _burn_in = result.sample_result.burn_in
 
     for idx, plot_id in enumerate(param_names):
-        ax = axes[plot_id]
+        _ax = par_ax[plot_id]
 
-        ax = sns.scatterplot(x="iteration", y=plot_id, data=params_fval,
-                             ax=ax, **kwargs)
+        _ax = sns.scatterplot(
+            x="iteration", y=plot_id, data=params_fval, ax=_ax, **kwargs,
+        )
 
         if full_trace and _burn_in > 0:
-            ax.axvline(_burn_in,
-                       linestyle='--', linewidth=1.5,
-                       color='k')
+            _ax.axvline(
+                _burn_in,
+                linestyle='--', linewidth=1.5,
+                color='k',
+            )
 
-        ax.set_xlabel('iteration index')
-        ax.set_ylabel(param_names[idx])
+        _ax.set_xlabel('iteration index')
+        _ax.set_ylabel(param_names[idx])
         if use_problem_bounds:
-            ax.set_ylim([theta_lb[idx], theta_ub[idx]])
+            _ax.set_ylim([theta_lb[idx], theta_ub[idx]])
 
     if suptitle:
         fig.suptitle(suptitle)

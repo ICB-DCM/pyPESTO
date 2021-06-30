@@ -19,5 +19,6 @@ from .optimizer import (
     ScipyDifferentialEvolutionOptimizer,
     NLoptOptimizer,
     FidesOptimizer,
+    read_result_from_file,
 )
 from .result import OptimizerResult
