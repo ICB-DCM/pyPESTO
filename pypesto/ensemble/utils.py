@@ -193,7 +193,8 @@ def write_ensemble_prediction_to_h5(ensemble_prediction: EnsemblePrediction,
                                  data=ensemble_prediction.upper_bound)
 
         # write summary statistics to h5 file
-        for summary_id, summary in ensemble_prediction.prediction_summary.items():
+        for summary_id, summary in \
+                ensemble_prediction.prediction_summary.items():
             if summary is None:
                 continue
             tmp_base_path = os.path.join(base, f'{SUMMARY}_{summary_id}')

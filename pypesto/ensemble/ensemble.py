@@ -2,7 +2,7 @@ import logging
 from functools import partial
 import numpy as np
 import pandas as pd
-from typing import Sequence, Tuple, Callable, Dict, List, Optional, Union
+from typing import Sequence, Tuple, Callable, Dict, List, Optional
 
 from .. import Result
 from ..engine import (
