@@ -23,7 +23,7 @@ from .constants import (PREDICTOR, PREDICTION_ID, PREDICTION_RESULTS,
                         NVECTORS, VECTOR_TAGS, PREDICTIONS, MODE_FUN,
                         EnsembleType, ENSEMBLE_TYPE, MEAN, MEDIAN,
                         STANDARD_DEVIATION, SUMMARY, LOWER_BOUND,
-                        UPPER_BOUND, get_percentile_label)
+                        UPPER_BOUND, get_percentile_label, HISTORY)
 
 logger = logging.getLogger(__name__)
 
@@ -484,12 +484,12 @@ class Ensemble:
 
         fval_trace = [
             np.array(
-                result.optimize_result.list[i_ms]['history'].get_fval_trace()
+                result.optimize_result.list[i_ms][HISTORY].get_fval_trace()
             )
             for i_ms in range(n_starts)
         ]
         x_trace = [
-            result.optimize_result.list[i_ms]['history'].get_x_trace()
+            result.optimize_result.list[i_ms][HISTORY].get_x_trace()
             for i_ms in range(n_starts)
         ]
 

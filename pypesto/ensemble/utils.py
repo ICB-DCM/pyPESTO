@@ -6,7 +6,7 @@ from typing import Callable, Union, Sequence
 
 from .constants import (EnsembleType, OUTPUT, UPPER_BOUND, LOWER_BOUND,
                         PREDICTION_RESULTS, PREDICTION_ID, SUMMARY,
-                        OPTIMIZE, SAMPLE)
+                        OPTIMIZE, SAMPLE, X_NAMES, TIMEPOINTS, OUTPUT_IDS)
 from ..predict import PredictionConditionResult, PredictionResult
 from pathlib import Path
 from .ensemble import (Ensemble, EnsemblePrediction)
@@ -251,7 +251,7 @@ def read_ensemble_prediction_from_h5(
         pred_res_list = []
         bounds = {}
         for key in f.keys():
-            if key == 'prediction_id':
+            if key == PREDICTION_ID:
                 prediction_id = f[key][()].decode()
                 continue
             if key in {LOWER_BOUND, UPPER_BOUND}:
@@ -262,15 +262,15 @@ def read_ensemble_prediction_from_h5(
                                for cond in f[key].keys()]
                 bounds[key] = np.array(bounds[key])
                 continue
-            x_names = decode_array(f[f'{key}/x_names'][()])
+            x_names = decode_array(f[f'{key}/{X_NAMES}'][()])
             condition_ids = np.array(decode_array(
                 f[f'{key}/condition_ids'][()]
             ))
             pred_cond_res_list = []
             for id, _ in enumerate(condition_ids):
-                output = f[f'{key}/{id}/output'][:]
-                output_ids = decode_array(f[f'{key}/{id}/output_ids'][:])
-                timepoints = f[f'{key}/{id}/timepoints'][:]
+                output = f[f'{key}/{id}/{OUTPUT}'][:]
+                output_ids = decode_array(f[f'{key}/{id}/{OUTPUT_IDS}'][:])
+                timepoints = f[f'{key}/{id}/{TIMEPOINTS}'][:]
                 pred_cond_res_list.append(PredictionConditionResult(
                     timepoints=timepoints,
                     output_ids=output_ids,
