@@ -61,8 +61,8 @@ If you want to upgrade from an existing previous version, replace
 ``install`` by ``ìnstall --upgrade`` in the above commands.
 
 
-Install optional packages
--------------------------
+Install optional packages and external dependencies
+---------------------------------------------------
 
 * This package includes multiple comfort methods simplyfing its use for
   parameter estimation for models generated using the toolbox
@@ -70,8 +70,14 @@ Install optional packages
   To use AMICI, install it via pip::
 
     pip3 install amici
+    
+  Or follow the instructions from the
+  `AMICI github <https://github.com/AMICI-dev/AMICI/blob/master/INSTALL.md>`_.
 
 * This package inherently supports optimization using the dlib toolbox.
   To use it, install dlib via::
 
    pip3 install dlib
+   
+* All external dependecies can be installed through
+  `this shell script <https://github.com/AMICI-dev/AMICI/blob/master/INSTALL.md>`_.
