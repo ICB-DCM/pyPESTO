@@ -80,4 +80,4 @@ Install optional packages and external dependencies
    pip3 install dlib
    
 * All external dependecies can be installed through
-  `this shell script <https://github.com/AMICI-dev/AMICI/blob/master/INSTALL.md>`_.
+  `this shell script < https://github.com/ICB-DCM/pyPESTO/blob/main/.github/workflows/install_deps.sh>`_.
