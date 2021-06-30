@@ -70,7 +70,7 @@ Install optional packages and external dependencies
   To use AMICI, install it via pip::
 
     pip3 install amici
-    
+
   Or follow the instructions from the
   `AMICI documentation <https://amici.readthedocs.io/en/latest/python_installation.html>`_.
 
@@ -78,6 +78,6 @@ Install optional packages and external dependencies
   To use it, install dlib via::
 
    pip3 install dlib
-   
+
 * All external dependecies can be installed through
   `this shell script <https://github.com/ICB-DCM/pyPESTO/blob/main/.github/workflows/install_deps.sh>`_.
