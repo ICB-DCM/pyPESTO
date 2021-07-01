@@ -107,12 +107,8 @@ class PetabImporter(AmiciObjectBuilder):
             except (RuntimeError, ValueError):
                 dfs.append(dfs[0])
 
-        return np.all((dfs[0].rel_err.values < RTOL) |
-                      (dfs[0].abs_err.values < ATOL) |
-                      (dfs[1].rel_err.values < RTOL) |
-                      (dfs[1].abs_err.values < ATOL) |
-                      (dfs[2].rel_err.values < RTOL) |
-                      (dfs[2].abs_err.values < ATOL))
+        return all([np.all(df.rel_err.values < RTOL |
+                   df.abs_err.values < ATOL) for df in dfs])
 
     def create_model(self,
                      force_compile: bool = False,
