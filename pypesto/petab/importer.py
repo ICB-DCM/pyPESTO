@@ -96,14 +96,14 @@ class PetabImporter(AmiciObjectBuilder):
         objective.amici_solver.setRelativeTolerance(1e-12)
         free_indices = par[problem.x_free_indices]
         dfs = []
-        dfs.append(objective.check_grad_multi_eps(
-                    free_indices,
-                    multi_eps=[1e-3, 1e-4, 1e-5]))
 
         modes = [MODE_FUN, MODE_RES]
         for mode in modes:
             try:
-                dfs.append(objective.check_grad(free_indices, mode=mode))
+                dfs.append(objective.check_grad_multi_eps(
+                            free_indices,
+                            multi_eps=[1e-3, 1e-4, 1e-5],
+                            mode=mode))
             except (RuntimeError, ValueError):
                 dfs.append(dfs[0])
 
