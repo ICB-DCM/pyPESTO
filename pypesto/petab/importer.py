@@ -1,4 +1,6 @@
+from pypesto.objective.constants import MODE_FUN, MODE_RES
 import pandas as pd
+import numpy as np
 import os
 import sys
 import importlib
@@ -77,6 +79,40 @@ class PetabImporter(AmiciObjectBuilder):
             petab_problem=petab_problem,
             output_folder=output_folder,
             model_name=model_name)
+
+    def check_and_log_gradients(self, RTOL: float = 1e-2, ATOL: float = 1e-3):
+        """Check and log if gradients are compatible with gradient-based optimizers
+        Parameters
+        ----------
+        RTOL: relative error tolerance (default 1e-2)
+        ATOL: absolute error tolerance (default 1e-3)
+        """
+        par = np.asarray(self.petab_problem.x_nominal_scaled)
+        problem = self.create_problem()
+        objective = problem.objective
+        objective.amici_solver.setSensitivityMethod(
+            amici.SensitivityMethod_forward)
+        objective.amici_solver.setAbsoluteTolerance(1e-10)
+        objective.amici_solver.setRelativeTolerance(1e-12)
+        free_indices = par[problem.x_free_indices]
+        dfs = []
+        dfs.append(objective.check_grad_multi_eps(
+                    free_indices,
+                    multi_eps=[1e-3, 1e-4, 1e-5]))
+
+        modes = [MODE_FUN, MODE_RES]
+        for mode in modes:
+            try:
+                dfs.append(objective.check_grad(free_indices, mode=mode))
+            except (RuntimeError, ValueError):
+                dfs.append(dfs[0])
+
+        return np.all((dfs[0].rel_err.values < RTOL) |
+                      (dfs[0].abs_err.values < ATOL) |
+                      (dfs[1].rel_err.values < RTOL) |
+                      (dfs[1].abs_err.values < ATOL) |
+                      (dfs[2].rel_err.values < RTOL) |
+                      (dfs[2].abs_err.values < ATOL))
 
     def create_model(self,
                      force_compile: bool = False,
