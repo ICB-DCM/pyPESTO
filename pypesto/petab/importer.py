@@ -133,7 +133,7 @@ class PetabImporter(AmiciObjectBuilder):
         return all([
             any([
                 np.all((mode_df.rel_err.values < rtol) |
-                       (mode_df.abs_err.values < atol))
+                       (mode_df.abs_err.values < atol)),
             ])
             for mode_df in dfs
         ])
