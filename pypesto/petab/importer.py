@@ -14,7 +14,6 @@ from ..predict import AmiciPredictor, PredictionResult
 from ..predict.constants import CONDITION_SEP
 from ..objective.priors import NegLogParameterPriors, \
     get_parameter_prior_dict
-from ..objective.function import Objective
 from ..objective.constants import MODE_FUN, MODE_RES
 
 try:
@@ -87,9 +86,6 @@ class PetabImporter(AmiciObjectBuilder):
         rtol: float = 1e-2,
         atol: float = 1e-3,
         mode: Literal = None,
-        objective: Optional[Objective] = None,
-        obj_absolute_tolerance: float = 1e-10,
-        obj_relative_tolerance: float = 1e-12,
         multi_eps=None,
         **kwargs,
     ) -> bool:
@@ -100,7 +96,6 @@ class PetabImporter(AmiciObjectBuilder):
         rtol: relative error tolerance
         atol: absolute error tolerance
         mode: function values or residuals
-        objective: objective function
         objAbsoluteTolerance: absolute tolerance in sensitivity calculation
         objRelativeTolerance: relative tolerance in sensitivity calculation
         multi_eps: multiple test step width for FDs
@@ -112,14 +107,7 @@ class PetabImporter(AmiciObjectBuilder):
         """
         par = np.asarray(self.petab_problem.x_nominal_scaled)
         problem = self.create_problem()
-
-        if objective is None:
-            objective = problem.objective
-            objective.amici_solver.setSensitivityMethod(
-                amici.SensitivityMethod_forward)
-            objective.amici_solver.setAbsoluteTolerance(obj_absolute_tolerance)
-            objective.amici_solver.setRelativeTolerance(obj_relative_tolerance)
-
+        objective = problem.objective
         free_indices = par[problem.x_free_indices]
         dfs = []
         modes = []

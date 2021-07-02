@@ -81,7 +81,15 @@ class PetabImportTest(unittest.TestCase):
         model_name = "Bachmann_MSB2011"
         petab_problem = pypesto.petab.PetabImporter.from_yaml(
             os.path.join(folder_base, model_name, model_name + '.yaml'))
-        self.assertFalse(petab_problem.check_gradients())
+
+        objective = petab_problem.create_objective()
+        objective.amici_solver.setSensitivityMethod(
+                 amici.SensitivityMethod_forward)
+        objective.amici_solver.setAbsoluteTolerance(1e-10)
+        objective.amici_solver.setRelativeTolerance(1e-12)
+
+        self.assertTrue(petab_problem.check_gradients(
+                        multi_eps=[1e-3, 1e-4, 1e-5]))
 
 
 def test_plist_mapping():
