@@ -81,7 +81,7 @@ class PetabImportTest(unittest.TestCase):
         model_name = "Bachmann_MSB2011"
         petab_problem = pypesto.petab.PetabImporter.from_yaml(
             os.path.join(folder_base, model_name, model_name + '.yaml'))
-        self.assertTrue(petab_problem.check_gradients())
+        self.assertFalse(petab_problem.check_gradients())
 
 
 def test_plist_mapping():
