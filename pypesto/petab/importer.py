@@ -90,6 +90,7 @@ class PetabImporter(AmiciObjectBuilder):
         objective: Objective = None,
         objAbsoluteTolerance: float = 1e-10,
         objRelativeTolerance: float = 1e-12,
+        multi_eps=None,
         **kwargs
     ):
         """Check if gradients match finite differences (FDs)
@@ -101,6 +102,7 @@ class PetabImporter(AmiciObjectBuilder):
         objective: objective function
         objAbsoluteTolerance: absolute tolerance in sensitivity calculation
         objRelativeTolerance: relative tolerance in sensitivity calculation
+        multi_eps: multiple test step width for FDs
 
         Returns
         -------
@@ -120,16 +122,20 @@ class PetabImporter(AmiciObjectBuilder):
         free_indices = par[problem.x_free_indices]
         dfs = []
         modes = []
+
         if mode is None:
             modes = [MODE_FUN, MODE_RES]
         else:
             modes = [mode]
 
+        if multi_eps is None:
+            multi_eps = [1e-3, 1e-4, 1e-5]
+
         for mode in modes:
             try:
                 dfs.append(objective.check_grad_multi_eps(
                             free_indices, *args, **kwargs,
-                            mode=mode))
+                            mode=mode, multi_eps=multi_eps))
             except (RuntimeError, ValueError):
                 # Might happen in case PEtab problem not well defined or
                 # fails for specified tolerances in forward sensitivities
