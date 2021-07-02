@@ -87,18 +87,19 @@ class PetabImporter(AmiciObjectBuilder):
         rtol: float = 1e-2,
         atol: float = 1e-3,
         mode: Literal = None,
-        objective: Objective = None,
-        objAbsoluteTolerance: float = 1e-10,
-        objRelativeTolerance: float = 1e-12,
+        objective: Optional[Objective] = None,
+        obj_absolute_tolerance: float = 1e-10,
+        obj_relative_tolerance: float = 1e-12,
         multi_eps=None,
-        **kwargs
-    ):
+        **kwargs,
+    ) -> bool:
         """Check if gradients match finite differences (FDs)
+
         Parameters
         ----------
         rtol: relative error tolerance
         atol: absolute error tolerance
-        mode: unction values or residuals
+        mode: function values or residuals
         objective: objective function
         objAbsoluteTolerance: absolute tolerance in sensitivity calculation
         objRelativeTolerance: relative tolerance in sensitivity calculation
@@ -116,8 +117,8 @@ class PetabImporter(AmiciObjectBuilder):
             objective = problem.objective
             objective.amici_solver.setSensitivityMethod(
                 amici.SensitivityMethod_forward)
-            objective.amici_solver.setAbsoluteTolerance(objAbsoluteTolerance)
-            objective.amici_solver.setRelativeTolerance(objRelativeTolerance)
+            objective.amici_solver.setAbsoluteTolerance(obj_absolute_tolerance)
+            objective.amici_solver.setRelativeTolerance(obj_relative_tolerance)
 
         free_indices = par[problem.x_free_indices]
         dfs = []
@@ -129,7 +130,7 @@ class PetabImporter(AmiciObjectBuilder):
             modes = [mode]
 
         if multi_eps is None:
-            multi_eps = [1e-3, 1e-4, 1e-5]
+            multi_eps = np.array([10**(-i) for i in range(3, 9)])
 
         for mode in modes:
             try:
@@ -139,12 +140,12 @@ class PetabImporter(AmiciObjectBuilder):
             except (RuntimeError, ValueError):
                 # Might happen in case PEtab problem not well defined or
                 # fails for specified tolerances in forward sensitivities
-                pass
+                return False
 
-        return any([
+        return all([
             any([
-                np.all(mode_df.rel_err.values < rtol),
-                np.all(mode_df.abs_err.values < atol),
+                np.all((mode_df.rel_err.values < rtol) |
+                       (mode_df.abs_err.values < atol))
             ])
             for mode_df in dfs
         ])
