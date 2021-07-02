@@ -1,4 +1,3 @@
-from pypesto.objective.constants import MODE_FUN, MODE_RES
 import pandas as pd
 import numpy as np
 import os
@@ -7,7 +6,7 @@ import importlib
 import shutil
 import logging
 import tempfile
-from typing import Iterable, List, Optional, Sequence, Union, Callable
+from typing import Iterable, List, Literal, Optional, Sequence, Union, Callable
 
 from ..problem import Problem
 from ..objective import AmiciObjective, AmiciObjectBuilder, AggregatedObjective
@@ -15,6 +14,8 @@ from ..predict import AmiciPredictor, PredictionResult
 from ..predict.constants import CONDITION_SEP
 from ..objective.priors import NegLogParameterPriors, \
     get_parameter_prior_dict
+from ..objective.function import Objective
+from ..objective.constants import MODE_FUN, MODE_RES
 
 try:
     import petab
@@ -80,37 +81,67 @@ class PetabImporter(AmiciObjectBuilder):
             output_folder=output_folder,
             model_name=model_name)
 
-    def check_and_log_gradients(self, RTOL: float = 1e-2, ATOL: float = 1e-3):
-        """Check and log if gradients are compatible with gradient-based optimizers
+    def check_gradients(
+        self,
+        *args,
+        rtol: float = 1e-2,
+        atol: float = 1e-3,
+        mode: Literal = None,
+        objective: Objective = None,
+        objAbsoluteTolerance: float = 1e-10,
+        objRelativeTolerance: float = 1e-12,
+        **kwargs
+    ):
+        """Check if gradients match finite differences (FDs)
         Parameters
         ----------
-        RTOL: relative error tolerance (default 1e-2)
-        ATOL: absolute error tolerance (default 1e-3)
+        rtol: relative error tolerance
+        atol: absolute error tolerance
+        mode: unction values or residuals
+        objective: objective function
+        objAbsoluteTolerance: absolute tolerance in sensitivity calculation
+        objRelativeTolerance: relative tolerance in sensitivity calculation
+
+        Returns
+        -------
+        bool
+            Indicates whether gradients match (True) FDs or not (False)
         """
         par = np.asarray(self.petab_problem.x_nominal_scaled)
         problem = self.create_problem()
-        objective = problem.objective
-        objective.amici_solver.setSensitivityMethod(
-            amici.SensitivityMethod_forward)
-        objective.amici_solver.setAbsoluteTolerance(1e-10)
-        objective.amici_solver.setRelativeTolerance(1e-12)
+
+        if objective is None:
+            objective = problem.objective
+            objective.amici_solver.setSensitivityMethod(
+                amici.SensitivityMethod_forward)
+            objective.amici_solver.setAbsoluteTolerance(objAbsoluteTolerance)
+            objective.amici_solver.setRelativeTolerance(objRelativeTolerance)
+
         free_indices = par[problem.x_free_indices]
         dfs = []
+        modes = []
+        if mode is None:
+            modes = [MODE_FUN, MODE_RES]
+        else:
+            modes = [mode]
 
-        modes = [MODE_FUN, MODE_RES]
         for mode in modes:
             try:
                 dfs.append(objective.check_grad_multi_eps(
-                            free_indices,
-                            multi_eps=[1e-3, 1e-4, 1e-5],
+                            free_indices, *args, **kwargs,
                             mode=mode))
             except (RuntimeError, ValueError):
-                dfs.append(dfs[0])
+                # Might happen in case PEtab problem not well defined or
+                # fails for specified tolerances in forward sensitivities
+                pass
 
-        return np.all((dfs[0].rel_err.values < RTOL) |
-                      (dfs[0].abs_err.values < ATOL) |
-                      (dfs[1].rel_err.values < RTOL) |
-                      (dfs[1].abs_err.values < ATOL))
+        return any([
+            any([
+                np.all(mode_df.rel_err.values < rtol),
+                np.all(mode_df.abs_err.values < atol),
+            ])
+            for mode_df in dfs
+        ])
 
     def create_model(self,
                      force_compile: bool = False,

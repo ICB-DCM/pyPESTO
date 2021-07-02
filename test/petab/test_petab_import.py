@@ -76,12 +76,12 @@ class PetabImportTest(unittest.TestCase):
             self.assertTrue(np.isfinite(
                 result.optimize_result.get_for_key('fval')[0]))
 
-    def test_4_gradients(self):
+    def test_check_gradients(self):
         # check gradients of simple model (should always be a true positive)
         model_name = "Bachmann_MSB2011"
         petab_problem = pypesto.petab.PetabImporter.from_yaml(
             os.path.join(folder_base, model_name, model_name + '.yaml'))
-        self.assertTrue(petab_problem.check_and_log_gradients())
+        self.assertTrue(petab_problem.check_gradients())
 
 
 def test_plist_mapping():
