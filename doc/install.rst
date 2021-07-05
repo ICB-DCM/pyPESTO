@@ -64,14 +64,14 @@ If you want to upgrade from an existing previous version, replace
 Install optional packages and external dependencies
 ---------------------------------------------------
 
-* This package includes multiple comfort methods simplifying its use for
+* pyPESTO includes multiple convenience methods to simplify
   parameter estimation for models generated using the toolbox
   `AMICI <https://github.com/AMICI-dev/AMICI>`_.
   To use AMICI, install it via pip::
 
     pip3 install amici
 
-  Or follow the instructions from the
+  or follow the instructions from the
   `AMICI documentation <https://amici.readthedocs.io/en/latest/python_installation.html>`_.
 
 * This package inherently supports optimization using the dlib toolbox.
@@ -79,5 +79,5 @@ Install optional packages and external dependencies
 
    pip3 install dlib
 
-* All external dependecies can be installed through
+* All external dependencies can be installed through
   `this shell script <https://github.com/ICB-DCM/pyPESTO/blob/main/.github/workflows/install_deps.sh>`_.
