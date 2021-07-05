@@ -580,7 +580,7 @@ class ObjectiveBase(abc.ABC):
 
         return result
 
-    def check_gradients(
+    def check_gradients_match_finite_differences(
         self,
         *args,
         x: np.ndarray = None,
@@ -596,10 +596,11 @@ class ObjectiveBase(abc.ABC):
         Parameters
         ----------
         rtol: relative error tolerance
+        x: The parameters for which to evaluate the gradient
+        x_free: Indices for which to compute gradients
+        rtol: relative error tolerance
         atol: absolute error tolerance
         mode: function values or residuals
-        objAbsoluteTolerance: absolute tolerance in sensitivity calculation
-        objRelativeTolerance: relative tolerance in sensitivity calculation
         multi_eps: multiple test step width for FDs
 
         Returns
