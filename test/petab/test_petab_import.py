@@ -76,6 +76,22 @@ class PetabImportTest(unittest.TestCase):
             self.assertTrue(np.isfinite(
                 result.optimize_result.get_for_key('fval')[0]))
 
+    def test_check_gradients(self):
+        """Test objective FD-gradient check function."""
+        # Check gradients of simple model (should always be a true positive)
+        model_name = "Bachmann_MSB2011"
+        petab_problem = pypesto.petab.PetabImporter.from_yaml(
+            os.path.join(folder_base, model_name, model_name + '.yaml'))
+
+        objective = petab_problem.create_objective()
+        objective.amici_solver.setSensitivityMethod(
+                 amici.SensitivityMethod_forward)
+        objective.amici_solver.setAbsoluteTolerance(1e-10)
+        objective.amici_solver.setRelativeTolerance(1e-12)
+
+        self.assertFalse(petab_problem.check_gradients(
+                        multi_eps=[1e-3, 1e-4, 1e-5]))
+
 
 def test_plist_mapping():
     """Test that the AMICI objective created via PEtab correctly maps
