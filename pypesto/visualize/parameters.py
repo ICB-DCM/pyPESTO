@@ -23,7 +23,8 @@ def parameters(
         colors: Optional[Union[List[float], List[List[float]]]] = None,
         legends: Optional[Union[str, List[str]]] = None,
         balance_alpha: bool = True,
-        start_indices: Optional[Union[int, Iterable[int]]] = None
+        start_indices: Optional[Union[int, Iterable[int]]] = None,
+        scale: Optional[Tuple[float, float]] = None,
 ) -> matplotlib.axes.Axes:
     """
     Plot parameter values.
@@ -58,6 +59,9 @@ def parameters(
     start_indices:
         list of integers specifying the multistarts to be plotted or
         int specifying up to which start index should be plotted
+    scale:
+        Tuple of bounds to which to scale parameter bounds or ``None``
+        to use original values.
 
     Returns
     -------
@@ -77,12 +81,20 @@ def parameters(
             raise ValueError("Permissible values for parameter_indices are "
                              "'all', 'free_only' or a list of indices")
 
+    def scale_par(x):
+        """Scale ``x`` from [lb, ub] to interval given by ``scale``"""
+        if scale is None or scale is False:
+            return x
+
+        return scale[0] + (x - lb) / (ub - lb) * (scale[1] - scale[0])
+
     for j, result in enumerate(results):
         # handle results and bounds
         (lb, ub, x_labels, fvals, xs) = \
             handle_inputs(result=result, lb=lb, ub=ub,
                           parameter_indices=parameter_indices,
                           start_indices=start_indices)
+        lb, ub, xs = map(scale_par, (lb, ub, xs))
 
         # call lowlevel routine
         ax = parameters_lowlevel(xs=xs, fvals=fvals, lb=lb, ub=ub,
@@ -103,6 +115,7 @@ def parameters(
         else:
             x_ref = np.array(i_ref['x'])
         x_ref = np.reshape(x_ref, (1, x_ref.size))
+        x_ref = scale_par(x_ref)
 
         # plot reference parameters using lowlevel routine
         ax = parameters_lowlevel(x_ref, [i_ref['fval']], ax=ax,
