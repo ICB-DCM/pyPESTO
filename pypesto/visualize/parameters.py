@@ -24,7 +24,7 @@ def parameters(
         legends: Optional[Union[str, List[str]]] = None,
         balance_alpha: bool = True,
         start_indices: Optional[Union[int, Iterable[int]]] = None,
-        scale: Optional[Tuple[float, float]] = None,
+        scale_to_interval: Optional[Tuple[float, float]] = None,
 ) -> matplotlib.axes.Axes:
     """
     Plot parameter values.
@@ -59,9 +59,9 @@ def parameters(
     start_indices:
         list of integers specifying the multistarts to be plotted or
         int specifying up to which start index should be plotted
-    scale:
-        Tuple of bounds to which to scale parameter bounds or ``None``
-        to use original values.
+    scale_to_interval:
+        Tuple of bounds to which to scale all parameter values and bounds, or
+        ``None`` to use bounds as determined by ``lb, ub``.
 
     Returns
     -------
@@ -83,10 +83,11 @@ def parameters(
 
     def scale_par(x):
         """Scale ``x`` from [lb, ub] to interval given by ``scale``"""
-        if scale is None or scale is False:
+        if scale_to_interval is None or scale_to_interval is False:
             return x
 
-        return scale[0] + (x - lb) / (ub - lb) * (scale[1] - scale[0])
+        return (scale_to_interval[0] + (x - lb) / (ub - lb)
+                * (scale_to_interval[1] - scale_to_interval[0]))
 
     for j, result in enumerate(results):
         # handle results and bounds
