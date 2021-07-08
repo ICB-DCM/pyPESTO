@@ -81,8 +81,9 @@ def parameters(
             raise ValueError("Permissible values for parameter_indices are "
                              "'all', 'free_only' or a list of indices")
 
-    def scale_par(x):
-        """Scale ``x`` from [lb, ub] to interval given by ``scale``"""
+    def scale_parameters(x):
+        """Scale ``x`` from [lb, ub] to interval given by ``scale_to_interval``
+        """
         if scale_to_interval is None or scale_to_interval is False:
             return x
 
@@ -95,7 +96,7 @@ def parameters(
             handle_inputs(result=result, lb=lb, ub=ub,
                           parameter_indices=parameter_indices,
                           start_indices=start_indices)
-        lb, ub, xs = map(scale_par, (lb, ub, xs))
+        lb, ub, xs = map(scale_parameters, (lb, ub, xs))
 
         # call lowlevel routine
         ax = parameters_lowlevel(xs=xs, fvals=fvals, lb=lb, ub=ub,
@@ -116,7 +117,7 @@ def parameters(
         else:
             x_ref = np.array(i_ref['x'])
         x_ref = np.reshape(x_ref, (1, x_ref.size))
-        x_ref = scale_par(x_ref)
+        x_ref = scale_parameters(x_ref)
 
         # plot reference parameters using lowlevel routine
         ax = parameters_lowlevel(x_ref, [i_ref['fval']], ax=ax,
