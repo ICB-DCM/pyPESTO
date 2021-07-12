@@ -3,7 +3,7 @@ import pandas as pd
 import copy
 import logging
 import abc
-from typing import Dict, Iterable, Sequence, Tuple, Union
+from typing import Dict, Iterable, Literal, Sequence, Tuple, Union
 
 from .constants import MODE_FUN, MODE_RES, FVAL, GRAD, HESS, RES, SRES
 from .history import HistoryBase
@@ -579,3 +579,62 @@ class ObjectiveBase(abc.ABC):
             logger.info(result)
 
         return result
+
+    def check_gradients_match_finite_differences(
+        self,
+        *args,
+        x: np.ndarray = None,
+        x_free: Sequence[int] = None,
+        rtol: float = 1e-2,
+        atol: float = 1e-3,
+        mode: Literal = None,
+        multi_eps=None,
+        **kwargs,
+    ) -> bool:
+        """Check if gradients match finite differences (FDs)
+
+        Parameters
+        ----------
+        rtol: relative error tolerance
+        x: The parameters for which to evaluate the gradient
+        x_free: Indices for which to compute gradients
+        rtol: relative error tolerance
+        atol: absolute error tolerance
+        mode: function values or residuals
+        multi_eps: multiple test step width for FDs
+
+        Returns
+        -------
+        bool
+            Indicates whether gradients match (True) FDs or not (False)
+        """
+        par = np.asarray(x)
+        free_indices = par[x_free]
+        dfs = []
+        modes = []
+
+        if mode is None:
+            modes = [MODE_FUN, MODE_RES]
+        else:
+            modes = [mode]
+
+        if multi_eps is None:
+            multi_eps = np.array([10**(-i) for i in range(3, 9)])
+
+        for mode in modes:
+            try:
+                dfs.append(self.check_grad_multi_eps(
+                            free_indices, *args, **kwargs,
+                            mode=mode, multi_eps=multi_eps))
+            except (RuntimeError, ValueError):
+                # Might happen in case PEtab problem not well defined or
+                # fails for specified tolerances in forward sensitivities
+                return False
+
+        return all([
+            any([
+                np.all((mode_df.rel_err.values < rtol) |
+                       (mode_df.abs_err.values < atol)),
+            ])
+            for mode_df in dfs
+        ])
