@@ -296,7 +296,6 @@ class AmiciPredictor:
             outputs_sensi = self.post_processor_sensi(amici_outputs)
         if self.post_processor_time is not None:
             timepoints = self.post_processor_time(amici_outputs)
-        
         return timepoints, outputs, outputs_sensi
 
     def _wrap_call_to_amici(self, amici_outputs, x, sensi_orders, mode,
