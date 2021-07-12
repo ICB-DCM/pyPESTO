@@ -71,7 +71,7 @@ Install optional packages and external dependencies
 
     pip3 install amici
 
-  or follow the instructions from the
+  or, in case of problems, follow the full instructions from the
   `AMICI documentation <https://amici.readthedocs.io/en/latest/python_installation.html>`_.
 
 * This package inherently supports optimization using the dlib toolbox.
