@@ -24,6 +24,7 @@ from .constants import (PREDICTOR, PREDICTION_ID, PREDICTION_RESULTS,
                         EnsembleType, ENSEMBLE_TYPE, MEAN, MEDIAN,
                         STANDARD_DEVIATION, SUMMARY, LOWER_BOUND,
                         UPPER_BOUND, get_percentile_label, HISTORY)
+from ..predict.constants import AMICI_Y, AMICI_LLH
 
 logger = logging.getLogger(__name__)
 
@@ -41,7 +42,8 @@ class EnsemblePrediction:
             prediction_id: str = None,
             prediction_results: Sequence[PredictionResult] = None,
             lower_bound: Sequence[np.ndarray] = None,
-            upper_bound: Sequence[np.ndarray] = None):
+            upper_bound: Sequence[np.ndarray] = None,
+            x_vectors: np.ndarray = None):
         """
         Constructor.
 
@@ -138,7 +140,8 @@ class EnsemblePrediction:
         }
 
     def compute_summary(self,
-                        percentiles_list: Sequence[int] = (5, 20, 80, 95)
+                        percentiles_list: Sequence[int] = (5, 20, 80, 95),
+                        weighting: bool = True
                         ) -> Dict:
         """
         Compute the mean, the median, the standard deviation and possibly
@@ -160,6 +163,11 @@ class EnsemblePrediction:
         if not self.prediction_results:
             raise ArithmeticError('Cannot compute summary statistics from '
                                   'empty prediction results.')
+        # check if weightings shall be used or not depending on whether llh
+        # is part of the prediciton output
+        if AMICI_LLH not in self.prediction_results[0].conditions[0].output:
+            weighting = False
+
         n_conditions = len(self.prediction_results[0].conditions)
 
         def _stack_outputs(ic: int):
@@ -172,8 +180,13 @@ class EnsemblePrediction:
             if self.prediction_results[0].conditions[ic].output is None:
                 return None
             # stack predictions
-            output_list = [prediction.conditions[ic].output
-                           for prediction in self.prediction_results]
+            if isinstance(self.prediction_results[0].conditions[ic].output,
+                          np.ndarray):
+                output_list = [prediction.conditions[ic].output
+                               for prediction in self.prediction_results]
+            else:
+                output_list = [prediction.conditions[ic].output[AMICI_Y]
+                               for prediction in self.prediction_results]
             # stack into one numpy array
             return np.stack(output_list, axis=-1)
 
@@ -192,14 +205,31 @@ class EnsemblePrediction:
             # stack into one numpy array
             return np.stack(output_sensi_list, axis=-1)
 
-        def _compute_summary(tmp_array, percentiles_list):
+        def _stack_weights(ic: int):
+            """
+            Group weights for different parameter vectors of one ensemble
+            together, if they belong to the same simulation condition, and
+            stacks them in one array
+            """
+            # Were outputs computed
+            if self.prediction_results[0].conditions[ic].output is None:
+                return None
+            # stack predictions
+            output_list = [prediction.conditions[ic].output[AMICI_LLH]
+                           for prediction in self.prediction_results]
+            # stack into one numpy array
+            return np.stack(output_list, axis=-1)
+
+        def _compute_summary(tmp_array, percentiles_list, weights):
             """
             Computes means, standard deviation, median, and requested
             percentiles for a set of stacked simulations
             """
             summary = {}
-            summary[MEAN] = np.mean(tmp_array, axis=-1)
-            summary[STANDARD_DEVIATION] = np.std(tmp_array, axis=-1)
+            summary[MEAN] = np.average(tmp_array, axis=-1, weights=weights)
+            summary[STANDARD_DEVIATION] = np.average(
+                (tmp_array.T-summary[MEAN].T).T**2,
+                axis=-1, weights=weights)
             summary[MEDIAN] = np.median(tmp_array, axis=-1)
             for perc in percentiles_list:
                 summary[get_percentile_label(perc)] = \
@@ -219,10 +249,15 @@ class EnsemblePrediction:
             # create a temporary array with all the outputs needed and wanted
             tmp_output = _stack_outputs(i_cond)
             tmp_output_sensi = _stack_outputs_sensi(i_cond)
+            tmp_weights = np.ones(tmp_output.shape[-1])
+            if weighting:
+                tmp_weights = np.exp(_stack_weights(i_cond))
 
             # handle outputs
             if tmp_output is not None:
-                output_summary = _compute_summary(tmp_output, percentiles_list)
+                output_summary = _compute_summary(tmp_output,
+                                                  percentiles_list,
+                                                  tmp_weights)
             else:
                 output_summary = {i_key: None for i_key in cond_lists.keys()}
 
