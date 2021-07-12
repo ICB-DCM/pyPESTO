@@ -51,14 +51,14 @@ def init_random_seed(random_seed: Union[int, None, List[int]], chains: int = 1):
 
 # This function is extracted (slighly modified) from pymc3.init_nuts
 def jitter(model: Model, start: Union[dict, None], chains: int,
-                  *, jitter_first: bool = False):
+                  *, jitter_first: bool = False, scale: float = 1.0):
     if start is None:
         start = model.test_point
     starts = []
     for _ in range(chains):
         new_start = {var: val.copy() for var, val in start.items()}
         for val in new_start.values():
-            val[...] += 2 * np.random.rand(*val.shape) - 1
+            val[...] += scale * (2 * np.random.rand(*val.shape) - 1)
         starts.append(new_start)
     if not jitter_first:
         starts[0] = start
