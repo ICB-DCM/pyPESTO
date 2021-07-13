@@ -1,11 +1,12 @@
 import pandas as pd
+import numpy as np
 import os
 import sys
 import importlib
 import shutil
 import logging
 import tempfile
-from typing import Iterable, List, Optional, Sequence, Union, Callable
+from typing import Iterable, List, Literal, Optional, Sequence, Union, Callable
 
 from ..problem import Problem
 from ..objective import AmiciObjective, AmiciObjectBuilder, AggregatedObjective
@@ -13,6 +14,7 @@ from ..predict import AmiciPredictor, PredictionResult
 from ..predict.constants import CONDITION_SEP
 from ..objective.priors import NegLogParameterPriors, \
     get_parameter_prior_dict
+from ..objective.constants import MODE_FUN, MODE_RES
 
 try:
     import petab
@@ -33,7 +35,8 @@ class PetabImporter(AmiciObjectBuilder):
     def __init__(self,
                  petab_problem: 'petab.Problem',
                  output_folder: str = None,
-                 model_name: str = None):
+                 model_name: str = None,
+                 validate_petab: bool = True):
         """
         petab_problem:
             Managing access to the model and data.
@@ -43,8 +46,14 @@ class PetabImporter(AmiciObjectBuilder):
         model_name:
             Name of the model, which will in particular be the name of the
             compiled model python module.
+        validate_petab:
+            Flag indicating if the PEtab problem shall be validated.
         """
         self.petab_problem = petab_problem
+
+        if validate_petab:
+            if petab.lint_problem(petab_problem):
+                raise ValueError("Invalid PEtab problem.")
 
         if output_folder is None:
             output_folder = _find_output_folder_name(
@@ -70,6 +79,64 @@ class PetabImporter(AmiciObjectBuilder):
             petab_problem=petab_problem,
             output_folder=output_folder,
             model_name=model_name)
+
+    def check_gradients(
+        self,
+        *args,
+        rtol: float = 1e-2,
+        atol: float = 1e-3,
+        mode: Literal = None,
+        multi_eps=None,
+        **kwargs,
+    ) -> bool:
+        """Check if gradients match finite differences (FDs)
+
+        Parameters
+        ----------
+        rtol: relative error tolerance
+        atol: absolute error tolerance
+        mode: function values or residuals
+        objAbsoluteTolerance: absolute tolerance in sensitivity calculation
+        objRelativeTolerance: relative tolerance in sensitivity calculation
+        multi_eps: multiple test step width for FDs
+
+        Returns
+        -------
+        bool
+            Indicates whether gradients match (True) FDs or not (False)
+        """
+        par = np.asarray(self.petab_problem.x_nominal_scaled)
+        problem = self.create_problem()
+        objective = problem.objective
+        free_indices = par[problem.x_free_indices]
+        dfs = []
+        modes = []
+
+        if mode is None:
+            modes = [MODE_FUN, MODE_RES]
+        else:
+            modes = [mode]
+
+        if multi_eps is None:
+            multi_eps = np.array([10**(-i) for i in range(3, 9)])
+
+        for mode in modes:
+            try:
+                dfs.append(objective.check_grad_multi_eps(
+                            free_indices, *args, **kwargs,
+                            mode=mode, multi_eps=multi_eps))
+            except (RuntimeError, ValueError):
+                # Might happen in case PEtab problem not well defined or
+                # fails for specified tolerances in forward sensitivities
+                return False
+
+        return all([
+            any([
+                np.all((mode_df.rel_err.values < rtol) |
+                       (mode_df.abs_err.values < atol)),
+            ])
+            for mode_df in dfs
+        ])
 
     def create_model(self,
                      force_compile: bool = False,

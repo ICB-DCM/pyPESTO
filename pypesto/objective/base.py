@@ -3,7 +3,7 @@ import pandas as pd
 import copy
 import logging
 import abc
-from typing import Dict, Iterable, Sequence, Tuple, Union
+from typing import Dict, Iterable, Literal, Sequence, Tuple, Union
 
 from .constants import MODE_FUN, MODE_RES, FVAL, GRAD, HESS, RES, SRES
 from .history import HistoryBase
@@ -31,20 +31,16 @@ class ObjectiveBase(abc.ABC):
     ----------
     x_names:
         Parameter names that can be optionally used in, e.g., history or
-        gradient checks
-
+        gradient checks.
 
     Attributes
     ----------
-
     history:
         For storing the call history. Initialized by the methods, e.g. the
         optimizer, in `initialize_history()`.
-
     pre_post_processor:
         Preprocess input values to and postprocess output values from
         __call__. Configured in `update_from_problem()`.
-
     """
 
     def __init__(
@@ -149,21 +145,23 @@ class ObjectiveBase(abc.ABC):
                              f"sensi_orders= {sensi_orders} and mode={mode}.")
 
         # pre-process
-        x_full = self.pre_post_processor.preprocess(x)
+        x_full = self.pre_post_processor.preprocess(x=x)
 
         # compute result
-        result = self.call_unprocessed(x_full, sensi_orders, mode, **kwargs)
+        result = self.call_unprocessed(
+            x=x_full, sensi_orders=sensi_orders, mode=mode, **kwargs)
 
         # post-process
-        result = self.pre_post_processor.postprocess(result)
+        result = self.pre_post_processor.postprocess(result=result)
 
         # update history
-        self.history.update(x, sensi_orders, mode, result)
+        self.history.update(
+            x=x, sensi_orders=sensi_orders, mode=mode, result=result)
 
         # map to output format
         if not return_dict:
-            result = ObjectiveBase.output_to_tuple(sensi_orders, mode,
-                                                   **result)
+            result = ObjectiveBase.output_to_tuple(
+                sensi_orders=sensi_orders, mode=mode, **result)
 
         return result
 
@@ -195,7 +193,37 @@ class ObjectiveBase(abc.ABC):
         """
         raise NotImplementedError()
 
-    @abc.abstractmethod
+    def check_mode(self, mode: str) -> bool:
+        """
+        Check if the objective is able to compute in the requested mode.
+
+        Either `check_mode` or the `fun_...` functions
+        must be overwritten in derived classes.
+
+        Parameters
+        ----------
+        mode:
+            Whether to compute function values or residuals.
+        Returns
+        -------
+        flag:
+            Boolean indicating whether mode is supported
+        """
+        if mode == MODE_FUN:
+            return self.has_fun
+        elif mode == MODE_RES:
+            return self.has_res
+        else:
+            raise ValueError(f"Unknown mode {mode}.")
+
+    def get_config(self) -> dict:
+        """
+        Get the configuration information of the objective
+        function and return it as a dictonary.
+        """
+        info = {'type':  self.__class__.__name__}
+        return info
+
     def check_sensi_orders(
         self,
         sensi_orders: Tuple[int, ...],
@@ -204,6 +232,9 @@ class ObjectiveBase(abc.ABC):
         """
         Check if the objective is able to compute the requested
         sensitivities.
+
+        Either `check_sensi_orders` or the `fun_...` functions
+        must be overwritten in derived classes.
 
         Parameters
         ----------
@@ -218,23 +249,25 @@ class ObjectiveBase(abc.ABC):
             Boolean indicating whether combination of sensi_orders and mode
             is supported
         """
-        raise NotImplementedError()
+        if (
+            mode == MODE_FUN
+            and (
+                0 in sensi_orders and not self.has_fun
+                or 1 in sensi_orders and not self.has_grad
+                or 2 in sensi_orders and not self.has_hess
+                or max(sensi_orders) > 2
+            )
+        ) or (
+            mode == MODE_RES
+            and (
+                0 in sensi_orders and not self.has_res
+                or 1 in sensi_orders and not self.has_sres
+                or max(sensi_orders) > 1
+            )
+        ):
+            return False
 
-    @abc.abstractmethod
-    def check_mode(self, mode: str) -> bool:
-        """
-        Check if the objective is able to compute in the requested mode.
-
-        Parameters
-        ----------
-        mode:
-            Whether to compute function values or residuals.
-        Returns
-        -------
-        flag:
-            Boolean indicating whether mode is supported
-        """
-        raise NotImplementedError()
+        return True
 
     @staticmethod
     def output_to_tuple(
@@ -266,37 +299,28 @@ class ObjectiveBase(abc.ABC):
 
     # The following are convenience functions for getting specific outputs.
     def get_fval(self, x: np.ndarray) -> float:
-        """
-        Get the function value at x.
-        """
+        """Get the function value at x."""
+
         fval = self(x, (0,), MODE_FUN)
         return fval
 
     def get_grad(self, x: np.ndarray) -> np.ndarray:
-        """
-        Get the gradient at x.
-        """
+        """Get the gradient at x."""
         grad = self(x, (1,), MODE_FUN)
         return grad
 
     def get_hess(self, x: np.ndarray) -> np.ndarray:
-        """
-        Get the Hessian at x.
-        """
+        """Get the Hessian at x."""
         hess = self(x, (2,), MODE_FUN)
         return hess
 
     def get_res(self, x: np.ndarray) -> np.ndarray:
-        """
-        Get the residuals at x.
-        """
+        """Get the residuals at x."""
         res = self(x, (0,), MODE_RES)
         return res
 
     def get_sres(self, x: np.ndarray) -> np.ndarray:
-        """
-        Get the residual sensitivities at x.
-        """
+        """Get the residual sensitivities at x."""
         sres = self(x, (1,), MODE_RES)
         return sres
 
@@ -555,3 +579,62 @@ class ObjectiveBase(abc.ABC):
             logger.info(result)
 
         return result
+
+    def check_gradients_match_finite_differences(
+        self,
+        *args,
+        x: np.ndarray = None,
+        x_free: Sequence[int] = None,
+        rtol: float = 1e-2,
+        atol: float = 1e-3,
+        mode: Literal = None,
+        multi_eps=None,
+        **kwargs,
+    ) -> bool:
+        """Check if gradients match finite differences (FDs)
+
+        Parameters
+        ----------
+        rtol: relative error tolerance
+        x: The parameters for which to evaluate the gradient
+        x_free: Indices for which to compute gradients
+        rtol: relative error tolerance
+        atol: absolute error tolerance
+        mode: function values or residuals
+        multi_eps: multiple test step width for FDs
+
+        Returns
+        -------
+        bool
+            Indicates whether gradients match (True) FDs or not (False)
+        """
+        par = np.asarray(x)
+        free_indices = par[x_free]
+        dfs = []
+        modes = []
+
+        if mode is None:
+            modes = [MODE_FUN, MODE_RES]
+        else:
+            modes = [mode]
+
+        if multi_eps is None:
+            multi_eps = np.array([10**(-i) for i in range(3, 9)])
+
+        for mode in modes:
+            try:
+                dfs.append(self.check_grad_multi_eps(
+                            free_indices, *args, **kwargs,
+                            mode=mode, multi_eps=multi_eps))
+            except (RuntimeError, ValueError):
+                # Might happen in case PEtab problem not well defined or
+                # fails for specified tolerances in forward sensitivities
+                return False
+
+        return all([
+            any([
+                np.all((mode_df.rel_err.values < rtol) |
+                       (mode_df.abs_err.values < atol)),
+            ])
+            for mode_df in dfs
+        ])

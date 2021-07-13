@@ -112,9 +112,9 @@ def calculate_zscore(chain: np.ndarray,
     ----------
     chain
     a:
-        First fraction of the MCMC chain. Default 10%.
+        First fraction of the MCMC chain.
     b:
-        Second fraction of the MCMC chain. Default 50%.
+        Second fraction of the MCMC chain.
 
     Returns
     -------
@@ -170,7 +170,7 @@ def burn_in_by_sequential_geweke(chain: np.ndarray,
     chain:
         The MCMC chain after removing warm up phase.
     zscore:
-        The Geweke test threshold. Default 2.
+        The Geweke test threshold.
 
     Returns
     -------
