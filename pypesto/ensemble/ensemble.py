@@ -24,7 +24,6 @@ from .constants import (PREDICTOR, PREDICTION_ID, PREDICTION_RESULTS,
                         EnsembleType, ENSEMBLE_TYPE, MEAN, MEDIAN,
                         STANDARD_DEVIATION, SUMMARY, LOWER_BOUND,
                         UPPER_BOUND, get_percentile_label, HISTORY)
-from ..predict.constants import AMICI_Y, AMICI_LLH
 
 logger = logging.getLogger(__name__)
 
@@ -141,7 +140,7 @@ class EnsemblePrediction:
 
     def compute_summary(self,
                         percentiles_list: Sequence[int] = (5, 20, 80, 95),
-                        weighting: bool = True
+                        weighting: bool = False
                         ) -> Dict:
         """
         Compute the mean, the median, the standard deviation and possibly
@@ -152,6 +151,8 @@ class EnsemblePrediction:
         ----------
         percentiles_list:
             List or tuple of percent numbers for the percentiles
+        weighting:
+            Whether weights should be used for trajectory.
 
         Returns
         -------
@@ -163,10 +164,11 @@ class EnsemblePrediction:
         if not self.prediction_results:
             raise ArithmeticError('Cannot compute summary statistics from '
                                   'empty prediction results.')
-        # check if weightings shall be used or not depending on whether llh
-        # is part of the prediciton output
-        if AMICI_LLH not in self.prediction_results[0].conditions[0].output:
-            weighting = False
+        # if weightings shall be used, check whether weights are there
+        if weighting:
+            if not self.prediction_results[0].conditions[0].output_weight:
+                logger.warning('WARNING: There are no weights in the '
+                               'prediction results. Will use 1 as weight.')
 
         n_conditions = len(self.prediction_results[0].conditions)
 
@@ -180,13 +182,8 @@ class EnsemblePrediction:
             if self.prediction_results[0].conditions[ic].output is None:
                 return None
             # stack predictions
-            if isinstance(self.prediction_results[0].conditions[ic].output,
-                          np.ndarray):
-                output_list = [prediction.conditions[ic].output
-                               for prediction in self.prediction_results]
-            else:
-                output_list = [prediction.conditions[ic].output[AMICI_Y]
-                               for prediction in self.prediction_results]
+            output_list = [prediction.conditions[ic].output
+                           for prediction in self.prediction_results]
             # stack into one numpy array
             return np.stack(output_list, axis=-1)
 
@@ -212,13 +209,28 @@ class EnsemblePrediction:
             stacks them in one array
             """
             # Were outputs computed
-            if self.prediction_results[0].conditions[ic].output is None:
+            if self.prediction_results[0].conditions[ic].output_weight is None:
                 return None
             # stack predictions
-            output_list = [prediction.conditions[ic].output[AMICI_LLH]
-                           for prediction in self.prediction_results]
+            output_weight_list = [prediction.conditions[ic].output_weight
+                                  for prediction in self.prediction_results]
             # stack into one numpy array
-            return np.stack(output_list, axis=-1)
+            return np.stack(output_weight_list, axis=-1)
+
+        def _stack_sigmas(ic: int):
+            """
+            Group weights for different parameter vectors of one ensemble
+            together, if they belong to the same simulation condition, and
+            stacks them in one array
+            """
+            # Were outputs computed
+            if self.prediction_results[0].conditions[ic].output_sigmay is None:
+                return None
+            # stack predictions
+            output_sigmay_list = [prediction.conditions[ic].output_sigmay
+                                  for prediction in self.prediction_results]
+            # stack into one numpy array
+            return np.stack(output_sigmay_list, axis=-1)
 
         def _compute_summary(tmp_array, percentiles_list, weights):
             """
@@ -227,9 +239,9 @@ class EnsemblePrediction:
             """
             summary = {}
             summary[MEAN] = np.average(tmp_array, axis=-1, weights=weights)
-            summary[STANDARD_DEVIATION] = np.average(
+            summary[STANDARD_DEVIATION] = np.sqrt(np.average(
                 (tmp_array.T-summary[MEAN].T).T**2,
-                axis=-1, weights=weights)
+                axis=-1, weights=weights))
             summary[MEDIAN] = np.median(tmp_array, axis=-1)
             for perc in percentiles_list:
                 summary[get_percentile_label(perc)] = \
@@ -610,6 +622,8 @@ class Ensemble:
             sensi_orders: Tuple = (0,),
             default_value: float = None,
             mode: str = MODE_FUN,
+            include_llh_weights: bool = False,
+            include_sigmay: bool = False,
             engine: Engine = None,
             progress_bar: bool = True
     ) -> EnsemblePrediction:
@@ -622,26 +636,25 @@ class Ensemble:
         ----------
         predictor:
             Prediction function, e.g., an AmiciPredictor
-
         prediction_id:
             Identifier for the predictions
-
         sensi_orders:
             Specifies which sensitivities to compute, e.g. (0,1) -> fval, grad
-
         default_value:
             If parameters are needed in the mapping, which are not found in the
             parameter source, it can make sense to fill them up with this
             default value (e.g. `np.nan`) in some cases (to be used with
             caution though).
-
         mode:
             Whether to compute function values or residuals.
-
+        include_llh_weights:
+            Whether to include weights in the output of the predictor.
+        include_sigmay:
+            Whether to include standard deviations in the output
+            of the predictor.
         engine:
             Parallelization engine. Defaults to sequential execution on a
             `SingleCoreEngine`.
-
         progress_bar:
             Whether to display a progress bar.
 
@@ -676,7 +689,11 @@ class Ensemble:
         )
 
         # Setup the tasks with the prediction method and chunked vectors.
-        method = partial(predictor, sensi_orders=sensi_orders, mode=mode)
+        method = partial(predictor,
+                         sensi_orders=sensi_orders,
+                         mode=mode,
+                         include_sigmay=include_sigmay,
+                         include_llh_weights=include_llh_weights)
         tasks = [
             EnsembleTask(
                 method=method,
