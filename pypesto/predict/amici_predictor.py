@@ -294,7 +294,6 @@ class AmiciPredictor:
             outputs_sensi = []
             outputs_weights = []
             outputs_sigmay = []
-            outputs_weights = []
             timepoints = [
                 amici_output[AMICI_T] if amici_output[AMICI_STATUS] == 0
                 else np.full((amici_nt[i_condition], ), np.nan)
@@ -333,6 +332,8 @@ class AmiciPredictor:
             return (timepoints, outputs, outputs_sensi, outputs_weights,
                     outputs_sigmay)
 
+        outputs_weights = []
+        outputs_sigmay = []
         # Get default output
         if not self.skip_default_outputs:
             (timepoints, outputs, outputs_sensi, outputs_weights,
