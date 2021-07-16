@@ -31,9 +31,10 @@ def trace_wrap(f):
         reduce = isinstance(ix, numbers.Integral)
         # default: full list
         if ix is None:
-            ix = np.arange(0, len(self), dtype=int)
             if trim:
                 ix = self.get_trimmed_indices()
+            else:
+                ix = np.arange(0, len(self), dtype=int)
         # turn every input into an index list
         if reduce:
             ix = np.array([ix], dtype=int)
