@@ -5,7 +5,8 @@ from copy import deepcopy
 from .constants import (MODE_FUN, OUTPUT_IDS, TIMEPOINTS, OUTPUT,
                         OUTPUT_SENSI, CSV, H5, AMICI_T, AMICI_Y,
                         AMICI_SY, AMICI_STATUS, RDATAS, PARAMETER_IDS,
-                        AMICI_LLH, AMICI_SIGMAY, OUTPUT_WEIGHT, OUTPUT_SIGMAY)
+                        AMICI_LLH, AMICI_SIGMAY, OUTPUT_WEIGHT, OUTPUT_SIGMAY,
+                        AMICI_X, AMICI_SX)
 from .result import PredictionResult
 from ..objective import AmiciObjective
 
@@ -110,7 +111,8 @@ class AmiciPredictor:
                 amici_objective.amici_model.getObservableIds()
 
         if amici_output_fields is None:
-            amici_output_fields = [AMICI_STATUS, AMICI_T, AMICI_Y, AMICI_SY]
+            amici_output_fields = [AMICI_STATUS, AMICI_T, AMICI_Y, AMICI_SY,
+                                   AMICI_X, AMICI_SX]
         self.amici_output_fields = amici_output_fields
 
     def __call__(
