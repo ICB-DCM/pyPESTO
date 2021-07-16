@@ -338,13 +338,7 @@ class HistoryBase(abc.ABC):
         decreasing history.
         """
         fval_trace = self.get_fval_trace()
-        indices = []
-        fval_current = np.inf
-        for iter_i, fval_i in enumerate(fval_trace):
-            if fval_i <= fval_current:
-                indices.append(iter_i)
-                fval_current = fval_i
-        return indices
+        return np.where(fval_trace <= np.minimum.accumulate(fval_trace))
 
 
 class History(HistoryBase):
