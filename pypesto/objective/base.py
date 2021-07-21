@@ -3,7 +3,7 @@ import pandas as pd
 import copy
 import logging
 import abc
-from typing import Dict, Iterable, Literal, Sequence, Tuple, Union
+from typing import Dict, Iterable, Sequence, Tuple, Union
 
 from .constants import MODE_FUN, MODE_RES, FVAL, GRAD, HESS, RES, SRES
 from .history import HistoryBase
@@ -587,7 +587,7 @@ class ObjectiveBase(abc.ABC):
         x_free: Sequence[int] = None,
         rtol: float = 1e-2,
         atol: float = 1e-3,
-        mode: Literal = None,
+        mode: str = None,
         multi_eps=None,
         **kwargs,
     ) -> bool:
