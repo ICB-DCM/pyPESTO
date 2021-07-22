@@ -338,7 +338,7 @@ class HistoryBase(abc.ABC):
         decreasing history.
         """
         fval_trace = self.get_fval_trace()
-        return np.where(fval_trace <= np.minimum.accumulate(fval_trace))
+        return np.where(fval_trace <= np.minimum.accumulate(fval_trace))[0]
 
 
 class History(HistoryBase):
