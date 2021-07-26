@@ -55,8 +55,8 @@ class ObjectiveBase(abc.ABC):
 
     def __deepcopy__(self, memodict=None) -> 'ObjectiveBase':
         other = type(self)()  # maintain type for derived classes
-        for attr in self.__dict__:
-            other.__dict__[attr] = copy.deepcopy(self.__dict__[attr])
+        for attr, val in self.__dict__.items():
+            other.__dict__[attr] = copy.deepcopy(val)
         return other
 
     # The following has_ properties can be used to find out what values

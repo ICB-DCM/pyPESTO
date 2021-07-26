@@ -1,6 +1,7 @@
 """Finite differences."""
 
-from typing import Callable, List, Tuple, Union
+import copy
+from typing import Callable, Dict, List, Tuple, Union
 import numpy as np
 import logging
 
@@ -316,6 +317,15 @@ class FD(ObjectiveBase):
             raise ValueError(
                 f"Method must be one of {FD.METHODS}.",
             )
+
+    def __deepcopy__(
+        self,
+        memodict: Dict = None,
+    ) -> 'FD':
+        other = self.__class__.__new__(self.__class__)
+        for attr, val in self.__dict__.items():
+            other.__dict__[attr] = copy.deepcopy(val)
+        return other
 
     @property
     def has_fun(self) -> bool:
