@@ -323,8 +323,8 @@ class FD(ObjectiveBase):
         memodict: Dict = None,
     ) -> 'FD':
         other = self.__class__.__new__(self.__class__)
-        for attr in self.__dict__:
-            other.__dict__[attr] = copy.deepcopy(self.__dict__[attr])
+        for attr, val in self.__dict__.items():
+            other.__dict__[attr] = copy.deepcopy(val)
         return other
 
     @property
