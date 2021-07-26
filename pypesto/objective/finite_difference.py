@@ -317,6 +317,15 @@ class FD(ObjectiveBase):
                 f"Method must be one of {FD.METHODS}.",
             )
 
+    def __deepcopy__(
+        self,
+        memodict: Dict = None,
+    ) -> 'FD':
+        other = self.__class__.__new__(self.__class__)
+        for attr in self.__dict__:
+            other.__dict__[attr] = copy.deepcopy(self.__dict__[attr])
+        return other
+
     @property
     def has_fun(self) -> bool:
         return self.obj.has_fun
