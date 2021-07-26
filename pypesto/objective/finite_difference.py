@@ -1,6 +1,7 @@
 """Finite differences."""
 
-from typing import Callable, List, Tuple, Union
+import copy
+from typing import Callable, Dict, List, Tuple, Union
 import numpy as np
 import logging
 
