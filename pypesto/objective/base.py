@@ -390,6 +390,12 @@ class ObjectiveBase(abc.ABC):
             Valid options are the column labels of the dataframe returned by
             the `ObjectiveBase.check_grad` method.
         """
+        if 'eps' in kwargs:
+            raise KeyError(
+                'Please use the `multi_eps` (not the `eps`) argument with '
+                '`check_grad_multi_eps` to specify step sizes.'
+            )
+
         if multi_eps is None:
             multi_eps = {1e-1, 1e-3, 1e-5, 1e-7, 1e-9}
 
