@@ -72,10 +72,8 @@ def test_preeq_guesses():
     correct with guesses set.
     """
     model_name = "Isensee_JCB2018"
-    petab_problem = pypesto.petab.PetabImporter.from_yaml(
-        os.path.join(folder_base, model_name, model_name + '.yaml')
-    )
-    importer = pypesto.petab.PetabImporter(petab_problem)
+    importer = pypesto.petab.PetabImporter.from_yaml(
+        os.path.join(folder_base, model_name, model_name + '.yaml'))
     obj = importer.create_objective()
     problem = importer.create_problem(obj)
 
