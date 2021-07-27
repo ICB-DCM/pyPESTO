@@ -387,7 +387,7 @@ class AmiciObjective(ObjectiveBase):
                     ]
                 )
                 # limit linear updates to max 20 % elementwise change
-                if (x_ss_guess/linear_update).max() < 0.2:
+                if (linear_update/(x_ss_guess + np.spacing(1))).max() < 0.2:
                     x_ss_guess += linear_update
 
         self.edatas[condition_ix].x0 = tuple(x_ss_guess)
