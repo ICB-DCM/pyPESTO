@@ -382,7 +382,9 @@ class AmiciObjective(ObjectiveBase):
                 x_ss_guess = guess_data['x_ss']
             if guess_data['sx_ss'] is not None:
                 linear_update = guess_data['sx_ss'].transpose().dot(
-                    (x_sim - guess_data['x'])
+                    (x_sim - guess_data['x'])[
+                        np.asarray(self.edatas[condition_ix].plist)
+                    ]
                 )
                 # limit linear updates to max 20 % elementwise change
                 if (x_ss_guess/linear_update).max() < 0.2:
