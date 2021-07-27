@@ -3,7 +3,7 @@ import pandas as pd
 import copy
 import logging
 import abc
-from typing import Dict, Iterable, Literal, Sequence, Tuple, Union
+from typing import Dict, Iterable, Literal, Optional, Sequence, Tuple, Union
 
 from .constants import MODE_FUN, MODE_RES, FVAL, GRAD, HESS, RES, SRES
 from .history import HistoryBase
@@ -370,7 +370,7 @@ class ObjectiveBase(abc.ABC):
     def check_grad_multi_eps(
         self,
         *args,
-        multi_eps: Iterable = None,
+        multi_eps: Optional[Iterable] = None,
         label: str = 'rel_err',
         **kwargs,
     ):
@@ -390,6 +390,12 @@ class ObjectiveBase(abc.ABC):
             Valid options are the column labels of the dataframe returned by
             the `ObjectiveBase.check_grad` method.
         """
+        if 'eps' in kwargs:
+            raise KeyError(
+                'Please use the `multi_eps` (not the `eps`) argument with '
+                '`check_grad_multi_eps` to specify step sizes.'
+            )
+
         if multi_eps is None:
             multi_eps = {1e-1, 1e-3, 1e-5, 1e-7, 1e-9}
 
