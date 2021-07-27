@@ -3,7 +3,7 @@ import pandas as pd
 import copy
 import logging
 import abc
-from typing import Dict, Iterable, Literal, Sequence, Tuple, Union
+from typing import Dict, Iterable, Literal, Optional, Sequence, Tuple, Union
 
 from .constants import MODE_FUN, MODE_RES, FVAL, GRAD, HESS, RES, SRES
 from .history import HistoryBase
@@ -370,7 +370,7 @@ class ObjectiveBase(abc.ABC):
     def check_grad_multi_eps(
         self,
         *args,
-        multi_eps: Iterable = None,
+        multi_eps: Optional[Iterable] = None,
         label: str = 'rel_err',
         **kwargs,
     ):
