@@ -4,6 +4,7 @@ This is for testing the pypesto.Objective.
 
 from pypesto.objective.amici_util import add_sim_grad_to_opt_grad
 
+import os
 import petab
 import pypesto
 import pypesto.petab
@@ -70,9 +71,10 @@ def test_preeq_guesses():
     that steadystate guesses are written and checks that gradient is still
     correct with guesses set.
     """
-    petab_problem = petab.Problem.from_yaml(
-        folder_base + "Zheng_PNAS2012/Zheng_PNAS2012.yaml")
-    petab_problem.model_name = "Zheng_PNAS2012"
+    model_name = "Isensee_JCB2018"
+    petab_problem = pypesto.petab.PetabImporter.from_yaml(
+        os.path.join(folder_base, model_name, model_name + '.yaml')
+    )
     importer = pypesto.petab.PetabImporter(petab_problem)
     obj = importer.create_objective()
     problem = importer.create_problem(obj)
