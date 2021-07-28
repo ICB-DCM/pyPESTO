@@ -7,7 +7,6 @@ from pypesto.objective.amici_util import add_sim_grad_to_opt_grad
 import os
 import petab
 import amici
-import fides
 import pypesto
 import pypesto.petab
 import pypesto.optimize
@@ -88,9 +87,7 @@ def test_preeq_guesses():
     # assert that initial guess is uninformative
     assert obj.steadystate_guesses['fval'] == np.inf
 
-    optimizer = pypesto.optimize.FidesOptimizer(
-        options={fides.Options.MAXITER: 10}
-    )
+    optimizer = pypesto.optimize.ScipyOptimizer()
     options = pypesto.optimize.OptimizeOptions(
         startpoint_resample=False
     )
