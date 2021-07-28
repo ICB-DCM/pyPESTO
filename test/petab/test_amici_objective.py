@@ -6,6 +6,8 @@ from pypesto.objective.amici_util import add_sim_grad_to_opt_grad
 
 import os
 import petab
+import amici
+import fides
 import pypesto
 import pypesto.petab
 import pypesto.optimize
@@ -71,26 +73,42 @@ def test_preeq_guesses():
     that steadystate guesses are written and checks that gradient is still
     correct with guesses set.
     """
-    model_name = "Isensee_JCB2018"
+    model_name = "Brannmark_JBC2010"
     importer = pypesto.petab.PetabImporter.from_yaml(
         os.path.join(folder_base, model_name, model_name + '.yaml'))
-    obj = importer.create_objective()
-    problem = importer.create_problem(obj)
+    problem = importer.create_problem()
+    obj = problem.objective
+    obj.amici_solver.setNewtonMaxSteps(0)
+    obj.amici_model.setSteadyStateSensitivityMode(
+        amici.SteadyStateSensitivityMode.simulationFSA
+    )
+    obj.amici_solver.setAbsoluteTolerance(1e-12)
+    obj.amici_solver.setRelativeTolerance(1e-12)
 
     # assert that initial guess is uninformative
-    assert problem.objective.steadystate_guesses['fval'] == np.inf
+    assert obj.steadystate_guesses['fval'] == np.inf
 
-    optimizer = pypesto.optimize.ScipyOptimizer(
-        'L-BFGS-B', options={'maxiter': 50})
+    optimizer = pypesto.optimize.FidesOptimizer(
+        options={fides.Options.MAXITER: 10}
+    )
+    options = pypesto.optimize.OptimizeOptions(
+        startpoint_resample=False
+    )
     result = pypesto.optimize.minimize(
         problem=problem, optimizer=optimizer, n_starts=1,
+        options=options
     )
 
-    assert problem.objective.steadystate_guesses['fval'] < np.inf
-    assert len(obj.steadystate_guesses['data']) == 1
+    assert obj.steadystate_guesses['fval'] < np.inf
+    assert len(obj.steadystate_guesses['data']) == len(obj.edatas)
+    # check that we have test a problem where plist is nontrivial
+    assert any(len(e.plist) != len(e.parameters) for e in obj.edatas)
 
     df = obj.check_grad(
-        result.optimize_result.list[0]['x'],
+        problem.get_reduced_vector(
+            result.optimize_result.list[0]['x'],
+            problem.x_free_indices
+        ),
         eps=1e-3,
         verbosity=0,
         mode=pypesto.objective.constants.MODE_FUN
@@ -101,4 +119,4 @@ def test_preeq_guesses():
 
     # assert that resetting works
     problem.objective.initialize()
-    assert problem.objective.steadystate_guesses['fval'] == np.inf
+    assert obj.steadystate_guesses['fval'] == np.inf
