@@ -634,7 +634,7 @@ def test_trim_history():
     history_options = pypesto.HistoryOptions(trace_record=True)
     result = pypesto.optimize.minimize(
         problem=pypesto_problem, optimizer=optimizer,
-        n_starts=2, history_options=history_options,
+        n_starts=1, history_options=history_options,
         engine=MultiProcessEngine()
     )
     fval_trace = result.optimize_result.list[0].history.get_fval_trace()
