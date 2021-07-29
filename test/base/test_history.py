@@ -630,7 +630,7 @@ def test_trim_history():
     problem = CRProblem()
     pypesto_problem = problem.get_problem()
 
-    optimizer = pypesto.optimize.FidesOptimizer(verbose=0)
+    optimizer = pypesto.optimize.ScipyOptimizer()
     history_options = pypesto.HistoryOptions(trace_record=True)
     result = pypesto.optimize.minimize(
         problem=pypesto_problem, optimizer=optimizer,
