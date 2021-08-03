@@ -24,13 +24,17 @@ def trace_wrap(f):
     index list, and reduces for integer `ix` the output to a single value.
     """
     def wrapped_f(
-            self, ix: Union[Sequence[int], int, None] = None
+            self, ix: Union[Sequence[int], int, None] = None,
+            trim: bool = False
     ) -> Union[Sequence[Union[float, MaybeArray]], Union[float, MaybeArray]]:
         # whether to reduce the output
         reduce = isinstance(ix, numbers.Integral)
         # default: full list
         if ix is None:
-            ix = np.arange(0, len(self), dtype=int)
+            if trim:
+                ix = self.get_trimmed_indices()
+            else:
+                ix = np.arange(0, len(self), dtype=int)
         # turn every input into an index list
         if reduce:
             ix = np.array([ix], dtype=int)
@@ -56,28 +60,21 @@ class HistoryOptions(dict):
         Flag indicating whether to record the trace of function calls.
         The trace_record_* flags only become effective if
         trace_record is True.
-        Default: False.
     trace_record_grad:
         Flag indicating whether to record the gradient in the trace.
-        Default: True.
     trace_record_hess:
         Flag indicating whether to record the Hessian in the trace.
-        Default: False.
     trace_record_res:
         Flag indicating whether to record the residual in
         the trace.
-        Default: False.
     trace_record_sres:
         Flag indicating whether to record the residual sensitivities in
         the trace.
-        Default: False.
     trace_record_chi2:
         Flag indicating whether to record the chi2 in the trace.
-        Default: True.
     trace_record_schi2:
         Flag indicating whether to record the chi2 sensitivities in the
         trace.
-        Default: True.
     trace_save_iter:
         After how many iterations to store the trace.
     storage_file:
@@ -237,7 +234,8 @@ class HistoryBase(abc.ABC):
         raise NotImplementedError()
 
     def get_x_trace(
-            self, ix: Union[int, Sequence[int], None] = None
+            self, ix: Union[int, Sequence[int], None] = None,
+            trim: bool = False
     ) -> Union[Sequence[np.ndarray], np.ndarray]:
         """Parameters.
 
@@ -247,7 +245,8 @@ class HistoryBase(abc.ABC):
         raise NotImplementedError()
 
     def get_fval_trace(
-            self, ix: Union[int, Sequence[int], None] = None
+            self, ix: Union[int, Sequence[int], None] = None,
+            trim: bool = False
     ) -> Union[Sequence[float], float]:
         """Function values.
 
@@ -257,7 +256,8 @@ class HistoryBase(abc.ABC):
         raise NotImplementedError()
 
     def get_grad_trace(
-            self, ix: Union[int, Sequence[int], None] = None
+            self, ix: Union[int, Sequence[int], None] = None,
+            trim: bool = False
     ) -> Union[Sequence[MaybeArray], MaybeArray]:
         """Gradients.
 
@@ -267,7 +267,8 @@ class HistoryBase(abc.ABC):
         raise NotImplementedError()
 
     def get_hess_trace(
-            self, ix: Union[int, Sequence[int], None] = None
+            self, ix: Union[int, Sequence[int], None] = None,
+            trim: bool = False
     ) -> Union[Sequence[MaybeArray], MaybeArray]:
         """Hessians.
 
@@ -277,7 +278,8 @@ class HistoryBase(abc.ABC):
         raise NotImplementedError()
 
     def get_res_trace(
-            self, ix: Union[int, Sequence[int], None] = None
+            self, ix: Union[int, Sequence[int], None] = None,
+            trim: bool = False
     ) -> Union[Sequence[MaybeArray], MaybeArray]:
         """Residuals.
 
@@ -287,7 +289,8 @@ class HistoryBase(abc.ABC):
         raise NotImplementedError()
 
     def get_sres_trace(
-            self, ix: Union[int, Sequence[int], None] = None
+            self, ix: Union[int, Sequence[int], None] = None,
+            trim: bool = False
     ) -> Union[Sequence[MaybeArray], MaybeArray]:
         """Residual sensitivities.
 
@@ -297,7 +300,8 @@ class HistoryBase(abc.ABC):
         raise NotImplementedError()
 
     def get_chi2_trace(
-            self, ix: Union[int, Sequence[int], None] = None
+            self, ix: Union[int, Sequence[int], None] = None,
+            trim: bool = False
     ) -> Union[Sequence[float], float]:
         """Chi2 values.
 
@@ -307,7 +311,8 @@ class HistoryBase(abc.ABC):
         raise NotImplementedError()
 
     def get_schi2_trace(
-            self, ix: Union[int, Sequence[int], None] = None
+            self, ix: Union[int, Sequence[int], None] = None,
+            trim: bool = False
     ) -> Union[Sequence[MaybeArray], MaybeArray]:
         """Chi2 sensitivities.
 
@@ -317,7 +322,8 @@ class HistoryBase(abc.ABC):
         raise NotImplementedError()
 
     def get_time_trace(
-            self, ix: Union[int, Sequence[int], None] = None
+            self, ix: Union[int, Sequence[int], None] = None,
+            trim: bool = False
     ) -> Union[Sequence[float], float]:
         """Cumulative execution times.
 
@@ -325,6 +331,14 @@ class HistoryBase(abc.ABC):
         values. If only a single value is requested, the list is flattened.
         """
         raise NotImplementedError()
+
+    def get_trimmed_indices(self):
+        """
+        Returns indices of the history to get a monotonically
+        decreasing history.
+        """
+        fval_trace = self.get_fval_trace()
+        return np.where(fval_trace <= np.fmin.accumulate(fval_trace))[0]
 
 
 class History(HistoryBase):
@@ -462,55 +476,64 @@ class MemoryHistory(History):
 
     @trace_wrap
     def get_x_trace(
-            self, ix: Union[int, Sequence[int], None] = None
+            self, ix: Union[int, Sequence[int], None] = None,
+            trim: bool = False
     ) -> Union[Sequence[np.ndarray], np.ndarray]:
         return [self._trace[X][i] for i in ix]
 
     @trace_wrap
     def get_fval_trace(
-            self, ix: Union[int, Sequence[int], None] = None
+            self, ix: Union[int, Sequence[int], None] = None,
+            trim: bool = False
     ) -> Union[Sequence[float], float]:
         return [self._trace[FVAL][i] for i in ix]
 
     @trace_wrap
     def get_grad_trace(
-            self, ix: Union[int, Sequence[int], None] = None
+            self, ix: Union[int, Sequence[int], None] = None,
+            trim: bool = False
     ) -> Union[Sequence[MaybeArray], MaybeArray]:
         return [self._trace[GRAD][i] for i in ix]
 
     @trace_wrap
     def get_hess_trace(
-            self, ix: Union[int, Sequence[int], None] = None
+            self, ix: Union[int, Sequence[int], None] = None,
+            trim: bool = False
     ) -> Union[Sequence[MaybeArray], MaybeArray]:
         return [self._trace[HESS][i] for i in ix]
 
     @trace_wrap
     def get_res_trace(
-            self, ix: Union[int, Sequence[int], None] = None
+            self, ix: Union[int, Sequence[int], None] = None,
+            trim: bool = False
     ) -> Union[Sequence[MaybeArray], MaybeArray]:
         return [self._trace[RES][i] for i in ix]
 
     @trace_wrap
     def get_sres_trace(
-            self, ix: Union[int, Sequence[int], None] = None
+            self, ix: Union[int, Sequence[int], None] = None,
+            trim: bool = False
     ) -> Union[Sequence[MaybeArray], MaybeArray]:
         return [self._trace[SRES][i] for i in ix]
 
     @trace_wrap
     def get_chi2_trace(
-            self, ix: Union[int, Sequence[int], None] = None
+            self, ix: Union[int, Sequence[int], None] = None,
+            trim: bool = False
     ) -> Union[Sequence[float], float]:
         return [self._trace[CHI2][i] for i in ix]
 
     @trace_wrap
     def get_schi2_trace(
-            self, ix: Union[int, Sequence[int], None] = None
+            self, ix: Union[int, Sequence[int], None] = None,
+            trim: bool = False
     ) -> Union[Sequence[MaybeArray], MaybeArray]:
         return [self._trace[SCHI2][i] for i in ix]
 
     @trace_wrap
     def get_time_trace(
-            self, ix: Union[int, Sequence[int], None] = None
+            self, ix: Union[int, Sequence[int], None] = None,
+            trim: bool = False
     ) -> Union[Sequence[float], float]:
         return [self._trace[TIME][i] for i in ix]
 
@@ -702,55 +725,64 @@ class CsvHistory(History):
 
     @trace_wrap
     def get_x_trace(
-            self, ix: Union[int, Sequence[int], None] = None
+            self, ix: Union[int, Sequence[int], None] = None,
+            trim: bool = False
     ) -> Union[Sequence[np.ndarray], np.ndarray]:
         return list(self._trace[X].values[ix])
 
     @trace_wrap
     def get_fval_trace(
-            self, ix: Union[int, Sequence[int], None]
+            self, ix: Union[int, Sequence[int], None],
+            trim: bool = False
     ) -> Union[Sequence[float], float]:
         return list(self._trace[(FVAL, np.nan)].values[ix])
 
     @trace_wrap
     def get_grad_trace(
-            self, ix: Union[int, Sequence[int], None] = None
+            self, ix: Union[int, Sequence[int], None] = None,
+            trim: bool = False
     ) -> Union[Sequence[MaybeArray], MaybeArray]:
         return list(self._trace[GRAD].values[ix])
 
     @trace_wrap
     def get_hess_trace(
-            self, ix: Union[int, Sequence[int], None] = None
+            self, ix: Union[int, Sequence[int], None] = None,
+            trim: bool = False
     ) -> Union[Sequence[MaybeArray], MaybeArray]:
         return list(self._trace[(HESS, np.nan)].values[ix])
 
     @trace_wrap
     def get_res_trace(
-            self, ix: Union[int, Sequence[int], None] = None
+            self, ix: Union[int, Sequence[int], None] = None,
+            trim: bool = False
     ) -> Union[Sequence[MaybeArray], MaybeArray]:
         return list(self._trace[(RES, np.nan)].values[ix])
 
     @trace_wrap
     def get_sres_trace(
-            self, ix: Union[int, Sequence[int], None] = None
+            self, ix: Union[int, Sequence[int], None] = None,
+            trim: bool = False
     ) -> Union[Sequence[MaybeArray], MaybeArray]:
         return list(self._trace[(SRES, np.nan)].values[ix])
 
     @trace_wrap
     def get_chi2_trace(
-            self, ix: Union[int, Sequence[int], None] = None
+            self, ix: Union[int, Sequence[int], None] = None,
+            trim: bool = False
     ) -> Union[Sequence[float], float]:
         return list(self._trace[(CHI2, np.nan)].values[ix])
 
     @trace_wrap
     def get_schi2_trace(
-            self, ix: Union[int, Sequence[int], None] = None
+            self, ix: Union[int, Sequence[int], None] = None,
+            trim: bool = False
     ) -> Union[Sequence[MaybeArray], MaybeArray]:
         return list(self._trace[SCHI2].values[ix])
 
     @trace_wrap
     def get_time_trace(
-            self, ix: Union[int, Sequence[int], None] = None
+            self, ix: Union[int, Sequence[int], None] = None,
+            trim: bool = False
     ) -> Union[Sequence[float], float]:
         return list(self._trace[(TIME, np.nan)].values[ix])
 
@@ -778,7 +810,7 @@ class Hdf5History(History):
         self._generate_hdf5_group()
 
     def __len__(self):
-        with h5py.File(self.file, 'a') as f:
+        with h5py.File(self.file, 'r') as f:
             return f[f'history/{self.id}/trace/'].attrs[
                         'n_iterations']
 
@@ -997,55 +1029,64 @@ class Hdf5History(History):
 
     @trace_wrap
     def get_x_trace(
-            self, ix: Union[int, Sequence[int], None] = None
+            self, ix: Union[int, Sequence[int], None] = None,
+            trim: bool = False
     ) -> Union[Sequence[np.ndarray], np.ndarray]:
         return self._get_hdf5_entries(X, ix)
 
     @trace_wrap
     def get_fval_trace(
-            self, ix: Union[int, Sequence[int], None] = None
+            self, ix: Union[int, Sequence[int], None] = None,
+            trim: bool = False
     ) -> Union[Sequence[float], float]:
         return self._get_hdf5_entries(FVAL, ix)
 
     @trace_wrap
     def get_grad_trace(
-            self, ix: Union[int, Sequence[int], None] = None
+            self, ix: Union[int, Sequence[int], None] = None,
+            trim: bool = False
     ) -> Union[Sequence[MaybeArray], MaybeArray]:
         return self._get_hdf5_entries(GRAD, ix)
 
     @trace_wrap
     def get_hess_trace(
-            self, ix: Union[int, Sequence[int], None] = None
+            self, ix: Union[int, Sequence[int], None] = None,
+            trim: bool = False
     ) -> Union[Sequence[MaybeArray], MaybeArray]:
         return self._get_hdf5_entries(HESS, ix)
 
     @trace_wrap
     def get_res_trace(
-            self, ix: Union[int, Sequence[int], None] = None
+            self, ix: Union[int, Sequence[int], None] = None,
+            trim: bool = False
     ) -> Union[Sequence[MaybeArray], MaybeArray]:
         return self._get_hdf5_entries(RES, ix)
 
     @trace_wrap
     def get_sres_trace(
-            self, ix: Union[int, Sequence[int], None] = None
+            self, ix: Union[int, Sequence[int], None] = None,
+            trim: bool = False
     ) -> Union[Sequence[MaybeArray], MaybeArray]:
         return self._get_hdf5_entries(SRES, ix)
 
     @trace_wrap
     def get_chi2_trace(
-            self, ix: Union[int, Sequence[int], None] = None
+            self, ix: Union[int, Sequence[int], None] = None,
+            trim: bool = False
     ) -> Union[Sequence[float], float]:
         return self._get_hdf5_entries(CHI2, ix)
 
     @trace_wrap
     def get_schi2_trace(
-            self, ix: Union[int, Sequence[int], None] = None
+            self, ix: Union[int, Sequence[int], None] = None,
+            trim: bool = False
     ) -> Union[Sequence[MaybeArray], MaybeArray]:
         return self._get_hdf5_entries(SCHI2, ix)
 
     @trace_wrap
     def get_time_trace(
-            self, ix: Union[int, Sequence[int], None] = None
+            self, ix: Union[int, Sequence[int], None] = None,
+            trim: bool = False
     ) -> Union[Sequence[float], float]:
         return self._get_hdf5_entries(TIME, ix)
 
