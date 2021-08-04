@@ -50,6 +50,24 @@ class PrePostProcessor:
         result = PrePostProcessor.as_ndarrays(result)
         return result
 
+    def reduce(
+            self, x: np.ndarray
+    ) -> np.ndarray:  # pylint: disable=R0201
+        """
+        Just return x without modifications.
+
+        Parameters
+        ----------
+        x:
+            Parameter vector for simulation.
+
+        Returns
+        -------
+        x:
+            Parameter vector for optimization.
+        """
+        return x
+
     @staticmethod
     def as_ndarrays(
             result: Dict
@@ -95,6 +113,14 @@ class FixedParametersProcessor(PrePostProcessor):
         x_full[self.x_fixed_indices] = self.x_fixed_vals
 
         return x_full
+
+    def reduce(self, x: np.ndarray) -> np.ndarray:
+        """Embed simulation vector to subsetted vector with optimization
+        parameters.
+        """
+        x = super().reduce(x)
+
+        return x[self.x_free_indices]
 
     def postprocess(self, result: Dict) -> Dict:
         """Constrain results to optimization parameter dimensions."""
