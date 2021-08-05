@@ -3,7 +3,7 @@ import copy
 import tempfile
 import os
 import abc
-from typing import Dict, Optional, Sequence, Tuple, Union, List
+from typing import Dict, Optional, Sequence, Tuple, Union
 from collections import OrderedDict
 
 from .base import ObjectiveBase
@@ -137,7 +137,7 @@ class AmiciObjective(ObjectiveBase):
         if x_ids is None:
             # use model parameter ids as ids
             x_ids = list(self.amici_model.getParameterIds())
-        self._x_ids = x_ids
+        self.x_ids = x_ids
 
         # mapping of parameters
         if parameter_mapping is None:
@@ -196,10 +196,6 @@ class AmiciObjective(ObjectiveBase):
         # Custom (condition-specific) timepoints. See the
         # `set_custom_timepoints` method for more information.
         self.custom_timepoints = None
-
-    @property
-    def x_ids(self) -> List[str]:
-        return list(self.pre_post_processor.reduce(np.asarray(self._x_ids)))
 
     def get_config(self) -> dict:
         info = super().get_config()
