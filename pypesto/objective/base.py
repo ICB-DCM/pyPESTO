@@ -45,7 +45,7 @@ class ObjectiveBase(abc.ABC):
 
     def __init__(
         self,
-        x_names: Sequence[str] = None,
+        x_names: Optional[Sequence[str]] = None,
     ):
 
         self._x_names = x_names
@@ -87,7 +87,10 @@ class ObjectiveBase(abc.ABC):
         return self.check_sensi_orders((1,), MODE_RES)
 
     @property
-    def x_names(self) -> List[str]:
+    def x_names(self) -> Union[List[str], None]:
+        if self._x_names is None:
+            return self._x_names
+
         return list(self.pre_post_processor.reduce(np.asarray(self._x_names)))
 
     def initialize(self):

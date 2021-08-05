@@ -3,7 +3,7 @@ import copy
 import tempfile
 import os
 import abc
-from typing import Dict, Optional, Sequence, Tuple, Union
+from typing import Dict, Optional, Sequence, Tuple, Union, List
 from collections import OrderedDict
 
 from .base import ObjectiveBase
@@ -55,15 +55,15 @@ class AmiciObjective(ObjectiveBase):
         amici_model: AmiciModel,
         amici_solver: AmiciSolver,
         edatas: Union[Sequence['amici.ExpData'], 'amici.ExpData'],
-        max_sensi_order: int = None,
-        x_ids: Sequence[str] = None,
-        x_names: Sequence[str] = None,
-        parameter_mapping: 'ParameterMapping' = None,
-        guess_steadystate: Optional[bool] = None,
-        n_threads: int = 1,
-        fim_for_hess: bool = True,
-        amici_object_builder: AmiciObjectBuilder = None,
-        calculator: AmiciCalculator = None,
+        max_sensi_order: Optional[int] = None,
+        x_ids: Optional[Sequence[str]] = None,
+        x_names: Optional[Sequence[str]] = None,
+        parameter_mapping: Optional['ParameterMapping'] = None,
+        guess_steadystate: Optional[Optional[bool]] = None,
+        n_threads: Optional[int] = 1,
+        fim_for_hess: Optional[bool] = True,
+        amici_object_builder: Optional[AmiciObjectBuilder] = None,
+        calculator: Optional[AmiciCalculator] = None,
     ):
         """
         Constructor.
@@ -137,7 +137,7 @@ class AmiciObjective(ObjectiveBase):
         if x_ids is None:
             # use model parameter ids as ids
             x_ids = list(self.amici_model.getParameterIds())
-        self.x_ids = x_ids
+        self._x_ids = x_ids
 
         # mapping of parameters
         if parameter_mapping is None:
@@ -196,6 +196,10 @@ class AmiciObjective(ObjectiveBase):
         # Custom (condition-specific) timepoints. See the
         # `set_custom_timepoints` method for more information.
         self.custom_timepoints = None
+
+    @property
+    def x_ids(self) -> List[str]:
+        return list(self.pre_post_processor.reduce(np.asarray(self._x_ids)))
 
     def get_config(self) -> dict:
         info = super().get_config()

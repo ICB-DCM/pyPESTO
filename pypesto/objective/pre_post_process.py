@@ -97,7 +97,7 @@ class FixedParametersProcessor(PrePostProcessor):
                  x_fixed_indices: Sequence[int],
                  x_fixed_vals: Sequence[float]):
         super().__init__()
-        self.dim_full = dim_full
+        self.dim_full: int = dim_full
         self.x_free_indices: np.ndarray = np.array(x_free_indices, dtype=int)
         self.x_fixed_indices: np.ndarray = np.array(x_fixed_indices, dtype=int)
         self.x_fixed_vals: np.ndarray = np.array(x_fixed_vals, dtype=float)
@@ -120,7 +120,10 @@ class FixedParametersProcessor(PrePostProcessor):
         """
         x = super().reduce(x)
 
-        return x[self.x_free_indices]
+        if x.size:
+            return x[self.x_free_indices]
+        else:
+            return x
 
     def postprocess(self, result: Dict) -> Dict:
         """Constrain results to optimization parameter dimensions."""
