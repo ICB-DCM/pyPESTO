@@ -12,27 +12,27 @@ Release notes
 * Finite Differences:
     * Adaptive finite differences (#671)
     * Add helper function for checking gradients of objectives (#690)
-    * Small bg fixes (#711, #714)
+    * Small bug fixes (#711, #714)
 
 * Storage:
     * Store representation of the objective (#669)
     * Minor fixes in HDF5 history (#679)
-    * HDF5reader for ensemble predictions (#681)
+    * HDF5 reader for ensemble predictions (#681)
     * Update storage demo jupyter notebook (#699)
-    * Trim trace to be monotonically decreasing (#705)
+    * Option to trim trace to be monotonically decreasing (#705)
 
 * General:
-    * Improved tests and bugfixes of validation intervals (#676, #685)
+    * Improved tests and bug fixes of validation intervals (#676, #685)
     * Add input file validation via PEtab linter for PEtab import (#678)
     * Remove default values from docstring (#680)
-    * minor fixes/improvements in ensembles (#687, #688)
+    * Minor fixes/improvements of ensembles (#687, #688)
     * Fix sorting of optimization values including `NaN` values (#691)
     * Specify axis limits for plotting (#693)
     * Minor fixes in visualization (#696)
     * Add installation option `all_optimizers` (#695)
     * Improve installation documentation (#689)
-    * Update `pysb` and `BNG` version on Git Hub Actions (#697)
-    * Bugfix in steady state guesses (#715)
+    * Update `pysb` and `BNG` version on GitHub Actions (#697)
+    * Bug fix in steady state guesses (#715)
 
 
 0.2.6 (2021-05-17)
