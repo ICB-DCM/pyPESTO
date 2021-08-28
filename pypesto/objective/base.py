@@ -91,7 +91,12 @@ class ObjectiveBase(abc.ABC):
         if self._x_names is None:
             return self._x_names
 
-        return list(self.pre_post_processor.reduce(np.asarray(self._x_names)))
+        # change from numpy array with `str_` dtype to list with `str` dtype
+        # to avoid issues when writing to hdf (and correctness of typehint)
+        return [
+            str(name) for name in
+            self.pre_post_processor.reduce(np.asarray(self._x_names))
+        ]
 
     def initialize(self):
         """Initialize the objective function.
