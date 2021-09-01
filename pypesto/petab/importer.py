@@ -575,7 +575,7 @@ class PetabImporter(AmiciObjectBuilder):
         dataframe is created, i.e. the measurement column label is adjusted.
         """
         return self.rdatas_to_measurement_df(rdatas, model).rename(
-            {petab.MEASUREMENT: petab.SIMULATION})
+            columns={petab.MEASUREMENT: petab.SIMULATION})
 
     def prediction_to_petab_measurement_df(
             self,
@@ -623,7 +623,7 @@ class PetabImporter(AmiciObjectBuilder):
         """
         return self.prediction_to_petab_measurement_df(
             prediction, predictor).rename(
-            {petab.MEASUREMENT: petab.SIMULATION})
+            columns={petab.MEASUREMENT: petab.SIMULATION})
 
 
 def _find_output_folder_name(
