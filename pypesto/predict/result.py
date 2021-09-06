@@ -65,6 +65,24 @@ class PredictionConditionResult:
         yield 'output', self.output
         yield 'output_sensi', self.output_sensi
 
+    def __eq__(self, other):
+        def to_bool(expr):
+            if isinstance(expr, bool):
+                return expr
+            return expr.any()
+
+        if to_bool(self.timepoints != other.timepoints):
+            return False
+        if to_bool(self.x_names != other.x_names):
+            return False
+        if to_bool(self.output_ids != other.output_ids):
+            return False
+        if to_bool(self.output != other.output):
+            return False
+        if to_bool(self.output_sensi != other.output_sensi):
+            return False
+        return True
+
 
 class PredictionResult:
     """
@@ -115,6 +133,18 @@ class PredictionResult:
         yield 'condition_ids', self.condition_ids
         yield 'comment', self.comment
         yield 'parameter_ids', parameter_ids
+
+    def __eq__(self, other):
+        if not isinstance(other, PredictionResult):
+            return False
+        if self.comment != other.comment:
+            return False
+        if self.condition_ids != other.condition_ids:
+            return False
+        for i_cond, _ in enumerate(self.conditions):
+            if self.conditions[i_cond] != other.conditions[i_cond]:
+                return False
+        return True
 
     def write_to_csv(self, output_file: str):
         """
@@ -202,7 +232,7 @@ class PredictionResult:
             base path in the h5 file
         """
         # check if the file exists and append to it in case it does
-        output_path = Path(output_file).with_suffix('.h5')
+        output_path = Path(output_file)
         filemode = 'w'
         if os.path.exists(output_path):
             filemode = 'r+'
