@@ -1,36 +1,28 @@
 from colorama import Fore
-import itertools
 import numpy as np
-import tempfile
-from typing import Dict, Iterable, List, Sequence, Set, Union
+from typing import Dict, Iterable, Sequence, Set, Union
 
 import petab
 from petab.C import NOMINAL_VALUE, ESTIMATE
+from petab_select import (
+    Model,
+)
 
 from ..objective import Objective
 from ..petab import PetabImporter
 from ..problem import Problem
 
-from .constants import (
-    ESTIMATE_SYMBOL_INTERNAL,
-    ESTIMATE_SYMBOL_UI,
-    HEADER_ROW,
-    MODEL_ID_COLUMN,
-    NOT_PARAMETERS,
-    PARAMETER_DEFINITIONS_START,
-    PARAMETER_VALUE_DELIMITER,
-    YAML_FILENAME,
-    YAML_FILENAME_COLUMN,
-)
-
 import logging
 logger = logging.getLogger(__name__)
 
 
-def row2problem(row: dict,
-                petab_problem: Union[petab.Problem, str] = None,
-                obj: Objective = None,
-                x_guess: Sequence[float] = None) -> Problem:
+# FIXME rename to e.g. `model2problem`
+def row2problem(
+    model: Model,
+    petab_problem: Union[petab.Problem, str] = None,
+    obj: Objective = None,
+    x_guess: Sequence[float] = None,
+) -> Problem:
     """
     Create a pypesto.Problem from a single, unambiguous model selection row.
     Optional petab.Problem and objective function can be provided to overwrite
@@ -39,9 +31,6 @@ def row2problem(row: dict,
 
     Parameters
     ----------
-    row:
-        A single, unambiguous model selection row.
-
     petab_problem:
         The petab problem for which to perform model selection.
 
@@ -59,45 +48,38 @@ def row2problem(row: dict,
     problem:
         The problem containing correctly fixed parameter values.
     """
-    # overwrite petab_problem by problem in case it refers to yaml
-    # TODO if yaml is specified in the model spec file, then a new problem
-    # might be created for each model row. This may be undesirable as the same
-    # model might be compiled for each model row with the same YAML value
-    if petab_problem is None and YAML_FILENAME in row.keys():
-        raise NotImplementedError()
-        # TODO untested
-        # YAML_FILENAME_COLUMN is not currently specified in the model
-        # specifications file (instead, the SBML .xml file is)
-        petab_problem = row[YAML_FILENAME]
-    if isinstance(petab_problem, str):
-        petab_problem = petab.Problem.from_yaml(petab_problem)
+    # # overwrite petab_problem by problem in case it refers to yaml
+    # # TODO if yaml is specified in the model spec file, then a new problem
+    # # might be created for each model row. This may be undesirable as the
+    # # same model may be compiled for each model row with the same YAML value
+    # if petab_problem is None and YAML_FILENAME in row.keys():
+    #     raise NotImplementedError()
+    #     # TODO untested
+    #     # YAML_FILENAME_COLUMN is not currently specified in the model
+    #     # specifications file (instead, the SBML .xml file is)
+    #     petab_problem = row[YAML_FILENAME]
+    # if isinstance(petab_problem, str):
+    #     petab_problem = petab.Problem.from_yaml(petab_problem)
 
-    # # drop row entries not referring to parameters
-    # # TODO switch to just YAML_FILENAME
-    # for key in [YAML_FILENAME, SBML_FILENAME, MODEL_ID]:
-    #     if key in row.keys():
-    #         row.pop(key)
-    row_parameters = {k: row[k] for k in row if k not in NOT_PARAMETERS}
+    #  # drop row entries not referring to parameters
+    #  # TODO switch to just YAML_FILENAME
+    #  for key in [YAML_FILENAME, SBML_FILENAME, MODEL_ID]:
+    #      if key in row.keys():
+    #          row.pop(key)
+    # row_parameters = {k: row[k] for k in row if k not in NOT_PARAMETERS}
 
-    # for par_id, par_val in row.items():
-    for par_id, par_val in row_parameters.items():
+    for par_id, par_val in model.parameters.items():
         if par_id not in petab_problem.x_ids:
             logger.info('%sWarning: parameter %s is not defined '
                         'in PETab model. It will be ignored.',
                         Fore.YELLOW,
                         par_id)
-            # logger.info(Fore.YELLOW + f'Warning: parameter {par_id} is not '
-            #             'defined in PETab model. It will be ignored.')
             continue
         if not np.isnan(par_val):
             petab_problem.parameter_df[ESTIMATE].loc[par_id] = 0
             petab_problem.parameter_df[NOMINAL_VALUE].loc[par_id] = par_val
-            # petab_problem.parameter_df.lowerBound.loc[par_id] = float("NaN")
-            # petab_problem.parameter_df.upperBound.loc[par_id] = float("NaN")
         else:
             petab_problem.parameter_df[ESTIMATE].loc[par_id] = 1
-            # petab_problem.parameter_df.nominalValue.loc[par_id] = float(
-            # "NaN")
 
     # Any parameter values in `x_guess` for parameters that are not estimated
     # should be filtered out and replaced with
@@ -112,8 +94,8 @@ def row2problem(row: dict,
             if petab_problem.parameter_df[ESTIMATE].loc[par_id] == 1:
                 filtered_x_guess.append(par_val)
             else:
-                if par_id in row_parameters:
-                    filtered_x_guess.append(row_parameters[par_id])
+                if par_id in model.parameters:
+                    filtered_x_guess.append(model.parameters[par_id])
                 else:
                     filtered_x_guess.append(
                         petab_problem.parameter_df[NOMINAL_VALUE].loc[par_id])
@@ -128,120 +110,6 @@ def row2problem(row: dict,
     pypesto_problem = importer.create_problem(obj, x_guesses=x_guesses)
 
     return pypesto_problem
-
-
-def _replace_estimate_symbol(parameter_definition: List[str]) -> List:
-    """
-    Converts the user-friendly symbol for estimated parameters, to the internal
-    symbol.
-
-    Arguments
-    ---------
-    parameter_definition:
-        A definition for a single parameter from a row of the model
-        specification file. The definition should be split into a list by
-        PARAMETER_VALUE_DELIMITER.
-
-    Returns
-    -------
-    The parameter definition, with the user-friendly estimate symbol
-    substituted for the internal symbol.
-    """
-    return [ESTIMATE_SYMBOL_INTERNAL if p == ESTIMATE_SYMBOL_UI else p
-            for p in parameter_definition]
-
-
-def unpack_file(file_name: str):
-    """
-    Unpacks a model specification file into a new temporary file, which is
-    returned.
-
-    Arguments
-    ---------
-    file_name:
-        The name of the file to be unpacked.
-
-    Returns
-    -------
-    A temporary file object, which is the unpacked file.
-
-    TODO
-        - Consider alternatives to `_{n}` suffix for model `modelId`
-        - How should the selected model be reported to the user? Remove the
-          `_{n}` suffix and report the original `modelId` alongside the
-          selected parameters? Generate a set of PEtab files with the
-          chosen SBML file and the parameters specified in a parameter or
-          condition file?
-        - Don't "unpack" file if it is already in the unpacked format
-        - Sort file after unpacking
-        - Remove duplicates?
-    """
-    expanded_models_file = tempfile.NamedTemporaryFile(mode='r+',
-                                                       delete=False)
-    with open(file_name) as fh:
-        with open(expanded_models_file.name, 'w') as ms_f:
-            # could replace `else` condition with ms_f.readline() here, and
-            # remove `if` statement completely
-            for line_index, line in enumerate(fh):
-                # Skip empty/whitespace-only lines
-                if not line.strip():
-                    continue
-                if line_index != HEADER_ROW:
-                    columns = line2row(line, unpacked=False)
-                    parameter_definitions = [
-                        _replace_estimate_symbol(
-                            definition.split(PARAMETER_VALUE_DELIMITER))
-                        for definition in columns[
-                            PARAMETER_DEFINITIONS_START:
-                        ]
-                    ]
-                    for index, selection in enumerate(itertools.product(
-                            *parameter_definitions
-                    )):
-                        # TODO change MODEL_ID_COLUMN and YAML_ID_COLUMN
-                        # to just MODEL_ID and YAML_FILENAME?
-                        ms_f.write(
-                            '\t'.join([
-                                columns[MODEL_ID_COLUMN]+f'_{index}',
-                                columns[YAML_FILENAME_COLUMN],
-                                *selection
-                            ]) + '\n'
-                        )
-                else:
-                    ms_f.write(line)
-    return expanded_models_file
-
-
-def line2row(line: str,
-             delimiter: str = '\t',
-             unpacked: bool = True,
-             convert_parameters_to_float: bool = True) -> List:
-    """
-    Convert a line from the model specifications file, to a list of column
-    values. No header information is returned.
-
-    Arguments
-    ---------
-    line:
-        A line from a file with delimiter-separated columns.
-
-    delimiter:
-        The string that separates columns in the file.
-
-    unpacked:
-        If False, parameter values are not converted to float.
-
-    Returns
-    -------
-    A list of column values. Parameter values are converted to type `float`.
-    """
-    columns = line.strip().split(delimiter)
-    metadata = columns[:PARAMETER_DEFINITIONS_START]
-    if unpacked and convert_parameters_to_float:
-        parameters = [float(p) for p in columns[PARAMETER_DEFINITIONS_START:]]
-    else:
-        parameters = columns[PARAMETER_DEFINITIONS_START:]
-    return metadata + parameters
 
 
 def get_x_fixed_estimated(

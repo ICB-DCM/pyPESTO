@@ -1,9 +1,9 @@
-modelId	YAML	k1	k2	k3
+model_id	petab_yaml	k1	k2	k3
 M1_0	example_modelSelection.yaml	0	0	0
-M1_1	example_modelSelection.yaml	0.2	0.1	-
-M1_2	example_modelSelection.yaml	0.2	-	0
-M1_3	example_modelSelection.yaml	-	0.1	0
-M1_4	example_modelSelection.yaml	0.2	-	-
-M1_5	example_modelSelection.yaml	-	0.1	-
-M1_6	example_modelSelection.yaml	-	-	0
-M1_7	example_modelSelection.yaml	-	-	-
+M1_1	example_modelSelection.yaml	0.2	0.1	estimate
+M1_2	example_modelSelection.yaml	0.2	estimate	0
+M1_3	example_modelSelection.yaml	estimate	0.1	0
+M1_4	example_modelSelection.yaml	0.2	estimate	estimate
+M1_5	example_modelSelection.yaml	estimate	0.1	estimate
+M1_6	example_modelSelection.yaml	estimate	estimate	0
+M1_7	example_modelSelection.yaml	estimate	estimate	estimate

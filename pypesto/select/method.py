@@ -1,11 +1,15 @@
 import abc
-from typing import Dict, Union
+import logging
+from typing import Dict
 
 import petab
+from petab_select import (
+    Model,
+)
 
 from .problem import ModelSelectionProblem
 
-import logging
+
 logger = logging.getLogger(__name__)
 
 
@@ -33,9 +37,11 @@ class ModelSelectorMethod(abc.ABC):
     minimize_options: Dict
 
     # the calling child class should have self.criterion defined
-    def compare(self,
-                old: ModelSelectionProblem,
-                new: ModelSelectionProblem) -> bool:
+    def compare(
+        self,
+        old: ModelSelectionProblem,
+        new: ModelSelectionProblem,
+    ) -> bool:
         """
         Compares models by criterion.
 
@@ -101,60 +107,61 @@ class ModelSelectorMethod(abc.ABC):
 
     def new_model_problem(
             self,
-            row: Dict[str, Union[str, float]],
-            petab_problem: petab.problem = None,
+            model: Model,
             valid: bool = True,
             autorun: bool = True,
-            compared_model_id: str = None,
-            compared_model_dict: str = None,
+            model0: Model = None,
+            startpoint_latest_mle: bool = True,
     ) -> ModelSelectionProblem:
         """
         Creates a ModelSelectionProblem.
 
         Arguments
         _________
-        row:
-            A dictionary describing the model, in the format returned by
-            `ModelSelector.model_generator()`.
-        petab_problem:
-            The PEtab problem of the model.
+        model:
+            The model description.
         valid:
             Whether the model should be considered a valid model. If it is not
             valid, it will not be optimized.
         autorun:
             Whether the model should be optimized upon creation.
-        compared_model_id:
-            The model that new model was compared to. Used to pass the maximum
-            likelihood estimate parameters from model `compared_model_id` to
-            the current model.
+        model0:
+            THe model that the new model `model` was compared to. Used to pass
+            the maximum likelihood estimate parameters from model
+            `compared_model_id` to the current model.
+        startpoint_latest_mle:
+            Whether one start should be initialized at the MLE of the previous
+            model `model0`.
         """
-        if petab_problem is None:
-            petab_problem = self.petab_problem
-
-        if compared_model_id in self.selection_history:
-            # TODO reconsider, might be a bad idea. also removing parameters
-            # for x_guess that are not estimated in the new model (as is done)
-            # in `row2problem` might also be a bad idea. Both if these would
-            # result in x_guess not actually being the latest MLE.
-            # if compared_model_dict is None:
-            #     raise KeyError('For `startpoint_latest_mle`, the information'
-            #                    ' of the model that corresponds to the MLE '
-            #                    'must be provided. This is to ensure only '
-            #                    'estimated parameter values are used in the '
-            #                    'startpoint, and all other values are taken '
-            #                    'from the PEtab parameter table or the model '
-            #                    'specification file.')
-            x_guess = self.selection_history[compared_model_id]['MLE']
+        # if compared_model_id in self.selection_history:  FIXME
+        #     TODO reconsider, might be a bad idea. also removing parameters
+        #     for x_guess that are not estimated in the new model (as is done)
+        #     in `row2problem` might also be a bad idea. Both if these would
+        #     result in x_guess not actually being the latest MLE.
+        #     if compared_model_dict is None:
+        #         raise KeyError('For `startpoint_latest_mle`, the information'
+        #                        ' of the model that corresponds to the MLE '
+        #                        'must be provided. This is to ensure only '
+        #                        'estimated parameter values are used in the '
+        #                        'startpoint, and all other values are taken '
+        #                        'from the PEtab parameter table or the model '
+        #                        'specification file.')
+        if (
+            model0 is not None and
+            model0.model_id in self.selection_history and
+            startpoint_latest_mle
+        ):
+            x_guess = self.selection_history[model0.model_id]['MLE']
         else:
             x_guess = None
 
         return ModelSelectionProblem(
-            row,
-            self.petab_problem,
+            model,
             valid=valid,
             autorun=autorun,
             x_guess=x_guess,
-            minimize_options=self.minimize_options
+            minimize_options=self.minimize_options,
+            objective_customizer=self.objective_customizer,
         )
 
     # possibly erroneous now that `ModelSelector.model_generator()` can exclude

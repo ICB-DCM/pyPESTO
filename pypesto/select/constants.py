@@ -17,4 +17,7 @@ ESTIMATE_SYMBOL_UI = '-'
 # actual internal symbol is float('nan'). Equality to this symbol should be
 # checked with a function like `math.isnan()` (not ` == float('nan')`).
 ESTIMATE_SYMBOL_INTERNAL = 'nan'
+# FIXME refactor out, replace with `None`
 INITIAL_VIRTUAL_MODEL = 'PYPESTO_INITIAL_MODEL'
+
+DUMMY_PATH = '.'

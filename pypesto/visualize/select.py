@@ -3,8 +3,11 @@ import matplotlib.pyplot as plt
 import networkx as nx
 from typing import Dict, List, Tuple
 
+from petab_select import (
+    AIC,
+)
 from pypesto.select.constants import (
-    COMPARED_MODEL_ID,
+    INITIAL_VIRTUAL_MODEL,
     MODEL_ID,
 )
 
@@ -12,9 +15,10 @@ from pypesto.select.constants import (
 RELATIVE_LABEL_FONTSIZE = -2
 
 
+# FIXME supply the problem to automatically detect the correct criterion?
 def plot_selected_models(
         selected_models: List[Dict],
-        criterion: str = 'AIC',
+        criterion: str = AIC,
         relative: str = True,
         fz: int = 14,
         size: Tuple[float, float] = (5, 4)) -> matplotlib.axes.Axes:
@@ -43,7 +47,7 @@ def plot_selected_models(
         The plot axes.
     """
     if relative:
-        zero = selected_models[-1][criterion]
+        zero = selected_models[-1]['model'].get_criterion(criterion)
     else:
         zero = 0
 
@@ -52,8 +56,10 @@ def plot_selected_models(
     linewidth = 3
 
     model_ids = [m[MODEL_ID] for m in selected_models]
-    criterion_values = [m[criterion] - zero for m in selected_models]
-    # compared_model_ids = [m[f'compared_{MODEL_ID}'] for m in selected_models]
+    criterion_values = [
+        m['model'].get_criterion(criterion) - zero
+        for m in selected_models
+    ]
 
     ax.plot(
         model_ids,
@@ -80,7 +86,7 @@ def plot_selected_models(
 
 
 def plot_history_digraph(selection_history: Dict,
-                         criterion: str = 'AIC',
+                         criterion: str = AIC,
                          optimal_distance: float = 1,
                          relative: bool = True,
                          options: Dict = None):
@@ -100,19 +106,29 @@ def plot_history_digraph(selection_history: Dict,
 
     zero = 0
     if relative:
-        criterions = [v[criterion] for k, v in selection_history.items()]
+        criterions = [
+            v['model'].get_criterion(criterion)
+            for k, v in selection_history.items()
+        ]
         zero = min(criterions)
 
     G = nx.DiGraph()
     edges = []
-    for node, node_data in selection_history.items():
-        from_ = node_data[COMPARED_MODEL_ID]
-        # may only not be the case for
-        # COMPARED_MODEL_ID == INITIAL_VIRTUAL_MODEL
-        if node_data[COMPARED_MODEL_ID] in selection_history:
-            compared_model = selection_history[node_data[COMPARED_MODEL_ID]]
-            from_ += '\n' + f'{compared_model[criterion] - zero:.2f}'
-        to = node + '\n' + f'{node_data[criterion] - zero:.2f}'
+    for _node, node_data in selection_history.items():
+        model = node_data['model']
+        model0 = node_data['model0']
+        if model0 is not None:
+            from_ = model0.model_id
+            # may only not be the case for
+            # COMPARED_MODEL_ID == INITIAL_VIRTUAL_MODEL
+            if model0.model_id in selection_history:
+                from_ += '\n' + f'{model0.get_criterion(criterion) - zero:.2f}'
+        else:
+            from_ = INITIAL_VIRTUAL_MODEL
+        to = (
+            model.model_id + '\n' +
+            f'{model.get_criterion(criterion) - zero:.2f}'
+        )
         edges.append((from_, to))
 
     # edges = [(node_data['compared_modelId'], node)

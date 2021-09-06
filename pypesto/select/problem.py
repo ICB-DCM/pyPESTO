@@ -1,23 +1,31 @@
-from typing import Dict, List, Set, Union
+from typing import Callable, Dict, List, Optional, Set
 
 import petab
 from petab.C import ESTIMATE
+from petab_select import (
+    calculate_aic,
+    calculate_bic,
+    calculate_aicc,
+    Model,
 
+    AIC,
+    AICC,
+    BIC,
+)
+
+from ..objective import ObjectiveBase
 from ..optimize import minimize
 from ..result import Result
 
-from .constants import MODEL_ID
 from .misc import (
     row2problem,
 )
 
-from .criteria import (
-    calculate_aic,
-    calculate_bic,
-    calculate_aicc,
-)
+OBJECTIVE_CUSTOMIZER_TYPE = Callable[[ObjectiveBase], None]
 
 
+# FIXME rename to ModelProblem? or something else? currently might be confused
+#       with `petab_select.Problem`
 class ModelSelectionProblem(object):
     """
     Handles the creation, estimation, and evaluation of a model. Here, a model
@@ -27,24 +35,19 @@ class ModelSelectionProblem(object):
     """
     def __init__(
             self,
-            row: Dict[str, Union[str, float]],
-            petab_problem: petab.problem,
+            model: Model,
             valid: bool = True,
             autorun: bool = True,
             x_guess: List[float] = None,
             x_fixed_estimated: Set[str] = None,
             minimize_options: Dict = None,
+            objective_customizer: Optional[OBJECTIVE_CUSTOMIZER_TYPE] = None,
     ):
         """
         Arguments
         ---------
-        row:
-            A single row from the model specification file, in the format that
-            is returned by `ModelSelector.model_generator()`.
-
-        petab_problem:
-            A petab problem that includes the parameters defined in the model
-            specification file.
+        model:
+            The model description.
 
         valid:
             If `False`, the model will not be tested.
@@ -61,10 +64,16 @@ class ModelSelectionProblem(object):
             the preference is implemented as comparison of different models
             with `ModelSelectionMethod.compare()`, unlike normal estimation,
             which occurs within the same model with `pypesto.minimize`.
+
+        minimize_options:
+            Keyword argument options that will be passed on to
+            `pypesto.optimize.minimize`.
+
+        objective_customizer:
+            A method that takes
         TODO: constraints
         """
-        self.row = row
-        self.petab_problem = petab_problem
+        self.model = model
         self.valid = valid
 
         # TODO may not actually be necessary
@@ -79,7 +88,7 @@ class ModelSelectionProblem(object):
         else:
             self.minimize_options = minimize_options
 
-        self.model_id = self.row[MODEL_ID]
+        self.model_id = self.model.model_id
 
         # Criteria
         self._aic = None
@@ -87,6 +96,8 @@ class ModelSelectionProblem(object):
         self._bic = None
 
         if self.valid:
+            self.petab_problem = \
+                petab.Problem.from_yaml(str(model.petab_yaml))
             # TODO warning/error if x_fixed_estimated is not a parameter ID in
             # the PEtab parameter table. A warning is currently produced in
             # `row2problem` above.
@@ -97,17 +108,21 @@ class ModelSelectionProblem(object):
                 self.petab_problem.parameter_df.query(f'{ESTIMATE} == 1').index
             )
             self.n_estimated = len(self.estimated)
-            self.n_measurements = len(petab_problem.measurement_df)
+            self.n_measurements = len(self.petab_problem.measurement_df)
 
-            self.pypesto_problem = row2problem(row,
-                                               petab_problem,
+            self.pypesto_problem = row2problem(self.model,
+                                               self.petab_problem,
                                                x_guess=x_guess)
+
+            if objective_customizer is not None:
+                objective_customizer(self.pypesto_problem.objective)
 
             self.minimize_result = None
 
             # TODO autorun may be unnecessary now that the `minimize_options`
             # argument is implemented.
             if autorun:
+                # TODO rename `minimize_options` to `minimize_kwargs`.
                 if minimize_options:
                     self.set_result(minimize(self.pypesto_problem,
                                              **minimize_options))
@@ -121,6 +136,34 @@ class ModelSelectionProblem(object):
         # that were estimated in this model.
         self.optimized_model = self.minimize_result.optimize_result.list[0]
 
+        self.model.estimated_parameters = {
+            id: value
+            for index, (id, value) in enumerate(dict(zip(
+                self.pypesto_problem.x_names,
+                self.optimized_model.x
+            )).items())
+            if index in self.pypesto_problem.x_free_indices
+        }
+
+    def get_criterion(self, id: str):
+        """Get a criterion value for the model.
+
+        Arguments:
+            id:
+                The ID of the criterion (e.g. `'AIC'` or
+                `petab_select.constants.AIC`).
+        """
+        if id == AIC:
+            return self.aic
+        elif id == AICC:
+            return self.aicc
+        elif id == BIC:
+            return self.bic
+        else:
+            raise NotImplementedError(
+                f'Unknown criterion: {id}'
+            )
+
     @property
     def aic(self):
         # TODO check naming conflicts, rename to lowercase
@@ -129,6 +172,7 @@ class ModelSelectionProblem(object):
                 self.n_estimated,
                 self.optimized_model.fval,
             )
+            self.model.set_criterion(AIC, self._aic)
         return self._aic
 
     @property
@@ -146,6 +190,7 @@ class ModelSelectionProblem(object):
                 self.n_measurements,
                 n_priors,
             )
+            self.model.set_criterion(AICC, self._aicc)
         return self._aicc
 
     @property
@@ -162,4 +207,10 @@ class ModelSelectionProblem(object):
                 self.n_measurements,
                 n_priors,
             )
+            self.model.set_criterion(BIC, self._bic)
         return self._bic
+
+    def compute_all_criteria(self):
+        self.aic
+        self.aicc
+        self.bic
