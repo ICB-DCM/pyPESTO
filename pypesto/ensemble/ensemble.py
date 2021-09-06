@@ -395,6 +395,8 @@ class Ensemble:
         """
         x_vectors = []
         vector_tags = []
+        x_names = [result.problem.x_names[i]
+                   for i in result.problem.x_free_indices]
 
         for start in result.optimize_result.list:
             # add the parameters from the next start as long as we
@@ -422,10 +424,10 @@ class Ensemble:
 
         x_vectors = np.stack(x_vectors, axis=1)
         return Ensemble(x_vectors=x_vectors,
-                        x_names=result.problem.x_names,
+                        x_names=x_names,
                         vector_tags=vector_tags,
-                        lower_bound=result.problem.lb_full,
-                        upper_bound=result.problem.ub_full,
+                        lower_bound=result.problem.lb,
+                        upper_bound=result.problem.ub,
                         **kwargs)
 
     @staticmethod
@@ -471,9 +473,10 @@ class Ensemble:
                                                         **kwargs)
         x_vectors = []
         vector_tags = []
-        x_names = result.problem.x_names
-        lb = result.problem.lb_full
-        ub = result.problem.ub_full
+        x_names = [result.problem.x_names[i]
+                   for i in result.problem.x_free_indices]
+        lb = result.problem.lb
+        ub = result.problem.ub
 
         # calculate the number of starts whose final nllh is below cutoff
         n_starts = sum(start['fval'] <= cutoff
@@ -786,7 +789,7 @@ def entries_per_start(fval_traces: List['np.ndarray'],
 
     # if all possible indices can be included, return
     if (n_per_start < max_per_start).all() and sum(n_per_start) < max_size:
-        return ens_ind
+        return n_per_start
 
     # trimm down starts that exceed the limit:
     n_per_start = [min(n, max_per_start) for n in n_per_start]

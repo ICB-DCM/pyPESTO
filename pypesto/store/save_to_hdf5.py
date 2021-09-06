@@ -6,7 +6,7 @@ from numbers import Integral
 import h5py
 import numpy as np
 
-from .hdf5 import write_array, write_float_array
+from .hdf5 import (write_array, write_float_array)
 from ..result import Result, SampleResult
 
 logger = logging.getLogger(__name__)
@@ -74,7 +74,8 @@ class ProblemHDF5Writer:
                              and not hasattr(type(problem), a)]
 
             problem_grp = f.create_group("problem")
-            # problem_grp.attrs['config'] = objective.get_config()
+            # save the configuration
+            f['problem/config'] = str(problem.objective.get_config())
 
             for problem_attr in attrs_to_save:
                 value = getattr(problem, problem_attr)
