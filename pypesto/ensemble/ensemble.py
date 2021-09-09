@@ -5,6 +5,7 @@ import pandas as pd
 from typing import Sequence, Tuple, Callable, Dict, List, Optional
 
 from .. import Result
+from ..objective import AmiciObjective
 from ..engine import (
     Engine,
     MultiProcessEngine,
@@ -23,7 +24,8 @@ from .constants import (PREDICTOR, PREDICTION_ID, PREDICTION_RESULTS,
                         NVECTORS, VECTOR_TAGS, PREDICTIONS, MODE_FUN,
                         EnsembleType, ENSEMBLE_TYPE, MEAN, MEDIAN,
                         STANDARD_DEVIATION, SUMMARY, LOWER_BOUND,
-                        UPPER_BOUND, get_percentile_label, HISTORY)
+                        UPPER_BOUND, get_percentile_label, HISTORY,
+                        WEIGHTED_SIGMA)
 
 logger = logging.getLogger(__name__)
 
@@ -78,7 +80,8 @@ class EnsemblePrediction:
         self.prediction_arrays = None
         self.prediction_summary = {MEAN: None,
                                    STANDARD_DEVIATION: None,
-                                   MEDIAN: None}
+                                   MEDIAN: None,
+                                   WEIGHTED_SIGMA: None}
 
     def __iter__(self):
         """
@@ -140,7 +143,8 @@ class EnsemblePrediction:
 
     def compute_summary(self,
                         percentiles_list: Sequence[int] = (5, 20, 80, 95),
-                        weighting: bool = False
+                        weighting: bool = False,
+                        compute_weighted_sigma: bool = False
                         ) -> Dict:
         """
         Compute the mean, the median, the standard deviation and possibly
@@ -153,6 +157,9 @@ class EnsemblePrediction:
             List or tuple of percent numbers for the percentiles
         weighting:
             Whether weights should be used for trajectory.
+        compute_chi2:
+            Whether weighted standard deviation of the ensemble mean trajectory
+            should be computed. Defaults to False.
 
         Returns
         -------
@@ -219,7 +226,7 @@ class EnsemblePrediction:
 
         def _stack_sigmas(ic: int):
             """
-            Group weights for different parameter vectors of one ensemble
+            Group sigmas for different parameter vectors of one ensemble
             together, if they belong to the same simulation condition, and
             stacks them in one array
             """
@@ -232,7 +239,8 @@ class EnsemblePrediction:
             # stack into one numpy array
             return np.stack(output_sigmay_list, axis=-1)
 
-        def _compute_summary(tmp_array, percentiles_list, weights):
+        def _compute_summary(tmp_array, percentiles_list, weights,
+                             tmp_sigmas=None):
             """
             Computes means, standard deviation, median, and requested
             percentiles for a set of stacked simulations
@@ -243,13 +251,16 @@ class EnsemblePrediction:
                 (tmp_array.T-summary[MEAN].T).T**2,
                 axis=-1, weights=weights))
             summary[MEDIAN] = np.median(tmp_array, axis=-1)
+            summary[WEIGHTED_SIGMA] = np.sqrt(np.average(
+                tmp_sigmas**2, axis=-1, weights=weights))
             for perc in percentiles_list:
                 summary[get_percentile_label(perc)] = \
                     np.percentile(tmp_array, perc, axis=-1)
             return summary
 
         # preallocate for results
-        cond_lists = {MEAN: [], STANDARD_DEVIATION: [], MEDIAN: []}
+        cond_lists = {MEAN: [], STANDARD_DEVIATION: [],
+                      MEDIAN: [], WEIGHTED_SIGMA: []}
         for perc in percentiles_list:
             cond_lists[get_percentile_label(perc)] = []
 
@@ -264,12 +275,16 @@ class EnsemblePrediction:
             tmp_weights = np.ones(tmp_output.shape[-1])
             if weighting:
                 tmp_weights = np.exp(_stack_weights(i_cond))
+            tmp_sigmas = None
+            if compute_weighted_sigma:
+                tmp_sigmas = _stack_sigmas(i_cond)
 
             # handle outputs
             if tmp_output is not None:
                 output_summary = _compute_summary(tmp_output,
                                                   percentiles_list,
-                                                  tmp_weights)
+                                                  tmp_weights,
+                                                  tmp_sigmas)
             else:
                 output_summary = {i_key: None for i_key in cond_lists.keys()}
 
@@ -302,6 +317,37 @@ class EnsemblePrediction:
 
         # also return the object
         return self.prediction_summary
+
+    def compute_chi2(self, amici_objective: AmiciObjective):
+        if (self.prediction_summary[MEAN] is None) or (
+                self.prediction_summary[WEIGHTED_SIGMA] is None):
+            try:
+                self.compute_summary(
+                        weighting=True,
+                        compute_weighted_sigma=True)
+            except TypeError:
+                raise ValueError('Computing a summary failed.')
+        n_conditions = len(self.prediction_results[0].conditions)
+        chi_2 = []
+        for i_cond in range(n_conditions):
+            # get measurements and put into right form
+            y_meas = amici_objective.edatas[i_cond].getObservedData()
+            y_meas = np.array(y_meas)
+            # bring into shape (n_t,n_y)
+            y_meas = y_meas.reshape(
+                (int(len(y_meas)/amici_objective.edatas[0].nytrue()),
+                 amici_objective.edatas[0].nytrue())
+            )
+            mean_traj = \
+                self.prediction_summary[MEAN].conditions[i_cond].output
+            weighted_sigmas = \
+                self.prediction_summary[
+                    WEIGHTED_SIGMA].conditions[i_cond].output
+            if y_meas.shape != mean_traj.shape:
+                raise ValueError('Shape of trajectory and shape '
+                                 'of measurements does not match.')
+            chi_2.append(np.nansum(((y_meas-mean_traj)/weighted_sigmas)**2))
+        return np.sum(chi_2)
 
 
 class Ensemble:
