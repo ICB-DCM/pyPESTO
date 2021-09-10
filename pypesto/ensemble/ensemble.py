@@ -251,8 +251,9 @@ class EnsemblePrediction:
                 (tmp_array.T-summary[MEAN].T).T**2,
                 axis=-1, weights=weights))
             summary[MEDIAN] = np.median(tmp_array, axis=-1)
-            summary[WEIGHTED_SIGMA] = np.sqrt(np.average(
-                tmp_sigmas**2, axis=-1, weights=weights))
+            if tmp_sigmas is not None:
+                summary[WEIGHTED_SIGMA] = np.sqrt(np.average(
+                    tmp_sigmas**2, axis=-1, weights=weights))
             for perc in percentiles_list:
                 summary[get_percentile_label(perc)] = \
                     np.percentile(tmp_array, perc, axis=-1)
