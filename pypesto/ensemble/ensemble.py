@@ -261,7 +261,9 @@ class EnsemblePrediction:
 
         # preallocate for results
         cond_lists = {MEAN: [], STANDARD_DEVIATION: [],
-                      MEDIAN: [], WEIGHTED_SIGMA: []}
+                      MEDIAN: []}
+        if compute_weighted_sigma:
+            cond_lists[WEIGHTED_SIGMA] = []
         for perc in percentiles_list:
             cond_lists[get_percentile_label(perc)] = []
 
