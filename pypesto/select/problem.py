@@ -14,7 +14,7 @@ from petab_select import (
 )
 
 from ..objective import ObjectiveBase
-from ..optimize import minimize
+from ..optimize import minimize, OptimizerResult
 from ..result import Result
 
 from .misc import (
@@ -22,6 +22,7 @@ from .misc import (
 )
 
 OBJECTIVE_CUSTOMIZER_TYPE = Callable[[ObjectiveBase], None]
+POSTPROCESSOR_TYPE = Callable[[ModelSelectionProblem], None]
 
 
 # FIXME rename to ModelProblem? or something else? currently might be confused
@@ -42,6 +43,7 @@ class ModelSelectionProblem(object):
             x_fixed_estimated: Set[str] = None,
             minimize_options: Dict = None,
             objective_customizer: Optional[OBJECTIVE_CUSTOMIZER_TYPE] = None,
+            postprocessor: Optional[POSTPROCESSOR_TYPE] = None,
     ):
         """
         Arguments
@@ -71,6 +73,13 @@ class ModelSelectionProblem(object):
 
         objective_customizer:
             A method that takes
+
+        postprocessor:
+            A method that takes a `ModelSelectionProblem` as input. For
+            example, this can be a function that generates a waterfall plot.
+            This postprocessor is applied at the end of the
+            `ModelSelectionProblem.set_result` method.
+
         TODO: constraints
         """
         self.model = model
@@ -89,6 +98,8 @@ class ModelSelectionProblem(object):
             self.minimize_options = minimize_options
 
         self.model_id = self.model.model_id
+
+        self.postprocessor = postprocessor
 
         # Criteria
         self._aic = None
@@ -122,12 +133,21 @@ class ModelSelectionProblem(object):
             # TODO autorun may be unnecessary now that the `minimize_options`
             # argument is implemented.
             if autorun:
+                # If there are no estimated parameters, evaluate the objective
+                # function and generate a fake optimization result.
+                if not self.pypesto_problem.x_free_indices:
+                    self.set_result(
+                        create_fake_pypesto_result_from_fval(
+                            self.pypesto_problem.objective([])
+                        )
+                    )
                 # TODO rename `minimize_options` to `minimize_kwargs`.
-                if minimize_options:
+                elif minimize_options:
                     self.set_result(minimize(self.pypesto_problem,
                                              **minimize_options))
                 else:
                     self.set_result(minimize(self.pypesto_problem))
+
 
     def set_result(self, result: Result):
         self.minimize_result = result
@@ -144,6 +164,9 @@ class ModelSelectionProblem(object):
             )).items())
             if index in self.pypesto_problem.x_free_indices
         }
+
+        if self.postprocessor is not None:
+            self.postprocessor(self)
 
     def get_criterion(self, id: str):
         """Get a criterion value for the model.
@@ -214,3 +237,33 @@ class ModelSelectionProblem(object):
         self.aic
         self.aicc
         self.bic
+
+
+def create_fake_pypesto_result_from_fval(
+    fval: float,
+) -> Result:
+    result = Result()
+
+    optimizer_result = OptimizerResult(
+        id='fake_result_for_problem_with_no_estimated_parameters',
+        x=[],
+        fval=fval,
+        grad=None,
+        hess=None,
+        res=None,
+        sres=None,
+        n_fval=1,
+        n_grad=0,
+        n_hess=0,
+        n_res=0,
+        n_sres=0,
+        x0=[],
+        fval0=fval,
+        history=None,
+        exitflag=0,
+        time=0.1,
+        message='Fake result for problem with no estimated parameters.',
+    )
+
+    result.optimize_result.append(optimizer_result)
+    return result
