@@ -60,3 +60,4 @@ from .dimension_reduction import (projection_scatter_umap,
                                   projection_scatter_pca,
                                   ensemble_crosstab_scatter_lowlevel,
                                   ensemble_scatter_lowlevel)
+from .model_fit import visualize_optimized_model_fit
