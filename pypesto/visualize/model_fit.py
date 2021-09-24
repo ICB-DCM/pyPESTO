@@ -1,7 +1,11 @@
+"""
+This file contains a function to visualize the model fit after an optimization.
+Currently only for PEtab problems.
+"""
 import petab
 from amici.petab_simulate import simulate_petab
 import amici.petab_import as petab_import
-from petab.visualize import plot_with_vis_spec
+from petab.visualize import plot_problem
 from typing import Union, Sequence
 from ..result import Result
 from amici.petab_objective import rdatas_to_simulation_df
@@ -12,10 +16,12 @@ def visualize_optimized_model_fit(petab_problem: petab.Problem,
                                   **kwargs
                                   ):
     """
-    Function calls the petab.visualize file of the petab_problem and
-    visualizes the fit of the optimized parameter. Possible additional
+    Visualize the optimized model fit of a PEtab problem.
+    Function calls the PEtab visualization file of the petab_problem and
+    visualizes the fit of the optimized parameter. Common additional
     argument is `subplot_dir` to specify the directory each subplot is
-    saved to.
+    saved to. Further keyword arguments are delegated to
+    petab.visualize.plot_with_vis_spec, see there for more information.
 
     Parameters
     ----------
@@ -44,10 +50,8 @@ def visualize_optimized_model_fit(petab_problem: petab.Problem,
                                      petab_problem.measurement_df)
 
     # function to call, to plot data and simulations
-    ax = plot_with_vis_spec(vis_spec_df=petab_problem.visualization_df,
-                            conditions_df=petab_problem.condition_df,
-                            measurements_df=petab_problem.measurement_df,
-                            simulations_df=sim_df,
-                            **kwargs
-                            )
+    ax = plot_problem(petab_problem=petab_problem,
+                      simulations_df=sim_df,
+                      **kwargs
+                      )
     return ax
