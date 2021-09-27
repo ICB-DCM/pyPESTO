@@ -43,8 +43,7 @@ class EnsemblePrediction:
             prediction_id: str = None,
             prediction_results: Sequence[PredictionResult] = None,
             lower_bound: Sequence[np.ndarray] = None,
-            upper_bound: Sequence[np.ndarray] = None,
-            x_vectors: np.ndarray = None):
+            upper_bound: Sequence[np.ndarray] = None):
         """
         Constructor.
 
@@ -157,7 +156,7 @@ class EnsemblePrediction:
             List or tuple of percent numbers for the percentiles
         weighting:
             Whether weights should be used for trajectory.
-        compute_chi2:
+        compute_weighted_sigma:
             Whether weighted standard deviation of the ensemble mean trajectory
             should be computed. Defaults to False.
 
@@ -322,6 +321,19 @@ class EnsemblePrediction:
         return self.prediction_summary
 
     def compute_chi2(self, amici_objective: AmiciObjective):
+        """
+        Compute the chi^2 error of the weighted mean trajectory.
+
+        Parameters
+        ----------
+        amici_objective:
+            The objective function of the model,
+            the parameter ensemble was created from.
+
+        Returns
+        -------
+        The chi^2 error.
+        """
         if (self.prediction_summary[MEAN] is None) or (
                 self.prediction_summary[WEIGHTED_SIGMA] is None):
             try:
@@ -338,8 +350,8 @@ class EnsemblePrediction:
             y_meas = np.array(y_meas)
             # bring into shape (n_t,n_y)
             y_meas = y_meas.reshape(
-                (int(len(y_meas)/amici_objective.edatas[0].nytrue()),
-                 amici_objective.edatas[0].nytrue())
+                amici_objective.edatas[0].nt(),
+                amici_objective.edatas[0].nytrue()
             )
             mean_traj = \
                 self.prediction_summary[MEAN].conditions[i_cond].output
