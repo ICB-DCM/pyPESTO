@@ -173,8 +173,8 @@ class EnsemblePrediction:
         # if weightings shall be used, check whether weights are there
         if weighting:
             if not self.prediction_results[0].conditions[0].output_weight:
-                logger.warning('WARNING: There are no weights in the '
-                               'prediction results. Will use 1 as weight.')
+                raise ValueError('There are no weights in the '
+                                 'prediction results.')
 
         n_conditions = len(self.prediction_results[0].conditions)
 
