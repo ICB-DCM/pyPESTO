@@ -922,10 +922,7 @@ def test_visualize_optimized_model_fit():
     # create problem
     problem = importer.create_problem()
 
-    optimizer = optimize.FidesOptimizer()
-
     result = optimize.minimize(problem=problem,
-                               optimizer=optimizer,
                                n_starts=1)
 
     # test call of visualize_optimized_model_fit
