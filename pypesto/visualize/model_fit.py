@@ -1,5 +1,6 @@
 """
-This file contains a function to visualize the model fit after an optimization.
+Visualization of the model fit after optimization.
+
 Currently only for PEtab problems.
 """
 import petab
@@ -26,14 +27,14 @@ def visualize_optimized_model_fit(petab_problem: petab.Problem,
     Parameters
     ----------
     petab_problem:
-        The petab_problem that was optimized.
+        The :py:class:`petab.Problem` that was optimized.
     result:
         The result object from optimization.
 
     Returns
     -------
     ax: Axis object of the created plot.
-    None: In case subplots are save to file
+    None: In case subplots are saved to file
     """
     problem_parameters = \
         dict(zip(petab_problem.parameter_df.index,
