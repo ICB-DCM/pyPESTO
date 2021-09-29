@@ -14,6 +14,7 @@ import pypesto.profile as profile
 import pypesto.sample as sample
 import pypesto.visualize as visualize
 import pypesto.ensemble as ensemble
+from pypesto.visualize.model_fit import visualize_optimized_model_fit
 from functools import wraps
 from typing import Sequence
 
@@ -928,5 +929,5 @@ def test_visualize_optimized_model_fit():
                                n_starts=1)
 
     # test call of visualize_optimized_model_fit
-    visualize.visualize_optimized_model_fit(petab_problem=petab_problem,
-                                            result=result)
+    visualize_optimized_model_fit(petab_problem=petab_problem,
+                                  result=result)
