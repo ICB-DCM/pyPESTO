@@ -208,11 +208,19 @@ class EnsemblePrediction:
             # stack into one numpy array
             return np.stack(output_sensi_list, axis=-1)
 
-        def _stack_weights(ic: int):
+        def _stack_weights(ic: int) -> np.ndarray:
             """
             Group weights for different parameter vectors of one ensemble
             together, if they belong to the same simulation condition, and
             stacks them in one array
+
+            Parameters
+            ----------
+            ic: the condition number.
+
+            Returns
+            -------
+            The stacked weights.
             """
             # Were outputs computed
             if self.prediction_results[0].conditions[ic].output_weight is None:
@@ -276,6 +284,8 @@ class EnsemblePrediction:
             tmp_output_sensi = _stack_outputs_sensi(i_cond)
             tmp_weights = np.ones(tmp_output.shape[-1])
             if weighting:
+                # take exp() to get the likelihood values,
+                # as the weights would be the log likelihoods.
                 tmp_weights = np.exp(_stack_weights(i_cond))
             tmp_sigmas = None
             if compute_weighted_sigma:
