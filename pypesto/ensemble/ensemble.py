@@ -462,6 +462,9 @@ class Ensemble:
             result: Result,
             remove_burn_in: bool = True,
             chain_slice: slice = None,
+            x_names: Sequence[str] = None,
+            lower_bound: np.ndarray = None,
+            upper_bound: np.ndarray = None,
             **kwargs,
     ):
         """Construct an ensemble from a sample.
@@ -475,14 +478,25 @@ class Ensemble:
             "burn-in".
         chain_slice:
             Subset the chain with a slice. Any "burn-in" removal occurs first.
+        x_names:
+            Names or identifiers of the parameters
+        lower_bound:
+            array of potential lower bounds for the parameters
+        upper_bound:
+            array of potential upper bounds for the parameters
 
         Returns
         -------
         The ensemble.
         """
         x_vectors = result.sample_result.trace_x[0]
-        x_names = [result.problem.x_names[i]
-                   for i in result.problem.x_free_indices]
+        if x_names is None:
+            x_names = [result.problem.x_names[i]
+                       for i in result.problem.x_free_indices]
+        if lower_bound is None:
+            lower_bound = result.problem.lb
+        if upper_bound is None:
+            upper_bound = result.problem.ub
         if remove_burn_in:
             if result.sample_result.burn_in is None:
                 geweke_test(result)
@@ -493,8 +507,8 @@ class Ensemble:
         x_vectors = x_vectors.T
         return Ensemble(x_vectors=x_vectors,
                         x_names=x_names,
-                        lower_bound=result.problem.lb,
-                        upper_bound=result.problem.ub,
+                        lower_bound=lower_bound,
+                        upper_bound=upper_bound,
                         **kwargs)
 
     @staticmethod
