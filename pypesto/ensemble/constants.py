@@ -32,6 +32,7 @@ MEDIAN = 'median'
 STANDARD_DEVIATION = 'std'
 PERCENTILE = 'percentile'
 SUMMARY = 'summary'
+WEIGHTED_SIGMA = 'weighted_sigma'
 
 X_NAMES = 'x_names'
 NX = 'n_x'
