@@ -481,6 +481,8 @@ class Ensemble:
         The ensemble.
         """
         x_vectors = result.sample_result.trace_x[0]
+        x_names = [result.problem.x_names[i]
+                   for i in result.problem.x_free_indices]
         if remove_burn_in:
             if result.sample_result.burn_in is None:
                 geweke_test(result)
@@ -489,7 +491,11 @@ class Ensemble:
         if chain_slice is not None:
             x_vectors = x_vectors[chain_slice]
         x_vectors = x_vectors.T
-        return Ensemble(x_vectors, **kwargs)
+        return Ensemble(x_vectors=x_vectors,
+                        x_names=x_names,
+                        lower_bound=result.problem.lb,
+                        upper_bound=result.problem.ub,
+                        **kwargs)
 
     @staticmethod
     def from_optimization_endpoints(
