@@ -185,11 +185,11 @@ def waterfall_lowlevel(fvals, scale_y='log10', offset_y=0., ax=None,
     if scale_y == 'log10':
         if np.log10(y_max) - np.log10(y_min) < 1.:
             y_mean = 0.5 * (np.log10(y_min) + np.log10(y_max))
-            ax.set_ylim((10. ** (y_mean - 0.5), 10. ** (y_mean + 0.5)))
+            ax.set_ylim(10. ** (y_mean - 0.5), 10. ** (y_mean + 0.5))
     else:
         if y_max - y_min < 1.:
             y_mean = 0.5 * (y_min + y_max)
-            ax.set_ylim((y_mean - 0.5, y_mean + 0.5))
+            ax.set_ylim(y_mean - 0.5, y_mean + 0.5)
 
     # labels
     ax.set_xlabel('Ordered optimizer run')
