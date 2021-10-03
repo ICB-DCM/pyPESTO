@@ -3,7 +3,7 @@ import pandas as pd
 import copy
 import logging
 import abc
-from typing import Dict, Iterable, Sequence, Tuple, Union
+from typing import Dict, Iterable, Optional, Sequence, Tuple, Union
 
 from .constants import MODE_FUN, MODE_RES, FVAL, GRAD, HESS, RES, SRES
 from .history import HistoryBase
@@ -55,8 +55,8 @@ class ObjectiveBase(abc.ABC):
 
     def __deepcopy__(self, memodict=None) -> 'ObjectiveBase':
         other = type(self)()  # maintain type for derived classes
-        for attr in self.__dict__:
-            other.__dict__[attr] = copy.deepcopy(self.__dict__[attr])
+        for attr, val in self.__dict__.items():
+            other.__dict__[attr] = copy.deepcopy(val)
         return other
 
     # The following has_ properties can be used to find out what values
@@ -370,7 +370,7 @@ class ObjectiveBase(abc.ABC):
     def check_grad_multi_eps(
         self,
         *args,
-        multi_eps: Iterable = None,
+        multi_eps: Optional[Iterable] = None,
         label: str = 'rel_err',
         **kwargs,
     ):
@@ -390,6 +390,12 @@ class ObjectiveBase(abc.ABC):
             Valid options are the column labels of the dataframe returned by
             the `ObjectiveBase.check_grad` method.
         """
+        if 'eps' in kwargs:
+            raise KeyError(
+                'Please use the `multi_eps` (not the `eps`) argument with '
+                '`check_grad_multi_eps` to specify step sizes.'
+            )
+
         if multi_eps is None:
             multi_eps = {1e-1, 1e-3, 1e-5, 1e-7, 1e-9}
 
@@ -579,3 +585,62 @@ class ObjectiveBase(abc.ABC):
             logger.info(result)
 
         return result
+
+    def check_gradients_match_finite_differences(
+        self,
+        *args,
+        x: np.ndarray = None,
+        x_free: Sequence[int] = None,
+        rtol: float = 1e-2,
+        atol: float = 1e-3,
+        mode: str = None,
+        multi_eps=None,
+        **kwargs,
+    ) -> bool:
+        """Check if gradients match finite differences (FDs)
+
+        Parameters
+        ----------
+        rtol: relative error tolerance
+        x: The parameters for which to evaluate the gradient
+        x_free: Indices for which to compute gradients
+        rtol: relative error tolerance
+        atol: absolute error tolerance
+        mode: function values or residuals
+        multi_eps: multiple test step width for FDs
+
+        Returns
+        -------
+        bool
+            Indicates whether gradients match (True) FDs or not (False)
+        """
+        par = np.asarray(x)
+        free_indices = par[x_free]
+        dfs = []
+        modes = []
+
+        if mode is None:
+            modes = [MODE_FUN, MODE_RES]
+        else:
+            modes = [mode]
+
+        if multi_eps is None:
+            multi_eps = np.array([10**(-i) for i in range(3, 9)])
+
+        for mode in modes:
+            try:
+                dfs.append(self.check_grad_multi_eps(
+                            free_indices, *args, **kwargs,
+                            mode=mode, multi_eps=multi_eps))
+            except (RuntimeError, ValueError):
+                # Might happen in case PEtab problem not well defined or
+                # fails for specified tolerances in forward sensitivities
+                return False
+
+        return all([
+            any([
+                np.all((mode_df.rel_err.values < rtol) |
+                       (mode_df.abs_err.values < atol)),
+            ])
+            for mode_df in dfs
+        ])
