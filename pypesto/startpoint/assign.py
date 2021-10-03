@@ -1,3 +1,5 @@
+"""Assign startpoints for a given problem."""
+
 import numpy as np
 
 from .base import StartpointMethod
@@ -11,7 +13,7 @@ def assign_startpoints(
     problem: Problem,
     startpoint_resample: bool,
 ) -> np.ndarray:
-    """Generate start points.
+    """Assign startpoints for a given problem.
 
     This is the main method called e.g. by `pypesto.optimize.minimize`.
 

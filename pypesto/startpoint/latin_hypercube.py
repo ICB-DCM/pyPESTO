@@ -1,3 +1,5 @@
+"""Latin hypercube sampling."""
+
 import numpy as np
 
 from .util import rescale

@@ -1,3 +1,5 @@
+"""Startpoint base classes."""
+
 import numpy as np
 from abc import abstractmethod
 from typing import Callable
