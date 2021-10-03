@@ -9,7 +9,7 @@ Startpoint methods can be implemented as derived from
 Handling in pypesto is then wrapped in
 :func:`pypesto.startpoint.assign_startpoints`, handling e.g.
 non-requirement of startpoints e.g. for global methods, and re-sampling of
-non-final points.
+non-finite points.
 """
 
 from .base import StartpointMethod, FunctionStartpoints
