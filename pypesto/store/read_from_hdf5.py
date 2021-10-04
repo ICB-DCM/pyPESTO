@@ -348,7 +348,7 @@ def load_objective_config(filename: str):
 
     Parameters
     ----------
-    f:
+    filename:
         The name of the file in which the information are stored.
 
     Returns:
@@ -366,6 +366,15 @@ def optimization_result_from_history(filename: str):
     """
     Converts a saved hdf5 History to an optimization result.
     Used for interrupted optimization runs.
+
+    Parameters
+    ----------
+    filename:
+        The name of the file in which the information are stored.
+
+    Returns:
+        A result object in which the optimization result is constructed from
+        history. But missing "Time, Message and Exitflag" keys.
     """
 
     result = Result()
