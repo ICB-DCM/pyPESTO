@@ -74,6 +74,7 @@ def optimizer(request):
     return request.param
 
 
+@pytest.mark.flaky(reruns=5)
 def test_optimization(problem, optimizer):
     """Test optimization using various optimizers and objective modes."""
     library, method = optimizer
