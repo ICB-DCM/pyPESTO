@@ -1069,8 +1069,9 @@ class FidesOptimizer(Optimizer):
 
         opt = fides.Optimizer(
             fun=problem.objective, funargs=args, ub=problem.ub, lb=problem.lb,
-            verbose=self.verbose,
-            hessian_update=self.hessian_update, options=self.options
+            verbose=self.verbose, hessian_update=self.hessian_update,
+            options=self.options, resfun=self.hessian_update.requires_resfun if
+            self.hessian_update is not None else False
         )
 
         try:
