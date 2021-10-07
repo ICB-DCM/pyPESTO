@@ -45,8 +45,10 @@ except ImportError:
 
 try:
     import fides
+    from fides.hessian_approximation import HessianApproximation
 except ImportError:
     fides = None
+    HessianApproximation = None
 
 
 EXITFLAG_LOADED_FROM_FILE = -99
@@ -997,7 +999,7 @@ class FidesOptimizer(Optimizer):
 
     def __init__(
             self,
-            hessian_update: Optional['fides.HessianApproximation'] = 'Hybrid',
+            hessian_update: Optional['HessianApproximation'] = 'Hybrid',
             options: Optional[Dict] = None,
             verbose: Optional[int] = logging.INFO
     ):
@@ -1014,12 +1016,12 @@ class FidesOptimizer(Optimizer):
         super().__init__()
 
         if hessian_update == 'Hybrid':
-            hessian_update = fides.HybridUpdate()
+            hessian_update = fides.HybridFixed()
 
         if hessian_update is not None and \
-                not isinstance(hessian_update, fides.HessianApproximation):
-            raise ValueError('Incompatible type for hessian update, '
-                             'must be fides.HessianApproximation, '
+                not isinstance(hessian_update, HessianApproximation):
+            raise ValueError('Incompatible type for hessian update. '
+                             'Must be a HessianApproximation, '
                              f'was {type(hessian_update)}.')
 
         if options is None:
