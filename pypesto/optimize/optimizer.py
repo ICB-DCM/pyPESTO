@@ -10,7 +10,7 @@ from ..objective import (
     HistoryOptions, HistoryBase, OptimizerHistory, CsvHistory, Hdf5History,
 )
 from ..problem import Problem
-from ..objective.constants import MODE_FUN, FVAL, GRAD
+from ..objective.constants import MODE_FUN, MODE_RES, FVAL, GRAD
 from .result import OptimizerResult
 
 try:
@@ -1046,15 +1046,17 @@ class FidesOptimizer(Optimizer):
                 "install fides via `pip install fides`."
             )
 
-        args = {'mode': MODE_FUN}
+        args = {'mode': MODE_RES if self.hessian_update.requires_resfun else
+                MODE_FUN}
 
         if not problem.objective.has_grad:
             raise ValueError('Fides cannot be applied to problems '
                              'with objectives that do not support '
                              'gradient evaluation.')
 
-        if self.hessian_update is None or isinstance(self.hessian_update,
-                                                     fides.HybridUpdate):
+        if self.hessian_update is not None and \
+                self.hessian_update.requires_hess and \
+                not self.hessian_update.requires_resfun:
             if not problem.objective.has_hess:
                 raise ValueError('Specified hessian update scheme cannot be '
                                  'used with objectives that do not support '
