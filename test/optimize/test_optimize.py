@@ -63,11 +63,9 @@ optimizers = [
         nlopt.GN_DIRECT_L_RAND_NOSCAL, nlopt.AUGLAG, nlopt.AUGLAG_EQ
     ]],
     *[('fides', solver) for solver in itt.product(
-        [None, fides.SR1(), fides.BFGS(), fides.DFP(), fides.PSB(),
-         fides.BG(), fides.BB(), fides.HybridFixed(), fides.SSM(),
+        [None, fides.BFGS(), fides.HybridFixed(), fides.SSM(),
          fides.TSSM(), fides.FX(), fides.GNSBFGS()],
-        [fides.SubSpaceDim.FULL, fides.SubSpaceDim.TWO,
-         fides.SubSpaceDim.STEIHAUG]
+        [fides.SubSpaceDim.TWO, fides.SubSpaceDim.STEIHAUG]
     )]
 ]
 
