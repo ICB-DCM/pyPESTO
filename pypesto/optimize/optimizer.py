@@ -597,7 +597,7 @@ class PyswarmOptimizer(Optimizer):
         ub = problem.ub
         if pyswarm is None:
             raise ImportError(
-                "This optimizer requires an installation of pyswarm.You can "
+                "This optimizer requires an installation of pyswarm. You can "
                 "install pyswarm via `pip install pyswarm."
             )
 
@@ -1048,17 +1048,19 @@ class FidesOptimizer(Optimizer):
                 "install fides via `pip install fides`."
             )
 
-        args = {'mode': MODE_RES if self.hessian_update.requires_resfun else
-                MODE_FUN}
+        resfun = self.hessian_update.requires_resfun if self.hessian_update \
+            is not None else False
+
+        args = {'mode': MODE_RES if resfun else MODE_FUN}
 
         if not problem.objective.has_grad:
             raise ValueError('Fides cannot be applied to problems '
                              'with objectives that do not support '
                              'gradient evaluation.')
 
-        if self.hessian_update is not None and \
-                self.hessian_update.requires_hess and \
-                not self.hessian_update.requires_resfun:
+        if self.hessian_update is None or (
+            self.hessian_update.requires_hess and not resfun
+        ):
             if not problem.objective.has_hess:
                 raise ValueError('Specified hessian update scheme cannot be '
                                  'used with objectives that do not support '
@@ -1070,8 +1072,7 @@ class FidesOptimizer(Optimizer):
         opt = fides.Optimizer(
             fun=problem.objective, funargs=args, ub=problem.ub, lb=problem.lb,
             verbose=self.verbose, hessian_update=self.hessian_update,
-            options=self.options, resfun=self.hessian_update.requires_resfun if
-            self.hessian_update is not None else False
+            options=self.options, resfun=resfun
         )
 
         try:
