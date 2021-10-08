@@ -40,11 +40,14 @@ def visualize_optimized_model_fit(petab_problem: petab.Problem,
         dict(zip(petab_problem.parameter_df.index,
                  result.optimize_result.list[0]['x']))
 
-    amici_model = petab_import.import_petab_problem(petab_problem)
+    amici_model = petab_import.import_petab_problem(
+        petab_problem,
+        model_output_dir=kwargs.pop('model_output_dir'))
 
     res = simulate_petab(petab_problem, amici_model=amici_model,
                          scaled_parameters=True,
-                         problem_parameters=problem_parameters)
+                         problem_parameters=problem_parameters,
+                         solver=kwargs.pop('amici_solver', None))
 
     sim_df = rdatas_to_simulation_df(res["rdatas"],
                                      amici_model,
