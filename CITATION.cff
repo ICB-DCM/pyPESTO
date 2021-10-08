@@ -1,0 +1,76 @@
+authors:
+   -
+      family-names: "Schälte"
+      given-names: "Yannik"
+      orcid: "https://orcid.org/0000-0003-1293-820X"
+
+   -
+      family-names: "Fröhlich"
+      given-names: "Fabian"
+      orcid: "https://orcid.org/0000-0002-5360-4292"
+   -
+      family-names: "Stapor"
+      given-names: "Paul"
+      orcid: "https://orcid.org/0000-0002-7567-3985"
+   -
+      family-names: "Vanhoefer"
+      given-names: "Jakob"
+      orcid: "https://orcid.org/0000-0002-3451-1701"
+   -
+      family-names: "Weindl"
+      given-names: "Daniel"
+      orcid: "https://orcid.org/0000-0001-9963-6057"
+   -
+      family-names: "Jost"
+      given-names: "Paul Jonas"
+      orcid: "https://orcid.org/0000-0001-7613-6244"
+   -
+      family-names: "Wang"
+      given-names: "Dantong"
+      orcid: "https://orcid.org/0000-0002-3277-5033"
+   -
+      family-names: "Lakrisenko"
+      given-names: "Polina"
+      orcid: "https://orcid.org/0000-0002-7626-8420"
+   -
+      family-names: "Raimúndez"
+      given-names: "Elba"
+      orcid: "https://orcid.org/0000-0002-2790-6668"
+   -
+      family-names: "Pathirana"
+      given-names: "Dilan"
+      orcid: "https://orcid.org/0000-0001-7000-2659"
+   -
+      family-names: "Schmiester"
+      given-names: "Leonard"
+      orcid: "https://orcid.org/0000-0001-7946-3232"
+   -
+      family-names: "Städter"
+      given-names: "Philipp"
+      orcid: "https://orcid.org/0000-0002-4586-6604"
+   -
+      family-names: "Contento"
+      given-names: "Lorenzo"
+      orcid: "https://orcid.org/0000-0002-7901-2172"
+   -
+      family-names: "Merkt"
+      given-names: "Simon"
+      orcid: "https://orcid.org/0000-0002-8017-4494"
+   -
+      family-names: "Dudkin"
+      given-names: "Erika"
+      orcid: "https://orcid.org/0000-0002-9649-0029"
+   -
+      family-names: "Meyer"
+      given-names: "Kristian"
+   -
+      family-names: "Grein"
+      given-names: "Stephan"
+      orcid: "https://orcid.org/0000-0001-9524-6633"
+title: "pyPESTO - Parameter EStimation TOolbox for python"
+message: "If you use this software, please cite both the article from preferred-citation and the software itself."
+url: "https://github.com/ICB-DCM/pyPESTO"
+doi: 10.5281/zenodo.2553546
+version: 0.2.7
+date-released: 2021-03-08
+cff-version: 1.2.0
