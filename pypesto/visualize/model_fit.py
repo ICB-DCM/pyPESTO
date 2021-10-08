@@ -42,7 +42,7 @@ def visualize_optimized_model_fit(petab_problem: petab.Problem,
 
     amici_model = petab_import.import_petab_problem(
         petab_problem,
-        model_output_dir=kwargs.pop('model_output_dir'))
+        model_output_dir=kwargs.pop('model_output_dir', None))
 
     res = simulate_petab(petab_problem, amici_model=amici_model,
                          scaled_parameters=True,
