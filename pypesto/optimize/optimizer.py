@@ -1009,8 +1009,9 @@ class FidesOptimizer(Optimizer):
         options:
             Optimizer options.
         hessian_update:
-            Hessian update strategy. If this is None, Hessian (approximation)
-            computed by problem.objective will be used.
+            Hessian update strategy. If this is None, a hybrid approximation
+            that switches from the problem.objective provided Hessian (
+            approximation) to a BFGS approximation will be used.
         """
 
         super().__init__()
