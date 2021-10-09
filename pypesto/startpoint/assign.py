@@ -59,7 +59,6 @@ def assign_startpoints(
         lb=problem.lb_init,
         ub=problem.ub_init,
         objective=problem.objective,
-        x_guesses=problem.x_guesses,
     )
 
     # put together
