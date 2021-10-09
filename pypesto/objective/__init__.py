@@ -6,7 +6,7 @@ Objective
 from .base import ObjectiveBase
 from .function import Objective
 from .aggregated import AggregatedObjective
-from .finite_difference import FD
+from .finite_difference import FD, FDDelta
 from .amici_calculator import AmiciCalculator
 from .amici import AmiciObjective, AmiciObjectBuilder
 from .priors import NegLogPriors, NegLogParameterPriors

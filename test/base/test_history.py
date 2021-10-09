@@ -620,3 +620,30 @@ def test_hdf5_history_mp():
                             np.testing.assert_array_equal(
                                 mem_entry_trace[iteration],
                                 hdf5_entry_trace[iteration])
+
+
+def test_trim_history():
+    """
+    Test whether the history gets correctly trimmed to be monotonically
+    decreasing.
+    """
+    problem = CRProblem()
+    pypesto_problem = problem.get_problem()
+
+    optimizer = pypesto.optimize.ScipyOptimizer()
+    history_options = pypesto.HistoryOptions(trace_record=True)
+    result = pypesto.optimize.minimize(
+        problem=pypesto_problem, optimizer=optimizer,
+        n_starts=1, history_options=history_options,
+        engine=MultiProcessEngine()
+    )
+    fval_trace = result.optimize_result.list[0].history.get_fval_trace()
+    fval_trace_trimmed = \
+        result.optimize_result.list[0].history.get_fval_trace(trim=True)
+    fval_trimmed_man = []
+    fval_current = np.inf
+    for fval_i in fval_trace:
+        if fval_i <= fval_current:
+            fval_trimmed_man.append(fval_i)
+            fval_current = fval_i
+    assert fval_trace_trimmed == fval_trimmed_man

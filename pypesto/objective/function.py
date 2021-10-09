@@ -114,6 +114,16 @@ class Objective(ObjectiveBase):
     def has_sres(self) -> bool:
         return callable(self.sres) or self.sres is True
 
+    def get_config(self) -> dict:
+        info = super().get_config()
+        info['x_names'] = self.x_names
+        sensi_order = 0
+        while self.check_sensi_orders(
+                sensi_orders=(sensi_order,), mode=MODE_FUN):
+            sensi_order += 1
+        info['sensi_order'] = sensi_order - 1
+        return info
+
     def call_unprocessed(
         self,
         x: np.ndarray,

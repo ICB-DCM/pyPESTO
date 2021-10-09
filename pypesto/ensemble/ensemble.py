@@ -2,7 +2,7 @@ import logging
 from functools import partial
 import numpy as np
 import pandas as pd
-from typing import Sequence, Tuple, Callable, Dict, List
+from typing import Sequence, Tuple, Callable, Dict, List, Optional
 
 from .. import Result
 from ..engine import (
@@ -23,7 +23,7 @@ from .constants import (PREDICTOR, PREDICTION_ID, PREDICTION_RESULTS,
                         NVECTORS, VECTOR_TAGS, PREDICTIONS, MODE_FUN,
                         EnsembleType, ENSEMBLE_TYPE, MEAN, MEDIAN,
                         STANDARD_DEVIATION, SUMMARY, LOWER_BOUND,
-                        UPPER_BOUND, get_percentile_label)
+                        UPPER_BOUND, get_percentile_label, HISTORY)
 
 logger = logging.getLogger(__name__)
 
@@ -35,12 +35,13 @@ class EnsemblePrediction:
     It can be attached to a ensemble-type object
     """
 
-    def __init__(self,
-                 predictor: Callable[[Sequence], PredictionResult],
-                 prediction_id: str = None,
-                 prediction_results: Sequence[PredictionResult] = None,
-                 lower_bound: Sequence[np.ndarray] = None,
-                 upper_bound: Sequence[np.ndarray] = None):
+    def __init__(
+            self,
+            predictor: Optional[Callable[[Sequence], PredictionResult]] = None,
+            prediction_id: str = None,
+            prediction_results: Sequence[PredictionResult] = None,
+            lower_bound: Sequence[np.ndarray] = None,
+            upper_bound: Sequence[np.ndarray] = None):
         """
         Constructor.
 
@@ -62,6 +63,8 @@ class EnsemblePrediction:
             array of potential upper bounds for the parameters
         """
         self.predictor = predictor
+        if predictor is None:
+            logger.info("This `EnsemblePrediction` has no predictor.")
         self.prediction_id = prediction_id
         self.prediction_results = prediction_results
         if prediction_results is None:
@@ -395,6 +398,8 @@ class Ensemble:
         """
         x_vectors = []
         vector_tags = []
+        x_names = [result.problem.x_names[i]
+                   for i in result.problem.x_free_indices]
 
         for start in result.optimize_result.list:
             # add the parameters from the next start as long as we
@@ -422,10 +427,10 @@ class Ensemble:
 
         x_vectors = np.stack(x_vectors, axis=1)
         return Ensemble(x_vectors=x_vectors,
-                        x_names=result.problem.x_names,
+                        x_names=x_names,
                         vector_tags=vector_tags,
-                        lower_bound=result.problem.lb_full,
-                        upper_bound=result.problem.ub_full,
+                        lower_bound=result.problem.lb,
+                        upper_bound=result.problem.ub,
                         **kwargs)
 
     @staticmethod
@@ -471,9 +476,10 @@ class Ensemble:
                                                         **kwargs)
         x_vectors = []
         vector_tags = []
-        x_names = result.problem.x_names
-        lb = result.problem.lb_full
-        ub = result.problem.ub_full
+        x_names = [result.problem.x_names[i]
+                   for i in result.problem.x_free_indices]
+        lb = result.problem.lb
+        ub = result.problem.ub
 
         # calculate the number of starts whose final nllh is below cutoff
         n_starts = sum(start['fval'] <= cutoff
@@ -481,12 +487,12 @@ class Ensemble:
 
         fval_trace = [
             np.array(
-                result.optimize_result.list[i_ms]['history'].get_fval_trace()
+                result.optimize_result.list[i_ms][HISTORY].get_fval_trace()
             )
             for i_ms in range(n_starts)
         ]
         x_trace = [
-            result.optimize_result.list[i_ms]['history'].get_x_trace()
+            result.optimize_result.list[i_ms][HISTORY].get_x_trace()
             for i_ms in range(n_starts)
         ]
 
@@ -657,6 +663,8 @@ class Ensemble:
             predictor=predictor,
             prediction_id=prediction_id,
             prediction_results=prediction_results,
+            lower_bound=self.lower_bound,
+            upper_bound=self.upper_bound
         )
 
     def compute_summary(self,
@@ -786,7 +794,7 @@ def entries_per_start(fval_traces: List['np.ndarray'],
 
     # if all possible indices can be included, return
     if (n_per_start < max_per_start).all() and sum(n_per_start) < max_size:
-        return ens_ind
+        return n_per_start
 
     # trimm down starts that exceed the limit:
     n_per_start = [min(n, max_per_start) for n in n_per_start]
