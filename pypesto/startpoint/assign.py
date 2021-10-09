@@ -1,6 +1,7 @@
 """Assign startpoints for a given problem."""
 
 import numpy as np
+from typing import Union
 
 from .base import StartpointMethod
 from ..problem import Problem
@@ -9,7 +10,7 @@ from ..objective import ObjectiveBase
 
 def assign_startpoints(
     n_starts: int,
-    startpoint_method: StartpointMethod,
+    startpoint_method: Union[StartpointMethod, bool],
     problem: Problem,
     startpoint_resample: bool,
 ) -> np.ndarray:
