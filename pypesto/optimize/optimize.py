@@ -5,7 +5,9 @@ from ..engine import Engine, SingleCoreEngine
 from ..objective import HistoryOptions
 from ..problem import Problem
 from ..result import Result
-from ..startpoint import assign_startpoints, uniform, StartpointMethod
+from ..startpoint import (
+    assign_startpoints, uniform, StartpointMethod, to_startpoint_method,
+)
 from .optimizer import Optimizer, ScipyOptimizer
 from .options import OptimizeOptions
 from .task import OptimizerTask
@@ -78,6 +80,9 @@ def minimize(
         startpoint_method = problem.startpoint_method
     elif startpoint_method is None:
         startpoint_method = uniform
+
+    # convert startpoint method to class instance
+    startpoint_method = to_startpoint_method(startpoint_method)
 
     # check options
     if options is None:

@@ -106,7 +106,6 @@ class LatinHypercubeStartpoints(StartpointMethod):
         lb: np.ndarray,
         ub: np.ndarray,
         objective: ObjectiveBase = None,
-        x_guesses: np.ndarray = None,
     ) -> np.ndarray:
         return _latin_hypercube(
             n_starts=n_starts,
