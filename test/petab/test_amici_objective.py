@@ -66,6 +66,7 @@ def test_error_leastsquares_with_ssigma():
         )
 
 
+@pytest.mark.flaky(reruns=5)
 def test_preeq_guesses():
     """
     Test whether optimization with preequilibration guesses works, asserts

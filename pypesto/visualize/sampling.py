@@ -577,6 +577,7 @@ def sampling_prediction_trajectories(
         condition_gap: float = 0.01,
         condition_ids: Sequence[str] = None,
         output_ids: Sequence[str] = None,
+        weighting: bool = False
 ) -> matplotlib.axes.Axes:
     """Plot MCMC-based prediction credibility intervals for the
     model states or outputs. One or various credibility levels
@@ -611,6 +612,8 @@ def sampling_prediction_trajectories(
         If provided, only data for the provided condition IDs will be plotted.
     output_ids:
         If provided, only data for the provided output IDs will be plotted.
+    weighting:
+        Whether weights should be used for trajectory.
 
     Returns
     -------
