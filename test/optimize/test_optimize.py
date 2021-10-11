@@ -63,8 +63,11 @@ optimizers = [
         nlopt.GN_DIRECT_L_RAND_NOSCAL, nlopt.AUGLAG, nlopt.AUGLAG_EQ
     ]],
     *[('fides', solver) for solver in itt.product(
-        [None, fides.SR1(), fides.BFGS(), fides.DFP()],
-        [fides.SubSpaceDim.FULL, fides.SubSpaceDim.TWO]
+        [None, fides.BFGS(), fides.SR1(), fides.PSB(), fides.BB(), fides.BG(),
+         fides.Broyden(0.5), fides.SSM(), fides.TSSM(), fides.HybridFixed(),
+         fides.FX(), fides.GNSBFGS()],
+        [fides.SubSpaceDim.TWO, fides.SubSpaceDim.FULL,
+         fides.SubSpaceDim.STEIHAUG]
     )]
 ]
 
@@ -74,6 +77,7 @@ def optimizer(request):
     return request.param
 
 
+@pytest.mark.flaky(reruns=5)
 def test_optimization(problem, optimizer):
     """Test optimization using various optimizers and objective modes."""
     library, method = optimizer

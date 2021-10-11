@@ -10,7 +10,7 @@ from ..objective import (
     HistoryOptions, HistoryBase, OptimizerHistory, CsvHistory, Hdf5History,
 )
 from ..problem import Problem
-from ..objective.constants import MODE_FUN, FVAL, GRAD
+from ..objective.constants import MODE_FUN, MODE_RES, FVAL, GRAD
 from .result import OptimizerResult
 
 try:
@@ -45,8 +45,10 @@ except ImportError:
 
 try:
     import fides
+    from fides.hessian_approximation import HessianApproximation
 except ImportError:
     fides = None
+    HessianApproximation = None
 
 
 EXITFLAG_LOADED_FROM_FILE = -99
@@ -595,7 +597,7 @@ class PyswarmOptimizer(Optimizer):
         ub = problem.ub
         if pyswarm is None:
             raise ImportError(
-                "This optimizer requires an installation of pyswarm.You can "
+                "This optimizer requires an installation of pyswarm. You can "
                 "install pyswarm via `pip install pyswarm."
             )
 
@@ -997,7 +999,7 @@ class FidesOptimizer(Optimizer):
 
     def __init__(
             self,
-            hessian_update: Optional['fides.HessianApproximation'] = 'Hybrid',
+            hessian_update: Optional['HessianApproximation'] = 'Hybrid',
             options: Optional[Dict] = None,
             verbose: Optional[int] = logging.INFO
     ):
@@ -1007,19 +1009,20 @@ class FidesOptimizer(Optimizer):
         options:
             Optimizer options.
         hessian_update:
-            Hessian update strategy. If this is None, Hessian (approximation)
-            computed by problem.objective will be used.
+            Hessian update strategy. If this is None, a hybrid approximation
+            that switches from the problem.objective provided Hessian (
+            approximation) to a BFGS approximation will be used.
         """
 
         super().__init__()
 
         if hessian_update == 'Hybrid':
-            hessian_update = fides.HybridUpdate()
+            hessian_update = fides.HybridFixed()
 
         if hessian_update is not None and \
-                not isinstance(hessian_update, fides.HessianApproximation):
-            raise ValueError('Incompatible type for hessian update, '
-                             'must be fides.HessianApproximation, '
+                not isinstance(hessian_update, HessianApproximation):
+            raise ValueError('Incompatible type for hessian update. '
+                             'Must be a HessianApproximation, '
                              f'was {type(hessian_update)}.')
 
         if options is None:
@@ -1046,15 +1049,19 @@ class FidesOptimizer(Optimizer):
                 "install fides via `pip install fides`."
             )
 
-        args = {'mode': MODE_FUN}
+        resfun = self.hessian_update.requires_resfun if self.hessian_update \
+            is not None else False
+
+        args = {'mode': MODE_RES if resfun else MODE_FUN}
 
         if not problem.objective.has_grad:
             raise ValueError('Fides cannot be applied to problems '
                              'with objectives that do not support '
                              'gradient evaluation.')
 
-        if self.hessian_update is None or isinstance(self.hessian_update,
-                                                     fides.HybridUpdate):
+        if self.hessian_update is None or (
+            self.hessian_update.requires_hess and not resfun
+        ):
             if not problem.objective.has_hess:
                 raise ValueError('Specified hessian update scheme cannot be '
                                  'used with objectives that do not support '
@@ -1065,8 +1072,8 @@ class FidesOptimizer(Optimizer):
 
         opt = fides.Optimizer(
             fun=problem.objective, funargs=args, ub=problem.ub, lb=problem.lb,
-            verbose=self.verbose,
-            hessian_update=self.hessian_update, options=self.options
+            verbose=self.verbose, hessian_update=self.hessian_update,
+            options=self.options, resfun=resfun
         )
 
         try:

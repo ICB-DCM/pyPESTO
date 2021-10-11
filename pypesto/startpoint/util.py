@@ -87,6 +87,7 @@ def resample_startpoints(startpoints, problem, method):
     for j in range(0, n_starts):
         startpoint = startpoints[j, :]
         # apply method until found valid point
+        problem.objective.initialize()
         fvals[j] = problem.objective(startpoint)
         while fvals[j] == np.inf or fvals[j] == np.nan:
             startpoint = method(
@@ -95,6 +96,7 @@ def resample_startpoints(startpoints, problem, method):
                 ub=ub,
                 x_guesses=x_guesses
             )[0, :]
+            problem.objective.initialize()
             fvals[j] = problem.objective(startpoint)
         # assign startpoint
         resampled_startpoints[j, :] = startpoint

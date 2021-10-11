@@ -55,15 +55,15 @@ class AmiciObjective(ObjectiveBase):
         amici_model: AmiciModel,
         amici_solver: AmiciSolver,
         edatas: Union[Sequence['amici.ExpData'], 'amici.ExpData'],
-        max_sensi_order: int = None,
-        x_ids: Sequence[str] = None,
-        x_names: Sequence[str] = None,
-        parameter_mapping: 'ParameterMapping' = None,
-        guess_steadystate: Optional[bool] = None,
-        n_threads: int = 1,
-        fim_for_hess: bool = True,
-        amici_object_builder: AmiciObjectBuilder = None,
-        calculator: AmiciCalculator = None,
+        max_sensi_order: Optional[int] = None,
+        x_ids: Optional[Sequence[str]] = None,
+        x_names: Optional[Sequence[str]] = None,
+        parameter_mapping: Optional['ParameterMapping'] = None,
+        guess_steadystate: Optional[Optional[bool]] = None,
+        n_threads: Optional[int] = 1,
+        fim_for_hess: Optional[bool] = True,
+        amici_object_builder: Optional[AmiciObjectBuilder] = None,
+        calculator: Optional[AmiciCalculator] = None,
     ):
         """
         Constructor.
@@ -196,6 +196,15 @@ class AmiciObjective(ObjectiveBase):
         # Custom (condition-specific) timepoints. See the
         # `set_custom_timepoints` method for more information.
         self.custom_timepoints = None
+
+    def get_config(self) -> dict:
+        info = super().get_config()
+        info['x_names'] = self.x_names
+        info['model_name'] = self.amici_model.getName()
+        info['solver'] = str(type(self.amici_solver))
+        info['sensi_order'] = self.max_sensi_order
+
+        return info
 
     def initialize(self):
         super().initialize()
@@ -373,10 +382,12 @@ class AmiciObjective(ObjectiveBase):
                 x_ss_guess = guess_data['x_ss']
             if guess_data['sx_ss'] is not None:
                 linear_update = guess_data['sx_ss'].transpose().dot(
-                    (x_sim - guess_data['x'])
+                    (x_sim - guess_data['x'])[
+                        np.asarray(self.edatas[condition_ix].plist)
+                    ]
                 )
                 # limit linear updates to max 20 % elementwise change
-                if (x_ss_guess/linear_update).max() < 0.2:
+                if (linear_update/(x_ss_guess + np.spacing(1))).max() < 0.2:
                     x_ss_guess += linear_update
 
         self.edatas[condition_ix].x0 = tuple(x_ss_guess)
@@ -475,3 +486,26 @@ class AmiciObjective(ObjectiveBase):
         amici_objective.custom_timepoints = custom_timepoints
         amici_objective.apply_custom_timepoints()
         return amici_objective
+
+    def check_gradients_match_finite_differences(
+        self,
+        x: np.ndarray = None,
+        *args,
+        **kwargs
+    ) -> bool:
+        """Check if gradients match finite differences (FDs)
+
+        Parameters
+        ----------
+        x: The parameters for which to evaluate the gradient.
+
+        Returns
+        -------
+        bool
+            Indicates whether gradients match (True) FDs or not (False)
+        """
+        if x is None and 'petab_problem' in dir(self.amici_object_builder):
+            x = self.amici_object_builder.petab_problem.x_nominal_scaled
+            x_free = self.amici_object_builder.petab_problem.x_free_indices
+        return super().check_gradients_match_finite_differences(
+             x=x, x_free=x_free, *args, **kwargs)

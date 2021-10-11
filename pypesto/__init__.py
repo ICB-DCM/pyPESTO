@@ -22,6 +22,7 @@ from .objective import (
     ObjectiveBase,
     OptimizerHistory,
     FD,
+    FDDelta,
 )
 from .problem import Problem
 from .result import (
