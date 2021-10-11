@@ -67,8 +67,11 @@ authors:
       family-names: "Grein"
       given-names: "Stephan"
       orcid: "https://orcid.org/0000-0001-9524-6633"
+   -
+      family-names = "Hasenauer"
+      given-names: "Jan"
+      orcid: "https://orcid.org/0000-0002-4935-3312"
 title: "pyPESTO - Parameter EStimation TOolbox for python"
-message: "If you use this software, please cite both the article from preferred-citation and the software itself."
 url: "https://github.com/ICB-DCM/pyPESTO"
 doi: 10.5281/zenodo.2553546
 version: 0.2.7
