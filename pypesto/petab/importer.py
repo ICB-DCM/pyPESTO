@@ -15,6 +15,7 @@ from ..predict.constants import CONDITION_SEP
 from ..objective.priors import NegLogParameterPriors, \
     get_parameter_prior_dict
 from ..objective.constants import MODE_FUN, MODE_RES
+from ..startpoint import FunctionStartpoints
 
 try:
     import petab
@@ -485,7 +486,7 @@ class PetabImporter(AmiciObjectBuilder):
                 self.petab_problem.parameter_df,
                 n_starts=n_starts)
 
-        return startpoint_method
+        return FunctionStartpoints(function=startpoint_method)
 
     def create_problem(
             self, objective: AmiciObjective = None,
