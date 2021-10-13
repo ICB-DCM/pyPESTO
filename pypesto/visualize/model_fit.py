@@ -117,6 +117,8 @@ def time_trajectory_model(
 
     # evaluate objective with return dic = True to get data
     parameters = result.optimize_result.list[0]['x']
+    # reduce vector to only include free indices. Needed downstream.
+    parameters = problem.get_reduced_vector(parameters)
     ret = obj(parameters, mode='mode_fun',
               sensi_orders=(0,), return_dict=True)
 
