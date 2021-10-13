@@ -919,7 +919,7 @@ def test_visualize_optimized_model_fit():
 
     # import to petab
     petab_problem = petab.Problem.from_yaml(
-        dir_path + "/conversion_reaction/conversion_reaction.yaml")
+        os.path.join(dir_path, "conversion_reaction/conversion_reaction.yaml"))
     # import to pypesto
     importer = pypesto.petab.PetabImporter(petab_problem)
     # create problem
@@ -932,8 +932,6 @@ def test_visualize_optimized_model_fit():
     visualize_optimized_model_fit(petab_problem=petab_problem,
                                   result=result)
 
-    assert True
-
 
 @close_fig
 def test_time_trajectory_model():
@@ -945,7 +943,7 @@ def test_time_trajectory_model():
 
     # import to petab
     petab_problem = petab.Problem.from_yaml(
-        dir_path + "/conversion_reaction/conversion_reaction.yaml")
+        os.path.join(dir_path, "conversion_reaction/conversion_reaction.yaml"))
     # import to pypesto
     importer = pypesto.petab.PetabImporter(petab_problem)
     # create problem
@@ -956,5 +954,3 @@ def test_time_trajectory_model():
 
     # test call of time_trajectory_model
     time_trajectory_model(result=result)
-
-    assert True
