@@ -127,7 +127,7 @@ def time_trajectory_model(
     observable_indices = None
     if state_ids is not None:
         state_indices = [
-            problem.objective.amici_model.getStateIds().index(state_id)
+            problem.objective.amici_model.getStateNames().index(state_id)
             for state_id in state_ids]
     if observable_ids is not None:
         observable_indices = [
