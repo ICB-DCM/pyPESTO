@@ -935,6 +935,7 @@ def test_visualize_optimized_model_fit():
     assert True
 
 
+@close_fig
 def test_time_trajectory_model():
     """Test pypesto.visualize.time_trajectory_model"""
     current_path = os.path.dirname(os.path.realpath(__file__))
