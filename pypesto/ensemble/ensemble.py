@@ -72,7 +72,11 @@ class EnsemblePrediction:
         if prediction_results is None:
             self.prediction_results = []
 
-        # handle bounds
+        # handle bounds, Not yet Implemented
+        if lower_bound is not None:
+            raise NotImplementedError
+        if upper_bound is not None:
+            raise NotImplementedError
         self.lower_bound = lower_bound
         self.upper_bound = upper_bound
 
@@ -462,6 +466,9 @@ class Ensemble:
             result: Result,
             remove_burn_in: bool = True,
             chain_slice: slice = None,
+            x_names: Sequence[str] = None,
+            lower_bound: np.ndarray = None,
+            upper_bound: np.ndarray = None,
             **kwargs,
     ):
         """Construct an ensemble from a sample.
@@ -475,12 +482,25 @@ class Ensemble:
             "burn-in".
         chain_slice:
             Subset the chain with a slice. Any "burn-in" removal occurs first.
+        x_names:
+            Names or identifiers of the parameters
+        lower_bound:
+            array of potential lower bounds for the parameters
+        upper_bound:
+            array of potential upper bounds for the parameters
 
         Returns
         -------
         The ensemble.
         """
         x_vectors = result.sample_result.trace_x[0]
+        if x_names is None:
+            x_names = [result.problem.x_names[i]
+                       for i in result.problem.x_free_indices]
+        if lower_bound is None:
+            lower_bound = result.problem.lb
+        if upper_bound is None:
+            upper_bound = result.problem.ub
         if remove_burn_in:
             if result.sample_result.burn_in is None:
                 geweke_test(result)
@@ -489,7 +509,11 @@ class Ensemble:
         if chain_slice is not None:
             x_vectors = x_vectors[chain_slice]
         x_vectors = x_vectors.T
-        return Ensemble(x_vectors, **kwargs)
+        return Ensemble(x_vectors=x_vectors,
+                        x_names=x_names,
+                        lower_bound=lower_bound,
+                        upper_bound=upper_bound,
+                        **kwargs)
 
     @staticmethod
     def from_optimization_endpoints(
@@ -786,8 +810,6 @@ class Ensemble:
             predictor=predictor,
             prediction_id=prediction_id,
             prediction_results=prediction_results,
-            lower_bound=self.lower_bound,
-            upper_bound=self.upper_bound
         )
 
     def compute_summary(self,
