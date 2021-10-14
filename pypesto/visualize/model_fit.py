@@ -20,6 +20,7 @@ AmiciModel = Union['amici.Model', 'amici.ModelPtr']
 
 def visualize_optimized_model_fit(petab_problem: petab.Problem,
                                   result: Union[Result, Sequence[Result]],
+                                  start_index: int = 0,
                                   **kwargs
                                   ):
     """
@@ -36,6 +37,8 @@ def visualize_optimized_model_fit(petab_problem: petab.Problem,
         The :py:class:`petab.Problem` that was optimized.
     result:
         The result object from optimization.
+    start_index:
+        The index of the optimization run in result.optimize_result.list.
 
     Returns
     -------
@@ -48,7 +51,7 @@ def visualize_optimized_model_fit(petab_problem: petab.Problem,
 
     problem_parameters = \
         dict(zip(petab_problem.parameter_df.index,
-                 result.optimize_result.list[0]['x']))
+                 result.optimize_result.list[start_index]['x']))
 
     amici_model = petab_import.import_petab_problem(
         petab_problem,
