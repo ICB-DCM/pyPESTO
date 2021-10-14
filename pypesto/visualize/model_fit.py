@@ -78,7 +78,7 @@ def time_trajectory_model(
         # TODO: conditions: Union[str, Sequence[str]] = None,
         timepoints: Union[np.ndarray, Sequence[np.ndarray]] = None,
         n_timepoints: int = 1000,
-        i_start: int = 0,
+        start_index: int = 0,
         state_ids: Union[str, Sequence[str]] = None,
         state_names: Union[str, Sequence[str]] = None,
         observable_ids: Union[str, Sequence[str]] = None,):
@@ -98,16 +98,18 @@ def time_trajectory_model(
     n_timepoints:
         Number of timepoints to be plotted between 0 and last measurement of
         the model. Only used when timepoints==None.
-    i_start:
+    start_index:
         Index of Optimization run to be plotted. Default is best start.
     state_ids:
         Ids of the states to be plotted.
+    state_names:
+        Names of the states to be plotted.
     observable_ids:
         Ids of the observables to be plotted.
 
     Returns
     -------
-    axes: Axis object of the created plot.
+    axes: `matplotlib.axes.Axes` object of the plot.
     """
 
     if problem is None:
@@ -122,7 +124,7 @@ def time_trajectory_model(
         timepoints_global=timepoints)
 
     # evaluate objective with return dic = True to get data
-    parameters = result.optimize_result.list[i_start]['x']
+    parameters = result.optimize_result.list[start_index]['x']
     # reduce vector to only include free indices. Needed downstream.
     parameters = problem.get_reduced_vector(parameters)
     ret = obj(parameters, mode='mode_fun',
@@ -172,7 +174,7 @@ def _time_trajectory_model_with_states(
 
     Returns
     -------
-    axes: Axis object of the created plot.
+    axes: `matplotlib.axes.Axes` object of the plot.
     """
     # if state_name, state_id or observable_id is not None, get indices
     # for these the AMICI plotting functions default to all indices if
@@ -235,7 +237,7 @@ def _time_trajectory_model_without_states(
 
     Returns
     -------
-    axes: Axis object of the created plot.
+    axes: `matplotlib.axes.Axes` object of the plot.
     """
     # if observable_id's is not None, get indices for these
     # the AMICI plotting functions default to all indices if `None` is
