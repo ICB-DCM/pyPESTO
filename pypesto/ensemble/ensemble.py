@@ -72,7 +72,11 @@ class EnsemblePrediction:
         if prediction_results is None:
             self.prediction_results = []
 
-        # handle bounds
+        # handle bounds, Not yet Implemented
+        if lower_bound is not None:
+            raise NotImplementedError
+        if upper_bound is not None:
+            raise NotImplementedError
         self.lower_bound = lower_bound
         self.upper_bound = upper_bound
 
@@ -806,8 +810,6 @@ class Ensemble:
             predictor=predictor,
             prediction_id=prediction_id,
             prediction_results=prediction_results,
-            lower_bound=self.lower_bound,
-            upper_bound=self.upper_bound
         )
 
     def compute_summary(self,
