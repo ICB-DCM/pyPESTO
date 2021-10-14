@@ -3,7 +3,7 @@ import pandas as pd
 import copy
 import logging
 import abc
-from typing import Dict, Iterable, Optional, Sequence, Tuple, Union
+from typing import Dict, Iterable, Optional, Sequence, Tuple, Union, List
 
 from .constants import MODE_FUN, MODE_RES, FVAL, GRAD, HESS, RES, SRES
 from .history import HistoryBase
@@ -45,10 +45,10 @@ class ObjectiveBase(abc.ABC):
 
     def __init__(
         self,
-        x_names: Sequence[str] = None,
+        x_names: Optional[Sequence[str]] = None,
     ):
 
-        self.x_names = x_names
+        self._x_names = x_names
 
         self.pre_post_processor = PrePostProcessor()
         self.history = HistoryBase()
@@ -85,6 +85,18 @@ class ObjectiveBase(abc.ABC):
     @property
     def has_sres(self) -> bool:
         return self.check_sensi_orders((1,), MODE_RES)
+
+    @property
+    def x_names(self) -> Union[List[str], None]:
+        if self._x_names is None:
+            return self._x_names
+
+        # change from numpy array with `str_` dtype to list with `str` dtype
+        # to avoid issues when writing to hdf (and correctness of typehint)
+        return [
+            str(name) for name in
+            self.pre_post_processor.reduce(np.asarray(self._x_names))
+        ]
 
     def initialize(self):
         """Initialize the objective function.
