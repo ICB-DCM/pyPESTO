@@ -197,8 +197,12 @@ class NegLogParameterPriors(ObjectiveBase):
         Computes the Jacobian of the residual representation of the prior
         for a parameter vector x w.r.t. x, if available.
         """
-        return np.vstack([prior['residual_dx'](x[prior['index']])
-                          for prior in self.prior_list])
+        sres = np.zeros((len(self.prior_list), len(x)))
+        for iprior, prior in enumerate(self.prior_list):
+            sres[iprior, prior['index']] = \
+                prior['residual_dx'](x[prior['index']])
+
+        return sres
 
 
 def get_parameter_prior_dict(index: int,
