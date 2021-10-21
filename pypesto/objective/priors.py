@@ -5,6 +5,7 @@ from copy import deepcopy
 from .function import ObjectiveBase
 from .aggregated import AggregatedObjective
 from .constants import MODE_FUN, MODE_RES, FVAL, GRAD, HESS, RES, SRES, CHI2
+from .util import res_to_chi2
 
 from .base import ResultDict
 
@@ -94,9 +95,8 @@ class NegLogParameterPriors(ObjectiveBase):
         if mode == MODE_RES:
             for order in sensi_orders:
                 if order == 0:
-                    r = self.residual(x)
-                    res[CHI2] = r.T.dot(r)
-                    res[RES] = r
+                    res[RES] = self.residual(x)
+                    res[CHI2] = res_to_chi2(res[RES])
                 elif order == 1:
                     res[SRES] = self.residual_jacobian(x)
                 else:
