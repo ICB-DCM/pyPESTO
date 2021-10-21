@@ -50,11 +50,6 @@ def test_mode(scale, prior_type):
     if prior_type.startswith('parameterScale'):
         scale = 'lin'
 
-    optimizer = pypesto.optimize.ScipyOptimizer(method='Nelder-Mead')
-
-    result = pypesto.optimize.minimize(
-        problem=test_problem, optimizer=optimizer, n_starts=10)
-
     # test uniform distribution:
     if prior_type in ['uniform', 'parameterScaleUniform']:
         # check inside and outside of interval
@@ -62,12 +57,22 @@ def test_mode(scale, prior_type):
         assert np.isclose(prior(lin_to_scaled(.5, scale)), 0)
         assert np.isclose(prior(lin_to_scaled(1.5, scale)), math.log(1))
         assert np.isclose(prior(lin_to_scaled(2.5, scale)), 0)
-
+        assert not test_prior.has_res
+        assert not test_prior.has_sres
     else:
-        # flat functions don't have local minima, so dont check this for
-        # uniform priors
-        assert np.isclose(result.optimize_result.list[0]['x'],
-                          problem_dict[scale]['opt'], atol=1e-04)
+        # test log-density based and residual representation
+        for method in ['Nelder-Mead', 'ls_trf']:
+            if method == 'ls_trf' and prior_type.endswith('logNormal'):
+                assert not test_prior.has_res
+                assert not test_prior.has_sres
+                continue
+            optimizer = pypesto.optimize.ScipyOptimizer(method=method)
+            result = pypesto.optimize.minimize(
+                problem=test_problem, optimizer=optimizer, n_starts=10)
+            # flat functions don't have local minima, so dont check this
+            # for uniform priors
+            assert np.isclose(result.optimize_result.list[0]['x'],
+                              problem_dict[scale]['opt'], atol=1e-04)
 
 
 def test_derivatives(prior_type, scale):
@@ -94,6 +99,11 @@ def test_derivatives(prior_type, scale):
 
     assert err_grad < 1e-3
     assert err_hes < 1e-3
+
+    if not prior_type.endswith(('uniform', 'Uniform', 'logNormal')):
+        err_res = opt.check_grad(prior_dict['residual'],
+                                 prior_dict['residual_dx'], x0)
+        assert err_res < 1e-3
 
 
 def lin_to_scaled(x: float,
