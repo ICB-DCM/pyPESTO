@@ -327,9 +327,9 @@ def _prior_densities(prior_type: str,
     Returns a tuple of Callables of the (log-)density (in untransformed =
     linear scale), unless prior_types starts with "parameterScale",
     together with their first + second derivative (= sensis) w.r.t.
-    the parameters. If possible, a residual representation and it's first
+    the parameters. If possible, a residual representation and its first
     derivative w.r.t. the parameters is included as 4th and 5th element of
-    the vetor. If a reformulation as residual is not possible the respective
+    the vector. If a reformulation as residual is not possible, the respective
     entries will be `None`.
 
     Currently the following distributions are supported:
