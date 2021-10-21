@@ -4,7 +4,8 @@ from copy import deepcopy
 
 from .function import ObjectiveBase
 from .aggregated import AggregatedObjective
-from .constants import MODE_FUN, MODE_RES, FVAL, GRAD, HESS
+from .constants import MODE_FUN, MODE_RES, FVAL, GRAD, HESS, RES, SRES, CHI2
+from .util import res_to_chi2
 
 from .base import ResultDict
 
@@ -80,31 +81,58 @@ class NegLogParameterPriors(ObjectiveBase):
 
         res[FVAL] = self.neg_log_density(x)
 
-        for order in sensi_orders:
-            if order == 0:
-                continue
-            elif order == 1:
-                res[GRAD] = self.gradient_neg_log_density(x)
-            elif order == 2:
-                res[HESS] = self.hessian_neg_log_density(x)
-            else:
-                raise ValueError(f'Invalid sensi order {order}.')
+        if mode == MODE_FUN:
+            for order in sensi_orders:
+                if order == 0:
+                    continue
+                elif order == 1:
+                    res[GRAD] = self.gradient_neg_log_density(x)
+                elif order == 2:
+                    res[HESS] = self.hessian_neg_log_density(x)
+                else:
+                    raise ValueError(f'Invalid sensi order {order}.')
+
+        if mode == MODE_RES:
+            for order in sensi_orders:
+                if order == 0:
+                    res[RES] = self.residual(x)
+                    res[CHI2] = res_to_chi2(res[RES])
+                elif order == 1:
+                    res[SRES] = self.residual_jacobian(x)
+                else:
+                    raise ValueError(f'Invalid sensi order {order}.')
 
         return res
 
     def check_sensi_orders(self,
                            sensi_orders: Tuple[int, ...],
                            mode: str) -> bool:
-        for order in sensi_orders:
-            if not (0 <= order <= 2):
-                return False
+        if mode == MODE_FUN:
+            for order in sensi_orders:
+                if not (0 <= order <= 2):
+                    return False
+        elif mode == MODE_RES:
+            for order in sensi_orders:
+                if order == 0:
+                    return all(prior.get('residual', None) is not None
+                               for prior in self.prior_list)
+                elif order == 1:
+                    return all(prior.get('residual_dx', None) is not None
+                               for prior in self.prior_list)
+                else:
+                    return False
+        else:
+            raise ValueError(f'Invalid input: Expected mode {MODE_FUN} or'
+                             f' {MODE_RES}, received {mode} instead.')
+
         return True
 
     def check_mode(self, mode) -> bool:
         if mode == MODE_FUN:
             return True
         elif mode == MODE_RES:
-            return False
+            return all(prior.get('residual', None) is not None
+                       for prior in self.prior_list)
         else:
             raise ValueError(f'Invalid input: Expected mode {MODE_FUN} or'
                              f' {MODE_RES}, received {mode} instead.')
@@ -158,6 +186,26 @@ class NegLogParameterPriors(ObjectiveBase):
 
         return h_dot_p
 
+    def residual(self, x):
+        """
+        Computes the residual representation of the prior for a parameter
+        vector x, if available.
+        """
+        return np.asarray([prior['residual'](x[prior['index']])
+                           for prior in self.prior_list])
+
+    def residual_jacobian(self, x):
+        """
+        Computes the Jacobian of the residual representation of the prior
+        for a parameter vector x w.r.t. x, if available.
+        """
+        sres = np.zeros((len(self.prior_list), len(x)))
+        for iprior, prior in enumerate(self.prior_list):
+            sres[iprior, prior['index']] = \
+                prior['residual_dx'](x[prior['index']])
+
+        return sres
+
 
 def get_parameter_prior_dict(index: int,
                              prior_type: str,
@@ -186,7 +234,7 @@ def get_parameter_prior_dict(index: int,
         space, unless it starts with "parameterScale")
     """
 
-    log_f, d_log_f_dx, dd_log_f_ddx = \
+    log_f, d_log_f_dx, dd_log_f_ddx, res, d_res_dx = \
         _prior_densities(prior_type, prior_parameters)
 
     if parameter_scale == 'lin' or prior_type.startswith('parameterScale'):
@@ -194,7 +242,9 @@ def get_parameter_prior_dict(index: int,
         return {'index': index,
                 'density_fun': log_f,
                 'density_dx': d_log_f_dx,
-                'density_ddx': dd_log_f_ddx}
+                'density_ddx': dd_log_f_ddx,
+                'residual': res,
+                'residual_dx': d_res_dx}
 
     elif parameter_scale == 'log':
 
@@ -212,10 +262,22 @@ def get_parameter_prior_dict(index: int,
                 (d_log_f_dx(np.exp(x_log)) +
                     np.exp(x_log) * dd_log_f_ddx(np.exp(x_log)))
 
+        if res is not None:
+            def res_log(x_log):
+                """residual-prior for log-parameters"""
+                return res(np.exp(x_log))
+
+        if d_res_dx is not None:
+            def d_res_log(x_log):
+                """residual-prior for log-parameters"""
+                return d_res_dx(np.exp(x_log)) * np.exp(x_log)
+
         return {'index': index,
                 'density_fun': log_f_log,
                 'density_dx': d_log_f_log,
-                'density_ddx': dd_log_f_log}
+                'density_ddx': dd_log_f_log,
+                'residual': res_log if res is not None else None,
+                'residual_dx': d_res_log if d_res_dx is not None else None}
 
     elif parameter_scale == 'log10':
 
@@ -235,10 +297,22 @@ def get_parameter_prior_dict(index: int,
                 (dd_log_f_ddx(10**x_log10) * 10**x_log10
                     + d_log_f_dx(10**x_log10))
 
+        if res is not None:
+            def res_log(x_log10):
+                """residual-prior for log10-parameters"""
+                return res(10**x_log10)
+
+        if d_res_dx is not None:
+            def d_res_log(x_log10):
+                """residual-prior for log10-parameters"""
+                return d_res_dx(10**x_log10) * log10 * 10**x_log10
+
         return {'index': index,
                 'density_fun': log_f_log10,
                 'density_dx': d_log_f_log10,
-                'density_ddx': dd_log_f_log10}
+                'density_ddx': dd_log_f_log10,
+                'residual': res_log if res is not None else None,
+                'residual_dx': d_res_log if d_res_dx is not None else None}
 
     else:
         raise ValueError(f"NegLogPriors in parameters in scale "
@@ -253,7 +327,10 @@ def _prior_densities(prior_type: str,
     Returns a tuple of Callables of the (log-)density (in untransformed =
     linear scale), unless prior_types starts with "parameterScale",
     together with their first + second derivative (= sensis) w.r.t.
-    the parameters.
+    the parameters. If possible, a residual representation and its first
+    derivative w.r.t. the parameters is included as 4th and 5th element of
+    the vector. If a reformulation as residual is not possible, the respective
+    entries will be `None`.
 
     Currently the following distributions are supported:
 
@@ -267,7 +344,7 @@ def _prior_densities(prior_type: str,
         "log", "parameterScaleNormal" will apply a normally distributed prior
         to logarithmic parameters, while "normal" will apply a normally
         distributed prior to linear parameters. For parameters with scale
-        "lin", "parameterScaleNormal" and "norma" are equivalent.
+        "lin", "parameterScaleNormal" and "normal" are equivalent.
 
         * uniform:
             Uniform distribution on transformed parameter scale.
@@ -318,17 +395,26 @@ def _prior_densities(prior_type: str,
             if prior_parameters[0] <= x <= prior_parameters[1]:
                 return - np.log(prior_parameters[1] - prior_parameters[0])
             else:
-                return 0
+                return - np.inf
 
         d_log_f_dx = _get_constant_function(0)
         dd_log_f_ddx = _get_constant_function(0)
 
-        return log_f, d_log_f_dx, dd_log_f_ddx
+        def res(x):
+            if prior_parameters[0] <= x <= prior_parameters[1]:
+                return 0
+            else:
+                return np.inf
+
+        d_res_dx = _get_constant_function(0)
+
+        return log_f, d_log_f_dx, dd_log_f_ddx, res, d_res_dx
 
     elif prior_type in ['normal', 'parameterScaleNormal']:
 
         mean = prior_parameters[0]
-        sigma2 = prior_parameters[1]**2
+        sigma = prior_parameters[1]
+        sigma2 = sigma**2
 
         def log_f(x):
             return -np.log(2*np.pi*sigma2)/2 - \
@@ -338,7 +424,12 @@ def _prior_densities(prior_type: str,
                                           mean/sigma2)
         dd_log_f_ddx = _get_constant_function(-1/sigma2)
 
-        return log_f, d_log_f_dx, dd_log_f_ddx
+        def res(x):
+            return (x-mean)/(np.sqrt(2)*sigma)
+
+        d_res_dx = _get_constant_function(1/(np.sqrt(2)*sigma))
+
+        return log_f, d_log_f_dx, dd_log_f_ddx, res, d_res_dx
 
     elif prior_type in ['laplace', 'parameterScaleLaplace']:
 
@@ -351,14 +442,20 @@ def _prior_densities(prior_type: str,
                    abs(x-mean)/scale
 
         def d_log_f_dx(x):
-            if x > prior_parameters[0]:
+            if x > mean:
                 return -1/scale
             else:
                 return 1/scale
 
         dd_log_f_ddx = _get_constant_function(0)
 
-        return log_f, d_log_f_dx, dd_log_f_ddx
+        def res(x):
+            return np.sqrt(abs(x-mean)/scale)
+
+        def d_res_dx(x):
+            return 1/2*(x-mean)/np.sqrt(scale*abs(x-mean)**3)
+
+        return log_f, d_log_f_dx, dd_log_f_ddx, res, d_res_dx
 
     elif prior_type == 'logUniform':
         # when implementing: add to tests
@@ -381,7 +478,7 @@ def _prior_densities(prior_type: str,
             return 1/(x**2) \
                    - (1 - np.log(x) + mean)/(sigma**2 * x**2)
 
-        return log_f, d_log_f_dx, dd_log_f_ddx
+        return log_f, d_log_f_dx, dd_log_f_ddx, None, None
 
     elif prior_type == 'logLaplace':
         # when implementing: add to tests
