@@ -395,7 +395,7 @@ def _prior_densities(prior_type: str,
             if prior_parameters[0] <= x <= prior_parameters[1]:
                 return - np.log(prior_parameters[1] - prior_parameters[0])
             else:
-                return 0
+                return np.inf
 
         d_log_f_dx = _get_constant_function(0)
         dd_log_f_ddx = _get_constant_function(0)
