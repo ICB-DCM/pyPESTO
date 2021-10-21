@@ -299,12 +299,12 @@ def get_parameter_prior_dict(index: int,
 
         if res is not None:
             def res_log(x_log10):
-                """residual-prior for log-parameters"""
+                """residual-prior for log10-parameters"""
                 return res(10**x_log10)
 
         if d_res_dx is not None:
             def d_res_log(x_log10):
-                """residual-prior for log-parameters"""
+                """residual-prior for log10-parameters"""
                 return d_res_dx(10**x_log10) * log10 * 10**x_log10
 
         return {'index': index,
