@@ -419,9 +419,9 @@ def _prior_densities(prior_type: str,
         dd_log_f_ddx = _get_constant_function(-1/sigma2)
 
         def res(x):
-            return (x-mean)/(2*sigma)
+            return (x-mean)/(np.sqrt(2)*sigma)
 
-        d_res_dx = _get_constant_function(1/(2*sigma))
+        d_res_dx = _get_constant_function(1/(np.sqrt(2)*sigma))
 
         return log_f, d_log_f_dx, dd_log_f_ddx, res, d_res_dx
 
