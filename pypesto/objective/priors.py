@@ -399,8 +399,10 @@ def _prior_densities(prior_type: str,
 
         d_log_f_dx = _get_constant_function(0)
         dd_log_f_ddx = _get_constant_function(0)
+        res = _get_constant_function(0)
+        d_res_dx = _get_constant_function(0)
 
-        return log_f, d_log_f_dx, dd_log_f_ddx, None, None
+        return log_f, d_log_f_dx, dd_log_f_ddx, res, d_res_dx
 
     elif prior_type in ['normal', 'parameterScaleNormal']:
 

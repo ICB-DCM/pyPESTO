@@ -65,8 +65,6 @@ def test_mode(scale, prior_type_list):
             assert np.isclose(prior(lin_to_scaled(.5, scale)), 0)
             assert np.isclose(prior(lin_to_scaled(1.5, scale)), math.log(1))
             assert np.isclose(prior(lin_to_scaled(2.5, scale)), 0)
-            assert not test_prior.has_res
-            assert not test_prior.has_sres
             true_optim.append(np.nan)
         else:
             true_optim.append(problem_dict[scale]['opt'])
