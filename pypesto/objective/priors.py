@@ -94,9 +94,9 @@ class NegLogParameterPriors(ObjectiveBase):
         if mode == MODE_RES:
             for order in sensi_orders:
                 if order == 0:
-                    res = self.residual(x)
-                    res[CHI2] = res.T.dot(res)
-                    res[RES] = res
+                    r = self.residual(x)
+                    res[CHI2] = r.T.dot(r)
+                    res[RES] = r
                 elif order == 1:
                     res[SRES] = self.residual_jacobian(x)
                 else:
