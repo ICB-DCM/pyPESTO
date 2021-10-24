@@ -285,13 +285,17 @@ def parameters_lowlevel(
                 marker='o',
                 label=tmp_legend)
 
-    plt.yticks(parameters_ind, x_labels)
+    ax.set_yticks(parameters_ind)
+    if x_labels is not None:
+        ax.set_yticklabels(x_labels)
 
     # draw bounds
     parameters_ind = np.array(parameters_ind).flatten()
     if lb is not None:
+        lb = np.array(lb, dtype="float64")
         ax.plot(lb.flatten(), parameters_ind, 'k--', marker='+')
     if ub is not None:
+        ub = np.array(ub, dtype="float64")
         ax.plot(ub.flatten(), parameters_ind, 'k--', marker='+')
 
     ax.set_xlabel('Parameter value')
