@@ -254,7 +254,8 @@ class AmiciObjective(ObjectiveBase):
             os.close(_fd)
             os.remove(_file)
 
-        state['steadyStateSensitivityMode'] = self.amici_model.getSteadyStateSensitivityMode()
+        state['steadyStateSensitivityMode'] = \
+            self.amici_model.getSteadyStateSensitivityMode()
 
         return state
 
@@ -294,7 +295,9 @@ class AmiciObjective(ObjectiveBase):
         self.edatas = edatas
 
         self.apply_custom_timepoints()
-        self.amici_model.setSteadyStateSensitivityMode(state['steadyStateSensitivityMode'])
+        self.amici_model.setSteadyStateSensitivityMode(
+            state['steadyStateSensitivityMode']
+        )
 
     def check_sensi_orders(
         self,
