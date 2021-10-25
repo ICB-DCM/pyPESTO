@@ -133,7 +133,6 @@ def resample_startpoints(
                 lb=lb,
                 ub=ub,
                 objective=objective,
-                x_guesses=x_guesses
             )[0, :]
             objective.initialize()
             fvals[j] = objective(startpoint)
