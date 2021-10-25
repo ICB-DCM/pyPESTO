@@ -278,8 +278,8 @@ def read_result(filename: str,
                 sample: bool = False,
                 ) -> Result:
     """
-    This is a function that saves the whole pypesto.Result object in an
-    HDF5 file. With booleans one can choose more detailed what to save.
+    Read the whole pypesto.Result object from an HDF5 file. With booleans
+    one can choose more detailed what to save.
 
     Parameters
     ----------

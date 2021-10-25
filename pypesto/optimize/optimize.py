@@ -1,4 +1,5 @@
 import logging
+import datetime
 from typing import Iterable, Union
 
 from ..engine import Engine, SingleCoreEngine
@@ -8,6 +9,7 @@ from ..result import Result
 from ..startpoint import (
     assign_startpoints, uniform, StartpointMethod, to_startpoint_method,
 )
+from ..store import write_result
 from .optimizer import Optimizer, ScipyOptimizer
 from .options import OptimizeOptions
 from .task import OptimizerTask
@@ -27,6 +29,7 @@ def minimize(
     progress_bar: bool = True,
     options: OptimizeOptions = None,
     history_options: HistoryOptions = None,
+    filename: str = "Auto"
 ) -> Result:
     """
     This is the main function to call to do multistart optimization.
@@ -57,6 +60,11 @@ def minimize(
         Various options applied to the multistart optimization.
     history_options:
         Optimizer history options.
+    filename:
+        Name of the hdf5 file, where the result will be saved. Default is
+        "Auto", in which case it will automatically generate a file named
+        `year_month_day_optimization_result.hdf5`. Deactivate saving by
+        setting filename to `None`.
 
     Returns
     -------
@@ -116,10 +124,10 @@ def minimize(
 
     # define tasks
     tasks = []
-    filename = None
+    filename_hist = None
     if history_options.storage_file is not None and \
             history_options.storage_file.endswith(('.h5', '.hdf5')):
-        filename = check_hdf5_mp(history_options, engine)
+        filename_hist = check_hdf5_mp(history_options, engine)
 
     for startpoint, id in zip(startpoints, ids):
         task = OptimizerTask(
@@ -135,8 +143,8 @@ def minimize(
     # do multistart optimization
     ret = engine.execute(tasks, progress_bar=progress_bar)
 
-    if filename is not None:
-        fill_hdf5_file(ret, filename)
+    if filename_hist is not None:
+        fill_hdf5_file(ret, filename_hist)
 
     # aggregate results
     for optimizer_result in ret:
@@ -145,4 +153,14 @@ def minimize(
     # sort by best fval
     result.optimize_result.sort()
 
+    if filename is None:
+        return result
+    if filename == "Auto":
+        if history_options.storage_file is not None and \
+                history_options.storage_file.endswith(('.h5', '.hdf5')):
+            filename = history_options.storage_file
+        else:
+            time = datetime.datetime.now().strftime("%Y_%d_%m")
+            filename = time+"_optimization_result.hdf5"
+    write_result(result=result, overwrite=True, optimize=True)
     return result

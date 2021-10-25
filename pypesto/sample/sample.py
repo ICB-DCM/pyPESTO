@@ -1,10 +1,12 @@
 import logging
+import datetime
 import numpy as np
 from typing import List, Union
 from time import process_time
 
 from ..problem import Problem
 from ..result import Result
+from ..store import write_result
 from .sampler import Sampler
 from .adaptive_metropolis import AdaptiveMetropolisSampler
 
@@ -16,7 +18,8 @@ def sample(
         n_samples: int,
         sampler: Sampler = None,
         x0: Union[np.ndarray, List[np.ndarray]] = None,
-        result: Result = None
+        result: Result = None,
+        filename: str = "Auto"
 ) -> Result:
     """
     This is the main function to call to do parameter sampling.
@@ -38,6 +41,11 @@ def sample(
     result:
         A result to write to. If None provided, one is created from the
         problem.
+    filename:
+        Name of the hdf5 file, where the result will be saved. Default is
+        "Auto", in which case it will automatically generate a file named
+        `year_month_day_optimization_result.hdf5`. Deactivate saving by
+        setting filename to `None`.
 
     Returns
     -------
@@ -78,4 +86,10 @@ def sample(
     # record results
     result.sample_result = sampler_result
 
+    if filename is None:
+        return result
+    if filename == "Auto":
+        time = datetime.datetime.now().strftime("%Y_%d_%m")
+        filename = time + "_sampling_result.hdf5"
+    write_result(result=result, overwrite=True, sample=True)
     return result

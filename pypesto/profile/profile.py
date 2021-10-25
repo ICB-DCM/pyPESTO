@@ -1,10 +1,12 @@
 import logging
+import datetime
 from typing import Callable, Union, Iterable
 
 from ..engine import Engine, SingleCoreEngine
 from ..optimize import Optimizer
 from ..problem import Problem
 from ..result import Result
+from ..store import write_result
 from .profile_next_guess import next_guess
 from .options import ProfileOptions
 from .util import initialize_profile
@@ -23,7 +25,8 @@ def parameter_profile(
         result_index: int = 0,
         next_guess_method: Union[Callable, str] = 'adaptive_step_regression',
         profile_options: ProfileOptions = None,
-        progress_bar: bool = True
+        progress_bar: bool = True,
+        filename: str = "Auto"
 ) -> Result:
     """
     This is the main function to call to do parameter profiling.
@@ -58,6 +61,11 @@ def parameter_profile(
         Various options applied to the profile optimization.
     progress_bar:
         Whether to display a progress bar.
+    filename:
+        Name of the hdf5 file, where the result will be saved. Default is
+        "Auto", in which case it will automatically generate a file named
+        `year_month_day_optimization_result.hdf5`. Deactivate saving by
+        setting filename to `None`.
 
     Returns
     -------
@@ -125,4 +133,10 @@ def parameter_profile(
         result.profile_result.list[-1][indexed_profile['index']] = \
             indexed_profile['profile']
 
+    if filename is None:
+        return result
+    if filename == "Auto":
+        time = datetime.datetime.now().strftime("%Y_%d_%m")
+        filename = time + "_profiling_result.hdf5"
+    write_result(result=result, overwrite=True, profile=True)
     return result
