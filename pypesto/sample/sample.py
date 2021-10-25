@@ -44,7 +44,7 @@ def sample(
     filename:
         Name of the hdf5 file, where the result will be saved. Default is
         "Auto", in which case it will automatically generate a file named
-        `year_month_day_optimization_result.hdf5`. Deactivate saving by
+        `year_month_day_sampling_result.hdf5`. Deactivate saving by
         setting filename to `None`.
 
     Returns
