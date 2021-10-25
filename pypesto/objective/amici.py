@@ -255,7 +255,7 @@ class AmiciObjective(ObjectiveBase):
             os.remove(_file)
 
         state['AMICI_model_settings'] = \
-            amici.getModelSettings(self.amici_model)
+            amici.get_model_settings(self.amici_model)
 
         return state
 
@@ -295,7 +295,10 @@ class AmiciObjective(ObjectiveBase):
         self.edatas = edatas
 
         self.apply_custom_timepoints()
-        amici.setModelSettings(self.amici_model, state['AMICI_model_settings'])
+        amici.set_model_settings(
+            self.amici_model,
+            state['AMICI_model_settings'],
+        )
 
     def check_sensi_orders(
         self,
