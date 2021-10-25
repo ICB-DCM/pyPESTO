@@ -254,7 +254,8 @@ class AmiciObjective(ObjectiveBase):
             os.close(_fd)
             os.remove(_file)
 
-        state['AMICI_model_settings'] = amici.getModelSettings(self.amici_model)
+        state['AMICI_model_settings'] = \
+            amici.getModelSettings(self.amici_model)
 
         return state
 
