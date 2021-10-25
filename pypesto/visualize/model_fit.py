@@ -109,9 +109,9 @@ def time_trajectory_model(
 
     Returns
     -------
-    axes: `matplotlib.axes.Axes` object of the plot.
+    axes:
+        `matplotlib.axes.Axes` object of the plot.
     """
-
     if problem is None:
         problem = result.problem
     # add timepoints as needed
@@ -174,7 +174,8 @@ def _time_trajectory_model_with_states(
 
     Returns
     -------
-    axes: `matplotlib.axes.Axes` object of the plot.
+    axes:
+        `matplotlib.axes.Axes` object of the plot.
     """
     # if state_name, state_id or observable_id is not None, get indices
     # for these the AMICI plotting functions default to all indices if
@@ -237,7 +238,8 @@ def _time_trajectory_model_without_states(
 
     Returns
     -------
-    axes: `matplotlib.axes.Axes` object of the plot.
+    axes:
+        `matplotlib.axes.Axes` object of the plot.
     """
     # if observable_id's is not None, get indices for these
     # the AMICI plotting functions default to all indices if `None` is

@@ -3,7 +3,8 @@ from typing import Iterable
 
 
 class McmcPtResult(dict):
-    """The result of a sampler run using Markov-chain Monte Carlo, and
+    """
+    The result of a sampler run using Markov-chain Monte Carlo, and
     optionally parallel tempering.
 
     Can be used like a dict.

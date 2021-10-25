@@ -73,7 +73,7 @@ class ProfileOptions(dict):
             maybe_options: Union['ProfileOptions', Dict]
     ) -> 'ProfileOptions':
         """
-        Returns a valid options object.
+        Return a valid options object.
 
         Parameters
         ----------

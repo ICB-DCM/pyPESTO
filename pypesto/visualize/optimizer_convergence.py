@@ -20,7 +20,6 @@ def optimizer_convergence(result: pypesto.Result,
 
     Parameters
     ----------
-
     result:
         Optimization result obtained by 'optimize.py'
 
@@ -39,7 +38,6 @@ def optimizer_convergence(result: pypesto.Result,
 
     Returns
     -------
-
     ax: matplotlib.Axes
         The plot axes.
     """

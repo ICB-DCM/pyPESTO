@@ -237,7 +237,8 @@ class HistoryBase(abc.ABC):
             self, ix: Union[int, Sequence[int], None] = None,
             trim: bool = False
     ) -> Union[Sequence[np.ndarray], np.ndarray]:
-        """Parameters.
+        """
+        Parameters.
 
         Takes as parameter an index or indices and returns corresponding trace
         values. If only a single value is requested, the list is flattened.
@@ -248,7 +249,8 @@ class HistoryBase(abc.ABC):
             self, ix: Union[int, Sequence[int], None] = None,
             trim: bool = False
     ) -> Union[Sequence[float], float]:
-        """Function values.
+        """
+        Function values.
 
         Takes as parameter an index or indices and returns corresponding trace
         values. If only a single value is requested, the list is flattened.
@@ -259,7 +261,8 @@ class HistoryBase(abc.ABC):
             self, ix: Union[int, Sequence[int], None] = None,
             trim: bool = False
     ) -> Union[Sequence[MaybeArray], MaybeArray]:
-        """Gradients.
+        """
+        Gradients.
 
         Takes as parameter an index or indices and returns corresponding trace
         values. If only a single value is requested, the list is flattened.
@@ -270,7 +273,8 @@ class HistoryBase(abc.ABC):
             self, ix: Union[int, Sequence[int], None] = None,
             trim: bool = False
     ) -> Union[Sequence[MaybeArray], MaybeArray]:
-        """Hessians.
+        """
+        Hessians.
 
         Takes as parameter an index or indices and returns corresponding trace
         values. If only a single value is requested, the list is flattened.
@@ -281,7 +285,8 @@ class HistoryBase(abc.ABC):
             self, ix: Union[int, Sequence[int], None] = None,
             trim: bool = False
     ) -> Union[Sequence[MaybeArray], MaybeArray]:
-        """Residuals.
+        """
+        Residuals.
 
         Takes as parameter an index or indices and returns corresponding trace
         values. If only a single value is requested, the list is flattened.
@@ -292,7 +297,8 @@ class HistoryBase(abc.ABC):
             self, ix: Union[int, Sequence[int], None] = None,
             trim: bool = False
     ) -> Union[Sequence[MaybeArray], MaybeArray]:
-        """Residual sensitivities.
+        """
+        Residual sensitivities.
 
         Takes as parameter an index or indices and returns corresponding trace
         values. If only a single value is requested, the list is flattened.
@@ -303,7 +309,8 @@ class HistoryBase(abc.ABC):
             self, ix: Union[int, Sequence[int], None] = None,
             trim: bool = False
     ) -> Union[Sequence[float], float]:
-        """Chi2 values.
+        """
+        Chi2 values.
 
         Takes as parameter an index or indices and returns corresponding trace
         values. If only a single value is requested, the list is flattened.
@@ -314,7 +321,8 @@ class HistoryBase(abc.ABC):
             self, ix: Union[int, Sequence[int], None] = None,
             trim: bool = False
     ) -> Union[Sequence[MaybeArray], MaybeArray]:
-        """Chi2 sensitivities.
+        """
+        Chi2 sensitivities.
 
         Takes as parameter an index or indices and returns corresponding trace
         values. If only a single value is requested, the list is flattened.
@@ -325,7 +333,8 @@ class HistoryBase(abc.ABC):
             self, ix: Union[int, Sequence[int], None] = None,
             trim: bool = False
     ) -> Union[Sequence[float], float]:
-        """Cumulative execution times.
+        """
+        Cumulative execution times.
 
         Takes as parameter an index or indices and returns corresponding trace
         values. If only a single value is requested, the list is flattened.
@@ -334,7 +343,7 @@ class HistoryBase(abc.ABC):
 
     def get_trimmed_indices(self):
         """
-        Returns indices of the history to get a monotonically
+        Return indices of the history to get a monotonically
         decreasing history.
         """
         fval_trace = self.get_fval_trace()
@@ -342,7 +351,8 @@ class HistoryBase(abc.ABC):
 
 
 class History(HistoryBase):
-    """Tracks numbers of function evaluations only, no trace.
+    """
+    Track number of function evaluations only, no trace.
 
     Parameters
     ----------
@@ -396,9 +406,7 @@ class History(HistoryBase):
     def _update_counts(self,
                        sensi_orders: Tuple[int, ...],
                        mode: str):
-        """
-        Update the counters.
-        """
+        """Update the counters."""
         if mode == MODE_FUN:
             if 0 in sensi_orders:
                 self._n_fval += 1
@@ -438,7 +446,8 @@ class History(HistoryBase):
 
 
 class MemoryHistory(History):
-    """Tracks numbers of function evaluations and keeps an in-memory
+    """
+    Track number of function evaluations and keeps an in-memory
     trace of function evaluations.
 
     Parameters
@@ -613,9 +622,7 @@ class CsvHistory(History):
                       x: np.ndarray,
                       mode: str,
                       result: ResultDict):
-        """
-        Update and possibly store the trace.
-        """
+        """Update and possibly store the trace."""
         if not self.options.trace_record:
             return
 
@@ -662,9 +669,7 @@ class CsvHistory(History):
         self._save_trace()
 
     def _init_trace(self, x: np.ndarray):
-        """
-        Initialize the trace.
-        """
+        """Initialize the trace."""
         if self.x_names is None:
             self.x_names = [f'x{i}' for i, _ in enumerate(x)]
 
@@ -788,7 +793,8 @@ class CsvHistory(History):
 
 
 class Hdf5History(History):
-    """Stores a representation of the history in an HDF5 file.
+    """
+    Stores a representation of the history in an HDF5 file.
 
     Parameters
     ----------
@@ -833,14 +839,14 @@ class Hdf5History(History):
     @staticmethod
     def load(id: str,
              file: str):
-        """Loads the History object from memory."""
+        """Load the History object from memory."""
         loaded_h5history = Hdf5History(id, file)
         loaded_h5history._recover_options(file)
         return loaded_h5history
 
     def _recover_options(self, file: str):
         """
-        Recovers options when loading the hdf5 history from memory
+        Recover options when loading the hdf5 history from memory
         by testing which entries were recorded.
         """
         trace_record = self._check_for_not_nan_entries(X)
@@ -866,7 +872,7 @@ class Hdf5History(History):
         self.options = restored_history_options
 
     def _check_for_not_nan_entries(self, hdf5_group: str) -> bool:
-        """Checks if there exist not-nan entries stored for a given group"""
+        """Check if there exist not-nan entries stored for a given group."""
         group = self._get_hdf5_entries(hdf5_group, ix=None)
 
         for entry in group:
@@ -879,9 +885,7 @@ class Hdf5History(History):
     def _update_counts(self,
                        sensi_orders: Tuple[int, ...],
                        mode: str):
-        """
-        Update the counters in the hdf5
-        """
+        """Update the counters in the hdf5."""
         with h5py.File(self.file, 'a') as f:
 
             if mode == MODE_FUN:
@@ -938,10 +942,7 @@ class Hdf5History(History):
                       sensi_orders: Tuple[int],
                       mode: str,
                       result: ResultDict):
-        """
-        Update and possibly store the trace.
-        """
-
+        """Update and possibly store the trace."""
         if not self.options.trace_record:
             return
 
@@ -976,9 +977,7 @@ class Hdf5History(History):
                 'n_iterations'] += 1
 
     def _generate_hdf5_group(self, f: h5py.File = None):
-        """
-        Generates the group in the hdf5 file, if it does not exist yet.
-        """
+        """Generate the group in the hdf5 file, if it does not exist yet."""
         try:
             with h5py.File(self.file, 'a') as f:
                 if f'history/{self.id}/trace/' not in f:
@@ -998,17 +997,18 @@ class Hdf5History(History):
         entry_id: str,
         ix: Union[int, Sequence[int], None] = None,
     ) -> Sequence:
-        """Get entries for field `entry_id` from HDF5 file, for indices `ix`.
+        """
+        Get entries for field `entry_id` from HDF5 file, for indices `ix`.
 
         Parameters
-        ------------
+        ----------
         entry_id:
             The key whose trace is returned.
         ix:
             Index or list of indices of the iterations that will produce
             the trace.
         Returns
-        --------
+        -------
         The entries ix for the key entry_id.
         """
         if ix is None:
@@ -1161,9 +1161,7 @@ class OptimizerHistory:
     def _update_vals(self,
                      x: np.ndarray,
                      result: ResultDict):
-        """
-        Update initial and best function values.
-        """
+        """Update initial and best function values."""
         # update initial point
         if np.allclose(x, self.x0):
             if self.fval0 is None:

@@ -68,7 +68,6 @@ def parameters(
     ax:
         The plot axes.
     """
-
     # parse input
     (results, colors, legends) = process_result_list(results, colors, legends)
 
@@ -82,8 +81,7 @@ def parameters(
                              "'all', 'free_only' or a list of indices")
 
     def scale_parameters(x):
-        """Scale ``x`` from [lb, ub] to interval given by ``scale_to_interval``
-        """
+        """Scale `x` from [lb, ub] to interval given by `scale_to_interval`."""
         if scale_to_interval is None or scale_to_interval is False:
             return x
 
@@ -159,14 +157,11 @@ def parameter_hist(
         List of integers specifying the multistarts to be plotted or
         int specifying up to which start index should be plotted
 
-
     Returns
     -------
     ax:
-    The plot axes.
-
+        The plot axes.
     """
-
     if ax is None:
         ax = plt.subplots()[1]
         fig = plt.gcf()
@@ -204,52 +199,39 @@ def parameters_lowlevel(
         legend_text: Optional[str] = None,
         balance_alpha: bool = True
 ) -> matplotlib.axes.Axes:
-
     """
     Plot parameters plot using list of parameters.
 
     Parameters
     ----------
-
     xs:
         Including optimized parameters for each startpoint.
         Shape: (n_starts, dim).
-
     fvals:
         Function values. Needed to assign cluster colors.
-
     lb, ub:
         The lower and upper bounds.
-
     x_labels:
         Labels to be used for the parameters.
-
     ax:
         Axes object to use.
-
     size:
         see parameters
-
     colors:
         One for each element in 'fvals'.
-
     linestyle:
         linestyle argument for parameter plot
-
     legend_text:
         Label for line plots
-
     balance_alpha:
         Flag indicating whether alpha for large clusters should be reduced to
         avoid overplotting (default: True)
 
     Returns
     -------
-
     ax:
         The plot axes.
     """
-
     # parse input
     xs = np.array(xs)
     fvals = np.array(fvals)
@@ -314,42 +296,33 @@ def handle_inputs(
         start_indices: Optional[Union[int, Iterable[int]]] = None
 ) -> Tuple[np.ndarray, np.ndarray, List[str], np.ndarray, List[np.ndarray]]:
     """
-    Computes the correct bounds for the parameter indices to be plotted and
+    Compute the correct bounds for the parameter indices to be plotted and
     outputs the corresponding parameters and their labels
 
     Parameters
     ----------
-
     result:
         Optimization result obtained by 'optimize.py'.
-
     parameter_indices:
         Specifies which parameters should be plotted.
-
     lb, ub:
         If not None, override result.problem.lb, problem.problem.ub.
         Dimension either result.problem.dim or result.problem.dim_full.
-
     start_indices:
         list of integers specifying the multistarts to be plotted or
         int specifying up to which start index should be plotted
 
     Returns
     -------
-
     lb, ub:
         Dimension either result.problem.dim or result.problem.dim_full.
-
     x_labels:
         ytick labels to be applied later on
-
     fvals:
         objective function values which are needed for plotting later
-
     xs:
         parameter values which will be plotted later
     """
-
     # retrieve results
     fvals = result.optimize_result.get_for_key('fval')
     xs = result.optimize_result.get_for_key('x')

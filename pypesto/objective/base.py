@@ -114,7 +114,7 @@ class ObjectiveBase(abc.ABC):
         **kwargs,
     ) -> Union[float, np.ndarray, Tuple, ResultDict]:
         """
-        Method to obtain arbitrary sensitivities. This is the central method
+        Obtain arbitrary sensitivities. This is the central method
         which is always called, also by the get_* methods.
 
         There are different ways in which an optimizer calls the objective
@@ -216,6 +216,7 @@ class ObjectiveBase(abc.ABC):
         ----------
         mode:
             Whether to compute function values or residuals.
+
         Returns
         -------
         flag:
@@ -312,7 +313,6 @@ class ObjectiveBase(abc.ABC):
     # The following are convenience functions for getting specific outputs.
     def get_fval(self, x: np.ndarray) -> float:
         """Get the function value at x."""
-
         fval = self(x, (0,), MODE_FUN)
         return fval
 
@@ -370,7 +370,6 @@ class ObjectiveBase(abc.ABC):
             Vector of the same length as x_fixed_indices, containing the values
             of the fixed parameters.
         """
-
         pre_post_processor = FixedParametersProcessor(
             dim_full=dim_full,
             x_free_indices=x_free_indices,
@@ -470,11 +469,10 @@ class ObjectiveBase(abc.ABC):
             mean).
 
         Returns
-        ----------
+        -------
         result:
             gradient, finite difference approximations and error estimates.
         """
-
         if x_indices is None:
             x_indices = list(range(len(x)))
 
@@ -613,7 +611,7 @@ class ObjectiveBase(abc.ABC):
         multi_eps=None,
         **kwargs,
     ) -> bool:
-        """Check if gradients match finite differences (FDs)
+        """Check if gradients match finite differences (FDs).
 
         Parameters
         ----------

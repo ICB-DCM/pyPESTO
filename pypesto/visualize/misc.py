@@ -20,33 +20,26 @@ from .constants import (
 
 def process_result_list(results, colors=None, legends=None):
     """
-    assigns colors and legends to a list of results, check user provided lists
+    Assign colors and legends to a list of results, check user provided lists
 
     Parameters
     ----------
-
     results: list or pypesto.Result
         list of pypesto.Result objects or a single pypesto.Result
-
     colors: list, optional
         list of RGBA colors
-
     legends: str or list
         labels for line plots
 
     Returns
     -------
-
     results: list of pypesto.Result
        list of pypesto.Result objects
-
     colors: list of RGBA
         One for each element in 'results'.
-
     legends: list of str
         labels for line plots
     """
-
     # check how many results were passed
     single_result = False
     legend_error = False
@@ -97,30 +90,25 @@ def process_offset_y(offset_y: Optional[float],
                      scale_y: str,
                      min_val: float) -> float:
     """
-    compute offset for y-axis, depend on user settings
+    Compute offset for y-axis, depend on user settings
 
     Parameters
     ----------
-
     offset_y:
        value for offsetting the later plotted values, in order to ensure
        positivity if a semilog-plot is used
-
     scale_y:
        Can be 'lin' or 'log10', specifying whether values should be plotted
        on linear or on log10-scale
-
     min_val:
         Smallest value to be plotted
 
     Returns
     -------
-
     offset_y: float
        value for offsetting the later plotted values, in order to ensure
        positivity if a semilog-plot is used
     """
-
     # check whether the offset specified by the user is sufficient
     if offset_y is not None:
         if (scale_y == 'log10') and (min_val + offset_y <= 0.):
@@ -140,24 +128,20 @@ def process_offset_y(offset_y: Optional[float],
 
 def process_y_limits(ax, y_limits):
     """
-    apply user specified limits of y-axis
+    Apply user specified limits of y-axis
 
     Parameters
     ----------
-
     ax: matplotlib.Axes, optional
         Axes object to use.
-
     y_limits: ndarray
        y_limits, minimum and maximum, for current axes object
 
     Returns
     -------
-
     ax: matplotlib.Axes, optional
         Axes object to use.
     """
-
     # apply y-limits, if they were specified by the user
     if y_limits is not None:
         y_limits = np.array(y_limits)
@@ -214,7 +198,7 @@ def process_y_limits(ax, y_limits):
 def process_start_indices(start_indices: Union[int, Iterable[int]],
                           max_length: int) -> List[int]:
     """
-    helper function that processes the start_indices and
+    Helper function that processes the start_indices and
     creates an array of indices if a number was provided and checks that the
     indices do not exceed the max_index
 
@@ -226,7 +210,6 @@ def process_start_indices(start_indices: Union[int, Iterable[int]],
     max_length:
         maximum possible index for the start_indices
     """
-
     if isinstance(start_indices, Number):
         start_indices = range(int(start_indices))
 

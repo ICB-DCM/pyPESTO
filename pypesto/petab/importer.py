@@ -1,3 +1,4 @@
+"""Contains the PetabImporter class."""
 import pandas as pd
 import numpy as np
 import os
@@ -31,6 +32,10 @@ logger = logging.getLogger(__name__)
 
 
 class PetabImporter(AmiciObjectBuilder):
+    """
+    Create an `amici.Model`, an `objective.AmiciObjective` or a
+    `pypesto.Problem` from Petab files.
+    """
     MODEL_BASE_DIR = "amici_models"
 
     def __init__(self,
@@ -71,9 +76,7 @@ class PetabImporter(AmiciObjectBuilder):
     def from_yaml(yaml_config: Union[dict, str],
                   output_folder: str = None,
                   model_name: str = None) -> 'PetabImporter':
-        """
-        Simplified constructor using a petab yaml file.
-        """
+        """Simplified constructor using a petab yaml file."""
         petab_problem = petab.Problem.from_yaml(yaml_config)
 
         return PetabImporter(
@@ -90,7 +93,8 @@ class PetabImporter(AmiciObjectBuilder):
         multi_eps=None,
         **kwargs,
     ) -> bool:
-        """Check if gradients match finite differences (FDs)
+        """
+        Check if gradients match finite differences (FDs).
 
         Parameters
         ----------
@@ -194,9 +198,7 @@ class PetabImporter(AmiciObjectBuilder):
         return model
 
     def _must_compile(self, force_compile: bool):
-        """
-        Check whether the model needs to be compiled first.
-        """
+        """Check whether the model needs to be compiled first."""
         # asked by user
         if force_compile:
             return True
@@ -226,7 +228,6 @@ class PetabImporter(AmiciObjectBuilder):
         kwargs: Extra arguments passed to `amici.SbmlImporter.sbml2amici`.
 
         """
-
         # delete output directory
         if os.path.exists(self.output_folder):
             shutil.rmtree(self.output_folder)
@@ -240,9 +241,7 @@ class PetabImporter(AmiciObjectBuilder):
             **kwargs)
 
     def create_solver(self, model: 'amici.Model' = None) -> 'amici.Solver':
-        """
-        Return model solver.
-        """
+        """Return model solver."""
         # create model
         if model is None:
             model = self.create_model()
@@ -439,7 +438,6 @@ class PetabImporter(AmiciObjectBuilder):
         Creates a prior from the parameter table. Returns None, if no priors
         are defined.
         """
-
         prior_list = []
 
         if petab.OBJECTIVE_PRIOR_TYPE in self.petab_problem.parameter_df:
@@ -665,7 +663,5 @@ def _find_output_folder_name(
 
 
 def _find_model_name(output_folder: str) -> str:
-    """
-    Just re-use the last part of the output folder.
-    """
+    """Just re-use the last part of the output folder."""
     return os.path.split(os.path.normpath(output_folder))[-1]

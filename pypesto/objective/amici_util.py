@@ -69,7 +69,6 @@ def create_plist_from_par_opt_to_par_sim(mapping_par_opt_to_par_sim):
 
     Parameters
     ----------
-
     mapping_par_opt_to_par_sim: array-like of str
         len == n_par_sim, the entries are either numeric, or
         optimization parameter ids.
@@ -134,10 +133,9 @@ def par_index_slices(
         The simulation to optimization parameter mapping.
 
     Returns
-    ----------
+    -------
     par_sim_slice:
         array of simulation parameter indices
-
     par_opt_slice:
         array of optimization parameter indices
     """
@@ -351,7 +349,7 @@ def init_return_values(sensi_order, mode, dim, error=False):
 
 
 def filter_return_dict(ret):
-    """Filters return dict for non-None values"""
+    """Filter return dict for non-None values."""
     return {
         key: val
         for key, val in ret.items()

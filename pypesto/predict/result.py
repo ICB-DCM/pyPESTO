@@ -22,9 +22,9 @@ from .constants import (
 
 class PredictionConditionResult:
     """
-    This class is a light-weight wrapper for the prediction of one simulation
-    condition of an amici model. It should provide a common api how amici
-    predictions should look like in pyPESTO.
+    Light-weight wrapper for the prediction of one simulation condition of
+    an amici model. It should provide a common api how amici predictions
+    should look like in pyPESTO.
     """
 
     def __init__(self,
@@ -100,11 +100,11 @@ class PredictionConditionResult:
 
 class PredictionResult:
     """
-    This class is a light-weight wrapper around predictions from pyPESTO made
-    via an amici model. It's only purpose is to have fixed format/api, how
-    prediction results should be stored, read, and handled: as predictions are
-    a very flexible format anyway, they should at least have a common
-    definition, which allows to work with them in a reasonable way.
+    Light-weight wrapper around predictions from pyPESTO made via an amici
+    model. It's only purpose is to have fixed format/api, how prediction
+    results should be stored, read, and handled: as predictions are a very
+    flexible format anyway, they should at least have a common definition,
+    which allows to work with them in a reasonable way.
     """
 
     def __init__(self,
@@ -162,7 +162,7 @@ class PredictionResult:
 
     def write_to_csv(self, output_file: str):
         """
-        This method saves predictions to a csv file.
+        Save predictions to a csv file.
 
         Parameters
         ----------
@@ -234,14 +234,13 @@ class PredictionResult:
                     output_file: str,
                     base_path: str = None):
         """
-        This method saves predictions to an h5 file. It appends to the file if
-        the file already exists.
+        Save predictions to an h5 file. It appends to the file if the file
+        already exists.
 
         Parameters
         ----------
         output_file:
             path to file/folder to which results will be written
-
         base_path:
             base path in the h5 file
         """
@@ -284,7 +283,7 @@ class PredictionResult:
     @staticmethod
     def _check_existence(output_path):
         """
-        Checks whether a file or a folder already exists and appends a
+        Check whether a file or a folder already exists and appends a
         timestamp if this is the case
         """
         output_path_out = output_path

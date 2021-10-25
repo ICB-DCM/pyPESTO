@@ -69,7 +69,6 @@ class Problem:
 
     Notes
     -----
-
     On the fixing of parameter values:
 
     The number of parameters dim_full the objective takes as input must
@@ -183,7 +182,6 @@ class Problem:
         Reduce all vectors to dimension dim and have the objective accept
         vectors of dimension dim.
         """
-
         for attr in ['lb_full', 'lb_init_full', 'ub_full', 'ub_init_full']:
             value = self.__getattribute__(attr)
             if value.size == 1:
@@ -230,7 +228,7 @@ class Problem:
     def set_x_guesses(self,
                       x_guesses: Iterable[float]):
         """
-        Sets the x_guesses of a problem.
+        Set the x_guesses of a problem.
 
         Parameters
         ----------
@@ -245,9 +243,7 @@ class Problem:
     def fix_parameters(self,
                        parameter_indices: SupportsIntIterableOrValue,
                        parameter_vals: SupportsFloatIterableOrValue) -> None:
-        """
-        Fix specified parameters to specified values
-        """
+        """Fix specified parameters to specified values."""
         parameter_indices = _make_iterable_if_value(parameter_indices, 'int')
         parameter_vals = _make_iterable_if_value(parameter_vals, 'float')
 
@@ -272,10 +268,7 @@ class Problem:
 
     def unfix_parameters(self, parameter_indices: SupportsIntIterableOrValue
                          ) -> None:
-        """
-        Free specified parameters
-        """
-
+        """Free specified parameters."""
         # check and adapt input
         parameter_indices = _make_iterable_if_value(parameter_indices, 'int')
 
@@ -400,7 +393,8 @@ class Problem:
         return x
 
     def full_index_to_free_index(self, full_index: int):
-        """Calculate index in reduced vector from index in full vector.
+        """
+        Calculate index in reduced vector from index in full vector.
 
         Parameters
         ----------
@@ -418,7 +412,7 @@ class Problem:
 
     def print_parameter_summary(self) -> None:
         """
-        Prints a summary of what parameters are being optimized and
+        Print a summary of what parameters are being optimized and
         parameter boundaries.
         """
         print(  # noqa: T001 (print)
@@ -451,10 +445,9 @@ def _type_conversion_with_check(index: int,
                                 valuename: str,
                                 convtype: str) -> Union[float, int]:
     """
-    Converts values to the requested type, raises and appropriate error if
+    Convert values to the requested type, raises and appropriate error if
     not possible.
     """
-
     if convtype not in _convtypes:
         raise ValueError(f'Unsupported type {convtype}')
 
@@ -480,9 +473,8 @@ def _make_iterable_if_value(value: Union[SupportsFloatIterableOrValue,
                             convtype: str) -> Union[Iterable[SupportsFloat],
                                                     Iterable[SupportsInt]]:
     """
-    Converts scalar values to iterables if input is scalar, may update type
+    Convert scalar values to iterables if input is scalar, may update type.
     """
-
     if convtype not in _convtypes:
         raise ValueError(f'Unsupported type {convtype}')
 

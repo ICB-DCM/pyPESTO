@@ -1,6 +1,4 @@
-"""
-This is for (string) constants used in the ensemble module.
-"""
+"""Constants used in the ensemble module."""
 
 
 from enum import Enum

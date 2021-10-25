@@ -29,7 +29,7 @@ def minimize(
     history_options: HistoryOptions = None,
 ) -> Result:
     """
-    This is the main function to call to do multistart optimization.
+    Main function to call to do multistart optimization.
 
     Parameters
     ----------
@@ -64,7 +64,6 @@ def minimize(
         Result object containing the results of all multistarts in
         `result.optimize_result`.
     """
-
     # optimizer
     if optimizer is None:
         optimizer = ScipyOptimizer()

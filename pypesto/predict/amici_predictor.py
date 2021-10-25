@@ -222,8 +222,8 @@ class AmiciPredictor:
                      include_sigmay: bool = False
                      ) -> Tuple[List, List, List]:
         """
-        This function splits the calls to amici into smaller chunks, as too
-        large ReturnData objects from amici including many simulations can be
+        Split the calls to amici into smaller chunks, as too large
+        ReturnData objects from amici including many simulations can be
         problematic in terms of memory
 
         Parameters
@@ -235,8 +235,8 @@ class AmiciPredictor:
         mode:
             Whether to compute function values or residuals.
 
-        Returns:
-        --------
+        Returns
+        -------
         timepoints:
             List of np.ndarrays, every entry includes the output timepoints of
             the respective condition
@@ -254,7 +254,6 @@ class AmiciPredictor:
             prediction output. Necessary for evaluation of weighted means
             of Ensembles.
         """
-
         # Do we have a maximum number of simulations allowed?
         n_edatas = len(self.amici_objective.edatas)
         if self.max_chunk_size is None:
@@ -285,7 +284,7 @@ class AmiciPredictor:
             """
             Default output of prediction, equals to observables of AMICI model.
             We need to check that call to AMICI was successful (status == 0),
-            before writing the output
+            before writing the output.
             """
             amici_nt = [len(edata.getTimepoints())
                         for edata in self.amici_objective.edatas]
@@ -355,7 +354,7 @@ class AmiciPredictor:
     def _wrap_call_to_amici(self, amici_outputs, x, sensi_orders, mode,
                             parameter_mapping, edatas):
         """
-        The only purpose of this function is to encapsulate the call to amici:
+        Encapsulate the call to amici.
         This allows to use variable scoping as a mean to clean up the memory
         after calling amici, which is beneficial if large models with large
         datasets are used.

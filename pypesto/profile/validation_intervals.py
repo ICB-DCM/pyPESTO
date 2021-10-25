@@ -25,7 +25,7 @@ def validation_profile_significance(
         return_significance: bool = True,
 ) -> float:
     """
-    A Validation Interval for significance alpha is a confidence region/
+    Validation Interval for significance alpha is a confidence region/
     interval for a new validation experiment. [#Kreutz]_ et al.
     (This method per default returns the significance = 1-alpha!)
 
@@ -85,7 +85,6 @@ def validation_profile_significance(
                   doi:10.1186/1752-0509-6-120
 
      """
-
     if (result_full_data is not None) and (optimizer is not None):
         raise UserWarning("optimizer will not be used, as a result object "
                           "for the full data set is provided.")

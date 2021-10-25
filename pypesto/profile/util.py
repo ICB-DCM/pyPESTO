@@ -84,7 +84,7 @@ def initialize_profile(
         profile_list: int
 ) -> float:
     """
-    This function initializes profiling based on a previous optimization.
+    Initialize profiling based on a previous optimization.
 
     Parameters
     ----------
@@ -148,7 +148,7 @@ def fill_profile_list(
         global_opt: float
 ) -> None:
     """
-    This is a helper function for initialize_profile
+    Helper function for initialize_profile.
 
     Parameters
     ----------
@@ -169,7 +169,6 @@ def fill_profile_list(
     global_opt:
         log-posterior at global optimum.
     """
-
     if optimizer_result[GRAD] is not None:
         gradnorm = np.linalg.norm(optimizer_result[GRAD])
     else:

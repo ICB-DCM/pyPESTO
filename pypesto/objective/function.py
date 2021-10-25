@@ -16,7 +16,6 @@ class Objective(ObjectiveBase):
 
     Parameters
     ----------
-
     fun:
         The objective function to be minimized. If it only computes the
         objective function value, it should be of the form
@@ -25,7 +24,6 @@ class Objective(ObjectiveBase):
 
         where x is an 1-D array with shape (n,), and n is the parameter space
         dimension.
-
     grad:
         Method for computing the gradient vector. If it is a callable,
         it should be of the form
@@ -34,7 +32,6 @@ class Objective(ObjectiveBase):
 
         If its value is True, then fun should return the gradient as a second
         output.
-
     hess:
         Method for computing the Hessian matrix. If it is a callable,
         it should be of the form
@@ -44,19 +41,16 @@ class Objective(ObjectiveBase):
         If its value is True, then fun should return the gradient as a
         second, and the Hessian as a third output, and grad should be True as
         well.
-
     hessp:
         Method for computing the Hessian vector product, i.e.
 
             ``hessp(x, v) -> array_like, shape (n,)``
 
         computes the product H*v of the Hessian of fun at x with v.
-
     res:
         Method for computing residuals, i.e.
 
             ``res(x) -> array_like, shape(m,).``
-
     sres:
         Method for computing residual sensitivities. If it is a callable,
         it should be of the form
@@ -65,12 +59,12 @@ class Objective(ObjectiveBase):
 
         If its value is True, then res should return the residual
         sensitivities as a second output.
-
     x_names:
         Parameter names. None if no names provided, otherwise a list of str,
         length dim_full (as in the Problem class). Can be read by the
         problem.
     """
+
     def __init__(
         self,
         fun: Callable = None,

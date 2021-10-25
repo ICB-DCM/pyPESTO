@@ -32,7 +32,7 @@ logger = logging.getLogger(__name__)
 
 class EnsemblePrediction:
     """
-    A ensemble prediction consists of an ensemble, i.e., a set of parameter
+    An ensemble prediction consists of an ensemble, i.e., a set of parameter
     vectors and their identifiers such as a sample, and a prediction function.
     It can be attached to a ensemble-type object
     """
@@ -88,8 +88,8 @@ class EnsemblePrediction:
 
     def __iter__(self):
         """
-        __iter__ makes the instances of the class iterable objects, allowing to
-        apply functions such as __dict__ to them.
+        Make the instances of the class iterable objects, allowing to apply
+        functions such as __dict__ to them.
         """
         yield PREDICTOR, self.predictor
         yield PREDICTION_ID, self.prediction_id
@@ -102,10 +102,10 @@ class EnsemblePrediction:
 
     def condense_to_arrays(self):
         """
-        This functions reshapes the predictions results to an array and adds
-        them as a member to the EnsemblePrediction objects. It's meant to be
-        used only if all conditions of a prediction have the same observables,
-        as this is often the case for large-scale data sets taken from online
+        Reshape the predictions results to an array and adds them as a
+        member to the EnsemblePrediction objects. It's meant to be used only
+        if all conditions of a prediction have the same observables, as this
+        is often the case for large-scale data sets taken from online
         databases or similar.
         """
         # prepare for storing results over all predictions
@@ -186,7 +186,7 @@ class EnsemblePrediction:
             """
             Group outputs for different parameter vectors of one ensemble
             together, if they belong to the same simulation condition, and
-            stacks them in one array
+            stacks them in one array.
             """
             # Were outputs computed
             if self.prediction_results[0].conditions[ic].output is None:
@@ -201,7 +201,7 @@ class EnsemblePrediction:
             """
             Group output sensitivities for different parameter vectors of one
             ensemble together, if the belong to the same simulation condition,
-            and stacks them in one array
+            and stacks them in one array.
             """
             # Were output sensitivitiess computed
             if self.prediction_results[0].conditions[ic].output_sensi is None:
@@ -239,7 +239,7 @@ class EnsemblePrediction:
             """
             Group sigmas for different parameter vectors of one ensemble
             together, if they belong to the same simulation condition, and
-            stacks them in one array
+            stacks them in one array.
             """
             # Were outputs computed
             if self.prediction_results[0].conditions[ic].output_sigmay is None:
@@ -253,8 +253,8 @@ class EnsemblePrediction:
         def _compute_summary(tmp_array, percentiles_list, weights,
                              tmp_sigmas=None):
             """
-            Computes means, standard deviation, median, and requested
-            percentiles for a set of stacked simulations
+            Compute means, standard deviation, median, and requested
+            percentiles for a set of stacked simulations.
             """
             summary = {}
             summary[MEAN] = np.average(tmp_array, axis=-1, weights=weights)
@@ -381,7 +381,7 @@ class EnsemblePrediction:
 
 class Ensemble:
     """
-    A ensemble is a wrapper around an numpy array. It comes with some
+    An ensemble is a wrapper around an numpy array. It comes with some
     convenience functionality: It allows to map parameter values via
     identifiers to the correct parameters, it allows to compute summaries of
     the parameter vectors (mean, standard deviation, median, percentiles) more
@@ -471,7 +471,8 @@ class Ensemble:
             upper_bound: np.ndarray = None,
             **kwargs,
     ):
-        """Construct an ensemble from a sample.
+        """
+        Construct an ensemble from a sample.
 
         Parameters
         ----------
@@ -522,7 +523,8 @@ class Ensemble:
             max_size: int = np.inf,
             **kwargs,
     ):
-        """Construct an ensemble from an optimization result.
+        """
+        Construct an ensemble from an optimization result.
 
         Parameters
         ----------
@@ -584,7 +586,8 @@ class Ensemble:
             distribute: bool = True,
             **kwargs,
     ):
-        """Construct an ensemble from the history of an optimization.
+        """
+        Construct an ensemble from the history of an optimization.
 
         Parameters
         ----------
@@ -672,8 +675,8 @@ class Ensemble:
 
     def __iter__(self):
         """
-        __iter__ makes the instances of the class iterable objects, allowing to
-        apply functions such as __dict__ to them.
+        Make the instances of the class iterable objects, allowing to apply
+        functions such as __dict__ to them.
         """
         yield X_VECTOR, self.x_vectors
         yield NX, self.n_x
@@ -815,8 +818,8 @@ class Ensemble:
     def compute_summary(self,
                         percentiles_list: Sequence[int] = (5, 20, 80, 95)):
         """
-        This function computes the mean, the median, the standard deviation
-        and possibly percentiles for the parameters of the ensemble.
+        Compute the mean, the median, the standard deviation and possibly
+        percentiles for the parameters of the ensemble.
         Those summary results are added as a data member to the
         EnsemblePrediction object.
 
@@ -909,7 +912,7 @@ def entries_per_start(fval_traces: List['np.ndarray'],
                       max_size: int,
                       max_per_start: int, ):
     """
-    Creates the indices of each start that will be included
+    Create the indices of each start that will be included
     in the ensemble.
 
     Parameters
@@ -929,7 +932,6 @@ def entries_per_start(fval_traces: List['np.ndarray'],
     -------
         A list of number of candidates per start that are to
         be included in the ensemble.
-
     """
     # choose possible candidates
     ens_ind = [np.flatnonzero(fval <= cutoff) for fval in fval_traces]
@@ -968,7 +970,7 @@ def get_vector_indices(trace_start: np.ndarray,
                        n_vectors: int,
                        distribute: bool, ):
     """
-    Returns the indices to be taken into an ensemble.
+    Return the indices to be taken into an ensemble.
 
     Parameters
     ----------
@@ -988,7 +990,6 @@ def get_vector_indices(trace_start: np.ndarray,
     -------
         The indices to include in the ensemble.
     """
-
     candidates = np.flatnonzero(trace_start <= cutoff)
 
     if distribute:

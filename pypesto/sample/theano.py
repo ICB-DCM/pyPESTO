@@ -48,8 +48,10 @@ class TheanoLogProbability(tt.Op):
         outputs[0][0] = np.array(log_prob)
 
     def grad(self, inputs, g):
-        # the method that calculates the gradients - it actually returns the
-        # vector-Jacobian product - g[0] is a vector of parameter values
+        """
+        Calculate the gradients - actually returns the
+        vector-Jacobian product - g[0] is a vector of parameter values.
+        """
         if self._log_prob_grad is None:
             # indicates gradient not available
             return [NullType]

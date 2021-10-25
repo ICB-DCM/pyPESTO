@@ -1,3 +1,4 @@
+"""Pymc3Sampler."""
 import numpy as np
 from typing import Union
 import logging
@@ -44,11 +45,29 @@ class Pymc3Sampler(Sampler):
 
     @classmethod
     def translate_options(cls, options):
+        """
+        Translate options and fill in defaults.
+
+        Parameters
+        ----------
+        options:
+            Options configuring the sampler.
+        """
         if not options:
             options = {'chains': 1}
         return options
 
     def initialize(self, problem: Problem, x0: np.ndarray):
+        """
+        Initialize the sampler.
+
+        Parameters
+        ----------
+        problem:
+            The problem for which to sample.
+        x0:
+            Should, but is not required to, be used as initial parameter.
+        """
         self.problem = problem
         if x0 is not None:
             if len(x0) != problem.dim:
@@ -61,6 +80,16 @@ class Pymc3Sampler(Sampler):
 
     def sample(
             self, n_samples: int, beta: float = 1.):
+        """
+        Sample the problem.
+
+        Parameters
+        ----------
+        n_samples:
+            Number of samples to be computed.
+        beta:
+            Inverse temperature for the log probability function.
+        """
         problem = self.problem
         log_post_fun = TheanoLogProbability(problem, beta)
         trace = self.trace
@@ -102,6 +131,7 @@ class Pymc3Sampler(Sampler):
         self.data = data
 
     def get_samples(self) -> McmcPtResult:
+        """Convert result from Pymc3 to McmcPtResult."""
         # parameter values
         trace_x = np.asarray(
             self.data.posterior.to_array()).transpose((1, 2, 0))

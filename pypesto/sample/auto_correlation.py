@@ -23,7 +23,6 @@ def autocorrelation_sokal(chain: np.ndarray) -> np.ndarray:
         tau_est: An estimate of the integrated autocorrelation time of
         the MCMC chain.
     """
-
     nsamples, npar = chain.shape
     tau_est = np.zeros((npar))
 

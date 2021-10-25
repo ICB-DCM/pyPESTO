@@ -37,14 +37,11 @@ class OptimizeResult:
         optimizer_result:
             The result of one (local) optimizer run.
         """
-
         self.list.append(optimizer_result)
         self.sort()
 
     def sort(self):
-        """
-        Sort the optimizer results by function value fval (ascending).
-        """
+        """Sort the optimizer results by function value fval (ascending)."""
         def get_fval(res):
             return res.fval if not np.isnan(res.fval) else np.inf
 
@@ -55,7 +52,6 @@ class OptimizeResult:
         Get as pandas DataFrame. If keys is a list,
         return only the specified values.
         """
-
         lst = self.as_list(keys)
 
         df = pd.DataFrame(lst)
@@ -72,7 +68,6 @@ class OptimizeResult:
         keys: list(str), optional
             Labels of the field to extract.
         """
-
         lst = self.list
 
         if keys is not None:
@@ -84,7 +79,6 @@ class OptimizeResult:
         """
         Extract the list of values for the specified key as a list.
         """
-
         return [res[key] for res in self.list]
 
 
@@ -155,7 +149,7 @@ class ProfileResult:
             self, i_par: int, profile_list: int = None
     ):
         """
-        Get theprofiler result at parameter index `i_par` of profile list
+        Get the profiler result at parameter index `i_par` of profile list
         `profile_list`.
 
         Parameters
@@ -171,9 +165,7 @@ class ProfileResult:
 
 
 class SampleResult:
-    """
-    Result of the sample() function.
-    """
+    """Result of the sample() function."""
 
     def __init__(self):
         pass
@@ -187,19 +179,14 @@ class Result:
 
     Attributes
     ----------
-
     problem: pypesto.Problem
         The problem underlying the results.
-
     optimize_result:
         The results of the optimizer runs.
-
     profile_result:
         The results of the profiler run.
-
     sample_result:
         The results of the sampler run.
-
     """
 
     def __init__(self, problem=None):

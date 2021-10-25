@@ -47,7 +47,8 @@ def sampling_fval_traces(
         title: str = None,
         size: Tuple[float, float] = None,
         ax: matplotlib.axes.Axes = None):
-    """Plot log-posterior (=function value) over iterations.
+    """
+    Plot log-posterior (=function value) over iterations.
 
     Parameters
     ----------
@@ -71,7 +72,6 @@ def sampling_fval_traces(
     ax:
         The plot axes.
     """
-
     # get data which should be plotted
     _, params_fval, _, _, _ = get_data_to_plot(result=result,
                                                i_chain=i_chain,
@@ -579,7 +579,8 @@ def sampling_prediction_trajectories(
         output_ids: Sequence[str] = None,
         weighting: bool = False
 ) -> matplotlib.axes.Axes:
-    """Plot MCMC-based prediction credibility intervals for the
+    """
+    Plot MCMC-based prediction credibility intervals for the
     model states or outputs. One or various credibility levels
     can be depicted. Plots are grouped by condition.
 
@@ -752,7 +753,8 @@ def sampling_parameter_cis(
         size: Tuple[float, float] = None,
         ax: matplotlib.axes.Axes = None
 ) -> matplotlib.axes.Axes:
-    """Plot MCMC-based parameter credibility intervals for one or more
+    """
+    Plot MCMC-based parameter credibility intervals for one or more
     credibility levels.
 
     Parameters
@@ -861,7 +863,8 @@ def sampling_parameter_traces(
         suptitle: str = None,
         size: Tuple[float, float] = None,
         ax: matplotlib.axes.Axes = None):
-    """Plot parameter values over iterations.
+    """
+    Plot parameter values over iterations.
 
     Parameters
     ----------
@@ -891,7 +894,6 @@ def sampling_parameter_traces(
     ax:
         The plot axes.
     """
-
     # get data which should be plotted
     nr_params, params_fval, theta_lb, theta_ub, param_names = get_data_to_plot(
         result=result, i_chain=i_chain, stepsize=stepsize,
@@ -962,7 +964,8 @@ def sampling_scatter(
         suptitle: str = None,
         diag_kind: str = "kde",
         size: Tuple[float, float] = None):
-    """Parameter scatter plot.
+    """
+    Parameter scatter plot.
 
     Parameters
     ----------
@@ -984,7 +987,6 @@ def sampling_scatter(
     ax:
         The plot axes.
     """
-
     # get data which should be plotted
     nr_params, params_fval, theta_lb, theta_ub, _ = get_data_to_plot(
         result=result, i_chain=i_chain, stepsize=stepsize)
@@ -1039,9 +1041,9 @@ def sampling_1d_marginals(
 
     Return
     --------
-    ax: matplotlib-axes
+    ax:
+        matplotlib-axes
     """
-
     # get data which should be plotted
     nr_params, params_fval, theta_lb, theta_ub, param_names = get_data_to_plot(
         result=result, i_chain=i_chain,

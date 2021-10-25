@@ -70,7 +70,6 @@ class MetropolisSampler(InternalSampler):
         Perform a step: Propose new parameter, evaluate and check whether to
         accept.
         """
-
         # propose step
         x_new: np.ndarray = self._propose_parameter(x)
 

@@ -10,9 +10,7 @@ logger = logging.getLogger(__name__)
 
 
 class OptimizerTask(Task):
-    """
-    A multistart optimization task, performed in `pypesto.minimize`.
-    """
+    """A multistart optimization task, performed in `pypesto.minimize`."""
 
     def __init__(
             self,

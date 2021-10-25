@@ -26,7 +26,7 @@ def parameter_profile(
         progress_bar: bool = True
 ) -> Result:
     """
-    This is the main function to call to do parameter profiling.
+    Main function to call to do parameter profiling.
 
     Parameters
     ----------

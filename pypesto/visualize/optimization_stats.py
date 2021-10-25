@@ -46,6 +46,8 @@ def optimization_run_properties_one_plot(
 
     Returns
     -------
+    ax:
+        The plot axes.
 
     Examples
     -------
@@ -133,9 +135,8 @@ def optimization_run_properties_per_multistart(
     ax:
     The plot axes.
 
-
     Examples
-    -------
+    --------
     optimization_properties_per_multistart(
         result1,
         properties_to_plot=['time'],
@@ -155,7 +156,6 @@ def optimization_run_properties_per_multistart(
         [result1, result2], properties_to_plot=['time', 'n_fval'],
         colors=[[.5, .9, .9, .3], [.2, .1, .9, .5]])
     """
-
     if properties_to_plot is None:
         properties_to_plot = ['time', 'n_fval', 'n_grad', 'n_hess', 'n_res',
                               'n_sres']
@@ -223,7 +223,6 @@ def optimization_run_property_per_multistart(
     ax:
         The plot axes.
     """
-
     supported_properties = {
         'time': 'Wall-clock time (seconds)',
         'n_fval': 'Number of function evaluations',
@@ -290,11 +289,10 @@ def stats_lowlevel(result: Result,
                    plot_type: str = 'line'):
     """
     Plot values of the optimization run property specified by property name
-    across different multistarts
+    across different multistarts.
 
     Parameters
     ----------
-
     result:
         Optimization result obtained by 'optimize.py'
     property_name:
@@ -321,7 +319,6 @@ def stats_lowlevel(result: Result,
     ax:
         The plot axes.
     """
-
     fvals = result.optimize_result.get_for_key('fval')
     values = result.optimize_result.get_for_key(property_name)
     values, fvals = delete_nan_inf(fvals, values)

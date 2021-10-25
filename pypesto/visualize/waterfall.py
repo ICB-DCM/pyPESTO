@@ -27,48 +27,36 @@ def waterfall(results: Union[Result, Sequence[Result]],
 
     Parameters
     ----------
-
     results:
         Optimization result obtained by 'optimize.py' or list of those
-
     ax: matplotlib.Axes, optional
         Axes object to use.
-
     size:
         Figure size (width, height) in inches. Is only applied when no ax
         object is specified
-
     y_limits: float or ndarray, optional
         maximum value to be plotted on the y-axis, or y-limits
-
     scale_y:
         May be logarithmic or linear ('log10' or 'lin')
-
     offset_y:
         offset for the y-axis, if it is supposed to be in log10-scale
-
     start_indices:
         Integers specifying the multistart to be plotted or int specifying
         up to which start index should be plotted
-
     reference:
         Reference points for optimization results, containing at least a
         function value fval
-
     colors:
         Colors or single color  for plotting. If not set, clustering is done
         and colors are assigned automatically
-
     legends:
         Labels for line plots, one label per result object
 
     Returns
     -------
-
     ax: matplotlib.Axes
         The plot axes.
     """
-
     # parse input
     (results, colors, legends) = process_result_list(results, colors, legends)
 
@@ -103,37 +91,28 @@ def waterfall_lowlevel(fvals, scale_y='log10', offset_y=0., ax=None,
 
     Parameters
     ----------
-
     fvals: numeric list or array
         Including values need to be plotted.
-
     scale_y: str, optional
         May be logarithmic or linear ('log10' or 'lin')
-
     offset_y:
         offset for the y-axis, if it is supposed to be in log10-scale
-
     ax: matplotlib.Axes, optional
         Axes object to use.
-
     size: tuple, optional
         see waterfall
-
     colors: list, or RGBA, optional
         list of colors, or single color
         color or list of colors for plotting. If not set, clustering is done
         and colors are assigned automatically
-
     legend_text: str
         Label for line plots
 
     Returns
     -------
-
     ax: matplotlib.Axes
         The plot axes.
     """
-
     # axes
     if ax is None:
         ax = plt.subplots()[1]
@@ -217,30 +196,22 @@ def process_offset_for_list(
 
     Parameters
     ----------
-
     offset_y:
         User provided offset_y
-
     results:
         Optimization results obtained by 'optimize.py'
-
     scale_y:
         May be logarithmic or linear ('log10' or 'lin')
-
     start_indices:
         Integers specifying the multistart to be plotted or int specifying
         up to which start index should be plotted
-
-
     references:
         Reference points that will be plotted along with the results
 
     Returns
     -------
-
     fvals:
         List of arrays of function values for each result
-
     offset_y:
         offset for the y-axis
     """
@@ -280,30 +251,23 @@ def handle_options(ax, max_len_fvals, ref, y_limits, offset_y):
 
     Parameters
     ----------
-
     ax: matplotlib.Axes, optional
         Axes object to use.
-
     max_len_fvals: int
         maximum number of points
-
     ref: list, optional
         List of reference points for optimization results, containing at
         least a function value fval
-
     y_limits: float or ndarray, optional
         maximum value to be plotted on the y-axis, or y-limits
-
     offset_y:
         offset for the y-axis, if it is supposed to be in log10-scale
 
     Returns
     -------
-
     ax: matplotlib.Axes
         The plot axes.
     """
-
     # handle reference points
     for i_ref in ref:
         # plot reference point as line

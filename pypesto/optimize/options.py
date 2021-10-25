@@ -37,11 +37,10 @@ class OptimizeOptions(dict):
             maybe_options: Union['OptimizeOptions', Dict]
     ) -> 'OptimizeOptions':
         """
-        Returns a valid options object.
+        Return a valid options object.
 
         Parameters
         ----------
-
         maybe_options: OptimizeOptions or dict
         """
         if isinstance(maybe_options, OptimizeOptions):

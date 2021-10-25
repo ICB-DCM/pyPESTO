@@ -243,15 +243,13 @@ def read_result_from_file(problem: Problem, history_options: HistoryOptions,
 
 class Optimizer(abc.ABC):
     """
-    This is the optimizer base class, not functional on its own.
+    Optimizer base class, not functional on its own.
     An optimizer takes a problem, and possibly a start point, and then
     performs an optimization. It returns an OptimizerResult.
     """
 
     def __init__(self):
-        """
-        Default constructor.
-        """
+        """Default constructor."""
 
     @abc.abstractmethod
     @fix_decorator
@@ -266,6 +264,7 @@ class Optimizer(abc.ABC):
     ) -> OptimizerResult:
         """"
         Perform optimization.
+
         Parameters
         ----------
         problem:
@@ -283,9 +282,7 @@ class Optimizer(abc.ABC):
         return False
 
     def get_default_options(self):
-        """
-        Create default options specific for the optimizer.
-        """
+        """Create default options specific for the optimizer."""
         return None
 
 
@@ -507,9 +504,7 @@ class IpoptOptimizer(Optimizer):
 
 
 class DlibOptimizer(Optimizer):
-    """
-    Use the Dlib toolbox for optimization.
-    """
+    """Use the Dlib toolbox for optimization."""
 
     def __init__(self,
                  options: Dict = None):
@@ -572,9 +567,7 @@ class DlibOptimizer(Optimizer):
 
 
 class PyswarmOptimizer(Optimizer):
-    """
-    Global optimization using pyswarm.
-    """
+    """Global optimization using pyswarm."""
 
     def __init__(self, options: Dict = None):
         super().__init__()
@@ -634,7 +627,6 @@ class CmaesOptimizer(Optimizer):
         options:
             Optimizer options that are directly passed on to cma.
         """
-
         super().__init__()
 
         if options is None:
@@ -804,15 +796,14 @@ class PyswarmsOptimizer(Optimizer):
         def successively_working_fval(swarm: np.ndarray) -> np.ndarray:
             """Evaluate the function for all parameters in the swarm object.
 
-            Parameters:
-            -----------
+            Parameters
+            ----------
             swarm: np.ndarray, shape (n_particales_in_swarm, n_parameters)
 
-            Returns:
-            --------
+            Returns
+            -------
             result: np.ndarray, shape (n_particles_in_swarm)
             """
-
             n_particles = swarm.shape[0]
             result = np.zeros(n_particles)
             # iterate over the particles in the swarm
@@ -858,7 +849,6 @@ class NLoptOptimizer(Optimizer):
         local_options:
             Optimizer options for the local method
         """
-
         super().__init__()
 
         if options is None:
@@ -1013,7 +1003,6 @@ class FidesOptimizer(Optimizer):
             that switches from the problem.objective provided Hessian (
             approximation) to a BFGS approximation will be used.
         """
-
         super().__init__()
 
         if hessian_update == 'Hybrid':

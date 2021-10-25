@@ -53,7 +53,6 @@ class OptimizerResult(dict):
 
     Notes
     -----
-
     Any field not supported by the optimizer is filled with None.
     """
 
@@ -107,7 +106,7 @@ class OptimizerResult(dict):
 
     def update_to_full(self, problem: Problem) -> None:
         """
-        Updates values to full vectors/matrices
+        Update values to full vectors/matrices.
 
         Parameters
         ----------

@@ -24,7 +24,6 @@ def obj_for_sensi(fun, grad, hess, max_sensi_order, integrated, x):
 
     Parameters
     ----------
-
     fun, grad, hess: callable
         Functions computing the fval, grad, hess.
     max_sensi_order: int
@@ -37,7 +36,6 @@ def obj_for_sensi(fun, grad, hess, max_sensi_order, integrated, x):
 
     Returns
     -------
-
     ret: dict
         With fields obj, max_sensi_order, x, fval, grad, hess.
     """
@@ -89,9 +87,7 @@ def obj_for_sensi(fun, grad, hess, max_sensi_order, integrated, x):
 
 
 def rosen_for_sensi(max_sensi_order, integrated=False, x=None):
-    """
-    Rosenbrock function from scipy.optimize.
-    """
+    """Rosenbrock function from scipy.optimize."""
     if x is None:
         x = [0, 1]
 
@@ -102,9 +98,7 @@ def rosen_for_sensi(max_sensi_order, integrated=False, x=None):
 
 
 def poly_for_sensi(max_sensi_order, integrated=False, x=0.):
-    """
-    1-dim polynomial for testing in 1d.
-    """
+    """1-dim polynomial for testing in 1d."""
 
     def fun(x):
         return (x - 2)**2 + 1
@@ -192,7 +186,7 @@ class CRProblem:
         return fres
 
     def get_fsres(self):
-        """Residual sensitivities"""
+        """Residual sensitivities."""
         return jacobian(self.get_fres())
 
     def get_ffim(self):
@@ -255,6 +249,7 @@ class CRProblem:
 
 
 def load_amici_objective(example_name):
+    """Load an `AmiciObjective for test purposes."""
     # name of the model that will also be the name of the python module
     model_name = 'model_' + example_name
 

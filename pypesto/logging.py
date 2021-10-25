@@ -20,13 +20,10 @@ def log(name: str = 'pypesto',
     ----------
     name:
         The name of the logger.
-
     level:
         The output level to use.
-
     console:
         If True, messages are logged to console.
-
     filename:
         If specified, messages are logged to a file with this name.
     """

@@ -57,7 +57,6 @@ def profiles(results: Union[Result, Sequence[Result]],
     ax: matplotlib.Axes
         The plot axes.
     """
-
     # parse input
     results, profile_list_ids, colors, legends = process_result_list_profiles(
         results, profile_list_ids, colors, legends)
@@ -143,7 +142,6 @@ def profiles_lowlevel(
     ax: matplotlib.Axes
         The plot axes.
     """
-
     # axes
     if ax is None:
         ax = []
@@ -265,7 +263,6 @@ def profile_lowlevel(
     ax: matplotlib.Axes
         The plot axes.
     """
-
     # parse input
     fvals = np.asarray(fvals)
 
@@ -308,7 +305,6 @@ def handle_reference_points(ref, ax, profile_indices):
     profile_indices: list of integer values
         List of integer values specifying which profiles should be plotted.
     """
-
     if len(ref) > 0:
         # loop over axes objects
         for i_par, i_ax in enumerate(ax):
@@ -330,7 +326,7 @@ def handle_inputs(
         profile_list: int,
         ratio_min: float):
     """
-    Retrieves the values of the profiles to be plotted later from a
+    Retrieve the values of the profiles to be plotted later from a
     pypesto.ProfileResult object
 
     Parameters
@@ -347,7 +343,6 @@ def handle_inputs(
     fvals: numeric list
         Including values that need to be plotted.
     """
-
     # extract ratio values values from result
     fvals = []
     for i_par in range(0, len(result.profile_result.list[profile_list])):
@@ -376,7 +371,7 @@ def process_result_list_profiles(results: Result,
                                  colors: Sequence[np.array],
                                  legends: Union[str, list]) -> Sequence[int]:
     """
-    assigns colors and legends to a list of results while taking care of the
+    Assign colors and legends to a list of results while taking care of the
     special cases for profile plotting
 
     Parameters
@@ -396,7 +391,6 @@ def process_result_list_profiles(results: Result,
         corrected list of integer values specifying which profiles should be
         plotted.
     """
-
     # ensure list of ids
     if isinstance(profile_list_ids, int):
         profile_list_ids = [profile_list_ids]
@@ -425,10 +419,9 @@ def process_profile_indices(
         profile_indices: Sequence[int],
         profile_list_ids: Union[int, Sequence[int]]):
     """
-    Retrieves the indices of the parameter for which profiles should be
+    Retrieve the indices of the parameter for which profiles should be
     plotted later from a list of pypesto.ProfileResult objects
     """
-
     # get all parameter indices, for which profiles were computed
     plottable_indices = set()
     for result in results:

@@ -24,7 +24,7 @@ class NegLogPriors(AggregatedObjective):
 
 class NegLogParameterPriors(ObjectiveBase):
     """
-    This class implements Negative Log Priors on Parameters.
+    Implements Negative Log Priors on Parameters.
 
     Contains a list of prior dictionaries for the individual parameters
     of the format
@@ -39,7 +39,6 @@ class NegLogParameterPriors(ObjectiveBase):
 
     Notes
     -----
-
     All callables should correspond to log-densities. That is, they return
     log-densities and their corresponding derivatives.
     Internally, values are multiplied by -1, since pyPESTO expects the
@@ -54,15 +53,12 @@ class NegLogParameterPriors(ObjectiveBase):
 
         Parameters
         ----------
-
         prior_list:
             List of dicts containing the individual parameter priors.
             Format see above.
-
         x_names:
             Sequence of parameter names (optional).
         """
-
         self.prior_list = prior_list
         super().__init__(x_names)
 
@@ -139,7 +135,7 @@ class NegLogParameterPriors(ObjectiveBase):
 
     def neg_log_density(self, x):
         """
-        Computes the negative log-density for a parameter
+        Compute the negative log-density for a parameter
         vector x.
         """
         density_val = 0
@@ -150,7 +146,7 @@ class NegLogParameterPriors(ObjectiveBase):
 
     def gradient_neg_log_density(self, x):
         """
-        Computes the gradient of the negative log-density for a parameter
+        Compute the gradient of the negative log-density for a parameter
         vector x.
         """
         grad = np.zeros_like(x)
@@ -162,7 +158,7 @@ class NegLogParameterPriors(ObjectiveBase):
 
     def hessian_neg_log_density(self, x):
         """
-        Computes the hessian of the negative log-density for a parameter
+        Compute the hessian of the negative log-density for a parameter
         vector x.
         """
         hessian = np.zeros((len(x), len(x)))
@@ -175,7 +171,7 @@ class NegLogParameterPriors(ObjectiveBase):
 
     def hessian_vp_neg_log_density(self, x, p):
         """
-        Computes the hessian vector product of the hessian of the
+        Compute the hessian vector product of the hessian of the
         negative log-density for a parameter vector x with a vector p.
         """
         h_dot_p = np.zeros_like(p)
@@ -188,7 +184,7 @@ class NegLogParameterPriors(ObjectiveBase):
 
     def residual(self, x):
         """
-        Computes the residual representation of the prior for a parameter
+        Compute the residual representation of the prior for a parameter
         vector x, if available.
         """
         return np.asarray([prior['residual'](x[prior['index']])
@@ -196,7 +192,7 @@ class NegLogParameterPriors(ObjectiveBase):
 
     def residual_jacobian(self, x):
         """
-        Computes the Jacobian of the residual representation of the prior
+        Compute the Jacobian of the residual representation of the prior
         for a parameter vector x w.r.t. x, if available.
         """
         sres = np.zeros((len(self.prior_list), len(x)))
@@ -213,27 +209,23 @@ def get_parameter_prior_dict(index: int,
                              parameter_scale: str = 'lin'):
 
     """
-    Returns the prior dict used to define priors for some default priors.
+    Return the prior dict used to define priors for some default priors.
 
     index:
         index of the parameter in x_full
-
     prior_type:
         Prior is defined in LINEAR=untransformed parameter space,
         unless it starts with "parameterScale". prior_type
         can be any of {"uniform", "normal", "laplace", "logNormal",
         "parameterScaleUniform", "parameterScaleNormal",
         "parameterScaleLaplace"}
-
     prior_parameters:
         Parameters of the priors. Parameters are defined in linear scale.
-
     parameter_scale:
         scale in which the parameter is defined (since a parameter can be
         log-transformed, while the prior is always defined in the linear
         space, unless it starts with "parameterScale")
     """
-
     log_f, d_log_f_dx, dd_log_f_ddx, res, d_res_dx = \
         _prior_densities(prior_type, prior_parameters)
 
@@ -249,27 +241,27 @@ def get_parameter_prior_dict(index: int,
     elif parameter_scale == 'log':
 
         def log_f_log(x_log):
-            """log-prior for log-parameters"""
+            """Log-prior for log-parameters."""
             return log_f(np.exp(x_log))
 
         def d_log_f_log(x_log):
-            """derivative of log-prior w.r.t. log-parameters"""
+            """Derivative of log-prior w.r.t. log-parameters."""
             return d_log_f_dx(np.exp(x_log)) * np.exp(x_log)
 
         def dd_log_f_log(x_log):
-            """second derivative of log-prior w.r.t. log-parameters"""
+            """Second derivative of log-prior w.r.t. log-parameters."""
             return np.exp(x_log) * \
                 (d_log_f_dx(np.exp(x_log)) +
                     np.exp(x_log) * dd_log_f_ddx(np.exp(x_log)))
 
         if res is not None:
             def res_log(x_log):
-                """residual-prior for log-parameters"""
+                """Residual-prior for log-parameters."""
                 return res(np.exp(x_log))
 
         if d_res_dx is not None:
             def d_res_log(x_log):
-                """residual-prior for log-parameters"""
+                """Residual-prior for log-parameters."""
                 return d_res_dx(np.exp(x_log)) * np.exp(x_log)
 
         return {'index': index,
@@ -284,27 +276,27 @@ def get_parameter_prior_dict(index: int,
         log10 = np.log(10)
 
         def log_f_log10(x_log10):
-            """log-prior for log10-parameters"""
+            """Log-prior for log10-parameters."""
             return log_f(10**x_log10)
 
         def d_log_f_log10(x_log10):
-            """derivative of log-prior w.r.t. log10-parameters"""
+            """Rerivative of log-prior w.r.t. log10-parameters."""
             return d_log_f_dx(10**x_log10) * log10 * 10**x_log10
 
         def dd_log_f_log10(x_log10):
-            """second derivative of log-prior w.r.t. log10-parameters"""
+            """Second derivative of log-prior w.r.t. log10-parameters."""
             return log10**2 * 10**x_log10 * \
                 (dd_log_f_ddx(10**x_log10) * 10**x_log10
                     + d_log_f_dx(10**x_log10))
 
         if res is not None:
             def res_log(x_log10):
-                """residual-prior for log10-parameters"""
+                """Residual-prior for log10-parameters."""
                 return res(10**x_log10)
 
         if d_res_dx is not None:
             def d_res_log(x_log10):
-                """residual-prior for log10-parameters"""
+                """Residual-prior for log10-parameters."""
                 return d_res_dx(10**x_log10) * log10 * 10**x_log10
 
         return {'index': index,
@@ -324,7 +316,7 @@ def _prior_densities(prior_type: str,
                                                      Callable,
                                                      Callable]:
     """
-    Returns a tuple of Callables of the (log-)density (in untransformed =
+    Return a tuple of Callables of the (log-)density (in untransformed =
     linear scale), unless prior_types starts with "parameterScale",
     together with their first + second derivative (= sensis) w.r.t.
     the parameters. If possible, a residual representation and its first
@@ -336,7 +328,6 @@ def _prior_densities(prior_type: str,
 
     Parameters
     ----------
-
     prior_type:
         string identifier indicating the distribution to be used. Here
         "transformed" parameter scale refers to the scale in which
@@ -366,7 +357,6 @@ def _prior_densities(prior_type: str,
 
         * logUniform
         * logLaplace
-
     prior_parameters:
         parameters for the distribution
 
@@ -385,10 +375,7 @@ def _prior_densities(prior_type: str,
         * logNormal:
             - prior_parameters[0]: mean of log-parameters
             - prior_parameters[1]: standard deviation of log-parameters
-
-
     """
-
     if prior_type in ['uniform', 'parameterScaleUniform']:
 
         def log_f(x):
@@ -490,9 +477,7 @@ def _prior_densities(prior_type: str,
 
 def _get_linear_function(slope: float,
                          intercept: float = 0):
-    """
-    Returns a linear function
-    """
+    """Return a linear function."""
     def function(x):
         return slope * x + intercept
     return function
@@ -500,7 +485,7 @@ def _get_linear_function(slope: float,
 
 def _get_constant_function(constant: float):
     """
-    Defines a callable, that returns the constant, regardless of the input.
+    Define a callable, that returns the constant, regardless of the input.
     """
     def function(x):
         return constant

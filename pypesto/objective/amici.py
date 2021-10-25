@@ -46,9 +46,7 @@ class AmiciObjectBuilder(abc.ABC):
 
 
 class AmiciObjective(ObjectiveBase):
-    """
-    This class allows to create an objective directly from an amici model.
-    """
+    """Allows to create an objective directly from an amici model."""
 
     def __init__(
         self,
@@ -493,7 +491,7 @@ class AmiciObjective(ObjectiveBase):
         *args,
         **kwargs
     ) -> bool:
-        """Check if gradients match finite differences (FDs)
+        """Check if gradients match finite differences (FDs).
 
         Parameters
         ----------

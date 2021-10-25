@@ -55,7 +55,7 @@ def sres_to_grad(res: np.ndarray, sres: np.ndarray):
     `fval = 0.5*sum(res**2)`.
 
     See also :func:`chi2_to_fval`.
-     """
+    """
     return schi2_to_grad(sres_to_schi2(res, sres))
 
 

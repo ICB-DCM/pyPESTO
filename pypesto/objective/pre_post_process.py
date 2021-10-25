@@ -54,7 +54,7 @@ class PrePostProcessor:
             self, x: np.ndarray
     ) -> np.ndarray:  # pylint: disable=R0201
         """
-        Just return x without modifications.
+        Return x without modifications.
 
         Parameters
         ----------
@@ -87,9 +87,7 @@ class PrePostProcessor:
 
 
 class FixedParametersProcessor(PrePostProcessor):
-    """
-    Extends the processor to handle the fixing of parameters.
-    """
+    """Extends the processor to handle the fixing of parameters."""
 
     def __init__(self,
                  dim_full: int,

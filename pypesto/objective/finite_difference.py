@@ -144,7 +144,8 @@ class FDDelta:
         fun: Callable,
         fd_method: str,
     ) -> None:
-        """Actually update. Wants to be called in `update` explicitly.
+        """
+        Actually update. Wants to be called in `update` explicitly.
 
         Run FDs with various deltas and pick the ones, separately for each
         parameter, with the best stability properties.
@@ -152,7 +153,6 @@ class FDDelta:
         The parameters are the same as for
         :func:`pypesto.objective.finite_difference.FDDelta.update`.
         """
-
         # calculate gradients for all deltas for all parameters
         nablas = []
         # iterate over deltas

@@ -1,3 +1,4 @@
+"""SingleCoreEngine for optimization and profiling."""
 from typing import List
 from tqdm import tqdm
 

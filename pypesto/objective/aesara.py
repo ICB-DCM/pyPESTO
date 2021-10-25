@@ -1,7 +1,7 @@
 """
-This adds an interface for the construction of loss functions
+Adds an interface for the construction of loss functions
 incorporating aesara models. This permits computation of derivatives using a
-combination of objective based methods and aeara based backpropagation
+combination of objective based methods and aeara based backpropagation.
 """
 
 import numpy as np

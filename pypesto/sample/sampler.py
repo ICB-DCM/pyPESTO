@@ -1,3 +1,4 @@
+"""Various Sampler classes."""
 import abc
 import numpy as np
 from typing import Dict, List, Union
@@ -50,7 +51,8 @@ class Sampler(abc.ABC):
 
     @classmethod
     def default_options(cls) -> Dict:
-        """Convenience method to set/get default options.
+        """
+        Set/Get default options.
 
         Returns
         -------
@@ -61,7 +63,8 @@ class Sampler(abc.ABC):
 
     @classmethod
     def translate_options(cls, options):
-        """Convenience method to translate options and fill in defaults.
+        """
+        Translate options and fill in defaults.
 
         Parameters
         ----------
@@ -80,7 +83,7 @@ class Sampler(abc.ABC):
 
 class InternalSample:
     """
-    This is the exchange object provided and accepted by
+    Exchange object provided and accepted by
     `InternalSampler.get_last_sample()`, `InternalSampler.set_last_sample()`.
     It carries all information needed to check whether to swap between chains,
     and to continue the chain from the updated sample.
@@ -131,9 +134,9 @@ class InternalSampler(Sampler):
 
     def make_internal(self, temper_lpost: bool):
         """
-        This function can be called by parallel tempering samplers during
-        initialization to allow the inner samplers to adjust to them
-        being used as inner samplers. Default: Do nothing.
+        Allow the inner samplers to adjust to them being used as inner
+        samplers. Can be called by parallel tempering samplers during
+        initialization. Default: Do nothing.
 
         Parameters
         ----------

@@ -19,7 +19,7 @@ def sample(
         result: Result = None
 ) -> Result:
     """
-    This is the main function to call to do parameter sampling.
+    Main function to call to do parameter sampling.
 
     Parameters
     ----------

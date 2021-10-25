@@ -22,7 +22,7 @@ def walk_along_profile(
         i_par: int
 ) -> ProfilerResult:
     """
-    This function computes half a profile, by walking ahead in positive
+    Compute half a profile, by walking ahead in positive
     direction until some stopping criterion is fulfilled. A two-sided profile
     is obtained by flipping the profile direction.
 
@@ -50,7 +50,6 @@ def walk_along_profile(
     current_profile:
         The current profile, modified in-place.
     """
-
     # create variables which are needed during iteration
     stop_profile = False
 

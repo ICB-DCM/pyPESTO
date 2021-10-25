@@ -1,3 +1,4 @@
+"""Abstract Task class."""
 import abc
 
 
@@ -13,6 +14,4 @@ class Task(abc.ABC):
 
     @abc.abstractmethod
     def execute(self):
-        """
-        Execute the task and return its results.
-        """
+        """Execute the task and return its results."""

@@ -8,9 +8,7 @@ from .constants import RDATAS, FVAL, CHI2, SCHI2, RES, SRES, GRAD, HESS, HESSP
 
 
 class AggregatedObjective(ObjectiveBase):
-    """
-    This class aggregates multiple objectives into one objective.
-    """
+    """Aggregates multiple objectives into one objective."""
 
     def __init__(
         self,
@@ -19,7 +17,6 @@ class AggregatedObjective(ObjectiveBase):
     ):
         """
         Constructor.
-
 
         Parameters
         ----------
@@ -30,7 +27,6 @@ class AggregatedObjective(ObjectiveBase):
             (Details see documentation of x_names in
             :class:`pypesto.ObjectiveBase`)
         """
-
         # input typechecks
         if not isinstance(objectives, Sequence):
             raise TypeError(f'Objectives must be a Sequence, '
@@ -109,7 +105,6 @@ def aggregate_results(rvals: Sequence[ResultDict]) -> ResultDict:
     rvals:
         results to aggregate
     """
-
     # rvals are guaranteed to be consistent as _check_sensi_orders checks
     # whether each objective can be called with the respective
     # sensi_orders/mode

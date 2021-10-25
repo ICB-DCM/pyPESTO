@@ -1,3 +1,4 @@
+"""MultiProcessEngine for optimization and profiling."""
 from multiprocessing import Pool
 import cloudpickle as pickle
 import os

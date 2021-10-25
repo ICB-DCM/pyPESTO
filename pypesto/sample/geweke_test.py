@@ -28,7 +28,6 @@ def spectrum(x: np.ndarray,
     spectral_density:
         The spectral density.
     """
-
     if nfft is None:
         nfft = np.min(len(x), 256)
 
@@ -71,7 +70,7 @@ def spectrum(x: np.ndarray,
 
 def spectrum0(x: np.ndarray) -> np.ndarray:
     """
-    Calculates the spectral density at frequency zero.
+    Calculate the spectral density at frequency zero.
 
     Parameters
     ----------
@@ -83,7 +82,6 @@ def spectrum0(x: np.ndarray) -> np.ndarray:
     spectral_density_zero:
         Spectral density at zero.
     """
-
     n_samples, n_par = x.shape
     spectral_density_zero = np.zeros((1, n_par))
 
@@ -98,7 +96,7 @@ def calculate_zscore(chain: np.ndarray,
                      a: float = 0.1,
                      b: float = 0.5) -> Tuple[float, float]:
     """
-    Performs a Geweke test on a chain using the first
+    Perform a Geweke test on a chain using the first
     "a" fraction and the last "b" fraction of it for
     comparison. Test for equality of the means of the
     first a% and last b% of a Markov chain.
@@ -123,7 +121,6 @@ def calculate_zscore(chain: np.ndarray,
     p:
         Significance level of the Geweke test.
     """
-
     nsamples, _ = chain.shape
 
     # Define First fraction
@@ -163,7 +160,7 @@ def calculate_zscore(chain: np.ndarray,
 def burn_in_by_sequential_geweke(chain: np.ndarray,
                                  zscore: float = 2.) -> int:
     """
-    Calculates the burn-in of MCMC chains.
+    Calculate the burn-in of MCMC chains.
 
     Parameters
     ----------
@@ -179,7 +176,6 @@ def burn_in_by_sequential_geweke(chain: np.ndarray,
         of the chain do not differ significantly
         regarding Geweke test.
     """
-
     nsamples, npar = chain.shape
     # number of fragments
     n = 20

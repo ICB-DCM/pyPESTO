@@ -1,3 +1,4 @@
+"""MultiThreadEngine for optimization and profiling."""
 from concurrent.futures import ThreadPoolExecutor
 import copy
 import os
