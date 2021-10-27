@@ -6,6 +6,38 @@ Release notes
 ..........
 
 
+0.2.8 (2021-10-28)
+------------------
+
+* PEtab:
+    * Use correct measurement column name in `rdatas_to_simulation_df` (#721)
+    * Visualize optimized model fit via PEtab problem (#725)
+    * Un-ignore observable scaling tests (#742)
+    * New function to plot model trajectory with custom time points (#739)
+
+* Optimization:
+    * OOD Refactor startpoint generation (#732)
+    * Update to fides 0.6.0 (#733)
+    * Correctly report FVAL vs CHI2 values in fides (#741)
+
+* Ensemble:
+    * Option for using weighted ensemble means (#702)
+    * Default names and bounds for `Ensemble.from_sample` (#730)
+
+* Storage:
+    * Load optimization result from HDF5 history (#726)
+
+* General:
+    * Enable use of priors with least squares optimizers (#745)
+    * Add temporary CITATION.cff file (#734)
+
+* Fixes:
+    * Fix non-exported visualization in notebook (#729)
+    * Mark some more tests as flaky (#704)
+    * Fix minor data type and OOD issues in parameter and waterfall plots
+      (#731)
+
+
 0.2.7 (2021-07-30)
 ------------------
 
