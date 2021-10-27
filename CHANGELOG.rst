@@ -30,6 +30,7 @@ Release notes
 * General:
     * Enable use of priors with least squares optimizers (#745)
     * Add temporary CITATION.cff file (#734)
+    * Regular scheduled CI runs (#754)
 
 * Fixes:
     * Fix non-exported visualization in notebook (#729)
