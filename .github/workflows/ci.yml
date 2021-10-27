@@ -4,7 +4,7 @@ name: CI
 on:
   push:
     branches:
-    - master
+    - main
   pull_request:
   schedule:
     # run Monday and Thursday at 03:42 UTC
