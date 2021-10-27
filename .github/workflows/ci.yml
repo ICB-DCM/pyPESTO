@@ -6,6 +6,9 @@ on:
     branches:
     - master
   pull_request:
+  schedule:
+    # run Monday and Thursday at 03:42 UTC
+    - cron: '42 3 * * MON,THU'
 
 # jobs
 jobs:
