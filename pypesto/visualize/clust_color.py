@@ -205,8 +205,10 @@ def assign_colors_for_list(
         colors: Optional[Union[RGBA, List[RGBA], np.ndarray]] = None
 ) -> Union[List[List[float]], np.ndarray]:
     """
-    Create a list of colors for a list of items or checks
-    a user-provided list of colors and uses this if everything is ok
+    Create a list of colors for a list of items.
+
+    Can also check a user-provided list of colors and use this if
+    everything is ok.
 
     Parameters
     ----------
@@ -248,8 +250,9 @@ def delete_nan_inf(fvals: np.ndarray,
                    x: Optional[np.ndarray] = None,
                    xdim: Optional[int] = 1) -> Tuple[np.ndarray, np.ndarray]:
     """
-    Delete nan and inf values in fvals. If parameters 'x' are passed, also
-    the corresponding entries are deleted.
+    Delete nan and inf values in fvals.
+
+    If parameters 'x' are passed, also the corresponding entries are deleted.
 
     Parameters
     ----------

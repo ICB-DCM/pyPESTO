@@ -22,8 +22,9 @@ def profiles(results: Union[Result, Sequence[Result]],
              ratio_min: float = 0.,
              show_bounds: bool = False):
     """
-    Plot classical 1D profile plot (using the posterior, e.g. Gaussian like
-    profile)
+    Plot classical 1D profile plot.
+
+    Using the posterior, e.g. Gaussian like profile.
 
     Parameters
     ----------
@@ -109,8 +110,9 @@ def profiles_lowlevel(
         color=None, legend_text: str = None, x_labels=None,
         show_bounds: bool = False, lb_full=None, ub_full=None):
     """
-    Lowlevel routine for profile plotting, working with a list of arrays
-    only, opening different axes objects in case
+    Lowlevel routine for profile plotting.
+
+    Working with a list of arrays only, opening different axes objects in case.
 
     Parameters
     ----------
@@ -236,7 +238,7 @@ def profile_lowlevel(
         color=None, legend_text: str = None, show_bounds: bool = False,
         lb: float = None, ub: float = None):
     """
-    Lowlevel routine for plotting one profile, working with a numpy array only
+    Lowlevel routine for plotting one profile, working with a numpy array only.
 
     Parameters
     ----------
@@ -326,8 +328,7 @@ def handle_inputs(
         profile_list: int,
         ratio_min: float):
     """
-    Retrieve the values of the profiles to be plotted later from a
-    pypesto.ProfileResult object
+    Retrieve the values of the profiles to be plotted.
 
     Parameters
     ----------
@@ -337,6 +338,9 @@ def handle_inputs(
         List of integer values specifying which profiles should be plotted.
     profile_list: int, optional
         Index of the profile list to be used for profiling.
+    ratio_min: int, optional
+        Exclude values where profile likelihood ratio is smaller than
+        ratio_min.
 
     Returns
     -------
@@ -371,8 +375,9 @@ def process_result_list_profiles(results: Result,
                                  colors: Sequence[np.array],
                                  legends: Union[str, list]) -> Sequence[int]:
     """
-    Assign colors and legends to a list of results while taking care of the
-    special cases for profile plotting
+    Assign colors and legends to a list of results.
+
+    Takes also care of the special cases for profile plotting.
 
     Parameters
     ----------
@@ -419,8 +424,10 @@ def process_profile_indices(
         profile_indices: Sequence[int],
         profile_list_ids: Union[int, Sequence[int]]):
     """
+    Clean up profile_indices to be plotted.
+
     Retrieve the indices of the parameter for which profiles should be
-    plotted later from a list of pypesto.ProfileResult objects
+    plotted later from a list of pypesto.ProfileResult objects.
     """
     # get all parameter indices, for which profiles were computed
     plottable_indices = set()

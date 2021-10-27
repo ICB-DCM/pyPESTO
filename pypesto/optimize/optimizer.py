@@ -279,6 +279,7 @@ class Optimizer(abc.ABC):
 
     @abc.abstractmethod
     def is_least_squares(self):
+        """Check whether optimizer is a least squares optimizer."""
         return False
 
     def get_default_options(self):
@@ -326,6 +327,7 @@ class ScipyOptimizer(Optimizer):
         id: str,
         history_options: HistoryOptions = None,
     ) -> OptimizerResult:
+        """Perform optimization. Parameters: see `Optimizer` documentation."""
         lb = problem.lb
         ub = problem.ub
         objective = problem.objective
@@ -435,9 +437,11 @@ class ScipyOptimizer(Optimizer):
         return optimizer_result
 
     def is_least_squares(self):
+        """Check whether optimizer is a least squares optimizer."""
         return re.match(r'(?i)^(ls_)', self.method)
 
     def get_default_options(self):
+        """Create default options specific for the optimizer."""
         if self.is_least_squares():
             options = {'max_nfev': 1000, 'disp': False}
         else:
@@ -469,7 +473,7 @@ class IpoptOptimizer(Optimizer):
             id: str,
             history_options: HistoryOptions = None,
     ) -> OptimizerResult:
-
+        """Perform optimization. Parameters: see `Optimizer` documentation."""
         if cyipopt is None:
             raise ImportError(
                 "This optimizer requires an installation of ipopt. You can "
@@ -500,6 +504,7 @@ class IpoptOptimizer(Optimizer):
         )
 
     def is_least_squares(self):
+        """Check whether optimizer is a least squares optimizer."""
         return False
 
 
@@ -527,7 +532,7 @@ class DlibOptimizer(Optimizer):
             id: str,
             history_options: HistoryOptions = None,
     ) -> OptimizerResult:
-
+        """Perform optimization. Parameters: see `Optimizer` documentation."""
         lb = problem.lb
         ub = problem.ub
         check_finite_bounds(lb, ub)
@@ -560,9 +565,11 @@ class DlibOptimizer(Optimizer):
         return optimizer_result
 
     def is_least_squares(self):
+        """Check whether optimizer is a least squares optimizer."""
         return False
 
     def get_default_options(self):
+        """Create default options specific for the optimizer."""
         return {'maxiter': 10000}
 
 
@@ -586,6 +593,7 @@ class PyswarmOptimizer(Optimizer):
             id: str,
             history_options: HistoryOptions = None,
     ) -> OptimizerResult:
+        """Perform optimization. Parameters: see `Optimizer` documentation."""
         lb = problem.lb
         ub = problem.ub
         if pyswarm is None:
@@ -607,6 +615,7 @@ class PyswarmOptimizer(Optimizer):
         return optimizer_result
 
     def is_least_squares(self):
+        """Check whether optimizer is a least squares optimizer."""
         return False
 
 
@@ -644,7 +653,7 @@ class CmaesOptimizer(Optimizer):
             id: str,
             history_options: HistoryOptions = None,
     ) -> OptimizerResult:
-
+        """Perform optimization. Parameters: see `Optimizer` documentation."""
         lb = problem.lb
         ub = problem.ub
 
@@ -669,6 +678,7 @@ class CmaesOptimizer(Optimizer):
         return optimizer_result
 
     def is_least_squares(self):
+        """Check whether optimizer is a least squares optimizer."""
         return False
 
 
@@ -713,6 +723,7 @@ class ScipyDifferentialEvolutionOptimizer(Optimizer):
             id: str,
             history_options: HistoryOptions = None,
     ) -> OptimizerResult:
+        """Perform optimization. Parameters: see `Optimizer` documentation."""
         bounds = list(zip(problem.lb, problem.ub))
 
         result = scipy.optimize.differential_evolution(
@@ -725,6 +736,7 @@ class ScipyDifferentialEvolutionOptimizer(Optimizer):
         return optimizer_result
 
     def is_least_squares(self):
+        """Check whether optimizer is a least squares optimizer."""
         return False
 
 
@@ -774,6 +786,7 @@ class PyswarmsOptimizer(Optimizer):
             id: str,
             history_options: HistoryOptions = None,
     ) -> OptimizerResult:
+        """Perform optimization. Parameters: see `Optimizer` documentation."""
         lb = problem.lb
         ub = problem.ub
 
@@ -823,6 +836,7 @@ class PyswarmsOptimizer(Optimizer):
         return optimizer_result
 
     def is_least_squares(self):
+        """Check whether optimizer is a least squares optimizer."""
         return False
 
 
@@ -924,7 +938,7 @@ class NLoptOptimizer(Optimizer):
             id: str,
             history_options: HistoryOptions = None,
     ) -> OptimizerResult:
-
+        """Perform optimization. Parameters: see `Optimizer` documentation."""
         opt = nlopt.opt(self.method, problem.dim)
 
         valid_options = ['ftol_abs', 'ftol_rel', 'xtol_abs', 'xtol_rel',
@@ -978,6 +992,7 @@ class NLoptOptimizer(Optimizer):
         return optimizer_result
 
     def is_least_squares(self):
+        """Check whether optimizer is a least squares optimizer."""
         return False
 
 
@@ -1031,7 +1046,7 @@ class FidesOptimizer(Optimizer):
             id: str,
             history_options: HistoryOptions = None,
     ) -> OptimizerResult:
-
+        """Perform optimization. Parameters: see `Optimizer` documentation."""
         if fides is None:
             raise ImportError(
                 "This optimizer requires an installation of fides. You can "
@@ -1083,4 +1098,5 @@ class FidesOptimizer(Optimizer):
         return optimizer_result
 
     def is_least_squares(self):
+        """Check whether optimizer is a least squares optimizer."""
         return False

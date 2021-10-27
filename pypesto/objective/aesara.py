@@ -88,9 +88,11 @@ class AesaraObjective(ObjectiveBase):
         self.inner_ret: ResultDict = {}
 
     def check_mode(self, mode) -> bool:
+        """See `ObjectiveBase` documentation."""
         return mode == MODE_FUN
 
     def check_sensi_orders(self, sensi_orders, mode) -> bool:
+        """See `ObjectiveBase` documentation."""
         if not self.check_mode(mode):
             return False
         else:
@@ -103,7 +105,11 @@ class AesaraObjective(ObjectiveBase):
             mode: str,
             **kwargs
     ) -> ResultDict:
+        """
+        Main method to overwrite from the base class.
 
+        It handles and delegates the actual objective evaluation.
+        """
         # hess computation in aesara requires grad
         if 2 in sensi_orders and 1 not in sensi_orders:
             sensi_orders = (1, *sensi_orders)
@@ -174,8 +180,12 @@ class AesaraObjectiveOp(Op):
         outputs[0][0] = np.array(log_prob)
 
     def grad(self, inputs, g):
-        # the method that calculates the gradients - it actually returns the
-        # vector-Jacobian product - g[0] is a vector of parameter values
+        """
+        Calculate the hessian.
+
+        Actually returns the vector-hessian product - g[0] is a vector of
+        parameter values.
+        """
         theta, = inputs
         log_prob_grad = self._log_prob_grad(theta)
         return [g[0] * log_prob_grad]
@@ -217,8 +227,12 @@ class AesaraObjectiveGradOp(Op):
         outputs[0][0] = log_prob_grad
 
     def grad(self, inputs, g):
-        # the method that calculates the hessian - it actually returns the
-        # vector-hessian product - g[0] is a vector of parameter values
+        """
+        Calculate the hessian.
+
+        Actually returns the vector-hessian product - g[0] is a vector of
+        parameter values.
+        """
         theta, = inputs
         log_prob_hess = self._log_prob_hess(theta)
         return [g[0].dot(log_prob_hess)]
@@ -227,6 +241,7 @@ class AesaraObjectiveGradOp(Op):
 class AesaraObjectiveHessOp(Op):
     """
     Aesara wrapper around a (non-normalized) log-probability Hessian function.
+
     This Op will be called with a vector of values and also return a matrix of
     values - the Hessian in each dimension.
 

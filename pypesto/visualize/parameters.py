@@ -296,8 +296,9 @@ def handle_inputs(
         start_indices: Optional[Union[int, Iterable[int]]] = None
 ) -> Tuple[np.ndarray, np.ndarray, List[str], np.ndarray, List[np.ndarray]]:
     """
-    Compute the correct bounds for the parameter indices to be plotted and
-    outputs the corresponding parameters and their labels
+    Compute the correct bounds for the parameter indices to be plotted.
+
+    Outputs the corresponding parameters and their labels.
 
     Parameters
     ----------

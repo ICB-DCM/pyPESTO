@@ -17,8 +17,9 @@ def check_overwrite(f: Union[h5py.File, h5py.Group],
                     overwrite: bool,
                     target: str):
     """
-    Check whether target already exists. Sends a warning if
-    overwrite=False, deletes the target if overwrite=True.
+    Check whether target already exists.
+
+    Sends a warning if overwrite=False, deletes the target if overwrite=True.
 
     Attributes
     ----------
@@ -49,10 +50,10 @@ class ProblemHDF5Writer:
 
     def __init__(self, storage_filename: str):
         """
+        Initialize writer.
 
         Parameters
         ----------
-
         storage_filename: str
             HDF5 problem file name
         """
@@ -89,8 +90,7 @@ class ProblemHDF5Writer:
 def get_or_create_group(f: Union[h5py.File, h5py.Group],
                         group_path: str) -> h5py.Group:
     """
-    Helper function that returns a group object for the group with
-    group_path relative to f. Creates it if it doesn't exist.
+    Return/create a group object for the group with group_path relative to f.
 
     Attributes
     ----------
@@ -101,7 +101,7 @@ def get_or_create_group(f: Union[h5py.File, h5py.Group],
     Returns
     -------
     grp:
-        hdf5 group object with specified path.
+        hdf5 group object with specified path relative to f.
     """
     if group_path in f:
         grp = f[group_path]
@@ -122,10 +122,10 @@ class OptimizationResultHDF5Writer:
 
     def __init__(self, storage_filename: str):
         """
+        Initialize Writer.
 
         Parameters
         ----------
-
         storage_filename: str
             HDF5 result file name
         """
@@ -171,9 +171,11 @@ class SamplingResultHDF5Writer:
 
     def __init__(self, storage_filename: str):
         """
+        Initialize Writer.
 
         Parameters
-        ----------storage_filename: str
+        ----------
+        storage_filename: str
             HDF5 result file name
         """
         self.storage_filename = storage_filename
@@ -221,6 +223,7 @@ class ProfileResultHDF5Writer:
 
     def __init__(self, storage_filename: str):
         """
+        Initialize Writer.
 
         Parameters
         ----------

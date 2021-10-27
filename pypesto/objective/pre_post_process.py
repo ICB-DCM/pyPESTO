@@ -6,9 +6,11 @@ from .constants import GRAD, HESS, RES, SRES
 
 class PrePostProcessor:
     """
-    Implements the methods preprocess and postprocess that are called at the
-    beginning and at the end of the objective call, in order to handle the
-    mapping of optimization parameters to simulation parameters.
+    Implements the methods preprocess and postprocess.
+
+    They are called at the beginning and at the end of the objective call,
+    in order to handle the mapping of optimization parameters to simulation
+    parameters.
 
     This class acts as a dummy base implementation, not performing any
     changes on the passed objects.
@@ -39,8 +41,7 @@ class PrePostProcessor:
             self, result: Dict
     ) -> Dict:  # pylint: disable=R0201
         """
-        Convert all arrays into np.ndarrays if necessary, and return them
-        without further modifications.
+        Convert all arrays into np.ndarrays if necessary, and return them.
 
         Parameters
         ----------
@@ -73,9 +74,10 @@ class PrePostProcessor:
             result: Dict
     ) -> Dict:
         """
-        Convert all array_like objects to np.ndarrays. This has the advantage
-        of a uniform output datatype which offers various methods to assess
-        the data.
+        Convert all array_like objects to np.ndarrays.
+
+        This has the advantage of a uniform output datatype which offers
+        various methods to assess the data.
         """
         keys = [GRAD, HESS, RES, SRES]
         for key in keys:
@@ -101,9 +103,7 @@ class FixedParametersProcessor(PrePostProcessor):
         self.x_fixed_vals: np.ndarray = np.array(x_fixed_vals, dtype=float)
 
     def preprocess(self, x: np.ndarray) -> np.ndarray:
-        """Embed optimization vector to full vector with all simulation
-        parameters.
-        """
+        """Embed optimization vector to full vector with all parameters."""
         x = super().preprocess(x)
 
         x_full = np.zeros(self.dim_full)
@@ -113,8 +113,18 @@ class FixedParametersProcessor(PrePostProcessor):
         return x_full
 
     def reduce(self, x: np.ndarray) -> np.ndarray:
-        """Embed simulation vector to subsetted vector with optimization
-        parameters.
+        """
+        Return x reduced to free indices.
+
+        Parameters
+        ----------
+        x:
+            Parameter vector for simulation.
+
+        Returns
+        -------
+        x:
+            Parameter vector for optimization.
         """
         x = super().reduce(x)
 

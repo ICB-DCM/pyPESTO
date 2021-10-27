@@ -1,4 +1,4 @@
-"""AdaptiveParallelTemperingSampler class"""
+"""AdaptiveParallelTemperingSampler class."""
 from typing import Dict, Sequence
 import numpy as np
 
@@ -10,7 +10,7 @@ class AdaptiveParallelTemperingSampler(ParallelTemperingSampler):
 
     @classmethod
     def default_options(cls) -> Dict:
-        """Default options for """
+        """Get default options for sampler."""
         options = super().default_options()
         # scaling factor for temperature adaptation
         options['eta'] = 100

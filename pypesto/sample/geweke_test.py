@@ -1,3 +1,4 @@
+"""Helper function for `geweke_test`."""
 import logging
 import warnings
 from typing import Tuple
@@ -96,10 +97,11 @@ def calculate_zscore(chain: np.ndarray,
                      a: float = 0.1,
                      b: float = 0.5) -> Tuple[float, float]:
     """
-    Perform a Geweke test on a chain using the first
-    "a" fraction and the last "b" fraction of it for
-    comparison. Test for equality of the means of the
-    first a% and last b% of a Markov chain.
+    Perform a Geweke test on a chain.
+
+    Use the first "a" fraction and the last "b" fraction of it for
+    comparison. Test for equality of the means of the first a% and last b%
+    of a Markov chain.
 
     See:
     Stephen P. Brooks and Gareth O. Roberts.

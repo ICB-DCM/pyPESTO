@@ -20,8 +20,10 @@ MaybeArray = Union[np.ndarray, 'np.nan']
 
 def trace_wrap(f):
     """
-    Wrapper around trace getters that transforms input `ix` vectors to a valid
-    index list, and reduces for integer `ix` the output to a single value.
+    Wrap around trace getters.
+
+    Transform input `ix` vectors to a valid index list, and reduces for
+    integer `ix` the output to a single value.
     """
     def wrapped_f(
             self, ix: Union[Sequence[int], int, None] = None,
@@ -49,8 +51,7 @@ def trace_wrap(f):
 
 class HistoryOptions(dict):
     """
-    Options for the objective that are used in optimization, profiling
-    and sampling.
+    Options for the objective that are used in optimization.
 
     In addition implements a factory pattern to generate history objects.
 
@@ -107,6 +108,7 @@ class HistoryOptions(dict):
         self.storage_file = storage_file
 
     def __getattr__(self, key):
+        """Allow to use keys as attributes."""
         try:
             return self[key]
         except KeyError:
@@ -120,7 +122,7 @@ class HistoryOptions(dict):
             maybe_options: Union['HistoryOptions', Dict]
     ) -> 'HistoryOptions':
         """
-        Returns a valid options object.
+        Return a valid options object.
 
         Parameters
         ----------
@@ -134,7 +136,7 @@ class HistoryOptions(dict):
     def create_history(
             self, id: str, x_names: Sequence[str]
     ) -> 'History':
-        """Factory method creating a :class:`History` object.
+        """Create a :class:`History` object; Factory method.
 
         Parameters
         ----------
@@ -144,7 +146,6 @@ class HistoryOptions(dict):
             Parameter names.
         """
         # create different history types based on the inputs
-
         if self.storage_file is None:
             if self.trace_record:
                 return MemoryHistory(options=self)
@@ -175,7 +176,7 @@ class HistoryBase(abc.ABC):
     """
 
     def __len__(self):
-        """Number of stored entries in the history"""
+        """Define length by number of stored entries in the history."""
         raise NotImplementedError()
 
     def update(
@@ -205,32 +206,32 @@ class HistoryBase(abc.ABC):
 
     @property
     def n_fval(self) -> int:
-        """Number of function evaluations."""
+        """Return number of function evaluations."""
         raise NotImplementedError()
 
     @property
     def n_grad(self) -> int:
-        """Number of gradient evaluations."""
+        """Return number of gradient evaluations."""
         raise NotImplementedError()
 
     @property
     def n_hess(self) -> int:
-        """Number of Hessian evaluations."""
+        """Return number of Hessian evaluations."""
         raise NotImplementedError()
 
     @property
     def n_res(self) -> int:
-        """Number of residual evaluations."""
+        """Return number of residual evaluations."""
         raise NotImplementedError()
 
     @property
     def n_sres(self) -> int:
-        """Number or residual sensitivity evaluations."""
+        """Return number or residual sensitivity evaluations."""
         raise NotImplementedError()
 
     @property
     def start_time(self) -> float:
-        """Start time."""
+        """Return start time."""
         raise NotImplementedError()
 
     def get_x_trace(
@@ -238,7 +239,7 @@ class HistoryBase(abc.ABC):
             trim: bool = False
     ) -> Union[Sequence[np.ndarray], np.ndarray]:
         """
-        Parameters.
+        Return parameters.
 
         Takes as parameter an index or indices and returns corresponding trace
         values. If only a single value is requested, the list is flattened.
@@ -250,7 +251,7 @@ class HistoryBase(abc.ABC):
             trim: bool = False
     ) -> Union[Sequence[float], float]:
         """
-        Function values.
+        Return function values.
 
         Takes as parameter an index or indices and returns corresponding trace
         values. If only a single value is requested, the list is flattened.
@@ -262,7 +263,7 @@ class HistoryBase(abc.ABC):
             trim: bool = False
     ) -> Union[Sequence[MaybeArray], MaybeArray]:
         """
-        Gradients.
+        Return gradients.
 
         Takes as parameter an index or indices and returns corresponding trace
         values. If only a single value is requested, the list is flattened.
@@ -274,7 +275,7 @@ class HistoryBase(abc.ABC):
             trim: bool = False
     ) -> Union[Sequence[MaybeArray], MaybeArray]:
         """
-        Hessians.
+        Return hessians.
 
         Takes as parameter an index or indices and returns corresponding trace
         values. If only a single value is requested, the list is flattened.
@@ -342,10 +343,7 @@ class HistoryBase(abc.ABC):
         raise NotImplementedError()
 
     def get_trimmed_indices(self):
-        """
-        Return indices of the history to get a monotonically
-        decreasing history.
-        """
+        """Get indices for a monotonically decreasing history."""
         fval_trace = self.get_fval_trace()
         return np.where(fval_trace <= np.fmin.accumulate(fval_trace))[0]
 
@@ -401,6 +399,7 @@ class History(HistoryBase):
         self._update_counts(sensi_orders, mode)
 
     def finalize(self):
+        """See `HistoryBase` docstring."""
         pass
 
     def _update_counts(self,
@@ -422,31 +421,39 @@ class History(HistoryBase):
 
     @property
     def n_fval(self) -> int:
+        """See `HistoryBase` docstring."""
         return self._n_fval
 
     @property
     def n_grad(self) -> int:
+        """See `HistoryBase` docstring."""
         return self._n_grad
 
     @property
     def n_hess(self) -> int:
+        """See `HistoryBase` docstring."""
         return self._n_hess
 
     @property
     def n_res(self) -> int:
+        """See `HistoryBase` docstring."""
         return self._n_res
 
     @property
     def n_sres(self) -> int:
+        """See `HistoryBase` docstring."""
         return self._n_sres
 
     @property
     def start_time(self) -> float:
+        """See `HistoryBase` docstring."""
         return self._start_time
 
 
 class MemoryHistory(History):
     """
+    Class for optimization history stored in memory.
+
     Track number of function evaluations and keeps an in-memory
     trace of function evaluations.
 
@@ -462,6 +469,7 @@ class MemoryHistory(History):
         self._trace: Dict[str, Any] = {key: [] for key in self._trace_keys}
 
     def __len__(self):
+        """Define length of history object."""
         return len(self._trace[TIME])
 
     def update(
@@ -471,6 +479,7 @@ class MemoryHistory(History):
             mode: str,
             result: ResultDict
     ) -> None:
+        """See `History` docstring."""
         super().update(x, sensi_orders, mode, result)
         self._update_trace(x, mode, result)
 
@@ -488,6 +497,7 @@ class MemoryHistory(History):
             self, ix: Union[int, Sequence[int], None] = None,
             trim: bool = False
     ) -> Union[Sequence[np.ndarray], np.ndarray]:
+        """See `HistoryBase` docstring."""
         return [self._trace[X][i] for i in ix]
 
     @trace_wrap
@@ -495,6 +505,7 @@ class MemoryHistory(History):
             self, ix: Union[int, Sequence[int], None] = None,
             trim: bool = False
     ) -> Union[Sequence[float], float]:
+        """See `HistoryBase` docstring."""
         return [self._trace[FVAL][i] for i in ix]
 
     @trace_wrap
@@ -502,6 +513,7 @@ class MemoryHistory(History):
             self, ix: Union[int, Sequence[int], None] = None,
             trim: bool = False
     ) -> Union[Sequence[MaybeArray], MaybeArray]:
+        """See `HistoryBase` docstring."""
         return [self._trace[GRAD][i] for i in ix]
 
     @trace_wrap
@@ -509,6 +521,7 @@ class MemoryHistory(History):
             self, ix: Union[int, Sequence[int], None] = None,
             trim: bool = False
     ) -> Union[Sequence[MaybeArray], MaybeArray]:
+        """See `HistoryBase` docstring."""
         return [self._trace[HESS][i] for i in ix]
 
     @trace_wrap
@@ -516,6 +529,7 @@ class MemoryHistory(History):
             self, ix: Union[int, Sequence[int], None] = None,
             trim: bool = False
     ) -> Union[Sequence[MaybeArray], MaybeArray]:
+        """See `HistoryBase` docstring."""
         return [self._trace[RES][i] for i in ix]
 
     @trace_wrap
@@ -523,6 +537,7 @@ class MemoryHistory(History):
             self, ix: Union[int, Sequence[int], None] = None,
             trim: bool = False
     ) -> Union[Sequence[MaybeArray], MaybeArray]:
+        """See `HistoryBase` docstring."""
         return [self._trace[SRES][i] for i in ix]
 
     @trace_wrap
@@ -530,6 +545,7 @@ class MemoryHistory(History):
             self, ix: Union[int, Sequence[int], None] = None,
             trim: bool = False
     ) -> Union[Sequence[float], float]:
+        """See `HistoryBase` docstring."""
         return [self._trace[CHI2][i] for i in ix]
 
     @trace_wrap
@@ -537,6 +553,7 @@ class MemoryHistory(History):
             self, ix: Union[int, Sequence[int], None] = None,
             trim: bool = False
     ) -> Union[Sequence[MaybeArray], MaybeArray]:
+        """See `HistoryBase` docstring."""
         return [self._trace[SCHI2][i] for i in ix]
 
     @trace_wrap
@@ -544,6 +561,7 @@ class MemoryHistory(History):
             self, ix: Union[int, Sequence[int], None] = None,
             trim: bool = False
     ) -> Union[Sequence[float], float]:
+        """See `HistoryBase` docstring."""
         return [self._trace[TIME][i] for i in ix]
 
 
@@ -594,6 +612,7 @@ class CsvHistory(History):
             self._update_counts_from_trace()
 
     def __len__(self):
+        """Define length of history object."""
         return len(self._trace)
 
     def _update_counts_from_trace(self):
@@ -610,6 +629,7 @@ class CsvHistory(History):
             mode: str,
             result: ResultDict
     ) -> None:
+        """See `History` docstring."""
         super().update(x, sensi_orders, mode, result)
         self._update_trace(x, mode, result)
 
@@ -711,8 +731,10 @@ class CsvHistory(History):
 
     def _save_trace(self, finalize: bool = False):
         """
-        Save to file via pd.DataFrame.to_csv() if `self.storage_file` is
-        not None and other conditions apply.
+        Save to file via pd.DataFrame.to_csv().
+
+        Only done, if `self.storage_file` is not None and other conditions.
+        apply.
         """
         if self.file is None:
             return
@@ -733,6 +755,7 @@ class CsvHistory(History):
             self, ix: Union[int, Sequence[int], None] = None,
             trim: bool = False
     ) -> Union[Sequence[np.ndarray], np.ndarray]:
+        """See `HistoryBase` docstring."""
         return list(self._trace[X].values[ix])
 
     @trace_wrap
@@ -740,6 +763,7 @@ class CsvHistory(History):
             self, ix: Union[int, Sequence[int], None],
             trim: bool = False
     ) -> Union[Sequence[float], float]:
+        """See `HistoryBase` docstring."""
         return list(self._trace[(FVAL, np.nan)].values[ix])
 
     @trace_wrap
@@ -747,6 +771,7 @@ class CsvHistory(History):
             self, ix: Union[int, Sequence[int], None] = None,
             trim: bool = False
     ) -> Union[Sequence[MaybeArray], MaybeArray]:
+        """See `HistoryBase` docstring."""
         return list(self._trace[GRAD].values[ix])
 
     @trace_wrap
@@ -754,6 +779,7 @@ class CsvHistory(History):
             self, ix: Union[int, Sequence[int], None] = None,
             trim: bool = False
     ) -> Union[Sequence[MaybeArray], MaybeArray]:
+        """See `HistoryBase` docstring."""
         return list(self._trace[(HESS, np.nan)].values[ix])
 
     @trace_wrap
@@ -761,6 +787,7 @@ class CsvHistory(History):
             self, ix: Union[int, Sequence[int], None] = None,
             trim: bool = False
     ) -> Union[Sequence[MaybeArray], MaybeArray]:
+        """See `HistoryBase` docstring."""
         return list(self._trace[(RES, np.nan)].values[ix])
 
     @trace_wrap
@@ -768,6 +795,7 @@ class CsvHistory(History):
             self, ix: Union[int, Sequence[int], None] = None,
             trim: bool = False
     ) -> Union[Sequence[MaybeArray], MaybeArray]:
+        """See `HistoryBase` docstring."""
         return list(self._trace[(SRES, np.nan)].values[ix])
 
     @trace_wrap
@@ -775,6 +803,7 @@ class CsvHistory(History):
             self, ix: Union[int, Sequence[int], None] = None,
             trim: bool = False
     ) -> Union[Sequence[float], float]:
+        """See `HistoryBase` docstring."""
         return list(self._trace[(CHI2, np.nan)].values[ix])
 
     @trace_wrap
@@ -782,6 +811,7 @@ class CsvHistory(History):
             self, ix: Union[int, Sequence[int], None] = None,
             trim: bool = False
     ) -> Union[Sequence[MaybeArray], MaybeArray]:
+        """See `HistoryBase` docstring."""
         return list(self._trace[SCHI2].values[ix])
 
     @trace_wrap
@@ -789,6 +819,7 @@ class CsvHistory(History):
             self, ix: Union[int, Sequence[int], None] = None,
             trim: bool = False
     ) -> Union[Sequence[float], float]:
+        """See `HistoryBase` docstring."""
         return list(self._trace[(TIME, np.nan)].values[ix])
 
 
@@ -816,6 +847,7 @@ class Hdf5History(History):
         self._generate_hdf5_group()
 
     def __len__(self):
+        """Define length of history object."""
         with h5py.File(self.file, 'r') as f:
             return f[f'history/{self.id}/trace/'].attrs[
                         'n_iterations']
@@ -827,13 +859,16 @@ class Hdf5History(History):
             mode: str,
             result: ResultDict
     ) -> None:
+        """See `History` docstring."""
         super().update(x, sensi_orders, mode, result)
         self._update_trace(x, sensi_orders, mode, result)
 
     def get_history_directory(self):
+        """Return filepath."""
         return self.file
 
     def finalize(self):
+        """See `History` docstring."""
         super().finalize()
 
     @staticmethod
@@ -846,8 +881,9 @@ class Hdf5History(History):
 
     def _recover_options(self, file: str):
         """
-        Recover options when loading the hdf5 history from memory
-        by testing which entries were recorded.
+        Recover options when loading the hdf5 history from memory.
+
+        Done by testing which entries were recorded.
         """
         trace_record = self._check_for_not_nan_entries(X)
         trace_record_grad = self._check_for_not_nan_entries(GRAD)
@@ -908,31 +944,37 @@ class Hdf5History(History):
 
     @property
     def n_fval(self) -> int:
+        """See `HistoryBase` docstring."""
         with h5py.File(self.file, 'r') as f:
             return f[f'history/{self.id}/trace/'].attrs['n_fval']
 
     @property
     def n_grad(self) -> int:
+        """See `HistoryBase` docstring."""
         with h5py.File(self.file, 'r') as f:
             return f[f'history/{self.id}/trace/'].attrs['n_grad']
 
     @property
     def n_hess(self) -> int:
+        """See `HistoryBase` docstring."""
         with h5py.File(self.file, 'r') as f:
             return f[f'history/{self.id}/trace/'].attrs['n_hess']
 
     @property
     def n_res(self) -> int:
+        """See `HistoryBase` docstring."""
         with h5py.File(self.file, 'r') as f:
             return f[f'history/{self.id}/trace/'].attrs['n_res']
 
     @property
     def n_sres(self) -> int:
+        """See `HistoryBase` docstring."""
         with h5py.File(self.file, 'r') as f:
             return f[f'history/{self.id}/trace/'].attrs['n_sres']
 
     @property
     def trace_save_iter(self):
+        """After how many iterations to store the trace."""
         with h5py.File(self.file, 'r') as f:
             return f[f'history/{self.id}/trace/']\
                 .attrs['trace_save_iter']
@@ -1007,6 +1049,7 @@ class Hdf5History(History):
         ix:
             Index or list of indices of the iterations that will produce
             the trace.
+
         Returns
         -------
         The entries ix for the key entry_id.
@@ -1032,6 +1075,7 @@ class Hdf5History(History):
             self, ix: Union[int, Sequence[int], None] = None,
             trim: bool = False
     ) -> Union[Sequence[np.ndarray], np.ndarray]:
+        """See `HistoryBase` docstring."""
         return self._get_hdf5_entries(X, ix)
 
     @trace_wrap
@@ -1039,6 +1083,7 @@ class Hdf5History(History):
             self, ix: Union[int, Sequence[int], None] = None,
             trim: bool = False
     ) -> Union[Sequence[float], float]:
+        """See `HistoryBase` docstring."""
         return self._get_hdf5_entries(FVAL, ix)
 
     @trace_wrap
@@ -1046,6 +1091,7 @@ class Hdf5History(History):
             self, ix: Union[int, Sequence[int], None] = None,
             trim: bool = False
     ) -> Union[Sequence[MaybeArray], MaybeArray]:
+        """See `HistoryBase` docstring."""
         return self._get_hdf5_entries(GRAD, ix)
 
     @trace_wrap
@@ -1053,6 +1099,7 @@ class Hdf5History(History):
             self, ix: Union[int, Sequence[int], None] = None,
             trim: bool = False
     ) -> Union[Sequence[MaybeArray], MaybeArray]:
+        """See `HistoryBase` docstring."""
         return self._get_hdf5_entries(HESS, ix)
 
     @trace_wrap
@@ -1060,6 +1107,7 @@ class Hdf5History(History):
             self, ix: Union[int, Sequence[int], None] = None,
             trim: bool = False
     ) -> Union[Sequence[MaybeArray], MaybeArray]:
+        """See `HistoryBase` docstring."""
         return self._get_hdf5_entries(RES, ix)
 
     @trace_wrap
@@ -1067,6 +1115,7 @@ class Hdf5History(History):
             self, ix: Union[int, Sequence[int], None] = None,
             trim: bool = False
     ) -> Union[Sequence[MaybeArray], MaybeArray]:
+        """See `HistoryBase` docstring."""
         return self._get_hdf5_entries(SRES, ix)
 
     @trace_wrap
@@ -1074,6 +1123,7 @@ class Hdf5History(History):
             self, ix: Union[int, Sequence[int], None] = None,
             trim: bool = False
     ) -> Union[Sequence[float], float]:
+        """See `HistoryBase` docstring."""
         return self._get_hdf5_entries(CHI2, ix)
 
     @trace_wrap
@@ -1081,6 +1131,7 @@ class Hdf5History(History):
             self, ix: Union[int, Sequence[int], None] = None,
             trim: bool = False
     ) -> Union[Sequence[MaybeArray], MaybeArray]:
+        """See `HistoryBase` docstring."""
         return self._get_hdf5_entries(SCHI2, ix)
 
     @trace_wrap
@@ -1088,13 +1139,15 @@ class Hdf5History(History):
             self, ix: Union[int, Sequence[int], None] = None,
             trim: bool = False
     ) -> Union[Sequence[float], float]:
+        """See `HistoryBase` docstring."""
         return self._get_hdf5_entries(TIME, ix)
 
 
 class OptimizerHistory:
     """
-    Objective call history. Container around a History object, which keeps
-    track of optimal values.
+    Objective call history.
+
+    Container around a History object, which keeps track of optimal values.
 
     Attributes
     ----------
@@ -1156,6 +1209,7 @@ class OptimizerHistory:
         self._update_vals(x, result)
 
     def finalize(self):
+        """Finalize history."""
         self.history.finalize()
 
     def _update_vals(self,
@@ -1236,6 +1290,7 @@ class OptimizerHistory:
                     self.extract_from_history(var, ix_try)
 
     def extract_from_history(self, var, ix):
+        """Get value of `var` at iteration `ix`."""
         val = getattr(self.history, f'get_{var}_trace')(ix)
         if not np.all(np.isnan(val)):
             setattr(self, f'{var}_min', val)
@@ -1243,8 +1298,9 @@ class OptimizerHistory:
 
 def ndarray2string_full(x: Union[np.ndarray, None]) -> Union[str, None]:
     """
-    Helper function that converts numpy arrays to string with 16 digit
-    numerical precision and no truncation for large arrays
+    Convert numpy arrays to string.
+
+    Use 16 digit numerical precision and no truncation for large arrays
 
     Parameters
     ----------
@@ -1264,7 +1320,7 @@ def ndarray2string_full(x: Union[np.ndarray, None]) -> Union[str, None]:
 
 def string2ndarray(x: Union[str, float]) -> Union[np.ndarray, float]:
     """
-    Helper function that converts string to numpy arrays
+    Convert string to numpy arrays.
 
     Parameters
     ----------

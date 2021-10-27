@@ -48,6 +48,7 @@ class OptimizerTask(Task):
         self.history_options = history_options
 
     def execute(self) -> 'pypesto.optimize.OptimizerResult':
+        """Execute the task."""
         logger.info(f"Executing task {self.id}.")
 
         optimizer_result = self.optimizer.minimize(

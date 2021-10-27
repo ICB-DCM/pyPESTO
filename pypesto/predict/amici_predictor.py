@@ -13,8 +13,9 @@ from ..objective import AmiciObjective
 
 class AmiciPredictor:
     """
-    Do forward simulations (predictions) with parameter vectors,
-    for an AMICI model. The user may supply post-processing methods.
+    Do forward simulations/predictions for an AMICI model.
+
+    The user may supply post-processing methods.
     If post-processing methods are supplied, and a gradient of the prediction
     is requested, then the sensitivities of the AMICI model must also be
     post-processed. There are no checks here to ensure that the sensitivities
@@ -26,6 +27,7 @@ class AmiciPredictor:
     output, these checks are also left to the user. An example for such a check
     is provided in the default output (see _default_output()).
     """
+
     def __init__(self,
                  amici_objective: AmiciObjective,
                  amici_output_fields: Union[Sequence[str], None] = None,
@@ -37,7 +39,7 @@ class AmiciPredictor:
                  condition_ids: Union[Sequence[str], None] = None,
                  ):
         """
-        Constructor.
+        Initialize predictor.
 
         Parameters
         ----------
@@ -126,6 +128,8 @@ class AmiciPredictor:
             include_sigmay: bool = False
     ) -> PredictionResult:
         """
+        Call the predictor.
+
         Simulate a model for a certain prediction function.
         This method relies on the AmiciObjective, which is underlying, but
         allows the user to apply any post-processing of the results, the
@@ -222,9 +226,10 @@ class AmiciPredictor:
                      include_sigmay: bool = False
                      ) -> Tuple[List, List, List]:
         """
-        Split the calls to amici into smaller chunks, as too large
-        ReturnData objects from amici including many simulations can be
-        problematic in terms of memory
+        Split the calls to amici into smaller chunks.
+
+        Too large ReturnData objects from amici including many simulations
+        can be problematic in terms of memory.
 
         Parameters
         ----------
@@ -282,9 +287,10 @@ class AmiciPredictor:
 
         def _default_output(amici_outputs):
             """
-            Default output of prediction, equals to observables of AMICI model.
-            We need to check that call to AMICI was successful (status == 0),
-            before writing the output.
+            Create default output of prediction.
+
+            Equals to observables of AMICI model. We need to check that call
+            to AMICI was successful (status == 0), before writing the output.
             """
             amici_nt = [len(edata.getTimepoints())
                         for edata in self.amici_objective.edatas]
@@ -355,6 +361,7 @@ class AmiciPredictor:
                             parameter_mapping, edatas):
         """
         Encapsulate the call to amici.
+
         This allows to use variable scoping as a mean to clean up the memory
         after calling amici, which is beneficial if large models with large
         datasets are used.

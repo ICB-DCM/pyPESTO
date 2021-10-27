@@ -116,8 +116,10 @@ def adaptive_step(
         order: int = 1
 ) -> np.ndarray:
     """
-    Group of more complex methods for point proposal, step size is
-    automatically computed by a line search algorithm (hence: adaptive)
+    Group of more complex methods for point proposal.
+
+    Step size is automatically computed by a line search algorithm (hence:
+    adaptive).
 
     Parameters
     ----------
@@ -246,9 +248,10 @@ def handle_profile_history(
         options: ProfileOptions
 ) -> Tuple:
     """
-    Compute the very first step direction update guesses, check whether
-    enough steps have been taken for applying regression, computes
-    regression or simple extrapolation.
+    Compute the very first step direction update guesses.
+
+    Check whether enough steps have been taken for applying regression,
+    computes regression or simple extrapolation.
     """
     # set the update direction
     delta_x_dir = np.zeros(len(x))
@@ -292,8 +295,9 @@ def get_reg_polynomial(
         options: ProfileOptions
 ) -> List[float]:
     """
-    Compute the regression polynomial which is used to step proposal
-    extrapolation from the last profile points
+    Compute the regression polynomial.
+
+    Used to step proposal extrapolation from the last profile points
     """
     # determine interpolation order
     reg_max_order = np.floor(n_profile_points / 2)
@@ -343,9 +347,10 @@ def do_line_seach(
         options: ProfileOptions
 ) -> np.ndarray:
     """
-    Perform the line search based on the objective function we want to
-    reach, based on the current position in parameter space and on the
-    first guess for the proposal.
+    Perform the line search.
+
+    Based on the objective function we want to reach, based on the current
+    position in parameter space and on the first guess for the proposal.
     """
     # Was the initial step too big or too small?
     if direction == 'increase':

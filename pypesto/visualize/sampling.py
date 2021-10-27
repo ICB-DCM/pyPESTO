@@ -30,15 +30,6 @@ from .misc import rgba2rgb
 logger = logging.getLogger(__name__)
 
 
-def sampling_fval_trace(*args, **kwargs):
-    warnings.warn(
-        '`sampling_fval_trace` is deprecated in favor of '
-        '`sampling_fval_traces` and will be removed in a future version of '
-        'pyPESTO.'
-    )
-    return sampling_fval_traces(*args, **kwargs)
-
-
 def sampling_fval_traces(
         result: Result,
         i_chain: int = 0,
@@ -580,6 +571,8 @@ def sampling_prediction_trajectories(
         weighting: bool = False
 ) -> matplotlib.axes.Axes:
     """
+    Visualize prediction trajectory of an EnsemblePrediction.
+
     Plot MCMC-based prediction credibility intervals for the
     model states or outputs. One or various credibility levels
     can be depicted. Plots are grouped by condition.
@@ -633,7 +626,8 @@ def sampling_prediction_trajectories(
         for percentile in _get_level_percentiles(level)
     ]
 
-    summary = ensemble_prediction.compute_summary(percentiles_list=percentiles)
+    summary = ensemble_prediction.compute_summary(
+        percentiles_list=percentiles, weighting=weighting)
 
     all_condition_ids, all_output_ids = _get_condition_and_output_ids(summary)
     if condition_ids is None:
@@ -754,8 +748,7 @@ def sampling_parameter_cis(
         ax: matplotlib.axes.Axes = None
 ) -> matplotlib.axes.Axes:
     """
-    Plot MCMC-based parameter credibility intervals for one or more
-    credibility levels.
+    Plot MCMC-based parameter credibility intervals.
 
     Parameters
     ----------
@@ -842,15 +835,6 @@ def sampling_parameter_cis(
     ax.legend(by_label.values(), by_label.keys(), bbox_to_anchor=(1.05, 1))
 
     return ax
-
-
-def sampling_parameters_trace(*args, **kwargs):
-    warnings.warn(
-        '`sampling_parameters_trace` is deprecated in favor of '
-        '`sampling_parameter_traces` and will be removed in a future version '
-        'of pyPESTO.'
-    )
-    return sampling_parameter_traces(*args, **kwargs)
 
 
 def sampling_parameter_traces(

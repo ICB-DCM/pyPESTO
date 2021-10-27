@@ -4,10 +4,9 @@ from typing import Iterable
 
 class McmcPtResult(dict):
     """
-    The result of a sampler run using Markov-chain Monte Carlo, and
-    optionally parallel tempering.
+    The result of a sampler run using Markov-chain Monte Carlo.
 
-    Can be used like a dict.
+    Currently result object of all supported samplers. Can be used like a dict.
 
     Parameters
     ----------
@@ -81,6 +80,7 @@ class McmcPtResult(dict):
                              f"trace_neglogprior.shape={trace_neglogprior.shape}") # noqa
 
     def __getattr__(self, key):
+        """Allow usage of keys like attributes."""
         try:
             return self[key]
         except KeyError:

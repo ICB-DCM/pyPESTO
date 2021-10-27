@@ -5,8 +5,10 @@ from typing import List
 
 class ReferencePoint(dict):
     """
-    Reference point for plotting. Should contain a parameter value and an
-    objective function value, may also contain a color and a legend.
+    Reference point for plotting.
+
+    Should contain a parameter value and an objective function value,
+    may also contain a color and a legend.
 
     Can be used like a dict.
 
@@ -88,6 +90,7 @@ class ReferencePoint(dict):
                 self.auto_color = True
 
     def __getattr__(self, key):
+        """Allow usage of keys as attributes."""
         try:
             return self[key]
         except KeyError:
@@ -99,7 +102,7 @@ class ReferencePoint(dict):
 
 def assign_colors(ref):
     """
-    Assign colors to reference points, depending on user settings
+    Assign colors to reference points, depending on user settings.
 
     Parameters
     ----------
@@ -133,7 +136,7 @@ def assign_colors(ref):
 def create_references(references=None, x=None, fval=None, color=None,
                       legend=None) -> List[ReferencePoint]:
     """
-    Create a list of reference point objects from user inputs
+    Create a list of reference point objects from user inputs.
 
     Parameters
     ----------

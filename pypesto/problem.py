@@ -151,30 +151,37 @@ class Problem:
 
     @property
     def lb(self) -> np.ndarray:
+        """Lower bounds of free parameters."""
         return self.lb_full[self.x_free_indices]
 
     @property
     def ub(self) -> np.ndarray:
+        """Upper bounds of free parameters"""
         return self.ub_full[self.x_free_indices]
 
     @property
     def lb_init(self) -> np.ndarray:
+        """Initial lower bounds of free parameters."""
         return self.lb_init_full[self.x_free_indices]
 
     @property
     def ub_init(self) -> np.ndarray:
+        """Initial upper bounds of free parameters."""
         return self.ub_init_full[self.x_free_indices]
 
     @property
     def x_guesses(self) -> np.ndarray:
+        """Guesses of the free parameter values."""
         return self.x_guesses_full[:, self.x_free_indices]
 
     @property
     def dim(self) -> int:
+        """Dimension only considering non fixed parameters."""
         return self.dim_full - len(self.x_fixed_indices)
 
     @property
     def x_free_indices(self) -> List[int]:
+        """Non fixed parameters."""
         return sorted(set(range(0, self.dim_full)) - set(self.x_fixed_indices))
 
     def normalize(self) -> None:

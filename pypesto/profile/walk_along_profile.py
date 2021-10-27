@@ -22,9 +22,11 @@ def walk_along_profile(
         i_par: int
 ) -> ProfilerResult:
     """
-    Compute half a profile, by walking ahead in positive
-    direction until some stopping criterion is fulfilled. A two-sided profile
-    is obtained by flipping the profile direction.
+    Compute half a profile.
+
+    Walk ahead in positive direction until some stopping criterion is
+    fulfilled. A two-sided profile is obtained by flipping the profile
+    direction.
 
     Parameters
     ----------

@@ -8,6 +8,8 @@ from .constants import MODE_FUN, MODE_RES, FVAL, GRAD, HESS, RES, SRES
 
 class Objective(ObjectiveBase):
     """
+    Objective class.
+
     The objective class allows the user explicitly specify functions that
     compute the function value and/or residuals as well as respective
     derivatives.
@@ -85,30 +87,36 @@ class Objective(ObjectiveBase):
 
     @property
     def has_fun(self) -> bool:
+        """Check whether function is defined."""
         return callable(self.fun)
 
     @property
     def has_grad(self) -> bool:
+        """Check whether gradient is defined."""
         return callable(self.grad) or self.grad is True
 
     @property
     def has_hess(self) -> bool:
+        """Check whether Hessian is defined."""
         return callable(self.hess) or self.hess is True
 
     @property
-    def has_hessp(self) -> bool:
+    def has_hessp(self) -> bool: # noqa
         # Not supported yet
         return False
 
     @property
     def has_res(self) -> bool:
+        """Check whether residuals are defined."""
         return callable(self.res)
 
     @property
     def has_sres(self) -> bool:
+        """Check whether residual sensitivities are defined."""
         return callable(self.sres) or self.sres is True
 
     def get_config(self) -> dict:
+        """Return basic information of the objective configuration."""
         info = super().get_config()
         info['x_names'] = self.x_names
         sensi_order = 0
@@ -126,8 +134,7 @@ class Objective(ObjectiveBase):
         **kwargs,
     ) -> ResultDict:
         """
-        Call objective function without pre- or post-processing and
-        formatting.
+        Call objective function without pre- or post-processing and formatting.
 
         Returns
         -------

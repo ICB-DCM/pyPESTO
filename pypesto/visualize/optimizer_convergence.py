@@ -13,6 +13,8 @@ def optimizer_convergence(result: pypesto.Result,
                           yscale: str = 'log',
                           size: Tuple[float] = (18.5, 10.5)) -> plt.Axes:
     """
+    Visualize to help spotting convergence issues.
+
     Scatter plot of function values and gradient values at the end of
     optimization. Optimizer exit-message is encoded by color. Can help
     identifying convergence issues in optimization and guide tolerance

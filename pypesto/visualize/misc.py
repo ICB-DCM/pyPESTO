@@ -20,7 +20,7 @@ from .constants import (
 
 def process_result_list(results, colors=None, legends=None):
     """
-    Assign colors and legends to a list of results, check user provided lists
+    Assign colors and legends to a list of results, check user provided lists.
 
     Parameters
     ----------
@@ -90,7 +90,7 @@ def process_offset_y(offset_y: Optional[float],
                      scale_y: str,
                      min_val: float) -> float:
     """
-    Compute offset for y-axis, depend on user settings
+    Compute offset for y-axis, depend on user settings.
 
     Parameters
     ----------
@@ -128,7 +128,7 @@ def process_offset_y(offset_y: Optional[float],
 
 def process_y_limits(ax, y_limits):
     """
-    Apply user specified limits of y-axis
+    Apply user specified limits of y-axis.
 
     Parameters
     ----------
@@ -198,9 +198,10 @@ def process_y_limits(ax, y_limits):
 def process_start_indices(start_indices: Union[int, Iterable[int]],
                           max_length: int) -> List[int]:
     """
-    Helper function that processes the start_indices and
-    creates an array of indices if a number was provided and checks that the
-    indices do not exceed the max_index
+    Process the start_indices.
+
+    Create an array of indices if a number was provided and checks that the
+    indices do not exceed the max_index.
 
     Parameters
     ----------
@@ -264,8 +265,7 @@ def rgba2rgb(fg: RGB_RGBA, bg: RGB_RGBA = None) -> RGB:
             bg_alpha: float = bg[RGBA_ALPHA],
     ) -> float:
         """
-        Composite a foreground color component over a background color
-        component.
+        Composite a foreground over a background color component.
 
         Porter and Duff equations are used for alpha compositing.
 

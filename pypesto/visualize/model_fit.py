@@ -24,6 +24,7 @@ def visualize_optimized_model_fit(petab_problem: petab.Problem,
                                   ):
     """
     Visualize the optimized model fit of a PEtab problem.
+
     Function calls the PEtab visualization file of the petab_problem and
     visualizes the fit of the optimized parameter. Common additional
     argument is `subplot_dir` to specify the directory each subplot is
@@ -84,6 +85,7 @@ def time_trajectory_model(
         observable_ids: Union[str, Sequence[str]] = None,):
     """
     Visualize the time trajectory of the model with given timepoints.
+
     It does this by calling the amici plotting routines.
 
     Parameters
@@ -155,8 +157,9 @@ def _time_trajectory_model_with_states(
         state_names: Sequence[str],
         observable_ids: Union[str, Sequence[str]]):
     """
-    Helper function for time_trajectory_model. Visualizes both states and
-    observables.
+    Visualizes both, states and observables.
+
+    Helper function for time_trajectory_model.
 
     Parameters
     ----------
@@ -223,8 +226,9 @@ def _time_trajectory_model_without_states(
         rdatas: Union['amici.ReturnData', Sequence['amici.ReturnData']],
         observable_ids: Union[str, Sequence[str]]):
     """
-    Helper function for time_trajectory_model. Visualizes both states and
-    observables.
+    Visualize both, states and observables.
+
+    Helper function for time_trajectory_model.
 
     Parameters
     ----------

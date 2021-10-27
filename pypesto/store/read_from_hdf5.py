@@ -81,19 +81,20 @@ def read_hdf5_optimization(f: h5py.File,
 
 class ProblemHDF5Reader:
     """
-    Reader of the HDF5 problem files written
-    by class ProblemHDF5Writer.
+    Reader of the HDF5 problem files written by ProblemHDF5Writer.
 
     Attributes
     ----------
     storage_filename:
         HDF5 problem file name
     """
+
     def __init__(self, storage_filename: str):
         """
+        Initialize reader.
+
         Parameters
         ----------
-
         storage_filename: str
             HDF5 problem file name
         """
@@ -107,6 +108,7 @@ class ProblemHDF5Reader:
         ----------
         objective:
             Objective function which is currently not saved to storage.
+
         Returns
         -------
         problem:
@@ -141,8 +143,7 @@ class ProblemHDF5Reader:
 
 class OptimizationResultHDF5Reader:
     """
-    Reader of the HDF5 result files written
-    by class OptimizationResultHDF5Writer.
+    Reader of the HDF5 result files written by OptimizationResultHDF5Writer.
 
     Attributes
     ----------
@@ -152,9 +153,10 @@ class OptimizationResultHDF5Reader:
 
     def __init__(self, storage_filename: str):
         """
+        Initialize reader.
+
         Parameters
         ----------
-
         storage_filename: str
             HDF5 result file name
         """
@@ -179,19 +181,20 @@ class OptimizationResultHDF5Reader:
 
 class SamplingResultHDF5Reader:
     """
-    Reader of the HDF5 result files written
-    by class SamplingResultHDF5Writer.
+    Reader of the HDF5 result files written by SamplingResultHDF5Writer.
 
     Attributes
     ----------
     storage_filename:
         HDF5 result file name
     """
+
     def __init__(self, storage_filename: str):
         """
+        Initialize reader.
+
         Parameters
         ----------
-
         storage_filename: str
             HDF5 result file name
         """
@@ -222,8 +225,7 @@ class SamplingResultHDF5Reader:
 
 class ProfileResultHDF5Reader:
     """
-    Reader of the HDF5 result files written
-    by class OptimizationResultHDF5Writer.
+    Reader of the HDF5 result files written by OptimizationResultHDF5Writer.
 
     Attributes
     ----------
@@ -233,6 +235,8 @@ class ProfileResultHDF5Reader:
 
     def __init__(self, storage_filename: str):
         """
+        Initialize reader.
+
         Parameters
         ----------
         storage_filename:
@@ -271,8 +275,7 @@ def read_result(filename: str,
                 sample: bool = False,
                 ) -> Result:
     """
-    Save the whole pypesto.Result object in an HDF5 file. With booleans one
-    can choose more detailed what to save.
+    Save the whole pypesto.Result object in an HDF5 file.
 
     Parameters
     ----------
@@ -337,7 +340,7 @@ def read_result(filename: str,
 
 def load_objective_config(filename: str):
     """
-    Load the objective information stored in f
+    Load the objective information stored in f.
 
     Parameters
     ----------
@@ -358,6 +361,7 @@ def load_objective_config(filename: str):
 def optimization_result_from_history(filename: str) -> Result:
     """
     Convert a saved hdf5 History to an optimization result.
+
     Used for interrupted optimization runs.
 
     Parameters

@@ -3,9 +3,11 @@ import numpy as np
 
 class ProfilerResult(dict):
     """
-    The result of a profiler run. The standardized return return value from
-    pypesto.profile, which can either be initialized from an OptimizerResult
-    or from an existing ProfilerResult (in order to extend the computation).
+    The result of a profiler run.
+
+    The standardized return return value from pypesto.profile, which can
+    either be initialized from an OptimizerResult or from an existing
+    ProfilerResult (in order to extend the computation).
 
     Can be used like a dict.
 
@@ -77,6 +79,7 @@ class ProfilerResult(dict):
         self.message = message
 
     def __getattr__(self, key):
+        """Allow usage of keys like attributes."""
         try:
             return self[key]
         except KeyError:
@@ -149,11 +152,11 @@ class ProfilerResult(dict):
 
     def flip_profile(self) -> None:
         """
-        Flip the profiling direction (left-right)
-        Profiling direction needs to be changed once (if the profile is new),
-        or twice if we append to an existing profile.
+        Flip the profiling direction (left-right).
 
-        All profiling paths are flipped in-place.
+        Profiling direction needs to be changed once (if the profile is new),
+        or twice if we append to an existing profile. All profiling paths
+        are flipped in-place.
         """
         self.x_path = np.fliplr(self.x_path)
         self.fval_path = np.flip(self.fval_path)

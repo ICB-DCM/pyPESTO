@@ -43,14 +43,17 @@ class TheanoLogProbability(tt.Op):
             self._log_prob_grad = None
 
     def perform(self, node, inputs, outputs, params=None):
+        """Calculate the gradients of the objective function at the inputs."""
         theta, = inputs
         log_prob = self._log_prob(theta)
         outputs[0][0] = np.array(log_prob)
 
     def grad(self, inputs, g):
         """
-        Calculate the gradients - actually returns the
-        vector-Jacobian product - g[0] is a vector of parameter values.
+        Calculate the gradients.
+
+        Actually returns the vector-Jacobian product - g[0] is a vector of
+        parameter values.
         """
         if self._log_prob_grad is None:
             # indicates gradient not available
@@ -63,6 +66,7 @@ class TheanoLogProbability(tt.Op):
 class TheanoLogProbabilityGradient(tt.Op):
     """
     Theano wrapper around a (non-normalized) log-probability gradient function.
+
     This Op will be called with a vector of values and also return a vector of
     values - the gradients in each dimension.
 
@@ -83,6 +87,7 @@ class TheanoLogProbabilityGradient(tt.Op):
             lambda x: - beta * self._objective(x, sensi_orders=(1,))
 
     def perform(self, node, inputs, outputs, params=None):
+        """Calculate the gradients of the objective function at the inputs."""
         theta, = inputs
         # calculate gradients
         log_prob_grad = self._log_prob_grad(theta)

@@ -191,8 +191,7 @@ def process_offset_for_list(
         references: Optional[Sequence[ReferencePoint]] = None,
 ) -> Tuple[List[np.ndarray], float]:
     """
-    If we have a list of results, all should use the same offset_y,
-    which is computed by this function and added to the fvals
+    Compute common offset_y and add it to `fvals` of results.
 
     Parameters
     ----------
@@ -245,9 +244,10 @@ def process_offset_for_list(
 
 def handle_options(ax, max_len_fvals, ref, y_limits, offset_y):
     """
+    Apply post-plotting transformations to the axis object.
+
     Get the limits for the y-axis, plots the reference points, will do
-    more at a later time point. This function is there to apply whatever
-    kind of post-plotting transformations to the axis object.
+    more at a later time point.
 
     Parameters
     ----------

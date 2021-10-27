@@ -83,6 +83,8 @@ class Sampler(abc.ABC):
 
 class InternalSample:
     """
+    Internal sample class.
+
     Exchange object provided and accepted by
     `InternalSampler.get_last_sample()`, `InternalSampler.set_last_sample()`.
     It carries all information needed to check whether to swap between chains,
@@ -134,9 +136,10 @@ class InternalSampler(Sampler):
 
     def make_internal(self, temper_lpost: bool):
         """
-        Allow the inner samplers to adjust to them being used as inner
-        samplers. Can be called by parallel tempering samplers during
-        initialization. Default: Do nothing.
+        Allow the inner samplers to be used as inner samplers.
+
+        Can be called by parallel tempering samplers during initialization.
+        Default: Do nothing.
 
         Parameters
         ----------

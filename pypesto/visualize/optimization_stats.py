@@ -20,8 +20,7 @@ def optimization_run_properties_one_plot(
     plot_type: str = 'line'
 ) -> matplotlib.axes.Axes:
     """
-    Plot stats for all optimization properties specified  in properties_to_plot
-    on one plot.
+    Plot stats for allproperties specified in properties_to_plot on one plot.
 
     Parameters
     ----------
@@ -50,7 +49,7 @@ def optimization_run_properties_one_plot(
         The plot axes.
 
     Examples
-    -------
+    --------
     optimization_properties_per_multistart(
         result1,
         properties_to_plot=['time'],
@@ -189,6 +188,7 @@ def optimization_run_property_per_multistart(
         plot_type: str = 'line') -> matplotlib.axes.Axes:
     """
     Plot stats for an optimization run property specified by opt_run_property.
+
     It is possible to plot a histogram or a line plot. In a line plot,
     on the x axis are the numbers of the multistarts, where the multistarts are
     ordered with respect to a function value. On the y axis of the line plot
@@ -288,8 +288,7 @@ def stats_lowlevel(result: Result,
                    legend: Optional[str] = None,
                    plot_type: str = 'line'):
     """
-    Plot values of the optimization run property specified by property name
-    across different multistarts.
+    Plot values of the optimization run property across different multistarts.
 
     Parameters
     ----------

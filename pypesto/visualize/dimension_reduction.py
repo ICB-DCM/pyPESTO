@@ -16,8 +16,10 @@ def projection_scatter_umap(umap_coordinates: np.ndarray,
                             components: Sequence[int] = (0, 1),
                             **kwargs):
     """
-    Plot a scatter plots for UMAP coordinates. Creates either one or multiple
-    scatter plots, depending on the number of coordinates passed to it.
+    Plot a scatter plots for UMAP coordinates.
+
+    Creates either one or multiple scatter plots, depending on the number of
+    coordinates passed to it.
 
     Parameters
     ----------
@@ -64,7 +66,9 @@ def projection_scatter_umap_original(umap_object: UmapTypeObject,
                                      components: Sequence[int] = (0, 1),
                                      **kwargs):
     """
-    Wrapper around umap.plot.points. Similar to projection_scatter_umap, but
+    See `projection_scatter_umap` for more documentation.
+
+    Wrapper around umap.plot.points. Similar to `projection_scatter_umap`, but
     uses the original plotting routine from umap.plot.
 
     Parameters
@@ -93,8 +97,10 @@ def projection_scatter_pca(pca_coordinates: np.ndarray,
                            components: Sequence[int] = (0, 1),
                            **kwargs):
     """
-    Plot a scatter plot for PCA coordinates. Creates either one or multiple
-    scatter plots, depending on the number of coordinates passed to it.
+    Plot a scatter plot for PCA coordinates.
+
+    Creates either one or multiple scatter plots, depending on the number of
+    coordinates passed to it.
 
     Parameters
     ----------
@@ -141,6 +147,7 @@ def ensemble_crosstab_scatter_lowlevel(dataset: np.ndarray,
                                        **kwargs):
     """
     Plot cross-classification table of scatter plots for different coordinates.
+
     Lowlevel routine for multiple UMAP and PCA plots, but can also be used to
     visualize, e.g., parameter traces across optimizer runs.
 
@@ -265,7 +272,7 @@ def ensemble_scatter_lowlevel(dataset,
 
 def _create_crosstab_axes(n_comp: int):
     """
-    Create a figure with cross-classification table of axes
+    Create a figure with cross-classification table of axes.
 
     Parameters
     ----------

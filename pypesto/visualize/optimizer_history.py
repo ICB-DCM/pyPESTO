@@ -26,9 +26,10 @@ def optimizer_history(results,
                       reference=None,
                       legends=None):
     """
-    Plot history of optimizer. Can plot either the history of the cost
-    function or of the gradient norm, over either the optimizer steps or
-    the computation time.
+    Plot history of optimizer.
+
+    Can plot either the history of the cost function or of the gradient
+    norm, over either the optimizer steps or the computation time.
 
     Parameters
     ----------
@@ -197,7 +198,7 @@ def get_trace(result: Result,
               trace_x: Optional[str],
               trace_y: Optional[str]) -> Tuple[str, str, List[np.ndarray]]:
     """
-    Get the values of the optimizer trace from the pypesto.Result object
+    Get the values of the optimizer trace from the pypesto.Result object.
 
     Parameters
     ----------
@@ -279,8 +280,10 @@ def get_vals(
     start_indices: Iterable[int]
 ) -> Tuple[List[np.ndarray], float, str]:
     """
-    Postprocess the values of the optimization history, depending on the
-    options set by the user (e.g. scale_y, offset_y, start_indices)
+    Postprocess the values of the optimization history.
+
+    Depending on the options set by the user (e.g. scale_y, offset_y,
+    start_indices).
 
     Parameters
     ----------
@@ -344,9 +347,10 @@ def handle_options(ax: plt.Axes,
                    y_limits: Union[float, np.ndarray],
                    offset_y: float):
     """
+    Apply post-plotting transformations to the axis object.
+
     Get the limits for the y-axis, plots the reference points, will do
-    more at a later time point. This function is there to apply whatever
-    kind of post-plotting transformations to the axis object.
+    more at a later time point.
 
     Parameters
     ----------

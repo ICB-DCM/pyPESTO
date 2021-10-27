@@ -33,9 +33,12 @@ logger = logging.getLogger(__name__)
 
 class PetabImporter(AmiciObjectBuilder):
     """
+    Importer for Petab files.
+
     Create an `amici.Model`, an `objective.AmiciObjective` or a
     `pypesto.Problem` from Petab files.
     """
+
     MODEL_BASE_DIR = "amici_models"
 
     def __init__(self,
@@ -44,6 +47,10 @@ class PetabImporter(AmiciObjectBuilder):
                  model_name: str = None,
                  validate_petab: bool = True):
         """
+        Initialize importer.
+
+        Parameters
+        ----------
         petab_problem:
             Managing access to the model and data.
         output_folder:
@@ -147,8 +154,7 @@ class PetabImporter(AmiciObjectBuilder):
                      force_compile: bool = False,
                      **kwargs) -> 'amici.Model':
         """
-        Import amici model. If necessary or force_compile is True, compile
-        first.
+        Import amici model.
 
         Parameters
         ----------
@@ -186,10 +192,7 @@ class PetabImporter(AmiciObjectBuilder):
         return self._create_model()
 
     def _create_model(self) -> 'amici.Model':
-        """
-        No checks, no compilation, just load the model module and return
-        the model.
-        """
+        """Load model module and return the model, no checks/compilation."""
         # load moduĺe
         module = amici.import_model_module(module_name=self.model_name,
                                            module_path=self.output_folder)
@@ -220,8 +223,9 @@ class PetabImporter(AmiciObjectBuilder):
 
     def compile_model(self, **kwargs):
         """
-        Compile the model. If the output folder exists already, it is first
-        deleted.
+        Compile the model.
+
+        If the output folder exists already, it is first deleted.
 
         Parameters
         ----------
@@ -254,9 +258,7 @@ class PetabImporter(AmiciObjectBuilder):
             model: 'amici.Model' = None,
             simulation_conditions=None
     ) -> List['amici.ExpData']:
-        """
-        Create list of amici.ExpData objects.
-        """
+        """Create list of amici.ExpData objects."""
         # create model
         if model is None:
             model = self.create_model()
@@ -435,8 +437,9 @@ class PetabImporter(AmiciObjectBuilder):
 
     def create_prior(self) -> NegLogParameterPriors:
         """
-        Creates a prior from the parameter table. Returns None, if no priors
-        are defined.
+        Create a prior from the parameter table.
+
+        Returns None, if no priors are defined.
         """
         prior_list = []
 
@@ -471,9 +474,10 @@ class PetabImporter(AmiciObjectBuilder):
 
     def create_startpoint_method(self):
         """
-        Creates a startpoint method, if the PEtab problem specifies an
-        initializationPrior. Returns None, if no initializationPrior
-        is specified.
+        Create a startpoint method.
+
+        If the PEtab problem specifies an initializationPrior. Returns None,
+        if no initializationPrior is specified.
         """
         if petab.INITIALIZATION_PRIOR_TYPE \
                 not in self.petab_problem.parameter_df:
@@ -540,8 +544,7 @@ class PetabImporter(AmiciObjectBuilder):
             model: 'amici.Model' = None
     ) -> pd.DataFrame:
         """
-        Create a measurement dataframe in the petab format from
-        the passed `rdatas` and own information.
+        Create a measurement dataframe in the petab format.
 
         Parameters
         ----------
@@ -570,8 +573,11 @@ class PetabImporter(AmiciObjectBuilder):
             self, rdatas: Sequence['amici.ReturnData'],
             model: 'amici.Model' = None
     ) -> pd.DataFrame:
-        """Same as `rdatas_to_measurement_df`, execpt a petab simulation
-        dataframe is created, i.e. the measurement column label is adjusted.
+        """
+        See `rdatas_to_measurement_df`.
+
+        Execpt a petab simulation dataframe is created, i.e. the measurement
+        column label is adjusted.
         """
         return self.rdatas_to_measurement_df(rdatas, model).rename(
             columns={petab.MEASUREMENT: petab.SIMULATION})
@@ -582,6 +588,8 @@ class PetabImporter(AmiciObjectBuilder):
             predictor: AmiciPredictor = None
     ) -> pd.DataFrame:
         """
+        Cast prediction into a dataframe.
+
         If a PEtab problem is simulated without post-processing, then the
         result can be cast into a PEtab measurement or simulation dataframe
 
@@ -616,9 +624,11 @@ class PetabImporter(AmiciObjectBuilder):
             prediction: PredictionResult,
             predictor: AmiciPredictor = None
     ) -> pd.DataFrame:
-        """Same as `prediction_to_petab_measurement_df`, except a PEtab
-        simulation dataframe is created, i.e. the measurement column label is
-        adjusted.
+        """
+        See `prediction_to_petab_measurement_df`.
+
+        Except a PEtab simulation dataframe is created, i.e. the measurement
+        column label is adjusted.
         """
         return self.prediction_to_petab_measurement_df(
             prediction, predictor).rename(
@@ -630,11 +640,12 @@ def _find_output_folder_name(
         model_name: str,
 ) -> str:
     """
-    Find a name for storing the compiled amici model in. If available,
-    use the sbml model name from the `petab_problem` or the provided
-    `model_name` (latter is given priority), otherwise create a unique name.
-    The folder will be located in the `PetabImporter.MODEL_BASE_DIR`
-    subdirectory of the current directory.
+    Find a name for storing the compiled amici model in.
+
+    If available, use the sbml model name from the `petab_problem` or the
+    provided `model_name` (latter is given priority), otherwise create a
+    unique name. The folder will be located in the
+    `PetabImporter.MODEL_BASE_DIR` subdirectory of the current directory.
     """
     # check whether location for amici model is a file
     if os.path.exists(PetabImporter.MODEL_BASE_DIR) and \
