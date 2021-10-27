@@ -23,7 +23,8 @@ def parameters(
         colors: Optional[Union[List[float], List[List[float]]]] = None,
         legends: Optional[Union[str, List[str]]] = None,
         balance_alpha: bool = True,
-        start_indices: Optional[Union[int, Iterable[int]]] = None
+        start_indices: Optional[Union[int, Iterable[int]]] = None,
+        scale_to_interval: Optional[Tuple[float, float]] = None,
 ) -> matplotlib.axes.Axes:
     """
     Plot parameter values.
@@ -58,6 +59,9 @@ def parameters(
     start_indices:
         list of integers specifying the multistarts to be plotted or
         int specifying up to which start index should be plotted
+    scale_to_interval:
+        Tuple of bounds to which to scale all parameter values and bounds, or
+        ``None`` to use bounds as determined by ``lb, ub``.
 
     Returns
     -------
@@ -77,12 +81,22 @@ def parameters(
             raise ValueError("Permissible values for parameter_indices are "
                              "'all', 'free_only' or a list of indices")
 
+    def scale_parameters(x):
+        """Scale ``x`` from [lb, ub] to interval given by ``scale_to_interval``
+        """
+        if scale_to_interval is None or scale_to_interval is False:
+            return x
+
+        return (scale_to_interval[0] + (x - lb) / (ub - lb)
+                * (scale_to_interval[1] - scale_to_interval[0]))
+
     for j, result in enumerate(results):
         # handle results and bounds
         (lb, ub, x_labels, fvals, xs) = \
             handle_inputs(result=result, lb=lb, ub=ub,
                           parameter_indices=parameter_indices,
                           start_indices=start_indices)
+        lb, ub, xs = map(scale_parameters, (lb, ub, xs))
 
         # call lowlevel routine
         ax = parameters_lowlevel(xs=xs, fvals=fvals, lb=lb, ub=ub,
@@ -103,6 +117,7 @@ def parameters(
         else:
             x_ref = np.array(i_ref['x'])
         x_ref = np.reshape(x_ref, (1, x_ref.size))
+        x_ref = scale_parameters(x_ref)
 
         # plot reference parameters using lowlevel routine
         ax = parameters_lowlevel(x_ref, [i_ref['fval']], ax=ax,
@@ -270,13 +285,17 @@ def parameters_lowlevel(
                 marker='o',
                 label=tmp_legend)
 
-    plt.yticks(parameters_ind, x_labels)
+    ax.set_yticks(parameters_ind)
+    if x_labels is not None:
+        ax.set_yticklabels(x_labels)
 
     # draw bounds
     parameters_ind = np.array(parameters_ind).flatten()
     if lb is not None:
+        lb = np.array(lb, dtype="float64")
         ax.plot(lb.flatten(), parameters_ind, 'k--', marker='+')
     if ub is not None:
+        ub = np.array(ub, dtype="float64")
         ax.plot(ub.flatten(), parameters_ind, 'k--', marker='+')
 
     ax.set_xlabel('Parameter value')
@@ -349,9 +368,9 @@ def handle_inputs(
 
     # get bounds
     if lb is None:
-        lb = result.problem.lb
+        lb = result.problem.lb_full
     if ub is None:
-        ub = result.problem.ub
+        ub = result.problem.ub_full
 
     # get labels
     x_labels = result.problem.x_names

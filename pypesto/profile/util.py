@@ -18,7 +18,7 @@ def chi2_quantile_to_ratio(alpha: float = 0.95, df: int = 1):
     alpha:
         Lower tail probability, defaults to 95% interval.
     df:
-        Degrees of freedom. Defaults to 1.
+        Degrees of freedom.
 
     Returns
     -------

@@ -1,14 +1,15 @@
-"""
-This is for testing optimization of the pypesto.Objective.
-"""
+"""Tests for `pypesto.sample` methods."""
 
 import numpy as np
 from scipy.stats import multivariate_normal, norm, kstest, ks_2samp, uniform
 import scipy.optimize as so
 import matplotlib.pyplot as plt
 import pytest
+import petab
+import os
 
 import pypesto
+import pypesto.petab
 import pypesto.optimize as optimize
 import pypesto.sample as sample
 import pypesto.visualize as visualize
@@ -81,6 +82,33 @@ def rosenbrock_problem():
     return problem
 
 
+def create_petab_problem():
+    current_path = os.path.dirname(os.path.realpath(__file__))
+    dir_path = os.path.abspath(os.path.join(current_path,
+                                            '..', '..', 'doc',
+                                            'example'))
+    # import to petab
+    petab_problem = petab.Problem.from_yaml(
+        dir_path+"/conversion_reaction/conversion_reaction.yaml")
+    # import to pypesto
+    importer = pypesto.petab.PetabImporter(petab_problem)
+    # create problem
+    problem = importer.create_problem()
+
+    return problem
+
+
+def sample_petab_problem():
+    # create problem
+    problem = create_petab_problem()
+
+    sampler = sample.AdaptiveMetropolisSampler()
+    result = sample.sample(problem, n_samples=1000,
+                           sampler=sampler,
+                           x0=np.array([3, -4]))
+    return result
+
+
 def prior(x):
     return multivariate_normal.pdf(x, mean=-1., cov=0.7)
 
@@ -97,11 +125,14 @@ def negative_log_prior(x):
     return - np.log(prior(x))
 
 
-@pytest.fixture(params=['Metropolis',
-                        'AdaptiveMetropolis',
-                        'ParallelTempering',
-                        'AdaptiveParallelTempering',
-                        'Pymc3'])
+@pytest.fixture(params=[
+    'Metropolis',
+    'AdaptiveMetropolis',
+    'ParallelTempering',
+    'AdaptiveParallelTempering',
+    'Pymc3',
+    'Emcee',
+])
 def sampler(request):
     if request.param == 'Metropolis':
         return sample.MetropolisSampler()
@@ -117,6 +148,8 @@ def sampler(request):
             n_chains=5)
     elif request.param == 'Pymc3':
         return sample.Pymc3Sampler(tune=5)
+    elif request.param == 'Emcee':
+        return sample.EmceeSampler(nwalkers=10)
 
 
 @pytest.fixture(params=['gaussian', 'gaussian_mixture', 'rosenbrock'])
@@ -156,7 +189,7 @@ def test_ground_truth():
 
     result = optimize.minimize(problem)
 
-    result = sample.sample(problem, n_samples=10000,
+    result = sample.sample(problem, n_samples=5000,
                            result=result, sampler=sampler)
 
     # get samples of first chain
@@ -203,7 +236,7 @@ def test_ground_truth_separated_modes():
 
     # only parallel tempering finds both modes
     print(statistic, pval)
-    assert statistic < 0.1
+    assert statistic < 0.2
 
     # sample using adaptive metropolis (single-chain)
     # initiated around the "first" mode of the distribution
@@ -444,6 +477,7 @@ def test_empty_prior():
     assert (logprior_trace == 0.).all()
 
 
+@pytest.mark.flaky(reruns=2)
 def test_prior():
     """Check that priors are defined for sampling."""
     # define negative log posterior
@@ -483,3 +517,47 @@ def test_prior():
     print(statistic, pval)
 
     assert statistic < 0.1
+
+
+def test_samples_cis():
+    """
+    Test whether :py:func:`pypesto.sample.calculate_ci_mcmc_sample` produces
+    percentile-based credibility intervals correctly.
+    """
+    # load problem
+    problem = gaussian_problem()
+
+    # set a sampler
+    sampler = sample.MetropolisSampler()
+
+    # optimization
+    result = optimize.minimize(problem, n_starts=3)
+
+    # sample
+    result = sample.sample(
+        problem, sampler=sampler, n_samples=2000, result=result)
+
+    # run geweke test
+    sample.geweke_test(result)
+
+    # get converged chain
+    converged_chain = np.asarray(
+        result.sample_result.trace_x[0, result.sample_result.burn_in:, :])
+
+    # set confidence levels
+    alpha_values = [0.99, 0.95, 0.68]
+
+    # loop over confidence levels
+    for alpha in alpha_values:
+        # calculate parameter samples confidence intervals
+        lb, ub = sample.calculate_ci_mcmc_sample(result, ci_level=alpha)
+        # get corresponding percentiles to alpha
+        percentiles = 100 * np.array([(1-alpha)/2, 1-(1-alpha)/2])
+        # check result agreement
+        diff = np.percentile(converged_chain, percentiles, axis=0)-[lb, ub]
+
+        assert (diff == 0).all()
+        # check if lower bound is smaller than upper bound
+        assert (lb < ub).all()
+        # check if dimmensions agree
+        assert lb.shape == ub.shape

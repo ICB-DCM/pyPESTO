@@ -1,28 +1,32 @@
 import logging
-from typing import Callable, Iterable, Union
+from typing import Iterable, Union
 
 from ..engine import Engine, SingleCoreEngine
 from ..objective import HistoryOptions
 from ..problem import Problem
 from ..result import Result
-from ..startpoint import assign_startpoints, uniform
+from ..startpoint import (
+    assign_startpoints, uniform, StartpointMethod, to_startpoint_method,
+)
 from .optimizer import Optimizer, ScipyOptimizer
 from .options import OptimizeOptions
 from .task import OptimizerTask
+from .util import check_hdf5_mp, fill_hdf5_file
 
 logger = logging.getLogger(__name__)
 
 
 def minimize(
-        problem: Problem,
-        optimizer: Optimizer = None,
-        n_starts: int = 100,
-        ids: Iterable[str] = None,
-        startpoint_method: Union[Callable, bool] = None,
-        result: Result = None,
-        engine: Engine = None,
-        options: OptimizeOptions = None,
-        history_options: HistoryOptions = None,
+    problem: Problem,
+    optimizer: Optimizer = None,
+    n_starts: int = 100,
+    ids: Iterable[str] = None,
+    startpoint_method: Union[StartpointMethod, bool] = None,
+    result: Result = None,
+    engine: Engine = None,
+    progress_bar: bool = True,
+    options: OptimizeOptions = None,
+    history_options: HistoryOptions = None,
 ) -> Result:
     """
     This is the main function to call to do multistart optimization.
@@ -47,6 +51,8 @@ def minimize(
     engine:
         Parallelization engine. Defaults to sequential execution on a
         SingleCoreEngine.
+    progress_bar:
+        Whether to display a progress bar.
     options:
         Various options applied to the multistart optimization.
     history_options:
@@ -64,15 +70,19 @@ def minimize(
         optimizer = ScipyOptimizer()
 
     # startpoint method
-    if (startpoint_method is not None) \
-            and (problem.startpoint_method is not None):
-        raise Warning('Problem.startpoint_method will be ignored. Start '
-                      'points will be generated using the startpoint method '
-                      'given as an argument to the minimize function.')
+    if startpoint_method is not None and problem.startpoint_method is not None:
+        raise Warning(
+            "Problem.startpoint_method will be ignored. Startpoints will be "
+            "generated using the startpoint method given as an argument to "
+            "the minimize function.",
+        )
     elif problem.startpoint_method is not None:
         startpoint_method = problem.startpoint_method
     elif startpoint_method is None:
         startpoint_method = uniform
+
+    # convert startpoint method to class instance
+    startpoint_method = to_startpoint_method(startpoint_method)
 
     # check options
     if options is None:
@@ -85,8 +95,11 @@ def minimize(
 
     # assign startpoints
     startpoints = assign_startpoints(
-        n_starts=n_starts, startpoint_method=startpoint_method,
-        problem=problem, startpoint_resample=options.startpoint_resample)
+        n_starts=n_starts,
+        startpoint_method=startpoint_method,
+        problem=problem,
+        startpoint_resample=options.startpoint_resample,
+    )
 
     if ids is None:
         ids = [str(j) for j in range(n_starts)]
@@ -103,14 +116,27 @@ def minimize(
 
     # define tasks
     tasks = []
+    filename = None
+    if history_options.storage_file is not None and \
+            history_options.storage_file.endswith(('.h5', '.hdf5')):
+        filename = check_hdf5_mp(history_options, engine)
+
     for startpoint, id in zip(startpoints, ids):
         task = OptimizerTask(
-            optimizer=optimizer, problem=problem, x0=startpoint, id=id,
-            options=options, history_options=history_options)
+            optimizer=optimizer,
+            problem=problem,
+            x0=startpoint,
+            id=id,
+            options=options,
+            history_options=history_options,
+        )
         tasks.append(task)
 
     # do multistart optimization
-    ret = engine.execute(tasks)
+    ret = engine.execute(tasks, progress_bar=progress_bar)
+
+    if filename is not None:
+        fill_hdf5_file(ret, filename)
 
     # aggregate results
     for optimizer_result in ret:

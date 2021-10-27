@@ -1,21 +1,31 @@
+import functools
 import numpy as np
 import scipy.optimize as so
 import matplotlib.pyplot as plt
 import pytest
+import os
+import petab
 
 import pypesto
+import pypesto.petab
 import pypesto.optimize as optimize
+import pypesto.predict as predict
 import pypesto.profile as profile
 import pypesto.sample as sample
 import pypesto.visualize as visualize
 import pypesto.ensemble as ensemble
+from pypesto.visualize.model_fit import visualize_optimized_model_fit, \
+    time_trajectory_model
+from functools import wraps
+from typing import Sequence
 
 
 def close_fig(fun):
     """Close figure."""
 
-    def wrapped_fun(*args):
-        ret = fun(*args)
+    @wraps(fun)
+    def wrapped_fun(*args, **kwargs):
+        ret = fun(*args, **kwargs)
         plt.close('all')
         return ret
 
@@ -33,17 +43,47 @@ def create_bounds(n_parameters: int = 2):
     return lb, ub
 
 
-def create_problem(n_parameters: int = 2):
+def create_problem(n_parameters: int = 2,
+                   x_names: Sequence[str] = None):
     # define a pypesto objective
     objective = pypesto.Objective(fun=so.rosen,
                                   grad=so.rosen_der,
-                                  hess=so.rosen_hess)
+                                  hess=so.rosen_hess,
+                                  x_names=x_names)
 
     # define a pypesto problem
     (lb, ub) = create_bounds(n_parameters)
     problem = pypesto.Problem(objective=objective, lb=lb, ub=ub)
 
     return problem
+
+
+def create_petab_problem():
+    current_path = os.path.dirname(os.path.realpath(__file__))
+    dir_path = os.path.abspath(os.path.join(current_path,
+                                            '..', '..',
+                                            'doc', 'example'))
+
+    # import to petab
+    petab_problem = petab.Problem.from_yaml(
+        dir_path + "/conversion_reaction/conversion_reaction.yaml")
+    # import to pypesto
+    importer = pypesto.petab.PetabImporter(petab_problem)
+    # create problem
+    problem = importer.create_problem()
+
+    return problem
+
+
+def sample_petab_problem():
+    # create problem
+    problem = create_petab_problem()
+
+    sampler = sample.AdaptiveMetropolisSampler()
+    result = sample.sample(problem, n_samples=1000,
+                           sampler=sampler,
+                           x0=np.array([3, -4]))
+    return result
 
 
 def create_optimization_result():
@@ -146,6 +186,29 @@ def create_plotting_options():
     return ref1, ref2, ref3, ref4, ref_point
 
 
+def post_processor(
+        amici_outputs,
+        output_type,
+        output_ids,
+):
+    """An ensemble prediction post-processor.
+
+    This post_processor will transform the output of the simulation tool such
+    that the output is compatible with other methods, such as plotting
+    routines.
+    """
+    outputs = [
+        amici_output[output_type]
+        if amici_output[predict.constants.AMICI_STATUS] == 0
+        else np.full(
+            (len(amici_output[predict.constants.AMICI_T]), len(output_ids)),
+            np.nan
+        )
+        for amici_output in amici_outputs
+    ]
+    return outputs
+
+
 @close_fig
 def test_waterfall():
     # create the necessary results
@@ -223,34 +286,41 @@ def test_waterfall_lowlevel():
     visualize.waterfall_lowlevel(fvals)
 
 
+@pytest.mark.parametrize("scale_to_interval", [None, (0, 1)])
 @close_fig
-def test_parameters():
+def test_parameters(scale_to_interval):
     # create the necessary results
     result_1 = create_optimization_result()
     result_2 = create_optimization_result()
 
     # test a standard call
-    visualize.parameters(result_1)
+    visualize.parameters(result_1,
+                         scale_to_interval=scale_to_interval)
 
     # test plotting of lists
-    visualize.parameters([result_1, result_2])
+    visualize.parameters([result_1, result_2],
+                         scale_to_interval=scale_to_interval)
 
 
+@pytest.mark.parametrize("scale_to_interval", [None, (0, 1)])
 @close_fig
-def test_parameters_with_nan_inf():
+def test_parameters_with_nan_inf(scale_to_interval):
     # create the necessary results
     result_1 = create_optimization_result_nan_inf()
     result_2 = create_optimization_result_nan_inf()
 
     # test a standard call
-    visualize.parameters(result_1)
+    visualize.parameters(result_1,
+                         scale_to_interval=scale_to_interval)
 
     # test plotting of lists
-    visualize.parameters([result_1, result_2])
+    visualize.parameters([result_1, result_2],
+                         scale_to_interval=scale_to_interval)
 
 
+@pytest.mark.parametrize("scale_to_interval", [None, (0, 1)])
 @close_fig
-def test_parameters_with_options():
+def test_parameters_with_options(scale_to_interval):
     # create the necessary results
     result_1 = create_optimization_result()
     result_2 = create_optimization_result()
@@ -264,17 +334,20 @@ def test_parameters_with_options():
                          parameter_indices='all',
                          reference=ref_point,
                          size=alt_fig_size,
-                         colors=[1., .3, .3, 0.5])
+                         colors=[1., .3, .3, 0.5],
+                         scale_to_interval=scale_to_interval)
 
     visualize.parameters([result_1, result_2],
                          parameter_indices='all',
                          reference=ref_point,
                          balance_alpha=False,
-                         start_indices=(0, 1, 4))
+                         start_indices=(0, 1, 4),
+                         scale_to_interval=scale_to_interval)
 
     visualize.parameters([result_1, result_2],
                          parameter_indices='free_only',
-                         start_indices=3)
+                         start_indices=3,
+                         scale_to_interval=scale_to_interval)
 
 
 @close_fig
@@ -389,8 +462,9 @@ def test_ensemble_identifiability():
     # =========================================================================
     # test ensemble identifiability if no bounds are hit
     # create an ensemble within tight bounds
-    my_ensemble = [(1 + np.cos(ix)**2) * np.random.rand(500) - 1. + np.sin(ix)
-                   for ix in range(100)]
+    my_ensemble = [
+        (1 + np.cos(ix) ** 2) * np.random.rand(500) - 1. + np.sin(ix)
+        for ix in range(100)]
     my_ensemble = ensemble.Ensemble(np.array(my_ensemble),
                                     lower_bound=problem.lb,
                                     upper_bound=problem.ub)
@@ -738,22 +812,22 @@ def create_sampling_result():
 
 
 @close_fig
-def test_sampling_fval_trace():
-    """Test pypesto.visualize.sampling_fval_trace"""
+def test_sampling_fval_traces():
+    """Test pypesto.visualize.sampling_fval_traces"""
     result = create_sampling_result()
-    visualize.sampling_fval_trace(result)
+    visualize.sampling_fval_traces(result)
     # call with custom arguments
-    visualize.sampling_fval_trace(
+    visualize.sampling_fval_traces(
         result, i_chain=1, stepsize=5, size=(10, 10))
 
 
 @close_fig
-def test_sampling_parameters_trace():
-    """Test pypesto.visualize.sampling_parameters_trace"""
+def test_sampling_parameter_traces():
+    """Test pypesto.visualize.sampling_parameter_traces"""
     result = create_sampling_result()
-    visualize.sampling_parameters_trace(result)
+    visualize.sampling_parameter_traces(result)
     # call with custom arguments
-    visualize.sampling_parameters_trace(
+    visualize.sampling_parameter_traces(
         result, i_chain=1, stepsize=5, size=(10, 10),
         use_problem_bounds=False)
 
@@ -780,3 +854,105 @@ def test_sampling_1d_marginals():
     visualize.sampling_1d_marginals(result, plot_type='hist')
     visualize.sampling_1d_marginals(
         result, plot_type='kde', bw='silverman')
+
+
+@close_fig
+def test_sampling_parameter_cis():
+    """Test pypesto.visualize.sampling_parameter_cis"""
+    result = create_sampling_result()
+    visualize.sampling_parameter_cis(result)
+    # call with custom arguments
+    visualize.sampling_parameter_cis(
+        result, alpha=[99, 68], step=0.1, size=(10, 10))
+
+
+@close_fig
+def test_sampling_prediction_trajectories():
+    """Test pypesto.visualize.sampling_prediction_trajectories"""
+    credibility_interval_levels = [99, 68]
+    result = sample_petab_problem()
+    post_processor_amici_x = functools.partial(
+        post_processor,
+        output_type=predict.constants.AMICI_X,
+        output_ids=result.problem.objective.amici_model.getStateIds(),
+    )
+    predictor = predict.AmiciPredictor(
+        result.problem.objective,
+        post_processor=post_processor_amici_x,
+        output_ids=result.problem.objective.amici_model.getStateIds(),
+    )
+
+    sample_ensemble = ensemble.Ensemble.from_sample(
+        result,
+        x_names=result.problem.x_names,
+        ensemble_type=ensemble.EnsembleType.sample,
+        lower_bound=result.problem.lb,
+        upper_bound=result.problem.ub,
+    )
+
+    ensemble_prediction = sample_ensemble.predict(
+        predictor,
+        prediction_id=predict.constants.AMICI_X,
+    )
+
+    # Plot by
+    visualize.sampling_prediction_trajectories(
+        ensemble_prediction,
+        levels=credibility_interval_levels,
+        groupby=predict.constants.CONDITION,
+    )
+    visualize.sampling_prediction_trajectories(
+        ensemble_prediction,
+        levels=credibility_interval_levels,
+        size=(10, 10),
+        groupby=predict.constants.OUTPUT,
+    )
+
+
+@close_fig
+def test_visualize_optimized_model_fit():
+    """Test pypesto.visualize.visualize_optimized_model_fit"""
+    current_path = os.path.dirname(os.path.realpath(__file__))
+    dir_path = os.path.abspath(os.path.join(current_path,
+                                            '..', '..',
+                                            'doc', 'example'))
+
+    # import to petab
+    petab_problem = petab.Problem.from_yaml(
+        os.path.join(dir_path, "conversion_reaction",
+                     "conversion_reaction.yaml"))
+    # import to pypesto
+    importer = pypesto.petab.PetabImporter(petab_problem)
+    # create problem
+    problem = importer.create_problem()
+
+    result = optimize.minimize(problem=problem,
+                               n_starts=1)
+
+    # test call of visualize_optimized_model_fit
+    visualize_optimized_model_fit(petab_problem=petab_problem,
+                                  result=result)
+
+
+@close_fig
+def test_time_trajectory_model():
+    """Test pypesto.visualize.time_trajectory_model"""
+    current_path = os.path.dirname(os.path.realpath(__file__))
+    dir_path = os.path.abspath(os.path.join(current_path,
+                                            '..', '..',
+                                            'doc', 'example'))
+
+    # import to petab
+    petab_problem = petab.Problem.from_yaml(
+        os.path.join(dir_path, "conversion_reaction",
+                     "conversion_reaction.yaml"))
+    # import to pypesto
+    importer = pypesto.petab.PetabImporter(petab_problem)
+    # create problem
+    problem = importer.create_problem()
+
+    result = optimize.minimize(problem=problem,
+                               n_starts=1)
+
+    # test call of time_trajectory_model
+    time_trajectory_model(result=result)

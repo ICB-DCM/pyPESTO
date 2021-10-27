@@ -1,15 +1,33 @@
+import logging
+from functools import partial
 import numpy as np
 import pandas as pd
-from typing import Sequence, Tuple, Callable, Dict
+from typing import Sequence, Tuple, Callable, Dict, List, Optional
 
-from ..prediction import PredictionResult, PredictionConditionResult
+from .. import Result
+from ..objective import AmiciObjective
+from ..engine import (
+    Engine,
+    MultiProcessEngine,
+    MultiThreadEngine,
+    SingleCoreEngine,
+)
+from ..predict import (
+    PredictionConditionResult,
+    PredictionResult,
+)
+from ..sample import geweke_test
+from .task import EnsembleTask
 from .constants import (PREDICTOR, PREDICTION_ID, PREDICTION_RESULTS,
                         PREDICTION_ARRAYS, PREDICTION_SUMMARY, OUTPUT,
                         OUTPUT_SENSI, TIMEPOINTS, X_VECTOR, NX, X_NAMES,
                         NVECTORS, VECTOR_TAGS, PREDICTIONS, MODE_FUN,
                         EnsembleType, ENSEMBLE_TYPE, MEAN, MEDIAN,
-                        STANDARD_DEVIATION, PERCENTILE, SUMMARY, LOWER_BOUND,
-                        UPPER_BOUND)
+                        STANDARD_DEVIATION, SUMMARY, LOWER_BOUND,
+                        UPPER_BOUND, get_percentile_label, HISTORY,
+                        WEIGHTED_SIGMA)
+
+logger = logging.getLogger(__name__)
 
 
 class EnsemblePrediction:
@@ -19,12 +37,13 @@ class EnsemblePrediction:
     It can be attached to a ensemble-type object
     """
 
-    def __init__(self,
-                 predictor: Callable[[Sequence], PredictionResult],
-                 prediction_id: str = None,
-                 prediction_results: Sequence[PredictionResult] = None,
-                 lower_bound: Sequence[np.ndarray] = None,
-                 upper_bound: Sequence[np.ndarray] = None):
+    def __init__(
+            self,
+            predictor: Optional[Callable[[Sequence], PredictionResult]] = None,
+            prediction_id: str = None,
+            prediction_results: Sequence[PredictionResult] = None,
+            lower_bound: Sequence[np.ndarray] = None,
+            upper_bound: Sequence[np.ndarray] = None):
         """
         Constructor.
 
@@ -46,19 +65,26 @@ class EnsemblePrediction:
             array of potential upper bounds for the parameters
         """
         self.predictor = predictor
+        if predictor is None:
+            logger.info("This `EnsemblePrediction` has no predictor.")
         self.prediction_id = prediction_id
         self.prediction_results = prediction_results
         if prediction_results is None:
             self.prediction_results = []
 
-        # handle bounds
+        # handle bounds, Not yet Implemented
+        if lower_bound is not None:
+            raise NotImplementedError
+        if upper_bound is not None:
+            raise NotImplementedError
         self.lower_bound = lower_bound
         self.upper_bound = upper_bound
 
         self.prediction_arrays = None
         self.prediction_summary = {MEAN: None,
                                    STANDARD_DEVIATION: None,
-                                   MEDIAN: None}
+                                   MEDIAN: None,
+                                   WEIGHTED_SIGMA: None}
 
     def __iter__(self):
         """
@@ -119,7 +145,9 @@ class EnsemblePrediction:
         }
 
     def compute_summary(self,
-                        percentiles_list: Sequence[int] = (5, 20, 80, 95)
+                        percentiles_list: Sequence[int] = (5, 20, 80, 95),
+                        weighting: bool = False,
+                        compute_weighted_sigma: bool = False
                         ) -> Dict:
         """
         Compute the mean, the median, the standard deviation and possibly
@@ -130,6 +158,11 @@ class EnsemblePrediction:
         ----------
         percentiles_list:
             List or tuple of percent numbers for the percentiles
+        weighting:
+            Whether weights should be used for trajectory.
+        compute_weighted_sigma:
+            Whether weighted standard deviation of the ensemble mean trajectory
+            should be computed. Defaults to False.
 
         Returns
         -------
@@ -141,6 +174,12 @@ class EnsemblePrediction:
         if not self.prediction_results:
             raise ArithmeticError('Cannot compute summary statistics from '
                                   'empty prediction results.')
+        # if weightings shall be used, check whether weights are there
+        if weighting:
+            if not self.prediction_results[0].conditions[0].output_weight:
+                raise ValueError('There are no weights in the '
+                                 'prediction results.')
+
         n_conditions = len(self.prediction_results[0].conditions)
 
         def _stack_outputs(ic: int):
@@ -173,24 +212,71 @@ class EnsemblePrediction:
             # stack into one numpy array
             return np.stack(output_sensi_list, axis=-1)
 
-        def _compute_summary(tmp_array, percentiles_list):
+        def _stack_weights(ic: int) -> np.ndarray:
+            """
+            Group weights for different parameter vectors of one ensemble
+            together, if they belong to the same simulation condition, and
+            stacks them in one array
+
+            Parameters
+            ----------
+            ic: the condition number.
+
+            Returns
+            -------
+            The stacked weights.
+            """
+            # Were outputs computed
+            if self.prediction_results[0].conditions[ic].output_weight is None:
+                return None
+            # stack predictions
+            output_weight_list = [prediction.conditions[ic].output_weight
+                                  for prediction in self.prediction_results]
+            # stack into one numpy array
+            return np.stack(output_weight_list, axis=-1)
+
+        def _stack_sigmas(ic: int):
+            """
+            Group sigmas for different parameter vectors of one ensemble
+            together, if they belong to the same simulation condition, and
+            stacks them in one array
+            """
+            # Were outputs computed
+            if self.prediction_results[0].conditions[ic].output_sigmay is None:
+                return None
+            # stack predictions
+            output_sigmay_list = [prediction.conditions[ic].output_sigmay
+                                  for prediction in self.prediction_results]
+            # stack into one numpy array
+            return np.stack(output_sigmay_list, axis=-1)
+
+        def _compute_summary(tmp_array, percentiles_list, weights,
+                             tmp_sigmas=None):
             """
             Computes means, standard deviation, median, and requested
             percentiles for a set of stacked simulations
             """
             summary = {}
-            summary[MEAN] = np.mean(tmp_array, axis=-1)
-            summary[STANDARD_DEVIATION] = np.std(tmp_array, axis=-1)
+            summary[MEAN] = np.average(tmp_array, axis=-1, weights=weights)
+            summary[STANDARD_DEVIATION] = np.sqrt(np.average(
+                (tmp_array.T-summary[MEAN].T).T**2,
+                axis=-1, weights=weights))
             summary[MEDIAN] = np.median(tmp_array, axis=-1)
+            if tmp_sigmas is not None:
+                summary[WEIGHTED_SIGMA] = np.sqrt(np.average(
+                    tmp_sigmas**2, axis=-1, weights=weights))
             for perc in percentiles_list:
-                summary[f'{PERCENTILE} {perc}'] = np.percentile(tmp_array,
-                                                                perc, axis=-1)
+                summary[get_percentile_label(perc)] = \
+                    np.percentile(tmp_array, perc, axis=-1)
             return summary
 
         # preallocate for results
-        cond_lists = {MEAN: [], STANDARD_DEVIATION: [], MEDIAN: []}
+        cond_lists = {MEAN: [], STANDARD_DEVIATION: [],
+                      MEDIAN: []}
+        if compute_weighted_sigma:
+            cond_lists[WEIGHTED_SIGMA] = []
         for perc in percentiles_list:
-            cond_lists[f'{PERCENTILE} {perc}'] = []
+            cond_lists[get_percentile_label(perc)] = []
 
         # iterate over conditions, compute summary
         for i_cond in range(n_conditions):
@@ -200,10 +286,21 @@ class EnsemblePrediction:
             # create a temporary array with all the outputs needed and wanted
             tmp_output = _stack_outputs(i_cond)
             tmp_output_sensi = _stack_outputs_sensi(i_cond)
+            tmp_weights = np.ones(tmp_output.shape[-1])
+            if weighting:
+                # take exp() to get the likelihood values,
+                # as the weights would be the log likelihoods.
+                tmp_weights = np.exp(_stack_weights(i_cond))
+            tmp_sigmas = None
+            if compute_weighted_sigma:
+                tmp_sigmas = _stack_sigmas(i_cond)
 
             # handle outputs
             if tmp_output is not None:
-                output_summary = _compute_summary(tmp_output, percentiles_list)
+                output_summary = _compute_summary(tmp_output,
+                                                  percentiles_list,
+                                                  tmp_weights,
+                                                  tmp_sigmas)
             else:
                 output_summary = {i_key: None for i_key in cond_lists.keys()}
 
@@ -223,7 +320,7 @@ class EnsemblePrediction:
                         timepoints=current_cond.timepoints,
                         output=output_summary[i_key],
                         output_sensi=output_sensi_summary[i_key],
-                        observable_ids=current_cond.observable_ids
+                        output_ids=current_cond.output_ids
                     )
                 )
 
@@ -236,6 +333,50 @@ class EnsemblePrediction:
 
         # also return the object
         return self.prediction_summary
+
+    def compute_chi2(self, amici_objective: AmiciObjective):
+        """
+        Compute the chi^2 error of the weighted mean trajectory.
+
+        Parameters
+        ----------
+        amici_objective:
+            The objective function of the model,
+            the parameter ensemble was created from.
+
+        Returns
+        -------
+        The chi^2 error.
+        """
+        if (self.prediction_summary[MEAN] is None) or (
+                self.prediction_summary[WEIGHTED_SIGMA] is None):
+            try:
+                self.compute_summary(
+                        weighting=True,
+                        compute_weighted_sigma=True)
+            except TypeError:
+                raise ValueError('Computing a summary failed.')
+        n_conditions = len(self.prediction_results[0].conditions)
+        chi_2 = []
+        for i_cond in range(n_conditions):
+            # get measurements and put into right form
+            y_meas = amici_objective.edatas[i_cond].getObservedData()
+            y_meas = np.array(y_meas)
+            # bring into shape (n_t,n_y)
+            y_meas = y_meas.reshape(
+                amici_objective.edatas[0].nt(),
+                amici_objective.edatas[0].nytrue()
+            )
+            mean_traj = \
+                self.prediction_summary[MEAN].conditions[i_cond].output
+            weighted_sigmas = \
+                self.prediction_summary[
+                    WEIGHTED_SIGMA].conditions[i_cond].output
+            if y_meas.shape != mean_traj.shape:
+                raise ValueError('Shape of trajectory and shape '
+                                 'of measurements does not match.')
+            chi_2.append(np.nansum(((y_meas-mean_traj)/weighted_sigmas)**2))
+        return np.sum(chi_2)
 
 
 class Ensemble:
@@ -283,6 +424,10 @@ class Ensemble:
         upper_bound:
             array of potential upper bounds for the parameters
         """
+        # Do we have a representative sample or just random ensemble?
+        self.ensemble_type = EnsembleType.ensemble
+        if ensemble_type is not None:
+            self.ensemble_type = ensemble_type
 
         # handle parameter vectors and sizes
         self.x_vectors = x_vectors
@@ -294,7 +439,7 @@ class Ensemble:
         # store bounds
         self.lower_bound = np.full((self.n_x,), np.nan)
         if lower_bound is not None:
-            if len(lower_bound) == 1:
+            if np.array(lower_bound).size == 1:
                 self.lower_bound = np.full((x_vectors.shape[0],), lower_bound)
             else:
                 self.lower_bound = lower_bound
@@ -311,15 +456,219 @@ class Ensemble:
         else:
             self.x_names = [f'x_{ix}' for ix in range(self.n_x)]
 
-        # Do we have a representative sample or just random ensemble?
-        self.ensemble_type = EnsembleType.ensemble
-        if ensemble_type is not None:
-            self.ensemble_type = ensemble_type
-
         # Do we have predictions for this ensemble?
         self.predictions = []
         if predictions is not None:
             self.predictions = predictions
+
+    @staticmethod
+    def from_sample(
+            result: Result,
+            remove_burn_in: bool = True,
+            chain_slice: slice = None,
+            x_names: Sequence[str] = None,
+            lower_bound: np.ndarray = None,
+            upper_bound: np.ndarray = None,
+            **kwargs,
+    ):
+        """Construct an ensemble from a sample.
+
+        Parameters
+        ----------
+        result:
+            A pyPESTO result that contains a sample result.
+        remove_burn_in:
+            Exclude parameter vectors from the ensemble if they are in the
+            "burn-in".
+        chain_slice:
+            Subset the chain with a slice. Any "burn-in" removal occurs first.
+        x_names:
+            Names or identifiers of the parameters
+        lower_bound:
+            array of potential lower bounds for the parameters
+        upper_bound:
+            array of potential upper bounds for the parameters
+
+        Returns
+        -------
+        The ensemble.
+        """
+        x_vectors = result.sample_result.trace_x[0]
+        if x_names is None:
+            x_names = [result.problem.x_names[i]
+                       for i in result.problem.x_free_indices]
+        if lower_bound is None:
+            lower_bound = result.problem.lb
+        if upper_bound is None:
+            upper_bound = result.problem.ub
+        if remove_burn_in:
+            if result.sample_result.burn_in is None:
+                geweke_test(result)
+            burn_in = result.sample_result.burn_in
+            x_vectors = x_vectors[burn_in:]
+        if chain_slice is not None:
+            x_vectors = x_vectors[chain_slice]
+        x_vectors = x_vectors.T
+        return Ensemble(x_vectors=x_vectors,
+                        x_names=x_names,
+                        lower_bound=lower_bound,
+                        upper_bound=upper_bound,
+                        **kwargs)
+
+    @staticmethod
+    def from_optimization_endpoints(
+            result: Result,
+            cutoff: float = np.inf,
+            max_size: int = np.inf,
+            **kwargs,
+    ):
+        """Construct an ensemble from an optimization result.
+
+        Parameters
+        ----------
+        result:
+            A pyPESTO result that contains an optimization result.
+        cutoff:
+            Exclude parameters from the optimization if the
+            nllh is higher than the `cutoff`.
+        max_size:
+            The maximum size the ensemble should be.
+
+        Returns
+        -------
+        The ensemble.
+        """
+        x_vectors = []
+        vector_tags = []
+        x_names = [result.problem.x_names[i]
+                   for i in result.problem.x_free_indices]
+
+        for start in result.optimize_result.list:
+            # add the parameters from the next start as long as we
+            # did not reach maximum size and the next value is still
+            # lower than the cutoff value
+            if start['fval'] <= cutoff and len(x_vectors) < max_size:
+                x_vectors.append(start['x'])
+
+                # the vector tag will be a -1 to indicate it is the last step
+                vector_tags.append((int(start['id']), -1))
+            else:
+                break
+
+        # print a warning if there are no vectors within the ensemble
+        if len(x_vectors) == 0:
+            raise ValueError('The ensemble does not contain any vectors. '
+                             'Either the cutoff value was too small\n or the '
+                             'result.optimize_result object might be empty.')
+        elif len(x_vectors) < max_size:
+            logger.info(f'The ensemble contains {len(x_vectors)} parameter '
+                        'vectors, which is less than the maximum size.\nIf '
+                        'you want to include more \nvectors, you can consider '
+                        'raising the cutoff value or including parameters '
+                        'from \nthe history with the `from_history` function.')
+
+        x_vectors = np.stack(x_vectors, axis=1)
+        return Ensemble(x_vectors=x_vectors,
+                        x_names=x_names,
+                        vector_tags=vector_tags,
+                        lower_bound=result.problem.lb,
+                        upper_bound=result.problem.ub,
+                        **kwargs)
+
+    @staticmethod
+    def from_optimization_history(
+            result: Result,
+            cutoff: float = np.inf,
+            max_size: int = np.inf,
+            max_per_start: int = np.inf,
+            distribute: bool = True,
+            **kwargs,
+    ):
+        """Construct an ensemble from the history of an optimization.
+
+        Parameters
+        ----------
+        result:
+            A pyPESTO result that contains an optimization result
+            with history recorded.
+        cutoff:
+            Exclude parameters from the optimization if the nllh
+            is higher than the `cutoff`.
+        max_size:
+            The maximum size the ensemble should be.
+        max_per_start:
+            The maximum number of vectors to be included from a
+            single optimization start.
+        distribute:
+            Boolean flag, whether the best (False) values from the
+            start should be taken or whether the indices should be
+            more evenly distributed.
+
+        Returns
+        -------
+        The ensemble.
+        """
+        if not result.optimize_result.list[0].history.options['trace_record']:
+            logger.warning('The optimize result has no trace. The Ensemble '
+                           'will automatically be created through '
+                           'from_optimization_endpoints().')
+            return Ensemble.from_optimization_endpoints(result=result,
+                                                        cutoff=cutoff,
+                                                        max_size=max_size,
+                                                        **kwargs)
+        x_vectors = []
+        vector_tags = []
+        x_names = [result.problem.x_names[i]
+                   for i in result.problem.x_free_indices]
+        lb = result.problem.lb
+        ub = result.problem.ub
+
+        # calculate the number of starts whose final nllh is below cutoff
+        n_starts = sum(start['fval'] <= cutoff
+                       for start in result.optimize_result.list)
+
+        fval_trace = [
+            np.array(
+                result.optimize_result.list[i_ms][HISTORY].get_fval_trace()
+            )
+            for i_ms in range(n_starts)
+        ]
+        x_trace = [
+            result.optimize_result.list[i_ms][HISTORY].get_x_trace()
+            for i_ms in range(n_starts)
+        ]
+
+        # calculate the number of iterations included from each start
+        n_per_starts = entries_per_start(fval_traces=fval_trace,
+                                         cutoff=cutoff,
+                                         max_per_start=max_per_start,
+                                         max_size=max_size)
+        # determine x_vectors from each start
+        for start in range(n_starts):
+            indices = get_vector_indices(trace_start=fval_trace[start],
+                                         cutoff=cutoff,
+                                         n_vectors=n_per_starts[start],
+                                         distribute=distribute)
+            x_vectors.extend([x_trace[start][ind] for ind in indices])
+            vector_tags.extend([
+                (int(result.optimize_result.list[start]['id']), ind)
+                for ind in indices
+            ])
+
+        # raise a `ValueError` if there are no vectors within the ensemble
+        if len(x_vectors) == 0:
+            raise ValueError('The ensemble does not contain any vectors. '
+                             'Either the `cutoff` value was too \nsmall '
+                             'or the `result.optimize_result` object might '
+                             'be empty.')
+
+        x_vectors = np.stack(x_vectors, axis=1)
+        return Ensemble(x_vectors=x_vectors,
+                        x_names=x_names,
+                        vector_tags=vector_tags,
+                        lower_bound=lb,
+                        upper_bound=ub,
+                        **kwargs)
 
     def __iter__(self):
         """
@@ -337,9 +686,11 @@ class Ensemble:
         yield LOWER_BOUND, self.lower_bound
         yield UPPER_BOUND, self.upper_bound
 
-    def _map_parameters_by_objective(self,
-                                     predictor: Callable,
-                                     default_value: float = np.nan):
+    def _map_parameters_by_objective(
+            self,
+            predictor: Callable,
+            default_value: float = None,
+    ):
         """
         The parameters of the ensemble don't need to have the same ordering as
         in the predictor. This functions maps them onto each other
@@ -347,22 +698,30 @@ class Ensemble:
         # create short hands
         parameter_ids_objective = predictor.amici_objective.x_names
         parameter_ids_ensemble = self.x_names
-        # map and fill if not found
-        mapping = [
-            parameter_ids_ensemble.index(parameter_id_objective)
-            if parameter_id_objective in parameter_ids_ensemble
-            else default_value
-            for parameter_id_objective in parameter_ids_objective
-        ]
-
+        # map, and fill with `default_value` if not found and `default_value`
+        # is specified.
+        mapping = []
+        for parameter_id_objective in parameter_ids_objective:
+            if parameter_id_objective in parameter_ids_ensemble:
+                mapping.append(
+                    parameter_ids_ensemble.index(parameter_id_objective)
+                )
+            elif default_value is not None:
+                mapping.append(default_value)
         return mapping
 
-    def predict(self,
-                predictor: Callable,
-                prediction_id: str = None,
-                sensi_orders: Tuple = (0,),
-                default_value: float = np.nan,
-                mode: str = MODE_FUN):
+    def predict(
+            self,
+            predictor: Callable,
+            prediction_id: str = None,
+            sensi_orders: Tuple = (0,),
+            default_value: float = None,
+            mode: str = MODE_FUN,
+            include_llh_weights: bool = False,
+            include_sigmay: bool = False,
+            engine: Engine = None,
+            progress_bar: bool = True
+    ) -> EnsemblePrediction:
         """
         Convenience function to run predictions for a full ensemble:
         User needs to hand over a predictor function and settings, then all
@@ -372,40 +731,86 @@ class Ensemble:
         ----------
         predictor:
             Prediction function, e.g., an AmiciPredictor
-
         prediction_id:
             Identifier for the predictions
-
         sensi_orders:
             Specifies which sensitivities to compute, e.g. (0,1) -> fval, grad
-
         default_value:
             If parameters are needed in the mapping, which are not found in the
             parameter source, it can make sense to fill them up with this
-            default value in some cases (to be used with caution though).
-
+            default value (e.g. `np.nan`) in some cases (to be used with
+            caution though).
         mode:
             Whether to compute function values or residuals.
+        include_llh_weights:
+            Whether to include weights in the output of the predictor.
+        include_sigmay:
+            Whether to include standard deviations in the output
+            of the predictor.
+        engine:
+            Parallelization engine. Defaults to sequential execution on a
+            `SingleCoreEngine`.
+        progress_bar:
+            Whether to display a progress bar.
 
         Returns
         -------
-        result:
-            EnsemblePrediction of the ensemble for the predictor function
+        The prediction of the ensemble.
         """
-        # preallocate
-        prediction_results = []
+        if engine is None:
+            engine = SingleCoreEngine()
 
-        # get the correct parameter mapping
+        # Vectors are chunked to improve parallization performance.
+        n_chunks = self.n_vectors  # Default is no chunking.
+        if isinstance(engine, MultiProcessEngine):
+            n_chunks = engine.n_procs
+        if isinstance(engine, MultiThreadEngine):
+            n_chunks = engine.n_threads
+        chunks = [
+            (
+                (chunk_i+0) * int(np.floor(self.n_vectors / n_chunks)),
+                (chunk_i+1) * int(np.floor(self.n_vectors / n_chunks)),
+            )
+            for chunk_i in range(n_chunks)
+        ]
+        # Last chunk should contain any remaining vectors that may have
+        # been skipped due to the `floor` method.
+        chunks[-1] = (chunks[-1][0], self.n_vectors)
+
+        # Get the correct parameter mapping.
         mapping = self._map_parameters_by_objective(
-            predictor, default_value=default_value)
+            predictor,
+            default_value=default_value,
+        )
 
-        for ix in range(self.n_vectors):
-            x = self.x_vectors[mapping, ix]
-            prediction_results.append(predictor(x, sensi_orders, mode))
+        # Setup the tasks with the prediction method and chunked vectors.
+        method = partial(predictor,
+                         sensi_orders=sensi_orders,
+                         mode=mode,
+                         include_sigmay=include_sigmay,
+                         include_llh_weights=include_llh_weights)
+        tasks = [
+            EnsembleTask(
+                method=method,
+                vectors=self.x_vectors[mapping, chunk_start:chunk_end],
+                id=chunk_i,
+            )
+            for chunk_i, (chunk_start, chunk_end) in enumerate(chunks)
+        ]
 
-        return EnsemblePrediction(predictor=predictor,
-                                  prediction_id=prediction_id,
-                                  prediction_results=prediction_results)
+        # Execute tasks and flatten chunked results.
+        prediction_results = [
+            prediction_result
+            for prediction_chunk in engine.execute(
+                tasks, progress_bar=progress_bar)
+            for prediction_result in prediction_chunk
+        ]
+
+        return EnsemblePrediction(
+            predictor=predictor,
+            prediction_id=prediction_id,
+            prediction_results=prediction_results,
+        )
 
     def compute_summary(self,
                         percentiles_list: Sequence[int] = (5, 20, 80, 95)):
@@ -430,8 +835,8 @@ class Ensemble:
                    STANDARD_DEVIATION: np.std(self.x_vectors, axis=1),
                    MEDIAN: np.median(self.x_vectors, axis=1)}
         for perc in percentiles_list:
-            summary[f'{PERCENTILE} {perc}'] = np.percentile(self.x_vectors,
-                                                            perc, axis=1)
+            summary[get_percentile_label(perc)] = \
+                np.percentile(self.x_vectors, perc, axis=1)
         # store and return results
         self.summary = summary
         return summary
@@ -484,10 +889,10 @@ class Ensemble:
             # handle percentiles
             for perc in perc_lower:
                 tmp_identifiability[f'within lb: perc {perc}'] = \
-                    lb < self.summary[f'{PERCENTILE} {perc}'][ix]
+                    lb < self.summary[get_percentile_label(perc)][ix]
             for perc in perc_upper:
                 tmp_identifiability[f'within ub: perc {perc}'] = \
-                    ub > self.summary[f'{PERCENTILE} {perc}'][ix]
+                    ub > self.summary[get_percentile_label(perc)][ix]
 
             parameter_identifiability.append(tmp_identifiability)
 
@@ -497,3 +902,97 @@ class Ensemble:
             parameter_identifiability['parameterId']
 
         return parameter_identifiability
+
+
+def entries_per_start(fval_traces: List['np.ndarray'],
+                      cutoff: float,
+                      max_size: int,
+                      max_per_start: int, ):
+    """
+    Creates the indices of each start that will be included
+    in the ensemble.
+
+    Parameters
+    ----------
+    fval_traces:
+        the fval-trace of each start.
+    cutoff:
+        Exclude parameters from the optimization if the nllh
+        is higher than the `cutoff`.
+    max_size:
+        The maximum size the ensemble should be.
+    max_per_start:
+        The maximum number of vectors to be included from a
+        single optimization start.
+
+    Returns
+    -------
+        A list of number of candidates per start that are to
+        be included in the ensemble.
+
+    """
+    # choose possible candidates
+    ens_ind = [np.flatnonzero(fval <= cutoff) for fval in fval_traces]
+
+    # count the number of candidates per start
+    n_per_start = np.array([len(start) for start in ens_ind])
+
+    # if all possible indices can be included, return
+    if (n_per_start < max_per_start).all() and sum(n_per_start) < max_size:
+        return n_per_start
+
+    # trimm down starts that exceed the limit:
+    n_per_start = [min(n, max_per_start) for n in n_per_start]
+
+    # trimm down more until it fits the max size
+    decr = 0
+    while(sum(n_per_start) > max_size):
+        n_per_start = [min(n, max_per_start-decr)
+                       for n in n_per_start]
+        decr += 1
+    # TODO: Possibility. With this implementation we could
+    #  in a scenario, where we have more candidates than
+    #  max size end up with an ensemble of size
+    #  `max_size - len(n_starts)` in the worst case. We could introduce
+    #  a flag which would be `force_max`, that indicates
+    #  whether those remaining free slots should be filled by
+    #  entries from certain starts. This would brng up the
+    #  discussion which starts to choose. One obvious choice
+    #  would be the best starts based on their endpoint.
+
+    return n_per_start
+
+
+def get_vector_indices(trace_start: np.ndarray,
+                       cutoff: float,
+                       n_vectors: int,
+                       distribute: bool, ):
+    """
+    Returns the indices to be taken into an ensemble.
+
+    Parameters
+    ----------
+    trace_start:
+        The fval_trace of a single start.
+    cutoff:
+        Exclude parameters from the optimization if the nllh
+        is higher than the `cutoff`.
+    n_vectors:
+        The number of indices to be included from one start.
+    distribute:
+        Boolean flag, whether the best (False) values from the
+        start should be taken or whether the indices should be
+        more evenly distributed.
+
+    Returns
+    -------
+        The indices to include in the ensemble.
+    """
+
+    candidates = np.flatnonzero(trace_start <= cutoff)
+
+    if distribute:
+        indices = np.round(np.linspace(0, len(candidates) - 1, n_vectors))
+        return candidates[indices.astype(int)]
+    else:
+        return candidates[:n_vectors]

@@ -6,10 +6,150 @@ Release notes
 ..........
 
 
+0.2.7 (2021-07-30)
+------------------
+
+* Finite Differences:
+    * Adaptive finite differences (#671)
+    * Add helper function for checking gradients of objectives (#690)
+    * Small bug fixes (#711, #714)
+
+* Storage:
+    * Store representation of the objective (#669)
+    * Minor fixes in HDF5 history (#679)
+    * HDF5 reader for ensemble predictions (#681)
+    * Update storage demo jupyter notebook (#699)
+    * Option to trim trace to be monotonically decreasing (#705)
+
+* General:
+    * Improved tests and bug fixes of validation intervals (#676, #685)
+    * Add input file validation via PEtab linter for PEtab import (#678)
+    * Remove default values from docstring (#680)
+    * Minor fixes/improvements of ensembles (#687, #688)
+    * Fix sorting of optimization values including `NaN` values (#691)
+    * Specify axis limits for plotting (#693)
+    * Minor fixes in visualization (#696)
+    * Add installation option `all_optimizers` (#695)
+    * Improve installation documentation (#689)
+    * Update `pysb` and `BNG` version on GitHub Actions (#697)
+    * Bug fix in steady state guesses (#715)
+
+
+0.2.6 (2021-05-17)
+------------------
+
+* Objective:
+    * Basic finite differences (#666)
+    * Fix factor 2 in res/fval values (#619)
+
+* Optimization:
+    * Sort optimization results when appending (#668)
+    * Read optimizer result from HDF5 (previously only CSV) (#663)
+
+* Storage:
+    * Load ensemble from HDF5 (#640)
+
+* CI:
+    * Add flake8 checks as pre-commit hook (#662)
+    * Add efficient biological conversion reaction test model (#619)
+
+* General:
+    * No automatic import of the predict module (#657)
+    * Assert unique problem parameter names (#665)
+    * Load ensemble from optimization result with and without history usage
+      (#640)
+    * Calculate validation profile significance (#658)
+    * Set pypesto screen logger to "INFO" by default (#667)
+
+* Minor fixes:
+    * Fix axis variable overwriting in `visualize.sampling_parameter_traces`
+      (#665)
+
+
+0.2.5 (2021-05-04)
+------------------
+
+* Objectives:
+    * New Aesara objectve (#623, #629, #635)
+
+* Sampling:
+    * New Emcee sampler (#606)
+    * Fix compatibility to new Theano version (#650)
+
+* Storage:
+    * Improve hdf5 storage documentation (#612)
+    * Hdf5 history for MultiProcessEngine (#650)
+    * Minor fixes (#637, #638, #645, #649)
+
+* Visualization:
+    * Fix bounds of parameter plots (#601)
+    * Fix waterfall plots with multiple results (#611)
+
+* CI:
+    * Move CI tests on GitHub Actions to python 3.9 (#598)
+    * Add issue template (#604)
+    * Update BionetGen Link (#630)
+    * Introduce project.toml (#634)
+
+* General:
+    * Introduce progress bar for optimization, profiles and ensembles (#641)
+    * Extend gradient checking functionality (#644)
+
+* Minor fixes:
+    * Fix installation of ipopt (#599)
+    * Fix Zenodo link (#601)
+    * Fix duplicates in documentation (#603)
+    * Fix least squares optimizers (#617 #631 #632)
+    * Fix trust region options (#616)
+    * Fix slicing for new AMICI release (#621)
+    * Refactor and document latin hypercube sampling (#647)
+    * Fix missing SBML name in PEtab import (#648)
+
+
+0.2.4 (2021-03-12)
+------------------
+
+* Ensembles/Sampling:
+    * General ensemble analysis, visualization, storage (#557, #565, #568)
+    * Calculate and plot MCMC parameter and prediction CIs via ensemble
+      definition, parallelize ensemble predictions (#490)
+
+* Optimization:
+    * New optimizer: SciPy Differential Evolution (#543)
+    * Set fides default to hybrid (#578)
+
+* AMICI:
+    * Make `guess_steadystate` less restrictive (#561) and have a more
+      intuitive default behavior (#562, #582)
+    * Customize time points (#490)
+
+* Storage:
+    * Save HDF5 history with SingleCoreEngine (#564)
+    * Add read/write function for whole results (#589)
+
+* Engines:
+    * MPI based distributed parallelization (#542)
+
+* Visualization:
+    * Speed up waterfall plots by resizing scales only once (#577)
+    * Change waterfall default offset to 1 - minimum (#593)
+
+* CI:
+    * Move GHA CI tests to pull request level for better cooperability (#574)
+    * Streamline test environments using tox and pre-commit hooks (#579)
+    * Test profile and sampling storage (#585)
+    * Update for Ubuntu 20.04, add rerun on failure (#587)
+
+* Minor fixes (release notes #558, nlop tests #559, close files #495,
+  visualization #554, deployment #560, flakiness #570,
+  aggregated deepcopy #572, respect user-provided offsets #576,
+  update to SWIG 4 #591, check overwrite in profile writing #566)
+
+
 0.2.3 (2021-01-18)
 ------------------
 
-* New Optimizers:
+* New optimizers:
     * FIDES (#506, #503 # 500)
     * NLopt (#493)
 
@@ -265,7 +405,7 @@ Breaking changes:
 0.0.9 (2019-10-11)
 ------------------
 
-* Update to AMICI 0.10.13, fix API changes (#185). 
+* Update to AMICI 0.10.13, fix API changes (#185).
 * Start using PEtab import from AMICI to be able to import constant species (#184, #185)
 * Require PEtab>=0.0.0a16 (#183)
 
@@ -310,7 +450,7 @@ Breaking changes:
 * Introduce PrePostProcessor to more reliably handle pre- and
   post-processing.
 * Fix problems with simulating for multiple conditions.
-* Add more visualization routines and options for those (colors, 
+* Add more visualization routines and options for those (colors,
   reference points, plotting of lists of result obejcts)
 
 

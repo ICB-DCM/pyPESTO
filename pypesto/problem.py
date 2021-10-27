@@ -135,18 +135,18 @@ class Problem:
             for idx, x in enumerate(x_fixed_vals)
         ]
 
-        self._x_free_indices: Union[List[int], None] = None
-
         if x_guesses is None:
             x_guesses = np.zeros((0, self.dim_full))
         self.x_guesses_full: np.ndarray = np.array(x_guesses)
 
         self.startpoint_method = startpoint_method
 
-        if objective.x_names is not None:
+        if x_names is None and objective.x_names is not None:
             x_names = objective.x_names
         elif x_names is None:
             x_names = [f'x{j}' for j in range(0, self.dim_full)]
+        if len(set(x_names)) != len(x_names):
+            raise ValueError("Parameter names x_names must be unique")
         self.x_names: List[str] = list(x_names)
 
         if x_scales is None:
@@ -205,10 +205,11 @@ class Problem:
                 raise AssertionError(f"{attr} dimension invalid.")
 
         if self.x_guesses_full.shape[1] != self.dim_full:
-            x_guesses = np.empty((self.x_guesses_full.shape[0], self.dim_full))
-            x_guesses[:] = np.nan
-            x_guesses[:, self.x_free_indices] = self.x_guesses_full
-            self.x_guesses_full = x_guesses
+            x_guesses_full = \
+                np.empty((self.x_guesses_full.shape[0], self.dim_full))
+            x_guesses_full[:] = np.nan
+            x_guesses_full[:, self.x_free_indices] = self.x_guesses_full
+            self.x_guesses_full = x_guesses_full
 
         # make objective aware of fixed parameters
         self.objective.update_from_problem(
@@ -232,6 +233,21 @@ class Problem:
             raise ValueError('ub must not contain nan values')
         if np.any(self.lb >= self.ub):
             raise ValueError('lb<ub not fulfilled.')
+
+    def set_x_guesses(self,
+                      x_guesses: Iterable[float]):
+        """
+        Sets the x_guesses of a problem.
+
+        Parameters
+        ----------
+        x_guesses:
+        """
+        x_guesses_full = np.array(x_guesses)
+        if x_guesses_full.shape[1] != self.dim_full:
+            raise ValueError('The dimension of individual x_guesses must be '
+                             'dim_full.')
+        self.x_guesses_full = x_guesses_full
 
     def fix_parameters(self,
                        parameter_indices: SupportsIntIterableOrValue,

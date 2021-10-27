@@ -4,7 +4,7 @@ import matplotlib.cm as cm
 import numpy as np
 
 # for typehints
-RGBA = List[float]
+from .constants import RGBA
 
 
 def assign_clusters(vals):
@@ -195,19 +195,21 @@ def assign_colors(vals, colors=None, balance_alpha=True,
         if colors.ndim == 2:
             colors = colors[0]
         return np.array([colors] * n_vals)
-    else:
-        if colors.shape[1] == 4 and n_vals == colors.shape[0]:
-            return colors
-        elif colors.shape[0] == 4:
-            colors = np.transpose(colors)
-            if n_vals == colors.shape[0]:
-                return colors
 
-        # Shape of array did not match n_vals. Error due to size mismatch:
-        raise ('Incorrect color input. Colors must be specified either as '
-               'list of [r, g, b, alpha] with length equal to function '
-               'values Number of function (here: ' + str(n_vals) + '), or as '
-               'one single [r, g, b, alpha] color.')
+    if colors.shape[1] == 4 and n_vals == colors.shape[0]:
+        return colors
+
+    if colors.shape[0] == 4:
+        colors = np.transpose(colors)
+        if n_vals == colors.shape[0]:
+            return colors
+
+    # Shape of array did not match n_vals. Error due to size mismatch:
+    raise ValueError(
+        'Incorrect color input. Colors must be specified either as '
+        'list of `[r, g, b, alpha]` with length equal to that of `vals` '
+        f'(here: {n_vals}), or as a single `[r, g, b, alpha]`.'
+    )
 
 
 def assign_colors_for_list(

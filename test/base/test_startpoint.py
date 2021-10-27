@@ -1,3 +1,5 @@
+"""Test the startpoint methods."""
+
 import numpy as np
 import pypesto
 import pytest

@@ -23,7 +23,7 @@ Also, there is the possibility to use multiple virtual environments via::
 
     python3 -m virtualenv ENV_NAME
     source ENV_NAME/bin/activate
- 
+
 where ENV_NAME denotes an individual environment name,
 if you do not want to mess up the system environment.
 
@@ -61,17 +61,23 @@ If you want to upgrade from an existing previous version, replace
 ``install`` by ``ìnstall --upgrade`` in the above commands.
 
 
-Install optional packages
--------------------------
+Install optional packages and external dependencies
+---------------------------------------------------
 
-* This package includes multiple comfort methods simplyfing its use for
+* pyPESTO includes multiple convenience methods to simplify
   parameter estimation for models generated using the toolbox
-  `amici <https://www.github.com/icb-dcm/amici>`_.
+  `AMICI <https://github.com/AMICI-dev/AMICI>`_.
   To use AMICI, install it via pip::
 
     pip3 install amici
+
+  or, in case of problems, follow the full instructions from the
+  `AMICI documentation <https://amici.readthedocs.io/en/latest/python_installation.html>`_.
 
 * This package inherently supports optimization using the dlib toolbox.
   To use it, install dlib via::
 
    pip3 install dlib
+
+* All external dependencies can be installed through
+  `this shell script <https://github.com/ICB-DCM/pyPESTO/blob/main/.github/workflows/install_deps.sh>`_.

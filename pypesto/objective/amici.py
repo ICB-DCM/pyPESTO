@@ -3,7 +3,7 @@ import copy
 import tempfile
 import os
 import abc
-from typing import Dict, Sequence, Union, Optional
+from typing import Dict, Optional, Sequence, Tuple, Union
 from collections import OrderedDict
 
 from .base import ObjectiveBase
@@ -50,19 +50,21 @@ class AmiciObjective(ObjectiveBase):
     This class allows to create an objective directly from an amici model.
     """
 
-    def __init__(self,
-                 amici_model: AmiciModel,
-                 amici_solver: AmiciSolver,
-                 edatas: Union[Sequence['amici.ExpData'], 'amici.ExpData'],
-                 max_sensi_order: int = None,
-                 x_ids: Sequence[str] = None,
-                 x_names: Sequence[str] = None,
-                 parameter_mapping: 'ParameterMapping' = None,
-                 guess_steadystate: Optional[bool] = None,
-                 n_threads: int = 1,
-                 fim_for_hess: bool = True,
-                 amici_object_builder: AmiciObjectBuilder = None,
-                 calculator: AmiciCalculator = None):
+    def __init__(
+        self,
+        amici_model: AmiciModel,
+        amici_solver: AmiciSolver,
+        edatas: Union[Sequence['amici.ExpData'], 'amici.ExpData'],
+        max_sensi_order: Optional[int] = None,
+        x_ids: Optional[Sequence[str]] = None,
+        x_names: Optional[Sequence[str]] = None,
+        parameter_mapping: Optional['ParameterMapping'] = None,
+        guess_steadystate: Optional[Optional[bool]] = None,
+        n_threads: Optional[int] = 1,
+        fim_for_hess: Optional[bool] = True,
+        amici_object_builder: Optional[AmiciObjectBuilder] = None,
+        calculator: Optional[AmiciCalculator] = None,
+    ):
         """
         Constructor.
 
@@ -161,7 +163,8 @@ class AmiciObjective(ObjectiveBase):
                                  'when `simulationFSA` as '
                                  'SteadyStateSensitivityMode!')
             self.guess_steadystate = False
-        else:
+
+        if self.guess_steadystate is not False:
             self.guess_steadystate = True
 
         if self.guess_steadystate:
@@ -189,6 +192,19 @@ class AmiciObjective(ObjectiveBase):
             calculator = AmiciCalculator()
         self.calculator = calculator
         super().__init__(x_names=x_names)
+
+        # Custom (condition-specific) timepoints. See the
+        # `set_custom_timepoints` method for more information.
+        self.custom_timepoints = None
+
+    def get_config(self) -> dict:
+        info = super().get_config()
+        info['x_names'] = self.x_names
+        info['model_name'] = self.amici_model.getName()
+        info['solver'] = str(type(self.amici_solver))
+        info['sensi_order'] = self.max_sensi_order
+
+        return info
 
     def initialize(self):
         super().initialize()
@@ -240,7 +256,7 @@ class AmiciObjective(ObjectiveBase):
 
         return state
 
-    def __setstate__(self, state: Dict):
+    def __setstate__(self, state: Dict) -> None:
         if state['amici_object_builder'] is None:
             raise NotImplementedError(
                 "AmiciObjective does not support __setstate__ without "
@@ -275,7 +291,13 @@ class AmiciObjective(ObjectiveBase):
         self.amici_solver = solver
         self.edatas = edatas
 
-    def check_sensi_orders(self, sensi_orders, mode) -> bool:
+        self.apply_custom_timepoints()
+
+    def check_sensi_orders(
+        self,
+        sensi_orders: Tuple[int, ...],
+        mode: str,
+    ) -> bool:
         sensi_order = max(sensi_orders)
 
         # dynamically obtain maximum allowed sensitivity order
@@ -293,10 +315,17 @@ class AmiciObjective(ObjectiveBase):
         # evaluate sensitivity order
         return sensi_order <= max_sensi_order
 
-    def check_mode(self, mode):
+    def check_mode(self, mode: str) -> bool:
         return mode in [MODE_FUN, MODE_RES]
 
-    def call_unprocessed(self, x, sensi_orders, mode, edatas=None):
+    def call_unprocessed(
+        self,
+        x: np.ndarray,
+        sensi_orders: Tuple[int, ...],
+        mode: str,
+        edatas: Sequence['amici.ExpData'] = None,
+        parameter_mapping: 'ParameterMapping' = None,
+    ):
         sensi_order = max(sensi_orders)
 
         x_dct = self.par_arr_to_dct(x)
@@ -309,11 +338,13 @@ class AmiciObjective(ObjectiveBase):
 
         if edatas is None:
             edatas = self.edatas
+        if parameter_mapping is None:
+            parameter_mapping = self.parameter_mapping
         ret = self.calculator(
             x_dct=x_dct, sensi_order=sensi_order, mode=mode,
             amici_model=self.amici_model, amici_solver=self.amici_solver,
             edatas=edatas, n_threads=self.n_threads,
-            x_ids=self.x_ids, parameter_mapping=self.parameter_mapping,
+            x_ids=self.x_ids, parameter_mapping=parameter_mapping,
             fim_for_hess=self.fim_for_hess,
         )
 
@@ -334,7 +365,7 @@ class AmiciObjective(ObjectiveBase):
         """Create dict from parameter vector."""
         return OrderedDict(zip(self.x_ids, x))
 
-    def apply_steadystate_guess(self, condition_ix: int, x_dct: Dict):
+    def apply_steadystate_guess(self, condition_ix: int, x_dct: Dict) -> None:
         """
         Use the stored steadystate as well as the respective  sensitivity (
         if available) and parameter value to approximate the steadystate at
@@ -351,16 +382,22 @@ class AmiciObjective(ObjectiveBase):
                 x_ss_guess = guess_data['x_ss']
             if guess_data['sx_ss'] is not None:
                 linear_update = guess_data['sx_ss'].transpose().dot(
-                    (x_sim - guess_data['x'])
+                    (x_sim - guess_data['x'])[
+                        np.asarray(self.edatas[condition_ix].plist)
+                    ]
                 )
                 # limit linear updates to max 20 % elementwise change
-                if (x_ss_guess/linear_update).max() < 0.2:
+                if (linear_update/(x_ss_guess + np.spacing(1))).max() < 0.2:
                     x_ss_guess += linear_update
 
         self.edatas[condition_ix].x0 = tuple(x_ss_guess)
 
     def store_steadystate_guess(
-            self, condition_ix: int, x_dct: Dict, rdata: 'amici.ReturnData'):
+        self,
+        condition_ix: int,
+        x_dct: Dict,
+        rdata: 'amici.ReturnData',
+    ) -> None:
         """
         Store condition parameter, steadystate and steadystate sensitivity in
         steadystate_guesses if steadystate guesses are enabled for this
@@ -381,11 +418,94 @@ class AmiciObjective(ObjectiveBase):
         preeq_guesses['x_ss'] = rdata['x_ss']
         preeq_guesses['sx_ss'] = rdata['sx_ss']
 
-    def reset_steadystate_guesses(self):
-        """Resets all steadystate guess data"""
+    def reset_steadystate_guesses(self) -> None:
+        """Reset all steadystate guess data."""
         if not self.guess_steadystate:
             return
 
         self.steadystate_guesses['fval'] = np.inf
         for condition in self.steadystate_guesses['data']:
             self.steadystate_guesses['data'][condition] = {}
+
+    def apply_custom_timepoints(self) -> None:
+        """Apply custom timepoints, if applicable.
+
+        See the `set_custom_timepoints` method for more information.
+        """
+        if self.custom_timepoints is not None:
+            for index in range(len(self.edatas)):
+                self.edatas[index].setTimepoints(
+                    self.custom_timepoints[index]
+                )
+
+    def set_custom_timepoints(
+        self,
+        timepoints: Sequence[Sequence[Union[float, int]]] = None,
+        timepoints_global: Sequence[Union[float, int]] = None,
+    ) -> 'AmiciObjective':
+        """
+        Create a copy of this objective that will be evaluated at custom
+        timepoints.
+
+        The intended use is to aid in predictions at unmeasured timepoints.
+
+        Parameters
+        ----------
+        timepoints:
+            The outer sequence should contain a sequence of timepoints for each
+            experimental condition.
+        timepoints_global:
+            A sequence of timepoints that will be used for all experimental
+            conditions.
+
+        Returns
+        -------
+        The customized copy of this objective.
+        """
+        if timepoints is None and timepoints_global is None:
+            raise KeyError('Timepoints were not specified.')
+
+        amici_objective = copy.deepcopy(self)
+
+        if timepoints is not None:
+            if len(timepoints) != len(amici_objective.edatas):
+                raise ValueError(
+                    'The number of condition-specific timepoints `timepoints` '
+                    'does not match the number of experimental conditions.\n'
+                    f'Number of provided timepoints: {len(timepoints)}. '
+                    'Number of experimental conditions: '
+                    f'{len(amici_objective.edatas)}.'
+                )
+            custom_timepoints = timepoints
+        else:
+            custom_timepoints = [
+                copy.deepcopy(timepoints_global)
+                for _ in range(len(amici_objective.edatas))
+            ]
+
+        amici_objective.custom_timepoints = custom_timepoints
+        amici_objective.apply_custom_timepoints()
+        return amici_objective
+
+    def check_gradients_match_finite_differences(
+        self,
+        x: np.ndarray = None,
+        *args,
+        **kwargs
+    ) -> bool:
+        """Check if gradients match finite differences (FDs)
+
+        Parameters
+        ----------
+        x: The parameters for which to evaluate the gradient.
+
+        Returns
+        -------
+        bool
+            Indicates whether gradients match (True) FDs or not (False)
+        """
+        if x is None and 'petab_problem' in dir(self.amici_object_builder):
+            x = self.amici_object_builder.petab_problem.x_nominal_scaled
+            x_free = self.amici_object_builder.petab_problem.x_free_indices
+        return super().check_gradients_match_finite_differences(
+             x=x, x_free=x_free, *args, **kwargs)

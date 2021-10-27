@@ -1,22 +1,22 @@
-"""
-This is for testing the pypesto.History.
-"""
+"""Test the :class:`pypesto.History`."""
 
 import numpy as np
 import pytest
 import unittest
 import tempfile
 from typing import Sequence
+import scipy.optimize as so
 
 import pypesto
 from pypesto.objective.util import sres_to_schi2, res_to_chi2
 from pypesto import CsvHistory, HistoryOptions,\
     MemoryHistory, ObjectiveBase, Hdf5History
-from pypesto.optimize.optimizer import read_result_from_file, OptimizerResult
+from pypesto.optimize import read_result_from_file, OptimizerResult
 from pypesto.objective.constants import (
-    FVAL, GRAD, HESS, RES, SRES, CHI2, SCHI2)
+    X, FVAL, GRAD, HESS, RES, SRES, CHI2, SCHI2)
+from pypesto.engine import MultiProcessEngine
 
-from ..util import rosen_for_sensi, load_amici_objective
+from ..util import rosen_for_sensi, load_amici_objective, CRProblem
 
 
 class HistoryTest(unittest.TestCase):
@@ -49,22 +49,26 @@ class HistoryTest(unittest.TestCase):
 
         self.history_options.trace_save_iter = 1
 
-        for storage_file in ['tmp/traces/conversion_example_{id}.csv', None]:
-            self.history_options.storage_file = storage_file
+        for storage_type in ['.csv', '.hdf5', None]:
+            with tempfile.TemporaryDirectory(dir=".") as tmpdirname:
+                _, fn = tempfile.mkstemp(storage_type, dir=f"{tmpdirname}")
+                self.history_options.storage_file = fn
+                if storage_type is None:
+                    self.history_options.storage_file = None
 
-            result = pypesto.optimize.minimize(
-                problem=self.problem,
-                optimizer=self.optimizer,
-                n_starts=1,
-                startpoint_method=pypesto.startpoint.uniform,
-                options=optimize_options,
-                history_options=self.history_options
-            )
+                result = pypesto.optimize.minimize(
+                    problem=self.problem,
+                    optimizer=self.optimizer,
+                    n_starts=1,
+                    startpoint_method=pypesto.startpoint.uniform,
+                    options=optimize_options,
+                    history_options=self.history_options
+                )
 
-            for istart, start in enumerate(result.optimize_result.list):
-                self.check_reconstruct_history(start, str(istart))
-                self.check_load_from_file(start, str(istart))
-                self.check_history_consistency(start)
+                for istart, start in enumerate(result.optimize_result.list):
+                    self.check_reconstruct_history(start, str(istart))
+                    self.check_load_from_file(start, str(istart))
+                    self.check_history_consistency(start)
 
     def check_load_from_file(self, start: OptimizerResult, id: str):
         """Verify we can reconstitute OptimizerResult from csv file"""
@@ -141,18 +145,26 @@ class HistoryTest(unittest.TestCase):
             assert getattr(start.history, attr) == \
                    getattr(reconst_history, attr), attr
 
-        assert len(start.history._trace) == len(reconst_history._trace)
-        self.assertListEqual(start.history._trace.columns.to_list(),
-                             reconst_history._trace.columns.to_list())
-        for col in start.history._trace.columns:
-            for true_val, reconst_val in zip(start.history._trace[col],
-                                             reconst_history._trace[col]):
-                if true_val is None:
-                    assert reconst_val is None, col
-                elif isinstance(true_val, float) and np.isnan(true_val):
-                    assert np.isnan(reconst_val), col
-                else:
-                    assert np.isclose(true_val, reconst_val).all(), col
+        assert len(start.history) == len(reconst_history)
+
+        history_entries = [X, FVAL, GRAD, HESS, RES, SRES, CHI2, SCHI2]
+
+        for entry in history_entries:
+            original_trace = getattr(start.history,
+                                     f'get_{entry}_trace')()
+            reconst_trace = getattr(reconst_history,
+                                    f'get_{entry}_trace')()
+            for iteration in range(len(original_trace)):
+                # comparing nan and None difficult
+                if original_trace[iteration] is None:
+                    assert reconst_trace[iteration] is None
+                if np.isnan(original_trace[iteration]).all():
+                    assert np.isnan(reconst_trace[iteration]).all()
+                np.testing.assert_array_almost_equal(
+                    reconst_trace[iteration],
+                    original_trace[iteration],
+                    decimal=10
+                )
 
     def check_history_consistency(self, start: OptimizerResult):
 
@@ -191,6 +203,7 @@ class HistoryTest(unittest.TestCase):
             for it in range(5):
                 x_full = xfull(start.history.get_x_trace(it))
                 val = getattr(start.history, f'get_{var}_trace')(it)
+
                 if not getattr(self.history_options, f'trace_record_{var}',
                                True):
                     assert np.isnan(val)
@@ -269,8 +282,8 @@ class ResModeHistoryTest(HistoryTest):
     def test_trace_schi2(self):
         self.history_options = HistoryOptions(
             trace_record=True,
-            trace_record_chi2=True,
-            trace_record_schi2=False,
+            trace_record_chi2=False,
+            trace_record_schi2=True,
         )
 
         self.check_history()
@@ -309,6 +322,42 @@ class ResModeHistoryTest(HistoryTest):
         )
 
         self.obj = pypesto.objective.AggregatedObjective([self.obj, self.obj])
+        self.fix_pars = False
+        self.check_history()
+
+
+class CRResModeHistoryTest(HistoryTest):
+    """Residual method test based on the conversion reaction model.
+
+    This is useful to check that everything works also for a simple Objective,
+    not only an AmiciObjective.
+    """
+
+    @classmethod
+    def setUpClass(cls):
+        cls.optimizer = pypesto.optimize.ScipyOptimizer(
+            method='ls_trf',
+            options={'max_nfev': 100}
+        )
+        problem = CRProblem()
+        cls.obj = problem.get_objective(fim_for_hess=True)
+
+        cls.lb = problem.lb
+        cls.ub = problem.ub
+        cls.x_fixed_indices = []
+        cls.x_fixed_vals = []
+
+    def test_trace_all(self):
+        self.history_options = HistoryOptions(
+            trace_record=True,
+            trace_record_grad=True,
+            trace_record_hess=True,
+            trace_record_res=True,
+            trace_record_sres=True,
+            trace_record_chi2=True,
+            trace_record_schi2=True,
+        )
+
         self.fix_pars = False
         self.check_history()
 
@@ -392,6 +441,42 @@ class FunModeHistoryTest(HistoryTest):
         self.check_history()
 
 
+class CRFunModeHistoryTest(HistoryTest):
+    """Function method test based on the conversion reaction model.
+
+    This is useful to check that everything works also for a simple Objective,
+    not only an AmiciObjective.
+    """
+
+    @classmethod
+    def setUpClass(cls):
+        cls.optimizer = pypesto.optimize.ScipyOptimizer(
+            method='trust-exact',
+            options={'maxiter': 100}
+        )
+        problem = CRProblem()
+        cls.obj = problem.get_objective(fim_for_hess=True)
+
+        cls.lb = problem.lb
+        cls.ub = problem.ub
+        cls.x_fixed_indices = []
+        cls.x_fixed_vals = []
+
+    def test_trace_all(self):
+        self.history_options = HistoryOptions(
+            trace_record=True,
+            trace_record_grad=True,
+            trace_record_hess=True,
+            trace_record_res=True,
+            trace_record_sres=True,
+            trace_record_chi2=True,
+            trace_record_schi2=True,
+        )
+
+        self.fix_pars = False
+        self.check_history()
+
+
 @pytest.fixture(params=["", "memory", "csv", "hdf5"])
 def history(request) -> pypesto.History:
     if request.param == "memory":
@@ -471,3 +556,94 @@ def test_trace_subset(history: pypesto.History):
                 assert isinstance(val, float)
             else:
                 assert isinstance(val, np.ndarray) or np.isnan(val)
+
+
+def test_hdf5_history_mp():
+    """Test whether hdf5-History works with a MultiProcessEngine."""
+    objective1 = pypesto.Objective(fun=so.rosen,
+                                   grad=so.rosen_der,
+                                   hess=so.rosen_hess)
+    objective2 = pypesto.Objective(fun=so.rosen,
+                                   grad=so.rosen_der,
+                                   hess=so.rosen_hess)
+    dim_full = 10
+    lb = -5 * np.ones((dim_full, 1))
+    ub = 5 * np.ones((dim_full, 1))
+    n_starts = 5
+    startpoints = pypesto.startpoint.latin_hypercube(n_starts=n_starts,
+                                                     lb=lb,
+                                                     ub=ub)
+    problem1 = pypesto.Problem(objective=objective1, lb=lb, ub=ub,
+                               x_guesses=startpoints)
+    problem2 = pypesto.Problem(objective=objective2, lb=lb, ub=ub,
+                               x_guesses=startpoints)
+
+    optimizer1 = pypesto.optimize.ScipyOptimizer(options={'maxiter': 10})
+    optimizer2 = pypesto.optimize.ScipyOptimizer(options={'maxiter': 10})
+
+    with tempfile.TemporaryDirectory(dir=".") as tmpdirname:
+        _, fn = tempfile.mkstemp(".hdf5", dir=f"{tmpdirname}")
+
+        history_options_mp = pypesto.HistoryOptions(trace_record=True,
+                                                    storage_file=fn)
+        history_options_mem = pypesto.HistoryOptions(trace_record=True)
+        # optimize with Memory History
+        result_hdf5_mem = pypesto.optimize.minimize(
+            problem=problem1, optimizer=optimizer1,
+            n_starts=n_starts, history_options=history_options_mem,
+            engine=MultiProcessEngine()
+        )
+
+        # optimizing with history saved in hdf5 and MultiProcessEngine
+        result_memory_mp = pypesto.optimize.minimize(
+            problem=problem2, optimizer=optimizer2,
+            n_starts=n_starts, history_options=history_options_mp,
+            engine=MultiProcessEngine()
+        )
+
+        history_entries = [X, FVAL, GRAD, HESS, RES, SRES, CHI2, SCHI2]
+        assert len(result_hdf5_mem.optimize_result.list) == \
+            len(result_memory_mp.optimize_result.list)
+        for mp_res in result_memory_mp.optimize_result.list:
+            for mem_res in result_hdf5_mem.optimize_result.list:
+                if mp_res['id'] == mem_res['id']:
+                    for entry in history_entries:
+                        hdf5_entry_trace = getattr(mp_res['history'],
+                                                   f'get_{entry}_trace')()
+                        mem_entry_trace = getattr(mem_res['history'],
+                                                  f'get_{entry}_trace')()
+                        for iteration in range(len(hdf5_entry_trace)):
+                            # comparing nan and None difficult
+                            if hdf5_entry_trace[iteration] is None or np.isnan(
+                                    hdf5_entry_trace[iteration]).all():
+                                continue
+                            np.testing.assert_array_equal(
+                                mem_entry_trace[iteration],
+                                hdf5_entry_trace[iteration])
+
+
+def test_trim_history():
+    """
+    Test whether the history gets correctly trimmed to be monotonically
+    decreasing.
+    """
+    problem = CRProblem()
+    pypesto_problem = problem.get_problem()
+
+    optimizer = pypesto.optimize.ScipyOptimizer()
+    history_options = pypesto.HistoryOptions(trace_record=True)
+    result = pypesto.optimize.minimize(
+        problem=pypesto_problem, optimizer=optimizer,
+        n_starts=1, history_options=history_options,
+        engine=MultiProcessEngine()
+    )
+    fval_trace = result.optimize_result.list[0].history.get_fval_trace()
+    fval_trace_trimmed = \
+        result.optimize_result.list[0].history.get_fval_trace(trim=True)
+    fval_trimmed_man = []
+    fval_current = np.inf
+    for fval_i in fval_trace:
+        if fval_i <= fval_current:
+            fval_trimmed_man.append(fval_i)
+            fval_current = fval_i
+    assert fval_trace_trimmed == fval_trimmed_man

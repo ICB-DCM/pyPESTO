@@ -1,11 +1,13 @@
 import h5py
 from ..result import Result
 from ..optimize.result import OptimizerResult
+from ..optimize.optimizer import fill_result_from_objective_history
 from ..profile.result import ProfilerResult
 from ..sample.result import McmcPtResult
 from ..problem import Problem
-from ..objective import Objective, ObjectiveBase, Hdf5History
+from ..objective import Objective, ObjectiveBase, Hdf5History, OptimizerHistory
 import numpy as np
+import ast
 import logging
 
 
@@ -111,13 +113,20 @@ class ProblemHDF5Reader:
         problem:
             A problem instance with all attributes read in.
         """
+
         # create empty problem
         if objective is None:
             objective = Objective()
+            # raise warning that objective is not loaded.
+            logger.info('WARNING: You are loading a problem.\nThis problem'
+                        ' is not to be used without a separately created'
+                        ' objective.')
         problem = Problem(objective, [], [])
 
         with h5py.File(self.storage_filename, 'r') as f:
             for problem_key in f['/problem']:
+                if problem_key == 'config':
+                    continue
                 setattr(problem, problem_key,
                         f[f'/problem/{problem_key}'][:])
             for problem_attr in f['/problem'].attrs:
@@ -207,7 +216,11 @@ class SamplingResultHDF5Reader:
             for key in f['/sampling/results'].attrs:
                 sample_result[key] = \
                     f['/sampling/results'].attrs[key]
-        self.results.sample_result = McmcPtResult(**sample_result)
+        try:
+            self.results.sample_result = McmcPtResult(**sample_result)
+        except TypeError:
+            logger.warning("Warning: You tried loading a non-existent "
+                           "sampling result.")
 
         return self.results
 
@@ -243,16 +256,138 @@ class ProfileResultHDF5Reader:
                 problem_reader = ProblemHDF5Reader(self.storage_filename)
                 self.results.problem = problem_reader.read()
             for profile_id in f['/profiling']:
-                profiling_list.append([])
+                profiling_list.append([
+                    None for _ in f[f'/profiling/{profile_id}']
+                ])
                 for parameter_id in f[f'/profiling/{profile_id}']:
                     if f[f'/profiling/{profile_id}/'
                          f'{parameter_id}'].attrs['IsNone']:
-                        profiling_list[int(profile_id)].append(None)
-                    else:
-                        profiling_list[int(profile_id)]\
-                            .append(
-                            read_hdf5_profile(f,
-                                              profile_id=profile_id,
-                                              parameter_id=parameter_id))
+                        continue
+                    profiling_list[int(profile_id)][int(parameter_id)] = \
+                        read_hdf5_profile(f,
+                                          profile_id=profile_id,
+                                          parameter_id=parameter_id)
             self.results.profile_result.list = profiling_list
         return self.results
+
+
+def read_result(filename: str,
+                problem: bool = True,
+                optimize: bool = False,
+                profile: bool = False,
+                sample: bool = False,
+                ) -> Result:
+    """
+    This is a function that saves the whole pypesto.Result object in an
+    HDF5 file. With booleans one can choose more detailed what to save.
+
+    Parameters
+    ----------
+    filename:
+        The HDF5 filename.
+    problem:
+        Read the problem.
+    optimize:
+        Read the optimize result.
+    profile:
+        Read the profile result.
+    sample:
+        Read the sample result.
+
+    Returns
+    -------
+    result:
+        Result object containing the results stored in HDF5 file.
+    """
+    if not any([optimize, profile, sample]):
+        optimize = True
+        profile = True
+        sample = True
+    result = Result()
+
+    if problem:
+        pypesto_problem_reader = ProblemHDF5Reader(filename)
+        result.problem = pypesto_problem_reader.read()
+
+    if optimize:
+        pypesto_opt_reader = OptimizationResultHDF5Reader(filename)
+        try:
+            temp_result = pypesto_opt_reader.read()
+            result.optimize_result = temp_result.optimize_result
+        except KeyError:
+            logger.warning('Loading the optimization result failed. It is '
+                           'highly likely that no optimization result exists '
+                           f'within {filename}.')
+
+    if profile:
+        pypesto_profile_reader = ProfileResultHDF5Reader(filename)
+        try:
+            temp_result = pypesto_profile_reader.read()
+            result.profile_result = temp_result.profile_result
+        except KeyError:
+            logger.warning('Loading the profiling result failed. It is '
+                           'highly likely that no profiling result exists '
+                           f'within {filename}.')
+
+    if sample:
+        pypesto_sample_reader = SamplingResultHDF5Reader(filename)
+        try:
+            temp_result = pypesto_sample_reader.read()
+            result.sample_result = temp_result.sample_result
+        except KeyError:
+            logger.warning('Loading the sampling result failed. It is '
+                           'highly likely that no sampling result exists '
+                           f'within {filename}.')
+
+    return result
+
+
+def load_objective_config(filename: str):
+    """
+    Load the objective information stored in f
+
+    Parameters
+    ----------
+    filename:
+        The name of the file in which the information are stored.
+
+    Returns:
+        A dictionary of the information, stored instead of the
+        actual objective in problem.objective.
+    """
+
+    with h5py.File(filename, 'r') as f:
+        info_str = f['problem/config'][()].decode()
+        info = ast.literal_eval(info_str)
+        return info
+
+
+def optimization_result_from_history(filename: str):
+    """
+    Converts a saved hdf5 History to an optimization result.
+    Used for interrupted optimization runs.
+
+    Parameters
+    ----------
+    filename:
+        The name of the file in which the information are stored.
+
+    Returns:
+        A result object in which the optimization result is constructed from
+        history. But missing "Time, Message and Exitflag" keys.
+    """
+
+    result = Result()
+    with h5py.File(filename, 'r') as f:
+        for id_name in f['history'].keys():
+            history = Hdf5History(id=id_name, file=filename)
+            history._recover_options(filename)
+            optimizer_history = OptimizerHistory(
+                history,
+                x0=f[f'history/{id_name}/trace/0/x'][()],
+                generate_from_history=True)
+            optimizer_result = OptimizerResult(id=id_name)
+            fill_result_from_objective_history(optimizer_result,
+                                               optimizer_history)
+            result.optimize_result.append(optimizer_result)
+    return result

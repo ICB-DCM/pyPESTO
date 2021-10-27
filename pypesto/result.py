@@ -8,6 +8,7 @@ optimization, profiling, sampling.
 
 """
 import pandas as pd
+import numpy as np
 import copy
 from typing import Sequence, TYPE_CHECKING
 
@@ -38,13 +39,16 @@ class OptimizeResult:
         """
 
         self.list.append(optimizer_result)
+        self.sort()
 
     def sort(self):
         """
         Sort the optimizer results by function value fval (ascending).
         """
+        def get_fval(res):
+            return res.fval if not np.isnan(res.fval) else np.inf
 
-        self.list = sorted(self.list, key=lambda res: res.fval)
+        self.list = sorted(self.list, key=get_fval)
 
     def as_dataframe(self, keys=None) -> pd.DataFrame:
         """

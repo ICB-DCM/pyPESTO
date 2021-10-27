@@ -7,8 +7,17 @@ from typing import Sequence, Union, Dict
 from pathlib import Path
 import os
 
-from .constants import (OBSERVABLE_IDS, PARAMETER_IDS, TIMEPOINTS, OUTPUT,
-                        OUTPUT_SENSI, TIME, CSV)
+from .constants import (
+    get_condition_label,
+    CONDITION_IDS,
+    CSV,
+    OUTPUT,
+    OUTPUT_IDS,
+    OUTPUT_SENSI,
+    PARAMETER_IDS,
+    TIME,
+    TIMEPOINTS,
+)
 
 
 class PredictionConditionResult:
@@ -20,9 +29,11 @@ class PredictionConditionResult:
 
     def __init__(self,
                  timepoints: np.ndarray,
-                 observable_ids: Sequence[str],
+                 output_ids: Sequence[str],
                  output: np.ndarray = None,
                  output_sensi: np.ndarray = None,
+                 output_weight: float = None,
+                 output_sigmay: np.ndarray = None,
                  x_names: Sequence[str] = None):
         """
         Constructor.
@@ -31,19 +42,25 @@ class PredictionConditionResult:
         ----------
         timepoints:
             Output timepoints for this simulation condition
-        observable_ids:
-            IDs of observables for this simulation condition
-        outputs:
+        output_ids:
+            IDs of outputs for this simulation condition
+        output:
             Postprocessed outputs (ndarray)
-        outputs_sensi:
+        output_sensi:
             Sensitivities of postprocessed outputs (ndarray)
+        output_weight:
+            LLH of the simulation
+        output_sigmay:
+            Standard deviations of postprocessed observables
         x_names:
             IDs of model parameter w.r.t to which sensitivities were computed
         """
         self.timepoints = timepoints
-        self.observable_ids = observable_ids
+        self.output_ids = output_ids
         self.output = output
         self.output_sensi = output_sensi
+        self.output_weight = output_weight
+        self.output_sigmay = output_sigmay
         self.x_names = x_names
         if x_names is None and output_sensi is not None:
             self.x_names = [f'parameter_{i_par}' for i_par in
@@ -51,10 +68,34 @@ class PredictionConditionResult:
 
     def __iter__(self):
         yield 'timepoints', self.timepoints
-        yield 'observable_ids', self.observable_ids
+        yield 'output_ids', self.output_ids
         yield 'x_names', self.x_names
         yield 'output', self.output
         yield 'output_sensi', self.output_sensi
+        yield 'output_weight', self.output_weight
+        yield 'output_sigmay', self.output_sigmay
+
+    def __eq__(self, other):
+        def to_bool(expr):
+            if isinstance(expr, bool):
+                return expr
+            return expr.any()
+
+        if to_bool(self.timepoints != other.timepoints):
+            return False
+        if to_bool(self.x_names != other.x_names):
+            return False
+        if to_bool(self.output_ids != other.output_ids):
+            return False
+        if to_bool(self.output != other.output):
+            return False
+        if to_bool(self.output_sensi != other.output_sensi):
+            return False
+        if to_bool(self.output_weight != other.output_weight):
+            return False
+        if to_bool(self.output_sigmay != other.output_sigmay):
+            return False
+        return True
 
 
 class PredictionResult:
@@ -91,7 +132,7 @@ class PredictionResult:
 
         self.condition_ids = condition_ids
         if self.condition_ids is None:
-            self.condition_ids = [f'condition_{i_cond}'
+            self.condition_ids = [get_condition_label(i_cond)
                                   for i_cond in range(len(conditions))]
 
         # add a comment to this prediction if available
@@ -106,6 +147,18 @@ class PredictionResult:
         yield 'condition_ids', self.condition_ids
         yield 'comment', self.comment
         yield 'parameter_ids', parameter_ids
+
+    def __eq__(self, other):
+        if not isinstance(other, PredictionResult):
+            return False
+        if self.comment != other.comment:
+            return False
+        if self.condition_ids != other.condition_ids:
+            return False
+        for i_cond, _ in enumerate(self.conditions):
+            if self.conditions[i_cond] != other.conditions[i_cond]:
+                return False
+        return True
 
     def write_to_csv(self, output_file: str):
         """
@@ -159,7 +212,7 @@ class PredictionResult:
                     output_dummy.stem + f'_{i_cond}' + output_dummy.suffix)
                 # create DataFrame and write to file
                 result = pd.DataFrame(index=timepoints,
-                                      columns=cond.observable_ids,
+                                      columns=cond.output_ids,
                                       data=cond.output)
                 result.to_csv(filename, sep='\t')
 
@@ -173,7 +226,7 @@ class PredictionResult:
                         output_dummy.suffix)
                     # create DataFrame and write to file
                     result = pd.DataFrame(index=timepoints,
-                                          columns=cond.observable_ids,
+                                          columns=cond.output_ids,
                                           data=cond.output_sensi[:, i_par, :])
                     result.to_csv(filename, sep='\t')
 
@@ -193,7 +246,7 @@ class PredictionResult:
             base path in the h5 file
         """
         # check if the file exists and append to it in case it does
-        output_path = Path(output_file).with_suffix('.h5')
+        output_path = Path(output_file)
         filemode = 'w'
         if os.path.exists(output_path):
             filemode = 'r+'
@@ -207,13 +260,16 @@ class PredictionResult:
             if self.conditions and self.conditions[0].x_names is not None:
                 f.create_dataset(os.path.join(base, PARAMETER_IDS),
                                  data=self.conditions[0].x_names)
+            if self.condition_ids is not None:
+                f.create_dataset(os.path.join(base, CONDITION_IDS),
+                                 data=self.condition_ids)
             for i_cond, cond in enumerate(self.conditions):
                 # each conditions gets a group of its own
                 f.create_group(os.path.join(base, str(i_cond)))
-                # save observable IDs
+                # save output IDs
                 f.create_dataset(os.path.join(base, str(i_cond),
-                                              OBSERVABLE_IDS),
-                                 data=cond.observable_ids)
+                                              OUTPUT_IDS),
+                                 data=cond.output_ids)
                 # save timepoints, outputs, and sensitivities of outputs
                 f.create_dataset(os.path.join(base, str(i_cond), TIMEPOINTS),
                                  data=cond.timepoints)
