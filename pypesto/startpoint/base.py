@@ -60,14 +60,17 @@ class FunctionStartpoints(StartpointMethod):
         self.function = function
 
     def __call__(
-            self,
-            n_starts: int,
-            lb: np.ndarray,
-            ub: np.ndarray,
-            objective: ObjectiveBase,
+        self,
+        n_starts: int,
+        lb: np.ndarray,
+        ub: np.ndarray,
+        objective: ObjectiveBase,
     ) -> np.ndarray:
         return self.function(
-            n_starts=n_starts, lb=lb, ub=ub, objective=objective,
+            n_starts=n_starts,
+            lb=lb,
+            ub=ub,
+            objective=objective,
         )
 
 

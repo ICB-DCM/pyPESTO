@@ -11,8 +11,15 @@ import numpy as np
 import pandas as pd
 import copy
 
-from typing import Iterable, List, Optional, Union, SupportsFloat, \
-    SupportsInt, Callable
+from typing import (
+    Iterable,
+    List,
+    Optional,
+    Union,
+    SupportsFloat,
+    SupportsInt,
+    Callable,
+)
 
 from .objective import ObjectiveBase
 from .objective.priors import NegLogPriors
@@ -82,20 +89,22 @@ class Problem:
     get_full_matrix() can be used.
     """
 
-    def __init__(self,
-                 objective: ObjectiveBase,
-                 lb: Union[np.ndarray, List[float]],
-                 ub: Union[np.ndarray, List[float]],
-                 dim_full: Optional[int] = None,
-                 x_fixed_indices: Optional[SupportsIntIterableOrValue] = None,
-                 x_fixed_vals: Optional[SupportsFloatIterableOrValue] = None,
-                 x_guesses: Optional[Iterable[float]] = None,
-                 startpoint_method: Optional[Callable] = None,
-                 x_names: Optional[Iterable[str]] = None,
-                 x_scales: Optional[Iterable[str]] = None,
-                 x_priors_defs: Optional[NegLogPriors] = None,
-                 lb_init: Union[np.ndarray, List[float], None] = None,
-                 ub_init: Union[np.ndarray, List[float], None] = None):
+    def __init__(
+        self,
+        objective: ObjectiveBase,
+        lb: Union[np.ndarray, List[float]],
+        ub: Union[np.ndarray, List[float]],
+        dim_full: Optional[int] = None,
+        x_fixed_indices: Optional[SupportsIntIterableOrValue] = None,
+        x_fixed_vals: Optional[SupportsFloatIterableOrValue] = None,
+        x_guesses: Optional[Iterable[float]] = None,
+        startpoint_method: Optional[Callable] = None,
+        x_names: Optional[Iterable[str]] = None,
+        x_scales: Optional[Iterable[str]] = None,
+        x_priors_defs: Optional[NegLogPriors] = None,
+        lb_init: Union[np.ndarray, List[float], None] = None,
+        ub_init: Union[np.ndarray, List[float], None] = None,
+    ):
         self.objective = copy.deepcopy(objective)
 
         self.lb_full: np.ndarray = np.array(lb).flatten()
@@ -107,14 +116,15 @@ class Problem:
             ub_init = ub
         self.ub_init_full: np.ndarray = np.array(ub_init).flatten()
 
-        self.dim_full: int = dim_full if dim_full is not None else \
-            self.lb_full.size
+        self.dim_full: int = (
+            dim_full if dim_full is not None else self.lb_full.size
+        )
 
         if x_fixed_indices is None:
             x_fixed_indices = []
-        x_fixed_indices = _make_iterable_if_value(x_fixed_indices, 'int')
+        x_fixed_indices = _make_iterable_if_value(x_fixed_indices, "int")
         self.x_fixed_indices: List[int] = [
-            _type_conversion_with_check(idx, ix, 'fixed indices', 'int')
+            _type_conversion_with_check(idx, ix, "fixed indices", "int")
             for idx, ix in enumerate(x_fixed_indices)
         ]
 
@@ -122,9 +132,9 @@ class Problem:
         # or remove values during profile computation
         if x_fixed_vals is None:
             x_fixed_vals = []
-        x_fixed_vals = _make_iterable_if_value(x_fixed_vals, 'float')
+        x_fixed_vals = _make_iterable_if_value(x_fixed_vals, "float")
         self.x_fixed_vals: List[float] = [
-            _type_conversion_with_check(idx, x, 'fixed values', 'float')
+            _type_conversion_with_check(idx, x, "fixed values", "float")
             for idx, x in enumerate(x_fixed_vals)
         ]
 
@@ -137,13 +147,13 @@ class Problem:
         if x_names is None and objective.x_names is not None:
             x_names = objective.x_names
         elif x_names is None:
-            x_names = [f'x{j}' for j in range(0, self.dim_full)]
+            x_names = [f"x{j}" for j in range(0, self.dim_full)]
         if len(set(x_names)) != len(x_names):
             raise ValueError("Parameter names x_names must be unique")
         self.x_names: List[str] = list(x_names)
 
         if x_scales is None:
-            x_scales = ['lin'] * self.dim_full
+            x_scales = ["lin"] * self.dim_full
         self.x_scales = x_scales
 
         self.x_priors = x_priors_defs
@@ -184,22 +194,24 @@ class Problem:
         vectors of dimension dim.
         """
 
-        for attr in ['lb_full', 'lb_init_full', 'ub_full', 'ub_init_full']:
+        for attr in ["lb_full", "lb_init_full", "ub_full", "ub_init_full"]:
             value = self.__getattribute__(attr)
             if value.size == 1:
                 self.__setattr__(attr, value * np.ones(self.dim_full))
             elif value.size == self.dim:
                 # in this case the bounds only holds the values of the
                 # reduced bounds.
-                self.__setattr__(attr, self.get_full_vector(value,
-                                                            self.x_fixed_vals))
+                self.__setattr__(
+                    attr, self.get_full_vector(value, self.x_fixed_vals)
+                )
 
             if self.__getattribute__(attr).size != self.dim_full:
                 raise AssertionError(f"{attr} dimension invalid.")
 
         if self.x_guesses_full.shape[1] != self.dim_full:
-            x_guesses_full = \
-                np.empty((self.x_guesses_full.shape[0], self.dim_full))
+            x_guesses_full = np.empty(
+                (self.x_guesses_full.shape[0], self.dim_full)
+            )
             x_guesses_full[:] = np.nan
             x_guesses_full[:, self.x_free_indices] = self.x_guesses_full
             self.x_guesses_full = x_guesses_full
@@ -209,7 +221,8 @@ class Problem:
             dim_full=self.dim_full,
             x_free_indices=self.x_free_indices,
             x_fixed_indices=self.x_fixed_indices,
-            x_fixed_vals=self.x_fixed_vals)
+            x_fixed_vals=self.x_fixed_vals,
+        )
 
         # sanity checks
         if len(self.x_scales) != self.dim_full:
@@ -221,14 +234,13 @@ class Problem:
                 "x_fixed_indices and x_fixed_vals must have the same length."
             )
         if np.isnan(self.lb).any():
-            raise ValueError('lb must not contain nan values')
+            raise ValueError("lb must not contain nan values")
         if np.isnan(self.ub).any():
-            raise ValueError('ub must not contain nan values')
+            raise ValueError("ub must not contain nan values")
         if np.any(self.lb >= self.ub):
-            raise ValueError('lb<ub not fulfilled.')
+            raise ValueError("lb<ub not fulfilled.")
 
-    def set_x_guesses(self,
-                      x_guesses: Iterable[float]):
+    def set_x_guesses(self, x_guesses: Iterable[float]):
         """
         Sets the x_guesses of a problem.
 
@@ -238,51 +250,57 @@ class Problem:
         """
         x_guesses_full = np.array(x_guesses)
         if x_guesses_full.shape[1] != self.dim_full:
-            raise ValueError('The dimension of individual x_guesses must be '
-                             'dim_full.')
+            raise ValueError(
+                "The dimension of individual x_guesses must be " "dim_full."
+            )
         self.x_guesses_full = x_guesses_full
 
-    def fix_parameters(self,
-                       parameter_indices: SupportsIntIterableOrValue,
-                       parameter_vals: SupportsFloatIterableOrValue) -> None:
+    def fix_parameters(
+        self,
+        parameter_indices: SupportsIntIterableOrValue,
+        parameter_vals: SupportsFloatIterableOrValue,
+    ) -> None:
         """
         Fix specified parameters to specified values
         """
-        parameter_indices = _make_iterable_if_value(parameter_indices, 'int')
-        parameter_vals = _make_iterable_if_value(parameter_vals, 'float')
+        parameter_indices = _make_iterable_if_value(parameter_indices, "int")
+        parameter_vals = _make_iterable_if_value(parameter_vals, "float")
 
         # first clean to-be-fixed indices to avoid redundancies
         for iter_index, (x_index, x_value) in enumerate(
-                zip(parameter_indices, parameter_vals)
+            zip(parameter_indices, parameter_vals)
         ):
             # check if parameter was already fixed, otherwise add it to the
             # fixed parameters
-            index = _type_conversion_with_check(iter_index, x_index,
-                                                'indices', 'int')
-            val = _type_conversion_with_check(iter_index, x_value,
-                                              'values', 'float')
+            index = _type_conversion_with_check(
+                iter_index, x_index, "indices", "int"
+            )
+            val = _type_conversion_with_check(
+                iter_index, x_value, "values", "float"
+            )
             if index in self.x_fixed_indices:
-                self.x_fixed_vals[
-                    self.x_fixed_indices.index(index)] = val
+                self.x_fixed_vals[self.x_fixed_indices.index(index)] = val
             else:
                 self.x_fixed_indices.append(index)
                 self.x_fixed_vals.append(val)
 
         self.normalize()
 
-    def unfix_parameters(self, parameter_indices: SupportsIntIterableOrValue
-                         ) -> None:
+    def unfix_parameters(
+        self, parameter_indices: SupportsIntIterableOrValue
+    ) -> None:
         """
         Free specified parameters
         """
 
         # check and adapt input
-        parameter_indices = _make_iterable_if_value(parameter_indices, 'int')
+        parameter_indices = _make_iterable_if_value(parameter_indices, "int")
 
         # first clean to-be-freed indices
         for iter_index, x_index in enumerate(parameter_indices):
-            index = _type_conversion_with_check(iter_index, x_index,
-                                                'indices', 'int')
+            index = _type_conversion_with_check(
+                iter_index, x_index, "indices", "int"
+            )
             if index in self.x_fixed_indices:
                 fixed_x_index = self.x_fixed_indices.index(index)
                 self.x_fixed_indices.pop(fixed_x_index)
@@ -291,9 +309,7 @@ class Problem:
         self.normalize()
 
     def get_full_vector(
-            self,
-            x: Union[np.ndarray, None],
-            x_fixed_vals: Iterable[float] = None
+        self, x: Union[np.ndarray, None], x_fixed_vals: Iterable[float] = None
     ) -> Union[np.ndarray, None]:
         """
         Map vector from dim to dim_full. Usually used for x, grad.
@@ -326,7 +342,7 @@ class Problem:
         return x_full
 
     def get_full_matrix(
-            self, x: Union[np.ndarray, None]
+        self, x: Union[np.ndarray, None]
     ) -> Union[np.ndarray, None]:
         """
         Map matrix from dim to dim_full. Usually used for hessian.
@@ -352,8 +368,9 @@ class Problem:
         return x_full
 
     def get_reduced_vector(
-            self, x_full: Union[np.ndarray, None],
-            x_indices: Optional[List[int]] = None
+        self,
+        x_full: Union[np.ndarray, None],
+        x_indices: Optional[List[int]] = None,
     ) -> Union[np.ndarray, None]:
         """
         Keep only those elements, which indices are specified in x_indices
@@ -379,7 +396,7 @@ class Problem:
         return np.array(x)
 
     def get_reduced_matrix(
-            self, x_full: Union[np.ndarray, None]
+        self, x_full: Union[np.ndarray, None]
     ) -> Union[np.ndarray, None]:
         """
         Map matrix from dim_full to dim, i.e. delete fixed indices.
@@ -413,7 +430,8 @@ class Problem:
         fixed_indices = np.asarray(self.x_fixed_indices)
         if full_index in fixed_indices:
             raise ValueError(
-                "Cannot compute index in free vector: Index is fixed.")
+                "Cannot compute index in free vector: Index is fixed."
+            )
         return full_index - sum(fixed_indices < full_index)
 
     def print_parameter_summary(self) -> None:
@@ -425,68 +443,67 @@ class Problem:
             pd.DataFrame(
                 index=self.x_names,
                 data={
-                    'free': [idx in self.x_free_indices
-                             for idx in range(self.dim_full)],
-                    'lb_full': self.lb_full,
-                    'ub_full': self.ub_full
-                }
+                    "free": [
+                        idx in self.x_free_indices
+                        for idx in range(self.dim_full)
+                    ],
+                    "lb_full": self.lb_full,
+                    "ub_full": self.ub_full,
+                },
             )
         )
 
 
 _convtypes = {
-    'float': {
-        'attr': '__float__',
-        'conv': float
-    },
-    'int': {
-        'attr': '__int__',
-        'conv': int
-    }
+    "float": {"attr": "__float__", "conv": float},
+    "int": {"attr": "__int__", "conv": int},
 }
 
 
-def _type_conversion_with_check(index: int,
-                                value: Union[SupportsFloat, SupportsInt],
-                                valuename: str,
-                                convtype: str) -> Union[float, int]:
+def _type_conversion_with_check(
+    index: int,
+    value: Union[SupportsFloat, SupportsInt],
+    valuename: str,
+    convtype: str,
+) -> Union[float, int]:
     """
     Converts values to the requested type, raises and appropriate error if
     not possible.
     """
 
     if convtype not in _convtypes:
-        raise ValueError(f'Unsupported type {convtype}')
+        raise ValueError(f"Unsupported type {convtype}")
 
-    can_convert = hasattr(value, _convtypes[convtype]['attr'])
+    can_convert = hasattr(value, _convtypes[convtype]["attr"])
     # this may fail for weird custom ypes that can be converted to int but
     # not float, but we probably don't want those as indiced anyways
-    lossless_conversion = not convtype == 'int' \
-        or (hasattr(value, _convtypes['float']['attr'])
-            and (float(value) - int(value) == 0.0))
+    lossless_conversion = not convtype == "int" or (
+        hasattr(value, _convtypes["float"]["attr"])
+        and (float(value) - int(value) == 0.0)
+    )
 
     if not can_convert or not lossless_conversion:
         raise ValueError(
-            f'All {valuename} must support lossless conversion to {convtype}. '
-            f'Found type {type(value)} at index {index}, which cannot '
-            f'be converted to {convtype}.'
+            f"All {valuename} must support lossless conversion to {convtype}. "
+            f"Found type {type(value)} at index {index}, which cannot "
+            f"be converted to {convtype}."
         )
 
-    return _convtypes[convtype]['conv'](value)
+    return _convtypes[convtype]["conv"](value)
 
 
-def _make_iterable_if_value(value: Union[SupportsFloatIterableOrValue,
-                                         SupportsIntIterableOrValue],
-                            convtype: str) -> Union[Iterable[SupportsFloat],
-                                                    Iterable[SupportsInt]]:
+def _make_iterable_if_value(
+    value: Union[SupportsFloatIterableOrValue, SupportsIntIterableOrValue],
+    convtype: str,
+) -> Union[Iterable[SupportsFloat], Iterable[SupportsInt]]:
     """
     Converts scalar values to iterables if input is scalar, may update type
     """
 
     if convtype not in _convtypes:
-        raise ValueError(f'Unsupported type {convtype}')
+        raise ValueError(f"Unsupported type {convtype}")
 
-    if not hasattr(value, '__iter__'):
-        return [_type_conversion_with_check(0, value, 'values', convtype)]
+    if not hasattr(value, "__iter__"):
+        return [_type_conversion_with_check(0, value, "values", convtype)]
     else:
         return value

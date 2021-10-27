@@ -10,17 +10,19 @@ from .clust_color import assign_colors
 from .misc import process_result_list
 
 
-def profiles(results: Union[Result, Sequence[Result]],
-             ax=None,
-             profile_indices: Sequence[int] = None,
-             size: Sequence[float] = (18.5, 6.5),
-             reference: Union[ReferencePoint, Sequence[ReferencePoint]] = None,
-             colors=None,
-             legends: Sequence[str] = None,
-             x_labels: Sequence[str] = None,
-             profile_list_ids: Union[int, Sequence[int]] = 0,
-             ratio_min: float = 0.,
-             show_bounds: bool = False):
+def profiles(
+    results: Union[Result, Sequence[Result]],
+    ax=None,
+    profile_indices: Sequence[int] = None,
+    size: Sequence[float] = (18.5, 6.5),
+    reference: Union[ReferencePoint, Sequence[ReferencePoint]] = None,
+    colors=None,
+    legends: Sequence[str] = None,
+    x_labels: Sequence[str] = None,
+    profile_list_ids: Union[int, Sequence[int]] = 0,
+    ratio_min: float = 0.0,
+    show_bounds: bool = False,
+):
     """
     Plot classical 1D profile plot (using the posterior, e.g. Gaussian like
     profile)
@@ -60,24 +62,31 @@ def profiles(results: Union[Result, Sequence[Result]],
 
     # parse input
     results, profile_list_ids, colors, legends = process_result_list_profiles(
-        results, profile_list_ids, colors, legends)
+        results, profile_list_ids, colors, legends
+    )
 
     # get the parameter ids to be plotted
-    profile_indices = process_profile_indices(results, profile_indices,
-                                              profile_list_ids)
+    profile_indices = process_profile_indices(
+        results, profile_indices, profile_list_ids
+    )
 
     # loop over results
     for i_result, result in enumerate(results):
         for i_profile_list, profile_list_id in enumerate(profile_list_ids):
-            fvals = handle_inputs(result, profile_indices=profile_indices,
-                                  profile_list=profile_list_id,
-                                  ratio_min=ratio_min)
+            fvals = handle_inputs(
+                result,
+                profile_indices=profile_indices,
+                profile_list=profile_list_id,
+                ratio_min=ratio_min,
+            )
 
             # add x_labels for parameters
             if x_labels is None:
-                x_labels = [name for name, fval in
-                            zip(result.problem.x_names, fvals)
-                            if fval is not None]
+                x_labels = [
+                    name
+                    for name, fval in zip(result.problem.x_names, fvals)
+                    if fval is not None
+                ]
 
             # plot multiple results or profile runs into one figure?
             if len(results) == 1 and len(profile_list_ids) > 1:
@@ -89,10 +98,16 @@ def profiles(results: Union[Result, Sequence[Result]],
 
             # call lowlevel routine
             ax = profiles_lowlevel(
-                fvals=fvals, ax=ax, size=size, color=colors[color_ind],
-                legend_text=legends[color_ind], x_labels=x_labels,
-                show_bounds=show_bounds, lb_full=result.problem.lb_full,
-                ub_full=result.problem.ub_full)
+                fvals=fvals,
+                ax=ax,
+                size=size,
+                color=colors[color_ind],
+                legend_text=legends[color_ind],
+                x_labels=x_labels,
+                show_bounds=show_bounds,
+                lb_full=result.problem.lb_full,
+                ub_full=result.problem.ub_full,
+            )
 
     # parse and apply plotting options
     ref = create_references(references=reference)
@@ -106,9 +121,16 @@ def profiles(results: Union[Result, Sequence[Result]],
 
 
 def profiles_lowlevel(
-        fvals, ax=None, size: Tuple[float, float] = (18.5, 6.5),
-        color=None, legend_text: str = None, x_labels=None,
-        show_bounds: bool = False, lb_full=None, ub_full=None):
+    fvals,
+    ax=None,
+    size: Tuple[float, float] = (18.5, 6.5),
+    color=None,
+    legend_text: str = None,
+    x_labels=None,
+    show_bounds: bool = False,
+    lb_full=None,
+    ub_full=None,
+):
     """
     Lowlevel routine for profile plotting, working with a list of arrays
     only, opening different axes objects in case
@@ -169,7 +191,8 @@ def profiles_lowlevel(
     if not create_new_ax:
         if n_fvals != len(ax) and n_profiles != len(ax):
             raise ValueError(
-                "Number of axes does not match number of profiles. Stopping.")
+                "Number of axes does not match number of profiles. Stopping."
+            )
         elif n_fvals == len(ax) and n_profiles != len(ax):
             # we may have some empty profiles, which we have to skip
             n_plots = n_fvals
@@ -213,19 +236,26 @@ def profiles_lowlevel(
         if fval is not None:
             # run lowlevel routine for one profile
             ax[counter] = profile_lowlevel(
-                fval, ax[counter], size=size, color=color,
-                legend_text=tmp_legend, show_bounds=show_bounds, lb=lb, ub=ub)
+                fval,
+                ax[counter],
+                size=size,
+                color=color,
+                legend_text=tmp_legend,
+                show_bounds=show_bounds,
+                lb=lb,
+                ub=ub,
+            )
 
         # labels
         if x_labels is None:
-            ax[counter].set_xlabel(f'Parameter {i_plot}')
+            ax[counter].set_xlabel(f"Parameter {i_plot}")
         else:
             ax[counter].set_xlabel(x_labels[counter])
 
         if counter % columns == 0:
-            ax[counter].set_ylabel('Log-posterior ratio')
+            ax[counter].set_ylabel("Log-posterior ratio")
         else:
-            ax[counter].set_yticklabels([''])
+            ax[counter].set_yticklabels([""])
 
         # increase counter and cleanup legend
         counter += 1
@@ -234,9 +264,15 @@ def profiles_lowlevel(
 
 
 def profile_lowlevel(
-        fvals, ax=None, size: Tuple[float, float] = (18.5, 6.5),
-        color=None, legend_text: str = None, show_bounds: bool = False,
-        lb: float = None, ub: float = None):
+    fvals,
+    ax=None,
+    size: Tuple[float, float] = (18.5, 6.5),
+    color=None,
+    legend_text: str = None,
+    show_bounds: bool = False,
+    lb: float = None,
+    ub: float = None,
+):
     """
     Lowlevel routine for plotting one profile, working with a numpy array only
 
@@ -270,13 +306,13 @@ def profile_lowlevel(
     fvals = np.asarray(fvals)
 
     # get colors
-    color = assign_colors([1.], color)
+    color = assign_colors([1.0], color)
 
     # axes
     if ax is None:
         ax = plt.subplots()[1]
-        ax.set_xlabel('Parameter value')
-        ax.set_ylabel('Log-posterior ratio')
+        ax.set_xlabel("Parameter value")
+        ax.set_ylabel("Log-posterior ratio")
         fig = plt.gcf()
         fig.set_size_inches(*size)
 
@@ -313,9 +349,13 @@ def handle_reference_points(ref, ax, profile_indices):
         # loop over axes objects
         for i_par, i_ax in enumerate(ax):
             for i_ref in ref:
-                current_x = i_ref['x'][profile_indices[i_par]]
-                i_ax.plot([current_x, current_x], [0., 1.],
-                          color=i_ref.color, label=i_ref.legend)
+                current_x = i_ref["x"][profile_indices[i_par]]
+                i_ax.plot(
+                    [current_x, current_x],
+                    [0.0, 1.0],
+                    color=i_ref.color,
+                    label=i_ref.legend,
+                )
 
             # create legend for reference points
             if i_ref.legend is not None:
@@ -325,10 +365,11 @@ def handle_reference_points(ref, ax, profile_indices):
 
 
 def handle_inputs(
-        result: Result,
-        profile_indices: Sequence[int],
-        profile_list: int,
-        ratio_min: float):
+    result: Result,
+    profile_indices: Sequence[int],
+    profile_list: int,
+    ratio_min: float,
+):
     """
     Retrieves the values of the profiles to be plotted later from a
     pypesto.ProfileResult object
@@ -351,12 +392,16 @@ def handle_inputs(
     # extract ratio values values from result
     fvals = []
     for i_par in range(0, len(result.profile_result.list[profile_list])):
-        if i_par in profile_indices and \
-                result.profile_result.list[profile_list][i_par] is not None:
-            xs = result.profile_result.list[profile_list][i_par]\
-                .x_path[i_par, :]
-            ratios = result.profile_result.list[profile_list][i_par]\
-                .ratio_path[:]
+        if (
+            i_par in profile_indices
+            and result.profile_result.list[profile_list][i_par] is not None
+        ):
+            xs = result.profile_result.list[profile_list][i_par].x_path[
+                i_par, :
+            ]
+            ratios = result.profile_result.list[profile_list][
+                i_par
+            ].ratio_path[:]
 
             # constrain
             indices = np.where(ratios > ratio_min)
@@ -371,10 +416,12 @@ def handle_inputs(
     return fvals
 
 
-def process_result_list_profiles(results: Result,
-                                 profile_list_ids: Sequence[int],
-                                 colors: Sequence[np.array],
-                                 legends: Union[str, list]) -> Sequence[int]:
+def process_result_list_profiles(
+    results: Result,
+    profile_list_ids: Sequence[int],
+    colors: Sequence[np.array],
+    legends: Union[str, list],
+) -> Sequence[int]:
     """
     assigns colors and legends to a list of results while taking care of the
     special cases for profile plotting
@@ -406,7 +453,8 @@ def process_result_list_profiles(results: Result,
         if len(results) != 1:
             # if we have no single result, then use the standard api
             results, colors, legends = process_result_list(
-                results, colors, legends)
+                results, colors, legends
+            )
             return results, profile_list_ids, colors, legends
     else:
         # a single results was provided, so make a list out of it
@@ -414,16 +462,16 @@ def process_result_list_profiles(results: Result,
 
     # If we have a single result, we may still have multiple profile_list_ids
     # which should be plotted separately: use profile_list_ids as results dummy
-    _, colors, legends = process_result_list(
-            profile_list_ids, colors, legends)
+    _, colors, legends = process_result_list(profile_list_ids, colors, legends)
 
     return results, profile_list_ids, colors, legends
 
 
 def process_profile_indices(
-        results: Sequence[Result],
-        profile_indices: Sequence[int],
-        profile_list_ids: Union[int, Sequence[int]]):
+    results: Sequence[Result],
+    profile_indices: Sequence[int],
+    profile_list_ids: Union[int, Sequence[int]],
+):
     """
     Retrieves the indices of the parameter for which profiles should be
     plotted later from a list of pypesto.ProfileResult objects
@@ -436,9 +484,12 @@ def process_profile_indices(
             # get parameter indices, for which profiles were computed
             if profile_list_id < len(result.profile_result.list):
                 tmp_indices = [
-                    par_id for par_id, prof in
-                    enumerate(result.profile_result.list[profile_list_id])
-                    if prof is not None]
+                    par_id
+                    for par_id, prof in enumerate(
+                        result.profile_result.list[profile_list_id]
+                    )
+                    if prof is not None
+                ]
                 # profile_indices should contain all parameter indices,
                 # for which in at least one of the results a profile exists
                 plottable_indices.update(tmp_indices)
@@ -451,7 +502,9 @@ def process_profile_indices(
         for ind in profile_indices:
             if ind not in plottable_indices:
                 profile_indices.remove(ind)
-                warn('Requested to plot profile for parameter index %i, '
-                     'but profile has not been computed.' % ind)
+                warn(
+                    "Requested to plot profile for parameter index %i, "
+                    "but profile has not been computed." % ind
+                )
 
     return profile_indices

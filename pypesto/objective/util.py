@@ -4,10 +4,12 @@ from typing import Union
 
 def _check_none(fun):
     """Wrapper: Return None if any input argument is None."""
+
     def checked_fun(*args, **kwargs):
         if any(x is None for x in [*args, *(kwargs.values())]):
             return None
         return fun(*args, **kwargs)
+
     return checked_fun
 
 
@@ -55,7 +57,7 @@ def sres_to_grad(res: np.ndarray, sres: np.ndarray):
     `fval = 0.5*sum(res**2)`.
 
     See also :func:`chi2_to_fval`.
-     """
+    """
     return schi2_to_grad(sres_to_schi2(res, sres))
 
 

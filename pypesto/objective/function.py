@@ -71,6 +71,7 @@ class Objective(ObjectiveBase):
         length dim_full (as in the Problem class). Can be read by the
         problem.
     """
+
     def __init__(
         self,
         fun: Callable = None,
@@ -116,12 +117,13 @@ class Objective(ObjectiveBase):
 
     def get_config(self) -> dict:
         info = super().get_config()
-        info['x_names'] = self.x_names
+        info["x_names"] = self.x_names
         sensi_order = 0
         while self.check_sensi_orders(
-                sensi_orders=(sensi_order,), mode=MODE_FUN):
+            sensi_orders=(sensi_order,), mode=MODE_FUN
+        ):
             sensi_order += 1
-        info['sensi_order'] = sensi_order - 1
+        info["sensi_order"] = sensi_order - 1
         return info
 
     def call_unprocessed(
@@ -178,8 +180,7 @@ class Objective(ObjectiveBase):
             else:
                 fval = self.fun(x)
                 grad = self.grad(x)
-            result = {FVAL: fval,
-                      GRAD: grad}
+            result = {FVAL: fval, GRAD: grad}
         elif sensi_orders == (1, 2):
             if self.hess is True:
                 grad, hess = self.fun(x)[1:3]
@@ -189,8 +190,7 @@ class Objective(ObjectiveBase):
                     grad = self.fun(x)[1]
                 else:
                     grad = self.grad(x)
-            result = {GRAD: grad,
-                      HESS: hess}
+            result = {GRAD: grad, HESS: hess}
         elif sensi_orders == (0, 1, 2):
             if self.hess is True:
                 fval, grad, hess = self.fun(x)[0:3]
@@ -201,9 +201,7 @@ class Objective(ObjectiveBase):
                 else:
                     fval = self.fun(x)
                     grad = self.grad(x)
-            result = {FVAL: fval,
-                      GRAD: grad,
-                      HESS: hess}
+            result = {FVAL: fval, GRAD: grad, HESS: hess}
         else:
             raise ValueError("These sensitivity orders are not supported.")
 
@@ -233,8 +231,7 @@ class Objective(ObjectiveBase):
             else:
                 res = self.res(x)
                 sres = self.sres(x)
-            result = {RES: res,
-                      SRES: sres}
+            result = {RES: res, SRES: sres}
         else:
             raise ValueError("These sensitivity orders are not supported.")
 

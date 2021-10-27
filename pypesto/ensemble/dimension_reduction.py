@@ -14,10 +14,11 @@ except ImportError:
 
 
 def get_umap_representation_parameters(
-        ens: Ensemble,
-        n_components: int = 2,
-        normalize_data: bool = False,
-        **kwargs) -> Tuple:
+    ens: Ensemble,
+    n_components: int = 2,
+    normalize_data: bool = False,
+    **kwargs,
+) -> Tuple:
     """
     Compute the representation with reduced dimensionality via umap
     (with a given number of umap components) of the parameter ensemble.
@@ -49,16 +50,17 @@ def get_umap_representation_parameters(
         dataset=ens.x_vectors.transpose(),
         n_components=n_components,
         normalize_data=normalize_data,
-        **kwargs
+        **kwargs,
     )
 
 
 def get_umap_representation_predictions(
-        ens: Union[Ensemble, EnsemblePrediction],
-        prediction_index: int = 0,
-        n_components: int = 2,
-        normalize_data: bool = False,
-        **kwargs) -> Tuple:
+    ens: Union[Ensemble, EnsemblePrediction],
+    prediction_index: int = 0,
+    n_components: int = 2,
+    normalize_data: bool = False,
+    **kwargs,
+) -> Tuple:
     """
     Compute the representation with reduced dimensionality via umap
     (with a given number of umap components) of the ensemble predictions.
@@ -98,15 +100,15 @@ def get_umap_representation_predictions(
         dataset=dataset,
         n_components=n_components,
         normalize_data=normalize_data,
-        **kwargs
+        **kwargs,
     )
 
 
 def get_pca_representation_parameters(
-        ens: Ensemble,
-        n_components: int = 2,
-        rescale_data: bool = True,
-        rescaler: Union[Callable, None] = None
+    ens: Ensemble,
+    n_components: int = 2,
+    rescale_data: bool = True,
+    rescaler: Union[Callable, None] = None,
 ) -> Tuple:
     """
     Compute the representation with reduced dimensionality via principal
@@ -142,16 +144,16 @@ def get_pca_representation_parameters(
         dataset=ens.x_vectors.transpose(),
         n_components=n_components,
         rescale_data=rescale_data,
-        rescaler=rescaler
+        rescaler=rescaler,
     )
 
 
 def get_pca_representation_predictions(
-        ens: Union[Ensemble, EnsemblePrediction],
-        prediction_index: int = 0,
-        n_components: int = 2,
-        rescale_data: bool = True,
-        rescaler: Union[Callable, None] = None
+    ens: Union[Ensemble, EnsemblePrediction],
+    prediction_index: int = 0,
+    n_components: int = 2,
+    rescale_data: bool = True,
+    rescaler: Union[Callable, None] = None,
 ) -> Tuple:
     """
     Compute the representation with reduced dimensionality via principal
@@ -196,15 +198,16 @@ def get_pca_representation_predictions(
         dataset=dataset,
         n_components=n_components,
         rescale_data=rescale_data,
-        rescaler=rescaler
+        rescaler=rescaler,
     )
 
 
 def _get_umap_representation_lowlevel(
-        dataset: np.ndarray,
-        n_components: int = 2,
-        normalize_data: bool = False,
-        **kwargs) -> Tuple:
+    dataset: np.ndarray,
+    n_components: int = 2,
+    normalize_data: bool = False,
+    **kwargs,
+) -> Tuple:
     """
     Compute the representation with reduced dimensionality via principal
     component analysis (with a given number of principal components) of the
@@ -250,10 +253,10 @@ def _get_umap_representation_lowlevel(
 
 
 def _get_pca_representation_lowlevel(
-        dataset: np.ndarray,
-        n_components: int = 2,
-        rescale_data: bool = True,
-        rescaler: Union[Callable, None] = None
+    dataset: np.ndarray,
+    n_components: int = 2,
+    rescale_data: bool = True,
+    rescaler: Union[Callable, None] = None,
 ) -> Tuple:
     """
     Compute the representation with reduced dimensionality via principal

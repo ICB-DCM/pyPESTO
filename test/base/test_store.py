@@ -6,23 +6,47 @@ import pypesto
 import pypesto.profile as profile
 import pypesto.sample as sample
 
-from pypesto.objective.constants import (X, FVAL, GRAD,
-                                         HESS, RES, SRES,
-                                         CHI2, SCHI2, ID, X0,
-                                         FVAL0, N_RES, N_FVAL,
-                                         N_GRAD, N_HESS, N_SRES)
+from pypesto.objective.constants import (
+    X,
+    FVAL,
+    GRAD,
+    HESS,
+    RES,
+    SRES,
+    CHI2,
+    SCHI2,
+    ID,
+    X0,
+    FVAL0,
+    N_RES,
+    N_FVAL,
+    N_GRAD,
+    N_HESS,
+    N_SRES,
+)
 import scipy.optimize as so
 
 import numpy as np
 
 from pypesto.store import (
-    ProblemHDF5Writer, ProblemHDF5Reader, OptimizationResultHDF5Writer,
-    OptimizationResultHDF5Reader, ProfileResultHDF5Writer,
-    ProfileResultHDF5Reader, SamplingResultHDF5Reader,
-    SamplingResultHDF5Writer, read_result, write_result,
-    load_objective_config, optimization_result_from_history)
-from ..visualize import (create_problem, create_optimization_result,
-                         create_petab_problem)
+    ProblemHDF5Writer,
+    ProblemHDF5Reader,
+    OptimizationResultHDF5Writer,
+    OptimizationResultHDF5Reader,
+    ProfileResultHDF5Writer,
+    ProfileResultHDF5Reader,
+    SamplingResultHDF5Reader,
+    SamplingResultHDF5Writer,
+    read_result,
+    write_result,
+    load_objective_config,
+    optimization_result_from_history,
+)
+from ..visualize import (
+    create_problem,
+    create_optimization_result,
+    create_petab_problem,
+)
 
 
 def test_storage_opt_result():
@@ -37,11 +61,13 @@ def test_storage_opt_result():
             for key in opt_res:
                 if isinstance(opt_res[key], np.ndarray):
                     np.testing.assert_array_equal(
-                        opt_res[key],
-                        read_result.optimize_result.list[i][key])
+                        opt_res[key], read_result.optimize_result.list[i][key]
+                    )
                 else:
-                    assert opt_res[key] == \
-                           read_result.optimize_result.list[i][key]
+                    assert (
+                        opt_res[key]
+                        == read_result.optimize_result.list[i][key]
+                    )
 
 
 def test_storage_opt_result_update():
@@ -58,11 +84,13 @@ def test_storage_opt_result_update():
             for key in opt_res:
                 if isinstance(opt_res[key], np.ndarray):
                     np.testing.assert_array_equal(
-                        opt_res[key],
-                        read_result.optimize_result.list[i][key])
+                        opt_res[key], read_result.optimize_result.list[i][key]
+                    )
                 else:
-                    assert opt_res[key] == \
-                           read_result.optimize_result.list[i][key]
+                    assert (
+                        opt_res[key]
+                        == read_result.optimize_result.list[i][key]
+                    )
 
 
 def test_storage_problem():
@@ -73,77 +101,93 @@ def test_storage_problem():
         problem_writer.write(problem)
         problem_reader = ProblemHDF5Reader(fn)
         read_problem = problem_reader.read()
-        problem_attrs = [value for name, value in
-                         vars(ProblemHDF5Writer).items() if
-                         not name.startswith('_') and not callable(value)]
+        problem_attrs = [
+            value
+            for name, value in vars(ProblemHDF5Writer).items()
+            if not name.startswith("_") and not callable(value)
+        ]
         for attr in problem_attrs:
             if isinstance(problem.__dict__[attr], np.ndarray):
                 np.testing.assert_array_equal(
-                    problem.__dict__[attr],
-                    read_problem.__dict__[attr])
+                    problem.__dict__[attr], read_problem.__dict__[attr]
+                )
                 assert isinstance(read_problem.__dict__[attr], np.ndarray)
             else:
-                assert problem.__dict__[attr] == \
-                       read_problem.__dict__[attr]
+                assert problem.__dict__[attr] == read_problem.__dict__[attr]
                 assert not isinstance(read_problem.__dict__[attr], np.ndarray)
 
 
 def test_storage_trace():
-    objective1 = pypesto.Objective(fun=so.rosen,
-                                   grad=so.rosen_der,
-                                   hess=so.rosen_hess)
-    objective2 = pypesto.Objective(fun=so.rosen,
-                                   grad=so.rosen_der,
-                                   hess=so.rosen_hess)
+    objective1 = pypesto.Objective(
+        fun=so.rosen, grad=so.rosen_der, hess=so.rosen_hess
+    )
+    objective2 = pypesto.Objective(
+        fun=so.rosen, grad=so.rosen_der, hess=so.rosen_hess
+    )
     dim_full = 10
     lb = -5 * np.ones((dim_full, 1))
     ub = 5 * np.ones((dim_full, 1))
     n_starts = 5
-    startpoints = pypesto.startpoint.latin_hypercube(n_starts=n_starts,
-                                                     lb=lb,
-                                                     ub=ub)
-    problem1 = pypesto.Problem(objective=objective1, lb=lb, ub=ub,
-                               x_guesses=startpoints)
-    problem2 = pypesto.Problem(objective=objective2, lb=lb, ub=ub,
-                               x_guesses=startpoints)
+    startpoints = pypesto.startpoint.latin_hypercube(
+        n_starts=n_starts, lb=lb, ub=ub
+    )
+    problem1 = pypesto.Problem(
+        objective=objective1, lb=lb, ub=ub, x_guesses=startpoints
+    )
+    problem2 = pypesto.Problem(
+        objective=objective2, lb=lb, ub=ub, x_guesses=startpoints
+    )
 
-    optimizer1 = pypesto.optimize.ScipyOptimizer(options={'maxiter': 10})
-    optimizer2 = pypesto.optimize.ScipyOptimizer(options={'maxiter': 10})
+    optimizer1 = pypesto.optimize.ScipyOptimizer(options={"maxiter": 10})
+    optimizer2 = pypesto.optimize.ScipyOptimizer(options={"maxiter": 10})
 
     with tempfile.TemporaryDirectory(dir=".") as tmpdirname:
         _, fn = tempfile.mkstemp(".hdf5", dir=f"{tmpdirname}")
 
-        history_options_hdf5 = pypesto.HistoryOptions(trace_record=True,
-                                                      storage_file=fn)
+        history_options_hdf5 = pypesto.HistoryOptions(
+            trace_record=True, storage_file=fn
+        )
         # optimize with history saved to hdf5
         result_hdf5 = pypesto.optimize.minimize(
-            problem=problem1, optimizer=optimizer1,
-            n_starts=n_starts, history_options=history_options_hdf5)
+            problem=problem1,
+            optimizer=optimizer1,
+            n_starts=n_starts,
+            history_options=history_options_hdf5,
+        )
 
         # optimizing with history saved in memory
         history_options_memory = pypesto.HistoryOptions(trace_record=True)
         result_memory = pypesto.optimize.minimize(
-            problem=problem2, optimizer=optimizer2,
-            n_starts=n_starts, history_options=history_options_memory)
+            problem=problem2,
+            optimizer=optimizer2,
+            n_starts=n_starts,
+            history_options=history_options_memory,
+        )
 
         history_entries = [X, FVAL, GRAD, HESS, RES, SRES, CHI2, SCHI2]
-        assert len(result_hdf5.optimize_result.list) == \
-            len(result_memory.optimize_result.list)
+        assert len(result_hdf5.optimize_result.list) == len(
+            result_memory.optimize_result.list
+        )
         for mem_res in result_memory.optimize_result.list:
             for hdf_res in result_hdf5.optimize_result.list:
-                if mem_res['id'] == hdf_res['id']:
+                if mem_res["id"] == hdf_res["id"]:
                     for entry in history_entries:
-                        hdf5_entry_trace = getattr(hdf_res['history'],
-                                                   f'get_{entry}_trace')()
+                        hdf5_entry_trace = getattr(
+                            hdf_res["history"], f"get_{entry}_trace"
+                        )()
                         for iteration in range(len(hdf5_entry_trace)):
                             # comparing nan and None difficult
-                            if hdf5_entry_trace[iteration] is None or np.isnan(
-                                    hdf5_entry_trace[iteration]).all():
+                            if (
+                                hdf5_entry_trace[iteration] is None
+                                or np.isnan(hdf5_entry_trace[iteration]).all()
+                            ):
                                 continue
                             np.testing.assert_array_equal(
-                                getattr(mem_res['history'],
-                                        f'get_{entry}_trace')()[iteration],
-                                hdf5_entry_trace[iteration])
+                                getattr(
+                                    mem_res["history"], f"get_{entry}_trace"
+                                )()[iteration],
+                                hdf5_entry_trace[iteration],
+                            )
 
 
 def test_storage_profiling():
@@ -153,29 +197,33 @@ def test_storage_profiling():
     and pypesto.store.ProfileResultHDF5Reader. Tests all entries
     aside from times and message.
     """
-    objective = pypesto.Objective(fun=so.rosen,
-                                  grad=so.rosen_der,
-                                  hess=so.rosen_hess)
+    objective = pypesto.Objective(
+        fun=so.rosen, grad=so.rosen_der, hess=so.rosen_hess
+    )
     dim_full = 10
     lb = -5 * np.ones((dim_full, 1))
     ub = 5 * np.ones((dim_full, 1))
     n_starts = 5
-    startpoints = pypesto.startpoint.latin_hypercube(n_starts=n_starts,
-                                                     lb=lb,
-                                                     ub=ub)
-    problem = pypesto.Problem(objective=objective, lb=lb, ub=ub,
-                              x_guesses=startpoints)
+    startpoints = pypesto.startpoint.latin_hypercube(
+        n_starts=n_starts, lb=lb, ub=ub
+    )
+    problem = pypesto.Problem(
+        objective=objective, lb=lb, ub=ub, x_guesses=startpoints
+    )
 
     optimizer = pypesto.optimize.ScipyOptimizer()
 
     result_optimization = pypesto.optimize.minimize(
-        problem=problem, optimizer=optimizer,
-        n_starts=n_starts)
+        problem=problem, optimizer=optimizer, n_starts=n_starts
+    )
     profile_original = profile.parameter_profile(
-        problem=problem, result=result_optimization,
-        profile_index=[0], optimizer=optimizer)
+        problem=problem,
+        result=result_optimization,
+        profile_index=[0],
+        optimizer=optimizer,
+    )
 
-    fn = 'test_file.hdf5'
+    fn = "test_file.hdf5"
     try:
         pypesto_profile_writer = ProfileResultHDF5Writer(fn)
         pypesto_profile_writer.write(profile_original)
@@ -183,21 +231,25 @@ def test_storage_profiling():
         profile_read = pypesto_profile_reader.read()
 
         for key in profile_original.profile_result.list[0][0].keys():
-            if profile_original.profile_result.list[0][0].keys is \
-                    None or key == 'time_path':
+            if (
+                profile_original.profile_result.list[0][0].keys is None
+                or key == "time_path"
+            ):
                 continue
             elif isinstance(
-                    profile_original.profile_result.list[0][0][key],
-                    np.ndarray):
+                profile_original.profile_result.list[0][0][key], np.ndarray
+            ):
                 np.testing.assert_array_equal(
                     profile_original.profile_result.list[0][0][key],
-                    profile_read.profile_result.list[0][0][key]
+                    profile_read.profile_result.list[0][0][key],
                 )
             elif isinstance(
-                    profile_original.profile_result.list[0][0][key],
-                    int):
-                assert profile_original.profile_result.list[0][0][key] == \
-                       profile_read.profile_result.list[0][0][key]
+                profile_original.profile_result.list[0][0][key], int
+            ):
+                assert (
+                    profile_original.profile_result.list[0][0][key]
+                    == profile_read.profile_result.list[0][0][key]
+                )
     finally:
         if os.path.exists(fn):
             os.remove(fn)
@@ -210,35 +262,34 @@ def test_storage_sampling():
     and pypesto.store.SamplingResultHDF5Reader. Tests all entries
     aside from time and message.
     """
-    objective = pypesto.Objective(fun=so.rosen,
-                                  grad=so.rosen_der,
-                                  hess=so.rosen_hess)
+    objective = pypesto.Objective(
+        fun=so.rosen, grad=so.rosen_der, hess=so.rosen_hess
+    )
     dim_full = 10
     lb = -5 * np.ones((dim_full, 1))
     ub = 5 * np.ones((dim_full, 1))
     n_starts = 5
-    startpoints = pypesto.startpoint.latin_hypercube(n_starts=n_starts,
-                                                     lb=lb,
-                                                     ub=ub)
-    problem = pypesto.Problem(objective=objective, lb=lb, ub=ub,
-                              x_guesses=startpoints)
+    startpoints = pypesto.startpoint.latin_hypercube(
+        n_starts=n_starts, lb=lb, ub=ub
+    )
+    problem = pypesto.Problem(
+        objective=objective, lb=lb, ub=ub, x_guesses=startpoints
+    )
 
     optimizer = pypesto.optimize.ScipyOptimizer()
 
     result_optimization = pypesto.optimize.minimize(
-        problem=problem, optimizer=optimizer,
-        n_starts=n_starts)
-    x_0 = result_optimization.optimize_result.list[0]['x']
-    sampler = sample.AdaptiveParallelTemperingSampler(
-        internal_sampler=sample.AdaptiveMetropolisSampler(),
-        n_chains=1
+        problem=problem, optimizer=optimizer, n_starts=n_starts
     )
-    sample_original = sample.sample(problem=problem,
-                                    sampler=sampler,
-                                    n_samples=100,
-                                    x0=[x_0])
+    x_0 = result_optimization.optimize_result.list[0]["x"]
+    sampler = sample.AdaptiveParallelTemperingSampler(
+        internal_sampler=sample.AdaptiveMetropolisSampler(), n_chains=1
+    )
+    sample_original = sample.sample(
+        problem=problem, sampler=sampler, n_samples=100, x0=[x_0]
+    )
 
-    fn = 'test_file.hdf5'
+    fn = "test_file.hdf5"
     try:
         pypesto_sample_writer = SamplingResultHDF5Writer(fn)
         pypesto_sample_writer.write(sample_original)
@@ -246,8 +297,7 @@ def test_storage_sampling():
         sample_read = pypesto_sample_reader.read()
 
         for key in sample_original.sample_result.keys():
-            if sample_original.sample_result[key] is None \
-                    or key == 'time':
+            if sample_original.sample_result[key] is None or key == "time":
                 continue
             elif isinstance(sample_original.sample_result[key], np.ndarray):
                 np.testing.assert_array_equal(
@@ -271,9 +321,9 @@ def test_storage_all():
     is know to not work completely. Also excludes testing the history
     key of an optimization result.
     """
-    objective = pypesto.Objective(fun=so.rosen,
-                                  grad=so.rosen_der,
-                                  hess=so.rosen_hess)
+    objective = pypesto.Objective(
+        fun=so.rosen, grad=so.rosen_der, hess=so.rosen_hess
+    )
     dim_full = 10
     lb = -5 * np.ones((dim_full, 1))
     ub = 5 * np.ones((dim_full, 1))
@@ -283,61 +333,60 @@ def test_storage_all():
     optimizer = pypesto.optimize.ScipyOptimizer()
     # Optimization
     result = pypesto.optimize.minimize(
-        problem=problem, optimizer=optimizer,
-        n_starts=n_starts)
+        problem=problem, optimizer=optimizer, n_starts=n_starts
+    )
     # Profiling
     result = profile.parameter_profile(
-        problem=problem, result=result,
-        profile_index=[0], optimizer=optimizer)
+        problem=problem, result=result, profile_index=[0], optimizer=optimizer
+    )
     # Sampling
 
     sampler = sample.AdaptiveMetropolisSampler()
-    result = sample.sample(problem=problem,
-                           sampler=sampler,
-                           n_samples=100,
-                           result=result)
+    result = sample.sample(
+        problem=problem, sampler=sampler, n_samples=100, result=result
+    )
     # Read and write
-    filename = 'test_file.hdf5'
+    filename = "test_file.hdf5"
     try:
-        write_result(result=result,
-                     filename=filename)
+        write_result(result=result, filename=filename)
         result_read = read_result(filename=filename)
 
         # test optimize
         for i, opt_res in enumerate(result.optimize_result.list):
             for key in opt_res:
-                if key == 'history':
+                if key == "history":
                     continue
                 if isinstance(opt_res[key], np.ndarray):
                     np.testing.assert_array_equal(
-                        opt_res[key],
-                        result_read.optimize_result.list[i][key])
+                        opt_res[key], result_read.optimize_result.list[i][key]
+                    )
                 else:
-                    assert opt_res[key] == \
-                           result_read.optimize_result.list[i][key]
+                    assert (
+                        opt_res[key]
+                        == result_read.optimize_result.list[i][key]
+                    )
 
         # test profile
         for key in result.profile_result.list[0][0].keys():
-            if result.profile_result.list[0][0].keys is \
-                    None or key == 'time_path':
+            if (
+                result.profile_result.list[0][0].keys is None
+                or key == "time_path"
+            ):
                 continue
-            elif isinstance(
-                    result.profile_result.list[0][0][key],
-                    np.ndarray):
+            elif isinstance(result.profile_result.list[0][0][key], np.ndarray):
                 np.testing.assert_array_equal(
                     result.profile_result.list[0][0][key],
-                    result_read.profile_result.list[0][0][key]
+                    result_read.profile_result.list[0][0][key],
                 )
-            elif isinstance(
-                    result.profile_result.list[0][0][key],
-                    int):
-                assert result.profile_result.list[0][0][key] == \
-                       result_read.profile_result.list[0][0][key]
+            elif isinstance(result.profile_result.list[0][0][key], int):
+                assert (
+                    result.profile_result.list[0][0][key]
+                    == result_read.profile_result.list[0][0][key]
+                )
 
         # test sample
         for key in result.sample_result.keys():
-            if result.sample_result[key] is None \
-                    or key == 'time':
+            if result.sample_result[key] is None or key == "time":
                 continue
             elif isinstance(result.sample_result[key], np.ndarray):
                 np.testing.assert_array_equal(
@@ -360,11 +409,11 @@ def test_storage_objective_config():
     of the objective function.
     """
     # create a problem with a function objective
-    problem_fun = create_problem(2, x_names=['a', 'b'])
+    problem_fun = create_problem(2, x_names=["a", "b"])
     # create a problem with amici Objective
     problem_amici = create_petab_problem()
     # put together into aggregated objective
-    problem_agg = create_problem(2, x_names=['a', 'b'])
+    problem_agg = create_problem(2, x_names=["a", "b"])
     objective_agg = pypesto.objective.AggregatedObjective(
         objectives=[problem_fun.objective, problem_amici.objective]
     )
@@ -373,7 +422,7 @@ def test_storage_objective_config():
     config_amici = problem_amici.objective.get_config()
     config_agg = objective_agg.get_config()
 
-    fn = 'test_file.hdf5'
+    fn = "test_file.hdf5"
     try:
         writer = ProblemHDF5Writer(fn)
         writer.write(problem=problem_fun, overwrite=True)
@@ -389,11 +438,12 @@ def test_storage_objective_config():
         for key in config_amici:
             assert config_amici[key] == config_amici_r[key]
         for key in config_agg_r:
-            if key == 'type':
+            if key == "type":
                 assert config_agg[key] == config_agg_r[key]
             else:
-                assert len(config_agg_r[key]) == len(config_fun_r) \
-                       or len(config_agg_r[key]) == len(config_amici_r)
+                assert len(config_agg_r[key]) == len(config_fun_r) or len(
+                    config_agg_r[key]
+                ) == len(config_amici_r)
 
     finally:
         if os.path.exists(fn):
@@ -405,26 +455,43 @@ def test_result_from_hdf5_history():
     with tempfile.TemporaryDirectory(dir=".") as tmpdirname:
         _, fn = tempfile.mkstemp(".hdf5", dir=f"{tmpdirname}")
 
-        history_options_hdf5 = pypesto.HistoryOptions(trace_record=True,
-                                                      storage_file=fn)
+        history_options_hdf5 = pypesto.HistoryOptions(
+            trace_record=True, storage_file=fn
+        )
         # optimize with history saved to hdf5
         result = pypesto.optimize.minimize(
-            problem=problem, n_starts=1,
-            history_options=history_options_hdf5)
+            problem=problem, n_starts=1, history_options=history_options_hdf5
+        )
 
         result_from_hdf5 = optimization_result_from_history(fn)
 
         # Currently 'exitflag', 'time' and 'message' are not loaded.
-        arguments = [ID, X, FVAL, GRAD, HESS, RES, SRES,
-                     N_FVAL, N_GRAD, N_HESS, N_RES, N_SRES, X0, FVAL0]
+        arguments = [
+            ID,
+            X,
+            FVAL,
+            GRAD,
+            HESS,
+            RES,
+            SRES,
+            N_FVAL,
+            N_GRAD,
+            N_HESS,
+            N_RES,
+            N_SRES,
+            X0,
+            FVAL0,
+        ]
         for key in arguments:
             if result.optimize_result.list[0][key] is None:
                 assert result_from_hdf5.optimize_result.list[0][key] is None
             elif isinstance(result.optimize_result.list[0][key], np.ndarray):
                 np.testing.assert_almost_equal(
                     result.optimize_result.list[0][key],
-                    result_from_hdf5.optimize_result.list[0][key]
+                    result_from_hdf5.optimize_result.list[0][key],
                 )
             else:
-                assert result.optimize_result.list[0][key] == \
-                       result_from_hdf5.optimize_result.list[0][key]
+                assert (
+                    result.optimize_result.list[0][key]
+                    == result_from_hdf5.optimize_result.list[0][key]
+                )

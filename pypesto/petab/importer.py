@@ -12,8 +12,7 @@ from ..problem import Problem
 from ..objective import AmiciObjective, AmiciObjectBuilder, AggregatedObjective
 from ..predict import AmiciPredictor, PredictionResult
 from ..predict.constants import CONDITION_SEP
-from ..objective.priors import NegLogParameterPriors, \
-    get_parameter_prior_dict
+from ..objective.priors import NegLogParameterPriors, get_parameter_prior_dict
 from ..objective.constants import MODE_FUN, MODE_RES
 from ..startpoint import FunctionStartpoints
 
@@ -33,11 +32,13 @@ logger = logging.getLogger(__name__)
 class PetabImporter(AmiciObjectBuilder):
     MODEL_BASE_DIR = "amici_models"
 
-    def __init__(self,
-                 petab_problem: 'petab.Problem',
-                 output_folder: str = None,
-                 model_name: str = None,
-                 validate_petab: bool = True):
+    def __init__(
+        self,
+        petab_problem: "petab.Problem",
+        output_folder: str = None,
+        model_name: str = None,
+        validate_petab: bool = True,
+    ):
         """
         petab_problem:
             Managing access to the model and data.
@@ -68,9 +69,11 @@ class PetabImporter(AmiciObjectBuilder):
         self.model_name = model_name
 
     @staticmethod
-    def from_yaml(yaml_config: Union[dict, str],
-                  output_folder: str = None,
-                  model_name: str = None) -> 'PetabImporter':
+    def from_yaml(
+        yaml_config: Union[dict, str],
+        output_folder: str = None,
+        model_name: str = None,
+    ) -> "PetabImporter":
         """
         Simplified constructor using a petab yaml file.
         """
@@ -79,7 +82,8 @@ class PetabImporter(AmiciObjectBuilder):
         return PetabImporter(
             petab_problem=petab_problem,
             output_folder=output_folder,
-            model_name=model_name)
+            model_name=model_name,
+        )
 
     def check_gradients(
         self,
@@ -119,29 +123,41 @@ class PetabImporter(AmiciObjectBuilder):
             modes = [mode]
 
         if multi_eps is None:
-            multi_eps = np.array([10**(-i) for i in range(3, 9)])
+            multi_eps = np.array([10 ** (-i) for i in range(3, 9)])
 
         for mode in modes:
             try:
-                dfs.append(objective.check_grad_multi_eps(
-                            free_indices, *args, **kwargs,
-                            mode=mode, multi_eps=multi_eps))
+                dfs.append(
+                    objective.check_grad_multi_eps(
+                        free_indices,
+                        *args,
+                        **kwargs,
+                        mode=mode,
+                        multi_eps=multi_eps,
+                    )
+                )
             except (RuntimeError, ValueError):
                 # Might happen in case PEtab problem not well defined or
                 # fails for specified tolerances in forward sensitivities
                 return False
 
-        return all([
-            any([
-                np.all((mode_df.rel_err.values < rtol) |
-                       (mode_df.abs_err.values < atol)),
-            ])
-            for mode_df in dfs
-        ])
+        return all(
+            [
+                any(
+                    [
+                        np.all(
+                            (mode_df.rel_err.values < rtol)
+                            | (mode_df.abs_err.values < atol)
+                        ),
+                    ]
+                )
+                for mode_df in dfs
+            ]
+        )
 
-    def create_model(self,
-                     force_compile: bool = False,
-                     **kwargs) -> 'amici.Model':
+    def create_model(
+        self, force_compile: bool = False, **kwargs
+    ) -> "amici.Model":
         """
         Import amici model. If necessary or force_compile is True, compile
         first.
@@ -160,11 +176,13 @@ class PetabImporter(AmiciObjectBuilder):
         kwargs: Extra arguments passed to amici.SbmlImporter.sbml2amici
         """
         # courtesy check whether target is folder
-        if os.path.exists(self.output_folder) \
-                and not os.path.isdir(self.output_folder):
+        if os.path.exists(self.output_folder) and not os.path.isdir(
+            self.output_folder
+        ):
             raise AssertionError(
                 f"Refusing to remove {self.output_folder} for model "
-                f"compilation: Not a folder.")
+                f"compilation: Not a folder."
+            )
 
         # add module to path
         if self.output_folder not in sys.path:
@@ -172,23 +190,27 @@ class PetabImporter(AmiciObjectBuilder):
 
         # compile
         if self._must_compile(force_compile):
-            logger.info(f"Compiling amici model to folder "
-                        f"{self.output_folder}.")
+            logger.info(
+                f"Compiling amici model to folder " f"{self.output_folder}."
+            )
             self.compile_model(**kwargs)
         else:
-            logger.info(f"Using existing amici model in folder "
-                        f"{self.output_folder}.")
+            logger.info(
+                f"Using existing amici model in folder "
+                f"{self.output_folder}."
+            )
 
         return self._create_model()
 
-    def _create_model(self) -> 'amici.Model':
+    def _create_model(self) -> "amici.Model":
         """
         No checks, no compilation, just load the model module and return
         the model.
         """
         # load moduĺe
-        module = amici.import_model_module(module_name=self.model_name,
-                                           module_path=self.output_folder)
+        module = amici.import_model_module(
+            module_name=self.model_name, module_path=self.output_folder
+        )
         model = module.getModel()
 
         return model
@@ -202,8 +224,9 @@ class PetabImporter(AmiciObjectBuilder):
             return True
 
         # folder does not exist
-        if not os.path.exists(self.output_folder) or \
-                not os.listdir(self.output_folder):
+        if not os.path.exists(self.output_folder) or not os.listdir(
+            self.output_folder
+        ):
             return True
 
         # try to import (in particular checks version)
@@ -237,9 +260,10 @@ class PetabImporter(AmiciObjectBuilder):
             observable_table=self.petab_problem.observable_df,
             model_name=self.model_name,
             model_output_dir=self.output_folder,
-            **kwargs)
+            **kwargs,
+        )
 
-    def create_solver(self, model: 'amici.Model' = None) -> 'amici.Solver':
+    def create_solver(self, model: "amici.Model" = None) -> "amici.Solver":
         """
         Return model solver.
         """
@@ -251,10 +275,8 @@ class PetabImporter(AmiciObjectBuilder):
         return solver
 
     def create_edatas(
-            self,
-            model: 'amici.Model' = None,
-            simulation_conditions=None
-    ) -> List['amici.ExpData']:
+        self, model: "amici.Model" = None, simulation_conditions=None
+    ) -> List["amici.ExpData"]:
         """
         Create list of amici.ExpData objects.
         """
@@ -265,15 +287,16 @@ class PetabImporter(AmiciObjectBuilder):
         return amici.petab_objective.create_edatas(
             amici_model=model,
             petab_problem=self.petab_problem,
-            simulation_conditions=simulation_conditions)
+            simulation_conditions=simulation_conditions,
+        )
 
     def create_objective(
-            self,
-            model: 'amici.Model' = None,
-            solver: 'amici.Solver' = None,
-            edatas: Sequence['amici.ExpData'] = None,
-            force_compile: bool = False,
-            **kwargs
+        self,
+        model: "amici.Model" = None,
+        solver: "amici.Solver" = None,
+        edatas: Sequence["amici.ExpData"] = None,
+        force_compile: bool = False,
+        **kwargs,
     ) -> AmiciObjective:
         """Create a :class:`pypesto.AmiciObjective`.
 
@@ -297,7 +320,8 @@ class PetabImporter(AmiciObjectBuilder):
         """
         # get simulation conditions
         simulation_conditions = petab.get_simulation_conditions(
-            self.petab_problem.measurement_df)
+            self.petab_problem.measurement_df
+        )
 
         # create model
         if model is None:
@@ -308,49 +332,58 @@ class PetabImporter(AmiciObjectBuilder):
         # create conditions and edatas from measurement data
         if edatas is None:
             edatas = self.create_edatas(
-                model=model,
-                simulation_conditions=simulation_conditions)
+                model=model, simulation_conditions=simulation_conditions
+            )
 
         parameter_mapping = amici.petab_objective.create_parameter_mapping(
             petab_problem=self.petab_problem,
             simulation_conditions=simulation_conditions,
             scaled_parameters=True,
-            amici_model=model)
+            amici_model=model,
+        )
 
         par_ids = self.petab_problem.x_ids
 
         # fill in dummy parameters (this is needed since some objective
         #  initialization e.g. checks for preeq parameters)
-        problem_parameters = {key: val for key, val in zip(
-            self.petab_problem.x_ids,
-            self.petab_problem.x_nominal_scaled)}
+        problem_parameters = {
+            key: val
+            for key, val in zip(
+                self.petab_problem.x_ids, self.petab_problem.x_nominal_scaled
+            )
+        }
         amici.parameter_mapping.fill_in_parameters(
             edatas=edatas,
             problem_parameters=problem_parameters,
             scaled_parameters=True,
             parameter_mapping=parameter_mapping,
-            amici_model=model)
+            amici_model=model,
+        )
 
         # create objective
         obj = AmiciObjective(
-            amici_model=model, amici_solver=solver, edatas=edatas,
-            x_ids=par_ids, x_names=par_ids,
+            amici_model=model,
+            amici_solver=solver,
+            edatas=edatas,
+            x_ids=par_ids,
+            x_names=par_ids,
             parameter_mapping=parameter_mapping,
             amici_object_builder=self,
-            **kwargs)
+            **kwargs,
+        )
 
         return obj
 
     def create_predictor(
-            self,
-            objective: AmiciObjective = None,
-            amici_output_fields: Sequence[str] = None,
-            post_processor: Union[Callable, None] = None,
-            post_processor_sensi: Union[Callable, None] = None,
-            post_processor_time: Union[Callable, None] = None,
-            max_chunk_size: Union[int, None] = None,
-            output_ids: Sequence[str] = None,
-            condition_ids: Sequence[str] = None,
+        self,
+        objective: AmiciObjective = None,
+        amici_output_fields: Sequence[str] = None,
+        post_processor: Union[Callable, None] = None,
+        post_processor_sensi: Union[Callable, None] = None,
+        post_processor_time: Union[Callable, None] = None,
+        max_chunk_size: Union[int, None] = None,
+        output_ids: Sequence[str] = None,
+        condition_ids: Sequence[str] = None,
     ) -> AmiciPredictor:
         """Create a :class:`pypesto.predict.AmiciPredictor`.
 
@@ -406,18 +439,19 @@ class PetabImporter(AmiciObjectBuilder):
 
         # create a identifiers of preequilibration and simulation condition ids
         # which can then be stored in the prediction result
-        edata_conditions = objective.amici_object_builder.petab_problem.\
-            get_simulation_conditions_from_measurement_df()
+        edata_conditions = (
+            objective.amici_object_builder.petab_problem.get_simulation_conditions_from_measurement_df()
+        )
         if PREEQUILIBRATION_CONDITION_ID not in list(edata_conditions.columns):
-            preeq_dummy = [''] * edata_conditions.shape[0]
+            preeq_dummy = [""] * edata_conditions.shape[0]
             edata_conditions[PREEQUILIBRATION_CONDITION_ID] = preeq_dummy
         edata_conditions.drop_duplicates(inplace=True)
 
         if condition_ids is None:
             condition_ids = [
-                edata_conditions.loc[id, PREEQUILIBRATION_CONDITION_ID] +
-                CONDITION_SEP + edata_conditions.loc[id,
-                                                     SIMULATION_CONDITION_ID]
+                edata_conditions.loc[id, PREEQUILIBRATION_CONDITION_ID]
+                + CONDITION_SEP
+                + edata_conditions.loc[id, SIMULATION_CONDITION_ID]
                 for id in edata_conditions.index
             ]
 
@@ -430,7 +464,8 @@ class PetabImporter(AmiciObjectBuilder):
             post_processor_time=post_processor_time,
             max_chunk_size=max_chunk_size,
             output_ids=output_ids,
-            condition_ids=condition_ids)
+            condition_ids=condition_ids,
+        )
 
         return predictor
 
@@ -446,25 +481,31 @@ class PetabImporter(AmiciObjectBuilder):
 
             for i, x_id in enumerate(self.petab_problem.x_ids):
 
-                prior_type_entry = self.petab_problem.\
-                    parameter_df.loc[x_id, petab.OBJECTIVE_PRIOR_TYPE]
+                prior_type_entry = self.petab_problem.parameter_df.loc[
+                    x_id, petab.OBJECTIVE_PRIOR_TYPE
+                ]
 
-                if (isinstance(prior_type_entry, str)
-                        and prior_type_entry != petab.PARAMETER_SCALE_UNIFORM):
+                if (
+                    isinstance(prior_type_entry, str)
+                    and prior_type_entry != petab.PARAMETER_SCALE_UNIFORM
+                ):
 
-                    prior_params = [float(param) for param in
-                                    self.petab_problem.parameter_df.
-                                    loc[x_id, petab.OBJECTIVE_PRIOR_PARAMETERS]
-                                    .split(';')]
+                    prior_params = [
+                        float(param)
+                        for param in self.petab_problem.parameter_df.loc[
+                            x_id, petab.OBJECTIVE_PRIOR_PARAMETERS
+                        ].split(";")
+                    ]
 
-                    scale = self.petab_problem.\
-                        parameter_df.loc[x_id, petab.PARAMETER_SCALE]
+                    scale = self.petab_problem.parameter_df.loc[
+                        x_id, petab.PARAMETER_SCALE
+                    ]
 
                     prior_list.append(
-                        get_parameter_prior_dict(i,
-                                                 prior_type_entry,
-                                                 prior_params,
-                                                 scale))
+                        get_parameter_prior_dict(
+                            i, prior_type_entry, prior_params, scale
+                        )
+                    )
 
         if len(prior_list):
             return NegLogParameterPriors(prior_list)
@@ -477,20 +518,24 @@ class PetabImporter(AmiciObjectBuilder):
         initializationPrior. Returns None, if no initializationPrior
         is specified.
         """
-        if petab.INITIALIZATION_PRIOR_TYPE \
-                not in self.petab_problem.parameter_df:
+        if (
+            petab.INITIALIZATION_PRIOR_TYPE
+            not in self.petab_problem.parameter_df
+        ):
             return None
 
         def startpoint_method(n_starts: int, **kwargs):
             return petab.sample_parameter_startpoints(
-                self.petab_problem.parameter_df,
-                n_starts=n_starts)
+                self.petab_problem.parameter_df, n_starts=n_starts
+            )
 
         return FunctionStartpoints(function=startpoint_method)
 
     def create_problem(
-            self, objective: AmiciObjective = None,
-            x_guesses: Optional[Iterable[float]] = None, **kwargs
+        self,
+        objective: AmiciObjective = None,
+        x_guesses: Optional[Iterable[float]] = None,
+        **kwargs,
     ) -> Problem:
         """Create a :class:`pypesto.Problem`.
 
@@ -519,9 +564,10 @@ class PetabImporter(AmiciObjectBuilder):
         if prior is not None:
             objective = AggregatedObjective([objective, prior])
 
-        x_scales = \
-            [self.petab_problem.parameter_df.loc[x_id, petab.PARAMETER_SCALE]
-                for x_id in self.petab_problem.x_ids]
+        x_scales = [
+            self.petab_problem.parameter_df.loc[x_id, petab.PARAMETER_SCALE]
+            for x_id in self.petab_problem.x_ids
+        ]
 
         problem = Problem(
             objective=objective,
@@ -533,13 +579,13 @@ class PetabImporter(AmiciObjectBuilder):
             startpoint_method=self.create_startpoint_method(),
             x_names=self.petab_problem.x_ids,
             x_scales=x_scales,
-            x_priors_defs=prior)
+            x_priors_defs=prior,
+        )
 
         return problem
 
     def rdatas_to_measurement_df(
-            self, rdatas: Sequence['amici.ReturnData'],
-            model: 'amici.Model' = None
+        self, rdatas: Sequence["amici.ReturnData"], model: "amici.Model" = None
     ) -> pd.DataFrame:
         """
         Create a measurement dataframe in the petab format from
@@ -566,22 +612,21 @@ class PetabImporter(AmiciObjectBuilder):
         measurement_df = self.petab_problem.measurement_df
 
         return amici.petab_objective.rdatas_to_measurement_df(
-            rdatas, model, measurement_df)
+            rdatas, model, measurement_df
+        )
 
     def rdatas_to_simulation_df(
-            self, rdatas: Sequence['amici.ReturnData'],
-            model: 'amici.Model' = None
+        self, rdatas: Sequence["amici.ReturnData"], model: "amici.Model" = None
     ) -> pd.DataFrame:
         """Same as `rdatas_to_measurement_df`, execpt a petab simulation
         dataframe is created, i.e. the measurement column label is adjusted.
         """
         return self.rdatas_to_measurement_df(rdatas, model).rename(
-            columns={petab.MEASUREMENT: petab.SIMULATION})
+            columns={petab.MEASUREMENT: petab.SIMULATION}
+        )
 
     def prediction_to_petab_measurement_df(
-            self,
-            prediction: PredictionResult,
-            predictor: AmiciPredictor = None
+        self, prediction: PredictionResult, predictor: AmiciPredictor = None
     ) -> pd.DataFrame:
         """
         If a PEtab problem is simulated without post-processing, then the
@@ -603,8 +648,7 @@ class PetabImporter(AmiciObjectBuilder):
         # create rdata-like dicts from the prediction result
         rdatas = []
         for condition in prediction.conditions:
-            rdatas.append({'t': condition.timepoints,
-                           'y': condition.output})
+            rdatas.append({"t": condition.timepoints, "y": condition.output})
 
         # add an AMICI model, if possible
         model = None
@@ -614,22 +658,20 @@ class PetabImporter(AmiciObjectBuilder):
         return self.rdatas_to_measurement_df(rdatas, model)
 
     def prediction_to_petab_simulation_df(
-            self,
-            prediction: PredictionResult,
-            predictor: AmiciPredictor = None
+        self, prediction: PredictionResult, predictor: AmiciPredictor = None
     ) -> pd.DataFrame:
         """Same as `prediction_to_petab_measurement_df`, except a PEtab
         simulation dataframe is created, i.e. the measurement column label is
         adjusted.
         """
         return self.prediction_to_petab_measurement_df(
-            prediction, predictor).rename(
-            columns={petab.MEASUREMENT: petab.SIMULATION})
+            prediction, predictor
+        ).rename(columns={petab.MEASUREMENT: petab.SIMULATION})
 
 
 def _find_output_folder_name(
-        petab_problem: 'petab.Problem',
-        model_name: str,
+    petab_problem: "petab.Problem",
+    model_name: str,
 ) -> str:
     """
     Find a name for storing the compiled amici model in. If available,
@@ -639,11 +681,13 @@ def _find_output_folder_name(
     subdirectory of the current directory.
     """
     # check whether location for amici model is a file
-    if os.path.exists(PetabImporter.MODEL_BASE_DIR) and \
-            not os.path.isdir(PetabImporter.MODEL_BASE_DIR):
+    if os.path.exists(PetabImporter.MODEL_BASE_DIR) and not os.path.isdir(
+        PetabImporter.MODEL_BASE_DIR
+    ):
         raise AssertionError(
             f"{PetabImporter.MODEL_BASE_DIR} exists and is not a directory, "
-            f"thus cannot create a directory for the compiled amici model.")
+            f"thus cannot create a directory for the compiled amici model."
+        )
 
     # create base directory if non-existent
     if not os.path.exists(PetabImporter.MODEL_BASE_DIR):
@@ -656,11 +700,13 @@ def _find_output_folder_name(
 
     if sbml_model_id:
         output_folder = os.path.abspath(
-            os.path.join(PetabImporter.MODEL_BASE_DIR, sbml_model_id))
+            os.path.join(PetabImporter.MODEL_BASE_DIR, sbml_model_id)
+        )
     else:
         # create random folder name
         output_folder = os.path.abspath(
-            tempfile.mkdtemp(dir=PetabImporter.MODEL_BASE_DIR))
+            tempfile.mkdtemp(dir=PetabImporter.MODEL_BASE_DIR)
+        )
     return output_folder
 
 

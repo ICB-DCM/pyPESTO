@@ -55,8 +55,10 @@ from .sampling import (
     sampling_prediction_trajectories,
 )
 from .ensemble import ensemble_identifiability
-from .dimension_reduction import (projection_scatter_umap,
-                                  projection_scatter_umap_original,
-                                  projection_scatter_pca,
-                                  ensemble_crosstab_scatter_lowlevel,
-                                  ensemble_scatter_lowlevel)
+from .dimension_reduction import (
+    projection_scatter_umap,
+    projection_scatter_umap_original,
+    projection_scatter_pca,
+    ensemble_crosstab_scatter_lowlevel,
+    ensemble_scatter_lowlevel,
+)

@@ -8,7 +8,7 @@ from .auto_correlation import autocorrelation_sokal
 logger = logging.getLogger(__name__)
 
 
-def geweke_test(result: Result, zscore: float = 2.) -> int:
+def geweke_test(result: Result, zscore: float = 2.0) -> int:
     """
     Calculates the burn-in of MCMC chains.
 
@@ -30,11 +30,10 @@ def geweke_test(result: Result, zscore: float = 2.) -> int:
     chain = np.asarray(result.sample_result.trace_x[0])
 
     # Calculate burn in index
-    burn_in = burn_in_by_sequential_geweke(chain=chain,
-                                           zscore=zscore)
+    burn_in = burn_in_by_sequential_geweke(chain=chain, zscore=zscore)
 
     # Log
-    logger.info(f'Geweke burn-in index: {burn_in}')
+    logger.info(f"Geweke burn-in index: {burn_in}")
 
     # Fill in burn-in value into result
     result.sample_result.burn_in = burn_in
@@ -68,11 +67,13 @@ def auto_correlation(result: Result) -> float:
     chain_length = result.sample_result.trace_x.shape[1]
 
     if burn_in == chain_length:
-        logger.warning("The autocorrelation can not "
-                       "be estimated. The chain seems to "
-                       "not have converged yet.\n"
-                       "You may want to use a larger number "
-                       "of samples.")
+        logger.warning(
+            "The autocorrelation can not "
+            "be estimated. The chain seems to "
+            "not have converged yet.\n"
+            "You may want to use a larger number "
+            "of samples."
+        )
         return None
 
     # Get converged parameter samples as numpy arrays
@@ -85,7 +86,7 @@ def auto_correlation(result: Result) -> float:
     _auto_correlation = max(auto_correlation_vector)
 
     # Log
-    logger.info(f'Estimated chain autocorrelation: {_auto_correlation}')
+    logger.info(f"Estimated chain autocorrelation: {_auto_correlation}")
 
     # Fill in autocorrelation value into result
     result.sample_result.auto_correlation = _auto_correlation
@@ -133,7 +134,7 @@ def effective_sample_size(result: Result) -> float:
     ess = N / (1 + _auto_correlation)
 
     # Log
-    logger.info(f'Estimated effective sample size: {ess}')
+    logger.info(f"Estimated effective sample size: {ess}")
 
     # Fill in effective sample size value into result
     result.sample_result.effective_sample_size = ess

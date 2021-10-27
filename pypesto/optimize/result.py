@@ -57,25 +57,27 @@ class OptimizerResult(dict):
     Any field not supported by the optimizer is filled with None.
     """
 
-    def __init__(self,
-                 id: str = None,
-                 x: np.ndarray = None,
-                 fval: float = None,
-                 grad: np.ndarray = None,
-                 hess: np.ndarray = None,
-                 res: np.ndarray = None,
-                 sres: np.ndarray = None,
-                 n_fval: int = None,
-                 n_grad: int = None,
-                 n_hess: int = None,
-                 n_res: int = None,
-                 n_sres: int = None,
-                 x0: np.ndarray = None,
-                 fval0: float = None,
-                 history: History = None,
-                 exitflag: int = None,
-                 time: float = None,
-                 message: str = None):
+    def __init__(
+        self,
+        id: str = None,
+        x: np.ndarray = None,
+        fval: float = None,
+        grad: np.ndarray = None,
+        hess: np.ndarray = None,
+        res: np.ndarray = None,
+        sres: np.ndarray = None,
+        n_fval: int = None,
+        n_grad: int = None,
+        n_hess: int = None,
+        n_res: int = None,
+        n_sres: int = None,
+        x0: np.ndarray = None,
+        fval0: float = None,
+        history: History = None,
+        exitflag: int = None,
+        time: float = None,
+        message: str = None,
+    ):
         super().__init__()
         self.id = id
         self.x: np.ndarray = np.array(x) if x is not None else None

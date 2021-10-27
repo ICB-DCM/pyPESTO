@@ -35,22 +35,20 @@ def check_hdf5_mp(
 
     # create directory with same name as original file stem
     partial_file_path = (
-            file_path.parent / file_path.stem /
-            (file_path.stem + '_{id}' + file_path.suffix)
+        file_path.parent
+        / file_path.stem
+        / (file_path.stem + "_{id}" + file_path.suffix)
     )
     partial_file_path.parent.mkdir(parents=True, exist_ok=True)
     history_options.storage_file = str(partial_file_path)
 
     # create hdf5 file that gathers the others within history group
-    with h5py.File(filename, mode='a') as f:
+    with h5py.File(filename, mode="a") as f:
         get_or_create_group(f, "history")
     return filename
 
 
-def fill_hdf5_file(
-    ret: list,
-    filename: str
-) -> None:
+def fill_hdf5_file(ret: list, filename: str) -> None:
     """
     Create links in `filename` to the
     history of each start contained in ret, the results
@@ -64,10 +62,9 @@ def fill_hdf5_file(
         The filename of the hdf5 file in which the histories
         are to be gathered.
     """
-    with h5py.File(filename, mode='a') as f:
+    with h5py.File(filename, mode="a") as f:
         for result in ret:
-            id = result['id']
-            f[f'history/{id}'] = h5py.ExternalLink(
-                result['history'].file,
-                f'history/{id}'
+            id = result["id"]
+            f[f"history/{id}"] = h5py.ExternalLink(
+                result["history"].file, f"history/{id}"
             )

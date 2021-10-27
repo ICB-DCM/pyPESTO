@@ -26,8 +26,8 @@ class OptimizeResult:
         self.list = []
 
     def append(
-            self,
-            optimizer_result: 'optimize.OptimizerResult',
+        self,
+        optimizer_result: "optimize.OptimizerResult",
     ):
         """
         Append an optimizer result to the result object.
@@ -45,6 +45,7 @@ class OptimizeResult:
         """
         Sort the optimizer results by function value fval (ascending).
         """
+
         def get_fval(res):
             return res.fval if not np.isnan(res.fval) else np.inf
 
@@ -111,9 +112,10 @@ class ProfileResult:
         return len(self.list) - 1
 
     def append_profiler_result(
-            self,
-            profiler_result: 'profile.ProfilerResult' = None,
-            profile_list: int = None) -> None:
+        self,
+        profiler_result: "profile.ProfilerResult" = None,
+        profile_list: int = None,
+    ) -> None:
         """Append the profiler result to the profile list.
 
         Parameters
@@ -131,10 +133,11 @@ class ProfileResult:
         self.list[profile_list].append(profiler_result)
 
     def set_profiler_result(
-            self,
-            profiler_result: 'profile.ProfilerResult',
-            i_par: int,
-            profile_list: int = None) -> None:
+        self,
+        profiler_result: "profile.ProfilerResult",
+        i_par: int,
+        profile_list: int = None,
+    ) -> None:
         """Write a profiler result to the result object at `i_par` of profile
         list `profile_list`.
 
@@ -151,9 +154,7 @@ class ProfileResult:
             profile_list = -1  # last
         self.list[profile_list][i_par] = copy.deepcopy(profiler_result)
 
-    def get_profiler_result(
-            self, i_par: int, profile_list: int = None
-    ):
+    def get_profiler_result(self, i_par: int, profile_list: int = None):
         """
         Get theprofiler result at parameter index `i_par` of profile list
         `profile_list`.

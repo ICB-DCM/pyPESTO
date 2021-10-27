@@ -4,8 +4,16 @@
 
 [flake8]
 
+max-line-length = 79
+
+extend-ignore =
+  # White space before :
+  E203
+  # Don't be crazy if line too long
+  E501
+
 per-file-ignores =
-    # Imported but unused
-    */__init__.py:F401
-    # Print and asserts
-    test/*:T001,S101
+  # Imported but unused
+  */__init__.py:F401
+  # Print and asserts
+  test/*:T001,S101

@@ -39,14 +39,17 @@ def test_optimize():
 
 
 def create_problem():
-    objective = rosen_for_sensi(2)['obj']
+    objective = rosen_for_sensi(2)["obj"]
     lb = [-3, -3, -3, -3, -3]
     ub = [3, 3, 3, 3, 3]
     x_fixed_indices = [1, 3]
     x_fixed_vals = [1, 1]
-    problem = pypesto.Problem(objective=objective,
-                              lb=lb, ub=ub,
-                              x_fixed_indices=x_fixed_indices,
-                              x_fixed_vals=x_fixed_vals)
+    problem = pypesto.Problem(
+        objective=objective,
+        lb=lb,
+        ub=ub,
+        x_fixed_indices=x_fixed_indices,
+        x_fixed_vals=x_fixed_vals,
+    )
 
     return problem

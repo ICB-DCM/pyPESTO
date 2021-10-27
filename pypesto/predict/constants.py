@@ -1,38 +1,38 @@
 """Constants used in the `pypesto.predict` module."""
 
 
-MODE_FUN = 'mode_fun'  # mode for function values
-MODE_RES = 'mode_res'  # mode for residuals
+MODE_FUN = "mode_fun"  # mode for function values
+MODE_RES = "mode_res"  # mode for residuals
 
-OUTPUT_IDS = 'output_ids'  # data member in PredictionConditionResult
-PARAMETER_IDS = 'x_names'  # data member in PredictionConditionResult
-CONDITION_IDS = 'condition_ids'
-TIMEPOINTS = 'timepoints'  # data member in PredictionConditionResult
-OUTPUT = 'output'  # field in the return dict of AmiciPredictor
-OUTPUT_SENSI = 'output_sensi'  # field in the return dict of AmiciPredictor
-OUTPUT_WEIGHT = 'output_weight'  # field in the return dict of AmiciPredictor
-OUTPUT_SIGMAY = 'output_sigmay'  # field in the return dict of AmiciPredictor
+OUTPUT_IDS = "output_ids"  # data member in PredictionConditionResult
+PARAMETER_IDS = "x_names"  # data member in PredictionConditionResult
+CONDITION_IDS = "condition_ids"
+TIMEPOINTS = "timepoints"  # data member in PredictionConditionResult
+OUTPUT = "output"  # field in the return dict of AmiciPredictor
+OUTPUT_SENSI = "output_sensi"  # field in the return dict of AmiciPredictor
+OUTPUT_WEIGHT = "output_weight"  # field in the return dict of AmiciPredictor
+OUTPUT_SIGMAY = "output_sigmay"  # field in the return dict of AmiciPredictor
 
 # separator in the conditions_ids betweeen preequilibration and simulation
 # condition
-CONDITION_SEP = '::'
+CONDITION_SEP = "::"
 
-RDATAS = 'rdatas'  # return field of call to pypesto objective
-AMICI_T = 't'  # return field in amici simulation result
-AMICI_X = 'x'  # return field in amici simulation result
-AMICI_SX = 'sx'  # return field in amici simulation result
-AMICI_Y = 'y'  # return field in amici simulation result
-AMICI_SY = 'sy'  # return field in amici simulation result
-AMICI_LLH = 'llh'  # return field in amici simulation result
-AMICI_STATUS = 'status'  # return field in amici simulation result
-AMICI_SIGMAY = 'sigmay'  # return field in amici simulation result
+RDATAS = "rdatas"  # return field of call to pypesto objective
+AMICI_T = "t"  # return field in amici simulation result
+AMICI_X = "x"  # return field in amici simulation result
+AMICI_SX = "sx"  # return field in amici simulation result
+AMICI_Y = "y"  # return field in amici simulation result
+AMICI_SY = "sy"  # return field in amici simulation result
+AMICI_LLH = "llh"  # return field in amici simulation result
+AMICI_STATUS = "status"  # return field in amici simulation result
+AMICI_SIGMAY = "sigmay"  # return field in amici simulation result
 
-CSV = 'csv'  # return file format
-H5 = 'h5'  # return file format
-TIME = 'time'  # column name in returned csv
+CSV = "csv"  # return file format
+H5 = "h5"  # return file format
+TIME = "time"  # column name in returned csv
 
-CONDITION = 'condition'
-CONDITION_IDS = 'condition_ids'
+CONDITION = "condition"
+CONDITION_IDS = "condition_ids"
 
 
 def get_condition_label(condition_id: str) -> str:
@@ -51,4 +51,4 @@ def get_condition_label(condition_id: str) -> str:
     -------
     The condition label.
     """
-    return f'condition_{condition_id}'
+    return f"condition_{condition_id}"

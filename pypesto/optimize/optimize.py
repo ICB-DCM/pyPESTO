@@ -6,7 +6,10 @@ from ..objective import HistoryOptions
 from ..problem import Problem
 from ..result import Result
 from ..startpoint import (
-    assign_startpoints, uniform, StartpointMethod, to_startpoint_method,
+    assign_startpoints,
+    uniform,
+    StartpointMethod,
+    to_startpoint_method,
 )
 from .optimizer import Optimizer, ScipyOptimizer
 from .options import OptimizeOptions
@@ -117,8 +120,10 @@ def minimize(
     # define tasks
     tasks = []
     filename = None
-    if history_options.storage_file is not None and \
-            history_options.storage_file.endswith(('.h5', '.hdf5')):
+    if (
+        history_options.storage_file is not None
+        and history_options.storage_file.endswith((".h5", ".hdf5"))
+    ):
         filename = check_hdf5_mp(history_options, engine)
 
     for startpoint, id in zip(startpoints, ids):

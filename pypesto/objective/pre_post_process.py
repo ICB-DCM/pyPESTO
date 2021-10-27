@@ -17,9 +17,7 @@ class PrePostProcessor:
     def __init__(self):
         pass
 
-    def preprocess(
-            self, x: np.ndarray
-    ) -> np.ndarray:  # pylint: disable=R0201
+    def preprocess(self, x: np.ndarray) -> np.ndarray:  # pylint: disable=R0201
         """
         Just return x without modifications.
 
@@ -35,9 +33,7 @@ class PrePostProcessor:
         """
         return x
 
-    def postprocess(
-            self, result: Dict
-    ) -> Dict:  # pylint: disable=R0201
+    def postprocess(self, result: Dict) -> Dict:  # pylint: disable=R0201
         """
         Convert all arrays into np.ndarrays if necessary, and return them
         without further modifications.
@@ -50,9 +46,7 @@ class PrePostProcessor:
         result = PrePostProcessor.as_ndarrays(result)
         return result
 
-    def reduce(
-            self, x: np.ndarray
-    ) -> np.ndarray:  # pylint: disable=R0201
+    def reduce(self, x: np.ndarray) -> np.ndarray:  # pylint: disable=R0201
         """
         Just return x without modifications.
 
@@ -69,9 +63,7 @@ class PrePostProcessor:
         return x
 
     @staticmethod
-    def as_ndarrays(
-            result: Dict
-    ) -> Dict:
+    def as_ndarrays(result: Dict) -> Dict:
         """
         Convert all array_like objects to np.ndarrays. This has the advantage
         of a uniform output datatype which offers various methods to assess
@@ -91,11 +83,13 @@ class FixedParametersProcessor(PrePostProcessor):
     Extends the processor to handle the fixing of parameters.
     """
 
-    def __init__(self,
-                 dim_full: int,
-                 x_free_indices: Sequence[int],
-                 x_fixed_indices: Sequence[int],
-                 x_fixed_vals: Sequence[float]):
+    def __init__(
+        self,
+        dim_full: int,
+        x_free_indices: Sequence[int],
+        x_fixed_indices: Sequence[int],
+        x_fixed_vals: Sequence[float],
+    ):
         super().__init__()
         self.dim_full: int = dim_full
         self.x_free_indices: np.ndarray = np.array(x_free_indices, dtype=int)

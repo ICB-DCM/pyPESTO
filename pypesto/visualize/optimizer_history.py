@@ -13,18 +13,20 @@ from .misc import process_y_limits
 from .misc import process_offset_y
 
 
-def optimizer_history(results,
-                      ax=None,
-                      size=(18.5, 10.5),
-                      trace_x='steps',
-                      trace_y='fval',
-                      scale_y='log10',
-                      offset_y=None,
-                      colors=None,
-                      y_limits=None,
-                      start_indices=None,
-                      reference=None,
-                      legends=None):
+def optimizer_history(
+    results,
+    ax=None,
+    size=(18.5, 10.5),
+    trace_x="steps",
+    trace_y="fval",
+    scale_y="log10",
+    offset_y=None,
+    colors=None,
+    y_limits=None,
+    start_indices=None,
+    reference=None,
+    legends=None,
+):
     """
     Plot history of optimizer. Can plot either the history of the cost
     function or of the gradient norm, over either the optimizer steps or
@@ -96,15 +98,21 @@ def optimizer_history(results,
         (x_label, y_label, vals) = get_trace(result, trace_x, trace_y)
 
         # compute the necessary offset for the y-axis
-        (vals, offset_y, y_label) = get_vals(vals, scale_y, offset_y, y_label,
-                                             start_indices)
+        (vals, offset_y, y_label) = get_vals(
+            vals, scale_y, offset_y, y_label, start_indices
+        )
 
         # call lowlevel plot routine
-        ax = optimizer_history_lowlevel(vals, scale_y=scale_y, ax=ax,
-                                        colors=colors[j],
-                                        size=size, x_label=x_label,
-                                        y_label=y_label,
-                                        legend_text=legends[j])
+        ax = optimizer_history_lowlevel(
+            vals,
+            scale_y=scale_y,
+            ax=ax,
+            colors=colors[j],
+            size=size,
+            x_label=x_label,
+            y_label=y_label,
+            legend_text=legends[j],
+        )
 
     # parse and apply plotting options
     ref = create_references(references=reference)
@@ -115,9 +123,16 @@ def optimizer_history(results,
     return ax
 
 
-def optimizer_history_lowlevel(vals, scale_y='log10', colors=None, ax=None,
-                               size=(18.5, 10.5), x_label='Optimizer steps',
-                               y_label='Objective value', legend_text=None):
+def optimizer_history_lowlevel(
+    vals,
+    scale_y="log10",
+    colors=None,
+    ax=None,
+    size=(18.5, 10.5),
+    x_label="Optimizer steps",
+    y_label="Objective value",
+    legend_text=None,
+):
     """
     Plot optimizer history using list of numpy arrays.
 
@@ -174,9 +189,11 @@ def optimizer_history_lowlevel(vals, scale_y='log10', colors=None, ax=None,
         # convert to a list of numpy arrays
         vals = np.array(vals)
         if vals.shape[0] != 2 or vals.ndim != 2:
-            raise ValueError('If numpy array is passed directly to lowlevel '
-                             'routine of optimizer_history, shape needs to '
-                             'be 2 x n.')
+            raise ValueError(
+                "If numpy array is passed directly to lowlevel "
+                "routine of optimizer_history, shape needs to "
+                "be 2 x n."
+            )
         fvals = [vals[1, -1]]
         vals = [vals]
     n_fvals = len(fvals)
@@ -201,7 +218,7 @@ def optimizer_history_lowlevel(vals, scale_y='log10', colors=None, ax=None,
             tmp_legend = None
 
         # line plots
-        if scale_y == 'log10':
+        if scale_y == "log10":
             ax.semilogy(val[0, :], val[1, :], color=color, label=tmp_legend)
         else:
             ax.plot(val[0, :], val[1, :], color=color, label=tmp_legend)
@@ -209,16 +226,16 @@ def optimizer_history_lowlevel(vals, scale_y='log10', colors=None, ax=None,
     # set labels
     ax.set_xlabel(x_label)
     ax.set_ylabel(y_label)
-    ax.set_title('Optimizer history')
+    ax.set_title("Optimizer history")
     if legend_text is not None:
         ax.legend()
 
     return ax
 
 
-def get_trace(result: Result,
-              trace_x: Optional[str],
-              trace_y: Optional[str]) -> Tuple[str, str, List[np.ndarray]]:
+def get_trace(
+    result: Result, trace_x: Optional[str], trace_y: Optional[str]
+) -> Tuple[str, str, List[np.ndarray]]:
     """
     Get the values of the optimizer trace from the pypesto.Result object
 
@@ -252,48 +269,53 @@ def get_trace(result: Result,
     """
 
     # get data frames
-    histories: List[History] = result.optimize_result.get_for_key('history')
+    histories: List[History] = result.optimize_result.get_for_key("history")
 
     vals = []
-    x_label = ''
-    y_label = ''
+    x_label = ""
+    y_label = ""
 
     for history in histories:
         options = history.options
-        if trace_y == 'gradnorm':
+        if trace_y == "gradnorm":
             # retrieve gradient trace, if saved
-            if not options.trace_record or not \
-                    options.trace_record_grad:
+            if not options.trace_record or not options.trace_record_grad:
                 raise ValueError("No gradient trace has been recorded.")
             grads = history.get_grad_trace()
-            indices = [i for i, val in enumerate(grads)
-                       if val is not None and np.isfinite(val).all()]
+            indices = [
+                i
+                for i, val in enumerate(grads)
+                if val is not None and np.isfinite(val).all()
+            ]
 
             grads = np.array([grads[i] for i in indices])
 
             # Get gradient trace, compute norm
             y_vals = np.linalg.norm(grads, axis=1)
-            y_label = 'gradient norm'
+            y_label = "gradient norm"
 
         else:  # trace_y == 'fval':
             if not options.trace_record:
                 raise ValueError("No function value trace has been recorded.")
             fvals = history.get_fval_trace()
-            indices = [i for i, val in enumerate(fvals)
-                       if val is not None and np.isfinite(val)]
+            indices = [
+                i
+                for i, val in enumerate(fvals)
+                if val is not None and np.isfinite(val)
+            ]
 
             y_vals = np.array([fvals[i] for i in indices])
-            y_label = 'objective value'
+            y_label = "objective value"
 
         # retrieve values from dataframe
-        if trace_x == 'time':
+        if trace_x == "time":
             times = np.array(history.get_time_trace())
             x_vals = times[indices]
-            x_label = 'Computation time [s]'
+            x_label = "Computation time [s]"
 
         else:  # trace_x == 'steps':
             x_vals = np.array(list(range(len(indices))))
-            x_label = 'Optimizer steps'
+            x_label = "Optimizer steps"
 
         # write down values
         vals.append(np.vstack([x_vals, y_vals]))
@@ -306,7 +328,7 @@ def get_vals(
     scale_y: Optional[str],
     offset_y: float,
     y_label: str,
-    start_indices: Iterable[int]
+    start_indices: Iterable[int],
 ) -> Tuple[List[np.ndarray], float, str]:
     """
     Postprocesses the values of the optimization history, depending on the
@@ -364,24 +386,26 @@ def get_vals(
         min_val = np.min([min_val, tmp_min])
 
     # check, whether offset can be used with this data
-    if y_label == 'fval':
+    if y_label == "fval":
         offset_y = process_offset_y(offset_y, scale_y, min_val)
     else:
-        offset_y = 0.
+        offset_y = 0.0
 
     if offset_y != 0:
         for val in vals:
             val[1, :] += offset_y * np.ones(val[1].shape)
-            y_label = 'offsetted ' + y_label
+            y_label = "offsetted " + y_label
 
     return vals, offset_y, y_label
 
 
-def handle_options(ax: plt.Axes,
-                   vals: List[np.ndarray],
-                   ref: List[ReferencePoint],
-                   y_limits: Union[float, np.ndarray],
-                   offset_y: float):
+def handle_options(
+    ax: plt.Axes,
+    vals: List[np.ndarray],
+    ref: List[ReferencePoint],
+    y_limits: Union[float, np.ndarray],
+    offset_y: float,
+):
     """
     Get the limits for the y-axis, plots the reference points, will do
     more at a later time point. This function is there to apply whatever
@@ -425,9 +449,13 @@ def handle_options(ax: plt.Axes,
             max_len = np.max([max_len, val[0, -1]])
 
         for i_ref in ref:
-            ax.plot([0, max_len],
-                    [i_ref.fval + offset_y, i_ref.fval + offset_y],
-                    '--', color=i_ref.color, label=i_ref.legend)
+            ax.plot(
+                [0, max_len],
+                [i_ref.fval + offset_y, i_ref.fval + offset_y],
+                "--",
+                color=i_ref.color,
+                label=i_ref.legend,
+            )
 
             # create legend for reference points
             if i_ref.legend is not None:

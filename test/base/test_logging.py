@@ -11,7 +11,7 @@ def test_optimize():
     pypesto.logging.log_to_console(logging.WARN)
     filename = ".test_logging.tmp"
     pypesto.logging.log_to_file(logging.DEBUG, filename)
-    logger = logging.getLogger('pypesto')
+    logger = logging.getLogger("pypesto")
     if os.path.exists(filename):
         os.remove(filename)
     fh = logging.FileHandler(filename)
@@ -27,14 +27,14 @@ def test_optimize():
     problem = pypesto.Problem(objective, -1, 1)
 
     optimizer = pypesto.optimize.ScipyOptimizer()
-    options = {'allow_failed_starts': True}
+    options = {"allow_failed_starts": True}
 
     # optimization
     pypesto.optimize.minimize(problem, optimizer, 5, options=options)
 
     # assert logging worked
     assert os.path.exists(filename)
-    f = open(filename, 'rb')
+    f = open(filename, "rb")
     content = str(f.read())
     f.close()
 

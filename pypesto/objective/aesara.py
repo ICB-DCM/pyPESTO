@@ -41,17 +41,20 @@ class AesaraObjective(ObjectiveBase):
         Multiplicative coefficient for objective
     """
 
-    def __init__(self,
-                 objective: ObjectiveBase,
-                 aet_x: TensorVariable,
-                 aet_fun: TensorVariable,
-                 coeff: Optional[float] = 1.,
-                 x_names: Sequence[str] = None):
+    def __init__(
+        self,
+        objective: ObjectiveBase,
+        aet_x: TensorVariable,
+        aet_fun: TensorVariable,
+        coeff: Optional[float] = 1.0,
+        x_names: Sequence[str] = None,
+    ):
         if not isinstance(objective, ObjectiveBase):
-            raise TypeError('objective must be an ObjectiveBase instance')
+            raise TypeError("objective must be an ObjectiveBase instance")
         if not objective.check_mode(MODE_FUN):
             raise NotImplementedError(
-                f'objective must support mode={MODE_FUN}')
+                f"objective must support mode={MODE_FUN}"
+            )
         super().__init__(x_names)
         self.base_objective = objective
 
@@ -63,9 +66,7 @@ class AesaraObjective(ObjectiveBase):
 
         # compiled function
         if objective.has_fun:
-            self.afun = aesara.function(
-                [aet_x], self.obj_op(aet_fun)
-            )
+            self.afun = aesara.function([aet_x], self.obj_op(aet_fun))
 
         # compiled gradient
         if objective.has_grad:
@@ -80,9 +81,7 @@ class AesaraObjective(ObjectiveBase):
             )
 
         # compiled input mapping
-        self.infun = aesara.function(
-            [aet_x], aet_fun
-        )
+        self.infun = aesara.function([aet_x], aet_fun)
 
         # temporary storage for evaluation results of objective
         self.inner_ret: ResultDict = {}
@@ -97,11 +96,7 @@ class AesaraObjective(ObjectiveBase):
             return self.base_objective.check_sensi_orders(sensi_orders, mode)
 
     def call_unprocessed(
-            self,
-            x: np.ndarray,
-            sensi_orders: Tuple[int, ...],
-            mode: str,
-            **kwargs
+        self, x: np.ndarray, sensi_orders: Tuple[int, ...], mode: str, **kwargs
     ) -> ResultDict:
 
         # hess computation in aesara requires grad
@@ -111,13 +106,15 @@ class AesaraObjective(ObjectiveBase):
         # this computes all the results from the inner objective, rendering
         # them accessible to aesara compiled functions
 
-        set_return_dict, return_dict = ('return_dict' in kwargs,
-                                        kwargs.pop('return_dict', False))
+        set_return_dict, return_dict = (
+            "return_dict" in kwargs,
+            kwargs.pop("return_dict", False),
+        )
         self.inner_ret = self.base_objective(
-            self.infun(x), sensi_orders, mode, return_dict=True,  **kwargs
+            self.infun(x), sensi_orders, mode, return_dict=True, **kwargs
         )
         if set_return_dict:
-            kwargs['return_dict'] = return_dict
+            kwargs["return_dict"] = return_dict
         ret = {}
         if RDATAS in self.inner_ret:
             ret[RDATAS] = self.inner_ret[RDATAS]
@@ -132,8 +129,10 @@ class AesaraObjective(ObjectiveBase):
 
     def __deepcopy__(self, memodict=None):
         other = AesaraObjective(
-            copy.deepcopy(self.base_objective), self.aet_x, self.aet_fun,
-            self._coeff
+            copy.deepcopy(self.base_objective),
+            self.aet_x,
+            self.aet_fun,
+            self._coeff,
         )
 
         return other
@@ -154,9 +153,7 @@ class AesaraObjectiveOp(Op):
     itypes = [aet.dvector]  # expects a vector of parameter values when called
     otypes = [aet.dscalar]  # outputs a single scalar value (the log prob)
 
-    def __init__(self,
-                 obj: AesaraObjective,
-                 coeff: Optional[float] = 1.):
+    def __init__(self, obj: AesaraObjective, coeff: Optional[float] = 1.0):
         self._objective: AesaraObjective = obj
         self._coeff: float = coeff
 
@@ -176,7 +173,7 @@ class AesaraObjectiveOp(Op):
     def grad(self, inputs, g):
         # the method that calculates the gradients - it actually returns the
         # vector-Jacobian product - g[0] is a vector of parameter values
-        theta, = inputs
+        (theta,) = inputs
         log_prob_grad = self._log_prob_grad(theta)
         return [g[0] * log_prob_grad]
 
@@ -198,9 +195,7 @@ class AesaraObjectiveGradOp(Op):
     itypes = [aet.dvector]  # expects a vector of parameter values when called
     otypes = [aet.dvector]  # outputs a vector (the log prob grad)
 
-    def __init__(self,
-                 obj: AesaraObjective,
-                 coeff: Optional[float] = 1.):
+    def __init__(self, obj: AesaraObjective, coeff: Optional[float] = 1.0):
         self._objective: AesaraObjective = obj
         self._coeff: float = coeff
 
@@ -219,7 +214,7 @@ class AesaraObjectiveGradOp(Op):
     def grad(self, inputs, g):
         # the method that calculates the hessian - it actually returns the
         # vector-hessian product - g[0] is a vector of parameter values
-        theta, = inputs
+        (theta,) = inputs
         log_prob_hess = self._log_prob_hess(theta)
         return [g[0].dot(log_prob_hess)]
 
@@ -241,9 +236,7 @@ class AesaraObjectiveHessOp(Op):
     itypes = [aet.dvector]
     otypes = [aet.dmatrix]
 
-    def __init__(self, obj:
-                 AesaraObjective,
-                 coeff: Optional[float] = 1.):
+    def __init__(self, obj: AesaraObjective, coeff: Optional[float] = 1.0):
         self._objective: AesaraObjective = obj
         self._coeff: float = coeff
 

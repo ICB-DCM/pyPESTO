@@ -15,9 +15,11 @@ class OptimizeOptions(dict):
         the minimization process.
     """
 
-    def __init__(self,
-                 startpoint_resample: bool = False,
-                 allow_failed_starts: bool = True):
+    def __init__(
+        self,
+        startpoint_resample: bool = False,
+        allow_failed_starts: bool = True,
+    ):
         super().__init__()
 
         self.startpoint_resample: bool = startpoint_resample
@@ -34,8 +36,8 @@ class OptimizeOptions(dict):
 
     @staticmethod
     def assert_instance(
-            maybe_options: Union['OptimizeOptions', Dict]
-    ) -> 'OptimizeOptions':
+        maybe_options: Union["OptimizeOptions", Dict]
+    ) -> "OptimizeOptions":
         """
         Returns a valid options object.
 

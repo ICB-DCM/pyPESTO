@@ -15,13 +15,14 @@ from typing import Union, Sequence
 from ..result import Result
 from amici.petab_objective import rdatas_to_simulation_df
 
-AmiciModel = Union['amici.Model', 'amici.ModelPtr']
+AmiciModel = Union["amici.Model", "amici.ModelPtr"]
 
 
-def visualize_optimized_model_fit(petab_problem: petab.Problem,
-                                  result: Union[Result, Sequence[Result]],
-                                  **kwargs
-                                  ):
+def visualize_optimized_model_fit(
+    petab_problem: petab.Problem,
+    result: Union[Result, Sequence[Result]],
+    **kwargs,
+):
     """
     Visualize the optimized model fit of a PEtab problem.
     Function calls the PEtab visualization file of the petab_problem and
@@ -46,42 +47,49 @@ def visualize_optimized_model_fit(petab_problem: petab.Problem,
         if petab is None:
             raise
 
-    problem_parameters = \
-        dict(zip(petab_problem.parameter_df.index,
-                 result.optimize_result.list[0]['x']))
+    problem_parameters = dict(
+        zip(
+            petab_problem.parameter_df.index,
+            result.optimize_result.list[0]["x"],
+        )
+    )
 
     amici_model = petab_import.import_petab_problem(
         petab_problem,
-        model_output_dir=kwargs.pop('model_output_dir', None),
-        force_compile=kwargs.pop('force_compile', False))
+        model_output_dir=kwargs.pop("model_output_dir", None),
+        force_compile=kwargs.pop("force_compile", False),
+    )
 
-    res = simulate_petab(petab_problem, amici_model=amici_model,
-                         scaled_parameters=True,
-                         problem_parameters=problem_parameters,
-                         solver=kwargs.pop('amici_solver', None))
+    res = simulate_petab(
+        petab_problem,
+        amici_model=amici_model,
+        scaled_parameters=True,
+        problem_parameters=problem_parameters,
+        solver=kwargs.pop("amici_solver", None),
+    )
 
-    sim_df = rdatas_to_simulation_df(res["rdatas"],
-                                     amici_model,
-                                     petab_problem.measurement_df)
+    sim_df = rdatas_to_simulation_df(
+        res["rdatas"], amici_model, petab_problem.measurement_df
+    )
 
     # function to call, to plot data and simulations
-    ax = plot_problem(petab_problem=petab_problem,
-                      simulations_df=sim_df,
-                      **kwargs
-                      )
+    ax = plot_problem(
+        petab_problem=petab_problem, simulations_df=sim_df, **kwargs
+    )
     return ax
 
 
 def time_trajectory_model(
-        result: Union[Result, Sequence[Result]],
-        problem: Problem = None,
-        # TODO: conditions: Union[str, Sequence[str]] = None,
-        timepoints: Union[np.ndarray, Sequence[np.ndarray]] = None,
-        n_timepoints: int = 1000,
-        start_index: int = 0,
-        state_ids: Union[str, Sequence[str]] = None,
-        state_names: Union[str, Sequence[str]] = None,
-        observable_ids: Union[str, Sequence[str]] = None,):
+    result: Union[Result, Sequence[Result]],
+    problem: Problem = None,
+    # TODO: conditions: Union[str, Sequence[str]] = None,
+    timepoints: Union[np.ndarray, Sequence[np.ndarray]] = None,
+    n_timepoints: int = 1000,
+    start_index: int = 0,
+    state_ids: Union[str, Sequence[str]] = None,
+    state_names: Union[str, Sequence[str]] = None,
+    observable_ids: Union[str, Sequence[str]] = None,
+):
     """
     Visualize the time trajectory of the model with given timepoints.
     It does this by calling the amici plotting routines.
@@ -117,43 +125,40 @@ def time_trajectory_model(
     # add timepoints as needed
     if timepoints is None:
         end_time = max(problem.objective.edatas[0].getTimepoints())
-        timepoints = np.linspace(start=0,
-                                 stop=end_time,
-                                 num=n_timepoints)
-    obj = problem.objective.set_custom_timepoints(
-        timepoints_global=timepoints)
+        timepoints = np.linspace(start=0, stop=end_time, num=n_timepoints)
+    obj = problem.objective.set_custom_timepoints(timepoints_global=timepoints)
 
     # evaluate objective with return dic = True to get data
-    parameters = result.optimize_result.list[start_index]['x']
+    parameters = result.optimize_result.list[start_index]["x"]
     # reduce vector to only include free indices. Needed downstream.
     parameters = problem.get_reduced_vector(parameters)
-    ret = obj(parameters, mode='mode_fun',
-              sensi_orders=(0,), return_dict=True)
+    ret = obj(parameters, mode="mode_fun", sensi_orders=(0,), return_dict=True)
 
     if state_ids == [] and state_names == []:
         axes = _time_trajectory_model_without_states(
             model=problem.objective.amici_model,
-            rdatas=ret['rdatas'],
-            observable_ids=observable_ids
+            rdatas=ret["rdatas"],
+            observable_ids=observable_ids,
         )
     else:
         axes = _time_trajectory_model_with_states(
             model=problem.objective.amici_model,
-            rdatas=ret['rdatas'],
+            rdatas=ret["rdatas"],
             state_ids=state_ids,
             state_names=state_names,
-            observable_ids=observable_ids
+            observable_ids=observable_ids,
         )
 
     return axes
 
 
 def _time_trajectory_model_with_states(
-        model: AmiciModel,
-        rdatas: Union['amici.ReturnData', Sequence['amici.ReturnData']],
-        state_ids: Sequence[str],
-        state_names: Sequence[str],
-        observable_ids: Union[str, Sequence[str]]):
+    model: AmiciModel,
+    rdatas: Union["amici.ReturnData", Sequence["amici.ReturnData"]],
+    state_ids: Sequence[str],
+    state_names: Sequence[str],
+    observable_ids: Union[str, Sequence[str]],
+):
     """
     Helper function for time_trajectory_model. Visualizes both states and
     observables.
@@ -183,12 +188,13 @@ def _time_trajectory_model_with_states(
     state_indices_by_name = []
     if state_ids is not None:
         state_indices_by_id = [
-            model.getStateIds().index(state_id)
-            for state_id in state_ids]
+            model.getStateIds().index(state_id) for state_id in state_ids
+        ]
     if state_names is not None:
         state_indices_by_name = [
             model.getStateNames().index(state_name)
-            for state_name in state_names]
+            for state_name in state_names
+        ]
     state_indices = list(set(state_indices_by_id + state_indices_by_name))
     if state_indices == []:
         state_indices = None
@@ -196,8 +202,8 @@ def _time_trajectory_model_with_states(
     observable_indices = None
     if observable_ids is not None:
         observable_indices = [
-            model.getObservableIds().index(obs_id)
-            for obs_id in observable_ids]
+            model.getObservableIds().index(obs_id) for obs_id in observable_ids
+        ]
 
     fig, axes = plt.subplots(len(rdatas), 2)
     # enforce two dimensions in case there is only one condition
@@ -208,19 +214,22 @@ def _time_trajectory_model_with_states(
             rdata=rdata,
             state_indices=state_indices,
             ax=axes[i_cond, 0],
-            model=model)
+            model=model,
+        )
         amici.plotting.plotObservableTrajectories(
             rdata=rdata,
             observable_indices=observable_indices,
             ax=axes[i_cond, 1],
-            model=model)
+            model=model,
+        )
     return axes
 
 
 def _time_trajectory_model_without_states(
-        model: AmiciModel,
-        rdatas: Union['amici.ReturnData', Sequence['amici.ReturnData']],
-        observable_ids: Union[str, Sequence[str]]):
+    model: AmiciModel,
+    rdatas: Union["amici.ReturnData", Sequence["amici.ReturnData"]],
+    observable_ids: Union[str, Sequence[str]],
+):
     """
     Helper function for time_trajectory_model. Visualizes both states and
     observables.
@@ -245,8 +254,8 @@ def _time_trajectory_model_without_states(
     observable_indices = None
     if observable_ids is not None:
         observable_indices = [
-            model.getObservableIds().index(obs_id)
-            for obs_id in observable_ids]
+            model.getObservableIds().index(obs_id) for obs_id in observable_ids
+        ]
 
     fig, axes = plt.subplots(len(rdatas))
 
@@ -255,5 +264,6 @@ def _time_trajectory_model_without_states(
             rdata=rdata,
             observable_indices=observable_indices,
             ax=axes[i_cond],
-            model=model)
+            model=model,
+        )
     return axes

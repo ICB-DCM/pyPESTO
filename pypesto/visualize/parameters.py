@@ -13,18 +13,18 @@ from .misc import process_result_list, process_start_indices
 
 
 def parameters(
-        results: Union[Result, Sequence[Result]],
-        ax: Optional[matplotlib.axes.Axes] = None,
-        parameter_indices: Union[str, Sequence[int]] = 'free_only',
-        lb: Optional[Union[np.ndarray, List[float]]] = None,
-        ub: Optional[Union[np.ndarray, List[float]]] = None,
-        size: Optional[Tuple[float, float]] = None,
-        reference: Optional[List[ReferencePoint]] = None,
-        colors: Optional[Union[List[float], List[List[float]]]] = None,
-        legends: Optional[Union[str, List[str]]] = None,
-        balance_alpha: bool = True,
-        start_indices: Optional[Union[int, Iterable[int]]] = None,
-        scale_to_interval: Optional[Tuple[float, float]] = None,
+    results: Union[Result, Sequence[Result]],
+    ax: Optional[matplotlib.axes.Axes] = None,
+    parameter_indices: Union[str, Sequence[int]] = "free_only",
+    lb: Optional[Union[np.ndarray, List[float]]] = None,
+    ub: Optional[Union[np.ndarray, List[float]]] = None,
+    size: Optional[Tuple[float, float]] = None,
+    reference: Optional[List[ReferencePoint]] = None,
+    colors: Optional[Union[List[float], List[List[float]]]] = None,
+    legends: Optional[Union[str, List[str]]] = None,
+    balance_alpha: bool = True,
+    start_indices: Optional[Union[int, Iterable[int]]] = None,
+    scale_to_interval: Optional[Tuple[float, float]] = None,
 ) -> matplotlib.axes.Axes:
     """
     Plot parameter values.
@@ -73,36 +73,49 @@ def parameters(
     (results, colors, legends) = process_result_list(results, colors, legends)
 
     if isinstance(parameter_indices, str):
-        if parameter_indices == 'all':
+        if parameter_indices == "all":
             parameter_indices = range(0, results[0].problem.dim_full)
-        elif parameter_indices == 'free_only':
+        elif parameter_indices == "free_only":
             parameter_indices = results[0].problem.x_free_indices
         else:
-            raise ValueError("Permissible values for parameter_indices are "
-                             "'all', 'free_only' or a list of indices")
+            raise ValueError(
+                "Permissible values for parameter_indices are "
+                "'all', 'free_only' or a list of indices"
+            )
 
     def scale_parameters(x):
-        """Scale ``x`` from [lb, ub] to interval given by ``scale_to_interval``
-        """
+        """Scale ``x`` from [lb, ub] to interval given by ``scale_to_interval``"""
         if scale_to_interval is None or scale_to_interval is False:
             return x
 
-        return (scale_to_interval[0] + (x - lb) / (ub - lb)
-                * (scale_to_interval[1] - scale_to_interval[0]))
+        return scale_to_interval[0] + (x - lb) / (ub - lb) * (
+            scale_to_interval[1] - scale_to_interval[0]
+        )
 
     for j, result in enumerate(results):
         # handle results and bounds
-        (lb, ub, x_labels, fvals, xs) = \
-            handle_inputs(result=result, lb=lb, ub=ub,
-                          parameter_indices=parameter_indices,
-                          start_indices=start_indices)
+        (lb, ub, x_labels, fvals, xs) = handle_inputs(
+            result=result,
+            lb=lb,
+            ub=ub,
+            parameter_indices=parameter_indices,
+            start_indices=start_indices,
+        )
         lb, ub, xs = map(scale_parameters, (lb, ub, xs))
 
         # call lowlevel routine
-        ax = parameters_lowlevel(xs=xs, fvals=fvals, lb=lb, ub=ub,
-                                 x_labels=x_labels, ax=ax, size=size,
-                                 colors=colors[j], legend_text=legends[j],
-                                 balance_alpha=balance_alpha)
+        ax = parameters_lowlevel(
+            xs=xs,
+            fvals=fvals,
+            lb=lb,
+            ub=ub,
+            x_labels=x_labels,
+            ax=ax,
+            size=size,
+            colors=colors[j],
+            legend_text=legends[j],
+            balance_alpha=balance_alpha,
+        )
 
     # parse and apply plotting options
     ref = create_references(references=reference)
@@ -111,32 +124,39 @@ def parameters(
     for i_ref in ref:
         # reduce parameter vector in reference point, if necessary
         if len(parameter_indices) < results[0].problem.dim_full:
-            x_ref = np.array(results[0].problem.get_reduced_vector(
-                i_ref['x'],
-                parameter_indices))
+            x_ref = np.array(
+                results[0].problem.get_reduced_vector(
+                    i_ref["x"], parameter_indices
+                )
+            )
         else:
-            x_ref = np.array(i_ref['x'])
+            x_ref = np.array(i_ref["x"])
         x_ref = np.reshape(x_ref, (1, x_ref.size))
         x_ref = scale_parameters(x_ref)
 
         # plot reference parameters using lowlevel routine
-        ax = parameters_lowlevel(x_ref, [i_ref['fval']], ax=ax,
-                                 colors=i_ref['color'],
-                                 linestyle='--',
-                                 legend_text=i_ref.legend,
-                                 balance_alpha=balance_alpha)
+        ax = parameters_lowlevel(
+            x_ref,
+            [i_ref["fval"]],
+            ax=ax,
+            colors=i_ref["color"],
+            linestyle="--",
+            legend_text=i_ref.legend,
+            balance_alpha=balance_alpha,
+        )
 
     return ax
 
 
 def parameter_hist(
-        result: Result,
-        parameter_name: str,
-        bins: Union[int, str] = 'auto',
-        ax: Optional['matplotlib.Axes'] = None,
-        size: Optional[Tuple[float]] = (18.5, 10.5),
-        color: Optional[List[float]] = None,
-        start_indices: Optional[Union[int, List[int]]] = None):
+    result: Result,
+    parameter_name: str,
+    bins: Union[int, str] = "auto",
+    ax: Optional["matplotlib.Axes"] = None,
+    size: Optional[Tuple[float]] = (18.5, 10.5),
+    color: Optional[List[float]] = None,
+    start_indices: Optional[Union[int, List[int]]] = None,
+):
     """
     Plot parameter values as a histogram.
 
@@ -172,7 +192,7 @@ def parameter_hist(
         fig = plt.gcf()
         fig.set_size_inches(*size)
 
-    xs = result.optimize_result.get_for_key('x')
+    xs = result.optimize_result.get_for_key("x")
 
     # reduce number of displayed results
     if isinstance(start_indices, int):
@@ -192,17 +212,17 @@ def parameter_hist(
 
 
 def parameters_lowlevel(
-        xs: Sequence[Union[np.ndarray, List[float]]],
-        fvals: Union[np.ndarray, List[float]],
-        lb: Optional[Union[np.ndarray, List[float]]] = None,
-        ub: Optional[Union[np.ndarray, List[float]]] = None,
-        x_labels: Optional[Iterable[str]] = None,
-        ax: Optional[matplotlib.axes.Axes] = None,
-        size: Optional[Tuple[float, float]] = None,
-        colors: Optional[Sequence[Union[np.ndarray, List[float]]]] = None,
-        linestyle: str = '-',
-        legend_text: Optional[str] = None,
-        balance_alpha: bool = True
+    xs: Sequence[Union[np.ndarray, List[float]]],
+    fvals: Union[np.ndarray, List[float]],
+    lb: Optional[Union[np.ndarray, List[float]]] = None,
+    ub: Optional[Union[np.ndarray, List[float]]] = None,
+    x_labels: Optional[Iterable[str]] = None,
+    ax: Optional[matplotlib.axes.Axes] = None,
+    size: Optional[Tuple[float, float]] = None,
+    colors: Optional[Sequence[Union[np.ndarray, List[float]]]] = None,
+    linestyle: str = "-",
+    legend_text: Optional[str] = None,
+    balance_alpha: bool = True,
 ) -> matplotlib.axes.Axes:
 
     """
@@ -266,8 +286,9 @@ def parameters_lowlevel(
         fig.set_size_inches(*size)
 
     # assign colors
-    colors = assign_colors(vals=fvals, colors=colors,
-                           balance_alpha=balance_alpha)
+    colors = assign_colors(
+        vals=fvals, colors=colors, balance_alpha=balance_alpha
+    )
 
     # parameter indices
     parameters_ind = list(range(1, xs.shape[1] + 1))[::-1]
@@ -279,11 +300,14 @@ def parameters_lowlevel(
             tmp_legend = legend_text
         else:
             tmp_legend = None
-        ax.plot(x, parameters_ind,
-                linestyle,
-                color=colors[j_x],
-                marker='o',
-                label=tmp_legend)
+        ax.plot(
+            x,
+            parameters_ind,
+            linestyle,
+            color=colors[j_x],
+            marker="o",
+            label=tmp_legend,
+        )
 
     ax.set_yticks(parameters_ind)
     if x_labels is not None:
@@ -293,14 +317,14 @@ def parameters_lowlevel(
     parameters_ind = np.array(parameters_ind).flatten()
     if lb is not None:
         lb = np.array(lb, dtype="float64")
-        ax.plot(lb.flatten(), parameters_ind, 'k--', marker='+')
+        ax.plot(lb.flatten(), parameters_ind, "k--", marker="+")
     if ub is not None:
         ub = np.array(ub, dtype="float64")
-        ax.plot(ub.flatten(), parameters_ind, 'k--', marker='+')
+        ax.plot(ub.flatten(), parameters_ind, "k--", marker="+")
 
-    ax.set_xlabel('Parameter value')
-    ax.set_ylabel('Parameter')
-    ax.set_title('Estimated parameters')
+    ax.set_xlabel("Parameter value")
+    ax.set_ylabel("Parameter")
+    ax.set_title("Estimated parameters")
     if legend_text is not None:
         ax.legend()
 
@@ -308,10 +332,11 @@ def parameters_lowlevel(
 
 
 def handle_inputs(
-        result: Result, parameter_indices: List[int],
-        lb: Optional[Union[np.ndarray, List[float]]] = None,
-        ub: Optional[Union[np.ndarray, List[float]]] = None,
-        start_indices: Optional[Union[int, Iterable[int]]] = None
+    result: Result,
+    parameter_indices: List[int],
+    lb: Optional[Union[np.ndarray, List[float]]] = None,
+    ub: Optional[Union[np.ndarray, List[float]]] = None,
+    start_indices: Optional[Union[int, Iterable[int]]] = None,
 ) -> Tuple[np.ndarray, np.ndarray, List[str], np.ndarray, List[np.ndarray]]:
     """
     Computes the correct bounds for the parameter indices to be plotted and
@@ -351,8 +376,8 @@ def handle_inputs(
     """
 
     # retrieve results
-    fvals = result.optimize_result.get_for_key('fval')
-    xs = result.optimize_result.get_for_key('x')
+    fvals = result.optimize_result.get_for_key("fval")
+    xs = result.optimize_result.get_for_key("x")
 
     # parse indices which should be plotted
     if start_indices is not None:
@@ -378,8 +403,9 @@ def handle_inputs(
     # handle fixed and free indices
     if len(parameter_indices) < result.problem.dim_full:
         for ix, x in enumerate(xs_out):
-            xs_out[ix] = result.problem.get_reduced_vector(x,
-                                                           parameter_indices)
+            xs_out[ix] = result.problem.get_reduced_vector(
+                x, parameter_indices
+            )
         lb = result.problem.get_reduced_vector(lb, parameter_indices)
         ub = result.problem.get_reduced_vector(ub, parameter_indices)
         x_labels = [x_labels[int(i)] for i in parameter_indices]

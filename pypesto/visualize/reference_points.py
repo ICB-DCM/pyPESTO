@@ -30,22 +30,22 @@ class ReferencePoint(dict):
         legend text for reference point
     """
 
-    def __init__(self,
-                 reference=None,
-                 x=None,
-                 fval=None,
-                 color=None,
-                 legend=None):
+    def __init__(
+        self, reference=None, x=None, fval=None, color=None, legend=None
+    ):
         super().__init__()
 
         if (reference is not None) and ((x is not None) or (fval is not None)):
-            raise ValueError("Please specify either an argument for reference "
-                             "or for x and fval, but not both.")
+            raise ValueError(
+                "Please specify either an argument for reference "
+                "or for x and fval, but not both."
+            )
 
         # assign legend, may be None
         self.legend = legend
-        if isinstance(reference, dict) or \
-                isinstance(reference, ReferencePoint):
+        if isinstance(reference, dict) or isinstance(
+            reference, ReferencePoint
+        ):
             # Handle case of dict or ReferencePoint
             self.x = np.array(reference["x"])
             self.fval = reference["fval"]
@@ -76,15 +76,19 @@ class ReferencePoint(dict):
             if x is not None:
                 self.x = np.array(x)
             else:
-                raise ValueError('Parameter vector x not passed, but is a '
-                                 'mandatory input when creating a reference '
-                                 'point. Stopping.')
+                raise ValueError(
+                    "Parameter vector x not passed, but is a "
+                    "mandatory input when creating a reference "
+                    "point. Stopping."
+                )
             if fval is not None:
                 self.fval = fval
             else:
-                raise ValueError('Objective value fval not passed, but is a '
-                                 'mandatory input when creating a reference '
-                                 'point. Stopping.')
+                raise ValueError(
+                    "Objective value fval not passed, but is a "
+                    "mandatory input when creating a reference "
+                    "point. Stopping."
+                )
             if color is not None:
                 self.color = color
                 self.auto_color = False
@@ -122,24 +126,27 @@ def assign_colors(ref):
     # loop over reference points
     auto_color_count = 0
     for i_ref in ref:
-        if i_ref['auto_color']:
+        if i_ref["auto_color"]:
             auto_color_count += 1
 
-    auto_colors = [[0., 0.5 * (1. + i_auto / auto_color_count), 0., 0.9] for
-                   i_auto in range(auto_color_count)]
+    auto_colors = [
+        [0.0, 0.5 * (1.0 + i_auto / auto_color_count), 0.0, 0.9]
+        for i_auto in range(auto_color_count)
+    ]
 
     # loop over reference points and assign auto_colors
     auto_color_count = 0
     for i_num, i_ref in enumerate(ref):
-        if i_ref['auto_color']:
-            i_ref['color'] = auto_colors[i_num]
+        if i_ref["auto_color"]:
+            i_ref["color"] = auto_colors[i_num]
             auto_color_count += 1
 
     return ref
 
 
-def create_references(references=None, x=None, fval=None, color=None,
-                      legend=None) -> List[ReferencePoint]:
+def create_references(
+    references=None, x=None, fval=None, color=None, legend=None
+) -> List[ReferencePoint]:
     """
     This function creates a list of reference point objects from user inputs
 

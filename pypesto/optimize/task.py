@@ -15,13 +15,14 @@ class OptimizerTask(Task):
     """
 
     def __init__(
-            self,
-            optimizer: 'pypesto.optimize.Optimizer',
-            problem: Problem,
-            x0: np.ndarray,
-            id: str,
-            options: 'pypesto.optimize.OptimizeOptions',
-            history_options: HistoryOptions):
+        self,
+        optimizer: "pypesto.optimize.Optimizer",
+        problem: Problem,
+        x0: np.ndarray,
+        id: str,
+        options: "pypesto.optimize.OptimizeOptions",
+        history_options: HistoryOptions,
+    ):
         """
         Create the task object.
 
@@ -49,11 +50,14 @@ class OptimizerTask(Task):
         self.options = options
         self.history_options = history_options
 
-    def execute(self) -> 'pypesto.optimize.OptimizerResult':
+    def execute(self) -> "pypesto.optimize.OptimizerResult":
         logger.info(f"Executing task {self.id}.")
 
         optimizer_result = self.optimizer.minimize(
-            problem=self.problem, x0=self.x0, id=self.id,
+            problem=self.problem,
+            x0=self.x0,
+            id=self.id,
             allow_failed_starts=self.options.allow_failed_starts,
-            history_options=self.history_options)
+            history_options=self.history_options,
+        )
         return optimizer_result

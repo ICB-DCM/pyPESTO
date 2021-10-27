@@ -5,7 +5,15 @@ import logging
 import warnings
 
 from .constants import (
-    FVAL, CHI2, GRAD, HESS, RES, SRES, RDATAS, MODE_FUN, MODE_RES
+    FVAL,
+    CHI2,
+    GRAD,
+    HESS,
+    RES,
+    SRES,
+    RDATAS,
+    MODE_FUN,
+    MODE_RES,
 )
 
 try:
@@ -13,20 +21,22 @@ try:
     import amici.petab_objective
     import amici.parameter_mapping
     from amici.parameter_mapping import (
-        ParameterMapping, ParameterMappingForCondition)
+        ParameterMapping,
+        ParameterMappingForCondition,
+    )
 except ImportError:
     pass
 
-AmiciModel = Union['amici.Model', 'amici.ModelPtr']
-AmiciSolver = Union['amici.Solver', 'amici.SolverPtr']
+AmiciModel = Union["amici.Model", "amici.ModelPtr"]
+AmiciSolver = Union["amici.Solver", "amici.SolverPtr"]
 
 logger = logging.getLogger(__name__)
 
 
 def map_par_opt_to_par_sim(
-        condition_map_sim_var: Dict[str, Union[float, str]],
-        x_dct: Dict[str, float],
-        amici_model: AmiciModel
+    condition_map_sim_var: Dict[str, Union[float, str]],
+    x_dct: Dict[str, float],
+    amici_model: AmiciModel,
 ) -> np.ndarray:
     """
     From the optimization vector, create the simulation vector according
@@ -47,8 +57,10 @@ def map_par_opt_to_par_sim(
         The simulation parameters vector corresponding to x under the
         specified mapping.
     """
-    par_sim_vals = [condition_map_sim_var[par_id]
-                    for par_id in amici_model.getParameterIds()]
+    par_sim_vals = [
+        condition_map_sim_var[par_id]
+        for par_id in amici_model.getParameterIds()
+    ]
 
     # iterate over simulation parameter indices
     for ix, val in enumerate(par_sim_vals):
@@ -61,8 +73,10 @@ def map_par_opt_to_par_sim(
 
 
 def create_plist_from_par_opt_to_par_sim(mapping_par_opt_to_par_sim):
-    warnings.warn("This function will be removed in future releases. ",
-                  DeprecationWarning)
+    warnings.warn(
+        "This function will be removed in future releases. ",
+        DeprecationWarning,
+    )
     """
     From the parameter mapping `mapping_par_opt_to_par_sim`, create the
     simulation plist according to the mapping `mapping`.
@@ -92,8 +106,8 @@ def create_plist_from_par_opt_to_par_sim(mapping_par_opt_to_par_sim):
 
 
 def create_identity_parameter_mapping(
-        amici_model: AmiciModel, n_conditions: int
-) -> 'ParameterMapping':
+    amici_model: AmiciModel, n_conditions: int
+) -> "ParameterMapping":
     """Create a dummy identity parameter mapping table.
 
     This fills in only the dynamic parameters. Values for fixed parameters,
@@ -107,19 +121,22 @@ def create_identity_parameter_mapping(
         condition_map_sim_var = {x_id: x_id for x_id in x_ids}
         condition_scale_map_sim_var = {
             x_id: amici.parameter_mapping.amici_to_petab_scale(x_scale)
-            for x_id, x_scale in zip(x_ids, x_scales)}
+            for x_id, x_scale in zip(x_ids, x_scales)
+        }
         # assumes fixed parameters are filled in already
         mapping_for_condition = ParameterMappingForCondition(
             map_sim_var=condition_map_sim_var,
-            scale_map_sim_var=condition_scale_map_sim_var)
+            scale_map_sim_var=condition_scale_map_sim_var,
+        )
 
         parameter_mapping.append(mapping_for_condition)
     return parameter_mapping
 
 
 def par_index_slices(
-        par_opt_ids: Sequence[str], par_sim_ids: Sequence[str],
-        condition_map_sim_var: Dict[str, Union[float, str]]
+    par_opt_ids: Sequence[str],
+    par_sim_ids: Sequence[str],
+    condition_map_sim_var: Dict[str, Union[float, str]],
 ) -> Tuple[np.ndarray, np.ndarray]:
     """
     Generate numpy arrays for indexing based on `mapping_par_opt_to_par_sim`.
@@ -142,24 +159,35 @@ def par_index_slices(
         array of optimization parameter indices
     """
     # the sum accounts for subindexing according to plist in edata
-    par_sim_slice, par_opt_slice = list(zip(*[
-        (sum(isinstance(condition_map_sim_var[par_id], str)
-             for par_id in
-             par_sim_ids[:par_sim_ids.index(par_sim_id) + 1]) - 1,
-         par_opt_ids.index(par_opt_id))
-        for par_sim_id, par_opt_id in condition_map_sim_var.items()
-        if isinstance(par_opt_id, str)
-    ]))
+    par_sim_slice, par_opt_slice = list(
+        zip(
+            *[
+                (
+                    sum(
+                        isinstance(condition_map_sim_var[par_id], str)
+                        for par_id in par_sim_ids[
+                            : par_sim_ids.index(par_sim_id) + 1
+                        ]
+                    )
+                    - 1,
+                    par_opt_ids.index(par_opt_id),
+                )
+                for par_sim_id, par_opt_id in condition_map_sim_var.items()
+                if isinstance(par_opt_id, str)
+            ]
+        )
+    )
     return np.asarray(par_sim_slice), np.asarray(par_opt_slice)
 
 
 def add_sim_grad_to_opt_grad(
-        par_opt_ids: Sequence[str],
-        par_sim_ids: Sequence[str],
-        condition_map_sim_var: Dict[str, Union[float, str]],
-        sim_grad: np.ndarray,
-        opt_grad: np.ndarray,
-        coefficient: float = 1.0):
+    par_opt_ids: Sequence[str],
+    par_sim_ids: Sequence[str],
+    condition_map_sim_var: Dict[str, Union[float, str]],
+    sim_grad: np.ndarray,
+    opt_grad: np.ndarray,
+    coefficient: float = 1.0,
+):
     """
     Sum simulation gradients to objective gradient according to the provided
     mapping `mapping_par_opt_to_par_sim`.
@@ -181,28 +209,33 @@ def add_sim_grad_to_opt_grad(
         Coefficient for sim_grad when adding to opt_grad.
     """
 
-    par_sim_slice, par_opt_slice = par_index_slices(par_opt_ids, par_sim_ids,
-                                                    condition_map_sim_var)
+    par_sim_slice, par_opt_slice = par_index_slices(
+        par_opt_ids, par_sim_ids, condition_map_sim_var
+    )
 
-    par_opt_slice_unique, unique_index = np.unique(par_opt_slice,
-                                                   return_index=True)
-    opt_grad[par_opt_slice_unique] += \
+    par_opt_slice_unique, unique_index = np.unique(
+        par_opt_slice, return_index=True
+    )
+    opt_grad[par_opt_slice_unique] += (
         coefficient * sim_grad[par_sim_slice[unique_index]]
+    )
 
     if par_opt_slice_unique.size < par_opt_slice.size:
         for idx in range(len(par_opt_slice)):
             if idx not in unique_index:
-                opt_grad[par_opt_slice[idx]] += \
+                opt_grad[par_opt_slice[idx]] += (
                     coefficient * sim_grad[par_sim_slice[idx]]
+                )
 
 
 def add_sim_hess_to_opt_hess(
-        par_opt_ids: Sequence[str],
-        par_sim_ids: Sequence[str],
-        condition_map_sim_var: Dict[str, Union[float, str]],
-        sim_hess: np.ndarray,
-        opt_hess: np.ndarray,
-        coefficient: float = 1.0):
+    par_opt_ids: Sequence[str],
+    par_sim_ids: Sequence[str],
+    condition_map_sim_var: Dict[str, Union[float, str]],
+    sim_hess: np.ndarray,
+    opt_hess: np.ndarray,
+    coefficient: float = 1.0,
+):
     """
     Sum simulation hessians to objective hessian according to the provided
     mapping `mapping_par_opt_to_par_sim`.
@@ -212,38 +245,49 @@ def add_sim_hess_to_opt_hess(
     Same as for add_sim_grad_to_opt_grad, replacing the gradients by hessians.
     """
 
-    par_sim_slice, par_opt_slice = par_index_slices(par_opt_ids, par_sim_ids,
-                                                    condition_map_sim_var)
+    par_sim_slice, par_opt_slice = par_index_slices(
+        par_opt_ids, par_sim_ids, condition_map_sim_var
+    )
 
-    par_opt_slice_unique, unique_index = np.unique(par_opt_slice,
-                                                   return_index=True)
+    par_opt_slice_unique, unique_index = np.unique(
+        par_opt_slice, return_index=True
+    )
 
-    non_unique_indices = [idx for idx in range(len(par_opt_slice))
-                          if idx not in unique_index]
+    non_unique_indices = [
+        idx for idx in range(len(par_opt_slice)) if idx not in unique_index
+    ]
 
-    opt_hess[np.ix_(par_opt_slice_unique, par_opt_slice_unique)] += \
-        coefficient * sim_hess[np.ix_(par_sim_slice[unique_index],
-                                      par_sim_slice[unique_index])]
+    opt_hess[np.ix_(par_opt_slice_unique, par_opt_slice_unique)] += (
+        coefficient
+        * sim_hess[
+            np.ix_(par_sim_slice[unique_index], par_sim_slice[unique_index])
+        ]
+    )
 
     if par_opt_slice_unique.size < par_opt_slice.size:
         for idx in non_unique_indices:
-            opt_hess[par_opt_slice[idx], par_opt_slice_unique] += \
-                coefficient * sim_hess[par_sim_slice[idx],
-                                       par_sim_slice[unique_index]]
-            opt_hess[par_opt_slice_unique, par_opt_slice[idx]] += \
-                coefficient * sim_hess[par_sim_slice[unique_index],
-                                       par_sim_slice[idx]]
+            opt_hess[par_opt_slice[idx], par_opt_slice_unique] += (
+                coefficient
+                * sim_hess[par_sim_slice[idx], par_sim_slice[unique_index]]
+            )
+            opt_hess[par_opt_slice_unique, par_opt_slice[idx]] += (
+                coefficient
+                * sim_hess[par_sim_slice[unique_index], par_sim_slice[idx]]
+            )
             for jdx in non_unique_indices:
-                opt_hess[par_opt_slice[idx], par_opt_slice[jdx]] += \
-                    coefficient * sim_hess[par_sim_slice[idx],
-                                           par_sim_slice[jdx]]
+                opt_hess[par_opt_slice[idx], par_opt_slice[jdx]] += (
+                    coefficient
+                    * sim_hess[par_sim_slice[idx], par_sim_slice[jdx]]
+                )
 
 
-def sim_sres_to_opt_sres(par_opt_ids: Sequence[str],
-                         par_sim_ids: Sequence[str],
-                         condition_map_sim_var: Dict[str, Union[float, str]],
-                         sim_sres: np.ndarray,
-                         coefficient: float = 1.0):
+def sim_sres_to_opt_sres(
+    par_opt_ids: Sequence[str],
+    par_sim_ids: Sequence[str],
+    condition_map_sim_var: Dict[str, Union[float, str]],
+    sim_sres: np.ndarray,
+    coefficient: float = 1.0,
+):
     """
     Sum simulation residual sensitivities to objective residual sensitivities
     according to the provided mapping.
@@ -255,19 +299,23 @@ def sim_sres_to_opt_sres(par_opt_ids: Sequence[str],
     """
     opt_sres = np.zeros((sim_sres.shape[0], len(par_opt_ids)))
 
-    par_sim_slice, par_opt_slice = par_index_slices(par_opt_ids, par_sim_ids,
-                                                    condition_map_sim_var)
+    par_sim_slice, par_opt_slice = par_index_slices(
+        par_opt_ids, par_sim_ids, condition_map_sim_var
+    )
 
-    par_opt_slice_unique, unique_index = np.unique(par_opt_slice,
-                                                   return_index=True)
-    opt_sres[:, par_opt_slice_unique] += \
+    par_opt_slice_unique, unique_index = np.unique(
+        par_opt_slice, return_index=True
+    )
+    opt_sres[:, par_opt_slice_unique] += (
         coefficient * sim_sres[:, par_sim_slice[unique_index]]
+    )
 
     if par_opt_slice_unique.size < par_opt_slice.size:
         for idx in range(len(par_opt_slice)):
             if idx not in unique_index:
-                opt_sres[:, par_opt_slice[idx]] += \
+                opt_sres[:, par_opt_slice[idx]] += (
                     coefficient * sim_sres[:, par_sim_slice[idx]]
+                )
 
     return opt_sres
 
@@ -278,7 +326,7 @@ def log_simulation(data_ix, rdata):
     logger.debug(f"status: {rdata['status']}")
     logger.debug(f"llh: {rdata['llh']}")
 
-    t_steadystate = 't_steadystate'
+    t_steadystate = "t_steadystate"
     if t_steadystate in rdata and rdata[t_steadystate] != np.nan:
         logger.debug(f"t_steadystate: {rdata[t_steadystate]}")
 
@@ -286,12 +334,13 @@ def log_simulation(data_ix, rdata):
 
 
 def get_error_output(
-        amici_model: AmiciModel,
-        edatas: Sequence['amici.ExpData'],
-        rdatas: Sequence['amici.ReturnData'],
-        sensi_order: int,
-        mode: str,
-        dim: int):
+    amici_model: AmiciModel,
+    edatas: Sequence["amici.ExpData"],
+    rdatas: Sequence["amici.ReturnData"],
+    sensi_order: int,
+    mode: str,
+    dim: int,
+):
     """Default output upon error.
 
     Returns values indicative of an error, that is with nan entries in all
@@ -300,12 +349,14 @@ def get_error_output(
     if not amici_model.nt():
         nt = sum(data.nt() for data in edatas)
     else:
-        nt = sum(data.nt() if data.nt() else amici_model.nt()
-                 for data in edatas)
+        nt = sum(
+            data.nt() if data.nt() else amici_model.nt() for data in edatas
+        )
     n_res = nt * amici_model.nytrue
 
-    nllh, snllh, s2nllh, chi2, res, sres = init_return_values(sensi_order,
-                                                              mode, dim, True)
+    nllh, snllh, s2nllh, chi2, res, sres = init_return_values(
+        sensi_order, mode, dim, True
+    )
     if res is not None:
         res = np.nan * np.ones(n_res)
     if sres is not None:
@@ -318,7 +369,7 @@ def get_error_output(
         HESS: s2nllh,
         RES: res,
         SRES: sres,
-        RDATAS: rdatas
+        RDATAS: rdatas,
     }
     return filter_return_dict(ret)
 
@@ -352,8 +403,4 @@ def init_return_values(sensi_order, mode, dim, error=False):
 
 def filter_return_dict(ret):
     """Filters return dict for non-None values"""
-    return {
-        key: val
-        for key, val in ret.items()
-        if val is not None
-    }
+    return {key: val for key, val in ret.items() if val is not None}

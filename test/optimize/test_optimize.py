@@ -21,13 +21,13 @@ from ..util import rosen_for_sensi, CRProblem
 from numpy.testing import assert_almost_equal
 
 
-@pytest.fixture(params=['cr', 'rosen-integrated', 'rosen-separated'])
+@pytest.fixture(params=["cr", "rosen-integrated", "rosen-separated"])
 def problem(request) -> pypesto.Problem:
-    if request.param == 'cr':
+    if request.param == "cr":
         return CRProblem().get_problem()
-    elif 'rosen' in request.param:
-        integrated = 'integrated' in request.param
-        obj = rosen_for_sensi(max_sensi_order=2, integrated=integrated)['obj']
+    elif "rosen" in request.param:
+        integrated = "integrated" in request.param
+        obj = rosen_for_sensi(max_sensi_order=2, integrated=integrated)["obj"]
         lb = 0 * np.ones((1, 2))
         ub = 1 * np.ones((1, 2))
         return pypesto.Problem(objective=obj, lb=lb, ub=ub)
@@ -36,39 +36,96 @@ def problem(request) -> pypesto.Problem:
 
 
 optimizers = [
-    *[('scipy', method) for method in [
-        'Nelder-Mead', 'Powell', 'CG', 'BFGS', 'Newton-CG',
-        'L-BFGS-B', 'TNC', 'COBYLA', 'SLSQP',
-        'trust-ncg', 'trust-exact', 'trust-krylov',
-        'ls_trf', 'ls_dogbox']],
+    *[
+        ("scipy", method)
+        for method in [
+            "Nelder-Mead",
+            "Powell",
+            "CG",
+            "BFGS",
+            "Newton-CG",
+            "L-BFGS-B",
+            "TNC",
+            "COBYLA",
+            "SLSQP",
+            "trust-ncg",
+            "trust-exact",
+            "trust-krylov",
+            "ls_trf",
+            "ls_dogbox",
+        ]
+    ],
     # disabled: ,'trust-constr', 'ls_lm', 'dogleg'
-    ('ipopt', ''),
-    ('dlib', ''),
-    ('pyswarm', ''),
-    ('cmaes', ''),
-    ('scipydiffevolopt', ''),
-    ('pyswarms', ''),
-    *[('nlopt', method) for method in [
-        nlopt.LD_VAR1, nlopt.LD_VAR2, nlopt.LD_TNEWTON_PRECOND_RESTART,
-        nlopt.LD_TNEWTON_PRECOND, nlopt.LD_TNEWTON_RESTART,
-        nlopt.LD_TNEWTON, nlopt.LD_LBFGS,
-        nlopt.LD_SLSQP, nlopt.LD_CCSAQ, nlopt.LD_MMA, nlopt.LN_SBPLX,
-        nlopt.LN_NELDERMEAD, nlopt.LN_PRAXIS, nlopt.LN_NEWUOA,
-        nlopt.LN_NEWUOA_BOUND, nlopt.LN_BOBYQA, nlopt.LN_COBYLA,
-        nlopt.GN_ESCH, nlopt.GN_ISRES, nlopt.GN_AGS, nlopt.GD_STOGO,
-        nlopt.GD_STOGO_RAND, nlopt.G_MLSL, nlopt.G_MLSL_LDS, nlopt.GD_MLSL,
-        nlopt.GD_MLSL_LDS, nlopt.GN_CRS2_LM, nlopt.GN_ORIG_DIRECT,
-        nlopt.GN_ORIG_DIRECT_L, nlopt.GN_DIRECT, nlopt.GN_DIRECT_L,
-        nlopt.GN_DIRECT_L_NOSCAL, nlopt.GN_DIRECT_L_RAND,
-        nlopt.GN_DIRECT_L_RAND_NOSCAL, nlopt.AUGLAG, nlopt.AUGLAG_EQ
-    ]],
-    *[('fides', solver) for solver in itt.product(
-        [None, fides.BFGS(), fides.SR1(), fides.BB(), fides.BG(),
-         fides.Broyden(0.5), fides.SSM(), fides.TSSM(), fides.HybridFixed(),
-         fides.FX(), fides.GNSBFGS()],
-        [fides.SubSpaceDim.TWO, fides.SubSpaceDim.FULL,
-         fides.SubSpaceDim.STEIHAUG]
-    )]
+    ("ipopt", ""),
+    ("dlib", ""),
+    ("pyswarm", ""),
+    ("cmaes", ""),
+    ("scipydiffevolopt", ""),
+    ("pyswarms", ""),
+    *[
+        ("nlopt", method)
+        for method in [
+            nlopt.LD_VAR1,
+            nlopt.LD_VAR2,
+            nlopt.LD_TNEWTON_PRECOND_RESTART,
+            nlopt.LD_TNEWTON_PRECOND,
+            nlopt.LD_TNEWTON_RESTART,
+            nlopt.LD_TNEWTON,
+            nlopt.LD_LBFGS,
+            nlopt.LD_SLSQP,
+            nlopt.LD_CCSAQ,
+            nlopt.LD_MMA,
+            nlopt.LN_SBPLX,
+            nlopt.LN_NELDERMEAD,
+            nlopt.LN_PRAXIS,
+            nlopt.LN_NEWUOA,
+            nlopt.LN_NEWUOA_BOUND,
+            nlopt.LN_BOBYQA,
+            nlopt.LN_COBYLA,
+            nlopt.GN_ESCH,
+            nlopt.GN_ISRES,
+            nlopt.GN_AGS,
+            nlopt.GD_STOGO,
+            nlopt.GD_STOGO_RAND,
+            nlopt.G_MLSL,
+            nlopt.G_MLSL_LDS,
+            nlopt.GD_MLSL,
+            nlopt.GD_MLSL_LDS,
+            nlopt.GN_CRS2_LM,
+            nlopt.GN_ORIG_DIRECT,
+            nlopt.GN_ORIG_DIRECT_L,
+            nlopt.GN_DIRECT,
+            nlopt.GN_DIRECT_L,
+            nlopt.GN_DIRECT_L_NOSCAL,
+            nlopt.GN_DIRECT_L_RAND,
+            nlopt.GN_DIRECT_L_RAND_NOSCAL,
+            nlopt.AUGLAG,
+            nlopt.AUGLAG_EQ,
+        ]
+    ],
+    *[
+        ("fides", solver)
+        for solver in itt.product(
+            [
+                None,
+                fides.BFGS(),
+                fides.SR1(),
+                fides.BB(),
+                fides.BG(),
+                fides.Broyden(0.5),
+                fides.SSM(),
+                fides.TSSM(),
+                fides.HybridFixed(),
+                fides.FX(),
+                fides.GNSBFGS(),
+            ],
+            [
+                fides.SubSpaceDim.TWO,
+                fides.SubSpaceDim.FULL,
+                fides.SubSpaceDim.STEIHAUG,
+            ],
+        )
+    ],
 ]
 
 
@@ -96,34 +153,55 @@ def test_unbounded_minimize(optimizer):
     ub_init = 1.11 * np.ones((1, 2))
     ub = np.inf * np.ones(ub_init.shape)
     problem = pypesto.Problem(
-        rosen_for_sensi(max_sensi_order=2)['obj'],
-        lb, ub, lb_init=lb_init, ub_init=ub_init
+        rosen_for_sensi(max_sensi_order=2)["obj"],
+        lb,
+        ub,
+        lb_init=lb_init,
+        ub_init=ub_init,
     )
     opt = get_optimizer(*optimizer)
 
     options = optimize.OptimizeOptions(allow_failed_starts=False)
 
-    if isinstance(optimizer[1], str) and re.match(r'^(?i)(ls_)', optimizer[1]):
+    if isinstance(optimizer[1], str) and re.match(r"^(?i)(ls_)", optimizer[1]):
         return
 
-    if optimizer in [('dlib', ''), ('pyswarm', ''), ('cmaes', ''),
-                     ('scipydiffevolopt', ''), ('pyswarms', ''),
-                     *[('nlopt', method) for method in [
-                         nlopt.GN_ESCH, nlopt.GN_ISRES, nlopt.GN_AGS,
-                         nlopt.GD_STOGO, nlopt.GD_STOGO_RAND, nlopt.G_MLSL,
-                         nlopt.G_MLSL_LDS, nlopt.GD_MLSL, nlopt.GD_MLSL_LDS,
-                         nlopt.GN_CRS2_LM, nlopt.GN_ORIG_DIRECT,
-                         nlopt.GN_ORIG_DIRECT_L, nlopt.GN_DIRECT,
-                         nlopt.GN_DIRECT_L, nlopt.GN_DIRECT_L_NOSCAL,
-                         nlopt.GN_DIRECT_L_RAND,
-                         nlopt.GN_DIRECT_L_RAND_NOSCAL]]]:
+    if optimizer in [
+        ("dlib", ""),
+        ("pyswarm", ""),
+        ("cmaes", ""),
+        ("scipydiffevolopt", ""),
+        ("pyswarms", ""),
+        *[
+            ("nlopt", method)
+            for method in [
+                nlopt.GN_ESCH,
+                nlopt.GN_ISRES,
+                nlopt.GN_AGS,
+                nlopt.GD_STOGO,
+                nlopt.GD_STOGO_RAND,
+                nlopt.G_MLSL,
+                nlopt.G_MLSL_LDS,
+                nlopt.GD_MLSL,
+                nlopt.GD_MLSL_LDS,
+                nlopt.GN_CRS2_LM,
+                nlopt.GN_ORIG_DIRECT,
+                nlopt.GN_ORIG_DIRECT_L,
+                nlopt.GN_DIRECT,
+                nlopt.GN_DIRECT_L,
+                nlopt.GN_DIRECT_L_NOSCAL,
+                nlopt.GN_DIRECT_L_RAND,
+                nlopt.GN_DIRECT_L_RAND_NOSCAL,
+            ]
+        ],
+    ]:
         with pytest.raises(ValueError):
             optimize.minimize(
                 problem=problem,
                 optimizer=opt,
                 n_starts=1,
                 startpoint_method=pypesto.startpoint.uniform,
-                options=options
+                options=options,
             )
         return
     else:
@@ -132,49 +210,50 @@ def test_unbounded_minimize(optimizer):
             optimizer=opt,
             n_starts=1,
             startpoint_method=pypesto.startpoint.uniform,
-            options=options
+            options=options,
         )
 
     # check that ub/lb were reverted
-    assert isinstance(result.optimize_result.list[0]['fval'], float)
-    if optimizer not in [('scipy', 'ls_trf'), ('scipy', 'ls_dogbox')]:
-        assert np.isfinite(result.optimize_result.list[0]['fval'])
-        assert result.optimize_result.list[0]['x'] is not None
+    assert isinstance(result.optimize_result.list[0]["fval"], float)
+    if optimizer not in [("scipy", "ls_trf"), ("scipy", "ls_dogbox")]:
+        assert np.isfinite(result.optimize_result.list[0]["fval"])
+        assert result.optimize_result.list[0]["x"] is not None
     # check that result is not in bounds, optimum is at (1,1), so you would
     # hope that any reasonable optimizer manage to finish with x < ub,
     # but I guess some are pretty terrible
-    assert np.any(result.optimize_result.list[0]['x'] < lb_init) or \
-        np.any(result.optimize_result.list[0]['x'] > ub_init)
+    assert np.any(result.optimize_result.list[0]["x"] < lb_init) or np.any(
+        result.optimize_result.list[0]["x"] > ub_init
+    )
 
 
 def get_optimizer(library, solver):
     """Constructs Optimizer given and optimization library and optimization
     solver specification"""
-    options = {
-        'maxiter': 100
-    }
+    options = {"maxiter": 100}
 
-    if library == 'scipy':
+    if library == "scipy":
         optimizer = optimize.ScipyOptimizer(method=solver, options=options)
-    elif library == 'ipopt':
+    elif library == "ipopt":
         optimizer = optimize.IpoptOptimizer()
-    elif library == 'dlib':
+    elif library == "dlib":
         optimizer = optimize.DlibOptimizer(options=options)
-    elif library == 'pyswarm':
+    elif library == "pyswarm":
         optimizer = optimize.PyswarmOptimizer(options=options)
-    elif library == 'cmaes':
+    elif library == "cmaes":
         optimizer = optimize.CmaesOptimizer(options=options)
-    elif library == 'scipydiffevolopt':
+    elif library == "scipydiffevolopt":
         optimizer = optimize.ScipyDifferentialEvolutionOptimizer(
-            options=options)
-    elif library == 'pyswarms':
+            options=options
+        )
+    elif library == "pyswarms":
         optimizer = optimize.PyswarmsOptimizer(options=options)
-    elif library == 'nlopt':
+    elif library == "nlopt":
         optimizer = optimize.NLoptOptimizer(method=solver, options=options)
-    elif library == 'fides':
+    elif library == "fides":
         options[fides.Options.SUBSPACE_DIM] = solver[1]
-        optimizer = optimize.FidesOptimizer(options=options,
-                                            hessian_update=solver[0])
+        optimizer = optimize.FidesOptimizer(
+            options=options, hessian_update=solver[0]
+        )
     else:
         raise ValueError(f"Optimizer not recognized: {library}")
 
@@ -194,15 +273,15 @@ def check_minimize(problem, library, solver, allow_failed_starts=False):
         optimizer=optimizer,
         n_starts=1,
         startpoint_method=pypesto.startpoint.uniform,
-        options=optimize_options
+        options=optimize_options,
     )
 
-    assert isinstance(result.optimize_result.list[0]['fval'], float)
+    assert isinstance(result.optimize_result.list[0]["fval"], float)
     if (library, solver) not in [
-            ('nlopt', nlopt.GD_STOGO_RAND)  # id 9, fails in 40% of cases
+        ("nlopt", nlopt.GD_STOGO_RAND)  # id 9, fails in 40% of cases
     ]:
-        assert np.isfinite(result.optimize_result.list[0]['fval'])
-        assert result.optimize_result.list[0]['x'] is not None
+        assert np.isfinite(result.optimize_result.list[0]["fval"])
+        assert result.optimize_result.list[0]["x"] is not None
 
 
 def test_mpipoolengine():
@@ -214,36 +293,53 @@ def test_mpipoolengine():
         path = os.path.dirname(__file__)
         # run the example file.
         subprocess.check_call(  # noqa: S603,S607
-            ['mpiexec', '-np', '2', 'python', '-m', 'mpi4py.futures',
-             f'{path}/../../doc/example/example_MPIPool.py'])
+            [
+                "mpiexec",
+                "-np",
+                "2",
+                "python",
+                "-m",
+                "mpi4py.futures",
+                f"{path}/../../doc/example/example_MPIPool.py",
+            ]
+        )
 
         # read results
-        opt_result_reader = OptimizationResultHDF5Reader('temp_result.h5')
+        opt_result_reader = OptimizationResultHDF5Reader("temp_result.h5")
         result1 = opt_result_reader.read()
         # set optimizer
         optimizer = optimize.FidesOptimizer(verbose=0)
         # initialize problem with x_guesses and objective
-        objective = pypesto.Objective(fun=sp.optimize.rosen,
-                                      grad=sp.optimize.rosen_der,
-                                      hess=sp.optimize.rosen_hess)
-        x_guesses = np.array([result1.optimize_result.list[i]['x0']
-                              for i in range(2)])
-        problem = pypesto.Problem(objective=objective,
-                                  ub=result1.problem.ub,
-                                  lb=result1.problem.lb,
-                                  x_guesses=x_guesses)
-        result2 = optimize.minimize(problem=problem,
-                                    optimizer=optimizer,
-                                    n_starts=2,
-                                    engine=pypesto.engine.MultiProcessEngine())
+        objective = pypesto.Objective(
+            fun=sp.optimize.rosen,
+            grad=sp.optimize.rosen_der,
+            hess=sp.optimize.rosen_hess,
+        )
+        x_guesses = np.array(
+            [result1.optimize_result.list[i]["x0"] for i in range(2)]
+        )
+        problem = pypesto.Problem(
+            objective=objective,
+            ub=result1.problem.ub,
+            lb=result1.problem.lb,
+            x_guesses=x_guesses,
+        )
+        result2 = optimize.minimize(
+            problem=problem,
+            optimizer=optimizer,
+            n_starts=2,
+            engine=pypesto.engine.MultiProcessEngine(),
+        )
 
         for ix in range(2):
-            assert_almost_equal(result1.optimize_result.list[ix]['x'],
-                                result2.optimize_result.list[ix]['x'],
-                                err_msg='The final parameter values '
-                                        'do not agree for the engines.')
+            assert_almost_equal(
+                result1.optimize_result.list[ix]["x"],
+                result2.optimize_result.list[ix]["x"],
+                err_msg="The final parameter values "
+                "do not agree for the engines.",
+            )
 
     finally:
-        if os.path.exists('temp_result.h5'):
+        if os.path.exists("temp_result.h5"):
             # delete data
-            os.remove('temp_result.h5')
+            os.remove("temp_result.h5")
