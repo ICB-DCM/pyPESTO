@@ -15,6 +15,7 @@ from ..predict.constants import CONDITION_SEP
 from ..objective.priors import NegLogParameterPriors, \
     get_parameter_prior_dict
 from ..objective.constants import MODE_FUN, MODE_RES
+from ..startpoint import FunctionStartpoints
 
 try:
     import petab
@@ -485,7 +486,7 @@ class PetabImporter(AmiciObjectBuilder):
                 self.petab_problem.parameter_df,
                 n_starts=n_starts)
 
-        return startpoint_method
+        return FunctionStartpoints(function=startpoint_method)
 
     def create_problem(
             self, objective: AmiciObjective = None,
@@ -575,7 +576,7 @@ class PetabImporter(AmiciObjectBuilder):
         dataframe is created, i.e. the measurement column label is adjusted.
         """
         return self.rdatas_to_measurement_df(rdatas, model).rename(
-            {petab.MEASUREMENT: petab.SIMULATION})
+            columns={petab.MEASUREMENT: petab.SIMULATION})
 
     def prediction_to_petab_measurement_df(
             self,
@@ -623,7 +624,7 @@ class PetabImporter(AmiciObjectBuilder):
         """
         return self.prediction_to_petab_measurement_df(
             prediction, predictor).rename(
-            {petab.MEASUREMENT: petab.SIMULATION})
+            columns={petab.MEASUREMENT: petab.SIMULATION})
 
 
 def _find_output_folder_name(

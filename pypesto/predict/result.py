@@ -32,6 +32,8 @@ class PredictionConditionResult:
                  output_ids: Sequence[str],
                  output: np.ndarray = None,
                  output_sensi: np.ndarray = None,
+                 output_weight: float = None,
+                 output_sigmay: np.ndarray = None,
                  x_names: Sequence[str] = None):
         """
         Constructor.
@@ -42,10 +44,14 @@ class PredictionConditionResult:
             Output timepoints for this simulation condition
         output_ids:
             IDs of outputs for this simulation condition
-        outputs:
+        output:
             Postprocessed outputs (ndarray)
-        outputs_sensi:
+        output_sensi:
             Sensitivities of postprocessed outputs (ndarray)
+        output_weight:
+            LLH of the simulation
+        output_sigmay:
+            Standard deviations of postprocessed observables
         x_names:
             IDs of model parameter w.r.t to which sensitivities were computed
         """
@@ -53,6 +59,8 @@ class PredictionConditionResult:
         self.output_ids = output_ids
         self.output = output
         self.output_sensi = output_sensi
+        self.output_weight = output_weight
+        self.output_sigmay = output_sigmay
         self.x_names = x_names
         if x_names is None and output_sensi is not None:
             self.x_names = [f'parameter_{i_par}' for i_par in
@@ -64,6 +72,8 @@ class PredictionConditionResult:
         yield 'x_names', self.x_names
         yield 'output', self.output
         yield 'output_sensi', self.output_sensi
+        yield 'output_weight', self.output_weight
+        yield 'output_sigmay', self.output_sigmay
 
     def __eq__(self, other):
         def to_bool(expr):
@@ -80,6 +90,10 @@ class PredictionConditionResult:
         if to_bool(self.output != other.output):
             return False
         if to_bool(self.output_sensi != other.output_sensi):
+            return False
+        if to_bool(self.output_weight != other.output_weight):
+            return False
+        if to_bool(self.output_sigmay != other.output_sigmay):
             return False
         return True
 
