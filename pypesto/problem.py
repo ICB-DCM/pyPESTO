@@ -73,6 +73,9 @@ class Problem:
     x_priors_defs:
         Definitions of priors for parameters. Types of priors, and their
         required and optional parameters, are described in the `Prior` class.
+    copy_objective:
+        Whethter to generate a deep copy of the objective function before
+        potential modification the problem class performs on it.
 
     Notes
     -----
@@ -104,8 +107,11 @@ class Problem:
         x_priors_defs: Optional[NegLogPriors] = None,
         lb_init: Union[np.ndarray, List[float], None] = None,
         ub_init: Union[np.ndarray, List[float], None] = None,
+        copy_objective: bool = True,
     ):
-        self.objective = copy.deepcopy(objective)
+        if copy_objective:
+            objective = copy.deepcopy(objective)
+        self.objective = objective
 
         self.lb_full: np.ndarray = np.array(lb).flatten()
         self.ub_full: np.ndarray = np.array(ub).flatten()
