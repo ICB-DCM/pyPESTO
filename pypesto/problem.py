@@ -68,6 +68,9 @@ class Problem:
     x_priors_defs:
         Definitions of priors for parameters. Types of priors, and their
         required and optional parameters, are described in the `Prior` class.
+    copy_objective:
+        Whethter to generate a deep copy of the objective function before
+        potential modification the problem class performs on it.
 
     Notes
     -----
@@ -83,21 +86,26 @@ class Problem:
     get_full_matrix() can be used.
     """
 
-    def __init__(self,
-                 objective: ObjectiveBase,
-                 lb: Union[np.ndarray, List[float]],
-                 ub: Union[np.ndarray, List[float]],
-                 dim_full: Optional[int] = None,
-                 x_fixed_indices: Optional[SupportsIntIterableOrValue] = None,
-                 x_fixed_vals: Optional[SupportsFloatIterableOrValue] = None,
-                 x_guesses: Optional[Iterable[float]] = None,
-                 startpoint_method: Optional[Callable] = None,
-                 x_names: Optional[Iterable[str]] = None,
-                 x_scales: Optional[Iterable[str]] = None,
-                 x_priors_defs: Optional[NegLogPriors] = None,
-                 lb_init: Union[np.ndarray, List[float], None] = None,
-                 ub_init: Union[np.ndarray, List[float], None] = None):
-        self.objective = copy.deepcopy(objective)
+    def __init__(
+        self,
+        objective: ObjectiveBase,
+        lb: Union[np.ndarray, List[float]],
+        ub: Union[np.ndarray, List[float]],
+        dim_full: Optional[int] = None,
+        x_fixed_indices: Optional[SupportsIntIterableOrValue] = None,
+        x_fixed_vals: Optional[SupportsFloatIterableOrValue] = None,
+        x_guesses: Optional[Iterable[float]] = None,
+        startpoint_method: Optional[Callable] = None,
+        x_names: Optional[Iterable[str]] = None,
+        x_scales: Optional[Iterable[str]] = None,
+        x_priors_defs: Optional[NegLogPriors] = None,
+        lb_init: Union[np.ndarray, List[float], None] = None,
+        ub_init: Union[np.ndarray, List[float], None] = None,
+        copy_objective: bool = True,
+    ):
+        if copy_objective:
+            objective = copy.deepcopy(objective)
+        self.objective = objective
 
         self.lb_full: np.ndarray = np.array(lb).flatten()
         self.ub_full: np.ndarray = np.array(ub).flatten()
