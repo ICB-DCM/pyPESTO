@@ -176,7 +176,7 @@ class AesaraObjectiveOp(Op):
         else:
             self._log_prob_grad = None
 
-    def perform(self, node, inputs, outputs, params=None):
+    def perform(self, node, inputs, outputs, params=None):  # noqa
         # note that we use precomputed values from the outer
         # AesaraObjective.call_unprocessed here, which which means we can
         # ignore inputs here
@@ -224,7 +224,7 @@ class AesaraObjectiveGradOp(Op):
         else:
             self._log_prob_hess = None
 
-    def perform(self, node, inputs, outputs, params=None):
+    def perform(self, node, inputs, outputs, params=None):  # noqa
         # note that we use precomputed values from the outer
         # AesaraObjective.call_unprocessed here, which which means we can
         # ignore inputs here
@@ -267,7 +267,7 @@ class AesaraObjectiveHessOp(Op):
         self._objective: AesaraObjective = obj
         self._coeff: float = coeff
 
-    def perform(self, node, inputs, outputs, params=None):
+    def perform(self, node, inputs, outputs, params=None):  # noqa
         # note that we use precomputed values from the outer
         # AesaraObjective.call_unprocessed here, which which means we can
         # ignore inputs here
