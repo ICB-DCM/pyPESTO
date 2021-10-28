@@ -92,7 +92,8 @@ def test_mode(scale, prior_type_list):
             )
             result = pypesto.optimize.minimize(
                 problem=test_problem, optimizer=optimizer, n_starts=10,
-                options=ooptions
+                options=ooptions,
+                filename=None
             )
 
             # flat functions don't have local minima, so dont check this

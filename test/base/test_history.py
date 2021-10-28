@@ -62,7 +62,8 @@ class HistoryTest(unittest.TestCase):
                     n_starts=1,
                     startpoint_method=pypesto.startpoint.uniform,
                     options=optimize_options,
-                    history_options=self.history_options
+                    history_options=self.history_options,
+                    filename=None
                 )
 
                 for istart, start in enumerate(result.optimize_result.list):
@@ -591,14 +592,16 @@ def test_hdf5_history_mp():
         result_hdf5_mem = pypesto.optimize.minimize(
             problem=problem1, optimizer=optimizer1,
             n_starts=n_starts, history_options=history_options_mem,
-            engine=MultiProcessEngine()
+            engine=MultiProcessEngine(),
+            filename=None
         )
 
         # optimizing with history saved in hdf5 and MultiProcessEngine
         result_memory_mp = pypesto.optimize.minimize(
             problem=problem2, optimizer=optimizer2,
             n_starts=n_starts, history_options=history_options_mp,
-            engine=MultiProcessEngine()
+            engine=MultiProcessEngine(),
+            filename=None
         )
 
         history_entries = [X, FVAL, GRAD, HESS, RES, SRES, CHI2, SCHI2]
@@ -635,7 +638,8 @@ def test_trim_history():
     result = pypesto.optimize.minimize(
         problem=pypesto_problem, optimizer=optimizer,
         n_starts=1, history_options=history_options,
-        engine=MultiProcessEngine()
+        engine=MultiProcessEngine(),
+        filename=None
     )
     fval_trace = result.optimize_result.list[0].history.get_fval_trace()
     fval_trace_trimmed = \
