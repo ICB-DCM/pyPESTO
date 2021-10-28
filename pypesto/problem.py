@@ -85,21 +85,22 @@ class Problem:
     get_full_matrix() can be used.
     """
 
-    def __init__(self,
-                 objective: ObjectiveBase,
-                 lb: Union[np.ndarray, List[float]],
-                 ub: Union[np.ndarray, List[float]],
-                 dim_full: Optional[int] = None,
-                 x_fixed_indices: Optional[SupportsIntIterableOrValue] = None,
-                 x_fixed_vals: Optional[SupportsFloatIterableOrValue] = None,
-                 x_guesses: Optional[Iterable[float]] = None,
-                 startpoint_method: Optional[Callable] = None,
-                 x_names: Optional[Iterable[str]] = None,
-                 x_scales: Optional[Iterable[str]] = None,
-                 x_priors_defs: Optional[NegLogPriors] = None,
-                 lb_init: Union[np.ndarray, List[float], None] = None,
-                 ub_init: Union[np.ndarray, List[float], None] = None,
-                 copy_objective: bool = True,
+    def __init__(
+        self,
+        objective: ObjectiveBase,
+        lb: Union[np.ndarray, List[float]],
+        ub: Union[np.ndarray, List[float]],
+        dim_full: Optional[int] = None,
+        x_fixed_indices: Optional[SupportsIntIterableOrValue] = None,
+        x_fixed_vals: Optional[SupportsFloatIterableOrValue] = None,
+        x_guesses: Optional[Iterable[float]] = None,
+        startpoint_method: Optional[Callable] = None,
+        x_names: Optional[Iterable[str]] = None,
+        x_scales: Optional[Iterable[str]] = None,
+        x_priors_defs: Optional[NegLogPriors] = None,
+        lb_init: Union[np.ndarray, List[float], None] = None,
+        ub_init: Union[np.ndarray, List[float], None] = None,
+        copy_objective: bool = True,
     ):
         if copy_objective:
             objective = copy.deepcopy(objective)
