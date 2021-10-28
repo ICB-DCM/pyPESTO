@@ -23,9 +23,10 @@ SupportsIntIterableOrValue = Union[Iterable[SupportsInt], SupportsInt]
 
 class Problem:
     """
-    The problem formulation. A problem specifies the objective function,
-    boundaries and constraints, parameter guesses as well as the parameters
-    which are to be optimized.
+    The problem formulation.
+
+    A problem specifies the objective function, boundaries and constraints,
+    parameter guesses as well as the parameters which are to be optimized.
 
     Parameters
     ----------
@@ -151,41 +152,43 @@ class Problem:
 
     @property
     def lb(self) -> np.ndarray:
-        """Lower bounds of free parameters."""
+        """Return lower bounds of free parameters."""
         return self.lb_full[self.x_free_indices]
 
     @property
     def ub(self) -> np.ndarray:
-        """Upper bounds of free parameters"""
+        """Return upper bounds of free parameters."""
         return self.ub_full[self.x_free_indices]
 
     @property
     def lb_init(self) -> np.ndarray:
-        """Initial lower bounds of free parameters."""
+        """Return initial lower bounds of free parameters."""
         return self.lb_init_full[self.x_free_indices]
 
     @property
     def ub_init(self) -> np.ndarray:
-        """Initial upper bounds of free parameters."""
+        """Return initial upper bounds of free parameters."""
         return self.ub_init_full[self.x_free_indices]
 
     @property
     def x_guesses(self) -> np.ndarray:
-        """Guesses of the free parameter values."""
+        """Return guesses of the free parameter values."""
         return self.x_guesses_full[:, self.x_free_indices]
 
     @property
     def dim(self) -> int:
-        """Dimension only considering non fixed parameters."""
+        """Return dimension only considering non fixed parameters."""
         return self.dim_full - len(self.x_fixed_indices)
 
     @property
     def x_free_indices(self) -> List[int]:
-        """Non fixed parameters."""
+        """Return non fixed parameters."""
         return sorted(set(range(0, self.dim_full)) - set(self.x_fixed_indices))
 
     def normalize(self) -> None:
         """
+        Process vectors.
+
         Reduce all vectors to dimension dim and have the objective accept
         vectors of dimension dim.
         """
@@ -356,7 +359,8 @@ class Problem:
             x_indices: Optional[List[int]] = None
     ) -> Union[np.ndarray, None]:
         """
-        Keep only those elements, which indices are specified in x_indices
+        Keep only those elements, which indices are specified in x_indices.
+
         If x_indices is not provided, delete fixed indices.
 
         Parameters
@@ -419,8 +423,9 @@ class Problem:
 
     def print_parameter_summary(self) -> None:
         """
-        Print a summary of what parameters are being optimized and
-        parameter boundaries.
+        Print a summary of parameters.
+
+        Include what parameters are being optimized and parameter boundaries.
         """
         print(  # noqa: T001 (print)
             pd.DataFrame(
@@ -452,8 +457,9 @@ def _type_conversion_with_check(index: int,
                                 valuename: str,
                                 convtype: str) -> Union[float, int]:
     """
-    Convert values to the requested type, raises and appropriate error if
-    not possible.
+    Convert values to the requested type.
+
+    Raises and appropriate error if not possible.
     """
     if convtype not in _convtypes:
         raise ValueError(f'Unsupported type {convtype}')
@@ -479,9 +485,7 @@ def _make_iterable_if_value(value: Union[SupportsFloatIterableOrValue,
                                          SupportsIntIterableOrValue],
                             convtype: str) -> Union[Iterable[SupportsFloat],
                                                     Iterable[SupportsInt]]:
-    """
-    Convert scalar values to iterables if input is scalar, may update type.
-    """
+    """Convert scalar values to iterables for scalar input, may update type."""
     if convtype not in _convtypes:
         raise ValueError(f'Unsupported type {convtype}')
 

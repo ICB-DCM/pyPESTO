@@ -13,8 +13,7 @@ def log(name: str = 'pypesto',
         console: bool = True,
         filename: str = ''):
     """
-    Log messages from a specified name with a specified level to any
-    combination of console and file.
+    Log messages from `name` with `level` to any combination of console/file.
 
     Parameters
     ----------

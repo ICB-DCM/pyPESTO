@@ -19,7 +19,6 @@ def get_covariance_matrix_parameters(ens: Ensemble) -> np.ndarray:
     covariance_matrix:
         covariance matrix of ensemble parameters
     """
-
     # call lowlevel routine using the parameter ensemble
     return np.cov(ens.x_vectors.transpose())
 
@@ -43,7 +42,6 @@ def get_covariance_matrix_predictions(
     covariance_matrix:
         covariance matrix of ensemble predictions
     """
-
     # extract the an array of predictions from either an Ensemble object or an
     # EnsemblePrediction object
     dataset = get_prediction_dataset(ens, prediction_index)

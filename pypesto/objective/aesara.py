@@ -1,4 +1,6 @@
 """
+Aesara models interface.
+
 Adds an interface for the construction of loss functions
 incorporating aesara models. This permits computation of derivatives using a
 combination of objective based methods and aeara based backpropagation.
@@ -23,11 +25,12 @@ except ImportError:
 
 class AesaraObjective(ObjectiveBase):
     """
-    Wrapper around an ObjectiveBase which computes the gradient at each
-    evaluation, caching it for later calls.
+    Wrapper around an ObjectiveBase.
+
+    Computes the gradient at each evaluation, caching it for later calls.
     Caching is only enabled after the first time the gradient is asked for
-    and disabled whenever the cached gradient is not used,
-    in order not to increase computation time for derivative-free samplers.
+    and disabled whenever the cached gradient is not used, in order not to
+    increase computation time for derivative-free samplers.
 
     Parameters
     ----------
@@ -106,9 +109,10 @@ class AesaraObjective(ObjectiveBase):
             **kwargs
     ) -> ResultDict:
         """
-        Main method to overwrite from the base class.
+        See `ObjectiveBase` for more documentation.
 
-        It handles and delegates the actual objective evaluation.
+        Main method to overwrite from the base class. It handles and
+        delegates the actual objective evaluation.
         """
         # hess computation in aesara requires grad
         if 2 in sensi_orders and 1 not in sensi_orders:
@@ -194,6 +198,7 @@ class AesaraObjectiveOp(Op):
 class AesaraObjectiveGradOp(Op):
     """
     Aesara wrapper around a (non-normalized) log-probability gradient function.
+
     This Op will be called with a vector of values and also return a vector of
     values - the gradients in each dimension.
 

@@ -32,6 +32,8 @@ logger = logging.getLogger(__name__)
 
 class EnsemblePrediction:
     """
+    Class of ensemble prediction.
+
     An ensemble prediction consists of an ensemble, i.e., a set of parameter
     vectors and their identifiers such as a sample, and a prediction function.
     It can be attached to a ensemble-type object
@@ -45,7 +47,7 @@ class EnsemblePrediction:
             lower_bound: Sequence[np.ndarray] = None,
             upper_bound: Sequence[np.ndarray] = None):
         """
-        Constructor.
+        Initialize.
 
         Parameters
         ----------
@@ -88,8 +90,9 @@ class EnsemblePrediction:
 
     def __iter__(self):
         """
-        Make the instances of the class iterable objects, allowing to apply
-        functions such as __dict__ to them.
+        Make the instances of the class iterable objects.
+
+        Allows to apply functions such as __dict__ to them.
         """
         yield PREDICTOR, self.predictor
         yield PREDICTION_ID, self.prediction_id
@@ -102,6 +105,8 @@ class EnsemblePrediction:
 
     def condense_to_arrays(self):
         """
+        Add prediction result to EnsemblePrediciton object.
+
         Reshape the predictions results to an array and adds them as a
         member to the EnsemblePrediction objects. It's meant to be used only
         if all conditions of a prediction have the same observables, as this
@@ -150,9 +155,11 @@ class EnsemblePrediction:
                         compute_weighted_sigma: bool = False
                         ) -> Dict:
         """
-        Compute the mean, the median, the standard deviation and possibly
-        percentiles from the ensemble prediction results. Those summary results
-        are added as a data member to the EnsemblePrediction object.
+        Compute summary from the ensemble prediction results.
+
+        Summary includes the mean, the median, the standard deviation and
+        possibly percentiles. Those summary results are added as a data
+        member to the EnsemblePrediction object.
 
         Parameters
         ----------
@@ -184,6 +191,8 @@ class EnsemblePrediction:
 
         def _stack_outputs(ic: int):
             """
+            Stack outputs.
+
             Group outputs for different parameter vectors of one ensemble
             together, if they belong to the same simulation condition, and
             stacks them in one array.
@@ -199,6 +208,8 @@ class EnsemblePrediction:
 
         def _stack_outputs_sensi(ic: int):
             """
+            Stack output sensitivities.
+
             Group output sensitivities for different parameter vectors of one
             ensemble together, if the belong to the same simulation condition,
             and stacks them in one array.
@@ -214,6 +225,8 @@ class EnsemblePrediction:
 
         def _stack_weights(ic: int) -> np.ndarray:
             """
+            Stack weights.
+
             Group weights for different parameter vectors of one ensemble
             together, if they belong to the same simulation condition, and
             stacks them in one array
@@ -237,6 +250,8 @@ class EnsemblePrediction:
 
         def _stack_sigmas(ic: int):
             """
+            Stack sigmas.
+
             Group sigmas for different parameter vectors of one ensemble
             together, if they belong to the same simulation condition, and
             stacks them in one array.
@@ -253,8 +268,10 @@ class EnsemblePrediction:
         def _compute_summary(tmp_array, percentiles_list, weights,
                              tmp_sigmas=None):
             """
-            Compute means, standard deviation, median, and requested
-            percentiles for a set of stacked simulations.
+            Compute summary for a set of stacked simulations.
+
+            Summary includes means, standard deviation, median, and requested
+            percentiles.
             """
             summary = {}
             summary[MEAN] = np.average(tmp_array, axis=-1, weights=weights)
@@ -381,12 +398,14 @@ class EnsemblePrediction:
 
 class Ensemble:
     """
-    An ensemble is a wrapper around an numpy array. It comes with some
-    convenience functionality: It allows to map parameter values via
-    identifiers to the correct parameters, it allows to compute summaries of
-    the parameter vectors (mean, standard deviation, median, percentiles) more
-    easily, and it can store predictions made by pyPESTO, such that the
-    parameter ensemble and the predictions are linked to each other.
+    An ensemble is a wrapper around an numpy array.
+
+    It comes with some convenience functionality: It allows to map parameter
+    values via identifiers to the correct parameters, it allows to compute
+    summaries of the parameter vectors (mean, standard deviation, median,
+    percentiles) more easily, and it can store predictions made by pyPESTO,
+    such that the parameter ensemble and the predictions are linked to each
+    other.
     """
 
     def __init__(self,
@@ -398,7 +417,7 @@ class Ensemble:
                  lower_bound: np.ndarray = None,
                  upper_bound: np.ndarray = None):
         """
-        Constructor.
+        Initialize.
 
         Parameters
         ----------
@@ -675,8 +694,9 @@ class Ensemble:
 
     def __iter__(self):
         """
-        Make the instances of the class iterable objects, allowing to apply
-        functions such as __dict__ to them.
+        Make the instances of the class iterable objects.
+
+        Allows to apply functions such as __dict__ to them.
         """
         yield X_VECTOR, self.x_vectors
         yield NX, self.n_x
@@ -695,8 +715,10 @@ class Ensemble:
             default_value: float = None,
     ):
         """
+        Create mapping for parameters from ensebmle to predictor.
+
         The parameters of the ensemble don't need to have the same ordering as
-        in the predictor. This functions maps them onto each other
+        in the predictor.
         """
         # create short hands
         parameter_ids_objective = predictor.amici_objective.x_names
@@ -726,7 +748,8 @@ class Ensemble:
             progress_bar: bool = True
     ) -> EnsemblePrediction:
         """
-        Convenience function to run predictions for a full ensemble:
+        Run predictions for a full ensemble.
+
         User needs to hand over a predictor function and settings, then all
         results are grouped as EnsemblePrediction for the whole ensemble
 
@@ -818,10 +841,11 @@ class Ensemble:
     def compute_summary(self,
                         percentiles_list: Sequence[int] = (5, 20, 80, 95)):
         """
-        Compute the mean, the median, the standard deviation and possibly
-        percentiles for the parameters of the ensemble.
-        Those summary results are added as a data member to the
-        EnsemblePrediction object.
+        Compute summary for the parameters of the ensemble.
+
+        Summary includes the mean, the median, the standard deviation and
+        possibly percentiles. Those summary results are added as a data
+        member to the EnsemblePrediction object.
 
         Parameters
         ----------
@@ -846,6 +870,8 @@ class Ensemble:
 
     def check_identifiability(self) -> pd.DataFrame:
         """
+        Check identifiability of ensemble.
+
         Use ensemble mean and standard deviation to assess (in a rudimentary
         way) whether or not parameters are identifiable. Returns a dataframe
         with tuples, which specify whether or not the lower and the upper
@@ -912,8 +938,7 @@ def entries_per_start(fval_traces: List['np.ndarray'],
                       max_size: int,
                       max_per_start: int, ):
     """
-    Create the indices of each start that will be included
-    in the ensemble.
+    Create the indices of each start that will be included in the ensemble.
 
     Parameters
     ----------

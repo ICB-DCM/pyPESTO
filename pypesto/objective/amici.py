@@ -411,9 +411,10 @@ class AmiciObjective(ObjectiveBase):
         rdata: 'amici.ReturnData',
     ) -> None:
         """
-        Store condition parameter, steadystate and steadystate sensitivity in
-        steadystate_guesses if steadystate guesses are enabled for this
-        condition
+        Store condition parameter, steadystate and steadystate sensitivity.
+
+        Stored in steadystate_guesses if steadystate guesses are enabled for
+        this condition.
         """
         if condition_ix not in self.steadystate_guesses['data']:
             return

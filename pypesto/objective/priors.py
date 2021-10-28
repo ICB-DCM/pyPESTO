@@ -187,6 +187,8 @@ class NegLogParameterPriors(ObjectiveBase):
 
     def residual_jacobian(self, x):
         """
+        Evaluate residual Jacobian.
+
         Evaluate the Jacobian of the residual representation of the prior
         for a parameter vector x w.r.t. x, if available.
         """

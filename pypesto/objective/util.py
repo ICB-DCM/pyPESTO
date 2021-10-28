@@ -3,7 +3,7 @@ from typing import Union
 
 
 def _check_none(fun):
-    """Wrapper: Return None if any input argument is None."""
+    """Return None if any input argument is None; Wrapper function."""
     def checked_fun(*args, **kwargs):
         if any(x is None for x in [*args, *(kwargs.values())]):
             return None
@@ -51,8 +51,9 @@ def schi2_to_grad(schi2: np.ndarray) -> np.ndarray:
 
 @_check_none
 def sres_to_grad(res: np.ndarray, sres: np.ndarray):
-    """Translate residual sensitivities to function value gradien, assuming
-    `fval = 0.5*sum(res**2)`.
+    """Translate residual sensitivities to function value gradient.
+
+     assuming `fval = 0.5*sum(res**2)`.
 
     See also :func:`chi2_to_fval`.
     """

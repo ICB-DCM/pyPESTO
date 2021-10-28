@@ -53,6 +53,8 @@ class FunctionStartpoints(StartpointMethod):
         function: Callable,
     ):
         """
+        Initialize.
+
         Parameters
         ----------
         function: The callable sampling startpoints.
@@ -66,6 +68,7 @@ class FunctionStartpoints(StartpointMethod):
             ub: np.ndarray,
             objective: ObjectiveBase,
     ) -> np.ndarray:
+        """Call function."""
         return self.function(
             n_starts=n_starts, lb=lb, ub=ub, objective=objective,
         )

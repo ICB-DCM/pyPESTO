@@ -58,8 +58,9 @@ logger = logging.getLogger(__name__)
 
 def history_decorator(minimize):
     """
-    Default decorator for the minimize() method to initialize and extract
-    information stored in the history.
+    Initialize and extract information stored in the history.
+
+    Default decorator for the minimize() method.
     """
 
     def wrapped_minimize(self, problem, x0, id, allow_failed_starts,
@@ -105,6 +106,8 @@ def history_decorator(minimize):
 
 def time_decorator(minimize):
     """
+    Measure time of optimization.
+
     Default decorator for the minimize() method to take time.
     Currently, the method time.time() is used, which measures
     the wall-clock time.
@@ -124,8 +127,9 @@ def time_decorator(minimize):
 
 def fix_decorator(minimize):
     """
-    Default decorator for the minimize() method to include also fixed
-    parameters in the result arrays (nans will be inserted in the
+    Include also fixed parameters in the result arrays of minimize().
+
+    Default decorator for the minimize() method (nans will be inserted in the
     derivatives).
     """
 
@@ -150,10 +154,7 @@ def fix_decorator(minimize):
 def fill_result_from_objective_history(
         result: OptimizerResult,
         optimizer_history: OptimizerHistory):
-    """
-    Overwrite function values in the result object with the values recorded in
-    the history.
-    """
+    """Overwrite values in the result object with values in the history."""
     update_vals = True
     # check history for better values
     # value could be different e.g. if constraints violated
@@ -244,12 +245,13 @@ def read_result_from_file(problem: Problem, history_options: HistoryOptions,
 class Optimizer(abc.ABC):
     """
     Optimizer base class, not functional on its own.
+
     An optimizer takes a problem, and possibly a start point, and then
     performs an optimization. It returns an OptimizerResult.
     """
 
     def __init__(self):
-        """Default constructor."""
+        """Initialize base class."""
 
     @abc.abstractmethod
     @fix_decorator
@@ -262,7 +264,7 @@ class Optimizer(abc.ABC):
             id: str,
             history_options: HistoryOptions = None,
     ) -> OptimizerResult:
-        """"
+        """
         Perform optimization.
 
         Parameters
@@ -297,6 +299,7 @@ def check_finite_bounds(lb, ub):
 class ScipyOptimizer(Optimizer):
     """
     Use the SciPy optimizers.
+
     Find details on the optimizer and configuration options at:
     https://docs.scipy.org/doc/scipy/reference/generated/scipy.\
         optimize.minimize.html#scipy.optimize.minimize
@@ -455,6 +458,8 @@ class IpoptOptimizer(Optimizer):
     def __init__(
             self, options: Dict = None):
         """
+        Initialize.
+
         Parameters
         ----------
         options:
@@ -622,11 +627,14 @@ class PyswarmOptimizer(Optimizer):
 class CmaesOptimizer(Optimizer):
     """
     Global optimization using cma-es.
+
     Package homepage: https://pypi.org/project/cma-es/
     """
 
     def __init__(self, par_sigma0: float = 0.25, options: Dict = None):
         """
+        Initialize.
+
         Parameters
         ----------
         par_sigma0:
@@ -685,6 +693,7 @@ class CmaesOptimizer(Optimizer):
 class ScipyDifferentialEvolutionOptimizer(Optimizer):
     """
     Global optimization using scipy's differential evolution optimizer.
+
     Package homepage: https://docs.scipy.org/doc/scipy/reference/generated\
         /scipy.optimize.differential_evolution.html
 
@@ -743,6 +752,7 @@ class ScipyDifferentialEvolutionOptimizer(Optimizer):
 class PyswarmsOptimizer(Optimizer):
     """
     Global optimization using pyswarms.
+
     Package homepage: https://pyswarms.readthedocs.io/en/latest/index.html
 
     Parameters
@@ -843,12 +853,15 @@ class PyswarmsOptimizer(Optimizer):
 class NLoptOptimizer(Optimizer):
     """
     Global/Local optimization using NLopt.
+
     Package homepage: https://nlopt.readthedocs.io/en/latest/
     """
 
     def __init__(self, method=None, local_method=None, options: Dict = None,
                  local_options: Dict = None):
         """
+        Initialize.
+
         Parameters
         ----------
         method:
@@ -999,6 +1012,7 @@ class NLoptOptimizer(Optimizer):
 class FidesOptimizer(Optimizer):
     """
     Global/Local optimization using the trust region optimizer fides.
+
     Package Homepage: https://fides-optimizer.readthedocs.io/en/latest
     """
 
@@ -1009,6 +1023,8 @@ class FidesOptimizer(Optimizer):
             verbose: Optional[int] = logging.INFO
     ):
         """
+        Initialize.
+
         Parameters
         ----------
         options:

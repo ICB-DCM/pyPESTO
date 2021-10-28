@@ -224,8 +224,10 @@ def write_ensemble_prediction_to_h5(ensemble_prediction: EnsemblePrediction,
 def get_prediction_dataset(ens: Union[Ensemble, EnsemblePrediction],
                            prediction_index: int = 0) -> np.ndarray:
     """
-    Extract an array of prediction from either an Ensemble object which
-    contains a list of predictions of from an EnsemblePrediction object.
+    Extract an array of prediction.
+
+    Can be done from either an Ensemble object which contains a list of
+    predictions of from an EnsemblePrediction object.
 
     Parameters
     ----------

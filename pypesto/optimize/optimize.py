@@ -29,7 +29,7 @@ def minimize(
     history_options: HistoryOptions = None,
 ) -> Result:
     """
-    Main function to call to do multistart optimization.
+    Do multistart optimization.
 
     Parameters
     ----------

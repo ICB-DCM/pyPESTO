@@ -56,6 +56,7 @@ COLOR_HIT_NO_BOUNDS = [0., 0.8, 0., 0.9]
 
 class EnsembleType(Enum):
     """Class to specify the type of ensemble."""
+
     ensemble = 1
     sample = 2
     unprocessed_chain = 3

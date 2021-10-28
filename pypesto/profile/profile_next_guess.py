@@ -18,8 +18,9 @@ def next_guess(
         global_opt: float
 ) -> np.ndarray:
     """
-    Create the next initial guess for the optimizer in
-    order to compute the next profile point. Different proposal methods
+    Create the next initial guess for the optimizer.
+
+    Used in order to compute the next profile point. Different proposal methods
     are available.
 
     Parameters
