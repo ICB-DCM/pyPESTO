@@ -31,6 +31,7 @@ Release notes
     * Enable use of priors with least squares optimizers (#745)
     * Add temporary CITATION.cff file (#734)
     * Regular scheduled CI runs (#754)
+    * Allow to not copy objective in problem (#756)
 
 * Fixes:
     * Fix non-exported visualization in notebook (#729)
