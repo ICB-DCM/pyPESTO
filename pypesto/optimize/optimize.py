@@ -162,5 +162,6 @@ def minimize(
         else:
             time = datetime.datetime.now().strftime("%Y_%d_%m")
             filename = time+"_optimization_result.hdf5"
-    write_result(result=result, overwrite=True, optimize=True)
+    write_result(result=result, overwrite=True,
+                 optimize=True, filename=filename)
     return result
