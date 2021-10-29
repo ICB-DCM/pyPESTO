@@ -1,5 +1,4 @@
 import logging
-import datetime
 from typing import Iterable, Union
 
 from ..engine import Engine, SingleCoreEngine
@@ -9,11 +8,10 @@ from ..result import Result
 from ..startpoint import (
     assign_startpoints, uniform, StartpointMethod, to_startpoint_method,
 )
-from ..store import write_result
 from .optimizer import Optimizer, ScipyOptimizer
 from .options import OptimizeOptions
 from .task import OptimizerTask
-from .util import check_hdf5_mp, fill_hdf5_file
+from .util import check_hdf5_mp, fill_hdf5_file, autosave
 
 logger = logging.getLogger(__name__)
 
@@ -153,15 +151,10 @@ def minimize(
     # sort by best fval
     result.optimize_result.sort()
 
-    if filename is None:
-        return result
-    if filename == "Auto":
-        if history_options.storage_file is not None and \
-                history_options.storage_file.endswith(('.h5', '.hdf5')):
-            filename = history_options.storage_file
-        else:
-            time = datetime.datetime.now().strftime("%Y_%d_%m")
-            filename = time+"_optimization_result.hdf5"
-    write_result(result=result, overwrite=True,
-                 optimize=True, filename=filename)
+    if filename == "Auto" and filename_hist is not None:
+        filename = filename_hist
+    autosave(filename=filename,
+             result=result,
+             type="optimization")
+
     return result

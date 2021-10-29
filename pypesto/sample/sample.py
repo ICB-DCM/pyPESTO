@@ -1,12 +1,11 @@
 import logging
-import datetime
 import numpy as np
 from typing import List, Union
 from time import process_time
 
 from ..problem import Problem
 from ..result import Result
-from ..store import write_result
+from ..optimize.util import autosave
 from .sampler import Sampler
 from .adaptive_metropolis import AdaptiveMetropolisSampler
 
@@ -86,11 +85,8 @@ def sample(
     # record results
     result.sample_result = sampler_result
 
-    if filename is None:
-        return result
-    if filename == "Auto":
-        time = datetime.datetime.now().strftime("%Y_%d_%m")
-        filename = time + "_sampling_result.hdf5"
-    write_result(result=result, overwrite=True,
-                 sample=True, filename=filename)
+    autosave(filename=filename,
+             result=result,
+             type="sampling")
+
     return result

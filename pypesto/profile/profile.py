@@ -1,12 +1,11 @@
 import logging
-import datetime
 from typing import Callable, Union, Iterable
 
 from ..engine import Engine, SingleCoreEngine
 from ..optimize import Optimizer
 from ..problem import Problem
 from ..result import Result
-from ..store import write_result
+from ..optimize.util import autosave
 from .profile_next_guess import next_guess
 from .options import ProfileOptions
 from .util import initialize_profile
@@ -133,11 +132,8 @@ def parameter_profile(
         result.profile_result.list[-1][indexed_profile['index']] = \
             indexed_profile['profile']
 
-    if filename is None:
-        return result
-    if filename == "Auto":
-        time = datetime.datetime.now().strftime("%Y_%d_%m")
-        filename = time + "_profiling_result.hdf5"
-    write_result(result=result, overwrite=True,
-                 profile=True, filename=filename)
+    autosave(filename=filename,
+             result=result,
+             type="profiling")
+
     return result
