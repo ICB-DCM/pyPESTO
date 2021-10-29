@@ -105,9 +105,9 @@ class EnsemblePrediction:
 
     def condense_to_arrays(self):
         """
-        Add prediction result to EnsemblePrediciton object.
+        Add prediction result to EnsemblePrediction object.
 
-        Reshape the predictions results to an array and adds them as a
+        Reshape the prediction results to an array and add them as a
         member to the EnsemblePrediction objects. It's meant to be used only
         if all conditions of a prediction have the same observables, as this
         is often the case for large-scale data sets taken from online
@@ -195,7 +195,7 @@ class EnsemblePrediction:
 
             Group outputs for different parameter vectors of one ensemble
             together, if they belong to the same simulation condition, and
-            stacks them in one array.
+            stack them in one array.
             """
             # Were outputs computed
             if self.prediction_results[0].conditions[ic].output is None:
@@ -212,7 +212,7 @@ class EnsemblePrediction:
 
             Group output sensitivities for different parameter vectors of one
             ensemble together, if the belong to the same simulation condition,
-            and stacks them in one array.
+            and stack them in one array.
             """
             # Were output sensitivitiess computed
             if self.prediction_results[0].conditions[ic].output_sensi is None:
@@ -229,7 +229,7 @@ class EnsemblePrediction:
 
             Group weights for different parameter vectors of one ensemble
             together, if they belong to the same simulation condition, and
-            stacks them in one array
+            stack them in one array
 
             Parameters
             ----------
@@ -254,7 +254,7 @@ class EnsemblePrediction:
 
             Group sigmas for different parameter vectors of one ensemble
             together, if they belong to the same simulation condition, and
-            stacks them in one array.
+            stack them in one array.
             """
             # Were outputs computed
             if self.prediction_results[0].conditions[ic].output_sigmay is None:
@@ -398,7 +398,7 @@ class EnsemblePrediction:
 
 class Ensemble:
     """
-    An ensemble is a wrapper around an numpy array.
+    An ensemble is a wrapper around a numpy array.
 
     It comes with some convenience functionality: It allows to map parameter
     values via identifiers to the correct parameters, it allows to compute

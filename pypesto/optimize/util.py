@@ -15,7 +15,7 @@ def check_hdf5_mp(
     """
     Create a folder for partial HDF5 files.
 
-    If no parallelization engine is used do nothing.
+    If no parallelization engine is used, do nothing.
 
     Parameters
     ----------

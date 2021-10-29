@@ -53,7 +53,7 @@ def schi2_to_grad(schi2: np.ndarray) -> np.ndarray:
 def sres_to_grad(res: np.ndarray, sres: np.ndarray):
     """Translate residual sensitivities to function value gradient.
 
-     assuming `fval = 0.5*sum(res**2)`.
+    Assumes `fval = 0.5*sum(res**2)`.
 
     See also :func:`chi2_to_fval`.
     """

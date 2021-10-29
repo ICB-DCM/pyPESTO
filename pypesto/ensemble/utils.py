@@ -258,7 +258,7 @@ def get_prediction_dataset(ens: Union[Ensemble, EnsemblePrediction],
 def read_ensemble_prediction_from_h5(
         predictor: Union[Callable[[Sequence], PredictionResult], None],
         input_file: str):
-    """Read an ensemble rediction from an HDF5 File."""
+    """Read an ensemble prediction from an HDF5 File."""
     # open file
     with h5py.File(input_file, 'r') as f:
         pred_res_list = []

@@ -154,7 +154,7 @@ def fill_profile_list(
     """
     Fill a ProfileResult.
 
-    Helper function for initialize_profile.
+    Helper function for `initialize_profile`.
 
     Parameters
     ----------

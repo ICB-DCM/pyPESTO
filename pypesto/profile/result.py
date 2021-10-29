@@ -5,7 +5,7 @@ class ProfilerResult(dict):
     """
     The result of a profiler run.
 
-    The standardized return return value from pypesto.profile, which can
+    The standardized return value from pypesto.profile, which can
     either be initialized from an OptimizerResult or from an existing
     ProfilerResult (in order to extend the computation).
 

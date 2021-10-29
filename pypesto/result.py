@@ -19,7 +19,7 @@ if TYPE_CHECKING:
 
 
 class OptimizeResult:
-    """Result of the minimize() function."""
+    """Result of the :py:func:`pypesto.optimize.minimize` function."""
 
     def __init__(self):
         self.list = []
@@ -50,7 +50,7 @@ class OptimizeResult:
         """
         Get as pandas DataFrame.
 
-        If keys is a list, return only the specified values.
+        If keys is a list, return only the specified values, otherwise all.
         """
         lst = self.as_list(keys)
 

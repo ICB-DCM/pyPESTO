@@ -104,9 +104,9 @@ class PredictionConditionResult:
 
 class PredictionResult:
     """
-    Light-weight wrapper around prediction from pyPESTO made by an amici model.
+    Light-weight wrapper around prediction from pyPESTO made by an AMICI model.
 
-    It's only purpose is to have fixed format/api, how prediction results
+    Its only purpose is to have fixed format/api, how prediction results
     should be stored, read, and handled: as predictions are a very flexible
     format anyway, they should at least have a common definition,
     which allows to work with them in a reasonable way.
