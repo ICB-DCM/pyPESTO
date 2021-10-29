@@ -490,9 +490,9 @@ class FD(ObjectiveBase):
         x: np.ndarray,
         sensi_orders: Tuple[int, ...],
         **kwargs,
-    ) -> Tuple[Tuple[int, ...], ResultDict]:  # noqa: D401
+    ) -> Tuple[Tuple[int, ...], ResultDict]:
         """
-        Helper function.
+        Call objective function for sensitivities.
 
         Calculate from the objective the sensitivities that are supposed to
         be calculated from the objective and not via FDs.
@@ -518,11 +518,11 @@ class FD(ObjectiveBase):
         x: np.ndarray,
         sensi_orders: Tuple[int, ...],
         **kwargs,
-    ) -> Tuple[Tuple[int, ...], ResultDict]:  # noqa: D401
+    ) -> Tuple[Tuple[int, ...], ResultDict]:
         """
-        Helper function.
+        Call objective function for sensitivities in residual mode.
 
-        Calculates from the objective the sensitivities that are supposed to
+        Calculate from the objective the sensitivities that are supposed to
         be calculated from the objective and not via FDs.
         """
         # define objective sensis
