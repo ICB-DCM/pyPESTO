@@ -17,4 +17,3 @@ per-file-ignores =
     # ignore D100='Missing docstring in public module',
     # D105='Missing docstring in magic method' and D107='Missing docstring in __init__'.
     *:D100,D105,D107
-    */*:D100,D105,D107
