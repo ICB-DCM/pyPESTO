@@ -138,5 +138,6 @@ def parameter_profile(
     if filename == "Auto":
         time = datetime.datetime.now().strftime("%Y_%d_%m")
         filename = time + "_profiling_result.hdf5"
-    write_result(result=result, overwrite=True, profile=True)
+    write_result(result=result, overwrite=True,
+                 profile=True, filename=filename)
     return result

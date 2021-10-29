@@ -91,5 +91,6 @@ def sample(
     if filename == "Auto":
         time = datetime.datetime.now().strftime("%Y_%d_%m")
         filename = time + "_sampling_result.hdf5"
-    write_result(result=result, overwrite=True, sample=True)
+    write_result(result=result, overwrite=True,
+                 sample=True, filename=filename)
     return result
