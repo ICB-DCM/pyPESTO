@@ -211,7 +211,7 @@ class EnsemblePrediction:
             Stack output sensitivities.
 
             Group output sensitivities for different parameter vectors of one
-            ensemble together, if the belong to the same simulation condition,
+            ensemble together, if they belong to the same simulation condition,
             and stack them in one array.
             """
             # Were output sensitivitiess computed
