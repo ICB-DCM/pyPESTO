@@ -81,7 +81,7 @@ def fill_hdf5_file(
 def autosave(filename: str, result: Result,
              type: str):
     """
-    Save the result of optimization, profling or sampling automatically.
+    Save the result of optimization, profiling or sampling automatically.
 
     Parameters
     ----------
