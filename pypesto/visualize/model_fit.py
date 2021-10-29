@@ -3,6 +3,7 @@ Visualization of the model fit after optimization.
 
 Currently only for PEtab problems.
 """
+import matplotlib.axes
 import numpy as np
 import matplotlib.pyplot as plt
 import amici.petab_import as petab_import
@@ -20,8 +21,9 @@ AmiciModel = Union['amici.Model', 'amici.ModelPtr']
 
 def visualize_optimized_model_fit(petab_problem: petab.Problem,
                                   result: Union[Result, Sequence[Result]],
+                                  start_index: int = 0,
                                   **kwargs
-                                  ):
+                                  ) -> Union[matplotlib.axes.Axes, None]:
     """
     Visualize the optimized model fit of a PEtab problem.
 
@@ -37,10 +39,12 @@ def visualize_optimized_model_fit(petab_problem: petab.Problem,
         The :py:class:`petab.Problem` that was optimized.
     result:
         The result object from optimization.
+    start_index:
+        The index of the optimization run in `result.optimize_result.list`.
 
     Returns
     -------
-    ax: Axis object of the created plot.
+    axes: `matplotlib.axes.Axes` object of the created plot.
     None: In case subplots are saved to file
     """
     if petab_problem is not None:
@@ -49,7 +53,7 @@ def visualize_optimized_model_fit(petab_problem: petab.Problem,
 
     problem_parameters = \
         dict(zip(petab_problem.parameter_df.index,
-                 result.optimize_result.list[0]['x']))
+                 result.optimize_result.list[start_index]['x']))
 
     amici_model = petab_import.import_petab_problem(
         petab_problem,
@@ -66,11 +70,11 @@ def visualize_optimized_model_fit(petab_problem: petab.Problem,
                                      petab_problem.measurement_df)
 
     # function to call, to plot data and simulations
-    ax = plot_problem(petab_problem=petab_problem,
-                      simulations_df=sim_df,
-                      **kwargs
-                      )
-    return ax
+    axes = plot_problem(petab_problem=petab_problem,
+                        simulations_df=sim_df,
+                        **kwargs
+                        )
+    return axes
 
 
 def time_trajectory_model(
@@ -82,7 +86,8 @@ def time_trajectory_model(
         start_index: int = 0,
         state_ids: Union[str, Sequence[str]] = None,
         state_names: Union[str, Sequence[str]] = None,
-        observable_ids: Union[str, Sequence[str]] = None,):
+        observable_ids: Union[str, Sequence[str]] = None,
+) -> Union[matplotlib.axes.Axes, None]:
     """
     Visualize the time trajectory of the model with given timepoints.
 
