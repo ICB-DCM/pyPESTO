@@ -1,4 +1,4 @@
-"""MPIPoolEngine for optimization and profiling."""
+"""Engines with multi-node parallelization."""
 from mpi4py.futures import MPIPoolExecutor
 from mpi4py import MPI
 import cloudpickle as pickle

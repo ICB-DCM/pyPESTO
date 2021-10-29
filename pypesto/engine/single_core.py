@@ -1,4 +1,4 @@
-"""SingleCoreEngine for optimization and profiling."""
+"""Engines without parallelization."""
 from typing import List
 from tqdm import tqdm
 
