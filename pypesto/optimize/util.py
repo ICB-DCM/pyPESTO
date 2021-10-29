@@ -98,7 +98,7 @@ def autosave(filename: str, result: Result,
     if filename is None:
         return None
     if filename == "Auto":
-        time = datetime.datetime.now().strftime("%Y_%d_%m")
+        time = datetime.datetime.now().strftime("%Y_%d_%m_%H_%M_%S")
         filename = time+f"_{type}_result.hdf5"
     write_result(result=result, overwrite=True,
                  optimize=True, filename=filename)
