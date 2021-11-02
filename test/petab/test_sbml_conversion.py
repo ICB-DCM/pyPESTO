@@ -98,7 +98,7 @@ def parameter_estimation(
     )
 
     pypesto.optimize.minimize(
-        problem, optimizer, n_starts, options=optimize_options)
+        problem, optimizer, n_starts, options=optimize_options, filename=None)
 
 
 if __name__ == '__main__':

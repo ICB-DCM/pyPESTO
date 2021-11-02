@@ -31,10 +31,10 @@ class ValidationIntervalTest(unittest.TestCase):
 
         # optimum f(0)=0
         cls.result_training_data = optimize.minimize(cls.problem_training_data,
-                                                     n_starts=5)
+                                                     n_starts=5, filename=None)
         # Optimum f(1)=2
         cls.result_all_data = optimize.minimize(cls.problem_all_data,
-                                                n_starts=5)
+                                                n_starts=5, filename=None)
 
     def test_validation_intervals(self):
         """Test validation profiles."""

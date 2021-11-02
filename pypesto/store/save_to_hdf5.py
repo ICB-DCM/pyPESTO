@@ -269,11 +269,12 @@ def write_result(result: Result,
                  filename: str,
                  overwrite: bool = False,
                  problem: bool = True,
-                 optimize: bool = True,
-                 profile: bool = True,
-                 sample: bool = True,
+                 optimize: bool = False,
+                 profile: bool = False,
+                 sample: bool = False,
                  ):
-    """Save whole pypesto.Result to hdf5 file.
+    """
+    Save whole pypesto.Result to hdf5 file.
 
     Boolean indicators allow specifying what to save.
 
@@ -294,6 +295,11 @@ def write_result(result: Result,
     sample:
         Read the sample result.
     """
+    if not any([optimize, profile, sample]):
+        optimize = True
+        profile = True
+        sample = True
+
     if problem:
         pypesto_problem_writer = ProblemHDF5Writer(filename)
         pypesto_problem_writer.write(result.problem, overwrite=overwrite)
