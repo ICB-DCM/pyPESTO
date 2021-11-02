@@ -28,7 +28,7 @@ def parameter_profile(
         filename: str = "Auto"
 ) -> Result:
     """
-    This is the main function to call to do parameter profiling.
+    Call to do parameter profiling.
 
     Parameters
     ----------

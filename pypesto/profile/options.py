@@ -60,6 +60,7 @@ class ProfileOptions(dict):
         self.magic_factor_obj_value = magic_factor_obj_value
 
     def __getattr__(self, key):
+        """Allow usage of keys like attributes."""
         try:
             return self[key]
         except KeyError:
@@ -73,7 +74,7 @@ class ProfileOptions(dict):
             maybe_options: Union['ProfileOptions', Dict]
     ) -> 'ProfileOptions':
         """
-        Returns a valid options object.
+        Return a valid options object.
 
         Parameters
         ----------

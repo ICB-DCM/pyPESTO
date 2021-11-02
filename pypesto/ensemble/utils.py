@@ -21,7 +21,7 @@ def read_from_csv(path: str,
                   lower_bound: np.ndarray = None,
                   upper_bound: np.ndarray = None):
     """
-    function for creating an ensemble from a csv file
+    Create an ensemble from a csv file.
 
     Parameters
     ----------
@@ -78,7 +78,7 @@ def read_ensemble_from_hdf5(filename: str,
         Which type of ensemble to create. From History, from
         Optimization or from Sample.
 
-    Returns:
+    Returns
     -------
     ensemble:
         Ensemble object of parameter vectors
@@ -110,7 +110,7 @@ def read_from_df(dataframe: pd.DataFrame,
                  lower_bound: np.ndarray = None,
                  upper_bound: np.ndarray = None):
     """
-    function for creating an ensemble from a csv file
+    Create an ensemble from a csv file.
 
     Parameters
     ----------
@@ -150,6 +150,18 @@ def read_from_df(dataframe: pd.DataFrame,
 def write_ensemble_prediction_to_h5(ensemble_prediction: EnsemblePrediction,
                                     output_file: str,
                                     base_path: str = None):
+    """
+    Write an `EnsemblePrediction` to hdf5.
+
+    Parameters
+    ----------
+    ensemble_prediction:
+        The prediciton to be saved.
+    output_file:
+        The filename of the hdf5 file.
+    base_path:
+        An optional filepath where the file should be saved to.
+    """
     # parse base path
     base = Path('')
     if base_path is not None:
@@ -212,11 +224,13 @@ def write_ensemble_prediction_to_h5(ensemble_prediction: EnsemblePrediction,
 def get_prediction_dataset(ens: Union[Ensemble, EnsemblePrediction],
                            prediction_index: int = 0) -> np.ndarray:
     """
-    Extract an array of prediction from either an Ensemble object which
-    contains a list of predictions of from an EnsemblePrediction object.
+    Extract an array of prediction.
+
+    Can be done from either an Ensemble object which contains a list of
+    predictions of from an EnsemblePrediction object.
 
     Parameters
-    ==========
+    ----------
     ens:
         Ensemble objects containing a set of parameter vectors and a set of
         predictions or EnsemblePrediction object containing only predictions
@@ -225,11 +239,10 @@ def get_prediction_dataset(ens: Union[Ensemble, EnsemblePrediction],
         index telling which prediction from the list should be analyzed
 
     Returns
-    =======
+    -------
     dataset:
         numpy array containing the ensemble predictions
     """
-
     if isinstance(ens, Ensemble):
         dataset = ens.predictions[prediction_index]
     elif isinstance(ens, EnsemblePrediction):
@@ -245,7 +258,7 @@ def get_prediction_dataset(ens: Union[Ensemble, EnsemblePrediction],
 def read_ensemble_prediction_from_h5(
         predictor: Union[Callable[[Sequence], PredictionResult], None],
         input_file: str):
-
+    """Read an ensemble prediction from an HDF5 File."""
     # open file
     with h5py.File(input_file, 'r') as f:
         pred_res_list = []
@@ -288,7 +301,7 @@ def read_ensemble_prediction_from_h5(
 
 
 def decode_array(array: np.ndarray) -> np.ndarray:
-    """Decodes array of bytes to string"""
+    """Decode array of bytes to string."""
     for i in range(len(array)):
         array[i] = array[i].decode()
     return array

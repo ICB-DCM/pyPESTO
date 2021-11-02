@@ -1,3 +1,4 @@
+"""Calculate different diagnostics of the sampling result."""
 import numpy as np
 import logging
 
@@ -10,7 +11,7 @@ logger = logging.getLogger(__name__)
 
 def geweke_test(result: Result, zscore: float = 2.) -> int:
     """
-    Calculates the burn-in of MCMC chains.
+    Calculate the burn-in of MCMC chains.
 
     Parameters
     ----------
@@ -44,7 +45,7 @@ def geweke_test(result: Result, zscore: float = 2.) -> int:
 
 def auto_correlation(result: Result) -> float:
     """
-    Calculates the autocorrelation of the MCMC chains.
+    Calculate the autocorrelation of the MCMC chains.
 
     Parameters
     ----------
@@ -108,7 +109,6 @@ def effective_sample_size(result: Result) -> float:
         Estimate of the effective sample size of
         the MCMC chains.
     """
-
     # Check if autocorrelation is available
     if result.sample_result.auto_correlation is None:
         # Calculate autocorrelation

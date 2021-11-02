@@ -41,6 +41,7 @@ class ParallelTemperingSampler(Sampler):
 
     @classmethod
     def default_options(cls) -> Dict:
+        """Return the default options for the sampler."""
         return {
             'max_temp': 5e4,
             'exponent': 4,
@@ -50,7 +51,7 @@ class ParallelTemperingSampler(Sampler):
     def initialize(self,
                    problem: Problem,
                    x0: Union[np.ndarray, List[np.ndarray]]):
-        # initialize all samplers
+        """Initialize all samplers."""
         n_chains = len(self.samplers)
         if isinstance(x0, list):
             x0s = x0
@@ -63,6 +64,7 @@ class ParallelTemperingSampler(Sampler):
 
     def sample(
             self, n_samples: int, beta: float = 1.):
+        """Sample and swap in between samplers."""
         # loop over iterations
         for i_sample in tqdm(range(int(n_samples))):  # TODO test
             # sample

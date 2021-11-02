@@ -18,8 +18,9 @@ def check_hdf5_mp(
     engine: Engine,
 ) -> Union[str, None]:
     """
-    Create a folder for partial HDF5 files,
-    if a parallelization engine will be used.
+    Create a folder for partial HDF5 files.
+
+    If no parallelization engine is used, do nothing.
 
     Parameters
     ----------
@@ -57,6 +58,8 @@ def fill_hdf5_file(
     filename: str
 ) -> None:
     """
+    Create single history file pointing to files of multiple starts.
+
     Create links in `filename` to the
     history of each start contained in ret, the results
     of the optimization.

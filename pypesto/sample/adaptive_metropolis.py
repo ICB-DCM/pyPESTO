@@ -7,9 +7,7 @@ from .metropolis import MetropolisSampler
 
 
 class AdaptiveMetropolisSampler(MetropolisSampler):
-    """
-    Metropolis-Hastings sampler with adaptive proposal covariance.
-    """
+    """Metropolis-Hastings sampler with adaptive proposal covariance."""
 
     def __init__(self, options: Dict = None):
         super().__init__(options)
@@ -20,6 +18,7 @@ class AdaptiveMetropolisSampler(MetropolisSampler):
 
     @classmethod
     def default_options(cls):
+        """Return the default options for the sampler."""
         return {
             # controls adaptation degeneration velocity of the proposals
             # in [0, 1], with 0 -> no adaptation, i.e. classical
@@ -43,6 +42,7 @@ class AdaptiveMetropolisSampler(MetropolisSampler):
         }
 
     def initialize(self, problem: Problem, x0: np.ndarray):
+        """Initialize the sampler."""
         super().initialize(problem, x0)
 
         if self.options['cov0'] is not None:
@@ -133,8 +133,9 @@ def update_history_statistics(
 
 def regularize_covariance(cov: np.ndarray, reg_factor: float) -> np.ndarray:
     """
-    Regularize the estimated covariance matrix of the sample. Useful if the
-    estimated covariance matrix is ill-conditioned.
+    Regularize the estimated covariance matrix of the sample.
+
+    Useful if the estimated covariance matrix is ill-conditioned.
     Increments the diagonal a little to ensure positivity.
 
     Parameters
