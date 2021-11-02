@@ -71,7 +71,8 @@ class PetabImportTest(unittest.TestCase):
                 options={'maxiter': 10})
             problem = importer.create_problem(obj)
             result = pypesto.optimize.minimize(
-                problem=problem, optimizer=optimizer, n_starts=2)
+                problem=problem, optimizer=optimizer, n_starts=2,
+                filename=None)
 
             self.assertTrue(np.isfinite(
                 result.optimize_result.get_for_key('fval')[0]))

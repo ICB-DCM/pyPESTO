@@ -19,7 +19,8 @@ def test_optimize():
     problem = create_problem()
     optimizer = pypesto.optimize.ScipyOptimizer()
     n_starts = 5
-    result = pypesto.optimize.minimize(problem, optimizer, n_starts)
+    result = pypesto.optimize.minimize(problem, optimizer, n_starts,
+                                       filename=None)
 
     optimizer_result = result.optimize_result.list[0]
     assert len(optimizer_result.x) == 5

@@ -82,7 +82,8 @@ def sample_petab_problem():
     sampler = sample.AdaptiveMetropolisSampler()
     result = sample.sample(problem, n_samples=1000,
                            sampler=sampler,
-                           x0=np.array([3, -4]))
+                           x0=np.array([3, -4]),
+                           filename=None)
     return result
 
 
@@ -145,7 +146,8 @@ def create_optimization_history():
         n_starts=5,
         startpoint_method=pypesto.startpoint.uniform,
         options=optimize_options,
-        history_options=history_options
+        history_options=history_options,
+        filename=None
     )
 
     return result_with_trace
@@ -386,6 +388,7 @@ def test_parameters_hist():
         optimizer=optimizer,
         n_starts=10,
         startpoint_method=pypesto.startpoint.uniform,
+        filename=None
     )
 
     visualize.parameter_hist(result_1, 'x1')
@@ -632,6 +635,7 @@ def test_optimization_stats():
         optimizer=optimizer,
         n_starts=10,
         startpoint_method=pypesto.startpoint.uniform,
+        filename=None
     )
 
     result_2 = optimize.minimize(
@@ -639,6 +643,7 @@ def test_optimization_stats():
         optimizer=optimizer,
         n_starts=10,
         startpoint_method=pypesto.startpoint.uniform,
+        filename=None
     )
 
     visualize.optimization_run_property_per_multistart(result_1, 'n_fval',
@@ -927,7 +932,8 @@ def test_visualize_optimized_model_fit():
     problem = importer.create_problem()
 
     result = optimize.minimize(problem=problem,
-                               n_starts=1)
+                               n_starts=1,
+                               filename=None)
 
     # test call of visualize_optimized_model_fit
     visualize_optimized_model_fit(petab_problem=petab_problem,
@@ -952,7 +958,8 @@ def test_time_trajectory_model():
     problem = importer.create_problem()
 
     result = optimize.minimize(problem=problem,
-                               n_starts=1)
+                               n_starts=1,
+                               filename=None)
 
     # test call of time_trajectory_model
     time_trajectory_model(result=result)
