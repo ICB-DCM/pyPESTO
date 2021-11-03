@@ -7,7 +7,7 @@ import importlib
 import shutil
 import logging
 import tempfile
-from typing import Iterable, List, Literal, Optional, Sequence, Union, Callable
+from typing import Iterable, List, Optional, Sequence, Union, Callable
 
 from ..problem import Problem
 from ..objective import AmiciObjective, AmiciObjectBuilder, AggregatedObjective
@@ -96,7 +96,7 @@ class PetabImporter(AmiciObjectBuilder):
         *args,
         rtol: float = 1e-2,
         atol: float = 1e-3,
-        mode: Literal = None,
+        mode: Union[str, List[str]] = None,
         multi_eps=None,
         **kwargs,
     ) -> bool:
