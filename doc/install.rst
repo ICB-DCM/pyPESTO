@@ -5,7 +5,7 @@ Install and upgrade
 Requirements
 ------------
 
-This package requires Python 3.6 or later.
+This package requires Python 3.7 or later.
 It is tested on Linux using Travis continuous integration.
 
 
