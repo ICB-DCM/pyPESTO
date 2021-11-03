@@ -10,15 +10,15 @@ Release notes
 ------------------
 
 * General:
-  * Automatically save results (#749)
-  * Update all docstrings to numpy standard (#750)
-  * Add Google Colab and nbviewer links to all notebooks for online
-    execution (#758)
-  * Option to not save hess and sres in result (#760)
-  * Set minimum supported python version to 3.7 (#755)
+    * Automatically save results (#749)
+    * Update all docstrings to numpy standard (#750)
+    * Add Google Colab and nbviewer links to all notebooks for online
+      execution (#758)
+    * Option to not save hess and sres in result (#760)
+    * Set minimum supported python version to 3.7 (#755)
 
 * Visualization:
-  * Parameterize start index in optimized model fit (#744)
+    * Parameterize start index in optimized model fit (#744)
 
 
 0.2.8 (2021-10-28)
