@@ -40,7 +40,12 @@ class OptimizerTask(Task):
             Options object applying to optimization.
         history_options:
             Optimizer history options.
-        report_hess
+        report_hess:
+            Flag indicating whether the Hessian is to be stored in
+            results
+        report_sres:
+            Flag indicating whether residual sensitivity is to be stored in
+            results
         """
         super().__init__()
 
