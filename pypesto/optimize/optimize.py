@@ -134,6 +134,8 @@ def minimize(
             id=id,
             options=options,
             history_options=history_options,
+            report_hess=options.report_hess,
+            report_sres=options.report_sres,
         )
         tasks.append(task)
 

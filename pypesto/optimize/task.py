@@ -19,7 +19,10 @@ class OptimizerTask(Task):
             x0: np.ndarray,
             id: str,
             options: 'pypesto.optimize.OptimizeOptions',
-            history_options: HistoryOptions):
+            history_options: HistoryOptions,
+            report_hess: bool,
+            report_sres: bool,
+    ):
         """
         Create the task object.
 
@@ -37,6 +40,12 @@ class OptimizerTask(Task):
             Options object applying to optimization.
         history_options:
             Optimizer history options.
+        report_hess:
+            Flag indicating whether the Hessian is to be stored in
+            results
+        report_sres:
+            Flag indicating whether residual sensitivity is to be stored in
+            results
         """
         super().__init__()
 
@@ -46,6 +55,8 @@ class OptimizerTask(Task):
         self.id = id
         self.options = options
         self.history_options = history_options
+        self.report_hess = report_hess
+        self.report_sres = report_sres
 
     def execute(self) -> 'pypesto.optimize.OptimizerResult':
         """Execute the task."""
@@ -55,4 +66,8 @@ class OptimizerTask(Task):
             problem=self.problem, x0=self.x0, id=self.id,
             allow_failed_starts=self.options.allow_failed_starts,
             history_options=self.history_options)
+        if not self.report_hess:
+            optimizer_result.hess = None
+        if not self.report_sres:
+            optimizer_result.sres = None
         return optimizer_result
