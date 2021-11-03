@@ -15,31 +15,28 @@ def ensemble_identifiability(ensemble: Ensemble,
                              ax: Optional[plt.Axes] = None,
                              size: Optional[Tuple[float]] = (12, 6)):
     """
-    Plots an overview about how many parameters hit the parameter bounds based
+    Visualize identifiablity of parameter ensemble.
+
+    Plot an overview about how many parameters hit the parameter bounds based
     on a ensemble of parameters. confidence intervals/credible ranges are
     computed via the ensemble mean plus/minus 1 standard deviation.
     This highlevel routine expects a ensemble object as input.
 
     Parameters
     ----------
-
     ensemble:
         ensemble of parameter vectors (from pypesto.ensemble)
-
     ax:
         Axes object to use.
-
     size:
         Figure size (width, height) in inches. Is only applied when no ax
         object is specified
 
     Returns
     -------
-
     ax: matplotlib.Axes
         The plot axes.
     """
-
     # first get the data to check identifiability
     id_df = ensemble.check_identifiability()
 
@@ -60,7 +57,9 @@ def ensemble_identifiability_lowlevel(none_hit: np.ndarray,
                                       ax: Optional[plt.Axes] = None,
                                       size: Optional[Tuple[float]] = (16, 10)):
     """
-    Plots an overview about how many parameters hit the parameter bounds based
+    Low-level identifiablity routine.
+
+    Plot an overview about how many parameters hit the parameter bounds based
     on a ensemble of parameters. Confidence intervals/credible ranges are
     computed via the ensemble mean plus/minus 1 standard deviation.
     This lowlevel routine works with numpy arrays which define the confidence
@@ -68,37 +67,29 @@ def ensemble_identifiability_lowlevel(none_hit: np.ndarray,
 
     Parameters
     ----------
-
     none_hit:
         2-dimensional array of confidence interval/credible ranges for
         identifiable parameters
-
     lb_hit:
         2-dimensional array of confidence interval/credible ranges for
         parameters which hit the lower parameter bound
-
     ub_hit:
         2-dimensional array of confidence interval/credible ranges for
         parameters which hit the upper parameter bound
-
     both_hit:
         2-dimensional array of confidence interval/credible ranges for
         parameters which hit both parameter bounds
-
     ax:
         Axes object to use.
-
     size:
         Figure size (width, height) in inches. Is only applied when no ax
         object is specified
 
     Returns
     -------
-
     ax: matplotlib.Axes
         The plot axes.
     """
-
     # define some short hands for later plotting
     n_par = sum([none_hit.shape[0], lb_hit.shape[0],
                  ub_hit.shape[0], both_hit.shape[0]])
@@ -175,12 +166,13 @@ def ensemble_identifiability_lowlevel(none_hit: np.ndarray,
 
 def _prepare_identifiability_plot(id_df: pd.DataFrame):
     """
-    This routine groups model parameters based on a ensemble object into
-    four categories, based on the mean of the parameter ensemble plus/minus
-    1 standard deviation: Parameters that hit both bounds, parameters that hit
-    only the lower [or upper] bound, and parameters that hit no bounds.
-    It returns them as four numpy arrays, together with their confidence
-    intervals/credible ranges.
+    Group model parameters based on an ensemble object .
+
+    Can group into four categories, based on the mean of the parameter
+    ensemble plus/minus 1 standard deviation: Parameters that hit both
+    bounds, parameters that hit only the lower [or upper] bound,
+    and parameters that hit no bounds. It returns them as four numpy arrays,
+    together with their confidence intervals/credible ranges.
 
     Parameters
     ----------
@@ -206,7 +198,6 @@ def _prepare_identifiability_plot(id_df: pd.DataFrame):
         2-dimensional array of confidence interval/credible ranges for
         parameters which hit both parameter bounds
     """
-
     # prepare
     both_hit = []
     lb_hit = []
@@ -252,7 +243,9 @@ def _create_patches(none_hit: np.ndarray,
                     ub_hit: np.ndarray,
                     both_hit: np.ndarray):
     """
-    Creates matplotlib.patches.PatchCollection objects from numpy arrays with
+    Create patches for identifiability analysis.
+
+    Create matplotlib.patches.PatchCollection objects from numpy arrays with
     confidence intervals/credible ranges, which visualize identifiability
     properties of the model parameters.
 

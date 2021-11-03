@@ -26,6 +26,7 @@ def visualize_optimized_model_fit(petab_problem: petab.Problem,
                                   ) -> Union[matplotlib.axes.Axes, None]:
     """
     Visualize the optimized model fit of a PEtab problem.
+
     Function calls the PEtab visualization file of the petab_problem and
     visualizes the fit of the optimized parameter. Common additional
     argument is `subplot_dir` to specify the directory each subplot is
@@ -89,6 +90,7 @@ def time_trajectory_model(
 ) -> Union[matplotlib.axes.Axes, None]:
     """
     Visualize the time trajectory of the model with given timepoints.
+
     It does this by calling the amici plotting routines.
 
     Parameters
@@ -114,9 +116,9 @@ def time_trajectory_model(
 
     Returns
     -------
-    axes: `matplotlib.axes.Axes` object of the plot.
+    axes:
+        `matplotlib.axes.Axes` object of the plot.
     """
-
     if problem is None:
         problem = result.problem
     # add timepoints as needed
@@ -160,8 +162,9 @@ def _time_trajectory_model_with_states(
         state_names: Sequence[str],
         observable_ids: Union[str, Sequence[str]]):
     """
-    Helper function for time_trajectory_model. Visualizes both states and
-    observables.
+    Visualizes both, states and observables.
+
+    Helper function for time_trajectory_model.
 
     Parameters
     ----------
@@ -179,7 +182,8 @@ def _time_trajectory_model_with_states(
 
     Returns
     -------
-    axes: `matplotlib.axes.Axes` object of the plot.
+    axes:
+        `matplotlib.axes.Axes` object of the plot.
     """
     # if state_name, state_id or observable_id is not None, get indices
     # for these the AMICI plotting functions default to all indices if
@@ -227,8 +231,9 @@ def _time_trajectory_model_without_states(
         rdatas: Union['amici.ReturnData', Sequence['amici.ReturnData']],
         observable_ids: Union[str, Sequence[str]]):
     """
-    Helper function for time_trajectory_model. Visualizes both states and
-    observables.
+    Visualize both, states and observables.
+
+    Helper function for time_trajectory_model.
 
     Parameters
     ----------
@@ -242,7 +247,8 @@ def _time_trajectory_model_without_states(
 
     Returns
     -------
-    axes: `matplotlib.axes.Axes` object of the plot.
+    axes:
+        `matplotlib.axes.Axes` object of the plot.
     """
     # if observable_id's is not None, get indices for these
     # the AMICI plotting functions default to all indices if `None` is

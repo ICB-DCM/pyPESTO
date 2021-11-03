@@ -1,3 +1,4 @@
+"""Abstract engine base class."""
 from typing import List
 import abc
 
@@ -5,9 +6,7 @@ from .task import Task
 
 
 class Engine(abc.ABC):
-    """
-    Abstract engine base class.
-    """
+    """Abstract engine base class."""
 
     def __init__(self):
         pass

@@ -10,18 +10,21 @@ except ImportError:
 
 
 class PetabImporterPysb(PetabImporter):
-    """Import for experimental PySB-based PEtab problems"""
+    """Import for experimental PySB-based PEtab problems."""
 
     def __init__(self,
                  petab_problem: 'amici.petab_import_pysb.PysbPetabProblem',
                  output_folder: str = None):
         """
+        Initialize importer.
+
+        Parameters
+        ----------
         petab_problem:
             Managing access to the model and data.
         output_folder:
             Folder to contain the amici model.
         """
-
         super().__init__(petab_problem,
                          model_name=petab_problem.pysb_model.name,
                          output_folder=output_folder,
@@ -29,15 +32,15 @@ class PetabImporterPysb(PetabImporter):
 
     def compile_model(self, **kwargs):
         """
-        Compile the model. If the output folder exists already, it is first
-        deleted.
+        Compile the model.
+
+        If the output folder exists already, it is first deleted.
 
         Parameters
         ----------
         kwargs: Extra arguments passed to `amici.SbmlImporter.sbml2amici`.
 
         """
-
         # delete output directory
         if os.path.exists(self.output_folder):
             shutil.rmtree(self.output_folder)
