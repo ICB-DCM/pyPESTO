@@ -61,7 +61,7 @@ def test_error_leastsquares_with_ssigma():
         'ls_trf', options={'max_nfev': 50})
     with pytest.raises(RuntimeError):
         pypesto.optimize.minimize(
-            problem=problem, optimizer=optimizer, n_starts=1,
+            problem=problem, optimizer=optimizer, n_starts=1, filename=None,
             options=pypesto.optimize.OptimizeOptions(allow_failed_starts=False)
         )
 
@@ -94,7 +94,7 @@ def test_preeq_guesses():
     )
     result = pypesto.optimize.minimize(
         problem=problem, optimizer=optimizer, n_starts=1,
-        options=options
+        options=options, filename=None
     )
 
     assert obj.steadystate_guesses['fval'] < np.inf

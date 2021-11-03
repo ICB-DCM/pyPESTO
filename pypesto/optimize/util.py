@@ -1,6 +1,11 @@
+"""Utility functions for :py:func:`pypesto.optimize.minimize`."""
+import datetime
+
 from ..engine import Engine, SingleCoreEngine
 from ..objective import HistoryOptions
 from ..store.save_to_hdf5 import get_or_create_group
+from ..store import write_result
+from ..result import Result
 from pathlib import Path
 from typing import Union
 
@@ -13,8 +18,9 @@ def check_hdf5_mp(
     engine: Engine,
 ) -> Union[str, None]:
     """
-    Create a folder for partial HDF5 files,
-    if a parallelization engine will be used.
+    Create a folder for partial HDF5 files.
+
+    If no parallelization engine is used, do nothing.
 
     Parameters
     ----------
@@ -52,6 +58,8 @@ def fill_hdf5_file(
     filename: str
 ) -> None:
     """
+    Create single history file pointing to files of multiple starts.
+
     Create links in `filename` to the
     history of each start contained in ret, the results
     of the optimization.
@@ -71,3 +79,29 @@ def fill_hdf5_file(
                 result['history'].file,
                 f'history/{id}'
             )
+
+
+def autosave(filename: str, result: Result,
+             type: str):
+    """
+    Save the result of optimization, profiling or sampling automatically.
+
+    Parameters
+    ----------
+    filename:
+        Either the filename to save to or "Auto", in which case it will
+        automatically generate a file named
+        `year_month_day_{type}_result.hdf5`.
+    result:
+        The result to be saved.
+    type:
+        Either `optimization`, `sampling` or `profiling`. Depending on the
+        method the function is called in.
+    """
+    if filename is None:
+        return None
+    if filename == "Auto":
+        time = datetime.datetime.now().strftime("%Y_%d_%m_%H_%M_%S")
+        filename = time+f"_{type}_result.hdf5"
+    write_result(result=result, overwrite=True,
+                 optimize=True, filename=filename)

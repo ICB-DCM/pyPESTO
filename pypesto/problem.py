@@ -1,3 +1,4 @@
+# noqa: D400,D205
 """
 Problem
 =======
@@ -23,9 +24,10 @@ SupportsIntIterableOrValue = Union[Iterable[SupportsInt], SupportsInt]
 
 class Problem:
     """
-    The problem formulation. A problem specifies the objective function,
-    boundaries and constraints, parameter guesses as well as the parameters
-    which are to be optimized.
+    The problem formulation.
+
+    A problem specifies the objective function, boundaries and constraints,
+    parameter guesses as well as the parameters which are to be optimized.
 
     Parameters
     ----------
@@ -66,10 +68,12 @@ class Problem:
     x_priors_defs:
         Definitions of priors for parameters. Types of priors, and their
         required and optional parameters, are described in the `Prior` class.
+    copy_objective:
+        Whethter to generate a deep copy of the objective function before
+        potential modification the problem class performs on it.
 
     Notes
     -----
-
     On the fixing of parameter values:
 
     The number of parameters dim_full the objective takes as input must
@@ -82,21 +86,26 @@ class Problem:
     get_full_matrix() can be used.
     """
 
-    def __init__(self,
-                 objective: ObjectiveBase,
-                 lb: Union[np.ndarray, List[float]],
-                 ub: Union[np.ndarray, List[float]],
-                 dim_full: Optional[int] = None,
-                 x_fixed_indices: Optional[SupportsIntIterableOrValue] = None,
-                 x_fixed_vals: Optional[SupportsFloatIterableOrValue] = None,
-                 x_guesses: Optional[Iterable[float]] = None,
-                 startpoint_method: Optional[Callable] = None,
-                 x_names: Optional[Iterable[str]] = None,
-                 x_scales: Optional[Iterable[str]] = None,
-                 x_priors_defs: Optional[NegLogPriors] = None,
-                 lb_init: Union[np.ndarray, List[float], None] = None,
-                 ub_init: Union[np.ndarray, List[float], None] = None):
-        self.objective = copy.deepcopy(objective)
+    def __init__(
+        self,
+        objective: ObjectiveBase,
+        lb: Union[np.ndarray, List[float]],
+        ub: Union[np.ndarray, List[float]],
+        dim_full: Optional[int] = None,
+        x_fixed_indices: Optional[SupportsIntIterableOrValue] = None,
+        x_fixed_vals: Optional[SupportsFloatIterableOrValue] = None,
+        x_guesses: Optional[Iterable[float]] = None,
+        startpoint_method: Optional[Callable] = None,
+        x_names: Optional[Iterable[str]] = None,
+        x_scales: Optional[Iterable[str]] = None,
+        x_priors_defs: Optional[NegLogPriors] = None,
+        lb_init: Union[np.ndarray, List[float], None] = None,
+        ub_init: Union[np.ndarray, List[float], None] = None,
+        copy_objective: bool = True,
+    ):
+        if copy_objective:
+            objective = copy.deepcopy(objective)
+        self.objective = objective
 
         self.lb_full: np.ndarray = np.array(lb).flatten()
         self.ub_full: np.ndarray = np.array(ub).flatten()
@@ -152,38 +161,46 @@ class Problem:
 
     @property
     def lb(self) -> np.ndarray:
+        """Return lower bounds of free parameters."""
         return self.lb_full[self.x_free_indices]
 
     @property
     def ub(self) -> np.ndarray:
+        """Return upper bounds of free parameters."""
         return self.ub_full[self.x_free_indices]
 
     @property
     def lb_init(self) -> np.ndarray:
+        """Return initial lower bounds of free parameters."""
         return self.lb_init_full[self.x_free_indices]
 
     @property
     def ub_init(self) -> np.ndarray:
+        """Return initial upper bounds of free parameters."""
         return self.ub_init_full[self.x_free_indices]
 
     @property
     def x_guesses(self) -> np.ndarray:
+        """Return guesses of the free parameter values."""
         return self.x_guesses_full[:, self.x_free_indices]
 
     @property
     def dim(self) -> int:
+        """Return dimension only considering non fixed parameters."""
         return self.dim_full - len(self.x_fixed_indices)
 
     @property
     def x_free_indices(self) -> List[int]:
+        """Return non fixed parameters."""
         return sorted(set(range(0, self.dim_full)) - set(self.x_fixed_indices))
 
     def normalize(self) -> None:
         """
+        Process vectors.
+
         Reduce all vectors to dimension dim and have the objective accept
         vectors of dimension dim.
         """
-
         for attr in ['lb_full', 'lb_init_full', 'ub_full', 'ub_init_full']:
             value = self.__getattribute__(attr)
             if value.size == 1:
@@ -230,7 +247,7 @@ class Problem:
     def set_x_guesses(self,
                       x_guesses: Iterable[float]):
         """
-        Sets the x_guesses of a problem.
+        Set the x_guesses of a problem.
 
         Parameters
         ----------
@@ -245,9 +262,7 @@ class Problem:
     def fix_parameters(self,
                        parameter_indices: SupportsIntIterableOrValue,
                        parameter_vals: SupportsFloatIterableOrValue) -> None:
-        """
-        Fix specified parameters to specified values
-        """
+        """Fix specified parameters to specified values."""
         parameter_indices = _make_iterable_if_value(parameter_indices, 'int')
         parameter_vals = _make_iterable_if_value(parameter_vals, 'float')
 
@@ -272,10 +287,7 @@ class Problem:
 
     def unfix_parameters(self, parameter_indices: SupportsIntIterableOrValue
                          ) -> None:
-        """
-        Free specified parameters
-        """
-
+        """Free specified parameters."""
         # check and adapt input
         parameter_indices = _make_iterable_if_value(parameter_indices, 'int')
 
@@ -356,7 +368,8 @@ class Problem:
             x_indices: Optional[List[int]] = None
     ) -> Union[np.ndarray, None]:
         """
-        Keep only those elements, which indices are specified in x_indices
+        Keep only those elements, which indices are specified in x_indices.
+
         If x_indices is not provided, delete fixed indices.
 
         Parameters
@@ -400,7 +413,8 @@ class Problem:
         return x
 
     def full_index_to_free_index(self, full_index: int):
-        """Calculate index in reduced vector from index in full vector.
+        """
+        Calculate index in reduced vector from index in full vector.
 
         Parameters
         ----------
@@ -418,8 +432,9 @@ class Problem:
 
     def print_parameter_summary(self) -> None:
         """
-        Prints a summary of what parameters are being optimized and
-        parameter boundaries.
+        Print a summary of parameters.
+
+        Include what parameters are being optimized and parameter boundaries.
         """
         print(  # noqa: T001 (print)
             pd.DataFrame(
@@ -451,10 +466,10 @@ def _type_conversion_with_check(index: int,
                                 valuename: str,
                                 convtype: str) -> Union[float, int]:
     """
-    Converts values to the requested type, raises and appropriate error if
-    not possible.
-    """
+    Convert values to the requested type.
 
+    Raises and appropriate error if not possible.
+    """
     if convtype not in _convtypes:
         raise ValueError(f'Unsupported type {convtype}')
 
@@ -479,10 +494,7 @@ def _make_iterable_if_value(value: Union[SupportsFloatIterableOrValue,
                                          SupportsIntIterableOrValue],
                             convtype: str) -> Union[Iterable[SupportsFloat],
                                                     Iterable[SupportsInt]]:
-    """
-    Converts scalar values to iterables if input is scalar, may update type
-    """
-
+    """Convert scalar values to iterables for scalar input, may update type."""
     if convtype not in _convtypes:
         raise ValueError(f'Unsupported type {convtype}')
 

@@ -20,9 +20,11 @@ def approximate_parameter_profile(
         n_steps: int = 100,
 ) -> Result:
     """
-    Calculate profiles based on an approximation via a normal likelihood
-    centered at the chosen optimal parameter value, with the covariance matrix
-    being the Hessian or FIM.
+    Calculate profile approximation.
+
+    Based on an approximation via a normal likelihood centered at the chosen
+    optimal parameter value, with the covariance matrix being the Hessian or
+    FIM.
 
     Parameters
     ----------

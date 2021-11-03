@@ -88,7 +88,8 @@ def resample_startpoints(
     x_guesses: np.ndarray,
     startpoint_method: StartpointMethod,
 ):
-    """Resample startpoints having non-finite value.
+    """
+    Resample startpoints having non-finite value.
 
     Check all proposed startpoints and resample ones with non-finite value
     via the startpoint_method.
@@ -116,7 +117,6 @@ def resample_startpoints(
     startpoints:
         Startpoints with all finite function values, shape (n_starts, n_par).
     """
-
     n_starts = startpoints.shape[0]
     resampled_startpoints = np.zeros_like(startpoints)
 
