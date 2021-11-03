@@ -16,7 +16,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: [3.9,3.8]
+        python-version: [3.9,3.7]
 
     steps:
     - name: Check out repository
@@ -37,7 +37,7 @@ jobs:
       run: .github/workflows/install_deps.sh amici
 
     - name: Run tests
-      timeout-minutes: 12
+      timeout-minutes: 10
       run: tox -e base
 
     - name: Coverage
