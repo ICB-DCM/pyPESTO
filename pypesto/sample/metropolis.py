@@ -9,9 +9,7 @@ from .result import McmcPtResult
 
 
 class MetropolisSampler(InternalSampler):
-    """
-    Simple Metropolis-Hastings sampler with fixed proposal variance.
-    """
+    """Simple Metropolis-Hastings sampler with fixed proposal variance."""
 
     def __init__(self, options: Dict = None):
         super().__init__(options)
@@ -25,12 +23,14 @@ class MetropolisSampler(InternalSampler):
 
     @classmethod
     def default_options(cls):
+        """Return the default options for the sampler."""
         return {
             'std': 1.,  # the proposal standard deviation
             'show_progress': True,  # whether to show the progress
         }
 
     def initialize(self, problem: Problem, x0: np.ndarray):
+        """Initialize the sampler."""
         self.problem = problem
         self.neglogpost = problem.objective
         self.neglogpost.history = History()
@@ -43,7 +43,7 @@ class MetropolisSampler(InternalSampler):
         self.trace_neglogprior = [self.neglogprior(x0)]
 
     def sample(self, n_samples: int, beta: float = 1.):
-        # load last recorded particle
+        """Load last recorded particle."""
         x = self.trace_x[-1]
         lpost = - self.trace_neglogpost[-1]
         lprior = - self.trace_neglogprior[-1]
@@ -61,16 +61,27 @@ class MetropolisSampler(InternalSampler):
             self.trace_neglogprior.append(-lprior)
 
     def make_internal(self, temper_lpost: bool):
+        """
+        Allow the inner samplers to be used as inner samplers.
+
+        Can be called by parallel tempering samplers during initialization.
+        Default: Do nothing.
+
+        Parameters
+        ----------
+        temper_lpost:
+            Whether to temperate the posterior or only the likelihood.
+        """
         self.options['show_progress'] = False
         self.temper_lpost = temper_lpost
 
     def _perform_step(self, x: np.ndarray, lpost: np.ndarray,
                       lprior: np.ndarray, beta: float):
         """
-        Perform a step: Propose new parameter, evaluate and check whether to
-        accept.
-        """
+        Perform a step.
 
+        Propose new parameter, evaluate and check whether to accept.
+        """
         # propose step
         x_new: np.ndarray = self._propose_parameter(x)
 
@@ -127,6 +138,13 @@ class MetropolisSampler(InternalSampler):
         """Update the proposal density. Default: Do nothing."""
 
     def get_last_sample(self) -> InternalSample:
+        """Get the last sample in the chain.
+
+        Returns
+        -------
+        internal_sample:
+            The last sample in the chain in the exchange format.
+        """
         return InternalSample(
             x=self.trace_x[-1],
             lpost=- self.trace_neglogpost[-1],
@@ -134,11 +152,20 @@ class MetropolisSampler(InternalSampler):
         )
 
     def set_last_sample(self, sample: InternalSample):
+        """
+        Set the last sample in the chain to the passed value.
+
+        Parameters
+        ----------
+        sample:
+            The sample that will replace the last sample in the chain.
+        """
         self.trace_x[-1] = sample.x
         self.trace_neglogpost[-1] = - sample.lpost
         self.trace_neglogprior[-1] = - sample.lprior
 
     def get_samples(self) -> McmcPtResult:
+        """Get the samples into the fitting pypesto format."""
         result = McmcPtResult(
             trace_x=np.array([self.trace_x]),
             trace_neglogpost=np.array([self.trace_neglogpost]),

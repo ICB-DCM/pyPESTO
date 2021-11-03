@@ -53,6 +53,7 @@ class UniformStartpoints(StartpointMethod):
         ub: np.ndarray,
         objective: ObjectiveBase = None,
     ) -> np.ndarray:
+        """Call function."""
         return _uniform(n_starts=n_starts, lb=lb, ub=ub)
 
 
