@@ -18,8 +18,9 @@ def next_guess(
         global_opt: float
 ) -> np.ndarray:
     """
-    This function creates the next initial guess for the optimizer in
-    order to compute the next profile point. Different proposal methods
+    Create the next initial guess for the optimizer.
+
+    Used in order to compute the next profile point. Different proposal methods
     are available.
 
     Parameters
@@ -46,7 +47,6 @@ def next_guess(
     next_guess:
         The next initial guess as base for the next profile point.
     """
-
     if update_type == 'fixed_step':
         return fixed_step(x, par_index, par_direction, profile_options,
                           problem)
@@ -117,8 +117,10 @@ def adaptive_step(
         order: int = 1
 ) -> np.ndarray:
     """
-    group of more complex methods for point proposal, step size is
-    automatically computed by a line search algorithm (hence: adaptive)
+    Group of more complex methods for point proposal.
+
+    Step size is automatically computed by a line search algorithm (hence:
+    adaptive).
 
     Parameters
     ----------
@@ -247,11 +249,11 @@ def handle_profile_history(
         options: ProfileOptions
 ) -> Tuple:
     """
-    Computes the very first step direction update guesses, check whether
-    enough steps have been taken for applying regression, computes
-    regression or simple extrapolation.
-    """
+    Compute the very first step direction update guesses.
 
+    Check whether enough steps have been taken for applying regression,
+    computes regression or simple extrapolation.
+    """
     # set the update direction
     delta_x_dir = np.zeros(len(x))
     delta_x_dir[par_index] = par_direction
@@ -294,10 +296,10 @@ def get_reg_polynomial(
         options: ProfileOptions
 ) -> List[float]:
     """
-    Computes the regression polynomial which is used to step proposal
-    extrapolation from the last profile points
-    """
+    Compute the regression polynomial.
 
+    Used to step proposal extrapolation from the last profile points
+    """
     # determine interpolation order
     reg_max_order = np.floor(n_profile_points / 2)
     reg_order = np.min([reg_max_order, options.reg_order])
@@ -346,9 +348,10 @@ def do_line_seach(
         options: ProfileOptions
 ) -> np.ndarray:
     """
-    Performs the line search based on the objective function we want to
-    reach, based on the current position in parameter space and on the
-    first guess for the proposal.
+    Perform the line search.
+
+    Based on the objective function we want to reach, based on the current
+    position in parameter space and on the first guess for the proposal.
     """
     # Was the initial step too big or too small?
     if direction == 'increase':
@@ -394,9 +397,7 @@ def next_x_interpolate(
         last_x: np.ndarray,
         next_obj_target: float
 ) -> np.ndarray:
-    """
-    Interpolate between the last two steps-
-    """
+    """Interpolate between the last two steps."""
     delta_obj = np.abs(next_obj - last_obj)
     add_x = np.abs(last_obj - next_obj_target) * (
             next_x - last_x) / delta_obj
@@ -410,9 +411,7 @@ def clip(
         lower: Union[float, np.ndarray],
         upper: Union[float, np.ndarray]
 ) -> Union[float, np.ndarray]:
-    """
-    Restrict a scalar or a vector to given bounds.
-    """
+    """Restrict a scalar or a vector to given bounds."""
     if isinstance(vector_guess, float):
         vector_guess = np.max([np.min([vector_guess, upper]), lower])
     else:

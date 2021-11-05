@@ -173,7 +173,8 @@ def test_storage_profiling():
         n_starts=n_starts)
     profile_original = profile.parameter_profile(
         problem=problem, result=result_optimization,
-        profile_index=[0], optimizer=optimizer)
+        profile_index=[0], optimizer=optimizer,
+        filename=None)
 
     fn = 'test_file.hdf5'
     try:
@@ -236,7 +237,8 @@ def test_storage_sampling():
     sample_original = sample.sample(problem=problem,
                                     sampler=sampler,
                                     n_samples=100,
-                                    x0=[x_0])
+                                    x0=[x_0],
+                                    filename=None)
 
     fn = 'test_file.hdf5'
     try:
@@ -288,14 +290,16 @@ def test_storage_all():
     # Profiling
     result = profile.parameter_profile(
         problem=problem, result=result,
-        profile_index=[0], optimizer=optimizer)
+        profile_index=[0], optimizer=optimizer,
+        filename=None)
     # Sampling
 
     sampler = sample.AdaptiveMetropolisSampler()
     result = sample.sample(problem=problem,
                            sampler=sampler,
                            n_samples=100,
-                           result=result)
+                           result=result,
+                           filename=None)
     # Read and write
     filename = 'test_file.hdf5'
     try:

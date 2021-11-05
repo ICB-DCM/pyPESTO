@@ -64,7 +64,7 @@ authors:
       given-names: "Stephan"
       orcid: "https://orcid.org/0000-0001-9524-6633"
    -
-      family-names = "Hasenauer"
+      family-names: "Hasenauer"
       given-names: "Jan"
       orcid: "https://orcid.org/0000-0002-4935-3312"
 title: "pyPESTO - Parameter EStimation TOolbox for python"

@@ -1,3 +1,4 @@
+"""Engines with multi-process parallelization."""
 from multiprocessing import Pool
 import cloudpickle as pickle
 import os

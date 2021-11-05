@@ -28,7 +28,8 @@ def _test_basic(engine):
     problem = pypesto.Problem(objective, lb, ub)
     optimizer = pypesto.optimize.ScipyOptimizer(options={'maxiter': 10})
     result = pypesto.optimize.minimize(
-        problem=problem, n_starts=5, engine=engine, optimizer=optimizer)
+        problem=problem, n_starts=5, engine=engine, optimizer=optimizer,
+        filename=None)
     assert len(result.optimize_result.as_list()) == 5
 
 
@@ -46,7 +47,8 @@ def _test_petab(engine):
     problem = petab_importer.create_problem(objective)
     optimizer = pypesto.optimize.ScipyOptimizer(options={'maxiter': 10})
     result = pypesto.optimize.minimize(
-        problem=problem, n_starts=3, engine=engine, optimizer=optimizer)
+        problem=problem, n_starts=3, engine=engine, optimizer=optimizer,
+        filename=None)
     assert len(result.optimize_result.as_list()) == 3
 
 

@@ -1,3 +1,4 @@
+"""Utility function for profile module."""
 import numpy as np
 import scipy.stats
 from typing import Any, Dict, Tuple, Iterable
@@ -10,6 +11,8 @@ from .result import ProfilerResult
 
 def chi2_quantile_to_ratio(alpha: float = 0.95, df: int = 1):
     """
+    Compute profile likelihood threshold.
+
     Transform lower tail probability `alpha` for a chi2 distribution with `df`
     degrees of freedom to a profile likelihood ratio threshold.
 
@@ -34,8 +37,9 @@ def calculate_approximate_ci(
         xs: np.ndarray, ratios: np.ndarray, confidence_ratio: float
 ) -> Tuple[float, float]:
     """
-    Calculate approximate confidence interval based on profile. Interval
-    bounds are linerly interpolated.
+    Calculate approximate confidence interval based on profile.
+
+    Interval bounds are linerly interpolated.
 
     Parameters
     ----------
@@ -84,7 +88,7 @@ def initialize_profile(
         profile_list: int
 ) -> float:
     """
-    This function initializes profiling based on a previous optimization.
+    Initialize profiling based on a previous optimization.
 
     Parameters
     ----------
@@ -148,7 +152,9 @@ def fill_profile_list(
         global_opt: float
 ) -> None:
     """
-    This is a helper function for initialize_profile
+    Fill a ProfileResult.
+
+    Helper function for `initialize_profile`.
 
     Parameters
     ----------
@@ -169,7 +175,6 @@ def fill_profile_list(
     global_opt:
         log-posterior at global optimum.
     """
-
     if optimizer_result[GRAD] is not None:
         gradnorm = np.linalg.norm(optimizer_result[GRAD])
     else:

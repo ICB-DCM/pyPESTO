@@ -5,27 +5,24 @@ from typing import List
 
 class ReferencePoint(dict):
     """
-    Reference point for plotting. Should contain a parameter value and an
-    objective function value, may also contain a color and a legend.
+    Reference point for plotting.
+
+    Should contain a parameter value and an objective function value,
+    may also contain a color and a legend.
 
     Can be used like a dict.
 
     Attributes
     ----------
-
     x: ndarray
         Reference parameters.
-
     fval: float
         Function value, fun(x), for reference parameters.
-
     color: RGBA, optional
         Color which should be used for reference point.
-
     auto_color: boolean
         flag indicating whether color for this reference point should be
         assigned automatically or whether it was assigned by user
-
     legend: str
         legend text for reference point
     """
@@ -93,6 +90,7 @@ class ReferencePoint(dict):
                 self.auto_color = True
 
     def __getattr__(self, key):
+        """Allow usage of keys as attributes."""
         try:
             return self[key]
         except KeyError:
@@ -104,21 +102,18 @@ class ReferencePoint(dict):
 
 def assign_colors(ref):
     """
-    Assigns colors to reference points, depending on user settings
+    Assign colors to reference points, depending on user settings.
 
     Parameters
     ----------
-
     ref: list of ReferencePoint
         Reference points, which need to get their color property filled
 
     Returns
     -------
-
     ref: list of ReferencePoint
         Reference points, which got their color property filled
     """
-
     # loop over reference points
     auto_color_count = 0
     for i_ref in ref:
@@ -141,32 +136,26 @@ def assign_colors(ref):
 def create_references(references=None, x=None, fval=None, color=None,
                       legend=None) -> List[ReferencePoint]:
     """
-    This function creates a list of reference point objects from user inputs
+    Create a list of reference point objects from user inputs.
 
     Parameters
     ----------
-
     references: ReferencePoint or dict or list, optional
         Will be converted into a list of RefPoints
-
     x: ndarray, optional
         Parameter vector which should be used for reference point
-
     fval: float, optional
         Objective function value which should be used for reference point
-
     color: RGBA, optional
         Color which should be used for reference point.
-
     legend: str
         legend text for reference point
+
     Returns
     -------
-
     colors: list of RGBA
         One for each element in 'vals'.
     """
-
     # parse input (reference)
     ref = []
     if references is not None:

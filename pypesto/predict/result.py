@@ -1,3 +1,4 @@
+"""PredictionResult and PredictionConditionResult."""
 import numpy as np
 import pandas as pd
 import h5py
@@ -22,9 +23,10 @@ from .constants import (
 
 class PredictionConditionResult:
     """
-    This class is a light-weight wrapper for the prediction of one simulation
-    condition of an amici model. It should provide a common api how amici
-    predictions should look like in pyPESTO.
+    Light-weight wrapper for the prediction of one simulation condition.
+
+    It should provide a common api how amici predictions should look like in
+    pyPESTO.
     """
 
     def __init__(self,
@@ -36,7 +38,7 @@ class PredictionConditionResult:
                  output_sigmay: np.ndarray = None,
                  x_names: Sequence[str] = None):
         """
-        Constructor.
+        Initialize PredictionConditionResult.
 
         Parameters
         ----------
@@ -67,6 +69,7 @@ class PredictionConditionResult:
                             range(output_sensi.shape[1])]
 
     def __iter__(self):
+        """Allow usage like a dict."""
         yield 'timepoints', self.timepoints
         yield 'output_ids', self.output_ids
         yield 'x_names', self.x_names
@@ -76,6 +79,7 @@ class PredictionConditionResult:
         yield 'output_sigmay', self.output_sigmay
 
     def __eq__(self, other):
+        """Check equality of two PredictionConditionResults."""
         def to_bool(expr):
             if isinstance(expr, bool):
                 return expr
@@ -100,11 +104,12 @@ class PredictionConditionResult:
 
 class PredictionResult:
     """
-    This class is a light-weight wrapper around predictions from pyPESTO made
-    via an amici model. It's only purpose is to have fixed format/api, how
-    prediction results should be stored, read, and handled: as predictions are
-    a very flexible format anyway, they should at least have a common
-    definition, which allows to work with them in a reasonable way.
+    Light-weight wrapper around prediction from pyPESTO made by an AMICI model.
+
+    Its only purpose is to have fixed format/api, how prediction results
+    should be stored, read, and handled: as predictions are a very flexible
+    format anyway, they should at least have a common definition,
+    which allows to work with them in a reasonable way.
     """
 
     def __init__(self,
@@ -112,7 +117,7 @@ class PredictionResult:
                  condition_ids: Sequence[str] = None,
                  comment: str = None):
         """
-        Constructor.
+        Initialize PredictionResult.
 
         Parameters
         ----------
@@ -139,6 +144,7 @@ class PredictionResult:
         self.comment = comment
 
     def __iter__(self):
+        """Allow usage like an iterator."""
         parameter_ids = None
         if self.conditions:
             parameter_ids = self.conditions[0].x_names
@@ -149,6 +155,7 @@ class PredictionResult:
         yield 'parameter_ids', parameter_ids
 
     def __eq__(self, other):
+        """Check equality of two PredictionResults."""
         if not isinstance(other, PredictionResult):
             return False
         if self.comment != other.comment:
@@ -162,7 +169,7 @@ class PredictionResult:
 
     def write_to_csv(self, output_file: str):
         """
-        This method saves predictions to a csv file.
+        Save predictions to a csv file.
 
         Parameters
         ----------
@@ -172,6 +179,8 @@ class PredictionResult:
 
         def _prepare_csv_output(output_file):
             """
+            Prepare a folder for output.
+
             If a csv is requested, this routine will create a folder for it,
             with a suiting name: csv's are by default 2-dimensional, but the
             output will have the format n_conditions x n_timepoints x n_outputs
@@ -234,14 +243,14 @@ class PredictionResult:
                     output_file: str,
                     base_path: str = None):
         """
-        This method saves predictions to an h5 file. It appends to the file if
-        the file already exists.
+        Save predictions to an h5 file.
+
+        It appends to the file if the file already exists.
 
         Parameters
         ----------
         output_file:
             path to file/folder to which results will be written
-
         base_path:
             base path in the h5 file
         """
@@ -284,8 +293,9 @@ class PredictionResult:
     @staticmethod
     def _check_existence(output_path):
         """
-        Checks whether a file or a folder already exists and appends a
-        timestamp if this is the case
+        Check whether a file or a folder already exists.
+
+        Append a timestamp if this is the case.
         """
         output_path_out = output_path
         while output_path_out.exists():
