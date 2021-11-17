@@ -595,7 +595,7 @@ class CsvHistory(History):
             dirname = os.path.dirname(self.file)
             os.makedirs(dirname, exist_ok=True)
 
-        if load_from_file:
+        if load_from_file and os.path.exists(self.file):
             trace = pd.read_csv(self.file, header=[0, 1], index_col=0)
             # replace 'nan' in cols with np.NAN
             cols = pd.DataFrame(trace.columns.to_list())
@@ -1250,6 +1250,9 @@ class OptimizerHistory:
                 self.sres_min = sres
 
     def _compute_vals_from_trace(self):
+        if not len(self.history):
+            # nothing to be computed from empty history
+            return
         # some optimizers may evaluate hess+grad first to compute trust region
         # etc
         max_init_iter = 3
