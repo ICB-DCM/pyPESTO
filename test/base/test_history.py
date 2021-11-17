@@ -11,7 +11,9 @@ import pypesto
 from pypesto.objective.util import sres_to_schi2, res_to_chi2
 from pypesto import CsvHistory, HistoryOptions,\
     MemoryHistory, ObjectiveBase, Hdf5History
-from pypesto.optimize import read_result_from_file, OptimizerResult
+from pypesto.optimize import (
+    read_result_from_file, read_results_from_file, OptimizerResult
+)
 from pypesto.objective.constants import (
     X, FVAL, GRAD, HESS, RES, SRES, CHI2, SCHI2)
 from pypesto.engine import MultiProcessEngine
@@ -70,6 +72,12 @@ class HistoryTest(unittest.TestCase):
                     self.check_reconstruct_history(start, str(istart))
                     self.check_load_from_file(start, str(istart))
                     self.check_history_consistency(start)
+
+                # check that we can also aggregrate from multiple files.
+                # load more results than necessary to check whether this
+                # also works in case of incomplete results.
+                read_results_from_file(self.problem, self.history_options,
+                                       len(result.optimize_result.list) + 2)
 
     def check_load_from_file(self, start: OptimizerResult, id: str):
         """Verify we can reconstitute OptimizerResult from csv file"""
