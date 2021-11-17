@@ -274,6 +274,7 @@ def read_results_from_file(problem: Problem, history_options: HistoryOptions,
         read_result_from_file(problem, history_options, str(istart))
         for istart in range(n_starts)
     ]
+    result.optimize_result.sort()
     return result
 
 
