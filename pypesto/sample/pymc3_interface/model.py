@@ -28,7 +28,9 @@ def create_pymc3_model(problem: Problem,
                        remap_to_reals: bool = True,
                        lerp_method: str = 'convex',
                        check: bool = True,
-                       verbose: bool = False):
+                       check_finite_in_objective: bool = True,
+                       verbose: bool = False,
+):
         # Check consistency of arguments
         if jitter_scales is not None:
             if testval is None:
@@ -80,7 +82,7 @@ def create_pymc3_model(problem: Problem,
             objective = problem.objective
             if objective.has_grad and cache_gradients:
                 objective = CachedObjective(objective)
-            log_post_fun = TheanoLogProbability(objective, beta)
+            log_post_fun = TheanoLogProbability(objective, beta, check_finite=check_finite_in_objective)
 
             # If a test value is given, correct values at the optimization
             # boundaries moving them just inside the interval.

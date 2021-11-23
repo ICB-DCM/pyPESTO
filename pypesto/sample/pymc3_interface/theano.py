@@ -111,24 +111,33 @@ class TheanoLogProbability(tt.Op):
         The `pypesto.ObjectiveBase` defining the log-probability.
     beta:
         Inverse temperature (e.g. in parallel tempering).
+    check_finite:
+        Check parameter vector for non-finite elements;
+        if any are found, set log-probability to -inf and gradient to NaN.
+        May fix things in some situations, may break things in others.
     """
 
     itypes = [tt.dvector]  # expects a vector of parameter values when called
     otypes = [tt.dscalar]  # outputs a single scalar value (the log prob)
 
-    def __init__(self, objective: ObjectiveBase, beta: float = 1.):
+    def __init__(self, objective: ObjectiveBase, beta: float = 1., check_finite: bool = True):
         self._objective = objective
         self._beta = beta
+        self._check_finite = check_finite
 
         # initialize the sensitivity Op
         if objective.has_grad:
-            self._log_prob_grad = TheanoLogProbabilityGradient(objective, beta)
+            self._log_prob_grad = TheanoLogProbabilityGradient(objective, beta, check_finite=check_finite)
         else:
             self._log_prob_grad = None
 
     def perform(self, node, inputs, outputs, params=None):
         theta, = inputs
-        log_prob = -self._beta * self._objective(theta, sensi_orders=(0,))
+        if not self._check_finite or np.all(np.isfinite(theta)):
+            log_prob = -self._beta * self._objective(theta, sensi_orders=(0,))
+        else:
+            print('Parameter vector theta contains non-finite elements! Log-probability set to -inf.', file=sys.stderr)
+            log_prob = -np.inf
         outputs[0][0] = np.array(log_prob)
 
     def grad(self, inputs, g):
@@ -154,17 +163,25 @@ class TheanoLogProbabilityGradient(tt.Op):
         The `pypesto.ObjectiveBase` defining the log-probability.
     beta:
         Inverse temperature (e.g. in parallel tempering).
+    check_finite:
+        Check parameter vector for non-finite elements;
+        if any are found, set gradient to NaN.
+        May fix things in some situations, may break things in others.
     """
 
     itypes = [tt.dvector]  # expects a vector of parameter values when called
     otypes = [tt.dvector]  # outputs a vector (the log prob grad)
 
-    def __init__(self, objective: ObjectiveBase, beta: float = 1.):
+    def __init__(self, objective: ObjectiveBase, beta: float = 1., check_finite: bool = True):
         self._objective = objective
         self._beta = beta
+        self._check_finite = check_finite
 
     def perform(self, node, inputs, outputs, params=None):
         theta, = inputs
-        # calculate gradients
-        log_prob_grad = -self._beta * self._objective(theta, sensi_orders=(1,))
+        if not self._check_finite or np.all(np.isfinite(theta)):
+            log_prob_grad = -self._beta * self._objective(theta, sensi_orders=(1,))
+        else:
+            print('Parameter vector theta contains non-finite elements! Log-probability gradient set to NaN.', file=sys.stderr)
+            log_prob_grad = np.full(theta.shape, np.nan)
         outputs[0][0] = log_prob_grad
