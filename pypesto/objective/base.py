@@ -146,7 +146,8 @@ class ObjectiveBase(abc.ABC):
             with function values and derivatives indicated by ids.
         """
         # copy parameter vector to prevent side effects
-        x = np.array(x) # np.array creates a copy of x
+        # np.array creates a copy of x already
+        x = np.array(x)
 
         # check input
         if not self.check_mode(mode):

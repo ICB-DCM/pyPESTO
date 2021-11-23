@@ -1112,7 +1112,7 @@ def get_data_to_plot(
         Parameter names to be plotted.
     """
     # get parameters and fval results as numpy arrays (trace_x is numpy array)
-    arr_param = np.asarray(result.sample_result.trace_x[i_chain]) 
+    arr_param = np.asarray(result.sample_result.trace_x[i_chain])
 
     if result.sample_result.burn_in is None:
         warnings.warn("Burn in index not found in the results, the full chain "
