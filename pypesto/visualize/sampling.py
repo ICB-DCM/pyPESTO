@@ -1111,8 +1111,8 @@ def get_data_to_plot(
     param_names:
         Parameter names to be plotted.
     """
-    # get parameters and fval results as numpy arrays
-    arr_param = np.array(result.sample_result.trace_x[i_chain])
+    # get parameters and fval results as numpy arrays (trace_x is numpy array)
+    arr_param = np.asarray(result.sample_result.trace_x[i_chain]) 
 
     if result.sample_result.burn_in is None:
         warnings.warn("Burn in index not found in the results, the full chain "
@@ -1133,8 +1133,8 @@ def get_data_to_plot(
     # thin out by stepsize, from the index burn_in until end of vector
     arr_param = arr_param[np.arange(burn_in, len(arr_param), stepsize)]
 
-    # invert sign for log posterior values
-    arr_fval = - np.array(sample_result.trace_neglogpost[i_chain])
+    # invert sign for log posterior values (trace_neglogpost is numpy array)
+    arr_fval = - np.asarray(sample_result.trace_neglogpost[i_chain])
     indices = np.arange(burn_in, len(arr_fval), stepsize)
     arr_fval = arr_fval[indices]
     theta_lb = result.problem.lb

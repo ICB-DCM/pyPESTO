@@ -78,18 +78,18 @@ class OptimizerResult(dict):
                  message: str = None):
         super().__init__()
         self.id = id
-        self.x: np.ndarray = np.array(x) if x is not None else None
+        self.x: np.ndarray = np.asarray(x) if x is not None else None
         self.fval: float = fval
-        self.grad: np.ndarray = np.array(grad) if grad is not None else None
-        self.hess: np.ndarray = np.array(hess) if hess is not None else None
-        self.res: np.ndarray = np.ndarray(res) if res is not None else None
-        self.sres: np.ndarray = np.ndarray(sres) if sres is not None else None
+        self.grad: np.ndarray = np.asarray(grad) if grad is not None else None
+        self.hess: np.ndarray = np.asarray(hess) if hess is not None else None
+        self.res: np.ndarray = np.asarray(res) if res is not None else None
+        self.sres: np.ndarray = np.asarray(sres) if sres is not None else None
         self.n_fval: int = n_fval
         self.n_grad: int = n_grad
         self.n_hess: int = n_hess
         self.n_res: int = n_res
         self.n_sres: int = n_sres
-        self.x0: np.ndarray = np.array(x0) if x0 is not None else None
+        self.x0: np.ndarray = np.asarray(x0) if x0 is not None else None
         self.fval0: float = fval0
         self.history: History = history
         self.exitflag: int = exitflag
