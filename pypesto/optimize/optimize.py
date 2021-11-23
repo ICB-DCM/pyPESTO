@@ -30,7 +30,7 @@ def minimize(
     filename: str = "Auto"
 ) -> Result:
     """
-    This is the main function to call to do multistart optimization.
+    Do multistart optimization.
 
     Parameters
     ----------
@@ -70,7 +70,6 @@ def minimize(
         Result object containing the results of all multistarts in
         `result.optimize_result`.
     """
-
     # optimizer
     if optimizer is None:
         optimizer = ScipyOptimizer()
@@ -135,6 +134,8 @@ def minimize(
             id=id,
             options=options,
             history_options=history_options,
+            report_hess=options.report_hess,
+            report_sres=options.report_sres,
         )
         tasks.append(task)
 

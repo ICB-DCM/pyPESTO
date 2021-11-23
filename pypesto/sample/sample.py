@@ -21,7 +21,7 @@ def sample(
         filename: str = "Auto"
 ) -> Result:
     """
-    This is the main function to call to do parameter sampling.
+    Call to do parameter sampling.
 
     Parameters
     ----------

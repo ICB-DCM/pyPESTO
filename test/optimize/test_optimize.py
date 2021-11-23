@@ -208,6 +208,42 @@ def check_minimize(problem, library, solver, allow_failed_starts=False):
         assert result.optimize_result.list[0]['x'] is not None
 
 
+def test_trim_results(problem):
+    """
+    Test trimming of hess/sres from results
+    """
+
+    optimize_options = optimize.OptimizeOptions(
+        report_hess=False, report_sres=False
+    )
+    prob = pypesto.Problem(
+        objective=rosen_for_sensi(max_sensi_order=2)['obj'],
+        lb=0 * np.ones((1, 2)), ub=1 * np.ones((1, 2))
+    )
+
+    # hess
+    optimizer = optimize.FidesOptimizer(verbose=0)
+    result = optimize.minimize(
+        problem=prob,
+        optimizer=optimizer,
+        n_starts=1,
+        startpoint_method=pypesto.startpoint.uniform,
+        options=optimize_options,
+    )
+    assert result.optimize_result.list[0].hess is None
+
+    # sres
+    optimizer = optimize.ScipyOptimizer(method='ls_trf')
+    result = optimize.minimize(
+        problem=prob,
+        optimizer=optimizer,
+        n_starts=1,
+        startpoint_method=pypesto.startpoint.uniform,
+        options=optimize_options,
+    )
+    assert result.optimize_result.list[0].sres is None
+
+
 def test_mpipoolengine():
     """
     Test the MPIPoolEngine by calling an example script with mpiexec.

@@ -23,10 +23,7 @@ AmiciSolver = Union['amici.Solver', 'amici.SolverPtr']
 
 
 class AmiciCalculator:
-    """
-    Class to perform the actual call to AMICI and obtain requested objective
-    function values.
-    """
+    """Class to perform the AMICI call and obtain objective function values."""
 
     def __init__(self):
         self._known_least_squares_safe = False
@@ -126,6 +123,7 @@ def calculate_function_values(rdatas,
                               x_ids: Sequence[str],
                               parameter_mapping: 'ParameterMapping',
                               fim_for_hess: bool):
+    """Calculate the function values from rdatas and return as dict."""
     # full optimization problem dimension (including fixed parameters)
     dim = len(x_ids)
 

@@ -1,3 +1,4 @@
+"""Engines with multi-node parallelization."""
 from mpi4py.futures import MPIPoolExecutor
 from mpi4py import MPI
 import cloudpickle as pickle
@@ -21,9 +22,9 @@ def work(pickled_task):
 
 class MPIPoolEngine(Engine):
     """
-    Parallelize the task execution using
-    `mpi4py <https://mpi4py.readthedocs.io/en/stable/>`_.
+    Parallelize the task execution.
 
+    Uses `mpi4py <https://mpi4py.readthedocs.io/en/stable/>`_.
     To be called with:
     ``mpiexec -np #Workers+1 python -m mpi4py.futures YOURFILE.py``
     """
@@ -32,7 +33,8 @@ class MPIPoolEngine(Engine):
         super().__init__()
 
     def execute(self, tasks: List[Task], progress_bar: bool = True):
-        """Pickle tasks and distribute work to workers.
+        """
+        Pickle tasks and distribute work to workers.
 
         Parameters
         ----------
@@ -41,7 +43,6 @@ class MPIPoolEngine(Engine):
         progress_bar:
             Whether to display a progress bar.
         """
-
         pickled_tasks = [pickle.dumps(task) for task in tasks]
 
         n_procs = MPI.COMM_WORLD.Get_size()   # Size of communicator

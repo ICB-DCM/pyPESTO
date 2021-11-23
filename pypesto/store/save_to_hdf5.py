@@ -1,3 +1,4 @@
+"""Include functions for saving various results to hdf5."""
 import os
 import logging
 from typing import Union
@@ -16,11 +17,12 @@ def check_overwrite(f: Union[h5py.File, h5py.Group],
                     overwrite: bool,
                     target: str):
     """
-    Checks whether target already exists. Sends a warning if
-    overwrite=False, deletes the target if overwrite=True.
+    Check whether target already exists.
+
+    Sends a warning if overwrite=False, deletes the target if overwrite=True.
 
     Attributes
-    -------------
+    ----------
     f: file or group where existence of a group with the path group_path
        should be checked
     target: name of the group, whose existence is checked
@@ -41,26 +43,24 @@ class ProblemHDF5Writer:
     Writer of the HDF5 problem files.
 
     Attributes
-    -------------
+    ----------
     storage_filename:
         HDF5 result file name
     """
 
     def __init__(self, storage_filename: str):
         """
+        Initialize writer.
+
         Parameters
         ----------
-
         storage_filename: str
             HDF5 problem file name
         """
         self.storage_filename = storage_filename
 
     def write(self, problem, overwrite: bool = False):
-        """
-        Write HDF5 problem file from pyPESTO problem object.
-        """
-
+        """Write HDF5 problem file from pyPESTO problem object."""
         # Create destination directory
         if isinstance(self.storage_filename, str):
             basedir = os.path.dirname(self.storage_filename)
@@ -90,11 +90,10 @@ class ProblemHDF5Writer:
 def get_or_create_group(f: Union[h5py.File, h5py.Group],
                         group_path: str) -> h5py.Group:
     """
-    Helper function that returns a group object for the group with group_path
-    relative to f. Creates it if it doesn't exist.
+    Return/create a group object for the group with group_path relative to f.
 
     Attributes
-    -------------
+    ----------
     f: file or group where existence of a group with the path group_path
        should be checked
     group_path: the path or simply the name of the group that should exist in f
@@ -102,7 +101,7 @@ def get_or_create_group(f: Union[h5py.File, h5py.Group],
     Returns
     -------
     grp:
-        hdf5 group object with specified path.
+        hdf5 group object with specified path relative to f.
     """
     if group_path in f:
         grp = f[group_path]
@@ -116,26 +115,24 @@ class OptimizationResultHDF5Writer:
     Writer of the HDF5 result files.
 
     Attributes
-    -------------
+    ----------
     storage_filename:
         HDF5 result file name
     """
 
     def __init__(self, storage_filename: str):
         """
+        Initialize Writer.
+
         Parameters
         ----------
-
         storage_filename: str
             HDF5 result file name
         """
         self.storage_filename = storage_filename
 
     def write(self, result: Result, overwrite=False):
-        """
-        Write HDF5 result file from pyPESTO result object.
-        """
-
+        """Write HDF5 result file from pyPESTO result object."""
         # Create destination directory
         if isinstance(self.storage_filename, str):
             basedir = os.path.dirname(self.storage_filename)
@@ -167,25 +164,24 @@ class SamplingResultHDF5Writer:
     Writer of the HDF5 sampling files.
 
     Attributes
-    -------------
+    ----------
     storage_filename:
         HDF5 result file name
     """
 
     def __init__(self, storage_filename: str):
         """
+        Initialize Writer.
+
         Parameters
         ----------
-
         storage_filename: str
             HDF5 result file name
         """
         self.storage_filename = storage_filename
 
     def write(self, result: Result, overwrite: bool = False):
-        """
-        Write HDF5 sampling file from pyPESTO result object.
-        """
+        """Write HDF5 sampling file from pyPESTO result object."""
         # if there is no sample available, log a warning and return
         # SampleResult is only a dummy class created by the Result class
         # and always indicates the lack of a sampling result.
@@ -220,26 +216,24 @@ class ProfileResultHDF5Writer:
     Writer of the HDF5 result files.
 
     Attributes
-    -------------
+    ----------
     storage_filename:
         HDF5 result file name
     """
 
     def __init__(self, storage_filename: str):
         """
+        Initialize Writer.
+
         Parameters
         ----------
-
         storage_filename: str
             HDF5 result file name
         """
         self.storage_filename = storage_filename
 
     def write(self, result: Result, overwrite: bool = False):
-        """
-        Write HDF5 result file from pyPESTO result object.
-        """
-
+        """Write HDF5 result file from pyPESTO result object."""
         # Create destination directory
         if isinstance(self.storage_filename, str):
             basedir = os.path.dirname(self.storage_filename)

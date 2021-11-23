@@ -84,13 +84,16 @@ def _latin_hypercube_unit(
 class LatinHypercubeStartpoints(StartpointMethod):
     """Generate latin hypercube-sampled startpoints.
 
-    See e.g. https://en.wikipedia.org/wiki/Latin_hypercube_sampling."""
+    See e.g. https://en.wikipedia.org/wiki/Latin_hypercube_sampling.
+    """
 
     def __init__(
         self,
         smooth: bool = True,
     ):
         """
+        Initialize.
+
         Parameters
         ----------
         smooth:
@@ -107,6 +110,7 @@ class LatinHypercubeStartpoints(StartpointMethod):
         ub: np.ndarray,
         objective: ObjectiveBase = None,
     ) -> np.ndarray:
+        """Call function."""
         return _latin_hypercube(
             n_starts=n_starts,
             lb=lb,

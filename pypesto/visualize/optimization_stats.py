@@ -20,8 +20,7 @@ def optimization_run_properties_one_plot(
     plot_type: str = 'line'
 ) -> matplotlib.axes.Axes:
     """
-    Plot stats for all optimization properties specified  in properties_to_plot
-    on one plot.
+    Plot stats for allproperties specified in properties_to_plot on one plot.
 
     Parameters
     ----------
@@ -46,9 +45,11 @@ def optimization_run_properties_one_plot(
 
     Returns
     -------
+    ax:
+        The plot axes.
 
     Examples
-    -------
+    --------
     optimization_properties_per_multistart(
         result1,
         properties_to_plot=['time'],
@@ -133,9 +134,8 @@ def optimization_run_properties_per_multistart(
     ax:
     The plot axes.
 
-
     Examples
-    -------
+    --------
     optimization_properties_per_multistart(
         result1,
         properties_to_plot=['time'],
@@ -155,7 +155,6 @@ def optimization_run_properties_per_multistart(
         [result1, result2], properties_to_plot=['time', 'n_fval'],
         colors=[[.5, .9, .9, .3], [.2, .1, .9, .5]])
     """
-
     if properties_to_plot is None:
         properties_to_plot = ['time', 'n_fval', 'n_grad', 'n_hess', 'n_res',
                               'n_sres']
@@ -189,6 +188,7 @@ def optimization_run_property_per_multistart(
         plot_type: str = 'line') -> matplotlib.axes.Axes:
     """
     Plot stats for an optimization run property specified by opt_run_property.
+
     It is possible to plot a histogram or a line plot. In a line plot,
     on the x axis are the numbers of the multistarts, where the multistarts are
     ordered with respect to a function value. On the y axis of the line plot
@@ -223,7 +223,6 @@ def optimization_run_property_per_multistart(
     ax:
         The plot axes.
     """
-
     supported_properties = {
         'time': 'Wall-clock time (seconds)',
         'n_fval': 'Number of function evaluations',
@@ -289,12 +288,10 @@ def stats_lowlevel(result: Result,
                    legend: Optional[str] = None,
                    plot_type: str = 'line'):
     """
-    Plot values of the optimization run property specified by property name
-    across different multistarts
+    Plot values of the optimization run property across different multistarts.
 
     Parameters
     ----------
-
     result:
         Optimization result obtained by 'optimize.py'
     property_name:
@@ -321,7 +318,6 @@ def stats_lowlevel(result: Result,
     ax:
         The plot axes.
     """
-
     fvals = result.optimize_result.get_for_key('fval')
     values = result.optimize_result.get_for_key(property_name)
     values, fvals = delete_nan_inf(fvals, values)
