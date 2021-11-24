@@ -222,6 +222,9 @@ def read_result_from_file(problem: Problem, history_options: HistoryOptions,
     history_options:
         Optimizer history options.
     """
+    if history_options.storage_file is None:
+        raise ValueError("No history file specified.")
+
     if history_options.storage_file.endswith('.csv'):
         history = CsvHistory(
             file=history_options.storage_file.format(id=identifier),

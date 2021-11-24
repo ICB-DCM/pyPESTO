@@ -76,8 +76,17 @@ class HistoryTest(unittest.TestCase):
                 # check that we can also aggregrate from multiple files.
                 # load more results than necessary to check whether this
                 # also works in case of incomplete results.
-                read_results_from_file(self.problem, self.history_options,
-                                       len(result.optimize_result.list) + 2)
+                if storage_type is not None:
+                    read_results_from_file(
+                        self.problem, self.history_options,
+                        len(result.optimize_result.list) + 2
+                    )
+                else:
+                    with pytest.raises(ValueError):
+                        read_results_from_file(
+                            self.problem, self.history_options,
+                            len(result.optimize_result.list)
+                        )
 
     def check_load_from_file(self, start: OptimizerResult, id: str):
         """Verify we can reconstitute OptimizerResult from csv file"""
