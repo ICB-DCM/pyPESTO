@@ -146,11 +146,12 @@ def optimizer_history_lowlevel(vals, scale_y='log10', colors=None, ax=None,
     if isinstance(vals, list):
         # convert entries to numpy arrays
         for val in vals:
-            val = np.array(val)
+            # val is already an numpy array
+            val = np.asarray(val)
             fvals.append(val[1, -1])
     else:
         # convert to a list of numpy arrays
-        vals = np.array(vals)
+        vals = np.asarray(vals)
         if vals.shape[0] != 2 or vals.ndim != 2:
             raise ValueError('If numpy array is passed directly to lowlevel '
                              'routine of optimizer_history, shape needs to '
