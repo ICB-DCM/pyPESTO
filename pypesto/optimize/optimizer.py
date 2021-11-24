@@ -267,7 +267,7 @@ def read_results_from_file(problem: Problem, history_options: HistoryOptions,
     problem:
         The problem to find optimal parameters for.
     n_starts:
-        number of performed multistarts.
+        Number of performed multistarts.
     history_options:
         Optimizer history options.
     """
