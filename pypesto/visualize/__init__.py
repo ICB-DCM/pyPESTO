@@ -24,6 +24,7 @@ from .misc import (
 )
 from .waterfall import (
     waterfall,
+    waterfall_w_zoom,
     waterfall_lowlevel,
 )
 from .parameters import (

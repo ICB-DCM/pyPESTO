@@ -87,7 +87,7 @@ def sample_petab_problem():
     return result
 
 
-def create_optimization_result():
+def create_optimization_result(n=4):
     # create the pypesto problem
     problem = create_problem()
 
@@ -98,7 +98,7 @@ def create_optimization_result():
             id=str(j), fval=j * 0.01, x=np.array([j + 0.1, j + 1]),
             grad=np.array([2.5 + j + 0.1, 2 + j + 1]))
         result.optimize_result.append(optimizer_result=optimizer_result)
-    for j in range(0, 4):
+    for j in range(0, n):
         optimizer_result = optimize.OptimizerResult(
             id=str(j + 3), fval=10 + j * 0.01,
             x=np.array([2.5 + j + 0.1, 2 + j + 1]),
@@ -209,6 +209,19 @@ def post_processor(
         for amici_output in amici_outputs
     ]
     return outputs
+
+
+@close_fig
+def test_waterfall_w_zoom():
+    # create the necessary results
+    result_1 = create_optimization_result(500)
+    result_2 = create_optimization_result()
+
+    # test a standard call
+    visualize.waterfall_w_zoom(result_1, n_starts_to_zoom=10, zoom=3)
+
+    # test plotting of lists
+    visualize.waterfall_w_zoom([result_1, result_2], n_starts_to_zoom=3)
 
 
 @close_fig

@@ -1,5 +1,6 @@
 import matplotlib.pyplot as plt
 from matplotlib.ticker import MaxNLocator
+from mpl_toolkits.axes_grid1 import inset_locator
 import numpy as np
 from .reference_points import create_references, ReferencePoint
 from .clust_color import assign_colors, delete_nan_inf, RGBA
@@ -10,6 +11,82 @@ from .misc import (
 
 from pypesto import Result
 from typing import Optional, Union, Sequence, Tuple, List
+
+
+def waterfall_w_zoom(results: Union[Result, Sequence[Result]],
+                     ax: Optional[plt.Axes] = None,
+                     size: Optional[Tuple[float]] = (18.5, 10.5),
+                     y_limits: Optional[Tuple[float]] = None,
+                     scale_y: Optional[str] = 'log10',
+                     offset_y: Optional[float] = None,
+                     n_starts_to_zoom: Optional[int] = 10,
+                     zoom: Optional[float] = 10,
+                     colors: Optional[Union[RGBA, Sequence[RGBA]]] = None,
+                     legends: Optional[Union[Sequence[str], str]] = None):
+    """
+    Plot waterfall plot with n_starts_to_zoom best multistarts zoomed in
+
+    Parameters
+    ----------
+
+    results:
+        Optimization result obtained by 'optimize.py' or list of those
+    ax: matplotlib.Axes, optional
+        Axes object to use.
+    size:
+        Figure size (width, height) in inches. Is only applied when no ax
+        object is specified
+    y_limits: float or ndarray, optional
+        Maximum value to be plotted on the y-axis, or y-limits
+    scale_y:
+        May be logarithmic or linear ('log10' or 'lin')
+    offset_y:
+        Offset for the y-axis, if it is supposed to be in log10-scale
+    n_starts_to_zoom:
+        Number of best multistarts that should be zoomed in.
+        Should be smaller that the total number of multistarts
+    zoom:
+        Scaling factor of the data axes. *zoom* > 1 will enlargen the
+        coordinates (i.e., "zoomed in"), while *zoom* < 1 will shrink the
+        coordinates (i.e., "zoomed out").
+    colors:
+        Colors or single color  for plotting. If not set, clustering is done
+        and colors are assigned automatically
+    legends:
+        Labels for line plots, one label per result object
+
+    Returns
+    -------
+    ax: matplotlib.Axes
+        The plot axes.
+    """
+    if isinstance(results, Result):
+        results = [results]
+    max_n_starts = max([len(res.optimize_result.list) for res in results])
+    if n_starts_to_zoom >= max_n_starts:
+        raise ValueError('Number or starts to zoom in should be smaller that '
+                         'the total number of starts')
+
+    ax = waterfall(results, ax, size, y_limits, scale_y, offset_y, colors,
+                   legends)
+    y_min, _ = ax.get_ylim()
+
+    # create zoom in
+    inset_axes = inset_locator.zoomed_inset_axes(ax, zoom=zoom,
+                                                 loc='center right')
+    inset_axes = waterfall(results, inset_axes, y_limits=y_limits,
+                           scale_y=scale_y, offset_y=offset_y,
+                           start_indices=n_starts_to_zoom, colors=colors)
+    inset_locator.mark_inset(ax, inset_axes, loc1=2, loc2=4)
+    inset_axes.set_ylim(bottom=y_min)  # todo: top limit
+    inset_axes.set_xlabel('')
+    inset_axes.set_ylabel('')
+    inset_axes.set_title('')
+    legend = inset_axes.get_legend()
+    if legend is not None:
+        legend.remove()
+
+    return ax
 
 
 def waterfall(results: Union[Result, Sequence[Result]],
@@ -35,11 +112,11 @@ def waterfall(results: Union[Result, Sequence[Result]],
         Figure size (width, height) in inches. Is only applied when no ax
         object is specified
     y_limits: float or ndarray, optional
-        maximum value to be plotted on the y-axis, or y-limits
+        Maximum value to be plotted on the y-axis, or y-limits
     scale_y:
         May be logarithmic or linear ('log10' or 'lin')
     offset_y:
-        offset for the y-axis, if it is supposed to be in log10-scale
+        Offset for the y-axis, if it is supposed to be in log10-scale
     start_indices:
         Integers specifying the multistart to be plotted or int specifying
         up to which start index should be plotted
@@ -76,15 +153,25 @@ def waterfall(results: Union[Result, Sequence[Result]],
 
         # call lowlevel plot routine
         ax = waterfall_lowlevel(fvals=fvals, scale_y=scale_y,
-                                offset_y=offset_y, ax=ax, size=size,
+                                ax=ax, size=size,
                                 colors=colors[j], legend_text=legends[j])
 
     # apply changes specified be the user to the axis object
     ax = handle_options(ax, max_len_fvals, refs, y_limits, offset_y)
+
+    if any(legends):
+        ax.legend()
+    # labels
+    ax.set_xlabel('Ordered optimizer run')
+    if offset_y == .0:
+        ax.set_ylabel('Function value')
+    else:
+        ax.set_ylabel('Offsetted function value (relative to best start)')
+    ax.set_title('Waterfall plot')
     return ax
 
 
-def waterfall_lowlevel(fvals, scale_y='log10', offset_y=0., ax=None,
+def waterfall_lowlevel(fvals, scale_y='log10', ax=None,
                        size=(18.5, 10.5), colors=None, legend_text=None):
     """
     Plot waterfall plot using list of function values.
@@ -95,8 +182,6 @@ def waterfall_lowlevel(fvals, scale_y='log10', offset_y=0., ax=None,
         Including values need to be plotted.
     scale_y: str, optional
         May be logarithmic or linear ('log10' or 'lin')
-    offset_y:
-        offset for the y-axis, if it is supposed to be in log10-scale
     ax: matplotlib.Axes, optional
         Axes object to use.
     size: tuple, optional
@@ -170,15 +255,8 @@ def waterfall_lowlevel(fvals, scale_y='log10', offset_y=0., ax=None,
             y_mean = 0.5 * (y_min + y_max)
             ax.set_ylim(y_mean - 0.5, y_mean + 0.5)
 
-    # labels
-    ax.set_xlabel('Ordered optimizer run')
-    if offset_y == .0:
-        ax.set_ylabel('Function value')
-    else:
-        ax.set_ylabel('Offsetted function value (relative to best start)')
-    ax.set_title('Waterfall plot')
-    if legend_text is not None:
-        ax.legend()
+    # if legend_text is not None:
+    #     ax.legend()
 
     return ax
 
@@ -220,6 +298,7 @@ def process_offset_for_list(
         fvals = np.asarray([
             np.array(result.optimize_result.get_for_key('fval'))
         ])
+        # todo: order of results play a role
         if start_indices is None:
             start_indices = np.array(range(fvals.size))
         else:
