@@ -3,7 +3,7 @@ import pandas as pd
 import copy
 import logging
 import abc
-from typing import Dict, Iterable, Optional, Sequence, Tuple, Union
+from typing import Dict, Iterable, Optional, Sequence, Tuple, Union, List
 
 from .constants import MODE_FUN, MODE_RES, FVAL, GRAD, HESS, RES, SRES
 from .history import HistoryBase
@@ -45,10 +45,10 @@ class ObjectiveBase(abc.ABC):
 
     def __init__(
         self,
-        x_names: Sequence[str] = None,
+        x_names: Optional[Sequence[str]] = None,
     ):
 
-        self.x_names = x_names
+        self._x_names = x_names
 
         self.pre_post_processor = PrePostProcessor()
         self.history = HistoryBase()
@@ -85,6 +85,18 @@ class ObjectiveBase(abc.ABC):
     @property
     def has_sres(self) -> bool:
         return self.check_sensi_orders((1,), MODE_RES)
+
+    @property
+    def x_names(self) -> Union[List[str], None]:
+        if self._x_names is None:
+            return self._x_names
+
+        # change from numpy array with `str_` dtype to list with `str` dtype
+        # to avoid issues when writing to hdf (and correctness of typehint)
+        return [
+            str(name) for name in
+            self.pre_post_processor.reduce(np.asarray(self._x_names))
+        ]
 
     def initialize(self):
         """Initialize the objective function.
@@ -426,6 +438,7 @@ class ObjectiveBase(abc.ABC):
         eps: float = 1e-5,
         verbosity: int = 1,
         mode: str = MODE_FUN,
+        order: int = 0,
         detailed: bool = False,
     ) -> pd.DataFrame:
         """
@@ -448,6 +461,8 @@ class ObjectiveBase(abc.ABC):
         mode:
             Residual (MODE_RES) or objective function value (MODE_FUN)
             computation mode.
+        order:
+            Derivative order, either gradient (0) or Hessian (1).
         detailed:
             Toggle whether additional values are returned. Additional values
             are function values, and the central difference weighted by the
@@ -464,7 +479,7 @@ class ObjectiveBase(abc.ABC):
             x_indices = list(range(len(x)))
 
         # function value and objective gradient
-        fval, grad = self(x, (0, 1), mode)
+        fval, grad = self(x, (0 + order, 1 + order), mode)
 
         grad_list = []
         fd_f_list = []
@@ -594,6 +609,7 @@ class ObjectiveBase(abc.ABC):
         rtol: float = 1e-2,
         atol: float = 1e-3,
         mode: str = None,
+        order: int = 0,
         multi_eps=None,
         **kwargs,
     ) -> bool:
@@ -607,6 +623,7 @@ class ObjectiveBase(abc.ABC):
         rtol: relative error tolerance
         atol: absolute error tolerance
         mode: function values or residuals
+        order: gradient order, 0 for gradient, 1 for hessian
         multi_eps: multiple test step width for FDs
 
         Returns
@@ -615,9 +632,11 @@ class ObjectiveBase(abc.ABC):
             Indicates whether gradients match (True) FDs or not (False)
         """
         par = np.asarray(x)
-        free_indices = par[x_free]
+        if x_free is None:
+            free_indices = par
+        else:
+            free_indices = par[x_free]
         dfs = []
-        modes = []
 
         if mode is None:
             modes = [MODE_FUN, MODE_RES]

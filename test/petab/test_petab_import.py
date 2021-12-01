@@ -106,6 +106,10 @@ def test_plist_mapping():
 
     problem = petab_problem.create_problem()
     objective = problem.objective
+    # check that x_names are correctly subsetted
+    assert objective.x_names == [
+        problem.x_names[ix] for ix in problem.x_free_indices
+    ]
     objective.amici_solver.setSensitivityMethod(
         amici.SensitivityMethod_forward)
     objective.amici_solver.setAbsoluteTolerance(1e-10)

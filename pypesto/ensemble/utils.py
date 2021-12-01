@@ -284,8 +284,6 @@ def read_ensemble_prediction_from_h5(
         return EnsemblePrediction(predictor=predictor,
                                   prediction_id=prediction_id,
                                   prediction_results=pred_res_list,
-                                  lower_bound=bounds[LOWER_BOUND],
-                                  upper_bound=bounds[UPPER_BOUND],
                                   )
 
 
