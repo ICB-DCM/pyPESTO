@@ -181,8 +181,7 @@ def waterfall(results: Union[Result, Sequence[Result]],
         if inset_axes is not None:
             inset_axes = waterfall_lowlevel(fvals=fvals[:n_starts_to_zoom],
                                             scale_y=scale_y, ax=inset_axes,
-                                            colors=colors,
-                                            legend_text=legends[j])
+                                            colors=colors)
 
     # apply changes specified be the user to the axis object
     ax = handle_options(ax, max_len_fvals, refs, y_limits, offset_y)
