@@ -3,8 +3,7 @@
 import numpy as np
 
 from .util import rescale
-from .base import StartpointMethod
-from ..objective import ObjectiveBase
+from .base import FunctionStartpoints
 
 
 def _uniform(
@@ -43,18 +42,21 @@ def _uniform(
     return xs
 
 
-class UniformStartpoints(StartpointMethod):
+class UniformStartpoints(FunctionStartpoints):
     """Generate uniformly sampled startpoints."""
 
-    def __call__(
+    def __init__(
         self,
-        n_starts: int,
-        lb: np.ndarray,
-        ub: np.ndarray,
-        objective: ObjectiveBase = None,
-    ) -> np.ndarray:
-        """Call function."""
-        return _uniform(n_starts=n_starts, lb=lb, ub=ub)
+        use_guesses: bool = True,
+        check_fval: bool = False,
+        check_grad: bool = False,
+    ):
+        super().__init__(
+            function=_uniform,
+            use_guesses=use_guesses,
+            check_fval=check_fval,
+            check_grad=check_grad,
+        )
 
 
 # convenience and legacy

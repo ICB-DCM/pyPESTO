@@ -4,7 +4,7 @@ import numpy as np
 from ..problem import Problem
 from .sampler import Sampler
 from .result import McmcPtResult
-from ..startpoint import assign_startpoints, uniform
+from ..startpoint import UniformStartpoints
 
 try:
     import emcee
@@ -103,9 +103,14 @@ class EmceeSampler(Sampler):
             problem.x_guesses_full = np.row_stack((x0, problem.x_guesses_full))
 
             #  sample start points
-            self.state = assign_startpoints(
-                n_starts=self.nwalkers, startpoint_method=uniform,
-                problem=problem, startpoint_resample=True)
+            self.state = UniformStartpoints(
+                use_guesses=True,
+                check_fval=True,
+                check_grad=False,
+            )(
+                n_starts=self.nwalkers,
+                problem=problem,
+            )
 
             #  restore original guesses
             problem.x_guesses_full = problem.x_guesses_full[x0.shape[0]:]
