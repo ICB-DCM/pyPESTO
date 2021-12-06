@@ -64,8 +64,14 @@ def history_decorator(minimize):
     Default decorator for the minimize() method.
     """
 
-    def wrapped_minimize(self, problem, x0, id, allow_failed_starts,
-                         history_options=None):
+    def wrapped_minimize(
+        self,
+        problem,
+        x0,
+        id,
+        allow_failed_starts,
+        history_options=None,
+    ):
         objective = problem.objective
 
         # initialize the objective
@@ -75,8 +81,9 @@ def history_decorator(minimize):
         if history_options is None:
             history_options = HistoryOptions()
         history = history_options.create_history(
-            id=id, x_names=[problem.x_names[ix]
-                            for ix in problem.x_free_indices])
+            id=id,
+            x_names=[problem.x_names[ix] for ix in problem.x_free_indices],
+        )
         optimizer_history = OptimizerHistory(history=history, x0=x0)
 
         # plug in history for the objective to record it
@@ -297,11 +304,11 @@ class Optimizer(abc.ABC):
     @time_decorator
     @history_decorator
     def minimize(
-            self,
-            problem: Problem,
-            x0: np.ndarray,
-            id: str,
-            history_options: HistoryOptions = None,
+        self,
+        problem: Problem,
+        x0: np.ndarray,
+        id: str,
+        history_options: HistoryOptions = None,
     ) -> OptimizerResult:
         """
         Perform optimization.

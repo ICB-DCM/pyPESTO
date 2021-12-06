@@ -94,6 +94,7 @@ def minimize(
         options = OptimizeOptions()
     options = OptimizeOptions.assert_instance(options)
 
+    # history options
     if history_options is None:
         history_options = HistoryOptions()
     history_options = HistoryOptions.assert_instance(history_options)
@@ -119,13 +120,13 @@ def minimize(
     if engine is None:
         engine = SingleCoreEngine()
 
-    # define tasks
-    tasks = []
     filename_hist = None
     if history_options.storage_file is not None and \
             history_options.storage_file.endswith(('.h5', '.hdf5')):
         filename_hist = check_hdf5_mp(history_options, engine)
 
+    # define tasks
+    tasks = []
     for startpoint, id in zip(startpoints, ids):
         task = OptimizerTask(
             optimizer=optimizer,
@@ -154,8 +155,6 @@ def minimize(
 
     if filename == "Auto" and filename_hist is not None:
         filename = filename_hist
-    autosave(filename=filename,
-             result=result,
-             type="optimization")
+    autosave(filename=filename, result=result, type="optimization")
 
     return result

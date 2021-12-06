@@ -63,9 +63,12 @@ class OptimizerTask(Task):
         logger.info(f"Executing task {self.id}.")
 
         optimizer_result = self.optimizer.minimize(
-            problem=self.problem, x0=self.x0, id=self.id,
+            problem=self.problem,
+            x0=self.x0,
+            id=self.id,
             allow_failed_starts=self.options.allow_failed_starts,
-            history_options=self.history_options)
+            history_options=self.history_options,
+        )
         if not self.report_hess:
             optimizer_result.hess = None
         if not self.report_sres:

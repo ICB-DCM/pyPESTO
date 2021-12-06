@@ -404,31 +404,32 @@ def test_storage_objective_config():
             os.remove(fn)
 
 
-def test_result_from_hdf5_history():
+def test_result_from_hdf5_history(hdf5_file):
     problem = create_petab_problem()
-    with tempfile.TemporaryDirectory(dir=".") as tmpdirname:
-        _, fn = tempfile.mkstemp(".hdf5", dir=f"{tmpdirname}")
 
-        history_options_hdf5 = pypesto.HistoryOptions(trace_record=True,
-                                                      storage_file=fn)
-        # optimize with history saved to hdf5
-        result = pypesto.optimize.minimize(
-            problem=problem, n_starts=1,
-            history_options=history_options_hdf5)
+    history_options_hdf5 = pypesto.HistoryOptions(
+        trace_record=True,
+        storage_file=hdf5_file,
+    )
+    # optimize with history saved to hdf5
+    result = pypesto.optimize.minimize(
+        problem=problem, n_starts=1,
+        history_options=history_options_hdf5,
+    )
 
-        result_from_hdf5 = optimization_result_from_history(fn)
+    result_from_hdf5 = optimization_result_from_history(hdf5_file)
 
-        # Currently 'exitflag', 'time' and 'message' are not loaded.
-        arguments = [ID, X, FVAL, GRAD, HESS, RES, SRES,
-                     N_FVAL, N_GRAD, N_HESS, N_RES, N_SRES, X0, FVAL0]
-        for key in arguments:
-            if result.optimize_result.list[0][key] is None:
-                assert result_from_hdf5.optimize_result.list[0][key] is None
-            elif isinstance(result.optimize_result.list[0][key], np.ndarray):
-                np.testing.assert_almost_equal(
-                    result.optimize_result.list[0][key],
-                    result_from_hdf5.optimize_result.list[0][key]
-                )
-            else:
-                assert result.optimize_result.list[0][key] == \
-                       result_from_hdf5.optimize_result.list[0][key]
+    # Currently 'exitflag', 'time' and 'message' are not loaded.
+    arguments = [ID, X, FVAL, GRAD, HESS, RES, SRES,
+                 N_FVAL, N_GRAD, N_HESS, N_RES, N_SRES, X0, FVAL0]
+    for key in arguments:
+        if result.optimize_result.list[0][key] is None:
+            assert result_from_hdf5.optimize_result.list[0][key] is None
+        elif isinstance(result.optimize_result.list[0][key], np.ndarray):
+            np.testing.assert_almost_equal(
+                result.optimize_result.list[0][key],
+                result_from_hdf5.optimize_result.list[0][key]
+            )
+        else:
+            assert result.optimize_result.list[0][key] == \
+                   result_from_hdf5.optimize_result.list[0][key]

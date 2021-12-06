@@ -34,9 +34,10 @@ def check_hdf5_mp(
     The filename that will be used to combine the partial HDF5 files later.
     If a parallelization engine is not used, `None` is returned.
     """
+    filename = history_options.storage_file
+
     if isinstance(engine, SingleCoreEngine):
         return None
-    filename = history_options.storage_file
     file_path = Path(filename)
 
     # create directory with same name as original file stem
@@ -48,8 +49,9 @@ def check_hdf5_mp(
     history_options.storage_file = str(partial_file_path)
 
     # create hdf5 file that gathers the others within history group
-    with h5py.File(filename, mode='a') as f:
+    with h5py.File(filename, mode='w') as f:
         get_or_create_group(f, "history")
+
     return filename
 
 
