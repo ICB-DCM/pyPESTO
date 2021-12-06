@@ -58,19 +58,11 @@ def test_unbounded_startpoints(spmethod):
             spmethod(n_starts=n_starts, lb=lb_, ub=ub_)
 
 
-@pytest.fixture(params=[True, False])
-def check_fval(request) -> bool:
-    return request.param
-
-
-@pytest.fixture(params=[True, False])
-def check_grad(request) -> bool:
-    return request.param
-
-
+@pytest.mark.parametrize("check_fval", [True, False])
+@pytest.mark.parametrize("check_grad", [True, False])
 def test_resampling(check_fval: bool, check_grad: bool):
     """Test that startpoint resampling works."""
-    dim = 2
+    dim = 3
     lb = -1 * np.ones(shape=dim)
     ub = 1 * np.ones(shape=dim)
 
@@ -79,13 +71,17 @@ def test_resampling(check_fval: bool, check_grad: bool):
             return np.nan
         if x[1] > 0.5:
             return np.inf
+        if x[2] > 0.5:
+            return - np.inf
         return np.sum(x)
 
     def grad(x: np.ndarray):
-        if x[0] < -0.5:
+        if x[0] < - 0.5:
             return np.full_like(x, fill_value=np.nan)
-        if x[1] < -0.5:
+        if x[1] < - 0.5:
             return np.full_like(x, fill_value=np.inf)
+        if x[2] < - 0.5:
+            return np.full_like(x, fill_value=- np.inf)
         return x
 
     # startpoint guesses

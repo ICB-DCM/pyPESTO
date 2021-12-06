@@ -177,9 +177,9 @@ class CheckedStartpoints(StartpointMethod, ABC):
             while True:
                 # discontinue if all requested sensis are finite
                 if (
-                    0 not in sensi_orders or ret[FVAL] < np.inf
+                    0 not in sensi_orders or np.isfinite(ret[FVAL])
                 ) and (
-                    1 not in sensi_orders or np.all(ret[GRAD] < np.inf)
+                    1 not in sensi_orders or np.isfinite(ret[GRAD]).all()
                 ):
                     break
 
