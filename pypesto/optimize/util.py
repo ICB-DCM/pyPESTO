@@ -129,10 +129,12 @@ def autosave(
         method the function is called in.
     """
     if filename is None:
-        return None
+        return
+
     if filename == "Auto":
         time = datetime.datetime.now().strftime("%Y_%d_%m_%H_%M_%S")
         filename = time+f"_{type}_result.hdf5"
+
     write_result(
         result=result,
         overwrite=True,
