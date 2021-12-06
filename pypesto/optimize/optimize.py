@@ -29,7 +29,7 @@ def minimize(
     progress_bar: bool = True,
     options: OptimizeOptions = None,
     history_options: HistoryOptions = None,
-    filename: str = "Auto"
+    filename: Union[str, None] = "Auto"
 ) -> Result:
     """
     Do multistart optimization.
