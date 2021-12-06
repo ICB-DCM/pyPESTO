@@ -469,7 +469,7 @@ class PetabImporter(AmiciObjectBuilder):
 
         return predictor
 
-    def create_prior(self) -> NegLogParameterPriors:
+    def create_prior(self) -> Union[NegLogParameterPriors, None]:
         """
         Create a prior from the parameter table.
 

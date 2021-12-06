@@ -11,6 +11,7 @@ Startpoint methods can be implemented by deriving from
 from .base import (
     NoStartpoints,
     StartpointMethod,
+    CheckedStartpoints,
     FunctionStartpoints,
     to_startpoint_method,
 )
