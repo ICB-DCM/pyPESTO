@@ -127,4 +127,4 @@ class LatinHypercubeStartpoints(CheckedStartpoints):
 
 
 # convenience and legacy
-latin_hypercube = LatinHypercubeStartpoints(smooth=True)
+latin_hypercube = LatinHypercubeStartpoints(smooth=True).sample

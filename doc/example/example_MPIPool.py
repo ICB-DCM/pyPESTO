@@ -23,7 +23,7 @@ def setup_rosen_problem(n_starts: int = 2):
     ub = 5 * np.ones((dim_full, 1))
 
     # fixing startpoints
-    startpoints = pypesto.startpoint.latin_hypercube.sample(
+    startpoints = pypesto.startpoint.latin_hypercube(
         n_starts=n_starts, lb=lb, ub=ub
     )
     problem = pypesto.Problem(objective=objective, lb=lb, ub=ub,

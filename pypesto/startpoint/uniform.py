@@ -60,4 +60,4 @@ class UniformStartpoints(FunctionStartpoints):
 
 
 # convenience and legacy
-uniform = UniformStartpoints()
+uniform = UniformStartpoints().sample
