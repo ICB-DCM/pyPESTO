@@ -45,7 +45,7 @@ def test_latin_hypercube():
         assert np.array_equal(sorted(x), range(0, n_starts))
 
 
-def test_ubounded_startpoints(spmethod):
+def test_unbounded_startpoints(spmethod):
     """Test Exceptions for non-finite lb/ub"""
     for lb_, ub_ in [
         (-np.inf * np.ones(lb.shape), ub),

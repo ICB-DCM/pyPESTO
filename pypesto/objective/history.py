@@ -145,6 +145,9 @@ class HistoryOptions(dict):
 
     def _sanity_check(self):
         """Apply basic sanity checks."""
+        if self.storage_file is None:
+            return
+
         _, type_ = os.path.splitext(self.storage_file)
         if type_.lower() not in [".csv", ".hdf5", ".h5"]:
             raise ValueError(
