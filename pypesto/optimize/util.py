@@ -102,6 +102,7 @@ def autosave(filename: str, result: Result,
         return None
     if filename == "Auto":
         time = datetime.datetime.now().strftime("%Y_%d_%m_%H_%M_%S")
-        filename = time+f"_{type}_result.hdf5"
-    write_result(result=result, overwrite=True,
-                 optimize=True, filename=filename)
+        filename = time+f"_{type}_result.h5"
+    # set the type to True and pass it on to write_result
+    to_save = {type: True}
+    write_result(result=result, overwrite=True, filename=filename, **to_save)

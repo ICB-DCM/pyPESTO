@@ -18,7 +18,7 @@ def sample(
         sampler: Sampler = None,
         x0: Union[np.ndarray, List[np.ndarray]] = None,
         result: Result = None,
-        filename: str = "Auto"
+        filename: Union[str, None] = "Auto"
 ) -> Result:
     """
     Call to do parameter sampling.
@@ -87,6 +87,6 @@ def sample(
 
     autosave(filename=filename,
              result=result,
-             type="sampling")
+             type="sample")
 
     return result

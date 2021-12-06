@@ -25,7 +25,7 @@ def parameter_profile(
         next_guess_method: Union[Callable, str] = 'adaptive_step_regression',
         profile_options: ProfileOptions = None,
         progress_bar: bool = True,
-        filename: str = "Auto"
+        filename: Union[str, None] = "Auto"
 ) -> Result:
     """
     Call to do parameter profiling.
@@ -134,6 +134,6 @@ def parameter_profile(
 
     autosave(filename=filename,
              result=result,
-             type="profiling")
+             type="profile")
 
     return result

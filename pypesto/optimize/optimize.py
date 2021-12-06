@@ -156,6 +156,6 @@ def minimize(
         filename = filename_hist
     autosave(filename=filename,
              result=result,
-             type="optimization")
+             type="optimize")
 
     return result
