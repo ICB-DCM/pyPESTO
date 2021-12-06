@@ -6,7 +6,7 @@ from .util import rescale
 from .base import FunctionStartpoints
 
 
-def _uniform(
+def uniform(
     n_starts: int,
     lb: np.ndarray,
     ub: np.ndarray,
@@ -52,12 +52,8 @@ class UniformStartpoints(FunctionStartpoints):
         check_grad: bool = False,
     ):
         super().__init__(
-            function=_uniform,
+            function=uniform,
             use_guesses=use_guesses,
             check_fval=check_fval,
             check_grad=check_grad,
         )
-
-
-# convenience and legacy
-uniform = UniformStartpoints().sample

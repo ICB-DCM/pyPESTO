@@ -6,11 +6,11 @@ from .util import rescale
 from .base import CheckedStartpoints
 
 
-def _latin_hypercube(
+def latin_hypercube(
     n_starts: int,
     lb: np.ndarray,
     ub: np.ndarray,
-    smooth: bool,
+    smooth: bool = True,
 ) -> np.ndarray:
     """Generate latin hypercube points.
 
@@ -118,13 +118,9 @@ class LatinHypercubeStartpoints(CheckedStartpoints):
         ub: np.ndarray,
     ) -> np.ndarray:
         """Call function."""
-        return _latin_hypercube(
+        return latin_hypercube(
             n_starts=n_starts,
             lb=lb,
             ub=ub,
             smooth=self.smooth,
         )
-
-
-# convenience and legacy
-latin_hypercube = LatinHypercubeStartpoints(smooth=True).sample
