@@ -63,7 +63,7 @@ def preprocess_hdf5_history(
 
     # create directory with same name as original file stem
     template_path = (
-        path.parent / path.stem / path.stem + "_{id}" + path.suffix
+        path.parent / path.stem / (path.stem + "_{id}" + path.suffix)
     )
     template_path.parent.mkdir(parents=True, exist_ok=True)
     # set history file to template path
