@@ -11,7 +11,7 @@ from ..startpoint import (
 from .optimizer import Optimizer, ScipyOptimizer
 from .options import OptimizeOptions
 from .task import OptimizerTask
-from .util import check_hdf5_mp, fill_hdf5_file, autosave
+from .util import preprocess_hdf5_history, postprocess_hdf5_history, autosave
 
 logger = logging.getLogger(__name__)
 
@@ -120,10 +120,11 @@ def minimize(
     if engine is None:
         engine = SingleCoreEngine()
 
-    filename_hist = None
-    if history_options.storage_file is not None and \
-            history_options.storage_file.endswith(('.h5', '.hdf5')):
-        filename_hist = check_hdf5_mp(history_options, engine)
+    # maybe change to one hdf5 storage file per start if parallel
+    storage_file = history_options.storage_file
+    history_requires_postprocessing = preprocess_hdf5_history(
+        history_options, engine
+    )
 
     # define tasks
     tasks = []
@@ -140,11 +141,12 @@ def minimize(
         )
         tasks.append(task)
 
-    # do multistart optimization
+    # perform multistart optimization
     ret = engine.execute(tasks, progress_bar=progress_bar)
 
-    if filename_hist is not None:
-        fill_hdf5_file(ret, filename_hist)
+    # merge hdf5 history files
+    if history_requires_postprocessing:
+        postprocess_hdf5_history(ret, storage_file, history_options)
 
     # aggregate results
     for optimizer_result in ret:
@@ -153,8 +155,8 @@ def minimize(
     # sort by best fval
     result.optimize_result.sort()
 
-    if filename == "Auto" and filename_hist is not None:
-        filename = filename_hist
+    if filename == "Auto" and storage_file is not None:
+        filename = storage_file
     autosave(filename=filename, result=result, type="optimization")
 
     return result
