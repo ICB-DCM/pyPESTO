@@ -12,6 +12,7 @@ from ..objective import (
 from ..problem import Problem
 from ..objective.constants import MODE_FUN, MODE_RES, FVAL, GRAD
 from .result import OptimizerResult
+from ..result import OptimizeResult, Result
 
 try:
     import cyipopt
@@ -209,7 +210,21 @@ def fill_result_from_objective_history(
 
 def read_result_from_file(problem: Problem, history_options: HistoryOptions,
                           identifier: str):
-    """Fill an OptimizerResult from history."""
+    """
+    Fill an OptimizerResult from history.
+
+    Parameters
+    ----------
+    problem:
+        The problem to find optimal parameters for.
+    identifier:
+        Multistart id.
+    history_options:
+        Optimizer history options.
+    """
+    if history_options.storage_file is None:
+        raise ValueError("No history file specified.")
+
     if history_options.storage_file.endswith('.csv'):
         history = CsvHistory(
             file=history_options.storage_file.format(id=identifier),
@@ -233,12 +248,36 @@ def read_result_from_file(problem: Problem, history_options: HistoryOptions,
         id=identifier,
         message='loaded from file',
         exitflag=EXITFLAG_LOADED_FROM_FILE,
-        time=max(history.get_time_trace())
+        time=max(history.get_time_trace()) if len(history) else 0.0
     )
     result.id = identifier
     result = fill_result_from_objective_history(result, opt_hist)
     result.update_to_full(problem)
 
+    return result
+
+
+def read_results_from_file(problem: Problem, history_options: HistoryOptions,
+                           n_starts: int):
+    """
+    Fill a Result from a set of histories.
+
+    Parameters
+    ----------
+    problem:
+        The problem to find optimal parameters for.
+    n_starts:
+        Number of performed multistarts.
+    history_options:
+        Optimizer history options.
+    """
+    result = Result()
+    result.optimize_result = OptimizeResult()
+    result.optimize_result.list = [
+        read_result_from_file(problem, history_options, str(istart))
+        for istart in range(n_starts)
+    ]
+    result.optimize_result.sort()
     return result
 
 
