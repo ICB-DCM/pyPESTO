@@ -148,12 +148,17 @@ class HistoryOptions(dict):
         if self.storage_file is None:
             return
 
+        # extract storage type
         _, type_ = os.path.splitext(self.storage_file)
+
+        # check storage format is valid
         if type_.lower() not in [".csv", ".hdf5", ".h5"]:
             raise ValueError(
                 "Only history storage to '.csv' and '.hdf5' is supported, got "
                 f"{type_}",
             )
+
+        # check csv histories are parametrized
         if type_ == ".csv" and "{id}" not in self.storage_file:
             raise ValueError(
                 "For csv history, the `storage_file` must contain an `{id}` "
