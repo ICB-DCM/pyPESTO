@@ -46,7 +46,7 @@ def test_latin_hypercube():
         assert np.array_equal(sorted(x), range(0, n_starts))
 
 
-def test_ubounded_startpoints(spmethod):
+def test_unbounded_startpoints(spmethod):
     """Test Exceptions for non-finite lb/ub"""
     for lb_, ub_ in [
         (-np.inf * np.ones(lb.shape), ub),
@@ -56,3 +56,74 @@ def test_ubounded_startpoints(spmethod):
     ]:
         with pytest.raises(ValueError):
             spmethod(n_starts=n_starts, lb=lb_, ub=ub_)
+
+
+@pytest.fixture(params=[True, False])
+def check_fval(request) -> bool:
+    return request.param
+
+
+@pytest.fixture(params=[True, False])
+def check_grad(request) -> bool:
+    return request.param
+
+
+def test_resampling(check_fval: bool, check_grad: bool):
+    """Test that startpoint resampling works."""
+    dim = 2
+    lb = -1 * np.ones(shape=dim)
+    ub = 1 * np.ones(shape=dim)
+
+    def fun(x: np.ndarray):
+        if x[0] > 0.5:
+            return np.nan
+        if x[1] > 0.5:
+            return np.inf
+        return np.sum(x)
+
+    def grad(x: np.ndarray):
+        if x[0] < -0.5:
+            return np.full_like(x, fill_value=np.nan)
+        if x[1] < -0.5:
+            return np.full_like(x, fill_value=np.inf)
+        return x
+
+    # startpoint guesses
+    n_guesses = 20
+    x_guesses = pypesto.startpoint.uniform(n_starts=n_guesses, lb=lb, ub=ub)
+
+    # define objective and problem
+    obj = pypesto.Objective(fun=fun, grad=grad)
+    problem = pypesto.Problem(objective=obj, lb=lb, ub=ub, x_guesses=x_guesses)
+
+    # define startpoint method (here only considering uniform for simplicity)
+    startpoint_method = pypesto.startpoint.UniformStartpoints(
+        use_guesses=True,
+        check_fval=check_fval,
+        check_grad=check_grad,
+    )
+
+    # find startpoints
+    xs = startpoint_method(n_starts=40, problem=problem)
+
+    # calculate function values and gradients
+    fvals = np.array([fun(x) for x in xs])
+    grads = np.array([grad(x) for x in xs])
+
+    # check that function values are (not) finite
+    if check_fval:
+        assert np.isfinite(fvals).all()
+    else:
+        assert not np.isfinite(fvals).all()
+
+    # check that gradients are (not) finite
+    if check_grad:
+        assert np.isfinite(grads).all()
+    else:
+        assert not np.isfinite(grads).all()
+
+    # check that guesses were used and potentially discarded
+    if check_fval or check_grad:
+        assert not np.allclose(x_guesses, xs[:n_guesses, :])
+    else:
+        assert np.allclose(x_guesses, xs[:n_guesses, :])
