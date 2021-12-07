@@ -125,10 +125,8 @@ def minimize(
             problem=problem,
             x0=startpoint,
             id=id,
-            options=options,
             history_options=history_options,
-            report_hess=options.report_hess,
-            report_sres=options.report_sres,
+            optimize_options=options,
         )
         tasks.append(task)
 

@@ -1327,6 +1327,7 @@ class OptimizerHistory:
                 self.sres_min = sres
 
     def _compute_vals_from_trace(self):
+        """Set initial and best function value from trace (at start)."""
         if not len(self.history):
             # nothing to be computed from empty history
             return
