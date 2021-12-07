@@ -2,7 +2,7 @@
 import h5py
 from ..result import Result
 from ..optimize.result import OptimizerResult
-from ..optimize.optimizer import fill_result_from_objective_history
+from ..optimize.optimizer import fill_result_from_history
 from ..profile.result import ProfilerResult
 from ..sample.result import McmcPtResult
 from ..problem import Problem
@@ -384,7 +384,6 @@ def optimization_result_from_history(filename: str) -> Result:
                 x0=f[f'history/{id_name}/trace/0/x'][()],
                 generate_from_history=True)
             optimizer_result = OptimizerResult(id=id_name)
-            fill_result_from_objective_history(optimizer_result,
-                                               optimizer_history)
+            fill_result_from_history(optimizer_result, optimizer_history)
             result.optimize_result.append(optimizer_result)
     return result

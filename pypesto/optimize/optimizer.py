@@ -198,7 +198,7 @@ def fix_decorator(minimize):
 def fill_result_from_history(
     result: OptimizerResult,
     optimizer_history: OptimizerHistory,
-    optimize_options: OptimizeOptions,
+    optimize_options: OptimizeOptions = None,
 ) -> OptimizerResult:
     """Overwrite some values in the result object with values in the history.
 
@@ -212,6 +212,9 @@ def fill_result_from_history(
     -------
     result: The in-place modified result.
     """
+    if optimize_options is None:
+        optimize_options = OptimizeOptions()
+
     # logging
     history_fval, result_fval = optimizer_history.fval_min, result.fval
     if not np.isclose(history_fval, result_fval):
@@ -296,7 +299,6 @@ def read_result_from_file(
     result = fill_result_from_history(
         result=result,
         optimizer_history=opt_hist,
-        optimize_options=OptimizeOptions(),
     )
     result.update_to_full(problem)
 
