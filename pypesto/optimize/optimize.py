@@ -6,7 +6,9 @@ from ..objective import HistoryOptions
 from ..problem import Problem
 from ..result import Result
 from ..startpoint import (
-    assign_startpoints, uniform, StartpointMethod, to_startpoint_method,
+    uniform,
+    StartpointMethod,
+    to_startpoint_method,
 )
 from .optimizer import Optimizer, ScipyOptimizer
 from .options import OptimizeOptions
@@ -75,17 +77,8 @@ def minimize(
         optimizer = ScipyOptimizer()
 
     # startpoint method
-    if startpoint_method is not None and problem.startpoint_method is not None:
-        raise Warning(
-            "Problem.startpoint_method will be ignored. Startpoints will be "
-            "generated using the startpoint method given as an argument to "
-            "the minimize function.",
-        )
-    elif problem.startpoint_method is not None:
-        startpoint_method = problem.startpoint_method
-    elif startpoint_method is None:
+    if startpoint_method is None:
         startpoint_method = uniform
-
     # convert startpoint method to class instance
     startpoint_method = to_startpoint_method(startpoint_method)
 
@@ -100,11 +93,9 @@ def minimize(
     history_options = HistoryOptions.assert_instance(history_options)
 
     # assign startpoints
-    startpoints = assign_startpoints(
+    startpoints = startpoint_method(
         n_starts=n_starts,
-        startpoint_method=startpoint_method,
         problem=problem,
-        startpoint_resample=options.startpoint_resample,
     )
 
     if ids is None:

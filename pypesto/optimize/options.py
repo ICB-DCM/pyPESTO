@@ -7,9 +7,6 @@ class OptimizeOptions(dict):
 
     Parameters
     ----------
-    startpoint_resample:
-        Flag indicating whether initial points are supposed to be resampled if
-        function evaluation fails at the initial point
     allow_failed_starts:
         Flag indicating whether we tolerate that exceptions are thrown during
         the minimization process.
@@ -23,14 +20,14 @@ class OptimizeOptions(dict):
         scale problems.
     """
 
-    def __init__(self,
-                 startpoint_resample: bool = False,
-                 allow_failed_starts: bool = True,
-                 report_sres: bool = True,
-                 report_hess: bool = True):
+    def __init__(
+        self,
+        allow_failed_starts: bool = True,
+        report_sres: bool = True,
+        report_hess: bool = True,
+    ):
         super().__init__()
 
-        self.startpoint_resample: bool = startpoint_resample
         self.allow_failed_starts: bool = allow_failed_starts
         self.report_sres: bool = report_sres
         self.report_hess: bool = report_hess
@@ -46,7 +43,7 @@ class OptimizeOptions(dict):
 
     @staticmethod
     def assert_instance(
-            maybe_options: Union['OptimizeOptions', Dict]
+        maybe_options: Union['OptimizeOptions', Dict],
     ) -> 'OptimizeOptions':
         """
         Return a valid options object.

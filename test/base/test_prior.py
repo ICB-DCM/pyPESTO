@@ -87,13 +87,12 @@ def test_mode(scale, prior_type_list):
             if method == 'ls_trf' and not test_prior.has_res:
                 continue
             optimizer = pypesto.optimize.ScipyOptimizer(method=method)
-            ooptions = pypesto.optimize.OptimizeOptions(
-                startpoint_resample=True
+            startpoints = pypesto.startpoint.UniformStartpoints(
+                check_fval=True,
             )
             result = pypesto.optimize.minimize(
                 problem=test_problem, optimizer=optimizer, n_starts=10,
-                options=ooptions,
-                filename=None
+                startpoint_method=startpoints, filename=None,
             )
 
             # flat functions don't have local minima, so dont check this
