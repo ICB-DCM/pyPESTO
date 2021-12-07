@@ -219,14 +219,15 @@ def fill_result_from_history(
     history_fval, result_fval = optimizer_history.fval_min, result.fval
     if not np.isclose(history_fval, result_fval):
         logger.debug(
-            f"Minimal function value mismatch: history {history_fval:3e}, "
-            f"result {result_fval}"
+            f"Minimal function value mismatch: history {history_fval:8e}, "
+            f"result {result_fval:8e}"
         )
 
     # all variables of interest
     keys = ["x", "fval", "grad", "hess", "res", "sres"]
 
-    # overwrite if history beats optimizer and better
+    # always overwrite if history beats optimizer
+    #  (result_fval < history_fval should be impossible)
     if optimize_options.history_beats_optimizer:
         for key in keys:
             setattr(result, key, getattr(optimizer_history, f"{key}_min"))
