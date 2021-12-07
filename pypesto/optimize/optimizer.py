@@ -215,8 +215,11 @@ def fill_result_from_objective_history(
     return result
 
 
-def read_result_from_file(problem: Problem, history_options: HistoryOptions,
-                          identifier: str):
+def read_result_from_file(
+    problem: Problem,
+    history_options: HistoryOptions,
+    identifier: str,
+):
     """
     Fill an OptimizerResult from history.
 
@@ -264,8 +267,11 @@ def read_result_from_file(problem: Problem, history_options: HistoryOptions,
     return result
 
 
-def read_results_from_file(problem: Problem, history_options: HistoryOptions,
-                           n_starts: int):
+def read_results_from_file(
+    problem: Problem,
+    history_options: HistoryOptions,
+    n_starts: int,
+):
     """
     Fill a Result from a set of histories.
 
