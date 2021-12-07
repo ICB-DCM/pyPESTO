@@ -52,20 +52,27 @@ class HistoryTest(unittest.TestCase):
         self.history_options.trace_save_iter = 1
 
         for storage_type in ['.csv', '.hdf5', None]:
-            with tempfile.TemporaryDirectory(dir=".") as tmpdirname:
-                _, fn = tempfile.mkstemp(storage_type, dir=f"{tmpdirname}")
+            with tempfile.TemporaryDirectory(dir=".") as tmpdir:
+                if storage_type == ".csv":
+                    _, fn = tempfile.mkstemp(
+                        "_{id}" + storage_type, dir=tmpdir
+                    )
+                else:
+                    _, fn = tempfile.mkstemp(storage_type, dir=tmpdir)
                 self.history_options.storage_file = fn
                 if storage_type is None:
                     self.history_options.storage_file = None
 
+                n_starts = 1
+
                 result = pypesto.optimize.minimize(
                     problem=self.problem,
                     optimizer=self.optimizer,
-                    n_starts=1,
+                    n_starts=n_starts,
                     startpoint_method=pypesto.startpoint.uniform,
                     options=optimize_options,
                     history_options=self.history_options,
-                    filename=None
+                    filename=None,
                 )
 
                 for istart, start in enumerate(result.optimize_result.list):
@@ -79,13 +86,13 @@ class HistoryTest(unittest.TestCase):
                 if storage_type is not None:
                     read_results_from_file(
                         self.problem, self.history_options,
-                        len(result.optimize_result.list) + 2
+                        n_starts=n_starts,
                     )
                 else:
                     with pytest.raises(ValueError):
                         read_results_from_file(
                             self.problem, self.history_options,
-                            len(result.optimize_result.list)
+                            n_starts=n_starts,
                         )
 
     def check_load_from_file(self, start: OptimizerResult, id: str):
