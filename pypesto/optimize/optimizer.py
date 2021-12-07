@@ -224,7 +224,7 @@ def fill_result_from_history(
         )
 
     # all variables of interest
-    keys = ["x", "fval", "grad", "hess", "res", "sres"]
+    keys = {"x", "fval", "grad", "hess", "res", "sres"}
 
     # always overwrite if history beats optimizer
     #  (result_fval < history_fval should be impossible)
@@ -238,7 +238,7 @@ def fill_result_from_history(
 
     # counters
     # we only use our own counters here as optimizers may report differently
-    for key in keys:
+    for key in keys - {"x"}:
         setattr(
             result, f"n_{key}", getattr(optimizer_history.history, f"n_{key}")
         )
