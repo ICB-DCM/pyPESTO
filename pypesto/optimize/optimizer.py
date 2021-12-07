@@ -84,7 +84,12 @@ def history_decorator(minimize):
             id=id,
             x_names=[problem.x_names[ix] for ix in problem.x_free_indices],
         )
-        optimizer_history = OptimizerHistory(history=history, x0=x0)
+        optimizer_history = OptimizerHistory(
+            history=history,
+            x0=x0,
+            lb=problem.lb,
+            ub=problem.ub,
+        )
 
         # plug in history for the objective to record it
         objective.history = optimizer_history
@@ -160,8 +165,9 @@ def fix_decorator(minimize):
 
 
 def fill_result_from_objective_history(
-        result: OptimizerResult,
-        optimizer_history: OptimizerHistory):
+    result: OptimizerResult,
+    optimizer_history: OptimizerHistory,
+):
     """Overwrite values in the result object with values in the history."""
     update_vals = True
     # check history for better values
@@ -250,8 +256,11 @@ def read_result_from_file(
         raise NotImplementedError()
 
     opt_hist = OptimizerHistory(
-        history, history.get_x_trace(0),
-        generate_from_history=True
+        history=history,
+        x0=history.get_x_trace(0),
+        lb=problem.lb,
+        ub=problem.ub,
+        generate_from_history=True,
     )
 
     result = OptimizerResult(

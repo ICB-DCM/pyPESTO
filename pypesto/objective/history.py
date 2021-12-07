@@ -1235,16 +1235,20 @@ class OptimizerHistory:
         History object to attach to this container. This history object
         implements the storage of the actual history.
     x0:
-        Initial values for optimization
+        Initial values for optimization.
+    lb, ub:
+        Lower and upper bound. Used for checking validity of optimal points.
     generate_from_history:
         If set to true, this function will try to fill attributes of this
-        function based on the provided history
+        function based on the provided history.
     """
 
     def __init__(
         self,
         history: History,
         x0: np.ndarray,
+        lb: np.ndarray,
+        ub: np.ndarray,
         generate_from_history: bool = False,
     ) -> None:
         self.history: History = history
@@ -1252,6 +1256,10 @@ class OptimizerHistory:
         # initial point
         self.fval0: Union[float, None] = None
         self.x0: np.ndarray = x0
+
+        # bounds
+        self.lb: np.ndarray = lb
+        self.ub: np.ndarray = ub
 
         # minimum point
         self.fval_min: float = np.inf
@@ -1287,6 +1295,10 @@ class OptimizerHistory:
                 self.fval0 = result.get(FVAL, None)
             self.x0 = x
 
+        # check whether point is admissible
+        if not self._admissible(x):
+            return
+
         # update best point
         fval = result.get(FVAL, None)
         grad = result.get(GRAD, None)
@@ -1318,6 +1330,7 @@ class OptimizerHistory:
         if not len(self.history):
             # nothing to be computed from empty history
             return
+
         # some optimizers may evaluate hess+grad first to compute trust region
         # etc
         max_init_iter = 3
@@ -1329,10 +1342,15 @@ class OptimizerHistory:
                 self.fval0 = float(candidate)
                 break
 
+        # get indices of admissible trace entries
+        # shape (n_sample, n_x)
+        xs = np.asarray(self.history.get_x_trace())
+        ixs_admit = [self._admissible(x) for x in xs]
+
         # we prioritize fval over chi2 as fval is written whenever possible
-        ix_min = np.nanargmin(self.history.get_fval_trace())
+        ix_min = np.nanargmin(self.history.get_fval_trace(ixs_admit))
         # np.argmin returns ndarray when multiple minimal values are found, we
-        # generally want the first occurence
+        # generally want the first occurrence
         if isinstance(ix_min, np.ndarray):
             ix_min = ix_min[0]
 
@@ -1362,11 +1380,24 @@ class OptimizerHistory:
                     # extract from the next
                     self.extract_from_history(var, ix_try)
 
-    def extract_from_history(self, var, ix):
+    def extract_from_history(self, var: str, ix: int):
         """Get value of `var` at iteration `ix`."""
         val = getattr(self.history, f'get_{var}_trace')(ix)
         if not np.all(np.isnan(val)):
             setattr(self, f'{var}_min', val)
+
+    def _admissible(self, x: np.ndarray) -> bool:
+        """Check whether point `x` is admissible (i.e. within bounds).
+
+        Parameters
+        ----------
+        x: A single parameter vector.
+
+        Returns
+        -------
+        admissible: Whether the point fulfills the problem requirements.
+        """
+        return np.all(x <= self.ub) and np.all(x >= self.lb)
 
 
 def ndarray2string_full(x: Union[np.ndarray, None]) -> Union[str, None]:
