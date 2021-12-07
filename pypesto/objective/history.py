@@ -7,6 +7,7 @@ import time
 import os
 import abc
 from typing import Any, Dict, List, Tuple, Sequence, Union
+from pathlib import Path
 
 from .constants import (
     MODE_FUN,
@@ -149,10 +150,10 @@ class HistoryOptions(dict):
             return
 
         # extract storage type
-        _, type_ = os.path.splitext(self.storage_file)
+        type_ = Path(self.storage_file).suffix
 
         # check storage format is valid
-        if type_.lower() not in [".csv", ".hdf5", ".h5"]:
+        if type_ not in [".csv", ".hdf5", ".h5"]:
             raise ValueError(
                 "Only history storage to '.csv' and '.hdf5' is supported, got "
                 f"{type_}",

@@ -29,7 +29,7 @@ def minimize(
     progress_bar: bool = True,
     options: OptimizeOptions = None,
     history_options: HistoryOptions = None,
-    filename: str = "Auto"
+    filename: Union[str, None] = "Auto",
 ) -> Result:
     """
     Do multistart optimization.
@@ -111,7 +111,7 @@ def minimize(
     if engine is None:
         engine = SingleCoreEngine()
 
-    # maybe change to one hdf5 storage file per start if parallel
+    # change to one hdf5 storage file per start if parallel and if hdf5
     history_file = history_options.storage_file
     history_requires_postprocessing = preprocess_hdf5_history(
         history_options, engine
