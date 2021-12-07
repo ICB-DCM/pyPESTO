@@ -3,15 +3,14 @@
 import numpy as np
 
 from .util import rescale
-from .base import StartpointMethod
-from ..objective import ObjectiveBase
+from .base import CheckedStartpoints
 
 
-def _latin_hypercube(
+def latin_hypercube(
     n_starts: int,
     lb: np.ndarray,
     ub: np.ndarray,
-    smooth: bool,
+    smooth: bool = True,
 ) -> np.ndarray:
     """Generate latin hypercube points.
 
@@ -81,7 +80,7 @@ def _latin_hypercube_unit(
     return xs
 
 
-class LatinHypercubeStartpoints(StartpointMethod):
+class LatinHypercubeStartpoints(CheckedStartpoints):
     """Generate latin hypercube-sampled startpoints.
 
     See e.g. https://en.wikipedia.org/wiki/Latin_hypercube_sampling.
@@ -89,35 +88,39 @@ class LatinHypercubeStartpoints(StartpointMethod):
 
     def __init__(
         self,
+        use_guesses: bool = True,
+        check_fval: bool = False,
+        check_grad: bool = False,
         smooth: bool = True,
     ):
-        """
-        Initialize.
+        """Initialize.
 
         Parameters
         ----------
+        use_guesses, check_fval, check_grad:
+            As in CheckedStartpoints.
         smooth:
             Whether a (uniformly chosen) random starting point within the
             hypercube [i/n_starts, (i+1)/n_starts] should be chosen (True) or
             the midpoint of the interval (False).
         """
+        super().__init__(
+            use_guesses=use_guesses,
+            check_fval=check_fval,
+            check_grad=check_grad,
+        )
         self.smooth: bool = smooth
 
-    def __call__(
+    def sample(
         self,
         n_starts: int,
         lb: np.ndarray,
         ub: np.ndarray,
-        objective: ObjectiveBase = None,
     ) -> np.ndarray:
         """Call function."""
-        return _latin_hypercube(
+        return latin_hypercube(
             n_starts=n_starts,
             lb=lb,
             ub=ub,
             smooth=self.smooth,
         )
-
-
-# convenience and legacy
-latin_hypercube = LatinHypercubeStartpoints(smooth=True)
