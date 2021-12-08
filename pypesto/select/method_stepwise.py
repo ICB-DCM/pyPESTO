@@ -1,4 +1,4 @@
-from typing import Callable, Dict, Union
+from typing import Callable, Dict, Optional, Union
 
 import petab_select
 from petab_select import (
@@ -12,11 +12,7 @@ from petab_select.constants import (
 )
 
 from .method import ModelSelectorMethod
-
-#from .constants import (
-#    DUMMY_PATH,
-#    #INITIAL_VIRTUAL_MODEL,
-#)
+from .postprocessors import TYPE_POSTPROCESSOR
 
 import logging
 logger = logging.getLogger(__name__)
@@ -43,6 +39,7 @@ class ForwardSelector(ModelSelectorMethod):
             criterion_threshold: float = 0,
             objective_customizer: Callable = None,
             limit: int = None,
+            model_postprocessor: Optional[TYPE_POSTPROCESSOR] = None,
     ):
         # TODO rename to `default_petab_problem`? There may be multiple petab
         # problems for a single model selection run, defined by the future
@@ -74,6 +71,7 @@ class ForwardSelector(ModelSelectorMethod):
 
         self.objective_customizer = objective_customizer
         self.limit = limit
+        self.model_postprocessor = model_postprocessor
 
     #def new_direction_problem(self) -> 'ModelSelectionProblem':  # noqa: F821
     #    """

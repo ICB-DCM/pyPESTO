@@ -22,10 +22,8 @@ from ..objective import ObjectiveBase
 from ..optimize import minimize, OptimizerResult
 from ..result import Result
 
-#from .misc import (
-#    row2problem,
-#)
 from .misc import model_to_pypesto_problem
+from .postprocessors import TYPE_POSTPROCESSOR
 
 
 OBJECTIVE_CUSTOMIZER_TYPE = Callable[[ObjectiveBase], None]
@@ -52,7 +50,7 @@ class ModelSelectionProblem(object):
             x_fixed_estimated: Set[str] = None,
             minimize_options: Dict = None,
             objective_customizer: Optional[OBJECTIVE_CUSTOMIZER_TYPE] = None,
-            postprocessor: Optional[POSTPROCESSOR_TYPE] = None,
+            postprocessor: Optional[TYPE_POSTPROCESSOR] = None,
     ):
         """
         Arguments

@@ -1,5 +1,5 @@
 import abc
-from typing import Dict, Iterable, Union
+from typing import Dict, Iterable, Optional, Union
 
 import numpy as np
 
@@ -15,6 +15,7 @@ from petab_select import (
 
 from .method_brute_force import BruteForceSelector
 from .method_stepwise import ForwardSelector
+from .postprocessors import TYPE_POSTPROCESSOR
 
 
 class ModelSelector(abc.ABC):
@@ -26,9 +27,12 @@ class ModelSelector(abc.ABC):
     def __init__(
             self,
             problem: petab_select.Problem,
+            model_postprocessor: Optional[TYPE_POSTPROCESSOR] = None,
     ):
         self.problem = problem
         self.model_space = self.problem.model_space
+
+        self.model_postprocessor = model_postprocessor
 
         self.selection_history = {}
 
@@ -148,6 +152,7 @@ class ModelSelector(abc.ABC):
                 criterion_threshold=criterion_threshold,
                 objective_customizer=objective_customizer,
                 limit=limit,
+                model_postprocessor=self.model_postprocessor,
             )
             #result = selector(predecessor_model=initial_model)
             result = selector()
@@ -182,6 +187,7 @@ class ModelSelector(abc.ABC):
                     criterion_threshold,
                     objective_customizer=objective_customizer,
                     limit=limit,
+                    model_postprocessor=self.model_postprocessor,
                 )
                 try:
                     result = selector()
@@ -217,6 +223,7 @@ class ModelSelector(abc.ABC):
                 limit=limit,
                 # TODO rename to model0
                 model0=initial_model,
+                model_postprocessor=self.model_postprocessor,
             )
             (
                 selected_models,
