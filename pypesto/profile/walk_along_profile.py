@@ -3,7 +3,7 @@ import numpy as np
 from typing import Callable
 
 from ..objective.constants import GRAD
-from ..optimize import Optimizer, OptimizerResult
+from ..optimize import Optimizer, OptimizerResult, OptimizeOptions
 from ..problem import Problem
 from .result import ProfilerResult
 from .options import ProfileOptions
@@ -86,8 +86,12 @@ def walk_along_profile(
         # IMPORTANT: This optimization will need a proper exception
         # handling (coming soon)
         if startpoint.size > 0:
-            optimizer_result = optimizer.minimize(problem, startpoint, '0',
-                                                  allow_failed_starts=False)
+            optimizer_result = optimizer.minimize(
+                problem=problem,
+                x0=startpoint,
+                id='0',
+                optimize_options=OptimizeOptions(allow_failed_starts=False),
+            )
         else:
             # if too many parameters are fixed, there is nothing to do ...
             fval = problem.objective([])

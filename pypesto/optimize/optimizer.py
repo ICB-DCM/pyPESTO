@@ -217,7 +217,10 @@ def fill_result_from_history(
 
     # logging
     history_fval, result_fval = optimizer_history.fval_min, result.fval
-    if not np.isclose(history_fval, result_fval):
+    if (
+        history_fval is not None and result_fval is not None
+        and not np.isclose(history_fval, result_fval)
+    ):
         logger.debug(
             f"Minimal function value mismatch: history {history_fval:8e}, "
             f"result {result_fval:8e}"
@@ -228,7 +231,7 @@ def fill_result_from_history(
 
     # always overwrite if history beats optimizer
     #  (result_fval < history_fval should be impossible)
-    if optimize_options.history_beats_optimizer:
+    if optimize_options.history_beats_optimizer or result_fval is None:
         for key in keys:
             setattr(result, key, getattr(optimizer_history, f"{key}_min"))
 
