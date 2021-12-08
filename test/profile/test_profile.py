@@ -42,7 +42,8 @@ class ProfilerTest(unittest.TestCase):
                 problem=self.problem,
                 result=self.result,
                 optimizer=self.optimizer,
-                next_guess_method=method)
+                next_guess_method=method,
+                filename=None)
 
             # check result
             self.assertTrue(
@@ -89,7 +90,8 @@ class ProfilerTest(unittest.TestCase):
                 result=self.result,
                 optimizer=self.optimizer,
                 next_guess_method='fixed_step',
-                engine=engine,)
+                engine=engine,
+                filename=None)
 
         # check results
         for count, _engine in enumerate(engines[1:]):
@@ -120,7 +122,8 @@ class ProfilerTest(unittest.TestCase):
             profile_index=np.array([1]),
             next_guess_method='fixed_step',
             result_index=1,
-            profile_options=options)
+            profile_options=options,
+            filename=None)
 
         self.assertIsInstance(result.profile_result.list[0][1],
                               profile.ProfilerResult)
@@ -135,7 +138,8 @@ class ProfilerTest(unittest.TestCase):
             profile_index=np.array([0]),
             result_index=2,
             profile_list=0,
-            profile_options=options)
+            profile_options=options,
+            filename=None)
 
         self.assertIsInstance(result.profile_result.list[0][0],
                               profile.ProfilerResult)
@@ -147,7 +151,8 @@ class ProfilerTest(unittest.TestCase):
             optimizer=self.optimizer,
             next_guess_method='fixed_step',
             profile_index=np.array([0]),
-            profile_options=options)
+            profile_options=options,
+            filename=None)
         # check result
         self.assertIsInstance(result.profile_result.list[1][0],
                               profile.ProfilerResult)
@@ -159,7 +164,8 @@ class ProfilerTest(unittest.TestCase):
             problem=self.problem,
             result=self.result,
             optimizer=self.optimizer,
-            next_guess_method='fixed_step')
+            next_guess_method='fixed_step',
+            filename=None)
 
         # set new bounds (knowing that one parameter stopped at the bounds
         self.problem.lb_full = -4 * np.ones(2)
@@ -171,7 +177,8 @@ class ProfilerTest(unittest.TestCase):
                                            optimizer=self.optimizer,
                                            next_guess_method='fixed_step',
                                            profile_index=np.array([1]),
-                                           profile_list=0)
+                                           profile_list=0,
+                                           filename=None)
         # check result
         self.assertTrue(
             isinstance(result.profile_result.list[0][0],
@@ -226,7 +233,8 @@ def test_profile_with_history():
         optimizer=optimizer,
         profile_index=np.array([0, 2, 4]),
         result_index=0,
-        profile_options=profile_options
+        profile_options=profile_options,
+        filename=None
     )
 
 
@@ -243,7 +251,7 @@ def test_profile_with_fixed_parameters():
 
     optimizer = optimize.ScipyOptimizer(options={'maxiter': 50})
     result = optimize.minimize(
-        problem=problem, optimizer=optimizer, n_starts=2)
+        problem=problem, optimizer=optimizer, n_starts=2, filename=None)
 
     for i_method, next_guess_method in enumerate([
             'fixed_step', 'adaptive_step_order_0',
@@ -251,7 +259,8 @@ def test_profile_with_fixed_parameters():
         print(next_guess_method)
         profile.parameter_profile(
             problem=problem, result=result, optimizer=optimizer,
-            next_guess_method=next_guess_method)
+            next_guess_method=next_guess_method,
+            filename=None)
 
         # standard plotting
         axes = visualize.profiles(result, profile_list_ids=i_method)
@@ -263,7 +272,8 @@ def test_profile_with_fixed_parameters():
                            result.optimize_result.list[0]['x'][2:5])
     profile.parameter_profile(
         problem=problem, result=result, optimizer=optimizer,
-        next_guess_method='adaptive_step_regression')
+        next_guess_method='adaptive_step_regression',
+        filename=None)
 
 
 def create_optimization_results(objective, dim_full=2):
@@ -285,7 +295,8 @@ def create_optimization_results(objective, dim_full=2):
         optimizer=optimizer,
         n_starts=5,
         startpoint_method=pypesto.startpoint.uniform,
-        options=optimize_options
+        options=optimize_options,
+        filename=None
     )
 
     return problem, result, optimizer

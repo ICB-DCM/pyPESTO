@@ -10,16 +10,15 @@ def get_covariance_matrix_parameters(ens: Ensemble) -> np.ndarray:
     Compute the covariance of ensemble parameters.
 
     Parameters
-    ==========
+    ----------
     ens:
         Ensemble object containing a set of parameter vectors
 
     Returns
-    =======
+    -------
     covariance_matrix:
         covariance matrix of ensemble parameters
     """
-
     # call lowlevel routine using the parameter ensemble
     return np.cov(ens.x_vectors.transpose())
 
@@ -31,20 +30,18 @@ def get_covariance_matrix_predictions(
     Compute the covariance of ensemble predictions.
 
     Parameters
-    ==========
+    ----------
     ens:
         Ensemble object containing a set of parameter vectors and a set of
         predictions or EnsemblePrediction object containing only predictions
-
     prediction_index:
         index telling which prediction from the list should be analyzed
 
     Returns
-    =======
+    -------
     covariance_matrix:
         covariance matrix of ensemble predictions
     """
-
     # extract the an array of predictions from either an Ensemble object or an
     # EnsemblePrediction object
     dataset = get_prediction_dataset(ens, prediction_index)
@@ -67,46 +64,38 @@ def get_spectral_decomposition_parameters(
     Compute the spectral decomposition of ensemble parameters.
 
     Parameters
-    ==========
+    ----------
     ens:
         Ensemble object containing a set of parameter vectors
-
     normalize:
         flag indicating whether the returned Eigenvalues should be normalized
         with respect to the largest Eigenvalue
-
     only_separable_directions:
         return only separable directions according to
         cutoff_[absolute/relative]_separable
-
     cutoff_absolute_separable:
         Consider only eigenvalues of the covariance matrix above this cutoff
         (only applied when only_separable_directions is True)
-
     cutoff_relative_separable:
         Consider only eigenvalues of the covariance matrix above this cutoff,
         when rescaled with the largest eigenvalue
         (only applied when only_separable_directions is True)
-
     only_identifiable_directions:
         return only identifiable directions according to
         cutoff_[absolute/relative]_identifiable
-
     cutoff_absolute_identifiable:
         Consider only low eigenvalues of the covariance matrix with inverses
         above of this cutoff
         (only applied when only_identifiable_directions is True)
-
     cutoff_relative_identifiable:
         Consider only low eigenvalues of the covariance matrix when rescaled
         with the largest eigenvalue with inverses above of this cutoff
         (only applied when only_identifiable_directions is True)
 
     Returns
-    =======
+    -------
     eigenvalues:
         Eigenvalues of the covariance matrix
-
     eigenvectors:
         Eigenvectors of the covariance matrix
     """
@@ -140,47 +129,39 @@ def get_spectral_decomposition_predictions(
     Compute the spectral decomposition of ensemble predictions.
 
     Parameters
-    ==========
+    ----------
     ens:
         Ensemble object containing a set of parameter vectors and a set of
         predictions or EnsemblePrediction object containing only predictions
-
     normalize:
         flag indicating whether the returned Eigenvalues should be normalized
         with respect to the largest Eigenvalue
-
     only_separable_directions:
         return only separable directions according to
         cutoff_[absolute/relative]_separable
-
     cutoff_absolute_separable:
         Consider only eigenvalues of the covariance matrix above this cutoff
         (only applied when only_separable_directions is True)
-
     cutoff_relative_separable:
         Consider only eigenvalues of the covariance matrix above this cutoff,
         when rescaled with the largest eigenvalue
         (only applied when only_separable_directions is True)
-
     only_identifiable_directions:
         return only identifiable directions according to
         cutoff_[absolute/relative]_identifiable
-
     cutoff_absolute_identifiable:
         Consider only low eigenvalues of the covariance matrix with inverses
         above of this cutoff
         (only applied when only_identifiable_directions is True)
-
     cutoff_relative_identifiable:
         Consider only low eigenvalues of the covariance matrix when rescaled
         with the largest eigenvalue with inverses above of this cutoff
         (only applied when only_identifiable_directions is True)
 
     Returns
-    =======
+    -------
     eigenvalues:
         Eigenvalues of the covariance matrix
-
     eigenvectors:
         Eigenvectors of the covariance matrix
     """
@@ -209,51 +190,42 @@ def get_spectral_decomposition_lowlevel(
     Compute the spectral decomposition of ensemble parameters or predictions.
 
     Parameters
-    ==========
+    ----------
     matrix:
         symmetric matrix (typically a covariance matrix) of parameters or
         predictions
-
     normalize:
         flag indicating whether the returned Eigenvalues should be normalized
         with respect to the largest Eigenvalue
-
     only_separable_directions:
         return only separable directions according to
         cutoff_[absolute/relative]_separable
-
     cutoff_absolute_separable:
         Consider only eigenvalues of the covariance matrix above this cutoff
         (only applied when only_separable_directions is True)
-
     cutoff_relative_separable:
         Consider only eigenvalues of the covariance matrix above this cutoff,
         when rescaled with the largest eigenvalue
         (only applied when only_separable_directions is True)
-
     only_identifiable_directions:
         return only identifiable directions according to
         cutoff_[absolute/relative]_identifiable
-
     cutoff_absolute_identifiable:
         Consider only low eigenvalues of the covariance matrix with inverses
         above of this cutoff
         (only applied when only_identifiable_directions is True)
-
     cutoff_relative_identifiable:
         Consider only low eigenvalues of the covariance matrix when rescaled
         with the largest eigenvalue with inverses above of this cutoff
         (only applied when only_identifiable_directions is True)
 
     Returns
-    =======
+    -------
     eigenvalues:
         Eigenvalues of the covariance matrix
-
     eigenvectors:
         Eigenvectors of the covariance matrix
     """
-
     # get the eigenvalue decomposition
     eigenvalues, eigenvectors = np.linalg.eigh(matrix)
 

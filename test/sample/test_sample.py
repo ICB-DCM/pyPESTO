@@ -105,7 +105,8 @@ def sample_petab_problem():
     sampler = sample.AdaptiveMetropolisSampler()
     result = sample.sample(problem, n_samples=1000,
                            sampler=sampler,
-                           x0=np.array([3, -4]))
+                           x0=np.array([3, -4]),
+                           filename=None)
     return result
 
 
@@ -167,11 +168,12 @@ def test_pipeline(sampler, problem):
     # optimization
     optimizer = optimize.ScipyOptimizer(options={'maxiter': 10})
     result = optimize.minimize(
-        problem, n_starts=3, optimizer=optimizer)
+        problem, n_starts=3, optimizer=optimizer, filename=None)
 
     # sample
     result = sample.sample(
-        problem, sampler=sampler, n_samples=100, result=result)
+        problem, sampler=sampler, n_samples=100, result=result,
+        filename=None)
 
     # some plot
     visualize.sampling_1d_marginals(result)
@@ -187,10 +189,11 @@ def test_ground_truth():
 
     problem = gaussian_problem()
 
-    result = optimize.minimize(problem)
+    result = optimize.minimize(problem, filename=None)
 
     result = sample.sample(problem, n_samples=5000,
-                           result=result, sampler=sampler)
+                           result=result, sampler=sampler,
+                           filename=None)
 
     # get samples of first chain
     samples = result.sample_result.trace_x[0].flatten()
@@ -219,7 +222,8 @@ def test_ground_truth_separated_modes():
 
     result = sample.sample(problem, n_samples=1e4,
                            sampler=sampler,
-                           x0=np.array([0.]))
+                           x0=np.array([0.]),
+                           filename=None)
 
     # get samples of first chain
     samples = result.sample_result.trace_x[0, :, 0]
@@ -243,7 +247,8 @@ def test_ground_truth_separated_modes():
     sampler = sample.AdaptiveMetropolisSampler()
     result = sample.sample(problem, n_samples=1e4,
                            sampler=sampler,
-                           x0=np.array([-2.]))
+                           x0=np.array([-2.]),
+                           filename=None)
 
     # get samples of first chain
     samples = result.sample_result.trace_x[0, :, 0]
@@ -266,7 +271,8 @@ def test_ground_truth_separated_modes():
     # initiated around the "second" mode of the distribution
     sampler = sample.AdaptiveMetropolisSampler()
     result = sample.sample(problem, n_samples=1e4, sampler=sampler,
-                           x0=np.array([120.]))
+                           x0=np.array([120.]),
+                           filename=None)
 
     # get samples of first chain
     samples = result.sample_result.trace_x[0, :, 0]
@@ -293,7 +299,8 @@ def test_multiple_startpoints():
         internal_sampler=sample.MetropolisSampler(),
         n_chains=2
     )
-    result = sample.sample(problem, n_samples=10, x0=x0s, sampler=sampler)
+    result = sample.sample(problem, n_samples=10, x0=x0s, sampler=sampler,
+                           filename=None)
 
     assert result.sample_result.trace_neglogpost.shape[0] == 2
     assert [result.sample_result.trace_x[0][0],
@@ -340,11 +347,12 @@ def test_geweke_test_unconverged():
     sampler = sample.MetropolisSampler()
 
     # optimization
-    result = optimize.minimize(problem, n_starts=3)
+    result = optimize.minimize(problem, n_starts=3, filename=None)
 
     # sample
     result = sample.sample(
-        problem, sampler=sampler, n_samples=100, result=result)
+        problem, sampler=sampler, n_samples=100, result=result,
+        filename=None)
 
     # run geweke test (should not fail!)
     sample.geweke_test(result)
@@ -357,11 +365,12 @@ def test_autocorrelation_pipeline():
     sampler = sample.MetropolisSampler()
 
     # optimization
-    result = optimize.minimize(problem, n_starts=3)
+    result = optimize.minimize(problem, n_starts=3, filename=None)
 
     # sample
     result = sample.sample(
-        problem, sampler=sampler, n_samples=1000, result=result)
+        problem, sampler=sampler, n_samples=1000, result=result,
+        filename=None)
 
     # run auto-correlation with previous geweke
     sample.geweke_test(result)
@@ -395,11 +404,12 @@ def test_autocorrelation_short_chain():
     sampler = sample.MetropolisSampler()
 
     # optimization
-    result = optimize.minimize(problem, n_starts=3)
+    result = optimize.minimize(problem, n_starts=3, filename=None)
 
     # sample
     result = sample.sample(
-        problem, sampler=sampler, n_samples=10, result=result)
+        problem, sampler=sampler, n_samples=10, result=result,
+        filename=None)
 
     # manually set burn in to chain length (only for testing!!)
     chain_length = result.sample_result.trace_x.shape[1]
@@ -468,7 +478,8 @@ def test_empty_prior():
     sampler = sample.AdaptiveMetropolisSampler()
 
     result = sample.sample(test_problem, n_samples=50, sampler=sampler,
-                           x0=np.array([0.]))
+                           x0=np.array([0.]),
+                           filename=None)
 
     # get log prior values of first chain
     logprior_trace = -result.sample_result.trace_neglogprior[0, :]
@@ -498,7 +509,8 @@ def test_prior():
     sampler = sample.AdaptiveMetropolisSampler()
 
     result = sample.sample(test_problem, n_samples=1e4, sampler=sampler,
-                           x0=np.array([0.]))
+                           x0=np.array([0.]),
+                           filename=None)
 
     # get log prior values of first chain
     logprior_trace = -result.sample_result.trace_neglogprior[0, :]
@@ -531,11 +543,11 @@ def test_samples_cis():
     sampler = sample.MetropolisSampler()
 
     # optimization
-    result = optimize.minimize(problem, n_starts=3)
+    result = optimize.minimize(problem, n_starts=3, filename=None)
 
     # sample
     result = sample.sample(
-        problem, sampler=sampler, n_samples=2000, result=result)
+        problem, sampler=sampler, n_samples=2000, result=result, filename=None)
 
     # run geweke test
     sample.geweke_test(result)

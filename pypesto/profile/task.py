@@ -55,8 +55,8 @@ class ProfilerTask(Task):
         self.options = options
 
     def execute(self) -> 'pypesto.profile.ProfilerResult':
+        """Compute profile in descending and ascending direction."""
         logger.info(f"Executing task {self.i_par}.")
-        # compute profile in descending and ascending direction
         for par_direction in [-1, 1]:
             # flip profile
             self.current_profile.flip_profile()

@@ -16,6 +16,8 @@ logger = logging.getLogger(__name__)
 
 class ObjectiveBase(abc.ABC):
     """
+    Abstract objective class.
+
     The objective class is a simple wrapper around the objective function,
     giving a standardized way of calling. Apart from that, it manages several
     things including fixing of parameters and history.
@@ -54,6 +56,7 @@ class ObjectiveBase(abc.ABC):
         self.history = HistoryBase()
 
     def __deepcopy__(self, memodict=None) -> 'ObjectiveBase':
+        """Create deepcopy of objective object."""
         other = type(self)()  # maintain type for derived classes
         for attr, val in self.__dict__.items():
             other.__dict__[attr] = copy.deepcopy(val)
@@ -63,31 +66,37 @@ class ObjectiveBase(abc.ABC):
     # the objective supports.
     @property
     def has_fun(self) -> bool:
+        """Check whether function is defined."""
         return self.check_sensi_orders((0,), MODE_FUN)
 
     @property
     def has_grad(self) -> bool:
+        """Check whether gradient is defined."""
         return self.check_sensi_orders((1,), MODE_FUN)
 
     @property
     def has_hess(self) -> bool:
+        """Check whether Hessian is defined."""
         return self.check_sensi_orders((2,), MODE_FUN)
 
     @property
-    def has_hessp(self) -> bool:
+    def has_hessp(self) -> bool: # noqa
         # Not supported yet
         return False
 
     @property
     def has_res(self) -> bool:
+        """Check whether residuals are defined."""
         return self.check_sensi_orders((0,), MODE_RES)
 
     @property
     def has_sres(self) -> bool:
+        """Check whether residual sensitivities are defined."""
         return self.check_sensi_orders((1,), MODE_RES)
 
     @property
     def x_names(self) -> Union[List[str], None]:
+        """Parameter names."""
         if self._x_names is None:
             return self._x_names
 
@@ -99,7 +108,9 @@ class ObjectiveBase(abc.ABC):
         ]
 
     def initialize(self):
-        """Initialize the objective function.
+        """
+        Initialize the objective function.
+
         This function is used at the beginning of an analysis, e.g.
         optimization, and can e.g. reset the objective memory.
         By default does nothing.
@@ -114,8 +125,10 @@ class ObjectiveBase(abc.ABC):
         **kwargs,
     ) -> Union[float, np.ndarray, Tuple, ResultDict]:
         """
-        Method to obtain arbitrary sensitivities. This is the central method
-        which is always called, also by the get_* methods.
+        Obtain arbitrary sensitivities.
+
+        This is the central method which is always called, also by the
+        get_* methods.
 
         There are different ways in which an optimizer calls the objective
         function, and in how the objective function provides information
@@ -146,7 +159,8 @@ class ObjectiveBase(abc.ABC):
             with function values and derivatives indicated by ids.
         """
         # copy parameter vector to prevent side effects
-        x = np.array(x).copy()
+        # np.array creates a copy of x already
+        x = np.array(x)
 
         # check input
         if not self.check_mode(mode):
@@ -186,8 +200,7 @@ class ObjectiveBase(abc.ABC):
         **kwargs,
     ) -> ResultDict:
         """
-        Call objective function without pre- or post-processing and
-        formatting.
+        Call objective function without pre- or post-processing and formatting.
 
         Parameters
         ----------
@@ -216,6 +229,7 @@ class ObjectiveBase(abc.ABC):
         ----------
         mode:
             Whether to compute function values or residuals.
+
         Returns
         -------
         flag:
@@ -230,8 +244,9 @@ class ObjectiveBase(abc.ABC):
 
     def get_config(self) -> dict:
         """
-        Get the configuration information of the objective
-        function and return it as a dictonary.
+        Get the configuration information of the objective function.
+
+        Return it as a dictonary.
         """
         info = {'type':  self.__class__.__name__}
         return info
@@ -242,8 +257,7 @@ class ObjectiveBase(abc.ABC):
         mode: str,
     ) -> bool:
         """
-        Check if the objective is able to compute the requested
-        sensitivities.
+        Check if the objective is able to compute the requested sensitivities.
 
         Either `check_sensi_orders` or the `fun_...` functions
         must be overwritten in derived classes.
@@ -288,9 +302,11 @@ class ObjectiveBase(abc.ABC):
         **kwargs: Union[float, np.ndarray],
     ) -> Tuple:
         """
-        Return values as requested by the caller, since usually only a subset
-        is demanded. One output is returned as-is, more than one output are
-        returned as a tuple in order (fval, grad, hess).
+        Return values as requested by the caller.
+
+        Usually only a subset of outputs is demanded. One output is returned
+        as-is, more than one output are returned as a tuple in order (fval,
+        grad, hess).
         """
         output = ()
         if mode == MODE_FUN:
@@ -312,7 +328,6 @@ class ObjectiveBase(abc.ABC):
     # The following are convenience functions for getting specific outputs.
     def get_fval(self, x: np.ndarray) -> float:
         """Get the function value at x."""
-
         fval = self(x, (0,), MODE_FUN)
         return fval
 
@@ -344,11 +359,13 @@ class ObjectiveBase(abc.ABC):
         x_fixed_vals: Sequence[float],
     ):
         """
-        Handle fixed parameters. Later, the objective will be given parameter
-        vectors x of dimension dim, which have to be filled up with fixed
-        parameter values to form a vector of dimension dim_full >= dim.
-        This vector is then used to compute function value and derivatives.
-        The derivatives must later be reduced again to dimension dim.
+        Handle fixed parameters.
+
+        Later, the objective will be given parameter vectors x of dimension
+        dim, which have to be filled up with fixed parameter values to form
+        a vector of dimension dim_full >= dim. This vector is then used to
+        compute function value and derivatives. The derivatives must later
+        be reduced again to dimension dim.
 
         This is so as to make the fixing of parameters transparent to the
         caller.
@@ -370,7 +387,6 @@ class ObjectiveBase(abc.ABC):
             Vector of the same length as x_fixed_indices, containing the values
             of the fixed parameters.
         """
-
         pre_post_processor = FixedParametersProcessor(
             dim_full=dim_full,
             x_free_indices=x_free_indices,
@@ -387,6 +403,8 @@ class ObjectiveBase(abc.ABC):
         **kwargs,
     ):
         """
+        Compare gradient evaluation.
+
         Equivalent to the `ObjectiveBase.check_grad` method, except multiple
         finite difference step sizes are tested. The result contains the
         lowest finite difference for each parameter, and the corresponding
@@ -442,8 +460,10 @@ class ObjectiveBase(abc.ABC):
         detailed: bool = False,
     ) -> pd.DataFrame:
         """
-        Compare gradient evaluation: Firstly approximate via finite
-        differences, and secondly use the objective gradient.
+        Compare gradient evaluation.
+
+        Firstly approximate via finite differences, and secondly use the
+        objective gradient.
 
         Parameters
         ----------
@@ -470,11 +490,10 @@ class ObjectiveBase(abc.ABC):
             mean).
 
         Returns
-        ----------
+        -------
         result:
             gradient, finite difference approximations and error estimates.
         """
-
         if x_indices is None:
             x_indices = list(range(len(x)))
 
@@ -613,7 +632,7 @@ class ObjectiveBase(abc.ABC):
         multi_eps=None,
         **kwargs,
     ) -> bool:
-        """Check if gradients match finite differences (FDs)
+        """Check if gradients match finite differences (FDs).
 
         Parameters
         ----------

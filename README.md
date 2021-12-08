@@ -8,7 +8,6 @@ parameter estimation.
 [![PyPI](https://badge.fury.io/py/pypesto.svg)](https://badge.fury.io/py/pypesto)
 [![CI](https://github.com/ICB-DCM/pyPESTO/workflows/CI/badge.svg)](https://github.com/ICB-DCM/pyPESTO/actions)
 [![Coverage](https://codecov.io/gh/ICB-DCM/pyPESTO/branch/master/graph/badge.svg)](https://codecov.io/gh/ICB-DCM/pyPESTO)
-[![Quality](https://api.codacy.com/project/badge/Grade/134432ddad0e464b8494587ff370f661)](https://www.codacy.com/app/dweindl/pyPESTO?utm_source=github.com&amp;utm_medium=referral&amp;utm_content=ICB-DCM/pyPESTO&amp;utm_campaign=Badge_Grade)
 [![Documentation](https://readthedocs.org/projects/pypesto/badge/?version=latest)](https://pypesto.readthedocs.io)
 [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.2553546.svg)](https://doi.org/10.5281/zenodo.2553546)
 
@@ -19,15 +18,15 @@ pyPESTO features include:
 * Multi-start local optimization
 * Profile computation
 * Result visualization
-* Interface to [AMICI](https://github.com/ICB-DCM/AMICI/) for efficient
+* Interface to [AMICI](https://github.com/AMICI-dev/AMICI/) for efficient
   simulation and sensitivity analysis of ordinary differential equation (ODE)
   models
-  ([example](https://github.com/ICB-DCM/pyPESTO/blob/master/doc/example/boehm_JProteomeRes2014.ipynb))
+  ([example](https://github.com/ICB-DCM/pyPESTO/blob/main/doc/example/amici_import.ipynb))
 * Parameter estimation pipeline for systems biology problems specified in
   [SBML](http://sbml.org/) and [PEtab](https://github.com/PEtab-dev/PEtab)
   ([example](https://github.com/ICB-DCM/pyPESTO/blob/master/doc/example/petab_import.ipynb))
 * Parameter estimation with qualitative data as described in
-  [Schmiester et al. (2019)](https://www.biorxiv.org/content/10.1101/848648v1).
+  [Schmiester et al. (2020)](https://doi.org/10.1007/s00285-020-01522-w).
   This is currently implemented in the `feature_ordinal` branch.
 
 ## Quick install

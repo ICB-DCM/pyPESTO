@@ -1,7 +1,23 @@
 Examples
 ========
 
-The following examples cover typical use cases and should help get a better idea of how to use this package:
+We provide a collection of example notebooks to get a better idea of how to
+use pyPESTO, and illustrate core features.
+
+The notebooks can be run locally with an installation of jupyter
+(``pip install jupyter``), or online on Google Colab or nbviewer, following
+the links at the top of each notebook.
+At least an installation of pyPESTO is required, which can be performed by
+
+.. code:: sh
+
+   # install if not done yet
+   !pip install pypesto --quiet
+
+Potentially, further dependencies may be required.
+
+The following examples cover typical use cases and should help get a better
+idea of how to use this package:
 
 .. toctree::
    :maxdepth: 1

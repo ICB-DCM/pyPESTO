@@ -24,10 +24,12 @@ def validation_profile_significance(
         lsq_objective: bool = False,
         return_significance: bool = True,
 ) -> float:
-    """
-    A Validation Interval for significance alpha is a confidence region/
-    interval for a new validation experiment. [#Kreutz]_ et al.
-    (This method per default returns the significance = 1-alpha!)
+    r"""
+    Compute significance of Validation Interval.
+
+    It is a confidence region/interval for a new validation experiment.
+    [#Kreutz]_ et al. (This method per default returns the significance =
+    1-alpha!)
 
     The reasoning behind their approach is, that a validation data set
     is outside the validation interval, if fitting the full data set
@@ -78,14 +80,11 @@ def validation_profile_significance(
         within the Confidence Interval (False). I.e. alpha = 1-significance.
 
 
-        .. [#Kreutz] Kreutz, Clemens, Raue, Andreas and Timmer, Jens.
-                  “Likelihood based observability analysis and
-                  confidence intervals for predictions of dynamic models”.
-                  BMC Systems Biology 2012/12.
-                  doi:10.1186/1752-0509-6-120
-
-     """
-
+    .. [#Kreutz] Kreutz, Clemens, Raue, Andreas and Timmer, Jens.
+        “Likelihood based observability analysis and
+        confidence intervals for predictions of dynamic models”.
+        BMC Systems Biology 2012/12. doi:10.1186/1752-0509-6-120
+    """
     if (result_full_data is not None) and (optimizer is not None):
         raise UserWarning("optimizer will not be used, as a result object "
                           "for the full data set is provided.")

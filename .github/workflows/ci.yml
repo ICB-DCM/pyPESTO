@@ -4,8 +4,11 @@ name: CI
 on:
   push:
     branches:
-    - master
+    - main
   pull_request:
+  schedule:
+    # run Monday and Thursday at 03:42 UTC
+    - cron: '42 3 * * MON,THU'
 
 # jobs
 jobs:
@@ -13,7 +16,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: [3.9]
+        python-version: [3.7]
 
     steps:
     - name: Check out repository
@@ -47,7 +50,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: [3.9]
+        python-version: [3.7]
 
     steps:
     - name: Check out repository
@@ -81,7 +84,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: [3.9]
+        python-version: [3.7]
 
     steps:
     - name: Check out repository
@@ -177,7 +180,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: [3.9]
+        python-version: [3.7]
 
     steps:
     - name: Check out repository
@@ -205,7 +208,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: [3.9]
+        python-version: [3.7]
 
     steps:
     - name: Check out repository

@@ -94,11 +94,16 @@ def parameter_estimation(
 
     optimize_options = pypesto.optimize.OptimizeOptions(
         allow_failed_starts=False,
-        startpoint_resample=True,
     )
 
+    startpoints = pypesto.startpoint.UniformStartpoints(check_fval=True)
+
     pypesto.optimize.minimize(
-        problem, optimizer, n_starts, options=optimize_options)
+        problem, optimizer, n_starts,
+        startpoint_method=startpoints,
+        options=optimize_options,
+        filename=None,
+    )
 
 
 if __name__ == '__main__':

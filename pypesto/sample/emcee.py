@@ -4,7 +4,7 @@ import numpy as np
 from ..problem import Problem
 from .sampler import Sampler
 from .result import McmcPtResult
-from ..startpoint import assign_startpoints, uniform
+from ..startpoint import UniformStartpoints
 
 try:
     import emcee
@@ -26,6 +26,8 @@ class EmceeSampler(Sampler):
         run_args: dict = None,
     ):
         """
+        Initialize sampler.
+
         Parameters
         ----------
         nwalkers: The number of walkers in the ensemble.
@@ -63,6 +65,7 @@ class EmceeSampler(Sampler):
         problem: Problem,
         x0: Union[np.ndarray, List[np.ndarray]],
     ) -> None:
+        """Initialize the sampler."""
         self.problem = problem
 
         # extract for pickling efficiency
@@ -100,19 +103,25 @@ class EmceeSampler(Sampler):
             problem.x_guesses_full = np.row_stack((x0, problem.x_guesses_full))
 
             #  sample start points
-            self.state = assign_startpoints(
-                n_starts=self.nwalkers, startpoint_method=uniform,
-                problem=problem, startpoint_resample=True)
+            self.state = UniformStartpoints(
+                use_guesses=True,
+                check_fval=True,
+                check_grad=False,
+            )(
+                n_starts=self.nwalkers,
+                problem=problem,
+            )
 
             #  restore original guesses
             problem.x_guesses_full = problem.x_guesses_full[x0.shape[0]:]
 
     def sample(self, n_samples: int, beta: float = 1.) -> None:
-        # the method returns the most recent sample state
+        """Return the most recent sample state."""
         self.state = self.sampler.run_mcmc(
             self.state, n_samples, **self.run_args)
 
     def get_samples(self) -> McmcPtResult:
+        """Get the samples into the fitting pypesto format."""
         # all walkers are concatenated, yielding a flat array
         trace_x = np.array([self.sampler.get_chain(flat=True)])
         trace_neglogpost = np.array([- self.sampler.get_log_prob(flat=True)])

@@ -3,8 +3,9 @@ import numpy as np
 
 def autocorrelation_sokal(chain: np.ndarray) -> np.ndarray:
     """
-    Estimate the integrated autocorrelation time of a MCMC chain
-    using Sokal's adaptive truncated periodogram estimator.
+    Estimate the integrated autocorrelation time of a MCMC chain.
+
+    Uses Sokal's adaptive truncated periodogram estimator.
 
     - Haario, H., Laine, M., Mira, A. et al. DRAM: Efficient
     adaptive MCMC. Stat Comput 16, 339–354 (2006).
@@ -18,12 +19,12 @@ def autocorrelation_sokal(chain: np.ndarray) -> np.ndarray:
     Parameters
     ----------
         chain: The MCMC chain.
+
     Returns
     -------
         tau_est: An estimate of the integrated autocorrelation time of
         the MCMC chain.
     """
-
     nsamples, npar = chain.shape
     tau_est = np.zeros((npar))
 
