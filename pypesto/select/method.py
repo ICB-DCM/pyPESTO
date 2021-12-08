@@ -3,8 +3,15 @@ import logging
 from typing import Dict
 
 import petab
+from petab_select.constants import (
+    VIRTUAL_INITIAL_MODEL,
+)
 from petab_select import (
     Model,
+    Criterion,
+    #AIC,
+    #AICC,
+    #BIC,
 )
 
 from .problem import ModelSelectionProblem
@@ -39,67 +46,88 @@ class ModelSelectorMethod(abc.ABC):
     # the calling child class should have self.criterion defined
     def compare(
         self,
-        old: ModelSelectionProblem,
-        new: ModelSelectionProblem,
+        old_model: Model,
+        new_model: Model,
     ) -> bool:
         """
         Compares models by criterion.
 
         Arguments
         ---------
-        old:
-            A `ModelSelectionProblem` that has already been optimized.
-        new:
-            See `old`.
+        old_model:
+            A calibrated model
+        new_model:
+            A calibrated model.
 
         Returns
         -------
-        `True`, if `new` is superior to `old` by the criterion, else `False`.
+        `True`, if `new_model` is superior to `old_model` by the criterion,
+        else `False`.
         """
-        # TODO implement criterion as @property of ModelSelectorMethod
-        # TODO refactor to reduce repeated code
-        if self.criterion == 'AIC':
-            result = new.aic + self.criterion_threshold < old.aic
-            logger.info('%s\t%s\tAIC\t%.3f\t%.3f\t%.3f\t%s',
-                        old.model_id,
-                        new.model_id,
-                        old.aic,
-                        new.aic,
-                        new.aic - old.aic,
-                        "Accepted" if result else "Rejected")
-            # logger.info(f'{old.model_id}\t{new.model_id}\tAIC\t{old.AIC:.3f}\t'
-            #             f'{new.AIC:.3f}\t'
-            #             f'{new.AIC-old.AIC:.3f}\t'
-            #             f'{"Accepted" if result else "Rejected"}')
-            # return result
-        elif self.criterion == 'AICc':
-            result = new.aicc + self.criterion_threshold < old.aicc
-            logger.info('%s\t%s\tAICc\t%.3f\t%.3f\t%.3f\t%s',
-                        old.model_id,
-                        new.model_id,
-                        old.aicc,
-                        new.aicc,
-                        new.aicc - old.aicc,
-                        "Accepted" if result else "Rejected")
-            # logger.info(f'{old.model_id}\t{new.model_id}\tAIC\t{old.AIC:.3f}\t'
-            #             f'{new.AIC:.3f}\t'
-            #             f'{new.AIC-old.AIC:.3f}\t'
-            #             f'{"Accepted" if result else "Rejected"}')
-            # return result
-        elif self.criterion == 'BIC':
-            result = new.bic + self.criterion_threshold < old.bic
-            logger.info('%s\t%s\tBIC\t%.3f\t%.3f\t%.3f\t%s',
-                        old.model_id,
-                        new.model_id,
-                        old.bic,
-                        new.bic,
-                        new.bic - old.bic,
-                        "Accepted" if result else "Rejected")
-            # logger.info(f'{old.model_id}\t{new.model_id}\tBIC\t{old.BIC:.3f}\t'
-            #             f'{new.BIC:.3f}\t'
-            #             f'{new.BIC-old.BIC:.3f}\t'
-            #             f'{"Accepted" if result else "Rejected"}')
-            # return result
+        # TODO switch to `petab_select.model.default_compare`
+        # should then allow for easy extensibility to compare custom criteria
+        if self.criterion in [
+            Criterion.AIC,
+            Criterion.AICC,
+            Criterion.BIC,
+        ]:
+            new_criterion = new_model.get_criterion(self.criterion)
+            old_criterion = old_model.get_criterion(self.criterion)
+            result = new_criterion + self.criterion_threshold < old_criterion
+            logger.info(
+                '%s\t%s\t%s\t%.3f\t%.3f\t%.3f\t%s',
+                old_model.model_id,
+                new_model.model_id,
+                self.criterion,
+                old_criterion,
+                new_criterion,
+                new_criterion - old_criterion,
+                "Accepted" if result else "Rejected",
+            )
+        ## TODO implement criterion as @property of ModelSelectorMethod
+        ## TODO refactor to reduce repeated code
+        #if self.criterion == 'AIC':
+        #    result = new.aic + self.criterion_threshold < old.aic
+        #    logger.info('%s\t%s\tAIC\t%.3f\t%.3f\t%.3f\t%s',
+        #                old.model_id,
+        #                new.model_id,
+        #                old.aic,
+        #                new.aic,
+        #                new.aic - old.aic,
+        #                "Accepted" if result else "Rejected")
+        #    # logger.info(f'{old.model_id}\t{new.model_id}\tAIC\t{old.AIC:.3f}\t'
+        #    #             f'{new.AIC:.3f}\t'
+        #    #             f'{new.AIC-old.AIC:.3f}\t'
+        #    #             f'{"Accepted" if result else "Rejected"}')
+        #    # return result
+        #elif self.criterion == 'AICc':
+        #    result = new.aicc + self.criterion_threshold < old.aicc
+        #    logger.info('%s\t%s\tAICc\t%.3f\t%.3f\t%.3f\t%s',
+        #                old.model_id,
+        #                new.model_id,
+        #                old.aicc,
+        #                new.aicc,
+        #                new.aicc - old.aicc,
+        #                "Accepted" if result else "Rejected")
+        #    # logger.info(f'{old.model_id}\t{new.model_id}\tAIC\t{old.AIC:.3f}\t'
+        #    #             f'{new.AIC:.3f}\t'
+        #    #             f'{new.AIC-old.AIC:.3f}\t'
+        #    #             f'{"Accepted" if result else "Rejected"}')
+        #    # return result
+        #elif self.criterion == 'BIC':
+        #    result = new.bic + self.criterion_threshold < old.bic
+        #    logger.info('%s\t%s\tBIC\t%.3f\t%.3f\t%.3f\t%s',
+        #                old.model_id,
+        #                new.model_id,
+        #                old.bic,
+        #                new.bic,
+        #                new.bic - old.bic,
+        #                "Accepted" if result else "Rejected")
+        #    # logger.info(f'{old.model_id}\t{new.model_id}\tBIC\t{old.BIC:.3f}\t'
+        #    #             f'{new.BIC:.3f}\t'
+        #    #             f'{new.BIC-old.BIC:.3f}\t'
+        #    #             f'{"Accepted" if result else "Rejected"}')
+        #    # return result
         else:
             raise NotImplementedError('Model selection criterion: '
                                       f'{self.criterion}.')
@@ -108,9 +136,10 @@ class ModelSelectorMethod(abc.ABC):
     def new_model_problem(
             self,
             model: Model,
+            criterion: Criterion,
             valid: bool = True,
             autorun: bool = True,
-            model0: Model = None,
+            #model0: Model = None,
             startpoint_latest_mle: bool = True,
     ) -> ModelSelectionProblem:
         """
@@ -120,15 +149,18 @@ class ModelSelectorMethod(abc.ABC):
         _________
         model:
             The model description.
+        criterion_id:
+            The ID of the criterion that should be computed after the model is
+            calibrated.
         valid:
             Whether the model should be considered a valid model. If it is not
             valid, it will not be optimized.
         autorun:
             Whether the model should be optimized upon creation.
-        model0:
-            THe model that the new model `model` was compared to. Used to pass
-            the maximum likelihood estimate parameters from model
-            `compared_model_id` to the current model.
+        #model0:
+        #    THe model that the new model `model` was compared to. Used to pass
+        #    the maximum likelihood estimate parameters from model
+        #    `compared_model_id` to the current model.
         startpoint_latest_mle:
             Whether one start should be initialized at the MLE of the previous
             model `model0`.
@@ -146,17 +178,25 @@ class ModelSelectorMethod(abc.ABC):
         #                        'startpoint, and all other values are taken '
         #                        'from the PEtab parameter table or the model '
         #                        'specification file.')
+        x_guess = None
         if (
-            model0 is not None and
-            model0.model_id in self.selection_history and
-            startpoint_latest_mle
+            startpoint_latest_mle and
+            #model.predecessor_model_id is not None and
+            #model.predecessor_model_id != VIRTUAL_INITIAL_MODEL and
+            model.predecessor_model_id in self.selection_history
         ):
-            x_guess = self.selection_history[model0.model_id]['MLE']
-        else:
-            x_guess = None
+            #x_guess = \
+            #    self.selection_history[model.predecessor_model_id]['MLE']
+            predecessor_model = \
+                self.selection_history[model.predecessor_model_id]['model']
+            x_guess = {
+                **predecessor_model.parameters,
+                **predecessor_model.estimated_parameters,
+            }
 
         return ModelSelectionProblem(
-            model,
+            model=model,
+            criterion=criterion,
             valid=valid,
             autorun=autorun,
             x_guess=x_guess,

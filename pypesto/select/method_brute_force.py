@@ -1,5 +1,7 @@
 from typing import Callable, Dict
 
+import numpy as np
+
 import petab_select
 from petab_select import (
     BruteForceCandidateSpace,
@@ -43,13 +45,13 @@ class BruteForceSelector(ModelSelectorMethod):
             # TODO doc, signature in `problem.py:__init__`
             objective_customizer: Callable = None,
             criterion_threshold: float = 0,
-            limit: int = None,
+            limit: int = np.inf,
             model0: Model = None,
     ):
         self.problem = problem
         self.model_space = problem.model_space
         # FIXME not used for anything
-        self.method = method
+        self.method = method  # should simply be `petab_select.constants.Method.brute_force`?!
         self.criterion = criterion
         self.selection_history = selection_history
         self.select_first_improvement = select_first_improvement
@@ -83,10 +85,17 @@ class BruteForceSelector(ModelSelectorMethod):
 
         # TODO parallelisation (not sensible if self.select_first_improvement)
         # FIXME implement limit in all selectors
-        test_models = self.model_space.neighbors(
-            self.candidate_space,
+        #test_models = self.model_space.neighbors(
+        #    self.candidate_space,
+        #    limit=self.limit,
+        #)
+        calibrated_models = [v['model'] for v in self.selection_history.values()]
+        test_models = petab_select.ui.candidates(
+            problem=self.problem,
+            candidate_space=self.candidate_space,
             limit=self.limit,
-        )
+            excluded_models=calibrated_models,
+        ).models
         # Error if no valid test models are found. May occur if
         # all models have already been tested. `Exception` may be a bad way
         # to handle this... a warning?
@@ -106,16 +115,17 @@ class BruteForceSelector(ModelSelectorMethod):
             # will be an issue, since 0 is usually not in the bounds of
             # estimation?
             test_model_problem = self.new_model_problem(
-                test_model,
-                model0=self.model0,
+                model=test_model,
+                criterion=self.criterion,
+                #model0=self.model0,
                 # model0=model_problem.model,  FIXME
             )
 
-            test_model_problem.compute_all_criteria()
-            test_model.set_criterion(
-                self.criterion,
-                test_model_problem.get_criterion(self.criterion),
-            )
+            #test_model_problem.compute_all_criteria()
+            #test_model.set_criterion(
+            #    self.criterion,
+            #    test_model_problem.get_criterion(self.criterion),
+            #)
 
             # FIXME Change dictionary to `petab_select.model.Model` object
             # instead.
@@ -124,8 +134,9 @@ class BruteForceSelector(ModelSelectorMethod):
                 'model': test_model,
                 'model0': self.model0,
                 # COMPARED_MODEL_ID: compared_model_id,  FIXME
-                'MLE': list(zip(
-                    test_model_problem.petab_problem.parameter_df.index,
+                'MLE': dict(zip(
+                    #test_model_problem.petab_problem.parameter_df.index,
+                    test_model_problem.pypesto_problem.x_names,
                     test_model_problem.optimized_model['x']
                 ))
             }
@@ -154,7 +165,7 @@ class BruteForceSelector(ModelSelectorMethod):
 
         # could move this to start of loop and check against `model.valid`
         # TODO might be better
-        selected_models.append(self.problem.get_best(test_models).model_id)
+        selected_models.append(self.problem.get_best(test_models))
 
         # TODO consider changing `selected_models` return value to be a list
         # of the corresponding `ModelSelectionProblem` objects. Might be too

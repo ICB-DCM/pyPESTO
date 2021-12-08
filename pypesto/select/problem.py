@@ -2,27 +2,34 @@ from typing import Callable, Dict, List, Optional, Set
 
 import petab
 from petab.C import ESTIMATE
+import petab_select
 from petab_select import (
-    calculate_aic,
-    calculate_bic,
-    calculate_aicc,
+    # FIXME remove calculations here, only perform in PEtab Select
+    #calculate_aic,
+    #calculate_bic,
+    #calculate_aicc,
     Model,
+    Criterion,
 
-    AIC,
-    AICC,
-    BIC,
+    #AIC,
+    #AICC,
+    #BIC,
+
+    #NLLH,
 )
 
 from ..objective import ObjectiveBase
 from ..optimize import minimize, OptimizerResult
 from ..result import Result
 
-from .misc import (
-    row2problem,
-)
+#from .misc import (
+#    row2problem,
+#)
+from .misc import model_to_pypesto_problem
+
 
 OBJECTIVE_CUSTOMIZER_TYPE = Callable[[ObjectiveBase], None]
-POSTPROCESSOR_TYPE = Callable[[ModelSelectionProblem], None]
+POSTPROCESSOR_TYPE = Callable[["ModelSelectionProblem"], None]
 
 
 # FIXME rename to ModelProblem? or something else? currently might be confused
@@ -37,6 +44,8 @@ class ModelSelectionProblem(object):
     def __init__(
             self,
             model: Model,
+            criterion: Criterion,
+            #problem: petab_select.Problem,
             valid: bool = True,
             autorun: bool = True,
             x_guess: List[float] = None,
@@ -50,6 +59,10 @@ class ModelSelectionProblem(object):
         ---------
         model:
             The model description.
+
+        criterion_id:
+            The ID of the criterion that should be computed after the model is
+            calibrated.
 
         valid:
             If `False`, the model will not be tested.
@@ -83,6 +96,7 @@ class ModelSelectionProblem(object):
         TODO: constraints
         """
         self.model = model
+        self.criterion = criterion
         self.valid = valid
 
         # TODO may not actually be necessary
@@ -102,28 +116,29 @@ class ModelSelectionProblem(object):
         self.postprocessor = postprocessor
 
         # Criteria
-        self._aic = None
-        self._aicc = None
-        self._bic = None
+        #self._aic = None
+        #self._aicc = None
+        #self._bic = None
 
         if self.valid:
-            self.petab_problem = \
-                petab.Problem.from_yaml(str(model.petab_yaml))
+            #self.petab_problem = \
+            #    petab.Problem.from_yaml(str(model.petab_yaml))
             # TODO warning/error if x_fixed_estimated is not a parameter ID in
             # the PEtab parameter table. A warning is currently produced in
             # `row2problem` above.
             # Could move to a separate method that is only called when a
             # criterion that requires the number of estimated parameters is
             # called (same for self.n_measurements).
-            self.estimated = x_fixed_estimated | set(
-                self.petab_problem.parameter_df.query(f'{ESTIMATE} == 1').index
-            )
-            self.n_estimated = len(self.estimated)
-            self.n_measurements = len(self.petab_problem.measurement_df)
+            #self.estimated = x_fixed_estimated | set(
+            #    self.petab_problem.parameter_df.query(f'{ESTIMATE} == 1').index
+            #)
+            #self.n_estimated = len(self.estimated)
+            #self.n_measurements = len(self.petab_problem.measurement_df)
 
-            self.pypesto_problem = row2problem(self.model,
-                                               self.petab_problem,
-                                               x_guess=x_guess)
+            self.pypesto_problem = model_to_pypesto_problem(
+                self.model,
+                x_guesses=None if x_guess is None else [x_guess],
+            )
 
             if objective_customizer is not None:
                 objective_customizer(self.pypesto_problem.objective)
@@ -155,6 +170,8 @@ class ModelSelectionProblem(object):
         # subsequent models in model selection, for parameters in those models
         # that were estimated in this model.
         self.optimized_model = self.minimize_result.optimize_result.list[0]
+        self.model.set_criterion(Criterion.NLLH, self.optimized_model.fval)
+        self.model.compute_criterion(criterion=self.criterion)
 
         self.model.estimated_parameters = {
             id: value
@@ -168,75 +185,75 @@ class ModelSelectionProblem(object):
         if self.postprocessor is not None:
             self.postprocessor(self)
 
-    def get_criterion(self, id: str):
-        """Get a criterion value for the model.
+    #def get_criterion(self, id: str):
+    #    """Get a criterion value for the model.
 
-        Arguments:
-            id:
-                The ID of the criterion (e.g. `'AIC'` or
-                `petab_select.constants.AIC`).
-        """
-        if id == AIC:
-            return self.aic
-        elif id == AICC:
-            return self.aicc
-        elif id == BIC:
-            return self.bic
-        else:
-            raise NotImplementedError(
-                f'Unknown criterion: {id}'
-            )
+    #    Arguments:
+    #        id:
+    #            The ID of the criterion (e.g. `'AIC'` or
+    #            `petab_select.constants.AIC`).
+    #    """
+    #    if id == AIC:
+    #        return self.aic
+    #    elif id == AICC:
+    #        return self.aicc
+    #    elif id == BIC:
+    #        return self.bic
+    #    else:
+    #        raise NotImplementedError(
+    #            f'Unknown criterion: {id}'
+    #        )
 
-    @property
-    def aic(self):
-        # TODO check naming conflicts, rename to lowercase
-        if self._aic is None:
-            self._aic = calculate_aic(
-                self.n_estimated,
-                self.optimized_model.fval,
-            )
-            self.model.set_criterion(AIC, self._aic)
-        return self._aic
+    #@property
+    #def aic(self):
+    #    # TODO check naming conflicts, rename to lowercase
+    #    if self._aic is None:
+    #        self._aic = calculate_aic(
+    #            n_estimated=self.n_estimated,
+    #            nllh=self.optimized_model.fval,
+    #        )
+    #        self.model.set_criterion(AIC, self._aic)
+    #    return self._aic
 
-    @property
-    def aicc(self):
-        # TODO check naming conflicts, rename to lowercase
-        if self._aicc is None:
-            # TODO this is probably not how number of priors is meant to be
-            #      calculated... also untested
-            n_priors = 0
-            if self.pypesto_problem.x_priors is not None:
-                n_priors = len(self.pypesto_problem.x_priors._objectives)
-            self._aicc = calculate_aicc(
-                self.n_estimated,
-                self.optimized_model.fval,
-                self.n_measurements,
-                n_priors,
-            )
-            self.model.set_criterion(AICC, self._aicc)
-        return self._aicc
+    #@property
+    #def aicc(self):
+    #    # TODO check naming conflicts, rename to lowercase
+    #    if self._aicc is None:
+    #        # TODO this is probably not how number of priors is meant to be
+    #        #      calculated... also untested
+    #        n_priors = 0
+    #        if self.pypesto_problem.x_priors is not None:
+    #            n_priors = len(self.pypesto_problem.x_priors._objectives)
+    #        self._aicc = calculate_aicc(
+    #            n_estimated=self.n_estimated,
+    #            nllh=self.optimized_model.fval,
+    #            n_measurements=self.n_measurements,
+    #            n_priors=n_priors,
+    #        )
+    #        self.model.set_criterion(AICC, self._aicc)
+    #    return self._aicc
 
-    @property
-    def bic(self):
-        if self._bic is None:
-            # TODO this is probably not how number of priors is meant to be
-            #      calculated... also untested
-            n_priors = 0
-            if self.pypesto_problem.x_priors is not None:
-                n_priors = len(self.pypesto_problem.x_priors._objectives)
-            self._bic = calculate_bic(
-                self.n_estimated,
-                self.optimized_model.fval,
-                self.n_measurements,
-                n_priors,
-            )
-            self.model.set_criterion(BIC, self._bic)
-        return self._bic
+    #@property
+    #def bic(self):
+    #    if self._bic is None:
+    #        # TODO this is probably not how number of priors is meant to be
+    #        #      calculated... also untested
+    #        n_priors = 0
+    #        if self.pypesto_problem.x_priors is not None:
+    #            n_priors = len(self.pypesto_problem.x_priors._objectives)
+    #        self._bic = calculate_bic(
+    #            n_estimated=self.n_estimated,
+    #            nllh=self.optimized_model.fval,
+    #            n_measurements=self.n_measurements,
+    #            n_priors=n_priors,
+    #        )
+    #        self.model.set_criterion(BIC, self._bic)
+    #    return self._bic
 
-    def compute_all_criteria(self):
-        self.aic
-        self.aicc
-        self.bic
+    #def compute_all_criteria(self):
+    #    self.aic
+    #    self.aicc
+    #    self.bic
 
 
 def create_fake_pypesto_result_from_fval(

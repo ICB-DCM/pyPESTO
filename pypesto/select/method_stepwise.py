@@ -1,10 +1,11 @@
-from typing import Callable, Dict
+from typing import Callable, Dict, Union
 
 import petab_select
 from petab_select import (
     BackwardCandidateSpace,
     ForwardCandidateSpace,
     Model,
+    VIRTUAL_INITIAL_MODEL
 )
 from petab_select.constants import (
     MODEL_ID,
@@ -12,10 +13,10 @@ from petab_select.constants import (
 
 from .method import ModelSelectorMethod
 
-from .constants import (
-    DUMMY_PATH,
-    INITIAL_VIRTUAL_MODEL,
-)
+#from .constants import (
+#    DUMMY_PATH,
+#    #INITIAL_VIRTUAL_MODEL,
+#)
 
 import logging
 logger = logging.getLogger(__name__)
@@ -34,7 +35,7 @@ class ForwardSelector(ModelSelectorMethod):
             method: str,
             criterion: str,
             selection_history: Dict[str, Dict],
-            initial_model: Model,
+            initial_model: Union[Model, None],
             reverse: bool,
             select_first_improvement: bool,
             startpoint_latest_mle: bool,
@@ -58,61 +59,76 @@ class ForwardSelector(ModelSelectorMethod):
         self.minimize_options = minimize_options
         self.criterion_threshold = criterion_threshold
 
+        # TODO expect that VIRTUAL_INITIAL_MODEL is passed by the user or at
+        #      least set further upstream than here?
+        if self.initial_model is None:
+            self.initial_model = VIRTUAL_INITIAL_MODEL
         if reverse:
-            self.candidate_space = BackwardCandidateSpace(self.initial_model)
+            self.candidate_space = BackwardCandidateSpace(
+                #predecessor_model=self.initial_model,
+            )
         else:
-            self.candidate_space = ForwardCandidateSpace(self.initial_model)
+            self.candidate_space = ForwardCandidateSpace(
+                #predecessor_model=self.initial_model,
+            )
 
         self.objective_customizer = objective_customizer
+        self.limit = limit
 
-    def new_direction_problem(self) -> 'ModelSelectionProblem':  # noqa: F821
-        """
-        Produces a virtual initial model that can be used to identify
-        models in `self.model_generator()` that are relatively more (or less,
-        if `self.reverse` is `True` to indicate backward selection) complex
-        compared to the initial model.
+    #def new_direction_problem(self) -> 'ModelSelectionProblem':  # noqa: F821
+    #    """
+    #    Produces a virtual initial model that can be used to identify
+    #    models in `self.model_generator()` that are relatively more (or less,
+    #    if `self.reverse` is `True` to indicate backward selection) complex
+    #    compared to the initial model.
 
-        Returns
-        -------
-        If `self.reverse` is `True`, returns a model with all parameters
-        estimated (the initial model for backward selection), else returns a
-        model with all parameters zero (the initial model for forward
-        selection). Models are returned as a `ModelSelectionProblem`.
-        The returned model will have `ModelSelectionProblem.valid=False`, to
-        ensure that the model is not considered for selection. TODO valid
-        attribute not used at the moment, as `self.initial_model` is now
-        implemented.
+    #    Returns
+    #    -------
+    #    If `self.reverse` is `True`, returns a model with all parameters
+    #    estimated (the initial model for backward selection), else returns a
+    #    model with all parameters zero (the initial model for forward
+    #    selection). Models are returned as a `ModelSelectionProblem`.
+    #    The returned model will have `ModelSelectionProblem.valid=False`, to
+    #    ensure that the model is not considered for selection. TODO valid
+    #    attribute not used at the moment, as `self.initial_model` is now
+    #    implemented.
 
-        TODO:
-            fail gracefully if no models are selected after the selection
-            algorithm is run with this initial model, so this model is never
-            reported as a possible model.
-        """
+    #    TODO:
+    #        fail gracefully if no models are selected after the selection
+    #        algorithm is run with this initial model, so this model is never
+    #        reported as a possible model.
+    #    """
 
-        if self.reverse:
-            # TODO ESTIMATE_SYMBOL_INTERNAL
-            parameters = {
-                k: float('nan')
-                for k in self.model_space.parameter_ids
-            }
-        else:
-            parameters = {
-                k: float(0)
-                for k in self.model_space.parameter_ids
-            }
+    #    if self.reverse:
+    #        # TODO ESTIMATE_SYMBOL_INTERNAL
+    #        parameters = {
+    #            k: float('nan')
+    #            for k in self.model_space.parameter_ids
+    #        }
+    #    else:
+    #        parameters = {
+    #            k: float(0)
+    #            for k in self.model_space.parameter_ids
+    #        }
 
-        model = Model(
-            model_id=INITIAL_VIRTUAL_MODEL,
-            petab_yaml=DUMMY_PATH,
-            parameters=parameters,
-        )
+    #    model = Model(
+    #        model_id=INITIAL_VIRTUAL_MODEL,
+    #        petab_yaml=DUMMY_PATH,
+    #        parameters=parameters,
+    #    )
 
-        return self.new_model_problem(model=model, valid=False)
+    #    return self.new_model_problem(model=model, valid=False)
 
-    def __call__(self):
+    def __call__(self, predecessor_model: Model = None):
         """
         Runs the forward (or backward, if `self.reverse=True`) selection
         algorithm.
+
+        Arguments
+        ---------
+        predecessor_model:
+            Candidate models will be sought in the neighborhood of this
+            model.
 
         Returns
         -------
@@ -127,35 +143,44 @@ class ForwardSelector(ModelSelectorMethod):
         selected_models = []
         local_selection_history = {}
         logger.info('%sNew Selection%s', '-'*22, '-'*21)
-        # self.setup_direction(self.direction)
-        # TODO rewrite so this is in `__init__()`, and this method saves the
-        # latest "best" model as `self.model`. Would allow for continuation of
-        # from `self.model` by jumping two complexities level above it
-        # (assuming forward selection, and that the previous `__call__()`
-        # terminated because models that were one complexity above did not
-        # produce a better criterion value.
-        if self.initial_model is None:
-            model_problem = self.new_direction_problem()
-        else:
-            model_problem = self.new_model_problem(model=self.initial_model)
-            model_problem.compute_all_criteria()
-            logger.info('Starting with model: %s\n', model_problem.model_id)
-            logger.info('Old ID\tNew ID\tCrit\tOld\tNew\tDiff\tResult')
-            # copied from for loop -- move into separate function?
-            local_selection_history[self.initial_model.model_id] = {
-                MODEL_ID: model_problem.model_id,
-                'model': model_problem.model,
-                'model0': None,
-                'MLE': dict(zip(
-                    model_problem.petab_problem.parameter_df.index,
-                    model_problem.optimized_model['x']
-                ))
-            }
-            self.selection_history.update(local_selection_history)
-            selected_models.append(
-                local_selection_history[model_problem.model_id]
-            )
+        #
+        ## self.setup_direction(self.direction)
+        ## TODO rewrite so this is in `__init__()`, and this method saves the
+        ## latest "best" model as `self.model`. Would allow for continuation of
+        ## from `self.model` by jumping two complexities level above it
+        ## (assuming forward selection, and that the previous `__call__()`
+        ## terminated because models that were one complexity above did not
+        ## produce a better criterion value.
+        #if self.initial_model is None:
+        #    model_problem = self.new_direction_problem()
+        #else:
+        #    model_problem = self.new_model_problem(model=self.initial_model)
+        #    model_problem.compute_all_criteria()
+        #    logger.info('Starting with model: %s\n', model_problem.model_id)
+        #    logger.info('Old ID\tNew ID\tCrit\tOld\tNew\tDiff\tResult')
+        #    # copied from for loop -- move into separate function?
+        #    local_selection_history[self.initial_model.model_id] = {
+        #        MODEL_ID: model_problem.model_id,
+        #        'model': model_problem.model,
+        #        'model0': None,
+        #        'MLE': dict(zip(
+        #            model_problem.petab_problem.parameter_df.index,
+        #            model_problem.optimized_model['x']
+        #        ))
+        #    }
+        #    self.selection_history.update(local_selection_history)
+        #    selected_models.append(
+        #        local_selection_history[model_problem.model_id]
+        #    )
+        #
+        # FIXME proceed now means "do full forward selection"
         proceed = True
+        break_after_first_iteration = True
+
+        if predecessor_model is None:
+            predecessor_model = self.initial_model
+        #print(predecessor_model if isinstance(predecessor_model, str) else predecessor_model.model_subspace_id)
+        #breakpoint()
 
         # TODO parallelisation (not sensible if self.select_first_improvement)
         # TODO rename `proceed` to `improved_criterion`
@@ -167,8 +192,18 @@ class ForwardSelector(ModelSelectorMethod):
             # longer necessary if "first better test model is chosen" is the
             # only algorithm, not "all test models are compared, best test
             # model is chosen".
-            self.candidate_space.reset(model_problem.model)
-            test_models = self.model_space.neighbors(self.candidate_space)
+            #test_models = self.model_space.neighbors(self.candidate_space)
+            calibrated_models = [v['model'] for v in self.selection_history.values()]
+            test_models = petab_select.ui.candidates(
+                problem=self.problem,
+                candidate_space=self.candidate_space,
+                initial_model=predecessor_model,
+                # TODO use PEtab Select to get best model from previous
+                #      iteration, to use as initial model, instead of
+                #      providing?
+                limit=self.limit,
+                excluded_models=calibrated_models,
+            ).models
             # Error if no valid test models are found. May occur if
             # all models have already been tested. `Exception` may be a bad way
             # to handle this... a warning?
@@ -195,20 +230,24 @@ class ForwardSelector(ModelSelectorMethod):
                 # will be an issue, since 0 is usually not in the bounds of
                 # estimation?
                 test_model_problem = self.new_model_problem(
-                    test_model,
-                    model0=model_problem.model,
+                    model=test_model,
+                    criterion=self.criterion,
+                    #model0=model_problem.model,
                 )
 
-                test_model_problem.compute_all_criteria()
+                #test_model_problem.compute_all_criteria()
 
+                # refactor to simply be `Model.model_id : Model`
                 local_selection_history[test_model.model_id] = {
                     MODEL_ID: test_model.model_id,
                     'model': test_model,
-                    'model0': model_problem.model,
-                    'MLE': list(zip(
-                        test_model_problem.petab_problem.parameter_df.index,
+                    #'model0': model_problem.model,
+                    'MLE': dict(zip(
+                        #test_model_problem.petab_problem.parameter_df.index,
+                        test_model_problem.pypesto_problem.x_names,
                         test_model_problem.optimized_model['x']
-                    ))
+                    )),
+                    #'problem': test_model_problem,
                 }
 
                 # TODO necessary to do here? used to exclude models in
@@ -219,9 +258,7 @@ class ForwardSelector(ModelSelectorMethod):
                 # Move to after the loop/above the return statement.
                 self.selection_history.update(local_selection_history)
 
-                # The initial model from self.new_direction_problem() is only
-                # for complexity comparison, and is not a real model.
-                if self.initial_model is None:
+                if self.initial_model == VIRTUAL_INITIAL_MODEL:
                     # TODO bug: if `model` is changed here to `test_model`
                     # then the remaining models will be compared to
                     # `test_model` and not `model`. This will still result in
@@ -250,19 +287,30 @@ class ForwardSelector(ModelSelectorMethod):
                 # TODO: this might make visualisation difficult, need a way to
                 # predictably select the next model from a set of models that
                 # are equivalent by criteria. Alphabetically?
-                if self.compare(model_problem, test_model_problem):
+                #if self.compare(model_problem, test_model_problem):
+                if self.compare(predecessor_model, test_model):
                     # TODO bug, see bug described in above if statement
-                    model_problem = test_model_problem
+                    #model_problem = test_model_problem
                     proceed = True
                     if self.select_first_improvement:
                         break
 
             # could move this to start of loop and check against `model.valid`
             # TODO might be better
-            if proceed:
-                selected_models.append(
-                    local_selection_history[model_problem.model_id]
-                )
+            #if proceed:
+            #    local_models = [item['model'] for item in local_selection_history.values()]
+            #    best_local_model = self.problem.get_best(local_models)
+            #    breakpoint()
+            #    selected_models.append(best_local_model)
+            #    #selected_models.append(
+            #    #    local_selection_history[model_problem.model_id]
+            #    #)
+            local_models = [item['model'] for item in local_selection_history.values()]
+            best_local_model = self.problem.get_best(local_models)
+            selected_models.append(best_local_model)
+
+            if break_after_first_iteration:
+                break
 
         # TODO consider changing `selected_models` return value to be a list
         # of the corresponding `ModelSelectionProblem` objects. Might be too

@@ -1,5 +1,7 @@
 import abc
-from typing import Dict, Iterable
+from typing import Dict, Iterable, Union
+
+import numpy as np
 
 import petab_select
 from petab_select import (
@@ -77,7 +79,7 @@ class ModelSelector(abc.ABC):
         # TODO doc, signature in `problem.py:__init__`
         objective_customizer: Dict = None,
         criterion_threshold: float = 0,
-        limit: int = None,
+        limit: Union[float, int] = np.inf,
     ):
         """
         Runs a model selection algorithm. The result is the selected model for
@@ -147,10 +149,19 @@ class ModelSelector(abc.ABC):
                 objective_customizer=objective_customizer,
                 limit=limit,
             )
+            #result = selector(predecessor_model=initial_model)
             result = selector()
             selected_models = result[0]
             local_selection_history = result[1]
             self.selection_history = result[2]
+            latest_models = [
+                v['model']
+                for v in local_selection_history.values()
+            ]
+            #predecessor_model = self.problem.get_best(
+            #    models=latest_models,
+            #    criterion=criterion,
+            #)
         elif method == BIDIRECTIONAL:
             # TODO untested
             reverse = False
@@ -210,7 +221,7 @@ class ModelSelector(abc.ABC):
             (
                 selected_models,
                 local_selection_history,
-                self.selection_history,
+                _#self.selection_history,
             ) = selector()
         elif method == 'all':
             raise NotImplementedError('Testing of all models is not yet '
