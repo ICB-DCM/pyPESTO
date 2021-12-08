@@ -69,9 +69,12 @@ def history_decorator(minimize):
         problem: Problem,
         x0: np.ndarray,
         id: str,
-        history_options: HistoryOptions,
-        optimize_options: OptimizeOptions,
+        history_options: HistoryOptions = None,
+        optimize_options: OptimizeOptions = None,
     ):
+        if history_options is None:
+            history_options = HistoryOptions()
+
         objective = problem.objective
 
         # initialize the objective
@@ -139,8 +142,8 @@ def time_decorator(minimize):
         problem: Problem,
         x0: np.ndarray,
         id: str,
-        history_options: HistoryOptions,
-        optimize_options: OptimizeOptions,
+        history_options: HistoryOptions = None,
+        optimize_options: OptimizeOptions = None,
     ):
         start_time = time.time()
         result = minimize(
@@ -170,8 +173,8 @@ def fix_decorator(minimize):
         problem: Problem,
         x0: np.ndarray,
         id: str,
-        history_options: HistoryOptions,
-        optimize_options: OptimizeOptions,
+        history_options: HistoryOptions = None,
+        optimize_options: OptimizeOptions = None,
     ):
         # perform the actual optimization
         result = minimize(
