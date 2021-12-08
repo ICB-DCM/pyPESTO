@@ -20,9 +20,9 @@ from ..result import Result
 from .misc import (
     row2problem,
 )
+from .postprocessors import TYPE_POSTPROCESSOR
 
 OBJECTIVE_CUSTOMIZER_TYPE = Callable[[ObjectiveBase], None]
-POSTPROCESSOR_TYPE = Callable[[ModelSelectionProblem], None]
 
 
 # FIXME rename to ModelProblem? or something else? currently might be confused
@@ -43,7 +43,7 @@ class ModelSelectionProblem(object):
             x_fixed_estimated: Set[str] = None,
             minimize_options: Dict = None,
             objective_customizer: Optional[OBJECTIVE_CUSTOMIZER_TYPE] = None,
-            postprocessor: Optional[POSTPROCESSOR_TYPE] = None,
+            postprocessor: Optional[TYPE_POSTPROCESSOR] = None,
     ):
         """
         Arguments

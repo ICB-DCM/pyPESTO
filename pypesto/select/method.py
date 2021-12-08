@@ -36,6 +36,8 @@ class ModelSelectorMethod(abc.ABC):
     # TODO docstring
     minimize_options: Dict
 
+    # TODO general __init__ that sets e.g. model_postprocessor
+
     # the calling child class should have self.criterion defined
     def compare(
         self,
@@ -162,6 +164,7 @@ class ModelSelectorMethod(abc.ABC):
             x_guess=x_guess,
             minimize_options=self.minimize_options,
             objective_customizer=self.objective_customizer,
+            postprocessor=self.model_postprocessor,
         )
 
     # possibly erroneous now that `ModelSelector.model_generator()` can exclude

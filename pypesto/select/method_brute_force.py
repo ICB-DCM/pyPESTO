@@ -1,4 +1,4 @@
-from typing import Callable, Dict
+from typing import Callable, Dict, Optional
 
 import petab_select
 from petab_select import (
@@ -10,6 +10,7 @@ from petab_select.constants import (
 )
 
 from .method import ModelSelectorMethod
+from .postprocessors import TYPE_POSTPROCESSOR
 
 import logging
 logger = logging.getLogger(__name__)
@@ -45,6 +46,7 @@ class BruteForceSelector(ModelSelectorMethod):
             criterion_threshold: float = 0,
             limit: int = None,
             model0: Model = None,
+            model_postprocessor: Optional[TYPE_POSTPROCESSOR] = None,
     ):
         self.problem = problem
         self.model_space = problem.model_space
@@ -61,6 +63,7 @@ class BruteForceSelector(ModelSelectorMethod):
         self.candidate_space = BruteForceCandidateSpace()
         self.model0 = model0
         self.objective_customizer = objective_customizer
+        self.model_postprocessor = model_postprocessor
 
     def __call__(self):
         """
