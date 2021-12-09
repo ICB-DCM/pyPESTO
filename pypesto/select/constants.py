@@ -1,6 +1,6 @@
 from typing import Callable
 
-from petab_select.constants import TYPE_PATH
+from petab_select.constants import TYPE_PATH  # noqa: F401
 
 
-TYPE_POSTPROCESSOR = Callable[['ModelSelectionProblem'], None]
+TYPE_POSTPROCESSOR = Callable[["ModelSelectionProblem"], None]  # noqa: F821

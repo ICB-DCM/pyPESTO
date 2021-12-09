@@ -3,15 +3,9 @@ import logging
 from typing import Dict
 
 import petab
-from petab_select.constants import (
-    VIRTUAL_INITIAL_MODEL,
-)
 from petab_select import (
     Model,
     Criterion,
-    #AIC,
-    #AICC,
-    #BIC,
 )
 
 from .problem import ModelSelectionProblem
@@ -67,6 +61,7 @@ class ModelSelectorMethod(abc.ABC):
         else `False`.
         """
         # TODO switch to `petab_select.model.default_compare`
+        # TODO implement criterion as @property of ModelSelectorMethod
         # should then allow for easy extensibility to compare custom criteria
         if self.criterion in [
             Criterion.AIC,
@@ -86,50 +81,6 @@ class ModelSelectorMethod(abc.ABC):
                 new_criterion - old_criterion,
                 "Accepted" if result else "Rejected",
             )
-        ## TODO implement criterion as @property of ModelSelectorMethod
-        ## TODO refactor to reduce repeated code
-        #if self.criterion == 'AIC':
-        #    result = new.aic + self.criterion_threshold < old.aic
-        #    logger.info('%s\t%s\tAIC\t%.3f\t%.3f\t%.3f\t%s',
-        #                old.model_id,
-        #                new.model_id,
-        #                old.aic,
-        #                new.aic,
-        #                new.aic - old.aic,
-        #                "Accepted" if result else "Rejected")
-        #    # logger.info(f'{old.model_id}\t{new.model_id}\tAIC\t{old.AIC:.3f}\t'
-        #    #             f'{new.AIC:.3f}\t'
-        #    #             f'{new.AIC-old.AIC:.3f}\t'
-        #    #             f'{"Accepted" if result else "Rejected"}')
-        #    # return result
-        #elif self.criterion == 'AICc':
-        #    result = new.aicc + self.criterion_threshold < old.aicc
-        #    logger.info('%s\t%s\tAICc\t%.3f\t%.3f\t%.3f\t%s',
-        #                old.model_id,
-        #                new.model_id,
-        #                old.aicc,
-        #                new.aicc,
-        #                new.aicc - old.aicc,
-        #                "Accepted" if result else "Rejected")
-        #    # logger.info(f'{old.model_id}\t{new.model_id}\tAIC\t{old.AIC:.3f}\t'
-        #    #             f'{new.AIC:.3f}\t'
-        #    #             f'{new.AIC-old.AIC:.3f}\t'
-        #    #             f'{"Accepted" if result else "Rejected"}')
-        #    # return result
-        #elif self.criterion == 'BIC':
-        #    result = new.bic + self.criterion_threshold < old.bic
-        #    logger.info('%s\t%s\tBIC\t%.3f\t%.3f\t%.3f\t%s',
-        #                old.model_id,
-        #                new.model_id,
-        #                old.bic,
-        #                new.bic,
-        #                new.bic - old.bic,
-        #                "Accepted" if result else "Rejected")
-        #    # logger.info(f'{old.model_id}\t{new.model_id}\tBIC\t{old.BIC:.3f}\t'
-        #    #             f'{new.BIC:.3f}\t'
-        #    #             f'{new.BIC-old.BIC:.3f}\t'
-        #    #             f'{"Accepted" if result else "Rejected"}')
-        #    # return result
         else:
             raise NotImplementedError('Model selection criterion: '
                                       f'{self.criterion}.')
@@ -141,7 +92,6 @@ class ModelSelectorMethod(abc.ABC):
             criterion: Criterion,
             valid: bool = True,
             autorun: bool = True,
-            #model0: Model = None,
             startpoint_latest_mle: bool = True,
     ) -> ModelSelectionProblem:
         """
@@ -183,12 +133,8 @@ class ModelSelectorMethod(abc.ABC):
         x_guess = None
         if (
             startpoint_latest_mle and
-            #model.predecessor_model_id is not None and
-            #model.predecessor_model_id != VIRTUAL_INITIAL_MODEL and
             model.predecessor_model_id in self.selection_history
         ):
-            #x_guess = \
-            #    self.selection_history[model.predecessor_model_id]['MLE']
             predecessor_model = \
                 self.selection_history[model.predecessor_model_id]['model']
             x_guess = {

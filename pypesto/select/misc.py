@@ -1,8 +1,5 @@
-from colorama import Fore
-import numpy as np
-from typing import Dict, Iterable, Sequence, Set, Union
+from typing import Dict, Iterable
 
-import petab
 from petab.C import NOMINAL_VALUE, ESTIMATE
 from petab_select import (
     Model,

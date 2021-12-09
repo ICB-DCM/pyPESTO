@@ -1,4 +1,4 @@
-from typing import Callable, List, Union
+from typing import List
 
 from pathlib import Path
 
@@ -10,10 +10,11 @@ from .constants import (
     TYPE_PATH,
     TYPE_POSTPROCESSOR,
 )
+from .problem import ModelSelectionProblem
 
 
 def multi_postprocessor(
-    problem: 'ModelSelectionProblem',
+    problem: ModelSelectionProblem,
     postprocessors: List[TYPE_POSTPROCESSOR] = None,
 ):
     """A postprocessor that combines multiple other postprocessors.
@@ -34,7 +35,7 @@ def multi_postprocessor(
 
 
 def waterfall_plot_postprocessor(
-    problem: 'ModelSelectionProblem',
+    problem: ModelSelectionProblem,
     output_path: TYPE_PATH = '.',
 ):
     """A postprocessor to produce a waterfall plot from a model calibration.
@@ -47,7 +48,7 @@ def waterfall_plot_postprocessor(
 
 
 def save_postprocessor(
-    problem: 'ModelSelectionProblem',
+    problem: ModelSelectionProblem,
     output_path: TYPE_PATH = '.',
 ):
     """Save the parameter estimation results for optimized models.

@@ -179,19 +179,10 @@ class ModelSelector(abc.ABC):
                 limit=limit,
                 model_postprocessor=self.model_postprocessor,
             )
-            #result = selector(predecessor_model=initial_model)
             result = selector()
             selected_models = result[0]
             local_selection_history = result[1]
             self.selection_history = result[2]
-            latest_models = [
-                v['model']
-                for v in local_selection_history.values()
-            ]
-            #predecessor_model = self.problem.get_best(
-            #    models=latest_models,
-            #    criterion=criterion,
-            #)
         elif method == BIDIRECTIONAL:
             # TODO untested
             reverse = False
@@ -253,7 +244,7 @@ class ModelSelector(abc.ABC):
             (
                 selected_models,
                 local_selection_history,
-                _#self.selection_history,
+                _,
             ) = selector()
         elif method == 'all':
             raise NotImplementedError('Testing of all models is not yet '

@@ -15,6 +15,7 @@ from .constants import TYPE_POSTPROCESSOR
 from .method import ModelSelectorMethod
 
 import logging
+
 logger = logging.getLogger(__name__)
 
 
@@ -34,26 +35,28 @@ class BruteForceSelector(ModelSelectorMethod):
         will be used as one start point of the calibration of the other
         models tested in this call.
     """
+
     def __init__(
-            self,
-            problem: petab_select.Problem,
-            method: str,
-            criterion: str,
-            selection_history: Dict[str, Dict],
-            select_first_improvement: bool,
-            startpoint_latest_mle: bool,
-            minimize_options: Dict = None,
-            # TODO doc, signature in `problem.py:__init__`
-            objective_customizer: Callable = None,
-            criterion_threshold: float = 0,
-            limit: int = np.inf,
-            model0: Model = None,
-            model_postprocessor: Optional[TYPE_POSTPROCESSOR] = None,
+        self,
+        problem: petab_select.Problem,
+        method: str,
+        criterion: str,
+        selection_history: Dict[str, Dict],
+        select_first_improvement: bool,
+        startpoint_latest_mle: bool,
+        minimize_options: Dict = None,
+        # TODO doc, signature in `problem.py:__init__`
+        objective_customizer: Callable = None,
+        criterion_threshold: float = 0,
+        limit: int = np.inf,
+        model0: Model = None,
+        model_postprocessor: Optional[TYPE_POSTPROCESSOR] = None,
     ):
         self.problem = problem
         self.model_space = problem.model_space
         # FIXME not used for anything
-        self.method = method  # should simply be `petab_select.constants.Method.brute_force`?!
+        # should simply be `petab_select.constants.Method.brute_force`?!
+        self.method = method
         self.criterion = criterion
         self.selection_history = selection_history
         self.select_first_improvement = select_first_improvement
@@ -84,15 +87,11 @@ class BruteForceSelector(ModelSelectorMethod):
         #       are calculated every time
         selected_models = []
         local_selection_history = {}
-        logger.info('%sNew Selection%s', '-'*22, '-'*21)
+        logger.info("%sNew Selection%s", "-" * 22, "-" * 21)
 
         # TODO parallelisation (not sensible if self.select_first_improvement)
         # FIXME implement limit in all selectors
-        #test_models = self.model_space.neighbors(
-        #    self.candidate_space,
-        #    limit=self.limit,
-        #)
-        calibrated_models = [v['model'] for v in self.selection_history.values()]
+        calibrated_models = [v["model"] for v in self.selection_history.values()]
         test_models = petab_select.ui.candidates(
             problem=self.problem,
             candidate_space=self.candidate_space,
@@ -106,7 +105,7 @@ class BruteForceSelector(ModelSelectorMethod):
         # successfully selected.
         # if not test_models and self.initial_model is None:  FIXME
         if not test_models and not selected_models:
-            raise StopIteration('No valid models found.')
+            raise StopIteration("No valid models found.")
         # TODO consider `self.minimize_models(List[ModelSelectionProblem])`
         # and `self.set_minimize_method(List[ModelSelectionProblem])`
         # methods, to allow customisation of the minimize method. The
@@ -120,28 +119,21 @@ class BruteForceSelector(ModelSelectorMethod):
             test_model_problem = self.new_model_problem(
                 model=test_model,
                 criterion=self.criterion,
-                #model0=self.model0,
-                # model0=model_problem.model,  FIXME
             )
-
-            #test_model_problem.compute_all_criteria()
-            #test_model.set_criterion(
-            #    self.criterion,
-            #    test_model_problem.get_criterion(self.criterion),
-            #)
 
             # FIXME Change dictionary to `petab_select.model.Model` object
             # instead.
             local_selection_history[test_model.model_id] = {
                 MODEL_ID: test_model.model_id,
-                'model': test_model,
-                'model0': self.model0,
+                "model": test_model,
+                "model0": self.model0,
                 # COMPARED_MODEL_ID: compared_model_id,  FIXME
-                'MLE': dict(zip(
-                    #test_model_problem.petab_problem.parameter_df.index,
-                    test_model_problem.pypesto_problem.x_names,
-                    test_model_problem.optimized_model['x']
-                ))
+                "MLE": dict(
+                    zip(
+                        test_model_problem.pypesto_problem.x_names,
+                        test_model_problem.optimized_model["x"],
+                    )
+                ),
             }
 
             # TODO necessary to do here? used to exclude models in
@@ -160,9 +152,9 @@ class BruteForceSelector(ModelSelectorMethod):
             # are equivalent by criteria. Alphabetically?
             # FIXME switch to `petab_select.Problem.compare`
             if (
-                self.select_first_improvement and
-                self.model0 is not None and
-                self.problem.compare(self.model0, test_model)
+                self.select_first_improvement
+                and self.model0 is not None
+                and self.problem.compare(self.model0, test_model)
             ):
                 break
 
