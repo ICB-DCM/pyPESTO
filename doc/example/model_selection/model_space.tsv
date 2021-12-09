@@ -1,4 +1,4 @@
-model_id	petab_yaml	k1	k2	k3
+model_subspace_id	petab_yaml	k1	k2	k3
 M1_0	example_modelSelection.yaml	0	0	0
 M1_1	example_modelSelection.yaml	0.2	0.1	estimate
 M1_2	example_modelSelection.yaml	0.2	estimate	0

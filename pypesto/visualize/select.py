@@ -3,12 +3,13 @@ import matplotlib.pyplot as plt
 import networkx as nx
 from typing import Dict, List, Tuple
 
-from petab_select import (
-    AIC,
-)
-from pypesto.select.constants import (
-    INITIAL_VIRTUAL_MODEL,
+from petab_select.constants import (
+    Criterion,
     MODEL_ID,
+    VIRTUAL_INITIAL_MODEL,
+)
+from petab_select import (
+    Model,
 )
 
 
@@ -17,11 +18,13 @@ RELATIVE_LABEL_FONTSIZE = -2
 
 # FIXME supply the problem to automatically detect the correct criterion?
 def plot_selected_models(
-        selected_models: List[Dict],
-        criterion: str = AIC,
-        relative: str = True,
-        fz: int = 14,
-        size: Tuple[float, float] = (5, 4)) -> matplotlib.axes.Axes:
+    selected_models: List[Dict],
+    criterion: str = Criterion.AIC,
+    relative: str = True,
+    fz: int = 14,
+    size: Tuple[float, float] = (5, 4),
+    label_attribute: str = 'model_id',
+) -> matplotlib.axes.Axes:
     """
     Plot AIC or BIC for different models selected during model selection
     routine.
@@ -40,6 +43,9 @@ def plot_selected_models(
         fontsize
     size:
         Figure size in inches.
+    label_attribute:
+        The attribute of a `petab_select.model.Model` instance, to use as the
+        label for the model's representation in the graph.
 
     Returns
     -------
@@ -47,22 +53,30 @@ def plot_selected_models(
         The plot axes.
     """
     if relative:
-        zero = selected_models[-1]['model'].get_criterion(criterion)
+        zero = selected_models[-1].get_criterion(criterion)
     else:
         zero = 0
+
+    def label_maker(
+        model: Model,
+        zero=zero,
+        label_attribute=label_attribute,
+    ) -> str:
+        model_label = getattr(model, label_attribute)
+        return model_label
 
     # FIGURE
     _, ax = plt.subplots(figsize=size)
     linewidth = 3
 
-    model_ids = [m[MODEL_ID] for m in selected_models]
+    model_labels = [label_maker(model) for model in selected_models]
     criterion_values = [
-        m['model'].get_criterion(criterion) - zero
-        for m in selected_models
+        model.get_criterion(criterion) - zero
+        for model in selected_models
     ]
 
     ax.plot(
-        model_ids,
+        model_labels,
         criterion_values,
         linewidth=linewidth,
         color='lightgrey',
@@ -70,11 +84,11 @@ def plot_selected_models(
     )
 
     ax.get_xticks()
-    ax.set_xticks(list(range(len(model_ids))))
+    ax.set_xticks(list(range(len(model_labels))))
     ax.set_ylabel(criterion + ('(relative)' if relative else '(absolute)'),
                   fontsize=fz)
     # could change to compared_model_ids, if all models are plotted
-    ax.set_xticklabels(model_ids, fontsize=fz+RELATIVE_LABEL_FONTSIZE)
+    ax.set_xticklabels(model_labels, fontsize=fz+RELATIVE_LABEL_FONTSIZE)
     for tick in ax.yaxis.get_major_ticks():
         tick.label.set_fontsize(fz+RELATIVE_LABEL_FONTSIZE)
     ytl = ax.get_yticks()
@@ -85,11 +99,14 @@ def plot_selected_models(
     return ax
 
 
-def plot_history_digraph(selection_history: Dict,
-                         criterion: str = AIC,
-                         optimal_distance: float = 1,
-                         relative: bool = True,
-                         options: Dict = None):
+def plot_history_digraph(
+    selection_history: Dict,
+    criterion: Criterion = Criterion.AIC,
+    optimal_distance: float = 1,
+    relative: bool = True,
+    options: Dict = None,
+    label_attribute: str = 'model_id',
+):
     """
     Plots all visited models in the model space, as a directed graph.
     TODO replace magic numbers with options/constants
@@ -98,12 +115,13 @@ def plot_history_digraph(selection_history: Dict,
     ---------
     selection_history:
         The output from a `ModelSelector.select()` call.
-
     options:
         The values to be used for the optional keyword arguments in the
         `networkx.draw_networkx()` method.
+    label_attribute:
+        The attribute of a `petab_select.model.Model` instance, to use as the
+        label for the model's representation in the graph.
     """
-
     zero = 0
     if relative:
         criterions = [
@@ -112,23 +130,40 @@ def plot_history_digraph(selection_history: Dict,
         ]
         zero = min(criterions)
 
+    def label_maker(
+        model: Model,
+        zero=zero,
+        label_attribute=label_attribute,
+    ) -> str:
+        model_label = getattr(model, label_attribute)
+        criterion_label = \
+            f'{model.get_criterion(criterion) - zero:.2f}'
+        return '\n'.join([model_label, criterion_label])
+
     G = nx.DiGraph()
     edges = []
     for _node, node_data in selection_history.items():
         model = node_data['model']
-        model0 = node_data['model0']
-        if model0 is not None:
-            from_ = model0.model_id
+        predecessor_model_id = model.predecessor_model_id
+        #model0 = node_data['model0']
+        if predecessor_model_id is not None:
+            from_ = predecessor_model_id
             # may only not be the case for
             # COMPARED_MODEL_ID == INITIAL_VIRTUAL_MODEL
-            if model0.model_id in selection_history:
-                from_ += '\n' + f'{model0.get_criterion(criterion) - zero:.2f}'
+            if predecessor_model_id in selection_history:
+                predecessor_model = \
+                    selection_history[predecessor_model_id]['model']
+                from_ = label_maker(predecessor_model)
+                #from_ = getattr(predecessor_model, label_attribute)
+                #from_ += '\n' + f'{predecessor_model.get_criterion(criterion) - zero:.2f}'
         else:
-            from_ = INITIAL_VIRTUAL_MODEL
-        to = (
-            model.model_id + '\n' +
-            f'{model.get_criterion(criterion) - zero:.2f}'
-        )
+            raise ValueError('unknown error: not sure why this is reachable anymore')
+            from_ = VIRTUAL_INITIAL_MODEL
+        to = label_maker(model)
+        #to = (
+        #    getattr(model, label_attribute) + '\n' +
+        #    f'{model.get_criterion(criterion) - zero:.2f}'
+        #)
         edges.append((from_, to))
 
     # edges = [(node_data['compared_modelId'], node)

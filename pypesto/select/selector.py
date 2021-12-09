@@ -1,6 +1,7 @@
 import abc
-from typing import Dict, Iterable, Optional, Union
+from typing import Dict, Iterable, List, Optional, Union
 
+from more_itertools import one
 import numpy as np
 
 import petab_select
@@ -13,9 +14,9 @@ from petab_select import (
     Model,
 )
 
+from .constants import TYPE_POSTPROCESSOR
 from .method_brute_force import BruteForceSelector
 from .method_stepwise import ForwardSelector
-from .postprocessors import TYPE_POSTPROCESSOR
 
 
 class ModelSelector(abc.ABC):
@@ -71,6 +72,30 @@ class ModelSelector(abc.ABC):
             local_selection_history.append(local_selection_history_)
 
         return selected_models, local_selection_history, self.selection_history
+
+    def select_to_completion(
+        self,
+        *args,
+        **kwargs,
+    ) -> List[Model]:
+        history_of_best_model = []
+        while True:
+            if history_of_best_model:
+                kwargs['initial_model'] = history_of_best_model[-1]
+            try:
+                (
+                    selected_models,
+                    _,
+                    self.selection_history,
+                ) = self.select(
+                    *args,
+                    **kwargs,
+                )
+                history_of_best_model.append(one(selected_models))
+            except StopIteration:
+                break
+
+        return history_of_best_model
 
     def select(
         self,

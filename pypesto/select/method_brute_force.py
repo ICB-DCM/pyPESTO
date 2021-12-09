@@ -11,8 +11,8 @@ from petab_select.constants import (
     MODEL_ID,
 )
 
+from .constants import TYPE_POSTPROCESSOR
 from .method import ModelSelectorMethod
-from .postprocessors import TYPE_POSTPROCESSOR
 
 import logging
 logger = logging.getLogger(__name__)

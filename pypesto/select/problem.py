@@ -22,8 +22,8 @@ from ..objective import ObjectiveBase
 from ..optimize import minimize, OptimizerResult
 from ..result import Result
 
+from .constants import TYPE_POSTPROCESSOR
 from .misc import model_to_pypesto_problem
-from .postprocessors import TYPE_POSTPROCESSOR
 
 
 OBJECTIVE_CUSTOMIZER_TYPE = Callable[[ObjectiveBase], None]

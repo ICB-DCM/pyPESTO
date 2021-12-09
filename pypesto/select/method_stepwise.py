@@ -11,8 +11,8 @@ from petab_select.constants import (
     MODEL_ID,
 )
 
+from .constants import TYPE_POSTPROCESSOR
 from .method import ModelSelectorMethod
-from .postprocessors import TYPE_POSTPROCESSOR
 
 import logging
 logger = logging.getLogger(__name__)
@@ -256,7 +256,7 @@ class ForwardSelector(ModelSelectorMethod):
                 # Move to after the loop/above the return statement.
                 self.selection_history.update(local_selection_history)
 
-                if self.initial_model == VIRTUAL_INITIAL_MODEL:
+                if predecessor_model == VIRTUAL_INITIAL_MODEL:
                     # TODO bug: if `model` is changed here to `test_model`
                     # then the remaining models will be compared to
                     # `test_model` and not `model`. This will still result in
@@ -304,7 +304,7 @@ class ForwardSelector(ModelSelectorMethod):
             #    #    local_selection_history[model_problem.model_id]
             #    #)
             local_models = [item['model'] for item in local_selection_history.values()]
-            best_local_model = self.problem.get_best(local_models)
+            best_local_model = self.problem.get_best(local_models, self.criterion)
             selected_models.append(best_local_model)
 
             if break_after_first_iteration:
