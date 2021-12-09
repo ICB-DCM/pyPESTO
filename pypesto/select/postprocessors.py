@@ -17,7 +17,7 @@ def multi_postprocessor(
     problem: ModelSelectionProblem,
     postprocessors: List[TYPE_POSTPROCESSOR] = None,
 ):
-    """A postprocessor that combines multiple other postprocessors.
+    """Combine multiple postprocessors into a single postprocessor.
 
     See `save_postprocessor` for usage hints.
 
@@ -38,7 +38,7 @@ def waterfall_plot_postprocessor(
     problem: ModelSelectionProblem,
     output_path: TYPE_PATH = ".",
 ):
-    """A postprocessor to produce a waterfall plot from a model calibration.
+    """Produce a waterfall plot from a model calibration.
 
     See `save_postprocessor` for usage hints and argument documentation.
     """

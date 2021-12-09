@@ -19,7 +19,8 @@ from .method_stepwise import ForwardSelector
 
 
 class ModelSelector(abc.ABC):
-    """
+    """Handles use of a model selection algorithm.
+
     Handles model selection. Usage involves initialisation with a model
     specifications file, and then calling the `select()` method to perform
     model selection with a specified algorithm and criterion.
@@ -54,9 +55,7 @@ class ModelSelector(abc.ABC):
         minimize_options: Dict = None,
         criterion_threshold: float = 0,
     ):
-        """
-        TODO docstring
-        """
+        """Run an algorithm multiple times, with different initial models."""
         selected_models = []
         local_selection_history = []
         for initial_model in initial_models:
@@ -79,6 +78,7 @@ class ModelSelector(abc.ABC):
         *args,
         **kwargs,
     ) -> List[Model]:
+        """Run an algorithm until it terminates."""
         history_of_best_model = []
         while True:
             if history_of_best_model:
@@ -107,9 +107,10 @@ class ModelSelector(abc.ABC):
         criterion_threshold: float = 0,
         limit: Union[float, int] = np.inf,
     ):
-        """
-        Runs a model selection algorithm. The result is the selected model for
-        the current run, independent of previous `select()` calls.
+        """Run a single iteration of a model selection algorithm.
+
+        The result is the selected model for the current run, independent of
+        previous selected models.
 
         Arguments
         ---------
@@ -243,8 +244,6 @@ class ModelSelector(abc.ABC):
                 local_selection_history,
                 _,
             ) = selector()
-        elif method == "all":
-            raise NotImplementedError("Testing of all models is not yet implemented.")
         else:
             raise NotImplementedError(f"Model selection algorithm: {method}.")
 

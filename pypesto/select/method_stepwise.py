@@ -20,7 +20,8 @@ logger = logging.getLogger(__name__)
 
 
 class ForwardSelector(ModelSelectorMethod):
-    """
+    """A forward and backward stepwise selection algorithm.
+
     here it is assumed that that there is only one petab_problem
     TODO rewrite `__call__()` here? unsure of intended purpose of separate
     call method that can be called independently/multiple times after
@@ -72,9 +73,7 @@ class ForwardSelector(ModelSelectorMethod):
         self.model_postprocessor = model_postprocessor
 
     def __call__(self, predecessor_model: Model = None):
-        """
-        Runs the forward (or backward, if `self.reverse=True`) selection
-        algorithm.
+        """Run the simple (forward/backward) stepwise selection algorithm.
 
         Arguments
         ---------
@@ -112,7 +111,8 @@ class ForwardSelector(ModelSelectorMethod):
             # longer necessary if "first better test model is chosen" is the
             # only algorithm, not "all test models are compared, best test
             # model is chosen".
-            calibrated_models = [v["model"] for v in self.selection_history.values()]
+            calibrated_models = \
+                [v["model"] for v in self.selection_history.values()]
             test_models = petab_select.ui.candidates(
                 problem=self.problem,
                 candidate_space=self.candidate_space,
@@ -208,8 +208,10 @@ class ForwardSelector(ModelSelectorMethod):
                     if self.select_first_improvement:
                         break
 
-            local_models = [item["model"] for item in local_selection_history.values()]
-            best_local_model = self.problem.get_best(local_models, self.criterion)
+            local_models = \
+                [item["model"] for item in local_selection_history.values()]
+            best_local_model = \
+                self.problem.get_best(local_models, self.criterion)
             selected_models.append(best_local_model)
 
             if break_after_first_iteration:

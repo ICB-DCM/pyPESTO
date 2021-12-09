@@ -20,8 +20,9 @@ logger = logging.getLogger(__name__)
 
 
 class BruteForceSelector(ModelSelectorMethod):
-    """
-    here it is assumed that that there is only one petab_problem
+    """Test all models in the model space.
+
+    Here it is assumed that that there is only one petab_problem
     TODO rewrite `__call__()` here? unsure of intended purpose of separate
     call method that can be called independently/multiple times after
     initialisation...
@@ -71,9 +72,7 @@ class BruteForceSelector(ModelSelectorMethod):
         self.model_postprocessor = model_postprocessor
 
     def __call__(self):
-        """
-        Runs the brute force selection algorithm.
-
+        """Run the brute force selection algorithm.
 
         Returns
         -------
@@ -91,7 +90,8 @@ class BruteForceSelector(ModelSelectorMethod):
 
         # TODO parallelisation (not sensible if self.select_first_improvement)
         # FIXME implement limit in all selectors
-        calibrated_models = [v["model"] for v in self.selection_history.values()]
+        calibrated_models = \
+            [v["model"] for v in self.selection_history.values()]
         test_models = petab_select.ui.candidates(
             problem=self.problem,
             candidate_space=self.candidate_space,

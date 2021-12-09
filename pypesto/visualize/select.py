@@ -5,14 +5,15 @@ from typing import Dict, List, Tuple
 
 from petab_select.constants import (
     Criterion,
-    MODEL_ID,
     VIRTUAL_INITIAL_MODEL,
 )
 from petab_select import (
     Model,
+    MODEL_ID,
 )
 
 
+# TODO move methods to petab_select
 RELATIVE_LABEL_FONTSIZE = -2
 
 
@@ -23,11 +24,9 @@ def plot_selected_models(
     relative: str = True,
     fz: int = 14,
     size: Tuple[float, float] = (5, 4),
-    label_attribute: str = 'model_id',
+    label_attribute: str = MODEL_ID,
 ) -> matplotlib.axes.Axes:
-    """
-    Plot AIC or BIC for different models selected during model selection
-    routine.
+    """Plot criterion for calibrated models.
 
     Parameters
     ----------
@@ -105,10 +104,10 @@ def plot_history_digraph(
     optimal_distance: float = 1,
     relative: bool = True,
     options: Dict = None,
-    label_attribute: str = 'model_id',
+    label_attribute: str = MODEL_ID,
 ):
-    """
-    Plots all visited models in the model space, as a directed graph.
+    """Plot all visited models in the model space, as a directed graph.
+
     TODO replace magic numbers with options/constants
 
     Arguments
@@ -145,7 +144,6 @@ def plot_history_digraph(
     for _node, node_data in selection_history.items():
         model = node_data['model']
         predecessor_model_id = model.predecessor_model_id
-        #model0 = node_data['model0']
         if predecessor_model_id is not None:
             from_ = predecessor_model_id
             # may only not be the case for
@@ -154,16 +152,12 @@ def plot_history_digraph(
                 predecessor_model = \
                     selection_history[predecessor_model_id]['model']
                 from_ = label_maker(predecessor_model)
-                #from_ = getattr(predecessor_model, label_attribute)
-                #from_ += '\n' + f'{predecessor_model.get_criterion(criterion) - zero:.2f}'
         else:
-            raise ValueError('unknown error: not sure why this is reachable anymore')
+            raise ValueError(
+                'unknown error: not sure why this is reachable anymore'
+            )
             from_ = VIRTUAL_INITIAL_MODEL
         to = label_maker(model)
-        #to = (
-        #    getattr(model, label_attribute) + '\n' +
-        #    f'{model.get_criterion(criterion) - zero:.2f}'
-        #)
         edges.append((from_, to))
 
     # edges = [(node_data['compared_modelId'], node)

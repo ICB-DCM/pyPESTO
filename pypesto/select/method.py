@@ -15,7 +15,8 @@ logger = logging.getLogger(__name__)
 
 
 class ModelSelectorMethod(abc.ABC):
-    """
+    """Base class for model selection methods.
+
     Contains methods that are common to more than one model selection
     algorithm. This is the parent class of model selection algorithms, and
     should not be instantiated.
@@ -46,8 +47,7 @@ class ModelSelectorMethod(abc.ABC):
         old_model: Model,
         new_model: Model,
     ) -> bool:
-        """
-        Compares models by criterion.
+        """Compare models by criterion.
 
         Arguments
         ---------
@@ -83,7 +83,9 @@ class ModelSelectorMethod(abc.ABC):
                 "Accepted" if result else "Rejected",
             )
         else:
-            raise NotImplementedError(f"Model selection criterion: {self.criterion}.")
+            raise NotImplementedError(
+                f"Model selection criterion: {self.criterion}."
+            )
         return result
 
     def new_model_problem(
@@ -94,8 +96,7 @@ class ModelSelectorMethod(abc.ABC):
         autorun: bool = True,
         startpoint_latest_mle: bool = True,
     ) -> ModelSelectionProblem:
-        """
-        Creates a ModelSelectionProblem.
+        """Create a ModelSelectionProblem.
 
         Arguments
         _________
@@ -135,9 +136,8 @@ class ModelSelectorMethod(abc.ABC):
             startpoint_latest_mle
             and model.predecessor_model_id in self.selection_history
         ):
-            predecessor_model = self.selection_history[model.predecessor_model_id][
-                "model"
-            ]
+            predecessor_model = \
+                self.selection_history[model.predecessor_model_id]["model"]
             x_guess = {
                 **predecessor_model.parameters,
                 **predecessor_model.estimated_parameters,

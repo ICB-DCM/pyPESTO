@@ -20,7 +20,8 @@ POSTPROCESSOR_TYPE = Callable[["ModelSelectionProblem"], None]
 # FIXME rename to ModelProblem? or something else? currently might be confused
 #       with `petab_select.Problem`
 class ModelSelectionProblem(object):
-    """
+    """Handles all required calibration tasks on a model.
+
     Handles the creation, estimation, and evaluation of a model. Here, a model
     is a PEtab problem that is patched with a dictionary of custom parameter
     values (which may specify that the parameter should be estimated).
@@ -39,7 +40,8 @@ class ModelSelectionProblem(object):
         objective_customizer: Optional[OBJECTIVE_CUSTOMIZER_TYPE] = None,
         postprocessor: Optional[TYPE_POSTPROCESSOR] = None,
     ):
-        """
+        """Initialize.
+
         Arguments
         ---------
         model:
@@ -124,11 +126,14 @@ class ModelSelectionProblem(object):
                     )
                 # TODO rename `minimize_options` to `minimize_kwargs`.
                 elif minimize_options:
-                    self.set_result(minimize(self.pypesto_problem, **minimize_options))
+                    self.set_result(
+                        minimize(self.pypesto_problem, **minimize_options)
+                    )
                 else:
                     self.set_result(minimize(self.pypesto_problem))
 
     def set_result(self, result: Result):
+        """Postprocess a result."""
         self.minimize_result = result
         # TODO extract best parameter estimates, to use as start point for
         # subsequent models in model selection, for parameters in those models
@@ -140,7 +145,10 @@ class ModelSelectionProblem(object):
         self.model.estimated_parameters = {
             id: value
             for index, (id, value) in enumerate(
-                dict(zip(self.pypesto_problem.x_names, self.optimized_model.x)).items()
+                dict(zip(
+                    self.pypesto_problem.x_names,
+                    self.optimized_model.x,
+                )).items()
             )
             if index in self.pypesto_problem.x_free_indices
         }
@@ -152,6 +160,7 @@ class ModelSelectionProblem(object):
 def create_fake_pypesto_result_from_fval(
     fval: float,
 ) -> Result:
+    """Create a fake result for problems with no estimated parameters."""
     result = Result()
 
     optimizer_result = OptimizerResult(
