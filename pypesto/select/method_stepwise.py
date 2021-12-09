@@ -5,7 +5,7 @@ from petab_select import (
     BackwardCandidateSpace,
     ForwardCandidateSpace,
     Model,
-    VIRTUAL_INITIAL_MODEL
+    VIRTUAL_INITIAL_MODEL,
 )
 from petab_select.constants import (
     MODEL_ID,
@@ -15,6 +15,7 @@ from .constants import TYPE_POSTPROCESSOR
 from .method import ModelSelectorMethod
 
 import logging
+
 logger = logging.getLogger(__name__)
 
 
@@ -25,21 +26,22 @@ class ForwardSelector(ModelSelectorMethod):
     call method that can be called independently/multiple times after
     initialisation...
     """
+
     def __init__(
-            self,
-            problem: petab_select.Problem,
-            method: str,
-            criterion: str,
-            selection_history: Dict[str, Dict],
-            initial_model: Union[Model, None],
-            reverse: bool,
-            select_first_improvement: bool,
-            startpoint_latest_mle: bool,
-            minimize_options: Dict = None,
-            criterion_threshold: float = 0,
-            objective_customizer: Callable = None,
-            limit: int = None,
-            model_postprocessor: Optional[TYPE_POSTPROCESSOR] = None,
+        self,
+        problem: petab_select.Problem,
+        method: str,
+        criterion: str,
+        selection_history: Dict[str, Dict],
+        initial_model: Union[Model, None],
+        reverse: bool,
+        select_first_improvement: bool,
+        startpoint_latest_mle: bool,
+        minimize_options: Dict = None,
+        criterion_threshold: float = 0,
+        objective_customizer: Callable = None,
+        limit: int = None,
+        model_postprocessor: Optional[TYPE_POSTPROCESSOR] = None,
     ):
         # TODO rename to `default_petab_problem`? There may be multiple petab
         # problems for a single model selection run, defined by the future
@@ -92,7 +94,7 @@ class ForwardSelector(ModelSelectorMethod):
         #       are calculated every time
         selected_models = []
         local_selection_history = {}
-        logger.info('%sNew Selection%s', '-'*22, '-'*21)
+        logger.info("%sNew Selection%s", "-" * 22, "-" * 21)
         # FIXME proceed now means "do full forward selection"
         proceed = True
         break_after_first_iteration = True
@@ -110,8 +112,7 @@ class ForwardSelector(ModelSelectorMethod):
             # longer necessary if "first better test model is chosen" is the
             # only algorithm, not "all test models are compared, best test
             # model is chosen".
-            calibrated_models = \
-                [v['model'] for v in self.selection_history.values()]
+            calibrated_models = [v["model"] for v in self.selection_history.values()]
             test_models = petab_select.ui.candidates(
                 problem=self.problem,
                 candidate_space=self.candidate_space,
@@ -134,7 +135,7 @@ class ForwardSelector(ModelSelectorMethod):
             # change this check to be whether any models were successfully
             # selected.
             if not test_models and not selected_models:
-                raise StopIteration('No valid models found.')
+                raise StopIteration("No valid models found.")
             # TODO consider `self.minimize_models(List[ModelSelectionProblem])`
             # and `self.set_minimize_method(List[ModelSelectionProblem])`
             # methods, to allow customisation of the minimize method. The
@@ -155,11 +156,13 @@ class ForwardSelector(ModelSelectorMethod):
                 # TODO: refactor to simply be `Model.model_id : Model`
                 local_selection_history[test_model.model_id] = {
                     MODEL_ID: test_model.model_id,
-                    'model': test_model,
-                    'MLE': dict(zip(
-                        test_model_problem.pypesto_problem.x_names,
-                        test_model_problem.optimized_model['x']
-                    )),
+                    "model": test_model,
+                    "MLE": dict(
+                        zip(
+                            test_model_problem.pypesto_problem.x_names,
+                            test_model_problem.optimized_model["x"],
+                        )
+                    ),
                 }
 
                 # TODO necessary to do here? used to exclude models in
@@ -181,10 +184,10 @@ class ForwardSelector(ModelSelectorMethod):
                     # better than this test_model are rejected.
                     model_problem = test_model_problem
                     logger.info(
-                        'Starting with model: %s\n',
+                        "Starting with model: %s\n",
                         model_problem.model_id,
                     )
-                    logger.info('Old ID\tNew ID\tCrit\tOld\tNew\tDiff\tResult')
+                    logger.info("Old ID\tNew ID\tCrit\tOld\tNew\tDiff\tResult")
                     # TODO reconsider whether `False` is appropriate, after
                     # refactor that changed self.initial_model to be None if
                     # no initial model (as a dict) is specified. Could change
@@ -205,10 +208,8 @@ class ForwardSelector(ModelSelectorMethod):
                     if self.select_first_improvement:
                         break
 
-            local_models = \
-                [item['model'] for item in local_selection_history.values()]
-            best_local_model = \
-                self.problem.get_best(local_models, self.criterion)
+            local_models = [item["model"] for item in local_selection_history.values()]
+            best_local_model = self.problem.get_best(local_models, self.criterion)
             selected_models.append(best_local_model)
 
             if break_after_first_iteration:

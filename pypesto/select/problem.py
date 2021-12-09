@@ -26,17 +26,18 @@ class ModelSelectionProblem(object):
     values (which may specify that the parameter should be estimated).
     Evaluation refers to criterion values such as AIC.
     """
+
     def __init__(
-            self,
-            model: Model,
-            criterion: Criterion,
-            valid: bool = True,
-            autorun: bool = True,
-            x_guess: List[float] = None,
-            x_fixed_estimated: Set[str] = None,
-            minimize_options: Dict = None,
-            objective_customizer: Optional[OBJECTIVE_CUSTOMIZER_TYPE] = None,
-            postprocessor: Optional[TYPE_POSTPROCESSOR] = None,
+        self,
+        model: Model,
+        criterion: Criterion,
+        valid: bool = True,
+        autorun: bool = True,
+        x_guess: List[float] = None,
+        x_fixed_estimated: Set[str] = None,
+        minimize_options: Dict = None,
+        objective_customizer: Optional[OBJECTIVE_CUSTOMIZER_TYPE] = None,
+        postprocessor: Optional[TYPE_POSTPROCESSOR] = None,
     ):
         """
         Arguments
@@ -123,8 +124,7 @@ class ModelSelectionProblem(object):
                     )
                 # TODO rename `minimize_options` to `minimize_kwargs`.
                 elif minimize_options:
-                    self.set_result(minimize(self.pypesto_problem,
-                                             **minimize_options))
+                    self.set_result(minimize(self.pypesto_problem, **minimize_options))
                 else:
                     self.set_result(minimize(self.pypesto_problem))
 
@@ -139,10 +139,9 @@ class ModelSelectionProblem(object):
 
         self.model.estimated_parameters = {
             id: value
-            for index, (id, value) in enumerate(dict(zip(
-                self.pypesto_problem.x_names,
-                self.optimized_model.x
-            )).items())
+            for index, (id, value) in enumerate(
+                dict(zip(self.pypesto_problem.x_names, self.optimized_model.x)).items()
+            )
             if index in self.pypesto_problem.x_free_indices
         }
 
@@ -156,7 +155,7 @@ def create_fake_pypesto_result_from_fval(
     result = Result()
 
     optimizer_result = OptimizerResult(
-        id='fake_result_for_problem_with_no_estimated_parameters',
+        id="fake_result_for_problem_with_no_estimated_parameters",
         x=[],
         fval=fval,
         grad=None,
@@ -173,7 +172,7 @@ def create_fake_pypesto_result_from_fval(
         history=None,
         exitflag=0,
         time=0.1,
-        message='Fake result for problem with no estimated parameters.',
+        message="Fake result for problem with no estimated parameters.",
     )
 
     result.optimize_result.append(optimizer_result)

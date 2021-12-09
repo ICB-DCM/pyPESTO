@@ -10,7 +10,6 @@ from petab_select import (
     BIDIRECTIONAL,
     BRUTE_FORCE,
     FORWARD,
-
     Model,
 )
 
@@ -25,10 +24,11 @@ class ModelSelector(abc.ABC):
     specifications file, and then calling the `select()` method to perform
     model selection with a specified algorithm and criterion.
     """
+
     def __init__(
-            self,
-            problem: petab_select.Problem,
-            model_postprocessor: Optional[TYPE_POSTPROCESSOR] = None,
+        self,
+        problem: petab_select.Problem,
+        model_postprocessor: Optional[TYPE_POSTPROCESSOR] = None,
     ):
         self.problem = problem
         self.model_space = self.problem.model_space
@@ -45,14 +45,14 @@ class ModelSelector(abc.ABC):
     # TODO method that automatically generates initial models, for a specific
     # number of starts. TODO parallelise
     def multistart_select(
-            self,
-            method: str,
-            criterion: str,
-            initial_models: Iterable[Model] = None,
-            select_first_improvement: bool = False,
-            startpoint_latest_mle: bool = False,
-            minimize_options: Dict = None,
-            criterion_threshold: float = 0
+        self,
+        method: str,
+        criterion: str,
+        initial_models: Iterable[Model] = None,
+        select_first_improvement: bool = False,
+        startpoint_latest_mle: bool = False,
+        minimize_options: Dict = None,
+        criterion_threshold: float = 0,
     ):
         """
         TODO docstring
@@ -67,7 +67,8 @@ class ModelSelector(abc.ABC):
                 select_first_improvement=select_first_improvement,
                 startpoint_latest_mle=startpoint_latest_mle,
                 minimize_options=minimize_options,
-                criterion_threshold=criterion_threshold)
+                criterion_threshold=criterion_threshold,
+            )
             selected_models.append(selected_models_)
             local_selection_history.append(local_selection_history_)
 
@@ -81,13 +82,9 @@ class ModelSelector(abc.ABC):
         history_of_best_model = []
         while True:
             if history_of_best_model:
-                kwargs['initial_model'] = history_of_best_model[-1]
+                kwargs["initial_model"] = history_of_best_model[-1]
             try:
-                (
-                    selected_models,
-                    _,
-                    self.selection_history,
-                ) = self.select(
+                (selected_models, _, self.selection_history,) = self.select(
                     *args,
                     **kwargs,
                 )
@@ -189,7 +186,7 @@ class ModelSelector(abc.ABC):
             selected_models = []
             local_selection_history = {}
             while True:
-                raise NotImplementedError('FIXME: edit to match new format')
+                raise NotImplementedError("FIXME: edit to match new format")
                 selector = ForwardSelector(
                     self.model_space,
                     method,
@@ -221,7 +218,7 @@ class ModelSelector(abc.ABC):
                 # repeated until the entire model space is exhausted?
                 # TODO include best parameter estimates in initial_model
                 # data, for use as startpoint in future tested models
-                initial_model = result[0][-1]['row']
+                initial_model = result[0][-1]["row"]
                 # reverse = False if reverse else True
                 reverse = not reverse
         elif method == BRUTE_FORCE:
@@ -246,11 +243,10 @@ class ModelSelector(abc.ABC):
                 local_selection_history,
                 _,
             ) = selector()
-        elif method == 'all':
-            raise NotImplementedError('Testing of all models is not yet '
-                                      'implemented.')
+        elif method == "all":
+            raise NotImplementedError("Testing of all models is not yet implemented.")
         else:
-            raise NotImplementedError(f'Model selection algorithm: {method}.')
+            raise NotImplementedError(f"Model selection algorithm: {method}.")
 
         # TODO: Reconsider return value. `result` could be stored in attribute,
         # then no values need to be returned, and users can request values

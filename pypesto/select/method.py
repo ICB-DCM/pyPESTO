@@ -26,6 +26,7 @@ class ModelSelectorMethod(abc.ABC):
 
     TODO remove `self.petab_problem` once the YAML column rewrite is completed.
     """
+
     # Described in the docstring for the `ModelSelector.select` method.
     criterion: str
     # Described in the docstring for the `ModelSelector.select` method.
@@ -72,7 +73,7 @@ class ModelSelectorMethod(abc.ABC):
             old_criterion = old_model.get_criterion(self.criterion)
             result = new_criterion + self.criterion_threshold < old_criterion
             logger.info(
-                '%s\t%s\t%s\t%.3f\t%.3f\t%.3f\t%s',
+                "%s\t%s\t%s\t%.3f\t%.3f\t%.3f\t%s",
                 old_model.model_id,
                 new_model.model_id,
                 self.criterion,
@@ -82,17 +83,16 @@ class ModelSelectorMethod(abc.ABC):
                 "Accepted" if result else "Rejected",
             )
         else:
-            raise NotImplementedError('Model selection criterion: '
-                                      f'{self.criterion}.')
+            raise NotImplementedError(f"Model selection criterion: {self.criterion}.")
         return result
 
     def new_model_problem(
-            self,
-            model: Model,
-            criterion: Criterion,
-            valid: bool = True,
-            autorun: bool = True,
-            startpoint_latest_mle: bool = True,
+        self,
+        model: Model,
+        criterion: Criterion,
+        valid: bool = True,
+        autorun: bool = True,
+        startpoint_latest_mle: bool = True,
     ) -> ModelSelectionProblem:
         """
         Creates a ModelSelectionProblem.
@@ -132,11 +132,12 @@ class ModelSelectorMethod(abc.ABC):
         #                        'specification file.')
         x_guess = None
         if (
-            startpoint_latest_mle and
-            model.predecessor_model_id in self.selection_history
+            startpoint_latest_mle
+            and model.predecessor_model_id in self.selection_history
         ):
-            predecessor_model = \
-                self.selection_history[model.predecessor_model_id]['model']
+            predecessor_model = self.selection_history[model.predecessor_model_id][
+                "model"
+            ]
             x_guess = {
                 **predecessor_model.parameters,
                 **predecessor_model.estimated_parameters,

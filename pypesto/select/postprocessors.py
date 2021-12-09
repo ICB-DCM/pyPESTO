@@ -36,20 +36,20 @@ def multi_postprocessor(
 
 def waterfall_plot_postprocessor(
     problem: ModelSelectionProblem,
-    output_path: TYPE_PATH = '.',
+    output_path: TYPE_PATH = ".",
 ):
     """A postprocessor to produce a waterfall plot from a model calibration.
 
     See `save_postprocessor` for usage hints and argument documentation.
     """
     visualize.waterfall(problem.minimize_result)
-    plot_output_path = Path(output_path) / (problem.model.model_id + '.png')
+    plot_output_path = Path(output_path) / (problem.model.model_id + ".png")
     plt.savefig(str(plot_output_path))
 
 
 def save_postprocessor(
     problem: ModelSelectionProblem,
-    output_path: TYPE_PATH = '.',
+    output_path: TYPE_PATH = ".",
 ):
     """Save the parameter estimation results for optimized models.
 
@@ -74,5 +74,5 @@ def save_postprocessor(
     """
     store.write_result(
         problem.minimize_result,
-        Path(output_path) / (problem.model.model_id + '.hdf5'),
+        Path(output_path) / (problem.model.model_id + ".hdf5"),
     )

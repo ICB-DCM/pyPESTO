@@ -15,6 +15,7 @@ from ..petab import PetabImporter
 from ..problem import Problem
 
 import logging
+
 logger = logging.getLogger(__name__)
 
 
@@ -75,11 +76,9 @@ def model_to_pypesto_problem(
                     )
                 # Default to the PEtab parameter table nominal value
                 else:
-                    corrected_value = (
-                        petab_problem
-                        .parameter_df
-                        .loc[parameter_id, NOMINAL_VALUE]
-                    )
+                    corrected_value = petab_problem.parameter_df.loc[
+                        parameter_id, NOMINAL_VALUE
+                    ]
                 corrected_x_guess.append(corrected_value)
             corrected_x_guesses.append(corrected_x_guess)
 
