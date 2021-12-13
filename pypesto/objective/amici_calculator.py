@@ -71,7 +71,11 @@ class AmiciCalculator:
             requested).
         """
         # set order in solver
-        sensi_order = max(sensi_orders)
+        if sensi_orders:
+            sensi_order = max(sensi_orders)
+        else:
+            sensi_order = 0
+
         if sensi_order == 2 and fim_for_hess:
             # we use the FIM
             amici_solver.setSensitivityOrder(sensi_order-1)

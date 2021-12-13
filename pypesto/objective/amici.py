@@ -299,6 +299,8 @@ class AmiciObjective(ObjectiveBase):
         mode: str,
     ) -> bool:
         """See `ObjectiveBase` documentation."""
+        if not sensi_orders:
+            return True
         sensi_order = max(sensi_orders)
 
         # dynamically obtain maximum allowed sensitivity order

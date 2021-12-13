@@ -39,7 +39,7 @@ def test_evaluate():
     Test if values are computed correctly.
     """
     for struct in [rosen_for_sensi(2, False, [0, 1]),
-                   poly_for_sensi(2, True, 0.5),
+                   poly_for_sensi(2, True, [0.5]),
                    convreact_for_funmode(2, [-0.3, -0.7])]:
         _test_evaluate_funmode(struct)
         _test_evaluate_prior(struct)
