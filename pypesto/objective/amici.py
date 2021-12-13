@@ -336,8 +336,6 @@ class AmiciObjective(ObjectiveBase):
         result:
             A dict containing the results.
         """
-        sensi_order = max(sensi_orders)
-
         x_dct = self.par_arr_to_dct(x)
 
         # update steady state
@@ -351,7 +349,7 @@ class AmiciObjective(ObjectiveBase):
         if parameter_mapping is None:
             parameter_mapping = self.parameter_mapping
         ret = self.calculator(
-            x_dct=x_dct, sensi_order=sensi_order, mode=mode,
+            x_dct=x_dct, sensi_orders=sensi_orders, mode=mode,
             amici_model=self.amici_model, amici_solver=self.amici_solver,
             edatas=edatas, n_threads=self.n_threads,
             x_ids=self.x_ids, parameter_mapping=parameter_mapping,
