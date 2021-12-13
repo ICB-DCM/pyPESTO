@@ -170,24 +170,23 @@ def calculate_function_values(rdatas,
                                             sensi_orders, mode, dim)
 
                 # Hessian
-                if 2 in sensi_orders:
-                    if sensi_method == amici.SensitivityMethod_forward \
-                            and fim_for_hess:
-                        # add FIM for Hessian
-                        add_sim_hess_to_opt_hess(
-                            x_ids,
-                            par_sim_ids,
-                            condition_map_sim_var,
-                            rdata['FIM'],
-                            s2nllh,
-                            coefficient=+1.0
-                        )
-                        if not np.isfinite(s2nllh).all():
-                            return get_error_output(amici_model, edatas,
-                                                    rdatas, sensi_orders,
-                                                    mode, dim)
-                    else:
-                        raise ValueError("AMICI cannot compute Hessians yet.")
+            if 2 in sensi_orders:
+                if sensi_method != amici.SensitivityMethod_forward \
+                        or not fim_for_hess:
+                    raise ValueError("AMICI cannot compute Hessians yet.")
+                    # add FIM for Hessian
+                add_sim_hess_to_opt_hess(
+                    x_ids,
+                    par_sim_ids,
+                    condition_map_sim_var,
+                    rdata['FIM'],
+                    s2nllh,
+                    coefficient=+1.0
+                )
+                if not np.isfinite(s2nllh).all():
+                    return get_error_output(amici_model, edatas,
+                                            rdatas, sensi_orders,
+                                            mode, dim)
 
         elif mode == MODE_RES:
             if 0 in sensi_orders:
