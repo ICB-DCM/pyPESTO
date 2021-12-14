@@ -174,6 +174,10 @@ def test_pipeline(sampler, problem):
     result = sample.sample(
         problem, sampler=sampler, n_samples=100, result=result,
         filename=None)
+    # remove warnings in test/sample/test_sample.
+    # Warning here: pypesto/visualize/sampling.py:1104
+    # geweke test
+    sample.geweke_test(result=result)
 
     # some plot
     visualize.sampling_1d_marginals(result)
