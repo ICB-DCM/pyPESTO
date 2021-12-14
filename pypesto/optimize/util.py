@@ -82,7 +82,7 @@ def fill_hdf5_file(
 
 
 def autosave(filename: str, result: Result,
-             type: str):
+             store_type: str, overwrite: bool = False):
     """
     Save the result of optimization, profiling or sampling automatically.
 
@@ -97,12 +97,17 @@ def autosave(filename: str, result: Result,
     type:
         Either `optimization`, `sampling` or `profiling`. Depending on the
         method the function is called in.
+    overwrite:
+        Whether to overwrite the currently existing results.
     """
     if filename is None:
         return None
     if filename == "Auto":
         time = datetime.datetime.now().strftime("%Y_%d_%m_%H_%M_%S")
-        filename = time+f"_{type}_result.h5"
+        filename = time+f"_{store_type}_result.h5"
     # set the type to True and pass it on to write_result
-    to_save = {type: True}
-    write_result(result=result, overwrite=True, filename=filename, **to_save)
+    to_save = {store_type: True}
+    write_result(result=result,
+                 overwrite=overwrite,
+                 filename=filename,
+                 **to_save)
