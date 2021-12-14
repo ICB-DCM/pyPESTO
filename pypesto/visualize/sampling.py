@@ -997,7 +997,7 @@ def sampling_1d_marginals(
         par_indices: Sequence[int] = None,
         stepsize: int = 1,
         plot_type: str = 'both',
-        bw: str = 'scott',
+        bw_method: str = 'scott',
         suptitle: str = None,
         size: Tuple[float, float] = None):
     """
@@ -1017,7 +1017,7 @@ def sampling_1d_marginals(
     plot_type: {'hist'|'kde'|'both'}
         Specify whether to plot a histogram ('hist'), a kernel density estimate
         ('kde'), or both ('both').
-    bw: {'scott', 'silverman' | scalar | pair of scalars}
+    bw_method: {'scott', 'silverman' | scalar | pair of scalars}
         Kernel bandwidth method.
     suptitle:
         Figure super title.
@@ -1046,7 +1046,12 @@ def sampling_1d_marginals(
     # fig, ax = plt.subplots(nr_params, figsize=size)[1]
     for idx, par_id in enumerate(param_names):
         if plot_type == 'kde':
-            sns.kdeplot(params_fval[par_id], bw=bw, ax=par_ax[par_id])
+            # bw argument is deprecated... FutureWarning: The `bw` parameter is
+            # deprecated in favor of `bw_method` and `bw_adjust`.
+            # TODO: add bw_adjust as option?
+            sns.kdeplot(params_fval[par_id],
+                        bw_method=bw_method,
+                        ax=par_ax[par_id])
         elif plot_type == 'hist':
             # fixes usage of sns distplot which throws a future warning
             sns.histplot(
