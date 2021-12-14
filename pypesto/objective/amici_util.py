@@ -286,7 +286,7 @@ def get_error_output(
         amici_model: AmiciModel,
         edatas: Sequence['amici.ExpData'],
         rdatas: Sequence['amici.ReturnData'],
-        sensi_orders: Tuple[int],
+        sensi_orders: Tuple[int, ...],
         mode: str,
         dim: int):
     """Get default output upon error.
