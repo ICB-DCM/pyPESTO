@@ -120,7 +120,7 @@ class AmiciCalculator:
 
 
 def calculate_function_values(rdatas,
-                              sensi_orders: Tuple[int],
+                              sensi_orders: Tuple[int, ...],
                               mode: str,
                               amici_model: AmiciModel,
                               amici_solver: AmiciSolver,

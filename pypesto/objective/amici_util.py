@@ -320,7 +320,7 @@ def get_error_output(
     return filter_return_dict(ret)
 
 
-def init_return_values(sensi_orders: Tuple[int],
+def init_return_values(sensi_orders: Tuple[int, ...],
                        mode: str,
                        dim: int,
                        error: bool = False):
