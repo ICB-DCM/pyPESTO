@@ -225,7 +225,12 @@ def profiles_lowlevel(
         if counter % columns == 0:
             ax[counter].set_ylabel('Log-posterior ratio')
         else:
-            ax[counter].set_yticklabels([''])
+            # fix pyPESTO/pyPESTO/pypesto/visualize/profiles.py:228:
+            # UserWarning: FixedFormatter should only be used
+            # together with FixedLocator. Fix from matplotlib #18848.
+            ax[counter].set_yticklabels(
+                ['' for _ in ax[counter].get_yticklabels()]
+            )
 
         # increase counter and cleanup legend
         counter += 1
