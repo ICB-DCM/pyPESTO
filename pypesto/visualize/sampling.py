@@ -1047,10 +1047,17 @@ def sampling_1d_marginals(
         if plot_type == 'kde':
             sns.kdeplot(params_fval[par_id], bw=bw, ax=par_ax[par_id])
         elif plot_type == 'hist':
-            sns.distplot(
-                params_fval[par_id], kde=False, rug=True, ax=par_ax[par_id])
+            # fixes usage of sns distplot which throws a future warning
+            sns.histplot(
+                data=params_fval[par_id],
+                ax=par_ax[par_id])
+            sns.rugplot(data=params_fval[par_id], ax=par_ax[par_id])
         elif plot_type == 'both':
-            sns.distplot(params_fval[par_id], rug=True, ax=par_ax[par_id])
+            sns.histplot(
+                data=params_fval[par_id],
+                kde=True,
+                ax=par_ax[par_id])
+            sns.rugplot(data=params_fval[par_id], ax=par_ax[par_id])
 
         par_ax[par_id].set_xlabel(param_names[idx])
         par_ax[par_id].set_ylabel('Density')
