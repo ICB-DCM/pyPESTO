@@ -101,13 +101,13 @@ def poly_for_sensi(max_sensi_order, integrated=False, x=0.):
     """1-dim polynomial for testing in 1d."""
 
     def fun(x):
-        return (x - 2)**2 + 1
+        return (np.asarray(x) - 2)**2 + 1
 
     def grad(x):
-        return 2 * (x - 2)
+        return 2 * (np.asarray(x) - 2)
 
     def hess(_):
-        return 2
+        return np.ones((1, 1)) * 2
 
     return obj_for_sensi(fun, grad, hess,
                          max_sensi_order, integrated, x)
