@@ -25,10 +25,10 @@ def test_petab_pysb_optimization():
     test_case = '0001'
     test_case_dir = os.path.join(petabtests.PYSB_DIR, test_case)
     petab_yaml = os.path.join(test_case_dir, f'_{test_case}.yaml')
-    soution_yaml = os.path.join(test_case_dir, f'_{test_case}_solution.yaml')
+    solution_yaml = os.path.join(test_case_dir, f'_{test_case}_solution.yaml')
 
     # expected results
-    with open(soution_yaml) as f:
+    with open(solution_yaml) as f:
         solution = yaml.full_load(f)
 
     petab_problem = PysbPetabProblem.from_yaml(petab_yaml)
