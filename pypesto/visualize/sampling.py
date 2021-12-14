@@ -977,6 +977,7 @@ def sampling_scatter(
 
     sns.set(style="ticks")
 
+    # TODO: Think this throws the axis errors in seaborn.
     ax = sns.pairplot(
         params_fval.drop(['logPosterior', 'iteration'], axis=1),
         diag_kind=diag_kind)
