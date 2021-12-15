@@ -103,7 +103,8 @@ def test_unbounded_minimize(optimizer):
 
     options = optimize.OptimizeOptions(allow_failed_starts=False)
 
-    if isinstance(optimizer[1], str) and re.match(r'^(?i)(ls_)', optimizer[1]):
+    # check whether the optimizer is least squares
+    if isinstance(optimizer[1], str) and re.match(r'(?i)^(ls_)', optimizer[1]):
         return
 
     if optimizer in [('dlib', ''), ('pyswarm', ''), ('cmaes', ''),
