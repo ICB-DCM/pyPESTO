@@ -15,7 +15,7 @@ import subprocess  # noqa: S404
 
 import pypesto
 import pypesto.optimize as optimize
-from pypesto.store import OptimizationResultHDF5Reader
+from pypesto.store import read_result
 
 from ..util import rosen_for_sensi, CRProblem
 from numpy.testing import assert_almost_equal
@@ -258,8 +258,9 @@ def test_mpipoolengine():
              f'{path}/../../doc/example/example_MPIPool.py'])
 
         # read results
-        opt_result_reader = OptimizationResultHDF5Reader('temp_result.h5')
-        result1 = opt_result_reader.read()
+        result1 = read_result('temp_result.h5',
+                              problem=True,
+                              optimize=True)
         # set optimizer
         optimizer = optimize.FidesOptimizer(verbose=0)
         # initialize problem with x_guesses and objective
