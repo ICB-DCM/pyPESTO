@@ -149,6 +149,6 @@ def minimize(
     # if history file provided, set storage file to that one
     if filename == "Auto" and history_file is not None:
         filename = history_file
-    autosave(filename=filename, result=result, type="optimization")
+    autosave(filename=filename, result=result, store_type="optimization")
 
     return result

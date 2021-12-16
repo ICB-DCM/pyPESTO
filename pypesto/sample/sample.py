@@ -87,6 +87,6 @@ def sample(
 
     autosave(filename=filename,
              result=result,
-             type="sample")
+             store_type="sample")
 
     return result

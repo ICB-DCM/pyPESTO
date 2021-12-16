@@ -134,6 +134,6 @@ def parameter_profile(
 
     autosave(filename=filename,
              result=result,
-             type="profile")
+             store_type="profile")
 
     return result
