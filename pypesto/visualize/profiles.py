@@ -229,7 +229,9 @@ def profiles_lowlevel(
             # UserWarning: FixedFormatter should only be used
             # together with FixedLocator. Fix from matplotlib #18848.
             ax[counter].set_yticks(ax[counter].get_yticks())
-            ax[counter].set_yticklabels([''])
+            ax[counter].set_yticklabels(
+                ['' for _ in ax[counter].get_yticks()]
+            )
 
         # increase counter and cleanup legend
         counter += 1
