@@ -108,9 +108,10 @@ def postprocess_hdf5_history(
     history_options.storage_file = storage_file
 
 
-
-def autosave(filename: str, result: Result,
-             store_type: str, overwrite: bool = False):
+def autosave(filename: str,
+             result: Result,
+             store_type: str,
+             overwrite: bool = False):
     """
     Save the result of optimization, profiling or sampling automatically.
 
@@ -122,7 +123,7 @@ def autosave(filename: str, result: Result,
         `year_month_day_{type}_result.hdf5`.
     result:
         The result to be saved.
-    type:
+    store_type:
         Either `optimization`, `sampling` or `profiling`. Depending on the
         method the function is called in.
     overwrite:
