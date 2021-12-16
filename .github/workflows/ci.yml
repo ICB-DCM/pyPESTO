@@ -37,7 +37,7 @@ jobs:
       run: .github/workflows/install_deps.sh amici
 
     - name: Run tests
-      timeout-minutes: 10
+      timeout-minutes: 15
       run: tox -e base
 
     - name: Coverage
