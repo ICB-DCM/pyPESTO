@@ -124,7 +124,7 @@ def autosave(filename: str,
     result:
         The result to be saved.
     store_type:
-        Either `optimization`, `sampling` or `profiling`. Depending on the
+        Either `optimize`, `sample` or `profile`. Depending on the
         method the function is called in.
     overwrite:
         Whether to overwrite the currently existing results.
