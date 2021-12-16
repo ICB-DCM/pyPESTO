@@ -228,7 +228,7 @@ def profiles_lowlevel(
             # fix pyPESTO/pyPESTO/pypesto/visualize/profiles.py:228:
             # UserWarning: FixedFormatter should only be used
             # together with FixedLocator. Fix from matplotlib #18848.
-            ax[counter].set_yticks(ax[counter].get_yticks)
+            ax[counter].set_yticks(ax[counter].get_yticks())
             ax[counter].set_yticklabels([''])
 
         # increase counter and cleanup legend
