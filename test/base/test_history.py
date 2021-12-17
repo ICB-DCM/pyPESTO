@@ -11,7 +11,9 @@ import pypesto
 from pypesto.objective.util import sres_to_schi2, res_to_chi2
 from pypesto import CsvHistory, HistoryOptions,\
     MemoryHistory, ObjectiveBase, Hdf5History
-from pypesto.optimize import read_result_from_file, OptimizerResult
+from pypesto.optimize import (
+    read_result_from_file, read_results_from_file, OptimizerResult
+)
 from pypesto.objective.constants import (
     X, FVAL, GRAD, HESS, RES, SRES, CHI2, SCHI2)
 from pypesto.engine import MultiProcessEngine
@@ -50,25 +52,48 @@ class HistoryTest(unittest.TestCase):
         self.history_options.trace_save_iter = 1
 
         for storage_type in ['.csv', '.hdf5', None]:
-            with tempfile.TemporaryDirectory(dir=".") as tmpdirname:
-                _, fn = tempfile.mkstemp(storage_type, dir=f"{tmpdirname}")
+            with tempfile.TemporaryDirectory(dir=".") as tmpdir:
+                if storage_type == ".csv":
+                    _, fn = tempfile.mkstemp(
+                        "_{id}" + storage_type, dir=tmpdir
+                    )
+                else:
+                    _, fn = tempfile.mkstemp(storage_type, dir=tmpdir)
                 self.history_options.storage_file = fn
                 if storage_type is None:
                     self.history_options.storage_file = None
 
+                n_starts = 1
+
                 result = pypesto.optimize.minimize(
                     problem=self.problem,
                     optimizer=self.optimizer,
-                    n_starts=1,
+                    n_starts=n_starts,
                     startpoint_method=pypesto.startpoint.uniform,
                     options=optimize_options,
-                    history_options=self.history_options
+                    history_options=self.history_options,
+                    filename=None,
                 )
 
                 for istart, start in enumerate(result.optimize_result.list):
                     self.check_reconstruct_history(start, str(istart))
                     self.check_load_from_file(start, str(istart))
                     self.check_history_consistency(start)
+
+                # check that we can also aggregrate from multiple files.
+                # load more results than necessary to check whether this
+                # also works in case of incomplete results.
+                if storage_type is not None:
+                    read_results_from_file(
+                        self.problem, self.history_options,
+                        n_starts=n_starts,
+                    )
+                else:
+                    with pytest.raises(ValueError):
+                        read_results_from_file(
+                            self.problem, self.history_options,
+                            n_starts=n_starts,
+                        )
 
     def check_load_from_file(self, start: OptimizerResult, id: str):
         """Verify we can reconstitute OptimizerResult from csv file"""
@@ -591,14 +616,16 @@ def test_hdf5_history_mp():
         result_hdf5_mem = pypesto.optimize.minimize(
             problem=problem1, optimizer=optimizer1,
             n_starts=n_starts, history_options=history_options_mem,
-            engine=MultiProcessEngine()
+            engine=MultiProcessEngine(),
+            filename=None
         )
 
         # optimizing with history saved in hdf5 and MultiProcessEngine
         result_memory_mp = pypesto.optimize.minimize(
             problem=problem2, optimizer=optimizer2,
             n_starts=n_starts, history_options=history_options_mp,
-            engine=MultiProcessEngine()
+            engine=MultiProcessEngine(),
+            filename=None
         )
 
         history_entries = [X, FVAL, GRAD, HESS, RES, SRES, CHI2, SCHI2]
@@ -635,7 +662,8 @@ def test_trim_history():
     result = pypesto.optimize.minimize(
         problem=pypesto_problem, optimizer=optimizer,
         n_starts=1, history_options=history_options,
-        engine=MultiProcessEngine()
+        engine=MultiProcessEngine(),
+        filename=None
     )
     fval_trace = result.optimize_result.list[0].history.get_fval_trace()
     fval_trace_trimmed = \

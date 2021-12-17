@@ -144,7 +144,8 @@ class FDDelta:
         fun: Callable,
         fd_method: str,
     ) -> None:
-        """Actually update. Wants to be called in `update` explicitly.
+        """
+        Actually update. Wants to be called in `update` explicitly.
 
         Run FDs with various deltas and pick the ones, separately for each
         parameter, with the best stability properties.
@@ -152,7 +153,6 @@ class FDDelta:
         The parameters are the same as for
         :func:`pypesto.objective.finite_difference.FDDelta.update`.
         """
-
         # calculate gradients for all deltas for all parameters
         nablas = []
         # iterate over deltas
@@ -322,6 +322,7 @@ class FD(ObjectiveBase):
         self,
         memodict: Dict = None,
     ) -> 'FD':
+        """Create deepcopy of Objective."""
         other = self.__class__.__new__(self.__class__)
         for attr, val in self.__dict__.items():
             other.__dict__[attr] = copy.deepcopy(val)
@@ -329,22 +330,27 @@ class FD(ObjectiveBase):
 
     @property
     def has_fun(self) -> bool:
+        """Check whether function is defined."""
         return self.obj.has_fun
 
     @property
     def has_grad(self) -> bool:
+        """Check whether gradient is defined."""
         return self.grad is not False and self.obj.has_fun
 
     @property
     def has_hess(self) -> bool:
+        """Check whether Hessian is defined."""
         return self.hess is not False and self.obj.has_fun
 
     @property
     def has_res(self) -> bool:
+        """Check whether residuals are defined."""
         return self.obj.has_res
 
     @property
     def has_sres(self) -> bool:
+        """Check whether residual sensitivities are defined."""
         return self.sres is not False and self.obj.has_res
 
     def call_unprocessed(
@@ -354,9 +360,12 @@ class FD(ObjectiveBase):
         mode: str,
         **kwargs,
     ) -> ResultDict:
-        # This is the main method to overwrite from the base class, it handles
-        #  and delegates the actual objective evaluation.
+        """
+        See `ObjectiveBase` for more documentation.
 
+        Main method to overwrite from the base class. It handles and
+        delegates the actual objective evaluation.
+        """
         if mode == MODE_FUN:
             result = self._call_mode_fun(
                 x=x, sensi_orders=sensi_orders, **kwargs)
@@ -483,8 +492,10 @@ class FD(ObjectiveBase):
         **kwargs,
     ) -> Tuple[Tuple[int, ...], ResultDict]:
         """
-        Helper function that calculates from the objective the sensitivities
-        that are supposed to be calculated from the objective and not via FDs.
+        Call objective function for sensitivities.
+
+        Calculate from the objective the sensitivities that are supposed to
+        be calculated from the objective and not via FDs.
         """
         # define objective sensis
         sensi_orders_obj = []
@@ -509,8 +520,10 @@ class FD(ObjectiveBase):
         **kwargs,
     ) -> Tuple[Tuple[int, ...], ResultDict]:
         """
-        Helper function that calculates from the objective the sensitivities
-        that are supposed to be calculated from the objective and not via FDs.
+        Call objective function for sensitivities in residual mode.
+
+        Calculate from the objective the sensitivities that are supposed to
+        be calculated from the objective and not via FDs.
         """
         # define objective sensis
         sensi_orders_obj = []
@@ -528,7 +541,8 @@ class FD(ObjectiveBase):
 
 
 def unit_vec(dim: int, ix: int) -> np.ndarray:
-    """Unit vector of dimension `dim` at coordinate `ix`.
+    """
+    Return unit vector of dimension `dim` at coordinate `ix`.
 
     Parameters
     ----------

@@ -3,9 +3,11 @@ import numpy as np
 
 class ProfilerResult(dict):
     """
-    The result of a profiler run. The standardized return return value from
-    pypesto.profile, which can either be initialized from an OptimizerResult
-    or from an existing ProfilerResult (in order to extend the computation).
+    The result of a profiler run.
+
+    The standardized return value from pypesto.profile, which can
+    either be initialized from an OptimizerResult or from an existing
+    ProfilerResult (in order to extend the computation).
 
     Can be used like a dict.
 
@@ -37,7 +39,6 @@ class ProfilerResult(dict):
 
     Notes
     -----
-
     Any field not supported by the profiler or the profiling optimizer is
     filled with None. Some fields are filled by pypesto itself.
     """
@@ -78,6 +79,7 @@ class ProfilerResult(dict):
         self.message = message
 
     def __getattr__(self, key):
+        """Allow usage of keys like attributes."""
         try:
             return self[key]
         except KeyError:
@@ -97,7 +99,7 @@ class ProfilerResult(dict):
                              n_grad: int = 0,
                              n_hess: int = 0) -> None:
         """
-        This function appends a new point to the profile path.
+        Append a new point to the profile path.
 
         Parameters
         ----------
@@ -122,7 +124,6 @@ class ProfilerResult(dict):
         n_hess:
             Number of Hessian evaluations performed to find `x`.
         """
-
         # short function to append to numpy vectors
         def append_to_vector(field_name, val):
             field_new = np.zeros(self[field_name].size + 1)
@@ -151,13 +152,12 @@ class ProfilerResult(dict):
 
     def flip_profile(self) -> None:
         """
-        This function flips the profiling direction (left-right)
+        Flip the profiling direction (left-right).
+
         Profiling direction needs to be changed once (if the profile is new),
-        or twice if we append to an existing profile.
-
-        All profiling paths are flipped in-place.
+        or twice if we append to an existing profile. All profiling paths
+        are flipped in-place.
         """
-
         self.x_path = np.fliplr(self.x_path)
         self.fval_path = np.flip(self.fval_path)
         self.ratio_path = np.flip(self.ratio_path)

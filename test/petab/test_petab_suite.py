@@ -78,7 +78,7 @@ def _execute_case(case):
     # import and create objective function
     importer = pypesto.petab.PetabImporter.from_yaml(
         yaml_file, output_folder=output_folder)
-    model = importer.create_model()
+    model = importer.create_model(generate_sensitivity_code=False)
     obj = importer.create_objective(model=model)
 
     # the scaled parameters
@@ -115,10 +115,7 @@ def _execute_case(case):
     logger.log(logging.INFO if simulations_match else logging.ERROR,
                f"Simulations: match = {simulations_match}")
 
-    # FIXME case 7, 16 fail due to amici/#963
-    if not all([llhs_match, simulations_match]) \
-            or (not chi2s_match and case not in ['0007', '0016']):
-        # chi2s_match ignored until fixed in amici
+    if not all([llhs_match, chi2s_match, simulations_match]):
         logger.error(f"Case {case} failed.")
         raise AssertionError(f"Case {case}: Test results do not match "
                              "expectations")

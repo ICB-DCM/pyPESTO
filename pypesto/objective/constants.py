@@ -1,11 +1,9 @@
-"""
-This is for (string) constants used in the objective module.
-"""
-
+"""Constants used in the objective module."""
 
 MODE_FUN = 'mode_fun'  # mode for function values
 MODE_RES = 'mode_res'  # mode for residuals
 FVAL = 'fval'  # function value
+FVAL0 = 'fval0'  # function value at start
 GRAD = 'grad'  # gradient
 HESS = 'hess'  # Hessian
 HESSP = 'hessp'  # Hessian vector product
@@ -23,3 +21,4 @@ CHI2 = 'chi2'  # chi2 value
 SCHI2 = 'schi2'  # chi2 value gradient
 X = 'x'
 X0 = 'x0'
+ID = 'id'

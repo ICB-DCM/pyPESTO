@@ -6,9 +6,11 @@ from ..problem import Problem
 
 class OptimizerResult(dict):
     """
-    The result of an optimizer run. Used as a standardized return value to
-    map from the individual result objects returned by the employed
-    optimizers to the format understood by pypesto.
+    The result of an optimizer run.
+
+    Used as a standardized return value to map from the individual result
+    objects returned by the employed optimizers to the format understood by
+    pypesto.
 
     Can be used like a dict.
 
@@ -53,7 +55,6 @@ class OptimizerResult(dict):
 
     Notes
     -----
-
     Any field not supported by the optimizer is filled with None.
     """
 
@@ -82,8 +83,8 @@ class OptimizerResult(dict):
         self.fval: float = fval
         self.grad: np.ndarray = np.array(grad) if grad is not None else None
         self.hess: np.ndarray = np.array(hess) if hess is not None else None
-        self.res: np.ndarray = np.ndarray(res) if res is not None else None
-        self.sres: np.ndarray = np.ndarray(sres) if sres is not None else None
+        self.res: np.ndarray = np.array(res) if res is not None else None
+        self.sres: np.ndarray = np.array(sres) if sres is not None else None
         self.n_fval: int = n_fval
         self.n_grad: int = n_grad
         self.n_hess: int = n_hess
@@ -107,7 +108,7 @@ class OptimizerResult(dict):
 
     def update_to_full(self, problem: Problem) -> None:
         """
-        Updates values to full vectors/matrices
+        Update values to full vectors/matrices.
 
         Parameters
         ----------

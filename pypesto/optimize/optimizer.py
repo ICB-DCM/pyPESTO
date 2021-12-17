@@ -10,8 +10,9 @@ from ..objective import (
     HistoryOptions, HistoryBase, OptimizerHistory, CsvHistory, Hdf5History,
 )
 from ..problem import Problem
-from ..objective.constants import MODE_FUN, FVAL, GRAD
+from ..objective.constants import MODE_FUN, MODE_RES, FVAL, GRAD
 from .result import OptimizerResult
+from ..result import OptimizeResult, Result
 
 try:
     import cyipopt
@@ -45,8 +46,10 @@ except ImportError:
 
 try:
     import fides
+    from fides.hessian_approximation import HessianApproximation
 except ImportError:
     fides = None
+    HessianApproximation = None
 
 
 EXITFLAG_LOADED_FROM_FILE = -99
@@ -56,12 +59,19 @@ logger = logging.getLogger(__name__)
 
 def history_decorator(minimize):
     """
-    Default decorator for the minimize() method to initialize and extract
-    information stored in the history.
+    Initialize and extract information stored in the history.
+
+    Default decorator for the minimize() method.
     """
 
-    def wrapped_minimize(self, problem, x0, id, allow_failed_starts,
-                         history_options=None):
+    def wrapped_minimize(
+        self,
+        problem,
+        x0,
+        id,
+        allow_failed_starts,
+        history_options=None,
+    ):
         objective = problem.objective
 
         # initialize the objective
@@ -71,8 +81,9 @@ def history_decorator(minimize):
         if history_options is None:
             history_options = HistoryOptions()
         history = history_options.create_history(
-            id=id, x_names=[problem.x_names[ix]
-                            for ix in problem.x_free_indices])
+            id=id,
+            x_names=[problem.x_names[ix] for ix in problem.x_free_indices],
+        )
         optimizer_history = OptimizerHistory(history=history, x0=x0)
 
         # plug in history for the objective to record it
@@ -103,6 +114,8 @@ def history_decorator(minimize):
 
 def time_decorator(minimize):
     """
+    Measure time of optimization.
+
     Default decorator for the minimize() method to take time.
     Currently, the method time.time() is used, which measures
     the wall-clock time.
@@ -122,8 +135,9 @@ def time_decorator(minimize):
 
 def fix_decorator(minimize):
     """
-    Default decorator for the minimize() method to include also fixed
-    parameters in the result arrays (nans will be inserted in the
+    Include also fixed parameters in the result arrays of minimize().
+
+    Default decorator for the minimize() method (nans will be inserted in the
     derivatives).
     """
 
@@ -148,10 +162,7 @@ def fix_decorator(minimize):
 def fill_result_from_objective_history(
         result: OptimizerResult,
         optimizer_history: OptimizerHistory):
-    """
-    Overwrite function values in the result object with the values recorded in
-    the history.
-    """
+    """Overwrite values in the result object with values in the history."""
     update_vals = True
     # check history for better values
     # value could be different e.g. if constraints violated
@@ -204,9 +215,26 @@ def fill_result_from_objective_history(
     return result
 
 
-def read_result_from_file(problem: Problem, history_options: HistoryOptions,
-                          identifier: str):
-    """Fill an OptimizerResult from history."""
+def read_result_from_file(
+    problem: Problem,
+    history_options: HistoryOptions,
+    identifier: str,
+):
+    """
+    Fill an OptimizerResult from history.
+
+    Parameters
+    ----------
+    problem:
+        The problem to find optimal parameters for.
+    identifier:
+        Multistart id.
+    history_options:
+        Optimizer history options.
+    """
+    if history_options.storage_file is None:
+        raise ValueError("No history file specified.")
+
     if history_options.storage_file.endswith('.csv'):
         history = CsvHistory(
             file=history_options.storage_file.format(id=identifier),
@@ -230,7 +258,7 @@ def read_result_from_file(problem: Problem, history_options: HistoryOptions,
         id=identifier,
         message='loaded from file',
         exitflag=EXITFLAG_LOADED_FROM_FILE,
-        time=max(history.get_time_trace())
+        time=max(history.get_time_trace()) if len(history) else 0.0
     )
     result.id = identifier
     result = fill_result_from_objective_history(result, opt_hist)
@@ -239,31 +267,58 @@ def read_result_from_file(problem: Problem, history_options: HistoryOptions,
     return result
 
 
+def read_results_from_file(
+    problem: Problem,
+    history_options: HistoryOptions,
+    n_starts: int,
+):
+    """
+    Fill a Result from a set of histories.
+
+    Parameters
+    ----------
+    problem:
+        The problem to find optimal parameters for.
+    n_starts:
+        Number of performed multistarts.
+    history_options:
+        Optimizer history options.
+    """
+    result = Result()
+    result.optimize_result = OptimizeResult()
+    result.optimize_result.list = [
+        read_result_from_file(problem, history_options, str(istart))
+        for istart in range(n_starts)
+    ]
+    result.optimize_result.sort()
+    return result
+
+
 class Optimizer(abc.ABC):
     """
-    This is the optimizer base class, not functional on its own.
+    Optimizer base class, not functional on its own.
+
     An optimizer takes a problem, and possibly a start point, and then
     performs an optimization. It returns an OptimizerResult.
     """
 
     def __init__(self):
-        """
-        Default constructor.
-        """
+        """Initialize base class."""
 
     @abc.abstractmethod
     @fix_decorator
     @time_decorator
     @history_decorator
     def minimize(
-            self,
-            problem: Problem,
-            x0: np.ndarray,
-            id: str,
-            history_options: HistoryOptions = None,
+        self,
+        problem: Problem,
+        x0: np.ndarray,
+        id: str,
+        history_options: HistoryOptions = None,
     ) -> OptimizerResult:
-        """"
+        """
         Perform optimization.
+
         Parameters
         ----------
         problem:
@@ -278,12 +333,11 @@ class Optimizer(abc.ABC):
 
     @abc.abstractmethod
     def is_least_squares(self):
+        """Check whether optimizer is a least squares optimizer."""
         return False
 
     def get_default_options(self):
-        """
-        Create default options specific for the optimizer.
-        """
+        """Create default options specific for the optimizer."""
         return None
 
 
@@ -297,6 +351,7 @@ def check_finite_bounds(lb, ub):
 class ScipyOptimizer(Optimizer):
     """
     Use the SciPy optimizers.
+
     Find details on the optimizer and configuration options at:
     https://docs.scipy.org/doc/scipy/reference/generated/scipy.\
         optimize.minimize.html#scipy.optimize.minimize
@@ -327,6 +382,7 @@ class ScipyOptimizer(Optimizer):
         id: str,
         history_options: HistoryOptions = None,
     ) -> OptimizerResult:
+        """Perform optimization. Parameters: see `Optimizer` documentation."""
         lb = problem.lb
         ub = problem.ub
         objective = problem.objective
@@ -436,9 +492,11 @@ class ScipyOptimizer(Optimizer):
         return optimizer_result
 
     def is_least_squares(self):
+        """Check whether optimizer is a least squares optimizer."""
         return re.match(r'(?i)^(ls_)', self.method)
 
     def get_default_options(self):
+        """Create default options specific for the optimizer."""
         if self.is_least_squares():
             options = {'max_nfev': 1000, 'disp': False}
         else:
@@ -452,6 +510,8 @@ class IpoptOptimizer(Optimizer):
     def __init__(
             self, options: Dict = None):
         """
+        Initialize.
+
         Parameters
         ----------
         options:
@@ -470,7 +530,7 @@ class IpoptOptimizer(Optimizer):
             id: str,
             history_options: HistoryOptions = None,
     ) -> OptimizerResult:
-
+        """Perform optimization. Parameters: see `Optimizer` documentation."""
         if cyipopt is None:
             raise ImportError(
                 "This optimizer requires an installation of ipopt. You can "
@@ -501,13 +561,12 @@ class IpoptOptimizer(Optimizer):
         )
 
     def is_least_squares(self):
+        """Check whether optimizer is a least squares optimizer."""
         return False
 
 
 class DlibOptimizer(Optimizer):
-    """
-    Use the Dlib toolbox for optimization.
-    """
+    """Use the Dlib toolbox for optimization."""
 
     def __init__(self,
                  options: Dict = None):
@@ -530,7 +589,7 @@ class DlibOptimizer(Optimizer):
             id: str,
             history_options: HistoryOptions = None,
     ) -> OptimizerResult:
-
+        """Perform optimization. Parameters: see `Optimizer` documentation."""
         lb = problem.lb
         ub = problem.ub
         check_finite_bounds(lb, ub)
@@ -563,16 +622,16 @@ class DlibOptimizer(Optimizer):
         return optimizer_result
 
     def is_least_squares(self):
+        """Check whether optimizer is a least squares optimizer."""
         return False
 
     def get_default_options(self):
+        """Create default options specific for the optimizer."""
         return {'maxiter': 10000}
 
 
 class PyswarmOptimizer(Optimizer):
-    """
-    Global optimization using pyswarm.
-    """
+    """Global optimization using pyswarm."""
 
     def __init__(self, options: Dict = None):
         super().__init__()
@@ -591,11 +650,12 @@ class PyswarmOptimizer(Optimizer):
             id: str,
             history_options: HistoryOptions = None,
     ) -> OptimizerResult:
+        """Perform optimization. Parameters: see `Optimizer` documentation."""
         lb = problem.lb
         ub = problem.ub
         if pyswarm is None:
             raise ImportError(
-                "This optimizer requires an installation of pyswarm.You can "
+                "This optimizer requires an installation of pyswarm. You can "
                 "install pyswarm via `pip install pyswarm."
             )
 
@@ -612,17 +672,21 @@ class PyswarmOptimizer(Optimizer):
         return optimizer_result
 
     def is_least_squares(self):
+        """Check whether optimizer is a least squares optimizer."""
         return False
 
 
 class CmaesOptimizer(Optimizer):
     """
     Global optimization using cma-es.
+
     Package homepage: https://pypi.org/project/cma-es/
     """
 
     def __init__(self, par_sigma0: float = 0.25, options: Dict = None):
         """
+        Initialize.
+
         Parameters
         ----------
         par_sigma0:
@@ -632,7 +696,6 @@ class CmaesOptimizer(Optimizer):
         options:
             Optimizer options that are directly passed on to cma.
         """
-
         super().__init__()
 
         if options is None:
@@ -650,7 +713,7 @@ class CmaesOptimizer(Optimizer):
             id: str,
             history_options: HistoryOptions = None,
     ) -> OptimizerResult:
-
+        """Perform optimization. Parameters: see `Optimizer` documentation."""
         lb = problem.lb
         ub = problem.ub
 
@@ -675,12 +738,14 @@ class CmaesOptimizer(Optimizer):
         return optimizer_result
 
     def is_least_squares(self):
+        """Check whether optimizer is a least squares optimizer."""
         return False
 
 
 class ScipyDifferentialEvolutionOptimizer(Optimizer):
     """
     Global optimization using scipy's differential evolution optimizer.
+
     Package homepage: https://docs.scipy.org/doc/scipy/reference/generated\
         /scipy.optimize.differential_evolution.html
 
@@ -719,6 +784,7 @@ class ScipyDifferentialEvolutionOptimizer(Optimizer):
             id: str,
             history_options: HistoryOptions = None,
     ) -> OptimizerResult:
+        """Perform optimization. Parameters: see `Optimizer` documentation."""
         bounds = list(zip(problem.lb, problem.ub))
 
         result = scipy.optimize.differential_evolution(
@@ -731,12 +797,14 @@ class ScipyDifferentialEvolutionOptimizer(Optimizer):
         return optimizer_result
 
     def is_least_squares(self):
+        """Check whether optimizer is a least squares optimizer."""
         return False
 
 
 class PyswarmsOptimizer(Optimizer):
     """
     Global optimization using pyswarms.
+
     Package homepage: https://pyswarms.readthedocs.io/en/latest/index.html
 
     Parameters
@@ -780,6 +848,7 @@ class PyswarmsOptimizer(Optimizer):
             id: str,
             history_options: HistoryOptions = None,
     ) -> OptimizerResult:
+        """Perform optimization. Parameters: see `Optimizer` documentation."""
         lb = problem.lb
         ub = problem.ub
 
@@ -802,15 +871,14 @@ class PyswarmsOptimizer(Optimizer):
         def successively_working_fval(swarm: np.ndarray) -> np.ndarray:
             """Evaluate the function for all parameters in the swarm object.
 
-            Parameters:
-            -----------
+            Parameters
+            ----------
             swarm: np.ndarray, shape (n_particales_in_swarm, n_parameters)
 
-            Returns:
-            --------
+            Returns
+            -------
             result: np.ndarray, shape (n_particles_in_swarm)
             """
-
             n_particles = swarm.shape[0]
             result = np.zeros(n_particles)
             # iterate over the particles in the swarm
@@ -830,18 +898,22 @@ class PyswarmsOptimizer(Optimizer):
         return optimizer_result
 
     def is_least_squares(self):
+        """Check whether optimizer is a least squares optimizer."""
         return False
 
 
 class NLoptOptimizer(Optimizer):
     """
     Global/Local optimization using NLopt.
+
     Package homepage: https://nlopt.readthedocs.io/en/latest/
     """
 
     def __init__(self, method=None, local_method=None, options: Dict = None,
                  local_options: Dict = None):
         """
+        Initialize.
+
         Parameters
         ----------
         method:
@@ -856,7 +928,6 @@ class NLoptOptimizer(Optimizer):
         local_options:
             Optimizer options for the local method
         """
-
         super().__init__()
 
         if options is None:
@@ -932,7 +1003,7 @@ class NLoptOptimizer(Optimizer):
             id: str,
             history_options: HistoryOptions = None,
     ) -> OptimizerResult:
-
+        """Perform optimization. Parameters: see `Optimizer` documentation."""
         opt = nlopt.opt(self.method, problem.dim)
 
         valid_options = ['ftol_abs', 'ftol_rel', 'xtol_abs', 'xtol_rel',
@@ -986,40 +1057,44 @@ class NLoptOptimizer(Optimizer):
         return optimizer_result
 
     def is_least_squares(self):
+        """Check whether optimizer is a least squares optimizer."""
         return False
 
 
 class FidesOptimizer(Optimizer):
     """
     Global/Local optimization using the trust region optimizer fides.
+
     Package Homepage: https://fides-optimizer.readthedocs.io/en/latest
     """
 
     def __init__(
             self,
-            hessian_update: Optional['fides.HessianApproximation'] = 'Hybrid',
+            hessian_update: Optional['HessianApproximation'] = 'Hybrid',
             options: Optional[Dict] = None,
             verbose: Optional[int] = logging.INFO
     ):
         """
+        Initialize.
+
         Parameters
         ----------
         options:
             Optimizer options.
         hessian_update:
-            Hessian update strategy. If this is None, Hessian (approximation)
-            computed by problem.objective will be used.
+            Hessian update strategy. If this is None, a hybrid approximation
+            that switches from the problem.objective provided Hessian (
+            approximation) to a BFGS approximation will be used.
         """
-
         super().__init__()
 
         if hessian_update == 'Hybrid':
-            hessian_update = fides.HybridUpdate()
+            hessian_update = fides.HybridFixed()
 
         if hessian_update is not None and \
-                not isinstance(hessian_update, fides.HessianApproximation):
-            raise ValueError('Incompatible type for hessian update, '
-                             'must be fides.HessianApproximation, '
+                not isinstance(hessian_update, HessianApproximation):
+            raise ValueError('Incompatible type for hessian update. '
+                             'Must be a HessianApproximation, '
                              f'was {type(hessian_update)}.')
 
         if options is None:
@@ -1039,22 +1114,26 @@ class FidesOptimizer(Optimizer):
             id: str,
             history_options: HistoryOptions = None,
     ) -> OptimizerResult:
-
+        """Perform optimization. Parameters: see `Optimizer` documentation."""
         if fides is None:
             raise ImportError(
                 "This optimizer requires an installation of fides. You can "
                 "install fides via `pip install fides`."
             )
 
-        args = {'mode': MODE_FUN}
+        resfun = self.hessian_update.requires_resfun if self.hessian_update \
+            is not None else False
+
+        args = {'mode': MODE_RES if resfun else MODE_FUN}
 
         if not problem.objective.has_grad:
             raise ValueError('Fides cannot be applied to problems '
                              'with objectives that do not support '
                              'gradient evaluation.')
 
-        if self.hessian_update is None or isinstance(self.hessian_update,
-                                                     fides.HybridUpdate):
+        if self.hessian_update is None or (
+            self.hessian_update.requires_hess and not resfun
+        ):
             if not problem.objective.has_hess:
                 raise ValueError('Specified hessian update scheme cannot be '
                                  'used with objectives that do not support '
@@ -1065,8 +1144,8 @@ class FidesOptimizer(Optimizer):
 
         opt = fides.Optimizer(
             fun=problem.objective, funargs=args, ub=problem.ub, lb=problem.lb,
-            verbose=self.verbose,
-            hessian_update=self.hessian_update, options=self.options
+            verbose=self.verbose, hessian_update=self.hessian_update,
+            options=self.options, resfun=resfun
         )
 
         try:
@@ -1079,11 +1158,13 @@ class FidesOptimizer(Optimizer):
             msg = str(err)
 
         optimizer_result = OptimizerResult(
-            x=opt.x_min, fval=opt.fval_min, grad=opt.grad_min, hess=opt.hess,
-            message=msg, exitflag=opt.exitflag
+            x=opt.x_min, fval=opt.fval_min if not resfun else None,
+            grad=opt.grad_min, hess=opt.hess, message=msg,
+            exitflag=opt.exitflag
         )
 
         return optimizer_result
 
     def is_least_squares(self):
+        """Check whether optimizer is a least squares optimizer."""
         return False

@@ -10,6 +10,8 @@ CONDITION_IDS = 'condition_ids'
 TIMEPOINTS = 'timepoints'  # data member in PredictionConditionResult
 OUTPUT = 'output'  # field in the return dict of AmiciPredictor
 OUTPUT_SENSI = 'output_sensi'  # field in the return dict of AmiciPredictor
+OUTPUT_WEIGHT = 'output_weight'  # field in the return dict of AmiciPredictor
+OUTPUT_SIGMAY = 'output_sigmay'  # field in the return dict of AmiciPredictor
 
 # separator in the conditions_ids betweeen preequilibration and simulation
 # condition
@@ -21,7 +23,9 @@ AMICI_X = 'x'  # return field in amici simulation result
 AMICI_SX = 'sx'  # return field in amici simulation result
 AMICI_Y = 'y'  # return field in amici simulation result
 AMICI_SY = 'sy'  # return field in amici simulation result
+AMICI_LLH = 'llh'  # return field in amici simulation result
 AMICI_STATUS = 'status'  # return field in amici simulation result
+AMICI_SIGMAY = 'sigmay'  # return field in amici simulation result
 
 CSV = 'csv'  # return file format
 H5 = 'h5'  # return file format

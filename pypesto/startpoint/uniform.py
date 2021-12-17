@@ -1,19 +1,32 @@
+"""Uniform sampling."""
+
 import numpy as np
+
 from .util import rescale
+from .base import FunctionStartpoints
 
 
-def uniform(**kwargs) -> np.ndarray:
+def uniform(
+    n_starts: int,
+    lb: np.ndarray,
+    ub: np.ndarray,
+) -> np.ndarray:
+    """Generate uniform points.
+
+    Parameters
+    ----------
+    n_starts: Number of starts.
+    lb: Lower bound.
+    ub: Upper bound.
+
+    Returns
+    -------
+    xs: Uniformly sampled points in [lb, ub], shape (n_starts, n_x).
     """
-    Generate uniform points.
-    """
-    # extract input
-    n_starts = kwargs['n_starts']
-    lb = kwargs['lb']
-    ub = kwargs['ub']
-
     if not np.isfinite(ub).all() or not np.isfinite(lb).all():
-        raise ValueError('Cannot use uniform startpoint method with '
-                         'non-finite boundaries.')
+        raise ValueError(
+            "Cannot use uniform startpoint method with non-finite boundaries.",
+        )
 
     # parse
     dim = lb.size
@@ -27,3 +40,20 @@ def uniform(**kwargs) -> np.ndarray:
     xs = rescale(xs, lb, ub)
 
     return xs
+
+
+class UniformStartpoints(FunctionStartpoints):
+    """Generate uniformly sampled startpoints."""
+
+    def __init__(
+        self,
+        use_guesses: bool = True,
+        check_fval: bool = False,
+        check_grad: bool = False,
+    ):
+        super().__init__(
+            function=uniform,
+            use_guesses=use_guesses,
+            check_fval=check_fval,
+            check_grad=check_grad,
+        )

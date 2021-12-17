@@ -70,8 +70,14 @@ class PetabImportTest(unittest.TestCase):
             optimizer = pypesto.optimize.ScipyOptimizer(
                 options={'maxiter': 10})
             problem = importer.create_problem(obj)
+            startpoints = importer.create_startpoint_method()
             result = pypesto.optimize.minimize(
-                problem=problem, optimizer=optimizer, n_starts=2)
+                problem=problem,
+                optimizer=optimizer,
+                n_starts=2,
+                startpoint_method=startpoints,
+                filename=None,
+            )
 
             self.assertTrue(np.isfinite(
                 result.optimize_result.get_for_key('fval')[0]))
@@ -106,6 +112,10 @@ def test_plist_mapping():
 
     problem = petab_problem.create_problem()
     objective = problem.objective
+    # check that x_names are correctly subsetted
+    assert objective.x_names == [
+        problem.x_names[ix] for ix in problem.x_free_indices
+    ]
     objective.amici_solver.setSensitivityMethod(
         amici.SensitivityMethod_forward)
     objective.amici_solver.setAbsoluteTolerance(1e-10)

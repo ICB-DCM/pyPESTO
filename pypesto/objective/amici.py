@@ -46,27 +46,25 @@ class AmiciObjectBuilder(abc.ABC):
 
 
 class AmiciObjective(ObjectiveBase):
-    """
-    This class allows to create an objective directly from an amici model.
-    """
+    """Allows to create an objective directly from an amici model."""
 
     def __init__(
         self,
         amici_model: AmiciModel,
         amici_solver: AmiciSolver,
         edatas: Union[Sequence['amici.ExpData'], 'amici.ExpData'],
-        max_sensi_order: int = None,
-        x_ids: Sequence[str] = None,
-        x_names: Sequence[str] = None,
-        parameter_mapping: 'ParameterMapping' = None,
-        guess_steadystate: Optional[bool] = None,
-        n_threads: int = 1,
-        fim_for_hess: bool = True,
-        amici_object_builder: AmiciObjectBuilder = None,
-        calculator: AmiciCalculator = None,
+        max_sensi_order: Optional[int] = None,
+        x_ids: Optional[Sequence[str]] = None,
+        x_names: Optional[Sequence[str]] = None,
+        parameter_mapping: Optional['ParameterMapping'] = None,
+        guess_steadystate: Optional[Optional[bool]] = None,
+        n_threads: Optional[int] = 1,
+        fim_for_hess: Optional[bool] = True,
+        amici_object_builder: Optional[AmiciObjectBuilder] = None,
+        calculator: Optional[AmiciCalculator] = None,
     ):
         """
-        Constructor.
+        Initialize objective.
 
         Parameters
         ----------
@@ -198,6 +196,7 @@ class AmiciObjective(ObjectiveBase):
         self.custom_timepoints = None
 
     def get_config(self) -> dict:
+        """Return basic information of the objective configuration."""
         info = super().get_config()
         info['x_names'] = self.x_names
         info['model_name'] = self.amici_model.getName()
@@ -207,6 +206,7 @@ class AmiciObjective(ObjectiveBase):
         return info
 
     def initialize(self):
+        """See `ObjectiveBase` documentation."""
         super().initialize()
         self.reset_steadystate_guesses()
         self.calculator.initialize()
@@ -298,6 +298,9 @@ class AmiciObjective(ObjectiveBase):
         sensi_orders: Tuple[int, ...],
         mode: str,
     ) -> bool:
+        """See `ObjectiveBase` documentation."""
+        if not sensi_orders:
+            return True
         sensi_order = max(sensi_orders)
 
         # dynamically obtain maximum allowed sensitivity order
@@ -316,6 +319,7 @@ class AmiciObjective(ObjectiveBase):
         return sensi_order <= max_sensi_order
 
     def check_mode(self, mode: str) -> bool:
+        """See `ObjectiveBase` documentation."""
         return mode in [MODE_FUN, MODE_RES]
 
     def call_unprocessed(
@@ -326,8 +330,14 @@ class AmiciObjective(ObjectiveBase):
         edatas: Sequence['amici.ExpData'] = None,
         parameter_mapping: 'ParameterMapping' = None,
     ):
-        sensi_order = max(sensi_orders)
+        """
+        Call objective function without pre- or post-processing and formatting.
 
+        Returns
+        -------
+        result:
+            A dict containing the results.
+        """
         x_dct = self.par_arr_to_dct(x)
 
         # update steady state
@@ -341,7 +351,7 @@ class AmiciObjective(ObjectiveBase):
         if parameter_mapping is None:
             parameter_mapping = self.parameter_mapping
         ret = self.calculator(
-            x_dct=x_dct, sensi_order=sensi_order, mode=mode,
+            x_dct=x_dct, sensi_orders=sensi_orders, mode=mode,
             amici_model=self.amici_model, amici_solver=self.amici_solver,
             edatas=edatas, n_threads=self.n_threads,
             x_ids=self.x_ids, parameter_mapping=parameter_mapping,
@@ -367,7 +377,9 @@ class AmiciObjective(ObjectiveBase):
 
     def apply_steadystate_guess(self, condition_ix: int, x_dct: Dict) -> None:
         """
-        Use the stored steadystate as well as the respective  sensitivity (
+        Apply steady state guess to `edatas[condition_ix].x0`.
+
+        Use the stored steadystate as well as the respective sensitivity (
         if available) and parameter value to approximate the steadystate at
         the current parameters using a zeroth or first order taylor
         approximation:
@@ -399,9 +411,10 @@ class AmiciObjective(ObjectiveBase):
         rdata: 'amici.ReturnData',
     ) -> None:
         """
-        Store condition parameter, steadystate and steadystate sensitivity in
-        steadystate_guesses if steadystate guesses are enabled for this
-        condition
+        Store condition parameter, steadystate and steadystate sensitivity.
+
+        Stored in steadystate_guesses if steadystate guesses are enabled for
+        this condition.
         """
         if condition_ix not in self.steadystate_guesses['data']:
             return
@@ -444,8 +457,7 @@ class AmiciObjective(ObjectiveBase):
         timepoints_global: Sequence[Union[float, int]] = None,
     ) -> 'AmiciObjective':
         """
-        Create a copy of this objective that will be evaluated at custom
-        timepoints.
+        Create a copy of this objective that is evaluated at custom timepoints.
 
         The intended use is to aid in predictions at unmeasured timepoints.
 
@@ -493,7 +505,7 @@ class AmiciObjective(ObjectiveBase):
         *args,
         **kwargs
     ) -> bool:
-        """Check if gradients match finite differences (FDs)
+        """Check if gradients match finite differences (FDs).
 
         Parameters
         ----------

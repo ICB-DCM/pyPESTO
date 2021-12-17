@@ -32,6 +32,7 @@ class EnsembleTask(Task):
         self.id = id
 
     def execute(self) -> List[Any]:
+        """Execute the task."""
         logger.info(f"Executing task {self.id}.")
         results = []
         for index in range(self.vectors.shape[1]):

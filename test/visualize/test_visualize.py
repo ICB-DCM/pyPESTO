@@ -14,12 +14,15 @@ import pypesto.profile as profile
 import pypesto.sample as sample
 import pypesto.visualize as visualize
 import pypesto.ensemble as ensemble
+from pypesto.visualize.model_fit import visualize_optimized_model_fit, \
+    time_trajectory_model
 from functools import wraps
 from typing import Sequence
 
 
 def close_fig(fun):
     """Close figure."""
+
     @wraps(fun)
     def wrapped_fun(*args, **kwargs):
         ret = fun(*args, **kwargs)
@@ -79,7 +82,8 @@ def sample_petab_problem():
     sampler = sample.AdaptiveMetropolisSampler()
     result = sample.sample(problem, n_samples=1000,
                            sampler=sampler,
-                           x0=np.array([3, -4]))
+                           x0=np.array([3, -4]),
+                           filename=None)
     return result
 
 
@@ -142,7 +146,8 @@ def create_optimization_history():
         n_starts=5,
         startpoint_method=pypesto.startpoint.uniform,
         options=optimize_options,
-        history_options=history_options
+        history_options=history_options,
+        filename=None
     )
 
     return result_with_trace
@@ -383,6 +388,7 @@ def test_parameters_hist():
         optimizer=optimizer,
         n_starts=10,
         startpoint_method=pypesto.startpoint.uniform,
+        filename=None
     )
 
     visualize.parameter_hist(result_1, 'x1')
@@ -459,8 +465,9 @@ def test_ensemble_identifiability():
     # =========================================================================
     # test ensemble identifiability if no bounds are hit
     # create an ensemble within tight bounds
-    my_ensemble = [(1 + np.cos(ix)**2) * np.random.rand(500) - 1. + np.sin(ix)
-                   for ix in range(100)]
+    my_ensemble = [
+        (1 + np.cos(ix) ** 2) * np.random.rand(500) - 1. + np.sin(ix)
+        for ix in range(100)]
     my_ensemble = ensemble.Ensemble(np.array(my_ensemble),
                                     lower_bound=problem.lb,
                                     upper_bound=problem.ub)
@@ -628,6 +635,7 @@ def test_optimization_stats():
         optimizer=optimizer,
         n_starts=10,
         startpoint_method=pypesto.startpoint.uniform,
+        filename=None
     )
 
     result_2 = optimize.minimize(
@@ -635,6 +643,7 @@ def test_optimization_stats():
         optimizer=optimizer,
         n_starts=10,
         startpoint_method=pypesto.startpoint.uniform,
+        filename=None
     )
 
     visualize.optimization_run_property_per_multistart(result_1, 'n_fval',
@@ -903,3 +912,54 @@ def test_sampling_prediction_trajectories():
         size=(10, 10),
         groupby=predict.constants.OUTPUT,
     )
+
+
+@close_fig
+def test_visualize_optimized_model_fit():
+    """Test pypesto.visualize.visualize_optimized_model_fit"""
+    current_path = os.path.dirname(os.path.realpath(__file__))
+    dir_path = os.path.abspath(os.path.join(current_path,
+                                            '..', '..',
+                                            'doc', 'example'))
+
+    # import to petab
+    petab_problem = petab.Problem.from_yaml(
+        os.path.join(dir_path, "conversion_reaction",
+                     "conversion_reaction.yaml"))
+    # import to pypesto
+    importer = pypesto.petab.PetabImporter(petab_problem)
+    # create problem
+    problem = importer.create_problem()
+
+    result = optimize.minimize(problem=problem,
+                               n_starts=1,
+                               filename=None)
+
+    # test call of visualize_optimized_model_fit
+    visualize_optimized_model_fit(petab_problem=petab_problem,
+                                  result=result)
+
+
+@close_fig
+def test_time_trajectory_model():
+    """Test pypesto.visualize.time_trajectory_model"""
+    current_path = os.path.dirname(os.path.realpath(__file__))
+    dir_path = os.path.abspath(os.path.join(current_path,
+                                            '..', '..',
+                                            'doc', 'example'))
+
+    # import to petab
+    petab_problem = petab.Problem.from_yaml(
+        os.path.join(dir_path, "conversion_reaction",
+                     "conversion_reaction.yaml"))
+    # import to pypesto
+    importer = pypesto.petab.PetabImporter(petab_problem)
+    # create problem
+    problem = importer.create_problem()
+
+    result = optimize.minimize(problem=problem,
+                               n_starts=1,
+                               filename=None)
+
+    # test call of time_trajectory_model
+    time_trajectory_model(result=result)

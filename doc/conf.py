@@ -110,6 +110,19 @@ pygments_style = 'sphinx'
 # If true, `todo` and `todoList` produce output, else they produce nothing.
 todo_include_todos = False
 
+# Add notebooks prolog to Google Colab and nbviewer
+nbsphinx_prolog = r"""
+{% set docname = 'github/icb-dcm/pypesto/blob/main/doc/' + env.doc2path(env.docname, base=None) %}
+.. raw:: html
+
+    <div class="note">
+      <a href="https://colab.research.google.com/{{ docname|e }}" target="_blank">
+      <img src="../_static/colab-badge.svg" alt="Open in Colab"/></a>
+      <a href="https://nbviewer.jupyter.org/{{ docname|e }}" target="_blank">
+      <img src="../_static/nbviewer-badge.svg" alt="Open in nbviewer"/></a>
+    </div>
+
+"""
 
 # -- Options for HTML output ----------------------------------------------
 
@@ -127,7 +140,9 @@ html_theme = 'sphinx_rtd_theme'
 # Add any paths that contain custom static files (such as style sheets) here,
 # relative to this directory. They are copied after the builtin static files,
 # so a file named "default.css" will overwrite the builtin "default.css".
-# html_static_path = ['_static']
+html_static_path = ['_static']
+
+# Favicon
 html_favicon = "logo/logo_favicon.png"
 
 # Custom sidebar templates, must be a dictionary that maps document names

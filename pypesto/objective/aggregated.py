@@ -8,9 +8,7 @@ from .constants import RDATAS, FVAL, CHI2, SCHI2, RES, SRES, GRAD, HESS, HESSP
 
 
 class AggregatedObjective(ObjectiveBase):
-    """
-    This class aggregates multiple objectives into one objective.
-    """
+    """Aggregates multiple objectives into one objective."""
 
     def __init__(
         self,
@@ -18,8 +16,7 @@ class AggregatedObjective(ObjectiveBase):
         x_names: Sequence[str] = None,
     ):
         """
-        Constructor.
-
+        Initialize objective.
 
         Parameters
         ----------
@@ -30,7 +27,6 @@ class AggregatedObjective(ObjectiveBase):
             (Details see documentation of x_names in
             :class:`pypesto.ObjectiveBase`)
         """
-
         # input typechecks
         if not isinstance(objectives, Sequence):
             raise TypeError(f'Objectives must be a Sequence, '
@@ -51,6 +47,7 @@ class AggregatedObjective(ObjectiveBase):
         super().__init__(x_names=x_names)
 
     def __deepcopy__(self, memodict=None):
+        """Create copy of objective."""
         other = AggregatedObjective(
             objectives=[deepcopy(objective) for objective in self._objectives],
             x_names=deepcopy(self.x_names),
@@ -61,6 +58,7 @@ class AggregatedObjective(ObjectiveBase):
         return other
 
     def check_mode(self, mode: str) -> bool:
+        """See `ObjectiveBase` documentation."""
         return all(
             objective.check_mode(mode)
             for objective in self._objectives
@@ -71,6 +69,7 @@ class AggregatedObjective(ObjectiveBase):
         sensi_orders: Tuple[int, ...],
         mode: str,
     ) -> bool:
+        """See `ObjectiveBase` documentation."""
         return all(
             objective.check_sensi_orders(sensi_orders, mode)
             for objective in self._objectives
@@ -83,16 +82,24 @@ class AggregatedObjective(ObjectiveBase):
         mode: str,
         **kwargs,
     ) -> ResultDict:
+        """
+        See `ObjectiveBase` for more documentation.
+
+        Main method to overwrite from the base class. It handles and
+        delegates the actual objective evaluation.
+        """
         return aggregate_results([
             objective.call_unprocessed(x, sensi_orders, mode, **kwargs)
             for objective in self._objectives
         ])
 
     def initialize(self):
+        """See `ObjectiveBase` documentation."""
         for objective in self._objectives:
             objective.initialize()
 
     def get_config(self) -> dict:
+        """Return basic information of the objective configuration."""
         info = super().get_config()
         for n_obj, obj in enumerate(self._objectives):
             info[f'objective_{n_obj}'] = obj.get_config()
@@ -101,15 +108,13 @@ class AggregatedObjective(ObjectiveBase):
 
 def aggregate_results(rvals: Sequence[ResultDict]) -> ResultDict:
     """
-    Aggregrate the results from the provided sequence of ResultDicts into a
-    single ResultDict.
+    Aggregrate the results from the provided ResultDicts into a single one.
 
     Parameters
     ----------
     rvals:
         results to aggregate
     """
-
     # rvals are guaranteed to be consistent as _check_sensi_orders checks
     # whether each objective can be called with the respective
     # sensi_orders/mode

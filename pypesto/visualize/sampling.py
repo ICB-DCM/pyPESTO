@@ -30,15 +30,6 @@ from .misc import rgba2rgb
 logger = logging.getLogger(__name__)
 
 
-def sampling_fval_trace(*args, **kwargs):
-    warnings.warn(
-        '`sampling_fval_trace` is deprecated in favor of '
-        '`sampling_fval_traces` and will be removed in a future version of '
-        'pyPESTO.'
-    )
-    return sampling_fval_traces(*args, **kwargs)
-
-
 def sampling_fval_traces(
         result: Result,
         i_chain: int = 0,
@@ -47,7 +38,8 @@ def sampling_fval_traces(
         title: str = None,
         size: Tuple[float, float] = None,
         ax: matplotlib.axes.Axes = None):
-    """Plot log-posterior (=function value) over iterations.
+    """
+    Plot log-posterior (=function value) over iterations.
 
     Parameters
     ----------
@@ -71,7 +63,6 @@ def sampling_fval_traces(
     ax:
         The plot axes.
     """
-
     # get data which should be plotted
     _, params_fval, _, _, _ = get_data_to_plot(result=result,
                                                i_chain=i_chain,
@@ -577,8 +568,12 @@ def sampling_prediction_trajectories(
         condition_gap: float = 0.01,
         condition_ids: Sequence[str] = None,
         output_ids: Sequence[str] = None,
+        weighting: bool = False
 ) -> matplotlib.axes.Axes:
-    """Plot MCMC-based prediction credibility intervals for the
+    """
+    Visualize prediction trajectory of an EnsemblePrediction.
+
+    Plot MCMC-based prediction credibility intervals for the
     model states or outputs. One or various credibility levels
     can be depicted. Plots are grouped by condition.
 
@@ -611,6 +606,8 @@ def sampling_prediction_trajectories(
         If provided, only data for the provided condition IDs will be plotted.
     output_ids:
         If provided, only data for the provided output IDs will be plotted.
+    weighting:
+        Whether weights should be used for trajectory.
 
     Returns
     -------
@@ -629,7 +626,8 @@ def sampling_prediction_trajectories(
         for percentile in _get_level_percentiles(level)
     ]
 
-    summary = ensemble_prediction.compute_summary(percentiles_list=percentiles)
+    summary = ensemble_prediction.compute_summary(
+        percentiles_list=percentiles, weighting=weighting)
 
     all_condition_ids, all_output_ids = _get_condition_and_output_ids(summary)
     if condition_ids is None:
@@ -749,8 +747,8 @@ def sampling_parameter_cis(
         size: Tuple[float, float] = None,
         ax: matplotlib.axes.Axes = None
 ) -> matplotlib.axes.Axes:
-    """Plot MCMC-based parameter credibility intervals for one or more
-    credibility levels.
+    """
+    Plot MCMC-based parameter credibility intervals.
 
     Parameters
     ----------
@@ -839,15 +837,6 @@ def sampling_parameter_cis(
     return ax
 
 
-def sampling_parameters_trace(*args, **kwargs):
-    warnings.warn(
-        '`sampling_parameters_trace` is deprecated in favor of '
-        '`sampling_parameter_traces` and will be removed in a future version '
-        'of pyPESTO.'
-    )
-    return sampling_parameter_traces(*args, **kwargs)
-
-
 def sampling_parameter_traces(
         result: Result,
         i_chain: int = 0,
@@ -858,7 +847,8 @@ def sampling_parameter_traces(
         suptitle: str = None,
         size: Tuple[float, float] = None,
         ax: matplotlib.axes.Axes = None):
-    """Plot parameter values over iterations.
+    """
+    Plot parameter values over iterations.
 
     Parameters
     ----------
@@ -888,7 +878,6 @@ def sampling_parameter_traces(
     ax:
         The plot axes.
     """
-
     # get data which should be plotted
     nr_params, params_fval, theta_lb, theta_ub, param_names = get_data_to_plot(
         result=result, i_chain=i_chain, stepsize=stepsize,
@@ -959,7 +948,8 @@ def sampling_scatter(
         suptitle: str = None,
         diag_kind: str = "kde",
         size: Tuple[float, float] = None):
-    """Parameter scatter plot.
+    """
+    Parameter scatter plot.
 
     Parameters
     ----------
@@ -981,7 +971,6 @@ def sampling_scatter(
     ax:
         The plot axes.
     """
-
     # get data which should be plotted
     nr_params, params_fval, theta_lb, theta_ub, _ = get_data_to_plot(
         result=result, i_chain=i_chain, stepsize=stepsize)
@@ -1036,9 +1025,9 @@ def sampling_1d_marginals(
 
     Return
     --------
-    ax: matplotlib-axes
+    ax:
+        matplotlib-axes
     """
-
     # get data which should be plotted
     nr_params, params_fval, theta_lb, theta_ub, param_names = get_data_to_plot(
         result=result, i_chain=i_chain,
@@ -1108,8 +1097,8 @@ def get_data_to_plot(
     param_names:
         Parameter names to be plotted.
     """
-    # get parameters and fval results as numpy arrays
-    arr_param = np.array(result.sample_result.trace_x[i_chain])
+    # get parameters and fval results as numpy arrays (trace_x is numpy array)
+    arr_param = np.asarray(result.sample_result.trace_x[i_chain])
 
     if result.sample_result.burn_in is None:
         warnings.warn("Burn in index not found in the results, the full chain "
@@ -1130,8 +1119,8 @@ def get_data_to_plot(
     # thin out by stepsize, from the index burn_in until end of vector
     arr_param = arr_param[np.arange(burn_in, len(arr_param), stepsize)]
 
-    # invert sign for log posterior values
-    arr_fval = - np.array(sample_result.trace_neglogpost[i_chain])
+    # invert sign for log posterior values (trace_neglogpost is numpy array)
+    arr_fval = - np.asarray(sample_result.trace_neglogpost[i_chain])
     indices = np.arange(burn_in, len(arr_fval), stepsize)
     arr_fval = arr_fval[indices]
     theta_lb = result.problem.lb

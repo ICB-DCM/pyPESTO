@@ -29,8 +29,7 @@ def map_par_opt_to_par_sim(
         amici_model: AmiciModel
 ) -> np.ndarray:
     """
-    From the optimization vector, create the simulation vector according
-    to the mapping.
+    Create simulation vector from optimization vector using the mapping.
 
     Parameters
     ----------
@@ -61,15 +60,14 @@ def map_par_opt_to_par_sim(
 
 
 def create_plist_from_par_opt_to_par_sim(mapping_par_opt_to_par_sim):
-    warnings.warn("This function will be removed in future releases. ",
-                  DeprecationWarning)
     """
+    Create list of parameter indices for which sensitivity is to be computed.
+
     From the parameter mapping `mapping_par_opt_to_par_sim`, create the
     simulation plist according to the mapping `mapping`.
 
     Parameters
     ----------
-
     mapping_par_opt_to_par_sim: array-like of str
         len == n_par_sim, the entries are either numeric, or
         optimization parameter ids.
@@ -80,6 +78,8 @@ def create_plist_from_par_opt_to_par_sim(mapping_par_opt_to_par_sim):
         List of parameter indices for which the sensitivity needs to be
         computed
     """
+    warnings.warn("This function will be removed in future releases. ",
+                  DeprecationWarning)
     plist = []
 
     # iterate over simulation parameter indices
@@ -134,10 +134,9 @@ def par_index_slices(
         The simulation to optimization parameter mapping.
 
     Returns
-    ----------
+    -------
     par_sim_slice:
         array of simulation parameter indices
-
     par_opt_slice:
         array of optimization parameter indices
     """
@@ -161,8 +160,9 @@ def add_sim_grad_to_opt_grad(
         opt_grad: np.ndarray,
         coefficient: float = 1.0):
     """
-    Sum simulation gradients to objective gradient according to the provided
-    mapping `mapping_par_opt_to_par_sim`.
+    Sum simulation gradients to objective gradient.
+
+    Uses the provided mapping `mapping_par_opt_to_par_sim` for summing up.
 
     Parameters
     ----------
@@ -180,7 +180,6 @@ def add_sim_grad_to_opt_grad(
     coefficient:
         Coefficient for sim_grad when adding to opt_grad.
     """
-
     par_sim_slice, par_opt_slice = par_index_slices(par_opt_ids, par_sim_ids,
                                                     condition_map_sim_var)
 
@@ -204,14 +203,12 @@ def add_sim_hess_to_opt_hess(
         opt_hess: np.ndarray,
         coefficient: float = 1.0):
     """
-    Sum simulation hessians to objective hessian according to the provided
-    mapping `mapping_par_opt_to_par_sim`.
+    Sum simulation hessians to objective hessian.
 
     Parameters
     ----------
     Same as for add_sim_grad_to_opt_grad, replacing the gradients by hessians.
     """
-
     par_sim_slice, par_opt_slice = par_index_slices(par_opt_ids, par_sim_ids,
                                                     condition_map_sim_var)
 
@@ -245,8 +242,8 @@ def sim_sres_to_opt_sres(par_opt_ids: Sequence[str],
                          sim_sres: np.ndarray,
                          coefficient: float = 1.0):
     """
-    Sum simulation residual sensitivities to objective residual sensitivities
-    according to the provided mapping.
+
+    Sum simulation residual sensitivities to objective residual sensitivities.
 
     Parameters
     ----------
@@ -289,10 +286,10 @@ def get_error_output(
         amici_model: AmiciModel,
         edatas: Sequence['amici.ExpData'],
         rdatas: Sequence['amici.ReturnData'],
-        sensi_order: int,
+        sensi_orders: Tuple[int, ...],
         mode: str,
         dim: int):
-    """Default output upon error.
+    """Get default output upon error.
 
     Returns values indicative of an error, that is with nan entries in all
     vectors, and a function value, i.e. nllh, of `np.inf`.
@@ -304,7 +301,7 @@ def get_error_output(
                  for data in edatas)
     n_res = nt * amici_model.nytrue
 
-    nllh, snllh, s2nllh, chi2, res, sres = init_return_values(sensi_order,
+    nllh, snllh, s2nllh, chi2, res, sres = init_return_values(sensi_orders,
                                                               mode, dim, True)
     if res is not None:
         res = np.nan * np.ones(n_res)
@@ -323,7 +320,11 @@ def get_error_output(
     return filter_return_dict(ret)
 
 
-def init_return_values(sensi_order, mode, dim, error=False):
+def init_return_values(sensi_orders: Tuple[int, ...],
+                       mode: str,
+                       dim: int,
+                       error: bool = False):
+    """Initialize return values."""
     if error:
         fval = np.inf
         sval = np.nan
@@ -333,25 +334,27 @@ def init_return_values(sensi_order, mode, dim, error=False):
     nllh = fval
     snllh = None
     s2nllh = None
-    if mode == MODE_FUN and sensi_order > 0:
-        snllh = sval * np.ones(dim)
-        if sensi_order > 1:
+    if mode == MODE_FUN:
+        if 1 in sensi_orders:
+            snllh = sval * np.ones(dim)
+        if 2 in sensi_orders:
             s2nllh = sval * np.ones([dim, dim])
 
     chi2 = None
     res = None
     sres = None
     if mode == MODE_RES:
-        chi2 = fval
-        res = np.zeros([0])
-        if sensi_order > 0:
+        if 0 in sensi_orders:
+            chi2 = fval
+            res = np.zeros([0])
+        if 1 in sensi_orders:
             sres = np.zeros([0, dim])
 
     return nllh, snllh, s2nllh, chi2, res, sres
 
 
 def filter_return_dict(ret):
-    """Filters return dict for non-None values"""
+    """Filter return dict for non-None values."""
     return {
         key: val
         for key, val in ret.items()

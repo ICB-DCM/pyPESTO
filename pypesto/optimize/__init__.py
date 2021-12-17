@@ -1,3 +1,4 @@
+# noqa: D400,D205
 """
 Optimize
 ========
@@ -20,5 +21,6 @@ from .optimizer import (
     NLoptOptimizer,
     FidesOptimizer,
     read_result_from_file,
+    read_results_from_file
 )
 from .result import OptimizerResult
