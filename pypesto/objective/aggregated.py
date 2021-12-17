@@ -103,6 +103,8 @@ class AggregatedObjective(ObjectiveBase):
         **kwargs,
     ) -> Union[float, np.ndarray, Tuple, ResultDict]:
         """
+        Negative loglikelihood.
+
         The function in this case is interpreted as negative loglikelihood.
         """
         return aggregate_results([
@@ -119,6 +121,8 @@ class AggregatedObjective(ObjectiveBase):
         **kwargs,
     ) -> Union[float, np.ndarray, Tuple, ResultDict]:
         """
+        Negative logposterior.
+
         As the function is interpreted as negative loglikelihood, the prior
         is the "trivial" prior.
         """

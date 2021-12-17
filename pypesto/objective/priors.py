@@ -117,9 +117,7 @@ class NegLogParameterPriors(ObjectiveBase):
         return_dict: bool = False,
         **kwargs,
     ) -> Union[float, np.ndarray, Tuple, ResultDict]:
-        """
-        Returns 0.
-        """
+        """Negative loglikelihood, returns 0."""
         if return_dict:
             get_zero_result_dict(x, sensi_orders, mode)
         else:
@@ -133,9 +131,7 @@ class NegLogParameterPriors(ObjectiveBase):
         return_dict: bool = False,
         **kwargs,
     ) -> Union[float, np.ndarray, Tuple, ResultDict]:
-        """
-        Returns a call of the function.
-        """
+        """Negative logposterior, returns a call of the function."""
         return super().__call__(x, sensi_orders, mode, return_dict, **kwargs)
 
     def check_sensi_orders(self,

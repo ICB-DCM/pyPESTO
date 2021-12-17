@@ -100,7 +100,10 @@ class AesaraObjective(ObjectiveBase):
         **kwargs,
     ) -> Union[float, np.ndarray, Tuple, ResultDict]:
         """
-        The Objective in this case is interpreted as negative loglikelihood.
+        Negative loglikelihood.
+
+        Returns the negative loglikelihood, which in this case is the
+        objective itself.
         """
         return super().__call__(x, sensi_orders, mode, return_dict, **kwargs)
 
@@ -113,6 +116,8 @@ class AesaraObjective(ObjectiveBase):
         **kwargs,
     ) -> Union[float, np.ndarray, Tuple, ResultDict]:
         """
+        Negative logprior.
+
         As the Objective is interpreted as negative loglikelihood, the prior
         is the "trivial" prior.
         """

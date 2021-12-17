@@ -75,7 +75,7 @@ def get_zero_result_dict(
         x: np.ndarray,
         sensi_orders: Tuple[int, ...] = (0, ),
         mode: str = MODE_FUN):
-    """Returns an result object for the trivial = constant objective.
+    """Return an result object for the trivial = constant objective.
 
     This is used as the dummy part for get_negloglikelihood and
     get_neglogprior, if the objective does not contain a likelihood/prior

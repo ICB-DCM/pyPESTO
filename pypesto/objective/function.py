@@ -159,7 +159,9 @@ class Objective(ObjectiveBase):
         **kwargs,
     ) -> Union[float, np.ndarray, Tuple, ResultDict]:
         """
-        The function in this case is interpreted as negative loglikelihood.
+        Negative likelihood.
+
+        The function is interpreted as negative loglikelihood.
         """
         return super().__call__(x, sensi_orders, mode, return_dict, **kwargs)
 
@@ -172,6 +174,8 @@ class Objective(ObjectiveBase):
         **kwargs,
     ) -> Union[float, np.ndarray, Tuple, ResultDict]:
         """
+        Negative logprior.
+
         As the function is interpreted as negative loglikelihood, the prior
         is the "trivial" prior.
         """

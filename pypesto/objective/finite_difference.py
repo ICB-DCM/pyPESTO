@@ -387,7 +387,9 @@ class FD(ObjectiveBase):
         **kwargs,
     ) -> Union[float, np.ndarray, Tuple, ResultDict]:
         """
-        The objective in this case is interpreted as negative loglikelihood.
+        Negative loglikelihood.
+
+        The objective is interpreted as negative loglikelihood.
         """
         return super().__call__(x, sensi_orders, mode, return_dict, **kwargs)
 
@@ -400,6 +402,8 @@ class FD(ObjectiveBase):
         **kwargs,
     ) -> Union[float, np.ndarray, Tuple, ResultDict]:
         """
+        Negative logprior.
+
         As the objective is interpreted as negative loglikelihood, the prior
         is the "trivial" prior.
         """

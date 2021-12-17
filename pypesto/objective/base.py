@@ -228,7 +228,9 @@ class ObjectiveBase(abc.ABC):
         **kwargs,
     ) -> Union[float, np.ndarray, Tuple, ResultDict]:
         """
-        Returns the contribution of the objective function, that is given by
+        Negative Loglikelihood.
+
+        Returns the contribution to the objective function, that is given by
         the likelihood. Has the same interface as the __call__ method.
         """
         raise NotImplementedError()
@@ -243,7 +245,9 @@ class ObjectiveBase(abc.ABC):
         **kwargs,
     ) -> Union[float, np.ndarray, Tuple, ResultDict]:
         """
-        Returns the contribution of the objective function, that is given by
+        Negative logprior.
+
+        Returns the contribution to the objective function, that is given by
         the prior. Has the same interface as the __call__ method.
         """
         raise NotImplementedError()

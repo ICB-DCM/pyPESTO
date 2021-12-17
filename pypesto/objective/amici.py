@@ -382,7 +382,10 @@ class AmiciObjective(ObjectiveBase):
         **kwargs,
     ) -> Union[float, np.ndarray, Tuple, ResultDict]:
         """
-        AMICI returns the negative loglikelihood.
+        Negative loglikelihood.
+
+        Returns the negative loglikelihood, which coincides with the AMICI
+        objective.
         """
         return super().__call__(x, sensi_orders, mode, return_dict, **kwargs)
 
@@ -395,7 +398,9 @@ class AmiciObjective(ObjectiveBase):
         **kwargs,
     ) -> Union[float, np.ndarray, Tuple, ResultDict]:
         """
-        As AMICI returns the negative loglikelihood, the prior
+        Negative logprior.
+
+        As the AMICI objective returns the negative loglikelihood, the prior
         is the "trivial" prior.
         """
         if return_dict:
