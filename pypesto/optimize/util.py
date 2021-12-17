@@ -1,5 +1,7 @@
 """Utility functions for :py:func:`pypesto.optimize.minimize`."""
 import datetime
+import os
+import binascii
 from pathlib import Path
 from typing import List
 import h5py
@@ -134,7 +136,8 @@ def autosave(filename: str,
 
     if filename == "Auto":
         time = datetime.datetime.now().strftime("%Y_%d_%m_%H_%M_%S")
-        filename = time+f"_{store_type}_result.h5"
+        filename = time+f"_{store_type}_result_" \
+                        f"{binascii.b2a_hex(os.urandom(8)).decode()}.h5"
     # set the type to True and pass it on to write_result
     to_save = {store_type: True}
     write_result(result=result,
