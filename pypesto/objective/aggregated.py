@@ -1,10 +1,11 @@
 import numpy as np
 
 from copy import deepcopy
-from typing import Sequence, Tuple
+from typing import Sequence, Tuple, Union
 from .base import ObjectiveBase, ResultDict
 
-from .constants import RDATAS, FVAL, CHI2, SCHI2, RES, SRES, GRAD, HESS, HESSP
+from .constants import \
+    (RDATAS, FVAL, CHI2, SCHI2, RES, SRES, GRAD, HESS, HESSP, MODE_FUN)
 
 
 class AggregatedObjective(ObjectiveBase):
@@ -90,6 +91,39 @@ class AggregatedObjective(ObjectiveBase):
         """
         return aggregate_results([
             objective.call_unprocessed(x, sensi_orders, mode, **kwargs)
+            for objective in self._objectives
+        ])
+
+    def get_negloglikelihood(
+        self,
+        x: np.ndarray,
+        sensi_orders: Tuple[int, ...] = (0, ),
+        mode: str = MODE_FUN,
+        return_dict: bool = False,
+        **kwargs,
+    ) -> Union[float, np.ndarray, Tuple, ResultDict]:
+        """
+        The function in this case is interpreted as negative loglikelihood.
+        """
+        return aggregate_results([
+            objective.get_negloglikelihood(x, sensi_orders, mode, **kwargs)
+            for objective in self._objectives
+        ])
+
+    def get_neglogprior(
+        self,
+        x: np.ndarray,
+        sensi_orders: Tuple[int, ...] = (0, ),
+        mode: str = MODE_FUN,
+        return_dict: bool = False,
+        **kwargs,
+    ) -> Union[float, np.ndarray, Tuple, ResultDict]:
+        """
+        As the function is interpreted as negative loglikelihood, the prior
+        is the "trivial" prior.
+        """
+        return aggregate_results([
+            objective.get_neglogprior(x, sensi_orders, mode, **kwargs)
             for objective in self._objectives
         ])
 

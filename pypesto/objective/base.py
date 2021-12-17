@@ -218,6 +218,36 @@ class ObjectiveBase(abc.ABC):
         """
         raise NotImplementedError()
 
+    @abc.abstractmethod
+    def get_negloglikelihood(
+        self,
+        x: np.ndarray,
+        sensi_orders: Tuple[int, ...] = (0, ),
+        mode: str = MODE_FUN,
+        return_dict: bool = False,
+        **kwargs,
+    ) -> Union[float, np.ndarray, Tuple, ResultDict]:
+        """
+        Returns the contribution of the objective function, that is given by
+        the likelihood. Has the same interface as the __call__ method.
+        """
+        raise NotImplementedError()
+
+    @abc.abstractmethod
+    def get_neglogprior(
+        self,
+        x: np.ndarray,
+        sensi_orders: Tuple[int, ...] = (0, ),
+        mode: str = MODE_FUN,
+        return_dict: bool = False,
+        **kwargs,
+    ) -> Union[float, np.ndarray, Tuple, ResultDict]:
+        """
+        Returns the contribution of the objective function, that is given by
+        the prior. Has the same interface as the __call__ method.
+        """
+        raise NotImplementedError()
+
     def check_mode(self, mode: str) -> bool:
         """
         Check if the objective is able to compute in the requested mode.

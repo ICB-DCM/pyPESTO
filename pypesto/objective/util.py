@@ -1,5 +1,6 @@
 import numpy as np
-from typing import Union
+from typing import Union, Tuple
+from .constants import MODE_FUN, MODE_RES, FVAL, GRAD, HESS, RES, SRES
 
 
 def _check_none(fun):
@@ -68,3 +69,39 @@ def sres_to_fim(sres: np.ndarray):
     of 0.5 as in :func:`res_to_fval`.
     """
     return sres.transpose().dot(sres)
+
+
+def get_zero_result_dict(
+        x: np.ndarray,
+        sensi_orders: Tuple[int, ...] = (0, ),
+        mode: str = MODE_FUN):
+    """Returns an result object for the trivial = constant objective.
+
+    This is used as the dummy part for get_negloglikelihood and
+    get_neglogprior, if the objective does not contain a likelihood/prior
+    contribution.
+
+    :param x:
+    :param sensi_orders:
+    :param mode:
+    :return:
+    """
+    result = {}
+
+    if mode == MODE_FUN:
+        if 0 in sensi_orders:
+            result[FVAL] = 0
+        if 1 in sensi_orders:
+            result[GRAD] = np.zeros_like(x)
+        if 2 in sensi_orders:
+            result[HESS] = np.zeros((len(x), len(x)))
+    elif mode == MODE_RES:
+        if 0 in sensi_orders:
+            result[RES] = np.array([0])
+        if 1 in sensi_orders:
+            result[SRES] = np.zeros((1, len(x)))
+        if 2 in sensi_orders:
+            raise ValueError(f"Sensitivity order 2 are not supported "
+                             f"for {MODE_RES}.")
+    else:
+        raise ValueError(f'unknown mode {mode}.')

@@ -11,8 +11,9 @@ import copy
 
 from .base import ObjectiveBase, ResultDict
 from .constants import MODE_FUN, FVAL, GRAD, HESS, RDATAS
+from .util import get_zero_result_dict
 
-from typing import Tuple, Optional, Sequence
+from typing import Tuple, Optional, Sequence, Union
 
 try:
     import aesara
@@ -89,6 +90,36 @@ class AesaraObjective(ObjectiveBase):
 
         # temporary storage for evaluation results of objective
         self.inner_ret: ResultDict = {}
+
+    def get_negloglikelihood(
+        self,
+        x: np.ndarray,
+        sensi_orders: Tuple[int, ...] = (0, ),
+        mode: str = MODE_FUN,
+        return_dict: bool = False,
+        **kwargs,
+    ) -> Union[float, np.ndarray, Tuple, ResultDict]:
+        """
+        The Objective in this case is interpreted as negative loglikelihood.
+        """
+        return super().__call__(x, sensi_orders, mode, return_dict, **kwargs)
+
+    def get_neglogprior(
+        self,
+        x: np.ndarray,
+        sensi_orders: Tuple[int, ...] = (0, ),
+        mode: str = MODE_FUN,
+        return_dict: bool = False,
+        **kwargs,
+    ) -> Union[float, np.ndarray, Tuple, ResultDict]:
+        """
+        As the Objective is interpreted as negative loglikelihood, the prior
+        is the "trivial" prior.
+        """
+        if return_dict:
+            get_zero_result_dict(x, sensi_orders, mode)
+        else:
+            return 0.0
 
     def check_mode(self, mode) -> bool:
         """See `ObjectiveBase` documentation."""

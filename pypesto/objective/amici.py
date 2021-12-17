@@ -6,11 +6,13 @@ import abc
 from typing import Dict, Optional, Sequence, Tuple, Union
 from collections import OrderedDict
 
-from .base import ObjectiveBase
+from .base import ObjectiveBase, ResultDict
 from .constants import MODE_FUN, MODE_RES, FVAL, RDATAS
 from .amici_calculator import AmiciCalculator
 from .amici_util import (
     map_par_opt_to_par_sim, create_identity_parameter_mapping)
+
+from .util import get_zero_result_dict
 
 try:
     import amici
@@ -370,6 +372,36 @@ class AmiciObjective(ObjectiveBase):
                 self.store_steadystate_guess(data_ix, x_dct, rdata)
 
         return ret
+
+    def get_negloglikelihood(
+        self,
+        x: np.ndarray,
+        sensi_orders: Tuple[int, ...] = (0, ),
+        mode: str = MODE_FUN,
+        return_dict: bool = False,
+        **kwargs,
+    ) -> Union[float, np.ndarray, Tuple, ResultDict]:
+        """
+        AMICI returns the negative loglikelihood.
+        """
+        return super().__call__(x, sensi_orders, mode, return_dict, **kwargs)
+
+    def get_neglogprior(
+        self,
+        x: np.ndarray,
+        sensi_orders: Tuple[int, ...] = (0, ),
+        mode: str = MODE_FUN,
+        return_dict: bool = False,
+        **kwargs,
+    ) -> Union[float, np.ndarray, Tuple, ResultDict]:
+        """
+        As AMICI returns the negative loglikelihood, the prior
+        is the "trivial" prior.
+        """
+        if return_dict:
+            get_zero_result_dict(x, sensi_orders, mode)
+        else:
+            return 0.0
 
     def par_arr_to_dct(self, x: Sequence[float]) -> Dict[str, float]:
         """Create dict from parameter vector."""

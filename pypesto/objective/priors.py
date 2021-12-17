@@ -1,11 +1,11 @@
 import numpy as np
-from typing import Callable, Dict, List, Sequence, Tuple
+from typing import Callable, Dict, List, Sequence, Tuple, Union
 from copy import deepcopy
 
 from .function import ObjectiveBase
 from .aggregated import AggregatedObjective
 from .constants import MODE_FUN, MODE_RES, FVAL, GRAD, HESS, RES, SRES, CHI2
-from .util import res_to_chi2
+from .util import res_to_chi2, get_zero_result_dict
 
 from .base import ResultDict
 
@@ -71,7 +71,8 @@ class NegLogParameterPriors(ObjectiveBase):
             self,
             x: np.ndarray,
             sensi_orders: Tuple[int, ...],
-            mode: str
+            mode: str,
+            **kwargs
     ) -> ResultDict:
         """
         Call objective function without pre- or post-processing and formatting.
@@ -107,6 +108,35 @@ class NegLogParameterPriors(ObjectiveBase):
                     raise ValueError(f'Invalid sensi order {order}.')
 
         return res
+
+    def get_negloglikelihood(
+        self,
+        x: np.ndarray,
+        sensi_orders: Tuple[int, ...] = (0, ),
+        mode: str = MODE_FUN,
+        return_dict: bool = False,
+        **kwargs,
+    ) -> Union[float, np.ndarray, Tuple, ResultDict]:
+        """
+        Returns 0.
+        """
+        if return_dict:
+            get_zero_result_dict(x, sensi_orders, mode)
+        else:
+            return 0.0
+
+    def get_neglogprior(
+        self,
+        x: np.ndarray,
+        sensi_orders: Tuple[int, ...] = (0, ),
+        mode: str = MODE_FUN,
+        return_dict: bool = False,
+        **kwargs,
+    ) -> Union[float, np.ndarray, Tuple, ResultDict]:
+        """
+        Returns a call of the function.
+        """
+        return super().__call__(x, sensi_orders, mode, return_dict, **kwargs)
 
     def check_sensi_orders(self,
                            sensi_orders: Tuple[int, ...],
