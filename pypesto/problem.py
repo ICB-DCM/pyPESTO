@@ -22,7 +22,6 @@ from typing import (
 )
 
 from .objective import ObjectiveBase
-from .objective.priors import NegLogPriors
 
 SupportsFloatIterableOrValue = Union[Iterable[SupportsFloat], SupportsFloat]
 SupportsIntIterableOrValue = Union[Iterable[SupportsInt], SupportsInt]
