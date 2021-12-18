@@ -32,12 +32,11 @@ class MetropolisSampler(InternalSampler):
     def initialize(self, problem: Problem, x0: np.ndarray):
         """Initialize the sampler."""
         self.problem = problem
+
         self.neglogpost = problem.objective
         self.neglogpost.history = History()
-        if problem.x_priors is None:
-            self.neglogprior = lambda x: -0.
-        else:
-            self.neglogprior = problem.x_priors
+        self.neglogprior = self.problem.objective.get_neglogprior
+
         self.trace_x = [x0]
         self.trace_neglogpost = [self.neglogpost(x0)]
         self.trace_neglogprior = [self.neglogprior(x0)]

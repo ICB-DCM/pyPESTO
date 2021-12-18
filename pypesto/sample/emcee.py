@@ -125,8 +125,12 @@ class EmceeSampler(Sampler):
         # all walkers are concatenated, yielding a flat array
         trace_x = np.array([self.sampler.get_chain(flat=True)])
         trace_neglogpost = np.array([- self.sampler.get_log_prob(flat=True)])
-        # the sampler does not know priors
-        trace_neglogprior = np.full(trace_neglogpost.shape, np.nan)
+
+        # compute the neglogprior for all samples.
+        trace_neglogprior = \
+            np.array([self.problem.objective.get_neglogprior(x)
+                      for x in trace_x])
+
         # the walkers all run on temperature 1
         betas = np.array([1.])
 

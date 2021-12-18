@@ -149,9 +149,13 @@ class Pymc3Sampler(Sampler):
                 or trace_x.shape[2] != self.problem.dim:
             raise ValueError("Trace dimensions are inconsistent")
 
+        trace_neglogprior = np.array(
+            [self.problem.get_neglogprior(x) for x in trace_x]
+        )
+
         return McmcPtResult(
             trace_x=np.array(trace_x),
             trace_neglogpost=np.array(trace_neglogpost),
-            trace_neglogprior=np.full(trace_neglogpost.shape, np.nan),
+            trace_neglogprior=trace_neglogprior,
             betas=np.array([1.] * trace_x.shape[0]),
         )
