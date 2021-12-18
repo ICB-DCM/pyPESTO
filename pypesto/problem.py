@@ -68,9 +68,6 @@ class Problem:
         Parameter scales can be optionally given and are used e.g. in
         visualisation and prior generation. Currently the scales 'lin',
         'log`and 'log10' are supported.
-    x_priors_defs:
-        Definitions of priors for parameters. Types of priors, and their
-        required and optional parameters, are described in the `Prior` class.
     copy_objective:
         Whethter to generate a deep copy of the objective function before
         potential modification the problem class performs on it.
@@ -100,7 +97,6 @@ class Problem:
         x_guesses: Optional[Iterable[float]] = None,
         x_names: Optional[Iterable[str]] = None,
         x_scales: Optional[Iterable[str]] = None,
-        x_priors_defs: Optional[NegLogPriors] = None,
         lb_init: Union[np.ndarray, List[float], None] = None,
         ub_init: Union[np.ndarray, List[float], None] = None,
         copy_objective: bool = True,
@@ -155,8 +151,6 @@ class Problem:
         if x_scales is None:
             x_scales = ['lin'] * self.dim_full
         self.x_scales = x_scales
-
-        self.x_priors = x_priors_defs
 
         self.normalize()
 
