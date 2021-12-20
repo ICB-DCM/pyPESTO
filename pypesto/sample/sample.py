@@ -13,12 +13,12 @@ logger = logging.getLogger(__name__)
 
 
 def sample(
-    problem: Problem,
-    n_samples: int,
-    sampler: Sampler = None,
-    x0: Union[np.ndarray, List[np.ndarray]] = None,
-    result: Result = None,
-    filename: str = "Auto",
+        problem: Problem,
+        n_samples: int,
+        sampler: Sampler = None,
+        x0: Union[np.ndarray, List[np.ndarray]] = None,
+        result: Result = None,
+        filename: Union[str, None] = "Auto"
 ) -> Result:
     """
     Call to do parameter sampling.
@@ -87,6 +87,6 @@ def sample(
 
     autosave(filename=filename,
              result=result,
-             type="sampling")
+             store_type="sample")
 
     return result

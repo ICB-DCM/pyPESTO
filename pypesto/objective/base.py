@@ -275,6 +275,9 @@ class ObjectiveBase(abc.ABC):
             Boolean indicating whether combination of sensi_orders and mode
             is supported
         """
+        if not sensi_orders:
+            return True
+
         if (
             mode == MODE_FUN
             and (

@@ -102,7 +102,8 @@ def validation_profile_significance(
                                     optimizer=optimizer,
                                     n_starts=n_starts,
                                     engine=engine,
-                                    progress_bar=False)
+                                    progress_bar=False,
+                                    filename=None)
 
     # Validation intervals compare the nllh value on the full data set
     # of the parameter fits from the training and the full data set.

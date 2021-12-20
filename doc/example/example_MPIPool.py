@@ -44,8 +44,9 @@ if __name__ == '__main__':
 
     # result is the way to call the optimization with MPIPoolEngine.
     result = optimize.minimize(
-            problem=problem, optimizer=optimizer,
-            n_starts=n_starts, engine=MPIPoolEngine())
+        problem=problem, optimizer=optimizer,
+        n_starts=n_starts, engine=MPIPoolEngine(),
+        filename=None)
 
     # saving optimization results to hdf5
     file_name = 'temp_result.h5'
