@@ -577,8 +577,7 @@ class PetabImporter(AmiciObjectBuilder):
             x_fixed_vals=self.petab_problem.x_nominal_fixed_scaled,
             x_guesses=x_guesses,
             x_names=self.petab_problem.x_ids,
-            x_scales=x_scales,
-            x_priors_defs=prior,
+            x_scales=x_scales
         )
 
         return problem
