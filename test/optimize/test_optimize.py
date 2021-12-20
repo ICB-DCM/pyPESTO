@@ -230,6 +230,7 @@ def test_trim_results(problem):
         n_starts=1,
         startpoint_method=pypesto.startpoint.uniform,
         options=optimize_options,
+        filename=None
     )
     assert result.optimize_result.list[0].hess is None
 
@@ -241,6 +242,7 @@ def test_trim_results(problem):
         n_starts=1,
         startpoint_method=pypesto.startpoint.uniform,
         options=optimize_options,
+        filename=None
     )
     assert result.optimize_result.list[0].sres is None
 
