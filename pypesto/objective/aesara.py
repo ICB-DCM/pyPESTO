@@ -105,7 +105,11 @@ class AesaraObjective(ObjectiveBase):
         Returns the negative loglikelihood, which in this case is the
         objective itself.
         """
-        return self.base_objective(x, sensi_orders, mode, return_dict, **kwargs)
+        return self.base_objective(x,
+                                   sensi_orders,
+                                   mode,
+                                   return_dict,
+                                   **kwargs)
 
     def get_neglogprior(
         self,
@@ -121,7 +125,11 @@ class AesaraObjective(ObjectiveBase):
         As the Objective is interpreted as negative loglikelihood, the prior
         is the "trivial" prior.
         """
-        return self.base_objective(x, sensi_orders, mode, return_dict, **kwargs)
+        return self.base_objective(x,
+                                   sensi_orders,
+                                   mode,
+                                   return_dict,
+                                   **kwargs)
 
     def check_mode(self, mode) -> bool:
         """See `ObjectiveBase` documentation."""
