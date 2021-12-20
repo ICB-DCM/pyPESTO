@@ -11,7 +11,6 @@ import copy
 
 from .base import ObjectiveBase, ResultDict
 from .constants import MODE_FUN, FVAL, GRAD, HESS, RDATAS
-from .util import get_zero_result_dict
 
 from typing import Tuple, Optional, Sequence, Union
 
