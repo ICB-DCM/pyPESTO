@@ -105,3 +105,5 @@ def get_zero_result_dict(
                              f"for {MODE_RES}.")
     else:
         raise ValueError(f'unknown mode {mode}.')
+
+    return result

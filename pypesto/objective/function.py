@@ -180,7 +180,7 @@ class Objective(ObjectiveBase):
         is the "trivial" prior.
         """
         if return_dict:
-            get_zero_result_dict(x, sensi_orders, mode)
+            return get_zero_result_dict(x, sensi_orders, mode)
         else:
             return 0.0
 

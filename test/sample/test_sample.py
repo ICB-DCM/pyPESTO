@@ -13,6 +13,7 @@ import pypesto.petab
 import pypesto.optimize as optimize
 import pypesto.sample as sample
 import pypesto.visualize as visualize
+from pypesto.objective.priors import get_parameter_prior_dict
 
 
 def gaussian_llh(x):
@@ -110,6 +111,16 @@ def sample_petab_problem():
     return result
 
 
+def nlprior_objective():
+    prior_dict = get_parameter_prior_dict(
+        index=0,
+        prior_type='normal',
+
+        prior_parameters=[-1., 0.7]
+    )
+    return pypesto.objective.NegLogParameterPriors([prior_dict])
+
+
 def prior(x):
     return multivariate_normal.pdf(x, mean=-1., cov=0.7)
 
@@ -118,12 +129,16 @@ def likelihood(x):
     return uniform.pdf(x, loc=-10., scale=20.)[0]
 
 
-def negative_log_posterior(x):
-    return - np.log(likelihood(x)) - np.log(prior(x))
+def negative_log_likelihood(x):
+    return - np.log(likelihood(x))
 
 
 def negative_log_prior(x):
     return - np.log(prior(x))
+
+
+def negative_log_posterior(x):
+    return - np.log(likelihood(x)) - np.log(prior(x))
 
 
 @pytest.fixture(params=[
@@ -492,17 +507,15 @@ def test_empty_prior():
 def test_prior():
     """Check that priors are defined for sampling."""
     # define negative log posterior
-    posterior_fun = pypesto.Objective(fun=negative_log_posterior)
 
-    # define negative log prior
-    prior_fun = pypesto.Objective(fun=negative_log_prior)
+    nllh_obj = pypesto.Objective(fun=negative_log_likelihood)
+    nlprior_obj = nlprior_objective()
 
-    # define pypesto prior object
-    prior_object = pypesto.NegLogPriors(objectives=[prior_fun])
+    posterior = pypesto.objective.AggregatedObjective(
+        [nllh_obj, nlprior_obj])
 
     # define pypesto problem using prior object
-    test_problem = pypesto.Problem(objective=posterior_fun,
-                                   x_priors_defs=prior_object,
+    test_problem = pypesto.Problem(objective=posterior,
                                    lb=-10, ub=10,
                                    x_names=['x'])
 

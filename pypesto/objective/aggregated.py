@@ -126,10 +126,22 @@ class AggregatedObjective(ObjectiveBase):
         As the function is interpreted as negative loglikelihood, the prior
         is the "trivial" prior.
         """
-        return aggregate_results([
-            objective.get_neglogprior(x, sensi_orders, mode, **kwargs)
-            for objective in self._objectives
-        ])
+        priors = [
+            objective.get_neglogprior(x,
+                                      sensi_orders,
+                                      mode,
+                                      return_dict=True,
+                                      **kwargs)
+            for objective in self._objectives]
+
+        result_as_dict = aggregate_results(priors)
+
+        if return_dict:
+            return result_as_dict
+        else:
+            return ObjectiveBase.output_to_tuple(sensi_orders,
+                                                 mode,
+                                                 **result_as_dict)
 
     def initialize(self):
         """See `ObjectiveBase` documentation."""
