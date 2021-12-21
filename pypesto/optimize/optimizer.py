@@ -191,9 +191,10 @@ def fix_decorator(minimize):
         # vectors to full vectors
         result.update_to_full(problem)
 
-        logger.info(f"Final fval={result.fval:.4f}, "
-                    f"time={result.time:.4f}s, "
-                    f"n_fval={result.n_fval}.")
+        logger.debug(
+            f"Final fval={result.fval:.4f}, time={result.time:.4f}s, "
+            f"n_fval={result.n_fval}.",
+        )
 
         return result
 

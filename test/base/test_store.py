@@ -436,11 +436,14 @@ def test_result_from_hdf5_history(hdf5_file):
     )
     # optimize with history saved to hdf5
     result = optimize.minimize(
-        problem=problem, n_starts=1,
+        problem=problem,
+        n_starts=1,
         history_options=history_options_hdf5,
     )
 
-    result_from_hdf5 = optimization_result_from_history(hdf5_file)
+    result_from_hdf5 = optimization_result_from_history(
+        filename=hdf5_file, problem=problem
+    )
 
     # Currently 'exitflag', 'time' and 'message' are not loaded.
     arguments = [ID, X, FVAL, GRAD, HESS, RES, SRES,

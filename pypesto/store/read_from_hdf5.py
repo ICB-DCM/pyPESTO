@@ -1,5 +1,7 @@
 """Include various function to read results from hdf5 Files."""
 import h5py
+
+import pypesto
 from ..result import Result
 from ..optimize.result import OptimizerResult
 from ..optimize.optimizer import fill_result_from_history
@@ -355,7 +357,10 @@ def load_objective_config(filename: str):
         return info
 
 
-def optimization_result_from_history(filename: str) -> Result:
+def optimization_result_from_history(
+    filename: str,
+    problem: pypesto.Problem,
+) -> Result:
     """Convert a saved hdf5 History to an optimization result.
 
     Used for interrupted optimization runs.
@@ -364,6 +369,8 @@ def optimization_result_from_history(filename: str) -> Result:
     ----------
     filename:
         The name of the file in which the information are stored.
+    problem:
+        Problem, needed to identify what parameters to accept.
 
     Returns
     -------
@@ -376,9 +383,12 @@ def optimization_result_from_history(filename: str) -> Result:
             history = Hdf5History(id=id_name, file=filename)
             history._recover_options(filename)
             optimizer_history = OptimizerHistory(
-                history,
+                history=history,
                 x0=f[f'history/{id_name}/trace/0/x'][()],
-                generate_from_history=True)
+                lb=problem.lb,
+                ub=problem.ub,
+                generate_from_history=True,
+            )
             optimizer_result = OptimizerResult(id=id_name)
             fill_result_from_history(optimizer_result, optimizer_history)
             result.optimize_result.append(optimizer_result)

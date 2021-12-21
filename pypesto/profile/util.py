@@ -81,11 +81,11 @@ def calculate_approximate_ci(
 
 
 def initialize_profile(
-        problem: Problem,
-        result: Result,
-        result_index: int,
-        profile_index: Iterable[int],
-        profile_list: int
+    problem: Problem,
+    result: Result,
+    result_index: int,
+    profile_index: Iterable[int],
+    profile_list: int,
 ) -> float:
     """
     Initialize profiling based on a previous optimization.
@@ -136,7 +136,8 @@ def initialize_profile(
         profile_index=profile_index,
         profile_list=profile_list,
         problem_dimension=problem.dim_full,
-        global_opt=global_opt)
+        global_opt=global_opt,
+    )
 
     # return the log-posterior of the global optimum (needed in order to
     # compute the log-posterior-ratio)
@@ -144,15 +145,14 @@ def initialize_profile(
 
 
 def fill_profile_list(
-        profile_result: ProfileResult,
-        optimizer_result: Dict[str, Any],
-        profile_index: Iterable[int],
-        profile_list: int,
-        problem_dimension: int,
-        global_opt: float
+    profile_result: ProfileResult,
+    optimizer_result: Dict[str, Any],
+    profile_index: Iterable[int],
+    profile_list: int,
+    problem_dimension: int,
+    global_opt: float,
 ) -> None:
-    """
-    Fill a ProfileResult.
+    """Fill a ProfileResult.
 
     Helper function for `initialize_profile`.
 
@@ -178,7 +178,7 @@ def fill_profile_list(
     if optimizer_result[GRAD] is not None:
         gradnorm = np.linalg.norm(optimizer_result[GRAD])
     else:
-        gradnorm = None
+        gradnorm = np.nan
 
     # create blank profile
     new_profile = ProfilerResult(
@@ -192,7 +192,8 @@ def fill_profile_list(
         n_fval=0,
         n_grad=0,
         n_hess=0,
-        message=None)
+        message=None,
+    )
 
     if profile_list is None:
         # All profiles have to be created from scratch
