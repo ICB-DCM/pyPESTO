@@ -110,8 +110,6 @@ class HistoryTest(unittest.TestCase):
         rstart = optimize.read_result_from_file(
             self.problem, self.history_options, id
         )
-        for key in ["fval", "x", "grad"]:
-            print(getattr(start, key), getattr(rstart, key))
 
         result_attributes = [
             key for key in start.keys()
@@ -201,25 +199,35 @@ class HistoryTest(unittest.TestCase):
                 )
 
     def check_history_consistency(self, start: optimize.OptimizerResult):
-
         def xfull(x_trace):
             return self.problem.get_full_vector(
                 x_trace, self.problem.x_fixed_vals
             )
 
         if isinstance(start.history, (CsvHistory, Hdf5History)):
-            it_final = np.nanargmin(start.history.get_fval_trace())
+            # get index of optimal parameter
+            ix_admit = [
+                ix for ix, x in enumerate(start.history.get_x_trace())
+                if np.all(x >= self.problem.lb)
+                and np.all(x <= self.problem.ub)
+            ]
+            it_final = np.nanargmin(start.history.get_fval_trace(ix_admit))
             if isinstance(it_final, np.ndarray):
                 it_final = it_final[0]
+            it_final = ix_admit[it_final]
+
             it_start = int(np.where(np.logical_not(
                 np.isnan(start.history.get_fval_trace())
             ))[0][0])
             assert np.allclose(
-                xfull(start.history.get_x_trace(it_start)), start.x0)
+                xfull(start.history.get_x_trace(it_start)), start.x0), \
+                type(start.history)
             assert np.allclose(
-                xfull(start.history.get_x_trace(it_final)), start.x)
+                xfull(start.history.get_x_trace(it_final)), start.x), \
+                type(start.history)
             assert np.isclose(
-                start.history.get_fval_trace(it_start), start.fval0)
+                start.history.get_fval_trace(it_start), start.fval0), \
+                type(start.history)
 
         funs = {
             FVAL: self.obj.get_fval,
