@@ -1346,7 +1346,7 @@ class OptimizerHistory:
         # get indices of admissible trace entries
         # shape (n_sample, n_x)
         xs = np.asarray(self.history.get_x_trace())
-        ixs_admit = [self._admissible(x) for x in xs]
+        ixs_admit = [ix for ix, x in enumerate(xs) if self._admissible(x)]
 
         # we prioritize fval over chi2 as fval is written whenever possible
         ix_min = np.nanargmin(self.history.get_fval_trace(ixs_admit))
@@ -1354,6 +1354,8 @@ class OptimizerHistory:
         # generally want the first occurrence
         if isinstance(ix_min, np.ndarray):
             ix_min = ix_min[0]
+        # select index in original array
+        ix_min = ixs_admit[ix_min]
 
         for var in ['fval', 'chi2', 'x']:
             self.extract_from_history(var, ix_min)

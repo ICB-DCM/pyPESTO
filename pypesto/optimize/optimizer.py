@@ -236,8 +236,8 @@ def fill_result_from_history(
     x_match = x_exist and np.allclose(history_x, result_x)
     if x_exist and not x_match:
         logger.debug(
-            f"Optimal parameter mismatch: history {history_x:3e}, "
-            f"result {result_x:3e}"
+            f"Optimal parameter mismatch: history {history_x}, "
+            f"result {result_x}"
         )
 
     # counters

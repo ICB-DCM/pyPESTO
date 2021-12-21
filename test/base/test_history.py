@@ -50,7 +50,8 @@ class HistoryTest(unittest.TestCase):
         self.problem = pypesto.Problem(**kwargs)
 
         optimize_options = pypesto.optimize.OptimizeOptions(
-            allow_failed_starts=False
+            allow_failed_starts=False,
+            history_beats_optimizer=True,
         )
 
         self.history_options.trace_save_iter = 1
@@ -84,7 +85,7 @@ class HistoryTest(unittest.TestCase):
                     self.check_load_from_file(start, str(istart))
                     self.check_history_consistency(start)
 
-                # check that we can also aggregrate from multiple files.
+                # check that we can also aggregate from multiple files.
                 # load more results than necessary to check whether this
                 # also works in case of incomplete results.
                 if storage_type is not None:
@@ -100,31 +101,31 @@ class HistoryTest(unittest.TestCase):
                         )
 
     def check_load_from_file(self, start: optimize.OptimizerResult, id: str):
-        """Verify we can reconstitute OptimizerResult from csv file"""
-
+        """Verify we can reconstitute OptimizerResult from history file"""
+        # TODO other implementations
         if isinstance(start.history, MemoryHistory):
             return
-
-        # TODO other implementations
         assert isinstance(start.history, (CsvHistory, Hdf5History))
 
         rstart = optimize.read_result_from_file(
             self.problem, self.history_options, id
         )
+        for key in ["fval", "x", "grad"]:
+            print(getattr(start, key), getattr(rstart, key))
 
         result_attributes = [
             key for key in start.keys()
             if key not in ['history', 'message', 'exitflag', 'time']
         ]
         for attr in result_attributes:
-            # if we didn't record we cant recover the value
+            # if we didn't record we can't recover the value
             if not self.history_options.get(f'trace_record_{attr}', True):
                 continue
 
             # note that we can expect slight deviations in grad when using
             # a ls optimizer since history computes this from res
             # with sensitivies activated while the optimizer uses a res
-            # without sensitivities activated. If this fails to often,
+            # without sensitivities activated. If this fails too often,
             # increase atol
             if start[attr] is None:
                 continue  # reconstituted may carry more information
@@ -237,8 +238,9 @@ class HistoryTest(unittest.TestCase):
                 x_full = xfull(start.history.get_x_trace(it))
                 val = getattr(start.history, f'get_{var}_trace')(it)
 
-                if not getattr(self.history_options, f'trace_record_{var}',
-                               True):
+                if not getattr(
+                    self.history_options, f'trace_record_{var}', True
+                ):
                     assert np.isnan(val)
                     continue
                 if np.all(np.isnan(val)):
@@ -257,7 +259,7 @@ class HistoryTest(unittest.TestCase):
                     # note that we can expect slight deviations here since
                     # this res is computed without sensitivities while the
                     # result here may be computed with with sensitivies
-                    # activated. If this fails to often, increase atol/rtol
+                    # activated. If this fails too often, increase atol/rtol
                     assert np.allclose(
                         val, fun(x_full),
                         rtol=1e-3, atol=1e-4
@@ -400,7 +402,7 @@ class FunModeHistoryTest(HistoryTest):
     def setUpClass(cls):
         cls.optimizer = pypesto.optimize.ScipyOptimizer(
             method='trust-exact',
-            options={'maxiter': 100}
+            options={'maxiter': 100},
         )
 
         cls.lb = 0 * np.ones((1, 2))
@@ -411,7 +413,7 @@ class FunModeHistoryTest(HistoryTest):
     def test_trace_grad(self):
         self.obj = rosen_for_sensi(
             max_sensi_order=2,
-            integrated=False
+            integrated=False,
         )['obj']
 
         self.history_options = HistoryOptions(
@@ -425,7 +427,7 @@ class FunModeHistoryTest(HistoryTest):
     def test_trace_grad_integrated(self):
         self.obj = rosen_for_sensi(
             max_sensi_order=2,
-            integrated=True
+            integrated=True,
         )['obj']
 
         self.history_options = HistoryOptions(
@@ -439,7 +441,7 @@ class FunModeHistoryTest(HistoryTest):
     def test_trace_all(self):
         self.obj = rosen_for_sensi(
             max_sensi_order=2,
-            integrated=True
+            integrated=True,
         )['obj']
 
         self.history_options = HistoryOptions(
