@@ -9,13 +9,17 @@ import scipy.optimize as so
 
 import pypesto
 from pypesto.objective.util import sres_to_schi2, res_to_chi2
-from pypesto import CsvHistory, HistoryOptions,\
-    MemoryHistory, ObjectiveBase, Hdf5History
-from pypesto.optimize import (
-    read_result_from_file, read_results_from_file, OptimizerResult
+from pypesto import (
+    CsvHistory,
+    Hdf5History,
+    HistoryOptions,
+    MemoryHistory,
+    ObjectiveBase,
 )
+import pypesto.optimize as optimize
 from pypesto.objective.constants import (
-    X, FVAL, GRAD, HESS, RES, SRES, CHI2, SCHI2)
+    X, FVAL, GRAD, HESS, RES, SRES, CHI2, SCHI2
+)
 from pypesto.engine import MultiProcessEngine
 
 from ..util import rosen_for_sensi, load_amici_objective, CRProblem
@@ -84,18 +88,18 @@ class HistoryTest(unittest.TestCase):
                 # load more results than necessary to check whether this
                 # also works in case of incomplete results.
                 if storage_type is not None:
-                    read_results_from_file(
+                    optimize.read_results_from_file(
                         self.problem, self.history_options,
                         n_starts=n_starts,
                     )
                 else:
                     with pytest.raises(ValueError):
-                        read_results_from_file(
+                        optimize.read_results_from_file(
                             self.problem, self.history_options,
                             n_starts=n_starts,
                         )
 
-    def check_load_from_file(self, start: OptimizerResult, id: str):
+    def check_load_from_file(self, start: optimize.OptimizerResult, id: str):
         """Verify we can reconstitute OptimizerResult from csv file"""
 
         if isinstance(start.history, MemoryHistory):
@@ -104,7 +108,9 @@ class HistoryTest(unittest.TestCase):
         # TODO other implementations
         assert isinstance(start.history, (CsvHistory, Hdf5History))
 
-        rstart = read_result_from_file(self.problem, self.history_options, id)
+        rstart = optimize.read_result_from_file(
+            self.problem, self.history_options, id
+        )
 
         result_attributes = [
             key for key in start.keys()
@@ -137,7 +143,9 @@ class HistoryTest(unittest.TestCase):
             else:
                 assert start[attr] == rstart[attr], attr
 
-    def check_reconstruct_history(self, start: OptimizerResult, id: str):
+    def check_reconstruct_history(
+        self, start: optimize.OptimizerResult, id: str
+    ):
         """verify we can reconstruct history objects from csv/hdf5 files"""
 
         if isinstance(start.history, MemoryHistory):
@@ -191,7 +199,7 @@ class HistoryTest(unittest.TestCase):
                     decimal=10
                 )
 
-    def check_history_consistency(self, start: OptimizerResult):
+    def check_history_consistency(self, start: optimize.OptimizerResult):
 
         def xfull(x_trace):
             return self.problem.get_full_vector(

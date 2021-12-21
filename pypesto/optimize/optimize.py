@@ -1,5 +1,5 @@
 import logging
-from typing import Iterable, Union
+from typing import Callable, Iterable, Union
 
 from ..engine import Engine, SingleCoreEngine
 from ..objective import HistoryOptions
@@ -23,7 +23,7 @@ def minimize(
     optimizer: Optimizer = None,
     n_starts: int = 100,
     ids: Iterable[str] = None,
-    startpoint_method: Union[StartpointMethod, bool] = None,
+    startpoint_method: Union[StartpointMethod, Callable, bool] = None,
     result: Result = None,
     engine: Engine = None,
     progress_bar: bool = True,

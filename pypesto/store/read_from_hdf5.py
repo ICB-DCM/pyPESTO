@@ -15,11 +15,12 @@ import logging
 logger = logging.getLogger(__name__)
 
 
-def read_hdf5_profile(f: h5py.File,
-                      profile_id: str,
-                      parameter_id: str) -> 'ProfilerResult':
-    """
-    Read HDF5 results per start.
+def read_hdf5_profile(
+    f: h5py.File,
+    profile_id: str,
+    parameter_id: str,
+) -> 'ProfilerResult':
+    """Read HDF5 results per start.
 
     Parameters
     ----------
@@ -45,11 +46,12 @@ def read_hdf5_profile(f: h5py.File,
     return result
 
 
-def read_hdf5_optimization(f: h5py.File,
-                           file_name: str,
-                           opt_id: str) -> 'OptimizerResult':
-    """
-    Read HDF5 results per start.
+def read_hdf5_optimization(
+    f: h5py.File,
+    file_name: str,
+    opt_id: str,
+) -> 'OptimizerResult':
+    """Read HDF5 results per start.
 
     Parameters
     ----------
@@ -90,8 +92,7 @@ class ProblemHDF5Reader:
     """
 
     def __init__(self, storage_filename: str):
-        """
-        Initialize reader.
+        """Initialize reader.
 
         Parameters
         ----------
@@ -101,8 +102,7 @@ class ProblemHDF5Reader:
         self.storage_filename = storage_filename
 
     def read(self, objective: ObjectiveBase = None) -> Problem:
-        """
-        Read HDF5 problem file and return pyPESTO problem object.
+        """Read HDF5 problem file and return pyPESTO problem object.
 
         Parameters
         ----------
@@ -190,8 +190,7 @@ class SamplingResultHDF5Reader:
     """
 
     def __init__(self, storage_filename: str):
-        """
-        Initialize reader.
+        """Initialize reader.
 
         Parameters
         ----------
@@ -274,8 +273,7 @@ def read_result(filename: str,
                 profile: bool = False,
                 sample: bool = False,
                 ) -> Result:
-    """
-    Save the whole pypesto.Result object in an HDF5 file.
+    """Save the whole pypesto.Result object in an HDF5 file.
 
     Parameters
     ----------
@@ -339,8 +337,7 @@ def read_result(filename: str,
 
 
 def load_objective_config(filename: str):
-    """
-    Load the objective information stored in f.
+    """Load the objective information stored in f.
 
     Parameters
     ----------
@@ -359,8 +356,7 @@ def load_objective_config(filename: str):
 
 
 def optimization_result_from_history(filename: str) -> Result:
-    """
-    Convert a saved hdf5 History to an optimization result.
+    """Convert a saved hdf5 History to an optimization result.
 
     Used for interrupted optimization runs.
 

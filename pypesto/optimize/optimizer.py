@@ -10,7 +10,9 @@ from ..objective import (
     HistoryOptions, HistoryBase, OptimizerHistory, CsvHistory, Hdf5History,
 )
 from ..problem import Problem
-from ..objective.constants import MODE_FUN, MODE_RES, FVAL, GRAD
+from ..objective.constants import (
+    MODE_FUN, MODE_RES, X, FVAL, GRAD, HESS, RES, SRES,
+)
 from .result import OptimizerResult
 from .options import OptimizeOptions
 from ..result import OptimizeResult, Result
@@ -219,38 +221,54 @@ def fill_result_from_history(
         optimize_options = OptimizeOptions()
 
     # logging
+    #  function values
     history_fval, result_fval = optimizer_history.fval_min, result.fval
-    if (
-        history_fval is not None and result_fval is not None
-        and not np.isclose(history_fval, result_fval)
-    ):
+    fval_exist = history_fval is not None and result_fval is not None
+    fval_match = fval_exist and np.isclose(history_fval, result_fval)
+    if fval_exist and not fval_match:
         logger.debug(
             f"Minimal function value mismatch: history {history_fval:8e}, "
             f"result {result_fval:8e}"
         )
+    #  parameters
+    history_x, result_x = optimizer_history.x_min, result.x
+    x_exist = history_x is not None and result_x is not None
+    x_match = x_exist and np.allclose(history_x, result_x)
+    if x_exist and not x_match:
+        logger.debug(
+            f"Optimal parameter mismatch: history {history_x:3e}, "
+            f"result {result_x:3e}"
+        )
 
-    # all variables of interest
-    keys = {"x", "fval", "grad", "hess", "res", "sres"}
-
-    # always overwrite if history beats optimizer
-    #  (result_fval < history_fval should be impossible)
-    if optimize_options.history_beats_optimizer or result_fval is None:
-        for key in keys:
-            setattr(result, key, getattr(optimizer_history, f"{key}_min"))
+    # counters
+    # we only use our own counters here as optimizers may report differently
+    for key in (FVAL, GRAD, HESS, RES, SRES):
+        setattr(
+            result, f"n_{key}",
+            getattr(optimizer_history.history, f"n_{key}")
+        )
 
     # initial values
     result.x0 = optimizer_history.x0
     result.fval0 = optimizer_history.fval0
 
-    # counters
-    # we only use our own counters here as optimizers may report differently
-    for key in keys - {"x"}:
-        setattr(
-            result, f"n_{key}", getattr(optimizer_history.history, f"n_{key}")
-        )
-
     # trace
     result.history = optimizer_history.history
+
+    # if optimizer is trusted, don't overwrite/complement optimal point
+    if not optimize_options.history_beats_optimizer:
+        return result
+
+    # all variables of interest
+    keys = (X, FVAL, GRAD, HESS, RES, SRES)
+
+    # optimal point
+    for key in keys:
+        hist_val = getattr(optimizer_history, f"{key}_min")
+        # replace by history if history has entry, or point does not match
+        #  point recorded in result
+        if hist_val is not None or not fval_match or not x_match:
+            setattr(result, key, hist_val)
 
     return result
 
@@ -278,7 +296,7 @@ def read_result_from_file(
         history = CsvHistory(
             file=history_options.storage_file.format(id=identifier),
             options=history_options,
-            load_from_file=True
+            load_from_file=True,
         )
     elif history_options.storage_file.endswith(('.h5', '.hdf5')):
         history = Hdf5History.load(
@@ -300,7 +318,7 @@ def read_result_from_file(
         id=identifier,
         message='loaded from file',
         exitflag=EXITFLAG_LOADED_FROM_FILE,
-        time=max(history.get_time_trace()) if len(history) else 0.0
+        time=max(history.get_time_trace()) if len(history) else 0.0,
     )
     result.id = identifier
     result = fill_result_from_history(
@@ -949,7 +967,7 @@ class PyswarmsOptimizer(Optimizer):
 
         optimizer_result = OptimizerResult(
             x=pos,
-            fval=np.array(cost)
+            fval=float(cost),
         )
 
         return optimizer_result
@@ -1112,10 +1130,13 @@ class NLoptOptimizer(Optimizer):
                 RuntimeError, MemoryError) as e:
             result = None
             msg = str(e)
-        optimizer_result = OptimizerResult(x=result,
-                                           fval=opt.last_optimum_value(),
-                                           message=msg,
-                                           exitflag=opt.last_optimize_result())
+
+        optimizer_result = OptimizerResult(
+            x=result,
+            fval=opt.last_optimum_value(),
+            message=msg,
+            exitflag=opt.last_optimize_result(),
+        )
 
         return optimizer_result
 
