@@ -110,8 +110,8 @@ class AesaraObjective(ObjectiveBase):
         """
         Negative loglikelihood.
 
-        Returns the negative loglikelihood, which in this case is the
-        objective itself.
+        Returns the negative loglikelihood, which is the negative loglikelihood
+        of the base objective with aesara computed input.
         """
         return self.call_unprocessed(
             x,
@@ -133,8 +133,8 @@ class AesaraObjective(ObjectiveBase):
         """
         Negative logprior.
 
-        As the Objective is interpreted as negative loglikelihood, the prior
-        is the "trivial" prior.
+        Returns the negative logprior, which is the negative logprior
+        of the base objective with aesara computed input.
         """
         return self.call_unprocessed(
             x,
