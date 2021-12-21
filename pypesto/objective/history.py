@@ -1295,7 +1295,7 @@ class OptimizerHistory:
                 self.fval0 = result.get(FVAL, None)
             self.x0 = x
 
-        # check whether point is admissible
+        # don't update optimal point if point is not admissible
         if not self._admissible(x):
             return
 
@@ -1316,7 +1316,7 @@ class OptimizerHistory:
 
         # sometimes sensitivities are evaluated on subsequent calls. We can
         # identify this situation by checking that x hasn't changed
-        if np.all(self.x_min == x):
+        if np.allclose(self.x_min, x):
             if self.grad_min is None and grad is not None:
                 self.grad_min = grad
             if self.hess_min is None and hess is not None:

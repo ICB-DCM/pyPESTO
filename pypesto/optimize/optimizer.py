@@ -260,11 +260,8 @@ def fill_result_from_history(
     if not optimize_options.history_beats_optimizer:
         return result
 
-    # all variables of interest
-    keys = (X, FVAL, GRAD, HESS, RES, SRES)
-
     # optimal point
-    for key in keys:
+    for key in (X, FVAL, GRAD, HESS, RES, SRES):
         hist_val = getattr(optimizer_history, f"{key}_min")
         # replace by history if history has entry, or point does not match
         #  point recorded in result
