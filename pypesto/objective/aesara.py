@@ -8,6 +8,7 @@ combination of objective based methods and aeara based backpropagation.
 
 import numpy as np
 import copy
+import enum
 
 from .base import ObjectiveBase, ResultDict
 from .constants import MODE_FUN, FVAL, GRAD, HESS, RDATAS
@@ -21,6 +22,14 @@ try:
     from aesara.graph.op import Op
 except ImportError:
     aesara = aet = Op = TensorVariable = None
+
+
+class LikelihoodPart(enum.Enum, str):
+    """Enumeration of likelihood parts."""
+
+    LIKELIHOOD = "likelihood"
+    PRIOR = "prior"
+    ALL = "all"
 
 
 class AesaraObjective(ObjectiveBase):
@@ -104,11 +113,14 @@ class AesaraObjective(ObjectiveBase):
         Returns the negative loglikelihood, which in this case is the
         objective itself.
         """
-        return self.base_objective(x,
-                                   sensi_orders,
-                                   mode,
-                                   return_dict,
-                                   **kwargs)
+        return self.call_unprocessed(
+            x,
+            sensi_orders,
+            mode,
+            LikelihoodPart.LIKELIHOOD,
+            return_dict,
+            **kwargs
+        )
 
     def get_neglogprior(
         self,
@@ -124,11 +136,14 @@ class AesaraObjective(ObjectiveBase):
         As the Objective is interpreted as negative loglikelihood, the prior
         is the "trivial" prior.
         """
-        return self.base_objective(x,
-                                   sensi_orders,
-                                   mode,
-                                   return_dict,
-                                   **kwargs)
+        return self.call_unprocessed(
+            x,
+            sensi_orders,
+            mode,
+            LikelihoodPart.PRIOR,
+            return_dict,
+            **kwargs
+        )
 
     def check_mode(self, mode) -> bool:
         """See `ObjectiveBase` documentation."""
@@ -146,6 +161,7 @@ class AesaraObjective(ObjectiveBase):
             x: np.ndarray,
             sensi_orders: Tuple[int, ...],
             mode: str,
+            likelihood_part: LikelihoodPart = LikelihoodPart.ALL,
             **kwargs
     ) -> ResultDict:
         """
@@ -163,7 +179,16 @@ class AesaraObjective(ObjectiveBase):
 
         set_return_dict, return_dict = ('return_dict' in kwargs,
                                         kwargs.pop('return_dict', False))
-        self.inner_ret = self.base_objective(
+
+        # Call different functions on base objective depending on which
+        # likelihood parts are requested (based on outer call)
+        self.inner_ret = {
+            LikelihoodPart.ALL: self.base_objective,
+            LikelihoodPart.LIKELIHOOD:
+                self.base_objective.get_negloglikelihood,
+            LikelihoodPart.PRIOR:
+                self.base_objective.get_neglogprior,
+        }.get(likelihood_part, self.base_objective)(
             self.infun(x), sensi_orders, mode, return_dict=True,  **kwargs
         )
         if set_return_dict:
