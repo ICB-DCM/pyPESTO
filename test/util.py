@@ -128,9 +128,15 @@ class CRProblem:
     """
 
     def __init__(
-        self, n_t: int = 10, max_t: float = 15., x0: anp.ndarray = None,
-        p_true: anp.ndarray = None, sigma: float = 0.02,
-        lb: anp.ndarray = None, ub: anp.ndarray = None,
+        self,
+        n_t: int = 10,
+        max_t: float = 15.,
+        x0: anp.ndarray = None,
+        p_true: anp.ndarray = None,
+        sigma: float = 0.02,
+        lb: anp.ndarray = None,
+        ub: anp.ndarray = None,
+        x_guesses: anp.ndarray = None,
     ):
         """
         Parameters
@@ -157,11 +163,13 @@ class CRProblem:
 
         if lb is None:
             lb = anp.array([0., 0.])
-        self.lb = lb
+        self.lb: anp.ndarray = lb
 
         if ub is None:
             ub = anp.array([0.5, 0.5])
-        self.ub = ub
+        self.ub: anp.ndarray = ub
+
+        self.x_guesses: anp.ndarray = x_guesses
 
         y_true = self.get_fy()(self.p_true)
         # seed random number generator for reproducibility
@@ -245,6 +253,7 @@ class CRProblem:
             objective=self.get_objective(),
             lb=self.lb,
             ub=self.ub,
+            x_guesses=self.x_guesses,
         )
 
 
