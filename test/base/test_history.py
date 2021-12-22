@@ -127,7 +127,10 @@ class HistoryTest(unittest.TestCase):
             # increase atol
             if start[attr] is None:
                 continue  # reconstituted may carry more information
-            if attr in ['sres', 'grad', 'hess'] and rstart[attr] is None:
+            if (
+                attr in ['res', 'sres', 'grad', 'hess']
+                and rstart[attr] is None
+            ):
                 continue  # may not always recover those
             elif isinstance(start[attr], np.ndarray):
                 assert np.allclose(
