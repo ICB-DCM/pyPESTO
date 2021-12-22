@@ -111,7 +111,9 @@ def parameter_profile(
             continue
 
         current_profile = result.profile_result.get_profiler_result(
-            i_par=i_par, profile_list=profile_list)
+            i_par=i_par,
+            profile_list=profile_list,
+        )
 
         task = ProfilerTask(
             current_profile=current_profile,
@@ -120,7 +122,7 @@ def parameter_profile(
             options=profile_options,
             create_next_guess=create_next_guess,
             global_opt=global_opt,
-            i_par=i_par
+            i_par=i_par,
         )
         tasks.append(task)
 

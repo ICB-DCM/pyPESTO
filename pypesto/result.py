@@ -146,7 +146,7 @@ class ProfileResult:
         self.list[profile_list][i_par] = copy.deepcopy(profiler_result)
 
     def get_profiler_result(
-            self, i_par: int, profile_list: int = None
+        self, i_par: int, profile_list: int = None
     ):
         """
         Get the profiler result at parameter index `i_par` of `profile_list`.
