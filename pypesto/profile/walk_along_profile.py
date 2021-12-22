@@ -3,7 +3,7 @@ import numpy as np
 from typing import Callable
 
 from ..objective.constants import GRAD
-from ..optimize import Optimizer, OptimizerResult
+from ..optimize import Optimizer, OptimizerResult, OptimizeOptions
 from ..problem import Problem
 from .result import ProfilerResult
 from .options import ProfileOptions
@@ -12,14 +12,14 @@ logger = logging.getLogger(__name__)
 
 
 def walk_along_profile(
-        current_profile: ProfilerResult,
-        problem: Problem,
-        par_direction: int,
-        optimizer: Optimizer,
-        options: ProfileOptions,
-        create_next_guess: Callable,
-        global_opt: float,
-        i_par: int
+    current_profile: ProfilerResult,
+    problem: Problem,
+    par_direction: int,
+    optimizer: Optimizer,
+    options: ProfileOptions,
+    create_next_guess: Callable,
+    global_opt: float,
+    i_par: int,
 ) -> ProfilerResult:
     """
     Compute half a profile.
@@ -86,21 +86,36 @@ def walk_along_profile(
         # IMPORTANT: This optimization will need a proper exception
         # handling (coming soon)
         if startpoint.size > 0:
-            optimizer_result = optimizer.minimize(problem, startpoint, '0',
-                                                  allow_failed_starts=False)
+            optimizer_result = optimizer.minimize(
+                problem=problem,
+                x0=startpoint,
+                id='0',
+                optimize_options=OptimizeOptions(allow_failed_starts=False),
+            )
         else:
             # if too many parameters are fixed, there is nothing to do ...
-            fval = problem.objective([])
+            fval = problem.objective(np.array([]))
             optimizer_result = OptimizerResult(
-                id='0', x=np.array([]), fval=fval, n_fval=0, n_grad=0, n_res=0,
-                n_hess=0, n_sres=0, x0=np.array([]), fval0=fval, time=0)
+                id='0',
+                x=np.array([]),
+                fval=fval,
+                n_fval=0,
+                n_grad=0,
+                n_res=0,
+                n_hess=0,
+                n_sres=0,
+                x0=np.array([]),
+                fval0=fval,
+                time=0,
+            )
             optimizer_result.update_to_full(problem=problem)
 
         if optimizer_result[GRAD] is not None:
-            gradnorm = np.linalg.norm(optimizer_result[GRAD][
-                                      problem.x_free_indices])
+            gradnorm = np.linalg.norm(
+                optimizer_result[GRAD][problem.x_free_indices]
+            )
         else:
-            gradnorm = None
+            gradnorm = np.nan
 
         current_profile.append_profile_point(
             x=optimizer_result.x,
@@ -111,7 +126,8 @@ def walk_along_profile(
             exitflag=optimizer_result.exitflag,
             n_fval=optimizer_result.n_fval,
             n_grad=optimizer_result.n_grad,
-            n_hess=optimizer_result.n_hess)
+            n_hess=optimizer_result.n_hess,
+        )
 
     # free the profiling parameter again
     problem.unfix_parameters(i_par)

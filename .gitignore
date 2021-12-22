@@ -111,3 +111,4 @@ test/amici_models/*
 *.dat
 /BioNetGen-*.*.*
 /bionetgen.tar
+/report.log

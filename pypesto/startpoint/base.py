@@ -239,7 +239,7 @@ class FunctionStartpoints(CheckedStartpoints):
 
 
 def to_startpoint_method(
-    maybe_startpoint_method: Union[StartpointMethod, Callable],
+    maybe_startpoint_method: Union[StartpointMethod, Callable, bool],
 ) -> StartpointMethod:
     """Create StartpointMethod instance if possible, otherwise raise.
 
