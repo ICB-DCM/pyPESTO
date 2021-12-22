@@ -1362,32 +1362,40 @@ class OptimizerHistory:
             if var == 'fval':
                 self.fval_min = float(self.fval_min)
 
-        if self.history.options.trace_record_res:
-            self.extract_from_history('res', ix_min)
+        for var in ['res', 'grad', 'sres', 'hess']:
+            if not getattr(self.history.options, f'trace_record_{var}'):
+                continue  # var not saved in history
+            # gradients may be evaluated at different indices, therefore
+            #  iterate over all and check whether any has the same parameter
+            #  and the desired field filled
+            # for res we do the same because otherwise randomly None
+            #  (TODO investigate why, but ok this way)
+            for ix in range(len(self.history)):
+                if not np.allclose(self.x_min, self.history.get_x_trace(ix)):
+                    continue
+                if self.extract_from_history(var, ix):
+                    # successfully assigned
+                    break
 
-        for var in ['grad', 'sres', 'hess']:
-            target = f'{var}_min'  # attribute in self we want to set
-            ix_try = ix_min + 1  # index we try after ix_min doesnt work
-            if getattr(self.history.options, f'trace_record_{var}'):
-                self.extract_from_history(var, ix_min)
-                if (
-                    getattr(self, target) is None
-                    and ix_try < len(self.history)
-                    and np.allclose(
-                        self.history.get_x_trace(ix_min),
-                        self.history.get_x_trace(ix_try),
-                    )
-                ):
-                    # gradient/sres typically evaluated on the next call
-                    # so we check if x remains the same and if yes try to
-                    # extract from the next
-                    self.extract_from_history(var, ix_try)
+    def extract_from_history(self, var: str, ix: int) -> bool:
+        """Get value of `var` at iteration `ix` and assign to `{var}_min`.
 
-    def extract_from_history(self, var: str, ix: int):
-        """Get value of `var` at iteration `ix`."""
+        Parameters
+        ----------
+        var: Variable to extract, e.g. 'grad', 'x'.
+        ix: Trace index.
+
+        Returns
+        -------
+        successful:
+            Whether extraction and assignment worked. False in particular if
+            the history value is nan.
+        """
         val = getattr(self.history, f'get_{var}_trace')(ix)
         if not np.all(np.isnan(val)):
             setattr(self, f'{var}_min', val)
+            return True
+        return False
 
     def _admissible(self, x: np.ndarray) -> bool:
         """Check whether point `x` is admissible (i.e. within bounds).
