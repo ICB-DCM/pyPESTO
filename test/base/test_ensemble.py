@@ -156,7 +156,7 @@ def get_ensemble_prediction(max_size: int = 2,
     optimizer = pypesto.optimize.ScipyOptimizer()
     result = pypesto.optimize.minimize(
         problem=problem, optimizer=optimizer,
-        n_starts=2, )
+        n_starts=2, filename=None)
 
     ensemble_ep = Ensemble.from_optimization_endpoints(
         result=result, max_size=10
