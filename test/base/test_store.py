@@ -452,10 +452,10 @@ def test_result_from_hdf5_history(hdf5_file):
         if result.optimize_result.list[0][key] is None:
             assert result_from_hdf5.optimize_result.list[0][key] is None
         elif isinstance(result.optimize_result.list[0][key], np.ndarray):
-            np.testing.assert_almost_equal(
+            assert np.allclose(
                 result.optimize_result.list[0][key],
                 result_from_hdf5.optimize_result.list[0][key]
-            )
+            ), key
         else:
             assert result.optimize_result.list[0][key] == \
-                   result_from_hdf5.optimize_result.list[0][key]
+                   result_from_hdf5.optimize_result.list[0][key], key
