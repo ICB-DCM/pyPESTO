@@ -1365,12 +1365,15 @@ class OptimizerHistory:
         for var in ['res', 'grad', 'sres', 'hess']:
             if not getattr(self.history.options, f'trace_record_{var}'):
                 continue  # var not saved in history
+            # first try index of optimal function value
+            if self.extract_from_history(var, ix_min):
+                continue
             # gradients may be evaluated at different indices, therefore
             #  iterate over all and check whether any has the same parameter
             #  and the desired field filled
             # for res we do the same because otherwise randomly None
             #  (TODO investigate why, but ok this way)
-            for ix in range(len(self.history)):
+            for ix in reversed(range(len(self.history))):
                 if not np.allclose(self.x_min, self.history.get_x_trace(ix)):
                     continue
                 if self.extract_from_history(var, ix):
