@@ -7,6 +7,7 @@ import warnings
 from .constants import (
     FVAL, CHI2, GRAD, HESS, RES, SRES, RDATAS, MODE_FUN, MODE_RES
 )
+from ..logging import log_level_active
 
 try:
     import amici
@@ -279,7 +280,8 @@ def log_simulation(data_ix, rdata):
     if t_steadystate in rdata and rdata[t_steadystate] != np.nan:
         logger.debug(f"t_steadystate: {rdata[t_steadystate]}")
 
-    logger.debug(f"res: {rdata['res']}")
+    if log_level_active(logger, logging.DEBUG):
+        logger.debug(f"res: {rdata['res']}")
 
 
 def get_error_output(
