@@ -72,7 +72,7 @@ def log_level_active(logger: logging.Logger, level: int) -> bool:
     Parameters
     ----------
     logger:
-        The logger:
+        The logger.
     level:
         The requested log level.
 
