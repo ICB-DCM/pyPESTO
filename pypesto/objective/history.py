@@ -1235,16 +1235,20 @@ class OptimizerHistory:
         History object to attach to this container. This history object
         implements the storage of the actual history.
     x0:
-        Initial values for optimization
+        Initial values for optimization.
+    lb, ub:
+        Lower and upper bound. Used for checking validity of optimal points.
     generate_from_history:
         If set to true, this function will try to fill attributes of this
-        function based on the provided history
+        function based on the provided history.
     """
 
     def __init__(
         self,
         history: History,
         x0: np.ndarray,
+        lb: np.ndarray,
+        ub: np.ndarray,
         generate_from_history: bool = False,
     ) -> None:
         self.history: History = history
@@ -1252,6 +1256,10 @@ class OptimizerHistory:
         # initial point
         self.fval0: Union[float, None] = None
         self.x0: np.ndarray = x0
+
+        # bounds
+        self.lb: np.ndarray = lb
+        self.ub: np.ndarray = ub
 
         # minimum point
         self.fval_min: float = np.inf
@@ -1287,6 +1295,10 @@ class OptimizerHistory:
                 self.fval0 = result.get(FVAL, None)
             self.x0 = x
 
+        # don't update optimal point if point is not admissible
+        if not self._admissible(x):
+            return
+
         # update best point
         fval = result.get(FVAL, None)
         grad = result.get(GRAD, None)
@@ -1304,7 +1316,7 @@ class OptimizerHistory:
 
         # sometimes sensitivities are evaluated on subsequent calls. We can
         # identify this situation by checking that x hasn't changed
-        if np.all(self.x_min == x):
+        if self.x_min is not None and np.allclose(self.x_min, x):
             if self.grad_min is None and grad is not None:
                 self.grad_min = grad
             if self.hess_min is None and hess is not None:
@@ -1315,9 +1327,11 @@ class OptimizerHistory:
                 self.sres_min = sres
 
     def _compute_vals_from_trace(self):
+        """Set initial and best function value from trace (at start)."""
         if not len(self.history):
             # nothing to be computed from empty history
             return
+
         # some optimizers may evaluate hess+grad first to compute trust region
         # etc
         max_init_iter = 3
@@ -1329,44 +1343,75 @@ class OptimizerHistory:
                 self.fval0 = float(candidate)
                 break
 
+        # get indices of admissible trace entries
+        # shape (n_sample, n_x)
+        xs = np.asarray(self.history.get_x_trace())
+        ixs_admit = [ix for ix, x in enumerate(xs) if self._admissible(x)]
+
         # we prioritize fval over chi2 as fval is written whenever possible
-        ix_min = np.nanargmin(self.history.get_fval_trace())
+        ix_min = np.nanargmin(self.history.get_fval_trace(ixs_admit))
         # np.argmin returns ndarray when multiple minimal values are found, we
-        # generally want the first occurence
+        # generally want the first occurrence
         if isinstance(ix_min, np.ndarray):
             ix_min = ix_min[0]
+        # select index in original array
+        ix_min = ixs_admit[ix_min]
 
         for var in ['fval', 'chi2', 'x']:
             self.extract_from_history(var, ix_min)
             if var == 'fval':
                 self.fval_min = float(self.fval_min)
 
-        if self.history.options.trace_record_res:
-            self.extract_from_history('res', ix_min)
+        for var in ['res', 'grad', 'sres', 'hess']:
+            if not getattr(self.history.options, f'trace_record_{var}'):
+                continue  # var not saved in history
+            # first try index of optimal function value
+            if self.extract_from_history(var, ix_min):
+                continue
+            # gradients may be evaluated at different indices, therefore
+            #  iterate over all and check whether any has the same parameter
+            #  and the desired field filled
+            # for res we do the same because otherwise randomly None
+            #  (TODO investigate why, but ok this way)
+            for ix in reversed(range(len(self.history))):
+                if not np.allclose(self.x_min, self.history.get_x_trace(ix)):
+                    continue
+                if self.extract_from_history(var, ix):
+                    # successfully assigned
+                    break
 
-        for var in ['grad', 'sres', 'hess']:
-            target = f'{var}_min'  # attribute in self we want to set
-            ix_try = ix_min + 1  # index we try after ix_min doesnt work
-            if getattr(self.history.options, f'trace_record_{var}'):
-                self.extract_from_history(var, ix_min)
-                if (
-                    getattr(self, target) is None
-                    and ix_try < len(self.history)
-                    and np.allclose(
-                        self.history.get_x_trace(ix_min),
-                        self.history.get_x_trace(ix_try),
-                    )
-                ):
-                    # gradient/sres typically evaluated on the next call
-                    # so we check if x remains the same and if yes try to
-                    # extract from the next
-                    self.extract_from_history(var, ix_try)
+    def extract_from_history(self, var: str, ix: int) -> bool:
+        """Get value of `var` at iteration `ix` and assign to `{var}_min`.
 
-    def extract_from_history(self, var, ix):
-        """Get value of `var` at iteration `ix`."""
+        Parameters
+        ----------
+        var: Variable to extract, e.g. 'grad', 'x'.
+        ix: Trace index.
+
+        Returns
+        -------
+        successful:
+            Whether extraction and assignment worked. False in particular if
+            the history value is nan.
+        """
         val = getattr(self.history, f'get_{var}_trace')(ix)
         if not np.all(np.isnan(val)):
             setattr(self, f'{var}_min', val)
+            return True
+        return False
+
+    def _admissible(self, x: np.ndarray) -> bool:
+        """Check whether point `x` is admissible (i.e. within bounds).
+
+        Parameters
+        ----------
+        x: A single parameter vector.
+
+        Returns
+        -------
+        admissible: Whether the point fulfills the problem requirements.
+        """
+        return np.all(x <= self.ub) and np.all(x >= self.lb)
 
 
 def ndarray2string_full(x: Union[np.ndarray, None]) -> Union[str, None]:

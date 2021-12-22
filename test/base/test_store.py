@@ -436,11 +436,14 @@ def test_result_from_hdf5_history(hdf5_file):
     )
     # optimize with history saved to hdf5
     result = optimize.minimize(
-        problem=problem, n_starts=1,
+        problem=problem,
+        n_starts=1,
         history_options=history_options_hdf5,
     )
 
-    result_from_hdf5 = optimization_result_from_history(hdf5_file)
+    result_from_hdf5 = optimization_result_from_history(
+        filename=hdf5_file, problem=problem
+    )
 
     # Currently 'exitflag', 'time' and 'message' are not loaded.
     arguments = [ID, X, FVAL, GRAD, HESS, RES, SRES,
@@ -449,10 +452,10 @@ def test_result_from_hdf5_history(hdf5_file):
         if result.optimize_result.list[0][key] is None:
             assert result_from_hdf5.optimize_result.list[0][key] is None
         elif isinstance(result.optimize_result.list[0][key], np.ndarray):
-            np.testing.assert_almost_equal(
+            assert np.allclose(
                 result.optimize_result.list[0][key],
                 result_from_hdf5.optimize_result.list[0][key]
-            )
+            ), key
         else:
             assert result.optimize_result.list[0][key] == \
-                   result_from_hdf5.optimize_result.list[0][key]
+                   result_from_hdf5.optimize_result.list[0][key], key

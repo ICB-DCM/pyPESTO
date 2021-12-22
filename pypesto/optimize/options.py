@@ -18,6 +18,10 @@ class OptimizeOptions(dict):
         Flag indicating whether hess will be stored in the results object.
         Deactivating this option will improve memory consumption for large
         scale problems.
+    history_beats_optimizer:
+        Whether the optimal value recorded by pyPESTO in the history has
+        priority over the optimal value reported by the optimizer (True)
+        or not (False).
     """
 
     def __init__(
@@ -25,12 +29,14 @@ class OptimizeOptions(dict):
         allow_failed_starts: bool = True,
         report_sres: bool = True,
         report_hess: bool = True,
+        history_beats_optimizer: bool = True,
     ):
         super().__init__()
 
         self.allow_failed_starts: bool = allow_failed_starts
         self.report_sres: bool = report_sres
         self.report_hess: bool = report_hess
+        self.history_beats_optimizer: bool = history_beats_optimizer
 
     def __getattr__(self, key):
         try:

@@ -1,8 +1,10 @@
 """Include various function to read results from hdf5 Files."""
 import h5py
+
+import pypesto
 from ..result import Result
 from ..optimize.result import OptimizerResult
-from ..optimize.optimizer import fill_result_from_objective_history
+from ..optimize.optimizer import fill_result_from_history
 from ..profile.result import ProfilerResult
 from ..sample.result import McmcPtResult
 from ..problem import Problem
@@ -15,11 +17,12 @@ import logging
 logger = logging.getLogger(__name__)
 
 
-def read_hdf5_profile(f: h5py.File,
-                      profile_id: str,
-                      parameter_id: str) -> 'ProfilerResult':
-    """
-    Read HDF5 results per start.
+def read_hdf5_profile(
+    f: h5py.File,
+    profile_id: str,
+    parameter_id: str,
+) -> 'ProfilerResult':
+    """Read HDF5 results per start.
 
     Parameters
     ----------
@@ -45,11 +48,12 @@ def read_hdf5_profile(f: h5py.File,
     return result
 
 
-def read_hdf5_optimization(f: h5py.File,
-                           file_name: str,
-                           opt_id: str) -> 'OptimizerResult':
-    """
-    Read HDF5 results per start.
+def read_hdf5_optimization(
+    f: h5py.File,
+    file_name: str,
+    opt_id: str,
+) -> 'OptimizerResult':
+    """Read HDF5 results per start.
 
     Parameters
     ----------
@@ -90,8 +94,7 @@ class ProblemHDF5Reader:
     """
 
     def __init__(self, storage_filename: str):
-        """
-        Initialize reader.
+        """Initialize reader.
 
         Parameters
         ----------
@@ -101,8 +104,7 @@ class ProblemHDF5Reader:
         self.storage_filename = storage_filename
 
     def read(self, objective: ObjectiveBase = None) -> Problem:
-        """
-        Read HDF5 problem file and return pyPESTO problem object.
+        """Read HDF5 problem file and return pyPESTO problem object.
 
         Parameters
         ----------
@@ -190,8 +192,7 @@ class SamplingResultHDF5Reader:
     """
 
     def __init__(self, storage_filename: str):
-        """
-        Initialize reader.
+        """Initialize reader.
 
         Parameters
         ----------
@@ -274,8 +275,7 @@ def read_result(filename: str,
                 profile: bool = False,
                 sample: bool = False,
                 ) -> Result:
-    """
-    Save the whole pypesto.Result object in an HDF5 file.
+    """Save the whole pypesto.Result object in an HDF5 file.
 
     Parameters
     ----------
@@ -339,8 +339,7 @@ def read_result(filename: str,
 
 
 def load_objective_config(filename: str):
-    """
-    Load the objective information stored in f.
+    """Load the objective information stored in f.
 
     Parameters
     ----------
@@ -358,9 +357,11 @@ def load_objective_config(filename: str):
         return info
 
 
-def optimization_result_from_history(filename: str) -> Result:
-    """
-    Convert a saved hdf5 History to an optimization result.
+def optimization_result_from_history(
+    filename: str,
+    problem: pypesto.Problem,
+) -> Result:
+    """Convert a saved hdf5 History to an optimization result.
 
     Used for interrupted optimization runs.
 
@@ -368,6 +369,8 @@ def optimization_result_from_history(filename: str) -> Result:
     ----------
     filename:
         The name of the file in which the information are stored.
+    problem:
+        Problem, needed to identify what parameters to accept.
 
     Returns
     -------
@@ -380,11 +383,13 @@ def optimization_result_from_history(filename: str) -> Result:
             history = Hdf5History(id=id_name, file=filename)
             history._recover_options(filename)
             optimizer_history = OptimizerHistory(
-                history,
+                history=history,
                 x0=f[f'history/{id_name}/trace/0/x'][()],
-                generate_from_history=True)
+                lb=problem.lb,
+                ub=problem.ub,
+                generate_from_history=True,
+            )
             optimizer_result = OptimizerResult(id=id_name)
-            fill_result_from_objective_history(optimizer_result,
-                                               optimizer_history)
+            fill_result_from_history(optimizer_result, optimizer_history)
             result.optimize_result.append(optimizer_result)
     return result
