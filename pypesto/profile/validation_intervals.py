@@ -15,14 +15,14 @@ logger = logging.getLogger(__name__)
 
 
 def validation_profile_significance(
-        problem_full_data: Problem,
-        result_training_data: Result,
-        result_full_data: Optional[Result] = None,
-        n_starts: Optional[int] = 1,
-        optimizer: Optional[Optimizer] = None,
-        engine: Optional[Engine] = None,
-        lsq_objective: bool = False,
-        return_significance: bool = True,
+    problem_full_data: Problem,
+    result_training_data: Result,
+    result_full_data: Optional[Result] = None,
+    n_starts: Optional[int] = 1,
+    optimizer: Optional[Optimizer] = None,
+    engine: Optional[Engine] = None,
+    lsq_objective: bool = False,
+    return_significance: bool = True,
 ) -> float:
     r"""
     Compute significance of Validation Interval.
@@ -102,7 +102,8 @@ def validation_profile_significance(
                                     optimizer=optimizer,
                                     n_starts=n_starts,
                                     engine=engine,
-                                    progress_bar=False)
+                                    progress_bar=False,
+                                    filename=None)
 
     # Validation intervals compare the nllh value on the full data set
     # of the parameter fits from the training and the full data set.

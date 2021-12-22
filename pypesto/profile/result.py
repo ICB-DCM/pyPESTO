@@ -43,18 +43,20 @@ class ProfilerResult(dict):
     filled with None. Some fields are filled by pypesto itself.
     """
 
-    def __init__(self,
-                 x_path: np.ndarray,
-                 fval_path: np.ndarray,
-                 ratio_path: np.ndarray,
-                 gradnorm_path: np.ndarray = None,
-                 exitflag_path: np.ndarray = None,
-                 time_path: np.ndarray = None,
-                 time_total: float = 0.,
-                 n_fval: int = 0,
-                 n_grad: int = 0,
-                 n_hess: int = 0,
-                 message: str = None):
+    def __init__(
+        self,
+        x_path: np.ndarray,
+        fval_path: np.ndarray,
+        ratio_path: np.ndarray,
+        gradnorm_path: np.ndarray = np.nan,
+        exitflag_path: np.ndarray = np.nan,
+        time_path: np.ndarray = np.nan,
+        time_total: float = 0.,
+        n_fval: int = 0,
+        n_grad: int = 0,
+        n_hess: int = 0,
+        message: str = None,
+    ):
         super().__init__()
 
         # initialize profile path
@@ -68,8 +70,7 @@ class ProfilerResult(dict):
 
         self.fval_path = np.asarray(fval_path)
         self.ratio_path = np.asarray(ratio_path)
-        self.gradnorm_path = np.asarray(gradnorm_path) \
-            if gradnorm_path is not None else None
+        self.gradnorm_path = np.asarray(gradnorm_path)
         self.exitflag_path = np.asarray(exitflag_path)
         self.time_path = np.asarray(time_path)
         self.time_total = time_total
@@ -88,16 +89,18 @@ class ProfilerResult(dict):
     __setattr__ = dict.__setitem__
     __delattr__ = dict.__delitem__
 
-    def append_profile_point(self,
-                             x: np.ndarray,
-                             fval: float,
-                             ratio: float,
-                             gradnorm: float = np.nan,
-                             time: float = np.nan,
-                             exitflag: float = np.nan,
-                             n_fval: int = 0,
-                             n_grad: int = 0,
-                             n_hess: int = 0) -> None:
+    def append_profile_point(
+        self,
+        x: np.ndarray,
+        fval: float,
+        ratio: float,
+        gradnorm: float = np.nan,
+        time: float = np.nan,
+        exitflag: float = np.nan,
+        n_fval: int = 0,
+        n_grad: int = 0,
+        n_hess: int = 0,
+    ) -> None:
         """
         Append a new point to the profile path.
 

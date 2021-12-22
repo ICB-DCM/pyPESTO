@@ -12,12 +12,12 @@ logger = logging.getLogger(__name__)
 
 
 def approximate_parameter_profile(
-        problem: Problem,
-        result: Result,
-        profile_index: Iterable[int] = None,
-        profile_list: int = None,
-        result_index: int = 0,
-        n_steps: int = 100,
+    problem: Problem,
+    result: Result,
+    profile_index: Iterable[int] = None,
+    profile_list: int = None,
+    result_index: int = 0,
+    n_steps: int = 100,
 ) -> Result:
     """
     Calculate profile approximation.
@@ -102,7 +102,7 @@ def approximate_parameter_profile(
         profiler_result = ProfilerResult(
             x_path=xs,
             fval_path=fvals,
-            ratio_path=ratios
+            ratio_path=ratios,
         )
 
         result.profile_result.set_profiler_result(

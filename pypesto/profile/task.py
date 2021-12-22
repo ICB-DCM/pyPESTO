@@ -15,14 +15,14 @@ class ProfilerTask(Task):
     """A parameter likelihood profiling task."""
 
     def __init__(
-            self,
-            current_profile: ProfilerResult,
-            problem: Problem,
-            options: ProfileOptions,
-            i_par: int,
-            global_opt: float,
-            optimizer: 'pypesto.optimize.Optimizer',
-            create_next_guess: Callable,
+        self,
+        current_profile: ProfilerResult,
+        problem: Problem,
+        options: ProfileOptions,
+        i_par: int,
+        global_opt: float,
+        optimizer: 'pypesto.optimize.Optimizer',
+        create_next_guess: Callable,
     ):
         """
         Create the task object.
@@ -57,6 +57,7 @@ class ProfilerTask(Task):
     def execute(self) -> 'pypesto.profile.ProfilerResult':
         """Compute profile in descending and ascending direction."""
         logger.info(f"Executing task {self.i_par}.")
+
         for par_direction in [-1, 1]:
             # flip profile
             self.current_profile.flip_profile()
@@ -70,7 +71,8 @@ class ProfilerTask(Task):
                 options=self.options,
                 create_next_guess=self.create_next_guess,
                 global_opt=self.global_opt,
-                i_par=self.i_par)
+                i_par=self.i_par,
+            )
 
         # return the ProfilerResult and the index of the parameter profiled
         return {'profile': self.current_profile, 'index': self.i_par}
