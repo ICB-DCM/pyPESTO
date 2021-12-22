@@ -1,15 +1,15 @@
 """Validation intervals."""
 
 import logging
-from typing import Optional
 from copy import deepcopy
+from typing import Optional
+
+from scipy.stats import chi2
 
 from ..engine import Engine
 from ..optimize import Optimizer, minimize
 from ..problem import Problem
 from ..result import Result
-from scipy.stats import chi2
-
 
 logger = logging.getLogger(__name__)
 
@@ -86,8 +86,10 @@ def validation_profile_significance(
         BMC Systems Biology 2012/12. doi:10.1186/1752-0509-6-120
     """
     if (result_full_data is not None) and (optimizer is not None):
-        raise UserWarning("optimizer will not be used, as a result object "
-                          "for the full data set is provided.")
+        raise UserWarning(
+            "optimizer will not be used, as a result object "
+            "for the full data set is provided."
+        )
 
     # if result for full data is not provided: minimize
     if result_full_data is None:
@@ -98,41 +100,45 @@ def validation_profile_significance(
         problem = deepcopy(problem_full_data)
         problem.set_x_guesses(x_0)
 
-        result_full_data = minimize(problem=problem,
-                                    optimizer=optimizer,
-                                    n_starts=n_starts,
-                                    engine=engine,
-                                    progress_bar=False,
-                                    filename=None)
+        result_full_data = minimize(
+            problem=problem,
+            optimizer=optimizer,
+            n_starts=n_starts,
+            engine=engine,
+            progress_bar=False,
+            filename=None,
+        )
 
     # Validation intervals compare the nllh value on the full data set
     # of the parameter fits from the training and the full data set.
 
-    nllh_new = \
-        result_full_data.optimize_result.get_for_key('fval')[0]
-    nllh_old = \
-        problem_full_data.objective(
-            problem_full_data.get_reduced_vector(
-                result_training_data.optimize_result.get_for_key('x')[0]))
+    nllh_new = result_full_data.optimize_result.get_for_key('fval')[0]
+    nllh_old = problem_full_data.objective(
+        problem_full_data.get_reduced_vector(
+            result_training_data.optimize_result.get_for_key('x')[0]
+        )
+    )
 
     if nllh_new > nllh_old:
-        logger.warning("Fitting of the full data set provided a worse fit "
-                       "than the fit only considering the training data. "
-                       "Consider rerunning the not handing over "
-                       "result_full_data or running the fitting from the "
-                       "best parameters found from the training data.")
+        logger.warning(
+            "Fitting of the full data set provided a worse fit "
+            "than the fit only considering the training data. "
+            "Consider rerunning the not handing over "
+            "result_full_data or running the fitting from the "
+            "best parameters found from the training data."
+        )
 
     # compute the probability, that the validation data set is outside the CI
     # => survival function chi.sf
     if return_significance:
         if lsq_objective:
-            return chi2.sf(nllh_old-nllh_new, 1)
+            return chi2.sf(nllh_old - nllh_new, 1)
         else:
-            return chi2.sf(2*(nllh_old-nllh_new), 1)
+            return chi2.sf(2 * (nllh_old - nllh_new), 1)
     # compute the probability, that the validation data set is inside the CI
     # => cumulative density function chi.cdf
     else:
         if lsq_objective:
-            return chi2.cdf(nllh_old-nllh_new, 1)
+            return chi2.cdf(nllh_old - nllh_new, 1)
         else:
-            return chi2.cdf(2*(nllh_old-nllh_new), 1)
+            return chi2.cdf(2 * (nllh_old - nllh_new), 1)

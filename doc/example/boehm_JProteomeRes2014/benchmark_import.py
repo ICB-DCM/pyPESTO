@@ -1,10 +1,10 @@
-import numpy as np
-import scipy as sp
 import h5py
+import numpy as np
 import pandas as pd
+import scipy as sp
+
 
 class DataProvider:
-
     def __init__(self, h5_file):
         self.h5_file = h5_file
 

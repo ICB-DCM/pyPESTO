@@ -1,8 +1,10 @@
 """Test the fixing of parameters feature."""
 
 import numpy as np
+
 import pypesto
 import pypesto.optimize
+
 from ..util import rosen_for_sensi
 
 
@@ -19,8 +21,9 @@ def test_optimize():
     problem = create_problem()
     optimizer = pypesto.optimize.ScipyOptimizer()
     n_starts = 5
-    result = pypesto.optimize.minimize(problem, optimizer, n_starts,
-                                       filename=None)
+    result = pypesto.optimize.minimize(
+        problem, optimizer, n_starts, filename=None
+    )
 
     optimizer_result = result.optimize_result.list[0]
     assert len(optimizer_result.x) == 5
@@ -45,9 +48,12 @@ def create_problem():
     ub = [3, 3, 3, 3, 3]
     x_fixed_indices = [1, 3]
     x_fixed_vals = [1, 1]
-    problem = pypesto.Problem(objective=objective,
-                              lb=lb, ub=ub,
-                              x_fixed_indices=x_fixed_indices,
-                              x_fixed_vals=x_fixed_vals)
+    problem = pypesto.Problem(
+        objective=objective,
+        lb=lb,
+        ub=ub,
+        x_fixed_indices=x_fixed_indices,
+        x_fixed_vals=x_fixed_vals,
+    )
 
     return problem

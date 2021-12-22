@@ -1,16 +1,17 @@
 """Tests for `pypesto.sample` methods."""
 
-import numpy as np
-from scipy.stats import multivariate_normal, norm, kstest, ks_2samp, uniform
-import scipy.optimize as so
-import matplotlib.pyplot as plt
-import pytest
-import petab
 import os
 
+import matplotlib.pyplot as plt
+import numpy as np
+import petab
+import pytest
+import scipy.optimize as so
+from scipy.stats import ks_2samp, kstest, multivariate_normal, norm, uniform
+
 import pypesto
-import pypesto.petab
 import pypesto.optimize as optimize
+import pypesto.petab
 import pypesto.sample as sample
 import pypesto.visualize as visualize
 
@@ -21,7 +22,7 @@ def gaussian_llh(x):
 
 def gaussian_problem():
     def nllh(x):
-        return - gaussian_llh(x)
+        return -gaussian_llh(x)
 
     objective = pypesto.Objective(fun=nllh)
     problem = pypesto.Problem(objective=objective, lb=[-10], ub=[10])
@@ -31,34 +32,40 @@ def gaussian_problem():
 def gaussian_mixture_llh(x):
     return np.log(
         0.3 * multivariate_normal.pdf(x, mean=-1.5, cov=0.1)
-        + 0.7 * multivariate_normal.pdf(x, mean=2.5, cov=0.2))
+        + 0.7 * multivariate_normal.pdf(x, mean=2.5, cov=0.2)
+    )
 
 
 def gaussian_mixture_problem():
     """Problem based on a mixture of gaussians."""
+
     def nllh(x):
-        return - gaussian_mixture_llh(x)
+        return -gaussian_mixture_llh(x)
 
     objective = pypesto.Objective(fun=nllh)
-    problem = pypesto.Problem(objective=objective, lb=[-10], ub=[10],
-                              x_names=['x'])
+    problem = pypesto.Problem(
+        objective=objective, lb=[-10], ub=[10], x_names=['x']
+    )
     return problem
 
 
 def gaussian_mixture_separated_modes_llh(x):
     return np.log(
-        0.5*multivariate_normal.pdf(x, mean=-1., cov=0.7)
-        + 0.5*multivariate_normal.pdf(x, mean=100., cov=0.8))
+        0.5 * multivariate_normal.pdf(x, mean=-1.0, cov=0.7)
+        + 0.5 * multivariate_normal.pdf(x, mean=100.0, cov=0.8)
+    )
 
 
 def gaussian_mixture_separated_modes_problem():
     """Problem based on a mixture of gaussians with far/separated modes."""
+
     def nllh(x):
-        return - gaussian_mixture_separated_modes_llh(x)
+        return -gaussian_mixture_separated_modes_llh(x)
 
     objective = pypesto.Objective(fun=nllh)
-    problem = pypesto.Problem(objective=objective, lb=[-100], ub=[200],
-                              x_names=['x'])
+    problem = pypesto.Problem(
+        objective=objective, lb=[-100], ub=[200], x_names=['x']
+    )
     return problem
 
 
@@ -77,19 +84,24 @@ def rosenbrock_problem():
     ub = 5 * np.ones((dim_full, 1))
 
     problem = pypesto.Problem(
-            objective=objective, lb=lb, ub=ub,
-            x_fixed_indices=[1], x_fixed_vals=[2])
+        objective=objective,
+        lb=lb,
+        ub=ub,
+        x_fixed_indices=[1],
+        x_fixed_vals=[2],
+    )
     return problem
 
 
 def create_petab_problem():
     current_path = os.path.dirname(os.path.realpath(__file__))
-    dir_path = os.path.abspath(os.path.join(current_path,
-                                            '..', '..', 'doc',
-                                            'example'))
+    dir_path = os.path.abspath(
+        os.path.join(current_path, '..', '..', 'doc', 'example')
+    )
     # import to petab
     petab_problem = petab.Problem.from_yaml(
-        dir_path+"/conversion_reaction/conversion_reaction.yaml")
+        dir_path + "/conversion_reaction/conversion_reaction.yaml"
+    )
     # import to pypesto
     importer = pypesto.petab.PetabImporter(petab_problem)
     # create problem
@@ -103,37 +115,42 @@ def sample_petab_problem():
     problem = create_petab_problem()
 
     sampler = sample.AdaptiveMetropolisSampler()
-    result = sample.sample(problem, n_samples=1000,
-                           sampler=sampler,
-                           x0=np.array([3, -4]),
-                           filename=None)
+    result = sample.sample(
+        problem,
+        n_samples=1000,
+        sampler=sampler,
+        x0=np.array([3, -4]),
+        filename=None,
+    )
     return result
 
 
 def prior(x):
-    return multivariate_normal.pdf(x, mean=-1., cov=0.7)
+    return multivariate_normal.pdf(x, mean=-1.0, cov=0.7)
 
 
 def likelihood(x):
-    return uniform.pdf(x, loc=-10., scale=20.)[0]
+    return uniform.pdf(x, loc=-10.0, scale=20.0)[0]
 
 
 def negative_log_posterior(x):
-    return - np.log(likelihood(x)) - np.log(prior(x))
+    return -np.log(likelihood(x)) - np.log(prior(x))
 
 
 def negative_log_prior(x):
-    return - np.log(prior(x))
+    return -np.log(prior(x))
 
 
-@pytest.fixture(params=[
-    'Metropolis',
-    'AdaptiveMetropolis',
-    'ParallelTempering',
-    'AdaptiveParallelTempering',
-    'Pymc3',
-    'Emcee',
-])
+@pytest.fixture(
+    params=[
+        'Metropolis',
+        'AdaptiveMetropolis',
+        'ParallelTempering',
+        'AdaptiveParallelTempering',
+        'Pymc3',
+        'Emcee',
+    ]
+)
 def sampler(request):
     if request.param == 'Metropolis':
         return sample.MetropolisSampler()
@@ -141,12 +158,12 @@ def sampler(request):
         return sample.AdaptiveMetropolisSampler()
     elif request.param == 'ParallelTempering':
         return sample.ParallelTemperingSampler(
-            internal_sampler=sample.MetropolisSampler(),
-            betas=[1, 1e-2, 1e-4])
+            internal_sampler=sample.MetropolisSampler(), betas=[1, 1e-2, 1e-4]
+        )
     elif request.param == 'AdaptiveParallelTempering':
         return sample.AdaptiveParallelTemperingSampler(
-            internal_sampler=sample.AdaptiveMetropolisSampler(),
-            n_chains=5)
+            internal_sampler=sample.AdaptiveMetropolisSampler(), n_chains=5
+        )
     elif request.param == 'Pymc3':
         return sample.Pymc3Sampler(tune=5)
     elif request.param == 'Emcee':
@@ -168,12 +185,13 @@ def test_pipeline(sampler, problem):
     # optimization
     optimizer = optimize.ScipyOptimizer(options={'maxiter': 10})
     result = optimize.minimize(
-        problem, n_starts=3, optimizer=optimizer, filename=None)
+        problem, n_starts=3, optimizer=optimizer, filename=None
+    )
 
     # sample
     result = sample.sample(
-        problem, sampler=sampler, n_samples=100, result=result,
-        filename=None)
+        problem, sampler=sampler, n_samples=100, result=result, filename=None
+    )
 
     # some plot
     visualize.sampling_1d_marginals(result)
@@ -185,15 +203,16 @@ def test_ground_truth():
     # use best self-implemented sampler, which has a chance of correctly
     # sample from the distribution
     sampler = sample.AdaptiveParallelTemperingSampler(
-        internal_sampler=sample.AdaptiveMetropolisSampler(), n_chains=5)
+        internal_sampler=sample.AdaptiveMetropolisSampler(), n_chains=5
+    )
 
     problem = gaussian_problem()
 
     result = optimize.minimize(problem, filename=None)
 
-    result = sample.sample(problem, n_samples=5000,
-                           result=result, sampler=sampler,
-                           filename=None)
+    result = sample.sample(
+        problem, n_samples=5000, result=result, sampler=sampler, filename=None
+    )
 
     # get samples of first chain
     samples = result.sample_result.trace_x[0].flatten()
@@ -216,27 +235,30 @@ def test_ground_truth_separated_modes():
 
     # First use parallel tempering with 3 chains
     sampler = sample.AdaptiveParallelTemperingSampler(
-        internal_sampler=sample.AdaptiveMetropolisSampler(), n_chains=3)
+        internal_sampler=sample.AdaptiveMetropolisSampler(), n_chains=3
+    )
 
     problem = gaussian_mixture_separated_modes_problem()
 
-    result = sample.sample(problem, n_samples=1e4,
-                           sampler=sampler,
-                           x0=np.array([0.]),
-                           filename=None)
+    result = sample.sample(
+        problem,
+        n_samples=1e4,
+        sampler=sampler,
+        x0=np.array([0.0]),
+        filename=None,
+    )
 
     # get samples of first chain
     samples = result.sample_result.trace_x[0, :, 0]
 
     # generate bimodal ground-truth samples
     # "first" mode centered at -1
-    rvs1 = norm.rvs(size=5000, loc=-1., scale=np.sqrt(0.7))
+    rvs1 = norm.rvs(size=5000, loc=-1.0, scale=np.sqrt(0.7))
     # "second" mode centered at 100
-    rvs2 = norm.rvs(size=5001, loc=100., scale=np.sqrt(0.8))
+    rvs2 = norm.rvs(size=5001, loc=100.0, scale=np.sqrt(0.8))
 
     # test for distribution similarity
-    statistic, pval = ks_2samp(np.concatenate([rvs1, rvs2]),
-                               samples)
+    statistic, pval = ks_2samp(np.concatenate([rvs1, rvs2]), samples)
 
     # only parallel tempering finds both modes
     print(statistic, pval)
@@ -245,17 +267,19 @@ def test_ground_truth_separated_modes():
     # sample using adaptive metropolis (single-chain)
     # initiated around the "first" mode of the distribution
     sampler = sample.AdaptiveMetropolisSampler()
-    result = sample.sample(problem, n_samples=1e4,
-                           sampler=sampler,
-                           x0=np.array([-2.]),
-                           filename=None)
+    result = sample.sample(
+        problem,
+        n_samples=1e4,
+        sampler=sampler,
+        x0=np.array([-2.0]),
+        filename=None,
+    )
 
     # get samples of first chain
     samples = result.sample_result.trace_x[0, :, 0]
 
     # test for distribution similarity
-    statistic, pval = ks_2samp(np.concatenate([rvs1, rvs2]),
-                               samples)
+    statistic, pval = ks_2samp(np.concatenate([rvs1, rvs2]), samples)
 
     # single-chain adaptive metropolis does not find both modes
     print(statistic, pval)
@@ -270,16 +294,19 @@ def test_ground_truth_separated_modes():
     # sample using adaptive metropolis (single-chain)
     # initiated around the "second" mode of the distribution
     sampler = sample.AdaptiveMetropolisSampler()
-    result = sample.sample(problem, n_samples=1e4, sampler=sampler,
-                           x0=np.array([120.]),
-                           filename=None)
+    result = sample.sample(
+        problem,
+        n_samples=1e4,
+        sampler=sampler,
+        x0=np.array([120.0]),
+        filename=None,
+    )
 
     # get samples of first chain
     samples = result.sample_result.trace_x[0, :, 0]
 
     # test for distribution similarity
-    statistic, pval = ks_2samp(np.concatenate([rvs1, rvs2]),
-                               samples)
+    statistic, pval = ks_2samp(np.concatenate([rvs1, rvs2]), samples)
 
     # single-chain adaptive metropolis does not find both modes
     print(statistic, pval)
@@ -296,15 +323,17 @@ def test_multiple_startpoints():
     problem = gaussian_problem()
     x0s = [np.array([0]), np.array([1])]
     sampler = sample.ParallelTemperingSampler(
-        internal_sampler=sample.MetropolisSampler(),
-        n_chains=2
+        internal_sampler=sample.MetropolisSampler(), n_chains=2
     )
-    result = sample.sample(problem, n_samples=10, x0=x0s, sampler=sampler,
-                           filename=None)
+    result = sample.sample(
+        problem, n_samples=10, x0=x0s, sampler=sampler, filename=None
+    )
 
     assert result.sample_result.trace_neglogpost.shape[0] == 2
-    assert [result.sample_result.trace_x[0][0],
-            result.sample_result.trace_x[1][0]] == x0s
+    assert [
+        result.sample_result.trace_x[0][0],
+        result.sample_result.trace_x[1][0],
+    ] == x0s
 
 
 def test_regularize_covariance():
@@ -312,10 +341,9 @@ def test_regularize_covariance():
     Make sure that `regularize_covariance` renders symmetric matrices
     positive definite.
     """
-    matrix = np.array([[-1., -4.], [-4., 1.]])
+    matrix = np.array([[-1.0, -4.0], [-4.0, 1.0]])
     assert np.any(np.linalg.eigvals(matrix) < 0)
-    reg = sample.adaptive_metropolis.regularize_covariance(
-        matrix, 1e-6)
+    reg = sample.adaptive_metropolis.regularize_covariance(matrix, 1e-6)
     assert np.all(np.linalg.eigvals(reg) >= 0)
 
 
@@ -324,8 +352,7 @@ def test_geweke_test_switch():
     warm_up = np.zeros((100, 2))
     converged = np.ones((901, 2))
     chain = np.concatenate((warm_up, converged), axis=0)
-    burn_in = sample.diagnostics.burn_in_by_sequential_geweke(
-        chain=chain)
+    burn_in = sample.diagnostics.burn_in_by_sequential_geweke(chain=chain)
     assert burn_in == 100
 
 
@@ -335,8 +362,7 @@ def test_geweke_test_switch_short():
     warm_up = np.zeros((25, 2))
     converged = np.ones((75, 2))
     chain = np.concatenate((warm_up, converged), axis=0)
-    burn_in = sample.diagnostics.burn_in_by_sequential_geweke(
-        chain=chain)
+    burn_in = sample.diagnostics.burn_in_by_sequential_geweke(chain=chain)
     assert burn_in == 25
 
 
@@ -351,8 +377,8 @@ def test_geweke_test_unconverged():
 
     # sample
     result = sample.sample(
-        problem, sampler=sampler, n_samples=100, result=result,
-        filename=None)
+        problem, sampler=sampler, n_samples=100, result=result, filename=None
+    )
 
     # run geweke test (should not fail!)
     sample.geweke_test(result)
@@ -369,8 +395,8 @@ def test_autocorrelation_pipeline():
 
     # sample
     result = sample.sample(
-        problem, sampler=sampler, n_samples=1000, result=result,
-        filename=None)
+        problem, sampler=sampler, n_samples=1000, result=result, filename=None
+    )
 
     # run auto-correlation with previous geweke
     sample.geweke_test(result)
@@ -408,8 +434,8 @@ def test_autocorrelation_short_chain():
 
     # sample
     result = sample.sample(
-        problem, sampler=sampler, n_samples=10, result=result,
-        filename=None)
+        problem, sampler=sampler, n_samples=10, result=result, filename=None
+    )
 
     # manually set burn in to chain length (only for testing!!)
     chain_length = result.sample_result.trace_x.shape[1]
@@ -433,13 +459,15 @@ def test_autocorrelation_mixture():
 
     auto_correlation_1 = sample.diagnostics.autocorrelation_sokal(chain=chain)
     auto_correlation_2 = sample.diagnostics.autocorrelation_sokal(
-                               chain=2*chain)
+        chain=2 * chain
+    )
     auto_correlation_3 = sample.diagnostics.autocorrelation_sokal(
-                               chain=-3*chain)
+        chain=-3 * chain
+    )
 
-    assert (abs(auto_correlation_1-auto_correlation_2) < 1e-15).all()
-    assert (abs(auto_correlation_2-auto_correlation_3) < 1e-15).all()
-    assert (abs(auto_correlation_1-auto_correlation_3) < 1e-15).all()
+    assert (abs(auto_correlation_1 - auto_correlation_2) < 1e-15).all()
+    assert (abs(auto_correlation_2 - auto_correlation_3) < 1e-15).all()
+    assert (abs(auto_correlation_1 - auto_correlation_3) < 1e-15).all()
 
 
 def test_autocorrelation_dim():
@@ -448,18 +476,20 @@ def test_autocorrelation_dim():
     # Loop over different sizes of parameter vectors
     for n in range(4):
         # create the chain for n parameters
-        chain = np.array(np.random.randn(101, n+1))
+        chain = np.array(np.random.randn(101, n + 1))
         # calculate the autocorrelation
         auto_correlation = sample.diagnostics.autocorrelation_sokal(
-                              chain=chain)
-        assert len(auto_correlation) == (n+1)
+            chain=chain
+        )
+        assert len(auto_correlation) == (n + 1)
 
 
 def test_autocorrelation_high():
     """Check that the autocorrelation is high for a not well-mixed chain."""
     # there should be always need to be some variability
-    chain = np.concatenate((np.ones((50, 1)), 2*np.ones((35, 1)),
-                            np.ones((25, 1))))
+    chain = np.concatenate(
+        (np.ones((50, 1)), 2 * np.ones((35, 1)), np.ones((25, 1)))
+    )
 
     auto_correlation = sample.diagnostics.autocorrelation_sokal(chain=chain)
 
@@ -472,20 +502,25 @@ def test_empty_prior():
     posterior_fun = pypesto.Objective(fun=negative_log_posterior)
 
     # define pypesto problem without prior object
-    test_problem = pypesto.Problem(objective=posterior_fun, lb=-10, ub=10,
-                                   x_names=['x'])
+    test_problem = pypesto.Problem(
+        objective=posterior_fun, lb=-10, ub=10, x_names=['x']
+    )
 
     sampler = sample.AdaptiveMetropolisSampler()
 
-    result = sample.sample(test_problem, n_samples=50, sampler=sampler,
-                           x0=np.array([0.]),
-                           filename=None)
+    result = sample.sample(
+        test_problem,
+        n_samples=50,
+        sampler=sampler,
+        x0=np.array([0.0]),
+        filename=None,
+    )
 
     # get log prior values of first chain
     logprior_trace = -result.sample_result.trace_neglogprior[0, :]
 
     # check that all entries are zero
-    assert (logprior_trace == 0.).all()
+    assert (logprior_trace == 0.0).all()
 
 
 @pytest.mark.flaky(reruns=2)
@@ -501,28 +536,35 @@ def test_prior():
     prior_object = pypesto.NegLogPriors(objectives=[prior_fun])
 
     # define pypesto problem using prior object
-    test_problem = pypesto.Problem(objective=posterior_fun,
-                                   x_priors_defs=prior_object,
-                                   lb=-10, ub=10,
-                                   x_names=['x'])
+    test_problem = pypesto.Problem(
+        objective=posterior_fun,
+        x_priors_defs=prior_object,
+        lb=-10,
+        ub=10,
+        x_names=['x'],
+    )
 
     sampler = sample.AdaptiveMetropolisSampler()
 
-    result = sample.sample(test_problem, n_samples=1e4, sampler=sampler,
-                           x0=np.array([0.]),
-                           filename=None)
+    result = sample.sample(
+        test_problem,
+        n_samples=1e4,
+        sampler=sampler,
+        x0=np.array([0.0]),
+        filename=None,
+    )
 
     # get log prior values of first chain
     logprior_trace = -result.sample_result.trace_neglogprior[0, :]
 
     # check that not all entries are zero
-    assert (logprior_trace != 0.).any()
+    assert (logprior_trace != 0.0).any()
 
     # get samples of first chain
     samples = result.sample_result.trace_x[0, :, 0]
 
     # generate ground-truth samples
-    rvs = norm.rvs(size=5000, loc=-1., scale=np.sqrt(0.7))
+    rvs = norm.rvs(size=5000, loc=-1.0, scale=np.sqrt(0.7))
 
     # check sample distribution agreement with the ground-truth
     statistic, pval = ks_2samp(rvs, samples)
@@ -547,14 +589,16 @@ def test_samples_cis():
 
     # sample
     result = sample.sample(
-        problem, sampler=sampler, n_samples=2000, result=result, filename=None)
+        problem, sampler=sampler, n_samples=2000, result=result, filename=None
+    )
 
     # run geweke test
     sample.geweke_test(result)
 
     # get converged chain
     converged_chain = np.asarray(
-        result.sample_result.trace_x[0, result.sample_result.burn_in:, :])
+        result.sample_result.trace_x[0, result.sample_result.burn_in :, :]
+    )
 
     # set confidence levels
     alpha_values = [0.99, 0.95, 0.68]
@@ -564,9 +608,9 @@ def test_samples_cis():
         # calculate parameter samples confidence intervals
         lb, ub = sample.calculate_ci_mcmc_sample(result, ci_level=alpha)
         # get corresponding percentiles to alpha
-        percentiles = 100 * np.array([(1-alpha)/2, 1-(1-alpha)/2])
+        percentiles = 100 * np.array([(1 - alpha) / 2, 1 - (1 - alpha) / 2])
         # check result agreement
-        diff = np.percentile(converged_chain, percentiles, axis=0)-[lb, ub]
+        diff = np.percentile(converged_chain, percentiles, axis=0) - [lb, ub]
 
         assert (diff == 0).all()
         # check if lower bound is smaller than upper bound

@@ -51,7 +51,7 @@ class ProfilerResult(dict):
         gradnorm_path: np.ndarray = np.nan,
         exitflag_path: np.ndarray = np.nan,
         time_path: np.ndarray = np.nan,
-        time_total: float = 0.,
+        time_total: float = 0.0,
         n_fval: int = 0,
         n_grad: int = 0,
         n_hess: int = 0,

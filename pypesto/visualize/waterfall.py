@@ -1,27 +1,33 @@
+from typing import List, Optional, Sequence, Tuple, Union
+
 import matplotlib.pyplot as plt
-from matplotlib.ticker import MaxNLocator
 import numpy as np
-from .reference_points import create_references, ReferencePoint
-from .clust_color import assign_colors, delete_nan_inf, RGBA
-from .misc import (
-    process_result_list, process_start_indices, process_y_limits,
-    process_offset_y
-)
+from matplotlib.ticker import MaxNLocator
 
 from pypesto import Result
-from typing import Optional, Union, Sequence, Tuple, List
+
+from .clust_color import RGBA, assign_colors, delete_nan_inf
+from .misc import (
+    process_offset_y,
+    process_result_list,
+    process_start_indices,
+    process_y_limits,
+)
+from .reference_points import ReferencePoint, create_references
 
 
-def waterfall(results: Union[Result, Sequence[Result]],
-              ax: Optional[plt.Axes] = None,
-              size: Optional[Tuple[float]] = (18.5, 10.5),
-              y_limits: Optional[Tuple[float]] = None,
-              scale_y: Optional[str] = 'log10',
-              offset_y: Optional[float] = None,
-              start_indices: Optional[Union[Sequence[int], int]] = None,
-              reference: Optional[Sequence[ReferencePoint]] = None,
-              colors: Optional[Union[RGBA, Sequence[RGBA]]] = None,
-              legends: Optional[Union[Sequence[str], str]] = None):
+def waterfall(
+    results: Union[Result, Sequence[Result]],
+    ax: Optional[plt.Axes] = None,
+    size: Optional[Tuple[float]] = (18.5, 10.5),
+    y_limits: Optional[Tuple[float]] = None,
+    scale_y: Optional[str] = 'log10',
+    offset_y: Optional[float] = None,
+    start_indices: Optional[Union[Sequence[int], int]] = None,
+    reference: Optional[Sequence[ReferencePoint]] = None,
+    colors: Optional[Union[RGBA, Sequence[RGBA]]] = None,
+    legends: Optional[Union[Sequence[str], str]] = None,
+):
     """
     Plot waterfall plot.
 
@@ -63,8 +69,9 @@ def waterfall(results: Union[Result, Sequence[Result]],
     refs = create_references(references=reference)
 
     # precompute y-offset, if needed and if a list of results was passed
-    fvals_all, offset_y = process_offset_for_list(offset_y, results, scale_y,
-                                                  start_indices, refs)
+    fvals_all, offset_y = process_offset_for_list(
+        offset_y, results, scale_y, start_indices, refs
+    )
 
     # plotting routine needs the maximum number of multistarts
     max_len_fvals = np.array([0])
@@ -75,17 +82,30 @@ def waterfall(results: Union[Result, Sequence[Result]],
         max_len_fvals = np.max([max_len_fvals, *fvals.shape])
 
         # call lowlevel plot routine
-        ax = waterfall_lowlevel(fvals=fvals, scale_y=scale_y,
-                                offset_y=offset_y, ax=ax, size=size,
-                                colors=colors[j], legend_text=legends[j])
+        ax = waterfall_lowlevel(
+            fvals=fvals,
+            scale_y=scale_y,
+            offset_y=offset_y,
+            ax=ax,
+            size=size,
+            colors=colors[j],
+            legend_text=legends[j],
+        )
 
     # apply changes specified be the user to the axis object
     ax = handle_options(ax, max_len_fvals, refs, y_limits, offset_y)
     return ax
 
 
-def waterfall_lowlevel(fvals, scale_y='log10', offset_y=0., ax=None,
-                       size=(18.5, 10.5), colors=None, legend_text=None):
+def waterfall_lowlevel(
+    fvals,
+    scale_y='log10',
+    offset_y=0.0,
+    ax=None,
+    size=(18.5, 10.5),
+    colors=None,
+    legend_text=None,
+):
     """
     Plot waterfall plot using list of function values.
 
@@ -153,26 +173,28 @@ def waterfall_lowlevel(fvals, scale_y='log10', offset_y=0., ax=None,
 
         # line plot (linear or logarithmic)
         if scale_y == 'log10':
-            ax.semilogy(j, fval, color=color,
-                        marker='o', label=tmp_legend, alpha=1.)
+            ax.semilogy(
+                j, fval, color=color, marker='o', label=tmp_legend, alpha=1.0
+            )
         else:
-            ax.plot(j, fval, color=color,
-                    marker='o', label=tmp_legend, alpha=1.)
+            ax.plot(
+                j, fval, color=color, marker='o', label=tmp_legend, alpha=1.0
+            )
 
     # check if y-axis has a reasonable scale
     y_min, y_max = ax.get_ylim()
     if scale_y == 'log10':
-        if np.log10(y_max) - np.log10(y_min) < 1.:
+        if np.log10(y_max) - np.log10(y_min) < 1.0:
             y_mean = 0.5 * (np.log10(y_min) + np.log10(y_max))
-            ax.set_ylim(10. ** (y_mean - 0.5), 10. ** (y_mean + 0.5))
+            ax.set_ylim(10.0 ** (y_mean - 0.5), 10.0 ** (y_mean + 0.5))
     else:
-        if y_max - y_min < 1.:
+        if y_max - y_min < 1.0:
             y_mean = 0.5 * (y_min + y_max)
             ax.set_ylim(y_mean - 0.5, y_mean + 0.5)
 
     # labels
     ax.set_xlabel('Ordered optimizer run')
-    if offset_y == .0:
+    if offset_y == 0.0:
         ax.set_ylabel('Function value')
     else:
         ax.set_ylabel('Offsetted function value (relative to best start)')
@@ -184,11 +206,11 @@ def waterfall_lowlevel(fvals, scale_y='log10', offset_y=0., ax=None,
 
 
 def process_offset_for_list(
-        offset_y: float,
-        results: Sequence[Result],
-        scale_y: Optional[str],
-        start_indices: Optional[Sequence[int]] = None,
-        references: Optional[Sequence[ReferencePoint]] = None,
+    offset_y: float,
+    results: Sequence[Result],
+    scale_y: Optional[str],
+    start_indices: Optional[Sequence[int]] = None,
+    references: Optional[Sequence[ReferencePoint]] = None,
 ) -> Tuple[List[np.ndarray], float]:
     """
     Compute common offset_y and add it to `fvals` of results.
@@ -217,9 +239,9 @@ def process_offset_for_list(
     min_val = np.inf
     fvals_all = []
     for result in results:
-        fvals = np.asarray([
-            np.array(result.optimize_result.get_for_key('fval'))
-        ])
+        fvals = np.asarray(
+            [np.array(result.optimize_result.get_for_key('fval'))]
+        )
         if start_indices is None:
             start_indices = np.array(range(fvals.size))
         else:
@@ -271,9 +293,13 @@ def handle_options(ax, max_len_fvals, ref, y_limits, offset_y):
     # handle reference points
     for i_ref in ref:
         # plot reference point as line
-        ax.plot([0, max_len_fvals - 1],
-                [i_ref.fval + offset_y, i_ref.fval + offset_y], '--',
-                color=i_ref.color, label=i_ref.legend)
+        ax.plot(
+            [0, max_len_fvals - 1],
+            [i_ref.fval + offset_y, i_ref.fval + offset_y],
+            '--',
+            color=i_ref.color,
+            label=i_ref.legend,
+        )
 
         # create legend for reference points
         if i_ref.legend is not None:

@@ -8,3 +8,13 @@ requires = [
   "wheel >= 0.36.2",
 ]
 build-backend = "setuptools.build_meta"
+
+[tool.black]
+line-length = 79
+target-version = ['py37', 'py38', 'py39']
+skip-string-normalization = true
+
+[tool.isort]
+profile = "black"
+line_length = 79
+multi_line_output = 3

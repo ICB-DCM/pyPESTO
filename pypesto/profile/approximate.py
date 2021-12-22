@@ -1,7 +1,8 @@
 import logging
+from typing import Iterable
+
 import numpy as np
 from scipy.stats import multivariate_normal
-from typing import Iterable
 
 from ..problem import Problem
 from ..result import Result
@@ -60,8 +61,9 @@ def approximate_parameter_profile(
 
     # create the profile result object (retrieve global optimum) or append to
     # existing list of profiles
-    global_opt = initialize_profile(problem, result, result_index,
-                                    profile_index, profile_list)
+    global_opt = initialize_profile(
+        problem, result, result_index, profile_index, profile_list
+    )
 
     # extract optimization result
     optimizer_result = result.optimize_result.list[result_index]
@@ -77,7 +79,8 @@ def approximate_parameter_profile(
     if hess is None or np.isnan(hess).any():
         logger.info("Computing Hessian/FIM as not available in result.")
         hess = problem.objective(
-            problem.get_reduced_vector(x), sensi_orders=(2,))
+            problem.get_reduced_vector(x), sensi_orders=(2,)
+        )
 
     # inverse of the hessian
     sigma = np.linalg.inv(hess)
@@ -93,10 +96,11 @@ def approximate_parameter_profile(
 
         i_free_par = problem.full_index_to_free_index(i_par)
 
-        ys = multivariate_normal.pdf(xs[i_par], mean=x[i_par],
-                                     cov=sigma[i_free_par, i_free_par])
+        ys = multivariate_normal.pdf(
+            xs[i_par], mean=x[i_par], cov=sigma[i_free_par, i_free_par]
+        )
 
-        fvals = - np.log(ys)
+        fvals = -np.log(ys)
         ratios = ys / ys.max() * ratio_scaling
 
         profiler_result = ProfilerResult(
@@ -107,6 +111,8 @@ def approximate_parameter_profile(
 
         result.profile_result.set_profiler_result(
             profiler_result=profiler_result,
-            i_par=i_par, profile_list=profile_list)
+            i_par=i_par,
+            profile_list=profile_list,
+        )
 
     return result

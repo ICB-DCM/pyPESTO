@@ -1,22 +1,25 @@
 """This file serves as an example how to use MPIPoolEngine
 to optimize across nodes and also as a test for the
 MPIPoolEngine."""
-import pypesto
 import numpy as np
 import scipy as sp
+
+import pypesto
 import pypesto.optimize as optimize
-from pypesto.store import (OptimizationResultHDF5Writer,
-                           ProblemHDF5Writer)
+
 # you need to manually import the MPIPoolEninge
 from pypesto.engine.mpi_pool import MPIPoolEngine
+from pypesto.store import OptimizationResultHDF5Writer, ProblemHDF5Writer
 
 
 def setup_rosen_problem(n_starts: int = 2):
     """Set up the rosenbrock problem and return
     a pypesto.Problem"""
-    objective = pypesto.Objective(fun=sp.optimize.rosen,
-                                  grad=sp.optimize.rosen_der,
-                                  hess=sp.optimize.rosen_hess)
+    objective = pypesto.Objective(
+        fun=sp.optimize.rosen,
+        grad=sp.optimize.rosen_der,
+        hess=sp.optimize.rosen_hess,
+    )
 
     dim_full = 10
     lb = -5 * np.ones((dim_full, 1))
@@ -26,8 +29,9 @@ def setup_rosen_problem(n_starts: int = 2):
     startpoints = pypesto.startpoint.latin_hypercube(
         n_starts=n_starts, lb=lb, ub=ub
     )
-    problem = pypesto.Problem(objective=objective, lb=lb, ub=ub,
-                              x_guesses=startpoints)
+    problem = pypesto.Problem(
+        objective=objective, lb=lb, ub=ub, x_guesses=startpoints
+    )
     return problem
 
 
@@ -44,9 +48,12 @@ if __name__ == '__main__':
 
     # result is the way to call the optimization with MPIPoolEngine.
     result = optimize.minimize(
-        problem=problem, optimizer=optimizer,
-        n_starts=n_starts, engine=MPIPoolEngine(),
-        filename=None)
+        problem=problem,
+        optimizer=optimizer,
+        n_starts=n_starts,
+        engine=MPIPoolEngine(),
+        filename=None,
+    )
 
     # saving optimization results to hdf5
     file_name = 'temp_result.h5'

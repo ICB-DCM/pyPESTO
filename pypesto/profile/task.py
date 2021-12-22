@@ -1,12 +1,13 @@
 import logging
 from typing import Callable
 
+import pypesto.optimize
+
 from ..engine import Task
 from ..problem import Problem
-from .result import ProfilerResult
 from .options import ProfileOptions
+from .result import ProfilerResult
 from .walk_along_profile import walk_along_profile
-import pypesto.optimize
 
 logger = logging.getLogger(__name__)
 

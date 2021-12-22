@@ -1,21 +1,21 @@
 """Include functions for saving various results to hdf5."""
-import os
 import logging
-from typing import Union
+import os
 from numbers import Integral
+from typing import Union
 
 import h5py
 import numpy as np
 
-from .hdf5 import (write_array, write_float_array)
 from ..result import Result, SampleResult
+from .hdf5 import write_array, write_float_array
 
 logger = logging.getLogger(__name__)
 
 
-def check_overwrite(f: Union[h5py.File, h5py.Group],
-                    overwrite: bool,
-                    target: str):
+def check_overwrite(
+    f: Union[h5py.File, h5py.Group], overwrite: bool, target: str
+):
     """
     Check whether target already exists.
 
@@ -32,10 +32,12 @@ def check_overwrite(f: Union[h5py.File, h5py.Group],
         if overwrite:
             del f[target]
         else:
-            raise Exception(f"The file already exists and contains "
-                            f"information about {target} result."
-                            f"If you wish to overwrite the file set"
-                            f"overwrite=True.")
+            raise Exception(
+                f"The file already exists and contains "
+                f"information about {target} result."
+                f"If you wish to overwrite the file set"
+                f"overwrite=True."
+            )
 
 
 class ProblemHDF5Writer:
@@ -69,9 +71,13 @@ class ProblemHDF5Writer:
 
         with h5py.File(self.storage_filename, "a") as f:
             check_overwrite(f, overwrite, 'problem')
-            attrs_to_save = [a for a in dir(problem) if not a.startswith('__')
-                             and not callable(getattr(problem, a))
-                             and not hasattr(type(problem), a)]
+            attrs_to_save = [
+                a
+                for a in dir(problem)
+                if not a.startswith('__')
+                and not callable(getattr(problem, a))
+                and not hasattr(type(problem), a)
+            ]
 
             problem_grp = f.create_group("problem")
             # save the configuration
@@ -87,8 +93,9 @@ class ProblemHDF5Writer:
                     problem_grp.attrs[problem_attr] = value
 
 
-def get_or_create_group(f: Union[h5py.File, h5py.Group],
-                        group_path: str) -> h5py.Group:
+def get_or_create_group(
+    f: Union[h5py.File, h5py.Group], group_path: str
+) -> h5py.Group:
     """
     Return/create a group object for the group with group_path relative to f.
 
@@ -185,9 +192,11 @@ class SamplingResultHDF5Writer:
         # if there is no sample available, log a warning and return
         # SampleResult is only a dummy class created by the Result class
         # and always indicates the lack of a sampling result.
-        if(isinstance(result.sample_result, SampleResult)):
-            logger.warning("Warning: There is no sampling_result, "
-                           "which you tried to save to hdf5.")
+        if isinstance(result.sample_result, SampleResult):
+            logger.warning(
+                "Warning: There is no sampling_result, "
+                "which you tried to save to hdf5."
+            )
             return
 
         # Create destination directory
@@ -203,9 +212,9 @@ class SamplingResultHDF5Writer:
 
             for key in result.sample_result.keys():
                 if isinstance(result.sample_result[key], np.ndarray):
-                    write_float_array(results_grp,
-                                      key,
-                                      result.sample_result[key])
+                    write_float_array(
+                        results_grp, key, result.sample_result[key]
+                    )
                 elif result.sample_result[key] is not None:
                     results_grp.attrs[key] = result.sample_result[key]
             f.flush()
@@ -245,11 +254,13 @@ class ProfileResultHDF5Writer:
             profiling_grp = get_or_create_group(f, "profiling")
 
             for profile_id, profile in enumerate(result.profile_result.list):
-                profile_grp = get_or_create_group(profiling_grp,
-                                                  str(profile_id))
+                profile_grp = get_or_create_group(
+                    profiling_grp, str(profile_id)
+                )
                 for parameter_id, parameter_profile in enumerate(profile):
-                    result_grp = get_or_create_group(profile_grp,
-                                                     str(parameter_id))
+                    result_grp = get_or_create_group(
+                        profile_grp, str(parameter_id)
+                    )
 
                     if parameter_profile is None:
                         result_grp.attrs['IsNone'] = True
@@ -257,22 +268,23 @@ class ProfileResultHDF5Writer:
                     result_grp.attrs['IsNone'] = False
                     for key in parameter_profile.keys():
                         if isinstance(parameter_profile[key], np.ndarray):
-                            write_float_array(result_grp,
-                                              key,
-                                              parameter_profile[key])
+                            write_float_array(
+                                result_grp, key, parameter_profile[key]
+                            )
                         elif parameter_profile[key] is not None:
                             result_grp.attrs[key] = parameter_profile[key]
             f.flush()
 
 
-def write_result(result: Result,
-                 filename: str,
-                 overwrite: bool = False,
-                 problem: bool = True,
-                 optimize: bool = False,
-                 profile: bool = False,
-                 sample: bool = False,
-                 ):
+def write_result(
+    result: Result,
+    filename: str,
+    overwrite: bool = False,
+    problem: bool = True,
+    optimize: bool = False,
+    profile: bool = False,
+    sample: bool = False,
+):
     """
     Save whole pypesto.Result to hdf5 file.
 

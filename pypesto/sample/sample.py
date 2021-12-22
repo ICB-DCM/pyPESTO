@@ -1,24 +1,25 @@
 import logging
-import numpy as np
-from typing import List, Union
 from time import process_time
+from typing import List, Union
 
+import numpy as np
+
+from ..optimize.util import autosave
 from ..problem import Problem
 from ..result import Result
-from ..optimize.util import autosave
-from .sampler import Sampler
 from .adaptive_metropolis import AdaptiveMetropolisSampler
+from .sampler import Sampler
 
 logger = logging.getLogger(__name__)
 
 
 def sample(
-        problem: Problem,
-        n_samples: int,
-        sampler: Sampler = None,
-        x0: Union[np.ndarray, List[np.ndarray]] = None,
-        result: Result = None,
-        filename: Union[str, None] = "Auto"
+    problem: Problem,
+    n_samples: int,
+    sampler: Sampler = None,
+    x0: Union[np.ndarray, List[np.ndarray]] = None,
+    result: Result = None,
+    filename: Union[str, None] = "Auto",
 ) -> Result:
     """
     Call to do parameter sampling.
@@ -60,7 +61,8 @@ def sample(
         result.optimize_result.sort()
         if len(result.optimize_result.list) > 0:
             x0 = problem.get_reduced_vector(
-                result.optimize_result.list[0]['x'])
+                result.optimize_result.list[0]['x']
+            )
         # TODO multiple x0 for PT, #269
 
     # set sampler
@@ -74,7 +76,7 @@ def sample(
     t_start = process_time()
     sampler.sample(n_samples=n_samples)
     t_elapsed = process_time() - t_start
-    logger.info("Elapsed time: "+str(t_elapsed))
+    logger.info("Elapsed time: " + str(t_elapsed))
 
     # extract results
     sampler_result = sampler.get_samples()
@@ -85,8 +87,6 @@ def sample(
     # record results
     result.sample_result = sampler_result
 
-    autosave(filename=filename,
-             result=result,
-             store_type="sample")
+    autosave(filename=filename, result=result, store_type="sample")
 
     return result

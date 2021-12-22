@@ -8,10 +8,11 @@ the pypesto components. It contains sub-results for
 optimization, profiling, sampling.
 
 """
-import pandas as pd
-import numpy as np
 import copy
-from typing import Sequence, TYPE_CHECKING
+from typing import TYPE_CHECKING, Sequence
+
+import numpy as np
+import pandas as pd
 
 if TYPE_CHECKING:
     import pypesto.optimize as optimize
@@ -25,8 +26,8 @@ class OptimizeResult:
         self.list = []
 
     def append(
-            self,
-            optimizer_result: 'optimize.OptimizerResult',
+        self,
+        optimizer_result: 'optimize.OptimizerResult',
     ):
         """
         Append an optimizer result to the result object.
@@ -41,6 +42,7 @@ class OptimizeResult:
 
     def sort(self):
         """Sort the optimizer results by function value fval (ascending)."""
+
         def get_fval(res):
             return res.fval if not np.isnan(res.fval) else np.inf
 
@@ -104,9 +106,10 @@ class ProfileResult:
         return len(self.list) - 1
 
     def append_profiler_result(
-            self,
-            profiler_result: 'profile.ProfilerResult' = None,
-            profile_list: int = None) -> None:
+        self,
+        profiler_result: 'profile.ProfilerResult' = None,
+        profile_list: int = None,
+    ) -> None:
         """Append the profiler result to the profile list.
 
         Parameters
@@ -124,10 +127,11 @@ class ProfileResult:
         self.list[profile_list].append(profiler_result)
 
     def set_profiler_result(
-            self,
-            profiler_result: 'profile.ProfilerResult',
-            i_par: int,
-            profile_list: int = None) -> None:
+        self,
+        profiler_result: 'profile.ProfilerResult',
+        i_par: int,
+        profile_list: int = None,
+    ) -> None:
         """
         Write a profiler result to the result object.
 
@@ -145,9 +149,7 @@ class ProfileResult:
             profile_list = -1  # last
         self.list[profile_list][i_par] = copy.deepcopy(profiler_result)
 
-    def get_profiler_result(
-        self, i_par: int, profile_list: int = None
-    ):
+    def get_profiler_result(self, i_par: int, profile_list: int = None):
         """
         Get the profiler result at parameter index `i_par` of `profile_list`.
 

@@ -1,4 +1,3 @@
-# noqa: D400,D205
 """
 pyPESTO
 =======
@@ -6,13 +5,21 @@ pyPESTO
 Parameter Estimation TOolbox for python.
 """
 
-# make version available
+# isort: off
+
 from .version import __version__
+
+# isort: on
+
+# import simple modules as submodules
+from . import engine, logging, startpoint, store, visualize
 
 # import basic objects into global namespace
 from .objective import (
+    FD,
     AmiciObjective,
     CsvHistory,
+    FDDelta,
     Hdf5History,
     History,
     HistoryBase,
@@ -22,22 +29,8 @@ from .objective import (
     Objective,
     ObjectiveBase,
     OptimizerHistory,
-    FD,
-    FDDelta,
 )
 from .problem import Problem
-from .result import (
-    OptimizeResult,
-    ProfileResult,
-    Result,
-    SampleResult,
-)
-
-# import simple modules as submodules
-from . import engine
-from . import logging
-from . import startpoint
-from . import store
-from . import visualize
+from .result import OptimizeResult, ProfileResult, Result, SampleResult
 
 logging.log()

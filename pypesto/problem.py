@@ -8,18 +8,11 @@ describing the problem to be solved.
 
 """
 
+import copy
+from typing import Iterable, List, Optional, SupportsFloat, SupportsInt, Union
+
 import numpy as np
 import pandas as pd
-import copy
-
-from typing import (
-    Iterable,
-    List,
-    Optional,
-    Union,
-    SupportsFloat,
-    SupportsInt,
-)
 
 from .objective import ObjectiveBase
 from .objective.priors import NegLogPriors

@@ -1,7 +1,8 @@
-from scipy import cluster
-from typing import List, Tuple, Optional, Union
+from typing import List, Optional, Tuple, Union
+
 import matplotlib.cm as cm
 import numpy as np
+from scipy import cluster
 
 # for typehints
 from .constants import RGBA
@@ -28,7 +29,7 @@ def assign_clusters(vals):
     if vals is None or len(vals) == 0:
         return [], []
     elif len(vals) == 1:
-        return np.array([0]), np.array([1.])
+        return np.array([0]), np.array([1.0])
 
     # linkage requires (n, 1) data array
     vals = np.reshape(vals, (-1, 1))
@@ -39,8 +40,8 @@ def assign_clusters(vals):
 
     # get clustering based on distance
     clust = cluster.hierarchy.fcluster(
-        cluster.hierarchy.linkage(vals),
-        t=0.1, criterion='distance')
+        cluster.hierarchy.linkage(vals), t=0.1, criterion='distance'
+    )
 
     # get unique clusters
     _, ind_clust = np.unique(clust, return_index=True)
@@ -90,11 +91,11 @@ def assign_clustered_colors(vals, balance_alpha=True, highlight_global=True):
 
     # fill color array from colormap
     colormap = cm.ScalarMappable().to_rgba
-    color_list = colormap(np.linspace(0., 1., n_clusters))
+    color_list = colormap(np.linspace(0.0, 1.0, n_clusters))
 
     # best optimum should be colored in red
     if highlight_global and cluster_size[0] > 1:
-        color_list = np.concatenate(([[1., 0., 0., 1.]], color_list))
+        color_list = np.concatenate(([[1.0, 0.0, 0.0, 1.0]], color_list))
 
     # We have clustered the results. However, clusters may have size 1,
     # so we need to rearrange the regroup the results into "no_clusters",
@@ -108,15 +109,15 @@ def assign_clustered_colors(vals, balance_alpha=True, highlight_global=True):
     # assign transparency valuesaccording to cluster size, if wanted
     if balance_alpha:
         # assign neutral color, add 1 for avoiding division by zero
-        grey = [0.7, 0.7, 0.7, min(1., 5. / (no_clusters.size + 1.))]
+        grey = [0.7, 0.7, 0.7, min(1.0, 5.0 / (no_clusters.size + 1.0))]
 
         # reduce alpha level depend on size of each cluster
         n_cluster_size = np.delete(cluster_size, no_clusters)
         for icluster in range(n_clusters):
-            color_list[icluster][3] = min(1., 5. / n_cluster_size[icluster])
+            color_list[icluster][3] = min(1.0, 5.0 / n_cluster_size[icluster])
     else:
         # assign neutral color
-        grey = [0.7, 0.7, 0.7, 1.]
+        grey = [0.7, 0.7, 0.7, 1.0]
 
     # create a color list, prfilled with grey values
     colors = np.array([grey] * clusters.size)
@@ -129,13 +130,14 @@ def assign_clustered_colors(vals, balance_alpha=True, highlight_global=True):
 
     # if best value was found only once: replace it with red
     if highlight_global and cluster_size[0] == 1:
-        colors[0] = [1., 0., 0., 1.]
+        colors[0] = [1.0, 0.0, 0.0, 1.0]
 
     return colors
 
 
-def assign_colors(vals, colors=None, balance_alpha=True,
-                  highlight_global=True):
+def assign_colors(
+    vals, colors=None, balance_alpha=True, highlight_global=True
+):
     """
     Assign colors or format user specified colors.
 
@@ -165,8 +167,11 @@ def assign_colors(vals, colors=None, balance_alpha=True,
 
     # if the user did not specify any colors:
     if colors is None:
-        return assign_clustered_colors(vals, balance_alpha=balance_alpha,
-                                       highlight_global=highlight_global)
+        return assign_clustered_colors(
+            vals,
+            balance_alpha=balance_alpha,
+            highlight_global=highlight_global,
+        )
 
     # The user passed values and colors: parse them first!
     # we want everything to be numpy arrays, to not check every time whether a
@@ -201,8 +206,8 @@ def assign_colors(vals, colors=None, balance_alpha=True,
 
 
 def assign_colors_for_list(
-        num_entries: int,
-        colors: Optional[Union[RGBA, List[RGBA], np.ndarray]] = None
+    num_entries: int,
+    colors: Optional[Union[RGBA, List[RGBA], np.ndarray]] = None,
 ) -> Union[List[List[float]], np.ndarray]:
     """
     Create a list of colors for a list of items.
@@ -229,8 +234,9 @@ def assign_colors_for_list(
         dummy_clusters = np.array(list(range(num_entries)) * 2)
 
         # we don't want alpha levels for all plotting routines in this case...
-        colors = assign_colors(dummy_clusters, balance_alpha=False,
-                               highlight_global=False)
+        colors = assign_colors(
+            dummy_clusters, balance_alpha=False, highlight_global=False
+        )
 
         # dummy cluster had twice as many entries as really there. Reduce.
         real_indices = np.arange(int(colors.shape[0] / 2))
@@ -238,17 +244,19 @@ def assign_colors_for_list(
 
     # if the user specified color lies does not match the number of results
     if len(colors) != num_entries:
-        raise ('Incorrect color input. Colors must be specified either as '
-               'list of [r, g, b, alpha] with length equal to function '
-               'values Number of function (here: ' + str(num_entries) + '), '
-               'or as one single [r, g, b, alpha] color.')
+        raise (
+            'Incorrect color input. Colors must be specified either as '
+            'list of [r, g, b, alpha] with length equal to function '
+            'values Number of function (here: ' + str(num_entries) + '), '
+            'or as one single [r, g, b, alpha] color.'
+        )
 
     return colors
 
 
-def delete_nan_inf(fvals: np.ndarray,
-                   x: Optional[np.ndarray] = None,
-                   xdim: Optional[int] = 1) -> Tuple[np.ndarray, np.ndarray]:
+def delete_nan_inf(
+    fvals: np.ndarray, x: Optional[np.ndarray] = None, xdim: Optional[int] = 1
+) -> Tuple[np.ndarray, np.ndarray]:
     """
     Delete nan and inf values in fvals.
 
@@ -282,8 +290,14 @@ def delete_nan_inf(fvals: np.ndarray,
         if np.isfinite(fvals).any():
             x = np.vstack(np.take(x, np.where(np.isfinite(fvals))[0], axis=0))
         else:
-            x = np.empty((0,
-                          x.shape[1] if x.ndim == 2
-                          else x[0].shape[0] if x[0] is not None
-                          else xdim))
+            x = np.empty(
+                (
+                    0,
+                    x.shape[1]
+                    if x.ndim == 2
+                    else x[0].shape[0]
+                    if x[0] is not None
+                    else xdim,
+                )
+            )
     return x, fvals[np.isfinite(fvals)]

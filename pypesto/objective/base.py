@@ -1,13 +1,14 @@
-import numpy as np
-import pandas as pd
+import abc
 import copy
 import logging
-import abc
-from typing import Dict, Iterable, Optional, Sequence, Tuple, Union, List
+from typing import Dict, Iterable, List, Optional, Sequence, Tuple, Union
 
-from .constants import MODE_FUN, MODE_RES, FVAL, GRAD, HESS, RES, SRES
+import numpy as np
+import pandas as pd
+
+from .constants import FVAL, GRAD, HESS, MODE_FUN, MODE_RES, RES, SRES
 from .history import HistoryBase
-from .pre_post_process import PrePostProcessor, FixedParametersProcessor
+from .pre_post_process import FixedParametersProcessor, PrePostProcessor
 
 ResultDict = Dict[str, Union[float, np.ndarray, Dict]]
 
@@ -80,7 +81,7 @@ class ObjectiveBase(abc.ABC):
         return self.check_sensi_orders((2,), MODE_FUN)
 
     @property
-    def has_hessp(self) -> bool: # noqa
+    def has_hessp(self) -> bool:  # noqa
         # Not supported yet
         return False
 
@@ -103,8 +104,10 @@ class ObjectiveBase(abc.ABC):
         # change from numpy array with `str_` dtype to list with `str` dtype
         # to avoid issues when writing to hdf (and correctness of typehint)
         return [
-            str(name) for name in
-            self.pre_post_processor.reduce(np.asarray(self._x_names))
+            str(name)
+            for name in self.pre_post_processor.reduce(
+                np.asarray(self._x_names)
+            )
         ]
 
     def initialize(self):
@@ -119,7 +122,7 @@ class ObjectiveBase(abc.ABC):
     def __call__(
         self,
         x: np.ndarray,
-        sensi_orders: Tuple[int, ...] = (0, ),
+        sensi_orders: Tuple[int, ...] = (0,),
         mode: str = MODE_FUN,
         return_dict: bool = False,
         **kwargs,
@@ -164,30 +167,36 @@ class ObjectiveBase(abc.ABC):
 
         # check input
         if not self.check_mode(mode):
-            raise ValueError(f"This Objective cannot be called with mode"
-                             f"={mode}.")
+            raise ValueError(
+                f"This Objective cannot be called with mode" f"={mode}."
+            )
         if not self.check_sensi_orders(sensi_orders, mode):
-            raise ValueError(f"This Objective cannot be called with "
-                             f"sensi_orders= {sensi_orders} and mode={mode}.")
+            raise ValueError(
+                f"This Objective cannot be called with "
+                f"sensi_orders= {sensi_orders} and mode={mode}."
+            )
 
         # pre-process
         x_full = self.pre_post_processor.preprocess(x=x)
 
         # compute result
         result = self.call_unprocessed(
-            x=x_full, sensi_orders=sensi_orders, mode=mode, **kwargs)
+            x=x_full, sensi_orders=sensi_orders, mode=mode, **kwargs
+        )
 
         # post-process
         result = self.pre_post_processor.postprocess(result=result)
 
         # update history
         self.history.update(
-            x=x, sensi_orders=sensi_orders, mode=mode, result=result)
+            x=x, sensi_orders=sensi_orders, mode=mode, result=result
+        )
 
         # map to output format
         if not return_dict:
             result = ObjectiveBase.output_to_tuple(
-                sensi_orders=sensi_orders, mode=mode, **result)
+                sensi_orders=sensi_orders, mode=mode, **result
+            )
 
         return result
 
@@ -248,7 +257,7 @@ class ObjectiveBase(abc.ABC):
 
         Return it as a dictonary.
         """
-        info = {'type':  self.__class__.__name__}
+        info = {'type': self.__class__.__name__}
         return info
 
     def check_sensi_orders(
@@ -281,16 +290,21 @@ class ObjectiveBase(abc.ABC):
         if (
             mode == MODE_FUN
             and (
-                0 in sensi_orders and not self.has_fun
-                or 1 in sensi_orders and not self.has_grad
-                or 2 in sensi_orders and not self.has_hess
+                0 in sensi_orders
+                and not self.has_fun
+                or 1 in sensi_orders
+                and not self.has_grad
+                or 2 in sensi_orders
+                and not self.has_hess
                 or max(sensi_orders) > 2
             )
         ) or (
             mode == MODE_RES
             and (
-                0 in sensi_orders and not self.has_res
-                or 1 in sensi_orders and not self.has_sres
+                0 in sensi_orders
+                and not self.has_res
+                or 1 in sensi_orders
+                and not self.has_sres
                 or max(sensi_orders) > 1
             )
         ):
@@ -394,7 +408,8 @@ class ObjectiveBase(abc.ABC):
             dim_full=dim_full,
             x_free_indices=x_free_indices,
             x_fixed_indices=x_fixed_indices,
-            x_fixed_vals=x_fixed_vals)
+            x_fixed_vals=x_fixed_vals,
+        )
 
         self.pre_post_processor = pre_post_processor
 
@@ -447,8 +462,9 @@ class ObjectiveBase(abc.ABC):
             # Replace rows in `combined_result` with corresponding rows
             # in `result` that have an improved value in column `label`.
             mask_improvements = result[label] < combined_result[label]
-            combined_result.loc[mask_improvements, :] = \
-                result.loc[mask_improvements, :]
+            combined_result.loc[mask_improvements, :] = result.loc[
+                mask_improvements, :
+            ]
 
         return combined_result
 
@@ -543,16 +559,16 @@ class ObjectiveBase(abc.ABC):
             rel_err_ix = abs(abs_err_ix / (fd_c_ix + eps))
 
             if detailed:
-                std_check_ix = (grad_ix - fd_c_ix)/np.std([
-                    fd_f_ix,
-                    fd_b_ix,
-                    fd_c_ix
-                ])
-                mean_check_ix = abs(grad_ix - fd_c_ix)/np.mean([
-                    abs(fd_f_ix - fd_b_ix),
-                    abs(fd_f_ix - fd_c_ix),
-                    abs(fd_b_ix - fd_c_ix),
-                ])
+                std_check_ix = (grad_ix - fd_c_ix) / np.std(
+                    [fd_f_ix, fd_b_ix, fd_c_ix]
+                )
+                mean_check_ix = abs(grad_ix - fd_c_ix) / np.mean(
+                    [
+                        abs(fd_f_ix - fd_b_ix),
+                        abs(fd_f_ix - fd_c_ix),
+                        abs(fd_b_ix - fd_c_ix),
+                    ]
+                )
 
             # log for dimension ix
             if verbosity > 1:
@@ -595,10 +611,9 @@ class ObjectiveBase(abc.ABC):
         # update data dictionary if detailed output is requested
         if detailed:
             prefix_data = {
-                'fval': [fval]*len(x_indices),
+                'fval': [fval] * len(x_indices),
                 'fval_p': fval_p_list,
                 'fval_m': fval_m_list,
-
             }
             std_str = '(grad-fd_c)/std({fd_f,fd_b,fd_c})'
             mean_str = '|grad-fd_c|/mean(|fd_f-fd_b|,|fd_f-fd_c|,|fd_b-fd_c|)'
@@ -612,8 +627,8 @@ class ObjectiveBase(abc.ABC):
         result = pd.DataFrame(
             data=data,
             index=[
-                self.x_names[ix] if self.x_names is not None
-                else f'x_{ix}' for ix in x_indices
+                self.x_names[ix] if self.x_names is not None else f'x_{ix}'
+                for ix in x_indices
             ],
         )
 
@@ -666,22 +681,34 @@ class ObjectiveBase(abc.ABC):
             modes = [mode]
 
         if multi_eps is None:
-            multi_eps = np.array([10**(-i) for i in range(3, 9)])
+            multi_eps = np.array([10 ** (-i) for i in range(3, 9)])
 
         for mode in modes:
             try:
-                dfs.append(self.check_grad_multi_eps(
-                            free_indices, *args, **kwargs,
-                            mode=mode, multi_eps=multi_eps))
+                dfs.append(
+                    self.check_grad_multi_eps(
+                        free_indices,
+                        *args,
+                        **kwargs,
+                        mode=mode,
+                        multi_eps=multi_eps,
+                    )
+                )
             except (RuntimeError, ValueError):
                 # Might happen in case PEtab problem not well defined or
                 # fails for specified tolerances in forward sensitivities
                 return False
 
-        return all([
-            any([
-                np.all((mode_df.rel_err.values < rtol) |
-                       (mode_df.abs_err.values < atol)),
-            ])
-            for mode_df in dfs
-        ])
+        return all(
+            [
+                any(
+                    [
+                        np.all(
+                            (mode_df.rel_err.values < rtol)
+                            | (mode_df.abs_err.values < atol)
+                        ),
+                    ]
+                )
+                for mode_df in dfs
+            ]
+        )

@@ -10,6 +10,22 @@
 # `pre-commit run --all-files` as by default only changed files are checked
 
 repos:
+- repo: https://github.com/psf/black
+  rev: 21.12b0
+  hooks:
+  - id: black
+    description: The uncompromising code formatter
+- repo: https://github.com/pycqa/isort
+  rev: 5.8.0
+  hooks:
+  - id: isort
+    name: isort (python)
+  - id: isort
+    name: isort (cython)
+    types: [cython]
+  - id: isort
+    name: isort (pyi)
+    types: [pyi]
 - repo: https://github.com/pre-commit/pre-commit-hooks
   rev: v3.2.0
   hooks:

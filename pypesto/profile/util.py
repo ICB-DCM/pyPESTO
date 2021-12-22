@@ -1,11 +1,12 @@
 """Utility function for profile module."""
+from typing import Any, Dict, Iterable, Tuple
+
 import numpy as np
 import scipy.stats
-from typing import Any, Dict, Tuple, Iterable
 
 from ..objective.constants import GRAD
 from ..problem import Problem
-from ..result import Result, ProfileResult
+from ..result import ProfileResult, Result
 from .result import ProfilerResult
 
 
@@ -34,7 +35,7 @@ def chi2_quantile_to_ratio(alpha: float = 0.95, df: int = 1):
 
 
 def calculate_approximate_ci(
-        xs: np.ndarray, ratios: np.ndarray, confidence_ratio: float
+    xs: np.ndarray, ratios: np.ndarray, confidence_ratio: float
 ) -> Tuple[float, float]:
     """
     Calculate approximate confidence interval based on profile.
@@ -58,7 +59,7 @@ def calculate_approximate_ci(
         Bounds of the approximate confidence interval.
     """
     # extract indices where the ratio is larger than the minimum ratio
-    indices, = np.where(ratios >= confidence_ratio)
+    (indices,) = np.where(ratios >= confidence_ratio)
     l_ind, u_ind = indices[0], indices[-1]
 
     # lower bound
@@ -118,7 +119,8 @@ def initialize_profile(
     # Check whether an optimization result is existing
     if result.optimize_result is None:
         raise ValueError(
-            "Optimization has to be carried out before profiling can be done.")
+            "Optimization has to be carried out before profiling can be done."
+        )
 
     tmp_optimize_result = result.optimize_result.as_list()
 
@@ -187,8 +189,8 @@ def fill_profile_list(
         ratio_path=np.array([np.exp(global_opt - optimizer_result["fval"])]),
         gradnorm_path=gradnorm,
         exitflag_path=optimizer_result["exitflag"],
-        time_path=np.array([0.]),
-        time_total=0.,
+        time_path=np.array([0.0]),
+        time_total=0.0,
         n_fval=0,
         n_grad=0,
         n_hess=0,
@@ -210,8 +212,10 @@ def fill_profile_list(
             # We append to an existing list
             if i_parameter in profile_index:
                 # Do we have to create a new profile?
-                create_new = (profile_result.list[profile_list][i_parameter]
-                              is None)
+                create_new = (
+                    profile_result.list[profile_list][i_parameter] is None
+                )
                 if create_new:
                     profile_result.set_profiler_result(
-                        new_profile, i_parameter)
+                        new_profile, i_parameter
+                    )

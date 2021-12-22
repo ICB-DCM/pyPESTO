@@ -1,12 +1,13 @@
 import logging
-import numpy as np
 from typing import Callable
 
+import numpy as np
+
 from ..objective.constants import GRAD
-from ..optimize import Optimizer, OptimizerResult, OptimizeOptions
+from ..optimize import OptimizeOptions, Optimizer, OptimizerResult
 from ..problem import Problem
-from .result import ProfilerResult
 from .options import ProfileOptions
+from .result import ProfilerResult
 
 logger = logging.getLogger(__name__)
 
@@ -62,20 +63,28 @@ def walk_along_profile(
 
         # check if the next profile point needs to be computed
         if par_direction == -1:
-            stop_profile = (x_now[i_par] <= problem.lb_full[[i_par]]) \
-                or (current_profile.ratio_path[-1] < options.ratio_min)
+            stop_profile = (x_now[i_par] <= problem.lb_full[[i_par]]) or (
+                current_profile.ratio_path[-1] < options.ratio_min
+            )
 
         if par_direction == 1:
-            stop_profile = (x_now[i_par] >= problem.ub_full[[i_par]]) \
-                or (current_profile.ratio_path[-1] < options.ratio_min)
+            stop_profile = (x_now[i_par] >= problem.ub_full[[i_par]]) or (
+                current_profile.ratio_path[-1] < options.ratio_min
+            )
 
         if stop_profile:
             break
 
         # compute the new start point for optimization
-        x_next = create_next_guess(x_now, i_par, par_direction,
-                                   options, current_profile, problem,
-                                   global_opt)
+        x_next = create_next_guess(
+            x_now,
+            i_par,
+            par_direction,
+            options,
+            current_profile,
+            problem,
+            global_opt,
+        )
 
         # fix current profiling parameter to current value and set
         # start point

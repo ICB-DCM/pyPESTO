@@ -8,8 +8,5 @@ optional post-processing.
 
 
 from .amici_predictor import AmiciPredictor
-from .result import (
-    PredictionResult,
-    PredictionConditionResult,
-)
+from .result import PredictionConditionResult, PredictionResult
 from .task import PredictorTask

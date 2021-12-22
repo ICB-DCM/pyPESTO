@@ -1,13 +1,16 @@
-import numpy as np
 from typing import Union
+
+import numpy as np
 
 
 def _check_none(fun):
     """Return None if any input argument is None; Wrapper function."""
+
     def checked_fun(*args, **kwargs):
         if any(x is None for x in [*args, *(kwargs.values())]):
             return None
         return fun(*args, **kwargs)
+
     return checked_fun
 
 

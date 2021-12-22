@@ -1,15 +1,14 @@
 """Engines with multi-node parallelization."""
-from mpi4py.futures import MPIPoolExecutor
-from mpi4py import MPI
-import cloudpickle as pickle
 import logging
-from tqdm import tqdm
-
 from typing import List
+
+import cloudpickle as pickle
+from mpi4py import MPI
+from mpi4py.futures import MPIPoolExecutor
+from tqdm import tqdm
 
 from .base import Engine
 from .task import Task
-
 
 logger = logging.getLogger(__name__)
 
@@ -45,13 +44,14 @@ class MPIPoolEngine(Engine):
         """
         pickled_tasks = [pickle.dumps(task) for task in tasks]
 
-        n_procs = MPI.COMM_WORLD.Get_size()   # Size of communicator
-        logger.info(f"Performing parallel task execution on {n_procs-1} "
-                    f"workers with one manager.")
+        n_procs = MPI.COMM_WORLD.Get_size()  # Size of communicator
+        logger.info(
+            f"Performing parallel task execution on {n_procs-1} "
+            f"workers with one manager."
+        )
 
         with MPIPoolExecutor() as executor:
-            results = executor.map(work,
-                                   tqdm(pickled_tasks,
-                                        disable=not progress_bar)
-                                   )
+            results = executor.map(
+                work, tqdm(pickled_tasks, disable=not progress_bar)
+            )
         return results

@@ -1,16 +1,17 @@
 """Utility functions for :py:func:`pypesto.optimize.minimize`."""
+import binascii
 import datetime
 import os
-import binascii
 from pathlib import Path
 from typing import List
+
 import h5py
 
 from ..engine import Engine, SingleCoreEngine
 from ..objective import HistoryOptions
-from ..store.save_to_hdf5 import get_or_create_group
-from ..store import write_result
 from ..result import Result
+from ..store import write_result
+from ..store.save_to_hdf5 import get_or_create_group
 from .optimizer import OptimizerResult
 
 
@@ -102,18 +103,16 @@ def postprocess_hdf5_history(
         for result in ret:
             id = result['id']
             f[f'history/{id}'] = h5py.ExternalLink(
-                result['history'].file,
-                f'history/{id}'
+                result['history'].file, f'history/{id}'
             )
 
     # reset storage file (undo preprocessing changes)
     history_options.storage_file = storage_file
 
 
-def autosave(filename: str,
-             result: Result,
-             store_type: str,
-             overwrite: bool = False):
+def autosave(
+    filename: str, result: Result, store_type: str, overwrite: bool = False
+):
     """
     Save the result of optimization, profiling or sampling automatically.
 
@@ -136,11 +135,12 @@ def autosave(filename: str,
 
     if filename == "Auto":
         time = datetime.datetime.now().strftime("%Y_%d_%m_%H_%M_%S")
-        filename = time+f"_{store_type}_result_" \
-                        f"{binascii.b2a_hex(os.urandom(8)).decode()}.h5"
+        filename = (
+            time + f"_{store_type}_result_"
+            f"{binascii.b2a_hex(os.urandom(8)).decode()}.h5"
+        )
     # set the type to True and pass it on to write_result
     to_save = {store_type: True}
-    write_result(result=result,
-                 overwrite=overwrite,
-                 filename=filename,
-                 **to_save)
+    write_result(
+        result=result, overwrite=overwrite, filename=filename, **to_save
+    )

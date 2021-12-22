@@ -1,9 +1,9 @@
+from typing import Callable, Sequence, Tuple, Union
+
 import numpy as np
 
 from .base import ObjectiveBase, ResultDict
-from typing import Callable, Sequence, Tuple, Union
-
-from .constants import MODE_FUN, MODE_RES, FVAL, GRAD, HESS, RES, SRES
+from .constants import FVAL, GRAD, HESS, MODE_FUN, MODE_RES, RES, SRES
 
 
 class Objective(ObjectiveBase):
@@ -101,7 +101,7 @@ class Objective(ObjectiveBase):
         return callable(self.hess) or self.hess is True
 
     @property
-    def has_hessp(self) -> bool: # noqa
+    def has_hessp(self) -> bool:  # noqa
         # Not supported yet
         return False
 
@@ -121,7 +121,8 @@ class Objective(ObjectiveBase):
         info['x_names'] = self.x_names
         sensi_order = 0
         while self.check_sensi_orders(
-                sensi_orders=(sensi_order,), mode=MODE_FUN):
+            sensi_orders=(sensi_order,), mode=MODE_FUN
+        ):
             sensi_order += 1
         info['sensi_order'] = sensi_order - 1
         return info
@@ -182,8 +183,7 @@ class Objective(ObjectiveBase):
             else:
                 fval = self.fun(x)
                 grad = self.grad(x)
-            result = {FVAL: fval,
-                      GRAD: grad}
+            result = {FVAL: fval, GRAD: grad}
         elif sensi_orders == (0, 2):
             if self.hess is True:
                 fval, _, hess = self.fun(x)[:3]
@@ -193,8 +193,7 @@ class Objective(ObjectiveBase):
                 else:
                     fval = self.fun(x)
                 hess = self.hess(x)
-            result = {FVAL: fval,
-                      HESS: hess}
+            result = {FVAL: fval, HESS: hess}
         elif sensi_orders == (1, 2):
             if self.hess is True:
                 grad, hess = self.fun(x)[1:3]
@@ -204,8 +203,7 @@ class Objective(ObjectiveBase):
                     grad = self.fun(x)[1]
                 else:
                     grad = self.grad(x)
-            result = {GRAD: grad,
-                      HESS: hess}
+            result = {GRAD: grad, HESS: hess}
         elif sensi_orders == (0, 1, 2):
             if self.hess is True:
                 fval, grad, hess = self.fun(x)[0:3]
@@ -216,9 +214,7 @@ class Objective(ObjectiveBase):
                 else:
                     fval = self.fun(x)
                     grad = self.grad(x)
-            result = {FVAL: fval,
-                      GRAD: grad,
-                      HESS: hess}
+            result = {FVAL: fval, GRAD: grad, HESS: hess}
         else:
             raise ValueError("These sensitivity orders are not supported.")
 
@@ -251,8 +247,7 @@ class Objective(ObjectiveBase):
             else:
                 res = self.res(x)
                 sres = self.sres(x)
-            result = {RES: res,
-                      SRES: sres}
+            result = {RES: res, SRES: sres}
         else:
             raise ValueError("These sensitivity orders are not supported.")
 
