@@ -1,4 +1,8 @@
+"""Optimization result."""
+
 import numpy as np
+import pandas as pd
+from typing import Sequence
 
 from ..objective import History
 from ..problem import Problem
@@ -122,3 +126,66 @@ class OptimizerResult(dict):
         self.grad = problem.get_full_vector(self.grad)
         self.hess = problem.get_full_matrix(self.hess)
         self.x0 = problem.get_full_vector(self.x0, problem.x_fixed_vals)
+
+
+class OptimizeResult:
+    """Result of the :py:func:`pypesto.optimize.minimize` function."""
+
+    def __init__(self):
+        self.list = []
+
+    def append(
+        self,
+        optimizer_result: OptimizerResult,
+    ):
+        """
+        Append an optimizer result to the result object.
+
+        Parameters
+        ----------
+        optimizer_result:
+            The result of one (local) optimizer run.
+        """
+        self.list.append(optimizer_result)
+        self.sort()
+
+    def sort(self):
+        """Sort the optimizer results by function value fval (ascending)."""
+        def get_fval(res):
+            return res.fval if not np.isnan(res.fval) else np.inf
+
+        self.list = sorted(self.list, key=get_fval)
+
+    def as_dataframe(self, keys=None) -> pd.DataFrame:
+        """
+        Get as pandas DataFrame.
+
+        If keys is a list, return only the specified values, otherwise all.
+        """
+        lst = self.as_list(keys)
+
+        df = pd.DataFrame(lst)
+
+        return df
+
+    def as_list(self, keys=None) -> Sequence:
+        """
+        Get as list.
+
+        If keys is a list, return only the specified values.
+
+        Parameters
+        ----------
+        keys: list(str), optional
+            Labels of the field to extract.
+        """
+        lst = self.list
+
+        if keys is not None:
+            lst = [{key: res[key] for key in keys} for res in lst]
+
+        return lst
+
+    def get_for_key(self, key) -> list:
+        """Extract the list of values for the specified key as a list."""
+        return [res[key] for res in self.list]

@@ -4,7 +4,7 @@ from typing import Callable, List, Tuple, Union
 
 from ..problem import Problem
 from .options import ProfileOptions
-from .result import ProfilerResult
+from ..result import ProfilerResult
 
 
 def next_guess(

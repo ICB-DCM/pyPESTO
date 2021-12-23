@@ -4,7 +4,7 @@ import numpy as np
 from typing import Dict, List, Union
 
 from ..problem import Problem
-from .result import McmcPtResult
+from ..result import McmcPtResult
 
 
 class Sampler(abc.ABC):

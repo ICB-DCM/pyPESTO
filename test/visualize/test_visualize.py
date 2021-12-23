@@ -10,7 +10,6 @@ import pypesto
 import pypesto.petab
 import pypesto.optimize as optimize
 import pypesto.predict as predict
-import pypesto.profile as profile
 import pypesto.sample as sample
 import pypesto.visualize as visualize
 import pypesto.ensemble as ensemble
@@ -94,12 +93,12 @@ def create_optimization_result():
     # write some dummy results for optimization
     result = pypesto.Result(problem=problem)
     for j in range(0, 3):
-        optimizer_result = optimize.OptimizerResult(
+        optimizer_result = pypesto.OptimizerResult(
             id=str(j), fval=j * 0.01, x=np.array([j + 0.1, j + 1]),
             grad=np.array([2.5 + j + 0.1, 2 + j + 1]))
         result.optimize_result.append(optimizer_result=optimizer_result)
     for j in range(0, 4):
-        optimizer_result = optimize.OptimizerResult(
+        optimizer_result = pypesto.OptimizerResult(
             id=str(j + 3), fval=10 + j * 0.01,
             x=np.array([2.5 + j + 0.1, 2 + j + 1]),
             grad=np.array([j + 0.1, j + 1]))
@@ -116,10 +115,10 @@ def create_optimization_result_nan_inf():
     result = create_optimization_result()
 
     # append nan and inf
-    optimizer_result = optimize.OptimizerResult(
+    optimizer_result = pypesto.OptimizerResult(
         fval=float('nan'), x=np.array([float('nan'), float('nan')]))
     result.optimize_result.append(optimizer_result=optimizer_result)
-    optimizer_result = optimize.OptimizerResult(
+    optimizer_result = pypesto.OptimizerResult(
         fval=-float('inf'), x=np.array([-float('inf'), -float('inf')]))
     result.optimize_result.append(optimizer_result=optimizer_result)
 
@@ -166,8 +165,8 @@ def create_profile_result():
                          [2.1, 2.2, 2.4, 2.5, 2.8, 2.9, 3.1]])
     fval_path_1 = [4., 3., 1., 0., 1.5, 2.5, 5.]
     fval_path_2 = [4.5, 3.5, 1.5, 0., 1.3, 2.3, 4.3]
-    tmp_result_1 = profile.ProfilerResult(x_path_1, fval_path_1, ratio_path_1)
-    tmp_result_2 = profile.ProfilerResult(x_path_2, fval_path_2, ratio_path_2)
+    tmp_result_1 = pypesto.ProfilerResult(x_path_1, fval_path_1, ratio_path_1)
+    tmp_result_2 = pypesto.ProfilerResult(x_path_2, fval_path_2, ratio_path_2)
 
     # use pypesto function to write the numeric values into the results
     result.profile_result.append_empty_profile_list()
@@ -806,7 +805,7 @@ def create_sampling_result():
     trace_neglogprior = np.zeros((n_chain, n_iter))
     trace_x = np.random.randn(n_chain, n_iter, n_par)
     betas = np.array([1, .1])
-    sample_result = sample.McmcPtResult(
+    sample_result = pypesto.McmcPtResult(
         trace_neglogpost=trace_neglogpost,
         trace_neglogprior=trace_neglogprior,
         trace_x=trace_x, betas=betas,

@@ -10,10 +10,12 @@ from ..startpoint import (
     StartpointMethod,
     to_startpoint_method,
 )
+from ..store import autosave
+
 from .optimizer import Optimizer, ScipyOptimizer
 from .options import OptimizeOptions
 from .task import OptimizerTask
-from .util import preprocess_hdf5_history, postprocess_hdf5_history, autosave
+from .util import preprocess_hdf5_history, postprocess_hdf5_history
 
 logger = logging.getLogger(__name__)
 

@@ -5,8 +5,7 @@ from typing import Any, Dict, Tuple, Iterable
 
 from ..objective.constants import GRAD
 from ..problem import Problem
-from ..result import Result, ProfileResult
-from .result import ProfilerResult
+from ..result import Result, ProfileResult, ProfilerResult
 
 
 def chi2_quantile_to_ratio(alpha: float = 0.95, df: int = 1):

@@ -1,14 +1,10 @@
 """Include various function to read results from hdf5 Files."""
+
 import h5py
 
-import pypesto
-from ..result import Result
-from ..optimize.result import OptimizerResult
-from ..optimize.optimizer import fill_result_from_history
-from ..profile.result import ProfilerResult
-from ..sample.result import McmcPtResult
+from ..result import Result, OptimizerResult, ProfilerResult, McmcPtResult
 from ..problem import Problem
-from ..objective import Objective, ObjectiveBase, Hdf5History, OptimizerHistory
+from ..objective import Objective, ObjectiveBase, Hdf5History
 import numpy as np
 import ast
 import logging
@@ -355,41 +351,3 @@ def load_objective_config(filename: str):
         info_str = f['problem/config'][()].decode()
         info = ast.literal_eval(info_str)
         return info
-
-
-def optimization_result_from_history(
-    filename: str,
-    problem: pypesto.Problem,
-) -> Result:
-    """Convert a saved hdf5 History to an optimization result.
-
-    Used for interrupted optimization runs.
-
-    Parameters
-    ----------
-    filename:
-        The name of the file in which the information are stored.
-    problem:
-        Problem, needed to identify what parameters to accept.
-
-    Returns
-    -------
-        A result object in which the optimization result is constructed from
-        history. But missing "Time, Message and Exitflag" keys.
-    """
-    result = Result()
-    with h5py.File(filename, 'r') as f:
-        for id_name in f['history'].keys():
-            history = Hdf5History(id=id_name, file=filename)
-            history._recover_options(filename)
-            optimizer_history = OptimizerHistory(
-                history=history,
-                x0=f[f'history/{id_name}/trace/0/x'][()],
-                lb=problem.lb,
-                ub=problem.ub,
-                generate_from_history=True,
-            )
-            optimizer_result = OptimizerResult(id=id_name)
-            fill_result_from_history(optimizer_result, optimizer_history)
-            result.optimize_result.append(optimizer_result)
-    return result

@@ -3,7 +3,7 @@ from typing import Callable
 
 from ..engine import Task
 from ..problem import Problem
-from .result import ProfilerResult
+from ..result import ProfilerResult
 from .options import ProfileOptions
 from .walk_along_profile import walk_along_profile
 import pypesto.optimize

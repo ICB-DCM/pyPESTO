@@ -4,6 +4,7 @@ import logging
 from ..engine import Task
 from ..objective import HistoryOptions
 from ..problem import Problem
+from ..result import OptimizerResult
 import pypesto.optimize
 
 logger = logging.getLogger(__name__)
@@ -47,7 +48,7 @@ class OptimizerTask(Task):
         self.optimize_options = optimize_options
         self.history_options = history_options
 
-    def execute(self) -> 'pypesto.optimize.OptimizerResult':
+    def execute(self) -> OptimizerResult:
         """Execute the task."""
         logger.info(f"Executing task {self.id}.")
 

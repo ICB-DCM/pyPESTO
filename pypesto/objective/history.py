@@ -950,12 +950,11 @@ class Hdf5History(History):
     def load(id: str, file: str):
         """Load the History object from memory."""
         loaded_h5history = Hdf5History(id, file)
-        loaded_h5history._recover_options(file)
+        loaded_h5history.recover_options(file)
         return loaded_h5history
 
-    def _recover_options(self, file: str):
-        """
-        Recover options when loading the hdf5 history from memory.
+    def recover_options(self, file: str):
+        """Recover options when loading the hdf5 history from memory.
 
         Done by testing which entries were recorded.
         """
