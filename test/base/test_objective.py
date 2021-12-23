@@ -1,17 +1,17 @@
 """Test the :class:`pypesto.Objective`."""
 
-import numpy as np
-import sympy as sp
-import numbers
-import pytest
-import pypesto
 import copy
-
-from ..util import rosen_for_sensi, poly_for_sensi, CRProblem
+import numbers
 
 import aesara.tensor as aet
+import numpy as np
+import pytest
+import sympy as sp
 
+import pypesto
 from pypesto.objective.aesara import AesaraObjective
+
+from ..util import CRProblem, poly_for_sensi, rosen_for_sensi
 
 
 @pytest.fixture(params=[True, False])

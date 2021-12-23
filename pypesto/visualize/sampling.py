@@ -1,31 +1,28 @@
 import logging
-import matplotlib.pyplot as plt
+import warnings
+from typing import Dict, Sequence, Tuple, Union
+
 import matplotlib.axes
-from matplotlib.lines import Line2D
+import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import seaborn as sns
-from typing import Dict, Sequence, Tuple, Union
-import warnings
+from matplotlib.lines import Line2D
 
-from ..ensemble import (
-    get_percentile_label,
-    EnsemblePrediction,
-    MEDIAN,
-)
-from ..predict import PredictionResult
-from ..predict.constants import CONDITION, OUTPUT
-from ..result import Result, McmcPtResult
-from ..sample import calculate_ci_mcmc_sample
-from .constants import (
+from ..C import (
+    CONDITION,
     LEN_RGB,
-    RGBA_BLACK,
-    RGBA_MIN,
-    RGBA_MAX,
+    MEDIAN,
+    OUTPUT,
     RGB,
+    RGBA_BLACK,
+    RGBA_MAX,
+    RGBA_MIN,
 )
+from ..ensemble import EnsemblePrediction, get_percentile_label
+from ..result import McmcPtResult, PredictionResult, Result
+from ..sample import calculate_ci_mcmc_sample
 from .misc import rgba2rgb
-
 
 logger = logging.getLogger(__name__)
 

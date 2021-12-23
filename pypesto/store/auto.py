@@ -1,8 +1,9 @@
 """Auto-saving."""
 
+import binascii
 import datetime
 import os
-import binascii
+
 from ..result import Result
 from .save_to_hdf5 import write_result
 

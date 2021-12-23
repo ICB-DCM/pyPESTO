@@ -1,15 +1,15 @@
 import logging
-from typing import Callable, Union, Iterable
+from typing import Callable, Iterable, Union
 
 from ..engine import Engine, SingleCoreEngine
 from ..optimize import Optimizer
 from ..problem import Problem
 from ..result import Result
 from ..store import autosave
-from .profile_next_guess import next_guess
 from .options import ProfileOptions
-from .util import initialize_profile
+from .profile_next_guess import next_guess
 from .task import ProfilerTask
+from .util import initialize_profile
 
 logger = logging.getLogger(__name__)
 

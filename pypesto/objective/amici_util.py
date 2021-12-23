@@ -1,20 +1,21 @@
-import numpy as np
-import numbers
-from typing import Dict, Sequence, Union, Tuple
 import logging
+import numbers
 import warnings
+from typing import Dict, Sequence, Tuple, Union
 
-from .constants import (
-    FVAL, CHI2, GRAD, HESS, RES, SRES, RDATAS, MODE_FUN, MODE_RES
-)
+import numpy as np
+
+from ..C import CHI2, FVAL, GRAD, HESS, MODE_FUN, MODE_RES, RDATAS, RES, SRES
 from ..logging import log_level_active
 
 try:
     import amici
-    import amici.petab_objective
     import amici.parameter_mapping
+    import amici.petab_objective
     from amici.parameter_mapping import (
-        ParameterMapping, ParameterMappingForCondition)
+        ParameterMapping,
+        ParameterMappingForCondition,
+    )
 except ImportError:
     pass
 

@@ -1,15 +1,15 @@
 import os
+import re
 import sys
 import unittest
-import numpy as np
 import warnings
-import re
+
+import numpy as np
 
 import pypesto
 import pypesto.optimize
 
 from ..util import load_amici_objective
-
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 

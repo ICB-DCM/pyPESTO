@@ -1,7 +1,8 @@
 """Various Sampler classes."""
 import abc
-import numpy as np
 from typing import Dict, List, Union
+
+import numpy as np
 
 from ..problem import Problem
 from ..result import McmcPtResult

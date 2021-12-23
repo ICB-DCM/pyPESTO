@@ -2,17 +2,19 @@
 This is for testing the pypesto.Objective.
 """
 
+import os
+
+import amici
+import numpy as np
+import petab
+import pytest
+
+import pypesto
+import pypesto.objective.constants
+import pypesto.optimize
+import pypesto.petab
 from pypesto.objective.amici_util import add_sim_grad_to_opt_grad
 
-import os
-import petab
-import amici
-import pypesto
-import pypesto.petab
-import pypesto.optimize
-import pypesto.objective.constants
-import pytest
-import numpy as np
 from .petab_util import folder_base
 
 ATOL = 1e-1

@@ -2,8 +2,8 @@
 
 import numpy as np
 
-from .util import rescale
 from .base import FunctionStartpoints
+from .util import rescale
 
 
 def uniform(

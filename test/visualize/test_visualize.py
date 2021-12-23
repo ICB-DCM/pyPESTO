@@ -1,22 +1,25 @@
 import functools
-import numpy as np
-import scipy.optimize as so
-import matplotlib.pyplot as plt
-import pytest
 import os
+from functools import wraps
+from typing import Sequence
+
+import matplotlib.pyplot as plt
+import numpy as np
 import petab
+import pytest
+import scipy.optimize as so
 
 import pypesto
-import pypesto.petab
+import pypesto.ensemble as ensemble
 import pypesto.optimize as optimize
+import pypesto.petab
 import pypesto.predict as predict
 import pypesto.sample as sample
 import pypesto.visualize as visualize
-import pypesto.ensemble as ensemble
-from pypesto.visualize.model_fit import visualize_optimized_model_fit, \
-    time_trajectory_model
-from functools import wraps
-from typing import Sequence
+from pypesto.visualize.model_fit import (
+    time_trajectory_model,
+    visualize_optimized_model_fit,
+)
 
 
 def close_fig(fun):

@@ -5,8 +5,8 @@ import matplotlib.axes
 import matplotlib.pyplot as plt
 import numpy as np
 
-from .clust_color import assign_colors, delete_nan_inf, assign_colors_for_list
 from ..result import Result
+from .clust_color import assign_colors, assign_colors_for_list, delete_nan_inf
 from .misc import process_result_list, process_start_indices
 
 

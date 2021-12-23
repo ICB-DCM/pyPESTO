@@ -1,11 +1,12 @@
-from typing import Dict, List, Sequence, Union
-from tqdm import tqdm
-import numpy as np
 import copy
+from typing import Dict, List, Sequence, Union
+
+import numpy as np
+from tqdm import tqdm
 
 from ..problem import Problem
-from .sampler import Sampler, InternalSampler
 from ..result import McmcPtResult
+from .sampler import InternalSampler, Sampler
 
 
 class ParallelTemperingSampler(Sampler):

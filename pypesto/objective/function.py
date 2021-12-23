@@ -1,9 +1,9 @@
-import numpy as np
-
-from .base import ObjectiveBase, ResultDict
 from typing import Callable, Sequence, Tuple, Union
 
-from .constants import MODE_FUN, MODE_RES, FVAL, GRAD, HESS, RES, SRES
+import numpy as np
+
+from ..C import FVAL, GRAD, HESS, MODE_FUN, MODE_RES, RES, SRES
+from .base import ObjectiveBase, ResultDict
 
 
 class Objective(ObjectiveBase):

@@ -1,14 +1,14 @@
 """Include various function to read results from hdf5 Files."""
 
-import h5py
-
-from ..result import Result, OptimizerResult, ProfilerResult, McmcPtResult
-from ..problem import Problem
-from ..objective import Objective, ObjectiveBase, Hdf5History
-import numpy as np
 import ast
 import logging
 
+import h5py
+import numpy as np
+
+from ..objective import Hdf5History, Objective, ObjectiveBase
+from ..problem import Problem
+from ..result import McmcPtResult, OptimizerResult, ProfilerResult, Result
 
 logger = logging.getLogger(__name__)
 

@@ -1,7 +1,8 @@
 """A set of helper functions."""
-import numpy as np
 import logging
 from typing import Tuple
+
+import numpy as np
 
 from ..result import Result
 from .diagnostics import geweke_test

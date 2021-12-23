@@ -1,14 +1,15 @@
 """Test the :class:`pypesto.History`."""
 
+import tempfile
+import unittest
+from typing import Sequence
+
 import numpy as np
 import pytest
-import unittest
-import tempfile
-from typing import Sequence
 import scipy.optimize as so
 
 import pypesto
-from pypesto.objective.util import sres_to_schi2, res_to_chi2
+import pypesto.optimize as optimize
 from pypesto import (
     CsvHistory,
     Hdf5History,
@@ -16,13 +17,11 @@ from pypesto import (
     MemoryHistory,
     ObjectiveBase,
 )
-import pypesto.optimize as optimize
-from pypesto.objective.constants import (
-    X, FVAL, GRAD, HESS, RES, SRES, CHI2, SCHI2
-)
+from pypesto.C import CHI2, FVAL, GRAD, HESS, RES, SCHI2, SRES, X
 from pypesto.engine import MultiProcessEngine
+from pypesto.objective.util import res_to_chi2, sres_to_schi2
 
-from ..util import rosen_for_sensi, load_amici_objective, CRProblem
+from ..util import CRProblem, load_amici_objective, rosen_for_sensi
 
 
 class HistoryTest(unittest.TestCase):

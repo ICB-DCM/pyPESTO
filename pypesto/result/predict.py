@@ -1,15 +1,16 @@
 """PredictionResult and PredictionConditionResult."""
+
+import os
+from pathlib import Path
+from time import time
+from typing import Dict, Sequence, Union
+from warnings import warn
+
+import h5py
 import numpy as np
 import pandas as pd
-import h5py
-from warnings import warn
-from time import time
-from typing import Sequence, Union, Dict
-from pathlib import Path
-import os
 
-from .constants import (
-    get_condition_label,
+from ..C import (
     CONDITION_IDS,
     CSV,
     OUTPUT,
@@ -19,6 +20,7 @@ from .constants import (
     TIME,
     TIMEPOINTS,
 )
+from ..util import get_condition_label
 
 
 class PredictionConditionResult:

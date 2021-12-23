@@ -6,6 +6,8 @@ pyPESTO
 Parameter Estimation TOolbox for python.
 """
 
+# isort: off
+
 # make version available
 from .version import __version__
 
@@ -32,15 +34,22 @@ from .result import (
     OptimizerResult,
     ProfileResult,
     ProfilerResult,
+    PredictionResult,
+    PredictionConditionResult,
     Result,
     SampleResult,
 )
 
 # import simple modules as submodules
-from . import engine
-from . import logging
-from . import startpoint
-from . import store
-from . import visualize
+from . import (
+    engine,
+    logging,
+    startpoint,
+    store,
+    visualize,
+    C,
+)
+
+# isort: on
 
 logging.log()

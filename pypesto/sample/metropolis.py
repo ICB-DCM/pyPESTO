@@ -1,11 +1,12 @@
-import numpy as np
 from typing import Dict, Sequence, Union
+
+import numpy as np
 from tqdm import tqdm
 
-from ..objective import History, ObjectiveBase, NegLogPriors
+from ..objective import History, NegLogPriors, ObjectiveBase
 from ..problem import Problem
-from .sampler import InternalSample, InternalSampler
 from ..result import McmcPtResult
+from .sampler import InternalSample, InternalSampler
 
 
 class MetropolisSampler(InternalSampler):

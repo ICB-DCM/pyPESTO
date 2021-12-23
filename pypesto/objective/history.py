@@ -1,38 +1,39 @@
+import abc
+import copy
+import numbers
+import os
+import time
+from pathlib import Path
+from typing import Any, Dict, List, Sequence, Tuple, Union
+
+import h5py
 import numpy as np
 import pandas as pd
-import numbers
-import h5py
-import copy
-import time
-import os
-import abc
-from typing import Any, Dict, List, Tuple, Sequence, Union
-from pathlib import Path
 
-from .constants import (
-    MODE_FUN,
-    MODE_RES,
+from ..C import (
+    CHI2,
     FVAL,
     GRAD,
     HESS,
-    RES,
-    SRES,
-    CHI2,
-    SCHI2,
-    TIME,
+    MODE_FUN,
+    MODE_RES,
     N_FVAL,
     N_GRAD,
     N_HESS,
     N_RES,
     N_SRES,
+    RES,
+    SCHI2,
+    SRES,
+    TIME,
     X,
 )
 from .util import (
     res_to_chi2,
     res_to_fval,
-    sres_to_schi2,
-    sres_to_fim,
     schi2_to_grad,
+    sres_to_fim,
+    sres_to_schi2,
 )
 
 ResultDict = Dict[str, Union[float, np.ndarray]]

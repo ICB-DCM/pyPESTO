@@ -1,13 +1,14 @@
 import logging
-import numpy as np
-from typing import List, Union
 from time import process_time
+from typing import List, Union
+
+import numpy as np
 
 from ..problem import Problem
 from ..result import Result
 from ..store import autosave
-from .sampler import Sampler
 from .adaptive_metropolis import AdaptiveMetropolisSampler
+from .sampler import Sampler
 
 logger = logging.getLogger(__name__)
 
