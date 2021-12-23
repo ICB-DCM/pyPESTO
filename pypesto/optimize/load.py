@@ -93,7 +93,7 @@ def read_result_from_file(
     problem: Problem,
     history_options: HistoryOptions,
     identifier: str,
-):
+) -> OptimizerResult:
     """Fill an OptimizerResult from history.
 
     Parameters
@@ -150,7 +150,7 @@ def read_results_from_file(
     problem: Problem,
     history_options: HistoryOptions,
     n_starts: int,
-):
+) -> Result:
     """Fill a Result from a set of histories.
 
     Parameters

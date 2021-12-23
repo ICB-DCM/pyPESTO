@@ -14,7 +14,7 @@ from ..objective.constants import (
     MODE_FUN, MODE_RES, FVAL, GRAD
 )
 from .options import OptimizeOptions
-from .io import fill_result_from_history
+from .load import fill_result_from_history
 from ..result import OptimizerResult
 
 try:
