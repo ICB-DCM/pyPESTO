@@ -47,7 +47,7 @@ OUTPUT_SENSI = 'output_sensi'  # field in the return dict of AmiciPredictor
 OUTPUT_WEIGHT = 'output_weight'  # field in the return dict of AmiciPredictor
 OUTPUT_SIGMAY = 'output_sigmay'  # field in the return dict of AmiciPredictor
 
-# separator in the conditions_ids betweeen preequilibration and simulation
+# separator in the conditions_ids between preequilibration and simulation
 # condition
 CONDITION_SEP = '::'
 
