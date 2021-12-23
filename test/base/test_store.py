@@ -15,13 +15,14 @@ from pypesto.objective.constants import (X, FVAL, GRAD,
 import scipy.optimize as so
 
 import numpy as np
-
+from pypesto.optimize import optimization_result_from_history
 from pypesto.store import (
     ProblemHDF5Writer, ProblemHDF5Reader, OptimizationResultHDF5Writer,
     OptimizationResultHDF5Reader, ProfileResultHDF5Writer,
     ProfileResultHDF5Reader, SamplingResultHDF5Reader,
     SamplingResultHDF5Writer, read_result, write_result,
-    load_objective_config, optimization_result_from_history)
+    load_objective_config,
+)
 from ..visualize import (create_problem, create_optimization_result,
                          create_petab_problem)
 

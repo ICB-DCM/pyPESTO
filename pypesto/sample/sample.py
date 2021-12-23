@@ -5,7 +5,7 @@ from time import process_time
 
 from ..problem import Problem
 from ..result import Result
-from ..optimize.util import autosave
+from ..store import autosave
 from .sampler import Sampler
 from .adaptive_metropolis import AdaptiveMetropolisSampler
 

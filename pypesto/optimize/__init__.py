@@ -20,7 +20,10 @@ from .optimizer import (
     ScipyDifferentialEvolutionOptimizer,
     NLoptOptimizer,
     FidesOptimizer,
-    read_result_from_file,
-    read_results_from_file
 )
-from .result import OptimizerResult
+from .load import (
+    fill_result_from_history,
+    optimization_result_from_history,
+    read_results_from_file,
+    read_result_from_file,
+)

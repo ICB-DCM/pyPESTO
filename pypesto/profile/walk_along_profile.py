@@ -3,9 +3,9 @@ import numpy as np
 from typing import Callable
 
 from ..objective.constants import GRAD
-from ..optimize import Optimizer, OptimizerResult, OptimizeOptions
+from ..optimize import Optimizer, OptimizeOptions
 from ..problem import Problem
-from .result import ProfilerResult
+from ..result import OptimizerResult, ProfilerResult
 from .options import ProfileOptions
 
 logger = logging.getLogger(__name__)

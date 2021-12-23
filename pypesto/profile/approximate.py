@@ -4,8 +4,7 @@ from scipy.stats import multivariate_normal
 from typing import Iterable
 
 from ..problem import Problem
-from ..result import Result
-from .result import ProfilerResult
+from ..result import Result, ProfilerResult
 from .util import initialize_profile
 
 logger = logging.getLogger(__name__)

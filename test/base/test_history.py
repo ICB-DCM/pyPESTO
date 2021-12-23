@@ -27,7 +27,7 @@ from ..util import rosen_for_sensi, load_amici_objective, CRProblem
 
 class HistoryTest(unittest.TestCase):
     problem: pypesto.Problem = None
-    optimizer: pypesto.optimize.Optimizer = None
+    optimizer: optimize.Optimizer = None
     obj: ObjectiveBase = None
     history_options: HistoryOptions = None
     ub: np.ndarray = None
@@ -100,7 +100,7 @@ class HistoryTest(unittest.TestCase):
                             n_starts=n_starts,
                         )
 
-    def check_load_from_file(self, start: optimize.OptimizerResult, id: str):
+    def check_load_from_file(self, start: pypesto.OptimizerResult, id: str):
         """Verify we can reconstitute OptimizerResult from history file"""
         # TODO other implementations
         if isinstance(start.history, MemoryHistory):
@@ -143,7 +143,7 @@ class HistoryTest(unittest.TestCase):
                 assert start[attr] == rstart[attr], attr
 
     def check_reconstruct_history(
-        self, start: optimize.OptimizerResult, id: str
+        self, start: pypesto.OptimizerResult, id: str
     ):
         """verify we can reconstruct history objects from csv/hdf5 files"""
 
@@ -198,7 +198,7 @@ class HistoryTest(unittest.TestCase):
                     decimal=10
                 )
 
-    def check_history_consistency(self, start: optimize.OptimizerResult):
+    def check_history_consistency(self, start: pypesto.OptimizerResult):
         def xfull(x_trace):
             return self.problem.get_full_vector(
                 x_trace, self.problem.x_fixed_vals

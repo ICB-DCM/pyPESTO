@@ -1,4 +1,7 @@
+"""Profiling result."""
+
 import numpy as np
+import copy
 
 
 class ProfilerResult(dict):
@@ -167,3 +170,87 @@ class ProfilerResult(dict):
         self.gradnorm_path = np.flip(self.gradnorm_path)
         self.exitflag_path = np.flip(self.exitflag_path)
         self.time_path = np.flip(self.time_path)
+
+
+class ProfileResult:
+    """
+    Result of the profile() function.
+
+    It holds a list of profile lists. Each profile list consists of a list of
+    `ProfilerResult` objects, one for each parameter.
+    """
+
+    def __init__(self):
+        self.list = []
+
+    def append_empty_profile_list(self) -> int:
+        """Append an empty profile list to the list of profile lists.
+
+        Returns
+        -------
+        index:
+            The index of the created profile list.
+        """
+        self.list.append([])
+        return len(self.list) - 1
+
+    def append_profiler_result(
+        self,
+        profiler_result: ProfilerResult = None,
+        profile_list: int = None,
+    ) -> None:
+        """Append the profiler result to the profile list.
+
+        Parameters
+        ----------
+        profiler_result:
+            The result of one profiler run for a parameter, or None if to be
+            left empty.
+        profile_list:
+            Index specifying the profile list to which we want to append.
+            Defaults to the last list.
+        """
+        if profile_list is None:
+            profile_list = -1  # last
+        profiler_result = copy.deepcopy(profiler_result)
+        self.list[profile_list].append(profiler_result)
+
+    def set_profiler_result(
+        self,
+        profiler_result: ProfilerResult,
+        i_par: int,
+        profile_list: int = None,
+    ) -> None:
+        """
+        Write a profiler result to the result object.
+
+        Parameters
+        ----------
+        profiler_result:
+            The result of one (local) profiler run.
+        i_par:
+            Integer specifying the parameter index where to put
+            profiler_result.
+        profile_list:
+            Index specifying the profile list. Defaults to the last list.
+        """
+        if profile_list is None:
+            profile_list = -1  # last
+        self.list[profile_list][i_par] = copy.deepcopy(profiler_result)
+
+    def get_profiler_result(
+        self, i_par: int, profile_list: int = None
+    ):
+        """
+        Get the profiler result at parameter index `i_par` of `profile_list`.
+
+        Parameters
+        ----------
+        i_par:
+            Integer specifying the profile index.
+        profile_list:
+            Index specifying the profile list. Defaults to the last list.
+        """
+        if profile_list is None:
+            profile_list = -1  # last
+        return self.list[profile_list][i_par]

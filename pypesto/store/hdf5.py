@@ -1,4 +1,5 @@
 """Convenience functions for working with HDF5 files."""
+
 import h5py
 import numpy as np
 

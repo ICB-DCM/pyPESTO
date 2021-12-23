@@ -5,7 +5,7 @@ from tqdm import tqdm
 from ..objective import History, ObjectiveBase, NegLogPriors
 from ..problem import Problem
 from .sampler import InternalSample, InternalSampler
-from .result import McmcPtResult
+from ..result import McmcPtResult
 
 
 class MetropolisSampler(InternalSampler):

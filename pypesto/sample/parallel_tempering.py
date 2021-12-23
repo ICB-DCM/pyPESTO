@@ -5,7 +5,7 @@ import copy
 
 from ..problem import Problem
 from .sampler import Sampler, InternalSampler
-from .result import McmcPtResult
+from ..result import McmcPtResult
 
 
 class ParallelTemperingSampler(Sampler):

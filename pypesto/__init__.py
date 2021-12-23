@@ -27,8 +27,11 @@ from .objective import (
 )
 from .problem import Problem
 from .result import (
+    McmcPtResult,
     OptimizeResult,
+    OptimizerResult,
     ProfileResult,
+    ProfilerResult,
     Result,
     SampleResult,
 )

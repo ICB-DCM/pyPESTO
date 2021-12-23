@@ -8,9 +8,7 @@ from ..result import Result
 from ..objective import History
 from .reference_points import create_references, ReferencePoint
 from .clust_color import assign_colors
-from .misc import process_result_list
-from .misc import process_y_limits
-from .misc import process_offset_y
+from .misc import process_result_list, process_y_limits, process_offset_y
 
 
 def optimizer_history(results,

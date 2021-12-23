@@ -3,7 +3,7 @@ import numpy as np
 
 from ..problem import Problem
 from .sampler import Sampler
-from .result import McmcPtResult
+from ..result import McmcPtResult
 from ..startpoint import UniformStartpoints
 
 try:

@@ -15,8 +15,8 @@ from ..ensemble import (
 )
 from ..predict import PredictionResult
 from ..predict.constants import CONDITION, OUTPUT
-from ..result import Result
-from ..sample import McmcPtResult, calculate_ci_mcmc_sample
+from ..result import Result, McmcPtResult
+from ..sample import calculate_ci_mcmc_sample
 from .constants import (
     LEN_RGB,
     RGBA_BLACK,
