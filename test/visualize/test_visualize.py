@@ -203,9 +203,9 @@ def post_processor(
     """
     outputs = [
         amici_output[output_type]
-        if amici_output[predict.constants.AMICI_STATUS] == 0
+        if amici_output[pypesto.C.AMICI_STATUS] == 0
         else np.full(
-            (len(amici_output[predict.constants.AMICI_T]), len(output_ids)),
+            (len(amici_output[pypesto.C.AMICI_T]), len(output_ids)),
             np.nan
         )
         for amici_output in amici_outputs
@@ -880,7 +880,7 @@ def test_sampling_prediction_trajectories():
     result = sample_petab_problem()
     post_processor_amici_x = functools.partial(
         post_processor,
-        output_type=predict.constants.AMICI_X,
+        output_type=pypesto.C.AMICI_X,
         output_ids=result.problem.objective.amici_model.getStateIds(),
     )
     predictor = predict.AmiciPredictor(
@@ -892,27 +892,27 @@ def test_sampling_prediction_trajectories():
     sample_ensemble = ensemble.Ensemble.from_sample(
         result,
         x_names=result.problem.x_names,
-        ensemble_type=ensemble.EnsembleType.sample,
+        ensemble_type=pypesto.C.EnsembleType.sample,
         lower_bound=result.problem.lb,
         upper_bound=result.problem.ub,
     )
 
     ensemble_prediction = sample_ensemble.predict(
         predictor,
-        prediction_id=predict.constants.AMICI_X,
+        prediction_id=pypesto.C.AMICI_X,
     )
 
     # Plot by
     visualize.sampling_prediction_trajectories(
         ensemble_prediction,
         levels=credibility_interval_levels,
-        groupby=predict.constants.CONDITION,
+        groupby=pypesto.C.CONDITION,
     )
     visualize.sampling_prediction_trajectories(
         ensemble_prediction,
         levels=credibility_interval_levels,
         size=(10, 10),
-        groupby=predict.constants.OUTPUT,
+        groupby=pypesto.C.OUTPUT,
     )
 
 
