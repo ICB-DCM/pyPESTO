@@ -11,7 +11,7 @@ from ..C import FVAL, GRAD, MODE_FUN, MODE_RES
 from ..objective import HistoryBase, HistoryOptions, OptimizerHistory
 from ..problem import Problem
 from ..result import OptimizerResult
-from .io import fill_result_from_history
+from .load import fill_result_from_history
 from .options import OptimizeOptions
 
 try:

@@ -1,23 +1,18 @@
 """Load/reconstitute results from history."""
 
+import numpy as np
+import h5py
 import logging
 import os
 
-import h5py
-import numpy as np
-
 import pypesto
-
-from ..C import FVAL, GRAD, HESS, RES, SRES, X
-from ..objective import (
-    CsvHistory,
-    Hdf5History,
-    HistoryOptions,
-    OptimizerHistory,
-)
+from ..objective import HistoryOptions, CsvHistory
 from ..problem import Problem
-from ..result import OptimizeResult, OptimizerResult, Result
+from ..objective.constants import X, FVAL, GRAD, HESS, RES, SRES
 from .options import OptimizeOptions
+from ..result import OptimizeResult
+from ..result import Result, OptimizerResult
+from ..objective import Hdf5History, OptimizerHistory
 
 logger = logging.getLogger(__name__)
 
@@ -98,7 +93,7 @@ def read_result_from_file(
     problem: Problem,
     history_options: HistoryOptions,
     identifier: str,
-):
+) -> OptimizerResult:
     """Fill an OptimizerResult from history.
 
     Parameters
@@ -155,7 +150,7 @@ def read_results_from_file(
     problem: Problem,
     history_options: HistoryOptions,
     n_starts: int,
-):
+) -> Result:
     """Fill a Result from a set of histories.
 
     Parameters

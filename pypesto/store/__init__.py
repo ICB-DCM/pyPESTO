@@ -1,6 +1,6 @@
 """
 Storage
-=======
+-------
 
 Saving and loading traces and results objects.
 """

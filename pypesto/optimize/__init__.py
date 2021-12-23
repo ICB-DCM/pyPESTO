@@ -6,7 +6,7 @@ Optimize
 Multistart optimization with support for various optimizers.
 """
 
-from .io import (
+from .load import (
     fill_result_from_history,
     optimization_result_from_history,
     read_result_from_file,

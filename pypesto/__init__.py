@@ -1,7 +1,7 @@
 # noqa: D400,D205
 """
 pyPESTO
-=======
+-------
 
 Parameter Estimation TOolbox for python.
 """

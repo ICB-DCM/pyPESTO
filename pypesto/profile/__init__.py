@@ -1,6 +1,6 @@
 """
 Profile
-=======
+-------
 """
 
 from .approximate import approximate_parameter_profile
