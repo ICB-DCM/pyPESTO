@@ -3,6 +3,7 @@ import scipy.optimize
 import re
 import abc
 import time
+import os
 import logging
 from typing import Dict, Optional
 
@@ -345,12 +346,23 @@ def read_results_from_file(
     history_options:
         Optimizer history options.
     """
+    if history_options.storage_file is None:
+        raise ValueError("No history file specified.")
+
     result = Result()
     result.optimize_result = OptimizeResult()
     result.optimize_result.list = [
         read_result_from_file(problem, history_options, str(istart))
         for istart in range(n_starts)
+        if os.path.exists(history_options.storage_file.format(id=str(istart)))
     ]
+    if not result.optimize_result.list:
+        logger.error("No history files found.")
+
+    if len(result.optimize_result.list) != n_starts:
+        logger.warning(f"History files were incomplete "
+                       f"({len(result.optimize_result.list)}/{n_starts}).")
+
     result.optimize_result.sort()
     return result
 

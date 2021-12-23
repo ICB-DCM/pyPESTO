@@ -86,12 +86,12 @@ class HistoryTest(unittest.TestCase):
                     self.check_history_consistency(start)
 
                 # check that we can also aggregate from multiple files.
-                # load more results than necessary to check whether this
-                # also works in case of incomplete results.
+                # load more results than what is generated to check whether
+                # this also works in case of incomplete results.
                 if storage_type is not None:
                     optimize.read_results_from_file(
                         self.problem, self.history_options,
-                        n_starts=n_starts,
+                        n_starts=n_starts + 1,
                     )
                 else:
                     with pytest.raises(ValueError):
