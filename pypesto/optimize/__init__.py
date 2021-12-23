@@ -21,7 +21,7 @@ from .optimizer import (
     NLoptOptimizer,
     FidesOptimizer,
 )
-from .load import (
+from .io import (
     fill_result_from_history,
     optimization_result_from_history,
     read_results_from_file,
