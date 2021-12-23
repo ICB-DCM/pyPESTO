@@ -14,11 +14,8 @@ import pytest
 import pypesto
 import pypesto.ensemble
 import pypesto.petab
-from pypesto.predict import (
-    AmiciPredictor,
-    PredictionConditionResult,
-    PredictionResult,
-)
+from pypesto.predict import AmiciPredictor
+from pypesto.result import PredictionConditionResult, PredictionResult
 
 
 @pytest.fixture()
