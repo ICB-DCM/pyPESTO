@@ -1,18 +1,23 @@
 """Load/reconstitute results from history."""
 
-import numpy as np
-import h5py
 import logging
 import os
 
+import h5py
+import numpy as np
+
 import pypesto
-from ..objective import HistoryOptions, CsvHistory
+
+from ..C import FVAL, GRAD, HESS, RES, SRES, X
+from ..objective import (
+    CsvHistory,
+    Hdf5History,
+    HistoryOptions,
+    OptimizerHistory,
+)
 from ..problem import Problem
-from ..objective.constants import X, FVAL, GRAD, HESS, RES, SRES
+from ..result import OptimizeResult, OptimizerResult, Result
 from .options import OptimizeOptions
-from ..result import OptimizeResult
-from ..result import Result, OptimizerResult
-from ..objective import Hdf5History, OptimizerHistory
 
 logger = logging.getLogger(__name__)
 
