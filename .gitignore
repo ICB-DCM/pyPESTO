@@ -108,6 +108,7 @@ amici_models/*
 test/doc/example/tmp/benchmark-models/
 test/amici_models/*
 *.hdf5
+*.h5
 *.dat
 /BioNetGen-*.*.*
 /bionetgen.tar

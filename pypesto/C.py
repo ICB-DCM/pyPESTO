@@ -131,4 +131,5 @@ RGBA_BLACK = (RGBA_MIN, RGBA_MIN, RGBA_MIN, RGBA_MAX)  # black as an RGBA color
 ###############################################################################
 # Environment variables
 
+PYPESTO_MAX_N_STARTS: str = "PYPESTO_MAX_N_STARTS"
 PYPESTO_MAX_N_SAMPLES: str = "PYPESTO_MAX_N_SAMPLES"

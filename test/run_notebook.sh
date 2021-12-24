@@ -6,6 +6,7 @@
 
 # Environment
 
+export PYPESTO_MAX_N_STARTS=20
 export PYPESTO_MAX_N_SAMPLES=1000
 
 base_dir='doc/example'
