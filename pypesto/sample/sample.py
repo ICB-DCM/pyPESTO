@@ -9,6 +9,7 @@ from ..result import Result
 from ..store import autosave
 from .adaptive_metropolis import AdaptiveMetropolisSampler
 from .sampler import Sampler
+from .util import bound_n_samples_from_env
 
 logger = logging.getLogger(__name__)
 
@@ -55,6 +56,9 @@ def sample(
     # prepare result object
     if result is None:
         result = Result(problem)
+
+    # number of samples
+    n_samples = bound_n_samples_from_env(n_samples)
 
     # try to find initial parameters
     if x0 is None:
