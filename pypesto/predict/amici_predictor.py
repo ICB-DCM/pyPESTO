@@ -52,11 +52,11 @@ class AmiciPredictor:
             A callable function which applies postprocessing to the simulation
             results and possibly defines different outputs than those of
             the amici model. Default are the observables
-            (`pypesto.predict.constants.AMICI_Y`) of the AMICI model. This
+            (`pypesto.C.AMICI_Y`) of the AMICI model. This
             method takes a list of dicts (with the returned
-            fields `pypesto.predict.constants.AMICI_T`,
-            `pypesto.predict.constants.AMICI_X`, and
-            `pypesto.predict.constants.AMICI_Y` of the AMICI ReturnData
+            fields `pypesto.C.AMICI_T`,
+            `pypesto.C.AMICI_X`, and
+            `pypesto.C.AMICI_Y` of the AMICI ReturnData
             objects) as input. Safeguards for, e.g., failure of AMICI are left
             to the user.
         post_processor_sensi:
@@ -64,18 +64,18 @@ class AmiciPredictor:
             sensitivities of the simulation results. Defaults to the
             observable sensitivities of the AMICI model.
             This method takes a list of dicts (with the returned fields
-            `pypesto.predict.constants.AMICI_T`,
-            `pypesto.predict.constants.AMICI_X`,
-            `pypesto.predict.constants.AMICI_Y`,
-            `pypesto.predict.constants.AMICI_SX`, and
-            `pypesto.predict.constants.AMICI_SY` of the AMICI ReturnData
+            `pypesto.C.AMICI_T`,
+            `pypesto.C.AMICI_X`,
+            `pypesto.C.AMICI_Y`,
+            `pypesto.C.AMICI_SX`, and
+            `pypesto.C.AMICI_SY` of the AMICI ReturnData
             objects) as input. Safeguards for, e.g., failure of AMICI are left
             to the user.
         post_processor_time:
             A callable function which applies postprocessing to the timepoints
             of the simulations. Defaults to the timepoints of the amici model.
             This method takes a list of dicts (with the returned field
-            `pypesto.predict.constants.AMICI_T` of the amici ReturnData
+            `pypesto.C.AMICI_T` of the amici ReturnData
             objects) as input. Safeguards for, e.g., failure of AMICI are left
             to the user.
         max_chunk_size:
