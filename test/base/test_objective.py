@@ -213,6 +213,7 @@ def fd_method(request) -> str:
     pypesto.FDDelta.CONSTANT,
     pypesto.FDDelta.DISTANCE,
     pypesto.FDDelta.STEPS,
+    pypesto.FDDelta.ALWAYS,
 ])
 def fd_delta(request):
     """Finite difference step size method."""
@@ -285,3 +286,13 @@ def test_fds(fd_method, fd_delta):
         # cannot be called
         with pytest.raises(ValueError):
             getattr(obj_fd_limited, f"get_{attr}")(p)
+
+    # evaluate a couple times and assert number of update steps is as expected
+    for i in range(31):
+        obj_fd(10 * i * p, sensi_orders=(0, 1))
+    if fd_delta == pypesto.FDDelta.CONSTANT:
+        assert obj_fd.delta_fun.updates == 1
+    elif isinstance(fd_delta, (float, np.ndarray)):
+        assert obj_fd.delta_fun.updates == 0
+    else:
+        assert obj_fd.delta_fun.updates > 1
