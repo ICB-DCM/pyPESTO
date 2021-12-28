@@ -11,10 +11,10 @@ from typing import Iterable, List, Optional, Sequence, Union, Callable
 
 from ..problem import Problem
 from ..objective import AmiciObjective, AmiciObjectBuilder, AggregatedObjective
-from ..predict import AmiciPredictor, PredictionResult
-from ..predict.constants import CONDITION_SEP
+from ..predict import AmiciPredictor
+from ..result import PredictionResult
 from ..objective.priors import NegLogParameterPriors, get_parameter_prior_dict
-from ..C import MODE_FUN, MODE_RES
+from ..C import MODE_FUN, MODE_RES, CONDITION_SEP
 from ..startpoint import FunctionStartpoints, StartpointMethod
 
 try:
