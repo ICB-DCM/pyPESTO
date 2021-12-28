@@ -12,7 +12,7 @@ from ..C import (EnsembleType, OUTPUT, UPPER_BOUND, LOWER_BOUND,
                  OPTIMIZE, SAMPLE, X_NAMES, TIMEPOINTS, OUTPUT_IDS)
 from ..result import PredictionConditionResult, PredictionResult
 from ..store import read_result, get_or_create_group, write_array
-from .ensemble import (Ensemble, EnsemblePrediction)
+from .ensemble import Ensemble, EnsemblePrediction
 
 
 def read_from_csv(path: str,
