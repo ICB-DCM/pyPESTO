@@ -8,7 +8,7 @@ import pypesto
 import pypesto.optimize
 from pypesto.objective import NegLogParameterPriors
 from pypesto.objective.priors import get_parameter_prior_dict
-from pypesto.objective.constants import MODE_RES, MODE_FUN
+from pypesto.C import MODE_RES, MODE_FUN
 
 scales = ['lin', 'log', 'log10']
 

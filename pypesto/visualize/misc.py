@@ -6,7 +6,7 @@ from .clust_color import assign_colors_for_list
 from numbers import Number
 from typing import Iterable, List, Optional, Union
 
-from .constants import (
+from ..C import (
     LEN_RGB,
     LEN_RGBA,
     RGB,

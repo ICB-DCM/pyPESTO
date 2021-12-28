@@ -4,7 +4,7 @@ from copy import deepcopy
 from typing import Sequence, Tuple
 from .base import ObjectiveBase, ResultDict
 
-from .constants import RDATAS, FVAL, CHI2, SCHI2, RES, SRES, GRAD, HESS, HESSP
+from ..C import RDATAS, FVAL, CHI2, SCHI2, RES, SRES, GRAD, HESS, HESSP
 
 
 class AggregatedObjective(ObjectiveBase):

@@ -1,3 +1,5 @@
+"""Objective utilities."""
+
 import numpy as np
 from typing import Union
 
@@ -14,7 +16,7 @@ def _check_none(fun):
 @_check_none
 def res_to_chi2(res: np.ndarray) -> Union[float, None]:
     """Translate residuals to chi2 values, `chi2 = sum(res**2)`."""
-    return np.dot(res, res)
+    return float(np.dot(res, res))
 
 
 @_check_none

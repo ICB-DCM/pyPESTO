@@ -2,12 +2,12 @@ import numpy as np
 from typing import Sequence, Union, Callable, Tuple, List
 from copy import deepcopy
 
-from .constants import (MODE_FUN, OUTPUT_IDS, TIMEPOINTS, OUTPUT,
-                        OUTPUT_SENSI, CSV, H5, AMICI_T, AMICI_Y,
-                        AMICI_SY, AMICI_STATUS, RDATAS, PARAMETER_IDS,
-                        AMICI_LLH, AMICI_SIGMAY, OUTPUT_WEIGHT, OUTPUT_SIGMAY,
-                        AMICI_X, AMICI_SX)
-from .result import PredictionResult
+from ..C import (MODE_FUN, OUTPUT_IDS, TIMEPOINTS, OUTPUT,
+                 OUTPUT_SENSI, CSV, H5, AMICI_T, AMICI_Y,
+                 AMICI_SY, AMICI_STATUS, RDATAS, PARAMETER_IDS,
+                 AMICI_LLH, AMICI_SIGMAY, OUTPUT_WEIGHT, OUTPUT_SIGMAY,
+                 AMICI_X, AMICI_SX)
+from ..result import PredictionResult
 from ..objective import AmiciObjective
 
 

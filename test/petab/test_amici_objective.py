@@ -10,7 +10,6 @@ import amici
 import pypesto
 import pypesto.petab
 import pypesto.optimize
-import pypesto.objective.constants
 import pytest
 import numpy as np
 from .petab_util import folder_base
@@ -108,7 +107,7 @@ def test_preeq_guesses():
         ),
         eps=1e-3,
         verbosity=0,
-        mode=pypesto.objective.constants.MODE_FUN
+        mode=pypesto.C.MODE_FUN
     )
     print("relative errors MODE_FUN: ", df.rel_err.values)
     print("absolute errors MODE_FUN: ", df.abs_err.values)

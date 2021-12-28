@@ -3,7 +3,7 @@ import numpy as np
 from .base import ObjectiveBase, ResultDict
 from typing import Callable, Sequence, Tuple, Union
 
-from .constants import MODE_FUN, MODE_RES, FVAL, GRAD, HESS, RES, SRES
+from ..C import MODE_FUN, MODE_RES, FVAL, GRAD, HESS, RES, SRES
 
 
 class Objective(ObjectiveBase):

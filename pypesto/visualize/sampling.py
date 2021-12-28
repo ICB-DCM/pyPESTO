@@ -11,13 +11,13 @@ import warnings
 from ..ensemble import (
     get_percentile_label,
     EnsemblePrediction,
-    MEDIAN,
 )
-from ..predict import PredictionResult
-from ..predict.constants import CONDITION, OUTPUT
-from ..result import Result, McmcPtResult
+from ..result import Result, McmcPtResult, PredictionResult
 from ..sample import calculate_ci_mcmc_sample
-from .constants import (
+from ..C import (
+    CONDITION,
+    MEDIAN,
+    OUTPUT,
     LEN_RGB,
     RGBA_BLACK,
     RGBA_MIN,

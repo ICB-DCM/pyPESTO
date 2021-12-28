@@ -1,7 +1,7 @@
 import numpy as np
 from typing import Dict, Sequence
 
-from .constants import GRAD, HESS, RES, SRES
+from ..C import GRAD, HESS, RES, SRES
 
 
 class PrePostProcessor:

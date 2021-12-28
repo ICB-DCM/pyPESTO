@@ -2,7 +2,7 @@ import numpy as np
 from typing import Callable, Union, Tuple
 
 from .ensemble import Ensemble, EnsemblePrediction
-from .utils import get_prediction_dataset
+from .util import get_prediction_dataset
 
 try:
     import sklearn.decomposition

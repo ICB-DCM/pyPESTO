@@ -3,7 +3,7 @@ import numpy as np
 import scipy.stats
 from typing import Any, Dict, Tuple, Iterable
 
-from ..objective.constants import GRAD
+from ..C import GRAD
 from ..problem import Problem
 from ..result import Result, ProfileResult, ProfilerResult
 

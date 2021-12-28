@@ -8,7 +8,7 @@ import os
 import pypesto
 from ..objective import HistoryOptions, CsvHistory
 from ..problem import Problem
-from ..objective.constants import X, FVAL, GRAD, HESS, RES, SRES
+from ..C import X, FVAL, GRAD, HESS, RES, SRES
 from .options import OptimizeOptions
 from ..result import OptimizeResult
 from ..result import Result, OptimizerResult
