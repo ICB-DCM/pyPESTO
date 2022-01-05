@@ -47,40 +47,6 @@ from .task import EnsembleTask
 logger = logging.getLogger(__name__)
 
 
-def get_percentile_label(percentile: Union[float, int, str]) -> str:
-    """Convert a percentile to a label.
-
-    Labels for percentiles are used at different locations (e.g. ensemble
-    prediction code, and visualization code). This method ensures that the same
-    percentile is labeled identically everywhere.
-
-    The percentile is rounded to two decimal places in the label representation
-    if it is specified to more decimal places. This is for readability in
-    plotting routines, and to avoid float to string conversion issues related
-    to float precision.
-
-    Parameters
-    ----------
-    percentile:
-        The percentile value that will be used to generate a label.
-
-    Returns
-    -------
-    The label of the (possibly rounded) percentile.
-    """
-    if isinstance(percentile, str):
-        percentile = float(percentile)
-        if percentile == round(percentile):
-            percentile = round(percentile)
-    if isinstance(percentile, float):
-        percentile_str = f'{percentile:.2f}'
-        # Add `...` to the label if the percentile value changed after rounding
-        if float(percentile_str) != percentile:
-            percentile_str += '...'
-        percentile = percentile_str
-    return f'{PERCENTILE} {percentile}'
-
-
 class EnsemblePrediction:
     """
     Class of ensemble prediction.
@@ -1073,3 +1039,37 @@ def get_vector_indices(trace_start: np.ndarray,
         return candidates[indices.astype(int)]
     else:
         return candidates[:n_vectors]
+
+
+def get_percentile_label(percentile: Union[float, int, str]) -> str:
+    """Convert a percentile to a label.
+
+    Labels for percentiles are used at different locations (e.g. ensemble
+    prediction code, and visualization code). This method ensures that the same
+    percentile is labeled identically everywhere.
+
+    The percentile is rounded to two decimal places in the label representation
+    if it is specified to more decimal places. This is for readability in
+    plotting routines, and to avoid float to string conversion issues related
+    to float precision.
+
+    Parameters
+    ----------
+    percentile:
+        The percentile value that will be used to generate a label.
+
+    Returns
+    -------
+    The label of the (possibly rounded) percentile.
+    """
+    if isinstance(percentile, str):
+        percentile = float(percentile)
+        if percentile == round(percentile):
+            percentile = round(percentile)
+    if isinstance(percentile, float):
+        percentile_str = f'{percentile:.2f}'
+        # Add `...` to the label if the percentile value changed after rounding
+        if float(percentile_str) != percentile:
+            percentile_str += '...'
+        percentile = percentile_str
+    return f'{PERCENTILE} {percentile}'
