@@ -52,7 +52,7 @@ class OptimizerTask(Task):
 
     def execute(self) -> OptimizerResult:
         """Execute the task."""
-        logger.info(f"Executing task {self.id}.")
+        logger.debug(f"Executing task {self.id}.")
 
         optimizer_result = self.optimizer.minimize(
             problem=self.problem,
