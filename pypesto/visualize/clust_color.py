@@ -1,7 +1,8 @@
-from scipy import cluster
-from typing import List, Tuple, Optional, Union
+from typing import List, Optional, Tuple, Union
+
 import matplotlib.cm as cm
 import numpy as np
+from scipy import cluster
 
 # for typehints
 from ..C import RGBA

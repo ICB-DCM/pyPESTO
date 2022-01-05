@@ -5,17 +5,16 @@ from ..engine import Engine, SingleCoreEngine
 from ..objective import HistoryOptions
 from ..problem import Problem
 from ..result import Result
-from ..startpoint import (
-    uniform,
-    StartpointMethod,
-    to_startpoint_method,
-)
+from ..startpoint import StartpointMethod, to_startpoint_method, uniform
 from ..store import autosave
-
 from .optimizer import Optimizer, ScipyOptimizer
 from .options import OptimizeOptions
 from .task import OptimizerTask
-from .util import preprocess_hdf5_history, postprocess_hdf5_history
+from .util import (
+    bound_n_starts_from_env,
+    postprocess_hdf5_history,
+    preprocess_hdf5_history,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -77,6 +76,9 @@ def minimize(
     # optimizer
     if optimizer is None:
         optimizer = ScipyOptimizer()
+
+    # number of starts
+    n_starts = bound_n_starts_from_env(n_starts)
 
     # startpoint method
     if startpoint_method is None:

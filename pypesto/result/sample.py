@@ -1,7 +1,8 @@
 """Sampling result."""
 
-import numpy as np
 from typing import Iterable
+
+import numpy as np
 
 
 class McmcPtResult(dict):

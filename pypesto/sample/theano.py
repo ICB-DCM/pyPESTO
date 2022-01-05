@@ -1,6 +1,6 @@
 import numpy as np
 
-from ..objective import Objective
+from ..objective import ObjectiveBase
 from ..problem import Problem
 
 try:
@@ -30,7 +30,7 @@ class TheanoLogProbability(tt.Op):
     otypes = [tt.dscalar]  # outputs a single scalar value (the log prob)
 
     def __init__(self, problem: Problem, beta: float = 1.):
-        self._objective: Objective = problem.objective
+        self._objective: ObjectiveBase = problem.objective
 
         # initialize the log probability Op
         self._log_prob = \
@@ -82,7 +82,7 @@ class TheanoLogProbabilityGradient(tt.Op):
     otypes = [tt.dvector]  # outputs a vector (the log prob grad)
 
     def __init__(self, problem: Problem, beta: float = 1.):
-        self._objective: Objective = problem.objective
+        self._objective: ObjectiveBase = problem.objective
         self._log_prob_grad = \
             lambda x: - beta * self._objective(x, sensi_orders=(1,))
 

@@ -1,5 +1,6 @@
-import numpy as np
 from typing import Dict, Sequence
+
+import numpy as np
 
 from ..C import GRAD, HESS, RES, SRES
 

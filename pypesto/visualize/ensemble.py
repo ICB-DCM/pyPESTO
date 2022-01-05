@@ -1,14 +1,13 @@
-import matplotlib.pyplot as plt
-from matplotlib.collections import PatchCollection
-from matplotlib.patches import Rectangle
-import numpy as np
-import pandas as pd
-
 from typing import Optional, Tuple
 
+import matplotlib.pyplot as plt
+import numpy as np
+import pandas as pd
+from matplotlib.collections import PatchCollection
+from matplotlib.patches import Rectangle
+
+from ..C import COLOR_HIT_BOTH_BOUNDS, COLOR_HIT_NO_BOUNDS, COLOR_HIT_ONE_BOUND
 from ..ensemble import Ensemble
-from ..C import (
-    COLOR_HIT_BOTH_BOUNDS, COLOR_HIT_ONE_BOUND, COLOR_HIT_NO_BOUNDS)
 
 
 def ensemble_identifiability(ensemble: Ensemble,

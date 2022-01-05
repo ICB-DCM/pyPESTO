@@ -6,19 +6,19 @@ incorporating aesara models. This permits computation of derivatives using a
 combination of objective based methods and aeara based backpropagation.
 """
 
-import numpy as np
 import copy
+from typing import Optional, Sequence, Tuple
 
+import numpy as np
+
+from ..C import FVAL, GRAD, HESS, MODE_FUN, RDATAS
 from .base import ObjectiveBase, ResultDict
-from ..C import MODE_FUN, FVAL, GRAD, HESS, RDATAS
-
-from typing import Tuple, Optional, Sequence
 
 try:
     import aesara
     import aesara.tensor as aet
-    from aesara.tensor.var import TensorVariable
     from aesara.graph.op import Op
+    from aesara.tensor.var import TensorVariable
 except ImportError:
     aesara = aet = Op = TensorVariable = None
 

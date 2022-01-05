@@ -1,15 +1,15 @@
 """Include functions for saving various results to hdf5."""
 
-import os
 import logging
-from typing import Union
+import os
 from numbers import Integral
+from typing import Union
 
 import h5py
 import numpy as np
 
-from .hdf5 import (write_array, write_float_array)
 from ..result import Result, SampleResult
+from .hdf5 import write_array, write_float_array
 
 logger = logging.getLogger(__name__)
 

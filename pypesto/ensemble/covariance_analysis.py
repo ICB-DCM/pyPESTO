@@ -1,5 +1,6 @@
+from typing import Tuple, Union
+
 import numpy as np
-from typing import Union, Tuple
 
 from .ensemble import Ensemble, EnsemblePrediction
 from .util import get_prediction_dataset

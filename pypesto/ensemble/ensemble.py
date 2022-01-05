@@ -1,30 +1,47 @@
 import logging
 from functools import partial
+from typing import Callable, Dict, List, Optional, Sequence, Tuple, Union
+
 import numpy as np
 import pandas as pd
-from typing import Sequence, Tuple, Union, Callable, Dict, List, Optional
 
-from .. import Result
-from ..objective import AmiciObjective
+from ..C import (
+    ENSEMBLE_TYPE,
+    HISTORY,
+    LOWER_BOUND,
+    MEAN,
+    MEDIAN,
+    MODE_FUN,
+    NVECTORS,
+    NX,
+    OUTPUT,
+    OUTPUT_SENSI,
+    PERCENTILE,
+    PREDICTION_ARRAYS,
+    PREDICTION_ID,
+    PREDICTION_RESULTS,
+    PREDICTION_SUMMARY,
+    PREDICTIONS,
+    PREDICTOR,
+    STANDARD_DEVIATION,
+    SUMMARY,
+    TIMEPOINTS,
+    UPPER_BOUND,
+    VECTOR_TAGS,
+    WEIGHTED_SIGMA,
+    X_NAMES,
+    X_VECTOR,
+    EnsembleType,
+)
 from ..engine import (
     Engine,
     MultiProcessEngine,
     MultiThreadEngine,
     SingleCoreEngine,
 )
-from ..result import (
-    PredictionConditionResult,
-    PredictionResult,
-)
+from ..objective import AmiciObjective
+from ..result import PredictionConditionResult, PredictionResult, Result
 from ..sample import geweke_test
-from ..C import (PREDICTOR, PREDICTION_ID, PREDICTION_RESULTS,
-                 PREDICTION_ARRAYS, PREDICTION_SUMMARY, OUTPUT,
-                 OUTPUT_SENSI, TIMEPOINTS, X_VECTOR, NX, X_NAMES,
-                 NVECTORS, VECTOR_TAGS, PREDICTIONS, MODE_FUN,
-                 EnsembleType, ENSEMBLE_TYPE, MEAN, MEDIAN,
-                 STANDARD_DEVIATION, SUMMARY, LOWER_BOUND,
-                 UPPER_BOUND, HISTORY, PERCENTILE,
-                 WEIGHTED_SIGMA)
 from .task import EnsembleTask
 
 logger = logging.getLogger(__name__)

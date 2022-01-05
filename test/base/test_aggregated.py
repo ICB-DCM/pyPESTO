@@ -1,14 +1,16 @@
 """Test objective aggregation."""
 
-import numpy as np
 import itertools as itt
-import pypesto
+
+import numpy as np
 import pytest
-from pypesto.C import MODE_RES, MODE_FUN
+
+import pypesto
+from pypesto.C import MODE_FUN, MODE_RES
 from pypesto.objective import NegLogParameterPriors
 from pypesto.objective.priors import get_parameter_prior_dict
 
-from ..util import poly_for_sensi, rosen_for_sensi, load_amici_objective
+from ..util import load_amici_objective, poly_for_sensi, rosen_for_sensi
 
 # absolute and relative test tolerance
 ATOL = 1e-6

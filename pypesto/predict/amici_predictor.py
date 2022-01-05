@@ -1,14 +1,31 @@
-import numpy as np
-from typing import Sequence, Union, Callable, Tuple, List
 from copy import deepcopy
+from typing import Callable, List, Sequence, Tuple, Union
 
-from ..C import (MODE_FUN, OUTPUT_IDS, TIMEPOINTS, OUTPUT,
-                 OUTPUT_SENSI, CSV, H5, AMICI_T, AMICI_Y,
-                 AMICI_SY, AMICI_STATUS, RDATAS, PARAMETER_IDS,
-                 AMICI_LLH, AMICI_SIGMAY, OUTPUT_WEIGHT, OUTPUT_SIGMAY,
-                 AMICI_X, AMICI_SX)
-from ..result import PredictionResult
+import numpy as np
+
+from ..C import (
+    AMICI_LLH,
+    AMICI_SIGMAY,
+    AMICI_STATUS,
+    AMICI_SX,
+    AMICI_SY,
+    AMICI_T,
+    AMICI_X,
+    AMICI_Y,
+    CSV,
+    H5,
+    MODE_FUN,
+    OUTPUT,
+    OUTPUT_IDS,
+    OUTPUT_SENSI,
+    OUTPUT_SIGMAY,
+    OUTPUT_WEIGHT,
+    PARAMETER_IDS,
+    RDATAS,
+    TIMEPOINTS,
+)
 from ..objective import AmiciObjective
+from ..result import PredictionResult
 
 
 class AmiciPredictor:

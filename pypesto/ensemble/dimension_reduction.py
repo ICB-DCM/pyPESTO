@@ -1,14 +1,15 @@
+from typing import Callable, Tuple, Union
+
 import numpy as np
-from typing import Callable, Union, Tuple
 
 from .ensemble import Ensemble, EnsemblePrediction
 from .util import get_prediction_dataset
 
 try:
     import sklearn.decomposition
-    from sklearn.preprocessing import StandardScaler
     import umap
     import umap.plot
+    from sklearn.preprocessing import StandardScaler
 except ImportError:
     pass
 

@@ -1,11 +1,12 @@
 """Startpoint base classes."""
 
-import numpy as np
-from abc import abstractmethod, ABC
+from abc import ABC, abstractmethod
 from typing import Callable, Union
 
-from ..problem import ObjectiveBase, Problem
+import numpy as np
+
 from ..C import FVAL, GRAD
+from ..problem import ObjectiveBase, Problem
 
 
 class StartpointMethod(ABC):

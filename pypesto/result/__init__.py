@@ -7,8 +7,8 @@ the pypesto components. It contains sub-results for
 optimization, profiling, sampling.
 """
 
-from .result import Result
-from .optimize import OptimizerResult, OptimizeResult
+from .optimize import OptimizeResult, OptimizerResult
 from .predict import PredictionConditionResult, PredictionResult
-from .profile import ProfilerResult, ProfileResult
+from .profile import ProfileResult, ProfilerResult
+from .result import Result
 from .sample import McmcPtResult, SampleResult

@@ -1,10 +1,10 @@
 """Convenience functions for working with HDF5 files."""
 
+from numbers import Integral, Number, Real
+from typing import Collection
+
 import h5py
 import numpy as np
-
-from typing import Collection
-from numbers import Number, Integral, Real
 
 
 def write_array(f: h5py.Group,

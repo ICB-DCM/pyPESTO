@@ -2,16 +2,18 @@
 This is for testing the petab import.
 """
 
-import os
-import numpy as np
-import yaml
 import logging
+import os
+
+import numpy as np
+import petabtests
+import yaml
+
+# must import after previous, otherwise circular import issues :(
+from amici.petab_import_pysb import PysbPetabProblem
 
 import pypesto.optimize as optimize
 from pypesto.petab.pysb_importer import PetabImporterPysb
-# must import after previous, otherwise circular import issues :(
-from amici.petab_import_pysb import PysbPetabProblem
-import petabtests
 
 # In CI, bionetgen is install here
 BNGPATH = os.path.abspath(

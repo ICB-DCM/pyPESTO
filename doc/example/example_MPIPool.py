@@ -1,14 +1,15 @@
 """This file serves as an example how to use MPIPoolEngine
 to optimize across nodes and also as a test for the
 MPIPoolEngine."""
-import pypesto
 import numpy as np
 import scipy as sp
+
+import pypesto
 import pypesto.optimize as optimize
-from pypesto.store import (OptimizationResultHDF5Writer,
-                           ProblemHDF5Writer)
+
 # you need to manually import the MPIPoolEninge
 from pypesto.engine.mpi_pool import MPIPoolEngine
+from pypesto.store import OptimizationResultHDF5Writer, ProblemHDF5Writer
 
 
 def setup_rosen_problem(n_starts: int = 2):

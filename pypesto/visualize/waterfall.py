@@ -1,15 +1,18 @@
-import matplotlib.pyplot as plt
-from matplotlib.ticker import MaxNLocator
-import numpy as np
-from .reference_points import create_references, ReferencePoint
-from .clust_color import assign_colors, delete_nan_inf, RGBA
-from .misc import (
-    process_result_list, process_start_indices, process_y_limits,
-    process_offset_y
-)
+from typing import List, Optional, Sequence, Tuple, Union
 
-from pypesto import Result
-from typing import Optional, Union, Sequence, Tuple, List
+import matplotlib.pyplot as plt
+import numpy as np
+from matplotlib.ticker import MaxNLocator
+
+from ..result import Result
+from .clust_color import RGBA, assign_colors, delete_nan_inf
+from .misc import (
+    process_offset_y,
+    process_result_list,
+    process_start_indices,
+    process_y_limits,
+)
+from .reference_points import ReferencePoint, create_references
 
 
 def waterfall(results: Union[Result, Sequence[Result]],

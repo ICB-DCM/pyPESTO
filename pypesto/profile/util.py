@@ -1,11 +1,12 @@
 """Utility function for profile module."""
+from typing import Any, Dict, Iterable, Tuple
+
 import numpy as np
 import scipy.stats
-from typing import Any, Dict, Tuple, Iterable
 
 from ..C import GRAD
 from ..problem import Problem
-from ..result import Result, ProfileResult, ProfilerResult
+from ..result import ProfileResult, ProfilerResult, Result
 
 
 def chi2_quantile_to_ratio(alpha: float = 0.95, df: int = 1):

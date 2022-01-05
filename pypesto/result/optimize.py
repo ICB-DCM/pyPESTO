@@ -1,8 +1,9 @@
 """Optimization result."""
 
+from typing import Sequence
+
 import numpy as np
 import pandas as pd
-from typing import Sequence
 
 from ..objective import History
 from ..problem import Problem

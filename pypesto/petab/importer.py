@@ -1,29 +1,30 @@
 """Contains the PetabImporter class."""
-import pandas as pd
-import numpy as np
-import os
-import sys
 import importlib
-import shutil
 import logging
+import os
+import shutil
+import sys
 import tempfile
-from typing import Iterable, List, Optional, Sequence, Union, Callable
+from typing import Callable, Iterable, List, Optional, Sequence, Union
 
-from ..problem import Problem
-from ..objective import AmiciObjective, AmiciObjectBuilder, AggregatedObjective
-from ..predict import AmiciPredictor
-from ..result import PredictionResult
+import numpy as np
+import pandas as pd
+
+from ..C import CONDITION_SEP, MODE_FUN, MODE_RES
+from ..objective import AggregatedObjective, AmiciObjectBuilder, AmiciObjective
 from ..objective.priors import NegLogParameterPriors, get_parameter_prior_dict
-from ..C import MODE_FUN, MODE_RES, CONDITION_SEP
+from ..predict import AmiciPredictor
+from ..problem import Problem
+from ..result import PredictionResult
 from ..startpoint import FunctionStartpoints, StartpointMethod
 
 try:
-    import petab
-    from petab.C import PREEQUILIBRATION_CONDITION_ID, SIMULATION_CONDITION_ID
     import amici
+    import amici.parameter_mapping
     import amici.petab_import
     import amici.petab_objective
-    import amici.parameter_mapping
+    import petab
+    from petab.C import PREEQUILIBRATION_CONDITION_ID, SIMULATION_CONDITION_ID
 except ImportError:
     pass
 

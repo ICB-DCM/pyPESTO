@@ -6,24 +6,23 @@ Optimize
 Multistart optimization with support for various optimizers.
 """
 
-from .options import OptimizeOptions
-from .optimize import (
-    minimize)
-from .optimizer import (
-    Optimizer,
-    ScipyOptimizer,
-    IpoptOptimizer,
-    DlibOptimizer,
-    PyswarmOptimizer,
-    CmaesOptimizer,
-    PyswarmsOptimizer,
-    ScipyDifferentialEvolutionOptimizer,
-    NLoptOptimizer,
-    FidesOptimizer,
-)
 from .load import (
     fill_result_from_history,
     optimization_result_from_history,
-    read_results_from_file,
     read_result_from_file,
+    read_results_from_file,
 )
+from .optimize import minimize
+from .optimizer import (
+    CmaesOptimizer,
+    DlibOptimizer,
+    FidesOptimizer,
+    IpoptOptimizer,
+    NLoptOptimizer,
+    Optimizer,
+    PyswarmOptimizer,
+    PyswarmsOptimizer,
+    ScipyDifferentialEvolutionOptimizer,
+    ScipyOptimizer,
+)
+from .options import OptimizeOptions

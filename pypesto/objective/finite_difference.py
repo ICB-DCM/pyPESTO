@@ -1,14 +1,13 @@
 """Finite differences."""
 
 import copy
-from typing import Callable, Dict, List, Tuple, Union
-import numpy as np
 import logging
+from typing import Callable, Dict, List, Tuple, Union
 
+import numpy as np
+
+from ..C import FVAL, GRAD, HESS, MODE_FUN, MODE_RES, RES, SRES
 from .base import ObjectiveBase, ResultDict
-from ..C import (
-    MODE_FUN, MODE_RES, FVAL, GRAD, HESS, RES, SRES,
-)
 
 logger = logging.getLogger(__name__)
 

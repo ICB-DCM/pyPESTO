@@ -1,15 +1,15 @@
 """Validation intervals."""
 
 import logging
-from typing import Optional
 from copy import deepcopy
+from typing import Optional
+
+from scipy.stats import chi2
 
 from ..engine import Engine
 from ..optimize import Optimizer, minimize
 from ..problem import Problem
 from ..result import Result
-from scipy.stats import chi2
-
 
 logger = logging.getLogger(__name__)
 

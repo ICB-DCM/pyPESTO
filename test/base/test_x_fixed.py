@@ -1,8 +1,10 @@
 """Test the fixing of parameters feature."""
 
 import numpy as np
+
 import pypesto
 import pypesto.optimize
+
 from ..util import rosen_for_sensi
 
 

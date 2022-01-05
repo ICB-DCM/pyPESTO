@@ -1,13 +1,13 @@
-import numpy as np
-from typing import Callable, Dict, List, Sequence, Tuple
 from copy import deepcopy
+from typing import Callable, Dict, List, Sequence, Tuple
 
-from .function import ObjectiveBase
+import numpy as np
+
+from ..C import CHI2, FVAL, GRAD, HESS, MODE_FUN, MODE_RES, RES, SRES
 from .aggregated import AggregatedObjective
-from ..C import MODE_FUN, MODE_RES, FVAL, GRAD, HESS, RES, SRES, CHI2
-from .util import res_to_chi2
-
 from .base import ResultDict
+from .function import ObjectiveBase
+from .util import res_to_chi2
 
 
 class NegLogPriors(AggregatedObjective):

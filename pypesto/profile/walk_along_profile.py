@@ -1,9 +1,10 @@
 import logging
-import numpy as np
 from typing import Callable
 
+import numpy as np
+
 from ..C import GRAD
-from ..optimize import Optimizer, OptimizeOptions
+from ..optimize import OptimizeOptions, Optimizer
 from ..problem import Problem
 from ..result import OptimizerResult, ProfilerResult
 from .options import ProfileOptions

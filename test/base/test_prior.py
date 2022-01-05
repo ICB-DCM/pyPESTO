@@ -1,14 +1,15 @@
 """Test priors."""
 
 import math
-import pytest
+
 import numpy as np
+import pytest
 
 import pypesto
 import pypesto.optimize
+from pypesto.C import MODE_FUN, MODE_RES
 from pypesto.objective import NegLogParameterPriors
 from pypesto.objective.priors import get_parameter_prior_dict
-from pypesto.C import MODE_RES, MODE_FUN
 
 scales = ['lin', 'log', 'log10']
 

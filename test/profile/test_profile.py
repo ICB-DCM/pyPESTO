@@ -2,10 +2,12 @@
 This is for testing profiling of the pypesto.Objective.
 """
 
-import numpy as np
 import unittest
-from copy import deepcopy
 import warnings
+from copy import deepcopy
+
+import numpy as np
+from numpy.testing import assert_almost_equal
 
 import pypesto
 import pypesto.optimize as optimize
@@ -13,9 +15,8 @@ import pypesto.profile as profile
 import pypesto.visualize as visualize
 from pypesto import ObjectiveBase
 
-from ..visualize import close_fig
 from ..util import rosen_for_sensi
-from numpy.testing import assert_almost_equal
+from ..visualize import close_fig
 
 
 class ProfilerTest(unittest.TestCase):

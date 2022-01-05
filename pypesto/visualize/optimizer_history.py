@@ -1,14 +1,14 @@
+from typing import Iterable, List, Optional, Tuple, Union
+
 import matplotlib.pyplot as plt
-from matplotlib.ticker import MaxNLocator
 import numpy as np
+from matplotlib.ticker import MaxNLocator
 
-from typing import List, Optional, Tuple, Union, Iterable
-
-from ..result import Result
 from ..objective import History
-from .reference_points import create_references, ReferencePoint
+from ..result import Result
 from .clust_color import assign_colors
-from .misc import process_result_list, process_y_limits, process_offset_y
+from .misc import process_offset_y, process_result_list, process_y_limits
+from .reference_points import ReferencePoint, create_references
 
 
 def optimizer_history(results,

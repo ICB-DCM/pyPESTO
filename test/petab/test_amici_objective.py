@@ -2,16 +2,19 @@
 This is for testing the pypesto.Objective.
 """
 
+import os
+
+import amici
+import numpy as np
+import petab
+import pytest
+
+import pypesto
+import pypesto.optimize as optimize
+import pypesto.petab
+from pypesto import C
 from pypesto.objective.amici_util import add_sim_grad_to_opt_grad
 
-import os
-import petab
-import amici
-import pypesto
-import pypesto.petab
-import pypesto.optimize
-import pytest
-import numpy as np
 from .petab_util import folder_base
 
 ATOL = 1e-1
@@ -59,9 +62,9 @@ def test_error_leastsquares_with_ssigma():
     optimizer = pypesto.optimize.ScipyOptimizer(
         'ls_trf', options={'max_nfev': 50})
     with pytest.raises(RuntimeError):
-        pypesto.optimize.minimize(
+        optimize.minimize(
             problem=problem, optimizer=optimizer, n_starts=1, filename=None,
-            options=pypesto.optimize.OptimizeOptions(allow_failed_starts=False)
+            options=optimize.OptimizeOptions(allow_failed_starts=False)
         )
 
 
@@ -87,10 +90,10 @@ def test_preeq_guesses():
     # assert that initial guess is uninformative
     assert obj.steadystate_guesses['fval'] == np.inf
 
-    optimizer = pypesto.optimize.ScipyOptimizer()
+    optimizer = optimize.ScipyOptimizer()
     startpoints = pypesto.startpoint.UniformStartpoints(check_fval=False)
 
-    result = pypesto.optimize.minimize(
+    result = optimize.minimize(
         problem=problem, optimizer=optimizer, n_starts=1,
         startpoint_method=startpoints, filename=None
     )
@@ -107,7 +110,7 @@ def test_preeq_guesses():
         ),
         eps=1e-3,
         verbosity=0,
-        mode=pypesto.C.MODE_FUN
+        mode=C.MODE_FUN,
     )
     print("relative errors MODE_FUN: ", df.rel_err.values)
     print("absolute errors MODE_FUN: ", df.abs_err.values)

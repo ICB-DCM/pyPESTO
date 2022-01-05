@@ -1,21 +1,18 @@
-import numpy as np
-import scipy.optimize
-import re
 import abc
-import time
 import logging
+import re
+import time
 from typing import Dict, Optional
 
-from ..objective import (
-    HistoryOptions, HistoryBase, OptimizerHistory
-)
+import numpy as np
+import scipy.optimize
+
+from ..C import FVAL, GRAD, MODE_FUN, MODE_RES
+from ..objective import HistoryBase, HistoryOptions, OptimizerHistory
 from ..problem import Problem
-from ..C import (
-    MODE_FUN, MODE_RES, FVAL, GRAD
-)
-from .options import OptimizeOptions
-from .load import fill_result_from_history
 from ..result import OptimizerResult
+from .load import fill_result_from_history
+from .options import OptimizeOptions
 
 try:
     import cyipopt

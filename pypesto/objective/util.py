@@ -1,7 +1,8 @@
 """Objective utilities."""
 
-import numpy as np
 from typing import Union
+
+import numpy as np
 
 
 def _check_none(fun):
