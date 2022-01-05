@@ -4,7 +4,7 @@ import numpy as np
 import itertools as itt
 import pypesto
 import pytest
-from pypesto.objective.constants import MODE_RES, MODE_FUN
+from pypesto.C import MODE_RES, MODE_FUN
 from pypesto.objective import NegLogParameterPriors
 from pypesto.objective.priors import get_parameter_prior_dict
 

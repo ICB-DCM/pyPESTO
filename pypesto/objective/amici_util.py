@@ -4,7 +4,7 @@ from typing import Dict, Sequence, Union, Tuple
 import logging
 import warnings
 
-from .constants import (
+from ..C import (
     FVAL, CHI2, GRAD, HESS, RES, SRES, RDATAS, MODE_FUN, MODE_RES
 )
 from ..logging import log_level_active

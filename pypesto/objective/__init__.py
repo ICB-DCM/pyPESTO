@@ -20,4 +20,3 @@ from .history import (
     Hdf5History,
     OptimizerHistory,
 )
-from . import constants

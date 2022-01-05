@@ -3,14 +3,12 @@ Ensemble
 ========
 """
 
-
-from .constants import *  # noqa: F403
-
 from .ensemble import (
     Ensemble,
     EnsemblePrediction,
+    get_percentile_label,
 )
-from .utils import (
+from .util import (
     read_from_df,
     read_from_csv,
     write_ensemble_prediction_to_h5,

@@ -13,8 +13,8 @@ import pytest
 import libsbml
 import petab
 
-from pypesto.predict import (
-    AmiciPredictor,
+from pypesto.predict import AmiciPredictor
+from pypesto.result import (
     PredictionConditionResult,
     PredictionResult,
 )

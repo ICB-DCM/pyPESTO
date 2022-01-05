@@ -1,8 +1,8 @@
 import numpy as np
 from typing import Union, Tuple
 
-from ..ensemble import Ensemble, EnsemblePrediction
-from .utils import get_prediction_dataset
+from .ensemble import Ensemble, EnsemblePrediction
+from .util import get_prediction_dataset
 
 
 def get_covariance_matrix_parameters(ens: Ensemble) -> np.ndarray:

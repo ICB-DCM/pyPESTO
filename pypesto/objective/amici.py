@@ -7,7 +7,7 @@ from typing import Dict, Optional, Sequence, Tuple, Union
 from collections import OrderedDict
 
 from .base import ObjectiveBase
-from .constants import MODE_FUN, MODE_RES, FVAL, RDATAS
+from ..C import MODE_FUN, MODE_RES, FVAL, RDATAS
 from .amici_calculator import AmiciCalculator
 from .amici_util import (
     map_par_opt_to_par_sim, create_identity_parameter_mapping)

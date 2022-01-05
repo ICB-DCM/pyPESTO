@@ -1,7 +1,7 @@
 import numpy as np
 from typing import Dict, List, Sequence, Union, Tuple
 
-from .constants import (
+from ..C import (
     MODE_FUN, MODE_RES, FVAL, GRAD, HESS, RES, SRES, RDATAS, CHI2
 )
 from .amici_util import (

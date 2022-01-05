@@ -8,10 +8,11 @@ import scipy.optimize as so
 
 from ..visualize import create_petab_problem
 from functools import partial
-from pypesto.predict.constants import (AMICI_STATUS,
-                                       AMICI_T,
-                                       AMICI_Y)
-from pypesto.ensemble.constants import MEAN, WEIGHTED_SIGMA
+from pypesto.C import (AMICI_STATUS,
+                       AMICI_T,
+                       AMICI_Y,
+                       MEAN,
+                       WEIGHTED_SIGMA)
 from pypesto.predict import AmiciPredictor
 from pypesto.engine import MultiProcessEngine
 import pypesto.optimize as optimize

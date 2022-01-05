@@ -7,7 +7,7 @@ import pandas as pd
 from typing import Optional, Tuple
 
 from ..ensemble import Ensemble
-from ..ensemble.constants import (
+from ..C import (
     COLOR_HIT_BOTH_BOUNDS, COLOR_HIT_ONE_BOUND, COLOR_HIT_NO_BOUNDS)
 
 

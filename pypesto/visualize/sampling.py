@@ -11,13 +11,13 @@ import warnings
 from ..ensemble import (
     get_percentile_label,
     EnsemblePrediction,
-    MEDIAN,
 )
-from ..predict import PredictionResult
-from ..predict.constants import CONDITION, OUTPUT
-from ..result import Result, McmcPtResult
+from ..result import Result, McmcPtResult, PredictionResult
 from ..sample import calculate_ci_mcmc_sample
-from .constants import (
+from ..C import (
+    CONDITION,
+    MEDIAN,
+    OUTPUT,
     LEN_RGB,
     RGBA_BLACK,
     RGBA_MIN,
@@ -597,11 +597,11 @@ def sampling_prediction_trajectories(
     axis_label_padding:
         Pixels between axis labels and plots.
     groupby:
-        Group plots by `pypesto.predict.constants.OUTPUT` or
-        `pypesto.predict.constants.CONDITION`.
+        Group plots by `pypesto.C.OUTPUT` or
+        `pypesto.C.CONDITION`.
     condition_gap:
         Gap between conditions when
-        `groupby == pypesto.predict.constants.CONDITION`.
+        `groupby == pypesto.C.CONDITION`.
     condition_ids:
         If provided, only data for the provided condition IDs will be plotted.
     output_ids:

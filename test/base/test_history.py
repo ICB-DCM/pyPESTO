@@ -17,7 +17,7 @@ from pypesto import (
     ObjectiveBase,
 )
 import pypesto.optimize as optimize
-from pypesto.objective.constants import (
+from pypesto.C import (
     X, FVAL, GRAD, HESS, RES, SRES, CHI2, SCHI2
 )
 from pypesto.engine import MultiProcessEngine
@@ -238,7 +238,7 @@ class HistoryTest(unittest.TestCase):
             CHI2: lambda x: res_to_chi2(self.obj.get_res(x)),
             SCHI2: lambda x: sres_to_schi2(*self.obj(
                 x, (0, 1,),
-                pypesto.objective.constants.MODE_RES
+                pypesto.C.MODE_RES
             ))
         }
         for var, fun in funs.items():

@@ -9,5 +9,6 @@ optimization, profiling, sampling.
 
 from .result import Result
 from .optimize import OptimizerResult, OptimizeResult
+from .predict import PredictionConditionResult, PredictionResult
 from .profile import ProfilerResult, ProfileResult
 from .sample import McmcPtResult, SampleResult

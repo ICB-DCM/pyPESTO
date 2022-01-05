@@ -5,7 +5,7 @@ import logging
 import abc
 from typing import Dict, Iterable, Optional, Sequence, Tuple, Union, List
 
-from .constants import MODE_FUN, MODE_RES, FVAL, GRAD, HESS, RES, SRES
+from ..C import MODE_FUN, MODE_RES, FVAL, GRAD, HESS, RES, SRES
 from .history import HistoryBase
 from .pre_post_process import PrePostProcessor, FixedParametersProcessor
 

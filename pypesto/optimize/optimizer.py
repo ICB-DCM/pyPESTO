@@ -10,7 +10,7 @@ from ..objective import (
     HistoryOptions, HistoryBase, OptimizerHistory
 )
 from ..problem import Problem
-from ..objective.constants import (
+from ..C import (
     MODE_FUN, MODE_RES, FVAL, GRAD
 )
 from .options import OptimizeOptions

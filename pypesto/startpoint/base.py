@@ -5,7 +5,7 @@ from abc import abstractmethod, ABC
 from typing import Callable, Union
 
 from ..problem import ObjectiveBase, Problem
-from ..objective.constants import FVAL, GRAD
+from ..C import FVAL, GRAD
 
 
 class StartpointMethod(ABC):

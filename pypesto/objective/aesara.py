@@ -10,7 +10,7 @@ import numpy as np
 import copy
 
 from .base import ObjectiveBase, ResultDict
-from .constants import MODE_FUN, FVAL, GRAD, HESS, RDATAS
+from ..C import MODE_FUN, FVAL, GRAD, HESS, RDATAS
 
 from typing import Tuple, Optional, Sequence
 

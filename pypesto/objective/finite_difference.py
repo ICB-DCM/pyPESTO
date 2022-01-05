@@ -6,7 +6,7 @@ import numpy as np
 import logging
 
 from .base import ObjectiveBase, ResultDict
-from .constants import (
+from ..C import (
     MODE_FUN, MODE_RES, FVAL, GRAD, HESS, RES, SRES,
 )
 

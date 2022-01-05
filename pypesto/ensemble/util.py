@@ -1,16 +1,18 @@
+"""Ensemble utilities."""
+
 import h5py
 import numpy as np
 import pandas as pd
 import os
 from typing import Callable, Union, Sequence
-
-from .constants import (EnsembleType, OUTPUT, UPPER_BOUND, LOWER_BOUND,
-                        PREDICTION_RESULTS, PREDICTION_ID, SUMMARY,
-                        OPTIMIZE, SAMPLE, X_NAMES, TIMEPOINTS, OUTPUT_IDS)
-from ..predict import PredictionConditionResult, PredictionResult
 from pathlib import Path
-from .ensemble import (Ensemble, EnsemblePrediction)
+
+from ..C import (EnsembleType, OUTPUT, UPPER_BOUND, LOWER_BOUND,
+                 PREDICTION_RESULTS, PREDICTION_ID, SUMMARY,
+                 OPTIMIZE, SAMPLE, X_NAMES, TIMEPOINTS, OUTPUT_IDS)
+from ..result import PredictionConditionResult, PredictionResult
 from ..store import read_result, get_or_create_group, write_array
+from .ensemble import Ensemble, EnsemblePrediction
 
 
 def read_from_csv(path: str,

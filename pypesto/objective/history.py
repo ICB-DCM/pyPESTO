@@ -9,7 +9,7 @@ import abc
 from typing import Any, Dict, List, Tuple, Sequence, Union
 from pathlib import Path
 
-from .constants import (
+from ..C import (
     MODE_FUN,
     MODE_RES,
     FVAL,

@@ -7,11 +7,12 @@ import pypesto.optimize as optimize
 import pypesto.profile as profile
 import pypesto.sample as sample
 
-from pypesto.objective.constants import (X, FVAL, GRAD,
-                                         HESS, RES, SRES,
-                                         CHI2, SCHI2, ID, X0,
-                                         FVAL0, N_RES, N_FVAL,
-                                         N_GRAD, N_HESS, N_SRES)
+from pypesto.C import (
+    X, FVAL, GRAD,
+    HESS, RES, SRES,
+    CHI2, SCHI2, ID, X0,
+    FVAL0, N_RES, N_FVAL,
+    N_GRAD, N_HESS, N_SRES)
 import scipy.optimize as so
 
 import numpy as np
