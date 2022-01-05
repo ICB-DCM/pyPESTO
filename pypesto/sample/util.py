@@ -1,9 +1,11 @@
 """A set of helper functions."""
 import logging
+import os
 from typing import Tuple
 
 import numpy as np
 
+from ..C import PYPESTO_MAX_N_SAMPLES
 from ..result import Result
 from .diagnostics import geweke_test
 
@@ -93,3 +95,32 @@ def calculate_ci(
     # Upper and lower bounds
     lb, ub = np.percentile(values, percentiles, **kwargs)
     return lb, ub
+
+
+def bound_n_samples_from_env(n_samples: int):
+    """Bound number of samples from environment variable.
+
+    Uses environment variable `PYPESTO_MAX_N_SAMPLES`.
+    This is used to speed up testing, while in application it should not
+    be used.
+
+    Parameters
+    ----------
+    n_samples: Number of samples desired.
+
+    Returns
+    -------
+    n_samples_new:
+        The original number of samples, or the minimum with the environment
+        variable, if exists.
+    """
+    if PYPESTO_MAX_N_SAMPLES not in os.environ:
+        return n_samples
+    n_samples_new = min(n_samples, int(os.environ[PYPESTO_MAX_N_SAMPLES]))
+
+    logger.info(
+        f"Bounding number of samples from {n_samples} to {n_samples_new} via "
+        f"environment variable {PYPESTO_MAX_N_SAMPLES}"
+    )
+
+    return n_samples_new
