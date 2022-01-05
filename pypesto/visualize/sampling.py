@@ -594,11 +594,11 @@ def sampling_prediction_trajectories(
     axis_label_padding:
         Pixels between axis labels and plots.
     groupby:
-        Group plots by `pypesto.predict.constants.OUTPUT` or
-        `pypesto.predict.constants.CONDITION`.
+        Group plots by `pypesto.C.OUTPUT` or
+        `pypesto.C.CONDITION`.
     condition_gap:
         Gap between conditions when
-        `groupby == pypesto.predict.constants.CONDITION`.
+        `groupby == pypesto.C.CONDITION`.
     condition_ids:
         If provided, only data for the provided condition IDs will be plotted.
     output_ids:

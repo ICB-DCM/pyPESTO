@@ -36,6 +36,7 @@ class FDDelta:
         evaluation point is sufficiently far away from the last training point.
         FDDelta.STEPS means that the step size is updated `max_steps`
         evaluations after the last update.
+        FDDelta.ALWAYS mean that the step size is selected in every call.
     max_distance:
         Coefficient on the distance between current and reference point beyond
         which to update, in the `FDDelta.DISTANCE` update condition.
@@ -48,7 +49,8 @@ class FDDelta:
     CONSTANT = "constant"
     DISTANCE = "distance"
     STEPS = "steps"
-    UPDATE_CONDITIONS = [CONSTANT, DISTANCE, STEPS]
+    ALWAYS = "always"
+    UPDATE_CONDITIONS = [CONSTANT, DISTANCE, STEPS, ALWAYS]
 
     def __init__(
         self,
@@ -76,11 +78,12 @@ class FDDelta:
         self.max_distance: float = max_distance
         self.max_steps: int = max_steps
 
-        # running variables
+        # run variables
         #  parameter where the step sizes where updated last
         self.x0: Union[np.ndarray, None] = None
         #  overall number of steps
         self.steps: int = 0
+        self.updates: int = 0
 
     def update(
         self,
@@ -119,11 +122,12 @@ class FDDelta:
             if (
                 self.update_condition == FDDelta.DISTANCE and
                 np.sum((x - self.x0)**2) <= self.max_distance * np.sqrt(len(x))
-            ):
-                return
-            if (
+            ) or (
                 self.update_condition == FDDelta.STEPS and
                 (self.steps-1) % self.max_steps != 0 and self.steps > 1
+            ) or (
+                self.update_condition == FDDelta.CONSTANT and
+                self.delta is not None
             ):
                 return
 
@@ -198,6 +202,7 @@ class FDDelta:
 
         # log
         logger.info(f"Optimal FD delta: {self.delta}")
+        self.updates += 1
 
     def get(self) -> np.ndarray:
         """Get delta vector."""

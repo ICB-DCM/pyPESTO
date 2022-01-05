@@ -110,7 +110,7 @@ def test_preeq_guesses():
         ),
         eps=1e-3,
         verbosity=0,
-        mode=C.MODE_FUN
+        mode=C.MODE_FUN,
     )
     print("relative errors MODE_FUN: ", df.rel_err.values)
     print("absolute errors MODE_FUN: ", df.abs_err.values)

@@ -1,3 +1,5 @@
+"""Ensemble utilities."""
+
 import os
 from pathlib import Path
 from typing import Callable, Sequence, Union

@@ -1,9 +1,7 @@
 """
 Constants
 =========
-
 Package-wide consistent constant definitions.
-
 """
 
 from enum import Enum

@@ -1,3 +1,5 @@
+"""Objective utilities."""
+
 from typing import Union
 
 import numpy as np
