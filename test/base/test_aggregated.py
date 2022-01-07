@@ -1,11 +1,16 @@
 """Test objective aggregation."""
 
-import numpy as np
-import pypesto
-import pytest
-from pypesto.objective.constants import MODE_RES
+import itertools as itt
 
-from ..util import poly_for_sensi, rosen_for_sensi, load_amici_objective
+import numpy as np
+import pytest
+
+import pypesto
+from pypesto.C import MODE_FUN, MODE_RES
+from pypesto.objective import NegLogParameterPriors
+from pypesto.objective.priors import get_parameter_prior_dict
+
+from ..util import load_amici_objective, poly_for_sensi, rosen_for_sensi
 
 # absolute and relative test tolerance
 ATOL = 1e-6
@@ -36,11 +41,27 @@ def test_evaluate():
     Test if values are computed correctly.
     """
     for struct in [rosen_for_sensi(2, False, [0, 1]),
-                   poly_for_sensi(2, True, 0.5),
+                   poly_for_sensi(2, True, [0.5]),
                    convreact_for_funmode(2, [-0.3, -0.7])]:
         _test_evaluate_funmode(struct)
+        _test_evaluate_prior(struct)
 
-    _test_evaluate_resmode(convreact_for_resmode(1, [-0.3, -0.7]))
+    resstruct = convreact_for_resmode(1, [-0.3, -0.7])
+    _test_evaluate_resmode(resstruct)
+    _test_evaluate_prior(resstruct)
+
+
+def _test_evaluate_prior(struct):
+    x = struct['x']
+    prior_list = [get_parameter_prior_dict(0, 'normal', [0, 1], 'lin')]
+    obj = pypesto.objective.AggregatedObjective(
+        [struct['obj'], NegLogParameterPriors(prior_list)]
+    )
+    for mode, max_sensi_order in zip([MODE_RES, MODE_FUN], [1, 2]):
+        sensi_orders = range(max_sensi_order + 1)
+        for num_orders in range(len(sensi_orders)):
+            for sensi_order in itt.combinations(sensi_orders, num_orders):
+                obj(x, sensi_order, mode=mode)
 
 
 def _test_evaluate_funmode(struct):

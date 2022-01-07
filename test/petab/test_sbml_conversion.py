@@ -1,15 +1,15 @@
 import os
+import re
 import sys
 import unittest
-import numpy as np
 import warnings
-import re
+
+import numpy as np
 
 import pypesto
 import pypesto.optimize
 
 from ..util import load_amici_objective
-
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
@@ -36,7 +36,8 @@ class AmiciObjectiveTest(unittest.TestCase):
 
             df = objective.check_grad(
                 x0, eps=1e-3, verbosity=0,
-                mode=pypesto.objective.constants.MODE_FUN)
+                mode=pypesto.C.MODE_FUN,
+            )
             print("relative errors MODE_FUN: ", df.rel_err.values)
             print("absolute errors MODE_FUN: ", df.abs_err.values)
             assert np.all((df.rel_err.values < RTOL) |
@@ -44,7 +45,8 @@ class AmiciObjectiveTest(unittest.TestCase):
 
             df = objective.check_grad(
                 x0, eps=1e-3, verbosity=0,
-                mode=pypesto.objective.constants.MODE_RES)
+                mode=pypesto.C.MODE_RES,
+            )
             print("relative errors MODE_RES: ", df.rel_err.values)
             print("absolute errors MODE_RES: ", df.rel_err.values)
             assert np.all((df.rel_err.values < RTOL) |
@@ -94,11 +96,16 @@ def parameter_estimation(
 
     optimize_options = pypesto.optimize.OptimizeOptions(
         allow_failed_starts=False,
-        startpoint_resample=True,
     )
 
+    startpoints = pypesto.startpoint.UniformStartpoints(check_fval=True)
+
     pypesto.optimize.minimize(
-        problem, optimizer, n_starts, options=optimize_options, filename=None)
+        problem, optimizer, n_starts,
+        startpoint_method=startpoints,
+        options=optimize_options,
+        filename=None,
+    )
 
 
 if __name__ == '__main__':

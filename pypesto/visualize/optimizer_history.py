@@ -1,16 +1,14 @@
+from typing import Iterable, List, Optional, Tuple, Union
+
 import matplotlib.pyplot as plt
-from matplotlib.ticker import MaxNLocator
 import numpy as np
+from matplotlib.ticker import MaxNLocator
 
-from typing import List, Optional, Tuple, Union, Iterable
-
-from ..result import Result
 from ..objective import History
-from .reference_points import create_references, ReferencePoint
+from ..result import Result
 from .clust_color import assign_colors
-from .misc import process_result_list
-from .misc import process_y_limits
-from .misc import process_offset_y
+from .misc import process_offset_y, process_result_list, process_y_limits
+from .reference_points import ReferencePoint, create_references
 
 
 def optimizer_history(results,
@@ -146,11 +144,12 @@ def optimizer_history_lowlevel(vals, scale_y='log10', colors=None, ax=None,
     if isinstance(vals, list):
         # convert entries to numpy arrays
         for val in vals:
-            val = np.array(val)
+            # val is already an numpy array
+            val = np.asarray(val)
             fvals.append(val[1, -1])
     else:
         # convert to a list of numpy arrays
-        vals = np.array(vals)
+        vals = np.asarray(vals)
         if vals.shape[0] != 2 or vals.ndim != 2:
             raise ValueError('If numpy array is passed directly to lowlevel '
                              'routine of optimizer_history, shape needs to '

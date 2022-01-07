@@ -1,31 +1,28 @@
 import logging
-import matplotlib.pyplot as plt
+import warnings
+from typing import Dict, Sequence, Tuple, Union
+
 import matplotlib.axes
-from matplotlib.lines import Line2D
+import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import seaborn as sns
-from typing import Dict, Sequence, Tuple, Union
-import warnings
+from matplotlib.lines import Line2D
 
-from ..ensemble import (
-    get_percentile_label,
-    EnsemblePrediction,
-    MEDIAN,
-)
-from ..predict import PredictionResult
-from ..predict.constants import CONDITION, OUTPUT
-from ..result import Result
-from ..sample import McmcPtResult, calculate_ci_mcmc_sample
-from .constants import (
+from ..C import (
+    CONDITION,
     LEN_RGB,
-    RGBA_BLACK,
-    RGBA_MIN,
-    RGBA_MAX,
+    MEDIAN,
+    OUTPUT,
     RGB,
+    RGBA_BLACK,
+    RGBA_MAX,
+    RGBA_MIN,
 )
+from ..ensemble import EnsemblePrediction, get_percentile_label
+from ..result import McmcPtResult, PredictionResult, Result
+from ..sample import calculate_ci_mcmc_sample
 from .misc import rgba2rgb
-
 
 logger = logging.getLogger(__name__)
 
@@ -597,11 +594,11 @@ def sampling_prediction_trajectories(
     axis_label_padding:
         Pixels between axis labels and plots.
     groupby:
-        Group plots by `pypesto.predict.constants.OUTPUT` or
-        `pypesto.predict.constants.CONDITION`.
+        Group plots by `pypesto.C.OUTPUT` or
+        `pypesto.C.CONDITION`.
     condition_gap:
         Gap between conditions when
-        `groupby == pypesto.predict.constants.CONDITION`.
+        `groupby == pypesto.C.CONDITION`.
     condition_ids:
         If provided, only data for the provided condition IDs will be plotted.
     output_ids:
@@ -1097,8 +1094,8 @@ def get_data_to_plot(
     param_names:
         Parameter names to be plotted.
     """
-    # get parameters and fval results as numpy arrays
-    arr_param = np.array(result.sample_result.trace_x[i_chain])
+    # get parameters and fval results as numpy arrays (trace_x is numpy array)
+    arr_param = np.asarray(result.sample_result.trace_x[i_chain])
 
     if result.sample_result.burn_in is None:
         warnings.warn("Burn in index not found in the results, the full chain "
@@ -1119,8 +1116,8 @@ def get_data_to_plot(
     # thin out by stepsize, from the index burn_in until end of vector
     arr_param = arr_param[np.arange(burn_in, len(arr_param), stepsize)]
 
-    # invert sign for log posterior values
-    arr_fval = - np.array(sample_result.trace_neglogpost[i_chain])
+    # invert sign for log posterior values (trace_neglogpost is numpy array)
+    arr_fval = - np.asarray(sample_result.trace_neglogpost[i_chain])
     indices = np.arange(burn_in, len(arr_fval), stepsize)
     arr_fval = arr_fval[indices]
     theta_lb = result.problem.lb

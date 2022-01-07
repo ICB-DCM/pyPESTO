@@ -7,9 +7,6 @@ class OptimizeOptions(dict):
 
     Parameters
     ----------
-    startpoint_resample:
-        Flag indicating whether initial points are supposed to be resampled if
-        function evaluation fails at the initial point
     allow_failed_starts:
         Flag indicating whether we tolerate that exceptions are thrown during
         the minimization process.
@@ -21,19 +18,25 @@ class OptimizeOptions(dict):
         Flag indicating whether hess will be stored in the results object.
         Deactivating this option will improve memory consumption for large
         scale problems.
+    history_beats_optimizer:
+        Whether the optimal value recorded by pyPESTO in the history has
+        priority over the optimal value reported by the optimizer (True)
+        or not (False).
     """
 
-    def __init__(self,
-                 startpoint_resample: bool = False,
-                 allow_failed_starts: bool = True,
-                 report_sres: bool = True,
-                 report_hess: bool = True):
+    def __init__(
+        self,
+        allow_failed_starts: bool = True,
+        report_sres: bool = True,
+        report_hess: bool = True,
+        history_beats_optimizer: bool = True,
+    ):
         super().__init__()
 
-        self.startpoint_resample: bool = startpoint_resample
         self.allow_failed_starts: bool = allow_failed_starts
         self.report_sres: bool = report_sres
         self.report_hess: bool = report_hess
+        self.history_beats_optimizer: bool = history_beats_optimizer
 
     def __getattr__(self, key):
         try:
@@ -46,7 +49,7 @@ class OptimizeOptions(dict):
 
     @staticmethod
     def assert_instance(
-            maybe_options: Union['OptimizeOptions', Dict]
+        maybe_options: Union['OptimizeOptions', Dict],
     ) -> 'OptimizeOptions':
         """
         Return a valid options object.

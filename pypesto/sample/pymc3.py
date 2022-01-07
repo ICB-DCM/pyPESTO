@@ -1,18 +1,19 @@
 """Pymc3Sampler."""
-import numpy as np
-from typing import Union
 import logging
+from typing import Union
+
+import numpy as np
 
 from ..objective import History
 from ..problem import Problem
+from ..result import McmcPtResult
 from .sampler import Sampler
-from .result import McmcPtResult
 
 logger = logging.getLogger(__name__)
 
 try:
-    import pymc3 as pm
     import arviz as az
+    import pymc3 as pm
     import theano.tensor as tt
 except ImportError:
     pm = az = tt = None

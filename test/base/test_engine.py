@@ -1,13 +1,14 @@
 """Test the execution engines."""
 
-import numpy as np
 import copy
+
+import amici
 import cloudpickle as pickle
+import numpy as np
 
 import pypesto
 import pypesto.optimize
 import pypesto.petab
-import amici
 
 from ..petab.petab_util import folder_base
 from ..util import rosen_for_sensi

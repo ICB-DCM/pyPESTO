@@ -1,10 +1,13 @@
-import numpy as np
 import logging
+
+import numpy as np
+
+import pypesto.optimize
 
 from ..engine import Task
 from ..objective import HistoryOptions
 from ..problem import Problem
-import pypesto.optimize
+from ..result import OptimizerResult
 
 logger = logging.getLogger(__name__)
 
@@ -13,18 +16,15 @@ class OptimizerTask(Task):
     """A multistart optimization task, performed in `pypesto.minimize`."""
 
     def __init__(
-            self,
-            optimizer: 'pypesto.optimize.Optimizer',
-            problem: Problem,
-            x0: np.ndarray,
-            id: str,
-            options: 'pypesto.optimize.OptimizeOptions',
-            history_options: HistoryOptions,
-            report_hess: bool,
-            report_sres: bool,
+        self,
+        optimizer: 'pypesto.optimize.Optimizer',
+        problem: Problem,
+        x0: np.ndarray,
+        id: str,
+        history_options: HistoryOptions,
+        optimize_options: 'pypesto.optimize.OptimizeOptions',
     ):
-        """
-        Create the task object.
+        """Create the task object.
 
         Parameters
         ----------
@@ -40,12 +40,6 @@ class OptimizerTask(Task):
             Options object applying to optimization.
         history_options:
             Optimizer history options.
-        report_hess:
-            Flag indicating whether the Hessian is to be stored in
-            results
-        report_sres:
-            Flag indicating whether residual sensitivity is to be stored in
-            results
         """
         super().__init__()
 
@@ -53,21 +47,22 @@ class OptimizerTask(Task):
         self.problem = problem
         self.x0 = x0
         self.id = id
-        self.options = options
+        self.optimize_options = optimize_options
         self.history_options = history_options
-        self.report_hess = report_hess
-        self.report_sres = report_sres
 
-    def execute(self) -> 'pypesto.optimize.OptimizerResult':
+    def execute(self) -> OptimizerResult:
         """Execute the task."""
-        logger.info(f"Executing task {self.id}.")
+        logger.debug(f"Executing task {self.id}.")
 
         optimizer_result = self.optimizer.minimize(
-            problem=self.problem, x0=self.x0, id=self.id,
-            allow_failed_starts=self.options.allow_failed_starts,
-            history_options=self.history_options)
-        if not self.report_hess:
+            problem=self.problem,
+            x0=self.x0,
+            id=self.id,
+            history_options=self.history_options,
+            optimize_options=self.optimize_options,
+        )
+        if not self.optimize_options.report_hess:
             optimizer_result.hess = None
-        if not self.report_sres:
+        if not self.optimize_options.report_sres:
             optimizer_result.sres = None
         return optimizer_result

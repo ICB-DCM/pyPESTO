@@ -1,6 +1,7 @@
-from typing import Dict, Tuple
-import numpy as np
 import numbers
+from typing import Dict, Tuple
+
+import numpy as np
 
 from ..problem import Problem
 from .metropolis import MetropolisSampler

@@ -3,18 +3,20 @@ Visualization of the model fit after optimization.
 
 Currently only for PEtab problems.
 """
-import matplotlib.axes
-import numpy as np
-import matplotlib.pyplot as plt
+from typing import Sequence, Union
+
 import amici.petab_import as petab_import
-import petab
 import amici.plotting
-from ..problem import Problem
+import matplotlib.axes
+import matplotlib.pyplot as plt
+import numpy as np
+import petab
+from amici.petab_objective import rdatas_to_simulation_df
 from amici.petab_simulate import simulate_petab
 from petab.visualize import plot_problem
-from typing import Union, Sequence
+
+from ..problem import Problem
 from ..result import Result
-from amici.petab_objective import rdatas_to_simulation_df
 
 AmiciModel = Union['amici.Model', 'amici.ModelPtr']
 

@@ -2,23 +2,24 @@
 This is for testing optimization of the pypesto.Objective.
 """
 
-import numpy as np
-import pytest
-import warnings
-import re
-import nlopt
-import fides
-import scipy as sp
 import itertools as itt
 import os
+import re
 import subprocess  # noqa: S404
+import warnings
+
+import fides
+import nlopt
+import numpy as np
+import pytest
+import scipy as sp
+from numpy.testing import assert_almost_equal
 
 import pypesto
 import pypesto.optimize as optimize
 from pypesto.store import OptimizationResultHDF5Reader
 
-from ..util import rosen_for_sensi, CRProblem
-from numpy.testing import assert_almost_equal
+from ..util import CRProblem, rosen_for_sensi
 
 
 @pytest.fixture(params=['cr', 'rosen-integrated', 'rosen-separated'])
@@ -229,6 +230,7 @@ def test_trim_results(problem):
         n_starts=1,
         startpoint_method=pypesto.startpoint.uniform,
         options=optimize_options,
+        filename=None
     )
     assert result.optimize_result.list[0].hess is None
 
@@ -240,6 +242,7 @@ def test_trim_results(problem):
         n_starts=1,
         startpoint_method=pypesto.startpoint.uniform,
         options=optimize_options,
+        filename=None
     )
     assert result.optimize_result.list[0].sres is None
 
@@ -287,3 +290,45 @@ def test_mpipoolengine():
         if os.path.exists('temp_result.h5'):
             # delete data
             os.remove('temp_result.h5')
+
+
+def test_history_beats_optimizer():
+    """Test overwriting from history vs whatever the optimizer reports."""
+    problem = CRProblem(
+        x_guesses=np.array([0.25, 0.25]).reshape(1, -1)
+    ).get_problem()
+
+    max_fval = 10
+    scipy_options = {"maxfun": max_fval}
+
+    result_hist = optimize.minimize(
+        problem=problem,
+        optimizer=optimize.ScipyOptimizer(method="TNC", options=scipy_options),
+        n_starts=1,
+        options=optimize.OptimizeOptions(history_beats_optimizer=True),
+        filename=None,
+    )
+
+    result_opt = optimize.minimize(
+        problem=problem,
+        optimizer=optimize.ScipyOptimizer(method="TNC", options=scipy_options),
+        n_starts=1,
+        options=optimize.OptimizeOptions(history_beats_optimizer=False),
+        filename=None,
+    )
+
+    for result in (result_hist, result_opt):
+        # number of function evaluations
+        assert result.optimize_result.list[0]['n_fval'] <= max_fval + 1
+        # optimal value in bounds
+        assert np.all(problem.lb <= result.optimize_result.list[0]['x'])
+        assert np.all(problem.ub >= result.optimize_result.list[0]['x'])
+        # entries filled
+        for key in ('fval', 'x', 'grad'):
+            val = result.optimize_result.list[0][key]
+            assert val is not None and np.all(np.isfinite(val))
+
+    # TNC funnily reports the last value if not converged
+    #  (this may break if their implementation is changed at some point ...)
+    assert result_hist.optimize_result.list[0]['fval'] \
+        < result_opt.optimize_result.list[0]['fval']

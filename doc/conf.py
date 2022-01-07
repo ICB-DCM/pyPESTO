@@ -19,6 +19,7 @@
 
 import os
 import sys
+
 sys.path.insert(0, os.path.abspath('../'))
 
 
@@ -87,6 +88,7 @@ author = 'The pyPESTO developers'
 #
 # The short X.Y version.
 import pypesto
+
 version = pypesto.__version__
 # The full version, including alpha/beta/rc tags.
 release = version

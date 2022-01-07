@@ -1,13 +1,14 @@
-import matplotlib.pyplot as plt
-from matplotlib.ticker import MaxNLocator
-import numpy as np
 from typing import Sequence, Tuple, Union
 from warnings import warn
 
+import matplotlib.pyplot as plt
+import numpy as np
+from matplotlib.ticker import MaxNLocator
+
 from ..result import Result
-from .reference_points import create_references, ReferencePoint
 from .clust_color import assign_colors
 from .misc import process_result_list
+from .reference_points import ReferencePoint, create_references
 
 
 def profiles(results: Union[Result, Sequence[Result]],
@@ -205,7 +206,7 @@ def profiles_lowlevel(
 
         # create or choose an axes object
         if create_new_ax:
-            ax.append(fig.add_subplot(rows, columns, counter + 1))
+            ax.append(fig.add_subplot(int(rows), int(columns), counter + 1))
         else:
             plt.axes(ax[counter])
 

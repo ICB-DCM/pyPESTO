@@ -1,13 +1,14 @@
-import numpy as np
-import pandas as pd
+import abc
 import copy
 import logging
-import abc
-from typing import Dict, Iterable, Optional, Sequence, Tuple, Union, List
+from typing import Dict, Iterable, List, Optional, Sequence, Tuple, Union
 
-from .constants import MODE_FUN, MODE_RES, FVAL, GRAD, HESS, RES, SRES
+import numpy as np
+import pandas as pd
+
+from ..C import FVAL, GRAD, HESS, MODE_FUN, MODE_RES, RES, SRES
 from .history import HistoryBase
-from .pre_post_process import PrePostProcessor, FixedParametersProcessor
+from .pre_post_process import FixedParametersProcessor, PrePostProcessor
 
 ResultDict = Dict[str, Union[float, np.ndarray, Dict]]
 
@@ -159,7 +160,8 @@ class ObjectiveBase(abc.ABC):
             with function values and derivatives indicated by ids.
         """
         # copy parameter vector to prevent side effects
-        x = np.array(x).copy()
+        # np.array creates a copy of x already
+        x = np.array(x)
 
         # check input
         if not self.check_mode(mode):
@@ -274,6 +276,9 @@ class ObjectiveBase(abc.ABC):
             Boolean indicating whether combination of sensi_orders and mode
             is supported
         """
+        if not sensi_orders:
+            return True
+
         if (
             mode == MODE_FUN
             and (

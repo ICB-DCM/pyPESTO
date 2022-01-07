@@ -1,10 +1,11 @@
-import numpy as np
 import copy
 from typing import Callable, List, Tuple, Union
 
+import numpy as np
+
 from ..problem import Problem
+from ..result import ProfilerResult
 from .options import ProfileOptions
-from .result import ProfilerResult
 
 
 def next_guess(
@@ -65,14 +66,13 @@ def next_guess(
 
 
 def fixed_step(
-        x: np.ndarray,
-        par_index: int,
-        par_direction: int,
-        options: ProfileOptions,
-        problem: Problem
+    x: np.ndarray,
+    par_index: int,
+    par_direction: int,
+    options: ProfileOptions,
+    problem: Problem,
 ) -> np.ndarray:
-    """
-    Most simple method to create the next guess.
+    """Most simple method to create the next guess.
 
     Parameters
     ----------
@@ -107,17 +107,16 @@ def fixed_step(
 
 
 def adaptive_step(
-        x: np.ndarray,
-        par_index: int,
-        par_direction: int,
-        options: ProfileOptions,
-        current_profile: ProfilerResult,
-        problem: Problem,
-        global_opt: float,
-        order: int = 1
+    x: np.ndarray,
+    par_index: int,
+    par_direction: int,
+    options: ProfileOptions,
+    current_profile: ProfilerResult,
+    problem: Problem,
+    global_opt: float,
+    order: int = 1,
 ) -> np.ndarray:
-    """
-    Group of more complex methods for point proposal.
+    """Group of more complex methods for point proposal.
 
     Step size is automatically computed by a line search algorithm (hence:
     adaptive).
@@ -238,18 +237,17 @@ def adaptive_step(
 
 
 def handle_profile_history(
-        x: np.ndarray,
-        par_index: int,
-        par_direction: int,
-        n_profile_points: int,
-        global_opt: float,
-        order: int,
-        current_profile: ProfilerResult,
-        problem: Problem,
-        options: ProfileOptions
+    x: np.ndarray,
+    par_index: int,
+    par_direction: int,
+    n_profile_points: int,
+    global_opt: float,
+    order: int,
+    current_profile: ProfilerResult,
+    problem: Problem,
+    options: ProfileOptions,
 ) -> Tuple:
-    """
-    Compute the very first step direction update guesses.
+    """Compute the very first step direction update guesses.
 
     Check whether enough steps have been taken for applying regression,
     computes regression or simple extrapolation.
@@ -289,14 +287,13 @@ def handle_profile_history(
 
 
 def get_reg_polynomial(
-        n_profile_points: int,
-        par_index: int,
-        current_profile: ProfilerResult,
-        problem: Problem,
-        options: ProfileOptions
+    n_profile_points: int,
+    par_index: int,
+    current_profile: ProfilerResult,
+    problem: Problem,
+    options: ProfileOptions,
 ) -> List[float]:
-    """
-    Compute the regression polynomial.
+    """Compute the regression polynomial.
 
     Used to step proposal extrapolation from the last profile points
     """
@@ -335,20 +332,19 @@ def get_reg_polynomial(
 
 
 def do_line_seach(
-        next_x: np.ndarray,
-        step_size_guess: float,
-        direction: str,
-        par_extrapol: Callable,
-        next_obj: float,
-        next_obj_target: float,
-        clip_to_minmax: Callable,
-        clip_to_bounds: Callable,
-        par_index: int,
-        problem: Problem,
-        options: ProfileOptions
+    next_x: np.ndarray,
+    step_size_guess: float,
+    direction: str,
+    par_extrapol: Callable,
+    next_obj: float,
+    next_obj_target: float,
+    clip_to_minmax: Callable,
+    clip_to_bounds: Callable,
+    par_index: int,
+    problem: Problem,
+    options: ProfileOptions,
 ) -> np.ndarray:
-    """
-    Perform the line search.
+    """Perform the line search.
 
     Based on the objective function we want to reach, based on the current
     position in parameter space and on the first guess for the proposal.
@@ -391,11 +387,11 @@ def do_line_seach(
 
 
 def next_x_interpolate(
-        next_obj: float,
-        last_obj: float,
-        next_x: np.ndarray,
-        last_x: np.ndarray,
-        next_obj_target: float
+    next_obj: float,
+    last_obj: float,
+    next_x: np.ndarray,
+    last_x: np.ndarray,
+    next_obj_target: float,
 ) -> np.ndarray:
     """Interpolate between the last two steps."""
     delta_obj = np.abs(next_obj - last_obj)
@@ -407,9 +403,9 @@ def next_x_interpolate(
 
 
 def clip(
-        vector_guess: Union[float, np.ndarray],
-        lower: Union[float, np.ndarray],
-        upper: Union[float, np.ndarray]
+    vector_guess: Union[float, np.ndarray],
+    lower: Union[float, np.ndarray],
+    upper: Union[float, np.ndarray],
 ) -> Union[float, np.ndarray]:
     """Restrict a scalar or a vector to given bounds."""
     if isinstance(vector_guess, float):

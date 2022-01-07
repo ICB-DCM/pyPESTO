@@ -1,19 +1,21 @@
-import numpy as np
-import numbers
-from typing import Dict, Sequence, Union, Tuple
 import logging
+import numbers
 import warnings
+from typing import Dict, Sequence, Tuple, Union
 
-from .constants import (
-    FVAL, CHI2, GRAD, HESS, RES, SRES, RDATAS, MODE_FUN, MODE_RES
-)
+import numpy as np
+
+from ..C import CHI2, FVAL, GRAD, HESS, MODE_FUN, MODE_RES, RDATAS, RES, SRES
+from ..logging import log_level_active
 
 try:
     import amici
-    import amici.petab_objective
     import amici.parameter_mapping
+    import amici.petab_objective
     from amici.parameter_mapping import (
-        ParameterMapping, ParameterMappingForCondition)
+        ParameterMapping,
+        ParameterMappingForCondition,
+    )
 except ImportError:
     pass
 
@@ -279,14 +281,15 @@ def log_simulation(data_ix, rdata):
     if t_steadystate in rdata and rdata[t_steadystate] != np.nan:
         logger.debug(f"t_steadystate: {rdata[t_steadystate]}")
 
-    logger.debug(f"res: {rdata['res']}")
+    if log_level_active(logger, logging.DEBUG):
+        logger.debug(f"res: {rdata['res']}")
 
 
 def get_error_output(
         amici_model: AmiciModel,
         edatas: Sequence['amici.ExpData'],
         rdatas: Sequence['amici.ReturnData'],
-        sensi_order: int,
+        sensi_orders: Tuple[int, ...],
         mode: str,
         dim: int):
     """Get default output upon error.
@@ -301,7 +304,7 @@ def get_error_output(
                  for data in edatas)
     n_res = nt * amici_model.nytrue
 
-    nllh, snllh, s2nllh, chi2, res, sres = init_return_values(sensi_order,
+    nllh, snllh, s2nllh, chi2, res, sres = init_return_values(sensi_orders,
                                                               mode, dim, True)
     if res is not None:
         res = np.nan * np.ones(n_res)
@@ -320,7 +323,10 @@ def get_error_output(
     return filter_return_dict(ret)
 
 
-def init_return_values(sensi_order, mode, dim, error=False):
+def init_return_values(sensi_orders: Tuple[int, ...],
+                       mode: str,
+                       dim: int,
+                       error: bool = False):
     """Initialize return values."""
     if error:
         fval = np.inf
@@ -331,18 +337,20 @@ def init_return_values(sensi_order, mode, dim, error=False):
     nllh = fval
     snllh = None
     s2nllh = None
-    if mode == MODE_FUN and sensi_order > 0:
-        snllh = sval * np.ones(dim)
-        if sensi_order > 1:
+    if mode == MODE_FUN:
+        if 1 in sensi_orders:
+            snllh = sval * np.ones(dim)
+        if 2 in sensi_orders:
             s2nllh = sval * np.ones([dim, dim])
 
     chi2 = None
     res = None
     sres = None
     if mode == MODE_RES:
-        chi2 = fval
-        res = np.zeros([0])
-        if sensi_order > 0:
+        if 0 in sensi_orders:
+            chi2 = fval
+            res = np.zeros([0])
+        if 1 in sensi_orders:
             sres = np.zeros([0, dim])
 
     return nllh, snllh, s2nllh, chi2, res, sres
