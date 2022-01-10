@@ -14,7 +14,7 @@ from petab_select import (
     Model,
 )
 
-from .constants import TYPE_POSTPROCESSOR
+from ..C import TYPE_POSTPROCESSOR
 from .model_problem import ModelProblem
 
 

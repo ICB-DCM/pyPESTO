@@ -2,9 +2,10 @@ from pathlib import Path
 from typing import List
 
 import matplotlib.pyplot as plt
+from petab_select.constants import TYPE_PATH
 
 from .. import store, visualize
-from .constants import TYPE_PATH, TYPE_POSTPROCESSOR
+from ..C import TYPE_POSTPROCESSOR
 from .problem import ModelSelectionProblem
 
 

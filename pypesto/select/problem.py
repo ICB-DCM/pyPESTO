@@ -3,7 +3,7 @@ from typing import Iterable, List, Optional
 import petab_select
 from petab_select import Model
 
-from .constants import TYPE_POSTPROCESSOR
+from ..C import TYPE_POSTPROCESSOR
 from .method import MethodCaller
 
 
