@@ -1,5 +1,6 @@
 """AdaptiveParallelTemperingSampler class."""
 from typing import Dict, Sequence
+
 import numpy as np
 
 from .parallel_tempering import ParallelTemperingSampler

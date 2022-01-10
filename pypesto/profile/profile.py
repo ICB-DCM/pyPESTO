@@ -1,15 +1,15 @@
 import logging
-from typing import Callable, Union, Iterable
+from typing import Callable, Iterable, Union
 
 from ..engine import Engine, SingleCoreEngine
 from ..optimize import Optimizer
 from ..problem import Problem
 from ..result import Result
-from ..optimize.util import autosave
-from .profile_next_guess import next_guess
+from ..store import autosave
 from .options import ProfileOptions
-from .util import initialize_profile
+from .profile_next_guess import next_guess
 from .task import ProfilerTask
+from .util import initialize_profile
 
 logger = logging.getLogger(__name__)
 
@@ -25,7 +25,7 @@ def parameter_profile(
         next_guess_method: Union[Callable, str] = 'adaptive_step_regression',
         profile_options: ProfileOptions = None,
         progress_bar: bool = True,
-        filename: str = "Auto"
+        filename: Union[str, None] = "Auto",
 ) -> Result:
     """
     Call to do parameter profiling.
@@ -111,7 +111,9 @@ def parameter_profile(
             continue
 
         current_profile = result.profile_result.get_profiler_result(
-            i_par=i_par, profile_list=profile_list)
+            i_par=i_par,
+            profile_list=profile_list,
+        )
 
         task = ProfilerTask(
             current_profile=current_profile,
@@ -120,7 +122,7 @@ def parameter_profile(
             options=profile_options,
             create_next_guess=create_next_guess,
             global_opt=global_opt,
-            i_par=i_par
+            i_par=i_par,
         )
         tasks.append(task)
 
@@ -134,6 +136,6 @@ def parameter_profile(
 
     autosave(filename=filename,
              result=result,
-             type="profiling")
+             store_type="profile")
 
     return result

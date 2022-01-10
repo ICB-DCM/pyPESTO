@@ -2,8 +2,8 @@
 
 import numpy as np
 
-from .util import rescale
 from .base import CheckedStartpoints
+from .util import rescale
 
 
 def latin_hypercube(

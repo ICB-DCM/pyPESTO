@@ -1,15 +1,19 @@
 """Utility functions for :py:func:`pypesto.optimize.minimize`."""
-import datetime
+
+import logging
+import os
 from pathlib import Path
 from typing import List
+
 import h5py
 
+from ..C import PYPESTO_MAX_N_STARTS
 from ..engine import Engine, SingleCoreEngine
 from ..objective import HistoryOptions
 from ..store.save_to_hdf5 import get_or_create_group
-from ..store import write_result
-from ..result import Result
 from .optimizer import OptimizerResult
+
+logger = logging.getLogger(__name__)
 
 
 def preprocess_hdf5_history(
@@ -108,36 +112,30 @@ def postprocess_hdf5_history(
     history_options.storage_file = storage_file
 
 
-def autosave(
-    filename: str,
-    result: Result,
-    type: str,
-):
-    """
-    Save the result of optimization, profiling or sampling automatically.
+def bound_n_starts_from_env(n_starts: int):
+    """Bound number of optimization starts from environment variable.
+
+    Uses environment variable `PYPESTO_MAX_N_STARTS`.
+    This is used to speed up testing, while in application it should not
+    be used.
 
     Parameters
     ----------
-    filename:
-        Either the filename to save to or "Auto", in which case it will
-        automatically generate a file named
-        `year_month_day_{type}_result.hdf5`.
-    result:
-        The result to be saved.
-    type:
-        Either `optimization`, `sampling` or `profiling`. Depending on the
-        method the function is called in.
+    n_starts: Number of starts desired.
+
+    Returns
+    -------
+    n_starts_new:
+        The original number of starts, or the minimum with the environment
+        variable, if exists.
     """
-    if filename is None:
-        return
+    if PYPESTO_MAX_N_STARTS not in os.environ:
+        return n_starts
+    n_starts_new = min(n_starts, int(os.environ[PYPESTO_MAX_N_STARTS]))
 
-    if filename == "Auto":
-        time = datetime.datetime.now().strftime("%Y_%d_%m_%H_%M_%S")
-        filename = time+f"_{type}_result.hdf5"
-
-    write_result(
-        result=result,
-        overwrite=True,
-        optimize=True,
-        filename=filename,
+    logger.info(
+        f"Bounding number of samples from {n_starts} to {n_starts_new} via "
+        f"environment variable {PYPESTO_MAX_N_STARTS}"
     )
+
+    return n_starts_new

@@ -4,23 +4,34 @@
 #  Arguments 1, 2 specify a part of the models to run.
 #  If nothing is specified, all are run.
 
-# When adding notebooks, make sure the load is balanced.
+# Environment
+
+export PYPESTO_MAX_N_STARTS=20
+export PYPESTO_MAX_N_SAMPLES=1000
 
 base_dir='doc/example'
 
 # Split notebooks up to parallelize execution
+# When adding notebooks, make sure the load is balanced.
 
 # Various topics notebooks
 nbs_1=(
-  'amici_import.ipynb' 'conversion_reaction.ipynb'
-  'fixed_parameters.ipynb' 'petab_import.ipynb'
-  'prior_definition.ipynb' 'rosenbrock.ipynb'
-  'store.ipynb' 'synthetic_data.ipynb'
-  'hdf5_storage.ipynb')
+  'amici_import.ipynb'
+  'conversion_reaction.ipynb'
+  'fixed_parameters.ipynb'
+  'petab_import.ipynb'
+  'prior_definition.ipynb'
+  'rosenbrock.ipynb'
+  'store.ipynb'
+  'synthetic_data.ipynb'
+  'hdf5_storage.ipynb'
+)
 
 # Sampling notebooks
 nbs_2=(
-  'sampler_study.ipynb' 'sampling_diagnostics.ipynb')
+  'sampler_study.ipynb'
+  'sampling_diagnostics.ipynb'
+)
 
 # Model selection notebook
 nbs_3=(
@@ -68,7 +79,6 @@ for nb in `ls $base_dir | grep -E ipynb`; do
   done
   if $missing; then
     echo "Notebook $nb is not covered in tests."
-    exit 1
   fi
 done
 

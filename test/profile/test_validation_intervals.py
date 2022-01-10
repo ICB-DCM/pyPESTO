@@ -2,9 +2,9 @@
 This is for testing profile based validation intervals.
 """
 
-import numpy as np
 import unittest
 
+import numpy as np
 
 import pypesto
 import pypesto.optimize as optimize

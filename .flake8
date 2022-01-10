@@ -12,7 +12,8 @@ per-file-ignores =
     # Ignore errors in module docstring
     pypesto/logging.py:D400,D205,D107
     pypesto/problem.py:D400,D205,D107
-    pypesto/result.py:D400,D205,D107
+    pypesto/util.py:D400,D205,D107
+    pypesto/C.py:D400,D205,D107
     pypesto/version.py:D
     # ignore D100='Missing docstring in public module',
     # D105='Missing docstring in magic method' and D107='Missing docstring in __init__'.

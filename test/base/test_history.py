@@ -1,29 +1,32 @@
 """Test the :class:`pypesto.History`."""
 
+import tempfile
+import unittest
+from typing import Sequence
+
 import numpy as np
 import pytest
-import unittest
-import tempfile
-from typing import Sequence
 import scipy.optimize as so
 
 import pypesto
-from pypesto.objective.util import sres_to_schi2, res_to_chi2
-from pypesto import CsvHistory, HistoryOptions,\
-    MemoryHistory, ObjectiveBase, Hdf5History
-from pypesto.optimize import (
-    read_result_from_file, read_results_from_file, OptimizerResult
+import pypesto.optimize as optimize
+from pypesto import (
+    CsvHistory,
+    Hdf5History,
+    HistoryOptions,
+    MemoryHistory,
+    ObjectiveBase,
 )
-from pypesto.objective.constants import (
-    X, FVAL, GRAD, HESS, RES, SRES, CHI2, SCHI2)
+from pypesto.C import CHI2, FVAL, GRAD, HESS, RES, SCHI2, SRES, X
 from pypesto.engine import MultiProcessEngine
+from pypesto.objective.util import res_to_chi2, sres_to_schi2
 
-from ..util import rosen_for_sensi, load_amici_objective, CRProblem
+from ..util import CRProblem, load_amici_objective, rosen_for_sensi
 
 
 class HistoryTest(unittest.TestCase):
     problem: pypesto.Problem = None
-    optimizer: pypesto.optimize.Optimizer = None
+    optimizer: optimize.Optimizer = None
     obj: ObjectiveBase = None
     history_options: HistoryOptions = None
     ub: np.ndarray = None
@@ -46,7 +49,8 @@ class HistoryTest(unittest.TestCase):
         self.problem = pypesto.Problem(**kwargs)
 
         optimize_options = pypesto.optimize.OptimizeOptions(
-            allow_failed_starts=False
+            allow_failed_starts=False,
+            history_beats_optimizer=True,
         )
 
         self.history_options.trace_save_iter = 1
@@ -80,45 +84,45 @@ class HistoryTest(unittest.TestCase):
                     self.check_load_from_file(start, str(istart))
                     self.check_history_consistency(start)
 
-                # check that we can also aggregrate from multiple files.
-                # load more results than necessary to check whether this
-                # also works in case of incomplete results.
+                # check that we can also aggregate from multiple files.
+                # load more results than what is generated to check whether
+                # this also works in case of incomplete results.
                 if storage_type is not None:
-                    read_results_from_file(
+                    optimize.read_results_from_file(
                         self.problem, self.history_options,
-                        n_starts=n_starts,
+                        n_starts=n_starts + 1,
                     )
                 else:
                     with pytest.raises(ValueError):
-                        read_results_from_file(
+                        optimize.read_results_from_file(
                             self.problem, self.history_options,
                             n_starts=n_starts,
                         )
 
-    def check_load_from_file(self, start: OptimizerResult, id: str):
-        """Verify we can reconstitute OptimizerResult from csv file"""
-
+    def check_load_from_file(self, start: pypesto.OptimizerResult, id: str):
+        """Verify we can reconstitute OptimizerResult from history file"""
+        # TODO other implementations
         if isinstance(start.history, MemoryHistory):
             return
-
-        # TODO other implementations
         assert isinstance(start.history, (CsvHistory, Hdf5History))
 
-        rstart = read_result_from_file(self.problem, self.history_options, id)
+        rstart = optimize.read_result_from_file(
+            self.problem, self.history_options, id
+        )
 
         result_attributes = [
             key for key in start.keys()
             if key not in ['history', 'message', 'exitflag', 'time']
         ]
         for attr in result_attributes:
-            # if we didn't record we cant recover the value
+            # if we didn't record we can't recover the value
             if not self.history_options.get(f'trace_record_{attr}', True):
                 continue
 
             # note that we can expect slight deviations in grad when using
             # a ls optimizer since history computes this from res
-            # with sensitivies activated while the optimizer uses a res
-            # without sensitivities activated. If this fails to often,
+            # with sensitivities activated while the optimizer uses a res
+            # without sensitivities activated. If this fails too often,
             # increase atol
             if start[attr] is None:
                 continue  # reconstituted may carry more information
@@ -137,7 +141,9 @@ class HistoryTest(unittest.TestCase):
             else:
                 assert start[attr] == rstart[attr], attr
 
-    def check_reconstruct_history(self, start: OptimizerResult, id: str):
+    def check_reconstruct_history(
+        self, start: pypesto.OptimizerResult, id: str
+    ):
         """verify we can reconstruct history objects from csv/hdf5 files"""
 
         if isinstance(start.history, MemoryHistory):
@@ -191,26 +197,36 @@ class HistoryTest(unittest.TestCase):
                     decimal=10
                 )
 
-    def check_history_consistency(self, start: OptimizerResult):
-
+    def check_history_consistency(self, start: pypesto.OptimizerResult):
         def xfull(x_trace):
             return self.problem.get_full_vector(
                 x_trace, self.problem.x_fixed_vals
             )
 
         if isinstance(start.history, (CsvHistory, Hdf5History)):
-            it_final = np.nanargmin(start.history.get_fval_trace())
+            # get index of optimal parameter
+            ix_admit = [
+                ix for ix, x in enumerate(start.history.get_x_trace())
+                if np.all(x >= self.problem.lb)
+                and np.all(x <= self.problem.ub)
+            ]
+            it_final = np.nanargmin(start.history.get_fval_trace(ix_admit))
             if isinstance(it_final, np.ndarray):
                 it_final = it_final[0]
+            it_final = ix_admit[it_final]
+
             it_start = int(np.where(np.logical_not(
                 np.isnan(start.history.get_fval_trace())
             ))[0][0])
             assert np.allclose(
-                xfull(start.history.get_x_trace(it_start)), start.x0)
+                xfull(start.history.get_x_trace(it_start)), start.x0), \
+                type(start.history)
             assert np.allclose(
-                xfull(start.history.get_x_trace(it_final)), start.x)
+                xfull(start.history.get_x_trace(it_final)), start.x), \
+                type(start.history)
             assert np.isclose(
-                start.history.get_fval_trace(it_start), start.fval0)
+                start.history.get_fval_trace(it_start), start.fval0), \
+                type(start.history)
 
         funs = {
             FVAL: self.obj.get_fval,
@@ -221,7 +237,7 @@ class HistoryTest(unittest.TestCase):
             CHI2: lambda x: res_to_chi2(self.obj.get_res(x)),
             SCHI2: lambda x: sres_to_schi2(*self.obj(
                 x, (0, 1,),
-                pypesto.objective.constants.MODE_RES
+                pypesto.C.MODE_RES
             ))
         }
         for var, fun in funs.items():
@@ -229,8 +245,9 @@ class HistoryTest(unittest.TestCase):
                 x_full = xfull(start.history.get_x_trace(it))
                 val = getattr(start.history, f'get_{var}_trace')(it)
 
-                if not getattr(self.history_options, f'trace_record_{var}',
-                               True):
+                if not getattr(
+                    self.history_options, f'trace_record_{var}', True
+                ):
                     assert np.isnan(val)
                     continue
                 if np.all(np.isnan(val)):
@@ -249,7 +266,7 @@ class HistoryTest(unittest.TestCase):
                     # note that we can expect slight deviations here since
                     # this res is computed without sensitivities while the
                     # result here may be computed with with sensitivies
-                    # activated. If this fails to often, increase atol/rtol
+                    # activated. If this fails too often, increase atol/rtol
                     assert np.allclose(
                         val, fun(x_full),
                         rtol=1e-3, atol=1e-4
@@ -392,7 +409,7 @@ class FunModeHistoryTest(HistoryTest):
     def setUpClass(cls):
         cls.optimizer = pypesto.optimize.ScipyOptimizer(
             method='trust-exact',
-            options={'maxiter': 100}
+            options={'maxiter': 100},
         )
 
         cls.lb = 0 * np.ones((1, 2))
@@ -403,7 +420,7 @@ class FunModeHistoryTest(HistoryTest):
     def test_trace_grad(self):
         self.obj = rosen_for_sensi(
             max_sensi_order=2,
-            integrated=False
+            integrated=False,
         )['obj']
 
         self.history_options = HistoryOptions(
@@ -417,7 +434,7 @@ class FunModeHistoryTest(HistoryTest):
     def test_trace_grad_integrated(self):
         self.obj = rosen_for_sensi(
             max_sensi_order=2,
-            integrated=True
+            integrated=True,
         )['obj']
 
         self.history_options = HistoryOptions(
@@ -431,7 +448,7 @@ class FunModeHistoryTest(HistoryTest):
     def test_trace_all(self):
         self.obj = rosen_for_sensi(
             max_sensi_order=2,
-            integrated=True
+            integrated=True,
         )['obj']
 
         self.history_options = HistoryOptions(

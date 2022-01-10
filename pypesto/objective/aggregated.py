@@ -1,10 +1,10 @@
-import numpy as np
-
 from copy import deepcopy
 from typing import Sequence, Tuple
-from .base import ObjectiveBase, ResultDict
 
-from .constants import RDATAS, FVAL, CHI2, SCHI2, RES, SRES, GRAD, HESS, HESSP
+import numpy as np
+
+from ..C import CHI2, FVAL, GRAD, HESS, HESSP, RDATAS, RES, SCHI2, SRES
+from .base import ObjectiveBase, ResultDict
 
 
 class AggregatedObjective(ObjectiveBase):

@@ -1,19 +1,22 @@
-import numpy as np
-from typing import Dict, List, Sequence, Union
+from typing import Dict, List, Sequence, Tuple, Union
 
-from .constants import (
-    MODE_FUN, MODE_RES, FVAL, GRAD, HESS, RES, SRES, RDATAS, CHI2
-)
+import numpy as np
+
+from ..C import CHI2, FVAL, GRAD, HESS, MODE_FUN, MODE_RES, RDATAS, RES, SRES
 from .amici_util import (
-    add_sim_grad_to_opt_grad, add_sim_hess_to_opt_hess,
-    sim_sres_to_opt_sres, log_simulation, get_error_output, filter_return_dict,
+    add_sim_grad_to_opt_grad,
+    add_sim_hess_to_opt_hess,
+    filter_return_dict,
+    get_error_output,
     init_return_values,
+    log_simulation,
+    sim_sres_to_opt_sres,
 )
 
 try:
     import amici
-    import amici.petab_objective
     import amici.parameter_mapping
+    import amici.petab_objective
     from amici.parameter_mapping import ParameterMapping
 except ImportError:
     pass
@@ -33,7 +36,7 @@ class AmiciCalculator:
 
     def __call__(self,
                  x_dct: Dict,
-                 sensi_order: int,
+                 sensi_orders: Tuple[int],
                  mode: str,
                  amici_model: AmiciModel,
                  amici_solver: AmiciSolver,
@@ -50,8 +53,8 @@ class AmiciCalculator:
         ----------
         x_dct:
             Parameters for which to compute function value and derivatives.
-        sensi_order:
-            Maximum sensitivity order.
+        sensi_orders:
+            Tuple of requested sensitivity orders.
         mode:
             Call mode (function value or residual based).
         amici_model:
@@ -71,6 +74,11 @@ class AmiciCalculator:
             requested).
         """
         # set order in solver
+        if sensi_orders:
+            sensi_order = max(sensi_orders)
+        else:
+            sensi_order = 0
+
         if sensi_order == 2 and fim_for_hess:
             # we use the FIM
             amici_solver.setSensitivityOrder(sensi_order-1)
@@ -94,7 +102,7 @@ class AmiciCalculator:
             num_threads=min(n_threads, len(edatas)),
         )
         if not self._known_least_squares_safe and mode == MODE_RES and \
-                sensi_order > 0:
+                1 in sensi_orders:
             if not amici_model.getAddSigmaResiduals() and any(
                 ((r['ssigmay'] is not None and np.any(r['ssigmay']))
                  or
@@ -108,14 +116,14 @@ class AmiciCalculator:
             self._known_least_squares_safe = True  # don't check this again
 
         return calculate_function_values(
-            rdatas=rdatas, sensi_order=sensi_order, mode=mode,
+            rdatas=rdatas, sensi_orders=sensi_orders, mode=mode,
             amici_model=amici_model, amici_solver=amici_solver, edatas=edatas,
             x_ids=x_ids, parameter_mapping=parameter_mapping,
             fim_for_hess=fim_for_hess)
 
 
 def calculate_function_values(rdatas,
-                              sensi_order: int,
+                              sensi_orders: Tuple[int, ...],
                               mode: str,
                               amici_model: AmiciModel,
                               amici_solver: AmiciSolver,
@@ -130,9 +138,9 @@ def calculate_function_values(rdatas,
     # check if the simulation failed
     if any(rdata['status'] < 0.0 for rdata in rdatas):
         return get_error_output(amici_model, edatas, rdatas,
-                                sensi_order, mode, dim)
+                                sensi_orders, mode, dim)
 
-    nllh, snllh, s2nllh, chi2, res, sres = init_return_values(sensi_order,
+    nllh, snllh, s2nllh, chi2, res, sres = init_return_values(sensi_orders,
                                                               mode, dim)
 
     par_sim_ids = list(amici_model.getParameterIds())
@@ -151,9 +159,9 @@ def calculate_function_values(rdatas,
         if mode == MODE_FUN:
             if not np.isfinite(nllh):
                 return get_error_output(amici_model, edatas, rdatas,
-                                        sensi_order, mode, dim)
+                                        sensi_orders, mode, dim)
 
-            if sensi_order > 0:
+            if 1 in sensi_orders:
                 # add gradient
                 add_sim_grad_to_opt_grad(
                     x_ids,
@@ -166,33 +174,33 @@ def calculate_function_values(rdatas,
 
                 if not np.isfinite(snllh).all():
                     return get_error_output(amici_model, edatas, rdatas,
-                                            sensi_order, mode, dim)
+                                            sensi_orders, mode, dim)
 
                 # Hessian
-                if sensi_order > 1:
-                    if sensi_method == amici.SensitivityMethod_forward \
-                            and fim_for_hess:
-                        # add FIM for Hessian
-                        add_sim_hess_to_opt_hess(
-                            x_ids,
-                            par_sim_ids,
-                            condition_map_sim_var,
-                            rdata['FIM'],
-                            s2nllh,
-                            coefficient=+1.0
-                        )
-                        if not np.isfinite(s2nllh).all():
-                            return get_error_output(amici_model, edatas,
-                                                    rdatas, sensi_order,
-                                                    mode, dim)
-                    else:
-                        raise ValueError("AMICI cannot compute Hessians yet.")
+            if 2 in sensi_orders:
+                if sensi_method != amici.SensitivityMethod_forward \
+                        or not fim_for_hess:
+                    raise ValueError("AMICI cannot compute Hessians yet.")
+                    # add FIM for Hessian
+                add_sim_hess_to_opt_hess(
+                    x_ids,
+                    par_sim_ids,
+                    condition_map_sim_var,
+                    rdata['FIM'],
+                    s2nllh,
+                    coefficient=+1.0
+                )
+                if not np.isfinite(s2nllh).all():
+                    return get_error_output(amici_model, edatas,
+                                            rdatas, sensi_orders,
+                                            mode, dim)
 
         elif mode == MODE_RES:
-            chi2 += rdata['chi2']
-            res = np.hstack([res, rdata['res']]) \
-                if res.size else rdata['res']
-            if sensi_order > 0:
+            if 0 in sensi_orders:
+                chi2 += rdata['chi2']
+                res = np.hstack([res, rdata['res']]) \
+                    if res.size else rdata['res']
+            if 1 in sensi_orders:
                 opt_sres = sim_sres_to_opt_sres(
                     x_ids,
                     par_sim_ids,
@@ -205,11 +213,12 @@ def calculate_function_values(rdatas,
 
     ret = {
         FVAL: nllh,
+        RDATAS: rdatas,
         CHI2: chi2,
         GRAD: snllh,
         HESS: s2nllh,
         RES: res,
         SRES: sres,
-        RDATAS: rdatas
     }
+
     return filter_return_dict(ret)

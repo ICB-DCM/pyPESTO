@@ -2,28 +2,52 @@
 
 import os
 import tempfile
+
+import numpy as np
+import scipy.optimize as so
+
 import pypesto
 import pypesto.optimize as optimize
 import pypesto.profile as profile
 import pypesto.sample as sample
-
-from pypesto.objective.constants import (X, FVAL, GRAD,
-                                         HESS, RES, SRES,
-                                         CHI2, SCHI2, ID, X0,
-                                         FVAL0, N_RES, N_FVAL,
-                                         N_GRAD, N_HESS, N_SRES)
-import scipy.optimize as so
-
-import numpy as np
-
+from pypesto.C import (
+    CHI2,
+    FVAL,
+    FVAL0,
+    GRAD,
+    HESS,
+    ID,
+    N_FVAL,
+    N_GRAD,
+    N_HESS,
+    N_RES,
+    N_SRES,
+    RES,
+    SCHI2,
+    SRES,
+    X0,
+    X,
+)
+from pypesto.optimize import optimization_result_from_history
 from pypesto.store import (
-    ProblemHDF5Writer, ProblemHDF5Reader, OptimizationResultHDF5Writer,
-    OptimizationResultHDF5Reader, ProfileResultHDF5Writer,
-    ProfileResultHDF5Reader, SamplingResultHDF5Reader,
-    SamplingResultHDF5Writer, read_result, write_result,
-    load_objective_config, optimization_result_from_history)
-from ..visualize import (create_problem, create_optimization_result,
-                         create_petab_problem)
+    OptimizationResultHDF5Reader,
+    OptimizationResultHDF5Writer,
+    ProblemHDF5Reader,
+    ProblemHDF5Writer,
+    ProfileResultHDF5Reader,
+    ProfileResultHDF5Writer,
+    SamplingResultHDF5Reader,
+    SamplingResultHDF5Writer,
+    load_objective_config,
+    read_result,
+    write_result,
+)
+
+from ..visualize import (
+    create_optimization_result,
+    create_petab_problem,
+    create_problem,
+)
 
 
 def test_storage_opt_result():
@@ -436,11 +460,14 @@ def test_result_from_hdf5_history(hdf5_file):
     )
     # optimize with history saved to hdf5
     result = optimize.minimize(
-        problem=problem, n_starts=1,
+        problem=problem,
+        n_starts=1,
         history_options=history_options_hdf5,
     )
 
-    result_from_hdf5 = optimization_result_from_history(hdf5_file)
+    result_from_hdf5 = optimization_result_from_history(
+        filename=hdf5_file, problem=problem
+    )
 
     # Currently 'exitflag', 'time' and 'message' are not loaded.
     arguments = [ID, X, FVAL, GRAD, HESS, RES, SRES,
@@ -449,10 +476,10 @@ def test_result_from_hdf5_history(hdf5_file):
         if result.optimize_result.list[0][key] is None:
             assert result_from_hdf5.optimize_result.list[0][key] is None
         elif isinstance(result.optimize_result.list[0][key], np.ndarray):
-            np.testing.assert_almost_equal(
+            assert np.allclose(
                 result.optimize_result.list[0][key],
                 result_from_hdf5.optimize_result.list[0][key]
-            )
+            ), key
         else:
             assert result.optimize_result.list[0][key] == \
-                   result_from_hdf5.optimize_result.list[0][key]
+                   result_from_hdf5.optimize_result.list[0][key], key

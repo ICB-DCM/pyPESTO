@@ -1,9 +1,9 @@
-import numpy as np
-
-from .base import ObjectiveBase, ResultDict
 from typing import Callable, Sequence, Tuple, Union
 
-from .constants import MODE_FUN, MODE_RES, FVAL, GRAD, HESS, RES, SRES
+import numpy as np
+
+from ..C import FVAL, GRAD, HESS, MODE_FUN, MODE_RES, RES, SRES
+from .base import ObjectiveBase, ResultDict
 
 
 class Objective(ObjectiveBase):
@@ -154,7 +154,10 @@ class Objective(ObjectiveBase):
         x: np.ndarray,
         sensi_orders: Tuple[int, ...],
     ) -> ResultDict:
-        if sensi_orders == (0,):
+        if not sensi_orders:
+            result = {}
+
+        elif sensi_orders == (0,):
             if self.grad is True:
                 fval = self.fun(x)[0]
             else:
@@ -175,12 +178,23 @@ class Objective(ObjectiveBase):
             result = {HESS: hess}
         elif sensi_orders == (0, 1):
             if self.grad is True:
-                fval, grad = self.fun(x)[0:2]
+                fval, grad = self.fun(x)[:2]
             else:
                 fval = self.fun(x)
                 grad = self.grad(x)
             result = {FVAL: fval,
                       GRAD: grad}
+        elif sensi_orders == (0, 2):
+            if self.hess is True:
+                fval, _, hess = self.fun(x)[:3]
+            else:
+                if self.grad is True:
+                    fval = self.fun(x)[0]
+                else:
+                    fval = self.fun(x)
+                hess = self.hess(x)
+            result = {FVAL: fval,
+                      HESS: hess}
         elif sensi_orders == (1, 2):
             if self.hess is True:
                 grad, hess = self.fun(x)[1:3]
@@ -215,7 +229,10 @@ class Objective(ObjectiveBase):
         x: np.ndarray,
         sensi_orders: Tuple[int, ...],
     ) -> ResultDict:
-        if sensi_orders == (0,):
+        if not sensi_orders:
+            result = {}
+
+        elif sensi_orders == (0,):
             if self.sres is True:
                 res = self.res(x)[0]
             else:

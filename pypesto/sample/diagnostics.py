@@ -1,10 +1,11 @@
 """Calculate different diagnostics of the sampling result."""
-import numpy as np
 import logging
 
+import numpy as np
+
 from ..result import Result
-from .geweke_test import burn_in_by_sequential_geweke
 from .auto_correlation import autocorrelation_sokal
+from .geweke_test import burn_in_by_sequential_geweke
 
 logger = logging.getLogger(__name__)
 

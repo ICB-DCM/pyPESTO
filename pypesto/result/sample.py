@@ -1,5 +1,8 @@
-import numpy as np
+"""Sampling result."""
+
 from typing import Iterable
+
+import numpy as np
 
 
 class McmcPtResult(dict):
@@ -33,16 +36,18 @@ class McmcPtResult(dict):
     iterations (i.e., the chain length), and `n_par` the number of parameters.
     """
 
-    def __init__(self,
-                 trace_x: np.ndarray,
-                 trace_neglogpost: np.ndarray,
-                 trace_neglogprior: np.ndarray,
-                 betas: Iterable[float],
-                 burn_in: int = None,
-                 time: float = 0.,
-                 auto_correlation: float = None,
-                 effective_sample_size: float = None,
-                 message: str = None):
+    def __init__(
+        self,
+        trace_x: np.ndarray,
+        trace_neglogpost: np.ndarray,
+        trace_neglogprior: np.ndarray,
+        betas: Iterable[float],
+        burn_in: int = None,
+        time: float = 0.,
+        auto_correlation: float = None,
+        effective_sample_size: float = None,
+        message: str = None,
+    ):
         super().__init__()
 
         self.trace_x = trace_x
@@ -88,3 +93,10 @@ class McmcPtResult(dict):
 
     __setattr__ = dict.__setitem__
     __delattr__ = dict.__delitem__
+
+
+class SampleResult:
+    """Result of the sample() function."""
+
+    def __init__(self):
+        pass

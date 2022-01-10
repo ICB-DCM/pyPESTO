@@ -1,21 +1,24 @@
-import numpy as np
-import copy
-import tempfile
-import os
 import abc
-from typing import Dict, Optional, Sequence, Tuple, Union
+import copy
+import os
+import tempfile
 from collections import OrderedDict
+from typing import Dict, Optional, Sequence, Tuple, Union
 
-from .base import ObjectiveBase
-from .constants import MODE_FUN, MODE_RES, FVAL, RDATAS
+import numpy as np
+
+from ..C import FVAL, MODE_FUN, MODE_RES, RDATAS
 from .amici_calculator import AmiciCalculator
 from .amici_util import (
-    map_par_opt_to_par_sim, create_identity_parameter_mapping)
+    create_identity_parameter_mapping,
+    map_par_opt_to_par_sim,
+)
+from .base import ObjectiveBase
 
 try:
     import amici
-    import amici.petab_objective
     import amici.parameter_mapping
+    import amici.petab_objective
     from amici.parameter_mapping import ParameterMapping
 except ImportError:
     pass
@@ -299,6 +302,8 @@ class AmiciObjective(ObjectiveBase):
         mode: str,
     ) -> bool:
         """See `ObjectiveBase` documentation."""
+        if not sensi_orders:
+            return True
         sensi_order = max(sensi_orders)
 
         # dynamically obtain maximum allowed sensitivity order
@@ -336,8 +341,6 @@ class AmiciObjective(ObjectiveBase):
         result:
             A dict containing the results.
         """
-        sensi_order = max(sensi_orders)
-
         x_dct = self.par_arr_to_dct(x)
 
         # update steady state
@@ -351,7 +354,7 @@ class AmiciObjective(ObjectiveBase):
         if parameter_mapping is None:
             parameter_mapping = self.parameter_mapping
         ret = self.calculator(
-            x_dct=x_dct, sensi_order=sensi_order, mode=mode,
+            x_dct=x_dct, sensi_orders=sensi_orders, mode=mode,
             amici_model=self.amici_model, amici_solver=self.amici_solver,
             edatas=edatas, n_threads=self.n_threads,
             x_ids=self.x_ids, parameter_mapping=parameter_mapping,
