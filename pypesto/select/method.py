@@ -1,86 +1,404 @@
-import abc
+from dataclasses import dataclass
+from enum import Enum
 import logging
-from typing import Dict
+from typing import Callable, Dict, List, Optional, Tuple, Union
+import warnings
 
-import petab
+import numpy as np
+
+import petab_select
 from petab_select import (
-    Model,
+    CandidateSpace,
     Criterion,
+    Method,
+    Model,
+    VIRTUAL_INITIAL_MODEL,
 )
 
-from .problem import ModelSelectionProblem
+from .constants import TYPE_POSTPROCESSOR
+from .model_problem import ModelProblem
 
 
-logger = logging.getLogger(__name__)
+class MethodSignalProceed(str, Enum):
+    """Indicators for how a model selection method should proceed."""
+
+    # FIXME move to PEtab Select?
+    STOP = 'stop'
+    CONTINUE = 'continue'
 
 
-class ModelSelectorMethod(abc.ABC):
-    """Base class for model selection methods.
+@dataclass
+class MethodSignal:
+    """The state of a model selection method after a single model calibration.
 
-    Contains methods that are common to more than one model selection
-    algorithm. This is the parent class of model selection algorithms, and
-    should not be instantiated.
-
-    Required attributes of child classes are `self.criterion` and
-    `self.petab_problem`. `self.minimize_options` should be set, but can be
-    `None`. `self.criterion_threshold` should be set, but can be zero.
-
-    TODO remove `self.petab_problem` once the YAML column rewrite is completed.
+    Attributes:
+        accept:
+            Whether to accept the model.
+        proceed:
+            How the method should proceed.
     """
 
-    # Described in the docstring for the `ModelSelector.select` method.
-    criterion: str
-    # Described in the docstring for the `ModelSelector.select` method.
-    criterion_threshold: float
-    # TODO docstring
-    petab_problem: petab.Problem
-    # TODO docstring
-    selection_history: Dict[str, Dict]
-    # TODO docstring
-    minimize_options: Dict
+    accept: bool
+    # TODO change to bool?
+    proceed: MethodSignalProceed
 
-    # TODO general __init__ that sets e.g. model_postprocessor
 
-    # the calling child class should have self.criterion defined
-    def compare(
+class MethodLogger:
+    """Log results from a model selection method.
+
+    Attributes:
+        level:
+            The logging level.
+        logger:
+            A logger from the `logging` module.
+    """
+
+    def __init__(
         self,
-        old_model: Model,
-        new_model: Model,
+        level: str = 'info'
+    ):
+        self.logger = logging.getLogger(__name__)
+        self.level = level
+
+    def log(self, message, level: str = None):
+        """Log a message.
+
+        Args:
+            message:
+                The message.
+            level:
+                The logging level. Defaults to the value defined in the
+                constructor.
+        """
+        if level is None:
+            level = self.level
+        getattr(self.logger, self.level)(message)
+
+    def new_selection(self):
+        """Start logging a new model selection."""
+        padding = 20
+        self.log('-'*padding + 'New Selection' + '-'*padding)
+        self.log(
+            "Predecessor model ID\tModel ID\tCriterion ID\tPredecessor model "
+            "criterion\tModel criterion\tCriterion difference\tAccept"
+        )
+
+    def new_result(
+        self,
+        accept,
+        criterion,
+        model,
+        predecessor_model,
+        precision: int = 3,
+    ):
+        """Log a model calibration result.
+
+        Args:
+            accept:
+                Whether the model is accepted.
+            criterion:
+                The criterion type.
+            model:
+                The calibrated model.
+            predecessor_model:
+                The predecessor model.
+            precision:
+                The number of decimal places to log.
+        """
+        model_criterion = model.get_criterion(criterion)
+
+        if isinstance(predecessor_model, Model):
+            predecessor_model_hash = predecessor_model.get_hash()
+            predecessor_model_criterion = \
+                predecessor_model.get_criterion(criterion)
+            criterion_difference = \
+                round(model_criterion - predecessor_model_criterion, precision)
+
+            predecessor_model_criterion = \
+                round(predecessor_model_criterion, precision)
+        else:
+            criterion_difference = None
+            predecessor_model_criterion = None
+            predecessor_model_hash = predecessor_model
+
+        model_criterion = round(model_criterion, precision)
+
+        message_parts = [
+            model.model_id,
+            predecessor_model_hash,
+            criterion,
+            model_criterion,
+            predecessor_model_criterion,
+            criterion_difference,
+            accept,
+        ]
+        message = '\t'.join([str(v) for v in message_parts])
+        self.log(message)
+
+
+class MethodCaller:
+    """Base class for model selection methods.
+
+    Attributes:
+        petab_select_problem:
+            The PEtab Select problem.
+        candidate_space:
+            A `petab_select.CandidateSpace`, used to generate candidate models.
+        criterion:
+            The criterion by which models will be compared.
+        criterion_threshold:
+            The minimum improvement in criterion that a test model must have to
+            be selected. The comparison is made according to the method. For
+            example, in `ForwardSelector`, test models are compared to the
+            previously selected model.
+        history:
+            The history of the model selection, as a `dict` with model hashes
+            as keys and models as values.
+        limit:
+            Limit the number of calibrated models. NB: the number of accepted
+            models may (likely) be fewer.
+        logger:
+            A `MethodLogger`, used to log results.
+        minimize_options:
+            A dictionary that will be passed to `pypesto.minimize` as keyword
+            arguments for model optimization.
+        model_postprocessor:
+            A method that is applied to each model after calibration.
+        objective_customizer:
+            A method that is applied to the pyPESTO objective after the
+            objective is initialized, before calibration.
+        predecessor_model:
+            Specify the predecessor (initial) model for the model selection
+            algorithm. If `None`, then the algorithm will generate an
+            predecessor model if required.
+        select_first_improvement:
+            If `True`, model selection will terminate as soon as a better model
+            is found. If `False`, all candidate models will be tested.
+        startpoint_latest_mle:
+            If `True`, one of the startpoints in the multistart optimization
+            will be the MLE of the latest model.
+    """
+
+    def __init__(
+        self,
+        petab_select_problem: petab_select.Problem,
+        history: Dict[str, Model],
+
+        minimize_options: Dict = None,
+        model_postprocessor: TYPE_POSTPROCESSOR = None,
+        objective_customizer: Callable = None,
+        select_first_improvement: bool = False,
+        startpoint_latest_mle: bool = True,
+
+        candidate_space: CandidateSpace = None,
+        criterion: Criterion = None,
+        criterion_threshold: float = 0.0,
+        limit: int = np.inf,
+        # TODO misleading, `Method` here is simply an Enum, not a callable...
+        method: Method = None,
+        predecessor_model: Model = None,
+    ):
+        """Arguments are used in every `__call__`, unless overridden."""
+        self.petab_select_problem = petab_select_problem
+
+        self.history = history
+        self.minimize_options = minimize_options
+        self.model_postprocessor = model_postprocessor
+        self.objective_customizer = objective_customizer
+        self.predecessor_model = predecessor_model
+        self.select_first_improvement = select_first_improvement
+        self.startpoint_latest_mle = startpoint_latest_mle
+
+        # Forbid specification of both a candidate space and a method.
+        if candidate_space is not None and method is not None:
+            self.logger.log('Both `candidate_space` and `method` were provided. Please only provide one. The method will be ignored here.', level='warning')  # noqa: E501
+        # Get method.
+        self.method = (
+            method if method is not None else
+            candidate_space.method if candidate_space is not None else
+            self.petab_select_problem.method
+        )
+        # Require either a candidate space or a method.
+        if candidate_space is None and self.method is None:
+            raise ValueError('Please provide one of either `candidate_space` or `method`, or specify the `method` in the PEtab Select problem.')  # noqa: E501
+        # Use candidate space if provided.
+        if candidate_space is not None:
+            self.candidate_space = candidate_space
+            if predecessor_model is not None:
+                candidate_space.set_predecessor_model(predecessor_model)
+        # Else generate one based on the PEtab Select problem.
+        else:
+            self.candidate_space = \
+                self.petab_select_problem.new_candidate_space(
+                    method=self.method,
+                    predecessor_model=self.predecessor_model,
+                )
+        # May have changed from `None` to `petab_select.VIRTUAL_INITIAL_MODEL`
+        self.predecessor_model = self.candidate_space.get_predecessor_model()
+
+        self.criterion = criterion
+        if self.criterion is None:
+            self.criterion = self.petab_select_problem.criterion
+        self.limit = limit
+
+        self.criterion_threshold = criterion_threshold
+
+        self.logger = MethodLogger()
+
+    def __call__(
+        self,
+        predecessor_model: Optional[Union[Model, None]] = None,
+    ) -> Tuple[List[Model], Dict[str, Model]]:
+        """Run a single iteration of the model selection method.
+
+        A single iteration here refers to calibration of all candidate models.
+        For example, given a predecessor model with 3 estimated parameters,
+        with the forward method, a single iteration would involve calibration
+        of all models that have both: the same 3 estimated parameters; and 1
+        additional estimated paramenter.
+
+        Args:
+            predecessor_model:
+                The model that will be used for comparison. Example 1: the
+                initial model of a forward method. Example 2: all models found
+                with a brute force method should be better than this model.
+
+        Returns:
+            A 2-tuple, with the following values:
+            #. 1. the best model; and
+            #. 2. all candidate models in this iteration, as a `dict` with
+                  model hashes as keys and models as values.
+        """
+        better_models = []
+        local_history = {}
+        self.logger.new_selection()
+
+        if predecessor_model is None:
+            # May still be `None` (e.g. brute force method)
+            predecessor_model = self.predecessor_model
+
+        candidate_models = petab_select.ui.candidates(
+            problem=self.petab_select_problem,
+            candidate_space=self.candidate_space,
+            limit=self.limit,
+            excluded_model_hashes=list(self.history),
+            predecessor_model=predecessor_model,
+        ).models
+
+        if not candidate_models:
+            raise StopIteration("No valid models found.")
+
+        # TODO parallelize calibration (maybe not sensible if
+        #      `self.select_first_improvement`)
+        for candidate_model in candidate_models:
+            # autoruns calibration
+            self.new_model_problem(model=candidate_model)
+
+            local_history[candidate_model.model_id] = candidate_model
+
+            method_signal = self.handle_calibrated_model(
+                model=candidate_model,
+                predecessor_model=predecessor_model,
+            )
+            if method_signal.accept:
+                better_models.append(candidate_model)
+            if method_signal.proceed == MethodSignalProceed.STOP:
+                break
+        self.history.update(local_history)
+        best_model = None
+        if better_models:
+            best_model = petab_select.ui.best(
+                problem=self.petab_select_problem,
+                models=better_models,
+                criterion=self.criterion,
+            )
+
+        return best_model, local_history
+
+    def handle_calibrated_model(
+        self,
+        model: Model,
+        predecessor_model: Optional[Model],
+    ) -> MethodSignal:
+        """Handle the model selection method, given a new calibrated model.
+
+        Args:
+            model:
+                The calibrated model.
+            predecessor_model:
+                The predecessor model.
+
+        Returns:
+            A `MethodSignal` that describes the result.
+        """
+        # Use the predecessor model from `__init__` if an iteration-specific
+        # predecessor model was not supplied to `__call__`.
+        if predecessor_model is None:
+            # May still be `None` after this assignment.
+            predecessor_model = self.predecessor_model
+
+        # Default to accepting the model and continuing the method.
+        method_signal = MethodSignal(
+            accept=True,
+            proceed=MethodSignalProceed.CONTINUE,
+        )
+
+        # Reject the model if it doesn't improve on the predecessor model.
+        if (
+            predecessor_model is not None and
+            predecessor_model != VIRTUAL_INITIAL_MODEL and
+            not self.model1_gt_model0(model1=model, model0=predecessor_model)
+        ):
+            method_signal.accept = False
+
+        # Stop the model selection method if it a first improvement is found.
+        if self.select_first_improvement and method_signal.accept:
+            method_signal.proceed = MethodSignalProceed.STOP
+
+        # TODO allow users to supply an arbitrary constraint function to e.g.:
+        #      - quit after 10 accepted models
+        #      - reject models that are worse than the current 10 best models
+
+        # Log result
+        self.logger.new_result(
+            accept=method_signal.accept,
+            criterion=self.criterion,
+            model=model,
+            predecessor_model=predecessor_model,
+        )
+
+        return method_signal
+
+    def model1_gt_model0(
+        self,
+        model1: Model,
+        model0: Model,
     ) -> bool:
         """Compare models by criterion.
 
-        Arguments
-        ---------
-        old_model:
-            A calibrated model
-        new_model:
-            A calibrated model.
+        Args:
+            model1:
+                The new model.
+            model0:
+                The original model.
 
-        Returns
-        -------
-        `True`, if `new_model` is superior to `old_model` by the criterion,
-        else `False`.
+        Returns:
+            `True`, if `model1` is superior to `model0` by the criterion,
+            else `False`.
         """
-        # TODO switch to `petab_select.model.default_compare`
-        # TODO implement criterion as @property of ModelSelectorMethod
-        # should then allow for easy extensibility to compare custom criteria
         if self.criterion in [
             Criterion.AIC,
             Criterion.AICC,
             Criterion.BIC,
+            Criterion.LH,
+            Criterion.LLH,
+            Criterion.NLLH,
         ]:
-            new_criterion = new_model.get_criterion(self.criterion)
-            old_criterion = old_model.get_criterion(self.criterion)
-            result = new_criterion + self.criterion_threshold < old_criterion
-            logger.info(
-                "%s\t%s\t%s\t%.3f\t%.3f\t%.3f\t%s",
-                old_model.model_id,
-                new_model.model_id,
-                self.criterion,
-                old_criterion,
-                new_criterion,
-                new_criterion - old_criterion,
-                "Accepted" if result else "Rejected",
+            result = petab_select.model.default_compare(
+                model0=model0,
+                model1=model1,
+                criterion=self.criterion,
+                criterion_threshold=self.criterion_threshold,
             )
         else:
             raise NotImplementedError(
@@ -88,64 +406,67 @@ class ModelSelectorMethod(abc.ABC):
             )
         return result
 
+    def compare(
+        self,
+        model0: Model,
+        model1: Model,
+    ) -> bool:
+        """Compare models by criterion.
+
+        Arguments
+        ---------
+        model0:
+            The original model.
+        model1:
+            The new model.
+
+        Returns
+        -------
+        `True`, if `model1` is superior to `model0` by the criterion,
+        else `False`.
+        """
+        warnings.warn(
+            'Deprecated in favor of `model1_gt_model0`.',
+            DeprecationWarning,
+        )
+        return self.model1_gt_model0(model1=model1, model0=model0)
+
     def new_model_problem(
         self,
         model: Model,
-        criterion: Criterion,
         valid: bool = True,
         autorun: bool = True,
-        startpoint_latest_mle: bool = True,
-    ) -> ModelSelectionProblem:
-        """Create a ModelSelectionProblem.
+    ) -> ModelProblem:
+        """Create a model problem, usually to calibrate a model.
 
-        Arguments
-        _________
-        model:
-            The model description.
-        criterion_id:
-            The ID of the criterion that should be computed after the model is
-            calibrated.
-        valid:
-            Whether the model should be considered a valid model. If it is not
-            valid, it will not be optimized.
-        autorun:
-            Whether the model should be optimized upon creation.
-        #model0:
-        #    THe model that the new model `model` was compared to. Used to pass
-        #    the maximum likelihood estimate parameters from model
-        #    `compared_model_id` to the current model.
-        startpoint_latest_mle:
-            Whether one start should be initialized at the MLE of the previous
-            model `model0`.
+        Args:
+            model:
+                The model.
+            valid:
+                Whether the model should be considered a valid model. If it is
+                not valid, it will not be calibrated.
+            autorun:
+                Whether the model should be calibrated upon creation.
+
+        Returns:
+            The model selection problem.
         """
-        # if compared_model_id in self.selection_history:  FIXME
-        #     TODO reconsider, might be a bad idea. also removing parameters
-        #     for x_guess that are not estimated in the new model (as is done)
-        #     in `row2problem` might also be a bad idea. Both if these would
-        #     result in x_guess not actually being the latest MLE.
-        #     if compared_model_dict is None:
-        #         raise KeyError('For `startpoint_latest_mle`, the information'
-        #                        ' of the model that corresponds to the MLE '
-        #                        'must be provided. This is to ensure only '
-        #                        'estimated parameter values are used in the '
-        #                        'startpoint, and all other values are taken '
-        #                        'from the PEtab parameter table or the model '
-        #                        'specification file.')
         x_guess = None
         if (
-            startpoint_latest_mle
-            and model.predecessor_model_id in self.selection_history
+            self.startpoint_latest_mle
+            and model.predecessor_model_hash in self.history
         ):
-            predecessor_model = \
-                self.selection_history[model.predecessor_model_id]["model"]
+            predecessor_model = self.history[model.predecessor_model_hash]
+            if str(model.petab_yaml) != str(predecessor_model.petab_yaml):
+                raise NotImplementedError('The PEtab YAML files differ between the model and its predecessor model. This may imply different (fixed union estimated) parameter sets. Support for this is not yet implemented.')  # noqa: E501
             x_guess = {
                 **predecessor_model.parameters,
                 **predecessor_model.estimated_parameters,
             }
 
-        return ModelSelectionProblem(
+        return ModelProblem(
             model=model,
-            criterion=criterion,
+            criterion=self.criterion,
             valid=valid,
             autorun=autorun,
             x_guess=x_guess,
@@ -153,44 +474,3 @@ class ModelSelectorMethod(abc.ABC):
             objective_customizer=self.objective_customizer,
             postprocessor=self.model_postprocessor,
         )
-
-    # possibly erroneous now that `ModelSelector.model_generator()` can exclude
-    # models, which would change the index of yielded models.
-    # def model_by_index(self, index: int) -> Dict[str, Union[str, float]]:
-    #     # alternative:
-    #     #
-    #     return next(itertools.islice(self.model_generator(), index, None))
-    #     #return next(self.model_generator(index=index))
-
-    # def set_exclusions(self, exclusions: List[str])
-
-    # def excluded_models(self,
-    #                     exclude_history: bool = True,
-    # )
-
-    # def setup_model_generator(self,
-    #                           base_model_generator: Generator[
-    #                               Dict[str, Union[str, float]],
-    #                               None,
-    #                               None
-    #                           ],
-    # ) -> None:
-    #     self.base_model_generator = base_model_generator
-
-    # def model_generator(self,
-    #                     exclude_history: bool = True,
-    #                     exclusions: List[str] = None
-    # ) -> Generator[Dict[str, Union[str, float]], None, None]:
-    #     for model in self.base_model_generator():
-    #         model_dict = dict(zip(self.header, line2row(line)))
-    #         # Exclusion of history makes sense here, to avoid duplicated code
-    #         # in specific selectors. However, the selection history of this
-    #         # class is only updated when a `selector.__call__` returns, so
-    #         # the exclusion of a model tested twice within the same selector
-    #         # call is not excluded here. Could be implemented by decorating
-    #         # `model_generator` in `ModelSelectorMethod` to include the
-    #         # call selection history as `exclusions` (TODO).
-    #         if model_dict[MODEL_ID] in exclusions or (
-    #                 exclude_history and
-    #                 model_dict[MODEL_ID] in self.selection_history):
-    #             continue

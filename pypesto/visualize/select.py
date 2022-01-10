@@ -3,28 +3,29 @@ import matplotlib.pyplot as plt
 import networkx as nx
 from typing import Dict, List, Tuple
 
-from petab_select.constants import (
-    Criterion,
-    VIRTUAL_INITIAL_MODEL,
-)
-from petab_select import (
-    Model,
-    MODEL_ID,
-)
+from petab_select.constants import Criterion
+from petab_select import Model
+
+from .. import select as pypesto_select
 
 
 # TODO move methods to petab_select
 RELATIVE_LABEL_FONTSIZE = -2
 
 
+def default_label_maker(model: Model) -> str:
+    """Create a model label, for plotting."""
+    return model.model_hash[:4]
+
+
 # FIXME supply the problem to automatically detect the correct criterion?
 def plot_selected_models(
-    selected_models: List[Dict],
+    selected_models: List[Model],
     criterion: str = Criterion.AIC,
     relative: str = True,
     fz: int = 14,
     size: Tuple[float, float] = (5, 4),
-    label_attribute: str = MODEL_ID,
+    labels: Dict[str, str] = None,
 ) -> matplotlib.axes.Axes:
     """Plot criterion for calibrated models.
 
@@ -42,52 +43,50 @@ def plot_selected_models(
         fontsize
     size:
         Figure size in inches.
-    label_attribute:
-        The attribute of a `petab_select.model.Model` instance, to use as the
-        label for the model's representation in the graph.
+    labels:
+        A dictionary of model labels, where keys are model hashes, and
+        values are model labels, for plotting. If a model label is not
+        provided, it will be generated from its model ID.
 
     Returns
     -------
     ax:
         The plot axes.
     """
+    zero = 0
     if relative:
         zero = selected_models[-1].get_criterion(criterion)
-    else:
-        zero = 0
 
-    def label_maker(
-        model: Model,
-        zero=zero,
-        label_attribute=label_attribute,
-    ) -> str:
-        model_label = getattr(model, label_attribute)
-        return model_label
+    if labels is None:
+        labels = {}
 
     # FIGURE
     _, ax = plt.subplots(figsize=size)
     linewidth = 3
 
-    model_labels = [label_maker(model) for model in selected_models]
-    criterion_values = [
+    criterion_values = {
+        labels.get(model.get_hash(), default_label_maker(model)):
         model.get_criterion(criterion) - zero
         for model in selected_models
-    ]
+    }
 
     ax.plot(
-        model_labels,
-        criterion_values,
+        criterion_values.keys(),
+        criterion_values.values(),
         linewidth=linewidth,
         color='lightgrey',
         # edgecolor='k'
     )
 
     ax.get_xticks()
-    ax.set_xticks(list(range(len(model_labels))))
+    ax.set_xticks(list(range(len(criterion_values))))
     ax.set_ylabel(criterion + ('(relative)' if relative else '(absolute)'),
                   fontsize=fz)
     # could change to compared_model_ids, if all models are plotted
-    ax.set_xticklabels(model_labels, fontsize=fz+RELATIVE_LABEL_FONTSIZE)
+    ax.set_xticklabels(
+        criterion_values.keys(),
+        fontsize=fz+RELATIVE_LABEL_FONTSIZE,
+    )
     for tick in ax.yaxis.get_major_ticks():
         tick.label.set_fontsize(fz+RELATIVE_LABEL_FONTSIZE)
     ytl = ax.get_yticks()
@@ -99,65 +98,63 @@ def plot_selected_models(
 
 
 def plot_history_digraph(
-    selection_history: Dict,
-    criterion: Criterion = Criterion.AIC,
+    problem: pypesto_select.Problem,
+    history: Dict[str, Model] = None,
+    criterion: Criterion = None,
     optimal_distance: float = 1,
     relative: bool = True,
     options: Dict = None,
-    label_attribute: str = MODEL_ID,
+    labels: Dict[str, str] = None,
 ):
     """Plot all visited models in the model space, as a directed graph.
 
     TODO replace magic numbers with options/constants
 
-    Arguments
-    ---------
-    selection_history:
-        The output from a `ModelSelector.select()` call.
-    options:
-        The values to be used for the optional keyword arguments in the
-        `networkx.draw_networkx()` method.
-    label_attribute:
-        The attribute of a `petab_select.model.Model` instance, to use as the
-        label for the model's representation in the graph.
+    Args:
+        problem:
+            The pyPESTO Select problem.
+        history:
+            The models calibrated during model selection, in the format of
+            `pypesto.select.Problem.history`.
+        criterion:
+            The criterion.
+        optimal_distance:
+            See docs for argument `k` in `networkx.spring_layout`.
+        relative:
+            If `True`, criterion values are offset by the minimum criterion
+            value.
+        options:
+            Additional keyword arguments for `networkx.draw_networkx`.
+        labels:
+            A dictionary of model labels, where keys are model hashes, and
+            values are model labels, for plotting. If a model label is not
+            provided, it will be generated from its model ID.
     """
-    zero = 0
-    if relative:
-        criterions = [
-            v['model'].get_criterion(criterion)
-            for k, v in selection_history.items()
-        ]
-        zero = min(criterions)
-
-    def label_maker(
-        model: Model,
-        zero=zero,
-        label_attribute=label_attribute,
-    ) -> str:
-        model_label = getattr(model, label_attribute)
-        criterion_label = \
-            f'{model.get_criterion(criterion) - zero:.2f}'
-        return '\n'.join([model_label, criterion_label])
+    if criterion is None:
+        criterion = problem.petab_select_problem.criterion
+    if history is None:
+        history = problem.history
+    if labels is None:
+        labels = {}
 
     G = nx.DiGraph()
     edges = []
-    for _node, node_data in selection_history.items():
-        model = node_data['model']
-        predecessor_model_id = model.predecessor_model_id
-        if predecessor_model_id is not None:
-            from_ = predecessor_model_id
+    for model in history.values():
+        predecessor_model_hash = model.predecessor_model_hash
+        if predecessor_model_hash is not None:
+            from_ = labels.get(predecessor_model_hash, predecessor_model_hash)
             # may only not be the case for
             # COMPARED_MODEL_ID == INITIAL_VIRTUAL_MODEL
-            if predecessor_model_id in selection_history:
-                predecessor_model = \
-                    selection_history[predecessor_model_id]['model']
-                from_ = label_maker(predecessor_model)
+            if predecessor_model_hash in history:
+                predecessor_model = history[predecessor_model_hash]
+                from_ = labels.get(
+                    predecessor_model.get_hash(),
+                    default_label_maker(predecessor_model),
+                )
         else:
-            raise ValueError(
-                'unknown error: not sure why this is reachable anymore'
-            )
-            from_ = VIRTUAL_INITIAL_MODEL
-        to = label_maker(model)
+            raise NotImplementedError('Plots for models with `None` as their predecessor model are not yet implemented.')  # noqa: E501
+            from_ = 'None'
+        to = labels.get(model.get_hash(), default_label_maker(model))
         edges.append((from_, to))
 
     # edges = [(node_data['compared_modelId'], node)
