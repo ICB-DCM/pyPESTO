@@ -114,7 +114,7 @@ class EnsembleType(Enum):
 ###############################################################################
 # SELECT
 
-TYPE_POSTPROCESSOR = Callable[["ModelProblem"], None]
+TYPE_POSTPROCESSOR = Callable[["ModelProblem"], None]  # noqa: F821
 
 
 ###############################################################################
