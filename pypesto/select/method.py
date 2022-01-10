@@ -130,6 +130,7 @@ class MethodLogger:
 
             Returns
             -------
+            str
                 The ID.
             """
             model_subspace_id = model.model_subspace_id or ''
@@ -305,6 +306,7 @@ class MethodCaller:
 
         Returns
         -------
+        tuple
             A 2-tuple, with the following values:
 
                1. the best model; and
@@ -376,6 +378,7 @@ class MethodCaller:
 
         Returns
         -------
+        MethodSignal
             A `MethodSignal` that describes the result.
         """
         # Use the predecessor model from `__init__` if an iteration-specific
@@ -432,6 +435,7 @@ class MethodCaller:
 
         Returns
         -------
+        bool
             `True`, if `model1` is superior to `model0` by the criterion,
             else `False`.
         """
@@ -475,6 +479,7 @@ class MethodCaller:
 
         Returns
         -------
+        ModelProblem
             The model selection problem.
         """
         x_guess = None

@@ -38,7 +38,8 @@ def model_to_pypesto_problem(
 
     Returns
     -------
-        The pyPESTO problem.
+    Problem
+        The pyPESTO select problem.
     """
     # Any parameter values in `x_guess` for parameters that are not estimated
     # should be corrected by replacing them with

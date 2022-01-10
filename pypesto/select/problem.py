@@ -1,5 +1,5 @@
 """Manage all components of a pyPESTO model selection problem."""
-from typing import Iterable, List, Optional
+from typing import Dict, Iterable, List, Optional, Tuple
 
 import petab_select
 from petab_select import Model
@@ -53,6 +53,7 @@ class Problem:
 
         Returns
         -------
+        MethodCaller
             A `MethodCaller` instance.
         """
         return MethodCaller(
@@ -67,7 +68,7 @@ class Problem:
         self,
         *args,
         **kwargs,
-    ):
+    ) -> Tuple[Model, Dict[str, Model], Dict[str, Model]]:
         """Run a single iteration of a model selection algorithm.
 
         The result is the selected model for the current run, independent of
@@ -77,6 +78,7 @@ class Problem:
 
         Returns
         -------
+        tuple
             A 3-tuple, with the following values:
 
                1. the best model;
@@ -115,6 +117,7 @@ class Problem:
 
         Returns
         -------
+        list
             The best models (the best model at each iteration).
         """
         best_models = []
@@ -144,7 +147,7 @@ class Problem:
         *args,
         predecessor_models: Iterable[Model] = None,
         **kwargs,
-    ):
+    ) -> Tuple[Model, List[Model]]:
         """Run an algorithm multiple times, with different predecessor models.
 
         Note that the same method caller is currently shared between all calls.
@@ -164,6 +167,7 @@ class Problem:
 
         Returns
         -------
+        tuple
             A 2-tuple, with the following values:
 
                1. the best model; and
