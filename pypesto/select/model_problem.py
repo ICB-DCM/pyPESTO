@@ -1,3 +1,4 @@
+"""Calibrate a PEtab Select model with pyPESTO."""
 from typing import Callable, Dict, List, Optional
 
 from petab_select import Criterion, Model

@@ -1,3 +1,4 @@
+"""Process a model after calibration."""
 from pathlib import Path
 from typing import List
 

@@ -1,3 +1,4 @@
+"""Manage all components of a pyPESTO model selection problem."""
 from typing import Iterable, List, Optional
 
 import petab_select
@@ -87,7 +88,7 @@ class Problem:
         # - startpoint_latest_mle
         # - select_first_improvement
 
-        # FIXME handle bidirectional
+        # TODO handle bidirectional
         method_caller = self.create_method_caller(*args, **kwargs)
         best_model, local_history = method_caller()
         self.history.update(method_caller.history)
@@ -120,6 +121,8 @@ class Problem:
 
         intermediate_kwargs = {}
         while True:
+            # TODO currently uses the best model so far, not the best model
+            #      from the previous iteration. Make this a possibility?
             if best_models:
                 # TODO string literal
                 intermediate_kwargs["predecessor_model"] = best_models[-1]

@@ -1,3 +1,4 @@
+"""Functionality related to using a PEtab Select model selection method."""
 import logging
 from dataclasses import dataclass
 from enum import Enum
@@ -20,7 +21,7 @@ from .model_problem import ModelProblem
 class MethodSignalProceed(str, Enum):
     """Indicators for how a model selection method should proceed."""
 
-    # FIXME move to PEtab Select?
+    # TODO move to PEtab Select?
     STOP = 'stop'
     CONTINUE = 'continue'
 
@@ -73,16 +74,22 @@ class MethodLogger:
         """
         if level is None:
             level = self.level
-        getattr(self.logger, self.level)(message)
+        getattr(self.logger, level)(message)
 
     def new_selection(self) -> None:
         """Start logging a new model selection."""
         padding = 20
         self.log('-'*padding + 'New Selection' + '-'*padding)
-        self.log(
-            "Predecessor model ID\tModel ID\tCriterion ID\tPredecessor model "
-            "criterion\tModel criterion\tCriterion difference\tAccept"
-        )
+        columns = [
+            "Predecessor model subspace:ID",
+            "Model subspace:ID",
+            "Criterion ID",
+            "Predecessor model criterion",
+            "Model criterion",
+            "Criterion difference",
+            "Accept",
+        ]
+        self.log("\t".join([f'[{c}]' for c in columns]))
 
     def new_result(
         self,
@@ -90,6 +97,7 @@ class MethodLogger:
         criterion,
         model,
         predecessor_model,
+        max_id_length: str = 12,
         precision: int = 3,
     ) -> None:
         """Log a model calibration result.
@@ -100,6 +108,9 @@ class MethodLogger:
             Whether the model is accepted.
         criterion:
             The criterion type.
+        max_id_length:
+            Model and predecessor model IDs are truncated to this length in the
+            logged message.
         model:
             The calibrated model.
         predecessor_model:
@@ -109,8 +120,25 @@ class MethodLogger:
         """
         model_criterion = model.get_criterion(criterion)
 
+        def get_model_id(model: Model) -> str:
+            """Get a model ID for logging.
+
+            Parameters
+            ----------
+            model:
+                The model.
+
+            Returns
+            -------
+            The ID.
+            """
+            model_subspace_id = model.model_subspace_id or ''
+            original_model_id = model.model_id or model.get_hash()
+            model_id = model_subspace_id + ':' + original_model_id
+            return model_id
+
         if isinstance(predecessor_model, Model):
-            predecessor_model_hash = predecessor_model.get_hash()
+            predecessor_model_id = get_model_id(predecessor_model)
             predecessor_model_criterion = \
                 predecessor_model.get_criterion(criterion)
             criterion_difference = \
@@ -121,16 +149,16 @@ class MethodLogger:
         else:
             criterion_difference = None
             predecessor_model_criterion = None
-            predecessor_model_hash = predecessor_model
+            predecessor_model_id = predecessor_model
 
         model_criterion = round(model_criterion, precision)
 
         message_parts = [
-            model.model_id,
-            predecessor_model_hash,
+            predecessor_model_id[:max_id_length],
+            get_model_id(model)[:max_id_length],
             criterion,
-            model_criterion,
             predecessor_model_criterion,
+            model_criterion,
             criterion_difference,
             accept,
         ]
@@ -186,25 +214,27 @@ class MethodCaller:
         self,
         petab_select_problem: petab_select.Problem,
         history: Dict[str, Model],
-
+        # Arguments/attributes that can simply take the default value here.
+        criterion_threshold: float = 0.0,
+        limit: int = np.inf,
         minimize_options: Dict = None,
         model_postprocessor: TYPE_POSTPROCESSOR = None,
         objective_customizer: Callable = None,
         select_first_improvement: bool = False,
         startpoint_latest_mle: bool = True,
-
+        # Arguments/attributes that should be handled more carefully.
         candidate_space: CandidateSpace = None,
         criterion: Criterion = None,
-        criterion_threshold: float = 0.0,
-        limit: int = np.inf,
         # TODO misleading, `Method` here is simply an Enum, not a callable...
         method: Method = None,
         predecessor_model: Model = None,
     ):
         """Arguments are used in every `__call__`, unless overridden."""
         self.petab_select_problem = petab_select_problem
-
         self.history = history
+
+        self.criterion_threshold = criterion_threshold
+        self.limit = limit
         self.minimize_options = minimize_options
         self.model_postprocessor = model_postprocessor
         self.objective_customizer = objective_customizer
@@ -212,9 +242,19 @@ class MethodCaller:
         self.select_first_improvement = select_first_improvement
         self.startpoint_latest_mle = startpoint_latest_mle
 
+        self.criterion = criterion
+        if self.criterion is None:
+            self.criterion = self.petab_select_problem.criterion
+
         # Forbid specification of both a candidate space and a method.
         if candidate_space is not None and method is not None:
-            self.logger.log('Both `candidate_space` and `method` were provided. Please only provide one. The method will be ignored here.', level='warning')  # noqa: E501
+            self.logger.log(
+                (
+                    'Both `candidate_space` and `method` were provided. '
+                    'Please only provide one. The method will be ignored here.'
+                ),
+                level='warning',
+            )
         # Get method.
         self.method = (
             method if method is not None else
@@ -223,7 +263,10 @@ class MethodCaller:
         )
         # Require either a candidate space or a method.
         if candidate_space is None and self.method is None:
-            raise ValueError('Please provide one of either `candidate_space` or `method`, or specify the `method` in the PEtab Select problem.')  # noqa: E501
+            raise ValueError(
+                'Please provide one of either `candidate_space` or `method`, '
+                'or specify the `method` in the PEtab Select problem.'
+            )
         # Use candidate space if provided.
         if candidate_space is not None:
             self.candidate_space = candidate_space
@@ -238,13 +281,6 @@ class MethodCaller:
                 )
         # May have changed from `None` to `petab_select.VIRTUAL_INITIAL_MODEL`
         self.predecessor_model = self.candidate_space.get_predecessor_model()
-
-        self.criterion = criterion
-        if self.criterion is None:
-            self.criterion = self.petab_select_problem.criterion
-        self.limit = limit
-
-        self.criterion_threshold = criterion_threshold
 
         self.logger = MethodLogger()
 
@@ -274,7 +310,10 @@ class MethodCaller:
         #. 2. all candidate models in this iteration, as a `dict` with
               model hashes as keys and models as values.
         """
+        # Calibrated models in this iteration that improve on the predecessor
+        # model.
         better_models = []
+        # All calibrated models in this iteration (see second return value).
         local_history = {}
         self.logger.new_selection()
 
@@ -444,7 +483,12 @@ class MethodCaller:
         ):
             predecessor_model = self.history[model.predecessor_model_hash]
             if str(model.petab_yaml) != str(predecessor_model.petab_yaml):
-                raise NotImplementedError('The PEtab YAML files differ between the model and its predecessor model. This may imply different (fixed union estimated) parameter sets. Support for this is not yet implemented.')  # noqa: E501
+                raise NotImplementedError(
+                    'The PEtab YAML files differ between the model and its '
+                    'predecessor model. This may imply different (fixed union '
+                    'estimated) parameter sets. Support for this is not yet '
+                    'implemented.'
+                )
             x_guess = {
                 **predecessor_model.parameters,
                 **predecessor_model.estimated_parameters,

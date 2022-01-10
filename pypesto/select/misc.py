@@ -1,3 +1,4 @@
+"""Miscellaneous methods."""
 import logging
 from typing import Dict, Iterable
 

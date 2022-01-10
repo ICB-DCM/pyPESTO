@@ -1,3 +1,4 @@
+"""Visualization routines for model selection with pyPESTO."""
 from typing import Dict, List, Tuple
 
 import matplotlib
@@ -151,21 +152,20 @@ def plot_history_digraph(
                     default_label_maker(predecessor_model),
                 )
         else:
-            raise NotImplementedError('Plots for models with `None` as their predecessor model are not yet implemented.')  # noqa: E501
+            raise NotImplementedError(
+                'Plots for models with `None` as their predecessor model are '
+                'not yet implemented.'
+            )
             from_ = 'None'
         to = labels.get(model.get_hash(), default_label_maker(model))
         edges.append((from_, to))
 
-    # edges = [(node_data['compared_modelId'], node)
-    #          for node, node_data in selection_history.items()]
     G.add_edges_from(edges)
     default_options = {
         'node_color': 'lightgrey',
         'arrowstyle': '-|>',
         'node_shape': 's',
         'node_size': 2500,
-        # 'width': 2,
-        # 'arrowsize': 10,
     }
     if options is not None:
         default_options.update(options)
@@ -173,10 +173,5 @@ def plot_history_digraph(
 
     pos = nx.spring_layout(G, k=optimal_distance, iterations=20)
     nx.draw_networkx(G, pos, **default_options)
-    # if optimal_distance is not None:
-    #     pos = nx.spring_layout(G, k=optimal_distance, iterations=20)
-    #     nx.draw_networkx(G, pos, **default_options)
-    # else:
-    #     nx.draw_networkx(G, **default_options)
 
     plt.show()
