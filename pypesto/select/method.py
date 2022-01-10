@@ -306,8 +306,9 @@ class MethodCaller:
         Returns
         -------
         A 2-tuple, with the following values:
-           #. 1. the best model; and
-           #. 2. all candidate models in this iteration, as a `dict` with
+
+           1. the best model; and
+           2. all candidate models in this iteration, as a `dict` with
                  model hashes as keys and models as values.
         """
         # Calibrated models in this iteration that improve on the predecessor
