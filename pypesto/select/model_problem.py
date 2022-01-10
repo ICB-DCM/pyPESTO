@@ -1,17 +1,12 @@
 from typing import Callable, Dict, List, Optional, Set
 
-from petab_select import (
-    Model,
-    Criterion,
-)
+from petab_select import Criterion, Model
 
 from ..objective import ObjectiveBase
-from ..optimize import minimize, OptimizerResult
+from ..optimize import OptimizerResult, minimize
 from ..result import Result
-
 from .constants import TYPE_POSTPROCESSOR
 from .misc import model_to_pypesto_problem
-
 
 OBJECTIVE_CUSTOMIZER_TYPE = Callable[[ObjectiveBase], None]
 POSTPROCESSOR_TYPE = Callable[["ModelProblem"], None]

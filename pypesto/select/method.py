@@ -1,18 +1,17 @@
+import logging
+import warnings
 from dataclasses import dataclass
 from enum import Enum
-import logging
 from typing import Callable, Dict, List, Optional, Tuple, Union
-import warnings
 
 import numpy as np
-
 import petab_select
 from petab_select import (
+    VIRTUAL_INITIAL_MODEL,
     CandidateSpace,
     Criterion,
     Method,
     Model,
-    VIRTUAL_INITIAL_MODEL,
 )
 
 from .constants import TYPE_POSTPROCESSOR

@@ -1,13 +1,12 @@
+from typing import Dict, List, Tuple
+
 import matplotlib
 import matplotlib.pyplot as plt
 import networkx as nx
-from typing import Dict, List, Tuple
-
-from petab_select.constants import Criterion
 from petab_select import Model
+from petab_select.constants import Criterion
 
 from .. import select as pypesto_select
-
 
 # TODO move methods to petab_select
 RELATIVE_LABEL_FONTSIZE = -2

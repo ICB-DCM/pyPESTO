@@ -1,15 +1,10 @@
-from typing import List
-
 from pathlib import Path
+from typing import List
 
 import matplotlib.pyplot as plt
 
-from .. import store
-from .. import visualize
-from .constants import (
-    TYPE_PATH,
-    TYPE_POSTPROCESSOR,
-)
+from .. import store, visualize
+from .constants import TYPE_PATH, TYPE_POSTPROCESSOR
 from .problem import ModelSelectionProblem
 
 

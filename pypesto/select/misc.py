@@ -1,20 +1,14 @@
+import logging
 from typing import Dict, Iterable
 
-from petab.C import NOMINAL_VALUE, ESTIMATE
-from petab_select import (
-    Model,
-    parameter_string_to_value,
-)
-from petab_select.constants import (
-    PETAB_PROBLEM,
-)
 import petab_select.ui
+from petab.C import ESTIMATE, NOMINAL_VALUE
+from petab_select import Model, parameter_string_to_value
+from petab_select.constants import PETAB_PROBLEM
 
 from ..objective import Objective
 from ..petab import PetabImporter
 from ..problem import Problem
-
-import logging
 
 logger = logging.getLogger(__name__)
 
