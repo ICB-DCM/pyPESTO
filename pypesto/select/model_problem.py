@@ -3,8 +3,8 @@ from typing import Callable, Dict, List, Optional, Set
 from petab_select import Criterion, Model
 
 from ..objective import ObjectiveBase
-from ..optimize import OptimizerResult, minimize
-from ..result import Result
+from ..optimize import minimize
+from ..result import OptimizerResult, Result
 from .constants import TYPE_POSTPROCESSOR
 from .misc import model_to_pypesto_problem
 
