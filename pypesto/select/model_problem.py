@@ -1,4 +1,4 @@
-from typing import Callable, Dict, List, Optional, Set
+from typing import Callable, Dict, List, Optional
 
 from petab_select import Criterion, Model
 
@@ -12,13 +12,45 @@ OBJECTIVE_CUSTOMIZER_TYPE = Callable[[ObjectiveBase], None]
 POSTPROCESSOR_TYPE = Callable[["ModelProblem"], None]
 
 
-class ModelProblem(object):
+class ModelProblem:
     """Handles all required calibration tasks on a model.
 
     Handles the creation, estimation, and evaluation of a model. Here, a model
     is a PEtab problem that is patched with a dictionary of custom parameter
     values (which may specify that the parameter should be estimated).
     Evaluation refers to criterion values such as AIC.
+
+    Attributes
+    ----------
+    best_start:
+        The best start from a pyPESTO optimize result.
+    criterion:
+        The criterion that should be computed after the model is
+        calibrated.
+    minimize_options:
+        Keyword argument options that will be passed on to
+        `pypesto.optimize.minimize`.
+    minimize_result:
+        A pyPESTO result with an optimize result.
+    model:
+        A PEtab Select model.
+    model_id:
+        The ID of the PEtab Select model.
+    objective_customizer:
+        A method that takes a `pypesto.objective.AmiciObjective` as
+        input, and makes changes to the objective in-place.
+    postprocessor:
+        A method that takes a `ModelSelectionProblem` as input. For
+        example, this can be a function that generates a waterfall
+        plot. This postprocessor is applied at the end of the
+        `ModelProblem.set_result` method.
+    pypesto_problem:
+        The pyPESTO problem for the model.
+    valid:
+        If `False`, the model will not be tested.
+    x_guess:
+        A single startpoint, that will be used as one of the
+        startpoints in the multi-start optimization.
     """
 
     def __init__(
@@ -28,47 +60,20 @@ class ModelProblem(object):
         valid: bool = True,
         autorun: bool = True,
         x_guess: List[float] = None,
-        x_fixed_estimated: Set[str] = None,
         minimize_options: Dict = None,
         objective_customizer: Optional[OBJECTIVE_CUSTOMIZER_TYPE] = None,
         postprocessor: Optional[TYPE_POSTPROCESSOR] = None,
     ):
         """Construct then calibrate a model problem.
 
-        Args:
-            model:
-                The model description.
-            criterion:
-                The criterion that should be computed after the model is
-                calibrated.
-            valid:
-                If `False`, the model will not be tested.
-            autorun:
-                If `False`, the model parameters will not be estimated. Allows
-                users to manually call pypesto.minimize with custom options,
-                then`set_result()`.
-            x_guess:
-                A single startpoint, that will be used as one of the
-                startpoints in the multi-start optimization.
-            x_fixed_estimated:
-                TODO not implemented
-                Parameters that can be fixed to different values can be
-                considered estimated, as the "best" fixed parameter will be
-                preferred. Note, the preference is implemented as comparison of
-                different models with `ModelSelectionMethod.compare()`, unlike
-                normal estimation, which occurs within the same model with
-                `pypesto.minimize`.
-            minimize_options:
-                Keyword argument options that will be passed on to
-                `pypesto.optimize.minimize`.
-            objective_customizer:
-                A method that takes a `pypesto.objective.AmiciObjective` as
-                input, and makes changes to the objective in-place.
-            postprocessor:
-                A method that takes a `ModelSelectionProblem` as input. For
-                example, this can be a function that generates a waterfall
-                plot. This postprocessor is applied at the end of the
-                `ModelProblem.set_result` method.
+        See the class documentation for documentation of most parameters.
+
+        Parameters
+        ----------
+        autorun:
+            If `False`, the model parameters will not be estimated. Allows
+            users to manually call pypesto.minimize with custom options,
+            then`set_result()`.
 
         TODO: constraints
         """
@@ -76,32 +81,25 @@ class ModelProblem(object):
         self.criterion = criterion
         self.valid = valid
 
-        # TODO may not actually be necessary
-        if x_fixed_estimated is None:
-            x_fixed_estimated = set()
-        else:
-            # TODO remove parameters that are zero
-            pass
-
-        if minimize_options is None:
-            self.minimize_options = {}
-        else:
+        self.minimize_options = {}
+        if minimize_options is not None:
             self.minimize_options = minimize_options
 
         self.model_id = self.model.model_id
-
+        self.objective_customizer = objective_customizer
         self.postprocessor = postprocessor
+        self.best_start = None
+        self.minimize_result = None
+        self.x_guess = x_guess
 
         if self.valid:
             self.pypesto_problem = model_to_pypesto_problem(
                 self.model,
-                x_guesses=None if x_guess is None else [x_guess],
+                x_guesses=None if self.x_guess is None else [self.x_guess],
             )
 
-            if objective_customizer is not None:
-                objective_customizer(self.pypesto_problem.objective)
-
-            self.minimize_result = None
+            if self.objective_customizer is not None:
+                self.objective_customizer(self.pypesto_problem.objective)
 
             # TODO autorun may be unnecessary now that the `minimize_options`
             # argument is implemented.
@@ -124,13 +122,19 @@ class ModelProblem(object):
                     self.set_result(minimize(self.pypesto_problem))
 
     def set_result(self, result: Result):
-        """Postprocess a result."""
+        """Postprocess a result.
+
+        Parameters
+        ----------
+        result:
+            A pyPESTO result with an optimize result.
+        """
         self.minimize_result = result
         # TODO extract best parameter estimates, to use as start point for
         # subsequent models in model selection, for parameters in those models
         # that were estimated in this model.
-        self.optimized_model = self.minimize_result.optimize_result.list[0]
-        self.model.set_criterion(Criterion.NLLH, self.optimized_model.fval)
+        self.best_start = self.minimize_result.optimize_result.list[0]
+        self.model.set_criterion(Criterion.NLLH, self.best_start.fval)
         self.model.compute_criterion(criterion=self.criterion)
 
         self.model.estimated_parameters = {
@@ -138,7 +142,7 @@ class ModelProblem(object):
             for index, (id, value) in enumerate(
                 dict(zip(
                     self.pypesto_problem.x_names,
-                    self.optimized_model.x,
+                    self.best_start.x,
                 )).items()
             )
             if index in self.pypesto_problem.x_free_indices
@@ -151,7 +155,13 @@ class ModelProblem(object):
 def create_fake_pypesto_result_from_fval(
     fval: float,
 ) -> Result:
-    """Create a fake result for problems with no estimated parameters."""
+    """Create a result for problems with no estimated parameters.
+
+    Parameters
+    ----------
+    fval:
+        The objective function value.
+    """
     result = Result()
 
     optimizer_result = OptimizerResult(

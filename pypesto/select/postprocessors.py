@@ -6,11 +6,11 @@ from petab_select.constants import TYPE_PATH
 
 from .. import store, visualize
 from ..C import TYPE_POSTPROCESSOR
-from .problem import ModelSelectionProblem
+from .model_problem import ModelProblem
 
 
 def multi_postprocessor(
-    problem: ModelSelectionProblem,
+    problem: ModelProblem,
     postprocessors: List[TYPE_POSTPROCESSOR] = None,
 ):
     """Combine multiple postprocessors into a single postprocessor.
@@ -31,7 +31,7 @@ def multi_postprocessor(
 
 
 def waterfall_plot_postprocessor(
-    problem: ModelSelectionProblem,
+    problem: ModelProblem,
     output_path: TYPE_PATH = ".",
 ):
     """Produce a waterfall plot from a model calibration.
@@ -44,7 +44,7 @@ def waterfall_plot_postprocessor(
 
 
 def save_postprocessor(
-    problem: ModelSelectionProblem,
+    problem: ModelProblem,
     output_path: TYPE_PATH = ".",
 ):
     """Save the parameter estimation results for optimized models.
@@ -64,9 +64,9 @@ def save_postprocessor(
     Parameters
     ----------
     problem:
-        A model selection problem that has been optimized.
+        A model problem that has been optimized.
     output_path:
-        The location where results will be stored.
+        The location where output will be stored.
     """
     store.write_result(
         problem.minimize_result,

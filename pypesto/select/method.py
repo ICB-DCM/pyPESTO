@@ -1,5 +1,4 @@
 import logging
-import warnings
 from dataclasses import dataclass
 from enum import Enum
 from typing import Callable, Dict, List, Optional, Tuple, Union
@@ -30,11 +29,12 @@ class MethodSignalProceed(str, Enum):
 class MethodSignal:
     """The state of a model selection method after a single model calibration.
 
-    Attributes:
-        accept:
-            Whether to accept the model.
-        proceed:
-            How the method should proceed.
+    Attributes
+    ----------
+    accept:
+        Whether to accept the model.
+    proceed:
+        How the method should proceed.
     """
 
     accept: bool
@@ -45,11 +45,12 @@ class MethodSignal:
 class MethodLogger:
     """Log results from a model selection method.
 
-    Attributes:
-        level:
-            The logging level.
-        logger:
-            A logger from the `logging` module.
+    Attributes
+    ----------
+    level:
+        The logging level.
+    logger:
+        A logger from the `logging` module.
     """
 
     def __init__(
@@ -59,21 +60,22 @@ class MethodLogger:
         self.logger = logging.getLogger(__name__)
         self.level = level
 
-    def log(self, message, level: str = None):
+    def log(self, message, level: str = None) -> None:
         """Log a message.
 
-        Args:
-            message:
-                The message.
-            level:
-                The logging level. Defaults to the value defined in the
-                constructor.
+        Parameters
+        ----------
+        message:
+            The message.
+        level:
+            The logging level. Defaults to the value defined in the
+            constructor.
         """
         if level is None:
             level = self.level
         getattr(self.logger, self.level)(message)
 
-    def new_selection(self):
+    def new_selection(self) -> None:
         """Start logging a new model selection."""
         padding = 20
         self.log('-'*padding + 'New Selection' + '-'*padding)
@@ -89,20 +91,21 @@ class MethodLogger:
         model,
         predecessor_model,
         precision: int = 3,
-    ):
+    ) -> None:
         """Log a model calibration result.
 
-        Args:
-            accept:
-                Whether the model is accepted.
-            criterion:
-                The criterion type.
-            model:
-                The calibrated model.
-            predecessor_model:
-                The predecessor model.
-            precision:
-                The number of decimal places to log.
+        Parameters
+        ----------
+        accept:
+            Whether the model is accepted.
+        criterion:
+            The criterion type.
+        model:
+            The calibrated model.
+        predecessor_model:
+            The predecessor model.
+        precision:
+            The number of decimal places to log.
         """
         model_criterion = model.get_criterion(criterion)
 
@@ -136,46 +139,47 @@ class MethodLogger:
 
 
 class MethodCaller:
-    """Base class for model selection methods.
+    """Handle calls to PEtab Select model selection methods.
 
-    Attributes:
-        petab_select_problem:
-            The PEtab Select problem.
-        candidate_space:
-            A `petab_select.CandidateSpace`, used to generate candidate models.
-        criterion:
-            The criterion by which models will be compared.
-        criterion_threshold:
-            The minimum improvement in criterion that a test model must have to
-            be selected. The comparison is made according to the method. For
-            example, in `ForwardSelector`, test models are compared to the
-            previously selected model.
-        history:
-            The history of the model selection, as a `dict` with model hashes
-            as keys and models as values.
-        limit:
-            Limit the number of calibrated models. NB: the number of accepted
-            models may (likely) be fewer.
-        logger:
-            A `MethodLogger`, used to log results.
-        minimize_options:
-            A dictionary that will be passed to `pypesto.minimize` as keyword
-            arguments for model optimization.
-        model_postprocessor:
-            A method that is applied to each model after calibration.
-        objective_customizer:
-            A method that is applied to the pyPESTO objective after the
-            objective is initialized, before calibration.
-        predecessor_model:
-            Specify the predecessor (initial) model for the model selection
-            algorithm. If `None`, then the algorithm will generate an
-            predecessor model if required.
-        select_first_improvement:
-            If `True`, model selection will terminate as soon as a better model
-            is found. If `False`, all candidate models will be tested.
-        startpoint_latest_mle:
-            If `True`, one of the startpoints in the multistart optimization
-            will be the MLE of the latest model.
+    Attributes
+    ----------
+    petab_select_problem:
+        The PEtab Select problem.
+    candidate_space:
+        A `petab_select.CandidateSpace`, used to generate candidate models.
+    criterion:
+        The criterion by which models will be compared.
+    criterion_threshold:
+        The minimum improvement in criterion that a test model must have to
+        be selected. The comparison is made according to the method. For
+        example, in `ForwardSelector`, test models are compared to the
+        previously selected model.
+    history:
+        The history of the model selection, as a `dict` with model hashes
+        as keys and models as values.
+    limit:
+        Limit the number of calibrated models. NB: the number of accepted
+        models may (likely) be fewer.
+    logger:
+        A `MethodLogger`, used to log results.
+    minimize_options:
+        A dictionary that will be passed to `pypesto.minimize` as keyword
+        arguments for model optimization.
+    model_postprocessor:
+        A method that is applied to each model after calibration.
+    objective_customizer:
+        A method that is applied to the pyPESTO objective after the
+        objective is initialized, before calibration.
+    predecessor_model:
+        Specify the predecessor (initial) model for the model selection
+        algorithm. If `None`, then the algorithm will generate an
+        predecessor model if required.
+    select_first_improvement:
+        If `True`, model selection will terminate as soon as a better model
+        is found. If `False`, all candidate models will be tested.
+    startpoint_latest_mle:
+        If `True`, one of the startpoints in the multistart optimization
+        will be the MLE of the latest model.
     """
 
     def __init__(
@@ -256,17 +260,19 @@ class MethodCaller:
         of all models that have both: the same 3 estimated parameters; and 1
         additional estimated paramenter.
 
-        Args:
-            predecessor_model:
-                The model that will be used for comparison. Example 1: the
-                initial model of a forward method. Example 2: all models found
-                with a brute force method should be better than this model.
+        Parameters
+        ----------
+        predecessor_model:
+            The model that will be used for comparison. Example 1: the
+            initial model of a forward method. Example 2: all models found
+            with a brute force method should be better than this model.
 
-        Returns:
-            A 2-tuple, with the following values:
-            #. 1. the best model; and
-            #. 2. all candidate models in this iteration, as a `dict` with
-                  model hashes as keys and models as values.
+        Returns
+        -------
+        A 2-tuple, with the following values:
+        #. 1. the best model; and
+        #. 2. all candidate models in this iteration, as a `dict` with
+              model hashes as keys and models as values.
         """
         better_models = []
         local_history = {}
@@ -321,14 +327,16 @@ class MethodCaller:
     ) -> MethodSignal:
         """Handle the model selection method, given a new calibrated model.
 
-        Args:
-            model:
-                The calibrated model.
-            predecessor_model:
-                The predecessor model.
+        Parameters
+        ----------
+        model:
+            The calibrated model.
+        predecessor_model:
+            The predecessor model.
 
-        Returns:
-            A `MethodSignal` that describes the result.
+        Returns
+        -------
+        A `MethodSignal` that describes the result.
         """
         # Use the predecessor model from `__init__` if an iteration-specific
         # predecessor model was not supplied to `__call__`.
@@ -375,15 +383,17 @@ class MethodCaller:
     ) -> bool:
         """Compare models by criterion.
 
-        Args:
-            model1:
-                The new model.
-            model0:
-                The original model.
+        Parameters
+        ----------
+        model1:
+            The new model.
+        model0:
+            The original model.
 
-        Returns:
-            `True`, if `model1` is superior to `model0` by the criterion,
-            else `False`.
+        Returns
+        -------
+        `True`, if `model1` is superior to `model0` by the criterion,
+        else `False`.
         """
         if self.criterion in [
             Criterion.AIC,
@@ -405,31 +415,6 @@ class MethodCaller:
             )
         return result
 
-    def compare(
-        self,
-        model0: Model,
-        model1: Model,
-    ) -> bool:
-        """Compare models by criterion.
-
-        Arguments
-        ---------
-        model0:
-            The original model.
-        model1:
-            The new model.
-
-        Returns
-        -------
-        `True`, if `model1` is superior to `model0` by the criterion,
-        else `False`.
-        """
-        warnings.warn(
-            'Deprecated in favor of `model1_gt_model0`.',
-            DeprecationWarning,
-        )
-        return self.model1_gt_model0(model1=model1, model0=model0)
-
     def new_model_problem(
         self,
         model: Model,
@@ -438,17 +423,19 @@ class MethodCaller:
     ) -> ModelProblem:
         """Create a model problem, usually to calibrate a model.
 
-        Args:
-            model:
-                The model.
-            valid:
-                Whether the model should be considered a valid model. If it is
-                not valid, it will not be calibrated.
-            autorun:
-                Whether the model should be calibrated upon creation.
+        Parameters
+        ----------
+        model:
+            The model.
+        valid:
+            Whether the model should be considered a valid model. If it is
+            not valid, it will not be calibrated.
+        autorun:
+            Whether the model should be calibrated upon creation.
 
-        Returns:
-            The model selection problem.
+        Returns
+        -------
+        The model selection problem.
         """
         x_guess = None
         if (

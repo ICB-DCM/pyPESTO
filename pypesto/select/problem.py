@@ -14,17 +14,18 @@ class Problem:
     specifications file, and then calling the `select()` method to perform
     model selection with a specified algorithm and criterion.
 
-    Attributes:
-        history:
-            Storage for all calibrated models. A dictionary, where keys are
-            model hashes, and values are `petab_select.Model` objects.
-        method_caller:
-            A `MethodCaller`, used to run a single iteration of a model
-            selection method.
-        model_postprocessor:
-            A method that is applied to each model after calibration.
-        petab_select_problem:
-            A PEtab Select problem.
+    Attributes
+    ----------
+    history:
+        Storage for all calibrated models. A dictionary, where keys are
+        model hashes, and values are `petab_select.Model` objects.
+    method_caller:
+        A `MethodCaller`, used to run a single iteration of a model
+        selection method.
+    model_postprocessor:
+        A method that is applied to each model after calibration.
+    petab_select_problem:
+        A PEtab Select problem.
     """
 
     def __init__(
@@ -33,9 +34,7 @@ class Problem:
         model_postprocessor: Optional[TYPE_POSTPROCESSOR] = None,
     ):
         self.petab_select_problem = petab_select_problem
-
         self.model_postprocessor = model_postprocessor
-
         self.history = {}
 
         # Dictionary of method names as keys, with a dictionary as the values.
@@ -50,6 +49,10 @@ class Problem:
         """Create a method caller.
 
         `args` and `kwargs` are passed to the `MethodCaller` constructor.
+
+        Returns
+        -------
+        A `MethodCaller` instance.
         """
         return MethodCaller(
             petab_select_problem=self.petab_select_problem,
@@ -69,17 +72,16 @@ class Problem:
         The result is the selected model for the current run, independent of
         previous selected models.
 
-        Args:
-            *args, **kwargs:
-                Passed on to a `MethodCaller`.
+        `args` and `kwargs` are passed to the `MethodCaller` constructor.
 
-        Returns:
-            A 3-tuple, with the following values:
-            #. 1. the best model;
-            #. 2. all candidate models in this iteration, as a `dict` with
-                  model hashes as keys and models as values; and
-            #. 3. all candidate models from all iterations, as a `dict` with
-                  model hashes as keys and models as values.
+        Returns
+        -------
+        A 3-tuple, with the following values:
+        #. 1. the best model;
+        #. 2. all candidate models in this iteration, as a `dict` with
+              model hashes as keys and models as values; and
+        #. 3. all candidate models from all iterations, as a `dict` with
+              model hashes as keys and models as values.
         """
         # TODO move some options to PEtab Select? e.g.:
         # - startpoint_latest_mle
@@ -103,9 +105,15 @@ class Problem:
     ) -> List[Model]:
         """Run an algorithm until an exception `StopIteration` is raised.
 
-        An enxception `StopIteration` is raised by
+        `args` and `kwargs` are passed to the `MethodCaller` constructor.
+
+        An exception `StopIteration` is raised by
         `pypesto.select.method.MethodCaller.__call__` when no candidate models
         are found.
+
+        Returns
+        -------
+        The best models (the best model at each iteration).
         """
         best_models = []
         method_caller = self.create_method_caller(*args, **kwargs)
@@ -141,6 +149,20 @@ class Problem:
         Could also be managed by sharing the same "history" object (but then
         the same model could be repeatedly calibrated, if the calibrations
         start before any have stopped).
+
+        `args` and `kwargs` are passed to the `MethodCaller` constructor.
+
+        Parameters
+        ----------
+        predecessor_models:
+            The models that will be used as initial models. One "model
+            selection iteration" will be run for each predecessor model.
+
+        Returns
+        -------
+        A 2-tuple, with the following values:
+        #. 1. the best model; and
+        #. 2. the best models (the best model at each iteration).
         """
         best_models = []
         method_caller = self.create_method_caller(*args, **kwargs)
