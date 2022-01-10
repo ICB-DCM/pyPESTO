@@ -1,14 +1,14 @@
 """Test pypesto.select"""
 import math
-import numpy as np
-import pandas as pd
-import pytest
 import tempfile
 from typing import Dict, List, Set
 
+import numpy as np
+import pandas as pd
 import petab
-from pypesto.petab import PetabImporter
+import pytest
 
+from pypesto.petab import PetabImporter
 from pypesto.select import (
     ForwardSelector,
     ModelSelectionProblem,
@@ -17,7 +17,6 @@ from pypesto.select import (
     row2problem,
     unpack_file,
 )
-
 from pypesto.select.constants import (
     COMPARED_MODEL_ID,
     ESTIMATE_SYMBOL_INTERNAL,
