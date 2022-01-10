@@ -2,23 +2,24 @@
 This is for testing optimization of the pypesto.Objective.
 """
 
-import numpy as np
-import pytest
-import warnings
-import re
-import nlopt
-import fides
-import scipy as sp
 import itertools as itt
 import os
+import re
 import subprocess  # noqa: S404
+import warnings
+
+import fides
+import nlopt
+import numpy as np
+import pytest
+import scipy as sp
+from numpy.testing import assert_almost_equal
 
 import pypesto
 import pypesto.optimize as optimize
 from pypesto.store import read_result
 
-from ..util import rosen_for_sensi, CRProblem
-from numpy.testing import assert_almost_equal
+from ..util import CRProblem, rosen_for_sensi
 
 
 @pytest.fixture(params=['cr', 'rosen-integrated', 'rosen-separated'])

@@ -1,31 +1,48 @@
 import logging
 from functools import partial
+from typing import Callable, Dict, List, Optional, Sequence, Tuple, Union
+
 import numpy as np
 import pandas as pd
-from typing import Sequence, Tuple, Callable, Dict, List, Optional
 
-from .. import Result
-from ..objective import AmiciObjective
+from ..C import (
+    ENSEMBLE_TYPE,
+    HISTORY,
+    LOWER_BOUND,
+    MEAN,
+    MEDIAN,
+    MODE_FUN,
+    NVECTORS,
+    NX,
+    OUTPUT,
+    OUTPUT_SENSI,
+    PERCENTILE,
+    PREDICTION_ARRAYS,
+    PREDICTION_ID,
+    PREDICTION_RESULTS,
+    PREDICTION_SUMMARY,
+    PREDICTIONS,
+    PREDICTOR,
+    STANDARD_DEVIATION,
+    SUMMARY,
+    TIMEPOINTS,
+    UPPER_BOUND,
+    VECTOR_TAGS,
+    WEIGHTED_SIGMA,
+    X_NAMES,
+    X_VECTOR,
+    EnsembleType,
+)
 from ..engine import (
     Engine,
     MultiProcessEngine,
     MultiThreadEngine,
     SingleCoreEngine,
 )
-from ..predict import (
-    PredictionConditionResult,
-    PredictionResult,
-)
+from ..objective import AmiciObjective
+from ..result import PredictionConditionResult, PredictionResult, Result
 from ..sample import geweke_test
 from .task import EnsembleTask
-from .constants import (PREDICTOR, PREDICTION_ID, PREDICTION_RESULTS,
-                        PREDICTION_ARRAYS, PREDICTION_SUMMARY, OUTPUT,
-                        OUTPUT_SENSI, TIMEPOINTS, X_VECTOR, NX, X_NAMES,
-                        NVECTORS, VECTOR_TAGS, PREDICTIONS, MODE_FUN,
-                        EnsembleType, ENSEMBLE_TYPE, MEAN, MEDIAN,
-                        STANDARD_DEVIATION, SUMMARY, LOWER_BOUND,
-                        UPPER_BOUND, get_percentile_label, HISTORY,
-                        WEIGHTED_SIGMA)
 
 logger = logging.getLogger(__name__)
 
@@ -1022,3 +1039,37 @@ def get_vector_indices(trace_start: np.ndarray,
         return candidates[indices.astype(int)]
     else:
         return candidates[:n_vectors]
+
+
+def get_percentile_label(percentile: Union[float, int, str]) -> str:
+    """Convert a percentile to a label.
+
+    Labels for percentiles are used at different locations (e.g. ensemble
+    prediction code, and visualization code). This method ensures that the same
+    percentile is labeled identically everywhere.
+
+    The percentile is rounded to two decimal places in the label representation
+    if it is specified to more decimal places. This is for readability in
+    plotting routines, and to avoid float to string conversion issues related
+    to float precision.
+
+    Parameters
+    ----------
+    percentile:
+        The percentile value that will be used to generate a label.
+
+    Returns
+    -------
+    The label of the (possibly rounded) percentile.
+    """
+    if isinstance(percentile, str):
+        percentile = float(percentile)
+        if percentile == round(percentile):
+            percentile = round(percentile)
+    if isinstance(percentile, float):
+        percentile_str = f'{percentile:.2f}'
+        # Add `...` to the label if the percentile value changed after rounding
+        if float(percentile_str) != percentile:
+            percentile_str += '...'
+        percentile = percentile_str
+    return f'{PERCENTILE} {percentile}'

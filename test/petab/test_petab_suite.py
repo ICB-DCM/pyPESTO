@@ -1,17 +1,17 @@
 """Execute petab test suite."""
 
-import petabtests
-import pypesto
-import pypesto.petab
-
-import sys
+import logging
 import os
+import sys
+
+import amici.petab_objective
+import petab
+import petabtests
 import pytest
 from _pytest.outcomes import Skipped
-import logging
 
-import petab
-import amici.petab_objective
+import pypesto
+import pypesto.petab
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)

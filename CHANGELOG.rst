@@ -6,6 +6,38 @@ Release notes
 ..........
 
 
+0.2.10 (2022-01-06)
+-------------------
+
+* AMICI:
+    * Make AMICI objective report only what is being asked for (#777)
+
+* Optimization:
+    * (Breaking) Refactor startpoint generation with clear assignments;
+      allow checking gradients (#769)
+    * (Breaking) Prioritize history vs optimize result (#775)
+
+* Storage:
+    * Fix loading empty history and result generation from multiple
+      histories (#764)
+    * Fix autosave function for single-core (#770)
+    * Fix potential autosave overwriting and typehints (#772)
+    * Allow loading of partial results from history file (#783)
+
+* CI:
+    * Compile AMICI models without gradients in test suite (#774)
+
+* General:
+    * (Breaking) Create result sub-module; shift storage+result related
+      functionality (#784)
+    * Fix finite difference constant mode (#786)
+    * Refactor ensemble module (#788)
+    * Introduce general C constants file (#788)
+    * Apply isort for automatic imports formatting (#785)
+    * Reduce run log output (#789)
+    * Various minor fixes (#765, #766, #768, #771)
+
+
 0.2.9 (2021-11-03)
 ------------------
 

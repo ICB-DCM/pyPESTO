@@ -9,17 +9,11 @@ Startpoint methods can be implemented by deriving from
 """
 
 from .base import (
-    NoStartpoints,
-    StartpointMethod,
     CheckedStartpoints,
     FunctionStartpoints,
+    NoStartpoints,
+    StartpointMethod,
     to_startpoint_method,
 )
-from .uniform import (
-    UniformStartpoints,
-    uniform,
-)
-from .latin_hypercube import (
-    LatinHypercubeStartpoints,
-    latin_hypercube,
-)
+from .latin_hypercube import LatinHypercubeStartpoints, latin_hypercube
+from .uniform import UniformStartpoints, uniform

@@ -1,5 +1,6 @@
 """Engines without parallelization."""
 from typing import List
+
 from tqdm import tqdm
 
 from .base import Engine

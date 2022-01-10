@@ -2,10 +2,12 @@
 This is for testing profiling of the pypesto.Objective.
 """
 
-import numpy as np
 import unittest
-from copy import deepcopy
 import warnings
+from copy import deepcopy
+
+import numpy as np
+from numpy.testing import assert_almost_equal
 
 import pypesto
 import pypesto.optimize as optimize
@@ -13,9 +15,8 @@ import pypesto.profile as profile
 import pypesto.visualize as visualize
 from pypesto import ObjectiveBase
 
-from ..visualize import close_fig
 from ..util import rosen_for_sensi
-from numpy.testing import assert_almost_equal
+from ..visualize import close_fig
 
 
 class ProfilerTest(unittest.TestCase):
@@ -48,7 +49,7 @@ class ProfilerTest(unittest.TestCase):
             # check result
             self.assertTrue(
                 isinstance(result.profile_result.list[i_run][0],
-                           profile.ProfilerResult))
+                           pypesto.ProfilerResult))
             self.assertEqual(len(result.profile_result.list), i_run+1)
             self.assertEqual(len(result.profile_result.list[i_run]), 2)
 
@@ -126,7 +127,7 @@ class ProfilerTest(unittest.TestCase):
             filename=None)
 
         self.assertIsInstance(result.profile_result.list[0][1],
-                              profile.ProfilerResult)
+                              pypesto.ProfilerResult)
         self.assertIsNone(result.profile_result.list[0][0])
 
         # 2nd run of profiling, appending to an existing list of profiles
@@ -142,7 +143,7 @@ class ProfilerTest(unittest.TestCase):
             filename=None)
 
         self.assertIsInstance(result.profile_result.list[0][0],
-                              profile.ProfilerResult)
+                              pypesto.ProfilerResult)
 
         # 3rd run of profiling, opening a new list, using the default algorithm
         result = profile.parameter_profile(
@@ -155,7 +156,7 @@ class ProfilerTest(unittest.TestCase):
             filename=None)
         # check result
         self.assertIsInstance(result.profile_result.list[1][0],
-                              profile.ProfilerResult)
+                              pypesto.ProfilerResult)
         self.assertIsNone(result.profile_result.list[1][1])
 
     def test_extending_profiles(self):
@@ -182,10 +183,10 @@ class ProfilerTest(unittest.TestCase):
         # check result
         self.assertTrue(
             isinstance(result.profile_result.list[0][0],
-                       profile.ProfilerResult))
+                       pypesto.ProfilerResult))
         self.assertTrue(
             isinstance(result.profile_result.list[0][1],
-                       profile.ProfilerResult))
+                       pypesto.ProfilerResult))
 
     def test_approximate_profiles(self):
         """Test for the approximate profile function."""
@@ -196,7 +197,7 @@ class ProfilerTest(unittest.TestCase):
             n_steps=n_steps)
         profile_list = result.profile_result.list[-1]
         assert profile_list[0] is None
-        assert isinstance(profile_list[1], profile.ProfilerResult)
+        assert isinstance(profile_list[1], pypesto.ProfilerResult)
         assert np.isclose(profile_list[1].ratio_path.max(), 1)
         assert len(profile_list[1].ratio_path) == n_steps
         assert profile_list[1].x_path.shape == (2, n_steps)

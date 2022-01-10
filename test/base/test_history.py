@@ -1,14 +1,15 @@
 """Test the :class:`pypesto.History`."""
 
+import tempfile
+import unittest
+from typing import Sequence
+
 import numpy as np
 import pytest
-import unittest
-import tempfile
-from typing import Sequence
 import scipy.optimize as so
 
 import pypesto
-from pypesto.objective.util import sres_to_schi2, res_to_chi2
+import pypesto.optimize as optimize
 from pypesto import (
     CsvHistory,
     Hdf5History,
@@ -16,18 +17,16 @@ from pypesto import (
     MemoryHistory,
     ObjectiveBase,
 )
-import pypesto.optimize as optimize
-from pypesto.objective.constants import (
-    X, FVAL, GRAD, HESS, RES, SRES, CHI2, SCHI2
-)
+from pypesto.C import CHI2, FVAL, GRAD, HESS, RES, SCHI2, SRES, X
 from pypesto.engine import MultiProcessEngine
+from pypesto.objective.util import res_to_chi2, sres_to_schi2
 
-from ..util import rosen_for_sensi, load_amici_objective, CRProblem
+from ..util import CRProblem, load_amici_objective, rosen_for_sensi
 
 
 class HistoryTest(unittest.TestCase):
     problem: pypesto.Problem = None
-    optimizer: pypesto.optimize.Optimizer = None
+    optimizer: optimize.Optimizer = None
     obj: ObjectiveBase = None
     history_options: HistoryOptions = None
     ub: np.ndarray = None
@@ -86,12 +85,12 @@ class HistoryTest(unittest.TestCase):
                     self.check_history_consistency(start)
 
                 # check that we can also aggregate from multiple files.
-                # load more results than necessary to check whether this
-                # also works in case of incomplete results.
+                # load more results than what is generated to check whether
+                # this also works in case of incomplete results.
                 if storage_type is not None:
                     optimize.read_results_from_file(
                         self.problem, self.history_options,
-                        n_starts=n_starts,
+                        n_starts=n_starts + 1,
                     )
                 else:
                     with pytest.raises(ValueError):
@@ -100,7 +99,7 @@ class HistoryTest(unittest.TestCase):
                             n_starts=n_starts,
                         )
 
-    def check_load_from_file(self, start: optimize.OptimizerResult, id: str):
+    def check_load_from_file(self, start: pypesto.OptimizerResult, id: str):
         """Verify we can reconstitute OptimizerResult from history file"""
         # TODO other implementations
         if isinstance(start.history, MemoryHistory):
@@ -143,7 +142,7 @@ class HistoryTest(unittest.TestCase):
                 assert start[attr] == rstart[attr], attr
 
     def check_reconstruct_history(
-        self, start: optimize.OptimizerResult, id: str
+        self, start: pypesto.OptimizerResult, id: str
     ):
         """verify we can reconstruct history objects from csv/hdf5 files"""
 
@@ -198,7 +197,7 @@ class HistoryTest(unittest.TestCase):
                     decimal=10
                 )
 
-    def check_history_consistency(self, start: optimize.OptimizerResult):
+    def check_history_consistency(self, start: pypesto.OptimizerResult):
         def xfull(x_trace):
             return self.problem.get_full_vector(
                 x_trace, self.problem.x_fixed_vals
@@ -238,7 +237,7 @@ class HistoryTest(unittest.TestCase):
             CHI2: lambda x: res_to_chi2(self.obj.get_res(x)),
             SCHI2: lambda x: sres_to_schi2(*self.obj(
                 x, (0, 1,),
-                pypesto.objective.constants.MODE_RES
+                pypesto.C.MODE_RES
             ))
         }
         for var, fun in funs.items():

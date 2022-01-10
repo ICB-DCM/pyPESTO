@@ -1,19 +1,22 @@
-import numpy as np
-from typing import Dict, List, Sequence, Union, Tuple
+from typing import Dict, List, Sequence, Tuple, Union
 
-from .constants import (
-    MODE_FUN, MODE_RES, FVAL, GRAD, HESS, RES, SRES, RDATAS, CHI2
-)
+import numpy as np
+
+from ..C import CHI2, FVAL, GRAD, HESS, MODE_FUN, MODE_RES, RDATAS, RES, SRES
 from .amici_util import (
-    add_sim_grad_to_opt_grad, add_sim_hess_to_opt_hess,
-    sim_sres_to_opt_sres, log_simulation, get_error_output, filter_return_dict,
+    add_sim_grad_to_opt_grad,
+    add_sim_hess_to_opt_hess,
+    filter_return_dict,
+    get_error_output,
     init_return_values,
+    log_simulation,
+    sim_sres_to_opt_sres,
 )
 
 try:
     import amici
-    import amici.petab_objective
     import amici.parameter_mapping
+    import amici.petab_objective
     from amici.parameter_mapping import ParameterMapping
 except ImportError:
     pass

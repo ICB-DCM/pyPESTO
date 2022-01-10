@@ -1,16 +1,17 @@
 """Tests for `pypesto.sample` methods."""
 
-import numpy as np
-from scipy.stats import multivariate_normal, norm, kstest, ks_2samp, uniform
-import scipy.optimize as so
-import matplotlib.pyplot as plt
-import pytest
-import petab
 import os
 
+import matplotlib.pyplot as plt
+import numpy as np
+import petab
+import pytest
+import scipy.optimize as so
+from scipy.stats import ks_2samp, kstest, multivariate_normal, norm, uniform
+
 import pypesto
-import pypesto.petab
 import pypesto.optimize as optimize
+import pypesto.petab
 import pypesto.sample as sample
 import pypesto.visualize as visualize
 
