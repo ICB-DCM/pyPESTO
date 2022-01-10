@@ -53,7 +53,7 @@ class Problem:
 
         Returns
         -------
-        A `MethodCaller` instance.
+            A `MethodCaller` instance.
         """
         return MethodCaller(
             petab_select_problem=self.petab_select_problem,
@@ -77,13 +77,13 @@ class Problem:
 
         Returns
         -------
-        A 3-tuple, with the following values:
+            A 3-tuple, with the following values:
 
-           1. the best model;
-           2. all candidate models in this iteration, as a `dict` with
-              model hashes as keys and models as values; and
-           3. all candidate models from all iterations, as a `dict` with
-              model hashes as keys and models as values.
+               1. the best model;
+               2. all candidate models in this iteration, as a `dict` with
+                  model hashes as keys and models as values; and
+               3. all candidate models from all iterations, as a `dict` with
+                  model hashes as keys and models as values.
         """
         # TODO move some options to PEtab Select? e.g.:
         # - startpoint_latest_mle
@@ -115,7 +115,7 @@ class Problem:
 
         Returns
         -------
-        The best models (the best model at each iteration).
+            The best models (the best model at each iteration).
         """
         best_models = []
         method_caller = self.create_method_caller(*args, **kwargs)
@@ -164,10 +164,10 @@ class Problem:
 
         Returns
         -------
-        A 2-tuple, with the following values:
+            A 2-tuple, with the following values:
 
-           1. the best model; and
-           2. the best models (the best model at each iteration).
+               1. the best model; and
+               2. the best models (the best model at each iteration).
         """
         best_models = []
         method_caller = self.create_method_caller(*args, **kwargs)

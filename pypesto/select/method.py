@@ -130,7 +130,7 @@ class MethodLogger:
 
             Returns
             -------
-            The ID.
+                The ID.
             """
             model_subspace_id = model.model_subspace_id or ''
             original_model_id = model.model_id or model.get_hash()
@@ -305,11 +305,11 @@ class MethodCaller:
 
         Returns
         -------
-        A 2-tuple, with the following values:
+            A 2-tuple, with the following values:
 
-           1. the best model; and
-           2. all candidate models in this iteration, as a `dict` with
-                 model hashes as keys and models as values.
+               1. the best model; and
+               2. all candidate models in this iteration, as a `dict` with
+                     model hashes as keys and models as values.
         """
         # Calibrated models in this iteration that improve on the predecessor
         # model.
@@ -376,7 +376,7 @@ class MethodCaller:
 
         Returns
         -------
-        A `MethodSignal` that describes the result.
+            A `MethodSignal` that describes the result.
         """
         # Use the predecessor model from `__init__` if an iteration-specific
         # predecessor model was not supplied to `__call__`.
@@ -432,8 +432,8 @@ class MethodCaller:
 
         Returns
         -------
-        `True`, if `model1` is superior to `model0` by the criterion,
-        else `False`.
+            `True`, if `model1` is superior to `model0` by the criterion,
+            else `False`.
         """
         if self.criterion in [
             Criterion.AIC,
@@ -475,7 +475,7 @@ class MethodCaller:
 
         Returns
         -------
-        The model selection problem.
+            The model selection problem.
         """
         x_guess = None
         if (
