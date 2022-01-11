@@ -5,7 +5,7 @@ Package-wide consistent constant definitions.
 """
 
 from enum import Enum
-from typing import Tuple, Union
+from typing import Callable, Tuple, Union
 
 ###############################################################################
 # OBJECTIVE
@@ -127,6 +127,12 @@ class EnsembleType(Enum):
     ensemble = 1
     sample = 2
     unprocessed_chain = 3
+
+
+###############################################################################
+# SELECT
+
+TYPE_POSTPROCESSOR = Callable[["ModelProblem"], None]  # noqa: F821
 
 
 ###############################################################################

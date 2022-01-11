@@ -46,6 +46,7 @@ Algorithms and features
    example/sampling_diagnostics.ipynb
    example/store.ipynb
    example/hdf5_storage.ipynb
+   example/model_selection.ipynb
 
 Application examples
 --------------------
