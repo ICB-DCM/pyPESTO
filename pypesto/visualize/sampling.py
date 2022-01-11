@@ -974,6 +974,7 @@ def sampling_scatter(
 
     sns.set(style="ticks")
 
+    # TODO: Think this throws the axis errors in seaborn.
     ax = sns.pairplot(
         params_fval.drop(['logPosterior', 'iteration'], axis=1),
         diag_kind=diag_kind)
@@ -993,7 +994,7 @@ def sampling_1d_marginals(
         par_indices: Sequence[int] = None,
         stepsize: int = 1,
         plot_type: str = 'both',
-        bw: str = 'scott',
+        bw_method: str = 'scott',
         suptitle: str = None,
         size: Tuple[float, float] = None):
     """
@@ -1013,7 +1014,7 @@ def sampling_1d_marginals(
     plot_type: {'hist'|'kde'|'both'}
         Specify whether to plot a histogram ('hist'), a kernel density estimate
         ('kde'), or both ('both').
-    bw: {'scott', 'silverman' | scalar | pair of scalars}
+    bw_method: {'scott', 'silverman' | scalar | pair of scalars}
         Kernel bandwidth method.
     suptitle:
         Figure super title.
@@ -1042,12 +1043,28 @@ def sampling_1d_marginals(
     # fig, ax = plt.subplots(nr_params, figsize=size)[1]
     for idx, par_id in enumerate(param_names):
         if plot_type == 'kde':
-            sns.kdeplot(params_fval[par_id], bw=bw, ax=par_ax[par_id])
+            # bw_method argument is deprecated... FutureWarning:
+            # The `bw_method` parameter is deprecated in favor of
+            # `bw_method` and `bw_adjust`.
+            # TODO: add bw_adjust as option?
+            sns.kdeplot(params_fval[par_id],
+                        bw_method=bw_method,
+                        ax=par_ax[par_id])
         elif plot_type == 'hist':
-            sns.distplot(
-                params_fval[par_id], kde=False, rug=True, ax=par_ax[par_id])
+            # fixes usage of sns distplot which throws a future warning
+            sns.histplot(
+                x=params_fval[par_id],
+                ax=par_ax[par_id],
+                stat='probability')
+            sns.rugplot(x=params_fval[par_id], ax=par_ax[par_id])
         elif plot_type == 'both':
-            sns.distplot(params_fval[par_id], rug=True, ax=par_ax[par_id])
+            sns.histplot(
+                x=params_fval[par_id],
+                kde=True,
+                ax=par_ax[par_id],
+                stat='probability'
+            )
+            sns.rugplot(x=params_fval[par_id], ax=par_ax[par_id])
 
         par_ax[par_id].set_xlabel(param_names[idx])
         par_ax[par_id].set_ylabel('Density')
