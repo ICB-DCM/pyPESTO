@@ -1,21 +1,20 @@
-import numpy as np
 import warnings
-from .clust_color import assign_colors
-from .clust_color import assign_colors_for_list
-
 from numbers import Number
 from typing import Iterable, List, Optional, Union
 
-from .constants import (
+import numpy as np
+
+from ..C import (
     LEN_RGB,
     LEN_RGBA,
     RGB,
     RGB_RGBA,
-    RGBA_MIN,
-    RGBA_MAX,
     RGBA_ALPHA,
+    RGBA_MAX,
+    RGBA_MIN,
     RGBA_WHITE,
 )
+from .clust_color import assign_colors, assign_colors_for_list
 
 
 def process_result_list(results, colors=None, legends=None):

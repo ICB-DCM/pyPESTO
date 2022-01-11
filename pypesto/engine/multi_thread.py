@@ -1,14 +1,14 @@
 """Engines with multi-threading parallelization."""
-from concurrent.futures import ThreadPoolExecutor
 import copy
-import os
 import logging
-from tqdm import tqdm
+import os
+from concurrent.futures import ThreadPoolExecutor
 from typing import List
+
+from tqdm import tqdm
 
 from .base import Engine
 from .task import Task
-
 
 logger = logging.getLogger(__name__)
 

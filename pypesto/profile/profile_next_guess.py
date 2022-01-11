@@ -1,10 +1,11 @@
-import numpy as np
 import copy
 from typing import Callable, List, Tuple, Union
 
+import numpy as np
+
 from ..problem import Problem
+from ..result import ProfilerResult
 from .options import ProfileOptions
-from .result import ProfilerResult
 
 
 def next_guess(

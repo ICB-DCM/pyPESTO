@@ -1,23 +1,21 @@
 """Tests for `pypesto.prediction.AmiciPredictor`."""
 
-import amici
-import pypesto
-import pypesto.petab
-import pypesto.ensemble
 import os
+import shutil
 import sys
+
+import amici
+import libsbml
 import numpy as np
 import pandas as pd
-import shutil
-import pytest
-import libsbml
 import petab
+import pytest
 
-from pypesto.predict import (
-    AmiciPredictor,
-    PredictionConditionResult,
-    PredictionResult,
-)
+import pypesto
+import pypesto.ensemble
+import pypesto.petab
+from pypesto.predict import AmiciPredictor
+from pypesto.result import PredictionConditionResult, PredictionResult
 
 
 @pytest.fixture()

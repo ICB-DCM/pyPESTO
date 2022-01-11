@@ -1,6 +1,7 @@
 import logging
-import numpy as np
 from typing import Any, Callable, List
+
+import numpy as np
 
 from ..engine import Task
 
