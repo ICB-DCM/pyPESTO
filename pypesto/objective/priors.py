@@ -1,5 +1,5 @@
 from copy import deepcopy
-from typing import Callable, Dict, List, Sequence, Tuple
+from typing import Callable, Dict, List, Sequence, Tuple, Union
 
 import numpy as np
 
@@ -130,8 +130,10 @@ class NegLogParameterPriors(ObjectiveBase):
                 else:
                     return False
         else:
-            raise ValueError(f'Invalid input: Expected mode {MODE_FUN} or'
-                             f' {MODE_RES}, received {mode} instead.')
+            raise ValueError(
+                f'Invalid input: Expected mode {MODE_FUN} or '
+                f'{MODE_RES}, received {mode} instead.'
+            )
 
         return True
 
@@ -143,8 +145,10 @@ class NegLogParameterPriors(ObjectiveBase):
             return all(prior.get('residual', None) is not None
                        for prior in self.prior_list)
         else:
-            raise ValueError(f'Invalid input: Expected mode {MODE_FUN} or'
-                             f' {MODE_RES}, received {mode} instead.')
+            raise ValueError(
+                f'Invalid input: Expected mode {MODE_FUN} or '
+                f'{MODE_RES}, received {mode} instead.'
+            )
 
     def neg_log_density(self, x):
         """Evaluate the negative log-density at x."""
@@ -315,7 +319,7 @@ def get_parameter_prior_dict(
 
     else:
         raise ValueError(
-            f"NegLogPriors in parameters in scale "
+            "NegLogPriors in parameters in scale "
             f"{parameter_scale} are currently not supported."
         )
 
@@ -323,7 +327,13 @@ def get_parameter_prior_dict(
 def _prior_densities(
     prior_type: str,
     prior_parameters: np.array,
-) -> [Callable, Callable, Callable]:
+) -> [
+    Callable,
+    Callable,
+    Callable,
+    Union[Callable, None],
+    Union[Callable, None],
+]:
     """
     Create prior density functions.
 
@@ -385,6 +395,12 @@ def _prior_densities(
         * logNormal:
             - prior_parameters[0]: mean of log-parameters
             - prior_parameters[1]: standard deviation of log-parameters
+
+    Returns
+    -------
+    log_f, d_log_f_dx, dd_log_f_ddx, res, d_res_dx:
+        Log density, first and second derivative, and if possible a residual
+        representation and its first derivative.
     """
     if prior_type in [C.UNIFORM, C.PARAMETER_SCALE_UNIFORM]:
 
@@ -414,15 +430,14 @@ def _prior_densities(
         sigma2 = sigma**2
 
         def log_f(x):
-            return -np.log(2*np.pi*sigma2)/2 - \
-                   (x-mean)**2/(2*sigma2)
+            return -np.log(2 * np.pi * sigma2) / 2 - \
+                   (x - mean)**2 / (2 * sigma2)
 
-        d_log_f_dx = _get_linear_function(-1/sigma2,
-                                          mean/sigma2)
-        dd_log_f_ddx = _get_constant_function(-1/sigma2)
+        d_log_f_dx = _get_linear_function(-1 / sigma2, mean / sigma2)
+        dd_log_f_ddx = _get_constant_function(-1 / sigma2)
 
         def res(x):
-            return (x-mean)/(np.sqrt(2)*sigma)
+            return (x - mean) / (np.sqrt(2) * sigma)
 
         d_res_dx = _get_constant_function(1/(np.sqrt(2)*sigma))
 
@@ -432,17 +447,17 @@ def _prior_densities(
 
         mean = prior_parameters[0]
         scale = prior_parameters[1]
-        log_2_sigma = np.log(2*prior_parameters[1])
+        log_2_sigma = np.log(2 * prior_parameters[1])
 
         def log_f(x):
             return -log_2_sigma -\
-                   abs(x-mean)/scale
+                   abs(x - mean)/scale
 
         def d_log_f_dx(x):
             if x > mean:
-                return -1/scale
+                return -1 / scale
             else:
-                return 1/scale
+                return 1 / scale
 
         dd_log_f_ddx = _get_constant_function(0)
 
@@ -450,7 +465,7 @@ def _prior_densities(
             return np.sqrt(abs(x-mean)/scale)
 
         def d_res_dx(x):
-            return 1/2*(x-mean)/np.sqrt(scale*abs(x-mean)**3)
+            return 1 / 2 * (x - mean) / np.sqrt(scale * abs(x - mean)**3)
 
         return log_f, d_log_f_dx, dd_log_f_ddx, res, d_res_dx
 
@@ -466,14 +481,14 @@ def _prior_densities(
 
         def log_f(x):
             return - np.log(sqrt2_pi * sigma * x) \
-                   - (np.log(x) - mean)**2/(2*sigma**2)
+                   - (np.log(x) - mean)**2 / (2 * sigma**2)
 
         def d_log_f_dx(x):
-            return - 1/x - (np.log(x) - mean)/(sigma**2 * x)
+            return - 1.0 / x - (np.log(x) - mean)/(sigma**2 * x)
 
         def dd_log_f_ddx(x):
-            return 1/(x**2) \
-                   - (1 - np.log(x) + mean)/(sigma**2 * x**2)
+            return 1.0 / (x**2) \
+                   - (1.0 - np.log(x) + mean)/(sigma**2 * x**2)
 
         return log_f, d_log_f_dx, dd_log_f_ddx, None, None
 
@@ -489,7 +504,7 @@ def _prior_densities(
 
 def _get_linear_function(
     slope: float,
-    intercept: float = 0,
+    intercept: float = 0.0,
 ):
     """Return a linear function."""
     def function(x):
