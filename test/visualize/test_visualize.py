@@ -860,7 +860,7 @@ def test_sampling_1d_marginals():
     # call with other modes
     visualize.sampling_1d_marginals(result, plot_type='hist')
     visualize.sampling_1d_marginals(
-        result, plot_type='kde', bw='silverman')
+        result, plot_type='kde', bw_method='silverman')
 
 
 @close_fig
