@@ -40,7 +40,7 @@ def waterfall_plot_postprocessor(
     See `save_postprocessor` for usage hints and argument documentation.
     """
     visualize.waterfall(problem.minimize_result)
-    plot_output_path = Path(output_path) / (problem.model.model_id + ".png")
+    plot_output_path = Path(output_path) / (problem.model.model_hash + ".png")
     plt.savefig(str(plot_output_path))
 
 
@@ -71,5 +71,5 @@ def save_postprocessor(
     """
     store.write_result(
         problem.minimize_result,
-        Path(output_path) / (problem.model.model_id + ".hdf5"),
+        Path(output_path) / (problem.model.model_hash + ".hdf5"),
     )
