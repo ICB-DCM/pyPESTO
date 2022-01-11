@@ -484,11 +484,11 @@ def _prior_densities(
                    - (np.log(x) - mean)**2 / (2 * sigma**2)
 
         def d_log_f_dx(x):
-            return - 1.0 / x - (np.log(x) - mean)/(sigma**2 * x)
+            return - 1 / x - (np.log(x) - mean)/(sigma**2 * x)
 
         def dd_log_f_ddx(x):
-            return 1.0 / (x**2) \
-                   - (1.0 - np.log(x) + mean)/(sigma**2 * x**2)
+            return 1 / (x**2) \
+                   - (1 - np.log(x) + mean)/(sigma**2 * x**2)
 
         return log_f, d_log_f_dx, dd_log_f_ddx, None, None
 
