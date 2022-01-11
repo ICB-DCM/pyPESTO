@@ -10,6 +10,7 @@ from more_itertools import one
 from petab_select import ESTIMATE, Criterion, Method, Model
 
 import pypesto.select
+import pypesto.visualize.select
 from pypesto.select import model_problem
 
 # Options sent to `pypesto.optimize.optimize.minimize`, to reduce run time.
@@ -226,6 +227,7 @@ def test_problem_multistart_select(pypesto_select_problem, initial_models):
 
 
 def test_postprocessors(petab_select_problem):
+    """Test model calibration postprocessors."""
     output_path = Path('output')
     output_path.mkdir(exist_ok=True, parents=True)
     postprocessor_1 = partial(
@@ -283,6 +285,7 @@ def test_postprocessors(petab_select_problem):
 
 
 def test_model_problem_fake_result():
+    """Test fake results for models with no estimated parameters."""
     expected_fval = 100.0
 
     fake_result = \
@@ -303,3 +306,20 @@ def test_model_problem_fake_result():
     test_fval = fake_start.fval
     # The fake start has the expected fval.
     assert test_fval == expected_fval
+
+
+def test_vis(pypesto_select_problem):
+    """Test plotting routines."""
+    best_models = pypesto_select_problem.select_to_completion(
+        method=Method.FORWARD,
+        criterion=Criterion.AIC,
+        minimize_options=minimize_options,
+    )
+    pypesto.visualize.select.plot_selected_models(
+        selected_models=best_models,
+        criterion=Criterion.AIC,
+    )
+    pypesto.visualize.select.plot_history_digraph(
+        problem=pypesto_select_problem,
+        criterion=Criterion.AIC,
+    )

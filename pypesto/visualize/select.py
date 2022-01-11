@@ -1,7 +1,6 @@
 """Visualization routines for model selection with pyPESTO."""
 from typing import Dict, List, Tuple
 
-import matplotlib
 import matplotlib.pyplot as plt
 import networkx as nx
 from petab_select import Model
@@ -26,7 +25,8 @@ def plot_selected_models(
     fz: int = 14,
     size: Tuple[float, float] = (5, 4),
     labels: Dict[str, str] = None,
-) -> matplotlib.axes.Axes:
+    ax: plt.Axes = None,
+) -> plt.Axes:
     """Plot criterion for calibrated models.
 
     Parameters
@@ -47,11 +47,13 @@ def plot_selected_models(
         A dictionary of model labels, where keys are model hashes, and
         values are model labels, for plotting. If a model label is not
         provided, it will be generated from its model ID.
+    ax:
+        The axis to use for plotting.
 
     Returns
     -------
-    ax:
-        The plot axes.
+    matplotlib.pyplot.Axes
+        The plot axis.
     """
     zero = 0
     if relative:
@@ -61,7 +63,8 @@ def plot_selected_models(
         labels = {}
 
     # FIGURE
-    _, ax = plt.subplots(figsize=size)
+    if ax is None:
+        _, ax = plt.subplots(figsize=size)
     linewidth = 3
 
     criterion_values = {
@@ -88,7 +91,7 @@ def plot_selected_models(
         fontsize=fz+RELATIVE_LABEL_FONTSIZE,
     )
     for tick in ax.yaxis.get_major_ticks():
-        tick.label.set_fontsize(fz+RELATIVE_LABEL_FONTSIZE)
+        tick.label1.set_fontsize(fz+RELATIVE_LABEL_FONTSIZE)
     ytl = ax.get_yticks()
     ax.set_ylim([min(ytl), max(ytl)])
     # removing top and right borders
@@ -105,30 +108,39 @@ def plot_history_digraph(
     relative: bool = True,
     options: Dict = None,
     labels: Dict[str, str] = None,
-):
+    ax: plt.Axes = None,
+) -> plt.Axes:
     """Plot all visited models in the model space, as a directed graph.
 
     TODO replace magic numbers with options/constants
 
-    Args:
-        problem:
-            The pyPESTO Select problem.
-        history:
-            The models calibrated during model selection, in the format of
-            `pypesto.select.Problem.history`.
-        criterion:
-            The criterion.
-        optimal_distance:
-            See docs for argument `k` in `networkx.spring_layout`.
-        relative:
-            If `True`, criterion values are offset by the minimum criterion
-            value.
-        options:
-            Additional keyword arguments for `networkx.draw_networkx`.
-        labels:
-            A dictionary of model labels, where keys are model hashes, and
-            values are model labels, for plotting. If a model label is not
-            provided, it will be generated from its model ID.
+    Parameters
+    ----------
+    problem:
+        The pyPESTO Select problem.
+    history:
+        The models calibrated during model selection, in the format of
+        `pypesto.select.Problem.history`.
+    criterion:
+        The criterion.
+    optimal_distance:
+        See docs for argument `k` in `networkx.spring_layout`.
+    relative:
+        If `True`, criterion values are offset by the minimum criterion
+        value.
+    options:
+        Additional keyword arguments for `networkx.draw_networkx`.
+    labels:
+        A dictionary of model labels, where keys are model hashes, and
+        values are model labels, for plotting. If a model label is not
+        provided, it will be generated from its model ID.
+    ax:
+        The axis to use for plotting.
+
+    Returns
+    -------
+    matplotlib.pyplot.Axes
+        The plot axis.
     """
     if criterion is None:
         criterion = problem.petab_select_problem.criterion
@@ -169,9 +181,11 @@ def plot_history_digraph(
     }
     if options is not None:
         default_options.update(options)
-    plt.figure(figsize=(12, 12))
+
+    if ax is None:
+        _, ax = plt.subplots(figsize=(12, 12))
 
     pos = nx.spring_layout(G, k=optimal_distance, iterations=20)
-    nx.draw_networkx(G, pos, **default_options)
+    nx.draw_networkx(G, pos, ax=ax, **default_options)
 
-    plt.show()
+    return ax
