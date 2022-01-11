@@ -48,11 +48,18 @@ class MethodLogger:
 
     Attributes
     ----------
+    column_width:
+        The width of columns when logging.
+    column_sep:
+        The substring used to separate column values when logging.
     level:
         The logging level.
     logger:
         A logger from the `logging` module.
     """
+
+    column_width: int = 12
+    column_sep: str = " | "
 
     def __init__(
         self,
@@ -80,16 +87,20 @@ class MethodLogger:
         """Start logging a new model selection."""
         padding = 20
         self.log('-'*padding + 'New Selection' + '-'*padding)
-        columns = [
-            "Predecessor model subspace:ID",
-            "Model subspace:ID",
-            "Criterion ID",
-            "Predecessor model criterion",
-            "Model criterion",
-            "Criterion difference",
-            "Accept",
-        ]
-        self.log("\t".join([f'[{c}]' for c in columns]))
+        columns = {
+            "Predecessor model subspace:ID": "model0",
+            "Model subspace:ID": "model",
+            "Criterion ID": "crit",
+            "Predecessor model criterion": "model0_crit",
+            "Model criterion": "model_crit",
+            "Criterion difference": "crit_diff",
+            "Accept": "accept",
+        }
+        columns = {
+            k: v.ljust(self.column_width)[:self.column_width]
+            for k, v in columns.items()
+        }
+        self.log(self.column_sep.join(columns.values()))
 
     def new_result(
         self,
@@ -138,32 +149,37 @@ class MethodLogger:
             model_id = model_subspace_id + ':' + original_model_id
             return model_id
 
+        def float_to_str(value: float, precision: int = 3) -> str:
+            return f"{value:.{precision}e}"
+
         if isinstance(predecessor_model, Model):
             predecessor_model_id = get_model_id(predecessor_model)
             predecessor_model_criterion = \
                 predecessor_model.get_criterion(criterion)
             criterion_difference = \
-                round(model_criterion - predecessor_model_criterion, precision)
-
+                float_to_str(model_criterion - predecessor_model_criterion)
             predecessor_model_criterion = \
-                round(predecessor_model_criterion, precision)
+                float_to_str(predecessor_model_criterion)
         else:
             criterion_difference = None
             predecessor_model_criterion = None
             predecessor_model_id = predecessor_model
 
-        model_criterion = round(model_criterion, precision)
+        model_criterion = float_to_str(model_criterion)
 
         message_parts = [
-            predecessor_model_id[:max_id_length],
-            get_model_id(model)[:max_id_length],
-            criterion,
+            predecessor_model_id,
+            get_model_id(model),
+            criterion.value,
             predecessor_model_criterion,
             model_criterion,
             criterion_difference,
             accept,
         ]
-        message = '\t'.join([str(v) for v in message_parts])
+        message = self.column_sep.join([
+            str(v).ljust(self.column_width)[:self.column_width]
+            for v in message_parts
+        ])
         self.log(message)
 
 
