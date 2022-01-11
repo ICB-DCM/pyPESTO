@@ -136,7 +136,7 @@ jobs:
         key: ${{ runner.os }}-${{ matrix.python-version }}-ci-select
 
     - name: Install dependencies
-      run: .github/workflows/install_deps.sh select
+      run: .github/workflows/install_deps.sh amici
 
     - name: Run tests
       timeout-minutes: 20
