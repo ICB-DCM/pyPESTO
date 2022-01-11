@@ -5,6 +5,7 @@ from ..problem import Problem
 
 try:
     import theano.tensor as tt
+
     try:
         from theano.graph.null_type import NullType
     except ImportError:
@@ -29,12 +30,13 @@ class TheanoLogProbability(tt.Op):
     itypes = [tt.dvector]  # expects a vector of parameter values when called
     otypes = [tt.dscalar]  # outputs a single scalar value (the log prob)
 
-    def __init__(self, problem: Problem, beta: float = 1.):
+    def __init__(self, problem: Problem, beta: float = 1.0):
         self._objective: ObjectiveBase = problem.objective
 
         # initialize the log probability Op
-        self._log_prob = \
-            lambda x: - beta * self._objective(x, sensi_orders=(0,))
+        self._log_prob = lambda x: -beta * self._objective(
+            x, sensi_orders=(0,)
+        )
 
         # initialize the sensitivity Op
         if problem.objective.has_grad:
@@ -44,7 +46,7 @@ class TheanoLogProbability(tt.Op):
 
     def perform(self, node, inputs, outputs, params=None):
         """Calculate the gradients of the objective function at the inputs."""
-        theta, = inputs
+        (theta,) = inputs
         log_prob = self._log_prob(theta)
         outputs[0][0] = np.array(log_prob)
 
@@ -58,7 +60,7 @@ class TheanoLogProbability(tt.Op):
         if self._log_prob_grad is None:
             # indicates gradient not available
             return [NullType]
-        theta, = inputs
+        (theta,) = inputs
         log_prob_grad = self._log_prob_grad(theta)
         return [g[0] * log_prob_grad]
 
@@ -81,14 +83,15 @@ class TheanoLogProbabilityGradient(tt.Op):
     itypes = [tt.dvector]  # expects a vector of parameter values when called
     otypes = [tt.dvector]  # outputs a vector (the log prob grad)
 
-    def __init__(self, problem: Problem, beta: float = 1.):
+    def __init__(self, problem: Problem, beta: float = 1.0):
         self._objective: ObjectiveBase = problem.objective
-        self._log_prob_grad = \
-            lambda x: - beta * self._objective(x, sensi_orders=(1,))
+        self._log_prob_grad = lambda x: -beta * self._objective(
+            x, sensi_orders=(1,)
+        )
 
     def perform(self, node, inputs, outputs, params=None):
         """Calculate the gradients of the objective function at the inputs."""
-        theta, = inputs
+        (theta,) = inputs
         # calculate gradients
         log_prob_grad = self._log_prob_grad(theta)
         outputs[0][0] = log_prob_grad

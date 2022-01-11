@@ -55,14 +55,15 @@ class AdaptiveMetropolisSampler(MetropolisSampler):
         self._cov = regularize_covariance(cov0, self.options['reg_factor'])
         self._mean_hist = self.trace_x[-1]
         self._cov_hist = self._cov
-        self._cov_scale = 1.
+        self._cov_scale = 1.0
 
     def _propose_parameter(self, x: np.ndarray):
         x_new = np.random.multivariate_normal(x, self._cov)
         return x_new
 
-    def _update_proposal(self, x: np.ndarray, lpost: float, log_p_acc: float,
-                         n_sample_cur: int):
+    def _update_proposal(
+        self, x: np.ndarray, lpost: float, log_p_acc: float, n_sample_cur: int
+    ):
         # parse options
         decay_constant = self.options['decay_constant']
         threshold_sample = self.options['threshold_sample']
@@ -71,30 +72,33 @@ class AdaptiveMetropolisSampler(MetropolisSampler):
 
         # compute historical mean and covariance
         self._mean_hist, self._cov_hist = update_history_statistics(
-            mean=self._mean_hist, cov=self._cov_hist, x_new=x,
+            mean=self._mean_hist,
+            cov=self._cov_hist,
+            x_new=x,
             n_cur_sample=max(n_sample_cur + 1, threshold_sample),
-            decay_constant=decay_constant)
+            decay_constant=decay_constant,
+        )
 
         # compute covariance scaling factor
         self._cov_scale *= np.exp(
             (np.exp(log_p_acc) - target_acceptance_rate)
-            / np.power(n_sample_cur + 1, decay_constant))
+            / np.power(n_sample_cur + 1, decay_constant)
+        )
 
         # set proposal covariance
         # TODO check publication
         self._cov = self._cov_scale * self._cov_hist
 
         # regularize proposal covariance
-        self._cov = regularize_covariance(
-            cov=self._cov, reg_factor=reg_factor)
+        self._cov = regularize_covariance(cov=self._cov, reg_factor=reg_factor)
 
 
 def update_history_statistics(
-        mean: np.ndarray,
-        cov: np.ndarray,
-        x_new: np.ndarray,
-        n_cur_sample: int,
-        decay_constant: float
+    mean: np.ndarray,
+    cov: np.ndarray,
+    x_new: np.ndarray,
+    n_cur_sample: int,
+    decay_constant: float,
 ) -> Tuple[np.ndarray, np.ndarray]:
     """
     Update sampling statistics.
@@ -121,13 +125,14 @@ def update_history_statistics(
         The updated values for the estimated mean and the estimated covariance
         matrix of the sample.
     """
-    update_rate = n_cur_sample ** (- decay_constant)
+    update_rate = n_cur_sample ** (-decay_constant)
 
     mean = (1 - update_rate) * mean + update_rate * x_new
 
     dx = x_new - mean
-    cov = (1 - update_rate) * cov + \
-        update_rate * dx.reshape((-1, 1)) @ dx.reshape((1, -1))
+    cov = (1 - update_rate) * cov + update_rate * dx.reshape(
+        (-1, 1)
+    ) @ dx.reshape((1, -1))
 
     return mean, cov
 

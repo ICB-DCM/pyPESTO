@@ -106,7 +106,8 @@ def history_decorator(minimize):
             if optimize_options.allow_failed_starts:
                 logger.error(f'start {id} failed: {err}')
                 result = OptimizerResult(
-                    x0=x0, exitflag=-1, message=str(err), id=id)
+                    x0=x0, exitflag=-1, message=str(err), id=id
+                )
             else:
                 raise
 
@@ -248,8 +249,10 @@ class Optimizer(abc.ABC):
 def check_finite_bounds(lb, ub):
     """Raise if bounds are not finite."""
     if not np.isfinite(lb).all() or not np.isfinite(ub).all():
-        raise ValueError('Selected optimizer cannot work with unconstrained '
-                         'optimization problems.')
+        raise ValueError(
+            'Selected optimizer cannot work with unconstrained '
+            'optimization problems.'
+        )
 
 
 class ScipyOptimizer(Optimizer):
@@ -300,7 +303,8 @@ class ScipyOptimizer(Optimizer):
             if not objective.has_res:
                 raise Exception(
                     "For least squares optimization, the objective "
-                    "must be able to compute residuals.")
+                    "must be able to compute residuals."
+                )
 
             ls_method = self.method[3:]
             bounds = (lb, ub)
@@ -311,8 +315,11 @@ class ScipyOptimizer(Optimizer):
 
             if self.options is not None:
                 ls_options = self.options.copy()
-                ls_options['verbose'] = 2 if 'disp' in ls_options.keys() \
-                                             and ls_options['disp'] else 0
+                ls_options['verbose'] = (
+                    2
+                    if 'disp' in ls_options.keys() and ls_options['disp']
+                    else 0
+                )
                 ls_options.pop('disp', None)
                 ls_options['max_nfev'] = ls_options.pop('maxiter', None)
             else:
@@ -325,10 +332,11 @@ class ScipyOptimizer(Optimizer):
                 method=ls_method,
                 jac=jac,
                 bounds=bounds,
-                tr_solver=ls_options.pop('tr_solver',
-                                         'lsmr' if len(x0) > 1 else 'exact'),
+                tr_solver=ls_options.pop(
+                    'tr_solver', 'lsmr' if len(x0) > 1 else 'exact'
+                ),
                 loss='linear',
-                **ls_options
+                **ls_options,
             )
             # extract fval/grad from result, note that fval is not available
             # from least squares solvers
@@ -338,8 +346,10 @@ class ScipyOptimizer(Optimizer):
             # is an fval based optimization method
 
             if not objective.has_fun:
-                raise Exception("For this optimizer, the objective must "
-                                "be able to compute function values")
+                raise Exception(
+                    "For this optimizer, the objective must "
+                    "be able to compute function values"
+                )
 
             bounds = scipy.optimize.Bounds(lb, ub)
 
@@ -347,26 +357,50 @@ class ScipyOptimizer(Optimizer):
             #    ['cg', 'bfgs', 'newton-cg', 'l-bfgs-b', 'tnc', 'slsqp',
             #        'dogleg', 'trust-ncg']
             # TODO: is it more efficient to have tuple as output of fun?
-            method_supports_grad = self.method.lower() in \
-                ['cg', 'bfgs', 'newton-cg', 'l-bfgs-b', 'tnc', 'slsqp',
-                 'dogleg', 'trust-ncg', 'trust-krylov', 'trust-exact',
-                 'trust-constr']
-            method_supports_hess = self.method.lower() in \
-                ['newton-cg', 'dogleg', 'trust-ncg', 'trust-krylov',
-                 'trust-exact', 'trust-constr']
-            method_supports_hessp = self.method.lower() in \
-                ['newton-cg', 'trust-ncg', 'trust-krylov', 'trust-constr']
+            method_supports_grad = self.method.lower() in [
+                'cg',
+                'bfgs',
+                'newton-cg',
+                'l-bfgs-b',
+                'tnc',
+                'slsqp',
+                'dogleg',
+                'trust-ncg',
+                'trust-krylov',
+                'trust-exact',
+                'trust-constr',
+            ]
+            method_supports_hess = self.method.lower() in [
+                'newton-cg',
+                'dogleg',
+                'trust-ncg',
+                'trust-krylov',
+                'trust-exact',
+                'trust-constr',
+            ]
+            method_supports_hessp = self.method.lower() in [
+                'newton-cg',
+                'trust-ncg',
+                'trust-krylov',
+                'trust-constr',
+            ]
 
             fun = objective.get_fval
-            jac = objective.get_grad \
-                if objective.has_grad and method_supports_grad \
+            jac = (
+                objective.get_grad
+                if objective.has_grad and method_supports_grad
                 else None
-            hess = objective.get_hess \
-                if objective.has_hess and method_supports_hess \
+            )
+            hess = (
+                objective.get_hess
+                if objective.has_hess and method_supports_hess
                 else None
-            hessp = objective.get_hessp \
-                if objective.has_hessp and method_supports_hessp \
+            )
+            hessp = (
+                objective.get_hessp
+                if objective.has_hessp and method_supports_hessp
                 else None
+            )
             # minimize will ignore hessp otherwise
             if hessp is not None:
                 hess = None
@@ -393,7 +427,7 @@ class ScipyOptimizer(Optimizer):
             grad=grad,
             hess=getattr(res, 'hess', None),
             exitflag=res.status,
-            message=res.message
+            message=res.message,
         )
 
         return optimizer_result
@@ -414,8 +448,7 @@ class ScipyOptimizer(Optimizer):
 class IpoptOptimizer(Optimizer):
     """Use IpOpt (https://pypi.org/project/ipopt/) for optimization."""
 
-    def __init__(
-            self, options: Dict = None):
+    def __init__(self, options: Dict = None):
         """
         Initialize.
 
@@ -463,9 +496,7 @@ class IpoptOptimizer(Optimizer):
 
         # the ipopt return object is a scipy.optimize.OptimizeResult
         return OptimizerResult(
-            x=ret.x,
-            exitflag=ret.status,
-            message=ret.message
+            x=ret.x, exitflag=ret.status, message=ret.message
         )
 
     def is_least_squares(self):
@@ -476,16 +507,14 @@ class IpoptOptimizer(Optimizer):
 class DlibOptimizer(Optimizer):
     """Use the Dlib toolbox for optimization."""
 
-    def __init__(self,
-                 options: Dict = None):
+    def __init__(self, options: Dict = None):
         super().__init__()
 
         self.options = options
         if self.options is None:
             self.options = DlibOptimizer.get_default_options(self)
         elif 'maxiter' not in self.options:
-            raise KeyError('Dlib options are missing the key word '
-                           'maxiter.')
+            raise KeyError('Dlib options are missing the key word ' 'maxiter.')
 
     @fix_decorator
     @time_decorator
@@ -511,8 +540,10 @@ class DlibOptimizer(Optimizer):
             )
 
         if not objective.has_fun:
-            raise ValueError("For this optimizer, the objective must "
-                             "be able to return function values.")
+            raise ValueError(
+                "For this optimizer, the objective must "
+                "be able to return function values."
+            )
 
         # dlib requires variable length arguments
         def get_fval_vararg(*x):
@@ -572,12 +603,10 @@ class PyswarmOptimizer(Optimizer):
         check_finite_bounds(lb, ub)
 
         xopt, fopt = pyswarm.pso(
-            problem.objective.get_fval, lb, ub, **self.options)
-
-        optimizer_result = OptimizerResult(
-            x=np.array(xopt),
-            fval=fopt
+            problem.objective.get_fval, lb, ub, **self.options
         )
+
+        optimizer_result = OptimizerResult(x=np.array(xopt), fval=fopt)
 
         return optimizer_result
 
@@ -639,12 +668,19 @@ class CmaesOptimizer(Optimizer):
                 "install cma via `pip install cma."
             )
 
-        result = cma.CMAEvolutionStrategy(
-            x0, sigma0, inopts=self.options,
-        ).optimize(problem.objective.get_fval).result
+        result = (
+            cma.CMAEvolutionStrategy(
+                x0,
+                sigma0,
+                inopts=self.options,
+            )
+            .optimize(problem.objective.get_fval)
+            .result
+        )
 
-        optimizer_result = OptimizerResult(x=np.array(result[0]),
-                                           fval=result[1])
+        optimizer_result = OptimizerResult(
+            x=np.array(result[0]), fval=result[1]
+        )
 
         return optimizer_result
 
@@ -703,8 +739,9 @@ class ScipyDifferentialEvolutionOptimizer(Optimizer):
             problem.objective.get_fval, bounds, **self.options
         )
 
-        optimizer_result = OptimizerResult(x=np.array(result.x),
-                                           fval=result.fun)
+        optimizer_result = OptimizerResult(
+            x=np.array(result.x), fval=result.fun
+        )
 
         return optimizer_result
 
@@ -767,19 +804,25 @@ class PyswarmsOptimizer(Optimizer):
 
         if pyswarms is None:
             raise ImportError(
-                "This optimizer requires an installation of pyswarms.")
+                "This optimizer requires an installation of pyswarms."
+            )
 
         # check for finite values for the bounds
         if np.isfinite(lb).all() is np.False_:
             raise ValueError(
-                "This optimizer can only handle finite lower bounds.")
+                "This optimizer can only handle finite lower bounds."
+            )
         if np.isfinite(ub).all() is np.False_:
             raise ValueError(
-                "This optimizer can only handle finite upper bounds.")
+                "This optimizer can only handle finite upper bounds."
+            )
 
         optimizer = pyswarms.single.global_best.GlobalBestPSO(
-            n_particles=self.par_popsize, dimensions=len(x0),
-            options=self.options, bounds=(lb, ub))
+            n_particles=self.par_popsize,
+            dimensions=len(x0),
+            options=self.options,
+            bounds=(lb, ub),
+        )
 
         def successively_working_fval(swarm: np.ndarray) -> np.ndarray:
             """Evaluate the function for all parameters in the swarm object.
@@ -801,7 +844,8 @@ class PyswarmsOptimizer(Optimizer):
             return result
 
         cost, pos = optimizer.optimize(
-            successively_working_fval, iters=self.options['maxiter'])
+            successively_working_fval, iters=self.options['maxiter']
+        )
 
         optimizer_result = OptimizerResult(
             x=pos,
@@ -860,54 +904,86 @@ class NLoptOptimizer(Optimizer):
         if nlopt is None:
             raise ImportError(
                 "This optimizer requires an installation of NLopt. You can "
-                "install NLopt via `pip install nlopt`.")
+                "install NLopt via `pip install nlopt`."
+            )
 
         if method is None:
             method = nlopt.LD_LBFGS
 
         needs_local_method = [
-            nlopt.G_MLSL, nlopt.G_MLSL_LDS, nlopt.GD_MLSL, nlopt.GD_MLSL_LDS,
-            nlopt.AUGLAG, nlopt.AUGLAG_EQ
+            nlopt.G_MLSL,
+            nlopt.G_MLSL_LDS,
+            nlopt.GD_MLSL,
+            nlopt.GD_MLSL_LDS,
+            nlopt.AUGLAG,
+            nlopt.AUGLAG_EQ,
         ]
 
         if local_method is None and method in needs_local_method:
             local_method = nlopt.LD_LBFGS
 
         if local_method is not None and method not in needs_local_method:
-            raise ValueError(f'Method "{method}" does not allow a local '
-                             f'method. Please set `local_method` to None.')
+            raise ValueError(
+                f'Method "{method}" does not allow a local '
+                f'method. Please set `local_method` to None.'
+            )
 
         self.local_methods = [
-            nlopt.LD_VAR1, nlopt.LD_VAR2, nlopt.LD_TNEWTON_PRECOND_RESTART,
-            nlopt.LD_TNEWTON_PRECOND, nlopt.LD_TNEWTON_RESTART,
-            nlopt.LD_TNEWTON, nlopt.LD_LBFGS,
-            nlopt.LD_SLSQP, nlopt.LD_CCSAQ, nlopt.LD_MMA, nlopt.LN_SBPLX,
-            nlopt.LN_NELDERMEAD, nlopt.LN_PRAXIS, nlopt.LN_NEWUOA,
-            nlopt.LN_NEWUOA_BOUND, nlopt.LN_BOBYQA, nlopt.LN_COBYLA,
+            nlopt.LD_VAR1,
+            nlopt.LD_VAR2,
+            nlopt.LD_TNEWTON_PRECOND_RESTART,
+            nlopt.LD_TNEWTON_PRECOND,
+            nlopt.LD_TNEWTON_RESTART,
+            nlopt.LD_TNEWTON,
+            nlopt.LD_LBFGS,
+            nlopt.LD_SLSQP,
+            nlopt.LD_CCSAQ,
+            nlopt.LD_MMA,
+            nlopt.LN_SBPLX,
+            nlopt.LN_NELDERMEAD,
+            nlopt.LN_PRAXIS,
+            nlopt.LN_NEWUOA,
+            nlopt.LN_NEWUOA_BOUND,
+            nlopt.LN_BOBYQA,
+            nlopt.LN_COBYLA,
         ]
         self.global_methods = [
-            nlopt.GN_ESCH, nlopt.GN_ISRES, nlopt.GN_AGS, nlopt.GD_STOGO,
-            nlopt.GD_STOGO_RAND, nlopt.G_MLSL, nlopt.G_MLSL_LDS, nlopt.GD_MLSL,
-            nlopt.GD_MLSL_LDS, nlopt.GN_CRS2_LM, nlopt.GN_ORIG_DIRECT,
-            nlopt.GN_ORIG_DIRECT_L, nlopt.GN_DIRECT, nlopt.GN_DIRECT_L,
-            nlopt.GN_DIRECT_L_NOSCAL, nlopt.GN_DIRECT_L_RAND,
+            nlopt.GN_ESCH,
+            nlopt.GN_ISRES,
+            nlopt.GN_AGS,
+            nlopt.GD_STOGO,
+            nlopt.GD_STOGO_RAND,
+            nlopt.G_MLSL,
+            nlopt.G_MLSL_LDS,
+            nlopt.GD_MLSL,
+            nlopt.GD_MLSL_LDS,
+            nlopt.GN_CRS2_LM,
+            nlopt.GN_ORIG_DIRECT,
+            nlopt.GN_ORIG_DIRECT_L,
+            nlopt.GN_DIRECT,
+            nlopt.GN_DIRECT_L,
+            nlopt.GN_DIRECT_L_NOSCAL,
+            nlopt.GN_DIRECT_L_RAND,
             nlopt.GN_DIRECT_L_RAND_NOSCAL,
         ]
-        self.hybrid_methods = [
-            nlopt.AUGLAG, nlopt.AUGLAG_EQ
-        ]
-        methods = self.local_methods + self.global_methods + \
-            self.hybrid_methods
+        self.hybrid_methods = [nlopt.AUGLAG, nlopt.AUGLAG_EQ]
+        methods = (
+            self.local_methods + self.global_methods + self.hybrid_methods
+        )
 
         if method not in methods:
-            raise ValueError(f'"{method}" is not a valid method. Valid '
-                             f'methods are: {methods}')
+            raise ValueError(
+                f'"{method}" is not a valid method. Valid '
+                f'methods are: {methods}'
+            )
 
         self.method = method
 
         if local_method is not None and local_method not in self.local_methods:
-            raise ValueError(f'"{local_method}" is not a valid method. Valid '
-                             f'methods are: {self.local_methods}')
+            raise ValueError(
+                f'"{local_method}" is not a valid method. Valid '
+                f'methods are: {self.local_methods}'
+            )
 
         self.local_method = local_method
 
@@ -925,16 +1001,25 @@ class NLoptOptimizer(Optimizer):
         """Perform optimization. Parameters: see `Optimizer` documentation."""
         opt = nlopt.opt(self.method, problem.dim)
 
-        valid_options = ['ftol_abs', 'ftol_rel', 'xtol_abs', 'xtol_rel',
-                         'stopval', 'x_weights', 'maxeval', 'maxtime',
-                         'initial_step']
+        valid_options = [
+            'ftol_abs',
+            'ftol_rel',
+            'xtol_abs',
+            'xtol_rel',
+            'stopval',
+            'x_weights',
+            'maxeval',
+            'maxtime',
+            'initial_step',
+        ]
 
         def set_options(o, options):
             for option, value in options.items():
                 if option not in valid_options:
                     raise ValueError(
                         f'"{option}" is not a valid option. Valid '
-                        f'options are: {valid_options}')
+                        f'options are: {valid_options}'
+                    )
                 getattr(o, f'set_{option}')(value)
 
         if self.local_method is not None:
@@ -964,8 +1049,13 @@ class NLoptOptimizer(Optimizer):
         try:
             result = opt.optimize(x0)
             msg = 'Finished Successfully.'
-        except (nlopt.RoundoffLimited, nlopt.ForcedStop, ValueError,
-                RuntimeError, MemoryError) as e:
+        except (
+            nlopt.RoundoffLimited,
+            nlopt.ForcedStop,
+            ValueError,
+            RuntimeError,
+            MemoryError,
+        ) as e:
             result = None
             msg = str(e)
 
@@ -1013,11 +1103,14 @@ class FidesOptimizer(Optimizer):
         if hessian_update == 'Hybrid':
             hessian_update = fides.HybridFixed()
 
-        if hessian_update is not None and \
-                not isinstance(hessian_update, HessianApproximation):
-            raise ValueError('Incompatible type for hessian update. '
-                             'Must be a HessianApproximation, '
-                             f'was {type(hessian_update)}.')
+        if hessian_update is not None and not isinstance(
+            hessian_update, HessianApproximation
+        ):
+            raise ValueError(
+                'Incompatible type for hessian update. '
+                'Must be a HessianApproximation, '
+                f'was {type(hessian_update)}.'
+            )
 
         if options is None:
             options = {}
@@ -1044,31 +1137,43 @@ class FidesOptimizer(Optimizer):
                 "install fides via `pip install fides`."
             )
 
-        resfun = self.hessian_update.requires_resfun if self.hessian_update \
-            is not None else False
+        resfun = (
+            self.hessian_update.requires_resfun
+            if self.hessian_update is not None
+            else False
+        )
 
         args = {'mode': MODE_RES if resfun else MODE_FUN}
 
         if not problem.objective.has_grad:
-            raise ValueError('Fides cannot be applied to problems '
-                             'with objectives that do not support '
-                             'gradient evaluation.')
+            raise ValueError(
+                'Fides cannot be applied to problems '
+                'with objectives that do not support '
+                'gradient evaluation.'
+            )
 
         if self.hessian_update is None or (
             self.hessian_update.requires_hess and not resfun
         ):
             if not problem.objective.has_hess:
-                raise ValueError('Specified hessian update scheme cannot be '
-                                 'used with objectives that do not support '
-                                 'Hessian computation.')
+                raise ValueError(
+                    'Specified hessian update scheme cannot be '
+                    'used with objectives that do not support '
+                    'Hessian computation.'
+                )
             args['sensi_orders'] = (0, 1, 2)
         else:
             args['sensi_orders'] = (0, 1)
 
         opt = fides.Optimizer(
-            fun=problem.objective, funargs=args, ub=problem.ub, lb=problem.lb,
-            verbose=self.verbose, hessian_update=self.hessian_update,
-            options=self.options, resfun=resfun
+            fun=problem.objective,
+            funargs=args,
+            ub=problem.ub,
+            lb=problem.lb,
+            verbose=self.verbose,
+            hessian_update=self.hessian_update,
+            options=self.options,
+            resfun=resfun,
         )
 
         try:
@@ -1081,9 +1186,12 @@ class FidesOptimizer(Optimizer):
             msg = str(err)
 
         optimizer_result = OptimizerResult(
-            x=opt.x_min, fval=opt.fval_min if not resfun else None,
-            grad=opt.grad_min, hess=opt.hess, message=msg,
-            exitflag=opt.exitflag
+            x=opt.x_min,
+            fval=opt.fval_min if not resfun else None,
+            grad=opt.grad_min,
+            hess=opt.hess,
+            message=msg,
+            exitflag=opt.exitflag,
         )
 
         return optimizer_result

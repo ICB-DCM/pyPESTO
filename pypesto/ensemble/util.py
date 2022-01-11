@@ -27,13 +27,15 @@ from ..store import get_or_create_group, read_result, write_array
 from .ensemble import Ensemble, EnsemblePrediction
 
 
-def read_from_csv(path: str,
-                  sep: str = '\t',
-                  index_col: int = 0,
-                  headline_parser: Callable = None,
-                  ensemble_type: EnsembleType = None,
-                  lower_bound: np.ndarray = None,
-                  upper_bound: np.ndarray = None):
+def read_from_csv(
+    path: str,
+    sep: str = '\t',
+    index_col: int = 0,
+    headline_parser: Callable = None,
+    ensemble_type: EnsembleType = None,
+    lower_bound: np.ndarray = None,
+    upper_bound: np.ndarray = None,
+):
     """
     Create an ensemble from a csv file.
 
@@ -67,20 +69,23 @@ def read_from_csv(path: str,
     if ensemble_type is None:
         ensemble_type = EnsembleType.ensemble
 
-    return read_from_df(dataframe=ensemble_df,
-                        headline_parser=headline_parser,
-                        ensemble_type=ensemble_type,
-                        lower_bound=lower_bound,
-                        upper_bound=upper_bound)
+    return read_from_df(
+        dataframe=ensemble_df,
+        headline_parser=headline_parser,
+        ensemble_type=ensemble_type,
+        lower_bound=lower_bound,
+        upper_bound=upper_bound,
+    )
 
 
-def read_ensemble_from_hdf5(filename: str,
-                            input_type: str = OPTIMIZE,
-                            remove_burn_in: bool = True,
-                            chain_slice: slice = None,
-                            cutoff: float = np.inf,
-                            max_size: int = np.inf
-                            ):
+def read_ensemble_from_hdf5(
+    filename: str,
+    input_type: str = OPTIMIZE,
+    remove_burn_in: bool = True,
+    chain_slice: slice = None,
+    cutoff: float = np.inf,
+    max_size: int = np.inf,
+):
     """
     Create an ensemble from an HDF5 storage file.
 
@@ -100,29 +105,33 @@ def read_ensemble_from_hdf5(filename: str,
     # TODO: add option HISTORY. Need to fix
     #  reading history from hdf5.
     if input_type == OPTIMIZE:
-        result = read_result(filename=filename,
-                             optimize=True)
-        return Ensemble.from_optimization_endpoints(result=result,
-                                                    cutoff=cutoff,
-                                                    max_size=max_size)
+        result = read_result(filename=filename, optimize=True)
+        return Ensemble.from_optimization_endpoints(
+            result=result, cutoff=cutoff, max_size=max_size
+        )
     elif input_type == SAMPLE:
-        result = read_result(filename=filename,
-                             sample=True)
-        return Ensemble.from_sample(result=result,
-                                    remove_burn_in=remove_burn_in,
-                                    chain_slice=chain_slice)
+        result = read_result(filename=filename, sample=True)
+        return Ensemble.from_sample(
+            result=result,
+            remove_burn_in=remove_burn_in,
+            chain_slice=chain_slice,
+        )
     else:
-        raise ValueError('The type you provided was neither '
-                         f'"{SAMPLE}" nor "{OPTIMIZE}". Those are '
-                         'currently the only supported types. '
-                         'Please choose one of them.')
+        raise ValueError(
+            'The type you provided was neither '
+            f'"{SAMPLE}" nor "{OPTIMIZE}". Those are '
+            'currently the only supported types. '
+            'Please choose one of them.'
+        )
 
 
-def read_from_df(dataframe: pd.DataFrame,
-                 headline_parser: Callable = None,
-                 ensemble_type: EnsembleType = None,
-                 lower_bound: np.ndarray = None,
-                 upper_bound: np.ndarray = None):
+def read_from_df(
+    dataframe: pd.DataFrame,
+    headline_parser: Callable = None,
+    ensemble_type: EnsembleType = None,
+    lower_bound: np.ndarray = None,
+    upper_bound: np.ndarray = None,
+):
     """
     Create an ensemble from a csv file.
 
@@ -153,17 +162,21 @@ def read_from_df(dataframe: pd.DataFrame,
     if ensemble_type is None:
         ensemble_type = EnsembleType.ensemble
 
-    return Ensemble(x_vectors=dataframe.values,
-                    x_names=list(dataframe.index),
-                    vector_tags=vector_tags,
-                    ensemble_type=ensemble_type,
-                    lower_bound=lower_bound,
-                    upper_bound=upper_bound)
+    return Ensemble(
+        x_vectors=dataframe.values,
+        x_names=list(dataframe.index),
+        vector_tags=vector_tags,
+        ensemble_type=ensemble_type,
+        lower_bound=lower_bound,
+        upper_bound=upper_bound,
+    )
 
 
-def write_ensemble_prediction_to_h5(ensemble_prediction: EnsemblePrediction,
-                                    output_file: str,
-                                    base_path: str = None):
+def write_ensemble_prediction_to_h5(
+    ensemble_prediction: EnsemblePrediction,
+    output_file: str,
+    base_path: str = None,
+):
     """
     Write an `EnsemblePrediction` to hdf5.
 
@@ -185,42 +198,48 @@ def write_ensemble_prediction_to_h5(ensemble_prediction: EnsemblePrediction,
     with h5py.File(output_file, 'a') as f:
         # write prediction ID if available
         if ensemble_prediction.prediction_id is not None:
-            f.create_dataset(os.path.join(base, PREDICTION_ID),
-                             data=ensemble_prediction.prediction_id)
+            f.create_dataset(
+                os.path.join(base, PREDICTION_ID),
+                data=ensemble_prediction.prediction_id,
+            )
 
         # write lower bounds per condition, if available
         if ensemble_prediction.lower_bound is not None:
             if isinstance(ensemble_prediction.lower_bound[0], np.ndarray):
                 lb_grp = get_or_create_group(f, LOWER_BOUND)
-                for i_cond, lower_bounds in \
-                        enumerate(ensemble_prediction.lower_bound):
-                    condition_id = (
-                        ensemble_prediction
-                        .prediction_results[0]
-                        .condition_ids[i_cond]
-                    )
+                for i_cond, lower_bounds in enumerate(
+                    ensemble_prediction.lower_bound
+                ):
+                    condition_id = ensemble_prediction.prediction_results[
+                        0
+                    ].condition_ids[i_cond]
                     write_array(lb_grp, condition_id, lower_bounds)
             elif isinstance(ensemble_prediction.lower_bound[0], float):
-                f.create_dataset(LOWER_BOUND,
-                                 data=ensemble_prediction.lower_bound)
+                f.create_dataset(
+                    LOWER_BOUND, data=ensemble_prediction.lower_bound
+                )
 
         # write upper bounds per condition, if available
         if ensemble_prediction.upper_bound is not None:
             if isinstance(ensemble_prediction.upper_bound[0], np.ndarray):
                 ub_grp = get_or_create_group(f, UPPER_BOUND)
-                for i_cond, upper_bounds in \
-                        enumerate(ensemble_prediction.upper_bound):
-                    condition_id = \
-                        ensemble_prediction.prediction_results[
-                            0].condition_ids[i_cond]
+                for i_cond, upper_bounds in enumerate(
+                    ensemble_prediction.upper_bound
+                ):
+                    condition_id = ensemble_prediction.prediction_results[
+                        0
+                    ].condition_ids[i_cond]
                     write_array(ub_grp, condition_id, upper_bounds)
             elif isinstance(ensemble_prediction.upper_bound[0], float):
-                f.create_dataset(UPPER_BOUND,
-                                 data=ensemble_prediction.upper_bound)
+                f.create_dataset(
+                    UPPER_BOUND, data=ensemble_prediction.upper_bound
+                )
 
         # write summary statistics to h5 file
-        for summary_id, summary in \
-                ensemble_prediction.prediction_summary.items():
+        for (
+            summary_id,
+            summary,
+        ) in ensemble_prediction.prediction_summary.items():
             if summary is None:
                 continue
             tmp_base_path = os.path.join(base, f'{SUMMARY}_{summary_id}')
@@ -228,15 +247,18 @@ def write_ensemble_prediction_to_h5(ensemble_prediction: EnsemblePrediction,
             summary.write_to_h5(output_file, base_path=tmp_base_path)
 
         # write the single prediction results
-        for i_result, result in \
-                enumerate(ensemble_prediction.prediction_results):
-            tmp_base_path = os.path.join(base,
-                                         f'{PREDICTION_RESULTS}_{i_result}')
+        for i_result, result in enumerate(
+            ensemble_prediction.prediction_results
+        ):
+            tmp_base_path = os.path.join(
+                base, f'{PREDICTION_RESULTS}_{i_result}'
+            )
             result.write_to_h5(output_file, base_path=tmp_base_path)
 
 
-def get_prediction_dataset(ens: Union[Ensemble, EnsemblePrediction],
-                           prediction_index: int = 0) -> np.ndarray:
+def get_prediction_dataset(
+    ens: Union[Ensemble, EnsemblePrediction], prediction_index: int = 0
+) -> np.ndarray:
     """
     Extract an array of prediction.
 
@@ -263,15 +285,18 @@ def get_prediction_dataset(ens: Union[Ensemble, EnsemblePrediction],
         ens.condense_to_arrays()
         dataset = ens.prediction_arrays[OUTPUT].transpose()
     else:
-        raise Exception('Need either an Ensemble object with predictions or '
-                        'an EnsemblePrediction object as input. Stopping.')
+        raise Exception(
+            'Need either an Ensemble object with predictions or '
+            'an EnsemblePrediction object as input. Stopping.'
+        )
 
     return dataset
 
 
 def read_ensemble_prediction_from_h5(
-        predictor: Union[Callable[[Sequence], PredictionResult], None],
-        input_file: str):
+    predictor: Union[Callable[[Sequence], PredictionResult], None],
+    input_file: str,
+):
     """Read an ensemble prediction from an HDF5 File."""
     # open file
     with h5py.File(input_file, 'r') as f:
@@ -285,33 +310,38 @@ def read_ensemble_prediction_from_h5(
                 if isinstance(f[key], h5py._hl.dataset.Dataset):
                     bounds[key] = f[key][:]
                     continue
-                bounds[key] = [f[f'{key}/{cond}'][()]
-                               for cond in f[key].keys()]
+                bounds[key] = [
+                    f[f'{key}/{cond}'][()] for cond in f[key].keys()
+                ]
                 bounds[key] = np.array(bounds[key])
                 continue
             x_names = decode_array(f[f'{key}/{X_NAMES}'][()])
-            condition_ids = np.array(decode_array(
-                f[f'{key}/condition_ids'][()]
-            ))
+            condition_ids = np.array(
+                decode_array(f[f'{key}/condition_ids'][()])
+            )
             pred_cond_res_list = []
             for id, _ in enumerate(condition_ids):
                 output = f[f'{key}/{id}/{OUTPUT}'][:]
                 output_ids = decode_array(f[f'{key}/{id}/{OUTPUT_IDS}'][:])
                 timepoints = f[f'{key}/{id}/{TIMEPOINTS}'][:]
-                pred_cond_res_list.append(PredictionConditionResult(
-                    timepoints=timepoints,
-                    output_ids=output_ids,
-                    output=output,
-                    x_names=x_names
-                ))
-            pred_res_list.append(PredictionResult(
-                conditions=pred_cond_res_list,
-                condition_ids=condition_ids
-            ))
-        return EnsemblePrediction(predictor=predictor,
-                                  prediction_id=prediction_id,
-                                  prediction_results=pred_res_list,
-                                  )
+                pred_cond_res_list.append(
+                    PredictionConditionResult(
+                        timepoints=timepoints,
+                        output_ids=output_ids,
+                        output=output,
+                        x_names=x_names,
+                    )
+                )
+            pred_res_list.append(
+                PredictionResult(
+                    conditions=pred_cond_res_list, condition_ids=condition_ids
+                )
+            )
+        return EnsemblePrediction(
+            predictor=predictor,
+            prediction_id=prediction_id,
+            prediction_results=pred_res_list,
+        )
 
 
 def decode_array(array: np.ndarray) -> np.ndarray:

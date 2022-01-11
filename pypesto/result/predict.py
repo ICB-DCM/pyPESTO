@@ -31,14 +31,16 @@ class PredictionConditionResult:
     pyPESTO.
     """
 
-    def __init__(self,
-                 timepoints: np.ndarray,
-                 output_ids: Sequence[str],
-                 output: np.ndarray = None,
-                 output_sensi: np.ndarray = None,
-                 output_weight: float = None,
-                 output_sigmay: np.ndarray = None,
-                 x_names: Sequence[str] = None):
+    def __init__(
+        self,
+        timepoints: np.ndarray,
+        output_ids: Sequence[str],
+        output: np.ndarray = None,
+        output_sensi: np.ndarray = None,
+        output_weight: float = None,
+        output_sigmay: np.ndarray = None,
+        x_names: Sequence[str] = None,
+    ):
         """
         Initialize PredictionConditionResult.
 
@@ -67,8 +69,9 @@ class PredictionConditionResult:
         self.output_sigmay = output_sigmay
         self.x_names = x_names
         if x_names is None and output_sensi is not None:
-            self.x_names = [f'parameter_{i_par}' for i_par in
-                            range(output_sensi.shape[1])]
+            self.x_names = [
+                f'parameter_{i_par}' for i_par in range(output_sensi.shape[1])
+            ]
 
     def __iter__(self):
         """Allow usage like a dict."""
@@ -82,6 +85,7 @@ class PredictionConditionResult:
 
     def __eq__(self, other):
         """Check equality of two PredictionConditionResults."""
+
         def to_bool(expr):
             if isinstance(expr, bool):
                 return expr
@@ -114,10 +118,12 @@ class PredictionResult:
     which allows to work with them in a reasonable way.
     """
 
-    def __init__(self,
-                 conditions: Sequence[Union[PredictionConditionResult, Dict]],
-                 condition_ids: Sequence[str] = None,
-                 comment: str = None):
+    def __init__(
+        self,
+        conditions: Sequence[Union[PredictionConditionResult, Dict]],
+        condition_ids: Sequence[str] = None,
+        comment: str = None,
+    ):
         """
         Initialize PredictionResult.
 
@@ -133,14 +139,19 @@ class PredictionResult:
             An additional note, which can be attached to this prediction
         """
         # cast the result per condition
-        self.conditions = [cond if isinstance(cond, PredictionConditionResult)
-                           else PredictionConditionResult(**cond)
-                           for cond in conditions]
+        self.conditions = [
+            cond
+            if isinstance(cond, PredictionConditionResult)
+            else PredictionConditionResult(**cond)
+            for cond in conditions
+        ]
 
         self.condition_ids = condition_ids
         if self.condition_ids is None:
-            self.condition_ids = [get_condition_label(i_cond)
-                                  for i_cond in range(len(conditions))]
+            self.condition_ids = [
+                get_condition_label(i_cond)
+                for i_cond in range(len(conditions))
+            ]
 
         # add a comment to this prediction if available
         self.comment = comment
@@ -205,7 +216,8 @@ class PredictionResult:
             output_path.mkdir(parents=True, exist_ok=False)
             # add the suffix
             output_dummy = Path(output_path.stem).with_suffix(
-                f'.{output_suffix}')
+                f'.{output_suffix}'
+            )
 
             return output_path, output_dummy
 
@@ -220,11 +232,12 @@ class PredictionResult:
             if cond.output is not None:
                 # create filename for this condition
                 filename = output_path.joinpath(
-                    output_dummy.stem + f'_{i_cond}' + output_dummy.suffix)
+                    output_dummy.stem + f'_{i_cond}' + output_dummy.suffix
+                )
                 # create DataFrame and write to file
-                result = pd.DataFrame(index=timepoints,
-                                      columns=cond.output_ids,
-                                      data=cond.output)
+                result = pd.DataFrame(
+                    index=timepoints, columns=cond.output_ids, data=cond.output
+                )
                 result.to_csv(filename, sep='\t')
 
             # handle output sensitivities, if computed
@@ -233,17 +246,19 @@ class PredictionResult:
                 for i_par in range(cond.output_sensi.shape[1]):
                     # create filename for this condition and parameter
                     filename = output_path.joinpath(
-                        output_dummy.stem + f'_{i_cond}__s{i_par}' +
-                        output_dummy.suffix)
+                        output_dummy.stem
+                        + f'_{i_cond}__s{i_par}'
+                        + output_dummy.suffix
+                    )
                     # create DataFrame and write to file
-                    result = pd.DataFrame(index=timepoints,
-                                          columns=cond.output_ids,
-                                          data=cond.output_sensi[:, i_par, :])
+                    result = pd.DataFrame(
+                        index=timepoints,
+                        columns=cond.output_ids,
+                        data=cond.output_sensi[:, i_par, :],
+                    )
                     result.to_csv(filename, sep='\t')
 
-    def write_to_h5(self,
-                    output_file: str,
-                    base_path: str = None):
+    def write_to_h5(self, output_file: str, base_path: str = None):
         """
         Save predictions to an h5 file.
 
@@ -269,28 +284,37 @@ class PredictionResult:
         with h5py.File(output_path, filemode) as f:
             # loop over conditions (i.e., amici edata objects)
             if self.conditions and self.conditions[0].x_names is not None:
-                f.create_dataset(os.path.join(base, PARAMETER_IDS),
-                                 data=self.conditions[0].x_names)
+                f.create_dataset(
+                    os.path.join(base, PARAMETER_IDS),
+                    data=self.conditions[0].x_names,
+                )
             if self.condition_ids is not None:
-                f.create_dataset(os.path.join(base, CONDITION_IDS),
-                                 data=self.condition_ids)
+                f.create_dataset(
+                    os.path.join(base, CONDITION_IDS), data=self.condition_ids
+                )
             for i_cond, cond in enumerate(self.conditions):
                 # each conditions gets a group of its own
                 f.create_group(os.path.join(base, str(i_cond)))
                 # save output IDs
-                f.create_dataset(os.path.join(base, str(i_cond),
-                                              OUTPUT_IDS),
-                                 data=cond.output_ids)
+                f.create_dataset(
+                    os.path.join(base, str(i_cond), OUTPUT_IDS),
+                    data=cond.output_ids,
+                )
                 # save timepoints, outputs, and sensitivities of outputs
-                f.create_dataset(os.path.join(base, str(i_cond), TIMEPOINTS),
-                                 data=cond.timepoints)
+                f.create_dataset(
+                    os.path.join(base, str(i_cond), TIMEPOINTS),
+                    data=cond.timepoints,
+                )
                 if cond.output is not None:
-                    f.create_dataset(os.path.join(base, str(i_cond), OUTPUT),
-                                     data=cond.output)
+                    f.create_dataset(
+                        os.path.join(base, str(i_cond), OUTPUT),
+                        data=cond.output,
+                    )
                 if cond.output_sensi is not None:
-                    f.create_dataset(os.path.join(base, str(i_cond),
-                                                  OUTPUT_SENSI),
-                                     data=cond.output_sensi)
+                    f.create_dataset(
+                        os.path.join(base, str(i_cond), OUTPUT_SENSI),
+                        data=cond.output_sensi,
+                    )
 
     @staticmethod
     def _check_existence(output_path):
@@ -302,8 +326,11 @@ class PredictionResult:
         output_path_out = output_path
         while output_path_out.exists():
             output_path_out = output_path_out.with_name(
-                output_path_out.stem + f'_{round(time() * 1000)}')
-            warn('Output name already existed! Changed the name of the output '
-                 'by appending the unix timestampp to make it unique!')
+                output_path_out.stem + f'_{round(time() * 1000)}'
+            )
+            warn(
+                'Output name already existed! Changed the name of the output '
+                'by appending the unix timestampp to make it unique!'
+            )
 
         return output_path_out

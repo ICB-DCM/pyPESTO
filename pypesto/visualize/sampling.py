@@ -28,13 +28,14 @@ logger = logging.getLogger(__name__)
 
 
 def sampling_fval_traces(
-        result: Result,
-        i_chain: int = 0,
-        full_trace: bool = False,
-        stepsize: int = 1,
-        title: str = None,
-        size: Tuple[float, float] = None,
-        ax: matplotlib.axes.Axes = None):
+    result: Result,
+    i_chain: int = 0,
+    full_trace: bool = False,
+    stepsize: int = 1,
+    title: str = None,
+    size: Tuple[float, float] = None,
+    ax: matplotlib.axes.Axes = None,
+):
     """
     Plot log-posterior (=function value) over iterations.
 
@@ -61,19 +62,19 @@ def sampling_fval_traces(
         The plot axes.
     """
     # get data which should be plotted
-    _, params_fval, _, _, _ = get_data_to_plot(result=result,
-                                               i_chain=i_chain,
-                                               stepsize=stepsize,
-                                               full_trace=full_trace)
+    _, params_fval, _, _, _ = get_data_to_plot(
+        result=result,
+        i_chain=i_chain,
+        stepsize=stepsize,
+        full_trace=full_trace,
+    )
 
     # set axes and figure
     if ax is None:
         _, ax = plt.subplots(figsize=size)
 
     sns.set(style="ticks")
-    kwargs = {'edgecolor': "w",  # for edge color
-              'linewidth': 0.3,
-              's': 10}
+    kwargs = {'edgecolor': "w", 'linewidth': 0.3, 's': 10}  # for edge color
     if full_trace:
         kwargs['hue'] = "converged"
         if len(params_fval[kwargs['hue']].unique()) == 1:
@@ -82,8 +83,9 @@ def sampling_fval_traces(
             kwargs['palette'] = ["#868686", "#477ccd"]
         kwargs['legend'] = False
 
-    sns.scatterplot(x="iteration", y="logPosterior", data=params_fval,
-                    ax=ax, **kwargs)
+    sns.scatterplot(
+        x="iteration", y="logPosterior", data=params_fval, ax=ax, **kwargs
+    )
 
     if result.sample_result.burn_in is None:
         _burn_in = 0
@@ -91,9 +93,7 @@ def sampling_fval_traces(
         _burn_in = result.sample_result.burn_in
 
     if full_trace and _burn_in > 0:
-        ax.axvline(_burn_in,
-                   linestyle='--', linewidth=1.5,
-                   color='k')
+        ax.axvline(_burn_in, linestyle='--', linewidth=1.5, color='k')
 
     ax.set_xlabel('iteration index')
     ax.set_ylabel('log-posterior')
@@ -134,10 +134,10 @@ def _get_level_percentiles(level: float) -> Tuple[float, float]:
 
 
 def _get_statistic_data(
-        summary: Dict[str, PredictionResult],
-        statistic: str,
-        condition_id: str,
-        output_id: str,
+    summary: Dict[str, PredictionResult],
+    statistic: str,
+    condition_id: str,
+    output_id: str,
 ) -> Tuple[Sequence[float], Sequence[float]]:
     """Get statistic-, condition-, and output-specific data.
 
@@ -169,14 +169,14 @@ def _get_statistic_data(
 
 
 def _plot_trajectories_by_condition(
-        summary: Dict[str, PredictionResult],
-        condition_ids: Sequence[str],
-        output_ids: Sequence[str],
-        axes: matplotlib.axes.Axes,
-        levels: Sequence[float],
-        level_opacities: Dict[int, float],
-        labels: Dict[str, str],
-        variable_colors: Sequence[RGB],
+    summary: Dict[str, PredictionResult],
+    condition_ids: Sequence[str],
+    output_ids: Sequence[str],
+    axes: matplotlib.axes.Axes,
+    levels: Sequence[float],
+    level_opacities: Dict[int, float],
+    labels: Dict[str, str],
+    variable_colors: Sequence[RGB],
 ) -> None:
     """Plot predicted trajectories, with subplots grouped by condition.
 
@@ -215,12 +215,7 @@ def _plot_trajectories_by_condition(
         for output_index, output_id in enumerate(output_ids):
             # Plot the median for each output.
             ax.plot(
-                *_get_statistic_data(
-                    summary,
-                    MEDIAN,
-                    condition_id,
-                    output_id
-                ),
+                *_get_statistic_data(summary, MEDIAN, condition_id, output_id),
                 'k-',
             )
             # Plot the regions described by the credibility level,
@@ -267,14 +262,14 @@ def _plot_trajectories_by_condition(
 
 
 def _plot_trajectories_by_output(
-        summary: Dict[str, PredictionResult],
-        condition_ids: Sequence[str],
-        output_ids: Sequence[str],
-        axes: matplotlib.axes.Axes,
-        levels: Sequence[float],
-        level_opacities: Dict[int, float],
-        labels: Dict[str, str],
-        variable_colors: Sequence[RGB],
+    summary: Dict[str, PredictionResult],
+    condition_ids: Sequence[str],
+    output_ids: Sequence[str],
+    axes: matplotlib.axes.Axes,
+    levels: Sequence[float],
+    level_opacities: Dict[int, float],
+    labels: Dict[str, str],
+    variable_colors: Sequence[RGB],
 ) -> None:
     """Plot predicted trajectories, with subplots grouped by output.
 
@@ -369,7 +364,7 @@ def _plot_trajectories_by_output(
 
 
 def _get_condition_and_output_ids(
-        summary: Dict[str, PredictionResult]
+    summary: Dict[str, PredictionResult]
 ) -> Tuple[Sequence[str], Sequence[str]]:
     """Get all condition and output IDs in a prediction summary.
 
@@ -387,39 +382,42 @@ def _get_condition_and_output_ids(
     # For now, all prediction results must predict for the same set of
     # conditions. Can support different conditions later.
     all_condition_ids = [
-        prediction.condition_ids
-        for prediction in summary.values()
+        prediction.condition_ids for prediction in summary.values()
     ]
     if not (
-            np.array([
+        np.array(
+            [
                 set(condition_ids) == set(all_condition_ids[0])
                 for condition_ids in all_condition_ids
-            ]).all()
+            ]
+        ).all()
     ):
         raise KeyError('All predictions must have the same set of conditions.')
     condition_ids = all_condition_ids[0]
 
-    output_ids = sorted({
-        output_id
-        for prediction in summary.values()
-        for condition in prediction.conditions
-        for output_id in condition.output_ids
-    })
+    output_ids = sorted(
+        {
+            output_id
+            for prediction in summary.values()
+            for condition in prediction.conditions
+            for output_id in condition.output_ids
+        }
+    )
 
     return condition_ids, output_ids
 
 
 def _handle_legends(
-        fig: matplotlib.figure.Figure,
-        axes: matplotlib.axes.Axes,
-        levels: Union[float, Sequence[float]],
-        labels: Dict[str, str],
-        level_opacities: Sequence[float],
-        variable_names: Sequence[str],
-        variable_colors: Sequence[RGB],
-        groupby: str,
-        artist_padding: float,
-        n_col: int,
+    fig: matplotlib.figure.Figure,
+    axes: matplotlib.axes.Axes,
+    levels: Union[float, Sequence[float]],
+    labels: Dict[str, str],
+    level_opacities: Sequence[float],
+    variable_names: Sequence[str],
+    variable_colors: Sequence[RGB],
+    groupby: str,
+    artist_padding: float,
+    n_col: int,
 ) -> None:
     """Add legends to a sampling prediction trajectories plot.
 
@@ -456,32 +454,35 @@ def _handle_legends(
     """
     # Fake plots for legend line styles
     fake_data = [[0], [0]]
-    variable_lines = np.array([
-        # Assumes that the color for a variable is always the same, with
-        # different opacity for different credibility interval levels.
-        # Create a line object with fake data for each variable value.
+    variable_lines = np.array(
         [
-            labels[variable_name],
-            Line2D(*fake_data, color=variable_colors[index], lw=4)
+            # Assumes that the color for a variable is always the same, with
+            # different opacity for different credibility interval levels.
+            # Create a line object with fake data for each variable value.
+            [
+                labels[variable_name],
+                Line2D(*fake_data, color=variable_colors[index], lw=4),
+            ]
+            for index, variable_name in enumerate(variable_names)
         ]
-        for index, variable_name in enumerate(variable_names)
-    ])
+    )
     # Assumes that different CI levels are represented as
     # different opacities of the same color.
     # Create a line object with fake data for each credibility level.
     ci_lines = []
     for index, level in enumerate(levels):
-        ci_lines.append([
-            f'{level}% CI',
-            Line2D(
-                *fake_data,
-                color=rgba2rgb([
-                    *RGBA_BLACK[:LEN_RGB],
-                    level_opacities[index]
-                ]),
-                lw=4
-            )
-        ])
+        ci_lines.append(
+            [
+                f'{level}% CI',
+                Line2D(
+                    *fake_data,
+                    color=rgba2rgb(
+                        [*RGBA_BLACK[:LEN_RGB], level_opacities[index]]
+                    ),
+                    lw=4,
+                ),
+            ]
+        )
     # Create a line object with fake data for the median line.
     median_line = [['Median', Line2D(*fake_data, color=RGBA_BLACK)]]
     level_lines = np.array(ci_lines + median_line)
@@ -499,7 +500,7 @@ def _handle_legends(
         OUTPUT: 'Conditions',
         CONDITION: 'Trajectories',
     }
-    legend_variables = axes.flat[n_col-1].legend(
+    legend_variables = axes.flat[n_col - 1].legend(
         variable_lines[:, 1],
         variable_lines[:, 0],
         **legend_options_top_right,
@@ -516,9 +517,8 @@ def _handle_legends(
 
 
 def _handle_colors(
-        levels: Union[float, Sequence[float]],
-        n_variables: int,
-
+    levels: Union[float, Sequence[float]],
+    n_variables: int,
 ) -> Tuple[Sequence[float], Sequence[RGB]]:
     """Calculate the colors for the prediction trajectories plot.
 
@@ -542,7 +542,7 @@ def _handle_colors(
     )
     cmap = plt.cm.viridis
     cmap_min = RGBA_MIN
-    cmap_max = 0.85*(RGBA_MAX - RGBA_MIN) + RGBA_MIN  # exclude yellows
+    cmap_max = 0.85 * (RGBA_MAX - RGBA_MIN) + RGBA_MIN  # exclude yellows
 
     # define colormap
     variable_colors = [
@@ -554,18 +554,18 @@ def _handle_colors(
 
 
 def sampling_prediction_trajectories(
-        ensemble_prediction: EnsemblePrediction,
-        levels: Union[float, Sequence[float]],
-        title: str = None,
-        size: Tuple[float, float] = None,
-        axes: matplotlib.axes.Axes = None,
-        labels: Dict[str, str] = None,
-        axis_label_padding: int = 50,
-        groupby: str = CONDITION,
-        condition_gap: float = 0.01,
-        condition_ids: Sequence[str] = None,
-        output_ids: Sequence[str] = None,
-        weighting: bool = False
+    ensemble_prediction: EnsemblePrediction,
+    levels: Union[float, Sequence[float]],
+    title: str = None,
+    size: Tuple[float, float] = None,
+    axes: matplotlib.axes.Axes = None,
+    labels: Dict[str, str] = None,
+    axis_label_padding: int = 50,
+    groupby: str = CONDITION,
+    condition_gap: float = 0.01,
+    condition_ids: Sequence[str] = None,
+    output_ids: Sequence[str] = None,
+    weighting: bool = False,
 ) -> matplotlib.axes.Axes:
     """
     Visualize prediction trajectory of an EnsemblePrediction.
@@ -624,7 +624,8 @@ def sampling_prediction_trajectories(
     ]
 
     summary = ensemble_prediction.compute_summary(
-        percentiles_list=percentiles, weighting=weighting)
+        percentiles_list=percentiles, weighting=weighting
+    )
 
     all_condition_ids, all_output_ids = _get_condition_and_output_ids(summary)
     if condition_ids is None:
@@ -646,8 +647,9 @@ def sampling_prediction_trajectories(
     else:
         raise ValueError(f'Unsupported groupby value: {groupby}')
 
-    level_opacities, variable_colors = \
-        _handle_colors(levels=levels, n_variables=n_variables)
+    level_opacities, variable_colors = _handle_colors(
+        levels=levels, n_variables=n_variables
+    )
 
     if axes is None:
         n_row = int(np.round(np.sqrt(n_subplots)))
@@ -664,7 +666,7 @@ def sampling_prediction_trajectories(
                 'Provided `axes` contains insufficient subplots. At least '
                 f'{n_subplots} are required.'
             )
-    artist_padding = axis_label_padding / (fig.get_size_inches()*fig.dpi)[0]
+    artist_padding = axis_label_padding / (fig.get_size_inches() * fig.dpi)[0]
 
     if groupby == CONDITION:
         _plot_trajectories_by_condition(
@@ -719,7 +721,7 @@ def sampling_prediction_trajectories(
         xlabel,
         ha='center',
         va='center',
-        transform=fig.transFigure
+        transform=fig.transFigure,
     )
     fig.text(
         xmin - artist_padding,
@@ -728,7 +730,7 @@ def sampling_prediction_trajectories(
         ha='center',
         va='center',
         transform=fig.transFigure,
-        rotation='vertical'
+        rotation='vertical',
     )
 
     # plt.tight_layout()  # Ruins layout for `groupby == OUTPUT`.
@@ -736,13 +738,13 @@ def sampling_prediction_trajectories(
 
 
 def sampling_parameter_cis(
-        result: Result,
-        alpha: Sequence[int] = None,
-        step: float = 0.05,
-        show_median: bool = True,
-        title: str = None,
-        size: Tuple[float, float] = None,
-        ax: matplotlib.axes.Axes = None
+    result: Result,
+    alpha: Sequence[int] = None,
+    step: float = 0.05,
+    show_median: bool = True,
+    title: str = None,
+    size: Tuple[float, float] = None,
+    ax: matplotlib.axes.Axes = None,
 ) -> matplotlib.axes.Axes:
     """
     Plot MCMC-based parameter credibility intervals.
@@ -793,7 +795,7 @@ def sampling_parameter_cis(
             # extract percentile-based confidence intervals
             lb, ub = calculate_ci_mcmc_sample(
                 result=result,
-                ci_level=level/100,
+                ci_level=level / 100,
             )
 
             # assemble boxes for projectile plot
@@ -801,24 +803,32 @@ def sampling_parameter_cis(
             y1 = [npar + _step, npar + _step]
             y2 = [npar - _step, npar - _step]
             # Plot boxes
-            ax.fill(np.append(x1, x1[::-1]),
-                    np.append(y1, y2[::-1]), color=colors[n],
-                    label=str(level) + '% CI')
+            ax.fill(
+                np.append(x1, x1[::-1]),
+                np.append(y1, y2[::-1]),
+                color=colors[n],
+                label=str(level) + '% CI',
+            )
 
             if show_median:
                 if n == len(alpha_sorted) - 1:
                     burn_in = result.sample_result.burn_in
                     converged = result.sample_result.trace_x[0, burn_in:, npar]
                     _median = np.median(converged)
-                    ax.plot([_median, _median], [npar - _step, npar + _step],
-                            'k-', label='MCMC median')
+                    ax.plot(
+                        [_median, _median],
+                        [npar - _step, npar + _step],
+                        'k-',
+                        label='MCMC median',
+                    )
 
             # increment height of boxes
             _step += step
 
     ax.set_yticks(range(n_pars))
     ax.set_yticklabels(
-        result.problem.get_reduced_vector(result.problem.x_names))
+        result.problem.get_reduced_vector(result.problem.x_names)
+    )
     ax.set_xlabel('Parameter value')
     ax.set_ylabel('Parameter name')
 
@@ -835,15 +845,16 @@ def sampling_parameter_cis(
 
 
 def sampling_parameter_traces(
-        result: Result,
-        i_chain: int = 0,
-        par_indices: Sequence[int] = None,
-        full_trace: bool = False,
-        stepsize: int = 1,
-        use_problem_bounds: bool = True,
-        suptitle: str = None,
-        size: Tuple[float, float] = None,
-        ax: matplotlib.axes.Axes = None):
+    result: Result,
+    i_chain: int = 0,
+    par_indices: Sequence[int] = None,
+    full_trace: bool = False,
+    stepsize: int = 1,
+    use_problem_bounds: bool = True,
+    suptitle: str = None,
+    size: Tuple[float, float] = None,
+    ax: matplotlib.axes.Axes = None,
+):
     """
     Plot parameter values over iterations.
 
@@ -877,8 +888,12 @@ def sampling_parameter_traces(
     """
     # get data which should be plotted
     nr_params, params_fval, theta_lb, theta_ub, param_names = get_data_to_plot(
-        result=result, i_chain=i_chain, stepsize=stepsize,
-        full_trace=full_trace, par_indices=par_indices)
+        result=result,
+        i_chain=i_chain,
+        stepsize=stepsize,
+        full_trace=full_trace,
+        par_indices=par_indices,
+    )
 
     # compute, how many rows and columns we need for the subplots
     num_row = int(np.round(np.sqrt(nr_params)))
@@ -893,9 +908,7 @@ def sampling_parameter_traces(
     par_ax = dict(zip(param_names, ax.flat))
 
     sns.set(style="ticks")
-    kwargs = {'edgecolor': "w",  # for edge color
-              'linewidth': 0.3,
-              's': 10}
+    kwargs = {'edgecolor': "w", 'linewidth': 0.3, 's': 10}  # for edge color
 
     if full_trace:
         kwargs['hue'] = "converged"
@@ -914,13 +927,18 @@ def sampling_parameter_traces(
         _ax = par_ax[plot_id]
 
         _ax = sns.scatterplot(
-            x="iteration", y=plot_id, data=params_fval, ax=_ax, **kwargs,
+            x="iteration",
+            y=plot_id,
+            data=params_fval,
+            ax=_ax,
+            **kwargs,
         )
 
         if full_trace and _burn_in > 0:
             _ax.axvline(
                 _burn_in,
-                linestyle='--', linewidth=1.5,
+                linestyle='--',
+                linewidth=1.5,
                 color='k',
             )
 
@@ -939,12 +957,13 @@ def sampling_parameter_traces(
 
 
 def sampling_scatter(
-        result: Result,
-        i_chain: int = 0,
-        stepsize: int = 1,
-        suptitle: str = None,
-        diag_kind: str = "kde",
-        size: Tuple[float, float] = None):
+    result: Result,
+    i_chain: int = 0,
+    stepsize: int = 1,
+    suptitle: str = None,
+    diag_kind: str = "kde",
+    size: Tuple[float, float] = None,
+):
     """
     Parameter scatter plot.
 
@@ -970,14 +989,16 @@ def sampling_scatter(
     """
     # get data which should be plotted
     nr_params, params_fval, theta_lb, theta_ub, _ = get_data_to_plot(
-        result=result, i_chain=i_chain, stepsize=stepsize)
+        result=result, i_chain=i_chain, stepsize=stepsize
+    )
 
     sns.set(style="ticks")
 
     # TODO: Think this throws the axis errors in seaborn.
     ax = sns.pairplot(
         params_fval.drop(['logPosterior', 'iteration'], axis=1),
-        diag_kind=diag_kind)
+        diag_kind=diag_kind,
+    )
 
     if size is not None:
         ax.fig.set_size_inches(size)
@@ -989,14 +1010,15 @@ def sampling_scatter(
 
 
 def sampling_1d_marginals(
-        result: Result,
-        i_chain: int = 0,
-        par_indices: Sequence[int] = None,
-        stepsize: int = 1,
-        plot_type: str = 'both',
-        bw_method: str = 'scott',
-        suptitle: str = None,
-        size: Tuple[float, float] = None):
+    result: Result,
+    i_chain: int = 0,
+    par_indices: Sequence[int] = None,
+    stepsize: int = 1,
+    plot_type: str = 'both',
+    bw_method: str = 'scott',
+    suptitle: str = None,
+    size: Tuple[float, float] = None,
+):
     """
     Plot marginals.
 
@@ -1028,8 +1050,11 @@ def sampling_1d_marginals(
     """
     # get data which should be plotted
     nr_params, params_fval, theta_lb, theta_ub, param_names = get_data_to_plot(
-        result=result, i_chain=i_chain,
-        stepsize=stepsize, par_indices=par_indices)
+        result=result,
+        i_chain=i_chain,
+        stepsize=stepsize,
+        par_indices=par_indices,
+    )
 
     # compute, how many rows and columns we need for the subplots
     num_row = int(np.round(np.sqrt(nr_params)))
@@ -1047,22 +1072,21 @@ def sampling_1d_marginals(
             # The `bw_method` parameter is deprecated in favor of
             # `bw_method` and `bw_adjust`.
             # TODO: add bw_adjust as option?
-            sns.kdeplot(params_fval[par_id],
-                        bw_method=bw_method,
-                        ax=par_ax[par_id])
+            sns.kdeplot(
+                params_fval[par_id], bw_method=bw_method, ax=par_ax[par_id]
+            )
         elif plot_type == 'hist':
             # fixes usage of sns distplot which throws a future warning
             sns.histplot(
-                x=params_fval[par_id],
-                ax=par_ax[par_id],
-                stat='probability')
+                x=params_fval[par_id], ax=par_ax[par_id], stat='probability'
+            )
             sns.rugplot(x=params_fval[par_id], ax=par_ax[par_id])
         elif plot_type == 'both':
             sns.histplot(
                 x=params_fval[par_id],
                 kde=True,
                 ax=par_ax[par_id],
-                stat='probability'
+                stat='probability',
             )
             sns.rugplot(x=params_fval[par_id], ax=par_ax[par_id])
 
@@ -1080,8 +1104,12 @@ def sampling_1d_marginals(
 
 
 def get_data_to_plot(
-        result: Result, i_chain: int, stepsize: int,
-        full_trace: bool = False, par_indices: Sequence[int] = None):
+    result: Result,
+    i_chain: int,
+    stepsize: int,
+    full_trace: bool = False,
+    par_indices: Sequence[int] = None,
+):
     """Get the data which should be plotted as a pandas.DataFrame.
 
     Parameters
@@ -1115,9 +1143,11 @@ def get_data_to_plot(
     arr_param = np.asarray(result.sample_result.trace_x[i_chain])
 
     if result.sample_result.burn_in is None:
-        warnings.warn("Burn in index not found in the results, the full chain "
-                      "will be shown.\nYou may want to use, e.g., "
-                      "`pypesto.sample.geweke_test`.")
+        warnings.warn(
+            "Burn in index not found in the results, the full chain "
+            "will be shown.\nYou may want to use, e.g., "
+            "`pypesto.sample.geweke_test`."
+        )
         _burn_in = 0
     else:
         _burn_in = result.sample_result.burn_in
@@ -1134,7 +1164,7 @@ def get_data_to_plot(
     arr_param = arr_param[np.arange(burn_in, len(arr_param), stepsize)]
 
     # invert sign for log posterior values (trace_neglogpost is numpy array)
-    arr_fval = - np.asarray(sample_result.trace_neglogpost[i_chain])
+    arr_fval = -np.asarray(sample_result.trace_neglogpost[i_chain])
     indices = np.arange(burn_in, len(arr_fval), stepsize)
     arr_fval = arr_fval[indices]
     theta_lb = result.problem.lb
@@ -1155,10 +1185,12 @@ def get_data_to_plot(
         pd_conv = pd.DataFrame(data=converged, columns=['converged'])
 
         params_fval = pd.concat(
-            [pd_params, pd_fval, pd_iter, pd_conv], axis=1, ignore_index=False)
+            [pd_params, pd_fval, pd_iter, pd_conv], axis=1, ignore_index=False
+        )
     else:
         params_fval = pd.concat(
-            [pd_params, pd_fval, pd_iter], axis=1, ignore_index=False)
+            [pd_params, pd_fval, pd_iter], axis=1, ignore_index=False
+        )
 
     # some global parameters
     nr_params = arr_param.shape[1]  # number of parameters

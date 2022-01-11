@@ -55,7 +55,7 @@ class ProfilerResult(dict):
         gradnorm_path: np.ndarray = np.nan,
         exitflag_path: np.ndarray = np.nan,
         time_path: np.ndarray = np.nan,
-        time_total: float = 0.,
+        time_total: float = 0.0,
         n_fval: int = 0,
         n_grad: int = 0,
         n_hess: int = 0,
@@ -239,9 +239,7 @@ class ProfileResult:
             profile_list = -1  # last
         self.list[profile_list][i_par] = copy.deepcopy(profiler_result)
 
-    def get_profiler_result(
-        self, i_par: int, profile_list: int = None
-    ):
+    def get_profiler_result(self, i_par: int, profile_list: int = None):
         """
         Get the profiler result at parameter index `i_par` of `profile_list`.
 

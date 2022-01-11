@@ -68,8 +68,10 @@ def plot_selected_models(
     linewidth = 3
 
     criterion_values = {
-        labels.get(model.get_hash(), default_label_maker(model)):
-        model.get_criterion(criterion) - zero
+        labels.get(
+            model.get_hash(), default_label_maker(model)
+        ): model.get_criterion(criterion)
+        - zero
         for model in selected_models
     }
 
@@ -83,15 +85,16 @@ def plot_selected_models(
 
     ax.get_xticks()
     ax.set_xticks(list(range(len(criterion_values))))
-    ax.set_ylabel(criterion + ('(relative)' if relative else '(absolute)'),
-                  fontsize=fz)
+    ax.set_ylabel(
+        criterion + ('(relative)' if relative else '(absolute)'), fontsize=fz
+    )
     # could change to compared_model_ids, if all models are plotted
     ax.set_xticklabels(
         criterion_values.keys(),
-        fontsize=fz+RELATIVE_LABEL_FONTSIZE,
+        fontsize=fz + RELATIVE_LABEL_FONTSIZE,
     )
     for tick in ax.yaxis.get_major_ticks():
-        tick.label1.set_fontsize(fz+RELATIVE_LABEL_FONTSIZE)
+        tick.label1.set_fontsize(fz + RELATIVE_LABEL_FONTSIZE)
     ytl = ax.get_yticks()
     ax.set_ylim([min(ytl), max(ytl)])
     # removing top and right borders

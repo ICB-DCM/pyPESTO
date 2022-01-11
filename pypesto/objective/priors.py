@@ -124,11 +124,15 @@ class NegLogParameterPriors(ObjectiveBase):
         elif mode == C.MODE_RES:
             for order in sensi_orders:
                 if order == 0:
-                    return all(prior.get('residual', None) is not None
-                               for prior in self.prior_list)
+                    return all(
+                        prior.get('residual', None) is not None
+                        for prior in self.prior_list
+                    )
                 elif order == 1:
-                    return all(prior.get('residual_dx', None) is not None
-                               for prior in self.prior_list)
+                    return all(
+                        prior.get('residual_dx', None) is not None
+                        for prior in self.prior_list
+                    )
                 else:
                     return False
         else:
@@ -144,8 +148,10 @@ class NegLogParameterPriors(ObjectiveBase):
         if mode == C.MODE_FUN:
             return True
         elif mode == C.MODE_RES:
-            return all(prior.get('residual', None) is not None
-                       for prior in self.prior_list)
+            return all(
+                prior.get('residual', None) is not None
+                for prior in self.prior_list
+            )
         else:
             raise ValueError(
                 f'Invalid input: Expected mode {C.MODE_FUN} or '
@@ -174,8 +180,9 @@ class NegLogParameterPriors(ObjectiveBase):
         hessian = np.zeros((len(x), len(x)))
 
         for prior in self.prior_list:
-            hessian[prior['index'], prior['index']] -= \
-                prior['density_ddx'](x[prior['index']])
+            hessian[prior['index'], prior['index']] -= prior['density_ddx'](
+                x[prior['index']]
+            )
 
         return hessian
 
@@ -184,15 +191,17 @@ class NegLogParameterPriors(ObjectiveBase):
         h_dot_p = np.zeros_like(p)
 
         for prior in self.prior_list:
-            h_dot_p[prior['index']] -= \
+            h_dot_p[prior['index']] -= (
                 prior['density_ddx'](x[prior['index']]) * p[prior['index']]
+            )
 
         return h_dot_p
 
     def residual(self, x):
         """Evaluate the residual representation of the prior at x."""
-        return np.asarray([prior['residual'](x[prior['index']])
-                           for prior in self.prior_list])
+        return np.asarray(
+            [prior['residual'](x[prior['index']]) for prior in self.prior_list]
+        )
 
     def residual_jacobian(self, x):
         """
@@ -203,8 +212,9 @@ class NegLogParameterPriors(ObjectiveBase):
         """
         sres = np.zeros((len(self.prior_list), len(x)))
         for iprior, prior in enumerate(self.prior_list):
-            sres[iprior, prior['index']] = \
-                prior['residual_dx'](x[prior['index']])
+            sres[iprior, prior['index']] = prior['residual_dx'](
+                x[prior['index']]
+            )
 
         return sres
 
@@ -233,8 +243,9 @@ def get_parameter_prior_dict(
         log-transformed, while the prior is always defined in the linear
         space, unless it starts with "parameterScale")
     """
-    log_f, d_log_f_dx, dd_log_f_ddx, res, d_res_dx = \
-        _prior_densities(prior_type, prior_parameters)
+    log_f, d_log_f_dx, dd_log_f_ddx, res, d_res_dx = _prior_densities(
+        prior_type, prior_parameters
+    )
 
     if parameter_scale == C.LIN or prior_type.startswith('parameterScale'):
 
@@ -259,18 +270,21 @@ def get_parameter_prior_dict(
 
         def dd_log_f_log(x_log):
             """Second derivative of log-prior w.r.t. log-parameters."""
-            return np.exp(x_log) * \
-                (d_log_f_dx(np.exp(x_log)) +
-                    np.exp(x_log) * dd_log_f_ddx(np.exp(x_log)))
+            return np.exp(x_log) * (
+                d_log_f_dx(np.exp(x_log))
+                + np.exp(x_log) * dd_log_f_ddx(np.exp(x_log))
+            )
 
         res_log = None
         if res is not None:
+
             def res_log(x_log):
                 """Residual-prior for log-parameters."""
                 return res(np.exp(x_log))
 
         d_res_log = None
         if d_res_dx is not None:
+
             def d_res_log(x_log):
                 """Residual-prior for log-parameters."""
                 return d_res_dx(np.exp(x_log)) * np.exp(x_log)
@@ -290,29 +304,36 @@ def get_parameter_prior_dict(
 
         def log_f_log10(x_log10):
             """Log-prior for log10-parameters."""
-            return log_f(10**x_log10)
+            return log_f(10 ** x_log10)
 
         def d_log_f_log10(x_log10):
             """Rerivative of log-prior w.r.t. log10-parameters."""
-            return d_log_f_dx(10**x_log10) * log10 * 10**x_log10
+            return d_log_f_dx(10 ** x_log10) * log10 * 10 ** x_log10
 
         def dd_log_f_log10(x_log10):
             """Second derivative of log-prior w.r.t. log10-parameters."""
-            return log10**2 * 10**x_log10 * \
-                (dd_log_f_ddx(10**x_log10) * 10**x_log10
-                    + d_log_f_dx(10**x_log10))
+            return (
+                log10 ** 2
+                * 10 ** x_log10
+                * (
+                    dd_log_f_ddx(10 ** x_log10) * 10 ** x_log10
+                    + d_log_f_dx(10 ** x_log10)
+                )
+            )
 
         res_log = None
         if res is not None:
+
             def res_log(x_log10):
                 """Residual-prior for log10-parameters."""
-                return res(10**x_log10)
+                return res(10 ** x_log10)
 
         d_res_log = None
         if d_res_dx is not None:
+
             def d_res_log(x_log10):
                 """Residual-prior for log10-parameters."""
-                return d_res_dx(10**x_log10) * log10 * 10**x_log10
+                return d_res_dx(10 ** x_log10) * log10 * 10 ** x_log10
 
         return {
             'index': index,
@@ -412,9 +433,9 @@ def _prior_densities(
 
         def log_f(x):
             if prior_parameters[0] <= x <= prior_parameters[1]:
-                return - np.log(prior_parameters[1] - prior_parameters[0])
+                return -np.log(prior_parameters[1] - prior_parameters[0])
             else:
-                return - np.inf
+                return -np.inf
 
         d_log_f_dx = _get_constant_function(0)
         dd_log_f_ddx = _get_constant_function(0)
@@ -433,11 +454,12 @@ def _prior_densities(
 
         mean = prior_parameters[0]
         sigma = prior_parameters[1]
-        sigma2 = sigma**2
+        sigma2 = sigma ** 2
 
         def log_f(x):
-            return -np.log(2 * np.pi * sigma2) / 2 - \
-                   (x - mean)**2 / (2 * sigma2)
+            return -np.log(2 * np.pi * sigma2) / 2 - (x - mean) ** 2 / (
+                2 * sigma2
+            )
 
         d_log_f_dx = _get_linear_function(-1 / sigma2, mean / sigma2)
         dd_log_f_ddx = _get_constant_function(-1 / sigma2)
@@ -445,7 +467,7 @@ def _prior_densities(
         def res(x):
             return (x - mean) / (np.sqrt(2) * sigma)
 
-        d_res_dx = _get_constant_function(1/(np.sqrt(2)*sigma))
+        d_res_dx = _get_constant_function(1 / (np.sqrt(2) * sigma))
 
         return log_f, d_log_f_dx, dd_log_f_ddx, res, d_res_dx
 
@@ -456,8 +478,7 @@ def _prior_densities(
         log_2_sigma = np.log(2 * prior_parameters[1])
 
         def log_f(x):
-            return -log_2_sigma -\
-                   abs(x - mean)/scale
+            return -log_2_sigma - abs(x - mean) / scale
 
         def d_log_f_dx(x):
             if x > mean:
@@ -468,10 +489,10 @@ def _prior_densities(
         dd_log_f_ddx = _get_constant_function(0)
 
         def res(x):
-            return np.sqrt(abs(x-mean)/scale)
+            return np.sqrt(abs(x - mean) / scale)
 
         def d_res_dx(x):
-            return 1 / 2 * (x - mean) / np.sqrt(scale * abs(x - mean)**3)
+            return 1 / 2 * (x - mean) / np.sqrt(scale * abs(x - mean) ** 3)
 
         return log_f, d_log_f_dx, dd_log_f_ddx, res, d_res_dx
 
@@ -483,18 +504,20 @@ def _prior_densities(
         # TODO check again :)
         mean = prior_parameters[0]
         sigma = prior_parameters[1]
-        sqrt2_pi = np.sqrt(2*np.pi)
+        sqrt2_pi = np.sqrt(2 * np.pi)
 
         def log_f(x):
-            return - np.log(sqrt2_pi * sigma * x) \
-                   - (np.log(x) - mean)**2 / (2 * sigma**2)
+            return -np.log(sqrt2_pi * sigma * x) - (np.log(x) - mean) ** 2 / (
+                2 * sigma ** 2
+            )
 
         def d_log_f_dx(x):
-            return - 1 / x - (np.log(x) - mean)/(sigma**2 * x)
+            return -1 / x - (np.log(x) - mean) / (sigma ** 2 * x)
 
         def dd_log_f_ddx(x):
-            return 1 / (x**2) \
-                   - (1 - np.log(x) + mean)/(sigma**2 * x**2)
+            return 1 / (x ** 2) - (1 - np.log(x) + mean) / (
+                sigma ** 2 * x ** 2
+            )
 
         return log_f, d_log_f_dx, dd_log_f_ddx, None, None
 
@@ -503,8 +526,7 @@ def _prior_densities(
         raise NotImplementedError
     else:
         raise ValueError(
-            f'NegLogPriors of type {prior_type} are currently '
-            'not supported'
+            f'NegLogPriors of type {prior_type} are currently ' 'not supported'
         )
 
 
@@ -513,13 +535,17 @@ def _get_linear_function(
     intercept: float = 0.0,
 ):
     """Return a linear function."""
+
     def function(x):
         return slope * x + intercept
+
     return function
 
 
 def _get_constant_function(constant: float):
     """Define a callable returning the constant, regardless of the input."""
+
     def function(x):
         return constant
+
     return function
