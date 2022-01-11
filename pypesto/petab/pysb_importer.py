@@ -13,9 +13,11 @@ except ImportError:
 class PetabImporterPysb(PetabImporter):
     """Import for experimental PySB-based PEtab problems."""
 
-    def __init__(self,
-                 petab_problem: 'amici.petab_import_pysb.PysbPetabProblem',
-                 output_folder: str = None):
+    def __init__(
+        self,
+        petab_problem: 'amici.petab_import_pysb.PysbPetabProblem',
+        output_folder: str = None,
+    ):
         """
         Initialize importer.
 
@@ -26,10 +28,12 @@ class PetabImporterPysb(PetabImporter):
         output_folder:
             Folder to contain the amici model.
         """
-        super().__init__(petab_problem,
-                         model_name=petab_problem.pysb_model.name,
-                         output_folder=output_folder,
-                         validate_petab=False)
+        super().__init__(
+            petab_problem,
+            model_name=petab_problem.pysb_model.name,
+            output_folder=output_folder,
+            validate_petab=False,
+        )
 
     def compile_model(self, **kwargs):
         """
@@ -49,4 +53,5 @@ class PetabImporterPysb(PetabImporter):
         amici.petab_import_pysb.import_model_pysb(
             petab_problem=self.petab_problem,
             model_output_dir=self.output_folder,
-            **kwargs)
+            **kwargs,
+        )

@@ -37,16 +37,18 @@ class ProfileOptions(dict):
         profiling at small ratios (must be >= 0 and < 1).
     """
 
-    def __init__(self,
-                 default_step_size: float = 0.01,
-                 min_step_size: float = 0.001,
-                 max_step_size: float = 1.,
-                 step_size_factor: float = 1.25,
-                 delta_ratio_max: float = 0.1,
-                 ratio_min: float = 0.145,
-                 reg_points: int = 10,
-                 reg_order: int = 4,
-                 magic_factor_obj_value: float = 0.5):
+    def __init__(
+        self,
+        default_step_size: float = 0.01,
+        min_step_size: float = 0.001,
+        max_step_size: float = 1.0,
+        step_size_factor: float = 1.25,
+        delta_ratio_max: float = 0.1,
+        ratio_min: float = 0.145,
+        reg_points: int = 10,
+        reg_order: int = 4,
+        magic_factor_obj_value: float = 0.5,
+    ):
         super().__init__()
 
         self.default_step_size = default_step_size
@@ -71,7 +73,7 @@ class ProfileOptions(dict):
 
     @staticmethod
     def create_instance(
-            maybe_options: Union['ProfileOptions', Dict]
+        maybe_options: Union['ProfileOptions', Dict]
     ) -> 'ProfileOptions':
         """
         Return a valid options object.

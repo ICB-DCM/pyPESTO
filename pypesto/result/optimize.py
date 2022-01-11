@@ -152,6 +152,7 @@ class OptimizeResult:
 
     def sort(self):
         """Sort the optimizer results by function value fval (ascending)."""
+
         def get_fval(res):
             return res.fval if not np.isnan(res.fval) else np.inf
 

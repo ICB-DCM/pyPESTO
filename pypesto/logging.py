@@ -8,10 +8,12 @@ Logging convenience functions.
 import logging
 
 
-def log(name: str = 'pypesto',
-        level: int = logging.INFO,
-        console: bool = True,
-        filename: str = ''):
+def log(
+    name: str = 'pypesto',
+    level: int = logging.INFO,
+    console: bool = True,
+    filename: str = '',
+):
     """
     Log messages from `name` with `level` to any combination of console/file.
 
@@ -51,8 +53,9 @@ def log_to_console(level: int = logging.INFO):
     log(level=level, console=True)
 
 
-def log_to_file(level: int = logging.INFO,
-                filename: str = '.pypesto_logging.log'):
+def log_to_file(
+    level: int = logging.INFO, filename: str = '.pypesto_logging.log'
+):
     """
     Log to file.
 

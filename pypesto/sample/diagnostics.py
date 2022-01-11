@@ -10,7 +10,7 @@ from .geweke_test import burn_in_by_sequential_geweke
 logger = logging.getLogger(__name__)
 
 
-def geweke_test(result: Result, zscore: float = 2.) -> int:
+def geweke_test(result: Result, zscore: float = 2.0) -> int:
     """
     Calculate the burn-in of MCMC chains.
 
@@ -32,8 +32,7 @@ def geweke_test(result: Result, zscore: float = 2.) -> int:
     chain = np.asarray(result.sample_result.trace_x[0])
 
     # Calculate burn in index
-    burn_in = burn_in_by_sequential_geweke(chain=chain,
-                                           zscore=zscore)
+    burn_in = burn_in_by_sequential_geweke(chain=chain, zscore=zscore)
 
     # Log
     logger.info(f'Geweke burn-in index: {burn_in}')
@@ -70,11 +69,13 @@ def auto_correlation(result: Result) -> float:
     chain_length = result.sample_result.trace_x.shape[1]
 
     if burn_in == chain_length:
-        logger.warning("The autocorrelation can not "
-                       "be estimated. The chain seems to "
-                       "not have converged yet.\n"
-                       "You may want to use a larger number "
-                       "of samples.")
+        logger.warning(
+            "The autocorrelation can not "
+            "be estimated. The chain seems to "
+            "not have converged yet.\n"
+            "You may want to use a larger number "
+            "of samples."
+        )
         return None
 
     # Get converged parameter samples as numpy arrays

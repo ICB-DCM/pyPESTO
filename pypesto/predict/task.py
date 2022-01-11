@@ -26,12 +26,12 @@ class PredictorTask(Task):
     """
 
     def __init__(
-            self,
-            predictor: 'pypesto.predict.Predictor',  # noqa: F821
-            x: Sequence[float],
-            sensi_orders: Tuple[int, ...],
-            mode: str,
-            id: str,
+        self,
+        predictor: 'pypesto.predict.Predictor',  # noqa: F821
+        x: Sequence[float],
+        sensi_orders: Tuple[int, ...],
+        mode: str,
+        id: str,
     ):
         super().__init__()
         self.predictor = predictor

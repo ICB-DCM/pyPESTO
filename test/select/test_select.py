@@ -97,11 +97,14 @@ def test_problem_select(pypesto_select_problem):
     )
 
     expected_local_history_model_subspace_ids = ['M1_0']
-    test_local_history_model_subspace_ids = \
-        [model.model_subspace_id for model in local_history_1.values()]
+    test_local_history_model_subspace_ids = [
+        model.model_subspace_id for model in local_history_1.values()
+    ]
     # The expected "forward" models were found.
-    assert test_local_history_model_subspace_ids == \
-        expected_local_history_model_subspace_ids
+    assert (
+        test_local_history_model_subspace_ids
+        == expected_local_history_model_subspace_ids
+    )
 
     expected_best_model_aic = 36.97
     test_best_model_aic = best_model_1.get_criterion(Criterion.AIC)
@@ -121,11 +124,14 @@ def test_problem_select(pypesto_select_problem):
     )
 
     expected_local_history_model_subspace_ids = ['M1_1', 'M1_2', 'M1_3']
-    test_local_history_model_subspace_ids = \
-        [model.model_subspace_id for model in local_history_2.values()]
+    test_local_history_model_subspace_ids = [
+        model.model_subspace_id for model in local_history_2.values()
+    ]
     # The expected "forward" models were found.
-    assert test_local_history_model_subspace_ids == \
-        expected_local_history_model_subspace_ids
+    assert (
+        test_local_history_model_subspace_ids
+        == expected_local_history_model_subspace_ids
+    )
 
     expected_best_model_subspace_id = 'M1_3'
     test_best_model_subspace_id = best_model_2.model_subspace_id
@@ -162,14 +168,16 @@ def test_problem_select_to_completion(pypesto_select_problem):
     assert test_history_subspace_ids == expected_history_subspace_ids
 
     expected_best_model_subspace_ids = ['M1_0', 'M1_1']
-    test_best_model_subspace_ids = \
-        [model.model_subspace_id for model in best_models]
+    test_best_model_subspace_ids = [
+        model.model_subspace_id for model in best_models
+    ]
     # Expected best models were found.
     assert test_best_model_subspace_ids == expected_best_model_subspace_ids
 
     expected_best_model_criterion_values = [36.921, -4.017]
-    test_best_model_criterion_values = \
-        [model.get_criterion(Criterion.BIC) for model in best_models]
+    test_best_model_criterion_values = [
+        model.get_criterion(Criterion.BIC) for model in best_models
+    ]
     # The best models have the expected criterion values.
     assert np.isclose(
         test_best_model_criterion_values,
@@ -255,11 +263,14 @@ def test_postprocessors(petab_select_problem):
     )
 
     expected_local_history_model_subspace_ids = ['M1_0']
-    test_local_history_model_subspace_ids = \
-        [model.model_subspace_id for model in local_history_1.values()]
+    test_local_history_model_subspace_ids = [
+        model.model_subspace_id for model in local_history_1.values()
+    ]
     # The expected "forward" models were found.
-    assert test_local_history_model_subspace_ids == \
-        expected_local_history_model_subspace_ids
+    assert (
+        test_local_history_model_subspace_ids
+        == expected_local_history_model_subspace_ids
+    )
 
     expected_best_model_aic = 36.97
     test_best_model_aic = best_model_1.get_criterion(Criterion.AIC)
@@ -288,8 +299,9 @@ def test_model_problem_fake_result():
     """Test fake results for models with no estimated parameters."""
     expected_fval = 100.0
 
-    fake_result = \
-        model_problem.create_fake_pypesto_result_from_fval(expected_fval)
+    fake_result = model_problem.create_fake_pypesto_result_from_fval(
+        expected_fval
+    )
     # There is only one start in the result.
     fake_start = one(fake_result.optimize_result.list)
 

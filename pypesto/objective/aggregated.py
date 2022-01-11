@@ -29,15 +29,17 @@ class AggregatedObjective(ObjectiveBase):
         """
         # input typechecks
         if not isinstance(objectives, Sequence):
-            raise TypeError(f'Objectives must be a Sequence, '
-                            f'was {type(objectives)}.')
+            raise TypeError(
+                f'Objectives must be a Sequence, ' f'was {type(objectives)}.'
+            )
 
         if not all(
-                isinstance(objective, ObjectiveBase)
-                for objective in objectives
+            isinstance(objective, ObjectiveBase) for objective in objectives
         ):
-            raise TypeError('Objectives must only contain elements of type'
-                            'pypesto.Objective')
+            raise TypeError(
+                'Objectives must only contain elements of type'
+                'pypesto.Objective'
+            )
 
         if not objectives:
             raise ValueError('Length of objectives must be at least one')
@@ -60,8 +62,7 @@ class AggregatedObjective(ObjectiveBase):
     def check_mode(self, mode: str) -> bool:
         """See `ObjectiveBase` documentation."""
         return all(
-            objective.check_mode(mode)
-            for objective in self._objectives
+            objective.check_mode(mode) for objective in self._objectives
         )
 
     def check_sensi_orders(
@@ -88,10 +89,12 @@ class AggregatedObjective(ObjectiveBase):
         Main method to overwrite from the base class. It handles and
         delegates the actual objective evaluation.
         """
-        return aggregate_results([
-            objective.call_unprocessed(x, sensi_orders, mode, **kwargs)
-            for objective in self._objectives
-        ])
+        return aggregate_results(
+            [
+                objective.call_unprocessed(x, sensi_orders, mode, **kwargs)
+                for objective in self._objectives
+            ]
+        )
 
     def initialize(self):
         """See `ObjectiveBase` documentation."""

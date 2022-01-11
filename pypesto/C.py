@@ -116,9 +116,9 @@ UPPER_BOUND = 'upper_bound'
 PREEQUILIBRATION_CONDITION_ID = 'preequilibrationConditionId'
 SIMULATION_CONDITION_ID = 'simulationConditionId'
 
-COLOR_HIT_BOTH_BOUNDS = [0.6, 0., 0., 0.9]
-COLOR_HIT_ONE_BOUND = [0.95, 0.6, 0., 0.9]
-COLOR_HIT_NO_BOUNDS = [0., 0.8, 0., 0.9]
+COLOR_HIT_BOTH_BOUNDS = [0.6, 0.0, 0.0, 0.9]
+COLOR_HIT_ONE_BOUND = [0.95, 0.6, 0.0, 0.9]
+COLOR_HIT_NO_BOUNDS = [0.0, 0.8, 0.0, 0.9]
 
 
 class EnsembleType(Enum):

@@ -37,11 +37,25 @@ def problem(request) -> pypesto.Problem:
 
 
 optimizers = [
-    *[('scipy', method) for method in [
-        'Nelder-Mead', 'Powell', 'CG', 'BFGS', 'Newton-CG',
-        'L-BFGS-B', 'TNC', 'COBYLA', 'SLSQP',
-        'trust-ncg', 'trust-exact', 'trust-krylov',
-        'ls_trf', 'ls_dogbox']],
+    *[
+        ('scipy', method)
+        for method in [
+            'Nelder-Mead',
+            'Powell',
+            'CG',
+            'BFGS',
+            'Newton-CG',
+            'L-BFGS-B',
+            'TNC',
+            'COBYLA',
+            'SLSQP',
+            'trust-ncg',
+            'trust-exact',
+            'trust-krylov',
+            'ls_trf',
+            'ls_dogbox',
+        ]
+    ],
     # disabled: ,'trust-constr', 'ls_lm', 'dogleg'
     ('ipopt', ''),
     ('dlib', ''),
@@ -49,27 +63,70 @@ optimizers = [
     ('cmaes', ''),
     ('scipydiffevolopt', ''),
     ('pyswarms', ''),
-    *[('nlopt', method) for method in [
-        nlopt.LD_VAR1, nlopt.LD_VAR2, nlopt.LD_TNEWTON_PRECOND_RESTART,
-        nlopt.LD_TNEWTON_PRECOND, nlopt.LD_TNEWTON_RESTART,
-        nlopt.LD_TNEWTON, nlopt.LD_LBFGS,
-        nlopt.LD_SLSQP, nlopt.LD_CCSAQ, nlopt.LD_MMA, nlopt.LN_SBPLX,
-        nlopt.LN_NELDERMEAD, nlopt.LN_PRAXIS, nlopt.LN_NEWUOA,
-        nlopt.LN_NEWUOA_BOUND, nlopt.LN_BOBYQA, nlopt.LN_COBYLA,
-        nlopt.GN_ESCH, nlopt.GN_ISRES, nlopt.GN_AGS, nlopt.GD_STOGO,
-        nlopt.GD_STOGO_RAND, nlopt.G_MLSL, nlopt.G_MLSL_LDS, nlopt.GD_MLSL,
-        nlopt.GD_MLSL_LDS, nlopt.GN_CRS2_LM, nlopt.GN_ORIG_DIRECT,
-        nlopt.GN_ORIG_DIRECT_L, nlopt.GN_DIRECT, nlopt.GN_DIRECT_L,
-        nlopt.GN_DIRECT_L_NOSCAL, nlopt.GN_DIRECT_L_RAND,
-        nlopt.GN_DIRECT_L_RAND_NOSCAL, nlopt.AUGLAG, nlopt.AUGLAG_EQ
-    ]],
-    *[('fides', solver) for solver in itt.product(
-        [None, fides.BFGS(), fides.SR1(), fides.BB(), fides.BG(),
-         fides.Broyden(0.5), fides.SSM(), fides.TSSM(), fides.HybridFixed(),
-         fides.FX(), fides.GNSBFGS()],
-        [fides.SubSpaceDim.TWO, fides.SubSpaceDim.FULL,
-         fides.SubSpaceDim.STEIHAUG]
-    )]
+    *[
+        ('nlopt', method)
+        for method in [
+            nlopt.LD_VAR1,
+            nlopt.LD_VAR2,
+            nlopt.LD_TNEWTON_PRECOND_RESTART,
+            nlopt.LD_TNEWTON_PRECOND,
+            nlopt.LD_TNEWTON_RESTART,
+            nlopt.LD_TNEWTON,
+            nlopt.LD_LBFGS,
+            nlopt.LD_SLSQP,
+            nlopt.LD_CCSAQ,
+            nlopt.LD_MMA,
+            nlopt.LN_SBPLX,
+            nlopt.LN_NELDERMEAD,
+            nlopt.LN_PRAXIS,
+            nlopt.LN_NEWUOA,
+            nlopt.LN_NEWUOA_BOUND,
+            nlopt.LN_BOBYQA,
+            nlopt.LN_COBYLA,
+            nlopt.GN_ESCH,
+            nlopt.GN_ISRES,
+            nlopt.GN_AGS,
+            nlopt.GD_STOGO,
+            nlopt.GD_STOGO_RAND,
+            nlopt.G_MLSL,
+            nlopt.G_MLSL_LDS,
+            nlopt.GD_MLSL,
+            nlopt.GD_MLSL_LDS,
+            nlopt.GN_CRS2_LM,
+            nlopt.GN_ORIG_DIRECT,
+            nlopt.GN_ORIG_DIRECT_L,
+            nlopt.GN_DIRECT,
+            nlopt.GN_DIRECT_L,
+            nlopt.GN_DIRECT_L_NOSCAL,
+            nlopt.GN_DIRECT_L_RAND,
+            nlopt.GN_DIRECT_L_RAND_NOSCAL,
+            nlopt.AUGLAG,
+            nlopt.AUGLAG_EQ,
+        ]
+    ],
+    *[
+        ('fides', solver)
+        for solver in itt.product(
+            [
+                None,
+                fides.BFGS(),
+                fides.SR1(),
+                fides.BB(),
+                fides.BG(),
+                fides.Broyden(0.5),
+                fides.SSM(),
+                fides.TSSM(),
+                fides.HybridFixed(),
+                fides.FX(),
+                fides.GNSBFGS(),
+            ],
+            [
+                fides.SubSpaceDim.TWO,
+                fides.SubSpaceDim.FULL,
+                fides.SubSpaceDim.STEIHAUG,
+            ],
+        )
+    ],
 ]
 
 
@@ -98,7 +155,10 @@ def test_unbounded_minimize(optimizer):
     ub = np.inf * np.ones(ub_init.shape)
     problem = pypesto.Problem(
         rosen_for_sensi(max_sensi_order=2)['obj'],
-        lb, ub, lb_init=lb_init, ub_init=ub_init
+        lb,
+        ub,
+        lb_init=lb_init,
+        ub_init=ub_init,
     )
     opt = get_optimizer(*optimizer)
 
@@ -108,17 +168,35 @@ def test_unbounded_minimize(optimizer):
     if isinstance(optimizer[1], str) and re.match(r'(?i)^(ls_)', optimizer[1]):
         return
 
-    if optimizer in [('dlib', ''), ('pyswarm', ''), ('cmaes', ''),
-                     ('scipydiffevolopt', ''), ('pyswarms', ''),
-                     *[('nlopt', method) for method in [
-                         nlopt.GN_ESCH, nlopt.GN_ISRES, nlopt.GN_AGS,
-                         nlopt.GD_STOGO, nlopt.GD_STOGO_RAND, nlopt.G_MLSL,
-                         nlopt.G_MLSL_LDS, nlopt.GD_MLSL, nlopt.GD_MLSL_LDS,
-                         nlopt.GN_CRS2_LM, nlopt.GN_ORIG_DIRECT,
-                         nlopt.GN_ORIG_DIRECT_L, nlopt.GN_DIRECT,
-                         nlopt.GN_DIRECT_L, nlopt.GN_DIRECT_L_NOSCAL,
-                         nlopt.GN_DIRECT_L_RAND,
-                         nlopt.GN_DIRECT_L_RAND_NOSCAL]]]:
+    if optimizer in [
+        ('dlib', ''),
+        ('pyswarm', ''),
+        ('cmaes', ''),
+        ('scipydiffevolopt', ''),
+        ('pyswarms', ''),
+        *[
+            ('nlopt', method)
+            for method in [
+                nlopt.GN_ESCH,
+                nlopt.GN_ISRES,
+                nlopt.GN_AGS,
+                nlopt.GD_STOGO,
+                nlopt.GD_STOGO_RAND,
+                nlopt.G_MLSL,
+                nlopt.G_MLSL_LDS,
+                nlopt.GD_MLSL,
+                nlopt.GD_MLSL_LDS,
+                nlopt.GN_CRS2_LM,
+                nlopt.GN_ORIG_DIRECT,
+                nlopt.GN_ORIG_DIRECT_L,
+                nlopt.GN_DIRECT,
+                nlopt.GN_DIRECT_L,
+                nlopt.GN_DIRECT_L_NOSCAL,
+                nlopt.GN_DIRECT_L_RAND,
+                nlopt.GN_DIRECT_L_RAND_NOSCAL,
+            ]
+        ],
+    ]:
         with pytest.raises(ValueError):
             optimize.minimize(
                 problem=problem,
@@ -126,7 +204,7 @@ def test_unbounded_minimize(optimizer):
                 n_starts=1,
                 startpoint_method=pypesto.startpoint.uniform,
                 options=options,
-                filename=None
+                filename=None,
             )
         return
     else:
@@ -136,7 +214,7 @@ def test_unbounded_minimize(optimizer):
             n_starts=1,
             startpoint_method=pypesto.startpoint.uniform,
             options=options,
-            filename=None
+            filename=None,
         )
 
     # check that ub/lb were reverted
@@ -147,16 +225,15 @@ def test_unbounded_minimize(optimizer):
     # check that result is not in bounds, optimum is at (1,1), so you would
     # hope that any reasonable optimizer manage to finish with x < ub,
     # but I guess some are pretty terrible
-    assert np.any(result.optimize_result.list[0]['x'] < lb_init) or \
-        np.any(result.optimize_result.list[0]['x'] > ub_init)
+    assert np.any(result.optimize_result.list[0]['x'] < lb_init) or np.any(
+        result.optimize_result.list[0]['x'] > ub_init
+    )
 
 
 def get_optimizer(library, solver):
     """Constructs Optimizer given and optimization library and optimization
     solver specification"""
-    options = {
-        'maxiter': 100
-    }
+    options = {'maxiter': 100}
 
     if library == 'scipy':
         optimizer = optimize.ScipyOptimizer(method=solver, options=options)
@@ -170,15 +247,17 @@ def get_optimizer(library, solver):
         optimizer = optimize.CmaesOptimizer(options=options)
     elif library == 'scipydiffevolopt':
         optimizer = optimize.ScipyDifferentialEvolutionOptimizer(
-            options=options)
+            options=options
+        )
     elif library == 'pyswarms':
         optimizer = optimize.PyswarmsOptimizer(options=options)
     elif library == 'nlopt':
         optimizer = optimize.NLoptOptimizer(method=solver, options=options)
     elif library == 'fides':
         options[fides.Options.SUBSPACE_DIM] = solver[1]
-        optimizer = optimize.FidesOptimizer(options=options,
-                                            hessian_update=solver[0])
+        optimizer = optimize.FidesOptimizer(
+            options=options, hessian_update=solver[0]
+        )
     else:
         raise ValueError(f"Optimizer not recognized: {library}")
 
@@ -199,12 +278,12 @@ def check_minimize(problem, library, solver, allow_failed_starts=False):
         n_starts=1,
         startpoint_method=pypesto.startpoint.uniform,
         options=optimize_options,
-        filename=None
+        filename=None,
     )
 
     assert isinstance(result.optimize_result.list[0]['fval'], float)
     if (library, solver) not in [
-            ('nlopt', nlopt.GD_STOGO_RAND)  # id 9, fails in 40% of cases
+        ('nlopt', nlopt.GD_STOGO_RAND)  # id 9, fails in 40% of cases
     ]:
         assert np.isfinite(result.optimize_result.list[0]['fval'])
         assert result.optimize_result.list[0]['x'] is not None
@@ -220,7 +299,8 @@ def test_trim_results(problem):
     )
     prob = pypesto.Problem(
         objective=rosen_for_sensi(max_sensi_order=2)['obj'],
-        lb=0 * np.ones((1, 2)), ub=1 * np.ones((1, 2))
+        lb=0 * np.ones((1, 2)),
+        ub=1 * np.ones((1, 2)),
     )
 
     # hess
@@ -231,7 +311,7 @@ def test_trim_results(problem):
         n_starts=1,
         startpoint_method=pypesto.startpoint.uniform,
         options=optimize_options,
-        filename=None
+        filename=None,
     )
     assert result.optimize_result.list[0].hess is None
 
@@ -243,7 +323,7 @@ def test_trim_results(problem):
         n_starts=1,
         startpoint_method=pypesto.startpoint.uniform,
         options=optimize_options,
-        filename=None
+        filename=None,
     )
     assert result.optimize_result.list[0].sres is None
 
@@ -257,36 +337,51 @@ def test_mpipoolengine():
         path = os.path.dirname(__file__)
         # run the example file.
         subprocess.check_call(  # noqa: S603,S607
-            ['mpiexec', '-np', '2', 'python', '-m', 'mpi4py.futures',
-             f'{path}/../../doc/example/example_MPIPool.py'])
+            [
+                'mpiexec',
+                '-np',
+                '2',
+                'python',
+                '-m',
+                'mpi4py.futures',
+                f'{path}/../../doc/example/example_MPIPool.py',
+            ]
+        )
 
         # read results
-        result1 = read_result('temp_result.h5',
-                              problem=True,
-                              optimize=True)
+        result1 = read_result('temp_result.h5', problem=True, optimize=True)
         # set optimizer
         optimizer = optimize.FidesOptimizer(verbose=0)
         # initialize problem with x_guesses and objective
-        objective = pypesto.Objective(fun=sp.optimize.rosen,
-                                      grad=sp.optimize.rosen_der,
-                                      hess=sp.optimize.rosen_hess)
-        x_guesses = np.array([result1.optimize_result.list[i]['x0']
-                              for i in range(2)])
-        problem = pypesto.Problem(objective=objective,
-                                  ub=result1.problem.ub,
-                                  lb=result1.problem.lb,
-                                  x_guesses=x_guesses)
-        result2 = optimize.minimize(problem=problem,
-                                    optimizer=optimizer,
-                                    n_starts=2,
-                                    engine=pypesto.engine.MultiProcessEngine(),
-                                    filename=None)
+        objective = pypesto.Objective(
+            fun=sp.optimize.rosen,
+            grad=sp.optimize.rosen_der,
+            hess=sp.optimize.rosen_hess,
+        )
+        x_guesses = np.array(
+            [result1.optimize_result.list[i]['x0'] for i in range(2)]
+        )
+        problem = pypesto.Problem(
+            objective=objective,
+            ub=result1.problem.ub,
+            lb=result1.problem.lb,
+            x_guesses=x_guesses,
+        )
+        result2 = optimize.minimize(
+            problem=problem,
+            optimizer=optimizer,
+            n_starts=2,
+            engine=pypesto.engine.MultiProcessEngine(),
+            filename=None,
+        )
 
         for ix in range(2):
-            assert_almost_equal(result1.optimize_result.list[ix]['x'],
-                                result2.optimize_result.list[ix]['x'],
-                                err_msg='The final parameter values '
-                                        'do not agree for the engines.')
+            assert_almost_equal(
+                result1.optimize_result.list[ix]['x'],
+                result2.optimize_result.list[ix]['x'],
+                err_msg='The final parameter values '
+                'do not agree for the engines.',
+            )
 
     finally:
         if os.path.exists('temp_result.h5'):
@@ -332,5 +427,7 @@ def test_history_beats_optimizer():
 
     # TNC funnily reports the last value if not converged
     #  (this may break if their implementation is changed at some point ...)
-    assert result_hist.optimize_result.list[0]['fval'] \
+    assert (
+        result_hist.optimize_result.list[0]['fval']
         < result_opt.optimize_result.list[0]['fval']
+    )

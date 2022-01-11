@@ -61,10 +61,7 @@ class MethodLogger:
     column_width: int = 12
     column_sep: str = " | "
 
-    def __init__(
-        self,
-        level: str = 'info'
-    ):
+    def __init__(self, level: str = 'info'):
         self.logger = logging.getLogger(__name__)
         self.level = level
 
@@ -86,7 +83,7 @@ class MethodLogger:
     def new_selection(self) -> None:
         """Start logging a new model selection."""
         padding = 20
-        self.log('-'*padding + 'New Selection' + '-'*padding)
+        self.log('-' * padding + 'New Selection' + '-' * padding)
         columns = {
             "Predecessor model subspace:ID": "model0",
             "Model subspace:ID": "model",
@@ -97,7 +94,7 @@ class MethodLogger:
             "Accept": "accept",
         }
         columns = {
-            k: v.ljust(self.column_width)[:self.column_width]
+            k: v.ljust(self.column_width)[: self.column_width]
             for k, v in columns.items()
         }
         self.log(self.column_sep.join(columns.values()))
@@ -154,12 +151,15 @@ class MethodLogger:
 
         if isinstance(predecessor_model, Model):
             predecessor_model_id = get_model_id(predecessor_model)
-            predecessor_model_criterion = \
-                predecessor_model.get_criterion(criterion)
-            criterion_difference = \
-                float_to_str(model_criterion - predecessor_model_criterion)
-            predecessor_model_criterion = \
-                float_to_str(predecessor_model_criterion)
+            predecessor_model_criterion = predecessor_model.get_criterion(
+                criterion
+            )
+            criterion_difference = float_to_str(
+                model_criterion - predecessor_model_criterion
+            )
+            predecessor_model_criterion = float_to_str(
+                predecessor_model_criterion
+            )
         else:
             criterion_difference = None
             predecessor_model_criterion = None
@@ -176,10 +176,12 @@ class MethodLogger:
             criterion_difference,
             accept,
         ]
-        message = self.column_sep.join([
-            str(v).ljust(self.column_width)[:self.column_width]
-            for v in message_parts
-        ])
+        message = self.column_sep.join(
+            [
+                str(v).ljust(self.column_width)[: self.column_width]
+                for v in message_parts
+            ]
+        )
         self.log(message)
 
 
@@ -274,9 +276,11 @@ class MethodCaller:
             )
         # Get method.
         self.method = (
-            method if method is not None else
-            candidate_space.method if candidate_space is not None else
-            self.petab_select_problem.method
+            method
+            if method is not None
+            else candidate_space.method
+            if candidate_space is not None
+            else self.petab_select_problem.method
         )
         # Require either a candidate space or a method.
         if candidate_space is None and self.method is None:
@@ -291,11 +295,12 @@ class MethodCaller:
                 candidate_space.set_predecessor_model(predecessor_model)
         # Else generate one based on the PEtab Select problem.
         else:
-            self.candidate_space = \
+            self.candidate_space = (
                 self.petab_select_problem.new_candidate_space(
                     method=self.method,
                     predecessor_model=self.predecessor_model,
                 )
+            )
         # May have changed from `None` to `petab_select.VIRTUAL_INITIAL_MODEL`
         self.predecessor_model = self.candidate_space.get_predecessor_model()
 
@@ -411,9 +416,11 @@ class MethodCaller:
 
         # Reject the model if it doesn't improve on the predecessor model.
         if (
-            predecessor_model is not None and
-            predecessor_model != VIRTUAL_INITIAL_MODEL and
-            not self.model1_gt_model0(model1=model, model0=predecessor_model)
+            predecessor_model is not None
+            and predecessor_model != VIRTUAL_INITIAL_MODEL
+            and not self.model1_gt_model0(
+                model1=model, model0=predecessor_model
+            )
         ):
             method_signal.accept = False
 

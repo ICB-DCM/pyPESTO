@@ -79,8 +79,7 @@ class Pymc3Sampler(Sampler):
 
         self.problem.objective.history = History()
 
-    def sample(
-            self, n_samples: int, beta: float = 1.):
+    def sample(self, n_samples: int, beta: float = 1.0):
         """
         Sample the problem.
 
@@ -97,23 +96,32 @@ class Pymc3Sampler(Sampler):
 
         x0 = None
         if self.x0 is not None:
-            x0 = {x_name: val
-                  for x_name, val in zip(self.problem.x_names, self.x0)}
+            x0 = {
+                x_name: val
+                for x_name, val in zip(self.problem.x_names, self.x0)
+            }
 
         # create model context
         with pm.Model() as model:
             # uniform bounds
-            k = [pm.Uniform(x_name, lower=lb, upper=ub)
-                 for x_name, lb, ub in
-                 zip(problem.get_reduced_vector(problem.x_names),
-                     problem.lb, problem.ub)]
+            k = [
+                pm.Uniform(x_name, lower=lb, upper=ub)
+                for x_name, lb, ub in zip(
+                    problem.get_reduced_vector(problem.x_names),
+                    problem.lb,
+                    problem.ub,
+                )
+            ]
 
             # convert to tensor vector
             theta = tt.as_tensor_variable(k)
 
             # use a DensityDist for the log-posterior
-            pm.DensityDist('log_post', logp=lambda v: log_post_fun(v),
-                           observed={'v': theta})
+            pm.DensityDist(
+                'log_post',
+                logp=lambda v: log_post_fun(v),
+                observed={'v': theta},
+            )
 
             # step, by default automatically determined by pymc3
             step = None
@@ -122,8 +130,12 @@ class Pymc3Sampler(Sampler):
 
             # perform the actual sampling
             trace = pm.sample(
-                draws=int(n_samples), trace=trace, start=x0, step=step,
-                **self.options)
+                draws=int(n_samples),
+                trace=trace,
+                start=x0,
+                step=step,
+                **self.options,
+            )
 
             # convert trace to inference data object
             data = az.from_pymc3(trace=trace, model=model)
@@ -134,25 +146,29 @@ class Pymc3Sampler(Sampler):
     def get_samples(self) -> McmcPtResult:
         """Convert result from Pymc3 to McmcPtResult."""
         # parameter values
-        trace_x = np.asarray(
-            self.data.posterior.to_array()).transpose((1, 2, 0))
+        trace_x = np.asarray(self.data.posterior.to_array()).transpose(
+            (1, 2, 0)
+        )
 
         # TODO this is only the negative objective values
         trace_neglogpost = np.asarray(self.data.log_likelihood.to_array())
         # remove trailing dimensions
-        trace_neglogpost = np.reshape(trace_neglogpost,
-                                      trace_neglogpost.shape[1:-1])
+        trace_neglogpost = np.reshape(
+            trace_neglogpost, trace_neglogpost.shape[1:-1]
+        )
         # flip sign
-        trace_neglogpost = - trace_neglogpost
+        trace_neglogpost = -trace_neglogpost
 
-        if trace_x.shape[0] != trace_neglogpost.shape[0] \
-                or trace_x.shape[1] != trace_neglogpost.shape[1] \
-                or trace_x.shape[2] != self.problem.dim:
+        if (
+            trace_x.shape[0] != trace_neglogpost.shape[0]
+            or trace_x.shape[1] != trace_neglogpost.shape[1]
+            or trace_x.shape[2] != self.problem.dim
+        ):
             raise ValueError("Trace dimensions are inconsistent")
 
         return McmcPtResult(
             trace_x=np.array(trace_x),
             trace_neglogpost=np.array(trace_neglogpost),
             trace_neglogprior=np.full(trace_neglogpost.shape, np.nan),
-            betas=np.array([1.] * trace_x.shape[0]),
+            betas=np.array([1.0] * trace_x.shape[0]),
         )

@@ -36,11 +36,12 @@ def autosave(
 
     if filename == "Auto":
         time = datetime.datetime.now().strftime("%Y_%d_%m_%H_%M_%S")
-        filename = time+f"_{store_type}_result_" \
-                        f"{binascii.b2a_hex(os.urandom(8)).decode()}.h5"
+        filename = (
+            time + f"_{store_type}_result_"
+            f"{binascii.b2a_hex(os.urandom(8)).decode()}.h5"
+        )
     # set the type to True and pass it on to write_result
     to_save = {store_type: True}
-    write_result(result=result,
-                 overwrite=overwrite,
-                 filename=filename,
-                 **to_save)
+    write_result(
+        result=result, overwrite=overwrite, filename=filename, **to_save
+    )
