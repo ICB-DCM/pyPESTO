@@ -278,8 +278,8 @@ def test_postprocessors(petab_select_problem):
     assert expected_hdf5_file.is_file()
 
     # Remove the expected files (also ensures they firstly exist).
-    expected_png_file.unlink(missing_ok=False)
-    expected_hdf5_file.unlink(missing_ok=False)
+    expected_png_file.unlink()
+    expected_hdf5_file.unlink()
 
 
 def test_model_problem_fake_result():
