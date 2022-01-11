@@ -1,13 +1,14 @@
-import matplotlib.pyplot as plt
-import pandas as pd
-import seaborn as sns
-import numpy as np
-import pypesto
-
 from typing import Optional, Tuple
 
+import matplotlib.pyplot as plt
+import numpy as np
+import pandas as pd
+import seaborn as sns
 
-def optimizer_convergence(result: pypesto.Result,
+from ..result import Result
+
+
+def optimizer_convergence(result: Result,
                           ax: Optional[plt.Axes] = None,
                           xscale: str = 'symlog',
                           yscale: str = 'log',

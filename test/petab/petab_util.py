@@ -1,6 +1,6 @@
-import git
 import os
 
+import git
 
 repo_base = "doc/example/tmp/benchmark-models/"
 

@@ -3,21 +3,20 @@ Objective
 =========
 """
 
-from .base import ObjectiveBase
-from .function import Objective
 from .aggregated import AggregatedObjective
-from .finite_difference import FD, FDDelta
+from .amici import AmiciObjectBuilder, AmiciObjective
 from .amici_calculator import AmiciCalculator
-from .amici import AmiciObjective, AmiciObjectBuilder
-from .priors import NegLogPriors, NegLogParameterPriors
-from .util import res_to_chi2, sres_to_schi2
+from .base import ObjectiveBase
+from .finite_difference import FD, FDDelta
+from .function import Objective
 from .history import (
-    HistoryOptions,
-    HistoryBase,
-    History,
-    MemoryHistory,
     CsvHistory,
     Hdf5History,
+    History,
+    HistoryBase,
+    HistoryOptions,
+    MemoryHistory,
     OptimizerHistory,
 )
-from . import constants
+from .priors import NegLogParameterPriors, NegLogPriors
+from .util import res_to_chi2, sres_to_schi2

@@ -1,13 +1,14 @@
-import numpy as np
-import pandas as pd
+import abc
 import copy
 import logging
-import abc
-from typing import Dict, Iterable, Optional, Sequence, Tuple, Union, List
+from typing import Dict, Iterable, List, Optional, Sequence, Tuple, Union
 
-from .constants import MODE_FUN, MODE_RES, FVAL, GRAD, HESS, RES, SRES
+import numpy as np
+import pandas as pd
+
+from ..C import FVAL, GRAD, HESS, MODE_FUN, MODE_RES, RES, SRES
 from .history import HistoryBase
-from .pre_post_process import PrePostProcessor, FixedParametersProcessor
+from .pre_post_process import FixedParametersProcessor, PrePostProcessor
 
 ResultDict = Dict[str, Union[float, np.ndarray, Dict]]
 

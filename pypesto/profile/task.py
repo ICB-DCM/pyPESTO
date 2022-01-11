@@ -1,12 +1,13 @@
 import logging
 from typing import Callable
 
+import pypesto.optimize
+
 from ..engine import Task
 from ..problem import Problem
-from .result import ProfilerResult
+from ..result import ProfilerResult
 from .options import ProfileOptions
 from .walk_along_profile import walk_along_profile
-import pypesto.optimize
 
 logger = logging.getLogger(__name__)
 
@@ -56,7 +57,7 @@ class ProfilerTask(Task):
 
     def execute(self) -> 'pypesto.profile.ProfilerResult':
         """Compute profile in descending and ascending direction."""
-        logger.info(f"Executing task {self.i_par}.")
+        logger.debug(f"Executing task {self.i_par}.")
 
         for par_direction in [-1, 1]:
             # flip profile

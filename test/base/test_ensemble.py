@@ -1,19 +1,21 @@
-import numpy as np
-import pypesto
 import os
-from pypesto.ensemble import (Ensemble,
-                              write_ensemble_prediction_to_h5,
-                              read_ensemble_prediction_from_h5,)
+from functools import partial
+
+import numpy as np
 import scipy.optimize as so
 
-from ..visualize import create_petab_problem
-from functools import partial
-from pypesto.predict.constants import (AMICI_STATUS,
-                                       AMICI_T,
-                                       AMICI_Y)
-from pypesto.ensemble.constants import MEAN, WEIGHTED_SIGMA
-from pypesto.predict import AmiciPredictor
+import pypesto
+import pypesto.optimize as optimize
+from pypesto.C import AMICI_STATUS, AMICI_T, AMICI_Y, MEAN, WEIGHTED_SIGMA
 from pypesto.engine import MultiProcessEngine
+from pypesto.ensemble import (
+    Ensemble,
+    read_ensemble_prediction_from_h5,
+    write_ensemble_prediction_to_h5,
+)
+from pypesto.predict import AmiciPredictor
+
+from ..visualize import create_petab_problem
 
 
 def test_ensemble_from_optimization():
@@ -30,9 +32,9 @@ def test_ensemble_from_optimization():
 
     problem = pypesto.Problem(objective=objective, lb=lb, ub=ub)
 
-    optimizer = pypesto.optimize.ScipyOptimizer(options={'maxiter': 10})
+    optimizer = optimize.ScipyOptimizer(options={'maxiter': 10})
     history_options = pypesto.HistoryOptions(trace_record=True)
-    result = pypesto.optimize.minimize(
+    result = optimize.minimize(
         problem=problem, optimizer=optimizer,
         n_starts=n_starts, history_options=history_options)
 
@@ -153,8 +155,8 @@ def get_ensemble_prediction(max_size: int = 2,
     """
     problem = create_petab_problem()
 
-    optimizer = pypesto.optimize.ScipyOptimizer()
-    result = pypesto.optimize.minimize(
+    optimizer = optimize.ScipyOptimizer()
+    result = optimize.minimize(
         problem=problem, optimizer=optimizer,
         n_starts=2, filename=None)
 

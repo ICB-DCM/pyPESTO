@@ -1,13 +1,15 @@
 """Various test problems and utility functions."""
 
 
+import importlib
 import os
 import sys
+
+import autograd.numpy as anp
 import numpy as np
 import scipy.optimize as so
-import importlib
-import autograd.numpy as anp
 from autograd import jacobian
+
 import pypesto
 
 try:

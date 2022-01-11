@@ -1,6 +1,7 @@
-from .importer import PetabImporter
 import os
 import shutil
+
+from .importer import PetabImporter
 
 try:
     import amici

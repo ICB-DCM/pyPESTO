@@ -1,6 +1,7 @@
-import numpy as np
+from typing import Optional, Sequence, Tuple
+
 import matplotlib.pyplot as plt
-from typing import Optional, Tuple, Sequence
+import numpy as np
 
 from .clust_color import RGBA
 

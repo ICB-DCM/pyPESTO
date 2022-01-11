@@ -4,11 +4,12 @@ This is for testing the petab import.
 
 import os
 import unittest
-import numpy as np
-import pytest
 
 import amici
+import numpy as np
 import petab
+import pytest
+
 import pypesto
 import pypesto.optimize
 import pypesto.petab

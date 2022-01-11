@@ -1,10 +1,11 @@
+from typing import Sequence, Union
+
 import matplotlib.axes
 import matplotlib.pyplot as plt
-from typing import Sequence, Union
 import numpy as np
 
+from ..profile import calculate_approximate_ci, chi2_quantile_to_ratio
 from ..result import Result
-from ..profile import chi2_quantile_to_ratio, calculate_approximate_ci
 
 
 def profile_cis(

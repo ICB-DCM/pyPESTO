@@ -1,23 +1,25 @@
 import functools
-import numpy as np
-import scipy.optimize as so
-import matplotlib.pyplot as plt
-import pytest
 import os
-import petab
-
-import pypesto
-import pypesto.petab
-import pypesto.optimize as optimize
-import pypesto.predict as predict
-import pypesto.profile as profile
-import pypesto.sample as sample
-import pypesto.visualize as visualize
-import pypesto.ensemble as ensemble
-from pypesto.visualize.model_fit import visualize_optimized_model_fit, \
-    time_trajectory_model
 from functools import wraps
 from typing import Sequence
+
+import matplotlib.pyplot as plt
+import numpy as np
+import petab
+import pytest
+import scipy.optimize as so
+
+import pypesto
+import pypesto.ensemble as ensemble
+import pypesto.optimize as optimize
+import pypesto.petab
+import pypesto.predict as predict
+import pypesto.sample as sample
+import pypesto.visualize as visualize
+from pypesto.visualize.model_fit import (
+    time_trajectory_model,
+    visualize_optimized_model_fit,
+)
 
 
 def close_fig(fun):
@@ -94,12 +96,12 @@ def create_optimization_result():
     # write some dummy results for optimization
     result = pypesto.Result(problem=problem)
     for j in range(0, 3):
-        optimizer_result = optimize.OptimizerResult(
+        optimizer_result = pypesto.OptimizerResult(
             id=str(j), fval=j * 0.01, x=np.array([j + 0.1, j + 1]),
             grad=np.array([2.5 + j + 0.1, 2 + j + 1]))
         result.optimize_result.append(optimizer_result=optimizer_result)
     for j in range(0, 4):
-        optimizer_result = optimize.OptimizerResult(
+        optimizer_result = pypesto.OptimizerResult(
             id=str(j + 3), fval=10 + j * 0.01,
             x=np.array([2.5 + j + 0.1, 2 + j + 1]),
             grad=np.array([j + 0.1, j + 1]))
@@ -116,10 +118,10 @@ def create_optimization_result_nan_inf():
     result = create_optimization_result()
 
     # append nan and inf
-    optimizer_result = optimize.OptimizerResult(
+    optimizer_result = pypesto.OptimizerResult(
         fval=float('nan'), x=np.array([float('nan'), float('nan')]))
     result.optimize_result.append(optimizer_result=optimizer_result)
-    optimizer_result = optimize.OptimizerResult(
+    optimizer_result = pypesto.OptimizerResult(
         fval=-float('inf'), x=np.array([-float('inf'), -float('inf')]))
     result.optimize_result.append(optimizer_result=optimizer_result)
 
@@ -166,8 +168,8 @@ def create_profile_result():
                          [2.1, 2.2, 2.4, 2.5, 2.8, 2.9, 3.1]])
     fval_path_1 = [4., 3., 1., 0., 1.5, 2.5, 5.]
     fval_path_2 = [4.5, 3.5, 1.5, 0., 1.3, 2.3, 4.3]
-    tmp_result_1 = profile.ProfilerResult(x_path_1, fval_path_1, ratio_path_1)
-    tmp_result_2 = profile.ProfilerResult(x_path_2, fval_path_2, ratio_path_2)
+    tmp_result_1 = pypesto.ProfilerResult(x_path_1, fval_path_1, ratio_path_1)
+    tmp_result_2 = pypesto.ProfilerResult(x_path_2, fval_path_2, ratio_path_2)
 
     # use pypesto function to write the numeric values into the results
     result.profile_result.append_empty_profile_list()
@@ -201,9 +203,9 @@ def post_processor(
     """
     outputs = [
         amici_output[output_type]
-        if amici_output[predict.constants.AMICI_STATUS] == 0
+        if amici_output[pypesto.C.AMICI_STATUS] == 0
         else np.full(
-            (len(amici_output[predict.constants.AMICI_T]), len(output_ids)),
+            (len(amici_output[pypesto.C.AMICI_T]), len(output_ids)),
             np.nan
         )
         for amici_output in amici_outputs
@@ -806,7 +808,7 @@ def create_sampling_result():
     trace_neglogprior = np.zeros((n_chain, n_iter))
     trace_x = np.random.randn(n_chain, n_iter, n_par)
     betas = np.array([1, .1])
-    sample_result = sample.McmcPtResult(
+    sample_result = pypesto.McmcPtResult(
         trace_neglogpost=trace_neglogpost,
         trace_neglogprior=trace_neglogprior,
         trace_x=trace_x, betas=betas,
@@ -878,7 +880,7 @@ def test_sampling_prediction_trajectories():
     result = sample_petab_problem()
     post_processor_amici_x = functools.partial(
         post_processor,
-        output_type=predict.constants.AMICI_X,
+        output_type=pypesto.C.AMICI_X,
         output_ids=result.problem.objective.amici_model.getStateIds(),
     )
     predictor = predict.AmiciPredictor(
@@ -890,27 +892,27 @@ def test_sampling_prediction_trajectories():
     sample_ensemble = ensemble.Ensemble.from_sample(
         result,
         x_names=result.problem.x_names,
-        ensemble_type=ensemble.EnsembleType.sample,
+        ensemble_type=pypesto.C.EnsembleType.sample,
         lower_bound=result.problem.lb,
         upper_bound=result.problem.ub,
     )
 
     ensemble_prediction = sample_ensemble.predict(
         predictor,
-        prediction_id=predict.constants.AMICI_X,
+        prediction_id=pypesto.C.AMICI_X,
     )
 
     # Plot by
     visualize.sampling_prediction_trajectories(
         ensemble_prediction,
         levels=credibility_interval_levels,
-        groupby=predict.constants.CONDITION,
+        groupby=pypesto.C.CONDITION,
     )
     visualize.sampling_prediction_trajectories(
         ensemble_prediction,
         levels=credibility_interval_levels,
         size=(10, 10),
-        groupby=predict.constants.OUTPUT,
+        groupby=pypesto.C.OUTPUT,
     )
 
 

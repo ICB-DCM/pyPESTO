@@ -1,11 +1,11 @@
 import logging
-import numpy as np
-from scipy.stats import multivariate_normal
 from typing import Iterable
 
+import numpy as np
+from scipy.stats import multivariate_normal
+
 from ..problem import Problem
-from ..result import Result
-from .result import ProfilerResult
+from ..result import ProfilerResult, Result
 from .util import initialize_profile
 
 logger = logging.getLogger(__name__)
