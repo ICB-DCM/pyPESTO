@@ -17,7 +17,7 @@ from numpy.testing import assert_almost_equal
 
 import pypesto
 import pypesto.optimize as optimize
-from pypesto.store import OptimizationResultHDF5Reader
+from pypesto.store import read_result
 
 from ..util import CRProblem, rosen_for_sensi
 
@@ -104,7 +104,8 @@ def test_unbounded_minimize(optimizer):
 
     options = optimize.OptimizeOptions(allow_failed_starts=False)
 
-    if isinstance(optimizer[1], str) and re.match(r'^(?i)(ls_)', optimizer[1]):
+    # check whether the optimizer is least squares
+    if isinstance(optimizer[1], str) and re.match(r'(?i)^(ls_)', optimizer[1]):
         return
 
     if optimizer in [('dlib', ''), ('pyswarm', ''), ('cmaes', ''),
@@ -260,8 +261,9 @@ def test_mpipoolengine():
              f'{path}/../../doc/example/example_MPIPool.py'])
 
         # read results
-        opt_result_reader = OptimizationResultHDF5Reader('temp_result.h5')
-        result1 = opt_result_reader.read()
+        result1 = read_result('temp_result.h5',
+                              problem=True,
+                              optimize=True)
         # set optimizer
         optimizer = optimize.FidesOptimizer(verbose=0)
         # initialize problem with x_guesses and objective
