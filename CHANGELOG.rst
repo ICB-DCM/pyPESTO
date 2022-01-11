@@ -6,6 +6,23 @@ Release notes
 ..........
 
 
+0.2.11 (2022-01-11)
+-------------------
+
+* Model selection: basic support of petab-select (#397)
+
+* AMICI:
+    * Maintain model settings when pickling for multiprocessing (#747)
+
+* General:
+    * Apply nbqa black and isort to auto-format all notebooks via
+      pre-commit hook (#794)
+    * Apply black formatting via pre-commit hook (#796)
+    * Require Python >= 3.8 (#795)
+    * Fix various warnings (#778)
+    * Minor fixes (#792)
+
+
 0.2.10 (2022-01-06)
 -------------------
 
