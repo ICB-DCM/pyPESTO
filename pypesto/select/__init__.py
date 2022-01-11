@@ -10,6 +10,7 @@ from .problem import Problem
 
 try:
     import petab_select
+    del petab_select
 except ImportError:
     import warnings
     warnings.warn(
