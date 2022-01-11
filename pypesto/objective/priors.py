@@ -4,7 +4,6 @@ from typing import Callable, Dict, List, Sequence, Tuple, Union
 import numpy as np
 
 from .. import C
-from ..C import CHI2, FVAL, GRAD, HESS, MODE_FUN, MODE_RES, RES, SRES
 from .aggregated import AggregatedObjective
 from .base import ResultDict
 from .function import ObjectiveBase
@@ -46,9 +45,11 @@ class NegLogParameterPriors(ObjectiveBase):
     Objective function to be of a negative log-density type.
     """
 
-    def __init__(self,
-                 prior_list: List[Dict],
-                 x_names: Sequence[str] = None):
+    def __init__(
+        self,
+        prior_list: List[Dict],
+        x_names: Sequence[str] = None,
+    ):
         """
         Initialize.
 
@@ -69,10 +70,11 @@ class NegLogParameterPriors(ObjectiveBase):
         return other
 
     def call_unprocessed(
-            self,
-            x: np.ndarray,
-            sensi_orders: Tuple[int, ...],
-            mode: str
+        self,
+        x: np.ndarray,
+        sensi_orders: Tuple[int, ...],
+        mode: str,
+        **kwargs,
     ) -> ResultDict:
         """
         Call objective function without pre- or post-processing and formatting.
@@ -84,40 +86,42 @@ class NegLogParameterPriors(ObjectiveBase):
         """
         res = {}
 
-        res[FVAL] = self.neg_log_density(x)
+        res[C.FVAL] = self.neg_log_density(x)
 
-        if mode == MODE_FUN:
+        if mode == C.MODE_FUN:
             for order in sensi_orders:
                 if order == 0:
                     continue
                 elif order == 1:
-                    res[GRAD] = self.gradient_neg_log_density(x)
+                    res[C.GRAD] = self.gradient_neg_log_density(x)
                 elif order == 2:
-                    res[HESS] = self.hessian_neg_log_density(x)
+                    res[C.HESS] = self.hessian_neg_log_density(x)
                 else:
                     raise ValueError(f'Invalid sensi order {order}.')
 
-        if mode == MODE_RES:
+        if mode == C.MODE_RES:
             for order in sensi_orders:
                 if order == 0:
-                    res[RES] = self.residual(x)
-                    res[CHI2] = res_to_chi2(res[RES])
+                    res[C.RES] = self.residual(x)
+                    res[C.CHI2] = res_to_chi2(res[C.RES])
                 elif order == 1:
-                    res[SRES] = self.residual_jacobian(x)
+                    res[C.SRES] = self.residual_jacobian(x)
                 else:
                     raise ValueError(f'Invalid sensi order {order}.')
 
         return res
 
-    def check_sensi_orders(self,
-                           sensi_orders: Tuple[int, ...],
-                           mode: str) -> bool:
+    def check_sensi_orders(
+        self,
+        sensi_orders: Tuple[int, ...],
+        mode: str,
+    ) -> bool:
         """See `ObjectiveBase` documentation."""
-        if mode == MODE_FUN:
+        if mode == C.MODE_FUN:
             for order in sensi_orders:
                 if not (0 <= order <= 2):
                     return False
-        elif mode == MODE_RES:
+        elif mode == C.MODE_RES:
             for order in sensi_orders:
                 if order == 0:
                     return all(prior.get('residual', None) is not None
@@ -129,23 +133,23 @@ class NegLogParameterPriors(ObjectiveBase):
                     return False
         else:
             raise ValueError(
-                f'Invalid input: Expected mode {MODE_FUN} or '
-                f'{MODE_RES}, received {mode} instead.'
+                f'Invalid input: Expected mode {C.MODE_FUN} or '
+                f'{C.MODE_RES}, received {mode} instead.'
             )
 
         return True
 
-    def check_mode(self, mode) -> bool:
+    def check_mode(self, mode: str) -> bool:
         """See `ObjectiveBase` documentation."""
-        if mode == MODE_FUN:
+        if mode == C.MODE_FUN:
             return True
-        elif mode == MODE_RES:
+        elif mode == C.MODE_RES:
             return all(prior.get('residual', None) is not None
                        for prior in self.prior_list)
         else:
             raise ValueError(
-                f'Invalid input: Expected mode {MODE_FUN} or '
-                f'{MODE_RES}, received {mode} instead.'
+                f'Invalid input: Expected mode {C.MODE_FUN} or '
+                f'{C.MODE_RES}, received {mode} instead.'
             )
 
     def neg_log_density(self, x):
@@ -259,11 +263,13 @@ def get_parameter_prior_dict(
                 (d_log_f_dx(np.exp(x_log)) +
                     np.exp(x_log) * dd_log_f_ddx(np.exp(x_log)))
 
+        res_log = None
         if res is not None:
             def res_log(x_log):
                 """Residual-prior for log-parameters."""
                 return res(np.exp(x_log))
 
+        d_res_log = None
         if d_res_dx is not None:
             def d_res_log(x_log):
                 """Residual-prior for log-parameters."""
@@ -274,8 +280,8 @@ def get_parameter_prior_dict(
             'density_fun': log_f_log,
             'density_dx': d_log_f_log,
             'density_ddx': dd_log_f_log,
-            'residual': res_log if res is not None else None,
-            'residual_dx': d_res_log if d_res_dx is not None else None,
+            'residual': res_log,
+            'residual_dx': d_res_log,
         }
 
     elif parameter_scale == C.LOG10:
@@ -296,11 +302,13 @@ def get_parameter_prior_dict(
                 (dd_log_f_ddx(10**x_log10) * 10**x_log10
                     + d_log_f_dx(10**x_log10))
 
+        res_log = None
         if res is not None:
             def res_log(x_log10):
                 """Residual-prior for log10-parameters."""
                 return res(10**x_log10)
 
+        d_res_log = None
         if d_res_dx is not None:
             def d_res_log(x_log10):
                 """Residual-prior for log10-parameters."""
@@ -311,8 +319,8 @@ def get_parameter_prior_dict(
             'density_fun': log_f_log10,
             'density_dx': d_log_f_log10,
             'density_ddx': dd_log_f_log10,
-            'residual': res_log if res is not None else None,
-            'residual_dx': d_res_log if d_res_dx is not None else None,
+            'residual': res_log,
+            'residual_dx': d_res_log,
         }
 
     else:
