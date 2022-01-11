@@ -164,10 +164,6 @@ class OptimizationResultHDF5Reader:
     def read(self) -> Result:
         """Read HDF5 result file and return pyPESTO result object."""
         with h5py.File(self.storage_filename, "r") as f:
-            if '/problem' in f['/']:
-                problem_reader = ProblemHDF5Reader(self.storage_filename)
-                self.results.problem = problem_reader.read()
-
             for opt_id in f['/optimization/results']:
                 result = read_hdf5_optimization(f,
                                                 self.storage_filename,
@@ -202,9 +198,6 @@ class SamplingResultHDF5Reader:
         """Read HDF5 result file and return pyPESTO result object."""
         sample_result = {}
         with h5py.File(self.storage_filename, "r") as f:
-            if '/problem' in f['/']:
-                problem_reader = ProblemHDF5Reader(self.storage_filename)
-                self.results.problem = problem_reader.read()
             for key in f['/sampling/results']:
                 sample_result[key] = \
                     f[f'/sampling/results/{key}'][:]
@@ -246,9 +239,6 @@ class ProfileResultHDF5Reader:
         """Read HDF5 result file and return pyPESTO result object."""
         profiling_list = []
         with h5py.File(self.storage_filename, "r") as f:
-            if '/problem' in f['/']:
-                problem_reader = ProblemHDF5Reader(self.storage_filename)
-                self.results.problem = problem_reader.read()
             for profile_id in f['/profiling']:
                 profiling_list.append([
                     None for _ in f[f'/profiling/{profile_id}']
@@ -266,7 +256,7 @@ class ProfileResultHDF5Reader:
 
 
 def read_result(filename: str,
-                problem: bool = True,
+                problem: bool = False,
                 optimize: bool = False,
                 profile: bool = False,
                 sample: bool = False,

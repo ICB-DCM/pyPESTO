@@ -35,6 +35,24 @@ ID = 'id'
 
 
 ###############################################################################
+# PRIOR
+
+LIN = 'lin'  # linear
+LOG = 'log'  # logarithmic to basis e
+LOG10 = 'log10'  # logarithmic to basis 10
+
+UNIFORM = 'uniform'
+PARAMETER_SCALE_UNIFORM = 'parameterScaleUniform'
+NORMAL = 'normal'
+PARAMETER_SCALE_NORMAL = 'parameterScaleNormal'
+LAPLACE = 'laplace'
+PARAMETER_SCALE_LAPLACE = 'parameterScaleLaplace'
+LOG_UNIFORM = 'logUniform'
+LOG_NORMAL = 'logNormal'
+LOG_LAPLACE = 'logLaplace'
+
+
+###############################################################################
 # PREDICT
 
 OUTPUT_IDS = 'output_ids'  # data member in PredictionConditionResult
