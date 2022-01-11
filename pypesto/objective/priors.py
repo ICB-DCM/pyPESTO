@@ -30,12 +30,10 @@ class NegLogParameterPriors(ObjectiveBase):
     Contains a list of prior dictionaries for the individual parameters
     of the format
 
-    {
-        'index': [int],
-        'density_fun': [Callable],
-        'density_dx': [Callable],
-        'density_ddx': [Callable],
-    }
+    {'index': [int],
+     'density_fun': [Callable],
+     'density_dx': [Callable],
+     'density_ddx': [Callable]}
 
     A prior instance can be added to e.g. an objective, that gives the
     likelihood, by an AggregatedObjective.
