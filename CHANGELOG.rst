@@ -13,7 +13,7 @@ Release notes
     * Automated model selection with forward/backward/brute force methods and
       AIC/AICc/BIC criteria
     * Much functionality (methods, criteria, model space, problem
-      specification) via PEtab Select
+      specification) via `PEtab Select <https://github.com/PEtab-dev/petab_select>`
     * Plotting routines
     * `Example notebook <https://github.com/ICB-DCM/pyPESTO/blob/main/doc/example/model_selection.ipynb>`
     * Model calibration postprocessors
