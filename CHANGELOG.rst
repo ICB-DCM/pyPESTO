@@ -15,7 +15,7 @@ Release notes
     * Much functionality (methods, criteria, model space, problem
       specification) via PEtab Select
     * Plotting routines
-    * Example notebook
+    * `Example notebook <https://github.com/ICB-DCM/pyPESTO/blob/main/doc/example/model_selection.ipynb>`
     * Model calibration postprocessors
     * Select first model that improves on predecessor model
     * Use previous MLE as startpoint
