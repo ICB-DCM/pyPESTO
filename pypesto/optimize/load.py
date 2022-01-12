@@ -68,8 +68,7 @@ def fill_result_from_history(
     # we only use our own counters here as optimizers may report differently
     for key in (FVAL, GRAD, HESS, RES, SRES):
         setattr(
-            result, f"n_{key}",
-            getattr(optimizer_history.history, f"n_{key}")
+            result, f"n_{key}", getattr(optimizer_history.history, f"n_{key}")
         )
 
     # initial values
@@ -181,8 +180,10 @@ def read_results_from_file(
         logger.error("No history files found.")
 
     if len(result.optimize_result.list) != n_starts:
-        logger.warning(f"History files were incomplete "
-                       f"({len(result.optimize_result.list)}/{n_starts}).")
+        logger.warning(
+            f"History files were incomplete "
+            f"({len(result.optimize_result.list)}/{n_starts})."
+        )
 
     result.optimize_result.sort()
     return result

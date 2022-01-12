@@ -4,6 +4,12 @@
 
 [flake8]
 
+extend-ignore =
+  # White space before :
+  E203
+  # Don't be crazy if line too long
+  E501
+
 per-file-ignores =
     # Imported but unused
     */__init__.py:F401,D400,D205

@@ -44,13 +44,14 @@ class MPIPoolEngine(Engine):
         """
         pickled_tasks = [pickle.dumps(task) for task in tasks]
 
-        n_procs = MPI.COMM_WORLD.Get_size()   # Size of communicator
-        logger.info(f"Performing parallel task execution on {n_procs-1} "
-                    f"workers with one manager.")
+        n_procs = MPI.COMM_WORLD.Get_size()  # Size of communicator
+        logger.info(
+            f"Performing parallel task execution on {n_procs-1} "
+            f"workers with one manager."
+        )
 
         with MPIPoolExecutor() as executor:
-            results = executor.map(work,
-                                   tqdm(pickled_tasks,
-                                        disable=not progress_bar)
-                                   )
+            results = executor.map(
+                work, tqdm(pickled_tasks, disable=not progress_bar)
+            )
         return results

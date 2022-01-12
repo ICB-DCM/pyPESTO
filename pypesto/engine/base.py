@@ -22,5 +22,4 @@ class Engine(abc.ABC):
         progress_bar:
             Whether to display a progress bar.
         """
-        raise NotImplementedError(
-            "This engine is not intended to be called.")
+        raise NotImplementedError("This engine is not intended to be called.")

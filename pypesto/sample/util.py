@@ -13,9 +13,9 @@ logger = logging.getLogger(__name__)
 
 
 def calculate_ci_mcmc_sample(
-        result: Result,
-        ci_level: float = 0.95,
-        exclude_burn_in: bool = True,
+    result: Result,
+    ci_level: float = 0.95,
+    exclude_burn_in: bool = True,
 ) -> Tuple[np.ndarray, np.ndarray]:
     """Calculate parameter credibility intervals based on MCMC samples.
 
@@ -48,8 +48,8 @@ def calculate_ci_mcmc_sample(
 
 
 def calculate_ci_mcmc_sample_prediction(
-        simulated_values: np.ndarray,
-        ci_level: float = 0.95,
+    simulated_values: np.ndarray,
+    ci_level: float = 0.95,
 ) -> Tuple[np.ndarray, np.ndarray]:
     """Calculate prediction credibility intervals based on MCMC samples.
 
@@ -70,9 +70,9 @@ def calculate_ci_mcmc_sample_prediction(
 
 
 def calculate_ci(
-        values: np.ndarray,
-        ci_level: float,
-        **kwargs,
+    values: np.ndarray,
+    ci_level: float,
+    **kwargs,
 ) -> Tuple[np.ndarray, np.ndarray]:
     """Calculate confidence/credibility levels using percentiles.
 
@@ -91,7 +91,7 @@ def calculate_ci(
         Bounds of the confidence/credibility interval.
     """
     # Percentile values corresponding to the CI level
-    percentiles = 100 * np.array([(1-ci_level)/2, 1-(1-ci_level)/2])
+    percentiles = 100 * np.array([(1 - ci_level) / 2, 1 - (1 - ci_level) / 2])
     # Upper and lower bounds
     lb, ub = np.percentile(values, percentiles, **kwargs)
     return lb, ub

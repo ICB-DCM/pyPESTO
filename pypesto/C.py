@@ -5,7 +5,7 @@ Package-wide consistent constant definitions.
 """
 
 from enum import Enum
-from typing import Tuple, Union
+from typing import Callable, Tuple, Union
 
 ###############################################################################
 # OBJECTIVE
@@ -32,6 +32,24 @@ SCHI2 = 'schi2'  # chi2 value gradient
 X = 'x'
 X0 = 'x0'
 ID = 'id'
+
+
+###############################################################################
+# PRIOR
+
+LIN = 'lin'  # linear
+LOG = 'log'  # logarithmic to basis e
+LOG10 = 'log10'  # logarithmic to basis 10
+
+UNIFORM = 'uniform'
+PARAMETER_SCALE_UNIFORM = 'parameterScaleUniform'
+NORMAL = 'normal'
+PARAMETER_SCALE_NORMAL = 'parameterScaleNormal'
+LAPLACE = 'laplace'
+PARAMETER_SCALE_LAPLACE = 'parameterScaleLaplace'
+LOG_UNIFORM = 'logUniform'
+LOG_NORMAL = 'logNormal'
+LOG_LAPLACE = 'logLaplace'
 
 
 ###############################################################################
@@ -98,9 +116,9 @@ UPPER_BOUND = 'upper_bound'
 PREEQUILIBRATION_CONDITION_ID = 'preequilibrationConditionId'
 SIMULATION_CONDITION_ID = 'simulationConditionId'
 
-COLOR_HIT_BOTH_BOUNDS = [0.6, 0., 0., 0.9]
-COLOR_HIT_ONE_BOUND = [0.95, 0.6, 0., 0.9]
-COLOR_HIT_NO_BOUNDS = [0., 0.8, 0., 0.9]
+COLOR_HIT_BOTH_BOUNDS = [0.6, 0.0, 0.0, 0.9]
+COLOR_HIT_ONE_BOUND = [0.95, 0.6, 0.0, 0.9]
+COLOR_HIT_NO_BOUNDS = [0.0, 0.8, 0.0, 0.9]
 
 
 class EnsembleType(Enum):
@@ -109,6 +127,12 @@ class EnsembleType(Enum):
     ensemble = 1
     sample = 2
     unprocessed_chain = 3
+
+
+###############################################################################
+# SELECT
+
+TYPE_POSTPROCESSOR = Callable[["ModelProblem"], None]  # noqa: F821
 
 
 ###############################################################################

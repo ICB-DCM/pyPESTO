@@ -6,6 +6,33 @@ Release notes
 ..........
 
 
+0.2.11 (2022-01-11)
+-------------------
+
+* Model selection (#397):
+    * Automated model selection with forward/backward/brute force methods and
+      AIC/AICc/BIC criteria
+    * Much functionality (methods, criteria, model space, problem
+      specification) via `PEtab Select <https://github.com/PEtab-dev/petab_select>`
+    * Plotting routines
+    * `Example notebook <https://github.com/ICB-DCM/pyPESTO/blob/main/doc/example/model_selection.ipynb>`
+    * Model calibration postprocessors
+    * Select first model that improves on predecessor model
+    * Use previous MLE as startpoint
+    * Tests
+
+* AMICI:
+    * Maintain model settings when pickling for multiprocessing (#747)
+
+* General:
+    * Apply nbqa black and isort to auto-format all notebooks via
+      pre-commit hook (#794)
+    * Apply black formatting via pre-commit hook (#796)
+    * Require Python >= 3.8 (#795)
+    * Fix various warnings (#778)
+    * Minor fixes (#792)
+
+
 0.2.10 (2022-01-06)
 -------------------
 

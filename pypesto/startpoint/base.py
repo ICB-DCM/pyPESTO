@@ -158,9 +158,9 @@ class CheckedStartpoints(StartpointMethod, ABC):
             return xs
 
         if self.check_fval and not self.check_grad:
-            sensi_orders = 0,
+            sensi_orders = (0,)
         elif not self.check_fval and self.check_grad:
-            sensi_orders = 1,
+            sensi_orders = (1,)
         else:
             sensi_orders = 0, 1
 
@@ -177,9 +177,7 @@ class CheckedStartpoints(StartpointMethod, ABC):
             # loop until all requested sensis are finite
             while True:
                 # discontinue if all requested sensis are finite
-                if (
-                    0 not in sensi_orders or np.isfinite(ret[FVAL])
-                ) and (
+                if (0 not in sensi_orders or np.isfinite(ret[FVAL])) and (
                     1 not in sensi_orders or np.isfinite(ret[GRAD]).all()
                 ):
                     break

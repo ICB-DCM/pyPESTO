@@ -104,8 +104,7 @@ def postprocess_hdf5_history(
         for result in ret:
             id = result['id']
             f[f'history/{id}'] = h5py.ExternalLink(
-                result['history'].file,
-                f'history/{id}'
+                result['history'].file, f'history/{id}'
             )
 
     # reset storage file (undo preprocessing changes)

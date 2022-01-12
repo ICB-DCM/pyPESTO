@@ -15,12 +15,16 @@ from .pysb_importer import PetabImporterPysb
 try:
     import petab
 except ImportError:
-    warnings.warn("PEtab import requires an installation of petab "
-                  "(https://github.com/PEtab-dev/PEtab). "
-                  "Install via `pip3 install petab`.")
+    warnings.warn(
+        "PEtab import requires an installation of petab "
+        "(https://github.com/PEtab-dev/PEtab). "
+        "Install via `pip3 install petab`."
+    )
 try:
     import amici
 except ImportError:
-    warnings.warn("PEtab import requires an installation of amici "
-                  "(https://github.com/AMICI-dev/AMICI). "
-                  "Install via `pip3 install amici`.")
+    warnings.warn(
+        "PEtab import requires an installation of amici "
+        "(https://github.com/AMICI-dev/AMICI). "
+        "Install via `pip3 install amici`."
+    )

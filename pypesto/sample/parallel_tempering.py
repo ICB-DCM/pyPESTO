@@ -13,11 +13,12 @@ class ParallelTemperingSampler(Sampler):
     """Simple parallel tempering sampler."""
 
     def __init__(
-            self,
-            internal_sampler: InternalSampler,
-            betas: Sequence[float] = None,
-            n_chains: int = None,
-            options: Dict = None):
+        self,
+        internal_sampler: InternalSampler,
+        betas: Sequence[float] = None,
+        n_chains: int = None,
+        options: Dict = None,
+    ):
         super().__init__(options)
 
         # set betas
@@ -25,17 +26,20 @@ class ParallelTemperingSampler(Sampler):
             raise ValueError("Set either betas or n_chains.")
         if betas is None:
             betas = near_exponential_decay_betas(
-                n_chains=n_chains, exponent=self.options['exponent'],
-                max_temp=self.options['max_temp'])
-        if betas[0] != 1.:
+                n_chains=n_chains,
+                exponent=self.options['exponent'],
+                max_temp=self.options['max_temp'],
+            )
+        if betas[0] != 1.0:
             raise ValueError("The first chain must have beta=1.0")
         self.betas0 = np.array(betas)
         self.betas = None
 
         self.temper_lpost = self.options['temper_log_posterior']
 
-        self.samplers = [copy.deepcopy(internal_sampler)
-                         for _ in range(len(self.betas0))]
+        self.samplers = [
+            copy.deepcopy(internal_sampler) for _ in range(len(self.betas0))
+        ]
         # configure internal samplers
         for sampler in self.samplers:
             sampler.make_internal(temper_lpost=self.temper_lpost)
@@ -49,9 +53,9 @@ class ParallelTemperingSampler(Sampler):
             'temper_log_posterior': False,
         }
 
-    def initialize(self,
-                   problem: Problem,
-                   x0: Union[np.ndarray, List[np.ndarray]]):
+    def initialize(
+        self, problem: Problem, x0: Union[np.ndarray, List[np.ndarray]]
+    ):
         """Initialize all samplers."""
         n_chains = len(self.samplers)
         if isinstance(x0, list):
@@ -63,8 +67,7 @@ class ParallelTemperingSampler(Sampler):
             sampler.initialize(_problem, x0)
         self.betas = self.betas0
 
-    def sample(
-            self, n_samples: int, beta: float = 1.):
+    def sample(self, n_samples: int, beta: float = 1.0):
         """Sample and swap in between samplers."""
         # loop over iterations
         for i_sample in tqdm(range(int(n_samples))):  # TODO test
@@ -82,15 +85,17 @@ class ParallelTemperingSampler(Sampler):
         """Concatenate all chains."""
         results = [sampler.get_samples() for sampler in self.samplers]
         trace_x = np.array([result.trace_x[0] for result in results])
-        trace_neglogpost = np.array([result.trace_neglogpost[0]
-                                     for result in results])
-        trace_neglogprior = np.array([result.trace_neglogprior[0]
-                                      for result in results])
+        trace_neglogpost = np.array(
+            [result.trace_neglogpost[0] for result in results]
+        )
+        trace_neglogprior = np.array(
+            [result.trace_neglogprior[0] for result in results]
+        )
         return McmcPtResult(
             trace_x=trace_x,
             trace_neglogpost=trace_neglogpost,
             trace_neglogprior=trace_neglogprior,
-            betas=self.betas
+            betas=self.betas,
         )
 
     def swap_samples(self) -> Sequence[bool]:
@@ -107,7 +112,8 @@ class ParallelTemperingSampler(Sampler):
 
         # loop over chains from highest temperature down
         for dbeta, sampler1, sampler2 in reversed(
-                list(zip(dbetas, self.samplers[:-1], self.samplers[1:]))):
+            list(zip(dbetas, self.samplers[:-1], self.samplers[1:]))
+        ):
             # extract samples
             sample1 = sampler1.get_last_sample()
             sample2 = sampler2.get_last_sample()
@@ -138,7 +144,8 @@ class ParallelTemperingSampler(Sampler):
 
 
 def near_exponential_decay_betas(
-        n_chains: int, exponent: float, max_temp: float) -> np.ndarray:
+    n_chains: int, exponent: float, max_temp: float
+) -> np.ndarray:
     """Initialize betas in a near-exponential decay scheme.
 
     Parameters
@@ -152,10 +159,11 @@ def near_exponential_decay_betas(
     """
     # special case of one chain
     if n_chains == 1:
-        return np.array([1.])
+        return np.array([1.0])
 
-    temperatures = np.linspace(1, max_temp ** (1 / exponent), n_chains) \
-        ** exponent
+    temperatures = (
+        np.linspace(1, max_temp ** (1 / exponent), n_chains) ** exponent
+    )
     betas = 1 / temperatures
 
     return betas
