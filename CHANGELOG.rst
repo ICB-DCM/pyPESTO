@@ -9,7 +9,17 @@ Release notes
 0.2.11 (2022-01-11)
 -------------------
 
-* Model selection: basic support of petab-select (#397)
+* Model selection (#397):
+    * Automated model selection with forward/backward/brute force methods and
+      AIC/AICc/BIC criteria
+    * Much functionality (methods, criteria, model space, problem
+      specification) via PEtab Select
+    * Plotting routines
+    * Example notebook
+    * Model calibration postprocessors
+    * Select first model that improves on predecessor model
+    * Use previous MLE as startpoint
+    * Tests
 
 * AMICI:
     * Maintain model settings when pickling for multiprocessing (#747)
