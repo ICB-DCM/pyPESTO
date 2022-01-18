@@ -185,7 +185,7 @@ def sampler(request):
             n_chains=5,
         )
     elif request.param == 'Pymc3':
-        return sample.Pymc3Sampler(tune=5)
+        return sample.Pymc3Sampler(tune=5, progressbar=False)
     elif request.param == 'Emcee':
         return sample.EmceeSampler(nwalkers=10)
 
