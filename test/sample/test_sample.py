@@ -185,12 +185,20 @@ def test_pipeline(sampler, problem):
     # optimization
     optimizer = optimize.ScipyOptimizer(options={'maxiter': 10})
     result = optimize.minimize(
-        problem, n_starts=3, optimizer=optimizer, filename=None
+        problem=problem,
+        n_starts=3,
+        optimizer=optimizer,
+        filename=None,
+        progress_bar=False,
     )
 
     # sample
     result = sample.sample(
-        problem, sampler=sampler, n_samples=100, result=result, filename=None
+        problem=problem,
+        sampler=sampler,
+        n_samples=100,
+        result=result,
+        filename=None,
     )
     # remove warnings in test/sample/test_sample.
     # Warning here: pypesto/visualize/sampling.py:1104
@@ -212,7 +220,11 @@ def test_ground_truth():
 
     problem = gaussian_problem()
 
-    result = optimize.minimize(problem, filename=None)
+    result = optimize.minimize(
+        problem,
+        filename=None,
+        progress_bar=False,
+    )
 
     result = sample.sample(
         problem, n_samples=5000, result=result, sampler=sampler, filename=None
@@ -377,7 +389,12 @@ def test_geweke_test_unconverged():
     sampler = sample.MetropolisSampler()
 
     # optimization
-    result = optimize.minimize(problem, n_starts=3, filename=None)
+    result = optimize.minimize(
+        problem=problem,
+        n_starts=3,
+        filename=None,
+        progress_bar=False,
+    )
 
     # sample
     result = sample.sample(
@@ -395,11 +412,20 @@ def test_autocorrelation_pipeline():
     sampler = sample.MetropolisSampler()
 
     # optimization
-    result = optimize.minimize(problem, n_starts=3, filename=None)
+    result = optimize.minimize(
+        problem=problem,
+        n_starts=3,
+        filename=None,
+        progress_bar=False,
+    )
 
     # sample
     result = sample.sample(
-        problem, sampler=sampler, n_samples=1000, result=result, filename=None
+        problem=problem,
+        sampler=sampler,
+        n_samples=1000,
+        result=result,
+        filename=None,
     )
 
     # run auto-correlation with previous geweke
@@ -434,7 +460,12 @@ def test_autocorrelation_short_chain():
     sampler = sample.MetropolisSampler()
 
     # optimization
-    result = optimize.minimize(problem, n_starts=3, filename=None)
+    result = optimize.minimize(
+        problem=problem,
+        n_starts=3,
+        filename=None,
+        progress_bar=False,
+    )
 
     # sample
     result = sample.sample(
@@ -589,11 +620,20 @@ def test_samples_cis():
     sampler = sample.MetropolisSampler()
 
     # optimization
-    result = optimize.minimize(problem, n_starts=3, filename=None)
+    result = optimize.minimize(
+        problem=problem,
+        n_starts=3,
+        filename=None,
+        progress_bar=False,
+    )
 
     # sample
     result = sample.sample(
-        problem, sampler=sampler, n_samples=2000, result=result, filename=None
+        problem=problem,
+        sampler=sampler,
+        n_samples=2000,
+        result=result,
+        filename=None,
     )
 
     # run geweke test

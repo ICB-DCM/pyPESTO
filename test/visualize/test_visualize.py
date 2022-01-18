@@ -161,6 +161,7 @@ def create_optimization_history():
         options=optimize_options,
         history_options=history_options,
         filename=None,
+        progress_bar=False,
     )
 
     return result_with_trace
@@ -428,6 +429,7 @@ def test_parameters_hist():
         n_starts=10,
         startpoint_method=pypesto.startpoint.uniform,
         filename=None,
+        progress_bar=False,
     )
 
     visualize.parameter_hist(result_1, 'x1')
@@ -738,6 +740,7 @@ def test_optimization_stats():
         n_starts=10,
         startpoint_method=pypesto.startpoint.uniform,
         filename=None,
+        progress_bar=False,
     )
 
     result_2 = optimize.minimize(
@@ -746,6 +749,7 @@ def test_optimization_stats():
         n_starts=10,
         startpoint_method=pypesto.startpoint.uniform,
         filename=None,
+        progress_bar=False,
     )
 
     visualize.optimization_run_property_per_multistart(
@@ -1050,7 +1054,12 @@ def test_visualize_optimized_model_fit():
     # create problem
     problem = importer.create_problem()
 
-    result = optimize.minimize(problem=problem, n_starts=1, filename=None)
+    result = optimize.minimize(
+        problem=problem,
+        n_starts=1,
+        filename=None,
+        progress_bar=False,
+    )
 
     # test call of visualize_optimized_model_fit
     visualize_optimized_model_fit(petab_problem=petab_problem, result=result)
@@ -1075,7 +1084,12 @@ def test_time_trajectory_model():
     # create problem
     problem = importer.create_problem()
 
-    result = optimize.minimize(problem=problem, n_starts=1, filename=None)
+    result = optimize.minimize(
+        problem=problem,
+        n_starts=1,
+        filename=None,
+        progress_bar=False,
+    )
 
     # test call of time_trajectory_model
     time_trajectory_model(result=result)

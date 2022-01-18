@@ -205,6 +205,7 @@ def test_unbounded_minimize(optimizer):
                 startpoint_method=pypesto.startpoint.uniform,
                 options=options,
                 filename=None,
+                progress_bar=False,
             )
         return
     else:
@@ -215,6 +216,7 @@ def test_unbounded_minimize(optimizer):
             startpoint_method=pypesto.startpoint.uniform,
             options=options,
             filename=None,
+            progress_bar=False,
         )
 
     # check that ub/lb were reverted
@@ -279,6 +281,7 @@ def check_minimize(problem, library, solver, allow_failed_starts=False):
         startpoint_method=pypesto.startpoint.uniform,
         options=optimize_options,
         filename=None,
+        progress_bar=False,
     )
 
     assert isinstance(result.optimize_result.list[0]['fval'], float)
@@ -312,6 +315,7 @@ def test_trim_results(problem):
         startpoint_method=pypesto.startpoint.uniform,
         options=optimize_options,
         filename=None,
+        progress_bar=False,
     )
     assert result.optimize_result.list[0].hess is None
 
@@ -324,6 +328,7 @@ def test_trim_results(problem):
         startpoint_method=pypesto.startpoint.uniform,
         options=optimize_options,
         filename=None,
+        progress_bar=False,
     )
     assert result.optimize_result.list[0].sres is None
 
@@ -373,6 +378,7 @@ def test_mpipoolengine():
             n_starts=2,
             engine=pypesto.engine.MultiProcessEngine(),
             filename=None,
+            progress_bar=False,
         )
 
         for ix in range(2):
@@ -404,6 +410,7 @@ def test_history_beats_optimizer():
         n_starts=1,
         options=optimize.OptimizeOptions(history_beats_optimizer=True),
         filename=None,
+        progress_bar=False,
     )
 
     result_opt = optimize.minimize(
@@ -412,6 +419,7 @@ def test_history_beats_optimizer():
         n_starts=1,
         options=optimize.OptimizeOptions(history_beats_optimizer=False),
         filename=None,
+        progress_bar=False,
     )
 
     for result in (result_hist, result_opt):

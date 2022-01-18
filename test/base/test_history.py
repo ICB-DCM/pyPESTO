@@ -80,6 +80,7 @@ class HistoryTest(unittest.TestCase):
                     options=optimize_options,
                     history_options=self.history_options,
                     filename=None,
+                    progress_bar=False,
                 )
 
                 for istart, start in enumerate(result.optimize_result.list):
@@ -670,6 +671,7 @@ def test_hdf5_history_mp():
             history_options=history_options_mem,
             engine=MultiProcessEngine(),
             filename=None,
+            progress_bar=False,
         )
 
         # optimizing with history saved in hdf5 and MultiProcessEngine
@@ -680,6 +682,7 @@ def test_hdf5_history_mp():
             history_options=history_options_mp,
             engine=MultiProcessEngine(),
             filename=None,
+            progress_bar=False,
         )
 
         history_entries = [X, FVAL, GRAD, HESS, RES, SRES, CHI2, SCHI2]
@@ -726,6 +729,7 @@ def test_trim_history():
         history_options=history_options,
         engine=MultiProcessEngine(),
         filename=None,
+        progress_bar=False,
     )
     fval_trace = result.optimize_result.list[0].history.get_fval_trace()
     fval_trace_trimmed = result.optimize_result.list[0].history.get_fval_trace(

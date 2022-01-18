@@ -147,6 +147,7 @@ def test_storage_trace(hdf5_file):
         optimizer=optimizer1,
         n_starts=n_starts,
         history_options=history_options_hdf5,
+        progress_bar=False,
     )
 
     # optimizing with history saved in memory
@@ -157,6 +158,7 @@ def test_storage_trace(hdf5_file):
         n_starts=n_starts,
         history_options=history_options_memory,
         filename=None,
+        progress_bar=False,
     )
 
     history_entries = [X, FVAL, GRAD, HESS, RES, SRES, CHI2, SCHI2]
@@ -213,6 +215,7 @@ def test_storage_profiling():
         optimizer=optimizer,
         n_starts=n_starts,
         filename=None,
+        progress_bar=False,
     )
     profile_original = profile.parameter_profile(
         problem=problem,
@@ -220,6 +223,7 @@ def test_storage_profiling():
         profile_index=[0],
         optimizer=optimizer,
         filename=None,
+        progress_bar=False,
     )
 
     fn = 'test_file.hdf5'
@@ -282,6 +286,7 @@ def test_storage_sampling():
         optimizer=optimizer,
         n_starts=n_starts,
         filename=None,
+        progress_bar=False,
     )
     x_0 = result_optimization.optimize_result.list[0]['x']
     sampler = sample.AdaptiveParallelTemperingSampler(
@@ -343,6 +348,7 @@ def test_storage_all():
         optimizer=optimizer,
         n_starts=n_starts,
         filename=None,
+        progress_bar=False,
     )
     # Profiling
     result = profile.parameter_profile(
@@ -351,6 +357,7 @@ def test_storage_all():
         profile_index=[0],
         optimizer=optimizer,
         filename=None,
+        progress_bar=False,
     )
     # Sampling
     sampler = sample.AdaptiveMetropolisSampler()
@@ -478,6 +485,7 @@ def test_result_from_hdf5_history(hdf5_file):
         problem=problem,
         n_starts=1,
         history_options=history_options_hdf5,
+        progress_bar=False,
     )
 
     result_from_hdf5 = optimization_result_from_history(

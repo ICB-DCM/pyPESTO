@@ -53,6 +53,7 @@ if __name__ == '__main__':
         n_starts=n_starts,
         engine=MPIPoolEngine(),
         filename=None,
+        progress_bar=False,
     )
 
     # saving optimization results to hdf5
