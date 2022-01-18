@@ -170,20 +170,18 @@ def sampler(request):
         )
     elif request.param == 'ParallelTempering':
         return sample.ParallelTemperingSampler(
-            internal_sampler=sample.MetropolisSampler(
-                options={
-                    'show_progress': False,
-                },
-            ),
+            internal_sampler=sample.MetropolisSampler(),
+            options={
+                'show_progress': False,
+            },
             betas=[1, 1e-2, 1e-4],
         )
     elif request.param == 'AdaptiveParallelTempering':
         return sample.AdaptiveParallelTemperingSampler(
-            internal_sampler=sample.AdaptiveMetropolisSampler(
-                options={
-                    'show_progress': False,
-                },
-            ),
+            internal_sampler=sample.AdaptiveMetropolisSampler(),
+            options={
+                'show_progress': False,
+            },
             n_chains=5,
         )
     elif request.param == 'Pymc3':
@@ -237,11 +235,10 @@ def test_ground_truth():
     # use best self-implemented sampler, which has a chance of correctly
     # sample from the distribution
     sampler = sample.AdaptiveParallelTemperingSampler(
-        internal_sampler=sample.AdaptiveMetropolisSampler(
-            options={
-                'show_progress': False,
-            },
-        ),
+        internal_sampler=sample.AdaptiveMetropolisSampler(),
+        options={
+            'show_progress': False,
+        },
         n_chains=5,
     )
 
@@ -278,11 +275,10 @@ def test_ground_truth_separated_modes():
 
     # First use parallel tempering with 3 chains
     sampler = sample.AdaptiveParallelTemperingSampler(
-        internal_sampler=sample.AdaptiveMetropolisSampler(
-            options={
-                'show_progress': False,
-            },
-        ),
+        internal_sampler=sample.AdaptiveMetropolisSampler(),
+        options={
+            'show_progress': False,
+        },
         n_chains=3,
     )
 
@@ -379,11 +375,10 @@ def test_multiple_startpoints():
     problem = gaussian_problem()
     x0s = [np.array([0]), np.array([1])]
     sampler = sample.ParallelTemperingSampler(
-        internal_sampler=sample.MetropolisSampler(
-            options={
-                'show_progress': False,
-            },
-        ),
+        internal_sampler=sample.MetropolisSampler(),
+        options={
+            'show_progress': False,
+        },
         n_chains=2,
     )
     result = sample.sample(
