@@ -80,7 +80,11 @@ def sample_petab_problem():
     # create problem
     problem = create_petab_problem()
 
-    sampler = sample.AdaptiveMetropolisSampler()
+    sampler = sample.AdaptiveMetropolisSampler(
+        options={
+            'show_progress': False,
+        },
+    )
     result = sample.sample(
         problem,
         n_samples=1000,

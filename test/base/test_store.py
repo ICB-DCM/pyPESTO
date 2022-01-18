@@ -290,7 +290,11 @@ def test_storage_sampling():
     )
     x_0 = result_optimization.optimize_result.list[0]['x']
     sampler = sample.AdaptiveParallelTemperingSampler(
-        internal_sampler=sample.AdaptiveMetropolisSampler(), n_chains=1
+        internal_sampler=sample.AdaptiveMetropolisSampler(),
+        n_chains=1,
+        options={
+            'show_progress': False,
+        },
     )
     sample_original = sample.sample(
         problem=problem,
@@ -360,7 +364,11 @@ def test_storage_all():
         progress_bar=False,
     )
     # Sampling
-    sampler = sample.AdaptiveMetropolisSampler()
+    sampler = sample.AdaptiveMetropolisSampler(
+        options={
+            'show_progress': False,
+        }
+    )
     result = sample.sample(
         problem=problem,
         sampler=sampler,

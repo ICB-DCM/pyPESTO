@@ -214,5 +214,6 @@ def get_ensemble_prediction(
         engine=engine,
         include_llh_weights=inc_weights,
         include_sigmay=inc_sigmay,
+        progress_bar=False,
     )
     return ensemble_prediction
