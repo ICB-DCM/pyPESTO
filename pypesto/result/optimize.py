@@ -137,18 +137,14 @@ class OptimizeResult:
         self.list = []
 
     def __getattr__(self, key):
-        """
-        Define `optimize_result.key`.
-        """
+        """Define `optimize_result.key`."""
         try:
             return [res[key] for res in self.list]
         except KeyError:
             raise AttributeError(key)
 
     def __getitem__(self, index):
-        """
-        Define `optimize_result[i]` to access the i-th result.
-        """
+        """Define `optimize_result[i]` to access the i-th result."""
         try:
             return self.list[index]
         except IndexError:

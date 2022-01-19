@@ -239,7 +239,7 @@ def process_offset_for_list(
     fvals_all = []
     for result in results:
         fvals = np.asarray(
-            [np.array(result.optimize_result.get_for_key('fval'))]
+            [np.array(result.optimize_result.fval)]
         )
         if start_indices is None:
             start_indices = np.array(range(fvals.size))

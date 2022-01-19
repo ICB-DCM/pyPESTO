@@ -372,7 +372,7 @@ def stats_lowlevel(
     ax:
         The plot axes.
     """
-    fvals = result.optimize_result.get_for_key('fval')
+    fvals = result.optimize_result.fval
     values = result.optimize_result.get_for_key(property_name)
     values, fvals = delete_nan_inf(fvals, values)
 

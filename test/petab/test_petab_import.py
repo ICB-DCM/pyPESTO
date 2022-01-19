@@ -80,7 +80,7 @@ class PetabImportTest(unittest.TestCase):
             )
 
             self.assertTrue(
-                np.isfinite(result.optimize_result.get_for_key('fval')[0])
+                np.isfinite(result.optimize_result.fval[0])
             )
 
     def test_check_gradients(self):

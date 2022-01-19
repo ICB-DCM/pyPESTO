@@ -913,7 +913,7 @@ def create_sampling_result():
     result = create_optimization_result()
     n_chain = 2
     n_iter = 100
-    n_par = len(result.optimize_result.get_for_key('x')[0])
+    n_par = len(result.optimize_result.x[0])
     trace_neglogpost = np.random.randn(n_chain, n_iter)
     trace_neglogprior = np.zeros((n_chain, n_iter))
     trace_x = np.random.randn(n_chain, n_iter, n_par)
