@@ -77,6 +77,7 @@ class PetabImportTest(unittest.TestCase):
                 n_starts=2,
                 startpoint_method=startpoints,
                 filename=None,
+                progress_bar=False,
             )
 
             self.assertTrue(
