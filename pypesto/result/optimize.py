@@ -152,8 +152,10 @@ class OptimizeResult:
         try:
             return self.list[index]
         except IndexError:
-            raise IndexError(f"{index} out of range for optimize result of "
-                             f"length {len(self.list)}.")
+            raise IndexError(
+                f"{index} out of range for optimize result of "
+                f"length {len(self.list)}."
+            )
 
     def __len__(self):
         return len(self.list)
@@ -213,7 +215,9 @@ class OptimizeResult:
 
     def get_for_key(self, key) -> list:
         """Extract the list of values for the specified key as a list."""
-        warnings.warn("get_for_key() is deprecated in favour of "
-                      "optimize_result['key'] and will be removed in future "
-                      "releases.")
+        warnings.warn(
+            "get_for_key() is deprecated in favour of "
+            "optimize_result['key'] and will be removed in future "
+            "releases."
+        )
         return [res[key] for res in self.list]
