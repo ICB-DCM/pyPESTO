@@ -1023,6 +1023,7 @@ def test_sampling_prediction_trajectories():
     ensemble_prediction = sample_ensemble.predict(
         predictor,
         prediction_id=pypesto.C.AMICI_X,
+        progress_bar=False,
     )
 
     # Plot by
