@@ -1,10 +1,10 @@
 """Optimization result."""
 
+import warnings
 from typing import Sequence
 
 import numpy as np
 import pandas as pd
-import warnings
 
 from ..objective import History
 from ..problem import Problem
