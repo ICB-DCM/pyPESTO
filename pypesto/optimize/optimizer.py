@@ -277,9 +277,7 @@ class ScipyOptimizer(Optimizer):
         self.options = options
         if self.options is None:
             self.options = ScipyOptimizer.get_default_options(self)
-            self.options['ftol'] = tol
-        elif self.options is not None and 'ftol' not in self.options:
-            self.options['ftol'] = tol
+        self.tol = tol
 
     @fix_decorator
     @time_decorator
@@ -336,6 +334,7 @@ class ScipyOptimizer(Optimizer):
                     'tr_solver', 'lsmr' if len(x0) > 1 else 'exact'
                 ),
                 loss='linear',
+                ftol=self.tol,
                 **ls_options,
             )
             # extract fval/grad from result, note that fval is not available
@@ -415,6 +414,7 @@ class ScipyOptimizer(Optimizer):
                 hessp=hessp,
                 bounds=bounds,
                 options=self.options,
+                tol=self.tol,
             )
             # extract fval/grad from result
             grad = getattr(res, 'jac', None)
