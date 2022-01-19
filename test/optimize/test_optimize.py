@@ -258,7 +258,7 @@ def get_optimizer(library, solver):
     elif library == 'fides':
         options[fides.Options.SUBSPACE_DIM] = solver[1]
         optimizer = optimize.FidesOptimizer(
-            options=options, hessian_update=solver[0]
+            options=options, hessian_update=solver[0], verbose=0
         )
     else:
         raise ValueError(f"Optimizer not recognized: {library}")
