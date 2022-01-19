@@ -239,7 +239,7 @@ def get_trace(
         label for y-axis to be plotted later.
     """
     # get data frames
-    histories: List[History] = result.optimize_result.get_for_key('history')
+    histories: List[History] = result.optimize_result.history
 
     vals = []
     x_label = ''
