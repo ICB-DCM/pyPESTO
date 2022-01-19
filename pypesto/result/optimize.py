@@ -1,6 +1,7 @@
 """Optimization result."""
 
 import warnings
+from copy import deepcopy
 from typing import Sequence
 
 import numpy as np
@@ -135,6 +136,11 @@ class OptimizeResult:
 
     def __init__(self):
         self.list = []
+
+    def __deepcopy__(self):
+        other = OptimizeResult()
+        other.list = deepcopy(self.list)
+        return other
 
     def __getattr__(self, key):
         """Define `optimize_result.key`."""
