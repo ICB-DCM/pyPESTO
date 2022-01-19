@@ -137,7 +137,7 @@ class OptimizeResult:
     def __init__(self):
         self.list = []
 
-    def __deepcopy__(self):
+    def __deepcopy__(self, memo):
         other = OptimizeResult()
         other.list = deepcopy(self.list)
         return other
