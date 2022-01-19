@@ -609,7 +609,6 @@ def test_trace_subset(history: pypesto.History):
             # check partial traces coincide
             assert len(partial_trace) == len(arr)
             for a, b in zip(partial_trace, [full_trace[i] for i in arr]):
-                print(var, a, b)
                 if var != 'schi2':
                     assert np.all(a == b) or np.isnan(a) and np.isnan(b)
                 else:
