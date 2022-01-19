@@ -307,7 +307,7 @@ def test_trim_results(problem):
     )
 
     # hess
-    optimizer = optimize.FidesOptimizer(verbose=0)
+    optimizer = optimize.FidesOptimizer(verbose=40)
     result = optimize.minimize(
         problem=prob,
         optimizer=optimizer,
@@ -356,7 +356,7 @@ def test_mpipoolengine():
         # read results
         result1 = read_result('temp_result.h5', problem=True, optimize=True)
         # set optimizer
-        optimizer = optimize.FidesOptimizer(verbose=0)
+        optimizer = optimize.FidesOptimizer(verbose=40)
         # initialize problem with x_guesses and objective
         objective = pypesto.Objective(
             fun=sp.optimize.rosen,

@@ -44,7 +44,7 @@ if __name__ == '__main__':
     # create problem
     problem = setup_rosen_problem()
     # create optimizer
-    optimizer = optimize.FidesOptimizer(verbose=0)
+    optimizer = optimize.FidesOptimizer(verbose=40)
 
     # result is the way to call the optimization with MPIPoolEngine.
     result = optimize.minimize(
