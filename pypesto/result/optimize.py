@@ -1,5 +1,7 @@
 """Optimization result."""
 
+import warnings
+from copy import deepcopy
 from typing import Sequence
 
 import numpy as np
@@ -135,6 +137,31 @@ class OptimizeResult:
     def __init__(self):
         self.list = []
 
+    def __deepcopy__(self, memo):
+        other = OptimizeResult()
+        other.list = deepcopy(self.list)
+        return other
+
+    def __getattr__(self, key):
+        """Define `optimize_result.key`."""
+        try:
+            return [res[key] for res in self.list]
+        except KeyError:
+            raise AttributeError(key)
+
+    def __getitem__(self, index):
+        """Define `optimize_result[i]` to access the i-th result."""
+        try:
+            return self.list[index]
+        except IndexError:
+            raise IndexError(
+                f"{index} out of range for optimize result of "
+                f"length {len(self.list)}."
+            )
+
+    def __len__(self):
+        return len(self.list)
+
     def append(
         self,
         optimizer_result: OptimizerResult,
@@ -190,4 +217,9 @@ class OptimizeResult:
 
     def get_for_key(self, key) -> list:
         """Extract the list of values for the specified key as a list."""
+        warnings.warn(
+            "get_for_key() is deprecated in favour of "
+            "optimize_result['key'] and will be removed in future "
+            "releases."
+        )
         return [res[key] for res in self.list]
