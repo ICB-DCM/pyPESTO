@@ -22,7 +22,11 @@ def test_optimize():
     optimizer = pypesto.optimize.ScipyOptimizer()
     n_starts = 5
     result = pypesto.optimize.minimize(
-        problem, optimizer, n_starts, filename=None
+        problem=problem,
+        optimizer=optimizer,
+        n_starts=n_starts,
+        filename=None,
+        progress_bar=False,
     )
 
     optimizer_result = result.optimize_result.list[0]

@@ -46,7 +46,11 @@ def test_petab_pysb_optimization():
 
     optimizer = optimize.ScipyOptimizer()
     result = optimize.minimize(
-        problem=problem, optimizer=optimizer, n_starts=10, filename=None
+        problem=problem,
+        optimizer=optimizer,
+        n_starts=10,
+        filename=None,
+        progress_bar=False,
     )
     fvals = np.array(result.optimize_result.fval)
 

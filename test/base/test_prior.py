@@ -120,6 +120,7 @@ def test_mode(scale, prior_type_list):
                 n_starts=10,
                 startpoint_method=startpoints,
                 filename=None,
+                progress_bar=False,
             )
 
             # flat functions don't have local minima, so dont check this

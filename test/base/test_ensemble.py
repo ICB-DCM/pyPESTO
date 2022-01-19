@@ -39,6 +39,7 @@ def test_ensemble_from_optimization():
         optimizer=optimizer,
         n_starts=n_starts,
         history_options=history_options,
+        progress_bar=False,
     )
 
     # change fvals of each start
@@ -171,7 +172,11 @@ def get_ensemble_prediction(
 
     optimizer = optimize.ScipyOptimizer()
     result = optimize.minimize(
-        problem=problem, optimizer=optimizer, n_starts=2, filename=None
+        problem=problem,
+        optimizer=optimizer,
+        n_starts=2,
+        filename=None,
+        progress_bar=False,
     )
 
     ensemble_ep = Ensemble.from_optimization_endpoints(
@@ -209,5 +214,6 @@ def get_ensemble_prediction(
         engine=engine,
         include_llh_weights=inc_weights,
         include_sigmay=inc_sigmay,
+        progress_bar=False,
     )
     return ensemble_prediction

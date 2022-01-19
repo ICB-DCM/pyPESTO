@@ -844,7 +844,9 @@ class PyswarmsOptimizer(Optimizer):
             return result
 
         cost, pos = optimizer.optimize(
-            successively_working_fval, iters=self.options['maxiter']
+            successively_working_fval,
+            iters=self.options['maxiter'],
+            verbose=False,
         )
 
         optimizer_result = OptimizerResult(
