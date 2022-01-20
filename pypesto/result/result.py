@@ -2,7 +2,7 @@
 
 from .optimize import OptimizeResult
 from .profile import ProfileResult
-from .sample import SampleResult
+from .sample import SampleResultBase
 
 
 class Result:
@@ -28,4 +28,4 @@ class Result:
         self.problem = problem
         self.optimize_result = OptimizeResult()
         self.profile_result = ProfileResult()
-        self.sample_result = SampleResult()
+        self.sample_result = SampleResultBase()

@@ -229,6 +229,10 @@ def test_pipeline(sampler, problem):
     visualize.sampling_1d_marginals(result)
     plt.close()
 
+    # test interator
+    for x in result.sample_result:
+        assert x.shape == problem.lb.shape
+
 
 def test_ground_truth():
     """Test whether we actually retrieve correct distributions."""

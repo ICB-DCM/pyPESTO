@@ -5,7 +5,67 @@ from typing import Iterable
 import numpy as np
 
 
-class McmcPtResult(dict):
+class SampleResultBase(dict):
+    """Result of the sample() function."""
+
+    def __init__(
+        self,
+        trace_x: np.ndarray = None,
+        trace_neglogpost: np.ndarray = None,
+        trace_neglogprior: np.ndarray = None,
+        burn_in: int = None,
+        time: float = 0.0,
+        auto_correlation: float = None,
+        effective_sample_size: float = None,
+        message: str = None,
+        **kwargs,
+    ):
+
+        super().__init__()
+
+        self.trace_x = trace_x
+        self.trace_neglogpost = trace_neglogpost
+        self.trace_neglogprior = trace_neglogprior
+        self.burn_in = burn_in
+        self.time = time
+        self.auto_correlation = auto_correlation
+        self.effective_sample_size = effective_sample_size
+        self.message = message
+
+    @staticmethod
+    def _check_trace_dimensions(trace_x, trace_neglogpost, trace_neglogprior):
+        raise NotImplementedError(
+            'Base class does not implement trace checks.'
+        )
+
+    @property
+    def n_samples(self):
+        return self.trace_x.shape[0]
+
+    def __getattr__(self, key):
+        """Allow usage of keys like attributes."""
+        try:
+            return self[key]
+        except KeyError:
+            raise AttributeError(key)
+
+    def __iter__(self):
+        self._index_iter = self.burn_in
+        return self
+
+    def __next__(self):
+        # return next sample
+        if self._index_iter < self.n_samples:
+            sample = self.trace_x[self._index_iter, :]
+            self._index_iter += 1
+            return sample
+        else:
+            # clean up and terminate
+            del self._index_iter
+            raise StopIteration
+
+
+class McmcPtResult(SampleResultBase):
     """
     The result of a sampler run using Markov-chain Monte Carlo.
 
@@ -13,11 +73,11 @@ class McmcPtResult(dict):
 
     Parameters
     ----------
-    trace_x: [n_chain, n_iter, n_par]
+    trace_x: [n_chain, n_samples, n_par]
         Parameters.
-    trace_neglogpost: [n_chain, n_iter]
+    trace_neglogpost: [n_chain, n_samples]
         Negative log posterior values.
-    trace_neglogprior: [n_chain, n_iter]
+    trace_neglogprior: [n_chain, n_samples]
         Negative log prior values.
     betas: [n_chain]
         The associated inverse temperatures.
@@ -32,7 +92,7 @@ class McmcPtResult(dict):
     message: str
         Textual comment on the profile result.
 
-    Here, `n_chain` denotes the number of chains, `n_iter` the number of
+    Here, `n_chain` denotes the number of chains, `n_samples` the number of
     iterations (i.e., the chain length), and `n_par` the number of parameters.
     """
 
@@ -48,18 +108,32 @@ class McmcPtResult(dict):
         effective_sample_size: float = None,
         message: str = None,
     ):
-        super().__init__()
+        super().__init__(
+            trace_x,
+            trace_neglogpost,
+            trace_neglogprior,
+            burn_in,
+            time,
+            auto_correlation,
+            effective_sample_size,
+            message,
+        )
 
-        self.trace_x = trace_x
-        self.trace_neglogpost = trace_neglogpost
-        self.trace_neglogprior = trace_neglogprior
+        self._check_trace_dimensions(
+            trace_x, trace_neglogpost, trace_neglogprior
+        )
+
         self.betas = betas
-        self.burn_in = burn_in
-        self.time = time
-        self.auto_correlation = auto_correlation
-        self.effective_sample_size = effective_sample_size
-        self.message = message
 
+    @property
+    def n_samples(self):
+        return self.trace_x.shape[1]
+
+    @staticmethod
+    def _check_trace_dimensions(trace_x, trace_neglogpost, trace_neglogprior):
+        """
+        Check if dimensions of different traces match.
+        """
         if trace_x.ndim != 3:
             raise ValueError(f"trace_x.ndim not as expected: {trace_x.ndim}")
         if trace_neglogpost.ndim != 2:
@@ -100,19 +174,22 @@ class McmcPtResult(dict):
                 f"trace_neglogprior.shape={trace_neglogprior.shape}"
             )  # noqa
 
-    def __getattr__(self, key):
-        """Allow usage of keys like attributes."""
-        try:
-            return self[key]
-        except KeyError:
-            raise AttributeError(key)
+        def __iter__(self):
+            raise NotImplementedError
+
+        def __next__(self):
+            raise NotImplementedError
 
     __setattr__ = dict.__setitem__
     __delattr__ = dict.__delitem__
 
-
-class SampleResult:
-    """Result of the sample() function."""
-
-    def __init__(self):
-        pass
+    def __next__(self):
+        # return next sample
+        if self._index_iter < self.n_samples:
+            sample = self.trace_x[0, self._index_iter, :]
+            self._index_iter += 1
+            return sample
+        else:
+            # clean up and terminate
+            del self._index_iter
+            raise StopIteration

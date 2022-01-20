@@ -11,4 +11,4 @@ from .optimize import OptimizeResult, OptimizerResult
 from .predict import PredictionConditionResult, PredictionResult
 from .profile import ProfileResult, ProfilerResult
 from .result import Result
-from .sample import McmcPtResult, SampleResult
+from .sample import McmcPtResult, SampleResultBase

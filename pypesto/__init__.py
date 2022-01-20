@@ -37,7 +37,7 @@ from .result import (
     PredictionResult,
     PredictionConditionResult,
     Result,
-    SampleResult,
+    SampleResultBase,
 )
 
 # import simple modules as submodules

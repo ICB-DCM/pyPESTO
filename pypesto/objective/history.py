@@ -1344,7 +1344,7 @@ class OptimizerHistory:
                 break
 
         # get indices of admissible trace entries
-        # shape (n_sample, n_x)
+        # shape (n_samples, n_x)
         xs = np.asarray(self.history.get_x_trace())
         ixs_admit = [ix for ix, x in enumerate(xs) if self._admissible(x)]
 

@@ -8,7 +8,7 @@ from typing import Union
 import h5py
 import numpy as np
 
-from ..result import Result, SampleResult
+from ..result import Result, SampleResultBase
 from .hdf5 import write_array, write_float_array
 
 logger = logging.getLogger(__name__)
@@ -191,9 +191,9 @@ class SamplingResultHDF5Writer:
     def write(self, result: Result, overwrite: bool = False):
         """Write HDF5 sampling file from pyPESTO result object."""
         # if there is no sample available, log a warning and return
-        # SampleResult is only a dummy class created by the Result class
+        # SampleResultBase is only a dummy class created by the Result class
         # and always indicates the lack of a sampling result.
-        if isinstance(result.sample_result, SampleResult):
+        if isinstance(result.sample_result, SampleResultBase):
             logger.warning(
                 "Warning: There is no sampling_result, "
                 "which you tried to save to hdf5."
