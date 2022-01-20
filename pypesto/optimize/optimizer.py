@@ -267,7 +267,7 @@ class ScipyOptimizer(Optimizer):
     def __init__(
         self,
         method: str = 'L-BFGS-B',
-        tol: float = 1e-9,
+        tol: float = None,
         options: Dict = None,
     ):
         super().__init__()
@@ -277,9 +277,7 @@ class ScipyOptimizer(Optimizer):
         self.options = options
         if self.options is None:
             self.options = ScipyOptimizer.get_default_options(self)
-            self.options['ftol'] = tol
-        elif self.options is not None and 'ftol' not in self.options:
-            self.options['ftol'] = tol
+        self.tol = tol
 
     @fix_decorator
     @time_decorator
@@ -298,8 +296,11 @@ class ScipyOptimizer(Optimizer):
         objective = problem.objective
 
         if self.is_least_squares():
+            # set tolerance to default of scipy optimizer
+            tol = self.tol
+            if tol is None:
+                tol = 1e-8
             # is a residual based least squares method
-
             if not objective.has_res:
                 raise Exception(
                     "For least squares optimization, the objective "
@@ -336,6 +337,7 @@ class ScipyOptimizer(Optimizer):
                     'tr_solver', 'lsmr' if len(x0) > 1 else 'exact'
                 ),
                 loss='linear',
+                ftol=tol,
                 **ls_options,
             )
             # extract fval/grad from result, note that fval is not available
@@ -415,6 +417,7 @@ class ScipyOptimizer(Optimizer):
                 hessp=hessp,
                 bounds=bounds,
                 options=self.options,
+                tol=self.tol,
             )
             # extract fval/grad from result
             grad = getattr(res, 'jac', None)
