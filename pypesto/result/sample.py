@@ -40,6 +40,7 @@ class SampleResultBase(dict):
 
     @property
     def n_samples(self):
+        """Number of samples."""
         return self.trace_x.shape[0]
 
     def __getattr__(self, key):
@@ -127,13 +128,12 @@ class McmcPtResult(SampleResultBase):
 
     @property
     def n_samples(self):
+        """Number of samples."""
         return self.trace_x.shape[1]
 
     @staticmethod
     def _check_trace_dimensions(trace_x, trace_neglogpost, trace_neglogprior):
-        """
-        Check if dimensions of different traces match.
-        """
+        """Check if dimensions of different traces match."""
         if trace_x.ndim != 3:
             raise ValueError(f"trace_x.ndim not as expected: {trace_x.ndim}")
         if trace_neglogpost.ndim != 2:
