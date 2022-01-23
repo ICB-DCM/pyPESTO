@@ -209,7 +209,7 @@ class SamplingResultHDF5Reader:
             self.results.sample_result = McmcPtResult(**sample_result)
         except TypeError:
             logger.warning(
-                "Warning: You tried loading a non-existent " "sampling result."
+                "Warning: You tried loading a non-existent sampling result."
             )
 
         return self.results

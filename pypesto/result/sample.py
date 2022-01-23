@@ -38,17 +38,24 @@ class SampleResultBase(dict):
             'Base class does not implement trace checks.'
         )
 
-    @property
-    def n_samples(self):
+    def _get_n_samples(self):
         """Return number of samples."""
         return 0 if (self.x_trace is None) else self.trace_x.shape[0]
 
     def __getattr__(self, key):
         """Allow usage of keys like attributes."""
+        if key is 'n_samples':
+            return self._get_n_samples()
         try:
             return self[key]
         except KeyError:
             raise AttributeError(key)
+
+    def __setattr__(self, key, value):
+        """Allow usage of keys like attributes."""
+        if key is 'n_samples':
+            return
+        self[key] = value
 
     def __iter__(self):
         self._index_iter = self.burn_in
@@ -129,7 +136,7 @@ class McmcPtResult(SampleResultBase):
     @property
     def n_samples(self):
         """Return number of samples."""
-        return 0 if (self.x_trace is None) else self.trace_x.shape[1]
+        return 0 if (self.trace_x is None) else self.trace_x.shape[1]
 
     @staticmethod
     def _check_trace_dimensions(trace_x, trace_neglogpost, trace_neglogprior):
