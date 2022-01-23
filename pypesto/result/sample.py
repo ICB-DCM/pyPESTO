@@ -40,8 +40,8 @@ class SampleResultBase(dict):
 
     @property
     def n_samples(self):
-        """Number of samples."""
-        return self.trace_x.shape[0]
+        """Return number of samples."""
+        return 0 if (self.x_trace is None) else self.trace_x.shape[0]
 
     def __getattr__(self, key):
         """Allow usage of keys like attributes."""
@@ -128,8 +128,8 @@ class McmcPtResult(SampleResultBase):
 
     @property
     def n_samples(self):
-        """Number of samples."""
-        return self.trace_x.shape[1]
+        """Return number of samples."""
+        return 0 if (self.x_trace is None) else self.trace_x.shape[1]
 
     @staticmethod
     def _check_trace_dimensions(trace_x, trace_neglogpost, trace_neglogprior):
@@ -173,12 +173,6 @@ class McmcPtResult(SampleResultBase):
                 f"trace_neglogpost.shape={trace_neglogpost.shape},"  # noqa
                 f"trace_neglogprior.shape={trace_neglogprior.shape}"
             )  # noqa
-
-        def __iter__(self):
-            raise NotImplementedError
-
-        def __next__(self):
-            raise NotImplementedError
 
     __setattr__ = dict.__setitem__
     __delattr__ = dict.__delitem__
