@@ -40,11 +40,11 @@ class SampleResultBase(dict):
 
     def _get_n_samples(self):
         """Return number of samples."""
-        return 0 if (self.x_trace is None) else self.trace_x.shape[0]
+        return 0 if (self.trace_x is None) else self.trace_x.shape[0]
 
     def __getattr__(self, key):
         """Allow usage of keys like attributes."""
-        if key is 'n_samples':
+        if key == 'n_samples':
             return self._get_n_samples()
         try:
             return self[key]
@@ -53,7 +53,7 @@ class SampleResultBase(dict):
 
     def __setattr__(self, key, value):
         """Allow usage of keys like attributes."""
-        if key is 'n_samples':
+        if key == 'n_samples':
             raise ValueError("n_samples can not be set, as they are computed "
                              "from self.trace_x.")
         self[key] = value
