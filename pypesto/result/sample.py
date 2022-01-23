@@ -54,7 +54,8 @@ class SampleResultBase(dict):
     def __setattr__(self, key, value):
         """Allow usage of keys like attributes."""
         if key is 'n_samples':
-            return
+            raise ValueError("n_samples can not be set, as they are computed "
+                             "from self.trace_x.")
         self[key] = value
 
     def __iter__(self):
