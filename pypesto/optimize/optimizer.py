@@ -1105,9 +1105,6 @@ class FidesOptimizer(Optimizer):
         """
         super().__init__()
 
-        if hessian_update == 'default':
-            hessian_update = 'default'
-
         if (
             (hessian_update is not None)
             and (hessian_update != 'default')
