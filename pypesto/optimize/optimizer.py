@@ -46,7 +46,7 @@ except ImportError:
 
 try:
     import fides
-    from fides.hessian_approximation import HessianApproximation, BFGS
+    from fides.hessian_approximation import HessianApproximation
 except ImportError:
     fides = None
     HessianApproximation = None
@@ -1108,8 +1108,10 @@ class FidesOptimizer(Optimizer):
         if hessian_update == 'default':
             hessian_update = 'default'
 
-        if (hessian_update is not None) and (hessian_update != 'default') and not isinstance(
-            hessian_update, HessianApproximation
+        if (
+            (hessian_update is not None)
+            and (hessian_update != 'default')
+            and not isinstance(hessian_update, HessianApproximation)
         ):
             raise ValueError(
                 'Incompatible type for hessian update. '
