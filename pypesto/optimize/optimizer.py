@@ -1145,7 +1145,7 @@ class FidesOptimizer(Optimizer):
             )
 
         if self.hessian_update == 'default':
-            if problem.objective.has_hess:
+            if not problem.objective.has_hess:
                 _hessian_update = fides.BFGS()
             else:
                 _hessian_update = fides.HybridFixed()
