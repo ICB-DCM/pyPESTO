@@ -46,7 +46,7 @@ except ImportError:
 
 try:
     import fides
-    from fides.hessian_approximation import HessianApproximation
+    from fides.hessian_approximation import HessianApproximation, BFGS
 except ImportError:
     fides = None
     HessianApproximation = None
@@ -1087,7 +1087,7 @@ class FidesOptimizer(Optimizer):
 
     def __init__(
         self,
-        hessian_update: Optional['HessianApproximation'] = 'Hybrid',
+        hessian_update: Optional['HessianApproximation'] = 'default',
         options: Optional[Dict] = None,
         verbose: Optional[int] = logging.INFO,
     ):
@@ -1105,10 +1105,10 @@ class FidesOptimizer(Optimizer):
         """
         super().__init__()
 
-        if hessian_update == 'Hybrid':
-            hessian_update = fides.HybridFixed()
+        if hessian_update == 'default':
+            hessian_update = 'default'
 
-        if hessian_update is not None and not isinstance(
+        if (hessian_update is not None) and (hessian_update != 'default') and not isinstance(
             hessian_update, HessianApproximation
         ):
             raise ValueError(
@@ -1141,6 +1141,14 @@ class FidesOptimizer(Optimizer):
                 "This optimizer requires an installation of fides. You can "
                 "install fides via `pip install fides`."
             )
+
+        _hessian_update = None
+        if self.hessian_update == 'default':
+            _hessian_update = 'default'
+            if problem.objective.has_hess:
+                self.hessian_update = fides.HybridFixed()
+            else:
+                self.hessian_update = fides.BFGS()
 
         resfun = (
             self.hessian_update.requires_resfun
@@ -1198,6 +1206,9 @@ class FidesOptimizer(Optimizer):
             message=msg,
             exitflag=opt.exitflag,
         )
+
+        if _hessian_update is not None:
+            self.hessian_update = 'default'
 
         return optimizer_result
 
