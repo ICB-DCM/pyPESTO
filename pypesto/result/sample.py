@@ -29,7 +29,7 @@ class SampleResultBase(dict):
     effective_sample_size:
         The estimated effective sample size.
     message: str
-        Textual comment on the profile result.
+        Textual comment on the sample result.
     """
 
     def __init__(
@@ -55,7 +55,6 @@ class SampleResultBase(dict):
         self.auto_correlation = auto_correlation
         self.effective_sample_size = effective_sample_size
         self.message = message
-        self._index_iter = None
 
     def _check_trace_dimensions(self):
         raise NotImplementedError(
@@ -83,21 +82,6 @@ class SampleResultBase(dict):
             )
         self[key] = value
 
-    def __iter__(self):
-        self._index_iter = self.burn_in
-        return self
-
-    def __next__(self):
-        # return next sample
-        if self._index_iter < self.n_samples:
-            sample = self.trace_x[self._index_iter, :]
-            self._index_iter += 1
-            return sample
-        else:
-            # clean up and terminate
-            self._index_iter = None
-            raise StopIteration
-
 
 class McmcPtResult(SampleResultBase):
     """
@@ -124,7 +108,7 @@ class McmcPtResult(SampleResultBase):
     effective_sample_size: [n_chain]
         The estimated effective sample size.
     message: str
-        Textual comment on the profile result.
+        Textual comment on the sample result.
 
     Here, `n_chain` denotes the number of chains, `n_samples` the number of
     iterations (i.e., the chain length), and `n_par` the number of parameters.
@@ -209,14 +193,3 @@ class McmcPtResult(SampleResultBase):
 
     __setattr__ = dict.__setitem__
     __delattr__ = dict.__delitem__
-
-    def __next__(self):
-        # return next sample
-        if self._index_iter < self.n_samples:
-            sample = self.trace_x[0, self._index_iter, :]
-            self._index_iter += 1
-            return sample
-        else:
-            # clean up and terminate
-            self._index_iter = None
-            raise StopIteration
