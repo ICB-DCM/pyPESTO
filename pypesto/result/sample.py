@@ -6,7 +6,31 @@ import numpy as np
 
 
 class SampleResultBase(dict):
-    """Result of the sample() function."""
+    """
+    Sampling result object base.
+
+    Parameters
+    ----------
+    trace_x: [n_samples, n_par]
+        Parameters.
+        (Caution: indexing is different for McmcPtResult)
+    trace_neglogpost: [n_samples]
+        Negative log posterior values.
+        (Caution: indexing is different for McmcPtResult)
+    trace_neglogprior: [n_samples]
+        Negative log prior values.
+        (Caution: indexing is different for McmcPtResult)
+    burn_in: int
+        The burn in index.
+    time: float
+        The computation time.
+    auto_correlation:
+        The estimated autcorrelation.
+    effective_sample_size:
+        The estimated effective sample size.
+    message: str
+        Textual comment on the profile result.
+    """
 
     def __init__(
         self,
@@ -31,21 +55,20 @@ class SampleResultBase(dict):
         self.auto_correlation = auto_correlation
         self.effective_sample_size = effective_sample_size
         self.message = message
+        self._index_iter = None
 
-    @staticmethod
-    def _check_trace_dimensions(trace_x, trace_neglogpost, trace_neglogprior):
+    def _check_trace_dimensions(self):
         raise NotImplementedError(
             'Base class does not implement trace checks.'
         )
 
-    def _get_n_samples(self):
+    @property
+    def n_samples(self):
         """Return number of samples."""
         return 0 if (self.trace_x is None) else self.trace_x.shape[0]
 
     def __getattr__(self, key):
         """Allow usage of keys like attributes."""
-        if key == 'n_samples':
-            return self._get_n_samples()
         try:
             return self[key]
         except KeyError:
@@ -55,7 +78,7 @@ class SampleResultBase(dict):
         """Allow usage of keys like attributes."""
         if key == 'n_samples':
             raise ValueError(
-                "n_samples can not be set, as they are computed "
+                "n_samples cannot be set, as they are computed "
                 "from self.trace_x."
             )
         self[key] = value
@@ -72,7 +95,7 @@ class SampleResultBase(dict):
             return sample
         else:
             # clean up and terminate
-            del self._index_iter
+            self._index_iter = None
             raise StopIteration
 
 
@@ -130,9 +153,7 @@ class McmcPtResult(SampleResultBase):
             message,
         )
 
-        self._check_trace_dimensions(
-            trace_x, trace_neglogpost, trace_neglogprior
-        )
+        self._check_trace_dimensions()
 
         self.betas = betas
 
@@ -141,47 +162,49 @@ class McmcPtResult(SampleResultBase):
         """Return number of samples."""
         return 0 if (self.trace_x is None) else self.trace_x.shape[1]
 
-    @staticmethod
-    def _check_trace_dimensions(trace_x, trace_neglogpost, trace_neglogprior):
+    def _check_trace_dimensions(self):
         """Check if dimensions of different traces match."""
-        if trace_x.ndim != 3:
-            raise ValueError(f"trace_x.ndim not as expected: {trace_x.ndim}")
-        if trace_neglogpost.ndim != 2:
+        if self.race_x.ndim != 3:
+            raise ValueError(
+                f"trace_x.ndim not as expected: {self.trace_x.ndim}"
+            )
+        if self.trace_neglogpost.ndim != 2:
             raise ValueError(
                 "trace_neglogpost.ndim not as expected: "
-                f"{trace_neglogpost.ndim}"
+                f"{self.trace_neglogpost.ndim}"
             )
-        if trace_neglogprior.ndim != 2:
+        if self.trace_neglogprior.ndim != 2:
             raise ValueError(
                 "trace_neglogprior.ndim not as expected: "
-                f"{trace_neglogprior.ndim}"
+                f"{self.trace_neglogprior.ndim}"
             )
         if (
-            trace_x.shape[0] != trace_neglogpost.shape[0]
-            or trace_x.shape[1] != trace_neglogpost.shape[1]
+            self.trace_x.shape[0] != self.trace_neglogpost.shape[0]
+            or self.trace_x.shape[1] != self.trace_neglogpost.shape[1]
         ):
             raise ValueError(
                 "Trace dimensions do not match:"
-                f"trace_x.shape={trace_x.shape},"
-                f"trace_neglogpost.shape={trace_neglogpost.shape}"
+                f"trace_x.shape={self.trace_x.shape},"
+                f"trace_neglogpost.shape={self.trace_neglogpost.shape}"
             )  # noqa
         if (
-            trace_x.shape[0] != trace_neglogprior.shape[0]
-            or trace_x.shape[1] != trace_neglogprior.shape[1]
+            self.trace_x.shape[0] != self.trace_neglogprior.shape[0]
+            or self.trace_x.shape[1] != self.trace_neglogprior.shape[1]
         ):
             raise ValueError(
                 "Trace dimensions do not match:"
-                f"trace_x.shape={trace_x.shape},"
-                f"trace_neglogprior.shape={trace_neglogprior.shape}"
+                f"trace_x.shape={self.trace_x.shape},"
+                f"trace_neglogprior.shape={self.trace_neglogprior.shape}"
             )  # noqa
         if (
-            trace_neglogpost.shape[0] != trace_neglogprior.shape[0]
-            or trace_neglogpost.shape[1] != trace_neglogprior.shape[1]
+            self.trace_neglogpost.shape[0] != self.trace_neglogprior.shape[0]
+            or self.trace_neglogpost.shape[1]
+            != self.trace_neglogprior.shape[1]
         ):
             raise ValueError(
                 "Trace dimensions do not match:"
-                f"trace_neglogpost.shape={trace_neglogpost.shape},"  # noqa
-                f"trace_neglogprior.shape={trace_neglogprior.shape}"
+                f"trace_neglogpost.shape={self.trace_neglogpost.shape},"  # noqa
+                f"trace_neglogprior.shape={self.trace_neglogprior.shape}"
             )  # noqa
 
     __setattr__ = dict.__setitem__
@@ -195,5 +218,5 @@ class McmcPtResult(SampleResultBase):
             return sample
         else:
             # clean up and terminate
-            del self._index_iter
+            self._index_iter = None
             raise StopIteration
