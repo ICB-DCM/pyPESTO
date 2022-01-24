@@ -1,0 +1,11 @@
+format_version: 1
+parameter_file: parameters_boehm_JProteomeRes2014.tsv
+problems:
+- condition_files:
+  - experimentalCondition_boehm_JProteomeRes2014.tsv
+  measurement_files:
+  - measurementData_boehm_JProteomeRes2014.tsv
+  observable_files:
+  - observables_boehm_JProteomeRes2014.tsv
+  sbml_files:
+  - boehm_JProteomeRes2014.xml
