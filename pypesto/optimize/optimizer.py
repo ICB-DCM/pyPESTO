@@ -1087,7 +1087,7 @@ class FidesOptimizer(Optimizer):
 
     def __init__(
         self,
-        hessian_update: Optional['HessianApproximation'] = 'Hybrid',
+        hessian_update: Optional['HessianApproximation'] = 'default',
         options: Optional[Dict] = None,
         verbose: Optional[int] = logging.INFO,
     ):
@@ -1105,11 +1105,13 @@ class FidesOptimizer(Optimizer):
         """
         super().__init__()
 
-        if hessian_update == 'Hybrid':
-            hessian_update = fides.HybridFixed()
+        if hessian_update == 'default':
+            hessian_update = 'default'
 
-        if hessian_update is not None and not isinstance(
-            hessian_update, HessianApproximation
+        if (
+            (hessian_update is not None)
+            and (hessian_update != 'default')
+            and not isinstance(hessian_update, HessianApproximation)
         ):
             raise ValueError(
                 'Incompatible type for hessian update. '
@@ -1142,9 +1144,17 @@ class FidesOptimizer(Optimizer):
                 "install fides via `pip install fides`."
             )
 
+        if self.hessian_update == 'default':
+            if problem.objective.has_hess:
+                _hessian_update = fides.BFGS()
+            else:
+                _hessian_update = fides.HybridFixed()
+        else:
+            _hessian_update = self.hessian_update
+
         resfun = (
-            self.hessian_update.requires_resfun
-            if self.hessian_update is not None
+            _hessian_update.requires_resfun
+            if _hessian_update is not None
             else False
         )
 
@@ -1157,8 +1167,8 @@ class FidesOptimizer(Optimizer):
                 'gradient evaluation.'
             )
 
-        if self.hessian_update is None or (
-            self.hessian_update.requires_hess and not resfun
+        if _hessian_update is None or (
+            _hessian_update.requires_hess and not resfun
         ):
             if not problem.objective.has_hess:
                 raise ValueError(
@@ -1176,7 +1186,7 @@ class FidesOptimizer(Optimizer):
             ub=problem.ub,
             lb=problem.lb,
             verbose=self.verbose,
-            hessian_update=self.hessian_update,
+            hessian_update=_hessian_update,
             options=self.options,
             resfun=resfun,
         )
