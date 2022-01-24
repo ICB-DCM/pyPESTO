@@ -164,7 +164,7 @@ class McmcPtResult(SampleResultBase):
 
     def _check_trace_dimensions(self):
         """Check if dimensions of different traces match."""
-        if self.race_x.ndim != 3:
+        if self.trace_x.ndim != 3:
             raise ValueError(
                 f"trace_x.ndim not as expected: {self.trace_x.ndim}"
             )
