@@ -9,6 +9,7 @@ import pandas as pd
 
 from ..objective import History
 from ..problem import Problem
+from ..util import assign_clusters, delete_nan_inf
 
 
 class OptimizerResult(dict):
@@ -59,6 +60,8 @@ class OptimizerResult(dict):
         Execution time.
     message: str
         Textual comment on the optimization result.
+    optimizer: str
+        The optimizer used for optimization.
 
     Notes
     -----
@@ -85,6 +88,7 @@ class OptimizerResult(dict):
         exitflag: int = None,
         time: float = None,
         message: str = None,
+        optimizer: str = None,
     ):
         super().__init__()
         self.id = id
@@ -105,6 +109,7 @@ class OptimizerResult(dict):
         self.exitflag: int = exitflag
         self.time: float = time
         self.message: str = message
+        self.optimizer = optimizer
 
     def __getattr__(self, key):
         try:
@@ -114,6 +119,19 @@ class OptimizerResult(dict):
 
     __setattr__ = dict.__setitem__
     __delattr__ = dict.__delitem__
+
+    def __repr__(self):
+        message = (
+            "### Optimizer Result \n\n"
+            f"* optimizer used: {self.optimizer} \n"
+            f"* message: {self.message} \n"
+            f"* number of evaluations: {self.n_fval} \n"
+            f"* time taken to optimize: {self.time} \n"
+            f"* endpoint: {self.x} \n"
+            f"* final objective value: {self.fval} \n"
+            f"* final gradient value: {self.grad} \n"
+        )
+        return message
 
     def update_to_full(self, problem: Problem) -> None:
         """
@@ -161,6 +179,25 @@ class OptimizeResult:
 
     def __len__(self):
         return len(self.list)
+
+    def __repr__(self):
+        # perform clustering for better information
+        clust, clustsize = assign_clusters(delete_nan_inf(self.fval)[1])
+
+        message = (
+            "## Optimization Result \n\n"
+            f"* number of starts: {len(self)} \n"
+            f"* number of sucessfull starts: \n"
+            f"* best value found {clustsize[0]} time(s) \n"
+            f"* number of plateaus found: "
+            f"{1 + max(clust) - sum(clustsize == 1)} \n"
+            f"* best value: {self[0]['fval']}, "
+            f"worst value: {self[-1]['fval']} \n\n"
+            f"A summary of the best run:\n\n{self[0]}"
+        )
+
+        # TODO: n_succesfull, circular import for assign clusters
+        return message
 
     def append(
         self,
