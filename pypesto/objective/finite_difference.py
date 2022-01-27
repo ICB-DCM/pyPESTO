@@ -1,14 +1,13 @@
 """Finite differences."""
 
 import copy
-from typing import Callable, Dict, List, Tuple, Union
-import numpy as np
 import logging
+from typing import Callable, Dict, List, Tuple, Union
 
+import numpy as np
+
+from ..C import FVAL, GRAD, HESS, MODE_FUN, MODE_RES, RES, SRES
 from .base import ObjectiveBase, ResultDict
-from .constants import (
-    MODE_FUN, MODE_RES, FVAL, GRAD, HESS, RES, SRES,
-)
 
 logger = logging.getLogger(__name__)
 
@@ -37,6 +36,7 @@ class FDDelta:
         evaluation point is sufficiently far away from the last training point.
         FDDelta.STEPS means that the step size is updated `max_steps`
         evaluations after the last update.
+        FDDelta.ALWAYS mean that the step size is selected in every call.
     max_distance:
         Coefficient on the distance between current and reference point beyond
         which to update, in the `FDDelta.DISTANCE` update condition.
@@ -49,7 +49,8 @@ class FDDelta:
     CONSTANT = "constant"
     DISTANCE = "distance"
     STEPS = "steps"
-    UPDATE_CONDITIONS = [CONSTANT, DISTANCE, STEPS]
+    ALWAYS = "always"
+    UPDATE_CONDITIONS = [CONSTANT, DISTANCE, STEPS, ALWAYS]
 
     def __init__(
         self,
@@ -64,7 +65,7 @@ class FDDelta:
         self.delta: Union[np.ndarray, float, None] = delta
 
         if test_deltas is None:
-            test_deltas = np.array([10**(-i) for i in range(1, 9)])
+            test_deltas = np.array([10 ** (-i) for i in range(1, 9)])
         self.test_deltas: np.ndarray = test_deltas
 
         if update_condition not in FDDelta.UPDATE_CONDITIONS:
@@ -77,11 +78,12 @@ class FDDelta:
         self.max_distance: float = max_distance
         self.max_steps: int = max_steps
 
-        # running variables
+        # run variables
         #  parameter where the step sizes where updated last
         self.x0: Union[np.ndarray, None] = None
         #  overall number of steps
         self.steps: int = 0
+        self.updates: int = 0
 
     def update(
         self,
@@ -118,13 +120,20 @@ class FDDelta:
         # return if no update needed
         if self.delta is not None:
             if (
-                self.update_condition == FDDelta.DISTANCE and
-                np.sum((x - self.x0)**2) <= self.max_distance * np.sqrt(len(x))
-            ):
-                return
-            if (
-                self.update_condition == FDDelta.STEPS and
-                (self.steps-1) % self.max_steps != 0 and self.steps > 1
+                (
+                    self.update_condition == FDDelta.DISTANCE
+                    and np.sum((x - self.x0) ** 2)
+                    <= self.max_distance * np.sqrt(len(x))
+                )
+                or (
+                    self.update_condition == FDDelta.STEPS
+                    and (self.steps - 1) % self.max_steps != 0
+                    and self.steps > 1
+                )
+                or (
+                    self.update_condition == FDDelta.CONSTANT
+                    and self.delta is not None
+                )
             ):
                 return
 
@@ -160,8 +169,12 @@ class FDDelta:
             # calculate Jacobian with step size delta
             delta_vec = delta * np.ones_like(x)
             nabla = fd_nabla_1(
-                x=x, fval=fval, f_fval=fun, delta_vec=delta_vec,
-                fd_method=fd_method)
+                x=x,
+                fval=fval,
+                f_fval=fun,
+                delta_vec=delta_vec,
+                fd_method=fd_method,
+            )
 
             nablas.append(nabla)
 
@@ -175,10 +188,10 @@ class FDDelta:
         #  with the minimal entry and thus the most stable behavior
         #  is selected.
         stab_vec = np.full(shape=nablas.shape, fill_value=np.nan)
-        stab_vec[1:-1] = np.mean(np.abs(
-            [nablas[2:] - nablas[1:-1],
-             nablas[1:-1] - nablas[:-2]]
-        ), axis=0)
+        stab_vec[1:-1] = np.mean(
+            np.abs([nablas[2:] - nablas[1:-1], nablas[1:-1] - nablas[:-2]]),
+            axis=0,
+        )
         # on the edge, just take the single neighbor
         stab_vec[0] = np.abs(nablas[1] - nablas[0])
         stab_vec[-1] = np.abs(nablas[-1] - nablas[-2])
@@ -188,7 +201,8 @@ class FDDelta:
         if stab_vec.ndim > 2:
             # flatten all dimensions > 1
             stab_vec = stab_vec.reshape(
-                stab_vec.shape[0], stab_vec.shape[1], -1).max(axis=2)
+                stab_vec.shape[0], stab_vec.shape[1], -1
+            ).max(axis=2)
 
         # minimum delta index for each parameter
         min_ixs = np.argmin(stab_vec, axis=0)
@@ -199,6 +213,7 @@ class FDDelta:
 
         # log
         logger.info(f"Optimal FD delta: {self.delta}")
+        self.updates += 1
 
     def get(self) -> np.ndarray:
         """Get delta vector."""
@@ -368,10 +383,12 @@ class FD(ObjectiveBase):
         """
         if mode == MODE_FUN:
             result = self._call_mode_fun(
-                x=x, sensi_orders=sensi_orders, **kwargs)
+                x=x, sensi_orders=sensi_orders, **kwargs
+            )
         elif mode == MODE_RES:
             result = self._call_mode_res(
-                x=x, sensi_orders=sensi_orders, **kwargs)
+                x=x, sensi_orders=sensi_orders, **kwargs
+            )
         else:
             raise ValueError("This mode is not supported.")
 
@@ -389,7 +406,9 @@ class FD(ObjectiveBase):
         """
         # get from objective what it can and should deliver
         sensi_orders_obj, result = self._call_from_obj_fun(
-            x=x, sensi_orders=sensi_orders, **kwargs,
+            x=x,
+            sensi_orders=sensi_orders,
+            **kwargs,
         )
 
         # remaining sensis via FDs
@@ -402,47 +421,63 @@ class FD(ObjectiveBase):
             return result
 
         # whether the Hessian should be based on 2nd order FD from fval
-        hess_via_fd_fval = \
-            hess_via_fd and (self.hess_via_fval or not self.obj.has_grad)
+        hess_via_fd_fval = hess_via_fd and (
+            self.hess_via_fval or not self.obj.has_grad
+        )
         hess_via_fd_grad = hess_via_fd and not hess_via_fd_fval
 
         def f_fval(x):
             """Short-hand to get a function value."""
             return self.obj.call_unprocessed(
-                x=x, sensi_orders=(0,), mode=MODE_FUN, **kwargs)[FVAL]
+                x=x, sensi_orders=(0,), mode=MODE_FUN, **kwargs
+            )[FVAL]
 
         def f_grad(x):
             """Short-hand to get a gradient value."""
             return self.obj.call_unprocessed(
-                x=x, sensi_orders=(1,), mode=MODE_FUN, **kwargs)[GRAD]
+                x=x, sensi_orders=(1,), mode=MODE_FUN, **kwargs
+            )[GRAD]
 
         # update delta vectors
         if grad_via_fd or hess_via_fd_fval:
             # note: we use the same delta for 1st and 2nd order approximations
             # this may be not ideal
             self.delta_fun.update(
-                x=x, fval=result.get(FVAL), fun=f_fval, fd_method=self.method)
+                x=x, fval=result.get(FVAL), fun=f_fval, fd_method=self.method
+            )
         if hess_via_fd_grad:
             self.delta_grad.update(
-                x=x, fval=result.get(GRAD), fun=f_grad, fd_method=self.method)
+                x=x, fval=result.get(GRAD), fun=f_grad, fd_method=self.method
+            )
 
         # calculate gradient
         if grad_via_fd:
             result[GRAD] = fd_nabla_1(
-                x=x, fval=result.get(FVAL), f_fval=f_fval,
+                x=x,
+                fval=result.get(FVAL),
+                f_fval=f_fval,
                 delta_vec=self.delta_fun.get(),
-                fd_method=self.method)
+                fd_method=self.method,
+            )
 
         # calculate Hessian
         if hess_via_fd:
             if hess_via_fd_fval:
                 result[HESS] = fd_nabla_2(
-                    x=x, fval=result.get(FVAL), f_fval=f_fval,
-                    delta_vec=self.delta_fun.get(), fd_method=self.method)
+                    x=x,
+                    fval=result.get(FVAL),
+                    f_fval=f_fval,
+                    delta_vec=self.delta_fun.get(),
+                    fd_method=self.method,
+                )
             else:
                 hess = fd_nabla_1(
-                    x=x, fval=result.get(GRAD), f_fval=f_grad,
-                    delta_vec=self.delta_fun.get(), fd_method=self.method)
+                    x=x,
+                    fval=result.get(GRAD),
+                    f_fval=f_grad,
+                    delta_vec=self.delta_fun.get(),
+                    fd_method=self.method,
+                )
                 # make it symmetric
                 result[HESS] = 0.5 * (hess + hess.T)
 
@@ -460,7 +495,9 @@ class FD(ObjectiveBase):
         """
         # get from objective what it can and should deliver
         sensi_orders_obj, result = self._call_from_obj_res(
-            x=x, sensi_orders=sensi_orders, **kwargs,
+            x=x,
+            sensi_orders=sensi_orders,
+            **kwargs,
         )
 
         if sensi_orders == sensi_orders_obj:
@@ -470,16 +507,22 @@ class FD(ObjectiveBase):
         def f_res(x):
             """Short-hand to get a function value."""
             return self.obj.call_unprocessed(
-                x=x, sensi_orders=(0,), mode=MODE_RES, **kwargs)[RES]
+                x=x, sensi_orders=(0,), mode=MODE_RES, **kwargs
+            )[RES]
 
         # update delta vector
         self.delta_res.update(
-            x=x, fval=result.get(RES), fun=f_res, fd_method=self.method)
+            x=x, fval=result.get(RES), fun=f_res, fd_method=self.method
+        )
 
         # sres
         sres = fd_nabla_1(
-            x=x, fval=result.get(RES), f_fval=f_res,
-            delta_vec=self.delta_res.get(), fd_method=self.method)
+            x=x,
+            fval=result.get(RES),
+            f_fval=f_res,
+            delta_vec=self.delta_res.get(),
+            fd_method=self.method,
+        )
         # sres should have shape (n_res, n_par)
         result[SRES] = sres.T
 
@@ -510,7 +553,8 @@ class FD(ObjectiveBase):
         result = {}
         if sensi_orders_obj:
             result = self.obj.call_unprocessed(
-                x=x, sensi_orders=sensi_orders_obj, mode=MODE_FUN, **kwargs)
+                x=x, sensi_orders=sensi_orders_obj, mode=MODE_FUN, **kwargs
+            )
         return sensi_orders_obj, result
 
     def _call_from_obj_res(
@@ -536,7 +580,8 @@ class FD(ObjectiveBase):
         result = {}
         if sensi_orders_obj:
             result = self.obj.call_unprocessed(
-                x=x, sensi_orders=sensi_orders_obj, mode=MODE_RES, **kwargs)
+                x=x, sensi_orders=sensi_orders_obj, mode=MODE_RES, **kwargs
+            )
         return sensi_orders_obj, result
 
 
@@ -695,7 +740,8 @@ def fd_nabla_2(
             else:
                 raise ValueError(f"Method {fd_method} not recognized.")
 
-            nabla_2[ix1][ix2] = nabla_2[ix2][ix1] = \
-                (fpp - fpm - fmp + fmm) / (delta1_val * delta2_val)
+            nabla_2[ix1][ix2] = nabla_2[ix2][ix1] = (fpp - fpm - fmp + fmm) / (
+                delta1_val * delta2_val
+            )
 
     return np.array(nabla_2)

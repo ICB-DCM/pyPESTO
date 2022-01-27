@@ -1,8 +1,11 @@
 """A set of helper functions."""
-import numpy as np
 import logging
+import os
 from typing import Tuple
 
+import numpy as np
+
+from ..C import PYPESTO_MAX_N_SAMPLES
 from ..result import Result
 from .diagnostics import geweke_test
 
@@ -10,9 +13,9 @@ logger = logging.getLogger(__name__)
 
 
 def calculate_ci_mcmc_sample(
-        result: Result,
-        ci_level: float = 0.95,
-        exclude_burn_in: bool = True,
+    result: Result,
+    ci_level: float = 0.95,
+    exclude_burn_in: bool = True,
 ) -> Tuple[np.ndarray, np.ndarray]:
     """Calculate parameter credibility intervals based on MCMC samples.
 
@@ -45,8 +48,8 @@ def calculate_ci_mcmc_sample(
 
 
 def calculate_ci_mcmc_sample_prediction(
-        simulated_values: np.ndarray,
-        ci_level: float = 0.95,
+    simulated_values: np.ndarray,
+    ci_level: float = 0.95,
 ) -> Tuple[np.ndarray, np.ndarray]:
     """Calculate prediction credibility intervals based on MCMC samples.
 
@@ -67,9 +70,9 @@ def calculate_ci_mcmc_sample_prediction(
 
 
 def calculate_ci(
-        values: np.ndarray,
-        ci_level: float,
-        **kwargs,
+    values: np.ndarray,
+    ci_level: float,
+    **kwargs,
 ) -> Tuple[np.ndarray, np.ndarray]:
     """Calculate confidence/credibility levels using percentiles.
 
@@ -88,7 +91,36 @@ def calculate_ci(
         Bounds of the confidence/credibility interval.
     """
     # Percentile values corresponding to the CI level
-    percentiles = 100 * np.array([(1-ci_level)/2, 1-(1-ci_level)/2])
+    percentiles = 100 * np.array([(1 - ci_level) / 2, 1 - (1 - ci_level) / 2])
     # Upper and lower bounds
     lb, ub = np.percentile(values, percentiles, **kwargs)
     return lb, ub
+
+
+def bound_n_samples_from_env(n_samples: int):
+    """Bound number of samples from environment variable.
+
+    Uses environment variable `PYPESTO_MAX_N_SAMPLES`.
+    This is used to speed up testing, while in application it should not
+    be used.
+
+    Parameters
+    ----------
+    n_samples: Number of samples desired.
+
+    Returns
+    -------
+    n_samples_new:
+        The original number of samples, or the minimum with the environment
+        variable, if exists.
+    """
+    if PYPESTO_MAX_N_SAMPLES not in os.environ:
+        return n_samples
+    n_samples_new = min(n_samples, int(os.environ[PYPESTO_MAX_N_SAMPLES]))
+
+    logger.info(
+        f"Bounding number of samples from {n_samples} to {n_samples_new} via "
+        f"environment variable {PYPESTO_MAX_N_SAMPLES}"
+    )
+
+    return n_samples_new

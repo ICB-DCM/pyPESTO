@@ -1,20 +1,25 @@
-import numpy as np
+"""Objective utilities."""
+
 from typing import Union
+
+import numpy as np
 
 
 def _check_none(fun):
     """Return None if any input argument is None; Wrapper function."""
+
     def checked_fun(*args, **kwargs):
         if any(x is None for x in [*args, *(kwargs.values())]):
             return None
         return fun(*args, **kwargs)
+
     return checked_fun
 
 
 @_check_none
 def res_to_chi2(res: np.ndarray) -> Union[float, None]:
     """Translate residuals to chi2 values, `chi2 = sum(res**2)`."""
-    return np.dot(res, res)
+    return float(np.dot(res, res))
 
 
 @_check_none

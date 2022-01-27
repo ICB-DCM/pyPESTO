@@ -1,6 +1,7 @@
 import logging
-import numpy as np
 from typing import Any, Callable, List
+
+import numpy as np
 
 from ..engine import Task
 
@@ -21,10 +22,10 @@ class EnsembleTask(Task):
     """
 
     def __init__(
-            self,
-            method: Callable,
-            vectors: np.ndarray,
-            id: str,
+        self,
+        method: Callable,
+        vectors: np.ndarray,
+        id: str,
     ):
         super().__init__()
         self.method = method

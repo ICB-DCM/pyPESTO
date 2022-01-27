@@ -1,12 +1,12 @@
 """Utility function for profile module."""
+from typing import Any, Dict, Iterable, Tuple
+
 import numpy as np
 import scipy.stats
-from typing import Any, Dict, Tuple, Iterable
 
-from ..objective.constants import GRAD
+from ..C import GRAD
 from ..problem import Problem
-from ..result import Result, ProfileResult
-from .result import ProfilerResult
+from ..result import ProfileResult, ProfilerResult, Result
 
 
 def chi2_quantile_to_ratio(alpha: float = 0.95, df: int = 1):
@@ -34,7 +34,7 @@ def chi2_quantile_to_ratio(alpha: float = 0.95, df: int = 1):
 
 
 def calculate_approximate_ci(
-        xs: np.ndarray, ratios: np.ndarray, confidence_ratio: float
+    xs: np.ndarray, ratios: np.ndarray, confidence_ratio: float
 ) -> Tuple[float, float]:
     """
     Calculate approximate confidence interval based on profile.
@@ -58,7 +58,7 @@ def calculate_approximate_ci(
         Bounds of the approximate confidence interval.
     """
     # extract indices where the ratio is larger than the minimum ratio
-    indices, = np.where(ratios >= confidence_ratio)
+    (indices,) = np.where(ratios >= confidence_ratio)
     l_ind, u_ind = indices[0], indices[-1]
 
     # lower bound
@@ -81,11 +81,11 @@ def calculate_approximate_ci(
 
 
 def initialize_profile(
-        problem: Problem,
-        result: Result,
-        result_index: int,
-        profile_index: Iterable[int],
-        profile_list: int
+    problem: Problem,
+    result: Result,
+    result_index: int,
+    profile_index: Iterable[int],
+    profile_list: int,
 ) -> float:
     """
     Initialize profiling based on a previous optimization.
@@ -118,7 +118,8 @@ def initialize_profile(
     # Check whether an optimization result is existing
     if result.optimize_result is None:
         raise ValueError(
-            "Optimization has to be carried out before profiling can be done.")
+            "Optimization has to be carried out before profiling can be done."
+        )
 
     tmp_optimize_result = result.optimize_result.as_list()
 
@@ -136,7 +137,8 @@ def initialize_profile(
         profile_index=profile_index,
         profile_list=profile_list,
         problem_dimension=problem.dim_full,
-        global_opt=global_opt)
+        global_opt=global_opt,
+    )
 
     # return the log-posterior of the global optimum (needed in order to
     # compute the log-posterior-ratio)
@@ -144,15 +146,14 @@ def initialize_profile(
 
 
 def fill_profile_list(
-        profile_result: ProfileResult,
-        optimizer_result: Dict[str, Any],
-        profile_index: Iterable[int],
-        profile_list: int,
-        problem_dimension: int,
-        global_opt: float
+    profile_result: ProfileResult,
+    optimizer_result: Dict[str, Any],
+    profile_index: Iterable[int],
+    profile_list: int,
+    problem_dimension: int,
+    global_opt: float,
 ) -> None:
-    """
-    Fill a ProfileResult.
+    """Fill a ProfileResult.
 
     Helper function for `initialize_profile`.
 
@@ -178,7 +179,7 @@ def fill_profile_list(
     if optimizer_result[GRAD] is not None:
         gradnorm = np.linalg.norm(optimizer_result[GRAD])
     else:
-        gradnorm = None
+        gradnorm = np.nan
 
     # create blank profile
     new_profile = ProfilerResult(
@@ -187,12 +188,13 @@ def fill_profile_list(
         ratio_path=np.array([np.exp(global_opt - optimizer_result["fval"])]),
         gradnorm_path=gradnorm,
         exitflag_path=optimizer_result["exitflag"],
-        time_path=np.array([0.]),
-        time_total=0.,
+        time_path=np.array([0.0]),
+        time_total=0.0,
         n_fval=0,
         n_grad=0,
         n_hess=0,
-        message=None)
+        message=None,
+    )
 
     if profile_list is None:
         # All profiles have to be created from scratch
@@ -209,8 +211,10 @@ def fill_profile_list(
             # We append to an existing list
             if i_parameter in profile_index:
                 # Do we have to create a new profile?
-                create_new = (profile_result.list[profile_list][i_parameter]
-                              is None)
+                create_new = (
+                    profile_result.list[profile_list][i_parameter] is None
+                )
                 if create_new:
                     profile_result.set_profiler_result(
-                        new_profile, i_parameter)
+                        new_profile, i_parameter
+                    )

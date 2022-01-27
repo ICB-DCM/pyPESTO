@@ -1,14 +1,14 @@
 """Engines with multi-process parallelization."""
-from multiprocessing import Pool
-import cloudpickle as pickle
-import os
 import logging
+import os
+from multiprocessing import Pool
 from typing import List
+
+import cloudpickle as pickle
 from tqdm import tqdm
 
 from .base import Engine
 from .task import Task
-
 
 logger = logging.getLogger(__name__)
 
@@ -41,7 +41,8 @@ class MultiProcessEngine(Engine):
             logger.warning(
                 f"Engine set up to use up to {n_procs} processes in total. "
                 f"The number was automatically determined and might not be "
-                f"appropriate on some systems.")
+                f"appropriate on some systems."
+            )
         self.n_procs: int = n_procs
 
     def execute(self, tasks: List[Task], progress_bar: bool = True):
@@ -59,13 +60,13 @@ class MultiProcessEngine(Engine):
         pickled_tasks = [pickle.dumps(task) for task in tasks]
 
         n_procs = min(self.n_procs, n_tasks)
-        logger.info(f"Performing parallel task execution on {n_procs} "
-                    f"processes.")
+        logger.info(
+            f"Performing parallel task execution on {n_procs} " f"processes."
+        )
 
         with Pool(processes=n_procs) as pool:
-            results = pool.map(work,
-                               tqdm(pickled_tasks,
-                                    disable=not progress_bar)
-                               )
+            results = pool.map(
+                work, tqdm(pickled_tasks, disable=not progress_bar)
+            )
 
         return results

@@ -1,11 +1,12 @@
 """Startpoint base classes."""
 
-import numpy as np
-from abc import abstractmethod, ABC
+from abc import ABC, abstractmethod
 from typing import Callable, Union
 
+import numpy as np
+
+from ..C import FVAL, GRAD
 from ..problem import ObjectiveBase, Problem
-from ..objective.constants import FVAL, GRAD
 
 
 class StartpointMethod(ABC):
@@ -157,9 +158,9 @@ class CheckedStartpoints(StartpointMethod, ABC):
             return xs
 
         if self.check_fval and not self.check_grad:
-            sensi_orders = 0,
+            sensi_orders = (0,)
         elif not self.check_fval and self.check_grad:
-            sensi_orders = 1,
+            sensi_orders = (1,)
         else:
             sensi_orders = 0, 1
 
@@ -176,9 +177,7 @@ class CheckedStartpoints(StartpointMethod, ABC):
             # loop until all requested sensis are finite
             while True:
                 # discontinue if all requested sensis are finite
-                if (
-                    0 not in sensi_orders or np.isfinite(ret[FVAL])
-                ) and (
+                if (0 not in sensi_orders or np.isfinite(ret[FVAL])) and (
                     1 not in sensi_orders or np.isfinite(ret[GRAD]).all()
                 ):
                     break
@@ -239,7 +238,7 @@ class FunctionStartpoints(CheckedStartpoints):
 
 
 def to_startpoint_method(
-    maybe_startpoint_method: Union[StartpointMethod, Callable],
+    maybe_startpoint_method: Union[StartpointMethod, Callable, bool],
 ) -> StartpointMethod:
     """Create StartpointMethod instance if possible, otherwise raise.
 

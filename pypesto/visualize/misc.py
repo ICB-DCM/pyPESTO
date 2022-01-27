@@ -1,21 +1,20 @@
-import numpy as np
 import warnings
-from .clust_color import assign_colors
-from .clust_color import assign_colors_for_list
-
 from numbers import Number
 from typing import Iterable, List, Optional, Union
 
-from .constants import (
+import numpy as np
+
+from ..C import (
     LEN_RGB,
     LEN_RGBA,
     RGB,
     RGB_RGBA,
-    RGBA_MIN,
-    RGBA_MAX,
     RGBA_ALPHA,
+    RGBA_MAX,
+    RGBA_MIN,
     RGBA_WHITE,
 )
+from .clust_color import assign_colors, assign_colors_for_list
 
 
 def process_result_list(results, colors=None, legends=None):
@@ -80,15 +79,17 @@ def process_result_list(results, colors=None, legends=None):
 
     # size of legend list and size of results does not match
     if legend_error:
-        raise ValueError('List of results passed and list of labels do '
-                         'not have the same length but should. Stopping.')
+        raise ValueError(
+            'List of results passed and list of labels do '
+            'not have the same length but should. Stopping.'
+        )
 
     return results, colors, legends
 
 
-def process_offset_y(offset_y: Optional[float],
-                     scale_y: str,
-                     min_val: float) -> float:
+def process_offset_y(
+    offset_y: Optional[float], scale_y: str, min_val: float
+) -> float:
     """
     Compute offset for y-axis, depend on user settings.
 
@@ -111,19 +112,22 @@ def process_offset_y(offset_y: Optional[float],
     """
     # check whether the offset specified by the user is sufficient
     if offset_y is not None:
-        if (scale_y == 'log10') and (min_val + offset_y <= 0.):
-            warnings.warn("Offset specified by user is insufficient. "
-                          "Ignoring specified offset and using " +
-                          str(np.abs(min_val) + 1.) + " instead.")
+        if (scale_y == 'log10') and (min_val + offset_y <= 0.0):
+            warnings.warn(
+                "Offset specified by user is insufficient. "
+                "Ignoring specified offset and using "
+                + str(np.abs(min_val) + 1.0)
+                + " instead."
+            )
         else:
             return offset_y
     else:
         # check whether scaling is lin or log10
         if scale_y == 'lin':
             # linear scaling doesn't need any offset
-            return 0.
+            return 0.0
 
-    return 1. - min_val
+    return 1.0 - min_val
 
 
 def process_y_limits(ax, y_limits):
@@ -157,16 +161,20 @@ def process_y_limits(ax, y_limits):
             y_limits = [y_limits[0], y_limits[1]]
 
         # check validity of bounds if plotting in log-scale
-        if ax.get_yscale() == 'log' and y_limits[0] <= 0.:
+        if ax.get_yscale() == 'log' and y_limits[0] <= 0.0:
             tmp_y_limits = ax.get_ylim()
-            if y_limits[1] <= 0.:
+            if y_limits[1] <= 0.0:
                 y_limits = tmp_y_limits
-                warnings.warn("Invalid bounds for plotting in "
-                              "log-scale. Using defaults bounds.")
+                warnings.warn(
+                    "Invalid bounds for plotting in "
+                    "log-scale. Using defaults bounds."
+                )
             else:
                 y_limits = [tmp_y_limits[0], y_limits[1]]
-                warnings.warn("Invalid lower bound for plotting in "
-                              "log-scale. Using only upper bound.")
+                warnings.warn(
+                    "Invalid lower bound for plotting in "
+                    "log-scale. Using only upper bound."
+                )
 
             # set limits
             ax.set_ylim(y_limits)
@@ -184,10 +192,13 @@ def process_y_limits(ax, y_limits):
                 data_range = np.log10(data_range)
                 new_limits = (
                     np.power(10, np.log10(data_limits[0]) - 0.02 * data_range),
-                    np.power(10, np.log10(data_limits[1]) + 0.02 * data_range))
+                    np.power(10, np.log10(data_limits[1]) + 0.02 * data_range),
+                )
             else:
-                new_limits = (data_limits[0] - 0.02 * data_range,
-                              data_limits[1] + 0.02 * data_range)
+                new_limits = (
+                    data_limits[0] - 0.02 * data_range,
+                    data_limits[1] + 0.02 * data_range,
+                )
 
             # set limits
             ax.set_ylim(new_limits)
@@ -195,8 +206,9 @@ def process_y_limits(ax, y_limits):
     return ax
 
 
-def process_start_indices(start_indices: Union[int, Iterable[int]],
-                          max_length: int) -> List[int]:
+def process_start_indices(
+    start_indices: Union[int, Iterable[int]], max_length: int
+) -> List[int]:
     """
     Process the start_indices.
 
@@ -217,8 +229,11 @@ def process_start_indices(start_indices: Union[int, Iterable[int]],
     start_indices = np.array(start_indices, dtype=int)
 
     # check, whether index set is not too big
-    start_indices = [start_index for start_index in start_indices if
-                     start_index < max_length]
+    start_indices = [
+        start_index
+        for start_index in start_indices
+        if start_index < max_length
+    ]
 
     return start_indices
 
@@ -259,10 +274,10 @@ def rgba2rgb(fg: RGB_RGBA, bg: RGB_RGBA = None) -> RGB:
         )
 
     def apparent_composite_color_component(
-            fg_component: float,
-            bg_component: float,
-            fg_alpha: float = fg[RGBA_ALPHA],
-            bg_alpha: float = bg[RGBA_ALPHA],
+        fg_component: float,
+        bg_component: float,
+        fg_alpha: float = fg[RGBA_ALPHA],
+        bg_alpha: float = bg[RGBA_ALPHA],
     ) -> float:
         """
         Composite a foreground over a background color component.
@@ -285,8 +300,8 @@ def rgba2rgb(fg: RGB_RGBA, bg: RGB_RGBA = None) -> RGB:
         The component of the new color.
         """
         return (
-            fg_component * fg_alpha +
-            bg_component * bg_alpha * (RGBA_MAX - fg_alpha)
+            fg_component * fg_alpha
+            + bg_component * bg_alpha * (RGBA_MAX - fg_alpha)
         ) / (fg_alpha + bg_alpha * (RGBA_MAX - fg_alpha))
 
     return [

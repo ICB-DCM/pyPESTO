@@ -1,10 +1,11 @@
 """Various Sampler classes."""
 import abc
-import numpy as np
 from typing import Dict, List, Union
 
+import numpy as np
+
 from ..problem import Problem
-from .result import McmcPtResult
+from ..result import McmcPtResult
 
 
 class Sampler(abc.ABC):
@@ -18,9 +19,9 @@ class Sampler(abc.ABC):
         self.options = self.__class__.translate_options(options)
 
     @abc.abstractmethod
-    def initialize(self,
-                   problem: Problem,
-                   x0: Union[np.ndarray, List[np.ndarray]]):
+    def initialize(
+        self, problem: Problem, x0: Union[np.ndarray, List[np.ndarray]]
+    ):
         """Initialize the sampler.
 
         Parameters
@@ -33,7 +34,9 @@ class Sampler(abc.ABC):
 
     @abc.abstractmethod
     def sample(
-            self, n_samples: int, beta: float = 1.,
+        self,
+        n_samples: int,
+        beta: float = 1.0,
     ):
         """Perform sampling.
 

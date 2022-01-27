@@ -1,19 +1,20 @@
 import logging
-from typing import Iterable, Union
+from typing import Callable, Iterable, Union
 
 from ..engine import Engine, SingleCoreEngine
 from ..objective import HistoryOptions
 from ..problem import Problem
 from ..result import Result
-from ..startpoint import (
-    uniform,
-    StartpointMethod,
-    to_startpoint_method,
-)
+from ..startpoint import StartpointMethod, to_startpoint_method, uniform
+from ..store import autosave
 from .optimizer import Optimizer, ScipyOptimizer
 from .options import OptimizeOptions
 from .task import OptimizerTask
-from .util import preprocess_hdf5_history, postprocess_hdf5_history, autosave
+from .util import (
+    bound_n_starts_from_env,
+    postprocess_hdf5_history,
+    preprocess_hdf5_history,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -23,7 +24,7 @@ def minimize(
     optimizer: Optimizer = None,
     n_starts: int = 100,
     ids: Iterable[str] = None,
-    startpoint_method: Union[StartpointMethod, bool] = None,
+    startpoint_method: Union[StartpointMethod, Callable, bool] = None,
     result: Result = None,
     engine: Engine = None,
     progress_bar: bool = True,
@@ -76,6 +77,9 @@ def minimize(
     if optimizer is None:
         optimizer = ScipyOptimizer()
 
+    # number of starts
+    n_starts = bound_n_starts_from_env(n_starts)
+
     # startpoint method
     if startpoint_method is None:
         startpoint_method = uniform
@@ -125,10 +129,8 @@ def minimize(
             problem=problem,
             x0=startpoint,
             id=id,
-            options=options,
             history_options=history_options,
-            report_hess=options.report_hess,
-            report_sres=options.report_sres,
+            optimize_options=options,
         )
         tasks.append(task)
 
@@ -149,6 +151,6 @@ def minimize(
     # if history file provided, set storage file to that one
     if filename == "Auto" and history_file is not None:
         filename = history_file
-    autosave(filename=filename, result=result, type="optimization")
+    autosave(filename=filename, result=result, store_type="optimize")
 
     return result

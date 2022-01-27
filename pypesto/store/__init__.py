@@ -5,11 +5,21 @@ Storage
 Saving and loading traces and results objects.
 """
 
-from .save_to_hdf5 import (ProblemHDF5Writer, OptimizationResultHDF5Writer,
-                           ProfileResultHDF5Writer, SamplingResultHDF5Writer,
-                           write_result, get_or_create_group)
-from .read_from_hdf5 import (ProblemHDF5Reader, OptimizationResultHDF5Reader,
-                             ProfileResultHDF5Reader, SamplingResultHDF5Reader,
-                             read_result, load_objective_config,
-                             optimization_result_from_history)
+from .auto import autosave
 from .hdf5 import write_array
+from .read_from_hdf5 import (
+    OptimizationResultHDF5Reader,
+    ProblemHDF5Reader,
+    ProfileResultHDF5Reader,
+    SamplingResultHDF5Reader,
+    load_objective_config,
+    read_result,
+)
+from .save_to_hdf5 import (
+    OptimizationResultHDF5Writer,
+    ProblemHDF5Writer,
+    ProfileResultHDF5Writer,
+    SamplingResultHDF5Writer,
+    get_or_create_group,
+    write_result,
+)

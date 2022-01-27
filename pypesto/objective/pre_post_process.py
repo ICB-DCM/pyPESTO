@@ -1,7 +1,8 @@
-import numpy as np
 from typing import Dict, Sequence
 
-from .constants import GRAD, HESS, RES, SRES
+import numpy as np
+
+from ..C import GRAD, HESS, RES, SRES
 
 
 class PrePostProcessor:
@@ -19,9 +20,7 @@ class PrePostProcessor:
     def __init__(self):
         pass
 
-    def preprocess(
-            self, x: np.ndarray
-    ) -> np.ndarray:  # pylint: disable=R0201
+    def preprocess(self, x: np.ndarray) -> np.ndarray:  # pylint: disable=R0201
         """
         Just return x without modifications.
 
@@ -37,9 +36,7 @@ class PrePostProcessor:
         """
         return x
 
-    def postprocess(
-            self, result: Dict
-    ) -> Dict:  # pylint: disable=R0201
+    def postprocess(self, result: Dict) -> Dict:  # pylint: disable=R0201
         """
         Convert all arrays into np.ndarrays if necessary, and return them.
 
@@ -51,9 +48,7 @@ class PrePostProcessor:
         result = PrePostProcessor.as_ndarrays(result)
         return result
 
-    def reduce(
-            self, x: np.ndarray
-    ) -> np.ndarray:  # pylint: disable=R0201
+    def reduce(self, x: np.ndarray) -> np.ndarray:  # pylint: disable=R0201
         """
         Return x without modifications.
 
@@ -70,9 +65,7 @@ class PrePostProcessor:
         return x
 
     @staticmethod
-    def as_ndarrays(
-            result: Dict
-    ) -> Dict:
+    def as_ndarrays(result: Dict) -> Dict:
         """
         Convert all array_like objects to np.ndarrays.
 
@@ -91,11 +84,13 @@ class PrePostProcessor:
 class FixedParametersProcessor(PrePostProcessor):
     """Extends the processor to handle the fixing of parameters."""
 
-    def __init__(self,
-                 dim_full: int,
-                 x_free_indices: Sequence[int],
-                 x_fixed_indices: Sequence[int],
-                 x_fixed_vals: Sequence[float]):
+    def __init__(
+        self,
+        dim_full: int,
+        x_free_indices: Sequence[int],
+        x_fixed_indices: Sequence[int],
+        x_fixed_vals: Sequence[float],
+    ):
         super().__init__()
         self.dim_full: int = dim_full
         self.x_free_indices: np.ndarray = np.array(x_free_indices, dtype=int)
