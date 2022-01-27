@@ -12,6 +12,7 @@ from ..objective import (
 from ..problem import Problem
 from ..objective.constants import MODE_FUN, MODE_RES, FVAL, GRAD
 from .result import OptimizerResult
+from ..result import OptimizeResult, Result
 
 try:
     import cyipopt
@@ -63,8 +64,14 @@ def history_decorator(minimize):
     Default decorator for the minimize() method.
     """
 
-    def wrapped_minimize(self, problem, x0, id, allow_failed_starts,
-                         history_options=None):
+    def wrapped_minimize(
+        self,
+        problem,
+        x0,
+        id,
+        allow_failed_starts,
+        history_options=None,
+    ):
         objective = problem.objective
 
         # initialize the objective
@@ -74,8 +81,9 @@ def history_decorator(minimize):
         if history_options is None:
             history_options = HistoryOptions()
         history = history_options.create_history(
-            id=id, x_names=[problem.x_names[ix]
-                            for ix in problem.x_free_indices])
+            id=id,
+            x_names=[problem.x_names[ix] for ix in problem.x_free_indices],
+        )
         optimizer_history = OptimizerHistory(history=history, x0=x0)
 
         # plug in history for the objective to record it
@@ -207,9 +215,26 @@ def fill_result_from_objective_history(
     return result
 
 
-def read_result_from_file(problem: Problem, history_options: HistoryOptions,
-                          identifier: str):
-    """Fill an OptimizerResult from history."""
+def read_result_from_file(
+    problem: Problem,
+    history_options: HistoryOptions,
+    identifier: str,
+):
+    """
+    Fill an OptimizerResult from history.
+
+    Parameters
+    ----------
+    problem:
+        The problem to find optimal parameters for.
+    identifier:
+        Multistart id.
+    history_options:
+        Optimizer history options.
+    """
+    if history_options.storage_file is None:
+        raise ValueError("No history file specified.")
+
     if history_options.storage_file.endswith('.csv'):
         history = CsvHistory(
             file=history_options.storage_file.format(id=identifier),
@@ -233,12 +258,39 @@ def read_result_from_file(problem: Problem, history_options: HistoryOptions,
         id=identifier,
         message='loaded from file',
         exitflag=EXITFLAG_LOADED_FROM_FILE,
-        time=max(history.get_time_trace())
+        time=max(history.get_time_trace()) if len(history) else 0.0
     )
     result.id = identifier
     result = fill_result_from_objective_history(result, opt_hist)
     result.update_to_full(problem)
 
+    return result
+
+
+def read_results_from_file(
+    problem: Problem,
+    history_options: HistoryOptions,
+    n_starts: int,
+):
+    """
+    Fill a Result from a set of histories.
+
+    Parameters
+    ----------
+    problem:
+        The problem to find optimal parameters for.
+    n_starts:
+        Number of performed multistarts.
+    history_options:
+        Optimizer history options.
+    """
+    result = Result()
+    result.optimize_result = OptimizeResult()
+    result.optimize_result.list = [
+        read_result_from_file(problem, history_options, str(istart))
+        for istart in range(n_starts)
+    ]
+    result.optimize_result.sort()
     return result
 
 
@@ -258,11 +310,11 @@ class Optimizer(abc.ABC):
     @time_decorator
     @history_decorator
     def minimize(
-            self,
-            problem: Problem,
-            x0: np.ndarray,
-            id: str,
-            history_options: HistoryOptions = None,
+        self,
+        problem: Problem,
+        x0: np.ndarray,
+        id: str,
+        history_options: HistoryOptions = None,
     ) -> OptimizerResult:
         """
         Perform optimization.

@@ -70,9 +70,14 @@ class PetabImportTest(unittest.TestCase):
             optimizer = pypesto.optimize.ScipyOptimizer(
                 options={'maxiter': 10})
             problem = importer.create_problem(obj)
+            startpoints = importer.create_startpoint_method()
             result = pypesto.optimize.minimize(
-                problem=problem, optimizer=optimizer, n_starts=2,
-                filename=None)
+                problem=problem,
+                optimizer=optimizer,
+                n_starts=2,
+                startpoint_method=startpoints,
+                filename=None,
+            )
 
             self.assertTrue(np.isfinite(
                 result.optimize_result.get_for_key('fval')[0]))

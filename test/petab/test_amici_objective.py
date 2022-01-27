@@ -89,12 +89,11 @@ def test_preeq_guesses():
     assert obj.steadystate_guesses['fval'] == np.inf
 
     optimizer = pypesto.optimize.ScipyOptimizer()
-    options = pypesto.optimize.OptimizeOptions(
-        startpoint_resample=False
-    )
+    startpoints = pypesto.startpoint.UniformStartpoints(check_fval=False)
+
     result = pypesto.optimize.minimize(
         problem=problem, optimizer=optimizer, n_starts=1,
-        options=options, filename=None
+        startpoint_method=startpoints, filename=None
     )
 
     assert obj.steadystate_guesses['fval'] < np.inf

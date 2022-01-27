@@ -78,7 +78,7 @@ def _execute_case(case):
     # import and create objective function
     importer = pypesto.petab.PetabImporter.from_yaml(
         yaml_file, output_folder=output_folder)
-    model = importer.create_model()
+    model = importer.create_model(generate_sensitivity_code=False)
     obj = importer.create_objective(model=model)
 
     # the scaled parameters

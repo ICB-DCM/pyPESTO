@@ -18,15 +18,15 @@ pyPESTO features include:
 * Multi-start local optimization
 * Profile computation
 * Result visualization
-* Interface to [AMICI](https://github.com/ICB-DCM/AMICI/) for efficient
+* Interface to [AMICI](https://github.com/AMICI-dev/AMICI/) for efficient
   simulation and sensitivity analysis of ordinary differential equation (ODE)
   models
-  ([example](https://github.com/ICB-DCM/pyPESTO/blob/master/doc/example/boehm_JProteomeRes2014.ipynb))
+  ([example](https://github.com/ICB-DCM/pyPESTO/blob/main/doc/example/amici_import.ipynb))
 * Parameter estimation pipeline for systems biology problems specified in
   [SBML](http://sbml.org/) and [PEtab](https://github.com/PEtab-dev/PEtab)
   ([example](https://github.com/ICB-DCM/pyPESTO/blob/master/doc/example/petab_import.ipynb))
 * Parameter estimation with qualitative data as described in
-  [Schmiester et al. (2019)](https://www.biorxiv.org/content/10.1101/848648v1).
+  [Schmiester et al. (2020)](https://doi.org/10.1007/s00285-020-01522-w).
   This is currently implemented in the `feature_ordinal` branch.
 
 ## Quick install

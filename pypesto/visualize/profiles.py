@@ -205,7 +205,7 @@ def profiles_lowlevel(
 
         # create or choose an axes object
         if create_new_ax:
-            ax.append(fig.add_subplot(rows, columns, counter + 1))
+            ax.append(fig.add_subplot(int(rows), int(columns), counter + 1))
         else:
             plt.axes(ax[counter])
 

@@ -83,8 +83,8 @@ class OptimizerResult(dict):
         self.fval: float = fval
         self.grad: np.ndarray = np.array(grad) if grad is not None else None
         self.hess: np.ndarray = np.array(hess) if hess is not None else None
-        self.res: np.ndarray = np.ndarray(res) if res is not None else None
-        self.sres: np.ndarray = np.ndarray(sres) if sres is not None else None
+        self.res: np.ndarray = np.array(res) if res is not None else None
+        self.sres: np.ndarray = np.array(sres) if sres is not None else None
         self.n_fval: int = n_fval
         self.n_grad: int = n_grad
         self.n_hess: int = n_hess
