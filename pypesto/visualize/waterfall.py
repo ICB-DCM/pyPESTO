@@ -26,11 +26,10 @@ def waterfall_w_zoom(results: Union[Result, Sequence[Result]],
                      colors: Optional[Union[RGBA, Sequence[RGBA]]] = None,
                      legends: Optional[Union[Sequence[str], str]] = None):
     """
-    Plot waterfall plot with n_starts_to_zoom best multistarts zoomed in
+    Plot waterfall plot with n_starts_to_zoom best multistarts zoomed in.
 
     Parameters
     ----------
-
     results:
         Optimization result obtained by 'optimize.py' or list of those
     ax: matplotlib.Axes, optional
@@ -94,6 +93,7 @@ def waterfall(
     scale_y: Optional[str] = 'log10',
     offset_y: Optional[float] = None,
     start_indices: Optional[Union[Sequence[int], int]] = None,
+    n_starts_to_zoom: int = 10,
     reference: Optional[Sequence[ReferencePoint]] = None,
     colors: Optional[Union[RGBA, Sequence[RGBA]]] = None,
     legends: Optional[Union[Sequence[str], str]] = None,
@@ -215,12 +215,11 @@ def waterfall(
 
 def waterfall_lowlevel(
     fvals,
-    scale_y='log10',
-    offset_y=0.0,
-    ax=None,
-    size=(18.5, 10.5),
-    colors=None,
-    legend_text=None,
+    ax,
+    scale_y: str = 'log10',
+    offset_y: float = 0.0,
+    colors: Optional[Union[RGBA, Sequence[RGBA]]] = None,
+    legend_text: Optional[str] = None,
 ):
     """
     Plot waterfall plot using list of function values.
@@ -232,13 +231,13 @@ def waterfall_lowlevel(
     ax: matplotlib.Axes, Axes object to use.
     scale_y: str, optional
         May be logarithmic or linear ('log10' or 'lin')
-    size: tuple, optional
-        see waterfall
+    offset_y:
+        offset for the y-axis, if it is supposed to be in log10-scale
     colors: list, or RGBA, optional
         list of colors, or single color
         color or list of colors for plotting. If not set, clustering is done
         and colors are assigned automatically
-    legend_text: str
+    legend_text:
         Label for line plots
 
     Returns
@@ -246,7 +245,6 @@ def waterfall_lowlevel(
     ax: matplotlib.Axes
         The plot axes.
     """
-
     n_fvals = len(fvals)
     start_ind = range(n_fvals)
 
