@@ -35,7 +35,7 @@ def autocorrelation_sokal(chain: np.ndarray) -> np.ndarray:
     # Get the imaginary part
     xi = np.imag(x)
 
-    xr = xr ** 2 + xi ** 2
+    xr = xr**2 + xi**2
     # First value to zero
     xr[0, :] = 0.0
     # Calculate the fast Fourier transform

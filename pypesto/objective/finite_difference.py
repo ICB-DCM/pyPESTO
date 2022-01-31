@@ -715,7 +715,7 @@ def fd_nabla_2(
         else:
             raise ValueError(f"Method {fd_method} not recognized.")
 
-        nabla_2[ix1][ix1] = (f2p + f2m - 2 * fc) / delta1_val ** 2
+        nabla_2[ix1][ix1] = (f2p + f2m - 2 * fc) / delta1_val**2
 
         # off-diagonals
         for ix2 in range(ix1):
