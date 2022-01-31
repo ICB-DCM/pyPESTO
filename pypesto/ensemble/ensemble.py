@@ -330,7 +330,7 @@ class EnsemblePrediction:
             summary[MEDIAN] = np.median(tmp_array, axis=-1)
             if tmp_sigmas is not None:
                 summary[WEIGHTED_SIGMA] = np.sqrt(
-                    np.average(tmp_sigmas ** 2, axis=-1, weights=weights)
+                    np.average(tmp_sigmas**2, axis=-1, weights=weights)
                 )
             for perc in percentiles_list:
                 summary[get_percentile_label(perc)] = np.percentile(
