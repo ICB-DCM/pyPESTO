@@ -52,7 +52,7 @@ def process_result_list(results, colors=None, legends=None):
     # handle results according to their number
     if single_result:
         # assign colors and create list for later handling
-        colors = [colors]
+        colors = [np.array(colors)]
 
         # create list of legends for later handling
         if not isinstance(legends, list):
