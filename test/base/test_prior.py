@@ -192,6 +192,6 @@ def scaled_to_lin(x: float, scale: str):
     elif scale == 'log':
         return math.exp(x)
     elif scale == 'log10':
-        return 10 ** x
+        return 10**x
     else:
         ValueError(f'Unknown scale {scale}')
