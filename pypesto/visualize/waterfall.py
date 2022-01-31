@@ -184,7 +184,7 @@ def waterfall(
         max_len_fvals = np.max([max_len_fvals, *fvals.shape])
 
         # remove colors where value is infinite if colors were passed on
-        if fvals.size == colors[j].shape[0]:
+        if colors[j] is not None and fvals.size == colors[j].shape[0]:
             colors[j] = colors[j][np.isfinite(np.transpose(fvals)).flatten()]
         # parse input
         fvals = np.array(fvals)
