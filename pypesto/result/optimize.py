@@ -164,7 +164,12 @@ class OptimizeResult:
     def __len__(self):
         return len(self.list)
 
-    def append(self, optimize_result: OptimizationResult, sort: bool = True):
+    def append(
+        self,
+        optimize_result: OptimizationResult,
+        sort: bool = True,
+        prefix: str = '',
+    ):
         """
         Append an OptimizerResult or an OptimizeResult to the result object.
 
@@ -176,11 +181,28 @@ class OptimizeResult:
             Boolean used so we only sort once when appending an
             optimize_result.
         """
+        current_ids = set(self.id)
         if isinstance(optimize_result, OptimizeResult):
+            new_ids = [
+                prefix + identifier for identifier in optimize_result.id
+            ]
+            if current_ids.isdisjoint(new_ids):
+                raise ValueError(
+                    "Some id's you want to merge coincide with "
+                    "the existing id's. Please use an "
+                    "appropriate prefix such as 'run_2_'."
+                )
             for optimizer_result in optimize_result.list:
-                self.append(optimizer_result, sort=False)
+                self.append(optimizer_result, sort=False, prefix=prefix)
         elif isinstance(optimize_result, OptimizerResult):
-            optimize_result.id = self._assign_unique_id(optimize_result.id)
+            new_id = prefix + optimize_result.id
+            if new_id in current_ids:
+                raise ValueError(
+                    "The id you want to merge coincides with "
+                    "the existing id's. Please use an "
+                    "appropriate prefix such as 'run_2_'."
+                )
+            optimize_result.id = new_id
             self.list.append(optimize_result)
         if sort:
             self.sort()
@@ -231,18 +253,3 @@ class OptimizeResult:
             "releases."
         )
         return [res[key] for res in self.list]
-
-    def _assign_unique_id(self, id: str, suffix: int = None):
-        """
-        Assign a unique id to an id if needed.
-
-        Returns id if not used already otherwise tries id_suffix with
-        increasing suffix until it is unique.
-        """
-        if suffix is None:
-            if id not in self.id:
-                return id
-            return self._assign_unique_id(id=id, suffix=1)
-        if f'{id}_{suffix}' not in self.id:
-            return f'{id}_{suffix}'
-        return self._assign_unique_id(id=id, suffix=suffix + 1)
