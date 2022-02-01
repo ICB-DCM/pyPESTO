@@ -111,7 +111,8 @@ def create_optimization_result(n=4):
         result.optimize_result.append(optimizer_result=optimizer_result)
     for j in range(0, n):
         optimizer_result = pypesto.OptimizerResult(
-            id=str(j + 3), fval=10 + j * 0.01,
+            id=str(j + 3),
+            fval=10 + j * 0.01,
             x=np.array([2.5 + j + 0.1, 2 + j + 1]),
             grad=np.array([j + 0.1, j + 1]),
         )
@@ -242,7 +243,7 @@ def test_waterfall_w_zoom():
     result_2 = create_optimization_result()
 
     # test a standard call
-    visualize.waterfall_w_zoom(result_1, n_starts_to_zoom=10, zoom=3)
+    visualize.waterfall_w_zoom(result_1, n_starts_to_zoom=10)
 
     # test plotting of lists
     visualize.waterfall_w_zoom([result_1, result_2], n_starts_to_zoom=3)

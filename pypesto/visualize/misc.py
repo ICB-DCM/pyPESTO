@@ -14,7 +14,7 @@ from ..C import (
     RGBA_MIN,
     RGBA_WHITE,
 )
-from .clust_color import assign_colors, assign_colors_for_list
+from .clust_color import assign_colors_for_list
 
 
 def process_result_list(results, colors=None, legends=None):
@@ -52,9 +52,10 @@ def process_result_list(results, colors=None, legends=None):
     # handle results according to their number
     if single_result:
         # assign colors and create list for later handling
-        if colors is not None:
-            colors = assign_colors(results, colors)
-        colors = [colors]
+        if colors is None:
+            colors = [colors]
+        else:
+            colors = [np.array(colors)]
 
         # create list of legends for later handling
         if not isinstance(legends, list):
