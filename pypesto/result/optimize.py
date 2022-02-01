@@ -2,13 +2,15 @@
 
 import warnings
 from copy import deepcopy
-from typing import Sequence
+from typing import Sequence, Union
 
 import numpy as np
 import pandas as pd
 
 from ..objective import History
 from ..problem import Problem
+
+OptimizationResult = Union['OptimizerResult', 'OptimizeResult']
 
 
 class OptimizerResult(dict):
@@ -162,20 +164,27 @@ class OptimizeResult:
     def __len__(self):
         return len(self.list)
 
-    def append(
-        self,
-        optimizer_result: OptimizerResult,
-    ):
+    def append(self, opt_result: OptimizationResult, to_sort: bool = True):
         """
-        Append an optimizer result to the result object.
+        Append an OptimizerResult or an OptimizeResult to the result object.
 
         Parameters
         ----------
-        optimizer_result:
-            The result of one (local) optimizer run.
+        opt_result:
+            The result of one or more (local) optimizer run.
+        to_sort:
+            Boolean used so we only sort once when appending an
+            optimize_result.
         """
-        self.list.append(optimizer_result)
-        self.sort()
+        if isinstance(opt_result, OptimizeResult):
+            for optimizier_result in opt_result.list:
+                self.append(optimizier_result, to_sort=False)
+        elif isinstance(opt_result, OptimizerResult):
+            opt_result.id = self._assign_unique_id(opt_result.id)
+            self.list.append(opt_result)
+            self.sort()
+        if to_sort:
+            self.sort()
 
     def sort(self):
         """Sort the optimizer results by function value fval (ascending)."""
@@ -223,3 +232,18 @@ class OptimizeResult:
             "releases."
         )
         return [res[key] for res in self.list]
+
+    def _assign_unique_id(self, id: str, suffix: int = None):
+        """
+        Assign a unique id to an id if needed.
+
+        Returns id if not used already otherwise tries id_suffix with
+        increasing suffix until it is unique.
+        """
+        if suffix is None:
+            if id not in self.id:
+                return id
+            return self._assign_unique_id(id=id, suffix=1)
+        if f'{id}_{suffix}' not in self.id:
+            return f'{id}_{suffix}'
+        return self._assign_unique_id(id=id, suffix=suffix + 1)

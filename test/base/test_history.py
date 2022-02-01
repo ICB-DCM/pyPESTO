@@ -726,7 +726,6 @@ def test_trim_history():
         optimizer=optimizer,
         n_starts=1,
         history_options=history_options,
-        engine=MultiProcessEngine(),
         filename=None,
         progress_bar=False,
     )
