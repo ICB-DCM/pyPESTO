@@ -177,12 +177,11 @@ class OptimizeResult:
             optimize_result.
         """
         if isinstance(opt_result, OptimizeResult):
-            for optimizier_result in opt_result.list:
-                self.append(optimizier_result, to_sort=False)
+            for optimizer_result in opt_result.list:
+                self.append(optimizer_result, to_sort=False)
         elif isinstance(opt_result, OptimizerResult):
             opt_result.id = self._assign_unique_id(opt_result.id)
             self.list.append(opt_result)
-            self.sort()
         if to_sort:
             self.sort()
 
