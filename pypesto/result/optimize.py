@@ -164,7 +164,7 @@ class OptimizeResult:
     def __len__(self):
         return len(self.list)
 
-    def append(self, opt_result: OptimizationResult, to_sort: bool = True):
+    def append(self, opt_result: OptimizationResult, sort: bool = True):
         """
         Append an OptimizerResult or an OptimizeResult to the result object.
 
@@ -172,17 +172,17 @@ class OptimizeResult:
         ----------
         opt_result:
             The result of one or more (local) optimizer run.
-        to_sort:
+        sort:
             Boolean used so we only sort once when appending an
             optimize_result.
         """
         if isinstance(opt_result, OptimizeResult):
             for optimizer_result in opt_result.list:
-                self.append(optimizer_result, to_sort=False)
+                self.append(optimizer_result, sort=False)
         elif isinstance(opt_result, OptimizerResult):
             opt_result.id = self._assign_unique_id(opt_result.id)
             self.list.append(opt_result)
-        if to_sort:
+        if sort:
             self.sort()
 
     def sort(self):
