@@ -108,7 +108,7 @@ def create_optimization_result():
             x=np.array([j + 0.1, j + 1]),
             grad=np.array([2.5 + j + 0.1, 2 + j + 1]),
         )
-        result.optimize_result.append(optimizer_result=optimizer_result)
+        result.optimize_result.append(opt_result=optimizer_result)
     for j in range(0, 4):
         optimizer_result = pypesto.OptimizerResult(
             id=str(j + 3),
@@ -116,7 +116,7 @@ def create_optimization_result():
             x=np.array([2.5 + j + 0.1, 2 + j + 1]),
             grad=np.array([j + 0.1, j + 1]),
         )
-        result.optimize_result.append(optimizer_result=optimizer_result)
+        result.optimize_result.append(opt_result=optimizer_result)
 
     return result
 
@@ -132,11 +132,11 @@ def create_optimization_result_nan_inf():
     optimizer_result = pypesto.OptimizerResult(
         fval=float('nan'), x=np.array([float('nan'), float('nan')])
     )
-    result.optimize_result.append(optimizer_result=optimizer_result)
+    result.optimize_result.append(opt_result=optimizer_result)
     optimizer_result = pypesto.OptimizerResult(
         fval=-float('inf'), x=np.array([-float('inf'), -float('inf')])
     )
-    result.optimize_result.append(optimizer_result=optimizer_result)
+    result.optimize_result.append(opt_result=optimizer_result)
 
     return result
 
