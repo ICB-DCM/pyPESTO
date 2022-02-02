@@ -101,20 +101,20 @@ def create_optimization_result(n=4):
 
     # write some dummy results for optimization
     result = pypesto.Result(problem=problem)
-    for j in range(0, 3):
+    for k in range(0, 3):
         optimizer_result = pypesto.OptimizerResult(
-            id=str(j),
-            fval=j * 0.01,
-            x=np.array([j + 0.1, j + 1]),
-            grad=np.array([2.5 + j + 0.1, 2 + j + 1]),
+            id=str(k),
+            fval=k * 0.01,
+            x=np.array([k + 0.1, k + 1]),
+            grad=np.array([2.5 + k + 0.1, 2 + k + 1]),
         )
         result.optimize_result.append(optimizer_result=optimizer_result)
-    for j in range(0, n):
+    for k in range(0, n):
         optimizer_result = pypesto.OptimizerResult(
-            id=str(j + 3),
-            fval=10 + j * 0.01,
-            x=np.array([2.5 + j + 0.1, 2 + j + 1]),
-            grad=np.array([j + 0.1, j + 1]),
+            id=str(k + 3),
+            fval=10 + k * 0.01,
+            x=np.array([2.5 + k + 0.1, 2 + k + 1]),
+            grad=np.array([k + 0.1, k + 1]),
         )
         result.optimize_result.append(optimizer_result=optimizer_result)
 
