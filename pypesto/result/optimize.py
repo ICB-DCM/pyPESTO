@@ -180,6 +180,8 @@ class OptimizeResult:
         sort:
             Boolean used so we only sort once when appending an
             optimize_result.
+        prefix:
+            The IDs for all appended results will be prefixed with this.
         """
         current_ids = set(self.id)
         if isinstance(optimize_result, OptimizeResult):
