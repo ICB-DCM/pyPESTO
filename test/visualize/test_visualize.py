@@ -130,11 +130,13 @@ def create_optimization_result_nan_inf():
 
     # append nan and inf
     optimizer_result = pypesto.OptimizerResult(
-        fval=float('nan'), x=np.array([float('nan'), float('nan')])
+        fval=float('nan'), x=np.array([float('nan'), float('nan')]), id='nan'
     )
     result.optimize_result.append(optimize_result=optimizer_result)
     optimizer_result = pypesto.OptimizerResult(
-        fval=-float('inf'), x=np.array([-float('inf'), -float('inf')])
+        fval=-float('inf'),
+        x=np.array([-float('inf'), -float('inf')]),
+        id='inf',
     )
     result.optimize_result.append(optimize_result=optimizer_result)
 
