@@ -41,4 +41,4 @@ from .sampling import (
     sampling_prediction_trajectories,
     sampling_scatter,
 )
-from .waterfall import waterfall, waterfall_lowlevel, waterfall_w_zoom
+from .waterfall import waterfall, waterfall_lowlevel

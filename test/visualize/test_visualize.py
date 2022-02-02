@@ -243,10 +243,10 @@ def test_waterfall_w_zoom():
     result_2 = create_optimization_result()
 
     # test a standard call
-    visualize.waterfall_w_zoom(result_1, n_starts_to_zoom=10)
+    visualize.waterfall(result_1, n_starts_to_zoom=10)
 
     # test plotting of lists
-    visualize.waterfall_w_zoom([result_1, result_2], n_starts_to_zoom=3)
+    visualize.waterfall([result_1, result_2], n_starts_to_zoom=3)
 
 
 @close_fig
