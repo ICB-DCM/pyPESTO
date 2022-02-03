@@ -1,6 +1,7 @@
 """Optimization result."""
 
 import warnings
+from collections import Counter
 from copy import deepcopy
 from typing import Sequence
 
@@ -189,6 +190,8 @@ class OptimizeResult:
         message = (
             "## Optimization Result \n\n"
             f"* number of starts: {len(self)} \n"
+            f"* summary of optimizer messages: "
+            f"{dict(Counter(self.message))} \n"
             f"* best value found {clustsize[0]} time(s) \n"
             f"* number of plateaus found: "
             f"{1 + max(clust) - sum(clustsize == 1)} \n"
