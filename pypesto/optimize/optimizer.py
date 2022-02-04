@@ -279,6 +279,15 @@ class ScipyOptimizer(Optimizer):
             self.options = ScipyOptimizer.get_default_options(self)
         self.tol = tol
 
+    def __repr__(self) -> str:
+        rep = f"<{self.__class__.__name__} method={self.method}"
+        # print everything that is customized
+        if self.tol is not None:
+            rep += f" tol={self.tol}"
+        if self.options is not None:
+            rep += f" options={self.options}"
+        return rep + ">"
+
     @fix_decorator
     @time_decorator
     @history_decorator
