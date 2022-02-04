@@ -61,7 +61,7 @@ class OptimizerTask(Task):
             history_options=self.history_options,
             optimize_options=self.optimize_options,
         )
-        optimizer_result.optimizer = self.optimizer
+        optimizer_result.optimizer = str(self.optimizer)
 
         if not self.optimize_options.report_hess:
             optimizer_result.hess = None

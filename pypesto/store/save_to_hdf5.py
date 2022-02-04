@@ -160,9 +160,6 @@ class OptimizationResultHDF5Writer:
                 for key in start.keys():
                     if key == 'history':
                         continue
-                    if key == 'optimizer':
-                        start_grp.attrs[key] = str(start[key])
-                        continue
                     if isinstance(start[key], np.ndarray):
                         write_float_array(start_grp, key, start[key])
                     elif start[key] is not None:
