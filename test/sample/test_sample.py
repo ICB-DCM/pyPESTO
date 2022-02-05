@@ -152,6 +152,7 @@ def negative_log_prior(x):
         'ParallelTempering',
         'AdaptiveParallelTempering',
         'Pymc3',
+        'Pymc',
         'Emcee',
     ]
 )
@@ -186,6 +187,8 @@ def sampler(request):
         )
     elif request.param == 'Pymc3':
         return sample.Pymc3Sampler(tune=5, progressbar=False)
+    elif request.param == 'Pymc':
+        return sample.PymcSampler(tune=5, progressbar=False)
     elif request.param == 'Emcee':
         return sample.EmceeSampler(nwalkers=10)
 
