@@ -129,10 +129,21 @@ class OptimizerResult(dict):
             f"* message: {self.message} \n"
             f"* number of evaluations: {self.n_fval} \n"
             f"* time taken to optimize: {self.time} \n"
+            f"* startpoint: {self.x0} \n"
             f"* endpoint: {self.x} \n"
-            f"* final objective value: {self.fval} \n"
-            f"* final gradient value: {self.grad} \n"
         )
+        # add fval, gradient, hessian, res, sres if available
+        if self.fval is not None:
+            message += f"* final objective value: {self.fval} \n"
+        if self.grad is not None:
+            message += f"* final gradient value: {self.grad} \n"
+        if self.hess is not None:
+            message += f"* final hessian value: {self.hess} \n"
+        if self.res is not None:
+            message += f"* final residual value: {self.res} \n"
+        if self.sres is not None:
+            message += f"* final residual sensitivity: {self.sres} \n"
+
         return message
 
     def update_to_full(self, problem: Problem) -> None:
