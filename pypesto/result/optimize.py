@@ -193,10 +193,18 @@ class OptimizeResult:
                 for message, count in Counter(self.message).most_common()
             ]
         )
+        times_message = (
+            f'\n\tMean execution time: {np.mean(self.time)}s\n'
+            f'\tMaximum execution time: {np.max(self.time)}s,'
+            f'\tid={self[np.argmax(self.time)].id}\n'
+            f'\tMinimum execution time: {np.min(self.time)}s,\t'
+            f'id={self[np.argmin(self.time)].id}'
+        )
 
         summary = (
             "## Optimization Result \n\n"
             f"* number of starts: {len(self)} \n"
+            f"* execution time summary: {times_message}\n"
             f"* summary of optimizer messages:\n{counter_message}\n"
             f"* best value found (approximately) {clustsize[0]} time(s) \n"
             f"* number of plateaus found: "
