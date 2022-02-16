@@ -49,7 +49,7 @@ def optimizer_convergence(
     if ax is None:
         ax = plt.subplots(figsize=size)[1]
 
-    fvals = result.optimize_result.get_for_key('fval')
+    fvals = result.optimize_result.fval
     grad_norms = [
         np.linalg.norm(
             result.problem.get_reduced_vector(
@@ -59,9 +59,9 @@ def optimizer_convergence(
         )
         if grad is not None
         else np.NaN
-        for grad in result.optimize_result.get_for_key('grad')
+        for grad in result.optimize_result.grad
     ]
-    msgs = result.optimize_result.get_for_key('message')
+    msgs = result.optimize_result.message
     conv_data = pd.DataFrame(
         {'fval': fvals, 'gradient norm': grad_norms, 'exit message': msgs}
     )

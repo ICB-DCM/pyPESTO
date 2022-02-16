@@ -139,7 +139,7 @@ def test_finite_difference_checks():
     x = sp.Symbol('x')
 
     # Setup single-parameter objective function
-    fun_expr = x ** 10
+    fun_expr = x**10
     grad_expr = fun_expr.diff()
     theta = 0.1
 

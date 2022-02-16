@@ -267,7 +267,7 @@ class ScipyOptimizer(Optimizer):
     def __init__(
         self,
         method: str = 'L-BFGS-B',
-        tol: float = 1e-9,
+        tol: float = None,
         options: Dict = None,
     ):
         super().__init__()
@@ -277,9 +277,7 @@ class ScipyOptimizer(Optimizer):
         self.options = options
         if self.options is None:
             self.options = ScipyOptimizer.get_default_options(self)
-            self.options['ftol'] = tol
-        elif self.options is not None and 'ftol' not in self.options:
-            self.options['ftol'] = tol
+        self.tol = tol
 
     @fix_decorator
     @time_decorator
@@ -298,8 +296,11 @@ class ScipyOptimizer(Optimizer):
         objective = problem.objective
 
         if self.is_least_squares():
+            # set tolerance to default of scipy optimizer
+            tol = self.tol
+            if tol is None:
+                tol = 1e-8
             # is a residual based least squares method
-
             if not objective.has_res:
                 raise Exception(
                     "For least squares optimization, the objective "
@@ -336,6 +337,7 @@ class ScipyOptimizer(Optimizer):
                     'tr_solver', 'lsmr' if len(x0) > 1 else 'exact'
                 ),
                 loss='linear',
+                ftol=tol,
                 **ls_options,
             )
             # extract fval/grad from result, note that fval is not available
@@ -415,6 +417,7 @@ class ScipyOptimizer(Optimizer):
                 hessp=hessp,
                 bounds=bounds,
                 options=self.options,
+                tol=self.tol,
             )
             # extract fval/grad from result
             grad = getattr(res, 'jac', None)
@@ -844,7 +847,9 @@ class PyswarmsOptimizer(Optimizer):
             return result
 
         cost, pos = optimizer.optimize(
-            successively_working_fval, iters=self.options['maxiter']
+            successively_working_fval,
+            iters=self.options['maxiter'],
+            verbose=False,
         )
 
         optimizer_result = OptimizerResult(
@@ -1082,7 +1087,7 @@ class FidesOptimizer(Optimizer):
 
     def __init__(
         self,
-        hessian_update: Optional['HessianApproximation'] = 'Hybrid',
+        hessian_update: Optional['HessianApproximation'] = 'default',
         options: Optional[Dict] = None,
         verbose: Optional[int] = logging.INFO,
     ):
@@ -1100,11 +1105,10 @@ class FidesOptimizer(Optimizer):
         """
         super().__init__()
 
-        if hessian_update == 'Hybrid':
-            hessian_update = fides.HybridFixed()
-
-        if hessian_update is not None and not isinstance(
-            hessian_update, HessianApproximation
+        if (
+            (hessian_update is not None)
+            and (hessian_update != 'default')
+            and not isinstance(hessian_update, HessianApproximation)
         ):
             raise ValueError(
                 'Incompatible type for hessian update. '
@@ -1137,9 +1141,23 @@ class FidesOptimizer(Optimizer):
                 "install fides via `pip install fides`."
             )
 
+        if self.hessian_update == 'default':
+            if not problem.objective.has_hess:
+                logging.warning(
+                    'Fides is using BFGS as hessian approximation, '
+                    'as the problem does not provide a Hessian. '
+                    'Specify a Hessian to use a more efficient '
+                    'hybrid approximation scheme.'
+                )
+                _hessian_update = fides.BFGS()
+            else:
+                _hessian_update = fides.HybridFixed()
+        else:
+            _hessian_update = self.hessian_update
+
         resfun = (
-            self.hessian_update.requires_resfun
-            if self.hessian_update is not None
+            _hessian_update.requires_resfun
+            if _hessian_update is not None
             else False
         )
 
@@ -1152,8 +1170,8 @@ class FidesOptimizer(Optimizer):
                 'gradient evaluation.'
             )
 
-        if self.hessian_update is None or (
-            self.hessian_update.requires_hess and not resfun
+        if _hessian_update is None or (
+            _hessian_update.requires_hess and not resfun
         ):
             if not problem.objective.has_hess:
                 raise ValueError(
@@ -1171,7 +1189,7 @@ class FidesOptimizer(Optimizer):
             ub=problem.ub,
             lb=problem.lb,
             verbose=self.verbose,
-            hessian_update=self.hessian_update,
+            hessian_update=_hessian_update,
             options=self.options,
             resfun=resfun,
         )

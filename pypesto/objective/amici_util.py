@@ -343,6 +343,8 @@ def get_error_output(
             data.nt() if data.nt() else amici_model.nt() for data in edatas
         )
     n_res = nt * amici_model.nytrue
+    if amici_model.getAddSigmaResiduals():
+        n_res *= 2
 
     nllh, snllh, s2nllh, chi2, res, sres = init_return_values(
         sensi_orders, mode, dim, True
