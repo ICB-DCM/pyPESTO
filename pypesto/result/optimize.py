@@ -186,9 +186,11 @@ class OptimizeResult:
         current_ids = set(self.id)
         if isinstance(optimize_result, OptimizeResult):
             new_ids = [
-                prefix + identifier for identifier in optimize_result.id
+                prefix + identifier
+                for identifier in optimize_result.id
+                if identifier is not None
             ]
-            if current_ids.isdisjoint(new_ids):
+            if current_ids.isdisjoint(new_ids) and new_ids:
                 raise ValueError(
                     "Some id's you want to merge coincide with "
                     "the existing id's. Please use an "
@@ -197,15 +199,19 @@ class OptimizeResult:
             for optimizer_result in optimize_result.list:
                 self.append(optimizer_result, sort=False, prefix=prefix)
         elif isinstance(optimize_result, OptimizerResult):
-            new_id = prefix + optimize_result.id
-            if new_id in current_ids:
-                raise ValueError(
-                    "The id you want to merge coincides with "
-                    "the existing id's. Please use an "
-                    "appropriate prefix such as 'run_2_'."
-                )
-            optimize_result.id = new_id
-            self.list.append(optimize_result)
+            # if id is None, append without checking for duplicate ids
+            if optimize_result.id is None:
+                self.list.append(optimize_result)
+            else:
+                new_id = prefix + optimize_result.id
+                if new_id in current_ids:
+                    raise ValueError(
+                        "The id you want to merge coincides with "
+                        "the existing id's. Please use an "
+                        "appropriate prefix such as 'run_2_'."
+                    )
+                optimize_result.id = new_id
+                self.list.append(optimize_result)
         if sort:
             self.sort()
 
