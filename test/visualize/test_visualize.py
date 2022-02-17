@@ -108,7 +108,7 @@ def create_optimization_result(n=4):
             x=np.array([k + 0.1, k + 1]),
             grad=np.array([2.5 + k + 0.1, 2 + k + 1]),
         )
-        result.optimize_result.append(optimizer_result=optimizer_result)
+        result.optimize_result.append(optimize_result=optimizer_result)
     for k in range(0, n):
         optimizer_result = pypesto.OptimizerResult(
             id=str(k + 3),
