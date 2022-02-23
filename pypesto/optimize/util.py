@@ -3,13 +3,14 @@
 import logging
 import os
 from pathlib import Path
-from typing import List
+from typing import Iterable, List
 
 import h5py
 
 from ..C import PYPESTO_MAX_N_STARTS
 from ..engine import Engine, SingleCoreEngine
 from ..objective import HistoryOptions
+from ..result import Result
 from ..store.save_to_hdf5 import get_or_create_group
 from .optimizer import OptimizerResult
 
@@ -138,3 +139,41 @@ def bound_n_starts_from_env(n_starts: int):
     )
 
     return n_starts_new
+
+
+def assign_ids(
+    ids: Iterable[str] = None,
+    result: Result = None,
+    n_starts: int = 100,
+) -> Iterable[str]:
+    """
+    Assign ids to starts.
+
+    ids:
+        Ids assigned to the startpoints.
+    result:
+        A result object to append the optimization results to. For example,
+        one might append more runs to a previous optimization. Assign only
+        unique ids.
+    n_starts:
+        Number of starts of the optimizer.
+    """
+    used_ids = set()
+    if result is not None:
+        used_ids = set(result.optimize_result.id)
+        N_used = len(used_ids)
+    if ids is None:
+        i = 0
+        ids = [str(j) for j in range(i * n_starts, (i + 1) * n_starts)]
+        while not used_ids.isdisjoint(ids):
+            i += 1
+            ids = [
+                str(j) for j in range(N_used * i, N_used * (i + 1) + n_starts)
+            ]
+    if len(ids) != n_starts:
+        raise AssertionError("Number of starts and ids must coincide.")
+    if not used_ids.isdisjoint(ids):
+        raise AssertionError(
+            "Manually assigned ids must differ from existing ones."
+        )
+    return ids
