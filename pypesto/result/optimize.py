@@ -1,6 +1,7 @@
 """Optimization result."""
 
 import warnings
+from collections import Counter
 from copy import deepcopy
 from typing import Sequence, Union
 
@@ -9,6 +10,7 @@ import pandas as pd
 
 from ..objective import History
 from ..problem import Problem
+from ..util import assign_clusters, delete_nan_inf
 
 OptimizationResult = Union['OptimizerResult', 'OptimizeResult']
 
@@ -61,6 +63,8 @@ class OptimizerResult(dict):
         Execution time.
     message: str
         Textual comment on the optimization result.
+    optimizer: str
+        The optimizer used for optimization.
 
     Notes
     -----
@@ -87,6 +91,7 @@ class OptimizerResult(dict):
         exitflag: int = None,
         time: float = None,
         message: str = None,
+        optimizer: str = None,
     ):
         super().__init__()
         self.id = id
@@ -107,6 +112,7 @@ class OptimizerResult(dict):
         self.exitflag: int = exitflag
         self.time: float = time
         self.message: str = message
+        self.optimizer = optimizer
 
     def __getattr__(self, key):
         try:
@@ -116,6 +122,31 @@ class OptimizerResult(dict):
 
     __setattr__ = dict.__setitem__
     __delattr__ = dict.__delitem__
+
+    def summary(self):
+        """Get summary of the object."""
+        message = (
+            "### Optimizer Result \n\n"
+            f"* optimizer used: {self.optimizer} \n"
+            f"* message: {self.message} \n"
+            f"* number of evaluations: {self.n_fval} \n"
+            f"* time taken to optimize: {self.time} \n"
+            f"* startpoint: {self.x0} \n"
+            f"* endpoint: {self.x} \n"
+        )
+        # add fval, gradient, hessian, res, sres if available
+        if self.fval is not None:
+            message += f"* final objective value: {self.fval} \n"
+        if self.grad is not None:
+            message += f"* final gradient value: {self.grad} \n"
+        if self.hess is not None:
+            message += f"* final hessian value: {self.hess} \n"
+        if self.res is not None:
+            message += f"* final residual value: {self.res} \n"
+        if self.sres is not None:
+            message += f"* final residual sensitivity: {self.sres} \n"
+
+        return message
 
     def update_to_full(self, problem: Problem) -> None:
         """
@@ -163,6 +194,39 @@ class OptimizeResult:
 
     def __len__(self):
         return len(self.list)
+
+    def summary(self):
+        """Get summary of the object."""
+        # perform clustering for better information
+        clust, clustsize = assign_clusters(delete_nan_inf(self.fval)[1])
+        counter_message = '\n'.join(
+            ["\tCount\tMessage"]
+            + [
+                f"\t{count}\t{message}"
+                for message, count in Counter(self.message).most_common()
+            ]
+        )
+        times_message = (
+            f'\n\tMean execution time: {np.mean(self.time)}s\n'
+            f'\tMaximum execution time: {np.max(self.time)}s,'
+            f'\tid={self[np.argmax(self.time)].id}\n'
+            f'\tMinimum execution time: {np.min(self.time)}s,\t'
+            f'id={self[np.argmin(self.time)].id}'
+        )
+
+        summary = (
+            "## Optimization Result \n\n"
+            f"* number of starts: {len(self)} \n"
+            f"* execution time summary: {times_message}\n"
+            f"* summary of optimizer messages:\n{counter_message}\n"
+            f"* best value found (approximately) {clustsize[0]} time(s) \n"
+            f"* number of plateaus found: "
+            f"{1 + max(clust) - sum(clustsize == 1)} \n"
+            f"* best value: {self[0]['fval']}, "
+            f"worst value: {self[-1]['fval']} \n\n"
+            f"A summary of the best run:\n\n{self[0].summary()}"
+        )
+        return summary
 
     def append(
         self,

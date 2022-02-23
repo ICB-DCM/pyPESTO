@@ -7,12 +7,9 @@ pypesto comes with various visualization routines. To use these,
 import pypesto.visualize.
 """
 
-from .clust_color import (
-    assign_clustered_colors,
-    assign_clusters,
-    assign_colors,
-    delete_nan_inf,
-)
+from pypesto.util import assign_clusters, delete_nan_inf
+
+from .clust_color import assign_clustered_colors, assign_colors
 from .dimension_reduction import (
     ensemble_crosstab_scatter_lowlevel,
     ensemble_scatter_lowlevel,
