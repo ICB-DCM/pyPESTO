@@ -5,8 +5,10 @@ import numpy as np
 from matplotlib.ticker import MaxNLocator
 from mpl_toolkits.axes_grid1 import inset_locator
 
+from pypesto.util import delete_nan_inf
+
 from ..result import Result
-from .clust_color import RGBA, assign_colors, delete_nan_inf
+from .clust_color import RGBA, assign_colors
 from .misc import (
     process_offset_y,
     process_result_list,

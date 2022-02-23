@@ -119,7 +119,8 @@ class HistoryTest(unittest.TestCase):
         result_attributes = [
             key
             for key in start.keys()
-            if key not in ['history', 'message', 'exitflag', 'time']
+            if key
+            not in ['history', 'message', 'exitflag', 'time', 'optimizer']
         ]
         for attr in result_attributes:
             # if we didn't record we can't recover the value
