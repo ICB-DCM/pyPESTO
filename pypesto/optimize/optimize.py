@@ -11,6 +11,7 @@ from .optimizer import Optimizer, ScipyOptimizer
 from .options import OptimizeOptions
 from .task import OptimizerTask
 from .util import (
+    assign_ids,
     bound_n_starts_from_env,
     postprocess_hdf5_history,
     preprocess_hdf5_history,
@@ -102,10 +103,10 @@ def minimize(
         problem=problem,
     )
 
-    if ids is None:
-        ids = [str(j) for j in range(n_starts)]
-    if len(ids) != n_starts:
-        raise AssertionError("Number of starts and ids must coincide.")
+    ids = assign_ids(
+        ids=ids,
+        result=result,
+    )
 
     # prepare result
     if result is None:

@@ -5,8 +5,10 @@ import matplotlib.pyplot as plt
 import numpy as np
 from matplotlib.ticker import MaxNLocator
 
+from pypesto.util import delete_nan_inf
+
 from ..result import Result
-from .clust_color import assign_colors, delete_nan_inf
+from .clust_color import assign_colors
 from .misc import process_result_list, process_start_indices
 from .reference_points import ReferencePoint, create_references
 

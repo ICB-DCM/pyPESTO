@@ -281,7 +281,7 @@ def write_result(
     result: Result,
     filename: str,
     overwrite: bool = False,
-    problem: bool = True,
+    problem: bool = False,
     optimize: bool = False,
     profile: bool = False,
     sample: bool = False,

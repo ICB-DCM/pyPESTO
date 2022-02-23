@@ -5,8 +5,10 @@ import matplotlib.axes
 import matplotlib.pyplot as plt
 import numpy as np
 
+from pypesto.util import delete_nan_inf
+
 from ..result import Result
-from .clust_color import assign_colors, assign_colors_for_list, delete_nan_inf
+from .clust_color import assign_colors, assign_colors_for_list
 from .misc import process_result_list, process_start_indices
 
 

@@ -279,6 +279,15 @@ class ScipyOptimizer(Optimizer):
             self.options = ScipyOptimizer.get_default_options(self)
         self.tol = tol
 
+    def __repr__(self) -> str:
+        rep = f"<{self.__class__.__name__} method={self.method}"
+        # print everything that is customized
+        if self.tol is not None:
+            rep += f" tol={self.tol}"
+        if self.options is not None:
+            rep += f" options={self.options}"
+        return rep + ">"
+
     @fix_decorator
     @time_decorator
     @history_decorator
@@ -463,6 +472,13 @@ class IpoptOptimizer(Optimizer):
         super().__init__()
         self.options = options
 
+    def __repr__(self) -> str:
+        rep = f"<{self.__class__.__name__}"
+        # print everything that is customized
+        if self.options is not None:
+            rep += f" options={self.options}"
+        return rep + ">"
+
     @fix_decorator
     @time_decorator
     @history_decorator
@@ -518,6 +534,13 @@ class DlibOptimizer(Optimizer):
             self.options = DlibOptimizer.get_default_options(self)
         elif 'maxiter' not in self.options:
             raise KeyError('Dlib options are missing the key word ' 'maxiter.')
+
+    def __repr__(self) -> str:
+        rep = f"<{self.__class__.__name__}"
+        # print everything that is customized
+        if self.options is not None:
+            rep += f" options={self.options}"
+        return rep + ">"
 
     @fix_decorator
     @time_decorator
@@ -583,6 +606,13 @@ class PyswarmOptimizer(Optimizer):
             options = {'maxiter': 200}
         self.options = options
 
+    def __repr__(self) -> str:
+        rep = f"<{self.__class__.__name__}"
+        # print everything that is customized
+        if self.options is not None:
+            rep += f" options={self.options}"
+        return rep + ">"
+
     @fix_decorator
     @time_decorator
     @history_decorator
@@ -644,6 +674,13 @@ class CmaesOptimizer(Optimizer):
             options = {'maxiter': 10000}
         self.options = options
         self.par_sigma0 = par_sigma0
+
+    def __repr__(self) -> str:
+        rep = f"<{self.__class__.__name__} par_sigma0={self.par_sigma0}"
+        # print everything that is customized
+        if self.options is not None:
+            rep += f" options={self.options}"
+        return rep + ">"
 
     @fix_decorator
     @time_decorator
@@ -724,6 +761,13 @@ class ScipyDifferentialEvolutionOptimizer(Optimizer):
             options = {'maxiter': 100}
         self.options = options
 
+    def __repr__(self) -> str:
+        rep = f"<{self.__class__.__name__}"
+        # print everything that is customized
+        if self.options is not None:
+            rep += f" options={self.options}"
+        return rep + ">"
+
     @fix_decorator
     @time_decorator
     @history_decorator
@@ -789,6 +833,13 @@ class PyswarmsOptimizer(Optimizer):
         all_options.update(options)
         self.options = all_options
         self.par_popsize = par_popsize
+
+    def __repr__(self) -> str:
+        rep = f"<{self.__class__.__name__} par_popsize={self.par_popsize}"
+        # print everything that is customized
+        if self.options is not None:
+            rep += f" options={self.options}"
+        return rep + ">"
 
     @fix_decorator
     @time_decorator
@@ -992,6 +1043,17 @@ class NLoptOptimizer(Optimizer):
 
         self.local_method = local_method
 
+    def __repr__(self) -> str:
+        rep = f"<{self.__class__.__name__} method={self.method}"
+        # print everything that is customized
+        if self.local_method is not None:
+            rep += f" local_method={self.local_method}"
+        if self.options is not None:
+            rep += f" options={self.options}"
+        if self.local_options is not None:
+            rep += f" local_options={self.local_methods}"
+        return rep + ">"
+
     @fix_decorator
     @time_decorator
     @history_decorator
@@ -1122,6 +1184,23 @@ class FidesOptimizer(Optimizer):
         self.verbose = verbose
         self.options = options
         self.hessian_update = hessian_update
+
+    def __repr__(self) -> str:
+        rep = f"<{self.__class__.__name__} "
+        # print everything that is customized
+        if self.hessian_update is not None:
+            if self.hessian_update == 'default':
+                rep += f" hessian_update={self.hessian_update}"
+            else:
+                rep += (
+                    f" hessian_update="
+                    f"{self.hessian_update.__class__.__name__}"
+                )
+        if self.verbose is not None:
+            rep += f" verbose={self.verbose}"
+        if self.options is not None:
+            rep += f" options={self.options}"
+        return rep + ">"
 
     @fix_decorator
     @time_decorator
