@@ -158,19 +158,22 @@ def assign_ids(
     n_starts:
         Number of starts of the optimizer.
     """
-    used_ids = set({})
+    used_ids = set()
     if result is not None:
-        used_ids = result.optimize_result.id
+        used_ids = set(result.optimize_result.id)
+        N_used = len(used_ids)
     if ids is None:
         i = 0
         ids = [str(j) for j in range(i * n_starts, (i + 1) * n_starts)]
         while not used_ids.isdisjoint(ids):
             i += 1
-            ids = [str(j) for j in range(i * n_starts, (i + 1) * n_starts)]
+            ids = [
+                str(j) for j in range(N_used * i, N_used * (i + 1) + n_starts)
+            ]
     if len(ids) != n_starts:
         raise AssertionError("Number of starts and ids must coincide.")
     if not used_ids.isdisjoint(ids):
         raise AssertionError(
-            "Manually assigned ids must differ from " "existing ones."
+            "Manually assigned ids must differ from existing ones."
         )
     return ids
