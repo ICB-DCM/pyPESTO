@@ -55,7 +55,7 @@ def autosave(
 
 def default_filename(**kwargs) -> str:
     """Create a filename when results will be autosaved.
-    
+
     See :func:`autosave` for additional information.
     """
     time = datetime.datetime.now().strftime("%Y_%d_%m_%H_%M_%S")
