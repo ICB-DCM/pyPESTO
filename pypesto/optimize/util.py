@@ -144,7 +144,7 @@ def bound_n_starts_from_env(n_starts: int):
 def assign_ids(
     n_starts: int,
     ids: Iterable[str] = None,
-    result: Result = None
+    result: Result = None,
 ) -> Iterable[str]:
     """
     Assign ids to starts.
