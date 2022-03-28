@@ -105,6 +105,7 @@ def minimize(
     )
 
     ids = assign_ids(
+        n_starts=n_starts,
         ids=ids,
         result=result,
     )
