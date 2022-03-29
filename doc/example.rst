@@ -42,7 +42,10 @@ Algorithms and features
 
    example/fixed_parameters.ipynb
    example/prior_definition.ipynb
+..
+   temporarily disabled until pymc4 support is there https://github.com/ICB-DCM/pyPESTO/pull/818
    example/sampler_study.ipynb
+
    example/sampling_diagnostics.ipynb
    example/store.ipynb
    example/hdf5_storage.ipynb
