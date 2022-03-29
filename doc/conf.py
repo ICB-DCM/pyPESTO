@@ -110,6 +110,7 @@ exclude_patterns = [
     '**.ipynb_checkpoints',
     'example/tmp',
     'README.md',
+    'example/sampler_study.ipynb',
 ]
 
 # The name of the Pygments (syntax highlighting) style to use.
