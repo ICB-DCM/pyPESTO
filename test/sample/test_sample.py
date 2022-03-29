@@ -151,8 +151,8 @@ def negative_log_prior(x):
         'AdaptiveMetropolis',
         'ParallelTempering',
         'AdaptiveParallelTempering',
-         # TODO: Replace by pymc4 https://github.com/ICB-DCM/pyPESTO/pull/818
-         # 'Pymc3',
+        # TODO: Replace by pymc4 https://github.com/ICB-DCM/pyPESTO/pull/818
+        # 'Pymc3',
         'Emcee',
     ]
 )
