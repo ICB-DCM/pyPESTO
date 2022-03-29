@@ -46,6 +46,7 @@ def prior_type_list(request):
     return request.param
 
 
+@pytest.mark.flaky(reruns=3)
 def test_mode(scale, prior_type_list):
     """
     Tests the maximum/optimum for priors in different scales...
