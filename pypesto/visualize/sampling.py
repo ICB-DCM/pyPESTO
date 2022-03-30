@@ -539,7 +539,7 @@ def _handle_colors(
     level_opacities = sorted(
         # min 30%, max 100%, opacity
         np.linspace(0.3 * RGBA_MAX, RGBA_MAX, len(levels)),
-        reverse=False,
+        reverse=reverse,
     )
     cmap = plt.cm.viridis
     cmap_min = RGBA_MIN
