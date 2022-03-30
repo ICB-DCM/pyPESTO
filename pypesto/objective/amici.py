@@ -378,7 +378,7 @@ class AmiciObjective(ObjectiveBase):
         ):
             kwargs['amici_reporting'] = amici.RDataReporting.full
 
-        return super()(x, sensi_orders, mode, return_dict, **kwargs)
+        return super().__call__(x, sensi_orders, mode, return_dict, **kwargs)
 
     def call_unprocessed(
         self,
