@@ -140,13 +140,7 @@ def time_trajectory_model(
     parameters = result.optimize_result.list[start_index]['x']
     # reduce vector to only include free indices. Needed downstream.
     parameters = problem.get_reduced_vector(parameters)
-    ret = obj(
-        parameters,
-        mode='mode_fun',
-        sensi_orders=(0,),
-        amici_reporting=amici.RDataReporting.full,
-        return_dict=True,
-    )
+    ret = obj(parameters, mode='mode_fun', sensi_orders=(0,), return_dict=True)
 
     if state_ids == [] and state_names == []:
         axes = _time_trajectory_model_without_states(

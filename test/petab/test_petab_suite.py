@@ -90,12 +90,7 @@ def _execute_case(case):
     problem_parameters = importer.petab_problem.x_nominal_scaled
 
     # simulate
-    ret = obj(
-        problem_parameters,
-        sensi_orders=(0,),
-        amici_reporting=amici.RDataReporting.full,
-        return_dict=True,
-    )
+    ret = obj(problem_parameters, sensi_orders=(0,), return_dict=True)
 
     # extract results
     rdatas = ret['rdatas']

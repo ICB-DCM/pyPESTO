@@ -3,12 +3,6 @@ from typing import Callable, List, Sequence, Tuple, Union
 
 import numpy as np
 
-try:
-    import amici
-except ImportError:
-    pass
-
-
 from ..C import (
     AMICI_LLH,
     AMICI_SIGMAY,
@@ -448,7 +442,6 @@ class AmiciPredictor:
             parameter_mapping=parameter_mapping,
             edatas=edatas,
             return_dict=True,
-            amici_reporting=amici.RDataReporting.full,
         )
         for rdata in chunk[RDATAS]:
             amici_outputs.append(
