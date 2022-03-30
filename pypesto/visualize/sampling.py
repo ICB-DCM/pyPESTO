@@ -652,7 +652,9 @@ def sampling_prediction_trajectories(
         raise ValueError(f'Unsupported groupby value: {groupby}')
 
     level_opacities, variable_colors = _handle_colors(
-        levels=levels, n_variables=n_variables, reverse=reverse_opacities,
+        levels=levels,
+        n_variables=n_variables,
+        reverse=reverse_opacities,
     )
 
     if axes is None:
