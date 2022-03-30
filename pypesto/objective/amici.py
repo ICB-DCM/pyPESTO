@@ -65,6 +65,7 @@ class AmiciObjective(ObjectiveBase):
         fim_for_hess: Optional[bool] = True,
         amici_object_builder: Optional[AmiciObjectBuilder] = None,
         calculator: Optional[AmiciCalculator] = None,
+        amici_reporting: Optional['amici.RDataReporting'] = None,
     ):
         """
         Initialize objective.
@@ -112,6 +113,10 @@ class AmiciObjective(ObjectiveBase):
         calculator:
             Performs the actual calculation of the function values and
             derivatives.
+        amici_reporting:
+            Determines which quantities will be computed by AMICI,
+            see ``amici.Solver.setReturnDataReportingMode``. Set to ``None``
+            to compute only the minimum required information.
         """
         if amici is None:
             raise ImportError(
@@ -197,6 +202,7 @@ class AmiciObjective(ObjectiveBase):
         self.n_threads = n_threads
         self.fim_for_hess = fim_for_hess
         self.amici_object_builder = amici_object_builder
+        self.amici_reporting = amici_reporting
 
         if calculator is None:
             calculator = AmiciCalculator()
@@ -371,6 +377,17 @@ class AmiciObjective(ObjectiveBase):
             A dict containing the results.
         """
         x_dct = self.par_arr_to_dct(x)
+
+        # only ask amici to compute required quantities
+        if self.amici_reporting is None:
+            if mode == MODE_FUN:
+                self.amici_solver.setReturnDataReportingMode(
+                    amici.RDataReporting.likelihood
+                )
+            elif mode == MODE_RES:
+                self.amici_solver.setReturnDataReportingMode(
+                    amici.RDataReporting.residuals
+                )
 
         # update steady state
         if (
