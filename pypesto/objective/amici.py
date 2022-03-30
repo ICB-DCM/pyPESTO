@@ -374,7 +374,7 @@ class AmiciObjective(ObjectiveBase):
         if (
             return_dict
             and self.amici_reporting is None
-            and not kwargs.get('amici_reporting')
+            and 'amici_reporting' not in kwargs
         ):
             kwargs['amici_reporting'] = amici.RDataReporting.full
 
