@@ -1,6 +1,7 @@
 from copy import deepcopy
 from typing import Callable, List, Sequence, Tuple, Union
 
+import amici
 import numpy as np
 
 from ..C import (
@@ -442,6 +443,7 @@ class AmiciPredictor:
             parameter_mapping=parameter_mapping,
             edatas=edatas,
             return_dict=True,
+            amici_reporting=amici.RDataReporting.full,
         )
         for rdata in chunk[RDATAS]:
             amici_outputs.append(

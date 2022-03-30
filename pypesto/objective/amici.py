@@ -367,6 +367,7 @@ class AmiciObjective(ObjectiveBase):
         mode: str,
         edatas: Sequence['amici.ExpData'] = None,
         parameter_mapping: 'ParameterMapping' = None,
+        amici_reporting: Optional['amici.RDataReporting'] = None,
     ):
         """
         Call objective function without pre- or post-processing and formatting.
@@ -379,15 +380,14 @@ class AmiciObjective(ObjectiveBase):
         x_dct = self.par_arr_to_dct(x)
 
         # only ask amici to compute required quantities
-        if self.amici_reporting is None:
-            if mode == MODE_FUN:
-                self.amici_solver.setReturnDataReportingMode(
-                    amici.RDataReporting.likelihood
-                )
-            elif mode == MODE_RES:
-                self.amici_solver.setReturnDataReportingMode(
-                    amici.RDataReporting.residuals
-                )
+        amici_reporting |= self.amici_reporting
+        if amici_reporting is None:
+            amici_reporting = (
+                amici.RDataReporting.likelihood
+                if mode == MODE_FUN
+                else amici.RDataReporting.residuals
+            )
+            self.amici_solver.setReturnDataReportingMode(amici_reporting)
 
         # update steady state
         if (
