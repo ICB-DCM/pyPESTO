@@ -380,14 +380,18 @@ class AmiciObjective(ObjectiveBase):
         x_dct = self.par_arr_to_dct(x)
 
         # only ask amici to compute required quantities
-        amici_reporting = amici_reporting or self.amici_reporting
+        amici_reporting = (
+            self.amici_reporting
+            if amici_reporting is None
+            else amici_reporting
+        )
         if amici_reporting is None:
             amici_reporting = (
                 amici.RDataReporting.likelihood
                 if mode == MODE_FUN
                 else amici.RDataReporting.residuals
             )
-            self.amici_solver.setReturnDataReportingMode(amici_reporting)
+        self.amici_solver.setReturnDataReportingMode(amici_reporting)
 
         # update steady state
         if (
