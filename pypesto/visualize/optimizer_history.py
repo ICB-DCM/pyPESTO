@@ -275,7 +275,7 @@ def get_trace(
             ]
 
             y_vals = np.array([fvals[i] for i in indices])
-            y_label = 'objective value'
+            y_label = 'Objective value'
 
         # retrieve values from dataframe
         if trace_x == 'time':
@@ -349,7 +349,7 @@ def get_vals(
         min_val = np.min([min_val, tmp_min])
 
     # check, whether offset can be used with this data
-    if y_label == 'fval':
+    if y_label == 'Objective value':
         offset_y = process_offset_y(offset_y, scale_y, min_val)
     else:
         offset_y = 0.0
