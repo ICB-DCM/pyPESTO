@@ -1,8 +1,13 @@
 from copy import deepcopy
 from typing import Callable, List, Sequence, Tuple, Union
 
-import amici
 import numpy as np
+
+try:
+    import amici
+except ImportError:
+    pass
+
 
 from ..C import (
     AMICI_LLH,
