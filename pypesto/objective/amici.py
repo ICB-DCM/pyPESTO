@@ -13,7 +13,7 @@ from .amici_util import (
     create_identity_parameter_mapping,
     map_par_opt_to_par_sim,
 )
-from .base import ObjectiveBase
+from .base import ObjectiveBase, ResultDict
 
 try:
     import amici
@@ -359,6 +359,26 @@ class AmiciObjective(ObjectiveBase):
     def check_mode(self, mode: str) -> bool:
         """See `ObjectiveBase` documentation."""
         return mode in [MODE_FUN, MODE_RES]
+
+    def __call__(
+        self,
+        x: np.ndarray,
+        sensi_orders: Tuple[int, ...] = (0,),
+        mode: str = MODE_FUN,
+        return_dict: bool = False,
+        **kwargs,
+    ) -> Union[float, np.ndarray, Tuple, ResultDict]:
+        """See `ObjectiveBase` documentation."""
+        # Use AMICI full reporting if amici.ReturnDatas are returned and no
+        #  other reporting mode was set
+        if (
+            return_dict
+            and self.amici_reporting is None
+            and not kwargs.get('amici_reporting')
+        ):
+            kwargs['amici_reporting'] = amici.RDataReporting.full
+
+        return super()(x, sensi_orders, mode, return_dict, **kwargs)
 
     def call_unprocessed(
         self,
