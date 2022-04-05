@@ -172,7 +172,7 @@ def par_index_slices(
     zip_iterator = zip(
         *(
             (
-                # simulation parameter index
+                # sensitivity parameter index in AMICI simulation results
                 cumsum_par_sim_maps_to_str[par_sim_id_to_idx[par_sim_id]] - 1,
                 # corresponding optimization parameter index
                 par_opt_id_to_idx[par_opt_id],
