@@ -322,8 +322,9 @@ def read_ensemble_prediction_from_h5(
             pred_cond_res_list = []
             for id, _ in enumerate(condition_ids):
                 output = f[f'{key}/{id}/{OUTPUT}'][:]
-                output_ids = tuple(decode_array(f[f'{key}/{id}'
-                                                  f'/{OUTPUT_IDS}'][:]))
+                output_ids = tuple(
+                    decode_array(f[f'{key}/{id}' f'/{OUTPUT_IDS}'][:])
+                )
                 timepoints = f[f'{key}/{id}/{TIMEPOINTS}'][:]
                 pred_cond_res_list.append(
                     PredictionConditionResult(
