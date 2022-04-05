@@ -519,6 +519,7 @@ def _handle_legends(
 def _handle_colors(
     levels: Union[float, Sequence[float]],
     n_variables: int,
+    reverse: bool = False,
 ) -> Tuple[Sequence[float], Sequence[RGB]]:
     """Calculate the colors for the prediction trajectories plot.
 
@@ -538,7 +539,7 @@ def _handle_colors(
     level_opacities = sorted(
         # min 30%, max 100%, opacity
         np.linspace(0.3 * RGBA_MAX, RGBA_MAX, len(levels)),
-        reverse=True,
+        reverse=reverse,
     )
     cmap = plt.cm.viridis
     cmap_min = RGBA_MIN
@@ -566,6 +567,7 @@ def sampling_prediction_trajectories(
     condition_ids: Sequence[str] = None,
     output_ids: Sequence[str] = None,
     weighting: bool = False,
+    reverse_opacities: bool = False,
 ) -> matplotlib.axes.Axes:
     """
     Visualize prediction trajectory of an EnsemblePrediction.
@@ -605,6 +607,8 @@ def sampling_prediction_trajectories(
         If provided, only data for the provided output IDs will be plotted.
     weighting:
         Whether weights should be used for trajectory.
+    reverse_opacities:
+        Whether to reverse the opacities that are assigned to different levels.
 
     Returns
     -------
@@ -648,7 +652,9 @@ def sampling_prediction_trajectories(
         raise ValueError(f'Unsupported groupby value: {groupby}')
 
     level_opacities, variable_colors = _handle_colors(
-        levels=levels, n_variables=n_variables
+        levels=levels,
+        n_variables=n_variables,
+        reverse=reverse_opacities,
     )
 
     if axes is None:
