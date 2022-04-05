@@ -149,8 +149,12 @@ def par_index_slices(
     par_opt_slice:
         array of optimization parameter indices
     """
+    # Create ID to index mapping for more efficient lookup than list.index
     par_opt_id_to_idx = {id_: idx for idx, id_ in enumerate(par_opt_ids)}
     par_sim_id_to_idx = {id_: idx for idx, id_ in enumerate(par_sim_ids)}
+
+    # bool array indicating which simulation parameters map to estimated
+    #  parameters
     par_sim_maps_to_str = np.fromiter(
         (
             isinstance(condition_map_sim_var[par_id], str)
@@ -165,7 +169,9 @@ def par_index_slices(
     zip_iterator = zip(
         *(
             (
+                # simulation parameter index
                 cumsum_par_sim_maps_to_str[par_sim_id_to_idx[par_sim_id]] - 1,
+                # corresponding optimization parameter index
                 par_opt_id_to_idx[par_opt_id],
             )
             for par_sim_id, par_opt_id in condition_map_sim_var.items()
