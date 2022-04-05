@@ -303,6 +303,8 @@ def read_ensemble_prediction_from_h5(
         pred_res_list = []
         bounds = {}
         for key in f.keys():
+            if key.startswith(SUMMARY):
+                continue
             if key == PREDICTION_ID:
                 prediction_id = f[key][()].decode()
                 continue
@@ -315,8 +317,8 @@ def read_ensemble_prediction_from_h5(
                 ]
                 bounds[key] = np.array(bounds[key])
                 continue
-            x_names = decode_array(f[f'{key}/{X_NAMES}'][()])
-            condition_ids = decode_array(f[f'{key}/condition_ids'][()])
+            x_names = list(decode_array(f[f'{key}/{X_NAMES}'][()]))
+            condition_ids = list(decode_array(f[f'{key}/condition_ids'][()]))
             pred_cond_res_list = []
             for id, _ in enumerate(condition_ids):
                 output = f[f'{key}/{id}/{OUTPUT}'][:]
@@ -346,4 +348,5 @@ def decode_array(array: np.ndarray) -> np.ndarray:
     """Decode array of bytes to string."""
     for i in range(len(array)):
         array[i] = array[i].decode()
-    return list(array)
+    # return list(array)
+    return array
