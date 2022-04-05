@@ -153,7 +153,7 @@ def par_index_slices(
     par_opt_id_to_idx = {id_: idx for idx, id_ in enumerate(par_opt_ids)}
     par_sim_id_to_idx = {id_: idx for idx, id_ in enumerate(par_sim_ids)}
 
-    # bool array indicating which simulation parameters map to estimated
+    # bool array indicating which simulation parameters map to any estimated
     #  parameters
     par_sim_maps_to_str = np.fromiter(
         (
@@ -163,7 +163,10 @@ def par_index_slices(
         dtype=bool,
         count=len(par_sim_ids),
     )
-    # the sum accounts for subindexing according to plist in edata
+    # elsewhere, amici.ExpData.plist is set to compute only sensitivities
+    #  w.r.t. estimated parameters. the parameter ordering is preserved there.
+    #  therefore, the cumulative sum of mapped estimated parameters yields the
+    #  index for AMICI-computed sensitivities for the respective parameter.
     cumsum_par_sim_maps_to_str = np.cumsum(par_sim_maps_to_str)
 
     zip_iterator = zip(
