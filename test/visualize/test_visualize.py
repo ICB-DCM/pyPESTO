@@ -15,6 +15,7 @@ import pypesto.optimize as optimize
 import pypesto.petab
 import pypesto.predict as predict
 import pypesto.sample as sample
+import pypesto.util
 import pypesto.visualize as visualize
 from pypesto.visualize.model_fit import (
     time_trajectory_model,
@@ -108,7 +109,7 @@ def create_optimization_result(n=4):
             x=np.array([k + 0.1, k + 1]),
             grad=np.array([2.5 + k + 0.1, 2 + k + 1]),
         )
-        result.optimize_result.append(optimizer_result=optimizer_result)
+        result.optimize_result.append(optimize_result=optimizer_result)
     for k in range(0, n):
         optimizer_result = pypesto.OptimizerResult(
             id=str(k + 3),
@@ -116,7 +117,7 @@ def create_optimization_result(n=4):
             x=np.array([2.5 + k + 0.1, 2 + k + 1]),
             grad=np.array([k + 0.1, k + 1]),
         )
-        result.optimize_result.append(optimizer_result=optimizer_result)
+        result.optimize_result.append(optimize_result=optimizer_result)
 
     return result
 
@@ -130,13 +131,15 @@ def create_optimization_result_nan_inf():
 
     # append nan and inf
     optimizer_result = pypesto.OptimizerResult(
-        fval=float('nan'), x=np.array([float('nan'), float('nan')])
+        fval=float('nan'), x=np.array([float('nan'), float('nan')]), id='nan'
     )
-    result.optimize_result.append(optimizer_result=optimizer_result)
+    result.optimize_result.append(optimize_result=optimizer_result)
     optimizer_result = pypesto.OptimizerResult(
-        fval=-float('inf'), x=np.array([-float('inf'), -float('inf')])
+        fval=-float('inf'),
+        x=np.array([-float('inf'), -float('inf')]),
+        id='inf',
     )
-    result.optimize_result.append(optimizer_result=optimizer_result)
+    result.optimize_result.append(optimize_result=optimizer_result)
 
     return result
 
@@ -827,19 +830,19 @@ def test_optimize_convergence():
 
 def test_assign_clusters():
     # test empty input
-    visualize.assign_clusters([])
+    pypesto.util.assign_clusters([])
 
     # test if it runs at all
     fvals = [0.01, 0.02, 1.01, 2.02, 2.03, 2.04, 3, 4, 4.1, 4.11, 10]
-    visualize.assign_clusters(fvals)
+    pypesto.util.assign_clusters(fvals)
     fvals = np.array(fvals)
-    clust, clustsize = visualize.assign_clusters(fvals)
+    clust, clustsize = pypesto.util.assign_clusters(fvals)
     np.testing.assert_array_equal(clust, [0, 0, 1, 2, 2, 2, 3, 4, 4, 4, 5])
     np.testing.assert_array_equal(clustsize, [2, 1, 3, 1, 3, 1])
 
     # test if clustering works as intended
     fvals = [0.0, 0.00001, 1.0, 2.0, 2.001]
-    clust, clustsize = visualize.assign_clusters(fvals)
+    clust, clustsize = pypesto.util.assign_clusters(fvals)
     assert len(clust) == 5
     assert len(clustsize) == 3
     np.testing.assert_array_equal(clust, [0, 0, 1, 2, 2])
@@ -884,7 +887,7 @@ def test_delete_nan_inf():
 
     # create a random x
     x = np.array([[1, 2], [1, 1], [np.nan, 1], [65, 1], [2, 3]])
-    x, fvals = visualize.delete_nan_inf(fvals, x)
+    x, fvals = pypesto.util.delete_nan_inf(fvals, x)
 
     # test if the nan and inf in fvals are deleted, and so do the
     # corresponding entries in x
