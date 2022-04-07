@@ -149,26 +149,41 @@ def par_index_slices(
     par_opt_slice:
         array of optimization parameter indices
     """
-    # the sum accounts for subindexing according to plist in edata
-    par_sim_slice, par_opt_slice = list(
-        zip(
-            *[
-                (
-                    sum(
-                        isinstance(condition_map_sim_var[par_id], str)
-                        for par_id in par_sim_ids[
-                            : par_sim_ids.index(par_sim_id) + 1
-                        ]
-                    )
-                    - 1,
-                    par_opt_ids.index(par_opt_id),
-                )
-                for par_sim_id, par_opt_id in condition_map_sim_var.items()
-                if isinstance(par_opt_id, str)
-            ]
+    # Create ID to index mapping for more efficient lookup than list.index
+    par_opt_id_to_idx = {id_: idx for idx, id_ in enumerate(par_opt_ids)}
+    par_sim_id_to_idx = {id_: idx for idx, id_ in enumerate(par_sim_ids)}
+
+    # bool array indicating which simulation parameters map to any estimated
+    #  parameters
+    par_sim_maps_to_str = np.fromiter(
+        (
+            isinstance(condition_map_sim_var[par_id], str)
+            for par_id in par_sim_ids
+        ),
+        dtype=bool,
+        count=len(par_sim_ids),
+    )
+    # elsewhere, amici.ExpData.plist is set to compute only sensitivities
+    #  w.r.t. estimated parameters. the parameter ordering is preserved there.
+    #  therefore, the cumulative sum of mapped estimated parameters yields the
+    #  index for AMICI-computed sensitivities for the respective parameter.
+    cumsum_par_sim_maps_to_str = np.cumsum(par_sim_maps_to_str)
+
+    zip_iterator = zip(
+        *(
+            (
+                # sensitivity parameter index in AMICI simulation results
+                cumsum_par_sim_maps_to_str[par_sim_id_to_idx[par_sim_id]] - 1,
+                # corresponding optimization parameter index
+                par_opt_id_to_idx[par_opt_id],
+            )
+            for par_sim_id, par_opt_id in condition_map_sim_var.items()
+            if isinstance(par_opt_id, str)
         )
     )
-    return np.asarray(par_sim_slice), np.asarray(par_opt_slice)
+    par_sim_slice = np.fromiter(next(zip_iterator), dtype=int)
+    par_opt_slice = np.fromiter(next(zip_iterator), dtype=int)
+    return par_sim_slice, par_opt_slice
 
 
 def add_sim_grad_to_opt_grad(
