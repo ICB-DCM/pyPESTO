@@ -170,12 +170,12 @@ class AmiciObjective(ObjectiveBase):
         if (
             self.guess_steadystate is not False
             and self.amici_model.getSteadyStateSensitivityMode()
-            == amici.SteadyStateSensitivityMode_simulationFSA
+            == amici.SteadyStateSensitivityMode.integrationOnly
         ):
             if self.guess_steadystate:
                 raise ValueError(
                     'Steadystate guesses cannot be enabled '
-                    'when `simulationFSA` as '
+                    'when `integrationOnly` as '
                     'SteadyStateSensitivityMode!'
                 )
             self.guess_steadystate = False
