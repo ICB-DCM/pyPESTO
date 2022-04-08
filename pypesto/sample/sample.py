@@ -1,6 +1,6 @@
 import logging
 from time import process_time
-from typing import List, Union
+from typing import Callable, List, Union
 
 import numpy as np
 
@@ -20,7 +20,7 @@ def sample(
     sampler: Sampler = None,
     x0: Union[np.ndarray, List[np.ndarray]] = None,
     result: Result = None,
-    filename: Union[str, None] = "Auto",
+    filename: Union[str, Callable, None] = "Auto",
 ) -> Result:
     """
     Call to do parameter sampling.
@@ -47,6 +47,7 @@ def sample(
         "Auto", in which case it will automatically generate a file named
         `year_month_day_sampling_result.hdf5`. Deactivate saving by
         setting filename to `None`.
+        Optionally a method, see docs for `pypesto.store.auto.autosave`.
 
     Returns
     -------
