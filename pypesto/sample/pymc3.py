@@ -41,10 +41,8 @@ class Pymc3Sampler(Sampler):
         with warnings.catch_warnings():
             warnings.simplefilter("always", category=DeprecationWarning)
             warnings.warn(
-                'Pymc3 is depracated and will be removed in a future '
-                'version. We are currently not supporting Pymc3 anymore due '
-                'to compability problems. When pymc v4 is available, we will '
-                'be able to support it again.',
+                'PyMC3 support is deprecated due to compatibility issues. '
+                'We intend to support PyMC4 when it becomes available.',
                 DeprecationWarning,
                 2,
             )
