@@ -31,7 +31,7 @@ def minimize(
     progress_bar: bool = True,
     options: OptimizeOptions = None,
     history_options: HistoryOptions = None,
-    filename: Union[str, None] = "Auto",
+    filename: Union[str, Callable, None] = "Auto",
 ) -> Result:
     """
     Do multistart optimization.
@@ -67,6 +67,7 @@ def minimize(
         "Auto", in which case it will automatically generate a file named
         `year_month_day_optimization_result.hdf5`. Deactivate saving by
         setting filename to `None`.
+        Optionally a method, see docs for `pypesto.store.auto.autosave`.
 
     Returns
     -------
@@ -104,6 +105,7 @@ def minimize(
     )
 
     ids = assign_ids(
+        n_starts=n_starts,
         ids=ids,
         result=result,
     )

@@ -88,7 +88,7 @@ def test_preeq_guesses():
     obj = problem.objective
     obj.amici_solver.setNewtonMaxSteps(0)
     obj.amici_model.setSteadyStateSensitivityMode(
-        amici.SteadyStateSensitivityMode.simulationFSA
+        amici.SteadyStateSensitivityMode.integrationOnly
     )
     obj.amici_solver.setAbsoluteTolerance(1e-12)
     obj.amici_solver.setRelativeTolerance(1e-12)

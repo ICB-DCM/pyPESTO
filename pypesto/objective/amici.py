@@ -13,7 +13,7 @@ from .amici_util import (
     create_identity_parameter_mapping,
     map_par_opt_to_par_sim,
 )
-from .base import ObjectiveBase
+from .base import ObjectiveBase, ResultDict
 
 try:
     import amici
@@ -65,6 +65,7 @@ class AmiciObjective(ObjectiveBase):
         fim_for_hess: Optional[bool] = True,
         amici_object_builder: Optional[AmiciObjectBuilder] = None,
         calculator: Optional[AmiciCalculator] = None,
+        amici_reporting: Optional['amici.RDataReporting'] = None,
     ):
         """
         Initialize objective.
@@ -112,6 +113,10 @@ class AmiciObjective(ObjectiveBase):
         calculator:
             Performs the actual calculation of the function values and
             derivatives.
+        amici_reporting:
+            Determines which quantities will be computed by AMICI,
+            see ``amici.Solver.setReturnDataReportingMode``. Set to ``None``
+            to compute only the minimum required information.
         """
         if amici is None:
             raise ImportError(
@@ -165,12 +170,12 @@ class AmiciObjective(ObjectiveBase):
         if (
             self.guess_steadystate is not False
             and self.amici_model.getSteadyStateSensitivityMode()
-            == amici.SteadyStateSensitivityMode_simulationFSA
+            == amici.SteadyStateSensitivityMode.integrationOnly
         ):
             if self.guess_steadystate:
                 raise ValueError(
                     'Steadystate guesses cannot be enabled '
-                    'when `simulationFSA` as '
+                    'when `integrationOnly` as '
                     'SteadyStateSensitivityMode!'
                 )
             self.guess_steadystate = False
@@ -187,7 +192,6 @@ class AmiciObjective(ObjectiveBase):
                     iexp: {}
                     for iexp, edata in enumerate(self.edatas)
                     if len(edata.fixedParametersPreequilibration)
-                    or self.amici_solver.getPreequilibration()
                 },
             }
         # optimization parameter names
@@ -198,6 +202,7 @@ class AmiciObjective(ObjectiveBase):
         self.n_threads = n_threads
         self.fim_for_hess = fim_for_hess
         self.amici_object_builder = amici_object_builder
+        self.amici_reporting = amici_reporting
 
         if calculator is None:
             calculator = AmiciCalculator()
@@ -355,6 +360,26 @@ class AmiciObjective(ObjectiveBase):
         """See `ObjectiveBase` documentation."""
         return mode in [MODE_FUN, MODE_RES]
 
+    def __call__(
+        self,
+        x: np.ndarray,
+        sensi_orders: Tuple[int, ...] = (0,),
+        mode: str = MODE_FUN,
+        return_dict: bool = False,
+        **kwargs,
+    ) -> Union[float, np.ndarray, Tuple, ResultDict]:
+        """See `ObjectiveBase` documentation."""
+        # Use AMICI full reporting if amici.ReturnDatas are returned and no
+        #  other reporting mode was set
+        if (
+            return_dict
+            and self.amici_reporting is None
+            and 'amici_reporting' not in kwargs
+        ):
+            kwargs['amici_reporting'] = amici.RDataReporting.full
+
+        return super().__call__(x, sensi_orders, mode, return_dict, **kwargs)
+
     def call_unprocessed(
         self,
         x: np.ndarray,
@@ -362,6 +387,7 @@ class AmiciObjective(ObjectiveBase):
         mode: str,
         edatas: Sequence['amici.ExpData'] = None,
         parameter_mapping: 'ParameterMapping' = None,
+        amici_reporting: Optional['amici.RDataReporting'] = None,
     ):
         """
         Call objective function without pre- or post-processing and formatting.
@@ -372,6 +398,20 @@ class AmiciObjective(ObjectiveBase):
             A dict containing the results.
         """
         x_dct = self.par_arr_to_dct(x)
+
+        # only ask amici to compute required quantities
+        amici_reporting = (
+            self.amici_reporting
+            if amici_reporting is None
+            else amici_reporting
+        )
+        if amici_reporting is None:
+            amici_reporting = (
+                amici.RDataReporting.likelihood
+                if mode == MODE_FUN
+                else amici.RDataReporting.residuals
+            )
+        self.amici_solver.setReturnDataReportingMode(amici_reporting)
 
         # update steady state
         if (

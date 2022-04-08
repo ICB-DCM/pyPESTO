@@ -13,7 +13,6 @@ from .emcee import EmceeSampler
 from .metropolis import MetropolisSampler
 from .parallel_tempering import ParallelTemperingSampler
 from .pymc import PymcSampler
-from .pymc3 import Pymc3Sampler
 from .sample import sample
 from .sampler import InternalSampler, Sampler
 from .util import calculate_ci_mcmc_sample, calculate_ci_mcmc_sample_prediction
