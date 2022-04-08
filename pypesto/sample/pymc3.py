@@ -1,5 +1,6 @@
 """Pymc3Sampler."""
 import logging
+import warnings
 from typing import Union
 
 import numpy as np
@@ -37,6 +38,14 @@ class Pymc3Sampler(Sampler):
     """
 
     def __init__(self, step_function=None, **kwargs):
+        with warnings.catch_warnings():
+            warnings.simplefilter("always", category=DeprecationWarning)
+            warnings.warn(
+                'PyMC3 support is deprecated due to compatibility issues. '
+                'We intend to support PyMC4 when it becomes available.',
+                DeprecationWarning,
+                2,
+            )
         super().__init__(kwargs)
         self.step_function = step_function
         self.problem: Union[Problem, None] = None
