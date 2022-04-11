@@ -6,6 +6,41 @@ Release notes
 ..........
 
 
+0.2.12 (2022-04-11)
+-------------------
+
+* AMICI:
+    * Update to renamed steady state sensitivity modes (#843)
+    * Set amici.Solver.setReturnDataReportingMode (#835)
+    * Optimize `pypesto/objective/amici_util.py::par_index_slices`(#845)
+    * Remove Solver.getPreequilibration (#830)
+    * fix n_res size for error output with parameter dependent sigma (#812)
+    * PetabImporter: Auto-regenerate AMICI models in case of version mismatch (#848)
+* Pymc3
+    * Disable Pymc3 Sampler tests (#831)
+    *
+*  Visualizations:
+    * Waterfall zoom (#808)
+    * Reverse opacities of colors in prediction trajectories plots(#838)
+* OptimizeResult:
+    * Summary method (#816)
+    * Append method for OptimizeResult (#815)
+    * added __getattr__ function to OptimizeResult (#802)
+* General:
+    * disable progress bar in tests (#799)
+    * Make Fides work with objectives, that do not have a hessian (#807)
+    * removed ftol in favor of tol (#803)
+    * Fix pyPESTO Select test; Update to stable black version (#810)
+    * Fix id assignment in case of large number of starts (#825)
+    * Temporarily fix jinja2 version (#826)
+    * Upgrade black to be compatible with latest click (#829)
+    * Fix wrong link in doc/example/hdf5_storage.ipynb (#827)
+    * Mark test/base/test_prior.py::test_mode as flaky (#833)
+    * Custom methods for autosave filenames (#822)
+    * fix saving ensemble predictions to hdf5 (#840)
+    * Upgrad nbQA to 1.3.1 (#846)
+
+
 0.2.11 (2022-01-11)
 -------------------
 
