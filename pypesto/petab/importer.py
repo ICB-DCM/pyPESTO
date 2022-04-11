@@ -171,6 +171,12 @@ class PetabImporter(AmiciObjectBuilder):
             importlib.import_module(self.model_name)
         except ModuleNotFoundError:
             return True
+        except amici.AmiciVersionError as e:
+            logger.info(
+                "amici model will be re-imported due to version "
+                f"mismatch: {e}"
+            )
+            return True
 
         # no need to (re-)compile
         return False
