@@ -22,6 +22,7 @@ Release notes
 *  Visualizations:
     * Waterfall zoom (#808)
     * Reverse opacities of colors in prediction trajectories plots(#838)
+    * Model fit plots (#850)
 * OptimizeResult:
     * Summary method (#816)
     * Append method for OptimizeResult (#815)
