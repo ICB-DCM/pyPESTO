@@ -12,7 +12,7 @@ Release notes
 * AMICI:
     * Update to renamed steady state sensitivity modes (#843)
     * Set amici.Solver.setReturnDataReportingMode (#835)
-    * Optimize `pypesto/objective/amici_util.py::par_index_slices`(#845)
+    * Optimize `pypesto/objective/amici_util.py::par_index_slices` (#845)
     * Remove Solver.getPreequilibration (#830)
     * fix n_res size for error output with parameter dependent sigma (#812)
     * PetabImporter: Auto-regenerate AMICI models in case of version mismatch (#848)
