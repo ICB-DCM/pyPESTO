@@ -4,6 +4,7 @@ from typing import Callable, Dict, List, Optional, Sequence, Tuple, Union
 
 import numpy as np
 import pandas as pd
+from scipy.stats import chi2
 
 from ..C import (
     ENSEMBLE_TYPE,
@@ -603,8 +604,9 @@ class Ensemble:
     @staticmethod
     def from_optimization_endpoints(
         result: Result,
-        cutoff: float = np.inf,
+        cutoff: float = None,
         max_size: int = np.inf,
+        percentile: float = 0.95,
         **kwargs,
     ):
         """
@@ -616,14 +618,26 @@ class Ensemble:
             A pyPESTO result that contains an optimization result.
         cutoff:
             Exclude parameters from the optimization if the
-            nllh is higher than the `cutoff`.
+            nllh is higher than the `cutoff`. If cutoff is None, a cutoff
+            will be calculated based on the percentile passed.
         max_size:
             The maximum size the ensemble should be.
+        percentile:
+            Percentile of a chi^2 distribution. Used to determinie the
+            cutoff value.
 
         Returns
         -------
         The ensemble.
         """
+        if cutoff is None:
+            if percentile is None:
+                raise ValueError(
+                    'Neither cutoff nor percentile were set. '
+                    'Determining a cutoff value is not '
+                    'possible. Please set one of the two.'
+                )
+            cutoff = calculate_cutoff(result=result, percentile=percentile)
         x_vectors = []
         vector_tags = []
         x_names = [
@@ -671,10 +685,11 @@ class Ensemble:
     @staticmethod
     def from_optimization_history(
         result: Result,
-        cutoff: float = np.inf,
+        cutoff: float = None,
         max_size: int = np.inf,
         max_per_start: int = np.inf,
         distribute: bool = True,
+        percentile: float = 0.95,
         **kwargs,
     ):
         """
@@ -686,8 +701,9 @@ class Ensemble:
             A pyPESTO result that contains an optimization result
             with history recorded.
         cutoff:
-            Exclude parameters from the optimization if the nllh
-            is higher than the `cutoff`.
+            Exclude parameters from the optimization if the
+            nllh is higher than the `cutoff`. If cutoff is None, a cutoff
+            will be calculated based on the percentile passed.
         max_size:
             The maximum size the ensemble should be.
         max_per_start:
@@ -697,11 +713,22 @@ class Ensemble:
             Boolean flag, whether the best (False) values from the
             start should be taken or whether the indices should be
             more evenly distributed.
+        percentile:
+            Percentile of a chi^2 distribution. Used to determinie the
+            cutoff value.
 
         Returns
         -------
         The ensemble.
         """
+        if cutoff is None:
+            if percentile is None:
+                raise ValueError(
+                    'Neither cutoff nor percentile were set. '
+                    'Determining a cutoff value is not '
+                    'possible. Please set one of the two.'
+                )
+            cutoff = calculate_cutoff(result=result, percentile=percentile)
         if not result.optimize_result.list[0].history.options['trace_record']:
             logger.warning(
                 'The optimize result has no trace. The Ensemble '
@@ -1157,3 +1184,33 @@ def get_percentile_label(percentile: Union[float, int, str]) -> str:
             percentile_str += '...'
         percentile = percentile_str
     return f'{PERCENTILE} {percentile}'
+
+
+def calculate_cutoff(result: Result, percentile: float = 0.95):
+    """
+    Calculate the cutoff of the ensemble.
+
+    Based on the number of parameters of the problem. Based on the
+    assumpiton that the difference of the NLLs of the true and optimal
+    parameter is chi^2 distributed with n_theta degress of freedom.
+
+    Parameters
+    ----------
+    result: The optimization result from which to create the ensemble.
+    percentile: The percentile of the chi^2 distribution. Between 0 and 1.
+    Higher values will result in a more lax cutoff. If the value is greater
+    than 1, the cutoff will be returned as np.inf.
+
+    Returns
+    -------
+    The calculated cutoff value.
+    """
+    if percentile >= 1:
+        return np.inf
+    # optimal point as base:
+    fval_opt = result.optimize_result[0].fval
+    # degrees of freedom is equal to the number of parameters
+    df = result.problem.dim
+    range = chi2.ppf(q=percentile, df=df)
+
+    return fval_opt + range
