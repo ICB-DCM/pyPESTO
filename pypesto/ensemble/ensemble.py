@@ -1213,4 +1213,4 @@ def calculate_cutoff(result: Result, percentile: float = 0.95):
     df = result.problem.dim
     range = chi2.ppf(q=percentile, df=df)
 
-    return fval_opt + range
+    return fval_opt + range / 2
