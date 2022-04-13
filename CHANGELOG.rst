@@ -40,7 +40,7 @@ Release notes
     * Custom methods for autosave filenames (#822)
     * fix saving ensemble predictions to hdf5 (#840)
     * Upgrad nbQA to 1.3.1 (#846)
-    * removed constantParameters for constant_parameters in notebook (#852)
+    * Replaced constantParameters with constant_parameters in notebook (#852)
 
 
 0.2.11 (2022-01-11)
