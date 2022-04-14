@@ -1130,12 +1130,13 @@ class Hdf5History(History):
 
             for iteration in ix:
                 try:
-                    entry = np.array(
-                        f[
-                            f'history/{self.id}/trace'
-                            f'/{str(iteration)}/{entry_id}'
-                        ]
-                    )
+                    dataset = f[
+                        f'history/{self.id}/trace/{str(iteration)}/{entry_id}'
+                    ]
+                    if dataset.shape == ():
+                        entry = dataset[()]  # scalar
+                    else:
+                        entry = np.array(dataset)
                     trace_result.append(entry)
                 except KeyError:
                     trace_result.append(None)
