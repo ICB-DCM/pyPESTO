@@ -7,7 +7,6 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import seaborn as sns
-import matplotlib.axes
 from matplotlib.collections import LineCollection
 from matplotlib.container import ErrorbarContainer
 from matplotlib.lines import Line2D
@@ -563,11 +562,11 @@ def _handle_legends(
             # https://github.com/matplotlib/matplotlib/blob
             # /710fce3df95e22701bd68bf6af2c8adbc9d67a79/lib/matplotlib/
             # axes/_axes.py#L3424=
-            markersize=2. * prediction_errorbar_settings['capsize'],
+            markersize=2.0 * prediction_errorbar_settings['capsize'],
         )
         average_title += ' + SD'
         barline = LineCollection(
-            np.empty((2,2,2)),
+            np.empty((2, 2, 2)),
             color=prediction_errorbar_settings['color'],
         )
         average_line_object = ErrorbarContainer(
