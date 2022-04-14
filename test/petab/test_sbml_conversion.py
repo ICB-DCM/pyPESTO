@@ -118,12 +118,13 @@ def parameter_estimation(objective, library, solver, fixed_pars, n_starts):
     startpoints = pypesto.startpoint.UniformStartpoints(check_fval=True)
 
     pypesto.optimize.minimize(
-        problem,
-        optimizer,
-        n_starts,
+        problem=problem,
+        optimizer=optimizer,
+        n_starts=n_starts,
         startpoint_method=startpoints,
         options=optimize_options,
         filename=None,
+        progress_bar=False,
     )
 
 

@@ -29,7 +29,7 @@ nbs_1=(
 
 # Sampling notebooks
 nbs_2=(
-  'sampler_study.ipynb'
+  # 'sampler_study.ipynb'
   'sampling_diagnostics.ipynb'
   'model_selection.ipynb'
 )

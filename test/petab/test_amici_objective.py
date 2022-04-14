@@ -69,6 +69,7 @@ def test_error_leastsquares_with_ssigma():
             n_starts=1,
             filename=None,
             options=optimize.OptimizeOptions(allow_failed_starts=False),
+            progress_bar=False,
         )
 
 
@@ -87,7 +88,7 @@ def test_preeq_guesses():
     obj = problem.objective
     obj.amici_solver.setNewtonMaxSteps(0)
     obj.amici_model.setSteadyStateSensitivityMode(
-        amici.SteadyStateSensitivityMode.simulationFSA
+        amici.SteadyStateSensitivityMode.integrationOnly
     )
     obj.amici_solver.setAbsoluteTolerance(1e-12)
     obj.amici_solver.setRelativeTolerance(1e-12)
@@ -104,6 +105,7 @@ def test_preeq_guesses():
         n_starts=1,
         startpoint_method=startpoints,
         filename=None,
+        progress_bar=False,
     )
 
     assert obj.steadystate_guesses['fval'] < np.inf

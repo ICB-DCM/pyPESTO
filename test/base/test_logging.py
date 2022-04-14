@@ -32,7 +32,12 @@ def test_optimize():
 
     # optimization
     pypesto.optimize.minimize(
-        problem, optimizer, 5, options=options, filename=None
+        problem=problem,
+        optimizer=optimizer,
+        n_starts=5,
+        options=options,
+        filename=None,
+        progress_bar=False,
     )
 
     # assert logging worked

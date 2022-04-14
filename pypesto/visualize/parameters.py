@@ -5,8 +5,10 @@ import matplotlib.pyplot as plt
 import numpy as np
 from matplotlib.ticker import MaxNLocator
 
+from pypesto.util import delete_nan_inf
+
 from ..result import Result
-from .clust_color import assign_colors, delete_nan_inf
+from .clust_color import assign_colors
 from .misc import process_result_list, process_start_indices
 from .reference_points import ReferencePoint, create_references
 
@@ -187,7 +189,7 @@ def parameter_hist(
         fig = plt.gcf()
         fig.set_size_inches(*size)
 
-    xs = result.optimize_result.get_for_key('x')
+    xs = result.optimize_result.x
 
     # reduce number of displayed results
     if isinstance(start_indices, int):
@@ -350,8 +352,8 @@ def handle_inputs(
         parameter values which will be plotted later
     """
     # retrieve results
-    fvals = result.optimize_result.get_for_key('fval')
-    xs = result.optimize_result.get_for_key('x')
+    fvals = result.optimize_result.fval
+    xs = result.optimize_result.x
 
     # parse indices which should be plotted
     if start_indices is not None:

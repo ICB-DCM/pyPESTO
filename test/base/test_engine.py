@@ -36,8 +36,9 @@ def _test_basic(engine):
         engine=engine,
         optimizer=optimizer,
         filename=None,
+        progress_bar=False,
     )
-    assert len(result.optimize_result.as_list()) == 5
+    assert len(result.optimize_result) == 5
 
 
 def test_petab():
@@ -62,8 +63,9 @@ def _test_petab(engine):
         engine=engine,
         optimizer=optimizer,
         filename=None,
+        progress_bar=False,
     )
-    assert len(result.optimize_result.as_list()) == 3
+    assert len(result.optimize_result) == 3
 
 
 def test_deepcopy_objective():

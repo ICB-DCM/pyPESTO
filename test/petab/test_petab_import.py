@@ -77,11 +77,10 @@ class PetabImportTest(unittest.TestCase):
                 n_starts=2,
                 startpoint_method=startpoints,
                 filename=None,
+                progress_bar=False,
             )
 
-            self.assertTrue(
-                np.isfinite(result.optimize_result.get_for_key('fval')[0])
-            )
+            self.assertTrue(np.isfinite(result.optimize_result.fval[0]))
 
     def test_check_gradients(self):
         """Test objective FD-gradient check function."""
