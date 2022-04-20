@@ -12,19 +12,19 @@ from .reference_points import ReferencePoint, create_references
 
 
 def optimizer_history(
-    results,
-    ax=None,
-    size=(18.5, 10.5),
-    trace_x='steps',
-    trace_y='fval',
-    scale_y='log10',
-    offset_y=None,
+    results: Union[Result, List[Result]],
+    ax: Optional[plt.Axes] = None,
+    size: Tuple = (18.5, 10.5),
+    trace_x: str = 'steps',
+    trace_y: str = 'fval',
+    scale_y: str = 'log10',
+    offset_y: Optional[float] = None,
     colors=None,
     y_limits=None,
-    start_indices=None,
+    start_indices: Optional[Union[int, List[int]]] = None,
     reference=None,
-    legends=None,
-):
+    legends: Optional[Union[str, List[str]]] = None,
+) -> plt.Axes:
     """
     Plot history of optimizer.
 
@@ -33,22 +33,22 @@ def optimizer_history(
 
     Parameters
     ----------
-    results: pypesto.Result or list
+    results:
         Optimization result obtained by 'optimize.py' or list of those
-    ax: matplotlib.Axes, optional
+    ax:
         Axes object to use.
     size: tuple, optional
         Figure size (width, height) in inches. Is only applied when no ax
         object is specified
-    trace_x: str, optional
+    trace_x:
         What should be plotted on the x-axis?
         Possibilities: 'time', 'steps'
         Default: 'steps'
-    trace_y: str, optional
+    trace_y:
         What should be plotted on the y-axis?
         Possibilities: 'fval', 'gradnorm', 'stepsize'
         Default: 'fval'
-    scale_y: str, optional
+    scale_y:
         May be logarithmic or linear ('log10' or 'lin')
     offset_y: float, optional
         Offset for the y-axis-values, as these are plotted on a log10-scale
@@ -59,18 +59,18 @@ def optimizer_history(
         and colors are assigned automatically
     y_limits: float or ndarray, optional
         maximum value to be plotted on the y-axis, or y-limits
-    start_indices: list or int
+    start_indices:
         list of integers specifying the multistart to be plotted or
         int specifying up to which start index should be plotted
     reference: list, optional
-        List of reference points for optimization results, containing et
+        List of reference points for optimization results, containing at
         least a function value fval
-    legends: list or str
+    legends:
         Labels for line plots, one label per result object
 
     Returns
     -------
-    ax: matplotlib.Axes
+    ax:
         The plot axes.
     """
     if isinstance(start_indices, int):
@@ -110,42 +110,42 @@ def optimizer_history(
 
 
 def optimizer_history_lowlevel(
-    vals,
-    scale_y='log10',
+    vals: List[np.ndarray],
+    scale_y: str = 'log10',
     colors=None,
-    ax=None,
-    size=(18.5, 10.5),
-    x_label='Optimizer steps',
-    y_label='Objective value',
-    legend_text=None,
-):
+    ax: Optional[plt.Axes] = None,
+    size: Tuple = (18.5, 10.5),
+    x_label: str = 'Optimizer steps',
+    y_label: str = 'Objective value',
+    legend_text: Optional[str] = None,
+) -> plt.Axes:
     """
     Plot optimizer history using list of numpy arrays.
 
     Parameters
     ----------
-    vals: list of numpy arrays
+    vals:
         list of 2xn-arrays (x_values and y_values of the trace)
-    scale_y: str, optional
+    scale_y:
         May be logarithmic or linear ('log10' or 'lin')
     colors: list, or RGBA, optional
         list of colors, or single color
         color or list of colors for plotting. If not set, clustering is done
         and colors are assigned automatically
-    ax: matplotlib.Axes, optional
+    ax:
         Axes object to use.
-    size: tuple, optional
+    size:
         see waterfall
-    x_label: str
+    x_label:
         label for x-axis
-    y_label: str
+    y_label:
         label for y-axis
-    legend_text: str
+    legend_text:
         Label for line plots
 
     Returns
     -------
-    ax: matplotlib.Axes
+    ax:
         The plot axes.
     """
     # axes
@@ -368,7 +368,7 @@ def handle_options(
     ref: List[ReferencePoint],
     y_limits: Union[float, np.ndarray],
     offset_y: float,
-):
+) -> plt.Axes:
     """
     Apply post-plotting transformations to the axis object.
 
@@ -391,7 +391,7 @@ def handle_options(
 
     Returns
     -------
-    ax: matplotlib.Axes
+    ax:
         The plot axes.
     """
     # handle y-limits
