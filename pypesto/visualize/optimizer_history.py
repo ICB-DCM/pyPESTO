@@ -7,6 +7,7 @@ from matplotlib.ticker import MaxNLocator
 from ..objective import History
 from ..result import Result
 from .clust_color import assign_colors
+from ..C import RGBA
 from .misc import process_offset_y, process_result_list, process_y_limits
 from .reference_points import ReferencePoint, create_references
 
@@ -19,10 +20,11 @@ def optimizer_history(
     trace_y: str = 'fval',
     scale_y: str = 'log10',
     offset_y: Optional[float] = None,
-    colors=None,
-    y_limits=None,
+    colors: Optional[Union[RGBA, List[RGBA]]] = None,
+    y_limits: Optional[Union[float, np.ndarray]] = None,
     start_indices: Optional[Union[int, List[int]]] = None,
-    reference=None,
+    reference: Optional[Union[ReferencePoint, dict, List[ReferencePoint],
+                              List[dict]]] = None,
     legends: Optional[Union[str, List[str]]] = None,
 ) -> plt.Axes:
     """
@@ -57,12 +59,12 @@ def optimizer_history(
         list of colors, or single color
         color or list of colors for plotting. If not set, clustering is done
         and colors are assigned automatically
-    y_limits: float or ndarray, optional
+    y_limits:
         maximum value to be plotted on the y-axis, or y-limits
     start_indices:
         list of integers specifying the multistart to be plotted or
         int specifying up to which start index should be plotted
-    reference: list, optional
+    reference:
         List of reference points for optimization results, containing at
         least a function value fval
     legends:
@@ -112,7 +114,7 @@ def optimizer_history(
 def optimizer_history_lowlevel(
     vals: List[np.ndarray],
     scale_y: str = 'log10',
-    colors=None,
+    colors: Optional[Union[RGBA, List[RGBA]]] = None,
     ax: Optional[plt.Axes] = None,
     size: Tuple = (18.5, 10.5),
     x_label: str = 'Optimizer steps',
@@ -366,7 +368,7 @@ def handle_options(
     ax: plt.Axes,
     vals: List[np.ndarray],
     ref: List[ReferencePoint],
-    y_limits: Union[float, np.ndarray],
+    y_limits: Union[float, np.ndarray, None],
     offset_y: float,
 ) -> plt.Axes:
     """

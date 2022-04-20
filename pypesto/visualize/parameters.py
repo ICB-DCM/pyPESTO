@@ -9,6 +9,7 @@ from pypesto.util import delete_nan_inf
 
 from ..result import Result
 from .clust_color import assign_colors
+from ..C import RGBA
 from .misc import process_result_list, process_start_indices
 from .reference_points import ReferencePoint, create_references
 
@@ -21,7 +22,7 @@ def parameters(
     ub: Optional[Union[np.ndarray, List[float]]] = None,
     size: Optional[Tuple[float, float]] = None,
     reference: Optional[List[ReferencePoint]] = None,
-    colors: Optional[Union[List[float], List[List[float]]]] = None,
+    colors: Optional[Union[RGBA, List[RGBA]]] = None,
     legends: Optional[Union[str, List[str]]] = None,
     balance_alpha: bool = True,
     start_indices: Optional[Union[int, Iterable[int]]] = None,
