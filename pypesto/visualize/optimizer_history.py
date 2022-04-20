@@ -21,7 +21,7 @@ def optimizer_history(
     scale_y: str = 'log10',
     offset_y: Optional[float] = None,
     colors: Optional[Union[RGBA, List[RGBA]]] = None,
-    y_limits: Optional[Union[float, np.ndarray]] = None,
+    y_limits: Optional[Union[float, List[float], np.ndarray]] = None,
     start_indices: Optional[Union[int, List[int]]] = None,
     reference: Optional[Union[ReferencePoint, dict, List[ReferencePoint],
                               List[dict]]] = None,
@@ -52,7 +52,7 @@ def optimizer_history(
         Default: 'fval'
     scale_y:
         May be logarithmic or linear ('log10' or 'lin')
-    offset_y: float, optional
+    offset_y:
         Offset for the y-axis-values, as these are plotted on a log10-scale
         Will be computed automatically if necessary
     colors: list, or RGBA, optional
@@ -83,12 +83,14 @@ def optimizer_history(
 
     for j, result in enumerate(results):
         # extract cost function values from result
-        (x_label, y_label, vals) = get_trace(result, trace_x, trace_y)
+        vals = get_trace(result, trace_x, trace_y)
 
         # compute the necessary offset for the y-axis
-        (vals, offset_y, y_label) = get_vals(
-            vals, scale_y, offset_y, y_label, start_indices
+        (vals, offset_y) = get_vals(
+            vals, scale_y, offset_y, trace_y, start_indices
         )
+
+        x_label, y_label = get_labels(trace_x, trace_y, offset_y)
 
         # call lowlevel plot routine
         ax = optimizer_history_lowlevel(
@@ -214,7 +216,7 @@ def optimizer_history_lowlevel(
 
 def get_trace(
     result: Result, trace_x: Optional[str], trace_y: Optional[str]
-) -> Tuple[str, str, List[np.ndarray]]:
+) -> List[np.ndarray]:
     """
     Get the values of the optimizer trace from the pypesto.Result object.
 
@@ -228,7 +230,7 @@ def get_trace(
         Default: 'steps'
     trace_y: str, optional
         What should be plotted on the y-axis?
-        Possibilities: 'fval'(later also: 'gradnorm', 'stepsize')
+        Possibilities: 'fval', 'gradnorm' (later also:'stepsize')
         Default: 'fval'
 
     Returns
@@ -244,8 +246,6 @@ def get_trace(
     histories: List[History] = result.optimize_result.history
 
     vals = []
-    x_label = ''
-    y_label = ''
 
     for history in histories:
         options = history.options
@@ -264,7 +264,6 @@ def get_trace(
 
             # Get gradient trace, compute norm
             y_vals = np.linalg.norm(grads, axis=1)
-            y_label = 'gradient norm'
 
         else:  # trace_y == 'fval':
             if not options.trace_record:
@@ -277,31 +276,28 @@ def get_trace(
             ]
 
             y_vals = np.array([fvals[i] for i in indices])
-            y_label = 'Objective value'
 
         # retrieve values from dataframe
         if trace_x == 'time':
             times = np.array(history.get_time_trace())
             x_vals = times[indices]
-            x_label = 'Computation time [s]'
 
         else:  # trace_x == 'steps':
             x_vals = np.array(list(range(len(indices))))
-            x_label = 'Optimizer steps'
 
         # write down values
         vals.append(np.vstack([x_vals, y_vals]))
 
-    return x_label, y_label, vals
+    return vals
 
 
 def get_vals(
     vals: List[np.ndarray],
     scale_y: Optional[str],
     offset_y: float,
-    y_label: str,
+    trace_y: str,
     start_indices: Iterable[int],
-) -> Tuple[List[np.ndarray], float, str]:
+) -> Tuple[List[np.ndarray], float]:
     """
     Postprocess the values of the optimization history.
 
@@ -310,20 +306,20 @@ def get_vals(
 
     Parameters
     ----------
-    vals: list
+    vals:
         list of numpy arrays of dimension 2 x len(start_indices)
-    scale_y: str, optional
+    scale_y:
         May be logarithmic or linear ('log10' or 'lin')
-    offset_y: float
+    offset_y:
         offset for the y-axis, as this is supposed to be in log10-scale
-    y_label: str
-        Label for y axis
+    trace_y:
+        What should be plotted on the y-axis
     start_indices:
         list of integers specifying the multi start indices to be plotted
 
     Returns
     -------
-    vals: list
+    vals:
         list of numpy arrays
     offset_y:
         offset for the y-axis, if this is supposed to be in log10-scale
@@ -351,7 +347,7 @@ def get_vals(
         min_val = np.min([min_val, tmp_min])
 
     # check, whether offset can be used with this data
-    if y_label == 'Objective value':
+    if trace_y == 'fval':
         offset_y = process_offset_y(offset_y, scale_y, min_val)
     else:
         offset_y = 0.0
@@ -359,9 +355,44 @@ def get_vals(
     if offset_y != 0:
         for val in vals:
             val[1, :] += offset_y * np.ones(val[1].shape)
-            y_label = 'offsetted ' + y_label
 
-    return vals, offset_y, y_label
+    return vals, offset_y
+
+
+def get_labels(trace_x: str, trace_y: str, offset_y: float) -> Tuple[str, str]:
+    """
+    Generate labels for x and y axes of the history plot
+
+    Parameters
+    ----------
+    trace_x:
+        What should be plotted on the x-axis
+    trace_y:
+        What should be plotted on the y-axis
+    offset_y:
+        Offset for the y-axis-values
+    Returns
+    -------
+    labels for x and y axes
+
+    """
+    x_label = ''
+    y_label = ''
+
+    if trace_x == 'time':
+        x_label = 'Computation time [s]'
+    else:
+        x_label = 'Optimizer steps'
+
+    if trace_y == 'gradnorm':
+        y_label = 'Gradient norm'
+    else:
+        y_label = 'Objective value'
+
+    if offset_y != 0:
+        y_label = 'Offsetted' + y_label.lower()
+
+    return x_label, y_label
 
 
 def handle_options(
