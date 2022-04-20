@@ -7,7 +7,8 @@ from matplotlib.ticker import MaxNLocator
 from ..objective import History
 from ..result import Result
 from .clust_color import assign_colors
-from ..C import RGBA
+from ..C import (RGBA, TRACE_X_STEPS, TRACE_X_TIME, TRACE_Y_FVAL,
+                 TRACE_Y_GRADNORM)
 from .misc import process_offset_y, process_result_list, process_y_limits
 from .reference_points import ReferencePoint, create_references
 
@@ -16,8 +17,8 @@ def optimizer_history(
     results: Union[Result, List[Result]],
     ax: Optional[plt.Axes] = None,
     size: Tuple = (18.5, 10.5),
-    trace_x: str = 'steps',
-    trace_y: str = 'fval',
+    trace_x: str = TRACE_X_STEPS,
+    trace_y: str = TRACE_Y_FVAL,
     scale_y: str = 'log10',
     offset_y: Optional[float] = None,
     colors: Optional[Union[RGBA, List[RGBA]]] = None,
@@ -44,12 +45,12 @@ def optimizer_history(
         object is specified
     trace_x:
         What should be plotted on the x-axis?
-        Possibilities: 'time', 'steps'
-        Default: 'steps'
+        Possibilities: TRACE_X
+        Default: TRACE_X_STEPS
     trace_y:
         What should be plotted on the y-axis?
-        Possibilities: 'fval', 'gradnorm', 'stepsize'
-        Default: 'fval'
+        Possibilities: TRACE_Y
+        Default: TRACE_Y_FVAl
     scale_y:
         May be logarithmic or linear ('log10' or 'lin')
     offset_y:
@@ -226,12 +227,12 @@ def get_trace(
         Optimization result obtained by 'optimize.py'.
     trace_x: str, optional
         What should be plotted on the x-axis?
-        Possibilities: 'time', 'steps'
-        Default: 'steps'
+        Possibilities: TRACE_X
+        Default: TRACE_X_STEPS
     trace_y: str, optional
         What should be plotted on the y-axis?
-        Possibilities: 'fval', 'gradnorm' (later also:'stepsize')
-        Default: 'fval'
+        Possibilities: TRACE_Y
+        Default: TRACE_Y_FVAL
 
     Returns
     -------
@@ -249,7 +250,7 @@ def get_trace(
 
     for history in histories:
         options = history.options
-        if trace_y == 'gradnorm':
+        if trace_y == TRACE_Y_GRADNORM:
             # retrieve gradient trace, if saved
             if not options.trace_record or not options.trace_record_grad:
                 raise ValueError("No gradient trace has been recorded.")
@@ -265,7 +266,7 @@ def get_trace(
             # Get gradient trace, compute norm
             y_vals = np.linalg.norm(grads, axis=1)
 
-        else:  # trace_y == 'fval':
+        else:  # trace_y == TRACE_Y_FVAL:
             if not options.trace_record:
                 raise ValueError("No function value trace has been recorded.")
             fvals = history.get_fval_trace()
@@ -278,11 +279,11 @@ def get_trace(
             y_vals = np.array([fvals[i] for i in indices])
 
         # retrieve values from dataframe
-        if trace_x == 'time':
+        if trace_x == TRACE_X_TIME:
             times = np.array(history.get_time_trace())
             x_vals = times[indices]
 
-        else:  # trace_x == 'steps':
+        else:  # trace_x == TRACE_X_STEPS:
             x_vals = np.array(list(range(len(indices))))
 
         # write down values
@@ -347,7 +348,7 @@ def get_vals(
         min_val = np.min([min_val, tmp_min])
 
     # check, whether offset can be used with this data
-    if trace_y == 'fval':
+    if trace_y == TRACE_Y_FVAL:
         offset_y = process_offset_y(offset_y, scale_y, min_val)
     else:
         offset_y = 0.0
@@ -361,16 +362,16 @@ def get_vals(
 
 def get_labels(trace_x: str, trace_y: str, offset_y: float) -> Tuple[str, str]:
     """
-    Generate labels for x and y axes of the history plot
+    Generate labels for x and y axes of the history plot.
 
     Parameters
     ----------
     trace_x:
-        What should be plotted on the x-axis
+        What should be plotted on the x-axis. Possible values: TRACE_X.
     trace_y:
-        What should be plotted on the y-axis
+        What should be plotted on the y-axis. Possible values: TRACE_Y.
     offset_y:
-        Offset for the y-axis-values
+        Offset for the y-axis-values.
     Returns
     -------
     labels for x and y axes
@@ -379,12 +380,12 @@ def get_labels(trace_x: str, trace_y: str, offset_y: float) -> Tuple[str, str]:
     x_label = ''
     y_label = ''
 
-    if trace_x == 'time':
+    if trace_x == TRACE_X_TIME:
         x_label = 'Computation time [s]'
     else:
         x_label = 'Optimizer steps'
 
-    if trace_y == 'gradnorm':
+    if trace_y == TRACE_Y_GRADNORM:
         y_label = 'Gradient norm'
     else:
         y_label = 'Objective value'
