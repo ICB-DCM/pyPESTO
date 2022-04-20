@@ -4,13 +4,13 @@ import matplotlib.pyplot as plt
 import numpy as np
 from matplotlib.ticker import MaxNLocator
 
-from ..objective import History
-from ..result import Result
-from .clust_color import assign_colors
 from ..C import (RGBA, TRACE_X_STEPS, TRACE_X_TIME, TRACE_Y_FVAL,
                  TRACE_Y_GRADNORM)
+from .clust_color import assign_colors
 from .misc import process_offset_y, process_result_list, process_y_limits
+from ..objective import History
 from .reference_points import ReferencePoint, create_references
+from ..result import Result
 
 
 def optimizer_history(
