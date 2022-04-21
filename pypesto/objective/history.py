@@ -27,6 +27,11 @@ from ..C import (
     SRES,
     TIME,
     X,
+    CPU_TIME_TOTAL,
+    PREEQ_CPU_TIME,
+    POSTEQ_CPU_TIME_B,
+    POSTEQ_CPU_TIME,
+    PREEQ_CPU_TIME_B
 )
 from .util import (
     res_to_chi2,
@@ -395,7 +400,76 @@ class HistoryBase(abc.ABC):
         trim: bool = False,
     ) -> Union[Sequence[float], float]:
         """
-        Cumulative execution times.
+        Cumulative execution times [s].
+
+        Takes as parameter an index or indices and returns corresponding trace
+        values. If only a single value is requested, the list is flattened.
+        """
+        raise NotImplementedError()
+
+    def get_cpu_time_total_trace(
+        self,
+        ix: Union[int, Sequence[int], None] = None,
+        trim: bool = False
+    ) -> Union[Sequence[float], float]:
+        """
+        Cumulative simulation CPU time [ms].
+
+        Takes as parameter an index or indices and returns corresponding trace
+        values. If only a single value is requested, the list is flattened.
+        """
+        raise NotImplementedError()
+
+    def get_preeq_time_trace(
+        self,
+        ix: Union[int, Sequence[int], None] = None,
+        trim: bool = False
+    ) -> Union[Sequence[float], float]:
+        """
+        Cumulative computation time of the steady state solver [ms].
+        (preequilibration)
+
+        Takes as parameter an index or indices and returns corresponding trace
+        values. If only a single value is requested, the list is flattened.
+        """
+        raise NotImplementedError()
+
+    def get_preeq_timeB_trace(
+        self,
+        ix: Union[int, Sequence[int], None] = None,
+        trim: bool = False
+    ) -> Union[Sequence[float], float]:
+        """
+        Cumulative computation time of the steady state solver of the backward
+        problem [ms] (preequilibration).
+
+        Takes as parameter an index or indices and returns corresponding trace
+        values. If only a single value is requested, the list is flattened.
+        """
+        raise NotImplementedError()
+
+    def get_posteq_time_trace(
+        self,
+        ix: Union[int, Sequence[int], None] = None,
+        trim: bool = False
+    ) -> Union[Sequence[float], float]:
+        """
+        Cumulative computation time of the steady state solver [ms]
+        (postequilibration).
+
+        Takes as parameter an index or indices and returns corresponding trace
+        values. If only a single value is requested, the list is flattened.
+        """
+        raise NotImplementedError()
+
+    def get_posteq_timeB_trace(
+        self,
+        ix: Union[int, Sequence[int], None] = None,
+        trim: bool = False
+    ) -> Union[Sequence[float], float]:
+        """
+        Cumulative computation time of the steady state solver of the backward
+        problem [ms] (postequilibration).
 
         Takes as parameter an index or indices and returns corresponding trace
         values. If only a single value is requested, the list is flattened.
@@ -1072,6 +1146,16 @@ class Hdf5History(History):
             CHI2: ret[CHI2],
             SCHI2: ret[SCHI2],
             HESS: ret[HESS],
+            CPU_TIME_TOTAL: sum([rdata['cpu_time_total'] for rdata in
+                                 result['rdatas']]),
+            PREEQ_CPU_TIME: sum([rdata['preeq_cpu_time'] for rdata in
+                                result['rdatas']]),
+            PREEQ_CPU_TIME_B: sum([rdata['preeq_cpu_timeB'] for rdata in
+                                   result['rdatas']]),
+            POSTEQ_CPU_TIME: sum([rdata['posteq_cpu_time'] for rdata in
+                                 result['rdatas']]),
+            POSTEQ_CPU_TIME_B: sum([rdata['posteq_cpu_timeB'] for rdata in
+                                    result['rdatas']])
         }
 
         with h5py.File(self.file, 'a') as f:
@@ -1204,6 +1288,41 @@ class Hdf5History(History):
     ) -> Union[Sequence[float], float]:
         """See `HistoryBase` docstring."""
         return self._get_hdf5_entries(TIME, ix)
+
+    @trace_wrap
+    def get_cpu_time_total_trace(
+        self, ix: Union[int, Sequence[int], None] = None, trim: bool = False
+    ) -> Union[Sequence[float], float]:
+        """See `HistoryBase` docstring."""
+        return self._get_hdf5_entries(CPU_TIME_TOTAL, ix)
+
+    @trace_wrap
+    def get_preeq_time_trace(
+        self, ix: Union[int, Sequence[int], None] = None, trim: bool = False
+    ) -> Union[Sequence[float], float]:
+        """See `HistoryBase` docstring."""
+        return self._get_hdf5_entries(PREEQ_CPU_TIME, ix)
+
+    @trace_wrap
+    def get_preeq_timeB_trace(
+        self, ix: Union[int, Sequence[int], None] = None, trim: bool = False
+    ) -> Union[Sequence[float], float]:
+        """See `HistoryBase` docstring."""
+        return self._get_hdf5_entries(PREEQ_CPU_TIME_B, ix)
+
+    @trace_wrap
+    def get_posteq_time_trace(
+        self, ix: Union[int, Sequence[int], None] = None, trim: bool = False
+    ) -> Union[Sequence[float], float]:
+        """See `HistoryBase` docstring."""
+        return self._get_hdf5_entries(POSTEQ_CPU_TIME, ix)
+
+    @trace_wrap
+    def get_posteq_timeB_trace(
+        self, ix: Union[int, Sequence[int], None] = None, trim: bool = False
+    ) -> Union[Sequence[float], float]:
+        """See `HistoryBase` docstring."""
+        return self._get_hdf5_entries(POSTEQ_CPU_TIME_B, ix)
 
 
 class OptimizerHistory:

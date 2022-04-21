@@ -33,6 +33,11 @@ X = 'x'
 X0 = 'x0'
 ID = 'id'
 
+CPU_TIME_TOTAL = 'cpu_time_total'
+PREEQ_CPU_TIME = 'preeq_cpu_time'
+PREEQ_CPU_TIME_B = 'preeq_cpu_timeB'
+POSTEQ_CPU_TIME = 'posteq_cpu_time'
+POSTEQ_CPU_TIME_B = 'posteq_cpu_timeB'
 
 ###############################################################################
 # PRIOR
