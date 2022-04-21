@@ -4,13 +4,18 @@ import matplotlib.pyplot as plt
 import numpy as np
 from matplotlib.ticker import MaxNLocator
 
-from ..C import (RGBA, TRACE_X_STEPS, TRACE_X_TIME, TRACE_Y_FVAL,
-                 TRACE_Y_GRADNORM)
+from ..C import (
+    RGBA,
+    TRACE_X_STEPS,
+    TRACE_X_TIME,
+    TRACE_Y_FVAL,
+    TRACE_Y_GRADNORM,
+)
+from ..objective import History
+from ..result import Result
 from .clust_color import assign_colors
 from .misc import process_offset_y, process_result_list, process_y_limits
-from ..objective import History
 from .reference_points import ReferencePoint, create_references
-from ..result import Result
 
 
 def optimizer_history(
@@ -24,8 +29,9 @@ def optimizer_history(
     colors: Optional[Union[RGBA, List[RGBA]]] = None,
     y_limits: Optional[Union[float, List[float], np.ndarray]] = None,
     start_indices: Optional[Union[int, List[int]]] = None,
-    reference: Optional[Union[ReferencePoint, dict, List[ReferencePoint],
-                              List[dict]]] = None,
+    reference: Optional[
+        Union[ReferencePoint, dict, List[ReferencePoint], List[dict]]
+    ] = None,
     legends: Optional[Union[str, List[str]]] = None,
 ) -> plt.Axes:
     """
