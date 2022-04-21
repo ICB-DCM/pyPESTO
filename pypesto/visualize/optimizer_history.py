@@ -1,3 +1,4 @@
+import logging
 from typing import Iterable, List, Optional, Tuple, Union
 
 import matplotlib.pyplot as plt
@@ -16,6 +17,8 @@ from ..result import Result
 from .clust_color import assign_colors
 from .misc import process_offset_y, process_result_list, process_y_limits
 from .reference_points import ReferencePoint, create_references
+
+logger = logging.getLogger(__name__)
 
 
 def optimizer_history(
@@ -115,7 +118,7 @@ def optimizer_history(
     ref = create_references(references=reference)
 
     # handle options
-    ax = handle_options(ax, vals, ref, y_limits, offset_y)
+    ax = handle_options(ax, vals, trace_y, ref, y_limits, offset_y)
 
     return ax
 
@@ -405,6 +408,7 @@ def get_labels(trace_x: str, trace_y: str, offset_y: float) -> Tuple[str, str]:
 def handle_options(
     ax: plt.Axes,
     vals: List[np.ndarray],
+    trace_y: str,
     ref: List[ReferencePoint],
     y_limits: Union[float, np.ndarray, None],
     offset_y: float,
@@ -422,6 +426,8 @@ def handle_options(
         least a function value fval
     vals:
         list of numpy arrays of size 2 x number of values
+    trace_y:
+        What should be plotted on the x-axis.
     ax:
         Axes object to use.
     y_limits:
@@ -437,25 +443,31 @@ def handle_options(
     # handle y-limits
     ax = process_y_limits(ax, y_limits)
 
-    # handle reference points
-    if len(ref) > 0:
-        # plot reference points
-        # get length of longest trajectory
-        max_len = 0
-        for val in vals:
-            max_len = np.max([max_len, val[0, -1]])
+    if trace_y == TRACE_Y_FVAL:
+        # handle reference points
+        if len(ref) > 0:
+            # plot reference points
+            # get length of longest trajectory
+            max_len = 0
+            for val in vals:
+                max_len = np.max([max_len, val[0, -1]])
 
-        for i_ref in ref:
-            ax.plot(
-                [0, max_len],
-                [i_ref.fval + offset_y, i_ref.fval + offset_y],
-                '--',
-                color=i_ref.color,
-                label=i_ref.legend,
-            )
+            for i_ref in ref:
+                ax.plot(
+                    [0, max_len],
+                    [i_ref.fval + offset_y, i_ref.fval + offset_y],
+                    '--',
+                    color=i_ref.color,
+                    label=i_ref.legend,
+                )
 
-            # create legend for reference points
-            if i_ref.legend is not None:
-                ax.legend()
+                # create legend for reference points
+                if i_ref.legend is not None:
+                    ax.legend()
+    else:
+        logger.warning(
+            f'Reference point is currently only implemented for trace_y == '
+            f'{TRACE_Y_FVAL} and will not be plotted for trace_y == {trace_y}.'
+        )
 
     return ax
