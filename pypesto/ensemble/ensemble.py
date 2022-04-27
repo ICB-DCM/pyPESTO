@@ -618,12 +618,12 @@ class Ensemble:
             A pyPESTO result that contains an optimization result.
         cutoff:
             Exclude parameters from the optimization if the
-            nllh is higher than the `cutoff`. If cutoff is None, a cutoff
+            nllh is higher than the `cutoff`. If `cutoff` is `None`, a cutoff
             will be calculated based on the percentile passed.
         max_size:
             The maximum size the ensemble should be.
         percentile:
-            Percentile of a chi^2 distribution. Used to determinie the
+            Percentile of a chi^2 distribution. Used to determine the
             cutoff value.
 
         Returns
@@ -633,9 +633,8 @@ class Ensemble:
         if cutoff is None:
             if percentile is None:
                 raise ValueError(
-                    'Neither cutoff nor percentile were set. '
-                    'Determining a cutoff value is not '
-                    'possible. Please set one of the two.'
+                    'Please specify either a cutoff or percentile. '
+                    'To use all vectors, specify `percentile=1.0`.'
                 )
             cutoff = calculate_cutoff(result=result, percentile=percentile)
         x_vectors = []
@@ -1196,10 +1195,12 @@ def calculate_cutoff(result: Result, percentile: float = 0.95):
 
     Parameters
     ----------
-    result: The optimization result from which to create the ensemble.
-    percentile: The percentile of the chi^2 distribution. Between 0 and 1.
-    Higher values will result in a more lax cutoff. If the value is greater
-    than 1, the cutoff will be returned as np.inf.
+    result:
+        The optimization result from which to create the ensemble.
+    percentile:
+        The percentile of the chi^2 distribution. Between 0 and 1.
+        Higher values will result in a more lax cutoff. If the value is greater
+        than 1, the cutoff will be returned as np.inf.
 
     Returns
     -------
