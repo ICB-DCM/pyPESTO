@@ -219,7 +219,7 @@ class OptimizeResult:
             f"* number of starts: {len(self)} \n"
             f"* best value: {self[0]['fval']}, "
             f"worst value: {self[-1]['fval']} \n"
-            f"* number of infinite values: {np.isinf(self.fval).sum()}\n\n"
+            f"* number of non-finite values: {np.logical_not(np.isfinite(self.fval)).sum()}\n\n"
             f"* execution time summary: {times_message}\n"
             f"* summary of optimizer messages:\n{counter_message}\n"
             f"* best value found (approximately) {clustsize[0]} time(s) \n"
