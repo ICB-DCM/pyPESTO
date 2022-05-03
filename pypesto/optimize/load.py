@@ -170,6 +170,7 @@ def read_results_from_file(
         raise ValueError("No history file specified.")
 
     result = Result()
+    result.problem = problem
     result.optimize_result = OptimizeResult()
     result.optimize_result.list = [
         read_result_from_file(problem, history_options, str(istart))
