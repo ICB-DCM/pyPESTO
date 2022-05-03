@@ -920,7 +920,7 @@ class Hdf5History(History):
     ):
         super().__init__(options=options)
         self.id = id
-        self.file = file
+        self.file, self.editable = self._check_file_id(file)
         self._generate_hdf5_group()
 
     def __len__(self):
@@ -936,6 +936,8 @@ class Hdf5History(History):
         result: ResultDict,
     ) -> None:
         """See `History` docstring."""
+        if not self.editable:
+            raise ValueError('This id is already used in the history file.')
         super().update(x, sensi_orders, mode, result)
         self._update_trace(x, sensi_orders, mode, result)
 
@@ -1204,6 +1206,23 @@ class Hdf5History(History):
     ) -> Union[Sequence[float], float]:
         """See `HistoryBase` docstring."""
         return self._get_hdf5_entries(TIME, ix)
+
+    def _check_file_id(self, file: str):
+        """
+        Check, whether the id is already existent in the file.
+
+        Parameters
+        ----------
+        file:
+            HDF5 file name.
+        """
+        with h5py.File(file, 'a') as f:
+            editable = True
+            if 'history' not in f.keys():
+                return file, editable
+            if self.id in f['history']:
+                editable = False
+            return file, editable
 
 
 class OptimizerHistory:
