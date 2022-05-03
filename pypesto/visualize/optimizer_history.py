@@ -58,7 +58,7 @@ def optimizer_history(
         Default: TRACE_X_STEPS
     trace_y:
         What should be plotted on the y-axis?
-        Possibilities: TRACE_Y
+        Possibilities: TRACE_Y_FVAL, TRACE_Y_GRADNORM
         Default: TRACE_Y_FVAl
     scale_y:
         May be logarithmic or linear ('log10' or 'lin')
@@ -240,7 +240,7 @@ def get_trace(
         Default: TRACE_X_STEPS
     trace_y: str, optional
         What should be plotted on the y-axis?
-        Possibilities: TRACE_Y
+        Possibilities: TRACE_Y_FVAL, TRACE_Y_GRADNORM
         Default: TRACE_Y_FVAL
 
     Returns
@@ -378,7 +378,8 @@ def get_labels(trace_x: str, trace_y: str, offset_y: float) -> Tuple[str, str]:
     trace_x:
         What should be plotted on the x-axis. Possible values: TRACE_X.
     trace_y:
-        What should be plotted on the y-axis. Possible values: TRACE_Y.
+        What should be plotted on the y-axis.
+        Possible values: TRACE_Y_FVAL, TRACE_Y_GRADNORM.
     offset_y:
         Offset for the y-axis-values.
     Returns
