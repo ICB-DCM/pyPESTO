@@ -217,13 +217,14 @@ class OptimizeResult:
         summary = (
             "## Optimization Result \n\n"
             f"* number of starts: {len(self)} \n"
+            f"* best value: {self[0]['fval']}, "
+            f"worst value: {self[-1]['fval']} \n"
+            f"* number of non-finite values: {np.logical_not(np.isfinite(self.fval)).sum()}\n\n"
             f"* execution time summary: {times_message}\n"
             f"* summary of optimizer messages:\n{counter_message}\n"
             f"* best value found (approximately) {clustsize[0]} time(s) \n"
             f"* number of plateaus found: "
             f"{1 + max(clust) - sum(clustsize == 1)} \n"
-            f"* best value: {self[0]['fval']}, "
-            f"worst value: {self[-1]['fval']} \n\n"
             f"A summary of the best run:\n\n{self[0].summary()}"
         )
         return summary
