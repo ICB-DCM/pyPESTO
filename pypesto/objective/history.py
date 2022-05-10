@@ -937,7 +937,10 @@ class Hdf5History(History):
     ) -> None:
         """See `History` docstring."""
         if not self.editable:
-            raise ValueError('This id is already used in the history file.')
+            raise ValueError(
+                f'ID "{self.id}" is already used'
+                f' in history file "{self.file}".'
+            )
         super().update(x, sensi_orders, mode, result)
         self._update_trace(x, sensi_orders, mode, result)
 
@@ -1215,14 +1218,20 @@ class Hdf5History(History):
         ----------
         file:
             HDF5 file name.
+
+        Returns
+        -------
+        file:
+            HDF5 file name.
+        editable:
+            Boolean, whether this hdf5 file should be editable. Returns
+            false if the history is a loaded one to prevent overwriting.
+
         """
-        with h5py.File(file, 'a') as f:
-            editable = True
-            if 'history' not in f.keys():
-                return file, editable
-            if self.id in f['history']:
-                editable = False
-            return file, editable
+        with h5py.File(file, 'r') as f:
+            return file, (
+                'history' not in f.keys() or self.id not in f['history']
+            )
 
 
 class OptimizerHistory:
