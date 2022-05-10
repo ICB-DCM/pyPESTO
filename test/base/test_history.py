@@ -189,6 +189,7 @@ class HistoryTest(unittest.TestCase):
                 'start_time',
                 '_trace',
                 'x_names',
+                'editable',
             ]
         ]
         for attr in history_attributes:
