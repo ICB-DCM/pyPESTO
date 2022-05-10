@@ -14,7 +14,7 @@ per-file-ignores =
     # Imported but unused
     */__init__.py:F401,D400,D205
     # Print and asserts
-    test/*:T001,S101,D
+    test/*:T201,S101,D
     # Ignore errors in module docstring
     pypesto/logging.py:D400,D205,D107
     pypesto/problem.py:D400,D205,D107
