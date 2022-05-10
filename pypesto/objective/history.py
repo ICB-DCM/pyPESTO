@@ -1229,10 +1229,13 @@ class Hdf5History(History):
             false if the history is a loaded one to prevent overwriting.
 
         """
-        with h5py.File(file, 'r') as f:
-            return file, (
-                'history' not in f.keys() or self.id not in f['history']
-            )
+        try:
+            with h5py.File(file, 'r') as f:
+                return file, (
+                    'history' not in f.keys() or self.id not in f['history']
+                )
+        except OSError:  # if the file is non-existent, return editable = True
+            return file, True
 
 
 class OptimizerHistory:
