@@ -21,6 +21,7 @@ def sample(
     x0: Union[np.ndarray, List[np.ndarray]] = None,
     result: Result = None,
     filename: Union[str, Callable, None] = "Auto",
+    overwrite: bool = False,
 ) -> Result:
     """
     Call to do parameter sampling.
@@ -48,6 +49,8 @@ def sample(
         `year_month_day_sampling_result.hdf5`. Deactivate saving by
         setting filename to `None`.
         Optionally a method, see docs for `pypesto.store.auto.autosave`.
+    overwrite:
+        Boolean, whether to potentially overwrite the existing file `filename`.
 
     Returns
     -------
@@ -92,6 +95,11 @@ def sample(
     # record results
     result.sample_result = sampler_result
 
-    autosave(filename=filename, result=result, store_type="sample")
+    autosave(
+        filename=filename,
+        result=result,
+        store_type="sample",
+        overwrite=overwrite,
+    )
 
     return result
