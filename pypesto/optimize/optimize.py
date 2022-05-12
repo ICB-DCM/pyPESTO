@@ -70,7 +70,8 @@ def minimize(
         setting filename to `None`.
         Optionally a method, see docs for `pypesto.store.auto.autosave`.
     overwrite:
-        Boolean, whether to potentially overwrite the existing file `filename`.
+        Whether to overwrite `result/optimization` in the autosave file
+        if it already exists.
 
     Returns
     -------
