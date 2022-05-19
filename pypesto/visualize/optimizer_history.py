@@ -401,7 +401,7 @@ def get_labels(trace_x: str, trace_y: str, offset_y: float) -> Tuple[str, str]:
         y_label = 'Objective value'
 
     if offset_y != 0:
-        y_label = 'Offsetted' + y_label.lower()
+        y_label = 'Offsetted ' + y_label.lower()
 
     return x_label, y_label
 
