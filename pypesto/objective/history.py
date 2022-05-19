@@ -920,7 +920,7 @@ class Hdf5History(History):
     ):
         super().__init__(options=options)
         self.id = id
-        self.file = file
+        self.file, self.editable = self._check_file_id(file)
         self._generate_hdf5_group()
 
     def __len__(self):
@@ -936,6 +936,11 @@ class Hdf5History(History):
         result: ResultDict,
     ) -> None:
         """See `History` docstring."""
+        if not self.editable:
+            raise ValueError(
+                f'ID "{self.id}" is already used'
+                f' in history file "{self.file}".'
+            )
         super().update(x, sensi_orders, mode, result)
         self._update_trace(x, sensi_orders, mode, result)
 
@@ -1130,12 +1135,13 @@ class Hdf5History(History):
 
             for iteration in ix:
                 try:
-                    entry = np.array(
-                        f[
-                            f'history/{self.id}/trace'
-                            f'/{str(iteration)}/{entry_id}'
-                        ]
-                    )
+                    dataset = f[
+                        f'history/{self.id}/trace/{str(iteration)}/{entry_id}'
+                    ]
+                    if dataset.shape == ():
+                        entry = dataset[()]  # scalar
+                    else:
+                        entry = np.array(dataset)
                     trace_result.append(entry)
                 except KeyError:
                     trace_result.append(None)
@@ -1204,6 +1210,32 @@ class Hdf5History(History):
     ) -> Union[Sequence[float], float]:
         """See `HistoryBase` docstring."""
         return self._get_hdf5_entries(TIME, ix)
+
+    def _check_file_id(self, file: str):
+        """
+        Check, whether the id is already existent in the file.
+
+        Parameters
+        ----------
+        file:
+            HDF5 file name.
+
+        Returns
+        -------
+        file:
+            HDF5 file name.
+        editable:
+            Boolean, whether this hdf5 file should be editable. Returns
+            false if the history is a loaded one to prevent overwriting.
+
+        """
+        try:
+            with h5py.File(file, 'r') as f:
+                return file, (
+                    'history' not in f.keys() or self.id not in f['history']
+                )
+        except OSError:  # if the file is non-existent, return editable = True
+            return file, True
 
 
 class OptimizerHistory:
