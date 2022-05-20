@@ -184,7 +184,7 @@ def create_fake_pypesto_result_from_fval(
         fval0=fval,
         history=None,
         exitflag=0,
-        time=0.1,
+        time=0.0,
         message="Fake result for problem with no estimated parameters.",
     )
 
