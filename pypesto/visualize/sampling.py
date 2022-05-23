@@ -1078,6 +1078,7 @@ def sampling_scatter(
     suptitle: str = None,
     diag_kind: str = "kde",
     size: Tuple[float, float] = None,
+    show_bounds: bool = True,
 ):
     """
     Parameter scatter plot.
@@ -1096,6 +1097,8 @@ def sampling_scatter(
         Visualization mode for marginal densities {‘auto’, ‘hist’, ‘kde’, None}
     size:
         Figure size in inches.
+    show_bounds:
+        Whether to show, and extend the plot to, the lower and upper bounds.
 
     Returns
     -------
@@ -1120,6 +1123,13 @@ def sampling_scatter(
 
     if suptitle:
         ax.fig.suptitle(suptitle)
+
+    if show_bounds:
+        # set bounds of plot to parameter bounds. Only use diagonal as
+        # sns.PairGrid has sharex,sharey = True by default.
+        for i_axis, axis in enumerate(np.diag(ax.axes)):
+            axis.set_xlim(result.problem.lb[i_axis], result.problem.ub[i_axis])
+            axis.set_ylim(result.problem.lb[i_axis], result.problem.ub[i_axis])
 
     return ax
 
