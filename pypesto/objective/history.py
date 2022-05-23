@@ -960,6 +960,14 @@ class Hdf5History(History):
             Optimizer exitflag to be saved.
         """
         super().finalize()
+        with h5py.File(self.file, 'a') as f:
+            if f'history/{self.id}/messages/' not in f:
+                f.create_group(f'history/{self.id}/messages/')
+            grp = f[f'history/{self.id}/messages/']
+            if message is not None:
+                grp.attrs['message'] = message
+            if exitflag is not None:
+                grp.attrs['exitflag'] = exitflag
 
     @staticmethod
     def load(id: str, file: str):
