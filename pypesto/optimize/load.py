@@ -83,10 +83,10 @@ def fill_result_from_history(
         return result
 
     if isinstance(optimizer_history.history, Hdf5History):
-        if optimizer_history.history.message is not None:
-            result.message = optimizer_history.history.message
-        if optimizer_history.history.exitflag is not None:
-            result.exitflag = optimizer_history.history.exitflag
+        if (message := optimizer_history.history.message) is not None:
+            result.message = message
+        if (exitflag := optimizer_history.history.exitflag) is not None:
+            result.exitflag = exitflag
 
     # optimal point
     for key in (X, FVAL, GRAD, HESS, RES, SRES):
