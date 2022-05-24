@@ -237,7 +237,8 @@ class HistoryBase(abc.ABC):
         mode: str,
         result: ResultDict,
     ) -> None:
-        """Update history after a function evaluation.
+        """
+        Update history after a function evaluation.
 
         Parameters
         ----------
@@ -252,8 +253,21 @@ class HistoryBase(abc.ABC):
             `sensi_orders` and mode `mode`.
         """
 
-    def finalize(self):
-        """Finalize history. Called after a run."""
+    def finalize(
+        self,
+        message: str = None,
+        exitflag: str = None,
+    ):
+        """
+        Finalize history. Called after a run.
+
+        Parameters
+        ----------
+        message:
+            Optimizer message to be saved.
+        exitflag:
+            Optimizer exitflag to be saved.
+        """
 
     @property
     def n_fval(self) -> int:
@@ -458,7 +472,7 @@ class History(HistoryBase):
             result[FVAL] = res_to_fval(res)
         self._update_counts(sensi_orders, mode)
 
-    def finalize(self):
+    def finalize(self, message: str = None, exitflag: str = None):
         """See `HistoryBase` docstring."""
         pass
 
@@ -706,8 +720,8 @@ class CsvHistory(History):
         super().update(x, sensi_orders, mode, result)
         self._update_trace(x, mode, result)
 
-    def finalize(self):
-        """Finalize history. Called after a run."""
+    def finalize(self, message: str = None, exitflag: str = None):
+        """See `HistoryBase` docstring."""
         super().finalize()
         self._save_trace(finalize=True)
 
@@ -949,16 +963,7 @@ class Hdf5History(History):
         return self.file
 
     def finalize(self, message: str = None, exitflag: str = None):
-        """
-        Finalize history. Called after a run.
-
-        Parameters
-        ----------
-        message:
-            Optimizer message to be saved.
-        exitflag:
-            Optimizer exitflag to be saved.
-        """
+        """See `HistoryBase` docstring."""
         super().finalize()
         with h5py.File(self.file, 'a') as f:
             if f'history/{self.id}/messages/' not in f:
@@ -1361,9 +1366,7 @@ class OptimizerHistory:
         exitflag:
             Optimizer exitflag to be saved.
         """
-        self.history.finalize()
-        if isinstance(self.history, Hdf5History):
-            self.history.finalize(message=message, exitflag=exitflag)
+        self.history.finalize(message=message, exitflag=exitflag)
 
     def _update_vals(self, x: np.ndarray, result: ResultDict):
         """Update initial and best function values."""
