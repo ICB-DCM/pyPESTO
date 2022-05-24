@@ -6,6 +6,25 @@ Release notes
 ..........
 
 
+0.2.13 (2022-05-24)
+-------------------
+
+* Ensembles:
+    * Add standard deviation to ensemble prediction plots (#853)
+* Storage
+    * distinguish between scalar and vector values in Hdf5History._get_hdf5_entries (#856)
+    * Fix hdf5 history overwrite (#861)
+    * Updated optimization storage format. Made Attributes explicit. (#863)
+    * add problem to result from read_results_from_file (#862)
+* General
+    * various additions to Optimize(r)Result summary method (#859, #865, #866, #867)
+    * fix optimizer history fval offset (#834)
+    * Updated the profile, minimize, sample and added overwrite as argument. (#864)
+    * Fix y-labels in pypesto.visualize.optimizer_history (#869)
+    * Created show_bounds, to display proper sampling scatter plots. (#868)
+    * Enabled saving messages and exit flags in hdf5 history in case of finished run (#873)
+
+
 0.2.12 (2022-04-11)
 -------------------
 
