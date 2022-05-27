@@ -300,7 +300,7 @@ def test_model_problem_fake_result():
     expected_fval = 100.0
 
     fake_result = model_problem.create_fake_pypesto_result_from_fval(
-        expected_fval
+        fval=expected_fval,
     )
     # There is only one start in the result.
     fake_start = one(fake_result.optimize_result.list)
