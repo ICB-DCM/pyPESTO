@@ -82,6 +82,12 @@ def fill_result_from_history(
     if not optimize_options.history_beats_optimizer:
         return result
 
+    if isinstance(optimizer_history.history, Hdf5History):
+        if (message := optimizer_history.history.message) is not None:
+            result.message = message
+        if (exitflag := optimizer_history.history.exitflag) is not None:
+            result.exitflag = exitflag
+
     # optimal point
     for key in (X, FVAL, GRAD, HESS, RES, SRES):
         hist_val = getattr(optimizer_history, f"{key}_min")
