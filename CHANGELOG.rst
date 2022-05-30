@@ -23,6 +23,7 @@ Release notes
     * Fix y-labels in pypesto.visualize.optimizer_history (#869)
     * Created show_bounds, to display proper sampling scatter plots. (#868)
     * Enabled saving messages and exit flags in hdf5 history in case of finished run (#873)
+    * Select: use objective function evaluation time as optimization time for models with no estimated parameters (#872)
 
 
 0.2.12 (2022-04-11)
