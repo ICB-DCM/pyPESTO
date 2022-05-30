@@ -688,7 +688,7 @@ class Ensemble:
         max_size: int = np.inf,
         max_per_start: int = np.inf,
         distribute: bool = True,
-        percentile: float = 0.95,
+        percentile: float = None,
         **kwargs,
     ):
         """
