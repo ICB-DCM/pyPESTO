@@ -604,9 +604,9 @@ class Ensemble:
     @staticmethod
     def from_optimization_endpoints(
         result: Result,
-        cutoff: float = None,
+        rel_cutoff: float = None,
         max_size: int = np.inf,
-        percentile: float = 0.95,
+        percentile: float = None,
         **kwargs,
     ):
         """
@@ -616,10 +616,11 @@ class Ensemble:
         ----------
         result:
             A pyPESTO result that contains an optimization result.
-        cutoff:
-            Exclude parameters from the optimization if the
-            nllh is higher than the `cutoff`. If `cutoff` is `None`, a cutoff
-            will be calculated based on the percentile passed.
+        rel_cutoff:
+            Relative cutoff. Exclude parameter vectors, for which the
+            objective value difference to the best vector is greater than
+            cutoff, i.e. include all vectors such that
+            `fval(vector) <= fval(opt_vector) + rel_cutoff`.
         max_size:
             The maximum size the ensemble should be.
         percentile:
@@ -630,13 +631,12 @@ class Ensemble:
         -------
         The ensemble.
         """
-        if cutoff is None:
-            if percentile is None:
-                raise ValueError(
-                    'Please specify either a cutoff or percentile. '
-                    'To use all vectors, specify `percentile=1.0`.'
-                )
-            cutoff = calculate_cutoff(result=result, percentile=percentile)
+        if rel_cutoff is None and percentile is None:
+            abs_cutoff = np.inf
+        elif rel_cutoff is not None:
+            abs_cutoff = result.optimize_result[0].fval + rel_cutoff
+        else:
+            abs_cutoff = calculate_cutoff(result=result, percentile=percentile)
         x_vectors = []
         vector_tags = []
         x_names = [
@@ -647,7 +647,7 @@ class Ensemble:
             # add the parameters from the next start as long as we
             # did not reach maximum size and the next value is still
             # lower than the cutoff value
-            if start['fval'] <= cutoff and len(x_vectors) < max_size:
+            if start['fval'] <= abs_cutoff and len(x_vectors) < max_size:
                 x_vectors.append(start['x'])
 
                 # the vector tag will be a -1 to indicate it is the last step
@@ -684,7 +684,7 @@ class Ensemble:
     @staticmethod
     def from_optimization_history(
         result: Result,
-        cutoff: float = None,
+        rel_cutoff: float = None,
         max_size: int = np.inf,
         max_per_start: int = np.inf,
         distribute: bool = True,
@@ -699,10 +699,11 @@ class Ensemble:
         result:
             A pyPESTO result that contains an optimization result
             with history recorded.
-        cutoff:
-            Exclude parameters from the optimization if the
-            nllh is higher than the `cutoff`. If cutoff is None, a cutoff
-            will be calculated based on the percentile passed.
+        rel_cutoff:
+            Relative cutoff. Exclude parameter vectors, for which the
+            objective value difference to the best vector is greater than
+            cutoff, i.e. include all vectors such that
+            `fval(vector) <= fval(opt_vector) + rel_cutoff`.
         max_size:
             The maximum size the ensemble should be.
         max_per_start:
@@ -720,14 +721,12 @@ class Ensemble:
         -------
         The ensemble.
         """
-        if cutoff is None:
-            if percentile is None:
-                raise ValueError(
-                    'Neither cutoff nor percentile were set. '
-                    'Determining a cutoff value is not '
-                    'possible. Please set one of the two.'
-                )
-            cutoff = calculate_cutoff(result=result, percentile=percentile)
+        if rel_cutoff is None and percentile is None:
+            abs_cutoff = np.inf
+        elif rel_cutoff is not None:
+            abs_cutoff = result.optimize_result[0].fval + rel_cutoff
+        else:
+            abs_cutoff = calculate_cutoff(result=result, percentile=percentile)
         if not result.optimize_result.list[0].history.options['trace_record']:
             logger.warning(
                 'The optimize result has no trace. The Ensemble '
@@ -735,7 +734,10 @@ class Ensemble:
                 'from_optimization_endpoints().'
             )
             return Ensemble.from_optimization_endpoints(
-                result=result, cutoff=cutoff, max_size=max_size, **kwargs
+                result=result,
+                rel_cutoff=rel_cutoff,
+                max_size=max_size,
+                **kwargs,
             )
         x_vectors = []
         vector_tags = []
@@ -747,7 +749,8 @@ class Ensemble:
 
         # calculate the number of starts whose final nllh is below cutoff
         n_starts = sum(
-            start['fval'] <= cutoff for start in result.optimize_result.list
+            start['fval'] <= abs_cutoff
+            for start in result.optimize_result.list
         )
 
         fval_trace = [
@@ -764,7 +767,7 @@ class Ensemble:
         # calculate the number of iterations included from each start
         n_per_starts = entries_per_start(
             fval_traces=fval_trace,
-            cutoff=cutoff,
+            cutoff=abs_cutoff,
             max_per_start=max_per_start,
             max_size=max_size,
         )
@@ -772,7 +775,7 @@ class Ensemble:
         for start in range(n_starts):
             indices = get_vector_indices(
                 trace_start=fval_trace[start],
-                cutoff=cutoff,
+                cutoff=abs_cutoff,
                 n_vectors=n_per_starts[start],
                 distribute=distribute,
             )

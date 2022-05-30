@@ -107,7 +107,7 @@ def read_ensemble_from_hdf5(
     if input_type == OPTIMIZE:
         result = read_result(filename=filename, optimize=True)
         return Ensemble.from_optimization_endpoints(
-            result=result, cutoff=cutoff, max_size=max_size
+            result=result, rel_cutoff=cutoff, max_size=max_size
         )
     elif input_type == SAMPLE:
         result = read_result(filename=filename, sample=True)

@@ -54,11 +54,11 @@ def test_ensemble_from_optimization():
 
     # test_endpoints
     ensemble_ep = Ensemble.from_optimization_endpoints(
-        result=result, cutoff=4, max_size=10
+        result=result, rel_cutoff=4, max_size=10
     )
 
     ensemble_hist = Ensemble.from_optimization_history(
-        result=result, cutoff=4, max_size=10, max_per_start=5
+        result=result, rel_cutoff=4, max_size=10, max_per_start=5
     )
 
     # compare vector_tags with the expected values:
