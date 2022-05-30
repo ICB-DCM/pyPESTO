@@ -1201,20 +1201,20 @@ def calculate_cutoff(result: Result, percentile: float = 0.95):
     result:
         The optimization result from which to create the ensemble.
     percentile:
-        The percentile of the chi^2 distribution. Between 0 and 1.
+        The percentile of the chi^2 distribution. Between 0 and 100.
         Higher values will result in a more lax cutoff. If the value is greater
-        than 1, the cutoff will be returned as np.inf.
+        than 100, the cutoff will be returned as np.inf.
 
     Returns
     -------
     The calculated cutoff value.
     """
-    if percentile >= 1:
+    if percentile >= 100:
         return np.inf
     # optimal point as base:
     fval_opt = result.optimize_result[0].fval
     # degrees of freedom is equal to the number of parameters
     df = result.problem.dim
-    range = chi2.ppf(q=percentile, df=df)
+    range = chi2.ppf(q=percentile / 100, df=df)
 
-    return fval_opt + range / 2
+    return fval_opt + range
