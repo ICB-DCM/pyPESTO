@@ -1214,7 +1214,7 @@ def calculate_cutoff(result: Result, percentile: float = 0.95):
     -------
     The calculated cutoff value.
     """
-    if percentile >= 100:
+    if percentile > 100:
         raise ValueError(
             f"percentile={percentile} is too large. Choose "
             f"0<=percentile<=100."
