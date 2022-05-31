@@ -635,6 +635,11 @@ class Ensemble:
             abs_cutoff = np.inf
         elif rel_cutoff is not None:
             abs_cutoff = result.optimize_result[0].fval + rel_cutoff
+            if percentile is not None:
+                logger.warning(
+                    'percentile is going to be ignored as '
+                    'rel_cutoff is not `None`.'
+                )
         else:
             abs_cutoff = calculate_cutoff(result=result, percentile=percentile)
         x_vectors = []
@@ -1210,7 +1215,10 @@ def calculate_cutoff(result: Result, percentile: float = 0.95):
     The calculated cutoff value.
     """
     if percentile >= 100:
-        return np.inf
+        raise ValueError(
+            f"percentile={percentile} is too large. Choose "
+            f"0<=percentile<=100."
+        )
     # optimal point as base:
     fval_opt = result.optimize_result[0].fval
     # degrees of freedom is equal to the number of parameters
