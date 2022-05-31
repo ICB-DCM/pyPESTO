@@ -1193,7 +1193,7 @@ def calculate_cutoff(result: Result, percentile: float = 0.95):
     Calculate the cutoff of the ensemble.
 
     Based on the number of parameters of the problem. Based on the
-    assumpiton that the difference of the nllh's of the true and optimal
+    assumption that the difference of the nllh's of the true and optimal
     parameter is chi^2 distributed with n_theta degress of freedom.
 
     Parameters
