@@ -437,7 +437,7 @@ class Problem:
 
         Include what parameters are being optimized and parameter boundaries.
         """
-        print(  # noqa: T001 (print)
+        print(  # noqa: T201 (print)
             pd.DataFrame(
                 index=self.x_names,
                 data={
