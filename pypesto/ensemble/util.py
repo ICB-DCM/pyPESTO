@@ -13,6 +13,8 @@ from ..C import (
     OPTIMIZE,
     OUTPUT,
     OUTPUT_IDS,
+    OUTPUT_SIGMAY,
+    OUTPUT_WEIGHT,
     PREDICTION_ID,
     PREDICTION_RESULTS,
     SAMPLE,
@@ -326,12 +328,22 @@ def read_ensemble_prediction_from_h5(
                     decode_array(f[f'{key}/{id}' f'/{OUTPUT_IDS}'][:])
                 )
                 timepoints = f[f'{key}/{id}/{TIMEPOINTS}'][:]
+                try:
+                    output_weight = f[f'{key}/{id}/{OUTPUT_WEIGHT}'][()]
+                except KeyError:
+                    output_weight = None
+                try:
+                    output_sigmay = f[f'{key}/{id}/{OUTPUT_SIGMAY}'][:]
+                except KeyError:
+                    output_sigmay = None
                 pred_cond_res_list.append(
                     PredictionConditionResult(
                         timepoints=timepoints,
                         output_ids=output_ids,
                         output=output,
                         x_names=x_names,
+                        output_weight=output_weight,
+                        output_sigmay=output_sigmay,
                     )
                 )
             pred_res_list.append(
