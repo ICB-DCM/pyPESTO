@@ -24,6 +24,7 @@ Release notes
     * Created show_bounds, to display proper sampling scatter plots. (#868)
     * Enabled saving messages and exit flags in hdf5 history in case of finished run (#873)
     * Select: use objective function evaluation time as optimization time for models with no estimated parameters (#872)
+    * removed checking for equality and checking for np.allclose in test_aesara (#877)
 
 
 0.2.12 (2022-04-11)
