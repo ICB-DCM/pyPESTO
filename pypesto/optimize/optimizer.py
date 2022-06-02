@@ -46,10 +46,12 @@ except ImportError:
 
 try:
     import fides
+    from fides import Optimizer as fidesOptimizer
     from fides.hessian_approximation import HessianApproximation
 except ImportError:
     fides = None
     HessianApproximation = None
+    fidesOptimizer = None
 
 logger = logging.getLogger(__name__)
 
@@ -1296,7 +1298,7 @@ class FidesOptimizer(Optimizer):
         """Check whether optimizer is a least squares optimizer."""
         return False
 
-    def _convert_exitflag_to_message(self, opt: fides.Optimizer):
+    def _convert_exitflag_to_message(self, opt: fidesOptimizer):
         """
         Convert the exitflag of a run to an informative message.
 
