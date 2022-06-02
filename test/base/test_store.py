@@ -12,11 +12,13 @@ import pypesto.profile as profile
 import pypesto.sample as sample
 from pypesto.C import (
     CHI2,
+    EXITFLAG,
     FVAL,
     FVAL0,
     GRAD,
     HESS,
     ID,
+    MESSAGE,
     N_FVAL,
     N_GRAD,
     N_HESS,
@@ -500,7 +502,7 @@ def test_result_from_hdf5_history(hdf5_file):
         filename=hdf5_file, problem=problem
     )
 
-    # Currently 'exitflag', 'time' and 'message' are not loaded.
+    # Currently 'time' is not loaded.
     arguments = [
         ID,
         X,
@@ -516,6 +518,8 @@ def test_result_from_hdf5_history(hdf5_file):
         N_SRES,
         X0,
         FVAL0,
+        EXITFLAG,
+        MESSAGE,
     ]
     for key in arguments:
         if result.optimize_result.list[0][key] is None:

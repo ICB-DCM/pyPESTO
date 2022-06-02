@@ -189,9 +189,9 @@ def test_aesara(max_sensi_order, integrated):
     assert obj(x_ref) == prob['fval']
 
     if max_sensi_order > 0:
-        assert (
-            obj(x_ref, sensi_orders=(1,)) == prob['grad'] * np.cosh(x_ref)
-        ).all()
+        assert np.allclose(
+            obj(x_ref, sensi_orders=(1,)), prob['grad'] * np.cosh(x_ref)
+        )
 
     if max_sensi_order > 1:
         assert np.allclose(

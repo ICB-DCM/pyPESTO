@@ -100,8 +100,10 @@ def history_decorator(minimize):
                 history_options=history_options,
                 optimize_options=optimize_options,
             )
-            objective.history.finalize()
             result.id = id
+            objective.history.finalize(
+                message=result.message, exitflag=result.exitflag
+            )
         except Exception as err:
             if optimize_options.allow_failed_starts:
                 logger.error(f'start {id} failed: {err}')

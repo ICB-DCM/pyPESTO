@@ -33,6 +33,9 @@ X = 'x'
 X0 = 'x0'
 ID = 'id'
 
+EXITFLAG = 'exitflag'
+MESSAGE = 'message'
+
 
 ###############################################################################
 # PRIOR
@@ -148,6 +151,17 @@ RGBA_MAX = 1  # max value for an RGBA element
 RGBA_ALPHA = 3  # zero-indexed fourth element in RGBA
 RGBA_WHITE = (RGBA_MAX, RGBA_MAX, RGBA_MAX, RGBA_MAX)  # white as an RGBA color
 RGBA_BLACK = (RGBA_MIN, RGBA_MIN, RGBA_MIN, RGBA_MAX)  # black as an RGBA color
+
+# optimizer history
+TRACE_X_TIME = 'time'
+TRACE_X_STEPS = 'steps'
+# supported values to plot on x-axis
+TRACE_X = (TRACE_X_TIME, TRACE_X_STEPS)
+
+TRACE_Y_FVAL = 'fval'
+TRACE_Y_GRADNORM = 'gradnorm'
+# supported values to plot on y-axis
+TRACE_Y = (TRACE_Y_FVAL, TRACE_Y_GRADNORM)
 
 
 ###############################################################################
