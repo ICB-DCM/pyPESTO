@@ -1277,10 +1277,7 @@ class FidesOptimizer(Optimizer):
 
         try:
             opt.minimize(x0)
-            if opt.converged:
-                msg = 'Finished Successfully.'
-            else:
-                msg = 'Failed to converge'
+            msg = self._convert_exitflag_to_message(opt)
         except RuntimeError as err:
             msg = str(err)
 
@@ -1298,3 +1295,41 @@ class FidesOptimizer(Optimizer):
     def is_least_squares(self):
         """Check whether optimizer is a least squares optimizer."""
         return False
+
+    def _convert_exitflag_to_message(self, opt: fides.Optimizer):
+        """
+        Convert the exitflag of a run to an informative message.
+
+        Parameters
+        ----------
+        opt:
+            The fides.Optimizer that has finished minimizing storing the
+            exitflag.
+
+        Returns
+        -------
+            An informative message on the cause of termination. Based on
+            fides documentation.
+        """
+        if opt.exitflag == 0:
+            return "Optimizer did not run"
+        elif opt.exitflag == -1:
+            return "Reached maximum number of allowed iterations"
+        elif opt.exitflag == -2:
+            return "Expected to reach maximum allowed time in next iteration"
+        elif opt.exitflag == -3:
+            return "Encountered non-finite fval/grad/hess"
+        elif opt.exitflag == -4:
+            return "Exceeded specified boundaries"
+        elif opt.exitflag == -5:
+            return "Trust Region Radius too small to proceed"
+        elif opt.exitflag == 1:
+            return "Converged according to fval difference"
+        elif opt.exitflag == 2:
+            return "Converged according to x difference"
+        elif opt.exitflag == 3:
+            return "Converged according to gradient norm"
+        else:
+            raise ValueError(
+                f"exitflag={opt.exitflag} is not defined in " f"fides."
+            )
