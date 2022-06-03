@@ -1367,6 +1367,7 @@ class OptimizerHistory:
             Optimizer exitflag to be saved.
         """
         self.history.finalize(message=message, exitflag=exitflag)
+        self._compute_vals_from_trace()
 
     def _update_vals(self, x: np.ndarray, result: ResultDict):
         """Update initial and best function values."""
