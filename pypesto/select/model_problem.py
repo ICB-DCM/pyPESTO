@@ -1,4 +1,5 @@
 """Calibrate a PEtab Select model with pyPESTO."""
+import time
 from typing import Callable, Dict, List, Optional
 
 from petab_select import Criterion, Model
@@ -108,9 +109,15 @@ class ModelProblem:
                 # If there are no estimated parameters, evaluate the objective
                 # function and generate a fake optimization result.
                 if not self.pypesto_problem.x_free_indices:
+                    fake_result_start_time = time.time()
+                    fake_result_fval = self.pypesto_problem.objective([])
+                    fake_result_evaluation_time = (
+                        time.time() - fake_result_start_time
+                    )
                     self.set_result(
                         create_fake_pypesto_result_from_fval(
-                            self.pypesto_problem.objective([])
+                            fval=fake_result_fval,
+                            evaluation_time=fake_result_evaluation_time,
                         )
                     )
                 # TODO rename `minimize_options` to `minimize_kwargs`.
@@ -157,6 +164,7 @@ class ModelProblem:
 
 def create_fake_pypesto_result_from_fval(
     fval: float,
+    evaluation_time: float = 0.0,
 ) -> Result:
     """Create a result for problems with no estimated parameters.
 
@@ -184,7 +192,7 @@ def create_fake_pypesto_result_from_fval(
         fval0=fval,
         history=None,
         exitflag=0,
-        time=0.1,
+        time=evaluation_time,
         message="Fake result for problem with no estimated parameters.",
     )
 

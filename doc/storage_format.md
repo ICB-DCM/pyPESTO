@@ -48,27 +48,32 @@ Results of the `$n`'th multistart a saved in the format
 
 ```
 + /optimization/results/$n/
-  - fval: [float]
-      Objective function value of best iteration
   - x: [float n_par_full]
       Parameter set of best iteration
   - grad: [float n_par_full]
       Gradient of objective function at point x
-  - hess: [float n_par_full x n_par_full]
-      Hessian matrix of objective function at point x
-  - n_fval: [int]
-      Total number of objective function evaluations
-  - n_grad: [int]
-      Number of gradient evaluations
-  - n_hess: [int]
-      Number of Hessian evaluations
   - x0: [float n_par_full]
       Initial parameter set
-  - fval0: [float]
-      Objective function value at starting parameters
-  - exitflag: [str] Some exit flag
-  - time: [float] Execution time
-  - message: [str] Some exit message
+  - Atrributes:
+      - fval: [float]
+          Objective function value of best iteration
+      - hess: [float n_par_full x n_par_full]
+          Hessian matrix of objective function at point x
+      - n_fval: [int]
+          Total number of objective function evaluations
+      - n_grad: [int]
+          Number of gradient evaluations
+      - n_hess: [int]
+          Number of Hessian evaluations
+      - fval0: [float]
+          Objective function value at starting parameters
+      - optimizer: [str]
+          Basic information on the used optimizer
+      - exitflag: [str] Some exit flag
+      - time: [float] Execution time
+      - message: [str] Some exit message
+      - id: [str] The id of the optimization
+
 ```
 
 #### Trace per local optimization

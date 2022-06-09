@@ -1,30 +1,42 @@
+import logging
 from typing import Iterable, List, Optional, Tuple, Union
 
 import matplotlib.pyplot as plt
 import numpy as np
 from matplotlib.ticker import MaxNLocator
 
+from ..C import (
+    RGBA,
+    TRACE_X_STEPS,
+    TRACE_X_TIME,
+    TRACE_Y_FVAL,
+    TRACE_Y_GRADNORM,
+)
 from ..objective import History
 from ..result import Result
 from .clust_color import assign_colors
 from .misc import process_offset_y, process_result_list, process_y_limits
 from .reference_points import ReferencePoint, create_references
 
+logger = logging.getLogger(__name__)
+
 
 def optimizer_history(
-    results,
-    ax=None,
-    size=(18.5, 10.5),
-    trace_x='steps',
-    trace_y='fval',
-    scale_y='log10',
-    offset_y=None,
-    colors=None,
-    y_limits=None,
-    start_indices=None,
-    reference=None,
-    legends=None,
-):
+    results: Union[Result, List[Result]],
+    ax: Optional[plt.Axes] = None,
+    size: Tuple = (18.5, 10.5),
+    trace_x: str = TRACE_X_STEPS,
+    trace_y: str = TRACE_Y_FVAL,
+    scale_y: str = 'log10',
+    offset_y: Optional[float] = None,
+    colors: Optional[Union[RGBA, List[RGBA]]] = None,
+    y_limits: Optional[Union[float, List[float], np.ndarray]] = None,
+    start_indices: Optional[Union[int, List[int]]] = None,
+    reference: Optional[
+        Union[ReferencePoint, dict, List[ReferencePoint], List[dict]]
+    ] = None,
+    legends: Optional[Union[str, List[str]]] = None,
+) -> plt.Axes:
     """
     Plot history of optimizer.
 
@@ -33,44 +45,44 @@ def optimizer_history(
 
     Parameters
     ----------
-    results: pypesto.Result or list
+    results:
         Optimization result obtained by 'optimize.py' or list of those
-    ax: matplotlib.Axes, optional
+    ax:
         Axes object to use.
     size: tuple, optional
         Figure size (width, height) in inches. Is only applied when no ax
         object is specified
-    trace_x: str, optional
+    trace_x:
         What should be plotted on the x-axis?
-        Possibilities: 'time', 'steps'
-        Default: 'steps'
-    trace_y: str, optional
+        Possibilities: TRACE_X
+        Default: TRACE_X_STEPS
+    trace_y:
         What should be plotted on the y-axis?
-        Possibilities: 'fval', 'gradnorm', 'stepsize'
-        Default: 'fval'
-    scale_y: str, optional
+        Possibilities: TRACE_Y_FVAL, TRACE_Y_GRADNORM
+        Default: TRACE_Y_FVAl
+    scale_y:
         May be logarithmic or linear ('log10' or 'lin')
-    offset_y: float, optional
+    offset_y:
         Offset for the y-axis-values, as these are plotted on a log10-scale
         Will be computed automatically if necessary
     colors: list, or RGBA, optional
         list of colors, or single color
         color or list of colors for plotting. If not set, clustering is done
         and colors are assigned automatically
-    y_limits: float or ndarray, optional
+    y_limits:
         maximum value to be plotted on the y-axis, or y-limits
-    start_indices: list or int
+    start_indices:
         list of integers specifying the multistart to be plotted or
         int specifying up to which start index should be plotted
-    reference: list, optional
-        List of reference points for optimization results, containing et
+    reference:
+        List of reference points for optimization results, containing at
         least a function value fval
-    legends: list or str
+    legends:
         Labels for line plots, one label per result object
 
     Returns
     -------
-    ax: matplotlib.Axes
+    ax:
         The plot axes.
     """
     if isinstance(start_indices, int):
@@ -81,12 +93,14 @@ def optimizer_history(
 
     for j, result in enumerate(results):
         # extract cost function values from result
-        (x_label, y_label, vals) = get_trace(result, trace_x, trace_y)
+        vals = get_trace(result, trace_x, trace_y)
 
         # compute the necessary offset for the y-axis
-        (vals, offset_y, y_label) = get_vals(
-            vals, scale_y, offset_y, y_label, start_indices
+        (vals, offset_y) = get_vals(
+            vals, scale_y, offset_y, trace_y, start_indices
         )
+
+        x_label, y_label = get_labels(trace_x, trace_y, offset_y)
 
         # call lowlevel plot routine
         ax = optimizer_history_lowlevel(
@@ -104,48 +118,48 @@ def optimizer_history(
     ref = create_references(references=reference)
 
     # handle options
-    ax = handle_options(ax, vals, ref, y_limits, offset_y)
+    ax = handle_options(ax, vals, trace_y, ref, y_limits, offset_y)
 
     return ax
 
 
 def optimizer_history_lowlevel(
-    vals,
-    scale_y='log10',
-    colors=None,
-    ax=None,
-    size=(18.5, 10.5),
-    x_label='Optimizer steps',
-    y_label='Objective value',
-    legend_text=None,
-):
+    vals: List[np.ndarray],
+    scale_y: str = 'log10',
+    colors: Optional[Union[RGBA, List[RGBA]]] = None,
+    ax: Optional[plt.Axes] = None,
+    size: Tuple = (18.5, 10.5),
+    x_label: str = 'Optimizer steps',
+    y_label: str = 'Objective value',
+    legend_text: Optional[str] = None,
+) -> plt.Axes:
     """
     Plot optimizer history using list of numpy arrays.
 
     Parameters
     ----------
-    vals: list of numpy arrays
+    vals:
         list of 2xn-arrays (x_values and y_values of the trace)
-    scale_y: str, optional
+    scale_y:
         May be logarithmic or linear ('log10' or 'lin')
     colors: list, or RGBA, optional
         list of colors, or single color
         color or list of colors for plotting. If not set, clustering is done
         and colors are assigned automatically
-    ax: matplotlib.Axes, optional
+    ax:
         Axes object to use.
-    size: tuple, optional
+    size:
         see waterfall
-    x_label: str
+    x_label:
         label for x-axis
-    y_label: str
+    y_label:
         label for y-axis
-    legend_text: str
+    legend_text:
         Label for line plots
 
     Returns
     -------
-    ax: matplotlib.Axes
+    ax:
         The plot axes.
     """
     # axes
@@ -212,7 +226,7 @@ def optimizer_history_lowlevel(
 
 def get_trace(
     result: Result, trace_x: Optional[str], trace_y: Optional[str]
-) -> Tuple[str, str, List[np.ndarray]]:
+) -> List[np.ndarray]:
     """
     Get the values of the optimizer trace from the pypesto.Result object.
 
@@ -222,12 +236,12 @@ def get_trace(
         Optimization result obtained by 'optimize.py'.
     trace_x: str, optional
         What should be plotted on the x-axis?
-        Possibilities: 'time', 'steps'
-        Default: 'steps'
+        Possibilities: TRACE_X
+        Default: TRACE_X_STEPS
     trace_y: str, optional
         What should be plotted on the y-axis?
-        Possibilities: 'fval'(later also: 'gradnorm', 'stepsize')
-        Default: 'fval'
+        Possibilities: TRACE_Y_FVAL, TRACE_Y_GRADNORM
+        Default: TRACE_Y_FVAL
 
     Returns
     -------
@@ -242,12 +256,10 @@ def get_trace(
     histories: List[History] = result.optimize_result.history
 
     vals = []
-    x_label = ''
-    y_label = ''
 
     for history in histories:
         options = history.options
-        if trace_y == 'gradnorm':
+        if trace_y == TRACE_Y_GRADNORM:
             # retrieve gradient trace, if saved
             if not options.trace_record or not options.trace_record_grad:
                 raise ValueError("No gradient trace has been recorded.")
@@ -262,9 +274,8 @@ def get_trace(
 
             # Get gradient trace, compute norm
             y_vals = np.linalg.norm(grads, axis=1)
-            y_label = 'gradient norm'
 
-        else:  # trace_y == 'fval':
+        else:  # trace_y == TRACE_Y_FVAL:
             if not options.trace_record:
                 raise ValueError("No function value trace has been recorded.")
             fvals = history.get_fval_trace()
@@ -275,31 +286,28 @@ def get_trace(
             ]
 
             y_vals = np.array([fvals[i] for i in indices])
-            y_label = 'objective value'
 
         # retrieve values from dataframe
-        if trace_x == 'time':
+        if trace_x == TRACE_X_TIME:
             times = np.array(history.get_time_trace())
             x_vals = times[indices]
-            x_label = 'Computation time [s]'
 
-        else:  # trace_x == 'steps':
+        else:  # trace_x == TRACE_X_STEPS:
             x_vals = np.array(list(range(len(indices))))
-            x_label = 'Optimizer steps'
 
         # write down values
         vals.append(np.vstack([x_vals, y_vals]))
 
-    return x_label, y_label, vals
+    return vals
 
 
 def get_vals(
     vals: List[np.ndarray],
     scale_y: Optional[str],
     offset_y: float,
-    y_label: str,
+    trace_y: str,
     start_indices: Iterable[int],
-) -> Tuple[List[np.ndarray], float, str]:
+) -> Tuple[List[np.ndarray], float]:
     """
     Postprocess the values of the optimization history.
 
@@ -308,20 +316,20 @@ def get_vals(
 
     Parameters
     ----------
-    vals: list
+    vals:
         list of numpy arrays of dimension 2 x len(start_indices)
-    scale_y: str, optional
+    scale_y:
         May be logarithmic or linear ('log10' or 'lin')
-    offset_y: float
+    offset_y:
         offset for the y-axis, as this is supposed to be in log10-scale
-    y_label: str
-        Label for y axis
+    trace_y:
+        What should be plotted on the y-axis
     start_indices:
         list of integers specifying the multi start indices to be plotted
 
     Returns
     -------
-    vals: list
+    vals:
         list of numpy arrays
     offset_y:
         offset for the y-axis, if this is supposed to be in log10-scale
@@ -349,7 +357,7 @@ def get_vals(
         min_val = np.min([min_val, tmp_min])
 
     # check, whether offset can be used with this data
-    if y_label == 'fval':
+    if trace_y == TRACE_Y_FVAL:
         offset_y = process_offset_y(offset_y, scale_y, min_val)
     else:
         offset_y = 0.0
@@ -357,18 +365,55 @@ def get_vals(
     if offset_y != 0:
         for val in vals:
             val[1, :] += offset_y * np.ones(val[1].shape)
-            y_label = 'offsetted ' + y_label
 
-    return vals, offset_y, y_label
+    return vals, offset_y
+
+
+def get_labels(trace_x: str, trace_y: str, offset_y: float) -> Tuple[str, str]:
+    """
+    Generate labels for x and y axes of the history plot.
+
+    Parameters
+    ----------
+    trace_x:
+        What should be plotted on the x-axis. Possible values: TRACE_X.
+    trace_y:
+        What should be plotted on the y-axis.
+        Possible values: TRACE_Y_FVAL, TRACE_Y_GRADNORM.
+    offset_y:
+        Offset for the y-axis-values.
+    Returns
+    -------
+    labels for x and y axes
+
+    """
+    x_label = ''
+    y_label = ''
+
+    if trace_x == TRACE_X_TIME:
+        x_label = 'Computation time [s]'
+    else:
+        x_label = 'Optimizer steps'
+
+    if trace_y == TRACE_Y_GRADNORM:
+        y_label = 'Gradient norm'
+    else:
+        y_label = 'Objective value'
+
+    if offset_y != 0:
+        y_label = 'Offsetted ' + y_label.lower()
+
+    return x_label, y_label
 
 
 def handle_options(
     ax: plt.Axes,
     vals: List[np.ndarray],
+    trace_y: str,
     ref: List[ReferencePoint],
-    y_limits: Union[float, np.ndarray],
+    y_limits: Union[float, np.ndarray, None],
     offset_y: float,
-):
+) -> plt.Axes:
     """
     Apply post-plotting transformations to the axis object.
 
@@ -382,6 +427,8 @@ def handle_options(
         least a function value fval
     vals:
         list of numpy arrays of size 2 x number of values
+    trace_y:
+        What should be plotted on the x-axis.
     ax:
         Axes object to use.
     y_limits:
@@ -391,31 +438,37 @@ def handle_options(
 
     Returns
     -------
-    ax: matplotlib.Axes
+    ax:
         The plot axes.
     """
     # handle y-limits
     ax = process_y_limits(ax, y_limits)
 
-    # handle reference points
-    if len(ref) > 0:
-        # plot reference points
-        # get length of longest trajectory
-        max_len = 0
-        for val in vals:
-            max_len = np.max([max_len, val[0, -1]])
+    if trace_y == TRACE_Y_FVAL:
+        # handle reference points
+        if len(ref) > 0:
+            # plot reference points
+            # get length of longest trajectory
+            max_len = 0
+            for val in vals:
+                max_len = np.max([max_len, val[0, -1]])
 
-        for i_ref in ref:
-            ax.plot(
-                [0, max_len],
-                [i_ref.fval + offset_y, i_ref.fval + offset_y],
-                '--',
-                color=i_ref.color,
-                label=i_ref.legend,
-            )
+            for i_ref in ref:
+                ax.plot(
+                    [0, max_len],
+                    [i_ref.fval + offset_y, i_ref.fval + offset_y],
+                    '--',
+                    color=i_ref.color,
+                    label=i_ref.legend,
+                )
 
-            # create legend for reference points
-            if i_ref.legend is not None:
-                ax.legend()
+                # create legend for reference points
+                if i_ref.legend is not None:
+                    ax.legend()
+    else:
+        logger.warning(
+            f'Reference point is currently only implemented for trace_y == '
+            f'{TRACE_Y_FVAL} and will not be plotted for trace_y == {trace_y}.'
+        )
 
     return ax
