@@ -167,14 +167,14 @@ def test_problem_select_to_completion(pypesto_select_problem):
     # Expected models were calibrated during the search.
     assert test_history_subspace_ids == expected_history_subspace_ids
 
-    expected_best_model_subspace_ids = ['M1_0', 'M1_1']
+    expected_best_model_subspace_ids = ['M1_0', 'M1_1', 'M1_7']
     test_best_model_subspace_ids = [
         model.model_subspace_id for model in best_models
     ]
     # Expected best models were found.
     assert test_best_model_subspace_ids == expected_best_model_subspace_ids
 
-    expected_best_model_criterion_values = [36.921, -4.017]
+    expected_best_model_criterion_values = [36.767, -4.592, -4.889]
     test_best_model_criterion_values = [
         model.get_criterion(Criterion.BIC) for model in best_models
     ]
@@ -300,7 +300,7 @@ def test_model_problem_fake_result():
     expected_fval = 100.0
 
     fake_result = model_problem.create_fake_pypesto_result_from_fval(
-        expected_fval
+        fval=expected_fval,
     )
     # There is only one start in the result.
     fake_start = one(fake_result.optimize_result.list)

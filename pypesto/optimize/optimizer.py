@@ -46,10 +46,12 @@ except ImportError:
 
 try:
     import fides
+    from fides import Optimizer as fidesOptimizer
     from fides.hessian_approximation import HessianApproximation
 except ImportError:
     fides = None
     HessianApproximation = None
+    fidesOptimizer = None
 
 logger = logging.getLogger(__name__)
 
@@ -100,8 +102,10 @@ def history_decorator(minimize):
                 history_options=history_options,
                 optimize_options=optimize_options,
             )
-            objective.history.finalize()
             result.id = id
+            objective.history.finalize(
+                message=result.message, exitflag=result.exitflag
+            )
         except Exception as err:
             if optimize_options.allow_failed_starts:
                 logger.error(f'start {id} failed: {err}')
@@ -278,6 +282,15 @@ class ScipyOptimizer(Optimizer):
         if self.options is None:
             self.options = ScipyOptimizer.get_default_options(self)
         self.tol = tol
+
+    def __repr__(self) -> str:
+        rep = f"<{self.__class__.__name__} method={self.method}"
+        # print everything that is customized
+        if self.tol is not None:
+            rep += f" tol={self.tol}"
+        if self.options is not None:
+            rep += f" options={self.options}"
+        return rep + ">"
 
     @fix_decorator
     @time_decorator
@@ -463,6 +476,13 @@ class IpoptOptimizer(Optimizer):
         super().__init__()
         self.options = options
 
+    def __repr__(self) -> str:
+        rep = f"<{self.__class__.__name__}"
+        # print everything that is customized
+        if self.options is not None:
+            rep += f" options={self.options}"
+        return rep + ">"
+
     @fix_decorator
     @time_decorator
     @history_decorator
@@ -518,6 +538,13 @@ class DlibOptimizer(Optimizer):
             self.options = DlibOptimizer.get_default_options(self)
         elif 'maxiter' not in self.options:
             raise KeyError('Dlib options are missing the key word ' 'maxiter.')
+
+    def __repr__(self) -> str:
+        rep = f"<{self.__class__.__name__}"
+        # print everything that is customized
+        if self.options is not None:
+            rep += f" options={self.options}"
+        return rep + ">"
 
     @fix_decorator
     @time_decorator
@@ -583,6 +610,13 @@ class PyswarmOptimizer(Optimizer):
             options = {'maxiter': 200}
         self.options = options
 
+    def __repr__(self) -> str:
+        rep = f"<{self.__class__.__name__}"
+        # print everything that is customized
+        if self.options is not None:
+            rep += f" options={self.options}"
+        return rep + ">"
+
     @fix_decorator
     @time_decorator
     @history_decorator
@@ -644,6 +678,13 @@ class CmaesOptimizer(Optimizer):
             options = {'maxiter': 10000}
         self.options = options
         self.par_sigma0 = par_sigma0
+
+    def __repr__(self) -> str:
+        rep = f"<{self.__class__.__name__} par_sigma0={self.par_sigma0}"
+        # print everything that is customized
+        if self.options is not None:
+            rep += f" options={self.options}"
+        return rep + ">"
 
     @fix_decorator
     @time_decorator
@@ -724,6 +765,13 @@ class ScipyDifferentialEvolutionOptimizer(Optimizer):
             options = {'maxiter': 100}
         self.options = options
 
+    def __repr__(self) -> str:
+        rep = f"<{self.__class__.__name__}"
+        # print everything that is customized
+        if self.options is not None:
+            rep += f" options={self.options}"
+        return rep + ">"
+
     @fix_decorator
     @time_decorator
     @history_decorator
@@ -789,6 +837,13 @@ class PyswarmsOptimizer(Optimizer):
         all_options.update(options)
         self.options = all_options
         self.par_popsize = par_popsize
+
+    def __repr__(self) -> str:
+        rep = f"<{self.__class__.__name__} par_popsize={self.par_popsize}"
+        # print everything that is customized
+        if self.options is not None:
+            rep += f" options={self.options}"
+        return rep + ">"
 
     @fix_decorator
     @time_decorator
@@ -992,6 +1047,17 @@ class NLoptOptimizer(Optimizer):
 
         self.local_method = local_method
 
+    def __repr__(self) -> str:
+        rep = f"<{self.__class__.__name__} method={self.method}"
+        # print everything that is customized
+        if self.local_method is not None:
+            rep += f" local_method={self.local_method}"
+        if self.options is not None:
+            rep += f" options={self.options}"
+        if self.local_options is not None:
+            rep += f" local_options={self.local_methods}"
+        return rep + ">"
+
     @fix_decorator
     @time_decorator
     @history_decorator
@@ -1087,7 +1153,7 @@ class FidesOptimizer(Optimizer):
 
     def __init__(
         self,
-        hessian_update: Optional['HessianApproximation'] = 'Hybrid',
+        hessian_update: Optional['HessianApproximation'] = 'default',
         options: Optional[Dict] = None,
         verbose: Optional[int] = logging.INFO,
     ):
@@ -1105,11 +1171,10 @@ class FidesOptimizer(Optimizer):
         """
         super().__init__()
 
-        if hessian_update == 'Hybrid':
-            hessian_update = fides.HybridFixed()
-
-        if hessian_update is not None and not isinstance(
-            hessian_update, HessianApproximation
+        if (
+            (hessian_update is not None)
+            and (hessian_update != 'default')
+            and not isinstance(hessian_update, HessianApproximation)
         ):
             raise ValueError(
                 'Incompatible type for hessian update. '
@@ -1123,6 +1188,23 @@ class FidesOptimizer(Optimizer):
         self.verbose = verbose
         self.options = options
         self.hessian_update = hessian_update
+
+    def __repr__(self) -> str:
+        rep = f"<{self.__class__.__name__} "
+        # print everything that is customized
+        if self.hessian_update is not None:
+            if self.hessian_update == 'default':
+                rep += f" hessian_update={self.hessian_update}"
+            else:
+                rep += (
+                    f" hessian_update="
+                    f"{self.hessian_update.__class__.__name__}"
+                )
+        if self.verbose is not None:
+            rep += f" verbose={self.verbose}"
+        if self.options is not None:
+            rep += f" options={self.options}"
+        return rep + ">"
 
     @fix_decorator
     @time_decorator
@@ -1142,9 +1224,23 @@ class FidesOptimizer(Optimizer):
                 "install fides via `pip install fides`."
             )
 
+        if self.hessian_update == 'default':
+            if not problem.objective.has_hess:
+                logging.warning(
+                    'Fides is using BFGS as hessian approximation, '
+                    'as the problem does not provide a Hessian. '
+                    'Specify a Hessian to use a more efficient '
+                    'hybrid approximation scheme.'
+                )
+                _hessian_update = fides.BFGS()
+            else:
+                _hessian_update = fides.HybridFixed()
+        else:
+            _hessian_update = self.hessian_update
+
         resfun = (
-            self.hessian_update.requires_resfun
-            if self.hessian_update is not None
+            _hessian_update.requires_resfun
+            if _hessian_update is not None
             else False
         )
 
@@ -1157,8 +1253,8 @@ class FidesOptimizer(Optimizer):
                 'gradient evaluation.'
             )
 
-        if self.hessian_update is None or (
-            self.hessian_update.requires_hess and not resfun
+        if _hessian_update is None or (
+            _hessian_update.requires_hess and not resfun
         ):
             if not problem.objective.has_hess:
                 raise ValueError(
@@ -1176,17 +1272,14 @@ class FidesOptimizer(Optimizer):
             ub=problem.ub,
             lb=problem.lb,
             verbose=self.verbose,
-            hessian_update=self.hessian_update,
+            hessian_update=_hessian_update,
             options=self.options,
             resfun=resfun,
         )
 
         try:
             opt.minimize(x0)
-            if opt.converged:
-                msg = 'Finished Successfully.'
-            else:
-                msg = 'Failed to converge'
+            msg = self._convert_exitflag_to_message(opt)
         except RuntimeError as err:
             msg = str(err)
 
@@ -1204,3 +1297,33 @@ class FidesOptimizer(Optimizer):
     def is_least_squares(self):
         """Check whether optimizer is a least squares optimizer."""
         return False
+
+    def _convert_exitflag_to_message(self, opt: fidesOptimizer):
+        """
+        Convert the exitflag of a run to an informative message.
+
+        Parameters
+        ----------
+        opt:
+            The fides.Optimizer that has finished minimizing storing the
+            exitflag.
+
+        Returns
+        -------
+            An informative message on the cause of termination. Based on
+            fides documentation.
+        """
+        messages = {
+            fides.ExitFlag.DID_NOT_RUN: "Optimizer did not run",
+            fides.ExitFlag.MAXITER: "Reached maximum number of allowed iterations",
+            fides.ExitFlag.MAXTIME: "Expected to reach maximum allowed time in next iteration",
+            fides.ExitFlag.NOT_FINITE: "Encountered non-finite fval/grad/hess",
+            fides.ExitFlag.EXCEEDED_BOUNDARY: "Exceeded specified boundaries",
+            fides.ExitFlag.DELTA_TOO_SMALL: "Trust Region Radius too small to proceed",
+            fides.ExitFlag.FTOL: "Converged according to fval difference",
+            fides.ExitFlag.XTOL: "Converged according to x difference",
+            fides.ExitFlag.GTOL: "Converged according to gradient norm",
+        }
+        return messages.get(
+            opt.exitflag, f"exitflag={opt.exitflag} is not defined in fides."
+        )

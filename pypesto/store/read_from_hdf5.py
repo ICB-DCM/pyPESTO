@@ -261,7 +261,7 @@ class ProfileResultHDF5Reader:
 
 def read_result(
     filename: str,
-    problem: bool = False,
+    problem: bool = True,
     optimize: bool = False,
     profile: bool = False,
     sample: bool = False,

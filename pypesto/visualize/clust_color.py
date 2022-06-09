@@ -1,59 +1,12 @@
-from typing import List, Optional, Tuple, Union
+from typing import List, Optional, Union
 
 import matplotlib.cm as cm
 import numpy as np
-from scipy import cluster
+
+from pypesto.util import assign_clusters
 
 # for typehints
 from ..C import RGBA
-
-
-def assign_clusters(vals):
-    """
-    Find clustering.
-
-    Parameters
-    ----------
-    vals: numeric list or array
-        List to be clustered.
-
-    Returns
-    -------
-    clust: numeric list
-        Indicating the corresponding cluster of each element from
-        'vals'.
-    clustsize: numeric list
-        Size of clusters, length equals number of clusters.
-    """
-    # sanity checks
-    if vals is None or len(vals) == 0:
-        return [], []
-    elif len(vals) == 1:
-        return np.array([0]), np.array([1.0])
-
-    # linkage requires (n, 1) data array
-    vals = np.reshape(vals, (-1, 1))
-
-    # however: clusters are sorted by size, not by value... Resort.
-    # Create preallocated object first
-    cluster_indices = np.zeros(vals.size, dtype=int)
-
-    # get clustering based on distance
-    clust = cluster.hierarchy.fcluster(
-        cluster.hierarchy.linkage(vals), t=0.1, criterion='distance'
-    )
-
-    # get unique clusters
-    _, ind_clust = np.unique(clust, return_index=True)
-    unique_clust = clust[np.sort(ind_clust)]
-    cluster_size = np.zeros(unique_clust.size, dtype=int)
-
-    # loop over clusters: resort and count number of entries
-    for index, i_clust in enumerate(unique_clust):
-        cluster_indices[np.where(clust == i_clust)] = index
-        cluster_size[index] = sum(clust == i_clust)
-
-    return cluster_indices, cluster_size
 
 
 def assign_clustered_colors(vals, balance_alpha=True, highlight_global=True):
@@ -252,52 +205,3 @@ def assign_colors_for_list(
         )
 
     return colors
-
-
-def delete_nan_inf(
-    fvals: np.ndarray, x: Optional[np.ndarray] = None, xdim: Optional[int] = 1
-) -> Tuple[np.ndarray, np.ndarray]:
-    """
-    Delete nan and inf values in fvals.
-
-    If parameters 'x' are passed, also the corresponding entries are deleted.
-
-    Parameters
-    ----------
-    x:
-        array of parameters
-    fvals:
-        array of fval
-    xdim:
-        dimension of x, in case x dimension cannot be inferred
-
-    Returns
-    -------
-    x:
-        array of parameters without nan or inf
-    fvals:
-        array of fval without nan or inf
-    """
-    fvals = np.asarray(fvals)
-    if x is not None:
-        # if we start out with a list of x, the x corresponding to
-        # to finite fvals may be None, so we cannot stack the x before taking
-        # subindexing
-        # If none of the fvals are finite, np.vstack will fail and np.take
-        # will not yield the correct dimension, so we try to construct an
-        # empty np.ndarray with the correct dimension (other functions rely
-        # on x.shape[1] to be of correct dimension)
-        if np.isfinite(fvals).any():
-            x = np.vstack(np.take(x, np.where(np.isfinite(fvals))[0], axis=0))
-        else:
-            x = np.empty(
-                (
-                    0,
-                    x.shape[1]
-                    if x.ndim == 2
-                    else x[0].shape[0]
-                    if x[0] is not None
-                    else xdim,
-                )
-            )
-    return x, fvals[np.isfinite(fvals)]

@@ -237,7 +237,8 @@ class HistoryBase(abc.ABC):
         mode: str,
         result: ResultDict,
     ) -> None:
-        """Update history after a function evaluation.
+        """
+        Update history after a function evaluation.
 
         Parameters
         ----------
@@ -252,8 +253,21 @@ class HistoryBase(abc.ABC):
             `sensi_orders` and mode `mode`.
         """
 
-    def finalize(self):
-        """Finalize history. Called after a run."""
+    def finalize(
+        self,
+        message: str = None,
+        exitflag: str = None,
+    ):
+        """
+        Finalize history. Called after a run.
+
+        Parameters
+        ----------
+        message:
+            Optimizer message to be saved.
+        exitflag:
+            Optimizer exitflag to be saved.
+        """
 
     @property
     def n_fval(self) -> int:
@@ -458,7 +472,7 @@ class History(HistoryBase):
             result[FVAL] = res_to_fval(res)
         self._update_counts(sensi_orders, mode)
 
-    def finalize(self):
+    def finalize(self, message: str = None, exitflag: str = None):
         """See `HistoryBase` docstring."""
         pass
 
@@ -706,8 +720,8 @@ class CsvHistory(History):
         super().update(x, sensi_orders, mode, result)
         self._update_trace(x, mode, result)
 
-    def finalize(self):
-        """Finalize history. Called after a run."""
+    def finalize(self, message: str = None, exitflag: str = None):
+        """See `HistoryBase` docstring."""
         super().finalize()
         self._save_trace(finalize=True)
 
@@ -920,7 +934,7 @@ class Hdf5History(History):
     ):
         super().__init__(options=options)
         self.id = id
-        self.file = file
+        self.file, self.editable = self._check_file_id(file)
         self._generate_hdf5_group()
 
     def __len__(self):
@@ -936,6 +950,11 @@ class Hdf5History(History):
         result: ResultDict,
     ) -> None:
         """See `History` docstring."""
+        if not self.editable:
+            raise ValueError(
+                f'ID "{self.id}" is already used'
+                f' in history file "{self.file}".'
+            )
         super().update(x, sensi_orders, mode, result)
         self._update_trace(x, sensi_orders, mode, result)
 
@@ -943,9 +962,17 @@ class Hdf5History(History):
         """Return filepath."""
         return self.file
 
-    def finalize(self):
-        """See `History` docstring."""
+    def finalize(self, message: str = None, exitflag: str = None):
+        """See `HistoryBase` docstring."""
         super().finalize()
+        with h5py.File(self.file, 'a') as f:
+            if f'history/{self.id}/messages/' not in f:
+                f.create_group(f'history/{self.id}/messages/')
+            grp = f[f'history/{self.id}/messages/']
+            if message is not None:
+                grp.attrs['message'] = message
+            if exitflag is not None:
+                grp.attrs['exitflag'] = exitflag
 
     @staticmethod
     def load(id: str, file: str):
@@ -1046,6 +1073,24 @@ class Hdf5History(History):
         with h5py.File(self.file, 'r') as f:
             return f[f'history/{self.id}/trace/'].attrs['trace_save_iter']
 
+    @property
+    def message(self):
+        """Optimizer message in case of finished optimization."""
+        with h5py.File(self.file, 'r') as f:
+            try:
+                return f[f'history/{self.id}/messages/'].attrs['message']
+            except KeyError:
+                return None
+
+    @property
+    def exitflag(self):
+        """Optimizer exitflag in case of finished optimization."""
+        with h5py.File(self.file, 'r') as f:
+            try:
+                return f[f'history/{self.id}/messages/'].attrs['exitflag']
+            except KeyError:
+                return None
+
     def _update_trace(
         self,
         x: np.ndarray,
@@ -1130,12 +1175,13 @@ class Hdf5History(History):
 
             for iteration in ix:
                 try:
-                    entry = np.array(
-                        f[
-                            f'history/{self.id}/trace'
-                            f'/{str(iteration)}/{entry_id}'
-                        ]
-                    )
+                    dataset = f[
+                        f'history/{self.id}/trace/{str(iteration)}/{entry_id}'
+                    ]
+                    if dataset.shape == ():
+                        entry = dataset[()]  # scalar
+                    else:
+                        entry = np.array(dataset)
                     trace_result.append(entry)
                 except KeyError:
                     trace_result.append(None)
@@ -1204,6 +1250,32 @@ class Hdf5History(History):
     ) -> Union[Sequence[float], float]:
         """See `HistoryBase` docstring."""
         return self._get_hdf5_entries(TIME, ix)
+
+    def _check_file_id(self, file: str):
+        """
+        Check, whether the id is already existent in the file.
+
+        Parameters
+        ----------
+        file:
+            HDF5 file name.
+
+        Returns
+        -------
+        file:
+            HDF5 file name.
+        editable:
+            Boolean, whether this hdf5 file should be editable. Returns
+            false if the history is a loaded one to prevent overwriting.
+
+        """
+        try:
+            with h5py.File(file, 'r') as f:
+                return file, (
+                    'history' not in f.keys() or self.id not in f['history']
+                )
+        except OSError:  # if the file is non-existent, return editable = True
+            return file, True
 
 
 class OptimizerHistory:
@@ -1283,9 +1355,18 @@ class OptimizerHistory:
         self.history.update(x, sensi_orders, mode, result)
         self._update_vals(x, result)
 
-    def finalize(self):
-        """Finalize history."""
-        self.history.finalize()
+    def finalize(self, message: str = None, exitflag: int = None):
+        """
+        Finalize history.
+
+        Parameters
+        ----------
+        message:
+            Optimizer message to be saved.
+        exitflag:
+            Optimizer exitflag to be saved.
+        """
+        self.history.finalize(message=message, exitflag=exitflag)
 
     def _update_vals(self, x: np.ndarray, result: ResultDict):
         """Update initial and best function values."""

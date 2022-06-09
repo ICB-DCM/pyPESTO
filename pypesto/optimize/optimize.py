@@ -11,6 +11,7 @@ from .optimizer import Optimizer, ScipyOptimizer
 from .options import OptimizeOptions
 from .task import OptimizerTask
 from .util import (
+    assign_ids,
     bound_n_starts_from_env,
     postprocess_hdf5_history,
     preprocess_hdf5_history,
@@ -30,7 +31,8 @@ def minimize(
     progress_bar: bool = True,
     options: OptimizeOptions = None,
     history_options: HistoryOptions = None,
-    filename: Union[str, None] = "Auto",
+    filename: Union[str, Callable, None] = "Auto",
+    overwrite: bool = False,
 ) -> Result:
     """
     Do multistart optimization.
@@ -66,6 +68,10 @@ def minimize(
         "Auto", in which case it will automatically generate a file named
         `year_month_day_optimization_result.hdf5`. Deactivate saving by
         setting filename to `None`.
+        Optionally a method, see docs for `pypesto.store.auto.autosave`.
+    overwrite:
+        Whether to overwrite `result/optimization` in the autosave file
+        if it already exists.
 
     Returns
     -------
@@ -102,10 +108,11 @@ def minimize(
         problem=problem,
     )
 
-    if ids is None:
-        ids = [str(j) for j in range(n_starts)]
-    if len(ids) != n_starts:
-        raise AssertionError("Number of starts and ids must coincide.")
+    ids = assign_ids(
+        n_starts=n_starts,
+        ids=ids,
+        result=result,
+    )
 
     # prepare result
     if result is None:
@@ -151,6 +158,11 @@ def minimize(
     # if history file provided, set storage file to that one
     if filename == "Auto" and history_file is not None:
         filename = history_file
-    autosave(filename=filename, result=result, store_type="optimize")
+    autosave(
+        filename=filename,
+        result=result,
+        store_type="optimize",
+        overwrite=overwrite,
+    )
 
     return result

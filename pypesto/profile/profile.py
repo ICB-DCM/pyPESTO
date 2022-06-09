@@ -25,7 +25,8 @@ def parameter_profile(
     next_guess_method: Union[Callable, str] = 'adaptive_step_regression',
     profile_options: ProfileOptions = None,
     progress_bar: bool = True,
-    filename: Union[str, None] = "Auto",
+    filename: Union[str, Callable, None] = "Auto",
+    overwrite: bool = False,
 ) -> Result:
     """
     Call to do parameter profiling.
@@ -65,6 +66,10 @@ def parameter_profile(
         "Auto", in which case it will automatically generate a file named
         `year_month_day_profiling_result.hdf5`. Deactivate saving by
         setting filename to `None`.
+        Optionally a method, see docs for `pypesto.store.auto.autosave`.
+    overwrite:
+        Whether to overwrite `result/profiling` in the autosave file
+        if it already exists.
 
     Returns
     -------
@@ -154,6 +159,11 @@ def parameter_profile(
             indexed_profile['index']
         ] = indexed_profile['profile']
 
-    autosave(filename=filename, result=result, store_type="profile")
+    autosave(
+        filename=filename,
+        result=result,
+        store_type="profile",
+        overwrite=overwrite,
+    )
 
     return result

@@ -15,6 +15,7 @@ import pypesto.optimize as optimize
 import pypesto.petab
 import pypesto.predict as predict
 import pypesto.sample as sample
+import pypesto.util
 import pypesto.visualize as visualize
 from pypesto.visualize.model_fit import (
     time_trajectory_model,
@@ -95,28 +96,28 @@ def sample_petab_problem():
     return result
 
 
-def create_optimization_result():
+def create_optimization_result(n=4):
     # create the pypesto problem
     problem = create_problem()
 
     # write some dummy results for optimization
     result = pypesto.Result(problem=problem)
-    for j in range(0, 3):
+    for k in range(0, 3):
         optimizer_result = pypesto.OptimizerResult(
-            id=str(j),
-            fval=j * 0.01,
-            x=np.array([j + 0.1, j + 1]),
-            grad=np.array([2.5 + j + 0.1, 2 + j + 1]),
+            id=str(k),
+            fval=k * 0.01,
+            x=np.array([k + 0.1, k + 1]),
+            grad=np.array([2.5 + k + 0.1, 2 + k + 1]),
         )
-        result.optimize_result.append(optimizer_result=optimizer_result)
-    for j in range(0, 4):
+        result.optimize_result.append(optimize_result=optimizer_result)
+    for k in range(0, n):
         optimizer_result = pypesto.OptimizerResult(
-            id=str(j + 3),
-            fval=10 + j * 0.01,
-            x=np.array([2.5 + j + 0.1, 2 + j + 1]),
-            grad=np.array([j + 0.1, j + 1]),
+            id=str(k + 3),
+            fval=10 + k * 0.01,
+            x=np.array([2.5 + k + 0.1, 2 + k + 1]),
+            grad=np.array([k + 0.1, k + 1]),
         )
-        result.optimize_result.append(optimizer_result=optimizer_result)
+        result.optimize_result.append(optimize_result=optimizer_result)
 
     return result
 
@@ -130,13 +131,15 @@ def create_optimization_result_nan_inf():
 
     # append nan and inf
     optimizer_result = pypesto.OptimizerResult(
-        fval=float('nan'), x=np.array([float('nan'), float('nan')])
+        fval=float('nan'), x=np.array([float('nan'), float('nan')]), id='nan'
     )
-    result.optimize_result.append(optimizer_result=optimizer_result)
+    result.optimize_result.append(optimize_result=optimizer_result)
     optimizer_result = pypesto.OptimizerResult(
-        fval=-float('inf'), x=np.array([-float('inf'), -float('inf')])
+        fval=-float('inf'),
+        x=np.array([-float('inf'), -float('inf')]),
+        id='inf',
     )
-    result.optimize_result.append(optimizer_result=optimizer_result)
+    result.optimize_result.append(optimize_result=optimizer_result)
 
     return result
 
@@ -234,6 +237,19 @@ def post_processor(
         for amici_output in amici_outputs
     ]
     return outputs
+
+
+@close_fig
+def test_waterfall_w_zoom():
+    # create the necessary results
+    result_1 = create_optimization_result(500)
+    result_2 = create_optimization_result()
+
+    # test a standard call
+    visualize.waterfall(result_1, n_starts_to_zoom=10)
+
+    # test plotting of lists
+    visualize.waterfall([result_1, result_2], n_starts_to_zoom=3)
 
 
 @close_fig
@@ -814,19 +830,19 @@ def test_optimize_convergence():
 
 def test_assign_clusters():
     # test empty input
-    visualize.assign_clusters([])
+    pypesto.util.assign_clusters([])
 
     # test if it runs at all
     fvals = [0.01, 0.02, 1.01, 2.02, 2.03, 2.04, 3, 4, 4.1, 4.11, 10]
-    visualize.assign_clusters(fvals)
+    pypesto.util.assign_clusters(fvals)
     fvals = np.array(fvals)
-    clust, clustsize = visualize.assign_clusters(fvals)
+    clust, clustsize = pypesto.util.assign_clusters(fvals)
     np.testing.assert_array_equal(clust, [0, 0, 1, 2, 2, 2, 3, 4, 4, 4, 5])
     np.testing.assert_array_equal(clustsize, [2, 1, 3, 1, 3, 1])
 
     # test if clustering works as intended
     fvals = [0.0, 0.00001, 1.0, 2.0, 2.001]
-    clust, clustsize = visualize.assign_clusters(fvals)
+    clust, clustsize = pypesto.util.assign_clusters(fvals)
     assert len(clust) == 5
     assert len(clustsize) == 3
     np.testing.assert_array_equal(clust, [0, 0, 1, 2, 2])
@@ -871,7 +887,7 @@ def test_delete_nan_inf():
 
     # create a random x
     x = np.array([[1, 2], [1, 1], [np.nan, 1], [65, 1], [2, 3]])
-    x, fvals = visualize.delete_nan_inf(fvals, x)
+    x, fvals = pypesto.util.delete_nan_inf(fvals, x)
 
     # test if the nan and inf in fvals are deleted, and so do the
     # corresponding entries in x

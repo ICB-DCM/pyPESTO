@@ -46,6 +46,7 @@ def prior_type_list(request):
     return request.param
 
 
+@pytest.mark.flaky(reruns=3)
 def test_mode(scale, prior_type_list):
     """
     Tests the maximum/optimum for priors in different scales...
@@ -192,6 +193,6 @@ def scaled_to_lin(x: float, scale: str):
     elif scale == 'log':
         return math.exp(x)
     elif scale == 'log10':
-        return 10 ** x
+        return 10**x
     else:
         ValueError(f'Unknown scale {scale}')
