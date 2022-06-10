@@ -44,7 +44,7 @@ def test_ensemble_from_optimization():
 
     # change fvals of each start
     for i_start, optimizer_result in enumerate(result.optimize_result.list):
-        optimizer_result['fval'] = i_start + 1
+        optimizer_result['fval'] = i_start
         for i_iter in range(len(optimizer_result['history']._trace['fval'])):
             optimizer_result['history']._trace['fval'][i_iter] = (
                 len(optimizer_result['history']._trace['fval'])
@@ -54,11 +54,11 @@ def test_ensemble_from_optimization():
 
     # test_endpoints
     ensemble_ep = Ensemble.from_optimization_endpoints(
-        result=result, cutoff=4, max_size=10
+        result=result, rel_cutoff=3, max_size=10
     )
 
     ensemble_hist = Ensemble.from_optimization_history(
-        result=result, cutoff=4, max_size=10, max_per_start=5
+        result=result, rel_cutoff=3, max_size=10, max_per_start=5
     )
 
     # compare vector_tags with the expected values:
@@ -73,8 +73,8 @@ def test_ensemble_from_optimization():
             - 1
             - j,
         )
-        for i in range(4)
-        for j in reversed(range(4 - i))
+        for i in range(3)
+        for j in reversed(range(3 - i))
     ]
     assert hist_tags == ensemble_hist.vector_tags
     assert ep_tags == ensemble_ep.vector_tags
