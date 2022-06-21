@@ -5,6 +5,10 @@ from typing import Iterable, List, Optional, Union
 import numpy as np
 
 from ..C import (
+    ALL,
+    ALL_CLUSTERED,
+    FIRST_CLUSTER,
+    FREE_ONLY,
     LEN_RGB,
     LEN_RGBA,
     RGB,
@@ -14,10 +18,14 @@ from ..C import (
     RGBA_MIN,
     RGBA_WHITE,
 )
+from ..result import Result
+from ..util import assign_clusters, delete_nan_inf
 from .clust_color import assign_colors_for_list
 
 
-def process_result_list(results, colors=None, legends=None):
+def process_result_list(
+    results: Union[Result, List[Result]], colors=None, legends=None
+):
     """
     Assign colors and legends to a list of results, check user provided lists.
 
@@ -207,38 +215,6 @@ def process_y_limits(ax, y_limits):
     return ax
 
 
-def process_start_indices(
-    start_indices: Union[int, Iterable[int]], max_length: int
-) -> List[int]:
-    """
-    Process the start_indices.
-
-    Create an array of indices if a number was provided and checks that the
-    indices do not exceed the max_index.
-
-    Parameters
-    ----------
-    start_indices:
-        list of indices or int specifying an endpoint of the sequence of
-        indices
-    max_length:
-        maximum possible index for the start_indices
-    """
-    if isinstance(start_indices, Number):
-        start_indices = range(int(start_indices))
-
-    start_indices = np.array(start_indices, dtype=int)
-
-    # check, whether index set is not too big
-    start_indices = [
-        start_index
-        for start_index in start_indices
-        if start_index < max_length
-    ]
-
-    return start_indices
-
-
 def rgba2rgb(fg: RGB_RGBA, bg: RGB_RGBA = None) -> RGB:
     """Combine two colors, removing transparency.
 
@@ -309,3 +285,96 @@ def rgba2rgb(fg: RGB_RGBA, bg: RGB_RGBA = None) -> RGB:
         apparent_composite_color_component(fg[i], bg[i])
         for i in range(LEN_RGB)
     ]
+
+
+def process_start_indices(
+    start_indices: Union[str, int, Iterable[int]], result: Result
+):
+    """
+    Process the start_indices.
+
+    Create an array of indices if a number was provided and checks that the
+    indices do not exceed the max_index.
+
+    Parameters
+    ----------
+    start_indices:
+        list of indices or int specifying an endpoint of the sequence of
+        indices
+    result:
+        Result to determine maximum allowed length and/or clusters.
+    """
+    if start_indices is None:
+        start_indices = ALL
+    if isinstance(str):
+        if start_indices == ALL:
+            return list(range(len(result.optimize_result)))
+        elif start_indices == ALL_CLUSTERED:
+            clust_ind, clust_size = assign_clusters(
+                delete_nan_inf(result.optimize_result.fval)[1]
+            )
+            # get all clusters that have size > 2:
+            clust_gr2 = np.where(clust_size > 2)[0]
+            start_indices = np.concatenate(
+                [np.where(clust_ind == i_clust)[0] for i_clust in clust_gr2]
+            )
+            return start_indices
+        elif start_indices == FIRST_CLUSTER:
+            clust_ind = assign_clusters(
+                delete_nan_inf(result.optimize_result.fval)[1]
+            )[0]
+            return np.where(clust_ind == 0)[0]
+        else:
+            raise ValueError(
+                f"Permissible values for start_indices are {ALL}, "
+                f"{ALL_CLUSTERED}, {FIRST_CLUSTER}, an integer or a "
+                f"list of indices."
+            )
+        # TODO: probably add to optimizers to also save whether a start was
+        #  succesfull (or standardize either message or exitflag)
+    # if it is an integer n, select the first n starts
+    if isinstance(start_indices, Number):
+        start_indices = range(int(start_indices))
+    start_indices = np.array(start_indices, dtype=int)
+
+    # check, whether index set is not too big
+    start_indices = [
+        start_index
+        for start_index in start_indices
+        if start_index < len(result.optimize_result)
+    ]
+
+    return start_indices
+
+
+def process_parameter_indices(
+    parameter_indices: Union[str, Iterable[int]], result: Result
+):
+    """
+    Process the parameter_indices.
+
+    Create an array of indices depending on the string that is provided. Or
+    returns the sequence in case a sequence was provided.
+
+    Parameters
+    ----------
+    parameter_indices:
+        list of indices or str specifying the desired indices. Default is
+        `free_only`
+    result:
+        Result to determine maximum allowed length and/or clusters.
+    """
+    if parameter_indices is None:
+        parameter_indices = FREE_ONLY
+    if isinstance(parameter_indices, str):
+        if parameter_indices == ALL:
+            return range(0, result.problem.dim_full)
+        elif parameter_indices == FREE_ONLY:
+            return result.problem.x_free_indices
+        # TODO: VARYING_ONLY as option.
+        else:
+            raise ValueError(
+                "Permissible values for parameter_indices are "
+                f"{ALL}, {FREE_ONLY} or a list of indices."
+            )
+    return parameter_indices

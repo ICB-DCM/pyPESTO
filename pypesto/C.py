@@ -163,6 +163,15 @@ TRACE_Y_GRADNORM = 'gradnorm'
 # supported values to plot on y-axis
 TRACE_Y = (TRACE_Y_FVAL, TRACE_Y_GRADNORM)
 
+# parameter indices
+FREE_ONLY = 'free_only'  # only estimated parameters
+ALL = 'all'  # all parameters, also for start indices
+
+# start indices
+ALL_CONVERGED = 'all_converged'  # all starts that successfully converged
+ALL_CLUSTERED = 'all_clustered'  # best + all that are in a cluster of size > 1
+FIRST_CLUSTER = 'first_cluster'  # all starts that belong to the first cluster
+
 
 ###############################################################################
 # Environment variables
