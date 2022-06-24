@@ -121,12 +121,19 @@ def aggregate_results(rvals: Sequence[ResultDict]) -> ResultDict:
     # rvals are guaranteed to be consistent as _check_sensi_orders checks
     # whether each objective can be called with the respective
     # sensi_orders/mode
+    keys = []
+    for rval in rvals:
+        rval_keys = []
+        for key, value in rval.items():
+            if value is not None:
+                rval_keys.append(key)
+        keys.append(rval_keys)
+    key_set = set.intersection(*[set(rval_keys) for rval_keys in keys])
 
     # sum over fval/grad/hess
     result = {
         key: sum(rval[key] for rval in rvals)
-        for key in [FVAL, CHI2, SCHI2, GRAD, HESS, HESSP]
-        if rvals[0].get(key, None) is not None
+        for key in key_set
     }
 
     # extract rdatas and flatten
