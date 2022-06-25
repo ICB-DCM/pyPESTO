@@ -118,20 +118,11 @@ def aggregate_results(rvals: Sequence[ResultDict]) -> ResultDict:
     rvals:
         results to aggregate
     """
-
-    keys = []
-    for rval in rvals:
-        rval_keys = []
-        for key, value in rval.items():
-            if value is not None:
-                rval_keys.append(key)
-        keys.append(rval_keys)
-    key_set = set.intersection(*[set(rval_keys) for rval_keys in keys])
-
-    # sum over fval/grad/hess
+    # sum over fval/grad/hess, if available in all rvals
     result = {
-        key: sum(np.array(rval[key]) for rval in rvals)
-        for key in key_set
+        key: sum(rval[key] for rval in rvals)
+        for key in [FVAL, CHI2, SCHI2, GRAD, HESS, HESSP]
+        if all([rval.get(key, None) is not None for rval in rvals])
     }
 
     # extract rdatas and flatten
