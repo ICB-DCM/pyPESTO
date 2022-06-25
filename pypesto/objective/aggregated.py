@@ -118,9 +118,7 @@ def aggregate_results(rvals: Sequence[ResultDict]) -> ResultDict:
     rvals:
         results to aggregate
     """
-    # rvals are guaranteed to be consistent as _check_sensi_orders checks
-    # whether each objective can be called with the respective
-    # sensi_orders/mode
+
     keys = []
     for rval in rvals:
         rval_keys = []
@@ -132,7 +130,7 @@ def aggregate_results(rvals: Sequence[ResultDict]) -> ResultDict:
 
     # sum over fval/grad/hess
     result = {
-        key: sum(rval[key] for rval in rvals)
+        key: sum(np.array(rval[key]) for rval in rvals)
         for key in key_set
     }
 
