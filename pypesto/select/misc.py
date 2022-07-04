@@ -2,6 +2,7 @@
 import logging
 from typing import Dict, Iterable
 
+import petab
 import petab_select.ui
 from petab.C import ESTIMATE, NOMINAL_VALUE
 from petab_select import Model, parameter_string_to_value
@@ -41,21 +42,49 @@ def model_to_pypesto_problem(
     Problem
         The pyPESTO select problem.
     """
-    # Any parameter values in `x_guess` for parameters that are not estimated
-    # should be corrected by replacing them with
-    # - their corresponding values in `row` if possible, else
-    # - their corresponding nominal values in the `petab_problem.parameter_df`.
+    petab_problem = petab_select.ui.model_to_petab(model=model)[PETAB_PROBLEM]
+
+    corrected_x_guesses = correct_x_guesses(
+        x_guesses=x_guesses,
+        model=model,
+        petab_problem=petab_problem,
+    )
+
+    importer = PetabImporter(petab_problem)
+    if objective is None:
+        objective = importer.create_objective()
+    pypesto_problem = importer.create_problem(
+        objective=objective,
+        x_guesses=corrected_x_guesses,
+    )
+    return pypesto_problem
+
+
+def correct_x_guesses(
+    x_guesses: Iterable[Dict[str, float]],
+    model: Model,
+    petab_problem: petab.Problem = None,
+):
+    """Fix startpoint guesses passed between models of different sizes.
+
+    Any parameter values in `x_guess` for parameters that are not estimated
+    should be corrected by replacing them with
+    - their corresponding values in `row` if possible, else
+    - their corresponding nominal values in the `petab_problem.parameter_df`.
+    """
     # TODO reconsider whether correcting is a good idea (`x_guess` is no longer
     # the latest MLE then). Similar todo exists in
     # `ModelSelectorMethod.new_model_problem`.
-
-    petab_problem = petab_select.ui.model_to_petab(model=model)[PETAB_PROBLEM]
-
+    # TODO move to PEtab Select?
     # TODO may be issues, e.g. differences in bounds of parameters between
     #      different model PEtab problems is not accounted for, or if there are
     #      different parameters in the old/new PEtab problem.
 
-    # TODO move to PEtab Select?
+    if petab_problem is None:
+        petab_problem = petab_select.ui.model_to_petab(model=model)[
+            PETAB_PROBLEM
+        ]
+
     corrected_x_guesses = None
     if x_guesses is not None:
         corrected_x_guesses = []
@@ -77,12 +106,4 @@ def model_to_pypesto_problem(
                     ]
                 corrected_x_guess.append(corrected_value)
             corrected_x_guesses.append(corrected_x_guess)
-
-    importer = PetabImporter(petab_problem)
-    if objective is None:
-        objective = importer.create_objective()
-    pypesto_problem = importer.create_problem(
-        objective=objective,
-        x_guesses=corrected_x_guesses,
-    )
-    return pypesto_problem
+    return corrected_x_guesses

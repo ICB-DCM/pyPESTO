@@ -1,12 +1,13 @@
 """Calibrate a PEtab Select model with pyPESTO."""
 import time
-from typing import Callable, Dict, List, Optional
+from typing import Any, Callable, Dict, List, Optional
 
 from petab_select import Criterion, Model
 
 from ..C import TYPE_POSTPROCESSOR
 from ..objective import ObjectiveBase
 from ..optimize import minimize
+from ..problem import Problem
 from ..result import OptimizerResult, Result
 from .misc import model_to_pypesto_problem
 
@@ -65,6 +66,7 @@ class ModelProblem:
         minimize_options: Dict = None,
         objective_customizer: Optional[OBJECTIVE_CUSTOMIZER_TYPE] = None,
         postprocessor: Optional[TYPE_POSTPROCESSOR] = None,
+        model_to_pypesto_problem_method: Callable[[Any], Problem] = None,
     ):
         """Construct then calibrate a model problem.
 
@@ -94,8 +96,12 @@ class ModelProblem:
         self.minimize_result = None
         self.x_guess = x_guess
 
+        self.model_to_pypesto_problem_method = model_to_pypesto_problem_method
+        if model_to_pypesto_problem_method is None:
+            self.model_to_pypesto_problem_method = model_to_pypesto_problem
+
         if self.valid:
-            self.pypesto_problem = model_to_pypesto_problem(
+            self.pypesto_problem = self.model_to_pypesto_problem_method(
                 self.model,
                 x_guesses=None if self.x_guess is None else [self.x_guess],
             )
