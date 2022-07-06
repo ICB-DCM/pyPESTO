@@ -463,7 +463,7 @@ def parameters_correlation_matrix(
     df = pd.DataFrame(parameters, columns=x_labels)
     corr_matrix = df.corr(method=method)
     if cluster:
-        sns.clustermap(data=corr_matrix, ax=ax)
+        sns.clustermap(data=corr_matrix, yticklabels=True, vmin=-1, vmax=1)
     else:
-        sns.heatmap(data=corr_matrix, ax=ax)
+        sns.heatmap(data=corr_matrix, ax=ax, yticklabels=True, vmin=-1, vmax=1)
     return ax

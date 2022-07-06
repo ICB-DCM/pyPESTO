@@ -306,7 +306,7 @@ def process_start_indices(
     """
     if start_indices is None:
         start_indices = ALL
-    if isinstance(str):
+    if isinstance(start_indices, str):
         if start_indices == ALL:
             return list(range(len(result.optimize_result)))
         elif start_indices == ALL_CLUSTERED:
