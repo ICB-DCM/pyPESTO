@@ -122,7 +122,7 @@ def aggregate_results(rvals: Sequence[ResultDict]) -> ResultDict:
     result = {
         key: sum(rval[key] for rval in rvals)
         for key in [FVAL, CHI2, SCHI2, GRAD, HESS, HESSP]
-        if all([key in rval for rval in rvals])
+        if all(key in rval for rval in rvals)
     }
 
     # extract rdatas and flatten
