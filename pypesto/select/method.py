@@ -380,7 +380,21 @@ class MethodCaller:
                 models=better_models,
                 criterion=self.criterion,
             )
-
+        jumped_to_most_distant = self.candidate_space.update_after_calibration(
+            history=self.history, 
+            local_history=local_history,
+            criterion=self.criterion,
+        )
+        # If candidate space not Famos then ignored.
+        # Else, in case we jumped to most distant in this iteration, update the 
+        # best_model to the predecessor_model (jumped to model) so it becomes
+        # the predecessor model in next iteration. 
+        # Also update the local_history with it.
+        if jumped_to_most_distant:
+            best_model = self.candidate_space.predecessor_model
+            self.new_model_problem(model = best_model)
+            local_history[best_model.model_id] = best_model
+        
         return best_model, local_history
 
     def handle_calibrated_model(
