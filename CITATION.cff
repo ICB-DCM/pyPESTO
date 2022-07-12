@@ -1,3 +1,4 @@
+message: If you use this software, please cite it using these metadata.
 authors:
    -
       family-names: "Schälte"
@@ -70,6 +71,5 @@ authors:
 title: "pyPESTO - Parameter EStimation TOolbox for python"
 url: "https://github.com/ICB-DCM/pyPESTO"
 doi: 10.5281/zenodo.2553546
-version: 0.2.7
 date-released: 2021-03-08
 cff-version: 1.2.0
