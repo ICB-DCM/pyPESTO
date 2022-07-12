@@ -71,5 +71,4 @@ authors:
 title: "pyPESTO - Parameter EStimation TOolbox for python"
 url: "https://github.com/ICB-DCM/pyPESTO"
 doi: 10.5281/zenodo.2553546
-date-released: 2021-03-08
 cff-version: 1.2.0
