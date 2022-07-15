@@ -401,8 +401,6 @@ def handle_inputs(
 
 def parameters_correlation_matrix(
     result: Result,
-    ax: Optional[matplotlib.axes.Axes] = None,
-    size: Optional[Tuple[float, float]] = None,
     parameter_indices: Union[str, Sequence[int]] = 'free_only',
     start_indices: Optional[Union[int, Iterable[int]]] = None,
     method: Union[str, Callable] = 'pearson',
@@ -415,11 +413,6 @@ def parameters_correlation_matrix(
     ----------
     result:
         Optimization result obtained by 'optimize.py'
-    ax:
-        Axes object to use
-    size:
-        Figure size (width, height) in inches. Is only applied when no ax
-        object is specified
     parameter_indices:
         List of integers specifying the parameters to be considered.
     start_indices:
@@ -442,15 +435,6 @@ def parameters_correlation_matrix(
     parameter_indices = process_parameter_indices(
         parameter_indices=parameter_indices, result=result
     )
-
-    if size is None:
-        # 0.5 inch height per parameter
-        size = (18.5, len(parameter_indices) / 2)
-
-    if ax is None:
-        ax = plt.subplots()[1]
-        fig = plt.gcf()
-        fig.set_size_inches(*size)
     # put all parameters into a dataframe, where columns are parameters
     parameters = [
         result.optimize_result[i_start]['x'][parameter_indices]
@@ -463,7 +447,9 @@ def parameters_correlation_matrix(
     df = pd.DataFrame(parameters, columns=x_labels)
     corr_matrix = df.corr(method=method)
     if cluster:
-        sns.clustermap(data=corr_matrix, yticklabels=True, vmin=-1, vmax=1)
+        ax = sns.clustermap(
+            data=corr_matrix, yticklabels=True, vmin=-1, vmax=1
+        )
     else:
-        sns.heatmap(data=corr_matrix, ax=ax, yticklabels=True, vmin=-1, vmax=1)
+        ax = sns.heatmap(data=corr_matrix, yticklabels=True, vmin=-1, vmax=1)
     return ax
