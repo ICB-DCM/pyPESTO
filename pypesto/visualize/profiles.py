@@ -97,11 +97,22 @@ def profiles(
                 # multiple results per axes object
                 color_ind = i_result
 
+            profile_order = None
+            # if profile_indices is not sorted, pass it to lowlevel
+            if not (
+                all(
+                    profile_indices[i] <= profile_indices[i + 1]
+                    for i in range(len(profile_indices) - 1)
+                )
+            ):
+                profile_order = profile_indices
+
             # call lowlevel routine
             ax = profiles_lowlevel(
                 fvals=fvals,
                 ax=ax,
                 size=size,
+                profile_order=profile_order,
                 color=colors[color_ind],
                 legend_text=legends[color_ind],
                 x_labels=x_labels,
@@ -125,6 +136,7 @@ def profiles_lowlevel(
     fvals,
     ax=None,
     size: Tuple[float, float] = (18.5, 6.5),
+    profile_order: Sequence[int] = None,
     color=None,
     legend_text: str = None,
     x_labels=None,
@@ -149,6 +161,8 @@ def profiles_lowlevel(
     size: tuple, optional
         Figure size (width, height) in inches. Is only applied when no ax
         object is specified.
+    profile_order: numeric list or array
+        List of profiles in the order they are to be visualized.
     color: RGBA, optional
         Color for profiles in plot.
     legend_text: str
@@ -228,8 +242,12 @@ def profiles_lowlevel(
             tmp_legend = None
 
         # create or choose an axes object
+        if profile_order is None:
+            i_ax = counter
+        else:
+            i_ax = profile_order.index(i_plot)
         if create_new_ax:
-            ax.append(fig.add_subplot(int(rows), int(columns), counter + 1))
+            ax.append(fig.add_subplot(int(rows), int(columns), i_ax + 1))
         else:
             plt.axes(ax[counter])
 
@@ -352,7 +370,7 @@ def handle_reference_points(ref, ax, profile_indices):
         # loop over axes objects
         for i_par, i_ax in enumerate(ax):
             for i_ref in ref:
-                current_x = i_ref['x'][profile_indices[i_par]]
+                current_x = i_ref['x'][sorted(profile_indices)[i_par]]
                 i_ax.plot(
                     [current_x, current_x],
                     [0.0, 1.0],
