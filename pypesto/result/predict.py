@@ -16,6 +16,8 @@ from ..C import (
     OUTPUT,
     OUTPUT_IDS,
     OUTPUT_SENSI,
+    OUTPUT_SIGMAY,
+    OUTPUT_WEIGHT,
     PARAMETER_IDS,
     TIME,
     TIMEPOINTS,
@@ -314,6 +316,16 @@ class PredictionResult:
                     f.create_dataset(
                         os.path.join(base, str(i_cond), OUTPUT_SENSI),
                         data=cond.output_sensi,
+                    )
+                if cond.output_weight is not None:
+                    f.create_dataset(
+                        os.path.join(base, str(i_cond), OUTPUT_WEIGHT),
+                        data=cond.output_weight,
+                    )
+                if cond.output_sigmay is not None:
+                    f.create_dataset(
+                        os.path.join(base, str(i_cond), OUTPUT_SIGMAY),
+                        data=cond.output_sigmay,
                     )
 
     @staticmethod

@@ -6,6 +6,27 @@ Release notes
 ..........
 
 
+0.2.13 (2022-05-24)
+-------------------
+
+* Ensembles:
+    * Added standard deviation to ensemble prediction plots (#853)
+* Storage
+    * Distinguish between scalar and vector values in Hdf5History._get_hdf5_entries (#856)
+    * Fix hdf5 history overwrite (#861)
+    * Updated optimization storage format. Made attributes explicit. (#863)
+    * Added problem to result from read_results_from_file (#862)
+* General
+    * Various additions to Optimize(r)Result summary method (#859, #865, #866, #867)
+    * Fixed optimizer history fval offset (#834)
+    * Updated the profile, minimize, sample and added overwrite as argument. (#864)
+    * Fixed y-labels in pypesto.visualize.optimizer_history (#869)
+    * Created show_bounds, to display proper sampling scatter plots. (#868)
+    * Enabled saving messages and exit flags in hdf5 history in case of finished run (#873)
+    * Select: use objective function evaluation time as optimization time for models with no estimated parameters (#872)
+    * removed checking for equality and checking for np.allclose in test_aesara (#877)
+
+
 0.2.12 (2022-04-11)
 -------------------
 
@@ -18,7 +39,6 @@ Release notes
     * PetabImporter: Auto-regenerate AMICI models in case of version mismatch (#848)
 * Pymc3
     * Disable Pymc3 Sampler tests (#831)
-    *
 *  Visualizations:
     * Waterfall zoom (#808)
     * Reverse opacities of colors in prediction trajectories plots(#838)
@@ -39,7 +59,7 @@ Release notes
     * Mark test/base/test_prior.py::test_mode as flaky (#833)
     * Custom methods for autosave filenames (#822)
     * fix saving ensemble predictions to hdf5 (#840)
-    * Upgrad nbQA to 1.3.1 (#846)
+    * Upgrade nbQA to 1.3.1 (#846)
     * Replaced constantParameters with constant_parameters in notebook (#852)
 
 
