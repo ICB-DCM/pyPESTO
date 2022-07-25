@@ -1,10 +1,5 @@
-.. pyPESTO documentation master file, created by
-   sphinx-quickstart on Mon Jul 30 08:30:38 2018.
-   You can adapt this file completely to your liking, but it should at least
-   contain the root `toctree` directive.
-
-Welcome to pyPESTO's documentation!
-===================================
+pyPESTO - PYthon-based Parameter EStimation TOolbox
+===================================================
 
 .. image:: https://github.com/ICB-DCM/pyPESTO/workflows/CI/badge.svg
    :target: https://github.com/ICB-DCM/pyPESTO/actions
