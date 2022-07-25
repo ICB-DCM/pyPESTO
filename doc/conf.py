@@ -46,6 +46,8 @@ extensions = [
     'nbsphinx',
     # code highlighting in jupyter cells
     'IPython.sphinxext.ipython_console_highlighting',
+    # support markdown-based docs
+    'myst_parser',
 ]
 
 # default autodoc options
