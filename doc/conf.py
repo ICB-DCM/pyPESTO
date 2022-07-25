@@ -32,16 +32,20 @@ needs_sphinx = '3.0.4'
 # extensions coming with Sphinx (named 'sphinx.ext.*') or your custom
 # ones.
 extensions = [
+    # include documentation from docstrings
     'sphinx.ext.autodoc',
-    'sphinx.ext.napoleon',
-    # code highlighting in jupyter cells
-    'IPython.sphinxext.ipython_console_highlighting',
-    'nbsphinx',
-    'recommonmark',
+    # generate autodoc summaries
+    'sphinx.ext.autosummary',
     # link to code
     'sphinx.ext.viewcode',
     # link to other projects' docs
     'sphinx.ext.intersphinx',
+    # support numpy and google style docstrings
+    'sphinx.ext.napoleon',
+    # source parser for jupyter notebook files
+    'nbsphinx',
+    # code highlighting in jupyter cells
+    'IPython.sphinxext.ipython_console_highlighting',
 ]
 
 # default autodoc options
@@ -59,7 +63,7 @@ autodoc_default_options = {
 intersphinx_mapping = {
     'python': ('https://docs.python.org/3', None),
     'numpy': ('https://numpy.org/devdocs/', None),
-    'scipy': ('https://docs.scipy.org/doc/scipy/reference/', None),
+    'scipy': ('https://docs.scipy.org/doc/scipy/', None),
     'pandas': ('https://pandas.pydata.org/docs/', None),
     'petab': ('https://petab.readthedocs.io/en/stable/', None),
     'amici': ('https://amici.readthedocs.io/en/latest/', None),
@@ -98,7 +102,7 @@ release = version
 #
 # This is also used if you do content translation via gettext catalogs.
 # Usually you set "language" from the command line for these cases.
-language = None
+language = "en"
 
 # List of patterns, relative to source directory, that match files and
 # directories to ignore when looking for source files.
