@@ -1,8 +1,6 @@
 API reference
 =============
 
-.. automodule:: pypesto
-
 .. toctree::
    :maxdepth: 2
    :caption: API reference

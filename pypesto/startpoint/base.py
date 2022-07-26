@@ -6,7 +6,8 @@ from typing import Callable, Union
 import numpy as np
 
 from ..C import FVAL, GRAD
-from ..problem import ObjectiveBase, Problem
+from ..objective import ObjectiveBase
+from ..problem import Problem
 
 
 class StartpointMethod(ABC):
