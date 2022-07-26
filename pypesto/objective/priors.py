@@ -73,7 +73,7 @@ class NegLogParameterPriors(ObjectiveBase):
         self,
         x: np.ndarray,
         sensi_orders: Tuple[int, ...],
-        mode: str,
+        mode: C.ModeType,
         **kwargs,
     ) -> ResultDict:
         """
@@ -114,7 +114,7 @@ class NegLogParameterPriors(ObjectiveBase):
     def check_sensi_orders(
         self,
         sensi_orders: Tuple[int, ...],
-        mode: str,
+        mode: C.ModeType,
     ) -> bool:
         """See `ObjectiveBase` documentation."""
         if mode == C.MODE_FUN:
@@ -143,7 +143,7 @@ class NegLogParameterPriors(ObjectiveBase):
 
         return True
 
-    def check_mode(self, mode: str) -> bool:
+    def check_mode(self, mode: C.ModeType) -> bool:
         """See `ObjectiveBase` documentation."""
         if mode == C.MODE_FUN:
             return True

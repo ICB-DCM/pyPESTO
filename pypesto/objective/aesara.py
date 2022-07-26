@@ -11,7 +11,7 @@ from typing import Optional, Sequence, Tuple
 
 import numpy as np
 
-from ..C import FVAL, GRAD, HESS, MODE_FUN, RDATAS
+from ..C import FVAL, GRAD, HESS, MODE_FUN, RDATAS, ModeType
 from .base import ObjectiveBase, ResultDict
 
 try:
@@ -89,11 +89,11 @@ class AesaraObjective(ObjectiveBase):
         # temporary storage for evaluation results of objective
         self.inner_ret: ResultDict = {}
 
-    def check_mode(self, mode) -> bool:
+    def check_mode(self, mode: ModeType) -> bool:
         """See `ObjectiveBase` documentation."""
         return mode == MODE_FUN
 
-    def check_sensi_orders(self, sensi_orders, mode) -> bool:
+    def check_sensi_orders(self, sensi_orders, mode: ModeType) -> bool:
         """See `ObjectiveBase` documentation."""
         if not self.check_mode(mode):
             return False
@@ -101,7 +101,11 @@ class AesaraObjective(ObjectiveBase):
             return self.base_objective.check_sensi_orders(sensi_orders, mode)
 
     def call_unprocessed(
-        self, x: np.ndarray, sensi_orders: Tuple[int, ...], mode: str, **kwargs
+        self,
+        x: np.ndarray,
+        sensi_orders: Tuple[int, ...],
+        mode: ModeType,
+        **kwargs,
     ) -> ResultDict:
         """
         See `ObjectiveBase` for more documentation.

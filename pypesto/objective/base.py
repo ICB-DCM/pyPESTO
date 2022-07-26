@@ -6,7 +6,7 @@ from typing import Dict, Iterable, List, Optional, Sequence, Tuple, Union
 import numpy as np
 import pandas as pd
 
-from ..C import FVAL, GRAD, HESS, MODE_FUN, MODE_RES, RES, SRES
+from ..C import FVAL, GRAD, HESS, MODE_FUN, MODE_RES, RES, SRES, ModeType
 from .history import HistoryBase
 from .pre_post_process import FixedParametersProcessor, PrePostProcessor
 
@@ -124,7 +124,7 @@ class ObjectiveBase(abc.ABC):
         self,
         x: np.ndarray,
         sensi_orders: Tuple[int, ...] = (0,),
-        mode: str = MODE_FUN,
+        mode: ModeType = MODE_FUN,
         return_dict: bool = False,
         **kwargs,
     ) -> Union[float, np.ndarray, Tuple, ResultDict]:
@@ -206,7 +206,7 @@ class ObjectiveBase(abc.ABC):
         self,
         x: np.ndarray,
         sensi_orders: Tuple[int, ...],
-        mode: str,
+        mode: ModeType,
         **kwargs,
     ) -> ResultDict:
         """
@@ -228,7 +228,7 @@ class ObjectiveBase(abc.ABC):
         """
         raise NotImplementedError()
 
-    def check_mode(self, mode: str) -> bool:
+    def check_mode(self, mode: ModeType) -> bool:
         """
         Check if the objective is able to compute in the requested mode.
 
@@ -264,7 +264,7 @@ class ObjectiveBase(abc.ABC):
     def check_sensi_orders(
         self,
         sensi_orders: Tuple[int, ...],
-        mode: str,
+        mode: ModeType,
     ) -> bool:
         """
         Check if the objective is able to compute the requested sensitivities.
@@ -316,7 +316,7 @@ class ObjectiveBase(abc.ABC):
     @staticmethod
     def output_to_tuple(
         sensi_orders: Tuple[int, ...],
-        mode: str,
+        mode: ModeType,
         **kwargs: Union[float, np.ndarray],
     ) -> Tuple:
         """
@@ -475,7 +475,7 @@ class ObjectiveBase(abc.ABC):
         x_indices: Sequence[int] = None,
         eps: float = 1e-5,
         verbosity: int = 1,
-        mode: str = MODE_FUN,
+        mode: ModeType = MODE_FUN,
         order: int = 0,
         detailed: bool = False,
     ) -> pd.DataFrame:
@@ -646,7 +646,7 @@ class ObjectiveBase(abc.ABC):
         x_free: Sequence[int] = None,
         rtol: float = 1e-2,
         atol: float = 1e-3,
-        mode: str = None,
+        mode: ModeType = None,
         order: int = 0,
         multi_eps=None,
         **kwargs,

@@ -3,7 +3,18 @@ from typing import Sequence, Tuple
 
 import numpy as np
 
-from ..C import CHI2, FVAL, GRAD, HESS, HESSP, RDATAS, RES, SCHI2, SRES
+from ..C import (
+    CHI2,
+    FVAL,
+    GRAD,
+    HESS,
+    HESSP,
+    RDATAS,
+    RES,
+    SCHI2,
+    SRES,
+    ModeType,
+)
 from .base import ObjectiveBase, ResultDict
 
 
@@ -59,7 +70,7 @@ class AggregatedObjective(ObjectiveBase):
 
         return other
 
-    def check_mode(self, mode: str) -> bool:
+    def check_mode(self, mode: ModeType) -> bool:
         """See `ObjectiveBase` documentation."""
         return all(
             objective.check_mode(mode) for objective in self._objectives
@@ -68,7 +79,7 @@ class AggregatedObjective(ObjectiveBase):
     def check_sensi_orders(
         self,
         sensi_orders: Tuple[int, ...],
-        mode: str,
+        mode: ModeType,
     ) -> bool:
         """See `ObjectiveBase` documentation."""
         return all(
@@ -80,7 +91,7 @@ class AggregatedObjective(ObjectiveBase):
         self,
         x: np.ndarray,
         sensi_orders: Tuple[int, ...],
-        mode: str,
+        mode: ModeType,
         **kwargs,
     ) -> ResultDict:
         """
