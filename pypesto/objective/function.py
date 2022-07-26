@@ -101,7 +101,8 @@ class Objective(ObjectiveBase):
         return callable(self.hess) or self.hess is True
 
     @property
-    def has_hessp(self) -> bool:  # noqa
+    def has_hessp(self) -> bool:
+        """Check whether Hessian vector product is defined."""
         # Not supported yet
         return False
 
