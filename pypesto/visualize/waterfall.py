@@ -234,8 +234,10 @@ def waterfall_lowlevel(
     y_min, y_max = ax.get_ylim()
     if scale_y == 'log10':
         if np.log10(y_max) - np.log10(y_min) < 1.0:
-            y_mean = 0.5 * (np.log10(y_min) + np.log10(y_max))
-            ax.set_ylim(10.0 ** (y_mean - 0.5), 10.0 ** (y_mean + 0.5))
+            ax.set_ylim(
+                ax.dataLim.y0 - 0.001 * abs(ax.dataLim.y0),
+                ax.dataLim.y1 + 0.001 * abs(ax.dataLim.y1),
+            )
     else:
         if y_max - y_min < 1.0:
             y_mean = 0.5 * (y_min + y_max)
