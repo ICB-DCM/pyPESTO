@@ -37,7 +37,7 @@ def check_overwrite(
             raise RuntimeError(
                 f"File `{f.filename}` already exists and contains "
                 f"information about {target} result. "
-                f"If you wish to overwrite the file set "
+                f"If you wish to overwrite the file, set "
                 f"`overwrite=True`."
             )
 
