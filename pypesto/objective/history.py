@@ -773,7 +773,7 @@ class CsvHistory(History):
                 row[(var, float('nan'))] = np.NaN
 
         self._trace = pd.concat(
-            (self._trace, row),
+            (self._trace, pd.DataFrame(row)),
         )
 
         # save trace to file
