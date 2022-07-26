@@ -2,7 +2,7 @@ from typing import Callable, Sequence, Tuple, Union
 
 import numpy as np
 
-from ..C import FVAL, GRAD, HESS, MODE_FUN, MODE_RES, RES, SRES
+from ..C import FVAL, GRAD, HESS, MODE_FUN, MODE_RES, RES, SRES, ModeType
 from .base import ObjectiveBase, ResultDict
 
 
@@ -132,7 +132,7 @@ class Objective(ObjectiveBase):
         self,
         x: np.ndarray,
         sensi_orders: Tuple[int, ...],
-        mode: str,
+        mode: ModeType,
         **kwargs,
     ) -> ResultDict:
         """

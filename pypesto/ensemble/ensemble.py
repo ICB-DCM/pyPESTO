@@ -33,6 +33,7 @@ from ..C import (
     X_NAMES,
     X_VECTOR,
     EnsembleType,
+    ModeType,
 )
 from ..engine import (
     Engine,
@@ -860,7 +861,7 @@ class Ensemble:
         prediction_id: str = None,
         sensi_orders: Tuple = (0,),
         default_value: float = None,
-        mode: str = MODE_FUN,
+        mode: ModeType = MODE_FUN,
         include_llh_weights: bool = False,
         include_sigmay: bool = False,
         engine: Engine = None,
