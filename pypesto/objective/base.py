@@ -81,7 +81,8 @@ class ObjectiveBase(abc.ABC):
         return self.check_sensi_orders((2,), MODE_FUN)
 
     @property
-    def has_hessp(self) -> bool:  # noqa
+    def has_hessp(self) -> bool:
+        """Check whether Hessian-vector product is defined."""
         # Not supported yet
         return False
 
