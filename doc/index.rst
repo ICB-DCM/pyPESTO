@@ -1,5 +1,5 @@
-pyPESTO - PYthon-based Parameter EStimation TOolbox
-===================================================
+pyPESTO - Parameter EStimation TOolbox for python
+=================================================
 
 .. image:: https://github.com/ICB-DCM/pyPESTO/workflows/CI/badge.svg
    :target: https://github.com/ICB-DCM/pyPESTO/actions

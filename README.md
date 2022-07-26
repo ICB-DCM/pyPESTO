@@ -1,4 +1,4 @@
-# pyPESTO - PYthon-based Parameter EStimation TOolbox
+# pyPESTO - Parameter EStimation TOolbox for python
 
 <img src="https://raw.githubusercontent.com/ICB-DCM/pyPESTO/master/doc/logo/logo_wordmark.png" width="50%" alt="pyPESTO logo"/>
 
