@@ -20,24 +20,25 @@ def check_overwrite(
     """
     Check whether target already exists.
 
-    Sends a warning if overwrite=False, deletes the target if overwrite=True.
+    Sends a warning if ``overwrite=False``, deletes the target if
+    ``overwrite=True``.
 
     Attributes
     ----------
     f: file or group where existence of a group with the path group_path
        should be checked
     target: name of the group, whose existence is checked
-    overwrite: if overwrite is true, it deltes the target in f
+    overwrite: if ``True``, it deletes the target in ``f``
     """
     if target in f:
         if overwrite:
             del f[target]
         else:
-            raise Exception(
-                f"The file already exists and contains "
-                f"information about {target} result."
-                f"If you wish to overwrite the file set"
-                f"overwrite=True."
+            raise RuntimeError(
+                f"File `{f.filename}` already exists and contains "
+                f"information about {target} result. "
+                f"If you wish to overwrite the file, set "
+                f"`overwrite=True`."
             )
 
 
