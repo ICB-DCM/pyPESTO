@@ -148,11 +148,11 @@ class ModelProblem:
         # subsequent models in model selection, for parameters in those models
         # that were estimated in this model.
         self.best_start = self.minimize_result.optimize_result.list[0]
-        self.model.set_criterion(Criterion.NLLH, self.best_start.fval)
+        self.model.set_criterion(Criterion.NLLH, float(self.best_start.fval))
         self.model.compute_criterion(criterion=self.criterion)
 
         self.model.estimated_parameters = {
-            id: value
+            id: float(value)
             for index, (id, value) in enumerate(
                 dict(
                     zip(
