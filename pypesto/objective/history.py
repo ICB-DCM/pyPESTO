@@ -26,6 +26,7 @@ from ..C import (
     SCHI2,
     SRES,
     TIME,
+    ModeType,
     X,
 )
 from .util import (
@@ -234,7 +235,7 @@ class HistoryBase(abc.ABC):
         self,
         x: np.ndarray,
         sensi_orders: Tuple[int, ...],
-        mode: str,
+        mode: ModeType,
         result: ResultDict,
     ) -> None:
         """
@@ -449,7 +450,7 @@ class History(HistoryBase):
         self,
         x: np.ndarray,
         sensi_orders: Tuple[int, ...],
-        mode: str,
+        mode: ModeType,
         result: ResultDict,
     ) -> None:
         """Update history after a function evaluation.
@@ -479,7 +480,7 @@ class History(HistoryBase):
     def _update_counts(
         self,
         sensi_orders: Tuple[int, ...],
-        mode: str,
+        mode: ModeType,
     ):
         """Update the counters."""
         if mode == MODE_FUN:
@@ -552,7 +553,7 @@ class MemoryHistory(History):
         self,
         x: np.ndarray,
         sensi_orders: Tuple[int, ...],
-        mode: str,
+        mode: ModeType,
         result: ResultDict,
     ) -> None:
         """See `History` docstring."""
@@ -713,7 +714,7 @@ class CsvHistory(History):
         self,
         x: np.ndarray,
         sensi_orders: Tuple[int, ...],
-        mode: str,
+        mode: ModeType,
         result: ResultDict,
     ) -> None:
         """See `History` docstring."""
@@ -728,7 +729,7 @@ class CsvHistory(History):
     def _update_trace(
         self,
         x: np.ndarray,
-        mode: str,
+        mode: ModeType,
         result: ResultDict,
     ):
         """Update and possibly store the trace."""
@@ -772,7 +773,9 @@ class CsvHistory(History):
             else:
                 row[(var, float('nan'))] = np.NaN
 
-        self._trace = self._trace.append(row)
+        self._trace = pd.concat(
+            (self._trace, pd.DataFrame([row])),
+        )
 
         # save trace to file
         self._save_trace()
@@ -946,7 +949,7 @@ class Hdf5History(History):
         self,
         x: np.ndarray,
         sensi_orders: Tuple[int, ...],
-        mode: str,
+        mode: ModeType,
         result: ResultDict,
     ) -> None:
         """See `History` docstring."""
@@ -1020,7 +1023,7 @@ class Hdf5History(History):
         return False
 
     # overwrite _update_counts
-    def _update_counts(self, sensi_orders: Tuple[int, ...], mode: str):
+    def _update_counts(self, sensi_orders: Tuple[int, ...], mode: ModeType):
         """Update the counters in the hdf5."""
         with h5py.File(self.file, 'a') as f:
 
@@ -1095,7 +1098,7 @@ class Hdf5History(History):
         self,
         x: np.ndarray,
         sensi_orders: Tuple[int],
-        mode: str,
+        mode: ModeType,
         result: ResultDict,
     ):
         """Update and possibly store the trace."""
@@ -1348,7 +1351,7 @@ class OptimizerHistory:
         self,
         x: np.ndarray,
         sensi_orders: Tuple[int],
-        mode: str,
+        mode: ModeType,
         result: ResultDict,
     ) -> None:
         """Update history and best found value."""
@@ -1543,7 +1546,7 @@ def string2ndarray(x: Union[str, float]) -> Union[np.ndarray, float]:
 
 
 def extract_values(
-    mode: str, result: ResultDict, options: HistoryOptions
+    mode: ModeType, result: ResultDict, options: HistoryOptions
 ) -> Dict:
     """Extract values to record from result."""
     ret = {}

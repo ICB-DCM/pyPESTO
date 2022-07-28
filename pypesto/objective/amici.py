@@ -7,7 +7,7 @@ from typing import Dict, Optional, Sequence, Tuple, Union
 
 import numpy as np
 
-from ..C import FVAL, MODE_FUN, MODE_RES, RDATAS
+from ..C import FVAL, MODE_FUN, MODE_RES, RDATAS, ModeType
 from .amici_calculator import AmiciCalculator
 from .amici_util import (
     create_identity_parameter_mapping,
@@ -333,7 +333,7 @@ class AmiciObjective(ObjectiveBase):
     def check_sensi_orders(
         self,
         sensi_orders: Tuple[int, ...],
-        mode: str,
+        mode: ModeType,
     ) -> bool:
         """See `ObjectiveBase` documentation."""
         if not sensi_orders:
@@ -356,7 +356,7 @@ class AmiciObjective(ObjectiveBase):
         # evaluate sensitivity order
         return sensi_order <= max_sensi_order
 
-    def check_mode(self, mode: str) -> bool:
+    def check_mode(self, mode: ModeType) -> bool:
         """See `ObjectiveBase` documentation."""
         return mode in [MODE_FUN, MODE_RES]
 
@@ -364,7 +364,7 @@ class AmiciObjective(ObjectiveBase):
         self,
         x: np.ndarray,
         sensi_orders: Tuple[int, ...] = (0,),
-        mode: str = MODE_FUN,
+        mode: ModeType = MODE_FUN,
         return_dict: bool = False,
         **kwargs,
     ) -> Union[float, np.ndarray, Tuple, ResultDict]:
@@ -384,7 +384,7 @@ class AmiciObjective(ObjectiveBase):
         self,
         x: np.ndarray,
         sensi_orders: Tuple[int, ...],
-        mode: str,
+        mode: ModeType,
         edatas: Sequence['amici.ExpData'] = None,
         parameter_mapping: 'ParameterMapping' = None,
         amici_reporting: Optional['amici.RDataReporting'] = None,

@@ -5,13 +5,14 @@ Package-wide consistent constant definitions.
 """
 
 from enum import Enum
-from typing import Callable, Tuple, Union
+from typing import Callable, Literal, Tuple, Union
 
 ###############################################################################
 # OBJECTIVE
 
 MODE_FUN = 'mode_fun'  # mode for function values
 MODE_RES = 'mode_res'  # mode for residuals
+ModeType = Literal['mode_fun', 'mode_res']  # type for `mode` argument
 FVAL = 'fval'  # function value
 FVAL0 = 'fval0'  # function value at start
 GRAD = 'grad'  # gradient
