@@ -1,11 +1,11 @@
 """Objective utilities."""
 
-from typing import Union
+from typing import Any, Callable, Union
 
 import numpy as np
 
 
-def _check_none(fun):
+def _check_none(fun: Callable[..., Any]) -> Callable[..., Union[Any, None]]:
     """Return None if any input argument is None; Wrapper function."""
 
     def checked_fun(*args, **kwargs):
@@ -17,13 +17,13 @@ def _check_none(fun):
 
 
 @_check_none
-def res_to_chi2(res: np.ndarray) -> Union[float, None]:
+def res_to_chi2(res: np.ndarray) -> float:
     """Translate residuals to chi2 values, `chi2 = sum(res**2)`."""
     return float(np.dot(res, res))
 
 
 @_check_none
-def chi2_to_fval(chi2: float) -> Union[float, None]:
+def chi2_to_fval(chi2: float) -> float:
     """Translate chi2 to function value, `fval = 0.5*chi2 = 0.5*sum(res**2)`.
 
     Note that for the function value we thus employ a probabilistic
@@ -34,13 +34,13 @@ def chi2_to_fval(chi2: float) -> Union[float, None]:
 
 
 @_check_none
-def res_to_fval(res: np.ndarray) -> Union[float, None]:
+def res_to_fval(res: np.ndarray) -> float:
     """Translate residuals to function value, `fval = 0.5*sum(res**2)`."""
     return chi2_to_fval(res_to_chi2(res))
 
 
 @_check_none
-def sres_to_schi2(res: np.ndarray, sres: np.ndarray):
+def sres_to_schi2(res: np.ndarray, sres: np.ndarray) -> np.ndarray:
     """Translate residual sensitivities to chi2 gradient."""
     return 2 * res.dot(sres)
 
@@ -55,7 +55,7 @@ def schi2_to_grad(schi2: np.ndarray) -> np.ndarray:
 
 
 @_check_none
-def sres_to_grad(res: np.ndarray, sres: np.ndarray):
+def sres_to_grad(res: np.ndarray, sres: np.ndarray) -> np.ndarray:
     """Translate residual sensitivities to function value gradient.
 
     Assumes `fval = 0.5*sum(res**2)`.
@@ -66,7 +66,7 @@ def sres_to_grad(res: np.ndarray, sres: np.ndarray):
 
 
 @_check_none
-def sres_to_fim(sres: np.ndarray):
+def sres_to_fim(sres: np.ndarray) -> np.ndarray:
     """Translate residual sensitivities to FIM.
 
     The FIM is based on the function values, not chi2, i.e. has a normalization
