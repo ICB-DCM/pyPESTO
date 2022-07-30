@@ -40,7 +40,13 @@ from ..C import (
     X,
 )
 from ..util import allclose, is_none_or_nan, is_none_or_nan_array, isclose
-from .util import res_to_chi2, schi2_to_grad, sres_to_fim, sres_to_schi2
+from .util import (
+    chi2_to_fval,
+    res_to_chi2,
+    schi2_to_grad,
+    sres_to_fim,
+    sres_to_schi2,
+)
 
 ResultDict = Dict[str, Union[float, np.ndarray]]
 MaybeArray = Union[np.ndarray, 'np.nan']
@@ -1412,6 +1418,13 @@ class OptimizerHistory:
         # Thus, here at the end we go over the history once and try to fill
         #  in what is available.
 
+        # check if a useful history exists
+        # TODO Y This can be solved prettier
+        try:
+            self.history.get_x_trace()
+        except NotImplementedError:
+            return
+
         # find optimal point
         result = self._get_optimal_point_from_history()
 
@@ -1625,6 +1638,8 @@ def add_fun_from_res(result: ResultDict) -> ResultDict:
         result[CHI2] = res_to_chi2(result.get(RES))
     if result.get(SCHI2) is None:
         result[SCHI2] = sres_to_schi2(result.get(RES), result.get(SRES))
+    if result.get(FVAL) is None:
+        result[FVAL] = chi2_to_fval(result.get(CHI2))
     if result.get(GRAD) is None:
         result[GRAD] = schi2_to_grad(result.get(SCHI2))
     if result.get(HESS) is None:
@@ -1654,7 +1669,9 @@ def reduce_result_via_options(
 
     # apply options to result
     for key in HistoryBase.FULL_RESULT_KEYS:
-        if key not in result or not options.get(f'trace_record_{key}', True):
+        if result.get(key) is None or not options.get(
+            f'trace_record_{key}', True
+        ):
             result[key] = np.nan
 
     return result

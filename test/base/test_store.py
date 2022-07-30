@@ -232,23 +232,25 @@ def test_storage_profiling():
         pypesto_profile_reader = ProfileResultHDF5Reader(fn)
         profile_read = pypesto_profile_reader.read()
 
-        for key in profile_original.profile_result[0][0].keys():
+        for key in profile_original.profile_result.list[0][0].keys():
             if (
-                profile_original.profile_result[0][0].keys is None
+                profile_original.profile_result.list[0][0].keys is None
                 or key == 'time_path'
             ):
                 continue
             elif isinstance(
-                profile_original.profile_result[0][0][key], np.ndarray
+                profile_original.profile_result.list[0][0][key], np.ndarray
             ):
                 np.testing.assert_array_equal(
-                    profile_original.profile_result[0][0][key],
-                    profile_read.profile_result[0][0][key],
+                    profile_original.profile_result.list[0][0][key],
+                    profile_read.profile_result.list[0][0][key],
                 )
-            elif isinstance(profile_original.profile_result[0][0][key], int):
+            elif isinstance(
+                profile_original.profile_result.list[0][0][key], int
+            ):
                 assert (
-                    profile_original.profile_result[0][0][key]
-                    == profile_read.profile_result[0][0][key]
+                    profile_original.profile_result.list[0][0][key]
+                    == profile_read.profile_result.list[0][0][key]
                 )
     finally:
         if os.path.exists(fn):
@@ -392,18 +394,21 @@ def test_storage_all():
                     assert opt_res[key] == result_read.optimize_result[i][key]
 
         # test profile
-        for key in result.profile_result[0][0].keys():
-            if result.profile_result[0][0].keys is None or key == 'time_path':
+        for key in result.profile_result.list[0][0].keys():
+            if (
+                result.profile_result.list[0][0].keys is None
+                or key == 'time_path'
+            ):
                 continue
-            elif isinstance(result.profile_result[0][0][key], np.ndarray):
+            elif isinstance(result.profile_result.list[0][0][key], np.ndarray):
                 np.testing.assert_array_equal(
-                    result.profile_result[0][0][key],
-                    result_read.profile_result[0][0][key],
+                    result.profile_result.list[0][0][key],
+                    result_read.profile_result.list[0][0][key],
                 )
-            elif isinstance(result.profile_result[0][0][key], int):
+            elif isinstance(result.profile_result.list[0][0][key], int):
                 assert (
-                    result.profile_result[0][0][key]
-                    == result_read.profile_result[0][0][key]
+                    result.profile_result.list[0][0][key]
+                    == result_read.profile_result.list[0][0][key]
                 )
 
         # test sample
