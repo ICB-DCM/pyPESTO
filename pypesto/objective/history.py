@@ -255,7 +255,7 @@ class HistoryBase(abc.ABC):
     # history also knows chi2, schi2
     FULL_RESULT_KEYS = (*RESULT_KEYS, CHI2, SCHI2)
     # all possible history entries
-    ALL_KEYS: set[str] = (X, *FULL_RESULT_KEYS, TIME)
+    ALL_KEYS = (X, *FULL_RESULT_KEYS, TIME)
 
     def __len__(self) -> int:
         """Define length by number of stored entries in the history."""
