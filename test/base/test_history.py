@@ -19,7 +19,7 @@ from pypesto import (
 )
 from pypesto.C import CHI2, FVAL, GRAD, HESS, RES, SCHI2, SRES, X
 from pypesto.engine import MultiProcessEngine
-from pypesto.objective.util import res_to_chi2, sres_to_schi2
+from pypesto.util import res_to_chi2, sres_to_schi2
 
 from ..util import CRProblem, load_amici_objective, rosen_for_sensi
 
