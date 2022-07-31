@@ -1,3 +1,5 @@
+"""History utility functions."""
+
 import numbers
 from typing import Dict, Sequence, Union
 

@@ -1,3 +1,5 @@
+"""Track optimal values during an optimization."""
+
 from typing import Tuple, Union
 
 import numpy as np

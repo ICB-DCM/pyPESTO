@@ -1,3 +1,5 @@
+"""In-memory history."""
+
 import time
 from typing import Any, Dict, Sequence, Tuple, Union
 

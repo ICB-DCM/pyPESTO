@@ -1,3 +1,5 @@
+"""Generate a history from options and inputs."""
+
 from pathlib import Path
 from typing import Sequence
 

@@ -1,3 +1,5 @@
+"""HDF5 history."""
+
 import time
 from typing import Dict, Sequence, Tuple, Union
 
