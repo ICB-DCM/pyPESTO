@@ -8,7 +8,7 @@ from typing import Sequence, Union
 import numpy as np
 import pandas as pd
 
-from ..objective import History
+from ..history import History
 from ..problem import Problem
 from ..util import assign_clusters, delete_nan_inf
 

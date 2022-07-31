@@ -10,7 +10,9 @@ and evaluate performance.
 
 from .base import History, HistoryBase
 from .csv import CsvHistory
+from .generate import create_history
 from .hdf5 import Hdf5History
 from .memory import MemoryHistory
 from .optimizer import OptimizerHistory
 from .options import HistoryOptions
+from .util import CsvHistoryTemplateError, HistoryTypeError
