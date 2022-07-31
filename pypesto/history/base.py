@@ -18,16 +18,15 @@ from ..C import (
     ModeType,
     X,
 )
-from .options import HistoryOptions
-from .util import (
-    MaybeArray,
-    ResultDict,
+from ..util import (
     chi2_to_fval,
     res_to_chi2,
     schi2_to_grad,
     sres_to_fim,
     sres_to_schi2,
 )
+from .options import HistoryOptions
+from .util import MaybeArray, ResultDict
 
 
 class HistoryBase(abc.ABC):
