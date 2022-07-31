@@ -8,7 +8,7 @@ import numpy as np
 import scipy.optimize
 
 from ..C import FVAL, GRAD, MODE_FUN, MODE_RES
-from ..objective import HistoryBase, HistoryOptions, OptimizerHistory
+from ..history import HistoryBase, HistoryOptions, OptimizerHistory
 from ..problem import Problem
 from ..result import OptimizerResult
 from .load import fill_result_from_history

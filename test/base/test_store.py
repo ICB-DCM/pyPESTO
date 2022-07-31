@@ -4,6 +4,7 @@ import os
 import tempfile
 
 import numpy as np
+import pytest
 import scipy.optimize as so
 
 import pypesto
@@ -477,7 +478,8 @@ def test_storage_objective_config():
             os.remove(fn)
 
 
-def test_result_from_hdf5_history(hdf5_file):
+@pytest.mark.parametrize("nr", range(1000))
+def test_result_from_hdf5_history(hdf5_file, nr):
     """Test whether we can recover a result from a hdf5 file.
 
     This means that the result obtained directly via minimize, and the result

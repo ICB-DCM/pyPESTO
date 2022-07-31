@@ -7,7 +7,7 @@ import numpy as np
 import pandas as pd
 
 from ..C import FVAL, GRAD, HESS, MODE_FUN, MODE_RES, RES, SRES, ModeType
-from .history import HistoryBase
+from ..history import HistoryBase
 from .pre_post_process import FixedParametersProcessor, PrePostProcessor
 
 ResultDict = Dict[str, Union[float, np.ndarray, Dict]]

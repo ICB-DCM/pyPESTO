@@ -9,17 +9,6 @@ from .amici_calculator import AmiciCalculator
 from .base import ObjectiveBase
 from .finite_difference import FD, FDDelta
 from .function import Objective
-from .history import (
-    CsvHistory,
-    CsvHistoryTemplateError,
-    Hdf5History,
-    History,
-    HistoryBase,
-    HistoryOptions,
-    HistoryTypeError,
-    MemoryHistory,
-    OptimizerHistory,
-)
 from .priors import (
     NegLogParameterPriors,
     NegLogPriors,

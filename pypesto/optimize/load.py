@@ -21,7 +21,7 @@ from ..C import (
     TRACE,
     X,
 )
-from ..objective import (
+from ..history import (
     CsvHistory,
     Hdf5History,
     HistoryOptions,
