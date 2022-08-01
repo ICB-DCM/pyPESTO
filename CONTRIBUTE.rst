@@ -60,7 +60,7 @@ GitHub Actions
 --------------
 
 For automatic continuous integration testing, we use GitHub Actions. All tests
-are run there on pull requests and required to pass. The configuration is
+are run there on pull requests and are required to pass. The configuration is
 specified in ``.github/workflows/ci.yml``.
 
 Documentation
