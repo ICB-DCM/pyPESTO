@@ -107,7 +107,7 @@ def fill_result_from_history(
         hist_val = getattr(optimizer_history, f"{key}_min")
         # replace by history if history has entry, or point does not match
         #  point recorded in result
-        if hist_val is not None or (not fval_match or not x_match):
+        if hist_val is not None or not fval_match or not x_match:
             setattr(result, key, hist_val)
 
     return result

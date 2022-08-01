@@ -25,13 +25,13 @@ def _check_none(fun: Callable[..., Any]) -> Callable[..., Union[Any, None]]:
 
 @_check_none
 def res_to_chi2(res: np.ndarray) -> float:
-    """Translate residuals to chi2 values, `chi2 = sum(res**2)`."""
+    """Translate residuals to chi2 values, `chi2 = sum(res**2) + C`."""
     return float(np.dot(res, res))
 
 
 @_check_none
 def chi2_to_fval(chi2: float) -> float:
-    """Translate chi2 to function value, `fval = 0.5*chi2 = 0.5*sum(res**2)`.
+    """Translate chi2 to function value, `fval = 0.5*chi2 = 0.5*sum(res**2) + C`.
 
     Note that for the function value we thus employ a probabilistic
     interpretation, as the log-likelihood of a standard normal noise model.
@@ -42,7 +42,7 @@ def chi2_to_fval(chi2: float) -> float:
 
 @_check_none
 def res_to_fval(res: np.ndarray) -> float:
-    """Translate residuals to function value, `fval = 0.5*sum(res**2)`."""
+    """Translate residuals to function value, `fval = 0.5*sum(res**2) + C`."""
     return chi2_to_fval(res_to_chi2(res))
 
 
@@ -148,7 +148,7 @@ def isclose(
 
     Returns
     -------
-    True if all elements of x and y are close, False otherwise.
+    Element-wise boolean comparison of x and y.
     """
     # Note: We use this wrapper around np.isclose in order to more easily
     #  adjust hyper parameters for the tolerance.

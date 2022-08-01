@@ -1,5 +1,6 @@
 """Track optimal values during an optimization."""
 
+import logging
 from typing import Tuple, Union
 
 import numpy as np
@@ -8,6 +9,8 @@ from ..C import FVAL, GRAD, HESS, RES, SRES, ModeType, X
 from ..util import allclose, is_none_or_nan, is_none_or_nan_array, isclose
 from .base import History, HistoryBase, add_fun_from_res
 from .util import ResultDict
+
+logger = logging.getLogger(__name__)
 
 
 class OptimizerHistory:
@@ -78,7 +81,7 @@ class OptimizerHistory:
         self.sres_min: Union[np.ndarray, None] = None
 
         if generate_from_history:
-            self._compute_vals_from_trace()
+            self._maybe_compute_init_and_min_vals_from_trace()
 
     def update(
         self,
@@ -132,6 +135,11 @@ class OptimizerHistory:
             and not isclose(fval, self.fval_min)
             and not allclose(result[X], self.x_min)
         ):
+            # issue a warning, as if this happens, then something may be wrong
+            logger.warn(
+                f"History has a better point {fval} than the current best "
+                "point {self.fval_min}."
+            )
             # update everything
             for key in self.MIN_KEYS:
                 setattr(self, key + '_min', result[key])
@@ -171,23 +179,25 @@ class OptimizerHistory:
         if self.x_min is not None and np.array_equal(self.x_min, x):
             for key in (GRAD, HESS, SRES):
                 val_min = getattr(self, f'{key}_min', None)
-                val = result.get(key)
                 if is_none_or_nan_array(val_min) and not is_none_or_nan_array(
-                    val
+                    val := result.get(key)
                 ):
-                    setattr(self, f'{key}_min', result.get(key))
+                    setattr(self, f'{key}_min', val)
 
-    def _compute_vals_from_trace(self) -> None:
-        """Set initial and best function value from trace."""
+    def _maybe_compute_init_and_min_vals_from_trace(self) -> None:
+        """Try to set initial and best function value from trace.
+
+        Only possible if history has a trace.
+        """
         if not len(self.history):
             # nothing to be computed from empty history
             return
 
         # some optimizers may evaluate hess+grad first to compute trust region
         # etc
-        for it in range(len(self.history)):
-            fval = self.history.get_fval_trace(it)
-            x = self.history.get_x_trace(it)
+        for ix in range(len(self.history)):
+            fval = self.history.get_fval_trace(ix)
+            x = self.history.get_x_trace(ix)
             if not is_none_or_nan(fval) and allclose(x, self.x0):
                 self.fval0 = float(fval)
                 break

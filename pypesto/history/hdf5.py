@@ -393,7 +393,7 @@ class Hdf5History(History):
             Returns true if the file or the id entry does not exist yet.
         """
         try:
-            with h5py.File(file, 'r') as f:
+            with h5py.File(file, 'a') as f:
                 # editable if the id entry does not exist
                 return 'history' not in f.keys() or self.id not in f['history']
         except OSError:
