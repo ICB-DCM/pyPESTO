@@ -7,7 +7,7 @@ Workflow
 If you start working on a new feature or a fix, please create an issue on
 GitHub briefly describing the issue and assign yourself.
 Your startpoint should always be the ``develop`` branch, which contains the
-lastest updates.
+latest updates.
 
 Create an own branch or fork, on which you can implement your changes. To
 get your work merged, please:
