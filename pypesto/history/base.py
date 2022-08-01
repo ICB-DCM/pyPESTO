@@ -1,31 +1,30 @@
+"""Base history class."""
+
 import abc
+import numbers
 import time
 from typing import Dict, Sequence, Tuple, Union
-
-"""Base history class."""
 
 import numpy as np
 
 from ..C import (
-    CHI2,
     FVAL,
     GRAD,
     HESS,
     MODE_FUN,
     MODE_RES,
     RES,
-    SCHI2,
     SRES,
     TIME,
     ModeType,
     X,
 )
 from ..util import (
-    chi2_to_fval,
-    res_to_chi2,
-    schi2_to_grad,
+    fval_to_chi2,
+    grad_to_schi2,
+    res_to_fval,
     sres_to_fim,
-    sres_to_schi2,
+    sres_to_grad,
 )
 from .options import HistoryOptions
 from .util import MaybeArray, ResultDict
@@ -39,10 +38,8 @@ class HistoryBase(abc.ABC):
 
     # values calculated by the objective function
     RESULT_KEYS = (FVAL, GRAD, HESS, RES, SRES)
-    # history also knows chi2, schi2
-    FULL_RESULT_KEYS = (*RESULT_KEYS, CHI2, SCHI2)
     # all possible history entries
-    ALL_KEYS = (X, *FULL_RESULT_KEYS, TIME)
+    ALL_KEYS = (X, *RESULT_KEYS, TIME)
 
     def __len__(self) -> int:
         """Define length by number of stored entries in the history."""
@@ -206,7 +203,12 @@ class HistoryBase(abc.ABC):
         Takes as parameter an index or indices and returns corresponding trace
         values. If only a single value is requested, the list is flattened.
         """
-        raise NotImplementedError()
+        fval_trace = self.get_fval_trace(ix, trim)
+        reduce = isinstance(ix, numbers.Integral)
+        if reduce:
+            return fval_to_chi2(fval_trace)
+        else:
+            return [fval_to_chi2(fval) for fval in fval_trace]
 
     def get_schi2_trace(
         self,
@@ -219,7 +221,12 @@ class HistoryBase(abc.ABC):
         Takes as parameter an index or indices and returns corresponding trace
         values. If only a single value is requested, the list is flattened.
         """
-        raise NotImplementedError()
+        grad_trace = self.get_grad_trace(ix, trim)
+        reduce = isinstance(ix, numbers.Integral)
+        if reduce:
+            return grad_to_schi2(grad_trace)
+        else:
+            return [grad_to_schi2(grad) for grad in grad_trace]
 
     def get_time_trace(
         self,
@@ -355,14 +362,10 @@ def add_fun_from_res(result: ResultDict) -> ResultDict:
     result = result.copy()
 
     # calculate function values from residuals
-    if result.get(CHI2) is None:
-        result[CHI2] = res_to_chi2(result.get(RES))
-    if result.get(SCHI2) is None:
-        result[SCHI2] = sres_to_schi2(result.get(RES), result.get(SRES))
     if result.get(FVAL) is None:
-        result[FVAL] = chi2_to_fval(result.get(CHI2))
+        result[FVAL] = res_to_fval(result.get(RES))
     if result.get(GRAD) is None:
-        result[GRAD] = schi2_to_grad(result.get(SCHI2))
+        result[GRAD] = sres_to_grad(result.get(RES), result.get(SRES))
     if result.get(HESS) is None:
         result[HESS] = sres_to_fim(result.get(SRES))
 
@@ -389,7 +392,7 @@ def reduce_result_via_options(
     result = result.copy()
 
     # apply options to result
-    for key in HistoryBase.FULL_RESULT_KEYS:
+    for key in HistoryBase.RESULT_KEYS:
         if result.get(key) is None or not options.get(
             f'trace_record_{key}', True
         ):

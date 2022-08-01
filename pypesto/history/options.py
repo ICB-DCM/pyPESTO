@@ -29,11 +29,6 @@ class HistoryOptions(dict):
     trace_record_sres:
         Flag indicating whether to record the residual sensitivities in
         the trace.
-    trace_record_chi2:
-        Flag indicating whether to record the chi2 in the trace.
-    trace_record_schi2:
-        Flag indicating whether to record the chi2 sensitivities in the
-        trace.
     trace_save_iter:
         After how many iterations to store the trace.
     storage_file:
@@ -51,8 +46,6 @@ class HistoryOptions(dict):
         trace_record_hess: bool = True,
         trace_record_res: bool = True,
         trace_record_sres: bool = True,
-        trace_record_chi2: bool = True,
-        trace_record_schi2: bool = True,
         trace_save_iter: int = 10,
         storage_file: str = None,
     ):
@@ -63,8 +56,6 @@ class HistoryOptions(dict):
         self.trace_record_hess: bool = trace_record_hess
         self.trace_record_res: bool = trace_record_res
         self.trace_record_sres: bool = trace_record_sres
-        self.trace_record_chi2: bool = trace_record_chi2
-        self.trace_record_schi2: bool = trace_record_schi2
         self.trace_save_iter: int = trace_save_iter
         self.storage_file: str = storage_file
 
