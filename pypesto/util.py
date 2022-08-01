@@ -78,7 +78,7 @@ def isclose(
 
     Returns
     -------
-    True if all elements of x and y are close, False otherwise.
+    Element-wise boolean comparison of x and y.
     """
     # Note: We use this wrapper around np.isclose in order to more easily
     #  adjust hyper parameters for the tolerance.
