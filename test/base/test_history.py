@@ -262,7 +262,6 @@ class HistoryTest(unittest.TestCase):
                 x_full = xfull(start.history.get_x_trace(it))
                 val = getattr(start.history, f'get_{var}_trace')(it)
                 fun_val = fun(x_full)
-                print(var, it, x_full, val, fun_val)
 
                 if not getattr(
                     self.history_options, f'trace_record_{var}', True
@@ -274,14 +273,14 @@ class HistoryTest(unittest.TestCase):
                 if var in [FVAL]:
                     # note that we can expect slight deviations here since
                     # this fval/chi2 may be computed without sensitivities
-                    # while the result here may be computed with with
-                    # sensitivies activated. If this fails to often,
+                    # while the result here may be computed with
+                    # sensitivities activated. If this fails too often,
                     # increase atol/rtol
                     assert np.isclose(val, fun_val, rtol=1e-3, atol=1e-4), var
                 elif var in [RES]:
                     # note that we can expect slight deviations here since
                     # this res is computed without sensitivities while the
-                    # result here may be computed with with sensitivies
+                    # result here may be computed with sensitivities
                     # activated. If this fails too often, increase atol/rtol
                     assert np.allclose(val, fun_val, rtol=1e-3, atol=1e-4), var
                 elif var in [SRES]:
