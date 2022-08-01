@@ -11,10 +11,12 @@ from .finite_difference import FD, FDDelta
 from .function import Objective
 from .history import (
     CsvHistory,
+    CsvHistoryTemplateError,
     Hdf5History,
     History,
     HistoryBase,
     HistoryOptions,
+    HistoryTypeError,
     MemoryHistory,
     OptimizerHistory,
 )

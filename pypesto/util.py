@@ -5,10 +5,84 @@ Utilities
 Package-wide utilities.
 
 """
-from typing import Optional, Tuple
+from numbers import Number
+from typing import Optional, Tuple, Union
 
 import numpy as np
 from scipy import cluster
+
+
+def is_none_or_nan(x: Union[Number, None]) -> bool:
+    """
+    Check if x is None or NaN.
+
+    Parameters
+    ----------
+    x:
+        object to be checked
+
+    Returns
+    -------
+    True if x is None or NaN, False otherwise.
+    """
+    return x is None or np.isnan(x)
+
+
+def is_none_or_nan_array(x: Union[Number, np.ndarray, None]) -> bool:
+    """
+    Check if x is None or NaN array.
+
+    Parameters
+    ----------
+    x:
+        object to be checked
+
+    Returns
+    -------
+    True if x is None or NaN array, False otherwise.
+    """
+    return x is None or np.isnan(x).all()
+
+
+def allclose(
+    x: Union[Number, np.ndarray], y: Union[Number, np.ndarray]
+) -> bool:
+    """
+    Check if two arrays are close.
+
+    Parameters
+    ----------
+    x: first array
+    y: second array
+
+    Returns
+    -------
+    True if all elements of x and y are close, False otherwise.
+    """
+    # Note: We use this wrapper around np.allclose in order to more easily
+    #  adjust hyper parameters for the tolerance.
+    return np.allclose(x, y)
+
+
+def isclose(
+    x: Union[Number, np.ndarray],
+    y: Union[Number, np.ndarray],
+) -> Union[bool, np.ndarray]:
+    """
+    Check if two values or arrays are close, element-wise.
+
+    Parameters
+    ----------
+    x: first array
+    y: second array
+
+    Returns
+    -------
+    Element-wise boolean comparison of x and y.
+    """
+    # Note: We use this wrapper around np.isclose in order to more easily
+    #  adjust hyper parameters for the tolerance.
+    return np.isclose(x, y)
 
 
 def get_condition_label(condition_id: str) -> str:

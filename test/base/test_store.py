@@ -64,13 +64,10 @@ def test_storage_opt_result():
             for key in opt_res:
                 if isinstance(opt_res[key], np.ndarray):
                     np.testing.assert_array_equal(
-                        opt_res[key], read_result.optimize_result.list[i][key]
+                        opt_res[key], read_result.optimize_result[i][key]
                     )
                 else:
-                    assert (
-                        opt_res[key]
-                        == read_result.optimize_result.list[i][key]
-                    )
+                    assert opt_res[key] == read_result.optimize_result[i][key]
 
 
 def test_storage_opt_result_update(hdf5_file):
@@ -88,10 +85,10 @@ def test_storage_opt_result_update(hdf5_file):
         for key in opt_res:
             if isinstance(opt_res[key], np.ndarray):
                 np.testing.assert_array_equal(
-                    opt_res[key], read_result.optimize_result.list[i][key]
+                    opt_res[key], read_result.optimize_result[i][key]
                 )
             else:
-                assert opt_res[key] == read_result.optimize_result.list[i][key]
+                assert opt_res[key] == read_result.optimize_result[i][key]
 
 
 def test_storage_problem(hdf5_file):
@@ -290,7 +287,7 @@ def test_storage_sampling():
         filename=None,
         progress_bar=False,
     )
-    x_0 = result_optimization.optimize_result.list[0]['x']
+    x_0 = result_optimization.optimize_result[0]['x']
     sampler = sample.AdaptiveParallelTemperingSampler(
         internal_sampler=sample.AdaptiveMetropolisSampler(),
         options={
@@ -391,13 +388,10 @@ def test_storage_all():
                     continue
                 if isinstance(opt_res[key], np.ndarray):
                     np.testing.assert_array_equal(
-                        opt_res[key], result_read.optimize_result.list[i][key]
+                        opt_res[key], result_read.optimize_result[i][key]
                     )
                 else:
-                    assert (
-                        opt_res[key]
-                        == result_read.optimize_result.list[i][key]
-                    )
+                    assert opt_res[key] == result_read.optimize_result[i][key]
 
         # test profile
         for key in result.profile_result.list[0][0].keys():
@@ -484,18 +478,27 @@ def test_storage_objective_config():
 
 
 def test_result_from_hdf5_history(hdf5_file):
-    problem = create_petab_problem()
+    """Test whether we can recover a result from a hdf5 file.
 
+    This means that the result obtained directly via minimize, and the result
+    obtained from the history should coincide.
+
+    For this aim, run a simple problem and record the full history, such that
+    recovery should be possible.
+    """
+    problem = create_petab_problem()
     history_options_hdf5 = pypesto.HistoryOptions(
         trace_record=True,
         storage_file=hdf5_file,
     )
+
     # optimize with history saved to hdf5
     result = optimize.minimize(
         problem=problem,
         n_starts=1,
         history_options=history_options_hdf5,
         progress_bar=False,
+        options={"allow_failed_starts": False},
     )
 
     result_from_hdf5 = optimization_result_from_history(
@@ -522,15 +525,15 @@ def test_result_from_hdf5_history(hdf5_file):
         MESSAGE,
     ]
     for key in arguments:
-        if result.optimize_result.list[0][key] is None:
-            assert result_from_hdf5.optimize_result.list[0][key] is None
-        elif isinstance(result.optimize_result.list[0][key], np.ndarray):
+        if result.optimize_result[0][key] is None:
+            assert result_from_hdf5.optimize_result[0][key] is None, key
+        elif isinstance(result.optimize_result[0][key], np.ndarray):
             assert np.allclose(
-                result.optimize_result.list[0][key],
-                result_from_hdf5.optimize_result.list[0][key],
+                result.optimize_result[0][key],
+                result_from_hdf5.optimize_result[0][key],
             ), key
         else:
             assert (
-                result.optimize_result.list[0][key]
-                == result_from_hdf5.optimize_result.list[0][key]
+                result.optimize_result[0][key]
+                == result_from_hdf5.optimize_result[0][key]
             ), key
