@@ -35,7 +35,7 @@ def chi2_to_fval(chi2: float) -> float:
 
 @_check_none
 def res_to_fval(res: np.ndarray) -> float:
-    """Translate residuals to function value, `fval = 0.5*sum(res**2)`."""
+    """Translate residuals to function value, `fval = 0.5*sum(res**2) + C`."""
     return chi2_to_fval(res_to_chi2(res))
 
 
