@@ -24,8 +24,6 @@ class OptimizerHistory:
     ----------
     fval0, fval_min:
         Initial and best function value found.
-    chi20, chi2_min:
-        Initial and best chi2 value found.
     x0, x_min:
         Initial and best parameters found.
     grad_min:

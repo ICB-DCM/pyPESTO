@@ -5,7 +5,7 @@ from typing import Any, Dict, Sequence, Tuple, Union
 
 import numpy as np
 
-from ..C import CHI2, FVAL, GRAD, HESS, RES, SCHI2, SRES, TIME, ModeType, X
+from ..C import FVAL, GRAD, HESS, RES, SRES, TIME, ModeType, X
 from .base import (
     History,
     HistoryBase,
@@ -117,24 +117,6 @@ class MemoryHistory(History):
     ) -> Union[Sequence[MaybeArray], MaybeArray]:
         """See `HistoryBase` docstring."""
         return [self._trace[SRES][i] for i in ix]
-
-    @trace_wrap
-    def get_chi2_trace(
-        self,
-        ix: Union[int, Sequence[int], None] = None,
-        trim: bool = False,
-    ) -> Union[Sequence[float], float]:
-        """See `HistoryBase` docstring."""
-        return [self._trace[CHI2][i] for i in ix]
-
-    @trace_wrap
-    def get_schi2_trace(
-        self,
-        ix: Union[int, Sequence[int], None] = None,
-        trim: bool = False,
-    ) -> Union[Sequence[MaybeArray], MaybeArray]:
-        """See `HistoryBase` docstring."""
-        return [self._trace[SCHI2][i] for i in ix]
 
     @trace_wrap
     def get_time_trace(

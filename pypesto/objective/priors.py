@@ -4,7 +4,6 @@ from typing import Callable, Dict, List, Sequence, Tuple, Union
 import numpy as np
 
 from .. import C
-from ..util import res_to_chi2
 from .aggregated import AggregatedObjective
 from .base import ResultDict
 from .function import ObjectiveBase
@@ -103,7 +102,6 @@ class NegLogParameterPriors(ObjectiveBase):
             for order in sensi_orders:
                 if order == 0:
                     res[C.RES] = self.residual(x)
-                    res[C.CHI2] = res_to_chi2(res[C.RES])
                 elif order == 1:
                     res[C.SRES] = self.residual_jacobian(x)
                 else:
