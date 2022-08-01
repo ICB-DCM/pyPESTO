@@ -4,10 +4,10 @@ from typing import Callable, Dict, List, Sequence, Tuple, Union
 import numpy as np
 
 from .. import C
+from ..util import res_to_chi2
 from .aggregated import AggregatedObjective
 from .base import ResultDict
 from .function import ObjectiveBase
-from .util import res_to_chi2
 
 
 class NegLogPriors(AggregatedObjective):

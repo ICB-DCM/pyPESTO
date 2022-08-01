@@ -34,8 +34,21 @@ X = 'x'
 X0 = 'x0'
 ID = 'id'
 
-EXITFLAG = 'exitflag'
-MESSAGE = 'message'
+
+###############################################################################
+# HISTORY
+
+HISTORY = "history"
+TRACE = "trace"
+N_ITERATIONS = "n_iterations"
+MESSAGES = "messages"
+MESSAGE = "message"
+EXITFLAG = "exitflag"
+TRACE_SAVE_ITER = "trace_save_iter"
+
+SUFFIXES_CSV = ["csv"]
+SUFFIXES_HDF5 = ["hdf5", "h5"]
+SUFFIXES = SUFFIXES_CSV + SUFFIXES_HDF5
 
 
 ###############################################################################
@@ -166,7 +179,7 @@ TRACE_Y = (TRACE_Y_FVAL, TRACE_Y_GRADNORM)
 
 
 ###############################################################################
-# Environment variables
+# ENVIRONMENT VARIABLES
 
 PYPESTO_MAX_N_STARTS: str = "PYPESTO_MAX_N_STARTS"
 PYPESTO_MAX_N_SAMPLES: str = "PYPESTO_MAX_N_SAMPLES"

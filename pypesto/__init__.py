@@ -12,18 +12,20 @@ Parameter Estimation TOolbox for python.
 from .version import __version__
 
 # import basic objects into global namespace
-from .objective import (
-    AmiciObjective,
+from .history import (
     CsvHistory,
     Hdf5History,
     History,
     HistoryBase,
     HistoryOptions,
     MemoryHistory,
+    OptimizerHistory,
+)
+from .objective import (
+    AmiciObjective,
     NegLogPriors,
     Objective,
     ObjectiveBase,
-    OptimizerHistory,
     FD,
     FDDelta,
 )

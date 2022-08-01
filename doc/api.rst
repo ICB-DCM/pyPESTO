@@ -9,6 +9,7 @@ API reference
    api_ensemble
    api_logging
    api_objective
+   api_history
    api_optimize
    api_petab
    api_predict

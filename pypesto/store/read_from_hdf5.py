@@ -6,7 +6,8 @@ import logging
 import h5py
 import numpy as np
 
-from ..objective import Hdf5History, Objective, ObjectiveBase
+from ..history import Hdf5History
+from ..objective import Objective, ObjectiveBase
 from ..problem import Problem
 from ..result import McmcPtResult, OptimizerResult, ProfilerResult, Result
 

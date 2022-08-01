@@ -8,7 +8,7 @@ from typing import Sequence, Union
 import numpy as np
 import pandas as pd
 
-from ..objective import History
+from ..history import History
 from ..problem import Problem
 from ..util import assign_clusters, delete_nan_inf
 
@@ -335,7 +335,7 @@ class OptimizeResult:
         """Extract the list of values for the specified key as a list."""
         warnings.warn(
             "get_for_key() is deprecated in favour of "
-            "optimize_result['key'] and will be removed in future "
+            "optimize_result.key and will be removed in future "
             "releases."
         )
         return [res[key] for res in self.list]

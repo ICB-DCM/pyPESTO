@@ -5,7 +5,7 @@ from typing import Union
 
 import numpy as np
 
-from ..objective import History
+from ..history import History
 from ..problem import Problem
 from ..result import McmcPtResult
 from .sampler import Sampler

@@ -5,7 +5,7 @@ import numpy as np
 import pypesto.optimize
 
 from ..engine import Task
-from ..objective import HistoryOptions
+from ..history import HistoryOptions
 from ..problem import Problem
 from ..result import OptimizerResult
 

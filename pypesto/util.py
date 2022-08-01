@@ -5,10 +5,154 @@ Utilities
 Package-wide utilities.
 
 """
-from typing import Optional, Tuple
+from numbers import Number
+from typing import Any, Callable, Optional, Tuple, Union
 
 import numpy as np
 from scipy import cluster
+
+
+def _check_none(fun: Callable[..., Any]) -> Callable[..., Union[Any, None]]:
+    """Return None if any input argument is None; Wrapper function."""
+
+    def checked_fun(*args, **kwargs):
+        if any(x is None for x in [*args, *(kwargs.values())]):
+            return None
+        return fun(*args, **kwargs)
+
+    return checked_fun
+
+
+@_check_none
+def res_to_chi2(res: np.ndarray) -> float:
+    """Translate residuals to chi2 values, `chi2 = sum(res**2) + C`."""
+    return float(np.dot(res, res))
+
+
+@_check_none
+def chi2_to_fval(chi2: float) -> float:
+    """Translate chi2 to function value, `fval = 0.5*chi2 = 0.5*sum(res**2) + C`.
+
+    Note that for the function value we thus employ a probabilistic
+    interpretation, as the log-likelihood of a standard normal noise model.
+    This is in line with e.g. AMICI's and SciPy's objective definition.
+    """
+    return 0.5 * chi2
+
+
+@_check_none
+def res_to_fval(res: np.ndarray) -> float:
+    """Translate residuals to function value, `fval = 0.5*sum(res**2) + C`."""
+    return chi2_to_fval(res_to_chi2(res))
+
+
+@_check_none
+def sres_to_schi2(res: np.ndarray, sres: np.ndarray) -> np.ndarray:
+    """Translate residual sensitivities to chi2 gradient."""
+    return 2 * res.dot(sres)
+
+
+@_check_none
+def schi2_to_grad(schi2: np.ndarray) -> np.ndarray:
+    """Translate chi2 gradient to function value gradient.
+
+    See also :func:`chi2_to_fval`.
+    """
+    return 0.5 * schi2
+
+
+@_check_none
+def sres_to_grad(res: np.ndarray, sres: np.ndarray) -> np.ndarray:
+    """Translate residual sensitivities to function value gradient.
+
+    Assumes `fval = 0.5*sum(res**2)`.
+
+    See also :func:`chi2_to_fval`.
+    """
+    return schi2_to_grad(sres_to_schi2(res, sres))
+
+
+@_check_none
+def sres_to_fim(sres: np.ndarray) -> np.ndarray:
+    """Translate residual sensitivities to FIM.
+
+    The FIM is based on the function values, not chi2, i.e. has a normalization
+    of 0.5 as in :func:`res_to_fval`.
+    """
+    return sres.transpose().dot(sres)
+
+
+def is_none_or_nan(x: Union[Number, None]) -> bool:
+    """
+    Check if x is None or NaN.
+
+    Parameters
+    ----------
+    x:
+        object to be checked
+
+    Returns
+    -------
+    True if x is None or NaN, False otherwise.
+    """
+    return x is None or np.isnan(x)
+
+
+def is_none_or_nan_array(x: Union[Number, np.ndarray, None]) -> bool:
+    """
+    Check if x is None or NaN array.
+
+    Parameters
+    ----------
+    x:
+        object to be checked
+
+    Returns
+    -------
+    True if x is None or NaN array, False otherwise.
+    """
+    return x is None or np.isnan(x).all()
+
+
+def allclose(
+    x: Union[Number, np.ndarray], y: Union[Number, np.ndarray]
+) -> bool:
+    """
+    Check if two arrays are close.
+
+    Parameters
+    ----------
+    x: first array
+    y: second array
+
+    Returns
+    -------
+    True if all elements of x and y are close, False otherwise.
+    """
+    # Note: We use this wrapper around np.allclose in order to more easily
+    #  adjust hyper parameters for the tolerance.
+    return np.allclose(x, y)
+
+
+def isclose(
+    x: Union[Number, np.ndarray],
+    y: Union[Number, np.ndarray],
+) -> Union[bool, np.ndarray]:
+    """
+    Check if two values or arrays are close, element-wise.
+
+    Parameters
+    ----------
+    x: first array
+    y: second array
+
+    Returns
+    -------
+    Element-wise boolean comparison of x and y.
+    """
+    # Note: We use this wrapper around np.isclose in order to more easily
+    #  adjust hyper parameters for the tolerance.
+    return np.isclose(x, y)
 
 
 def get_condition_label(condition_id: str) -> str:
