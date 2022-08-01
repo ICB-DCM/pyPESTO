@@ -1,8 +1,8 @@
+"""Base history class."""
+
 import abc
 import time
 from typing import Dict, Sequence, Tuple, Union
-
-"""Base history class."""
 
 import numpy as np
 
