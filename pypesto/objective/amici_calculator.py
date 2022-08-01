@@ -2,7 +2,18 @@ from typing import Dict, List, Sequence, Tuple, Union
 
 import numpy as np
 
-from ..C import CHI2, FVAL, GRAD, HESS, MODE_FUN, MODE_RES, RDATAS, RES, SRES
+from ..C import (
+    CHI2,
+    FVAL,
+    GRAD,
+    HESS,
+    MODE_FUN,
+    MODE_RES,
+    RDATAS,
+    RES,
+    SRES,
+    ModeType,
+)
 from .amici_util import (
     add_sim_grad_to_opt_grad,
     add_sim_hess_to_opt_hess,
@@ -38,7 +49,7 @@ class AmiciCalculator:
         self,
         x_dct: Dict,
         sensi_orders: Tuple[int],
-        mode: str,
+        mode: ModeType,
         amici_model: AmiciModel,
         amici_solver: AmiciSolver,
         edatas: List['amici.ExpData'],
@@ -139,7 +150,7 @@ class AmiciCalculator:
 def calculate_function_values(
     rdatas,
     sensi_orders: Tuple[int, ...],
-    mode: str,
+    mode: ModeType,
     amici_model: AmiciModel,
     amici_solver: AmiciSolver,
     edatas: List['amici.ExpData'],
