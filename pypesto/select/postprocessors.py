@@ -1,4 +1,4 @@
-"""Process a model after calibration."""
+"""Process a model selection model problem after calibration."""
 from pathlib import Path
 from typing import List
 
@@ -22,7 +22,7 @@ def multi_postprocessor(
     Parameters
     ----------
     problem:
-        A model selection problem that has been optimized.
+        A model selection model problem that has been optimized.
     postprocessors:
         A list of postprocessors, which will be sequentially applied to the
         optimized model `problem`.
@@ -36,7 +36,7 @@ def waterfall_plot_postprocessor(
     problem: ModelProblem,
     output_path: TYPE_PATH = ".",
 ):
-    """Produce a waterfall plot from a model calibration.
+    """Produce a waterfall plot from a PEtab Select model calibration.
 
     See `save_postprocessor` for usage hints and argument documentation.
     """
@@ -49,7 +49,7 @@ def save_postprocessor(
     problem: ModelProblem,
     output_path: TYPE_PATH = ".",
 ):
-    """Save the parameter estimation results for optimized models.
+    """Save the parameter estimation results for optimized PEtab Select models.
 
     When used, first set the output folder for results, e.g. with
     `functools.partial`. This is because postprocessors should take only a
@@ -66,7 +66,7 @@ def save_postprocessor(
     Parameters
     ----------
     problem:
-        A model problem that has been optimized.
+        A model selection model problem that has been optimized.
     output_path:
         The location where output will be stored.
     """
@@ -77,7 +77,7 @@ def save_postprocessor(
 
 
 def model_id_binary_postprocessor(problem: ModelProblem):
-    """Change model IDs to binary strings.
+    """Change PEtab Select model IDs to binary strings.
 
     Changes the model ID in-place to be a string like `M_ijk`, where
     `i`, `j`, `k`, etc. are `1` if the parameter in that position is estimated,
@@ -91,7 +91,7 @@ def model_id_binary_postprocessor(problem: ModelProblem):
     Parameters
     ----------
     problem:
-        A model selection problem that has been optimized.
+        A model selection model problem that has been optimized.
     """
     model_id = "M_"
     for parameter_value in problem.model.parameters.values():
@@ -104,12 +104,12 @@ def report_postprocessor(
     output_filepath: TYPE_PATH,
     criteria: List[Criterion] = None,
 ):
-    """Create a TSV table of model calibration results.
+    """Create a TSV table of model selection results.
 
     Parameters
     ----------
     problem:
-        A model selection problem that has been optimized.
+        A model selection model problem that has been optimized.
     output_filepath:
         The file path where the report will be saved.
     criteria:
