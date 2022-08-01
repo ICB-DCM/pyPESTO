@@ -3,7 +3,6 @@ from typing import Dict, List, Sequence, Tuple, Union
 import numpy as np
 
 from ..C import (
-    CHI2,
     FVAL,
     GRAD,
     HESS,
@@ -247,12 +246,11 @@ def calculate_function_values(
 
     ret = {
         FVAL: nllh,
-        RDATAS: rdatas,
-        CHI2: chi2,
         GRAD: snllh,
         HESS: s2nllh,
         RES: res,
         SRES: sres,
+        RDATAS: rdatas,
     }
 
     return filter_return_dict(ret)

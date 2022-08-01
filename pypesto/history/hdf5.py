@@ -7,7 +7,6 @@ import h5py
 import numpy as np
 
 from ..C import (
-    CHI2,
     EXITFLAG,
     FVAL,
     GRAD,
@@ -24,7 +23,6 @@ from ..C import (
     N_RES,
     N_SRES,
     RES,
-    SCHI2,
     SRES,
     TIME,
     TRACE,
@@ -115,8 +113,6 @@ class Hdf5History(History):
         trace_record_hess = self._has_non_nan_entries(HESS)
         trace_record_res = self._has_non_nan_entries(RES)
         trace_record_sres = self._has_non_nan_entries(SRES)
-        trace_record_chi2 = self._has_non_nan_entries(CHI2)
-        trace_record_schi2 = self._has_non_nan_entries(SCHI2)
 
         restored_history_options = HistoryOptions(
             trace_record=trace_record,
@@ -124,8 +120,6 @@ class Hdf5History(History):
             trace_record_hess=trace_record_hess,
             trace_record_res=trace_record_res,
             trace_record_sres=trace_record_sres,
-            trace_record_chi2=trace_record_chi2,
-            trace_record_schi2=trace_record_schi2,
             trace_save_iter=self.trace_save_iter,
             storage_file=file,
         )
@@ -239,8 +233,6 @@ class Hdf5History(History):
             GRAD: result[GRAD],
             RES: result[RES],
             SRES: result[SRES],
-            CHI2: result[CHI2],
-            SCHI2: result[SCHI2],
             HESS: result[HESS],
             TIME: used_time,
         }
@@ -355,20 +347,6 @@ class Hdf5History(History):
     ) -> Union[Sequence[MaybeArray], MaybeArray]:
         """See `HistoryBase` docstring."""
         return self._get_hdf5_entries(SRES, ix)
-
-    @trace_wrap
-    def get_chi2_trace(
-        self, ix: Union[int, Sequence[int], None] = None, trim: bool = False
-    ) -> Union[Sequence[float], float]:
-        """See `HistoryBase` docstring."""
-        return self._get_hdf5_entries(CHI2, ix)
-
-    @trace_wrap
-    def get_schi2_trace(
-        self, ix: Union[int, Sequence[int], None] = None, trim: bool = False
-    ) -> Union[Sequence[MaybeArray], MaybeArray]:
-        """See `HistoryBase` docstring."""
-        return self._get_hdf5_entries(SCHI2, ix)
 
     @trace_wrap
     def get_time_trace(
