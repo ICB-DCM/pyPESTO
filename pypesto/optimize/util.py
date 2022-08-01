@@ -9,11 +9,7 @@ import h5py
 
 from .. import C
 from ..engine import Engine, SingleCoreEngine
-from ..objective import (
-    CsvHistoryTemplateError,
-    HistoryOptions,
-    HistoryTypeError,
-)
+from ..history import CsvHistoryTemplateError, HistoryOptions, HistoryTypeError
 from ..result import Result
 from ..store.save_to_hdf5 import get_or_create_group
 from .optimizer import OptimizerResult

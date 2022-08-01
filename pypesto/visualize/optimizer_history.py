@@ -12,7 +12,7 @@ from ..C import (
     TRACE_Y_FVAL,
     TRACE_Y_GRADNORM,
 )
-from ..objective import History
+from ..history import History
 from ..result import Result
 from .clust_color import assign_colors
 from .misc import process_offset_y, process_result_list, process_y_limits
