@@ -24,7 +24,7 @@ def res_to_chi2(res: np.ndarray) -> float:
 
 @_check_none
 def chi2_to_fval(chi2: float) -> float:
-    """Translate chi2 to function value, `fval = 0.5*chi2 = 0.5*sum(res**2)`.
+    """Translate chi2 to function value, `fval = 0.5*chi2 = 0.5*sum(res**2) + C`.
 
     Note that for the function value we thus employ a probabilistic
     interpretation, as the log-likelihood of a standard normal noise model.
@@ -35,7 +35,7 @@ def chi2_to_fval(chi2: float) -> float:
 
 @_check_none
 def res_to_fval(res: np.ndarray) -> float:
-    """Translate residuals to function value, `fval = 0.5*sum(res**2)`."""
+    """Translate residuals to function value, `fval = 0.5*sum(res**2) + C`."""
     return chi2_to_fval(res_to_chi2(res))
 
 
