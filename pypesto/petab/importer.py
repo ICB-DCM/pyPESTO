@@ -5,7 +5,16 @@ import os
 import shutil
 import sys
 import tempfile
-from typing import Callable, Iterable, List, Optional, Sequence, Union
+from typing import (
+    Any,
+    Callable,
+    Dict,
+    Iterable,
+    List,
+    Optional,
+    Sequence,
+    Union,
+)
 
 import numpy as np
 import pandas as pd
@@ -473,6 +482,7 @@ class PetabImporter(AmiciObjectBuilder):
         self,
         objective: AmiciObjective = None,
         x_guesses: Optional[Iterable[float]] = None,
+        problem_kwargs: Dict[str, Any] = None,
         **kwargs,
     ) -> Problem:
         """Create a :class:`pypesto.Problem`.
@@ -485,6 +495,8 @@ class PetabImporter(AmiciObjectBuilder):
             Guesses for the parameter values, shape (g, dim), where g denotes
             the number of guesses. These are used as start points in the
             optimization.
+        problem_kwargs:
+            Passed to the `pypesto.Problem` constructor.
         **kwargs:
             Additional key word arguments passed on to the objective,
             if not provided.
@@ -496,6 +508,9 @@ class PetabImporter(AmiciObjectBuilder):
         """
         if objective is None:
             objective = self.create_objective(**kwargs)
+
+        if problem_kwargs is None:
+            problem_kwargs = {}
 
         prior = self.create_prior()
 
@@ -517,6 +532,7 @@ class PetabImporter(AmiciObjectBuilder):
             x_names=self.petab_problem.x_ids,
             x_scales=x_scales,
             x_priors_defs=prior,
+            **problem_kwargs,
         )
 
         return problem

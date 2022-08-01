@@ -5,13 +5,14 @@ Package-wide consistent constant definitions.
 """
 
 from enum import Enum
-from typing import Callable, Tuple, Union
+from typing import Callable, Literal, Tuple, Union
 
 ###############################################################################
 # OBJECTIVE
 
 MODE_FUN = 'mode_fun'  # mode for function values
 MODE_RES = 'mode_res'  # mode for residuals
+ModeType = Literal['mode_fun', 'mode_res']  # type for `mode` argument
 FVAL = 'fval'  # function value
 FVAL0 = 'fval0'  # function value at start
 GRAD = 'grad'  # gradient
@@ -32,6 +33,22 @@ SCHI2 = 'schi2'  # chi2 value gradient
 X = 'x'
 X0 = 'x0'
 ID = 'id'
+
+
+###############################################################################
+# HISTORY
+
+HISTORY = "history"
+TRACE = "trace"
+N_ITERATIONS = "n_iterations"
+MESSAGES = "messages"
+MESSAGE = "message"
+EXITFLAG = "exitflag"
+TRACE_SAVE_ITER = "trace_save_iter"
+
+SUFFIXES_CSV = ["csv"]
+SUFFIXES_HDF5 = ["hdf5", "h5"]
+SUFFIXES = SUFFIXES_CSV + SUFFIXES_HDF5
 
 
 ###############################################################################
@@ -149,9 +166,20 @@ RGBA_ALPHA = 3  # zero-indexed fourth element in RGBA
 RGBA_WHITE = (RGBA_MAX, RGBA_MAX, RGBA_MAX, RGBA_MAX)  # white as an RGBA color
 RGBA_BLACK = (RGBA_MIN, RGBA_MIN, RGBA_MIN, RGBA_MAX)  # black as an RGBA color
 
+# optimizer history
+TRACE_X_TIME = 'time'
+TRACE_X_STEPS = 'steps'
+# supported values to plot on x-axis
+TRACE_X = (TRACE_X_TIME, TRACE_X_STEPS)
+
+TRACE_Y_FVAL = 'fval'
+TRACE_Y_GRADNORM = 'gradnorm'
+# supported values to plot on y-axis
+TRACE_Y = (TRACE_Y_FVAL, TRACE_Y_GRADNORM)
+
 
 ###############################################################################
-# Environment variables
+# ENVIRONMENT VARIABLES
 
 PYPESTO_MAX_N_STARTS: str = "PYPESTO_MAX_N_STARTS"
 PYPESTO_MAX_N_SAMPLES: str = "PYPESTO_MAX_N_SAMPLES"

@@ -2,7 +2,7 @@ import logging
 from typing import Callable, Iterable, Union
 
 from ..engine import Engine, SingleCoreEngine
-from ..objective import HistoryOptions
+from ..history import HistoryOptions
 from ..problem import Problem
 from ..result import Result
 from ..startpoint import StartpointMethod, to_startpoint_method, uniform
@@ -32,6 +32,7 @@ def minimize(
     options: OptimizeOptions = None,
     history_options: HistoryOptions = None,
     filename: Union[str, Callable, None] = "Auto",
+    overwrite: bool = False,
 ) -> Result:
     """
     Do multistart optimization.
@@ -68,6 +69,9 @@ def minimize(
         `year_month_day_optimization_result.hdf5`. Deactivate saving by
         setting filename to `None`.
         Optionally a method, see docs for `pypesto.store.auto.autosave`.
+    overwrite:
+        Whether to overwrite `result/optimization` in the autosave file
+        if it already exists.
 
     Returns
     -------
@@ -154,6 +158,11 @@ def minimize(
     # if history file provided, set storage file to that one
     if filename == "Auto" and history_file is not None:
         filename = history_file
-    autosave(filename=filename, result=result, store_type="optimize")
+    autosave(
+        filename=filename,
+        result=result,
+        store_type="optimize",
+        overwrite=overwrite,
+    )
 
     return result

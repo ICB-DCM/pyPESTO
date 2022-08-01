@@ -8,7 +8,12 @@ import numpy as np
 import scipy.optimize
 
 from ..C import FVAL, GRAD, MODE_FUN, MODE_RES
-from ..objective import HistoryBase, HistoryOptions, OptimizerHistory
+from ..history import (
+    HistoryBase,
+    HistoryOptions,
+    OptimizerHistory,
+    create_history,
+)
 from ..problem import Problem
 from ..result import OptimizerResult
 from .load import fill_result_from_history
@@ -46,10 +51,12 @@ except ImportError:
 
 try:
     import fides
+    from fides import Optimizer as fidesOptimizer
     from fides.hessian_approximation import HessianApproximation
 except ImportError:
     fides = None
     HessianApproximation = None
+    fidesOptimizer = None
 
 logger = logging.getLogger(__name__)
 
@@ -76,9 +83,11 @@ def history_decorator(minimize):
         # initialize the objective
         objective.initialize()
 
-        history = history_options.create_history(
+        # initialize the history
+        history = create_history(
             id=id,
             x_names=[problem.x_names[ix] for ix in problem.x_free_indices],
+            options=history_options,
         )
         optimizer_history = OptimizerHistory(
             history=history,
@@ -100,8 +109,10 @@ def history_decorator(minimize):
                 history_options=history_options,
                 optimize_options=optimize_options,
             )
-            objective.history.finalize()
             result.id = id
+            objective.history.finalize(
+                message=result.message, exitflag=result.exitflag
+            )
         except Exception as err:
             if optimize_options.allow_failed_starts:
                 logger.error(f'start {id} failed: {err}')
@@ -1275,10 +1286,7 @@ class FidesOptimizer(Optimizer):
 
         try:
             opt.minimize(x0)
-            if opt.converged:
-                msg = 'Finished Successfully.'
-            else:
-                msg = 'Failed to converge'
+            msg = self._convert_exitflag_to_message(opt)
         except RuntimeError as err:
             msg = str(err)
 
@@ -1296,3 +1304,33 @@ class FidesOptimizer(Optimizer):
     def is_least_squares(self):
         """Check whether optimizer is a least squares optimizer."""
         return False
+
+    def _convert_exitflag_to_message(self, opt: fidesOptimizer):
+        """
+        Convert the exitflag of a run to an informative message.
+
+        Parameters
+        ----------
+        opt:
+            The fides.Optimizer that has finished minimizing storing the
+            exitflag.
+
+        Returns
+        -------
+            An informative message on the cause of termination. Based on
+            fides documentation.
+        """
+        messages = {
+            fides.ExitFlag.DID_NOT_RUN: "Optimizer did not run",
+            fides.ExitFlag.MAXITER: "Reached maximum number of allowed iterations",
+            fides.ExitFlag.MAXTIME: "Expected to reach maximum allowed time in next iteration",
+            fides.ExitFlag.NOT_FINITE: "Encountered non-finite fval/grad/hess",
+            fides.ExitFlag.EXCEEDED_BOUNDARY: "Exceeded specified boundaries",
+            fides.ExitFlag.DELTA_TOO_SMALL: "Trust Region Radius too small to proceed",
+            fides.ExitFlag.FTOL: "Converged according to fval difference",
+            fides.ExitFlag.XTOL: "Converged according to x difference",
+            fides.ExitFlag.GTOL: "Converged according to gradient norm",
+        }
+        return messages.get(
+            opt.exitflag, f"exitflag={opt.exitflag} is not defined in fides."
+        )

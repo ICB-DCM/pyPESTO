@@ -19,7 +19,7 @@ from pypesto import (
 )
 from pypesto.C import CHI2, FVAL, GRAD, HESS, RES, SCHI2, SRES, X
 from pypesto.engine import MultiProcessEngine
-from pypesto.objective.util import res_to_chi2, sres_to_schi2
+from pypesto.util import res_to_chi2, sres_to_schi2
 
 from ..util import CRProblem, load_amici_objective, rosen_for_sensi
 
@@ -189,6 +189,7 @@ class HistoryTest(unittest.TestCase):
                 'start_time',
                 '_trace',
                 'x_names',
+                'editable',
             ]
         ]
         for attr in history_attributes:
@@ -608,27 +609,27 @@ def test_trace_subset(history: pypesto.History):
             partial_trace = getter(arr)
 
             # check partial traces coincide
-            assert len(partial_trace) == len(arr)
+            assert len(partial_trace) == len(arr), var
             for a, b in zip(partial_trace, [full_trace[i] for i in arr]):
                 if var != 'schi2':
-                    assert np.all(a == b) or np.isnan(a) and np.isnan(b)
+                    assert np.all(a == b) or np.isnan(a) and np.isnan(b), var
                 else:
                     assert (
                         np.all(a == b)
                         or np.all(np.isnan(a))
                         and np.all(np.isnan(b))
-                    )
+                    ), var
 
             # check sequence type
-            assert isinstance(full_trace, Sequence)
-            assert isinstance(partial_trace, Sequence)
+            assert isinstance(full_trace, Sequence), var
+            assert isinstance(partial_trace, Sequence), var
 
             # check individual type
             val = getter(0)
             if var in ['fval', 'chi2', 'time']:
-                assert isinstance(val, float)
+                assert isinstance(val, float), var
             else:
-                assert isinstance(val, np.ndarray) or np.isnan(val)
+                assert isinstance(val, np.ndarray) or np.isnan(val), var
 
 
 def test_hdf5_history_mp():

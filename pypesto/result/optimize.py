@@ -8,7 +8,7 @@ from typing import Sequence, Union
 import numpy as np
 import pandas as pd
 
-from ..objective import History
+from ..history import History
 from ..problem import Problem
 from ..util import assign_clusters, delete_nan_inf
 
@@ -195,8 +195,17 @@ class OptimizeResult:
     def __len__(self):
         return len(self.list)
 
-    def summary(self):
-        """Get summary of the object."""
+    def summary(self, disp_best: bool = True, disp_worst: bool = False) -> str:
+        """
+        Get summary of the object.
+
+        Parameters
+        ----------
+        disp_best:
+            Whether to display a detailed summary of the best run.
+        disp_worst:
+            Whether to display a detailed summary of the worst run.
+        """
         # perform clustering for better information
         clust, clustsize = assign_clusters(delete_nan_inf(self.fval)[1])
         counter_message = '\n'.join(
@@ -207,25 +216,30 @@ class OptimizeResult:
             ]
         )
         times_message = (
-            f'\n\tMean execution time: {np.mean(self.time)}s\n'
-            f'\tMaximum execution time: {np.max(self.time)}s,'
+            f'\n\tMean execution time: {np.mean(self.time):0.3f}s\n'
+            f'\tMaximum execution time: {np.max(self.time):0.3f}s,'
             f'\tid={self[np.argmax(self.time)].id}\n'
-            f'\tMinimum execution time: {np.min(self.time)}s,\t'
+            f'\tMinimum execution time: {np.min(self.time):0.3f}s,\t'
             f'id={self[np.argmin(self.time)].id}'
         )
 
         summary = (
             "## Optimization Result \n\n"
             f"* number of starts: {len(self)} \n"
+            f"* best value: {self[0]['fval']}, id={self[0]['id']}\n"
+            f"* worst value: {self[-1]['fval']}, id={self[-1]['id']}\n"
+            f"* number of non-finite values: "
+            f"{np.logical_not(np.isfinite(self.fval)).sum()}\n\n"
             f"* execution time summary: {times_message}\n"
             f"* summary of optimizer messages:\n{counter_message}\n"
-            f"* best value found (approximately) {clustsize[0]} time(s) \n"
+            f"* best value found (approximately) {int(clustsize[0])} time(s)\n"
             f"* number of plateaus found: "
-            f"{1 + max(clust) - sum(clustsize == 1)} \n"
-            f"* best value: {self[0]['fval']}, "
-            f"worst value: {self[-1]['fval']} \n\n"
-            f"A summary of the best run:\n\n{self[0].summary()}"
+            f"{1 + max(clust) - sum(clustsize == 1)}"
         )
+        if disp_best:
+            summary += f"\nA summary of the best run:\n\n{self[0].summary()}"
+        if disp_worst:
+            summary += f"\nA summary of the worst run:\n\n{self[-1].summary()}"
         return summary
 
     def append(

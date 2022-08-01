@@ -1,20 +1,11 @@
-"""
-Problem
-=======
-
-A problem contains the objective as well as all information like prior
-describing the problem to be solved.
-
-"""
-
 import copy
 from typing import Iterable, List, Optional, SupportsFloat, SupportsInt, Union
 
 import numpy as np
 import pandas as pd
 
-from .objective import ObjectiveBase
-from .objective.priors import NegLogPriors
+from ..objective import ObjectiveBase
+from ..objective.priors import NegLogPriors
 
 SupportsFloatIterableOrValue = Union[Iterable[SupportsFloat], SupportsFloat]
 SupportsIntIterableOrValue = Union[Iterable[SupportsInt], SupportsInt]
@@ -437,7 +428,7 @@ class Problem:
 
         Include what parameters are being optimized and parameter boundaries.
         """
-        print(  # noqa: T001 (print)
+        print(  # noqa: T201 (print)
             pd.DataFrame(
                 index=self.x_names,
                 data={

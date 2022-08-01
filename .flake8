@@ -9,18 +9,22 @@ extend-ignore =
   E203
   # Don't be crazy if line too long
   E501
+  # Missing docstring in public module
+  D100
+  # Missing docstring in public method
+  # D102
+  # Missing docstring in magic method
+  D105
+  # Missing docstring in __init__
+  D107
 
 per-file-ignores =
     # Imported but unused
     */__init__.py:F401,D400,D205
     # Print and asserts
-    test/*:T001,S101,D
+    test/*:T201,S101,D
     # Ignore errors in module docstring
     pypesto/logging.py:D400,D205,D107
     pypesto/problem.py:D400,D205,D107
     pypesto/util.py:D400,D205,D107
     pypesto/C.py:D400,D205,D107
-    pypesto/version.py:D
-    # ignore D100='Missing docstring in public module',
-    # D105='Missing docstring in magic method' and D107='Missing docstring in __init__'.
-    *:D100,D105,D107
