@@ -146,13 +146,14 @@ def report_postprocessor(
 
     # Arbitrary convergence criterion
     header.append('n_converged')
-    row.append(str((
-        np.array(problem.minimize_result.optimize_result.fval)
-        < (
-            problem.minimize_result.optimize_result.list[0].fval
-            + 0.1
+    row.append(
+        str(
+            (
+                np.array(problem.minimize_result.optimize_result.fval)
+                < (problem.minimize_result.optimize_result.list[0].fval + 0.1)
+            ).sum()
         )
-    ).sum()))
+    )
 
     for start_index, start_optimization_time in enumerate(
         start_optimization_times
