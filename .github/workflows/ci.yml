@@ -37,7 +37,7 @@ jobs:
       run: .github/workflows/install_deps.sh amici
 
     - name: Run tests
-      timeout-minutes: 12
+      timeout-minutes: 15
       run: tox -e base
 
     - name: Coverage
@@ -176,7 +176,7 @@ jobs:
       run: tox -e size
 
     - name: Run quality checks
-      timeout-minutes: 1
+      timeout-minutes: 5
       run: tox -e project,flake8
 
     - name: Run pre-commit hooks

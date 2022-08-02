@@ -3,7 +3,7 @@ from typing import Sequence, Tuple
 
 import numpy as np
 
-from ..C import CHI2, FVAL, GRAD, HESS, HESSP, RDATAS, RES, SCHI2, SRES
+from ..C import FVAL, GRAD, HESS, HESSP, RDATAS, RES, SRES, ModeType
 from .base import ObjectiveBase, ResultDict
 
 
@@ -59,7 +59,7 @@ class AggregatedObjective(ObjectiveBase):
 
         return other
 
-    def check_mode(self, mode: str) -> bool:
+    def check_mode(self, mode: ModeType) -> bool:
         """See `ObjectiveBase` documentation."""
         return all(
             objective.check_mode(mode) for objective in self._objectives
@@ -68,7 +68,7 @@ class AggregatedObjective(ObjectiveBase):
     def check_sensi_orders(
         self,
         sensi_orders: Tuple[int, ...],
-        mode: str,
+        mode: ModeType,
     ) -> bool:
         """See `ObjectiveBase` documentation."""
         return all(
@@ -80,7 +80,7 @@ class AggregatedObjective(ObjectiveBase):
         self,
         x: np.ndarray,
         sensi_orders: Tuple[int, ...],
-        mode: str,
+        mode: ModeType,
         **kwargs,
     ) -> ResultDict:
         """
@@ -121,7 +121,7 @@ def aggregate_results(rvals: Sequence[ResultDict]) -> ResultDict:
     # sum over fval/grad/hess, if available in all rvals
     result = {
         key: sum(rval[key] for rval in rvals)
-        for key in [FVAL, CHI2, SCHI2, GRAD, HESS, HESSP]
+        for key in [FVAL, GRAD, HESS, HESSP]
         if all(key in rval for rval in rvals)
     }
 

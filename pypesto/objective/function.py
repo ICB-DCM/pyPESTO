@@ -2,7 +2,7 @@ from typing import Callable, Sequence, Tuple, Union
 
 import numpy as np
 
-from ..C import FVAL, GRAD, HESS, MODE_FUN, MODE_RES, RES, SRES
+from ..C import FVAL, GRAD, HESS, MODE_FUN, MODE_RES, RES, SRES, ModeType
 from .base import ObjectiveBase, ResultDict
 
 
@@ -101,7 +101,8 @@ class Objective(ObjectiveBase):
         return callable(self.hess) or self.hess is True
 
     @property
-    def has_hessp(self) -> bool:  # noqa
+    def has_hessp(self) -> bool:
+        """Check whether Hessian vector product is defined."""
         # Not supported yet
         return False
 
@@ -131,7 +132,7 @@ class Objective(ObjectiveBase):
         self,
         x: np.ndarray,
         sensi_orders: Tuple[int, ...],
-        mode: str,
+        mode: ModeType,
         **kwargs,
     ) -> ResultDict:
         """
