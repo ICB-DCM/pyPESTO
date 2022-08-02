@@ -23,12 +23,12 @@ from ..C import (
     ModeType,
     X,
 )
-from .base import History, add_fun_from_res, reduce_result_via_options
+from .base import CountHistoryBase, add_fun_from_res, reduce_result_via_options
 from .options import HistoryOptions
 from .util import MaybeArray, ResultDict, trace_wrap
 
 
-class CsvHistory(History):
+class CsvHistory(CountHistoryBase):
     """Stores a representation of the history in a CSV file.
 
     Parameters
@@ -51,9 +51,9 @@ class CsvHistory(History):
         load_from_file: bool = False,
     ):
         super().__init__(options=options)
-        self.x_names = x_names
+        self.x_names: Sequence[str] = x_names
         self._trace: Union[pd.DataFrame, None] = None
-        self.file = os.path.abspath(file)
+        self.file: str = os.path.abspath(file)
 
         # create trace file dirs
         if self.file is not None:
@@ -75,10 +75,6 @@ class CsvHistory(History):
             self._trace = trace
             self.x_names = trace[X].columns
             self._update_counts_from_trace()
-
-    def __len__(self) -> int:
-        """Define length of history object."""
-        return len(self._trace)
 
     def _update_counts_from_trace(self) -> None:
         self._n_fval = self._trace[(N_FVAL, np.NaN)].max()
@@ -231,6 +227,10 @@ class CsvHistory(History):
                     ndarray2string_full
                 )
             trace_copy.to_csv(self.file)
+
+    def __len__(self) -> int:
+        """Define length of history object."""
+        return len(self._trace)
 
     @trace_wrap
     def get_x_trace(
