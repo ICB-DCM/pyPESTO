@@ -67,6 +67,20 @@ def with_h5_file(mode: str):
     return decorator
 
 
+def check_editable(fun):
+    """Check if the history is editable."""
+
+    def wrapper(self, *args, **kwargs):
+        if not self.editable:
+            raise ValueError(
+                f'ID "{self.id}" is already used in history file '
+                f'"{self.file}".'
+            )
+        return fun(self, *args, **kwargs)
+
+    return wrapper
+
+
 class Hdf5History(HistoryBase):
     """
     Stores a representation of the history in an HDF5 file.
@@ -82,7 +96,10 @@ class Hdf5History(HistoryBase):
     """
 
     def __init__(
-        self, id: str, file: str, options: Union[HistoryOptions, Dict] = None
+        self,
+        id: str,
+        file: str,
+        options: Union[HistoryOptions, Dict] = None,
     ):
         super().__init__(options=options)
         self.id: str = id
@@ -91,12 +108,13 @@ class Hdf5History(HistoryBase):
         # filled during file access
         self._f: Union[h5py.File, None] = None
 
-        # check whether the file can be edited
+        # to check whether the trace can be edited
         self.editable: bool = self._editable()
 
-        # generate group for id
-        self._generate_hdf5_group()
+        # maybe generate id group
+        self._maybe_generate_hdf5_group()
 
+    @check_editable
     def update(
         self,
         x: np.ndarray,
@@ -106,16 +124,12 @@ class Hdf5History(HistoryBase):
     ) -> None:
         """See `History` docstring."""
         # check whether the file was marked as editable upon initialization
-        if not self.editable:
-            raise ValueError(
-                f'ID "{self.id}" is already used in history file '
-                f'"{self.file}".'
-            )
         super().update(x, sensi_orders, mode, result)
         self._update_counts(sensi_orders, mode)
         self._update_trace(x, sensi_orders, mode, result)
 
     @with_h5_file("a")
+    @check_editable
     def finalize(self, message: str = None, exitflag: str = None) -> None:
         """See `HistoryBase` docstring."""
         super().finalize()
@@ -299,7 +313,7 @@ class Hdf5History(HistoryBase):
         f[f'{HISTORY}/{self.id}/{TRACE}/'].attrs[N_ITERATIONS] += 1
 
     @with_h5_file("a")
-    def _generate_hdf5_group(self) -> None:
+    def _maybe_generate_hdf5_group(self) -> None:
         """Generate group in the hdf5 file, if it does not exist yet."""
         if f'{HISTORY}/{self.id}/{TRACE}/' in self._f:
             return
@@ -405,8 +419,7 @@ class Hdf5History(HistoryBase):
         """See `HistoryBase` docstring."""
         return self._get_hdf5_entries(TIME, ix)
 
-    @with_h5_file("a")
-    def _editable(self) -> None:
+    def _editable(self) -> bool:
         """
         Check whether the id is already existent in the file.
 
@@ -419,9 +432,12 @@ class Hdf5History(HistoryBase):
         -------
         True if the file is editable, False otherwise.
         """
-        # editable if the id entry does not exist
-        f = self._f
-        if HISTORY not in f.keys() or self.id not in f[HISTORY]:
-            return True
-
-        return False
+        try:
+            with h5py.File(self.file, "a") as f:
+                # editable if the id entry does not exist
+                if HISTORY not in f.keys() or self.id not in f[HISTORY]:
+                    return True
+                return False
+        except OSError:
+            # if something goes wrong, we assume the file is not editable
+            return False
