@@ -68,7 +68,7 @@ def read_hdf5_optimization(
         if optimization_key == 'history':
             if optimization_key in f:
                 result['history'] = Hdf5History(id=opt_id, file=file_name)
-                result['history']._recover_options(file_name)
+                result['history'].recover_options(file_name)
                 continue
         if optimization_key in f[f'/optimization/results/{opt_id}']:
             result[optimization_key] = f[
@@ -268,6 +268,9 @@ def read_result(
     sample: bool = False,
 ) -> Result:
     """Save the whole pypesto.Result object in an HDF5 file.
+
+    By default, loads everything. If any of `optimize, profile, sample` is
+    explicitly set to true, load <u>__only__</u> this one.
 
     Parameters
     ----------
