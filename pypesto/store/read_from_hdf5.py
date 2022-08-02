@@ -6,7 +6,8 @@ import logging
 import h5py
 import numpy as np
 
-from ..objective import Hdf5History, Objective, ObjectiveBase
+from ..history import Hdf5History
+from ..objective import Objective, ObjectiveBase
 from ..problem import Problem
 from ..result import McmcPtResult, OptimizerResult, ProfilerResult, Result
 
@@ -67,7 +68,7 @@ def read_hdf5_optimization(
         if optimization_key == 'history':
             if optimization_key in f:
                 result['history'] = Hdf5History(id=opt_id, file=file_name)
-                result['history']._recover_options(file_name)
+                result['history'].recover_options(file_name)
                 continue
         if optimization_key in f[f'/optimization/results/{opt_id}']:
             result[optimization_key] = f[
@@ -267,6 +268,9 @@ def read_result(
     sample: bool = False,
 ) -> Result:
     """Save the whole pypesto.Result object in an HDF5 file.
+
+    By default, loads everything. If any of `optimize, profile, sample` is
+    explicitly set to true, loads *only* this one.
 
     Parameters
     ----------
