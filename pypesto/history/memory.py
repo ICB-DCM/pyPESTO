@@ -7,7 +7,7 @@ import numpy as np
 
 from ..C import FVAL, GRAD, HESS, RES, SRES, TIME, ModeType, X
 from .base import (
-    History,
+    CountHistoryBase,
     HistoryBase,
     add_fun_from_res,
     reduce_result_via_options,
@@ -16,7 +16,7 @@ from .options import HistoryOptions
 from .util import MaybeArray, ResultDict, trace_wrap
 
 
-class MemoryHistory(History):
+class MemoryHistory(CountHistoryBase):
     """
     Class for optimization history stored in memory.
 
@@ -32,10 +32,6 @@ class MemoryHistory(History):
     def __init__(self, options: Union[HistoryOptions, Dict] = None):
         super().__init__(options=options)
         self._trace: Dict[str, Any] = {key: [] for key in HistoryBase.ALL_KEYS}
-
-    def __len__(self) -> int:
-        """Define length of history object."""
-        return len(self._trace[TIME])
 
     def update(
         self,
@@ -63,6 +59,10 @@ class MemoryHistory(History):
 
         for key in HistoryBase.ALL_KEYS:
             self._trace[key].append(result[key])
+
+    def __len__(self) -> int:
+        """Define length of history object."""
+        return len(self._trace[TIME])
 
     @trace_wrap
     def get_x_trace(

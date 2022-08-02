@@ -12,7 +12,7 @@ from ..C import (
     TRACE_Y_FVAL,
     TRACE_Y_GRADNORM,
 )
-from ..history import History
+from ..history import HistoryBase
 from ..result import Result
 from .clust_color import assign_colors
 from .misc import process_offset_y, process_result_list, process_y_limits
@@ -253,7 +253,7 @@ def get_trace(
         label for y-axis to be plotted later.
     """
     # get data frames
-    histories: List[History] = result.optimize_result.history
+    histories: List[HistoryBase] = result.optimize_result.history
 
     vals = []
 

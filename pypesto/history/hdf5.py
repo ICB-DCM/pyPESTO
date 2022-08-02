@@ -30,12 +30,12 @@ from ..C import (
     ModeType,
     X,
 )
-from .base import History, add_fun_from_res, reduce_result_via_options
+from .base import HistoryBase, add_fun_from_res, reduce_result_via_options
 from .options import HistoryOptions
 from .util import MaybeArray, ResultDict, trace_wrap
 
 
-class Hdf5History(History):
+class Hdf5History(HistoryBase):
     """
     Stores a representation of the history in an HDF5 file.
 
@@ -55,13 +55,9 @@ class Hdf5History(History):
         super().__init__(options=options)
         self.id: str = id
         self.file: str = file
+        self._start_time: float = time.time()
         self.editable: bool = self._is_editable(file)
         self._generate_hdf5_group()
-
-    def __len__(self) -> int:
-        """Define length of history object."""
-        with h5py.File(self.file, 'r') as f:
-            return f[f'{HISTORY}/{self.id}/{TRACE}/'].attrs[N_ITERATIONS]
 
     def update(
         self,
@@ -77,6 +73,7 @@ class Hdf5History(History):
                 f' in history file "{self.file}".'
             )
         super().update(x, sensi_orders, mode, result)
+        self._update_counts(sensi_orders, mode)
         self._update_trace(x, sensi_orders, mode, result)
 
     def finalize(self, message: str = None, exitflag: str = None) -> None:
@@ -136,7 +133,6 @@ class Hdf5History(History):
 
         return False
 
-    # overwrite _update_counts
     def _update_counts(self, sensi_orders: Tuple[int, ...], mode: ModeType):
         """Update the counters in the hdf5."""
         with h5py.File(self.file, 'a') as f:
@@ -153,6 +149,11 @@ class Hdf5History(History):
                     f[f'{HISTORY}/{self.id}/{TRACE}/'].attrs[N_RES] += 1
                 if 1 in sensi_orders:
                     f[f'{HISTORY}/{self.id}/{TRACE}/'].attrs[N_SRES] += 1
+
+    def __len__(self) -> int:
+        """Define length of history object."""
+        with h5py.File(self.file, 'r') as f:
+            return f[f'{HISTORY}/{self.id}/{TRACE}/'].attrs[N_ITERATIONS]
 
     @property
     def n_fval(self) -> int:
@@ -189,6 +190,12 @@ class Hdf5History(History):
         """After how many iterations to store the trace."""
         with h5py.File(self.file, 'r') as f:
             return f[f'{HISTORY}/{self.id}/{TRACE}/'].attrs[TRACE_SAVE_ITER]
+
+    @property
+    def start_time(self) -> float:
+        """See `HistoryBase` docstring."""
+        # TODO Y This should also be saved in and recovered from the hdf5 file
+        return self._start_time
 
     @property
     def message(self) -> str:

@@ -13,9 +13,11 @@ from .version import __version__
 
 # import basic objects into global namespace
 from .history import (
+    CountHistory,
+    CountHistoryBase,
     CsvHistory,
     Hdf5History,
-    History,
+    NoHistory,
     HistoryBase,
     HistoryOptions,
     MemoryHistory,
