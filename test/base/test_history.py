@@ -497,6 +497,7 @@ class CRFunModeHistoryTest(HistoryTest):
 
 @pytest.fixture(params=["memory", "csv", "hdf5", ""])
 def history(request) -> pypesto.HistoryBase:
+    # initialize history with the requested backend
     if request.param == "memory":
         history = pypesto.MemoryHistory(options={'trace_record': True})
     elif request.param == "csv":
@@ -511,10 +512,13 @@ def history(request) -> pypesto.HistoryBase:
         history = pypesto.CountHistory()
     else:
         raise ValueError("Unknown history type")
+
+    # add some entries to the history
     for _ in range(10):
         result = {FVAL: np.random.randn(), GRAD: np.random.randn(7)}
         history.update(np.random.randn(7), (0, 1), 'mode_fun', result)
     history.finalize()
+
     return history
 
 
