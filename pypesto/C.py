@@ -28,6 +28,7 @@ N_GRAD = 'n_grad'  # number of gradient evaluations
 N_HESS = 'n_hess'  # number of Hessian evaluations
 N_RES = 'n_res'  # number of residual evaluations
 N_SRES = 'n_sres'  # number of residual sensitivity evaluations
+START_TIME = 'start_time'  # start time
 X = 'x'
 X0 = 'x0'
 ID = 'id'

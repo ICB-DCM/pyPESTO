@@ -24,6 +24,7 @@ from ..C import (
     N_SRES,
     RES,
     SRES,
+    START_TIME,
     TIME,
     TRACE,
     TRACE_SAVE_ITER,
@@ -44,9 +45,17 @@ def with_h5_file(mode: str):
         Access mode, see
         https://docs.h5py.org/en/stable/high/file.html.
     """
+    modes = ["r", "a"]
+    if mode not in modes:
+        # can be extended if reasonable
+        raise ValueError(f"Mode must be one of {modes}")
 
     def decorator(fun):
         def wrapper(self, *args, **kwargs):
+            # file already opened
+            if self._f is not None and (mode == self._f.mode or mode == "r"):
+                return fun(self, *args, **kwargs)
+
             with h5py.File(self.file, mode) as f:
                 self._f = f
                 ret = fun(self, *args, **kwargs)
@@ -78,16 +87,15 @@ class Hdf5History(HistoryBase):
         super().__init__(options=options)
         self.id: str = id
         self.file: str = file
-        self._start_time: float = time.time()
+
+        # filled during file access
+        self._f: Union[h5py.File, None] = None
 
         # check whether the file can be edited
         self.editable: bool = self._editable()
 
         # generate group for id
         self._generate_hdf5_group()
-
-        # filled during file access
-        self._f: Union[h5py.File, None] = None
 
     def update(
         self,
@@ -225,10 +233,11 @@ class Hdf5History(HistoryBase):
         return self._f[f'{HISTORY}/{self.id}/{TRACE}/'].attrs[TRACE_SAVE_ITER]
 
     @property
+    @with_h5_file("r")
     def start_time(self) -> float:
         """See `HistoryBase` docstring."""
         # TODO Y This should also be saved in and recovered from the hdf5 file
-        return self._start_time
+        return self._f[f'{HISTORY}/{self.id}/{TRACE}/'].attrs[START_TIME]
 
     @property
     @with_h5_file("r")
@@ -266,7 +275,7 @@ class Hdf5History(HistoryBase):
             add_fun_from_res(result), self.options
         )
 
-        used_time = time.time() - self._start_time
+        used_time = time.time() - self.start_time
 
         values = {
             X: x,
@@ -302,6 +311,7 @@ class Hdf5History(HistoryBase):
         grp.attrs[N_HESS] = 0
         grp.attrs[N_RES] = 0
         grp.attrs[N_SRES] = 0
+        grp.attrs[START_TIME] = time.time()
         # TODO Y it makes no sense to save this here
         #  Also, we do not seem to evaluate this at all
         grp.attrs[TRACE_SAVE_ITER] = self.options.trace_save_iter
