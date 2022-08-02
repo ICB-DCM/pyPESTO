@@ -270,7 +270,7 @@ def read_result(
     """Save the whole pypesto.Result object in an HDF5 file.
 
     By default, loads everything. If any of `optimize, profile, sample` is
-    explicitly set to true, load <u>__only__</u> this one.
+    explicitly set to true, loads *only* this one.
 
     Parameters
     ----------
