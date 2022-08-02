@@ -1,11 +1,12 @@
 """Base history class."""
 
-import abc
 import numbers
 import time
+from abc import ABC, abstractmethod
 from typing import Dict, Sequence, Tuple, Union
 
 import numpy as np
+from overrides import EnforceOverrides, overrides
 
 from ..C import (
     FVAL,
@@ -30,21 +31,21 @@ from .options import HistoryOptions
 from .util import MaybeArray, ResultDict
 
 
-class HistoryBase(abc.ABC):
-    """Base class for history objects.
-
-    Can be used as a dummy history, but does not implement any functionality.
-    """
+class HistoryBase(ABC, EnforceOverrides):
+    """Abstract base class for histories."""
 
     # values calculated by the objective function
     RESULT_KEYS = (FVAL, GRAD, HESS, RES, SRES)
     # all possible history entries
     ALL_KEYS = (X, *RESULT_KEYS, TIME)
 
-    def __len__(self) -> int:
-        """Define length by number of stored entries in the history."""
-        raise NotImplementedError()
+    def __init__(self, options: HistoryOptions = None):
+        if options is None:
+            options = HistoryOptions()
+        options = HistoryOptions.assert_instance(options)
+        self.options: HistoryOptions = options
 
+    @abstractmethod
     def update(
         self,
         x: np.ndarray,
@@ -84,36 +85,41 @@ class HistoryBase(abc.ABC):
             Optimizer exitflag to be saved.
         """
 
+    @abstractmethod
+    def __len__(self) -> int:
+        """Define length by number of stored entries in the history."""
+
     @property
+    @abstractmethod
     def n_fval(self) -> int:
         """Return number of function evaluations."""
-        raise NotImplementedError()
 
     @property
+    @abstractmethod
     def n_grad(self) -> int:
         """Return number of gradient evaluations."""
-        raise NotImplementedError()
 
     @property
+    @abstractmethod
     def n_hess(self) -> int:
         """Return number of Hessian evaluations."""
-        raise NotImplementedError()
 
     @property
+    @abstractmethod
     def n_res(self) -> int:
         """Return number of residual evaluations."""
-        raise NotImplementedError()
 
     @property
+    @abstractmethod
     def n_sres(self) -> int:
         """Return number or residual sensitivity evaluations."""
-        raise NotImplementedError()
 
     @property
+    @abstractmethod
     def start_time(self) -> float:
         """Return start time."""
-        raise NotImplementedError()
 
+    @abstractmethod
     def get_x_trace(
         self,
         ix: Union[int, Sequence[int], None] = None,
@@ -125,8 +131,8 @@ class HistoryBase(abc.ABC):
         Takes as parameter an index or indices and returns corresponding trace
         values. If only a single value is requested, the list is flattened.
         """
-        raise NotImplementedError()
 
+    @abstractmethod
     def get_fval_trace(
         self,
         ix: Union[int, Sequence[int], None] = None,
@@ -138,8 +144,8 @@ class HistoryBase(abc.ABC):
         Takes as parameter an index or indices and returns corresponding trace
         values. If only a single value is requested, the list is flattened.
         """
-        raise NotImplementedError()
 
+    @abstractmethod
     def get_grad_trace(
         self,
         ix: Union[int, Sequence[int], None] = None,
@@ -151,8 +157,8 @@ class HistoryBase(abc.ABC):
         Takes as parameter an index or indices and returns corresponding trace
         values. If only a single value is requested, the list is flattened.
         """
-        raise NotImplementedError()
 
+    @abstractmethod
     def get_hess_trace(
         self,
         ix: Union[int, Sequence[int], None] = None,
@@ -164,8 +170,8 @@ class HistoryBase(abc.ABC):
         Takes as parameter an index or indices and returns corresponding trace
         values. If only a single value is requested, the list is flattened.
         """
-        raise NotImplementedError()
 
+    @abstractmethod
     def get_res_trace(
         self,
         ix: Union[int, Sequence[int], None] = None,
@@ -177,8 +183,8 @@ class HistoryBase(abc.ABC):
         Takes as parameter an index or indices and returns corresponding trace
         values. If only a single value is requested, the list is flattened.
         """
-        raise NotImplementedError()
 
+    @abstractmethod
     def get_sres_trace(
         self,
         ix: Union[int, Sequence[int], None] = None,
@@ -190,7 +196,6 @@ class HistoryBase(abc.ABC):
         Takes as parameter an index or indices and returns corresponding trace
         values. If only a single value is requested, the list is flattened.
         """
-        raise NotImplementedError()
 
     def get_chi2_trace(
         self,
@@ -228,6 +233,7 @@ class HistoryBase(abc.ABC):
         else:
             return [grad_to_schi2(grad) for grad in grad_trace]
 
+    @abstractmethod
     def get_time_trace(
         self,
         ix: Union[int, Sequence[int], None] = None,
@@ -246,30 +252,126 @@ class HistoryBase(abc.ABC):
         fval_trace = self.get_fval_trace()
         return np.where(fval_trace <= np.fmin.accumulate(fval_trace))[0]
 
+    def implements_trace(self) -> bool:
+        """Check whether the history has a trace that can be queried."""
+        try:
+            self.get_fval_trace()
+        except NotImplementedError:
+            return False
 
-class History(HistoryBase):
+        return True
+
+
+class NoHistory(HistoryBase):
+    """Dummy history that does not do anything.
+
+    Can be used whenever a history object is needed, but no history is desired.
+    Can be created, but not queried.
     """
-    Tracks number of function evaluations only, no trace.
 
-    Parameters
-    ----------
-    options:
-        History options.
+    @overrides
+    def update(
+        self,
+        x: np.ndarray,
+        sensi_orders: Tuple[int, ...],
+        mode: ModeType,
+        result: ResultDict,
+    ) -> None:
+        pass
+
+    @overrides
+    def __len__(self) -> int:
+        raise NotImplementedError()
+
+    @property
+    @overrides
+    def n_fval(self) -> int:
+        raise NotImplementedError()
+
+    @property
+    @overrides
+    def n_grad(self) -> int:
+        raise NotImplementedError()
+
+    @property
+    @overrides
+    def n_hess(self) -> int:
+        raise NotImplementedError()
+
+    @property
+    @overrides
+    def n_res(self) -> int:
+        raise NotImplementedError()
+
+    @property
+    @overrides
+    def n_sres(self) -> int:
+        raise NotImplementedError()
+
+    @property
+    @overrides
+    def start_time(self) -> float:
+        raise NotImplementedError()
+
+    @overrides
+    def get_x_trace(
+        self, ix: Union[int, Sequence[int], None] = None, trim: bool = False
+    ) -> Union[Sequence[np.ndarray], np.ndarray]:
+        raise NotImplementedError()
+
+    @overrides
+    def get_fval_trace(
+        self, ix: Union[int, Sequence[int], None] = None, trim: bool = False
+    ) -> Union[Sequence[float], float]:
+        raise NotImplementedError()
+
+    @overrides
+    def get_grad_trace(
+        self, ix: Union[int, Sequence[int], None] = None, trim: bool = False
+    ) -> Union[Sequence[MaybeArray], MaybeArray]:
+        raise NotImplementedError()
+
+    @overrides
+    def get_hess_trace(
+        self, ix: Union[int, Sequence[int], None] = None, trim: bool = False
+    ) -> Union[Sequence[MaybeArray], MaybeArray]:
+        raise NotImplementedError()
+
+    @overrides
+    def get_res_trace(
+        self, ix: Union[int, Sequence[int], None] = None, trim: bool = False
+    ) -> Union[Sequence[MaybeArray], MaybeArray]:
+        raise NotImplementedError()
+
+    @overrides
+    def get_sres_trace(
+        self, ix: Union[int, Sequence[int], None] = None, trim: bool = False
+    ) -> Union[Sequence[MaybeArray], MaybeArray]:
+        raise NotImplementedError()
+
+    @overrides
+    def get_time_trace(
+        self, ix: Union[int, Sequence[int], None] = None, trim: bool = False
+    ) -> Union[Sequence[float], float]:
+        raise NotImplementedError()
+
+
+class CountHistoryBase(HistoryBase, ABC):
+    """Abstract class tracking counts of function evaluations.
+
+    Needs a separate implementation of trace.
     """
 
     def __init__(self, options: Union[HistoryOptions, Dict] = None):
+        super().__init__(options)
         self._n_fval: int = 0
         self._n_grad: int = 0
         self._n_hess: int = 0
         self._n_res: int = 0
         self._n_sres: int = 0
-        self._start_time = time.time()
+        self._start_time: float = time.time()
 
-        if options is None:
-            options = HistoryOptions()
-        options = HistoryOptions.assert_instance(options)
-        self.options: HistoryOptions = options
-
+    @overrides
     def update(
         self,
         x: np.ndarray,
@@ -313,34 +415,91 @@ class History(HistoryBase):
                 self._n_sres += 1
 
     @property
+    @overrides
     def n_fval(self) -> int:
         """See `HistoryBase` docstring."""
         return self._n_fval
 
     @property
+    @overrides
     def n_grad(self) -> int:
         """See `HistoryBase` docstring."""
         return self._n_grad
 
     @property
+    @overrides
     def n_hess(self) -> int:
         """See `HistoryBase` docstring."""
         return self._n_hess
 
     @property
+    @overrides
     def n_res(self) -> int:
         """See `HistoryBase` docstring."""
         return self._n_res
 
     @property
+    @overrides
     def n_sres(self) -> int:
         """See `HistoryBase` docstring."""
         return self._n_sres
 
     @property
+    @overrides
     def start_time(self) -> float:
         """See `HistoryBase` docstring."""
         return self._start_time
+
+
+class CountHistory(CountHistoryBase):
+    """History that can only count, other functions cannot be invoked."""
+
+    @overrides
+    def __len__(self) -> int:
+        raise NotImplementedError()
+
+    @overrides
+    def get_x_trace(
+        self, ix: Union[int, Sequence[int], None] = None, trim: bool = False
+    ) -> Union[Sequence[np.ndarray], np.ndarray]:
+        raise NotImplementedError()
+
+    @overrides
+    def get_fval_trace(
+        self, ix: Union[int, Sequence[int], None] = None, trim: bool = False
+    ) -> Union[Sequence[float], float]:
+        raise NotImplementedError()
+
+    @overrides
+    def get_grad_trace(
+        self, ix: Union[int, Sequence[int], None] = None, trim: bool = False
+    ) -> Union[Sequence[MaybeArray], MaybeArray]:
+        raise NotImplementedError()
+
+    @overrides
+    def get_hess_trace(
+        self, ix: Union[int, Sequence[int], None] = None, trim: bool = False
+    ) -> Union[Sequence[MaybeArray], MaybeArray]:
+        raise NotImplementedError()
+
+    @overrides
+    def get_res_trace(
+        self, ix: Union[int, Sequence[int], None] = None, trim: bool = False
+    ) -> Union[Sequence[MaybeArray], MaybeArray]:
+        raise NotImplementedError()
+
+    @overrides
+    def get_sres_trace(
+        self, ix: Union[int, Sequence[int], None] = None, trim: bool = False
+    ) -> Union[Sequence[MaybeArray], MaybeArray]:
+        raise NotImplementedError()
+
+    @overrides
+    def get_time_trace(
+        self, ix: Union[int, Sequence[int], None] = None, trim: bool = False
+    ) -> Union[Sequence[float], float]:
+
+        raise NotImplementedError()
 
 
 def add_fun_from_res(result: ResultDict) -> ResultDict:
