@@ -8,7 +8,7 @@ from typing import Sequence, Union
 import numpy as np
 import pandas as pd
 
-from ..objective import History
+from ..history import HistoryBase
 from ..problem import Problem
 from ..util import assign_clusters, delete_nan_inf
 
@@ -87,7 +87,7 @@ class OptimizerResult(dict):
         n_sres: int = None,
         x0: np.ndarray = None,
         fval0: float = None,
-        history: History = None,
+        history: HistoryBase = None,
         exitflag: int = None,
         time: float = None,
         message: str = None,
@@ -108,7 +108,7 @@ class OptimizerResult(dict):
         self.n_sres: int = n_sres
         self.x0: np.ndarray = np.array(x0) if x0 is not None else None
         self.fval0: float = fval0
-        self.history: History = history
+        self.history: HistoryBase = history
         self.exitflag: int = exitflag
         self.time: float = time
         self.message: str = message
@@ -335,7 +335,7 @@ class OptimizeResult:
         """Extract the list of values for the specified key as a list."""
         warnings.warn(
             "get_for_key() is deprecated in favour of "
-            "optimize_result['key'] and will be removed in future "
+            "optimize_result.key and will be removed in future "
             "releases."
         )
         return [res[key] for res in self.list]

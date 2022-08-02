@@ -28,14 +28,25 @@ N_GRAD = 'n_grad'  # number of gradient evaluations
 N_HESS = 'n_hess'  # number of Hessian evaluations
 N_RES = 'n_res'  # number of residual evaluations
 N_SRES = 'n_sres'  # number of residual sensitivity evaluations
-CHI2 = 'chi2'  # chi2 value
-SCHI2 = 'schi2'  # chi2 value gradient
 X = 'x'
 X0 = 'x0'
 ID = 'id'
 
-EXITFLAG = 'exitflag'
-MESSAGE = 'message'
+
+###############################################################################
+# HISTORY
+
+HISTORY = "history"
+TRACE = "trace"
+N_ITERATIONS = "n_iterations"
+MESSAGES = "messages"
+MESSAGE = "message"
+EXITFLAG = "exitflag"
+TRACE_SAVE_ITER = "trace_save_iter"
+
+SUFFIXES_CSV = ["csv"]
+SUFFIXES_HDF5 = ["hdf5", "h5"]
+SUFFIXES = SUFFIXES_CSV + SUFFIXES_HDF5
 
 
 ###############################################################################
@@ -166,7 +177,7 @@ TRACE_Y = (TRACE_Y_FVAL, TRACE_Y_GRADNORM)
 
 
 ###############################################################################
-# Environment variables
+# ENVIRONMENT VARIABLES
 
 PYPESTO_MAX_N_STARTS: str = "PYPESTO_MAX_N_STARTS"
 PYPESTO_MAX_N_SAMPLES: str = "PYPESTO_MAX_N_SAMPLES"

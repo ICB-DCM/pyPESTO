@@ -1,13 +1,13 @@
-import abc
 import copy
 import logging
+from abc import ABC, abstractmethod
 from typing import Dict, Iterable, List, Optional, Sequence, Tuple, Union
 
 import numpy as np
 import pandas as pd
 
 from ..C import FVAL, GRAD, HESS, MODE_FUN, MODE_RES, RES, SRES, ModeType
-from .history import HistoryBase
+from ..history import NoHistory
 from .pre_post_process import FixedParametersProcessor, PrePostProcessor
 
 ResultDict = Dict[str, Union[float, np.ndarray, Dict]]
@@ -15,7 +15,7 @@ ResultDict = Dict[str, Union[float, np.ndarray, Dict]]
 logger = logging.getLogger(__name__)
 
 
-class ObjectiveBase(abc.ABC):
+class ObjectiveBase(ABC):
     """
     Abstract objective class.
 
@@ -54,7 +54,7 @@ class ObjectiveBase(abc.ABC):
         self._x_names = x_names
 
         self.pre_post_processor = PrePostProcessor()
-        self.history = HistoryBase()
+        self.history = NoHistory()
 
     def __deepcopy__(self, memodict=None) -> 'ObjectiveBase':
         """Create deepcopy of objective object."""
@@ -201,7 +201,7 @@ class ObjectiveBase(abc.ABC):
 
         return result
 
-    @abc.abstractmethod
+    @abstractmethod
     def call_unprocessed(
         self,
         x: np.ndarray,
@@ -226,7 +226,6 @@ class ObjectiveBase(abc.ABC):
         result:
             A dict containing the results.
         """
-        raise NotImplementedError()
 
     def check_mode(self, mode: ModeType) -> bool:
         """
@@ -405,14 +404,12 @@ class ObjectiveBase(abc.ABC):
             Vector of the same length as x_fixed_indices, containing the values
             of the fixed parameters.
         """
-        pre_post_processor = FixedParametersProcessor(
+        self.pre_post_processor = FixedParametersProcessor(
             dim_full=dim_full,
             x_free_indices=x_free_indices,
             x_fixed_indices=x_fixed_indices,
             x_fixed_vals=x_fixed_vals,
         )
-
-        self.pre_post_processor = pre_post_processor
 
     def check_grad_multi_eps(
         self,
