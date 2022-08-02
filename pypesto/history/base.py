@@ -6,7 +6,6 @@ from abc import ABC, abstractmethod
 from typing import Dict, Sequence, Tuple, Union
 
 import numpy as np
-from overrides import EnforceOverrides, overrides
 
 from ..C import (
     FVAL,
@@ -31,7 +30,7 @@ from .options import HistoryOptions
 from .util import MaybeArray, ResultDict
 
 
-class HistoryBase(ABC, EnforceOverrides):
+class HistoryBase(ABC):
     """Abstract base class for histories."""
 
     # values calculated by the objective function
@@ -269,8 +268,7 @@ class NoHistory(HistoryBase):
     Can be created, but not queried.
     """
 
-    @overrides
-    def update(
+    def update(  # noqa: D102
         self,
         x: np.ndarray,
         sensi_orders: Tuple[int, ...],
@@ -279,78 +277,64 @@ class NoHistory(HistoryBase):
     ) -> None:
         pass
 
-    @overrides
-    def __len__(self) -> int:
+    def __len__(self) -> int:  # noqa: D102
         raise NotImplementedError()
 
     @property
-    @overrides
-    def n_fval(self) -> int:
+    def n_fval(self) -> int:  # noqa: D102
         raise NotImplementedError()
 
     @property
-    @overrides
-    def n_grad(self) -> int:
+    def n_grad(self) -> int:  # noqa: D102
         raise NotImplementedError()
 
     @property
-    @overrides
-    def n_hess(self) -> int:
+    def n_hess(self) -> int:  # noqa: D102
         raise NotImplementedError()
 
     @property
-    @overrides
-    def n_res(self) -> int:
+    def n_res(self) -> int:  # noqa: D102
         raise NotImplementedError()
 
     @property
-    @overrides
-    def n_sres(self) -> int:
+    def n_sres(self) -> int:  # noqa: D102
         raise NotImplementedError()
 
     @property
-    @overrides
-    def start_time(self) -> float:
+    def start_time(self) -> float:  # noqa: D102
         raise NotImplementedError()
 
-    @overrides
-    def get_x_trace(
+    def get_x_trace(  # noqa: D102
         self, ix: Union[int, Sequence[int], None] = None, trim: bool = False
     ) -> Union[Sequence[np.ndarray], np.ndarray]:
         raise NotImplementedError()
 
-    @overrides
-    def get_fval_trace(
+    def get_fval_trace(  # noqa: D102
         self, ix: Union[int, Sequence[int], None] = None, trim: bool = False
     ) -> Union[Sequence[float], float]:
         raise NotImplementedError()
 
-    @overrides
-    def get_grad_trace(
+    def get_grad_trace(  # noqa: D102
         self, ix: Union[int, Sequence[int], None] = None, trim: bool = False
     ) -> Union[Sequence[MaybeArray], MaybeArray]:
         raise NotImplementedError()
 
-    @overrides
-    def get_hess_trace(
+    def get_hess_trace(  # noqa: D102
         self, ix: Union[int, Sequence[int], None] = None, trim: bool = False
     ) -> Union[Sequence[MaybeArray], MaybeArray]:
         raise NotImplementedError()
 
-    @overrides
-    def get_res_trace(
+    def get_res_trace(  # noqa: D102
         self, ix: Union[int, Sequence[int], None] = None, trim: bool = False
     ) -> Union[Sequence[MaybeArray], MaybeArray]:
         raise NotImplementedError()
 
-    @overrides
-    def get_sres_trace(
+    def get_sres_trace(  # noqa: D102
         self, ix: Union[int, Sequence[int], None] = None, trim: bool = False
     ) -> Union[Sequence[MaybeArray], MaybeArray]:
         raise NotImplementedError()
 
-    @overrides
-    def get_time_trace(
+    def get_time_trace(  # noqa: D102
         self, ix: Union[int, Sequence[int], None] = None, trim: bool = False
     ) -> Union[Sequence[float], float]:
         raise NotImplementedError()
@@ -371,28 +355,13 @@ class CountHistoryBase(HistoryBase, ABC):
         self._n_sres: int = 0
         self._start_time: float = time.time()
 
-    @overrides
-    def update(
+    def update(  # noqa: D102
         self,
         x: np.ndarray,
         sensi_orders: Tuple[int, ...],
         mode: ModeType,
         result: ResultDict,
     ) -> None:
-        """Update history after a function evaluation.
-
-        Parameters
-        ----------
-        x:
-            The parameter vector.
-        sensi_orders:
-            The sensitivity orders computed.
-        mode:
-            The objective function mode computed (function value or residuals).
-        result:
-            The objective function values for parameters `x`, sensitivities
-            `sensi_orders` and mode `mode`.
-        """
         self._update_counts(sensi_orders, mode)
 
     def _update_counts(
@@ -415,87 +384,67 @@ class CountHistoryBase(HistoryBase, ABC):
                 self._n_sres += 1
 
     @property
-    @overrides
-    def n_fval(self) -> int:
-        """See `HistoryBase` docstring."""
+    def n_fval(self) -> int:  # noqa: D102
         return self._n_fval
 
     @property
-    @overrides
-    def n_grad(self) -> int:
-        """See `HistoryBase` docstring."""
+    def n_grad(self) -> int:  # noqa: D102
         return self._n_grad
 
     @property
-    @overrides
-    def n_hess(self) -> int:
-        """See `HistoryBase` docstring."""
+    def n_hess(self) -> int:  # noqa: D102
         return self._n_hess
 
     @property
-    @overrides
-    def n_res(self) -> int:
-        """See `HistoryBase` docstring."""
+    def n_res(self) -> int:  # noqa: D102
         return self._n_res
 
     @property
-    @overrides
-    def n_sres(self) -> int:
-        """See `HistoryBase` docstring."""
+    def n_sres(self) -> int:  # noqa: D102
         return self._n_sres
 
     @property
-    @overrides
-    def start_time(self) -> float:
-        """See `HistoryBase` docstring."""
+    def start_time(self) -> float:  # noqa: D102
         return self._start_time
 
 
 class CountHistory(CountHistoryBase):
     """History that can only count, other functions cannot be invoked."""
 
-    @overrides
-    def __len__(self) -> int:
+    def __len__(self) -> int:  # noqa: D102
         raise NotImplementedError()
 
-    @overrides
-    def get_x_trace(
+    def get_x_trace(  # noqa: D102
         self, ix: Union[int, Sequence[int], None] = None, trim: bool = False
     ) -> Union[Sequence[np.ndarray], np.ndarray]:
         raise NotImplementedError()
 
-    @overrides
-    def get_fval_trace(
+    def get_fval_trace(  # noqa: D102
         self, ix: Union[int, Sequence[int], None] = None, trim: bool = False
     ) -> Union[Sequence[float], float]:
         raise NotImplementedError()
 
-    @overrides
-    def get_grad_trace(
+    def get_grad_trace(  # noqa: D102
         self, ix: Union[int, Sequence[int], None] = None, trim: bool = False
     ) -> Union[Sequence[MaybeArray], MaybeArray]:
         raise NotImplementedError()
 
-    @overrides
-    def get_hess_trace(
+    def get_hess_trace(  # noqa: D102
         self, ix: Union[int, Sequence[int], None] = None, trim: bool = False
     ) -> Union[Sequence[MaybeArray], MaybeArray]:
         raise NotImplementedError()
 
-    @overrides
-    def get_res_trace(
+    def get_res_trace(  # noqa: D102
         self, ix: Union[int, Sequence[int], None] = None, trim: bool = False
     ) -> Union[Sequence[MaybeArray], MaybeArray]:
         raise NotImplementedError()
 
-    @overrides
-    def get_sres_trace(
+    def get_sres_trace(  # noqa: D102
         self, ix: Union[int, Sequence[int], None] = None, trim: bool = False
     ) -> Union[Sequence[MaybeArray], MaybeArray]:
         raise NotImplementedError()
 
-    @overrides
-    def get_time_trace(
+    def get_time_trace(  # noqa: D102
         self, ix: Union[int, Sequence[int], None] = None, trim: bool = False
     ) -> Union[Sequence[float], float]:
 
