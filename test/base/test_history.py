@@ -495,16 +495,22 @@ class CRFunModeHistoryTest(HistoryTest):
         self.check_history()
 
 
-@pytest.fixture(params=["", "memory", "csv", "hdf5"])
+@pytest.fixture(params=["memory", "csv", "hdf5", ""])
 def history(request) -> pypesto.HistoryBase:
     if request.param == "memory":
         history = pypesto.MemoryHistory(options={'trace_record': True})
     elif request.param == "csv":
         file = tempfile.mkstemp(suffix='.csv')[1]
         history = pypesto.CsvHistory(file, options={'trace_record': True})
-    else:
-        # TODO wthdf5
+    elif request.param == "hdf5":
+        file = tempfile.mkstemp(suffix='.hdf5')[1]
+        history = pypesto.Hdf5History(
+            id="id", file=file, options={'trace_record': True}
+        )
+    elif request.param == "":
         history = pypesto.CountHistory()
+    else:
+        raise ValueError("Unknown history type")
     for _ in range(10):
         result = {FVAL: np.random.randn(), GRAD: np.random.randn(7)}
         history.update(np.random.randn(7), (0, 1), 'mode_fun', result)
