@@ -23,6 +23,7 @@ Getting started
 .. toctree::
    :maxdepth: 2
 
+   example/overview.ipynb
    example/rosenbrock.ipynb
 
 PEtab and AMICI
