@@ -364,7 +364,7 @@ def handle_inputs(
 
     # parse indices which should be plotted
     if start_indices is not None:
-        start_indices = process_start_indices(start_indices, result)
+        start_indices = process_start_indices(result, start_indices)
 
         # reduce number of displayed results
         xs_out = [xs[ind] for ind in start_indices]

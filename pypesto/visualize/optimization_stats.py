@@ -379,7 +379,7 @@ def stats_lowlevel(
     values, fvals = delete_nan_inf(fvals, values)
 
     if start_indices is not None:
-        start_indices = process_start_indices(start_indices, result)
+        start_indices = process_start_indices(result, start_indices)
         values = values[start_indices]
         fvals = fvals[start_indices]
 

@@ -292,7 +292,7 @@ def process_offset_for_list(
     for result in results:
         fvals = np.asarray([np.array(result.optimize_result.fval)])
         # todo: order of results plays a role
-        start_indices = process_start_indices(start_indices, result)
+        start_indices = process_start_indices(result, start_indices)
         fvals = fvals[:, start_indices]
         # if none of the fvals are finite, set default value to zero as
         # np.nanmin will error for an empty array
