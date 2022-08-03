@@ -495,30 +495,41 @@ class CRFunModeHistoryTest(HistoryTest):
         self.check_history()
 
 
-@pytest.fixture(params=["", "memory", "csv", "hdf5"])
-def history(request) -> pypesto.History:
+@pytest.fixture(params=["memory", "csv", "hdf5", ""])
+def history(request) -> pypesto.HistoryBase:
+    # initialize history with the requested backend
     if request.param == "memory":
         history = pypesto.MemoryHistory(options={'trace_record': True})
     elif request.param == "csv":
         file = tempfile.mkstemp(suffix='.csv')[1]
         history = pypesto.CsvHistory(file, options={'trace_record': True})
+    elif request.param == "hdf5":
+        file = tempfile.mkstemp(suffix='.hdf5')[1]
+        history = pypesto.Hdf5History(
+            id="id", file=file, options={'trace_record': True}
+        )
+    elif request.param == "":
+        history = pypesto.CountHistory()
     else:
-        history = pypesto.History()
+        raise ValueError("Unknown history type")
+
+    # add some entries to the history
     for _ in range(10):
         result = {FVAL: np.random.randn(), GRAD: np.random.randn(7)}
         history.update(np.random.randn(7), (0, 1), 'mode_fun', result)
     history.finalize()
+
     return history
 
 
-def test_history_properties(history: pypesto.History):
+def test_history_properties(history: pypesto.HistoryBase):
     assert history.n_fval == 10
     assert history.n_grad == 10
     assert history.n_hess == 0
     assert history.n_res == 0
     assert history.n_sres == 0
 
-    if type(history) == pypesto.History:
+    if not history.implements_trace():
         with pytest.raises(NotImplementedError):
             history.get_fval_trace()
     else:
@@ -526,7 +537,7 @@ def test_history_properties(history: pypesto.History):
         assert len(fvals) == 10
         assert all(np.isfinite(fvals))
 
-    if type(history) == pypesto.History:
+    if not history.implements_trace():
         with pytest.raises(NotImplementedError):
             history.get_grad_trace()
     else:
@@ -535,7 +546,7 @@ def test_history_properties(history: pypesto.History):
         assert len(grads[0]) == 7
 
     # assert x values are not all the same
-    if type(history) != pypesto.History:
+    if history.implements_trace():
         xs = np.array(history.get_x_trace())
         assert np.all(xs[:-1] != xs[-1])
 
@@ -543,39 +554,41 @@ def test_history_properties(history: pypesto.History):
         assert all(np.isnan(res) for res in ress)
 
 
-def test_trace_subset(history: pypesto.History):
+def test_trace_subset(history: pypesto.HistoryBase):
     """Test whether selecting only a trace subset works."""
-    if type(history) != pypesto.History:
-        arr = list(range(0, len(history), 2))
+    if not history.implements_trace():
+        return
 
-        for var in [
-            'fval',
-            'grad',
-            'hess',
-            'res',
-            'sres',
-            'x',
-            'time',
-        ]:
-            getter = getattr(history, f'get_{var}_trace')
-            full_trace = getter()
-            partial_trace = getter(arr)
+    arr = list(range(0, len(history), 2))
 
-            # check partial traces coincide
-            assert len(partial_trace) == len(arr), var
-            for a, b in zip(partial_trace, [full_trace[i] for i in arr]):
-                assert np.all(a == b) or np.isnan(a) and np.isnan(b), var
+    for var in [
+        'fval',
+        'grad',
+        'hess',
+        'res',
+        'sres',
+        'x',
+        'time',
+    ]:
+        getter = getattr(history, f'get_{var}_trace')
+        full_trace = getter()
+        partial_trace = getter(arr)
 
-            # check sequence type
-            assert isinstance(full_trace, Sequence), var
-            assert isinstance(partial_trace, Sequence), var
+        # check partial traces coincide
+        assert len(partial_trace) == len(arr), var
+        for a, b in zip(partial_trace, [full_trace[i] for i in arr]):
+            assert np.all(a == b) or np.isnan(a) and np.isnan(b), var
 
-            # check individual type
-            val = getter(0)
-            if var in ['fval', 'time']:
-                assert isinstance(val, float), var
-            else:
-                assert isinstance(val, np.ndarray) or np.isnan(val), var
+        # check sequence type
+        assert isinstance(full_trace, Sequence), var
+        assert isinstance(partial_trace, Sequence), var
+
+        # check individual type
+        val = getter(0)
+        if var in ['fval', 'time']:
+            assert isinstance(val, float), var
+        else:
+            assert isinstance(val, np.ndarray) or np.isnan(val), var
 
 
 def test_hdf5_history_mp():
