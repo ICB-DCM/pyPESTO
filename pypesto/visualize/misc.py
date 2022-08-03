@@ -288,8 +288,9 @@ def rgba2rgb(fg: RGB_RGBA, bg: RGB_RGBA = None) -> RGB:
 
 
 def process_start_indices(
-    start_indices: Union[str, int, Iterable[int]], result: Result
-):
+        result: Result,
+        start_indices: Union[str, int, Iterable[int]] = ALL,
+) -> np.ndarray:
     """
     Process the start_indices.
 
@@ -300,15 +301,18 @@ def process_start_indices(
     ----------
     start_indices:
         list of indices or int specifying an endpoint of the sequence of
-        indices
+        indices. Furthermore the following strings are possible:
+            * 'all', this is the default, using all start indices.
+            * 'all_clustered', this includes the best  start and all that are
+            in a cluster of size > 1.
+            * 'first_cluster', includes all starts that belong to the first
+            cluster.
     result:
         Result to determine maximum allowed length and/or clusters.
     """
-    if start_indices is None:
-        start_indices = ALL
     if isinstance(start_indices, str):
         if start_indices == ALL:
-            return list(range(len(result.optimize_result)))
+            return np.asarray(range(len(result.optimize_result)))
         elif start_indices == ALL_CLUSTERED:
             clust_ind, clust_size = assign_clusters(
                 delete_nan_inf(result.optimize_result.fval)[1]
@@ -330,51 +334,46 @@ def process_start_indices(
                 f"{ALL_CLUSTERED}, {FIRST_CLUSTER}, an integer or a "
                 f"list of indices."
             )
-        # TODO: probably add to optimizers to also save whether a start was
-        #  succesfull (or standardize either message or exitflag)
     # if it is an integer n, select the first n starts
     if isinstance(start_indices, Number):
         start_indices = range(int(start_indices))
-    start_indices = np.array(start_indices, dtype=int)
 
-    # check, whether index set is not too big
+    # check whether index set is not too big
     start_indices = [
         start_index
         for start_index in start_indices
         if start_index < len(result.optimize_result)
     ]
 
-    return start_indices
+    return np.asarray(start_indices)
 
 
 def process_parameter_indices(
-    parameter_indices: Union[str, Iterable[int]], result: Result
-):
+        result: Result,
+        parameter_indices: Union[str, Iterable[int]] = FREE_ONLY,
+) -> list:
     """
-    Process the parameter_indices.
+    Process the parameter indices, always returning a valid array.
 
     Create an array of indices depending on the string that is provided. Or
     returns the sequence in case a sequence was provided.
 
     Parameters
     ----------
-    parameter_indices:
-        list of indices or str specifying the desired indices. Default is
-        `free_only`
     result:
         Result to determine maximum allowed length and/or clusters.
+    parameter_indices:
+        list of indices or str specifying the desired indices. Default is
+        `free_only`. Other option is 'all'.
     """
-    if parameter_indices is None:
-        parameter_indices = FREE_ONLY
     if isinstance(parameter_indices, str):
         if parameter_indices == ALL:
-            return range(0, result.problem.dim_full)
+            return list(range(0, result.problem.dim_full))
         elif parameter_indices == FREE_ONLY:
             return result.problem.x_free_indices
-        # TODO: VARYING_ONLY as option.
         else:
             raise ValueError(
                 "Permissible values for parameter_indices are "
                 f"{ALL}, {FREE_ONLY} or a list of indices."
             )
-    return parameter_indices
+    return list(parameter_indices)
