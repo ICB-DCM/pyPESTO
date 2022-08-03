@@ -288,8 +288,8 @@ def rgba2rgb(fg: RGB_RGBA, bg: RGB_RGBA = None) -> RGB:
 
 
 def process_start_indices(
-        result: Result,
-        start_indices: Union[str, int, Iterable[int]] = ALL,
+    result: Result,
+    start_indices: Union[str, int, Iterable[int]] = ALL,
 ) -> np.ndarray:
     """
     Process the start_indices.
@@ -349,8 +349,8 @@ def process_start_indices(
 
 
 def process_parameter_indices(
-        result: Result,
-        parameter_indices: Union[str, Iterable[int]] = FREE_ONLY,
+    result: Result,
+    parameter_indices: Union[str, Iterable[int]] = FREE_ONLY,
 ) -> list:
     """
     Process the parameter indices, always returning a valid array.
@@ -364,7 +364,8 @@ def process_parameter_indices(
         Result to determine maximum allowed length and/or clusters.
     parameter_indices:
         list of indices or str specifying the desired indices. Default is
-        `free_only`. Other option is 'all'.
+        `free_only`. Other option is 'all', which included all estimated
+        and fixed parameters.
     """
     if isinstance(parameter_indices, str):
         if parameter_indices == ALL:
