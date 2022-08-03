@@ -215,7 +215,7 @@ class PetabImporter(AmiciObjectBuilder):
             )
             self.compile_model(**kwargs)
         else:
-            logger.info(
+            logger.debug(
                 f"Using existing amici model in folder "
                 f"{self.output_folder}."
             )
@@ -357,6 +357,7 @@ class PetabImporter(AmiciObjectBuilder):
             simulation_conditions=simulation_conditions,
             scaled_parameters=True,
             amici_model=model,
+            fill_fixed_parameters=False,
         )
 
         par_ids = self.petab_problem.x_ids
