@@ -2,7 +2,7 @@
 
 import os
 from pathlib import Path
-from typing import Callable, Sequence, Union
+from typing import Callable, Literal, Sequence, Union
 
 import h5py
 import numpy as np
@@ -82,7 +82,7 @@ def read_from_csv(
 
 def read_ensemble_from_hdf5(
     filename: str,
-    input_type: str = OPTIMIZE,
+    input_type: Literal['optimize', 'sample'] = OPTIMIZE,
     remove_burn_in: bool = True,
     chain_slice: slice = None,
     cutoff: float = np.inf,
@@ -109,7 +109,7 @@ def read_ensemble_from_hdf5(
     if input_type == OPTIMIZE:
         result = read_result(filename=filename, optimize=True)
         return Ensemble.from_optimization_endpoints(
-            result=result, cutoff=cutoff, max_size=max_size
+            result=result, rel_cutoff=cutoff, max_size=max_size
         )
     elif input_type == SAMPLE:
         result = read_result(filename=filename, sample=True)

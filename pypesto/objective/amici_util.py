@@ -5,7 +5,17 @@ from typing import Dict, Sequence, Tuple, Union
 
 import numpy as np
 
-from ..C import CHI2, FVAL, GRAD, HESS, MODE_FUN, MODE_RES, RDATAS, RES, SRES
+from ..C import (
+    FVAL,
+    GRAD,
+    HESS,
+    MODE_FUN,
+    MODE_RES,
+    RDATAS,
+    RES,
+    SRES,
+    ModeType,
+)
 from ..logging import log_level_active
 
 try:
@@ -343,7 +353,7 @@ def get_error_output(
     edatas: Sequence['amici.ExpData'],
     rdatas: Sequence['amici.ReturnData'],
     sensi_orders: Tuple[int, ...],
-    mode: str,
+    mode: ModeType,
     dim: int,
 ):
     """Get default output upon error.
@@ -371,7 +381,6 @@ def get_error_output(
 
     ret = {
         FVAL: nllh,
-        CHI2: chi2,
         GRAD: snllh,
         HESS: s2nllh,
         RES: res,
@@ -382,7 +391,10 @@ def get_error_output(
 
 
 def init_return_values(
-    sensi_orders: Tuple[int, ...], mode: str, dim: int, error: bool = False
+    sensi_orders: Tuple[int, ...],
+    mode: ModeType,
+    dim: int,
+    error: bool = False,
 ):
     """Initialize return values."""
     if error:

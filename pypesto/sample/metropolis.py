@@ -3,7 +3,8 @@ from typing import Dict, Sequence, Union
 import numpy as np
 from tqdm import tqdm
 
-from ..objective import History, NegLogPriors, ObjectiveBase
+from ..history import NoHistory
+from ..objective import NegLogPriors, ObjectiveBase
 from ..problem import Problem
 from ..result import McmcPtResult
 from .sampler import InternalSample, InternalSampler
@@ -34,7 +35,7 @@ class MetropolisSampler(InternalSampler):
         """Initialize the sampler."""
         self.problem = problem
         self.neglogpost = problem.objective
-        self.neglogpost.history = History()
+        self.neglogpost.history = NoHistory()
         if problem.x_priors is None:
             self.neglogprior = lambda x: -0.0
         else:

@@ -6,7 +6,7 @@ from typing import Callable, Dict, List, Tuple, Union
 
 import numpy as np
 
-from ..C import FVAL, GRAD, HESS, MODE_FUN, MODE_RES, RES, SRES
+from ..C import FVAL, GRAD, HESS, MODE_FUN, MODE_RES, RES, SRES, ModeType
 from .base import ObjectiveBase, ResultDict
 
 logger = logging.getLogger(__name__)
@@ -372,7 +372,7 @@ class FD(ObjectiveBase):
         self,
         x: np.ndarray,
         sensi_orders: Tuple[int, ...],
-        mode: str,
+        mode: ModeType,
         **kwargs,
     ) -> ResultDict:
         """

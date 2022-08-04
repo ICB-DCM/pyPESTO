@@ -2,7 +2,7 @@ import logging
 from typing import Callable, Iterable, Union
 
 from ..engine import Engine, SingleCoreEngine
-from ..objective import HistoryOptions
+from ..history import HistoryOptions
 from ..problem import Problem
 from ..result import Result
 from ..startpoint import StartpointMethod, to_startpoint_method, uniform

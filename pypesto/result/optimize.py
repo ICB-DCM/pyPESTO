@@ -8,7 +8,7 @@ from typing import Sequence, Union
 import numpy as np
 import pandas as pd
 
-from ..objective import History
+from ..history import HistoryBase
 from ..problem import Problem
 from ..util import assign_clusters, delete_nan_inf
 
@@ -87,7 +87,7 @@ class OptimizerResult(dict):
         n_sres: int = None,
         x0: np.ndarray = None,
         fval0: float = None,
-        history: History = None,
+        history: HistoryBase = None,
         exitflag: int = None,
         time: float = None,
         message: str = None,
@@ -108,7 +108,7 @@ class OptimizerResult(dict):
         self.n_sres: int = n_sres
         self.x0: np.ndarray = np.array(x0) if x0 is not None else None
         self.fval0: float = fval0
-        self.history: History = history
+        self.history: HistoryBase = history
         self.exitflag: int = exitflag
         self.time: float = time
         self.message: str = message
@@ -195,7 +195,7 @@ class OptimizeResult:
     def __len__(self):
         return len(self.list)
 
-    def summary(self, disp_best: bool = True, disp_worst: bool = False):
+    def summary(self, disp_best: bool = True, disp_worst: bool = False) -> str:
         """
         Get summary of the object.
 
@@ -216,10 +216,10 @@ class OptimizeResult:
             ]
         )
         times_message = (
-            f'\n\tMean execution time: {np.mean(self.time)}s\n'
-            f'\tMaximum execution time: {np.max(self.time)}s,'
+            f'\n\tMean execution time: {np.mean(self.time):0.3f}s\n'
+            f'\tMaximum execution time: {np.max(self.time):0.3f}s,'
             f'\tid={self[np.argmax(self.time)].id}\n'
-            f'\tMinimum execution time: {np.min(self.time)}s,\t'
+            f'\tMinimum execution time: {np.min(self.time):0.3f}s,\t'
             f'id={self[np.argmin(self.time)].id}'
         )
 
@@ -228,10 +228,11 @@ class OptimizeResult:
             f"* number of starts: {len(self)} \n"
             f"* best value: {self[0]['fval']}, id={self[0]['id']}\n"
             f"* worst value: {self[-1]['fval']}, id={self[-1]['id']}\n"
-            f"* number of non-finite values: {np.logical_not(np.isfinite(self.fval)).sum()}\n\n"
+            f"* number of non-finite values: "
+            f"{np.logical_not(np.isfinite(self.fval)).sum()}\n\n"
             f"* execution time summary: {times_message}\n"
             f"* summary of optimizer messages:\n{counter_message}\n"
-            f"* best value found (approximately) {clustsize[0]} time(s) \n"
+            f"* best value found (approximately) {int(clustsize[0])} time(s)\n"
             f"* number of plateaus found: "
             f"{1 + max(clust) - sum(clustsize == 1)}"
         )
@@ -334,7 +335,7 @@ class OptimizeResult:
         """Extract the list of values for the specified key as a list."""
         warnings.warn(
             "get_for_key() is deprecated in favour of "
-            "optimize_result['key'] and will be removed in future "
+            "optimize_result.key and will be removed in future "
             "releases."
         )
         return [res[key] for res in self.list]

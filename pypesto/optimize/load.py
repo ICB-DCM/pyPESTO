@@ -2,17 +2,30 @@
 
 import logging
 import os
+from pathlib import Path
 
 import h5py
 import numpy as np
 
 import pypesto
 
-from ..C import FVAL, GRAD, HESS, RES, SRES, X
-from ..objective import (
+from ..C import (
+    FVAL,
+    GRAD,
+    HESS,
+    HISTORY,
+    RES,
+    SRES,
+    SUFFIXES_CSV,
+    SUFFIXES_HDF5,
+    TRACE,
+    X,
+)
+from ..history import (
     CsvHistory,
     Hdf5History,
     HistoryOptions,
+    HistoryTypeError,
     OptimizerHistory,
 )
 from ..problem import Problem
@@ -51,8 +64,8 @@ def fill_result_from_history(
     fval_match = fval_exist and np.isclose(history_fval, result_fval)
     if fval_exist and not fval_match:
         logger.debug(
-            f"Minimal function value mismatch: history {history_fval:8e}, "
-            f"result {result_fval:8e}"
+            "Minimal function value mismatch: "
+            f"history {history_fval:8e}, result {result_fval:8e}"
         )
     #  parameters
     history_x, result_x = optimizer_history.x_min, result.x
@@ -82,6 +95,7 @@ def fill_result_from_history(
     if not optimize_options.history_beats_optimizer:
         return result
 
+    # exit flag and message
     if isinstance(optimizer_history.history, Hdf5History):
         if (message := optimizer_history.history.message) is not None:
             result.message = message
@@ -118,19 +132,23 @@ def read_result_from_file(
     if history_options.storage_file is None:
         raise ValueError("No history file specified.")
 
-    if history_options.storage_file.endswith('.csv'):
+    # evaluate type
+    suffix = Path(history_options.storage_file).suffix[1:]
+
+    if suffix in SUFFIXES_CSV:
         history = CsvHistory(
             file=history_options.storage_file.format(id=identifier),
             options=history_options,
             load_from_file=True,
         )
-    elif history_options.storage_file.endswith(('.h5', '.hdf5')):
+    elif suffix in SUFFIXES_HDF5:
         history = Hdf5History.load(
             id=identifier,
             file=history_options.storage_file.format(id=identifier),
+            options=history_options,
         )
     else:
-        raise NotImplementedError()
+        raise HistoryTypeError(suffix)
 
     opt_hist = OptimizerHistory(
         history=history,
@@ -218,17 +236,21 @@ def optimization_result_from_history(
     """
     result = Result()
     with h5py.File(filename, 'r') as f:
-        for id_name in f['history'].keys():
-            history = Hdf5History(id=id_name, file=filename)
-            history.recover_options(filename)
-            optimizer_history = OptimizerHistory(
-                history=history,
-                x0=f[f'history/{id_name}/trace/0/x'][()],
-                lb=problem.lb,
-                ub=problem.ub,
-                generate_from_history=True,
-            )
-            optimizer_result = OptimizerResult(id=id_name)
-            fill_result_from_history(optimizer_result, optimizer_history)
-            result.optimize_result.append(optimizer_result)
+        ids = list(f[HISTORY].keys())
+        x0s = [f[f'{HISTORY}/{id}/{TRACE}/0/{X}'][()] for id in ids]
+
+    for id, x0 in zip(ids, x0s):
+        history = Hdf5History(id=id, file=filename)
+        history.recover_options(filename)
+        optimizer_history = OptimizerHistory(
+            history=history,
+            x0=x0,
+            lb=problem.lb,
+            ub=problem.ub,
+            generate_from_history=True,
+        )
+        optimizer_result = OptimizerResult(id=id)
+        fill_result_from_history(optimizer_result, optimizer_history)
+        result.optimize_result.append(optimizer_result)
+
     return result
