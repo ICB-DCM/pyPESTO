@@ -107,24 +107,26 @@ def visualize_optimized_model_fit(
         res["rdatas"], amici_model, petab_problem.measurement_df
     )
 
-    unflattened_sim_df = sim_df
+    sim_df_to_plot = sim_df
+    petab_problem_to_plot = petab_problem
     if unflattened_petab_problem:
-        unflattened_sim_df = petab.core.unflatten_simulation_df(
+        sim_df_to_plot = petab.core.unflatten_simulation_df(
             simulation_df=sim_df,
             petab_problem=unflattened_petab_problem,
         )
+        petab_problem_to_plot = unflattened_petab_problem
 
     # function to call, to plot data and simulations
     axes = plot_problem(
-        petab_problem=unflattened_petab_problem,
-        simulations_df=unflattened_sim_df,
+        petab_problem=petab_problem_to_plot,
+        simulations_df=sim_df_to_plot,
         **kwargs,
     )
     if return_dict:
         return {
             'axes': axes,
             'amici_result': res,
-            'simulation_df': unflattened_sim_df,
+            'simulation_df': sim_df_to_plot,
         }
     return axes
 
