@@ -5,7 +5,7 @@ from typing import Union
 
 import numpy as np
 
-from ..objective import History
+from ..history import NoHistory
 from ..problem import Problem
 from ..result import McmcPtResult
 from .sampler import Sampler
@@ -86,7 +86,7 @@ class Pymc3Sampler(Sampler):
         self.trace = None
         self.data = None
 
-        self.problem.objective.history = History()
+        self.problem.objective.history = NoHistory()
 
     def sample(self, n_samples: int, beta: float = 1.0):
         """
