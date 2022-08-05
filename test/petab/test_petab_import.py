@@ -87,7 +87,7 @@ class PetabImportTest(unittest.TestCase):
         # Check gradients of simple model (should always be a true positive)
         model_name = "Bachmann_MSB2011"
         petab_problem = pypesto.petab.PetabImporter.from_yaml(
-            os.path.join(models.MODEL_DIR, model_name, model_name + '.yaml')
+            os.path.join(models.MODELS_DIR, model_name, model_name + '.yaml')
         )
 
         objective = petab_problem.create_objective()
