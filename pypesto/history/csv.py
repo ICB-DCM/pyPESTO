@@ -9,7 +9,6 @@ import numpy as np
 import pandas as pd
 
 from ..C import (
-    CHI2,
     FVAL,
     GRAD,
     HESS,
@@ -19,18 +18,17 @@ from ..C import (
     N_RES,
     N_SRES,
     RES,
-    SCHI2,
     SRES,
     TIME,
     ModeType,
     X,
 )
-from .base import History, add_fun_from_res, reduce_result_via_options
+from .base import CountHistoryBase, add_fun_from_res, reduce_result_via_options
 from .options import HistoryOptions
 from .util import MaybeArray, ResultDict, trace_wrap
 
 
-class CsvHistory(History):
+class CsvHistory(CountHistoryBase):
     """Stores a representation of the history in a CSV file.
 
     Parameters
@@ -53,9 +51,9 @@ class CsvHistory(History):
         load_from_file: bool = False,
     ):
         super().__init__(options=options)
-        self.x_names = x_names
+        self.x_names: Sequence[str] = x_names
         self._trace: Union[pd.DataFrame, None] = None
-        self.file = os.path.abspath(file)
+        self.file: str = os.path.abspath(file)
 
         # create trace file dirs
         if self.file is not None:
@@ -77,10 +75,6 @@ class CsvHistory(History):
             self._trace = trace
             self.x_names = trace[X].columns
             self._update_counts_from_trace()
-
-    def __len__(self) -> int:
-        """Define length of history object."""
-        return len(self._trace)
 
     def _update_counts_from_trace(self) -> None:
         self._n_fval = self._trace[(N_FVAL, np.NaN)].max()
@@ -141,8 +135,6 @@ class CsvHistory(History):
             N_SRES: self._n_sres,
             FVAL: result[FVAL],
             RES: result[RES],
-            SRES: result[SRES],
-            CHI2: result[CHI2],
             HESS: result[HESS],
         }
 
@@ -152,7 +144,6 @@ class CsvHistory(History):
         for var, val in {
             X: x,
             GRAD: result[GRAD],
-            SCHI2: result[SCHI2],
         }.items():
             if var == X or self.options[f'trace_record_{var}']:
                 row[var] = val
@@ -181,14 +172,13 @@ class CsvHistory(History):
                 N_RES,
                 N_SRES,
                 FVAL,
-                CHI2,
                 RES,
                 SRES,
                 HESS,
             ]
         ]
 
-        for var in [X, GRAD, SCHI2]:
+        for var in [X, GRAD]:
             if var == X or self.options[f'trace_record_{var}']:
                 columns.extend([(var, x_name) for x_name in self.x_names])
             else:
@@ -238,6 +228,10 @@ class CsvHistory(History):
                 )
             trace_copy.to_csv(self.file)
 
+    def __len__(self) -> int:
+        """Define length of history object."""
+        return len(self._trace)
+
     @trace_wrap
     def get_x_trace(
         self,
@@ -281,20 +275,6 @@ class CsvHistory(History):
     ) -> Union[Sequence[MaybeArray], MaybeArray]:
         """See `HistoryBase` docstring."""
         return list(self._trace[(SRES, np.nan)].values[ix])
-
-    @trace_wrap
-    def get_chi2_trace(
-        self, ix: Union[int, Sequence[int], None] = None, trim: bool = False
-    ) -> Union[Sequence[float], float]:
-        """See `HistoryBase` docstring."""
-        return list(self._trace[(CHI2, np.nan)].values[ix])
-
-    @trace_wrap
-    def get_schi2_trace(
-        self, ix: Union[int, Sequence[int], None] = None, trim: bool = False
-    ) -> Union[Sequence[MaybeArray], MaybeArray]:
-        """See `HistoryBase` docstring."""
-        return list(self._trace[SCHI2].values[ix])
 
     @trace_wrap
     def get_time_trace(

@@ -7,7 +7,7 @@ import numpy as np
 
 from ..C import FVAL, GRAD, HESS, RES, SRES, ModeType, X
 from ..util import allclose, is_none_or_nan, is_none_or_nan_array, isclose
-from .base import History, HistoryBase, add_fun_from_res
+from .base import HistoryBase, add_fun_from_res
 from .util import ResultDict
 
 logger = logging.getLogger(__name__)
@@ -24,8 +24,6 @@ class OptimizerHistory:
     ----------
     fval0, fval_min:
         Initial and best function value found.
-    chi20, chi2_min:
-        Initial and best chi2 value found.
     x0, x_min:
         Initial and best parameters found.
     grad_min:
@@ -56,13 +54,13 @@ class OptimizerHistory:
 
     def __init__(
         self,
-        history: History,
+        history: HistoryBase,
         x0: np.ndarray,
         lb: np.ndarray,
         ub: np.ndarray,
         generate_from_history: bool = False,
     ) -> None:
-        self.history: History = history
+        self.history: HistoryBase = history
 
         # initial point
         self.fval0: Union[float, None] = None
