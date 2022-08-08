@@ -126,25 +126,25 @@ class OptimizerResult(dict):
     def summary(self):
         """Get summary of the object."""
         message = (
-            "### Optimizer Result \n\n"
-            f"* optimizer used: {self.optimizer} \n"
+            "### Optimizer Result\n\n"
+            f"* optimizer used: {self.optimizer}\n"
             f"* message: {self.message} \n"
-            f"* number of evaluations: {self.n_fval} \n"
-            f"* time taken to optimize: {self.time} \n"
-            f"* startpoint: {self.x0} \n"
-            f"* endpoint: {self.x} \n"
+            f"* number of evaluations: {self.n_fval}\n"
+            f"* time taken to optimize: {self.time:0.3f}s\n"
+            f"* startpoint: {self.x0}\n"
+            f"* endpoint: {self.x}\n"
         )
         # add fval, gradient, hessian, res, sres if available
         if self.fval is not None:
-            message += f"* final objective value: {self.fval} \n"
+            message += f"* final objective value: {self.fval}\n"
         if self.grad is not None:
-            message += f"* final gradient value: {self.grad} \n"
+            message += f"* final gradient value: {self.grad}\n"
         if self.hess is not None:
-            message += f"* final hessian value: {self.hess} \n"
+            message += f"* final hessian value: {self.hess}\n"
         if self.res is not None:
-            message += f"* final residual value: {self.res} \n"
+            message += f"* final residual value: {self.res}\n"
         if self.sres is not None:
-            message += f"* final residual sensitivity: {self.sres} \n"
+            message += f"* final residual sensitivity: {self.sres}\n"
 
         return message
 
@@ -206,20 +206,26 @@ class OptimizeResult:
         disp_worst:
             Whether to display a detailed summary of the worst run.
         """
+        if len(self) == 0:
+            return "## Optimization Result \n\n*empty*\n"
+
         # perform clustering for better information
         clust, clustsize = assign_clusters(delete_nan_inf(self.fval)[1])
-        counter_message = '\n'.join(
-            ["\tCount\tMessage"]
-            + [
-                f"\t{count}\t{message}"
-                for message, count in Counter(self.message).most_common()
-            ]
+
+        # aggregate exit messages
+        message_counts_df = pd.DataFrame(
+            Counter(self.message).most_common(), columns=["Message", "Count"]
         )
+        counter_message = message_counts_df[["Count", "Message"]].to_markdown(
+            index=False
+        )
+        counter_message = "  " + counter_message.replace("\n", "\n  ")
+
         times_message = (
-            f'\n\tMean execution time: {np.mean(self.time):0.3f}s\n'
-            f'\tMaximum execution time: {np.max(self.time):0.3f}s,'
+            f'\t* Mean execution time: {np.mean(self.time):0.3f}s\n'
+            f'\t* Maximum execution time: {np.max(self.time):0.3f}s,'
             f'\tid={self[np.argmax(self.time)].id}\n'
-            f'\tMinimum execution time: {np.min(self.time):0.3f}s,\t'
+            f'\t* Minimum execution time: {np.min(self.time):0.3f}s,\t'
             f'id={self[np.argmin(self.time)].id}'
         )
 
@@ -230,11 +236,11 @@ class OptimizeResult:
             f"* worst value: {self[-1]['fval']}, id={self[-1]['id']}\n"
             f"* number of non-finite values: "
             f"{np.logical_not(np.isfinite(self.fval)).sum()}\n\n"
-            f"* execution time summary: {times_message}\n"
-            f"* summary of optimizer messages:\n{counter_message}\n"
+            f"* execution time summary:\n{times_message}\n"
+            f"* summary of optimizer messages:\n\n{counter_message}\n\n"
             f"* best value found (approximately) {int(clustsize[0])} time(s)\n"
             f"* number of plateaus found: "
-            f"{1 + max(clust) - sum(clustsize == 1)}"
+            f"{1 + max(clust) - sum(clustsize == 1)}\n"
         )
         if disp_best:
             summary += f"\nA summary of the best run:\n\n{self[0].summary()}"
