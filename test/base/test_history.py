@@ -209,10 +209,8 @@ class HistoryTest(unittest.TestCase):
                     assert reconst_trace[iteration] is None
                 if np.isnan(original_trace[iteration]).all():
                     assert np.isnan(reconst_trace[iteration]).all()
-                np.testing.assert_array_almost_equal(
-                    reconst_trace[iteration],
-                    original_trace[iteration],
-                    decimal=10,
+                np.testing.assert_array_almost_equal_nulp(
+                    reconst_trace[iteration], original_trace[iteration], nulp=2
                 )
 
     def check_history_consistency(self, start: pypesto.OptimizerResult):
