@@ -4,7 +4,7 @@ from typing import Union
 
 import numpy as np
 
-from ..objective import History
+from ..history import MemoryHistory
 from ..problem import Problem
 from ..result import McmcPtResult
 from .sampler import Sampler
@@ -19,9 +19,34 @@ except ImportError:
     pm = az = at = None
 
 try:
-    from ..objective.aesara import AesaraObjectiveOp
+    from ..objective.aesara import AesaraObjectiveRV
 except (AttributeError, ImportError):
     AesaraObjectiveOp = None
+
+
+class AesaraDist(pm.NoDistribution):
+    """PyMC distribution wrapper for AesaraObjectiveRVs."""
+
+    def __new__(
+        cls,
+        name: str,
+        rv_op: AesaraObjectiveRV,
+        parameters: at.TensorVariable,
+    ):
+        """
+        Instantiate a PyMC distribution from an AesaraObjectiveRV.
+
+        Parameters
+        ----------
+        name:
+            Name of the distribution
+        rv_op:
+            Aesara objective random variable
+        parameters:
+            Input parameters to the aesara objective
+        """
+        cls.rv_op = rv_op
+        return super().__new__(cls, name, [parameters], observed=0)
 
 
 class PymcSampler(Sampler):
@@ -77,7 +102,7 @@ class PymcSampler(Sampler):
         self.trace = None
         self.data = None
 
-        self.problem.objective.history = History()
+        self.problem.objective.history = MemoryHistory()
 
     def sample(self, n_samples: int, coeff: float = 1.0):
         """
@@ -91,7 +116,7 @@ class PymcSampler(Sampler):
             Inverse temperature for the log probability function.
         """
         problem = self.problem
-        log_post_fun = AesaraObjectiveOp(problem.objective, coeff)
+        log_post_fun = AesaraObjectiveRV(problem.objective, coeff)
         trace = self.trace
 
         x0 = None
@@ -102,7 +127,7 @@ class PymcSampler(Sampler):
             }
 
         # create model context
-        with pm.Model() as model:
+        with pm.Model():
             # uniform bounds
             k = [
                 pm.Uniform(x_name, lower=lb, upper=ub)
@@ -117,11 +142,8 @@ class PymcSampler(Sampler):
             theta = at.as_tensor_variable(k)
 
             # use a DensityDist for the log-posterior
-            pm.DensityDist(
-                'log_post',
-                logp=lambda v: log_post_fun(v),
-                observed={'v': theta},
-            )
+
+            AesaraDist('log_post', log_post_fun, theta)
 
             # step, by default automatically determined by pymc
             step = None
@@ -129,7 +151,7 @@ class PymcSampler(Sampler):
                 step = self.step_function()
 
             # perform the actual sampling
-            trace = pm.sample(
+            data = pm.sample(
                 draws=int(n_samples),
                 trace=trace,
                 start=x0,
@@ -137,10 +159,6 @@ class PymcSampler(Sampler):
                 **self.options,
             )
 
-            # convert trace to inference data object
-            data = az.from_pymc3(trace=trace, model=model)
-
-        self.trace = trace
         self.data = data
 
     def get_samples(self) -> McmcPtResult:

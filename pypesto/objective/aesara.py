@@ -17,10 +17,12 @@ from .base import ObjectiveBase, ResultDict
 try:
     import aesara
     import aesara.tensor as aet
+    from aeppl.logprob import _logprob
     from aesara.graph.op import Op
+    from aesara.tensor.random.op import RandomVariable
     from aesara.tensor.var import TensorVariable
 except ImportError:
-    aesara = aet = Op = TensorVariable = None
+    aesara = aet = Op = TensorVariable = RandomVariable = None
 
 
 class AesaraObjective(ObjectiveBase):
@@ -65,7 +67,7 @@ class AesaraObjective(ObjectiveBase):
         self.aet_fun = aet_fun
         self._coeff = coeff
 
-        self.obj_op = AesaraObjectiveOp(self, self._coeff)
+        self.obj_op = AesaraObjectiveRV(self, self._coeff)
 
         # compiled function
         if objective.has_fun:
@@ -150,6 +152,41 @@ class AesaraObjective(ObjectiveBase):
         )
 
         return other
+
+
+class AesaraObjectiveRV(RandomVariable):
+    """
+    Aesara RandomVariable wrapper for an AesaraObjective.
+
+    Parameters
+    ----------
+    obj:
+        Objective function
+    coeff:
+        Multiplicative coefficient for the objective
+    """
+
+    def __init__(self, obj: AesaraObjective, coeff: Optional[float] = 1.0):
+        self._objective: AesaraObjective = obj
+        self._coeff: float = coeff
+
+        super().__init__(
+            name='log_post',
+            ndim_supp=0,
+            ndims_params=[obj.pre_post_processor.x_free_indices.size],
+            dtype='floatX',
+        )
+
+
+@_logprob.register(AesaraObjectiveRV)
+def aesara_logprob(op, values, *inputs, **kwargs):
+    """
+    Aeppl registration of the logprob function of AesaraObjectiveRV class.
+
+    AesaraObjective already is the logprob, so this function simply applies
+    the identity function to the value variables
+    """
+    return values[0]
 
 
 class AesaraObjectiveOp(Op):
