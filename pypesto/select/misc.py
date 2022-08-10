@@ -44,11 +44,13 @@ def model_to_pypesto_problem(
     """
     petab_problem = petab_select.ui.model_to_petab(model=model)[PETAB_PROBLEM]
 
-    corrected_x_guesses = correct_x_guesses(
-        x_guesses=x_guesses,
-        model=model,
-        petab_problem=petab_problem,
-    )
+    corrected_x_guesses = None
+    if x_guesses is not None:
+        corrected_x_guesses = correct_x_guesses(
+            x_guesses=x_guesses,
+            model=model,
+            petab_problem=petab_problem,
+        )
 
     importer = PetabImporter(petab_problem)
     if objective is None:
@@ -92,7 +94,10 @@ def correct_x_guesses(
             corrected_x_guess = []
             for parameter_id in petab_problem.parameter_df.index:
                 # Use the `x_guess` value, if the parameter is to be estimated.
-                if petab_problem.parameter_df[ESTIMATE].loc[parameter_id] == 1:
+                if (
+                    petab_problem.parameter_df[ESTIMATE].loc[parameter_id] == 1
+                    and parameter_id in x_guess
+                ):
                     corrected_value = x_guess[parameter_id]
                 # Else use the PEtab Select model parameter value, if defined.
                 elif parameter_id in model.parameters:
