@@ -122,12 +122,13 @@ class ModelProblem:
                     )
                 # TODO rename `minimize_options` to `minimize_kwargs`.
                 # TODO or allow users to provide custom `minimize` methods?
-                elif minimize_options:
-                    self.set_result(
-                        minimize(self.pypesto_problem, **minimize_options)
-                    )
                 else:
-                    self.set_result(minimize(self.pypesto_problem))
+                    self.set_result(
+                        minimize(
+                            self.pypesto_problem,
+                            **minimize_options,
+                        )
+                    )
 
     def set_result(self, result: Result):
         """Postprocess a result.
