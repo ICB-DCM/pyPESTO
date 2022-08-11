@@ -86,7 +86,7 @@ class HistoryTest(unittest.TestCase):
 
                 for istart, start in enumerate(result.optimize_result.list):
                     if self.history_options.storage_file:
-                        # make file read-only. all checks still have pass.
+                        # make file read-only. all checks still have to pass.
                         filename = self.history_options.storage_file.format(
                             id=str(istart)
                         )
