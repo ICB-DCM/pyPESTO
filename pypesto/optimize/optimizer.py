@@ -9,8 +9,8 @@ import scipy.optimize
 
 from ..C import FVAL, GRAD, MODE_FUN, MODE_RES
 from ..history import (
-    HistoryBase,
     HistoryOptions,
+    NoHistory,
     OptimizerHistory,
     create_history,
 )
@@ -130,7 +130,7 @@ def history_decorator(minimize):
         )
 
         # clean up, history is available from result
-        objective.history = HistoryBase()
+        objective.history = NoHistory()
 
         return result
 

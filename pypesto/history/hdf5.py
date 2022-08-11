@@ -24,18 +24,64 @@ from ..C import (
     N_SRES,
     RES,
     SRES,
+    START_TIME,
     TIME,
     TRACE,
     TRACE_SAVE_ITER,
     ModeType,
     X,
 )
-from .base import History, add_fun_from_res, reduce_result_via_options
+from .base import HistoryBase, add_fun_from_res, reduce_result_via_options
 from .options import HistoryOptions
 from .util import MaybeArray, ResultDict, trace_wrap
 
 
-class Hdf5History(History):
+def with_h5_file(mode: str):
+    """Wrap function to work with hdf5 file.
+
+    Parameters
+    ----------
+    mode:
+        Access mode, see
+        https://docs.h5py.org/en/stable/high/file.html.
+    """
+    modes = ["r", "a"]
+    if mode not in modes:
+        # can be extended if reasonable
+        raise ValueError(f"Mode must be one of {modes}")
+
+    def decorator(fun):
+        def wrapper(self, *args, **kwargs):
+            # file already opened
+            if self._f is not None and (mode == self._f.mode or mode == "r"):
+                return fun(self, *args, **kwargs)
+
+            with h5py.File(self.file, mode) as f:
+                self._f = f
+                ret = fun(self, *args, **kwargs)
+                self._f = None
+                return ret
+
+        return wrapper
+
+    return decorator
+
+
+def check_editable(fun):
+    """Check if the history is editable."""
+
+    def wrapper(self, *args, **kwargs):
+        if not self.editable:
+            raise ValueError(
+                f'ID "{self.id}" is already used in history file '
+                f'"{self.file}".'
+            )
+        return fun(self, *args, **kwargs)
+
+    return wrapper
+
+
+class Hdf5History(HistoryBase):
     """
     Stores a representation of the history in an HDF5 file.
 
@@ -50,19 +96,25 @@ class Hdf5History(History):
     """
 
     def __init__(
-        self, id: str, file: str, options: Union[HistoryOptions, Dict] = None
+        self,
+        id: str,
+        file: str,
+        options: Union[HistoryOptions, Dict] = None,
     ):
         super().__init__(options=options)
         self.id: str = id
         self.file: str = file
-        self.editable: bool = self._is_editable(file)
-        self._generate_hdf5_group()
 
-    def __len__(self) -> int:
-        """Define length of history object."""
-        with h5py.File(self.file, 'r') as f:
-            return f[f'{HISTORY}/{self.id}/{TRACE}/'].attrs[N_ITERATIONS]
+        # filled during file access
+        self._f: Union[h5py.File, None] = None
 
+        # to check whether the trace can be edited
+        self.editable: bool = self._editable()
+
+        # maybe generate id group
+        self._maybe_generate_hdf5_group()
+
+    @check_editable
     def update(
         self,
         x: np.ndarray,
@@ -71,27 +123,26 @@ class Hdf5History(History):
         result: ResultDict,
     ) -> None:
         """See `History` docstring."""
-        if not self.editable:
-            raise ValueError(
-                f'ID "{self.id}" is already used'
-                f' in history file "{self.file}".'
-            )
+        # check whether the file was marked as editable upon initialization
         super().update(x, sensi_orders, mode, result)
+        self._update_counts(sensi_orders, mode)
         self._update_trace(x, sensi_orders, mode, result)
 
+    @with_h5_file("a")
+    @check_editable
     def finalize(self, message: str = None, exitflag: str = None) -> None:
         """See `HistoryBase` docstring."""
         super().finalize()
 
         # add message and exitflag to trace
-        with h5py.File(self.file, 'a') as f:
-            if f'{HISTORY}/{self.id}/{MESSAGES}/' not in f:
-                f.create_group(f'{HISTORY}/{self.id}/{MESSAGES}/')
-            grp = f[f'{HISTORY}/{self.id}/{MESSAGES}/']
-            if message is not None:
-                grp.attrs[MESSAGE] = message
-            if exitflag is not None:
-                grp.attrs[EXITFLAG] = exitflag
+        f = self._f
+        if f'{HISTORY}/{self.id}/{MESSAGES}/' not in f:
+            f.create_group(f'{HISTORY}/{self.id}/{MESSAGES}/')
+        grp = f[f'{HISTORY}/{self.id}/{MESSAGES}/']
+        if message is not None:
+            grp.attrs[MESSAGE] = message
+        if exitflag is not None:
+            grp.attrs[EXITFLAG] = exitflag
 
     @staticmethod
     def load(
@@ -136,78 +187,91 @@ class Hdf5History(History):
 
         return False
 
-    # overwrite _update_counts
+    @with_h5_file("a")
     def _update_counts(self, sensi_orders: Tuple[int, ...], mode: ModeType):
         """Update the counters in the hdf5."""
-        with h5py.File(self.file, 'a') as f:
+        f = self._f
 
-            if mode == MODE_FUN:
-                if 0 in sensi_orders:
-                    f[f'{HISTORY}/{self.id}/{TRACE}/'].attrs[N_FVAL] += 1
-                if 1 in sensi_orders:
-                    f[f'{HISTORY}/{self.id}/{TRACE}/'].attrs[N_GRAD] += 1
-                if 2 in sensi_orders:
-                    f[f'{HISTORY}/{self.id}/{TRACE}/'].attrs[N_HESS] += 1
-            elif mode == MODE_RES:
-                if 0 in sensi_orders:
-                    f[f'{HISTORY}/{self.id}/{TRACE}/'].attrs[N_RES] += 1
-                if 1 in sensi_orders:
-                    f[f'{HISTORY}/{self.id}/{TRACE}/'].attrs[N_SRES] += 1
+        if mode == MODE_FUN:
+            if 0 in sensi_orders:
+                f[f'{HISTORY}/{self.id}/{TRACE}/'].attrs[N_FVAL] += 1
+            if 1 in sensi_orders:
+                f[f'{HISTORY}/{self.id}/{TRACE}/'].attrs[N_GRAD] += 1
+            if 2 in sensi_orders:
+                f[f'{HISTORY}/{self.id}/{TRACE}/'].attrs[N_HESS] += 1
+        elif mode == MODE_RES:
+            if 0 in sensi_orders:
+                f[f'{HISTORY}/{self.id}/{TRACE}/'].attrs[N_RES] += 1
+            if 1 in sensi_orders:
+                f[f'{HISTORY}/{self.id}/{TRACE}/'].attrs[N_SRES] += 1
+
+    @with_h5_file("r")
+    def __len__(self) -> int:
+        """Define length of history object."""
+        return self._f[f'{HISTORY}/{self.id}/{TRACE}/'].attrs[N_ITERATIONS]
 
     @property
+    @with_h5_file("r")
     def n_fval(self) -> int:
         """See `HistoryBase` docstring."""
-        with h5py.File(self.file, 'r') as f:
-            return f[f'{HISTORY}/{self.id}/{TRACE}/'].attrs[N_FVAL]
+        return self._f[f'{HISTORY}/{self.id}/{TRACE}/'].attrs[N_FVAL]
 
     @property
+    @with_h5_file("r")
     def n_grad(self) -> int:
         """See `HistoryBase` docstring."""
-        with h5py.File(self.file, 'r') as f:
-            return f[f'{HISTORY}/{self.id}/{TRACE}/'].attrs[N_GRAD]
+        return self._f[f'{HISTORY}/{self.id}/{TRACE}/'].attrs[N_GRAD]
 
     @property
+    @with_h5_file("r")
     def n_hess(self) -> int:
         """See `HistoryBase` docstring."""
-        with h5py.File(self.file, 'r') as f:
-            return f[f'{HISTORY}/{self.id}/{TRACE}/'].attrs[N_HESS]
+        return self._f[f'{HISTORY}/{self.id}/{TRACE}/'].attrs[N_HESS]
 
     @property
+    @with_h5_file("r")
     def n_res(self) -> int:
         """See `HistoryBase` docstring."""
-        with h5py.File(self.file, 'r') as f:
-            return f[f'{HISTORY}/{self.id}/{TRACE}/'].attrs[N_RES]
+        return self._f[f'{HISTORY}/{self.id}/{TRACE}/'].attrs[N_RES]
 
     @property
+    @with_h5_file("r")
     def n_sres(self) -> int:
         """See `HistoryBase` docstring."""
-        with h5py.File(self.file, 'r') as f:
-            return f[f'{HISTORY}/{self.id}/{TRACE}/'].attrs[N_SRES]
+        return self._f[f'{HISTORY}/{self.id}/{TRACE}/'].attrs[N_SRES]
 
     @property
+    @with_h5_file("r")
     def trace_save_iter(self) -> int:
         """After how many iterations to store the trace."""
-        with h5py.File(self.file, 'r') as f:
-            return f[f'{HISTORY}/{self.id}/{TRACE}/'].attrs[TRACE_SAVE_ITER]
+        return self._f[f'{HISTORY}/{self.id}/{TRACE}/'].attrs[TRACE_SAVE_ITER]
 
     @property
+    @with_h5_file("r")
+    def start_time(self) -> float:
+        """See `HistoryBase` docstring."""
+        # TODO Y This should also be saved in and recovered from the hdf5 file
+        return self._f[f'{HISTORY}/{self.id}/{TRACE}/'].attrs[START_TIME]
+
+    @property
+    @with_h5_file("r")
     def message(self) -> str:
         """Optimizer message in case of finished optimization."""
-        with h5py.File(self.file, 'r') as f:
-            try:
-                return f[f'{HISTORY}/{self.id}/{MESSAGES}/'].attrs[MESSAGE]
-            except KeyError:
-                return None
+        try:
+            return self._f[f'{HISTORY}/{self.id}/{MESSAGES}/'].attrs[MESSAGE]
+        except KeyError:
+            return None
 
     @property
+    @with_h5_file("r")
     def exitflag(self) -> str:
         """Optimizer exitflag in case of finished optimization."""
-        with h5py.File(self.file, 'r') as f:
-            try:
-                return f[f'{HISTORY}/{self.id}/{MESSAGES}/'].attrs[EXITFLAG]
-            except KeyError:
-                return None
+        try:
+            return self._f[f'{HISTORY}/{self.id}/{MESSAGES}/'].attrs[EXITFLAG]
+        except KeyError:
+            return None
 
+    @with_h5_file("a")
     def _update_trace(
         self,
         x: np.ndarray,
@@ -225,7 +289,7 @@ class Hdf5History(History):
             add_fun_from_res(result), self.options
         )
 
-        used_time = time.time() - self._start_time
+        used_time = time.time() - self.start_time
 
         values = {
             X: x,
@@ -237,35 +301,36 @@ class Hdf5History(History):
             TIME: used_time,
         }
 
-        with h5py.File(self.file, 'a') as f:
-            iteration = f[f'{HISTORY}/{self.id}/{TRACE}/'].attrs[N_ITERATIONS]
+        f = self._f
+        iteration = f[f'{HISTORY}/{self.id}/{TRACE}/'].attrs[N_ITERATIONS]
 
-            for key in values.keys():
-                if values[key] is not None:
-                    f[
-                        f'{HISTORY}/{self.id}/{TRACE}/{iteration}/{key}'
-                    ] = values[key]
+        for key in values.keys():
+            if values[key] is not None:
+                f[f'{HISTORY}/{self.id}/{TRACE}/{iteration}/{key}'] = values[
+                    key
+                ]
 
-            f[f'{HISTORY}/{self.id}/{TRACE}/'].attrs[N_ITERATIONS] += 1
+        f[f'{HISTORY}/{self.id}/{TRACE}/'].attrs[N_ITERATIONS] += 1
 
-    def _generate_hdf5_group(self, f: h5py.File = None) -> None:
+    @with_h5_file("a")
+    def _maybe_generate_hdf5_group(self) -> None:
         """Generate group in the hdf5 file, if it does not exist yet."""
-        try:
-            with h5py.File(self.file, 'a') as f:
-                if f'{HISTORY}/{self.id}/{TRACE}/' not in f:
-                    grp = f.create_group(f'{HISTORY}/{self.id}/{TRACE}/')
-                    grp.attrs[N_ITERATIONS] = 0
-                    grp.attrs[N_FVAL] = 0
-                    grp.attrs[N_GRAD] = 0
-                    grp.attrs[N_HESS] = 0
-                    grp.attrs[N_RES] = 0
-                    grp.attrs[N_SRES] = 0
-                    # TODO Y it makes no sense to save this here
-                    #  Also, we do not seem to evaluate this at all
-                    grp.attrs[TRACE_SAVE_ITER] = self.options.trace_save_iter
-        except OSError:
-            pass
+        if f'{HISTORY}/{self.id}/{TRACE}/' in self._f:
+            return
 
+        grp = self._f.create_group(f'{HISTORY}/{self.id}/{TRACE}/')
+        grp.attrs[N_ITERATIONS] = 0
+        grp.attrs[N_FVAL] = 0
+        grp.attrs[N_GRAD] = 0
+        grp.attrs[N_HESS] = 0
+        grp.attrs[N_RES] = 0
+        grp.attrs[N_SRES] = 0
+        grp.attrs[START_TIME] = time.time()
+        # TODO Y it makes no sense to save this here
+        #  Also, we do not seem to evaluate this at all
+        grp.attrs[TRACE_SAVE_ITER] = self.options.trace_save_iter
+
+    @with_h5_file("r")
     def _get_hdf5_entries(
         self,
         entry_id: str,
@@ -290,19 +355,18 @@ class Hdf5History(History):
             ix = range(len(self))
         trace_result = []
 
-        with h5py.File(self.file, 'r') as f:
-            for iteration in ix:
-                try:
-                    dataset = f[
-                        f'{HISTORY}/{self.id}/{TRACE}/{iteration}/{entry_id}'
-                    ]
-                    if dataset.shape == ():
-                        entry = dataset[()]  # scalar
-                    else:
-                        entry = np.array(dataset)
-                    trace_result.append(entry)
-                except KeyError:
-                    trace_result.append(None)
+        for iteration in ix:
+            try:
+                dataset = self._f[
+                    f'{HISTORY}/{self.id}/{TRACE}/{iteration}/{entry_id}'
+                ]
+                if dataset.shape == ():
+                    entry = dataset[()]  # scalar
+                else:
+                    entry = np.array(dataset)
+                trace_result.append(entry)
+            except KeyError:
+                trace_result.append(None)
 
         return trace_result
 
@@ -355,7 +419,7 @@ class Hdf5History(History):
         """See `HistoryBase` docstring."""
         return self._get_hdf5_entries(TIME, ix)
 
-    def _is_editable(self, file: str) -> bool:
+    def _editable(self) -> bool:
         """
         Check whether the id is already existent in the file.
 
@@ -366,14 +430,14 @@ class Hdf5History(History):
 
         Returns
         -------
-        editable:
-            Boolean, whether this hdf5 file should be editable.
-            Returns true if the file or the id entry does not exist yet.
+        True if the file is editable, False otherwise.
         """
         try:
-            with h5py.File(file, 'a') as f:
+            with h5py.File(self.file, "a") as f:
                 # editable if the id entry does not exist
-                return 'history' not in f.keys() or self.id not in f['history']
+                if HISTORY not in f.keys() or self.id not in f[HISTORY]:
+                    return True
+                return False
         except OSError:
-            # editable if the file does not exist
-            return True
+            # if something goes wrong, we assume the file is not editable
+            return False

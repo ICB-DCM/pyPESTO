@@ -2,7 +2,7 @@
 import logging
 from dataclasses import dataclass
 from enum import Enum
-from typing import Callable, Dict, List, Optional, Tuple, Union
+from typing import Any, Callable, Dict, List, Optional, Tuple, Union
 
 import numpy as np
 import petab_select
@@ -15,6 +15,7 @@ from petab_select import (
 )
 
 from ..C import TYPE_POSTPROCESSOR
+from ..problem import Problem
 from .model_problem import ModelProblem
 
 
@@ -247,6 +248,7 @@ class MethodCaller:
         # TODO misleading, `Method` here is simply an Enum, not a callable...
         method: Method = None,
         predecessor_model: Model = None,
+        model_to_pypesto_problem_method: Callable[[Any], Problem] = None,
     ):
         """Arguments are used in every `__call__`, unless overridden."""
         self.petab_select_problem = petab_select_problem
@@ -260,6 +262,7 @@ class MethodCaller:
         self.predecessor_model = predecessor_model
         self.select_first_improvement = select_first_improvement
         self.startpoint_latest_mle = startpoint_latest_mle
+        self.model_to_pypesto_problem_method = model_to_pypesto_problem_method
 
         self.criterion = criterion
         if self.criterion is None:
@@ -511,4 +514,5 @@ class MethodCaller:
             minimize_options=self.minimize_options,
             objective_customizer=self.objective_customizer,
             postprocessor=self.model_postprocessor,
+            model_to_pypesto_problem_method=self.model_to_pypesto_problem_method,
         )

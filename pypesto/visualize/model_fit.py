@@ -31,6 +31,7 @@ def visualize_optimized_model_fit(
     force_compile: bool = False,
     amici_solver: amici.Solver = None,
     return_dict: bool = False,
+    unflattened_petab_problem: petab.Problem = None,
     **kwargs,
 ) -> Union[matplotlib.axes.Axes, None]:
     """
@@ -60,6 +61,9 @@ def visualize_optimized_model_fit(
         Passed to `amici.petab_objective.simulate_petab` as `solver`.
     return_dict:
         Return plot and simulation results as a dictionary.
+    unflattened_petab_problem:
+        If the original PEtab problem is flattened, this can be passed
+        to plot with the original unflattened problem.
     kwargs:
         Passed to `petab.visualize.plot_problem`.
 
@@ -103,15 +107,26 @@ def visualize_optimized_model_fit(
         res["rdatas"], amici_model, petab_problem.measurement_df
     )
 
+    sim_df_to_plot = sim_df
+    petab_problem_to_plot = petab_problem
+    if unflattened_petab_problem:
+        sim_df_to_plot = petab.core.unflatten_simulation_df(
+            simulation_df=sim_df,
+            petab_problem=unflattened_petab_problem,
+        )
+        petab_problem_to_plot = unflattened_petab_problem
+
     # function to call, to plot data and simulations
     axes = plot_problem(
-        petab_problem=petab_problem, simulations_df=sim_df, **kwargs
+        petab_problem=petab_problem_to_plot,
+        simulations_df=sim_df_to_plot,
+        **kwargs,
     )
     if return_dict:
         return {
             'axes': axes,
             'amici_result': res,
-            'simulation_df': sim_df,
+            'simulation_df': sim_df_to_plot,
         }
     return axes
 
