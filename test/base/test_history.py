@@ -1,7 +1,9 @@
 """Test the :class:`pypesto.History`."""
 
+import os
 import tempfile
 import unittest
+from stat import S_IMODE, S_IWGRP, S_IWOTH, S_IWRITE
 from typing import Sequence
 
 import numpy as np
@@ -83,6 +85,16 @@ class HistoryTest(unittest.TestCase):
                 )
 
                 for istart, start in enumerate(result.optimize_result.list):
+                    if self.history_options.storage_file:
+                        # make file read-only. all checks still have pass.
+                        filename = self.history_options.storage_file.format(
+                            id=str(istart)
+                        )
+                        current = S_IMODE(os.lstat(filename).st_mode)
+                        os.chmod(
+                            filename, current & ~S_IWRITE & ~S_IWGRP & ~S_IWOTH
+                        )
+
                     self.check_reconstruct_history(start, str(istart))
                     self.check_load_from_file(start, str(istart))
                     self.check_history_consistency(start)

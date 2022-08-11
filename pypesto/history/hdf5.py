@@ -1,5 +1,7 @@
 """HDF5 history."""
 
+
+import contextlib
 import time
 from typing import Dict, Sequence, Tuple, Union
 
@@ -53,7 +55,11 @@ def with_h5_file(mode: str):
     def decorator(fun):
         def wrapper(self, *args, **kwargs):
             # file already opened
-            if self._f is not None and (mode == self._f.mode or mode == "r"):
+            if self._f is not None and (
+                mode == self._f.mode
+                or mode == "r"
+                or (self._f.mode == "r+" and mode == "a")
+            ):
                 return fun(self, *args, **kwargs)
 
             with h5py.File(self.file, mode) as f:
@@ -111,10 +117,8 @@ class Hdf5History(HistoryBase):
         # to check whether the trace can be edited
         self.editable: bool = self._editable()
 
-        # maybe generate id group
-        self._maybe_generate_hdf5_group()
-
     @check_editable
+    @with_h5_file("a")
     def update(
         self,
         x: np.ndarray,
@@ -190,68 +194,92 @@ class Hdf5History(HistoryBase):
     @with_h5_file("a")
     def _update_counts(self, sensi_orders: Tuple[int, ...], mode: ModeType):
         """Update the counters in the hdf5."""
-        f = self._f
+        group = self._require_group()
 
         if mode == MODE_FUN:
             if 0 in sensi_orders:
-                f[f'{HISTORY}/{self.id}/{TRACE}/'].attrs[N_FVAL] += 1
+                group.attrs[N_FVAL] += 1
             if 1 in sensi_orders:
-                f[f'{HISTORY}/{self.id}/{TRACE}/'].attrs[N_GRAD] += 1
+                group.attrs[N_GRAD] += 1
             if 2 in sensi_orders:
-                f[f'{HISTORY}/{self.id}/{TRACE}/'].attrs[N_HESS] += 1
+                group.attrs[N_HESS] += 1
         elif mode == MODE_RES:
             if 0 in sensi_orders:
-                f[f'{HISTORY}/{self.id}/{TRACE}/'].attrs[N_RES] += 1
+                group.attrs[N_RES] += 1
             if 1 in sensi_orders:
-                f[f'{HISTORY}/{self.id}/{TRACE}/'].attrs[N_SRES] += 1
+                group.attrs[N_SRES] += 1
 
     @with_h5_file("r")
     def __len__(self) -> int:
         """Define length of history object."""
-        return self._f[f'{HISTORY}/{self.id}/{TRACE}/'].attrs[N_ITERATIONS]
+        try:
+            return self._get_group().attrs[N_ITERATIONS]
+        except KeyError:
+            return 0
 
     @property
     @with_h5_file("r")
     def n_fval(self) -> int:
         """See `HistoryBase` docstring."""
-        return self._f[f'{HISTORY}/{self.id}/{TRACE}/'].attrs[N_FVAL]
+        try:
+            return self._get_group().attrs[N_FVAL]
+        except KeyError:
+            return 0
 
     @property
     @with_h5_file("r")
     def n_grad(self) -> int:
         """See `HistoryBase` docstring."""
-        return self._f[f'{HISTORY}/{self.id}/{TRACE}/'].attrs[N_GRAD]
+        try:
+            return self._get_group().attrs[N_GRAD]
+        except KeyError:
+            return 0
 
     @property
     @with_h5_file("r")
     def n_hess(self) -> int:
         """See `HistoryBase` docstring."""
-        return self._f[f'{HISTORY}/{self.id}/{TRACE}/'].attrs[N_HESS]
+        try:
+            return self._get_group().attrs[N_HESS]
+        except KeyError:
+            return 0
 
     @property
     @with_h5_file("r")
     def n_res(self) -> int:
         """See `HistoryBase` docstring."""
-        return self._f[f'{HISTORY}/{self.id}/{TRACE}/'].attrs[N_RES]
+        try:
+            return self._get_group().attrs[N_RES]
+        except KeyError:
+            return 0
 
     @property
     @with_h5_file("r")
     def n_sres(self) -> int:
         """See `HistoryBase` docstring."""
-        return self._f[f'{HISTORY}/{self.id}/{TRACE}/'].attrs[N_SRES]
+        try:
+            return self._get_group().attrs[N_SRES]
+        except KeyError:
+            return 0
 
     @property
     @with_h5_file("r")
     def trace_save_iter(self) -> int:
         """After how many iterations to store the trace."""
-        return self._f[f'{HISTORY}/{self.id}/{TRACE}/'].attrs[TRACE_SAVE_ITER]
+        try:
+            return self._get_group().attrs[TRACE_SAVE_ITER]
+        except KeyError:
+            return 0
 
     @property
     @with_h5_file("r")
     def start_time(self) -> float:
         """See `HistoryBase` docstring."""
         # TODO Y This should also be saved in and recovered from the hdf5 file
-        return self._f[f'{HISTORY}/{self.id}/{TRACE}/'].attrs[START_TIME]
+        try:
+            return self._get_group().attrs[START_TIME]
+        except KeyError:
+            return np.nan
 
     @property
     @with_h5_file("r")
@@ -301,22 +329,24 @@ class Hdf5History(HistoryBase):
             TIME: used_time,
         }
 
-        f = self._f
-        iteration = f[f'{HISTORY}/{self.id}/{TRACE}/'].attrs[N_ITERATIONS]
+        iteration = self._require_group().attrs[N_ITERATIONS]
 
         for key in values.keys():
             if values[key] is not None:
-                f[f'{HISTORY}/{self.id}/{TRACE}/{iteration}/{key}'] = values[
-                    key
-                ]
+                self._require_group()[f'{iteration}/{key}'] = values[key]
 
-        f[f'{HISTORY}/{self.id}/{TRACE}/'].attrs[N_ITERATIONS] += 1
+        self._require_group().attrs[N_ITERATIONS] += 1
+
+    @with_h5_file("r")
+    def _get_group(self) -> h5py.Group:
+        """Get the HDF5 group for the current history."""
+        return self._f[f'{HISTORY}/{self.id}/{TRACE}/']
 
     @with_h5_file("a")
-    def _maybe_generate_hdf5_group(self) -> None:
-        """Generate group in the hdf5 file, if it does not exist yet."""
-        if f'{HISTORY}/{self.id}/{TRACE}/' in self._f:
-            return
+    def _require_group(self) -> h5py.Group:
+        """Get, or if necessary create, the group in the hdf5 file."""
+        with contextlib.suppress(KeyError):
+            return self._f[f'{HISTORY}/{self.id}/{TRACE}/']
 
         grp = self._f.create_group(f'{HISTORY}/{self.id}/{TRACE}/')
         grp.attrs[N_ITERATIONS] = 0
@@ -329,6 +359,7 @@ class Hdf5History(HistoryBase):
         # TODO Y it makes no sense to save this here
         #  Also, we do not seem to evaluate this at all
         grp.attrs[TRACE_SAVE_ITER] = self.options.trace_save_iter
+        return grp
 
     @with_h5_file("r")
     def _get_hdf5_entries(
