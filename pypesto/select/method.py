@@ -334,9 +334,6 @@ class MethodCaller:
                2. all candidate models in this iteration, as a `dict` with
                      model hashes as keys and models as values.
         """
-        # Calibrated models in this iteration that improve on the predecessor
-        # model.
-        better_models = []
         # All calibrated models in this iteration (see second return value).
         local_history = {}
         self.logger.new_selection()
@@ -345,13 +342,14 @@ class MethodCaller:
             # May still be `None` (e.g. brute force method)
             predecessor_model = self.predecessor_model
 
-        candidate_models = petab_select.ui.candidates(
+        candidate_models, self.history, local_history= petab_select.ui.candidates(
             problem=self.petab_select_problem,
             candidate_space=self.candidate_space,
             limit=self.limit,
+            history=self.history,
             excluded_model_hashes=list(self.history),
-            predecessor_model=predecessor_model,
-        ).models
+            previous_predecessor_model=predecessor_model,
+        )
 
         if not candidate_models:
             raise StopIteration("No valid models found.")
@@ -362,26 +360,7 @@ class MethodCaller:
             # autoruns calibration
             self.new_model_problem(model=candidate_model)
 
-            local_history[candidate_model.model_id] = candidate_model
-
-            method_signal = self.handle_calibrated_model(
-                model=candidate_model,
-                predecessor_model=predecessor_model,
-            )
-            if method_signal.accept:
-                better_models.append(candidate_model)
-            if method_signal.proceed == MethodSignalProceed.STOP:
-                break
-        self.history.update(local_history)
-        best_model = None
-        if better_models:
-            best_model = petab_select.ui.best(
-                problem=self.petab_select_problem,
-                models=better_models,
-                criterion=self.criterion,
-            )
-
-        return best_model, local_history
+        return self.candidate_space.predecessor_model, local_history
 
     def handle_calibrated_model(
         self,
