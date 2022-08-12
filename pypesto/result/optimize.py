@@ -269,12 +269,12 @@ class OptimizeResult:
         """
         current_ids = set(self.id)
         if isinstance(optimize_result, OptimizeResult):
-            new_ids = [
+            new_ids = {
                 prefix + identifier
                 for identifier in optimize_result.id
                 if identifier is not None
-            ]
-            if current_ids.isdisjoint(new_ids) and new_ids:
+            }
+            if not current_ids.isdisjoint(new_ids):
                 raise ValueError(
                     "Some id's you want to merge coincide with "
                     "the existing id's. Please use an "
