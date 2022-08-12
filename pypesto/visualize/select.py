@@ -4,7 +4,7 @@ from typing import Dict, List, Tuple
 import matplotlib.pyplot as plt
 import networkx as nx
 from petab_select import Model
-from petab_select.constants import Criterion, VIRTUAL_INITIAL_MODEL
+from petab_select.constants import VIRTUAL_INITIAL_MODEL, Criterion
 
 from .. import select as pypesto_select
 
