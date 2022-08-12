@@ -4,7 +4,7 @@ from typing import Dict, List, Tuple
 import matplotlib.pyplot as plt
 import networkx as nx
 from petab_select import Model
-from petab_select.constants import Criterion
+from petab_select.constants import Criterion, VIRTUAL_INITIAL_MODEL
 
 from .. import select as pypesto_select
 
@@ -66,6 +66,10 @@ def plot_selected_models(
     if ax is None:
         _, ax = plt.subplots(figsize=size)
     linewidth = 3
+
+    selected_models = [
+        model for model in selected_models if model != VIRTUAL_INITIAL_MODEL
+    ]
 
     criterion_values = {
         labels.get(

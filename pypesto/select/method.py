@@ -264,6 +264,8 @@ class MethodCaller:
         self.startpoint_latest_mle = startpoint_latest_mle
         self.model_to_pypesto_problem_method = model_to_pypesto_problem_method
 
+        self.logger = MethodLogger()
+
         self.criterion = criterion
         if self.criterion is None:
             self.criterion = self.petab_select_problem.criterion
@@ -307,8 +309,6 @@ class MethodCaller:
         # May have changed from `None` to `petab_select.VIRTUAL_INITIAL_MODEL`
         self.predecessor_model = self.candidate_space.get_predecessor_model()
 
-        self.logger = MethodLogger()
-
     def __call__(
         self,
         predecessor_model: Optional[Union[Model, None]] = None,
@@ -338,32 +338,49 @@ class MethodCaller:
                      model hashes as keys and models as values.
         """
         # All calibrated models in this iteration (see second return value).
-        local_history = {}
         self.logger.new_selection()
 
         if predecessor_model is None:
             # May still be `None` (e.g. brute force method)
             predecessor_model = self.predecessor_model
 
-        candidate_models, self.history, local_history= petab_select.ui.candidates(
+        (
+            candidate_models,
+            self.history,
+            local_history,
+        ) = petab_select.ui.candidates(
             problem=self.petab_select_problem,
             candidate_space=self.candidate_space,
             limit=self.limit,
             history=self.history,
             excluded_model_hashes=list(self.history),
+            # FIXME meaning changes here, i.e. predecessor model is used as previous
+            #       predecessor model, since PEtab Select now gets the next predecessor
+            #       model if the candidate space has models.
             previous_predecessor_model=predecessor_model,
+            criterion=self.criterion,
         )
+        predecessor_model = self.candidate_space.predecessor_model
 
         if not candidate_models:
             raise StopIteration("No valid models found.")
 
         # TODO parallelize calibration (maybe not sensible if
         #      `self.select_first_improvement`)
+        calibrated_candidate_models = []
         for candidate_model in candidate_models:
             # autoruns calibration
             self.new_model_problem(model=candidate_model)
+            calibrated_candidate_models.append(candidate_model)
+            method_signal = self.handle_calibrated_model(
+                model=candidate_model,
+                predecessor_model=predecessor_model,
+            )
+            if method_signal.proceed == MethodSignalProceed.STOP:
+                self.candidate_space.models = calibrated_candidate_models
+                break
 
-        return self.candidate_space.predecessor_model, local_history
+        return predecessor_model, local_history
 
     def handle_calibrated_model(
         self,

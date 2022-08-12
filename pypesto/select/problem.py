@@ -93,8 +93,20 @@ class Problem:
 
         # TODO handle bidirectional
         method_caller = self.create_method_caller(*args, **kwargs)
-        best_model, local_history = method_caller()
+        previous_best_model, previous_local_history = method_caller()
         self.history.update(method_caller.history)
+
+        best_model = petab_select.ui.best(
+            problem=self.petab_select_problem,
+            models=method_caller.candidate_space.models,
+            criterion=method_caller.criterion,
+        )
+
+        local_history = {
+            model.get_hash(): model
+            for model in method_caller.candidate_space.models
+        }
+        self.history.update(local_history)
 
         # TODO: Reconsider return value. `result` could be stored in attribute,
         # then no values need to be returned, and users can request values
@@ -131,11 +143,14 @@ class Problem:
                 # TODO string literal
                 intermediate_kwargs["predecessor_model"] = best_models[-1]
             try:
-                best_model, _ = method_caller(**intermediate_kwargs)
-                if best_model is not None:
-                    best_models.append(best_model)
+                previous_best_model, _ = method_caller(**intermediate_kwargs)
+                best_models.append(previous_best_model)
                 self.history.update(method_caller.history)
             except StopIteration:
+                previous_best_model = (
+                    method_caller.candidate_space.predecessor_model
+                )
+                best_models.append(previous_best_model)
                 break
 
         return best_models
@@ -173,18 +188,24 @@ class Problem:
                1. the best model; and
                2. the best models (the best model at each iteration).
         """
-        best_models = []
+        model_lists = []
         method_caller = self.create_method_caller(*args, **kwargs)
         for predecessor_model in predecessor_models:
-            best_model, _ = method_caller(predecessor_model=predecessor_model)
-            if best_model is not None:
-                best_models.append(best_model)
+            _ = method_caller(predecessor_model=predecessor_model)
+            model_lists.append(method_caller.candidate_space.models)
             self.history.update(method_caller.history)
+            self.history.update(
+                {
+                    model.get_hash(): model
+                    for model in method_caller.candidate_space.models
+                }
+            )
+            method_caller.candidate_space.reset(exclusions=self.history)
 
         best_model = petab_select.ui.best(
             problem=method_caller.petab_select_problem,
-            models=best_models,
+            models=[model for models in model_lists for model in models],
             criterion=method_caller.criterion,
         )
 
-        return best_model, best_models
+        return best_model, model_lists
