@@ -193,12 +193,10 @@ def test_problem_select_to_completion(pypesto_select_problem):
     )
 
     expected_history_subspace_ids = {'M1_0', 'M1_1', 'M1_4', 'M1_5', 'M1_7'}
-    test_history_subspace_ids = set(
-        [
-            model.model_subspace_id
-            for model in pypesto_select_problem.history.values()
-        ]
-    )
+    test_history_subspace_ids = {
+        model.model_subspace_id
+        for model in pypesto_select_problem.history.values()
+    }
     # Expected models were calibrated during the search.
     assert test_history_subspace_ids == expected_history_subspace_ids
 
