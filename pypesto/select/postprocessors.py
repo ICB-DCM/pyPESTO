@@ -1,4 +1,4 @@
-"""Process a model selection model problem after calibration."""
+"""Process a model selection :class:`ModelProblem` after calibration."""
 from pathlib import Path
 from typing import List
 
@@ -22,7 +22,7 @@ def multi_postprocessor(
     Parameters
     ----------
     problem:
-        A model selection model problem that has been optimized.
+        A model selection :class:`ModelProblem` that has been optimized.
     postprocessors:
         A list of postprocessors, which will be sequentially applied to the
         optimized model `problem`.
@@ -66,7 +66,7 @@ def save_postprocessor(
     Parameters
     ----------
     problem:
-        A model selection model problem that has been optimized.
+        A model selection :class:`ModelProblem` that has been optimized.
     output_path:
         The location where output will be stored.
     """
@@ -91,7 +91,7 @@ def model_id_binary_postprocessor(problem: ModelProblem):
     Parameters
     ----------
     problem:
-        A model selection model problem that has been optimized.
+        A model selection :class:`ModelProblem` that has been optimized.
     """
     model_id = "M_"
     for parameter_value in problem.model.parameters.values():
@@ -109,7 +109,7 @@ def report_postprocessor(
     Parameters
     ----------
     problem:
-        A model selection model problem that has been optimized.
+        A model selection :class:`ModelProblem` that has been optimized.
     output_filepath:
         The file path where the report will be saved.
     criteria:
