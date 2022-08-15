@@ -36,7 +36,7 @@ def waterfall_plot_postprocessor(
     problem: ModelProblem,
     output_path: TYPE_PATH = ".",
 ):
-    """Produce a waterfall plot from a PEtab Select model calibration.
+    """Produce a waterfall plot.
 
     See `save_postprocessor` for usage hints and argument documentation.
     """
@@ -49,7 +49,7 @@ def save_postprocessor(
     problem: ModelProblem,
     output_path: TYPE_PATH = ".",
 ):
-    """Save the parameter estimation results for optimized PEtab Select models.
+    """Save the parameter estimation result.
 
     When used, first set the output folder for results, e.g. with
     `functools.partial`. This is because postprocessors should take only a
@@ -77,7 +77,7 @@ def save_postprocessor(
 
 
 def model_id_binary_postprocessor(problem: ModelProblem):
-    """Change PEtab Select model IDs to binary strings.
+    """Change a PEtab Select model ID to a binary string.
 
     Changes the model ID in-place to be a string like `M_ijk`, where
     `i`, `j`, `k`, etc. are `1` if the parameter in that position is estimated,
