@@ -41,6 +41,17 @@ def chi2_to_fval(chi2: float) -> float:
 
 
 @_check_none
+def fval_to_chi2(fval: float) -> float:
+    """Translate function value to chi2, `chi2 = 2 * fval`.
+
+    Note that for the function value we thus employ a probabilistic
+    interpretation, as the log-likelihood of a standard normal noise model.
+    This is in line with e.g. AMICI's and SciPy's objective definition.
+    """
+    return 2.0 * fval
+
+
+@_check_none
 def res_to_fval(res: np.ndarray) -> float:
     """Translate residuals to function value, `fval = 0.5*sum(res**2) + C`."""
     return chi2_to_fval(res_to_chi2(res))
@@ -59,6 +70,12 @@ def schi2_to_grad(schi2: np.ndarray) -> np.ndarray:
     See also :func:`chi2_to_fval`.
     """
     return 0.5 * schi2
+
+
+@_check_none
+def grad_to_schi2(grad: np.ndarray) -> np.ndarray:
+    """Translate function value gradient to chi2 gradient."""
+    return 2.0 * grad
 
 
 @_check_none

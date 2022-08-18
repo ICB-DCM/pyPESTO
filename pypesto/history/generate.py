@@ -4,7 +4,7 @@ from pathlib import Path
 from typing import Sequence
 
 from ..C import SUFFIXES_CSV, SUFFIXES_HDF5
-from .base import History, HistoryBase
+from .base import CountHistory, HistoryBase
 from .csv import CsvHistory
 from .hdf5 import Hdf5History
 from .memory import MemoryHistory
@@ -38,7 +38,7 @@ def create_history(
         if options.trace_record:
             return MemoryHistory(options=options)
         else:
-            return History(options=options)
+            return CountHistory(options=options)
 
     # replace id template in storage file
     storage_file = options.storage_file.replace("{id}", id)

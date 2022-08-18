@@ -6,7 +6,6 @@ from typing import Dict, Sequence, Tuple, Union
 import numpy as np
 
 from ..C import (
-    CHI2,
     FVAL,
     GRAD,
     HESS,
@@ -382,7 +381,6 @@ def get_error_output(
 
     ret = {
         FVAL: nllh,
-        CHI2: chi2,
         GRAD: snllh,
         HESS: s2nllh,
         RES: res,

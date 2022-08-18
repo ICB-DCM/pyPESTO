@@ -11,7 +11,6 @@ import pypesto.optimize as optimize
 import pypesto.profile as profile
 import pypesto.sample as sample
 from pypesto.C import (
-    CHI2,
     EXITFLAG,
     FVAL,
     FVAL0,
@@ -25,7 +24,6 @@ from pypesto.C import (
     N_RES,
     N_SRES,
     RES,
-    SCHI2,
     SRES,
     X0,
     X,
@@ -160,7 +158,7 @@ def test_storage_trace(hdf5_file):
         progress_bar=False,
     )
 
-    history_entries = [X, FVAL, GRAD, HESS, RES, SRES, CHI2, SCHI2]
+    history_entries = [X, FVAL, GRAD, HESS, RES, SRES]
     assert len(result_hdf5.optimize_result.list) == len(
         result_memory.optimize_result.list
     )
