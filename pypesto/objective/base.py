@@ -636,7 +636,7 @@ class ObjectiveBase(ABC):
 
         return result
 
-    def _check_gradients_match_finite_differences(
+    def check_gradients_match_finite_differences(
         self,
         *args,
         x: np.ndarray = None,
