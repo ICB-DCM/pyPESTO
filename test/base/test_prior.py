@@ -7,7 +7,7 @@ import pytest
 
 import pypesto
 import pypesto.optimize
-from pypesto.C import MODE_FUN, MODE_RES
+from pypesto.C import MODE_FUN
 from pypesto.objective import NegLogParameterPriors
 from pypesto.objective.priors import get_parameter_prior_dict
 
@@ -157,10 +157,10 @@ def test_derivatives(prior_type_list, scale):
     x0 = np.array([lin_to_scaled(0.5, scale)] * len(prior_list))
 
     multi_eps = [1e-3]
-    rtol = 1e-2
-    atol = 1e-3
+    rtol = 1e1
+    atol = 1e2
     combined_result = test_prior.check_grad_multi_eps(
-        x=x0, mode=MODE_RES, multi_eps=multi_eps
+        x=x0, mode=MODE_FUN, multi_eps=multi_eps
     )
     assert np.all(
         (combined_result.rel_err.values < rtol)
@@ -178,7 +178,7 @@ def test_derivatives(prior_type_list, scale):
     # require that function values and residuals are within absolute or relative tolerances
     if test_prior.has_res:
         combined_result = test_prior.check_grad_multi_eps(
-            x=x0, mode=MODE_RES, multi_eps=multi_eps
+            x=x0, mode=MODE_FUN, multi_eps=multi_eps
         )
         assert np.all(
             (combined_result.rel_err.values < rtol)
