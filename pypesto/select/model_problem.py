@@ -1,12 +1,13 @@
 """Calibrate a PEtab Select model with pyPESTO."""
 import time
-from typing import Callable, Dict, List, Optional
+from typing import Any, Callable, Dict, List, Optional
 
 from petab_select import Criterion, Model
 
 from ..C import TYPE_POSTPROCESSOR
 from ..objective import ObjectiveBase
 from ..optimize import minimize
+from ..problem import Problem
 from ..result import OptimizerResult, Result
 from .misc import model_to_pypesto_problem
 
@@ -65,6 +66,7 @@ class ModelProblem:
         minimize_options: Dict = None,
         objective_customizer: Optional[OBJECTIVE_CUSTOMIZER_TYPE] = None,
         postprocessor: Optional[TYPE_POSTPROCESSOR] = None,
+        model_to_pypesto_problem_method: Callable[[Any], Problem] = None,
     ):
         """Construct then calibrate a model problem.
 
@@ -94,8 +96,12 @@ class ModelProblem:
         self.minimize_result = None
         self.x_guess = x_guess
 
+        self.model_to_pypesto_problem_method = model_to_pypesto_problem_method
+        if model_to_pypesto_problem_method is None:
+            self.model_to_pypesto_problem_method = model_to_pypesto_problem
+
         if self.valid:
-            self.pypesto_problem = model_to_pypesto_problem(
+            self.pypesto_problem = self.model_to_pypesto_problem_method(
                 self.model,
                 x_guesses=None if self.x_guess is None else [self.x_guess],
             )
@@ -122,12 +128,13 @@ class ModelProblem:
                     )
                 # TODO rename `minimize_options` to `minimize_kwargs`.
                 # TODO or allow users to provide custom `minimize` methods?
-                elif minimize_options:
-                    self.set_result(
-                        minimize(self.pypesto_problem, **minimize_options)
-                    )
                 else:
-                    self.set_result(minimize(self.pypesto_problem))
+                    self.set_result(
+                        minimize(
+                            self.pypesto_problem,
+                            **minimize_options,
+                        )
+                    )
 
     def set_result(self, result: Result):
         """Postprocess a result.
@@ -142,11 +149,11 @@ class ModelProblem:
         # subsequent models in model selection, for parameters in those models
         # that were estimated in this model.
         self.best_start = self.minimize_result.optimize_result.list[0]
-        self.model.set_criterion(Criterion.NLLH, self.best_start.fval)
+        self.model.set_criterion(Criterion.NLLH, float(self.best_start.fval))
         self.model.compute_criterion(criterion=self.criterion)
 
         self.model.estimated_parameters = {
-            id: value
+            id: float(value)
             for index, (id, value) in enumerate(
                 dict(
                     zip(
