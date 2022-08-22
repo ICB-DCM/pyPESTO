@@ -168,18 +168,39 @@ class AesaraObjectiveRV(RandomVariable):
         Objective function
     coeff:
         Multiplicative coefficient for the objective
+    x_size:
+        Dimension of input vector
     """
 
-    def __init__(self, obj: AesaraObjective, coeff: Optional[float] = 1.0):
+    def __init__(
+        self,
+        obj: AesaraObjective,
+        coeff: Optional[float] = 1.0,
+        x_size: Optional[int] = np.NAN,
+    ):
         self._objective: AesaraObjective = obj
         self._coeff: float = coeff
 
-        if obj.pre_post_processor is None or not hasattr(
-            obj, 'x_free_indices'
-        ):
+        # figure out size of input for different objective types
+        if not np.isnan(x_size):
+            # from user input
+            pass
+        elif hasattr(obj, 'aet_x'):
+            # aesara objective
             x_size = obj.aet_x.shape.value[0]
-        else:
+        elif obj.pre_post_processor is not None and hasattr(
+            obj.pre_post_processor, 'x_free_indices'
+        ):
+            # extract size from preprocessor
             x_size = obj.pre_post_processor.x_free_indices.size
+        elif obj.x_names is not None:
+            # from parameter names
+            x_size = len(obj.x_names)
+        else:
+            raise ValueError(
+                'Could not extract number of parameters from '
+                'objective. Please specify as x_size argument.'
+            )
 
         super().__init__(
             name='log_post',
