@@ -16,10 +16,9 @@ from typing import (
     Union,
 )
 
-import numpy as np
 import pandas as pd
 
-from ..C import CONDITION_SEP, MODE_FUN, MODE_RES
+from ..C import CONDITION_SEP
 from ..objective import AggregatedObjective, AmiciObjectBuilder, AmiciObjective
 from ..objective.priors import NegLogParameterPriors, get_parameter_prior_dict
 from ..predict import AmiciPredictor

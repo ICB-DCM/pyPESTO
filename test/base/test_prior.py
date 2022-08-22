@@ -157,16 +157,32 @@ def test_derivatives(prior_type_list, scale):
     x0 = np.array([lin_to_scaled(0.5, scale)] * len(prior_list))
 
     multi_eps = [1e-3]
-    assert test_prior.check_gradients_match_finite_differences(
-        x=x0, mode=MODE_FUN, multi_eps=multi_eps
+    rtol = 1e-2
+    atol = 1e-3
+    combined_result = test_prior.check_grad_multi_eps(
+        x=x0, mode=MODE_RES, multi_eps=multi_eps
     )
-    assert test_prior.check_gradients_match_finite_differences(
-        x=x0, mode=MODE_FUN, order=1, multi_eps=multi_eps
+    assert np.all(
+        (combined_result.rel_err.values < rtol)
+        | (combined_result.abs_err.values < atol)
     )
 
+    combined_result = test_prior.check_grad_multi_eps(
+        x=x0, mode=MODE_FUN, order=1, multi_eps=multi_eps
+    )
+    assert np.all(
+        (combined_result.rel_err.values < rtol)
+        | (combined_result.abs_err.values < atol)
+    )
+
+    # require that function values and residuals are within absolute or relative tolerances
     if test_prior.has_res:
-        test_prior.check_gradients_match_finite_differences(
+        combined_result = test_prior.check_grad_multi_eps(
             x=x0, mode=MODE_RES, multi_eps=multi_eps
+        )
+        assert np.all(
+            (combined_result.rel_err.values < rtol)
+            | (combined_result.abs_err.values < atol)
         )
 
 
