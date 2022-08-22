@@ -20,8 +20,8 @@ except ImportError:
 
 try:
     from ..objective.aesara import AesaraObjectiveRV
-except (AttributeError, ImportError):
-    AesaraObjectiveOp = None
+except (AttributeError, ImportError, TypeError):
+    AesaraObjectiveRV = None
 
 
 class AesaraDist(pm.NoDistribution):

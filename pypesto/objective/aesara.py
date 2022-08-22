@@ -67,7 +67,7 @@ class AesaraObjective(ObjectiveBase):
         self.aet_fun = aet_fun
         self._coeff = coeff
 
-        self.obj_op = AesaraObjectiveRV(self, self._coeff)
+        self.obj_op = AesaraObjectiveOp(self, self._coeff)
 
         # compiled function
         if objective.has_fun:
@@ -170,10 +170,17 @@ class AesaraObjectiveRV(RandomVariable):
         self._objective: AesaraObjective = obj
         self._coeff: float = coeff
 
+        if obj.pre_post_processor is None or not hasattr(
+            obj, 'x_free_indices'
+        ):
+            x_size = obj.aet_x.shape.value[0]
+        else:
+            x_size = obj.pre_post_processor.x_free_indices.size
+
         super().__init__(
             name='log_post',
             ndim_supp=0,
-            ndims_params=[obj.pre_post_processor.x_free_indices.size],
+            ndims_params=[x_size],
             dtype='floatX',
         )
 
