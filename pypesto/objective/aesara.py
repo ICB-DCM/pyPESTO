@@ -22,7 +22,11 @@ try:
     from aesara.tensor.random.op import RandomVariable
     from aesara.tensor.var import TensorVariable
 except ImportError:
-    aesara = aet = Op = TensorVariable = RandomVariable = None
+    raise ImportError(
+        "Using an aeasara objective requires an installation of "
+        "the python package aesara. Please install aesara via "
+        "`pip install aesara`."
+    )
 
 
 class AesaraObjective(ObjectiveBase):

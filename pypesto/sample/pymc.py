@@ -15,13 +15,14 @@ try:
     import aesara.tensor as at
     import arviz as az
     import pymc as pm
-except ImportError:
-    pm = az = at = None
 
-try:
     from ..objective.aesara import AesaraObjectiveRV
-except (AttributeError, ImportError, TypeError):
-    AesaraObjectiveRV = None
+except ImportError:
+    raise ImportError(
+        "Using the pymc sampler requires an installation of the "
+        "python packages aesara, arviz and pymc. Please install "
+        "these packages via `pip install aesara arviz pymc`."
+    )
 
 
 class AesaraDist(pm.NoDistribution):
