@@ -14,6 +14,7 @@ import pypesto.optimize as optimize
 import pypesto.petab
 import pypesto.sample as sample
 import pypesto.visualize as visualize
+from pypesto.sample.pymc import PymcSampler
 
 
 def gaussian_llh(x):
@@ -189,7 +190,7 @@ def sampler(request):
     elif request.param == 'Pymc3':
         return sample.Pymc3Sampler(tune=5, progressbar=False)
     elif request.param == 'Pymc':
-        return sample.PymcSampler(tune=5, progressbar=False)
+        return PymcSampler(tune=5, progressbar=False)
     elif request.param == 'Emcee':
         return sample.EmceeSampler(nwalkers=10)
 
