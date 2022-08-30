@@ -4,14 +4,17 @@ from typing import List
 
 import numpy as np
 import pandas as pd
+import petab
 import petab_select
 import pytest
 from more_itertools import one
-from petab_select import ESTIMATE, Criterion, Method, Model
+from petab.C import NOMINAL_VALUE
+from petab_select import ESTIMATE, PETAB_PROBLEM, Criterion, Method, Model
 
 import pypesto.select
 import pypesto.visualize.select
 from pypesto.select import model_problem
+from pypesto.select.misc import correct_x_guesses
 
 # Options sent to `pypesto.optimize.optimize.minimize`, to reduce run time.
 minimize_options = {
@@ -335,3 +338,74 @@ def test_vis(pypesto_select_problem):
         problem=pypesto_select_problem,
         criterion=Criterion.AIC,
     )
+
+
+def test_custom_objective(petab_problem_yaml):
+    parameters = {
+        'k2': 0.333,
+        'sigma_x2': 0.444,
+    }
+    parameters_x_guesses = [parameters]
+
+    expected_fun = 0.111
+    expected_grad = [0.222] * 3
+
+    def fun_grad(x, fun=expected_fun, grad=expected_grad):
+        return expected_fun, expected_grad
+
+    custom_objective = pypesto.objective.Objective(
+        fun=fun_grad,
+        grad=True,
+    )
+
+    model = Model(petab_yaml=petab_problem_yaml)
+
+    def get_pypesto_problem(model, objective, petab_problem, x_guesses):
+        corrected_x_guesses = correct_x_guesses(
+            x_guesses=x_guesses,
+            model=model,
+        )
+
+        pypesto_problem = pypesto.Problem(
+            objective=objective,
+            lb=petab_problem.lb,
+            ub=petab_problem.ub,
+            x_guesses=corrected_x_guesses,
+        )
+
+        return pypesto_problem
+
+    def model_to_pypesto_problem(
+        model, objective=custom_objective, x_guesses=None
+    ):
+        petab_problem = petab_select.ui.model_to_petab(model=model)[
+            PETAB_PROBLEM
+        ]
+        pypesto_problem = get_pypesto_problem(
+            model=model,
+            objective=objective,
+            petab_problem=petab_problem,
+            x_guesses=x_guesses,
+        )
+        return pypesto_problem
+
+    pypesto_problem = model_to_pypesto_problem(
+        model, x_guesses=parameters_x_guesses
+    )
+
+    expected_x_guess = petab.Problem.from_yaml(
+        petab_problem_yaml
+    ).parameter_df[NOMINAL_VALUE]
+    expected_x_guess.update(parameters)
+    expected_x_guess = expected_x_guess.values
+
+    test_x_guess = pypesto_problem.x_guesses[0]
+    # The x_guess was generated correctly from the partial dictionary, with remaining results taken from the nominal values of the PEtab parameter table.
+    assert np.isclose(test_x_guess, expected_x_guess).all()
+
+    test_fun, test_grad = pypesto_problem.objective(
+        test_x_guess, sensi_orders=(0, 1)
+    )
+    # The custom objective and gradient were returned.
+    assert test_fun == expected_fun
+    assert np.isclose(test_grad, expected_grad).all()
