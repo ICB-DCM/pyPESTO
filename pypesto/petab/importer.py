@@ -682,7 +682,12 @@ class PetabImporter(AmiciObjectBuilder):
         # create rdata-like dicts from the prediction result
         rdatas = []
         for condition in prediction.conditions:
-            rdatas.append({'t': condition.timepoints, 'y': condition.output})
+            # create dummy return data
+            # TODO Y This is not pretty
+            rdata = amici.ReturnDataView(amici.ReturnData())
+            rdata.ts = condition.timepoints
+            rdata.y = condition.output
+            rdatas.append(rdata)
 
         # add an AMICI model, if possible
         model = None
