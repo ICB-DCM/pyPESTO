@@ -108,7 +108,7 @@ def test_plist_mapping():
     edata.plist)."""
     model_name = "Boehm_JProteomeRes2014"
     petab_problem = pypesto.petab.PetabImporter.from_yaml(
-        os.path.join(models.MODEL_DIR, model_name, model_name + '.yaml')
+        os.path.join(models.MODELS_DIR, model_name, model_name + '.yaml')
     )
 
     # define test parameter
@@ -139,7 +139,7 @@ def test_max_sensi_order():
     correctly."""
     model_name = "Boehm_JProteomeRes2014"
     problem = pypesto.petab.PetabImporter.from_yaml(
-        os.path.join(models.MODEL_DIR, model_name, model_name + '.yaml')
+        os.path.join(models.MODELS_DIR, model_name, model_name + '.yaml')
     )
 
     # define test parameter
