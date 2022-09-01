@@ -46,6 +46,7 @@ Release notes
     * Fix flaky test `CRFunModeHistoryTest.test_trace_all` (#917)
     * Fix novel B024 ABC without abstract methods (#923)
     * Use `benchmark-models-petab` instead of manual download (#915)
+    * Improve API docs and add overview notebook (#911)
 
 
 0.2.13 (2022-05-24)
