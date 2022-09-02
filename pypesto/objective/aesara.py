@@ -17,10 +17,16 @@ from .base import ObjectiveBase, ResultDict
 try:
     import aesara
     import aesara.tensor as aet
+    from aeppl.logprob import _logprob
     from aesara.graph.op import Op
+    from aesara.tensor.random.op import RandomVariable
     from aesara.tensor.var import TensorVariable
 except ImportError:
-    aesara = aet = Op = TensorVariable = None
+    raise ImportError(
+        "Using an aeasara objective requires an installation of "
+        "the python package aesara. Please install aesara via "
+        "`pip install aesara`."
+    )
 
 
 class AesaraObjective(ObjectiveBase):
@@ -150,6 +156,69 @@ class AesaraObjective(ObjectiveBase):
         )
 
         return other
+
+
+class AesaraObjectiveRV(RandomVariable):
+    """
+    Aesara RandomVariable wrapper for an AesaraObjective.
+
+    Parameters
+    ----------
+    obj:
+        Objective function
+    coeff:
+        Multiplicative coefficient for the objective
+    x_size:
+        Dimension of input vector
+    """
+
+    def __init__(
+        self,
+        obj: AesaraObjective,
+        coeff: Optional[float] = 1.0,
+        x_size: Optional[int] = np.NAN,
+    ):
+        self._objective: AesaraObjective = obj
+        self._coeff: float = coeff
+
+        # figure out size of input for different objective types
+        if not np.isnan(x_size):
+            # from user input
+            pass
+        elif hasattr(obj, 'aet_x'):
+            # aesara objective
+            x_size = obj.aet_x.shape.value[0]
+        elif obj.pre_post_processor is not None and hasattr(
+            obj.pre_post_processor, 'x_free_indices'
+        ):
+            # extract size from preprocessor
+            x_size = obj.pre_post_processor.x_free_indices.size
+        elif obj.x_names is not None:
+            # from parameter names
+            x_size = len(obj.x_names)
+        else:
+            raise ValueError(
+                'Could not extract number of parameters from '
+                'objective. Please specify as x_size argument.'
+            )
+
+        super().__init__(
+            name='log_post',
+            ndim_supp=0,
+            ndims_params=[x_size],
+            dtype='floatX',
+        )
+
+
+@_logprob.register(AesaraObjectiveRV)
+def aesara_logprob(op, values, *inputs, **kwargs):
+    """
+    Aeppl registration of the logprob function of AesaraObjectiveRV class.
+
+    AesaraObjective already is the logprob, so this function simply applies
+    the identity function to the value variables
+    """
+    return values[0]
 
 
 class AesaraObjectiveOp(Op):
