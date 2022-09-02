@@ -117,7 +117,7 @@ class PymcSampler(Sampler):
             Inverse temperature for the log probability function.
         """
         problem = self.problem
-        log_post_fun = AesaraObjectiveRV(problem.objective, coeff)
+        log_post_rv = AesaraObjectiveRV(problem.objective, coeff)
         trace = self.trace
 
         x0 = None
@@ -143,7 +143,7 @@ class PymcSampler(Sampler):
             theta = at.as_tensor_variable(k)
 
             # define distribution with log-posterior as density
-            AesaraDist('log_post', log_post_fun, theta)
+            AesaraDist('log_post', log_post_rv, theta)
 
             # step, by default automatically determined by pymc
             step = None
