@@ -139,11 +139,10 @@ class PymcSampler(Sampler):
                 )
             ]
 
-            # convert to tensor vector
+            # convert parameters to aesara tensor variable
             theta = at.as_tensor_variable(k)
 
-            # use a DensityDist for the log-posterior
-
+            # define distribution with log-posterior as density
             AesaraDist('log_post', log_post_fun, theta)
 
             # step, by default automatically determined by pymc
