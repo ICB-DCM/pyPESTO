@@ -303,8 +303,8 @@ def process_start_indices(
         list of indices or int specifying an endpoint of the sequence of
         indices. Furthermore the following strings are possible:
             * 'all', this is the default, using all start indices.
-            * 'all_clustered', this includes the best  start and all that are
-            in a cluster of size > 1.
+            * 'all_clustered', this includes the best start and all clusters
+            with the size > 1.
             * 'first_cluster', includes all starts that belong to the first
             cluster.
     result:
