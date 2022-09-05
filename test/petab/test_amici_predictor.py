@@ -364,7 +364,7 @@ def test_petab_prediction():
     # import PEtab problem
     petab_problem.model_name = f'{model_name}_petab'
     importer = pypesto.petab.PetabImporter(petab_problem)
-    # create prediction via PAteb
+    # create prediction via PEtab
     predictor = importer.create_predictor()
 
     # ===== run test for prediction ===========================================

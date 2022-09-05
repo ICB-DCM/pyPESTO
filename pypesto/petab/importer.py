@@ -5,6 +5,7 @@ import os
 import shutil
 import sys
 import tempfile
+from dataclasses import dataclass
 from typing import (
     Any,
     Callable,
@@ -215,7 +216,7 @@ class PetabImporter(AmiciObjectBuilder):
             )
             self.compile_model(**kwargs)
         else:
-            logger.info(
+            logger.debug(
                 f"Using existing amici model in folder "
                 f"{self.output_folder}."
             )
@@ -357,6 +358,7 @@ class PetabImporter(AmiciObjectBuilder):
             simulation_conditions=simulation_conditions,
             scaled_parameters=True,
             amici_model=model,
+            fill_fixed_parameters=False,
         )
 
         par_ids = self.petab_problem.x_ids
@@ -679,9 +681,15 @@ class PetabImporter(AmiciObjectBuilder):
             self.petab_problem.measurement_df.
         """
         # create rdata-like dicts from the prediction result
-        rdatas = []
-        for condition in prediction.conditions:
-            rdatas.append({'t': condition.timepoints, 'y': condition.output})
+        @dataclass
+        class FakeRData:
+            ts: np.ndarray
+            y: np.ndarray
+
+        rdatas = [
+            FakeRData(ts=condition.timepoints, y=condition.output)
+            for condition in prediction.conditions
+        ]
 
         # add an AMICI model, if possible
         model = None

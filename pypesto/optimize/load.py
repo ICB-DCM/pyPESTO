@@ -236,17 +236,21 @@ def optimization_result_from_history(
     """
     result = Result()
     with h5py.File(filename, 'r') as f:
-        for id_name in f[HISTORY].keys():
-            history = Hdf5History(id=id_name, file=filename)
-            history.recover_options(filename)
-            optimizer_history = OptimizerHistory(
-                history=history,
-                x0=f[f'{HISTORY}/{id_name}/{TRACE}/0/{X}'][()],
-                lb=problem.lb,
-                ub=problem.ub,
-                generate_from_history=True,
-            )
-            optimizer_result = OptimizerResult(id=id_name)
-            fill_result_from_history(optimizer_result, optimizer_history)
-            result.optimize_result.append(optimizer_result)
+        ids = list(f[HISTORY].keys())
+        x0s = [f[f'{HISTORY}/{id}/{TRACE}/0/{X}'][()] for id in ids]
+
+    for id, x0 in zip(ids, x0s):
+        history = Hdf5History(id=id, file=filename)
+        history.recover_options(filename)
+        optimizer_history = OptimizerHistory(
+            history=history,
+            x0=x0,
+            lb=problem.lb,
+            ub=problem.ub,
+            generate_from_history=True,
+        )
+        optimizer_result = OptimizerResult(id=id)
+        fill_result_from_history(optimizer_result, optimizer_history)
+        result.optimize_result.append(optimizer_result)
+
     return result
