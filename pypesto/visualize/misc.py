@@ -338,7 +338,7 @@ def process_start_indices(
     if isinstance(start_indices, Number):
         start_indices = range(int(start_indices))
 
-    # check whether index set is not too big
+    # filter out the indices that exceed the range of possible start indices
     start_indices = [
         start_index
         for start_index in start_indices
