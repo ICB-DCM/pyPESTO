@@ -1,11 +1,10 @@
-"""Pymc3Sampler."""
+"""Pymc v4 Sampler."""
 import logging
-import warnings
 from typing import Union
 
 import numpy as np
 
-from ..history import NoHistory
+from ..history import MemoryHistory
 from ..problem import Problem
 from ..result import McmcPtResult
 from .sampler import Sampler
@@ -13,39 +12,57 @@ from .sampler import Sampler
 logger = logging.getLogger(__name__)
 
 try:
+    import aesara.tensor as at
     import arviz as az
-    import pymc3 as pm
-    import theano.tensor as tt
+    import pymc as pm
+
+    from ..objective.aesara import AesaraObjectiveRV
 except ImportError:
-    pm = az = tt = None
+    raise ImportError(
+        "Using the pymc sampler requires an installation of the "
+        "python packages aesara, arviz and pymc. Please install "
+        "these packages via `pip install aesara arviz pymc`."
+    )
 
-try:
-    from .theano import TheanoLogProbability
-except (AttributeError, ImportError):
-    TheanoLogProbability = None
+
+class AesaraDist(pm.NoDistribution):
+    """PyMC distribution wrapper for AesaraObjectiveRVs."""
+
+    def __new__(
+        cls,
+        name: str,
+        rv_op: AesaraObjectiveRV,
+        parameters: at.TensorVariable,
+    ):
+        """
+        Instantiate a PyMC distribution from an AesaraObjectiveRV.
+
+        Parameters
+        ----------
+        name:
+            Name of the distribution
+        rv_op:
+            Aesara objective random variable
+        parameters:
+            Input parameters to the aesara objective
+        """
+        cls.rv_op = rv_op
+        return super().__new__(cls, name, [parameters], observed=0)
 
 
-class Pymc3Sampler(Sampler):
-    """Wrapper around Pymc3 samplers.
+class PymcSampler(Sampler):
+    """Wrapper around Pymc v4 samplers.
 
     Parameters
     ----------
     step_function:
-        A pymc3 step function, e.g. NUTS, Slice. If not specified, pymc3
+        A pymc step function, e.g. NUTS, Slice. If not specified, pymc
         determines one automatically (preferable).
     **kwargs:
-        Options are directly passed on to `pymc3.sample`.
+        Options are directly passed on to `pymc.sample`.
     """
 
     def __init__(self, step_function=None, **kwargs):
-        with warnings.catch_warnings():
-            warnings.simplefilter("always", category=DeprecationWarning)
-            warnings.warn(
-                'PyMC3 support is deprecated due to compatibility issues. '
-                'We intend to support PyMC4 when it becomes available.',
-                DeprecationWarning,
-                2,
-            )
         super().__init__(kwargs)
         self.step_function = step_function
         self.problem: Union[Problem, None] = None
@@ -86,9 +103,9 @@ class Pymc3Sampler(Sampler):
         self.trace = None
         self.data = None
 
-        self.problem.objective.history = NoHistory()
+        self.problem.objective.history = MemoryHistory()
 
-    def sample(self, n_samples: int, beta: float = 1.0):
+    def sample(self, n_samples: int, coeff: float = 1.0):
         """
         Sample the problem.
 
@@ -96,11 +113,11 @@ class Pymc3Sampler(Sampler):
         ----------
         n_samples:
             Number of samples to be computed.
-        beta:
+        coeff:
             Inverse temperature for the log probability function.
         """
         problem = self.problem
-        log_post_fun = TheanoLogProbability(problem, beta)
+        log_post_rv = AesaraObjectiveRV(problem.objective, coeff)
         trace = self.trace
 
         x0 = None
@@ -111,7 +128,7 @@ class Pymc3Sampler(Sampler):
             }
 
         # create model context
-        with pm.Model() as model:
+        with pm.Model():
             # uniform bounds
             k = [
                 pm.Uniform(x_name, lower=lb, upper=ub)
@@ -122,23 +139,19 @@ class Pymc3Sampler(Sampler):
                 )
             ]
 
-            # convert to tensor vector
-            theta = tt.as_tensor_variable(k)
+            # convert parameters to aesara tensor variable
+            theta = at.as_tensor_variable(k)
 
-            # use a DensityDist for the log-posterior
-            pm.DensityDist(
-                'log_post',
-                logp=lambda v: log_post_fun(v),
-                observed={'v': theta},
-            )
+            # define distribution with log-posterior as density
+            AesaraDist('log_post', log_post_rv, theta)
 
-            # step, by default automatically determined by pymc3
+            # step, by default automatically determined by pymc
             step = None
             if self.step_function:
                 step = self.step_function()
 
             # perform the actual sampling
-            trace = pm.sample(
+            data = pm.sample(
                 draws=int(n_samples),
                 trace=trace,
                 start=x0,
@@ -146,14 +159,10 @@ class Pymc3Sampler(Sampler):
                 **self.options,
             )
 
-            # convert trace to inference data object
-            data = az.from_pymc3(trace=trace, model=model)
-
-        self.trace = trace
         self.data = data
 
     def get_samples(self) -> McmcPtResult:
-        """Convert result from Pymc3 to McmcPtResult."""
+        """Convert result from pymc to McmcPtResult."""
         # parameter values
         trace_x = np.asarray(self.data.posterior.to_array()).transpose(
             (1, 2, 0)
