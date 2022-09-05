@@ -18,6 +18,7 @@ from petab_select import (
     Model,
 )
 
+import pypesto.engine
 import pypesto.select
 import pypesto.visualize.select
 from pypesto.select import model_problem
@@ -25,8 +26,10 @@ from pypesto.select.misc import correct_x_guesses
 
 # Options sent to `pypesto.optimize.optimize.minimize`, to reduce run time.
 minimize_options = {
+    'engine': pypesto.engine.MultiProcessEngine(),
     'n_starts': 10,
     'filename': None,
+    'progress_bar': False,
 }
 # Tolerances for the differences between expected and test values.
 tolerances = {
@@ -132,7 +135,7 @@ def test_problem_select(pypesto_select_problem):
 
     best_model = None
     for expected_result in expected_results:
-        _ = pypesto_select_problem.select(
+        best_model, _, _ = pypesto_select_problem.select(
             criterion=criterion,
             minimize_options=minimize_options,
             predecessor_model=best_model,
@@ -142,11 +145,6 @@ def test_problem_select(pypesto_select_problem):
         test_candidates_model_subspace_ids = [
             model.model_subspace_id for model in candidate_space.models
         ]
-        best_model = petab_select.ui.best(
-            problem=pypesto_select_problem.petab_select_problem,
-            models=candidate_space.models,
-            criterion=criterion,
-        )
 
         test_best_model_subspace_id = best_model.model_subspace_id
         test_best_model_aic = best_model.get_criterion(Criterion.AIC)

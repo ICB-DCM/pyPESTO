@@ -340,7 +340,7 @@ class NoHistory(HistoryBase):
         raise NotImplementedError()
 
 
-class CountHistoryBase(HistoryBase, ABC):
+class CountHistoryBase(HistoryBase, ABC):  # noqa: B024
     """Abstract class tracking counts of function evaluations.
 
     Needs a separate implementation of trace.
