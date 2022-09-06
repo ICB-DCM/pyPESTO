@@ -28,3 +28,5 @@ per-file-ignores =
     pypesto/problem.py:D400,D205,D107
     pypesto/util.py:D400,D205,D107
     pypesto/C.py:D400,D205,D107
+    # Module level import not at top of file
+    test/julia/test_pyjulia.py:E402
