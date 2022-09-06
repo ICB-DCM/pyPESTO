@@ -6,7 +6,6 @@ API reference
 .. automodule:: pypesto.history
 .. automodule:: pypesto.logging
 .. automodule:: pypesto.objective
-.. automodule:: pypesto.objective.amici
 .. automodule:: pypesto.objective.julia
 .. automodule:: pypesto.optimize
 .. automodule:: pypesto.petab
