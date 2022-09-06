@@ -12,13 +12,16 @@ except ImportError:
 from ..function import Objective
 
 
-def as_array(fun):
+def _as_array(input):
     """Convert output to numpy array."""
+    if callable(input):
 
-    def wrapper(*args, **kwargs):
-        return np.asarray(fun(*args, **kwargs))
+        def wrapper(*args, **kwargs):
+            return np.asarray(input(*args, **kwargs))
 
-    return wrapper
+        return wrapper
+
+    return np.asarray(input)
 
 
 def _read_source(module_name: str, source_file: str) -> None:
@@ -71,22 +74,25 @@ class JuliaObjective(Objective):
         fun, grad, hess, res, sres = self._get_callables()
         super().__init__(fun=fun, grad=grad, hess=hess, res=res, sres=sres)
 
-    def get(self, name: str) -> Union[Callable, None]:
+    def get(self, name: str, as_array: bool = False) -> Union[Callable, None]:
         """Get variable from Julia module.
 
         Use this function to access any variable from the Julia module.
         """
         if name is not None:
-            return getattr(getattr(Main, self.module), name, None)
+            ret = getattr(getattr(Main, self.module), name, None)
+            if as_array:
+                ret = _as_array(ret)
+            return ret
         return None
 
     def _get_callables(self) -> tuple:
         """Get all callables."""
         fun = self.get(self._fun)
-        grad = as_array(self.get(self._grad))
-        hess = as_array(self.get(self._hess))
-        res = as_array(self.get(self._res))
-        sres = as_array(self.get(self._sres))
+        grad = self.get(self._grad, as_array=True)
+        hess = self.get(self._hess, as_array=True)
+        res = self.get(self._res, as_array=True)
+        sres = self.get(self._sres, as_array=True)
         return fun, grad, hess, res, sres
 
     def __getstate__(self):
