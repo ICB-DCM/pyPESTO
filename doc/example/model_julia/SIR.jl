@@ -1,4 +1,4 @@
-# Discrete Gillespie SIR disease dynamics model
+# ODE model of SIR disease dynamics
 
 module SIR
 
