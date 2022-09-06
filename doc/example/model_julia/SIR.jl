@@ -4,7 +4,7 @@ module SIR
 
 # Install dependencies
 import Pkg
-Pkg.add(["Catalyst", "OrdinaryDiffEq", "Zygote", "SciMLSensitivity", "Plots"])
+Pkg.add(["Catalyst", "OrdinaryDiffEq", "Zygote", "SciMLSensitivity"])
 
 # Define reaction network
 using Catalyst: @reaction_network
