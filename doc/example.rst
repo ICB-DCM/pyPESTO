@@ -46,6 +46,7 @@ Algorithms and features
    example/store.ipynb
    example/hdf5_storage.ipynb
    example/model_selection.ipynb
+   example/julia.ipynb
 
 ..
    temporarily disabled until pymc4 support is there https://github.com/ICB-DCM/pyPESTO/pull/818

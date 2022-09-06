@@ -34,7 +34,8 @@ def test_pyjulia_pipeline():
     assert (obj.get_grad(x) == obj.get_grad(x)).all()  # noqa: S101
 
     # gradient check
-    assert obj.check_gradients_match_finite_differences()  # noqa: S101
+    x_true = obj.get("p_true")
+    assert obj.check_gradients_match_finite_differences(x_true)  # noqa: S101
 
     # define problem
     lb, ub = [-5.0, -3.0], [-3.0, -1.0]
@@ -47,7 +48,6 @@ def test_pyjulia_pipeline():
     result2 = optimize.minimize(problem, engine=MultiProcessEngine())
 
     # check results match
-    x_true = obj.get("p_true")
     assert np.allclose(  # noqa: S101
         result.optimize_result[0].x, result2.optimize_result[0].x
     )

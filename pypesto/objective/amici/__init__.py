@@ -1,6 +1,6 @@
 """
-AMICI wrapper
-=============
+AMICI objective
+===============
 """
 
 from .amici import AmiciObjectBuilder, AmiciObjective
