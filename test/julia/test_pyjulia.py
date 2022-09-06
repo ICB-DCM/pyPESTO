@@ -27,11 +27,6 @@ def test_pyjulia_pipeline():
     assert obj.get_fval(x) == obj.get_fval(x)  # noqa: S101
     assert (obj.get_grad(x) == obj.get_grad(x)).all()  # noqa: S101
 
-    # gradient check
-    assert obj.check_gradients_match_finite_differences(  # noqa: S101
-        x=np.array([-3.8, -1.8])
-    )
-
     # define problem
     lb, ub = [-5.0, -3.0], [-3.0, -1.0]
     problem = Problem(obj, lb=lb, ub=ub)
