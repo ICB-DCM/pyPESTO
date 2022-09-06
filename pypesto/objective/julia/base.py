@@ -40,10 +40,10 @@ class JuliaObjective(Objective):
         self,
         module: str,
         source_file: str = None,
-        fun: str = "fun",
-        grad: str = "grad",
-        hess: str = "hess",
-        res: str = "res",
+        fun: str = None,
+        grad: str = None,
+        hess: str = None,
+        res: str = None,
         sres: str = None,
     ):
         # checks
