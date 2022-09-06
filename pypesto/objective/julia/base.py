@@ -37,7 +37,62 @@ def _read_source(module_name: str, source_file: str) -> None:
 
 
 class JuliaObjective(Objective):
-    """Wrapper around an objective defined in Julia."""
+    """Wrapper around an objective defined in Julia.
+
+    This class provides objective function wrappers around Julia objects.
+    It expects the corresponding Julia objects to be defined in a
+    `source_file` within a `module`.
+
+    We use the PyJulia package to access Julia from inside Python.
+    It can be installed via `pip install pypesto[julia]`, however requires
+    additional Julia dependencies to be installed via:
+
+    >>> python -c "import julia; julia.install()"
+
+    For further information, see
+    https://pyjulia.readthedocs.io/en/latest/installation.html.
+
+    There are some known problems, e.g. with statically linked Python
+    interpreters, see
+    https://pyjulia.readthedocs.io/en/latest/troubleshooting.html
+    for details.
+    Possible solutions are to pass ``compiled_modules=False`` to the Julia
+    constructor early in your code:
+
+    >>> from julia.api import Julia
+    >>> jl = Julia(compiled_modules=False)
+
+    This however slows down loading and using Julia packages, especially for
+    large ones.
+    An alternative is to use the ``python-jl`` command shipped with PyJulia:
+
+    >>> python-jl MY_SCRIPT.py
+
+    This basically launches a Python interpreter inside Julia.
+    When using Jupyter notebooks, this wrapper can be installed as an
+    additional kernel via:
+
+    >>> python -m ipykernel install --name python-jl [--prefix=/path/to/python/env]
+
+    And changing the first argument in
+    ``/path/to/python/env/share/jupyter/kernels/python-jl/kernel.json``
+    to ``python-jl``.
+
+    Model simulations are eagerly converted to Python objects
+    (specifically, `numpy.ndarray` and `pandas.DataFrame`).
+    This can introduce overhead and could be avoided by an alternative
+    lazy implementation.
+
+    Parameters
+    ----------
+    module:
+        Julia module name.
+    source_file:
+        Julia source file name. Defaults to `{module}.jl`.
+    fun, grad, hess, res, sres:
+        Names of callables within the Julia code of the corresponding
+        objective functions and derivatives.
+    """
 
     def __init__(
         self,

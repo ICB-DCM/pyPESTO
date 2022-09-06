@@ -101,9 +101,12 @@ jobs:
         version: 1.7
 
     - name: Cache
-      uses: actions/cache@v1
+      uses: actions/cache@v3
       with:
-        path: ~/.cache
+        path: |
+          ~/.cache
+          ~/.julia/artifacts
+          ~/.julia/packages
         key: ${{ runner.os }}-${{ matrix.python-version }}-ci-julia
 
     - name: Install dependencies
