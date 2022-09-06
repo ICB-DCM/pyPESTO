@@ -107,7 +107,7 @@ jobs:
         key: ${{ runner.os }}-${{ matrix.python-version }}-ci-julia
 
     - name: Run tests
-      timeout-minutes: 10
+      timeout-minutes: 20
       run: tox -e julia
 
     - name: Coverage
