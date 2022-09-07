@@ -2,7 +2,7 @@ from typing import Dict, List, Sequence, Tuple, Union
 
 import numpy as np
 
-from ..C import (
+from ...C import (
     FVAL,
     GRAD,
     HESS,

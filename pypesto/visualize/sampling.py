@@ -1203,7 +1203,7 @@ def sampling_1d_marginals(
         elif plot_type == 'hist':
             # fixes usage of sns distplot which throws a future warning
             sns.histplot(
-                x=params_fval[par_id], ax=par_ax[par_id], stat='probability'
+                x=params_fval[par_id], ax=par_ax[par_id], stat='density'
             )
             sns.rugplot(x=params_fval[par_id], ax=par_ax[par_id])
         elif plot_type == 'both':
@@ -1211,7 +1211,7 @@ def sampling_1d_marginals(
                 x=params_fval[par_id],
                 kde=True,
                 ax=par_ax[par_id],
-                stat='probability',
+                stat='density',
             )
             sns.rugplot(x=params_fval[par_id], ax=par_ax[par_id])
 

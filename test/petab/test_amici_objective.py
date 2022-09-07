@@ -14,7 +14,7 @@ import pypesto
 import pypesto.optimize as optimize
 import pypesto.petab
 from pypesto import C
-from pypesto.objective.amici_util import add_sim_grad_to_opt_grad
+from pypesto.objective.amici.amici_util import add_sim_grad_to_opt_grad
 
 ATOL = 1e-1
 RTOL = 1e-0
