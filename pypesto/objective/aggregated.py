@@ -111,7 +111,7 @@ class AggregatedObjective(ObjectiveBase):
 
 def aggregate_results(rvals: Sequence[ResultDict]) -> ResultDict:
     """
-    Aggregrate the results from the provided ResultDicts into a single one.
+    Aggregate the results from the provided ResultDicts into a single one.
 
     Parameters
     ----------

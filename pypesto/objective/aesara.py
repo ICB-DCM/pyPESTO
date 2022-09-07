@@ -3,7 +3,7 @@ Aesara models interface.
 
 Adds an interface for the construction of loss functions
 incorporating aesara models. This permits computation of derivatives using a
-combination of objective based methods and aeara based backpropagation.
+combination of objective based methods and aesara based backpropagation.
 """
 
 import copy
@@ -43,7 +43,7 @@ class AesaraObjective(ObjectiveBase):
     objective:
         The `pypesto.ObjectiveBase` to wrap.
     aet_x:
-        Tensor variables that that define the variables of `aet_fun`
+        Tensor variables that define the variables of `aet_fun`
     aet_fun:
         Aesara function that maps `aet_x` to the variables of `objective`
     coeff:
@@ -228,7 +228,7 @@ class AesaraObjectiveOp(Op):
     Parameters
     ----------
     obj:
-        Base aseara objective
+        Base aesara objective
     coeff:
         Multiplicative coefficient for the objective function value
     """
@@ -248,7 +248,7 @@ class AesaraObjectiveOp(Op):
 
     def perform(self, node, inputs, outputs, params=None):  # noqa
         # note that we use precomputed values from the outer
-        # AesaraObjective.call_unprocessed here, which which means we can
+        # AesaraObjective.call_unprocessed here, which means we can
         # ignore inputs here
         log_prob = self._coeff * self._objective.inner_ret[FVAL]
         outputs[0][0] = np.array(log_prob)
@@ -275,7 +275,7 @@ class AesaraObjectiveGradOp(Op):
     Parameters
     ----------
     obj:
-        Base aseara objective
+        Base aesara objective
     coeff:
         Multiplicative coefficient for the objective function value
     """
@@ -321,7 +321,7 @@ class AesaraObjectiveHessOp(Op):
     Parameters
     ----------
     obj:
-        Base aseara objective
+        Base aesara objective
     coeff:
         Multiplicative coefficient for the objective function value
     """
@@ -335,7 +335,7 @@ class AesaraObjectiveHessOp(Op):
 
     def perform(self, node, inputs, outputs, params=None):  # noqa
         # note that we use precomputed values from the outer
-        # AesaraObjective.call_unprocessed here, which which means we can
+        # AesaraObjective.call_unprocessed here, which means we can
         # ignore inputs here
         log_prob_hess = self._coeff * self._objective.inner_ret[HESS]
         outputs[0][0] = log_prob_hess
