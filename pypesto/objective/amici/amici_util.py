@@ -5,7 +5,7 @@ from typing import Dict, Sequence, Tuple, Union
 
 import numpy as np
 
-from ..C import (
+from ...C import (
     FVAL,
     GRAD,
     HESS,
@@ -16,7 +16,7 @@ from ..C import (
     SRES,
     ModeType,
 )
-from ..logging import log_level_active
+from ...logging import log_level_active
 
 try:
     import amici

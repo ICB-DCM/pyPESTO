@@ -95,7 +95,7 @@ def waterfall(
     )
 
     # plotting routine needs the maximum number of multistarts
-    max_len_fvals = np.array([0])
+    max_len_fvals = 0
 
     # loop over results
     for j, fvals in enumerate(fvals_all):
