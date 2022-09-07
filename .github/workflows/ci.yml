@@ -105,8 +105,6 @@ jobs:
       with:
         path: |
           ~/.cache
-          ~/.julia/artifacts
-          ~/.julia/packages
         key: ${{ runner.os }}-${{ matrix.python-version }}-ci-julia
 
     - name: Install dependencies
