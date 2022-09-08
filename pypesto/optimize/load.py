@@ -3,6 +3,7 @@
 import logging
 import os
 from pathlib import Path
+from typing import Union
 
 import h5py
 import numpy as np
@@ -114,7 +115,7 @@ def fill_result_from_history(
 
 
 def read_result_from_file(
-    problem: Problem,
+    problem: Union[Problem, None],
     history_options: HistoryOptions,
     identifier: str,
 ) -> OptimizerResult:
@@ -124,6 +125,7 @@ def read_result_from_file(
     ----------
     problem:
         The problem to find optimal parameters for.
+        If ``None``, bounds will be set to [-inf, inf].
     identifier:
         Multistart id.
     history_options:
@@ -150,14 +152,21 @@ def read_result_from_file(
     else:
         raise HistoryTypeError(suffix)
 
+    x0 = history.get_x_trace(0)
+
+    if problem:
+        lb, ub = problem.lb, problem.ub
+    else:
+        lb = np.full_like(x0, fill_value=-np.inf)
+        ub = np.full_like(x0, fill_value=np.inf)
+
     opt_hist = OptimizerHistory(
         history=history,
-        x0=history.get_x_trace(0),
-        lb=problem.lb,
-        ub=problem.ub,
+        x0=x0,
+        lb=lb,
+        ub=ub,
         generate_from_history=True,
     )
-
     result = OptimizerResult(
         id=identifier,
         message='loaded from file',
@@ -169,8 +178,8 @@ def read_result_from_file(
         result=result,
         optimizer_history=opt_hist,
     )
-    result.update_to_full(problem)
-
+    if problem:
+        result.update_to_full(problem)
     return result
 
 
