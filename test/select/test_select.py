@@ -135,7 +135,7 @@ def test_problem_select(pypesto_select_problem):
 
     best_model = None
     for expected_result in expected_results:
-        best_model, _, _ = pypesto_select_problem.select(
+        best_model, _ = pypesto_select_problem.select(
             criterion=criterion,
             minimize_options=minimize_options,
             predecessor_model=best_model,
@@ -404,7 +404,7 @@ def test_vis(pypesto_select_problem):
     )
     # import matplotlib.pyplot as plt
     # plt.savefig('output/selected.png')
-    pypesto.visualize.select.plot_history_digraph(
+    pypesto.visualize.select.plot_calibrated_models_digraph(
         problem=pypesto_select_problem,
         criterion=criterion,
         labels=labels,
