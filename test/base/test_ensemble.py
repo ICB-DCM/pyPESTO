@@ -175,7 +175,6 @@ def get_ensemble_prediction(
         problem=problem,
         optimizer=optimizer,
         n_starts=2,
-        filename=None,
         progress_bar=False,
     )
 
