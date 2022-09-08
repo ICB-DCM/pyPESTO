@@ -2,6 +2,9 @@
 
 module LR
 
+using Pkg
+Pkg.add("ForwardDiff")
+
 using Random: randn, MersenneTwister
 using ForwardDiff: gradient
 
