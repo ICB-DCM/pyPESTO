@@ -289,7 +289,7 @@ def rgba2rgb(fg: RGB_RGBA, bg: RGB_RGBA = None) -> RGB:
 
 def process_start_indices(
     result: Result,
-    start_indices: Union[str, int, Iterable[int]] = ALL,
+    start_indices: Union[str, int, Iterable[int]] = None,
 ) -> np.ndarray:
     """
     Process the start_indices.
@@ -310,6 +310,8 @@ def process_start_indices(
     result:
         Result to determine maximum allowed length and/or clusters.
     """
+    if start_indices is None:
+        start_indices = ALL
     if isinstance(start_indices, str):
         if start_indices == ALL:
             return np.asarray(range(len(result.optimize_result)))
