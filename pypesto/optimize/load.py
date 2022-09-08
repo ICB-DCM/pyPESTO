@@ -125,7 +125,8 @@ def read_result_from_file(
     ----------
     problem:
         The problem to find optimal parameters for.
-        If ``None``, bounds will be set to [-inf, inf].
+        If ``None``, bounds will be assumed to be [-inf, inf] for checking for
+        admissible points.
     identifier:
         Multistart id.
     history_options:
