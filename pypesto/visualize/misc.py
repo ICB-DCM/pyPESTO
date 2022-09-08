@@ -317,8 +317,11 @@ def process_start_indices(
             clust_ind, clust_size = assign_clusters(
                 delete_nan_inf(result.optimize_result.fval)[1]
             )
-            # get all clusters that have size > 2:
+            # get all clusters that have size >= 2 and cluster of best start:
             clust_gr2 = np.where(clust_size > 2)[0]
+            clust_gr2 = (
+                np.append(clust_gr2, 0) if 0 not in clust_gr2 else clust_gr2
+            )
             start_indices = np.concatenate(
                 [np.where(clust_ind == i_clust)[0] for i_clust in clust_gr2]
             )
