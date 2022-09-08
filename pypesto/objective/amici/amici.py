@@ -7,13 +7,13 @@ from typing import Dict, Optional, Sequence, Tuple, Union
 
 import numpy as np
 
-from ..C import FVAL, MODE_FUN, MODE_RES, RDATAS, ModeType
+from ...C import FVAL, MODE_FUN, MODE_RES, RDATAS, ModeType
+from ..base import ObjectiveBase, ResultDict
 from .amici_calculator import AmiciCalculator
 from .amici_util import (
     create_identity_parameter_mapping,
     map_par_opt_to_par_sim,
 )
-from .base import ObjectiveBase, ResultDict
 
 try:
     import amici

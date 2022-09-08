@@ -181,7 +181,7 @@ class FDDelta:
         # shape (n_delta, n_par, ...)
         nablas = np.array(nablas)
 
-        # The stability vector is the the absolute difference of Jacobian
+        # The stability vector is the absolute difference of Jacobian
         #  entries towards smaller and larger deltas, thus indicating the
         #  change in the approximation when changing delta.
         # This is done separately for each parameter. Then, for each the delta

@@ -14,7 +14,7 @@ import pypesto
 import pypesto.optimize as optimize
 import pypesto.petab
 from pypesto import C
-from pypesto.objective.amici_util import add_sim_grad_to_opt_grad
+from pypesto.objective.amici.amici_util import add_sim_grad_to_opt_grad
 
 ATOL = 1e-1
 RTOL = 1e-0
@@ -67,7 +67,6 @@ def test_error_leastsquares_with_ssigma():
             problem=problem,
             optimizer=optimizer,
             n_starts=1,
-            filename=None,
             options=optimize.OptimizeOptions(allow_failed_starts=False),
             progress_bar=False,
         )
@@ -104,7 +103,6 @@ def test_preeq_guesses():
         optimizer=optimizer,
         n_starts=1,
         startpoint_method=startpoints,
-        filename=None,
         progress_bar=False,
     )
 

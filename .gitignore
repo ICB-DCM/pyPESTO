@@ -95,7 +95,6 @@ data/.spyproject
 data/processed
 examples/*.err
 examples/*.out
-doc/*.log
 *.kdev*
 .pytest_cache
 dask-worker-space
@@ -112,4 +111,4 @@ test/amici_models/*
 *.dat
 /BioNetGen-*.*.*
 /bionetgen.tar
-/report.log
+**.log

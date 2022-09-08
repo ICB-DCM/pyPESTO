@@ -36,7 +36,6 @@ def _test_basic(engine):
         n_starts=5,
         engine=engine,
         optimizer=optimizer,
-        filename=None,
         progress_bar=False,
     )
     assert len(result.optimize_result) == 5
@@ -65,7 +64,6 @@ def _test_petab(engine):
         n_starts=3,
         engine=engine,
         optimizer=optimizer,
-        filename=None,
         progress_bar=False,
     )
     assert len(result.optimize_result) == 3
