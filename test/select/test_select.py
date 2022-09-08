@@ -190,13 +190,22 @@ def test_problem_select_to_completion(pypesto_select_problem):
         candidate_space=candidate_space,
     )
 
-    expected_history_subspace_ids = {'M1_0', 'M1_1', 'M1_4', 'M1_5', 'M1_7'}
-    test_history_subspace_ids = {
+    expected_calibrated_models_subspace_ids = {
+        'M1_0',
+        'M1_1',
+        'M1_4',
+        'M1_5',
+        'M1_7',
+    }
+    test_calibrated_models_subspace_ids = {
         model.model_subspace_id
-        for model in pypesto_select_problem.history.values()
+        for model in pypesto_select_problem.calibrated_models.values()
     }
     # Expected models were calibrated during the search.
-    assert test_history_subspace_ids == expected_history_subspace_ids
+    assert (
+        test_calibrated_models_subspace_ids
+        == expected_calibrated_models_subspace_ids
+    )
 
     expected_best_model_subspace_ids = [
         # The first iteration is from a virtual model, which will appear
@@ -293,7 +302,7 @@ def test_problem_multistart_select(pypesto_select_problem, initial_models):
     }
     test_predecessor_model_hashes = {
         model.model_subspace_id: model.predecessor_model_hash
-        for model in pypesto_select_problem.history.values()
+        for model in pypesto_select_problem.calibrated_models.values()
     }
     # All calibrated models have the expected predecessor model.
     assert test_predecessor_model_hashes == expected_predecessor_model_hashes
@@ -321,20 +330,20 @@ def test_postprocessors(petab_select_problem):
     )
 
     # Iteration 1 # Same as first iteration of `test_problem_select` ##########
-    best_model_1, local_history_1, _ = pypesto_select_problem.select(
+    best_model_1, newly_calibrated_models_1 = pypesto_select_problem.select(
         method=Method.FORWARD,
         criterion=Criterion.AIC,
         minimize_options=minimize_options,
     )
 
-    expected_local_history_model_subspace_ids = ['M1_0']
-    test_local_history_model_subspace_ids = [
-        model.model_subspace_id for model in local_history_1.values()
+    expected_newly_calibrated_models_subspace_ids = ['M1_0']
+    test_newly_calibrated_models_subspace_ids = [
+        model.model_subspace_id for model in newly_calibrated_models_1.values()
     ]
     # The expected "forward" models were found.
     assert (
-        test_local_history_model_subspace_ids
-        == expected_local_history_model_subspace_ids
+        test_newly_calibrated_models_subspace_ids
+        == expected_newly_calibrated_models_subspace_ids
     )
 
     expected_best_model_aic = 36.97
@@ -395,7 +404,7 @@ def test_vis(pypesto_select_problem):
     )
     labels = {
         model.get_hash(): model.model_subspace_id
-        for model in pypesto_select_problem.history.values()
+        for model in pypesto_select_problem.calibrated_models.values()
     }
     pypesto.visualize.select.plot_selected_models(
         selected_models=best_models,
