@@ -52,7 +52,6 @@ if __name__ == '__main__':
         optimizer=optimizer,
         n_starts=n_starts,
         engine=MPIPoolEngine(),
-        filename=None,
         progress_bar=False,
     )
 

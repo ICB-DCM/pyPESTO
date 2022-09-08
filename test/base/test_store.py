@@ -154,7 +154,6 @@ def test_storage_trace(hdf5_file):
         optimizer=optimizer2,
         n_starts=n_starts,
         history_options=history_options_memory,
-        filename=None,
         progress_bar=False,
     )
 
@@ -211,7 +210,6 @@ def test_storage_profiling():
         problem=problem,
         optimizer=optimizer,
         n_starts=n_starts,
-        filename=None,
         progress_bar=False,
     )
     profile_original = profile.parameter_profile(
@@ -219,7 +217,6 @@ def test_storage_profiling():
         result=result_optimization,
         profile_index=[0],
         optimizer=optimizer,
-        filename=None,
         progress_bar=False,
     )
 
@@ -282,7 +279,6 @@ def test_storage_sampling():
         problem=problem,
         optimizer=optimizer,
         n_starts=n_starts,
-        filename=None,
         progress_bar=False,
     )
     x_0 = result_optimization.optimize_result[0]['x']
@@ -298,7 +294,6 @@ def test_storage_sampling():
         sampler=sampler,
         n_samples=100,
         x0=[x_0],
-        filename=None,
     )
 
     fn = 'test_file.hdf5'
@@ -348,7 +343,6 @@ def test_storage_all():
         problem=problem,
         optimizer=optimizer,
         n_starts=n_starts,
-        filename=None,
         progress_bar=False,
     )
     # Profiling
@@ -357,7 +351,6 @@ def test_storage_all():
         result=result,
         profile_index=[0],
         optimizer=optimizer,
-        filename=None,
         progress_bar=False,
     )
     # Sampling
@@ -371,7 +364,6 @@ def test_storage_all():
         sampler=sampler,
         n_samples=100,
         result=result,
-        filename=None,
     )
     # Read and write
     filename = 'test_file.hdf5'

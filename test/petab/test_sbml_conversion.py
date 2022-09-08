@@ -123,7 +123,6 @@ def parameter_estimation(objective, library, solver, fixed_pars, n_starts):
         n_starts=n_starts,
         startpoint_method=startpoints,
         options=optimize_options,
-        filename=None,
         progress_bar=False,
     )
 
