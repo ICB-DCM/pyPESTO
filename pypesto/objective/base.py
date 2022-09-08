@@ -255,7 +255,7 @@ class ObjectiveBase(ABC):
         """
         Get the configuration information of the objective function.
 
-        Return it as a dictonary.
+        Return it as a dictionary.
         """
         info = {'type': self.__class__.__name__}
         return info

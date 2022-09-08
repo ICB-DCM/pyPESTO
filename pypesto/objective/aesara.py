@@ -3,7 +3,7 @@ Aesara models interface.
 
 Adds an interface for the construction of loss functions
 incorporating aesara models. This permits computation of derivatives using a
-combination of objective based methods and aeara based backpropagation.
+combination of objective based methods and aesara based backpropagation.
 """
 
 import copy
@@ -17,10 +17,16 @@ from .base import ObjectiveBase, ResultDict
 try:
     import aesara
     import aesara.tensor as aet
+    from aeppl.logprob import _logprob
     from aesara.graph.op import Op
+    from aesara.tensor.random.op import RandomVariable
     from aesara.tensor.var import TensorVariable
 except ImportError:
-    aesara = aet = Op = TensorVariable = None
+    raise ImportError(
+        "Using an aeasara objective requires an installation of "
+        "the python package aesara. Please install aesara via "
+        "`pip install aesara`."
+    )
 
 
 class AesaraObjective(ObjectiveBase):
@@ -37,7 +43,7 @@ class AesaraObjective(ObjectiveBase):
     objective:
         The `pypesto.ObjectiveBase` to wrap.
     aet_x:
-        Tensor variables that that define the variables of `aet_fun`
+        Tensor variables that define the variables of `aet_fun`
     aet_fun:
         Aesara function that maps `aet_x` to the variables of `objective`
     coeff:
@@ -152,6 +158,69 @@ class AesaraObjective(ObjectiveBase):
         return other
 
 
+class AesaraObjectiveRV(RandomVariable):
+    """
+    Aesara RandomVariable wrapper for an AesaraObjective.
+
+    Parameters
+    ----------
+    obj:
+        Objective function
+    coeff:
+        Multiplicative coefficient for the objective
+    x_size:
+        Dimension of input vector
+    """
+
+    def __init__(
+        self,
+        obj: AesaraObjective,
+        coeff: Optional[float] = 1.0,
+        x_size: Optional[int] = np.NAN,
+    ):
+        self._objective: AesaraObjective = obj
+        self._coeff: float = coeff
+
+        # figure out size of input for different objective types
+        if not np.isnan(x_size):
+            # from user input
+            pass
+        elif hasattr(obj, 'aet_x'):
+            # aesara objective
+            x_size = obj.aet_x.shape.value[0]
+        elif obj.pre_post_processor is not None and hasattr(
+            obj.pre_post_processor, 'x_free_indices'
+        ):
+            # extract size from preprocessor
+            x_size = obj.pre_post_processor.x_free_indices.size
+        elif obj.x_names is not None:
+            # from parameter names
+            x_size = len(obj.x_names)
+        else:
+            raise ValueError(
+                'Could not extract number of parameters from '
+                'objective. Please specify as x_size argument.'
+            )
+
+        super().__init__(
+            name='log_post',
+            ndim_supp=0,
+            ndims_params=[x_size],
+            dtype='floatX',
+        )
+
+
+@_logprob.register(AesaraObjectiveRV)
+def aesara_logprob(op, values, *inputs, **kwargs):
+    """
+    Aeppl registration of the logprob function of AesaraObjectiveRV class.
+
+    AesaraObjective already is the logprob, so this function simply applies
+    the identity function to the value variables
+    """
+    return values[0]
+
+
 class AesaraObjectiveOp(Op):
     """
     Aesara wrapper around a (non-normalized) log-probability function.
@@ -159,7 +228,7 @@ class AesaraObjectiveOp(Op):
     Parameters
     ----------
     obj:
-        Base aseara objective
+        Base aesara objective
     coeff:
         Multiplicative coefficient for the objective function value
     """
@@ -179,7 +248,7 @@ class AesaraObjectiveOp(Op):
 
     def perform(self, node, inputs, outputs, params=None):  # noqa
         # note that we use precomputed values from the outer
-        # AesaraObjective.call_unprocessed here, which which means we can
+        # AesaraObjective.call_unprocessed here, which means we can
         # ignore inputs here
         log_prob = self._coeff * self._objective.inner_ret[FVAL]
         outputs[0][0] = np.array(log_prob)
@@ -206,7 +275,7 @@ class AesaraObjectiveGradOp(Op):
     Parameters
     ----------
     obj:
-        Base aseara objective
+        Base aesara objective
     coeff:
         Multiplicative coefficient for the objective function value
     """
@@ -252,7 +321,7 @@ class AesaraObjectiveHessOp(Op):
     Parameters
     ----------
     obj:
-        Base aseara objective
+        Base aesara objective
     coeff:
         Multiplicative coefficient for the objective function value
     """
@@ -266,7 +335,7 @@ class AesaraObjectiveHessOp(Op):
 
     def perform(self, node, inputs, outputs, params=None):  # noqa
         # note that we use precomputed values from the outer
-        # AesaraObjective.call_unprocessed here, which which means we can
+        # AesaraObjective.call_unprocessed here, which means we can
         # ignore inputs here
         log_prob_hess = self._coeff * self._objective.inner_ret[HESS]
         outputs[0][0] = log_prob_hess

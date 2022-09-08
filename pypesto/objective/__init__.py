@@ -4,8 +4,7 @@ Objective
 """
 
 from .aggregated import AggregatedObjective
-from .amici import AmiciObjectBuilder, AmiciObjective
-from .amici_calculator import AmiciCalculator
+from .amici import AmiciCalculator, AmiciObjectBuilder, AmiciObjective
 from .base import ObjectiveBase
 from .finite_difference import FD, FDDelta
 from .function import Objective
