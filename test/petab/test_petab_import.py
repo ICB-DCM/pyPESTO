@@ -76,7 +76,6 @@ class PetabImportTest(unittest.TestCase):
                 optimizer=optimizer,
                 n_starts=2,
                 startpoint_method=startpoints,
-                filename=None,
                 progress_bar=False,
             )
 

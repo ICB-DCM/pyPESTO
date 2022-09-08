@@ -91,7 +91,6 @@ def sample_petab_problem():
         n_samples=1000,
         sampler=sampler,
         x0=np.array([3, -4]),
-        filename=None,
     )
     return result
 
@@ -167,7 +166,6 @@ def create_optimization_history():
         startpoint_method=pypesto.startpoint.uniform,
         options=optimize_options,
         history_options=history_options,
-        filename=None,
         progress_bar=False,
     )
 
@@ -448,7 +446,6 @@ def test_parameters_hist():
         optimizer=optimizer,
         n_starts=10,
         startpoint_method=pypesto.startpoint.uniform,
-        filename=None,
         progress_bar=False,
     )
 
@@ -759,7 +756,6 @@ def test_optimization_stats():
         optimizer=optimizer,
         n_starts=10,
         startpoint_method=pypesto.startpoint.uniform,
-        filename=None,
         progress_bar=False,
     )
 
@@ -768,7 +764,6 @@ def test_optimization_stats():
         optimizer=optimizer,
         n_starts=10,
         startpoint_method=pypesto.startpoint.uniform,
-        filename=None,
         progress_bar=False,
     )
 
@@ -1078,7 +1073,6 @@ def test_visualize_optimized_model_fit():
     result = optimize.minimize(
         problem=problem,
         n_starts=1,
-        filename=None,
         progress_bar=False,
     )
 
@@ -1108,7 +1102,6 @@ def test_time_trajectory_model():
     result = optimize.minimize(
         problem=problem,
         n_starts=1,
-        filename=None,
         progress_bar=False,
     )
 

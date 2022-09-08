@@ -67,7 +67,6 @@ def test_error_leastsquares_with_ssigma():
             problem=problem,
             optimizer=optimizer,
             n_starts=1,
-            filename=None,
             options=optimize.OptimizeOptions(allow_failed_starts=False),
             progress_bar=False,
         )
@@ -104,7 +103,6 @@ def test_preeq_guesses():
         optimizer=optimizer,
         n_starts=1,
         startpoint_method=startpoints,
-        filename=None,
         progress_bar=False,
     )
 

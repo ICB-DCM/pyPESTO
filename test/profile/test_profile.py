@@ -50,7 +50,6 @@ class ProfilerTest(unittest.TestCase):
                 result=self.result,
                 optimizer=self.optimizer,
                 next_guess_method=method,
-                filename=None,
                 progress_bar=False,
             )
 
@@ -122,7 +121,6 @@ class ProfilerTest(unittest.TestCase):
                 optimizer=self.optimizer,
                 next_guess_method='fixed_step',
                 engine=engine,
-                filename=None,
                 progress_bar=False,
             )
 
@@ -158,7 +156,6 @@ class ProfilerTest(unittest.TestCase):
             next_guess_method='fixed_step',
             result_index=1,
             profile_options=options,
-            filename=None,
             progress_bar=False,
         )
 
@@ -177,7 +174,6 @@ class ProfilerTest(unittest.TestCase):
             result_index=2,
             profile_list=0,
             profile_options=options,
-            filename=None,
             progress_bar=False,
         )
 
@@ -193,7 +189,6 @@ class ProfilerTest(unittest.TestCase):
             next_guess_method='fixed_step',
             profile_index=np.array([0]),
             profile_options=options,
-            filename=None,
             progress_bar=False,
         )
         # check result
@@ -209,7 +204,6 @@ class ProfilerTest(unittest.TestCase):
             result=self.result,
             optimizer=self.optimizer,
             next_guess_method='fixed_step',
-            filename=None,
             progress_bar=False,
         )
 
@@ -225,7 +219,6 @@ class ProfilerTest(unittest.TestCase):
             next_guess_method='fixed_step',
             profile_index=np.array([1]),
             profile_list=0,
-            filename=None,
             progress_bar=False,
         )
         # check result
@@ -300,7 +293,6 @@ def test_profile_with_history():
         profile_index=np.array([0, 2, 4]),
         result_index=0,
         profile_options=profile_options,
-        filename=None,
         progress_bar=False,
     )
 
@@ -325,7 +317,6 @@ def test_profile_with_fixed_parameters():
         problem=problem,
         optimizer=optimizer,
         n_starts=2,
-        filename=None,
         progress_bar=False,
     )
 
@@ -343,7 +334,6 @@ def test_profile_with_fixed_parameters():
             result=result,
             optimizer=optimizer,
             next_guess_method=next_guess_method,
-            filename=None,
             progress_bar=False,
         )
 
@@ -359,7 +349,6 @@ def test_profile_with_fixed_parameters():
         result=result,
         optimizer=optimizer,
         next_guess_method='adaptive_step_regression',
-        filename=None,
         progress_bar=False,
     )
 
@@ -382,7 +371,6 @@ def create_optimization_results(objective, dim_full=2):
         n_starts=5,
         startpoint_method=pypesto.startpoint.uniform,
         options=optimize_options,
-        filename=None,
         progress_bar=False,
     )
 
