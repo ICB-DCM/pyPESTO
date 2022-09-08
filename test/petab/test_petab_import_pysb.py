@@ -49,7 +49,6 @@ def test_petab_pysb_optimization():
         problem=problem,
         optimizer=optimizer,
         n_starts=10,
-        filename=None,
         progress_bar=False,
     )
     fvals = np.array(result.optimize_result.fval)

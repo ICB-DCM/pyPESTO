@@ -80,7 +80,6 @@ class HistoryTest(unittest.TestCase):
                     startpoint_method=pypesto.startpoint.uniform,
                     options=optimize_options,
                     history_options=self.history_options,
-                    filename=None,
                     progress_bar=False,
                 )
 
@@ -643,7 +642,6 @@ def test_hdf5_history_mp():
             n_starts=n_starts,
             history_options=history_options_mem,
             engine=MultiProcessEngine(),
-            filename=None,
             progress_bar=False,
         )
 
@@ -654,7 +652,6 @@ def test_hdf5_history_mp():
             n_starts=n_starts,
             history_options=history_options_mp,
             engine=MultiProcessEngine(),
-            filename=None,
             progress_bar=False,
         )
 
@@ -700,7 +697,6 @@ def test_trim_history():
         optimizer=optimizer,
         n_starts=1,
         history_options=history_options,
-        filename=None,
         progress_bar=False,
     )
     fval_trace = result.optimize_result.list[0].history.get_fval_trace()

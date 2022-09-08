@@ -25,7 +25,6 @@ def test_optimize():
         problem=problem,
         optimizer=optimizer,
         n_starts=n_starts,
-        filename=None,
         progress_bar=False,
     )
 

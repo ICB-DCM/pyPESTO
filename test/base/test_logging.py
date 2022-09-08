@@ -36,7 +36,6 @@ def test_optimize():
         optimizer=optimizer,
         n_starts=5,
         options=options,
-        filename=None,
         progress_bar=False,
     )
 

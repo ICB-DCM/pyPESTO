@@ -120,7 +120,6 @@ def test_mode(scale, prior_type_list):
                 optimizer=optimizer,
                 n_starts=10,
                 startpoint_method=startpoints,
-                filename=None,
                 progress_bar=False,
             )
 
