@@ -339,6 +339,7 @@ def test_mpipoolengine():
         subprocess.check_call(  # noqa: S603,S607
             [
                 'mpiexec',
+                '--oversubscribe',
                 '-np',
                 '2',
                 'python',
