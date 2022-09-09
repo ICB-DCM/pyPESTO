@@ -130,7 +130,10 @@ optimizers = [
 ]
 
 
-@pytest.fixture(params=optimizers)
+@pytest.fixture(
+    params=optimizers,
+    ids=[f"{i}-{o[0]}" for i, o in enumerate(optimizers)],
+)
 def optimizer(request):
     return request.param
 
