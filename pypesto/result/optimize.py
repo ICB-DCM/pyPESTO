@@ -229,6 +229,12 @@ class OptimizeResult:
             f'id={self[np.argmin(self.time)].id}'
         )
 
+        # special handling in case there are only non-finite fvals
+        num_best_value = int(clustsize[0]) if clustsize else len(self)
+        num_plateaus = (
+            (1 + max(clust) - sum(clustsize == 1)) if clustsize else 0
+        )
+
         summary = (
             "## Optimization Result \n\n"
             f"* number of starts: {len(self)} \n"
@@ -238,9 +244,8 @@ class OptimizeResult:
             f"{np.logical_not(np.isfinite(self.fval)).sum()}\n\n"
             f"* execution time summary:\n{times_message}\n"
             f"* summary of optimizer messages:\n\n{counter_message}\n\n"
-            f"* best value found (approximately) {int(clustsize[0])} time(s)\n"
-            f"* number of plateaus found: "
-            f"{1 + max(clust) - sum(clustsize == 1)}\n"
+            f"* best value found (approximately) {num_best_value} time(s)\n"
+            f"* number of plateaus found: {num_plateaus}\n"
         )
         if disp_best:
             summary += f"\nA summary of the best run:\n\n{self[0].summary()}"
