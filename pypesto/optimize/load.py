@@ -119,7 +119,19 @@ def read_history_from_file(
     history_options: HistoryOptions,
     identifier: str,
 ) -> OptimizerHistory:
-    """Read history from file."""
+    """Read history from file.
+
+    Parameters
+    ----------
+    problem:
+        The problem to find optimal parameters for.
+        If ``None``, bounds will be assumed to be [-inf, inf] for checking for
+        admissible points.
+    identifier:
+        Multistart id.
+    history_options:
+        Optimizer history options.
+    """
     if history_options.storage_file is None:
         raise ValueError("No history file specified.")
 
