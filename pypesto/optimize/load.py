@@ -3,7 +3,7 @@
 import logging
 import os
 from pathlib import Path
-from typing import Union
+from typing import Optional
 
 import h5py
 import numpy as np
@@ -115,7 +115,7 @@ def fill_result_from_history(
 
 
 def read_result_from_file(
-    problem: Union[Problem, None],
+    problem: Optional[Problem],
     history_options: HistoryOptions,
     identifier: str,
 ) -> OptimizerResult:
