@@ -11,7 +11,6 @@ from .. import C
 from ..engine import Engine, SingleCoreEngine
 from ..history import CsvHistoryTemplateError, HistoryOptions, HistoryTypeError
 from ..result import Result
-from ..store.save_to_hdf5 import get_or_create_group
 from .optimizer import OptimizerResult
 
 logger = logging.getLogger(__name__)
@@ -94,7 +93,7 @@ def postprocess_hdf5_history(
     # create hdf5 file that gathers the others within history group
     with h5py.File(storage_file, mode='w') as f:
         # create file and group
-        get_or_create_group(f, "history")
+        f.require_group("history")
         # append links to each single result file
         for result in ret:
             id = result['id']
