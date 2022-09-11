@@ -1,0 +1,385 @@
+"""Enhanced Scatter Search.
+
+See [EgeaBal2009]_ and [PenasGon2017]_.
+
+References
+==========
+
+.. [EgeaBal2009] 'Dynamic Optimization of Nonlinear Processes with an Enhanced
+  Scatter Search Method', Jose A. Egea, Eva Balsa-Canto, María-Sonia G. García,
+  and Julio R. Banga, Ind. Eng. Chem. Res. 2009, 48, 9, 4388–4401.
+  https://doi.org/10.1021/ie801717t
+.. [PenasGon2017] 'Parameter estimation in large-scale systems biology models:
+   a parallel and self-adaptive cooperative strategy', David R. Penas,
+   Patricia González, Jose A. Egea, Ramón Doallo and Julio R. Banga,
+   BMC Bioinformatics 2017, 18, 52 https://doi.org/10.1186/s12859-016-1452-4
+"""
+import logging
+from typing import Tuple
+
+import numpy as np
+
+import pypesto.optimize
+from pypesto import Problem
+from pypesto.startpoint import StartpointMethod
+
+logger = logging.getLogger(__name__)
+
+__all__ = ['OptimizerESS']
+
+
+class FunctionEvaluator:
+    """Wrapper for optimization problem and startpoint method.
+
+    Takes care of (not yet parallel) function evaluations, startpoint
+    sampling, and tracks number of function evaluations.
+
+    Parameters
+    ----------
+    problem: The problem
+    startpoint_method: Method for choosing feasible parameters
+    """
+
+    def __init__(self, problem: Problem, startpoint_method: StartpointMethod):
+        self.problem = problem
+        self.startpoint_method = startpoint_method
+        self.n_eval = 0
+
+    def single(self, x):
+        self.n_eval += 1
+        return self.problem.objective(x)
+
+    def multiple(self, xs):
+        return np.fromiter((self.single(x) for x in xs), dtype=float)
+
+    def single_random(self):
+        # TODO: check for finite fval (gradient does not matter)
+        x = self.startpoint_method(n_starts=1, problem=self.problem)[0]
+        return x, self.single(x)
+
+    def multiple_random(self, n: int):
+        # TODO: check for finite fval (gradient does not matter)
+        xs = self.startpoint_method(n_starts=n, problem=self.problem)
+        return xs, self.multiple(xs)
+
+    def reset_counter(self):
+        self.n_eval = 0
+
+
+class RefSet:
+    """Scatter search reference set.
+
+    Parameters
+    ----------
+    dim: Reference set size
+    evaluator: Function evaluator
+    """
+
+    def __init__(self, dim: int, evaluator: FunctionEvaluator):
+        self.dim = dim
+        self.evaluator = evaluator
+        # epsilon in [PenasGon2017]_
+        self.proximity_threshold = 1e-3
+
+        self.fx = np.full(shape=(dim,), fill_value=np.inf)
+        self.x = np.full(
+            shape=(dim, self.evaluator.problem.dim), fill_value=np.nan
+        )
+        self.n_stuck = np.zeros(shape=[dim])
+
+    def sort(self):
+        """Sort RefSet by quality."""
+        order = np.argsort(self.fx)
+        self.fx = self.fx[order]
+        self.x = self.x[order]
+        self.n_stuck = self.n_stuck[order]
+
+    def initialize(self, n_diverse: int):
+        """Create initial reference set with random parameters.
+
+        Generate initial RefSet with 0.5*`dim_refset` best solutions from
+        `n_diverse` random points. Fill the rest with random points.
+        """
+        # sample n_diverse points
+        xtmp, ftmp = self.evaluator.multiple_random(n_diverse)
+
+        # create initial refset with 50% best values
+        order = np.argsort(ftmp)
+        num_best = int(self.dim / 2)
+        self.x[:num_best] = xtmp[order[:num_best]]
+        self.fx[:num_best] = ftmp[order[:num_best]]
+
+        # ... and 50% others
+        random_idxs = np.random.choice(
+            order[num_best:], size=self.dim - num_best, replace=False
+        )
+        self.x[num_best:] = xtmp[random_idxs]
+        self.fx[num_best:] = ftmp[random_idxs]
+
+    def prune_too_close(self):
+        # prune too close ones, pair-wise comparison
+        x = self.x
+        for i in range(self.dim):
+            for j in range(i + 1, self.dim):
+                # check proximity
+                while (
+                    np.max(np.abs((x[i] - x[j]) / x[j]))
+                    <= self.proximity_threshold
+                ):
+                    # too close. replace x_j.
+                    x[j], self.fx[j] = self.evaluator.single_random()
+                    self.sort()
+
+    def update(self, i, x, fx):
+        """Update a entry RefSet entry."""
+        self.x[i] = x
+        self.fx[i] = fx
+        self.n_stuck[i] = 0
+
+    def replace_by_random(self, i: int):
+        self.x[i], self.fx[i] = self.evaluator.single_random()
+        self.n_stuck[i] = 0
+
+
+class OptimizerESS:
+    """Enhanced Scatter Search (ESS) global optimization.
+
+    .. note: Does not implement any constraint handling yet
+    """
+
+    def __init__(self, local_optimizer: pypesto.optimize.Optimizer = None):
+        self.refset = None
+        self.x_best = None
+        self.f_best = None
+        self.local_optimizer = local_optimizer
+        self.local_solutions = []
+        # Only perform local search from best solution
+        self.local_only_best_sol = False
+        self.n_iter = 0
+        # Iteration in which the last local search took place
+        self.last_local_search_iteration = 0
+
+        # Hyperparameters
+        # minimum number of function evaluations before first local search
+        self.local_n1 = 10  # TODO
+        # minimum number of function evaluations between consecutive local
+        #  searches
+        self.local_n2 = 10  # TODO
+        self.balance = 0.5
+        self.n_change = 5  # TODO
+        self.max_iter = 15
+
+    def minimize(self, problem: Problem, startpoint_method: StartpointMethod):
+        """Minimize."""
+        logger.setLevel(logging.DEBUG)
+        dim_refset = 10
+        self.evaluator = FunctionEvaluator(
+            problem=problem, startpoint_method=startpoint_method
+        )
+        self.x_best = np.full(shape=(dim_refset,), fill_value=np.nan)
+        self.f_best = np.inf
+        # quality vs diversity balancing factor [0, 1];
+        #  0 = only quality; 1 = only diversity
+        self.n_diverse = 10 * dim_refset
+        refset = RefSet(dim=dim_refset, evaluator=self.evaluator)
+        self.refset = refset
+
+        # Initial RefSet generation
+        refset.initialize(n_diverse=self.n_diverse)
+
+        # sacess Algorithm 1
+        while self._keep_going():
+            self._report_iteration()
+
+            # has x_best changed in the current iteration?
+            self.x_best_has_changed = False
+
+            # 1. diversification
+            # 2. improvement
+            # 3. reference set update
+            # 4. subset generation
+            # 5. solution combination
+            refset.sort()
+            refset.prune_too_close()
+
+            # Combination method
+            x_best_children, fx_best_children = self._combine_solutions()
+
+            # Go-beyond strategy
+            self._go_beyond(x_best_children, fx_best_children)
+
+            # Local search
+            if self.local_optimizer is not None:
+                # TODO try alternatives if it fails on initial point?
+                self._do_local_search(x_best_children, fx_best_children)
+
+            # replace refset members by best children where an improvement
+            #  was made. replace stuck members by random points.
+            for i in range(refset.dim):
+                if fx_best_children[i] < refset.fx[i]:
+                    refset.update(i, x_best_children[i], fx_best_children[i])
+                else:
+                    refset.n_stuck[i] += 1
+                    if refset.n_stuck[i] > self.n_change:
+                        refset.replace_by_random(i)
+
+            self.n_iter += 1
+
+        self._report_final()
+
+    def _keep_going(self):
+        """Check exit criteria."""
+        if self.n_iter >= self.max_iter:
+            return False
+
+        return True
+
+    def _combine_solutions(self) -> Tuple[np.array, np.array]:
+        """Combine solutions and evaluate."""
+        # TODO: move to refset
+        y = np.zeros(shape=(self.refset.dim, self.evaluator.problem.dim))
+        fy = np.full(shape=self.refset.dim, fill_value=np.inf)
+        for i in range(self.refset.dim):
+            xs_new = np.hstack(
+                tuple(
+                    self._combine(i, j)
+                    for j in range(self.refset.dim)
+                    if i != j
+                ),
+            )
+            fxs_new = self.evaluator.multiple(xs_new)
+            best_idx = np.argmin(fxs_new)
+            fy[i] = fxs_new[best_idx]
+            y[i] = xs_new[best_idx]
+        return y, fy
+
+    def _combine(self, i, j):
+        # combine solutions
+        # see Egea2009 3.2
+        # TODO: will that always yield admissible points?
+        if i == j:
+            raise ValueError("i == j")
+        x = self.refset.x
+
+        d = x[j] - x[i]
+        alpha = np.sign(j - i)
+        beta = (np.abs(j - i) - 1) / (self.refset.dim - 2)
+        c1 = x[i] - d * (1 + alpha * beta)
+        c2 = x[i] - d * (1 - alpha * beta)
+        r = np.random.uniform(0, 1, self.evaluator.problem.dim)
+        return c1 + (c2 - c1) * r
+
+    def _do_local_search(self, x_best_children, fx_best_children):
+        # SaCeSS Algorithm 2
+        if self.local_only_best_sol and self.x_best_has_changed:
+            logger.debug("Local search only from best point.")
+            local_search_x0 = self.x_best
+            local_search_fx0 = self.f_best
+        # first local search?
+        elif not self.local_solutions and self.n_iter >= self.local_n1:
+            logger.debug(
+                f"First local search from best point due to local_n1={self.local_n1}."
+            )
+            local_search_x0 = self.x_best
+            local_search_fx0 = self.f_best
+        elif (
+            self.local_solutions
+            and self.n_iter - self.last_local_search_iteration >= self.local_n2
+        ):
+            quality_order = np.argsort(fx_best_children)
+            # compute minimal distance between the best children and all local
+            #  optima found so far
+            min_distances = np.array(
+                np.min(
+                    np.linalg.norm(y_i - local_solution)
+                    for local_solution in self.local_solutions
+                )
+                for y_i in x_best_children
+            )
+            # sort by furthest distance to existing local optima
+            diversity_order = np.argsort(min_distances)[::-1]
+            priority = (
+                1 - self.balance
+            ) * quality_order + self.balance * diversity_order
+            local_search_x0 = x_best_children[np.argmin(priority)]
+            local_search_fx0 = fx_best_children[np.argmin(priority)]
+        else:
+            return
+
+        # actual local search
+        optimizer_result = self.local_optimizer.minimize(
+            problem=self.evaluator.problem,
+            x0=local_search_x0,
+            id="0",  # TODO
+        )
+        logger.debug(
+            f"Local search: {local_search_fx0} -> " f"{optimizer_result.fval}"
+        )
+        self.local_solutions.append(optimizer_result.x)
+
+        self._maybe_update_global_best(
+            optimizer_result.x, optimizer_result.fval
+        )
+        self.last_local_search_iteration = self.n_iter
+        self.evaluator.reset_counter()
+
+    def _maybe_update_global_best(self, x, fx):
+        if fx < self.f_best:
+            self.x_best = x
+            self.f_best = fx
+            self.x_best_has_changed = True
+
+    def _go_beyond(self, x_best_children, fx_best_children):
+        """Apply go-beyond strategy.
+
+        Egea2009 algorithm 1
+        """
+        for i in range(self.refset.dim):
+            if fx_best_children[i] < self.refset.fx[i]:
+                # offspring is better than parent
+
+                x_parent = self.refset.x[i]
+                fx_parent = self.refset.fx[i]
+                x_child = x_best_children[i]
+                fx_child = fx_best_children[i]
+                improvement = 1
+                Lambda = 1
+                while fx_child < fx_parent:
+                    # update best child
+                    x_best_children[i] = x_child
+                    fx_best_children[i] = fx_child
+
+                    # create new solution, child becomes parent
+                    x_new = np.random.uniform(
+                        low=x_child - (x_parent - x_child) / Lambda,
+                        high=x_child,
+                    )
+                    x_parent = x_child
+                    fx_parent = fx_child
+                    x_child = x_new
+                    fx_child = self.evaluator.single(x_child)
+
+                    improvement += 1
+                    if improvement == 2:
+                        Lambda /= 2
+                        improvement = 0
+
+                # update overall best?
+                self._maybe_update_global_best(
+                    x_best_children[i], fx_best_children[i]
+                )
+
+    def _report_iteration(self):
+        logger.info(
+            f"{self.n_iter:4} | {self.f_best:+.2E} | {self.refset.fx}"
+            f" | {len(self.local_solutions)}"
+        )
+
+    def _report_final(self):
+        logger.info(
+            f"-- Stopping after {self.n_iter} iterations. "
+            f"Final refset: {self.refset.fx} "
+            f"num local solutions: {len(self.local_solutions)}"
+        )
+
+        logger.info(f"Best fval {self.f_best}")
