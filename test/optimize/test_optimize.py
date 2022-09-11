@@ -435,3 +435,34 @@ def test_history_beats_optimizer():
         result_hist.optimize_result.list[0]['fval']
         < result_opt.optimize_result.list[0]['fval']
     )
+
+
+@pytest.mark.parametrize("local_optimizer", [None, optimize.FidesOptimizer()])
+def test_ess(problem, local_optimizer, request):
+    from pypesto.optimize.ess import OptimizerESS
+
+    np.set_printoptions(
+        edgeitems=30,
+        linewidth=100000,
+        formatter={float: lambda x: "%.3g" % x},
+    )
+    ess = OptimizerESS(
+        dim_refset=10,
+        max_iter=20,
+        local_optimizer=local_optimizer,
+        local_n1=10,
+        local_n2=10,
+    )
+    res = ess.minimize(
+        problem=problem,
+        startpoint_method=pypesto.startpoint.UniformStartpoints(),
+    )
+    print("ESS result: ", res.summary())
+
+    # best values roughly: cr: 4.701; rosen 7.592e-10
+    if 'rosen' in request.node.callspec.id:
+        assert res.optimize_result[0].fval < 1e-5
+    elif 'cr' in request.node.callspec.id:
+        assert res.optimize_result[0].fval < 5
+    else:
+        raise AssertionError()
