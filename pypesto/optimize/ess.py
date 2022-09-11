@@ -1,6 +1,6 @@
 """Enhanced Scatter Search.
 
-See [EgeaBal2009]_ and [PenasGon2017]_.
+See papers on ESS [EgeaBal2009]_ and saCeSS [PenasGon2017]_.
 
 References
 ==========
@@ -15,6 +15,7 @@ References
    BMC Bioinformatics 2017, 18, 52 https://doi.org/10.1186/s12859-016-1452-4
 """
 import logging
+import time
 from typing import Tuple
 
 import numpy as np
@@ -145,61 +146,90 @@ class OptimizerESS:
     """Enhanced Scatter Search (ESS) global optimization.
 
     .. note: Does not implement any constraint handling yet
+
+    Parameters
+    ----------
+    dim_refset: Size of the ReferenceSet
+    max_iter: Maximum number of ESS iterations.
+    local_n1: Minimum number of function evaluations before first local search.
+    local_n2: Minimum number of function evaluations between consecutive local
+        searches.
+    local_optimizer: Local optimizer for refinement, or ``None`` to skip local
+        searches.
     """
 
-    def __init__(self, local_optimizer: pypesto.optimize.Optimizer = None):
-        self.refset = None
-        self.x_best = None
-        self.f_best = None
+    def __init__(
+        self,
+        *,
+        max_iter: int,
+        local_n1: int,
+        local_n2: int,
+        dim_refset: int,
+        local_optimizer: pypesto.optimize.Optimizer = None,
+    ):
+        # Hyperparameters
+        self.local_n1 = local_n1
+        self.local_n2 = local_n2
+        self.max_iter = max_iter
+        self.dim_refset = dim_refset
         self.local_optimizer = local_optimizer
-        self.local_solutions = []
+        # quality vs diversity balancing factor [0, 1];
+        #  0 = only quality; 1 = only diversity
+        self.balance = 0.5
+        # after how many iterations a stagnated solution is to be replaced by
+        #  a random one
+        self.n_change = 5  # TODO
         # Only perform local search from best solution
         self.local_only_best_sol = False
+        # Number of samples to construct initial RefSet
+        self.n_diverse = 10 * dim_refset
+
+        self._initialize()
+
+    def _initialize(self):
+        # RefSet
+        self.refset = None
+        # Overall best parameters found so far
+        self.x_best = None
+        # Overall best function value found so far
+        self.fx_best = None
+        # Final parameters from local searches
+        self.local_solutions = []
+        # Index of current iteration
         self.n_iter = 0
         # Iteration in which the last local search took place
         self.last_local_search_iteration = 0
+        # Whether self.x_best has changed in the current iteration
+        self.x_best_has_changed = False
 
-        # Hyperparameters
-        # minimum number of function evaluations before first local search
-        self.local_n1 = 10  # TODO
-        # minimum number of function evaluations between consecutive local
-        #  searches
-        self.local_n2 = 10  # TODO
-        self.balance = 0.5
-        self.n_change = 5  # TODO
-        self.max_iter = 15
+        self.evaluator = None
+        self.x_best = None
+        self.fx_best = np.inf
+        self.starttime = None
 
     def minimize(self, problem: Problem, startpoint_method: StartpointMethod):
         """Minimize."""
         logger.setLevel(logging.DEBUG)
-        dim_refset = 10
+        self._initialize()
         self.evaluator = FunctionEvaluator(
             problem=problem, startpoint_method=startpoint_method
         )
-        self.x_best = np.full(shape=(dim_refset,), fill_value=np.nan)
-        self.f_best = np.inf
-        # quality vs diversity balancing factor [0, 1];
-        #  0 = only quality; 1 = only diversity
-        self.n_diverse = 10 * dim_refset
-        refset = RefSet(dim=dim_refset, evaluator=self.evaluator)
-        self.refset = refset
+        self.x_best = np.full(
+            shape=(self.evaluator.problem.dim,), fill_value=np.nan
+        )
+        self.refset = RefSet(dim=self.dim_refset, evaluator=self.evaluator)
+        refset = self.refset
+        self.starttime = time.time()
 
         # Initial RefSet generation
-        refset.initialize(n_diverse=self.n_diverse)
+        self.refset.initialize(n_diverse=self.n_diverse)
 
-        # sacess Algorithm 1
+        # [PenasGon2017]_ Algorithm 1
         while self._keep_going():
-            self._report_iteration()
-
-            # has x_best changed in the current iteration?
             self.x_best_has_changed = False
 
-            # 1. diversification
-            # 2. improvement
-            # 3. reference set update
-            # 4. subset generation
-            # 5. solution combination
             refset.sort()
+            self._report_iteration()
             refset.prune_too_close()
 
             # Combination method
@@ -210,7 +240,6 @@ class OptimizerESS:
 
             # Local search
             if self.local_optimizer is not None:
-                # TODO try alternatives if it fails on initial point?
                 self._do_local_search(x_best_children, fx_best_children)
 
             # replace refset members by best children where an improvement
@@ -226,9 +255,31 @@ class OptimizerESS:
             self.n_iter += 1
 
         self._report_final()
+        return self._create_result()
+
+    def _create_result(self):
+        # TODO what to return here:
+        #  only the single best value?
+        #  the local solutions + the best
+        #  the local solutions + refset + best?
+        optimizer_result = pypesto.OptimizerResult(
+            x=self.x_best,
+            fval=self.fx_best,
+            # TODO
+            message="Stopped",
+            # TODO
+            exitflag=0,
+            time=time.time() - self.starttime,
+        )
+
+        result = pypesto.Result(problem=self.evaluator.problem)
+        result.optimize_result.append(optimizer_result)
+        return result
 
     def _keep_going(self):
         """Check exit criteria."""
+        # TODO further stopping criteria: gtol, fatol, frtol
+
         if self.n_iter >= self.max_iter:
             return False
 
@@ -255,7 +306,7 @@ class OptimizerESS:
 
     def _combine(self, i, j):
         # combine solutions
-        # see Egea2009 3.2
+        # see [EgeaBal2009]_ Section 3.2
         # TODO: will that always yield admissible points?
         if i == j:
             raise ValueError("i == j")
@@ -270,18 +321,18 @@ class OptimizerESS:
         return c1 + (c2 - c1) * r
 
     def _do_local_search(self, x_best_children, fx_best_children):
-        # SaCeSS Algorithm 2
+        # [PenasGon2017]_ Algorithm 2
         if self.local_only_best_sol and self.x_best_has_changed:
             logger.debug("Local search only from best point.")
             local_search_x0 = self.x_best
-            local_search_fx0 = self.f_best
+            local_search_fx0 = self.fx_best
         # first local search?
         elif not self.local_solutions and self.n_iter >= self.local_n1:
             logger.debug(
                 f"First local search from best point due to local_n1={self.local_n1}."
             )
             local_search_x0 = self.x_best
-            local_search_fx0 = self.f_best
+            local_search_fx0 = self.fx_best
         elif (
             self.local_solutions
             and self.n_iter - self.last_local_search_iteration >= self.local_n2
@@ -307,6 +358,7 @@ class OptimizerESS:
             return
 
         # actual local search
+        # TODO try alternatives if it fails on initial point?
         optimizer_result = self.local_optimizer.minimize(
             problem=self.evaluator.problem,
             x0=local_search_x0,
@@ -324,9 +376,9 @@ class OptimizerESS:
         self.evaluator.reset_counter()
 
     def _maybe_update_global_best(self, x, fx):
-        if fx < self.f_best:
+        if fx < self.fx_best:
             self.x_best = x
-            self.f_best = fx
+            self.fx_best = fx
             self.x_best_has_changed = True
 
     def _go_beyond(self, x_best_children, fx_best_children):
@@ -371,15 +423,15 @@ class OptimizerESS:
 
     def _report_iteration(self):
         logger.info(
-            f"{self.n_iter:4} | {self.f_best:+.2E} | {self.refset.fx}"
+            f"{self.n_iter:4} | {self.fx_best:+.2E} | {self.refset.fx}"
             f" | {len(self.local_solutions)}"
         )
 
     def _report_final(self):
         logger.info(
             f"-- Stopping after {self.n_iter} iterations. "
-            f"Final refset: {self.refset.fx} "
+            f"Final refset: {np.sort(self.refset.fx)} "
             f"num local solutions: {len(self.local_solutions)}"
         )
 
-        logger.info(f"Best fval {self.f_best}")
+        logger.info(f"Best fval {self.fx_best}")
