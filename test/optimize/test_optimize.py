@@ -444,7 +444,7 @@ def test_ess(problem, local_optimizer, request):
     np.set_printoptions(
         edgeitems=30,
         linewidth=100000,
-        formatter={float: lambda x: "%.3g" % x},
+        formatter={"float": lambda x: "%.3g" % x},
     )
     ess = OptimizerESS(
         dim_refset=10,

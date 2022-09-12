@@ -16,7 +16,7 @@ References
 """
 import logging
 import time
-from typing import Tuple
+from typing import Iterable, Tuple
 
 import numpy as np
 
@@ -45,18 +45,22 @@ class FunctionEvaluator:
         self.problem = problem
         self.startpoint_method = startpoint_method
         self.n_eval = 0
+        self.n_eval_round = 0
 
-    def single(self, x):
+    def single(self, x: np.array) -> float:
         self.n_eval += 1
+        self.n_eval_round += 1
         return self.problem.objective(x)
 
-    def multiple(self, xs):
+    def multiple(self, xs: Iterable):
         return np.fromiter((self.single(x) for x in xs), dtype=float)
 
-    def single_random(self):
-        # TODO: check for finite fval (gradient does not matter)
-        x = self.startpoint_method(n_starts=1, problem=self.problem)[0]
-        return x, self.single(x)
+    def single_random(self) -> Tuple[np.array, float]:
+        x = fx = np.nan
+        while not np.isfinite(fx):
+            x = self.startpoint_method(n_starts=1, problem=self.problem)[0]
+            fx = self.single(x)
+        return x, fx
 
     def multiple_random(self, n: int):
         # TODO: check for finite fval (gradient does not matter)
@@ -65,6 +69,10 @@ class FunctionEvaluator:
 
     def reset_counter(self):
         self.n_eval = 0
+        self.reset_round_counter()
+
+    def reset_round_counter(self):
+        self.n_eval_round = 0
 
 
 class RefSet:
@@ -168,6 +176,7 @@ class OptimizerESS:
         local_optimizer: pypesto.optimize.Optimizer = None,
     ):
         # Hyperparameters
+        # TODO number of iterations or function evaluations? paper ambiguous
         self.local_n1 = local_n1
         self.local_n2 = local_n2
         self.max_iter = max_iter
@@ -192,7 +201,7 @@ class OptimizerESS:
         # Overall best parameters found so far
         self.x_best = None
         # Overall best function value found so far
-        self.fx_best = None
+        self.fx_best = np.inf
         # Final parameters from local searches
         self.local_solutions = []
         # Index of current iteration
@@ -203,8 +212,6 @@ class OptimizerESS:
         self.x_best_has_changed = False
 
         self.evaluator = None
-        self.x_best = None
-        self.fx_best = np.inf
         self.starttime = None
 
     def minimize(self, problem: Problem, startpoint_method: StartpointMethod):
@@ -262,18 +269,40 @@ class OptimizerESS:
         #  only the single best value?
         #  the local solutions + the best
         #  the local solutions + refset + best?
+        duration = time.time() - self.starttime
+        i_result = 0
+        result = pypesto.Result(problem=self.evaluator.problem)
+        # save global best
         optimizer_result = pypesto.OptimizerResult(
+            id=str(i_result),
             x=self.x_best,
             fval=self.fx_best,
             # TODO
-            message="Stopped",
+            message="Global best",
             # TODO
             exitflag=0,
-            time=time.time() - self.starttime,
+            time=duration,
         )
-
-        result = pypesto.Result(problem=self.evaluator.problem)
         result.optimize_result.append(optimizer_result)
+
+        # save refset
+
+        for i in range(self.refset.dim):
+            i_result += 1
+            result.optimize_result.append(
+                pypesto.OptimizerResult(
+                    id=str(i_result),
+                    x=self.refset.x[i],
+                    fval=self.refset.fx[i],
+                    # TODO
+                    message=f"RefSet[{i}]",
+                    # TODO
+                    exitflag=0,
+                    time=duration,
+                )
+            )
+        # TODO save local solutions (need to track fvals or re-evaluate)
+
         return result
 
     def _keep_going(self):
@@ -291,7 +320,7 @@ class OptimizerESS:
         y = np.zeros(shape=(self.refset.dim, self.evaluator.problem.dim))
         fy = np.full(shape=self.refset.dim, fill_value=np.inf)
         for i in range(self.refset.dim):
-            xs_new = np.hstack(
+            xs_new = np.vstack(
                 tuple(
                     self._combine(i, j)
                     for j in range(self.refset.dim)
@@ -321,7 +350,11 @@ class OptimizerESS:
         return c1 + (c2 - c1) * r
 
     def _do_local_search(self, x_best_children, fx_best_children):
-        # [PenasGon2017]_ Algorithm 2
+        """
+        Perform a local search to refine the next generation.
+
+        See [PenasGon2017]_ Algorithm 2.
+        """
         if self.local_only_best_sol and self.x_best_has_changed:
             logger.debug("Local search only from best point.")
             local_search_x0 = self.x_best
@@ -373,18 +406,18 @@ class OptimizerESS:
             optimizer_result.x, optimizer_result.fval
         )
         self.last_local_search_iteration = self.n_iter
-        self.evaluator.reset_counter()
+        self.evaluator.reset_round_counter()
 
     def _maybe_update_global_best(self, x, fx):
         if fx < self.fx_best:
-            self.x_best = x
+            self.x_best = x[:]
             self.fx_best = fx
             self.x_best_has_changed = True
 
     def _go_beyond(self, x_best_children, fx_best_children):
         """Apply go-beyond strategy.
 
-        Egea2009 algorithm 1
+        See [Egea2009]_ algorithm 1
         """
         for i in range(self.refset.dim):
             if fx_best_children[i] < self.refset.fx[i]:
