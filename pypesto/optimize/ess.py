@@ -15,8 +15,11 @@ References
    BMC Bioinformatics 2017, 18, 52 https://doi.org/10.1186/s12859-016-1452-4
 """
 import logging
+import threading
 import time
-from typing import Iterable, Tuple
+from concurrent.futures import ThreadPoolExecutor
+from copy import deepcopy
+from typing import Sequence, Tuple
 
 import numpy as np
 
@@ -41,19 +44,41 @@ class FunctionEvaluator:
     startpoint_method: Method for choosing feasible parameters
     """
 
-    def __init__(self, problem: Problem, startpoint_method: StartpointMethod):
+    def __init__(
+        self,
+        problem: Problem,
+        startpoint_method: StartpointMethod,
+        n_threads: int,
+    ):
         self.problem = problem
         self.startpoint_method = startpoint_method
         self.n_eval = 0
         self.n_eval_round = 0
+        self.n_threads = n_threads
+        self._thread_local = threading.local()
+        self.executor = ThreadPoolExecutor(
+            max_workers=self.n_threads,
+            thread_name_prefix=__name__,
+            initializer=self._initialize_worker,
+            initargs=(self._thread_local,),
+        )
 
     def single(self, x: np.array) -> float:
         self.n_eval += 1
         self.n_eval_round += 1
         return self.problem.objective(x)
 
-    def multiple(self, xs: Iterable):
-        return np.fromiter((self.single(x) for x in xs), dtype=float)
+    def multiple(self, xs: Sequence):
+        res = np.fromiter(
+            # map(self.single, xs),
+            self.executor.map(
+                self._evalute_on_worker, ((self._thread_local, x) for x in xs)
+            ),
+            dtype=float,
+        )
+        self.n_eval += len(xs)
+        self.n_eval_round += len(xs)
+        return res
 
     def single_random(self) -> Tuple[np.array, float]:
         x = fx = np.nan
@@ -73,6 +98,14 @@ class FunctionEvaluator:
 
     def reset_round_counter(self):
         self.n_eval_round = 0
+
+    def _initialize_worker(self, local):
+        local.objective = deepcopy(self.problem.objective)
+
+    @staticmethod
+    def _evalute_on_worker(local_and_x):
+        local, x = local_and_x
+        return local.objective(x)
 
 
 class RefSet:
@@ -164,6 +197,7 @@ class OptimizerESS:
         searches.
     local_optimizer: Local optimizer for refinement, or ``None`` to skip local
         searches.
+    n_diverse: Number of samples to choose from to construct the initial RefSet
     """
 
     def __init__(
@@ -174,6 +208,8 @@ class OptimizerESS:
         local_n2: int,
         dim_refset: int,
         local_optimizer: pypesto.optimize.Optimizer = None,
+        n_diverse: int = None,
+        n_threads=1,
     ):
         # Hyperparameters
         # TODO number of iterations or function evaluations? paper ambiguous
@@ -182,6 +218,8 @@ class OptimizerESS:
         self.max_iter = max_iter
         self.dim_refset = dim_refset
         self.local_optimizer = local_optimizer
+        self.n_diverse = n_diverse or 10 * dim_refset
+        self.n_threads = n_threads
         # quality vs diversity balancing factor [0, 1];
         #  0 = only quality; 1 = only diversity
         self.balance = 0.5
@@ -190,8 +228,6 @@ class OptimizerESS:
         self.n_change = 5  # TODO
         # Only perform local search from best solution
         self.local_only_best_sol = False
-        # Number of samples to construct initial RefSet
-        self.n_diverse = 10 * dim_refset
 
         self._initialize()
 
@@ -219,7 +255,9 @@ class OptimizerESS:
         logger.setLevel(logging.DEBUG)
         self._initialize()
         self.evaluator = FunctionEvaluator(
-            problem=problem, startpoint_method=startpoint_method
+            problem=problem,
+            startpoint_method=startpoint_method,
+            n_threads=self.n_threads,
         )
         self.x_best = np.full(
             shape=(self.evaluator.problem.dim,), fill_value=np.nan
@@ -382,11 +420,13 @@ class OptimizerESS:
             )
             # sort by furthest distance to existing local optima
             diversity_order = np.argsort(min_distances)[::-1]
+            # balance quality and diversity (small score is better)
             priority = (
                 1 - self.balance
             ) * quality_order + self.balance * diversity_order
-            local_search_x0 = x_best_children[np.argmin(priority)]
-            local_search_fx0 = fx_best_children[np.argmin(priority)]
+            chosen_child_idx = np.argmin(priority)
+            local_search_x0 = x_best_children[chosen_child_idx]
+            local_search_fx0 = fx_best_children[chosen_child_idx]
         else:
             return
 
@@ -420,39 +460,40 @@ class OptimizerESS:
         See [Egea2009]_ algorithm 1
         """
         for i in range(self.refset.dim):
-            if fx_best_children[i] < self.refset.fx[i]:
-                # offspring is better than parent
+            if fx_best_children[i] >= self.refset.fx[i]:
+                continue
 
-                x_parent = self.refset.x[i]
-                fx_parent = self.refset.fx[i]
-                x_child = x_best_children[i]
-                fx_child = fx_best_children[i]
-                improvement = 1
-                Lambda = 1
-                while fx_child < fx_parent:
-                    # update best child
-                    x_best_children[i] = x_child
-                    fx_best_children[i] = fx_child
+            # offspring is better than parent
+            x_parent = self.refset.x[i]
+            fx_parent = self.refset.fx[i]
+            x_child = x_best_children[i]
+            fx_child = fx_best_children[i]
+            improvement = 1
+            Lambda = 1
+            while fx_child < fx_parent:
+                # update best child
+                x_best_children[i] = x_child
+                fx_best_children[i] = fx_child
 
-                    # create new solution, child becomes parent
-                    x_new = np.random.uniform(
-                        low=x_child - (x_parent - x_child) / Lambda,
-                        high=x_child,
-                    )
-                    x_parent = x_child
-                    fx_parent = fx_child
-                    x_child = x_new
-                    fx_child = self.evaluator.single(x_child)
-
-                    improvement += 1
-                    if improvement == 2:
-                        Lambda /= 2
-                        improvement = 0
-
-                # update overall best?
-                self._maybe_update_global_best(
-                    x_best_children[i], fx_best_children[i]
+                # create new solution, child becomes parent
+                x_new = np.random.uniform(
+                    low=x_child - (x_parent - x_child) / Lambda,
+                    high=x_child,
                 )
+                x_parent = x_child
+                fx_parent = fx_child
+                x_child = x_new
+                fx_child = self.evaluator.single(x_child)
+
+                improvement += 1
+                if improvement == 2:
+                    Lambda /= 2
+                    improvement = 0
+
+            # update overall best?
+            self._maybe_update_global_best(
+                x_best_children[i], fx_best_children[i]
+            )
 
     def _report_iteration(self):
         logger.info(
