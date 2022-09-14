@@ -448,10 +448,11 @@ def test_ess(problem, local_optimizer, request):
     )
     ess = OptimizerESS(
         dim_refset=10,
-        max_iter=20,
+        max_iter=31,
         local_optimizer=local_optimizer,
         local_n1=10,
         local_n2=10,
+        n_threads=2,
     )
     res = ess.minimize(
         problem=problem,
@@ -461,8 +462,12 @@ def test_ess(problem, local_optimizer, request):
 
     # best values roughly: cr: 4.701; rosen 7.592e-10
     if 'rosen' in request.node.callspec.id:
-        assert res.optimize_result[0].fval < 1e-5
+        if local_optimizer:
+            assert res.optimize_result[0].fval < 1e-4
+        assert res.optimize_result[0].fval < 1
     elif 'cr' in request.node.callspec.id:
-        assert res.optimize_result[0].fval < 5
+        if local_optimizer:
+            assert res.optimize_result[0].fval < 5
+        assert res.optimize_result[0].fval < 20
     else:
         raise AssertionError()
