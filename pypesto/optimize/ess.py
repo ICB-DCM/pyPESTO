@@ -40,6 +40,8 @@ class ESSExitFlag(int, enum.Enum):
     DID_NOT_RUN = 0
     # Exited after reaching maximum number of iterations
     MAX_ITER = -1
+    # Exited after exhausting function evaluation budget
+    MAX_EVAL = -2
 
 
 class FunctionEvaluator:
@@ -276,6 +278,9 @@ class OptimizerESS:
     local_optimizer: Local optimizer for refinement, or ``None`` to skip local
         searches.
     n_diverse: Number of samples to choose from to construct the initial RefSet
+    max_eval: Maximum number of objective functions allowed. This criterion is
+        only checked once per iteration, not after every objective evaluation,
+        so the actual number of function evaluations may exceed this value.
     """
 
     def __init__(
@@ -286,14 +291,15 @@ class OptimizerESS:
         local_n2: int,
         dim_refset: int,
         local_optimizer: pypesto.optimize.Optimizer = None,
+        max_eval=np.inf,
         n_diverse: int = None,
         n_threads=1,
     ):
         # Hyperparameters
-        # TODO number of iterations or function evaluations? paper ambiguous
         self.local_n1 = local_n1
         self.local_n2 = local_n2
         self.max_iter = max_iter
+        self.max_eval = max_eval
         self.dim_refset = dim_refset
         self.local_optimizer = local_optimizer
         # TODO 10x problem dimension, not refset dimension
@@ -321,8 +327,9 @@ class OptimizerESS:
         self.local_solutions = []
         # Index of current iteration
         self.n_iter = 0
-        # Iteration in which the last local search took place
-        self.last_local_search_iteration = 0
+        # Number of function evalutions at which the last local search took
+        #  place
+        self.last_local_search_neval = 0
         # Whether self.x_best has changed in the current iteration
         self.x_best_has_changed = False
         self.exit_flag = ESSExitFlag.DID_NOT_RUN
@@ -426,6 +433,10 @@ class OptimizerESS:
             self.exit_flag = ESSExitFlag.MAX_ITER
             return False
 
+        if self.evaluator.n_eval >= self.max_eval:
+            self.exit_flag = ESSExitFlag.MAX_EVAL
+            return False
+
         return True
 
     def _combine_solutions(self) -> Tuple[np.array, np.array]:
@@ -474,15 +485,19 @@ class OptimizerESS:
             local_search_x0 = self.x_best
             local_search_fx0 = self.fx_best
         # first local search?
-        elif not self.local_solutions and self.n_iter >= self.local_n1:
+        elif (
+            not self.local_solutions and self.evaluator.n_eval >= self.local_n1
+        ):
             logger.debug(
-                f"First local search from best point due to local_n1={self.local_n1}."
+                "First local search from best point due to "
+                f"local_n1={self.local_n1}."
             )
             local_search_x0 = self.x_best
             local_search_fx0 = self.fx_best
         elif (
             self.local_solutions
-            and self.n_iter - self.last_local_search_iteration >= self.local_n2
+            and self.evaluator.n_eval - self.last_local_search_neval
+            >= self.local_n2
         ):
             quality_order = np.argsort(fx_best_children)
             # compute minimal distance between the best children and all local
@@ -523,7 +538,7 @@ class OptimizerESS:
         self._maybe_update_global_best(
             optimizer_result.x, optimizer_result.fval
         )
-        self.last_local_search_iteration = self.n_iter
+        self.last_local_search_neval = self.n_iter
         self.evaluator.reset_round_counter()
 
     def _maybe_update_global_best(self, x, fx):
