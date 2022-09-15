@@ -230,9 +230,9 @@ class OptimizeResult:
         )
 
         # special handling in case there are only non-finite fvals
-        num_best_value = int(clustsize[0]) if clustsize else len(self)
+        num_best_value = int(clustsize[0]) if len(clustsize) else len(self)
         num_plateaus = (
-            (1 + max(clust) - sum(clustsize == 1)) if clustsize else 0
+            (1 + max(clust) - sum(clustsize == 1)) if len(clustsize) else 0
         )
 
         summary = (
