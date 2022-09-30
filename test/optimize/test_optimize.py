@@ -130,7 +130,10 @@ optimizers = [
 ]
 
 
-@pytest.fixture(params=optimizers)
+@pytest.fixture(
+    params=optimizers,
+    ids=[f"{i}-{o[0]}" for i, o in enumerate(optimizers)],
+)
 def optimizer(request):
     return request.param
 
@@ -339,6 +342,7 @@ def test_mpipoolengine():
         subprocess.check_call(  # noqa: S603,S607
             [
                 'mpiexec',
+                '--oversubscribe',
                 '-np',
                 '2',
                 'python',
