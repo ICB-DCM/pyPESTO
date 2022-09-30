@@ -50,7 +50,7 @@ class Problem:
         # TODO default caller, based on petab_select.Problem
         self.method_caller = None
 
-    def create_method_caller(self, *args, **kwargs) -> MethodCaller:
+    def create_method_caller(self, **kwargs) -> MethodCaller:
         """Create a method caller.
 
         `args` and `kwargs` are passed to the `MethodCaller` constructor.
@@ -62,7 +62,6 @@ class Problem:
         """
         return MethodCaller(
             petab_select_problem=self.petab_select_problem,
-            *args,
             calibrated_models=self.calibrated_models,
             model_postprocessor=self.model_postprocessor,
             **kwargs,
@@ -111,7 +110,6 @@ class Problem:
 
     def select(
         self,
-        *args,
         **kwargs,
     ) -> Tuple[Model, Dict[str, Model], Dict[str, Model]]:
         """Run a single iteration of a model selection algorithm.
@@ -119,7 +117,7 @@ class Problem:
         The result is the selected model for the current run, independent of
         previous selected models.
 
-        `args` and `kwargs` are passed to the `MethodCaller` constructor.
+        `kwargs` are passed to the `MethodCaller` constructor.
 
         Returns
         -------
@@ -137,7 +135,7 @@ class Problem:
         # - select_first_improvement
         self.handle_select_kwargs(kwargs)
         # TODO handle bidirectional
-        method_caller = self.create_method_caller(*args, **kwargs)
+        method_caller = self.create_method_caller(**kwargs)
         previous_best_model, newly_calibrated_models = method_caller(
             # TODO add predecessor model to state
             newly_calibrated_models=self.newly_calibrated_models,
@@ -160,12 +158,11 @@ class Problem:
 
     def select_to_completion(
         self,
-        *args,
         **kwargs,
     ) -> List[Model]:
         """Run an algorithm until an exception `StopIteration` is raised.
 
-        `args` and `kwargs` are passed to the `MethodCaller` constructor.
+        `kwargs` are passed to the `MethodCaller` constructor.
 
         An exception `StopIteration` is raised by
         `pypesto.select.method.MethodCaller.__call__` when no candidate models
@@ -178,7 +175,7 @@ class Problem:
         """
         best_models = []
         self.handle_select_kwargs(kwargs)
-        method_caller = self.create_method_caller(*args, **kwargs)
+        method_caller = self.create_method_caller(**kwargs)
 
         intermediate_kwargs = {}
         while True:
@@ -209,7 +206,6 @@ class Problem:
     # number of starts. TODO parallelise?
     def multistart_select(
         self,
-        *args,
         predecessor_models: Iterable[Model] = None,
         **kwargs,
     ) -> Tuple[Model, List[Model]]:
@@ -222,7 +218,7 @@ class Problem:
         (but then the same model could be repeatedly calibrated, if the
         calibrations start before any have stopped).
 
-        `args` and `kwargs` are passed to the `MethodCaller` constructor.
+        `kwargs` are passed to the `MethodCaller` constructor.
 
         Parameters
         ----------
@@ -244,7 +240,7 @@ class Problem:
             self.newly_calibrated_models for _ in predecessor_models
         ]
 
-        method_caller = self.create_method_caller(*args, **kwargs)
+        method_caller = self.create_method_caller(**kwargs)
         for start_index, predecessor_model in enumerate(predecessor_models):
             (
                 best_model,
