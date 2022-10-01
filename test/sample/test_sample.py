@@ -14,7 +14,7 @@ import pypesto.optimize as optimize
 import pypesto.petab
 import pypesto.sample as sample
 import pypesto.visualize as visualize
-from pypesto.sample.pymc import PymcSampler
+# from pypesto.sample.pymc import PymcSampler
 
 
 def gaussian_llh(x):
@@ -151,7 +151,7 @@ def negative_log_prior(x):
         'AdaptiveMetropolis',
         'ParallelTempering',
         'AdaptiveParallelTempering',
-        'Pymc',
+        # 'Pymc',
         'Emcee',
     ]
 )

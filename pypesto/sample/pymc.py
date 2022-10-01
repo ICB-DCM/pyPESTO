@@ -1,6 +1,7 @@
 """Pymc v4 Sampler."""
 import logging
 from typing import Union
+import warnings
 
 import numpy as np
 
@@ -69,6 +70,7 @@ class PymcSampler(Sampler):
         self.x0: Union[np.ndarray, None] = None
         self.trace: Union[pm.backends.Text, None] = None
         self.data: Union[az.InferenceData, None] = None
+        warnings.warn("The pymc sampler is currently not supported")
 
     @classmethod
     def translate_options(cls, options):
