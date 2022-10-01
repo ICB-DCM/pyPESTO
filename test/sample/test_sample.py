@@ -14,6 +14,7 @@ import pypesto.optimize as optimize
 import pypesto.petab
 import pypesto.sample as sample
 import pypesto.visualize as visualize
+
 # from pypesto.sample.pymc import PymcSampler
 
 
@@ -184,8 +185,8 @@ def sampler(request):
             },
             n_chains=5,
         )
-    elif request.param == 'Pymc':
-        return PymcSampler(tune=5, progressbar=False)
+    # elif request.param == 'Pymc':
+    #     return PymcSampler(tune=5, progressbar=False)
     elif request.param == 'Emcee':
         return sample.EmceeSampler(nwalkers=10)
 

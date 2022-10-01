@@ -1,7 +1,7 @@
 """Pymc v4 Sampler."""
 import logging
-from typing import Union
 import warnings
+from typing import Union
 
 import numpy as np
 
