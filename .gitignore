@@ -79,6 +79,7 @@ data/figures
 # coverage
 coverage_py.xml
 coverage.xml
+.coverage*
 
 # examples
 doc/example/tmp
