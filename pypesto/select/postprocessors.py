@@ -48,6 +48,7 @@ def waterfall_plot_postprocessor(
 def save_postprocessor(
     problem: ModelProblem,
     output_path: TYPE_PATH = ".",
+    use_model_hash: bool = False,
 ):
     """Save the parameter estimation result.
 
@@ -69,10 +70,16 @@ def save_postprocessor(
         A model selection :class:`ModelProblem` that has been optimized.
     output_path:
         The location where output will be stored.
+    use_model_hash:
+        Whether the filename should use the model hash. Defaults to `False`,
+        in which case the model ID is used instead.
     """
+    stem = problem.model.model_id
+    if use_model_hash:
+        stem = problem.model.get_hash()
     store.write_result(
         problem.minimize_result,
-        Path(output_path) / (problem.model.model_hash + ".hdf5"),
+        Path(output_path) / (stem + ".hdf5"),
     )
 
 
