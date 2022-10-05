@@ -3,7 +3,6 @@ from typing import Optional, Tuple
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
-import seaborn as sns
 
 from ..result import Result
 
@@ -46,6 +45,8 @@ def optimizer_convergence(
     ax: matplotlib.Axes
         The plot axes.
     """
+    import seaborn as sns
+
     if ax is None:
         ax = plt.subplots(figsize=size)[1]
 

@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import os
 import shutil
 
@@ -7,6 +9,7 @@ try:
     import amici
     import amici.petab_import_pysb
 except ImportError:
+    # handled upstream
     pass
 
 
@@ -15,7 +18,7 @@ class PetabImporterPysb(PetabImporter):
 
     def __init__(
         self,
-        petab_problem: 'amici.petab_import_pysb.PysbPetabProblem',
+        petab_problem: amici.petab_import_pysb.PysbPetabProblem,
         output_folder: str = None,
     ):
         """

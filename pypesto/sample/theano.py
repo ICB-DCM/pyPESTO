@@ -1,18 +1,23 @@
+from __future__ import annotations
+
+from typing import TYPE_CHECKING
+
 import numpy as np
 
 from ..objective import ObjectiveBase
 from ..problem import Problem
 
-try:
-    import theano.tensor as tt
-
+if TYPE_CHECKING:
     try:
-        from theano.graph.null_type import NullType
+        import theano.tensor as tt
+
+        try:
+            from theano.graph.null_type import NullType
+        except ImportError:
+            # for older versions of theano
+            from theano.gof.null_type import NullType
     except ImportError:
-        # for older versions of theano
-        from theano.gof.null_type import NullType
-except ImportError:
-    tt = NullType = None
+        tt = NullType = None
 
 
 class TheanoLogProbability(tt.Op):
