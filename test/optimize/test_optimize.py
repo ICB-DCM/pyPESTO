@@ -439,19 +439,14 @@ def test_history_beats_optimizer():
 
 @pytest.mark.parametrize("local_optimizer", [None, optimize.FidesOptimizer()])
 def test_ess(problem, local_optimizer, request):
-    from pypesto.optimize.ess import OptimizerESS
+    from pypesto.optimize.ess import ESSOptimizer
 
-    np.set_printoptions(
-        edgeitems=30,
-        linewidth=100000,
-        formatter={"float": lambda x: "%.3g" % x},
-    )
-    ess = OptimizerESS(
+    ess = ESSOptimizer(
         dim_refset=10,
-        max_iter=31,
+        max_iter=20,
         local_optimizer=local_optimizer,
-        local_n1=10,
-        local_n2=10,
+        local_n1=100,
+        local_n2=100,
         n_threads=2,
     )
     res = ess.minimize(

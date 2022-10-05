@@ -1,18 +1,29 @@
 """Enhanced Scatter Search.
 
-See papers on ESS [EgeaBal2009]_ and saCeSS [PenasGon2017]_.
+See papers on ESS [EgeaBal2009]_, CESS [VillaverdeEge2012]_ and
+saCeSS [PenasGon2017]_.
 
 References
 ==========
 
 .. [EgeaBal2009] 'Dynamic Optimization of Nonlinear Processes with an Enhanced
-  Scatter Search Method', Jose A. Egea, Eva Balsa-Canto, María-Sonia G. García,
-  and Julio R. Banga, Ind. Eng. Chem. Res. 2009, 48, 9, 4388–4401.
-  https://doi.org/10.1021/ie801717t
+   Scatter Search Method', Jose A. Egea, Eva Balsa-Canto,
+   María-Sonia G. García, and Julio R. Banga, Ind. Eng. Chem. Res.
+   2009, 48, 9, 4388–4401. https://doi.org/10.1021/ie801717t
+
+.. [EgeaMar2010] 'An evolutionary method for complex-process optimization',
+   Jose A. Egea, Rafael Martí, Julio R. Banga, Computers & Operations Research,
+   2010, 37, 2, 315-324. https://doi.org/10.1016/j.cor.2009.05.003
+
+.. [VillaverdeEge2012] 'A cooperative strategy for parameter estimation in
+   large scale systems biology models.' Villaverde, A.F., Egea, J.A.
+   & Banga, J.R. BMC Syst Biol 2012, 6, 75.
+   https://doi.org/10.1186/1752-0509-6-75
+
 .. [PenasGon2017] 'Parameter estimation in large-scale systems biology models:
    a parallel and self-adaptive cooperative strategy', David R. Penas,
    Patricia González, Jose A. Egea, Ramón Doallo and Julio R. Banga,
-   BMC Bioinformatics 2017, 18, 52 https://doi.org/10.1186/s12859-016-1452-4
+   BMC Bioinformatics 2017, 18, 52. https://doi.org/10.1186/s12859-016-1452-4
 """
 import enum
 import logging
@@ -25,16 +36,16 @@ from typing import Sequence, Tuple
 import numpy as np
 
 import pypesto.optimize
-from pypesto import Problem
+from pypesto import OptimizerResult, Problem
 from pypesto.startpoint import StartpointMethod
 
 logger = logging.getLogger(__name__)
 
-__all__ = ['OptimizerESS', 'ESSExitFlag']
+__all__ = ['ESSOptimizer', 'ESSExitFlag']
 
 
 class ESSExitFlag(int, enum.Enum):
-    """Exit flags used by :class:`OptimiterESS`."""
+    """Exit flags used by :class:`ESSOptimizer`."""
 
     # ESS did not run/finish yet
     DID_NOT_RUN = 0
@@ -120,7 +131,7 @@ class FunctionEvaluator:
         res = np.fromiter(
             # map(self.single, xs),
             self._executor.map(
-                self._evalute_on_worker, ((self._thread_local, x) for x in xs)
+                self._evaluate_on_worker, ((self._thread_local, x) for x in xs)
             ),
             dtype=float,
         )
@@ -182,7 +193,7 @@ class FunctionEvaluator:
         local.objective = deepcopy(self.problem.objective)
 
     @staticmethod
-    def _evalute_on_worker(local_and_x):
+    def _evaluate_on_worker(local_and_x):
         """Task handler on worker threads."""
         local, x = local_and_x
         return local.objective(x)
@@ -191,16 +202,22 @@ class FunctionEvaluator:
 class RefSet:
     """Scatter search reference set.
 
-    Parameters
+    Attributes
     ----------
-    dim: Reference set size
-    evaluator: Function evaluator
+    # TODO
     """
 
     def __init__(self, dim: int, evaluator: FunctionEvaluator):
+        """Construct.
+
+        Parameters
+        ----------
+        dim: Reference set size
+        evaluator: Function evaluator
+        """
         self.dim = dim
         self.evaluator = evaluator
-        # epsilon in [PenasGon2017]_
+        # \epsilon in [PenasGon2017]_
         self.proximity_threshold = 1e-3
 
         self.fx = np.full(shape=(dim,), fill_value=np.inf)
@@ -219,27 +236,33 @@ class RefSet:
     def initialize(self, n_diverse: int):
         """Create initial reference set with random parameters.
 
-        Generate initial RefSet with 0.5*`dim_refset` best solutions from
-        `n_diverse` random points. Fill the rest with random points.
+        Sample `n_diverse` random points, populate half of the RefSet using
+        the best solutions and fill the rest with random points.
         """
         # sample n_diverse points
-        xtmp, ftmp = self.evaluator.multiple_random(n_diverse)
+        x_diverse, fx_diverse = self.evaluator.multiple_random(n_diverse)
 
         # create initial refset with 50% best values
-        order = np.argsort(ftmp)
         num_best = int(self.dim / 2)
-        self.x[:num_best] = xtmp[order[:num_best]]
-        self.fx[:num_best] = ftmp[order[:num_best]]
+        order = np.argsort(fx_diverse)
+        self.x[:num_best] = x_diverse[order[:num_best]]
+        self.fx[:num_best] = fx_diverse[order[:num_best]]
 
-        # ... and 50% others
+        # ... and 50% random points
         random_idxs = np.random.choice(
             order[num_best:], size=self.dim - num_best, replace=False
         )
-        self.x[num_best:] = xtmp[random_idxs]
-        self.fx[num_best:] = ftmp[random_idxs]
+        self.x[num_best:] = x_diverse[random_idxs]
+        self.fx[num_best:] = fx_diverse[random_idxs]
 
     def prune_too_close(self):
-        # prune too close ones, pair-wise comparison
+        """Prune too similar RefSet members.
+
+        Replace a parameter vector if its maximum relative difference to a
+        better parameter vector is below the given threshold.
+
+        Assumes RefSet is sorted.
+        """
         x = self.x
         for i in range(self.dim):
             for j in range(i + 1, self.dim):
@@ -252,21 +275,24 @@ class RefSet:
                     x[j], self.fx[j] = self.evaluator.single_random()
                     self.sort()
 
-    def update(self, i, x, fx):
-        """Update a entry RefSet entry."""
+    def update(self, i: int, x: np.array, fx: float):
+        """Update a RefSet entry."""
         self.x[i] = x
         self.fx[i] = fx
         self.n_stuck[i] = 0
 
     def replace_by_random(self, i: int):
+        """Replace the RefSet member with the given index by a random point."""
         self.x[i], self.fx[i] = self.evaluator.single_random()
         self.n_stuck[i] = 0
 
 
-class OptimizerESS:
+class ESSOptimizer:
     """Enhanced Scatter Search (ESS) global optimization.
 
     .. note: Does not implement any constraint handling yet
+
+    For plausible values of hyperparameters, see [VillaverdeEge2012]_.
 
     Parameters
     ----------
@@ -290,7 +316,7 @@ class OptimizerESS:
         local_n1: int,
         local_n2: int,
         dim_refset: int,
-        local_optimizer: pypesto.optimize.Optimizer = None,
+        local_optimizer: 'pypesto.optimize.Optimizer' = None,
         max_eval=np.inf,
         n_diverse: int = None,
         n_threads=1,
@@ -302,15 +328,14 @@ class OptimizerESS:
         self.max_eval = max_eval
         self.dim_refset = dim_refset
         self.local_optimizer = local_optimizer
-        # TODO 10x problem dimension, not refset dimension
-        self.n_diverse = n_diverse or 10 * dim_refset
+        self.n_diverse = n_diverse
         self.n_threads = n_threads
         # quality vs diversity balancing factor [0, 1];
         #  0 = only quality; 1 = only diversity
         self.balance = 0.5
-        # after how many iterations a stagnated solution is to be replaced by
-        #  a random one
-        self.n_change = 5  # TODO
+        # After how many iterations a stagnated solution is to be replaced by
+        #  a random one. Default value taken from [EgeaMar2010]_
+        self.n_change = 20
         # Only perform local search from best solution
         self.local_only_best_sol = False
 
@@ -327,7 +352,7 @@ class OptimizerESS:
         self.local_solutions = []
         # Index of current iteration
         self.n_iter = 0
-        # Number of function evalutions at which the last local search took
+        # Number of function evaluations at which the last local search took
         #  place
         self.last_local_search_neval = 0
         # Whether self.x_best has changed in the current iteration
@@ -338,6 +363,10 @@ class OptimizerESS:
 
     def minimize(self, problem: Problem, startpoint_method: StartpointMethod):
         """Minimize."""
+        if self.n_diverse is None:
+            # [EgeaMar2010]_ 2.1
+            self.n_diverse = 10 * problem.dim
+
         logger.setLevel(logging.DEBUG)
         self._initialize()
         self.evaluator = FunctionEvaluator(
@@ -393,19 +422,25 @@ class OptimizerESS:
         #  only the single best value?
         #  the local solutions + the best
         #  the local solutions + refset + best?
-        duration = time.time() - self.starttime
+        common_result_fields = {
+            'exitflag': self.exit_flag,
+            # meaningful? this is the overall time, and identical for all
+            #  reported points
+            'time': time.time() - self.starttime,
+            'n_fval': self.evaluator.n_eval,
+        }
         i_result = 0
         result = pypesto.Result(problem=self.evaluator.problem)
+
         # save global best
         optimizer_result = pypesto.OptimizerResult(
             id=str(i_result),
             x=self.x_best,
             fval=self.fx_best,
-            # TODO
             message="Global best",
-            exitflag=self.exit_flag,
-            time=duration,
+            **common_result_fields,
         )
+        # TODO: Create a single History with the global best?
         result.optimize_result.append(optimizer_result)
 
         # save refset
@@ -417,8 +452,7 @@ class OptimizerESS:
                     x=self.refset.x[i],
                     fval=self.refset.fx[i],
                     message=f"RefSet[{i}]",
-                    exitflag=self.exit_flag,
-                    time=duration,
+                    **common_result_fields,
                 )
             )
         # TODO save local solutions (need to track fvals or re-evaluate)
@@ -523,14 +557,18 @@ class OptimizerESS:
 
         # actual local search
         # TODO try alternatives if it fails on initial point?
-        optimizer_result = self.local_optimizer.minimize(
+        optimizer_result: OptimizerResult = self.local_optimizer.minimize(
             problem=self.evaluator.problem,
             x0=local_search_x0,
             id="0",  # TODO
         )
-        # TODO function evaluations during local search should be added to the
-        #  function evaluation counter
-        logger.debug(
+        # add function evaluations during local search to our function
+        #  evaluation counter (NOTE: depending on the setup, we might neglect
+        #  gradient evaluations).
+        self.evaluator.n_eval += optimizer_result.n_fval
+        self.evaluator.n_eval_round += optimizer_result.n_fval
+
+        logger.info(
             f"Local search: {local_search_fx0} -> " f"{optimizer_result.fval}"
         )
         self.local_solutions.append(optimizer_result.x)
@@ -591,16 +629,28 @@ class OptimizerESS:
     def _report_iteration(self):
         if self.n_iter == 0:
             logger.info("iter | best | nf | refset         |")
-        logger.info(
-            f"{self.n_iter:4} | {self.fx_best:+.2E} | {self.evaluator.n_eval} "
-            f"| {self.refset.fx} | {len(self.local_solutions)}"
-        )
+
+        with np.printoptions(
+            edgeitems=30,
+            linewidth=100000,
+            formatter={"float": lambda x: "%.3g" % x},
+        ):
+            logger.info(
+                f"{self.n_iter:4} | {self.fx_best:+.2E} | "
+                f"{self.evaluator.n_eval} "
+                f"| {self.refset.fx} | {len(self.local_solutions)}"
+            )
 
     def _report_final(self):
-        logger.info(
-            f"-- Stopping after {self.n_iter} iterations. "
-            f"Final refset: {np.sort(self.refset.fx)} "
-            f"num local solutions: {len(self.local_solutions)}"
-        )
+        with np.printoptions(
+            edgeitems=30,
+            linewidth=100000,
+            formatter={"float": lambda x: "%.3g" % x},
+        ):
+            logger.info(
+                f"-- Stopping after {self.n_iter} iterations. "
+                f"Final refset: {np.sort(self.refset.fx)} "
+                f"num local solutions: {len(self.local_solutions)}"
+            )
 
         logger.info(f"Best fval {self.fx_best}")
