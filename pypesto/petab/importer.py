@@ -9,7 +9,6 @@ import sys
 import tempfile
 from dataclasses import dataclass
 from typing import (
-    TYPE_CHECKING,
     Any,
     Callable,
     Dict,
@@ -31,19 +30,15 @@ from ..problem import Problem
 from ..result import PredictionResult
 from ..startpoint import FunctionStartpoints, StartpointMethod
 
-if TYPE_CHECKING:
-    try:
-        import amici
-        import amici.parameter_mapping
-        import amici.petab_import
-        import amici.petab_objective
-        import petab
-        from petab.C import (
-            PREEQUILIBRATION_CONDITION_ID,
-            SIMULATION_CONDITION_ID,
-        )
-    except ImportError:
-        pass
+try:
+    import amici
+    import amici.parameter_mapping
+    import amici.petab_import
+    import amici.petab_objective
+    import petab
+    from petab.C import PREEQUILIBRATION_CONDITION_ID, SIMULATION_CONDITION_ID
+except ImportError:
+    pass
 
 logger = logging.getLogger(__name__)
 
