@@ -55,7 +55,7 @@ class PetabImporter(AmiciObjectBuilder):
 
     def __init__(
         self,
-        petab_problem: 'petab.Problem',
+        petab_problem: petab.Problem,
         output_folder: str = None,
         model_name: str = None,
         validate_petab: bool = True,
@@ -298,7 +298,7 @@ class PetabImporter(AmiciObjectBuilder):
 
     def create_edatas(
         self, model: amici.Model = None, simulation_conditions=None
-    ) -> List['amici.ExpData']:
+    ) -> List[amici.ExpData]:
         """Create list of amici.ExpData objects."""
         # create model
         if model is None:
