@@ -1,8 +1,10 @@
+from __future__ import annotations
+
 import abc
 import logging
 import re
 import time
-from typing import Dict, Optional
+from typing import TYPE_CHECKING, Dict, Optional
 
 import numpy as np
 import scipy.optimize
@@ -19,46 +21,20 @@ from ..result import OptimizerResult
 from .load import fill_result_from_history
 from .options import OptimizeOptions
 
-try:
-    import cyipopt
-except ImportError:
-    cyipopt = None
-
-try:
-    import dlib
-except ImportError:
-    dlib = None
-
-try:
-    import pyswarm
-except ImportError:
-    pyswarm = None
-
-try:
-    import cma
-except ImportError:
-    cma = None
-
-try:
-    import pyswarms
-except ImportError:
-    pyswarms = None
-
-try:
-    import nlopt
-except ImportError:
-    nlopt = None
-
-try:
+if TYPE_CHECKING:
     import fides
-    from fides import Optimizer as fidesOptimizer
-    from fides.hessian_approximation import HessianApproximation
-except ImportError:
-    fides = None
-    HessianApproximation = None
-    fidesOptimizer = None
 
 logger = logging.getLogger(__name__)
+
+
+class OptimizerImportError(ImportError):
+    """Exception raised when an optimizer is not available."""
+
+    def __init__(self, optimizer: str):
+        super().__init__(
+            f'Optimizer "{optimizer}" not available, install corresponding '
+            f'package e.g. via "pip install pypesto[{optimizer}]"'
+        )
 
 
 def history_decorator(minimize):
@@ -502,11 +478,10 @@ class IpoptOptimizer(Optimizer):
         optimize_options: OptimizeOptions = None,
     ) -> OptimizerResult:
         """Perform optimization. Parameters: see `Optimizer` documentation."""
-        if cyipopt is None:
-            raise ImportError(
-                "This optimizer requires an installation of ipopt. You can "
-                "install ipopt via `pip install ipopt`."
-            )
+        try:
+            import cyipopt
+        except ImportError:
+            raise OptimizerImportError("ipopt")
 
         objective = problem.objective
 
@@ -570,11 +545,10 @@ class DlibOptimizer(Optimizer):
         check_finite_bounds(lb, ub)
         objective = problem.objective
 
-        if dlib is None:
-            raise ImportError(
-                "This optimizer requires an installation of dlib. You can "
-                "install dlib via `pip install dlib`."
-            )
+        try:
+            import dlib
+        except ImportError:
+            raise OptimizerImportError("dlib")
 
         if not objective.has_fun:
             raise ValueError(
@@ -638,11 +612,11 @@ class PyswarmOptimizer(Optimizer):
         """Perform optimization. Parameters: see `Optimizer` documentation."""
         lb = problem.lb
         ub = problem.ub
-        if pyswarm is None:
-            raise ImportError(
-                "This optimizer requires an installation of pyswarm. You can "
-                "install pyswarm via `pip install pyswarm."
-            )
+
+        try:
+            import pyswarm
+        except ImportError:
+            raise OptimizerImportError("pyswarm")
 
         check_finite_bounds(lb, ub)
 
@@ -713,11 +687,10 @@ class CmaesOptimizer(Optimizer):
         sigma0 = self.par_sigma0 * np.median(ub - lb)
         self.options['bounds'] = [lb, ub]
 
-        if cma is None:
-            raise ImportError(
-                "This optimizer requires an installation of cma. You can "
-                "install cma via `pip install cma."
-            )
+        try:
+            import cma
+        except ImportError:
+            raise OptimizerImportError("cma")
 
         result = (
             cma.CMAEvolutionStrategy(
@@ -867,10 +840,10 @@ class PyswarmsOptimizer(Optimizer):
         lb = problem.lb
         ub = problem.ub
 
-        if pyswarms is None:
-            raise ImportError(
-                "This optimizer requires an installation of pyswarms."
-            )
+        try:
+            import pyswarms
+        except ImportError:
+            raise OptimizerImportError("pyswarms")
 
         # check for finite values for the bounds
         if np.isfinite(lb).all() is np.False_:
@@ -968,11 +941,10 @@ class NLoptOptimizer(Optimizer):
         self.options = options
         self.local_options = local_options
 
-        if nlopt is None:
-            raise ImportError(
-                "This optimizer requires an installation of NLopt. You can "
-                "install NLopt via `pip install nlopt`."
-            )
+        try:
+            import nlopt
+        except ImportError:
+            raise OptimizerImportError("nlopt")
 
         if method is None:
             method = nlopt.LD_LBFGS
@@ -1077,6 +1049,8 @@ class NLoptOptimizer(Optimizer):
         optimize_options: OptimizeOptions = None,
     ) -> OptimizerResult:
         """Perform optimization. Parameters: see `Optimizer` documentation."""
+        import nlopt
+
         opt = nlopt.opt(self.method, problem.dim)
 
         valid_options = [
@@ -1160,7 +1134,9 @@ class FidesOptimizer(Optimizer):
 
     def __init__(
         self,
-        hessian_update: Optional['HessianApproximation'] = 'default',
+        hessian_update: Optional[
+            fides.hessian_approximation.HessianApproximation
+        ] = 'default',
         options: Optional[Dict] = None,
         verbose: Optional[int] = logging.INFO,
     ):
@@ -1178,10 +1154,18 @@ class FidesOptimizer(Optimizer):
         """
         super().__init__()
 
+        try:
+            import fides
+        except ImportError:
+            raise OptimizerImportError("fides")
+
         if (
             (hessian_update is not None)
             and (hessian_update != 'default')
-            and not isinstance(hessian_update, HessianApproximation)
+            and not isinstance(
+                hessian_update,
+                fides.hessian_approximation.HessianApproximation,
+            )
         ):
             raise ValueError(
                 'Incompatible type for hessian update. '
@@ -1225,11 +1209,7 @@ class FidesOptimizer(Optimizer):
         optimize_options: OptimizeOptions = None,
     ) -> OptimizerResult:
         """Perform optimization. Parameters: see `Optimizer` documentation."""
-        if fides is None:
-            raise ImportError(
-                "This optimizer requires an installation of fides. You can "
-                "install fides via `pip install fides`."
-            )
+        import fides
 
         if self.hessian_update == 'default':
             if not problem.objective.has_hess:
@@ -1305,7 +1285,7 @@ class FidesOptimizer(Optimizer):
         """Check whether optimizer is a least squares optimizer."""
         return False
 
-    def _convert_exitflag_to_message(self, opt: fidesOptimizer):
+    def _convert_exitflag_to_message(self, opt: fides.Optimizer):
         """
         Convert the exitflag of a run to an informative message.
 
@@ -1320,6 +1300,8 @@ class FidesOptimizer(Optimizer):
             An informative message on the cause of termination. Based on
             fides documentation.
         """
+        import fides
+
         messages = {
             fides.ExitFlag.DID_NOT_RUN: "Optimizer did not run",
             fides.ExitFlag.MAXITER: "Reached maximum number of allowed iterations",

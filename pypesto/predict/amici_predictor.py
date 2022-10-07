@@ -1,5 +1,7 @@
+from __future__ import annotations
+
 from copy import deepcopy
-from typing import Callable, List, Sequence, Tuple, Union
+from typing import TYPE_CHECKING, Callable, List, Sequence, Tuple, Union
 
 import numpy as np
 
@@ -25,7 +27,10 @@ from ..C import (
     TIMEPOINTS,
     ModeType,
 )
-from ..objective import AmiciObjective
+
+if TYPE_CHECKING:
+    from ..objective import AmiciObjective
+
 from ..result import PredictionResult
 
 
