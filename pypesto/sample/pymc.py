@@ -2,34 +2,32 @@
 from __future__ import annotations
 
 import logging
-import warnings
-from typing import TYPE_CHECKING, Union
+from typing import Union
 
 import numpy as np
 
 from ..history import MemoryHistory
 from ..problem import Problem
 from ..result import McmcPtResult
-from .sampler import Sampler, SamplerImportError
+from .sampler import Sampler
 
 logger = logging.getLogger(__name__)
 
-if TYPE_CHECKING:
-    try:
-        import aesara.tensor as at
-        import arviz as az
-        import pymc
+try:
+    import aesara.tensor as at
+    import arviz as az
+    import pymc
 
-        from ..objective.aesara import AesaraObjectiveRV
-    except ImportError:
-        raise ImportError(
-            "Using the pymc sampler requires an installation of the "
-            "python packages aesara, arviz and pymc. Please install "
-            "these packages via `pip install aesara arviz pymc`."
-        )
+    from ..objective.aesara import AesaraObjectiveRV
+except ImportError:
+    raise ImportError(
+        "Using the pymc sampler requires an installation of the "
+        "python packages aesara, arviz and pymc. Please install "
+        "these packages via `pip install aesara arviz pymc`."
+    )
 
 
-class AesaraDist(pymc.NoDistribution):
+class AesaraDist(pymc.Distribution):
     """PyMC distribution wrapper for AesaraObjectiveRVs."""
 
     def __new__(
@@ -73,7 +71,6 @@ class PymcSampler(Sampler):
         self.x0: Union[np.ndarray, None] = None
         self.trace: Union[pymc.backends.Text, None] = None
         self.data: Union[az.InferenceData, None] = None
-        warnings.warn("The pymc sampler is currently not supported")
 
     @classmethod
     def translate_options(cls, options):
@@ -121,11 +118,6 @@ class PymcSampler(Sampler):
         coeff:
             Inverse temperature for the log probability function.
         """
-        try:
-            import pymc
-        except ImportError:
-            raise SamplerImportError("pymc")
-
         problem = self.problem
         log_post_rv = AesaraObjectiveRV(problem.objective, coeff)
         trace = self.trace
@@ -164,7 +156,7 @@ class PymcSampler(Sampler):
             data = pymc.sample(
                 draws=int(n_samples),
                 trace=trace,
-                start=x0,
+                initvals=x0,
                 step=step,
                 **self.options,
             )
