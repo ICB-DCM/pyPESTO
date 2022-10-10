@@ -13,7 +13,7 @@ from ..history import MemoryHistory
 from ..objective import ObjectiveBase
 from ..problem import Problem
 from ..result import McmcPtResult
-from .sampler import Sampler
+from .sampler import Sampler, SamplerImportError
 
 logger = logging.getLogger(__name__)
 
@@ -160,6 +160,11 @@ class PymcSampler(Sampler):
         n_samples:
             Number of samples to be computed.
         """
+        try:
+            import pymc
+        except ImportError:
+            raise SamplerImportError("pymc")
+
         problem = self.problem
         log_post = AesaraObjectiveOp.create_instance(problem.objective, beta)
         trace = self.trace
