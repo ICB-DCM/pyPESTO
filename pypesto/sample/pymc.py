@@ -4,52 +4,91 @@ from __future__ import annotations
 import logging
 from typing import Union
 
+import aesara.tensor as at
+import arviz as az
 import numpy as np
+import pymc
 
 from ..history import MemoryHistory
+from ..objective import ObjectiveBase
 from ..problem import Problem
 from ..result import McmcPtResult
 from .sampler import Sampler
 
 logger = logging.getLogger(__name__)
 
-try:
-    import aesara.tensor as at
-    import arviz as az
-    import pymc
-
-    from ..objective.aesara import AesaraObjectiveRV
-except ImportError:
-    raise ImportError(
-        "Using the pymc sampler requires an installation of the "
-        "python packages aesara, arviz and pymc. Please install "
-        "these packages via `pip install aesara arviz pymc`."
-    )
+# implementation based on:
+# https://www.pymc.io/projects/examples/en/latest/case_studies/blackbox_external_likelihood_numpy.html
 
 
-class AesaraDist(pymc.Distribution):
-    """PyMC distribution wrapper for AesaraObjectiveRVs."""
+class AesaraObjectiveOp(at.Op):
+    """Aesara wrapper around a (non-normalized) log-probability function."""
 
-    def __new__(
-        cls,
-        name: str,
-        rv_op: AesaraObjectiveRV,
-        parameters: at.TensorVariable,
-    ):
-        """
-        Instantiate a PyMC distribution from an AesaraObjectiveRV.
+    itypes = [at.dvector]  # expects a vector of parameter values when called
+    otypes = [at.dscalar]  # outputs a single scalar value (the log prob)
+
+    def create_instance(objective: ObjectiveBase, beta: float = 1.0):
+        """Create an instance of this Op (factory method).
 
         Parameters
         ----------
-        name:
-            Name of the distribution
-        rv_op:
-            Aesara objective random variable
-        parameters:
-            Input parameters to the aesara objective
+        objective:
+            Objective function (negative log-likelihood or -posterior).
+        beta:
+            Inverse temperature (e.g. in parallel tempering).
+
+        Returns
+        -------
+        AesaraObjectiveOp
+            The created instance.
         """
-        cls.rv_op = rv_op
-        return super().__new__(cls, name, [parameters], observed=0)
+        if objective.has_grad:
+            return AesaraObjectiveWithGradientOp(objective, beta)
+        return AesaraObjectiveOp(objective, beta)
+
+    def __init__(self, objective: ObjectiveBase, beta: float = 1.0):
+        self._objective: ObjectiveBase = objective
+        self._beta: float = beta
+
+    def perform(self, node, inputs, outputs, params=None):
+        """Calculate the objective function value."""
+        (theta,) = inputs
+        log_prob = -self._beta * self._objective(theta, sensi_orders=(0,))
+        outputs[0][0] = np.array(log_prob)
+
+
+class AesaraObjectiveWithGradientOp(AesaraObjectiveOp):
+    """Aesara objective wrapper with gradient."""
+
+    def __init__(self, objective: ObjectiveBase, beta: float = 1.0):
+        super().__init__(objective, beta)
+
+        self._log_prob_grad = AesaraGradientOp(objective)
+
+    def grad(self, inputs, g):  # noqa
+        """Calculate the vector-Jacobian product."""
+        # the method that calculates the gradients - it actually returns the
+        # vector-Jacobian product - g[0] is a vector of parameter values
+        (theta,) = inputs  # our parameters
+        return [g[0] * self._log_prob_grad(theta)]
+
+
+class AesaraGradientOp(at.Op):
+    """Aesara wrapper around a (non-normalized) log-probability gradient."""
+
+    itypes = [at.dvector]  # expects a vector of parameter values when called
+    otypes = [at.dvector]  # outputs a vector (the log prob grad)
+
+    def __init__(self, objective: ObjectiveBase, beta: float):
+        self._objective: ObjectiveBase = objective
+        self._beta: float = beta
+
+    def perform(self, node, inputs, outputs, params=None):
+        """Calculate the gradients of the objective function."""
+        (theta,) = inputs
+        # calculate gradients
+        log_prob_grad = -self._beta * self._objective(theta, sensi_orders=(1,))
+        outputs[0][0] = log_prob_grad
 
 
 class PymcSampler(Sampler):
@@ -64,7 +103,12 @@ class PymcSampler(Sampler):
         Options are directly passed on to `pymc.sample`.
     """
 
-    def __init__(self, step_function=None, **kwargs):
+    def __init__(
+        self,
+        step_function=None,
+        post_compute_fval: bool = True,
+        **kwargs,
+    ):
         super().__init__(kwargs)
         self.step_function = step_function
         self.problem: Union[Problem, None] = None
@@ -107,7 +151,7 @@ class PymcSampler(Sampler):
 
         self.problem.objective.history = MemoryHistory()
 
-    def sample(self, n_samples: int, coeff: float = 1.0):
+    def sample(self, n_samples: int, beta: float = 1.0):
         """
         Sample the problem.
 
@@ -115,11 +159,9 @@ class PymcSampler(Sampler):
         ----------
         n_samples:
             Number of samples to be computed.
-        coeff:
-            Inverse temperature for the log probability function.
         """
         problem = self.problem
-        log_post_rv = AesaraObjectiveRV(problem.objective, coeff)
+        log_post = AesaraObjectiveOp.create_instance(problem.objective, beta)
         trace = self.trace
 
         x0 = None
@@ -131,8 +173,8 @@ class PymcSampler(Sampler):
 
         # create model context
         with pymc.Model():
-            # uniform bounds
-            k = [
+            # uniform prior
+            _k = [
                 pymc.Uniform(x_name, lower=lb, upper=ub)
                 for x_name, lb, ub in zip(
                     problem.get_reduced_vector(problem.x_names),
@@ -142,10 +184,13 @@ class PymcSampler(Sampler):
             ]
 
             # convert parameters to aesara tensor variable
-            theta = at.as_tensor_variable(k)
+            theta = at.as_tensor_variable(_k)
 
             # define distribution with log-posterior as density
-            AesaraDist('log_post', log_post_rv, theta)
+            pymc.Potential("potential", log_post(theta))
+
+            # record function values
+            pymc.Deterministic("loggyposty", log_post(theta))
 
             # step, by default automatically determined by pymc
             step = None
@@ -165,26 +210,32 @@ class PymcSampler(Sampler):
 
     def get_samples(self) -> McmcPtResult:
         """Convert result from pymc to McmcPtResult."""
-        # parameter values
-        trace_x = np.asarray(self.data.posterior.to_array()).transpose(
-            (1, 2, 0)
-        )
+        # dimensions
+        n_par, n_chain, n_iter = np.asarray(
+            self.data.posterior.to_array()
+        ).shape
+        n_par -= 1  # remove log-posterior
 
-        # TODO this is only the negative objective values
-        trace_neglogpost = np.asarray(self.data.log_likelihood.to_array())
-        # remove trailing dimensions
-        trace_neglogpost = np.reshape(
-            trace_neglogpost, trace_neglogpost.shape[1:-1]
-        )
-        # flip sign
-        trace_neglogpost = -trace_neglogpost
+        # parameters
+        trace_x = np.empty(shape=(n_chain, n_iter, n_par))
+        par_ids = self.problem.get_reduced_vector(self.problem.x_names)
+        if len(par_ids) != n_par:
+            raise AssertionError("Mismatch of parameter dimension")
+        for i_par, par_id in enumerate(par_ids):
+            trace_x[:, :, i_par] = np.asarray(self.data.posterior[par_id])
+
+        # function values
+        trace_neglogpost = -np.asarray(self.data.posterior["loggyposty"])
 
         if (
             trace_x.shape[0] != trace_neglogpost.shape[0]
             or trace_x.shape[1] != trace_neglogpost.shape[1]
             or trace_x.shape[2] != self.problem.dim
         ):
-            raise ValueError("Trace dimensions are inconsistent")
+            raise ValueError(
+                "Trace dimensions are inconsistent: "
+                f"{trace_x.shape=} {trace_neglogpost.shape=} {self.problem.dim=}"
+            )
 
         return McmcPtResult(
             trace_x=np.array(trace_x),
