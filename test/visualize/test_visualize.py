@@ -454,7 +454,7 @@ def test_parameters_hist():
 
 
 # @close_fig
-def _test_ensemble_dimension_reduction():
+def test_ensemble_dimension_reduction():
     # creates a test problem
     problem = create_problem(n_parameters=20)
 
