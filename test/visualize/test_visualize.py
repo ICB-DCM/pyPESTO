@@ -148,7 +148,7 @@ def create_optimization_history():
     problem = create_problem()
 
     # create optimizer
-    optimizer_options = {'maxiter': 200}
+    optimizer_options = {'maxfun': 200}
     optimizer = optimize.ScipyOptimizer(
         method='TNC', options=optimizer_options
     )
@@ -435,7 +435,7 @@ def test_parameters_hist():
     problem = create_problem()
 
     # create optimizer
-    optimizer_options = {'maxiter': 200}
+    optimizer_options = {'maxfun': 200}
     optimizer = optimize.ScipyOptimizer(
         method='TNC', options=optimizer_options
     )
@@ -745,7 +745,7 @@ def test_optimization_stats():
     problem = create_problem()
 
     # create optimizer
-    optimizer_options = {'maxiter': 200}
+    optimizer_options = {'maxfun': 200}
     optimizer = optimize.ScipyOptimizer(
         method='TNC', options=optimizer_options
     )
