@@ -440,7 +440,7 @@ class ScipyOptimizer(Optimizer):
         if self.is_least_squares():
             options = {'max_nfev': 1000, 'disp': False}
         else:
-            options = {'maxiter': 1000, 'disp': False}
+            options = {'maxfun': 1000, 'disp': False}
         return options
 
 
