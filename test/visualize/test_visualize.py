@@ -400,7 +400,7 @@ def test_parameters_with_options(scale_to_interval):
 
 
 @close_fig
-def _test_parameters_lowlevel():
+def test_parameters_lowlevel():
     # create some dummy results
     (lb, ub) = create_bounds()
     fvals = [0.01, 0.02, 1.01, 2.02, 2.03, 2.04, 3, 4, 4.1, 4.11]
@@ -454,7 +454,7 @@ def test_parameters_hist():
 
 
 # @close_fig
-def test_ensemble_dimension_reduction():
+def _test_ensemble_dimension_reduction():
     # creates a test problem
     problem = create_problem(n_parameters=20)
 
