@@ -178,7 +178,7 @@ class PymcSampler(Sampler):
 
         # create model context
         with pymc.Model():
-            # uniform prior
+            # parameter bounds as uniform prior
             _k = [
                 pymc.Uniform(x_name, lower=lb, upper=ub)
                 for x_name, lb, ub in zip(
