@@ -16,9 +16,8 @@ References
    2010, 37, 2, 315-324. https://doi.org/10.1016/j.cor.2009.05.003
 
 .. [VillaverdeEge2012] 'A cooperative strategy for parameter estimation in
-   large scale systems biology models.' Villaverde, A.F., Egea, J.A.
-   & Banga, J.R. BMC Syst Biol 2012, 6, 75.
-   https://doi.org/10.1186/1752-0509-6-75
+   large scale systems biology models', Villaverde, A.F., Egea, J.A. & Banga,
+   J.R. BMC Syst Biol 2012, 6, 75. https://doi.org/10.1186/1752-0509-6-75
 
 .. [PenasGon2017] 'Parameter estimation in large-scale systems biology models:
    a parallel and self-adaptive cooperative strategy', David R. Penas,
@@ -204,7 +203,8 @@ class RefSet:
 
     Attributes
     ----------
-    # TODO
+    dim: Reference set size
+    evaluator: Function evaluator
     """
 
     def __init__(self, dim: int, evaluator: FunctionEvaluator):
@@ -214,6 +214,11 @@ class RefSet:
         ----------
         dim: Reference set size
         evaluator: Function evaluator
+        proximity_threshold:
+        x: Parameters in the reference set
+        fx: Function values at the parameters in the reference set
+        n_stuck: Counts the number of times a refset member did not lead to an
+            improvement in the objective (length: ``dim``).
         """
         self.dim = dim
         self.evaluator = evaluator
@@ -292,7 +297,7 @@ class ESSOptimizer:
 
     .. note: Does not implement any constraint handling yet
 
-    For plausible values of hyperparameters, see [VillaverdeEge2012]_.
+    For plausible values of hyperparameters, see VillaverdeEge2012.
 
     Parameters
     ----------
@@ -417,11 +422,11 @@ class ESSOptimizer:
         self._report_final()
         return self._create_result()
 
-    def _create_result(self):
-        # TODO what to return here:
-        #  only the single best value?
-        #  the local solutions + the best
-        #  the local solutions + refset + best?
+    def _create_result(self) -> pypesto.Result:
+        """Create the result object.
+
+        Currently, this returns the overall best value and the final RefSet.
+        """
         common_result_fields = {
             'exitflag': self.exit_flag,
             # meaningful? this is the overall time, and identical for all
@@ -440,7 +445,7 @@ class ESSOptimizer:
             message="Global best",
             **common_result_fields,
         )
-        # TODO: Create a single History with the global best?
+        # TODO DW: Create a single History with the global best?
         result.optimize_result.append(optimizer_result)
 
         # save refset
@@ -455,13 +460,15 @@ class ESSOptimizer:
                     **common_result_fields,
                 )
             )
-        # TODO save local solutions (need to track fvals or re-evaluate)
+
+        # TODO DW: also save local solutions?
+        #  (need to track fvals or re-evaluate)
 
         return result
 
     def _keep_going(self):
         """Check exit criteria."""
-        # TODO further stopping criteria: gtol, fatol, frtol
+        # TODO DW which further stopping criteria: gtol, fatol, frtol?
 
         if self.n_iter >= self.max_iter:
             self.exit_flag = ESSExitFlag.MAX_ITER
@@ -475,7 +482,6 @@ class ESSOptimizer:
 
     def _combine_solutions(self) -> Tuple[np.array, np.array]:
         """Combine solutions and evaluate."""
-        # TODO: move to refset
         y = np.zeros(shape=(self.refset.dim, self.evaluator.problem.dim))
         fy = np.full(shape=self.refset.dim, fill_value=np.inf)
         for i in range(self.refset.dim):
@@ -495,7 +501,7 @@ class ESSOptimizer:
     def _combine(self, i, j):
         # combine solutions
         # see [EgeaBal2009]_ Section 3.2
-        # TODO: will that always yield admissible points?
+        # TODO DW: will that always yield admissible points?
         if i == j:
             raise ValueError("i == j")
         x = self.refset.x
@@ -556,11 +562,11 @@ class ESSOptimizer:
             return
 
         # actual local search
-        # TODO try alternatives if it fails on initial point?
+        # TODO DW: try alternatives if it fails on initial point?
         optimizer_result: OptimizerResult = self.local_optimizer.minimize(
             problem=self.evaluator.problem,
             x0=local_search_x0,
-            id="0",  # TODO
+            id="0",
         )
         # add function evaluations during local search to our function
         #  evaluation counter (NOTE: depending on the setup, we might neglect
@@ -568,7 +574,7 @@ class ESSOptimizer:
         self.evaluator.n_eval += optimizer_result.n_fval
         self.evaluator.n_eval_round += optimizer_result.n_fval
 
-        logger.info(
+        logger.debug(
             f"Local search: {local_search_fx0} -> " f"{optimizer_result.fval}"
         )
         self.local_solutions.append(optimizer_result.x)
