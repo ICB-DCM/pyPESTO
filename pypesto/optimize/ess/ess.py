@@ -63,15 +63,21 @@ class ESSOptimizer:
 
     Parameters
     ----------
-    dim_refset: Size of the ReferenceSet
-    max_iter: Maximum number of ESS iterations.
-    local_n1: Minimum number of function evaluations before first local search.
-    local_n2: Minimum number of function evaluations between consecutive local
+    dim_refset:
+        Size of the ReferenceSet
+    max_iter:
+        Maximum number of ESS iterations.
+    local_n1:
+        Minimum number of function evaluations before first local search.
+    local_n2:
+        Minimum number of function evaluations between consecutive local
         searches.
-    local_optimizer: Local optimizer for refinement, or ``None`` to skip local
-        searches.
-    n_diverse: Number of samples to choose from to construct the initial RefSet
-    max_eval: Maximum number of objective functions allowed. This criterion is
+    local_optimizer:
+        Local optimizer for refinement, or ``None`` to skip local searches.
+    n_diverse:
+        Number of samples to choose from to construct the initial RefSet
+    max_eval:
+        Maximum number of objective functions allowed. This criterion is
         only checked once per iteration, not after every objective evaluation,
         so the actual number of function evaluations may exceed this value.
     """

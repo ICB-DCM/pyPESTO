@@ -131,7 +131,7 @@ class FunctionEvaluator:
             xs[retry_indices] = self.startpoint_method(
                 n_starts=len(retry_indices), problem=self.problem
             )
-            fxs[retry_indices] = self.multiple(xs)
+            fxs[retry_indices] = self.multiple(xs[retry_indices])
         return xs, fxs
 
     def reset_counter(self):

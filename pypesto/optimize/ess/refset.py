@@ -10,8 +10,10 @@ class RefSet:
 
     Attributes
     ----------
-    dim: Reference set size
-    evaluator: Function evaluator
+    dim:
+        Reference set size
+    evaluator:
+        Function evaluator
     """
 
     def __init__(self, dim: int, evaluator: FunctionEvaluator):
@@ -19,12 +21,16 @@ class RefSet:
 
         Parameters
         ----------
-        dim: Reference set size
-        evaluator: Function evaluator
-        proximity_threshold:
-        x: Parameters in the reference set
-        fx: Function values at the parameters in the reference set
-        n_stuck: Counts the number of times a refset member did not lead to an
+        dim:
+            Reference set size
+        evaluator:
+            Function evaluator
+        x:
+            Parameters in the reference set
+        fx:
+            Function values at the parameters in the reference set
+        n_stuck:
+            Counts the number of times a refset member did not lead to an
             improvement in the objective (length: ``dim``).
         """
         self.dim = dim
@@ -48,7 +54,7 @@ class RefSet:
     def initialize(self, n_diverse: int):
         """Create initial reference set with random parameters.
 
-        Sample `n_diverse` random points, populate half of the RefSet using
+        Sample ``n_diverse`` random points, populate half of the RefSet using
         the best solutions and fill the rest with random points.
         """
         # sample n_diverse points
