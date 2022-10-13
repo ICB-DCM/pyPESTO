@@ -21,7 +21,7 @@ logger = logging.getLogger(__name__)
 # https://www.pymc.io/projects/examples/en/latest/case_studies/blackbox_external_likelihood_numpy.html
 
 
-class AesaraObjectiveOp(at.Op):
+class PymcObjectiveOp(at.Op):
     """Aesara wrapper around a (non-normalized) log-probability function."""
 
     itypes = [at.dvector]  # expects a vector of parameter values when called
@@ -39,12 +39,12 @@ class AesaraObjectiveOp(at.Op):
 
         Returns
         -------
-        AesaraObjectiveOp
+        PymcObjectiveOp
             The created instance.
         """
         if objective.has_grad:
-            return AesaraObjectiveWithGradientOp(objective, beta)
-        return AesaraObjectiveOp(objective, beta)
+            return PymcObjectiveWithGradientOp(objective, beta)
+        return PymcObjectiveOp(objective, beta)
 
     def __init__(self, objective: ObjectiveBase, beta: float = 1.0):
         self._objective: ObjectiveBase = objective
@@ -57,13 +57,13 @@ class AesaraObjectiveOp(at.Op):
         outputs[0][0] = np.array(log_prob)
 
 
-class AesaraObjectiveWithGradientOp(AesaraObjectiveOp):
+class PymcObjectiveWithGradientOp(PymcObjectiveOp):
     """Aesara objective wrapper with gradient."""
 
     def __init__(self, objective: ObjectiveBase, beta: float = 1.0):
         super().__init__(objective, beta)
 
-        self._log_prob_grad = AesaraGradientOp(objective)
+        self._log_prob_grad = PymcGradientOp(objective, beta)
 
     def grad(self, inputs, g):  # noqa
         """Calculate the vector-Jacobian product."""
@@ -73,7 +73,7 @@ class AesaraObjectiveWithGradientOp(AesaraObjectiveOp):
         return [g[0] * self._log_prob_grad(theta)]
 
 
-class AesaraGradientOp(at.Op):
+class PymcGradientOp(at.Op):
     """Aesara wrapper around a (non-normalized) log-probability gradient."""
 
     itypes = [at.dvector]  # expects a vector of parameter values when called
@@ -166,7 +166,7 @@ class PymcSampler(Sampler):
             raise SamplerImportError("pymc")
 
         problem = self.problem
-        log_post = AesaraObjectiveOp.create_instance(problem.objective, beta)
+        log_post = PymcObjectiveOp.create_instance(problem.objective, beta)
         trace = self.trace
 
         x0 = None
