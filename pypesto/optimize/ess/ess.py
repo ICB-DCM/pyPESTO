@@ -166,17 +166,17 @@ class ESSOptimizer:
             self._report_iteration()
             refset.prune_too_close()
 
-            # Combination method
+            # Apply combination method to update the RefSet
             x_best_children, fx_best_children = self._combine_solutions()
 
-            # Go-beyond strategy
+            # Go-beyond strategy to further improve the new combinations
             self._go_beyond(x_best_children, fx_best_children)
 
-            # Local search
+            # Maybe perform a local search
             if self.local_optimizer is not None:
                 self._do_local_search(x_best_children, fx_best_children)
 
-            # replace refset members by best children where an improvement
+            # Replace RefSet members by best children where an improvement
             #  was made. replace stuck members by random points.
             for i in range(refset.dim):
                 if fx_best_children[i] < refset.fx[i]:
@@ -255,7 +255,19 @@ class ESSOptimizer:
         return True
 
     def _combine_solutions(self) -> Tuple[np.array, np.array]:
-        """Combine solutions and evaluate."""
+        """Combine solutions and evaluate.
+
+        Creates the next generation from the RefSet by pair-wise combinations
+        of all RefSet members.
+
+        Returns
+        -------
+        y:
+            Contains the best of all pairwise combinations of all RefSet
+            members, for each RefSet members.
+        fy:
+            The corresponding objective values.
+        """
         y = np.zeros(shape=(self.refset.dim, self.evaluator.problem.dim))
         fy = np.full(shape=self.refset.dim, fill_value=np.inf)
         for i in range(self.refset.dim):
@@ -273,8 +285,15 @@ class ESSOptimizer:
         return y, fy
 
     def _combine(self, i, j) -> np.array:
-        # combine solutions
-        # see [EgeaBal2009]_ Section 3.2
+        """Combine RefSet members ``i`` and ``j``.
+
+        Samples a new point from a biased hyper-rectangle derived from the
+        given parents, favoring the direction of the better parent.
+
+        Assumes that the RefSet is sorted by quality.
+
+        See [EgeaBal2009]_ Section 3.2 for details.
+        """
         # TODO DW: will that always yield admissible points?
         if i == j:
             raise ValueError("i == j")
@@ -285,8 +304,7 @@ class ESSOptimizer:
         beta = (np.abs(j - i) - 1) / (self.refset.dim - 2)
         c1 = x[i] - d * (1 + alpha * beta)
         c2 = x[i] - d * (1 - alpha * beta)
-        r = np.random.uniform(0, 1, self.evaluator.problem.dim)
-        return c1 + (c2 - c1) * r
+        return np.random.uniform(c1, c2, self.evaluator.problem.dim)
 
     def _do_local_search(self, x_best_children, fx_best_children):
         """
@@ -360,6 +378,7 @@ class ESSOptimizer:
         self.evaluator.reset_round_counter()
 
     def _maybe_update_global_best(self, x, fx):
+        """Update the global best value if the provided value is better."""
         if fx < self.fx_best:
             self.x_best = x[:]
             self.fx_best = fx
@@ -367,6 +386,9 @@ class ESSOptimizer:
 
     def _go_beyond(self, x_best_children, fx_best_children):
         """Apply go-beyond strategy.
+
+        If a child is better than its parent, intensify search in that
+        direction until no further improvement is made.
 
         See [Egea2009]_ algorithm 1 + section 3.4
         """
@@ -411,6 +433,7 @@ class ESSOptimizer:
             )
 
     def _report_iteration(self):
+        """Log the current iteration."""
         if self.n_iter == 0:
             logger.info("iter | best | nf | refset         |")
 
@@ -426,6 +449,7 @@ class ESSOptimizer:
             )
 
     def _report_final(self):
+        """Log scatter search summary."""
         with np.printoptions(
             edgeitems=30,
             linewidth=100000,
