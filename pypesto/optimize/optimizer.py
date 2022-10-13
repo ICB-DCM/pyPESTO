@@ -318,7 +318,7 @@ class ScipyOptimizer(Optimizer):
                     else 0
                 )
                 ls_options.pop('disp', None)
-                ls_options['max_nfev'] = ls_options.pop('maxiter', None)
+                ls_options['max_nfev'] = ls_options.pop('maxfun', None)
             else:
                 ls_options = {}
 
@@ -440,7 +440,7 @@ class ScipyOptimizer(Optimizer):
         if self.is_least_squares():
             options = {'max_nfev': 1000, 'disp': False}
         else:
-            options = {'maxiter': 1000, 'disp': False}
+            options = {'maxfun': 1000, 'disp': False}
         return options
 
 

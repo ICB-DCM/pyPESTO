@@ -14,8 +14,7 @@ import pypesto.optimize as optimize
 import pypesto.petab
 import pypesto.sample as sample
 import pypesto.visualize as visualize
-
-# from pypesto.sample.pymc import PymcSampler
+from pypesto.sample.pymc import PymcSampler
 
 
 def gaussian_llh(x):
@@ -78,8 +77,9 @@ def rosenbrock_problem():
     --------
     * 3-dim
     * has fixed parameters
+    * has gradient
     """
-    objective = pypesto.Objective(fun=so.rosen)
+    objective = pypesto.Objective(fun=so.rosen, grad=so.rosen_der)
 
     dim_full = 2
     lb = -5 * np.ones((dim_full, 1))
@@ -152,7 +152,7 @@ def negative_log_prior(x):
         'AdaptiveMetropolis',
         'ParallelTempering',
         'AdaptiveParallelTempering',
-        # 'Pymc',
+        'Pymc',
         'Emcee',
     ]
 )
@@ -185,8 +185,8 @@ def sampler(request):
             },
             n_chains=5,
         )
-    # elif request.param == 'Pymc':
-    #     return PymcSampler(tune=5, progressbar=False)
+    elif request.param == 'Pymc':
+        return PymcSampler(tune=5, progressbar=False)
     elif request.param == 'Emcee':
         return sample.EmceeSampler(nwalkers=10)
 

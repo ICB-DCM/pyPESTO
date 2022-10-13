@@ -3,4 +3,4 @@ Aesara objective
 ================
 """
 
-from .base import AesaraObjective, AesaraObjectiveRV
+from .base import AesaraObjective
