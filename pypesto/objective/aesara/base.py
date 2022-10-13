@@ -17,9 +17,7 @@ from ..base import ObjectiveBase, ResultDict
 try:
     import aesara
     import aesara.tensor as aet
-    from aeppl.logprob import _logprob
-    from aesara.graph.op import Op
-    from aesara.tensor.random.op import RandomVariable
+    from aesara.tensor import Op
     from aesara.tensor.var import TensorVariable
 except ImportError:
     raise ImportError(
@@ -93,7 +91,7 @@ class AesaraObjective(ObjectiveBase):
         self.infun = aesara.function([aet_x], aet_fun)
 
         # temporary storage for evaluation results of objective
-        self.inner_ret: ResultDict = {}
+        self.cached_base_ret: ResultDict = {}
 
     def check_mode(self, mode: ModeType) -> bool:
         """See `ObjectiveBase` documentation."""
@@ -130,14 +128,14 @@ class AesaraObjective(ObjectiveBase):
             'return_dict' in kwargs,
             kwargs.pop('return_dict', False),
         )
-        self.inner_ret = self.base_objective(
+        self.cached_base_ret = self.base_objective(
             self.infun(x), sensi_orders, mode, return_dict=True, **kwargs
         )
         if set_return_dict:
             kwargs['return_dict'] = return_dict
         ret = {}
-        if RDATAS in self.inner_ret:
-            ret[RDATAS] = self.inner_ret[RDATAS]
+        if RDATAS in self.cached_base_ret:
+            ret[RDATAS] = self.cached_base_ret[RDATAS]
         if 0 in sensi_orders:
             ret[FVAL] = float(self.afun(x))
         if 1 in sensi_orders:
@@ -156,69 +154,6 @@ class AesaraObjective(ObjectiveBase):
         )
 
         return other
-
-
-class AesaraObjectiveRV(RandomVariable):
-    """
-    Aesara RandomVariable wrapper for an AesaraObjective.
-
-    Parameters
-    ----------
-    obj:
-        Objective function
-    coeff:
-        Multiplicative coefficient for the objective
-    x_size:
-        Dimension of input vector
-    """
-
-    def __init__(
-        self,
-        obj: AesaraObjective,
-        coeff: Optional[float] = 1.0,
-        x_size: Optional[int] = np.NAN,
-    ):
-        self._objective: AesaraObjective = obj
-        self._coeff: float = coeff
-
-        # figure out size of input for different objective types
-        if not np.isnan(x_size):
-            # from user input
-            pass
-        elif hasattr(obj, 'aet_x'):
-            # aesara objective
-            x_size = obj.aet_x.shape.value[0]
-        elif obj.pre_post_processor is not None and hasattr(
-            obj.pre_post_processor, 'x_free_indices'
-        ):
-            # extract size from preprocessor
-            x_size = obj.pre_post_processor.x_free_indices.size
-        elif obj.x_names is not None:
-            # from parameter names
-            x_size = len(obj.x_names)
-        else:
-            raise ValueError(
-                'Could not extract number of parameters from '
-                'objective. Please specify as x_size argument.'
-            )
-
-        super().__init__(
-            name='log_post',
-            ndim_supp=0,
-            ndims_params=[x_size],
-            dtype='floatX',
-        )
-
-
-@_logprob.register(AesaraObjectiveRV)
-def aesara_logprob(op, values, *inputs, **kwargs):
-    """
-    Aeppl registration of the logprob function of AesaraObjectiveRV class.
-
-    AesaraObjective already is the logprob, so this function simply applies
-    the identity function to the value variables
-    """
-    return values[0]
 
 
 class AesaraObjectiveOp(Op):
@@ -250,7 +185,7 @@ class AesaraObjectiveOp(Op):
         # note that we use precomputed values from the outer
         # AesaraObjective.call_unprocessed here, which means we can
         # ignore inputs here
-        log_prob = self._coeff * self._objective.inner_ret[FVAL]
+        log_prob = self._coeff * self._objective.cached_base_ret[FVAL]
         outputs[0][0] = np.array(log_prob)
 
     def grad(self, inputs, g):
@@ -260,6 +195,8 @@ class AesaraObjectiveOp(Op):
         Actually returns the vector-hessian product - g[0] is a vector of
         parameter values.
         """
+        if self._log_prob_grad is None:
+            return super(AesaraObjectiveOp, self).grad(inputs, g)
         (theta,) = inputs
         log_prob_grad = self._log_prob_grad(theta)
         return [g[0] * log_prob_grad]
@@ -294,9 +231,9 @@ class AesaraObjectiveGradOp(Op):
 
     def perform(self, node, inputs, outputs, params=None):  # noqa
         # note that we use precomputed values from the outer
-        # AesaraObjective.call_unprocessed here, which which means we can
+        # AesaraObjective.call_unprocessed here, which means we can
         # ignore inputs here
-        log_prob_grad = self._coeff * self._objective.inner_ret[GRAD]
+        log_prob_grad = self._coeff * self._objective.cached_base_ret[GRAD]
         outputs[0][0] = log_prob_grad
 
     def grad(self, inputs, g):
@@ -306,6 +243,8 @@ class AesaraObjectiveGradOp(Op):
         Actually returns the vector-hessian product - g[0] is a vector of
         parameter values.
         """
+        if self._log_prob_hess is None:
+            return super(AesaraObjectiveGradOp, self).grad(inputs, g)
         (theta,) = inputs
         log_prob_hess = self._log_prob_hess(theta)
         return [g[0].dot(log_prob_hess)]
@@ -337,5 +276,5 @@ class AesaraObjectiveHessOp(Op):
         # note that we use precomputed values from the outer
         # AesaraObjective.call_unprocessed here, which means we can
         # ignore inputs here
-        log_prob_hess = self._coeff * self._objective.inner_ret[HESS]
+        log_prob_hess = self._coeff * self._objective.cached_base_ret[HESS]
         outputs[0][0] = log_prob_hess

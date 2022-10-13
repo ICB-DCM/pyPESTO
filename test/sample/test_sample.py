@@ -77,8 +77,9 @@ def rosenbrock_problem():
     --------
     * 3-dim
     * has fixed parameters
+    * has gradient
     """
-    objective = pypesto.Objective(fun=so.rosen)
+    objective = pypesto.Objective(fun=so.rosen, grad=so.rosen_der)
 
     dim_full = 2
     lb = -5 * np.ones((dim_full, 1))
