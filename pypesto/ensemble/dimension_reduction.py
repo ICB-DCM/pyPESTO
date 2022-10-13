@@ -5,14 +5,6 @@ import numpy as np
 from .ensemble import Ensemble, EnsemblePrediction
 from .util import get_prediction_dataset
 
-try:
-    import sklearn.decomposition
-    import umap
-    import umap.plot
-    from sklearn.preprocessing import StandardScaler
-except ImportError:
-    pass
-
 
 def get_umap_representation_parameters(
     ens: Ensemble,
@@ -225,6 +217,10 @@ def _get_umap_representation_lowlevel(
     umap_object:
         returned fitted umap object from umap.UMAP()
     """
+    import umap
+    import umap.plot
+    from sklearn.preprocessing import StandardScaler
+
     # create a umap object
     umap_object = umap.UMAP(n_components=n_components, **kwargs)
 
@@ -272,6 +268,8 @@ def _get_pca_representation_lowlevel(
     pca_object:
         returned fitted pca object from sklearn.decomposition.PCA()
     """
+    import sklearn.decomposition
+
     # create a PCA object and decompose the dataset
     pca_object = sklearn.decomposition.PCA(n_components=n_components)
     pca_object.fit(dataset)

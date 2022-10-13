@@ -4,7 +4,6 @@ import matplotlib.axes
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
-import seaborn as sns
 from matplotlib.ticker import MaxNLocator
 
 from pypesto.util import delete_nan_inf
@@ -429,6 +428,8 @@ def parameters_correlation_matrix(
     ax:
         The plot axis.
     """
+    import seaborn as sns
+
     start_indices = process_start_indices(
         start_indices=start_indices, result=result
     )

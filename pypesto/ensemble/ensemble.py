@@ -1,6 +1,17 @@
+from __future__ import annotations
+
 import logging
 from functools import partial
-from typing import Callable, Dict, List, Optional, Sequence, Tuple, Union
+from typing import (
+    TYPE_CHECKING,
+    Callable,
+    Dict,
+    List,
+    Optional,
+    Sequence,
+    Tuple,
+    Union,
+)
 
 import numpy as np
 import pandas as pd
@@ -41,7 +52,10 @@ from ..engine import (
     MultiThreadEngine,
     SingleCoreEngine,
 )
-from ..objective import AmiciObjective
+
+if TYPE_CHECKING:
+    from ..objective import AmiciObjective
+
 from ..result import PredictionConditionResult, PredictionResult, Result
 from ..sample import geweke_test
 from .task import EnsembleTask

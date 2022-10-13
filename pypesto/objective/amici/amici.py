@@ -3,7 +3,7 @@ import copy
 import os
 import tempfile
 from collections import OrderedDict
-from typing import Dict, Optional, Sequence, Tuple, Union
+from typing import TYPE_CHECKING, Dict, Optional, Sequence, Tuple, Union
 
 import numpy as np
 
@@ -15,13 +15,12 @@ from .amici_util import (
     map_par_opt_to_par_sim,
 )
 
-try:
-    import amici
-    import amici.parameter_mapping
-    import amici.petab_objective
-    from amici.parameter_mapping import ParameterMapping
-except ImportError:
-    pass
+if TYPE_CHECKING:
+    try:
+        import amici
+        from amici.parameter_mapping import ParameterMapping
+    except ImportError:
+        pass
 
 AmiciModel = Union['amici.Model', 'amici.ModelPtr']
 AmiciSolver = Union['amici.Solver', 'amici.SolverPtr']
@@ -118,6 +117,8 @@ class AmiciObjective(ObjectiveBase):
             see ``amici.Solver.setReturnDataReportingMode``. Set to ``None``
             to compute only the minimum required information.
         """
+        import amici
+
         if amici is None:
             raise ImportError(
                 "This objective requires an installation of amici "
@@ -230,6 +231,8 @@ class AmiciObjective(ObjectiveBase):
         self.calculator.initialize()
 
     def __deepcopy__(self, memodict: Dict = None) -> 'AmiciObjective':
+        import amici
+
         other = self.__class__.__new__(self.__class__)
 
         for key in set(self.__dict__.keys()) - {
@@ -247,6 +250,8 @@ class AmiciObjective(ObjectiveBase):
         return other
 
     def __getstate__(self) -> Dict:
+        import amici
+
         if self.amici_object_builder is None:
             raise NotImplementedError(
                 "AmiciObjective does not support __getstate__ without "
@@ -287,6 +292,8 @@ class AmiciObjective(ObjectiveBase):
         return state
 
     def __setstate__(self, state: Dict) -> None:
+        import amici
+
         if state['amici_object_builder'] is None:
             raise NotImplementedError(
                 "AmiciObjective does not support __setstate__ without "
@@ -336,6 +343,8 @@ class AmiciObjective(ObjectiveBase):
         mode: ModeType,
     ) -> bool:
         """See `ObjectiveBase` documentation."""
+        import amici
+
         if not sensi_orders:
             return True
         sensi_order = max(sensi_orders)
@@ -369,6 +378,8 @@ class AmiciObjective(ObjectiveBase):
         **kwargs,
     ) -> Union[float, np.ndarray, Tuple, ResultDict]:
         """See `ObjectiveBase` documentation."""
+        import amici
+
         # Use AMICI full reporting if amici.ReturnDatas are returned and no
         #  other reporting mode was set
         if (
@@ -397,6 +408,8 @@ class AmiciObjective(ObjectiveBase):
         result:
             A dict containing the results.
         """
+        import amici
+
         x_dct = self.par_arr_to_dct(x)
 
         # only ask amici to compute required quantities

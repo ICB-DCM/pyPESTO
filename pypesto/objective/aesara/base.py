@@ -11,8 +11,8 @@ from typing import Optional, Sequence, Tuple
 
 import numpy as np
 
-from ..C import FVAL, GRAD, HESS, MODE_FUN, RDATAS, ModeType
-from .base import ObjectiveBase, ResultDict
+from ...C import FVAL, GRAD, HESS, MODE_FUN, RDATAS, ModeType
+from ..base import ObjectiveBase, ResultDict
 
 try:
     import aesara

@@ -1,17 +1,19 @@
-from typing import Optional, Sequence, Tuple
+from __future__ import annotations
+
+from typing import TYPE_CHECKING, Optional, Sequence, Tuple
 
 import matplotlib.pyplot as plt
 import numpy as np
 
 from .clust_color import RGBA
 
-try:
-    import umap
-    import umap.plot
+if TYPE_CHECKING:
+    try:
+        import umap
 
-    UmapTypeObject = umap.umap_.UMAP
-except ImportError:
-    UmapTypeObject = None
+        UmapTypeObject = umap.umap_.UMAP
+    except ImportError:
+        UmapTypeObject = None
 
 
 def projection_scatter_umap(
@@ -91,6 +93,8 @@ def projection_scatter_umap_original(
     ax: matplotlib.Axes
         The plot axes.
     """
+    import umap.plot
+
     # reduce, if necessary
     umap_object.embedding_ = umap_object.embedding_[:, components]
 

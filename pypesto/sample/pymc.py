@@ -1,31 +1,35 @@
 """Pymc v4 Sampler."""
+from __future__ import annotations
+
 import logging
-from typing import Union
+import warnings
+from typing import TYPE_CHECKING, Union
 
 import numpy as np
 
 from ..history import MemoryHistory
 from ..problem import Problem
 from ..result import McmcPtResult
-from .sampler import Sampler
+from .sampler import Sampler, SamplerImportError
 
 logger = logging.getLogger(__name__)
 
-try:
-    import aesara.tensor as at
-    import arviz as az
-    import pymc as pm
+if TYPE_CHECKING:
+    try:
+        import aesara.tensor as at
+        import arviz as az
+        import pymc
 
-    from ..objective.aesara import AesaraObjectiveRV
-except ImportError:
-    raise ImportError(
-        "Using the pymc sampler requires an installation of the "
-        "python packages aesara, arviz and pymc. Please install "
-        "these packages via `pip install aesara arviz pymc`."
-    )
+        from ..objective.aesara import AesaraObjectiveRV
+    except ImportError:
+        raise ImportError(
+            "Using the pymc sampler requires an installation of the "
+            "python packages aesara, arviz and pymc. Please install "
+            "these packages via `pip install aesara arviz pymc`."
+        )
 
 
-class AesaraDist(pm.NoDistribution):
+class AesaraDist(pymc.NoDistribution):
     """PyMC distribution wrapper for AesaraObjectiveRVs."""
 
     def __new__(
@@ -67,8 +71,9 @@ class PymcSampler(Sampler):
         self.step_function = step_function
         self.problem: Union[Problem, None] = None
         self.x0: Union[np.ndarray, None] = None
-        self.trace: Union[pm.backends.Text, None] = None
+        self.trace: Union[pymc.backends.Text, None] = None
         self.data: Union[az.InferenceData, None] = None
+        warnings.warn("The pymc sampler is currently not supported")
 
     @classmethod
     def translate_options(cls, options):
@@ -116,6 +121,11 @@ class PymcSampler(Sampler):
         coeff:
             Inverse temperature for the log probability function.
         """
+        try:
+            import pymc
+        except ImportError:
+            raise SamplerImportError("pymc")
+
         problem = self.problem
         log_post_rv = AesaraObjectiveRV(problem.objective, coeff)
         trace = self.trace
@@ -128,10 +138,10 @@ class PymcSampler(Sampler):
             }
 
         # create model context
-        with pm.Model():
+        with pymc.Model():
             # uniform bounds
             k = [
-                pm.Uniform(x_name, lower=lb, upper=ub)
+                pymc.Uniform(x_name, lower=lb, upper=ub)
                 for x_name, lb, ub in zip(
                     problem.get_reduced_vector(problem.x_names),
                     problem.lb,
@@ -151,7 +161,7 @@ class PymcSampler(Sampler):
                 step = self.step_function()
 
             # perform the actual sampling
-            data = pm.sample(
+            data = pymc.sample(
                 draws=int(n_samples),
                 trace=trace,
                 start=x0,

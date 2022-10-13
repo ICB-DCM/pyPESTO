@@ -8,6 +8,16 @@ from ..problem import Problem
 from ..result import McmcPtResult
 
 
+class SamplerImportError(ImportError):
+    """Exception raised when a sampler is not available."""
+
+    def __init__(self, sampler: str):
+        super().__init__(
+            f'Sampler "{sampler}" not available, install corresponding '
+            f'package e.g. via "pip install pypesto[{sampler}]"'
+        )
+
+
 class Sampler(abc.ABC):
     """Sampler base class, not functional on its own.
 
