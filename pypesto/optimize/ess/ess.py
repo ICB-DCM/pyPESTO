@@ -368,7 +368,7 @@ class ESSOptimizer:
     def _go_beyond(self, x_best_children, fx_best_children):
         """Apply go-beyond strategy.
 
-        See [Egea2009]_ algorithm 1
+        See [Egea2009]_ algorithm 1 + section 3.4
         """
         for i in range(self.refset.dim):
             if fx_best_children[i] >= self.refset.fx[i]:
@@ -380,7 +380,11 @@ class ESSOptimizer:
             x_child = x_best_children[i]
             fx_child = fx_best_children[i]
             improvement = 1
-            Lambda = 1
+            # Multiplier used in determining the hyper-rectangle from which to
+            # sample children. Will be increased in case of 2 consecutive
+            # improvements.
+            # (corresponds to 1/\Lambda in [Egea2009]_ algorithm 1)
+            go_beyound_factor = 1
             while fx_child < fx_parent:
                 # update best child
                 x_best_children[i] = x_child
@@ -388,7 +392,7 @@ class ESSOptimizer:
 
                 # create new solution, child becomes parent
                 x_new = np.random.uniform(
-                    low=x_child - (x_parent - x_child) / Lambda,
+                    low=x_child - (x_parent - x_child) * go_beyound_factor,
                     high=x_child,
                 )
                 x_parent = x_child
@@ -398,7 +402,7 @@ class ESSOptimizer:
 
                 improvement += 1
                 if improvement == 2:
-                    Lambda /= 2
+                    go_beyound_factor *= 2
                     improvement = 0
 
             # update overall best?
