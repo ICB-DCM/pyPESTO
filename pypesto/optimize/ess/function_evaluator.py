@@ -43,18 +43,18 @@ class FunctionEvaluator:
             function evaluations. Requires the objective to be copy-able, and
             that copies are thread-safe.
         """
-        self.problem = problem
-        self.startpoint_method = startpoint_method
-        self.n_eval = 0
-        self.n_eval_round = 0
+        self.problem: Problem = problem
+        self.startpoint_method: StartpointMethod = startpoint_method
+        self.n_eval: int = 0
+        self.n_eval_round: int = 0
         # Number of threads for parallel objective evaluation
-        self._n_threads = n_threads
+        self._n_threads: int = n_threads
         # Thread-local storage for copies of objective. Each thread gets its
         #  own copy of the objective, which may be sufficient to make some
         #  objectives thread-safe.
-        self._thread_local = threading.local()
+        self._thread_local: threading.local = threading.local()
         # The thread-pool to be used for parallel objective evaluations
-        self._executor = ThreadPoolExecutor(
+        self._executor: ThreadPoolExecutor = ThreadPoolExecutor(
             max_workers=self._n_threads,
             thread_name_prefix=__name__,
             initializer=self._initialize_worker,

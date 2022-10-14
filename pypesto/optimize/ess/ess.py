@@ -27,7 +27,7 @@ References
 import enum
 import logging
 import time
-from typing import Tuple
+from typing import List, Optional, Tuple
 
 import numpy as np
 
@@ -95,44 +95,46 @@ class ESSOptimizer:
         n_threads=1,
     ):
         # Hyperparameters
-        self.local_n1 = local_n1
-        self.local_n2 = local_n2
-        self.max_iter = max_iter
-        self.max_eval = max_eval
-        self.dim_refset = dim_refset
-        self.local_optimizer = local_optimizer
-        self.n_diverse = n_diverse
-        self.n_threads = n_threads
+        self.local_n1: int = local_n1
+        self.local_n2: int = local_n2
+        self.max_iter: int = max_iter
+        self.max_eval: int = max_eval
+        self.dim_refset: int = dim_refset
+        self.local_optimizer: Optional[
+            'pypesto.optimize.Optimizer'
+        ] = local_optimizer
+        self.n_diverse: int = n_diverse
+        self.n_threads: int = n_threads
         # quality vs diversity balancing factor [0, 1];
         #  0 = only quality; 1 = only diversity
-        self.balance = 0.5
+        self.balance: float = 0.5
         # After how many iterations a stagnated solution is to be replaced by
         #  a random one. Default value taken from [EgeaMar2010]_
-        self.n_change = 20
+        self.n_change: int = 20
         # Only perform local search from best solution
-        self.local_only_best_sol = False
+        self.local_only_best_sol: bool = False
 
         self._initialize()
 
     def _initialize(self):
         # RefSet
-        self.refset = None
+        self.refset: Optional[RefSet] = None
         # Overall best parameters found so far
-        self.x_best = None
+        self.x_best: Optional[np.array] = None
         # Overall best function value found so far
-        self.fx_best = np.inf
+        self.fx_best: float = np.inf
         # Final parameters from local searches
-        self.local_solutions = []
+        self.local_solutions: List[float] = []
         # Index of current iteration
-        self.n_iter = 0
+        self.n_iter: int = 0
         # Number of function evaluations at which the last local search took
         #  place
-        self.last_local_search_neval = 0
+        self.last_local_search_neval: int = 0
         # Whether self.x_best has changed in the current iteration
-        self.x_best_has_changed = False
-        self.exit_flag = ESSExitFlag.DID_NOT_RUN
-        self.evaluator = None
-        self.starttime = None
+        self.x_best_has_changed: bool = False
+        self.exit_flag: ESSExitFlag = ESSExitFlag.DID_NOT_RUN
+        self.evaluator: Optional[FunctionEvaluator] = None
+        self.starttime: Optional[float] = None
 
     def minimize(
         self, problem: Problem, startpoint_method: StartpointMethod
@@ -304,9 +306,13 @@ class ESSOptimizer:
         beta = (np.abs(j - i) - 1) / (self.refset.dim - 2)
         c1 = x[i] - d * (1 + alpha * beta)
         c2 = x[i] - d * (1 - alpha * beta)
-        return np.random.uniform(c1, c2, self.evaluator.problem.dim)
+        return np.random.uniform(
+            low=c1, high=c2, size=self.evaluator.problem.dim
+        )
 
-    def _do_local_search(self, x_best_children, fx_best_children):
+    def _do_local_search(
+        self, x_best_children: np.array, fx_best_children: np.array
+    ):
         """
         Perform a local search to refine the next generation.
 
