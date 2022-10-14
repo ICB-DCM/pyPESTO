@@ -1,6 +1,6 @@
 """Enhanced Scatter Search.
 
-See papers on ESS [EgeaBal2009]_, CESS [VillaverdeEge2012]_ and
+See papers on ESS [EgeaBal2009]_ [EgeaMar2010]_, CESS [VillaverdeEge2012]_ and
 saCeSS [PenasGon2017]_.
 
 References
