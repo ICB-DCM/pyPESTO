@@ -117,6 +117,7 @@ class ESSOptimizer:
         self._initialize()
 
     def _initialize(self):
+        """(Re-)Initialize."""
         # RefSet
         self.refset: Optional[RefSet] = None
         # Overall best parameters found so far
@@ -124,7 +125,7 @@ class ESSOptimizer:
         # Overall best function value found so far
         self.fx_best: float = np.inf
         # Final parameters from local searches
-        self.local_solutions: List[float] = []
+        self.local_solutions: List[np.array] = []
         # Index of current iteration
         self.n_iter: int = 0
         # Number of function evaluations at which the last local search took
@@ -312,6 +313,17 @@ class ESSOptimizer:
         Assumes that the RefSet is sorted by quality.
 
         See [EgeaBal2009]_ Section 3.2 for details.
+
+        Parameters
+        ----------
+        i:
+            Index of first RefSet member for recombination
+        j:
+            Index of second RefSet member for recombination
+
+        Returns
+        -------
+        A new parameter vector.
         """
         # TODO DW: will that always yield admissible points?
         if i == j:
@@ -329,7 +341,7 @@ class ESSOptimizer:
 
     def _do_local_search(
         self, x_best_children: np.array, fx_best_children: np.array
-    ):
+    ) -> None:
         """
         Perform a local search to refine the next generation.
 
@@ -429,7 +441,7 @@ class ESSOptimizer:
             # sample children. Will be increased in case of 2 consecutive
             # improvements.
             # (corresponds to 1/\Lambda in [Egea2009]_ algorithm 1)
-            go_beyound_factor = 1
+            go_beyond_factor = 1
             while fx_child < fx_parent:
                 # update best child
                 x_best_children[i] = x_child
@@ -437,7 +449,7 @@ class ESSOptimizer:
 
                 # create new solution, child becomes parent
                 x_new = np.random.uniform(
-                    low=x_child - (x_parent - x_child) * go_beyound_factor,
+                    low=x_child - (x_parent - x_child) * go_beyond_factor,
                     high=x_child,
                 )
                 x_parent = x_child
@@ -447,7 +459,7 @@ class ESSOptimizer:
 
                 improvement += 1
                 if improvement == 2:
-                    go_beyound_factor *= 2
+                    go_beyond_factor *= 2
                     improvement = 0
 
             # update overall best?
