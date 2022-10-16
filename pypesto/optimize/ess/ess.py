@@ -137,28 +137,45 @@ class ESSOptimizer:
         self.starttime: Optional[float] = None
 
     def minimize(
-        self, problem: Problem, startpoint_method: StartpointMethod
+        self,
+        problem: Problem,
+        startpoint_method: StartpointMethod,
+        refset: Optional[RefSet] = None,
     ) -> pypesto.Result:
-        """Minimize."""
-        if self.n_diverse is None:
-            # [EgeaMar2010]_ 2.1
-            self.n_diverse = 10 * problem.dim
+        """Minimize the given objective.
 
+        Parameters
+        ----------
+        problem:
+            Problem to run ESS on.
+        startpoint_method:
+            Method for choosing starting points.
+        refset:
+            The initial RefSet or ``None`` to auto-generate.
+        """
         self._initialize()
-        self.evaluator = FunctionEvaluator(
-            problem=problem,
-            startpoint_method=startpoint_method,
-            n_threads=self.n_threads,
-        )
+        self.starttime = time.time()
+
+        # generate initial RefSet if not provided
+        if refset is None:
+            if self.n_diverse is None:
+                # [EgeaMar2010]_ 2.1
+                self.n_diverse = 10 * problem.dim
+
+            self.evaluator = FunctionEvaluator(
+                problem=problem,
+                startpoint_method=startpoint_method,
+                n_threads=self.n_threads,
+            )
+            self.refset = RefSet(dim=self.dim_refset, evaluator=self.evaluator)
+            # Initial RefSet generation
+            self.refset.initialize(n_diverse=self.n_diverse)
+
+        refset = self.refset
+        self.evaluator = refset.evaluator
         self.x_best = np.full(
             shape=(self.evaluator.problem.dim,), fill_value=np.nan
         )
-        self.refset = RefSet(dim=self.dim_refset, evaluator=self.evaluator)
-        refset = self.refset
-        self.starttime = time.time()
-
-        # Initial RefSet generation
-        self.refset.initialize(n_diverse=self.n_diverse)
 
         # [PenasGon2017]_ Algorithm 1
         while self._keep_going():
