@@ -170,7 +170,7 @@ class ESSOptimizer:
             )
             self.refset = RefSet(dim=self.dim_refset, evaluator=self.evaluator)
             # Initial RefSet generation
-            self.refset.initialize(n_diverse=self.n_diverse)
+            self.refset.initialize_random(n_diverse=self.n_diverse)
 
         refset = self.refset
         self.evaluator = refset.evaluator

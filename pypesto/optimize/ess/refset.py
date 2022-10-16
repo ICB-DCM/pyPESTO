@@ -1,5 +1,7 @@
 """ReferenceSet functionality for scatter search."""
 
+from typing import Optional
+
 import numpy as np
 
 from .function_evaluator import FunctionEvaluator
@@ -14,9 +16,22 @@ class RefSet:
         Reference set size
     evaluator:
         Function evaluator
+    x:
+        Parameters in the reference set
+    fx:
+        Function values at the parameters in the reference set
+    n_stuck:
+        Counts the number of times a refset member did not lead to an
+        improvement in the objective (length: ``dim``).
     """
 
-    def __init__(self, dim: int, evaluator: FunctionEvaluator):
+    def __init__(
+        self,
+        dim: int,
+        evaluator: FunctionEvaluator,
+        x: Optional[np.array] = None,
+        fx: Optional[np.array] = None,
+    ):
         """Construct.
 
         Parameters
@@ -26,22 +41,27 @@ class RefSet:
         evaluator:
             Function evaluator
         x:
-            Parameters in the reference set
+            Initial RefSet parameters.
         fx:
-            Function values at the parameters in the reference set
-        n_stuck:
-            Counts the number of times a refset member did not lead to an
-            improvement in the objective (length: ``dim``).
+            Function values corresponding to entries in x. Must be provided if
+            and only if ``x`` is not ``None``.
         """
+        if (x is not None and fx is None) or (x is None and fx is not None):
+            raise ValueError(
+                "Either both or neither of `x` and `fx` " "should be provided"
+            )
+
         self.dim = dim
         self.evaluator = evaluator
         # \epsilon in [PenasGon2017]_
         self.proximity_threshold = 1e-3
 
-        self.fx = np.full(shape=(dim,), fill_value=np.inf)
-        self.x = np.full(
-            shape=(dim, self.evaluator.problem.dim), fill_value=np.nan
-        )
+        if x is None:
+            self.x = self.fx = None
+        else:
+            self.x = x
+            self.fx = fx
+
         self.n_stuck = np.zeros(shape=[dim])
 
     def sort(self):
@@ -51,14 +71,42 @@ class RefSet:
         self.x = self.x[order]
         self.n_stuck = self.n_stuck[order]
 
-    def initialize(self, n_diverse: int):
-        """Create initial reference set with random parameters.
+    def initialize_random(
+        self,
+        n_diverse: int = None,
+        x_diverse: np.array = None,
+        fx_diverse: np.array = None,
+    ):
+        """Create initial reference set from random parameters.
 
         Sample ``n_diverse`` random points, populate half of the RefSet using
         the best solutions and fill the rest with random points.
         """
         # sample n_diverse points
         x_diverse, fx_diverse = self.evaluator.multiple_random(n_diverse)
+
+        self.initialize_from_array(x_diverse=x_diverse, fx_diverse=fx_diverse)
+
+    def initialize_from_array(self, x_diverse: np.array, fx_diverse: np.array):
+        """Create initial reference set using the provided points.
+
+        Populate half of the RefSet using the best given solutions and fill the
+        rest with a random selection from the remaining points.
+        """
+        if len(x_diverse) != len(fx_diverse):
+            raise ValueError(
+                "Lengths of `x_diverse` and `fx_diverse` do " "not match."
+            )
+        if self.dim > len(x_diverse):
+            raise ValueError(
+                "Cannot create RefSet with dimension "
+                f"{self.dim} from only {len(x_diverse)} points."
+            )
+
+        self.fx = np.full(shape=(self.dim,), fill_value=np.inf)
+        self.x = np.full(
+            shape=(self.dim, self.evaluator.problem.dim), fill_value=np.nan
+        )
 
         # create initial refset with 50% best values
         num_best = int(self.dim / 2)
