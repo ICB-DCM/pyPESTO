@@ -52,6 +52,8 @@ class ESSExitFlag(int, enum.Enum):
     MAX_ITER = -1
     # Exited after exhausting function evaluation budget
     MAX_EVAL = -2
+    # Exited after exhausting wall-time budget
+    MAX_TIME = -3
 
 
 class ESSOptimizer:
@@ -80,6 +82,10 @@ class ESSOptimizer:
         Maximum number of objective functions allowed. This criterion is
         only checked once per iteration, not after every objective evaluation,
         so the actual number of function evaluations may exceed this value.
+    max_walltime_s:
+        Maximum walltime in seconds. Will only be checked between local
+        optimizations and other simulations, and thus, may be exceeded by the
+        duration of a local search.
     """
 
     def __init__(
@@ -93,6 +99,7 @@ class ESSOptimizer:
         max_eval=np.inf,
         n_diverse: int = None,
         n_threads=1,
+        max_walltime_s=None,
     ):
         # Hyperparameters
         self.local_n1: int = local_n1
@@ -113,7 +120,7 @@ class ESSOptimizer:
         self.n_change: int = 20
         # Only perform local search from best solution
         self.local_only_best_sol: bool = False
-
+        self.max_walltime_s = max_walltime_s
         self._initialize()
 
     def _initialize(self):
@@ -272,6 +279,13 @@ class ESSOptimizer:
             self.exit_flag = ESSExitFlag.MAX_EVAL
             return False
 
+        if (
+            self.max_walltime_s is not None
+            and time.time() - self.starttime > self.max_walltime_s
+        ):
+            self.exit_flag = ESSExitFlag.MAX_TIME
+            return False
+
         return True
 
     def _combine_solutions(self) -> Tuple[np.array, np.array]:
@@ -378,7 +392,8 @@ class ESSOptimizer:
             )
             # sort by furthest distance to existing local optima
             diversity_order = np.argsort(min_distances)[::-1]
-            # balance quality and diversity (small score is better)
+            # compute priority, balancing quality and diversity
+            #  (smaller value = higher priority)
             priority = (
                 1 - self.balance
             ) * quality_order + self.balance * diversity_order
