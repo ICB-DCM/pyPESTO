@@ -2,6 +2,7 @@
 
 import logging
 import os
+
 import pypesto
 import pypesto.optimize
 
@@ -30,7 +31,13 @@ def test_optimize():
     options = {'allow_failed_starts': True}
 
     # optimization
-    pypesto.optimize.minimize(problem, optimizer, 5, options=options)
+    pypesto.optimize.minimize(
+        problem=problem,
+        optimizer=optimizer,
+        n_starts=5,
+        options=options,
+        progress_bar=False,
+    )
 
     # assert logging worked
     assert os.path.exists(filename)

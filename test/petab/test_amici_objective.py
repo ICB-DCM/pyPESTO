@@ -2,18 +2,19 @@
 This is for testing the pypesto.Objective.
 """
 
-from pypesto.objective.amici_util import add_sim_grad_to_opt_grad
-
 import os
-import petab
+
 import amici
-import pypesto
-import pypesto.petab
-import pypesto.optimize
-import pypesto.objective.constants
-import pytest
+import benchmark_models_petab as models
 import numpy as np
-from .petab_util import folder_base
+import petab
+import pytest
+
+import pypesto
+import pypesto.optimize as optimize
+import pypesto.petab
+from pypesto import C
+from pypesto.objective.amici.amici_util import add_sim_grad_to_opt_grad
 
 ATOL = 1e-1
 RTOL = 1e-0
@@ -24,13 +25,11 @@ def test_add_sim_grad_to_opt_grad():
     Test gradient mapping/summation works as expected.
     17 = 1 + 2*5 + 2*3
     """
-    par_opt_ids = ['opt_par_1',
-                   'opt_par_2',
-                   'opt_par_3']
+    par_opt_ids = ['opt_par_1', 'opt_par_2', 'opt_par_3']
     mapping_par_opt_to_par_sim = {
         'sim_par_1': 'opt_par_1',
         'sim_par_2': 'opt_par_3',
-        'sim_par_3': 'opt_par_3'
+        'sim_par_3': 'opt_par_3',
     }
     par_sim_ids = ['sim_par_1', 'sim_par_2', 'sim_par_3']
 
@@ -44,28 +43,36 @@ def test_add_sim_grad_to_opt_grad():
         mapping_par_opt_to_par_sim,
         sim_grad,
         opt_grad,
-        coefficient=2.0)
+        coefficient=2.0,
+    )
 
     assert np.allclose(expected, opt_grad)
 
 
 def test_error_leastsquares_with_ssigma():
+    model_name = "Zheng_PNAS2012"
     petab_problem = petab.Problem.from_yaml(
-        folder_base + "Zheng_PNAS2012/Zheng_PNAS2012.yaml")
-    petab_problem.model_name = "Zheng_PNAS2012"
+        os.path.join(models.MODELS_DIR, model_name, model_name + ".yaml")
+    )
+    petab_problem.model_name = model_name
     importer = pypesto.petab.PetabImporter(petab_problem)
     obj = importer.create_objective()
     problem = importer.create_problem(obj)
 
     optimizer = pypesto.optimize.ScipyOptimizer(
-        'ls_trf', options={'max_nfev': 50})
+        'ls_trf', options={'max_nfev': 50}
+    )
     with pytest.raises(RuntimeError):
-        pypesto.optimize.minimize(
-            problem=problem, optimizer=optimizer, n_starts=1,
-            options=pypesto.optimize.OptimizeOptions(allow_failed_starts=False)
+        optimize.minimize(
+            problem=problem,
+            optimizer=optimizer,
+            n_starts=1,
+            options=optimize.OptimizeOptions(allow_failed_starts=False),
+            progress_bar=False,
         )
 
 
+@pytest.mark.flaky(reruns=5)
 def test_preeq_guesses():
     """
     Test whether optimization with preequilibration guesses works, asserts
@@ -74,12 +81,13 @@ def test_preeq_guesses():
     """
     model_name = "Brannmark_JBC2010"
     importer = pypesto.petab.PetabImporter.from_yaml(
-        os.path.join(folder_base, model_name, model_name + '.yaml'))
+        os.path.join(models.MODELS_DIR, model_name, model_name + '.yaml')
+    )
     problem = importer.create_problem()
     obj = problem.objective
     obj.amici_solver.setNewtonMaxSteps(0)
     obj.amici_model.setSteadyStateSensitivityMode(
-        amici.SteadyStateSensitivityMode.simulationFSA
+        amici.SteadyStateSensitivityMode.integrationOnly
     )
     obj.amici_solver.setAbsoluteTolerance(1e-12)
     obj.amici_solver.setRelativeTolerance(1e-12)
@@ -87,13 +95,15 @@ def test_preeq_guesses():
     # assert that initial guess is uninformative
     assert obj.steadystate_guesses['fval'] == np.inf
 
-    optimizer = pypesto.optimize.ScipyOptimizer()
-    options = pypesto.optimize.OptimizeOptions(
-        startpoint_resample=False
-    )
-    result = pypesto.optimize.minimize(
-        problem=problem, optimizer=optimizer, n_starts=1,
-        options=options
+    optimizer = optimize.ScipyOptimizer()
+    startpoints = pypesto.startpoint.UniformStartpoints(check_fval=False)
+
+    result = optimize.minimize(
+        problem=problem,
+        optimizer=optimizer,
+        n_starts=1,
+        startpoint_method=startpoints,
+        progress_bar=False,
     )
 
     assert obj.steadystate_guesses['fval'] < np.inf
@@ -103,12 +113,11 @@ def test_preeq_guesses():
 
     df = obj.check_grad(
         problem.get_reduced_vector(
-            result.optimize_result.list[0]['x'],
-            problem.x_free_indices
+            result.optimize_result.list[0]['x'], problem.x_free_indices
         ),
         eps=1e-3,
         verbosity=0,
-        mode=pypesto.objective.constants.MODE_FUN
+        mode=C.MODE_FUN,
     )
     print("relative errors MODE_FUN: ", df.rel_err.values)
     print("absolute errors MODE_FUN: ", df.abs_err.values)

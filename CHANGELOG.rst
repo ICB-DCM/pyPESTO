@@ -6,6 +6,214 @@ Release notes
 ..........
 
 
+0.2.14 (2022-09-01)
+-------------------
+
+* Ensembles:
+    * Save and load weights and sigmay (#876)
+    * Define relative cutoff (#855)
+* PEtab:
+    * Pass problem kwargs via petab importer (#874)
+* Optimize:
+    * Fides: Include message according to exitflag (#878)
+* Visualization:
+    * Fix waterfall plot limits for non-offsetted log-plots (#891)
+    * Plot unflattened model fit from flattened PEtab problems (#914)
+* History and storage:
+    * Maybe fix history-result reconstruction mismatch (#902)
+    * Move history to own module (#903)
+    * Remove chi2, schi2 except for history convenience function (#904)
+    * Clean up history hierarchy (#908)
+    * Fix `read_result` with history (#907)
+    * Improve hdf5 history file lock (#909, #921)
+* Select:
+    * Clean up use of `minimize_options` in model problem (#918)
+    * User-supplied method to produce pyPESTO problem (#884)
+    * Report, and binary model ID post-processors (#900)
+* General:
+    * Fix set of keys to aggregate results (#883)
+    * Remove version from `CITATION.cff` (#887)
+    * Nicer `OptimizeResult.summary` (#895, #916)
+    * Fix CI and docs (#892, #893)
+    * Fix message in `check_overwrite` (#894)
+    * Literal typehints for `mode` (#899)
+    * Fix pandas deprecation warning (#896)
+    * Document NEP 29 (time-window based python support) (#905)
+    * Fix `get_for_key` deprecation warning (#906)
+    * Fix multiple warnings from existing AMICI model (#912)
+    * Fix warning from AMICI fixed overrides (#912)
+    * Fix disjoint IDs check in `OptimizerResult.append` (#922)
+    * Fix flaky test `CRFunModeHistoryTest.test_trace_all` (#917)
+    * Fix novel B024 ABC without abstract methods (#923)
+    * Use `benchmark-models-petab` instead of manual download (#915)
+    * Improve API docs and add overview notebook (#911)
+
+
+0.2.13 (2022-05-24)
+-------------------
+
+* Ensembles:
+    * Added standard deviation to ensemble prediction plots (#853)
+* Storage
+    * Distinguish between scalar and vector values in Hdf5History._get_hdf5_entries (#856)
+    * Fix hdf5 history overwrite (#861)
+    * Updated optimization storage format. Made attributes explicit. (#863)
+    * Added problem to result from read_results_from_file (#862)
+* General
+    * Various additions to Optimize(r)Result summary method (#859, #865, #866, #867)
+    * Fixed optimizer history fval offset (#834)
+    * Updated the profile, minimize, sample and added overwrite as argument. (#864)
+    * Fixed y-labels in pypesto.visualize.optimizer_history (#869)
+    * Created show_bounds, to display proper sampling scatter plots. (#868)
+    * Enabled saving messages and exit flags in hdf5 history in case of finished run (#873)
+    * Select: use objective function evaluation time as optimization time for models with no estimated parameters (#872)
+    * removed checking for equality and checking for np.allclose in test_aesara (#877)
+
+
+0.2.12 (2022-04-11)
+-------------------
+
+* AMICI:
+    * Update to renamed steady state sensitivity modes (#843)
+    * Set amici.Solver.setReturnDataReportingMode (#835)
+    * Optimize `pypesto/objective/amici_util.py::par_index_slices` (#845)
+    * Remove Solver.getPreequilibration (#830)
+    * fix n_res size for error output with parameter dependent sigma (#812)
+    * PetabImporter: Auto-regenerate AMICI models in case of version mismatch (#848)
+* Pymc3
+    * Disable Pymc3 Sampler tests (#831)
+*  Visualizations:
+    * Waterfall zoom (#808)
+    * Reverse opacities of colors in prediction trajectories plots(#838)
+    * Model fit plots (#850)
+* OptimizeResult:
+    * Summary method (#816)
+    * Append method for OptimizeResult (#815)
+    * added __getattr__ function to OptimizeResult (#802)
+* General:
+    * disable progress bar in tests (#799)
+    * Make Fides work with objectives, that do not have a hessian (#807)
+    * removed ftol in favor of tol (#803)
+    * Fix pyPESTO Select test; Update to stable black version (#810)
+    * Fix id assignment in case of large number of starts (#825)
+    * Temporarily fix jinja2 version (#826)
+    * Upgrade black to be compatible with latest click (#829)
+    * Fix wrong link in doc/example/hdf5_storage.ipynb (#827)
+    * Mark test/base/test_prior.py::test_mode as flaky (#833)
+    * Custom methods for autosave filenames (#822)
+    * fix saving ensemble predictions to hdf5 (#840)
+    * Upgrade nbQA to 1.3.1 (#846)
+    * Replaced constantParameters with constant_parameters in notebook (#852)
+
+
+0.2.11 (2022-01-11)
+-------------------
+
+* Model selection (#397):
+    * Automated model selection with forward/backward/brute force methods and
+      AIC/AICc/BIC criteria
+    * Much functionality (methods, criteria, model space, problem
+      specification) via `PEtab Select <https://github.com/PEtab-dev/petab_select>`
+    * Plotting routines
+    * `Example notebook <https://github.com/ICB-DCM/pyPESTO/blob/main/doc/example/model_selection.ipynb>`
+    * Model calibration postprocessors
+    * Select first model that improves on predecessor model
+    * Use previous MLE as startpoint
+    * Tests
+
+* AMICI:
+    * Maintain model settings when pickling for multiprocessing (#747)
+
+* General:
+    * Apply nbqa black and isort to auto-format all notebooks via
+      pre-commit hook (#794)
+    * Apply black formatting via pre-commit hook (#796)
+    * Require Python >= 3.8 (#795)
+    * Fix various warnings (#778)
+    * Minor fixes (#792)
+
+
+0.2.10 (2022-01-06)
+-------------------
+
+* AMICI:
+    * Make AMICI objective report only what is being asked for (#777)
+
+* Optimization:
+    * (Breaking) Refactor startpoint generation with clear assignments;
+      allow checking gradients (#769)
+    * (Breaking) Prioritize history vs optimize result (#775)
+
+* Storage:
+    * Fix loading empty history and result generation from multiple
+      histories (#764)
+    * Fix autosave function for single-core (#770)
+    * Fix potential autosave overwriting and typehints (#772)
+    * Allow loading of partial results from history file (#783)
+
+* CI:
+    * Compile AMICI models without gradients in test suite (#774)
+
+* General:
+    * (Breaking) Create result sub-module; shift storage+result related
+      functionality (#784)
+    * Fix finite difference constant mode (#786)
+    * Refactor ensemble module (#788)
+    * Introduce general C constants file (#788)
+    * Apply isort for automatic imports formatting (#785)
+    * Reduce run log output (#789)
+    * Various minor fixes (#765, #766, #768, #771)
+
+
+0.2.9 (2021-11-03)
+------------------
+
+* General:
+    * Automatically save results (#749)
+    * Update all docstrings to numpy standard (#750)
+    * Add Google Colab and nbviewer links to all notebooks for online
+      execution (#758)
+    * Option to not save hess and sres in result (#760)
+    * Set minimum supported python version to 3.7 (#755)
+
+* Visualization:
+    * Parameterize start index in optimized model fit (#744)
+
+
+0.2.8 (2021-10-28)
+------------------
+
+* PEtab:
+    * Use correct measurement column name in `rdatas_to_simulation_df` (#721)
+    * Visualize optimized model fit via PEtab problem (#725)
+    * Un-ignore observable scaling tests (#742)
+    * New function to plot model trajectory with custom time points (#739)
+
+* Optimization:
+    * OOD Refactor startpoint generation (#732)
+    * Update to fides 0.6.0 (#733)
+    * Correctly report FVAL vs CHI2 values in fides (#741)
+
+* Ensemble:
+    * Option for using weighted ensemble means (#702)
+    * Default names and bounds for `Ensemble.from_sample` (#730)
+
+* Storage:
+    * Load optimization result from HDF5 history (#726)
+
+* General:
+    * Enable use of priors with least squares optimizers (#745)
+    * Add temporary CITATION.cff file (#734)
+    * Regular scheduled CI runs (#754)
+    * Allow to not copy objective in problem (#756)
+
+* Fixes:
+    * Fix non-exported visualization in notebook (#729)
+    * Mark some more tests as flaky (#704)
+    * Fix minor data type and OOD issues in parameter and waterfall plots
+      (#731)
+
+
 0.2.7 (2021-07-30)
 ------------------
 

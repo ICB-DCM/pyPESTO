@@ -1,19 +1,18 @@
-"""Convenience functions for working with HDF5 files"""
+"""Convenience functions for working with HDF5 files."""
+
+from numbers import Integral, Number, Real
+from typing import Collection
+
 import h5py
 import numpy as np
 
-from typing import Collection
-from numbers import Number, Integral, Real
 
-
-def write_array(f: h5py.Group,
-                path: str,
-                values: Collection) -> None:
+def write_array(f: h5py.Group, path: str, values: Collection) -> None:
     """
-    Write array to hdf5
+    Write array to hdf5.
 
     Parameters
-    -------------
+    ----------
     f:
         h5py.Group  where dataset should be created
     path:
@@ -21,26 +20,22 @@ def write_array(f: h5py.Group,
     values:
         array to write
     """
-
     if all(isinstance(x, Integral) for x in values):
         write_int_array(f, path, values)
     elif all(isinstance(x, Real) for x in values):
         write_float_array(f, path, values)
     elif all(isinstance(x, str) for x in values):
-        write_string_array(f, path,
-                           values)
+        write_string_array(f, path, values)
     else:
         f[path] = values
 
 
-def write_string_array(f: h5py.Group,
-                       path: str,
-                       strings: Collection) -> None:
+def write_string_array(f: h5py.Group, path: str, strings: Collection) -> None:
     """
-    Write string array to hdf5
+    Write string array to hdf5.
 
     Parameters
-    -------------
+    ----------
     f:
         h5py.Group where dataset should be created
     path:
@@ -53,15 +48,14 @@ def write_string_array(f: h5py.Group,
     dset[:] = [s.encode('utf8') for s in strings]
 
 
-def write_float_array(f: h5py.Group,
-                      path: str,
-                      values: Collection[Number],
-                      dtype='f8') -> None:
+def write_float_array(
+    f: h5py.Group, path: str, values: Collection[Number], dtype='f8'
+) -> None:
     """
-    Write float array to hdf5
+    Write float array to hdf5.
 
     Parameters
-    -------------
+    ----------
     f:
         h5py.Group where dataset should be created
     path:
@@ -78,15 +72,14 @@ def write_float_array(f: h5py.Group,
     dset[:] = values
 
 
-def write_int_array(f: h5py.Group,
-                    path: str,
-                    values: Collection[int],
-                    dtype='<i4'):
+def write_int_array(
+    f: h5py.Group, path: str, values: Collection[int], dtype='<i4'
+):
     """
-    Write integer array to hdf5
+    Write integer array to hdf5.
 
     Parameters
-    -------------
+    ----------
     f:
         h5py.Group where dataset should be created
     path:

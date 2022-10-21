@@ -1,32 +1,35 @@
 import logging
-from typing import Callable, Union, Iterable
+from typing import Callable, Iterable, Union
 
 from ..engine import Engine, SingleCoreEngine
 from ..optimize import Optimizer
 from ..problem import Problem
 from ..result import Result
-from .profile_next_guess import next_guess
+from ..store import autosave
 from .options import ProfileOptions
-from .util import initialize_profile
+from .profile_next_guess import next_guess
 from .task import ProfilerTask
+from .util import initialize_profile
 
 logger = logging.getLogger(__name__)
 
 
 def parameter_profile(
-        problem: Problem,
-        result: Result,
-        optimizer: Optimizer,
-        engine: Engine = None,
-        profile_index: Iterable[int] = None,
-        profile_list: int = None,
-        result_index: int = 0,
-        next_guess_method: Union[Callable, str] = 'adaptive_step_regression',
-        profile_options: ProfileOptions = None,
-        progress_bar: bool = True
+    problem: Problem,
+    result: Result,
+    optimizer: Optimizer,
+    engine: Engine = None,
+    profile_index: Iterable[int] = None,
+    profile_list: int = None,
+    result_index: int = 0,
+    next_guess_method: Union[Callable, str] = 'adaptive_step_regression',
+    profile_options: ProfileOptions = None,
+    progress_bar: bool = True,
+    filename: Union[str, Callable, None] = None,
+    overwrite: bool = False,
 ) -> Result:
     """
-    This is the main function to call to do parameter profiling.
+    Call to do parameter profiling.
 
     Parameters
     ----------
@@ -58,6 +61,15 @@ def parameter_profile(
         Various options applied to the profile optimization.
     progress_bar:
         Whether to display a progress bar.
+    filename:
+        Name of the hdf5 file, where the result will be saved. Default is
+        None, which deactivates automatic saving. If set to
+        "Auto" it will automatically generate a file named
+        `year_month_day_profiling_result.hdf5`.
+        Optionally a method, see docs for `pypesto.store.auto.autosave`.
+    overwrite:
+        Whether to overwrite `result/profiling` in the autosave file
+        if it already exists.
 
     Returns
     -------
@@ -76,21 +88,40 @@ def parameter_profile(
 
     # create a function handle that will be called later to get the next point
     if isinstance(next_guess_method, str):
-        def create_next_guess(x, par_index, par_direction_, profile_options_,
-                              current_profile_, problem_, global_opt_):
-            return next_guess(x, par_index, par_direction_, profile_options_,
-                              next_guess_method, current_profile_, problem_,
-                              global_opt_)
+
+        def create_next_guess(
+            x,
+            par_index,
+            par_direction_,
+            profile_options_,
+            current_profile_,
+            problem_,
+            global_opt_,
+        ):
+            return next_guess(
+                x,
+                par_index,
+                par_direction_,
+                profile_options_,
+                next_guess_method,
+                current_profile_,
+                problem_,
+                global_opt_,
+            )
+
     elif callable(next_guess_method):
-        raise Exception('Passing function handles for computation of next '
-                        'profiling point is not yet supported.')
+        raise Exception(
+            'Passing function handles for computation of next '
+            'profiling point is not yet supported.'
+        )
     else:
         raise Exception('Unsupported input for next_guess_method.')
 
     # create the profile result object (retrieve global optimum) or append to
     # existing list of profiles
-    global_opt = initialize_profile(problem, result, result_index,
-                                    profile_index, profile_list)
+    global_opt = initialize_profile(
+        problem, result, result_index, profile_index, profile_list
+    )
     # if engine==None set SingleCoreEngine() as default
     if engine is None:
         engine = SingleCoreEngine()
@@ -104,7 +135,9 @@ def parameter_profile(
             continue
 
         current_profile = result.profile_result.get_profiler_result(
-            i_par=i_par, profile_list=profile_list)
+            i_par=i_par,
+            profile_list=profile_list,
+        )
 
         task = ProfilerTask(
             current_profile=current_profile,
@@ -113,7 +146,7 @@ def parameter_profile(
             options=profile_options,
             create_next_guess=create_next_guess,
             global_opt=global_opt,
-            i_par=i_par
+            i_par=i_par,
         )
         tasks.append(task)
 
@@ -122,7 +155,15 @@ def parameter_profile(
 
     # fill in the ProfilerResults at the right index
     for indexed_profile in indexed_profiles:
-        result.profile_result.list[-1][indexed_profile['index']] = \
-            indexed_profile['profile']
+        result.profile_result.list[-1][
+            indexed_profile['index']
+        ] = indexed_profile['profile']
+
+    autosave(
+        filename=filename,
+        result=result,
+        store_type="profile",
+        overwrite=overwrite,
+    )
 
     return result

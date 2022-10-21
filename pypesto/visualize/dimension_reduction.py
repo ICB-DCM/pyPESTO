@@ -1,23 +1,29 @@
-import numpy as np
+from __future__ import annotations
+
+from typing import TYPE_CHECKING, Optional, Sequence, Tuple
+
 import matplotlib.pyplot as plt
-from typing import Optional, Tuple, Sequence
+import numpy as np
 
 from .clust_color import RGBA
 
-try:
-    import umap
-    import umap.plot
-    UmapTypeObject = umap.umap_.UMAP
-except ImportError:
-    UmapTypeObject = None
+if TYPE_CHECKING:
+    try:
+        import umap
+
+        UmapTypeObject = umap.umap_.UMAP
+    except ImportError:
+        UmapTypeObject = None
 
 
-def projection_scatter_umap(umap_coordinates: np.ndarray,
-                            components: Sequence[int] = (0, 1),
-                            **kwargs):
+def projection_scatter_umap(
+    umap_coordinates: np.ndarray, components: Sequence[int] = (0, 1), **kwargs
+):
     """
-    Plot a scatter plots for UMAP coordinates. Creates either one or multiple
-    scatter plots, depending on the number of coordinates passed to it.
+    Plot a scatter plots for UMAP coordinates.
+
+    Creates either one or multiple scatter plots, depending on the number of
+    coordinates passed to it.
 
     Parameters
     ----------
@@ -42,29 +48,34 @@ def projection_scatter_umap(umap_coordinates: np.ndarray,
         dataset = umap_coordinates[:, components]
 
         # call lowlevel routine
-        return ensemble_scatter_lowlevel(dataset,
-                                         x_label=x_label,
-                                         y_label=y_label,
-                                         **kwargs)
+        return ensemble_scatter_lowlevel(
+            dataset, x_label=x_label, y_label=y_label, **kwargs
+        )
     else:
         # We got more than two components. Plot a cross-classification table
         # Create the labels first
-        component_labels = [f'UMAP component {components[i_comp] + 1}'
-                            for i_comp in range(n_components)]
+        component_labels = [
+            f'UMAP component {components[i_comp] + 1}'
+            for i_comp in range(n_components)
+        ]
         # reduce pca components
         dataset = umap_coordinates[:, components]
         # run lowlevel plot
-        return ensemble_crosstab_scatter_lowlevel(dataset,
-                                                  component_labels,
-                                                  **kwargs)
+        return ensemble_crosstab_scatter_lowlevel(
+            dataset, component_labels, **kwargs
+        )
 
 
-def projection_scatter_umap_original(umap_object: UmapTypeObject,
-                                     color_by: Sequence[float] = None,
-                                     components: Sequence[int] = (0, 1),
-                                     **kwargs):
+def projection_scatter_umap_original(
+    umap_object: UmapTypeObject,
+    color_by: Sequence[float] = None,
+    components: Sequence[int] = (0, 1),
+    **kwargs,
+):
     """
-    Wrapper around umap.plot.points. Similar to projection_scatter_umap, but
+    See `projection_scatter_umap` for more documentation.
+
+    Wrapper around umap.plot.points. Similar to `projection_scatter_umap`, but
     uses the original plotting routine from umap.plot.
 
     Parameters
@@ -72,10 +83,8 @@ def projection_scatter_umap_original(umap_object: UmapTypeObject,
     umap_object:
         umap object (returned as second output by get_umap_representation)
         to be shown as scatter plot
-
     color_by:
         A sequence/list of floats, which specify the color in the colormap
-
     components:
         Components to be plotted (corresponds to columns of umap_coordinates)
 
@@ -84,6 +93,7 @@ def projection_scatter_umap_original(umap_object: UmapTypeObject,
     ax: matplotlib.Axes
         The plot axes.
     """
+    import umap.plot
 
     # reduce, if necessary
     umap_object.embedding_ = umap_object.embedding_[:, components]
@@ -92,19 +102,20 @@ def projection_scatter_umap_original(umap_object: UmapTypeObject,
     umap.plot.points(umap_object, values=color_by, theme='viridis', **kwargs)
 
 
-def projection_scatter_pca(pca_coordinates: np.ndarray,
-                           components: Sequence[int] = (0, 1),
-                           **kwargs):
+def projection_scatter_pca(
+    pca_coordinates: np.ndarray, components: Sequence[int] = (0, 1), **kwargs
+):
     """
-    Plot a scatter plots for PCA coordinates. Creates either one or multiple
-    scatter plots, depending on the number of coordinates passed to it.
+    Plot a scatter plot for PCA coordinates.
+
+    Creates either one or multiple scatter plots, depending on the number of
+    coordinates passed to it.
 
     Parameters
     ----------
     pca_coordinates:
         array of pca coordinates (returned as first output by the routine
         get_pca_representation) to be shown as scatter plot
-
     components:
         Components to be plotted (corresponds to columns of pca_coordinates)
 
@@ -123,36 +134,37 @@ def projection_scatter_pca(pca_coordinates: np.ndarray,
         dataset = pca_coordinates[:, components]
 
         # call lowlevel routine
-        return ensemble_scatter_lowlevel(dataset,
-                                         x_label=x_label,
-                                         y_label=y_label,
-                                         **kwargs)
+        return ensemble_scatter_lowlevel(
+            dataset, x_label=x_label, y_label=y_label, **kwargs
+        )
     else:
         # We got more than two components. Plot a cross-classification table
         # Create the labels first
-        component_labels = [f'PCA component {components[i_comp] + 1}'
-                            for i_comp in range(n_components)]
+        component_labels = [
+            f'PCA component {components[i_comp] + 1}'
+            for i_comp in range(n_components)
+        ]
         # reduce pca components
         dataset = pca_coordinates[:, components]
         # run lowlevel plot
-        return ensemble_crosstab_scatter_lowlevel(dataset,
-                                                  component_labels,
-                                                  **kwargs)
+        return ensemble_crosstab_scatter_lowlevel(
+            dataset, component_labels, **kwargs
+        )
 
 
-def ensemble_crosstab_scatter_lowlevel(dataset: np.ndarray,
-                                       component_labels: Sequence[str] = None,
-                                       **kwargs):
+def ensemble_crosstab_scatter_lowlevel(
+    dataset: np.ndarray, component_labels: Sequence[str] = None, **kwargs
+):
     """
     Plot cross-classification table of scatter plots for different coordinates.
+
     Lowlevel routine for multiple UMAP and PCA plots, but can also be used to
-    visualize, e.g., parameter traces across optimizer runs
+    visualize, e.g., parameter traces across optimizer runs.
 
     Parameters
     ----------
     dataset:
         array of data points to be shown as scatter plot
-
     component_labels:
         labels for the x-axes and the y-axes
 
@@ -161,7 +173,6 @@ def ensemble_crosstab_scatter_lowlevel(dataset: np.ndarray,
     axs:
         A dictionary of plot axes.
     """
-
     # We got more than two components. Create a cross-classification table
     n_components = dataset.shape[1]
     axs = _create_crosstab_axes(n_components)
@@ -185,62 +196,56 @@ def ensemble_crosstab_scatter_lowlevel(dataset: np.ndarray,
             tmp_dataset = dataset[:, [x_comp, y_comp]]
 
             # call lowlevel routine
-            ensemble_scatter_lowlevel(tmp_dataset,
-                                      x_label=x_label,
-                                      y_label=y_label,
-                                      ax=axs[(x_comp, y_comp)],
-                                      **kwargs)
+            ensemble_scatter_lowlevel(
+                tmp_dataset,
+                x_label=x_label,
+                y_label=y_label,
+                ax=axs[(x_comp, y_comp)],
+                **kwargs,
+            )
     # return dict of axes
     return axs
 
 
-def ensemble_scatter_lowlevel(dataset,
-                              ax: Optional[plt.Axes] = None,
-                              size: Optional[Tuple[float]] = (12, 6),
-                              x_label: str = 'component 1',
-                              y_label: str = 'component 2',
-                              color_by: Sequence[float] = None,
-                              color_map: str = 'viridis',
-                              background_color: RGBA = (0., 0., 0., 1.),
-                              marker_type: str = '.',
-                              scatter_size: float = 0.5,
-                              invert_scatter_order: bool = False):
+def ensemble_scatter_lowlevel(
+    dataset,
+    ax: Optional[plt.Axes] = None,
+    size: Optional[Tuple[float]] = (12, 6),
+    x_label: str = 'component 1',
+    y_label: str = 'component 2',
+    color_by: Sequence[float] = None,
+    color_map: str = 'viridis',
+    background_color: RGBA = (0.0, 0.0, 0.0, 1.0),
+    marker_type: str = '.',
+    scatter_size: float = 0.5,
+    invert_scatter_order: bool = False,
+):
     """
-    Create a scatter plot
+    Create a scatter plot.
 
     Parameters
     ----------
     dataset:
         array of data points in reduced dimension
-
     ax:
         Axes object to use.
-
     size:
         Figure size (width, height) in inches. Is only applied when no ax
         object is specified
-
     x_label:
         The x-axis label
-
     y_label:
         The y-axis label
-
     color_by:
         A sequence/list of floats, which specify the color in the colormap
-
     color_map:
         A colormap name known to pyplot
-
     background_color:
         Background color of the axes object (defaults to black)
-
     marker_type:
         Type of plotted markers
-
     scatter_size:
         Size of plotted markers
-
     invert_scatter_order:
         Specifies the order of plotting the scatter points, can be important
         in case of overplotting
@@ -250,7 +255,6 @@ def ensemble_scatter_lowlevel(dataset,
     ax: matplotlib.Axes
         The plot axes.
     """
-
     # first get the data to check identifiability
     # axes
     if ax is None:
@@ -259,14 +263,20 @@ def ensemble_scatter_lowlevel(dataset,
     plt.sca(ax)
 
     if color_by is None:
-        color_by = np.array([1.] * dataset.shape[0])
+        color_by = np.array([1.0] * dataset.shape[0])
 
     ordering = 1
     if invert_scatter_order:
         ordering = -1
 
-    plt.scatter(dataset[::ordering, 0], dataset[::ordering, 1],
-                c=color_by, cmap=color_map, marker=marker_type, s=scatter_size)
+    plt.scatter(
+        dataset[::ordering, 0],
+        dataset[::ordering, 1],
+        c=color_by,
+        cmap=color_map,
+        marker=marker_type,
+        s=scatter_size,
+    )
 
     # beautify
     ax.set_facecolor(background_color)
@@ -282,7 +292,7 @@ def ensemble_scatter_lowlevel(dataset,
 
 def _create_crosstab_axes(n_comp: int):
     """
-    Create a figure with cross-classification table of axes
+    Create a figure with cross-classification table of axes.
 
     Parameters
     ----------

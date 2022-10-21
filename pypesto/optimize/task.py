@@ -1,29 +1,30 @@
-import numpy as np
 import logging
 
-from ..engine import Task
-from ..objective import HistoryOptions
-from ..problem import Problem
+import numpy as np
+
 import pypesto.optimize
+
+from ..engine import Task
+from ..history import HistoryOptions
+from ..problem import Problem
+from ..result import OptimizerResult
 
 logger = logging.getLogger(__name__)
 
 
 class OptimizerTask(Task):
-    """
-    A multistart optimization task, performed in `pypesto.minimize`.
-    """
+    """A multistart optimization task, performed in `pypesto.minimize`."""
 
     def __init__(
-            self,
-            optimizer: 'pypesto.optimize.Optimizer',
-            problem: Problem,
-            x0: np.ndarray,
-            id: str,
-            options: 'pypesto.optimize.OptimizeOptions',
-            history_options: HistoryOptions):
-        """
-        Create the task object.
+        self,
+        optimizer: 'pypesto.optimize.Optimizer',
+        problem: Problem,
+        x0: np.ndarray,
+        id: str,
+        history_options: HistoryOptions,
+        optimize_options: 'pypesto.optimize.OptimizeOptions',
+    ):
+        """Create the task object.
 
         Parameters
         ----------
@@ -46,14 +47,24 @@ class OptimizerTask(Task):
         self.problem = problem
         self.x0 = x0
         self.id = id
-        self.options = options
+        self.optimize_options = optimize_options
         self.history_options = history_options
 
-    def execute(self) -> 'pypesto.optimize.OptimizerResult':
-        logger.info(f"Executing task {self.id}.")
+    def execute(self) -> OptimizerResult:
+        """Execute the task."""
+        logger.debug(f"Executing task {self.id}.")
 
         optimizer_result = self.optimizer.minimize(
-            problem=self.problem, x0=self.x0, id=self.id,
-            allow_failed_starts=self.options.allow_failed_starts,
-            history_options=self.history_options)
+            problem=self.problem,
+            x0=self.x0,
+            id=self.id,
+            history_options=self.history_options,
+            optimize_options=self.optimize_options,
+        )
+        optimizer_result.optimizer = str(self.optimizer)
+
+        if not self.optimize_options.report_hess:
+            optimizer_result.hess = None
+        if not self.optimize_options.report_sres:
+            optimizer_result.sres = None
         return optimizer_result

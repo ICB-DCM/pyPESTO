@@ -1,16 +1,14 @@
-import numpy as np
-
 from copy import deepcopy
 from typing import Sequence, Tuple
-from .base import ObjectiveBase, ResultDict
 
-from .constants import RDATAS, FVAL, CHI2, SCHI2, RES, SRES, GRAD, HESS, HESSP
+import numpy as np
+
+from ..C import FVAL, GRAD, HESS, HESSP, RDATAS, RES, SRES, ModeType
+from .base import ObjectiveBase, ResultDict
 
 
 class AggregatedObjective(ObjectiveBase):
-    """
-    This class aggregates multiple objectives into one objective.
-    """
+    """Aggregates multiple objectives into one objective."""
 
     def __init__(
         self,
@@ -18,7 +16,7 @@ class AggregatedObjective(ObjectiveBase):
         x_names: Sequence[str] = None,
     ):
         """
-        Constructor.
+        Initialize objective.
 
         Parameters
         ----------
@@ -29,18 +27,19 @@ class AggregatedObjective(ObjectiveBase):
             (Details see documentation of x_names in
             :class:`pypesto.ObjectiveBase`)
         """
-
         # input typechecks
         if not isinstance(objectives, Sequence):
-            raise TypeError(f'Objectives must be a Sequence, '
-                            f'was {type(objectives)}.')
+            raise TypeError(
+                f'Objectives must be a Sequence, ' f'was {type(objectives)}.'
+            )
 
         if not all(
-                isinstance(objective, ObjectiveBase)
-                for objective in objectives
+            isinstance(objective, ObjectiveBase) for objective in objectives
         ):
-            raise TypeError('Objectives must only contain elements of type'
-                            'pypesto.Objective')
+            raise TypeError(
+                'Objectives must only contain elements of type'
+                'pypesto.Objective'
+            )
 
         if not objectives:
             raise ValueError('Length of objectives must be at least one')
@@ -50,6 +49,7 @@ class AggregatedObjective(ObjectiveBase):
         super().__init__(x_names=x_names)
 
     def __deepcopy__(self, memodict=None):
+        """Create copy of objective."""
         other = AggregatedObjective(
             objectives=[deepcopy(objective) for objective in self._objectives],
             x_names=deepcopy(self.x_names),
@@ -59,17 +59,18 @@ class AggregatedObjective(ObjectiveBase):
 
         return other
 
-    def check_mode(self, mode: str) -> bool:
+    def check_mode(self, mode: ModeType) -> bool:
+        """See `ObjectiveBase` documentation."""
         return all(
-            objective.check_mode(mode)
-            for objective in self._objectives
+            objective.check_mode(mode) for objective in self._objectives
         )
 
     def check_sensi_orders(
         self,
         sensi_orders: Tuple[int, ...],
-        mode: str,
+        mode: ModeType,
     ) -> bool:
+        """See `ObjectiveBase` documentation."""
         return all(
             objective.check_sensi_orders(sensi_orders, mode)
             for objective in self._objectives
@@ -79,19 +80,29 @@ class AggregatedObjective(ObjectiveBase):
         self,
         x: np.ndarray,
         sensi_orders: Tuple[int, ...],
-        mode: str,
+        mode: ModeType,
         **kwargs,
     ) -> ResultDict:
-        return aggregate_results([
-            objective.call_unprocessed(x, sensi_orders, mode, **kwargs)
-            for objective in self._objectives
-        ])
+        """
+        See `ObjectiveBase` for more documentation.
+
+        Main method to overwrite from the base class. It handles and
+        delegates the actual objective evaluation.
+        """
+        return aggregate_results(
+            [
+                objective.call_unprocessed(x, sensi_orders, mode, **kwargs)
+                for objective in self._objectives
+            ]
+        )
 
     def initialize(self):
+        """See `ObjectiveBase` documentation."""
         for objective in self._objectives:
             objective.initialize()
 
     def get_config(self) -> dict:
+        """Return basic information of the objective configuration."""
         info = super().get_config()
         for n_obj, obj in enumerate(self._objectives):
             info[f'objective_{n_obj}'] = obj.get_config()
@@ -100,24 +111,18 @@ class AggregatedObjective(ObjectiveBase):
 
 def aggregate_results(rvals: Sequence[ResultDict]) -> ResultDict:
     """
-    Aggregrate the results from the provided sequence of ResultDicts into a
-    single ResultDict.
+    Aggregate the results from the provided ResultDicts into a single one.
 
     Parameters
     ----------
     rvals:
         results to aggregate
     """
-
-    # rvals are guaranteed to be consistent as _check_sensi_orders checks
-    # whether each objective can be called with the respective
-    # sensi_orders/mode
-
-    # sum over fval/grad/hess
+    # sum over fval/grad/hess, if available in all rvals
     result = {
         key: sum(rval[key] for rval in rvals)
-        for key in [FVAL, CHI2, SCHI2, GRAD, HESS, HESSP]
-        if rvals[0].get(key, None) is not None
+        for key in [FVAL, GRAD, HESS, HESSP]
+        if all(key in rval for rval in rvals)
     }
 
     # extract rdatas and flatten

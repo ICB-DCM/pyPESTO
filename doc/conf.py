@@ -19,6 +19,7 @@
 
 import os
 import sys
+
 sys.path.insert(0, os.path.abspath('../'))
 
 
@@ -31,16 +32,22 @@ needs_sphinx = '3.0.4'
 # extensions coming with Sphinx (named 'sphinx.ext.*') or your custom
 # ones.
 extensions = [
+    # include documentation from docstrings
     'sphinx.ext.autodoc',
-    'sphinx.ext.napoleon',
-    # code highlighting in jupyter cells
-    'IPython.sphinxext.ipython_console_highlighting',
-    'nbsphinx',
-    'recommonmark',
+    # generate autodoc summaries
+    'sphinx.ext.autosummary',
     # link to code
     'sphinx.ext.viewcode',
     # link to other projects' docs
     'sphinx.ext.intersphinx',
+    # support numpy and google style docstrings
+    'sphinx.ext.napoleon',
+    # source parser for jupyter notebook files
+    'nbsphinx',
+    # code highlighting in jupyter cells
+    'IPython.sphinxext.ipython_console_highlighting',
+    # support markdown-based docs
+    'myst_parser',
 ]
 
 # default autodoc options
@@ -58,7 +65,7 @@ autodoc_default_options = {
 intersphinx_mapping = {
     'python': ('https://docs.python.org/3', None),
     'numpy': ('https://numpy.org/devdocs/', None),
-    'scipy': ('https://docs.scipy.org/doc/scipy/reference/', None),
+    'scipy': ('https://docs.scipy.org/doc/scipy/', None),
     'pandas': ('https://pandas.pydata.org/docs/', None),
     'petab': ('https://petab.readthedocs.io/en/stable/', None),
     'amici': ('https://amici.readthedocs.io/en/latest/', None),
@@ -87,6 +94,7 @@ author = 'The pyPESTO developers'
 #
 # The short X.Y version.
 import pypesto
+
 version = pypesto.__version__
 # The full version, including alpha/beta/rc tags.
 release = version
@@ -96,13 +104,19 @@ release = version
 #
 # This is also used if you do content translation via gettext catalogs.
 # Usually you set "language" from the command line for these cases.
-language = None
+language = "en"
 
 # List of patterns, relative to source directory, that match files and
 # directories to ignore when looking for source files.
 # This patterns also effect to html_static_path and html_extra_path
-exclude_patterns = ['_build', 'Thumbs.db', '.DS_Store',
-                    '**.ipynb_checkpoints', 'example/tmp', 'README.md']
+exclude_patterns = [
+    '_build',
+    'Thumbs.db',
+    '.DS_Store',
+    '**.ipynb_checkpoints',
+    'example/tmp',
+    'README.md',
+]
 
 # The name of the Pygments (syntax highlighting) style to use.
 pygments_style = 'sphinx'
@@ -110,6 +124,19 @@ pygments_style = 'sphinx'
 # If true, `todo` and `todoList` produce output, else they produce nothing.
 todo_include_todos = False
 
+# Add notebooks prolog to Google Colab and nbviewer
+nbsphinx_prolog = r"""
+{% set docname = 'github/icb-dcm/pypesto/blob/main/doc/' + env.doc2path(env.docname, base=None) %}
+.. raw:: html
+
+    <div class="note">
+      <a href="https://colab.research.google.com/{{ docname|e }}" target="_blank">
+      <img src="../_static/colab-badge.svg" alt="Open in Colab"/></a>
+      <a href="https://nbviewer.jupyter.org/{{ docname|e }}" target="_blank">
+      <img src="../_static/nbviewer-badge.svg" alt="Open in nbviewer"/></a>
+    </div>
+
+"""
 
 # -- Options for HTML output ----------------------------------------------
 
@@ -127,7 +154,9 @@ html_theme = 'sphinx_rtd_theme'
 # Add any paths that contain custom static files (such as style sheets) here,
 # relative to this directory. They are copied after the builtin static files,
 # so a file named "default.css" will overwrite the builtin "default.css".
-# html_static_path = ['_static']
+html_static_path = ['_static']
+
+# Favicon
 html_favicon = "logo/logo_favicon.png"
 
 # Custom sidebar templates, must be a dictionary that maps document names
@@ -155,15 +184,12 @@ latex_elements = {
     # The paper size ('letterpaper' or 'a4paper').
     #
     # 'papersize': 'letterpaper',
-
     # The font size ('10pt', '11pt' or '12pt').
     #
     # 'pointsize': '10pt',
-
     # Additional stuff for the LaTeX preamble.
     #
     # 'preamble': '',
-
     # Latex figure (float) alignment
     #
     # 'figure_align': 'htbp',
@@ -173,8 +199,13 @@ latex_elements = {
 # (source start file, target name, title,
 #  author, documentclass [howto, manual, or own class]).
 latex_documents = [
-    (master_doc, 'pyPESTO.tex', 'pyPESTO Documentation',
-     'The pyPESTO developers', 'manual'),
+    (
+        master_doc,
+        'pyPESTO.tex',
+        'pyPESTO Documentation',
+        'The pyPESTO developers',
+        'manual',
+    ),
 ]
 
 
@@ -182,10 +213,7 @@ latex_documents = [
 
 # One entry per manual page. List of tuples
 # (source start file, name, description, authors, manual section).
-man_pages = [
-    (master_doc, 'pypesto', 'pyPESTO Documentation',
-     [author], 1)
-]
+man_pages = [(master_doc, 'pypesto', 'pyPESTO Documentation', [author], 1)]
 
 
 # -- Options for Texinfo output -------------------------------------------
@@ -194,7 +222,13 @@ man_pages = [
 # (source start file, target name, title, author,
 #  dir menu entry, description, category)
 texinfo_documents = [
-    (master_doc, 'pyPESTO', 'pyPESTO Documentation',
-     author, 'pyPESTO', 'One line description of project.',
-     'Miscellaneous'),
+    (
+        master_doc,
+        'pyPESTO',
+        'pyPESTO Documentation',
+        author,
+        'pyPESTO',
+        'One line description of project.',
+        'Miscellaneous',
+    ),
 ]

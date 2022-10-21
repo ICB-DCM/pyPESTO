@@ -1,15 +1,13 @@
+from __future__ import annotations
+
 from typing import List, Union
+
 import numpy as np
 
 from ..problem import Problem
-from .sampler import Sampler
-from .result import McmcPtResult
-from ..startpoint import assign_startpoints, uniform
-
-try:
-    import emcee
-except ImportError:
-    emcee = None
+from ..result import McmcPtResult
+from ..startpoint import UniformStartpoints
+from .sampler import Sampler, SamplerImportError
 
 
 class EmceeSampler(Sampler):
@@ -26,6 +24,8 @@ class EmceeSampler(Sampler):
         run_args: dict = None,
     ):
         """
+        Initialize sampler.
+
         Parameters
         ----------
         nwalkers: The number of walkers in the ensemble.
@@ -37,10 +37,10 @@ class EmceeSampler(Sampler):
             ``emcee.EnsembleSampler.run_mcmc``.
         """
         # check dependencies
-        if emcee is None:
-            raise ImportError(
-                "This sampler requires an installation of emcee. Install e.g. "
-                "via ``pip install pypesto[emcee]``.")
+        try:
+            import emcee
+        except ImportError:
+            raise SamplerImportError("emcee")
 
         super().__init__()
         self.nwalkers: int = nwalkers
@@ -63,6 +63,9 @@ class EmceeSampler(Sampler):
         problem: Problem,
         x0: Union[np.ndarray, List[np.ndarray]],
     ) -> None:
+        """Initialize the sampler."""
+        import emcee
+
         self.problem = problem
 
         # extract for pickling efficiency
@@ -77,9 +80,9 @@ class EmceeSampler(Sampler):
             """Log-probability density function."""
             # check if parameter lies within bounds
             if any(x < lb) or any(x > ub):
-                return - np.inf
+                return -np.inf
             # invert sign
-            return - 1. * objective(x)
+            return -1.0 * objective(x)
 
         # initialize sampler
         self.sampler = emcee.EnsembleSampler(
@@ -100,26 +103,33 @@ class EmceeSampler(Sampler):
             problem.x_guesses_full = np.row_stack((x0, problem.x_guesses_full))
 
             #  sample start points
-            self.state = assign_startpoints(
-                n_starts=self.nwalkers, startpoint_method=uniform,
-                problem=problem, startpoint_resample=True)
+            self.state = UniformStartpoints(
+                use_guesses=True,
+                check_fval=True,
+                check_grad=False,
+            )(
+                n_starts=self.nwalkers,
+                problem=problem,
+            )
 
             #  restore original guesses
-            problem.x_guesses_full = problem.x_guesses_full[x0.shape[0]:]
+            problem.x_guesses_full = problem.x_guesses_full[x0.shape[0] :]
 
-    def sample(self, n_samples: int, beta: float = 1.) -> None:
-        # the method returns the most recent sample state
+    def sample(self, n_samples: int, beta: float = 1.0) -> None:
+        """Return the most recent sample state."""
         self.state = self.sampler.run_mcmc(
-            self.state, n_samples, **self.run_args)
+            self.state, n_samples, **self.run_args
+        )
 
     def get_samples(self) -> McmcPtResult:
+        """Get the samples into the fitting pypesto format."""
         # all walkers are concatenated, yielding a flat array
         trace_x = np.array([self.sampler.get_chain(flat=True)])
-        trace_neglogpost = np.array([- self.sampler.get_log_prob(flat=True)])
+        trace_neglogpost = np.array([-self.sampler.get_log_prob(flat=True)])
         # the sampler does not know priors
         trace_neglogprior = np.full(trace_neglogpost.shape, np.nan)
         # the walkers all run on temperature 1
-        betas = np.array([1.])
+        betas = np.array([1.0])
 
         result = McmcPtResult(
             trace_x=trace_x,

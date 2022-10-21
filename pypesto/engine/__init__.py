@@ -8,7 +8,7 @@ task itself is internally parallelized.
 """
 
 from .base import Engine
-from .single_core import SingleCoreEngine
-from .multi_thread import MultiThreadEngine
 from .multi_process import MultiProcessEngine
+from .multi_thread import MultiThreadEngine
+from .single_core import SingleCoreEngine
 from .task import Task

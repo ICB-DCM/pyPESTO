@@ -1,9 +1,21 @@
+"""Various Sampler classes."""
 import abc
-import numpy as np
 from typing import Dict, List, Union
 
+import numpy as np
+
 from ..problem import Problem
-from .result import McmcPtResult
+from ..result import McmcPtResult
+
+
+class SamplerImportError(ImportError):
+    """Exception raised when a sampler is not available."""
+
+    def __init__(self, sampler: str):
+        super().__init__(
+            f'Sampler "{sampler}" not available, install corresponding '
+            f'package e.g. via "pip install pypesto[{sampler}]"'
+        )
 
 
 class Sampler(abc.ABC):
@@ -17,9 +29,9 @@ class Sampler(abc.ABC):
         self.options = self.__class__.translate_options(options)
 
     @abc.abstractmethod
-    def initialize(self,
-                   problem: Problem,
-                   x0: Union[np.ndarray, List[np.ndarray]]):
+    def initialize(
+        self, problem: Problem, x0: Union[np.ndarray, List[np.ndarray]]
+    ):
         """Initialize the sampler.
 
         Parameters
@@ -32,7 +44,9 @@ class Sampler(abc.ABC):
 
     @abc.abstractmethod
     def sample(
-            self, n_samples: int, beta: float = 1.,
+        self,
+        n_samples: int,
+        beta: float = 1.0,
     ):
         """Perform sampling.
 
@@ -50,7 +64,8 @@ class Sampler(abc.ABC):
 
     @classmethod
     def default_options(cls) -> Dict:
-        """Convenience method to set/get default options.
+        """
+        Set/Get default options.
 
         Returns
         -------
@@ -61,7 +76,8 @@ class Sampler(abc.ABC):
 
     @classmethod
     def translate_options(cls, options):
-        """Convenience method to translate options and fill in defaults.
+        """
+        Translate options and fill in defaults.
 
         Parameters
         ----------
@@ -80,7 +96,9 @@ class Sampler(abc.ABC):
 
 class InternalSample:
     """
-    This is the exchange object provided and accepted by
+    Internal sample class.
+
+    Exchange object provided and accepted by
     `InternalSampler.get_last_sample()`, `InternalSampler.set_last_sample()`.
     It carries all information needed to check whether to swap between chains,
     and to continue the chain from the updated sample.
@@ -131,9 +149,10 @@ class InternalSampler(Sampler):
 
     def make_internal(self, temper_lpost: bool):
         """
-        This function can be called by parallel tempering samplers during
-        initialization to allow the inner samplers to adjust to them
-        being used as inner samplers. Default: Do nothing.
+        Allow the inner samplers to be used as inner samplers.
+
+        Can be called by parallel tempering samplers during initialization.
+        Default: Do nothing.
 
         Parameters
         ----------

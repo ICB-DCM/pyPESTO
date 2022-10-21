@@ -2,32 +2,40 @@ import logging
 from typing import Callable, Iterable, Union
 
 from ..engine import Engine, SingleCoreEngine
-from ..objective import HistoryOptions
+from ..history import HistoryOptions
 from ..problem import Problem
 from ..result import Result
-from ..startpoint import assign_startpoints, uniform
+from ..startpoint import StartpointMethod, to_startpoint_method, uniform
+from ..store import autosave
 from .optimizer import Optimizer, ScipyOptimizer
 from .options import OptimizeOptions
 from .task import OptimizerTask
-from .util import check_hdf5_mp, fill_hdf5_file
+from .util import (
+    assign_ids,
+    bound_n_starts_from_env,
+    postprocess_hdf5_history,
+    preprocess_hdf5_history,
+)
 
 logger = logging.getLogger(__name__)
 
 
 def minimize(
-        problem: Problem,
-        optimizer: Optimizer = None,
-        n_starts: int = 100,
-        ids: Iterable[str] = None,
-        startpoint_method: Union[Callable, bool] = None,
-        result: Result = None,
-        engine: Engine = None,
-        progress_bar: bool = True,
-        options: OptimizeOptions = None,
-        history_options: HistoryOptions = None,
+    problem: Problem,
+    optimizer: Optimizer = None,
+    n_starts: int = 100,
+    ids: Iterable[str] = None,
+    startpoint_method: Union[StartpointMethod, Callable, bool] = None,
+    result: Result = None,
+    engine: Engine = None,
+    progress_bar: bool = True,
+    options: OptimizeOptions = None,
+    history_options: HistoryOptions = None,
+    filename: Union[str, Callable, None] = None,
+    overwrite: bool = False,
 ) -> Result:
     """
-    This is the main function to call to do multistart optimization.
+    Do multistart optimization.
 
     Parameters
     ----------
@@ -55,6 +63,15 @@ def minimize(
         Various options applied to the multistart optimization.
     history_options:
         Optimizer history options.
+    filename:
+        Name of the hdf5 file, where the result will be saved. Default is
+        None, which deactivates automatic saving. If set to
+        "Auto" it will automatically generate a file named
+        `year_month_day_profiling_result.hdf5`.
+        Optionally a method, see docs for `pypesto.store.auto.autosave`.
+    overwrite:
+        Whether to overwrite `result/optimization` in the autosave file
+        if it already exists.
 
     Returns
     -------
@@ -62,40 +79,40 @@ def minimize(
         Result object containing the results of all multistarts in
         `result.optimize_result`.
     """
-
     # optimizer
     if optimizer is None:
         optimizer = ScipyOptimizer()
 
+    # number of starts
+    n_starts = bound_n_starts_from_env(n_starts)
+
     # startpoint method
-    if (startpoint_method is not None) \
-            and (problem.startpoint_method is not None):
-        raise Warning('Problem.startpoint_method will be ignored. Start '
-                      'points will be generated using the startpoint method '
-                      'given as an argument to the minimize function.')
-    elif problem.startpoint_method is not None:
-        startpoint_method = problem.startpoint_method
-    elif startpoint_method is None:
+    if startpoint_method is None:
         startpoint_method = uniform
+    # convert startpoint method to class instance
+    startpoint_method = to_startpoint_method(startpoint_method)
 
     # check options
     if options is None:
         options = OptimizeOptions()
     options = OptimizeOptions.assert_instance(options)
 
+    # history options
     if history_options is None:
         history_options = HistoryOptions()
     history_options = HistoryOptions.assert_instance(history_options)
 
     # assign startpoints
-    startpoints = assign_startpoints(
-        n_starts=n_starts, startpoint_method=startpoint_method,
-        problem=problem, startpoint_resample=options.startpoint_resample)
+    startpoints = startpoint_method(
+        n_starts=n_starts,
+        problem=problem,
+    )
 
-    if ids is None:
-        ids = [str(j) for j in range(n_starts)]
-    if len(ids) != n_starts:
-        raise AssertionError("Number of starts and ids must coincide.")
+    ids = assign_ids(
+        n_starts=n_starts,
+        ids=ids,
+        result=result,
+    )
 
     # prepare result
     if result is None:
@@ -105,24 +122,31 @@ def minimize(
     if engine is None:
         engine = SingleCoreEngine()
 
+    # change to one hdf5 storage file per start if parallel and if hdf5
+    history_file = history_options.storage_file
+    history_requires_postprocessing = preprocess_hdf5_history(
+        history_options, engine
+    )
+
     # define tasks
     tasks = []
-    filename = None
-    if history_options.storage_file is not None and \
-            history_options.storage_file.endswith(('.h5', '.hdf5')):
-        filename = check_hdf5_mp(history_options, engine)
-
     for startpoint, id in zip(startpoints, ids):
         task = OptimizerTask(
-            optimizer=optimizer, problem=problem, x0=startpoint, id=id,
-            options=options, history_options=history_options)
+            optimizer=optimizer,
+            problem=problem,
+            x0=startpoint,
+            id=id,
+            history_options=history_options,
+            optimize_options=options,
+        )
         tasks.append(task)
 
-    # do multistart optimization
+    # perform multistart optimization
     ret = engine.execute(tasks, progress_bar=progress_bar)
 
-    if filename is not None:
-        fill_hdf5_file(ret, filename)
+    # merge hdf5 history files
+    if history_requires_postprocessing:
+        postprocess_hdf5_history(ret, history_file, history_options)
 
     # aggregate results
     for optimizer_result in ret:
@@ -130,5 +154,15 @@ def minimize(
 
     # sort by best fval
     result.optimize_result.sort()
+
+    # if history file provided, set storage file to that one
+    if filename == "Auto" and history_file is not None:
+        filename = history_file
+    autosave(
+        filename=filename,
+        result=result,
+        store_type="optimize",
+        overwrite=overwrite,
+    )
 
     return result

@@ -1,15 +1,15 @@
+"""Helper function for `geweke_test`."""
 import logging
 import warnings
 from typing import Tuple
+
 import numpy as np
 from scipy.stats import norm
 
 logger = logging.getLogger(__name__)
 
 
-def spectrum(x: np.ndarray,
-             nfft: int = None,
-             nw: int = None) -> np.ndarray:
+def spectrum(x: np.ndarray, nfft: int = None, nw: int = None) -> np.ndarray:
     """
     Power spectral density using Hanning window.
 
@@ -28,7 +28,6 @@ def spectrum(x: np.ndarray,
     spectral_density:
         The spectral density.
     """
-
     if nfft is None:
         nfft = np.min(len(x), 256)
 
@@ -38,9 +37,9 @@ def spectrum(x: np.ndarray,
     n_overlap = np.floor(nw / 2).astype(int)
 
     # Hanning window
-    w = .5 * (1 - np.cos(
-        2 * np.pi * np.transpose(np.arange(1, nw+1)) /
-        (nw + 1)))
+    w = 0.5 * (
+        1 - np.cos(2 * np.pi * np.transpose(np.arange(1, nw + 1)) / (nw + 1))
+    )
     n = len(x)
     if n < nw:
         x[nw] = 0
@@ -55,7 +54,7 @@ def spectrum(x: np.ndarray,
 
     for _ in range(k):
         xw = w * x[index]
-        index += (nw - n_overlap)
+        index += nw - n_overlap
         Xx = np.absolute(np.fft.fft(xw, n=nfft, axis=0)) ** 2
         spectral_density += Xx
 
@@ -71,7 +70,7 @@ def spectrum(x: np.ndarray,
 
 def spectrum0(x: np.ndarray) -> np.ndarray:
     """
-    Calculates the spectral density at frequency zero.
+    Calculate the spectral density at frequency zero.
 
     Parameters
     ----------
@@ -83,7 +82,6 @@ def spectrum0(x: np.ndarray) -> np.ndarray:
     spectral_density_zero:
         Spectral density at zero.
     """
-
     n_samples, n_par = x.shape
     spectral_density_zero = np.zeros((1, n_par))
 
@@ -94,14 +92,15 @@ def spectrum0(x: np.ndarray) -> np.ndarray:
     return spectral_density_zero
 
 
-def calculate_zscore(chain: np.ndarray,
-                     a: float = 0.1,
-                     b: float = 0.5) -> Tuple[float, float]:
+def calculate_zscore(
+    chain: np.ndarray, a: float = 0.1, b: float = 0.5
+) -> Tuple[float, float]:
     """
-    Performs a Geweke test on a chain using the first
-    "a" fraction and the last "b" fraction of it for
-    comparison. Test for equality of the means of the
-    first a% and last b% of a Markov chain.
+    Perform a Geweke test on a chain.
+
+    Use the first "a" fraction and the last "b" fraction of it for
+    comparison. Test for equality of the means of the first a% and last b%
+    of a Markov chain.
 
     See:
     Stephen P. Brooks and Gareth O. Roberts.
@@ -123,7 +122,6 @@ def calculate_zscore(chain: np.ndarray,
     p:
         Significance level of the Geweke test.
     """
-
     nsamples, _ = chain.shape
 
     # Define First fraction
@@ -133,9 +131,11 @@ def calculate_zscore(chain: np.ndarray,
 
     # Check if appropiate indexes
     if (index_a + index_b) / nsamples > 1:
-        raise ValueError("Sample size too small to "
-                         "meaningfully extract subsets "
-                         "for Geweke's test.")
+        raise ValueError(
+            "Sample size too small to "
+            "meaningfully extract subsets "
+            "for Geweke's test."
+        )
 
     # Expect to see RuntimeWarnings in this block for short chains
     with warnings.catch_warnings():
@@ -150,20 +150,20 @@ def calculate_zscore(chain: np.ndarray,
     spectrum_b = spectrum0(chain[index_b:, :])
 
     # Calculate z-score
-    z_score = (mean_a - mean_b) / (np.sqrt(
-        spectrum_a / index_a + spectrum_b /
-        (nsamples - index_b + 1)
-    ))
+    z_score = (mean_a - mean_b) / (
+        np.sqrt(spectrum_a / index_a + spectrum_b / (nsamples - index_b + 1))
+    )
     # Calculate significance (p value)
     p = 2 * (1 - norm.cdf(np.absolute(z_score)))
 
     return z_score, p
 
 
-def burn_in_by_sequential_geweke(chain: np.ndarray,
-                                 zscore: float = 2.) -> int:
+def burn_in_by_sequential_geweke(
+    chain: np.ndarray, zscore: float = 2.0
+) -> int:
     """
-    Calculates the burn-in of MCMC chains.
+    Calculate the burn-in of MCMC chains.
 
     Parameters
     ----------
@@ -179,14 +179,13 @@ def burn_in_by_sequential_geweke(chain: np.ndarray,
         of the chain do not differ significantly
         regarding Geweke test.
     """
-
     nsamples, npar = chain.shape
     # number of fragments
     n = 20
     # round each element to the nearest integer
     # toward zero
     step = np.floor(nsamples / n).astype(int)
-    fragments = np.arange(0, nsamples-1, step)
+    fragments = np.arange(0, nsamples - 1, step)
 
     z = np.zeros((len(fragments), npar))
     for i, indices in enumerate(fragments):
@@ -200,17 +199,20 @@ def burn_in_by_sequential_geweke(chain: np.ndarray,
     alpha2 = zscore * np.ones((len(idxs)))
 
     for i in range(len(max_z)):
-        alpha2[idxs[i]] = (alpha2[idxs[i]] /
-                           (len(fragments) - np.where(idxs == i)[0] + 1))
+        alpha2[idxs[i]] = alpha2[idxs[i]] / (
+            len(fragments) - np.where(idxs == i)[0] + 1
+        )
 
     if np.any(alpha2 > max_z):
         burn_in = (np.where(alpha2 > max_z)[0][0]) * step
     else:
         burn_in = nsamples
-        logger.warning("Burn in index coincides with chain "
-                       "length. The chain seems to not have "
-                       "converged yet.\n"
-                       "You may want to use a larger number "
-                       "of samples.")
+        logger.warning(
+            "Burn in index coincides with chain "
+            "length. The chain seems to not have "
+            "converged yet.\n"
+            "You may want to use a larger number "
+            "of samples."
+        )
 
     return burn_in

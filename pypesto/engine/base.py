@@ -1,13 +1,12 @@
-from typing import List
+"""Abstract engine base class."""
 import abc
+from typing import List
 
 from .task import Task
 
 
 class Engine(abc.ABC):
-    """
-    Abstract engine base class.
-    """
+    """Abstract engine base class."""
 
     def __init__(self):
         pass
@@ -23,5 +22,4 @@ class Engine(abc.ABC):
         progress_bar:
             Whether to display a progress bar.
         """
-        raise NotImplementedError(
-            "This engine is not intended to be called.")
+        raise NotImplementedError("This engine is not intended to be called.")

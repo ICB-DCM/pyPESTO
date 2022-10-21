@@ -1,4 +1,6 @@
+"""AdaptiveParallelTemperingSampler class."""
 from typing import Dict, Sequence
+
 import numpy as np
 
 from .parallel_tempering import ParallelTemperingSampler
@@ -9,6 +11,7 @@ class AdaptiveParallelTemperingSampler(ParallelTemperingSampler):
 
     @classmethod
     def default_options(cls) -> Dict:
+        """Get default options for sampler."""
         options = super().default_options()
         # scaling factor for temperature adaptation
         options['eta'] = 100
@@ -34,9 +37,9 @@ class AdaptiveParallelTemperingSampler(ParallelTemperingSampler):
         # update betas
         kappa = nu / (i_sample + 1 + nu) / eta
         ds = kappa * (swapped[:-1] - swapped[1:])
-        dtemp = np.diff(1. / betas[:-1])
+        dtemp = np.diff(1.0 / betas[:-1])
         dtemp = dtemp * np.exp(ds)
-        betas[:-1] = 1 / np.cumsum(np.insert(dtemp, obj=0, values=1.))
+        betas[:-1] = 1 / np.cumsum(np.insert(dtemp, obj=0, values=1.0))
 
         # fill in
         self.betas = betas

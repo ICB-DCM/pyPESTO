@@ -4,8 +4,11 @@ name: CI
 on:
   push:
     branches:
-    - master
+    - main
   pull_request:
+  schedule:
+    # run Monday and Thursday at 03:42 UTC
+    - cron: '42 3 * * MON,THU'
 
 # jobs
 jobs:
@@ -13,7 +16,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: [3.9]
+        python-version: ['3.8']
 
     steps:
     - name: Check out repository
@@ -34,7 +37,7 @@ jobs:
       run: .github/workflows/install_deps.sh amici
 
     - name: Run tests
-      timeout-minutes: 10
+      timeout-minutes: 15
       run: tox -e base
 
     - name: Coverage
@@ -47,7 +50,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: [3.9]
+        python-version: ['3.8']
 
     steps:
     - name: Check out repository
@@ -77,11 +80,52 @@ jobs:
         token: ${{ secrets.CODECOV_TOKEN }}
         file: ./coverage.xml
 
+  julia:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ['3.8']
+
+    steps:
+    - name: Check out repository
+      uses: actions/checkout@v2
+
+    - name: Prepare python ${{ matrix.python-version }}
+      uses: actions/setup-python@v1
+      with:
+        python-version: ${{ matrix.python-version }}
+
+    - name: Install julia
+      uses: julia-actions/setup-julia@v1
+      with:
+        version: 1.7
+
+    - name: Cache
+      uses: actions/cache@v3
+      with:
+        path: |
+          ~/.cache
+          ~/.julia/artifacts
+        key: ${{ runner.os }}-${{ matrix.python-version }}-ci-julia
+
+    - name: Install dependencies
+      run: .github/workflows/install_deps.sh
+
+    - name: Run tests
+      timeout-minutes: 20
+      run: tox -e julia
+
+    - name: Coverage
+      uses: codecov/codecov-action@v2
+      with:
+        token: ${{ secrets.CODECOV_TOKEN }}
+        file: ./coverage.xml
+
   optimize:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: [3.9]
+        python-version: ['3.8']
 
     steps:
     - name: Check out repository
@@ -111,11 +155,45 @@ jobs:
         token: ${{ secrets.CODECOV_TOKEN }}
         file: ./coverage.xml
 
+  select:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ['3.8']
+
+    steps:
+    - name: Check out repository
+      uses: actions/checkout@v2
+
+    - name: Prepare python ${{ matrix.python-version }}
+      uses: actions/setup-python@v1
+      with:
+        python-version: ${{ matrix.python-version }}
+
+    - name: Cache
+      uses: actions/cache@v1
+      with:
+        path: ~/.cache
+        key: ${{ runner.os }}-${{ matrix.python-version }}-ci-select
+
+    - name: Install dependencies
+      run: .github/workflows/install_deps.sh amici
+
+    - name: Run tests
+      timeout-minutes: 20
+      run: tox -e select
+
+    - name: Coverage
+      uses: codecov/codecov-action@v1
+      with:
+        token: ${{ secrets.CODECOV_TOKEN }}
+        file: ./coverage.xml
+
   quality:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: [3.9]
+        python-version: ['3.10']
 
     steps:
     - name: Check out repository
@@ -139,7 +217,7 @@ jobs:
       run: tox -e size
 
     - name: Run quality checks
-      timeout-minutes: 1
+      timeout-minutes: 5
       run: tox -e project,flake8
 
     - name: Run pre-commit hooks
@@ -149,7 +227,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: [3.9]
+        python-version: ['3.9']
 
     steps:
     - name: Check out repository
@@ -169,6 +247,9 @@ jobs:
     - name: Install dependencies
       run: .github/workflows/install_deps.sh doc amici
 
+    - name: Validate CITATION.cff
+      run: pip install cffconvert && cffconvert --validate
+
     - name: Build doc
       timeout-minutes: 5
       run: tox -e doc
@@ -177,7 +258,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: [3.9]
+        python-version: ['3.8']
 
     steps:
     - name: Check out repository
@@ -205,7 +286,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: [3.9]
+        python-version: ['3.8']
 
     steps:
     - name: Check out repository

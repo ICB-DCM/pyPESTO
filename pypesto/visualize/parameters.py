@@ -1,30 +1,37 @@
-import matplotlib.pyplot as plt
+from typing import Callable, Iterable, List, Optional, Sequence, Tuple, Union
+
 import matplotlib.axes
-from matplotlib.ticker import MaxNLocator
+import matplotlib.pyplot as plt
 import numpy as np
+import pandas as pd
+from matplotlib.ticker import MaxNLocator
 
-from typing import Iterable, List, Optional, Sequence, Tuple, Union
+from pypesto.util import delete_nan_inf
 
+from ..C import RGBA
 from ..result import Result
-from .reference_points import create_references, ReferencePoint
 from .clust_color import assign_colors
-from .clust_color import delete_nan_inf
-from .misc import process_result_list, process_start_indices
+from .misc import (
+    process_parameter_indices,
+    process_result_list,
+    process_start_indices,
+)
+from .reference_points import ReferencePoint, create_references
 
 
 def parameters(
-        results: Union[Result, Sequence[Result]],
-        ax: Optional[matplotlib.axes.Axes] = None,
-        parameter_indices: Union[str, Sequence[int]] = 'free_only',
-        lb: Optional[Union[np.ndarray, List[float]]] = None,
-        ub: Optional[Union[np.ndarray, List[float]]] = None,
-        size: Optional[Tuple[float, float]] = None,
-        reference: Optional[List[ReferencePoint]] = None,
-        colors: Optional[Union[List[float], List[List[float]]]] = None,
-        legends: Optional[Union[str, List[str]]] = None,
-        balance_alpha: bool = True,
-        start_indices: Optional[Union[int, Iterable[int]]] = None,
-        scale_to_interval: Optional[Tuple[float, float]] = None,
+    results: Union[Result, Sequence[Result]],
+    ax: Optional[matplotlib.axes.Axes] = None,
+    parameter_indices: Union[str, Sequence[int]] = 'free_only',
+    lb: Optional[Union[np.ndarray, List[float]]] = None,
+    ub: Optional[Union[np.ndarray, List[float]]] = None,
+    size: Optional[Tuple[float, float]] = None,
+    reference: Optional[List[ReferencePoint]] = None,
+    colors: Optional[Union[RGBA, List[RGBA]]] = None,
+    legends: Optional[Union[str, List[str]]] = None,
+    balance_alpha: bool = True,
+    start_indices: Optional[Union[int, Iterable[int]]] = None,
+    scale_to_interval: Optional[Tuple[float, float]] = None,
 ) -> matplotlib.axes.Axes:
     """
     Plot parameter values.
@@ -68,7 +75,6 @@ def parameters(
     ax:
         The plot axes.
     """
-
     # parse input
     (results, colors, legends) = process_result_list(results, colors, legends)
 
@@ -78,31 +84,44 @@ def parameters(
         elif parameter_indices == 'free_only':
             parameter_indices = results[0].problem.x_free_indices
         else:
-            raise ValueError("Permissible values for parameter_indices are "
-                             "'all', 'free_only' or a list of indices")
+            raise ValueError(
+                "Permissible values for parameter_indices are "
+                "'all', 'free_only' or a list of indices"
+            )
 
     def scale_parameters(x):
-        """Scale ``x`` from [lb, ub] to interval given by ``scale_to_interval``
-        """
+        """Scale `x` from [lb, ub] to interval given by `scale_to_interval`."""
         if scale_to_interval is None or scale_to_interval is False:
             return x
 
-        return (scale_to_interval[0] + (x - lb) / (ub - lb)
-                * (scale_to_interval[1] - scale_to_interval[0]))
+        return scale_to_interval[0] + (x - lb) / (ub - lb) * (
+            scale_to_interval[1] - scale_to_interval[0]
+        )
 
     for j, result in enumerate(results):
         # handle results and bounds
-        (lb, ub, x_labels, fvals, xs) = \
-            handle_inputs(result=result, lb=lb, ub=ub,
-                          parameter_indices=parameter_indices,
-                          start_indices=start_indices)
+        (lb, ub, x_labels, fvals, xs) = handle_inputs(
+            result=result,
+            lb=lb,
+            ub=ub,
+            parameter_indices=parameter_indices,
+            start_indices=start_indices,
+        )
         lb, ub, xs = map(scale_parameters, (lb, ub, xs))
 
         # call lowlevel routine
-        ax = parameters_lowlevel(xs=xs, fvals=fvals, lb=lb, ub=ub,
-                                 x_labels=x_labels, ax=ax, size=size,
-                                 colors=colors[j], legend_text=legends[j],
-                                 balance_alpha=balance_alpha)
+        ax = parameters_lowlevel(
+            xs=xs,
+            fvals=fvals,
+            lb=lb,
+            ub=ub,
+            x_labels=x_labels,
+            ax=ax,
+            size=size,
+            colors=colors[j],
+            legend_text=legends[j],
+            balance_alpha=balance_alpha,
+        )
 
     # parse and apply plotting options
     ref = create_references(references=reference)
@@ -111,32 +130,39 @@ def parameters(
     for i_ref in ref:
         # reduce parameter vector in reference point, if necessary
         if len(parameter_indices) < results[0].problem.dim_full:
-            x_ref = np.array(results[0].problem.get_reduced_vector(
-                i_ref['x'],
-                parameter_indices))
+            x_ref = np.array(
+                results[0].problem.get_reduced_vector(
+                    i_ref['x'], parameter_indices
+                )
+            )
         else:
             x_ref = np.array(i_ref['x'])
         x_ref = np.reshape(x_ref, (1, x_ref.size))
         x_ref = scale_parameters(x_ref)
 
         # plot reference parameters using lowlevel routine
-        ax = parameters_lowlevel(x_ref, [i_ref['fval']], ax=ax,
-                                 colors=i_ref['color'],
-                                 linestyle='--',
-                                 legend_text=i_ref.legend,
-                                 balance_alpha=balance_alpha)
+        ax = parameters_lowlevel(
+            x_ref,
+            [i_ref['fval']],
+            ax=ax,
+            colors=i_ref['color'],
+            linestyle='--',
+            legend_text=i_ref.legend,
+            balance_alpha=balance_alpha,
+        )
 
     return ax
 
 
 def parameter_hist(
-        result: Result,
-        parameter_name: str,
-        bins: Union[int, str] = 'auto',
-        ax: Optional['matplotlib.Axes'] = None,
-        size: Optional[Tuple[float]] = (18.5, 10.5),
-        color: Optional[List[float]] = None,
-        start_indices: Optional[Union[int, List[int]]] = None):
+    result: Result,
+    parameter_name: str,
+    bins: Union[int, str] = 'auto',
+    ax: Optional['matplotlib.Axes'] = None,
+    size: Optional[Tuple[float]] = (18.5, 10.5),
+    color: Optional[List[float]] = None,
+    start_indices: Optional[Union[int, List[int]]] = None,
+):
     """
     Plot parameter values as a histogram.
 
@@ -159,20 +185,17 @@ def parameter_hist(
         List of integers specifying the multistarts to be plotted or
         int specifying up to which start index should be plotted
 
-
     Returns
     -------
     ax:
-    The plot axes.
-
+        The plot axes.
     """
-
     if ax is None:
         ax = plt.subplots()[1]
         fig = plt.gcf()
         fig.set_size_inches(*size)
 
-    xs = result.optimize_result.get_for_key('x')
+    xs = result.optimize_result.x
 
     # reduce number of displayed results
     if isinstance(start_indices, int):
@@ -192,64 +215,51 @@ def parameter_hist(
 
 
 def parameters_lowlevel(
-        xs: Sequence[Union[np.ndarray, List[float]]],
-        fvals: Union[np.ndarray, List[float]],
-        lb: Optional[Union[np.ndarray, List[float]]] = None,
-        ub: Optional[Union[np.ndarray, List[float]]] = None,
-        x_labels: Optional[Iterable[str]] = None,
-        ax: Optional[matplotlib.axes.Axes] = None,
-        size: Optional[Tuple[float, float]] = None,
-        colors: Optional[Sequence[Union[np.ndarray, List[float]]]] = None,
-        linestyle: str = '-',
-        legend_text: Optional[str] = None,
-        balance_alpha: bool = True
+    xs: Sequence[Union[np.ndarray, List[float]]],
+    fvals: Union[np.ndarray, List[float]],
+    lb: Optional[Union[np.ndarray, List[float]]] = None,
+    ub: Optional[Union[np.ndarray, List[float]]] = None,
+    x_labels: Optional[Iterable[str]] = None,
+    ax: Optional[matplotlib.axes.Axes] = None,
+    size: Optional[Tuple[float, float]] = None,
+    colors: Optional[Sequence[Union[np.ndarray, List[float]]]] = None,
+    linestyle: str = '-',
+    legend_text: Optional[str] = None,
+    balance_alpha: bool = True,
 ) -> matplotlib.axes.Axes:
-
     """
     Plot parameters plot using list of parameters.
 
     Parameters
     ----------
-
     xs:
         Including optimized parameters for each startpoint.
         Shape: (n_starts, dim).
-
     fvals:
         Function values. Needed to assign cluster colors.
-
     lb, ub:
         The lower and upper bounds.
-
     x_labels:
         Labels to be used for the parameters.
-
     ax:
         Axes object to use.
-
     size:
         see parameters
-
     colors:
         One for each element in 'fvals'.
-
     linestyle:
         linestyle argument for parameter plot
-
     legend_text:
         Label for line plots
-
     balance_alpha:
         Flag indicating whether alpha for large clusters should be reduced to
         avoid overplotting (default: True)
 
     Returns
     -------
-
     ax:
         The plot axes.
     """
-
     # parse input
     xs = np.array(xs)
     fvals = np.array(fvals)
@@ -266,8 +276,9 @@ def parameters_lowlevel(
         fig.set_size_inches(*size)
 
     # assign colors
-    colors = assign_colors(vals=fvals, colors=colors,
-                           balance_alpha=balance_alpha)
+    colors = assign_colors(
+        vals=fvals, colors=colors, balance_alpha=balance_alpha
+    )
 
     # parameter indices
     parameters_ind = list(range(1, xs.shape[1] + 1))[::-1]
@@ -279,19 +290,26 @@ def parameters_lowlevel(
             tmp_legend = legend_text
         else:
             tmp_legend = None
-        ax.plot(x, parameters_ind,
-                linestyle,
-                color=colors[j_x],
-                marker='o',
-                label=tmp_legend)
+        ax.plot(
+            x,
+            parameters_ind,
+            linestyle,
+            color=colors[j_x],
+            marker='o',
+            label=tmp_legend,
+        )
 
-    plt.yticks(parameters_ind, x_labels)
+    ax.set_yticks(parameters_ind)
+    if x_labels is not None:
+        ax.set_yticklabels(x_labels)
 
     # draw bounds
     parameters_ind = np.array(parameters_ind).flatten()
     if lb is not None:
+        lb = np.array(lb, dtype="float64")
         ax.plot(lb.flatten(), parameters_ind, 'k--', marker='+')
     if ub is not None:
+        ub = np.array(ub, dtype="float64")
         ax.plot(ub.flatten(), parameters_ind, 'k--', marker='+')
 
     ax.set_xlabel('Parameter value')
@@ -304,55 +322,48 @@ def parameters_lowlevel(
 
 
 def handle_inputs(
-        result: Result, parameter_indices: List[int],
-        lb: Optional[Union[np.ndarray, List[float]]] = None,
-        ub: Optional[Union[np.ndarray, List[float]]] = None,
-        start_indices: Optional[Union[int, Iterable[int]]] = None
+    result: Result,
+    parameter_indices: List[int],
+    lb: Optional[Union[np.ndarray, List[float]]] = None,
+    ub: Optional[Union[np.ndarray, List[float]]] = None,
+    start_indices: Optional[Union[int, Iterable[int]]] = None,
 ) -> Tuple[np.ndarray, np.ndarray, List[str], np.ndarray, List[np.ndarray]]:
     """
-    Computes the correct bounds for the parameter indices to be plotted and
-    outputs the corresponding parameters and their labels
+    Compute the correct bounds for the parameter indices to be plotted.
+
+    Outputs the corresponding parameters and their labels.
 
     Parameters
     ----------
-
     result:
         Optimization result obtained by 'optimize.py'.
-
     parameter_indices:
         Specifies which parameters should be plotted.
-
     lb, ub:
         If not None, override result.problem.lb, problem.problem.ub.
         Dimension either result.problem.dim or result.problem.dim_full.
-
     start_indices:
         list of integers specifying the multistarts to be plotted or
         int specifying up to which start index should be plotted
 
     Returns
     -------
-
     lb, ub:
         Dimension either result.problem.dim or result.problem.dim_full.
-
     x_labels:
         ytick labels to be applied later on
-
     fvals:
         objective function values which are needed for plotting later
-
     xs:
         parameter values which will be plotted later
     """
-
     # retrieve results
-    fvals = result.optimize_result.get_for_key('fval')
-    xs = result.optimize_result.get_for_key('x')
+    fvals = result.optimize_result.fval
+    xs = result.optimize_result.x
 
     # parse indices which should be plotted
     if start_indices is not None:
-        start_indices = process_start_indices(start_indices, len(fvals))
+        start_indices = process_start_indices(result, start_indices)
 
         # reduce number of displayed results
         xs_out = [xs[ind] for ind in start_indices]
@@ -374,8 +385,9 @@ def handle_inputs(
     # handle fixed and free indices
     if len(parameter_indices) < result.problem.dim_full:
         for ix, x in enumerate(xs_out):
-            xs_out[ix] = result.problem.get_reduced_vector(x,
-                                                           parameter_indices)
+            xs_out[ix] = result.problem.get_reduced_vector(
+                x, parameter_indices
+            )
         lb = result.problem.get_reduced_vector(lb, parameter_indices)
         ub = result.problem.get_reduced_vector(ub, parameter_indices)
         x_labels = [x_labels[int(i)] for i in parameter_indices]
@@ -384,3 +396,61 @@ def handle_inputs(
         ub = result.problem.get_full_vector(ub)
 
     return lb, ub, x_labels, fvals_out, xs_out
+
+
+def parameters_correlation_matrix(
+    result: Result,
+    parameter_indices: Union[str, Sequence[int]] = 'free_only',
+    start_indices: Optional[Union[int, Iterable[int]]] = None,
+    method: Union[str, Callable] = 'pearson',
+    cluster: bool = True,
+) -> matplotlib.axes.Axes:
+    """
+    Plot correlation of optimized parameters.
+
+    Parameters
+    ----------
+    result:
+        Optimization result obtained by 'optimize.py'
+    parameter_indices:
+        List of integers specifying the parameters to be considered.
+    start_indices:
+        List of integers specifying the multistarts to be plotted or
+        int specifying up to which start index should be plotted
+    method:
+        The method to compute correlation. Allowed are `pearson, kendall,
+        spearman` or a callable function.
+    cluster:
+        Whether to cluster the correlation matrix.
+
+    Returns
+    -------
+    ax:
+        The plot axis.
+    """
+    import seaborn as sns
+
+    start_indices = process_start_indices(
+        start_indices=start_indices, result=result
+    )
+    parameter_indices = process_parameter_indices(
+        parameter_indices=parameter_indices, result=result
+    )
+    # put all parameters into a dataframe, where columns are parameters
+    parameters = [
+        result.optimize_result[i_start]['x'][parameter_indices]
+        for i_start in start_indices
+    ]
+    x_labels = [
+        result.problem.x_names[parameter_index]
+        for parameter_index in parameter_indices
+    ]
+    df = pd.DataFrame(parameters, columns=x_labels)
+    corr_matrix = df.corr(method=method)
+    if cluster:
+        ax = sns.clustermap(
+            data=corr_matrix, yticklabels=True, vmin=-1, vmax=1
+        )
+    else:
+        ax = sns.heatmap(data=corr_matrix, yticklabels=True, vmin=-1, vmax=1)
+    return ax

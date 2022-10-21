@@ -12,8 +12,12 @@ def problem():
     ub = [6] * 10
     objective = pypesto.Objective()
     problem = pypesto.Problem(
-        objective=objective, lb=lb, ub=ub, x_fixed_indices=[0, 1, 5],
-        x_fixed_vals=[42, 43, 44])
+        objective=objective,
+        lb=lb,
+        ub=ub,
+        x_fixed_indices=[0, 1, 5],
+        x_fixed_vals=[42, 43, 44],
+    )
     return problem
 
 
@@ -23,14 +27,22 @@ def test_dim_vs_dim_full():
 
     # define problem with bounds including fixed parameters
     pypesto.Problem(
-        objective=objective, lb=[-1] * 4, ub=[1] * 4, dim_full=4,
-        x_fixed_indices=[0, 3], x_fixed_vals=[42, 43]
+        objective=objective,
+        lb=[-1] * 4,
+        ub=[1] * 4,
+        dim_full=4,
+        x_fixed_indices=[0, 3],
+        x_fixed_vals=[42, 43],
     )
 
     # define problem with incomplete bounds
     pypesto.Problem(
-        objective=objective, lb=[-1] * 2, ub=[1] * 2, dim_full=4,
-        x_fixed_indices=[0, 3], x_fixed_vals=[42, 43]
+        objective=objective,
+        lb=[-1] * 2,
+        ub=[1] * 2,
+        dim_full=4,
+        x_fixed_indices=[0, 3],
+        x_fixed_vals=[42, 43],
     )
 
 
@@ -73,7 +85,7 @@ def test_x_names():
         'lb': [-5] * 3,
         'ub': [4] * 3,
         'x_fixed_indices': [1],
-        'x_fixed_vals': [42.],
+        'x_fixed_vals': [42.0],
     }
 
     # non-unique values
