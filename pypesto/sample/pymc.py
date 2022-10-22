@@ -170,10 +170,12 @@ class PymcSampler(Sampler):
         trace = self.trace
 
         x0 = None
+        x_names_free = problem.get_reduced_vector(problem.x_names)
         if self.x0 is not None:
             x0 = {
                 x_name: val
-                for x_name, val in zip(self.problem.x_names, self.x0)
+                for x_name, val in zip(problem.x_names, self.x0)
+                if x_name in x_names_free
             }
 
         # create model context
@@ -182,7 +184,7 @@ class PymcSampler(Sampler):
             _k = [
                 pymc.Uniform(x_name, lower=lb, upper=ub)
                 for x_name, lb, ub in zip(
-                    problem.get_reduced_vector(problem.x_names),
+                    x_names_free,
                     problem.lb,
                     problem.ub,
                 )
