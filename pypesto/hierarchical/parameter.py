@@ -7,6 +7,7 @@ logger = logging.getLogger(__name__)
 
 
 class InnerParameter:
+    """An inner parameter of a hierarchical optimization problem."""
 
     SCALING = 'scaling'
     OFFSET = 'offset'
@@ -26,6 +27,8 @@ class InnerParameter:
         group: int = None,
     ):
         """
+        Construct.
+
         Parameters
         ----------
         id: str
@@ -42,6 +45,14 @@ class InnerParameter:
             raise ValueError("Scale not recognized.")
         self.scale = scale
 
+        if type not in (
+            InnerParameter.OPTIMALSCALING,
+            InnerParameter.OFFSET,
+            InnerParameter.SIGMA,
+            InnerParameter.SCALING,
+        ):
+            raise ValueError(f"Unsupported inner parameter type `{type}`.")
+
         if type == InnerParameter.OPTIMALSCALING:
             if group is None:
                 raise ValueError("No Parameter group provided.")
@@ -50,8 +61,8 @@ class InnerParameter:
         self.group = group
         self.category = category
 
-        self.lb = lb
-        self.ub = ub
+        self.lb: float = lb
+        self.ub: float = ub
         self.ixs: Any = ixs
 
         if boring_val is None:
