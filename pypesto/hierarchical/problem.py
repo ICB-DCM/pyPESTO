@@ -40,7 +40,7 @@ class InnerProblem:
 
     @staticmethod
     def from_petab_amici(
-        petab_problem: petab.Problem,
+        petab_problem: 'petab.Problem',
         amici_model: 'amici.Model',
         edatas: List['amici.ExpData'],
     ):
@@ -103,7 +103,7 @@ def scale_value(
 
 
 def inner_problem_from_petab_problem(
-    petab_problem: petab.Problem,
+    petab_problem: 'petab.Problem',
     amici_model: 'amici.Model',
     edatas: List['amici.ExpData'],
 ) -> InnerProblem:
@@ -196,7 +196,7 @@ def inner_parameters_from_parameter_df(
 
 
 def ixs_for_measurement_specific_parameters(
-    petab_problem: petab.Problem, amici_model: 'amici.Model', x_ids
+    petab_problem: 'petab.Problem', amici_model: 'amici.Model', x_ids
 ) -> Dict:
     ixs_for_par = {}
 

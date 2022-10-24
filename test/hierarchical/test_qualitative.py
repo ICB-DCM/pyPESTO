@@ -52,6 +52,7 @@ inner_problem_options = [
 example_qualitative_yaml = (
     Path(__file__).parent
     / '..'
+    / '..'
     / 'doc'
     / 'example'
     / 'example_qualitative'
