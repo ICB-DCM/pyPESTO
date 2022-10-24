@@ -450,6 +450,7 @@ def test_ess(problem, local_optimizer, request):
         local_n1=100,
         local_n2=100,
         n_threads=2,
+        balance=0.5,
     )
     res = ess.minimize(
         problem=problem,
