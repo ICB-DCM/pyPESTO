@@ -1,24 +1,18 @@
 from __future__ import annotations
+
 import copy
 from typing import TYPE_CHECKING, Dict, List, Sequence, Tuple, Union
+
 import numpy as np
 
+from ..C import FVAL, GRAD, HESS, MODE_RES, RDATAS, RES, SRES, ModeType
 from ..objective.amici.amici_calculator import (
-    AmiciCalculator, calculate_function_values)
-from ..objective.amici.amici_util import (
-    get_error_output)
-from ..C import (
-    FVAL,
-    GRAD,
-    HESS,
-    MODE_RES,
-    RDATAS,
-    RES,
-    SRES,
-    ModeType,
+    AmiciCalculator,
+    calculate_function_values,
 )
+from ..objective.amici.amici_util import get_error_output
 from .problem import InnerProblem
-from .solver import InnerSolver, AnalyticalInnerSolver
+from .solver import AnalyticalInnerSolver, InnerSolver
 from .util import compute_nllh
 
 if TYPE_CHECKING:
@@ -34,7 +28,8 @@ AmiciSolver = Union['amici.Solver', 'amici.SolverPtr']
 
 class HierarchicalAmiciCalculator(AmiciCalculator):
     """
-    A calculator is passed as `calculator` to the pypesto.AmiciObjective.
+    A calculator that is passed as `calculator` to the pypesto.AmiciObjective.
+
     While this class cannot be used directly, it has two subclasses
     which allow to use forward or adjoint sensitivity analysis to
     solve a `pypesto.HierarchicalProblem` efficiently in an inner loop,
@@ -47,9 +42,7 @@ class HierarchicalAmiciCalculator(AmiciCalculator):
         inner_problem: InnerProblem,
         inner_solver: InnerSolver = None,
     ):
-        """
-        Initialize the calculator from the given problem.
-        """
+        """Initialize the calculator from the given problem."""
         super().__init__()
 
         self.inner_problem = inner_problem
@@ -60,9 +53,9 @@ class HierarchicalAmiciCalculator(AmiciCalculator):
         self.inner_solver = inner_solver
 
     def initialize(self):
+        """Initialize."""
         super().initialize()
         self.inner_solver.initialize()
-
 
     def __call__(
         self,
@@ -77,7 +70,6 @@ class HierarchicalAmiciCalculator(AmiciCalculator):
         parameter_mapping: ParameterMapping,
         fim_for_hess: bool,
     ):
-        import amici
         import amici.parameter_mapping
 
         # set order in solver
@@ -86,10 +78,10 @@ class HierarchicalAmiciCalculator(AmiciCalculator):
         else:
             sensi_order = 0
 
-        #if sensi_order == 2 and fim_for_hess:
+        # if sensi_order == 2 and fim_for_hess:
         #    # we use the FIM
         #    amici_solver.setSensitivityOrder(sensi_order - 1)
-        #else:
+        # else:
         #    amici_solver.setSensitivityOrder(sensi_order)
         dim = len(x_ids)
 
@@ -99,7 +91,8 @@ class HierarchicalAmiciCalculator(AmiciCalculator):
         # fill in boring values
         x_dct = copy.deepcopy(x_dct)
         for key, val in self.inner_problem.get_boring_pars(
-                scaled=True).items():
+            scaled=True
+        ).items():
             x_dct[key] = val
 
         # fill in parameters
@@ -138,17 +131,19 @@ class HierarchicalAmiciCalculator(AmiciCalculator):
                 )
             self._known_least_squares_safe = True  # don't check this again
 
-
         # check if any simulation failed
-        if any([rdata['status'] < 0.0 for rdata in rdatas]):
-            return get_error_output(amici_model, edatas, rdatas, sensi_order, mode, dim)
+        if any(rdata['status'] < 0.0 for rdata in rdatas):
+            return get_error_output(
+                amici_model, edatas, rdatas, sensi_order, mode, dim
+            )
 
         sim = [rdata['y'] for rdata in rdatas]
         sigma = [rdata['sigmay'] for rdata in rdatas]
 
         # compute optimal inner parameters
         x_inner_opt = self.inner_solver.solve(
-            self.inner_problem, sim, sigma, scaled=True)
+            self.inner_problem, sim, sigma, scaled=True
+        )
 
         # nllh = self.inner_solver.calculate_obj_function(x_inner_opt)
 
@@ -173,7 +168,7 @@ class HierarchicalAmiciCalculator(AmiciCalculator):
 
         # directly writing to parameter mapping ensures that plists do not
         # include hierarchically computed parameters
-        #x_dct = copy.deepcopy(x_dct)
+        # x_dct = copy.deepcopy(x_dct)
         for key, val in x_inner_opt.items():
             x_dct[key] = val
 
@@ -184,19 +179,20 @@ class HierarchicalAmiciCalculator(AmiciCalculator):
             problem_parameters=x_dct,
             scaled_parameters=True,
             parameter_mapping=parameter_mapping,
-            amici_model=amici_model
+            amici_model=amici_model,
         )
 
         if sensi_order == 0:
             nllh = compute_nllh(self.inner_problem.data, sim, sigma)
-            return {FVAL: nllh,
-                    GRAD: np.zeros(dim),
-                    HESS: np.zeros([dim, dim]),
-                    RES: np.zeros([0]),
-                    SRES: np.zeros([0, dim]),
-                    RDATAS: rdatas,
-                    'inner_parameters': x_inner_opt
-                    }
+            return {
+                FVAL: nllh,
+                GRAD: np.zeros(dim),
+                HESS: np.zeros([dim, dim]),
+                RES: np.zeros([0]),
+                SRES: np.zeros([0, dim]),
+                RDATAS: rdatas,
+                'inner_parameters': x_inner_opt,
+            }
 
         amici_solver.setSensitivityOrder(sensi_order)
 

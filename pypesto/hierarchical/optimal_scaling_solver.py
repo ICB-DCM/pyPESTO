@@ -1,6 +1,7 @@
-import numpy as np
-from typing import Dict, List, Tuple
 import warnings
+from typing import Dict, List, Tuple
+
+import numpy as np
 
 from ..optimize import Optimizer
 from .parameter import InnerParameter
@@ -15,20 +16,22 @@ MAX = 'max'
 
 class OptimalScalingInnerSolver(InnerSolver):
     """
-    Solve the inner subproblem of the
-    optimal scaling approach for ordinal data.
+    Inner solver for the optimal scaling problem.
+
+    Solves the inner subproblem of the optimal scaling approach for ordinal
+    data.
     """
 
-    def __init__(self,
-                 optimizer: Optimizer = None,
-                 options: Dict = None):
+    def __init__(self, optimizer: Optimizer = None, options: Dict = None):
 
         self.optimizer = optimizer
         self.options = options
         if self.options is None:
             self.options = OptimalScalingInnerSolver.get_default_options()
-        if self.options['method'] == STANDARD \
-                and self.options['reparameterized']:
+        if (
+            self.options['method'] == STANDARD
+            and self.options['reparameterized']
+        ):
             raise NotImplementedError(
                 'Combining standard approach with '
                 'reparameterization not implemented.'
@@ -36,11 +39,11 @@ class OptimalScalingInnerSolver(InnerSolver):
         self.x_guesses = None
 
     def solve(
-            self,
-            problem: InnerProblem,
-            sim: List[np.ndarray],
-            sigma: List[np.ndarray],
-            scaled: bool,
+        self,
+        problem: InnerProblem,
+        sim: List[np.ndarray],
+        sigma: List[np.ndarray],
+        scaled: bool,
     ) -> list:
         """
         Get results for every group (inner optimization problem)
@@ -59,13 +62,17 @@ class OptimalScalingInnerSolver(InnerSolver):
         optimal_surrogates = []
         for gr in problem.get_groups_for_xs(InnerParameter.OPTIMALSCALING):
             xs = problem.get_xs_for_group(gr)
-            surrogate_opt_results = optimize_surrogate_data(xs, sim, self.options)
+            surrogate_opt_results = optimize_surrogate_data(
+                xs, sim, self.options
+            )
             optimal_surrogates.append(surrogate_opt_results)
         return optimal_surrogates
 
     @staticmethod
     def calculate_obj_function(x_inner_opt: list):
         """
+        Calculate inner objective function value.
+
         Calculate the inner objective function from a list of inner
         optimization results returned from compute_optimal_surrogate_data
 
@@ -75,7 +82,9 @@ class OptimalScalingInnerSolver(InnerSolver):
             List of optimization results
         """
 
-        if False in [x_inner_opt[idx]['success'] for idx in range(len(x_inner_opt))]:
+        if False in [
+            x_inner_opt[idx]['success'] for idx in range(len(x_inner_opt))
+        ]:
             obj = np.nan
             warnings.warn(f"Inner optimization failed.")
         else:
@@ -90,41 +99,48 @@ class OptimalScalingInnerSolver(InnerSolver):
         """
         Return default options for solving the inner problem,
         if no options provided
-         """
-        options = {'method': 'reduced',
-                   'reparameterized': True,
-                   'intervalConstraints': 'max',
-                   'minGap': 1e-16}
+        """
+        options = {
+            'method': 'reduced',
+            'reparameterized': True,
+            'intervalConstraints': 'max',
+            'minGap': 1e-16,
+        }
         return options
 
 
-def optimize_surrogate_data(xs: List[InnerParameter],
-                            sim: List[np.ndarray],
-                            options: Dict):
+def optimize_surrogate_data(
+    xs: List[InnerParameter], sim: List[np.ndarray], options: Dict
+):
     """Run optimization for inner problem"""
 
     from scipy.optimize import minimize
 
-    interval_range, interval_gap = \
-        compute_interval_constraints(xs, sim, options)
+    interval_range, interval_gap = compute_interval_constraints(
+        xs, sim, options
+    )
     w = get_weight_for_surrogate(xs, sim)
 
     def obj_surr(x):
-        return obj_surrogate_data(xs, x, sim, interval_gap,
-                                  interval_range, w, options)
+        return obj_surrogate_data(
+            xs, x, sim, interval_gap, interval_range, w, options
+        )
 
-    inner_options = \
-        get_inner_options(options, xs, sim, interval_range, interval_gap)
+    inner_options = get_inner_options(
+        options, xs, sim, interval_range, interval_gap
+    )
 
     results = minimize(obj_surr, **inner_options)
     return results
 
 
-def get_inner_options(options: Dict,
-                      xs: List[InnerParameter],
-                      sim: List[np.ndarray],
-                      interval_range: float,
-                      interval_gap: float) -> Dict:
+def get_inner_options(
+    options: Dict,
+    xs: List[InnerParameter],
+    sim: List[np.ndarray],
+    interval_range: float,
+    interval_gap: float,
+) -> Dict:
 
     """Return default options for scipy optimizer"""
 
@@ -136,7 +152,7 @@ def get_inner_options(options: Dict,
         x0 = np.linspace(
             np.max([min_all, interval_range]),
             max_all + interval_range,
-            parameter_length
+            parameter_length,
         )
     elif options['method'] == STANDARD:
         parameter_length = 2 * len(xs)
@@ -145,27 +161,33 @@ def get_inner_options(options: Dict,
         raise NotImplementedError(
             f"Unkown optimal scaling method {options['method']}. "
             f"Please use {STANDARD} or {REDUCED}."
-
         )
 
     if options['reparameterized']:
         x0 = y2xi(x0, xs, interval_gap, interval_range)
         bounds = Bounds([0] * parameter_length, [max_all] * parameter_length)
 
-        inner_options = {'x0': x0, 'method': 'L-BFGS-B',
-                         'options': {'maxiter': 2000, 'ftol': 1e-10},
-                         'bounds': bounds}
+        inner_options = {
+            'x0': x0,
+            'method': 'L-BFGS-B',
+            'options': {'maxiter': 2000, 'ftol': 1e-10},
+            'bounds': bounds,
+        }
     else:
         constraints = get_constraints_for_optimization(xs, sim, options)
 
-        inner_options = {'x0': x0, 'method': 'SLSQP',
-                         'options': {'maxiter': 2000, 'ftol': 1e-10},
-                         'constraints': constraints}
+        inner_options = {
+            'x0': x0,
+            'method': 'SLSQP',
+            'options': {'maxiter': 2000, 'ftol': 1e-10},
+            'constraints': constraints,
+        }
     return inner_options
 
 
-def get_min_max(xs: List[InnerParameter],
-                sim: List[np.ndarray]) -> Tuple[float, float]:
+def get_min_max(
+    xs: List[InnerParameter], sim: List[np.ndarray]
+) -> Tuple[float, float]:
     """Return minimal and maximal simulation value"""
 
     sim_all = get_sim_all(xs, sim)
@@ -177,20 +199,20 @@ def get_min_max(xs: List[InnerParameter],
 
 
 def get_sim_all(xs, sim: List[np.ndarray]) -> list:
-    """"Get list of all simulations for all xs"""
+    """ "Get list of all simulations for all xs"""
 
     sim_all = []
     for x in xs:
-        for sim_i, mask_i in \
-                zip(sim, x.ixs):
+        for sim_i, mask_i in zip(sim, x.ixs):
             sim_x = sim_i[mask_i]
             if mask_i.any():
                 sim_all.append(sim_x[0])
     return sim_all
 
 
-def get_weight_for_surrogate(xs: List[InnerParameter],
-                             sim: List[np.ndarray]) -> float:
+def get_weight_for_surrogate(
+    xs: List[InnerParameter], sim: List[np.ndarray]
+) -> float:
     """Calculate weights for objective function"""
 
     sim_x_all = get_sim_all(xs, sim)
@@ -199,12 +221,12 @@ def get_weight_for_surrogate(xs: List[InnerParameter],
     for idx in range(len(sim_x_all) - 1):
         v_net += np.abs(sim_x_all[idx + 1] - sim_x_all[idx])
     w = 0.5 * np.sum(np.abs(sim_x_all)) + v_net + eps
-    return w ** 2
+    return w**2
 
 
-def compute_interval_constraints(xs: List[InnerParameter],
-                                 sim: List[np.ndarray],
-                                 options: Dict) -> Tuple[float, float]:
+def compute_interval_constraints(
+    xs: List[InnerParameter], sim: List[np.ndarray], options: Dict
+) -> Tuple[float, float]:
     """Compute minimal interval range and gap"""
 
     # compute constraints on interval size and interval gap size
@@ -218,10 +240,10 @@ def compute_interval_constraints(xs: List[InnerParameter],
 
     if options['intervalConstraints'] == MAXMIN:
 
-        interval_range = \
-            (max_simulation - min_simulation) / (2 * len(xs) + 1)
-        interval_gap = \
-            (max_simulation - min_simulation) / (4 * (len(xs) - 1) + 1)
+        interval_range = (max_simulation - min_simulation) / (2 * len(xs) + 1)
+        interval_gap = (max_simulation - min_simulation) / (
+            4 * (len(xs) - 1) + 1
+        )
     elif options['intervalConstraints'] == MAX:
 
         interval_range = max_simulation / (2 * len(xs) + 1)
@@ -231,42 +253,47 @@ def compute_interval_constraints(xs: List[InnerParameter],
             f"intervalConstraints = "
             f"{options['intervalConstraints']} not implemented. "
             f"Please use {MAX} or {MAXMIN}."
-
         )
     if interval_gap < eps:
         interval_gap = eps
     return interval_range, interval_gap
 
 
-def y2xi(optimal_scaling_bounds: np.ndarray,
-         xs: List[InnerParameter],
-         interval_gap: float,
-         interval_range: float) -> np.ndarray:
+def y2xi(
+    optimal_scaling_bounds: np.ndarray,
+    xs: List[InnerParameter],
+    interval_gap: float,
+    interval_range: float,
+) -> np.ndarray:
     """Get optimal scaling bounds and return reparameterized parameters"""
 
-    optimal_scaling_bounds_reparameterized = \
-        np.full(shape=(np.shape(optimal_scaling_bounds)), fill_value=np.nan)
+    optimal_scaling_bounds_reparameterized = np.full(
+        shape=(np.shape(optimal_scaling_bounds)), fill_value=np.nan
+    )
 
     for x in xs:
         x_category = int(x.category)
         if x_category == 1:
-            optimal_scaling_bounds_reparameterized[x_category - 1] = \
-                optimal_scaling_bounds[x_category - 1] \
-                - interval_range
+            optimal_scaling_bounds_reparameterized[x_category - 1] = (
+                optimal_scaling_bounds[x_category - 1] - interval_range
+            )
         else:
-            optimal_scaling_bounds_reparameterized[x_category - 1] = \
-                optimal_scaling_bounds[x_category - 1] \
-                - optimal_scaling_bounds[x_category - 2] \
-                - interval_gap - interval_range
+            optimal_scaling_bounds_reparameterized[x_category - 1] = (
+                optimal_scaling_bounds[x_category - 1]
+                - optimal_scaling_bounds[x_category - 2]
+                - interval_gap
+                - interval_range
+            )
 
     return optimal_scaling_bounds_reparameterized
 
 
 def xi2y(
-        optimal_scaling_bounds_reparameterized: np.ndarray,
-        xs: List[InnerParameter],
-        interval_gap: float,
-        interval_range: float) -> np.ndarray:
+    optimal_scaling_bounds_reparameterized: np.ndarray,
+    xs: List[InnerParameter],
+    interval_gap: float,
+    interval_range: float,
+) -> np.ndarray:
     """
     Get reparameterized parameters and
     return original optimal scaling bounds
@@ -274,44 +301,49 @@ def xi2y(
 
     # TODO: optimal scaling parameters in
     #  parameter sheet have to be ordered at the moment
-    optimal_scaling_bounds = \
-        np.full(shape=(np.shape(optimal_scaling_bounds_reparameterized)),
-                fill_value=np.nan)
+    optimal_scaling_bounds = np.full(
+        shape=(np.shape(optimal_scaling_bounds_reparameterized)),
+        fill_value=np.nan,
+    )
     for x in xs:
         x_category = int(x.category)
         if x_category == 1:
-            optimal_scaling_bounds[x_category - 1] = \
-                interval_range + optimal_scaling_bounds_reparameterized[
-                    x_category - 1]
+            optimal_scaling_bounds[x_category - 1] = (
+                interval_range
+                + optimal_scaling_bounds_reparameterized[x_category - 1]
+            )
         else:
-            optimal_scaling_bounds[x_category - 1] = \
-                optimal_scaling_bounds_reparameterized[x_category - 1] + \
-                interval_gap + interval_range + optimal_scaling_bounds[
-                    x_category - 2]
+            optimal_scaling_bounds[x_category - 1] = (
+                optimal_scaling_bounds_reparameterized[x_category - 1]
+                + interval_gap
+                + interval_range
+                + optimal_scaling_bounds[x_category - 2]
+            )
     return optimal_scaling_bounds
 
 
-def obj_surrogate_data(xs: List[InnerParameter],
-                       optimal_scaling_bounds: np.ndarray,
-                       sim: List[np.ndarray],
-                       interval_gap: float,
-                       interval_range: float,
-                       w: float,
-                       options: Dict) -> float:
+def obj_surrogate_data(
+    xs: List[InnerParameter],
+    optimal_scaling_bounds: np.ndarray,
+    sim: List[np.ndarray],
+    interval_gap: float,
+    interval_range: float,
+    w: float,
+    options: Dict,
+) -> float:
     """compute optimal scaling objective function"""
 
     obj = 0.0
     if options['reparameterized']:
-        optimal_scaling_bounds = \
-            xi2y(optimal_scaling_bounds, xs, interval_gap, interval_range)
+        optimal_scaling_bounds = xi2y(
+            optimal_scaling_bounds, xs, interval_gap, interval_range
+        )
 
     for x in xs:
-        x_upper, x_lower = \
-            get_bounds_for_category(
-                x, optimal_scaling_bounds, interval_gap, options
-            )
-        for sim_i, mask_i in \
-                zip(sim, x.ixs):
+        x_upper, x_lower = get_bounds_for_category(
+            x, optimal_scaling_bounds, interval_gap, options
+        )
+        for sim_i, mask_i in zip(sim, x.ixs):
             if mask_i.any():
                 y_sim = sim_i[mask_i]
                 if x_lower > y_sim:
@@ -325,10 +357,12 @@ def obj_surrogate_data(xs: List[InnerParameter],
     return obj
 
 
-def get_bounds_for_category(x: InnerParameter,
-                            optimal_scaling_bounds: np.ndarray,
-                            interval_gap: float,
-                            options: Dict) -> Tuple[float, float]:
+def get_bounds_for_category(
+    x: InnerParameter,
+    optimal_scaling_bounds: np.ndarray,
+    interval_gap: float,
+    options: Dict,
+) -> Tuple[float, float]:
     """Return upper and lower bound for a specific category x"""
 
     x_category = int(x.category)
@@ -348,29 +382,31 @@ def get_bounds_for_category(x: InnerParameter,
         raise NotImplementedError(
             f"Unkown optimal scaling method {options['method']}. "
             f"Please use {REDUCED} or {STANDARD}."
-
         )
     return x_upper, x_lower
 
 
-def get_constraints_for_optimization(xs: List[InnerParameter],
-                                     sim: List[np.ndarray],
-                                     options: Dict) -> Dict:
+def get_constraints_for_optimization(
+    xs: List[InnerParameter], sim: List[np.ndarray], options: Dict
+) -> Dict:
     """Return constraints for inner optimization"""
 
     num_categories = len(xs)
-    interval_range, interval_gap = \
-        compute_interval_constraints(xs, sim, options)
+    interval_range, interval_gap = compute_interval_constraints(
+        xs, sim, options
+    )
     if options['method'] == REDUCED:
-        a = np.diag(-np.ones(num_categories), -1) \
-            + np.diag(np.ones(num_categories + 1))
+        a = np.diag(-np.ones(num_categories), -1) + np.diag(
+            np.ones(num_categories + 1)
+        )
         a = a[:-1, :-1]
         b = np.empty((num_categories,))
         b[0] = interval_range
         b[1:] = interval_range + interval_gap
     elif options['method'] == STANDARD:
-        a = np.diag(-np.ones(2 * num_categories), -1) \
-            + np.diag(np.ones(2 * num_categories + 1))
+        a = np.diag(-np.ones(2 * num_categories), -1) + np.diag(
+            np.ones(2 * num_categories + 1)
+        )
         a = a[:-1, :]
         a = a[:, :-1]
         b = np.empty((2 * num_categories,))

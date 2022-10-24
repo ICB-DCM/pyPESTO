@@ -1,17 +1,25 @@
 import logging
+from typing import Dict, List
+
 import numpy as np
 import pandas as pd
-from typing import Dict, List
 
 from .parameter import InnerParameter
 
 try:
+    import amici
     import petab
     from petab.C import (
-        ESTIMATE, LOWER_BOUND, NOISE_PARAMETERS, PARAMETER_ID,
-        PARAMETER_SCALE, OBSERVABLE_ID, OBSERVABLE_PARAMETERS, TIME,
-        UPPER_BOUND)
-    import amici
+        ESTIMATE,
+        LOWER_BOUND,
+        NOISE_PARAMETERS,
+        OBSERVABLE_ID,
+        OBSERVABLE_PARAMETERS,
+        PARAMETER_ID,
+        PARAMETER_SCALE,
+        TIME,
+        UPPER_BOUND,
+    )
 except ImportError:
     pass
 
@@ -23,10 +31,7 @@ PARAMETER_CATEGORY = 'parameterCategory'
 
 
 class InnerProblem:
-
-    def __init__(self,
-                 xs: List[InnerParameter],
-                 data: List[np.ndarray]):
+    def __init__(self, xs: List[InnerParameter], data: List[np.ndarray]):
         self.xs: Dict[str, InnerParameter] = {x.id: x for x in xs}
         self.data = data
         self._solve_numerically = False
@@ -35,11 +40,13 @@ class InnerProblem:
 
     @staticmethod
     def from_petab_amici(
-            petab_problem: petab.Problem,
-            amici_model: 'amici.Model',
-            edatas: List['amici.ExpData']):
+        petab_problem: petab.Problem,
+        amici_model: 'amici.Model',
+        edatas: List['amici.ExpData'],
+    ):
         return inner_problem_from_petab_problem(
-            petab_problem, amici_model, edatas)
+            petab_problem, amici_model, edatas
+        )
 
     def get_x_ids(self):
         return [x.id for x in self.xs.values()]
@@ -55,9 +62,12 @@ class InnerProblem:
         return [x for x in self.xs.values() if x.group == group]
 
     def get_boring_pars(self, scaled: bool) -> Dict[str, float]:
-        return {x.id: scale_value(x.boring_val, x.scale)
-                if scaled else x.boring_val
-                for x in self.xs.values()}
+        return {
+            x.id: scale_value(x.boring_val, x.scale)
+            if scaled
+            else x.boring_val
+            for x in self.xs.values()
+        }
 
     def get_for_id(self, id: str):
         if id in self.xs:
@@ -89,22 +99,26 @@ def scale_value(val, scale: str):
 
 
 def inner_problem_from_petab_problem(
-        petab_problem: petab.Problem,
-        amici_model: 'amici.Model',
-        edatas: List['amici.ExpData']):
+    petab_problem: petab.Problem,
+    amici_model: 'amici.Model',
+    edatas: List['amici.ExpData'],
+):
     # inner parameters
     inner_parameters = inner_parameters_from_parameter_df(
-        petab_problem.parameter_df)
+        petab_problem.parameter_df
+    )
 
     x_ids = [x.id for x in inner_parameters]
 
     # used indices for all measurement specific parameters
     ixs = ixs_for_measurement_specific_parameters(
-        petab_problem, amici_model, x_ids)
+        petab_problem, amici_model, x_ids
+    )
     # print(ixs)
     # transform experimental data
-    edatas = [amici.numpy.ExpDataView(edata)['observedData']
-              for edata in edatas]
+    edatas = [
+        amici.numpy.ExpDataView(edata)['observedData'] for edata in edatas
+    ]
     # print(edatas)
     # matrixify
     ix_matrices = ix_matrices_from_arrays(ixs, edatas)
@@ -118,9 +132,9 @@ def inner_problem_from_petab_problem(
             petab_problem.parameter_df.loc[obs_par, PARAMETER_TYPE]
             for obs_par in obs_pars.split(';')
         )
-        for (obs_id, obs_pars), _ in petab_problem.measurement_df.groupby([
-            petab.OBSERVABLE_ID, petab.OBSERVABLE_PARAMETERS
-        ], dropna=True)
+        for (obs_id, obs_pars), _ in petab_problem.measurement_df.groupby(
+            [petab.OBSERVABLE_ID, petab.OBSERVABLE_PARAMETERS], dropna=True
+        )
         if ';' in obs_pars  # prefilter for at least 2 observable parameters
     }
 
@@ -141,8 +155,7 @@ def inner_problem_from_petab_problem(
 
 
 def inner_parameters_from_parameter_df(df: pd.DataFrame):
-    """Create list of inner free parameters from PEtab conform parameter df.
-    """
+    """Create list of inner free parameters from PEtab conform parameter df."""
     # create list of hierarchical parameters
     parameters = []
     df = df.reset_index()
@@ -161,33 +174,40 @@ def inner_parameters_from_parameter_df(df: pd.DataFrame):
             continue
         if petab.is_empty(row[PARAMETER_TYPE]):
             continue
-        parameters.append(InnerParameter(
-            id=row[PARAMETER_ID],
-            type=row[PARAMETER_TYPE],
-            scale=row[PARAMETER_SCALE],
-            lb=row[LOWER_BOUND],
-            ub=row[UPPER_BOUND],
-            category=row[PARAMETER_CATEGORY],
-            group=row[PARAMETER_GROUP]))
+        parameters.append(
+            InnerParameter(
+                id=row[PARAMETER_ID],
+                type=row[PARAMETER_TYPE],
+                scale=row[PARAMETER_SCALE],
+                lb=row[LOWER_BOUND],
+                ub=row[UPPER_BOUND],
+                category=row[PARAMETER_CATEGORY],
+                group=row[PARAMETER_GROUP],
+            )
+        )
 
     return parameters
 
 
 def ixs_for_measurement_specific_parameters(
-        petab_problem: petab.Problem, amici_model: 'amici.Model', x_ids):
+    petab_problem: petab.Problem, amici_model: 'amici.Model', x_ids
+):
     ixs_for_par = {}
 
     observable_ids = amici_model.getObservableIds()
 
-    simulation_conditions = \
+    simulation_conditions = (
         petab_problem.get_simulation_conditions_from_measurement_df()
+    )
     for condition_ix, condition in simulation_conditions.iterrows():
         df_for_condition = petab.get_rows_for_condition(
-            measurement_df=petab_problem.measurement_df, condition=condition)
+            measurement_df=petab_problem.measurement_df, condition=condition
+        )
 
         timepoints = sorted(df_for_condition[TIME].unique().astype(float))
         timepoints_w_reps = _get_timepoints_with_replicates(
-            measurement_df=df_for_condition)
+            measurement_df=df_for_condition
+        )
 
         for time in timepoints:
             # subselect for time
@@ -201,7 +221,8 @@ def ixs_for_measurement_specific_parameters(
             for _, measurement in df_for_time.iterrows():
                 # extract observable index
                 observable_ix = observable_ids.index(
-                    measurement[OBSERVABLE_ID])
+                    measurement[OBSERVABLE_ID]
+                )
 
                 # update time index for observable
                 if observable_ix in time_ix_for_obs_ix:
@@ -210,31 +231,32 @@ def ixs_for_measurement_specific_parameters(
                     time_ix_for_obs_ix[observable_ix] = time_ix_0
                 time_ix = time_ix_for_obs_ix[observable_ix]
 
-                observable_overrides = \
-                    petab.split_parameter_replacement_list(
-                        measurement[OBSERVABLE_PARAMETERS])
-                noise_overrides = \
-                    petab.split_parameter_replacement_list(
-                        measurement[NOISE_PARAMETERS])
+                observable_overrides = petab.split_parameter_replacement_list(
+                    measurement[OBSERVABLE_PARAMETERS]
+                )
+                noise_overrides = petab.split_parameter_replacement_list(
+                    measurement[NOISE_PARAMETERS]
+                )
 
                 # try to insert if hierarchical parameter
                 for override in observable_overrides + noise_overrides:
                     if override in x_ids:
                         ixs_for_par.setdefault(override, []).append(
-                            (condition_ix, time_ix, observable_ix))
+                            (condition_ix, time_ix, observable_ix)
+                        )
     return ixs_for_par
 
 
-#def noise
+# def noise
 
-#def ixs_for_noise_models_from_observable_df(df: pd.DataFrame):
-
+# def ixs_for_noise_models_from_observable_df(df: pd.DataFrame):
 
 
 def ix_matrices_from_arrays(ixs, edatas):
     ix_matrices = {
         id: [np.zeros_like(edata, dtype=bool) for edata in edatas]
-        for id in ixs}
+        for id in ixs
+    }
     for id, arr in ixs.items():
         matrices = ix_matrices[id]
         for (condition_ix, time_ix, observable_ix) in arr:
@@ -243,7 +265,8 @@ def ix_matrices_from_arrays(ixs, edatas):
 
 
 def _get_timepoints_with_replicates(
-        measurement_df: pd.DataFrame) -> List[float]:
+    measurement_df: pd.DataFrame,
+) -> List[float]:
     """
     Get list of timepoints including replicate measurements
 
@@ -263,8 +286,7 @@ def _get_timepoints_with_replicates(
         # subselect for time
         df_for_time = measurement_df[measurement_df.time == time]
         # rep number is maximum over rep numbers for observables
-        n_reps = max(df_for_time.groupby(
-            [OBSERVABLE_ID, TIME]).size())
+        n_reps = max(df_for_time.groupby([OBSERVABLE_ID, TIME]).size())
         # append time point n_rep times
         timepoints_w_reps.extend([time] * n_reps)
 

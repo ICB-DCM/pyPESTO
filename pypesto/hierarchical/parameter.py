@@ -1,5 +1,6 @@
 import logging
 from typing import Any
+
 import numpy as np
 
 logger = logging.getLogger(__name__)
@@ -12,16 +13,18 @@ class InnerParameter:
     SIGMA = 'sigma'
     OPTIMALSCALING = 'qualitative_scaling'
 
-    def __init__(self,
-                 id: str,
-                 type: str,
-                 scale: str = 'lin',
-                 lb: float = -np.inf,
-                 ub: float = np.inf,
-                 ixs: Any = None,
-                 boring_val: float = None,
-                 category: int = None,
-                 group: int = None):
+    def __init__(
+        self,
+        id: str,
+        type: str,
+        scale: str = 'lin',
+        lb: float = -np.inf,
+        ub: float = np.inf,
+        ixs: Any = None,
+        boring_val: float = None,
+        category: int = None,
+        group: int = None,
+    ):
         """
         Parameters
         ----------
@@ -61,6 +64,8 @@ class InnerParameter:
             elif type == InnerParameter.OPTIMALSCALING:
                 boring_val = category
             else:
-                raise ValueError("Could not deduce boring value for parameter "
-                                 f"{id} of type {type}.")
+                raise ValueError(
+                    "Could not deduce boring value for parameter "
+                    f"{id} of type {type}."
+                )
         self.boring_val: float = boring_val

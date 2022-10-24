@@ -30,3 +30,6 @@ per-file-ignores =
     pypesto/C.py:D400,D205,D107
     # Module level import not at top of file
     test/julia/test_pyjulia.py:E402
+
+exclude =
+    amici_models
