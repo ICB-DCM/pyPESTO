@@ -1,21 +1,32 @@
-from typing import Dict, List, Sequence, Union
+from __future__ import annotations
 import copy
+from typing import TYPE_CHECKING, Dict, List, Sequence, Tuple, Union
 import numpy as np
 
-from ..objective.amici_calculator import (
+from ..objective.amici.amici_calculator import (
     AmiciCalculator, calculate_function_values)
-from ..objective.amici_util import (
+from ..objective.amici.amici_util import (
     get_error_output)
-from ..objective.constants import FVAL, GRAD, HESS, RES, SRES, RDATAS
+from ..C import (
+    FVAL,
+    GRAD,
+    HESS,
+    MODE_RES,
+    RDATAS,
+    RES,
+    SRES,
+    ModeType,
+)
 from .problem import InnerProblem
 from .solver import InnerSolver, AnalyticalInnerSolver
 from .util import compute_nllh
 
-try:
-    import amici
-    from amici.parameter_mapping import ParameterMapping
-except ImportError:
-    amici = None
+if TYPE_CHECKING:
+    try:
+        import amici
+        from amici.parameter_mapping import ParameterMapping
+    except ImportError:
+        ParameterMapping = None
 
 AmiciModel = Union['amici.Model', 'amici.ModelPtr']
 AmiciSolver = Union['amici.Solver', 'amici.SolverPtr']
@@ -31,9 +42,11 @@ class HierarchicalAmiciCalculator(AmiciCalculator):
     specified as `pypesto.HierarchicalParameter`s.
     """
 
-    def __init__(self,
-                 inner_problem: InnerProblem,
-                 inner_solver: InnerSolver = None):
+    def __init__(
+        self,
+        inner_problem: InnerProblem,
+        inner_solver: InnerSolver = None,
+    ):
         """
         Initialize the calculator from the given problem.
         """
@@ -50,25 +63,35 @@ class HierarchicalAmiciCalculator(AmiciCalculator):
         super().initialize()
         self.inner_solver.initialize()
 
-    def __call__(self,
-                 x_dct: Dict,
-                 sensi_order: int,
-                 mode: str,
-                 amici_model: AmiciModel,
-                 amici_solver: AmiciSolver,
-                 edatas: List['amici.ExpData'],
-                 n_threads: int,
-                 x_ids: Sequence[str],
-                 parameter_mapping: 'ParameterMapping',
-                 fim_for_hess: bool):
 
+    def __call__(
+        self,
+        x_dct: Dict,
+        sensi_orders: Tuple[int],
+        mode: ModeType,
+        amici_model: AmiciModel,
+        amici_solver: AmiciSolver,
+        edatas: List[amici.ExpData],
+        n_threads: int,
+        x_ids: Sequence[str],
+        parameter_mapping: ParameterMapping,
+        fim_for_hess: bool,
+    ):
+        import amici
+        import amici.parameter_mapping
+
+        # set order in solver
+        if sensi_orders:
+            sensi_order = max(sensi_orders)
+        else:
+            sensi_order = 0
+
+        #if sensi_order == 2 and fim_for_hess:
+        #    # we use the FIM
+        #    amici_solver.setSensitivityOrder(sensi_order - 1)
+        #else:
+        #    amici_solver.setSensitivityOrder(sensi_order)
         dim = len(x_ids)
-        nllh = 0.0
-        snllh = np.zeros(dim)
-        s2nllh = np.zeros([dim, dim])
-
-        res = np.zeros([0])
-        sres = np.zeros([0, dim])
 
         # set order in solver to 0
         amici_solver.setSensitivityOrder(0)
@@ -85,7 +108,7 @@ class HierarchicalAmiciCalculator(AmiciCalculator):
             problem_parameters=x_dct,
             scaled_parameters=True,
             parameter_mapping=parameter_mapping,
-            amici_model=amici_model
+            amici_model=amici_model,
         )
 
         # run amici simulation
@@ -95,8 +118,26 @@ class HierarchicalAmiciCalculator(AmiciCalculator):
             edatas,
             num_threads=min(n_threads, len(edatas)),
         )
+        if (
+            not self._known_least_squares_safe
+            and mode == MODE_RES
+            and 1 in sensi_orders
+        ):
+            if not amici_model.getAddSigmaResiduals() and any(
+                (
+                    (r['ssigmay'] is not None and np.any(r['ssigmay']))
+                    or (r['ssigmaz'] is not None and np.any(r['ssigmaz']))
+                )
+                for r in rdatas
+            ):
+                raise RuntimeError(
+                    'Cannot use least squares solver with'
+                    'parameter dependent sigma! Support can be '
+                    'enabled via '
+                    'amici_model.setAddSigmaResiduals().'
+                )
+            self._known_least_squares_safe = True  # don't check this again
 
-        self._check_least_squares(sensi_order, mode, rdatas)
 
         # check if any simulation failed
         if any([rdata['status'] < 0.0 for rdata in rdatas]):
@@ -132,7 +173,7 @@ class HierarchicalAmiciCalculator(AmiciCalculator):
 
         # directly writing to parameter mapping ensures that plists do not
         # include hierarchically computed parameters
-        x_dct = copy.deepcopy(x_dct)
+        #x_dct = copy.deepcopy(x_dct)
         for key, val in x_inner_opt.items():
             x_dct[key] = val
 
@@ -149,25 +190,33 @@ class HierarchicalAmiciCalculator(AmiciCalculator):
         if sensi_order == 0:
             nllh = compute_nllh(self.inner_problem.data, sim, sigma)
             return {FVAL: nllh,
-                    GRAD: snllh,
-                    HESS: s2nllh,
-                    RES: res,
-                    SRES: sres,
+                    GRAD: np.zeros(dim),
+                    HESS: np.zeros([dim, dim]),
+                    RES: np.zeros([0]),
+                    SRES: np.zeros([0, dim]),
                     RDATAS: rdatas,
                     'inner_parameters': x_inner_opt
                     }
-        else:
-            amici_solver.setSensitivityOrder(sensi_order)
 
-            # resimulate
-            # run amici simulation
-            rdatas = amici.runAmiciSimulations(
-                amici_model,
-                amici_solver,
-                edatas,
-                num_threads=min(n_threads, len(edatas)),
-            )
+        amici_solver.setSensitivityOrder(sensi_order)
 
-            return calculate_function_values(
-                rdatas, sensi_order, mode, amici_model, amici_solver, edatas,
-                x_ids, parameter_mapping, fim_for_hess)
+        # resimulate
+        # run amici simulation
+        rdatas = amici.runAmiciSimulations(
+            amici_model,
+            amici_solver,
+            edatas,
+            num_threads=min(n_threads, len(edatas)),
+        )
+
+        return calculate_function_values(
+            rdatas=rdatas,
+            sensi_orders=sensi_orders,
+            mode=mode,
+            amici_model=amici_model,
+            amici_solver=amici_solver,
+            edatas=edatas,
+            x_ids=x_ids,
+            parameter_mapping=parameter_mapping,
+            fim_for_hess=fim_for_hess,
+        )
