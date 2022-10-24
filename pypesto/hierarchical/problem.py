@@ -1,5 +1,5 @@
 import logging
-from typing import Dict, List
+from typing import Dict, List, Union
 
 import numpy as np
 import pandas as pd
@@ -48,17 +48,17 @@ class InnerProblem:
             petab_problem, amici_model, edatas
         )
 
-    def get_x_ids(self):
+    def get_x_ids(self) -> List[str]:
         return [x.id for x in self.xs.values()]
 
-    def get_xs_for_type(self, type: str):
+    def get_xs_for_type(self, type: str) -> List[InnerParameter]:
         return [x for x in self.xs.values() if x.type == type]
 
-    def get_groups_for_xs(self, type: str):
+    def get_groups_for_xs(self, type: str) -> List[int]:
         groups = [x.group for x in self.xs.values() if x.type == type]
         return list(set(groups))
 
-    def get_xs_for_group(self, group: int):
+    def get_xs_for_group(self, group: int) -> List[InnerParameter]:
         return [x for x in self.xs.values() if x.group == group]
 
     def get_boring_pars(self, scaled: bool) -> Dict[str, float]:
@@ -69,16 +69,18 @@ class InnerProblem:
             for x in self.xs.values()
         }
 
-    def get_for_id(self, id: str):
+    def get_for_id(self, id: str) -> InnerParameter:
         if id in self.xs:
             return self.xs[id]
         raise KeyError(f"Cannot find id {id}.")
 
-    def is_empty(self):
+    def is_empty(self) -> bool:
         return len(self.xs) == 0
 
 
-def scale_value_dict(dct: Dict[str, float], problem: InnerProblem):
+def scale_value_dict(
+    dct: Dict[str, float], problem: InnerProblem
+) -> Dict[str, float]:
     """Scale a value dictionary."""
     scaled_dct = {}
     for key, val in dct.items():
@@ -87,7 +89,9 @@ def scale_value_dict(dct: Dict[str, float], problem: InnerProblem):
     return scaled_dct
 
 
-def scale_value(val, scale: str):
+def scale_value(
+    val: Union[float, np.array], scale: str
+) -> Union[float, np.array]:
     """Scale a single value."""
     if scale == 'lin':
         return val
@@ -102,7 +106,7 @@ def inner_problem_from_petab_problem(
     petab_problem: petab.Problem,
     amici_model: 'amici.Model',
     edatas: List['amici.ExpData'],
-):
+) -> InnerProblem:
     # inner parameters
     inner_parameters = inner_parameters_from_parameter_df(
         petab_problem.parameter_df
@@ -127,23 +131,23 @@ def inner_problem_from_petab_problem(
     for par in inner_parameters:
         par.ixs = ix_matrices[par.id]
 
-    par_group_types = par_group_types = {
-        tuple(obs_pars.split(';')): set(
+    par_group_types = {
+        tuple(obs_pars.split(';')): {
             petab_problem.parameter_df.loc[obs_par, PARAMETER_TYPE]
             for obs_par in obs_pars.split(';')
-        )
+        }
         for (obs_id, obs_pars), _ in petab_problem.measurement_df.groupby(
             [petab.OBSERVABLE_ID, petab.OBSERVABLE_PARAMETERS], dropna=True
         )
         if ';' in obs_pars  # prefilter for at least 2 observable parameters
     }
 
-    coupled_pars = set(
+    coupled_pars = {
         par
         for group, types in par_group_types.items()
         if InnerParameter.SCALING in types and InnerParameter.OFFSET
         for par in group
-    )
+    }
 
     for par in inner_parameters:
         if par.type not in [InnerParameter.SCALING, InnerParameter.OFFSET]:
@@ -154,7 +158,9 @@ def inner_problem_from_petab_problem(
     return InnerProblem(inner_parameters, edatas)
 
 
-def inner_parameters_from_parameter_df(df: pd.DataFrame):
+def inner_parameters_from_parameter_df(
+    df: pd.DataFrame,
+) -> List[InnerParameter]:
     """Create list of inner free parameters from PEtab conform parameter df."""
     # create list of hierarchical parameters
     parameters = []
@@ -191,7 +197,7 @@ def inner_parameters_from_parameter_df(df: pd.DataFrame):
 
 def ixs_for_measurement_specific_parameters(
     petab_problem: petab.Problem, amici_model: 'amici.Model', x_ids
-):
+) -> Dict:
     ixs_for_par = {}
 
     observable_ids = amici_model.getObservableIds()
@@ -252,7 +258,7 @@ def ixs_for_measurement_specific_parameters(
 # def ixs_for_noise_models_from_observable_df(df: pd.DataFrame):
 
 
-def ix_matrices_from_arrays(ixs, edatas):
+def ix_matrices_from_arrays(ixs: Dict, edatas) -> Dict[str, List[np.array]]:
     ix_matrices = {
         id: [np.zeros_like(edata, dtype=bool) for edata in edatas]
         for id in ixs
@@ -268,7 +274,7 @@ def _get_timepoints_with_replicates(
     measurement_df: pd.DataFrame,
 ) -> List[float]:
     """
-    Get list of timepoints including replicate measurements
+    Get list of timepoints including replicate measurements.
 
     :param measurement_df:
         PEtab measurement table subset for a single condition.
