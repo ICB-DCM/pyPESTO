@@ -386,11 +386,13 @@ class PetabImporter(AmiciObjectBuilder):
         )
 
         calculator = None
+        amici_reporting = None
         if hierarchical:
             inner_problem = InnerProblem.from_petab_amici(
                 self.petab_problem, model, edatas)
             if not inner_problem.is_empty():
                 calculator = HierarchicalAmiciCalculator(inner_problem)
+            amici_reporting = amici.RDataReporting.full
 
         # create objective
         obj = AmiciObjective(
@@ -402,6 +404,7 @@ class PetabImporter(AmiciObjectBuilder):
             parameter_mapping=parameter_mapping,
             amici_object_builder=self,
             calculator=calculator,
+            amici_reporting=amici_reporting,
             **kwargs,
         )
 
