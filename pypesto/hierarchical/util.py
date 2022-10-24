@@ -24,11 +24,10 @@ def compute_optimal_scaling(
         den += np.nansum(sim_x**2 / sigma_x**2)
 
     # compute optimal value
-    x_opt = 1.0  # value doesn't matter
     if not np.isclose(den, 0.0):
-        x_opt = num / den
-
-    return float(x_opt)
+        return float(num / den)
+    # avoid extreme values. specific value doesn't matter.
+    return 1.0
 
 
 def apply_scaling(
@@ -60,11 +59,10 @@ def compute_optimal_offset(
         den += np.nansum(1 / sigma_x**2)
 
     # compute optimal value
-    x_opt = 0.0  # value doesn't matter
     if not np.isclose(den, 0.0):
-        x_opt = num / den
-
-    return float(x_opt)
+        return float(num / den)
+    # avoid extreme values. specific value doesn't matter.
+    return 1.0
 
 
 def compute_optimal_offset_coupled(
@@ -99,11 +97,10 @@ def compute_optimal_offset_coupled(
     den = recnoise - r2
 
     # compute optimal value
-    x_opt = 0.0  # value doesn't matter
     if not np.isclose(den, 0.0):
-        x_opt = num / den
-
-    return float(x_opt)
+        return float(num / den)
+    # avoid extreme values. specific value doesn't matter.
+    return 1.0
 
 
 def apply_offset(
@@ -130,12 +127,11 @@ def compute_optimal_sigma(
         den += sim_x.size
 
     # compute optimal value
-    x_opt = 1.0  # value doesn't matter
-    if not np.isclose(x_opt, 0.0):
+    if not np.isclose(den, 0.0):
         # we report the standard deviation, not the variance
-        x_opt = np.sqrt(num / den)
-
-    return float(x_opt)
+        return np.sqrt(num / den)
+    # avoid extreme values. specific value doesn't matter.
+    return 1.0
 
 
 def apply_sigma(
