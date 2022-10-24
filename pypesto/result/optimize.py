@@ -192,6 +192,16 @@ class OptimizeResult:
                 f"length {len(self.list)}."
             )
 
+    def __getstate__(self):
+        # while we override __getattr__ as we do now, this is required to keep
+        # instances pickle-able
+        return vars(self)
+
+    def __setstate__(self, state):
+        # while we override __getattr__ as we do now, this is required to keep
+        # instances pickle-able
+        vars(self).update(state)
+
     def __len__(self):
         return len(self.list)
 
