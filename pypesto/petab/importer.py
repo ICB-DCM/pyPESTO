@@ -23,8 +23,8 @@ import numpy as np
 import pandas as pd
 
 from ..C import CONDITION_SEP, MODE_FUN, MODE_RES
-from ..hierarchical.problem import InnerProblem
 from ..hierarchical.calculator import HierarchicalAmiciCalculator
+from ..hierarchical.problem import InnerProblem
 from ..objective import AggregatedObjective, AmiciObjective
 from ..objective.amici import AmiciObjectBuilder
 from ..objective.priors import NegLogParameterPriors, get_parameter_prior_dict
@@ -389,7 +389,8 @@ class PetabImporter(AmiciObjectBuilder):
         amici_reporting = None
         if hierarchical:
             inner_problem = InnerProblem.from_petab_amici(
-                self.petab_problem, model, edatas)
+                self.petab_problem, model, edatas
+            )
             if not inner_problem.is_empty():
                 calculator = HierarchicalAmiciCalculator(inner_problem)
             amici_reporting = amici.RDataReporting.full
