@@ -49,6 +49,22 @@ class FunctionEvaluator:
         self.n_eval_round: int = 0
         # Number of threads for parallel objective evaluation
         self._n_threads: int = n_threads
+
+        self._init_threading()
+
+    def __getstate__(self):
+        return {
+            k: v
+            for k, v in vars(self).items()
+            if k not in {'_thread_local', '_executor'}
+        }
+
+    def __setstate__(self, state):
+        vars(self).update(state)
+        self._init_threading()
+
+    def _init_threading(self):
+        """Initialize multi-threading-related attributes."""
         # Thread-local storage for copies of objective. Each thread gets its
         #  own copy of the objective, which may be sufficient to make some
         #  objectives thread-safe.

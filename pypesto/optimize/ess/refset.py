@@ -51,6 +51,8 @@ class RefSet:
                 "Either both or neither of `x` and `fx` " "should be provided"
             )
 
+        if dim < 3:
+            raise ValueError("RefSet dimension has to be at least 3.")
         self.dim = dim
         self.evaluator = evaluator
         # \epsilon in [PenasGon2017]_
@@ -74,8 +76,6 @@ class RefSet:
     def initialize_random(
         self,
         n_diverse: int = None,
-        x_diverse: np.array = None,
-        fx_diverse: np.array = None,
     ):
         """Create initial reference set from random parameters.
 

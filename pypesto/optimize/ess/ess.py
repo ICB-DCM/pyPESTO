@@ -86,6 +86,9 @@ class ESSOptimizer:
         Maximum walltime in seconds. Will only be checked between local
         optimizations and other simulations, and thus, may be exceeded by the
         duration of a local search.
+    balance:
+        Quality vs diversity balancing factor [0, 1];
+        0 = only quality; 1 = only diversity
     """
 
     def __init__(
@@ -95,6 +98,7 @@ class ESSOptimizer:
         local_n1: int,
         local_n2: int,
         dim_refset: int,
+        balance: float,
         local_optimizer: 'pypesto.optimize.Optimizer' = None,
         max_eval=np.inf,
         n_diverse: int = None,
@@ -112,9 +116,7 @@ class ESSOptimizer:
         ] = local_optimizer
         self.n_diverse: int = n_diverse
         self.n_threads: int = n_threads
-        # quality vs diversity balancing factor [0, 1];
-        #  0 = only quality; 1 = only diversity
-        self.balance: float = 0.5
+        self.balance: float = balance
         # After how many iterations a stagnated solution is to be replaced by
         #  a random one. Default value taken from [EgeaMar2010]_
         self.n_change: int = 20
@@ -178,8 +180,10 @@ class ESSOptimizer:
             self.refset = RefSet(dim=self.dim_refset, evaluator=self.evaluator)
             # Initial RefSet generation
             self.refset.initialize_random(n_diverse=self.n_diverse)
+            refset = self.refset
+        else:
+            self.refset = refset
 
-        refset = self.refset
         self.evaluator = refset.evaluator
         self.x_best = np.full(
             shape=(self.evaluator.problem.dim,), fill_value=np.nan
