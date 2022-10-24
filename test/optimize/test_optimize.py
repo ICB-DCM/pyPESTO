@@ -438,20 +438,73 @@ def test_history_beats_optimizer():
     )
 
 
+@pytest.mark.parametrize("ess_type", ["ess", "cess"])
 @pytest.mark.parametrize("local_optimizer", [None, optimize.FidesOptimizer()])
-@pytest.mark.flaky(reruns=3)
-def test_ess(problem, local_optimizer, request):
-    from pypesto.optimize.ess import ESSOptimizer
+# @pytest.mark.flaky(reruns=3)
+def test_ess(problem, local_optimizer, ess_type, request):
+    from pypesto.optimize.ess import CESSOptimizer, ESSOptimizer
 
-    ess = ESSOptimizer(
-        dim_refset=10,
-        max_iter=20,
-        local_optimizer=local_optimizer,
-        local_n1=100,
-        local_n2=100,
-        n_threads=2,
-        balance=0.5,
-    )
+    if ess_type == "ess":
+        ess = ESSOptimizer(
+            dim_refset=10,
+            max_iter=20,
+            local_optimizer=local_optimizer,
+            local_n1=100,
+            local_n2=100,
+            n_threads=2,
+            balance=0.5,
+        )
+    elif ess_type == "cess":
+        if 'cr' in request.node.callspec.id:
+            # Not pickleable - incompatible with CESS
+            pytest.skip()
+        ess = CESSOptimizer(
+            ess_init_args=[
+                {
+                    'dim_refset': max(3, int(0.5 * problem.dim)),
+                    'local_n2': 0,
+                    'balance': 0.5,
+                    'n_diverse': 5 * problem.dim,
+                    'max_iter': 50,
+                    'local_n1': 100,
+                    'max_eval': 500,
+                    'local_optimizer': local_optimizer,
+                },
+                {
+                    'dim_refset': 20 * problem.dim,
+                    'local_n2': 100,
+                    'balance': 0.1,
+                    'n_diverse': 20 * problem.dim,
+                    'max_iter': 50,
+                    'local_n1': 100,
+                    'max_eval': 500,
+                    'local_optimizer': local_optimizer,
+                },
+                {
+                    'dim_refset': 10 * problem.dim,
+                    'local_n2': 20,
+                    'balance': 0.1,
+                    'n_diverse': 10 * problem.dim,
+                    'max_iter': 50,
+                    'local_n1': 100,
+                    'max_eval': 500,
+                },
+                {
+                    'dim_refset': 10 * problem.dim,
+                    'local_n2': 10,
+                    'balance': 0.2,
+                    'n_diverse': 10 * problem.dim,
+                    'max_iter': 50,
+                    'local_n1': 10,
+                    'max_eval': 500,
+                },
+            ],
+            max_n_eval=1000,
+            max_iter=5,
+        )
+    else:
+        raise ValueError(f"Unsupported ESS type {ess_type}.")
+
     res = ess.minimize(
         problem=problem,
         startpoint_method=pypesto.startpoint.UniformStartpoints(),
