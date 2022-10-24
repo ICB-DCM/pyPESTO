@@ -134,7 +134,7 @@ class HierarchicalAmiciCalculator(AmiciCalculator):
         # check if any simulation failed
         if any(rdata['status'] < 0.0 for rdata in rdatas):
             return get_error_output(
-                amici_model, edatas, rdatas, sensi_order, mode, dim
+                amici_model, edatas, rdatas, sensi_orders, mode, dim
             )
 
         sim = [rdata['y'] for rdata in rdatas]
