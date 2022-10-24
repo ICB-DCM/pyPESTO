@@ -126,8 +126,7 @@ class HierarchicalAmiciCalculator(AmiciCalculator):
                 raise RuntimeError(
                     'Cannot use least squares solver with'
                     'parameter dependent sigma! Support can be '
-                    'enabled via '
-                    'amici_model.setAddSigmaResiduals().'
+                    'enabled via amici_model.setAddSigmaResiduals().'
                 )
             self._known_least_squares_safe = True  # don't check this again
 
@@ -196,8 +195,7 @@ class HierarchicalAmiciCalculator(AmiciCalculator):
 
         amici_solver.setSensitivityOrder(sensi_order)
 
-        # resimulate
-        # run amici simulation
+        # re-simulate
         rdatas = amici.runAmiciSimulations(
             amici_model,
             amici_solver,

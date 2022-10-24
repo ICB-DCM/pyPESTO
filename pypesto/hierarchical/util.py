@@ -77,7 +77,7 @@ def compute_optimal_offset_coupled(
 
     # iterate over conditions
     for sim_i, data_i, sigma_i, mask_i in zip(sim, data, sigma, mask):
-        if mask_i.max() == False:
+        if mask_i.max(initial=False) is False:
             continue
         # extract relevant values
         sim_x = sim_i[mask_i]

@@ -21,8 +21,14 @@ from .util import (
 
 
 class InnerSolver:
+    """Solver for an inner optimization problem."""
+
     def initialize(self):
-        """Initialize the solver. Default: Do nothing."""
+        """
+        Initialize the solver.
+
+        Default: Do nothing.
+        """
 
     def solve(
         self,
@@ -37,7 +43,8 @@ class InnerSolver:
 class AnalyticalInnerSolver(InnerSolver):
     """Solve the inner subproblem analytically.
 
-    Currently supports scalings and sigmas for additive Gaussian noise.
+    Currently supports scaling parameters and sigmas for additive Gaussian
+    noise.
     """
 
     def solve(
@@ -138,9 +145,10 @@ class NumericalInnerSolver(InnerSolver):
                 elif par.type == InnerParameter.SIGMA:
                     apply_sigma(x_val, _sigma, mask)
                 else:
-                    raise ValueError("Can't handle parameter type.")
-            nllh = compute_nllh(data, _sim, _sigma)
-            return nllh
+                    raise ValueError(
+                        "Can't handle parameter type " f"`{par.type}`."
+                    )
+            return compute_nllh(data, _sim, _sigma)
 
         # TODO gradient
         objective = Objective(fun)
@@ -159,10 +167,7 @@ class NumericalInnerSolver(InnerSolver):
         # print(result.optimize_result.get_for_key('id'))
 
         best_par = result.optimize_result.list[0]['x']
-        x_opt = {
-            x_name: val
-            for x_name, val in zip(pypesto_problem.x_names, best_par)
-        }
+        x_opt = dict(zip(pypesto_problem.x_names, best_par))
 
         # cache
         self.x_guesses = np.array(

@@ -140,8 +140,6 @@ def get_inner_options(
     interval_gap: float,
 ) -> Dict:
     """Return default options for scipy optimizer."""
-    from scipy.optimize import Bounds
-
     min_all, max_all = get_min_max(xs, sim)
     if options['method'] == REDUCED:
         parameter_length = len(xs)
@@ -155,30 +153,30 @@ def get_inner_options(
         x0 = np.linspace(0, max_all + interval_range, parameter_length)
     else:
         raise NotImplementedError(
-            f"Unkown optimal scaling method {options['method']}. "
-            f"Please use {STANDARD} or {REDUCED}."
+            f"Unknown optimal scaling method `{options['method']}`. "
+            f"Please use `{STANDARD}` or `{REDUCED}`."
         )
 
     if options['reparameterized']:
+        from scipy.optimize import Bounds
+
         x0 = y2xi(x0, xs, interval_gap, interval_range)
         bounds = Bounds([0] * parameter_length, [max_all] * parameter_length)
 
-        inner_options = {
+        return {
             'x0': x0,
             'method': 'L-BFGS-B',
             'options': {'maxiter': 2000, 'ftol': 1e-10},
             'bounds': bounds,
         }
-    else:
-        constraints = get_constraints_for_optimization(xs, sim, options)
 
-        inner_options = {
-            'x0': x0,
-            'method': 'SLSQP',
-            'options': {'maxiter': 2000, 'ftol': 1e-10},
-            'constraints': constraints,
-        }
-    return inner_options
+    constraints = get_constraints_for_optimization(xs, sim, options)
+    return {
+        'x0': x0,
+        'method': 'SLSQP',
+        'options': {'maxiter': 2000, 'ftol': 1e-10},
+        'constraints': constraints,
+    }
 
 
 def get_min_max(
@@ -198,8 +196,8 @@ def get_sim_all(xs, sim: List[np.ndarray]) -> list:
     sim_all = []
     for x in xs:
         for sim_i, mask_i in zip(sim, x.ixs):
-            sim_x = sim_i[mask_i]
             if mask_i.any():
+                sim_x = sim_i[mask_i]
                 sim_all.append(sim_x[0])
     return sim_all
 
@@ -233,13 +231,11 @@ def compute_interval_constraints(
     min_simulation, max_simulation = get_min_max(xs, sim)
 
     if options['intervalConstraints'] == MAXMIN:
-
         interval_range = (max_simulation - min_simulation) / (2 * len(xs) + 1)
         interval_gap = (max_simulation - min_simulation) / (
             4 * (len(xs) - 1) + 1
         )
     elif options['intervalConstraints'] == MAX:
-
         interval_range = max_simulation / (2 * len(xs) + 1)
         interval_gap = max_simulation / (4 * (len(xs) - 1) + 1)
     else:
@@ -370,8 +366,8 @@ def get_bounds_for_category(
         x_upper = optimal_scaling_bounds[2 * x_category - 1]
     else:
         raise NotImplementedError(
-            f"Unknown optimal scaling method {options['method']}. "
-            f"Please use {REDUCED} or {STANDARD}."
+            f"Unknown optimal scaling method `{options['method']}`. "
+            f"Please use `{REDUCED}` or `{STANDARD}`."
         )
     return x_upper, x_lower
 
