@@ -233,6 +233,7 @@ class ESSOptimizer:
             #  reported points
             'time': time.time() - self.starttime,
             'n_fval': self.evaluator.n_eval,
+            'optimizer': str(self),
         }
         i_result = 0
         result = pypesto.Result(problem=self.evaluator.problem)
@@ -510,9 +511,9 @@ class ESSOptimizer:
             formatter={"float": lambda x: "%.3g" % x},
         ):
             logger.info(
-                f"-- Stopping after {self.n_iter} iterations. "
-                f"Final refset: {np.sort(self.refset.fx)} "
-                f"num local solutions: {len(self.local_solutions)}"
+                f"-- {self.exit_flag!r} "
+                f"Stopping after {self.n_iter} iterations. "
+                f"Num local solutions: {len(self.local_solutions)}."
             )
-
+            logger.info(f"Final refset: {np.sort(self.refset.fx)} ")
         logger.info(f"Best fval {self.fx_best}")
