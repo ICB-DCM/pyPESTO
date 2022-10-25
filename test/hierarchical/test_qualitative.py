@@ -1,5 +1,5 @@
 from pathlib import Path
-
+from typing import Dict, List
 import numpy as np
 import petab
 import pytest
@@ -65,7 +65,9 @@ def inner_problem_option(request):
     return request.param
 
 
-def test_evaluate_objective(inner_problem_option):
+def test_evaluate_objective(inner_problem_option: List[Dict]):
+    """Check that standard / reduced / reparameterized formulations yield the
+    same result."""
     petab_problem = petab.Problem.from_yaml(example_qualitative_yaml)
     vals = []
     for idx, option in enumerate(inner_problem_option):
@@ -75,7 +77,8 @@ def test_evaluate_objective(inner_problem_option):
         assert np.isclose(vals[idx], vals[idx - 1])
 
 
-def test_optimization(inner_problem_option):
+def test_optimization(inner_problem_option: List[Dict]):
+    """Check that optimizations finishes without error."""
     petab_problem = petab.Problem.from_yaml(example_qualitative_yaml)
 
     optimizer = pypesto.optimize.ScipyOptimizer(
@@ -88,7 +91,7 @@ def test_optimization(inner_problem_option):
         )
 
 
-def create_problem(petab_problem, option):
+def create_problem(petab_problem: petab.Problem, option: Dict) -> pypesto.Problem:
     importer = pypesto.petab.PetabImporter(petab_problem)
     importer.create_model()
 
