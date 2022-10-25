@@ -148,7 +148,7 @@ def waterfall(
     if offset_y == 0.0:
         ax.set_ylabel('Function value')
     else:
-        ax.set_ylabel('Objective value (offset={offset_y:0.3e})')
+        ax.set_ylabel(f'Objective value (offset={offset_y:0.3e})')
     ax.set_title('Waterfall plot')
     return ax
 
@@ -292,10 +292,7 @@ def process_offset_for_list(
     for result in results:
         fvals = np.asarray([np.array(result.optimize_result.fval)])
         # todo: order of results plays a role
-        if start_indices is None:
-            start_indices = np.array(range(fvals.size))
-        else:
-            start_indices = process_start_indices(start_indices, fvals.size)
+        start_indices = process_start_indices(result, start_indices)
         fvals = fvals[:, start_indices]
         # if none of the fvals are finite, set default value to zero as
         # np.nanmin will error for an empty array

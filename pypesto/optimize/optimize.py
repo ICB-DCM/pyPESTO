@@ -31,7 +31,7 @@ def minimize(
     progress_bar: bool = True,
     options: OptimizeOptions = None,
     history_options: HistoryOptions = None,
-    filename: Union[str, Callable, None] = "Auto",
+    filename: Union[str, Callable, None] = None,
     overwrite: bool = False,
 ) -> Result:
     """
@@ -65,9 +65,9 @@ def minimize(
         Optimizer history options.
     filename:
         Name of the hdf5 file, where the result will be saved. Default is
-        "Auto", in which case it will automatically generate a file named
-        `year_month_day_optimization_result.hdf5`. Deactivate saving by
-        setting filename to `None`.
+        None, which deactivates automatic saving. If set to
+        "Auto" it will automatically generate a file named
+        `year_month_day_profiling_result.hdf5`.
         Optionally a method, see docs for `pypesto.store.auto.autosave`.
     overwrite:
         Whether to overwrite `result/optimization` in the autosave file

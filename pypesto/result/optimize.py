@@ -192,6 +192,16 @@ class OptimizeResult:
                 f"length {len(self.list)}."
             )
 
+    def __getstate__(self):
+        # while we override __getattr__ as we do now, this is required to keep
+        # instances pickle-able
+        return vars(self)
+
+    def __setstate__(self, state):
+        # while we override __getattr__ as we do now, this is required to keep
+        # instances pickle-able
+        vars(self).update(state)
+
     def __len__(self):
         return len(self.list)
 
@@ -229,6 +239,12 @@ class OptimizeResult:
             f'id={self[np.argmin(self.time)].id}'
         )
 
+        # special handling in case there are only non-finite fvals
+        num_best_value = int(clustsize[0]) if len(clustsize) else len(self)
+        num_plateaus = (
+            (1 + max(clust) - sum(clustsize == 1)) if len(clustsize) else 0
+        )
+
         summary = (
             "## Optimization Result \n\n"
             f"* number of starts: {len(self)} \n"
@@ -238,9 +254,8 @@ class OptimizeResult:
             f"{np.logical_not(np.isfinite(self.fval)).sum()}\n\n"
             f"* execution time summary:\n{times_message}\n"
             f"* summary of optimizer messages:\n\n{counter_message}\n\n"
-            f"* best value found (approximately) {int(clustsize[0])} time(s)\n"
-            f"* number of plateaus found: "
-            f"{1 + max(clust) - sum(clustsize == 1)}\n"
+            f"* best value found (approximately) {num_best_value} time(s)\n"
+            f"* number of plateaus found: {num_plateaus}\n"
         )
         if disp_best:
             summary += f"\nA summary of the best run:\n\n{self[0].summary()}"

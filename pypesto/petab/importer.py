@@ -1,4 +1,6 @@
 """Contains the PetabImporter class."""
+from __future__ import annotations
+
 import importlib
 import logging
 import os
@@ -21,7 +23,8 @@ import numpy as np
 import pandas as pd
 
 from ..C import CONDITION_SEP, MODE_FUN, MODE_RES
-from ..objective import AggregatedObjective, AmiciObjectBuilder, AmiciObjective
+from ..objective import AggregatedObjective, AmiciObjective
+from ..objective.amici import AmiciObjectBuilder
 from ..objective.priors import NegLogParameterPriors, get_parameter_prior_dict
 from ..predict import AmiciPredictor
 from ..problem import Problem
@@ -53,7 +56,7 @@ class PetabImporter(AmiciObjectBuilder):
 
     def __init__(
         self,
-        petab_problem: 'petab.Problem',
+        petab_problem: petab.Problem,
         output_folder: str = None,
         model_name: str = None,
         validate_petab: bool = True,
@@ -95,7 +98,7 @@ class PetabImporter(AmiciObjectBuilder):
         yaml_config: Union[dict, str],
         output_folder: str = None,
         model_name: str = None,
-    ) -> 'PetabImporter':
+    ) -> PetabImporter:
         """Simplified constructor using a petab yaml file."""
         petab_problem = petab.Problem.from_yaml(yaml_config)
 
@@ -179,7 +182,7 @@ class PetabImporter(AmiciObjectBuilder):
         self,
         force_compile: bool = False,
         **kwargs,
-    ) -> 'amici.Model':
+    ) -> amici.Model:
         """
         Import amici model.
 
@@ -223,7 +226,7 @@ class PetabImporter(AmiciObjectBuilder):
 
         return self._create_model()
 
-    def _create_model(self) -> 'amici.Model':
+    def _create_model(self) -> amici.Model:
         """Load model module and return the model, no checks/compilation."""
         # load moduĺe
         module = amici.import_model_module(
@@ -285,7 +288,7 @@ class PetabImporter(AmiciObjectBuilder):
             **kwargs,
         )
 
-    def create_solver(self, model: 'amici.Model' = None) -> 'amici.Solver':
+    def create_solver(self, model: amici.Model = None) -> amici.Solver:
         """Return model solver."""
         # create model
         if model is None:
@@ -295,8 +298,8 @@ class PetabImporter(AmiciObjectBuilder):
         return solver
 
     def create_edatas(
-        self, model: 'amici.Model' = None, simulation_conditions=None
-    ) -> List['amici.ExpData']:
+        self, model: amici.Model = None, simulation_conditions=None
+    ) -> List[amici.ExpData]:
         """Create list of amici.ExpData objects."""
         # create model
         if model is None:
@@ -310,9 +313,9 @@ class PetabImporter(AmiciObjectBuilder):
 
     def create_objective(
         self,
-        model: 'amici.Model' = None,
-        solver: 'amici.Solver' = None,
-        edatas: Sequence['amici.ExpData'] = None,
+        model: amici.Model = None,
+        solver: amici.Solver = None,
+        edatas: Sequence[amici.ExpData] = None,
         force_compile: bool = False,
         **kwargs,
     ) -> AmiciObjective:
@@ -611,8 +614,8 @@ class PetabImporter(AmiciObjectBuilder):
 
     def rdatas_to_measurement_df(
         self,
-        rdatas: Sequence['amici.ReturnData'],
-        model: 'amici.Model' = None,
+        rdatas: Sequence[amici.ReturnData],
+        model: amici.Model = None,
     ) -> pd.DataFrame:
         """
         Create a measurement dataframe in the petab format.
@@ -643,8 +646,8 @@ class PetabImporter(AmiciObjectBuilder):
 
     def rdatas_to_simulation_df(
         self,
-        rdatas: Sequence['amici.ReturnData'],
-        model: 'amici.Model' = None,
+        rdatas: Sequence[amici.ReturnData],
+        model: amici.Model = None,
     ) -> pd.DataFrame:
         """
         See `rdatas_to_measurement_df`.
@@ -715,7 +718,7 @@ class PetabImporter(AmiciObjectBuilder):
 
 
 def _find_output_folder_name(
-    petab_problem: 'petab.Problem',
+    petab_problem: petab.Problem,
     model_name: str,
 ) -> str:
     """
