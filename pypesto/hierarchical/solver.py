@@ -25,7 +25,7 @@ class InnerSolver:
 
     def initialize(self):
         """
-        Initialize the solver.
+        (Re-)initialize the solver.
 
         Default: Do nothing.
         """
@@ -37,13 +37,30 @@ class InnerSolver:
         sigma: List[np.ndarray],
         scaled: bool,
     ) -> Dict[str, float]:
-        """Solve the subproblem."""
+        """Solve the subproblem.
+
+        Parameters
+        ----------
+        problem:
+            The inner problem to solve.
+        sim:
+            List of model output matrices, as provided in AMICI's
+            ``ReturnData.y``. Same order as simulations in the
+            PEtab problem.
+        sigma:
+            List of sigma matrices from the model, as provided in AMICI's
+            ``ReturnData.sigmay``. Same order as simulations in the
+            PEtab problem.
+        scale:
+            Whether to scale the results to the parameter scale specified in
+            ``problem``.
+        """
 
 
 class AnalyticalInnerSolver(InnerSolver):
     """Solve the inner subproblem analytically.
 
-    Currently supports scaling parameters and sigmas for additive Gaussian
+    Currently, supports scaling parameters and sigmas for additive Gaussian
     noise.
     """
 
@@ -54,6 +71,24 @@ class AnalyticalInnerSolver(InnerSolver):
         sigma: List[np.ndarray],
         scaled: bool,
     ) -> Dict[str, float]:
+        """Solve the subproblem analytically.
+
+        Parameters
+        ----------
+        problem:
+            The inner problem to solve.
+        sim:
+            List of model output matrices, as provided in AMICI's
+            ``ReturnData.y``. Same order as simulations in the
+            PEtab problem.
+        sigma:
+            List of sigma matrices from the model, as provided in AMICI's
+            ``ReturnData.sigmay``. Same order as simulations in the
+            PEtab problem.
+        scale:
+            Whether to scale the results to the parameter scale specified in
+            ``problem``.
+        """
         x_opt = {}
 
         data = copy.deepcopy(problem.data)
@@ -117,6 +152,7 @@ class NumericalInnerSolver(InnerSolver):
         self.x_guesses = None
 
     def initialize(self):
+        """(Re-)initialize the solver."""
         self.x_guesses = None
 
     def solve(
@@ -126,6 +162,24 @@ class NumericalInnerSolver(InnerSolver):
         sigma: List[np.ndarray],
         scaled: bool,
     ) -> Dict[str, float]:
+        """Solve the subproblem numerically.
+
+        Parameters
+        ----------
+        problem:
+            The inner problem to solve.
+        sim:
+            List of model output matrices, as provided in AMICI's
+            ``ReturnData.y``. Same order as simulations in the
+            PEtab problem.
+        sigma:
+            List of sigma matrices from the model, as provided in AMICI's
+            ``ReturnData.sigmay``. Same order as simulations in the
+            PEtab problem.
+        scale:
+            Whether to scale the results to the parameter scale specified in
+            ``problem``.
+        """
         pars = problem.xs.values()
         lb = np.array([x.lb for x in pars])
         ub = np.array([x.ub for x in pars])
