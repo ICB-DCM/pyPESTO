@@ -17,6 +17,8 @@ extend-ignore =
   D105
   # Missing docstring in __init__
   D107
+  # Empty method in abstract base class
+  B027
 
 per-file-ignores =
     # Imported but unused
