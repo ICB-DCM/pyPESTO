@@ -1,11 +1,13 @@
-import logging
 import time
 
 import amici
+import numpy as np
 from benchmark_models_petab import get_problem
+from numpy.testing import assert_allclose
 
 import pypesto
-import pypesto.logging
+
+# import pypesto.logging
 from pypesto.hierarchical.parameter import InnerParameter
 from pypesto.hierarchical.problem import PARAMETER_TYPE
 from pypesto.hierarchical.solver import (
@@ -15,7 +17,6 @@ from pypesto.hierarchical.solver import (
 from pypesto.petab import PetabImporter
 
 # pypesto.logging.log_to_console(level=logging.DEBUG)
-
 
 # TODO
 # - test scaling and offset parameters
@@ -69,16 +70,17 @@ def test_hierarchical_sigma():
     # Check for same fval
     # TODO get sigma from hierarchical optimization then supply to non-hierarchical,
     #      for fair test.
-    fval_False = problem[False].objective(
+    fval_False = problems[False].objective(
         importer.petab_problem.x_nominal_free_scaled
     )
-    fval_True = problem[True].objective(
+    fval_True = problems[True].objective(
         importer.petab_problem.x_nominal_free_scaled[:6]
     )
     # Hierarchical optimization does not affect the function value.
-    assert fval_True == fval_False
+    assert_allclose(fval_True, fval_False)
 
     # Check for same optimization result
+    n_starts = 1
     startpoints = pypesto.startpoint.latin_hypercube(
         n_starts=n_starts,
         lb=problems[False].lb,
@@ -103,13 +105,13 @@ def test_hierarchical_sigma():
 
         start_time = time.time()
         result = pypesto.minimize(problem, n_starts=50, engine=engine)
-        time = time.time() - start_time
+        wall_time = time.time() - start_time
 
         best_x = result.optimize_result.list[0].x
         best_fval = result.optimize_result.list[0].fval
 
         result = {
-            'time': time,
+            'time': wall_time,
             'best_x': best_x,
             'best_fval': best_fval,
         }
