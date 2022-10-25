@@ -1,5 +1,5 @@
 import logging
-from typing import Any
+from typing import Any, Literal
 
 import numpy as np
 
@@ -7,8 +7,16 @@ logger = logging.getLogger(__name__)
 
 
 class InnerParameter:
-    """An inner parameter of a hierarchical optimization problem."""
+    """
+    An inner parameter of a hierarchical optimization problem.
 
+    Attributes
+    ----------
+    coupled:
+        TODO
+    """
+
+    # Supported parameter types:
     SCALING = 'scaling'
     OFFSET = 'offset'
     SIGMA = 'sigma'
@@ -17,8 +25,8 @@ class InnerParameter:
     def __init__(
         self,
         id: str,
-        type: str,
-        scale: str = 'lin',
+        type: Literal['scaling', 'offset', 'sigma', 'qualitative_scaling'],
+        scale: Literal['lin', 'log', 'log10'] = 'lin',
         lb: float = -np.inf,
         ub: float = np.inf,
         ixs: Any = None,
@@ -31,11 +39,27 @@ class InnerParameter:
 
         Parameters
         ----------
-        id: str
+        id:
             Id of the parameter.
-        boring_val: float
+        type:
+            Type of this inner parameter.
+        scale:
+            Scale on which to estimate this parameter.
+        lb:
+            Lower bound for this parameter.
+        ub:
+            Upper bound for this parameter.
+        ixs:
+            TODO
+        boring_val:
             Value to be used when the parameter is not present (in particular
             to simulate unscaled observables).
+        category:
+            TODO
+            Only relevant if ``type==qualitative_scaling``.
+        group:
+            TODO
+            Only relevant if ``type==qualitative_scaling``.
         """
         self.id: str = id
         self.coupled = False
