@@ -6,7 +6,7 @@ Release notes
 ..........
 
 
-0.2.14 (2022-09-08)
+0.2.14 (2022-10-25)
 -------------------
 
 * Ensembles:
@@ -19,11 +19,12 @@ Release notes
 * Optimize:
     * Fides: Include message according to exitflag (#878)
 * Sampling:
-    * Added Pymc v4 Sampler (#818)
+    * Added Pymc v4 Sampler (#818, #944, #948)
 * Visualization:
     * Fix waterfall plot limits for non-offsetted log-plots (#891)
     * Plot unflattened model fit from flattened PEtab problems (#914)
-    * Added the offset value to waterfall plot for better intuitive understanding (#910)
+    * Added the offset value to waterfall plot for better intuitive understanding (#910, #945)
+    * Visualize parameter correlation (#888)
 * History and storage:
     * Fix history-result reconstruction mismatch (#902)
     * Move history to own module (#903)
@@ -32,15 +33,22 @@ Release notes
     * Fix `read_result` with history (#907)
     * Improve hdf5 history file lock (#909, #921)
     * Fix message in `check_overwrite` (#894)
+    * Deactivate automatic saving (#930, #932)
+    * Allow problem=None in read_result_from_file (#936)
+    * Remove superfluous get_or_create_group (#937)
+    * Extract read_history_from_file from read_result_from_file (#939)
+    * Select: use model ID in save postprocessor filename, by default (#943)
 * Select:
     * Clean up use of `minimize_options` in model problem (#918)
     * User-supplied method to produce pyPESTO problem (#884)
     * Report, and binary model ID post-processors (#900)
+    * Move method.py functionalities to ui.py in petab_select (#919)
 * Objective and Result:
     * Julia objective (#927)
     * Fix set of keys to aggregate results in aggregated objective (#883)
-    * Nicer `OptimizeResult.summary` (#895, #916)
+    * Nicer `OptimizeResult.summary` (#895, #916, #935, #942, )
     * Fix disjoint IDs check in `OptimizerResult.append` (#922)
+    * Fix OptimizeResult pickling (#953)
 * General:
     * Remove version from `CITATION.cff` (#887)
     * Fix CI and docs (#892, #893)
@@ -54,7 +62,10 @@ Release notes
     * Fix novel B024 ABC without abstract methods (#923)
     * Improve API docs and add overview notebook (#911)
     * Fix typos (#926)
-    * Fix julia tests (#929)
+    * Fix julia tests (#929, #933)
+    * Fix flaky test_mpipoolengine (#938)
+    * More informative test IDs in test_optimize (#940)
+    * Speed-up import via lazy imports (#946)
 
 
 0.2.13 (2022-05-24)
