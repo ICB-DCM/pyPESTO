@@ -4,11 +4,6 @@ from typing import Callable, Union
 
 import numpy as np
 
-try:
-    from julia import Main
-except ImportError:
-    pass
-
 from ..function import Objective
 
 
@@ -32,6 +27,8 @@ def _read_source(module_name: str, source_file: str) -> None:
     module_name: Julia module name.
     source_file: Qualified Julia source file.
     """
+    from julia import Main
+
     if not hasattr(Main, module_name):
         Main.include(source_file)
 
@@ -104,8 +101,10 @@ class JuliaObjective(Objective):
         res: str = None,
         sres: str = None,
     ):
-        # checks
-        if Main is None:
+        # lazy imports
+        try:
+            from julia import Main  # noqa: F401
+        except ImportError:
             raise ImportError(
                 "Install PyJulia, e.g. via `pip install pypesto[julia]`, "
                 "and see the class documentation",
@@ -134,6 +133,8 @@ class JuliaObjective(Objective):
 
         Use this function to access any variable from the Julia module.
         """
+        from julia import Main
+
         if name is not None:
             ret = getattr(getattr(Main, self.module), name, None)
             if as_array:

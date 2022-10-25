@@ -6,7 +6,6 @@ import matplotlib.axes
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
-import seaborn as sns
 from matplotlib.collections import LineCollection
 from matplotlib.container import ErrorbarContainer
 from matplotlib.lines import Line2D
@@ -71,6 +70,8 @@ def sampling_fval_traces(
     ax:
         The plot axes.
     """
+    import seaborn as sns
+
     # get data which should be plotted
     _, params_fval, _, _, _ = get_data_to_plot(
         result=result,
@@ -1001,6 +1002,8 @@ def sampling_parameter_traces(
     ax:
         The plot axes.
     """
+    import seaborn as sns
+
     # get data which should be plotted
     nr_params, params_fval, theta_lb, theta_ub, param_names = get_data_to_plot(
         result=result,
@@ -1105,6 +1108,8 @@ def sampling_scatter(
     ax:
         The plot axes.
     """
+    import seaborn as sns
+
     # get data which should be plotted
     nr_params, params_fval, theta_lb, theta_ub, _ = get_data_to_plot(
         result=result, i_chain=i_chain, stepsize=stepsize
@@ -1173,6 +1178,8 @@ def sampling_1d_marginals(
     ax:
         matplotlib-axes
     """
+    import seaborn as sns
+
     # get data which should be plotted
     nr_params, params_fval, theta_lb, theta_ub, param_names = get_data_to_plot(
         result=result,

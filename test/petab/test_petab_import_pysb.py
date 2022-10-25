@@ -13,7 +13,7 @@ import yaml
 from amici.petab_import_pysb import PysbPetabProblem
 
 import pypesto.optimize as optimize
-from pypesto.petab.pysb_importer import PetabImporterPysb
+from pypesto.petab import PetabImporterPysb
 
 # In CI, bionetgen is install here
 BNGPATH = os.path.abspath(
