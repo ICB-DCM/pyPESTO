@@ -3,7 +3,7 @@ Aesara models interface.
 
 Adds an interface for the construction of loss functions
 incorporating aesara models. This permits computation of derivatives using a
-combination of objective based methods and aeara based backpropagation.
+combination of objective based methods and aesara based backpropagation.
 """
 
 import copy
@@ -11,16 +11,20 @@ from typing import Optional, Sequence, Tuple
 
 import numpy as np
 
-from ..C import FVAL, GRAD, HESS, MODE_FUN, RDATAS
-from .base import ObjectiveBase, ResultDict
+from ...C import FVAL, GRAD, HESS, MODE_FUN, RDATAS, ModeType
+from ..base import ObjectiveBase, ResultDict
 
 try:
     import aesara
     import aesara.tensor as aet
-    from aesara.graph.op import Op
+    from aesara.tensor import Op
     from aesara.tensor.var import TensorVariable
 except ImportError:
-    aesara = aet = Op = TensorVariable = None
+    raise ImportError(
+        "Using an aeasara objective requires an installation of "
+        "the python package aesara. Please install aesara via "
+        "`pip install aesara`."
+    )
 
 
 class AesaraObjective(ObjectiveBase):
@@ -37,7 +41,7 @@ class AesaraObjective(ObjectiveBase):
     objective:
         The `pypesto.ObjectiveBase` to wrap.
     aet_x:
-        Tensor variables that that define the variables of `aet_fun`
+        Tensor variables that define the variables of `aet_fun`
     aet_fun:
         Aesara function that maps `aet_x` to the variables of `objective`
     coeff:
@@ -87,13 +91,13 @@ class AesaraObjective(ObjectiveBase):
         self.infun = aesara.function([aet_x], aet_fun)
 
         # temporary storage for evaluation results of objective
-        self.inner_ret: ResultDict = {}
+        self.cached_base_ret: ResultDict = {}
 
-    def check_mode(self, mode) -> bool:
+    def check_mode(self, mode: ModeType) -> bool:
         """See `ObjectiveBase` documentation."""
         return mode == MODE_FUN
 
-    def check_sensi_orders(self, sensi_orders, mode) -> bool:
+    def check_sensi_orders(self, sensi_orders, mode: ModeType) -> bool:
         """See `ObjectiveBase` documentation."""
         if not self.check_mode(mode):
             return False
@@ -101,7 +105,11 @@ class AesaraObjective(ObjectiveBase):
             return self.base_objective.check_sensi_orders(sensi_orders, mode)
 
     def call_unprocessed(
-        self, x: np.ndarray, sensi_orders: Tuple[int, ...], mode: str, **kwargs
+        self,
+        x: np.ndarray,
+        sensi_orders: Tuple[int, ...],
+        mode: ModeType,
+        **kwargs,
     ) -> ResultDict:
         """
         See `ObjectiveBase` for more documentation.
@@ -120,14 +128,14 @@ class AesaraObjective(ObjectiveBase):
             'return_dict' in kwargs,
             kwargs.pop('return_dict', False),
         )
-        self.inner_ret = self.base_objective(
+        self.cached_base_ret = self.base_objective(
             self.infun(x), sensi_orders, mode, return_dict=True, **kwargs
         )
         if set_return_dict:
             kwargs['return_dict'] = return_dict
         ret = {}
-        if RDATAS in self.inner_ret:
-            ret[RDATAS] = self.inner_ret[RDATAS]
+        if RDATAS in self.cached_base_ret:
+            ret[RDATAS] = self.cached_base_ret[RDATAS]
         if 0 in sensi_orders:
             ret[FVAL] = float(self.afun(x))
         if 1 in sensi_orders:
@@ -155,7 +163,7 @@ class AesaraObjectiveOp(Op):
     Parameters
     ----------
     obj:
-        Base aseara objective
+        Base aesara objective
     coeff:
         Multiplicative coefficient for the objective function value
     """
@@ -175,9 +183,9 @@ class AesaraObjectiveOp(Op):
 
     def perform(self, node, inputs, outputs, params=None):  # noqa
         # note that we use precomputed values from the outer
-        # AesaraObjective.call_unprocessed here, which which means we can
+        # AesaraObjective.call_unprocessed here, which means we can
         # ignore inputs here
-        log_prob = self._coeff * self._objective.inner_ret[FVAL]
+        log_prob = self._coeff * self._objective.cached_base_ret[FVAL]
         outputs[0][0] = np.array(log_prob)
 
     def grad(self, inputs, g):
@@ -187,6 +195,8 @@ class AesaraObjectiveOp(Op):
         Actually returns the vector-hessian product - g[0] is a vector of
         parameter values.
         """
+        if self._log_prob_grad is None:
+            return super(AesaraObjectiveOp, self).grad(inputs, g)
         (theta,) = inputs
         log_prob_grad = self._log_prob_grad(theta)
         return [g[0] * log_prob_grad]
@@ -202,7 +212,7 @@ class AesaraObjectiveGradOp(Op):
     Parameters
     ----------
     obj:
-        Base aseara objective
+        Base aesara objective
     coeff:
         Multiplicative coefficient for the objective function value
     """
@@ -221,9 +231,9 @@ class AesaraObjectiveGradOp(Op):
 
     def perform(self, node, inputs, outputs, params=None):  # noqa
         # note that we use precomputed values from the outer
-        # AesaraObjective.call_unprocessed here, which which means we can
+        # AesaraObjective.call_unprocessed here, which means we can
         # ignore inputs here
-        log_prob_grad = self._coeff * self._objective.inner_ret[GRAD]
+        log_prob_grad = self._coeff * self._objective.cached_base_ret[GRAD]
         outputs[0][0] = log_prob_grad
 
     def grad(self, inputs, g):
@@ -233,6 +243,8 @@ class AesaraObjectiveGradOp(Op):
         Actually returns the vector-hessian product - g[0] is a vector of
         parameter values.
         """
+        if self._log_prob_hess is None:
+            return super(AesaraObjectiveGradOp, self).grad(inputs, g)
         (theta,) = inputs
         log_prob_hess = self._log_prob_hess(theta)
         return [g[0].dot(log_prob_hess)]
@@ -248,7 +260,7 @@ class AesaraObjectiveHessOp(Op):
     Parameters
     ----------
     obj:
-        Base aseara objective
+        Base aesara objective
     coeff:
         Multiplicative coefficient for the objective function value
     """
@@ -262,7 +274,7 @@ class AesaraObjectiveHessOp(Op):
 
     def perform(self, node, inputs, outputs, params=None):  # noqa
         # note that we use precomputed values from the outer
-        # AesaraObjective.call_unprocessed here, which which means we can
+        # AesaraObjective.call_unprocessed here, which means we can
         # ignore inputs here
-        log_prob_hess = self._coeff * self._objective.inner_ret[HESS]
+        log_prob_hess = self._coeff * self._objective.cached_base_ret[HESS]
         outputs[0][0] = log_prob_hess

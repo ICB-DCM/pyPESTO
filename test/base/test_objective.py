@@ -185,24 +185,24 @@ def test_aesara(max_sensi_order, integrated):
     # compose rosenbrock function with with sinh transformation
     obj = AesaraObjective(prob['obj'], x, aet.sinh(x))
 
-    # check value against
-    assert obj(x_ref) == prob['fval']
+    # check function values and derivatives, also after copy
+    for _obj in (obj, copy.deepcopy(obj)):
+        # function value
+        assert _obj(x_ref) == prob['fval']
 
-    if max_sensi_order > 0:
-        assert np.allclose(
-            obj(x_ref, sensi_orders=(1,)), prob['grad'] * np.cosh(x_ref)
-        )
+        # gradient
+        if max_sensi_order > 0:
+            assert np.allclose(
+                _obj(x_ref, sensi_orders=(1,)), prob['grad'] * np.cosh(x_ref)
+            )
 
-    if max_sensi_order > 1:
-        assert np.allclose(
-            prob['hess'] * (np.diag(np.power(np.cosh(x_ref), 2)))
-            + np.diag(prob['grad'] * np.sinh(x_ref)),
-            obj(x_ref, sensi_orders=(2,)),
-        )
-
-    # test everything still works after deepcopy
-    cobj = copy.deepcopy(obj)
-    assert cobj(x_ref) == prob['fval']
+        # hessian
+        if max_sensi_order > 1:
+            assert np.allclose(
+                prob['hess'] * (np.diag(np.power(np.cosh(x_ref), 2)))
+                + np.diag(prob['grad'] * np.sinh(x_ref)),
+                _obj(x_ref, sensi_orders=(2,)),
+            )
 
 
 @pytest.fixture(

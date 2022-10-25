@@ -95,7 +95,7 @@ def waterfall(
     )
 
     # plotting routine needs the maximum number of multistarts
-    max_len_fvals = np.array([0])
+    max_len_fvals = 0
 
     # loop over results
     for j, fvals in enumerate(fvals_all):
@@ -148,7 +148,7 @@ def waterfall(
     if offset_y == 0.0:
         ax.set_ylabel('Function value')
     else:
-        ax.set_ylabel('Offsetted function value (relative to best start)')
+        ax.set_ylabel(f'Objective value (offset={offset_y:0.3e})')
     ax.set_title('Waterfall plot')
     return ax
 
@@ -234,8 +234,10 @@ def waterfall_lowlevel(
     y_min, y_max = ax.get_ylim()
     if scale_y == 'log10':
         if np.log10(y_max) - np.log10(y_min) < 1.0:
-            y_mean = 0.5 * (np.log10(y_min) + np.log10(y_max))
-            ax.set_ylim(10.0 ** (y_mean - 0.5), 10.0 ** (y_mean + 0.5))
+            ax.set_ylim(
+                ax.dataLim.y0 - 0.001 * abs(ax.dataLim.y0),
+                ax.dataLim.y1 + 0.001 * abs(ax.dataLim.y1),
+            )
     else:
         if y_max - y_min < 1.0:
             y_mean = 0.5 * (y_min + y_max)
@@ -246,7 +248,7 @@ def waterfall_lowlevel(
     if offset_y == 0.0:
         ax.set_ylabel('Function value')
     else:
-        ax.set_ylabel('Offsetted function value (relative to best start)')
+        ax.set_ylabel('Objective value (offset={offset_y:0.3e})')
     ax.set_title('Waterfall plot')
     if legend_text is not None:
         ax.legend()
@@ -290,10 +292,7 @@ def process_offset_for_list(
     for result in results:
         fvals = np.asarray([np.array(result.optimize_result.fval)])
         # todo: order of results plays a role
-        if start_indices is None:
-            start_indices = np.array(range(fvals.size))
-        else:
-            start_indices = process_start_indices(start_indices, fvals.size)
+        start_indices = process_start_indices(result, start_indices)
         fvals = fvals[:, start_indices]
         # if none of the fvals are finite, set default value to zero as
         # np.nanmin will error for an empty array

@@ -8,7 +8,7 @@ from typing import Sequence, Union
 import numpy as np
 import pandas as pd
 
-from ..objective import History
+from ..history import HistoryBase
 from ..problem import Problem
 from ..util import assign_clusters, delete_nan_inf
 
@@ -87,7 +87,7 @@ class OptimizerResult(dict):
         n_sres: int = None,
         x0: np.ndarray = None,
         fval0: float = None,
-        history: History = None,
+        history: HistoryBase = None,
         exitflag: int = None,
         time: float = None,
         message: str = None,
@@ -108,7 +108,7 @@ class OptimizerResult(dict):
         self.n_sres: int = n_sres
         self.x0: np.ndarray = np.array(x0) if x0 is not None else None
         self.fval0: float = fval0
-        self.history: History = history
+        self.history: HistoryBase = history
         self.exitflag: int = exitflag
         self.time: float = time
         self.message: str = message
@@ -126,25 +126,25 @@ class OptimizerResult(dict):
     def summary(self):
         """Get summary of the object."""
         message = (
-            "### Optimizer Result \n\n"
-            f"* optimizer used: {self.optimizer} \n"
+            "### Optimizer Result\n\n"
+            f"* optimizer used: {self.optimizer}\n"
             f"* message: {self.message} \n"
-            f"* number of evaluations: {self.n_fval} \n"
-            f"* time taken to optimize: {self.time} \n"
-            f"* startpoint: {self.x0} \n"
-            f"* endpoint: {self.x} \n"
+            f"* number of evaluations: {self.n_fval}\n"
+            f"* time taken to optimize: {self.time:0.3f}s\n"
+            f"* startpoint: {self.x0}\n"
+            f"* endpoint: {self.x}\n"
         )
         # add fval, gradient, hessian, res, sres if available
         if self.fval is not None:
-            message += f"* final objective value: {self.fval} \n"
+            message += f"* final objective value: {self.fval}\n"
         if self.grad is not None:
-            message += f"* final gradient value: {self.grad} \n"
+            message += f"* final gradient value: {self.grad}\n"
         if self.hess is not None:
-            message += f"* final hessian value: {self.hess} \n"
+            message += f"* final hessian value: {self.hess}\n"
         if self.res is not None:
-            message += f"* final residual value: {self.res} \n"
+            message += f"* final residual value: {self.res}\n"
         if self.sres is not None:
-            message += f"* final residual sensitivity: {self.sres} \n"
+            message += f"* final residual sensitivity: {self.sres}\n"
 
         return message
 
@@ -192,10 +192,20 @@ class OptimizeResult:
                 f"length {len(self.list)}."
             )
 
+    def __getstate__(self):
+        # while we override __getattr__ as we do now, this is required to keep
+        # instances pickle-able
+        return vars(self)
+
+    def __setstate__(self, state):
+        # while we override __getattr__ as we do now, this is required to keep
+        # instances pickle-able
+        vars(self).update(state)
+
     def __len__(self):
         return len(self.list)
 
-    def summary(self, disp_best: bool = True, disp_worst: bool = False):
+    def summary(self, disp_best: bool = True, disp_worst: bool = False) -> str:
         """
         Get summary of the object.
 
@@ -206,21 +216,33 @@ class OptimizeResult:
         disp_worst:
             Whether to display a detailed summary of the worst run.
         """
+        if len(self) == 0:
+            return "## Optimization Result \n\n*empty*\n"
+
         # perform clustering for better information
         clust, clustsize = assign_clusters(delete_nan_inf(self.fval)[1])
-        counter_message = '\n'.join(
-            ["\tCount\tMessage"]
-            + [
-                f"\t{count}\t{message}"
-                for message, count in Counter(self.message).most_common()
-            ]
+
+        # aggregate exit messages
+        message_counts_df = pd.DataFrame(
+            Counter(self.message).most_common(), columns=["Message", "Count"]
         )
+        counter_message = message_counts_df[["Count", "Message"]].to_markdown(
+            index=False
+        )
+        counter_message = "  " + counter_message.replace("\n", "\n  ")
+
         times_message = (
-            f'\n\tMean execution time: {np.mean(self.time)}s\n'
-            f'\tMaximum execution time: {np.max(self.time)}s,'
+            f'\t* Mean execution time: {np.mean(self.time):0.3f}s\n'
+            f'\t* Maximum execution time: {np.max(self.time):0.3f}s,'
             f'\tid={self[np.argmax(self.time)].id}\n'
-            f'\tMinimum execution time: {np.min(self.time)}s,\t'
+            f'\t* Minimum execution time: {np.min(self.time):0.3f}s,\t'
             f'id={self[np.argmin(self.time)].id}'
+        )
+
+        # special handling in case there are only non-finite fvals
+        num_best_value = int(clustsize[0]) if len(clustsize) else len(self)
+        num_plateaus = (
+            (1 + max(clust) - sum(clustsize == 1)) if len(clustsize) else 0
         )
 
         summary = (
@@ -228,12 +250,12 @@ class OptimizeResult:
             f"* number of starts: {len(self)} \n"
             f"* best value: {self[0]['fval']}, id={self[0]['id']}\n"
             f"* worst value: {self[-1]['fval']}, id={self[-1]['id']}\n"
-            f"* number of non-finite values: {np.logical_not(np.isfinite(self.fval)).sum()}\n\n"
-            f"* execution time summary: {times_message}\n"
-            f"* summary of optimizer messages:\n{counter_message}\n"
-            f"* best value found (approximately) {clustsize[0]} time(s) \n"
-            f"* number of plateaus found: "
-            f"{1 + max(clust) - sum(clustsize == 1)}"
+            f"* number of non-finite values: "
+            f"{np.logical_not(np.isfinite(self.fval)).sum()}\n\n"
+            f"* execution time summary:\n{times_message}\n"
+            f"* summary of optimizer messages:\n\n{counter_message}\n\n"
+            f"* best value found (approximately) {num_best_value} time(s)\n"
+            f"* number of plateaus found: {num_plateaus}\n"
         )
         if disp_best:
             summary += f"\nA summary of the best run:\n\n{self[0].summary()}"
@@ -262,12 +284,12 @@ class OptimizeResult:
         """
         current_ids = set(self.id)
         if isinstance(optimize_result, OptimizeResult):
-            new_ids = [
+            new_ids = {
                 prefix + identifier
                 for identifier in optimize_result.id
                 if identifier is not None
-            ]
-            if current_ids.isdisjoint(new_ids) and new_ids:
+            }
+            if not current_ids.isdisjoint(new_ids):
                 raise ValueError(
                     "Some id's you want to merge coincide with "
                     "the existing id's. Please use an "
@@ -334,7 +356,7 @@ class OptimizeResult:
         """Extract the list of values for the specified key as a list."""
         warnings.warn(
             "get_for_key() is deprecated in favour of "
-            "optimize_result['key'] and will be removed in future "
+            "optimize_result.key and will be removed in future "
             "releases."
         )
         return [res[key] for res in self.list]

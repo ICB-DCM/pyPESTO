@@ -130,7 +130,10 @@ optimizers = [
 ]
 
 
-@pytest.fixture(params=optimizers)
+@pytest.fixture(
+    params=optimizers,
+    ids=[f"{i}-{o[0]}" for i, o in enumerate(optimizers)],
+)
 def optimizer(request):
     return request.param
 
@@ -204,7 +207,6 @@ def test_unbounded_minimize(optimizer):
                 n_starts=1,
                 startpoint_method=pypesto.startpoint.uniform,
                 options=options,
-                filename=None,
                 progress_bar=False,
             )
         return
@@ -215,7 +217,6 @@ def test_unbounded_minimize(optimizer):
             n_starts=1,
             startpoint_method=pypesto.startpoint.uniform,
             options=options,
-            filename=None,
             progress_bar=False,
         )
 
@@ -238,6 +239,7 @@ def get_optimizer(library, solver):
     options = {'maxiter': 100}
 
     if library == 'scipy':
+        options['maxfun'] = options.pop('maxiter')
         optimizer = optimize.ScipyOptimizer(method=solver, options=options)
     elif library == 'ipopt':
         optimizer = optimize.IpoptOptimizer()
@@ -280,7 +282,6 @@ def check_minimize(problem, library, solver, allow_failed_starts=False):
         n_starts=1,
         startpoint_method=pypesto.startpoint.uniform,
         options=optimize_options,
-        filename=None,
         progress_bar=False,
     )
 
@@ -314,7 +315,6 @@ def test_trim_results(problem):
         n_starts=1,
         startpoint_method=pypesto.startpoint.uniform,
         options=optimize_options,
-        filename=None,
         progress_bar=False,
     )
     assert result.optimize_result.list[0].hess is None
@@ -327,7 +327,6 @@ def test_trim_results(problem):
         n_starts=1,
         startpoint_method=pypesto.startpoint.uniform,
         options=optimize_options,
-        filename=None,
         progress_bar=False,
     )
     assert result.optimize_result.list[0].sres is None
@@ -344,6 +343,7 @@ def test_mpipoolengine():
         subprocess.check_call(  # noqa: S603,S607
             [
                 'mpiexec',
+                '--oversubscribe',
                 '-np',
                 '2',
                 'python',
@@ -377,7 +377,6 @@ def test_mpipoolengine():
             optimizer=optimizer,
             n_starts=2,
             engine=pypesto.engine.MultiProcessEngine(),
-            filename=None,
             progress_bar=False,
         )
 
@@ -409,7 +408,6 @@ def test_history_beats_optimizer():
         optimizer=optimize.ScipyOptimizer(method="TNC", options=scipy_options),
         n_starts=1,
         options=optimize.OptimizeOptions(history_beats_optimizer=True),
-        filename=None,
         progress_bar=False,
     )
 
@@ -418,7 +416,6 @@ def test_history_beats_optimizer():
         optimizer=optimize.ScipyOptimizer(method="TNC", options=scipy_options),
         n_starts=1,
         options=optimize.OptimizeOptions(history_beats_optimizer=False),
-        filename=None,
         progress_bar=False,
     )
 

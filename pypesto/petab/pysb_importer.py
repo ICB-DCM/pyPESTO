@@ -1,13 +1,13 @@
+from __future__ import annotations
+
 import os
 import shutil
+from typing import TYPE_CHECKING
 
 from .importer import PetabImporter
 
-try:
-    import amici
+if TYPE_CHECKING:
     import amici.petab_import_pysb
-except ImportError:
-    pass
 
 
 class PetabImporterPysb(PetabImporter):
@@ -15,7 +15,7 @@ class PetabImporterPysb(PetabImporter):
 
     def __init__(
         self,
-        petab_problem: 'amici.petab_import_pysb.PysbPetabProblem',
+        petab_problem: amici.petab_import_pysb.PysbPetabProblem,
         output_folder: str = None,
     ):
         """
@@ -46,6 +46,8 @@ class PetabImporterPysb(PetabImporter):
         kwargs: Extra arguments passed to `amici.SbmlImporter.sbml2amici`.
 
         """
+        import amici.petab_import_pysb
+
         # delete output directory
         if os.path.exists(self.output_folder):
             shutil.rmtree(self.output_folder)

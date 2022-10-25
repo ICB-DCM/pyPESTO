@@ -3,25 +3,24 @@ import copy
 import os
 import tempfile
 from collections import OrderedDict
-from typing import Dict, Optional, Sequence, Tuple, Union
+from typing import TYPE_CHECKING, Dict, Optional, Sequence, Tuple, Union
 
 import numpy as np
 
-from ..C import FVAL, MODE_FUN, MODE_RES, RDATAS
+from ...C import FVAL, MODE_FUN, MODE_RES, RDATAS, ModeType
+from ..base import ObjectiveBase, ResultDict
 from .amici_calculator import AmiciCalculator
 from .amici_util import (
     create_identity_parameter_mapping,
     map_par_opt_to_par_sim,
 )
-from .base import ObjectiveBase, ResultDict
 
-try:
-    import amici
-    import amici.parameter_mapping
-    import amici.petab_objective
-    from amici.parameter_mapping import ParameterMapping
-except ImportError:
-    pass
+if TYPE_CHECKING:
+    try:
+        import amici
+        from amici.parameter_mapping import ParameterMapping
+    except ImportError:
+        pass
 
 AmiciModel = Union['amici.Model', 'amici.ModelPtr']
 AmiciSolver = Union['amici.Solver', 'amici.SolverPtr']
@@ -118,6 +117,8 @@ class AmiciObjective(ObjectiveBase):
             see ``amici.Solver.setReturnDataReportingMode``. Set to ``None``
             to compute only the minimum required information.
         """
+        import amici
+
         if amici is None:
             raise ImportError(
                 "This objective requires an installation of amici "
@@ -230,6 +231,8 @@ class AmiciObjective(ObjectiveBase):
         self.calculator.initialize()
 
     def __deepcopy__(self, memodict: Dict = None) -> 'AmiciObjective':
+        import amici
+
         other = self.__class__.__new__(self.__class__)
 
         for key in set(self.__dict__.keys()) - {
@@ -247,6 +250,8 @@ class AmiciObjective(ObjectiveBase):
         return other
 
     def __getstate__(self) -> Dict:
+        import amici
+
         if self.amici_object_builder is None:
             raise NotImplementedError(
                 "AmiciObjective does not support __getstate__ without "
@@ -287,6 +292,8 @@ class AmiciObjective(ObjectiveBase):
         return state
 
     def __setstate__(self, state: Dict) -> None:
+        import amici
+
         if state['amici_object_builder'] is None:
             raise NotImplementedError(
                 "AmiciObjective does not support __setstate__ without "
@@ -333,9 +340,11 @@ class AmiciObjective(ObjectiveBase):
     def check_sensi_orders(
         self,
         sensi_orders: Tuple[int, ...],
-        mode: str,
+        mode: ModeType,
     ) -> bool:
         """See `ObjectiveBase` documentation."""
+        import amici
+
         if not sensi_orders:
             return True
         sensi_order = max(sensi_orders)
@@ -356,7 +365,7 @@ class AmiciObjective(ObjectiveBase):
         # evaluate sensitivity order
         return sensi_order <= max_sensi_order
 
-    def check_mode(self, mode: str) -> bool:
+    def check_mode(self, mode: ModeType) -> bool:
         """See `ObjectiveBase` documentation."""
         return mode in [MODE_FUN, MODE_RES]
 
@@ -364,11 +373,13 @@ class AmiciObjective(ObjectiveBase):
         self,
         x: np.ndarray,
         sensi_orders: Tuple[int, ...] = (0,),
-        mode: str = MODE_FUN,
+        mode: ModeType = MODE_FUN,
         return_dict: bool = False,
         **kwargs,
     ) -> Union[float, np.ndarray, Tuple, ResultDict]:
         """See `ObjectiveBase` documentation."""
+        import amici
+
         # Use AMICI full reporting if amici.ReturnDatas are returned and no
         #  other reporting mode was set
         if (
@@ -384,7 +395,7 @@ class AmiciObjective(ObjectiveBase):
         self,
         x: np.ndarray,
         sensi_orders: Tuple[int, ...],
-        mode: str,
+        mode: ModeType,
         edatas: Sequence['amici.ExpData'] = None,
         parameter_mapping: 'ParameterMapping' = None,
         amici_reporting: Optional['amici.RDataReporting'] = None,
@@ -397,6 +408,8 @@ class AmiciObjective(ObjectiveBase):
         result:
             A dict containing the results.
         """
+        import amici
+
         x_dct = self.par_arr_to_dct(x)
 
         # only ask amici to compute required quantities

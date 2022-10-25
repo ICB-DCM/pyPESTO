@@ -6,7 +6,7 @@ from typing import Callable, Dict, List, Tuple, Union
 
 import numpy as np
 
-from ..C import FVAL, GRAD, HESS, MODE_FUN, MODE_RES, RES, SRES
+from ..C import FVAL, GRAD, HESS, MODE_FUN, MODE_RES, RES, SRES, ModeType
 from .base import ObjectiveBase, ResultDict
 
 logger = logging.getLogger(__name__)
@@ -181,7 +181,7 @@ class FDDelta:
         # shape (n_delta, n_par, ...)
         nablas = np.array(nablas)
 
-        # The stability vector is the the absolute difference of Jacobian
+        # The stability vector is the absolute difference of Jacobian
         #  entries towards smaller and larger deltas, thus indicating the
         #  change in the approximation when changing delta.
         # This is done separately for each parameter. Then, for each the delta
@@ -372,7 +372,7 @@ class FD(ObjectiveBase):
         self,
         x: np.ndarray,
         sensi_orders: Tuple[int, ...],
-        mode: str,
+        mode: ModeType,
         **kwargs,
     ) -> ResultDict:
         """

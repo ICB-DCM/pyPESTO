@@ -37,7 +37,7 @@ jobs:
       run: .github/workflows/install_deps.sh amici
 
     - name: Run tests
-      timeout-minutes: 12
+      timeout-minutes: 15
       run: tox -e base
 
     - name: Coverage
@@ -76,6 +76,47 @@ jobs:
 
     - name: Coverage
       uses: codecov/codecov-action@v1
+      with:
+        token: ${{ secrets.CODECOV_TOKEN }}
+        file: ./coverage.xml
+
+  julia:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ['3.8']
+
+    steps:
+    - name: Check out repository
+      uses: actions/checkout@v2
+
+    - name: Prepare python ${{ matrix.python-version }}
+      uses: actions/setup-python@v1
+      with:
+        python-version: ${{ matrix.python-version }}
+
+    - name: Install julia
+      uses: julia-actions/setup-julia@v1
+      with:
+        version: 1.7
+
+    - name: Cache
+      uses: actions/cache@v3
+      with:
+        path: |
+          ~/.cache
+          ~/.julia/artifacts
+        key: ${{ runner.os }}-${{ matrix.python-version }}-ci-julia
+
+    - name: Install dependencies
+      run: .github/workflows/install_deps.sh
+
+    - name: Run tests
+      timeout-minutes: 20
+      run: tox -e julia
+
+    - name: Coverage
+      uses: codecov/codecov-action@v2
       with:
         token: ${{ secrets.CODECOV_TOKEN }}
         file: ./coverage.xml
@@ -176,7 +217,7 @@ jobs:
       run: tox -e size
 
     - name: Run quality checks
-      timeout-minutes: 1
+      timeout-minutes: 5
       run: tox -e project,flake8
 
     - name: Run pre-commit hooks
@@ -205,6 +246,9 @@ jobs:
 
     - name: Install dependencies
       run: .github/workflows/install_deps.sh doc amici
+
+    - name: Validate CITATION.cff
+      run: pip install cffconvert && cffconvert --validate
 
     - name: Build doc
       timeout-minutes: 5

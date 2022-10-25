@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from typing import List, Union
 
 import numpy as np
@@ -5,12 +7,7 @@ import numpy as np
 from ..problem import Problem
 from ..result import McmcPtResult
 from ..startpoint import UniformStartpoints
-from .sampler import Sampler
-
-try:
-    import emcee
-except ImportError:
-    emcee = None
+from .sampler import Sampler, SamplerImportError
 
 
 class EmceeSampler(Sampler):
@@ -40,11 +37,10 @@ class EmceeSampler(Sampler):
             ``emcee.EnsembleSampler.run_mcmc``.
         """
         # check dependencies
-        if emcee is None:
-            raise ImportError(
-                "This sampler requires an installation of emcee. Install e.g. "
-                "via ``pip install pypesto[emcee]``."
-            )
+        try:
+            import emcee
+        except ImportError:
+            raise SamplerImportError("emcee")
 
         super().__init__()
         self.nwalkers: int = nwalkers
@@ -68,6 +64,8 @@ class EmceeSampler(Sampler):
         x0: Union[np.ndarray, List[np.ndarray]],
     ) -> None:
         """Initialize the sampler."""
+        import emcee
+
         self.problem = problem
 
         # extract for pickling efficiency

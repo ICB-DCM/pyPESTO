@@ -2,7 +2,7 @@
 import logging
 from dataclasses import dataclass
 from enum import Enum
-from typing import Callable, Dict, List, Optional, Tuple, Union
+from typing import Any, Callable, Dict, List, Optional, Tuple, Union
 
 import numpy as np
 import petab_select
@@ -15,6 +15,7 @@ from petab_select import (
 )
 
 from ..C import TYPE_POSTPROCESSOR
+from ..problem import Problem
 from .model_problem import ModelProblem
 
 
@@ -201,9 +202,9 @@ class MethodCaller:
         be selected. The comparison is made according to the method. For
         example, in `ForwardSelector`, test models are compared to the
         previously selected model.
-    history:
-        The history of the model selection, as a `dict` with model hashes
-        as keys and models as values.
+    calibrated_models:
+        The calibrated models of the model selection, as a `dict` where keys
+        are model hashes and values are models.
     limit:
         Limit the number of calibrated models. NB: the number of accepted
         models may (likely) be fewer.
@@ -232,7 +233,7 @@ class MethodCaller:
     def __init__(
         self,
         petab_select_problem: petab_select.Problem,
-        history: Dict[str, Model],
+        calibrated_models: Dict[str, Model],
         # Arguments/attributes that can simply take the default value here.
         criterion_threshold: float = 0.0,
         limit: int = np.inf,
@@ -247,10 +248,11 @@ class MethodCaller:
         # TODO misleading, `Method` here is simply an Enum, not a callable...
         method: Method = None,
         predecessor_model: Model = None,
+        model_to_pypesto_problem_method: Callable[[Any], Problem] = None,
     ):
         """Arguments are used in every `__call__`, unless overridden."""
         self.petab_select_problem = petab_select_problem
-        self.history = history
+        self.calibrated_models = calibrated_models
 
         self.criterion_threshold = criterion_threshold
         self.limit = limit
@@ -260,6 +262,9 @@ class MethodCaller:
         self.predecessor_model = predecessor_model
         self.select_first_improvement = select_first_improvement
         self.startpoint_latest_mle = startpoint_latest_mle
+        self.model_to_pypesto_problem_method = model_to_pypesto_problem_method
+
+        self.logger = MethodLogger()
 
         self.criterion = criterion
         if self.criterion is None:
@@ -304,11 +309,10 @@ class MethodCaller:
         # May have changed from `None` to `petab_select.VIRTUAL_INITIAL_MODEL`
         self.predecessor_model = self.candidate_space.get_predecessor_model()
 
-        self.logger = MethodLogger()
-
     def __call__(
         self,
         predecessor_model: Optional[Union[Model, None]] = None,
+        newly_calibrated_models: Optional[Dict[str, Model]] = None,
     ) -> Tuple[List[Model], Dict[str, Model]]:
         """Run a single iteration of the model selection method.
 
@@ -318,70 +322,71 @@ class MethodCaller:
         of all models that have both: the same 3 estimated parameters; and 1
         additional estimated paramenter.
 
+        The input `newly_calibrated_models` is from the previous iteration. The
+        output `newly_calibrated_models` is from the current iteration.
+
         Parameters
         ----------
         predecessor_model:
             The model that will be used for comparison. Example 1: the
             initial model of a forward method. Example 2: all models found
             with a brute force method should be better than this model.
+        newly_calibrated_models:
+            The newly calibrated models from the previous iteration.
 
         Returns
         -------
         tuple
             A 2-tuple, with the following values:
 
-               1. the best model; and
-               2. all candidate models in this iteration, as a `dict` with
-                     model hashes as keys and models as values.
+               1. the predecessor model for the newly calibrated models; and
+               2. the newly calibrated models, as a `dict` where keys are model
+                  hashes and values are models.
         """
-        # Calibrated models in this iteration that improve on the predecessor
-        # model.
-        better_models = []
         # All calibrated models in this iteration (see second return value).
-        local_history = {}
         self.logger.new_selection()
 
         if predecessor_model is None:
             # May still be `None` (e.g. brute force method)
             predecessor_model = self.predecessor_model
 
-        candidate_models = petab_select.ui.candidates(
+        candidate_space = petab_select.ui.candidates(
             problem=self.petab_select_problem,
             candidate_space=self.candidate_space,
             limit=self.limit,
-            excluded_model_hashes=list(self.history),
-            predecessor_model=predecessor_model,
-        ).models
+            calibrated_models=self.calibrated_models,
+            newly_calibrated_models=newly_calibrated_models,
+            excluded_model_hashes=self.calibrated_models.keys(),
+            # FIXME meaning changes here, i.e. predecessor model is used as previous
+            #       predecessor model, since PEtab Select now gets the next predecessor
+            #       model if the candidate space has models.
+            previous_predecessor_model=predecessor_model,
+            criterion=self.criterion,
+        )
+        predecessor_model = self.candidate_space.predecessor_model
 
-        if not candidate_models:
+        if not candidate_space.models:
             raise StopIteration("No valid models found.")
 
         # TODO parallelize calibration (maybe not sensible if
         #      `self.select_first_improvement`)
-        for candidate_model in candidate_models:
+        newly_calibrated_models = {}
+        for candidate_model in candidate_space.models:
             # autoruns calibration
             self.new_model_problem(model=candidate_model)
-
-            local_history[candidate_model.model_id] = candidate_model
-
+            newly_calibrated_models[
+                candidate_model.get_hash()
+            ] = candidate_model
             method_signal = self.handle_calibrated_model(
                 model=candidate_model,
                 predecessor_model=predecessor_model,
             )
-            if method_signal.accept:
-                better_models.append(candidate_model)
             if method_signal.proceed == MethodSignalProceed.STOP:
                 break
-        self.history.update(local_history)
-        best_model = None
-        if better_models:
-            best_model = petab_select.ui.best(
-                problem=self.petab_select_problem,
-                models=better_models,
-                criterion=self.criterion,
-            )
 
-        return best_model, local_history
+        self.calibrated_models.update(newly_calibrated_models)
+
+        return predecessor_model, newly_calibrated_models
 
     def handle_calibrated_model(
         self,
@@ -508,9 +513,11 @@ class MethodCaller:
         x_guess = None
         if (
             self.startpoint_latest_mle
-            and model.predecessor_model_hash in self.history
+            and model.predecessor_model_hash in self.calibrated_models
         ):
-            predecessor_model = self.history[model.predecessor_model_hash]
+            predecessor_model = self.calibrated_models[
+                model.predecessor_model_hash
+            ]
             if str(model.petab_yaml) != str(predecessor_model.petab_yaml):
                 raise NotImplementedError(
                     'The PEtab YAML files differ between the model and its '
@@ -532,4 +539,5 @@ class MethodCaller:
             minimize_options=self.minimize_options,
             objective_customizer=self.objective_customizer,
             postprocessor=self.model_postprocessor,
+            model_to_pypesto_problem_method=self.model_to_pypesto_problem_method,
         )

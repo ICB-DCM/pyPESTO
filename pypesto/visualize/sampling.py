@@ -6,7 +6,6 @@ import matplotlib.axes
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
-import seaborn as sns
 from matplotlib.collections import LineCollection
 from matplotlib.container import ErrorbarContainer
 from matplotlib.lines import Line2D
@@ -71,6 +70,8 @@ def sampling_fval_traces(
     ax:
         The plot axes.
     """
+    import seaborn as sns
+
     # get data which should be plotted
     _, params_fval, _, _, _ = get_data_to_plot(
         result=result,
@@ -1001,6 +1002,8 @@ def sampling_parameter_traces(
     ax:
         The plot axes.
     """
+    import seaborn as sns
+
     # get data which should be plotted
     nr_params, params_fval, theta_lb, theta_ub, param_names = get_data_to_plot(
         result=result,
@@ -1105,6 +1108,8 @@ def sampling_scatter(
     ax:
         The plot axes.
     """
+    import seaborn as sns
+
     # get data which should be plotted
     nr_params, params_fval, theta_lb, theta_ub, _ = get_data_to_plot(
         result=result, i_chain=i_chain, stepsize=stepsize
@@ -1173,6 +1178,8 @@ def sampling_1d_marginals(
     ax:
         matplotlib-axes
     """
+    import seaborn as sns
+
     # get data which should be plotted
     nr_params, params_fval, theta_lb, theta_ub, param_names = get_data_to_plot(
         result=result,
@@ -1203,7 +1210,7 @@ def sampling_1d_marginals(
         elif plot_type == 'hist':
             # fixes usage of sns distplot which throws a future warning
             sns.histplot(
-                x=params_fval[par_id], ax=par_ax[par_id], stat='probability'
+                x=params_fval[par_id], ax=par_ax[par_id], stat='density'
             )
             sns.rugplot(x=params_fval[par_id], ax=par_ax[par_id])
         elif plot_type == 'both':
@@ -1211,7 +1218,7 @@ def sampling_1d_marginals(
                 x=params_fval[par_id],
                 kde=True,
                 ax=par_ax[par_id],
-                stat='probability',
+                stat='density',
             )
             sns.rugplot(x=params_fval[par_id], ax=par_ax[par_id])
 

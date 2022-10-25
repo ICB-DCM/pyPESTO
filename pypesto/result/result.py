@@ -29,3 +29,7 @@ class Result:
         self.optimize_result = OptimizeResult()
         self.profile_result = ProfileResult()
         self.sample_result = SampleResult()
+
+    def summary(self) -> str:
+        """Get summary of the object."""
+        return self.optimize_result.summary()

@@ -20,24 +20,25 @@ def check_overwrite(
     """
     Check whether target already exists.
 
-    Sends a warning if overwrite=False, deletes the target if overwrite=True.
+    Sends a warning if ``overwrite=False``, deletes the target if
+    ``overwrite=True``.
 
     Attributes
     ----------
     f: file or group where existence of a group with the path group_path
        should be checked
     target: name of the group, whose existence is checked
-    overwrite: if overwrite is true, it deltes the target in f
+    overwrite: if ``True``, it deletes the target in ``f``
     """
     if target in f:
         if overwrite:
             del f[target]
         else:
-            raise Exception(
-                f"The file already exists and contains "
-                f"information about {target} result."
-                f"If you wish to overwrite the file set"
-                f"overwrite=True."
+            raise RuntimeError(
+                f"File `{f.filename}` already exists and contains "
+                f"information about {target} result. "
+                f"If you wish to overwrite the file, set "
+                f"`overwrite=True`."
             )
 
 
@@ -94,30 +95,6 @@ class ProblemHDF5Writer:
                     problem_grp.attrs[problem_attr] = value
 
 
-def get_or_create_group(
-    f: Union[h5py.File, h5py.Group], group_path: str
-) -> h5py.Group:
-    """
-    Return/create a group object for the group with group_path relative to f.
-
-    Attributes
-    ----------
-    f: file or group where existence of a group with the path group_path
-       should be checked
-    group_path: the path or simply the name of the group that should exist in f
-
-    Returns
-    -------
-    grp:
-        hdf5 group object with specified path relative to f.
-    """
-    if group_path in f:
-        grp = f[group_path]
-    else:
-        grp = f.create_group(group_path)
-    return grp
-
-
 class OptimizationResultHDF5Writer:
     """
     Writer of the HDF5 result files.
@@ -149,14 +126,14 @@ class OptimizationResultHDF5Writer:
 
         with h5py.File(self.storage_filename, "a") as f:
             check_overwrite(f, overwrite, 'optimization')
-            optimization_grp = get_or_create_group(f, "optimization")
+            optimization_grp = f.require_group("optimization")
             # settings =
             # optimization_grp.create_dataset("settings", settings, dtype=)
-            results_grp = get_or_create_group(optimization_grp, "results")
+            results_grp = optimization_grp.require_group("results")
 
             for start in result.optimize_result.list:
                 start_id = start['id']
-                start_grp = get_or_create_group(results_grp, start_id)
+                start_grp = results_grp.require_group(start_id)
                 for key in start.keys():
                     if key == 'history':
                         continue
@@ -208,8 +185,7 @@ class SamplingResultHDF5Writer:
 
         with h5py.File(self.storage_filename, "a") as f:
             check_overwrite(f, overwrite, 'sampling')
-            sampling_grp = get_or_create_group(f, "sampling")
-            results_grp = get_or_create_group(sampling_grp, "results")
+            results_grp = f.require_group("sampling/results")
 
             for key in result.sample_result.keys():
                 if isinstance(result.sample_result[key], np.ndarray):
@@ -252,16 +228,12 @@ class ProfileResultHDF5Writer:
 
         with h5py.File(self.storage_filename, "a") as f:
             check_overwrite(f, overwrite, 'profiling')
-            profiling_grp = get_or_create_group(f, "profiling")
+            profiling_grp = f.require_group("profiling")
 
             for profile_id, profile in enumerate(result.profile_result.list):
-                profile_grp = get_or_create_group(
-                    profiling_grp, str(profile_id)
-                )
+                profile_grp = profiling_grp.require_group(str(profile_id))
                 for parameter_id, parameter_profile in enumerate(profile):
-                    result_grp = get_or_create_group(
-                        profile_grp, str(parameter_id)
-                    )
+                    result_grp = profile_grp.require_group(str(parameter_id))
 
                     if parameter_profile is None:
                         result_grp.attrs['IsNone'] = True

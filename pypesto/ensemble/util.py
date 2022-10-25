@@ -2,7 +2,7 @@
 
 import os
 from pathlib import Path
-from typing import Callable, Sequence, Union
+from typing import Callable, Literal, Sequence, Union
 
 import h5py
 import numpy as np
@@ -13,6 +13,8 @@ from ..C import (
     OPTIMIZE,
     OUTPUT,
     OUTPUT_IDS,
+    OUTPUT_SIGMAY,
+    OUTPUT_WEIGHT,
     PREDICTION_ID,
     PREDICTION_RESULTS,
     SAMPLE,
@@ -23,7 +25,7 @@ from ..C import (
     EnsembleType,
 )
 from ..result import PredictionConditionResult, PredictionResult
-from ..store import get_or_create_group, read_result, write_array
+from ..store import read_result, write_array
 from .ensemble import Ensemble, EnsemblePrediction
 
 
@@ -80,7 +82,7 @@ def read_from_csv(
 
 def read_ensemble_from_hdf5(
     filename: str,
-    input_type: str = OPTIMIZE,
+    input_type: Literal['optimize', 'sample'] = OPTIMIZE,
     remove_burn_in: bool = True,
     chain_slice: slice = None,
     cutoff: float = np.inf,
@@ -107,7 +109,7 @@ def read_ensemble_from_hdf5(
     if input_type == OPTIMIZE:
         result = read_result(filename=filename, optimize=True)
         return Ensemble.from_optimization_endpoints(
-            result=result, cutoff=cutoff, max_size=max_size
+            result=result, rel_cutoff=cutoff, max_size=max_size
         )
     elif input_type == SAMPLE:
         result = read_result(filename=filename, sample=True)
@@ -206,7 +208,7 @@ def write_ensemble_prediction_to_h5(
         # write lower bounds per condition, if available
         if ensemble_prediction.lower_bound is not None:
             if isinstance(ensemble_prediction.lower_bound[0], np.ndarray):
-                lb_grp = get_or_create_group(f, LOWER_BOUND)
+                lb_grp = f.require_group(LOWER_BOUND)
                 for i_cond, lower_bounds in enumerate(
                     ensemble_prediction.lower_bound
                 ):
@@ -222,7 +224,7 @@ def write_ensemble_prediction_to_h5(
         # write upper bounds per condition, if available
         if ensemble_prediction.upper_bound is not None:
             if isinstance(ensemble_prediction.upper_bound[0], np.ndarray):
-                ub_grp = get_or_create_group(f, UPPER_BOUND)
+                ub_grp = f.require_group(UPPER_BOUND)
                 for i_cond, upper_bounds in enumerate(
                     ensemble_prediction.upper_bound
                 ):
@@ -326,12 +328,22 @@ def read_ensemble_prediction_from_h5(
                     decode_array(f[f'{key}/{id}' f'/{OUTPUT_IDS}'][:])
                 )
                 timepoints = f[f'{key}/{id}/{TIMEPOINTS}'][:]
+                try:
+                    output_weight = f[f'{key}/{id}/{OUTPUT_WEIGHT}'][()]
+                except KeyError:
+                    output_weight = None
+                try:
+                    output_sigmay = f[f'{key}/{id}/{OUTPUT_SIGMAY}'][:]
+                except KeyError:
+                    output_sigmay = None
                 pred_cond_res_list.append(
                     PredictionConditionResult(
                         timepoints=timepoints,
                         output_ids=output_ids,
                         output=output,
                         x_names=x_names,
+                        output_weight=output_weight,
+                        output_sigmay=output_sigmay,
                     )
                 )
             pred_res_list.append(

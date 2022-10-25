@@ -1,20 +1,11 @@
-"""
-Problem
-=======
-
-A problem contains the objective as well as all information like prior
-describing the problem to be solved.
-
-"""
-
 import copy
 from typing import Iterable, List, Optional, SupportsFloat, SupportsInt, Union
 
 import numpy as np
 import pandas as pd
 
-from .objective import ObjectiveBase
-from .objective.priors import NegLogPriors
+from ..objective import ObjectiveBase
+from ..objective.priors import NegLogPriors
 
 SupportsFloatIterableOrValue = Union[Iterable[SupportsFloat], SupportsFloat]
 SupportsIntIterableOrValue = Union[Iterable[SupportsInt], SupportsInt]

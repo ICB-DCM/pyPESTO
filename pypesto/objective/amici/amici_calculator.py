@@ -1,8 +1,20 @@
-from typing import Dict, List, Sequence, Tuple, Union
+from __future__ import annotations
+
+from typing import TYPE_CHECKING, Dict, List, Sequence, Tuple, Union
 
 import numpy as np
 
-from ..C import CHI2, FVAL, GRAD, HESS, MODE_FUN, MODE_RES, RDATAS, RES, SRES
+from ...C import (
+    FVAL,
+    GRAD,
+    HESS,
+    MODE_FUN,
+    MODE_RES,
+    RDATAS,
+    RES,
+    SRES,
+    ModeType,
+)
 from .amici_util import (
     add_sim_grad_to_opt_grad,
     add_sim_hess_to_opt_hess,
@@ -13,13 +25,12 @@ from .amici_util import (
     sim_sres_to_opt_sres,
 )
 
-try:
-    import amici
-    import amici.parameter_mapping
-    import amici.petab_objective
-    from amici.parameter_mapping import ParameterMapping
-except ImportError:
-    pass
+if TYPE_CHECKING:
+    try:
+        import amici
+        from amici.parameter_mapping import ParameterMapping
+    except ImportError:
+        ParameterMapping = None
 
 AmiciModel = Union['amici.Model', 'amici.ModelPtr']
 AmiciSolver = Union['amici.Solver', 'amici.SolverPtr']
@@ -38,13 +49,13 @@ class AmiciCalculator:
         self,
         x_dct: Dict,
         sensi_orders: Tuple[int],
-        mode: str,
+        mode: ModeType,
         amici_model: AmiciModel,
         amici_solver: AmiciSolver,
-        edatas: List['amici.ExpData'],
+        edatas: List[amici.ExpData],
         n_threads: int,
         x_ids: Sequence[str],
-        parameter_mapping: 'ParameterMapping',
+        parameter_mapping: ParameterMapping,
         fim_for_hess: bool,
     ):
         """Perform the actual AMICI call.
@@ -75,6 +86,9 @@ class AmiciCalculator:
             Whether to use the FIM (if available) instead of the Hessian (if
             requested).
         """
+        import amici
+        import amici.parameter_mapping
+
         # set order in solver
         if sensi_orders:
             sensi_order = max(sensi_orders)
@@ -139,15 +153,17 @@ class AmiciCalculator:
 def calculate_function_values(
     rdatas,
     sensi_orders: Tuple[int, ...],
-    mode: str,
+    mode: ModeType,
     amici_model: AmiciModel,
     amici_solver: AmiciSolver,
-    edatas: List['amici.ExpData'],
+    edatas: List[amici.ExpData],
     x_ids: Sequence[str],
-    parameter_mapping: 'ParameterMapping',
+    parameter_mapping: ParameterMapping,
     fim_for_hess: bool,
 ):
     """Calculate the function values from rdatas and return as dict."""
+    import amici
+
     # full optimization problem dimension (including fixed parameters)
     dim = len(x_ids)
 
@@ -236,12 +252,11 @@ def calculate_function_values(
 
     ret = {
         FVAL: nllh,
-        RDATAS: rdatas,
-        CHI2: chi2,
         GRAD: snllh,
         HESS: s2nllh,
         RES: res,
         SRES: sres,
+        RDATAS: rdatas,
     }
 
     return filter_return_dict(ret)
