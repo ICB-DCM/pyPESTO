@@ -9,8 +9,8 @@ For more background:
    Bioinformatics, Volume 37, Issue 23, 1 December 2021, Pages 4493–4500,
    https://doi.org/10.1093/bioinformatics/btab512
 
-.. [SchmiesterWei2020] "Efficient gradient-based parameter estimation for
-   dynamic models using qualitative data",
+.. [SchmiesterWei2020] "Parameterization of mechanistic models from
+   qualitative data using an efficient optimal scaling approach",
    Leonard Schmiester, Daniel Weindl, Jan Hasenauer,
    J. Math. Biol. 81, 603–623 (2020).
    https://doi.org/10.1007/s00285-020-01522-w

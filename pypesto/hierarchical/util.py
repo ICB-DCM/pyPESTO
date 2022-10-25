@@ -9,7 +9,13 @@ def compute_optimal_scaling(
     sigma: List[np.ndarray],
     mask: List[np.ndarray],
 ) -> float:
-    """Compute optimal scaling."""
+    """
+    Compute optimal scaling.
+
+    Compute optimal scaling parameter for the given measurements and model
+    outputs. See https://doi.org/10.1093/bioinformatics/btz581 SI Section 3.1
+    for the derivation.
+    """
     # numerator, denominator
     num, den = 0.0, 0.0
 
@@ -44,7 +50,12 @@ def compute_optimal_offset(
     sigma: List[np.ndarray],
     mask: List[np.ndarray],
 ) -> float:
-    """Compute optimal offset."""
+    """Compute optimal offset.
+
+    Compute optimal offset for the given measurements and model outputs. See
+    https://doi.org/10.1093/bioinformatics/btz581 SI Section 3.1 for the
+    derivation.
+    """
     # numerator, denominator
     num, den = 0.0, 0.0
 

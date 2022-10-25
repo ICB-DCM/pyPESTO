@@ -85,6 +85,12 @@ class InnerProblem:
         return [x for x in self.xs.values() if x.group == group]
 
     def get_boring_pars(self, scaled: bool) -> Dict[str, float]:
+        """
+        Get boring parameter values.
+
+        Get parameter values to be used for simulation before their optimal
+        values are computed.
+        """
         return {
             x.id: scale_value(x.boring_val, x.scale)
             if scaled
@@ -93,15 +99,35 @@ class InnerProblem:
         }
 
     def get_for_id(self, id: str) -> InnerParameter:
-        if id in self.xs:
+        """Get InnerParameter for the given parameter ID."""
+        try:
             return self.xs[id]
-        raise KeyError(f"Cannot find id {id}.")
+        except KeyError:
+            raise KeyError(f"Cannot find parameter with id {id}.")
 
     def is_empty(self) -> bool:
+        """Check for emptiness.
+
+        Returns
+        -------
+        ``True`` if there aren't any parameters associated with this problem,
+        ``False`` otherwise.
+        """
         return len(self.xs) == 0
 
 
 class AmiciInnerProblem(InnerProblem):
+    """
+    Inner optimization problem in hierarchical optimization.
+
+    For use with AMICI objects.
+
+    Attributes
+    ----------
+    edataviews:
+        AMICI ``ExpDataView``s for each simulation condition.
+    """
+
     def __init__(self, edatas: List[amici.ExpData], **kwargs):
         super().__init__(**kwargs)
         self.edataviews = [amici.numpy.ExpDataView(edata) for edata in edatas]
