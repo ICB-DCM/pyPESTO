@@ -156,7 +156,7 @@ class HierarchicalAmiciCalculator(AmiciCalculator):
 
         # TODO use plist to compute only required derivatives, in
         # `super.__call__`, `amici.parameter_mapping.fill_in_parameters`
-        super().__call__(
+        result = super().__call__(
             x_dct=x_dct,
             sensi_orders=sensi_orders,
             mode=mode,
@@ -168,3 +168,6 @@ class HierarchicalAmiciCalculator(AmiciCalculator):
             parameter_mapping=parameter_mapping,
             fim_for_hess=fim_for_hess,
         )
+        result['inner_parameters'] = inner_result[X]
+        result['inner_rdatas'] = inner_result[RDATAS]
+        return result
