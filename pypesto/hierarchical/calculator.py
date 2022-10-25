@@ -70,6 +70,8 @@ class HierarchicalAmiciCalculator(AmiciCalculator):
         parameter_mapping: ParameterMapping,
         fim_for_hess: bool,
     ):
+        if not self.inner_problem.check_edatas(edatas=edatas):
+            raise ValueError('The experimental data provided to this call differs from the experimental data used to setup the hierarchical optimizer.')
         import amici.parameter_mapping
 
         # set order in solver

@@ -51,15 +51,20 @@ def test_hierarchical_sigma():
     # Check for same fval
     # TODO get sigma from hierarchical optimization then supply to non-hierarchical,
     #      for fair test.
-    fval_False = problem[False].objective(importer.petab_problem.x_nominal_free_scaled)
-    fval_True = problem[True].objective(importer.petab_problem.x_nominal_free_scaled[:6])
+    fval_False = problem[False].objective(
+        importer.petab_problem.x_nominal_free_scaled
+    )
+    fval_True = problem[True].objective(
+        importer.petab_problem.x_nominal_free_scaled[:6]
+    )
     # Hierarchical optimization does not affect the function value.
     assert fval_True == fval_False
 
-
     # Check for same optimization result
     startpoints = pypesto.startpoint.latin_hypercube(
-        n_starts=n_starts, lb=problems[False].lb, ub=problems[False].ub,
+        n_starts=n_starts,
+        lb=problems[False].lb,
+        ub=problems[False].ub,
     )
 
     problems[False].set_x_guesses(startpoints)
@@ -68,18 +73,20 @@ def test_hierarchical_sigma():
     inner_solvers = {
         'analytical': AnalyticalInnerSolver(),
         'numerical': NumericalInnerSolver(),
-    ]
+    }
 
     def get_result(problem, inner_solver, inner_solvers=inner_solvers):
         if inner_solver:
-            problem.objective.calculator.inner_solver = inner_solvers[inner_solver_id]
+            problem.objective.calculator.inner_solver = inner_solvers[
+                inner_solver_id
+            ]
 
         engine = pypesto.MultiProcessEngine(n_procs=8)
 
         start_time = time.time()
         result = pypesto.minimize(problem, n_starts=50, engine=engine)
         time = time.time() - start_time
-        
+
         best_x = result.optimize_result.list[0].x
         best_fval = result.optimize_result.list[0].fval
 
@@ -102,8 +109,12 @@ def test_hierarchical_sigma():
     assert results['numerical']['time'] < results[False]['time']
     assert results['analytical']['time'] < results['numerical']['time']
 
-    assert np.isclose(results['analytical']['best_fval'], results[False]['best_fval'])
-    assert np.isclose(results['analytical']['best_fval'], results['numerical']['best_fval'])
+    assert np.isclose(
+        results['analytical']['best_fval'], results[False]['best_fval']
+    )
+    assert np.isclose(
+        results['analytical']['best_fval'], results['numerical']['best_fval']
+    )
     # Then `numerical isclose False` is mostly implied.
 
     # TODO assert optimized vector is similar at both model and objective

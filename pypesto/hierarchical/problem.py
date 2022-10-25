@@ -79,6 +79,33 @@ class InnerProblem:
         return len(self.xs) == 0
 
 
+class AmiciInnerProblem(InnerProblem):
+    def __init__(self, edatas: List[amici.ExpData], **kwargs):
+        super().__init__(**kwargs)
+        self.edataviews = [amici.numpy.ExpDataView(edata) for edata in edatas]
+
+    def check_edatas(self, edatas):
+        edataviews = [amici.numpy.ExpDataView(edata) for edata in edatas]
+
+        if len(self.edataviews) != len(edataviews):
+            return False
+
+        for edataview0, edataview in zip(self.edataviews, edataviews):
+            if not compare_edataviews(edataview0=edataview0, edataview=edataview):
+                return False
+
+        return True
+
+
+def compare_edataviews(edataview0, edataview):
+    for field_name in amici.numpy.ExpDataView._field_names:
+        if edataview0[field_name] is None and edataview[field_name] is None:
+            continue
+        if not np.array_equal(edataview0[field_name], edataview[field_name], equal_nan=True):
+            return False
+    return True
+
+
 def scale_value_dict(
     dct: Dict[str, float], problem: InnerProblem
 ) -> Dict[str, float]:
@@ -113,6 +140,7 @@ def inner_problem_from_petab_problem(
 
     Hierarchical optimization is a pypesto-specific PEtab extension.
     """
+    import amici
     # inner parameters
     inner_parameters = inner_parameters_from_parameter_df(
         petab_problem.parameter_df
@@ -124,15 +152,15 @@ def inner_problem_from_petab_problem(
     ixs = ixs_for_measurement_specific_parameters(
         petab_problem, amici_model, x_ids
     )
-    # print(ixs)
+
     # transform experimental data
-    edatas = [
+    data = [
         amici.numpy.ExpDataView(edata)['observedData'] for edata in edatas
     ]
-    # print(edatas)
+
     # matrixify
-    ix_matrices = ix_matrices_from_arrays(ixs, edatas)
-    # print(ix_matrices)
+    ix_matrices = ix_matrices_from_arrays(ixs, data)
+
     # assign matrices
     for par in inner_parameters:
         par.ixs = ix_matrices[par.id]
@@ -161,7 +189,7 @@ def inner_problem_from_petab_problem(
         if par.id in coupled_pars:
             par.coupled = True
 
-    return InnerProblem(inner_parameters, edatas)
+    return AmiciInnerProblem(xs=inner_parameters, data=data, edatas=edatas)
 
 
 def inner_parameters_from_parameter_df(
