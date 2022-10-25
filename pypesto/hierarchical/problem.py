@@ -32,15 +32,29 @@ PARAMETER_CATEGORY = 'parameterCategory'
 
 
 class InnerProblem:
+    """
+    Inner optimization problem in hierarchical optimization.
+
+    Attributes
+    ----------
+    xs:
+        Mapping of (inner) parameter ID to ``InnerParameters``.
+    data:
+        Measurement data. One matrix (`num_timepoints` x `num_observables`)
+        per simulation condition. Missing observations as NaN.
+    """
+
     def __init__(self, xs: List[InnerParameter], data: List[np.ndarray]):
         self.xs: Dict[str, InnerParameter] = {x.id: x for x in xs}
         self.data = data
-        self._solve_numerically = False
 
         logger.debug(f"Created InnerProblem with ids {self.get_x_ids()}")
 
         if self.is_empty():
-            raise ValueError('There are no parameters in the inner problem of hierarchical optimization.')
+            raise ValueError(
+                'There are no parameters in the inner problem of hierarchical '
+                'optimization.'
+            )
 
     @staticmethod
     def from_petab_amici(
@@ -48,21 +62,26 @@ class InnerProblem:
         amici_model: 'amici.Model',
         edatas: List['amici.ExpData'],
     ):
+        """Create an InnerProblem from a PEtab problem and AMICI objects."""
         return inner_problem_from_petab_problem(
             petab_problem, amici_model, edatas
         )
 
     def get_x_ids(self) -> List[str]:
-        return [x.id for x in self.xs.values()]
+        """Get IDs of inner parameters."""
+        return list(self.xs.keys())
 
     def get_xs_for_type(self, type: str) -> List[InnerParameter]:
+        """Get inner parameters of the given type."""
         return [x for x in self.xs.values() if x.type == type]
 
     def get_groups_for_xs(self, type: str) -> List[int]:
+        """Get unique list of ``InnerParameter.group`` values."""
         groups = [x.group for x in self.xs.values() if x.type == type]
         return list(set(groups))
 
     def get_xs_for_group(self, group: int) -> List[InnerParameter]:
+        """Get ``InnerParameter``s that belong to the given group."""
         return [x for x in self.xs.values() if x.group == group]
 
     def get_boring_pars(self, scaled: bool) -> Dict[str, float]:
@@ -94,7 +113,9 @@ class AmiciInnerProblem(InnerProblem):
             return False
 
         for edataview0, edataview in zip(self.edataviews, edataviews):
-            if not compare_edataviews(edataview0=edataview0, edataview=edataview):
+            if not compare_edataviews(
+                edataview0=edataview0, edataview=edataview
+            ):
                 return False
 
         return True
@@ -104,7 +125,9 @@ def compare_edataviews(edataview0, edataview):
     for field_name in amici.numpy.ExpDataView._field_names:
         if edataview0[field_name] is None and edataview[field_name] is None:
             continue
-        if not np.array_equal(edataview0[field_name], edataview[field_name], equal_nan=True):
+        if not np.array_equal(
+            edataview0[field_name], edataview[field_name], equal_nan=True
+        ):
             return False
     return True
 
@@ -144,6 +167,7 @@ def inner_problem_from_petab_problem(
     Hierarchical optimization is a pypesto-specific PEtab extension.
     """
     import amici
+
     # inner parameters
     inner_parameters = inner_parameters_from_parameter_df(
         petab_problem.parameter_df
@@ -157,9 +181,7 @@ def inner_problem_from_petab_problem(
     )
 
     # transform experimental data
-    data = [
-        amici.numpy.ExpDataView(edata)['observedData'] for edata in edatas
-    ]
+    data = [amici.numpy.ExpDataView(edata)['observedData'] for edata in edatas]
 
     # matrixify
     ix_matrices = ix_matrices_from_arrays(ixs, data)

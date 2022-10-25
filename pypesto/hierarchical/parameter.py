@@ -50,15 +50,16 @@ class InnerParameter:
         ub:
             Upper bound for this parameter.
         ixs:
-            TODO
+            Boolean matrix, indicating for which measurements this parameter
+            is used.
         boring_val:
-            Value to be used when the parameter is not present (in particular
-            to simulate unscaled observables).
+            Value to be used when the optimal parameter is not yet known
+            (in particular to simulate unscaled observables).
         category:
-            TODO
+            Category index.
             Only relevant if ``type==qualitative_scaling``.
         group:
-            TODO
+            Group index.
             Only relevant if ``type==qualitative_scaling``.
         """
         self.id: str = id
