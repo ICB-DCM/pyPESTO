@@ -39,6 +39,9 @@ class InnerProblem:
 
         logger.debug(f"Created InnerProblem with ids {self.get_x_ids()}")
 
+        if self.is_empty():
+            raise ValueError('There are no parameters in the inner problem of hierarchical optimization.')
+
     @staticmethod
     def from_petab_amici(
         petab_problem: 'petab.Problem',
