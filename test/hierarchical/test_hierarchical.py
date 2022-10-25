@@ -22,15 +22,13 @@ from pypesto.petab import PetabImporter
 # TODO
 # - test scaling and offset parameters
 
+# Suitable test cases from the benchmark collection
+# - Boehm
+# - Fujita
 
-def test_hierarchical_sigma():
-    """Test hierarchical optimization of noise (sigma) parameters.
-
-    Here (mostly): the flags `True` and `False` indicate that hierarchical
-    optimization is enabled and disabled, respectively.
-    """
-    # load benchmark collection PEtab problem
+def get_boehm():
     petab_problem = get_problem("Boehm_JProteomeRes2014")
+
     # Mark output parameters for hierarchical optimization
     petab_problem.parameter_df[PARAMETER_TYPE] = None
     for par_id in petab_problem.parameter_df.index:
@@ -47,15 +45,19 @@ def test_hierarchical_sigma():
                 par_id, PARAMETER_TYPE
             ] = InnerParameter.SCALING
 
-    # petab_problem = get_problem("Fujita_SciSignal2010")
+    return petab_problem
 
+
+def test_hierarchical_optimization_sigma():
+    """Test hierarchical optimization of noise (sigma) parameters.
+
+    Here (mostly): the flags `True` and `False` indicate that hierarchical
+    optimization is enabled and disabled, respectively.
+    """
+    petab_problem = get_boehm()
     importer = PetabImporter(petab_problem)
-
-    # `True` indicates hierarchical optimization is enabled,
-    # `False` is without.
     flags = [False, True]
     startpoints = None
-
     problems = {}
     for flag in flags:
         objective = importer.create_objective(hierarchical=flag)
@@ -65,31 +67,22 @@ def test_hierarchical_sigma():
         )
         problem.objective.amici_solver.setAbsoluteTolerance(1e-8)
         problem.objective.amici_solver.setRelativeTolerance(1e-8)
-
         problems[flag] = problem
 
-    # Check for same fval
-    # TODO get sigma from hierarchical optimization then supply to non-hierarchical,
-    #      for fair test.
-    fval_False = problems[False].objective(
-        importer.petab_problem.x_nominal_free_scaled
-    )
-    fval_True = problems[True].objective(
-        importer.petab_problem.x_nominal_free_scaled[:6]
-    )
-    # Hierarchical optimization does not affect the function value.
-    assert_allclose(fval_True, fval_False)
-
     # Check for same optimization result
-    n_starts = 1
-    startpoints = pypesto.startpoint.latin_hypercube(
-        n_starts=n_starts,
-        lb=problems[False].lb,
-        ub=problems[False].ub,
+    n_starts = 24
+    engine = pypesto.engine.MultiThreadEngine()
+    startpoints = problems[False].get_full_vector(
+        pypesto.startpoint.latin_hypercube(
+            n_starts=n_starts,
+            lb=problems[False].lb,
+            ub=problems[False].ub,
+        )
     )
 
     problems[False].set_x_guesses(startpoints)
-    problems[True].set_x_guesses(startpoints[:, :6])
+    # FIXME ideally would not need to provide guesses for inner parameters
+    problems[True].set_x_guesses(startpoints)
 
     inner_solvers = {
         'analytical': AnalyticalInnerSolver(),
@@ -102,10 +95,8 @@ def test_hierarchical_sigma():
                 inner_solver_id
             ]
 
-        engine = pypesto.MultiProcessEngine(n_procs=8)
-
         start_time = time.time()
-        result = pypesto.minimize(problem, n_starts=50, engine=engine)
+        result = pypesto.optimize.minimize(problem, n_starts=n_starts, engine=engine)
         wall_time = time.time() - start_time
 
         best_x = result.optimize_result.list[0].x
@@ -126,6 +117,7 @@ def test_hierarchical_sigma():
     ]:
         results[inner_solver_id] = get_result(problem, inner_solver_id)
 
+    breakpoint()
     assert results['analytical']['time'] < results[False]['time']
     assert results['numerical']['time'] < results[False]['time']
     assert results['analytical']['time'] < results['numerical']['time']
@@ -142,19 +134,16 @@ def test_hierarchical_sigma():
     #      hyperparameter values.
 
 
-def test_hierarchical_sigma2():
-    petab_problem = get_problem("Boehm_JProteomeRes2014")
-    # petab_problem = get_problem("Fujita_SciSignal2010")
-    
-    petab_problem.parameter_df.loc[petab_problem.parameter_df.index.str.startswith('sd_'), 'parameterType'] = InnerParameter.SIGMA
-    
+def test_hierarchical_calculator_and_objective():
+    """Test hierarchical calculation of sigma and objective values.
+
+    Here (mostly): the flags `True` and `False` indicate that hierarchical
+    optimization is enabled and disabled, respectively.
+    """
+    petab_problem = get_boehm()
     importer = PetabImporter(petab_problem)
-    
-    # `True` indicates hierarchical optimization is enabled,
-    # `False` is without.
     flags = [False, True]
     startpoints = None
-    
     problems = {}
     for flag in flags:
         objective = importer.create_objective(hierarchical=flag)
@@ -164,9 +153,7 @@ def test_hierarchical_sigma2():
         )
         problem.objective.amici_solver.setAbsoluteTolerance(1e-8)
         problem.objective.amici_solver.setRelativeTolerance(1e-8)
-    
         problems[flag] = problem
-    
     
     def calculate(problem, x_dct):              
         return problem.objective.calculator(
@@ -181,7 +168,6 @@ def test_hierarchical_sigma2():
             parameter_mapping=problem.objective.parameter_mapping,
             fim_for_hess=False,
         )
-    
     
     x_dct = dict(zip(petab_problem.x_ids, petab_problem.x_nominal_scaled))
     # Nominal sigma values are close to optimal. One is changed here to facilitate testing.
@@ -223,9 +209,3 @@ def test_hierarchical_sigma2():
     # High precision is required as the nominal values are very good already, so the test might pass accidentally
     # if the nominal values are used accidentally.
     assert np.isclose(fval_True, fval_False, atol=1e-12, rtol=1e-14)
-
-    # TODO tests
-    #  - optimized vector is similar at both model and objective hyperparameter
-    #    values
-    #  - hierarchical is faster than normal
-    #  - analyticalsolver is faster than numericalsolver
