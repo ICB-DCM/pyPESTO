@@ -6,6 +6,8 @@ from benchmark_models_petab import get_problem
 
 import pypesto
 import pypesto.logging
+from pypesto.hierarchical.parameter import InnerParameter
+from pypesto.hierarchical.problem import PARAMETER_TYPE
 from pypesto.hierarchical.solver import (
     AnalyticalInnerSolver,
     NumericalInnerSolver,
@@ -25,8 +27,24 @@ def test_hierarchical_sigma():
     Here (mostly): the flags `True` and `False` indicate that hierarchical
     optimization is enabled and disabled, respectively.
     """
-
+    # load benchmark collection PEtab problem
     petab_problem = get_problem("Boehm_JProteomeRes2014")
+    # Mark output parameters for hierarchical optimization
+    petab_problem.parameter_df[PARAMETER_TYPE] = None
+    for par_id in petab_problem.parameter_df.index:
+        if par_id.startswith("offset_"):
+            petab_problem.parameter_df.loc[
+                par_id, PARAMETER_TYPE
+            ] = InnerParameter.OFFSET
+        elif par_id.startswith("sd_"):
+            petab_problem.parameter_df.loc[
+                par_id, PARAMETER_TYPE
+            ] = InnerParameter.SIGMA
+        elif par_id.startswith("scaling_"):
+            petab_problem.parameter_df.loc[
+                par_id, PARAMETER_TYPE
+            ] = InnerParameter.SCALING
+
     # petab_problem = get_problem("Fujita_SciSignal2010")
 
     importer = PetabImporter(petab_problem)
