@@ -1,6 +1,6 @@
 """Inner optimization problem in hierarchical optimization."""
 import logging
-from typing import Dict, List, Union
+from typing import Dict, List, Tuple, Union
 
 import numpy as np
 import pandas as pd
@@ -231,10 +231,19 @@ def inner_parameters_from_parameter_df(
 
 
 def ixs_for_measurement_specific_parameters(
-    petab_problem: 'petab.Problem', amici_model: 'amici.Model', x_ids
-) -> Dict:
-    ixs_for_par = {}
+    petab_problem: 'petab.Problem',
+    amici_model: 'amici.Model',
+    x_ids: List[str],
+) -> Dict[str, List[Tuple[int, int, int]]]:
+    """
+    Create mapping of parameters to measurements.
 
+    Returns
+    -------
+    A dictionary mapping parameter ID to a List of condition, time, observable
+    index tuples in which this output parameter is used.
+    """
+    ixs_for_par = {}
     observable_ids = amici_model.getObservableIds()
 
     simulation_conditions = (
@@ -288,12 +297,19 @@ def ixs_for_measurement_specific_parameters(
     return ixs_for_par
 
 
-# def noise
+def ix_matrices_from_arrays(
+    ixs: Dict[str, List[Tuple[int, int, int]]], edatas: List[np.array]
+) -> Dict[str, List[np.array]]:
+    """
+    Convert mapping of parameters to measurements to matrix form.
 
-# def ixs_for_noise_models_from_observable_df(df: pd.DataFrame):
-
-
-def ix_matrices_from_arrays(ixs: Dict, edatas) -> Dict[str, List[np.array]]:
+    Returns
+    -------
+    A dictionary mapping parameter ID to a list of Boolean matrices, one per
+    simulation condition. Therein, ``True`` indicates that the respective
+    parameter is used for the model output at the respective timepoint,
+    observable and condition index.
+    """
     ix_matrices = {
         id: [np.zeros_like(edata, dtype=bool) for edata in edatas]
         for id in ixs

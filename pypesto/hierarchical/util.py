@@ -114,6 +114,12 @@ def apply_offset(
 def compute_optimal_sigma(
     data: List[np.ndarray], sim: List[np.ndarray], mask: List[np.ndarray]
 ) -> float:
+    """Compute optimal sigma.
+
+    Compute optimal sigmas for the given measurements and model outputs. See
+    https://doi.org/10.1093/bioinformatics/btz581 SI Section 3.2 for the
+    derivation.
+    """
     # numerator, denominator
     num, den = 0.0, 0.0
 
@@ -145,6 +151,11 @@ def apply_sigma(
 def compute_nllh(
     data: List[np.ndarray], sim: List[np.ndarray], sigma: List[np.ndarray]
 ) -> float:
+    """Compute negative log-likelihood.
+
+    Compute negative log-likelihood of the data, given the model outputs and
+    sigmas.
+    """
     nllh = 0.0
     for data_i, sim_i, sigma_i in zip(data, sim, sigma):
         nllh += 0.5 * np.nansum(np.log(2 * np.pi * sigma_i**2))
