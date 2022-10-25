@@ -25,15 +25,11 @@ from .amici_util import (
     sim_sres_to_opt_sres,
 )
 
-if TYPE_CHECKING:
-    try:
-        import amici
-        from amici.parameter_mapping import ParameterMapping
-    except ImportError:
-        ParameterMapping = None
+import amici
+from amici.parameter_mapping import ParameterMapping
 
-AmiciModel = Union['amici.Model', 'amici.ModelPtr']
-AmiciSolver = Union['amici.Solver', 'amici.SolverPtr']
+AmiciModel = Union[amici.Model, amici.ModelPtr]
+AmiciSolver = Union[amici.Solver, amici.SolverPtr]
 
 
 class AmiciCalculator:
@@ -86,8 +82,6 @@ class AmiciCalculator:
             Whether to use the FIM (if available) instead of the Hessian (if
             requested).
         """
-        import amici
-        import amici.parameter_mapping
 
         # set order in solver
         if sensi_orders:
