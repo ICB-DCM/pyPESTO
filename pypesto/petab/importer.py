@@ -334,6 +334,11 @@ class PetabImporter(AmiciObjectBuilder):
             The experimental data in AMICI format.
         force_compile:
             Whether to force-compile the model if not passed.
+        hierarchical:
+            Whether to use hierarchical optimization or not, in case the
+            underlying PEtab problem has parameters marked for hierarchical
+            optimization (non-empty `parameterType` column in the PEtab
+            parameter table).
         **kwargs:
             Additional arguments passed on to the objective.
 
@@ -602,6 +607,8 @@ class PetabImporter(AmiciObjectBuilder):
         x_fixed_indices = self.petab_problem.x_fixed_indices
         x_fixed_vals = self.petab_problem.x_nominal_fixed_scaled
         x_ids = self.petab_problem.x_ids
+        # In case of hierarchical optimization, parameters estimated in the
+        # inner subproblem are considered as fixed in the outer problem
         if isinstance(objective.calculator, HierarchicalAmiciCalculator):
             for inner_x_id in objective.calculator.inner_problem.get_x_ids():
                 if inner_x_id in x_fixed_indices:

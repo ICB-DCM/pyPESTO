@@ -1,3 +1,4 @@
+"""Inner optimization problem in hierarchical optimization."""
 import logging
 from typing import Dict, List, Union
 
@@ -107,6 +108,11 @@ def inner_problem_from_petab_problem(
     amici_model: 'amici.Model',
     edatas: List['amici.ExpData'],
 ) -> InnerProblem:
+    """
+    Create inner problem from PEtab problem.
+
+    Hierarchical optimization is a pypesto-specific PEtab extension.
+    """
     # inner parameters
     inner_parameters = inner_parameters_from_parameter_df(
         petab_problem.parameter_df
@@ -161,19 +167,20 @@ def inner_problem_from_petab_problem(
 def inner_parameters_from_parameter_df(
     df: pd.DataFrame,
 ) -> List[InnerParameter]:
-    """Create list of inner free parameters from PEtab conform parameter df."""
+    """
+    Create list of inner free parameters from PEtab parameter table.
+
+    Inner parameters are those that have a non-empty `parameterType` in the
+    PEtab problem.
+    """
     # create list of hierarchical parameters
-    parameters = []
     df = df.reset_index()
 
-    if PARAMETER_TYPE not in df:
-        df[PARAMETER_TYPE] = None
+    for col in (PARAMETER_TYPE, PARAMETER_GROUP, PARAMETER_CATEGORY):
+        if col not in df:
+            df[col] = None
 
-    if PARAMETER_GROUP not in df:
-        df[PARAMETER_GROUP] = None
-
-    if PARAMETER_CATEGORY not in df:
-        df[PARAMETER_CATEGORY] = None
+    parameters = []
 
     for _, row in df.iterrows():
         if not row[ESTIMATE]:
