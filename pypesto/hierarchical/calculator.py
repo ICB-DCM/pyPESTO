@@ -5,25 +5,20 @@ from typing import TYPE_CHECKING, Dict, List, Sequence, Tuple, Union
 
 import numpy as np
 
-from ..C import FVAL, GRAD, HESS, MODE_RES, RDATAS, RES, SRES, ModeType
+from ..C import FVAL, GRAD, HESS, MODE_RES, RDATAS, RES, SRES, ModeType, RDATAS, X
 from ..objective.amici.amici_calculator import (
     AmiciCalculator,
     calculate_function_values,
+    AmiciModel,
+    AmiciSolver,
 )
 from ..objective.amici.amici_util import get_error_output
 from .problem import InnerProblem
 from .solver import AnalyticalInnerSolver, InnerSolver
 from .util import compute_nllh
 
-if TYPE_CHECKING:
-    try:
-        import amici
-        from amici.parameter_mapping import ParameterMapping
-    except ImportError:
-        ParameterMapping = None
-
-AmiciModel = Union['amici.Model', 'amici.ModelPtr']
-AmiciSolver = Union['amici.Solver', 'amici.SolverPtr']
+import amici
+from amici.parameter_mapping import ParameterMapping
 
 
 class HierarchicalAmiciCalculator(AmiciCalculator):
@@ -57,35 +52,17 @@ class HierarchicalAmiciCalculator(AmiciCalculator):
         super().initialize()
         self.inner_solver.initialize()
 
-    def __call__(
+    def solve_x_inner(
         self,
         x_dct: Dict,
-        sensi_orders: Tuple[int],
-        mode: ModeType,
         amici_model: AmiciModel,
         amici_solver: AmiciSolver,
         edatas: List[amici.ExpData],
         n_threads: int,
-        x_ids: Sequence[str],
         parameter_mapping: ParameterMapping,
-        fim_for_hess: bool,
     ):
         if not self.inner_problem.check_edatas(edatas=edatas):
             raise ValueError('The experimental data provided to this call differs from the experimental data used to setup the hierarchical optimizer.')
-        import amici.parameter_mapping
-
-        # set order in solver
-        if sensi_orders:
-            sensi_order = max(sensi_orders)
-        else:
-            sensi_order = 0
-
-        # if sensi_order == 2 and fim_for_hess:
-        #    # we use the FIM
-        #    amici_solver.setSensitivityOrder(sensi_order - 1)
-        # else:
-        #    amici_solver.setSensitivityOrder(sensi_order)
-        dim = len(x_ids)
 
         # set order in solver to 0
         amici_solver.setSensitivityOrder(0)
@@ -113,30 +90,6 @@ class HierarchicalAmiciCalculator(AmiciCalculator):
             edatas,
             num_threads=min(n_threads, len(edatas)),
         )
-        if (
-            not self._known_least_squares_safe
-            and mode == MODE_RES
-            and 1 in sensi_orders
-        ):
-            if not amici_model.getAddSigmaResiduals() and any(
-                (
-                    (r['ssigmay'] is not None and np.any(r['ssigmay']))
-                    or (r['ssigmaz'] is not None and np.any(r['ssigmaz']))
-                )
-                for r in rdatas
-            ):
-                raise RuntimeError(
-                    'Cannot use least squares solver with'
-                    'parameter dependent sigma! Support can be '
-                    'enabled via amici_model.setAddSigmaResiduals().'
-                )
-            self._known_least_squares_safe = True  # don't check this again
-
-        # check if any simulation failed
-        if any(rdata['status'] < 0.0 for rdata in rdatas):
-            return get_error_output(
-                amici_model, edatas, rdatas, sensi_orders, mode, dim
-            )
 
         sim = [rdata['y'] for rdata in rdatas]
         sigma = [rdata['sigmay'] for rdata in rdatas]
@@ -146,72 +99,71 @@ class HierarchicalAmiciCalculator(AmiciCalculator):
             self.inner_problem, sim, sigma, scaled=True
         )
 
-        # nllh = self.inner_solver.calculate_obj_function(x_inner_opt)
+        return {X: x_inner_opt, RDATAS: rdatas}
 
-        # print(x_inner_opt)
 
-        # if sensi_order == 0:
-        #     dim = len(x_ids)
-        #     nllh = compute_nllh(self.inner_problem.data, sim, sigma)
-        #     return {
-        #         FVAL: nllh,
-        #         GRAD: np.zeros(dim),
-        #         HESS: np.zeros([dim, dim]),
-        #         RES: np.zeros([0]),
-        #         SRES: np.zeros([0, dim]),
-        #         RDATAS: rdatas
-        #     }
+    def __call__(
+        self,
+        x_dct: Dict,
+        sensi_orders: Tuple[int],
+        mode: ModeType,
+        amici_model: AmiciModel,
+        amici_solver: AmiciSolver,
+        edatas: List[amici.ExpData],
+        n_threads: int,
+        x_ids: Sequence[str],
+        parameter_mapping: ParameterMapping,
+        fim_for_hess: bool,
+    ):
+        if not self.inner_problem.check_edatas(edatas=edatas):
+            raise ValueError('The experimental data provided to this call differs from the experimental data used to setup the hierarchical optimizer.')
 
-        # fill in optimal values
-        # TODO: x_inner_opt is different for hierarchical and
-        #  qualitative approach. For now I commented the following
-        #  lines out to make qualitative approach work.
-
-        # directly writing to parameter mapping ensures that plists do not
-        # include hierarchically computed parameters
-        # x_dct = copy.deepcopy(x_dct)
-        for key, val in x_inner_opt.items():
-            x_dct[key] = val
-
-        # fill in parameters
-        # TODO use plist to compute only required derivatives
-        amici.parameter_mapping.fill_in_parameters(
-            edatas=edatas,
-            problem_parameters=x_dct,
-            scaled_parameters=True,
-            parameter_mapping=parameter_mapping,
+        inner_result = self.solve_x_inner(
+            x_dct=x_dct,
             amici_model=amici_model,
+            amici_solver=amici_solver,
+            edatas=edatas,
+            n_threads=n_threads,
+            parameter_mapping=parameter_mapping,
         )
 
-        if sensi_order == 0:
-            nllh = compute_nllh(self.inner_problem.data, sim, sigma)
+        if not sensi_orders or max(sensi_orders) == 0:
+            nllh = compute_nllh(
+                data=self.inner_problem.data,
+                sim=[rdata['y'] for rdata in inner_result[RDATAS]],
+                sigma=[rdata['sigmay'] for rdata in inner_result[RDATAS]],
+            )
+            dim = len(x_ids)
             return {
                 FVAL: nllh,
                 GRAD: np.zeros(dim),
                 HESS: np.zeros([dim, dim]),
                 RES: np.zeros([0]),
                 SRES: np.zeros([0, dim]),
-                RDATAS: rdatas,
-                'inner_parameters': x_inner_opt,
+                RDATAS: inner_result[RDATAS],
+                'inner_parameters': inner_result[X],
             }
 
-        amici_solver.setSensitivityOrder(sensi_order)
+        # fill in optimal values
+        # TODO: x_inner_opt is different for hierarchical and
+        #  qualitative approach. For now I commented the following
+        #  lines out to make qualitative approach work.
+        # directly writing to parameter mapping ensures that plists do not
+        # include hierarchically computed parameters
+        x_dct = copy.deepcopy(x_dct)
+        for key, val in inner_result[X].items():
+            x_dct[key] = val
 
-        # re-simulate
-        rdatas = amici.runAmiciSimulations(
-            amici_model,
-            amici_solver,
-            edatas,
-            num_threads=min(n_threads, len(edatas)),
-        )
-
-        return calculate_function_values(
-            rdatas=rdatas,
+        # TODO use plist to compute only required derivatives, in
+        # `super.__call__`, `amici.parameter_mapping.fill_in_parameters`
+        super().__call__(
+            x_dct=x_dct,
             sensi_orders=sensi_orders,
             mode=mode,
             amici_model=amici_model,
             amici_solver=amici_solver,
             edatas=edatas,
+            n_threads=n_threads,
             x_ids=x_ids,
             parameter_mapping=parameter_mapping,
             fim_for_hess=fim_for_hess,
