@@ -424,7 +424,9 @@ class ESSOptimizer:
         self.evaluator.n_eval_round += optimizer_result.n_fval
 
         logger.debug(
-            f"Local search: {local_search_fx0} -> " f"{optimizer_result.fval}"
+            f"Local search: {local_search_fx0} -> {optimizer_result.fval} "
+            f" took {optimizer_result.time}s, finished with "
+            f"{optimizer_result.exitflag}: {optimizer_result.message}"
         )
         self.local_solutions.append(optimizer_result.x)
 
