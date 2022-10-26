@@ -2,6 +2,8 @@ import time
 
 import amici
 import numpy as np
+import pandas as pd
+import petab
 from benchmark_models_petab import get_problem
 from numpy.testing import assert_allclose
 
@@ -26,9 +28,64 @@ from pypesto.petab import PetabImporter
 # - Boehm
 # - Fujita
 
+
 def get_boehm():
     petab_problem = get_problem("Boehm_JProteomeRes2014")
+    # Add scaling and offset parameters
+    petab_problem.observable_df[petab.OBSERVABLE_FORMULA] = [
+        f"observableParameter2_{obs_id} + observableParameter1_{obs_id} "
+        f"* {obs_formula}"
+        for obs_id, obs_formula in zip(
+            petab_problem.observable_df.index,
+            petab_problem.observable_df[petab.OBSERVABLE_FORMULA],
+        )
+    ]
+    # Set scaling and offset parameters for measurements
+    assert (
+        petab_problem.measurement_df[petab.OBSERVABLE_PARAMETERS].isna().all()
+    )
+    petab_problem.measurement_df[petab.OBSERVABLE_PARAMETERS] = [
+        f"scaling_{obs_id};offset_{obs_id}"
+        for obs_id in petab_problem.measurement_df[petab.OBSERVABLE_ID]
+    ]
+    # Add output parameters to parameter table
+    extra_parameters = []
+    for par_id in (
+        'offset_pSTAT5A_rel',
+        'offset_pSTAT5B_rel',
+        'offset_rSTAT5A_rel',
+    ):
+        extra_parameters.append(
+            {
+                petab.PARAMETER_ID: par_id,
+                petab.PARAMETER_SCALE: petab.LIN,
+                petab.LOWER_BOUND: -100,
+                petab.UPPER_BOUND: 100,
+                petab.NOMINAL_VALUE: 0,
+                petab.ESTIMATE: 0,
+            }
+        )
+    for par_id, nominal_value in zip(
+        ('scaling_pSTAT5A_rel', 'scaling_pSTAT5B_rel', 'scaling_rSTAT5A_rel'),
+        (3.85261197844677, 6.59147818673419, 3.15271275648527),
+    ):
+        extra_parameters.append(
+            {
+                petab.PARAMETER_ID: par_id,
+                petab.PARAMETER_SCALE: petab.LOG10,
+                petab.LOWER_BOUND: 1e-5,
+                petab.UPPER_BOUND: 1e5,
+                petab.NOMINAL_VALUE: nominal_value,
+                petab.ESTIMATE: 1,
+            }
+        )
 
+    petab_problem.parameter_df = pd.concat(
+        [
+            petab_problem.parameter_df,
+            petab.get_parameter_df(pd.DataFrame(extra_parameters)),
+        ]
+    )
     # Mark output parameters for hierarchical optimization
     petab_problem.parameter_df[PARAMETER_TYPE] = None
     for par_id in petab_problem.parameter_df.index:
@@ -44,6 +101,7 @@ def get_boehm():
             petab_problem.parameter_df.loc[
                 par_id, PARAMETER_TYPE
             ] = InnerParameter.SCALING
+    petab.lint_problem(petab_problem)
 
     return petab_problem
 
@@ -96,7 +154,9 @@ def test_hierarchical_optimization_sigma():
             ]
 
         start_time = time.time()
-        result = pypesto.optimize.minimize(problem, n_starts=n_starts, engine=engine)
+        result = pypesto.optimize.minimize(
+            problem, n_starts=n_starts, engine=engine
+        )
         wall_time = time.time() - start_time
 
         best_x = result.optimize_result.list[0].x
@@ -154,11 +214,11 @@ def test_hierarchical_calculator_and_objective():
         problem.objective.amici_solver.setAbsoluteTolerance(1e-8)
         problem.objective.amici_solver.setRelativeTolerance(1e-8)
         problems[flag] = problem
-    
-    def calculate(problem, x_dct):              
+
+    def calculate(problem, x_dct):
         return problem.objective.calculator(
             x_dct=x_dct,
-            sensi_orders=(0,1),       
+            sensi_orders=(0, 1),
             mode=MODE_FUN,
             amici_model=problem.objective.amici_model,
             amici_solver=problem.objective.amici_solver,
@@ -168,16 +228,15 @@ def test_hierarchical_calculator_and_objective():
             parameter_mapping=problem.objective.parameter_mapping,
             fim_for_hess=False,
         )
-    
+
     x_dct = dict(zip(petab_problem.x_ids, petab_problem.x_nominal_scaled))
     # Nominal sigma values are close to optimal. One is changed here to facilitate testing.
     x_dct['sd_pSTAT5A_rel'] = 0.5
-    
+
     calculator_results = {
-        flag: calculate(problems[flag], x_dct=x_dct)
-        for flag in flags
-    }   
-        
+        flag: calculate(problems[flag], x_dct=x_dct) for flag in flags
+    }
+
     # Hierarchical optimization means that the results differ here, because
     # the `False` case has suboptimal sigma values.
     assert not np.isclose(
@@ -188,10 +247,10 @@ def test_hierarchical_calculator_and_objective():
         calculator_results[True]['grad'],
         calculator_results[False]['grad'],
     ).all()
-    
+
     x_dct.update(calculator_results[True]['inner_parameters'])
-    calculator_results[False] = calculate(problem=problems[False], x_dct=x_dct) 
-        
+    calculator_results[False] = calculate(problem=problems[False], x_dct=x_dct)
+
     # The `False` case has copied the optimal sigma values from hierarchical optimization,
     # so can produce the same results now.
     assert np.isclose(
@@ -202,9 +261,17 @@ def test_hierarchical_calculator_and_objective():
         calculator_results[True]['grad'],
         calculator_results[False]['grad'],
     ).all()
-     
-    fval_False = problems[False].objective([x_dct[x_id] for x_id in petab_problem.x_free_ids])
-    fval_True = problems[True].objective([x_dct[x_id] for x_id in petab_problem.x_free_ids if not x_id.startswith('sd_')])
+
+    fval_False = problems[False].objective(
+        [x_dct[x_id] for x_id in petab_problem.x_free_ids]
+    )
+    fval_True = problems[True].objective(
+        [
+            x_dct[x_id]
+            for x_id in petab_problem.x_free_ids
+            if not x_id.startswith('sd_')
+        ]
+    )
     # Hierarchical optimization does not affect the function value, if optimal sigma are provided to the normal function.
     # High precision is required as the nominal values are very good already, so the test might pass accidentally
     # if the nominal values are used accidentally.
