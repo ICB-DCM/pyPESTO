@@ -233,6 +233,10 @@ class PetabImporter(AmiciObjectBuilder):
             module_name=self.model_name, module_path=self.output_folder
         )
         model = module.getModel()
+        amici.petab_import.check_model(
+            amici_model=model,
+            petab_problem=self.petab_problem,
+        )
 
         return model
 
