@@ -280,9 +280,7 @@ class PetabImporter(AmiciObjectBuilder):
             shutil.rmtree(self.output_folder)
 
         amici.petab_import.import_model(
-            sbml_model=self.petab_problem.sbml_model,
-            condition_table=self.petab_problem.condition_df,
-            observable_table=self.petab_problem.observable_df,
+            petab_problem=self.petab_problem,
             model_name=self.model_name,
             model_output_dir=self.output_folder,
             **kwargs,
