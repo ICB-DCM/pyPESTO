@@ -346,7 +346,6 @@ class ESSOptimizer:
         -------
         A new parameter vector.
         """
-        # TODO DW: will that always yield admissible points?
         if i == j:
             raise ValueError("i == j")
         x = self.refset.x
@@ -356,6 +355,12 @@ class ESSOptimizer:
         beta = (np.abs(j - i) - 1) / (self.refset.dim - 2)
         c1 = x[i] - d * (1 + alpha * beta)
         c2 = x[i] - d * (1 - alpha * beta)
+
+        # this will not always yield admissible points -> clip to bounds
+        ub, lb = self.evaluator.problem.ub, self.evaluator.problem.lb
+        c1 = np.fmax(np.fmin(c1, ub), lb)
+        c2 = np.fmax(np.fmin(c2, ub), lb)
+
         return np.random.uniform(
             low=c1, high=c2, size=self.evaluator.problem.dim
         )
@@ -472,10 +477,15 @@ class ESSOptimizer:
                 fx_best_children[i] = fx_child
 
                 # create new solution, child becomes parent
-                x_new = np.random.uniform(
-                    low=x_child - (x_parent - x_child) * go_beyond_factor,
-                    high=x_child,
-                )
+                # hyper-rectangle for sampling child
+                box_lb = x_child - (x_parent - x_child) * go_beyond_factor
+                box_ub = x_child
+                # clip to bounds
+                ub, lb = self.evaluator.problem.ub, self.evaluator.problem.lb
+                box_lb = np.fmax(np.fmin(box_lb, ub), lb)
+                box_ub = np.fmax(np.fmin(box_ub, ub), lb)
+                # sample parameters
+                x_new = np.random.uniform(low=box_lb, high=box_ub)
                 x_parent = x_child
                 fx_parent = fx_child
                 x_child = x_new
