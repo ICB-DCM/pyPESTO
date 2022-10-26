@@ -455,7 +455,10 @@ def test_ess(problem, local_optimizer, ess_type, request):
             balance=0.5,
         )
     elif ess_type == "cess":
-        if 'cr' in request.node.callspec.id:
+        if (
+            'cr' in request.node.callspec.id
+            or 'integrated' in request.node.callspec.id
+        ):
             # Not pickleable - incompatible with CESS
             pytest.skip()
         ess = CESSOptimizer(
