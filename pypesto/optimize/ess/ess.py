@@ -189,6 +189,9 @@ class ESSOptimizer:
         self.x_best = np.full(
             shape=(self.evaluator.problem.dim,), fill_value=np.nan
         )
+        # initialize global best from initial refset
+        for x, fx in zip(refset.x, refset.fx):
+            self._maybe_update_global_best(x, fx)
 
         # [PenasGon2017]_ Algorithm 1
         while self._keep_going():
