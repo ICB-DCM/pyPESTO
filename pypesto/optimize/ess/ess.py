@@ -441,7 +441,7 @@ class ESSOptimizer:
         self._maybe_update_global_best(
             optimizer_result.x, optimizer_result.fval
         )
-        self.last_local_search_neval = self.n_iter
+        self.last_local_search_neval = self.evaluator.n_eval
         self.evaluator.reset_round_counter()
 
     def _maybe_update_global_best(self, x, fx):
