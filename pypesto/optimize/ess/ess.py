@@ -66,7 +66,8 @@ class ESSOptimizer:
     Parameters
     ----------
     dim_refset:
-        Size of the ReferenceSet
+        Size of the ReferenceSet. Note that in every iteration at least
+        ``dim_refset**2 - dim_refset`` function evaluations will occur.
     max_iter:
         Maximum number of ESS iterations.
     local_n1:
@@ -297,7 +298,8 @@ class ESSOptimizer:
         """Combine solutions and evaluate.
 
         Creates the next generation from the RefSet by pair-wise combinations
-        of all RefSet members.
+        of all RefSet members. Creates ``RefSet.dim ** 2 - RefSet.dim`` new
+        parameter vectors, test them, and keeps the best child of each parent.
 
         Returns
         -------
