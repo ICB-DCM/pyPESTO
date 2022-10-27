@@ -1,7 +1,6 @@
 import time
 
 import amici
-import fides
 import numpy as np
 import pandas as pd
 import petab
@@ -22,7 +21,7 @@ from pypesto.petab import PetabImporter
 # pypesto.logging.log_to_console(level=logging.DEBUG)
 
 # TODO
-# - test scaling and offset parameters
+# - test offset parameters
 
 # Suitable test cases from the benchmark collection
 # - Boehm
@@ -127,8 +126,8 @@ def test_hierarchical_optimization_sigma_and_scaling():
         problems[flag] = problem
 
     # Check for same optimization result
-    n_starts = 24
-    engine = pypesto.engine.MultiThreadEngine()
+    n_starts = 1
+    engine = pypesto.engine.SingleCoreEngine()
     startpoints = problems[False].get_full_vector(
         pypesto.startpoint.latin_hypercube(
             n_starts=n_starts,
@@ -147,9 +146,6 @@ def test_hierarchical_optimization_sigma_and_scaling():
     }
 
     history_options = pypesto.HistoryOptions(trace_record=True)
-    optimizer = pypesto.optimize.FidesOptimizer(
-        verbose=0, hessian_update=fides.BFGS()
-    )
 
     def get_result(problem, inner_solver, inner_solvers=inner_solvers):
         if inner_solver:
@@ -185,53 +181,42 @@ def test_hierarchical_optimization_sigma_and_scaling():
     ]:
         results[inner_solver_id] = get_result(problem, inner_solver_id)
 
-    # DEBUGGING
-    f = results[False]['list']
-    a = results['analytical']['list']
-    n = results['numerical']['list']
-    f_s = sorted(f, key=lambda s: int(s.id))
-    a_s = sorted(a, key=lambda s: int(s.id))
-    n_s = sorted(n, key=lambda s: int(s.id))
-    f_v = [s.fval for s in f_s]
-    a_v = [s.fval for s in a_s]
-    n_v = [s.fval for s in n_s]
-    import matplotlib.pyplot as plt
-
-    _, ax = plt.subplots()
-    ax.plot(range(n_starts), f_v, label='not hierarchical')
-    ax.plot(range(n_starts), a_v, label='analytical hierarchical')
-    ax.plot(range(n_starts), n_v, label='numerical hierarchical')
-    ax.legend()
-    plt.show()
-
-    for i in range(n_starts):
-        _, ax = plt.subplots()
-
-        ax.plot((results[False]['list'][i].history.get_fval_trace(trim=True)), label='not hierarchical')
-        ax.plot((results['analytical']['list'][i].history.get_fval_trace(trim=True)), label='analytical hierarchical')
-        ax.plot((results['numerical']['list'][i].history.get_fval_trace(trim=True)), label='numerical hierarchical')
-        ax.set_yscale("log")
-        ax.legend()
-        plt.show()
-
-
-    breakpoint()
-    # END DEBUGGING
-
-    assert results['analytical']['time'] < results[False]['time']
-    assert results['numerical']['time'] < results[False]['time']
-    assert results['analytical']['time'] < results['numerical']['time']
-
-    assert np.isclose(
-        results['analytical']['best_fval'], results[False]['best_fval']
+    trace_False = np.array(
+        results[False]['list'][0].history.get_fval_trace(trim=True)
     )
-    assert np.isclose(
-        results['analytical']['best_fval'], results['numerical']['best_fval']
+    trace_numerical = np.array(
+        results['numerical']['list'][0].history.get_fval_trace(trim=True)
     )
-    # Then `numerical isclose False` is mostly implied.
+    trace_analytical = np.array(
+        results['numerical']['list'][0].history.get_fval_trace(trim=True)
+    )
 
-    # TODO assert optimized vector is similar at both model and objective
-    #      hyperparameter values.
+    def at_least_as_good_as(v, v0) -> bool:
+        """Check that the first vector of fvals is at least as good the second.
+
+        Parameters
+        ----------
+        v:
+            The first vector of fvals.
+        v0:
+            The second vector of fvals.
+
+        Returns
+        -------
+        Whether the first vector of fvals is at least as good as the second.
+        """
+        max_index = min(len(v), len(v0))
+        better_than = v[:max_index] < v0[:max_index]
+        as_good_as = np.isclose(v[:max_index], v0[:max_index])
+        return (better_than | as_good_as).all()
+
+    # The analytical inner solver is at least as good as (fval / speed) the
+    # numerical inner solver.
+    assert at_least_as_good_as(v=trace_analytical, v0=trace_numerical)
+    # The numerical inner solver is at least as good as (fval / speed) no
+    # inner solver (non-hierarchical).
+    assert at_least_as_good_as(v=trace_numerical, v0=trace_False)
+    # Now implied that analytical is at least as good as non-hierarchical.
 
 
 def test_hierarchical_calculator_and_objective():
