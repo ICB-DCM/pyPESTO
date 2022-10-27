@@ -35,6 +35,13 @@ ID = 'id'
 
 
 ###############################################################################
+# HIERARCHICAL
+
+INNER_PARAMETERS = 'inner_parameters'
+INNER_RDATAS = 'inner_rdatas'
+
+
+###############################################################################
 # HISTORY
 
 HISTORY = "history"
