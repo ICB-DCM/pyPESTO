@@ -1,6 +1,7 @@
 import time
 
 import amici
+import fides
 import numpy as np
 import pandas as pd
 import petab
@@ -105,8 +106,8 @@ def get_boehm():
     return petab_problem
 
 
-def test_hierarchical_optimization_sigma():
-    """Test hierarchical optimization of noise (sigma) parameters.
+def test_hierarchical_optimization_sigma_and_scaling():
+    """Test hierarchical optimization of sigma and scaling parameters.
 
     Here (mostly): the flags `True` and `False` indicate that hierarchical
     optimization is enabled and disabled, respectively.
@@ -145,6 +146,11 @@ def test_hierarchical_optimization_sigma():
         'numerical': NumericalInnerSolver(),
     }
 
+    history_options = pypesto.HistoryOptions(trace_record=True)
+    optimizer = pypesto.optimize.FidesOptimizer(
+        verbose=0, hessian_update=fides.BFGS()
+    )
+
     def get_result(problem, inner_solver, inner_solvers=inner_solvers):
         if inner_solver:
             problem.objective.calculator.inner_solver = inner_solvers[
@@ -153,7 +159,10 @@ def test_hierarchical_optimization_sigma():
 
         start_time = time.time()
         result = pypesto.optimize.minimize(
-            problem, n_starts=n_starts, engine=engine
+            problem=problem,
+            n_starts=n_starts,
+            engine=engine,
+            history_options=history_options,
         )
         wall_time = time.time() - start_time
 
@@ -161,6 +170,7 @@ def test_hierarchical_optimization_sigma():
         best_fval = result.optimize_result.list[0].fval
 
         result = {
+            'list': result.optimize_result.list,
             'time': wall_time,
             'best_x': best_x,
             'best_fval': best_fval,
@@ -175,7 +185,27 @@ def test_hierarchical_optimization_sigma():
     ]:
         results[inner_solver_id] = get_result(problem, inner_solver_id)
 
+    # DEBUGGING
+    f = results[False]['list']
+    a = results['analytical']['list']
+    n = results['numerical']['list']
+    f_s = sorted(f, key=lambda s: int(s.id))
+    a_s = sorted(a, key=lambda s: int(s.id))
+    n_s = sorted(n, key=lambda s: int(s.id))
+    f_v = [s.fval for s in f_s]
+    a_v = [s.fval for s in a_s]
+    n_v = [s.fval for s in n_s]
+    import matplotlib.pyplot as plt
+
+    _, ax = plt.subplots()
+    ax.plot(range(n_starts), f_v, label='not hierarchical')
+    ax.plot(range(n_starts), a_v, label='analytical hierarchical')
+    ax.plot(range(n_starts), n_v, label='numerical hierarchical')
+    ax.legend()
+    plt.show()
     breakpoint()
+    # END DEBUGGING
+
     assert results['analytical']['time'] < results[False]['time']
     assert results['numerical']['time'] < results[False]['time']
     assert results['analytical']['time'] < results['numerical']['time']
