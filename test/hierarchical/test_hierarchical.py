@@ -203,6 +203,18 @@ def test_hierarchical_optimization_sigma_and_scaling():
     ax.plot(range(n_starts), n_v, label='numerical hierarchical')
     ax.legend()
     plt.show()
+
+    for i in range(n_starts):
+        _, ax = plt.subplots()
+
+        ax.plot((results[False]['list'][i].history.get_fval_trace(trim=True)), label='not hierarchical')
+        ax.plot((results['analytical']['list'][i].history.get_fval_trace(trim=True)), label='analytical hierarchical')
+        ax.plot((results['numerical']['list'][i].history.get_fval_trace(trim=True)), label='numerical hierarchical')
+        ax.set_yscale("log")
+        ax.legend()
+        plt.show()
+
+
     breakpoint()
     # END DEBUGGING
 
