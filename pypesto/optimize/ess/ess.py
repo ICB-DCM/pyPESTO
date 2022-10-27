@@ -59,37 +59,7 @@ class ESSExitFlag(int, enum.Enum):
 class ESSOptimizer:
     """Enhanced Scatter Search (ESS) global optimization.
 
-    .. note: Does not implement any constraint handling yet
-
-    For plausible values of hyperparameters, see VillaverdeEge2012.
-
-    Parameters
-    ----------
-    dim_refset:
-        Size of the ReferenceSet. Note that in every iteration at least
-        ``dim_refset**2 - dim_refset`` function evaluations will occur.
-    max_iter:
-        Maximum number of ESS iterations.
-    local_n1:
-        Minimum number of function evaluations before first local search.
-    local_n2:
-        Minimum number of function evaluations between consecutive local
-        searches.
-    local_optimizer:
-        Local optimizer for refinement, or ``None`` to skip local searches.
-    n_diverse:
-        Number of samples to choose from to construct the initial RefSet
-    max_eval:
-        Maximum number of objective functions allowed. This criterion is
-        only checked once per iteration, not after every objective evaluation,
-        so the actual number of function evaluations may exceed this value.
-    max_walltime_s:
-        Maximum walltime in seconds. Will only be checked between local
-        optimizations and other simulations, and thus, may be exceeded by the
-        duration of a local search.
-    balance:
-        Quality vs diversity balancing factor [0, 1];
-        0 = only quality; 1 = only diversity
+    .. note: Does not implement any constraint handling beyond box constraints
     """
 
     def __init__(
@@ -106,6 +76,40 @@ class ESSOptimizer:
         n_threads=1,
         max_walltime_s=None,
     ):
+        """Construct new ESS instance.
+
+        For plausible values of hyperparameters, see VillaverdeEge2012.
+
+        Parameters
+        ----------
+        dim_refset:
+            Size of the ReferenceSet. Note that in every iteration at least
+            ``dim_refset**2 - dim_refset`` function evaluations will occur.
+        max_iter:
+            Maximum number of ESS iterations.
+        local_n1:
+            Minimum number of function evaluations before first local search.
+        local_n2:
+            Minimum number of function evaluations between consecutive local
+            searches. Maximally one local search per performed in each
+            iteration.
+        local_optimizer:
+            Local optimizer for refinement, or ``None`` to skip local searches.
+        n_diverse:
+            Number of samples to choose from to construct the initial RefSet
+        max_eval:
+            Maximum number of objective functions allowed. This criterion is
+            only checked once per iteration, not after every objective
+            evaluation, so the actual number of function evaluations may exceed
+            this value.
+        max_walltime_s:
+            Maximum walltime in seconds. Will only be checked between local
+            optimizations and other simulations, and thus, may be exceeded by
+            the duration of a local search.
+        balance:
+            Quality vs diversity balancing factor [0, 1];
+            0 = only quality; 1 = only diversity
+        """
         # Hyperparameters
         self.local_n1: int = local_n1
         self.local_n2: int = local_n2
@@ -431,9 +435,9 @@ class ESSOptimizer:
         self.evaluator.n_eval += optimizer_result.n_fval
         self.evaluator.n_eval_round += optimizer_result.n_fval
 
-        logger.debug(
+        logger.info(
             f"Local search: {local_search_fx0} -> {optimizer_result.fval} "
-            f" took {optimizer_result.time}s, finished with "
+            f" took {optimizer_result.time:.3g}s, finished with "
             f"{optimizer_result.exitflag}: {optimizer_result.message}"
         )
         self.local_solutions.append(optimizer_result.x)
