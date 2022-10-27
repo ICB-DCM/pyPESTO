@@ -133,54 +133,24 @@ class CESSOptimizer:
             self._report_iteration()
             self.i_iter += 1
 
-            # start ESS in all processes
-            ctx = multiprocessing.get_context('spawn')
-            with ctx.Pool(len(self.ess_init_args)) as pool:
-                # TODO rename - ess
-                results = pool.starmap(
-                    self._run_ess,
-                    (
-                        [ess_kwargs, problem, startpoint_method, refset]
-                        for (ess_kwargs, refset) in zip(
-                            self.ess_init_args, refsets
-                        )
-                    ),
-                    chunksize=1,
-                )
+            # run scatter searches
+            ess_optimizers = self._run_scatter_searches(
+                problem=problem,
+                startpoint_method=startpoint_method,
+                refsets=refsets,
+            )
             # collect refsets from the different ESS runs
-            refsets = [result.refset for result in results]
+            refsets = [result.refset for result in ess_optimizers]
 
             # update best values from ESS results
-            for result in results:
+            for result in ess_optimizers:
                 self._maybe_update_global_best(result.x_best, result.fx_best)
 
             if not self._keep_going(i_eval=evaluator.n_eval):
                 break
 
-            # gather final refsets
-            x = np.vstack([refset.x for refset in refsets])
-            fx = np.concatenate([refset.fx for refset in refsets])
-
-            # create new refsets based on the combined previous final refsets
-            for i, ess_init_args in enumerate(self.ess_init_args):
-                # set default value of max_eval if not present.
-                #  only set it on a copy, as the original dicts may be re-used
-                #  for different optimization problems.
-                # reasonable value proposed in [VillaverdeEge2012]:
-                #  2.5 < tau < 3.5, default: 2.5
-                ess_init_args = dict(
-                    {'ess_init_args': int(10**2.5 * problem.dim)},
-                    **ess_init_args,
-                )
-
-                # reset function evaluation counter
-                evaluator.n_eval = 0
-                evaluator.n_eval_round = 0
-                refsets[i] = RefSet(
-                    dim=ess_init_args['dim_refset'], evaluator=evaluator
-                )
-                refsets[i].initialize_from_array(x_diverse=x, fx_diverse=fx)
-                refsets[i].sort()
+            # create refsets for the next iteration
+            self._update_refsets(refsets=refsets, evaluator=evaluator)
 
             # TODO merge results
         self._report_final()
@@ -265,13 +235,45 @@ class CESSOptimizer:
 
         return result
 
-    def _run_ess(
+    def _run_scatter_searches(
+        self,
+        problem: Problem,
+        startpoint_method: StartpointMethod,
+        refsets: List[RefSet],
+    ) -> List[ESSOptimizer]:
+        """Start all scatter searches in different processes."""
+        # set default value of max_eval if not present.
+        #  only set it on a copy, as the original dicts may be re-used
+        #  for different optimization problems.
+        # reasonable value proposed in [VillaverdeEge2012]:
+        #  2.5 < tau < 3.5, default: 2.5
+        ess_init_args = [
+            dict(
+                {'max_eval': int(10**2.5 * problem.dim)},
+                **ess_kwargs,
+            )
+            for ess_kwargs in self.ess_init_args
+        ]
+
+        ctx = multiprocessing.get_context('spawn')
+        with ctx.Pool(len(self.ess_init_args)) as pool:
+            ess_optimizers = pool.starmap(
+                self._run_single_ess,
+                (
+                    [ess_kwargs, problem, startpoint_method, refset]
+                    for (ess_kwargs, refset) in zip(ess_init_args, refsets)
+                ),
+                chunksize=1,
+            )
+        return list(ess_optimizers)
+
+    def _run_single_ess(
         self,
         ess_kwargs,
         problem: Problem,
         startpoint_method: StartpointMethod,
         refset: RefSet,
-    ):
+    ) -> ESSOptimizer:
         """
         Run ESS.
 
@@ -310,3 +312,29 @@ class CESSOptimizer:
         if fx < self.fx_best:
             self.x_best = x[:]
             self.fx_best = fx
+
+    def _update_refsets(
+        self, refsets: List[RefSet], evaluator: FunctionEvaluator
+    ):
+        """
+        Update refsets.
+
+        Create new refsets based on the combined final refsets of the previous
+        CESS iteration.
+
+        Updates ``refsets`` in place.
+        """
+        # gather final refset entries
+        x = np.vstack([refset.x for refset in refsets])
+        fx = np.concatenate([refset.fx for refset in refsets])
+
+        # reset function evaluation counter
+        evaluator.n_eval = 0
+        evaluator.n_eval_round = 0
+
+        for i, ess_init_args in enumerate(self.ess_init_args):
+            refsets[i] = RefSet(
+                dim=ess_init_args['dim_refset'], evaluator=evaluator
+            )
+            refsets[i].initialize_from_array(x_diverse=x, fx_diverse=fx)
+            refsets[i].sort()
