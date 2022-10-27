@@ -19,7 +19,7 @@ logger = logging.getLogger(__name__)
 
 
 class CESSOptimizer:
-    """
+    r"""
     Cooperative Enhanced Scatter Search Optimizer (CESS).
 
     A cooperative scatter search algorithm based on [VillaverdeEge2012]_.
@@ -34,6 +34,8 @@ class CESSOptimizer:
     * ``local_n2``: ``[0, 100]``
     * ``balance``: ``[0, 0.5]``
     * ``n_diverse``: ``[5 n_par, 20 n_par]``
+    * ``max_eval``: such that :math:`\tau = log10(max_eval / n_par)` is in
+      [2.5, 3.5], with a recommended default value of 2.5.
 
     .. [VillaverdeEge2012] 'A cooperative strategy for parameter estimation in
        large scale systems biology models', Villaverde, A.F., Egea,
@@ -42,21 +44,38 @@ class CESSOptimizer:
 
     Attributes
     ----------
-    TODO
+    ess_init_args:
+        List of argument dictionaries passed to
+        :func:`ESSOptimizer.__init__`. The length of this list is the
+        number of parallel ESS processes.
+        Resource limits such as ``max_eval`` apply to a single CESS
+        iteration, not to the full search.
+    max_iter:
+        Maximum number of CESS iterations.
+    max_walltime_s:
+        Maximum walltime in seconds. Will only be checked between local
+        optimizations and other simulations, and thus, may be exceeded by
+        the duration of a local search. Defaults to no limit.
+    fx_best:
+        The best objective value seen so far.
+    x_best:
+        Parameter vector corresponding to ``fx_best``.
+    starttime:
+        Starting time of the most recent optimization.
+    i_iter:
+        Current iteration number.
     """
 
     def __init__(
         self,
-        max_n_eval: int,
         ess_init_args: List[Dict],
         max_iter: int,
+        max_walltime_s: float = np.inf,
     ):
         """Construct.
 
         Parameters
         ----------
-        max_n_eval:
-            TODO
         ess_init_args:
             List of argument dictionaries passed to
             :func:`ESSOptimizer.__init__`. The length of this list is the
@@ -65,16 +84,25 @@ class CESSOptimizer:
             iteration, not to the full search.
         max_iter:
             Maximum number of CESS iterations.
+        max_walltime_s:
+            Maximum walltime in seconds. Will only be checked between local
+            optimizations and other simulations, and thus, may be exceeded by
+            the duration of a local search. Defaults to no limit.
         """
-        self.max_n_eval = max_n_eval
+        self.max_walltime_s = max_walltime_s
         self.ess_init_args = ess_init_args
         self.max_iter = max_iter
+
+        self._initialize()
+
+    def _initialize(self):
+        """(Re-)initialize."""
+        self.starttime = time.time()
+        self.i_iter = 0
         # Overall best parameters found so far
         self.x_best: Optional[np.array] = None
         # Overall best function value found so far
         self.fx_best: float = np.inf
-        self.starttime = None
-        self.i_iter = None
 
     def minimize(
         self,
@@ -90,13 +118,7 @@ class CESSOptimizer:
         startpoint_method:
             Method for choosing starting points.
         """
-        self.starttime = time.time()
-
-        # TODO as option --- used where??
-        # [VillaverdeEge2012] Eq. 8
-        # default value proposed in [VillaverdeEge2012]: 2.5 < tau < 3.5
-        self.tau = np.log10(self.max_n_eval / problem.dim)
-        self.i_iter = 0
+        self._initialize()
 
         refsets = [None] * len(self.ess_init_args)
 
@@ -141,6 +163,19 @@ class CESSOptimizer:
 
             # create new refsets based on the combined previous final refsets
             for i, ess_init_args in enumerate(self.ess_init_args):
+                # set default value of max_eval if not present.
+                #  only set it on a copy, as the original dicts may be re-used
+                #  for different optimization problems.
+                # reasonable value proposed in [VillaverdeEge2012]:
+                #  2.5 < tau < 3.5, default: 2.5
+                ess_init_args = dict(
+                    {'ess_init_args': int(10**2.5 * problem.dim)},
+                    **ess_init_args,
+                )
+
+                # reset function evaluation counter
+                evaluator.n_eval = 0
+                evaluator.n_eval_round = 0
                 refsets[i] = RefSet(
                     dim=ess_init_args['dim_refset'], evaluator=evaluator
                 )
@@ -258,12 +293,14 @@ class CESSOptimizer:
         """
         # TODO DW which further stopping criteria: gtol, fatol, frtol?
 
+        # elapsed iterations
         if self.i_iter >= self.max_iter:
             self.exit_flag = ESSExitFlag.MAX_ITER
             return False
 
-        if i_eval >= self.max_n_eval:
-            self.exit_flag = ESSExitFlag.MAX_EVAL
+        # elapsed time
+        if time.time() - self.starttime >= self.max_walltime_s:
+            self.exit_flag = ESSExitFlag.MAX_TIME
             return False
 
         return True
