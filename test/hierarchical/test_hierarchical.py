@@ -262,16 +262,16 @@ def test_hierarchical_calculator_and_objective():
         calculator_results[False]['grad'],
     ).all()
 
-    fval_False = problems[False].objective(
-        [x_dct[x_id] for x_id in petab_problem.x_free_ids]
-    )
-    fval_True = problems[True].objective(
-        [
-            x_dct[x_id]
-            for x_id in petab_problem.x_free_ids
-            if not x_id.startswith('sd_')
-        ]
-    )
+    parameters = [x_dct[x_id] for x_id in petab_problem.x_free_ids]
+    fval_False = problems[False].objective(parameters)
+
+    # TODO user-friendly way to get these
+    outer_parameters = [
+        x_dct[x_id]
+        for x_id in petab_problem.x_free_ids
+        if pd.isna(petab_problem.parameter_df.loc[x_id].parameterType)
+    ]
+    fval_True = problems[True].objective(outer_parameters)
     # Hierarchical optimization does not affect the function value, if optimal sigma are provided to the normal function.
     # High precision is required as the nominal values are very good already, so the test might pass accidentally
     # if the nominal values are used accidentally.
