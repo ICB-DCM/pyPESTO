@@ -3,7 +3,7 @@
 import threading
 from concurrent.futures import ThreadPoolExecutor
 from copy import deepcopy
-from typing import Sequence, Tuple
+from typing import Optional, Sequence, Tuple
 
 import numpy as np
 
@@ -70,11 +70,15 @@ class FunctionEvaluator:
         #  objectives thread-safe.
         self._thread_local: threading.local = threading.local()
         # The thread-pool to be used for parallel objective evaluations
-        self._executor: ThreadPoolExecutor = ThreadPoolExecutor(
-            max_workers=self._n_threads,
-            thread_name_prefix=__name__,
-            initializer=self._initialize_worker,
-            initargs=(self._thread_local,),
+        self._executor: Optional[ThreadPoolExecutor] = (
+            ThreadPoolExecutor(
+                max_workers=self._n_threads,
+                thread_name_prefix=__name__,
+                initializer=self._initialize_worker,
+                initargs=(self._thread_local,),
+            )
+            if self._n_threads > 1
+            else None
         )
 
     def single(self, x: np.array) -> float:
@@ -100,13 +104,16 @@ class FunctionEvaluator:
         -------
         The objective function values in the same order as the inputs.
         """
-        res = np.fromiter(
-            # map(self.single, xs),
-            self._executor.map(
-                self._evaluate_on_worker, ((self._thread_local, x) for x in xs)
-            ),
-            dtype=float,
-        )
+        if self._executor is not None:
+            res = np.fromiter(
+                self._executor.map(
+                    self._evaluate_on_worker,
+                    ((self._thread_local, x) for x in xs),
+                ),
+                dtype=float,
+            )
+        else:
+            res = np.fromiter(map(self.single, xs), dtype=float)
         self.n_eval += len(xs)
         self.n_eval_round += len(xs)
         return res
