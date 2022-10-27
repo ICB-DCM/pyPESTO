@@ -462,6 +462,7 @@ def test_ess(problem, local_optimizer, ess_type, request):
             # Not pickleable - incompatible with CESS
             pytest.skip()
         ess = CESSOptimizer(
+            # CESS with 4 processes
             ess_init_args=[
                 {
                     'dim_refset': max(3, int(0.5 * problem.dim)),
@@ -470,7 +471,6 @@ def test_ess(problem, local_optimizer, ess_type, request):
                     'n_diverse': 5 * problem.dim,
                     'max_iter': 50,
                     'local_n1': 100,
-                    'max_eval': 500,
                     'local_optimizer': local_optimizer,
                 },
                 {
@@ -480,7 +480,6 @@ def test_ess(problem, local_optimizer, ess_type, request):
                     'n_diverse': 20 * problem.dim,
                     'max_iter': 50,
                     'local_n1': 100,
-                    'max_eval': 500,
                     'local_optimizer': local_optimizer,
                 },
                 {
@@ -490,7 +489,6 @@ def test_ess(problem, local_optimizer, ess_type, request):
                     'n_diverse': 10 * problem.dim,
                     'max_iter': 50,
                     'local_n1': 100,
-                    'max_eval': 500,
                 },
                 {
                     'dim_refset': 10 * problem.dim,
@@ -499,11 +497,10 @@ def test_ess(problem, local_optimizer, ess_type, request):
                     'n_diverse': 10 * problem.dim,
                     'max_iter': 50,
                     'local_n1': 10,
-                    'max_eval': 500,
                 },
             ],
-            max_n_eval=1000,
             max_iter=5,
+            max_walltime_s=10,
         )
     else:
         raise ValueError(f"Unsupported ESS type {ess_type}.")
