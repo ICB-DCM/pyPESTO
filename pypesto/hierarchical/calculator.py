@@ -1,24 +1,26 @@
 from __future__ import annotations
 
 import copy
-from typing import TYPE_CHECKING, Dict, List, Sequence, Tuple, Union
-
-import numpy as np
-
-from ..C import FVAL, GRAD, HESS, MODE_RES, RDATAS, RES, SRES, ModeType, RDATAS, X, AMICI_Y, AMICI_SIGMAY, INNER_PARAMETERS, INNER_RDATAS
-from ..objective.amici.amici_calculator import (
-    AmiciCalculator,
-    calculate_function_values,
-    AmiciModel,
-    AmiciSolver,
-)
-from ..objective.amici.amici_util import get_error_output
-from .problem import InnerProblem
-from .solver import AnalyticalInnerSolver, InnerSolver
-from .util import compute_nllh
+from typing import Dict, List, Sequence, Tuple
 
 import amici
 from amici.parameter_mapping import ParameterMapping
+
+from ..C import (
+    AMICI_SIGMAY,
+    AMICI_Y,
+    INNER_PARAMETERS,
+    INNER_RDATAS,
+    RDATAS,
+    ModeType,
+)
+from ..objective.amici.amici_calculator import (
+    AmiciCalculator,
+    AmiciModel,
+    AmiciSolver,
+)
+from .problem import InnerProblem
+from .solver import AnalyticalInnerSolver, InnerSolver
 
 
 class HierarchicalAmiciCalculator(AmiciCalculator):
@@ -65,8 +67,18 @@ class HierarchicalAmiciCalculator(AmiciCalculator):
         parameter_mapping: ParameterMapping,
         fim_for_hess: bool,
     ):
+        """Perform the actual AMICI call, with hierarchical optimization.
+
+        See documentation for `pypesto.objective.amici.amici_calculator.AmiciCalculator.__call__()`.
+
+        The return object also includes the simulation results that were
+        generated to solve the inner problem, as well as the parameters that
+        solver the inner problem.
+        """
         if not self.inner_problem.check_edatas(edatas=edatas):
-            raise ValueError('The experimental data provided to this call differs from the experimental data used to setup the hierarchical optimizer.')
+            raise ValueError(
+                'The experimental data provided to this call differs from the experimental data used to setup the hierarchical optimizer.'
+            )
 
         # compute optimal inner parameters
         x_dct = copy.deepcopy(x_dct)

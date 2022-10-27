@@ -1,8 +1,10 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Dict, List, Sequence, Tuple, Union
+from typing import Dict, List, Sequence, Tuple, Union
 
+import amici
 import numpy as np
+from amici.parameter_mapping import ParameterMapping
 
 from ...C import (
     FVAL,
@@ -24,9 +26,6 @@ from .amici_util import (
     log_simulation,
     sim_sres_to_opt_sres,
 )
-
-import amici
-from amici.parameter_mapping import ParameterMapping
 
 AmiciModel = Union[amici.Model, amici.ModelPtr]
 AmiciSolver = Union[amici.Solver, amici.SolverPtr]
@@ -82,12 +81,10 @@ class AmiciCalculator:
             Whether to use the FIM (if available) instead of the Hessian (if
             requested).
         """
-
         # set order in solver
+        sensi_order = 0
         if sensi_orders:
             sensi_order = max(sensi_orders)
-        else:
-            sensi_order = 0
 
         if sensi_order == 2 and fim_for_hess:
             # we use the FIM

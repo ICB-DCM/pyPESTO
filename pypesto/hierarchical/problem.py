@@ -132,7 +132,19 @@ class AmiciInnerProblem(InnerProblem):
         super().__init__(**kwargs)
         self.edataviews = [amici.numpy.ExpDataView(edata) for edata in edatas]
 
-    def check_edatas(self, edatas):
+    def check_edatas(self, edatas: List[amici.ExpData]) -> bool:
+        """Check for consistency in experimental data.
+
+        Parameters
+        ----------
+        edatas:
+            An experimental data set. Will be checked against the experimental
+            data set provided to the constructor.
+
+        Returns
+        -------
+        Whether the experimental data sets are consistent.
+        """
         edataviews = [amici.numpy.ExpDataView(edata) for edata in edatas]
 
         if len(self.edataviews) != len(edataviews):
@@ -147,7 +159,23 @@ class AmiciInnerProblem(InnerProblem):
         return True
 
 
-def compare_edataviews(edataview0, edataview):
+def compare_edataviews(edataview0, edataview) -> bool:
+    """Compare experimental data by their AMICI NumPy array views.
+
+    The input types can be created from an AMICI `List[ExpData]` type with
+    e.g. `edataview = [amici.numpy.ExpDataView(edata) for edata in edatas]`.
+
+    Parameters
+    ----------
+    edataview0:
+        An experimental data set.
+    edataview:
+        An experimental data set.
+
+    Returns
+    -------
+    Whether the experimental data sets are the same.
+    """
     for field_name in amici.numpy.ExpDataView._field_names:
         if edataview0[field_name] is None and edataview[field_name] is None:
             continue

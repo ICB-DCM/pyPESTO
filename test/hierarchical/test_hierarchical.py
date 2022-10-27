@@ -5,7 +5,6 @@ import numpy as np
 import pandas as pd
 import petab
 from benchmark_models_petab import get_problem
-from numpy.testing import assert_allclose
 
 import pypesto
 
@@ -115,7 +114,6 @@ def test_hierarchical_optimization_sigma():
     petab_problem = get_boehm()
     importer = PetabImporter(petab_problem)
     flags = [False, True]
-    startpoints = None
     problems = {}
     for flag in flags:
         objective = importer.create_objective(hierarchical=flag)
@@ -203,7 +201,6 @@ def test_hierarchical_calculator_and_objective():
     petab_problem = get_boehm()
     importer = PetabImporter(petab_problem)
     flags = [False, True]
-    startpoints = None
     problems = {}
     for flag in flags:
         objective = importer.create_objective(hierarchical=flag)
