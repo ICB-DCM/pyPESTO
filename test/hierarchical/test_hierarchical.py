@@ -1,3 +1,4 @@
+"""Tests for hierarchical optimization."""
 import time
 
 import amici
@@ -7,8 +8,6 @@ import petab
 from benchmark_models_petab import get_problem
 
 import pypesto
-
-# import pypesto.logging
 from pypesto.C import MODE_FUN
 from pypesto.hierarchical.parameter import InnerParameter
 from pypesto.hierarchical.problem import PARAMETER_TYPE
@@ -18,6 +17,7 @@ from pypesto.hierarchical.solver import (
 )
 from pypesto.petab import PetabImporter
 
+# import pypesto.logging
 # pypesto.logging.log_to_console(level=logging.DEBUG)
 
 # TODO
@@ -48,36 +48,40 @@ def get_boehm():
         for obs_id in petab_problem.measurement_df[petab.OBSERVABLE_ID]
     ]
     # Add output parameters to parameter table
-    extra_parameters = []
-    for par_id in (
-        'offset_pSTAT5A_rel',
-        'offset_pSTAT5B_rel',
-        'offset_rSTAT5A_rel',
-    ):
-        extra_parameters.append(
-            {
-                petab.PARAMETER_ID: par_id,
-                petab.PARAMETER_SCALE: petab.LIN,
-                petab.LOWER_BOUND: -100,
-                petab.UPPER_BOUND: 100,
-                petab.NOMINAL_VALUE: 0,
-                petab.ESTIMATE: 0,
-            }
+    extra_parameters = [
+        {
+            petab.PARAMETER_ID: par_id,
+            petab.PARAMETER_SCALE: petab.LIN,
+            petab.LOWER_BOUND: -100,
+            petab.UPPER_BOUND: 100,
+            petab.NOMINAL_VALUE: 0,
+            petab.ESTIMATE: 0,
+        }
+        for par_id in (
+            'offset_pSTAT5A_rel',
+            'offset_pSTAT5B_rel',
+            'offset_rSTAT5A_rel',
         )
-    for par_id, nominal_value in zip(
-        ('scaling_pSTAT5A_rel', 'scaling_pSTAT5B_rel', 'scaling_rSTAT5A_rel'),
-        (3.85261197844677, 6.59147818673419, 3.15271275648527),
-    ):
-        extra_parameters.append(
-            {
-                petab.PARAMETER_ID: par_id,
-                petab.PARAMETER_SCALE: petab.LOG10,
-                petab.LOWER_BOUND: 1e-5,
-                petab.UPPER_BOUND: 1e5,
-                petab.NOMINAL_VALUE: nominal_value,
-                petab.ESTIMATE: 1,
-            }
+    ]
+
+    extra_parameters.extend(
+        {
+            petab.PARAMETER_ID: par_id,
+            petab.PARAMETER_SCALE: petab.LOG10,
+            petab.LOWER_BOUND: 1e-5,
+            petab.UPPER_BOUND: 1e5,
+            petab.NOMINAL_VALUE: nominal_value,
+            petab.ESTIMATE: 1,
+        }
+        for par_id, nominal_value in zip(
+            (
+                'scaling_pSTAT5A_rel',
+                'scaling_pSTAT5B_rel',
+                'scaling_rSTAT5A_rel',
+            ),
+            (3.85261197844677, 6.59147818673419, 3.15271275648527),
         )
+    )
 
     petab_problem.parameter_df = pd.concat(
         [
@@ -191,25 +195,6 @@ def test_hierarchical_optimization_sigma_and_scaling():
         results['numerical']['list'][0].history.get_fval_trace(trim=True)
     )
 
-    def at_least_as_good_as(v, v0) -> bool:
-        """Check that the first vector of fvals is at least as good the second.
-
-        Parameters
-        ----------
-        v:
-            The first vector of fvals.
-        v0:
-            The second vector of fvals.
-
-        Returns
-        -------
-        Whether the first vector of fvals is at least as good as the second.
-        """
-        max_index = min(len(v), len(v0))
-        better_than = v[:max_index] < v0[:max_index]
-        as_good_as = np.isclose(v[:max_index], v0[:max_index])
-        return (better_than | as_good_as).all()
-
     # The analytical inner solver is at least as good as (fval / speed) the
     # numerical inner solver.
     assert at_least_as_good_as(v=trace_analytical, v0=trace_numerical)
@@ -300,3 +285,23 @@ def test_hierarchical_calculator_and_objective():
     # High precision is required as the nominal values are very good already, so the test might pass accidentally
     # if the nominal values are used accidentally.
     assert np.isclose(fval_True, fval_False, atol=1e-12, rtol=1e-14)
+
+
+def at_least_as_good_as(v, v0) -> bool:
+    """Check that the first vector of fvals is at least as good the second.
+
+    Parameters
+    ----------
+    v:
+        The first vector of fvals.
+    v0:
+        The second vector of fvals.
+
+    Returns
+    -------
+    Whether the first vector of fvals is at least as good as the second.
+    """
+    max_index = min(len(v), len(v0))
+    better_than = v[:max_index] < v0[:max_index]
+    as_good_as = np.isclose(v[:max_index], v0[:max_index])
+    return (better_than | as_good_as).all()
