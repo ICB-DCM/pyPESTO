@@ -20,15 +20,15 @@ jobs:
 
     steps:
     - name: Check out repository
-      uses: actions/checkout@v2
+      uses: actions/checkout@v3
 
     - name: Prepare python ${{ matrix.python-version }}
-      uses: actions/setup-python@v1
+      uses: actions/setup-python@v4
       with:
         python-version: ${{ matrix.python-version }}
 
     - name: Cache
-      uses: actions/cache@v1
+      uses: actions/cache@v3
       with:
         path: ~/.cache
         key: ${{ runner.os }}-${{ matrix.python-version }}-ci-base
@@ -54,15 +54,15 @@ jobs:
 
     steps:
     - name: Check out repository
-      uses: actions/checkout@v2
+      uses: actions/checkout@v3
 
     - name: Prepare python ${{ matrix.python-version }}
-      uses: actions/setup-python@v1
+      uses: actions/setup-python@v4
       with:
         python-version: ${{ matrix.python-version }}
 
     - name: Cache
-      uses: actions/cache@v1
+      uses: actions/cache@v3
       with:
         path: ~/.cache
         key: ${{ runner.os }}-${{ matrix.python-version }}-ci-petab
@@ -88,10 +88,10 @@ jobs:
 
     steps:
     - name: Check out repository
-      uses: actions/checkout@v2
+      uses: actions/checkout@v3
 
     - name: Prepare python ${{ matrix.python-version }}
-      uses: actions/setup-python@v1
+      uses: actions/setup-python@v4
       with:
         python-version: ${{ matrix.python-version }}
 
@@ -129,15 +129,15 @@ jobs:
 
     steps:
     - name: Check out repository
-      uses: actions/checkout@v2
+      uses: actions/checkout@v3
 
     - name: Prepare python ${{ matrix.python-version }}
-      uses: actions/setup-python@v1
+      uses: actions/setup-python@v4
       with:
         python-version: ${{ matrix.python-version }}
 
     - name: Cache
-      uses: actions/cache@v1
+      uses: actions/cache@v3
       with:
         path: ~/.cache
         key: ${{ runner.os }}-${{ matrix.python-version }}-ci-optimize
@@ -163,15 +163,15 @@ jobs:
 
     steps:
     - name: Check out repository
-      uses: actions/checkout@v2
+      uses: actions/checkout@v3
 
     - name: Prepare python ${{ matrix.python-version }}
-      uses: actions/setup-python@v1
+      uses: actions/setup-python@v4
       with:
         python-version: ${{ matrix.python-version }}
 
     - name: Cache
-      uses: actions/cache@v1
+      uses: actions/cache@v3
       with:
         path: ~/.cache
         key: ${{ runner.os }}-${{ matrix.python-version }}-ci-select
@@ -197,15 +197,15 @@ jobs:
 
     steps:
     - name: Check out repository
-      uses: actions/checkout@v2
+      uses: actions/checkout@v3
 
     - name: Prepare python ${{ matrix.python-version }}
-      uses: actions/setup-python@v1
+      uses: actions/setup-python@v4
       with:
         python-version: ${{ matrix.python-version }}
 
     - name: Cache
-      uses: actions/cache@v1
+      uses: actions/cache@v3
       with:
         path: ~/.cache
         key: ${{ runner.os }}-${{ matrix.python-version }}-ci-quality
@@ -231,15 +231,15 @@ jobs:
 
     steps:
     - name: Check out repository
-      uses: actions/checkout@v2
+      uses: actions/checkout@v3
 
     - name: Prepare python ${{ matrix.python-version }}
-      uses: actions/setup-python@v1
+      uses: actions/setup-python@v4
       with:
         python-version: ${{ matrix.python-version }}
 
     - name: Cache
-      uses: actions/cache@v1
+      uses: actions/cache@v3
       with:
         path: ~/.cache
         key: ${{ runner.os }}-${{ matrix.python-version }}-ci-docs
@@ -262,15 +262,15 @@ jobs:
 
     steps:
     - name: Check out repository
-      uses: actions/checkout@v2
+      uses: actions/checkout@v3
 
     - name: Prepare python ${{ matrix.python-version }}
-      uses: actions/setup-python@v1
+      uses: actions/setup-python@v4
       with:
         python-version: ${{ matrix.python-version }}
 
     - name: Cache
-      uses: actions/cache@v1
+      uses: actions/cache@v3
       with:
         path: ~/.cache
         key: ${{ runner.os }}-${{ matrix.python-version }}-ci-notebooks1
@@ -290,15 +290,15 @@ jobs:
 
     steps:
     - name: Check out repository
-      uses: actions/checkout@v2
+      uses: actions/checkout@v3
 
     - name: Prepare python ${{ matrix.python-version }}
-      uses: actions/setup-python@v1
+      uses: actions/setup-python@v4
       with:
         python-version: ${{ matrix.python-version }}
 
     - name: Cache
-      uses: actions/cache@v1
+      uses: actions/cache@v3
       with:
         path: ~/.cache
         key: ${{ runner.os }}-${{ matrix.python-version }}-ci-notebooks2
