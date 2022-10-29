@@ -19,6 +19,7 @@ from .dimension_reduction import (
 )
 from .ensemble import ensemble_identifiability
 from .misc import process_offset_y, process_result_list, process_y_limits
+from .model_fit import time_trajectory_model, visualize_optimized_model_fit
 from .optimization_stats import (
     optimization_run_properties_one_plot,
     optimization_run_properties_per_multistart,
