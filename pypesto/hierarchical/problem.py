@@ -5,6 +5,12 @@ from typing import Dict, List, Tuple, Union
 import numpy as np
 import pandas as pd
 
+from ..C import (
+    PARAMETER_CATEGORY,
+    PARAMETER_GROUP,
+    PARAMETER_TYPE,
+    InnerParameterType,
+)
 from .parameter import InnerParameter
 
 try:
@@ -26,10 +32,6 @@ except ImportError:
 
 logger = logging.getLogger(__name__)
 
-PARAMETER_TYPE = 'parameterType'
-PARAMETER_GROUP = 'parameterGroup'
-PARAMETER_CATEGORY = 'parameterCategory'
-
 
 class InnerProblem:
     """
@@ -45,7 +47,9 @@ class InnerProblem:
     """
 
     def __init__(self, xs: List[InnerParameter], data: List[np.ndarray]):
-        self.xs: Dict[str, InnerParameter] = {x.id: x for x in xs}
+        self.xs: Dict[str, InnerParameter] = {
+            x.inner_parameter_id: x for x in xs
+        }
         self.data = data
 
         logger.debug(f"Created InnerProblem with ids {self.get_x_ids()}")
@@ -71,37 +75,53 @@ class InnerProblem:
         """Get IDs of inner parameters."""
         return list(self.xs.keys())
 
-    def get_xs_for_type(self, type: str) -> List[InnerParameter]:
+    def get_xs_for_type(
+        self, inner_parameter_type: str
+    ) -> List[InnerParameter]:
         """Get inner parameters of the given type."""
-        return [x for x in self.xs.values() if x.type == type]
+        return [
+            x
+            for x in self.xs.values()
+            if x.inner_parameter_type == inner_parameter_type
+        ]
 
-    def get_groups_for_xs(self, type: str) -> List[int]:
+    def get_groups_for_xs(self, inner_parameter_type: str) -> List[int]:
         """Get unique list of ``InnerParameter.group`` values."""
-        groups = [x.group for x in self.xs.values() if x.type == type]
+        groups = [
+            x.group
+            for x in self.xs.values()
+            if x.inner_parameter_type == inner_parameter_type
+        ]
         return list(set(groups))
 
     def get_xs_for_group(self, group: int) -> List[InnerParameter]:
         """Get ``InnerParameter``s that belong to the given group."""
         return [x for x in self.xs.values() if x.group == group]
 
-    def get_boring_pars(self, scaled: bool) -> Dict[str, float]:
+    def get_dummy_values(self, scaled: bool) -> Dict[str, float]:
         """
-        Get boring parameter values.
+        Get dummy parameter values.
 
         Get parameter values to be used for simulation before their optimal
         values are computed.
+
+        Parameters
+        ----------
+        scaled:
+            Whether the parameters should be returned on parameter or linear
+            scale.
         """
         return {
-            x.id: scale_value(x.boring_val, x.scale)
+            x.inner_parameter_id: scale_value(x.dummy_value, x.scale)
             if scaled
-            else x.boring_val
+            else x.dummy_value
             for x in self.xs.values()
         }
 
-    def get_for_id(self, id: str) -> InnerParameter:
+    def get_for_id(self, inner_parameter_id: str) -> InnerParameter:
         """Get InnerParameter for the given parameter ID."""
         try:
-            return self.xs[id]
+            return self.xs[inner_parameter_id]
         except KeyError:
             raise KeyError(f"Cannot find parameter with id {id}.")
 
@@ -227,7 +247,7 @@ def inner_problem_from_petab_problem(
         petab_problem.parameter_df
     )
 
-    x_ids = [x.id for x in inner_parameters]
+    x_ids = [x.inner_parameter_id for x in inner_parameters]
 
     # used indices for all measurement specific parameters
     ixs = ixs_for_measurement_specific_parameters(
@@ -242,7 +262,7 @@ def inner_problem_from_petab_problem(
 
     # assign matrices
     for par in inner_parameters:
-        par.ixs = ix_matrices[par.id]
+        par.ixs = ix_matrices[par.inner_parameter_id]
 
     par_group_types = {
         tuple(obs_pars.split(';')): {
@@ -258,14 +278,17 @@ def inner_problem_from_petab_problem(
     coupled_pars = {
         par
         for group, types in par_group_types.items()
-        if InnerParameter.SCALING in types and InnerParameter.OFFSET
+        if InnerParameterType.SCALING in types and InnerParameterType.OFFSET
         for par in group
     }
 
     for par in inner_parameters:
-        if par.type not in [InnerParameter.SCALING, InnerParameter.OFFSET]:
+        if par.inner_parameter_type not in [
+            InnerParameterType.SCALING,
+            InnerParameterType.OFFSET,
+        ]:
             continue
-        if par.id in coupled_pars:
+        if par.inner_parameter_id in coupled_pars:
             par.coupled = True
 
     return AmiciInnerProblem(xs=inner_parameters, data=data, edatas=edatas)
@@ -296,8 +319,8 @@ def inner_parameters_from_parameter_df(
             continue
         parameters.append(
             InnerParameter(
-                id=row[PARAMETER_ID],
-                type=row[PARAMETER_TYPE],
+                inner_parameter_id=row[PARAMETER_ID],
+                inner_parameter_type=row[PARAMETER_TYPE],
                 scale=row[PARAMETER_SCALE],
                 lb=row[LOWER_BOUND],
                 ub=row[UPPER_BOUND],

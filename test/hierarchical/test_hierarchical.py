@@ -8,8 +8,7 @@ import petab
 from benchmark_models_petab import get_problem
 
 import pypesto
-from pypesto.C import MODE_FUN
-from pypesto.hierarchical.parameter import InnerParameter
+from pypesto.C import MODE_FUN, InnerParameterType
 from pypesto.hierarchical.problem import PARAMETER_TYPE
 from pypesto.hierarchical.solver import (
     AnalyticalInnerSolver,
@@ -95,15 +94,15 @@ def get_boehm():
         if par_id.startswith("offset_"):
             petab_problem.parameter_df.loc[
                 par_id, PARAMETER_TYPE
-            ] = InnerParameter.OFFSET
+            ] = InnerParameterType.OFFSET
         elif par_id.startswith("sd_"):
             petab_problem.parameter_df.loc[
                 par_id, PARAMETER_TYPE
-            ] = InnerParameter.SIGMA
+            ] = InnerParameterType.SIGMA
         elif par_id.startswith("scaling_"):
             petab_problem.parameter_df.loc[
                 par_id, PARAMETER_TYPE
-            ] = InnerParameter.SCALING
+            ] = InnerParameterType.SCALING
     petab.lint_problem(petab_problem)
 
     return petab_problem

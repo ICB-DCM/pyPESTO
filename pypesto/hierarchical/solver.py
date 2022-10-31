@@ -3,10 +3,10 @@ from typing import Dict, List
 
 import numpy as np
 
+from ..C import InnerParameterType
 from ..objective import Objective
 from ..optimize import Optimizer, minimize
 from ..problem import Problem
-from .parameter import InnerParameter
 from .problem import InnerProblem, scale_value_dict
 from .util import (
     apply_offset,
@@ -94,34 +94,44 @@ class AnalyticalInnerSolver(InnerSolver):
         data = copy.deepcopy(problem.data)
 
         # compute optimal offsets
-        for x in problem.get_xs_for_type(InnerParameter.OFFSET):
+        for x in problem.get_xs_for_type(InnerParameterType.OFFSET):
             if x.coupled:
-                x_opt[x.id] = compute_optimal_offset_coupled(
+                x_opt[x.inner_parameter_id] = compute_optimal_offset_coupled(
                     data=data, sim=sim, sigma=sigma, mask=x.ixs
                 )
             else:
-                x_opt[x.id] = compute_optimal_offset(
+                x_opt[x.inner_parameter_id] = compute_optimal_offset(
                     data=data, sim=sim, sigma=sigma, mask=x.ixs
                 )
         # apply offsets
-        for x in problem.get_xs_for_type(InnerParameter.OFFSET):
-            apply_offset(offset_value=x_opt[x.id], data=data, mask=x.ixs)
+        for x in problem.get_xs_for_type(InnerParameterType.OFFSET):
+            apply_offset(
+                offset_value=x_opt[x.inner_parameter_id], data=data, mask=x.ixs
+            )
 
         # compute optimal scalings
-        for x in problem.get_xs_for_type(InnerParameter.SCALING):
-            x_opt[x.id] = compute_optimal_scaling(
+        for x in problem.get_xs_for_type(InnerParameterType.SCALING):
+            x_opt[x.inner_parameter_id] = compute_optimal_scaling(
                 data=data, sim=sim, sigma=sigma, mask=x.ixs
             )
         # apply scalings (TODO not always necessary)
-        for x in problem.get_xs_for_type(InnerParameter.SCALING):
-            apply_scaling(scaling_value=x_opt[x.id], sim=sim, mask=x.ixs)
+        for x in problem.get_xs_for_type(InnerParameterType.SCALING):
+            apply_scaling(
+                scaling_value=x_opt[x.inner_parameter_id], sim=sim, mask=x.ixs
+            )
 
         # compute optimal sigmas
-        for x in problem.get_xs_for_type(InnerParameter.SIGMA):
-            x_opt[x.id] = compute_optimal_sigma(data=data, sim=sim, mask=x.ixs)
+        for x in problem.get_xs_for_type(InnerParameterType.SIGMA):
+            x_opt[x.inner_parameter_id] = compute_optimal_sigma(
+                data=data, sim=sim, mask=x.ixs
+            )
         # apply sigmas
-        for x in problem.get_xs_for_type(InnerParameter.SIGMA):
-            apply_sigma(sigma_value=x_opt[x.id], sigma=sigma, mask=x.ixs)
+        for x in problem.get_xs_for_type(InnerParameterType.SIGMA):
+            apply_sigma(
+                sigma_value=x_opt[x.inner_parameter_id],
+                sigma=sigma,
+                mask=x.ixs,
+            )
 
         # scale
         if scaled:
@@ -183,7 +193,7 @@ class NumericalInnerSolver(InnerSolver):
         pars = problem.xs.values()
         lb = np.array([x.lb for x in pars])
         ub = np.array([x.ub for x in pars])
-        x_names = [x.id for x in pars]
+        x_names = [x.inner_parameter_id for x in pars]
         data = problem.data
 
         # objective function
@@ -192,11 +202,11 @@ class NumericalInnerSolver(InnerSolver):
             _sigma = copy.deepcopy(sigma)
             for x_val, par in zip(x, pars):
                 mask = par.ixs
-                if par.type == InnerParameter.SCALING:
+                if par.type == InnerParameterType.SCALING:
                     apply_scaling(x_val, _sim, mask)
-                elif par.type == InnerParameter.OFFSET:
+                elif par.type == InnerParameterType.OFFSET:
                     apply_offset(x_val, _sim, mask)
-                elif par.type == InnerParameter.SIGMA:
+                elif par.type == InnerParameterType.SIGMA:
                     apply_sigma(x_val, _sigma, mask)
                 else:
                     raise ValueError(

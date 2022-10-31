@@ -37,10 +37,27 @@ ID = 'id'
 ###############################################################################
 # HIERARCHICAL
 
-USELESS_SCALING = 1.0
-USELESS_OFFSET = 0.0
 INNER_PARAMETERS = 'inner_parameters'
 INNER_RDATAS = 'inner_rdatas'
+PARAMETER_CATEGORY = 'parameterCategory'
+PARAMETER_GROUP = 'parameterGroup'
+PARAMETER_TYPE = 'parameterType'
+
+
+class InnerParameterType(str, Enum):
+    """Specifies different inner parameter types."""
+
+    OFFSET = 'offset'
+    # OPTIMALSCALING = 'qualitative_scaling'
+    SCALING = 'scaling'
+    SIGMA = 'sigma'
+
+
+DUMMY_INNER_VALUE = {
+    InnerParameterType.OFFSET: 0.0,
+    InnerParameterType.SCALING: 1.0,
+    InnerParameterType.SIGMA: 1.0,
+}
 
 
 ###############################################################################

@@ -2,10 +2,14 @@ from typing import List
 
 import numpy as np
 
-from ..C import USELESS_OFFSET, USELESS_SCALING
+from ..C import DUMMY_INNER_VALUE, InnerParameterType
 
 
-def get_finite_quotient(numerator, denominator, useless):
+def get_finite_quotient(
+    numerator: float,
+    denominator: float,
+    inner_parameter_type: InnerParameterType,
+):
     """Get a finite value for the inner parameter.
 
     Parameters
@@ -19,7 +23,7 @@ def get_finite_quotient(numerator, denominator, useless):
 
     Returns
     -------
-    `num / den` if finite, else `useless`.
+    `num / den` if it's finite, else a dummy value.
     """
     try:
         quotient = float(numerator / denominator)
@@ -27,7 +31,7 @@ def get_finite_quotient(numerator, denominator, useless):
             raise ValueError
         return quotient
     except Exception:
-        return useless
+        return DUMMY_INNER_VALUE[InnerParameterType]
 
 
 def compute_optimal_scaling(
@@ -59,7 +63,7 @@ def compute_optimal_scaling(
     return get_finite_quotient(
         numerator=num,
         denominator=den,
-        useless=USELESS_SCALING,
+        inner_parameter_type=InnerParameterType.SCALING,
     )
 
 
@@ -99,7 +103,7 @@ def compute_optimal_offset(
     return get_finite_quotient(
         numerator=num,
         denominator=den,
-        useless=USELESS_OFFSET,
+        inner_parameter_type=InnerParameterType.OFFSET,
     )
 
 

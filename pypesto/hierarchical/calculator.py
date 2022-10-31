@@ -82,7 +82,7 @@ class HierarchicalAmiciCalculator(AmiciCalculator):
 
         # compute optimal inner parameters
         x_dct = copy.deepcopy(x_dct)
-        x_dct.update(self.inner_problem.get_boring_pars(scaled=True))
+        x_dct.update(self.inner_problem.get_dummy_values(scaled=True))
         inner_rdatas = super().__call__(
             x_dct=x_dct,
             sensi_orders=(0,),

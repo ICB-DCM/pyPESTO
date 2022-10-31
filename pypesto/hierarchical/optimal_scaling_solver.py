@@ -21,11 +21,13 @@ from typing import Dict, List, Tuple
 
 import numpy as np
 
+from ..C import InnerParameterType
 from ..optimize import Optimizer
 from .parameter import InnerParameter
 from .problem import InnerProblem
 from .solver import InnerSolver
 
+# FIXME move to "C.py"
 REDUCED = 'reduced'
 STANDARD = 'standard'
 MAXMIN = 'max-min'
@@ -78,7 +80,7 @@ class OptimalScalingInnerSolver(InnerSolver):
             ...
         """
         optimal_surrogates = []
-        for gr in problem.get_groups_for_xs(InnerParameter.OPTIMALSCALING):
+        for gr in problem.get_groups_for_xs(InnerParameterType.OPTIMALSCALING):
             xs = problem.get_xs_for_group(gr)
             surrogate_opt_results = optimize_surrogate_data(
                 xs, sim, self.options

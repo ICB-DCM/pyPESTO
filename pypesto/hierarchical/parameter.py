@@ -3,6 +3,8 @@ from typing import Any, Literal
 
 import numpy as np
 
+from ..C import DUMMY_INNER_VALUE, LIN, LOG, LOG10, InnerParameterType
+
 logger = logging.getLogger(__name__)
 
 
@@ -16,21 +18,15 @@ class InnerParameter:
         TODO
     """
 
-    # Supported parameter types:
-    SCALING = 'scaling'
-    OFFSET = 'offset'
-    SIGMA = 'sigma'
-    OPTIMALSCALING = 'qualitative_scaling'
-
     def __init__(
         self,
-        id: str,
-        type: Literal['scaling', 'offset', 'sigma', 'qualitative_scaling'],
-        scale: Literal['lin', 'log', 'log10'] = 'lin',
+        inner_parameter_id: str,
+        inner_parameter_type: InnerParameterType,
+        scale: Literal[LIN, LOG, LOG10] = LIN,
         lb: float = -np.inf,
         ub: float = np.inf,
         ixs: Any = None,
-        boring_val: float = None,
+        dummy_value: float = None,
         category: int = None,
         group: int = None,
     ):
@@ -39,9 +35,9 @@ class InnerParameter:
 
         Parameters
         ----------
-        id:
+        inner_parameter_id:
             Id of the parameter.
-        type:
+        inner_parameter_type:
             Type of this inner parameter.
         scale:
             Scale on which to estimate this parameter.
@@ -52,7 +48,7 @@ class InnerParameter:
         ixs:
             Boolean matrix, indicating for which measurements this parameter
             is used.
-        boring_val:
+        dummy_value:
             Value to be used when the optimal parameter is not yet known
             (in particular to simulate unscaled observables).
         category:
@@ -62,46 +58,44 @@ class InnerParameter:
             Group index.
             Only relevant if ``type==qualitative_scaling``.
         """
-        self.id: str = id
+        self.inner_parameter_id: str = inner_parameter_id
         self.coupled = False
-        self.type: str = type
+        self.inner_parameter_type: str = inner_parameter_type
 
-        if scale not in {'lin', 'log', 'log10'}:
-            raise ValueError("Scale not recognized.")
+        if scale not in {LIN, LOG, LOG10}:
+            raise ValueError(f"Scale not recognized: {scale}.")
         self.scale = scale
 
-        if type not in (
-            InnerParameter.OPTIMALSCALING,
-            InnerParameter.OFFSET,
-            InnerParameter.SIGMA,
-            InnerParameter.SCALING,
+        if inner_parameter_type not in (
+            # InnerParameterType.OPTIMALSCALING,
+            InnerParameterType.OFFSET,
+            InnerParameterType.SIGMA,
+            InnerParameterType.SCALING,
         ):
-            raise ValueError(f"Unsupported inner parameter type `{type}`.")
+            raise ValueError(
+                f"Unsupported inner parameter type `{inner_parameter_type}`."
+            )
 
-        if type == InnerParameter.OPTIMALSCALING:
-            if group is None:
-                raise ValueError("No Parameter group provided.")
-            if category is None:
-                raise ValueError("No Category provided.")
-        self.group = group
-        self.category = category
+        # if inner_parameter_type == InnerParameter.OPTIMALSCALING:
+        #     if group is None:
+        #         raise ValueError("No Parameter group provided.")
+        #     if category is None:
+        #         raise ValueError("No Category provided.")
+        # self.group = group
+        # self.category = category
 
         self.lb: float = lb
         self.ub: float = ub
         self.ixs: Any = ixs
 
-        if boring_val is None:
-            if type == InnerParameter.SCALING:
-                boring_val = 1.0
-            elif type == InnerParameter.OFFSET:
-                boring_val = 0.0
-            elif type == InnerParameter.SIGMA:
-                boring_val = 1.0
-            elif type == InnerParameter.OPTIMALSCALING:
-                boring_val = category
-            else:
+        if dummy_value is None:
+            try:
+                dummy_value = DUMMY_INNER_VALUE[inner_parameter_type]
+            except KeyError as e:
                 raise ValueError(
-                    "Could not deduce boring value for parameter "
-                    f"{id} of type {type}."
-                )
-        self.boring_val: float = boring_val
+                    "Unsupported parameter type. Parameter id:"
+                    f"`{inner_parameter_id}`. Parameter type:"
+                    f"`{inner_parameter_type}`."
+                ) from e
+
+        self.dummy_value: float = dummy_value
