@@ -27,8 +27,8 @@ class InnerParameter:
         ub: float = np.inf,
         ixs: Any = None,
         dummy_value: float = None,
-        category: int = None,
-        group: int = None,
+        # category: int = None,
+        # group: int = None,
     ):
         """
         Construct.
