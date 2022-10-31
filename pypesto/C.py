@@ -37,6 +37,8 @@ ID = 'id'
 ###############################################################################
 # HIERARCHICAL
 
+USELESS_SCALING = 1.0
+USELESS_OFFSET = 0.0
 INNER_PARAMETERS = 'inner_parameters'
 INNER_RDATAS = 'inner_rdatas'
 

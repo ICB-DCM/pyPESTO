@@ -2,6 +2,33 @@ from typing import List
 
 import numpy as np
 
+from ..C import USELESS_OFFSET, USELESS_SCALING
+
+
+def get_finite_quotient(numerator, denominator, useless):
+    """Get a finite value for the inner parameter.
+
+    Parameters
+    ----------
+    numerator:
+        The numerator of a quotient.
+    denominator:
+        The denominator of a quotient.
+    useless:
+        The value to return if the quotient is not finite.
+
+    Returns
+    -------
+    `num / den` if finite, else `useless`.
+    """
+    try:
+        quotient = float(numerator / denominator)
+        if not np.isfinite(quotient):
+            raise ValueError
+        return quotient
+    except Exception:
+        return useless
+
 
 def compute_optimal_scaling(
     data: List[np.ndarray],
@@ -29,8 +56,11 @@ def compute_optimal_scaling(
         num += np.nansum(sim_x * data_x / sigma_x**2)
         den += np.nansum(sim_x**2 / sigma_x**2)
 
-    # compute optimal value
-    return float(num / den)
+    return get_finite_quotient(
+        numerator=num,
+        denominator=den,
+        useless=USELESS_SCALING,
+    )
 
 
 def apply_scaling(
@@ -66,11 +96,11 @@ def compute_optimal_offset(
         num += np.nansum((data_x - sim_x) / sigma_x**2)
         den += np.nansum(1 / sigma_x**2)
 
-    # compute optimal value
-    if not np.isclose(den, 0.0):
-        return float(num / den)
-    # avoid extreme values. specific value doesn't matter.
-    return 1.0
+    return get_finite_quotient(
+        numerator=num,
+        denominator=den,
+        useless=USELESS_OFFSET,
+    )
 
 
 def compute_optimal_offset_coupled(
