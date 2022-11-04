@@ -7,7 +7,7 @@ import numpy as np
 
 from ..problem import Problem
 from ..result import McmcPtResult
-from ..startpoint import uniform, UniformStartpoints
+from ..startpoint import UniformStartpoints, uniform
 from .sampler import Sampler, SamplerImportError
 
 logger = logging.getLogger(__name__)
