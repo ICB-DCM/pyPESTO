@@ -7,7 +7,7 @@ import numpy as np
 
 from ..problem import Problem
 from ..result import McmcPtResult
-from ..startpoint import uniform
+from ..startpoint import uniform, UniformStartpoints
 from .sampler import Sampler, SamplerImportError
 
 logger = logging.getLogger(__name__)
@@ -109,10 +109,12 @@ class EmceeSampler(Sampler):
         )
 
         # Include `center` in initial positions
-        initial_state = np.row_stack((
-            center,
-            initial_state_after_first,
-        ))
+        initial_state = np.row_stack(
+            (
+                center,
+                initial_state_after_first,
+            )
+        )
 
         return initial_state
 
@@ -184,10 +186,12 @@ class EmceeSampler(Sampler):
                 x_guesses_full0 = problem.x_guesses_full
                 #  add x0 to guesses
                 problem.set_x_guesses(
-                    np.row_stack((
-                        x0,
-                        problem.x_guesses_full,
-                    ))
+                    np.row_stack(
+                        (
+                            x0,
+                            problem.x_guesses_full,
+                        )
+                    )
                 )
                 #  sample start points
                 initial_state = UniformStartpoints(
