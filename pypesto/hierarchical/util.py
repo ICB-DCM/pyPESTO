@@ -70,7 +70,18 @@ def compute_optimal_scaling(
 def apply_scaling(
     scaling_value: float, sim: List[np.ndarray], mask: List[np.ndarray]
 ):
-    """Apply scaling to simulations (in-place)."""
+    """Apply scaling to simulations (in-place).
+
+    Parameters
+    ----------
+    scaling_value:
+        The optimal offset for the masked simulations.
+    sim:
+        All full (unmasked) simulations.
+    mask:
+        The masks that indicate the simulation subset that corresponds to the
+        `scaling_value`.
+    """
     for i in range(len(sim)):
         sim[i][mask[i]] = scaling_value * sim[i][mask[i]]
 
@@ -143,11 +154,22 @@ def compute_optimal_offset_coupled(
 
 
 def apply_offset(
-    offset_value: float, data: List[np.ndarray], mask: List[np.ndarray]
+    offset_value: float, sim: List[np.ndarray], mask: List[np.ndarray]
 ):
-    """Apply offset to simulations (in-place)."""
-    for i in range(len(data)):
-        data[i][mask[i]] = data[i][mask[i]] - offset_value
+    """Apply offset to simulations (in-place).
+
+    Parameters
+    ----------
+    offset_value:
+        The optimal offset for the masked simulations.
+    sim:
+        All full (unmasked) simulations.
+    mask:
+        The masks that indicate the simulation subset that corresponds to the
+        `offset_value`.
+    """
+    for i in range(len(sim)):
+        sim[i][mask[i]] = sim[i][mask[i]] + offset_value
 
 
 def compute_optimal_sigma(
@@ -178,9 +200,20 @@ def compute_optimal_sigma(
 def apply_sigma(
     sigma_value: float, sigma: List[np.ndarray], mask: List[np.ndarray]
 ):
-    """Apply scaling to simulations (in-place)."""
+    """Apply optimal sigma to pre-existing sigma arrays (in-place).
+
+    Parameters
+    ----------
+    sigma_value:
+        The optimal sigma value.
+    sigma:
+        All full (unmasked) sigmas.
+    mask:
+        The masks that indicate the sigma subset that corresponds to the
+        `sigma_value`.
+    """
     for i in range(len(sigma)):
-        sigma[i][mask[i]] = sigma_value * sigma[i][mask[i]]
+        sigma[i][mask[i]] = sigma_value
 
 
 def compute_nllh(
