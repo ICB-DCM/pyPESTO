@@ -154,22 +154,33 @@ def compute_optimal_offset_coupled(
 
 
 def apply_offset(
-    offset_value: float, sim: List[np.ndarray], mask: List[np.ndarray]
+    offset_value: float, data: List[np.ndarray], mask: List[np.ndarray]
 ):
-    """Apply offset to simulations (in-place).
+    """Apply offset to data (in-place).
+
+    Acts on data instead of simulation because of:
+    `data = scaling * simulation + offset`. The first step of transforming
+    data and simulation so they can be compared is to either multiply
+    `simulation` by `scaling`, or subtract `offset` from `data`.
+    As we only currently have `compute_optimal_offset_coupled`, not
+    `compute_optimal_scaling_coupled`, we need to compute optimal offset first,
+    so the first step must act on data.
+
+    NB: as this applies to data in-place, it's important to supply a copy of
+    data s.t. the original data is not affected.
 
     Parameters
     ----------
     offset_value:
         The optimal offset for the masked simulations.
     sim:
-        All full (unmasked) simulations.
+        All full (unmasked) data.
     mask:
-        The masks that indicate the simulation subset that corresponds to the
+        The masks that indicate the data subset that corresponds to the
         `offset_value`.
     """
-    for i in range(len(sim)):
-        sim[i][mask[i]] = sim[i][mask[i]] + offset_value
+    for i in range(len(data)):
+        data[i][mask[i]] = data[i][mask[i]] - offset_value
 
 
 def compute_optimal_sigma(

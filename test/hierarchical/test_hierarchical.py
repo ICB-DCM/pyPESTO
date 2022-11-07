@@ -14,6 +14,14 @@ from pypesto.hierarchical.solver import (
     AnalyticalInnerSolver,
     NumericalInnerSolver,
 )
+from pypesto.hierarchical.util import (
+    apply_offset,
+    apply_scaling,
+    compute_optimal_offset,
+    compute_optimal_offset_coupled,
+    compute_optimal_scaling,
+    compute_optimal_sigma,
+)
 from pypesto.petab import PetabImporter
 
 # import pypesto.logging
@@ -21,6 +29,9 @@ from pypesto.petab import PetabImporter
 
 # TODO
 # - test offset parameters
+# - test analytical handling of redundant offset/scaling parameters
+#   - e.g., scaling or offset can be applied to a flat line x=5 with the same
+#     effect, i.e. e.g. y=2*x is the same as y=x+5 here
 
 # Suitable test cases from the benchmark collection
 # - Boehm
@@ -284,6 +295,104 @@ def test_hierarchical_calculator_and_objective():
     # High precision is required as the nominal values are very good already, so the test might pass accidentally
     # if the nominal values are used accidentally.
     assert np.isclose(fval_True, fval_False, atol=1e-12, rtol=1e-14)
+
+
+def test_analytical_computations():
+    """Test analytically-solved hierarchical inner parameters.
+
+    Results can be sensitive to inner parameters, hence the expected values are
+    provided to the `apply_` methods.
+    """
+    function = np.exp
+
+    timepoints = np.linspace(0, 10, 101)
+
+    simulation = function(timepoints)
+    dummy_sigma = np.ones(simulation.shape)
+    mask = np.full(simulation.shape, True)
+
+    expected_scaling_value = 5
+    expected_offset_value = 2
+    expected_sigma_value = 2
+
+    rtol = 1e-3
+
+    # Scaling
+    simulation = function(timepoints)
+    data = expected_scaling_value * simulation
+    scaling_value = compute_optimal_scaling(
+        data=[data],
+        sim=[simulation],
+        sigma=[dummy_sigma],
+        mask=[mask],
+    )
+    assert np.isclose(scaling_value, expected_scaling_value, rtol=rtol)
+
+    # Offset
+    simulation = function(timepoints)
+    data = simulation + expected_offset_value
+    offset_value = compute_optimal_offset(
+        data=[data],
+        sim=[simulation],
+        sigma=[dummy_sigma],
+        mask=[mask],
+    )
+    assert np.isclose(offset_value, expected_offset_value, rtol=rtol)
+
+    # Coupled (scaling and offset)
+    simulation = function(timepoints)
+    data = expected_scaling_value * simulation + expected_offset_value
+    offset_value = compute_optimal_offset_coupled(
+        data=[data],
+        sim=[simulation],
+        sigma=[dummy_sigma],
+        mask=[mask],
+    )
+    apply_offset(offset_value=expected_offset_value, data=[data], mask=[mask])
+    scaling_value = compute_optimal_scaling(
+        data=[data],
+        sim=[simulation],
+        sigma=[dummy_sigma],
+        mask=[mask],
+    )
+    assert np.isclose(offset_value, expected_offset_value, rtol=rtol)
+    assert np.isclose(scaling_value, expected_scaling_value, rtol=rtol)
+
+    # All (scaling, offset, sigma)
+    simulation = function(timepoints)
+
+    _data0 = (
+        expected_scaling_value * simulation
+        + expected_offset_value
+        - expected_sigma_value
+    )
+    _data1 = (
+        expected_scaling_value * simulation
+        + expected_offset_value
+        + expected_sigma_value
+    )
+    data = _data0
+    data[::2] = _data1[::2]
+
+    offset_value = compute_optimal_offset_coupled(
+        data=[data],
+        sim=[simulation],
+        sigma=[dummy_sigma],
+        mask=[mask],
+    )
+    apply_offset(offset_value=offset_value, data=[data], mask=[mask])
+    scaling_value = compute_optimal_scaling(
+        data=[data],
+        sim=[simulation],
+        sigma=[dummy_sigma],
+        mask=[mask],
+    )
+    apply_scaling(scaling_value=scaling_value, sim=[simulation], mask=[mask])
+    sigma_value = compute_optimal_sigma(data=data, sim=simulation, mask=mask)
+
+    assert np.isclose(offset_value, expected_offset_value, rtol=rtol)
+    assert np.isclose(scaling_value, expected_scaling_value, rtol=rtol)
+    assert np.isclose(sigma_value, expected_sigma_value, rtol=rtol)
 
 
 def at_least_as_good_as(v, v0) -> bool:
