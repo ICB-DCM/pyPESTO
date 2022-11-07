@@ -5,10 +5,11 @@ import amici
 import numpy as np
 import pandas as pd
 import petab
+import pytest
 from benchmark_models_petab import get_problem
 
 import pypesto
-from pypesto.C import LIN, LOG10, MODE_FUN, InnerParameterType
+from pypesto.C import LOG10, MODE_FUN, InnerParameterType
 from pypesto.hierarchical.parameter import InnerParameter
 from pypesto.hierarchical.problem import PARAMETER_TYPE, InnerProblem
 from pypesto.hierarchical.solver import (
@@ -447,12 +448,14 @@ def test_analytical_inner_solver():
     rtol = 1e-3
 
     solver = AnalyticalInnerSolver()
-    result = solver.solve(
-        problem=inner_problem,
-        sim=[simulation],
-        sigma=[dummy_sigma],
-        scaled=False,
-    )
+
+    with pytest.warns(UserWarning, match='parameter bounds'):
+        result = solver.solve(
+            problem=inner_problem,
+            sim=[simulation],
+            sigma=[dummy_sigma],
+            scaled=False,
+        )
 
     assert np.isclose(result['offset_'], expected_values['offset_'], rtol=rtol)
     assert np.isclose(

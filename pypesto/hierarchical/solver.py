@@ -1,4 +1,5 @@
 import copy
+import itertools
 import warnings
 from typing import Any, Dict, List
 
@@ -90,10 +91,18 @@ class AnalyticalInnerSolver(InnerSolver):
             Whether to scale the results to the parameter scale specified in
             ``problem``.
         """
-        warnings.warn(
-            message="Note that parameter bounds are so far ignored "
-            f"by {self.__class__.__name__}."
-        )
+        # finite bounds are not handled here. warn.
+        for x in itertools.chain(
+            problem.get_xs_for_type(InnerParameterType.OFFSET),
+            problem.get_xs_for_type(InnerParameterType.SCALING),
+            problem.get_xs_for_type(InnerParameterType.SIGMA),
+        ):
+            if x.lb != -np.inf or x.ub != np.inf:
+                warnings.warn(
+                    message="Note that parameter bounds are so far ignored "
+                    f"by {self.__class__.__name__}."
+                )
+                break
 
         x_opt = {}
 
