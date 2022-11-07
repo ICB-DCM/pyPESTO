@@ -1,4 +1,5 @@
 import copy
+import warnings
 from typing import Any, Dict, List
 
 import numpy as np
@@ -89,6 +90,11 @@ class AnalyticalInnerSolver(InnerSolver):
             Whether to scale the results to the parameter scale specified in
             ``problem``.
         """
+        warnings.warn(
+            message="Note that parameter bounds are so far ignored "
+            f"by {self.__class__.__name__}."
+        )
+
         x_opt = {}
 
         data = copy.deepcopy(problem.data)
