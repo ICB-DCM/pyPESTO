@@ -389,9 +389,8 @@ def inner_problem_exp():
 
     expected_values = {
         'scaling_': 5,
-        # FIXME make nonzero when offset works in `test_numerical_inner_solver`
         'offset_': 2,
-        'sigma_': 2,
+        'sigma_': 3,
     }
 
     simulation = function(timepoints)
@@ -455,8 +454,7 @@ def test_analytical_inner_solver():
         scaled=False,
     )
 
-    # FIXME uncomment when offset works in `test_numerical_inner_solver`
-    # assert np.isclose(result['offset_'], expected_values['offset_'], rtol=rtol)
+    assert np.isclose(result['offset_'], expected_values['offset_'], rtol=rtol)
     assert np.isclose(
         result['scaling_'], expected_values['scaling_'], rtol=rtol
     )
@@ -471,11 +469,7 @@ def test_numerical_inner_solver():
 
     rtol = 1e-3
 
-    solver = NumericalInnerSolver(
-        minimize_kwargs={
-            'n_starts': 100,
-        }
-    )
+    solver = NumericalInnerSolver(minimize_kwargs={'n_starts': 10})
     result = solver.solve(
         problem=inner_problem,
         sim=[simulation],
@@ -483,7 +477,6 @@ def test_numerical_inner_solver():
         scaled=False,
     )
 
-    # FIXME uncomment when offset works in `test_numerical_inner_solver`
     assert np.isclose(result['offset_'], expected_values['offset_'], rtol=rtol)
     assert np.isclose(
         result['scaling_'], expected_values['scaling_'], rtol=rtol

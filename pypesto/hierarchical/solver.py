@@ -236,6 +236,7 @@ class NumericalInnerSolver(InnerSolver):
                     )
 
             return compute_nllh(_data, _sim, _sigma)
+
         # TODO gradient
         objective = Objective(fun)
 
