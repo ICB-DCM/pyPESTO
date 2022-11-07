@@ -4,7 +4,16 @@ import copy
 
 import pandas as pd
 import petab
-from petab.C import OBSERVABLE_ID
+from petab.C import (
+    LIN,
+    NOISE_DISTRIBUTION,
+    NOISE_FORMULA,
+    NOISE_PARAMETERS,
+    NORMAL,
+    OBSERVABLE_ID,
+    OBSERVABLE_TRANSFORMATION,
+    PARAMETER_SEPARATOR,
+)
 
 from ..C import PARAMETER_TYPE, InnerParameterType
 
@@ -29,6 +38,30 @@ def validate_petab(petab_problem: petab.Problem) -> None:
         ].index
     }
 
+    # Check measurements to ensure sigma parameters do not appear there.
+    # Ideally scaling and offset parameters would not either.
+    # In principle, sigma parameters can appear in the measurements table,
+    # but makes the validation slightly more effortful.
+    noise_parameters = [
+        noise_parameter
+        for noise_parameter_list in petab_problem.measurement_df[
+            NOISE_PARAMETERS
+        ]
+        for noise_parameter in noise_parameter_list.split(PARAMETER_SEPARATOR)
+    ]
+    for noise_parameter in noise_parameters:
+        # Loops over all inner parameters. Could limit this to just sigma.
+        for inner_parameter_id in inner_parameter_types:
+            if inner_parameter_id == noise_parameter:
+                raise ValueError(
+                    f"The inner parameter `{inner_parameter_id}` exists in "
+                    "`noiseParameters` column of the measurements table. This "
+                    "may be valid, but is not checked by this validator. "
+                    "Please reformulate the problem such that this parameter "
+                    "instead appears in the `noiseFormula` column of the "
+                    "observables table."
+                )
+
     # Loop over each observable
     for (
         observable_id,
@@ -38,6 +71,56 @@ def validate_petab(petab_problem: petab.Problem) -> None:
             inner_parameter_type: set()
             for inner_parameter_type in InnerParameterType
         }
+
+        # Check that objective function has no observable transformation,
+        # uses a normally-distributed noise model, and the sigma parameters
+        # are the "full" noise formula.
+        noise_formula = observable_def.get(NOISE_FORMULA, 1)
+        for (
+            inner_parameter_id,
+            inner_parameter_type,
+        ) in inner_parameter_types.items():
+            if inner_parameter_type != InnerParameterType.SIGMA:
+                continue
+            if (
+                inner_parameter_id in noise_formula
+                and noise_formula != inner_parameter_id
+            ):
+                # The case where the sigma parameter is subbed into the noise
+                # formula from the measurements table via `noiseParameter...`
+                # is handled later in this function, where such sigma
+                # parameters are banned from appearing in the measurements
+                # table `noiseParameters` column.
+                raise ValueError(
+                    "Hierarchically-optimized sigma parameters must be "
+                    "the only term in the noise formula. This is not the case "
+                    f"for observable `{observable_id}`, with noise formula "
+                    f"`{noise_formula}`."
+                )
+        if (
+            noise_distribution := observable_def.get(
+                NOISE_DISTRIBUTION, NORMAL
+            )
+            != NORMAL
+        ):
+            raise ValueError(
+                "Hierarchical optimization currently only works with "
+                "normally-distributed noise. The observable "
+                f"`{observable_id}` has the incompatible noise distribution "
+                f"`{noise_distribution}`."
+            )
+        if (
+            observable_transformation := observable_def.get(
+                OBSERVABLE_TRANSFORMATION, LIN
+            )
+            != LIN
+        ):
+            raise ValueError(
+                "Hierarchical optimization currently only works with "
+                "untransformed objective functions. The observable "
+                f"`{observable_id}` has the incompatible transformation "
+                f"`{observable_transformation}`."
+            )
 
         # Collect inner parameters from observable and noise formulae
         observable_row_df = pd.DataFrame(observable_def).transpose()
