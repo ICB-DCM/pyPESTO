@@ -1,11 +1,11 @@
 import copy
-from typing import Dict, List
+from typing import Any, Dict, List
 
 import numpy as np
 
 from ..C import InnerParameterType
 from ..objective import Objective
-from ..optimize import Optimizer, minimize
+from ..optimize import minimize
 from ..problem import Problem
 from .problem import InnerProblem, scale_value_dict
 from .util import (
@@ -147,17 +147,37 @@ class NumericalInnerSolver(InnerSolver):
 
     Special features: We cache the best parameters, which substantially
     speeds things up.
+
+    Attributes
+    ----------
+    minimize_kwargs:
+        Passed to the `pypesto.optimize.minimize` call.
+    n_cached:
+        Number of optimized parameter vectors to save.
+    problem_kwargs:
+        Passed to the `pypesto.Problem` constructor.
+    x_guesses:
+        Cached optimized parameter vectors, supplied as guesses to the next
+        `solve` call.
     """
 
     def __init__(
         self,
-        n_starts: int = 1,
-        n_records: int = 1,
-        optimizer: Optimizer = None,
+        minimize_kwargs: Dict[str, Any] = None,
+        n_cached: int = 1,
+        problem_kwargs: Dict[str, Any] = None,
     ):
-        self.n_starts = n_starts
-        self.n_records = n_records
-        self.optimizer = optimizer
+        self.minimize_kwargs = minimize_kwargs
+        if self.minimize_kwargs is None:
+            self.minimize_kwargs = {}
+        self.n_cached = n_cached
+        self.problem_kwargs = problem_kwargs
+        if self.problem_kwargs is None:
+            self.problem_kwargs = {}
+
+        self.minimize_kwargs['n_starts'] = self.minimize_kwargs.get(
+            'n_starts', 1
+        )
 
         self.x_guesses = None
 
@@ -202,15 +222,16 @@ class NumericalInnerSolver(InnerSolver):
             _sigma = copy.deepcopy(sigma)
             for x_val, par in zip(x, pars):
                 mask = par.ixs
-                if par.type == InnerParameterType.SCALING:
+                if par.inner_parameter_type == InnerParameterType.SCALING:
                     apply_scaling(x_val, _sim, mask)
-                elif par.type == InnerParameterType.OFFSET:
+                elif par.inner_parameter_type == InnerParameterType.OFFSET:
                     apply_offset(x_val, _sim, mask)
-                elif par.type == InnerParameterType.SIGMA:
+                elif par.inner_parameter_type == InnerParameterType.SIGMA:
                     apply_sigma(x_val, _sigma, mask)
                 else:
                     raise ValueError(
-                        "Can't handle parameter type " f"`{par.type}`."
+                        "Can't handle parameter type "
+                        f"`{par.inner_parameter_type}`."
                     )
             return compute_nllh(data, _sim, _sigma)
 
@@ -218,17 +239,17 @@ class NumericalInnerSolver(InnerSolver):
         objective = Objective(fun)
 
         # optimization problem
-        pypesto_problem = Problem(objective, lb=lb, ub=ub, x_names=x_names)
+        pypesto_problem = Problem(
+            objective, lb=lb, ub=ub, x_names=x_names, **self.problem_kwargs
+        )
 
         if self.x_guesses is not None:
-            pypesto_problem.x_guesses_full = self.x_guesses[
-                :, pypesto_problem.x_free_indices
-            ]
+            pypesto_problem.set_x_guesses(
+                self.x_guesses[:, pypesto_problem.x_free_indices]
+            )
 
         # perform the actual optimization
-        result = minimize(pypesto_problem, n_starts=self.n_starts)
-        # print(result.optimize_result.get_for_key('fval'))
-        # print(result.optimize_result.get_for_key('id'))
+        result = minimize(pypesto_problem, **self.minimize_kwargs)
 
         best_par = result.optimize_result.list[0]['x']
         x_opt = dict(zip(pypesto_problem.x_names, best_par))
@@ -237,7 +258,7 @@ class NumericalInnerSolver(InnerSolver):
         self.x_guesses = np.array(
             [
                 entry['x']
-                for entry in result.optimize_result.list[: self.n_records]
+                for entry in result.optimize_result.list[: self.n_cached]
             ]
         )
 
