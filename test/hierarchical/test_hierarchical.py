@@ -8,8 +8,9 @@ import petab
 from benchmark_models_petab import get_problem
 
 import pypesto
-from pypesto.C import MODE_FUN, InnerParameterType
-from pypesto.hierarchical.problem import PARAMETER_TYPE
+from pypesto.C import LIN, LOG10, MODE_FUN, InnerParameterType
+from pypesto.hierarchical.parameter import InnerParameter
+from pypesto.hierarchical.problem import PARAMETER_TYPE, InnerProblem
 from pypesto.hierarchical.solver import (
     AnalyticalInnerSolver,
     NumericalInnerSolver,
@@ -298,11 +299,7 @@ def test_hierarchical_calculator_and_objective():
 
 
 def test_analytical_computations():
-    """Test analytically-solved hierarchical inner parameters.
-
-    Results can be sensitive to inner parameters, hence the expected values are
-    provided to the `apply_` methods.
-    """
+    """Test analytically-solved hierarchical inner parameters."""
     function = np.exp
 
     timepoints = np.linspace(0, 10, 101)
@@ -361,18 +358,9 @@ def test_analytical_computations():
     # All (scaling, offset, sigma)
     simulation = function(timepoints)
 
-    _data0 = (
-        expected_scaling_value * simulation
-        + expected_offset_value
-        - expected_sigma_value
-    )
-    _data1 = (
-        expected_scaling_value * simulation
-        + expected_offset_value
-        + expected_sigma_value
-    )
-    data = _data0
-    data[::2] = _data1[::2]
+    data = expected_scaling_value * simulation + expected_offset_value
+    data[0::2] -= expected_sigma_value
+    data[1::2] += expected_sigma_value
 
     offset_value = compute_optimal_offset_coupled(
         data=[data],
@@ -393,6 +381,117 @@ def test_analytical_computations():
     assert np.isclose(offset_value, expected_offset_value, rtol=rtol)
     assert np.isclose(scaling_value, expected_scaling_value, rtol=rtol)
     assert np.isclose(sigma_value, expected_sigma_value, rtol=rtol)
+
+
+def inner_problem_exp():
+    function = np.exp
+    timepoints = np.linspace(0, 10, 101)
+
+    expected_values = {
+        'scaling_': 5,
+        # FIXME make nonzero when offset works in `test_numerical_inner_solver`
+        'offset_': 0,
+        'sigma_': 2,
+    }
+
+    simulation = function(timepoints)
+
+    data = (
+        expected_values['scaling_'] * simulation + expected_values['offset_']
+    )
+    data[0::2] -= expected_values['sigma_']
+    data[1::2] += expected_values['sigma_']
+
+    mask = np.full(data.shape, True)
+
+    inner_parameters = [
+        InnerParameter(
+            inner_parameter_id='offset_',
+            inner_parameter_type=InnerParameterType.OFFSET,
+            scale=LOG10,
+            lb=expected_values['offset_'] * 1e-5,
+            ub=expected_values['offset_'] * 1e5,
+            ixs=mask,
+        ),
+        InnerParameter(
+            inner_parameter_id='scaling_',
+            inner_parameter_type=InnerParameterType.SCALING,
+            scale=LOG10,
+            lb=expected_values['scaling_'] * 1e-5,
+            ub=expected_values['scaling_'] * 1e5,
+            ixs=mask,
+        ),
+        InnerParameter(
+            inner_parameter_id='sigma_',
+            inner_parameter_type=InnerParameterType.SIGMA,
+            scale=LOG10,
+            lb=expected_values['sigma_'] * 1e-5,
+            ub=expected_values['sigma_'] * 1e1,
+            ixs=mask,
+        ),
+    ]
+
+    inner_parameters[0].coupled = True
+    inner_parameters[1].coupled = True
+
+    # FIXME remove when offset works in `test_numerical_inner_solver`
+    inner_parameters.pop(0)
+
+    inner_problem = InnerProblem(xs=inner_parameters, data=[data])
+
+    return inner_problem, expected_values, simulation
+
+
+def test_analytical_inner_solver():
+    """Test numerically-solved hierarchical inner parameters."""
+    inner_problem, expected_values, simulation = inner_problem_exp()
+
+    dummy_sigma = np.ones(simulation.shape)
+
+    rtol = 1e-3
+
+    solver = AnalyticalInnerSolver()
+    result = solver.solve(
+        problem=inner_problem,
+        sim=[simulation],
+        sigma=[dummy_sigma],
+        scaled=False,
+    )
+
+    # FIXME uncomment when offset works in `test_numerical_inner_solver`
+    # assert np.isclose(result['offset_'], expected_values['offset_'], rtol=rtol)
+    assert np.isclose(
+        result['scaling_'], expected_values['scaling_'], rtol=rtol
+    )
+    assert np.isclose(result['sigma_'], expected_values['sigma_'], rtol=rtol)
+
+
+def test_numerical_inner_solver():
+    """Test numerically-solved hierarchical inner parameters."""
+    inner_problem, expected_values, simulation = inner_problem_exp()
+
+    dummy_sigma = np.ones(simulation.shape)
+
+    rtol = 1e-3
+
+    solver = NumericalInnerSolver(
+        minimize_kwargs={
+            'n_starts': 100,
+        }
+    )
+    result = solver.solve(
+        problem=inner_problem,
+        sim=[simulation],
+        sigma=[dummy_sigma],
+        scaled=False,
+    )
+
+    # FIXME uncomment when offset works in `test_numerical_inner_solver`
+    # assert np.isclose(result['offset_'], expected_values['offset_'], rtol=rtol)
+    assert np.isclose(
+        result['scaling_'], expected_values['scaling_'], rtol=rtol
+    )
+    assert np.isclose(result['sigma_'], expected_values['sigma_'], rtol=rtol)
 
 
 def at_least_as_good_as(v, v0) -> bool:
