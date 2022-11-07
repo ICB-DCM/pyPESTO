@@ -220,12 +220,13 @@ class NumericalInnerSolver(InnerSolver):
         def fun(x):
             _sim = copy.deepcopy(sim)
             _sigma = copy.deepcopy(sigma)
+            _data = copy.deepcopy(data)
             for x_val, par in zip(x, pars):
                 mask = par.ixs
                 if par.inner_parameter_type == InnerParameterType.SCALING:
                     apply_scaling(x_val, _sim, mask)
                 elif par.inner_parameter_type == InnerParameterType.OFFSET:
-                    apply_offset(x_val, _sim, mask)
+                    apply_offset(x_val, _data, mask)
                 elif par.inner_parameter_type == InnerParameterType.SIGMA:
                     apply_sigma(x_val, _sigma, mask)
                 else:
@@ -233,8 +234,8 @@ class NumericalInnerSolver(InnerSolver):
                         "Can't handle parameter type "
                         f"`{par.inner_parameter_type}`."
                     )
-            return compute_nllh(data, _sim, _sigma)
 
+            return compute_nllh(_data, _sim, _sigma)
         # TODO gradient
         objective = Objective(fun)
 
