@@ -275,7 +275,10 @@ def inner_problem_from_petab_problem(
     coupled_pars = {
         par
         for group, types in par_group_types.items()
-        if InnerParameterType.SCALING in types and InnerParameterType.OFFSET
+        if (
+            (InnerParameterType.SCALING in types)
+            and (InnerParameterType.OFFSET in types)
+        )
         for par in group
     }
 
