@@ -390,7 +390,7 @@ def inner_problem_exp():
     expected_values = {
         'scaling_': 5,
         # FIXME make nonzero when offset works in `test_numerical_inner_solver`
-        'offset_': 0,
+        'offset_': 2,
         'sigma_': 2,
     }
 
@@ -433,9 +433,6 @@ def inner_problem_exp():
 
     inner_parameters[0].coupled = True
     inner_parameters[1].coupled = True
-
-    # FIXME remove when offset works in `test_numerical_inner_solver`
-    inner_parameters.pop(0)
 
     inner_problem = InnerProblem(xs=inner_parameters, data=[data])
 
@@ -487,7 +484,7 @@ def test_numerical_inner_solver():
     )
 
     # FIXME uncomment when offset works in `test_numerical_inner_solver`
-    # assert np.isclose(result['offset_'], expected_values['offset_'], rtol=rtol)
+    assert np.isclose(result['offset_'], expected_values['offset_'], rtol=rtol)
     assert np.isclose(
         result['scaling_'], expected_values['scaling_'], rtol=rtol
     )
