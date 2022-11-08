@@ -78,8 +78,9 @@ class HierarchicalAmiciCalculator(AmiciCalculator):
         """
         if not self.inner_problem.check_edatas(edatas=edatas):
             raise ValueError(
-                'The experimental data provided to this call differs from the '
-                'experimental data used to setup the hierarchical optimizer.'
+                'The experimental data provided to this call differs from '
+                'the experimental data used to setup the hierarchical '
+                'optimizer.'
             )
 
         # compute optimal inner parameters

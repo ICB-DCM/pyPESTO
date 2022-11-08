@@ -132,30 +132,32 @@ class AmiciInnerProblem(InnerProblem):
 
     def __init__(self, edatas: List[amici.ExpData], **kwargs):
         super().__init__(**kwargs)
-        self.edataviews = [amici.numpy.ExpDataView(edata) for edata in edatas]
 
     def check_edatas(self, edatas: List[amici.ExpData]) -> bool:
-        """Check for consistency in experimental data.
+        """Check for consistency in data.
+
+        Currently only checks for the actual data values. e.g., timepoints are
+        not compared.
 
         Parameters
         ----------
         edatas:
-            An experimental data set. Will be checked against the experimental
-            data set provided to the constructor.
+            A data set. Will be checked against the data set provided to the
+            constructor.
 
         Returns
         -------
-        Whether the experimental data sets are consistent.
+        Whether the data sets are consistent.
         """
-        edataviews = [amici.numpy.ExpDataView(edata) for edata in edatas]
+        data = [
+            amici.numpy.ExpDataView(edata)['observedData'] for edata in edatas
+        ]
 
-        if len(self.edataviews) != len(edataviews):
+        if len(self.data) != len(data):
             return False
 
-        for edataview0, edataview in zip(self.edataviews, edataviews):
-            if not compare_edataviews(
-                edataview0=edataview0, edataview=edataview
-            ):
+        for data0, data1 in zip(self.data, data):
+            if not np.array_equal(data0, data1, equal_nan=True):
                 return False
 
         return True
