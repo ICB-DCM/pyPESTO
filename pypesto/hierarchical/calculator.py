@@ -19,7 +19,7 @@ from ..objective.amici.amici_calculator import (
     AmiciModel,
     AmiciSolver,
 )
-from .problem import InnerProblem
+from .problem import AmiciInnerProblem
 from .solver import AnalyticalInnerSolver, InnerSolver
 
 
@@ -36,7 +36,7 @@ class HierarchicalAmiciCalculator(AmiciCalculator):
 
     def __init__(
         self,
-        inner_problem: InnerProblem,
+        inner_problem: AmiciInnerProblem,
         inner_solver: InnerSolver = None,
     ):
         """Initialize the calculator from the given problem."""
@@ -69,7 +69,8 @@ class HierarchicalAmiciCalculator(AmiciCalculator):
     ):
         """Perform the actual AMICI call, with hierarchical optimization.
 
-        See documentation for `pypesto.objective.amici.amici_calculator.AmiciCalculator.__call__()`.
+        See documentation for
+        `pypesto.objective.amici.amici_calculator.AmiciCalculator.__call__()`.
 
         The return object also includes the simulation results that were
         generated to solve the inner problem, as well as the parameters that
@@ -77,7 +78,8 @@ class HierarchicalAmiciCalculator(AmiciCalculator):
         """
         if not self.inner_problem.check_edatas(edatas=edatas):
             raise ValueError(
-                'The experimental data provided to this call differs from the experimental data used to setup the hierarchical optimizer.'
+                'The experimental data provided to this call differs from the '
+                'experimental data used to setup the hierarchical optimizer.'
             )
 
         # compute optimal inner parameters
