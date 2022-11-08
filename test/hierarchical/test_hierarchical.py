@@ -40,7 +40,11 @@ from pypesto.petab import PetabImporter
 # - Fujita
 
 
-def get_boehm():
+def get_boehm() -> petab.Problem:
+    """Get Boehm_JProteomeRes2014 problem with scaled/offset observables.
+
+    Creates a modified version of the Boehm_JProteomeRes2014 benchmark problem,
+    suitable for hierarchical optimization."""
     petab_problem = get_problem("Boehm_JProteomeRes2014")
     # Add scaling and offset parameters
     petab_problem.observable_df[petab.OBSERVABLE_FORMULA] = [
@@ -251,7 +255,8 @@ def test_hierarchical_calculator_and_objective():
         )
 
     x_dct = dict(zip(petab_problem.x_ids, petab_problem.x_nominal_scaled))
-    # Nominal sigma values are close to optimal. One is changed here to facilitate testing.
+    # Nominal sigma values are close to optimal.
+    # One is changed here to facilitate testing.
     x_dct['sd_pSTAT5A_rel'] = 0.5
 
     calculator_results = {
@@ -272,8 +277,8 @@ def test_hierarchical_calculator_and_objective():
     x_dct.update(calculator_results[True]['inner_parameters'])
     calculator_results[False] = calculate(problem=problems[False], x_dct=x_dct)
 
-    # The `False` case has copied the optimal sigma values from hierarchical optimization,
-    # so can produce the same results now.
+    # The `False` case has copied the optimal sigma values from hierarchical
+    # optimization, so can produce the same results now.
     assert np.isclose(
         calculator_results[True]['fval'],
         calculator_results[False]['fval'],
@@ -284,7 +289,7 @@ def test_hierarchical_calculator_and_objective():
     ).all()
 
     parameters = [x_dct[x_id] for x_id in petab_problem.x_free_ids]
-    fval_False = problems[False].objective(parameters)
+    fval_false = problems[False].objective(parameters)
 
     # TODO user-friendly way to get these
     outer_parameters = [
@@ -292,11 +297,12 @@ def test_hierarchical_calculator_and_objective():
         for x_id in petab_problem.x_free_ids
         if pd.isna(petab_problem.parameter_df.loc[x_id].parameterType)
     ]
-    fval_True = problems[True].objective(outer_parameters)
-    # Hierarchical optimization does not affect the function value, if optimal sigma are provided to the normal function.
-    # High precision is required as the nominal values are very good already, so the test might pass accidentally
-    # if the nominal values are used accidentally.
-    assert np.isclose(fval_True, fval_False, atol=1e-12, rtol=1e-14)
+    fval_true = problems[True].objective(outer_parameters)
+    # Hierarchical optimization does not affect the function value, if optimal
+    # sigma are provided to the normal function. High precision is required as
+    # the nominal values are very good already, so the test might pass
+    # accidentally if the nominal values are used accidentally.
+    assert np.isclose(fval_true, fval_false, atol=1e-12, rtol=1e-14)
 
 
 def test_analytical_computations():
