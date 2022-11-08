@@ -39,8 +39,6 @@ ID = 'id'
 
 INNER_PARAMETERS = 'inner_parameters'
 INNER_RDATAS = 'inner_rdatas'
-# PARAMETER_CATEGORY = 'parameterCategory'
-# PARAMETER_GROUP = 'parameterGroup'
 PARAMETER_TYPE = 'parameterType'
 
 
@@ -48,7 +46,6 @@ class InnerParameterType(str, Enum):
     """Specifies different inner parameter types."""
 
     OFFSET = 'offset'
-    # OPTIMALSCALING = 'qualitative_scaling'
     SCALING = 'scaling'
     SIGMA = 'sigma'
 

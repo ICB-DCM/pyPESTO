@@ -6,8 +6,6 @@ import numpy as np
 import pandas as pd
 
 from ..C import PARAMETER_TYPE, InnerParameterType
-
-# from ..C import PARAMETER_CATEGORY, PARAMETER_GROUP
 from .parameter import InnerParameter
 
 try:
@@ -81,19 +79,6 @@ class InnerProblem:
             for x in self.xs.values()
             if x.inner_parameter_type == inner_parameter_type
         ]
-
-    # def get_groups_for_xs(self, inner_parameter_type: str) -> List[int]:
-    #     """Get unique list of ``InnerParameter.group`` values."""
-    #     groups = [
-    #         x.group
-    #         for x in self.xs.values()
-    #         if x.inner_parameter_type == inner_parameter_type
-    #     ]
-    #     return list(set(groups))
-
-    # def get_xs_for_group(self, group: int) -> List[InnerParameter]:
-    #     """Get ``InnerParameter``s that belong to the given group."""
-    #     return [x for x in self.xs.values() if x.group == group]
 
     def get_dummy_values(self, scaled: bool) -> Dict[str, float]:
         """
@@ -306,7 +291,7 @@ def inner_parameters_from_parameter_df(
     # create list of hierarchical parameters
     df = df.reset_index()
 
-    for col in (PARAMETER_TYPE,):  # , PARAMETER_GROUP, PARAMETER_CATEGORY):
+    for col in (PARAMETER_TYPE,):
         if col not in df:
             df[col] = None
 
@@ -324,8 +309,6 @@ def inner_parameters_from_parameter_df(
                 scale=row[PARAMETER_SCALE],
                 lb=row[LOWER_BOUND],
                 ub=row[UPPER_BOUND],
-                # category=row[PARAMETER_CATEGORY],
-                # group=row[PARAMETER_GROUP],
             )
         )
 

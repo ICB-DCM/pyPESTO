@@ -27,8 +27,6 @@ class InnerParameter:
         ub: float = np.inf,
         ixs: Any = None,
         dummy_value: float = None,
-        # category: int = None,
-        # group: int = None,
     ):
         """
         Construct.
@@ -51,12 +49,6 @@ class InnerParameter:
         dummy_value:
             Value to be used when the optimal parameter is not yet known
             (in particular to simulate unscaled observables).
-        category:
-            Category index.
-            Only relevant if ``type==qualitative_scaling``.
-        group:
-            Group index.
-            Only relevant if ``type==qualitative_scaling``.
         """
         self.inner_parameter_id: str = inner_parameter_id
         self.coupled = False
@@ -67,7 +59,6 @@ class InnerParameter:
         self.scale = scale
 
         if inner_parameter_type not in (
-            # InnerParameterType.OPTIMALSCALING,
             InnerParameterType.OFFSET,
             InnerParameterType.SIGMA,
             InnerParameterType.SCALING,
@@ -75,14 +66,6 @@ class InnerParameter:
             raise ValueError(
                 f"Unsupported inner parameter type `{inner_parameter_type}`."
             )
-
-        # if inner_parameter_type == InnerParameter.OPTIMALSCALING:
-        #     if group is None:
-        #         raise ValueError("No Parameter group provided.")
-        #     if category is None:
-        #         raise ValueError("No Category provided.")
-        # self.group = group
-        # self.category = category
 
         self.lb: float = lb
         self.ub: float = ub
