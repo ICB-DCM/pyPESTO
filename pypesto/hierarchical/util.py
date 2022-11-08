@@ -31,7 +31,7 @@ def get_finite_quotient(
             raise ValueError
         return quotient
     except Exception:
-        return DUMMY_INNER_VALUE[InnerParameterType]
+        return DUMMY_INNER_VALUE[inner_parameter_type]
 
 
 def compute_optimal_scaling(
