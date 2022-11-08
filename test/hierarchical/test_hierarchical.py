@@ -508,6 +508,4 @@ def at_least_as_good_as(v, v0) -> bool:
     Whether the first vector of fvals is at least as good as the second.
     """
     max_index = min(len(v), len(v0))
-    better_than = v[:max_index] < v0[:max_index]
-    as_good_as = np.isclose(v[:max_index], v0[:max_index])
-    return (better_than | as_good_as).all()
+    return (v[:max_index] <= v0[:max_index]).all()
