@@ -4,12 +4,15 @@ import copy
 
 import pandas as pd
 import petab
+import sympy as sp
+from more_itertools import one
 from petab.C import (
     LIN,
     NOISE_DISTRIBUTION,
     NOISE_FORMULA,
     NOISE_PARAMETERS,
     NORMAL,
+    OBSERVABLE_FORMULA,
     OBSERVABLE_ID,
     OBSERVABLE_TRANSFORMATION,
     PARAMETER_SEPARATOR,
@@ -40,8 +43,8 @@ def validate_petab(petab_problem: petab.Problem) -> None:
 
     # Check measurements to ensure sigma parameters do not appear there.
     # Ideally scaling and offset parameters would not either.
-    # In principle, sigma parameters can appear in the measurements table,
-    # but makes the validation slightly more effortful.
+    # FIXME: In principle, sigma parameters can appear in the measurements
+    # table, but makes the validation slightly more effortful.
     noise_parameters = [
         noise_parameter
         for noise_parameter_list in petab_problem.measurement_df[
@@ -121,6 +124,75 @@ def validate_petab(petab_problem: petab.Problem) -> None:
                 f"`{observable_id}` has the incompatible transformation "
                 f"`{observable_transformation}`."
             )
+
+        # Check that observable formulae are of the correct form
+        observable_formula = observable_def.get(OBSERVABLE_FORMULA)
+        observable_formula_sp = sp.sympify(observable_formula)
+        observable_id_sp = sp.sympify(observable_id)
+        formula_symbols = observable_formula_sp.free_symbols
+        formula_inner_parameters = [
+            str(s) for s in formula_symbols if str(s) in inner_parameter_types
+        ]
+        if formula_inner_parameters:
+            formula_inner_scalings = [
+                s
+                for s in formula_inner_parameters
+                if inner_parameter_types[s] == InnerParameterType.SCALING
+            ]
+            formula_inner_offsets = [
+                s
+                for s in formula_inner_parameters
+                if inner_parameter_types[s] == InnerParameterType.OFFSET
+            ]
+            formula_inner_sigmas = [
+                s
+                for s in formula_inner_parameters
+                if inner_parameter_types[s] == InnerParameterType.SIGMA
+            ]
+            if formula_inner_sigmas:
+                raise ValueError(
+                    "An observable formula contains sigma parameter(s). "
+                    f"Sigma parameters(s): `{formula_inner_sigmas}`. "
+                    f"Observable formula: `{observable_formula}`"
+                )
+            if (
+                len(formula_inner_scalings) > 1
+                or len(formula_inner_offsets) > 1
+            ):
+                raise ValueError(
+                    "An observable formula contains multiple scaling or "
+                    "offset parameters. "
+                    f"Scalings: `{formula_inner_scalings}`. "
+                    f"Offsets: `{formula_inner_offsets}`. "
+                    f"Observable formula: `{observable_formula}`."
+                )
+            # Scaling and offset
+            if formula_inner_scalings and formula_inner_offsets:
+                scaling_id = sp.sympify(one(formula_inner_scalings))
+                offset_id = sp.sympify(one(formula_inner_offsets))
+            # Only scaling
+            elif formula_inner_scalings:
+                scaling_id = sp.sympify(one(formula_inner_scalings))
+                offset_id = sp.core.singleton.S.Zero
+            elif formula_inner_offsets:
+                scaling_id = sp.core.singleton.S.One
+                offset_id = sp.sympify(one(formula_inner_offsets))
+            else:
+                raise ValueError(
+                    "Unknown error while parsing observable formula "
+                    f"`{observable_formula}` with inner parameters "
+                    f"`{formula_inner_parameters}`."
+                )
+
+            expected_formula_sp = scaling_id * observable_id_sp + offset_id
+            if sp.simplify(observable_formula_sp - expected_formula_sp) != 0:
+                raise ValueError(
+                    "The `observableFormula` for the observable "
+                    f"`{observable_id}` isn't of the correct form for "
+                    "hierarchical optimization. Expected "
+                    f"formula: `{expected_formula_sp}`. Actual "
+                    f"formula: `{observable_formula_sp}`."
+                )
 
         # Collect inner parameters from observable and noise formulae
         observable_row_df = pd.DataFrame(observable_def).transpose()
