@@ -417,6 +417,8 @@ class PetabImporter(AmiciObjectBuilder):
             amici_object_builder=self,
             calculator=calculator,
             amici_reporting=amici_reporting,
+            # FIXME: currently not supported with hierarchical
+            guess_steadystate=False,
             **kwargs,
         )
 
