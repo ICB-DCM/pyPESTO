@@ -62,6 +62,7 @@ class PetabImporter(AmiciObjectBuilder):
         output_folder: str = None,
         model_name: str = None,
         validate_petab: bool = True,
+        hierarchical: bool = False,
     ):
         """Initialize importer.
 
@@ -77,12 +78,21 @@ class PetabImporter(AmiciObjectBuilder):
             compiled model python module.
         validate_petab:
             Flag indicating if the PEtab problem shall be validated.
+        hierarchical:
+            Whether to use hierarchical optimization or not, in case the
+            underlying PEtab problem has parameters marked for hierarchical
+            optimization (non-empty `parameterType` column in the PEtab
+            parameter table).
         """
         self.petab_problem = petab_problem
+        self._hierarchical = hierarchical
 
         if validate_petab:
             if petab.lint_problem(petab_problem):
                 raise ValueError("Invalid PEtab problem.")
+            if self._hierarchical:
+                from ..hierarchical.petab import validate_petab
+                validate_petab(petab_problem)
 
         if output_folder is None:
             output_folder = _find_output_folder_name(
@@ -319,7 +329,6 @@ class PetabImporter(AmiciObjectBuilder):
         solver: amici.Solver = None,
         edatas: Sequence[amici.ExpData] = None,
         force_compile: bool = False,
-        hierarchical: bool = False,
         **kwargs,
     ) -> AmiciObjective:
         """Create a :class:`pypesto.AmiciObjective`.
@@ -334,11 +343,6 @@ class PetabImporter(AmiciObjectBuilder):
             The experimental data in AMICI format.
         force_compile:
             Whether to force-compile the model if not passed.
-        hierarchical:
-            Whether to use hierarchical optimization or not, in case the
-            underlying PEtab problem has parameters marked for hierarchical
-            optimization (non-empty `parameterType` column in the PEtab
-            parameter table).
         **kwargs:
             Additional arguments passed on to the objective.
 
@@ -392,7 +396,7 @@ class PetabImporter(AmiciObjectBuilder):
 
         calculator = None
         amici_reporting = None
-        if hierarchical:
+        if self._hierarchical:
             inner_problem = InnerProblem.from_petab_amici(
                 self.petab_problem, model, edatas
             )

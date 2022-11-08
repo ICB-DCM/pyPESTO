@@ -132,11 +132,11 @@ def test_hierarchical_optimization_sigma_and_scaling():
     optimization is enabled and disabled, respectively.
     """
     petab_problem = get_boehm()
-    importer = PetabImporter(petab_problem)
     flags = [False, True]
     problems = {}
     for flag in flags:
-        objective = importer.create_objective(hierarchical=flag)
+        importer = PetabImporter(petab_problem, hierarchical=flag)
+        objective = importer.create_objective()
         problem = importer.create_problem(objective)
         problem.objective.amici_solver.setSensitivityMethod(
             amici.SensitivityMethod_adjoint
@@ -227,11 +227,11 @@ def test_hierarchical_calculator_and_objective():
     optimization is enabled and disabled, respectively.
     """
     petab_problem = get_boehm()
-    importer = PetabImporter(petab_problem)
     flags = [False, True]
     problems = {}
     for flag in flags:
-        objective = importer.create_objective(hierarchical=flag)
+        importer = PetabImporter(petab_problem, hierarchical=flag)
+        objective = importer.create_objective()
         problem = importer.create_problem(objective)
         problem.objective.amici_solver.setSensitivityMethod(
             amici.SensitivityMethod_adjoint
