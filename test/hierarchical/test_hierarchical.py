@@ -136,7 +136,9 @@ def test_hierarchical_optimization_sigma_and_scaling():
     problems = {}
     for flag in flags:
         # FIXME drop validate_petab=False
-        importer = PetabImporter(petab_problem, hierarchical=flag, validate_petab=False)
+        importer = PetabImporter(
+            petab_problem, hierarchical=flag, validate_petab=False
+        )
         objective = importer.create_objective()
         problem = importer.create_problem(objective)
         problem.objective.amici_solver.setSensitivityMethod(
@@ -156,10 +158,14 @@ def test_hierarchical_optimization_sigma_and_scaling():
             ub=problems[False].ub,
         )
     )
-
     problems[False].set_x_guesses(startpoints)
-    # FIXME ideally would not need to provide guesses for inner parameters
-    problems[True].set_x_guesses(startpoints)
+    outer_indices = [
+        ix
+        for ix, x in enumerate(problems[False].x_names)
+        if x
+        not in problems[True].objective.calculator.inner_problem.get_x_ids()
+    ]
+    problems[True].set_x_guesses(startpoints[:, outer_indices])
 
     inner_solvers = {
         'analytical': AnalyticalInnerSolver(),
@@ -196,8 +202,8 @@ def test_hierarchical_optimization_sigma_and_scaling():
 
     results = {}
     for problem, inner_solver_id in [
-        (problems[False], False),
         (problems[True], 'analytical'),
+        (problems[False], False),
         (problems[True], 'numerical'),
     ]:
         results[inner_solver_id] = get_result(problem, inner_solver_id)
@@ -232,7 +238,9 @@ def test_hierarchical_calculator_and_objective():
     problems = {}
     for flag in flags:
         # FIXME drop validate_petab=False
-        importer = PetabImporter(petab_problem, hierarchical=flag, validate_petab=False)
+        importer = PetabImporter(
+            petab_problem, hierarchical=flag, validate_petab=False
+        )
         objective = importer.create_objective()
         problem = importer.create_problem(objective)
         problem.objective.amici_solver.setSensitivityMethod(

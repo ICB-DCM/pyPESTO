@@ -92,6 +92,7 @@ class PetabImporter(AmiciObjectBuilder):
                 raise ValueError("Invalid PEtab problem.")
             if self._hierarchical:
                 from ..hierarchical.petab import validate_petab
+
                 validate_petab(petab_problem)
 
         if output_folder is None:
@@ -402,6 +403,8 @@ class PetabImporter(AmiciObjectBuilder):
             )
             calculator = HierarchicalAmiciCalculator(inner_problem)
             amici_reporting = amici.RDataReporting.full
+            inner_parameter_ids = calculator.inner_problem.get_x_ids()
+            par_ids = [x for x in par_ids if x not in inner_parameter_ids]
 
         # create objective
         obj = AmiciObjective(
@@ -610,15 +613,29 @@ class PetabImporter(AmiciObjectBuilder):
         x_fixed_indices = self.petab_problem.x_fixed_indices
         x_fixed_vals = self.petab_problem.x_nominal_fixed_scaled
         x_ids = self.petab_problem.x_ids
+        lb = self.petab_problem.lb_scaled
+        ub = self.petab_problem.ub_scaled
+
         # In case of hierarchical optimization, parameters estimated in the
-        # inner subproblem are considered as fixed in the outer problem
-        if isinstance(objective.calculator, HierarchicalAmiciCalculator):
-            for inner_x_id in objective.calculator.inner_problem.get_x_ids():
-                if inner_x_id in x_fixed_indices:
-                    x_fixed_vals[x_fixed_indices.index(inner_x_id)] = np.nan
-                else:
-                    x_fixed_indices.append(x_ids.index(inner_x_id))
-                    x_fixed_vals.append(np.nan)
+        # inner subproblem are removed from the outer problem
+        if self._hierarchical:
+            assert isinstance(
+                objective.calculator, HierarchicalAmiciCalculator
+            )
+            inner_parameter_ids = (
+                objective.calculator.inner_problem.get_x_ids()
+            )
+            lb = [b for x, b in zip(x_ids, lb) if x not in inner_parameter_ids]
+            ub = [b for x, b in zip(x_ids, ub) if x not in inner_parameter_ids]
+            x_ids = [x for x in x_ids if x not in inner_parameter_ids]
+            x_fixed_indices = list(
+                map(x_ids.index, self.petab_problem.x_fixed_ids)
+            )
+
+        x_scales = [
+            self.petab_problem.parameter_df.loc[x_id, petab.PARAMETER_SCALE]
+            for x_id in x_ids
+        ]
 
         if problem_kwargs is None:
             problem_kwargs = {}
@@ -626,17 +643,17 @@ class PetabImporter(AmiciObjectBuilder):
         prior = self.create_prior()
 
         if prior is not None:
+            if self._hierarchical:
+                raise NotImplementedError(
+                    "Hierarchical optimization in combination "
+                    "with priors is not yet supported."
+                )
             objective = AggregatedObjective([objective, prior])
-
-        x_scales = [
-            self.petab_problem.parameter_df.loc[x_id, petab.PARAMETER_SCALE]
-            for x_id in x_ids
-        ]
 
         problem = Problem(
             objective=objective,
-            lb=self.petab_problem.lb_scaled,
-            ub=self.petab_problem.ub_scaled,
+            lb=lb,
+            ub=ub,
             x_fixed_indices=x_fixed_indices,
             x_fixed_vals=x_fixed_vals,
             x_guesses=x_guesses,
