@@ -406,6 +406,9 @@ class PetabImporter(AmiciObjectBuilder):
             inner_parameter_ids = calculator.inner_problem.get_x_ids()
             par_ids = [x for x in par_ids if x not in inner_parameter_ids]
 
+            # FIXME: currently not supported with hierarchical
+            kwargs['guess_steadystate'] = False
+
         # create objective
         obj = AmiciObjective(
             amici_model=model,
@@ -417,8 +420,6 @@ class PetabImporter(AmiciObjectBuilder):
             amici_object_builder=self,
             calculator=calculator,
             amici_reporting=amici_reporting,
-            # FIXME: currently not supported with hierarchical
-            guess_steadystate=False,
             **kwargs,
         )
 
