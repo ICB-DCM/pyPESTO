@@ -204,6 +204,8 @@ def compute_optimal_sigma(
         num += np.nansum((data_x - sim_x) ** 2)
         den += sim_x.size
 
+    if num == 0:
+        raise AssertionError()
     # compute optimal value
     return np.sqrt(num / den)
 
