@@ -42,7 +42,7 @@ def get_Boehm_JProteomeRes2014_hierarchical_petab() -> 'petab.Problem':  # noqa:
             petab.LOWER_BOUND: -100,
             petab.UPPER_BOUND: 100,
             petab.NOMINAL_VALUE: 0,
-            petab.ESTIMATE: 0,
+            petab.ESTIMATE: 1,
         }
         for par_id in (
             'offset_pSTAT5A_rel',
