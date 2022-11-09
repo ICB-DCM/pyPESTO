@@ -86,6 +86,8 @@ class AmiciCalculator:
             Whether to use the FIM (if available) instead of the Hessian (if
             requested).
         """
+        import amici.parameter_mapping
+
         # set order in solver
         sensi_order = 0
         if sensi_orders:
