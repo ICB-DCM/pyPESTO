@@ -60,6 +60,7 @@ autodoc_default_options = {
     'show-inheritance': True,
     'autodoc_inherit_docstrings': True,
 }
+autodoc_mock_imports = ["amici"]
 
 # links for intersphinx
 intersphinx_mapping = {
