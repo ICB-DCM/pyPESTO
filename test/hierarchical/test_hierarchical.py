@@ -51,10 +51,7 @@ def test_hierarchical_optimization_sigma_and_scaling():
     flags = [False, True]
     problems = {}
     for flag in flags:
-        # FIXME drop validate_petab=False
-        importer = PetabImporter(
-            petab_problem, hierarchical=flag, validate_petab=False
-        )
+        importer = PetabImporter(petab_problem, hierarchical=flag)
         objective = importer.create_objective()
         problem = importer.create_problem(objective)
         problem.objective.amici_solver.setSensitivityMethod(
@@ -153,10 +150,7 @@ def test_hierarchical_calculator_and_objective():
     flags = [False, True]
     problems = {}
     for flag in flags:
-        # FIXME drop validate_petab=False
-        importer = PetabImporter(
-            petab_problem, hierarchical=flag, validate_petab=False
-        )
+        importer = PetabImporter(petab_problem, hierarchical=flag)
         objective = importer.create_objective()
         problem = importer.create_problem(objective)
         problem.objective.amici_solver.setSensitivityMethod(

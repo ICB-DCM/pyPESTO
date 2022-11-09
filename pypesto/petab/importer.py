@@ -91,9 +91,11 @@ class PetabImporter(AmiciObjectBuilder):
             if petab.lint_problem(petab_problem):
                 raise ValueError("Invalid PEtab problem.")
             if self._hierarchical:
-                from ..hierarchical.petab import validate_petab
+                from ..hierarchical.petab import (
+                    validate_hierarchical_petab_problem,
+                )
 
-                validate_petab(petab_problem)
+                validate_hierarchical_petab_problem(petab_problem)
 
         if output_folder is None:
             output_folder = _find_output_folder_name(
