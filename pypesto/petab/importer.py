@@ -621,9 +621,10 @@ class PetabImporter(AmiciObjectBuilder):
         # In case of hierarchical optimization, parameters estimated in the
         # inner subproblem are removed from the outer problem
         if self._hierarchical:
-            assert isinstance(
+            if not isinstance(
                 objective.calculator, HierarchicalAmiciCalculator
-            )
+            ):
+                raise AssertionError()
             inner_parameter_ids = (
                 objective.calculator.inner_problem.get_x_ids()
             )
