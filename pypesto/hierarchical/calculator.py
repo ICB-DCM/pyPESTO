@@ -86,7 +86,7 @@ class HierarchicalAmiciCalculator(AmiciCalculator):
         # compute optimal inner parameters
         x_dct = copy.deepcopy(x_dct)
         x_dct.update(self.inner_problem.get_dummy_values(scaled=True))
-        inner_rdatas = super().__call__(
+        inner_result = super().__call__(
             x_dct=x_dct,
             sensi_orders=(0,),
             mode=mode,
@@ -97,7 +97,14 @@ class HierarchicalAmiciCalculator(AmiciCalculator):
             x_ids=x_ids,
             parameter_mapping=parameter_mapping,
             fim_for_hess=fim_for_hess,
-        )[RDATAS]
+        )
+        inner_rdatas = inner_result[RDATAS]
+
+        # if any amici simulation failed, it's unlikely we can compute
+        # meaningful inner parameters, so we better just fail early.
+        if any(rdata.status != amici.AMICI_SUCCESS for rdata in inner_rdatas):
+            return inner_result
+
         inner_parameters = self.inner_solver.solve(
             problem=self.inner_problem,
             sim=[rdata[AMICI_Y] for rdata in inner_rdatas],
