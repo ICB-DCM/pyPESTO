@@ -1,10 +1,8 @@
 from __future__ import annotations
 
-from typing import Dict, List, Sequence, Tuple, Union
+from typing import Dict, List, Sequence, Tuple, Union, TYPE_CHECKING
 
-import amici
 import numpy as np
-from amici.parameter_mapping import ParameterMapping
 
 from ...C import (
     FVAL,
@@ -27,8 +25,15 @@ from .amici_util import (
     sim_sres_to_opt_sres,
 )
 
-AmiciModel = Union[amici.Model, amici.ModelPtr]
-AmiciSolver = Union[amici.Solver, amici.SolverPtr]
+if TYPE_CHECKING:
+    try:
+        import amici
+        from amici.parameter_mapping import ParameterMapping
+    except ImportError:
+        ParameterMapping = None
+
+AmiciModel = Union['amici.Model', 'amici.ModelPtr']
+AmiciSolver = Union['amici.Solver', 'amici.SolverPtr']
 
 
 class AmiciCalculator:
