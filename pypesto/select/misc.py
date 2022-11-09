@@ -54,7 +54,11 @@ def model_to_pypesto_problem(
 
     importer = PetabImporter(petab_problem)
     if objective is None:
-        objective = importer.create_objective()
+        objective = importer.create_objective(
+            model_kwargs={
+                'non_estimated_parameters_as_constants': False,
+            }
+        )
     pypesto_problem = importer.create_problem(
         objective=objective,
         x_guesses=corrected_x_guesses,

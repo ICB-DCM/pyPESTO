@@ -197,7 +197,7 @@ class PetabImporter(AmiciObjectBuilder):
                 If `force_compile`, then an existing folder of that name will
                 be deleted.
 
-        kwargs: Extra arguments passed to amici.SbmlImporter.sbml2amici
+        kwargs: Extra arguments passed to amici.petab_import.import_model
         """
         # courtesy check whether target is folder
         if os.path.exists(self.output_folder) and not os.path.isdir(
@@ -317,6 +317,7 @@ class PetabImporter(AmiciObjectBuilder):
         solver: amici.Solver = None,
         edatas: Sequence[amici.ExpData] = None,
         force_compile: bool = False,
+        model_kwargs: Dict[str, Any] = None,
         **kwargs,
     ) -> AmiciObjective:
         """Create a :class:`pypesto.AmiciObjective`.
@@ -331,6 +332,8 @@ class PetabImporter(AmiciObjectBuilder):
             The experimental data in AMICI format.
         force_compile:
             Whether to force-compile the model if not passed.
+        model_kwargs:
+            Passed to the `create_model` method, if `model is None`.
         **kwargs:
             Additional arguments passed on to the objective.
 
@@ -346,7 +349,11 @@ class PetabImporter(AmiciObjectBuilder):
 
         # create model
         if model is None:
-            model = self.create_model(force_compile=force_compile)
+            if model_kwargs is None:
+                model_kwargs = {}
+            model = self.create_model(
+                force_compile=force_compile, **model_kwargs
+            )
         # create solver
         if solver is None:
             solver = self.create_solver(model)
