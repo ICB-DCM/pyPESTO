@@ -357,6 +357,11 @@ def get_ordering_by_start_id(results: Sequence[Result]) -> List[int]:
 
     optimize_results = [r.optimize_result.list for r in results]
 
+    # Check whether the same start IDs exist across all results.
+    # Note that start IDs, and not the vectors themselves, are checked. This is
+    # because, for example, when comparing hierarchical optimization to
+    # standard optimization, the starts may be comparable even if the vectors
+    # are not identical.
     ids0 = sorted([s.id for s in optimize_results[0]])
     for optimize_result in optimize_results[1:]:
         ids = sorted([s.id for s in optimize_result])
