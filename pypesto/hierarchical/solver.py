@@ -193,6 +193,9 @@ class NumericalInnerSolver(InnerSolver):
         self.minimize_kwargs['n_starts'] = self.minimize_kwargs.get(
             'n_starts', 1
         )
+        self.minimize_kwargs['progress_bar'] = self.minimize_kwargs.get(
+            'progress_bar', False
+        )
 
         self.x_guesses = None
 
