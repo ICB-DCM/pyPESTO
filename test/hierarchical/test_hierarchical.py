@@ -442,7 +442,7 @@ def test_validate():
                 petab.OBSERVABLE_ID: ["obs1", "obs2"],
                 petab.OBSERVABLE_FORMULA: [
                     "observableParameter1_obs1 * x1",
-                    "observableParameter1_obs1 * x2",
+                    "observableParameter1_obs2 * x2",
                 ],
                 petab.NOISE_FORMULA: [
                     "noiseParameter1_obs1",
