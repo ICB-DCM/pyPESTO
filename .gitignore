@@ -104,7 +104,7 @@ venv/*
 *.tmp
 tmp/*
 */tmp/*
-amici_models/*
+**/amici_models/
 test/doc/example/tmp/benchmark-models/
 test/amici_models/*
 *.hdf5
