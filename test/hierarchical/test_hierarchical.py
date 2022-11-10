@@ -4,6 +4,7 @@ import time
 import amici
 import numpy as np
 import pandas as pd
+import petab
 import pytest
 
 import pypesto
@@ -429,3 +430,49 @@ def at_least_as_good_as(v, v0) -> bool:
     """
     max_index = min(len(v), len(v0))
     return (v[:max_index] <= v0[:max_index]).all()
+
+
+def test_validate():
+    from pypesto.hierarchical.petab import validate_hierarchical_petab_problem
+
+    # Scaling shared across multiple observables - okay
+    observable_df = petab.get_observable_df(
+        pd.DataFrame(
+            {
+                petab.OBSERVABLE_ID: ["obs1", "obs2"],
+                petab.OBSERVABLE_FORMULA: [
+                    "observableParameter1_obs1 * x1",
+                    "observableParameter1_obs1 * x2",
+                ],
+                petab.NOISE_FORMULA: [
+                    "noiseParameter1_obs1",
+                    "noiseParameter1_obs2",
+                ],
+            }
+        )
+    )
+    measurement_df = petab.get_measurement_df(
+        pd.DataFrame(
+            {
+                petab.OBSERVABLE_ID: ["obs1", "obs2"],
+                petab.TIME: [0, 1],
+                petab.MEASUREMENT: [1, 2],
+                petab.OBSERVABLE_PARAMETERS: ["s", "s"],
+                petab.NOISE_PARAMETERS: [0.1, 0.1],
+            }
+        )
+    )
+    parameter_df = petab.get_parameter_df(
+        pd.DataFrame(
+            {
+                petab.PARAMETER_ID: ["s"],
+                "parameterType": ['scaling'],
+            }
+        )
+    )
+    petab_problem = petab.Problem(
+        observable_df=observable_df,
+        parameter_df=parameter_df,
+        measurement_df=measurement_df,
+    )
+    validate_hierarchical_petab_problem(petab_problem)
