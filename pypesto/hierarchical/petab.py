@@ -20,6 +20,31 @@ def validate_hierarchical_petab_problem(petab_problem: petab.Problem) -> None:
     petab_problem:
         The PEtab problem.
     """
+    if PARAMETER_TYPE not in petab_problem.parameter_df:
+        # not a hierarchical optimization problem
+        return
+
+    # ensure we only have linear parameter scale
+    inner_parameter_table = petab_problem.parameter_df[
+        petab_problem.parameter_df[PARAMETER_TYPE].isin(
+            [
+                InnerParameterType.OFFSET,
+                InnerParameterType.SIGMA,
+                InnerParameterType.SCALING,
+            ]
+        )
+    ]
+    if (
+        petab.PARAMETER_SCALE in inner_parameter_table
+        and not (
+            inner_parameter_table[petab.PARAMETER_SCALE].isna()
+            | (inner_parameter_table[petab.PARAMETER_SCALE] == petab.LIN)
+        ).all()
+    ):
+        raise NotImplementedError(
+            f"Only parameterScale=lin supported for parameters of the inner subproblem.\n{inner_parameter_table.loc[:, [PARAMETER_TYPE, petab.PARAMETER_SCALE]]}"
+        )
+
     inner_parameter_df = validate_measurement_formulae(
         petab_problem=petab_problem
     )

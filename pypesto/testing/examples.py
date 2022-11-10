@@ -54,7 +54,7 @@ def get_Boehm_JProteomeRes2014_hierarchical_petab() -> 'petab.Problem':  # noqa:
     extra_parameters.extend(
         {
             petab.PARAMETER_ID: par_id,
-            petab.PARAMETER_SCALE: petab.LOG10,
+            petab.PARAMETER_SCALE: petab.LIN,
             petab.LOWER_BOUND: 1e-5,
             petab.UPPER_BOUND: 1e5,
             petab.NOMINAL_VALUE: nominal_value,
@@ -91,6 +91,13 @@ def get_Boehm_JProteomeRes2014_hierarchical_petab() -> 'petab.Problem':  # noqa:
             petab_problem.parameter_df.loc[
                 par_id, PARAMETER_TYPE
             ] = InnerParameterType.SCALING
+
+    # log-scaling is not supported for inner parameters
+    petab_problem.parameter_df.loc[
+        petab_problem.parameter_df.index.str.startswith("sd_"),
+        petab.PARAMETER_SCALE,
+    ] = petab.LIN
+
     petab.lint_problem(petab_problem)
 
     return petab_problem
