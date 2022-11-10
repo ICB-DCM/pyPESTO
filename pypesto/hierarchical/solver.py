@@ -299,6 +299,6 @@ def _maybe_warn_unsupported_bounds(problem: InnerProblem):
         if x.lb != -np.inf or x.ub != np.inf:
             warnings.warn(
                 message="Note that parameter bounds for inner parameters are "
-                "so far ignored ."
+                "so far ignored."
             )
             break

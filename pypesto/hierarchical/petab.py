@@ -41,8 +41,12 @@ def validate_hierarchical_petab_problem(petab_problem: petab.Problem) -> None:
             | (inner_parameter_table[petab.PARAMETER_SCALE] == petab.LIN)
         ).all()
     ):
+        sub_df = inner_parameter_table.loc[
+            :, [PARAMETER_TYPE, petab.PARAMETER_SCALE]
+        ]
         raise NotImplementedError(
-            f"Only parameterScale=lin supported for parameters of the inner subproblem.\n{inner_parameter_table.loc[:, [PARAMETER_TYPE, petab.PARAMETER_SCALE]]}"
+            "Only parameterScale=lin supported for parameters of the inner "
+            f"subproblem.\n{sub_df}"
         )
 
     inner_parameter_df = validate_measurement_formulae(
