@@ -367,7 +367,7 @@ def _get_symbolic_formula_from_measurement(
     overrides = measurement[formula_type + 'Parameters']
     overrides = (
         overrides.split(PARAMETER_SEPARATOR)
-        if isinstance(str, overrides)
+        if isinstance(overrides, str)
         else [overrides]
     )
 
