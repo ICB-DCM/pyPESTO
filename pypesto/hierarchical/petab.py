@@ -178,7 +178,12 @@ def validate_measurement_formulae(
             petab_problem=petab_problem,
             inner_parameters=inner_parameters,
         )
-        inner_parameter_sets.append([str(v) for v in [offset, scaling, sigma]])
+        inner_parameter_sets.append(
+            [
+                str(v) if v is not None else None
+                for v in [offset, scaling, sigma]
+            ]
+        )
 
     return pd.DataFrame(
         data=inner_parameter_sets,
