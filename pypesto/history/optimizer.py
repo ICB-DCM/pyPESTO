@@ -143,7 +143,11 @@ class OptimizerHistory:
                 setattr(self, key + '_min', result[key])
 
         # check if history has same point
-        if isclose(fval, self.fval_min) and allclose(result[X], self.x_min):
+        if (
+            isclose(fval, self.fval_min)
+            and self.x_min is not None
+            and allclose(result[X], self.x_min)
+        ):
             # update only missing entries
             #  (e.g. grad and hess may be recorded but not in history)
             for key in self.MIN_KEYS:
