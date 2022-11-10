@@ -228,7 +228,15 @@ class NumericalInnerSolver(InnerSolver):
         # FIXME: check if any bounds were active, and fail if so?
         # lb = np.array([x.lb for x in pars])
         # ub = np.array([x.ub for x in pars])
-        lb = np.full(shape=len(pars), fill_value=self.dummy_lb)
+        lb = np.array(
+            [
+                0
+                if x.inner_parameter_type == InnerParameterType.SIGMA
+                else self.dummy_lb
+                for x in pars
+            ]
+        )
+
         ub = np.full(shape=len(pars), fill_value=self.dummy_ub)
 
         x_names = [x.inner_parameter_id for x in pars]
