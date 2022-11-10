@@ -53,7 +53,7 @@ class InnerSolver:
             List of sigma matrices from the model, as provided in AMICI's
             ``ReturnData.sigmay``. Same order as simulations in the
             PEtab problem.
-        scale:
+        scaled:
             Whether to scale the results to the parameter scale specified in
             ``problem``.
         """
@@ -87,7 +87,7 @@ class AnalyticalInnerSolver(InnerSolver):
             List of sigma matrices from the model, as provided in AMICI's
             ``ReturnData.sigmay``. Same order as simulations in the
             PEtab problem.
-        scale:
+        scaled:
             Whether to scale the results to the parameter scale specified in
             ``problem``.
         """
