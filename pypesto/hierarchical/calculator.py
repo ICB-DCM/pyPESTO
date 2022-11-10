@@ -4,11 +4,13 @@ import copy
 from typing import Dict, List, Sequence, Tuple
 
 import amici
+import numpy as np
 from amici.parameter_mapping import ParameterMapping
 
 from ..C import (
     AMICI_SIGMAY,
     AMICI_Y,
+    GRAD,
     INNER_PARAMETERS,
     INNER_RDATAS,
     RDATAS,
@@ -103,6 +105,12 @@ class HierarchicalAmiciCalculator(AmiciCalculator):
         # if any amici simulation failed, it's unlikely we can compute
         # meaningful inner parameters, so we better just fail early.
         if any(rdata.status != amici.AMICI_SUCCESS for rdata in inner_rdatas):
+            # if the gradient was requested, we need to provide some value
+            # for it
+            if 1 in sensi_orders:
+                inner_result[GRAD] = np.full(
+                    shape=len(x_ids), fill_value=np.nan
+                )
             return inner_result
 
         inner_parameters = self.inner_solver.solve(
