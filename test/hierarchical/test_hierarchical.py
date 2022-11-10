@@ -10,6 +10,7 @@ import pytest
 import pypesto
 from pypesto.C import LOG10, MODE_FUN, InnerParameterType
 from pypesto.hierarchical.parameter import InnerParameter
+from pypesto.hierarchical.petab import validate_hierarchical_petab_problem
 from pypesto.hierarchical.problem import InnerProblem
 from pypesto.hierarchical.solver import (
     AnalyticalInnerSolver,
@@ -23,6 +24,7 @@ from pypesto.hierarchical.util import (
     compute_optimal_scaling,
     compute_optimal_sigma,
 )
+from pypesto.optimize import FidesOptimizer, OptimizeOptions
 from pypesto.petab import PetabImporter
 from pypesto.testing.examples import (
     get_Boehm_JProteomeRes2014_hierarchical_petab,
@@ -93,13 +95,14 @@ def test_hierarchical_optimization_sigma_and_scaling():
             problem.objective.calculator.inner_solver = inner_solvers[
                 inner_solver_id
             ]
-
         start_time = time.time()
         result = pypesto.optimize.minimize(
             problem=problem,
             n_starts=n_starts,
             engine=engine,
             history_options=history_options,
+            options=OptimizeOptions(allow_failed_starts=False),
+            optimizer=FidesOptimizer(),
         )
         wall_time = time.time() - start_time
 
@@ -433,8 +436,6 @@ def at_least_as_good_as(v, v0) -> bool:
 
 
 def test_validate():
-    from pypesto.hierarchical.petab import validate_hierarchical_petab_problem
-
     # Scaling shared across multiple observables - okay
     observable_df = petab.get_observable_df(
         pd.DataFrame(
