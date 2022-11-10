@@ -91,19 +91,7 @@ class AnalyticalInnerSolver(InnerSolver):
             Whether to scale the results to the parameter scale specified in
             ``problem``.
         """
-        # finite bounds are not handled here. warn.
-        for x in itertools.chain(
-            problem.get_xs_for_type(InnerParameterType.OFFSET),
-            problem.get_xs_for_type(InnerParameterType.SCALING),
-            problem.get_xs_for_type(InnerParameterType.SIGMA),
-        ):
-            if x.lb != -np.inf or x.ub != np.inf:
-                warnings.warn(
-                    message="Note that parameter bounds are so far ignored "
-                    f"by {self.__class__.__name__}."
-                )
-                break
-
+        _maybe_warn_unsupported_bounds(problem)
         x_opt = {}
 
         data = copy.deepcopy(problem.data)
@@ -198,6 +186,8 @@ class NumericalInnerSolver(InnerSolver):
         )
 
         self.x_guesses = None
+        self.dummy_lb = -1e20
+        self.dummy_ub = +1e20
 
     def initialize(self):
         """(Re-)initialize the solver."""
@@ -228,9 +218,19 @@ class NumericalInnerSolver(InnerSolver):
             Whether to scale the results to the parameter scale specified in
             ``problem``.
         """
+        _maybe_warn_unsupported_bounds(problem)
+
         pars = problem.xs.values()
-        lb = np.array([x.lb for x in pars])
-        ub = np.array([x.ub for x in pars])
+        # We currently cannot handle constraints on inner parameters correctly,
+        # and would have to assume [-inf, inf]. However, this may not be
+        # supported by all inner optimizers, so we go for some (arbitrary)
+        # large value.
+        # FIXME: check if any bounds were active, and fail if so?
+        # lb = np.array([x.lb for x in pars])
+        # ub = np.array([x.ub for x in pars])
+        lb = np.full(shape=len(pars), fill_value=self.dummy_lb)
+        ub = np.full(shape=len(pars), fill_value=self.dummy_ub)
+
         x_names = [x.inner_parameter_id for x in pars]
         data = problem.data
 
@@ -287,3 +287,18 @@ class NumericalInnerSolver(InnerSolver):
             x_opt = scale_value_dict(x_opt, problem)
 
         return x_opt
+
+
+def _maybe_warn_unsupported_bounds(problem: InnerProblem):
+    """Warn of unsupported finite bounds."""
+    for x in itertools.chain(
+        problem.get_xs_for_type(InnerParameterType.OFFSET),
+        problem.get_xs_for_type(InnerParameterType.SCALING),
+        problem.get_xs_for_type(InnerParameterType.SIGMA),
+    ):
+        if x.lb != -np.inf or x.ub != np.inf:
+            warnings.warn(
+                message="Note that parameter bounds for inner parameters are "
+                "so far ignored ."
+            )
+            break
