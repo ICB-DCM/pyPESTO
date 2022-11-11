@@ -1,6 +1,6 @@
 import logging
 from time import process_time
-from typing import Callable, List, Union
+from typing import Callable, List, Optional, Union
 
 import numpy as np
 
@@ -16,7 +16,7 @@ logger = logging.getLogger(__name__)
 
 def sample(
     problem: Problem,
-    n_samples: int,
+    n_samples: Optional[int],
     sampler: Sampler = None,
     x0: Union[np.ndarray, List[np.ndarray]] = None,
     result: Result = None,
@@ -32,7 +32,8 @@ def sample(
         The problem to be solved. If None is provided, a
         :class:`pypesto.AdaptiveMetropolisSampler` is used.
     n_samples:
-        Number of samples to generate.
+        Number of samples to generate. `None` can be used if the sampler does
+        not use `n_samples`.
     sampler:
         The sampler to perform the actual sampling.
     x0:
@@ -63,7 +64,8 @@ def sample(
         result = Result(problem)
 
     # number of samples
-    n_samples = bound_n_samples_from_env(n_samples)
+    if n_samples is not None:
+        n_samples = bound_n_samples_from_env(n_samples)
 
     # try to find initial parameters
     if x0 is None:
