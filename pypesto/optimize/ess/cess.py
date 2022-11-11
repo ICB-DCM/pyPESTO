@@ -279,7 +279,7 @@ class CESSOptimizer:
 
         Helper for `starmap`.
         """
-        # different random seeds per prcess?
+        # different random seeds per process?
         np.random.seed((os.getpid() * int(time.time() * 1000)) % 2**32)
 
         ess = ESSOptimizer(**ess_kwargs)
@@ -291,7 +291,7 @@ class CESSOptimizer:
 
         Returns
         -------
-        ``True`` if not of the exit criteria is met, ``False`` otherwise.
+        ``True`` if none of the exit criteria is met, ``False`` otherwise.
         """
         # TODO DW which further stopping criteria: gtol, fatol, frtol?
 

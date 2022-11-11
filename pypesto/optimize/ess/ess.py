@@ -306,7 +306,7 @@ class ESSOptimizer:
 
         Creates the next generation from the RefSet by pair-wise combinations
         of all RefSet members. Creates ``RefSet.dim ** 2 - RefSet.dim`` new
-        parameter vectors, test them, and keeps the best child of each parent.
+        parameter vectors, tests them, and keeps the best child of each parent.
 
         Returns
         -------
