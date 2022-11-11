@@ -225,9 +225,6 @@ class NumericalInnerSolver(InnerSolver):
         # and would have to assume [-inf, inf]. However, this may not be
         # supported by all inner optimizers, so we go for some (arbitrary)
         # large value.
-        # FIXME: check if any bounds were active, and fail if so?
-        # lb = np.array([x.lb for x in pars])
-        # ub = np.array([x.ub for x in pars])
         lb = np.array(
             [
                 0
@@ -289,6 +286,13 @@ class NumericalInnerSolver(InnerSolver):
         result = minimize(pypesto_problem, **self.minimize_kwargs)
 
         best_par = result.optimize_result.list[0]['x']
+
+        if (np.isclose(best_par, lb) | np.isclose(best_par, ub)).any():
+            raise RuntimeError(
+                "Active bounds in inner problem optimization. This can result "
+                "in incorrect gradient computation for the outer parameters."
+            )
+
         x_opt = dict(zip(pypesto_problem.x_names, best_par))
 
         # cache
