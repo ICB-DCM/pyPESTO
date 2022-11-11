@@ -128,6 +128,10 @@ class HierarchicalAmiciCalculator(AmiciCalculator):
 
         # TODO use plist to compute only required derivatives, in
         # `super.__call__`, `amici.parameter_mapping.fill_in_parameters`
+        # TODO speed gain: if no offset or scaling parameters, only
+        #      sigma parameters in the inner problem, then simulation can be
+        #      skipped here, since observables will not change. Just need to
+        #      recompute NLLH with new sigma and old simulation.
         result = super().__call__(
             x_dct=x_dct,
             sensi_orders=sensi_orders,
