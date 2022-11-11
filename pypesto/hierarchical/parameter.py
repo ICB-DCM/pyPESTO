@@ -15,7 +15,24 @@ class InnerParameter:
     Attributes
     ----------
     coupled:
-        TODO
+        Whether the inner parameter is part of an observable that has both
+        an offset and scaling inner parameter.
+    dummy_value:
+        Value to be used when the optimal parameter is not yet known
+        (in particular to simulate unscaled observables).
+    inner_parameter_id:
+        The inner parameter ID.
+    inner_parameter_type:
+        The inner parameter type.
+    ixs:
+        A mask (boolean matrix) that indicates the measurements that this
+        parameter is used in.
+    lb:
+        The lower bound, for optimization.
+    scale:
+        Scale on which to estimate this parameter.
+    ub:
+        The upper bound, for optimization.
     """
 
     def __init__(
@@ -33,22 +50,7 @@ class InnerParameter:
 
         Parameters
         ----------
-        inner_parameter_id:
-            Id of the parameter.
-        inner_parameter_type:
-            Type of this inner parameter.
-        scale:
-            Scale on which to estimate this parameter.
-        lb:
-            Lower bound for this parameter.
-        ub:
-            Upper bound for this parameter.
-        ixs:
-            Boolean matrix, indicating for which measurements this parameter
-            is used.
-        dummy_value:
-            Value to be used when the optimal parameter is not yet known
-            (in particular to simulate unscaled observables).
+        See class attributes.
         """
         self.inner_parameter_id: str = inner_parameter_id
         self.coupled = False
