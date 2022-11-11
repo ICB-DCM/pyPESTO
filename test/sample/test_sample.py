@@ -154,6 +154,7 @@ def negative_log_prior(x):
         'AdaptiveParallelTempering',
         'Pymc',
         'Emcee',
+        'Dynesty',
     ]
 )
 def sampler(request):
@@ -189,6 +190,8 @@ def sampler(request):
         return PymcSampler(tune=5, progressbar=False)
     elif request.param == 'Emcee':
         return sample.EmceeSampler(nwalkers=10)
+    elif request.param == 'Dynesty':
+        return sample.DynestySampler()
 
 
 @pytest.fixture(params=['gaussian', 'gaussian_mixture', 'rosenbrock'])
