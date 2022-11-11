@@ -30,15 +30,6 @@ from pypesto.testing.examples import (
     get_Boehm_JProteomeRes2014_hierarchical_petab,
 )
 
-# import pypesto.logging
-# pypesto.logging.log_to_console(level=logging.DEBUG)
-
-# TODO
-# - test offset parameters
-# - test analytical handling of redundant offset/scaling parameters
-#   - e.g., scaling or offset can be applied to a flat line x=5 with the same
-#     effect, i.e. e.g. y=2*x is the same as y=x+5 here
-
 # Suitable test cases from the benchmark collection
 # - Boehm
 # - Fujita
@@ -215,11 +206,8 @@ def test_hierarchical_calculator_and_objective():
     parameters = [x_dct[x_id] for x_id in petab_problem.x_free_ids]
     fval_false = problems[False].objective(parameters)
 
-    # TODO user-friendly way to get these
     outer_parameters = [
-        x_dct[x_id]
-        for x_id in petab_problem.x_free_ids
-        if pd.isna(petab_problem.parameter_df.loc[x_id].parameterType)
+        x_dct[x_id] for x_id in problems[True].objective.x_names
     ]
     fval_true = problems[True].objective(outer_parameters)
     # Hierarchical optimization does not affect the function value, if optimal
