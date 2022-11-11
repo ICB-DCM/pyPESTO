@@ -5,7 +5,7 @@ import numpy as np
 import pandas as pd
 
 from ..objective import ObjectiveBase
-from ..objective.priors import NegLogPriors
+from ..objective.priors import NegLogParameterPriors
 
 SupportsFloatIterableOrValue = Union[Iterable[SupportsFloat], SupportsFloat]
 SupportsIntIterableOrValue = Union[Iterable[SupportsInt], SupportsInt]
@@ -83,7 +83,7 @@ class Problem:
         x_guesses: Optional[Iterable[float]] = None,
         x_names: Optional[Iterable[str]] = None,
         x_scales: Optional[Iterable[str]] = None,
-        x_priors_defs: Optional[NegLogPriors] = None,
+        x_priors_defs: Optional[NegLogParameterPriors] = None,
         lb_init: Union[np.ndarray, List[float], None] = None,
         ub_init: Union[np.ndarray, List[float], None] = None,
         copy_objective: bool = True,
