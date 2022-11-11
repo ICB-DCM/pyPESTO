@@ -159,7 +159,7 @@ def compute_optimal_offset_coupled(
     # NB: this will cause issues if e.g. a simulation with dynamics has values
     #     on the order of the zero check here (1e-10). An attempt to avoid this
     #     is done here by checking that the numerator not close to zero.
-    if np.isclose(den, 0, atol=1e-10) and not np.isclose(num, 0, atol=1e-10):
+    if np.isclose(den, 0, atol=1e-14) and not np.isclose(num, 0, atol=1e-4):
         # `get_finite_quotient` will now return the dummy value
         den = 0
 
