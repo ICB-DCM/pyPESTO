@@ -1,8 +1,14 @@
+"""DynestySampler class."""
+
 # TODO set `nlive` to > a few * n_params**2
 #      - https://github.com/joshspeagle/dynesty/issues/301#issuecomment-888461184
+#      - seems easy for `NestedSampler(..., live_points=...)`, and for
+#        `DynamicNestedSampler(..., nlive0=...)`.
 # TODO set one of the initial live points to the best vector from optimization
 #      - this should hopefully ensure a good estimate for `L_max`, used for
 #        stopping criteria
+#      - seems easy for `NestedSampler(..., live_points)`, but not for
+#        `DynamicNestedSampler`.
 # TODO allow selection of bounding methods
 #      - which bounding method works well for high-dimension problems?
 #        - possibly overlapping balls/cubes (reduced tuning parameters), or
@@ -116,7 +122,7 @@ class DynestySampler(Sampler):
             if any(x < self.problem.lb) or any(x > self.problem.ub):
                 return -np.inf
             # invert sign
-            # FIXME this is possibly the posterior if priors are defined
+            # TODO this is possibly the posterior if priors are defined
             return -1.0 * self.problem.objective(x)
 
         sampler_class = dynesty.NestedSampler
