@@ -5,7 +5,7 @@ from typing import Any, Dict, List
 
 import numpy as np
 
-from ..C import DUMMY_INNER_VALUE, InnerParameterType
+from ..C import InnerParameterType
 from ..objective import Objective
 from ..optimize import minimize
 from ..problem import Problem
@@ -274,12 +274,7 @@ class NumericalInnerSolver(InnerSolver):
             )
         else:
             pypesto_problem.set_x_guesses(
-                [
-                    [
-                        DUMMY_INNER_VALUE[inner_parameter.inner_parameter_type]
-                        for inner_parameter in pars
-                    ]
-                ]
+                [list(problem.get_dummy_values(scaled=False).values())]
             )
 
         # perform the actual optimization
