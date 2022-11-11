@@ -45,7 +45,8 @@ def visualize_optimized_model_fit(
         The :py:class:`petab.Problem` that was optimized.
     result:
         The result object from optimization. NB: the problem attribute
-        will be used for simulation, i.e. `result.problem.objective.amici_...`.
+        will be used for simulation, i.e. `result.problem.objective.amici_...`,
+        unless `pypesto_problem` is provided.
     start_index:
         The index of the optimization run in `result.optimize_result.list`.
         Ignored if `problem_parameters` is provided.
@@ -68,17 +69,16 @@ def visualize_optimized_model_fit(
         if petab is None:
             raise
 
+    problem = result.problem
     if pypesto_problem is not None:
-        result.problem = pypesto_problem
+        problem = pypesto_problem
 
-    x = result.optimize_result.list[start_index]['x'][
-        result.problem.x_free_indices
-    ]
-    objective_result = result.problem.objective(x, return_dict=True)
+    x = result.optimize_result.list[start_index]['x'][problem.x_free_indices]
+    objective_result = problem.objective(x, return_dict=True)
 
     simulation_df = rdatas_to_simulation_df(
         objective_result[RDATAS],
-        result.problem.objective.amici_model,
+        problem.objective.amici_model,
         petab_problem.measurement_df,
     )
 
