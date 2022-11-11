@@ -44,7 +44,7 @@ from pypesto.testing.examples import (
 # - Fujita
 
 
-def test_hierarchical_optimization_sigma_and_scaling():
+def test_hierarchical_optimization_pipeline():
     """Test hierarchical optimization of sigma and scaling parameters.
 
     Here (mostly): the flags `True` and `False` indicate that hierarchical
@@ -90,8 +90,8 @@ def test_hierarchical_optimization_sigma_and_scaling():
 
     history_options = pypesto.HistoryOptions(trace_record=True)
 
-    def get_result(problem, inner_solver, inner_solvers=inner_solvers):
-        if inner_solver:
+    def get_result(problem, inner_solver_id, inner_solvers=inner_solvers):
+        if inner_solver_id:
             problem.objective.calculator.inner_solver = inner_solvers[
                 inner_solver_id
             ]
