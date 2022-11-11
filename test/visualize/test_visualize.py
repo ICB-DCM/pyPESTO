@@ -1077,7 +1077,11 @@ def test_visualize_optimized_model_fit():
     )
 
     # test call of visualize_optimized_model_fit
-    visualize_optimized_model_fit(petab_problem=petab_problem, result=result)
+    visualize_optimized_model_fit(
+        petab_problem=petab_problem,
+        result=result,
+        pypesto_problem=problem,
+    )
 
 
 @close_fig

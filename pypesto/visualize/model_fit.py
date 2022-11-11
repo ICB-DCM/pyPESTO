@@ -23,9 +23,9 @@ AmiciModel = Union['amici.Model', 'amici.ModelPtr']
 
 def visualize_optimized_model_fit(
     petab_problem: petab.Problem,
-    result: Union[Result, Sequence[Result]] = None,
+    result: Union[Result, Sequence[Result]],
+    pypesto_problem: Problem,
     start_index: int = 0,
-    pypesto_problem: Problem = None,
     return_dict: bool = False,
     unflattened_petab_problem: petab.Problem = None,
     **kwargs,
@@ -44,9 +44,7 @@ def visualize_optimized_model_fit(
     petab_problem:
         The :py:class:`petab.Problem` that was optimized.
     result:
-        The result object from optimization. NB: the problem attribute
-        will be used for simulation, i.e. `result.problem.objective.amici_...`,
-        unless `pypesto_problem` is provided.
+        The result object from optimization.
     start_index:
         The index of the optimization run in `result.optimize_result.list`.
         Ignored if `problem_parameters` is provided.
@@ -65,20 +63,14 @@ def visualize_optimized_model_fit(
     axes: `matplotlib.axes.Axes` object of the created plot.
     None: In case subplots are saved to file
     """
-    if petab_problem is not None:
-        if petab is None:
-            raise
-
-    problem = result.problem
-    if pypesto_problem is not None:
-        problem = pypesto_problem
-
-    x = result.optimize_result.list[start_index]['x'][problem.x_free_indices]
-    objective_result = problem.objective(x, return_dict=True)
+    x = result.optimize_result.list[start_index]['x'][
+        pypesto_problem.x_free_indices
+    ]
+    objective_result = pypesto_problem.objective(x, return_dict=True)
 
     simulation_df = rdatas_to_simulation_df(
         objective_result[RDATAS],
-        problem.objective.amici_model,
+        pypesto_problem.objective.amici_model,
         petab_problem.measurement_df,
     )
 
