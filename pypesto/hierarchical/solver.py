@@ -5,7 +5,7 @@ from typing import Any, Dict, List
 
 import numpy as np
 
-from ..C import InnerParameterType
+from ..C import DUMMY_INNER_VALUE, InnerParameterType
 from ..objective import Objective
 from ..optimize import minimize
 from ..problem import Problem
@@ -249,10 +249,10 @@ class NumericalInnerSolver(InnerSolver):
             _data = copy.deepcopy(data)
             for x_val, par in zip(x, pars):
                 mask = par.ixs
-                if par.inner_parameter_type == InnerParameterType.SCALING:
-                    apply_scaling(x_val, _sim, mask)
-                elif par.inner_parameter_type == InnerParameterType.OFFSET:
+                if par.inner_parameter_type == InnerParameterType.OFFSET:
                     apply_offset(x_val, _data, mask)
+                elif par.inner_parameter_type == InnerParameterType.SCALING:
+                    apply_scaling(x_val, _sim, mask)
                 elif par.inner_parameter_type == InnerParameterType.SIGMA:
                     apply_sigma(x_val, _sigma, mask)
                 else:
@@ -274,6 +274,15 @@ class NumericalInnerSolver(InnerSolver):
         if self.x_guesses is not None:
             pypesto_problem.set_x_guesses(
                 self.x_guesses[:, pypesto_problem.x_free_indices]
+            )
+        else:
+            pypesto_problem.set_x_guesses(
+                [
+                    [
+                        DUMMY_INNER_VALUE[inner_parameter.inner_parameter_type]
+                        for inner_parameter in pars
+                    ]
+                ]
             )
 
         # perform the actual optimization
