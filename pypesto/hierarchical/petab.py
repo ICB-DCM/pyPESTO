@@ -130,10 +130,10 @@ def validate_inner_parameter_pairings(
                 scalings_with_offsets[scaling] = offset
                 offsets_with_scalings[offset] = scaling
 
-        # FIXME can a scaling that is paired with an offset, exist without
-        #       any scaling?
-        #       Same for offset?
-        #       Same for scaling+sigma and offset+sigma pairings?
+        # TODO can a scaling that is paired with an offset, exist without
+        #      any scaling?
+        #      Same for offset?
+        #      Same for scaling+sigma and offset+sigma pairings?
 
 
 def get_inner_parameters(
@@ -150,7 +150,7 @@ def get_inner_parameters(
     -------
     Parameter IDs and their inner parameter types.
     """
-    # TODO exclude fixed inner parameters?
+    # TODO exclude fixed inner parameters
 
     if PARAMETER_TYPE not in petab_problem.parameter_df.columns:
         raise ValueError(
