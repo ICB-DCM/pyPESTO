@@ -1,3 +1,4 @@
+import warnings
 from typing import List
 
 import numpy as np
@@ -26,7 +27,9 @@ def get_finite_quotient(
     `num / den` if it's finite, else a dummy value.
     """
     try:
-        quotient = float(numerator / denominator)
+        with warnings.catch_warnings():
+            warnings.filterwarnings('error')
+            quotient = float(numerator / denominator)
         if not np.isfinite(quotient):
             raise ValueError
         return quotient
@@ -149,8 +152,22 @@ def compute_optimal_offset_coupled(
     num = y - r1
     den = recnoise - r2
 
-    # compute optimal value
-    return float(num / den)
+    # If simulation is essentially constant, then offset and scaling
+    # have the same effect. In this case, we set the offset to a dummy value,
+    # and estimate scaling. This is because offset is computed first, by the
+    # calculator.
+    # NB: this will cause issues if e.g. a simulation with dynamics has values
+    #     on the order of the zero check here (1e-10). An attempt to avoid this
+    #     is done here by checking that the numerator not close to zero.
+    if np.isclose(den, 0, atol=1e-10) and not np.isclose(num, 0, atol=1e-10):
+        # `get_finite_quotient` will now return the dummy value
+        den = 0
+
+    return get_finite_quotient(
+        numerator=num,
+        denominator=den,
+        inner_parameter_type=InnerParameterType.OFFSET,
+    )
 
 
 def apply_offset(
