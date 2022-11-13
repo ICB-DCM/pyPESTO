@@ -122,7 +122,7 @@ def validate_inner_parameter_pairings(
                     "the same scaling or offset parameter must not have a "
                     f"different scaling or offset inner parameter. "
                     f"Scaling: `{scaling}`. "
-                    f"Expected scaling: `{expected_scaling}`."
+                    f"Expected scaling: `{expected_scaling}`. "
                     f"Offset: `{offset}`. "
                     f"Expected offset: `{expected_offset}`."
                 )
@@ -448,7 +448,7 @@ def _get_symbolic_formula_from_measurement(
     if len(inner_parameter_types) != len(symbolic_formula_inner_parameters):
         raise ValueError(
             "There are multiple inner parameters of the same type."
-            "Inner parameters: `{symbolic_formula_inner_parameters.values}`."
+            f"Inner parameters: `{symbolic_formula_inner_parameters.values}`."
         )
 
     return symbolic_formula, symbolic_formula_inner_parameters
