@@ -440,7 +440,7 @@ def test_history_beats_optimizer():
 
 @pytest.mark.parametrize("ess_type", ["ess", "cess"])
 @pytest.mark.parametrize("local_optimizer", [None, optimize.FidesOptimizer()])
-# @pytest.mark.flaky(reruns=3)
+@pytest.mark.flaky(reruns=3)
 def test_ess(problem, local_optimizer, ess_type, request):
     from pypesto.optimize.ess import CESSOptimizer, ESSOptimizer
 
