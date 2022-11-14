@@ -47,7 +47,6 @@ class HierarchicalAmiciCalculator(AmiciCalculator):
         self.inner_problem = inner_problem
 
         if inner_solver is None:
-            # inner_solver = NumericalInnerSolver()
             inner_solver = AnalyticalInnerSolver()
         self.inner_solver = inner_solver
 
