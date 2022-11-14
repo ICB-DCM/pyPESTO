@@ -56,9 +56,9 @@ def compute_optimal_scaling(
     # iterate over conditions
     for sim_i, data_i, sigma_i, mask_i in zip(sim, data, sigma, mask):
         # extract relevant values
-        sim_x = sim_i[mask_i]
-        data_x = data_i[mask_i]
-        sigma_x = sigma_i[mask_i]
+        sim_x = sim_i[mask_i]  # \tilde{h}_i
+        data_x = data_i[mask_i]  # \bar{y}_i
+        sigma_x = sigma_i[mask_i]  # \sigma_i
         # update statistics
         num += np.nansum(sim_x * data_x / sigma_x**2)
         den += np.nansum(sim_x**2 / sigma_x**2)
@@ -107,9 +107,9 @@ def compute_optimal_offset(
     # iterate over conditions
     for sim_i, data_i, sigma_i, mask_i in zip(sim, data, sigma, mask):
         # extract relevant values
-        sim_x = sim_i[mask_i]
-        data_x = data_i[mask_i]
-        sigma_x = sigma_i[mask_i]
+        sim_x = sim_i[mask_i]  # \tilde{h}_i
+        data_x = data_i[mask_i]  # \bar{y}_i
+        sigma_x = sigma_i[mask_i]  # \sigma_i
         # update statistics
         num += np.nansum((data_x - sim_x) / sigma_x**2)
         den += np.nansum(1 / sigma_x**2)
@@ -131,9 +131,20 @@ def compute_optimal_offset_coupled(
 
     Compute optimal offset for an observable that has both an offset and
     scaling inner parameter.
+
+    See https://doi.org/10.1093/bioinformatics/btz581 SI Section 3.1 for the
+    derivation.
     """
-    # numerator, denominator
-    h, recnoise, yh, y, h2 = 0.0, 0.0, 0.0, 0.0, 0.0
+    # will be \sum_i \frac{ \tilde{h}_i }{ \sigma_i^2 }
+    h = 0.0
+    # will be \sum_i \frac{1}{ \sigma_i^2 }
+    recnoise = 0.0
+    # will be \sum_i \frac{ \bar{y}_i * \tilde{h}_i }{ \sigma_i^2 }
+    yh = 0.0
+    # will be \sum_i \frac{ \bar{y}_i }{ \sigma_i^2 }
+    y = 0.0
+    # will be \sum_i \frac{ \tilde{h}_i^2}{ \sigma_i^2 }
+    h2 = 0.0
 
     # iterate over conditions
     for sim_i, data_i, sigma_i, mask_i in zip(sim, data, sigma, mask):
@@ -144,17 +155,16 @@ def compute_optimal_offset_coupled(
         data_x = data_i[mask_i]  # \bar{y}_i
         sigma_x = sigma_i[mask_i]  # \sigma_i
         # update statistics
-        s2 = sigma_x**2
+        s2 = sigma_x**2  # \sigma_i^2
         h += np.nansum(sim_x / s2)
         recnoise += np.nansum(1 / s2)
         yh += np.nansum((sim_x * data_x) / s2)
         y += np.nansum(data_x / s2)
         h2 += np.nansum((sim_x**2) / s2)
 
-    r1 = (yh * h) / h2
-    r2 = (h**2) / h2
-    num = y - r1
-    den = recnoise - r2
+    # numerator and denominator in equation 11
+    num = y - (yh * h) / h2
+    den = recnoise - (h**2) / h2
 
     # If simulation is essentially constant, then offset and scaling
     # have the same effect. In this case, we set the offset to a dummy value,
