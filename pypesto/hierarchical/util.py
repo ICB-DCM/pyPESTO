@@ -157,8 +157,8 @@ def compute_optimal_offset_coupled(
     # and estimate scaling. This is because offset is computed first, by the
     # calculator.
     # NB: this will cause issues if e.g. a simulation with dynamics has values
-    #     on the order of the zero check here (1e-10). An attempt to avoid this
-    #     is done here by checking that the numerator not close to zero.
+    #     on the order of the zero check here. An attempt to avoid this
+    #     is done here by checking that the numerator is not close to zero.
     if np.isclose(den, 0, atol=1e-14) and not np.isclose(num, 0, atol=1e-4):
         # `get_finite_quotient` will now return the dummy value
         den = 0
