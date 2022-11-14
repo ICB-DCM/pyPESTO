@@ -302,8 +302,10 @@ def ixs_for_measurement_specific_parameters(
 
     Returns
     -------
-    A dictionary mapping parameter ID to a List of condition, time, observable
-    index tuples in which this output parameter is used.
+    A dictionary mapping parameter ID to a List of
+    `(condition index, time index, observable index)` tuples in which this
+    output parameter is used. For each condition, the time index refers to
+    a sorted list of non-unique time points for which there are measurements.
     """
     ixs_for_par = {}
     observable_ids = amici_model.getObservableIds()
@@ -312,17 +314,20 @@ def ixs_for_measurement_specific_parameters(
         petab_problem.get_simulation_conditions_from_measurement_df()
     )
     for condition_ix, condition in simulation_conditions.iterrows():
+        # measurement table for current condition
         df_for_condition = petab.get_rows_for_condition(
             measurement_df=petab_problem.measurement_df, condition=condition
         )
 
+        # unique sorted list of timepoints
         timepoints = sorted(df_for_condition[TIME].unique().astype(float))
+        # non-unique sorted list of timepoints
         timepoints_w_reps = _get_timepoints_with_replicates(
             measurement_df=df_for_condition
         )
 
         for time in timepoints:
-            # subselect for time
+            # subselect measurements for time `time`
             df_for_time = df_for_condition[df_for_condition[TIME] == time]
             time_ix_0 = timepoints_w_reps.index(time)
 
@@ -336,12 +341,16 @@ def ixs_for_measurement_specific_parameters(
                     measurement[OBSERVABLE_ID]
                 )
 
-                # update time index for observable
+                # as the time indices have to account for replicates, we need
+                #  to track which time indices have already been assigned for
+                #  the current observable
                 if observable_ix in time_ix_for_obs_ix:
+                    # a replicate
                     time_ix_for_obs_ix[observable_ix] += 1
                 else:
+                    # the first measurement for this `(observable, timepoint)`
                     time_ix_for_obs_ix[observable_ix] = time_ix_0
-                time_ix = time_ix_for_obs_ix[observable_ix]
+                time_w_reps_ix = time_ix_for_obs_ix[observable_ix]
 
                 observable_overrides = petab.split_parameter_replacement_list(
                     measurement[OBSERVABLE_PARAMETERS]
@@ -354,7 +363,7 @@ def ixs_for_measurement_specific_parameters(
                 for override in observable_overrides + noise_overrides:
                     if override in x_ids:
                         ixs_for_par.setdefault(override, []).append(
-                            (condition_ix, time_ix, observable_ix)
+                            (condition_ix, time_w_reps_ix, observable_ix)
                         )
     return ixs_for_par
 
