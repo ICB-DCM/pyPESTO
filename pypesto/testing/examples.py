@@ -1,7 +1,10 @@
 """Example problems for tests / demos."""
 
+import numpy as np
+import pandas as pd
 
-def get_Boehm_JProteomeRes2014_hierarchical_petab() -> 'petab.Problem':  # noqa: F821
+
+def get_Boehm_JProteomeRes2014_hierarchical_petab_finite_bounds() -> 'petab.Problem':  # noqa: F821
     """
     Get Boehm_JProteomeRes2014 problem with scaled/offset observables.
 
@@ -100,4 +103,24 @@ def get_Boehm_JProteomeRes2014_hierarchical_petab() -> 'petab.Problem':  # noqa:
 
     petab.lint_problem(petab_problem)
 
+    return petab_problem
+
+
+def get_Boehm_JProteomeRes2014_hierarchical_petab_infinite_bounds() -> 'petab.Problem':  # noqa: F821
+    """
+    See `get_Boehm_JProteomeRes2014_hierarchical_petab_finite_bounds`.
+
+    Adjusts this PEtab problem to have infinite bounds for inner parameters.
+    """
+    from petab.C import LOWER_BOUND, UPPER_BOUND
+
+    from ..C import PARAMETER_TYPE
+
+    petab_problem = (
+        get_Boehm_JProteomeRes2014_hierarchical_petab_finite_bounds()
+    )
+    petab_problem.parameter_df.loc[
+        ~pd.isna(petab_problem.parameter_df[PARAMETER_TYPE]),
+        [LOWER_BOUND, UPPER_BOUND],
+    ] = (-np.inf, np.inf)
     return petab_problem

@@ -1,6 +1,5 @@
 import copy
 import itertools
-import warnings
 from typing import Any, Dict, List
 
 import numpy as np
@@ -313,8 +312,9 @@ def _maybe_warn_unsupported_bounds(problem: InnerProblem):
         problem.get_xs_for_type(InnerParameterType.SIGMA),
     ):
         if x.lb != -np.inf or x.ub != np.inf:
-            warnings.warn(
-                message="Note that parameter bounds for inner parameters are "
-                "so far ignored."
+            raise ValueError(
+                "Hierarchical optimization currently does not support finite "
+                "parameter bounds. Please use `-inf` and `inf` for the "
+                "lower and upper bounds, respectively, for all inner "
+                f"parameters, e.g.: `{x.inner_parameter_id}`."
             )
-            break

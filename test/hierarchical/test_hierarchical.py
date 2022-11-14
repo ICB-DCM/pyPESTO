@@ -5,7 +5,6 @@ import amici
 import numpy as np
 import pandas as pd
 import petab
-import pytest
 
 import pypesto
 from pypesto.C import LOG10, MODE_FUN, InnerParameterType
@@ -27,7 +26,8 @@ from pypesto.hierarchical.util import (
 from pypesto.optimize import FidesOptimizer, OptimizeOptions
 from pypesto.petab import PetabImporter
 from pypesto.testing.examples import (
-    get_Boehm_JProteomeRes2014_hierarchical_petab,
+    get_Boehm_JProteomeRes2014_hierarchical_petab_finite_bounds,
+    get_Boehm_JProteomeRes2014_hierarchical_petab_infinite_bounds,
 )
 
 # Suitable test cases from the benchmark collection
@@ -41,11 +41,14 @@ def test_hierarchical_optimization_pipeline():
     Here (mostly): the flags `True` and `False` indicate that hierarchical
     optimization is enabled and disabled, respectively.
     """
-    petab_problem = get_Boehm_JProteomeRes2014_hierarchical_petab()
     flags = [False, True]
+    petab_problems = {
+        False: get_Boehm_JProteomeRes2014_hierarchical_petab_finite_bounds(),
+        True: get_Boehm_JProteomeRes2014_hierarchical_petab_infinite_bounds(),
+    }
     problems = {}
     for flag in flags:
-        importer = PetabImporter(petab_problem, hierarchical=flag)
+        importer = PetabImporter(petab_problems[flag], hierarchical=flag)
         objective = importer.create_objective()
         problem = importer.create_problem(objective)
         problem.objective.amici_solver.setSensitivityMethod(
@@ -141,7 +144,9 @@ def test_hierarchical_calculator_and_objective():
     Here (mostly): the flags `True` and `False` indicate that hierarchical
     optimization is enabled and disabled, respectively.
     """
-    petab_problem = get_Boehm_JProteomeRes2014_hierarchical_petab()
+    petab_problem = (
+        get_Boehm_JProteomeRes2014_hierarchical_petab_infinite_bounds()
+    )
     flags = [False, True]
     problems = {}
     for flag in flags:
@@ -327,24 +332,24 @@ def inner_problem_exp():
             inner_parameter_id='offset_',
             inner_parameter_type=InnerParameterType.OFFSET,
             scale=LOG10,
-            lb=expected_values['offset_'] * 1e-5,
-            ub=expected_values['offset_'] * 1e5,
+            lb=-np.inf,
+            ub=np.inf,
             ixs=mask,
         ),
         InnerParameter(
             inner_parameter_id='scaling_',
             inner_parameter_type=InnerParameterType.SCALING,
             scale=LOG10,
-            lb=expected_values['scaling_'] * 1e-5,
-            ub=expected_values['scaling_'] * 1e5,
+            lb=-np.inf,
+            ub=np.inf,
             ixs=mask,
         ),
         InnerParameter(
             inner_parameter_id='sigma_',
             inner_parameter_type=InnerParameterType.SIGMA,
             scale=LOG10,
-            lb=expected_values['sigma_'] * 1e-5,
-            ub=expected_values['sigma_'] * 1e1,
+            lb=-np.inf,
+            ub=np.inf,
             ixs=mask,
         ),
     ]
@@ -367,13 +372,12 @@ def test_analytical_inner_solver():
 
     solver = AnalyticalInnerSolver()
 
-    with pytest.warns(UserWarning, match='parameter bounds'):
-        result = solver.solve(
-            problem=inner_problem,
-            sim=[simulation],
-            sigma=[dummy_sigma],
-            scaled=False,
-        )
+    result = solver.solve(
+        problem=inner_problem,
+        sim=[simulation],
+        sigma=[dummy_sigma],
+        scaled=False,
+    )
 
     assert np.isclose(result['offset_'], expected_values['offset_'], rtol=rtol)
     assert np.isclose(
