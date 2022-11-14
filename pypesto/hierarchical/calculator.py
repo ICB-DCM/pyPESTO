@@ -41,7 +41,15 @@ class HierarchicalAmiciCalculator(AmiciCalculator):
         inner_problem: AmiciInnerProblem,
         inner_solver: InnerSolver = None,
     ):
-        """Initialize the calculator from the given problem."""
+        """Initialize the calculator from the given problem.
+
+        Arguments
+        ---------
+        inner_problem:
+            The inner problem of a hierarchical optimization problem.
+        inner_solver:
+            A solver to solve ``inner_problem``.
+        """
         super().__init__()
 
         self.inner_problem = inner_problem
