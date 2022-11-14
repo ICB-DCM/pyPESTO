@@ -86,7 +86,7 @@ def apply_scaling(
         `scaling_value`.
     """
     for i in range(len(sim)):
-        sim[i][mask[i]] = scaling_value * sim[i][mask[i]]
+        sim[i][mask[i]] *= scaling_value
 
 
 def compute_optimal_offset(
@@ -197,7 +197,7 @@ def apply_offset(
         `offset_value`.
     """
     for i in range(len(data)):
-        data[i][mask[i]] = data[i][mask[i]] - offset_value
+        data[i][mask[i]] -= offset_value
 
 
 def compute_optimal_sigma(
@@ -254,8 +254,8 @@ def compute_nllh(
     Compute negative log-likelihood of the data, given the model outputs and
     sigmas.
     """
-    nllh = 0.0
-    for data_i, sim_i, sigma_i in zip(data, sim, sigma):
-        nllh += 0.5 * np.nansum(np.log(2 * np.pi * sigma_i**2))
-        nllh += 0.5 * np.nansum((data_i - sim_i) ** 2 / sigma_i**2)
-    return nllh
+    return sum(
+        0.5 * np.nansum(np.log(2 * np.pi * sigma_i**2))
+        + 0.5 * np.nansum((data_i - sim_i) ** 2 / sigma_i**2)
+        for data_i, sim_i, sigma_i in zip(data, sim, sigma)
+    )
