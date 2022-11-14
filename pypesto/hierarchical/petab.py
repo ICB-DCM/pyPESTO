@@ -80,7 +80,7 @@ def validate_inner_parameter_pairings(
 
         # Ensures each scaling is only ever paired with one sigma.
         if scaling is not None and sigma is not None:
-            expected_sigma = scalings_with_sigmas.get(scaling, None)
+            expected_sigma = scalings_with_sigmas.get(scaling)
             if expected_sigma is not None and sigma != expected_sigma:
                 raise ValueError(
                     "If a scaling parameter is paired with a sigma "
@@ -95,7 +95,7 @@ def validate_inner_parameter_pairings(
 
         # Ensures each offset is only ever paired with one sigma.
         if offset is not None and sigma is not None:
-            expected_sigma = offsets_with_sigmas.get(offset, None)
+            expected_sigma = offsets_with_sigmas.get(offset)
             if expected_sigma is not None and sigma != expected_sigma:
                 raise ValueError(
                     "If an offset parameter is paired with a sigma "
@@ -111,8 +111,8 @@ def validate_inner_parameter_pairings(
         # Ensures each scaling is only ever paired with one offset, and vice
         # versa.
         if scaling is not None and offset is not None:
-            expected_offset = scalings_with_offsets.get(scaling, None)
-            expected_scaling = offsets_with_scalings.get(offset, None)
+            expected_offset = scalings_with_offsets.get(scaling)
+            expected_scaling = offsets_with_scalings.get(offset)
             if (expected_offset is not None and offset != expected_offset) or (
                 expected_scaling is not None and scaling != expected_scaling
             ):
@@ -233,7 +233,7 @@ def _validate_measurement_specific_observable_formula(
 
     Parameters
     ----------
-    measurement_row:
+    measurement:
         A row from a PEtab measurements table.
     petab_problem:
         The PEtab problem.
@@ -365,7 +365,7 @@ def _get_symbolic_formula_from_measurement(
     formula_type: Literal['observable', 'noise'],
     petab_problem: petab.Problem,
     inner_parameters: Dict[str, InnerParameterType],
-) -> sp.Expr:
+) -> Tuple[sp.Expr, Dict[sp.Symbol, InnerParameterType]]:
     """Get a symbolic representation of a formula, with overrides overridden.
 
     Also performs some checks to ensure only valid numbers and types of inner
@@ -405,11 +405,7 @@ def _get_symbolic_formula_from_measurement(
         else [overrides]
     )
 
-    subs = {
-        placeholder: override
-        for placeholder, override in zip(formula_placeholders, overrides)
-    }
-
+    subs = dict(zip(formula_placeholders, overrides))
     symbolic_formula = sp.sympify(formula_string)
     symbolic_formula = symbolic_formula.subs(subs)
 

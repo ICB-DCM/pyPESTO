@@ -82,15 +82,15 @@ def get_Boehm_JProteomeRes2014_hierarchical_petab() -> 'petab.Problem':  # noqa:
         if par_id.startswith("offset_"):
             petab_problem.parameter_df.loc[
                 par_id, PARAMETER_TYPE
-            ] = InnerParameterType.OFFSET
+            ] = InnerParameterType.OFFSET.value
         elif par_id.startswith("sd_"):
             petab_problem.parameter_df.loc[
                 par_id, PARAMETER_TYPE
-            ] = InnerParameterType.SIGMA
+            ] = InnerParameterType.SIGMA.value
         elif par_id.startswith("scaling_"):
             petab_problem.parameter_df.loc[
                 par_id, PARAMETER_TYPE
-            ] = InnerParameterType.SCALING
+            ] = InnerParameterType.SCALING.value
 
     # log-scaling is not supported for inner parameters
     petab_problem.parameter_df.loc[

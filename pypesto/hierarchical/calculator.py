@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import copy
-from typing import Dict, List, Sequence, Tuple
+from typing import Dict, List, Optional, Sequence, Tuple
 
 import amici
 import numpy as np
@@ -39,7 +39,7 @@ class HierarchicalAmiciCalculator(AmiciCalculator):
     def __init__(
         self,
         inner_problem: AmiciInnerProblem,
-        inner_solver: InnerSolver = None,
+        inner_solver: Optional[InnerSolver] = None,
     ):
         """Initialize the calculator from the given problem.
 
@@ -49,6 +49,7 @@ class HierarchicalAmiciCalculator(AmiciCalculator):
             The inner problem of a hierarchical optimization problem.
         inner_solver:
             A solver to solve ``inner_problem``.
+            Defaults to ``pypesto.hierarchical.solver.AnalyticalInnerSolver``.
         """
         super().__init__()
 
