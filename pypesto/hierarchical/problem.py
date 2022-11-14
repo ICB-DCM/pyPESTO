@@ -165,33 +165,6 @@ class AmiciInnerProblem(InnerProblem):
         return True
 
 
-def compare_edataviews(edataview0, edataview) -> bool:
-    """Compare experimental data by their AMICI NumPy array views.
-
-    The input types can be created from an AMICI `List[ExpData]` type with
-    e.g. `edataview = [amici.numpy.ExpDataView(edata) for edata in edatas]`.
-
-    Parameters
-    ----------
-    edataview0:
-        An experimental data set.
-    edataview:
-        An experimental data set.
-
-    Returns
-    -------
-    Whether the experimental data sets are the same.
-    """
-    for field_name in amici.numpy.ExpDataView._field_names:
-        if edataview0[field_name] is None and edataview[field_name] is None:
-            continue
-        if not np.array_equal(
-            edataview0[field_name], edataview[field_name], equal_nan=True
-        ):
-            return False
-    return True
-
-
 def scale_value_dict(
     dct: Dict[str, float], problem: InnerProblem
 ) -> Dict[str, float]:
