@@ -127,7 +127,11 @@ def compute_optimal_offset_coupled(
     sigma: List[np.ndarray],
     mask: List[np.ndarray],
 ) -> float:
-    """Compute optimal offset."""
+    """Compute optimal offset.
+
+    Compute optimal offset for an observable that has both an offset and
+    scaling inner parameter.
+    """
     # numerator, denominator
     h, recnoise, yh, y, h2 = 0.0, 0.0, 0.0, 0.0, 0.0
 
@@ -136,9 +140,9 @@ def compute_optimal_offset_coupled(
         if mask_i.max(initial=False) is False:
             continue
         # extract relevant values
-        sim_x = sim_i[mask_i] # \tilde{h}_i
-        data_x = data_i[mask_i] # \bar{y}_i
-        sigma_x = sigma_i[mask_i] # \sigma_i
+        sim_x = sim_i[mask_i]  # \tilde{h}_i
+        data_x = data_i[mask_i]  # \bar{y}_i
+        sigma_x = sigma_i[mask_i]  # \sigma_i
         # update statistics
         s2 = sigma_x**2
         h += np.nansum(sim_x / s2)

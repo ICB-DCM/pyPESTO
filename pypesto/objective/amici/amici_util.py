@@ -193,9 +193,7 @@ def par_index_slices(
                 par_opt_id_to_idx[par_opt_id],
             )
             for par_sim_id, par_opt_id in condition_map_sim_var.items()
-            if isinstance(par_opt_id, str)
-            # FIXME is it safe to ignore missing ones?
-            and par_opt_id in par_opt_id_to_idx
+            if isinstance(par_opt_id, str) and par_opt_id in par_opt_id_to_idx
         )
     )
     par_sim_slice = np.fromiter(next(zip_iterator), dtype=int)
