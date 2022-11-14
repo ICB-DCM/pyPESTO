@@ -149,6 +149,8 @@ class AmiciInnerProblem(InnerProblem):
         -------
         Whether the data sets are consistent.
         """
+        # TODO replace but edata1==edata2 once this makes it into amici
+        #  https://github.com/AMICI-dev/AMICI/issues/1880
         data = [
             amici.numpy.ExpDataView(edata)['observedData'] for edata in edatas
         ]
