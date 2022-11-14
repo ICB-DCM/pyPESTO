@@ -6,7 +6,12 @@ import pandas as pd
 import petab
 import sympy as sp
 from more_itertools import one
-from petab.C import OBSERVABLE_ID, PARAMETER_SEPARATOR
+from petab.C import (
+    LIN,
+    OBSERVABLE_ID,
+    OBSERVABLE_TRANSFORMATION,
+    PARAMETER_SEPARATOR,
+)
 from petab.observables import get_formula_placeholders
 
 from ..C import PARAMETER_TYPE, InnerParameterType
@@ -446,5 +451,21 @@ def _get_symbolic_formula_from_measurement(
             "There are multiple inner parameters of the same type."
             f"Inner parameters: `{symbolic_formula_inner_parameters.values}`."
         )
+
+    if symbolic_formula_inner_parameters:
+        observable_transformation = petab_problem.observable_df.loc[
+            observable_id
+        ].get(OBSERVABLE_TRANSFORMATION)
+        if (
+            observable_transformation is not None
+            and observable_transformation != LIN
+        ):
+            raise ValueError(
+                "Non-linear observable transformations are not supported if "
+                "the observable is associated with hierarchically-optimized "
+                f"inner parameters. "
+                f"Observable transformation: `{observable_transformation}`. "
+                f"Measurement:\n{measurement}"
+            )
 
     return symbolic_formula, symbolic_formula_inner_parameters
