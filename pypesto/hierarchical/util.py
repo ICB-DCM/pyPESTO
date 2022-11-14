@@ -162,7 +162,8 @@ def compute_optimal_offset_coupled(
         y += np.nansum(data_x / s2)
         h2 += np.nansum((sim_x**2) / s2)
 
-    # numerator and denominator in equation 11
+    # numerator and denominator in equation 11, each multiplied by
+    #  recnoise = \sum_i \frac{1}{ \sigma_i^2 }
     num = y - (yh * h) / h2
     den = recnoise - (h**2) / h2
 
