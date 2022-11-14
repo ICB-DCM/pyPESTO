@@ -1,21 +1,20 @@
 """Example problems for tests / demos."""
 
-import numpy as np
 import pandas as pd
 
+from pypesto.C import InnerParameterType
 
-def get_Boehm_JProteomeRes2014_hierarchical_petab_finite_bounds() -> 'petab.Problem':  # noqa: F821
+
+def get_Boehm_JProteomeRes2014_hierarchical_petab() -> 'petab.Problem':  # noqa: F821
     """
     Get Boehm_JProteomeRes2014 problem with scaled/offset observables.
 
     Creates a modified version of the Boehm_JProteomeRes2014 benchmark problem,
     suitable for hierarchical optimization.
     """
-    import pandas as pd
     import petab
     from benchmark_models_petab import get_problem
 
-    from pypesto.C import InnerParameterType
     from pypesto.hierarchical.problem import PARAMETER_TYPE
 
     petab_problem = get_problem("Boehm_JProteomeRes2014")
@@ -106,21 +105,16 @@ def get_Boehm_JProteomeRes2014_hierarchical_petab_finite_bounds() -> 'petab.Prob
     return petab_problem
 
 
-def get_Boehm_JProteomeRes2014_hierarchical_petab_infinite_bounds() -> 'petab.Problem':  # noqa: F821
+def get_Boehm_JProteomeRes2014_hierarchical_petab_corrected_bounds() -> 'petab.Problem':  # noqa: F821
     """
-    See `get_Boehm_JProteomeRes2014_hierarchical_petab_finite_bounds`.
+    See `get_Boehm_JProteomeRes2014_hierarchical_petab`.
 
-    Adjusts this PEtab problem to have infinite bounds for inner parameters.
+    Adjusts this PEtab problem to have correct bounds for inner parameters.
     """
-    from petab.C import LOWER_BOUND, UPPER_BOUND
+    from ..hierarchical.petab import correct_parameter_df_bounds
 
-    from ..C import PARAMETER_TYPE
-
-    petab_problem = (
-        get_Boehm_JProteomeRes2014_hierarchical_petab_finite_bounds()
+    petab_problem = get_Boehm_JProteomeRes2014_hierarchical_petab()
+    petab_problem.parameter_df = correct_parameter_df_bounds(
+        parameter_df=petab_problem.parameter_df
     )
-    petab_problem.parameter_df.loc[
-        ~pd.isna(petab_problem.parameter_df[PARAMETER_TYPE]),
-        [LOWER_BOUND, UPPER_BOUND],
-    ] = (-np.inf, np.inf)
     return petab_problem

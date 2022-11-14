@@ -6,15 +6,45 @@ import pandas as pd
 import petab
 import sympy as sp
 from more_itertools import one
+from petab.C import LIN
+from petab.C import LOWER_BOUND as PETAB_LOWER_BOUND
 from petab.C import (
-    LIN,
     OBSERVABLE_ID,
     OBSERVABLE_TRANSFORMATION,
     PARAMETER_SEPARATOR,
 )
+from petab.C import UPPER_BOUND as PETAB_UPPER_BOUND
 from petab.observables import get_formula_placeholders
 
-from ..C import PARAMETER_TYPE, InnerParameterType
+from ..C import INNER_PARAMETER_BOUNDS
+from ..C import LOWER_BOUND as PYPESTO_LOWER_BOUND
+from ..C import PARAMETER_TYPE
+from ..C import UPPER_BOUND as PYPESTO_UPPER_BOUND
+from ..C import InnerParameterType
+
+
+def correct_parameter_df_bounds(parameter_df: pd.DataFrame) -> pd.DataFrame:
+    """Correct the bounds of inner parameters in a PEtab parameters table.
+
+    Parameters
+    ----------
+    parameter_df:
+        The PEtab parameters table.
+
+    Returns
+    -------
+    The table, with corrected bounds.
+    """
+
+    def correct_row(row: pd.Series) -> pd.Series:
+        if pd.isna(row[PARAMETER_TYPE]):
+            return row
+        bounds = INNER_PARAMETER_BOUNDS[row[PARAMETER_TYPE]]
+        row[PETAB_LOWER_BOUND] = bounds[PYPESTO_LOWER_BOUND]
+        row[PETAB_UPPER_BOUND] = bounds[PYPESTO_UPPER_BOUND]
+        return row
+
+    return parameter_df.apply(correct_row, axis=1)
 
 
 def validate_hierarchical_petab_problem(petab_problem: petab.Problem) -> None:

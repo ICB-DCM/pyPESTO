@@ -7,7 +7,14 @@ import pandas as pd
 import petab
 
 import pypesto
-from pypesto.C import LOG10, MODE_FUN, InnerParameterType
+from pypesto.C import (
+    INNER_PARAMETER_BOUNDS,
+    LOG10,
+    LOWER_BOUND,
+    MODE_FUN,
+    UPPER_BOUND,
+    InnerParameterType,
+)
 from pypesto.hierarchical.parameter import InnerParameter
 from pypesto.hierarchical.petab import validate_hierarchical_petab_problem
 from pypesto.hierarchical.problem import InnerProblem
@@ -26,8 +33,8 @@ from pypesto.hierarchical.util import (
 from pypesto.optimize import FidesOptimizer, OptimizeOptions
 from pypesto.petab import PetabImporter
 from pypesto.testing.examples import (
-    get_Boehm_JProteomeRes2014_hierarchical_petab_finite_bounds,
-    get_Boehm_JProteomeRes2014_hierarchical_petab_infinite_bounds,
+    get_Boehm_JProteomeRes2014_hierarchical_petab,
+    get_Boehm_JProteomeRes2014_hierarchical_petab_corrected_bounds,
 )
 
 # Suitable test cases from the benchmark collection
@@ -43,8 +50,8 @@ def test_hierarchical_optimization_pipeline():
     """
     flags = [False, True]
     petab_problems = {
-        False: get_Boehm_JProteomeRes2014_hierarchical_petab_finite_bounds(),
-        True: get_Boehm_JProteomeRes2014_hierarchical_petab_infinite_bounds(),
+        False: get_Boehm_JProteomeRes2014_hierarchical_petab(),
+        True: get_Boehm_JProteomeRes2014_hierarchical_petab_corrected_bounds(),
     }
     problems = {}
     for flag in flags:
@@ -145,7 +152,7 @@ def test_hierarchical_calculator_and_objective():
     optimization is enabled and disabled, respectively.
     """
     petab_problem = (
-        get_Boehm_JProteomeRes2014_hierarchical_petab_infinite_bounds()
+        get_Boehm_JProteomeRes2014_hierarchical_petab_corrected_bounds()
     )
     flags = [False, True]
     problems = {}
@@ -329,29 +336,18 @@ def inner_problem_exp():
 
     inner_parameters = [
         InnerParameter(
-            inner_parameter_id='offset_',
-            inner_parameter_type=InnerParameterType.OFFSET,
+            inner_parameter_id=inner_parameter_id,
+            inner_parameter_type=inner_parameter_type,
             scale=LOG10,
-            lb=-np.inf,
-            ub=np.inf,
+            lb=INNER_PARAMETER_BOUNDS[inner_parameter_type][LOWER_BOUND],
+            ub=INNER_PARAMETER_BOUNDS[inner_parameter_type][UPPER_BOUND],
             ixs=mask,
-        ),
-        InnerParameter(
-            inner_parameter_id='scaling_',
-            inner_parameter_type=InnerParameterType.SCALING,
-            scale=LOG10,
-            lb=-np.inf,
-            ub=np.inf,
-            ixs=mask,
-        ),
-        InnerParameter(
-            inner_parameter_id='sigma_',
-            inner_parameter_type=InnerParameterType.SIGMA,
-            scale=LOG10,
-            lb=-np.inf,
-            ub=np.inf,
-            ixs=mask,
-        ),
+        )
+        for inner_parameter_id, inner_parameter_type in [
+            ('offset_', InnerParameterType.OFFSET),
+            ('scaling_', InnerParameterType.SCALING),
+            ('sigma_', InnerParameterType.SIGMA),
+        ]
     ]
 
     inner_parameters[0].coupled = True

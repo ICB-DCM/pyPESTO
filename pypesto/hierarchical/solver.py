@@ -1,5 +1,4 @@
 import copy
-import itertools
 from typing import Any, Dict, List
 
 import numpy as np
@@ -90,7 +89,6 @@ class AnalyticalInnerSolver(InnerSolver):
             Whether to scale the results to the parameter scale specified in
             ``problem``.
         """
-        _maybe_warn_unsupported_bounds(problem)
         x_opt = {}
 
         data = copy.deepcopy(problem.data)
@@ -217,8 +215,6 @@ class NumericalInnerSolver(InnerSolver):
             Whether to scale the results to the parameter scale specified in
             ``problem``.
         """
-        _maybe_warn_unsupported_bounds(problem)
-
         pars = problem.xs.values()
         # We currently cannot handle constraints on inner parameters correctly,
         # and would have to assume [-inf, inf]. However, this may not be
@@ -302,19 +298,3 @@ class NumericalInnerSolver(InnerSolver):
             x_opt = scale_value_dict(x_opt, problem)
 
         return x_opt
-
-
-def _maybe_warn_unsupported_bounds(problem: InnerProblem):
-    """Warn of unsupported finite bounds."""
-    for x in itertools.chain(
-        problem.get_xs_for_type(InnerParameterType.OFFSET),
-        problem.get_xs_for_type(InnerParameterType.SCALING),
-        problem.get_xs_for_type(InnerParameterType.SIGMA),
-    ):
-        if x.lb != -np.inf or x.ub != np.inf:
-            raise ValueError(
-                "Hierarchical optimization currently does not support finite "
-                "parameter bounds. Please use `-inf` and `inf` for the "
-                "lower and upper bounds, respectively, for all inner "
-                f"parameters, e.g.: `{x.inner_parameter_id}`."
-            )

@@ -3,7 +3,16 @@ from typing import Any, Literal
 
 import numpy as np
 
-from ..C import DUMMY_INNER_VALUE, LIN, LOG, LOG10, InnerParameterType
+from ..C import (
+    DUMMY_INNER_VALUE,
+    INNER_PARAMETER_BOUNDS,
+    LIN,
+    LOG,
+    LOG10,
+    LOWER_BOUND,
+    UPPER_BOUND,
+    InnerParameterType,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -71,6 +80,7 @@ class InnerParameter:
 
         self.lb: float = lb
         self.ub: float = ub
+        self.check_bounds()
         self.ixs: Any = ixs
 
         if dummy_value is None:
@@ -84,3 +94,20 @@ class InnerParameter:
                 ) from e
 
         self.dummy_value: float = dummy_value
+
+    def check_bounds(self):
+        """Check bounds."""
+        expected_lb = INNER_PARAMETER_BOUNDS[self.inner_parameter_type][
+            LOWER_BOUND
+        ]
+        expected_ub = INNER_PARAMETER_BOUNDS[self.inner_parameter_type][
+            UPPER_BOUND
+        ]
+        if self.lb != expected_lb or self.ub != expected_ub:
+            raise ValueError(
+                "Invalid bounds for inner parameters. Parameter ID: "
+                f"`{self.inner_parameter_id}`. Provided bounds: "
+                f"`[{self.lb}, {self.ub}]`. Expected bounds: "
+                f"`[{expected_lb}, {expected_ub}]`. "
+                f"All expected parameter bounds:\n{INNER_PARAMETER_BOUNDS}"
+            )
