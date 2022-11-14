@@ -136,9 +136,9 @@ def compute_optimal_offset_coupled(
         if mask_i.max(initial=False) is False:
             continue
         # extract relevant values
-        sim_x = sim_i[mask_i]
-        data_x = data_i[mask_i]
-        sigma_x = sigma_i[mask_i]
+        sim_x = sim_i[mask_i] # \tilde{h}_i
+        data_x = data_i[mask_i] # \bar{y}_i
+        sigma_x = sigma_i[mask_i] # \sigma_i
         # update statistics
         s2 = sigma_x**2
         h += np.nansum(sim_x / s2)
