@@ -50,6 +50,12 @@ def compute_optimal_scaling(
     outputs. See https://doi.org/10.1093/bioinformatics/btz581 SI Section 3.1
     for the derivation.
     """
+    # SI Section 3.1: page 9, bottom (s = ...) with offset b=0 (as there is
+    # no offset, or it already has been subtracted from the measurements)
+    # numerator and denominator to compute the optimal scaling
+    # num: \sum_i \frac{ \bar{y}_i * \tilde{h}_i } { \sigma_i^2 }
+    # den:  \sum_i \frac{ \tilde{h}_i^2 }{ \sigma_i^2 }
+
     # numerator, denominator
     num, den = 0.0, 0.0
 
@@ -99,9 +105,13 @@ def compute_optimal_offset(
 
     Compute optimal offset for the given measurements and model outputs. See
     https://doi.org/10.1093/bioinformatics/btz581 SI Section 3.1 for the
-    derivation.
+    derivation. This function handles offsets that occur without any coupled
+    scaling parameter.
     """
-    # numerator, denominator
+    # SI Section 3.1: page 9, bottom (b = ...) with scaling s=1
+    # numerator and denominator to compute the optimal offset
+    # num: \sum_i \frac{ \bar{y}_i - \tilde{h}_i } { \sigma_i^2 }
+    # den:  \sum_i \frac{1}{ \sigma_i^2 }
     num, den = 0.0, 0.0
 
     # iterate over conditions
