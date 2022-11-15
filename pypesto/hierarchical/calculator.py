@@ -129,6 +129,9 @@ class HierarchicalAmiciCalculator(AmiciCalculator):
         )
 
         # fill in optimal values
+        # TODO: x_inner_opt is different for hierarchical and
+        #  qualitative approach. For now I commented the following
+        #  lines out to make qualitative approach work.
         # directly writing to parameter mapping ensures that plists do not
         # include hierarchically computed parameters
         x_dct = copy.deepcopy(x_dct)
