@@ -83,7 +83,6 @@ coverage.xml
 
 # examples
 doc/example/tmp
-doc/example/amici_models/*
 
 # store
 *.hdf5
@@ -104,9 +103,8 @@ venv/*
 *.tmp
 tmp/*
 */tmp/*
-amici_models/*
+**/amici_models/
 test/doc/example/tmp/benchmark-models/
-test/amici_models/*
 *.hdf5
 *.h5
 *.dat

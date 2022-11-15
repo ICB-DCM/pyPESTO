@@ -59,36 +59,7 @@ class ESSExitFlag(int, enum.Enum):
 class ESSOptimizer:
     """Enhanced Scatter Search (ESS) global optimization.
 
-    .. note: Does not implement any constraint handling yet
-
-    For plausible values of hyperparameters, see VillaverdeEge2012.
-
-    Parameters
-    ----------
-    dim_refset:
-        Size of the ReferenceSet
-    max_iter:
-        Maximum number of ESS iterations.
-    local_n1:
-        Minimum number of function evaluations before first local search.
-    local_n2:
-        Minimum number of function evaluations between consecutive local
-        searches.
-    local_optimizer:
-        Local optimizer for refinement, or ``None`` to skip local searches.
-    n_diverse:
-        Number of samples to choose from to construct the initial RefSet
-    max_eval:
-        Maximum number of objective functions allowed. This criterion is
-        only checked once per iteration, not after every objective evaluation,
-        so the actual number of function evaluations may exceed this value.
-    max_walltime_s:
-        Maximum walltime in seconds. Will only be checked between local
-        optimizations and other simulations, and thus, may be exceeded by the
-        duration of a local search.
-    balance:
-        Quality vs diversity balancing factor [0, 1];
-        0 = only quality; 1 = only diversity
+    .. note: Does not implement any constraint handling beyond box constraints
     """
 
     def __init__(
@@ -105,6 +76,40 @@ class ESSOptimizer:
         n_threads=1,
         max_walltime_s=None,
     ):
+        """Construct new ESS instance.
+
+        For plausible values of hyperparameters, see VillaverdeEge2012.
+
+        Parameters
+        ----------
+        dim_refset:
+            Size of the ReferenceSet. Note that in every iteration at least
+            ``dim_refset**2 - dim_refset`` function evaluations will occur.
+        max_iter:
+            Maximum number of ESS iterations.
+        local_n1:
+            Minimum number of function evaluations before first local search.
+        local_n2:
+            Minimum number of function evaluations between consecutive local
+            searches. Maximally one local search per performed in each
+            iteration.
+        local_optimizer:
+            Local optimizer for refinement, or ``None`` to skip local searches.
+        n_diverse:
+            Number of samples to choose from to construct the initial RefSet
+        max_eval:
+            Maximum number of objective functions allowed. This criterion is
+            only checked once per iteration, not after every objective
+            evaluation, so the actual number of function evaluations may exceed
+            this value.
+        max_walltime_s:
+            Maximum walltime in seconds. Will only be checked between local
+            optimizations and other simulations, and thus, may be exceeded by
+            the duration of a local search.
+        balance:
+            Quality vs diversity balancing factor [0, 1];
+            0 = only quality; 1 = only diversity
+        """
         # Hyperparameters
         self.local_n1: int = local_n1
         self.local_n2: int = local_n2
@@ -188,6 +193,9 @@ class ESSOptimizer:
         self.x_best = np.full(
             shape=(self.evaluator.problem.dim,), fill_value=np.nan
         )
+        # initialize global best from initial refset
+        for x, fx in zip(refset.x, refset.fx):
+            self._maybe_update_global_best(x, fx)
 
         # [PenasGon2017]_ Algorithm 1
         while self._keep_going():
@@ -297,7 +305,8 @@ class ESSOptimizer:
         """Combine solutions and evaluate.
 
         Creates the next generation from the RefSet by pair-wise combinations
-        of all RefSet members.
+        of all RefSet members. Creates ``RefSet.dim ** 2 - RefSet.dim`` new
+        parameter vectors, tests them, and keeps the best child of each parent.
 
         Returns
         -------
@@ -344,7 +353,6 @@ class ESSOptimizer:
         -------
         A new parameter vector.
         """
-        # TODO DW: will that always yield admissible points?
         if i == j:
             raise ValueError("i == j")
         x = self.refset.x
@@ -354,6 +362,12 @@ class ESSOptimizer:
         beta = (np.abs(j - i) - 1) / (self.refset.dim - 2)
         c1 = x[i] - d * (1 + alpha * beta)
         c2 = x[i] - d * (1 - alpha * beta)
+
+        # this will not always yield admissible points -> clip to bounds
+        ub, lb = self.evaluator.problem.ub, self.evaluator.problem.lb
+        c1 = np.fmax(np.fmin(c1, ub), lb)
+        c2 = np.fmax(np.fmin(c2, ub), lb)
+
         return np.random.uniform(
             low=c1, high=c2, size=self.evaluator.problem.dim
         )
@@ -421,15 +435,17 @@ class ESSOptimizer:
         self.evaluator.n_eval += optimizer_result.n_fval
         self.evaluator.n_eval_round += optimizer_result.n_fval
 
-        logger.debug(
-            f"Local search: {local_search_fx0} -> " f"{optimizer_result.fval}"
+        logger.info(
+            f"Local search: {local_search_fx0} -> {optimizer_result.fval} "
+            f" took {optimizer_result.time:.3g}s, finished with "
+            f"{optimizer_result.exitflag}: {optimizer_result.message}"
         )
         self.local_solutions.append(optimizer_result.x)
 
         self._maybe_update_global_best(
             optimizer_result.x, optimizer_result.fval
         )
-        self.last_local_search_neval = self.n_iter
+        self.last_local_search_neval = self.evaluator.n_eval
         self.evaluator.reset_round_counter()
 
     def _maybe_update_global_best(self, x, fx):
@@ -468,10 +484,15 @@ class ESSOptimizer:
                 fx_best_children[i] = fx_child
 
                 # create new solution, child becomes parent
-                x_new = np.random.uniform(
-                    low=x_child - (x_parent - x_child) * go_beyond_factor,
-                    high=x_child,
-                )
+                # hyper-rectangle for sampling child
+                box_lb = x_child - (x_parent - x_child) * go_beyond_factor
+                box_ub = x_child
+                # clip to bounds
+                ub, lb = self.evaluator.problem.ub, self.evaluator.problem.lb
+                box_lb = np.fmax(np.fmin(box_lb, ub), lb)
+                box_ub = np.fmax(np.fmin(box_ub, ub), lb)
+                # sample parameters
+                x_new = np.random.uniform(low=box_lb, high=box_ub)
                 x_parent = x_child
                 fx_parent = fx_child
                 x_child = x_new

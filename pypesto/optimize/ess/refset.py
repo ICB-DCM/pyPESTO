@@ -133,13 +133,15 @@ class RefSet:
         for i in range(self.dim):
             for j in range(i + 1, self.dim):
                 # check proximity
-                while (
-                    np.max(np.abs((x[i] - x[j]) / x[j]))
-                    <= self.proximity_threshold
-                ):
-                    # too close. replace x_j.
-                    x[j], self.fx[j] = self.evaluator.single_random()
-                    self.sort()
+                # zero-division may occur here
+                with np.errstate(divide='ignore', invalid='ignore'):
+                    while (
+                        np.max(np.abs((x[i] - x[j]) / x[j]))
+                        <= self.proximity_threshold
+                    ):
+                        # too close. replace x_j.
+                        x[j], self.fx[j] = self.evaluator.single_random()
+                        self.sort()
 
     def update(self, i: int, x: np.array, fx: float):
         """Update a RefSet entry."""
