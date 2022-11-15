@@ -60,8 +60,8 @@ class InnerSolver:
 class AnalyticalInnerSolver(InnerSolver):
     """Solve the inner subproblem analytically.
 
-    Currently, supports scaling parameters and sigmas for additive Gaussian
-    noise.
+    Currently, supports offset and scaling parameters (coupled or not), and
+    sigmas for additive Gaussian noise.
     """
 
     def solve(
@@ -114,7 +114,7 @@ class AnalyticalInnerSolver(InnerSolver):
             x_opt[x.inner_parameter_id] = compute_optimal_scaling(
                 data=data, sim=sim, sigma=sigma, mask=x.ixs
             )
-        # apply scalings (TODO not always necessary)
+        # apply scalings
         for x in problem.get_xs_for_type(InnerParameterType.SCALING):
             apply_scaling(
                 scaling_value=x_opt[x.inner_parameter_id], sim=sim, mask=x.ixs
