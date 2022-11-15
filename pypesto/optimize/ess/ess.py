@@ -88,9 +88,9 @@ class ESSOptimizer:
         max_iter:
             Maximum number of ESS iterations.
         local_n1:
-            Minimum number of function evaluations before first local search.
+            Minimum number of iterations before first local search.
         local_n2:
-            Minimum number of function evaluations between consecutive local
+            Minimum number of iterations between consecutive local
             searches. Maximally one local search per performed in each
             iteration.
         local_optimizer:
@@ -142,9 +142,8 @@ class ESSOptimizer:
         self.local_solutions: List[np.array] = []
         # Index of current iteration
         self.n_iter: int = 0
-        # Number of function evaluations at which the last local search took
-        #  place
-        self.last_local_search_neval: int = 0
+        # ESS iteration at which the last local search took place
+        self.last_local_search_niter: int = 0
         # Whether self.x_best has changed in the current iteration
         self.x_best_has_changed: bool = False
         self.exit_flag: ESSExitFlag = ESSExitFlag.DID_NOT_RUN
@@ -385,9 +384,7 @@ class ESSOptimizer:
             local_search_x0 = self.x_best
             local_search_fx0 = self.fx_best
         # first local search?
-        elif (
-            not self.local_solutions and self.evaluator.n_eval >= self.local_n1
-        ):
+        elif not self.local_solutions and self.n_iter >= self.local_n1:
             logger.debug(
                 "First local search from best point due to "
                 f"local_n1={self.local_n1}."
@@ -396,8 +393,7 @@ class ESSOptimizer:
             local_search_fx0 = self.fx_best
         elif (
             self.local_solutions
-            and self.evaluator.n_eval - self.last_local_search_neval
-            >= self.local_n2
+            and self.n_iter - self.last_local_search_niter >= self.local_n2
         ):
             quality_order = np.argsort(fx_best_children)
             # compute minimal distance between the best children and all local
@@ -445,7 +441,7 @@ class ESSOptimizer:
         self._maybe_update_global_best(
             optimizer_result.x, optimizer_result.fval
         )
-        self.last_local_search_neval = self.evaluator.n_eval
+        self.last_local_search_niter = self.n_iter
         self.evaluator.reset_round_counter()
 
     def _maybe_update_global_best(self, x, fx):
