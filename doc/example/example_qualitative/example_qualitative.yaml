@@ -1,0 +1,11 @@
+format_version: 1
+parameter_file: parameters_example_qualitative.tsv
+problems:
+- condition_files:
+  - experimentalCondition_example_qualitative.tsv
+  measurement_files:
+  - measurementData_example_qualitative.tsv
+  observable_files:
+  - observables_example_qualitative.tsv
+  sbml_files:
+  - model_example_qualitative.xml
