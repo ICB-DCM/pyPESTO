@@ -1,1 +1,6 @@
-"""Hierarchical optimization sub-package."""
+"""
+Hierarchical
+============
+
+Hierarchical optimization sub-package.
+"""
