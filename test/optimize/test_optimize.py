@@ -449,8 +449,8 @@ def test_ess(problem, local_optimizer, ess_type, request):
             dim_refset=10,
             max_iter=20,
             local_optimizer=local_optimizer,
-            local_n1=100,
-            local_n2=100,
+            local_n1=15,
+            local_n2=5,
             n_threads=2,
             balance=0.5,
         )
