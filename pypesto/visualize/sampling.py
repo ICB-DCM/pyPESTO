@@ -190,6 +190,9 @@ def _plot_trajectories_by_condition(
     variable_colors: Sequence[RGB],
     average: str = MEDIAN,
     add_sd: bool = False,
+    grouped_measurements: Dict[
+        Tuple[str, str], Sequence[Sequence[float]]
+    ] = None,
 ) -> None:
     """Plot predicted trajectories, with subplots grouped by condition.
 
@@ -224,6 +227,10 @@ def _plot_trajectories_by_condition(
         `MEDIAN` or `MEAN`).
     add_sd:
         Whether to add the standard deviation of the predictions to the plot.
+    grouped_measurements:
+        Measurement data that has already been grouped by condition and output,
+        where the keys are `(condition_id, output_id)` 2-tuples, and the values
+        are `[sequence of x-axis values, sequence of y-axis values]`.
     """
     # Each subplot has all data for a single condition.
     for condition_index, condition_id in enumerate(condition_ids):
@@ -302,6 +309,17 @@ def _plot_trajectories_by_condition(
                     ),
                     lw=0,
                 )
+            if (
+                grouped_measurements is not None
+                and (condition_id, output_id) in grouped_measurements
+            ):
+                ax.scatter(
+                    grouped_measurements[(condition_id, output_id)][0],
+                    grouped_measurements[(condition_id, output_id)][1],
+                    marker='o',
+                    facecolor=variable_colors[output_index],
+                    edgecolor='k',
+                )
 
 
 def _plot_trajectories_by_output(
@@ -315,6 +333,9 @@ def _plot_trajectories_by_output(
     variable_colors: Sequence[RGB],
     average: str = MEDIAN,
     add_sd: bool = False,
+    grouped_measurements: Dict[
+        Tuple[str, str], Sequence[Sequence[float]]
+    ] = None,
 ) -> None:
     """Plot predicted trajectories, with subplots grouped by output.
 
@@ -421,6 +442,22 @@ def _plot_trajectories_by_output(
                     lw=0,
                 )
                 t_max = max(t_max, *t_lower_shifted, *t_upper_shifted)
+            if (
+                grouped_measurements is not None
+                and (condition_id, output_id) in grouped_measurements
+            ):
+                ax.scatter(
+                    [
+                        t0 + _t
+                        for _t in grouped_measurements[
+                            (condition_id, output_id)
+                        ][0]
+                    ],
+                    grouped_measurements[(condition_id, output_id)][1],
+                    marker='o',
+                    facecolor=variable_colors[condition_index],
+                    edgecolor='k',
+                )
             # Set t0 to the last plotted timepoint of the current condition
             # plot.
             t0 = t_max
@@ -667,6 +704,7 @@ def sampling_prediction_trajectories(
     reverse_opacities: bool = False,
     average: str = MEDIAN,
     add_sd: bool = False,
+    measurement_df: pd.DataFrame = None,
 ) -> matplotlib.axes.Axes:
     """
     Visualize prediction trajectory of an EnsemblePrediction.
@@ -713,6 +751,10 @@ def sampling_prediction_trajectories(
         `MEDIAN` or `MEAN`).
     add_sd:
         Whether to add the standard deviation of the predictions to the plot.
+    measurement_df:
+        Plot measurement data. NB: This should take the form of a PEtab
+        measurements table, and the `observableId` column should correspond
+        to the output IDs in the ensemble prediction.
 
     Returns
     -------
@@ -740,6 +782,40 @@ def sampling_prediction_trajectories(
         condition_ids = all_condition_ids
     if output_ids is None:
         output_ids = all_output_ids
+
+    # Handle data
+    grouped_measurements = {}
+    if measurement_df is not None:
+        import petab
+
+        for condition_id in condition_ids:
+            if petab.PARAMETER_SEPARATOR in condition_id:
+                (
+                    preequilibration_condition_id,
+                    simulation_condition_id,
+                ) = condition_id.split(petab.PARAMETER_SEPARATOR)
+            else:
+                preequilibration_condition_id, simulation_condition_id = (
+                    '',
+                    condition_id,
+                )
+            condition = {
+                petab.SIMULATION_CONDITION_ID: simulation_condition_id,
+            }
+            if preequilibration_condition_id:
+                condition[
+                    petab.PREEQUILIBRATION_CONDITION_ID
+                ] = preequilibration_condition_id
+            for output_id in output_ids:
+                _df = petab.get_rows_for_condition(
+                    measurement_df=measurement_df,
+                    condition=condition,
+                )
+                _df = _df.loc[_df[petab.OBSERVABLE_ID] == output_id]
+                grouped_measurements[(condition_id, output_id)] = [
+                    _df[petab.TIME],
+                    _df[petab.MEASUREMENT],
+                ]
 
     # Set default labels for any unspecified labels.
     labels = {id_: labels.get(id_, id_) for id_ in condition_ids + output_ids}
@@ -790,6 +866,7 @@ def sampling_prediction_trajectories(
             variable_colors=variable_colors,
             average=average,
             add_sd=add_sd,
+            grouped_measurements=grouped_measurements,
         )
     elif groupby == OUTPUT:
         _plot_trajectories_by_output(
@@ -803,6 +880,7 @@ def sampling_prediction_trajectories(
             variable_colors=variable_colors,
             average=average,
             add_sd=add_sd,
+            grouped_measurements=grouped_measurements,
         )
 
     if title:
