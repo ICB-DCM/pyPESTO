@@ -780,8 +780,10 @@ def sampling_prediction_trajectories(
     all_condition_ids, all_output_ids = _get_condition_and_output_ids(summary)
     if condition_ids is None:
         condition_ids = all_condition_ids
+    condition_ids = list(condition_ids)
     if output_ids is None:
         output_ids = all_output_ids
+    output_ids = list(output_ids)
 
     # Handle data
     grouped_measurements = {}
