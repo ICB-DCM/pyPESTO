@@ -40,6 +40,13 @@ logger = logging.getLogger(__name__)
 class DynestySampler(Sampler):
     """Use dynesty for sampling.
 
+    NB: `get_samples` returns MCMC-like samples, by resampling original
+    `dynesty` samples according to their importance weights.
+    To work with the original samples, modify the results object with
+    `pypesto_result.sample_result = sampler.get_original_samples()`, where
+    `sampler` is an instance of `pypesto.sample.DynestySampler`. The original
+    dynesty results object is available at `sampler.results`.
+
     Wrapper around https://dynesty.readthedocs.io/en/stable/, see there for
     details.
     """
@@ -156,14 +163,42 @@ class DynestySampler(Sampler):
         self.sampler.run_nested(**self.run_args)
         self.results = self.sampler.results
 
-    def get_samples(self) -> McmcPtResult:
+    def get_original_samples(self) -> McmcPtResult:
         """Get the samples into the fitting pypesto format."""
         # all walkers are concatenated, yielding a flat array
         trace_x = np.array([self.results.samples])
         trace_neglogpost = -np.array([self.results.logl])
+
         # the sampler uses custom adaptive priors
         trace_neglogprior = np.full(trace_neglogpost.shape, np.nan)
         # the sampler uses temperature 1
+        betas = np.array([1.0])
+
+        result = McmcPtResult(
+            trace_x=trace_x,
+            trace_neglogpost=trace_neglogpost,
+            trace_neglogprior=trace_neglogprior,
+            betas=betas,
+        )
+
+        return result
+
+    def get_samples(self) -> McmcPtResult:
+        """Get the MCMC-like samples into the fitting pypesto format."""
+        samples = self.results.samples_equal()
+        indices = np.array(
+            [
+                np.argwhere(self.results.samples == sample).flat[0]
+                for sample in samples
+            ]
+        )
+        # FIXME check the self.results.samples[indices] == samples
+        # resample according to importance weights
+        trace_x = np.array([self.results.samples[indices]])
+        trace_neglogpost = -np.array([self.results.logl[indices]])
+
+        # dummy values
+        trace_neglogprior = np.full(trace_neglogpost.shape, np.nan)
         betas = np.array([1.0])
 
         result = McmcPtResult(
