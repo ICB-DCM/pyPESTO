@@ -129,6 +129,9 @@ class ESSOptimizer:
         self.local_only_best_sol: bool = False
         self.max_walltime_s = max_walltime_s
         self._initialize()
+        self.logger = logging.getLogger(
+            f"{self.__class__.__name__}-{id(self)}"
+        )
 
     def _initialize(self):
         """(Re-)Initialize."""
@@ -380,12 +383,12 @@ class ESSOptimizer:
         See [PenasGon2017]_ Algorithm 2.
         """
         if self.local_only_best_sol and self.x_best_has_changed:
-            logger.debug("Local search only from best point.")
+            self.logger.debug("Local search only from best point.")
             local_search_x0 = self.x_best
             local_search_fx0 = self.fx_best
         # first local search?
         elif not self.local_solutions and self.n_iter >= self.local_n1:
-            logger.debug(
+            self.logger.debug(
                 "First local search from best point due to "
                 f"local_n1={self.local_n1}."
             )
@@ -431,7 +434,7 @@ class ESSOptimizer:
         self.evaluator.n_eval += optimizer_result.n_fval
         self.evaluator.n_eval_round += optimizer_result.n_fval
 
-        logger.info(
+        self.logger.info(
             f"Local search: {local_search_fx0} -> {optimizer_result.fval} "
             f" took {optimizer_result.time:.3g}s, finished with "
             f"{optimizer_result.exitflag}: {optimizer_result.message}"
@@ -507,14 +510,14 @@ class ESSOptimizer:
     def _report_iteration(self):
         """Log the current iteration."""
         if self.n_iter == 0:
-            logger.info("iter | best | nf | refset         |")
+            self.logger.info("iter | best | nf | refset         |")
 
         with np.printoptions(
             edgeitems=30,
             linewidth=100000,
             formatter={"float": lambda x: "%.3g" % x},
         ):
-            logger.info(
+            self.logger.info(
                 f"{self.n_iter:4} | {self.fx_best:+.2E} | "
                 f"{self.evaluator.n_eval} "
                 f"| {self.refset.fx} | {len(self.local_solutions)}"
@@ -527,10 +530,10 @@ class ESSOptimizer:
             linewidth=100000,
             formatter={"float": lambda x: "%.3g" % x},
         ):
-            logger.info(
-                f"-- {self.exit_flag!r} "
-                f"Stopping after {self.n_iter} iterations. "
+            self.logger.info(
+                f"--  Final fval after {self.n_iter} "
+                f"iterations: {self.fx_best}. "
+                f"Exit flag: {self.exit_flag.name}. "
                 f"Num local solutions: {len(self.local_solutions)}."
             )
-            logger.info(f"Final refset: {np.sort(self.refset.fx)} ")
-        logger.info(f"Best fval {self.fx_best}")
+            self.logger.debug(f"Final refset: {np.sort(self.refset.fx)} ")

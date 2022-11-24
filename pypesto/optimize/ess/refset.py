@@ -1,6 +1,6 @@
 """ReferenceSet functionality for scatter search."""
 
-from typing import Optional
+from typing import Any, Dict, Optional
 
 import numpy as np
 
@@ -65,6 +65,7 @@ class RefSet:
             self.fx = fx
 
         self.n_stuck = np.zeros(shape=[dim])
+        self.attributes: Dict[Any, np.array] = {}
 
     def sort(self):
         """Sort RefSet by quality."""
@@ -72,6 +73,8 @@ class RefSet:
         self.fx = self.fx[order]
         self.x = self.x[order]
         self.n_stuck = self.n_stuck[order]
+        for attribute_name, attribute_values in self.attributes.items():
+            self.attributes[attribute_name] = attribute_values[order]
 
     def initialize_random(
         self,
@@ -153,3 +156,9 @@ class RefSet:
         """Replace the RefSet member with the given index by a random point."""
         self.x[i], self.fx[i] = self.evaluator.single_random()
         self.n_stuck[i] = 0
+
+    def add_attribute(self, name: str, values: np.array):
+        """Add an attribute array to the refset members
+
+        Will be sorted together with the refset members."""
+        self.attributes[name] = values
