@@ -1,33 +1,29 @@
-from __future__ import annotations
+from typing import Dict, List, Sequence, Tuple
 
 import copy
-from typing import Dict, List, Optional, Sequence, Tuple
-
 import amici
 import numpy as np
-from amici.parameter_mapping import ParameterMapping
 
-from ..C import (
-    AMICI_SIGMAY,
-    AMICI_Y,
-    GRAD,
-    INNER_PARAMETERS,
-    INNER_RDATAS,
-    RDATAS,
-    ModeType,
-)
-from ..objective.amici.amici_calculator import (
+from amici.parameter_mapping import ParameterMapping
+from ...objective.amici.amici_calculator import (
     AmiciCalculator,
     AmiciModel,
     AmiciSolver,
 )
-from .problem import AmiciInnerProblem
-from .solver import AnalyticalInnerSolver, InnerSolver
+from ...objective.amici.amici_util import (
+    get_error_output,
+    init_return_values,
+    filter_return_dict
+)
+from ...C import FVAL, GRAD, HESS, RES, SRES, RDATAS, MODE_RES
+
+from .optimal_scaling_problem import OptimalScalingProblem
+from .optimal_scaling_solver import OptimalScalingInnerSolver
 
 
-class HierarchicalAmiciCalculator(AmiciCalculator):
+class OptimalScalingAmiciCalculator(AmiciCalculator):
     """
-    A calculator that is passed as `calculator` to the pypesto.AmiciObjective.
+    A calculator is passed as `calculator` to the pypesto.AmiciObjective.
 
     While this class cannot be used directly, it has two subclasses
     which allow to use forward or adjoint sensitivity analysis to
@@ -38,77 +34,98 @@ class HierarchicalAmiciCalculator(AmiciCalculator):
 
     def __init__(
         self,
-        inner_problem: AmiciInnerProblem,
-        inner_solver: Optional[InnerSolver] = None,
+        inner_problem: OptimalScalingProblem,
+        inner_solver: OptimalScalingInnerSolver = None,
     ):
-        """Initialize the calculator from the given problem.
-
-        Arguments
-        ---------
-        inner_problem:
-            The inner problem of a hierarchical optimization problem.
-        inner_solver:
-            A solver to solve ``inner_problem``.
-            Defaults to ``pypesto.hierarchical.solver.AnalyticalInnerSolver``.
         """
-        super().__init__()
+        Initialize the calculator from the given problem.
+        """
+        self._known_least_squares_safe = False
 
         self.inner_problem = inner_problem
 
         if inner_solver is None:
-            inner_solver = AnalyticalInnerSolver()
+            inner_solver = OptimalScalingInnerSolver()
         self.inner_solver = inner_solver
 
     def initialize(self):
         """Initialize."""
-        super().initialize()
         self.inner_solver.initialize()
 
     def __call__(
         self,
         x_dct: Dict,
-        sensi_orders: Tuple[int],
-        mode: ModeType,
+        sensi_orders: Tuple[int, ...],
+        mode: str,
         amici_model: AmiciModel,
         amici_solver: AmiciSolver,
-        edatas: List[amici.ExpData],
+        edatas: List['amici.ExpData'],
         n_threads: int,
         x_ids: Sequence[str],
         parameter_mapping: ParameterMapping,
         fim_for_hess: bool,
     ):
-        """Perform the actual AMICI call, with hierarchical optimization.
+        # get dimension of outer problem
+        dim = len(x_ids)
 
-        See documentation for
-        `pypesto.objective.amici.amici_calculator.AmiciCalculator.__call__()`.
+        # initialize return values
+        nllh, snllh, s2nllh, chi2, res, sres = init_return_values(
+            sensi_orders, mode, dim
+        )
+        inner_result = {
+            FVAL: nllh,
+            GRAD: snllh,
+            HESS: s2nllh,
+            RES: res,
+            SRES: sres,
+            RDATAS: inner_rdatas,
+        }
+        # set order in solver
+        sensi_order = 0
+        if sensi_orders:
+            sensi_order = max(sensi_orders)
 
-        The return object also includes the simulation results that were
-        generated to solve the inner problem, as well as the parameters that
-        solver the inner problem.
-        """
-        if not self.inner_problem.check_edatas(edatas=edatas):
-            raise ValueError(
-                'The experimental data provided to this call differs from '
-                'the experimental data used to setup the hierarchical '
-                'optimizer.'
-            )
+        amici_solver.setSensitivityOrder(sensi_order)
 
-        # compute optimal inner parameters
+        # fill in dummy values before simulation
         x_dct = copy.deepcopy(x_dct)
         x_dct.update(self.inner_problem.get_dummy_values(scaled=True))
-        inner_result = super().__call__(
-            x_dct=x_dct,
-            sensi_orders=(0,),
-            mode=mode,
-            amici_model=amici_model,
-            amici_solver=amici_solver,
+
+        # fill in parameters
+        amici.parameter_mapping.fill_in_parameters(
             edatas=edatas,
-            n_threads=n_threads,
-            x_ids=x_ids,
+            problem_parameters=x_dct,
+            scaled_parameters=True,
             parameter_mapping=parameter_mapping,
-            fim_for_hess=fim_for_hess,
+            amici_model=amici_model,
         )
-        inner_rdatas = inner_result[RDATAS]
+        # run amici simulation
+        inner_rdatas = amici.runAmiciSimulations(
+            amici_model,
+            amici_solver,
+            edatas,
+            num_threads=min(n_threads, len(edatas)),
+        )
+        # is this needed?
+        if (
+            not self._known_least_squares_safe
+            and mode == MODE_RES
+            and 1 in sensi_orders
+        ):
+            if not amici_model.getAddSigmaResiduals() and any(
+                (
+                    (r['ssigmay'] is not None and np.any(r['ssigmay']))
+                    or (r['ssigmaz'] is not None and np.any(r['ssigmaz']))
+                )
+                for r in inner_rdatas
+            ):
+                raise RuntimeError(
+                    'Cannot use least squares solver with'
+                    'parameter dependent sigma! Support can be '
+                    'enabled via '
+                    'amici_model.setAddSigmaResiduals().'
+                )
+            self._known_least_squares_safe = True  # don't check this again
 
         # if any amici simulation failed, it's unlikely we can compute
         # meaningful inner parameters, so we better just fail early.
@@ -121,37 +138,45 @@ class HierarchicalAmiciCalculator(AmiciCalculator):
                 )
             return inner_result
 
-        inner_parameters = self.inner_solver.solve(
-            problem=self.inner_problem,
-            sim=[rdata[AMICI_Y] for rdata in inner_rdatas],
-            sigma=[rdata[AMICI_SIGMAY] for rdata in inner_rdatas],
-            scaled=True,
+        sim = [rdata['y'] for rdata in inner_rdatas]
+        sigma = [rdata['sigmay'] for rdata in inner_rdatas]
+
+        # compute optimal inner parameters
+        x_inner_opt = self.inner_solver.solve(
+            self.inner_problem, sim, sigma, scaled=True
         )
 
+        inner_result[FVAL] = self.inner_solver.calculate_obj_function(x_inner_opt)
+        
+        # TODO can be done, but not so easy
         # fill in optimal values
-        # directly writing to parameter mapping ensures that plists do not
-        # include hierarchically computed parameters
-        x_dct = copy.deepcopy(x_dct)
-        x_dct.update(inner_parameters)
+        # x_dct = copy.deepcopy(x_dct)
+        # for key, val in x_inner_opt.items():
+        #    x_dct[key] = val
 
-        # TODO use plist to compute only required derivatives, in
-        #  `super.__call__`, `amici.parameter_mapping.fill_in_parameters`
-        # TODO speed gain: if no gradient is required, then simulation can be
-        #  skipped here, and rdatas can be updated in place
-        #  (y, sigma, res, llh).
-        result = super().__call__(
-            x_dct=x_dct,
-            sensi_orders=sensi_orders,
-            mode=mode,
-            amici_model=amici_model,
-            amici_solver=amici_solver,
-            edatas=edatas,
-            n_threads=n_threads,
-            x_ids=x_ids,
-            parameter_mapping=parameter_mapping,
-            fim_for_hess=fim_for_hess,
-        )
-        result[INNER_PARAMETERS] = inner_parameters
-        result[INNER_RDATAS] = inner_rdatas
+        # fill in parameters
+        # TODO (#226) use plist to compute only required derivatives
+        # ZEBO TODO I don't need this right?... If I don't save them
+        # amici.parameter_mapping.fill_in_parameters(
+        #     edatas=edatas,
+        #     problem_parameters=x_dct,
+        #     scaled_parameters=True,
+        #     parameter_mapping=parameter_mapping,
+        #     amici_model=amici_model,
+        # )
 
-        return result
+        # calculate analytical gradients if requested
+        # if sensi_order > 0:
+        #     sy = [rdata['sy'] for rdata in inner_rdatas]
+        #     snllh = self.inner_solver.calculate_gradients(
+        #         self.inner_problem,
+        #         x_inner_opt,
+        #         sim,
+        #         sy,
+        #         parameter_mapping,
+        #         x_ids,
+        #         amici_model,
+        #         snllh,
+        #     )
+
+        return inner_result
