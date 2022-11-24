@@ -94,15 +94,16 @@ class InnerParameterType(str, Enum):
     """Specifies different inner parameter types."""
 
     OFFSET = 'offset'
-    # OPTIMALSCALING = 'qualitative_scaling'
     SCALING = 'scaling'
     SIGMA = 'sigma'
+    OPTIMALSCALING = 'qualitative_scaling'
 
 
 DUMMY_INNER_VALUE = {
     InnerParameterType.OFFSET: 0.0,
     InnerParameterType.SCALING: 1.0,
     InnerParameterType.SIGMA: 1.0,
+    InnerParameterType.OPTIMALSCALING: 0.0,
 }
 
 INNER_PARAMETER_BOUNDS = {
@@ -120,6 +121,13 @@ INNER_PARAMETER_BOUNDS = {
     },
 }
 
+###############################################################################
+# OPTIMAL SCALING 
+
+REDUCED = 'reduced'
+STANDARD = 'standard'
+MAXMIN = 'max-min'
+MAX = 'max'
 
 ###############################################################################
 # HISTORY

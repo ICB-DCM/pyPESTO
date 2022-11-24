@@ -82,19 +82,6 @@ class InnerProblem:
             if x.inner_parameter_type == inner_parameter_type
         ]
 
-    # def get_groups_for_xs(self, inner_parameter_type: str) -> List[int]:
-    #     """Get unique list of ``InnerParameter.group`` values."""
-    #     groups = [
-    #         x.group
-    #         for x in self.xs.values()
-    #         if x.inner_parameter_type == inner_parameter_type
-    #     ]
-    #     return list(set(groups))
-
-    # def get_xs_for_group(self, group: int) -> List[InnerParameter]:
-    #     """Get ``InnerParameter``s that belong to the given group."""
-    #     return [x for x in self.xs.values() if x.group == group]
-
     def get_dummy_values(self, scaled: bool) -> Dict[str, float]:
         """
         Get dummy parameter values.
