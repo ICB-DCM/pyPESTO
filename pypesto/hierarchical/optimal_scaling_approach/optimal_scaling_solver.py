@@ -15,6 +15,7 @@ from ...C import (
     STANDARD,
     MAXMIN,
     MAX,
+    InnerParameterType,
 )
 
 
@@ -62,7 +63,7 @@ class OptimalScalingInnerSolver(InnerSolver):
             ...
         """
         optimal_surrogates = []
-        for gr in problem.get_groups_for_xs(InnerParameter.OPTIMALSCALING):
+        for gr in problem.get_groups_for_xs(InnerParameterType.OPTIMALSCALING):
             xs = problem.get_xs_for_group(gr)
             surrogate_opt_results = optimize_surrogate_data(
                 xs, sim, self.options

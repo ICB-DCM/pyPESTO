@@ -6,7 +6,6 @@ import numpy as np
 
 from amici.parameter_mapping import ParameterMapping
 from ...objective.amici.amici_calculator import (
-    AmiciCalculator,
     AmiciModel,
     AmiciSolver,
 )
@@ -21,7 +20,7 @@ from .optimal_scaling_problem import OptimalScalingProblem
 from .optimal_scaling_solver import OptimalScalingInnerSolver
 
 
-class OptimalScalingAmiciCalculator(AmiciCalculator):
+class OptimalScalingAmiciCalculator():
     """
     A calculator is passed as `calculator` to the pypesto.AmiciObjective.
 
@@ -72,14 +71,6 @@ class OptimalScalingAmiciCalculator(AmiciCalculator):
         nllh, snllh, s2nllh, chi2, res, sres = init_return_values(
             sensi_orders, mode, dim
         )
-        inner_result = {
-            FVAL: nllh,
-            GRAD: snllh,
-            HESS: s2nllh,
-            RES: res,
-            SRES: sres,
-            RDATAS: inner_rdatas,
-        }
         # set order in solver
         sensi_order = 0
         if sensi_orders:
@@ -106,7 +97,15 @@ class OptimalScalingAmiciCalculator(AmiciCalculator):
             edatas,
             num_threads=min(n_threads, len(edatas)),
         )
-        # is this needed?
+        inner_result = {
+            FVAL: nllh,
+            GRAD: snllh,
+            HESS: s2nllh,
+            RES: res,
+            SRES: sres,
+            RDATAS: inner_rdatas,
+        }
+        # TODO is this needed?
         if (
             not self._known_least_squares_safe
             and mode == MODE_RES
@@ -179,4 +178,4 @@ class OptimalScalingAmiciCalculator(AmiciCalculator):
         #         snllh,
         #     )
 
-        return inner_result
+        return filter_return_dict(inner_result)

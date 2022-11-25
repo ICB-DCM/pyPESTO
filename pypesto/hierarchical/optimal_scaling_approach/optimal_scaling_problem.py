@@ -1,22 +1,39 @@
 import numpy as np
 from typing import List
-import petab
-import amici
 import pandas as pd
 
+from ...C import (
+    PARAMETER_TYPE,
+    PARAMETER_GROUP,
+    PARAMETER_CATEGORY,
+    InnerParameterType,
+)
 from ..problem import InnerProblem
-from ..parameter import InnerParameter
 from ..problem import (
     inner_parameters_from_parameter_df,
     ixs_for_measurement_specific_parameters,
     ix_matrices_from_arrays,
 )
+from .optimal_scaling_parameter import OptimalScalingParameter
+
+try:
+    import amici
+    import petab
+    from petab.C import (
+        ESTIMATE,
+        LOWER_BOUND,
+        PARAMETER_ID,
+        PARAMETER_SCALE,
+        UPPER_BOUND,
+    )
+except ImportError:
+    pass
 
 
 class OptimalScalingProblem(InnerProblem):
     def __init__(
         self,
-        xs: List[InnerParameter],
+        xs: List[OptimalScalingParameter],
         # hard_constraints: pd.DataFrame,
         data: List[np.ndarray],
     ):
@@ -25,7 +42,7 @@ class OptimalScalingProblem(InnerProblem):
         self.groups = {}
 
         for idx, gr in enumerate(
-            self.get_groups_for_xs(InnerParameter.OPTIMALSCALING)
+            self.get_groups_for_xs(InnerParameterType.OPTIMALSCALING)
         ):
             self.groups[gr] = {}
             xs = self.get_xs_for_group(gr)
@@ -80,14 +97,19 @@ class OptimalScalingProblem(InnerProblem):
         )
 
     def get_groups_for_xs(self, inner_parameter_type: str) -> List[int]:
-        """Get unique list of ``InnerParameter.group`` values."""
-        groups = [x.group for x in self.get_xs_for_type(inner_parameter_type)]
+        """Get unique list of ``OptimalScalingParameter.group`` values."""
+        try:
+            groups = [
+                x.group for x in self.get_xs_for_type(inner_parameter_type)
+            ]
+        except:
+            breakpoint()
         return list(set(groups))
 
     # FIXME does this break if there's inner parameters (xs) of different sorts, i.e.
     # not only optimalscaling? Think so...
-    def get_xs_for_group(self, group: int) -> List[InnerParameter]:
-        """Get ``InnerParameter``s that belong to the given group."""
+    def get_xs_for_group(self, group: int) -> List[OptimalScalingParameter]:
+        """Get ``OptimalScalingParameter``s that belong to the given group."""
         return [x for x in self.xs.values() if x.group == group]
 
     def initialize_c(self, gr, xs):
@@ -257,7 +279,7 @@ class OptimalScalingProblem(InnerProblem):
             num_points = np.sum(
                 [np.sum(x.ixs[idx]) for idx in range(len(x.ixs))]
             )
-            self.groups[gr]['cat_ixs'][x.id] = list(
+            self.groups[gr]['cat_ixs'][x.inner_parameter_id] = list(
                 range(idx_tot, idx_tot + num_points)
             )
             idx_tot += num_points
@@ -282,11 +304,11 @@ def qualitative_inner_problem_from_petab_problem(
     # hard_constraints=get_hard_constraints(petab_problem)
 
     # inner parameters
-    inner_parameters = inner_parameters_from_parameter_df(
+    inner_parameters = qualitative_inner_parameters_from_parameter_df(
         petab_problem.parameter_df
     )
 
-    x_ids = [x.id for x in inner_parameters]
+    x_ids = [x.inner_parameter_id for x in inner_parameters]
 
     # used indices for all measurement specific parameters
     ixs = ixs_for_measurement_specific_parameters(
@@ -303,13 +325,51 @@ def qualitative_inner_problem_from_petab_problem(
     # print("ix_matrices : \n",ix_matrices)
     # assign matrices
     for par in inner_parameters:
-        par.ixs = ix_matrices[par.id]
+        par.ixs = ix_matrices[par.inner_parameter_id]
 
     return OptimalScalingProblem(
         inner_parameters,
         # hard_constraints,
         edatas,
     )
+
+
+def qualitative_inner_parameters_from_parameter_df(
+    df: pd.DataFrame,
+) -> List[OptimalScalingParameter]:
+    """
+    Create list of inner free parameters from PEtab parameter table.
+
+    Inner parameters are those that have a non-empty `parameterType` in the
+    PEtab problem.
+    """
+    # create list of hierarchical parameters
+    df = df.reset_index()
+
+    for col in (PARAMETER_TYPE, PARAMETER_GROUP, PARAMETER_CATEGORY):
+        if col not in df:
+            df[col] = None
+
+    parameters = []
+
+    for _, row in df.iterrows():
+        if not row[ESTIMATE]:
+            continue
+        if petab.is_empty(row[PARAMETER_TYPE]):
+            continue
+        parameters.append(
+            OptimalScalingParameter(
+                inner_parameter_id=row[PARAMETER_ID],
+                inner_parameter_type=row[PARAMETER_TYPE],
+                scale=row[PARAMETER_SCALE],
+                lb=row[LOWER_BOUND],
+                ub=row[UPPER_BOUND],
+                category=row[PARAMETER_CATEGORY],
+                group=row[PARAMETER_GROUP],
+            )
+        )
+
+    return parameters
 
 
 # def get_hard_constraints(petab_problem: petab.Problem):

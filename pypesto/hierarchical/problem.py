@@ -270,7 +270,7 @@ def inner_parameters_from_parameter_df(
     # create list of hierarchical parameters
     df = df.reset_index()
 
-    for col in (PARAMETER_TYPE,):  # , PARAMETER_GROUP, PARAMETER_CATEGORY):
+    for col in (PARAMETER_TYPE,):
         if col not in df:
             df[col] = None
 
@@ -288,8 +288,6 @@ def inner_parameters_from_parameter_df(
                 scale=row[PARAMETER_SCALE],
                 lb=row[LOWER_BOUND],
                 ub=row[UPPER_BOUND],
-                # category=row[PARAMETER_CATEGORY],
-                # group=row[PARAMETER_GROUP],
             )
         )
 

@@ -85,8 +85,6 @@ ID = 'id'
 
 INNER_PARAMETERS = 'inner_parameters'
 INNER_RDATAS = 'inner_rdatas'
-# PARAMETER_CATEGORY = 'parameterCategory'
-# PARAMETER_GROUP = 'parameterGroup'
 PARAMETER_TYPE = 'parameterType'
 
 
@@ -123,6 +121,9 @@ INNER_PARAMETER_BOUNDS = {
 
 ###############################################################################
 # OPTIMAL SCALING 
+
+PARAMETER_CATEGORY = 'parameterCategory'
+PARAMETER_GROUP = 'parameterGroup'
 
 REDUCED = 'reduced'
 STANDARD = 'standard'
