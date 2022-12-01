@@ -26,7 +26,7 @@
 from __future__ import annotations
 
 import logging
-from typing import List, Union
+from typing import List, Optional, Union
 
 import numpy as np
 
@@ -56,6 +56,7 @@ class DynestySampler(Sampler):
         sampler_args: dict = None,
         run_args: dict = None,
         dynamic: bool = True,
+        save_internal: Optional[str] = None,
     ):
         """
         Initialize sampler.
@@ -68,6 +69,14 @@ class DynestySampler(Sampler):
         run_args:
             Further keyword arguments that are passed on to the `run_nested`
             method of the dynesty sampler.
+        dynamic:
+            Whether to use dynamic or static nested sampling.
+        save_internal:
+            The original internal dynesty sampler will be saved here.
+            The sampler can be restored with `dynesty.utils.restore_sampler`,
+            and pyPESTO `McmcPtResult` objects created with the
+            `pypesto.sample.dynesty.get_original_dynesty_samples` and
+            `pypesto.sample.dynesty.get_mcmc_like_dynesty_samples` methods.
         """
         # check dependencies
         try:
@@ -87,9 +96,15 @@ class DynestySampler(Sampler):
             run_args = {}
         self.run_args: dict = run_args
 
+        self.save_internal = save_internal
+
         # set in initialize
         self.problem: Union[Problem, None] = None
-        self.sampler: Union[dynesty.DynamicNestedSampler, None] = None
+        self.sampler: Union[
+            dynesty.DynamicNestedSampler,
+            dynesty.NestedSampler,
+            None,
+        ] = None
 
     def prior_transform(self, prior_sample: np.ndarray) -> np.ndarray:
         """Transform prior sample from unit cube to pyPESTO prior.
@@ -148,6 +163,8 @@ class DynestySampler(Sampler):
 
     def sample(self, n_samples: int, beta: float = None) -> None:
         """Return the most recent sample state."""
+        import dynesty
+
         if n_samples is not None:
             logger.warning(
                 "`n_samples` was specified but this is incompatible with "
@@ -162,50 +179,81 @@ class DynestySampler(Sampler):
 
         self.sampler.run_nested(**self.run_args)
         self.results = self.sampler.results
+        if self.save_internal is not None:
+            dynesty.utils.save_sampler(
+                sampler=self.sampler,
+                fname=self.save_internal,
+            )
 
     def get_original_samples(self) -> McmcPtResult:
         """Get the samples into the fitting pypesto format."""
-        # all walkers are concatenated, yielding a flat array
-        trace_x = np.array([self.results.samples])
-        trace_neglogpost = -np.array([self.results.logl])
-
-        # the sampler uses custom adaptive priors
-        trace_neglogprior = np.full(trace_neglogpost.shape, np.nan)
-        # the sampler uses temperature 1
-        betas = np.array([1.0])
-
-        result = McmcPtResult(
-            trace_x=trace_x,
-            trace_neglogpost=trace_neglogpost,
-            trace_neglogprior=trace_neglogprior,
-            betas=betas,
-        )
-
-        return result
+        return get_original_dynesty_samples(sampler=self.sampler)
 
     def get_samples(self) -> McmcPtResult:
-        """Get the MCMC-like samples into the fitting pypesto format."""
-        samples = self.results.samples_equal()
-        indices = np.array(
-            [
-                np.argwhere(self.results.samples == sample).flat[0]
-                for sample in samples
-            ]
-        )
-        # FIXME check the self.results.samples[indices] == samples
-        # resample according to importance weights
-        trace_x = np.array([self.results.samples[indices]])
-        trace_neglogpost = -np.array([self.results.logl[indices]])
+        """Get MCMC-like samples into the fitting pypesto format."""
+        return get_mcmc_like_dynesty_samples(sampler=self.sampler)
 
-        # dummy values
-        trace_neglogprior = np.full(trace_neglogpost.shape, np.nan)
-        betas = np.array([1.0])
 
-        result = McmcPtResult(
-            trace_x=trace_x,
-            trace_neglogpost=trace_neglogpost,
-            trace_neglogprior=trace_neglogprior,
-            betas=betas,
-        )
+def get_original_dynesty_samples(sampler) -> McmcPtResult:
+    """Get original dynesty samples.
 
-        return result
+    Parameters
+    ----------
+    sampler:
+        The (internal!) dynesty sampler. See
+        `pypesto.sample.DynestySampler.__init__`, specifically the
+        `save_internal` argument, for more details.
+
+    Returns
+    -------
+    The sample result.
+    """
+    trace_x = np.array([sampler.results.samples])
+    trace_neglogpost = -np.array([sampler.results.logl])
+
+    # the sampler uses custom adaptive priors
+    trace_neglogprior = np.full(trace_neglogpost.shape, np.nan)
+    # the sampler uses temperature 1
+    betas = np.array([1.0])
+
+    result = McmcPtResult(
+        trace_x=trace_x,
+        trace_neglogpost=trace_neglogpost,
+        trace_neglogprior=trace_neglogprior,
+        betas=betas,
+    )
+
+    return result
+
+
+def get_mcmc_like_dynesty_samples(sampler) -> McmcPtResult:
+    """Get MCMC-like samples.
+
+    Parameters
+    ----------
+    sampler:
+        The (internal!) dynesty sampler. See
+        `pypesto.sample.DynestySampler.__init__`, specifically the
+        `save_internal` argument, for more details.
+
+    Returns
+    -------
+    The sample result.
+    """
+    samples = sampler.results.samples_equal()
+
+    trace_x = np.array([samples])
+
+    # dummy values. Could provide `neglogpost` values based on
+    # `sampler.results.logl`, but ordering is time-consuming.
+    trace_neglogpost = np.array([np.full(samples.shape[0], np.nan)])
+    trace_neglogprior = np.array([np.full(samples.shape[0], np.nan)])
+    betas = np.array([1.0])
+
+    result = McmcPtResult(
+        trace_x=trace_x,
+        trace_neglogpost=trace_neglogpost,
+        trace_neglogprior=trace_neglogprior,
+        betas=betas,
+    )
+    return result
