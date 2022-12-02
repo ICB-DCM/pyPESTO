@@ -240,12 +240,13 @@ def get_mcmc_like_dynesty_samples(sampler) -> McmcPtResult:
     -------
     The sample result.
     """
+    # resample according to importance weights
     samples = sampler.results.samples_equal()
-
     trace_x = np.array([samples])
 
     # dummy values. Could provide `neglogpost` values based on
-    # `sampler.results.logl`, but ordering is time-consuming.
+    # `sampler.results.logl`, but naively reordering after resampling is
+    # time-consuming.
     trace_neglogpost = np.array([np.full(samples.shape[0], np.nan)])
     trace_neglogprior = np.array([np.full(samples.shape[0], np.nan)])
     betas = np.array([1.0])
