@@ -1,6 +1,6 @@
 import logging
 import warnings
-from typing import Dict, Sequence, Tuple, Union
+from typing import Dict, Optional, Sequence, Tuple, Union
 
 import matplotlib.axes
 import matplotlib.pyplot as plt
@@ -309,16 +309,15 @@ def _plot_trajectories_by_condition(
                     ),
                     lw=0,
                 )
-            if (
-                grouped_measurements is not None
-                and (condition_id, output_id) in grouped_measurements
+            if measurements := grouped_measurements.get(
+                (condition_id, output_id), False
             ):
                 ax.scatter(
-                    grouped_measurements[(condition_id, output_id)][0],
-                    grouped_measurements[(condition_id, output_id)][1],
+                    measurements[0],
+                    measurements[1],
                     marker='o',
                     facecolor=variable_colors[output_index],
-                    edgecolor='k',
+                    edgecolor='white',
                 )
 
 
@@ -442,21 +441,15 @@ def _plot_trajectories_by_output(
                     lw=0,
                 )
                 t_max = max(t_max, *t_lower_shifted, *t_upper_shifted)
-            if (
-                grouped_measurements is not None
-                and (condition_id, output_id) in grouped_measurements
+            if measurements := grouped_measurements.get(
+                (condition_id, output_id), False
             ):
                 ax.scatter(
-                    [
-                        t0 + _t
-                        for _t in grouped_measurements[
-                            (condition_id, output_id)
-                        ][0]
-                    ],
-                    grouped_measurements[(condition_id, output_id)][1],
+                    [t0 + _t for _t in measurements[0]],
+                    measurements[1],
                     marker='o',
                     facecolor=variable_colors[condition_index],
-                    edgecolor='k',
+                    edgecolor='white',
                 )
             # Set t0 to the last plotted timepoint of the current condition
             # plot.
@@ -520,6 +513,9 @@ def _handle_legends(
     n_col: int,
     average: str,
     add_sd: bool,
+    grouped_measurements: Optional[
+        Dict[Tuple[str, str], Sequence[Sequence[float]]]
+    ],
 ) -> None:
     """Add legends to a sampling prediction trajectories plot.
 
@@ -558,6 +554,10 @@ def _handle_legends(
         `MEDIAN` or `MEAN`).
     add_sd:
         Whether to add the standard deviation of the predictions to the plot.
+    grouped_measurements:
+        Measurement data that has already been grouped by condition and output,
+        where the keys are `(condition_id, output_id)` 2-tuples, and the values
+        are `[sequence of x-axis values, sequence of y-axis values]`.
     """
     # Fake plots for legend line styles
     fake_data = [[0], [0]]
@@ -573,6 +573,24 @@ def _handle_legends(
             for index, variable_name in enumerate(variable_names)
         ]
     )
+    if grouped_measurements:
+        variable_lines = np.vstack(
+            [
+                [
+                    [
+                        'Measurement data',
+                        Line2D(
+                            *fake_data,
+                            linewidth=0,
+                            marker='o',
+                            markerfacecolor='grey',
+                            markeredgecolor='white',
+                        ),
+                    ]
+                ],
+                variable_lines,
+            ]
+        )
     # Assumes that different CI levels are represented as
     # different opacities of the same color.
     # Create a line object with fake data for each credibility level.
@@ -901,6 +919,7 @@ def sampling_prediction_trajectories(
         n_col=n_col,
         average=average,
         add_sd=add_sd,
+        grouped_measurements=grouped_measurements,
     )
 
     # X and Y labels
