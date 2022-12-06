@@ -44,12 +44,12 @@ def history_decorator(minimize):
     """
 
     def wrapped_minimize(
-        self,
-        problem: Problem,
-        x0: np.ndarray,
-        id: str,
-        history_options: HistoryOptions = None,
-        optimize_options: OptimizeOptions = None,
+            self,
+            problem: Problem,
+            x0: np.ndarray,
+            id: str,
+            history_options: HistoryOptions = None,
+            optimize_options: OptimizeOptions = None,
     ):
         if history_options is None:
             history_options = HistoryOptions()
@@ -122,12 +122,12 @@ def time_decorator(minimize):
     """
 
     def wrapped_minimize(
-        self,
-        problem: Problem,
-        x0: np.ndarray,
-        id: str,
-        history_options: HistoryOptions = None,
-        optimize_options: OptimizeOptions = None,
+            self,
+            problem: Problem,
+            x0: np.ndarray,
+            id: str,
+            history_options: HistoryOptions = None,
+            optimize_options: OptimizeOptions = None,
     ):
         start_time = time.time()
         result = minimize(
@@ -153,12 +153,12 @@ def fix_decorator(minimize):
     """
 
     def wrapped_minimize(
-        self,
-        problem: Problem,
-        x0: np.ndarray,
-        id: str,
-        history_options: HistoryOptions = None,
-        optimize_options: OptimizeOptions = None,
+            self,
+            problem: Problem,
+            x0: np.ndarray,
+            id: str,
+            history_options: HistoryOptions = None,
+            optimize_options: OptimizeOptions = None,
     ):
         # perform the actual optimization
         result = minimize(
@@ -199,12 +199,12 @@ class Optimizer(abc.ABC):
     @time_decorator
     @history_decorator
     def minimize(
-        self,
-        problem: Problem,
-        x0: np.ndarray,
-        id: str,
-        history_options: HistoryOptions = None,
-        optimize_options: OptimizeOptions = None,
+            self,
+            problem: Problem,
+            x0: np.ndarray,
+            id: str,
+            history_options: HistoryOptions = None,
+            optimize_options: OptimizeOptions = None,
     ) -> OptimizerResult:
         """
         Perform optimization.
@@ -252,10 +252,10 @@ class ScipyOptimizer(Optimizer):
     """
 
     def __init__(
-        self,
-        method: str = 'L-BFGS-B',
-        tol: float = None,
-        options: Dict = None,
+            self,
+            method: str = 'L-BFGS-B',
+            tol: float = None,
+            options: Dict = None,
     ):
         super().__init__()
 
@@ -279,12 +279,12 @@ class ScipyOptimizer(Optimizer):
     @time_decorator
     @history_decorator
     def minimize(
-        self,
-        problem: Problem,
-        x0: np.ndarray,
-        id: str,
-        history_options: HistoryOptions = None,
-        optimize_options: OptimizeOptions = None,
+            self,
+            problem: Problem,
+            x0: np.ndarray,
+            id: str,
+            history_options: HistoryOptions = None,
+            optimize_options: OptimizeOptions = None,
     ) -> OptimizerResult:
         """Perform optimization. Parameters: see `Optimizer` documentation."""
         lb = problem.lb
@@ -383,10 +383,24 @@ class ScipyOptimizer(Optimizer):
                 'trust-constr',
             ]
 
-            fun = objective.get_fval
+            # Todo Resolve warning by implementing saving of hess temporarily
+            #  in objective and pass to scipy seperately
+            if objective.hess is True:
+                logger.warning("scipy.optimize.minimize does not support "
+                               "passing fun and hess as one function. Hence "
+                               "for each evaluation of hess, fun will be "
+                               "evaluated again. This can lead to enhanced "
+                               "computation times. If possible untangle fun "
+                               "and hess.")
+            if objective.grad is True:
+                fun = lambda x: objective(x, sensi_orders=(0,1))
+            else:
+                fun = objective.get_fval
             jac = (
                 objective.get_grad
-                if objective.has_grad and method_supports_grad
+                if objective.has_grad and method_supports_grad and
+                objective.grad is not True
+                else True if objective.grad is True
                 else None
             )
             hess = (
@@ -470,12 +484,12 @@ class IpoptOptimizer(Optimizer):
     @time_decorator
     @history_decorator
     def minimize(
-        self,
-        problem: Problem,
-        x0: np.ndarray,
-        id: str,
-        history_options: HistoryOptions = None,
-        optimize_options: OptimizeOptions = None,
+            self,
+            problem: Problem,
+            x0: np.ndarray,
+            id: str,
+            history_options: HistoryOptions = None,
+            optimize_options: OptimizeOptions = None,
     ) -> OptimizerResult:
         """Perform optimization. Parameters: see `Optimizer` documentation."""
         try:
@@ -532,12 +546,12 @@ class DlibOptimizer(Optimizer):
     @time_decorator
     @history_decorator
     def minimize(
-        self,
-        problem: Problem,
-        x0: np.ndarray,
-        id: str,
-        history_options: HistoryOptions = None,
-        optimize_options: OptimizeOptions = None,
+            self,
+            problem: Problem,
+            x0: np.ndarray,
+            id: str,
+            history_options: HistoryOptions = None,
+            optimize_options: OptimizeOptions = None,
     ) -> OptimizerResult:
         """Perform optimization. Parameters: see `Optimizer` documentation."""
         lb = problem.lb
@@ -602,12 +616,12 @@ class PyswarmOptimizer(Optimizer):
     @time_decorator
     @history_decorator
     def minimize(
-        self,
-        problem: Problem,
-        x0: np.ndarray,
-        id: str,
-        history_options: HistoryOptions = None,
-        optimize_options: OptimizeOptions = None,
+            self,
+            problem: Problem,
+            x0: np.ndarray,
+            id: str,
+            history_options: HistoryOptions = None,
+            optimize_options: OptimizeOptions = None,
     ) -> OptimizerResult:
         """Perform optimization. Parameters: see `Optimizer` documentation."""
         lb = problem.lb
@@ -671,12 +685,12 @@ class CmaesOptimizer(Optimizer):
     @time_decorator
     @history_decorator
     def minimize(
-        self,
-        problem: Problem,
-        x0: np.ndarray,
-        id: str,
-        history_options: HistoryOptions = None,
-        optimize_options: OptimizeOptions = None,
+            self,
+            problem: Problem,
+            x0: np.ndarray,
+            id: str,
+            history_options: HistoryOptions = None,
+            optimize_options: OptimizeOptions = None,
     ) -> OptimizerResult:
         """Perform optimization. Parameters: see `Optimizer` documentation."""
         lb = problem.lb
@@ -756,12 +770,12 @@ class ScipyDifferentialEvolutionOptimizer(Optimizer):
     @time_decorator
     @history_decorator
     def minimize(
-        self,
-        problem: Problem,
-        x0: np.ndarray,
-        id: str,
-        history_options: HistoryOptions = None,
-        optimize_options: OptimizeOptions = None,
+            self,
+            problem: Problem,
+            x0: np.ndarray,
+            id: str,
+            history_options: HistoryOptions = None,
+            optimize_options: OptimizeOptions = None,
     ) -> OptimizerResult:
         """Perform optimization. Parameters: see `Optimizer` documentation."""
         bounds = list(zip(problem.lb, problem.ub))
@@ -829,12 +843,12 @@ class PyswarmsOptimizer(Optimizer):
     @time_decorator
     @history_decorator
     def minimize(
-        self,
-        problem: Problem,
-        x0: np.ndarray,
-        id: str,
-        history_options: HistoryOptions = None,
-        optimize_options: OptimizeOptions = None,
+            self,
+            problem: Problem,
+            x0: np.ndarray,
+            id: str,
+            history_options: HistoryOptions = None,
+            optimize_options: OptimizeOptions = None,
     ) -> OptimizerResult:
         """Perform optimization. Parameters: see `Optimizer` documentation."""
         lb = problem.lb
@@ -907,11 +921,11 @@ class NLoptOptimizer(Optimizer):
     """
 
     def __init__(
-        self,
-        method=None,
-        local_method=None,
-        options: Dict = None,
-        local_options: Dict = None,
+            self,
+            method=None,
+            local_method=None,
+            options: Dict = None,
+            local_options: Dict = None,
     ):
         """
         Initialize.
@@ -1007,7 +1021,7 @@ class NLoptOptimizer(Optimizer):
         ]
         self.hybrid_methods = [nlopt.AUGLAG, nlopt.AUGLAG_EQ]
         methods = (
-            self.local_methods + self.global_methods + self.hybrid_methods
+                self.local_methods + self.global_methods + self.hybrid_methods
         )
 
         if method not in methods:
@@ -1041,12 +1055,12 @@ class NLoptOptimizer(Optimizer):
     @time_decorator
     @history_decorator
     def minimize(
-        self,
-        problem: Problem,
-        x0: np.ndarray,
-        id: str,
-        history_options: HistoryOptions = None,
-        optimize_options: OptimizeOptions = None,
+            self,
+            problem: Problem,
+            x0: np.ndarray,
+            id: str,
+            history_options: HistoryOptions = None,
+            optimize_options: OptimizeOptions = None,
     ) -> OptimizerResult:
         """Perform optimization. Parameters: see `Optimizer` documentation."""
         import nlopt
@@ -1102,11 +1116,11 @@ class NLoptOptimizer(Optimizer):
             result = opt.optimize(x0)
             msg = 'Finished Successfully.'
         except (
-            nlopt.RoundoffLimited,
-            nlopt.ForcedStop,
-            ValueError,
-            RuntimeError,
-            MemoryError,
+                nlopt.RoundoffLimited,
+                nlopt.ForcedStop,
+                ValueError,
+                RuntimeError,
+                MemoryError,
         ) as e:
             result = None
             msg = str(e)
@@ -1133,12 +1147,12 @@ class FidesOptimizer(Optimizer):
     """
 
     def __init__(
-        self,
-        hessian_update: Optional[
-            fides.hessian_approximation.HessianApproximation
-        ] = 'default',
-        options: Optional[Dict] = None,
-        verbose: Optional[int] = logging.INFO,
+            self,
+            hessian_update: Optional[
+                fides.hessian_approximation.HessianApproximation
+            ] = 'default',
+            options: Optional[Dict] = None,
+            verbose: Optional[int] = logging.INFO,
     ):
         """
         Initialize.
@@ -1160,12 +1174,12 @@ class FidesOptimizer(Optimizer):
             raise OptimizerImportError("fides")
 
         if (
-            (hessian_update is not None)
-            and (hessian_update != 'default')
-            and not isinstance(
-                hessian_update,
-                fides.hessian_approximation.HessianApproximation,
-            )
+                (hessian_update is not None)
+                and (hessian_update != 'default')
+                and not isinstance(
+            hessian_update,
+            fides.hessian_approximation.HessianApproximation,
+        )
         ):
             raise ValueError(
                 'Incompatible type for hessian update. '
@@ -1201,12 +1215,12 @@ class FidesOptimizer(Optimizer):
     @time_decorator
     @history_decorator
     def minimize(
-        self,
-        problem: Problem,
-        x0: np.ndarray,
-        id: str,
-        history_options: HistoryOptions = None,
-        optimize_options: OptimizeOptions = None,
+            self,
+            problem: Problem,
+            x0: np.ndarray,
+            id: str,
+            history_options: HistoryOptions = None,
+            optimize_options: OptimizeOptions = None,
     ) -> OptimizerResult:
         """Perform optimization. Parameters: see `Optimizer` documentation."""
         import fides
@@ -1241,7 +1255,7 @@ class FidesOptimizer(Optimizer):
             )
 
         if _hessian_update is None or (
-            _hessian_update.requires_hess and not resfun
+                _hessian_update.requires_hess and not resfun
         ):
             if not problem.objective.has_hess:
                 raise ValueError(
