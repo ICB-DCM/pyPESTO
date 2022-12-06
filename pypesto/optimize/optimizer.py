@@ -386,14 +386,16 @@ class ScipyOptimizer(Optimizer):
             # Todo Resolve warning by implementing saving of hess temporarily
             #  in objective and pass to scipy seperately
             if objective.hess is True:
-                logger.warning("scipy.optimize.minimize does not support "
-                               "passing fun and hess as one function. Hence "
-                               "for each evaluation of hess, fun will be "
-                               "evaluated again. This can lead to enhanced "
-                               "computation times. If possible untangle fun "
-                               "and hess.")
+                logger.warning(
+                    "scipy.optimize.minimize does not support "
+                    "passing fun and hess as one function. Hence "
+                    "for each evaluation of hess, fun will be "
+                    "evaluated again. This can lead to enhanced "
+                    "computation times. If possible untangle fun "
+                    "and hess."
+                )
             if objective.grad is True:
-                fun = lambda x: objective(x, sensi_orders=(0,1))
+                def fun(x): return objective(x, sensi_orders=(0, 1))
             else:
                 fun = objective.get_fval
             jac = (

@@ -529,8 +529,8 @@ def test_scipy_integrated_grad():
     obj = rosen_for_sensi(max_sensi_order=2, integrated=integrated)['obj']
     lb = 0 * np.ones((1, 2))
     ub = 1 * np.ones((1, 2))
-    problem = pypesto.Problem(objective=obj, lb=lb, ub=ub,
-                              x_guesses=[[0.5, 0.5]])
+    x_guesses = [[0.5, 0.5]]
+    problem = pypesto.Problem(objective=obj, lb=lb, ub=ub, x_guesses=x_guesses)
     optimizer = optimize.ScipyOptimizer(options={'maxiter': 10})
     optimize_options = optimize.OptimizeOptions(
         allow_failed_starts=False
@@ -545,5 +545,5 @@ def test_scipy_integrated_grad():
         history_options=history_options,
         progress_bar=False
     )
-    assert(len(result.optimize_result.history[0]._trace['fval']) ==
-           result.optimize_result.history[0].n_fval)
+    assert (len(result.optimize_result.history[0]._trace['fval']) ==
+            result.optimize_result.history[0].n_fval)
