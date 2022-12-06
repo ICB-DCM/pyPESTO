@@ -616,12 +616,12 @@ class PyswarmOptimizer(Optimizer):
     @time_decorator
     @history_decorator
     def minimize(
-            self,
-            problem: Problem,
-            x0: np.ndarray,
-            id: str,
-            history_options: HistoryOptions = None,
-            optimize_options: OptimizeOptions = None,
+        self,
+        problem: Problem,
+        x0: np.ndarray,
+        id: str,
+        history_options: HistoryOptions = None,
+        optimize_options: OptimizeOptions = None,
     ) -> OptimizerResult:
         """Perform optimization. Parameters: see `Optimizer` documentation."""
         lb = problem.lb
