@@ -395,14 +395,19 @@ class ScipyOptimizer(Optimizer):
                     "and hess."
                 )
             if objective.grad is True:
-                def fun(x): return objective(x, sensi_orders=(0, 1))
+
+                def fun(x):
+                    return objective(x, sensi_orders=(0, 1))
+
             else:
                 fun = objective.get_fval
             jac = (
                 objective.get_grad
-                if objective.has_grad and method_supports_grad and
-                objective.grad is not True
-                else True if objective.grad is True
+                if objective.has_grad
+                and method_supports_grad
+                and objective.grad is not True
+                else True
+                if objective.grad is True
                 else None
             )
             hess = (

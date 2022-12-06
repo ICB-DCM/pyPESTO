@@ -532,9 +532,7 @@ def test_scipy_integrated_grad():
     x_guesses = [[0.5, 0.5]]
     problem = pypesto.Problem(objective=obj, lb=lb, ub=ub, x_guesses=x_guesses)
     optimizer = optimize.ScipyOptimizer(options={'maxiter': 10})
-    optimize_options = optimize.OptimizeOptions(
-        allow_failed_starts=False
-    )
+    optimize_options = optimize.OptimizeOptions(allow_failed_starts=False)
     history_options = pypesto.HistoryOptions(trace_record=True)
     result = optimize.minimize(
         problem=problem,
@@ -543,7 +541,9 @@ def test_scipy_integrated_grad():
         startpoint_method=pypesto.startpoint.uniform,
         options=optimize_options,
         history_options=history_options,
-        progress_bar=False
+        progress_bar=False,
     )
-    assert (len(result.optimize_result.history[0]._trace['fval']) ==
-            result.optimize_result.history[0].n_fval)
+    assert (
+        len(result.optimize_result.history[0]._trace['fval'])
+        == result.optimize_result.history[0].n_fval
+    )
