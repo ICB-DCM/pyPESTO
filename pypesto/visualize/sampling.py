@@ -4,7 +4,6 @@ from colorsys import rgb_to_hls
 from typing import Dict, Optional, Sequence, Tuple, Union
 
 import matplotlib.axes
-import matplotlib.cm.viridis as cmap
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
@@ -28,6 +27,7 @@ from ..result import McmcPtResult, PredictionResult, Result
 from ..sample import calculate_ci_mcmc_sample
 from .misc import rgba2rgb
 
+cmap = matplotlib.cm.viridis
 logger = logging.getLogger(__name__)
 
 
