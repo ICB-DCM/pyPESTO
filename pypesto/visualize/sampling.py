@@ -1,8 +1,10 @@
 import logging
 import warnings
+from colorsys import rgb_to_hls
 from typing import Dict, Optional, Sequence, Tuple, Union
 
 import matplotlib.axes
+import matplotlib.cm.viridis as cmap
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
@@ -317,7 +319,11 @@ def _plot_trajectories_by_condition(
                     measurements[1],
                     marker='o',
                     facecolor=variable_colors[output_index],
-                    edgecolor='white',
+                    edgecolor=(
+                        'white'
+                        if rgb_to_hls(variable_colors[output_index])[1] < 0.5
+                        else 'black'
+                    ),
                 )
 
 
@@ -449,7 +455,11 @@ def _plot_trajectories_by_output(
                     measurements[1],
                     marker='o',
                     facecolor=variable_colors[condition_index],
-                    edgecolor='white',
+                    edgecolor=(
+                        'white'
+                        if rgb_to_hls(variable_colors[output_index])[1] < 0.5
+                        else 'black'
+                    ),
                 )
             # Set t0 to the last plotted timepoint of the current condition
             # plot.
@@ -693,7 +703,6 @@ def _handle_colors(
         np.linspace(0.3 * RGBA_MAX, RGBA_MAX, len(levels)),
         reverse=reverse,
     )
-    cmap = plt.cm.viridis
     cmap_min = RGBA_MIN
     cmap_max = 0.85 * (RGBA_MAX - RGBA_MIN) + RGBA_MIN  # exclude yellows
 
