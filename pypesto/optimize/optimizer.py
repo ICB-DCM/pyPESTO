@@ -390,8 +390,8 @@ class ScipyOptimizer(Optimizer):
                     "scipy.optimize.minimize does not support "
                     "passing fun and hess as one function. Hence "
                     "for each evaluation of hess, fun will be "
-                    "evaluated again. This can lead to enhanced "
-                    "computation times. If possible untangle fun "
+                    "evaluated again. This can lead to increased "
+                    "computation times. If possible, separate fun "
                     "and hess."
                 )
             if objective.grad is True:
