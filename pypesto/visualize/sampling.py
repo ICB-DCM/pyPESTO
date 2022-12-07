@@ -584,24 +584,6 @@ def _handle_legends(
             for index, variable_name in enumerate(variable_names)
         ]
     )
-    if grouped_measurements:
-        variable_lines = np.vstack(
-            [
-                [
-                    [
-                        'Measurement data',
-                        Line2D(
-                            *fake_data,
-                            linewidth=0,
-                            marker='o',
-                            markerfacecolor='grey',
-                            markeredgecolor='white',
-                        ),
-                    ]
-                ],
-                variable_lines,
-            ]
-        )
     # Assumes that different CI levels are represented as
     # different opacities of the same color.
     # Create a line object with fake data for each credibility level.
@@ -619,6 +601,7 @@ def _handle_legends(
                 ),
             ]
         )
+
     # Create a line object with fake data for the average line.
     average_title = average.title()
     average_line_object_line2d = Line2D(*fake_data, color=RGBA_BLACK)
@@ -648,7 +631,23 @@ def _handle_legends(
         average_line_object = average_line_object_line2d
     average_line = [[average_title, average_line_object]]
 
-    level_lines = np.array(ci_lines + average_line)
+    # Create a line object with fake data for the data points.
+    data_line = []
+    if grouped_measurements:
+        data_line = [
+            [
+                'Data',
+                Line2D(
+                    *fake_data,
+                    linewidth=0,
+                    marker='o',
+                    markerfacecolor='grey',
+                    markeredgecolor='white',
+                ),
+            ]
+        ]
+
+    level_lines = np.array(ci_lines + average_line + data_line)
 
     # CI level, and variable name, legends.
     legend_options_top_right = {
