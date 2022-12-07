@@ -240,6 +240,7 @@ def _plot_trajectories_by_condition(
         ax.set_title(f'Condition: {labels[condition_id]}')
         # Each subplot has all data for all condition-specific outputs.
         for output_index, output_id in enumerate(output_ids):
+            facecolor0 = variable_colors[output_index]
             # Plot the average for each output.
             t_average, y_average = _get_statistic_data(
                 summary,
@@ -318,10 +319,10 @@ def _plot_trajectories_by_condition(
                     measurements[0],
                     measurements[1],
                     marker='o',
-                    facecolor=variable_colors[output_index],
+                    facecolor=facecolor0,
                     edgecolor=(
                         'white'
-                        if rgb_to_hls(variable_colors[output_index])[1] < 0.5
+                        if rgb_to_hls(*facecolor0)[1] < 0.5
                         else 'black'
                     ),
                 )
@@ -362,6 +363,7 @@ def _plot_trajectories_by_output(
         ax.set_title(f'Trajectory: {labels[output_id]}')
         # Each subplot is divided by conditions, with vertical lines.
         for condition_index, condition_id in enumerate(condition_ids):
+            facecolor0 = variable_colors[condition_index]
             if condition_index != 0:
                 ax.axvline(
                     t0,
@@ -441,8 +443,7 @@ def _plot_trajectories_by_output(
                     lower_data,
                     upper_data,
                     facecolor=rgba2rgb(
-                        variable_colors[condition_index]
-                        + [level_opacities[level_index]]
+                        facecolor0 + [level_opacities[level_index]]
                     ),
                     lw=0,
                 )
@@ -454,10 +455,10 @@ def _plot_trajectories_by_output(
                     [t0 + _t for _t in measurements[0]],
                     measurements[1],
                     marker='o',
-                    facecolor=variable_colors[condition_index],
+                    facecolor=facecolor0,
                     edgecolor=(
                         'white'
-                        if rgb_to_hls(variable_colors[output_index])[1] < 0.5
+                        if rgb_to_hls(*facecolor0)[1] < 0.5
                         else 'black'
                     ),
                 )
