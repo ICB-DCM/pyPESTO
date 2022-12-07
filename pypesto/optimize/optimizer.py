@@ -406,9 +406,11 @@ class ScipyOptimizer(Optimizer):
                 if objective.has_grad
                 and method_supports_grad
                 and objective.grad is not True
-                else True
-                if objective.grad is True
-                else None
+                else (
+                    True
+                    if objective.grad is True
+                    else None
+                )
             )
             hess = (
                 objective.get_hess
