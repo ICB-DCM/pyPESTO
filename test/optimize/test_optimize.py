@@ -544,6 +544,6 @@ def test_scipy_integrated_grad():
         progress_bar=False,
     )
     assert (
-        len(result.optimize_result.history[0]._trace['fval'])
+        len(result.optimize_result.history[0].get_fval_trace())
         == result.optimize_result.history[0].n_fval
     )
