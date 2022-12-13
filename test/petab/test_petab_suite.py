@@ -80,9 +80,16 @@ def _execute_case(case):
     output_folder = f'amici_models/model_{case}'
 
     # import and create objective function
-    importer = pypesto.petab.PetabImporter.from_yaml(
-        yaml_file, output_folder=output_folder
-    )
+    if case.startswith('0006'):
+        petab_problem = petab.Problem.from_yaml(yaml_file)
+        petab.flatten_timepoint_specific_output_overrides(petab_problem)
+        importer = pypesto.petab.PetabImporter(
+            petab_problem=petab_problem, output_folder=output_folder
+        )
+    else:
+        importer = pypesto.petab.PetabImporter.from_yaml(
+            yaml_file, output_folder=output_folder
+        )
     model = importer.create_model(generate_sensitivity_code=False)
     obj = importer.create_objective(model=model)
 
