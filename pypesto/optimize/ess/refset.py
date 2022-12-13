@@ -158,7 +158,9 @@ class RefSet:
         self.n_stuck[i] = 0
 
     def add_attribute(self, name: str, values: np.array):
-        """Add an attribute array to the refset members
+        """
+        Add an attribute array to the refset members.
 
-        Will be sorted together with the refset members."""
+        The added array will be sorted together with the refset members.
+        """
         self.attributes[name] = values
