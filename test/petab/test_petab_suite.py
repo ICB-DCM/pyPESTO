@@ -91,6 +91,7 @@ def _execute_case(case):
         importer = pypesto.petab.PetabImporter.from_yaml(
             yaml_file, output_folder=output_folder
         )
+        petab_problem = importer.petab_problem
     model = importer.create_model(generate_sensitivity_code=False)
     obj = importer.create_objective(model=model)
 
