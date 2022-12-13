@@ -86,6 +86,7 @@ def _execute_case(case):
         importer = pypesto.petab.PetabImporter(
             petab_problem=petab_problem, output_folder=output_folder
         )
+        petab_problem = petab.Problem.from_yaml(yaml_file)
     else:
         importer = pypesto.petab.PetabImporter.from_yaml(
             yaml_file, output_folder=output_folder
@@ -106,9 +107,13 @@ def _execute_case(case):
     simulation_df = amici.petab_objective.rdatas_to_measurement_df(
         rdatas, model, importer.petab_problem.measurement_df
     )
-    petab.check_measurement_df(
-        simulation_df, importer.petab_problem.observable_df
-    )
+
+    if case.startswith('0006'):
+        simulation_df = petab.unflatten_simulation_df(
+            simulation_df, petab_problem
+        )
+
+    petab.check_measurement_df(simulation_df, petab_problem.observable_df)
     simulation_df = simulation_df.rename(
         columns={petab.MEASUREMENT: petab.SIMULATION}
     )
