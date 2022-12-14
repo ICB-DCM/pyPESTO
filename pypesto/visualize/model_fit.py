@@ -3,19 +3,18 @@ Visualization of the model fit after optimization.
 
 Currently only for PEtab problems.
 """
-from typing import Dict, Sequence, Union
+from typing import Sequence, Union
 
 import amici
-import amici.petab_import as petab_import
 import amici.plotting
 import matplotlib.axes
 import matplotlib.pyplot as plt
 import numpy as np
 import petab
 from amici.petab_objective import rdatas_to_simulation_df
-from amici.petab_simulate import simulate_petab
 from petab.visualize import plot_problem
 
+from ..C import RDATAS
 from ..problem import Problem
 from ..result import Result
 
@@ -24,12 +23,9 @@ AmiciModel = Union['amici.Model', 'amici.ModelPtr']
 
 def visualize_optimized_model_fit(
     petab_problem: petab.Problem,
-    result: Union[Result, Sequence[Result]] = None,
+    result: Union[Result, Sequence[Result]],
+    pypesto_problem: Problem,
     start_index: int = 0,
-    problem_parameters: Dict[str, float] = None,
-    model_output_dir: str = None,
-    force_compile: bool = False,
-    amici_solver: amici.Solver = None,
     return_dict: bool = False,
     unflattened_petab_problem: petab.Problem = None,
     **kwargs,
@@ -37,7 +33,7 @@ def visualize_optimized_model_fit(
     """
     Visualize the optimized model fit of a PEtab problem.
 
-    Function calls the PEtab visualization file of the petab_problem and
+    Function calls the PEtab visualization file of the `petab_problem` and
     visualizes the fit of the optimized parameter. Common additional
     argument is `subplot_dir` to specify the directory each subplot is
     saved to. Further keyword arguments are delegated to
@@ -52,13 +48,8 @@ def visualize_optimized_model_fit(
     start_index:
         The index of the optimization run in `result.optimize_result.list`.
         Ignored if `problem_parameters` is provided.
-    problem_parameters:
-        The (scaled) problem parameters to simulate.
-        Defaults to using `start_index`.
-    model_output_dir, force_compile:
-        Passed to `amici.petab_import.import_petab_problem`.
-    amici_solver:
-        Passed to `amici.petab_objective.simulate_petab` as `solver`.
+    pypesto_problem:
+        The pyPESTO problem.
     return_dict:
         Return plot and simulation results as a dictionary.
     unflattened_petab_problem:
@@ -72,61 +63,37 @@ def visualize_optimized_model_fit(
     axes: `matplotlib.axes.Axes` object of the created plot.
     None: In case subplots are saved to file
     """
-    if petab_problem is not None:
-        if petab is None:
-            raise
+    x = result.optimize_result.list[start_index]['x'][
+        pypesto_problem.x_free_indices
+    ]
+    objective_result = pypesto_problem.objective(x, return_dict=True)
 
-    if problem_parameters is None:
-        if result is None:
-            raise ValueError(
-                'Please provide a pyPESTO `result` or the '
-                '`problem_parameters` directly.'
-            )
-        problem_parameters = dict(
-            zip(
-                petab_problem.parameter_df.index,
-                result.optimize_result.list[start_index]['x'],
-            )
-        )
-
-    amici_model = petab_import.import_petab_problem(
-        petab_problem,
-        model_output_dir=model_output_dir,
-        force_compile=force_compile,
+    simulation_df = rdatas_to_simulation_df(
+        objective_result[RDATAS],
+        pypesto_problem.objective.amici_model,
+        petab_problem.measurement_df,
     )
 
-    res = simulate_petab(
-        petab_problem,
-        amici_model=amici_model,
-        scaled_parameters=True,
-        problem_parameters=problem_parameters,
-        solver=amici_solver,
-    )
-
-    sim_df = rdatas_to_simulation_df(
-        res["rdatas"], amici_model, petab_problem.measurement_df
-    )
-
-    sim_df_to_plot = sim_df
+    # handle flattened PEtab problems
     petab_problem_to_plot = petab_problem
     if unflattened_petab_problem:
-        sim_df_to_plot = petab.core.unflatten_simulation_df(
-            simulation_df=sim_df,
+        simulation_df = petab.core.unflatten_simulation_df(
+            simulation_df=simulation_df,
             petab_problem=unflattened_petab_problem,
         )
         petab_problem_to_plot = unflattened_petab_problem
 
-    # function to call, to plot data and simulations
+    # plot
     axes = plot_problem(
         petab_problem=petab_problem_to_plot,
-        simulations_df=sim_df_to_plot,
+        simulations_df=simulation_df,
         **kwargs,
     )
     if return_dict:
         return {
             'axes': axes,
-            'amici_result': res,
-            'simulation_df': sim_df_to_plot,
+            'objective_result': objective_result,
+            'simulation_df': simulation_df,
         }
     return axes
 

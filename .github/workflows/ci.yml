@@ -20,15 +20,15 @@ jobs:
 
     steps:
     - name: Check out repository
-      uses: actions/checkout@v2
+      uses: actions/checkout@v3
 
     - name: Prepare python ${{ matrix.python-version }}
-      uses: actions/setup-python@v1
+      uses: actions/setup-python@v4
       with:
         python-version: ${{ matrix.python-version }}
 
     - name: Cache
-      uses: actions/cache@v1
+      uses: actions/cache@v3
       with:
         path: ~/.cache
         key: ${{ runner.os }}-${{ matrix.python-version }}-ci-base
@@ -41,7 +41,7 @@ jobs:
       run: tox -e base
 
     - name: Coverage
-      uses: codecov/codecov-action@v1
+      uses: codecov/codecov-action@v3
       with:
         token: ${{ secrets.CODECOV_TOKEN }}
         file: ./coverage.xml
@@ -54,15 +54,15 @@ jobs:
 
     steps:
     - name: Check out repository
-      uses: actions/checkout@v2
+      uses: actions/checkout@v3
 
     - name: Prepare python ${{ matrix.python-version }}
-      uses: actions/setup-python@v1
+      uses: actions/setup-python@v4
       with:
         python-version: ${{ matrix.python-version }}
 
     - name: Cache
-      uses: actions/cache@v1
+      uses: actions/cache@v3
       with:
         path: ~/.cache
         key: ${{ runner.os }}-${{ matrix.python-version }}-ci-petab
@@ -75,7 +75,7 @@ jobs:
       run: tox -e petab
 
     - name: Coverage
-      uses: codecov/codecov-action@v1
+      uses: codecov/codecov-action@v3
       with:
         token: ${{ secrets.CODECOV_TOKEN }}
         file: ./coverage.xml
@@ -88,10 +88,10 @@ jobs:
 
     steps:
     - name: Check out repository
-      uses: actions/checkout@v2
+      uses: actions/checkout@v3
 
     - name: Prepare python ${{ matrix.python-version }}
-      uses: actions/setup-python@v1
+      uses: actions/setup-python@v4
       with:
         python-version: ${{ matrix.python-version }}
 
@@ -129,15 +129,15 @@ jobs:
 
     steps:
     - name: Check out repository
-      uses: actions/checkout@v2
+      uses: actions/checkout@v3
 
     - name: Prepare python ${{ matrix.python-version }}
-      uses: actions/setup-python@v1
+      uses: actions/setup-python@v4
       with:
         python-version: ${{ matrix.python-version }}
 
     - name: Cache
-      uses: actions/cache@v1
+      uses: actions/cache@v3
       with:
         path: ~/.cache
         key: ${{ runner.os }}-${{ matrix.python-version }}-ci-optimize
@@ -150,12 +150,12 @@ jobs:
       run: tox -e optimize
 
     - name: Coverage
-      uses: codecov/codecov-action@v1
+      uses: codecov/codecov-action@v3
       with:
         token: ${{ secrets.CODECOV_TOKEN }}
         file: ./coverage.xml
 
-  select:
+  hierarchical:
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -174,6 +174,40 @@ jobs:
       uses: actions/cache@v1
       with:
         path: ~/.cache
+        key: ${{ runner.os }}-${{ matrix.python-version }}-ci-hierarchical
+
+    - name: Install dependencies
+      run: .github/workflows/install_deps.sh amici
+
+    - name: Run tests
+      timeout-minutes: 20
+      run: tox -e hierarchical
+
+    - name: Coverage
+      uses: codecov/codecov-action@v1
+      with:
+        token: ${{ secrets.CODECOV_TOKEN }}
+        file: ./coverage.xml
+
+  select:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ['3.8']
+
+    steps:
+    - name: Check out repository
+      uses: actions/checkout@v3
+
+    - name: Prepare python ${{ matrix.python-version }}
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ matrix.python-version }}
+
+    - name: Cache
+      uses: actions/cache@v3
+      with:
+        path: ~/.cache
         key: ${{ runner.os }}-${{ matrix.python-version }}-ci-select
 
     - name: Install dependencies
@@ -184,7 +218,7 @@ jobs:
       run: tox -e select
 
     - name: Coverage
-      uses: codecov/codecov-action@v1
+      uses: codecov/codecov-action@v3
       with:
         token: ${{ secrets.CODECOV_TOKEN }}
         file: ./coverage.xml
@@ -197,15 +231,15 @@ jobs:
 
     steps:
     - name: Check out repository
-      uses: actions/checkout@v2
+      uses: actions/checkout@v3
 
     - name: Prepare python ${{ matrix.python-version }}
-      uses: actions/setup-python@v1
+      uses: actions/setup-python@v4
       with:
         python-version: ${{ matrix.python-version }}
 
     - name: Cache
-      uses: actions/cache@v1
+      uses: actions/cache@v3
       with:
         path: ~/.cache
         key: ${{ runner.os }}-${{ matrix.python-version }}-ci-quality
@@ -231,15 +265,15 @@ jobs:
 
     steps:
     - name: Check out repository
-      uses: actions/checkout@v2
+      uses: actions/checkout@v3
 
     - name: Prepare python ${{ matrix.python-version }}
-      uses: actions/setup-python@v1
+      uses: actions/setup-python@v4
       with:
         python-version: ${{ matrix.python-version }}
 
     - name: Cache
-      uses: actions/cache@v1
+      uses: actions/cache@v3
       with:
         path: ~/.cache
         key: ${{ runner.os }}-${{ matrix.python-version }}-ci-docs
@@ -262,15 +296,15 @@ jobs:
 
     steps:
     - name: Check out repository
-      uses: actions/checkout@v2
+      uses: actions/checkout@v3
 
     - name: Prepare python ${{ matrix.python-version }}
-      uses: actions/setup-python@v1
+      uses: actions/setup-python@v4
       with:
         python-version: ${{ matrix.python-version }}
 
     - name: Cache
-      uses: actions/cache@v1
+      uses: actions/cache@v3
       with:
         path: ~/.cache
         key: ${{ runner.os }}-${{ matrix.python-version }}-ci-notebooks1
@@ -290,15 +324,15 @@ jobs:
 
     steps:
     - name: Check out repository
-      uses: actions/checkout@v2
+      uses: actions/checkout@v3
 
     - name: Prepare python ${{ matrix.python-version }}
-      uses: actions/setup-python@v1
+      uses: actions/setup-python@v4
       with:
         python-version: ${{ matrix.python-version }}
 
     - name: Cache
-      uses: actions/cache@v1
+      uses: actions/cache@v3
       with:
         path: ~/.cache
         key: ${{ runner.os }}-${{ matrix.python-version }}-ci-notebooks2
