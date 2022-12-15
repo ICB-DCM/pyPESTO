@@ -2,24 +2,24 @@
 Jax models interface.
 
 Adds an interface for the construction of loss functions
-incorporating aesara models. This permits computation of derivatives using a
-combination of objective based methods and aesara based backpropagation.
+incorporating jax models. This permits computation of derivatives using a
+combination of objective based methods and jax based autodiff.
 """
 
 import copy
-from typing import Optional, Sequence, Tuple, Callable
+from functools import partial
+from typing import Callable, Sequence, Tuple
 
 import numpy as np
-from functools import partial
 
 from ...C import FVAL, GRAD, HESS, MODE_FUN, RDATAS, ModeType
 from ..base import ObjectiveBase, ResultDict
 
 try:
     import jax
-    import jax.numpy as jnp
-    from jax import core, grad, custom_jvp
     import jax.experimental.host_callback as hcb
+    import jax.numpy as jnp
+    from jax import custom_jvp, grad
 except ImportError:
     raise ImportError(
         "Using a jax objective requires an installation of "
@@ -32,68 +32,126 @@ except ImportError:
 
 
 @partial(custom_jvp, nondiff_argnums=(0,))
-def device_fun(obj, x):
+def _device_fun(obj: 'JaxObjective', x: jnp.DeviceArray):
+    """Jax compatible objective function execution using host callback.
+
+    This function does not actually call the underlying objective function,
+    but instead extracts cached return values. Thus it must only be called
+    from within obj.call_unprocessed and obj.cached_base_ret must be populated.
+
+    Parameters
+    ----------
+    obj:
+        The wrapped jax objective.
+    x:
+        jax computed input array.
+
+    Note
+    ----
+    This function should rather be implemented as class method of JaxObjective,
+    but this is not possible at the time of writing as this is not supported
+    by signature inspection in the underlying bind call.
+    """
     return hcb.call(
-        obj.cached_fval, x,
-        result_shape=jax.ShapeDtypeStruct(
-            (),
-            np.float64
-        ),
+        obj.cached_fval,
+        x,
+        result_shape=jax.ShapeDtypeStruct((), np.float64),
     )
 
 
 @partial(custom_jvp, nondiff_argnums=(0,))
-def device_fun_grad(obj, x):
+def _device_fun_grad(obj: 'JaxObjective', x: jnp.DeviceArray):
+    """Jax compatible objective gradient execution using host callback.
+
+    This function does not actually call the underlying objective function,
+    but instead extracts cached return values. Thus it must only be called
+    from within obj.call_unprocessed and obj.cached_base_ret must be populated.
+
+    Parameters
+    ----------
+    obj:
+        The wrapped jax objective.
+    x:
+        jax computed input array.
+
+    Note
+    ----
+    This function should rather be implemented as class method of JaxObjective,
+    but this is not possible at the time of writing as this is not supported
+    by signature inspection in the underlying bind call.
+    """
     return hcb.call(
-        obj.cached_grad, x,
+        obj.cached_grad,
+        x,
         result_shape=jax.ShapeDtypeStruct(
-            obj.cached_base_ret[GRAD].shape,
-            np.float64
+            obj.cached_base_ret[GRAD].shape,  # bootstrap from cached value
+            np.float64,
         ),
     )
 
 
-def device_fun_hess(obj, x):
+def _device_fun_hess(obj: 'JaxObjective', x: jnp.DeviceArray):
+    """Jax compatible objective Hessian execution using host callback.
+
+    This function does not actually call the underlying objective function,
+    but instead extracts cached return values. Thus it must only be called
+    from within obj.call_unprocessed and obj.cached_base_ret must be populated.
+
+    Parameters
+    ----------
+    obj:
+        The wrapped jax objective.
+    x:
+        jax computed input array.
+
+    Note
+    ----
+    This function should rather be implemented as class method of JaxObjective,
+    but this is not possible at the time of writing as this is not supported
+    by signature inspection in the underlying bind call.
+    """
     return hcb.call(
-        obj.cached_hess, x,
+        obj.cached_hess,
+        x,
         result_shape=jax.ShapeDtypeStruct(
-            obj.cached_base_ret[HESS].shape,
-            np.float64
+            obj.cached_base_ret[HESS].shape,  # bootstrap from cached value
+            np.float64,
         ),
     )
 
 
-def device_fun_jvp(obj, primals, tangents):
-    x, = primals
-    x_dot, = tangents
-    return device_fun(obj, x), device_fun_grad(obj, x).dot(x_dot)
+def _device_fun_jvp(
+    obj: 'JaxObjective', primals: jnp.DeviceArray, tangents: jnp.DeviceArray
+):
+    """JVP implementation for device_fun."""
+    (x,) = primals
+    (x_dot,) = tangents
+    return _device_fun(obj, x), _device_fun_grad(obj, x).dot(x_dot)
 
 
-def device_fun_grad_jvp(obj, primals, tangents):
-    x, = primals
-    x_dot, = tangents
-    return device_fun_grad(obj, x), device_fun_hess(obj, x).dot(x_dot)
+def _device_fun_grad_jvp(
+    obj: 'JaxObjective', primals: jnp.DeviceArray, tangents: jnp.DeviceArray
+):
+    """JVP implementation for device_fun_grad."""
+    (x,) = primals
+    (x_dot,) = tangents
+    return _device_fun_grad(obj, x), _device_fun_hess(obj, x).dot(x_dot)
 
 
-device_fun.defjvp(device_fun_jvp)
-device_fun_grad.defjvp(device_fun_grad_jvp)
+# assign jvp rules to device_fun and device_fun_grad
+_device_fun.defjvp(_device_fun_jvp)
+_device_fun_grad.defjvp(_device_fun_grad_jvp)
 
 
 class JaxObjective(ObjectiveBase):
-    """
-    Wrapper around an ObjectiveBase.
-
-    Computes the gradient at each evaluation, caching it for later calls.
-    Caching is only enabled after the first time the gradient is asked for
-    and disabled whenever the cached gradient is not used, in order not to
-    increase computation time for derivative-free samplers.
+    """Objective function that combines pypesto objectives with jax functions.
 
     Parameters
     ----------
     objective:
-        The `pypesto.ObjectiveBase` to wrap.
+        pyPESTO objective
     jax_fun:
-        Aesara function that maps `aet_x` to the variables of `objective`
+        jax function (not jitted) that computes input to the pyPESTO objective
     """
 
     def __init__(
@@ -113,15 +171,20 @@ class JaxObjective(ObjectiveBase):
 
         self.jax_fun = jax_fun
 
+        # would be cleaner to also have this as class method, but not supported
+        # by signature inspection in bind call.
         def jax_objective(x):
+            # device fun doesn't actually need the value of y, but we need to
+            # compute this here for autodiff to work
             y = jax_fun(x)
-            return device_fun(self, y)
+            return _device_fun(self, y)
 
+        # jit objective & derivatives (not integrated)
         self.jax_objective = jax.jit(jax_objective)
         self.jax_objective_grad = jax.jit(grad(jax_objective))
         self.jax_objective_hess = jax.jit(jax.hessian(jax_objective))
 
-        # compiled input mapping
+        # jit input function
         self.infun = jax.jit(self.jax_fun)
 
         # temporary storage for evaluation results of objective
@@ -163,7 +226,8 @@ class JaxObjective(ObjectiveBase):
         Main method to overwrite from the base class. It handles and
         delegates the actual objective evaluation.
         """
-        # derivative computation in jax always requires lower order derivatives
+        # derivative computation in jax always requires lower order
+        # derivatives, see jvp rules for device_fun and device_fun_grad.
         if 2 in sensi_orders:
             sensi_orders = (0, 1, 2)
         elif 1 in sensi_orders:
@@ -172,7 +236,7 @@ class JaxObjective(ObjectiveBase):
             sensi_orders = (0,)
 
         # this computes all the results from the inner objective, rendering
-        # them accessible as cached values for device_fun & co
+        # them accessible as cached values for device_fun, etc.
         set_return_dict, return_dict = (
             'return_dict' in kwargs,
             kwargs.pop('return_dict', False),
@@ -197,8 +261,8 @@ class JaxObjective(ObjectiveBase):
     def __deepcopy__(self, memodict=None):
         other = JaxObjective(
             copy.deepcopy(self.base_objective),
-            self.jax_fun,
-            self.x_names,
+            copy.deepcopy(self.jax_fun),
+            copy.deepcopy(self.x_names),
         )
 
         return other
