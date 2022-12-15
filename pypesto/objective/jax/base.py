@@ -32,7 +32,7 @@ except ImportError:
 
 
 @partial(custom_jvp, nondiff_argnums=(0,))
-def _device_fun(obj: 'JaxObjective', x: jnp.DeviceArray):
+def _device_fun(obj: 'JaxObjective', x: jnp.array):
     """Jax compatible objective function execution using host callback.
 
     This function does not actually call the underlying objective function,
@@ -60,7 +60,7 @@ def _device_fun(obj: 'JaxObjective', x: jnp.DeviceArray):
 
 
 @partial(custom_jvp, nondiff_argnums=(0,))
-def _device_fun_grad(obj: 'JaxObjective', x: jnp.DeviceArray):
+def _device_fun_grad(obj: 'JaxObjective', x: jnp.array):
     """Jax compatible objective gradient execution using host callback.
 
     This function does not actually call the underlying objective function,
@@ -90,7 +90,7 @@ def _device_fun_grad(obj: 'JaxObjective', x: jnp.DeviceArray):
     )
 
 
-def _device_fun_hess(obj: 'JaxObjective', x: jnp.DeviceArray):
+def _device_fun_hess(obj: 'JaxObjective', x: jnp.array):
     """Jax compatible objective Hessian execution using host callback.
 
     This function does not actually call the underlying objective function,
@@ -120,8 +120,13 @@ def _device_fun_hess(obj: 'JaxObjective', x: jnp.DeviceArray):
     )
 
 
+# define custom jvp for device_fun & device_fun_grad to enable autodiff, see
+# https://jax.readthedocs.io/en/latest/notebooks/Custom_derivative_rules_for_Python_code.html
+
+
+@_device_fun.defjvp
 def _device_fun_jvp(
-    obj: 'JaxObjective', primals: jnp.DeviceArray, tangents: jnp.DeviceArray
+    obj: 'JaxObjective', primals: jnp.array, tangents: jnp.array
 ):
     """JVP implementation for device_fun."""
     (x,) = primals
@@ -129,18 +134,14 @@ def _device_fun_jvp(
     return _device_fun(obj, x), _device_fun_grad(obj, x).dot(x_dot)
 
 
+@_device_fun_grad.defjvp
 def _device_fun_grad_jvp(
-    obj: 'JaxObjective', primals: jnp.DeviceArray, tangents: jnp.DeviceArray
+    obj: 'JaxObjective', primals: jnp.array, tangents: jnp.array
 ):
     """JVP implementation for device_fun_grad."""
     (x,) = primals
     (x_dot,) = tangents
     return _device_fun_grad(obj, x), _device_fun_hess(obj, x).dot(x_dot)
-
-
-# assign jvp rules to device_fun and device_fun_grad
-_device_fun.defjvp(_device_fun_jvp)
-_device_fun_grad.defjvp(_device_fun_grad_jvp)
 
 
 class JaxObjective(ObjectiveBase):
