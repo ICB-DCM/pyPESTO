@@ -16,6 +16,7 @@ from ..history import (
     OptimizerHistory,
     create_history,
 )
+from ..objective import Objective
 from ..problem import Problem
 from ..result import OptimizerResult
 from .load import fill_result_from_history
@@ -382,7 +383,13 @@ class ScipyOptimizer(Optimizer):
                 'trust-krylov',
                 'trust-constr',
             ]
-
+            # switch off passing over functions if not applicable (e.g.
+            # NegLogParameterPrior) since grad/hess attributes do not exist
+            if not isinstance(objective, Objective):
+                if not hasattr(objective, 'grad'):
+                    objective.grad = False
+                if not hasattr(objective, 'hess'):
+                    objective.hess = False
             # Todo Resolve warning by implementing saving of hess temporarily
             #  in objective and pass to scipy seperately
             if objective.hess is True:
