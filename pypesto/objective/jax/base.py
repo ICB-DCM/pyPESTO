@@ -23,7 +23,7 @@ try:
 except ImportError:
     raise ImportError(
         "Using a jax objective requires an installation of "
-        "the python package jax. Please install aesara via "
+        "the python package jax. Please install jax via "
         "`pip install jax jaxlib`."
     )
 
@@ -37,7 +37,7 @@ def _device_fun(obj: 'JaxObjective', x: jnp.DeviceArray):
 
     This function does not actually call the underlying objective function,
     but instead extracts cached return values. Thus it must only be called
-    from within obj.call_unprocessed and obj.cached_base_ret must be populated.
+    from within obj.call_unprocessed, and obj.cached_base_ret must be populated.
 
     Parameters
     ----------
@@ -145,6 +145,8 @@ _device_fun_grad.defjvp(_device_fun_grad_jvp)
 
 class JaxObjective(ObjectiveBase):
     """Objective function that combines pypesto objectives with jax functions.
+
+    The generated objective function will evaluate objective(jax_fun(x)).
 
     Parameters
     ----------
