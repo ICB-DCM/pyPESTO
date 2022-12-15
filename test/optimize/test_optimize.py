@@ -522,3 +522,28 @@ def test_ess(problem, local_optimizer, ess_type, request):
         assert res.optimize_result[0].fval < 20
     else:
         raise AssertionError()
+
+
+def test_scipy_integrated_grad():
+    integrated = True
+    obj = rosen_for_sensi(max_sensi_order=2, integrated=integrated)['obj']
+    lb = 0 * np.ones((1, 2))
+    ub = 1 * np.ones((1, 2))
+    x_guesses = [[0.5, 0.5]]
+    problem = pypesto.Problem(objective=obj, lb=lb, ub=ub, x_guesses=x_guesses)
+    optimizer = optimize.ScipyOptimizer(options={'maxiter': 10})
+    optimize_options = optimize.OptimizeOptions(allow_failed_starts=False)
+    history_options = pypesto.HistoryOptions(trace_record=True)
+    result = optimize.minimize(
+        problem=problem,
+        optimizer=optimizer,
+        n_starts=1,
+        startpoint_method=pypesto.startpoint.uniform,
+        options=optimize_options,
+        history_options=history_options,
+        progress_bar=False,
+    )
+    assert (
+        len(result.optimize_result.history[0].get_fval_trace())
+        == result.optimize_result.history[0].n_fval
+    )
