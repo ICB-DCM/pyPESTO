@@ -238,7 +238,7 @@ class SacessManager:
                         (self._best_known_fx.value - fx)
                         / self._best_known_fx.value
                     )
-                    < self._rejection_threshold.value
+                    > self._rejection_threshold.value
                 )
             ):
                 self._logger.debug(
@@ -309,7 +309,7 @@ class SacessWorker:
         self._n_received_solutions = 0
         self._neval = 0
         self._ess_kwargs = ess_kwargs
-        self._acceptance_threshold = 1e-6  # TODO
+        self._acceptance_threshold = 0.005
         self._n_sent_solutions = 0
         self._max_walltime_s = max_walltime_s
         self._start_time = None
@@ -337,6 +337,8 @@ class SacessWorker:
         )
         refset.initialize_random(n_diverse=self._ess_kwargs['n_diverse'])
         i_iter = 0
+        ess_results = pypesto.Result(problem=problem)
+
         while self._keep_going():
             # run standard ESS
             ess_kwargs = self._ess_kwargs.copy()
@@ -347,7 +349,7 @@ class SacessWorker:
             )
             ess = ESSOptimizer(**ess_kwargs)
             ess.logger.setLevel(logging.WARNING)
-            ess_results = ess.minimize(
+            cur_ess_results = ess.minimize(
                 problem=problem,
                 startpoint_method=startpoint_method,
                 refset=refset,
@@ -357,7 +359,10 @@ class SacessWorker:
                 f"f(x)={ess.fx_best}"
             )
 
-            # TODO accumulate results from all ESSs
+            ess_results.optimize_result.append(
+                cur_ess_results.optimize_result,
+                prefix=f"{self._worker_idx}_{i_iter}_",
+            )
             write_result(
                 ess_results,
                 f"sacess-{self._worker_idx}_tmp.h5",
@@ -372,12 +377,12 @@ class SacessWorker:
             # cooperation step
             # try to obtain a new solution from manager
             recv_x, recv_fx = self._manager.get_best_solution()
-            self._logger.debug(
-                f"Worker {self._worker_idx} received solution {recv_fx} "
-                f"(known best: {self._best_known_fx})."
-            )
-            if recv_fx < self._best_known_fx or not np.isfinite(
-                self._best_known_fx
+            # self._logger.debug(
+            #     f"Worker {self._worker_idx} received solution {recv_fx} "
+            #     f"(known best: {self._best_known_fx})."
+            # )
+            if recv_fx < self._best_known_fx or (
+                not np.isfinite(self._best_known_fx) and np.isfinite(recv_x)
             ):
                 logging.debug(
                     f"Worker {self._worker_idx} received better solution."
@@ -420,18 +425,17 @@ class SacessWorker:
 
         # solution improves best value by at least a factor of ...
         if (
-            np.isfinite(fx)
-            and not np.isfinite(self._best_known_fx)
+            (np.isfinite(fx) and not np.isfinite(self._best_known_fx))
             or (self._best_known_fx == 0 and fx < 0)
             or (
                 fx < self._best_known_fx
                 and abs((self._best_known_fx - fx) / fx)
-                < self._acceptance_threshold
+                > self._acceptance_threshold
             )
         ):
-            self._logger.debug(
-                f"Worker {self._worker_idx} sending solution {fx}."
-            )
+            # self._logger.debug(
+            #     f"Worker {self._worker_idx} sending solution {fx}."
+            # )
             self._n_sent_solutions += 1
             self._best_known_fx = fx
 
