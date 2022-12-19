@@ -257,6 +257,8 @@ class SacessManager:
                 self._rejections.value += 1
                 self._logger.debug(
                     f"Rejected solution from worker {sender_idx} "
+                    f"rel change: {abs((self._best_known_fx.value - fx) / self._best_known_fx.value)} "
+                    f" < {self._rejection_threshold} "
                     f"(total rejections: {self._rejections.value})."
                 )
                 # adapt acceptance threshold if too many solutions have been
@@ -341,27 +343,19 @@ class SacessWorker:
 
         while self._keep_going():
             # run standard ESS
-            ess_kwargs = self._ess_kwargs.copy()
-            # account for sacess walltime limit
-            ess_kwargs['max_walltime_s'] = min(
-                ess_kwargs.get('max_walltime_s', np.inf),
-                self._max_walltime_s - (time.time() - self._start_time),
-            )
-            ess = ESSOptimizer(**ess_kwargs)
-            ess.logger.setLevel(logging.WARNING)
-            cur_ess_results = ess.minimize(
+            ess, cur_ess_results = self._run_ess(
                 problem=problem,
                 startpoint_method=startpoint_method,
                 refset=refset,
             )
-            self._logger.debug(
-                f"#{self._worker_idx}: ESS finished with best "
-                f"f(x)={ess.fx_best}"
-            )
 
+            # drop all but the 10 best results
             ess_results.optimize_result.append(
                 cur_ess_results.optimize_result,
                 prefix=f"{self._worker_idx}_{i_iter}_",
+            )
+            ess_results.optimize_result.list = (
+                ess_results.optimize_result.list[:10]
             )
             write_result(
                 ess_results,
@@ -369,8 +363,8 @@ class SacessWorker:
                 overwrite=True,
                 optimize=True,
             )
-            # check if the last local ESS best solution is sufficiently better
-            # than the sacess-wide best solution
+            # check if the best solution of the last local ESS is sufficiently
+            # better than the sacess-wide best solution
             self.maybe_update_best(ess.x_best, ess.fx_best)
             self._best_known_fx = min(ess.fx_best, self._best_known_fx)
 
@@ -414,6 +408,34 @@ class SacessWorker:
 
             i_iter += 1
 
+    def _run_ess(
+        self,
+        problem: Problem,
+        startpoint_method: StartpointMethod,
+        refset: RefSet,
+    ) -> Tuple[ESSOptimizer, pypesto.Result]:
+        """Run ESS."""
+        ess_kwargs = self._ess_kwargs.copy()
+        # account for sacess walltime limit
+        ess_kwargs['max_walltime_s'] = min(
+            ess_kwargs.get('max_walltime_s', np.inf),
+            self._max_walltime_s - (time.time() - self._start_time),
+        )
+
+        ess = ESSOptimizer(**ess_kwargs)
+        ess.logger.setLevel(logging.WARNING)
+
+        cur_ess_results = ess.minimize(
+            problem=problem,
+            startpoint_method=startpoint_method,
+            refset=refset,
+        )
+        self._logger.debug(
+            f"#{self._worker_idx}: ESS finished with best "
+            f"f(x)={ess.fx_best}"
+        )
+        return ess, cur_ess_results
+
     def maybe_update_best(self, x: np.array, fx: float):
         """Maybe update the best known solution and send it to the manager."""
         self._logger.debug(
@@ -433,9 +455,9 @@ class SacessWorker:
                 > self._acceptance_threshold
             )
         ):
-            # self._logger.debug(
-            #     f"Worker {self._worker_idx} sending solution {fx}."
-            # )
+            self._logger.debug(
+                f"Worker {self._worker_idx} sending solution {fx}."
+            )
             self._n_sent_solutions += 1
             self._best_known_fx = fx
 
