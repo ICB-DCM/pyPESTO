@@ -20,6 +20,8 @@ from ..result import Result
 
 AmiciModel = Union['amici.Model', 'amici.ModelPtr']
 
+__all__ = ["visualize_optimized_model_fit", "time_trajectory_model"]
+
 
 def visualize_optimized_model_fit(
     petab_problem: petab.Problem,
@@ -33,11 +35,11 @@ def visualize_optimized_model_fit(
     """
     Visualize the optimized model fit of a PEtab problem.
 
-    Function calls the PEtab visualization file of the `petab_problem` and
+    Function calls the PEtab visualization file of the ``petab_problem`` and
     visualizes the fit of the optimized parameter. Common additional
-    argument is `subplot_dir` to specify the directory each subplot is
+    argument is ``subplot_dir`` to specify the directory each subplot is
     saved to. Further keyword arguments are delegated to
-    petab.visualize.plot_with_vis_spec, see there for more information.
+    :func:`petab.visualize.plot_with_vis_spec`, see there for more information.
 
     Parameters
     ----------
@@ -56,7 +58,7 @@ def visualize_optimized_model_fit(
         If the original PEtab problem is flattened, this can be passed
         to plot with the original unflattened problem.
     kwargs:
-        Passed to `petab.visualize.plot_problem`.
+        Passed to :func:`petab.visualize.plot_problem`.
 
     Returns
     -------
