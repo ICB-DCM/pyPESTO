@@ -10,6 +10,7 @@ import numpy as np
 
 import pypesto
 from pypesto.startpoint import StartpointMethod
+from pypesto.store.read_from_hdf5 import read_result
 
 from ..optimize import Problem
 from .ess import ESSExitFlag, ESSOptimizer
@@ -68,7 +69,7 @@ class SacessOptimizer:
         startpoint_method: StartpointMethod,
     ):
         """Solve the given optimization problem."""
-        logging.info(
+        logging.debug(
             f"Running sacess with {self.num_workers} "
             f"workers: {self.ess_init_args}"
         )
@@ -106,24 +107,23 @@ class SacessOptimizer:
             for p in worker_processes:
                 p.join()
 
-            # TODO: where are the good solutions recorded?
-            logging.info(
-                f"---- global best {sacess_manager._best_known_fx.value}"
-            )
+            logging.info(f"Global best: {sacess_manager._best_known_fx.value}")
 
         return self._create_result(problem)
 
     def _create_result(self, problem: Problem) -> pypesto.Result:
-        import os
+        """Create result object.
 
-        from pypesto.store.read_from_hdf5 import read_result
-
+        Creates an overall Result object from the results saved by the workers.
+        """
+        # gather results from workers and delete temporary result files
         result = None
         for worker_idx in range(self.num_workers):
+            tmp_result_filename = f"sacess-{worker_idx}_tmp.h5"
             tmp_result = read_result(
-                f"sacess-{worker_idx}_tmp.h5", problem=False, optimize=True
+                tmp_result_filename, problem=False, optimize=True
             )
-            os.remove(f"sacess-{worker_idx}_tmp.h5")
+            os.remove(tmp_result_filename)
             if result is None:
                 result = tmp_result
             else:
@@ -142,6 +142,21 @@ class SacessManager:
 
     Manages shared memory of a SACESS run. Loosely corresponds to the manager
     process in [PenasGon2017]_.
+
+    Attributes
+    ----------
+    _num_workers: Number of workers
+    _ess_options: ESS options for each worker
+    _best_known_fx: Best objective value encountered so far
+    _best_known_x: Parameters corresponding to ``_best_known_fx``
+    _best_settings: Settings of the best-performing ESS.
+    _worker_scores: Performance score of the different workers
+    _worker_comms: Number of communications received from the individual
+        workers
+    _rejections: Number of rejected solutions received from workers since last
+        adaptation of ``_rejection_threshold``.
+    _lock: Lock for accessing shared state.
+    logger: A logger instance
     """
 
     def __init__(
@@ -155,14 +170,10 @@ class SacessManager:
         self._best_known_fx = shmem_manager.Value("d", np.inf)
         self._best_known_x = shmem_manager.Array("d", [np.nan] * dim)
         self._best_settings = shmem_manager.dict()
-        self._scores = shmem_manager.Array("d", range(self._num_workers))
-        # Number of rejected solutions received from workers since last
-        #  adaptation of epsilon
         self._rejections = shmem_manager.Value("i", 0)
         # initial threshold for ...
         self._rejection_threshold = shmem_manager.Value("d", 0.1)
         self._lock = shmem_manager.RLock()
-
         # scores of the workers, ordered by worker-index
         # initial score is the worker index
         self._worker_scores = shmem_manager.Array(
@@ -174,15 +185,17 @@ class SacessManager:
         self.logger = logging.getLogger()
 
     def get_best_solution(self) -> Tuple[np.array, float]:
+        """Get the best objective value and corresponding parameters."""
         with self._lock:
             return np.array(self._best_known_x), self._best_known_fx.value
 
-    def get_best_settings(self):
+    def get_best_settings(self) -> Dict:
+        """Get ESS settings of the best performing worker."""
         with self._lock:
             # send settings of the best performing ESS to the workers that requested it
             # send newsettings[np.argmax(self.scores)]
             # TODO, not neessarily from best val, but high potential
-            return self._best_settings.value
+            return self._best_settings
 
     def submit_solution(
         self,
@@ -192,6 +205,10 @@ class SacessManager:
         elapsed_time_s: float,
         ess_kwargs: Dict[str, Any],
     ):
+        """Submit a solution.
+
+        To be called by a worker.
+        """
         with self._lock:
             # cooperation step
             # solution improves best value by at least a factor of ...
@@ -218,7 +235,8 @@ class SacessManager:
                 # reject solution
                 self._rejections.value += 1
                 self.logger.debug(
-                    f"Rejected solution from worker {sender_idx} (total rejections: {self._rejections.value})."
+                    f"Rejected solution from worker {sender_idx} "
+                    "(total rejections: {self._rejections.value})."
                 )
                 # adapt acceptance threshold if too many solutions have been
                 #  rejected
