@@ -149,14 +149,16 @@ class SacessManager:
     _ess_options: ESS options for each worker
     _best_known_fx: Best objective value encountered so far
     _best_known_x: Parameters corresponding to ``_best_known_fx``
-    _best_settings: Settings of the best-performing ESS.
-    _worker_scores: Performance score of the different workers
+    _worker_scores: Performance score of the different workers (the higher, the
+        more promising the respective worker is considered)
     _worker_comms: Number of communications received from the individual
         workers
     _rejections: Number of rejected solutions received from workers since last
         adaptation of ``_rejection_threshold``.
+    _rejection_threshold: Threshold for relative objective improvements that
+        incoming solutions have to pass to be accepted
     _lock: Lock for accessing shared state.
-    logger: A logger instance
+    _logger: A logger instance
     """
 
     def __init__(
@@ -169,33 +171,33 @@ class SacessManager:
         self._ess_options = [shmem_manager.dict(o) for o in ess_options]
         self._best_known_fx = shmem_manager.Value("d", np.inf)
         self._best_known_x = shmem_manager.Array("d", [np.nan] * dim)
-        self._best_settings = shmem_manager.dict()
         self._rejections = shmem_manager.Value("i", 0)
-        # initial threshold for ...
+        # initial value from [PenasGon2017]_ p.9
         self._rejection_threshold = shmem_manager.Value("d", 0.1)
-        self._lock = shmem_manager.RLock()
         # scores of the workers, ordered by worker-index
         # initial score is the worker index
         self._worker_scores = shmem_manager.Array(
             "d", range(self._num_workers)
         )
-        self._worker_comms = shmem_manager.Array(
-            "d", [0.0] * self._num_workers
-        )
-        self.logger = logging.getLogger()
+        self._worker_comms = shmem_manager.Array("i", [0] * self._num_workers)
+        self._lock = shmem_manager.RLock()
+        self._logger = logging.getLogger()
 
     def get_best_solution(self) -> Tuple[np.array, float]:
         """Get the best objective value and corresponding parameters."""
         with self._lock:
             return np.array(self._best_known_x), self._best_known_fx.value
 
-    def get_best_settings(self) -> Dict:
-        """Get ESS settings of the best performing worker."""
+    def reconfigure_worker(self, worker_idx: int) -> Dict:
+        """Reconfigure the given worker.
+
+        Updates the ESS options for the given worker to those of the worker at
+        the top of the scoreboard and returns those settings.
+        """
         with self._lock:
-            # send settings of the best performing ESS to the workers that requested it
-            # send newsettings[np.argmax(self.scores)]
-            # TODO, not neessarily from best val, but high potential
-            return self._best_settings
+            leader_options = self._ess_options[np.argmax(self._worker_scores)]
+            self._ess_options[worker_idx] = leader_options
+            return leader_options
 
     def submit_solution(
         self,
@@ -203,7 +205,6 @@ class SacessManager:
         fx: float,
         sender_idx: int,
         elapsed_time_s: float,
-        ess_kwargs: Dict[str, Any],
     ):
         """Submit a solution.
 
@@ -217,24 +218,21 @@ class SacessManager:
             ) / self._best_known_fx.value < self._rejection_threshold.value or (
                 np.isfinite(fx) and not np.isfinite(self._best_known_fx.value)
             ):
-                self.logger.debug(
+                self._logger.debug(
                     f"Accepted solution from worker {sender_idx}: {fx}."
                 )
                 # accept
                 self._best_known_fx.value = fx
                 self._best_known_x.value = x
-                self._best_settings.value = ess_kwargs
                 self._worker_comms[sender_idx] += 1
 
-                # TODO unclear why a longer duration since the last accepted
-                #  solution gives a higher score
                 self._worker_scores[sender_idx] = (
                     self._worker_comms[sender_idx] * elapsed_time_s
                 )
             else:
                 # reject solution
                 self._rejections.value += 1
-                self.logger.debug(
+                self._logger.debug(
                     f"Rejected solution from worker {sender_idx} "
                     "(total rejections: {self._rejections.value})."
                 )
@@ -242,7 +240,7 @@ class SacessManager:
                 #  rejected
                 if self._rejections.value > self._num_workers:
                     self._rejection_threshold.value /= 2
-                    self.logger.debug(
+                    self._logger.debug(
                         "Lowered acceptance threshold to "
                         f"{self._rejection_threshold.value}."
                     )
@@ -263,20 +261,23 @@ class SacessWorker:
         worker_idx: int,
         max_walltime_s: float = np.inf,
     ):
-        self.manager = manager
-        self.worker_idx = worker_idx
-        self.best_known_fx = np.inf
-        # number of received solution since the last one was sent to the manager
-        self.n_received_solutions = 0
-        self.iter_solver = 0
-        # number of function evaluations (?) since the last solution was sent to the manager
-        self.neval = 0
-        self.ess_kwargs = ess_kwargs
-        self.acceptance_threshold = 1e-6  # TODO
-        self.n_sent_solutions = 0
-        self.max_walltime_s = max_walltime_s
-        self.logger = logging.getLogger(str(os.getpid()))
-        self.manager.logger = self.logger
+        self._manager = manager
+        self._worker_idx = worker_idx
+        self._best_known_fx = np.inf
+        # number of received solution since the last one was sent to the
+        # manager
+        self._n_received_solutions = 0
+        self._iter_solver = 0
+        # number of function evaluations (?) since the last solution was sent
+        # to the manager
+        self._neval = 0
+        self._ess_kwargs = ess_kwargs
+        self._acceptance_threshold = 1e-6  # TODO
+        self._n_sent_solutions = 0
+        self._max_walltime_s = max_walltime_s
+        self._logger = logging.getLogger(str(os.getpid()))
+        self._manager._logger = self._logger
+        self._start_time = None
 
     def run(
         self,
@@ -288,117 +289,120 @@ class SacessWorker:
             startpoint_method=startpoint_method,
             n_threads=1,
         )
-        self.start_time = time.time()
+        self._start_time = time.time()
         # create refset from ndiverse
-        refset = RefSet(dim=self.ess_kwargs['dim_refset'], evaluator=evaluator)
-        refset.initialize_random(n_diverse=self.ess_kwargs['n_diverse'])
+        refset = RefSet(
+            dim=self._ess_kwargs['dim_refset'], evaluator=evaluator
+        )
+        refset.initialize_random(n_diverse=self._ess_kwargs['n_diverse'])
         i_iter = 0
         while self._keep_going():
             # run standard ESS
-            ess = ESSOptimizer(**self.ess_kwargs)
+            ess = ESSOptimizer(**self._ess_kwargs)
             ess.logger.setLevel(logging.WARNING)
             ess_results = ess.minimize(
                 problem=problem,
                 startpoint_method=startpoint_method,
                 refset=refset,
             )
-            self.logger.debug(
-                f"#{self.worker_idx}: ESS finished with best "
+            self._logger.debug(
+                f"#{self._worker_idx}: ESS finished with best "
                 f"f(x)={ess.fx_best}"
             )
             from ...store.save_to_hdf5 import write_result
 
             write_result(
                 ess_results,
-                f"sacess-{self.worker_idx}_tmp.h5",
+                f"sacess-{self._worker_idx}_tmp.h5",
                 overwrite=True,
                 optimize=True,
             )
             # check if the last local ESS best solution is sufficiently better
             # than the sacess-wide best solution
-            self.maybe_update_best(ess.x_best, ess.fx_best, self.ess_kwargs)
-            self.best_known_fx = min(ess.fx_best, self.best_known_fx)
+            self.maybe_update_best(ess.x_best, ess.fx_best)
+            self._best_known_fx = min(ess.fx_best, self._best_known_fx)
 
             # cooperation step
             # try to obtain a new solution from manager
-            recv_x, recv_fx = self.manager.get_best_solution()
-            self.logger.debug(
-                f"Worker {self.worker_idx} received solution {recv_fx} (known best: {self.best_known_fx})."
+            recv_x, recv_fx = self._manager.get_best_solution()
+            self._logger.debug(
+                f"Worker {self._worker_idx} received solution {recv_fx} "
+                f"(known best: {self._best_known_fx})."
             )
-            if recv_fx < self.best_known_fx:
+            if recv_fx < self._best_known_fx:
                 logging.warning(
-                    f"Worker {self.worker_idx} received better solution."
+                    f"Worker {self._worker_idx} received better solution."
                 )
-                self.best_known_fx = recv_x
-                self.n_received_solutions += 1
+                self._best_known_fx = recv_x
+                self._n_received_solutions += 1
                 self.replace_solution(refset, x=recv_x, fx=recv_fx)
 
             # adaptive step
             # Update ESS settings if we received way more solutions than we
             # sent
             if (
-                self.n_received_solutions > 10 * self.n_sent_solutions + 20
-                and self.neval > problem.dim * 5000
+                self._n_received_solutions > 10 * self._n_sent_solutions + 20
+                and self._neval > problem.dim * 5000
             ):
-                self.ess_kwargs = self.manager.get_best_settings()
-                self.logger.debug(
-                    f"Updated settings on worker {self.worker_idx} to "
-                    f"{self.ess_kwargs}"
+                self._ess_kwargs = self._manager.reconfigure_worker(
+                    self._worker_idx
+                )
+                self._logger.debug(
+                    f"Updated settings on worker {self._worker_idx} to "
+                    f"{self._ess_kwargs}"
                 )
 
-            self.logger.info(
-                f"sacess worker {self.worker_idx} iteration {i_iter} "
-                f"(best: {self.best_known_fx})."
+            self._logger.info(
+                f"sacess worker {self._worker_idx} iteration {i_iter} "
+                f"(best: {self._best_known_fx})."
             )
 
             i_iter += 1
 
-    def maybe_update_best(self, x, fx, ess_kwargs):
-        self.logger.debug(
-            f"Worker {self.worker_idx} maybe sending solution {fx}. "
-            f"{self.best_known_fx} {fx} {(self.best_known_fx - fx) / fx} {self.acceptance_threshold}"
+    def maybe_update_best(self, x, fx):
+        self._logger.debug(
+            f"Worker {self._worker_idx} maybe sending solution {fx}. "
+            f"{self._best_known_fx} {fx} {(self._best_known_fx - fx) / fx} "
+            f"{self._acceptance_threshold}"
         )
 
         # solution improves best value by at least a factor of ...
-        if (self.best_known_fx - fx) / fx < self.acceptance_threshold or (
-            np.isfinite(fx) and not np.isfinite(self.best_known_fx)
+        if (self._best_known_fx - fx) / fx < self._acceptance_threshold or (
+            np.isfinite(fx) and not np.isfinite(self._best_known_fx)
         ):
-            self.logger.debug(
-                f"Worker {self.worker_idx} sending solution {fx}."
+            self._logger.debug(
+                f"Worker {self._worker_idx} sending solution {fx}."
             )
-            self.n_sent_solutions += 1
-            self.best_known_fx = fx
+            self._n_sent_solutions += 1
+            self._best_known_fx = fx
 
             # send best_known_fx to manager
-            self.neval = 0
-            self.n_received_solutions = 0
-            elapsed_time = time.time() - self.start_time
-            self.manager.submit_solution(
+            self._neval = 0
+            self._n_received_solutions = 0
+            elapsed_time = time.time() - self._start_time
+            self._manager.submit_solution(
                 x=x,
                 fx=fx,
-                ess_kwargs=ess_kwargs,
-                sender_idx=self.worker_idx,
+                sender_idx=self._worker_idx,
                 elapsed_time_s=elapsed_time,
             )
 
-    def replace_solution(self, refset: RefSet, x: np.array, fx: float):
+    @staticmethod
+    def replace_solution(refset: RefSet, x: np.array, fx: float):
         """Replace the global refset member by the given solution."""
-        # (page 8, top)
-        # on first call, replace the worst solution
-        # TODO: first call of each ess or first call on worker?
+        # [PenasGon2017]_ page 8, top
         if "cooperative_solution" not in refset.attributes:
             label = np.zeros(shape=refset.dim)
+            # on first call, mark the worst solution as "cooperative solution"
             label[np.argmax(refset.fx)] = 1
             refset.add_attribute("cooperative_solution", label)
 
-        # mark that one "cooperative solution"
-        # subsequently replace the cooperative solution
-        else:
-            refset.update(
-                i=np.argwhere(refset.attributes["cooperative_solution"]),
-                x=x,
-                fx=fx,
-            )
+        # replace the cooperative solution
+        refset.update(
+            i=np.argwhere(refset.attributes["cooperative_solution"]),
+            x=x,
+            fx=fx,
+        )
 
     def _keep_going(self):
         """Check exit criteria.
@@ -408,10 +412,10 @@ class SacessWorker:
         ``True`` if none of the exit criteria is met, ``False`` otherwise.
         """
         # elapsed time
-        if time.time() - self.start_time >= self.max_walltime_s:
+        if time.time() - self._start_time >= self._max_walltime_s:
             self.exit_flag = ESSExitFlag.MAX_TIME
-            self.logger.debug(
-                f"Max walltime ({self.max_walltime_s}s) exceeded."
+            self._logger.debug(
+                f"Max walltime ({self._max_walltime_s}s) exceeded."
             )
             return False
 
