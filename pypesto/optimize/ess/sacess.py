@@ -9,9 +9,10 @@ from typing import Any, Dict, List, Tuple
 import numpy as np
 
 import pypesto
-from pypesto.startpoint import StartpointMethod
-from pypesto.store.read_from_hdf5 import read_result
 
+from ...startpoint import StartpointMethod
+from ...store.read_from_hdf5 import read_result
+from ...store.save_to_hdf5 import write_result
 from ..optimize import Problem
 from .ess import ESSExitFlag, ESSOptimizer
 from .function_evaluator import FunctionEvaluator
@@ -107,7 +108,9 @@ class SacessOptimizer:
             for p in worker_processes:
                 p.join()
 
-            logging.info(f"Global best: {sacess_manager._best_known_fx.value}")
+            logging.info(
+                f"Global best: {sacess_manager.get_best_solution()[1]}"
+            )
 
         return self._create_result(problem)
 
@@ -230,8 +233,11 @@ class SacessManager:
                 # known value is 0.
                 or (self._best_known_fx.value == 0 and fx < 0)
                 or (
-                    (self._best_known_fx.value - fx)
-                    / self._best_known_fx.value
+                    fx < self._best_known_fx.value
+                    and abs(
+                        (self._best_known_fx.value - fx)
+                        / self._best_known_fx.value
+                    )
                     < self._rejection_threshold.value
                 )
             ):
@@ -340,7 +346,7 @@ class SacessWorker:
                 self._max_walltime_s - (time.time() - self._start_time),
             )
             ess = ESSOptimizer(**ess_kwargs)
-            ess.logger.setLevel(logging.DEBUG)
+            ess.logger.setLevel(logging.WARNING)
             ess_results = ess.minimize(
                 problem=problem,
                 startpoint_method=startpoint_method,
@@ -350,7 +356,6 @@ class SacessWorker:
                 f"#{self._worker_idx}: ESS finished with best "
                 f"f(x)={ess.fx_best}"
             )
-            from ...store.save_to_hdf5 import write_result
 
             # TODO accumulate results from all ESSs
             write_result(
@@ -411,8 +416,15 @@ class SacessWorker:
         )
 
         # solution improves best value by at least a factor of ...
-        if (self._best_known_fx - fx) / fx < self._acceptance_threshold or (
-            np.isfinite(fx) and not np.isfinite(self._best_known_fx)
+        if (
+            np.isfinite(fx)
+            and not np.isfinite(self._best_known_fx)
+            or (self._best_known_fx == 0 and fx < 0)
+            or (
+                fx < self._best_known_fx
+                and abs((self._best_known_fx - fx) / fx)
+                < self._acceptance_threshold
+            )
         ):
             self._logger.debug(
                 f"Worker {self._worker_idx} sending solution {fx}."
