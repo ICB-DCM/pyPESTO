@@ -376,17 +376,20 @@ class SacessWorker:
                 f"Worker {self._worker_idx} received solution {recv_fx} "
                 f"(known best: {self._best_known_fx})."
             )
-            if recv_fx < self._best_known_fx:
-                logging.warning(
+            if recv_fx < self._best_known_fx or not np.isfinite(
+                self._best_known_fx
+            ):
+                logging.debug(
                     f"Worker {self._worker_idx} received better solution."
                 )
-                self._best_known_fx = recv_x
+                self._best_known_fx = recv_fx
                 self._n_received_solutions += 1
                 self.replace_solution(refset, x=recv_x, fx=recv_fx)
 
             # adaptive step
             # Update ESS settings if we received way more solutions than we
             # sent
+            # Magic numbers from [PenasGon2017]_ algorithm 5
             if (
                 self._n_received_solutions > 10 * self._n_sent_solutions + 20
                 and self._neval > problem.dim * 5000
