@@ -209,14 +209,31 @@ class SacessManager:
         """Submit a solution.
 
         To be called by a worker.
+
+        Parameters
+        ----------
+        x: Model parameters
+        fx: Objective value corresponding to ``x``
+        sender_idx: Index of the worker submitting the results.
+        elapsed_time_s: Elapsed time since the beginning of the sacess run.
         """
         with self._lock:
             # cooperation step
             # solution improves best value by at least a factor of ...
             if (
-                self._best_known_fx.value - fx
-            ) / self._best_known_fx.value < self._rejection_threshold.value or (
-                np.isfinite(fx) and not np.isfinite(self._best_known_fx.value)
+                # initially _best_known_fx is NaN
+                (
+                    np.isfinite(fx)
+                    and not np.isfinite(self._best_known_fx.value)
+                )
+                # avoid division by 0. just accept any improvement if best
+                # known value is 0.
+                or (self._best_known_fx.value == 0 and fx < 0)
+                or (
+                    (self._best_known_fx.value - fx)
+                    / self._best_known_fx.value
+                    < self._rejection_threshold.value
+                )
             ):
                 self._logger.debug(
                     f"Accepted solution from worker {sender_idx}: {fx}."
@@ -234,7 +251,7 @@ class SacessManager:
                 self._rejections.value += 1
                 self._logger.debug(
                     f"Rejected solution from worker {sender_idx} "
-                    "(total rejections: {self._rejections.value})."
+                    f"(total rejections: {self._rejections.value})."
                 )
                 # adapt acceptance threshold if too many solutions have been
                 #  rejected
@@ -252,6 +269,25 @@ class SacessWorker:
 
     Repeatedly runs ESSs and exchanges information with a SacessManager.
     Corresponds to a worker process in [PenasGon2017]_.
+
+    Attributes
+    ----------
+    _manager: The sacess manager this worker is working for.
+    _worker_idx: Index of this worker.
+    _best_known_fx: Best objective value known to this worker (obtained on its
+        own or received from the manager).
+    _n_received_solutions: Number of solutions received by this worker since
+        the last one was sent to the manager.
+    _neval: Number of objective evaluations since the last solution was sent
+        to the manager.
+    _ess_kwargs: ESSOptimizer options for this worker (may get updated during
+        the self-adaptive step).
+    _acceptance_threshold: Minimum relative improvement of the objective
+        compared to the best known value to be eligible for submission to the
+        Manager.
+    _n_sent_solutions: Number of solutions sent to the Manager.
+    _max_walltime_s: Walltime limit.
+    _logger: A Logger instance.
     """
 
     def __init__(
@@ -264,26 +300,25 @@ class SacessWorker:
         self._manager = manager
         self._worker_idx = worker_idx
         self._best_known_fx = np.inf
-        # number of received solution since the last one was sent to the
-        # manager
         self._n_received_solutions = 0
-        self._iter_solver = 0
-        # number of function evaluations (?) since the last solution was sent
-        # to the manager
         self._neval = 0
         self._ess_kwargs = ess_kwargs
         self._acceptance_threshold = 1e-6  # TODO
         self._n_sent_solutions = 0
         self._max_walltime_s = max_walltime_s
-        self._logger = logging.getLogger(str(os.getpid()))
-        self._manager._logger = self._logger
         self._start_time = None
+        self._logger = logging.getLogger(str(os.getpid()))
+        # Set the manager logger to one created within the current process
+        self._manager._logger = self._logger
 
     def run(
         self,
         problem: Problem,
         startpoint_method: StartpointMethod,
     ):
+        """Start the worker."""
+        self._logger.debug(f"#{self._worker_idx} starting.")
+
         evaluator = FunctionEvaluator(
             problem=problem,
             startpoint_method=startpoint_method,
@@ -298,8 +333,14 @@ class SacessWorker:
         i_iter = 0
         while self._keep_going():
             # run standard ESS
-            ess = ESSOptimizer(**self._ess_kwargs)
-            ess.logger.setLevel(logging.WARNING)
+            ess_kwargs = self._ess_kwargs.copy()
+            # account for sacess walltime limit
+            ess_kwargs['max_walltime_s'] = min(
+                ess_kwargs.get('max_walltime_s', np.inf),
+                self._max_walltime_s - (time.time() - self._start_time),
+            )
+            ess = ESSOptimizer(**ess_kwargs)
+            ess.logger.setLevel(logging.DEBUG)
             ess_results = ess.minimize(
                 problem=problem,
                 startpoint_method=startpoint_method,
@@ -311,6 +352,7 @@ class SacessWorker:
             )
             from ...store.save_to_hdf5 import write_result
 
+            # TODO accumulate results from all ESSs
             write_result(
                 ess_results,
                 f"sacess-{self._worker_idx}_tmp.h5",
@@ -359,11 +401,13 @@ class SacessWorker:
 
             i_iter += 1
 
-    def maybe_update_best(self, x, fx):
+    def maybe_update_best(self, x: np.array, fx: float):
+        """Maybe update the best known solution and send it to the manager."""
         self._logger.debug(
             f"Worker {self._worker_idx} maybe sending solution {fx}. "
-            f"{self._best_known_fx} {fx} {(self._best_known_fx - fx) / fx} "
-            f"{self._acceptance_threshold}"
+            f"best known: {self._best_known_fx}, "
+            f"rel change: {(self._best_known_fx - fx) / fx}, "
+            f"threshold: {self._acceptance_threshold}"
         )
 
         # solution improves best value by at least a factor of ...
@@ -434,5 +478,8 @@ def _run_worker(
     # create a thread-local logger
     global logger
     logger = logging.getLogger(__name__)
+
+    # different random seeds per process
+    np.random.seed((os.getpid() * int(time.time() * 1000)) % 2**32)
 
     return worker.run(problem=problem, startpoint_method=startpoint_method)
