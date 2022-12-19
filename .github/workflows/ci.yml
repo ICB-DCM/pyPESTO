@@ -6,6 +6,7 @@ on:
     branches:
     - main
   pull_request:
+  workflow_dispatch:
   schedule:
     # run Monday and Thursday at 03:42 UTC
     - cron: '42 3 * * MON,THU'
