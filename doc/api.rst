@@ -8,7 +8,6 @@ API reference
 .. automodule:: pypesto.objective
 .. automodule:: pypesto.objective.julia
 .. automodule:: pypesto.optimize
-.. automodule:: pypesto.optimize.ess
 .. automodule:: pypesto.petab
 .. automodule:: pypesto.predict
 .. automodule:: pypesto.problem
