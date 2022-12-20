@@ -42,6 +42,7 @@ class SacessOptimizer:
         self,
         ess_init_args: List[Dict[str, Any]],
         max_walltime_s: float = np.inf,
+        ess_loglevel: int = logging.WARNING,
     ):
         """Construct.
 
@@ -59,6 +60,8 @@ class SacessOptimizer:
             Maximum walltime in seconds. Will only be checked between local
             optimizations and other simulations, and thus, may be exceeded by
             the duration of a local search. Defaults to no limit.
+        ess_loglevel:
+            Loglevel for ESS runs.
         """
         self.num_workers = len(ess_init_args)
         if self.num_workers < 2:
@@ -68,6 +71,7 @@ class SacessOptimizer:
         self.ess_init_args = ess_init_args
         self.max_walltime_s = max_walltime_s
         self.exit_flag = ESSExitFlag.DID_NOT_RUN
+        self.ess_loglevel = ess_loglevel
 
     def minimize(
         self,
@@ -95,6 +99,7 @@ class SacessOptimizer:
                     ess_kwargs=ess_kwargs,
                     worker_idx=i,
                     max_walltime_s=self.max_walltime_s,
+                    ess_loglevel=self.ess_loglevel,
                 )
                 for i, ess_kwargs in enumerate(self.ess_init_args)
             ]
@@ -301,6 +306,7 @@ class SacessWorker:
     _n_sent_solutions: Number of solutions sent to the Manager.
     _max_walltime_s: Walltime limit.
     _logger: A Logger instance.
+    _ess_loglevel: Logging level for ESS runs
     """
 
     def __init__(
@@ -309,6 +315,7 @@ class SacessWorker:
         ess_kwargs: Dict[str, Any],
         worker_idx: int,
         max_walltime_s: float = np.inf,
+        ess_loglevel: int = logging.WARNING,
     ):
         self._manager = manager
         self._worker_idx = worker_idx
@@ -323,6 +330,7 @@ class SacessWorker:
         self._logger = logging.getLogger(str(os.getpid()))
         # Set the manager logger to one created within the current process
         self._manager._logger = self._logger
+        self._ess_loglevel = ess_loglevel
 
     def run(
         self,
@@ -428,7 +436,7 @@ class SacessWorker:
         )
 
         ess = ESSOptimizer(**ess_kwargs)
-        ess.logger.setLevel(logging.WARNING)
+        ess.logger.setLevel(self._ess_loglevel)
 
         cur_ess_results = ess.minimize(
             problem=problem,
