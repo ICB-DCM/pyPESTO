@@ -78,7 +78,7 @@ class RefSet:
 
     def initialize_random(
         self,
-        n_diverse: int = None,
+        n_diverse: int,
     ):
         """Create initial reference set from random parameters.
 

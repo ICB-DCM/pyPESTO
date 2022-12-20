@@ -1,10 +1,11 @@
 """Self-adaptive cooperative enhanced scatter search (SACESS)."""
+import itertools
 import logging
 import os
 import time
 from multiprocessing import Manager, Process
 from multiprocessing.managers import SyncManager
-from typing import Any, Dict, List, Tuple
+from typing import Any, Dict, List, Optional, Tuple
 
 import numpy as np
 
@@ -18,7 +19,7 @@ from .ess import ESSExitFlag, ESSOptimizer
 from .function_evaluator import FunctionEvaluator
 from .refset import RefSet
 
-__all__ = ["SacessOptimizer"]
+__all__ = ["SacessOptimizer", "get_default_ess_options"]
 
 logger = logging.getLogger(__name__)
 
@@ -40,7 +41,8 @@ class SacessOptimizer:
 
     def __init__(
         self,
-        ess_init_args: List[Dict[str, Any]],
+        num_workers: Optional[int] = None,
+        ess_init_args: Optional[List[Dict[str, Any]]] = None,
         max_walltime_s: float = np.inf,
         ess_loglevel: int = logging.WARNING,
     ):
@@ -56,6 +58,11 @@ class SacessOptimizer:
             aggressive configurations.
             Resource limits such as ``max_eval`` apply to a single CESS
             iteration, not to the full search.
+            Mutually exclusive with ``num_workers``.
+        num_workers:
+            Number of workers to be used. If this argument is given,
+            (different) default ESS settings will be used for each worker.
+            Mutually exclusive with ``ess_init_args``.
         max_walltime_s:
             Maximum walltime in seconds. Will only be checked between local
             optimizations and other simulations, and thus, may be exceeded by
@@ -63,7 +70,15 @@ class SacessOptimizer:
         ess_loglevel:
             Loglevel for ESS runs.
         """
-        self.num_workers = len(ess_init_args)
+        if (num_workers is None and ess_init_args is None) or (
+            num_workers is not None and ess_init_args is not None
+        ):
+            raise ValueError(
+                "Exactly one of `num_workers` or `ess_init_args` "
+                "has to be provided."
+            )
+
+        self.num_workers = num_workers or len(ess_init_args)
         if self.num_workers < 2:
             raise ValueError(
                 f"{self.__class__.__name__} needs at least 2 workers."
@@ -83,13 +98,16 @@ class SacessOptimizer:
             f"Running sacess with {self.num_workers} "
             f"workers: {self.ess_init_args}"
         )
+        ess_init_args = self.ess_init_args or get_default_ess_options(
+            num_workers=self.num_workers, dim=problem.dim
+        )
 
         # shared memory manager to handle shared state
         # (simulates the sacess manager process)
         with Manager() as shmem_manager:
             sacess_manager = SacessManager(
                 shmem_manager=shmem_manager,
-                ess_options=self.ess_init_args,
+                ess_options=ess_init_args,
                 dim=problem.dim,
             )
             # create workers
@@ -101,7 +119,7 @@ class SacessOptimizer:
                     max_walltime_s=self.max_walltime_s,
                     ess_loglevel=self.ess_loglevel,
                 )
-                for i, ess_kwargs in enumerate(self.ess_init_args)
+                for i, ess_kwargs in enumerate(ess_init_args)
             ]
             # launch worker processes
             worker_processes = [
@@ -350,7 +368,9 @@ class SacessWorker:
         refset = RefSet(
             dim=self._ess_kwargs['dim_refset'], evaluator=evaluator
         )
-        refset.initialize_random(n_diverse=self._ess_kwargs['n_diverse'])
+        refset.initialize_random(
+            n_diverse=self._ess_kwargs.get('n_diverse', 10 * problem.dim)
+        )
         i_iter = 0
         ess_results = pypesto.Result(problem=problem)
 
@@ -537,3 +557,100 @@ def _run_worker(
     np.random.seed((os.getpid() * int(time.time() * 1000)) % 2**32)
 
     return worker.run(problem=problem, startpoint_method=startpoint_method)
+
+
+def get_default_ess_options(num_workers: int, dim: int) -> List[Dict]:
+    """Get default ESS settings for (SA)CESS.
+
+    Returns settings for ``num_workers`` parallel scatter searches, combining
+    more aggressive and more conservative configurations.
+
+    Parameters
+    ----------
+    num_workers: Number of configurations to return.
+    dim: Problem dimension.
+    """
+    min_dimrefset = 3
+    settings = [
+        # settings for first worker
+        {
+            'dim_refset': 10 * dim,
+            'balance': 0.5,
+            'local_n2': 10,
+        },
+        # for the remaining workers, cycle through these settings
+        # 1
+        {
+            'dim_refset': max(min_dimrefset, dim),
+            'balance': 0.0,
+            'local_n1': 1,
+            'local_n2': 1,
+        },
+        # 2
+        {
+            'dim_refset': 3 * dim,
+            'balance': 0.0,
+            'local_n1': 4,
+            'local_n2': 4,
+        },
+        # 3
+        {
+            'dim_refset': 5 * dim,
+            'balance': 0.25,
+            'local_n1': 10,
+            'local_n2': 10,
+        },
+        # 4
+        {
+            'dim_refset': 10 * dim,
+            'balance': 0.5,
+            'local_n1': 20,
+            'local_n2': 20,
+        },
+        # 5
+        {
+            'dim_refset': 15 * dim,
+            'balance': 0.25,
+            'local_n1': 100,
+            'local_n2': 100,
+        },
+        # 6
+        {
+            'dim_refset': 12 * dim,
+            'balance': 0.25,
+            'local_n1': 50,
+            'local_n2': 50,
+        },
+        # 7
+        {
+            'dim_refset': int(7.5 * dim),
+            'balance': 0.25,
+            'local_n1': 15,
+            'local_n2': 15,
+        },
+        # 8
+        {
+            'dim_refset': 5 * dim,
+            'balance': 0.25,
+            'local_n1': 7,
+            'local_n2': 7,
+        },
+        # 9
+        {
+            'dim_refset': max(min_dimrefset, 2 * dim),
+            'balance': 0.0,
+            'local_n1': 2,
+            'local_n2': 2,
+        },
+        # 10
+        {
+            'dim_refset': max(min_dimrefset, int(0.5 * dim)),
+            'balance': 0.0,
+            'local_n1': 1,
+            'local_n2': 1,
+        },
+    ]
+    return [
+        settings[0],
+        *(itertools.islice(itertools.cycle(settings[1:]), num_workers - 1)),
+    ]

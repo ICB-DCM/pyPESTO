@@ -65,7 +65,7 @@ class ESSOptimizer:
     def __init__(
         self,
         *,
-        max_iter: int,
+        max_iter: int = 10**100,
         dim_refset: int,
         local_n1: int = 1,
         local_n2: int = 10,
