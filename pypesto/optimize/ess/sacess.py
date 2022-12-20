@@ -31,6 +31,11 @@ class SacessOptimizer:
     parallel. After each ESS run, depending on the outcome, there is a chance
     of exchanging good parameters, and changing ESS hyperparameters to those of
     the most promising worker.
+
+    .. [PenasGon2017] 'Parameter estimation in large-scale systems biology models:
+       a parallel and self-adaptive cooperative strategy', David R. Penas,
+       Patricia González, Jose A. Egea, Ramón Doallo and Julio R. Banga,
+       BMC Bioinformatics 2017, 18, 52. https://doi.org/10.1186/s12859-016-1452-4
     """
 
     def __init__(
@@ -241,6 +246,7 @@ class SacessManager:
                     > self._rejection_threshold.value
                 )
             ):
+                # accept solution
                 self._logger.debug(
                     f"Accepted solution from worker {sender_idx}: {fx}."
                 )
@@ -248,7 +254,6 @@ class SacessManager:
                 self._best_known_fx.value = fx
                 self._best_known_x.value = x
                 self._worker_comms[sender_idx] += 1
-
                 self._worker_scores[sender_idx] = (
                     self._worker_comms[sender_idx] * elapsed_time_s
                 )
@@ -330,7 +335,7 @@ class SacessWorker:
         evaluator = FunctionEvaluator(
             problem=problem,
             startpoint_method=startpoint_method,
-            n_threads=1,
+            n_threads=self._ess_kwargs.get('n_threads', 1),
         )
         self._start_time = time.time()
         # create refset from ndiverse
