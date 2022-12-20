@@ -19,3 +19,4 @@ API reference
 .. automodule:: pypesto.startpoint
 .. automodule:: pypesto.store
 .. automodule:: pypesto.visualize
+.. automodule:: pypesto.visualize.model_fit
