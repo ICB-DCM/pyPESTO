@@ -1240,7 +1240,7 @@ class FidesOptimizer(Optimizer):
 
         if self.hessian_update == 'default':
             if not problem.objective.has_hess:
-                logging.warning(
+                warnings.warn(
                     'Fides is using BFGS as hessian approximation, '
                     'as the problem does not provide a Hessian. '
                     'Specify a Hessian to use a more efficient '
