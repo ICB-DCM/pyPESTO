@@ -292,8 +292,8 @@ class OptimizeResult:
             if not current_ids.isdisjoint(new_ids):
                 raise ValueError(
                     "Some id's you want to merge coincide with "
-                    "the existing id's. Please use an "
-                    "appropriate prefix such as 'run_2_'."
+                    f"the existing id's: {current_ids & new_ids}. "
+                    "Please use an appropriate prefix such as 'run_2_'."
                 )
             for optimizer_result in optimize_result.list:
                 self.append(optimizer_result, sort=False, prefix=prefix)
@@ -305,12 +305,17 @@ class OptimizeResult:
                 new_id = prefix + optimize_result.id
                 if new_id in current_ids:
                     raise ValueError(
-                        "The id you want to merge coincides with "
+                        f"The id `{new_id}` you want to merge coincides with "
                         "the existing id's. Please use an "
                         "appropriate prefix such as 'run_2_'."
                     )
                 optimize_result.id = new_id
                 self.list.append(optimize_result)
+        else:
+            raise ValueError(
+                "Argument `optimize_result` is of unsupported "
+                f"type {type(optimize_result)}."
+            )
         if sort:
             self.sort()
 
