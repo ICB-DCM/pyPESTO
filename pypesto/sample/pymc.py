@@ -4,10 +4,10 @@ from __future__ import annotations
 import logging
 from typing import Union
 
-import aesara.tensor as at
 import arviz as az
 import numpy as np
 import pymc
+import pytensor.tensor as pt
 
 from ..history import MemoryHistory
 from ..objective import ObjectiveBase
@@ -21,11 +21,11 @@ logger = logging.getLogger(__name__)
 # https://www.pymc.io/projects/examples/en/latest/case_studies/blackbox_external_likelihood_numpy.html
 
 
-class PymcObjectiveOp(at.Op):
-    """Aesara wrapper around a (non-normalized) log-probability function."""
+class PymcObjectiveOp(pt.Op):
+    """PyTensor wrapper around a (non-normalized) log-probability function."""
 
-    itypes = [at.dvector]  # expects a vector of parameter values when called
-    otypes = [at.dscalar]  # outputs a single scalar value (the log prob)
+    itypes = [pt.dvector]  # expects a vector of parameter values when called
+    otypes = [pt.dscalar]  # outputs a single scalar value (the log prob)
 
     def create_instance(objective: ObjectiveBase, beta: float = 1.0):
         """Create an instance of this Op (factory method).
@@ -58,7 +58,7 @@ class PymcObjectiveOp(at.Op):
 
 
 class PymcObjectiveWithGradientOp(PymcObjectiveOp):
-    """Aesara objective wrapper with gradient."""
+    """PyTensor objective wrapper with gradient."""
 
     def __init__(self, objective: ObjectiveBase, beta: float = 1.0):
         super().__init__(objective, beta)
@@ -73,11 +73,11 @@ class PymcObjectiveWithGradientOp(PymcObjectiveOp):
         return [g[0] * self._log_prob_grad(theta)]
 
 
-class PymcGradientOp(at.Op):
-    """Aesara wrapper around a (non-normalized) log-probability gradient."""
+class PymcGradientOp(pt.Op):
+    """PyTensor wrapper around a (non-normalized) log-probability gradient."""
 
-    itypes = [at.dvector]  # expects a vector of parameter values when called
-    otypes = [at.dvector]  # outputs a vector (the log prob grad)
+    itypes = [pt.dvector]  # expects a vector of parameter values when called
+    otypes = [pt.dvector]  # outputs a vector (the log prob grad)
 
     def __init__(self, objective: ObjectiveBase, beta: float):
         self._objective: ObjectiveBase = objective
@@ -170,10 +170,12 @@ class PymcSampler(Sampler):
         trace = self.trace
 
         x0 = None
+        x_names_free = problem.get_reduced_vector(problem.x_names)
         if self.x0 is not None:
             x0 = {
                 x_name: val
-                for x_name, val in zip(self.problem.x_names, self.x0)
+                for x_name, val in zip(problem.x_names, self.x0)
+                if x_name in x_names_free
             }
 
         # create model context
@@ -182,14 +184,14 @@ class PymcSampler(Sampler):
             _k = [
                 pymc.Uniform(x_name, lower=lb, upper=ub)
                 for x_name, lb, ub in zip(
-                    problem.get_reduced_vector(problem.x_names),
+                    x_names_free,
                     problem.lb,
                     problem.ub,
                 )
             ]
 
-            # convert parameters to aesara tensor variable
-            theta = at.as_tensor_variable(_k)
+            # convert parameters to PyTensor tensor variable
+            theta = pt.as_tensor_variable(_k)
 
             # define distribution with log-posterior as density
             pymc.Potential("potential", log_post(theta))

@@ -48,6 +48,7 @@ Algorithms and features
    example/hdf5_storage.ipynb
    example/model_selection.ipynb
    example/julia.ipynb
+   example/hierarchical.ipynb
 
 Application examples
 --------------------
