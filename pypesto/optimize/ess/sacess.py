@@ -401,13 +401,13 @@ class SacessWorker:
                 refset=refset,
             )
 
-            # drop all but the 10 best results
+            # drop all but the 50 best results
             ess_results.optimize_result.append(
                 cur_ess_results.optimize_result,
                 prefix=f"{self._worker_idx}_{i_iter}_",
             )
             ess_results.optimize_result.list = (
-                ess_results.optimize_result.list[:10]
+                ess_results.optimize_result.list[:50]
             )
             write_result(
                 ess_results,
