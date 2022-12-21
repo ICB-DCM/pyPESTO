@@ -87,7 +87,6 @@ class RefSet:
         """
         # sample n_diverse points
         x_diverse, fx_diverse = self.evaluator.multiple_random(n_diverse)
-
         self.initialize_from_array(x_diverse=x_diverse, fx_diverse=fx_diverse)
 
     def initialize_from_array(self, x_diverse: np.array, fx_diverse: np.array):

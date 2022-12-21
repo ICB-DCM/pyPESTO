@@ -94,6 +94,7 @@ class SacessOptimizer:
         startpoint_method: StartpointMethod,
     ):
         """Solve the given optimization problem."""
+        start_time = time.time()
         logging.debug(
             f"Running sacess with {self.num_workers} "
             f"workers: {self.ess_init_args}"
@@ -124,7 +125,7 @@ class SacessOptimizer:
             # launch worker processes
             worker_processes = [
                 Process(
-                    name=f"sacess-worker-{i}",
+                    name=f"sacess-worker-{i:02d}",
                     target=_run_worker,
                     args=(worker, problem, startpoint_method),
                 )
@@ -136,8 +137,10 @@ class SacessOptimizer:
             for p in worker_processes:
                 p.join()
 
+            walltime = time.time() - start_time
             logging.info(
-                f"Global best: {sacess_manager.get_best_solution()[1]}"
+                f"sacess stopping after {walltime:3g}s with global best "
+                f"{sacess_manager.get_best_solution()[1]}."
             )
 
         return self._create_result(problem)
@@ -150,7 +153,9 @@ class SacessOptimizer:
         # gather results from workers and delete temporary result files
         result = None
         for worker_idx in range(self.num_workers):
-            tmp_result_filename = f"sacess-{worker_idx}_tmp.h5"
+            tmp_result_filename = SacessWorker.get_temp_result_filename(
+                worker_idx
+            )
             tmp_result = read_result(
                 tmp_result_filename, problem=False, optimize=True
             )
@@ -369,7 +374,9 @@ class SacessWorker:
             dim=self._ess_kwargs['dim_refset'], evaluator=evaluator
         )
         refset.initialize_random(
-            n_diverse=self._ess_kwargs.get('n_diverse', 10 * problem.dim)
+            n_diverse=max(
+                self._ess_kwargs.get('n_diverse', 10 * problem.dim), refset.dim
+            )
         )
         i_iter = 0
         ess_results = pypesto.Result(problem=problem)
@@ -392,7 +399,7 @@ class SacessWorker:
             )
             write_result(
                 ess_results,
-                f"sacess-{self._worker_idx}_tmp.h5",
+                self.get_temp_result_filename(self._worker_idx),
                 overwrite=True,
                 optimize=True,
             )
@@ -404,10 +411,11 @@ class SacessWorker:
             # cooperation step
             # try to obtain a new solution from manager
             recv_x, recv_fx = self._manager.get_best_solution()
-            # self._logger.debug(
-            #     f"Worker {self._worker_idx} received solution {recv_fx} "
-            #     f"(known best: {self._best_known_fx})."
-            # )
+            self._logger.log(
+                logging.DEBUG - 1,
+                f"Worker {self._worker_idx} received solution {recv_fx} "
+                f"(known best: {self._best_known_fx}).",
+            )
             if recv_fx < self._best_known_fx or (
                 not np.isfinite(self._best_known_fx) and np.isfinite(recv_x)
             ):
@@ -418,7 +426,7 @@ class SacessWorker:
                 self._n_received_solutions += 1
                 self.replace_solution(refset, x=recv_x, fx=recv_fx)
 
-            # adaptive step
+            # Adaptive step
             # Update ESS settings if we received way more solutions than we
             # sent
             # Magic numbers from [PenasGon2017]_ algorithm 5
@@ -539,6 +547,10 @@ class SacessWorker:
 
         return True
 
+    @staticmethod
+    def get_temp_result_filename(worker_idx: int) -> str:
+        return f"sacess-{worker_idx:02d}_tmp.h5"
+
 
 def _run_worker(
     worker: SacessWorker,
@@ -564,6 +576,9 @@ def get_default_ess_options(num_workers: int, dim: int) -> List[Dict]:
 
     Returns settings for ``num_workers`` parallel scatter searches, combining
     more aggressive and more conservative configurations.
+
+    Setting appropriate values for ``n_threads`` and ``local_optimizer`` is
+    left to the user. Defaults to single-threaded and no local optimizer.
 
     Parameters
     ----------

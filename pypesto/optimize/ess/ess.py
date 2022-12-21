@@ -175,9 +175,8 @@ class ESSOptimizer:
 
         # generate initial RefSet if not provided
         if refset is None:
-            if self.n_diverse is None:
-                # [EgeaMar2010]_ 2.1
-                self.n_diverse = 10 * problem.dim
+            # [EgeaMar2010]_ 2.1
+            self.n_diverse = self.n_diverse or 10 * problem.dim
 
             self.evaluator = FunctionEvaluator(
                 problem=problem,
@@ -513,7 +512,8 @@ class ESSOptimizer:
             self.logger.info("iter | best | nf | refset         |")
 
         with np.printoptions(
-            edgeitems=30,
+            edgeitems=5,
+            threshold=8,
             linewidth=100000,
             formatter={"float": lambda x: "%.3g" % x},
         ):
@@ -526,12 +526,13 @@ class ESSOptimizer:
     def _report_final(self):
         """Log scatter search summary."""
         with np.printoptions(
-            edgeitems=30,
+            edgeitems=5,
+            threshold=10,
             linewidth=100000,
             formatter={"float": lambda x: "%.3g" % x},
         ):
             self.logger.info(
-                f"--  Final fval after {self.n_iter} "
+                f"-- Final ESS fval after {self.n_iter} "
                 f"iterations: {self.fx_best}. "
                 f"Exit flag: {self.exit_flag.name}. "
                 f"Num local solutions: {len(self.local_solutions)}."
