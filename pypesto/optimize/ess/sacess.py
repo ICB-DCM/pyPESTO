@@ -44,6 +44,7 @@ class SacessOptimizer:
         num_workers: Optional[int] = None,
         ess_init_args: Optional[List[Dict[str, Any]]] = None,
         max_walltime_s: float = np.inf,
+        sacess_loglevel: int = logging.INFO,
         ess_loglevel: int = logging.WARNING,
     ):
         """Construct.
@@ -69,6 +70,8 @@ class SacessOptimizer:
             the duration of a local search. Defaults to no limit.
         ess_loglevel:
             Loglevel for ESS runs.
+        sacess_loglevel:
+            Loglevel for SACESS runs.
         """
         if (num_workers is None and ess_init_args is None) or (
             num_workers is not None and ess_init_args is not None
@@ -87,6 +90,8 @@ class SacessOptimizer:
         self.max_walltime_s = max_walltime_s
         self.exit_flag = ESSExitFlag.DID_NOT_RUN
         self.ess_loglevel = ess_loglevel
+        self.sacess_loglevel = sacess_loglevel
+        logger.setLevel(self.sacess_loglevel)
 
     def minimize(
         self,
@@ -95,7 +100,7 @@ class SacessOptimizer:
     ):
         """Solve the given optimization problem."""
         start_time = time.time()
-        logging.debug(
+        logger.debug(
             f"Running sacess with {self.num_workers} "
             f"workers: {self.ess_init_args}"
         )
@@ -127,7 +132,12 @@ class SacessOptimizer:
                 Process(
                     name=f"sacess-worker-{i:02d}",
                     target=_run_worker,
-                    args=(worker, problem, startpoint_method),
+                    args=(
+                        worker,
+                        problem,
+                        startpoint_method,
+                        self.sacess_loglevel,
+                    ),
                 )
                 for i, worker in enumerate(workers)
             ]
@@ -138,7 +148,7 @@ class SacessOptimizer:
                 p.join()
 
             walltime = time.time() - start_time
-            logging.info(
+            logger.info(
                 f"sacess stopping after {walltime:3g}s with global best "
                 f"{sacess_manager.get_best_solution()[1]}."
             )
@@ -361,7 +371,9 @@ class SacessWorker:
         startpoint_method: StartpointMethod,
     ):
         """Start the worker."""
-        self._logger.debug(f"#{self._worker_idx} starting.")
+        self._logger.debug(
+            f"#{self._worker_idx} starting " f"({self._ess_kwargs})."
+        )
 
         evaluator = FunctionEvaluator(
             problem=problem,
@@ -419,7 +431,7 @@ class SacessWorker:
             if recv_fx < self._best_known_fx or (
                 not np.isfinite(self._best_known_fx) and np.isfinite(recv_x)
             ):
-                logging.debug(
+                self._logger.debug(
                     f"Worker {self._worker_idx} received better solution."
                 )
                 self._best_known_fx = recv_fx
@@ -556,17 +568,16 @@ def _run_worker(
     worker: SacessWorker,
     problem: Problem,
     startpoint_method: StartpointMethod,
+    sacess_loglevel: int,
 ):
     """Run the given SACESS worker.
 
     Helper function as entrypoint for sacess worker processes.
     """
-    # create a thread-local logger
-    global logger
-    logger = logging.getLogger(__name__)
-
     # different random seeds per process
     np.random.seed((os.getpid() * int(time.time() * 1000)) % 2**32)
+
+    worker._logger.setLevel(sacess_loglevel)
 
     return worker.run(problem=problem, startpoint_method=startpoint_method)
 
