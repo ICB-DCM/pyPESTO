@@ -4,6 +4,7 @@ import abc
 import logging
 import re
 import time
+import warnings
 from typing import TYPE_CHECKING, Dict, Optional
 
 import numpy as np
@@ -393,7 +394,7 @@ class ScipyOptimizer(Optimizer):
             # Todo Resolve warning by implementing saving of hess temporarily
             #  in objective and pass to scipy seperately
             if objective.hess is True:
-                logger.warning(
+                warnings.warn(
                     "scipy.optimize.minimize does not support "
                     "passing fun and hess as one function. Hence "
                     "for each evaluation of hess, fun will be "
