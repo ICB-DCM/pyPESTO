@@ -152,7 +152,7 @@ class FunctionEvaluator:
         while not np.isfinite(fxs).all():
             retry_indices = np.argwhere(~np.isfinite(fxs)).squeeze()
             xs[retry_indices] = self.startpoint_method(
-                n_starts=len(retry_indices), problem=self.problem
+                n_starts=retry_indices.size, problem=self.problem
             )
             fxs[retry_indices] = self.multiple(xs[retry_indices])
         return xs, fxs
