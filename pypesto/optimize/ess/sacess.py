@@ -180,6 +180,8 @@ class SacessOptimizer:
                 )
         result.optimize_result.sort()
 
+        result.problem = problem
+
         return result
 
 
