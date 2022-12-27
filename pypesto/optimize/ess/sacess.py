@@ -303,7 +303,7 @@ class SacessManager:
                 self._logger.debug(
                     f"Rejected solution from worker {sender_idx} "
                     f"rel change: {abs((self._best_known_fx.value - fx) / self._best_known_fx.value)} "
-                    f" < {self._rejection_threshold} "
+                    f" < {self._rejection_threshold.value} "
                     f"(total rejections: {self._rejections.value})."
                 )
                 # adapt acceptance threshold if too many solutions have been
