@@ -535,6 +535,8 @@ class ESSOptimizer:
                 f"-- Final ESS fval after {self.n_iter} "
                 f"iterations: {self.fx_best}. "
                 f"Exit flag: {self.exit_flag.name}. "
-                f"Num local solutions: {len(self.local_solutions)}."
+                f"Num local solutions: {len(self.local_solutions)}. "
+                f"{self.evaluator.n_eval} objective evaluations in "
+                f"{time.time() - self.starttime:.3g}s."
             )
             self.logger.debug(f"Final refset: {np.sort(self.refset.fx)} ")
