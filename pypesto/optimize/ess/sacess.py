@@ -405,8 +405,6 @@ class SacessWorker:
         while self._keep_going():
             # run standard ESS
             ess, cur_ess_results = self._run_ess(
-                problem=problem,
-                startpoint_method=startpoint_method,
                 refset=refset,
             )
 
@@ -472,8 +470,6 @@ class SacessWorker:
 
     def _run_ess(
         self,
-        problem: Problem,
-        startpoint_method: StartpointMethod,
         refset: RefSet,
     ) -> Tuple[ESSOptimizer, pypesto.Result]:
         """Run ESS."""
@@ -488,8 +484,6 @@ class SacessWorker:
         ess.logger.setLevel(self._ess_loglevel)
 
         cur_ess_results = ess.minimize(
-            problem=problem,
-            startpoint_method=startpoint_method,
             refset=refset,
         )
         self._logger.debug(

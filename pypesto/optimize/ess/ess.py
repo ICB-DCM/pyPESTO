@@ -192,7 +192,8 @@ class ESSOptimizer:
             and (problem is not None or startpoint_method is not None)
         ):
             raise ValueError(
-                "Either `refset` or `problem` and `startpoint_method` has to be provided."
+                "Either `refset` or `problem` and `startpoint_method` "
+                "has to be provided."
             )
         # generate initial RefSet if not provided
         if refset is None:
@@ -212,7 +213,7 @@ class ESSOptimizer:
                 self.evaluator = FunctionEvaluatorMT(
                     problem=problem,
                     startpoint_method=startpoint_method,
-                    n_threads=self.n_threads,
+                    n_threads=self.n_threads or 1,
                 )
 
             self.refset = RefSet(dim=self.dim_refset, evaluator=self.evaluator)

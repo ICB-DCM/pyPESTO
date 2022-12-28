@@ -120,12 +120,19 @@ class CESSOptimizer:
         """
         self._initialize()
 
-        refsets = [None] * len(self.ess_init_args)
-
         evaluator = FunctionEvaluator(
             problem=problem,
             startpoint_method=startpoint_method,
         )
+
+        refsets = [
+            RefSet(evaluator=evaluator, dim=ess_init_args['dim_refset'])
+            for ess_init_args in self.ess_init_args
+        ]
+        for refset, ess_init_args in zip(refsets, self.ess_init_args):
+            refset.initialize_random(
+                n_diverse=ess_init_args.get('n_diverse', 10 * problem.dim)
+            )
 
         while True:
             logger.info("-" * 50)
@@ -134,8 +141,6 @@ class CESSOptimizer:
 
             # run scatter searches
             ess_optimizers = self._run_scatter_searches(
-                problem=problem,
-                startpoint_method=startpoint_method,
                 refsets=refsets,
             )
             # collect refsets from the different ESS runs
@@ -236,8 +241,6 @@ class CESSOptimizer:
 
     def _run_scatter_searches(
         self,
-        problem: Problem,
-        startpoint_method: StartpointMethod,
         refsets: List[RefSet],
     ) -> List[ESSOptimizer]:
         """Start all scatter searches in different processes."""
@@ -248,7 +251,11 @@ class CESSOptimizer:
         #  2.5 < tau < 3.5, default: 2.5
         ess_init_args = [
             dict(
-                {'max_eval': int(10**2.5 * problem.dim)},
+                {
+                    'max_eval': int(
+                        10**2.5 * refsets[0].evaluator.problem.dim
+                    )
+                },
                 **ess_kwargs,
             )
             for ess_kwargs in self.ess_init_args
@@ -259,7 +266,7 @@ class CESSOptimizer:
             ess_optimizers = pool.starmap(
                 self._run_single_ess,
                 (
-                    [ess_kwargs, problem, startpoint_method, refset]
+                    [ess_kwargs, refset]
                     for (ess_kwargs, refset) in zip(ess_init_args, refsets)
                 ),
                 chunksize=1,
@@ -269,8 +276,6 @@ class CESSOptimizer:
     def _run_single_ess(
         self,
         ess_kwargs,
-        problem: Problem,
-        startpoint_method: StartpointMethod,
         refset: RefSet,
     ) -> ESSOptimizer:
         """
@@ -282,7 +287,7 @@ class CESSOptimizer:
         np.random.seed((os.getpid() * int(time.time() * 1000)) % 2**32)
 
         ess = ESSOptimizer(**ess_kwargs)
-        ess.minimize(problem, startpoint_method, refset=refset)
+        ess.minimize(refset=refset)
         return ess
 
     def _keep_going(self, i_eval) -> bool:
