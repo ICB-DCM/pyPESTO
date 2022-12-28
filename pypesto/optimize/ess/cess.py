@@ -125,7 +125,6 @@ class CESSOptimizer:
         evaluator = FunctionEvaluator(
             problem=problem,
             startpoint_method=startpoint_method,
-            n_threads=1,
         )
 
         while True:

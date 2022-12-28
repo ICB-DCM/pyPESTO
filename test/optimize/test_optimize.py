@@ -514,6 +514,35 @@ def test_ess(problem, local_optimizer, ess_type, request):
         raise AssertionError()
 
 
+def test_ess_multiprocess(problem, request):
+    if (
+        'cr' in request.node.callspec.id
+        or 'integrated' in request.node.callspec.id
+    ):
+        # Not pickleable - incompatible with CESS
+        pytest.skip()
+
+    from pypesto.optimize.ess import ESSOptimizer, FunctionEvaluatorMP, RefSet
+
+    ess = ESSOptimizer(
+        max_iter=20,
+        local_optimizer=optimize.FidesOptimizer(),
+    )
+    refset = RefSet(
+        dim=10,
+        evaluator=FunctionEvaluatorMP(
+            problem=problem,
+            startpoint_method=pypesto.startpoint.UniformStartpoints(),
+            n_procs=4,
+        ),
+    )
+    refset.initialize_random(10 * refset.dim)
+    res = ess.minimize(
+        refset=refset,
+    )
+    print("ESS result: ", res.summary())
+
+
 def test_scipy_integrated_grad():
     integrated = True
     obj = rosen_for_sensi(max_sensi_order=2, integrated=integrated)['obj']

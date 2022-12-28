@@ -16,7 +16,7 @@ from ...store.read_from_hdf5 import read_result
 from ...store.save_to_hdf5 import write_result
 from ..optimize import Problem
 from .ess import ESSExitFlag, ESSOptimizer
-from .function_evaluator import FunctionEvaluator
+from .function_evaluator import FunctionEvaluatorMP, FunctionEvaluatorMT
 from .refset import RefSet
 
 __all__ = ["SacessOptimizer", "get_default_ess_options"]
@@ -377,11 +377,18 @@ class SacessWorker:
             f"#{self._worker_idx} starting " f"({self._ess_kwargs})."
         )
 
-        evaluator = FunctionEvaluator(
-            problem=problem,
-            startpoint_method=startpoint_method,
-            n_threads=self._ess_kwargs.get('n_threads', 1),
-        )
+        if n_procs := self._ess_kwargs.get('n_procs'):
+            evaluator = FunctionEvaluatorMP(
+                problem=problem,
+                startpoint_method=startpoint_method,
+                n_procs=n_procs,
+            )
+        else:
+            evaluator = FunctionEvaluatorMT(
+                problem=problem,
+                startpoint_method=startpoint_method,
+                n_threads=self._ess_kwargs.get('n_threads', 1),
+            )
         self._start_time = time.time()
         # create refset from ndiverse
         refset = RefSet(
