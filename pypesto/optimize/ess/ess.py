@@ -66,7 +66,7 @@ class ESSOptimizer:
         self,
         *,
         max_iter: int = 10**100,
-        dim_refset: int,
+        dim_refset: int = None,
         local_n1: int = 1,
         local_n2: int = 10,
         balance: float = 0.5,
@@ -175,6 +175,10 @@ class ESSOptimizer:
 
         # generate initial RefSet if not provided
         if refset is None:
+            if self.dim_refset is None:
+                raise ValueError(
+                    "Either refset or dim_refset have to be provided."
+                )
             # [EgeaMar2010]_ 2.1
             self.n_diverse = self.n_diverse or 10 * problem.dim
 
