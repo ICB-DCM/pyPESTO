@@ -132,7 +132,10 @@ def waterfall(
                     fvals.append(None)
         else:
             # remove nan or inf values in fvals
-            _, fvals = delete_nan_inf(fvals_raw)
+            # also remove extremely large values. These values result in `inf`
+            # values in the output of `scipy.cluster.hierarchy.linkage` in the
+            # method `pypesto.util.assign_clusters`, which raises errors.
+            _, fvals = delete_nan_inf(fvals=fvals_raw, magnitude_bound=1e100)
             fvals.sort()
 
         # assign colors
