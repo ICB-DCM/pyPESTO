@@ -241,7 +241,7 @@ def waterfall_lowlevel(
         # parse data for plotting
         color = colors[start_indices.index(j)]
         fval = fvals[start_indices.index(j)]
-        if j == 0:
+        if j == start_indices[0]:
             tmp_legend = legend_text
         else:
             tmp_legend = None
