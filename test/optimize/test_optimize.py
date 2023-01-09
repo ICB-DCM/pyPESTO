@@ -442,19 +442,10 @@ def test_history_beats_optimizer():
 @pytest.mark.parametrize("local_optimizer", [None, optimize.FidesOptimizer()])
 @pytest.mark.flaky(reruns=3)
 def test_ess(problem, local_optimizer, ess_type, request):
-    import logging
-
     from pypesto.optimize.ess import (
         CESSOptimizer,
         ESSOptimizer,
         SacessOptimizer,
-    )
-
-    logging.basicConfig(
-        level=logging.DEBUG,
-        format='%(asctime)s %(processName)s %(levelname)-8s %(message)s',
-        datefmt='%Y-%m-%d %H:%M:%S',
-        force=True,
     )
 
     if ess_type == "ess":
@@ -516,6 +507,15 @@ def test_ess(problem, local_optimizer, ess_type, request):
             max_walltime_s=10,
         )
     elif ess_type == "sacess":
+        import logging
+
+        logging.basicConfig(
+            level=logging.DEBUG,
+            force=True,
+            format='%(asctime)s %(processName)s %(levelname)-8s %(message)s',
+            datefmt='%Y-%m-%d %H:%M:%S',
+        )
+        logging.getLogger().setLevel(logging.DEBUG)
         if (
             'cr' in request.node.callspec.id
             or 'integrated' in request.node.callspec.id
