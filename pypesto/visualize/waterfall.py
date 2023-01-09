@@ -222,7 +222,7 @@ def waterfall_lowlevel(
 
     start_indices = [i for i, fval in enumerate(fvals) if fval is not None]
     fvals = [fvals[i] for i in start_indices]
-    if colors.ndim == 2 and colors.shape[0] > 1:
+    if colors is not None and colors.ndim == 2 and colors.shape[0] > 1:
         colors = [colors[i] for i in start_indices]
 
     # assign colors
