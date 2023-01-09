@@ -425,7 +425,6 @@ class PetabImporter(AmiciObjectBuilder):
             amici_reporting = amici.RDataReporting.full
             inner_parameter_ids = calculator.inner_problem.get_x_ids()
             par_ids = [x for x in par_ids if x not in inner_parameter_ids]
-            print(par_ids)
             # FIXME: currently not supported with hierarchical
             kwargs['guess_steadystate'] = False
 

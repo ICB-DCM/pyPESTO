@@ -131,11 +131,12 @@ class OptimalScalingAmiciCalculator():
         if any(rdata.status != amici.AMICI_SUCCESS for rdata in inner_rdatas):
             # if the gradient was requested, we need to provide some value
             # for it
+            inner_result[FVAL]=np.inf
             if 1 in sensi_orders:
                 inner_result[GRAD] = np.full(
                     shape=len(x_ids), fill_value=np.nan
                 )
-            return inner_result
+            return filter_return_dict(inner_result)
 
         sim = [rdata['y'] for rdata in inner_rdatas]
         sigma = [rdata['sigmay'] for rdata in inner_rdatas]
@@ -165,17 +166,19 @@ class OptimalScalingAmiciCalculator():
         # )
 
         # calculate analytical gradients if requested
-        # if sensi_order > 0:
-        #     sy = [rdata['sy'] for rdata in inner_rdatas]
-        #     snllh = self.inner_solver.calculate_gradients(
-        #         self.inner_problem,
-        #         x_inner_opt,
-        #         sim,
-        #         sy,
-        #         parameter_mapping,
-        #         x_ids,
-        #         amici_model,
-        #         snllh,
-        #     )
-
+        if sensi_order > 0:
+            sy = [rdata['sy'] for rdata in inner_rdatas]
+            inner_result[GRAD] = self.inner_solver.calculate_gradients(
+                problem=self.inner_problem,
+                x_inner_opt=x_inner_opt,
+                sim=sim,
+                sy=sy,
+                parameter_mapping=parameter_mapping,
+                par_opt_ids=x_ids,
+                amici_model=amici_model,
+                snllh=snllh
+            )
+        # print(filter_return_dict(inner_result))
+        # breakpoint()
+        # exit()
         return filter_return_dict(inner_result)

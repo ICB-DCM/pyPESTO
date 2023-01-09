@@ -93,84 +93,80 @@ class OptimalScalingInnerSolver(InnerSolver):
                 [x_inner_opt[idx]['fun'] for idx in range(len(x_inner_opt))]
             )
         return obj
+        # return np.sum(
+        #         [x_inner_opt[idx]['fun'] for idx in range(len(x_inner_opt))]
+        #     )
 
-    # def calculate_gradients(self,
-    #                         problem: OptimalScalingProblem,
-    #                         x_inner_opt,
-    #                         sim,
-    #                         sy,
-    #                         parameter_mapping,
-    #                         par_opt_ids,
-    #                         amici_model,
-    #                         snllh,
-    #                         ):
-    #     #breakpoint()
-    #     condition_map_sim_var = parameter_mapping[0].map_sim_var
-    #     #print(condition_map_sim_var)
-    #     par_sim_ids = list(amici_model.getParameterIds())
-    #     #print(par_sim_ids)
-    #     # TODO: Doesn't work with condition specific parameters
-    #     for par_sim, par_opt in condition_map_sim_var.items():
-    #         if not isinstance(par_opt, str):
-    #             continue
-    #         if par_opt.startswith('optimalScaling_'):
-    #             continue
-    #         par_sim_idx = par_sim_ids.index(par_sim)
-    #         par_opt_idx = par_opt_ids.index(par_opt)
-    #         grad = 0.0
-    #         #print(par_sim, par_opt)
-    #         for idx, gr in enumerate(problem.get_groups_for_xs(InnerParameter.OPTIMALSCALING)):
-    #             if (gr in problem.hard_constraints.group.values): #group of hard constraint measurements
-    #                 hard_constraints = problem.get_hard_constraints_for_group(gr)
-    #                 xi = get_xi_for_hard_constraints(gr, problem, hard_constraints, sim, self.options)
-    #                 sim_all = get_sim_all(problem.get_xs_for_group(gr), sim)
-    #                 sy_all = get_sy_all(problem.get_xs_for_group(gr), sy, par_sim_idx)
-    #                 #print(sim_all)
-    #                 #print(sy_all)
+    def calculate_gradients(self,
+                            problem: OptimalScalingProblem,
+                            x_inner_opt,
+                            sim,
+                            sy,
+                            parameter_mapping,
+                            par_opt_ids,
+                            amici_model,
+                            snllh,
+                            ):
+        condition_map_sim_var = parameter_mapping[0].map_sim_var
+        par_sim_ids = list(amici_model.getParameterIds())
+        # TODO: Doesn't work with condition specific parameters
+        for par_sim, par_opt in condition_map_sim_var.items():
+            if not isinstance(par_opt, str):
+                continue
+            if par_opt.startswith('optimalScaling_'):
+                continue
+            #par_sim_idx = par_sim_ids.index(par_sim)
+            par_opt_idx = par_opt_ids.index(par_opt)
+            grad = 0.0
+            for idx, gr in enumerate(problem.get_groups_for_xs(InnerParameterType.OPTIMALSCALING)):
+                # if (gr in problem.hard_constraints.group.values): #group of hard constraint measurements
+                #     hard_constraints = problem.get_hard_constraints_for_group(gr)
+                #     xi = get_xi_for_hard_constraints(gr, problem, hard_constraints, sim, self.options)
+                #     sim_all = get_sim_all(problem.get_xs_for_group(gr), sim)
+                #     sy_all = get_sy_all(problem.get_xs_for_group(gr), sy, par_sim_idx)
+                #     #print(sim_all)
+                #     #print(sy_all)
 
-    #                 problem.groups[gr]['W'] = problem.get_w(gr, sim_all)
-    #                 problem.groups[gr]['Wdot'] = problem.get_wdot(gr, sim_all, sy_all)
+                #     problem.groups[gr]['W'] = problem.get_w(gr, sim_all)
+                #     problem.groups[gr]['Wdot'] = problem.get_wdot(gr, sim_all, sy_all)
 
-    #                 res = np.block([xi[:problem.groups[gr]['num_datapoints']] - sim_all,
-    #                                 np.zeros(problem.groups[gr]['num_inner_params'] - problem.groups[gr]['num_datapoints'])])
-    #                 #print(res)
+                #     res = np.block([xi[:problem.groups[gr]['num_datapoints']] - sim_all,
+                #                     np.zeros(problem.groups[gr]['num_inner_params'] - problem.groups[gr]['num_datapoints'])])
+                #     #print(res)
 
-    #                 dy_dtheta = get_dy_dtheta(gr, problem, sy_all)
+                #     dy_dtheta = get_dy_dtheta(gr, problem, sy_all)
 
-    #                 df_dtheta = res.dot(res.dot(problem.groups[gr]['Wdot']) - 2*problem.groups[gr]['W'].dot(dy_dtheta)) # -2 * problem.W.dot(dy_dtheta).dot(res)
+                #     df_dtheta = res.dot(res.dot(problem.groups[gr]['Wdot']) - 2*problem.groups[gr]['W'].dot(dy_dtheta)) # -2 * problem.W.dot(dy_dtheta).dot(res)
 
-    #                 grad += df_dtheta
-    #                 continue
+                #     grad += df_dtheta
+                #     continue
 
-    #             xi = get_xi(gr, problem, x_inner_opt[idx], sim, self.options)
-    #             sim_all = get_sim_all(problem.get_xs_for_group(gr), sim)
-    #             sy_all = get_sy_all(problem.get_xs_for_group(gr), sy, par_sim_idx)
-    #             #print(sim_all)
-    #             #print(sy_all)
+                xi = get_xi(gr, problem, x_inner_opt[idx], sim, self.options)
+                sim_all = get_sim_all(problem.get_xs_for_group(gr), sim)
+                sy_all = get_sy_all(problem.get_xs_for_group(gr), sy, par_opt_idx)
 
-    #             problem.groups[gr]['W'] = problem.get_w(gr, sim_all)
-    #             problem.groups[gr]['Wdot'] = problem.get_wdot(gr, sim_all, sy_all)
+                problem.groups[gr]['W'] = problem.get_w(gr, sim_all)
+                problem.groups[gr]['Wdot'] = problem.get_wdot(gr, sim_all, sy_all)
 
-    #             res = np.block([xi[:problem.groups[gr]['num_datapoints']] - sim_all,
-    #                             np.zeros(problem.groups[gr]['num_inner_params'] - problem.groups[gr]['num_datapoints'])])
-    #             #print(res)
-    #             df_dxi = 2 * problem.groups[gr]['W'].dot(res)
+                res = np.block([xi[:problem.groups[gr]['num_datapoints']] - sim_all,
+                                np.zeros(problem.groups[gr]['num_inner_params'] - problem.groups[gr]['num_datapoints'])])
 
-    #             dy_dtheta = get_dy_dtheta(gr, problem, sy_all)
+                df_dxi = 2 * problem.groups[gr]['W'].dot(res)
 
-    #             dd_dtheta = problem.get_dd_dtheta(gr, problem.get_xs_for_group(gr), sim_all, sy_all)
-    #             d = problem.get_d(gr, problem.get_xs_for_group(gr), sim_all, self.options['minGap'])
+                dy_dtheta = get_dy_dtheta(gr, problem, sy_all)
 
-    #             mu = get_mu(gr, problem, xi, res, d)
+                dd_dtheta = problem.get_dd_dtheta(gr, problem.get_xs_for_group(gr), sim_all, sy_all)
+                d = problem.get_d(gr, problem.get_xs_for_group(gr), sim_all, self.options['minGap'])
 
-    #             dxi_dtheta = calculate_dxi_dtheta(gr, problem, xi, mu, dy_dtheta, res, d, dd_dtheta)
+                mu = get_mu(gr, problem, xi, res, d)
 
-    #             df_dtheta = res.dot(res.dot(problem.groups[gr]['Wdot']) - 2*problem.groups[gr]['W'].dot(dy_dtheta)) # -2 * problem.W.dot(dy_dtheta).dot(res)
+                dxi_dtheta = calculate_dxi_dtheta(gr, problem, xi, mu, dy_dtheta, res, d, dd_dtheta)
 
-    #             grad += dxi_dtheta.dot(df_dxi) + df_dtheta
-    #         snllh[par_opt_idx] = grad
-    #     #print("I calculated the grad with optimized inner pars")
-    #     return snllh
+                df_dtheta = res.dot(res.dot(problem.groups[gr]['Wdot']) - 2*problem.groups[gr]['W'].dot(dy_dtheta)) # -2 * problem.W.dot(dy_dtheta).dot(res)
+
+                grad += dxi_dtheta.dot(df_dxi) + df_dtheta
+            snllh[par_opt_idx] = grad
+        return snllh
 
     @staticmethod
     def get_default_options() -> Dict:
@@ -435,6 +431,7 @@ def get_weight_for_surrogate(
     # print(w ** 2)
 
     return np.sum(np.abs(sim_x_all)) + eps  # TODO: w ** 2
+    #return np.sum(np.square(sim_x_all)) + eps  # TODO: w ** 2
 
 
 def compute_interval_constraints(

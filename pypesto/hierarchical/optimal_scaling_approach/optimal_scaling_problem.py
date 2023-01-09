@@ -10,7 +10,6 @@ from ...C import (
 )
 from ..problem import InnerProblem
 from ..problem import (
-    inner_parameters_from_parameter_df,
     ixs_for_measurement_specific_parameters,
     ix_matrices_from_arrays,
 )
