@@ -23,3 +23,13 @@
 /pypesto/store/ @PaulJonasJost
 /pypesto/visualize/ @plakrisenko
 /docker @dweindl
+/test/base/ @yannikschaelte
+/test/doc/ @yannikschaelte
+/test/hierarchical/ @dilpath @dweindl @yannikschaelte
+/test/julia/ @yannikschaelte
+/test/optimize/ @yannikschaelte
+/test/petab/ @dweindl @FFroehlich
+/test/profile/ @PaulJonasJost
+/test/sample/ @elbaraim
+/test/select/ @dilpath
+/test/visualize/ @plakrisenko
