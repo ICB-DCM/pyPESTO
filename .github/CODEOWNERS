@@ -1,0 +1,25 @@
+# see https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-code-owners
+
+# default owners
+* @ICB-DCM/pypesto-maintainers
+
+/pypesto/engine/ @yannikschaelte
+/pypesto/engine/mpi_pool.py @PaulJonasJost
+/pypesto/ensemble/ @dilpath
+/pypesto/hierarchical/ @dilpath @dweindl @yannikschaelte
+/pypesto/hierarchical/optimal_scaling_approach/ @doresic
+/pypesto/history/ @PaulJonasJost
+/pypesto/objective/ @yannikschaelte
+/pypesto/objective/amici/ @yannikschaelte @dweindl @FFroehlich
+/pypesto/optimize/ @yannikschaelte
+/pypesto/petab/ @dweindl @FFroehlich
+/pypesto/predict/ @PaulJonasJost @dilpath
+/pypesto/problem/ @yannikschaelte
+/pypesto/profile/ @PaulJonasJost
+/pypesto/result/ @yannikschaelte
+/pypesto/sample/ @elbaraim
+/pypesto/select/ @dilpath
+/pypesto/startpoint/ @yannikschaelte
+/pypesto/store/ @PaulJonasJost
+/pypesto/visualize/ @plakrisenko
+/docker @dweindl
