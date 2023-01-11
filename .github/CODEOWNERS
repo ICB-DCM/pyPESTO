@@ -3,6 +3,16 @@
 # default owners
 * @ICB-DCM/pypesto-maintainers
 
+/doc/example/hdf5_storage.ipynb @PaulJonasJost
+/doc/example/hierarchical.ipynb @dilpath @dweindl @yannikschaelte
+/doc/example/julia.ipynb @yannikschaelte
+/doc/example/model_selection.ipynb @dilpath
+/doc/example/petab_import.ipynb @dweindl @FFroehlich
+/doc/example/sampler_study.ipynb @elbaraim
+/doc/example/sampling_diagnostics.ipynb @elbaraim
+/doc/example/store.ipynb @PaulJonasJost
+/doc/example/synthetic_data.ipynb @dilpath
+/docker/ @dweindl
 /pypesto/engine/ @yannikschaelte
 /pypesto/engine/mpi_pool.py @PaulJonasJost
 /pypesto/ensemble/ @dilpath
@@ -22,7 +32,6 @@
 /pypesto/startpoint/ @yannikschaelte
 /pypesto/store/ @PaulJonasJost
 /pypesto/visualize/ @plakrisenko
-/docker @dweindl
 /test/base/ @yannikschaelte
 /test/doc/ @yannikschaelte
 /test/hierarchical/ @dilpath @dweindl @yannikschaelte
@@ -33,12 +42,3 @@
 /test/sample/ @elbaraim
 /test/select/ @dilpath
 /test/visualize/ @plakrisenko
-/doc/example/hdf5_storage.ipynb @PaulJonasJost
-doc/example/hierarchical.ipynb @dilpath @dweindl @yannikschaelte
-doc/example/julia.ipynb @yannikschaelte
-doc/example/model_selection.ipynb @dilpath
-doc/example/petab_import.ipynb @dweindl @FFroehlich
-doc/example/sampler_study.ipynb @elbaraim
-doc/example/sampling_diagnostics.ipynb @elbaraim
-doc/example/store.ipynb @PaulJonasJost
-doc/example/synthetic_data.ipynb @dilpath
