@@ -1,17 +1,20 @@
 import numpy as np
-from typing import List
+from typing import List, Dict, Tuple
 import pandas as pd
 
 from ...C import (
-    PARAMETER_TYPE,
-    PARAMETER_GROUP,
-    PARAMETER_CATEGORY,
+    MEASUREMENT_TYPE,
+    MEASUREMENT_GROUP,
+    MEASUREMENT_CATEGORY,
+    ORDINAL,
+    LIN,
+    TIME,
     InnerParameterType,
 )
 from ..problem import InnerProblem
 from ..problem import (
-    ixs_for_measurement_specific_parameters,
     ix_matrices_from_arrays,
+    _get_timepoints_with_replicates,
 )
 from .optimal_scaling_parameter import OptimalScalingParameter
 
@@ -19,11 +22,7 @@ try:
     import amici
     import petab
     from petab.C import (
-        ESTIMATE,
-        LOWER_BOUND,
-        PARAMETER_ID,
-        PARAMETER_SCALE,
-        UPPER_BOUND,
+        OBSERVABLE_ID,
     )
 except ImportError:
     pass
@@ -35,19 +34,30 @@ class OptimalScalingProblem(InnerProblem):
         xs: List[OptimalScalingParameter],
         # hard_constraints: pd.DataFrame,
         data: List[np.ndarray],
+        method: str,
     ):
         super().__init__(xs, data)
         # self.hard_constraints = hard_constraints
         self.groups = {}
+        self.method = method
 
         for idx, gr in enumerate(
             self.get_groups_for_xs(InnerParameterType.OPTIMALSCALING)
         ):
             self.groups[gr] = {}
             xs = self.get_xs_for_group(gr)
-            self.groups[gr]['num_categories'] = len(xs)
+            self.groups[gr]['num_categories'] = len(
+                set([x.category for x in xs])
+            )
             self.groups[gr]['num_datapoints'] = np.sum(
-                [np.sum([np.sum(ixs) for ixs in x.ixs]) for x in xs]
+                [
+                    np.sum([np.sum(ixs) for ixs in x.ixs])
+                    for x in self.get_cat_ub_parameters_for_group(gr)
+                ]
+            )
+
+            self.groups[gr]['surrogate_data'] = np.zeros(
+                self.groups[gr]['num_datapoints']
             )
 
             self.groups[gr]['num_inner_params'] = (
@@ -76,10 +86,8 @@ class OptimalScalingProblem(InnerProblem):
                 )
             )
 
-            self.groups[gr]['cat_ixs'] = {}
-            self.get_cat_indices(gr, xs)
 
-            self.groups[gr]['C'] = self.initialize_c(gr, xs)
+            self.groups[gr]['C'] = self.initialize_c(gr)
 
             self.groups[gr]['W'] = self.initialize_w(gr)
 
@@ -90,19 +98,15 @@ class OptimalScalingProblem(InnerProblem):
         petab_problem: petab.Problem,
         amici_model: 'amici.Model',
         edatas: List['amici.ExpData'],
+        method: str,
     ):
         return qualitative_inner_problem_from_petab_problem(
-            petab_problem, amici_model, edatas
+            petab_problem, amici_model, edatas, method
         )
 
     def get_groups_for_xs(self, inner_parameter_type: str) -> List[int]:
         """Get unique list of ``OptimalScalingParameter.group`` values."""
-        try:
-            groups = [
-                x.group for x in self.get_xs_for_type(inner_parameter_type)
-            ]
-        except:
-            breakpoint()
+        groups = [x.group for x in self.get_xs_for_type(inner_parameter_type)]
         return list(set(groups))
 
     # FIXME does this break if there's inner parameters (xs) of different sorts, i.e.
@@ -111,7 +115,45 @@ class OptimalScalingProblem(InnerProblem):
         """Get ``OptimalScalingParameter``s that belong to the given group."""
         return [x for x in self.xs.values() if x.group == group]
 
-    def initialize_c(self, gr, xs):
+    def get_free_xs_for_group(
+        self, group: int
+    ) -> List[OptimalScalingParameter]:
+        """Get ``OptimalScalingParameter``s that are free and belong to the given group."""
+        return [
+            x
+            for x in self.xs.values()
+            if x.group == group and x.estimate == True
+        ]
+
+    def get_fixed_xs_for_group(
+        self, group: int
+    ) -> List[OptimalScalingParameter]:
+        """Get ``OptimalScalingParameter``s that are fixed and belong to the given group."""
+        return [
+            x
+            for x in self.xs.values()
+            if x.group == group and x.estimate == False
+        ]
+
+    def get_cat_ub_parameters_for_group(
+        self, group: int
+    ) -> List[OptimalScalingParameter]:
+        return [
+            x
+            for x in self.xs.values()
+            if x.group == group and x.inner_parameter_id[:2] == 'ub'
+        ]
+
+    def get_cat_lb_parameters_for_group(
+        self, group: int
+    ) -> List[OptimalScalingParameter]:
+        return [
+            x
+            for x in self.xs.values()
+            if x.group == group and x.inner_parameter_id[:2] == 'lb'
+        ]
+
+    def initialize_c(self, gr):
         constr = np.zeros(
             [
                 self.groups[gr]['num_constr_full'],
@@ -119,7 +161,7 @@ class OptimalScalingProblem(InnerProblem):
             ]
         )
         data_idx = 0
-        for cat_idx, x in enumerate(xs):
+        for cat_idx, x in enumerate(self.get_cat_ub_parameters_for_group(gr)):
             num_data_in_cat = int(
                 np.sum([np.sum(x.ixs[idx]) for idx in range(len(x.ixs))])
             )
@@ -265,23 +307,6 @@ class OptimalScalingProblem(InnerProblem):
 
         return dd_dtheta
 
-    def get_cat_for_xi_idx(self, gr, data_idx):
-        for cat_idx, (_, indices) in enumerate(
-            self.groups[gr]['cat_ixs'].items()
-        ):
-            if data_idx in indices:
-                return cat_idx
-
-    def get_cat_indices(self, gr, xs):
-        idx_tot = 0
-        for x in xs:
-            num_points = np.sum(
-                [np.sum(x.ixs[idx]) for idx in range(len(x.ixs))]
-            )
-            self.groups[gr]['cat_ixs'][x.inner_parameter_id] = list(
-                range(idx_tot, idx_tot + num_points)
-            )
-            idx_tot += num_points
 
     def get_last_category_for_group(self, gr):
         last_category = 1
@@ -298,20 +323,19 @@ def qualitative_inner_problem_from_petab_problem(
     petab_problem: petab.Problem,
     amici_model: 'amici.Model',
     edatas: List['amici.ExpData'],
+    method: str,
 ):
     # get hard constrained measurements from measurement.df
     # hard_constraints=get_hard_constraints(petab_problem)
 
     # inner parameters
-    inner_parameters = qualitative_inner_parameters_from_parameter_df(
-        petab_problem.parameter_df
+    inner_parameters = qualitative_inner_parameters_from_measurement_df(
+        petab_problem.measurement_df, method
     )
 
-    x_ids = [x.inner_parameter_id for x in inner_parameters]
-
     # used indices for all measurement specific parameters
-    ixs = ixs_for_measurement_specific_parameters(
-        petab_problem, amici_model, x_ids
+    ixs = qualitatiave_ixs_for_measurement_specific_parameters(
+        petab_problem, amici_model, inner_parameters
     )
     # print("ixs : \n", ixs)
     # transform experimental data
@@ -330,45 +354,159 @@ def qualitative_inner_problem_from_petab_problem(
         inner_parameters,
         # hard_constraints,
         edatas,
+        method,
     )
 
 
-def qualitative_inner_parameters_from_parameter_df(
+def qualitative_inner_parameters_from_measurement_df(
     df: pd.DataFrame,
+    method: str,
 ) -> List[OptimalScalingParameter]:
     """
-    Create list of inner free parameters from PEtab parameter table.
-
-    Inner parameters are those that have a non-empty `parameterType` in the
-    PEtab problem.
+    Create list of inner free parameters from PEtab measurement table
+    dependent on the method provided.
     """
     # create list of hierarchical parameters
     df = df.reset_index()
 
-    for col in (PARAMETER_TYPE, PARAMETER_GROUP, PARAMETER_CATEGORY):
-        if col not in df:
-            df[col] = None
+    # FIXME Make validate PEtab for optimal scaling
+    # for col in (MEASUREMENT_TYPE, MEASUREMENT_GROUP, MEASUREMENT_CATEGORY):
+    #     if col not in df:
+    #         df[col] = None
+    # if petab.is_empty(row[PARAMETER_TYPE]):
+    #     continue
 
-    parameters = []
+    estimate = get_estimate_for_method(method)
+    par_types = ['lb', 'ub']
 
-    for _, row in df.iterrows():
-        if not row[ESTIMATE]:
-            continue
-        if petab.is_empty(row[PARAMETER_TYPE]):
-            continue
-        parameters.append(
-            OptimalScalingParameter(
-                inner_parameter_id=row[PARAMETER_ID],
-                inner_parameter_type=row[PARAMETER_TYPE],
-                scale=row[PARAMETER_SCALE],
-                lb=row[LOWER_BOUND],
-                ub=row[UPPER_BOUND],
-                category=row[PARAMETER_CATEGORY],
-                group=row[PARAMETER_GROUP],
-            )
+    inner_parameters = []
+
+    for par_type, par_estimate in zip(par_types, estimate):
+        for _, row in df.iterrows():
+            if row[MEASUREMENT_TYPE] == ORDINAL:
+                par_id = (
+                    f'{par_type}_{row[MEASUREMENT_CATEGORY]}_'
+                    + row[OBSERVABLE_ID]
+                )
+
+                # Create only one set of bound parameters per category of a group.
+                if par_id not in [
+                    inner_par.inner_parameter_id
+                    for inner_par in inner_parameters
+                ]:
+                    inner_parameters.append(
+                        OptimalScalingParameter(
+                            inner_parameter_id=par_id,
+                            inner_parameter_type=InnerParameterType.OPTIMALSCALING,
+                            scale=LIN,
+                            lb=1e-5,  # let it be inf later, see what happens.
+                            ub=1e5,
+                            category=row[MEASUREMENT_CATEGORY],
+                            group=row[MEASUREMENT_GROUP],
+                            estimate=par_estimate,
+                        )
+                    )
+    inner_parameters.sort(key=lambda x: x.category)
+
+    return inner_parameters
+
+
+def get_estimate_for_method(method: str):
+    """
+    Dependent on the method provided, returns which inner parameters to estimate.
+    """
+    estimate_ub = True
+    estimate_lb = False
+
+    # TODO fix this?
+    # if method == STANDARD:
+    #     estimate_lb = True
+
+    return estimate_lb, estimate_ub
+
+
+def qualitatiave_ixs_for_measurement_specific_parameters(
+    petab_problem: 'petab.Problem',
+    amici_model: 'amici.Model',
+    inner_parameters: List[OptimalScalingParameter],
+) -> Dict[str, List[Tuple[int, int, int]]]:
+    """
+    Create mapping of parameters to measurements.
+
+    Returns
+    -------
+    A dictionary mapping parameter ID to a List of
+    `(condition index, time index, observable index)` tuples in which this
+    output parameter is used. For each condition, the time index refers to
+    a sorted list of non-unique time points for which there are measurements.
+    """
+    ixs_for_par = {}
+    observable_ids = amici_model.getObservableIds()
+
+    simulation_conditions = (
+        petab_problem.get_simulation_conditions_from_measurement_df()
+    )
+    for condition_ix, condition in simulation_conditions.iterrows():
+        # measurement table for current condition
+        df_for_condition = petab.get_rows_for_condition(
+            measurement_df=petab_problem.measurement_df, condition=condition
         )
 
-    return parameters
+        # unique sorted list of timepoints
+        timepoints = sorted(df_for_condition[TIME].unique().astype(float))
+        # non-unique sorted list of timepoints
+        timepoints_w_reps = _get_timepoints_with_replicates(
+            measurement_df=df_for_condition
+        )
+
+        for time in timepoints:
+            # subselect measurements for time `time`
+            df_for_time = df_for_condition[df_for_condition[TIME] == time]
+            time_ix_0 = timepoints_w_reps.index(time)
+
+            # remember used time indices for each observable
+            time_ix_for_obs_ix = {}
+
+            # iterate over measurements
+            for _, measurement in df_for_time.iterrows():
+                # extract observable index
+                observable_ix = observable_ids.index(
+                    measurement[OBSERVABLE_ID]
+                )
+
+                # as the time indices have to account for replicates, we need
+                #  to track which time indices have already been assigned for
+                #  the current observable
+                if observable_ix in time_ix_for_obs_ix:
+                    # a replicate
+                    time_ix_for_obs_ix[observable_ix] += 1
+                else:
+                    # the first measurement for this `(observable, timepoint)`
+                    time_ix_for_obs_ix[observable_ix] = time_ix_0
+                time_w_reps_ix = time_ix_for_obs_ix[observable_ix]
+
+                inner_par_ids_for_meas = get_inner_par_ids_for_measurement(
+                    measurement, inner_parameters
+                )
+
+                # try to insert if hierarchical parameter
+                for override in inner_par_ids_for_meas:
+                    ixs_for_par.setdefault(override, []).append(
+                        (condition_ix, time_w_reps_ix, observable_ix)
+                    )
+    return ixs_for_par
+
+
+def get_inner_par_ids_for_measurement(
+    measurement: Dict,
+    inner_parameters: List[OptimalScalingParameter],
+):
+    return [
+        inner_par.inner_parameter_id
+        for inner_par in inner_parameters
+        if inner_par.category == measurement[MEASUREMENT_CATEGORY]
+        and inner_par.group == measurement[MEASUREMENT_GROUP]
+    ]
 
 
 # def get_hard_constraints(petab_problem: petab.Problem):

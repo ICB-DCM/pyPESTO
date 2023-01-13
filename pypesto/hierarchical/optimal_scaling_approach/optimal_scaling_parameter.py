@@ -16,6 +16,10 @@ class OptimalScalingParameter(InnerParameter):
         Category index.
     group:
         Group index.
+    value:
+        Current value of the inner parameter.
+    estimate:
+        Whether to estimate inner parameter in inner subproblem.
     """
 
     def __init__(
@@ -23,6 +27,7 @@ class OptimalScalingParameter(InnerParameter):
         *args,
         category: int = None,
         group: int = None,
+        estimate: bool = False,
         **kwargs,
     ):
         """
@@ -42,5 +47,8 @@ class OptimalScalingParameter(InnerParameter):
             raise ValueError("No Parameter group provided.")
         if category is None:
             raise ValueError("No Category provided.")
-        self.group = group
+        
         self.category = category
+        self.group = group
+        self.estimate = estimate
+        self.value = self.dummy_value

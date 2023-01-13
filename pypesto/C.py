@@ -122,8 +122,11 @@ INNER_PARAMETER_BOUNDS = {
 ###############################################################################
 # OPTIMAL SCALING 
 
-PARAMETER_CATEGORY = 'parameterCategory'
-PARAMETER_GROUP = 'parameterGroup'
+MEASUREMENT_CATEGORY = 'measurementCategory'
+MEASUREMENT_GROUP = 'measurementGroup'
+MEASUREMENT_TYPE = 'measurementType'
+
+ORDINAL = 'ordinal'
 
 REDUCED = 'reduced'
 STANDARD = 'standard'
