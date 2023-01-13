@@ -1,7 +1,9 @@
+from __future__ import annotations
+
 import logging
 import numbers
 import warnings
-from typing import Dict, Sequence, Tuple, Union
+from typing import TYPE_CHECKING, Dict, Sequence, Tuple, Union
 
 import numpy as np
 
@@ -18,16 +20,15 @@ from ...C import (
 )
 from ...logging import log_level_active
 
-try:
-    import amici
-    import amici.parameter_mapping
-    import amici.petab_objective
-    from amici.parameter_mapping import (
-        ParameterMapping,
-        ParameterMappingForCondition,
-    )
-except ImportError:
-    pass
+if TYPE_CHECKING:
+    try:
+        import amici
+        from amici.parameter_mapping import (
+            ParameterMapping,
+            ParameterMappingForCondition,
+        )
+    except ImportError:
+        ParameterMapping = ParameterMappingForCondition = None
 
 AmiciModel = Union['amici.Model', 'amici.ModelPtr']
 AmiciSolver = Union['amici.Solver', 'amici.SolverPtr']
@@ -109,16 +110,18 @@ def create_plist_from_par_opt_to_par_sim(mapping_par_opt_to_par_sim):
 
 def create_identity_parameter_mapping(
     amici_model: AmiciModel, n_conditions: int
-) -> 'ParameterMapping':
+) -> ParameterMapping:
     """Create a dummy identity parameter mapping table.
 
     This fills in only the dynamic parameters. Values for fixed parameters,
     both in preequilibration and simulation, are assumed to be provided
     correctly in model or edatas already.
     """
+    import amici.parameter_mapping
+
     x_ids = list(amici_model.getParameterIds())
     x_scales = list(amici_model.getParameterScale())
-    parameter_mapping = ParameterMapping()
+    parameter_mapping = amici.parameter_mapping.ParameterMapping()
     for _ in range(n_conditions):
         condition_map_sim_var = {x_id: x_id for x_id in x_ids}
         condition_scale_map_sim_var = {
@@ -126,9 +129,11 @@ def create_identity_parameter_mapping(
             for x_id, x_scale in zip(x_ids, x_scales)
         }
         # assumes fixed parameters are filled in already
-        mapping_for_condition = ParameterMappingForCondition(
-            map_sim_var=condition_map_sim_var,
-            scale_map_sim_var=condition_scale_map_sim_var,
+        mapping_for_condition = (
+            amici.parameter_mapping.ParameterMappingForCondition(
+                map_sim_var=condition_map_sim_var,
+                scale_map_sim_var=condition_scale_map_sim_var,
+            )
         )
 
         parameter_mapping.append(mapping_for_condition)
@@ -188,7 +193,7 @@ def par_index_slices(
                 par_opt_id_to_idx[par_opt_id],
             )
             for par_sim_id, par_opt_id in condition_map_sim_var.items()
-            if isinstance(par_opt_id, str)
+            if isinstance(par_opt_id, str) and par_opt_id in par_opt_id_to_idx
         )
     )
     par_sim_slice = np.fromiter(next(zip_iterator), dtype=int)
@@ -203,7 +208,7 @@ def add_sim_grad_to_opt_grad(
     sim_grad: np.ndarray,
     opt_grad: np.ndarray,
     coefficient: float = 1.0,
-):
+) -> None:
     """
     Sum simulation gradients to objective gradient.
 
@@ -251,7 +256,7 @@ def add_sim_hess_to_opt_hess(
     sim_hess: np.ndarray,
     opt_hess: np.ndarray,
     coefficient: float = 1.0,
-):
+) -> None:
     """
     Sum simulation hessians to objective hessian.
 
@@ -301,7 +306,7 @@ def sim_sres_to_opt_sres(
     condition_map_sim_var: Dict[str, Union[float, str]],
     sim_sres: np.ndarray,
     coefficient: float = 1.0,
-):
+) -> np.ndarray:
     """
 
     Sum simulation residual sensitivities to objective residual sensitivities.
@@ -334,7 +339,7 @@ def sim_sres_to_opt_sres(
     return opt_sres
 
 
-def log_simulation(data_ix, rdata):
+def log_simulation(data_ix, rdata) -> None:
     """Log the simulation results."""
     logger.debug(f"=== DATASET {data_ix} ===")
     logger.debug(f"status: {rdata['status']}")
@@ -355,7 +360,7 @@ def get_error_output(
     sensi_orders: Tuple[int, ...],
     mode: ModeType,
     dim: int,
-):
+) -> dict:
     """Get default output upon error.
 
     Returns values indicative of an error, that is with nan entries in all
@@ -425,6 +430,6 @@ def init_return_values(
     return nllh, snllh, s2nllh, chi2, res, sres
 
 
-def filter_return_dict(ret):
+def filter_return_dict(ret) -> dict:
     """Filter return dict for non-None values."""
     return {key: val for key, val in ret.items() if val is not None}

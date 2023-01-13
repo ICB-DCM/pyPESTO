@@ -8,6 +8,52 @@ from enum import Enum
 from typing import Callable, Literal, Tuple, Union
 
 ###############################################################################
+# ENSEMBLE
+
+PREDICTOR = 'predictor'
+PREDICTION_ID = 'prediction_id'
+PREDICTION_RESULTS = 'prediction_results'
+PREDICTION_ARRAYS = 'prediction_arrays'
+PREDICTION_SUMMARY = 'prediction_summary'
+
+HISTORY = 'history'
+OPTIMIZE = 'optimize'
+SAMPLE = 'sample'
+
+MEAN = 'mean'
+MEDIAN = 'median'
+STANDARD_DEVIATION = 'std'
+PERCENTILE = 'percentile'
+SUMMARY = 'summary'
+WEIGHTED_SIGMA = 'weighted_sigma'
+
+X_NAMES = 'x_names'
+NX = 'n_x'
+X_VECTOR = 'x_vectors'
+NVECTORS = 'n_vectors'
+VECTOR_TAGS = 'vector_tags'
+ENSEMBLE_TYPE = 'ensemble_type'
+PREDICTIONS = 'predictions'
+
+LOWER_BOUND = 'lower_bound'
+UPPER_BOUND = 'upper_bound'
+PREEQUILIBRATION_CONDITION_ID = 'preequilibrationConditionId'
+SIMULATION_CONDITION_ID = 'simulationConditionId'
+
+COLOR_HIT_BOTH_BOUNDS = [0.6, 0.0, 0.0, 0.9]
+COLOR_HIT_ONE_BOUND = [0.95, 0.6, 0.0, 0.9]
+COLOR_HIT_NO_BOUNDS = [0.0, 0.8, 0.0, 0.9]
+
+
+class EnsembleType(Enum):
+    """Specifies different ensemble types."""
+
+    ensemble = 1
+    sample = 2
+    unprocessed_chain = 3
+
+
+###############################################################################
 # OBJECTIVE
 
 MODE_FUN = 'mode_fun'  # mode for function values
@@ -32,6 +78,44 @@ START_TIME = 'start_time'  # start time
 X = 'x'
 X0 = 'x0'
 ID = 'id'
+
+
+###############################################################################
+# HIERARCHICAL
+
+INNER_PARAMETERS = 'inner_parameters'
+INNER_RDATAS = 'inner_rdatas'
+PARAMETER_TYPE = 'parameterType'
+
+
+class InnerParameterType(str, Enum):
+    """Specifies different inner parameter types."""
+
+    OFFSET = 'offset'
+    SCALING = 'scaling'
+    SIGMA = 'sigma'
+
+
+DUMMY_INNER_VALUE = {
+    InnerParameterType.OFFSET: 0.0,
+    InnerParameterType.SCALING: 1.0,
+    InnerParameterType.SIGMA: 1.0,
+}
+
+INNER_PARAMETER_BOUNDS = {
+    InnerParameterType.OFFSET: {
+        LOWER_BOUND: -float('inf'),
+        UPPER_BOUND: float('inf'),
+    },
+    InnerParameterType.SCALING: {
+        LOWER_BOUND: -float('inf'),
+        UPPER_BOUND: float('inf'),
+    },
+    InnerParameterType.SIGMA: {
+        LOWER_BOUND: 0,
+        UPPER_BOUND: float('inf'),
+    },
+}
 
 
 ###############################################################################
@@ -100,52 +184,6 @@ H5 = 'h5'  # return file format
 
 
 ###############################################################################
-# ENSEMBLE
-
-PREDICTOR = 'predictor'
-PREDICTION_ID = 'prediction_id'
-PREDICTION_RESULTS = 'prediction_results'
-PREDICTION_ARRAYS = 'prediction_arrays'
-PREDICTION_SUMMARY = 'prediction_summary'
-
-HISTORY = 'history'
-OPTIMIZE = 'optimize'
-SAMPLE = 'sample'
-
-MEAN = 'mean'
-MEDIAN = 'median'
-STANDARD_DEVIATION = 'std'
-PERCENTILE = 'percentile'
-SUMMARY = 'summary'
-WEIGHTED_SIGMA = 'weighted_sigma'
-
-X_NAMES = 'x_names'
-NX = 'n_x'
-X_VECTOR = 'x_vectors'
-NVECTORS = 'n_vectors'
-VECTOR_TAGS = 'vector_tags'
-ENSEMBLE_TYPE = 'ensemble_type'
-PREDICTIONS = 'predictions'
-
-LOWER_BOUND = 'lower_bound'
-UPPER_BOUND = 'upper_bound'
-PREEQUILIBRATION_CONDITION_ID = 'preequilibrationConditionId'
-SIMULATION_CONDITION_ID = 'simulationConditionId'
-
-COLOR_HIT_BOTH_BOUNDS = [0.6, 0.0, 0.0, 0.9]
-COLOR_HIT_ONE_BOUND = [0.95, 0.6, 0.0, 0.9]
-COLOR_HIT_NO_BOUNDS = [0.0, 0.8, 0.0, 0.9]
-
-
-class EnsembleType(Enum):
-    """Specifies different ensemble types."""
-
-    ensemble = 1
-    sample = 2
-    unprocessed_chain = 3
-
-
-###############################################################################
 # SELECT
 
 TYPE_POSTPROCESSOR = Callable[["ModelProblem"], None]  # noqa: F821
@@ -175,6 +213,14 @@ TRACE_Y_FVAL = 'fval'
 TRACE_Y_GRADNORM = 'gradnorm'
 # supported values to plot on y-axis
 TRACE_Y = (TRACE_Y_FVAL, TRACE_Y_GRADNORM)
+
+# parameter indices
+FREE_ONLY = 'free_only'  # only estimated parameters
+ALL = 'all'  # all parameters, also for start indices
+
+# start indices
+ALL_CLUSTERED = 'all_clustered'  # best + all that are in a cluster of size > 1
+FIRST_CLUSTER = 'first_cluster'  # all starts that belong to the first cluster
 
 
 ###############################################################################

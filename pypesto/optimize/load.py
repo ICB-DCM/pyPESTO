@@ -3,6 +3,7 @@
 import logging
 import os
 from pathlib import Path
+from typing import Optional
 
 import h5py
 import numpy as np
@@ -113,17 +114,19 @@ def fill_result_from_history(
     return result
 
 
-def read_result_from_file(
-    problem: Problem,
+def read_history_from_file(
+    problem: Optional[Problem],
     history_options: HistoryOptions,
     identifier: str,
-) -> OptimizerResult:
-    """Fill an OptimizerResult from history.
+) -> OptimizerHistory:
+    """Read history from file.
 
     Parameters
     ----------
     problem:
         The problem to find optimal parameters for.
+        If ``None``, bounds will be assumed to be [-inf, inf] for checking for
+        admissible points.
     identifier:
         Multistart id.
     history_options:
@@ -150,27 +153,59 @@ def read_result_from_file(
     else:
         raise HistoryTypeError(suffix)
 
-    opt_hist = OptimizerHistory(
+    x0 = history.get_x_trace(0)
+
+    if problem:
+        lb, ub = problem.lb, problem.ub
+    else:
+        lb = np.full_like(x0, fill_value=-np.inf)
+        ub = np.full_like(x0, fill_value=np.inf)
+
+    return OptimizerHistory(
         history=history,
-        x0=history.get_x_trace(0),
-        lb=problem.lb,
-        ub=problem.ub,
+        x0=x0,
+        lb=lb,
+        ub=ub,
         generate_from_history=True,
     )
 
+
+def read_result_from_file(
+    problem: Optional[Problem],
+    history_options: HistoryOptions,
+    identifier: str,
+) -> OptimizerResult:
+    """Fill an OptimizerResult from history.
+
+    Parameters
+    ----------
+    problem:
+        The problem to find optimal parameters for.
+        If ``None``, bounds will be assumed to be [-inf, inf] for checking for
+        admissible points.
+    identifier:
+        Multistart id.
+    history_options:
+        Optimizer history options.
+    """
+    opt_hist = read_history_from_file(
+        problem=problem, history_options=history_options, identifier=identifier
+    )
     result = OptimizerResult(
         id=identifier,
         message='loaded from file',
         exitflag=EXITFLAG_LOADED_FROM_FILE,
-        time=max(history.get_time_trace()) if len(history) else 0.0,
+        time=max(opt_hist.history.get_time_trace())
+        if len(opt_hist.history)
+        else 0.0,
     )
     result.id = identifier
     result = fill_result_from_history(
         result=result,
         optimizer_history=opt_hist,
     )
-    result.update_to_full(problem)
-
+    if problem:
+        result.update_to_full(problem)
     return result
 
 

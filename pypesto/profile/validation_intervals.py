@@ -106,7 +106,6 @@ def validation_profile_significance(
             n_starts=n_starts,
             engine=engine,
             progress_bar=False,
-            filename=None,
         )
 
     # Validation intervals compare the nllh value on the full data set

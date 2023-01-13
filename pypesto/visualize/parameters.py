@@ -1,8 +1,9 @@
-from typing import Iterable, List, Optional, Sequence, Tuple, Union
+from typing import Callable, Iterable, List, Optional, Sequence, Tuple, Union
 
 import matplotlib.axes
 import matplotlib.pyplot as plt
 import numpy as np
+import pandas as pd
 from matplotlib.ticker import MaxNLocator
 
 from pypesto.util import delete_nan_inf
@@ -10,7 +11,11 @@ from pypesto.util import delete_nan_inf
 from ..C import RGBA
 from ..result import Result
 from .clust_color import assign_colors
-from .misc import process_result_list, process_start_indices
+from .misc import (
+    process_parameter_indices,
+    process_result_list,
+    process_start_indices,
+)
 from .reference_points import ReferencePoint, create_references
 
 
@@ -358,7 +363,7 @@ def handle_inputs(
 
     # parse indices which should be plotted
     if start_indices is not None:
-        start_indices = process_start_indices(start_indices, len(fvals))
+        start_indices = process_start_indices(result, start_indices)
 
         # reduce number of displayed results
         xs_out = [xs[ind] for ind in start_indices]
@@ -391,3 +396,61 @@ def handle_inputs(
         ub = result.problem.get_full_vector(ub)
 
     return lb, ub, x_labels, fvals_out, xs_out
+
+
+def parameters_correlation_matrix(
+    result: Result,
+    parameter_indices: Union[str, Sequence[int]] = 'free_only',
+    start_indices: Optional[Union[int, Iterable[int]]] = None,
+    method: Union[str, Callable] = 'pearson',
+    cluster: bool = True,
+) -> matplotlib.axes.Axes:
+    """
+    Plot correlation of optimized parameters.
+
+    Parameters
+    ----------
+    result:
+        Optimization result obtained by 'optimize.py'
+    parameter_indices:
+        List of integers specifying the parameters to be considered.
+    start_indices:
+        List of integers specifying the multistarts to be plotted or
+        int specifying up to which start index should be plotted
+    method:
+        The method to compute correlation. Allowed are `pearson, kendall,
+        spearman` or a callable function.
+    cluster:
+        Whether to cluster the correlation matrix.
+
+    Returns
+    -------
+    ax:
+        The plot axis.
+    """
+    import seaborn as sns
+
+    start_indices = process_start_indices(
+        start_indices=start_indices, result=result
+    )
+    parameter_indices = process_parameter_indices(
+        parameter_indices=parameter_indices, result=result
+    )
+    # put all parameters into a dataframe, where columns are parameters
+    parameters = [
+        result.optimize_result[i_start]['x'][parameter_indices]
+        for i_start in start_indices
+    ]
+    x_labels = [
+        result.problem.x_names[parameter_index]
+        for parameter_index in parameter_indices
+    ]
+    df = pd.DataFrame(parameters, columns=x_labels)
+    corr_matrix = df.corr(method=method)
+    if cluster:
+        ax = sns.clustermap(
+            data=corr_matrix, yticklabels=True, vmin=-1, vmax=1
+        )
+    else:
+        ax = sns.heatmap(data=corr_matrix, yticklabels=True, vmin=-1, vmax=1)
+    return ax

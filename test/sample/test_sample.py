@@ -77,8 +77,9 @@ def rosenbrock_problem():
     --------
     * 3-dim
     * has fixed parameters
+    * has gradient
     """
-    objective = pypesto.Objective(fun=so.rosen)
+    objective = pypesto.Objective(fun=so.rosen, grad=so.rosen_der)
 
     dim_full = 2
     lb = -5 * np.ones((dim_full, 1))
@@ -125,7 +126,6 @@ def sample_petab_problem():
         n_samples=1000,
         sampler=sampler,
         x0=np.array([3, -4]),
-        filename=None,
     )
     return result
 
@@ -154,6 +154,7 @@ def negative_log_prior(x):
         'AdaptiveParallelTempering',
         'Pymc',
         'Emcee',
+        'Dynesty',
     ]
 )
 def sampler(request):
@@ -189,6 +190,8 @@ def sampler(request):
         return PymcSampler(tune=5, progressbar=False)
     elif request.param == 'Emcee':
         return sample.EmceeSampler(nwalkers=10)
+    elif request.param == 'Dynesty':
+        return sample.DynestySampler()
 
 
 @pytest.fixture(params=['gaussian', 'gaussian_mixture', 'rosenbrock'])
@@ -209,7 +212,6 @@ def test_pipeline(sampler, problem):
         problem=problem,
         n_starts=3,
         optimizer=optimizer,
-        filename=None,
         progress_bar=False,
     )
 
@@ -219,7 +221,6 @@ def test_pipeline(sampler, problem):
         sampler=sampler,
         n_samples=100,
         result=result,
-        filename=None,
     )
     # remove warnings in test/sample/test_sample.
     # Warning here: pypesto/visualize/sampling.py:1104
@@ -247,12 +248,14 @@ def test_ground_truth():
 
     result = optimize.minimize(
         problem,
-        filename=None,
         progress_bar=False,
     )
 
     result = sample.sample(
-        problem, n_samples=5000, result=result, sampler=sampler, filename=None
+        problem,
+        n_samples=5000,
+        result=result,
+        sampler=sampler,
     )
 
     # get samples of first chain
@@ -290,7 +293,6 @@ def test_ground_truth_separated_modes():
         n_samples=1e4,
         sampler=sampler,
         x0=np.array([0.0]),
-        filename=None,
     )
 
     # get samples of first chain
@@ -321,7 +323,6 @@ def test_ground_truth_separated_modes():
         n_samples=1e4,
         sampler=sampler,
         x0=np.array([-2.0]),
-        filename=None,
     )
 
     # get samples of first chain
@@ -352,7 +353,6 @@ def test_ground_truth_separated_modes():
         n_samples=1e4,
         sampler=sampler,
         x0=np.array([120.0]),
-        filename=None,
     )
 
     # get samples of first chain
@@ -383,7 +383,10 @@ def test_multiple_startpoints():
         n_chains=2,
     )
     result = sample.sample(
-        problem, n_samples=10, x0=x0s, sampler=sampler, filename=None
+        problem,
+        n_samples=10,
+        x0=x0s,
+        sampler=sampler,
     )
 
     assert result.sample_result.trace_neglogpost.shape[0] == 2
@@ -437,13 +440,15 @@ def test_geweke_test_unconverged():
     result = optimize.minimize(
         problem=problem,
         n_starts=3,
-        filename=None,
         progress_bar=False,
     )
 
     # sample
     result = sample.sample(
-        problem, sampler=sampler, n_samples=100, result=result, filename=None
+        problem,
+        sampler=sampler,
+        n_samples=100,
+        result=result,
     )
 
     # run geweke test (should not fail!)
@@ -464,7 +469,6 @@ def test_autocorrelation_pipeline():
     result = optimize.minimize(
         problem=problem,
         n_starts=3,
-        filename=None,
         progress_bar=False,
     )
 
@@ -474,7 +478,6 @@ def test_autocorrelation_pipeline():
         sampler=sampler,
         n_samples=1000,
         result=result,
-        filename=None,
     )
 
     # run auto-correlation with previous geweke
@@ -516,13 +519,15 @@ def test_autocorrelation_short_chain():
     result = optimize.minimize(
         problem=problem,
         n_starts=3,
-        filename=None,
         progress_bar=False,
     )
 
     # sample
     result = sample.sample(
-        problem, sampler=sampler, n_samples=10, result=result, filename=None
+        problem,
+        sampler=sampler,
+        n_samples=10,
+        result=result,
     )
 
     # manually set burn in to chain length (only for testing!!)
@@ -605,7 +610,6 @@ def test_empty_prior():
         n_samples=50,
         sampler=sampler,
         x0=np.array([0.0]),
-        filename=None,
     )
 
     # get log prior values of first chain
@@ -647,7 +651,6 @@ def test_prior():
         n_samples=1e4,
         sampler=sampler,
         x0=np.array([0.0]),
-        filename=None,
     )
 
     # get log prior values of first chain
@@ -688,7 +691,6 @@ def test_samples_cis():
     result = optimize.minimize(
         problem=problem,
         n_starts=3,
-        filename=None,
         progress_bar=False,
     )
 
@@ -698,7 +700,6 @@ def test_samples_cis():
         sampler=sampler,
         n_samples=2000,
         result=result,
-        filename=None,
     )
 
     # run geweke test

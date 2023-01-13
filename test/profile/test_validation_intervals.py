@@ -34,14 +34,12 @@ class ValidationIntervalTest(unittest.TestCase):
         cls.result_training_data = optimize.minimize(
             cls.problem_training_data,
             n_starts=5,
-            filename=None,
             progress_bar=False,
         )
         # Optimum f(1)=2
         cls.result_all_data = optimize.minimize(
             cls.problem_all_data,
             n_starts=5,
-            filename=None,
             progress_bar=False,
         )
 

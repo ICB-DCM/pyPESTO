@@ -1,4 +1,6 @@
-from typing import Dict, List, Sequence, Tuple, Union
+from __future__ import annotations
+
+from typing import TYPE_CHECKING, Dict, List, Sequence, Tuple, Union
 
 import numpy as np
 
@@ -23,13 +25,12 @@ from .amici_util import (
     sim_sres_to_opt_sres,
 )
 
-try:
-    import amici
-    import amici.parameter_mapping
-    import amici.petab_objective
-    from amici.parameter_mapping import ParameterMapping
-except ImportError:
-    pass
+if TYPE_CHECKING:
+    try:
+        import amici
+        from amici.parameter_mapping import ParameterMapping
+    except ImportError:
+        ParameterMapping = None
 
 AmiciModel = Union['amici.Model', 'amici.ModelPtr']
 AmiciSolver = Union['amici.Solver', 'amici.SolverPtr']
@@ -51,10 +52,10 @@ class AmiciCalculator:
         mode: ModeType,
         amici_model: AmiciModel,
         amici_solver: AmiciSolver,
-        edatas: List['amici.ExpData'],
+        edatas: List[amici.ExpData],
         n_threads: int,
         x_ids: Sequence[str],
-        parameter_mapping: 'ParameterMapping',
+        parameter_mapping: ParameterMapping,
         fim_for_hess: bool,
     ):
         """Perform the actual AMICI call.
@@ -85,11 +86,12 @@ class AmiciCalculator:
             Whether to use the FIM (if available) instead of the Hessian (if
             requested).
         """
+        import amici.parameter_mapping
+
         # set order in solver
+        sensi_order = 0
         if sensi_orders:
             sensi_order = max(sensi_orders)
-        else:
-            sensi_order = 0
 
         if sensi_order == 2 and fim_for_hess:
             # we use the FIM
@@ -152,12 +154,14 @@ def calculate_function_values(
     mode: ModeType,
     amici_model: AmiciModel,
     amici_solver: AmiciSolver,
-    edatas: List['amici.ExpData'],
+    edatas: List[amici.ExpData],
     x_ids: Sequence[str],
-    parameter_mapping: 'ParameterMapping',
+    parameter_mapping: ParameterMapping,
     fim_for_hess: bool,
 ):
     """Calculate the function values from rdatas and return as dict."""
+    import amici
+
     # full optimization problem dimension (including fixed parameters)
     dim = len(x_ids)
 

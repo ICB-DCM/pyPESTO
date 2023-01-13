@@ -1,12 +1,12 @@
 import logging
 import warnings
-from typing import Dict, Sequence, Tuple, Union
+from colorsys import rgb_to_hls
+from typing import Dict, Optional, Sequence, Tuple, Union
 
 import matplotlib.axes
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
-import seaborn as sns
 from matplotlib.collections import LineCollection
 from matplotlib.container import ErrorbarContainer
 from matplotlib.lines import Line2D
@@ -27,6 +27,7 @@ from ..result import McmcPtResult, PredictionResult, Result
 from ..sample import calculate_ci_mcmc_sample
 from .misc import rgba2rgb
 
+cmap = matplotlib.cm.viridis
 logger = logging.getLogger(__name__)
 
 
@@ -71,6 +72,8 @@ def sampling_fval_traces(
     ax:
         The plot axes.
     """
+    import seaborn as sns
+
     # get data which should be plotted
     _, params_fval, _, _, _ = get_data_to_plot(
         result=result,
@@ -189,6 +192,9 @@ def _plot_trajectories_by_condition(
     variable_colors: Sequence[RGB],
     average: str = MEDIAN,
     add_sd: bool = False,
+    grouped_measurements: Dict[
+        Tuple[str, str], Sequence[Sequence[float]]
+    ] = None,
 ) -> None:
     """Plot predicted trajectories, with subplots grouped by condition.
 
@@ -223,6 +229,10 @@ def _plot_trajectories_by_condition(
         `MEDIAN` or `MEAN`).
     add_sd:
         Whether to add the standard deviation of the predictions to the plot.
+    grouped_measurements:
+        Measurement data that has already been grouped by condition and output,
+        where the keys are `(condition_id, output_id)` 2-tuples, and the values
+        are `[sequence of x-axis values, sequence of y-axis values]`.
     """
     # Each subplot has all data for a single condition.
     for condition_index, condition_id in enumerate(condition_ids):
@@ -230,6 +240,7 @@ def _plot_trajectories_by_condition(
         ax.set_title(f'Condition: {labels[condition_id]}')
         # Each subplot has all data for all condition-specific outputs.
         for output_index, output_id in enumerate(output_ids):
+            facecolor0 = variable_colors[output_index]
             # Plot the average for each output.
             t_average, y_average = _get_statistic_data(
                 summary,
@@ -301,6 +312,20 @@ def _plot_trajectories_by_condition(
                     ),
                     lw=0,
                 )
+            if measurements := grouped_measurements.get(
+                (condition_id, output_id), False
+            ):
+                ax.scatter(
+                    measurements[0],
+                    measurements[1],
+                    marker='o',
+                    facecolor=facecolor0,
+                    edgecolor=(
+                        'white'
+                        if rgb_to_hls(*facecolor0)[1] < 0.5
+                        else 'black'
+                    ),
+                )
 
 
 def _plot_trajectories_by_output(
@@ -314,6 +339,9 @@ def _plot_trajectories_by_output(
     variable_colors: Sequence[RGB],
     average: str = MEDIAN,
     add_sd: bool = False,
+    grouped_measurements: Dict[
+        Tuple[str, str], Sequence[Sequence[float]]
+    ] = None,
 ) -> None:
     """Plot predicted trajectories, with subplots grouped by output.
 
@@ -335,6 +363,7 @@ def _plot_trajectories_by_output(
         ax.set_title(f'Trajectory: {labels[output_id]}')
         # Each subplot is divided by conditions, with vertical lines.
         for condition_index, condition_id in enumerate(condition_ids):
+            facecolor0 = variable_colors[condition_index]
             if condition_index != 0:
                 ax.axvline(
                     t0,
@@ -414,12 +443,25 @@ def _plot_trajectories_by_output(
                     lower_data,
                     upper_data,
                     facecolor=rgba2rgb(
-                        variable_colors[condition_index]
-                        + [level_opacities[level_index]]
+                        facecolor0 + [level_opacities[level_index]]
                     ),
                     lw=0,
                 )
                 t_max = max(t_max, *t_lower_shifted, *t_upper_shifted)
+            if measurements := grouped_measurements.get(
+                (condition_id, output_id), False
+            ):
+                ax.scatter(
+                    [t0 + _t for _t in measurements[0]],
+                    measurements[1],
+                    marker='o',
+                    facecolor=facecolor0,
+                    edgecolor=(
+                        'white'
+                        if rgb_to_hls(*facecolor0)[1] < 0.5
+                        else 'black'
+                    ),
+                )
             # Set t0 to the last plotted timepoint of the current condition
             # plot.
             t0 = t_max
@@ -482,6 +524,9 @@ def _handle_legends(
     n_col: int,
     average: str,
     add_sd: bool,
+    grouped_measurements: Optional[
+        Dict[Tuple[str, str], Sequence[Sequence[float]]]
+    ],
 ) -> None:
     """Add legends to a sampling prediction trajectories plot.
 
@@ -520,6 +565,10 @@ def _handle_legends(
         `MEDIAN` or `MEAN`).
     add_sd:
         Whether to add the standard deviation of the predictions to the plot.
+    grouped_measurements:
+        Measurement data that has already been grouped by condition and output,
+        where the keys are `(condition_id, output_id)` 2-tuples, and the values
+        are `[sequence of x-axis values, sequence of y-axis values]`.
     """
     # Fake plots for legend line styles
     fake_data = [[0], [0]]
@@ -552,6 +601,7 @@ def _handle_legends(
                 ),
             ]
         )
+
     # Create a line object with fake data for the average line.
     average_title = average.title()
     average_line_object_line2d = Line2D(*fake_data, color=RGBA_BLACK)
@@ -581,7 +631,23 @@ def _handle_legends(
         average_line_object = average_line_object_line2d
     average_line = [[average_title, average_line_object]]
 
-    level_lines = np.array(ci_lines + average_line)
+    # Create a line object with fake data for the data points.
+    data_line = []
+    if grouped_measurements:
+        data_line = [
+            [
+                'Data',
+                Line2D(
+                    *fake_data,
+                    linewidth=0,
+                    marker='o',
+                    markerfacecolor='grey',
+                    markeredgecolor='white',
+                ),
+            ]
+        ]
+
+    level_lines = np.array(ci_lines + average_line + data_line)
 
     # CI level, and variable name, legends.
     legend_options_top_right = {
@@ -637,7 +703,6 @@ def _handle_colors(
         np.linspace(0.3 * RGBA_MAX, RGBA_MAX, len(levels)),
         reverse=reverse,
     )
-    cmap = plt.cm.viridis
     cmap_min = RGBA_MIN
     cmap_max = 0.85 * (RGBA_MAX - RGBA_MIN) + RGBA_MIN  # exclude yellows
 
@@ -666,6 +731,7 @@ def sampling_prediction_trajectories(
     reverse_opacities: bool = False,
     average: str = MEDIAN,
     add_sd: bool = False,
+    measurement_df: pd.DataFrame = None,
 ) -> matplotlib.axes.Axes:
     """
     Visualize prediction trajectory of an EnsemblePrediction.
@@ -712,6 +778,10 @@ def sampling_prediction_trajectories(
         `MEDIAN` or `MEAN`).
     add_sd:
         Whether to add the standard deviation of the predictions to the plot.
+    measurement_df:
+        Plot measurement data. NB: This should take the form of a PEtab
+        measurements table, and the `observableId` column should correspond
+        to the output IDs in the ensemble prediction.
 
     Returns
     -------
@@ -737,8 +807,44 @@ def sampling_prediction_trajectories(
     all_condition_ids, all_output_ids = _get_condition_and_output_ids(summary)
     if condition_ids is None:
         condition_ids = all_condition_ids
+    condition_ids = list(condition_ids)
     if output_ids is None:
         output_ids = all_output_ids
+    output_ids = list(output_ids)
+
+    # Handle data
+    grouped_measurements = {}
+    if measurement_df is not None:
+        import petab
+
+        for condition_id in condition_ids:
+            if petab.PARAMETER_SEPARATOR in condition_id:
+                (
+                    preequilibration_condition_id,
+                    simulation_condition_id,
+                ) = condition_id.split(petab.PARAMETER_SEPARATOR)
+            else:
+                preequilibration_condition_id, simulation_condition_id = (
+                    '',
+                    condition_id,
+                )
+            condition = {
+                petab.SIMULATION_CONDITION_ID: simulation_condition_id,
+            }
+            if preequilibration_condition_id:
+                condition[
+                    petab.PREEQUILIBRATION_CONDITION_ID
+                ] = preequilibration_condition_id
+            for output_id in output_ids:
+                _df = petab.get_rows_for_condition(
+                    measurement_df=measurement_df,
+                    condition=condition,
+                )
+                _df = _df.loc[_df[petab.OBSERVABLE_ID] == output_id]
+                grouped_measurements[(condition_id, output_id)] = [
+                    _df[petab.TIME],
+                    _df[petab.MEASUREMENT],
+                ]
 
     # Set default labels for any unspecified labels.
     labels = {id_: labels.get(id_, id_) for id_ in condition_ids + output_ids}
@@ -789,6 +895,7 @@ def sampling_prediction_trajectories(
             variable_colors=variable_colors,
             average=average,
             add_sd=add_sd,
+            grouped_measurements=grouped_measurements,
         )
     elif groupby == OUTPUT:
         _plot_trajectories_by_output(
@@ -802,6 +909,7 @@ def sampling_prediction_trajectories(
             variable_colors=variable_colors,
             average=average,
             add_sd=add_sd,
+            grouped_measurements=grouped_measurements,
         )
 
     if title:
@@ -820,6 +928,7 @@ def sampling_prediction_trajectories(
         n_col=n_col,
         average=average,
         add_sd=add_sd,
+        grouped_measurements=grouped_measurements,
     )
 
     # X and Y labels
@@ -1001,6 +1110,8 @@ def sampling_parameter_traces(
     ax:
         The plot axes.
     """
+    import seaborn as sns
+
     # get data which should be plotted
     nr_params, params_fval, theta_lb, theta_ub, param_names = get_data_to_plot(
         result=result,
@@ -1105,6 +1216,8 @@ def sampling_scatter(
     ax:
         The plot axes.
     """
+    import seaborn as sns
+
     # get data which should be plotted
     nr_params, params_fval, theta_lb, theta_ub, _ = get_data_to_plot(
         result=result, i_chain=i_chain, stepsize=stepsize
@@ -1173,6 +1286,8 @@ def sampling_1d_marginals(
     ax:
         matplotlib-axes
     """
+    import seaborn as sns
+
     # get data which should be plotted
     nr_params, params_fval, theta_lb, theta_ub, param_names = get_data_to_plot(
         result=result,
