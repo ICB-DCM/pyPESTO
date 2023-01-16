@@ -701,7 +701,7 @@ def test_samples_cis():
         n_samples=1000,
         result=result,
     )
-   
+
     # manually set burn in (only for testing!!)
     burn_in = 100
     result.sample_result.burn_in = burn_in
