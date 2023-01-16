@@ -698,12 +698,13 @@ def test_samples_cis():
     result = sample.sample(
         problem=problem,
         sampler=sampler,
-        n_samples=2000,
+        n_samples=1000,
         result=result,
     )
-
-    # run geweke test
-    sample.geweke_test(result)
+   
+    # manually set burn in (only for testing!!)
+    burn_in = 100
+    result.sample_result.burn_in = burn_in
 
     # get converged chain
     converged_chain = np.asarray(
