@@ -270,7 +270,7 @@ class HistoryTest(unittest.TestCase):
         }
 
         for var, fun in funs.items():
-            for it in range(5):
+            for it in range(len(start.history)):
                 x_full = xfull(start.history.get_x_trace(it))
                 val = getattr(start.history, f'get_{var}_trace')(it)
                 fun_val = fun(x_full)
