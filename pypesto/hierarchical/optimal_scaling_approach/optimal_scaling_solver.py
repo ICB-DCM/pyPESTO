@@ -324,6 +324,8 @@ def get_inner_options(
     from scipy.optimize import Bounds
 
     min_all, max_all = get_min_max(xs, sim)
+    if options['method'] == REDUCED:
+        last_opt_values = np.asarray([x.value for x in xs])
 
     if options['method'] == REDUCED:
         parameter_length = len(xs)
@@ -332,6 +334,8 @@ def get_inner_options(
             max_all + (interval_range + interval_gap) * parameter_length,
             parameter_length,
         )
+        if len(np.nonzero(last_opt_values))>0:
+            x0 = last_opt_values
     elif options['method'] == STANDARD:
         parameter_length = 2 * len(xs)
         x0 = np.linspace(0, max_all + interval_range, parameter_length)

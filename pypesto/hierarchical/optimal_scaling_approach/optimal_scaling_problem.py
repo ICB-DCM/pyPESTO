@@ -86,7 +86,6 @@ class OptimalScalingProblem(InnerProblem):
                 )
             )
 
-
             self.groups[gr]['C'] = self.initialize_c(gr)
 
             self.groups[gr]['W'] = self.initialize_w(gr)
@@ -141,16 +140,17 @@ class OptimalScalingProblem(InnerProblem):
         return [
             x
             for x in self.xs.values()
-            if x.group == group and x.inner_parameter_id[:2] == 'ub'
+            if x.group == group and x.inner_parameter_id[:6] == 'cat_ub'
         ]
 
+    # TODO add cat_ub to constants?
     def get_cat_lb_parameters_for_group(
         self, group: int
     ) -> List[OptimalScalingParameter]:
         return [
             x
             for x in self.xs.values()
-            if x.group == group and x.inner_parameter_id[:2] == 'lb'
+            if x.group == group and x.inner_parameter_id[:6] == 'cat_lb'
         ]
 
     def initialize_c(self, gr):
@@ -307,6 +307,11 @@ class OptimalScalingProblem(InnerProblem):
 
         return dd_dtheta
 
+    def get_inner_parameter_dictionary(self):
+        inner_par_dict = {}
+        for x_id, x in self.xs.items():
+            inner_par_dict[x_id] = x.value
+        return inner_par_dict
 
     def get_last_category_for_group(self, gr):
         last_category = 1
@@ -377,17 +382,14 @@ def qualitative_inner_parameters_from_measurement_df(
     #     continue
 
     estimate = get_estimate_for_method(method)
-    par_types = ['lb', 'ub']
+    par_types = ['cat_lb', 'cat_ub']
 
     inner_parameters = []
 
     for par_type, par_estimate in zip(par_types, estimate):
         for _, row in df.iterrows():
             if row[MEASUREMENT_TYPE] == ORDINAL:
-                par_id = (
-                    f'{par_type}_{row[MEASUREMENT_CATEGORY]}_'
-                    + row[OBSERVABLE_ID]
-                )
+                par_id = f'{par_type}_{row[OBSERVABLE_ID]}_{row[MEASUREMENT_GROUP]}_{row[MEASUREMENT_CATEGORY]}'
 
                 # Create only one set of bound parameters per category of a group.
                 if par_id not in [
@@ -406,7 +408,7 @@ def qualitative_inner_parameters_from_measurement_df(
                             estimate=par_estimate,
                         )
                     )
-    inner_parameters.sort(key=lambda x: x.category)
+    inner_parameters.sort(key=lambda x: (x.group, x.category))
 
     return inner_parameters
 

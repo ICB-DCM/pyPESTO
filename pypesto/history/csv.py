@@ -22,6 +22,7 @@ from ..C import (
     TIME,
     ModeType,
     X,
+    X_INNER_OPT,
 )
 from .base import CountHistoryBase, add_fun_from_res, reduce_result_via_options
 from .options import HistoryOptions
@@ -149,6 +150,10 @@ class CsvHistory(CountHistoryBase):
                 row[var] = val
             else:
                 row[(var, np.nan)] = np.nan
+        
+        if X_INNER_OPT in result:
+            for x_inner_id, x_inner_opt_value in result[X_INNER_OPT].items():
+                row[(X_INNER_OPT, x_inner_id)] = x_inner_opt_value
 
         self._trace = pd.concat(
             (self._trace, pd.DataFrame([row])),

@@ -14,7 +14,7 @@ from ...objective.amici.amici_util import (
     init_return_values,
     filter_return_dict
 )
-from ...C import FVAL, GRAD, HESS, RES, SRES, RDATAS, MODE_RES
+from ...C import FVAL, GRAD, HESS, RES, SRES, RDATAS, MODE_RES, X_INNER_OPT
 
 from .optimal_scaling_problem import OptimalScalingProblem
 from .optimal_scaling_solver import OptimalScalingInnerSolver
@@ -103,6 +103,7 @@ class OptimalScalingAmiciCalculator():
             RES: res,
             SRES: sres,
             RDATAS: inner_rdatas,
+            X_INNER_OPT: self.inner_problem.get_inner_parameter_dictionary(),
         }
         # TODO is this needed?
         if (
@@ -144,8 +145,8 @@ class OptimalScalingAmiciCalculator():
         x_inner_opt = self.inner_solver.solve(
             self.inner_problem, sim
         )
-
         inner_result[FVAL] = self.inner_solver.calculate_obj_function(x_inner_opt)
+        inner_result[X_INNER_OPT] = self.inner_problem.get_inner_parameter_dictionary()
         
         # TODO can be done, but not so easy
         # fill in optimal values
