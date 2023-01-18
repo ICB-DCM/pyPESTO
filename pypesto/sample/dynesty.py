@@ -41,7 +41,8 @@ class DynestySampler(Sampler):
     """Use dynesty for sampling.
 
     NB: `get_samples` returns MCMC-like samples, by resampling original
-    `dynesty` samples according to their importance weights.
+    `dynesty` samples according to their importance weights. This is because
+    the original samples contain many low-likelihood samples.
     To work with the original samples, modify the results object with
     `pypesto_result.sample_result = sampler.get_original_samples()`, where
     `sampler` is an instance of `pypesto.sample.DynestySampler`. The original
