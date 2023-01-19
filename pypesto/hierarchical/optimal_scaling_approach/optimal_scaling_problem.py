@@ -9,6 +9,8 @@ from ...C import (
     ORDINAL,
     LIN,
     TIME,
+    INNER_PARAMETER_BOUNDS,
+    STANDARD,
     InnerParameterType,
 )
 from ..problem import InnerProblem
@@ -143,7 +145,6 @@ class OptimalScalingProblem(InnerProblem):
             if x.group == group and x.inner_parameter_id[:6] == 'cat_ub'
         ]
 
-    # TODO add cat_ub to constants?
     def get_cat_lb_parameters_for_group(
         self, group: int
     ) -> List[OptimalScalingParameter]:
@@ -313,12 +314,12 @@ class OptimalScalingProblem(InnerProblem):
             inner_par_dict[x_id] = x.value
         return inner_par_dict
 
-    def get_last_category_for_group(self, gr):
-        last_category = 1
-        for x in self.xs.values():
-            if x.group == gr and x.category > last_category:
-                last_category = x.category
-        return last_category
+    # def get_last_category_for_group(self, gr):
+    #     last_category = 1
+    #     for x in self.xs.values():
+    #         if x.group == gr and x.category > last_category:
+    #             last_category = x.category
+    #     return last_category
 
     # def get_hard_constraints_for_group(self, group: float):
     #     return self.hard_constraints[self.hard_constraints['group'].astype(float)==group]
@@ -342,15 +343,15 @@ def qualitative_inner_problem_from_petab_problem(
     ixs = qualitatiave_ixs_for_measurement_specific_parameters(
         petab_problem, amici_model, inner_parameters
     )
-    # print("ixs : \n", ixs)
+
     # transform experimental data
     edatas = [
         amici.numpy.ExpDataView(edata)['observedData'] for edata in edatas
     ]
-    # print("edatas : \n",edatas)
+
     # matrixify
     ix_matrices = ix_matrices_from_arrays(ixs, edatas)
-    # print("ix_matrices : \n",ix_matrices)
+
     # assign matrices
     for par in inner_parameters:
         par.ixs = ix_matrices[par.inner_parameter_id]
@@ -385,6 +386,7 @@ def qualitative_inner_parameters_from_measurement_df(
     par_types = ['cat_lb', 'cat_ub']
 
     inner_parameters = []
+    lb, ub = INNER_PARAMETER_BOUNDS[InnerParameterType.OPTIMALSCALING].values()
 
     for par_type, par_estimate in zip(par_types, estimate):
         for _, row in df.iterrows():
@@ -401,8 +403,8 @@ def qualitative_inner_parameters_from_measurement_df(
                             inner_parameter_id=par_id,
                             inner_parameter_type=InnerParameterType.OPTIMALSCALING,
                             scale=LIN,
-                            lb=1e-5,  # let it be inf later, see what happens.
-                            ub=1e5,
+                            lb=lb,
+                            ub=ub,
                             category=row[MEASUREMENT_CATEGORY],
                             group=row[MEASUREMENT_GROUP],
                             estimate=par_estimate,
@@ -420,9 +422,8 @@ def get_estimate_for_method(method: str):
     estimate_ub = True
     estimate_lb = False
 
-    # TODO fix this?
-    # if method == STANDARD:
-    #     estimate_lb = True
+    if method == STANDARD:
+        estimate_lb = True
 
     return estimate_lb, estimate_ub
 

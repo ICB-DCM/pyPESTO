@@ -5,8 +5,6 @@ import numpy as np
 import pandas as pd
 
 from ...optimize import Optimizer
-from ..parameter import InnerParameter
-from ..problem import InnerProblem
 from ..solver import InnerSolver
 from .optimal_scaling_problem import OptimalScalingProblem
 from .optimal_scaling_parameter import OptimalScalingParameter
@@ -43,7 +41,7 @@ class OptimalScalingInnerSolver(InnerSolver):
 
     def solve(
         self,
-        problem: InnerProblem,
+        problem: OptimalScalingProblem,
         sim: List[np.ndarray],
     ) -> list:
         """
@@ -52,7 +50,7 @@ class OptimalScalingInnerSolver(InnerSolver):
         Parameters
         ----------
         problem:
-            InnerProblem from pyPESTO hierarchical
+            OptimalScalingProblem from pyPESTO hierarchical
         sim:
             Simulations from AMICI
         sigma:
@@ -62,14 +60,13 @@ class OptimalScalingInnerSolver(InnerSolver):
         """
         optimal_surrogates = []
         for gr in problem.get_groups_for_xs(InnerParameterType.OPTIMALSCALING):
-            xs = problem.get_free_xs_for_group(gr)
+            xs = problem.get_cat_ub_parameters_for_group(gr)
             surrogate_opt_results = optimize_surrogate_data(
                 xs, sim, self.options
             )
             save_inner_parameters_to_inner_problem(
                 gr, problem, surrogate_opt_results, sim, self.options
             )
-            get_xi(gr, problem, surrogate_opt_results, sim, self.options)
             optimal_surrogates.append(surrogate_opt_results)
         return optimal_surrogates
 
@@ -88,16 +85,13 @@ class OptimalScalingInnerSolver(InnerSolver):
         if False in [
             x_inner_opt[idx]['success'] for idx in range(len(x_inner_opt))
         ]:
-            obj = np.nan
+            obj = np.inf
             warnings.warn(f"Inner optimization failed.")
         else:
             obj = np.sum(
                 [x_inner_opt[idx]['fun'] for idx in range(len(x_inner_opt))]
             )
         return obj
-        # return np.sum(
-        #         [x_inner_opt[idx]['fun'] for idx in range(len(x_inner_opt))]
-        #     )
 
     def calculate_gradients(
         self,
@@ -107,16 +101,13 @@ class OptimalScalingInnerSolver(InnerSolver):
         sy,
         parameter_mapping,
         par_opt_ids,
-        amici_model,
         snllh,
     ):
         condition_map_sim_var = parameter_mapping[0].map_sim_var
-        par_sim_ids = list(amici_model.getParameterIds())
+        # par_sim_ids = list(amici_model.getParameterIds())
         # TODO: Doesn't work with condition specific parameters
         for par_sim, par_opt in condition_map_sim_var.items():
             if not isinstance(par_opt, str):
-                continue
-            if par_opt.startswith('optimalScaling_'):
                 continue
             # par_sim_idx = par_sim_ids.index(par_sim)
             par_opt_idx = par_opt_ids.index(par_opt)
@@ -145,7 +136,7 @@ class OptimalScalingInnerSolver(InnerSolver):
 
                 #     grad += df_dtheta
                 #     continue
-                xs = problem.get_free_xs_for_group(gr)
+                xs = problem.get_cat_ub_parameters_for_group(gr)
 
                 xi = get_xi(gr, problem, x_inner_opt[idx], sim, self.options)
                 sim_all = get_sim_all(xs, sim)
@@ -166,11 +157,11 @@ class OptimalScalingInnerSolver(InnerSolver):
                     ]
                 )
                 dy_dtheta = get_dy_dtheta(gr, problem, sy_all)
-                
+
                 df_dtheta = res.dot(
-                        res.dot(problem.groups[gr]['Wdot'])
-                        - 2 * problem.groups[gr]['W'].dot(dy_dtheta)
-                )# -2 * problem.W.dot(dy_dtheta).dot(res)
+                    res.dot(problem.groups[gr]['Wdot'])
+                    - 2 * problem.groups[gr]['W'].dot(dy_dtheta)
+                )
                 df_dxi = 2 * problem.groups[gr]['W'].dot(res)
 
                 if df_dxi.any():
@@ -182,11 +173,11 @@ class OptimalScalingInnerSolver(InnerSolver):
                     dxi_dtheta = calculate_dxi_dtheta(
                         gr, problem, xi, mu, dy_dtheta, res, d, dd_dtheta
                     )
-                    
+
                     grad += dxi_dtheta.dot(df_dxi) + df_dtheta
                 else:
                     grad += df_dtheta
-                
+
             snllh[par_opt_idx] = grad
         return snllh
 
@@ -266,7 +257,7 @@ def get_xi(
     options: Dict,
 ):
 
-    xs = problem.get_free_xs_for_group(gr)
+    xs = problem.get_cat_ub_parameters_for_group(gr)
     interval_range, interval_gap = compute_interval_constraints(
         xs, sim, options
     )
@@ -298,7 +289,7 @@ def optimize_surrogate_data(
             xs, x, sim, interval_gap, interval_range, w, options
         )
 
-    inner_options = get_inner_options(
+    inner_options = get_inner_optimization_options(
         options, xs, sim, interval_range, interval_gap
     )
     try:
@@ -311,7 +302,7 @@ def optimize_surrogate_data(
     return results
 
 
-def get_inner_options(
+def get_inner_optimization_options(
     options: Dict,
     xs: List[OptimalScalingParameter],
     sim: List[np.ndarray],
@@ -334,7 +325,7 @@ def get_inner_options(
             max_all + (interval_range + interval_gap) * parameter_length,
             parameter_length,
         )
-        if len(np.nonzero(last_opt_values))>0:
+        if len(np.nonzero(last_opt_values)) > 0:
             x0 = last_opt_values
     elif options['method'] == STANDARD:
         parameter_length = 2 * len(xs)
@@ -364,7 +355,7 @@ def get_inner_options(
         inner_options = {
             'x0': x0,
             'method': 'SLSQP',
-            'options': {'maxiter': 2000, 'ftol': 1e-10, 'disp': True},
+            'options': {'maxiter': 2000, 'ftol': 1e-10, 'disp': None},
             'constraints': constraints,
         }
     return inner_options
@@ -456,8 +447,8 @@ def get_weight_for_surrogate(
     # w = 0.5 * np.sum(np.abs(sim_x_all)) + v_net + eps
     # print(w ** 2)
 
-    return np.sum(np.abs(sim_x_all)) + eps 
-    # return np.sum(np.square(sim_x_all)) + eps  
+    return np.sum(np.abs(sim_x_all)) + eps
+    # return np.sum(np.square(sim_x_all)) + eps
 
 
 def compute_interval_constraints(

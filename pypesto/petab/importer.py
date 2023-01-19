@@ -22,13 +22,18 @@ from typing import (
 import numpy as np
 import pandas as pd
 
-from ..C import CONDITION_SEP, MODE_FUN, MODE_RES
+from ..C import CONDITION_SEP, MODE_FUN, MODE_RES, REDUCED
 from ..hierarchical.calculator import HierarchicalAmiciCalculator
 from ..hierarchical.problem import InnerProblem
 from ..hierarchical.optimal_scaling_approach import (
     OptimalScalingAmiciCalculator,
     OptimalScalingProblem,
     OptimalScalingInnerSolver
+)
+from ..hierarchical.spline_approach import (
+    SplineAmiciCalculator,
+    SplineInnerProblem,
+    SplineInnerSolver
 )
 from ..objective import AggregatedObjective, AmiciObjective
 from ..objective.amici import AmiciObjectBuilder
@@ -68,7 +73,8 @@ class PetabImporter(AmiciObjectBuilder):
         model_name: str = None,
         validate_petab: bool = True,
         hierarchical: bool = False,
-        qualitative: bool = False,
+        ordinal: bool = False,
+        nonlinear_monotone: bool = False,
     ):
         """Initialize importer.
 
@@ -92,7 +98,8 @@ class PetabImporter(AmiciObjectBuilder):
         """
         self.petab_problem = petab_problem
         self._hierarchical = hierarchical
-        self._qualitative = qualitative
+        self._ordinal = ordinal
+        self._nonlinear_monotone = nonlinear_monotone
 
         if validate_petab:
             if petab.lint_problem(petab_problem):
@@ -418,23 +425,46 @@ class PetabImporter(AmiciObjectBuilder):
             # FIXME: currently not supported with hierarchical
             kwargs['guess_steadystate'] = False
 
-        if self._qualitative:
+        if self._ordinal:
 
+            #TODO add constants to C
             if 'inner_problem_method' not in kwargs:
-                #TODO add constants to C
-                raise ValueError("To use the qualitative optimal scaling approach provide the desired inner_problem_method: either optimal_scaling_standard or optimal_scaling_reduced.")
+                inner_problem_method = REDUCED
+            else:
+                inner_problem_method = kwargs.pop('inner_problem_method')
             if 'inner_solver_options' in kwargs:
                 inner_solver_options = kwargs.pop('inner_solver_options')
             else:
                 inner_solver_options = None
-            
-            inner_problem_method = kwargs.pop('inner_problem_method')
 
             inner_problem = OptimalScalingProblem.from_petab_amici(
                 self.petab_problem, model, edatas, inner_problem_method
             )
             inner_solver = OptimalScalingInnerSolver(options=inner_solver_options)
             calculator = OptimalScalingAmiciCalculator(inner_problem, inner_solver)
+            amici_reporting = amici.RDataReporting.full
+            inner_parameter_ids = calculator.inner_problem.get_x_ids()
+            par_ids = [x for x in par_ids if x not in inner_parameter_ids]
+            # FIXME: currently not supported with hierarchical
+            kwargs['guess_steadystate'] = False
+
+        if self._nonlinear_monotone:
+            #TODO add constants to C
+            if 'inner_problem_options' in kwargs:
+                inner_problem_options = kwargs.pop('inner_problem_options')
+            else:
+                inner_problem_options = None
+
+            if 'inner_solver_options' in kwargs:
+                inner_solver_options = kwargs.pop('inner_solver_options')
+            else:
+                inner_solver_options = None
+
+            inner_problem = SplineInnerProblem.from_petab_amici(
+                self.petab_problem, model, edatas, inner_problem_options
+            )
+            inner_solver = SplineInnerSolver(options=inner_solver_options)
+            calculator = SplineAmiciCalculator(inner_problem, inner_solver)
             amici_reporting = amici.RDataReporting.full
             inner_parameter_ids = calculator.inner_problem.get_x_ids()
             par_ids = [x for x in par_ids if x not in inner_parameter_ids]
@@ -657,14 +687,14 @@ class PetabImporter(AmiciObjectBuilder):
                 objective.calculator, HierarchicalAmiciCalculator
             ):
                 raise AssertionError()
-        if self._qualitative:
+        if self._ordinal:
             if not isinstance(
                 objective.calculator, OptimalScalingAmiciCalculator
             ):
                 raise AssertionError()
         # In case of hierarchical optimization, parameters estimated in the
         # inner subproblem are removed from the outer problem
-        if self._hierarchical or self._qualitative:
+        if self._hierarchical or self._ordinal:
             inner_parameter_ids = (
                 objective.calculator.inner_problem.get_x_ids()
             )
@@ -686,7 +716,7 @@ class PetabImporter(AmiciObjectBuilder):
         prior = self.create_prior()
 
         if prior is not None:
-            if self._hierarchical or self._qualitative:
+            if self._hierarchical or self._ordinal:
                 raise NotImplementedError(
                     "Hierarchical optimization or Optimal scaling"
                     "optimization in combination with priors"

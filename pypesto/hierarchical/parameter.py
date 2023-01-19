@@ -74,6 +74,7 @@ class InnerParameter:
             InnerParameterType.OFFSET,
             InnerParameterType.SIGMA,
             InnerParameterType.SCALING,
+            InnerParameterType.SPLINE,
         ):
             raise ValueError(
                 f"Unsupported inner parameter type `{inner_parameter_type}`."

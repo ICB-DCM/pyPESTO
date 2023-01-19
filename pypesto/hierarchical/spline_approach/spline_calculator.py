@@ -16,11 +16,11 @@ from ...objective.amici.amici_util import (
 )
 from ...C import FVAL, GRAD, HESS, RES, SRES, RDATAS, MODE_RES, X_INNER_OPT
 
-from .optimal_scaling_problem import OptimalScalingProblem
-from .optimal_scaling_solver import OptimalScalingInnerSolver
+from .spline_problem import SplineInnerProblem
+from .spline_solver import SplineInnerSolver
 
 
-class OptimalScalingAmiciCalculator:
+class SplineAmiciCalculator:
     """
     A calculator is passed as `calculator` to the pypesto.AmiciObjective.
 
@@ -33,8 +33,8 @@ class OptimalScalingAmiciCalculator:
 
     def __init__(
         self,
-        inner_problem: OptimalScalingProblem,
-        inner_solver: OptimalScalingInnerSolver = None,
+        inner_problem: SplineInnerProblem,
+        inner_solver: SplineInnerSolver = None,
     ):
         """
         Initialize the calculator from the given problem.
@@ -44,7 +44,7 @@ class OptimalScalingAmiciCalculator:
         self.inner_problem = inner_problem
 
         if inner_solver is None:
-            inner_solver = OptimalScalingInnerSolver()
+            inner_solver = SplineInnerSolver()
         self.inner_solver = inner_solver
 
     def initialize(self):
@@ -104,6 +104,7 @@ class OptimalScalingAmiciCalculator:
             RDATAS: inner_rdatas,
             X_INNER_OPT: self.inner_problem.get_inner_parameter_dictionary(),
         }
+
         # TODO is this needed?
         if (
             not self._known_least_squares_safe
@@ -139,9 +140,10 @@ class OptimalScalingAmiciCalculator:
 
         sim = [rdata['y'] for rdata in inner_rdatas]
         # clip simulation?
+        sigma = [rdata['sigmay'] for rdata in inner_rdatas]
 
         # compute optimal inner parameters
-        x_inner_opt = self.inner_solver.solve(self.inner_problem, sim)
+        x_inner_opt = self.inner_solver.solve(self.inner_problem, sim, sigma)
         inner_result[FVAL] = self.inner_solver.calculate_obj_function(
             x_inner_opt
         )
@@ -160,6 +162,7 @@ class OptimalScalingAmiciCalculator:
                 parameter_mapping=parameter_mapping,
                 par_opt_ids=x_ids,
                 snllh=snllh,
+                sigma=sigma,
             )
 
         return filter_return_dict(inner_result)

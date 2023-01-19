@@ -6,16 +6,17 @@ from ..parameter import InnerParameter
 logger = logging.getLogger(__name__)
 
 
-class OptimalScalingParameter(InnerParameter):
+class SplineInnerParameter(InnerParameter):
     """
-    A optimal scaling (inner) parameter of the optimal scaling hierarchical optimization problem.
+    A spline (inner) parameter of the spline hierarchical optimization problem.
 
     Attributes
     ----------
-    category:
-        Category index.
     group:
         Group index.
+    index:
+        Parameter index inside the group. Ranges from 1 to n_spline_parameters
+        of its group.
     value:
         Current value of the inner parameter.
     estimate:
@@ -25,8 +26,8 @@ class OptimalScalingParameter(InnerParameter):
     def __init__(
         self,
         *args,
-        category: int = None,
         group: int = None,
+        index: int = None,
         estimate: bool = False,
         **kwargs,
     ):
@@ -38,17 +39,17 @@ class OptimalScalingParameter(InnerParameter):
         See class attributes.
         """
         super().__init__(*args, **kwargs)
-        if self.inner_parameter_type != InnerParameterType.OPTIMALSCALING:
+        if self.inner_parameter_type != InnerParameterType.SPLINE:
             raise ValueError(
-                "For the OptimalScalingParameter class, the parameter type has to be qualitative_scaling."
+                "For the SplineParameter class, the parameter type has to be spline."
             )
 
         if group is None:
             raise ValueError("No Parameter group provided.")
-        if category is None:
-            raise ValueError("No Category provided.")
+        if index is None:
+            raise ValueError("No Parameter index provided.")
 
-        self.category = category
         self.group = group
+        self.index = index
         self.estimate = estimate
         self.value = self.dummy_value
