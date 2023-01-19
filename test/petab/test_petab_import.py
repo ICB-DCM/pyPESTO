@@ -6,6 +6,7 @@ import os
 import unittest
 
 import amici
+import benchmark_models_petab as models
 import numpy as np
 import petab
 import pytest
@@ -14,7 +15,6 @@ import pypesto
 import pypesto.optimize
 import pypesto.petab
 
-from .petab_util import folder_base
 from .test_sbml_conversion import ATOL, RTOL
 
 
@@ -30,7 +30,7 @@ class PetabImportTest(unittest.TestCase):
         for model_name in ["Zheng_PNAS2012", "Boehm_JProteomeRes2014"]:
             # test yaml import for one model:
             yaml_config = os.path.join(
-                folder_base, model_name, model_name + '.yaml'
+                models.MODELS_DIR, model_name, model_name + '.yaml'
             )
             petab_problem = petab.Problem.from_yaml(yaml_config)
             self.petab_problems.append(petab_problem)
@@ -76,19 +76,17 @@ class PetabImportTest(unittest.TestCase):
                 optimizer=optimizer,
                 n_starts=2,
                 startpoint_method=startpoints,
-                filename=None,
+                progress_bar=False,
             )
 
-            self.assertTrue(
-                np.isfinite(result.optimize_result.get_for_key('fval')[0])
-            )
+            self.assertTrue(np.isfinite(result.optimize_result.fval[0]))
 
     def test_check_gradients(self):
         """Test objective FD-gradient check function."""
         # Check gradients of simple model (should always be a true positive)
         model_name = "Bachmann_MSB2011"
         petab_problem = pypesto.petab.PetabImporter.from_yaml(
-            os.path.join(folder_base, model_name, model_name + '.yaml')
+            os.path.join(models.MODELS_DIR, model_name, model_name + '.yaml')
         )
 
         objective = petab_problem.create_objective()
@@ -109,7 +107,7 @@ def test_plist_mapping():
     edata.plist)."""
     model_name = "Boehm_JProteomeRes2014"
     petab_problem = pypesto.petab.PetabImporter.from_yaml(
-        os.path.join(folder_base, model_name, model_name + '.yaml')
+        os.path.join(models.MODELS_DIR, model_name, model_name + '.yaml')
     )
 
     # define test parameter
@@ -140,7 +138,7 @@ def test_max_sensi_order():
     correctly."""
     model_name = "Boehm_JProteomeRes2014"
     problem = pypesto.petab.PetabImporter.from_yaml(
-        os.path.join(folder_base, model_name, model_name + '.yaml')
+        os.path.join(models.MODELS_DIR, model_name, model_name + '.yaml')
     )
 
     # define test parameter

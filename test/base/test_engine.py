@@ -1,8 +1,10 @@
 """Test the execution engines."""
 
 import copy
+import os
 
 import amici
+import benchmark_models_petab as models
 import cloudpickle as pickle
 import numpy as np
 
@@ -10,7 +12,6 @@ import pypesto
 import pypesto.optimize
 import pypesto.petab
 
-from ..petab.petab_util import folder_base
 from ..util import rosen_for_sensi
 
 
@@ -35,9 +36,9 @@ def _test_basic(engine):
         n_starts=5,
         engine=engine,
         optimizer=optimizer,
-        filename=None,
+        progress_bar=False,
     )
-    assert len(result.optimize_result.as_list()) == 5
+    assert len(result.optimize_result) == 5
 
 
 def test_petab():
@@ -51,7 +52,9 @@ def test_petab():
 
 def _test_petab(engine):
     petab_importer = pypesto.petab.PetabImporter.from_yaml(
-        folder_base + "Zheng_PNAS2012/Zheng_PNAS2012.yaml"
+        os.path.join(
+            models.MODELS_DIR, "Zheng_PNAS2012", "Zheng_PNAS2012.yaml"
+        )
     )
     objective = petab_importer.create_objective()
     problem = petab_importer.create_problem(objective)
@@ -61,15 +64,17 @@ def _test_petab(engine):
         n_starts=3,
         engine=engine,
         optimizer=optimizer,
-        filename=None,
+        progress_bar=False,
     )
-    assert len(result.optimize_result.as_list()) == 3
+    assert len(result.optimize_result) == 3
 
 
 def test_deepcopy_objective():
     """Test copying objectives (needed for MultiProcessEngine)."""
     petab_importer = pypesto.petab.PetabImporter.from_yaml(
-        folder_base + "Zheng_PNAS2012/Zheng_PNAS2012.yaml"
+        os.path.join(
+            models.MODELS_DIR, "Zheng_PNAS2012", "Zheng_PNAS2012.yaml"
+        )
     )
     objective = petab_importer.create_objective()
 
@@ -102,7 +107,9 @@ def test_deepcopy_objective():
 def test_pickle_objective():
     """Test serializing objectives (needed for MultiThreadEngine)."""
     petab_importer = pypesto.petab.PetabImporter.from_yaml(
-        folder_base + "Zheng_PNAS2012/Zheng_PNAS2012.yaml"
+        os.path.join(
+            models.MODELS_DIR, "Zheng_PNAS2012", "Zheng_PNAS2012.yaml"
+        )
     )
     objective = petab_importer.create_objective()
 

@@ -14,6 +14,7 @@ import pypesto.optimize as optimize
 import pypesto.petab
 import pypesto.sample as sample
 import pypesto.visualize as visualize
+from pypesto.sample.pymc import PymcSampler
 
 
 def gaussian_llh(x):
@@ -76,8 +77,9 @@ def rosenbrock_problem():
     --------
     * 3-dim
     * has fixed parameters
+    * has gradient
     """
-    objective = pypesto.Objective(fun=so.rosen)
+    objective = pypesto.Objective(fun=so.rosen, grad=so.rosen_der)
 
     dim_full = 2
     lb = -5 * np.ones((dim_full, 1))
@@ -114,13 +116,16 @@ def sample_petab_problem():
     # create problem
     problem = create_petab_problem()
 
-    sampler = sample.AdaptiveMetropolisSampler()
+    sampler = sample.AdaptiveMetropolisSampler(
+        options={
+            'show_progress': False,
+        },
+    )
     result = sample.sample(
         problem,
         n_samples=1000,
         sampler=sampler,
         x0=np.array([3, -4]),
-        filename=None,
     )
     return result
 
@@ -147,27 +152,46 @@ def negative_log_prior(x):
         'AdaptiveMetropolis',
         'ParallelTempering',
         'AdaptiveParallelTempering',
-        'Pymc3',
+        'Pymc',
         'Emcee',
+        'Dynesty',
     ]
 )
 def sampler(request):
     if request.param == 'Metropolis':
-        return sample.MetropolisSampler()
+        return sample.MetropolisSampler(
+            options={
+                'show_progress': False,
+            },
+        )
     elif request.param == 'AdaptiveMetropolis':
-        return sample.AdaptiveMetropolisSampler()
+        return sample.AdaptiveMetropolisSampler(
+            options={
+                'show_progress': False,
+            },
+        )
     elif request.param == 'ParallelTempering':
         return sample.ParallelTemperingSampler(
-            internal_sampler=sample.MetropolisSampler(), betas=[1, 1e-2, 1e-4]
+            internal_sampler=sample.MetropolisSampler(),
+            options={
+                'show_progress': False,
+            },
+            betas=[1, 1e-2, 1e-4],
         )
     elif request.param == 'AdaptiveParallelTempering':
         return sample.AdaptiveParallelTemperingSampler(
-            internal_sampler=sample.AdaptiveMetropolisSampler(), n_chains=5
+            internal_sampler=sample.AdaptiveMetropolisSampler(),
+            options={
+                'show_progress': False,
+            },
+            n_chains=5,
         )
-    elif request.param == 'Pymc3':
-        return sample.Pymc3Sampler(tune=5)
+    elif request.param == 'Pymc':
+        return PymcSampler(tune=5, progressbar=False)
     elif request.param == 'Emcee':
         return sample.EmceeSampler(nwalkers=10)
+    elif request.param == 'Dynesty':
+        return sample.DynestySampler()
 
 
 @pytest.fixture(params=['gaussian', 'gaussian_mixture', 'rosenbrock'])
@@ -185,12 +209,18 @@ def test_pipeline(sampler, problem):
     # optimization
     optimizer = optimize.ScipyOptimizer(options={'maxiter': 10})
     result = optimize.minimize(
-        problem, n_starts=3, optimizer=optimizer, filename=None
+        problem=problem,
+        n_starts=3,
+        optimizer=optimizer,
+        progress_bar=False,
     )
 
     # sample
     result = sample.sample(
-        problem, sampler=sampler, n_samples=100, result=result, filename=None
+        problem=problem,
+        sampler=sampler,
+        n_samples=100,
+        result=result,
     )
     # remove warnings in test/sample/test_sample.
     # Warning here: pypesto/visualize/sampling.py:1104
@@ -207,15 +237,25 @@ def test_ground_truth():
     # use best self-implemented sampler, which has a chance of correctly
     # sample from the distribution
     sampler = sample.AdaptiveParallelTemperingSampler(
-        internal_sampler=sample.AdaptiveMetropolisSampler(), n_chains=5
+        internal_sampler=sample.AdaptiveMetropolisSampler(),
+        options={
+            'show_progress': False,
+        },
+        n_chains=5,
     )
 
     problem = gaussian_problem()
 
-    result = optimize.minimize(problem, filename=None)
+    result = optimize.minimize(
+        problem,
+        progress_bar=False,
+    )
 
     result = sample.sample(
-        problem, n_samples=5000, result=result, sampler=sampler, filename=None
+        problem,
+        n_samples=5000,
+        result=result,
+        sampler=sampler,
     )
 
     # get samples of first chain
@@ -239,7 +279,11 @@ def test_ground_truth_separated_modes():
 
     # First use parallel tempering with 3 chains
     sampler = sample.AdaptiveParallelTemperingSampler(
-        internal_sampler=sample.AdaptiveMetropolisSampler(), n_chains=3
+        internal_sampler=sample.AdaptiveMetropolisSampler(),
+        options={
+            'show_progress': False,
+        },
+        n_chains=3,
     )
 
     problem = gaussian_mixture_separated_modes_problem()
@@ -249,7 +293,6 @@ def test_ground_truth_separated_modes():
         n_samples=1e4,
         sampler=sampler,
         x0=np.array([0.0]),
-        filename=None,
     )
 
     # get samples of first chain
@@ -270,13 +313,16 @@ def test_ground_truth_separated_modes():
 
     # sample using adaptive metropolis (single-chain)
     # initiated around the "first" mode of the distribution
-    sampler = sample.AdaptiveMetropolisSampler()
+    sampler = sample.AdaptiveMetropolisSampler(
+        options={
+            'show_progress': False,
+        },
+    )
     result = sample.sample(
         problem,
         n_samples=1e4,
         sampler=sampler,
         x0=np.array([-2.0]),
-        filename=None,
     )
 
     # get samples of first chain
@@ -297,13 +343,16 @@ def test_ground_truth_separated_modes():
 
     # sample using adaptive metropolis (single-chain)
     # initiated around the "second" mode of the distribution
-    sampler = sample.AdaptiveMetropolisSampler()
+    sampler = sample.AdaptiveMetropolisSampler(
+        options={
+            'show_progress': False,
+        },
+    )
     result = sample.sample(
         problem,
         n_samples=1e4,
         sampler=sampler,
         x0=np.array([120.0]),
-        filename=None,
     )
 
     # get samples of first chain
@@ -327,10 +376,17 @@ def test_multiple_startpoints():
     problem = gaussian_problem()
     x0s = [np.array([0]), np.array([1])]
     sampler = sample.ParallelTemperingSampler(
-        internal_sampler=sample.MetropolisSampler(), n_chains=2
+        internal_sampler=sample.MetropolisSampler(),
+        options={
+            'show_progress': False,
+        },
+        n_chains=2,
     )
     result = sample.sample(
-        problem, n_samples=10, x0=x0s, sampler=sampler, filename=None
+        problem,
+        n_samples=10,
+        x0=x0s,
+        sampler=sampler,
     )
 
     assert result.sample_result.trace_neglogpost.shape[0] == 2
@@ -374,14 +430,25 @@ def test_geweke_test_unconverged():
     """Check that the geweke test reacts nicely to small sample numbers."""
     problem = gaussian_problem()
 
-    sampler = sample.MetropolisSampler()
+    sampler = sample.MetropolisSampler(
+        options={
+            'show_progress': False,
+        },
+    )
 
     # optimization
-    result = optimize.minimize(problem, n_starts=3, filename=None)
+    result = optimize.minimize(
+        problem=problem,
+        n_starts=3,
+        progress_bar=False,
+    )
 
     # sample
     result = sample.sample(
-        problem, sampler=sampler, n_samples=100, result=result, filename=None
+        problem,
+        sampler=sampler,
+        n_samples=100,
+        result=result,
     )
 
     # run geweke test (should not fail!)
@@ -392,14 +459,25 @@ def test_autocorrelation_pipeline():
     """Check that the autocorrelation test works."""
     problem = gaussian_problem()
 
-    sampler = sample.MetropolisSampler()
+    sampler = sample.MetropolisSampler(
+        options={
+            'show_progress': False,
+        },
+    )
 
     # optimization
-    result = optimize.minimize(problem, n_starts=3, filename=None)
+    result = optimize.minimize(
+        problem=problem,
+        n_starts=3,
+        progress_bar=False,
+    )
 
     # sample
     result = sample.sample(
-        problem, sampler=sampler, n_samples=1000, result=result, filename=None
+        problem=problem,
+        sampler=sampler,
+        n_samples=1000,
+        result=result,
     )
 
     # run auto-correlation with previous geweke
@@ -431,14 +509,25 @@ def test_autocorrelation_short_chain():
     reacts nicely to small sample numbers."""
     problem = gaussian_problem()
 
-    sampler = sample.MetropolisSampler()
+    sampler = sample.MetropolisSampler(
+        options={
+            'show_progress': False,
+        },
+    )
 
     # optimization
-    result = optimize.minimize(problem, n_starts=3, filename=None)
+    result = optimize.minimize(
+        problem=problem,
+        n_starts=3,
+        progress_bar=False,
+    )
 
     # sample
     result = sample.sample(
-        problem, sampler=sampler, n_samples=10, result=result, filename=None
+        problem,
+        sampler=sampler,
+        n_samples=10,
+        result=result,
     )
 
     # manually set burn in to chain length (only for testing!!)
@@ -510,14 +599,17 @@ def test_empty_prior():
         objective=posterior_fun, lb=-10, ub=10, x_names=['x']
     )
 
-    sampler = sample.AdaptiveMetropolisSampler()
+    sampler = sample.AdaptiveMetropolisSampler(
+        options={
+            'show_progress': False,
+        },
+    )
 
     result = sample.sample(
         test_problem,
         n_samples=50,
         sampler=sampler,
         x0=np.array([0.0]),
-        filename=None,
     )
 
     # get log prior values of first chain
@@ -548,14 +640,17 @@ def test_prior():
         x_names=['x'],
     )
 
-    sampler = sample.AdaptiveMetropolisSampler()
+    sampler = sample.AdaptiveMetropolisSampler(
+        options={
+            'show_progress': False,
+        },
+    )
 
     result = sample.sample(
         test_problem,
         n_samples=1e4,
         sampler=sampler,
         x0=np.array([0.0]),
-        filename=None,
     )
 
     # get log prior values of first chain
@@ -586,14 +681,25 @@ def test_samples_cis():
     problem = gaussian_problem()
 
     # set a sampler
-    sampler = sample.MetropolisSampler()
+    sampler = sample.MetropolisSampler(
+        options={
+            'show_progress': False,
+        },
+    )
 
     # optimization
-    result = optimize.minimize(problem, n_starts=3, filename=None)
+    result = optimize.minimize(
+        problem=problem,
+        n_starts=3,
+        progress_bar=False,
+    )
 
     # sample
     result = sample.sample(
-        problem, sampler=sampler, n_samples=2000, result=result, filename=None
+        problem=problem,
+        sampler=sampler,
+        n_samples=2000,
+        result=result,
     )
 
     # run geweke test
@@ -621,3 +727,23 @@ def test_samples_cis():
         assert (lb < ub).all()
         # check if dimmensions agree
         assert lb.shape == ub.shape
+
+
+def test_dynesty_mcmc_samples():
+    problem = gaussian_problem()
+    sampler = sample.DynestySampler()
+
+    result = sample.sample(
+        problem=problem,
+        sampler=sampler,
+        n_samples=None,
+        filename=None,
+    )
+
+    original_sample_result = sampler.get_original_samples()
+    mcmc_sample_result = result.sample_result
+
+    # Nested sampling function values are monotonically increasing
+    assert (np.diff(original_sample_result.trace_neglogpost) <= 0).all()
+    # MCMC samples are not
+    assert not (np.diff(mcmc_sample_result.trace_neglogpost) <= 0).all()

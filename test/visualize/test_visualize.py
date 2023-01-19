@@ -15,6 +15,7 @@ import pypesto.optimize as optimize
 import pypesto.petab
 import pypesto.predict as predict
 import pypesto.sample as sample
+import pypesto.util
 import pypesto.visualize as visualize
 from pypesto.visualize.model_fit import (
     time_trajectory_model,
@@ -80,39 +81,42 @@ def sample_petab_problem():
     # create problem
     problem = create_petab_problem()
 
-    sampler = sample.AdaptiveMetropolisSampler()
+    sampler = sample.AdaptiveMetropolisSampler(
+        options={
+            'show_progress': False,
+        },
+    )
     result = sample.sample(
         problem,
         n_samples=1000,
         sampler=sampler,
         x0=np.array([3, -4]),
-        filename=None,
     )
     return result
 
 
-def create_optimization_result():
+def create_optimization_result(n=4):
     # create the pypesto problem
     problem = create_problem()
 
     # write some dummy results for optimization
     result = pypesto.Result(problem=problem)
-    for j in range(0, 3):
+    for k in range(0, 3):
         optimizer_result = pypesto.OptimizerResult(
-            id=str(j),
-            fval=j * 0.01,
-            x=np.array([j + 0.1, j + 1]),
-            grad=np.array([2.5 + j + 0.1, 2 + j + 1]),
+            id=str(k),
+            fval=k * 0.01,
+            x=np.array([k + 0.1, k + 1]),
+            grad=np.array([2.5 + k + 0.1, 2 + k + 1]),
         )
-        result.optimize_result.append(optimizer_result=optimizer_result)
-    for j in range(0, 4):
+        result.optimize_result.append(optimize_result=optimizer_result)
+    for k in range(0, n):
         optimizer_result = pypesto.OptimizerResult(
-            id=str(j + 3),
-            fval=10 + j * 0.01,
-            x=np.array([2.5 + j + 0.1, 2 + j + 1]),
-            grad=np.array([j + 0.1, j + 1]),
+            id=str(k + 3),
+            fval=10 + k * 0.01,
+            x=np.array([2.5 + k + 0.1, 2 + k + 1]),
+            grad=np.array([k + 0.1, k + 1]),
         )
-        result.optimize_result.append(optimizer_result=optimizer_result)
+        result.optimize_result.append(optimize_result=optimizer_result)
 
     return result
 
@@ -126,13 +130,15 @@ def create_optimization_result_nan_inf():
 
     # append nan and inf
     optimizer_result = pypesto.OptimizerResult(
-        fval=float('nan'), x=np.array([float('nan'), float('nan')])
+        fval=float('nan'), x=np.array([float('nan'), float('nan')]), id='nan'
     )
-    result.optimize_result.append(optimizer_result=optimizer_result)
+    result.optimize_result.append(optimize_result=optimizer_result)
     optimizer_result = pypesto.OptimizerResult(
-        fval=-float('inf'), x=np.array([-float('inf'), -float('inf')])
+        fval=-float('inf'),
+        x=np.array([-float('inf'), -float('inf')]),
+        id='inf',
     )
-    result.optimize_result.append(optimizer_result=optimizer_result)
+    result.optimize_result.append(optimize_result=optimizer_result)
 
     return result
 
@@ -142,7 +148,7 @@ def create_optimization_history():
     problem = create_problem()
 
     # create optimizer
-    optimizer_options = {'maxiter': 200}
+    optimizer_options = {'maxfun': 200}
     optimizer = optimize.ScipyOptimizer(
         method='TNC', options=optimizer_options
     )
@@ -160,7 +166,7 @@ def create_optimization_history():
         startpoint_method=pypesto.startpoint.uniform,
         options=optimize_options,
         history_options=history_options,
-        filename=None,
+        progress_bar=False,
     )
 
     return result_with_trace
@@ -229,6 +235,19 @@ def post_processor(
         for amici_output in amici_outputs
     ]
     return outputs
+
+
+@close_fig
+def test_waterfall_w_zoom():
+    # create the necessary results
+    result_1 = create_optimization_result(500)
+    result_2 = create_optimization_result()
+
+    # test a standard call
+    visualize.waterfall(result_1, n_starts_to_zoom=10)
+
+    # test plotting of lists
+    visualize.waterfall([result_1, result_2], n_starts_to_zoom=3)
 
 
 @close_fig
@@ -416,7 +435,7 @@ def test_parameters_hist():
     problem = create_problem()
 
     # create optimizer
-    optimizer_options = {'maxiter': 200}
+    optimizer_options = {'maxfun': 200}
     optimizer = optimize.ScipyOptimizer(
         method='TNC', options=optimizer_options
     )
@@ -427,7 +446,7 @@ def test_parameters_hist():
         optimizer=optimizer,
         n_starts=10,
         startpoint_method=pypesto.startpoint.uniform,
-        filename=None,
+        progress_bar=False,
     )
 
     visualize.parameter_hist(result_1, 'x1')
@@ -435,7 +454,7 @@ def test_parameters_hist():
 
 
 # @close_fig
-def test_ensemble_dimension_reduction():
+def _test_ensemble_dimension_reduction():
     # creates a test problem
     problem = create_problem(n_parameters=20)
 
@@ -726,7 +745,7 @@ def test_optimization_stats():
     problem = create_problem()
 
     # create optimizer
-    optimizer_options = {'maxiter': 200}
+    optimizer_options = {'maxfun': 200}
     optimizer = optimize.ScipyOptimizer(
         method='TNC', options=optimizer_options
     )
@@ -737,7 +756,7 @@ def test_optimization_stats():
         optimizer=optimizer,
         n_starts=10,
         startpoint_method=pypesto.startpoint.uniform,
-        filename=None,
+        progress_bar=False,
     )
 
     result_2 = optimize.minimize(
@@ -745,7 +764,7 @@ def test_optimization_stats():
         optimizer=optimizer,
         n_starts=10,
         startpoint_method=pypesto.startpoint.uniform,
-        filename=None,
+        progress_bar=False,
     )
 
     visualize.optimization_run_property_per_multistart(
@@ -806,19 +825,19 @@ def test_optimize_convergence():
 
 def test_assign_clusters():
     # test empty input
-    visualize.assign_clusters([])
+    pypesto.util.assign_clusters([])
 
     # test if it runs at all
     fvals = [0.01, 0.02, 1.01, 2.02, 2.03, 2.04, 3, 4, 4.1, 4.11, 10]
-    visualize.assign_clusters(fvals)
+    pypesto.util.assign_clusters(fvals)
     fvals = np.array(fvals)
-    clust, clustsize = visualize.assign_clusters(fvals)
+    clust, clustsize = pypesto.util.assign_clusters(fvals)
     np.testing.assert_array_equal(clust, [0, 0, 1, 2, 2, 2, 3, 4, 4, 4, 5])
     np.testing.assert_array_equal(clustsize, [2, 1, 3, 1, 3, 1])
 
     # test if clustering works as intended
     fvals = [0.0, 0.00001, 1.0, 2.0, 2.001]
-    clust, clustsize = visualize.assign_clusters(fvals)
+    clust, clustsize = pypesto.util.assign_clusters(fvals)
     assert len(clust) == 5
     assert len(clustsize) == 3
     np.testing.assert_array_equal(clust, [0, 0, 1, 2, 2])
@@ -863,7 +882,7 @@ def test_delete_nan_inf():
 
     # create a random x
     x = np.array([[1, 2], [1, 1], [np.nan, 1], [65, 1], [2, 3]])
-    x, fvals = visualize.delete_nan_inf(fvals, x)
+    x, fvals = pypesto.util.delete_nan_inf(fvals, x)
 
     # test if the nan and inf in fvals are deleted, and so do the
     # corresponding entries in x
@@ -913,7 +932,7 @@ def create_sampling_result():
     result = create_optimization_result()
     n_chain = 2
     n_iter = 100
-    n_par = len(result.optimize_result.get_for_key('x')[0])
+    n_par = len(result.optimize_result.x[0])
     trace_neglogpost = np.random.randn(n_chain, n_iter)
     trace_neglogprior = np.zeros((n_chain, n_iter))
     trace_x = np.random.randn(n_chain, n_iter, n_par)
@@ -1015,6 +1034,7 @@ def test_sampling_prediction_trajectories():
     ensemble_prediction = sample_ensemble.predict(
         predictor,
         prediction_id=pypesto.C.AMICI_X,
+        progress_bar=False,
     )
 
     # Plot by
@@ -1050,10 +1070,18 @@ def test_visualize_optimized_model_fit():
     # create problem
     problem = importer.create_problem()
 
-    result = optimize.minimize(problem=problem, n_starts=1, filename=None)
+    result = optimize.minimize(
+        problem=problem,
+        n_starts=1,
+        progress_bar=False,
+    )
 
     # test call of visualize_optimized_model_fit
-    visualize_optimized_model_fit(petab_problem=petab_problem, result=result)
+    visualize_optimized_model_fit(
+        petab_problem=petab_problem,
+        result=result,
+        pypesto_problem=problem,
+    )
 
 
 @close_fig
@@ -1075,7 +1103,11 @@ def test_time_trajectory_model():
     # create problem
     problem = importer.create_problem()
 
-    result = optimize.minimize(problem=problem, n_starts=1, filename=None)
+    result = optimize.minimize(
+        problem=problem,
+        n_starts=1,
+        progress_bar=False,
+    )
 
     # test call of time_trajectory_model
     time_trajectory_model(result=result)

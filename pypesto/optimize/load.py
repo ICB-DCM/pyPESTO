@@ -2,17 +2,31 @@
 
 import logging
 import os
+from pathlib import Path
+from typing import Optional
 
 import h5py
 import numpy as np
 
 import pypesto
 
-from ..C import FVAL, GRAD, HESS, RES, SRES, X
-from ..objective import (
+from ..C import (
+    FVAL,
+    GRAD,
+    HESS,
+    HISTORY,
+    RES,
+    SRES,
+    SUFFIXES_CSV,
+    SUFFIXES_HDF5,
+    TRACE,
+    X,
+)
+from ..history import (
     CsvHistory,
     Hdf5History,
     HistoryOptions,
+    HistoryTypeError,
     OptimizerHistory,
 )
 from ..problem import Problem
@@ -51,8 +65,8 @@ def fill_result_from_history(
     fval_match = fval_exist and np.isclose(history_fval, result_fval)
     if fval_exist and not fval_match:
         logger.debug(
-            f"Minimal function value mismatch: history {history_fval:8e}, "
-            f"result {result_fval:8e}"
+            "Minimal function value mismatch: "
+            f"history {history_fval:8e}, result {result_fval:8e}"
         )
     #  parameters
     history_x, result_x = optimizer_history.x_min, result.x
@@ -82,6 +96,13 @@ def fill_result_from_history(
     if not optimize_options.history_beats_optimizer:
         return result
 
+    # exit flag and message
+    if isinstance(optimizer_history.history, Hdf5History):
+        if (message := optimizer_history.history.message) is not None:
+            result.message = message
+        if (exitflag := optimizer_history.history.exitflag) is not None:
+            result.exitflag = exitflag
+
     # optimal point
     for key in (X, FVAL, GRAD, HESS, RES, SRES):
         hist_val = getattr(optimizer_history, f"{key}_min")
@@ -93,8 +114,64 @@ def fill_result_from_history(
     return result
 
 
+def read_history_from_file(
+    problem: Optional[Problem],
+    history_options: HistoryOptions,
+    identifier: str,
+) -> OptimizerHistory:
+    """Read history from file.
+
+    Parameters
+    ----------
+    problem:
+        The problem to find optimal parameters for.
+        If ``None``, bounds will be assumed to be [-inf, inf] for checking for
+        admissible points.
+    identifier:
+        Multistart id.
+    history_options:
+        Optimizer history options.
+    """
+    if history_options.storage_file is None:
+        raise ValueError("No history file specified.")
+
+    # evaluate type
+    suffix = Path(history_options.storage_file).suffix[1:]
+
+    if suffix in SUFFIXES_CSV:
+        history = CsvHistory(
+            file=history_options.storage_file.format(id=identifier),
+            options=history_options,
+            load_from_file=True,
+        )
+    elif suffix in SUFFIXES_HDF5:
+        history = Hdf5History.load(
+            id=identifier,
+            file=history_options.storage_file.format(id=identifier),
+            options=history_options,
+        )
+    else:
+        raise HistoryTypeError(suffix)
+
+    x0 = history.get_x_trace(0)
+
+    if problem:
+        lb, ub = problem.lb, problem.ub
+    else:
+        lb = np.full_like(x0, fill_value=-np.inf)
+        ub = np.full_like(x0, fill_value=np.inf)
+
+    return OptimizerHistory(
+        history=history,
+        x0=x0,
+        lb=lb,
+        ub=ub,
+        generate_from_history=True,
+    )
+
+
 def read_result_from_file(
-    problem: Problem,
+    problem: Optional[Problem],
     history_options: HistoryOptions,
     identifier: str,
 ) -> OptimizerResult:
@@ -104,49 +181,31 @@ def read_result_from_file(
     ----------
     problem:
         The problem to find optimal parameters for.
+        If ``None``, bounds will be assumed to be [-inf, inf] for checking for
+        admissible points.
     identifier:
         Multistart id.
     history_options:
         Optimizer history options.
     """
-    if history_options.storage_file is None:
-        raise ValueError("No history file specified.")
-
-    if history_options.storage_file.endswith('.csv'):
-        history = CsvHistory(
-            file=history_options.storage_file.format(id=identifier),
-            options=history_options,
-            load_from_file=True,
-        )
-    elif history_options.storage_file.endswith(('.h5', '.hdf5')):
-        history = Hdf5History.load(
-            id=identifier,
-            file=history_options.storage_file.format(id=identifier),
-        )
-    else:
-        raise NotImplementedError()
-
-    opt_hist = OptimizerHistory(
-        history=history,
-        x0=history.get_x_trace(0),
-        lb=problem.lb,
-        ub=problem.ub,
-        generate_from_history=True,
+    opt_hist = read_history_from_file(
+        problem=problem, history_options=history_options, identifier=identifier
     )
-
     result = OptimizerResult(
         id=identifier,
         message='loaded from file',
         exitflag=EXITFLAG_LOADED_FROM_FILE,
-        time=max(history.get_time_trace()) if len(history) else 0.0,
+        time=max(opt_hist.history.get_time_trace())
+        if len(opt_hist.history)
+        else 0.0,
     )
     result.id = identifier
     result = fill_result_from_history(
         result=result,
         optimizer_history=opt_hist,
     )
-    result.update_to_full(problem)
-
+    if problem:
+        result.update_to_full(problem)
     return result
 
 
@@ -170,6 +229,7 @@ def read_results_from_file(
         raise ValueError("No history file specified.")
 
     result = Result()
+    result.problem = problem
     result.optimize_result = OptimizeResult()
     result.optimize_result.list = [
         read_result_from_file(problem, history_options, str(istart))
@@ -211,17 +271,21 @@ def optimization_result_from_history(
     """
     result = Result()
     with h5py.File(filename, 'r') as f:
-        for id_name in f['history'].keys():
-            history = Hdf5History(id=id_name, file=filename)
-            history.recover_options(filename)
-            optimizer_history = OptimizerHistory(
-                history=history,
-                x0=f[f'history/{id_name}/trace/0/x'][()],
-                lb=problem.lb,
-                ub=problem.ub,
-                generate_from_history=True,
-            )
-            optimizer_result = OptimizerResult(id=id_name)
-            fill_result_from_history(optimizer_result, optimizer_history)
-            result.optimize_result.append(optimizer_result)
+        ids = list(f[HISTORY].keys())
+        x0s = [f[f'{HISTORY}/{id}/{TRACE}/0/{X}'][()] for id in ids]
+
+    for id, x0 in zip(ids, x0s):
+        history = Hdf5History(id=id, file=filename)
+        history.recover_options(filename)
+        optimizer_history = OptimizerHistory(
+            history=history,
+            x0=x0,
+            lb=problem.lb,
+            ub=problem.ub,
+            generate_from_history=True,
+        )
+        optimizer_result = OptimizerResult(id=id)
+        fill_result_from_history(optimizer_result, optimizer_history)
+        result.optimize_result.append(optimizer_result)
+
     return result

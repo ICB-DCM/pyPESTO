@@ -94,7 +94,7 @@ def validation_profile_significance(
     # if result for full data is not provided: minimize
     if result_full_data is None:
 
-        x_0 = result_training_data.optimize_result.get_for_key('x')
+        x_0 = result_training_data.optimize_result.x
 
         # copy problem, in order to not change/overwrite x_guesses
         problem = deepcopy(problem_full_data)
@@ -106,16 +106,15 @@ def validation_profile_significance(
             n_starts=n_starts,
             engine=engine,
             progress_bar=False,
-            filename=None,
         )
 
     # Validation intervals compare the nllh value on the full data set
     # of the parameter fits from the training and the full data set.
 
-    nllh_new = result_full_data.optimize_result.get_for_key('fval')[0]
+    nllh_new = result_full_data.optimize_result.fval[0]
     nllh_old = problem_full_data.objective(
         problem_full_data.get_reduced_vector(
-            result_training_data.optimize_result.get_for_key('x')[0]
+            result_training_data.optimize_result.x[0]
         )
     )
 

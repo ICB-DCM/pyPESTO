@@ -1,57 +1,42 @@
+from __future__ import annotations
+
 import abc
 import logging
 import re
 import time
-from typing import Dict, Optional
+import warnings
+from typing import TYPE_CHECKING, Dict, Optional
 
 import numpy as np
 import scipy.optimize
 
 from ..C import FVAL, GRAD, MODE_FUN, MODE_RES
-from ..objective import HistoryBase, HistoryOptions, OptimizerHistory
+from ..history import (
+    HistoryOptions,
+    NoHistory,
+    OptimizerHistory,
+    create_history,
+)
+from ..objective import Objective
 from ..problem import Problem
 from ..result import OptimizerResult
 from .load import fill_result_from_history
 from .options import OptimizeOptions
 
-try:
-    import cyipopt
-except ImportError:
-    cyipopt = None
-
-try:
-    import dlib
-except ImportError:
-    dlib = None
-
-try:
-    import pyswarm
-except ImportError:
-    pyswarm = None
-
-try:
-    import cma
-except ImportError:
-    cma = None
-
-try:
-    import pyswarms
-except ImportError:
-    pyswarms = None
-
-try:
-    import nlopt
-except ImportError:
-    nlopt = None
-
-try:
+if TYPE_CHECKING:
     import fides
-    from fides.hessian_approximation import HessianApproximation
-except ImportError:
-    fides = None
-    HessianApproximation = None
 
 logger = logging.getLogger(__name__)
+
+
+class OptimizerImportError(ImportError):
+    """Exception raised when an optimizer is not available."""
+
+    def __init__(self, optimizer: str):
+        super().__init__(
+            f'Optimizer "{optimizer}" not available, install corresponding '
+            f'package e.g. via "pip install pypesto[{optimizer}]"'
+        )
 
 
 def history_decorator(minimize):
@@ -76,9 +61,11 @@ def history_decorator(minimize):
         # initialize the objective
         objective.initialize()
 
-        history = history_options.create_history(
+        # initialize the history
+        history = create_history(
             id=id,
             x_names=[problem.x_names[ix] for ix in problem.x_free_indices],
+            options=history_options,
         )
         optimizer_history = OptimizerHistory(
             history=history,
@@ -100,8 +87,10 @@ def history_decorator(minimize):
                 history_options=history_options,
                 optimize_options=optimize_options,
             )
-            objective.history.finalize()
             result.id = id
+            objective.history.finalize(
+                message=result.message, exitflag=result.exitflag
+            )
         except Exception as err:
             if optimize_options.allow_failed_starts:
                 logger.error(f'start {id} failed: {err}')
@@ -119,7 +108,7 @@ def history_decorator(minimize):
         )
 
         # clean up, history is available from result
-        objective.history = HistoryBase()
+        objective.history = NoHistory()
 
         return result
 
@@ -267,7 +256,7 @@ class ScipyOptimizer(Optimizer):
     def __init__(
         self,
         method: str = 'L-BFGS-B',
-        tol: float = 1e-9,
+        tol: float = None,
         options: Dict = None,
     ):
         super().__init__()
@@ -277,9 +266,16 @@ class ScipyOptimizer(Optimizer):
         self.options = options
         if self.options is None:
             self.options = ScipyOptimizer.get_default_options(self)
-            self.options['ftol'] = tol
-        elif self.options is not None and 'ftol' not in self.options:
-            self.options['ftol'] = tol
+        self.tol = tol
+
+    def __repr__(self) -> str:
+        rep = f"<{self.__class__.__name__} method={self.method}"
+        # print everything that is customized
+        if self.tol is not None:
+            rep += f" tol={self.tol}"
+        if self.options is not None:
+            rep += f" options={self.options}"
+        return rep + ">"
 
     @fix_decorator
     @time_decorator
@@ -298,8 +294,11 @@ class ScipyOptimizer(Optimizer):
         objective = problem.objective
 
         if self.is_least_squares():
+            # set tolerance to default of scipy optimizer
+            tol = self.tol
+            if tol is None:
+                tol = 1e-8
             # is a residual based least squares method
-
             if not objective.has_res:
                 raise Exception(
                     "For least squares optimization, the objective "
@@ -321,7 +320,7 @@ class ScipyOptimizer(Optimizer):
                     else 0
                 )
                 ls_options.pop('disp', None)
-                ls_options['max_nfev'] = ls_options.pop('maxiter', None)
+                ls_options['max_nfev'] = ls_options.pop('maxfun', None)
             else:
                 ls_options = {}
 
@@ -336,6 +335,7 @@ class ScipyOptimizer(Optimizer):
                     'tr_solver', 'lsmr' if len(x0) > 1 else 'exact'
                 ),
                 loss='linear',
+                ftol=tol,
                 **ls_options,
             )
             # extract fval/grad from result, note that fval is not available
@@ -384,12 +384,37 @@ class ScipyOptimizer(Optimizer):
                 'trust-krylov',
                 'trust-constr',
             ]
+            # switch off passing over functions if not applicable (e.g.
+            # NegLogParameterPrior) since grad/hess attributes do not exist
+            if not isinstance(objective, Objective):
+                if not hasattr(objective, 'grad'):
+                    objective.grad = False
+                if not hasattr(objective, 'hess'):
+                    objective.hess = False
+            # Todo Resolve warning by implementing saving of hess temporarily
+            #  in objective and pass to scipy seperately
+            if objective.hess is True:
+                warnings.warn(
+                    "scipy.optimize.minimize does not support "
+                    "passing fun and hess as one function. Hence "
+                    "for each evaluation of hess, fun will be "
+                    "evaluated again. This can lead to increased "
+                    "computation times. If possible, separate fun "
+                    "and hess."
+                )
+            if objective.grad is True:
 
-            fun = objective.get_fval
+                def fun(x):
+                    return objective(x, sensi_orders=(0, 1))
+
+            else:
+                fun = objective.get_fval
             jac = (
                 objective.get_grad
-                if objective.has_grad and method_supports_grad
-                else None
+                if objective.has_grad
+                and method_supports_grad
+                and objective.grad is not True
+                else (True if objective.grad is True else None)
             )
             hess = (
                 objective.get_hess
@@ -415,6 +440,7 @@ class ScipyOptimizer(Optimizer):
                 hessp=hessp,
                 bounds=bounds,
                 options=self.options,
+                tol=self.tol,
             )
             # extract fval/grad from result
             grad = getattr(res, 'jac', None)
@@ -441,7 +467,7 @@ class ScipyOptimizer(Optimizer):
         if self.is_least_squares():
             options = {'max_nfev': 1000, 'disp': False}
         else:
-            options = {'maxiter': 1000, 'disp': False}
+            options = {'maxfun': 1000, 'disp': False}
         return options
 
 
@@ -460,6 +486,13 @@ class IpoptOptimizer(Optimizer):
         super().__init__()
         self.options = options
 
+    def __repr__(self) -> str:
+        rep = f"<{self.__class__.__name__}"
+        # print everything that is customized
+        if self.options is not None:
+            rep += f" options={self.options}"
+        return rep + ">"
+
     @fix_decorator
     @time_decorator
     @history_decorator
@@ -472,11 +505,10 @@ class IpoptOptimizer(Optimizer):
         optimize_options: OptimizeOptions = None,
     ) -> OptimizerResult:
         """Perform optimization. Parameters: see `Optimizer` documentation."""
-        if cyipopt is None:
-            raise ImportError(
-                "This optimizer requires an installation of ipopt. You can "
-                "install ipopt via `pip install ipopt`."
-            )
+        try:
+            import cyipopt
+        except ImportError:
+            raise OptimizerImportError("ipopt")
 
         objective = problem.objective
 
@@ -516,6 +548,13 @@ class DlibOptimizer(Optimizer):
         elif 'maxiter' not in self.options:
             raise KeyError('Dlib options are missing the key word ' 'maxiter.')
 
+    def __repr__(self) -> str:
+        rep = f"<{self.__class__.__name__}"
+        # print everything that is customized
+        if self.options is not None:
+            rep += f" options={self.options}"
+        return rep + ">"
+
     @fix_decorator
     @time_decorator
     @history_decorator
@@ -533,11 +572,10 @@ class DlibOptimizer(Optimizer):
         check_finite_bounds(lb, ub)
         objective = problem.objective
 
-        if dlib is None:
-            raise ImportError(
-                "This optimizer requires an installation of dlib. You can "
-                "install dlib via `pip install dlib`."
-            )
+        try:
+            import dlib
+        except ImportError:
+            raise OptimizerImportError("dlib")
 
         if not objective.has_fun:
             raise ValueError(
@@ -580,6 +618,13 @@ class PyswarmOptimizer(Optimizer):
             options = {'maxiter': 200}
         self.options = options
 
+    def __repr__(self) -> str:
+        rep = f"<{self.__class__.__name__}"
+        # print everything that is customized
+        if self.options is not None:
+            rep += f" options={self.options}"
+        return rep + ">"
+
     @fix_decorator
     @time_decorator
     @history_decorator
@@ -594,11 +639,11 @@ class PyswarmOptimizer(Optimizer):
         """Perform optimization. Parameters: see `Optimizer` documentation."""
         lb = problem.lb
         ub = problem.ub
-        if pyswarm is None:
-            raise ImportError(
-                "This optimizer requires an installation of pyswarm. You can "
-                "install pyswarm via `pip install pyswarm."
-            )
+
+        try:
+            import pyswarm
+        except ImportError:
+            raise OptimizerImportError("pyswarm")
 
         check_finite_bounds(lb, ub)
 
@@ -642,6 +687,13 @@ class CmaesOptimizer(Optimizer):
         self.options = options
         self.par_sigma0 = par_sigma0
 
+    def __repr__(self) -> str:
+        rep = f"<{self.__class__.__name__} par_sigma0={self.par_sigma0}"
+        # print everything that is customized
+        if self.options is not None:
+            rep += f" options={self.options}"
+        return rep + ">"
+
     @fix_decorator
     @time_decorator
     @history_decorator
@@ -662,11 +714,10 @@ class CmaesOptimizer(Optimizer):
         sigma0 = self.par_sigma0 * np.median(ub - lb)
         self.options['bounds'] = [lb, ub]
 
-        if cma is None:
-            raise ImportError(
-                "This optimizer requires an installation of cma. You can "
-                "install cma via `pip install cma."
-            )
+        try:
+            import cma
+        except ImportError:
+            raise OptimizerImportError("cma")
 
         result = (
             cma.CMAEvolutionStrategy(
@@ -720,6 +771,13 @@ class ScipyDifferentialEvolutionOptimizer(Optimizer):
         if options is None:
             options = {'maxiter': 100}
         self.options = options
+
+    def __repr__(self) -> str:
+        rep = f"<{self.__class__.__name__}"
+        # print everything that is customized
+        if self.options is not None:
+            rep += f" options={self.options}"
+        return rep + ">"
 
     @fix_decorator
     @time_decorator
@@ -787,6 +845,13 @@ class PyswarmsOptimizer(Optimizer):
         self.options = all_options
         self.par_popsize = par_popsize
 
+    def __repr__(self) -> str:
+        rep = f"<{self.__class__.__name__} par_popsize={self.par_popsize}"
+        # print everything that is customized
+        if self.options is not None:
+            rep += f" options={self.options}"
+        return rep + ">"
+
     @fix_decorator
     @time_decorator
     @history_decorator
@@ -802,10 +867,10 @@ class PyswarmsOptimizer(Optimizer):
         lb = problem.lb
         ub = problem.ub
 
-        if pyswarms is None:
-            raise ImportError(
-                "This optimizer requires an installation of pyswarms."
-            )
+        try:
+            import pyswarms
+        except ImportError:
+            raise OptimizerImportError("pyswarms")
 
         # check for finite values for the bounds
         if np.isfinite(lb).all() is np.False_:
@@ -844,7 +909,9 @@ class PyswarmsOptimizer(Optimizer):
             return result
 
         cost, pos = optimizer.optimize(
-            successively_working_fval, iters=self.options['maxiter']
+            successively_working_fval,
+            iters=self.options['maxiter'],
+            verbose=False,
         )
 
         optimizer_result = OptimizerResult(
@@ -901,11 +968,10 @@ class NLoptOptimizer(Optimizer):
         self.options = options
         self.local_options = local_options
 
-        if nlopt is None:
-            raise ImportError(
-                "This optimizer requires an installation of NLopt. You can "
-                "install NLopt via `pip install nlopt`."
-            )
+        try:
+            import nlopt
+        except ImportError:
+            raise OptimizerImportError("nlopt")
 
         if method is None:
             method = nlopt.LD_LBFGS
@@ -987,6 +1053,17 @@ class NLoptOptimizer(Optimizer):
 
         self.local_method = local_method
 
+    def __repr__(self) -> str:
+        rep = f"<{self.__class__.__name__} method={self.method}"
+        # print everything that is customized
+        if self.local_method is not None:
+            rep += f" local_method={self.local_method}"
+        if self.options is not None:
+            rep += f" options={self.options}"
+        if self.local_options is not None:
+            rep += f" local_options={self.local_methods}"
+        return rep + ">"
+
     @fix_decorator
     @time_decorator
     @history_decorator
@@ -999,6 +1076,8 @@ class NLoptOptimizer(Optimizer):
         optimize_options: OptimizeOptions = None,
     ) -> OptimizerResult:
         """Perform optimization. Parameters: see `Optimizer` documentation."""
+        import nlopt
+
         opt = nlopt.opt(self.method, problem.dim)
 
         valid_options = [
@@ -1082,7 +1161,9 @@ class FidesOptimizer(Optimizer):
 
     def __init__(
         self,
-        hessian_update: Optional['HessianApproximation'] = 'Hybrid',
+        hessian_update: Optional[
+            fides.hessian_approximation.HessianApproximation
+        ] = 'default',
         options: Optional[Dict] = None,
         verbose: Optional[int] = logging.INFO,
     ):
@@ -1100,11 +1181,18 @@ class FidesOptimizer(Optimizer):
         """
         super().__init__()
 
-        if hessian_update == 'Hybrid':
-            hessian_update = fides.HybridFixed()
+        try:
+            import fides
+        except ImportError:
+            raise OptimizerImportError("fides")
 
-        if hessian_update is not None and not isinstance(
-            hessian_update, HessianApproximation
+        if (
+            (hessian_update is not None)
+            and (hessian_update != 'default')
+            and not isinstance(
+                hessian_update,
+                fides.hessian_approximation.HessianApproximation,
+            )
         ):
             raise ValueError(
                 'Incompatible type for hessian update. '
@@ -1119,6 +1207,23 @@ class FidesOptimizer(Optimizer):
         self.options = options
         self.hessian_update = hessian_update
 
+    def __repr__(self) -> str:
+        rep = f"<{self.__class__.__name__} "
+        # print everything that is customized
+        if self.hessian_update is not None:
+            if self.hessian_update == 'default':
+                rep += f" hessian_update={self.hessian_update}"
+            else:
+                rep += (
+                    f" hessian_update="
+                    f"{self.hessian_update.__class__.__name__}"
+                )
+        if self.verbose is not None:
+            rep += f" verbose={self.verbose}"
+        if self.options is not None:
+            rep += f" options={self.options}"
+        return rep + ">"
+
     @fix_decorator
     @time_decorator
     @history_decorator
@@ -1131,15 +1236,25 @@ class FidesOptimizer(Optimizer):
         optimize_options: OptimizeOptions = None,
     ) -> OptimizerResult:
         """Perform optimization. Parameters: see `Optimizer` documentation."""
-        if fides is None:
-            raise ImportError(
-                "This optimizer requires an installation of fides. You can "
-                "install fides via `pip install fides`."
-            )
+        import fides
+
+        if self.hessian_update == 'default':
+            if not problem.objective.has_hess:
+                warnings.warn(
+                    'Fides is using BFGS as hessian approximation, '
+                    'as the problem does not provide a Hessian. '
+                    'Specify a Hessian to use a more efficient '
+                    'hybrid approximation scheme.'
+                )
+                _hessian_update = fides.BFGS()
+            else:
+                _hessian_update = fides.HybridFixed()
+        else:
+            _hessian_update = self.hessian_update
 
         resfun = (
-            self.hessian_update.requires_resfun
-            if self.hessian_update is not None
+            _hessian_update.requires_resfun
+            if _hessian_update is not None
             else False
         )
 
@@ -1152,8 +1267,8 @@ class FidesOptimizer(Optimizer):
                 'gradient evaluation.'
             )
 
-        if self.hessian_update is None or (
-            self.hessian_update.requires_hess and not resfun
+        if _hessian_update is None or (
+            _hessian_update.requires_hess and not resfun
         ):
             if not problem.objective.has_hess:
                 raise ValueError(
@@ -1171,17 +1286,14 @@ class FidesOptimizer(Optimizer):
             ub=problem.ub,
             lb=problem.lb,
             verbose=self.verbose,
-            hessian_update=self.hessian_update,
+            hessian_update=_hessian_update,
             options=self.options,
             resfun=resfun,
         )
 
         try:
             opt.minimize(x0)
-            if opt.converged:
-                msg = 'Finished Successfully.'
-            else:
-                msg = 'Failed to converge'
+            msg = self._convert_exitflag_to_message(opt)
         except RuntimeError as err:
             msg = str(err)
 
@@ -1199,3 +1311,35 @@ class FidesOptimizer(Optimizer):
     def is_least_squares(self):
         """Check whether optimizer is a least squares optimizer."""
         return False
+
+    def _convert_exitflag_to_message(self, opt: fides.Optimizer):
+        """
+        Convert the exitflag of a run to an informative message.
+
+        Parameters
+        ----------
+        opt:
+            The fides.Optimizer that has finished minimizing storing the
+            exitflag.
+
+        Returns
+        -------
+            An informative message on the cause of termination. Based on
+            fides documentation.
+        """
+        import fides
+
+        messages = {
+            fides.ExitFlag.DID_NOT_RUN: "Optimizer did not run",
+            fides.ExitFlag.MAXITER: "Reached maximum number of allowed iterations",
+            fides.ExitFlag.MAXTIME: "Expected to reach maximum allowed time in next iteration",
+            fides.ExitFlag.NOT_FINITE: "Encountered non-finite fval/grad/hess",
+            fides.ExitFlag.EXCEEDED_BOUNDARY: "Exceeded specified boundaries",
+            fides.ExitFlag.DELTA_TOO_SMALL: "Trust Region Radius too small to proceed",
+            fides.ExitFlag.FTOL: "Converged according to fval difference",
+            fides.ExitFlag.XTOL: "Converged according to x difference",
+            fides.ExitFlag.GTOL: "Converged according to gradient norm",
+        }
+        return messages.get(
+            opt.exitflag, f"exitflag={opt.exitflag} is not defined in fides."
+        )

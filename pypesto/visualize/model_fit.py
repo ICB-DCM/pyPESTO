@@ -5,36 +5,41 @@ Currently only for PEtab problems.
 """
 from typing import Sequence, Union
 
-import amici.petab_import as petab_import
+import amici
 import amici.plotting
 import matplotlib.axes
 import matplotlib.pyplot as plt
 import numpy as np
 import petab
 from amici.petab_objective import rdatas_to_simulation_df
-from amici.petab_simulate import simulate_petab
 from petab.visualize import plot_problem
 
+from ..C import RDATAS
 from ..problem import Problem
 from ..result import Result
 
 AmiciModel = Union['amici.Model', 'amici.ModelPtr']
 
+__all__ = ["visualize_optimized_model_fit", "time_trajectory_model"]
+
 
 def visualize_optimized_model_fit(
     petab_problem: petab.Problem,
     result: Union[Result, Sequence[Result]],
+    pypesto_problem: Problem,
     start_index: int = 0,
+    return_dict: bool = False,
+    unflattened_petab_problem: petab.Problem = None,
     **kwargs,
 ) -> Union[matplotlib.axes.Axes, None]:
     """
     Visualize the optimized model fit of a PEtab problem.
 
-    Function calls the PEtab visualization file of the petab_problem and
+    Function calls the PEtab visualization file of the ``petab_problem`` and
     visualizes the fit of the optimized parameter. Common additional
-    argument is `subplot_dir` to specify the directory each subplot is
+    argument is ``subplot_dir`` to specify the directory each subplot is
     saved to. Further keyword arguments are delegated to
-    petab.visualize.plot_with_vis_spec, see there for more information.
+    :func:`petab.visualize.plot_with_vis_spec`, see there for more information.
 
     Parameters
     ----------
@@ -44,45 +49,54 @@ def visualize_optimized_model_fit(
         The result object from optimization.
     start_index:
         The index of the optimization run in `result.optimize_result.list`.
+        Ignored if `problem_parameters` is provided.
+    pypesto_problem:
+        The pyPESTO problem.
+    return_dict:
+        Return plot and simulation results as a dictionary.
+    unflattened_petab_problem:
+        If the original PEtab problem is flattened, this can be passed
+        to plot with the original unflattened problem.
+    kwargs:
+        Passed to :func:`petab.visualize.plot_problem`.
 
     Returns
     -------
     axes: `matplotlib.axes.Axes` object of the created plot.
     None: In case subplots are saved to file
     """
-    if petab_problem is not None:
-        if petab is None:
-            raise
+    x = result.optimize_result.list[start_index]['x'][
+        pypesto_problem.x_free_indices
+    ]
+    objective_result = pypesto_problem.objective(x, return_dict=True)
 
-    problem_parameters = dict(
-        zip(
-            petab_problem.parameter_df.index,
-            result.optimize_result.list[start_index]['x'],
+    simulation_df = rdatas_to_simulation_df(
+        objective_result[RDATAS],
+        pypesto_problem.objective.amici_model,
+        petab_problem.measurement_df,
+    )
+
+    # handle flattened PEtab problems
+    petab_problem_to_plot = petab_problem
+    if unflattened_petab_problem:
+        simulation_df = petab.core.unflatten_simulation_df(
+            simulation_df=simulation_df,
+            petab_problem=unflattened_petab_problem,
         )
-    )
+        petab_problem_to_plot = unflattened_petab_problem
 
-    amici_model = petab_import.import_petab_problem(
-        petab_problem,
-        model_output_dir=kwargs.pop('model_output_dir', None),
-        force_compile=kwargs.pop('force_compile', False),
-    )
-
-    res = simulate_petab(
-        petab_problem,
-        amici_model=amici_model,
-        scaled_parameters=True,
-        problem_parameters=problem_parameters,
-        solver=kwargs.pop('amici_solver', None),
-    )
-
-    sim_df = rdatas_to_simulation_df(
-        res["rdatas"], amici_model, petab_problem.measurement_df
-    )
-
-    # function to call, to plot data and simulations
+    # plot
     axes = plot_problem(
-        petab_problem=petab_problem, simulations_df=sim_df, **kwargs
+        petab_problem=petab_problem_to_plot,
+        simulations_df=simulation_df,
+        **kwargs,
     )
+    if return_dict:
+        return {
+            'axes': axes,
+            'objective_result': objective_result,
+            'simulation_df': simulation_df,
+        }
     return axes
 
 

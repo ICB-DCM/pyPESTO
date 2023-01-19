@@ -7,7 +7,6 @@ from .. import C
 from .aggregated import AggregatedObjective
 from .base import ResultDict
 from .function import ObjectiveBase
-from .util import res_to_chi2
 
 
 class NegLogPriors(AggregatedObjective):
@@ -73,7 +72,7 @@ class NegLogParameterPriors(ObjectiveBase):
         self,
         x: np.ndarray,
         sensi_orders: Tuple[int, ...],
-        mode: str,
+        mode: C.ModeType,
         **kwargs,
     ) -> ResultDict:
         """
@@ -103,7 +102,6 @@ class NegLogParameterPriors(ObjectiveBase):
             for order in sensi_orders:
                 if order == 0:
                     res[C.RES] = self.residual(x)
-                    res[C.CHI2] = res_to_chi2(res[C.RES])
                 elif order == 1:
                     res[C.SRES] = self.residual_jacobian(x)
                 else:
@@ -114,7 +112,7 @@ class NegLogParameterPriors(ObjectiveBase):
     def check_sensi_orders(
         self,
         sensi_orders: Tuple[int, ...],
-        mode: str,
+        mode: C.ModeType,
     ) -> bool:
         """See `ObjectiveBase` documentation."""
         if mode == C.MODE_FUN:
@@ -143,7 +141,7 @@ class NegLogParameterPriors(ObjectiveBase):
 
         return True
 
-    def check_mode(self, mode: str) -> bool:
+    def check_mode(self, mode: C.ModeType) -> bool:
         """See `ObjectiveBase` documentation."""
         if mode == C.MODE_FUN:
             return True
@@ -304,20 +302,20 @@ def get_parameter_prior_dict(
 
         def log_f_log10(x_log10):
             """Log-prior for log10-parameters."""
-            return log_f(10 ** x_log10)
+            return log_f(10**x_log10)
 
         def d_log_f_log10(x_log10):
             """Rerivative of log-prior w.r.t. log10-parameters."""
-            return d_log_f_dx(10 ** x_log10) * log10 * 10 ** x_log10
+            return d_log_f_dx(10**x_log10) * log10 * 10**x_log10
 
         def dd_log_f_log10(x_log10):
             """Second derivative of log-prior w.r.t. log10-parameters."""
             return (
-                log10 ** 2
-                * 10 ** x_log10
+                log10**2
+                * 10**x_log10
                 * (
-                    dd_log_f_ddx(10 ** x_log10) * 10 ** x_log10
-                    + d_log_f_dx(10 ** x_log10)
+                    dd_log_f_ddx(10**x_log10) * 10**x_log10
+                    + d_log_f_dx(10**x_log10)
                 )
             )
 
@@ -326,14 +324,14 @@ def get_parameter_prior_dict(
 
             def res_log(x_log10):
                 """Residual-prior for log10-parameters."""
-                return res(10 ** x_log10)
+                return res(10**x_log10)
 
         d_res_log = None
         if d_res_dx is not None:
 
             def d_res_log(x_log10):
                 """Residual-prior for log10-parameters."""
-                return d_res_dx(10 ** x_log10) * log10 * 10 ** x_log10
+                return d_res_dx(10**x_log10) * log10 * 10**x_log10
 
         return {
             'index': index,
@@ -454,7 +452,7 @@ def _prior_densities(
 
         mean = prior_parameters[0]
         sigma = prior_parameters[1]
-        sigma2 = sigma ** 2
+        sigma2 = sigma**2
 
         def log_f(x):
             return -np.log(2 * np.pi * sigma2) / 2 - (x - mean) ** 2 / (
@@ -508,15 +506,15 @@ def _prior_densities(
 
         def log_f(x):
             return -np.log(sqrt2_pi * sigma * x) - (np.log(x) - mean) ** 2 / (
-                2 * sigma ** 2
+                2 * sigma**2
             )
 
         def d_log_f_dx(x):
-            return -1 / x - (np.log(x) - mean) / (sigma ** 2 * x)
+            return -1 / x - (np.log(x) - mean) / (sigma**2 * x)
 
         def dd_log_f_ddx(x):
-            return 1 / (x ** 2) - (1 - np.log(x) + mean) / (
-                sigma ** 2 * x ** 2
+            return 1 / (x**2) - (1 - np.log(x) + mean) / (
+                sigma**2 * x**2
             )
 
         return log_f, d_log_f_dx, dd_log_f_ddx, None, None

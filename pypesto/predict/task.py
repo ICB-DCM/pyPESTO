@@ -1,6 +1,7 @@
 import logging
 from typing import Sequence, Tuple
 
+from ..C import ModeType
 from ..engine import Task
 
 logger = logging.getLogger(__name__)
@@ -30,7 +31,7 @@ class PredictorTask(Task):
         predictor: 'pypesto.predict.Predictor',  # noqa: F821
         x: Sequence[float],
         sensi_orders: Tuple[int, ...],
-        mode: str,
+        mode: ModeType,
         id: str,
     ):
         super().__init__()

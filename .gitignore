@@ -79,10 +79,10 @@ data/figures
 # coverage
 coverage_py.xml
 coverage.xml
+.coverage*
 
 # examples
 doc/example/tmp
-doc/example/amici_models/*
 
 # store
 *.hdf5
@@ -95,7 +95,6 @@ data/.spyproject
 data/processed
 examples/*.err
 examples/*.out
-doc/*.log
 *.kdev*
 .pytest_cache
 dask-worker-space
@@ -104,12 +103,11 @@ venv/*
 *.tmp
 tmp/*
 */tmp/*
-amici_models/*
+**/amici_models/
 test/doc/example/tmp/benchmark-models/
-test/amici_models/*
 *.hdf5
 *.h5
 *.dat
 /BioNetGen-*.*.*
 /bionetgen.tar
-/report.log
+**.log

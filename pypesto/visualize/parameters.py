@@ -1,13 +1,21 @@
-from typing import Iterable, List, Optional, Sequence, Tuple, Union
+from typing import Callable, Iterable, List, Optional, Sequence, Tuple, Union
 
 import matplotlib.axes
 import matplotlib.pyplot as plt
 import numpy as np
+import pandas as pd
 from matplotlib.ticker import MaxNLocator
 
+from pypesto.util import delete_nan_inf
+
+from ..C import RGBA
 from ..result import Result
-from .clust_color import assign_colors, delete_nan_inf
-from .misc import process_result_list, process_start_indices
+from .clust_color import assign_colors
+from .misc import (
+    process_parameter_indices,
+    process_result_list,
+    process_start_indices,
+)
 from .reference_points import ReferencePoint, create_references
 
 
@@ -19,7 +27,7 @@ def parameters(
     ub: Optional[Union[np.ndarray, List[float]]] = None,
     size: Optional[Tuple[float, float]] = None,
     reference: Optional[List[ReferencePoint]] = None,
-    colors: Optional[Union[List[float], List[List[float]]]] = None,
+    colors: Optional[Union[RGBA, List[RGBA]]] = None,
     legends: Optional[Union[str, List[str]]] = None,
     balance_alpha: bool = True,
     start_indices: Optional[Union[int, Iterable[int]]] = None,
@@ -187,7 +195,7 @@ def parameter_hist(
         fig = plt.gcf()
         fig.set_size_inches(*size)
 
-    xs = result.optimize_result.get_for_key('x')
+    xs = result.optimize_result.x
 
     # reduce number of displayed results
     if isinstance(start_indices, int):
@@ -256,7 +264,12 @@ def parameters_lowlevel(
     xs = np.array(xs)
     fvals = np.array(fvals)
     # remove nan or inf values in fvals and xs
-    xs, fvals = delete_nan_inf(fvals, xs, len(ub) if ub is not None else 1)
+    xs, fvals = delete_nan_inf(
+        fvals=fvals,
+        x=xs,
+        xdim=len(ub) if ub is not None else 1,
+        magnitude_bound=1e100,
+    )
 
     if size is None:
         # 0.5 inch height per parameter
@@ -350,12 +363,12 @@ def handle_inputs(
         parameter values which will be plotted later
     """
     # retrieve results
-    fvals = result.optimize_result.get_for_key('fval')
-    xs = result.optimize_result.get_for_key('x')
+    fvals = result.optimize_result.fval
+    xs = result.optimize_result.x
 
     # parse indices which should be plotted
     if start_indices is not None:
-        start_indices = process_start_indices(start_indices, len(fvals))
+        start_indices = process_start_indices(result, start_indices)
 
         # reduce number of displayed results
         xs_out = [xs[ind] for ind in start_indices]
@@ -388,3 +401,61 @@ def handle_inputs(
         ub = result.problem.get_full_vector(ub)
 
     return lb, ub, x_labels, fvals_out, xs_out
+
+
+def parameters_correlation_matrix(
+    result: Result,
+    parameter_indices: Union[str, Sequence[int]] = 'free_only',
+    start_indices: Optional[Union[int, Iterable[int]]] = None,
+    method: Union[str, Callable] = 'pearson',
+    cluster: bool = True,
+) -> matplotlib.axes.Axes:
+    """
+    Plot correlation of optimized parameters.
+
+    Parameters
+    ----------
+    result:
+        Optimization result obtained by 'optimize.py'
+    parameter_indices:
+        List of integers specifying the parameters to be considered.
+    start_indices:
+        List of integers specifying the multistarts to be plotted or
+        int specifying up to which start index should be plotted
+    method:
+        The method to compute correlation. Allowed are `pearson, kendall,
+        spearman` or a callable function.
+    cluster:
+        Whether to cluster the correlation matrix.
+
+    Returns
+    -------
+    ax:
+        The plot axis.
+    """
+    import seaborn as sns
+
+    start_indices = process_start_indices(
+        start_indices=start_indices, result=result
+    )
+    parameter_indices = process_parameter_indices(
+        parameter_indices=parameter_indices, result=result
+    )
+    # put all parameters into a dataframe, where columns are parameters
+    parameters = [
+        result.optimize_result[i_start]['x'][parameter_indices]
+        for i_start in start_indices
+    ]
+    x_labels = [
+        result.problem.x_names[parameter_index]
+        for parameter_index in parameter_indices
+    ]
+    df = pd.DataFrame(parameters, columns=x_labels)
+    corr_matrix = df.corr(method=method)
+    if cluster:
+        ax = sns.clustermap(
+            data=corr_matrix, yticklabels=True, vmin=-1, vmax=1
+        )
+    else:
+        ax = sns.heatmap(data=corr_matrix, yticklabels=True, vmin=-1, vmax=1)
+    return ax

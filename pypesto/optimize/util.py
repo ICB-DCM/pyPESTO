@@ -3,14 +3,14 @@
 import logging
 import os
 from pathlib import Path
-from typing import List
+from typing import Iterable, List
 
 import h5py
 
-from ..C import PYPESTO_MAX_N_STARTS
+from .. import C
 from ..engine import Engine, SingleCoreEngine
-from ..objective import HistoryOptions
-from ..store.save_to_hdf5 import get_or_create_group
+from ..history import CsvHistoryTemplateError, HistoryOptions, HistoryTypeError
+from ..result import Result
 from .optimizer import OptimizerResult
 
 logger = logging.getLogger(__name__)
@@ -46,20 +46,14 @@ def preprocess_hdf5_history(
     path = Path(storage_file)
 
     # nothing to do if csv history and correctly set
-    if path.suffix == ".csv":
+    if path.suffix[1:] in C.SUFFIXES_CSV:
         if "{id}" not in storage_file:
-            raise ValueError(
-                "For csv history, the `storage_file` must contain an `{id}` "
-                "template"
-            )
+            raise CsvHistoryTemplateError(storage_file)
         return False
 
     # assuming hdf5 history henceforth
-    if path.suffix not in [".h5", ".hdf5"]:
-        raise ValueError(
-            "Only history storage to '.csv' and '.hdf5' is supported, got "
-            f"{path.suffix}",
-        )
+    if path.suffix[1:] not in C.SUFFIXES_HDF5:
+        raise HistoryTypeError(path.suffix)
 
     # nothing to do if no parallelization
     if isinstance(engine, SingleCoreEngine):
@@ -99,7 +93,7 @@ def postprocess_hdf5_history(
     # create hdf5 file that gathers the others within history group
     with h5py.File(storage_file, mode='w') as f:
         # create file and group
-        get_or_create_group(f, "history")
+        f.require_group("history")
         # append links to each single result file
         for result in ret:
             id = result['id']
@@ -128,13 +122,51 @@ def bound_n_starts_from_env(n_starts: int):
         The original number of starts, or the minimum with the environment
         variable, if exists.
     """
-    if PYPESTO_MAX_N_STARTS not in os.environ:
+    if C.PYPESTO_MAX_N_STARTS not in os.environ:
         return n_starts
-    n_starts_new = min(n_starts, int(os.environ[PYPESTO_MAX_N_STARTS]))
+    n_starts_new = min(n_starts, int(os.environ[C.PYPESTO_MAX_N_STARTS]))
 
     logger.info(
         f"Bounding number of samples from {n_starts} to {n_starts_new} via "
-        f"environment variable {PYPESTO_MAX_N_STARTS}"
+        f"environment variable {C.PYPESTO_MAX_N_STARTS}"
     )
 
     return n_starts_new
+
+
+def assign_ids(
+    n_starts: int,
+    ids: Iterable[str] = None,
+    result: Result = None,
+) -> Iterable[str]:
+    """
+    Assign ids to starts.
+
+    ids:
+        Ids assigned to the startpoints.
+    result:
+        A result object to append the optimization results to. For example,
+        one might append more runs to a previous optimization. Assign only
+        unique ids.
+    n_starts:
+        Number of starts of the optimizer.
+    """
+    used_ids = set()
+    if result is not None:
+        used_ids = set(result.optimize_result.id)
+        N_used = len(used_ids)
+    if ids is None:
+        i = 0
+        ids = [str(j) for j in range(i * n_starts, (i + 1) * n_starts)]
+        while not used_ids.isdisjoint(ids):
+            i += 1
+            ids = [
+                str(j) for j in range(N_used * i, N_used * (i + 1) + n_starts)
+            ]
+    if len(ids) != n_starts:
+        raise AssertionError("Number of starts and ids must coincide.")
+    if not used_ids.isdisjoint(ids):
+        raise AssertionError(
+            "Manually assigned ids must differ from existing ones."
+        )
+    return ids

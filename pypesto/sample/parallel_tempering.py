@@ -51,6 +51,7 @@ class ParallelTemperingSampler(Sampler):
             'max_temp': 5e4,
             'exponent': 4,
             'temper_log_posterior': False,
+            'show_progress': True,
         }
 
     def initialize(
@@ -69,8 +70,10 @@ class ParallelTemperingSampler(Sampler):
 
     def sample(self, n_samples: int, beta: float = 1.0):
         """Sample and swap in between samplers."""
+        show_progress = self.options['show_progress']
         # loop over iterations
-        for i_sample in tqdm(range(int(n_samples))):  # TODO test
+        for i_sample in tqdm(range(int(n_samples)), disable=not show_progress):
+            # TODO test
             # sample
             for sampler, beta in zip(self.samplers, self.betas):
                 sampler.sample(n_samples=1, beta=beta)

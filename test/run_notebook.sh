@@ -25,6 +25,7 @@ nbs_1=(
   'store.ipynb'
   'synthetic_data.ipynb'
   'hdf5_storage.ipynb'
+  'hierarchical.ipynb'
 )
 
 # Sampling notebooks

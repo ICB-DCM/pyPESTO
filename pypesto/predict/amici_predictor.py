@@ -1,5 +1,7 @@
+from __future__ import annotations
+
 from copy import deepcopy
-from typing import Callable, List, Sequence, Tuple, Union
+from typing import TYPE_CHECKING, Callable, List, Sequence, Tuple, Union
 
 import numpy as np
 
@@ -23,8 +25,12 @@ from ..C import (
     PARAMETER_IDS,
     RDATAS,
     TIMEPOINTS,
+    ModeType,
 )
-from ..objective import AmiciObjective
+
+if TYPE_CHECKING:
+    from ..objective import AmiciObjective
+
 from ..result import PredictionResult
 
 
@@ -147,7 +153,7 @@ class AmiciPredictor:
         self,
         x: np.ndarray,
         sensi_orders: Tuple[int, ...] = (0,),
-        mode: str = MODE_FUN,
+        mode: ModeType = MODE_FUN,
         output_file: str = '',
         output_format: str = CSV,
         include_llh_weights: bool = False,
@@ -261,7 +267,7 @@ class AmiciPredictor:
         self,
         x: np.ndarray,
         sensi_orders: Tuple[int, ...],
-        mode: str = MODE_FUN,
+        mode: ModeType = MODE_FUN,
         include_llh_weights: bool = False,
         include_sigmay: bool = False,
     ) -> Tuple[List, List, List]:

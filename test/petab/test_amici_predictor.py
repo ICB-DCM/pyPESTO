@@ -364,7 +364,7 @@ def test_petab_prediction():
     # import PEtab problem
     petab_problem.model_name = f'{model_name}_petab'
     importer = pypesto.petab.PetabImporter(petab_problem)
-    # create prediction via PAteb
+    # create prediction via PEtab
     predictor = importer.create_predictor()
 
     # ===== run test for prediction ===========================================
@@ -411,7 +411,9 @@ def test_petab_prediction():
     assert isinstance(parameter_identifiability, pd.DataFrame)
 
     # perform a prediction for the ensemble
-    ensemble_prediction = ensemble.predict(predictor=predictor)
+    ensemble_prediction = ensemble.predict(
+        predictor=predictor, progress_bar=False
+    )
     # check some of the basic functionality: compressing output to large arrays
     ensemble_prediction.condense_to_arrays()
     for field in ('timepoints', 'output', 'output_sensi'):

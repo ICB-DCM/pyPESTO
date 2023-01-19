@@ -1,12 +1,14 @@
 import logging
 import warnings
-from typing import Dict, Sequence, Tuple, Union
+from colorsys import rgb_to_hls
+from typing import Dict, Optional, Sequence, Tuple, Union
 
 import matplotlib.axes
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
-import seaborn as sns
+from matplotlib.collections import LineCollection
+from matplotlib.container import ErrorbarContainer
 from matplotlib.lines import Line2D
 
 from ..C import (
@@ -18,13 +20,22 @@ from ..C import (
     RGBA_BLACK,
     RGBA_MAX,
     RGBA_MIN,
+    STANDARD_DEVIATION,
 )
 from ..ensemble import EnsemblePrediction, get_percentile_label
 from ..result import McmcPtResult, PredictionResult, Result
 from ..sample import calculate_ci_mcmc_sample
 from .misc import rgba2rgb
 
+cmap = matplotlib.cm.viridis
 logger = logging.getLogger(__name__)
+
+
+prediction_errorbar_settings = {
+    'fmt': 'none',
+    'color': 'k',
+    'capsize': 10,
+}
 
 
 def sampling_fval_traces(
@@ -61,6 +72,8 @@ def sampling_fval_traces(
     ax:
         The plot axes.
     """
+    import seaborn as sns
+
     # get data which should be plotted
     _, params_fval, _, _, _ = get_data_to_plot(
         result=result,
@@ -177,6 +190,11 @@ def _plot_trajectories_by_condition(
     level_opacities: Dict[int, float],
     labels: Dict[str, str],
     variable_colors: Sequence[RGB],
+    average: str = MEDIAN,
+    add_sd: bool = False,
+    grouped_measurements: Dict[
+        Tuple[str, str], Sequence[Sequence[float]]
+    ] = None,
 ) -> None:
     """Plot predicted trajectories, with subplots grouped by condition.
 
@@ -206,6 +224,15 @@ def _plot_trajectories_by_condition(
     variable_colors:
         Colors used to differentiate plotted outputs. The order should
         correspond to `output_ids`.
+    average:
+        The ID of the statistic that will be plotted as the average (e.g.,
+        `MEDIAN` or `MEAN`).
+    add_sd:
+        Whether to add the standard deviation of the predictions to the plot.
+    grouped_measurements:
+        Measurement data that has already been grouped by condition and output,
+        where the keys are `(condition_id, output_id)` 2-tuples, and the values
+        are `[sequence of x-axis values, sequence of y-axis values]`.
     """
     # Each subplot has all data for a single condition.
     for condition_index, condition_id in enumerate(condition_ids):
@@ -213,11 +240,37 @@ def _plot_trajectories_by_condition(
         ax.set_title(f'Condition: {labels[condition_id]}')
         # Each subplot has all data for all condition-specific outputs.
         for output_index, output_id in enumerate(output_ids):
-            # Plot the median for each output.
+            facecolor0 = variable_colors[output_index]
+            # Plot the average for each output.
+            t_average, y_average = _get_statistic_data(
+                summary,
+                average,
+                condition_id,
+                output_id,
+            )
             ax.plot(
-                *_get_statistic_data(summary, MEDIAN, condition_id, output_id),
+                t_average,
+                y_average,
                 'k-',
             )
+            if add_sd:
+                t_std, y_std = _get_statistic_data(
+                    summary,
+                    STANDARD_DEVIATION,
+                    condition_id,
+                    output_id,
+                )
+                if (t_std != t_average).all():
+                    raise ValueError(
+                        'Unknown error: timepoints for average and standard '
+                        'deviation do not match.'
+                    )
+                ax.errorbar(
+                    t_average,
+                    y_average,
+                    yerr=y_std,
+                    **prediction_errorbar_settings,
+                )
             # Plot the regions described by the credibility level,
             # for each output.
             for level_index, level in enumerate(levels):
@@ -259,6 +312,20 @@ def _plot_trajectories_by_condition(
                     ),
                     lw=0,
                 )
+            if measurements := grouped_measurements.get(
+                (condition_id, output_id), False
+            ):
+                ax.scatter(
+                    measurements[0],
+                    measurements[1],
+                    marker='o',
+                    facecolor=facecolor0,
+                    edgecolor=(
+                        'white'
+                        if rgb_to_hls(*facecolor0)[1] < 0.5
+                        else 'black'
+                    ),
+                )
 
 
 def _plot_trajectories_by_output(
@@ -270,6 +337,11 @@ def _plot_trajectories_by_output(
     level_opacities: Dict[int, float],
     labels: Dict[str, str],
     variable_colors: Sequence[RGB],
+    average: str = MEDIAN,
+    add_sd: bool = False,
+    grouped_measurements: Dict[
+        Tuple[str, str], Sequence[Sequence[float]]
+    ] = None,
 ) -> None:
     """Plot predicted trajectories, with subplots grouped by output.
 
@@ -291,6 +363,7 @@ def _plot_trajectories_by_output(
         ax.set_title(f'Trajectory: {labels[output_id]}')
         # Each subplot is divided by conditions, with vertical lines.
         for condition_index, condition_id in enumerate(condition_ids):
+            facecolor0 = variable_colors[condition_index]
             if condition_index != 0:
                 ax.axvline(
                     t0,
@@ -299,21 +372,39 @@ def _plot_trajectories_by_output(
                 )
 
             t_max = t0
-            t_median, y_median = _get_statistic_data(
+            t_average, y_average = _get_statistic_data(
                 summary,
-                MEDIAN,
+                average,
                 condition_id,
                 output_id,
             )
-            # Shift the timepoints for the median plot to start at the end of
+            # Shift the timepoints for the average plot to start at the end of
             # the previous condition plot.
-            t_median_shifted = t_median + t0
+            t_average_shifted = t_average + t0
             ax.plot(
-                t_median_shifted,
-                y_median,
+                t_average_shifted,
+                y_average,
                 'k-',
             )
-            t_max = max(t_max, *t_median_shifted)
+            if add_sd:
+                t_std, y_std = _get_statistic_data(
+                    summary,
+                    STANDARD_DEVIATION,
+                    condition_id,
+                    output_id,
+                )
+                if (t_std != t_average).all():
+                    raise ValueError(
+                        'Unknown error: timepoints for average and standard '
+                        'deviation do not match.'
+                    )
+                ax.errorbar(
+                    t_average_shifted,
+                    y_average,
+                    yerr=y_std,
+                    **prediction_errorbar_settings,
+                )
+            t_max = max(t_max, *t_average_shifted)
             for level_index, level in enumerate(levels):
                 # Get the percentiles that correspond to the credibility level,
                 # as their labels in the `summary`.
@@ -352,12 +443,25 @@ def _plot_trajectories_by_output(
                     lower_data,
                     upper_data,
                     facecolor=rgba2rgb(
-                        variable_colors[condition_index]
-                        + [level_opacities[level_index]]
+                        facecolor0 + [level_opacities[level_index]]
                     ),
                     lw=0,
                 )
                 t_max = max(t_max, *t_lower_shifted, *t_upper_shifted)
+            if measurements := grouped_measurements.get(
+                (condition_id, output_id), False
+            ):
+                ax.scatter(
+                    [t0 + _t for _t in measurements[0]],
+                    measurements[1],
+                    marker='o',
+                    facecolor=facecolor0,
+                    edgecolor=(
+                        'white'
+                        if rgb_to_hls(*facecolor0)[1] < 0.5
+                        else 'black'
+                    ),
+                )
             # Set t0 to the last plotted timepoint of the current condition
             # plot.
             t0 = t_max
@@ -418,6 +522,11 @@ def _handle_legends(
     groupby: str,
     artist_padding: float,
     n_col: int,
+    average: str,
+    add_sd: bool,
+    grouped_measurements: Optional[
+        Dict[Tuple[str, str], Sequence[Sequence[float]]]
+    ],
 ) -> None:
     """Add legends to a sampling prediction trajectories plot.
 
@@ -451,6 +560,15 @@ def _handle_legends(
         The padding between the figure and the legends.
     n_col:
         The number of columns of subplots in the figure.
+    average:
+        The ID of the statistic that will be plotted as the average (e.g.,
+        `MEDIAN` or `MEAN`).
+    add_sd:
+        Whether to add the standard deviation of the predictions to the plot.
+    grouped_measurements:
+        Measurement data that has already been grouped by condition and output,
+        where the keys are `(condition_id, output_id)` 2-tuples, and the values
+        are `[sequence of x-axis values, sequence of y-axis values]`.
     """
     # Fake plots for legend line styles
     fake_data = [[0], [0]]
@@ -483,9 +601,53 @@ def _handle_legends(
                 ),
             ]
         )
-    # Create a line object with fake data for the median line.
-    median_line = [['Median', Line2D(*fake_data, color=RGBA_BLACK)]]
-    level_lines = np.array(ci_lines + median_line)
+
+    # Create a line object with fake data for the average line.
+    average_title = average.title()
+    average_line_object_line2d = Line2D(*fake_data, color=RGBA_BLACK)
+    if add_sd:
+        capline = Line2D(
+            *fake_data,
+            color=prediction_errorbar_settings['color'],
+            # https://github.com/matplotlib/matplotlib/blob
+            # /710fce3df95e22701bd68bf6af2c8adbc9d67a79/lib/matplotlib/
+            # axes/_axes.py#L3424=
+            markersize=2.0 * prediction_errorbar_settings['capsize'],
+        )
+        average_title += ' + SD'
+        barline = LineCollection(
+            np.empty((2, 2, 2)),
+            color=prediction_errorbar_settings['color'],
+        )
+        average_line_object = ErrorbarContainer(
+            (
+                average_line_object_line2d,
+                [capline],
+                [barline],
+            ),
+            has_yerr=True,
+        )
+    else:
+        average_line_object = average_line_object_line2d
+    average_line = [[average_title, average_line_object]]
+
+    # Create a line object with fake data for the data points.
+    data_line = []
+    if grouped_measurements:
+        data_line = [
+            [
+                'Data',
+                Line2D(
+                    *fake_data,
+                    linewidth=0,
+                    marker='o',
+                    markerfacecolor='grey',
+                    markeredgecolor='white',
+                ),
+            ]
+        ]
+
+    level_lines = np.array(ci_lines + average_line + data_line)
 
     # CI level, and variable name, legends.
     legend_options_top_right = {
@@ -511,7 +673,7 @@ def _handle_legends(
         level_lines[:, 1],
         level_lines[:, 0],
         **legend_options_bottom_right,
-        title='MCMC',
+        title='Prediction',
     )
     fig.add_artist(legend_variables)
 
@@ -519,6 +681,7 @@ def _handle_legends(
 def _handle_colors(
     levels: Union[float, Sequence[float]],
     n_variables: int,
+    reverse: bool = False,
 ) -> Tuple[Sequence[float], Sequence[RGB]]:
     """Calculate the colors for the prediction trajectories plot.
 
@@ -538,9 +701,8 @@ def _handle_colors(
     level_opacities = sorted(
         # min 30%, max 100%, opacity
         np.linspace(0.3 * RGBA_MAX, RGBA_MAX, len(levels)),
-        reverse=True,
+        reverse=reverse,
     )
-    cmap = plt.cm.viridis
     cmap_min = RGBA_MIN
     cmap_max = 0.85 * (RGBA_MAX - RGBA_MIN) + RGBA_MIN  # exclude yellows
 
@@ -566,6 +728,10 @@ def sampling_prediction_trajectories(
     condition_ids: Sequence[str] = None,
     output_ids: Sequence[str] = None,
     weighting: bool = False,
+    reverse_opacities: bool = False,
+    average: str = MEDIAN,
+    add_sd: bool = False,
+    measurement_df: pd.DataFrame = None,
 ) -> matplotlib.axes.Axes:
     """
     Visualize prediction trajectory of an EnsemblePrediction.
@@ -576,8 +742,8 @@ def sampling_prediction_trajectories(
 
     Parameters
     ----------
-    result:
-        The pyPESTO result object with filled sample result.
+    ensemble_prediction:
+        The ensemble prediction.
     levels:
         Credibility levels, e.g. [95] for a 95% credibility interval. See the
         :py:func:`_get_level_percentiles` method for a description of how these
@@ -605,6 +771,17 @@ def sampling_prediction_trajectories(
         If provided, only data for the provided output IDs will be plotted.
     weighting:
         Whether weights should be used for trajectory.
+    reverse_opacities:
+        Whether to reverse the opacities that are assigned to different levels.
+    average:
+        The ID of the statistic that will be plotted as the average (e.g.,
+        `MEDIAN` or `MEAN`).
+    add_sd:
+        Whether to add the standard deviation of the predictions to the plot.
+    measurement_df:
+        Plot measurement data. NB: This should take the form of a PEtab
+        measurements table, and the `observableId` column should correspond
+        to the output IDs in the ensemble prediction.
 
     Returns
     -------
@@ -630,8 +807,44 @@ def sampling_prediction_trajectories(
     all_condition_ids, all_output_ids = _get_condition_and_output_ids(summary)
     if condition_ids is None:
         condition_ids = all_condition_ids
+    condition_ids = list(condition_ids)
     if output_ids is None:
         output_ids = all_output_ids
+    output_ids = list(output_ids)
+
+    # Handle data
+    grouped_measurements = {}
+    if measurement_df is not None:
+        import petab
+
+        for condition_id in condition_ids:
+            if petab.PARAMETER_SEPARATOR in condition_id:
+                (
+                    preequilibration_condition_id,
+                    simulation_condition_id,
+                ) = condition_id.split(petab.PARAMETER_SEPARATOR)
+            else:
+                preequilibration_condition_id, simulation_condition_id = (
+                    '',
+                    condition_id,
+                )
+            condition = {
+                petab.SIMULATION_CONDITION_ID: simulation_condition_id,
+            }
+            if preequilibration_condition_id:
+                condition[
+                    petab.PREEQUILIBRATION_CONDITION_ID
+                ] = preequilibration_condition_id
+            for output_id in output_ids:
+                _df = petab.get_rows_for_condition(
+                    measurement_df=measurement_df,
+                    condition=condition,
+                )
+                _df = _df.loc[_df[petab.OBSERVABLE_ID] == output_id]
+                grouped_measurements[(condition_id, output_id)] = [
+                    _df[petab.TIME],
+                    _df[petab.MEASUREMENT],
+                ]
 
     # Set default labels for any unspecified labels.
     labels = {id_: labels.get(id_, id_) for id_ in condition_ids + output_ids}
@@ -648,7 +861,9 @@ def sampling_prediction_trajectories(
         raise ValueError(f'Unsupported groupby value: {groupby}')
 
     level_opacities, variable_colors = _handle_colors(
-        levels=levels, n_variables=n_variables
+        levels=levels,
+        n_variables=n_variables,
+        reverse=reverse_opacities,
     )
 
     if axes is None:
@@ -678,6 +893,9 @@ def sampling_prediction_trajectories(
             level_opacities=level_opacities,
             labels=labels,
             variable_colors=variable_colors,
+            average=average,
+            add_sd=add_sd,
+            grouped_measurements=grouped_measurements,
         )
     elif groupby == OUTPUT:
         _plot_trajectories_by_output(
@@ -689,6 +907,9 @@ def sampling_prediction_trajectories(
             level_opacities=level_opacities,
             labels=labels,
             variable_colors=variable_colors,
+            average=average,
+            add_sd=add_sd,
+            grouped_measurements=grouped_measurements,
         )
 
     if title:
@@ -705,6 +926,9 @@ def sampling_prediction_trajectories(
         groupby=groupby,
         artist_padding=artist_padding,
         n_col=n_col,
+        average=average,
+        add_sd=add_sd,
+        grouped_measurements=grouped_measurements,
     )
 
     # X and Y labels
@@ -886,6 +1110,8 @@ def sampling_parameter_traces(
     ax:
         The plot axes.
     """
+    import seaborn as sns
+
     # get data which should be plotted
     nr_params, params_fval, theta_lb, theta_ub, param_names = get_data_to_plot(
         result=result,
@@ -963,6 +1189,7 @@ def sampling_scatter(
     suptitle: str = None,
     diag_kind: str = "kde",
     size: Tuple[float, float] = None,
+    show_bounds: bool = True,
 ):
     """
     Parameter scatter plot.
@@ -981,12 +1208,16 @@ def sampling_scatter(
         Visualization mode for marginal densities {‘auto’, ‘hist’, ‘kde’, None}
     size:
         Figure size in inches.
+    show_bounds:
+        Whether to show, and extend the plot to, the lower and upper bounds.
 
     Returns
     -------
     ax:
         The plot axes.
     """
+    import seaborn as sns
+
     # get data which should be plotted
     nr_params, params_fval, theta_lb, theta_ub, _ = get_data_to_plot(
         result=result, i_chain=i_chain, stepsize=stepsize
@@ -1005,6 +1236,13 @@ def sampling_scatter(
 
     if suptitle:
         ax.fig.suptitle(suptitle)
+
+    if show_bounds:
+        # set bounds of plot to parameter bounds. Only use diagonal as
+        # sns.PairGrid has sharex,sharey = True by default.
+        for i_axis, axis in enumerate(np.diag(ax.axes)):
+            axis.set_xlim(result.problem.lb[i_axis], result.problem.ub[i_axis])
+            axis.set_ylim(result.problem.lb[i_axis], result.problem.ub[i_axis])
 
     return ax
 
@@ -1048,6 +1286,8 @@ def sampling_1d_marginals(
     ax:
         matplotlib-axes
     """
+    import seaborn as sns
+
     # get data which should be plotted
     nr_params, params_fval, theta_lb, theta_ub, param_names = get_data_to_plot(
         result=result,
@@ -1078,7 +1318,7 @@ def sampling_1d_marginals(
         elif plot_type == 'hist':
             # fixes usage of sns distplot which throws a future warning
             sns.histplot(
-                x=params_fval[par_id], ax=par_ax[par_id], stat='probability'
+                x=params_fval[par_id], ax=par_ax[par_id], stat='density'
             )
             sns.rugplot(x=params_fval[par_id], ax=par_ax[par_id])
         elif plot_type == 'both':
@@ -1086,7 +1326,7 @@ def sampling_1d_marginals(
                 x=params_fval[par_id],
                 kde=True,
                 ax=par_ax[par_id],
-                stat='probability',
+                stat='density',
             )
             sns.rugplot(x=params_fval[par_id], ax=par_ax[par_id])
 

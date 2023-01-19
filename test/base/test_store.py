@@ -11,19 +11,19 @@ import pypesto.optimize as optimize
 import pypesto.profile as profile
 import pypesto.sample as sample
 from pypesto.C import (
-    CHI2,
+    EXITFLAG,
     FVAL,
     FVAL0,
     GRAD,
     HESS,
     ID,
+    MESSAGE,
     N_FVAL,
     N_GRAD,
     N_HESS,
     N_RES,
     N_SRES,
     RES,
-    SCHI2,
     SRES,
     X0,
     X,
@@ -62,13 +62,10 @@ def test_storage_opt_result():
             for key in opt_res:
                 if isinstance(opt_res[key], np.ndarray):
                     np.testing.assert_array_equal(
-                        opt_res[key], read_result.optimize_result.list[i][key]
+                        opt_res[key], read_result.optimize_result[i][key]
                     )
                 else:
-                    assert (
-                        opt_res[key]
-                        == read_result.optimize_result.list[i][key]
-                    )
+                    assert opt_res[key] == read_result.optimize_result[i][key]
 
 
 def test_storage_opt_result_update(hdf5_file):
@@ -86,10 +83,10 @@ def test_storage_opt_result_update(hdf5_file):
         for key in opt_res:
             if isinstance(opt_res[key], np.ndarray):
                 np.testing.assert_array_equal(
-                    opt_res[key], read_result.optimize_result.list[i][key]
+                    opt_res[key], read_result.optimize_result[i][key]
                 )
             else:
-                assert opt_res[key] == read_result.optimize_result.list[i][key]
+                assert opt_res[key] == read_result.optimize_result[i][key]
 
 
 def test_storage_problem(hdf5_file):
@@ -147,6 +144,7 @@ def test_storage_trace(hdf5_file):
         optimizer=optimizer1,
         n_starts=n_starts,
         history_options=history_options_hdf5,
+        progress_bar=False,
     )
 
     # optimizing with history saved in memory
@@ -156,10 +154,10 @@ def test_storage_trace(hdf5_file):
         optimizer=optimizer2,
         n_starts=n_starts,
         history_options=history_options_memory,
-        filename=None,
+        progress_bar=False,
     )
 
-    history_entries = [X, FVAL, GRAD, HESS, RES, SRES, CHI2, SCHI2]
+    history_entries = [X, FVAL, GRAD, HESS, RES, SRES]
     assert len(result_hdf5.optimize_result.list) == len(
         result_memory.optimize_result.list
     )
@@ -212,14 +210,14 @@ def test_storage_profiling():
         problem=problem,
         optimizer=optimizer,
         n_starts=n_starts,
-        filename=None,
+        progress_bar=False,
     )
     profile_original = profile.parameter_profile(
         problem=problem,
         result=result_optimization,
         profile_index=[0],
         optimizer=optimizer,
-        filename=None,
+        progress_bar=False,
     )
 
     fn = 'test_file.hdf5'
@@ -281,18 +279,21 @@ def test_storage_sampling():
         problem=problem,
         optimizer=optimizer,
         n_starts=n_starts,
-        filename=None,
+        progress_bar=False,
     )
-    x_0 = result_optimization.optimize_result.list[0]['x']
+    x_0 = result_optimization.optimize_result[0]['x']
     sampler = sample.AdaptiveParallelTemperingSampler(
-        internal_sampler=sample.AdaptiveMetropolisSampler(), n_chains=1
+        internal_sampler=sample.AdaptiveMetropolisSampler(),
+        options={
+            'show_progress': False,
+        },
+        n_chains=1,
     )
     sample_original = sample.sample(
         problem=problem,
         sampler=sampler,
         n_samples=100,
         x0=[x_0],
-        filename=None,
     )
 
     fn = 'test_file.hdf5'
@@ -342,7 +343,7 @@ def test_storage_all():
         problem=problem,
         optimizer=optimizer,
         n_starts=n_starts,
-        filename=None,
+        progress_bar=False,
     )
     # Profiling
     result = profile.parameter_profile(
@@ -350,16 +351,19 @@ def test_storage_all():
         result=result,
         profile_index=[0],
         optimizer=optimizer,
-        filename=None,
+        progress_bar=False,
     )
     # Sampling
-    sampler = sample.AdaptiveMetropolisSampler()
+    sampler = sample.AdaptiveMetropolisSampler(
+        options={
+            'show_progress': False,
+        }
+    )
     result = sample.sample(
         problem=problem,
         sampler=sampler,
         n_samples=100,
         result=result,
-        filename=None,
     )
     # Read and write
     filename = 'test_file.hdf5'
@@ -374,13 +378,10 @@ def test_storage_all():
                     continue
                 if isinstance(opt_res[key], np.ndarray):
                     np.testing.assert_array_equal(
-                        opt_res[key], result_read.optimize_result.list[i][key]
+                        opt_res[key], result_read.optimize_result[i][key]
                     )
                 else:
-                    assert (
-                        opt_res[key]
-                        == result_read.optimize_result.list[i][key]
-                    )
+                    assert opt_res[key] == result_read.optimize_result[i][key]
 
         # test profile
         for key in result.profile_result.list[0][0].keys():
@@ -467,24 +468,34 @@ def test_storage_objective_config():
 
 
 def test_result_from_hdf5_history(hdf5_file):
-    problem = create_petab_problem()
+    """Test whether we can recover a result from a hdf5 file.
 
+    This means that the result obtained directly via minimize, and the result
+    obtained from the history should coincide.
+
+    For this aim, run a simple problem and record the full history, such that
+    recovery should be possible.
+    """
+    problem = create_petab_problem()
     history_options_hdf5 = pypesto.HistoryOptions(
         trace_record=True,
         storage_file=hdf5_file,
     )
+
     # optimize with history saved to hdf5
     result = optimize.minimize(
         problem=problem,
         n_starts=1,
         history_options=history_options_hdf5,
+        progress_bar=False,
+        options={"allow_failed_starts": False},
     )
 
     result_from_hdf5 = optimization_result_from_history(
         filename=hdf5_file, problem=problem
     )
 
-    # Currently 'exitflag', 'time' and 'message' are not loaded.
+    # Currently 'time' is not loaded.
     arguments = [
         ID,
         X,
@@ -500,17 +511,19 @@ def test_result_from_hdf5_history(hdf5_file):
         N_SRES,
         X0,
         FVAL0,
+        EXITFLAG,
+        MESSAGE,
     ]
     for key in arguments:
-        if result.optimize_result.list[0][key] is None:
-            assert result_from_hdf5.optimize_result.list[0][key] is None
-        elif isinstance(result.optimize_result.list[0][key], np.ndarray):
+        if result.optimize_result[0][key] is None:
+            assert result_from_hdf5.optimize_result[0][key] is None, key
+        elif isinstance(result.optimize_result[0][key], np.ndarray):
             assert np.allclose(
-                result.optimize_result.list[0][key],
-                result_from_hdf5.optimize_result.list[0][key],
+                result.optimize_result[0][key],
+                result_from_hdf5.optimize_result[0][key],
             ), key
         else:
             assert (
-                result.optimize_result.list[0][key]
-                == result_from_hdf5.optimize_result.list[0][key]
+                result.optimize_result[0][key]
+                == result_from_hdf5.optimize_result[0][key]
             ), key
