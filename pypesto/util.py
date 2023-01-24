@@ -240,7 +240,10 @@ def assign_clusters(vals):
 
 
 def delete_nan_inf(
-    fvals: np.ndarray, x: Optional[np.ndarray] = None, xdim: Optional[int] = 1
+    fvals: np.ndarray,
+    x: Optional[np.ndarray] = None,
+    xdim: Optional[int] = 1,
+    magnitude_bound: Optional[float] = np.inf,
 ) -> Tuple[np.ndarray, np.ndarray]:
     """
     Delete nan and inf values in fvals.
@@ -255,6 +258,9 @@ def delete_nan_inf(
         array of fval
     xdim:
         dimension of x, in case x dimension cannot be inferred
+    magnitude_bound:
+        any values with a magnitude (absolute value) larger than the
+        `magnitude_bound` are also deleted
 
     Returns
     -------
@@ -264,6 +270,7 @@ def delete_nan_inf(
         array of fval without nan or inf
     """
     fvals = np.asarray(fvals)
+    finite_fvals = np.isfinite(fvals) & (np.absolute(fvals) < magnitude_bound)
     if x is not None:
         # if we start out with a list of x, the x corresponding
         # to finite fvals may be None, so we cannot stack the x before taking
@@ -273,7 +280,7 @@ def delete_nan_inf(
         # empty np.ndarray with the correct dimension (other functions rely
         # on x.shape[1] to be of correct dimension)
         if np.isfinite(fvals).any():
-            x = np.vstack(np.take(x, np.where(np.isfinite(fvals))[0], axis=0))
+            x = np.vstack(np.take(x, np.where(finite_fvals)[0], axis=0))
         else:
             x = np.empty(
                 (
@@ -285,4 +292,4 @@ def delete_nan_inf(
                     else xdim,
                 )
             )
-    return x, fvals[np.isfinite(fvals)]
+    return x, fvals[finite_fvals]
