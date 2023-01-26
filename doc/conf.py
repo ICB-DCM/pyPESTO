@@ -48,6 +48,8 @@ extensions = [
     'IPython.sphinxext.ipython_console_highlighting',
     # support markdown-based docs
     'myst_parser',
+    # bibtex references
+    'sphinxcontrib.bibtex',
 ]
 
 # default autodoc options
@@ -74,6 +76,8 @@ intersphinx_mapping = {
     ),
     'amici': ('https://amici.readthedocs.io/en/latest/', None),
 }
+
+bibtex_bibfiles = ["using_pypesto.bib"]
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ['_templates']
