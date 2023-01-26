@@ -728,3 +728,23 @@ def test_samples_cis():
         assert (lb < ub).all()
         # check if dimmensions agree
         assert lb.shape == ub.shape
+
+
+def test_dynesty_mcmc_samples():
+    problem = gaussian_problem()
+    sampler = sample.DynestySampler()
+
+    result = sample.sample(
+        problem=problem,
+        sampler=sampler,
+        n_samples=None,
+        filename=None,
+    )
+
+    original_sample_result = sampler.get_original_samples()
+    mcmc_sample_result = result.sample_result
+
+    # Nested sampling function values are monotonically increasing
+    assert (np.diff(original_sample_result.trace_neglogpost) <= 0).all()
+    # MCMC samples are not
+    assert not (np.diff(mcmc_sample_result.trace_neglogpost) <= 0).all()
