@@ -62,6 +62,7 @@ class PetabImporter(AmiciObjectBuilder):
         output_folder: str = None,
         model_name: str = None,
         validate_petab: bool = True,
+        validate_petab_hierarchical: bool = True,
         hierarchical: bool = False,
     ):
         """Initialize importer.
@@ -78,6 +79,9 @@ class PetabImporter(AmiciObjectBuilder):
             compiled model python module.
         validate_petab:
             Flag indicating if the PEtab problem shall be validated.
+        validate_petab_hierarchical:
+            Flag indicating if the PEtab problem shall be validated in terms of
+            pyPESTO's hierarchical optimization implementation.
         hierarchical:
             Whether to use hierarchical optimization or not, in case the
             underlying PEtab problem has parameters marked for hierarchical
@@ -90,12 +94,12 @@ class PetabImporter(AmiciObjectBuilder):
         if validate_petab:
             if petab.lint_problem(petab_problem):
                 raise ValueError("Invalid PEtab problem.")
-            if self._hierarchical:
-                from ..hierarchical.petab import (
-                    validate_hierarchical_petab_problem,
-                )
+        if self._hierarchical and validate_petab_hierarchical:
+            from ..hierarchical.petab import (
+                validate_hierarchical_petab_problem,
+            )
 
-                validate_hierarchical_petab_problem(petab_problem)
+            validate_hierarchical_petab_problem(petab_problem)
 
         if output_folder is None:
             output_folder = _find_output_folder_name(
