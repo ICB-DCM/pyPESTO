@@ -8,8 +8,8 @@
 /doc/example/julia.ipynb @yannikschaelte
 /doc/example/model_selection.ipynb @dilpath
 /doc/example/petab_import.ipynb @dweindl @FFroehlich
-/doc/example/sampler_study.ipynb @elbaraim
-/doc/example/sampling_diagnostics.ipynb @elbaraim
+/doc/example/sampler_study.ipynb @dilpath @yannikschaelte
+/doc/example/sampling_diagnostics.ipynb @dilpath @yannikschaelte
 /doc/example/store.ipynb @PaulJonasJost
 /doc/example/synthetic_data.ipynb @dilpath
 /docker/ @dweindl
@@ -29,7 +29,7 @@
 /pypesto/problem/ @yannikschaelte
 /pypesto/profile/ @PaulJonasJost
 /pypesto/result/ @yannikschaelte
-/pypesto/sample/ @elbaraim
+/pypesto/sample/ @dilpath @yannikschaelte
 /pypesto/select/ @dilpath
 /pypesto/startpoint/ @yannikschaelte
 /pypesto/store/ @PaulJonasJost
@@ -41,6 +41,6 @@
 /test/optimize/ @yannikschaelte
 /test/petab/ @dweindl @FFroehlich
 /test/profile/ @PaulJonasJost
-/test/sample/ @elbaraim
+/test/sample/ @dilpath @yannikschaelte
 /test/select/ @dilpath
 /test/visualize/ @plakrisenko @stephanmg
