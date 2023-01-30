@@ -115,8 +115,8 @@ class ESSOptimizer:
             Quality vs diversity balancing factor [0, 1];
             0 = only quality; 1 = only diversity
         n_procs:
-            Number of parallel process to use for parallel function evaluation.
-            Mutually exclusive with `n_threads`.
+            Number of parallel processes to use for parallel function
+            evaluation. Mutually exclusive with `n_threads`.
         n_threads:
             Number of parallel threads to use for parallel function evaluation.
             Mutually exclusive with `n_procs`.
@@ -131,8 +131,12 @@ class ESSOptimizer:
             'pypesto.optimize.Optimizer'
         ] = local_optimizer
         self.n_diverse: int = n_diverse
-        self.n_procs: int = n_procs
-        self.n_threads: int = n_threads
+        if n_procs is not None and n_threads is not None:
+            raise ValueError(
+                "`n_procs` and `n_threads` are mutually exclusive."
+            )
+        self.n_procs: Optional[int] = n_procs
+        self.n_threads: Optional[int] = n_threads
         self.balance: float = balance
         # After how many iterations a stagnated solution is to be replaced by
         #  a random one. Default value taken from [EgeaMar2010]_
