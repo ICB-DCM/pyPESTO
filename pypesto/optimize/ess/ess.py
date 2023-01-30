@@ -35,7 +35,11 @@ import pypesto.optimize
 from pypesto import OptimizerResult, Problem
 from pypesto.startpoint import StartpointMethod
 
-from .function_evaluator import FunctionEvaluator
+from .function_evaluator import (
+    FunctionEvaluator,
+    FunctionEvaluatorMP,
+    FunctionEvaluatorMT,
+)
 from .refset import RefSet
 
 logger = logging.getLogger(__name__)
@@ -66,14 +70,15 @@ class ESSOptimizer:
         self,
         *,
         max_iter: int = 10**100,
-        dim_refset: int,
+        dim_refset: int = None,
         local_n1: int = 1,
         local_n2: int = 10,
         balance: float = 0.5,
         local_optimizer: 'pypesto.optimize.Optimizer' = None,
         max_eval=np.inf,
         n_diverse: int = None,
-        n_threads=1,
+        n_procs=None,
+        n_threads=None,
         max_walltime_s=None,
     ):
         """Construct new ESS instance.
@@ -109,6 +114,12 @@ class ESSOptimizer:
         balance:
             Quality vs diversity balancing factor [0, 1];
             0 = only quality; 1 = only diversity
+        n_procs:
+            Number of parallel processes to use for parallel function
+            evaluation. Mutually exclusive with `n_threads`.
+        n_threads:
+            Number of parallel threads to use for parallel function evaluation.
+            Mutually exclusive with `n_procs`.
         """
         # Hyperparameters
         self.local_n1: int = local_n1
@@ -120,7 +131,12 @@ class ESSOptimizer:
             'pypesto.optimize.Optimizer'
         ] = local_optimizer
         self.n_diverse: int = n_diverse
-        self.n_threads: int = n_threads
+        if n_procs is not None and n_threads is not None:
+            raise ValueError(
+                "`n_procs` and `n_threads` are mutually exclusive."
+            )
+        self.n_procs: Optional[int] = n_procs
+        self.n_threads: Optional[int] = n_threads
         self.balance: float = balance
         # After how many iterations a stagnated solution is to be replaced by
         #  a random one. Default value taken from [EgeaMar2010]_
@@ -155,8 +171,8 @@ class ESSOptimizer:
 
     def minimize(
         self,
-        problem: Problem,
-        startpoint_method: StartpointMethod,
+        problem: Problem = None,
+        startpoint_method: StartpointMethod = None,
         refset: Optional[RefSet] = None,
     ) -> pypesto.Result:
         """Minimize the given objective.
@@ -173,22 +189,44 @@ class ESSOptimizer:
         self._initialize()
         self.starttime = time.time()
 
+        if (
+            refset is None and (problem is None or startpoint_method is None)
+        ) or (
+            refset is not None
+            and (problem is not None or startpoint_method is not None)
+        ):
+            raise ValueError(
+                "Either `refset` or `problem` and `startpoint_method` "
+                "has to be provided."
+            )
         # generate initial RefSet if not provided
         if refset is None:
+            if self.dim_refset is None:
+                raise ValueError(
+                    "Either refset or dim_refset have to be provided."
+                )
             # [EgeaMar2010]_ 2.1
             self.n_diverse = self.n_diverse or 10 * problem.dim
+            if self.n_procs:
+                self.evaluator = FunctionEvaluatorMP(
+                    problem=problem,
+                    startpoint_method=startpoint_method,
+                    n_procs=self.n_procs,
+                )
+            else:
+                self.evaluator = FunctionEvaluatorMT(
+                    problem=problem,
+                    startpoint_method=startpoint_method,
+                    n_threads=self.n_threads or 1,
+                )
 
-            self.evaluator = FunctionEvaluator(
-                problem=problem,
-                startpoint_method=startpoint_method,
-                n_threads=self.n_threads,
-            )
             self.refset = RefSet(dim=self.dim_refset, evaluator=self.evaluator)
             # Initial RefSet generation
             self.refset.initialize_random(n_diverse=self.n_diverse)
             refset = self.refset
         else:
             self.refset = refset
+            problem = refset.evaluator.problem
 
         self.evaluator = refset.evaluator
         self.x_best = np.full(
