@@ -425,7 +425,8 @@ class SplineInnerSolver(InnerSolver):
         n = np.ones(K)
 
         # In case the simulation are very close to each other
-        # or even collapse into a single point (e.g. steady-state) (TODO add hyperparameter for 1e-6?)
+        # or even collapse into a single point (e.g. steady-state) (TODO add
+        # hyperparameter for 1e-6?)
         if max_all - min_all < 1e-6:
             average_value = (max_all + min_all) / 2
             if average_value < 5e-7:
@@ -484,7 +485,6 @@ class SplineInnerSolver(InnerSolver):
         max_meas: float,
         min_diff: float,
     ) -> Dict:
-
         """Return options for optimization"""
         range_all = max_meas - min_meas
 
@@ -1027,7 +1027,8 @@ def get_dxi_dtheta_old(
             gradient_derivative_lhs[i - 1][i - 1] += (
                 1 / sigma_k**2
             ) * delta_c**2
-            # rhs[i-1] += -2*w_dot*( xi[i-1] - z_k)* delta_c**2 NEED TO ADD HERE IF SIGMA IS OPTIMIZED
+            # rhs[i-1] += -2*w_dot*( xi[i-1] - z_k)* delta_c**2 NEED TO ADD
+            # HERE IF SIGMA IS OPTIMIZED
         else:
             if n < N + 1:
                 if n > 1:

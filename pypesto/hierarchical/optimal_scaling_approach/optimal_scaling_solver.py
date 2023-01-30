@@ -134,7 +134,9 @@ class OptimalScalingInnerSolver(InnerSolver):
 
                 #     dy_dtheta = get_dy_dtheta(gr, problem, sy_all)
 
-                #     df_dtheta = res.dot(res.dot(problem.groups[gr]['Wdot']) - 2*problem.groups[gr]['W'].dot(dy_dtheta)) # -2 * problem.W.dot(dy_dtheta).dot(res)
+                # df_dtheta = res.dot(res.dot(problem.groups[gr]['Wdot']) -
+                # 2*problem.groups[gr]['W'].dot(dy_dtheta)) # -2 *
+                # problem.W.dot(dy_dtheta).dot(res)
 
                 #     grad += df_dtheta
                 #     continue
@@ -296,7 +298,7 @@ def optimize_surrogate_data(
     )
     try:
         results = minimize(obj_surr, **inner_options)
-    except:
+    except BaseException:
         print('x0 violate bound constraints. Retrying with array of zeros.')
         inner_options['x0'] = np.zeros(len(inner_options['x0']))
         results = minimize(obj_surr, **inner_options)
@@ -311,7 +313,6 @@ def get_inner_optimization_options(
     interval_range: float,
     interval_gap: float,
 ) -> Dict:
-
     """Return default options for scipy optimizer"""
 
     from scipy.optimize import Bounds

@@ -63,6 +63,32 @@ class SplineAmiciCalculator:
         parameter_mapping: ParameterMapping,
         fim_for_hess: bool,
     ):
+        """Perform the actual AMICI call.
+
+        Parameters
+        ----------
+        x_dct:
+            Parameters for which to compute function value and derivatives.
+        sensi_orders:
+            Tuple of requested sensitivity orders.
+        mode:
+            Call mode (function value or residual based).
+        amici_model:
+            The AMICI model.
+        amici_solver:
+            The AMICI solver.
+        edatas:
+            The experimental data.
+        n_threads:
+            Number of threads for AMICI call.
+        x_ids:
+            Ids of optimization parameters.
+        parameter_mapping:
+            Mapping of optimization to simulation parameters.
+        fim_for_hess:
+            Whether to use the FIM (if available) instead of the Hessian (if
+            requested).
+        """
         # get dimension of outer problem
         dim = len(x_ids)
 

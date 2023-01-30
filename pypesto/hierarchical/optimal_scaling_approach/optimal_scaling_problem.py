@@ -273,7 +273,7 @@ class OptimalScalingProblem(InnerProblem):
 
         d[
             2 * self.groups[gr]['num_datapoints']
-            + 1 : 2 * self.groups[gr]['num_datapoints']
+            + 1: 2 * self.groups[gr]['num_datapoints']
             + self.groups[gr]['num_categories']
         ] = (
             interval_gap + eps
@@ -281,7 +281,7 @@ class OptimalScalingProblem(InnerProblem):
 
         d[
             2 * self.groups[gr]['num_datapoints']
-            + self.groups[gr]['num_categories'] :
+            + self.groups[gr]['num_categories']:
         ] = interval_range
         return d
 
@@ -296,13 +296,13 @@ class OptimalScalingProblem(InnerProblem):
 
         dd_dtheta[
             2 * self.groups[gr]['num_datapoints']
-            + 1 : 2 * self.groups[gr]['num_datapoints']
+            + 1: 2 * self.groups[gr]['num_datapoints']
             + self.groups[gr]['num_categories']
         ] = dinterval_gap_dtheta
 
         dd_dtheta[
             2 * self.groups[gr]['num_datapoints']
-            + self.groups[gr]['num_categories'] :
+            + self.groups[gr]['num_categories']:
         ] = dinterval_range_dtheta
 
         return dd_dtheta
@@ -321,7 +321,8 @@ class OptimalScalingProblem(InnerProblem):
     #     return last_category
 
     # def get_hard_constraints_for_group(self, group: float):
-    #     return self.hard_constraints[self.hard_constraints['group'].astype(float)==group]
+    # return
+    # self.hard_constraints[self.hard_constraints['group'].astype(float)==group]
 
 
 def qualitative_inner_problem_from_petab_problem(
@@ -392,7 +393,8 @@ def qualitative_inner_parameters_from_measurement_df(
             if row[MEASUREMENT_TYPE] == ORDINAL:
                 par_id = f'{par_type}_{row[OBSERVABLE_ID]}_{row[MEASUREMENT_GROUP]}_{row[MEASUREMENT_CATEGORY]}'
 
-                # Create only one set of bound parameters per category of a group.
+                # Create only one set of bound parameters per category of a
+                # group.
                 if par_id not in [
                     inner_par.inner_parameter_id
                     for inner_par in inner_parameters
