@@ -102,7 +102,7 @@ class InnerParameter:
         # Category bounds can be arbitrary.
         if self.inner_parameter_type == InnerParameterType.OPTIMALSCALING:
             return
-        
+
         expected_lb = INNER_PARAMETER_BOUNDS[self.inner_parameter_type][
             LOWER_BOUND
         ]

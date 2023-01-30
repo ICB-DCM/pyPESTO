@@ -1,7 +1,6 @@
 import warnings
 from typing import Dict, List, Tuple
 
-import amici
 import numpy as np
 
 from ...C import MAX, MAXMIN, REDUCED, STANDARD, InnerParameterType
@@ -9,6 +8,11 @@ from ...optimize import Optimizer
 from ..solver import InnerSolver
 from .optimal_scaling_parameter import OptimalScalingParameter
 from .optimal_scaling_problem import OptimalScalingProblem
+
+try:
+    from amici.parameter_mapping import ParameterMapping
+except ImportError:
+    pass
 
 
 class OptimalScalingInnerSolver(InnerSolver):
@@ -93,13 +97,13 @@ class OptimalScalingInnerSolver(InnerSolver):
         x_inner_opt: List[Dict],
         sim: List[np.ndarray],
         sy: List[np.ndarray],
-        parameter_mapping: amici.parameter_mapping.ParameterMapping,
+        parameter_mapping: ParameterMapping,
         par_opt_ids: List,
-        snllh: Dict, #TODO change naming for this variable
+        snllh: Dict,  # TODO change naming for this variable
     ):
         """
         Calculates gradients of the objective function with respect
-        to outer parameters (snllh). 
+        to outer parameters (snllh).
         """
         condition_map_sim_var = parameter_mapping[0].map_sim_var
         # par_sim_ids = list(amici_model.getParameterIds())

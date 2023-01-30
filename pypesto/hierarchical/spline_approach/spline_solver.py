@@ -11,6 +11,11 @@ from ..solver import InnerSolver
 from .spline_parameter import SplineInnerParameter
 from .spline_problem import SplineInnerProblem
 
+try:
+    from amici.parameter_mapping import ParameterMapping
+except ImportError:
+    pass
+
 
 class SplineInnerSolver(InnerSolver):
     """
@@ -126,13 +131,13 @@ class SplineInnerSolver(InnerSolver):
     def calculate_gradients(
         self,
         problem: SplineInnerProblem,
-        x_inner_opt,
-        sim,
-        sy,
-        parameter_mapping,
-        par_opt_ids,
-        snllh,
-        sigma,
+        x_inner_opt: List[Dict],
+        sim: List[np.ndarray],
+        sigma: List[np.ndarray],
+        sy: List[np.ndarray],
+        parameter_mapping: ParameterMapping,
+        par_opt_ids: List,
+        snllh: Dict,
     ):
         """
         Calculate the gradient of the objective function with respect to

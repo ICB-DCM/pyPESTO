@@ -1,9 +1,7 @@
 import copy
 from typing import Dict, List, Sequence, Tuple
 
-import amici
 import numpy as np
-from amici.parameter_mapping import ParameterMapping
 
 from ...C import FVAL, GRAD, HESS, MODE_RES, RDATAS, RES, SRES, X_INNER_OPT
 from ...objective.amici.amici_calculator import AmiciModel, AmiciSolver
@@ -14,6 +12,12 @@ from ...objective.amici.amici_util import (
 )
 from .optimal_scaling_problem import OptimalScalingProblem
 from .optimal_scaling_solver import OptimalScalingInnerSolver
+
+try:
+    import amici
+    from amici.parameter_mapping import ParameterMapping
+except ImportError:
+    pass
 
 
 class OptimalScalingAmiciCalculator:

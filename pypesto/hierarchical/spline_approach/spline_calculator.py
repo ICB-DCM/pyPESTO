@@ -1,9 +1,7 @@
 import copy
 from typing import Dict, List, Sequence, Tuple
 
-import amici
 import numpy as np
-from amici.parameter_mapping import ParameterMapping
 
 from ...C import FVAL, GRAD, HESS, MODE_RES, RDATAS, RES, SRES, X_INNER_OPT
 from ...objective.amici.amici_calculator import AmiciModel, AmiciSolver
@@ -14,6 +12,12 @@ from ...objective.amici.amici_util import (
 )
 from .spline_problem import SplineInnerProblem
 from .spline_solver import SplineInnerSolver
+
+try:
+    import amici
+    from amici.parameter_mapping import ParameterMapping
+except ImportError:
+    pass
 
 
 class SplineAmiciCalculator:
@@ -154,11 +158,11 @@ class SplineAmiciCalculator:
                 problem=self.inner_problem,
                 x_inner_opt=x_inner_opt,
                 sim=sim,
+                sigma=sigma,
                 sy=sy,
                 parameter_mapping=parameter_mapping,
                 par_opt_ids=x_ids,
                 snllh=snllh,
-                sigma=sigma,
             )
 
         return filter_return_dict(inner_result)
