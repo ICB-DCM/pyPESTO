@@ -30,6 +30,7 @@ except ImportError:
 
 
 class OptimalScalingProblem(InnerProblem):
+    """Class of the Optimal Scaling inner subproblem."""
     def __init__(
         self,
         xs: List[OptimalScalingParameter],
@@ -37,6 +38,17 @@ class OptimalScalingProblem(InnerProblem):
         data: List[np.ndarray],
         method: str,
     ):
+        """Construction of the Optimal Scaling inner subproblem.
+
+        Parameters
+        ----------
+            xs:
+                List of `OptimalScalingParameter`s of the subproblem.
+            data:
+                The data of the problem.
+            method:
+                A string representing the method of the Optimal Scaling approach, either 'reduced' or 'standard'.
+        """
         super().__init__(xs, data)
         # self.hard_constraints = hard_constraints
         self.groups = {}
@@ -100,6 +112,7 @@ class OptimalScalingProblem(InnerProblem):
         edatas: List['amici.ExpData'],
         method: str,
     ):
+        """Construct the inner problem from the `petab_problem`."""
         return qualitative_inner_problem_from_petab_problem(
             petab_problem, amici_model, edatas, method
         )
@@ -118,7 +131,8 @@ class OptimalScalingProblem(InnerProblem):
     def get_free_xs_for_group(
         self, group: int
     ) -> List[OptimalScalingParameter]:
-        """Get ``OptimalScalingParameter``s that are free and belong to the given group."""
+        """Get ``OptimalScalingParameter``s that are free and belong to the
+        given group."""
         return [
             x
             for x in self.xs.values()
@@ -128,7 +142,8 @@ class OptimalScalingProblem(InnerProblem):
     def get_fixed_xs_for_group(
         self, group: int
     ) -> List[OptimalScalingParameter]:
-        """Get ``OptimalScalingParameter``s that are fixed and belong to the given group."""
+        """Get ``OptimalScalingParameter``s that are fixed and belong to the
+        given group."""
         return [
             x
             for x in self.xs.values()
@@ -138,6 +153,8 @@ class OptimalScalingProblem(InnerProblem):
     def get_cat_ub_parameters_for_group(
         self, group: int
     ) -> List[OptimalScalingParameter]:
+        """Get ``OptimalScalingParameter``s that are category upper boundaries
+        and belong to the given group."""
         return [
             x
             for x in self.xs.values()
@@ -147,6 +164,8 @@ class OptimalScalingProblem(InnerProblem):
     def get_cat_lb_parameters_for_group(
         self, group: int
     ) -> List[OptimalScalingParameter]:
+        """Get ``OptimalScalingParameter``s that are category lower boundaries
+        and belong to the given group."""
         return [
             x
             for x in self.xs.values()
@@ -154,6 +173,7 @@ class OptimalScalingProblem(InnerProblem):
         ]
 
     def initialize_c(self, gr):
+        """Initialize the constraints matrix C for the group 'gr'."""
         constr = np.zeros(
             [
                 self.groups[gr]['num_constr_full'],
@@ -219,6 +239,7 @@ class OptimalScalingProblem(InnerProblem):
         return constr
 
     def initialize_w(self, gr):
+        """Initialize the weight matrix W for the group 'gr'."""
         weights = np.diag(
             np.block(
                 [
@@ -230,6 +251,7 @@ class OptimalScalingProblem(InnerProblem):
         return weights
 
     def get_w(self, gr, y_sim_all):
+        """Returns the weight matrix W of the group 'gr'."""
         weights = np.diag(
             np.block(
                 [
@@ -242,6 +264,8 @@ class OptimalScalingProblem(InnerProblem):
         return weights
 
     def get_wdot(self, gr, y_sim_all, sy_all):
+        """Returns the derivative of the weight matrix W of the group 'gr' with
+        respect to a outer parameter."""
         weights = np.diag(
             np.block(
                 [
@@ -258,6 +282,7 @@ class OptimalScalingProblem(InnerProblem):
         return weights
 
     def get_d(self, gr, xs, y_sim_all, eps):
+        """Returns vector d of minimal gaps and ranges."""
         # if 'minGap' not in options:
         #    eps = 1e-16
         # else:
@@ -286,7 +311,8 @@ class OptimalScalingProblem(InnerProblem):
         return d
 
     def get_dd_dtheta(self, gr, xs, y_sim_all, sy_all):
-
+        """Returns the derivative of vector d of minimal gaps and ranges with
+        respect to a outer parameter."""
         max_sim_idx = np.argmax(y_sim_all)
         max_sy = sy_all[max_sim_idx]
         dd_dtheta = np.zeros(self.groups[gr]['num_constr_full'])
@@ -308,6 +334,7 @@ class OptimalScalingProblem(InnerProblem):
         return dd_dtheta
 
     def get_inner_parameter_dictionary(self):
+        """Returns a dictionary with inner parameter ids and their values."""
         inner_par_dict = {}
         for x_id, x in self.xs.items():
             inner_par_dict[x_id] = x.value
@@ -331,6 +358,7 @@ def qualitative_inner_problem_from_petab_problem(
     edatas: List['amici.ExpData'],
     method: str,
 ):
+    """Constructs the inner problem from the `petab_problem`."""
     # get hard constrained measurements from measurement.df
     # hard_constraints=get_hard_constraints(petab_problem)
 
@@ -368,10 +396,8 @@ def qualitative_inner_parameters_from_measurement_df(
     df: pd.DataFrame,
     method: str,
 ) -> List[OptimalScalingParameter]:
-    """
-    Create list of inner free parameters from PEtab measurement table
-    dependent on the method provided.
-    """
+    """Create list of inner free parameters from PEtab measurement table
+    dependent on the method provided."""
     # create list of hierarchical parameters
     df = df.reset_index()
 
@@ -417,9 +443,8 @@ def qualitative_inner_parameters_from_measurement_df(
 
 
 def get_estimate_for_method(method: str):
-    """
-    Dependent on the method provided, returns which inner parameters to estimate.
-    """
+    """Returns which inner parameters to estimate dependent on the method
+    provided."""
     estimate_ub = True
     estimate_lb = False
 
@@ -434,8 +459,7 @@ def qualitatiave_ixs_for_measurement_specific_parameters(
     amici_model: 'amici.Model',
     inner_parameters: List[OptimalScalingParameter],
 ) -> Dict[str, List[Tuple[int, int, int]]]:
-    """
-    Create mapping of parameters to measurements.
+    """Create mapping of parameters to measurements.
 
     Returns
     -------
@@ -505,6 +529,8 @@ def get_inner_par_ids_for_measurement(
     measurement: Dict,
     inner_parameters: List[OptimalScalingParameter],
 ):
+    """Returns inner parameter ids of parameters which are related to the
+    measurement."""
     return [
         inner_par.inner_parameter_id
         for inner_par in inner_parameters

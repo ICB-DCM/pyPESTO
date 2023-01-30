@@ -7,8 +7,8 @@ logger = logging.getLogger(__name__)
 
 
 class SplineInnerParameter(InnerParameter):
-    """
-    A spline (inner) parameter of the spline hierarchical optimization problem.
+    """A spline (inner) parameter of the spline hierarchical optimization
+    problem.
 
     Attributes
     ----------
@@ -31,8 +31,7 @@ class SplineInnerParameter(InnerParameter):
         estimate: bool = False,
         **kwargs,
     ):
-        """
-        Construct.
+        """Construct.
 
         Parameters
         ----------

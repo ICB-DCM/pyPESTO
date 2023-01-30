@@ -20,13 +20,12 @@ except ImportError:
 
 
 class SplineAmiciCalculator:
-    """
-    A calculator is passed as `calculator` to the pypesto.AmiciObjective.
+    """A calculator is passed as `calculator` to the pypesto.AmiciObjective.
 
     While this class cannot be used directly, it has two subclasses
-    which allow to use forward or adjoint sensitivity analysis to
-    solve a `pypesto.HierarchicalProblem` efficiently in an inner loop,
-    while the outer optimization is only concerned with variables not
+    which allow to use forward or adjoint sensitivity analysis to solve
+    a `pypesto.HierarchicalProblem` efficiently in an inner loop, while
+    the outer optimization is only concerned with variables not
     specified as `pypesto.HierarchicalParameter`s.
     """
 
@@ -35,9 +34,7 @@ class SplineAmiciCalculator:
         inner_problem: SplineInnerProblem,
         inner_solver: SplineInnerSolver = None,
     ):
-        """
-        Initialize the calculator from the given problem.
-        """
+        """Initialize the calculator from the given problem."""
         self._known_least_squares_safe = False
 
         self.inner_problem = inner_problem

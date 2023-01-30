@@ -16,13 +16,10 @@ except ImportError:
 
 
 class OptimalScalingInnerSolver(InnerSolver):
-    """
-    Solve the inner subproblem of the
-    optimal scaling approach for ordinal data.
-    """
+    """Solve the inner subproblem of the optimal scaling approach for ordinal
+    data."""
 
     def __init__(self, optimizer: Optimizer = None, options: Dict = None):
-
         self.optimizer = optimizer
         self.options = options
         if self.options is None:
@@ -42,8 +39,7 @@ class OptimalScalingInnerSolver(InnerSolver):
         problem: OptimalScalingProblem,
         sim: List[np.ndarray],
     ) -> list:
-        """
-        Get results for every group (inner optimization problem).
+        """Get results for every group (inner optimization problem).
 
         Parameters
         ----------
@@ -70,9 +66,8 @@ class OptimalScalingInnerSolver(InnerSolver):
 
     @staticmethod
     def calculate_obj_function(x_inner_opt: list):
-        """
-        Calculate the inner objective function from a list of inner
-        optimization results returned from compute_optimal_surrogate_data
+        """Calculate the inner objective function from a list of inner
+        optimization results returned from compute_optimal_surrogate_data.
 
         Parameters
         ----------
@@ -101,10 +96,8 @@ class OptimalScalingInnerSolver(InnerSolver):
         par_opt_ids: List,
         snllh: Dict,  # TODO change naming for this variable
     ):
-        """
-        Calculates gradients of the objective function with respect
-        to outer parameters (snllh).
-        """
+        """Calculates gradients of the objective function with respect to outer
+        parameters (snllh)."""
         condition_map_sim_var = parameter_mapping[0].map_sim_var
         # par_sim_ids = list(amici_model.getParameterIds())
         # TODO: Doesn't work with condition specific parameters
@@ -187,10 +180,8 @@ class OptimalScalingInnerSolver(InnerSolver):
 
     @staticmethod
     def get_default_options() -> Dict:
-        """
-        Return default options for solving the inner problem,
-        if no options provided
-        """
+        """Return default options for solving the inner problem, if no options
+        provided."""
         options = {
             'method': REDUCED,
             'reparameterized': True,
@@ -279,7 +270,7 @@ def get_xi(
 def optimize_surrogate_data(
     xs: List[OptimalScalingParameter], sim: List[np.ndarray], options: Dict
 ):
-    """Run optimization for inner problem"""
+    """Run optimization for inner problem."""
 
     from scipy.optimize import minimize
 
@@ -313,7 +304,7 @@ def get_inner_optimization_options(
     interval_range: float,
     interval_gap: float,
 ) -> Dict:
-    """Return default options for scipy optimizer"""
+    """Return default options for scipy optimizer."""
 
     from scipy.optimize import Bounds
 
@@ -367,7 +358,7 @@ def get_inner_optimization_options(
 def get_min_max(
     xs: List[OptimalScalingParameter], sim: List[np.ndarray]
 ) -> Tuple[float, float]:
-    """Return minimal and maximal simulation value"""
+    """Return minimal and maximal simulation value."""
 
     sim_all = get_sim_all(xs, sim)
 
@@ -389,7 +380,7 @@ def get_sy_all(xs, sy, par_idx):
 
 
 def get_sim_all(xs, sim: List[np.ndarray]) -> list:
-    """ "Get list of all simulations for all xs"""
+    """"Get list of all simulations for all xs."""
 
     sim_all = []
     for x in xs:
@@ -438,7 +429,7 @@ def get_surrogate_all(
 def get_weight_for_surrogate(
     xs: List[OptimalScalingParameter], sim: List[np.ndarray]
 ) -> float:
-    """Calculate weights for objective function"""
+    """Calculate weights for objective function."""
 
     sim_x_all = get_sim_all(xs, sim)
     eps = 1e-8
@@ -457,7 +448,7 @@ def get_weight_for_surrogate(
 def compute_interval_constraints(
     xs: List[OptimalScalingParameter], sim: List[np.ndarray], options: Dict
 ) -> Tuple[float, float]:
-    """Compute minimal interval range and gap"""
+    """Compute minimal interval range and gap."""
 
     # compute constraints on interval size and interval gap size
     # similar to Pargett et al. (2014)
@@ -493,7 +484,7 @@ def y2xi(
     interval_gap: float,
     interval_range: float,
 ) -> np.ndarray:
-    """Get optimal scaling bounds and return reparameterized parameters"""
+    """Get optimal scaling bounds and return reparameterized parameters."""
 
     optimal_scaling_bounds_reparameterized = np.full(
         shape=(np.shape(optimal_scaling_bounds)), fill_value=np.nan
@@ -521,10 +512,8 @@ def xi2y(
     interval_gap: float,
     interval_range: float,
 ) -> np.ndarray:
-    """
-    Get reparameterized parameters and
-    return original optimal scaling bounds
-    """
+    """Get reparameterized parameters and return original optimal scaling
+    bounds."""
 
     optimal_scaling_bounds = np.full(
         shape=(np.shape(optimal_scaling_bounds_reparameterized)),
@@ -556,7 +545,7 @@ def obj_surrogate_data(
     w: float,
     options: Dict,
 ) -> float:
-    """compute optimal scaling objective function"""
+    """Compute optimal scaling objective function."""
 
     obj = 0.0
     if options['reparameterized']:
@@ -591,7 +580,7 @@ def get_bounds_for_category(
     interval_gap: float,
     options: Dict,
 ) -> Tuple[float, float]:
-    """Return upper and lower bound for a specific category x"""
+    """Return upper and lower bound for a specific category x."""
 
     x_category = int(x.category)
 
@@ -617,7 +606,7 @@ def get_bounds_for_category(
 def get_constraints_for_optimization(
     xs: List[OptimalScalingParameter], sim: List[np.ndarray], options: Dict
 ) -> Dict:
-    """Return constraints for inner optimization"""
+    """Return constraints for inner optimization."""
 
     num_categories = len(xs)
     interval_range, interval_gap = compute_interval_constraints(
@@ -653,6 +642,7 @@ def save_inner_parameters_to_inner_problem(
     sim: List[np.ndarray],
     options: Dict,
 ):
+    """Save inner parameter values to the inner subproblem."""
     xs = problem.get_free_xs_for_group(gr)
     interval_range, interval_gap = compute_interval_constraints(
         xs, sim, options

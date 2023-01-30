@@ -17,8 +17,7 @@ except ImportError:
 
 
 class SplineInnerSolver(InnerSolver):
-    """
-    Solver of the inner subproblem.
+    """Solver of the inner subproblem.
 
     Options
     -------
@@ -33,7 +32,6 @@ class SplineInnerSolver(InnerSolver):
     """
 
     def __init__(self, optimizer: Optimizer = None, options: Dict = None):
-
         self.optimizer = optimizer
         self.options = options
         if self.options is None:
@@ -52,8 +50,7 @@ class SplineInnerSolver(InnerSolver):
         sim: List[np.ndarray],
         sigma: List[np.ndarray],
     ) -> list:
-        """
-        Get results for every group (inner optimization problem).
+        """Get results for every group (inner optimization problem).
 
         Parameters
         ----------
@@ -90,8 +87,7 @@ class SplineInnerSolver(InnerSolver):
 
     @staticmethod
     def calculate_obj_function(x_inner_opt: list):
-        """
-        Calculate the inner objective function from a list of inner
+        """Calculate the inner objective function from a list of inner
         optimization results returned from solve.
 
         Parameters
@@ -112,10 +108,9 @@ class SplineInnerSolver(InnerSolver):
 
     @staticmethod
     def ls_calculate_obj_function(x_inner_opt: list):
-        """
-        Calculate the inner objective function from a list of inner
-        optimization results returned from solve
-        using the least squares inner optimizer.
+        """Calculate the inner objective function from a list of inner
+        optimization results returned from solve using the least squares inner
+        optimizer.
 
         Parameters
         ----------
@@ -138,9 +133,8 @@ class SplineInnerSolver(InnerSolver):
         par_opt_ids: List,
         snllh: Dict,
     ):
-        """
-        Calculate the gradient of the objective function with respect to
-        the outer dynaical parameters.
+        """Calculate the gradient of the objective function with respect to the
+        outer dynaical parameters.
 
         Parameters
         ----------
@@ -256,10 +250,8 @@ class SplineInnerSolver(InnerSolver):
 
     @staticmethod
     def get_default_options() -> Dict:
-        """
-        Return default options for solving the inner problem,
-        if no options provided
-        """
+        """Return default options for solving the inner problem, if no options
+        provided."""
         options = {
             "inner_optimizer": 'SLSQP',
             "use_minimal_difference": True,
@@ -271,7 +263,7 @@ class SplineInnerSolver(InnerSolver):
         inner_parameters: List[SplineInnerParameter],
         group_dict: Dict,
     ):
-        """Run optimization for inner problem"""
+        """Run optimization for inner problem."""
 
         group_measurements = group_dict['datapoints']
         group_noise_parameters = group_dict['noise_parameters']
@@ -407,7 +399,7 @@ class SplineInnerSolver(InnerSolver):
         return results
 
     def _rescale_spline_bases(self, sim_all: np.ndarray, N: int, K: int):
-        """Rescale the spline bases"""
+        """Rescale the spline bases."""
 
         min_all = sim_all[0]
         max_all = sim_all[0]
@@ -468,9 +460,7 @@ class SplineInnerSolver(InnerSolver):
         N: int,
         use_minimal_difference: bool,
     ):
-        """
-        Returns minimal parameter difference for spline parameters.
-        """
+        """Returns minimal parameter difference for spline parameters."""
         if use_minimal_difference:
             min_diff = (max_meas - min_meas) / (2 * N)
         else:
@@ -485,7 +475,7 @@ class SplineInnerSolver(InnerSolver):
         max_meas: float,
         min_diff: float,
     ) -> Dict:
-        """Return options for optimization"""
+        """Return options for optimization."""
         range_all = max_meas - min_meas
 
         constraint_min_diff = np.full(N, min_diff)
@@ -530,8 +520,8 @@ def get_objective_function(
     c: np.ndarray,
     n: np.ndarray,
 ):
-    """Objective function for problem reformulation
-    with s as parmaeter splines."""
+    """Objective function for problem reformulation with s as parmaeter
+    splines."""
     obj = 0
 
     for y_k, z_k, sigma_k, n_k in zip(sim_all, measurements, sigma, n):
@@ -561,8 +551,8 @@ def get_inner_gradient(
     c: np.ndarray,
     n: np.ndarray,
 ):
-    """Gradient of the objective function with respect
-    to the spline parameters for the reformulated inner problem"""
+    """Gradient of the objective function with respect to the spline parameters
+    for the reformulated inner problem."""
 
     Gradient = np.zeros(N)
 
@@ -602,8 +592,8 @@ def get_inner_hessian(
     c: np.ndarray,
     n: np.ndarray,
 ):
-    """Hessian of the objective function with respect
-    to the spline parameters for the reformulated inner problem"""
+    """Hessian of the objective function with respect to the spline parameters
+    for the reformulated inner problem."""
 
     Hessian = np.zeros((N, N))
 
@@ -639,8 +629,11 @@ def get_ds_dtheta(
     n: np.ndarray,
     min_diff: float,
 ):
-    """Calculates the derivative of reformulated spline parameters s with respect to the
-    dynamical parameter theta. Look at 'get_dxi_dtheta()' for details."""
+    """Calculates the derivative of reformulated spline parameters s with
+    respect to the dynamical parameter theta.
+
+    Look at 'get_dxi_dtheta()' for details.
+    """
 
     Jacobian_derivative = np.zeros((N, N))
     rhs = np.zeros(2 * N)
@@ -723,6 +716,8 @@ def get_df_dyk(
     c_dot: np.ndarray,
     n: np.ndarray,
 ):
+    """Returns the derivative of the objective function for one group with
+    respect to the simulations."""
     df_dyk = 0
 
     for y_k, z_k, y_dot_k, sigma_k, n_k in zip(
@@ -748,7 +743,7 @@ def get_df_dyk(
 
 
 def get_spline_bases_gradient(sim_all: np.ndarray, sy_all: np.ndarray, N: int):
-    """Get gradient of the rescaled spline bases"""
+    """Get gradient of the rescaled spline bases."""
 
     min_idx = 0
     max_idx = 0
@@ -773,8 +768,7 @@ def get_spline_bases_gradient(sim_all: np.ndarray, sy_all: np.ndarray, N: int):
 def extract_expdata_using_mask(
     expdata: List[np.ndarray], mask: List[np.ndarray]
 ):
-    """Extract data from expdata list of arrays for the
-    given mask."""
+    """Extract data from expdata list of arrays for the given mask."""
     return np.concatenate(
         [
             expdata[condition_index][mask[condition_index]]
@@ -787,6 +781,7 @@ def save_inner_parameters_to_inner_problem(
     inner_parameters,
     s,
 ):
+    """Save inner parameter values to the inner subproblem."""
     xi = np.zeros(len(s))
     for i in range(len(s)):
         for j in range(i, len(s)):
@@ -797,7 +792,7 @@ def save_inner_parameters_to_inner_problem(
 
 
 def get_monotonicity_measure(quantitative_data, sim_all):
-    """Get monotonicity measure by calculating inversions"""
+    """Get monotonicity measure by calculating inversions."""
     DeprecationWarning("Outdated function.")
     return
     quantitative_data['simulation'] = sim_all
@@ -827,12 +822,11 @@ def get_gradient_old(
     c: np.ndarray,
     n: np.ndarray,
 ):
-    """Gradient of the objective function with respect
-    to the spline parameters for the non-reformulated problem.
-    Returns the linearized form of the gradient:
+    """Gradient of the objective function with respect to the spline parameters
+    for the non-reformulated problem. Returns the linearized form of the
+    gradient:
 
     gradient = lhs_matrix * xi - rhs
-
     """
     DeprecationWarning(
         "Deprecated function due to reformulation of the problem."
@@ -898,8 +892,8 @@ def obj_spline_old(
     c: np.ndarray,
     n: np.ndarray,
 ):
-    """Objective function for non-reformulated problem
-    with xi as spline parameters"""
+    """Objective function for non-reformulated problem with xi as spline
+    parameters."""
 
     DeprecationWarning(
         "Deprecated function due to reformulation of the problem."
@@ -931,8 +925,8 @@ def obj_spline_old(
 
 
 def get_mu_old(Jacobian, rhs, xi, C):
-    """
-    Calculate the Langrange multipliers mu for the non-reformulated problem.
+    """Calculate the Langrange multipliers mu for the non-reformulated problem.
+
     For the reformulated problem, they equal the gradient.
     """
     DeprecationWarning(
@@ -988,15 +982,13 @@ def get_dxi_dtheta_old(
     c_dot,
     n,
 ):
-    """
-    Calculates the derivative of spline parameters xi with respect to the
-    dynamical parameter theta.
-    Firstly, we calculate the derivative of the first two equations of
-    the necessary optimality conditions of the optimization problem with
-    inequality constraints. Then we solve the linear system to obtain the
-    derivatives.
-    The derivative of the gradient with respect to the dynamical parameter
-    theta is calculated in the linearlized form with respect to dxi_dtheta:
+    """Calculates the derivative of spline parameters xi with respect to the
+    dynamical parameter theta. Firstly, we calculate the derivative of the
+    first two equations of the necessary optimality conditions of the
+    optimization problem with inequality constraints. Then we solve the linear
+    system to obtain the derivatives. The derivative of the gradient with
+    respect to the dynamical parameter theta is calculated in the linearlized
+    form with respect to dxi_dtheta:
 
     d_{theta} (gradient_{xi}) =
      = gradient_derivative_lhs * dxi_dtheta - gradient_derivative_rhs

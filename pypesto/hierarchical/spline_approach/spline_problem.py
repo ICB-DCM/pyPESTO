@@ -29,12 +29,24 @@ except ImportError:
 
 
 class SplineInnerProblem(InnerProblem):
+    """Class of the Spline inner subproblem."""
     def __init__(
         self,
         xs: List[SplineInnerParameter],
         data: List[np.ndarray],
         spline_ratio: float = 1 / 2,
     ):
+        """Construction of the Spline inner subproblem.
+
+        Parameters
+        ----------
+            xs:
+                List of `OptimalScalingParameter`s of the subproblem.
+            data:
+                The data of the problem.
+            spline_ratio:
+                The ratio of the number of spline inner parameters and number of measurements for each group. Default is 1/2.
+        """
         super().__init__(xs, data)
         self.groups = {}
         self.spline_ratio = spline_ratio
@@ -74,6 +86,7 @@ class SplineInnerProblem(InnerProblem):
         edatas: List['amici.ExpData'],
         options: Dict = None,
     ):
+        """Construct the inner problem from the `petab_problem`."""
         if options is None:
             options = get_default_options()
         return qualitative_inner_problem_from_petab_problem(
@@ -92,7 +105,8 @@ class SplineInnerProblem(InnerProblem):
         return [x for x in self.xs.values() if x.group == group]
 
     def get_free_xs_for_group(self, group: int) -> List[SplineInnerParameter]:
-        """Get ``SplineParameter``s that are free and belong to the given group."""
+        """Get ``SplineParameter``s that are free and belong to the given
+        group."""
         return [
             x
             for x in self.xs.values()
@@ -100,7 +114,8 @@ class SplineInnerProblem(InnerProblem):
         ]
 
     def get_fixed_xs_for_group(self, group: int) -> List[SplineInnerParameter]:
-        """Get ``SplineParameter``s that are fixed and belong to the given group."""
+        """Get ``SplineParameter``s that are fixed and belong to the given
+        group."""
         return [
             x
             for x in self.xs.values()
@@ -129,6 +144,7 @@ class SplineInnerProblem(InnerProblem):
 
 
 def get_default_options() -> Dict:
+    """Returns the default spline problem options dictionary."""
     return {SPLINE_RATIO: 1 / 2}
 
 
@@ -138,6 +154,7 @@ def qualitative_inner_problem_from_petab_problem(
     edatas: List['amici.ExpData'],
     options: Dict,
 ):
+    """Constructs the inner problem from the `petab_problem`."""
     spline_ratio = options[SPLINE_RATIO]
 
     # inner parameters
@@ -173,10 +190,8 @@ def spline_inner_parameters_from_measurement_df(
     df: pd.DataFrame,
     spline_ratio: float,
 ) -> List[SplineInnerParameter]:
-    """
-    Create list of inner free parameters from PEtab measurement table
-    dependent on the spline_ratio provided (or default == 1/2).
-    """
+    """Create list of inner free parameters from PEtab measurement table
+    dependent on the spline_ratio provided (or default == 1/2)."""
     # create list of hierarchical parameters
     df = df.reset_index()
 
@@ -226,8 +241,7 @@ def spline_ixs_for_measurement_specific_parameters(
     amici_model: 'amici.Model',
     inner_parameters: List[SplineInnerParameter],
 ) -> Dict[str, List[Tuple[int, int, int]]]:
-    """
-    Create mapping of parameters to measurements.
+    """Create mapping of parameters to measurements.
 
     Returns
     -------
@@ -299,6 +313,8 @@ def get_spline_inner_par_ids_for_measurement(
     measurement: Dict,
     inner_parameters: List[SplineInnerParameter],
 ):
+    """Returns inner parameter ids of parameters which are related to the
+    measurement."""
     return [
         inner_par.inner_parameter_id
         for inner_par in inner_parameters

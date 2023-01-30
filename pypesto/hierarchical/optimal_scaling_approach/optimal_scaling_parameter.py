@@ -7,8 +7,8 @@ logger = logging.getLogger(__name__)
 
 
 class OptimalScalingParameter(InnerParameter):
-    """
-    A optimal scaling (inner) parameter of the optimal scaling hierarchical optimization problem.
+    """A optimal scaling (inner) parameter of the optimal scaling hierarchical
+    optimization problem.
 
     Attributes
     ----------
@@ -30,8 +30,7 @@ class OptimalScalingParameter(InnerParameter):
         estimate: bool = False,
         **kwargs,
     ):
-        """
-        Construct.
+        """Construct.
 
         Parameters
         ----------
