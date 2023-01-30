@@ -84,7 +84,7 @@ class OptimalScalingInnerSolver(InnerSolver):
             x_inner_opt[idx]['success'] for idx in range(len(x_inner_opt))
         ]:
             obj = np.inf
-            warnings.warn(f"Inner optimization failed.")
+            warnings.warn("Inner optimization failed.")
         else:
             obj = np.sum(
                 [x_inner_opt[idx]['fun'] for idx in range(len(x_inner_opt))]

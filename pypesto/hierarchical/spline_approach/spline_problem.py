@@ -96,7 +96,7 @@ class SplineInnerProblem(InnerProblem):
         return [
             x
             for x in self.xs.values()
-            if x.group == group and x.estimate == True
+            if x.group == group and x.estimate is True
         ]
 
     def get_fixed_xs_for_group(self, group: int) -> List[SplineInnerParameter]:
@@ -104,7 +104,7 @@ class SplineInnerProblem(InnerProblem):
         return [
             x
             for x in self.xs.values()
-            if x.group == group and x.estimate == False
+            if x.group == group and x.estimate is False
         ]
 
     def get_inner_parameter_dictionary(self) -> Dict:

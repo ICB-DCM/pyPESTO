@@ -7,7 +7,6 @@ from ...C import FVAL, GRAD, HESS, MODE_RES, RDATAS, RES, SRES, X_INNER_OPT
 from ...objective.amici.amici_calculator import AmiciModel, AmiciSolver
 from ...objective.amici.amici_util import (
     filter_return_dict,
-    get_error_output,
     init_return_values,
 )
 from .optimal_scaling_problem import OptimalScalingProblem

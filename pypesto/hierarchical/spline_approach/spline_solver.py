@@ -2,7 +2,6 @@ import warnings
 from typing import Dict, List
 
 import numpy as np
-import pandas as pd
 from scipy.optimize import least_squares, minimize
 
 from ...C import InnerParameterType
@@ -104,7 +103,7 @@ class SplineInnerSolver(InnerSolver):
             x_inner_opt[idx]['success'] for idx in range(len(x_inner_opt))
         ]:
             obj = np.inf
-            warnings.warn(f"Inner optimization failed.")
+            warnings.warn("Inner optimization failed.")
         else:
             obj = np.sum(
                 [x_inner_opt[idx]['fun'] for idx in range(len(x_inner_opt))]
@@ -441,7 +440,7 @@ class SplineInnerSolver(InnerSolver):
                 if n[i] > N:
                     n[i] = N
                     warnings.warn(
-                        f"Interval for a sim has been set to a larger value than the number of spline parameters."
+                        "Interval for a sim has been set to a larger value than the number of spline parameters."
                     )
         # In case the simulations are sufficiently apart:
         else:
@@ -843,7 +842,7 @@ def get_gradient_old(
     rhs = np.zeros(N)
 
     for y_k, z_k, sigma_k in zip(sim_all, measurements, sigma):
-        n = math.ceil((y_k - c[0]) / delta_c) + 1
+        n = np.ceil((y_k - c[0]) / delta_c) + 1
         if n == 0:
             n = 1
         if n > N:
@@ -932,9 +931,6 @@ def obj_spline_old(
 
 
 def get_mu_old(Jacobian, rhs, xi, C):
-    from scipy import linalg
-    from scipy.optimize import least_squares, minimize
-
     """
     Calculate the Langrange multipliers mu for the non-reformulated problem.
     For the reformulated problem, they equal the gradient.
@@ -943,6 +939,8 @@ def get_mu_old(Jacobian, rhs, xi, C):
         "Deprecated function due to reformulation of the problem."
     )
     return
+
+    from scipy.optimize import minimize
 
     C_transpose = C.transpose()
 

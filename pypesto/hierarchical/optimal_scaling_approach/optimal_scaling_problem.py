@@ -122,7 +122,7 @@ class OptimalScalingProblem(InnerProblem):
         return [
             x
             for x in self.xs.values()
-            if x.group == group and x.estimate == True
+            if x.group == group and x.estimate is True
         ]
 
     def get_fixed_xs_for_group(
@@ -132,7 +132,7 @@ class OptimalScalingProblem(InnerProblem):
         return [
             x
             for x in self.xs.values()
-            if x.group == group and x.estimate == False
+            if x.group == group and x.estimate is False
         ]
 
     def get_cat_ub_parameters_for_group(
