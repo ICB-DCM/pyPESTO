@@ -3,17 +3,13 @@ from typing import Dict, List
 
 import numpy as np
 import pandas as pd
+from scipy.optimize import least_squares, minimize
 
+from ...C import InnerParameterType
 from ...optimize import Optimizer
 from ..solver import InnerSolver
-from .spline_problem import SplineInnerProblem
 from .spline_parameter import SplineInnerParameter
-from ...C import (
-    InnerParameterType,
-)
-
-import fides
-from scipy.optimize import minimize, least_squares
+from .spline_problem import SplineInnerProblem
 
 
 class SplineInnerSolver(InnerSolver):
@@ -344,6 +340,7 @@ class SplineInnerSolver(InnerSolver):
             )
 
         elif self.options['inner_optimizer'] == 'fides':
+            import fides
 
             def inner_hessian(x):
                 return get_inner_hessian(
@@ -1107,7 +1104,7 @@ def get_dxi_dtheta_old(
         dxi_dtheta = linalg.lstsq(lhs, gradient_derivative_rhs)
         return dxi_dtheta[0]
     else:
-        from scipy.sparse import linalg, csc_matrix
+        from scipy.sparse import csc_matrix, linalg
 
         lhs = np.block(
             [

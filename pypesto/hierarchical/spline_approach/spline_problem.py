@@ -1,30 +1,29 @@
+from typing import Dict, List, Tuple
+
 import numpy as np
-from typing import List, Dict, Tuple
 import pandas as pd
 
 from ...C import (
-    MEASUREMENT_TYPE,
-    MEASUREMENT_GROUP,
-    NONLINEAR_MONOTONE,
-    LIN,
-    TIME,
-    SPLINE_RATIO,
     INNER_PARAMETER_BOUNDS,
+    LIN,
+    MEASUREMENT_GROUP,
+    MEASUREMENT_TYPE,
+    NONLINEAR_MONOTONE,
+    SPLINE_RATIO,
+    TIME,
     InnerParameterType,
 )
-from ..problem import InnerProblem
 from ..problem import (
-    ix_matrices_from_arrays,
+    InnerProblem,
     _get_timepoints_with_replicates,
+    ix_matrices_from_arrays,
 )
 from .spline_parameter import SplineInnerParameter
 
 try:
     import amici
     import petab
-    from petab.C import (
-        OBSERVABLE_ID,
-    )
+    from petab.C import OBSERVABLE_ID
 except ImportError:
     pass
 

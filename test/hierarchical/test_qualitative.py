@@ -9,7 +9,7 @@ import pypesto
 import pypesto.logging
 import pypesto.optimize
 import pypesto.petab
-from pypesto.hierarchical.optimal_scaling_solver import (
+from pypesto.hierarchical.optimal_scaling_approach.optimal_scaling_solver import (
     OptimalScalingInnerSolver,
 )
 

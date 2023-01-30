@@ -1,31 +1,30 @@
+from typing import Dict, List, Tuple
+
 import numpy as np
-from typing import List, Dict, Tuple
 import pandas as pd
 
 from ...C import (
-    MEASUREMENT_TYPE,
-    MEASUREMENT_GROUP,
-    MEASUREMENT_CATEGORY,
-    ORDINAL,
-    LIN,
-    TIME,
     INNER_PARAMETER_BOUNDS,
+    LIN,
+    MEASUREMENT_CATEGORY,
+    MEASUREMENT_GROUP,
+    MEASUREMENT_TYPE,
+    ORDINAL,
     STANDARD,
+    TIME,
     InnerParameterType,
 )
-from ..problem import InnerProblem
 from ..problem import (
-    ix_matrices_from_arrays,
+    InnerProblem,
     _get_timepoints_with_replicates,
+    ix_matrices_from_arrays,
 )
 from .optimal_scaling_parameter import OptimalScalingParameter
 
 try:
     import amici
     import petab
-    from petab.C import (
-        OBSERVABLE_ID,
-    )
+    from petab.C import OBSERVABLE_ID
 except ImportError:
     pass
 
