@@ -86,9 +86,7 @@ class OptimalScalingAmiciCalculator:
             requested).
         """
         if mode == MODE_RES:
-            raise ValueError(
-                "Optimal scaling method cannot be called with residual mode."
-            )
+            raise ValueError("Optimal scaling method cannot be called with residual mode.")
 
         # get dimension of outer problem
         dim = len(x_ids)
@@ -164,6 +162,7 @@ class OptimalScalingAmiciCalculator:
                 sy=sy,
                 parameter_mapping=parameter_mapping,
                 par_opt_ids=x_ids,
+                par_sim_ids=amici_model.getParameterIds(),
                 snllh=snllh,
             )
 

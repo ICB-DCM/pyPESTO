@@ -282,6 +282,37 @@ class OptimalScalingProblem(InnerProblem):
             )
         )
         return weights
+    
+    def get_w_squared(self, gr, y_sim_all):
+        """Returns the weight matrix W of the group 'gr'."""
+        weights = np.diag(
+            np.block(
+                [
+                    np.ones(self.groups[gr]['num_datapoints'])
+                    / (np.sum(np.square(y_sim_all)) + 1e-8),
+                    np.zeros(2 * self.groups[gr]['num_categories']),
+                ]
+            )
+        )
+        return weights
+
+    def get_wdot_squared(self, gr, y_sim_all, sy_all):
+        """Returns the derivative of the weight matrix W of the group 'gr' with
+        respect to a outer parameter."""
+        weights = np.diag(
+            np.block(
+                [
+                    np.ones(self.groups[gr]['num_datapoints'])
+                    * (
+                        -1
+                        * 2 * sy_all.dot(y_sim_all)
+                        / ((np.sum(np.square(y_sim_all)) + 1e-8) ** 2)
+                    ),
+                    np.zeros(2 * self.groups[gr]['num_categories']),
+                ]
+            )
+        )
+        return weights
 
     def get_d(self, gr, xs, y_sim_all, eps):
         """Returns vector d of minimal gaps and ranges."""

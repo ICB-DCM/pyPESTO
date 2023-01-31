@@ -94,17 +94,17 @@ class OptimalScalingInnerSolver(InnerSolver):
         sy: List[np.ndarray],
         parameter_mapping: ParameterMapping,
         par_opt_ids: List,
+        par_sim_ids: List,
         snllh: Dict,
     ):
         """Calculates gradients of the objective function with respect to outer
         parameters (snllh)."""
         condition_map_sim_var = parameter_mapping[0].map_sim_var
-        # par_sim_ids = list(amici_model.getParameterIds())
         # TODO: Doesn't work with condition specific parameters
         for par_sim, par_opt in condition_map_sim_var.items():
             if not isinstance(par_opt, str):
                 continue
-            # par_sim_idx = par_sim_ids.index(par_sim)
+            par_sim_idx = par_sim_ids.index(par_sim)
             par_opt_idx = par_opt_ids.index(par_opt)
             grad = 0.0
             for idx, gr in enumerate(
@@ -137,7 +137,7 @@ class OptimalScalingInnerSolver(InnerSolver):
 
                 xi = get_xi(gr, problem, x_inner_opt[idx], sim, self.options)
                 sim_all = get_sim_all(xs, sim)
-                sy_all = get_sy_all(xs, sy, par_opt_idx)
+                sy_all = get_sy_all(xs, sy, par_sim_idx)
 
                 problem.groups[gr]['W'] = problem.get_w(gr, sim_all)
                 problem.groups[gr]['Wdot'] = problem.get_wdot(
