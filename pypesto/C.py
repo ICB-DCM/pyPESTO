@@ -95,7 +95,6 @@ class InnerParameterType(str, Enum):
     SCALING = 'scaling'
     SIGMA = 'sigma'
     OPTIMALSCALING = 'qualitative_scaling'
-    SPLINE = 'spline'
 
 
 DUMMY_INNER_VALUE = {
@@ -103,7 +102,6 @@ DUMMY_INNER_VALUE = {
     InnerParameterType.SCALING: 1.0,
     InnerParameterType.SIGMA: 1.0,
     InnerParameterType.OPTIMALSCALING: 0.0,
-    InnerParameterType.SPLINE: 0.0,
 }
 
 INNER_PARAMETER_BOUNDS = {
@@ -123,10 +121,6 @@ INNER_PARAMETER_BOUNDS = {
         LOWER_BOUND: -float('inf'),
         UPPER_BOUND: float('inf'),
     },
-    InnerParameterType.SPLINE: {
-        LOWER_BOUND: -float('inf'),
-        UPPER_BOUND: float('inf'),
-    },
 }
 
 ###############################################################################
@@ -142,16 +136,6 @@ REDUCED = 'reduced'
 STANDARD = 'standard'
 MAXMIN = 'max-min'
 MAX = 'max'
-
-###############################################################################
-# SPLINE APPROACH
-
-MEASUREMENT_GROUP = 'measurementGroup'
-MEASUREMENT_TYPE = 'measurementType'
-
-NONLINEAR_MONOTONE = 'nonlinear_monotone'
-
-SPLINE_RATIO = 'spline_ratio'
 
 ###############################################################################
 # HISTORY

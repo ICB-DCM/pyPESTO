@@ -30,11 +30,6 @@ from ..hierarchical.optimal_scaling_approach import (
     OptimalScalingProblem,
     OptimalScalingInnerSolver
 )
-from ..hierarchical.spline_approach import (
-    SplineAmiciCalculator,
-    SplineInnerProblem,
-    SplineInnerSolver
-)
 from ..objective import AggregatedObjective, AmiciObjective
 from ..objective.amici import AmiciObjectBuilder
 from ..objective.priors import NegLogParameterPriors, get_parameter_prior_dict
@@ -75,7 +70,6 @@ class PetabImporter(AmiciObjectBuilder):
         validate_petab_hierarchical: bool = True,
         hierarchical: bool = False,
         ordinal: bool = False,
-        nonlinear_monotone: bool = False,
     ):
         """Initialize importer.
 
@@ -103,7 +97,6 @@ class PetabImporter(AmiciObjectBuilder):
         self.petab_problem = petab_problem
         self._hierarchical = hierarchical
         self._ordinal = ordinal
-        self._nonlinear_monotone = nonlinear_monotone
 
         if validate_petab:
             if petab.lint_problem(petab_problem):
@@ -432,7 +425,6 @@ class PetabImporter(AmiciObjectBuilder):
             kwargs['guess_steadystate'] = False
 
         if self._ordinal:
-
             #TODO add constants to C
             if 'inner_problem_method' not in kwargs:
                 inner_problem_method = REDUCED
@@ -448,29 +440,6 @@ class PetabImporter(AmiciObjectBuilder):
             )
             inner_solver = OptimalScalingInnerSolver(options=inner_solver_options)
             calculator = OptimalScalingAmiciCalculator(inner_problem, inner_solver)
-            amici_reporting = amici.RDataReporting.full
-            inner_parameter_ids = calculator.inner_problem.get_x_ids()
-            par_ids = [x for x in par_ids if x not in inner_parameter_ids]
-            # FIXME: currently not supported with hierarchical
-            kwargs['guess_steadystate'] = False
-
-        if self._nonlinear_monotone:
-            #TODO add constants to C
-            if 'inner_problem_options' in kwargs:
-                inner_problem_options = kwargs.pop('inner_problem_options')
-            else:
-                inner_problem_options = None
-
-            if 'inner_solver_options' in kwargs:
-                inner_solver_options = kwargs.pop('inner_solver_options')
-            else:
-                inner_solver_options = None
-
-            inner_problem = SplineInnerProblem.from_petab_amici(
-                self.petab_problem, model, edatas, inner_problem_options
-            )
-            inner_solver = SplineInnerSolver(options=inner_solver_options)
-            calculator = SplineAmiciCalculator(inner_problem, inner_solver)
             amici_reporting = amici.RDataReporting.full
             inner_parameter_ids = calculator.inner_problem.get_x_ids()
             par_ids = [x for x in par_ids if x not in inner_parameter_ids]
