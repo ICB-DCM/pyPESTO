@@ -66,32 +66,30 @@ def inner_solver_options(request):
     return request.param
 
 
-def test_evaluate_objective(inner_solver_options: List[List[Dict]]):
+def test_evaluate_objective(inner_solver_options: List[Dict]):
     """Check that standard / reduced / reparameterized formulations yield the
     same result."""
     petab_problem = petab.Problem.from_yaml(example_qualitative_yaml)
-    for options in inner_solver_options:
-        vals = []
-        for idx, option in enumerate(options):
-            problem = create_problem(petab_problem, option)
-            val = problem.objective(np.array([0, 0]))
-            vals.append(val)
-            assert np.isclose(vals[idx], vals[idx - 1])
+    vals = []
+    for idx, option in enumerate(inner_solver_options):
+        problem = create_problem(petab_problem, option)
+        val = problem.objective(np.array([0, 0]))
+        vals.append(val)
+        assert np.isclose(vals[idx], vals[idx - 1])
 
 
-def test_optimization(inner_solver_options: List[List[Dict]]):
+def test_optimization(inner_solver_options: List[Dict]):
     """Check that optimizations finishes without error."""
     petab_problem = petab.Problem.from_yaml(example_qualitative_yaml)
 
     optimizer = pypesto.optimize.ScipyOptimizer(
         method='Nelder-Mead', options={'maxiter': 10}
     )
-    for options in inner_solver_options:
-        for option in options:
-            problem = create_problem(petab_problem, option)
-            pypesto.optimize.minimize(
-                problem=problem, n_starts=1, optimizer=optimizer
-            )
+    for option in inner_solver_options:
+        problem = create_problem(petab_problem, option)
+        pypesto.optimize.minimize(
+            problem=problem, n_starts=1, optimizer=optimizer
+        )
 
 
 def create_problem(
