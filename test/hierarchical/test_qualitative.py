@@ -13,7 +13,7 @@ from pypesto.hierarchical.optimal_scaling_approach.optimal_scaling_solver import
     OptimalScalingInnerSolver,
 )
 
-inner_problem_options = [
+inner_solver_options = [
     [
         {
             'method': 'standard',
@@ -61,46 +61,48 @@ example_qualitative_yaml = (
 )
 
 
-@pytest.fixture(params=inner_problem_options)
-def inner_problem_option(request):
+@pytest.fixture(params=inner_solver_options)
+def inner_solver_options(request):
     return request.param
 
 
-def test_evaluate_objective(inner_problem_option: List[Dict]):
+def test_evaluate_objective(inner_solver_options: List[List[Dict]]):
     """Check that standard / reduced / reparameterized formulations yield the
     same result."""
     petab_problem = petab.Problem.from_yaml(example_qualitative_yaml)
-    vals = []
-    for idx, option in enumerate(inner_problem_option):
-        problem = create_problem(petab_problem, option)
-        val = problem.objective(np.array([0, 0]))
-        vals.append(val)
-        assert np.isclose(vals[idx], vals[idx - 1])
+    for options in inner_solver_options:
+        vals = []
+        for idx, option in enumerate(options):
+            problem = create_problem(petab_problem, option)
+            val = problem.objective(np.array([0, 0]))
+            vals.append(val)
+            assert np.isclose(vals[idx], vals[idx - 1])
 
 
-def test_optimization(inner_problem_option: List[Dict]):
+def test_optimization(inner_solver_options: List[List[Dict]]):
     """Check that optimizations finishes without error."""
     petab_problem = petab.Problem.from_yaml(example_qualitative_yaml)
 
     optimizer = pypesto.optimize.ScipyOptimizer(
         method='Nelder-Mead', options={'maxiter': 10}
     )
-    for option in inner_problem_option:
-        problem = create_problem(petab_problem, option)
-        pypesto.optimize.minimize(
-            problem=problem, n_starts=1, optimizer=optimizer
-        )
+    for options in inner_solver_options:
+        for option in options:
+            problem = create_problem(petab_problem, option)
+            pypesto.optimize.minimize(
+                problem=problem, n_starts=1, optimizer=optimizer
+            )
 
 
 def create_problem(
     petab_problem: petab.Problem, option: Dict
 ) -> pypesto.Problem:
-    importer = pypesto.petab.PetabImporter(petab_problem)
+    importer = pypesto.petab.PetabImporter(petab_problem, ordinal=True)
     importer.create_model()
 
-    objective = importer.create_objective(hierarchical=True)
-    problem = importer.create_problem(objective)
-    problem.objective.calculator.inner_solver = OptimalScalingInnerSolver(
-        options=option
+    objective = importer.create_objective(
+        inner_problem_method=option['method'],
+        inner_solver_options=option,
     )
+    problem = importer.create_problem(objective)
     return problem

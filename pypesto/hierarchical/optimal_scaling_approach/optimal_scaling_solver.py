@@ -54,12 +54,21 @@ class OptimalScalingInnerSolver(InnerSolver):
         """
         optimal_surrogates = []
         for gr in problem.get_groups_for_xs(InnerParameterType.OPTIMALSCALING):
-            xs = problem.get_cat_ub_parameters_for_group(gr)
+            category_upper_bounds = problem.get_cat_ub_parameters_for_group(gr)
+            category_lower_bounds = problem.get_cat_lb_parameters_for_group(gr)
             surrogate_opt_results = optimize_surrogate_data(
-                xs, sim, self.options
+                category_upper_bounds=category_upper_bounds,
+                category_lower_bounds=category_lower_bounds,
+                sim=sim,
+                options=self.options,
             )
             save_inner_parameters_to_inner_problem(
-                gr, problem, surrogate_opt_results, sim, self.options
+                category_upper_bounds=category_upper_bounds,
+                gr=gr,
+                problem=problem,
+                x_inner_opt=surrogate_opt_results,
+                sim=sim,
+                options=self.options,
             )
             optimal_surrogates.append(surrogate_opt_results)
         return optimal_surrogates
@@ -268,24 +277,38 @@ def get_xi(
 
 
 def optimize_surrogate_data(
-    xs: List[OptimalScalingParameter], sim: List[np.ndarray], options: Dict
+    category_upper_bounds: List[OptimalScalingParameter],
+    category_lower_bounds: List[OptimalScalingParameter],
+    sim: List[np.ndarray],
+    options: Dict,
 ):
     """Run optimization for inner problem."""
 
     from scipy.optimize import minimize
 
     interval_range, interval_gap = compute_interval_constraints(
-        xs, sim, options
+        category_upper_bounds, sim, options
     )
-    w = get_weight_for_surrogate(xs, sim)
+    w = get_weight_for_surrogate(category_upper_bounds, sim)
 
     def obj_surr(x):
         return obj_surrogate_data(
-            xs, x, sim, interval_gap, interval_range, w, options
+            category_upper_bounds,
+            x,
+            sim,
+            interval_gap,
+            interval_range,
+            w,
+            options,
         )
 
     inner_options = get_inner_optimization_options(
-        options, xs, sim, interval_range, interval_gap
+        options,
+        category_upper_bounds,
+        category_lower_bounds,
+        sim,
+        interval_range,
+        interval_gap,
     )
     try:
         results = minimize(obj_surr, **inner_options)
@@ -299,7 +322,8 @@ def optimize_surrogate_data(
 
 def get_inner_optimization_options(
     options: Dict,
-    xs: List[OptimalScalingParameter],
+    category_upper_bounds: List[OptimalScalingParameter],
+    category_lower_bounds: List[OptimalScalingParameter],
     sim: List[np.ndarray],
     interval_range: float,
     interval_gap: float,
@@ -308,22 +332,34 @@ def get_inner_optimization_options(
 
     from scipy.optimize import Bounds
 
-    min_all, max_all = get_min_max(xs, sim)
+    min_all, max_all = get_min_max(category_upper_bounds, sim)
     if options['method'] == REDUCED:
-        last_opt_values = np.asarray([x.value for x in xs])
+        last_opt_values = np.asarray([x.value for x in category_upper_bounds])
+    elif options['method'] == STANDARD:
+        last_opt_values = np.ravel(
+            [
+                np.asarray([x.value for x in category_lower_bounds]),
+                np.asarray([x.value for x in category_upper_bounds]),
+            ],
+            'F',
+        )
 
     if options['method'] == REDUCED:
-        parameter_length = len(xs)
-        x0 = np.linspace(
-            np.max([min_all, interval_range]),
-            max_all + (interval_range + interval_gap) * parameter_length,
-            parameter_length,
-        )
+        parameter_length = len(category_upper_bounds)
         if len(np.nonzero(last_opt_values)) > 0:
             x0 = last_opt_values
+        else:
+            x0 = np.linspace(
+                np.max([min_all, interval_range]),
+                max_all + (interval_range + interval_gap) * parameter_length,
+                parameter_length,
+            )
     elif options['method'] == STANDARD:
-        parameter_length = 2 * len(xs)
-        x0 = np.linspace(0, max_all + interval_range, parameter_length)
+        parameter_length = 2 * len(category_upper_bounds)
+        if len(np.nonzero(last_opt_values)) > 0:
+            x0 = last_opt_values
+        else:
+            x0 = np.linspace(0, max_all + interval_range, parameter_length)
     else:
         raise NotImplementedError(
             f"Unkown optimal scaling 'method' {options['method']}. "
@@ -331,7 +367,7 @@ def get_inner_optimization_options(
         )
 
     if options['reparameterized']:
-        x0 = y2xi(x0, xs, interval_gap, interval_range)
+        x0 = y2xi(x0, category_upper_bounds, interval_gap, interval_range)
         bounds = Bounds(
             [0.0] * parameter_length,
             [max_all + (interval_range + interval_gap) * parameter_length]
@@ -344,7 +380,9 @@ def get_inner_optimization_options(
             'bounds': bounds,
         }
     else:
-        constraints = get_constraints_for_optimization(xs, sim, options)
+        constraints = get_constraints_for_optimization(
+            category_upper_bounds, sim, options
+        )
 
         inner_options = {
             'x0': x0,
@@ -636,6 +674,7 @@ def get_constraints_for_optimization(
 
 
 def save_inner_parameters_to_inner_problem(
+    category_upper_bounds: List[OptimalScalingParameter],
     gr,
     problem: OptimalScalingProblem,
     x_inner_opt: Dict,
@@ -643,13 +682,17 @@ def save_inner_parameters_to_inner_problem(
     options: Dict,
 ):
     """Save inner parameter values to the inner subproblem."""
-    xs = problem.get_free_xs_for_group(gr)
     interval_range, interval_gap = compute_interval_constraints(
-        xs, sim, options
+        category_upper_bounds, sim, options
     )
 
     surrogate_all, x_lower, x_upper = get_surrogate_all(
-        xs, x_inner_opt['x'], sim, interval_range, interval_gap, options
+        category_upper_bounds,
+        x_inner_opt['x'],
+        sim,
+        interval_range,
+        interval_gap,
+        options,
     )
     problem.groups[gr]['surrogate_data'] = surrogate_all.flatten()
 

@@ -282,7 +282,7 @@ class OptimalScalingProblem(InnerProblem):
             )
         )
         return weights
-    
+
     def get_w_squared(self, gr, y_sim_all):
         """Returns the weight matrix W of the group 'gr'."""
         weights = np.diag(
@@ -305,7 +305,8 @@ class OptimalScalingProblem(InnerProblem):
                     np.ones(self.groups[gr]['num_datapoints'])
                     * (
                         -1
-                        * 2 * sy_all.dot(y_sim_all)
+                        * 2
+                        * sy_all.dot(y_sim_all)
                         / ((np.sum(np.square(y_sim_all)) + 1e-8) ** 2)
                     ),
                     np.zeros(2 * self.groups[gr]['num_categories']),
@@ -316,16 +317,10 @@ class OptimalScalingProblem(InnerProblem):
 
     def get_d(self, gr, xs, y_sim_all, eps):
         """Returns vector d of minimal gaps and ranges."""
-        # if 'minGap' not in options:
-        #    eps = 1e-16
-        # else:
-        #    eps = options['minGap']
         max_simulation = np.nanmax(y_sim_all)
 
         interval_range = max_simulation / (2 * len(xs) + 1)
         interval_gap = max_simulation / (4 * (len(xs) - 1) + 1)
-        # if interval_gap < eps:
-        #   interval_gap = eps
 
         d = np.zeros(self.groups[gr]['num_constr_full'])
 
@@ -333,9 +328,7 @@ class OptimalScalingProblem(InnerProblem):
             2 * self.groups[gr]['num_datapoints']
             + 1 : 2 * self.groups[gr]['num_datapoints']
             + self.groups[gr]['num_categories']
-        ] = (
-            interval_gap + eps
-        )  # - 1] \
+        ] = (interval_gap + eps)
 
         d[
             2 * self.groups[gr]['num_datapoints']

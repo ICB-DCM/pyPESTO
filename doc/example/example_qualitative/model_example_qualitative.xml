@@ -268,11 +268,6 @@
         </annotation>
       </parameter>
     <parameter id="init_I" value="30" constant="true"/>
-    <parameter id="sigma_Ybar" value="0" constant="false"/>
-    <parameter id="sigma_Activity" value="0" constant="false"/>
-    <parameter id="observableParameter1_Activity" value="1" constant="false"/>
-    <parameter id="observableParameter2_Activity" value="1" constant="false"/>
-    <parameter id="observableParameter3_Activity" value="1" constant="false"/>
     </listOfParameters>
     <listOfInitialAssignments>
       <initialAssignment symbol="I">
