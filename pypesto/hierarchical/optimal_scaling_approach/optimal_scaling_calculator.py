@@ -35,7 +35,6 @@ class OptimalScalingAmiciCalculator:
         inner_solver: OptimalScalingInnerSolver = None,
     ):
         """Initialize the calculator from the given problem."""
-        self._known_least_squares_safe = False
 
         self.inner_problem = inner_problem
 
@@ -86,6 +85,11 @@ class OptimalScalingAmiciCalculator:
             Whether to use the FIM (if available) instead of the Hessian (if
             requested).
         """
+        if mode == MODE_RES:
+            raise ValueError(
+                "Optimal scaling method cannot be called with residual mode."
+            )
+
         # get dimension of outer problem
         dim = len(x_ids)
 
@@ -126,26 +130,6 @@ class OptimalScalingAmiciCalculator:
             RDATAS: inner_rdatas,
             X_INNER_OPT: self.inner_problem.get_inner_parameter_dictionary(),
         }
-        # TODO is this needed?
-        if (
-            not self._known_least_squares_safe
-            and mode == MODE_RES
-            and 1 in sensi_orders
-        ):
-            if not amici_model.getAddSigmaResiduals() and any(
-                (
-                    (r['ssigmay'] is not None and np.any(r['ssigmay']))
-                    or (r['ssigmaz'] is not None and np.any(r['ssigmaz']))
-                )
-                for r in inner_rdatas
-            ):
-                raise RuntimeError(
-                    'Cannot use least squares solver with'
-                    'parameter dependent sigma! Support can be '
-                    'enabled via '
-                    'amici_model.setAddSigmaResiduals().'
-                )
-            self._known_least_squares_safe = True  # don't check this again
 
         # if any amici simulation failed, it's unlikely we can compute
         # meaningful inner parameters, so we better just fail early.
@@ -160,7 +144,6 @@ class OptimalScalingAmiciCalculator:
             return filter_return_dict(inner_result)
 
         sim = [rdata['y'] for rdata in inner_rdatas]
-        # clip simulation?
 
         # compute optimal inner parameters
         x_inner_opt = self.inner_solver.solve(self.inner_problem, sim)

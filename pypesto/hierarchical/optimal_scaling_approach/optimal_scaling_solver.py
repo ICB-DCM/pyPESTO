@@ -94,7 +94,7 @@ class OptimalScalingInnerSolver(InnerSolver):
         sy: List[np.ndarray],
         parameter_mapping: ParameterMapping,
         par_opt_ids: List,
-        snllh: Dict,  # TODO change naming for this variable
+        snllh: Dict,
     ):
         """Calculates gradients of the objective function with respect to outer
         parameters (snllh)."""

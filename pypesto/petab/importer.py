@@ -426,10 +426,10 @@ class PetabImporter(AmiciObjectBuilder):
 
         if self._ordinal:
             #TODO add constants to C
-            if 'inner_problem_method' not in kwargs:
-                inner_problem_method = REDUCED
-            else:
+            if 'inner_problem_method' in kwargs:
                 inner_problem_method = kwargs.pop('inner_problem_method')
+            else:
+                inner_problem_method = None
             if 'inner_solver_options' in kwargs:
                 inner_solver_options = kwargs.pop('inner_solver_options')
             else:
@@ -443,6 +443,7 @@ class PetabImporter(AmiciObjectBuilder):
             amici_reporting = amici.RDataReporting.full
             inner_parameter_ids = calculator.inner_problem.get_x_ids()
             par_ids = [x for x in par_ids if x not in inner_parameter_ids]
+
             # FIXME: currently not supported with hierarchical
             kwargs['guess_steadystate'] = False
 

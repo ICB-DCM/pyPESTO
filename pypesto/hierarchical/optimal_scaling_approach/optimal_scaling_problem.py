@@ -10,6 +10,7 @@ from ...C import (
     MEASUREMENT_GROUP,
     MEASUREMENT_TYPE,
     ORDINAL,
+    REDUCED,
     STANDARD,
     TIME,
     InnerParameterType,
@@ -111,9 +112,11 @@ class OptimalScalingProblem(InnerProblem):
         petab_problem: petab.Problem,
         amici_model: 'amici.Model',
         edatas: List['amici.ExpData'],
-        method: str,
+        method: str = None,
     ):
         """Construct the inner problem from the `petab_problem`."""
+        if method is None:
+            method == REDUCED
         return qualitative_inner_problem_from_petab_problem(
             petab_problem, amici_model, edatas, method
         )
@@ -123,8 +126,6 @@ class OptimalScalingProblem(InnerProblem):
         groups = [x.group for x in self.get_xs_for_type(inner_parameter_type)]
         return list(set(groups))
 
-    # FIXME does this break if there's inner parameters (xs) of different sorts, i.e.
-    # not only optimalscaling? Think so...
     def get_xs_for_group(self, group: int) -> List[OptimalScalingParameter]:
         """Get ``OptimalScalingParameter``s that belong to the given group."""
         return [x for x in self.xs.values() if x.group == group]
@@ -399,15 +400,7 @@ def qualitative_inner_parameters_from_measurement_df(
 ) -> List[OptimalScalingParameter]:
     """Create list of inner free parameters from PEtab measurement table
     dependent on the method provided."""
-    # create list of hierarchical parameters
     df = df.reset_index()
-
-    # FIXME Make validate PEtab for optimal scaling
-    # for col in (MEASUREMENT_TYPE, MEASUREMENT_GROUP, MEASUREMENT_CATEGORY):
-    #     if col not in df:
-    #         df[col] = None
-    # if petab.is_empty(row[PARAMETER_TYPE]):
-    #     continue
 
     estimate = get_estimate_for_method(method)
     par_types = ['cat_lb', 'cat_ub']
