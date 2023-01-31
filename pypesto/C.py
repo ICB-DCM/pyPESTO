@@ -88,6 +88,7 @@ INNER_RDATAS = 'inner_rdatas'
 PARAMETER_TYPE = 'parameterType'
 X_INNER_OPT = 'x_inner_opt'
 
+
 class InnerParameterType(str, Enum):
     """Specifies different inner parameter types."""
 
@@ -124,7 +125,7 @@ INNER_PARAMETER_BOUNDS = {
 }
 
 ###############################################################################
-# OPTIMAL SCALING 
+# OPTIMAL SCALING
 
 MEASUREMENT_CATEGORY = 'measurementCategory'
 MEASUREMENT_GROUP = 'measurementGroup'

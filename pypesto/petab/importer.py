@@ -28,7 +28,7 @@ from ..hierarchical.problem import InnerProblem
 from ..hierarchical.optimal_scaling_approach import (
     OptimalScalingAmiciCalculator,
     OptimalScalingProblem,
-    OptimalScalingInnerSolver
+    OptimalScalingInnerSolver,
 )
 from ..objective import AggregatedObjective, AmiciObjective
 from ..objective.amici import AmiciObjectBuilder
@@ -425,7 +425,7 @@ class PetabImporter(AmiciObjectBuilder):
             kwargs['guess_steadystate'] = False
 
         if self._ordinal:
-            #TODO add constants to C
+            # TODO add constants to C
             if 'inner_problem_method' in kwargs:
                 inner_problem_method = kwargs.pop('inner_problem_method')
             else:
@@ -438,8 +438,12 @@ class PetabImporter(AmiciObjectBuilder):
             inner_problem = OptimalScalingProblem.from_petab_amici(
                 self.petab_problem, model, edatas, inner_problem_method
             )
-            inner_solver = OptimalScalingInnerSolver(options=inner_solver_options)
-            calculator = OptimalScalingAmiciCalculator(inner_problem, inner_solver)
+            inner_solver = OptimalScalingInnerSolver(
+                options=inner_solver_options
+            )
+            calculator = OptimalScalingAmiciCalculator(
+                inner_problem, inner_solver
+            )
             amici_reporting = amici.RDataReporting.full
             inner_parameter_ids = calculator.inner_problem.get_x_ids()
             par_ids = [x for x in par_ids if x not in inner_parameter_ids]
