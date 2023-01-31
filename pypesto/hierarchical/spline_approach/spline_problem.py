@@ -30,6 +30,7 @@ except ImportError:
 
 class SplineInnerProblem(InnerProblem):
     """Class of the Spline inner subproblem."""
+
     def __init__(
         self,
         xs: List[SplineInnerParameter],

@@ -31,6 +31,7 @@ except ImportError:
 
 class OptimalScalingProblem(InnerProblem):
     """Class of the Optimal Scaling inner subproblem."""
+
     def __init__(
         self,
         xs: List[OptimalScalingParameter],
@@ -298,7 +299,7 @@ class OptimalScalingProblem(InnerProblem):
 
         d[
             2 * self.groups[gr]['num_datapoints']
-            + 1: 2 * self.groups[gr]['num_datapoints']
+            + 1 : 2 * self.groups[gr]['num_datapoints']
             + self.groups[gr]['num_categories']
         ] = (
             interval_gap + eps
@@ -306,7 +307,7 @@ class OptimalScalingProblem(InnerProblem):
 
         d[
             2 * self.groups[gr]['num_datapoints']
-            + self.groups[gr]['num_categories']:
+            + self.groups[gr]['num_categories'] :
         ] = interval_range
         return d
 
@@ -322,13 +323,13 @@ class OptimalScalingProblem(InnerProblem):
 
         dd_dtheta[
             2 * self.groups[gr]['num_datapoints']
-            + 1: 2 * self.groups[gr]['num_datapoints']
+            + 1 : 2 * self.groups[gr]['num_datapoints']
             + self.groups[gr]['num_categories']
         ] = dinterval_gap_dtheta
 
         dd_dtheta[
             2 * self.groups[gr]['num_datapoints']
-            + self.groups[gr]['num_categories']:
+            + self.groups[gr]['num_categories'] :
         ] = dinterval_range_dtheta
 
         return dd_dtheta

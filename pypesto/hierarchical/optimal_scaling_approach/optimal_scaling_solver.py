@@ -380,7 +380,7 @@ def get_sy_all(xs, sy, par_idx):
 
 
 def get_sim_all(xs, sim: List[np.ndarray]) -> list:
-    """"Get list of all simulations for all xs."""
+    """Get list of all simulations for all xs."""
 
     sim_all = []
     for x in xs:
