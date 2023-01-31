@@ -42,6 +42,7 @@ pyPESTO - Parameter EStimation TOolbox for python
 
    changelog
    authors
+   references
    contact
    license
    logo

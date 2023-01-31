@@ -35,7 +35,11 @@ import pypesto.optimize
 from pypesto import OptimizerResult, Problem
 from pypesto.startpoint import StartpointMethod
 
-from .function_evaluator import FunctionEvaluator
+from .function_evaluator import (
+    FunctionEvaluator,
+    FunctionEvaluatorMP,
+    FunctionEvaluatorMT,
+)
 from .refset import RefSet
 
 logger = logging.getLogger(__name__)
@@ -65,15 +69,16 @@ class ESSOptimizer:
     def __init__(
         self,
         *,
-        max_iter: int,
-        local_n1: int,
-        local_n2: int,
-        dim_refset: int,
-        balance: float,
+        max_iter: int = 10**100,
+        dim_refset: int = None,
+        local_n1: int = 1,
+        local_n2: int = 10,
+        balance: float = 0.5,
         local_optimizer: 'pypesto.optimize.Optimizer' = None,
         max_eval=np.inf,
         n_diverse: int = None,
-        n_threads=1,
+        n_procs=None,
+        n_threads=None,
         max_walltime_s=None,
     ):
         """Construct new ESS instance.
@@ -88,9 +93,9 @@ class ESSOptimizer:
         max_iter:
             Maximum number of ESS iterations.
         local_n1:
-            Minimum number of function evaluations before first local search.
+            Minimum number of iterations before first local search.
         local_n2:
-            Minimum number of function evaluations between consecutive local
+            Minimum number of iterations between consecutive local
             searches. Maximally one local search per performed in each
             iteration.
         local_optimizer:
@@ -109,6 +114,12 @@ class ESSOptimizer:
         balance:
             Quality vs diversity balancing factor [0, 1];
             0 = only quality; 1 = only diversity
+        n_procs:
+            Number of parallel processes to use for parallel function
+            evaluation. Mutually exclusive with `n_threads`.
+        n_threads:
+            Number of parallel threads to use for parallel function evaluation.
+            Mutually exclusive with `n_procs`.
         """
         # Hyperparameters
         self.local_n1: int = local_n1
@@ -120,7 +131,12 @@ class ESSOptimizer:
             'pypesto.optimize.Optimizer'
         ] = local_optimizer
         self.n_diverse: int = n_diverse
-        self.n_threads: int = n_threads
+        if n_procs is not None and n_threads is not None:
+            raise ValueError(
+                "`n_procs` and `n_threads` are mutually exclusive."
+            )
+        self.n_procs: Optional[int] = n_procs
+        self.n_threads: Optional[int] = n_threads
         self.balance: float = balance
         # After how many iterations a stagnated solution is to be replaced by
         #  a random one. Default value taken from [EgeaMar2010]_
@@ -129,6 +145,9 @@ class ESSOptimizer:
         self.local_only_best_sol: bool = False
         self.max_walltime_s = max_walltime_s
         self._initialize()
+        self.logger = logging.getLogger(
+            f"{self.__class__.__name__}-{id(self)}"
+        )
 
     def _initialize(self):
         """(Re-)Initialize."""
@@ -142,9 +161,8 @@ class ESSOptimizer:
         self.local_solutions: List[np.array] = []
         # Index of current iteration
         self.n_iter: int = 0
-        # Number of function evaluations at which the last local search took
-        #  place
-        self.last_local_search_neval: int = 0
+        # ESS iteration at which the last local search took place
+        self.last_local_search_niter: int = 0
         # Whether self.x_best has changed in the current iteration
         self.x_best_has_changed: bool = False
         self.exit_flag: ESSExitFlag = ESSExitFlag.DID_NOT_RUN
@@ -153,8 +171,8 @@ class ESSOptimizer:
 
     def minimize(
         self,
-        problem: Problem,
-        startpoint_method: StartpointMethod,
+        problem: Problem = None,
+        startpoint_method: StartpointMethod = None,
         refset: Optional[RefSet] = None,
     ) -> pypesto.Result:
         """Minimize the given objective.
@@ -171,23 +189,44 @@ class ESSOptimizer:
         self._initialize()
         self.starttime = time.time()
 
+        if (
+            refset is None and (problem is None or startpoint_method is None)
+        ) or (
+            refset is not None
+            and (problem is not None or startpoint_method is not None)
+        ):
+            raise ValueError(
+                "Either `refset` or `problem` and `startpoint_method` "
+                "has to be provided."
+            )
         # generate initial RefSet if not provided
         if refset is None:
-            if self.n_diverse is None:
-                # [EgeaMar2010]_ 2.1
-                self.n_diverse = 10 * problem.dim
+            if self.dim_refset is None:
+                raise ValueError(
+                    "Either refset or dim_refset have to be provided."
+                )
+            # [EgeaMar2010]_ 2.1
+            self.n_diverse = self.n_diverse or 10 * problem.dim
+            if self.n_procs:
+                self.evaluator = FunctionEvaluatorMP(
+                    problem=problem,
+                    startpoint_method=startpoint_method,
+                    n_procs=self.n_procs,
+                )
+            else:
+                self.evaluator = FunctionEvaluatorMT(
+                    problem=problem,
+                    startpoint_method=startpoint_method,
+                    n_threads=self.n_threads or 1,
+                )
 
-            self.evaluator = FunctionEvaluator(
-                problem=problem,
-                startpoint_method=startpoint_method,
-                n_threads=self.n_threads,
-            )
             self.refset = RefSet(dim=self.dim_refset, evaluator=self.evaluator)
             # Initial RefSet generation
             self.refset.initialize_random(n_diverse=self.n_diverse)
             refset = self.refset
         else:
             self.refset = refset
+            problem = refset.evaluator.problem
 
         self.evaluator = refset.evaluator
         self.x_best = np.full(
@@ -381,14 +420,12 @@ class ESSOptimizer:
         See [PenasGon2017]_ Algorithm 2.
         """
         if self.local_only_best_sol and self.x_best_has_changed:
-            logger.debug("Local search only from best point.")
+            self.logger.debug("Local search only from best point.")
             local_search_x0 = self.x_best
             local_search_fx0 = self.fx_best
         # first local search?
-        elif (
-            not self.local_solutions and self.evaluator.n_eval >= self.local_n1
-        ):
-            logger.debug(
+        elif not self.local_solutions and self.n_iter >= self.local_n1:
+            self.logger.debug(
                 "First local search from best point due to "
                 f"local_n1={self.local_n1}."
             )
@@ -396,8 +433,7 @@ class ESSOptimizer:
             local_search_fx0 = self.fx_best
         elif (
             self.local_solutions
-            and self.evaluator.n_eval - self.last_local_search_neval
-            >= self.local_n2
+            and self.n_iter - self.last_local_search_niter >= self.local_n2
         ):
             quality_order = np.argsort(fx_best_children)
             # compute minimal distance between the best children and all local
@@ -435,7 +471,7 @@ class ESSOptimizer:
         self.evaluator.n_eval += optimizer_result.n_fval
         self.evaluator.n_eval_round += optimizer_result.n_fval
 
-        logger.info(
+        self.logger.info(
             f"Local search: {local_search_fx0} -> {optimizer_result.fval} "
             f" took {optimizer_result.time:.3g}s, finished with "
             f"{optimizer_result.exitflag}: {optimizer_result.message}"
@@ -445,7 +481,7 @@ class ESSOptimizer:
         self._maybe_update_global_best(
             optimizer_result.x, optimizer_result.fval
         )
-        self.last_local_search_neval = self.evaluator.n_eval
+        self.last_local_search_niter = self.n_iter
         self.evaluator.reset_round_counter()
 
     def _maybe_update_global_best(self, x, fx):
@@ -511,14 +547,15 @@ class ESSOptimizer:
     def _report_iteration(self):
         """Log the current iteration."""
         if self.n_iter == 0:
-            logger.info("iter | best | nf | refset         |")
+            self.logger.info("iter | best | nf | refset         |")
 
         with np.printoptions(
-            edgeitems=30,
+            edgeitems=5,
+            threshold=8,
             linewidth=100000,
             formatter={"float": lambda x: "%.3g" % x},
         ):
-            logger.info(
+            self.logger.info(
                 f"{self.n_iter:4} | {self.fx_best:+.2E} | "
                 f"{self.evaluator.n_eval} "
                 f"| {self.refset.fx} | {len(self.local_solutions)}"
@@ -527,14 +564,15 @@ class ESSOptimizer:
     def _report_final(self):
         """Log scatter search summary."""
         with np.printoptions(
-            edgeitems=30,
+            edgeitems=5,
+            threshold=10,
             linewidth=100000,
             formatter={"float": lambda x: "%.3g" % x},
         ):
-            logger.info(
-                f"-- {self.exit_flag!r} "
-                f"Stopping after {self.n_iter} iterations. "
+            self.logger.info(
+                f"-- Final ESS fval after {self.n_iter} "
+                f"iterations: {self.fx_best}. "
+                f"Exit flag: {self.exit_flag.name}. "
                 f"Num local solutions: {len(self.local_solutions)}."
             )
-            logger.info(f"Final refset: {np.sort(self.refset.fx)} ")
-        logger.info(f"Best fval {self.fx_best}")
+            self.logger.debug(f"Final refset: {np.sort(self.refset.fx)} ")

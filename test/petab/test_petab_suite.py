@@ -80,9 +80,18 @@ def _execute_case(case):
     output_folder = f'amici_models/model_{case}'
 
     # import and create objective function
-    importer = pypesto.petab.PetabImporter.from_yaml(
-        yaml_file, output_folder=output_folder
-    )
+    if case.startswith('0006'):
+        petab_problem = petab.Problem.from_yaml(yaml_file)
+        petab.flatten_timepoint_specific_output_overrides(petab_problem)
+        importer = pypesto.petab.PetabImporter(
+            petab_problem=petab_problem, output_folder=output_folder
+        )
+        petab_problem = petab.Problem.from_yaml(yaml_file)
+    else:
+        importer = pypesto.petab.PetabImporter.from_yaml(
+            yaml_file, output_folder=output_folder
+        )
+        petab_problem = importer.petab_problem
     model = importer.create_model(generate_sensitivity_code=False)
     obj = importer.create_objective(model=model)
 
@@ -99,9 +108,13 @@ def _execute_case(case):
     simulation_df = amici.petab_objective.rdatas_to_measurement_df(
         rdatas, model, importer.petab_problem.measurement_df
     )
-    petab.check_measurement_df(
-        simulation_df, importer.petab_problem.observable_df
-    )
+
+    if case.startswith('0006'):
+        simulation_df = petab.unflatten_simulation_df(
+            simulation_df, petab_problem
+        )
+
+    petab.check_measurement_df(simulation_df, petab_problem.observable_df)
     simulation_df = simulation_df.rename(
         columns={petab.MEASUREMENT: petab.SIMULATION}
     )

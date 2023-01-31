@@ -6,6 +6,37 @@ Release notes
 ..........
 
 
+0.2.15 (2022-12-21)
+-------------------
+
+* Optimize:
+    * Add an Enhanced Scatter Search optimizer (#941, #972)
+    * Cooperative enhanced scatter search (#954)
+    * Hierarchical optimization (#952, #975 )
+    * Allow scipy optimizer to use fun with integrated grad (#979)
+* Sampling:
+    * Remove fixed parameters from pymc sampling (#951)
+    * emcee sampler: initialize walkers near optimum (#961)
+    * dynesty Sampler (#963)
+    * Fix pymc>=5 aesara/pytensor issues (#983)
+* Visualization:
+    * Multi-result waterfall plot (#966)
+    * Model fit visualization: use problem.objective to simulate, instead of AMICI directly (#969)
+    * Unfix matplotlib version (#977)
+    * Plot measurements in sampling_prediction_trajectories (#976)
+* Objective definition:
+    * Support for jax objectives (#986)
+* General
+    * Fix license_file SetuptoolsDeprecationWarning (#965)
+    * Remove benchmark-models-petab requirement (#964)
+    * Github Actions(#958, #989 )
+    * Fix typehint for problem.x_priors_defs (#962)
+    * Fix tox4-related issues (#981)
+    * Fix AMICI deprecation warning (#956)
+    * Add pypesto.visualize.model_fit to API doc (#991)
+    * Exclude numpy==1.24.0 (#993)
+
+
 0.2.14 (2022-10-25)
 -------------------
 

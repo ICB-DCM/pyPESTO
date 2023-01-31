@@ -427,23 +427,22 @@ def _get_symbolic_formula_from_measurement(
     formula_string = petab_problem.observable_df.loc[
         observable_id, formula_type + 'Formula'
     ]
+    symbolic_formula = sp.sympify(formula_string)
 
     formula_placeholders = get_formula_placeholders(
         formula_string=formula_string,
         observable_id=observable_id,
         override_type=formula_type,
     )
-
-    overrides = measurement[formula_type + 'Parameters']
-    overrides = (
-        overrides.split(PARAMETER_SEPARATOR)
-        if isinstance(overrides, str)
-        else [overrides]
-    )
-
-    subs = dict(zip(formula_placeholders, overrides))
-    symbolic_formula = sp.sympify(formula_string)
-    symbolic_formula = symbolic_formula.subs(subs)
+    if formula_placeholders:
+        overrides = measurement[formula_type + 'Parameters']
+        overrides = (
+            overrides.split(PARAMETER_SEPARATOR)
+            if isinstance(overrides, str)
+            else [overrides]
+        )
+        subs = dict(zip(formula_placeholders, overrides))
+        symbolic_formula = symbolic_formula.subs(subs)
 
     symbolic_formula_inner_parameters = {
         sp.Symbol(inner_parameter_id): inner_parameter_type

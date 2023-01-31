@@ -355,10 +355,10 @@ def ixs_for_measurement_specific_parameters(
                 time_w_reps_ix = time_ix_for_obs_ix[observable_ix]
 
                 observable_overrides = petab.split_parameter_replacement_list(
-                    measurement[OBSERVABLE_PARAMETERS]
+                    measurement.get(OBSERVABLE_PARAMETERS, None)
                 )
                 noise_overrides = petab.split_parameter_replacement_list(
-                    measurement[NOISE_PARAMETERS]
+                    measurement.get(NOISE_PARAMETERS, None)
                 )
 
                 # try to insert if hierarchical parameter

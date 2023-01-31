@@ -72,6 +72,7 @@ class PetabImporter(AmiciObjectBuilder):
         output_folder: str = None,
         model_name: str = None,
         validate_petab: bool = True,
+        validate_petab_hierarchical: bool = True,
         hierarchical: bool = False,
         ordinal: bool = False,
         nonlinear_monotone: bool = False,
@@ -90,6 +91,9 @@ class PetabImporter(AmiciObjectBuilder):
             compiled model python module.
         validate_petab:
             Flag indicating if the PEtab problem shall be validated.
+        validate_petab_hierarchical:
+            Flag indicating if the PEtab problem shall be validated in terms of
+            pyPESTO's hierarchical optimization implementation.
         hierarchical:
             Whether to use hierarchical optimization or not, in case the
             underlying PEtab problem has parameters marked for hierarchical
@@ -104,12 +108,12 @@ class PetabImporter(AmiciObjectBuilder):
         if validate_petab:
             if petab.lint_problem(petab_problem):
                 raise ValueError("Invalid PEtab problem.")
-            if self._hierarchical:
-                from ..hierarchical.petab import (
-                    validate_hierarchical_petab_problem,
-                )
+        if self._hierarchical and validate_petab_hierarchical:
+            from ..hierarchical.petab import (
+                validate_hierarchical_petab_problem,
+            )
 
-                validate_hierarchical_petab_problem(petab_problem)
+            validate_hierarchical_petab_problem(petab_problem)
 
         if output_folder is None:
             output_folder = _find_output_folder_name(
@@ -262,6 +266,10 @@ class PetabImporter(AmiciObjectBuilder):
             module_name=self.model_name, module_path=self.output_folder
         )
         model = module.getModel()
+        amici.petab_import.check_model(
+            amici_model=model,
+            petab_problem=self.petab_problem,
+        )
 
         return model
 
@@ -309,9 +317,7 @@ class PetabImporter(AmiciObjectBuilder):
             shutil.rmtree(self.output_folder)
 
         amici.petab_import.import_model(
-            sbml_model=self.petab_problem.sbml_model,
-            condition_table=self.petab_problem.condition_df,
-            observable_table=self.petab_problem.observable_df,
+            petab_problem=self.petab_problem,
             model_name=self.model_name,
             model_output_dir=self.output_folder,
             **kwargs,

@@ -132,7 +132,10 @@ def waterfall(
                     fvals.append(None)
         else:
             # remove nan or inf values in fvals
-            _, fvals = delete_nan_inf(fvals_raw)
+            # also remove extremely large values. These values result in `inf`
+            # values in the output of `scipy.cluster.hierarchy.linkage` in the
+            # method `pypesto.util.assign_clusters`, which raises errors.
+            _, fvals = delete_nan_inf(fvals=fvals_raw, magnitude_bound=1e100)
             fvals.sort()
 
         # assign colors
@@ -222,6 +225,8 @@ def waterfall_lowlevel(
 
     start_indices = [i for i, fval in enumerate(fvals) if fval is not None]
     fvals = [fvals[i] for i in start_indices]
+    if colors is not None and colors.ndim == 2 and colors.shape[0] > 1:
+        colors = [colors[i] for i in start_indices]
 
     # assign colors
     colors = assign_colors(fvals, colors=colors)
@@ -237,9 +242,9 @@ def waterfall_lowlevel(
     # plot points
     for j in start_indices:
         # parse data for plotting
-        color = colors[j]
-        fval = fvals[j]
-        if j == 0:
+        color = colors[start_indices.index(j)]
+        fval = fvals[start_indices.index(j)]
+        if j == start_indices[0]:
             tmp_legend = legend_text
         else:
             tmp_legend = None

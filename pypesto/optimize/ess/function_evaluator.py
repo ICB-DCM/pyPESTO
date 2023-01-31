@@ -1,5 +1,6 @@
 """Helper for objective evaluation during scatter search."""
 
+import multiprocessing
 import threading
 from concurrent.futures import ThreadPoolExecutor
 from copy import deepcopy
@@ -31,7 +32,6 @@ class FunctionEvaluator:
         self,
         problem: Problem,
         startpoint_method: StartpointMethod,
-        n_threads: int,
     ):
         """Construct.
 
@@ -39,47 +39,11 @@ class FunctionEvaluator:
         ----------
         problem: The problem
         startpoint_method: Method for choosing feasible parameters
-        n_threads: Maximum number of threads to use for parallel objective
-            function evaluations. Requires the objective to be copy-able, and
-            that copies are thread-safe.
         """
         self.problem: Problem = problem
         self.startpoint_method: StartpointMethod = startpoint_method
         self.n_eval: int = 0
         self.n_eval_round: int = 0
-        # Number of threads for parallel objective evaluation
-        self._n_threads: int = n_threads
-
-        self._init_threading()
-
-    def __getstate__(self):
-        return {
-            k: v
-            for k, v in vars(self).items()
-            if k not in {'_thread_local', '_executor'}
-        }
-
-    def __setstate__(self, state):
-        vars(self).update(state)
-        self._init_threading()
-
-    def _init_threading(self):
-        """Initialize multi-threading-related attributes."""
-        # Thread-local storage for copies of objective. Each thread gets its
-        #  own copy of the objective, which may be sufficient to make some
-        #  objectives thread-safe.
-        self._thread_local: threading.local = threading.local()
-        # The thread-pool to be used for parallel objective evaluations
-        self._executor: Optional[ThreadPoolExecutor] = (
-            ThreadPoolExecutor(
-                max_workers=self._n_threads,
-                thread_name_prefix=__name__,
-                initializer=self._initialize_worker,
-                initargs=(self._thread_local,),
-            )
-            if self._n_threads > 1
-            else None
-        )
 
     def single(self, x: np.array) -> float:
         """Evaluate objective at point ``x``.
@@ -104,16 +68,7 @@ class FunctionEvaluator:
         -------
         The objective function values in the same order as the inputs.
         """
-        if self._executor is not None:
-            res = np.fromiter(
-                self._executor.map(
-                    self._evaluate_on_worker,
-                    ((self._thread_local, x) for x in xs),
-                ),
-                dtype=float,
-            )
-        else:
-            res = np.fromiter(map(self.single, xs), dtype=float)
+        res = np.fromiter(map(self.single, xs), dtype=float)
         self.n_eval += len(xs)
         self.n_eval_round += len(xs)
         return res
@@ -152,7 +107,7 @@ class FunctionEvaluator:
         while not np.isfinite(fxs).all():
             retry_indices = np.argwhere(~np.isfinite(fxs)).squeeze()
             xs[retry_indices] = self.startpoint_method(
-                n_starts=len(retry_indices), problem=self.problem
+                n_starts=retry_indices.size, problem=self.problem
             )
             fxs[retry_indices] = self.multiple(xs[retry_indices])
         return xs, fxs
@@ -171,8 +126,127 @@ class FunctionEvaluator:
         # create a copy of the objective to maybe be thread-safe.
         local.objective = deepcopy(self.problem.objective)
 
+
+class FunctionEvaluatorMT(FunctionEvaluator):
+    """FunctionEvaluator with thread-parallel evaluation."""
+
+    def __init__(
+        self,
+        problem: Problem,
+        startpoint_method: StartpointMethod,
+        n_threads: int,
+    ):
+        """Construct.
+
+        Parameters
+        ----------
+        problem: The problem
+        startpoint_method: Method for choosing feasible parameters
+        n_threads: Maximum number of threads to use for parallel objective
+            function evaluations. Requires the objective to be copy-able, and
+            that copies are thread-safe.
+        """
+        super().__init__(problem=problem, startpoint_method=startpoint_method)
+
+        # Number of threads for parallel objective evaluation
+        self._n_threads: int = n_threads
+
+        self._init_threading()
+
+    def __getstate__(self):
+        return {
+            k: v
+            for k, v in vars(self).items()
+            if k not in {'_thread_local', '_executor'}
+        }
+
+    def __setstate__(self, state):
+        vars(self).update(state)
+        self._init_threading()
+
+    def _init_threading(self):
+        """Initialize multi-threading-related attributes."""
+        # Thread-local storage for copies of objective. Each thread gets its
+        #  own copy of the objective, which may be sufficient to make some
+        #  objectives thread-safe.
+        self._thread_local: threading.local = threading.local()
+        # The thread-pool to be used for parallel objective evaluations
+        self._executor: Optional[ThreadPoolExecutor] = (
+            ThreadPoolExecutor(
+                max_workers=self._n_threads,
+                thread_name_prefix=__name__,
+                initializer=self._initialize_worker,
+                initargs=(self._thread_local,),
+            )
+            if self._n_threads > 1
+            else None
+        )
+
     @staticmethod
     def _evaluate_on_worker(local_and_x) -> float:
         """Task handler on worker threads."""
         local, x = local_and_x
         return local.objective(x)
+
+    def multiple(self, xs: Sequence[np.ndarray]) -> np.array:
+        """Evaluate objective at several points.
+
+        Parameters
+        ----------
+        xs: Sequence of parameter vectors at which the objective is to be
+            evaluated.
+
+        Returns
+        -------
+        The objective function values in the same order as the inputs.
+        """
+        if self._executor is not None:
+            res = np.fromiter(
+                self._executor.map(
+                    self._evaluate_on_worker,
+                    ((self._thread_local, x) for x in xs),
+                ),
+                dtype=float,
+            )
+        else:
+            res = np.fromiter(map(self.single, xs), dtype=float)
+        self.n_eval += len(xs)
+        self.n_eval_round += len(xs)
+        return res
+
+
+class FunctionEvaluatorMP(FunctionEvaluator):
+    """FunctionEvaluator with process-parallel evaluation."""
+
+    def __init__(
+        self,
+        problem: Problem,
+        startpoint_method: StartpointMethod,
+        n_procs: int,
+    ):
+        super().__init__(problem=problem, startpoint_method=startpoint_method)
+        self._pool = multiprocessing.Pool(
+            n_procs,
+            # initializer=self._initialize_worker,
+            # initargs=(self._thread_local,),
+        )
+
+    def multiple(self, xs: Sequence[np.ndarray]) -> np.array:
+        """Evaluate objective at several points.
+
+        Parameters
+        ----------
+        xs: Sequence of parameter vectors at which the objective is to be
+            evaluated.
+
+        Returns
+        -------
+        The objective function values in the same order as the inputs.
+        """
+        res = np.fromiter(
+            self._pool.map(self.problem.objective, xs),
+            dtype=float,
+        )
+        self.n_eval += len(xs)
+        self.n_eval_round += len(xs)
+        return res

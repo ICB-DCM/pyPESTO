@@ -3,6 +3,7 @@ This is for testing optimization of the pypesto.Objective.
 """
 
 import itertools as itt
+import logging
 import os
 import re
 import subprocess  # noqa: S404
@@ -438,19 +439,24 @@ def test_history_beats_optimizer():
     )
 
 
-@pytest.mark.parametrize("ess_type", ["ess", "cess"])
+@pytest.mark.parametrize("ess_type", ["ess", "cess", "sacess"])
 @pytest.mark.parametrize("local_optimizer", [None, optimize.FidesOptimizer()])
 @pytest.mark.flaky(reruns=3)
 def test_ess(problem, local_optimizer, ess_type, request):
-    from pypesto.optimize.ess import CESSOptimizer, ESSOptimizer
+    from pypesto.optimize.ess import (
+        CESSOptimizer,
+        ESSOptimizer,
+        SacessOptimizer,
+        get_default_ess_options,
+    )
 
     if ess_type == "ess":
         ess = ESSOptimizer(
             dim_refset=10,
             max_iter=20,
             local_optimizer=local_optimizer,
-            local_n1=100,
-            local_n2=100,
+            local_n1=15,
+            local_n2=5,
             n_threads=2,
             balance=0.5,
         )
@@ -461,46 +467,30 @@ def test_ess(problem, local_optimizer, ess_type, request):
         ):
             # Not pickleable - incompatible with CESS
             pytest.skip()
+        # CESS with 4 processes
+        ess_init_args = get_default_ess_options(num_workers=4, dim=problem.dim)
+        for x in ess_init_args:
+            x['local_optimizer'] = local_optimizer
         ess = CESSOptimizer(
-            # CESS with 4 processes
-            ess_init_args=[
-                {
-                    'dim_refset': max(3, int(0.5 * problem.dim)),
-                    'local_n2': 0,
-                    'balance': 0.5,
-                    'n_diverse': 5 * problem.dim,
-                    'max_iter': 50,
-                    'local_n1': 100,
-                    'local_optimizer': local_optimizer,
-                },
-                {
-                    'dim_refset': 20 * problem.dim,
-                    'local_n2': 100,
-                    'balance': 0.1,
-                    'n_diverse': 20 * problem.dim,
-                    'max_iter': 50,
-                    'local_n1': 100,
-                    'local_optimizer': local_optimizer,
-                },
-                {
-                    'dim_refset': 10 * problem.dim,
-                    'local_n2': 20,
-                    'balance': 0.1,
-                    'n_diverse': 10 * problem.dim,
-                    'max_iter': 50,
-                    'local_n1': 100,
-                },
-                {
-                    'dim_refset': 10 * problem.dim,
-                    'local_n2': 10,
-                    'balance': 0.2,
-                    'n_diverse': 10 * problem.dim,
-                    'max_iter': 50,
-                    'local_n1': 10,
-                },
-            ],
+            ess_init_args=ess_init_args,
             max_iter=5,
             max_walltime_s=10,
+        )
+    elif ess_type == "sacess":
+        if (
+            'cr' in request.node.callspec.id
+            or 'integrated' in request.node.callspec.id
+        ):
+            # Not pickleable - incompatible with CESS
+            pytest.skip()
+        # SACESS with 4 processes
+        ess_init_args = get_default_ess_options(num_workers=4, dim=problem.dim)
+        for x in ess_init_args:
+            x['local_optimizer'] = local_optimizer
+        ess = SacessOptimizer(
+            max_walltime_s=1,
+            sacess_loglevel=logging.DEBUG,
+            ess_init_args=ess_init_args,
         )
     else:
         raise ValueError(f"Unsupported ESS type {ess_type}.")
@@ -522,3 +512,57 @@ def test_ess(problem, local_optimizer, ess_type, request):
         assert res.optimize_result[0].fval < 20
     else:
         raise AssertionError()
+
+
+def test_ess_multiprocess(problem, request):
+    if (
+        'cr' in request.node.callspec.id
+        or 'integrated' in request.node.callspec.id
+    ):
+        # Not pickleable - incompatible with CESS
+        pytest.skip()
+
+    from pypesto.optimize.ess import ESSOptimizer, FunctionEvaluatorMP, RefSet
+
+    ess = ESSOptimizer(
+        max_iter=20,
+        local_optimizer=optimize.FidesOptimizer(),
+    )
+    refset = RefSet(
+        dim=10,
+        evaluator=FunctionEvaluatorMP(
+            problem=problem,
+            startpoint_method=pypesto.startpoint.UniformStartpoints(),
+            n_procs=4,
+        ),
+    )
+    refset.initialize_random(10 * refset.dim)
+    res = ess.minimize(
+        refset=refset,
+    )
+    print("ESS result: ", res.summary())
+
+
+def test_scipy_integrated_grad():
+    integrated = True
+    obj = rosen_for_sensi(max_sensi_order=2, integrated=integrated)['obj']
+    lb = 0 * np.ones((1, 2))
+    ub = 1 * np.ones((1, 2))
+    x_guesses = [[0.5, 0.5]]
+    problem = pypesto.Problem(objective=obj, lb=lb, ub=ub, x_guesses=x_guesses)
+    optimizer = optimize.ScipyOptimizer(options={'maxiter': 10})
+    optimize_options = optimize.OptimizeOptions(allow_failed_starts=False)
+    history_options = pypesto.HistoryOptions(trace_record=True)
+    result = optimize.minimize(
+        problem=problem,
+        optimizer=optimizer,
+        n_starts=1,
+        startpoint_method=pypesto.startpoint.uniform,
+        options=optimize_options,
+        history_options=history_options,
+        progress_bar=False,
+    )
+    assert (
+        len(result.optimize_result.history[0].get_fval_trace())
+        == result.optimize_result.history[0].n_fval
+    )
