@@ -117,7 +117,7 @@ class OptimalScalingProblem(InnerProblem):
         """Construct the inner problem from the `petab_problem`."""
         if method is None:
             method == REDUCED
-        return qualitative_inner_problem_from_petab_problem(
+        return optimal_scaling_inner_problem_from_petab_problem(
             petab_problem, amici_model, edatas, method
         )
 
@@ -378,7 +378,7 @@ class OptimalScalingProblem(InnerProblem):
     # self.hard_constraints[self.hard_constraints['group'].astype(float)==group]
 
 
-def qualitative_inner_problem_from_petab_problem(
+def optimal_scaling_inner_problem_from_petab_problem(
     petab_problem: petab.Problem,
     amici_model: 'amici.Model',
     edatas: List['amici.ExpData'],
@@ -389,7 +389,7 @@ def qualitative_inner_problem_from_petab_problem(
     # hard_constraints=get_hard_constraints(petab_problem)
 
     # inner parameters
-    inner_parameters = qualitative_inner_parameters_from_measurement_df(
+    inner_parameters = optimal_scaling_inner_parameters_from_measurement_df(
         petab_problem.measurement_df, method
     )
 
@@ -418,7 +418,7 @@ def qualitative_inner_problem_from_petab_problem(
     )
 
 
-def qualitative_inner_parameters_from_measurement_df(
+def optimal_scaling_inner_parameters_from_measurement_df(
     df: pd.DataFrame,
     method: str,
 ) -> List[OptimalScalingParameter]:

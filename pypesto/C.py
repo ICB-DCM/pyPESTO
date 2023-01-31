@@ -94,7 +94,7 @@ class InnerParameterType(str, Enum):
     OFFSET = 'offset'
     SCALING = 'scaling'
     SIGMA = 'sigma'
-    OPTIMALSCALING = 'qualitative_scaling'
+    OPTIMALSCALING = 'optimal_scaling'
 
 
 DUMMY_INNER_VALUE = {

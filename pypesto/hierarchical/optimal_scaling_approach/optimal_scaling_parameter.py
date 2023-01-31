@@ -39,7 +39,7 @@ class OptimalScalingParameter(InnerParameter):
         super().__init__(*args, **kwargs)
         if self.inner_parameter_type != InnerParameterType.OPTIMALSCALING:
             raise ValueError(
-                "For the OptimalScalingParameter class, the parameter type has to be qualitative_scaling."
+                "For the OptimalScalingParameter class, the parameter type has to be optimal_scaling."
             )
 
         if group is None:

@@ -50,14 +50,14 @@ inner_solver_options = [
     ],
 ]
 
-example_qualitative_yaml = (
+example_ordinal_yaml = (
     Path(__file__).parent
     / '..'
     / '..'
     / 'doc'
     / 'example'
-    / 'example_qualitative'
-    / 'example_qualitative.yaml'
+    / 'example_ordinal'
+    / 'example_ordinal.yaml'
 )
 
 
@@ -69,7 +69,7 @@ def inner_solver_options(request):
 def test_evaluate_objective(inner_solver_options: List[Dict]):
     """Check that standard / reduced / reparameterized formulations yield the
     same result."""
-    petab_problem = petab.Problem.from_yaml(example_qualitative_yaml)
+    petab_problem = petab.Problem.from_yaml(example_ordinal_yaml)
     vals = []
     for idx, option in enumerate(inner_solver_options):
         problem = create_problem(petab_problem, option)
@@ -80,7 +80,7 @@ def test_evaluate_objective(inner_solver_options: List[Dict]):
 
 def test_optimization(inner_solver_options: List[Dict]):
     """Check that optimizations finishes without error."""
-    petab_problem = petab.Problem.from_yaml(example_qualitative_yaml)
+    petab_problem = petab.Problem.from_yaml(example_ordinal_yaml)
 
     optimizer = pypesto.optimize.ScipyOptimizer(
         method='Nelder-Mead', options={'maxiter': 10}
