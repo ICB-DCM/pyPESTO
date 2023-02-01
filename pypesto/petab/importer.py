@@ -537,9 +537,7 @@ class PetabImporter(AmiciObjectBuilder):
         prior_list = []
 
         if petab.OBJECTIVE_PRIOR_TYPE in self.petab_problem.parameter_df:
-
             for i, x_id in enumerate(self.petab_problem.x_ids):
-
                 prior_type_entry = self.petab_problem.parameter_df.loc[
                     x_id, petab.OBJECTIVE_PRIOR_TYPE
                 ]
@@ -548,7 +546,6 @@ class PetabImporter(AmiciObjectBuilder):
                     isinstance(prior_type_entry, str)
                     and prior_type_entry != petab.PARAMETER_SCALE_UNIFORM
                 ):
-
                     prior_params = [
                         float(param)
                         for param in self.petab_problem.parameter_df.loc[
