@@ -745,6 +745,7 @@ class PetabImporter(AmiciObjectBuilder):
             A dataframe built from the rdatas in the format as in
             self.petab_problem.measurement_df.
         """
+
         # create rdata-like dicts from the prediction result
         @dataclass
         class FakeRData:
