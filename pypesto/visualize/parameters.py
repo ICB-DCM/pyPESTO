@@ -4,6 +4,7 @@ import matplotlib.axes
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
+from matplotlib.colors import Colormap
 from matplotlib.ticker import MaxNLocator
 
 from pypesto.util import delete_nan_inf
@@ -409,6 +410,10 @@ def parameters_correlation_matrix(
     start_indices: Optional[Union[int, Iterable[int]]] = None,
     method: Union[str, Callable] = 'pearson',
     cluster: bool = True,
+    cmap: Union[Colormap, str] = 'bwr',
+    return_table: bool = False,
+    show: Optional[bool] = False,
+    save: Union[bool, str, None] = False,
 ) -> matplotlib.axes.Axes:
     """
     Plot correlation of optimized parameters.
@@ -427,6 +432,15 @@ def parameters_correlation_matrix(
         spearman` or a callable function.
     cluster:
         Whether to cluster the correlation matrix.
+    cmap:
+        Colormap to use for the heatmap. Defaults to 'bwr'.
+    return_table:
+        Whether to return the parameter table additionally for further
+        inspection.
+    show:
+        Whether to show the plot.
+    save:
+        Whether to save the plot. If True, a default filename is generated.
 
     Returns
     -------
@@ -454,8 +468,21 @@ def parameters_correlation_matrix(
     corr_matrix = df.corr(method=method)
     if cluster:
         ax = sns.clustermap(
-            data=corr_matrix, yticklabels=True, vmin=-1, vmax=1
+            data=corr_matrix, yticklabels=True, vmin=-1, vmax=1, cmap=cmap
         )
     else:
-        ax = sns.heatmap(data=corr_matrix, yticklabels=True, vmin=-1, vmax=1)
-    return ax
+        ax = sns.heatmap(
+            data=corr_matrix, yticklabels=True, vmin=-1, vmax=1, cmap=cmap
+        )
+    if isinstance(save, str):
+        plt.savefig(save)
+    elif save:
+        plt.savefig('parameters_correlation_matrix.png')
+    if show:
+        plt.show()
+        if return_table:
+            return df
+    else:
+        if return_table:
+            return ax, df
+        return ax
