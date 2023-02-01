@@ -35,7 +35,6 @@ class OptimalScalingAmiciCalculator:
         inner_solver: OptimalScalingInnerSolver = None,
     ):
         """Initialize the calculator from the given problem."""
-
         self.inner_problem = inner_problem
 
         if inner_solver is None:

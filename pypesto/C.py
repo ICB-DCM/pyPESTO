@@ -127,6 +127,7 @@ INNER_PARAMETER_BOUNDS = {
 ###############################################################################
 # OPTIMAL SCALING
 
+# Should go to PEtab constants at some point
 MEASUREMENT_CATEGORY = 'measurementCategory'
 MEASUREMENT_GROUP = 'measurementGroup'
 MEASUREMENT_TYPE = 'measurementType'

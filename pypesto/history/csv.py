@@ -20,9 +20,9 @@ from ..C import (
     RES,
     SRES,
     TIME,
+    X_INNER_OPT,
     ModeType,
     X,
-    X_INNER_OPT,
 )
 from .base import CountHistoryBase, add_fun_from_res, reduce_result_via_options
 from .options import HistoryOptions

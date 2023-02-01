@@ -36,11 +36,10 @@ class OptimalScalingProblem(InnerProblem):
     def __init__(
         self,
         xs: List[OptimalScalingParameter],
-        # hard_constraints: pd.DataFrame,
         data: List[np.ndarray],
         method: str,
     ):
-        """Construction of the Optimal Scaling inner subproblem.
+        """Construct the Optimal Scaling inner subproblem.
 
         Parameters
         ----------
@@ -52,60 +51,57 @@ class OptimalScalingProblem(InnerProblem):
                 A string representing the method of the Optimal Scaling approach, either 'reduced' or 'standard'.
         """
         super().__init__(xs, data)
-        # self.hard_constraints = hard_constraints
         self.groups = {}
         self.method = method
 
-        for idx, gr in enumerate(
-            self.get_groups_for_xs(InnerParameterType.OPTIMALSCALING)
-        ):
-            self.groups[gr] = {}
-            xs = self.get_xs_for_group(gr)
-            self.groups[gr]['num_categories'] = len(
-                set([x.category for x in xs])
+        for group in self.get_groups_for_xs(InnerParameterType.OPTIMALSCALING):
+            self.groups[group] = {}
+            xs = self.get_xs_for_group(group)
+            self.groups[group]['num_categories'] = len(
+                {x.category for x in xs}
             )
-            self.groups[gr]['num_datapoints'] = np.sum(
+            self.groups[group]['num_datapoints'] = np.sum(
                 [
                     np.sum([np.sum(ixs) for ixs in x.ixs])
-                    for x in self.get_cat_ub_parameters_for_group(gr)
+                    for x in self.get_cat_ub_parameters_for_group(group)
                 ]
             )
 
-            self.groups[gr]['surrogate_data'] = np.zeros(
-                self.groups[gr]['num_datapoints']
+            self.groups[group]['surrogate_data'] = np.zeros(
+                self.groups[group]['num_datapoints']
             )
 
-            self.groups[gr]['num_inner_params'] = (
-                self.groups[gr]['num_datapoints']
-                + 2 * self.groups[gr]['num_categories']
+            self.groups[group]['num_inner_params'] = (
+                self.groups[group]['num_datapoints']
+                + 2 * self.groups[group]['num_categories']
             )
 
-            self.groups[gr]['num_constr_full'] = (
-                2 * self.groups[gr]['num_datapoints']
-                + 2 * self.groups[gr]['num_categories']
+            self.groups[group]['num_constr_full'] = (
+                2 * self.groups[group]['num_datapoints']
+                + 2 * self.groups[group]['num_categories']
             )  # - 1
 
-            self.groups[gr]['lb_indices'] = list(
+            self.groups[group]['lb_indices'] = list(
                 range(
-                    self.groups[gr]['num_datapoints'],
-                    self.groups[gr]['num_datapoints']
-                    + self.groups[gr]['num_categories'],
+                    self.groups[group]['num_datapoints'],
+                    self.groups[group]['num_datapoints']
+                    + self.groups[group]['num_categories'],
                 )
             )
 
-            self.groups[gr]['ub_indices'] = list(
+            self.groups[group]['ub_indices'] = list(
                 range(
-                    self.groups[gr]['num_datapoints']
-                    + self.groups[gr]['num_categories'],
-                    self.groups[gr]['num_inner_params'],
+                    self.groups[group]['num_datapoints']
+                    + self.groups[group]['num_categories'],
+                    self.groups[group]['num_inner_params'],
                 )
             )
 
-            self.groups[gr]['C'] = self.initialize_c(gr)
+            self.groups[group]['C'] = self.initialize_c(group)
 
-            self.groups[gr]['W'] = self.initialize_w(gr)
+            self.groups[group]['W'] = self.initialize_w(group)
 
-            self.groups[gr]['Wdot'] = self.initialize_w(gr)
+            self.groups[group]['Wdot'] = self.initialize_w(group)
 
     @staticmethod
     def from_petab_amici(
@@ -116,7 +112,7 @@ class OptimalScalingProblem(InnerProblem):
     ):
         """Construct the inner problem from the `petab_problem`."""
         if method is None:
-            method == REDUCED
+            method = REDUCED
         return optimal_scaling_inner_problem_from_petab_problem(
             petab_problem, amici_model, edatas, method
         )
@@ -133,8 +129,7 @@ class OptimalScalingProblem(InnerProblem):
     def get_free_xs_for_group(
         self, group: int
     ) -> List[OptimalScalingParameter]:
-        """Get ``OptimalScalingParameter``s that are free and belong to the
-        given group."""
+        """Get ``OptimalScalingParameter``s that are free and belong to the given group."""
         return [
             x
             for x in self.xs.values()
@@ -144,8 +139,7 @@ class OptimalScalingProblem(InnerProblem):
     def get_fixed_xs_for_group(
         self, group: int
     ) -> List[OptimalScalingParameter]:
-        """Get ``OptimalScalingParameter``s that are fixed and belong to the
-        given group."""
+        """Get ``OptimalScalingParameter``s that are fixed and belong to the given group."""
         return [
             x
             for x in self.xs.values()
@@ -155,8 +149,7 @@ class OptimalScalingProblem(InnerProblem):
     def get_cat_ub_parameters_for_group(
         self, group: int
     ) -> List[OptimalScalingParameter]:
-        """Get ``OptimalScalingParameter``s that are category upper boundaries
-        and belong to the given group."""
+        """Get ``OptimalScalingParameter``s that are category upper boundaries and belong to the given group."""
         return [
             x
             for x in self.xs.values()
@@ -166,76 +159,77 @@ class OptimalScalingProblem(InnerProblem):
     def get_cat_lb_parameters_for_group(
         self, group: int
     ) -> List[OptimalScalingParameter]:
-        """Get ``OptimalScalingParameter``s that are category lower boundaries
-        and belong to the given group."""
+        """Get ``OptimalScalingParameter``s that are category lower boundaries and belong to the given group."""
         return [
             x
             for x in self.xs.values()
             if x.group == group and x.inner_parameter_id[:6] == 'cat_lb'
         ]
 
-    def initialize_c(self, gr):
-        """Initialize the constraints matrix C for the group 'gr'."""
+    def initialize_c(self, group):
+        """Initialize the constraints matrix for the group."""
         constr = np.zeros(
             [
-                self.groups[gr]['num_constr_full'],
-                self.groups[gr]['num_inner_params'],
+                self.groups[group]['num_constr_full'],
+                self.groups[group]['num_inner_params'],
             ]
         )
         data_idx = 0
-        for cat_idx, x in enumerate(self.get_cat_ub_parameters_for_group(gr)):
+        for cat_idx, x in enumerate(
+            self.get_cat_ub_parameters_for_group(group)
+        ):
             num_data_in_cat = int(
                 np.sum([np.sum(x.ixs[idx]) for idx in range(len(x.ixs))])
             )
-            for data_in_cat_idx in range(num_data_in_cat):
+            for _data_in_cat_idx in range(num_data_in_cat):
                 # x_lower - y_surr <= 0
                 constr[data_idx, data_idx] = -1
                 constr[
-                    data_idx, cat_idx + self.groups[gr]['num_datapoints']
+                    data_idx, cat_idx + self.groups[group]['num_datapoints']
                 ] = 1
 
                 # y_surr - x_upper <= 0
                 constr[
-                    data_idx + self.groups[gr]['num_datapoints'], data_idx
+                    data_idx + self.groups[group]['num_datapoints'], data_idx
                 ] = 1
                 constr[
-                    data_idx + self.groups[gr]['num_datapoints'],
+                    data_idx + self.groups[group]['num_datapoints'],
                     cat_idx
-                    + self.groups[gr]['num_datapoints']
-                    + self.groups[gr]['num_categories'],
+                    + self.groups[group]['num_datapoints']
+                    + self.groups[group]['num_categories'],
                 ] = -1
                 data_idx += 1
 
                 # x_upper_i - x_lower_{i+1} <= 0
             if cat_idx == 0:  # - 1:
                 constr[
-                    2 * self.groups[gr]['num_datapoints'] + cat_idx,
-                    self.groups[gr]['num_datapoints'] + cat_idx,
+                    2 * self.groups[group]['num_datapoints'] + cat_idx,
+                    self.groups[group]['num_datapoints'] + cat_idx,
                 ] = -1
             else:
                 constr[
-                    2 * self.groups[gr]['num_datapoints'] + cat_idx,
-                    self.groups[gr]['num_datapoints'] + cat_idx,
+                    2 * self.groups[group]['num_datapoints'] + cat_idx,
+                    self.groups[group]['num_datapoints'] + cat_idx,
                 ] = -1  # + 1] = -1
                 constr[
-                    2 * self.groups[gr]['num_datapoints'] + cat_idx,
-                    self.groups[gr]['num_datapoints']
-                    + self.groups[gr]['num_categories']
+                    2 * self.groups[group]['num_datapoints'] + cat_idx,
+                    self.groups[group]['num_datapoints']
+                    + self.groups[group]['num_categories']
                     + cat_idx
                     - 1,
                 ] = 1  # + cat_idx] = 1
 
             constr[
-                2 * self.groups[gr]['num_datapoints']
-                + self.groups[gr]['num_categories']  # - 1
+                2 * self.groups[group]['num_datapoints']
+                + self.groups[group]['num_categories']  # - 1
                 + cat_idx,
-                self.groups[gr]['lb_indices'][cat_idx],
+                self.groups[group]['lb_indices'][cat_idx],
             ] = 1
             constr[
-                2 * self.groups[gr]['num_datapoints']
-                + self.groups[gr]['num_categories']  # - 1
+                2 * self.groups[group]['num_datapoints']
+                + self.groups[group]['num_categories']  # - 1
                 + cat_idx,
-                self.groups[gr]['ub_indices'][cat_idx],
+                self.groups[group]['ub_indices'][cat_idx],
             ] = -1
 
         return constr
@@ -253,7 +247,7 @@ class OptimalScalingProblem(InnerProblem):
         return weights
 
     def get_w(self, gr, y_sim_all):
-        """Returns the weight matrix W of the group 'gr'."""
+        """Return the weight matrix W of the group 'gr'."""
         weights = np.diag(
             np.block(
                 [
@@ -266,8 +260,7 @@ class OptimalScalingProblem(InnerProblem):
         return weights
 
     def get_wdot(self, gr, y_sim_all, sy_all):
-        """Returns the derivative of the weight matrix W of the group 'gr' with
-        respect to a outer parameter."""
+        """Return the derivative of the weight matrix of a group with respect to a outer parameter."""
         weights = np.diag(
             np.block(
                 [
@@ -284,7 +277,7 @@ class OptimalScalingProblem(InnerProblem):
         return weights
 
     def get_w_squared(self, gr, y_sim_all):
-        """Returns the weight matrix W of the group 'gr'."""
+        """Return the weight matrix W of the group 'gr'."""
         weights = np.diag(
             np.block(
                 [
@@ -297,8 +290,7 @@ class OptimalScalingProblem(InnerProblem):
         return weights
 
     def get_wdot_squared(self, gr, y_sim_all, sy_all):
-        """Returns the derivative of the weight matrix W of the group 'gr' with
-        respect to a outer parameter."""
+        """Return the derivative of the weight matrix of the group with respect to a outer parameter."""
         weights = np.diag(
             np.block(
                 [
@@ -316,7 +308,7 @@ class OptimalScalingProblem(InnerProblem):
         return weights
 
     def get_d(self, gr, xs, y_sim_all, eps):
-        """Returns vector d of minimal gaps and ranges."""
+        """Return vector of minimal gaps and ranges."""
         max_simulation = np.nanmax(y_sim_all)
 
         interval_range = max_simulation / (2 * len(xs) + 1)
@@ -337,8 +329,7 @@ class OptimalScalingProblem(InnerProblem):
         return d
 
     def get_dd_dtheta(self, gr, xs, y_sim_all, sy_all):
-        """Returns the derivative of vector d of minimal gaps and ranges with
-        respect to a outer parameter."""
+        """Return the derivative of vector of minimal gaps and ranges with respect to a outer parameter."""
         max_sim_idx = np.argmax(y_sim_all)
         max_sy = sy_all[max_sim_idx]
         dd_dtheta = np.zeros(self.groups[gr]['num_constr_full'])
@@ -360,22 +351,11 @@ class OptimalScalingProblem(InnerProblem):
         return dd_dtheta
 
     def get_inner_parameter_dictionary(self):
-        """Returns a dictionary with inner parameter ids and their values."""
+        """Return a dictionary with inner parameter ids and their values."""
         inner_par_dict = {}
         for x_id, x in self.xs.items():
             inner_par_dict[x_id] = x.value
         return inner_par_dict
-
-    # def get_last_category_for_group(self, gr):
-    #     last_category = 1
-    #     for x in self.xs.values():
-    #         if x.group == gr and x.category > last_category:
-    #             last_category = x.category
-    #     return last_category
-
-    # def get_hard_constraints_for_group(self, group: float):
-    # return
-    # self.hard_constraints[self.hard_constraints['group'].astype(float)==group]
 
 
 def optimal_scaling_inner_problem_from_petab_problem(
@@ -384,10 +364,7 @@ def optimal_scaling_inner_problem_from_petab_problem(
     edatas: List['amici.ExpData'],
     method: str,
 ):
-    """Constructs the inner problem from the `petab_problem`."""
-    # get hard constrained measurements from measurement.df
-    # hard_constraints=get_hard_constraints(petab_problem)
-
+    """Construct the inner problem from the `petab_problem`."""
     # inner parameters
     inner_parameters = optimal_scaling_inner_parameters_from_measurement_df(
         petab_problem.measurement_df, method
@@ -412,7 +389,6 @@ def optimal_scaling_inner_problem_from_petab_problem(
 
     return OptimalScalingProblem(
         inner_parameters,
-        # hard_constraints,
         edatas,
         method,
     )
@@ -422,8 +398,7 @@ def optimal_scaling_inner_parameters_from_measurement_df(
     df: pd.DataFrame,
     method: str,
 ) -> List[OptimalScalingParameter]:
-    """Create list of inner free parameters from PEtab measurement table
-    dependent on the method provided."""
+    """Create list of inner free parameters from PEtab measurement table dependent on the method provided."""
     df = df.reset_index()
 
     estimate = get_estimate_for_method(method)
@@ -461,8 +436,7 @@ def optimal_scaling_inner_parameters_from_measurement_df(
 
 
 def get_estimate_for_method(method: str):
-    """Returns which inner parameters to estimate dependent on the method
-    provided."""
+    """Return which inner parameters to estimate dependent on the method provided."""
     estimate_ub = True
     estimate_lb = False
 
@@ -547,32 +521,10 @@ def get_inner_par_ids_for_measurement(
     measurement: Dict,
     inner_parameters: List[OptimalScalingParameter],
 ):
-    """Returns inner parameter ids of parameters which are related to the
-    measurement."""
+    """Return inner parameter ids of parameters which are related to the measurement."""
     return [
         inner_par.inner_parameter_id
         for inner_par in inner_parameters
         if inner_par.category == measurement[MEASUREMENT_CATEGORY]
         and inner_par.group == measurement[MEASUREMENT_GROUP]
     ]
-
-
-# def get_hard_constraints(petab_problem: petab.Problem):
-#     measurement_df = petab_problem.measurement_df
-#     parameter_df = petab_problem.parameter_df
-#     hard_cons_df=pd.DataFrame(columns=['observableId', 'measurement', 'group', 'category', 'seen']) #ADD CONDITION HERE?
-#     if('IsHardConstraint' in measurement_df):
-#         for i in range(len(measurement_df)):
-#             if(measurement_df.loc[i, "IsHardConstraint"]==True):
-#                 group=float(parameter_df[parameter_df['parameterName']==measurement_df.loc[i, "observableParameters"]]['parameterGroup'])
-#                 category=float(parameter_df[parameter_df['parameterName']==measurement_df.loc[i, "observableParameters"]]['parameterCategory'])
-#                 #print(group)
-#                 seen=str(group) + '&' + str(category)
-#                 if(seen not in hard_cons_df['seen'].values):
-#                     hard_cons_df= hard_cons_df.append({'observableId': measurement_df.loc[i, "observableId"],
-#                                     'measurement': measurement_df.loc[i, "measurement"],
-#                                     'group' : group,
-#                                     'category': category,
-#                                     'seen': str(group) + '&' + str(category)}, ignore_index=True)
-#                 #print(hard_cons_df, sep='\n')
-#     return hard_cons_df

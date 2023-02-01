@@ -49,6 +49,7 @@ Algorithms and features
    example/model_selection.ipynb
    example/julia.ipynb
    example/hierarchical.ipynb
+   example/example_ordinal.ipynb
 
 Application examples
 --------------------
