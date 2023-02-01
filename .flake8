@@ -21,6 +21,8 @@ extend-ignore =
   B027
   # Using f"{foo!r}" instead of f"'{foo}'" (only until April 2023)
   B028
+  # No blank lines allowed after function docstring. (Clashing with black)
+  D202
 
 per-file-ignores =
     # Imported but unused

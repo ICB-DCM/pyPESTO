@@ -50,7 +50,6 @@ class ObjectiveBase(ABC):
         self,
         x_names: Optional[Sequence[str]] = None,
     ):
-
         self._x_names = x_names
 
         self.pre_post_processor = PrePostProcessor()
