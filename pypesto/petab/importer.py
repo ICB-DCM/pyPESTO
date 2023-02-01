@@ -22,7 +22,7 @@ from typing import (
 import numpy as np
 import pandas as pd
 
-from ..C import CONDITION_SEP, MODE_FUN, MODE_RES
+from ..C import CONDITION_SEP
 from ..hierarchical.calculator import HierarchicalAmiciCalculator
 from ..hierarchical.problem import InnerProblem
 from ..objective import AggregatedObjective, AmiciObjective
@@ -125,76 +125,6 @@ class PetabImporter(AmiciObjectBuilder):
             petab_problem=petab_problem,
             output_folder=output_folder,
             model_name=model_name,
-        )
-
-    def check_gradients(
-        self,
-        *args,
-        rtol: float = 1e-2,
-        atol: float = 1e-3,
-        mode: Union[str, List[str]] = None,
-        multi_eps=None,
-        **kwargs,
-    ) -> bool:
-        """
-        Check if gradients match finite differences (FDs).
-
-        Parameters
-        ----------
-        rtol: relative error tolerance
-        atol: absolute error tolerance
-        mode: function values or residuals
-        objAbsoluteTolerance: absolute tolerance in sensitivity calculation
-        objRelativeTolerance: relative tolerance in sensitivity calculation
-        multi_eps: multiple test step width for FDs
-
-        Returns
-        -------
-        match: Whether gradients match FDs (True) or not (False)
-        """
-        par = np.asarray(self.petab_problem.x_nominal_scaled)
-        problem = self.create_problem()
-        objective = problem.objective
-        free_indices = par[problem.x_free_indices]
-        dfs = []
-        modes = []
-
-        if mode is None:
-            modes = [MODE_FUN, MODE_RES]
-        else:
-            modes = [mode]
-
-        if multi_eps is None:
-            multi_eps = np.array([10 ** (-i) for i in range(3, 9)])
-
-        for mode in modes:
-            try:
-                dfs.append(
-                    objective.check_grad_multi_eps(
-                        free_indices,
-                        *args,
-                        **kwargs,
-                        mode=mode,
-                        multi_eps=multi_eps,
-                    )
-                )
-            except (RuntimeError, ValueError):
-                # Might happen in case PEtab problem not well defined or
-                # fails for specified tolerances in forward sensitivities
-                return False
-
-        return all(
-            [
-                any(
-                    [
-                        np.all(
-                            (mode_df.rel_err.values < rtol)
-                            | (mode_df.abs_err.values < atol)
-                        ),
-                    ]
-                )
-                for mode_df in dfs
-            ]
         )
 
     def create_model(
