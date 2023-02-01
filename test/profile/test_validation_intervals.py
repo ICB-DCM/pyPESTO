@@ -14,7 +14,6 @@ import pypesto.profile as profile
 class ValidationIntervalTest(unittest.TestCase):
     @classmethod
     def setUp(cls):
-
         cls.lb = np.array([-1])
         cls.ub = np.array([5])
 
@@ -93,7 +92,6 @@ class ValidationIntervalTest(unittest.TestCase):
         # validation interval is increased
 
         for d_val in [0.1, 1, 10, 100]:
-
             # problem including d_val
             problem_val = pypesto.Problem(
                 pypesto.objective.AggregatedObjective(

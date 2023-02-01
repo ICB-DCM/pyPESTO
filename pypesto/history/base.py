@@ -447,7 +447,6 @@ class CountHistory(CountHistoryBase):
     def get_time_trace(  # noqa: D102
         self, ix: Union[int, Sequence[int], None] = None, trim: bool = False
     ) -> Union[Sequence[float], float]:
-
         raise NotImplementedError()
 
 

@@ -389,7 +389,7 @@ def ix_matrices_from_arrays(
     }
     for id, arr in ixs.items():
         matrices = ix_matrices[id]
-        for (condition_ix, time_ix, observable_ix) in arr:
+        for condition_ix, time_ix, observable_ix in arr:
             matrices[condition_ix][time_ix, observable_ix] = True
     return ix_matrices
 

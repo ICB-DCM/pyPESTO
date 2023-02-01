@@ -158,6 +158,7 @@ def adaptive_step(
     x_new:
         The updated parameter vector, of size `dim_full`.
     """
+
     # restrict step proposal to minimum and maximum step size
     def clip_to_minmax(step_size_proposal):
         return clip(

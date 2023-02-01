@@ -5,7 +5,9 @@ import pandas as pd
 from pypesto.C import InnerParameterType
 
 
-def get_Boehm_JProteomeRes2014_hierarchical_petab() -> 'petab.Problem':  # noqa: F821
+def get_Boehm_JProteomeRes2014_hierarchical_petab() -> (
+    'petab.Problem'  # noqa: F821
+):
     """
     Get Boehm_JProteomeRes2014 problem with scaled/offset observables.
 
@@ -105,7 +107,9 @@ def get_Boehm_JProteomeRes2014_hierarchical_petab() -> 'petab.Problem':  # noqa:
     return petab_problem
 
 
-def get_Boehm_JProteomeRes2014_hierarchical_petab_corrected_bounds() -> 'petab.Problem':  # noqa: F821
+def get_Boehm_JProteomeRes2014_hierarchical_petab_corrected_bounds() -> (
+    'petab.Problem'  # noqa: F821
+):
     """
     See `get_Boehm_JProteomeRes2014_hierarchical_petab`.
 
