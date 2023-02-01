@@ -95,9 +95,7 @@ class PetabImportTest(unittest.TestCase):
         objective.amici_solver.setAbsoluteTolerance(1e-10)
         objective.amici_solver.setRelativeTolerance(1e-12)
 
-        self.assertFalse(
-            petab_problem.check_gradients(multi_eps=[1e-3, 1e-4, 1e-5])
-        )
+        petab_problem.check_grad_multi_eps(multi_eps=[1e-3, 1e-4, 1e-5])
 
 
 def test_plist_mapping():
