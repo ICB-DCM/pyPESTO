@@ -662,9 +662,10 @@ class PyswarmOptimizer(Optimizer):
 
 class CmaesOptimizer(Optimizer):
     """
-    Global optimization using cma-es.
+    Global optimization using covariance matrix adaptation evolutionary search.
 
-    Package homepage: https://pypi.org/project/cma-es/
+    This optimizer interfaces the cma package
+    (https://github.com/CMA-ES/pycma).
     """
 
     def __init__(self, par_sigma0: float = 0.25, options: Dict = None):

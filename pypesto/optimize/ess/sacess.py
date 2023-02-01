@@ -16,7 +16,7 @@ from ...store.read_from_hdf5 import read_result
 from ...store.save_to_hdf5 import write_result
 from ..optimize import Problem
 from .ess import ESSExitFlag, ESSOptimizer
-from .function_evaluator import FunctionEvaluator
+from .function_evaluator import FunctionEvaluatorMP, FunctionEvaluatorMT
 from .refset import RefSet
 
 __all__ = ["SacessOptimizer", "get_default_ess_options"]
@@ -180,6 +180,8 @@ class SacessOptimizer:
                 )
         result.optimize_result.sort()
 
+        result.problem = problem
+
         return result
 
 
@@ -301,7 +303,7 @@ class SacessManager:
                 self._logger.debug(
                     f"Rejected solution from worker {sender_idx} "
                     f"rel change: {abs((self._best_known_fx.value - fx) / self._best_known_fx.value)} "
-                    f" < {self._rejection_threshold} "
+                    f" < {self._rejection_threshold.value} "
                     f"(total rejections: {self._rejections.value})."
                 )
                 # adapt acceptance threshold if too many solutions have been
@@ -375,11 +377,18 @@ class SacessWorker:
             f"#{self._worker_idx} starting " f"({self._ess_kwargs})."
         )
 
-        evaluator = FunctionEvaluator(
-            problem=problem,
-            startpoint_method=startpoint_method,
-            n_threads=self._ess_kwargs.get('n_threads', 1),
-        )
+        if n_procs := self._ess_kwargs.get('n_procs'):
+            evaluator = FunctionEvaluatorMP(
+                problem=problem,
+                startpoint_method=startpoint_method,
+                n_procs=n_procs,
+            )
+        else:
+            evaluator = FunctionEvaluatorMT(
+                problem=problem,
+                startpoint_method=startpoint_method,
+                n_threads=self._ess_kwargs.get('n_threads', 1),
+            )
         self._start_time = time.time()
         # create refset from ndiverse
         refset = RefSet(
@@ -396,18 +405,16 @@ class SacessWorker:
         while self._keep_going():
             # run standard ESS
             ess, cur_ess_results = self._run_ess(
-                problem=problem,
-                startpoint_method=startpoint_method,
                 refset=refset,
             )
 
-            # drop all but the 10 best results
+            # drop all but the 50 best results
             ess_results.optimize_result.append(
                 cur_ess_results.optimize_result,
                 prefix=f"{self._worker_idx}_{i_iter}_",
             )
             ess_results.optimize_result.list = (
-                ess_results.optimize_result.list[:10]
+                ess_results.optimize_result.list[:50]
             )
             write_result(
                 ess_results,
@@ -463,8 +470,6 @@ class SacessWorker:
 
     def _run_ess(
         self,
-        problem: Problem,
-        startpoint_method: StartpointMethod,
         refset: RefSet,
     ) -> Tuple[ESSOptimizer, pypesto.Result]:
         """Run ESS."""
@@ -479,8 +484,6 @@ class SacessWorker:
         ess.logger.setLevel(self._ess_loglevel)
 
         cur_ess_results = ess.minimize(
-            problem=problem,
-            startpoint_method=startpoint_method,
             refset=refset,
         )
         self._logger.debug(
