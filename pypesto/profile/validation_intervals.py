@@ -93,7 +93,6 @@ def validation_profile_significance(
 
     # if result for full data is not provided: minimize
     if result_full_data is None:
-
         x_0 = result_training_data.optimize_result.x
 
         # copy problem, in order to not change/overwrite x_guesses
