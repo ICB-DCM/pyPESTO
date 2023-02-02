@@ -156,15 +156,15 @@ def test_derivatives(prior_type_list, scale):
     x0 = np.array([lin_to_scaled(0.5, scale)] * len(prior_list))
 
     multi_eps = [1e-3]
-    assert test_prior._ObjectiveBase__check_gradients_match_finite_differences(
+    assert test_prior._check_gradients_match_finite_differences(
         x=x0, mode=MODE_FUN, multi_eps=multi_eps
     )
-    assert test_prior._ObjectiveBase__check_gradients_match_finite_differences(
+    assert test_prior._check_gradients_match_finite_differences(
         x=x0, mode=MODE_FUN, order=1, multi_eps=multi_eps
     )
 
     if test_prior.has_res:
-        test_prior._ObjectiveBase__check_gradients_match_finite_differences(
+        test_prior._check_gradients_match_finite_differences(
             x=x0, mode=MODE_RES, multi_eps=multi_eps
         )
 

@@ -598,7 +598,7 @@ class AmiciObjective(ObjectiveBase):
         amici_objective.apply_custom_timepoints()
         return amici_objective
 
-    def __check_gradients_match_finite_differences(
+    def _check_gradients_match_finite_differences(
         self, x: np.ndarray = None, *args, **kwargs
     ) -> bool:
         """Check if gradients match finite differences (FDs).
@@ -615,8 +615,6 @@ class AmiciObjective(ObjectiveBase):
         if x is None and 'petab_problem' in dir(self.amici_object_builder):
             x = self.amici_object_builder.petab_problem.x_nominal_scaled
             x_free = self.amici_object_builder.petab_problem.x_free_indices
-        return (
-            super()._ObjectiveBase__check_gradients_match_finite_differences(
-                x=x, x_free=x_free, *args, **kwargs
-            )
+        return super()._check_gradients_match_finite_differences(
+            x=x, x_free=x_free, *args, **kwargs
         )
