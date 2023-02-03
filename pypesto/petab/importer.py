@@ -23,13 +23,7 @@ from typing import (
 import numpy as np
 import pandas as pd
 
-from ..C import (
-    CONDITION_SEP,
-    INNER_PROBLEM_METHOD,
-    INNER_SOLVER_OPTIONS,
-    MODE_FUN,
-    MODE_RES,
-)
+from ..C import CONDITION_SEP, MODE_FUN, MODE_RES
 from ..hierarchical.calculator import HierarchicalAmiciCalculator
 from ..hierarchical.optimal_scaling import (
     OptimalScalingAmiciCalculator,
@@ -372,6 +366,9 @@ class PetabImporter(AmiciObjectBuilder):
             Whether to force-compile the model if not passed.
         **kwargs:
             Additional arguments passed on to the objective.
+            In case of ordinal measurements, inner_problem_method and
+            inner_solver_options can optionally be passed here,
+            otherwise, defaults will be chosen.
 
         Returns
         -------
@@ -441,8 +438,8 @@ class PetabImporter(AmiciObjectBuilder):
 
         if self._ordinal:
             # TODO add constants to C
-            inner_problem_method = kwargs.pop(INNER_PROBLEM_METHOD, None)
-            inner_solver_options = kwargs.pop(INNER_SOLVER_OPTIONS, None)
+            inner_problem_method = kwargs.pop('inner_problem_method', None)
+            inner_solver_options = kwargs.pop('inner_solver_options', None)
 
             inner_problem = OptimalScalingProblem.from_petab_amici(
                 self.petab_problem, model, edatas, inner_problem_method

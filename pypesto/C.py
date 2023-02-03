@@ -124,9 +124,6 @@ INNER_PARAMETER_BOUNDS = {
     },
 }
 
-INNER_PROBLEM_METHOD = 'inner_problem_method'
-INNER_SOLVER_OPTIONS = 'inner_solver_options'
-
 ###############################################################################
 # OPTIMAL SCALING
 
