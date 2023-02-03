@@ -1,3 +1,4 @@
+"""Definition of an optimal scaling parameter class."""
 from typing import Dict, List, Tuple
 
 import numpy as np
@@ -20,7 +21,7 @@ from ..problem import (
     _get_timepoints_with_replicates,
     ix_matrices_from_arrays,
 )
-from .optimal_scaling_parameter import OptimalScalingParameter
+from .parameter import OptimalScalingParameter
 
 try:
     import amici
@@ -54,15 +55,17 @@ class OptimalScalingProblem(InnerProblem):
         self.groups = {}
         self.method = method
 
-        for group in self.get_groups_for_xs(InnerParameterType.OPTIMALSCALING):
+        for group in self.get_groups_for_xs(
+            InnerParameterType.OPTIMAL_SCALING
+        ):
             self.groups[group] = {}
             xs = self.get_xs_for_group(group)
             self.groups[group]['num_categories'] = len(
                 {x.category for x in xs}
             )
-            self.groups[group]['num_datapoints'] = np.sum(
+            self.groups[group]['num_datapoints'] = sum(
                 [
-                    np.sum([np.sum(ixs) for ixs in x.ixs])
+                    sum([np.sum(ixs) for ixs in x.ixs])
                     for x in self.get_cat_ub_parameters_for_group(group)
                 ]
             )
@@ -108,11 +111,9 @@ class OptimalScalingProblem(InnerProblem):
         petab_problem: petab.Problem,
         amici_model: 'amici.Model',
         edatas: List['amici.ExpData'],
-        method: str = None,
-    ):
+        method: str = REDUCED,
+    ) -> 'OptimalScalingProblem':
         """Construct the inner problem from the `petab_problem`."""
-        if method is None:
-            method = REDUCED
         return optimal_scaling_inner_problem_from_petab_problem(
             petab_problem, amici_model, edatas, method
         )
@@ -166,8 +167,22 @@ class OptimalScalingProblem(InnerProblem):
             if x.group == group and x.inner_parameter_id[:6] == 'cat_lb'
         ]
 
-    def initialize_c(self, group):
-        """Initialize the constraints matrix for the group."""
+    def initialize_c(self, group) -> np.ndarray:
+        """Initialize the constraints matrix for the group.
+
+        The structure of the constraints matrix is the following: Each row C_i of the matrix C
+        represents one optimization constraint as C_i * xi + d(theta, sim) <= 0, where xi is the
+        vector of inner paramters (surrogate data, lower bounds, upper bounds)^T, and d is the
+        vector of minimal category interval ranges and gaps.
+
+        First `self.groups[group]['num_datapoints']` rows constrain the surrogate data to stay
+        larger than lower category bounds.
+        Then another `self.groups[group]['num_datapoints']` rows constrain the surrogate data to
+        stay smaller than upper category bounds.
+        Then `self.groups[group]['num_categories']` rows constrain the ordering of the categories.
+        And lastly, the remaining `self.groups[group]['num_categories']` constrain the lower
+        bound to be smaller than the upper bound for each category.
+        """
         constr = np.zeros(
             [
                 self.groups[group]['num_constr_full'],
@@ -175,20 +190,29 @@ class OptimalScalingProblem(InnerProblem):
             ]
         )
         data_idx = 0
-        for cat_idx, x in enumerate(
+
+        # Iterate over categories.
+        for cat_idx, category in enumerate(
             self.get_cat_ub_parameters_for_group(group)
         ):
             num_data_in_cat = int(
-                np.sum([np.sum(x.ixs[idx]) for idx in range(len(x.ixs))])
+                np.sum(
+                    [
+                        np.sum(category.ixs[idx])
+                        for idx in range(len(category.ixs))
+                    ]
+                )
             )
-            for _data_in_cat_idx in range(num_data_in_cat):
-                # x_lower - y_surr <= 0
+
+            # Constrain the surrogate data of this category to stay within it.
+            for _ in range(num_data_in_cat):
+                # lb - y_surr <= 0
                 constr[data_idx, data_idx] = -1
                 constr[
                     data_idx, cat_idx + self.groups[group]['num_datapoints']
                 ] = 1
 
-                # y_surr - x_upper <= 0
+                # y_surr - ub <= 0
                 constr[
                     data_idx + self.groups[group]['num_datapoints'], data_idx
                 ] = 1
@@ -200,8 +224,8 @@ class OptimalScalingProblem(InnerProblem):
                 ] = -1
                 data_idx += 1
 
-                # x_upper_i - x_lower_{i+1} <= 0
-            if cat_idx == 0:  # - 1:
+            # Constrain the ordering wrt. neighbouring categories, i.e. ub_i - lb_{i+1} <= 0.
+            if cat_idx == 0:
                 constr[
                     2 * self.groups[group]['num_datapoints'] + cat_idx,
                     self.groups[group]['num_datapoints'] + cat_idx,
@@ -210,15 +234,16 @@ class OptimalScalingProblem(InnerProblem):
                 constr[
                     2 * self.groups[group]['num_datapoints'] + cat_idx,
                     self.groups[group]['num_datapoints'] + cat_idx,
-                ] = -1  # + 1] = -1
+                ] = -1
                 constr[
                     2 * self.groups[group]['num_datapoints'] + cat_idx,
                     self.groups[group]['num_datapoints']
                     + self.groups[group]['num_categories']
                     + cat_idx
                     - 1,
-                ] = 1  # + cat_idx] = 1
+                ] = 1
 
+            # Constrain upper bound to be larger than lower bound, i.e. lb_i - ub_i <= 0.
             constr[
                 2 * self.groups[group]['num_datapoints']
                 + self.groups[group]['num_categories']  # - 1
@@ -234,8 +259,8 @@ class OptimalScalingProblem(InnerProblem):
 
         return constr
 
-    def initialize_w(self, gr):
-        """Initialize the weight matrix W for the group 'gr'."""
+    def initialize_w(self, gr) -> np.ndarray:
+        """Initialize the weight matrix for the group."""
         weights = np.diag(
             np.block(
                 [
@@ -246,8 +271,8 @@ class OptimalScalingProblem(InnerProblem):
         )
         return weights
 
-    def get_w(self, gr, y_sim_all):
-        """Return the weight matrix W of the group 'gr'."""
+    def get_w(self, gr, y_sim_all) -> np.ndarray:
+        """Return the weight matrix of the group."""
         weights = np.diag(
             np.block(
                 [
@@ -259,8 +284,8 @@ class OptimalScalingProblem(InnerProblem):
         )
         return weights
 
-    def get_wdot(self, gr, y_sim_all, sy_all):
-        """Return the derivative of the weight matrix of a group with respect to a outer parameter."""
+    def get_wdot(self, gr, y_sim_all, sy_all) -> np.ndarray:
+        """Return the derivative of the weight matrix of a group with respect to an outer parameter."""
         weights = np.diag(
             np.block(
                 [
@@ -276,38 +301,7 @@ class OptimalScalingProblem(InnerProblem):
         )
         return weights
 
-    def get_w_squared(self, gr, y_sim_all):
-        """Return the weight matrix W of the group 'gr'."""
-        weights = np.diag(
-            np.block(
-                [
-                    np.ones(self.groups[gr]['num_datapoints'])
-                    / (np.sum(np.square(y_sim_all)) + 1e-8),
-                    np.zeros(2 * self.groups[gr]['num_categories']),
-                ]
-            )
-        )
-        return weights
-
-    def get_wdot_squared(self, gr, y_sim_all, sy_all):
-        """Return the derivative of the weight matrix of the group with respect to a outer parameter."""
-        weights = np.diag(
-            np.block(
-                [
-                    np.ones(self.groups[gr]['num_datapoints'])
-                    * (
-                        -1
-                        * 2
-                        * sy_all.dot(y_sim_all)
-                        / ((np.sum(np.square(y_sim_all)) + 1e-8) ** 2)
-                    ),
-                    np.zeros(2 * self.groups[gr]['num_categories']),
-                ]
-            )
-        )
-        return weights
-
-    def get_d(self, gr, xs, y_sim_all, eps):
+    def get_d(self, gr, xs, y_sim_all, eps) -> np.ndarray:
         """Return vector of minimal gaps and ranges."""
         max_simulation = np.nanmax(y_sim_all)
 
@@ -328,8 +322,8 @@ class OptimalScalingProblem(InnerProblem):
         ] = interval_range
         return d
 
-    def get_dd_dtheta(self, gr, xs, y_sim_all, sy_all):
-        """Return the derivative of vector of minimal gaps and ranges with respect to a outer parameter."""
+    def get_dd_dtheta(self, gr, xs, y_sim_all, sy_all) -> np.ndarray:
+        """Return the derivative of vector of minimal gaps and ranges with respect to an outer parameter."""
         max_sim_idx = np.argmax(y_sim_all)
         max_sy = sy_all[max_sim_idx]
         dd_dtheta = np.zeros(self.groups[gr]['num_constr_full'])
@@ -350,7 +344,7 @@ class OptimalScalingProblem(InnerProblem):
 
         return dd_dtheta
 
-    def get_inner_parameter_dictionary(self):
+    def get_inner_parameter_dictionary(self) -> Dict:
         """Return a dictionary with inner parameter ids and their values."""
         inner_par_dict = {}
         for x_id, x in self.xs.items():
@@ -405,7 +399,9 @@ def optimal_scaling_inner_parameters_from_measurement_df(
     par_types = ['cat_lb', 'cat_ub']
 
     inner_parameters = []
-    lb, ub = INNER_PARAMETER_BOUNDS[InnerParameterType.OPTIMALSCALING].values()
+    lb, ub = INNER_PARAMETER_BOUNDS[
+        InnerParameterType.OPTIMAL_SCALING
+    ].values()
 
     for par_type, par_estimate in zip(par_types, estimate):
         for _, row in df.iterrows():
@@ -421,7 +417,7 @@ def optimal_scaling_inner_parameters_from_measurement_df(
                     inner_parameters.append(
                         OptimalScalingParameter(
                             inner_parameter_id=par_id,
-                            inner_parameter_type=InnerParameterType.OPTIMALSCALING,
+                            inner_parameter_type=InnerParameterType.OPTIMAL_SCALING,
                             scale=LIN,
                             lb=lb,
                             ub=ub,

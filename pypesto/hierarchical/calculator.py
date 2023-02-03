@@ -26,15 +26,7 @@ from .solver import AnalyticalInnerSolver, InnerSolver
 
 
 class HierarchicalAmiciCalculator(AmiciCalculator):
-    """
-    A calculator that is passed as `calculator` to the pypesto.AmiciObjective.
-
-    While this class cannot be used directly, it has two subclasses
-    which allow to use forward or adjoint sensitivity analysis to
-    solve a `pypesto.HierarchicalProblem` efficiently in an inner loop,
-    while the outer optimization is only concerned with variables not
-    specified as `pypesto.HierarchicalParameter`s.
-    """
+    """A calculator that is passed as `calculator` to the pypesto.AmiciObjective."""
 
     def __init__(
         self,

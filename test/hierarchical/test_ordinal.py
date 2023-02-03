@@ -13,38 +13,17 @@ import pypesto.petab
 inner_solver_options = [
     [
         {
-            'method': 'standard',
-            'reparameterized': False,
-            'intervalConstraints': 'max',
-        },
-        {
-            'method': 'reduced',
-            'reparameterized': False,
-            'intervalConstraints': 'max',
-        },
-        {
-            'method': 'reduced',
-            'reparameterized': True,
-            'intervalConstraints': 'max',
-        },
-    ],
-    [
-        {
-            'method': 'standard',
-            'reparameterized': False,
-            'intervalConstraints': 'max-min',
-        },
-        {
-            'method': 'reduced',
-            'reparameterized': False,
-            'intervalConstraints': 'max-min',
-        },
-        {
-            'method': 'reduced',
-            'reparameterized': True,
-            'intervalConstraints': 'max-min',
-        },
-    ],
+            key: value
+            for key, value in zip(
+                ['method', 'reparameterized', 'intervalConstraints'],
+                [method, reparameterized, intervalConstraints],
+            )
+        }
+        for method, reparameterized in zip(
+            ['standard', 'reduced', 'reduced'], [False, False, True]
+        )
+    ]
+    for intervalConstraints in ['max', 'max-min']
 ]
 
 example_ordinal_yaml = (
@@ -69,7 +48,7 @@ def test_evaluate_objective(inner_solver_options: List[Dict]):
     petab_problem = petab.Problem.from_yaml(example_ordinal_yaml)
     vals = []
     for idx, option in enumerate(inner_solver_options):
-        problem = create_problem(petab_problem, option)
+        problem = _create_problem(petab_problem, option)
         val = problem.objective(np.array([0, 0]))
         vals.append(val)
         assert np.isclose(vals[idx], vals[idx - 1])
@@ -83,15 +62,16 @@ def test_optimization(inner_solver_options: List[Dict]):
         method='Nelder-Mead', options={'maxiter': 10}
     )
     for option in inner_solver_options:
-        problem = create_problem(petab_problem, option)
+        problem = _create_problem(petab_problem, option)
         pypesto.optimize.minimize(
             problem=problem, n_starts=1, optimizer=optimizer
         )
 
 
-def create_problem(
+def _create_problem(
     petab_problem: petab.Problem, option: Dict
 ) -> pypesto.Problem:
+    """Creates the ordinal pyPESTO problem with given options."""
     importer = pypesto.petab.PetabImporter(petab_problem, ordinal=True)
     importer.create_model()
 

@@ -7,6 +7,7 @@ import os
 import shutil
 import sys
 import tempfile
+import warnings
 from dataclasses import dataclass
 from typing import (
     Any,
@@ -22,9 +23,15 @@ from typing import (
 import numpy as np
 import pandas as pd
 
-from ..C import CONDITION_SEP, MODE_FUN, MODE_RES
+from ..C import (
+    CONDITION_SEP,
+    INNER_PROBLEM_METHOD,
+    INNER_SOLVER_OPTIONS,
+    MODE_FUN,
+    MODE_RES,
+)
 from ..hierarchical.calculator import HierarchicalAmiciCalculator
-from ..hierarchical.optimal_scaling_approach import (
+from ..hierarchical.optimal_scaling import (
     OptimalScalingAmiciCalculator,
     OptimalScalingInnerSolver,
     OptimalScalingProblem,
@@ -93,6 +100,10 @@ class PetabImporter(AmiciObjectBuilder):
             underlying PEtab problem has parameters marked for hierarchical
             optimization (non-empty `parameterType` column in the PEtab
             parameter table).
+        ordinal:
+            Whether ordinal data is used in the optimization problem. In this
+            case the Optimal Scaling approach will be used
+            to integrate it in a inner optimization subproblem.
         """
         self.petab_problem = petab_problem
         self._hierarchical = hierarchical
@@ -422,18 +433,16 @@ class PetabImporter(AmiciObjectBuilder):
             par_ids = [x for x in par_ids if x not in inner_parameter_ids]
 
             # FIXME: currently not supported with hierarchical
-            kwargs['guess_steadystate'] = False
+            if 'guess_steadystate' in kwargs and kwargs['guess_steadystate']:
+                warnings.warn(
+                    "`guess_steadystate` not supported with hierarchical optimization. Disabling `guess_steadystate`."
+                )
+                kwargs['guess_steadystate'] = False
 
         if self._ordinal:
             # TODO add constants to C
-            if 'inner_problem_method' in kwargs:
-                inner_problem_method = kwargs.pop('inner_problem_method')
-            else:
-                inner_problem_method = None
-            if 'inner_solver_options' in kwargs:
-                inner_solver_options = kwargs.pop('inner_solver_options')
-            else:
-                inner_solver_options = None
+            inner_problem_method = kwargs.pop(INNER_PROBLEM_METHOD, None)
+            inner_solver_options = kwargs.pop(INNER_SOLVER_OPTIONS, None)
 
             inner_problem = OptimalScalingProblem.from_petab_amici(
                 self.petab_problem, model, edatas, inner_problem_method
@@ -447,7 +456,11 @@ class PetabImporter(AmiciObjectBuilder):
             amici_reporting = amici.RDataReporting.full
 
             # FIXME: currently not supported with hierarchical
-            kwargs['guess_steadystate'] = False
+            if 'guess_steadystate' in kwargs and kwargs['guess_steadystate']:
+                warnings.warn(
+                    "`guess_steadystate` not supported with optimal scaling. Disabling `guess_steadystate`."
+                )
+                kwargs['guess_steadystate'] = False
 
         # create objective
         obj = AmiciObjective(
@@ -661,15 +674,19 @@ class PetabImporter(AmiciObjectBuilder):
             if not isinstance(
                 objective.calculator, HierarchicalAmiciCalculator
             ):
-                raise AssertionError()
+                raise AssertionError(
+                    f"If hierarchical optimization is enabled, the `calculator` attribute of the `objective` has to be {HierarchicalAmiciCalculator} and not {objective.calculator}."
+                )
         if self._ordinal:
             if not isinstance(
                 objective.calculator, OptimalScalingAmiciCalculator
             ):
-                raise AssertionError()
+                raise AssertionError(
+                    f"If the measurements are ordinal, the `calculator` attribute of the `objective` has to be {OptimalScalingAmiciCalculator} and not {objective.calculator}."
+                )
         # In case of hierarchical optimization, parameters estimated in the
         # inner subproblem are removed from the outer problem
-        if self._hierarchical or self._ordinal:
+        if self._hierarchical:
             inner_parameter_ids = (
                 objective.calculator.inner_problem.get_x_ids()
             )
@@ -693,8 +710,8 @@ class PetabImporter(AmiciObjectBuilder):
         if prior is not None:
             if self._hierarchical or self._ordinal:
                 raise NotImplementedError(
-                    "Hierarchical optimization or Optimal scaling"
-                    "optimization in combination with priors"
+                    "Hierarchical or optimal scaling "
+                    "optimization in combination with priors "
                     "is not yet supported."
                 )
             objective = AggregatedObjective([objective, prior])

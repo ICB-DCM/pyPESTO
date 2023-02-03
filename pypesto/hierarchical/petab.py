@@ -66,7 +66,7 @@ def validate_hierarchical_petab_problem(petab_problem: petab.Problem) -> None:
                 InnerParameterType.OFFSET,
                 InnerParameterType.SIGMA,
                 InnerParameterType.SCALING,
-                InnerParameterType.OPTIMALSCALING,
+                InnerParameterType.OPTIMAL_SCALING,
             ]
         )
     ]

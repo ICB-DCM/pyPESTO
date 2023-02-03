@@ -1,3 +1,4 @@
+"""Definition of an optimal scaling solver class."""
 import warnings
 from typing import Dict, List, Tuple
 
@@ -6,8 +7,8 @@ import numpy as np
 from ...C import MAX, MAXMIN, REDUCED, STANDARD, InnerParameterType
 from ...optimize import Optimizer
 from ..solver import InnerSolver
-from .optimal_scaling_parameter import OptimalScalingParameter
-from .optimal_scaling_problem import OptimalScalingProblem
+from .parameter import OptimalScalingParameter
+from .problem import OptimalScalingProblem
 
 try:
     from amici.parameter_mapping import ParameterMapping
@@ -54,7 +55,7 @@ class OptimalScalingInnerSolver(InnerSolver):
         """
         optimal_surrogates = []
         for group in problem.get_groups_for_xs(
-            InnerParameterType.OPTIMALSCALING
+            InnerParameterType.OPTIMAL_SCALING
         ):
             category_upper_bounds = problem.get_cat_ub_parameters_for_group(
                 group
@@ -158,7 +159,7 @@ class OptimalScalingInnerSolver(InnerSolver):
 
             # Iterate over inner parameter groups.
             for idx, group in enumerate(
-                problem.get_groups_for_xs(InnerParameterType.OPTIMALSCALING)
+                problem.get_groups_for_xs(InnerParameterType.OPTIMAL_SCALING)
             ):
                 xs = problem.get_cat_ub_parameters_for_group(group)
                 xi = get_xi(
@@ -472,7 +473,7 @@ def get_inner_optimization_options(
             x0 = np.linspace(0, max_all + interval_range, parameter_length)
     else:
         raise NotImplementedError(
-            f"Unkown optimal scaling 'method' {options['method']}. "
+            f"Unknown optimal scaling 'method' {options['method']}. "
             f"Please use {STANDARD} or {REDUCED}."
         )
 

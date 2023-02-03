@@ -1,3 +1,4 @@
+"""Definition of an optimal scaling calculator class."""
 import copy
 from typing import Dict, List, Sequence, Tuple
 
@@ -9,8 +10,8 @@ from ...objective.amici.amici_util import (
     filter_return_dict,
     init_return_values,
 )
-from .optimal_scaling_problem import OptimalScalingProblem
-from .optimal_scaling_solver import OptimalScalingInnerSolver
+from .problem import OptimalScalingProblem
+from .solver import OptimalScalingInnerSolver
 
 try:
     import amici
@@ -22,11 +23,8 @@ except ImportError:
 class OptimalScalingAmiciCalculator:
     """A calculator is passed as `calculator` to the pypesto.AmiciObjective.
 
-    While this class cannot be used directly, it has two subclasses
-    which allow to use forward or adjoint sensitivity analysis to solve
-    a `pypesto.HierarchicalProblem` efficiently in an inner loop, while
-    the outer optimization is only concerned with variables not
-    specified as `pypesto.HierarchicalParameter`s.
+    The object is called by the pypesto.AmiciObjective in ``call_unprocessed``
+    to calculate the current objective function values and gradient.
     """
 
     def __init__(
@@ -34,7 +32,16 @@ class OptimalScalingAmiciCalculator:
         inner_problem: OptimalScalingProblem,
         inner_solver: OptimalScalingInnerSolver = None,
     ):
-        """Initialize the calculator from the given problem."""
+        """Initialize the calculator from the given problem.
+
+        Parameters
+        ----------
+        inner_problem:
+            The optimal scaling inner problem.
+        inner_solver:
+            A solver to solve ``inner_problem``.
+            Defaults to ``OptimalScalingInnerSolver``.
+        """
         self.inner_problem = inner_problem
 
         if inner_solver is None:
@@ -83,10 +90,19 @@ class OptimalScalingAmiciCalculator:
         fim_for_hess:
             Whether to use the FIM (if available) instead of the Hessian (if
             requested).
+
+        Returns
+        -------
+        inner_result:
+            A dict containing the calculation results: FVAL, GRAD, RDATAS and X_INNER_OPT.
         """
         if mode == MODE_RES:
             raise ValueError(
                 "Optimal scaling method cannot be called with residual mode."
+            )
+        if 2 in sensi_orders:
+            raise ValueError(
+                "Hessian and FIM are not implemented for the optimal scaling calculator."
             )
 
         # get dimension of outer problem

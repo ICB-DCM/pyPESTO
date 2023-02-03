@@ -95,14 +95,14 @@ class InnerParameterType(str, Enum):
     OFFSET = 'offset'
     SCALING = 'scaling'
     SIGMA = 'sigma'
-    OPTIMALSCALING = 'optimal_scaling'
+    OPTIMAL_SCALING = 'optimal_scaling'
 
 
 DUMMY_INNER_VALUE = {
     InnerParameterType.OFFSET: 0.0,
     InnerParameterType.SCALING: 1.0,
     InnerParameterType.SIGMA: 1.0,
-    InnerParameterType.OPTIMALSCALING: 0.0,
+    InnerParameterType.OPTIMAL_SCALING: 0.0,
 }
 
 INNER_PARAMETER_BOUNDS = {
@@ -118,11 +118,14 @@ INNER_PARAMETER_BOUNDS = {
         LOWER_BOUND: 0,
         UPPER_BOUND: float('inf'),
     },
-    InnerParameterType.OPTIMALSCALING: {
+    InnerParameterType.OPTIMAL_SCALING: {
         LOWER_BOUND: -float('inf'),
         UPPER_BOUND: float('inf'),
     },
 }
+
+INNER_PROBLEM_METHOD = 'inner_problem_method'
+INNER_SOLVER_OPTIONS = 'inner_solver_options'
 
 ###############################################################################
 # OPTIMAL SCALING
