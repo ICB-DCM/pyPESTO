@@ -766,7 +766,7 @@ def get_bounds_for_category(
         x_upper = optimal_scaling_bounds[2 * x_category - 1]
     else:
         raise NotImplementedError(
-            f"Unkown optimal scaling 'method' {options['method']}. "
+            f"Unknown optimal scaling 'method' {options['method']}. "
             f"Please use {REDUCED} or {STANDARD}."
         )
     return x_upper, x_lower

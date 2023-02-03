@@ -434,7 +434,7 @@ class PetabImporter(AmiciObjectBuilder):
                 warnings.warn(
                     "`guess_steadystate` not supported with hierarchical optimization. Disabling `guess_steadystate`."
                 )
-                kwargs['guess_steadystate'] = False
+            kwargs['guess_steadystate'] = False
 
         if self._ordinal:
             # TODO add constants to C
@@ -457,7 +457,7 @@ class PetabImporter(AmiciObjectBuilder):
                 warnings.warn(
                     "`guess_steadystate` not supported with optimal scaling. Disabling `guess_steadystate`."
                 )
-                kwargs['guess_steadystate'] = False
+            kwargs['guess_steadystate'] = False
 
         # create objective
         obj = AmiciObjective(
