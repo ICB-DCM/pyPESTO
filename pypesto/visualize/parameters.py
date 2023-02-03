@@ -412,8 +412,6 @@ def parameters_correlation_matrix(
     cluster: bool = True,
     cmap: Union[Colormap, str] = 'bwr',
     return_table: bool = False,
-    show: Optional[bool] = False,
-    save: Union[bool, str, None] = False,
 ) -> matplotlib.axes.Axes:
     """
     Plot correlation of optimized parameters.
@@ -437,10 +435,6 @@ def parameters_correlation_matrix(
     return_table:
         Whether to return the parameter table additionally for further
         inspection.
-    show:
-        Whether to show the plot.
-    save:
-        Whether to save the plot. If True, a default filename is generated.
 
     Returns
     -------
@@ -474,15 +468,6 @@ def parameters_correlation_matrix(
         ax = sns.heatmap(
             data=corr_matrix, yticklabels=True, vmin=-1, vmax=1, cmap=cmap
         )
-    if isinstance(save, str):
-        plt.savefig(save)
-    elif save:
-        plt.savefig('parameters_correlation_matrix.png')
-    if show:
-        plt.show()
-        if return_table:
-            return df
-    else:
-        if return_table:
-            return ax, df
-        return ax
+    if return_table:
+        return ax, df
+    return ax
