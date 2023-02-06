@@ -48,9 +48,25 @@ class OptimalScalingInnerSolver(InnerSolver):
                 'minGap',
             ]
         ):
-            raise ValueError(
-                f"Some inner solver options missing. Please specific inner solver {[option for option in ['method', 'reparameterized', 'intervalConstraints', 'minGap'] if option not in self.options]} as well"
+            default_options = self.get_default_options()
+            missing_options = [
+                option
+                for option in [
+                    'method',
+                    'reparameterized',
+                    'intervalConstraints',
+                    'minGap',
+                ]
+                if option not in self.options
+            ]
+
+            warnings.warn(
+                f"Adding default inner solver options for {missing_options}."
             )
+
+            for option in missing_options:
+                self.options[option] = default_options[option]
+
         elif self.options['method'] not in [STANDARD, REDUCED]:
             raise ValueError(
                 f"Inner solver method cannot be {self.options['method']}. Please enter either {STANDARD} or {REDUCED}"
