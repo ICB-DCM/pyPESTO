@@ -5,7 +5,6 @@ from typing import Dict, List, Tuple
 import numpy as np
 
 from ...C import MAX, MAXMIN, REDUCED, STANDARD, InnerParameterType
-from ...optimize import Optimizer
 from ..solver import InnerSolver
 from .parameter import OptimalScalingParameter
 from .problem import OptimalScalingProblem
@@ -19,13 +18,56 @@ except ImportError:
 class OptimalScalingInnerSolver(InnerSolver):
     """Solve the inner subproblem of the optimal scaling approach for ordinal data."""
 
-    def __init__(self, optimizer: Optimizer = None, options: Dict = None):
-        """Construct the optimal scaling inner solver."""
-        self.optimizer = optimizer
+    def __init__(self, options: Dict = None):
+        """Construct the optimal scaling inner solver.
+
+        Parameters
+        ----------
+        options:
+            Inner solver options. If not given will take default ones.
+            Needs to contain method ('standard' or 'reduced'), reparameterized (Boolean),
+            intervalConstraints ('max' or 'maxmin'), and minGap (float).
+        """
         self.options = options
-        if self.options is None:
-            self.options = OptimalScalingInnerSolver.get_default_options()
-        if (
+
+        if not self.options:
+            self.options = self.get_default_options()
+        else:
+            self.validate_options()
+
+        self.x_guesses = None
+
+    def validate_options(self):
+        """Validate the current options dictionary."""
+        if not all(
+            option in self.options
+            for option in [
+                'method',
+                'reparameterized',
+                'intervalConstraints',
+                'minGap',
+            ]
+        ):
+            raise ValueError(
+                f"Some inner solver options missing. Please specific inner solver {[option for option in ['method', 'reparameterized', 'intervalConstraints', 'minGap'] if option not in self.options]} as well"
+            )
+        elif self.options['method'] not in [STANDARD, REDUCED]:
+            raise ValueError(
+                f"Inner solver method cannot be {self.options['method']}. Please enter either {STANDARD} or {REDUCED}"
+            )
+        elif type(self.options['reparameterized']) is not bool:
+            raise ValueError(
+                f"Inner solver option 'reparameterized' has to be boolean, not {type(self.options['reparameterized'])}."
+            )
+        elif self.options['intervalConstraints'] not in [MAX, MAXMIN]:
+            raise ValueError(
+                f"Inner solver method cannot be {self.options['intervalConstraints']}. Please enter either {MAX} or {MAXMIN}"
+            )
+        elif type(self.options['minGap']) is not float:
+            raise ValueError(
+                f"Inner solver option 'reparameterized' has to be a float, not {type(self.options['minGap'])}."
+            )
+        elif (
             self.options['method'] == STANDARD
             and self.options['reparameterized']
         ):
@@ -33,7 +75,6 @@ class OptimalScalingInnerSolver(InnerSolver):
                 'Combining standard approach with '
                 'reparameterization not implemented.'
             )
-        self.x_guesses = None
 
     def solve(
         self,
@@ -146,77 +187,86 @@ class OptimalScalingInnerSolver(InnerSolver):
         -------
         Filled in snllh dictionary with objective function gradients.
         """
-        condition_map_sim_var = parameter_mapping[0].map_sim_var
-        # TODO: Doesn't work with condition specific parameters
+        already_calculated = set()
 
-        # Iterate over outer optimization parameters.
-        for par_sim, par_opt in condition_map_sim_var.items():
-            if not isinstance(par_opt, str):
-                continue
-            par_sim_idx = par_sim_ids.index(par_sim)
-            par_opt_idx = par_opt_ids.index(par_opt)
-            grad = 0.0
-
-            # Iterate over inner parameter groups.
-            for idx, group in enumerate(
-                problem.get_groups_for_xs(InnerParameterType.OPTIMAL_SCALING)
-            ):
-                xs = problem.get_cat_ub_parameters_for_group(group)
-                xi = get_xi(
-                    group, problem, x_inner_opt[idx], sim, self.options
-                )
-                sim_all = get_sim_all(xs, sim)
-                sy_all = get_sy_all(xs, sy, par_sim_idx)
-
-                problem.groups[group]['W'] = problem.get_w(group, sim_all)
-                problem.groups[group]['Wdot'] = problem.get_wdot(
-                    group, sim_all, sy_all
-                )
-
-                residual = np.block(
-                    [
-                        xi[: problem.groups[group]['num_datapoints']]
-                        - sim_all,
-                        np.zeros(
-                            problem.groups[group]['num_inner_params']
-                            - problem.groups[group]['num_datapoints']
-                        ),
-                    ]
-                )
-                dy_dtheta = get_dy_dtheta(group, problem, sy_all)
-
-                df_dtheta = residual.dot(
-                    residual.dot(problem.groups[group]['Wdot'])
-                    - 2 * problem.groups[group]['W'].dot(dy_dtheta)
-                )
-                df_dxi = 2 * problem.groups[group]['W'].dot(residual)
-
-                if df_dxi.any():
-                    dd_dtheta = problem.get_dd_dtheta(
-                        group, xs, sim_all, sy_all
-                    )
-                    d = problem.get_d(
-                        group, xs, sim_all, self.options['minGap']
-                    )
-
-                    mu = get_mu(group, problem, residual)
-
-                    dxi_dtheta = calculate_dxi_dtheta(
-                        group,
-                        problem,
-                        xi,
-                        mu,
-                        dy_dtheta,
-                        residual,
-                        d,
-                        dd_dtheta,
-                    )
-
-                    grad += dxi_dtheta.dot(df_dxi) + df_dtheta
+        for condition_map_sim_var in [
+            cond_par_map.map_sim_var for cond_par_map in parameter_mapping
+        ]:
+            # Iterate over outer optimization parameters.
+            for par_sim, par_opt in condition_map_sim_var.items():
+                if (
+                    not isinstance(par_opt, str)
+                    or par_opt in already_calculated
+                ):
+                    continue
                 else:
-                    grad += df_dtheta
+                    already_calculated.add(par_opt)
+                par_sim_idx = par_sim_ids.index(par_sim)
+                par_opt_idx = par_opt_ids.index(par_opt)
+                grad = 0.0
 
-            snllh[par_opt_idx] = grad
+                # Iterate over inner parameter groups.
+                for idx, group in enumerate(
+                    problem.get_groups_for_xs(
+                        InnerParameterType.OPTIMAL_SCALING
+                    )
+                ):
+                    xs = problem.get_cat_ub_parameters_for_group(group)
+                    xi = get_xi(
+                        group, problem, x_inner_opt[idx], sim, self.options
+                    )
+                    sim_all = get_sim_all(xs, sim)
+                    sy_all = get_sy_all(xs, sy, par_sim_idx)
+
+                    problem.groups[group]['W'] = problem.get_w(group, sim_all)
+                    problem.groups[group]['Wdot'] = problem.get_wdot(
+                        group, sim_all, sy_all
+                    )
+
+                    residual = np.block(
+                        [
+                            xi[: problem.groups[group]['num_datapoints']]
+                            - sim_all,
+                            np.zeros(
+                                problem.groups[group]['num_inner_params']
+                                - problem.groups[group]['num_datapoints']
+                            ),
+                        ]
+                    )
+                    dy_dtheta = get_dy_dtheta(group, problem, sy_all)
+
+                    df_dtheta = residual.dot(
+                        residual.dot(problem.groups[group]['Wdot'])
+                        - 2 * problem.groups[group]['W'].dot(dy_dtheta)
+                    )
+                    df_dxi = 2 * problem.groups[group]['W'].dot(residual)
+
+                    if df_dxi.any():
+                        dd_dtheta = problem.get_dd_dtheta(
+                            group, xs, sim_all, sy_all
+                        )
+                        d = problem.get_d(
+                            group, xs, sim_all, self.options['minGap']
+                        )
+
+                        mu = get_mu(group, problem, residual)
+
+                        dxi_dtheta = calculate_dxi_dtheta(
+                            group,
+                            problem,
+                            xi,
+                            mu,
+                            dy_dtheta,
+                            residual,
+                            d,
+                            dd_dtheta,
+                        )
+
+                        grad += dxi_dtheta.dot(df_dxi) + df_dtheta
+                    else:
+                        grad += df_dtheta
+
+                snllh[par_opt_idx] = grad
         return snllh
 
     @staticmethod

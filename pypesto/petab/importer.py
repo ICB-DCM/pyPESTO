@@ -71,6 +71,7 @@ class PetabImporter(AmiciObjectBuilder):
         validate_petab_hierarchical: bool = True,
         hierarchical: bool = False,
         ordinal: bool = False,
+        inner_solver_options: Dict = None,
     ):
         """Initialize importer.
 
@@ -98,10 +99,16 @@ class PetabImporter(AmiciObjectBuilder):
             Whether ordinal data is used in the optimization problem. In this
             case the Optimal Scaling approach will be used
             to integrate it in a inner optimization subproblem.
+        inner_solver_options:
+            Options of the inner solver, passed to constructor of inner solvers
+            like :func:`pypesto.hiearchical.optimal_scaling.OptimalScalingInnerSolver`
         """
         self.petab_problem = petab_problem
         self._hierarchical = hierarchical
         self._ordinal = ordinal
+        self._inner_solver_options = inner_solver_options
+        if self._inner_solver_options is None:
+            self._inner_solver_options = {}
 
         if validate_petab:
             if petab.lint_problem(petab_problem):
@@ -366,9 +373,9 @@ class PetabImporter(AmiciObjectBuilder):
             Whether to force-compile the model if not passed.
         **kwargs:
             Additional arguments passed on to the objective.
-            In case of ordinal measurements, inner_problem_method and
-            inner_solver_options can optionally be passed here,
-            otherwise, defaults will be chosen.
+            In case of ordinal measurements, inner_solver_options
+            can optionally be passed here, otherwise,
+            defaults will be chosen.
 
         Returns
         -------
@@ -437,9 +444,12 @@ class PetabImporter(AmiciObjectBuilder):
             kwargs['guess_steadystate'] = False
 
         if self._ordinal:
-            # TODO add constants to C
-            inner_problem_method = kwargs.pop('inner_problem_method', None)
-            inner_solver_options = kwargs.pop('inner_solver_options', None)
+            inner_solver_options = kwargs.pop(
+                'inner_solver_options', self._inner_solver_options
+            )
+            inner_problem_method = inner_solver_options.get(
+                'method', self._inner_solver_options.get('method')
+            )
 
             inner_problem = OptimalScalingProblem.from_petab_amici(
                 self.petab_problem, model, edatas, inner_problem_method

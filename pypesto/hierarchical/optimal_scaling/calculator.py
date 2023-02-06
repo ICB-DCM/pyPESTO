@@ -23,7 +23,7 @@ except ImportError:
 class OptimalScalingAmiciCalculator:
     """A calculator is passed as `calculator` to the pypesto.AmiciObjective.
 
-    The object is called by the pypesto.AmiciObjective in ``call_unprocessed``
+    The object is called by :func:`pypesto.AmiciObjective.call_unprocessed`
     to calculate the current objective function values and gradient.
     """
 
