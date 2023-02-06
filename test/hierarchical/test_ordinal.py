@@ -76,7 +76,6 @@ def _create_problem(
     importer.create_model()
 
     objective = importer.create_objective(
-        inner_problem_method=option['method'],
         inner_solver_options=option,
     )
     problem = importer.create_problem(objective)
