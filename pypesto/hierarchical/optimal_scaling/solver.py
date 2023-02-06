@@ -612,12 +612,12 @@ def get_sim_all(inner_parameters, sim: List[np.ndarray]) -> list:
 
 
 def get_surrogate_all(
-    inner_parameters,
-    optimal_scaling_bounds,
-    sim,
-    interval_range,
-    interval_gap,
-    options,
+    inner_parameters: List[OptimalScalingParameter],
+    optimal_scaling_bounds: List,
+    sim: List[np.ndarray],
+    interval_range: float,
+    interval_gap: float,
+    options: Dict,
 ):
     """Return surrogate data, lower and upper category bounds."""
     if options['reparameterized']:

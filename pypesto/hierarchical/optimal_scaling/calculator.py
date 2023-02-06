@@ -47,6 +47,13 @@ class OptimalScalingAmiciCalculator:
         if inner_solver is None:
             inner_solver = OptimalScalingInnerSolver()
         self.inner_solver = inner_solver
+        if (
+            self.inner_problem.method
+            is not self.inner_solver.options['method']
+        ):
+            raise ValueError(
+                f"The inner problem method {self.inner_problem.method} and the inner solver method {self.inner_solver.options['method']} have to coincide."
+            )
 
     def initialize(self):
         """Initialize."""
