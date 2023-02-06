@@ -111,9 +111,12 @@ class OptimalScalingProblem(InnerProblem):
         petab_problem: petab.Problem,
         amici_model: 'amici.Model',
         edatas: List['amici.ExpData'],
-        method: str = REDUCED,
+        method: str = None,
     ) -> 'OptimalScalingProblem':
         """Construct the inner problem from the `petab_problem`."""
+        if not method:
+            method = REDUCED
+
         return optimal_scaling_inner_problem_from_petab_problem(
             petab_problem, amici_model, edatas, method
         )
