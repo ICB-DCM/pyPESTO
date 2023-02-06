@@ -289,7 +289,7 @@ def _time_trajectory_model_without_states(
         amici.plotting.plotObservableTrajectories(
             rdata=rdata,
             observable_indices=observable_indices,
-            ax=axes[i_cond],
+            ax=axes[i_cond] if len(rdatas) > 1 else axes,
             model=model,
         )
     return axes
