@@ -444,12 +444,12 @@ class PetabImporter(AmiciObjectBuilder):
             kwargs['guess_steadystate'] = False
 
         if self._ordinal:
-            inner_solver_options = kwargs.pop(
-                'inner_solver_options', self._inner_solver_options
-            )
-            inner_problem_method = inner_solver_options.get(
-                'method', self._inner_solver_options.get('method')
-            )
+            inner_solver_options = kwargs.pop('inner_solver_options', {})
+            inner_solver_options = {
+                **self._inner_solver_options,
+                **inner_solver_options,
+            }
+            inner_problem_method = inner_solver_options.get('method', None)
 
             inner_problem = OptimalScalingProblem.from_petab_amici(
                 self.petab_problem, model, edatas, inner_problem_method

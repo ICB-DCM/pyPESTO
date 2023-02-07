@@ -39,33 +39,25 @@ class OptimalScalingInnerSolver(InnerSolver):
 
     def validate_options(self):
         """Validate the current options dictionary."""
-        if not all(
-            option in self.options
+        missing_options = [
+            option
             for option in [
                 'method',
                 'reparameterized',
                 'intervalConstraints',
                 'minGap',
             ]
-        ):
-            default_options = self.get_default_options()
-            missing_options = [
-                option
-                for option in [
-                    'method',
-                    'reparameterized',
-                    'intervalConstraints',
-                    'minGap',
-                ]
-                if option not in self.options
-            ]
+            if option not in self.options
+        ]
+        if not all(missing_options):
+            self.options = {
+                **self.get_default_options(),
+                **self.options,
+            }
 
             warnings.warn(
                 f"Adding default inner solver options for {missing_options}."
             )
-
-            for option in missing_options:
-                self.options[option] = default_options[option]
 
         elif self.options['method'] not in [STANDARD, REDUCED]:
             raise ValueError(
