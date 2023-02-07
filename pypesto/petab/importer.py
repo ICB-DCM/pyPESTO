@@ -23,7 +23,7 @@ from typing import (
 import numpy as np
 import pandas as pd
 
-from ..C import CONDITION_SEP, MODE_FUN, MODE_RES
+from ..C import CONDITION_SEP, MODE_FUN, MODE_RES, SPLINE_RATIO
 from ..hierarchical.calculator import HierarchicalAmiciCalculator
 from ..hierarchical.optimal_scaling import (
     OptimalScalingAmiciCalculator,
@@ -477,25 +477,20 @@ class PetabImporter(AmiciObjectBuilder):
             kwargs['guess_steadystate'] = False
 
         if self._nonlinear_monotone:
-            # TODO add constants to C
-            if 'inner_problem_options' in kwargs:
-                inner_problem_options = kwargs.pop('inner_problem_options')
-            else:
-                inner_problem_options = None
-
-            if 'inner_solver_options' in kwargs:
-                inner_solver_options = kwargs.pop('inner_solver_options')
-            else:
-                inner_solver_options = None
+            inner_solver_options = kwargs.pop('inner_solver_options', None)
+            inner_solver_options = (
+                inner_solver_options
+                if inner_solver_options is not None
+                else self._inner_solver_options
+            )
+            spline_ratio = inner_solver_options.get(SPLINE_RATIO, None)
 
             inner_problem = SplineInnerProblem.from_petab_amici(
-                self.petab_problem, model, edatas, inner_problem_options
+                self.petab_problem, model, edatas, spline_ratio
             )
             inner_solver = SplineInnerSolver(options=inner_solver_options)
             calculator = SplineAmiciCalculator(inner_problem, inner_solver)
             amici_reporting = amici.RDataReporting.full
-            inner_parameter_ids = calculator.inner_problem.get_x_ids()
-            par_ids = [x for x in par_ids if x not in inner_parameter_ids]
             # FIXME: currently not supported with hierarchical
             kwargs['guess_steadystate'] = False
 

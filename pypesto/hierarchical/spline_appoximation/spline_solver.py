@@ -4,7 +4,12 @@ from typing import Dict, List
 import numpy as np
 from scipy.optimize import least_squares, minimize
 
-from ...C import MIN_SIM_RANGE, InnerParameterType
+from ...C import (
+    INNER_OPTIMIZER,
+    MIN_SIM_RANGE,
+    USE_MINIMAL_DIFFERENCE,
+    InnerParameterType,
+)
 from ...optimize import Optimizer
 from ..solver import InnerSolver
 from .spline_parameter import SplineInnerParameter
@@ -31,18 +36,22 @@ class SplineInnerSolver(InnerSolver):
     def __init__(self, optimizer: Optimizer = None, options: Dict = None):
         self.optimizer = optimizer
         self.options = options
-        if self.options is None:
-            self.options = SplineInnerSolver.get_default_options()
-        else:
-            self.validate_options()
+        if not self.options:
+            self.options = {}
+
+        self.options = {
+            **self.get_default_options(),
+            **self.options,
+        }
+        self.validate_options()
 
     def validate_options(self):
         """Validate the current options dictionary."""
-        if self.options['inner_optimizer'] not in ['SLSQP', 'LS', 'fides']:
+        if self.options[INNER_OPTIMIZER] not in ['SLSQP', 'LS', 'fides']:
             raise ValueError(
-                f"Chosen Inner optimizer {self.options['inner_optimizer']} is not implemented. Choose from SLSQP, LS or fides"
+                f"Chosen Inner optimizer {self.options[INNER_OPTIMIZER]} is not implemented. Choose from SLSQP, LS or fides"
             )
-        if self.options['use_minimal_difference'] not in [True, False]:
+        if self.options[USE_MINIMAL_DIFFERENCE] not in [True, False]:
             raise ValueError('Minimal difference must be a boolean value.')
 
     def solve(
@@ -245,7 +254,7 @@ class SplineInnerSolver(InnerSolver):
                         max_meas=max_meas,
                         N=N,
                         use_minimal_difference=self.options[
-                            'use_minimal_difference'
+                            USE_MINIMAL_DIFFERENCE
                         ],
                     )
 
@@ -339,7 +348,7 @@ class SplineInnerSolver(InnerSolver):
             min_meas=min_meas,
             max_meas=max_meas,
             N=n_spline_pars,
-            use_minimal_difference=self.options['use_minimal_difference'],
+            use_minimal_difference=self.options[USE_MINIMAL_DIFFERENCE],
         )
 
         inner_options = self._get_inner_optimization_options(
@@ -374,14 +383,14 @@ class SplineInnerSolver(InnerSolver):
                 n=intervals_per_sim,
             )
 
-        if self.options['inner_optimizer'] == 'SLSQP':
+        if self.options[INNER_OPTIMIZER] == 'SLSQP':
             results = minimize(
                 objective_function, jac=inner_gradient, **inner_options
             )
             results["x"][0] = results["x"][0].clip(min=0)
             results["x"][1:] = results["x"][1:].clip(min=min_diff)
 
-        elif self.options['inner_optimizer'] == 'LS':
+        elif self.options[INNER_OPTIMIZER] == 'LS':
             results = least_squares(
                 objective_function,
                 inner_options['x0'],
@@ -389,7 +398,7 @@ class SplineInnerSolver(InnerSolver):
                 bounds=(0, np.inf),
             )
 
-        elif self.options['inner_optimizer'] == 'fides':
+        elif self.options[INNER_OPTIMIZER] == 'fides':
             import fides
 
             def inner_hessian(x):

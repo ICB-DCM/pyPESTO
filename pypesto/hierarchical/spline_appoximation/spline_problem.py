@@ -48,11 +48,14 @@ class SplineInnerProblem(InnerProblem):
         self,
         xs: List[SplineInnerParameter],
         data: List[np.ndarray],
-        spline_ratio: float = 1 / 2,
+        spline_ratio: float = None,
     ):
         """Construct."""
         super().__init__(xs, data)
+        if spline_ratio is None:
+            spline_ratio = 1 / 2
         self.spline_ratio = spline_ratio
+
         if spline_ratio <= 0:
             raise ValueError("Spline ratio must be a positive float.")
         self._initialize_groups()
@@ -105,8 +108,6 @@ class SplineInnerProblem(InnerProblem):
         groups = [x.group for x in self.get_xs_for_type(inner_parameter_type)]
         return list(set(groups))
 
-    # FIXME does this break if there's inner parameters (xs) of different sorts, i.e.
-    # not only optimalscaling? Think so...
     def get_xs_for_group(self, group: int) -> List[SplineInnerParameter]:
         """Get ``SplineParameter``s that belong to the given group."""
         return [x for x in self.xs.values() if x.group == group]
@@ -157,10 +158,13 @@ def spline_inner_problem_from_petab_problem(
     petab_problem: petab.Problem,
     amici_model: 'amici.Model',
     edatas: List['amici.ExpData'],
-    options: Dict,
+    spline_ratio: float = None,
 ):
     """Construct the inner problem from the `petab_problem`."""
-    spline_ratio = options[SPLINE_RATIO]
+    if spline_ratio is None:
+        spline_ratio = 1 / 2
+    elif spline_ratio <= 0:
+        raise ValueError("Spline ratio must be a positive float.")
 
     # inner parameters
     inner_parameters = spline_inner_parameters_from_measurement_df(
