@@ -1,4 +1,3 @@
-"""Definition of an optimal scaling calculator class."""
 import copy
 from typing import Dict, List, Sequence, Tuple
 
@@ -10,8 +9,8 @@ from ...objective.amici.amici_util import (
     filter_return_dict,
     init_return_values,
 )
-from .problem import OptimalScalingProblem
-from .solver import OptimalScalingInnerSolver
+from .spline_problem import SplineInnerProblem
+from .spline_solver import SplineInnerSolver
 
 try:
     import amici
@@ -20,7 +19,7 @@ except ImportError:
     pass
 
 
-class OptimalScalingAmiciCalculator:
+class SplineAmiciCalculator:
     """A calculator is passed as `calculator` to the pypesto.AmiciObjective.
 
     The object is called by :func:`pypesto.AmiciObjective.call_unprocessed`
@@ -29,8 +28,8 @@ class OptimalScalingAmiciCalculator:
 
     def __init__(
         self,
-        inner_problem: OptimalScalingProblem,
-        inner_solver: OptimalScalingInnerSolver = None,
+        inner_problem: SplineInnerProblem,
+        inner_solver: SplineInnerSolver = None,
     ):
         """Initialize the calculator from the given problem.
 
@@ -40,20 +39,17 @@ class OptimalScalingAmiciCalculator:
             The optimal scaling inner problem.
         inner_solver:
             A solver to solve ``inner_problem``.
-            Defaults to ``OptimalScalingInnerSolver``.
+            Defaults to ``SplineInnerSolver``.
         """
         self.inner_problem = inner_problem
 
         if inner_solver is None:
-            inner_solver = OptimalScalingInnerSolver()
+            inner_solver = SplineInnerSolver()
         self.inner_solver = inner_solver
-        if (
-            self.inner_problem.method
-            is not self.inner_solver.options['method']
-        ):
-            raise ValueError(
-                f"The inner problem method {self.inner_problem.method} and the inner solver method {self.inner_solver.options['method']} have to coincide."
-            )
+
+    def initialize(self):
+        """Initialize."""
+        self.inner_solver.initialize()
 
     def __call__(
         self,
@@ -101,11 +97,11 @@ class OptimalScalingAmiciCalculator:
         """
         if mode == MODE_RES:
             raise ValueError(
-                "Optimal scaling method cannot be called with residual mode."
+                "Spline approximation cannot be called with residual mode."
             )
         if 2 in sensi_orders:
             raise ValueError(
-                "Hessian and FIM are not implemented for the optimal scaling calculator."
+                "Hessian and FIM are not implemented for the spline calculator."
             )
 
         # get dimension of outer problem
@@ -162,9 +158,11 @@ class OptimalScalingAmiciCalculator:
             return filter_return_dict(inner_result)
 
         sim = [rdata['y'] for rdata in inner_rdatas]
+        # clip simulation?
+        sigma = [rdata['sigmay'] for rdata in inner_rdatas]
 
         # compute optimal inner parameters
-        x_inner_opt = self.inner_solver.solve(self.inner_problem, sim)
+        x_inner_opt = self.inner_solver.solve(self.inner_problem, sim, sigma)
         inner_result[FVAL] = self.inner_solver.calculate_obj_function(
             x_inner_opt
         )
@@ -179,10 +177,10 @@ class OptimalScalingAmiciCalculator:
                 problem=self.inner_problem,
                 x_inner_opt=x_inner_opt,
                 sim=sim,
+                sigma=sigma,
                 sy=sy,
                 parameter_mapping=parameter_mapping,
                 par_opt_ids=x_ids,
-                par_sim_ids=amici_model.getParameterIds(),
                 snllh=snllh,
             )
 

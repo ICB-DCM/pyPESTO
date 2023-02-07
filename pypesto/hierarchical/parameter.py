@@ -74,6 +74,7 @@ class InnerParameter:
             InnerParameterType.OFFSET,
             InnerParameterType.SIGMA,
             InnerParameterType.SCALING,
+            InnerParameterType.SPLINE,
         ):
             raise ValueError(
                 f"Unsupported inner parameter type `{inner_parameter_type}`."
@@ -98,6 +99,9 @@ class InnerParameter:
 
     def check_bounds(self):
         """Check bounds."""
+        # Category bounds can be arbitrary.
+        if self.inner_parameter_type == InnerParameterType.OPTIMALSCALING:
+            return
 
         expected_lb = INNER_PARAMETER_BOUNDS[self.inner_parameter_type][
             LOWER_BOUND

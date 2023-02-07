@@ -31,6 +31,11 @@ from ..hierarchical.optimal_scaling import (
     OptimalScalingProblem,
 )
 from ..hierarchical.problem import InnerProblem
+from ..hierarchical.spline_appoximation import (
+    SplineAmiciCalculator,
+    SplineInnerProblem,
+    SplineInnerSolver,
+)
 from ..objective import AggregatedObjective, AmiciObjective
 from ..objective.amici import AmiciObjectBuilder
 from ..objective.priors import NegLogParameterPriors, get_parameter_prior_dict
@@ -72,6 +77,7 @@ class PetabImporter(AmiciObjectBuilder):
         hierarchical: bool = False,
         ordinal: bool = False,
         inner_solver_options: Dict = None,
+        nonlinear_monotone: bool = False,
     ):
         """Initialize importer.
 
@@ -109,6 +115,7 @@ class PetabImporter(AmiciObjectBuilder):
         self._inner_solver_options = inner_solver_options
         if self._inner_solver_options is None:
             self._inner_solver_options = {}
+        self._nonlinear_monotone = nonlinear_monotone
 
         if validate_petab:
             if petab.lint_problem(petab_problem):
@@ -467,6 +474,29 @@ class PetabImporter(AmiciObjectBuilder):
                 warnings.warn(
                     "`guess_steadystate` not supported with optimal scaling. Disabling `guess_steadystate`."
                 )
+            kwargs['guess_steadystate'] = False
+
+        if self._nonlinear_monotone:
+            # TODO add constants to C
+            if 'inner_problem_options' in kwargs:
+                inner_problem_options = kwargs.pop('inner_problem_options')
+            else:
+                inner_problem_options = None
+
+            if 'inner_solver_options' in kwargs:
+                inner_solver_options = kwargs.pop('inner_solver_options')
+            else:
+                inner_solver_options = None
+
+            inner_problem = SplineInnerProblem.from_petab_amici(
+                self.petab_problem, model, edatas, inner_problem_options
+            )
+            inner_solver = SplineInnerSolver(options=inner_solver_options)
+            calculator = SplineAmiciCalculator(inner_problem, inner_solver)
+            amici_reporting = amici.RDataReporting.full
+            inner_parameter_ids = calculator.inner_problem.get_x_ids()
+            par_ids = [x for x in par_ids if x not in inner_parameter_ids]
+            # FIXME: currently not supported with hierarchical
             kwargs['guess_steadystate'] = False
 
         # create objective

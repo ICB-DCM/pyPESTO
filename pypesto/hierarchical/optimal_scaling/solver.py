@@ -16,50 +16,39 @@ except ImportError:
 
 
 class OptimalScalingInnerSolver(InnerSolver):
-    """Solve the inner subproblem of the optimal scaling approach for ordinal data."""
+    """Solve the inner subproblem of the optimal scaling approach for ordinal data.
+
+    Options
+    -------
+    method:
+        The method to use for the inner optimization problem.
+        Can be 'standard' or 'reduced'.
+    reparameterized:
+        Whether to use reparameterized optimization.
+    intervalConstraints:
+        The type of interval constraints to use.
+        Can be 'max' or 'maxmin'.
+    minGap:
+        The minimum gap between two consecutive categories.
+    """
 
     def __init__(self, options: Dict = None):
-        """Construct the optimal scaling inner solver.
-
-        Parameters
-        ----------
-        options:
-            Inner solver options. If not given will take default ones.
-            Needs to contain method ('standard' or 'reduced'), reparameterized (Boolean),
-            intervalConstraints ('max' or 'maxmin'), and minGap (float).
-        """
+        """Construct."""
         self.options = options
 
         if not self.options:
-            self.options = self.get_default_options()
-        else:
-            self.validate_options()
+            self.options = {}
+        self.options = {
+            **self.get_default_options(),
+            **self.options,
+        }
+        self.validate_options()
 
         self.x_guesses = None
 
     def validate_options(self):
         """Validate the current options dictionary."""
-        missing_options = [
-            option
-            for option in [
-                'method',
-                'reparameterized',
-                'intervalConstraints',
-                'minGap',
-            ]
-            if option not in self.options
-        ]
-        if not all(missing_options):
-            self.options = {
-                **self.get_default_options(),
-                **self.options,
-            }
-
-            warnings.warn(
-                f"Adding default inner solver options for {missing_options}."
-            )
-
-        elif self.options['method'] not in [STANDARD, REDUCED]:
+        if self.options['method'] not in [STANDARD, REDUCED]:
             raise ValueError(
                 f"Inner solver method cannot be {self.options['method']}. Please enter either {STANDARD} or {REDUCED}"
             )
@@ -134,7 +123,7 @@ class OptimalScalingInnerSolver(InnerSolver):
         """Calculate the inner objective function value.
 
         Calculates the inner objective function value from a list of inner
-        optimization results returned from compute_optimal_surrogate_data.
+        optimization results returned from `compute_optimal_surrogate_data`.
 
         Parameters
         ----------
@@ -170,7 +159,7 @@ class OptimalScalingInnerSolver(InnerSolver):
         """Calculate gradients of the inner objective function.
 
         Calculates gradients of the objective function with respect to outer
-        parameters.
+        (dynamical) parameters.
 
         Parameters
         ----------
@@ -868,7 +857,7 @@ def save_inner_parameters_to_inner_problem(
     x_inner_opt: Dict,
     sim: List[np.ndarray],
     options: Dict,
-):
+) -> None:
     """Save inner parameter values to the inner subproblem."""
     interval_range, interval_gap = compute_interval_constraints(
         category_upper_bounds, sim, options
