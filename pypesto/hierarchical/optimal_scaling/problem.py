@@ -32,7 +32,20 @@ except ImportError:
 
 
 class OptimalScalingProblem(InnerProblem):
-    """Class of the Optimal Scaling inner subproblem."""
+    """Inner optimization problem for optimal scaling.
+
+    Attributes
+    ----------
+    xs:
+        Mapping of (inner) parameter ID to ``InnerParameters``.
+    data:
+        Measurement data. One matrix (`num_timepoints` x `num_observables`)
+        per simulation condition. Missing observations as NaN.
+    groups:
+        A dictionary of the groups of the subproblem.
+    method:
+        A string representing the method of the Optimal Scaling approach, either 'reduced' or 'standard'.
+    """
 
     def __init__(
         self,
@@ -40,20 +53,16 @@ class OptimalScalingProblem(InnerProblem):
         data: List[np.ndarray],
         method: str,
     ):
-        """Construct the Optimal Scaling inner subproblem.
-
-        Parameters
-        ----------
-            xs:
-                List of `OptimalScalingParameter`s of the subproblem.
-            data:
-                The data of the problem.
-            method:
-                A string representing the method of the Optimal Scaling approach, either 'reduced' or 'standard'.
-        """
+        """Construct."""
         super().__init__(xs, data)
         self.groups = {}
         self.method = method
+
+        self._initialize_groups()
+
+    def _initialize_groups(self) -> None:
+        """Initialize the groups of the subproblem."""
+        self.groups = {}
 
         for group in self.get_groups_for_xs(
             InnerParameterType.OPTIMAL_SCALING
@@ -434,7 +443,7 @@ def optimal_scaling_inner_parameters_from_measurement_df(
     return inner_parameters
 
 
-def get_estimate_for_method(method: str):
+def get_estimate_for_method(method: str) -> Tuple[bool, bool]:
     """Return which inner parameters to estimate dependent on the method provided."""
     estimate_ub = True
     estimate_lb = False
@@ -454,7 +463,7 @@ def qualitatiave_ixs_for_measurement_specific_parameters(
 
     Returns
     -------
-    A dictionary mapping parameter ID to a List of
+    A dictionary mapping parameter ID to a list of
     `(condition index, time index, observable index)` tuples in which this
     output parameter is used. For each condition, the time index refers to
     a sorted list of non-unique time points for which there are measurements.

@@ -55,10 +55,6 @@ class OptimalScalingAmiciCalculator:
                 f"The inner problem method {self.inner_problem.method} and the inner solver method {self.inner_solver.options['method']} have to coincide."
             )
 
-    def initialize(self):
-        """Initialize."""
-        self.inner_solver.initialize()
-
     def __call__(
         self,
         x_dct: Dict,
