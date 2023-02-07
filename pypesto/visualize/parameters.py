@@ -207,10 +207,10 @@ def parameter_hist(
     parameter_index = result.problem.x_names.index(parameter_name)
     parameter_values = [x[parameter_index] for x in xs]
 
-    ax.hist(parameter_values, color=color, bins=bins)
+    ax.hist(parameter_values, color=color, bins=bins, label=parameter_name)
     ax.set_xlabel(parameter_name)
     ax.set_ylabel("counts")
-    ax.set_title(f"Parameter {parameter_name}")
+    ax.set_title(f"{parameter_name}")
 
     return ax
 
