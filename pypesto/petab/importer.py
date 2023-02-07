@@ -100,7 +100,7 @@ class PetabImporter(AmiciObjectBuilder):
             case the Optimal Scaling approach will be used
             to integrate it in a inner optimization subproblem.
         inner_solver_options:
-            Options of the inner solver, passed to constructors of inner solver.
+            Options of the inner solver, passed to constructors of inner solvers.
             If not provided, default options will be used.
         """
         self.petab_problem = petab_problem
@@ -374,7 +374,7 @@ class PetabImporter(AmiciObjectBuilder):
         **kwargs:
             Additional arguments passed on to the objective.
             In case of ordinal measurements, inner_solver_options can optionally be passed here,
-            otherwise, those given to the importer constructor (or inner solver default) will be chosen.
+            otherwise, those given to the importer constructor (or inner solver defaults) will be chosen.
 
         Returns
         -------
