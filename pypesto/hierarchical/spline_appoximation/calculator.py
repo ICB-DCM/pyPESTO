@@ -9,8 +9,8 @@ from ...objective.amici.amici_util import (
     filter_return_dict,
     init_return_values,
 )
-from .spline_problem import SplineInnerProblem
-from .spline_solver import SplineInnerSolver
+from .problem import SplineInnerProblem
+from .solver import SplineInnerSolver
 
 try:
     import amici
@@ -181,6 +181,7 @@ class SplineAmiciCalculator:
                 sy=sy,
                 parameter_mapping=parameter_mapping,
                 par_opt_ids=x_ids,
+                par_sim_ids=amici_model.getParameterIds(),
                 snllh=snllh,
             )
 

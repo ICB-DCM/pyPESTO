@@ -18,7 +18,7 @@ from ..problem import (
     _get_timepoints_with_replicates,
     ix_matrices_from_arrays,
 )
-from .spline_parameter import SplineInnerParameter
+from .parameter import SplineInnerParameter
 
 try:
     import amici

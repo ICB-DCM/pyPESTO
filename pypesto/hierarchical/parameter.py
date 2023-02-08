@@ -100,7 +100,7 @@ class InnerParameter:
     def check_bounds(self):
         """Check bounds."""
         # Category bounds can be arbitrary.
-        if self.inner_parameter_type == InnerParameterType.OPTIMALSCALING:
+        if self.inner_parameter_type == InnerParameterType.OPTIMAL_SCALING:
             return
 
         expected_lb = INNER_PARAMETER_BOUNDS[self.inner_parameter_type][

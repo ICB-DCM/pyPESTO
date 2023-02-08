@@ -12,8 +12,8 @@ from ...C import (
 )
 from ...optimize import Optimizer
 from ..solver import InnerSolver
-from .spline_parameter import SplineInnerParameter
-from .spline_problem import SplineInnerProblem
+from .parameter import SplineInnerParameter
+from .problem import SplineInnerProblem
 
 try:
     from amici.parameter_mapping import ParameterMapping
