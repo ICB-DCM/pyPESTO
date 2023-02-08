@@ -1,3 +1,4 @@
+import logging
 from typing import Callable, Iterable, List, Optional, Sequence, Tuple, Union
 
 import matplotlib.axes
@@ -18,6 +19,8 @@ from .misc import (
     process_start_indices,
 )
 from .reference_points import ReferencePoint, create_references
+
+logger = logging.getLogger(__name__)
 
 
 def parameters(
@@ -470,4 +473,92 @@ def parameters_correlation_matrix(
         )
     if return_table:
         return ax, df
+    return ax
+
+
+def parameter_scatter(
+    result: Result,
+    parameter_indices: Union[str, Sequence[int]] = 'free_only',
+    start_indices: Optional[Union[int, Iterable[int]]] = None,
+    diag_kind: str = "kde",
+    suptitle: str = None,
+    size: Tuple[float, float] = None,
+    show_bounds: bool = False,
+):
+    """
+    Plot scatter of optimized parameters.
+
+    Parameters
+    ----------
+    result:
+        Optimization result obtained by 'optimize.py'
+    parameter_indices:
+        List of integers specifying the parameters to be considered.
+    start_indices:
+        List of integers specifying the multistarts to be plotted or
+        int specifying up to which start index should be plotted
+    diag_kind:
+        Visualization mode for marginal densities {‘auto’, ‘hist’, ‘kde’, None}
+    suptitle:
+        Title of the plot.
+    size:
+        Size of the plot.
+    show_bounds:
+        Whether to show the parameter bounds.
+
+    Returns
+    -------
+    ax:
+        The plot axis.
+    """
+    import seaborn as sns
+
+    start_indices = process_start_indices(
+        start_indices=start_indices, result=result
+    )
+    parameter_indices = process_parameter_indices(
+        parameter_indices=parameter_indices, result=result
+    )
+    # remove all start indices, that encounter an inf value at the start
+    # resulting in optimize_result[start]["x"] being None
+    start_indices_finite = start_indices[
+        [
+            result.optimize_result[i_start]['x'] is not None
+            for i_start in start_indices
+        ]
+    ]
+    # compare start_indices with start_indices_finite and log a warning
+    if not np.all(start_indices == start_indices_finite):
+        logger.warning(
+            'Some start indices were removed due to inf values at the start.'
+        )
+    # put all parameters into a dataframe, where columns are parameters
+    parameters = [
+        result.optimize_result[i_start]['x'][parameter_indices]
+        for i_start in start_indices
+    ]
+    x_labels = [
+        result.problem.x_names[parameter_index]
+        for parameter_index in parameter_indices
+    ]
+    df = pd.DataFrame(parameters, columns=x_labels)
+
+    sns.set(style="ticks")
+
+    ax = sns.pairplot(
+        df,
+        diag_kind=diag_kind,
+    )
+
+    if size is not None:
+        ax.fig.set_size_inches(size)
+    if suptitle:
+        ax.fig.suptitle(suptitle)
+    if show_bounds:
+        # set bounds of plot to parameter bounds. Only use diagonal as
+        # sns.PairGrid has sharex,sharey = True by default.
+        for i_axis, axis in enumerate(np.diag(ax.axes)):
+            axis.set_xlim(result.problem.lb[i_axis], result.problem.ub[i_axis])
+            axis.set_ylim(result.problem.lb[i_axis], result.problem.ub[i_axis])
+
     return ax
