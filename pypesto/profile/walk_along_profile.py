@@ -63,14 +63,20 @@ def walk_along_profile(
 
         # check if the next profile point needs to be computed
         if par_direction == -1:
-            stop_profile = (x_now[i_par] <= problem.lb_full[[i_par]]) or (
-                current_profile.ratio_path[-1] < options.ratio_min
-            )
+            if options.whole_path:
+                stop_profile = x_now[i_par] <= problem.lb_full[[i_par]]
+            else:
+                stop_profile = (x_now[i_par] <= problem.lb_full[[i_par]]) or (
+                    current_profile.ratio_path[-1] < options.ratio_min
+                )
 
         if par_direction == 1:
-            stop_profile = (x_now[i_par] >= problem.ub_full[[i_par]]) or (
-                current_profile.ratio_path[-1] < options.ratio_min
-            )
+            if options.whole_path:
+                stop_profile = x_now[i_par] >= problem.ub_full[[i_par]]
+            else:
+                stop_profile = (x_now[i_par] >= problem.ub_full[[i_par]]) or (
+                    current_profile.ratio_path[-1] < options.ratio_min
+                )
 
         if stop_profile:
             break
