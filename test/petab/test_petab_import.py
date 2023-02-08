@@ -21,7 +21,6 @@ from .test_sbml_conversion import ATOL, RTOL
 class PetabImportTest(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-
         cls.petab_problems = []
         cls.petab_importers = []
         cls.obj_edatas = []

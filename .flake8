@@ -17,6 +17,12 @@ extend-ignore =
   D105
   # Missing docstring in __init__
   D107
+  # Empty method in abstract base class
+  B027
+  # Using f"{foo!r}" instead of f"'{foo}'" (only until April 2023)
+  B028
+  # No blank lines allowed after function docstring. (Clashing with black)
+  D202
 
 per-file-ignores =
     # Imported but unused
@@ -30,3 +36,6 @@ per-file-ignores =
     pypesto/C.py:D400,D205,D107
     # Module level import not at top of file
     test/julia/test_pyjulia.py:E402
+
+exclude =
+    amici_models

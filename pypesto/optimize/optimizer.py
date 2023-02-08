@@ -4,6 +4,7 @@ import abc
 import logging
 import re
 import time
+import warnings
 from typing import TYPE_CHECKING, Dict, Optional
 
 import numpy as np
@@ -16,6 +17,7 @@ from ..history import (
     OptimizerHistory,
     create_history,
 )
+from ..objective import Objective
 from ..problem import Problem
 from ..result import OptimizerResult
 from .load import fill_result_from_history
@@ -382,12 +384,37 @@ class ScipyOptimizer(Optimizer):
                 'trust-krylov',
                 'trust-constr',
             ]
+            # switch off passing over functions if not applicable (e.g.
+            # NegLogParameterPrior) since grad/hess attributes do not exist
+            if not isinstance(objective, Objective):
+                if not hasattr(objective, 'grad'):
+                    objective.grad = False
+                if not hasattr(objective, 'hess'):
+                    objective.hess = False
+            # Todo Resolve warning by implementing saving of hess temporarily
+            #  in objective and pass to scipy seperately
+            if objective.hess is True:
+                warnings.warn(
+                    "scipy.optimize.minimize does not support "
+                    "passing fun and hess as one function. Hence "
+                    "for each evaluation of hess, fun will be "
+                    "evaluated again. This can lead to increased "
+                    "computation times. If possible, separate fun "
+                    "and hess."
+                )
+            if objective.grad is True:
 
-            fun = objective.get_fval
+                def fun(x):
+                    return objective(x, sensi_orders=(0, 1))
+
+            else:
+                fun = objective.get_fval
             jac = (
                 objective.get_grad
-                if objective.has_grad and method_supports_grad
-                else None
+                if objective.has_grad
+                and method_supports_grad
+                and objective.grad is not True
+                else (True if objective.grad is True else None)
             )
             hess = (
                 objective.get_hess
@@ -635,9 +662,10 @@ class PyswarmOptimizer(Optimizer):
 
 class CmaesOptimizer(Optimizer):
     """
-    Global optimization using cma-es.
+    Global optimization using covariance matrix adaptation evolutionary search.
 
-    Package homepage: https://pypi.org/project/cma-es/
+    This optimizer interfaces the cma package
+    (https://github.com/CMA-ES/pycma).
     """
 
     def __init__(self, par_sigma0: float = 0.25, options: Dict = None):
@@ -1213,7 +1241,7 @@ class FidesOptimizer(Optimizer):
 
         if self.hessian_update == 'default':
             if not problem.objective.has_hess:
-                logging.warning(
+                warnings.warn(
                     'Fides is using BFGS as hessian approximation, '
                     'as the problem does not provide a Hessian. '
                     'Specify a Hessian to use a more efficient '

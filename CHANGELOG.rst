@@ -6,7 +6,38 @@ Release notes
 ..........
 
 
-0.2.14 (2022-09-01)
+0.2.15 (2022-12-21)
+-------------------
+
+* Optimize:
+    * Add an Enhanced Scatter Search optimizer (#941, #972)
+    * Cooperative enhanced scatter search (#954)
+    * Hierarchical optimization (#952, #975 )
+    * Allow scipy optimizer to use fun with integrated grad (#979)
+* Sampling:
+    * Remove fixed parameters from pymc sampling (#951)
+    * emcee sampler: initialize walkers near optimum (#961)
+    * dynesty Sampler (#963)
+    * Fix pymc>=5 aesara/pytensor issues (#983)
+* Visualization:
+    * Multi-result waterfall plot (#966)
+    * Model fit visualization: use problem.objective to simulate, instead of AMICI directly (#969)
+    * Unfix matplotlib version (#977)
+    * Plot measurements in sampling_prediction_trajectories (#976)
+* Objective definition:
+    * Support for jax objectives (#986)
+* General
+    * Fix license_file SetuptoolsDeprecationWarning (#965)
+    * Remove benchmark-models-petab requirement (#964)
+    * Github Actions(#958, #989 )
+    * Fix typehint for problem.x_priors_defs (#962)
+    * Fix tox4-related issues (#981)
+    * Fix AMICI deprecation warning (#956)
+    * Add pypesto.visualize.model_fit to API doc (#991)
+    * Exclude numpy==1.24.0 (#993)
+
+
+0.2.14 (2022-10-25)
 -------------------
 
 * Ensembles:
@@ -14,39 +45,58 @@ Release notes
     * Define relative cutoff (#855)
 * PEtab:
     * Pass problem kwargs via petab importer (#874)
+    * Use `benchmark-models-petab` instead of manual download (#915)
+    * Use fake RData in in prediction_to_petab_measurement_df (#925)
 * Optimize:
     * Fides: Include message according to exitflag (#878)
+* Sampling:
+    * Added Pymc v4 Sampler (#818, #944, #948)
 * Visualization:
     * Fix waterfall plot limits for non-offsetted log-plots (#891)
     * Plot unflattened model fit from flattened PEtab problems (#914)
+    * Added the offset value to waterfall plot for better intuitive understanding (#910, #945)
+    * Visualize parameter correlation (#888)
 * History and storage:
-    * Maybe fix history-result reconstruction mismatch (#902)
+    * Fix history-result reconstruction mismatch (#902)
     * Move history to own module (#903)
     * Remove chi2, schi2 except for history convenience function (#904)
     * Clean up history hierarchy (#908)
     * Fix `read_result` with history (#907)
     * Improve hdf5 history file lock (#909, #921)
+    * Fix message in `check_overwrite` (#894)
+    * Deactivate automatic saving (#930, #932)
+    * Allow problem=None in read_result_from_file (#936)
+    * Remove superfluous get_or_create_group (#937)
+    * Extract read_history_from_file from read_result_from_file (#939)
+    * Select: use model ID in save postprocessor filename, by default (#943)
 * Select:
     * Clean up use of `minimize_options` in model problem (#918)
     * User-supplied method to produce pyPESTO problem (#884)
     * Report, and binary model ID post-processors (#900)
+    * Move method.py functionalities to ui.py in petab_select (#919)
+* Objective and Result:
+    * Julia objective (#927)
+    * Fix set of keys to aggregate results in aggregated objective (#883)
+    * Nicer `OptimizeResult.summary` (#895, #916, #935, #942, )
+    * Fix disjoint IDs check in `OptimizerResult.append` (#922)
+    * Fix OptimizeResult pickling (#953)
 * General:
-    * Fix set of keys to aggregate results (#883)
     * Remove version from `CITATION.cff` (#887)
-    * Nicer `OptimizeResult.summary` (#895, #916)
     * Fix CI and docs (#892, #893)
-    * Fix message in `check_overwrite` (#894)
     * Literal typehints for `mode` (#899)
     * Fix pandas deprecation warning (#896)
     * Document NEP 29 (time-window based python support) (#905)
     * Fix `get_for_key` deprecation warning (#906)
     * Fix multiple warnings from existing AMICI model (#912)
     * Fix warning from AMICI fixed overrides (#912)
-    * Fix disjoint IDs check in `OptimizerResult.append` (#922)
     * Fix flaky test `CRFunModeHistoryTest.test_trace_all` (#917)
     * Fix novel B024 ABC without abstract methods (#923)
-    * Use `benchmark-models-petab` instead of manual download (#915)
     * Improve API docs and add overview notebook (#911)
+    * Fix typos (#926)
+    * Fix julia tests (#929, #933)
+    * Fix flaky test_mpipoolengine (#938)
+    * More informative test IDs in test_optimize (#940)
+    * Speed-up import via lazy imports (#946)
 
 
 0.2.13 (2022-05-24)

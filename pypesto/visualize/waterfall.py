@@ -30,6 +30,7 @@ def waterfall(
     reference: Optional[Sequence[ReferencePoint]] = None,
     colors: Optional[Union[RGBA, Sequence[RGBA]]] = None,
     legends: Optional[Union[Sequence[str], str]] = None,
+    order_by_id: bool = False,
 ):
     """
     Plot waterfall plot.
@@ -63,6 +64,11 @@ def waterfall(
         and colors are assigned automatically
     legends:
         Labels for line plots, one label per result object
+    order_by_id:
+        Function values corresponding to the same start ID will be located at
+        the same x-axis position. Only applicable when a list of result
+        objects are provided. Default behavior is to sort the function values
+        of each result independently of other results.
 
     Returns
     -------
@@ -87,6 +93,10 @@ def waterfall(
     # parse input
     (results, colors, legends) = process_result_list(results, colors, legends)
 
+    # handle `order_by_id`
+    if order_by_id:
+        start_id_ordering = get_ordering_by_start_id(results)
+
     refs = create_references(references=reference)
 
     # precompute y-offset, if needed and if a list of results was passed
@@ -98,19 +108,35 @@ def waterfall(
     max_len_fvals = 0
 
     # loop over results
-    for j, fvals in enumerate(fvals_all):
+    for j, fvals_raw in enumerate(fvals_all):
         # extract specific cost function values from result
-        max_len_fvals = np.max([max_len_fvals, *fvals.shape])
+        max_len_fvals = np.max([max_len_fvals, *fvals_raw.shape])
 
         # remove colors where value is infinite if colors were passed on
-        if colors[j] is not None and fvals.size == colors[j].shape[0]:
-            colors[j] = colors[j][np.isfinite(np.transpose(fvals)).flatten()]
-        # parse input
-        fvals = np.array(fvals)
-        # remove nan or inf values in fvals
-        _, fvals = delete_nan_inf(fvals)
+        if colors[j] is not None and fvals_raw.size == colors[j].shape[0]:
+            colors[j] = colors[j][
+                np.isfinite(np.transpose(fvals_raw)).flatten()
+            ]
 
-        fvals.sort()
+        # parse input
+        if order_by_id:
+            start_ids = [s.id for s in results[j].optimize_result.list]
+            fvals_raw_is_finite = np.isfinite(fvals_raw)
+
+            fvals = []
+            for start_id in start_id_ordering:
+                start_index = start_ids.index(start_id)
+                if fvals_raw_is_finite[start_index]:
+                    fvals.append(fvals_raw[start_index])
+                else:
+                    fvals.append(None)
+        else:
+            # remove nan or inf values in fvals
+            # also remove extremely large values. These values result in `inf`
+            # values in the output of `scipy.cluster.hierarchy.linkage` in the
+            # method `pypesto.util.assign_clusters`, which raises errors.
+            _, fvals = delete_nan_inf(fvals=fvals_raw, magnitude_bound=1e100)
+            fvals.sort()
 
         # assign colors
         coloring = assign_colors(fvals, colors=colors[j])
@@ -168,7 +194,8 @@ def waterfall_lowlevel(
     Parameters
     ----------
     fvals: numeric list or array
-        Including values need to be plotted.
+        Including values need to be plotted. `None` values indicate that the
+        corresponding start index should be skipped.
     ax: matplotlib.Axes
         Axes object to use.
     size:
@@ -196,8 +223,10 @@ def waterfall_lowlevel(
         fig = plt.gcf()
         fig.set_size_inches(*size)
 
-    n_fvals = len(fvals)
-    start_ind = range(n_fvals)
+    start_indices = [i for i, fval in enumerate(fvals) if fval is not None]
+    fvals = [fvals[i] for i in start_indices]
+    if colors is not None and colors.ndim == 2 and colors.shape[0] > 1:
+        colors = [colors[i] for i in start_indices]
 
     # assign colors
     colors = assign_colors(fvals, colors=colors)
@@ -206,16 +235,16 @@ def waterfall_lowlevel(
     ax.xaxis.set_major_locator(MaxNLocator(integer=True))
     # plot line
     if scale_y == 'log10':
-        ax.semilogy(start_ind, fvals, color=[0.7, 0.7, 0.7, 0.6])
+        ax.semilogy(start_indices, fvals, color=[0.7, 0.7, 0.7, 0.6])
     else:
-        ax.plot(start_ind, fvals, color=[0.7, 0.7, 0.7, 0.6])
+        ax.plot(start_indices, fvals, color=[0.7, 0.7, 0.7, 0.6])
 
     # plot points
-    for j in range(n_fvals):
+    for j in start_indices:
         # parse data for plotting
-        color = colors[j]
-        fval = fvals[j]
-        if j == 0:
+        color = colors[start_indices.index(j)]
+        fval = fvals[start_indices.index(j)]
+        if j == start_indices[0]:
             tmp_legend = legend_text
         else:
             tmp_legend = None
@@ -290,10 +319,10 @@ def process_offset_for_list(
     min_val = np.inf
     fvals_all = []
     for result in results:
-        fvals = np.asarray([np.array(result.optimize_result.fval)])
+        fvals = np.array(result.optimize_result.fval)
         # todo: order of results plays a role
         start_indices = process_start_indices(result, start_indices)
-        fvals = fvals[:, start_indices]
+        fvals = fvals[start_indices]
         # if none of the fvals are finite, set default value to zero as
         # np.nanmin will error for an empty array
         if np.isfinite(fvals).any():
@@ -309,6 +338,59 @@ def process_offset_for_list(
 
     # return offsetted values
     return [fvals + offset_y for fvals in fvals_all], offset_y
+
+
+def get_ordering_by_start_id(results: Sequence[Result]) -> List[int]:
+    """Get an ordering of start IDs.
+
+    The ordering is generated by taking the best function value for each
+    start across all results, then sorting these best function values.
+    This means that the minimum value of the waterfall plot is
+    monotonically increasing.
+
+    Parameters
+    ----------
+    results:
+        The results.
+
+    Returns
+    -------
+    The ordering.
+    """
+    if len(results) < 2:
+        raise ValueError("Multiple result objects are required.")
+
+    optimize_results = [r.optimize_result.list for r in results]
+
+    # Check whether the same start IDs exist across all results.
+    # Note that start IDs, and not the vectors themselves, are checked. This is
+    # because, for example, when comparing hierarchical optimization to
+    # standard optimization, the starts may be comparable even if the vectors
+    # are not identical.
+    ids0 = sorted([s.id for s in optimize_results[0]])
+    for optimize_result in optimize_results[1:]:
+        ids = sorted([s.id for s in optimize_result])
+        if ids != ids0:
+            raise ValueError("The start IDs of the results do not match.")
+
+    start_fval_pairs = [
+        (start.id, start.fval)
+        for result in results
+        for start in result.optimize_result.list
+    ]
+
+    sorted_start_fval_pairs = sorted(
+        start_fval_pairs,
+        key=lambda pair: pair[1],
+    )
+
+    ordering = []
+    for start_id, _ in sorted_start_fval_pairs:
+        if start_id in ordering:
+            continue
+        ordering.append(start_id)
+
+    return ordering
 
 
 def handle_options(ax, max_len_fvals, ref, y_limits, offset_y):

@@ -48,6 +48,8 @@ extensions = [
     'IPython.sphinxext.ipython_console_highlighting',
     # support markdown-based docs
     'myst_parser',
+    # bibtex references
+    'sphinxcontrib.bibtex',
 ]
 
 # default autodoc options
@@ -60,6 +62,7 @@ autodoc_default_options = {
     'show-inheritance': True,
     'autodoc_inherit_docstrings': True,
 }
+autodoc_mock_imports = ["amici"]
 
 # links for intersphinx
 intersphinx_mapping = {
@@ -67,9 +70,14 @@ intersphinx_mapping = {
     'numpy': ('https://numpy.org/devdocs/', None),
     'scipy': ('https://docs.scipy.org/doc/scipy/', None),
     'pandas': ('https://pandas.pydata.org/docs/', None),
-    'petab': ('https://petab.readthedocs.io/en/stable/', None),
+    'petab': (
+        'https://petab.readthedocs.io/projects/libpetab-python/en/latest/',
+        None,
+    ),
     'amici': ('https://amici.readthedocs.io/en/latest/', None),
 }
+
+bibtex_bibfiles = ["using_pypesto.bib"]
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ['_templates']

@@ -695,7 +695,6 @@ def fd_nabla_2(
 
     # iterate over all parameter index tuples
     for ix1 in range(n_par):
-
         delta1_val = delta_vec[ix1]
         delta1 = delta1_val * unit_vec(dim=n_par, ix=ix1)
 
