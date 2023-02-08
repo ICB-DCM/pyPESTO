@@ -476,7 +476,7 @@ def parameters_correlation_matrix(
     return ax
 
 
-def parameter_scatter(
+def optimization_scatter(
     result: Result,
     parameter_indices: Union[str, Sequence[int]] = 'free_only',
     start_indices: Optional[Union[int, Iterable[int]]] = None,

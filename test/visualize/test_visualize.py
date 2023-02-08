@@ -453,6 +453,22 @@ def test_parameters_hist():
     visualize.parameter_hist(result_1, 'x1', start_indices=list(range(10)))
 
 
+@close_fig
+def test_optimization_scatter():
+    result = create_optimization_result()
+    visualize.optimization_scatter(result)
+
+
+@close_fig
+def test_optimization_scatter_with_x_None():
+    result = create_optimization_result()
+    # create an optimizerResult with x=None
+    optimizer_result = pypesto.OptimizerResult(x=None)
+    result.optimize_result.append(optimize_result=optimizer_result)
+
+    visualize.optimization_scatter(result)
+
+
 # @close_fig
 def _test_ensemble_dimension_reduction():
     # creates a test problem

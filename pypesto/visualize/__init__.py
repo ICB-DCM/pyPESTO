@@ -27,8 +27,8 @@ from .optimization_stats import (
 from .optimizer_convergence import optimizer_convergence
 from .optimizer_history import optimizer_history, optimizer_history_lowlevel
 from .parameters import (
+    optimization_scatter,
     parameter_hist,
-    parameter_scatter,
     parameters,
     parameters_lowlevel,
 )
