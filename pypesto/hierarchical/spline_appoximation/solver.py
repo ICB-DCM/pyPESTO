@@ -258,12 +258,6 @@ class SplineInnerSolver(InnerSolver):
                         ],
                     )
 
-                    # Correcting for small errors in optimization/calculations
-                    # TODO should I do this?
-                    # TODO Test this
-                    for i in range(len(mu)):
-                        if abs(mu[i]) < 1e-5:
-                            mu[i] = 0
                     # Calculate df_ds term only if mu is not all 0
                     if np.any(mu):
                         s_dot = calculate_ds_dtheta(
@@ -387,8 +381,6 @@ class SplineInnerSolver(InnerSolver):
             results = minimize(
                 objective_function, jac=inner_gradient, **inner_options
             )
-            results["x"][0] = results["x"][0].clip(min=0)
-            results["x"][1:] = results["x"][1:].clip(min=min_diff)
 
         elif self.options[INNER_OPTIMIZER] == 'LS':
             results = least_squares(
@@ -453,9 +445,6 @@ class SplineInnerSolver(InnerSolver):
             )
 
             results = opt_fides.minimize(inner_options['x0'])
-        # TODO should I be clipping like this?
-        results["x"][0] = results["x"][0].clip(min=0)
-        results["x"][1:] = results["x"][1:].clip(min=min_diff)
 
         return results
 
@@ -486,19 +475,11 @@ class SplineInnerSolver(InnerSolver):
         intervals_per_sim:
             List of indices of intervals each simulation belongs to.
         """
+        min_idx = np.argmin(sim_all)
+        max_idx = np.argmax(sim_all)
 
-        min_all = sim_all[0]
-        max_all = sim_all[0]
-        min_idx = 0
-        max_idx = 0
-
-        for idx in range(len(sim_all)):
-            if sim_all[idx] > max_all:
-                max_all = sim_all[idx]
-                max_idx = idx
-            if sim_all[idx] < min_all:
-                min_all = sim_all[idx]
-                min_idx = idx
+        min_all = sim_all[min_idx]
+        max_all = sim_all[max_idx]
 
         n = np.ones(K)
 
@@ -529,7 +510,6 @@ class SplineInnerSolver(InnerSolver):
             delta_c = (max_all - min_all) / (N - 1)
             c = np.linspace(min_all, max_all, N)
             for i in range(len(sim_all)):
-                # FIXME what if there are multiple maximal or minimal incides
                 if i == max_idx:
                     n[i] = N
                 elif i == min_idx:
@@ -603,14 +583,13 @@ class SplineInnerSolver(InnerSolver):
             )
             x0[0] = np.max([min_meas - 0.3 * range_all, 0])
 
+        from scipy.optimize import Bounds
+
         inner_options = {
             "x0": x0,
-            "method": "SLSQP",
-            "options": {"maxiter": 2000, "ftol": 1e-10, "disp": None},
-            "constraints": {
-                "type": "ineq",
-                "fun": lambda x: x - constraint_min_diff,
-            },
+            "method": "L-BFGS-B",
+            "options": {"ftol": 1e-10, "disp": None},
+            "bounds": Bounds(lb=constraint_min_diff),
         }
 
         return inner_options
@@ -632,8 +611,7 @@ def calculate_objective_function(
     for y_k, z_k, sigma_k, n_k in zip(sim_all, measurements, sigma, n):
         i = n_k - 1
         sum_s = 0
-        for j in range(i):
-            sum_s += s[j]
+        sum_s = np.sum(s[:i])
         if i == 0:
             obj += (1 / sigma_k**2) * (z_k - s[i]) ** 2
         elif i == N:
@@ -644,6 +622,32 @@ def calculate_objective_function(
             ) ** 2
     obj = obj / 2
     return obj
+
+
+def get_spline_mapped_simulations(
+    s: np.ndarray,
+    sim_all: np.ndarray,
+    N: int,
+    delta_c: float,
+    c: np.ndarray,
+    n: np.ndarray,
+):
+    """Return model simulations mapped using the approximation spline."""
+    mapped_simulations = np.zeros(len(sim_all))
+    xi = np.zeros(len(s))
+    for i in range(len(s)):
+        xi[i] = np.sum(s[: i + 1])
+
+    for y_k, n_k, index in zip(sim_all, n, range(len(sim_all))):
+        interval_index = n_k - 1
+        if interval_index == 0 or interval_index == N:
+            mapped_simulations[index] = xi[interval_index]
+        else:
+            mapped_simulations[index] = (y_k - c[interval_index - 1]) * (
+                xi[interval_index] - xi[interval_index - 1]
+            ) / delta_c + xi[interval_index - 1]
+
+    return mapped_simulations
 
 
 def calculate_inner_gradient(
@@ -664,8 +668,7 @@ def calculate_inner_gradient(
         weight_k = 1 / sigma_k**2
         sum_s = 0
         i = n_k - 1  # just the iterator to go over the Jacobian array
-        for j in range(i):
-            sum_s += s[j]
+        sum_s = np.sum(s[:i])
         if i == 0:
             gradient[i] += weight_k * (s[i] - z_k)
         elif i == N:
@@ -748,8 +751,7 @@ def calculate_ds_dtheta(
         i = n_k - 1  # just the iterator to go over the Jacobian matrix
         weight_k = 1 / sigma_k**2
         sum_s = 0
-        for j in range(i):
-            sum_s += s[j]
+        sum_s = np.sum(s[:i])
 
         # calculate the Jacobian derivative:
         if i == 0:
@@ -827,8 +829,7 @@ def calculate_df_dyk(
     ):
         i = n_k - 1
         sum_s = 0
-        for j in range(i):
-            sum_s += s[j]
+        sum_s = np.sum(s[:i])
         if i > 0 and i < N:
             df_dyk += (
                 (1 / sigma_k**2)
@@ -848,17 +849,10 @@ def calculate_spline_bases_gradient(
 ):
     """Calculate gradient of the rescaled spline bases."""
 
-    min_idx = 0
-    max_idx = 0
-    # FIXME WE STILL have a problem here, what if there are multiple
-    # simulations with same value y_max or y_min?... Which one?
-    for idx in range(len(sim_all)):
-        if sim_all[idx] > sim_all[max_idx]:
-            max_idx = idx
-        if sim_all[idx] < sim_all[min_idx]:
-            min_idx = idx
+    min_idx = np.argmin(sim_all)
+    max_idx = np.argmax(sim_all)
 
-    if sim_all[max_idx] - sim_all[min_idx] < 1e-6:
+    if sim_all[max_idx] - sim_all[min_idx] < MIN_SIM_RANGE:
         delta_c_dot = 0
         c_dot = np.full(N, (sy_all[max_idx] - sy_all[min_idx]) / 2)
     else:
@@ -899,8 +893,7 @@ def save_inner_parameters_to_inner_problem(
     """
     xi = np.zeros(len(s))
     for i in range(len(s)):
-        for j in range(i, len(s)):
-            xi[j] += s[i]
+        xi[i] = np.sum(s[: i + 1])
 
     for idx in range(len(inner_parameters)):
         inner_parameters[idx].value = xi[idx]

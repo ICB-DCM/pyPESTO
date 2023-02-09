@@ -158,8 +158,11 @@ class SplineAmiciCalculator:
             return filter_return_dict(inner_result)
 
         sim = [rdata['y'] for rdata in inner_rdatas]
-        # clip simulation?
         sigma = [rdata['sigmay'] for rdata in inner_rdatas]
+
+        # Clip negative simulation values to zero, to avoid numerical issues.
+        for i in range(len(sim)):
+            sim[i] = sim[i].clip(min=0)
 
         # compute optimal inner parameters
         x_inner_opt = self.inner_solver.solve(self.inner_problem, sim, sigma)
@@ -170,7 +173,7 @@ class SplineAmiciCalculator:
             X_INNER_OPT
         ] = self.inner_problem.get_inner_parameter_dictionary()
 
-        # calculate analytical gradients if requested
+        # Calculate analytical gradients if requested
         if sensi_order > 0:
             sy = [rdata['sy'] for rdata in inner_rdatas]
             inner_result[GRAD] = self.inner_solver.calculate_gradients(
@@ -186,3 +189,27 @@ class SplineAmiciCalculator:
             )
 
         return filter_return_dict(inner_result)
+
+
+def get_min_range_of_simulation(rdatas: List[np.ndarray]):
+    """Get the minimum range of the simulation results.
+
+    Parameters
+    ----------
+    rdatas:
+        The list of simulation results.
+
+    Returns
+    -------
+    min_range:
+        The minimum range of the simulation results.
+    """
+    min_range = np.max(rdatas[0]['y'][:, 0]) - np.min(rdatas[0]['y'][:, 0])
+    for rdata in rdatas:
+        for obs_ind in range(rdata['y'].shape[1]):
+            min_range = min(
+                min_range,
+                np.max(rdata['y'][:, obs_ind])
+                - np.min(rdata['y'][:, obs_ind]),
+            )
+    return min_range

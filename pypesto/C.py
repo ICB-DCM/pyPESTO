@@ -157,7 +157,7 @@ SPLINE_RATIO = 'spline_ratio'
 INNER_OPTIMIZER = 'inner_optimizer'
 USE_MINIMAL_DIFFERENCE = 'use_minimal_difference'
 
-MIN_SIM_RANGE = 1e-6
+MIN_SIM_RANGE = 1e-16
 
 ###############################################################################
 # HISTORY
