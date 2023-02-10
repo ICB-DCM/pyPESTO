@@ -1,0 +1,19 @@
+observableId	preequilibrationConditionId	simulationConditionId	measurement	time	observableParameters	noiseParameters	observableTransformation	noiseDistribution	measurementType	measurementGroup
+Activity		Inhibitor_0	15.24029495	5		1	lin	normal	nonlinear_monotone	1
+Activity		Inhibitor_3	15.97660789	5		1	lin	normal	nonlinear_monotone	1
+Activity		Inhibitor_10	17.89265379	5		1	lin	normal	nonlinear_monotone	1
+Activity		Inhibitor_25	23.18714697	5		1	lin	normal	nonlinear_monotone	1
+Activity		Inhibitor_35	16.81210375	5		1	lin	normal	nonlinear_monotone	1
+Activity		Inhibitor_50	9.17312936	5		1	lin	normal	nonlinear_monotone	1
+Activity		Inhibitor_75	4.15092812	5		1	lin	normal	nonlinear_monotone	1
+Activity		Inhibitor_100	2.53355252	5		1	lin	normal	nonlinear_monotone	1
+Activity		Inhibitor_300	0.58963290	5		1	lin	normal	nonlinear_monotone	1
+Ybar		Inhibitor_0	0	5		1	lin	normal	nonlinear_monotone	2
+Ybar		Inhibitor_3	0.05999885	5		1	lin	normal	nonlinear_monotone	2
+Ybar		Inhibitor_10	0.19999376	5		1	lin	normal	nonlinear_monotone	2
+Ybar		Inhibitor_25	0.49904277	5		1	lin	normal	nonlinear_monotone	2
+Ybar		Inhibitor_35	0.65916874	5		1	lin	normal	nonlinear_monotone	2
+Ybar		Inhibitor_50	0.81495435	5		1	lin	normal	nonlinear_monotone	2
+Ybar		Inhibitor_75	0.91638297	5		1	lin	normal	nonlinear_monotone	2
+Ybar		Inhibitor_100	0.94898071	5		1	lin	normal	nonlinear_monotone	2
+Ybar		Inhibitor_300	0.98813045	5		1	lin	normal	nonlinear_monotone	2

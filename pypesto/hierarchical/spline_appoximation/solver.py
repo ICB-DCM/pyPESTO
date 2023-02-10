@@ -2,15 +2,9 @@ import warnings
 from typing import Dict, List
 
 import numpy as np
-from scipy.optimize import least_squares, minimize
+from scipy.optimize import minimize
 
-from ...C import (
-    INNER_OPTIMIZER,
-    MIN_SIM_RANGE,
-    USE_MINIMAL_DIFFERENCE,
-    InnerParameterType,
-)
-from ...optimize import Optimizer
+from ...C import MIN_SIM_RANGE, USE_MINIMAL_DIFFERENCE, InnerParameterType
 from ..solver import InnerSolver
 from .parameter import SplineInnerParameter
 from .problem import SplineInnerProblem
@@ -26,15 +20,12 @@ class SplineInnerSolver(InnerSolver):
 
     Options
     -------
-    inner_optimizer:
-        Optimizer of the inner problem. Default is SLSQP.
     minimal_difference:
         If True then the method will constrain minimal spline parameter
         difference. Otherwise there will be no such constrain.
     """
 
-    def __init__(self, optimizer: Optimizer = None, options: Dict = None):
-        self.optimizer = optimizer
+    def __init__(self, options: Dict = None):
         self.options = options
         if not self.options:
             self.options = {}
@@ -47,10 +38,6 @@ class SplineInnerSolver(InnerSolver):
 
     def validate_options(self):
         """Validate the current options dictionary."""
-        if self.options[INNER_OPTIMIZER] not in ['SLSQP', 'LS', 'fides']:
-            raise ValueError(
-                f"Chosen Inner optimizer {self.options[INNER_OPTIMIZER]} is not implemented. Choose from SLSQP, LS or fides"
-            )
         if self.options[USE_MINIMAL_DIFFERENCE] not in [True, False]:
             raise ValueError('Minimal difference must be a boolean value.')
 
@@ -123,28 +110,6 @@ class SplineInnerSolver(InnerSolver):
             obj = np.sum(
                 [x_inner_opt[idx]['fun'] for idx in range(len(x_inner_opt))]
             )
-        return obj
-
-    @staticmethod
-    def ls_calculate_obj_function(x_inner_opt: list):
-        """Calculate the inner objective function value for LS optimizer.
-
-        Calculates the inner objective function value from a list of inner
-        optimization results returned from `optimize_spline` for the least
-        squares optimizer.
-
-        Parameters
-        ----------
-        x_inner_opt:
-            List of optimization results
-
-        Returns
-        -------
-        Inner objective function value.
-        """
-        obj = np.sum(
-            [x_inner_opt[idx]["fun"][0] for idx in range(len(x_inner_opt))]
-        )
         return obj
 
     def calculate_gradients(
@@ -303,7 +268,6 @@ class SplineInnerSolver(InnerSolver):
     def get_default_options() -> Dict:
         """Return default options for solving the inner problem."""
         options = {
-            "inner_optimizer": 'SLSQP',
             "use_minimal_difference": True,
         }
         return options
@@ -353,7 +317,7 @@ class SplineInnerSolver(InnerSolver):
             min_diff=min_diff,
         )
 
-        def objective_function(x):
+        def objective_function_wrapper(x):
             return calculate_objective_function(
                 s=x,
                 sim_all=current_group_simulation,
@@ -365,7 +329,7 @@ class SplineInnerSolver(InnerSolver):
                 n=intervals_per_sim,
             )
 
-        def inner_gradient(x):
+        def inner_gradient_wrapper(x):
             return calculate_inner_gradient(
                 s=x,
                 sim_all=current_group_simulation,
@@ -377,74 +341,38 @@ class SplineInnerSolver(InnerSolver):
                 n=intervals_per_sim,
             )
 
-        if self.options[INNER_OPTIMIZER] == 'SLSQP':
-            results = minimize(
-                objective_function, jac=inner_gradient, **inner_options
-            )
+        results = minimize(
+            objective_function_wrapper,
+            jac=inner_gradient_wrapper,
+            **inner_options,
+        )
+        # plot_Boehm = True
 
-        elif self.options[INNER_OPTIMIZER] == 'LS':
-            results = least_squares(
-                objective_function,
-                inner_options['x0'],
-                jac=inner_gradient,
-                bounds=(0, np.inf),
-            )
+        # if plot_Boehm:
+        #     print("last opt values\n", [x.value for x in inner_parameters])
+        #     print("current opt values\n", results['x'])
+        #     print("current simulation\n", current_group_simulation)
+        #     print("intervals_per_sim\n", intervals_per_sim)
+        #     s = results['x']
+        #     xi = np.zeros(len(s))
+        #     for i in range(len(s)):
+        #         for j in range(i, len(s)):
+        #             xi[j] += s[i]
 
-        elif self.options[INNER_OPTIMIZER] == 'fides':
-            import fides
-
-            def inner_hessian(x):
-                return calculate_inner_hessian(
-                    s=x,
-                    sim_all=current_group_simulation,
-                    sigma=group_noise_parameters,
-                    N=n_spline_pars,
-                    delta_c=distance_between_bases,
-                    c=spline_bases,
-                    n=intervals_per_sim,
-                )
-
-            def fides_objective_function(x):
-                return (
-                    calculate_objective_function(
-                        s=x,
-                        sim_all=current_group_simulation,
-                        measurements=group_measurements,
-                        sigma=group_noise_parameters,
-                        N=n_spline_pars,
-                        delta_c=distance_between_bases,
-                        c=spline_bases,
-                        n=intervals_per_sim,
-                    ),
-                    calculate_inner_gradient(
-                        s=x,
-                        sim_all=current_group_simulation,
-                        measurements=group_measurements,
-                        sigma=group_noise_parameters,
-                        N=n_spline_pars,
-                        delta_c=distance_between_bases,
-                        c=spline_bases,
-                        n=intervals_per_sim,
-                    ),
-                    calculate_inner_hessian(
-                        s=x,
-                        sim_all=current_group_simulation,
-                        sigma=group_noise_parameters,
-                        N=n_spline_pars,
-                        delta_c=distance_between_bases,
-                        c=spline_bases,
-                        n=intervals_per_sim,
-                    ),
-                )
-
-            lower_bounds = np.full(n_spline_pars, min_diff)
-            upper_bounds = np.full(n_spline_pars, np.inf)
-            lower_bounds[0] = 0
-            opt_fides = fides.Optimizer(
-                fides_objective_function, ub=upper_bounds, lb=lower_bounds
-            )
-
-            results = opt_fides.minimize(inner_options['x0'])
+        #     mapped_simulations = get_spline_mapped_simulations(
+        #         s,
+        #         current_group_simulation,
+        #         n_spline_pars,
+        #         distance_between_bases,
+        #         spline_bases,
+        #         intervals_per_sim
+        #     )
+        #     import matplotlib.pyplot as plt
+        #     plt.plot(current_group_simulation, group_measurements, 'bs')
+        #     plt.plot(spline_bases, xi, 'g')
+        #     plt.plot(spline_bases, xi, 'g.')
+        #     plt.plot(current_group_simulation, mapped_simulations, 'r^')
+        #     plt.show()
 
         return results
 
@@ -569,7 +497,7 @@ class SplineInnerSolver(InnerSolver):
 
         last_opt_values = np.asarray([x.value for x in inner_parameters])
 
-        if len(np.nonzero(last_opt_values)) > 0:
+        if (last_opt_values > 0).any():
             x0 = last_opt_values
         else:
             x0 = np.full(
@@ -689,7 +617,7 @@ def calculate_inner_gradient(
 
 
 def calculate_inner_hessian(
-    optimal_s: np.ndarray,
+    s: np.ndarray,
     sim_all: np.ndarray,
     sigma: np.ndarray,
     N: int,
@@ -705,7 +633,7 @@ def calculate_inner_hessian(
         sum_s = 0
         i = n_k - 1  # just the iterator to go over the Hessian matrix
         for j in range(i):
-            sum_s += optimal_s[j]
+            sum_s += s[j]
 
         hessian[i][i] += (1 / sigma_k**2) * ((y_k - c[i - 1]) / delta_c) ** 2
         for j in range(i):
@@ -917,6 +845,11 @@ def get_monotonicity_measure(measurement, simulation):
     inversions : int
         Number of inversions.
     """
+    if len(measurement) != len(simulation):
+        raise ValueError(
+            "Measurement and simulation data must have the same length."
+        )
+
     ordered_simulation = [
         x
         for _, x in sorted(

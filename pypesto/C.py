@@ -154,7 +154,6 @@ MEASUREMENT_TYPE = 'measurementType'
 NONLINEAR_MONOTONE = 'nonlinear_monotone'
 
 SPLINE_RATIO = 'spline_ratio'
-INNER_OPTIMIZER = 'inner_optimizer'
 USE_MINIMAL_DIFFERENCE = 'use_minimal_difference'
 
 MIN_SIM_RANGE = 1e-16
