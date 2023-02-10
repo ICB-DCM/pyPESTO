@@ -574,7 +574,7 @@ class PetabImporter(AmiciObjectBuilder):
         Parameters
         ----------
         **kwargs: Additional keyword arguments passed on to
-        :meth:`pypesto.startpoint.FunctionStartpoints.__init__`.
+            :meth:`pypesto.startpoint.FunctionStartpoints.__init__`.
         """
 
         def startpoint_method(n_starts: int, **kwargs):
