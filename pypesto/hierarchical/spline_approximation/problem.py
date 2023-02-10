@@ -9,7 +9,6 @@ from ...C import (
     MEASUREMENT_GROUP,
     MEASUREMENT_TYPE,
     NONLINEAR_MONOTONE,
-    SPLINE_RATIO,
     TIME,
     InnerParameterType,
 )
@@ -94,13 +93,13 @@ class SplineInnerProblem(InnerProblem):
         petab_problem: petab.Problem,
         amici_model: 'amici.Model',
         edatas: List['amici.ExpData'],
-        options: Dict = None,
+        spline_ratio: Dict = None,
     ) -> 'SplineInnerProblem':
         """Construct the inner problem from the `petab_problem`."""
-        if options is None:
-            options = get_default_options()
+        if spline_ratio is None:
+            spline_ratio = get_default_options()
         return spline_inner_problem_from_petab_problem(
-            petab_problem, amici_model, edatas, options
+            petab_problem, amici_model, edatas, spline_ratio
         )
 
     def get_groups_for_xs(self, inner_parameter_type: str) -> List[int]:
@@ -151,7 +150,8 @@ class SplineInnerProblem(InnerProblem):
 
 def get_default_options() -> Dict:
     """Return the default spline problem options dictionary."""
-    return {SPLINE_RATIO: 1 / 2}
+    spline_ratio = 1 / 2
+    return spline_ratio
 
 
 def spline_inner_problem_from_petab_problem(
@@ -162,7 +162,7 @@ def spline_inner_problem_from_petab_problem(
 ):
     """Construct the inner problem from the `petab_problem`."""
     if spline_ratio is None:
-        spline_ratio = 1 / 2
+        spline_ratio = get_default_options()
     elif spline_ratio <= 0:
         raise ValueError("Spline ratio must be a positive float.")
 

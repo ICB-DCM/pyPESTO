@@ -31,7 +31,7 @@ from ..hierarchical.optimal_scaling import (
     OptimalScalingProblem,
 )
 from ..hierarchical.problem import InnerProblem
-from ..hierarchical.spline_appoximation import (
+from ..hierarchical.spline_approximation import (
     SplineAmiciCalculator,
     SplineInnerProblem,
     SplineInnerSolver,

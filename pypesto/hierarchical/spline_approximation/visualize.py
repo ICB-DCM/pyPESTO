@@ -3,11 +3,36 @@ from typing import Dict, List
 import matplotlib.pyplot as plt
 import numpy as np
 
+from ...result import Result
 from .problem import SplineInnerProblem
 from .solver import SplineInnerSolver, get_spline_mapped_simulations
 
 
-def plot_inner_solutions(
+def plot_from_pypesto_result(pypesto_result: Result, **kwargs):
+    """Plot the inner solutions from a pypesto result."""
+
+    inner_problem = pypesto_result.problem.objective.calculator.inner_problem
+
+    groups = inner_problem.groups.keys()
+
+    # Get the inner results
+    results = []
+    for group in groups:
+        result = {}
+        parameter_values = [
+            x.value for x in inner_problem.get_xs_for_group(group)
+        ]
+        parameter_values.insert(0, 0)
+
+        # Get the reformulated parameters as the difference between the parameter_values
+        reformulated_parameter_values = np.diff(parameter_values)
+        result['x'] = reformulated_parameter_values
+        results.append(result)
+
+    return plot_from_inner_result(inner_problem, results, **kwargs)
+
+
+def plot_from_inner_result(
     inner_problem: SplineInnerProblem, results: List[Dict], **kwargs
 ):
     """Plot the inner solutions."""
@@ -38,7 +63,7 @@ def plot_inner_solutions(
 
     # for each result and group, plot the inner solution
     for result, group in zip(results, inner_problem.groups):
-        group_idx = group - 1
+        group_idx = list(inner_problem.groups.keys()).index(group)
 
         # For each group get the inner parameters and simulation
         xs = inner_problem.get_xs_for_group(group)
@@ -65,10 +90,10 @@ def plot_inner_solutions(
         )
         axs[group_idx].plot(spline_bases, inner_parameters, 'g')
         axs[group_idx].plot(
-            spline_bases, inner_parameters, 'g.', label='spline parameters'
+            spline_bases, inner_parameters, 'g.', label='Spline parameters'
         )
         axs[group_idx].plot(
-            simulation, mapped_simulations, 'r^', label='Simulation'
+            simulation, mapped_simulations, 'r^', label='Mapped simulation'
         )
         axs[group_idx].legend()
         axs[group_idx].set_title(f'Group {group}')

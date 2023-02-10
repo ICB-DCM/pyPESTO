@@ -10,14 +10,14 @@ import pypesto.logging
 import pypesto.optimize
 import pypesto.petab
 from pypesto.C import LIN, MODE_FUN, InnerParameterType
-from pypesto.hierarchical.spline_appoximation import (
+from pypesto.hierarchical.spline_approximation import (
     SplineInnerProblem,
     SplineInnerSolver,
 )
-from pypesto.hierarchical.spline_appoximation.parameter import (
+from pypesto.hierarchical.spline_approximation.parameter import (
     SplineInnerParameter,
 )
-from pypesto.hierarchical.spline_appoximation.solver import (
+from pypesto.hierarchical.spline_approximation.solver import (
     extract_expdata_using_mask,
     get_monotonicity_measure,
     get_spline_mapped_simulations,
