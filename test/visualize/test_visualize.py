@@ -463,7 +463,7 @@ def test_optimization_scatter():
 def test_optimization_scatter_with_x_None():
     result = create_optimization_result()
     # create an optimizerResult with x=None
-    optimizer_result = pypesto.OptimizerResult(x=None, fval=np.inf)
+    optimizer_result = pypesto.OptimizerResult(x=None, fval=np.inf, id="4")
     result.optimize_result.append(optimize_result=optimizer_result)
 
     visualize.optimization_scatter(result)
