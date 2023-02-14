@@ -3,7 +3,11 @@ from __future__ import annotations
 import copy
 from typing import Dict, List, Optional, Sequence, Tuple
 
-import amici
+try:
+    import amici
+except ImportError:
+    pass
+
 import numpy as np
 from amici.parameter_mapping import ParameterMapping
 
