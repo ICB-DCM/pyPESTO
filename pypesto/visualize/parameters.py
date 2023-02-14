@@ -491,14 +491,15 @@ def optimization_scatter(
     Parameters
     ----------
     result:
-        Optimization result obtained by 'optimize.py'
+        Optimization result obtained by 'optimize.py'.
     parameter_indices:
         List of integers specifying the parameters to be considered.
     start_indices:
         List of integers specifying the multistarts to be plotted or
-        int specifying up to which start index should be plotted
+        int specifying up to which start index should be plotted.
     diag_kind:
-        Visualization mode for marginal densities {‘auto’, ‘hist’, ‘kde’, None}
+        Visualization mode for marginal densities {‘auto’, ‘hist’, ‘kde’,
+        None}.
     suptitle:
         Title of the plot.
     size:
@@ -535,7 +536,7 @@ def optimization_scatter(
     # put all parameters into a dataframe, where columns are parameters
     parameters = [
         result.optimize_result[i_start]['x'][parameter_indices]
-        for i_start in start_indices
+        for i_start in start_indices_finite
     ]
     x_labels = [
         result.problem.x_names[parameter_index]
