@@ -3,13 +3,9 @@ from __future__ import annotations
 import copy
 from typing import Dict, List, Optional, Sequence, Tuple
 
-try:
-    import amici
-    from amici.parameter_mapping import ParameterMapping
-except ImportError:
-    pass
-
+import amici
 import numpy as np
+from amici.parameter_mapping import ParameterMapping
 
 from ..C import (
     AMICI_SIGMAY,
