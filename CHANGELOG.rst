@@ -6,10 +6,31 @@ Release notes
 ..........
 
 
-0.2.16 (2023-01-13)
+0.2.16 (2023-02-14)
 -------------------
 
-*
+* Optimize:
+    * sacess optimizer (#988, #997, )
+    * Warn only once if using ineffiecient objective settings (#996)
+    * Hierarchical Optimization (#1006)
+    * Fix cma documentation (#987)
+* Sampling:
+    * Dynesty sampler (#1002)
+    * Fix test/sample/test_sample.py::test_samples_cis failures (#1004)
+* Visualization:
+    * Fix misuse of start indices in waterfall plot (#1000)
+    * Fix large function values in clustering for visualizations (#999)
+    * parameter correlation diverging color scheme (#1009)
+* Profiling:
+    * added option to profile the whole parameter bounds. (#1014)
+* General
+    * Add CODEOWNERS (#1001)
+    * Add list of publications using pypesto (#1008)
+    * allow passing results to __init__  of pypesto.Result (#998)
+    * Updated flake8 to ignore Error B028 from bugbear until support for python 3.8 runs out. (#1005)
+    * black update (#1010)
+    * Doc typo fixes (#995)
+    * Doc: Install amici on RTD (#1016)
 
 
 0.2.15 (2022-12-21)
