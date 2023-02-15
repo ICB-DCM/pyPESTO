@@ -342,10 +342,10 @@ def calculate_dxi_dtheta(
     return dxi_dtheta[: problem.groups[group]['num_inner_params']]
 
 
-def get_dy_dtheta(gr: int, problem: OptimalScalingProblem, sy_all: np.ndarray):
+def get_dy_dtheta(group: int, problem: OptimalScalingProblem, sy_all: np.ndarray):
     """Restructure sensitivities into a numpy matrix of right dimension."""
     return np.block(
-        [sy_all, np.zeros(2 * problem.groups[gr]['num_categories'])]
+        [sy_all, np.zeros(2 * problem.groups[group]['num_categories'])]
     )
 
 
