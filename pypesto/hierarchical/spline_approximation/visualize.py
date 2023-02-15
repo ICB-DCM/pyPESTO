@@ -131,7 +131,7 @@ def plot_splines_from_inner_result(
         n_cols = int(np.ceil(n_groups / n_rows))
 
         # Make as many subplots as there are groups
-        fig, axs = plt.subplots(n_rows, n_cols, figsize=(10, 10), **kwargs)
+        fig, axs = plt.subplots(n_rows, n_cols, **kwargs)
 
         # Flatten the axes array
         axs = axs.flatten()
