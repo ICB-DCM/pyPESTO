@@ -95,7 +95,7 @@ def _create_problem(
 
 
 def test_optimal_scaling_calculator_and_objective():
-    """Test the optimal scaling calculation of objective values and."""
+    """Test the optimal scaling calculation of objective and gradient values."""
     petab_problem = petab.Problem.from_yaml(example_ordinal_yaml)
 
     methods = [STANDARD, REDUCED]
@@ -145,7 +145,7 @@ def test_optimal_scaling_calculator_and_objective():
         calculator_results[REDUCED]['grad'],
     ).all()
 
-    # Since the nominal parameters are close to true ones, the
+    # Since the nominal parameters are close to true ones,
     # the fval and grad should both be low.
     assert np.all(calculator_results[STANDARD]['fval'] < 0.2)
     assert np.all(calculator_results[STANDARD]['grad'] < 0.1)
@@ -170,7 +170,7 @@ def _inner_problem_exp():
             ]
         ),
         REDUCED: np.asarray(
-            [1.99999999, 4.00689557, 6.23751538, 8.40233862, 11.07675724]
+            [1.99999999, 4.00689557, 6.23751538, 8.40233862, 11.0767572]
         ),
     }
 

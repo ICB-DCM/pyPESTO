@@ -91,7 +91,7 @@ class OptimalScalingProblem(InnerProblem):
             self.groups[group]['num_constr_full'] = (
                 2 * self.groups[group]['num_datapoints']
                 + 2 * self.groups[group]['num_categories']
-            )  # - 1
+            )
 
             self.groups[group]['lb_indices'] = list(
                 range(
@@ -179,7 +179,7 @@ class OptimalScalingProblem(InnerProblem):
             if x.group == group and x.inner_parameter_id[:6] == 'cat_lb'
         ]
 
-    def initialize_c(self, group) -> np.ndarray:
+    def initialize_c(self, group: int) -> np.ndarray:
         """Initialize the constraints matrix for the group.
 
         The structure of the constraints matrix is the following: Each row C_i of the matrix C
@@ -271,87 +271,101 @@ class OptimalScalingProblem(InnerProblem):
 
         return constr
 
-    def initialize_w(self, gr) -> np.ndarray:
+    def initialize_w(self, group: int) -> np.ndarray:
         """Initialize the weight matrix for the group."""
         weights = np.diag(
             np.block(
                 [
-                    np.ones(self.groups[gr]['num_datapoints']),
-                    np.zeros(2 * self.groups[gr]['num_categories']),
+                    np.ones(self.groups[group]['num_datapoints']),
+                    np.zeros(2 * self.groups[group]['num_categories']),
                 ]
             )
         )
         return weights
 
-    def get_w(self, gr, y_sim_all) -> np.ndarray:
+    def get_w(self, group: int, y_sim_all: np.ndarray) -> np.ndarray:
         """Return the weight matrix of the group."""
         weights = np.diag(
             np.block(
                 [
-                    np.ones(self.groups[gr]['num_datapoints'])
+                    np.ones(self.groups[group]['num_datapoints'])
                     / (np.sum(np.abs(y_sim_all)) + 1e-8),
-                    np.zeros(2 * self.groups[gr]['num_categories']),
+                    np.zeros(2 * self.groups[group]['num_categories']),
                 ]
             )
         )
         return weights
 
-    def get_wdot(self, gr, y_sim_all, sy_all) -> np.ndarray:
+    def get_wdot(
+        self, group: int, y_sim_all: np.ndarray, sy_all: np.ndarray
+    ) -> np.ndarray:
         """Return the derivative of the weight matrix of a group with respect to an outer parameter."""
-        weights = np.diag(
+        w_dot = np.diag(
             np.block(
                 [
-                    np.ones(self.groups[gr]['num_datapoints'])
+                    np.ones(self.groups[group]['num_datapoints'])
                     * (
                         -1
                         * np.sum(sy_all)
                         / ((np.sum(np.abs(y_sim_all)) + 1e-8) ** 2)
                     ),
-                    np.zeros(2 * self.groups[gr]['num_categories']),
+                    np.zeros(2 * self.groups[group]['num_categories']),
                 ]
             )
         )
-        return weights
+        return w_dot
 
-    def get_d(self, gr, xs, y_sim_all, eps) -> np.ndarray:
+    def get_d(
+        self,
+        group,
+        xs: List[OptimalScalingParameter],
+        y_sim_all: np.ndarray,
+        eps: float,
+    ) -> np.ndarray:
         """Return vector of minimal gaps and ranges."""
         max_simulation = np.nanmax(y_sim_all)
 
         interval_range = max_simulation / (2 * len(xs) + 1)
         interval_gap = max_simulation / (4 * (len(xs) - 1) + 1)
 
-        d = np.zeros(self.groups[gr]['num_constr_full'])
+        d = np.zeros(self.groups[group]['num_constr_full'])
 
         d[
-            2 * self.groups[gr]['num_datapoints']
-            + 1 : 2 * self.groups[gr]['num_datapoints']
-            + self.groups[gr]['num_categories']
+            2 * self.groups[group]['num_datapoints']
+            + 1 : 2 * self.groups[group]['num_datapoints']
+            + self.groups[group]['num_categories']
         ] = (interval_gap + eps)
 
         d[
-            2 * self.groups[gr]['num_datapoints']
-            + self.groups[gr]['num_categories'] :
+            2 * self.groups[group]['num_datapoints']
+            + self.groups[group]['num_categories'] :
         ] = interval_range
         return d
 
-    def get_dd_dtheta(self, gr, xs, y_sim_all, sy_all) -> np.ndarray:
+    def get_dd_dtheta(
+        self,
+        group: int,
+        xs: List[OptimalScalingParameter],
+        y_sim_all: np.ndarray,
+        sy_all: np.ndarray,
+    ) -> np.ndarray:
         """Return the derivative of vector of minimal gaps and ranges with respect to an outer parameter."""
         max_sim_idx = np.argmax(y_sim_all)
         max_sy = sy_all[max_sim_idx]
-        dd_dtheta = np.zeros(self.groups[gr]['num_constr_full'])
+        dd_dtheta = np.zeros(self.groups[group]['num_constr_full'])
 
         dinterval_range_dtheta = max_sy / (2 * len(xs) + 1)
         dinterval_gap_dtheta = max_sy / (4 * (len(xs) - 1) + 1)
 
         dd_dtheta[
-            2 * self.groups[gr]['num_datapoints']
-            + 1 : 2 * self.groups[gr]['num_datapoints']
-            + self.groups[gr]['num_categories']
+            2 * self.groups[group]['num_datapoints']
+            + 1 : 2 * self.groups[group]['num_datapoints']
+            + self.groups[group]['num_categories']
         ] = dinterval_gap_dtheta
 
         dd_dtheta[
-            2 * self.groups[gr]['num_datapoints']
-            + self.groups[gr]['num_categories'] :
+            2 * self.groups[group]['num_datapoints']
+            + self.groups[group]['num_categories'] :
         ] = dinterval_range_dtheta
 
         return dd_dtheta
@@ -377,7 +391,7 @@ def optimal_scaling_inner_problem_from_petab_problem(
     )
 
     # used indices for all measurement specific parameters
-    ixs = qualitatiave_ixs_for_measurement_specific_parameters(
+    ixs = optimal_scaling_ixs_for_measurement_specific_parameters(
         petab_problem, amici_model, inner_parameters
     )
 
@@ -454,7 +468,7 @@ def get_estimate_for_method(method: str) -> Tuple[bool, bool]:
     return estimate_lb, estimate_ub
 
 
-def qualitatiave_ixs_for_measurement_specific_parameters(
+def optimal_scaling_ixs_for_measurement_specific_parameters(
     petab_problem: 'petab.Problem',
     amici_model: 'amici.Model',
     inner_parameters: List[OptimalScalingParameter],

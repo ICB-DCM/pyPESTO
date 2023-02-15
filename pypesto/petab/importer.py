@@ -98,7 +98,7 @@ class PetabImporter(AmiciObjectBuilder):
         ordinal:
             Whether ordinal data is used in the optimization problem. In this
             case the Optimal Scaling approach will be used
-            to integrate it in a inner optimization subproblem.
+            to integrate it in an inner optimization subproblem.
         inner_solver_options:
             Options of the inner solver, passed to constructors of inner solvers.
             If not provided, default options will be used.

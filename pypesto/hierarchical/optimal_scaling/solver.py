@@ -22,7 +22,7 @@ class OptimalScalingInnerSolver(InnerSolver):
     -------
     method:
         The method to use for the inner optimization problem.
-        Can be 'standard' or 'reduced'.
+        Can be 'standard' or 'reduced'. The latter is more efficient.
     reparameterized:
         Whether to use reparameterized optimization.
     intervalConstraints:
@@ -72,6 +72,11 @@ class OptimalScalingInnerSolver(InnerSolver):
                 'Combining standard approach with '
                 'reparameterization not implemented.'
             )
+        elif self.options['method'] == STANDARD:
+            warnings.warn(
+                'Standard approach is not recommended, as it is less efficient.'
+                'Please consider using the reduced approach instead.'
+            )
 
     def solve(
         self,
@@ -109,7 +114,7 @@ class OptimalScalingInnerSolver(InnerSolver):
             )
             save_inner_parameters_to_inner_problem(
                 category_upper_bounds=category_upper_bounds,
-                gr=group,
+                group=group,
                 problem=problem,
                 x_inner_opt=surrogate_opt_results,
                 sim=sim,
@@ -123,7 +128,7 @@ class OptimalScalingInnerSolver(InnerSolver):
         """Calculate the inner objective function value.
 
         Calculates the inner objective function value from a list of inner
-        optimization results returned from `compute_optimal_surrogate_data`.
+        optimization results returned from `OptimalScalingInnerSolver.solve`.
 
         Parameters
         ----------
@@ -279,14 +284,14 @@ class OptimalScalingInnerSolver(InnerSolver):
 
 
 def calculate_dxi_dtheta(
-    group,
+    group: int,
     problem: OptimalScalingProblem,
-    xi,
-    mu,
-    dy_dtheta,
-    residual,
-    d,
-    dd_dtheta,
+    xi: np.ndarray,
+    mu: np.ndarray,
+    dy_dtheta: np.ndarray,
+    residual: np.ndarray,
+    d: np.ndarray,
+    dd_dtheta: np.ndarray,
 ):
     """Calculate derivatives of inner parameters with respect to outer parameter.
 
@@ -337,14 +342,14 @@ def calculate_dxi_dtheta(
     return dxi_dtheta[: problem.groups[group]['num_inner_params']]
 
 
-def get_dy_dtheta(gr, problem: OptimalScalingProblem, sy_all):
+def get_dy_dtheta(gr: int, problem: OptimalScalingProblem, sy_all: np.ndarray):
     """Restructure sensitivities into a numpy matrix of right dimension."""
     return np.block(
         [sy_all, np.zeros(2 * problem.groups[gr]['num_categories'])]
     )
 
 
-def get_mu(group, problem: OptimalScalingProblem, residual):
+def get_mu(group: int, problem: OptimalScalingProblem, residual: np.ndarray):
     """Calculate Lagrange multipliers of the inner optimization problem.
 
     Parameters
@@ -367,7 +372,7 @@ def get_mu(group, problem: OptimalScalingProblem, residual):
 
 
 def get_xi(
-    gr,
+    group: int,
     problem: OptimalScalingProblem,
     x_inner_opt: Dict,
     sim: List[np.ndarray],
@@ -388,18 +393,18 @@ def get_xi(
     options:
         Optimal scaling inner solver options.
     """
-    xs = problem.get_cat_ub_parameters_for_group(gr)
+    xs = problem.get_cat_ub_parameters_for_group(group)
     interval_range, interval_gap = compute_interval_constraints(
         xs, sim, options
     )
 
-    xi = np.zeros(problem.groups[gr]['num_inner_params'])
+    xi = np.zeros(problem.groups[group]['num_inner_params'])
     surrogate_all, x_lower, x_upper = get_surrogate_all(
         xs, x_inner_opt['x'], sim, interval_range, interval_gap, options
     )
-    xi[: problem.groups[gr]['num_datapoints']] = surrogate_all.flatten()
-    xi[problem.groups[gr]['lb_indices']] = x_lower
-    xi[problem.groups[gr]['ub_indices']] = x_upper
+    xi[: problem.groups[group]['num_datapoints']] = surrogate_all.flatten()
+    xi[problem.groups[group]['lb_indices']] = x_lower
+    xi[problem.groups[group]['ub_indices']] = x_upper
     return xi
 
 
@@ -575,7 +580,6 @@ def get_sy_all(
     for inner_parameter in inner_parameters:
         for sy_i, mask_i in zip(sy, inner_parameter.ixs):
             sim_sy = sy_i[:, par_idx, :][mask_i]
-            # if mask_i.any():
             for sim_sy_i in sim_sy:
                 sy_all.append(sim_sy_i)
     return np.array(sy_all)
@@ -643,14 +647,6 @@ def get_weight_for_surrogate(
     sim_x_all = get_sim_all(inner_parameters, sim)
     eps = 1e-8
 
-    # Three different types of weights
-    # v_net = 0
-    # for idx in range(len(sim_x_all) - 1):
-    #     v_net += np.abs(sim_x_all[idx + 1] - sim_x_all[idx])
-    # w_pargett = (0.5 * np.sum(np.abs(sim_x_all)) + v_net + eps)** 2
-
-    # w_squared = np.sum(np.square(sim_x_all)) + eps
-
     w = np.sum(np.abs(sim_x_all)) + eps
 
     return w
@@ -682,7 +678,7 @@ def compute_interval_constraints(
         interval_range = max_simulation / (2 * len(inner_parameters) + 1)
         interval_gap = max_simulation / (4 * (len(inner_parameters) - 1) + 1)
     else:
-        raise ValueError(
+        raise NotImplementedError(
             f"intervalConstraints = "
             f"{options['intervalConstraints']} not implemented. "
             f"Please use {MAX} or {MAXMIN}."
@@ -775,7 +771,6 @@ def obj_surrogate_data(
             x, optimal_scaling_bounds, interval_gap, options
         )
         for sim_i, mask_i in zip(sim, x.ixs):
-            # if mask_i.any():
             y_sim = sim_i[mask_i]
             for y_sim_i in y_sim:
                 if x_lower > y_sim_i:
@@ -839,8 +834,7 @@ def get_constraints_for_optimization(
         a = np.diag(-np.ones(2 * num_categories), -1) + np.diag(
             np.ones(2 * num_categories + 1)
         )
-        a = a[:-1, :]
-        a = a[:, :-1]
+        a = a[:-1, :-1]
         b = np.empty((2 * num_categories,))
         b[0] = 0
         b[1::2] = interval_range
@@ -852,7 +846,7 @@ def get_constraints_for_optimization(
 
 def save_inner_parameters_to_inner_problem(
     category_upper_bounds: List[OptimalScalingParameter],
-    gr,
+    group: int,
     problem: OptimalScalingProblem,
     x_inner_opt: Dict,
     sim: List[np.ndarray],
@@ -871,9 +865,9 @@ def save_inner_parameters_to_inner_problem(
         interval_gap,
         options,
     )
-    problem.groups[gr]['surrogate_data'] = surrogate_all.flatten()
+    problem.groups[group]['surrogate_data'] = surrogate_all.flatten()
 
-    for inner_parameter in problem.get_cat_ub_parameters_for_group(gr):
+    for inner_parameter in problem.get_cat_ub_parameters_for_group(group):
         inner_parameter.value = x_upper[inner_parameter.category - 1]
-    for inner_parameter in problem.get_cat_lb_parameters_for_group(gr):
+    for inner_parameter in problem.get_cat_lb_parameters_for_group(group):
         inner_parameter.value = x_lower[inner_parameter.category - 1]
