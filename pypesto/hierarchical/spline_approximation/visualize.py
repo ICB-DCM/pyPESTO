@@ -176,4 +176,7 @@ def plot_splines_from_inner_result(
         axs[group_idx].set_xlabel('Model output')
         axs[group_idx].set_ylabel('Measurements')
 
+    for ax in axs[len(results) :]:
+        ax.remove()
+
     return fig, axs
