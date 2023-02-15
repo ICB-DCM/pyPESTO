@@ -381,6 +381,9 @@ def plot_categories_from_inner_result(
             axs[group_idx].set_xlabel('Timepoints')
             axs[group_idx].set_ylabel('Simulation/Surrogate data')
 
+    for ax in axs[len(results) :]:
+        ax.remove()
+
     return fig, axs
 
 
