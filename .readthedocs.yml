@@ -26,8 +26,3 @@ build:
     - swig
   tools:
     python: "3.10"
-
-# what to build
-formats:
-  - htmlzip
-  - pdf
