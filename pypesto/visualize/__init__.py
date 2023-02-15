@@ -26,7 +26,12 @@ from .optimization_stats import (
 )
 from .optimizer_convergence import optimizer_convergence
 from .optimizer_history import optimizer_history, optimizer_history_lowlevel
-from .parameters import parameter_hist, parameters, parameters_lowlevel
+from .parameters import (
+    optimization_scatter,
+    parameter_hist,
+    parameters,
+    parameters_lowlevel,
+)
 from .profile_cis import profile_cis
 from .profiles import profile_lowlevel, profiles, profiles_lowlevel
 from .reference_points import ReferencePoint, create_references
