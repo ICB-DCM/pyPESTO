@@ -10,7 +10,7 @@ Release notes
 -------------------
 
 * Optimize:
-    * sacess optimizer (#988, #997, )
+    * sacess optimizer (#988, #997)
     * Warn only once if using ineffiecient objective settings (#996)
     * Hierarchical Optimization (#1006)
     * Fix cma documentation (#987)
@@ -21,6 +21,7 @@ Release notes
     * Fix misuse of start indices in waterfall plot (#1000)
     * Fix large function values in clustering for visualizations (#999)
     * parameter correlation diverging color scheme (#1009)
+    * Optimization Parameter scatter plot (#1015)
 * Profiling:
     * added option to profile the whole parameter bounds. (#1014)
 * General
