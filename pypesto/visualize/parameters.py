@@ -486,7 +486,7 @@ def optimization_scatter(
     show_bounds: bool = False,
 ):
     """
-    Plot scatter of optimized parameters.
+    Plot a scatter plot of all pairs of parameters for the given starts.
 
     Parameters
     ----------
