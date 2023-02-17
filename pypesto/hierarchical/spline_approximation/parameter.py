@@ -11,8 +11,10 @@ class SplineInnerParameter(InnerParameter):
 
     Attributes
     ----------
+    observable_id:
+        The id of the observable the spline is modeling.
     group:
-        Group index.
+        Group index. Corresponds to observable index + 1.
     index:
         Parameter index inside the group. Ranges from 1 to n_spline_parameters
         of its group.
@@ -25,6 +27,7 @@ class SplineInnerParameter(InnerParameter):
     def __init__(
         self,
         *args,
+        observable_id: str = None,
         group: int = None,
         index: int = None,
         estimate: bool = False,
@@ -42,11 +45,14 @@ class SplineInnerParameter(InnerParameter):
                 "For the SplineParameter class, the parameter type has to be spline."
             )
 
+        if observable_id is None:
+            raise ValueError("No observable id provided.")
         if group is None:
             raise ValueError("No Parameter group provided.")
         if index is None:
             raise ValueError("No Parameter index provided.")
 
+        self.observable_id = observable_id
         self.group = group
         self.index = index
         self.estimate = estimate

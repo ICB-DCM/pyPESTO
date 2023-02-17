@@ -6,7 +6,6 @@ import pandas as pd
 from ...C import (
     INNER_PARAMETER_BOUNDS,
     LIN,
-    MEASUREMENT_GROUP,
     MEASUREMENT_TYPE,
     NONLINEAR_MONOTONE,
     TIME,
@@ -168,7 +167,7 @@ def spline_inner_problem_from_petab_problem(
 
     # inner parameters
     inner_parameters = spline_inner_parameters_from_measurement_df(
-        petab_problem.measurement_df, spline_ratio
+        petab_problem.measurement_df, spline_ratio, amici_model
     )
 
     # used indices for all measurement specific parameters
@@ -198,9 +197,12 @@ def spline_inner_problem_from_petab_problem(
 def spline_inner_parameters_from_measurement_df(
     df: pd.DataFrame,
     spline_ratio: float,
+    amici_model: 'amici.Model',
 ) -> List[SplineInnerParameter]:
     """Create list of inner free parameters from PEtab measurement table."""
     df = df.reset_index()
+
+    observable_ids = amici_model.getObservableIds()
 
     par_type = 'spline'
     estimate = True
@@ -210,12 +212,12 @@ def spline_inner_parameters_from_measurement_df(
 
     # Select the nonlinear monotone measurements.
     df = df[df[MEASUREMENT_TYPE] == NONLINEAR_MONOTONE]
-    groups = list(set(df[MEASUREMENT_GROUP]))
 
     # Iterate over groups.
-    for group in groups:
-        df_for_group = df[df[MEASUREMENT_GROUP] == group]
-        observable_id = df_for_group[OBSERVABLE_ID].values[0]
+    for observable_id in observable_ids:
+        group = observable_ids.index(observable_id) + 1
+        df_for_group = df[df[OBSERVABLE_ID] == observable_id]
+
         n_spline_parameters = int(np.ceil(len(df_for_group) * spline_ratio))
 
         # Create n_spline_parameters number of spline inner parameters.
@@ -228,6 +230,7 @@ def spline_inner_parameters_from_measurement_df(
                     scale=LIN,
                     lb=lb,
                     ub=ub,
+                    observable_id=observable_id,
                     group=group,
                     index=par_index + 1,
                     estimate=estimate,
@@ -320,5 +323,5 @@ def get_spline_inner_par_ids_for_measurement(
     return [
         inner_par.inner_parameter_id
         for inner_par in inner_parameters
-        if inner_par.group == measurement[MEASUREMENT_GROUP]
+        if inner_par.observable_id == measurement[OBSERVABLE_ID]
     ]

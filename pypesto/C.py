@@ -148,7 +148,6 @@ MAX = 'max'
 ###############################################################################
 # SPLINE APPROACH
 
-MEASUREMENT_GROUP = 'measurementGroup'
 MEASUREMENT_TYPE = 'measurementType'
 
 NONLINEAR_MONOTONE = 'nonlinear_monotone'

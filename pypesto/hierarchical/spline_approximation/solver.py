@@ -165,6 +165,9 @@ class SplineInnerSolver(InnerSolver):
                     or par_opt in already_calculated
                 ):
                     continue
+                # Current fix for scaling/offset parameters in models.
+                elif par_sim.startswith('observableParameter'):
+                    continue
                 else:
                     already_calculated.add(par_opt)
                 par_sim_idx = par_sim_ids.index(par_sim)

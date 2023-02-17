@@ -1,10 +1,14 @@
 import warnings
-from typing import Dict, List
+from typing import Dict, List, Sequence, Union
 
+import matplotlib.axes
 import matplotlib.pyplot as plt
 import numpy as np
+import petab
 
+from ...problem import Problem
 from ...result import Result
+from ...visualize.model_fit import visualize_optimized_model_fit
 from .problem import SplineInnerProblem
 from .solver import SplineInnerSolver, get_spline_mapped_simulations
 
@@ -50,6 +54,7 @@ def plot_splines_from_pypesto_result(
     amici_model = pypesto_result.problem.objective.amici_model
     amici_solver = pypesto_result.problem.objective.amici_solver
     n_threads = pypesto_result.problem.objective.n_threads
+    observable_ids = amici_model.getObservableIds()
 
     # Fill in the parameters.
     amici.parameter_mapping.fill_in_parameters(
@@ -86,12 +91,15 @@ def plot_splines_from_pypesto_result(
     inner_results = inner_solver.solve(inner_problem, sim, sigma)
 
     return plot_splines_from_inner_result(
-        inner_problem, inner_results, **kwargs
+        inner_problem, inner_results, observable_ids, **kwargs
     )
 
 
 def plot_splines_from_inner_result(
-    inner_problem: SplineInnerProblem, results: List[Dict], **kwargs
+    inner_problem: SplineInnerProblem,
+    results: List[Dict],
+    observable_ids=None,
+    **kwargs,
 ):
     """Plot the inner solutions.
 
@@ -171,7 +179,10 @@ def plot_splines_from_inner_result(
             simulation, mapped_simulations, 'r^', label='Mapped simulation'
         )
         axs[group_idx].legend()
-        axs[group_idx].set_title(f'Group {group}')
+        if observable_ids is not None:
+            axs[group_idx].set_title(f'{observable_ids[group-1]}')
+        else:
+            axs[group_idx].set_title(f'Group {group}')
 
         axs[group_idx].set_xlabel('Model output')
         axs[group_idx].set_ylabel('Measurements')
@@ -180,3 +191,149 @@ def plot_splines_from_inner_result(
         ax.remove()
 
     return fig, axs
+
+
+def visualize_spline_optimized_model_fit(
+    petab_problem: petab.Problem,
+    result: Union[Result, Sequence[Result]],
+    pypesto_problem: Problem,
+    start_index: int = 0,
+    return_dict: bool = False,
+    unflattened_petab_problem: petab.Problem = None,
+    **kwargs,
+) -> Union[matplotlib.axes.Axes, None]:
+    """Visualize the spline optimized model fit.
+
+    Adds the spline-mapped simulation to the axes given by
+    `pypesto.visualize.model_fit.visualize_optimized_model_fit`.
+    For further details on documentation see
+    :py:func:`pypesto.visualize.model_fit.visualize_optimized_model_fit`.
+    """
+
+    # Get the axes from the pypesto visualization.
+    axes = visualize_optimized_model_fit(
+        petab_problem,
+        result,
+        pypesto_problem,
+        start_index=start_index,
+        return_dict=return_dict,
+        unflattened_petab_problem=unflattened_petab_problem,
+        **kwargs,
+    )
+
+    if axes is None:
+        return None
+
+    # Get the parameters from the pypesto result for the start_index.
+    x_dct = dict(
+        zip(
+            pypesto_problem.objective.x_ids,
+            result.optimize_result.list[start_index]['x'],
+        )
+    )
+
+    # Get the needed objects from the pypesto problem.
+    edatas = pypesto_problem.objective.edatas
+    parameter_mapping = pypesto_problem.objective.parameter_mapping
+    amici_model = pypesto_problem.objective.amici_model
+    amici_solver = pypesto_problem.objective.amici_solver
+    n_threads = pypesto_problem.objective.n_threads
+
+    # Fill in the parameters.
+    amici.parameter_mapping.fill_in_parameters(
+        edatas=edatas,
+        problem_parameters=x_dct,
+        scaled_parameters=True,
+        parameter_mapping=parameter_mapping,
+        amici_model=amici_model,
+    )
+
+    # Simulate the model with the parameters from the pypesto result.
+    inner_rdatas = amici.runAmiciSimulations(
+        amici_model,
+        amici_solver,
+        edatas,
+        num_threads=min(n_threads, len(edatas)),
+    )
+
+    # If any amici simulation failed, raise warning and return None.
+    if any(rdata.status != amici.AMICI_SUCCESS for rdata in inner_rdatas):
+        warnings.warn(
+            'Warning: Some AMICI simulations failed. Cannot plot inner solutions.'
+        )
+        return None
+
+    # Get simulation and sigma.
+    sim = [rdata['y'] for rdata in inner_rdatas]
+    sigma = [rdata['sigmay'] for rdata in inner_rdatas]
+
+    # Get the inner solver and problem.
+    inner_solver = pypesto_problem.objective.calculator.inner_solver
+    inner_problem = pypesto_problem.objective.calculator.inner_problem
+
+    # Solve the inner problem.
+    inner_results = inner_solver.solve(inner_problem, sim, sigma)
+
+    # Get the observable ids.
+    observable_ids = amici_model.getObservableIds()
+
+    for inner_result, observable_id, group in zip(
+        inner_results, observable_ids, range(1, len(observable_ids) + 1)
+    ):
+        # Get the ax for the current observable.
+        ax = [
+            ax
+            for ax in axes.values()
+            if observable_id in ax.legend().get_texts()[0].get_text().split()
+        ][0]
+
+        # Get the inner parameters and simulation.
+        xs = inner_problem.get_xs_for_group(group)
+        s = inner_result['x']
+
+        inner_parameters = np.array([x.value for x in xs])
+        simulation = inner_problem.groups[group]['current_simulation']
+
+        # For the simulation, get the spline bases
+        delta_c, spline_bases, n = SplineInnerSolver._rescale_spline_bases(
+            self='a',
+            sim_all=simulation,
+            N=len(inner_parameters),
+            K=len(simulation),
+        )
+        # and the spline-mapped simulations.
+        mapped_simulations = get_spline_mapped_simulations(
+            s, simulation, len(inner_parameters), delta_c, spline_bases, n
+        )
+
+        # Plot the spline-mapped simulations to the ax with same color
+        # and timepoints as the lines which have 'simulation' in their label.
+        plotted_index = 0
+        for line in ax.lines:
+            if 'simulation' in line.get_label():
+                color = line.get_color()
+                timepoints = line.get_xdata()
+                condition_mapped_simulations = mapped_simulations[
+                    plotted_index : len(timepoints) + plotted_index
+                ]
+                plotted_index += len(timepoints)
+
+                ax.plot(
+                    timepoints,
+                    condition_mapped_simulations,
+                    color=color,
+                    linestyle='dotted',
+                    marker='^',
+                )
+
+        # Add linestyle='dotted' and marker='^' to the legend as black spline mapped simulations.
+        ax.plot(
+            [],
+            [],
+            color='black',
+            linestyle='dotted',
+            marker='^',
+            label='Spline mapped simulation',
+        )
+
+    return axes
