@@ -35,6 +35,9 @@ class ProfileOptions(dict):
     magic_factor_obj_value:
         There is this magic factor in the old profiling code which slows down
         profiling at small ratios (must be >= 0 and < 1).
+    whole_path:
+        Whether to profile the whole bounds or only till we get below the
+        ratio.
     """
 
     def __init__(
@@ -48,6 +51,7 @@ class ProfileOptions(dict):
         reg_points: int = 10,
         reg_order: int = 4,
         magic_factor_obj_value: float = 0.5,
+        whole_path: bool = False,
     ):
         super().__init__()
 
@@ -60,6 +64,7 @@ class ProfileOptions(dict):
         self.reg_points = reg_points
         self.reg_order = reg_order
         self.magic_factor_obj_value = magic_factor_obj_value
+        self.whole_path = whole_path
 
     def __getattr__(self, key):
         """Allow usage of keys like attributes."""

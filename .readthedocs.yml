@@ -8,17 +8,21 @@ version: 2
 # Build documentation in the doc/ directory with Sphinx
 sphinx:
   configuration: doc/conf.py
+  fail_on_warning: True
 
 # python requirements
 python:
-  version: 3.8
   install:
     - method: pip
       path: .
       extra_requirements:
         - doc
+        - amici
 
-# what to build
-formats:
-  - htmlzip
-  - pdf
+build:
+  os: "ubuntu-20.04"
+  apt_packages:
+    - libatlas-base-dev
+    - swig
+  tools:
+    python: "3.10"
