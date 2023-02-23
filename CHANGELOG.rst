@@ -14,6 +14,8 @@ Release notes
     * Warn only once if using ineffiecient objective settings (#996)
     * Hierarchical Optimization (#1006)
     * Fix cma documentation (#987)
+* Petab
+    * Improvement to create_startpoint_method() (#1018)
 * Sampling:
     * Dynesty sampler (#1002)
     * Fix test/sample/test_sample.py::test_samples_cis failures (#1004)
@@ -33,6 +35,7 @@ Release notes
     * Doc typo fixes (#995)
     * Doc: Install amici on RTD (#1016)
     * Add getting_started notebook (#1023)
+    * remove alernative formats build (#1022)
 
 
 0.2.15 (2022-12-21)
