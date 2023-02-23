@@ -6,7 +6,7 @@ Release notes
 ..........
 
 
-0.2.16 (2023-02-14)
+0.2.16 (2023-02-23)
 -------------------
 
 * Optimize:
@@ -32,6 +32,7 @@ Release notes
     * black update (#1010)
     * Doc typo fixes (#995)
     * Doc: Install amici on RTD (#1016)
+    * Add getting_started notebook (#1023)
 
 
 0.2.15 (2022-12-21)
