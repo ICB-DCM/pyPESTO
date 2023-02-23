@@ -16,7 +16,8 @@ class PetabImporterPysb(PetabImporter):
     def __init__(
         self,
         petab_problem: amici.petab_import_pysb.PysbPetabProblem,
-        output_folder: str = None,
+        validate_petab: bool = False,
+        **kwargs,
     ):
         """
         Initialize importer.
@@ -25,14 +26,17 @@ class PetabImporterPysb(PetabImporter):
         ----------
         petab_problem:
             Managing access to the model and data.
-        output_folder:
-            Folder to contain the amici model.
+        validate_petab:
+            Flag indicating if the PEtab problem shall be validated.
+        kwargs:
+            Passed to `PetabImporter.__init__`.
         """
+        if "model_name" not in kwargs:
+            kwargs["model_name"] = petab_problem.pysb_model.name
         super().__init__(
             petab_problem,
-            model_name=petab_problem.pysb_model.name,
-            output_folder=output_folder,
-            validate_petab=False,
+            validate_petab=validate_petab,
+            **kwargs,
         )
 
     def compile_model(self, **kwargs):

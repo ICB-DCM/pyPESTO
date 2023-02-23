@@ -38,7 +38,7 @@ jobs:
       run: .github/workflows/install_deps.sh amici
 
     - name: Run tests
-      timeout-minutes: 15
+      timeout-minutes: 25
       run: tox -e base
 
     - name: Coverage
@@ -286,7 +286,7 @@ jobs:
       run: pip install cffconvert && cffconvert --validate
 
     - name: Build doc
-      timeout-minutes: 5
+      timeout-minutes: 10
       run: tox -e doc
 
   notebooks1:

@@ -62,6 +62,7 @@ class PetabImporter(AmiciObjectBuilder):
         output_folder: str = None,
         model_name: str = None,
         validate_petab: bool = True,
+        validate_petab_hierarchical: bool = True,
         hierarchical: bool = False,
     ):
         """Initialize importer.
@@ -78,6 +79,9 @@ class PetabImporter(AmiciObjectBuilder):
             compiled model python module.
         validate_petab:
             Flag indicating if the PEtab problem shall be validated.
+        validate_petab_hierarchical:
+            Flag indicating if the PEtab problem shall be validated in terms of
+            pyPESTO's hierarchical optimization implementation.
         hierarchical:
             Whether to use hierarchical optimization or not, in case the
             underlying PEtab problem has parameters marked for hierarchical
@@ -90,12 +94,12 @@ class PetabImporter(AmiciObjectBuilder):
         if validate_petab:
             if petab.lint_problem(petab_problem):
                 raise ValueError("Invalid PEtab problem.")
-            if self._hierarchical:
-                from ..hierarchical.petab import (
-                    validate_hierarchical_petab_problem,
-                )
+        if self._hierarchical and validate_petab_hierarchical:
+            from ..hierarchical.petab import (
+                validate_hierarchical_petab_problem,
+            )
 
-                validate_hierarchical_petab_problem(petab_problem)
+            validate_hierarchical_petab_problem(petab_problem)
 
         if output_folder is None:
             output_folder = _find_output_folder_name(
@@ -533,9 +537,7 @@ class PetabImporter(AmiciObjectBuilder):
         prior_list = []
 
         if petab.OBJECTIVE_PRIOR_TYPE in self.petab_problem.parameter_df:
-
             for i, x_id in enumerate(self.petab_problem.x_ids):
-
                 prior_type_entry = self.petab_problem.parameter_df.loc[
                     x_id, petab.OBJECTIVE_PRIOR_TYPE
                 ]
@@ -544,7 +546,6 @@ class PetabImporter(AmiciObjectBuilder):
                     isinstance(prior_type_entry, str)
                     and prior_type_entry != petab.PARAMETER_SCALE_UNIFORM
                 ):
-
                     prior_params = [
                         float(param)
                         for param in self.petab_problem.parameter_df.loc[
@@ -567,24 +568,22 @@ class PetabImporter(AmiciObjectBuilder):
         else:
             return None
 
-    def create_startpoint_method(self) -> Union[StartpointMethod, None]:
+    def create_startpoint_method(self, **kwargs) -> StartpointMethod:
         """Create a startpoint method.
 
-        If the PEtab problem specifies an initializationPrior. Returns None,
-        if no initializationPrior is specified.
+        Parameters
+        ----------
+        **kwargs:
+            Additional keyword arguments passed on to
+            :meth:`pypesto.startpoint.FunctionStartpoints.__init__`.
         """
-        if (
-            petab.INITIALIZATION_PRIOR_TYPE
-            not in self.petab_problem.parameter_df
-        ):
-            return None
 
         def startpoint_method(n_starts: int, **kwargs):
             return petab.sample_parameter_startpoints(
                 self.petab_problem.parameter_df, n_starts=n_starts
             )
 
-        return FunctionStartpoints(function=startpoint_method)
+        return FunctionStartpoints(function=startpoint_method, **kwargs)
 
     def create_problem(
         self,
@@ -744,6 +743,7 @@ class PetabImporter(AmiciObjectBuilder):
             A dataframe built from the rdatas in the format as in
             self.petab_problem.measurement_df.
         """
+
         # create rdata-like dicts from the prediction result
         @dataclass
         class FakeRData:

@@ -228,7 +228,6 @@ class PredictionResult:
 
         # loop over conditions (i.e., amici edata objects)
         for i_cond, cond in enumerate(self.conditions):
-
             timepoints = pd.Series(name=TIME, data=cond.timepoints)
             # handle outputs, if computed
             if cond.output is not None:

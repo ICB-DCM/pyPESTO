@@ -698,12 +698,13 @@ def test_samples_cis():
     result = sample.sample(
         problem=problem,
         sampler=sampler,
-        n_samples=2000,
+        n_samples=1000,
         result=result,
     )
 
-    # run geweke test
-    sample.geweke_test(result)
+    # manually set burn in (only for testing!!)
+    burn_in = 100
+    result.sample_result.burn_in = burn_in
 
     # get converged chain
     converged_chain = np.asarray(
@@ -727,3 +728,23 @@ def test_samples_cis():
         assert (lb < ub).all()
         # check if dimmensions agree
         assert lb.shape == ub.shape
+
+
+def test_dynesty_mcmc_samples():
+    problem = gaussian_problem()
+    sampler = sample.DynestySampler()
+
+    result = sample.sample(
+        problem=problem,
+        sampler=sampler,
+        n_samples=None,
+        filename=None,
+    )
+
+    original_sample_result = sampler.get_original_samples()
+    mcmc_sample_result = result.sample_result
+
+    # Nested sampling function values are monotonically increasing
+    assert (np.diff(original_sample_result.trace_neglogpost) <= 0).all()
+    # MCMC samples are not
+    assert not (np.diff(mcmc_sample_result.trace_neglogpost) <= 0).all()

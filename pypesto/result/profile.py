@@ -131,6 +131,7 @@ class ProfilerResult(dict):
         n_hess:
             Number of Hessian evaluations performed to find `x`.
         """
+
         # short function to append to numpy vectors
         def append_to_vector(field_name, val):
             field_new = np.zeros(self[field_name].size + 1)

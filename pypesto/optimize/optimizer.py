@@ -4,6 +4,7 @@ import abc
 import logging
 import re
 import time
+import warnings
 from typing import TYPE_CHECKING, Dict, Optional
 
 import numpy as np
@@ -393,7 +394,7 @@ class ScipyOptimizer(Optimizer):
             # Todo Resolve warning by implementing saving of hess temporarily
             #  in objective and pass to scipy seperately
             if objective.hess is True:
-                logger.warning(
+                warnings.warn(
                     "scipy.optimize.minimize does not support "
                     "passing fun and hess as one function. Hence "
                     "for each evaluation of hess, fun will be "
@@ -661,9 +662,10 @@ class PyswarmOptimizer(Optimizer):
 
 class CmaesOptimizer(Optimizer):
     """
-    Global optimization using cma-es.
+    Global optimization using covariance matrix adaptation evolutionary search.
 
-    Package homepage: https://pypi.org/project/cma-es/
+    This optimizer interfaces the cma package
+    (https://github.com/CMA-ES/pycma).
     """
 
     def __init__(self, par_sigma0: float = 0.25, options: Dict = None):
@@ -1239,7 +1241,7 @@ class FidesOptimizer(Optimizer):
 
         if self.hessian_update == 'default':
             if not problem.objective.has_hess:
-                logging.warning(
+                warnings.warn(
                     'Fides is using BFGS as hessian approximation, '
                     'as the problem does not provide a Hessian. '
                     'Specify a Hessian to use a more efficient '
