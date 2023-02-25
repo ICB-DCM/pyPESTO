@@ -30,6 +30,7 @@ from .parameters import (
     optimization_scatter,
     parameter_hist,
     parameters,
+    parameters_correlation_matrix,
     parameters_lowlevel,
 )
 from .profile_cis import profile_cis
