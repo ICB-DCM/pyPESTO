@@ -566,3 +566,26 @@ def test_scipy_integrated_grad():
         len(result.optimize_result.history[0].get_fval_trace())
         == result.optimize_result.history[0].n_fval
     )
+
+
+def test_correct_startpoint_usage(optimizer):
+    """
+    Test that the startpoint is correctly used in all optimizers.
+    """
+    opt = get_optimizer(*optimizer)
+
+    # define a problem with an x_guess
+    problem = CRProblem(x_guesses=[np.array([1.0, 1.0])]).get_problem()
+
+    # run optimization
+    result = optimize.minimize(
+        problem=problem,
+        optimizer=opt,
+        n_starts=1,
+        progress_bar=False,
+    )
+    # check that the startpoint was used
+    assert result.optimize_result.list[0].x0 == pytest.approx(
+        problem.x_guesses[0]
+    )
+    print(opt)
