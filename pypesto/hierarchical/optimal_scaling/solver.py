@@ -159,6 +159,7 @@ class OptimalScalingInnerSolver(InnerSolver):
         parameter_mapping: ParameterMapping,
         par_opt_ids: List,
         par_sim_ids: List,
+        par_edatas_indices: List,
         snllh: Dict,
     ):
         """Calculate gradients of the inner objective function.
@@ -182,6 +183,9 @@ class OptimalScalingInnerSolver(InnerSolver):
             Ids of outer otimization parameters.
         par_sim_ids:
             Ids of outer simulation parameters, includes fixed parameters.
+        par_edata_indices:
+            Indices of parameters from `amici_model.getParameterIds()` that are needed for
+            sensitivity calculation. Comes from `edata.plist` for each condition.
         snllh:
             Empty dictionary with optimization parameters as keys.
 
@@ -203,8 +207,16 @@ class OptimalScalingInnerSolver(InnerSolver):
                     continue
                 else:
                     already_calculated.add(par_opt)
-                par_sim_idx = par_sim_ids.index(par_sim)
+
                 par_opt_idx = par_opt_ids.index(par_opt)
+                par_sim_idx = par_sim_ids.index(par_sim)
+                par_edata_idx = [
+                    par_edata_indices.index(par_sim_idx)
+                    if par_sim_idx in par_edata_indices
+                    else None
+                    for par_edata_indices in par_edatas_indices
+                ]
+
                 grad = 0.0
 
                 # Iterate over inner parameter groups.
@@ -218,7 +230,7 @@ class OptimalScalingInnerSolver(InnerSolver):
                         group, problem, x_inner_opt[idx], sim, self.options
                     )
                     sim_all = get_sim_all(xs, sim)
-                    sy_all = get_sy_all(xs, sy, par_sim_idx)
+                    sy_all = get_sy_all(xs, sy, par_edata_idx)
 
                     problem.groups[group]['W'] = problem.get_w(group, sim_all)
                     problem.groups[group]['Wdot'] = problem.get_wdot(
@@ -575,13 +587,18 @@ def get_min_max(
 def get_sy_all(
     inner_parameters: List[OptimalScalingParameter],
     sy: List[np.ndarray],
-    par_idx: int,
+    par_edata_idx: int,
 ):
     """Return model sensitivities for inner parameters and outer parameter index."""
     sy_all = []
     for inner_parameter in inner_parameters:
-        for sy_i, mask_i in zip(sy, inner_parameter.ixs):
-            sim_sy = sy_i[:, par_idx, :][mask_i]
+        for sy_i, mask_i, edata_idx in zip(
+            sy, inner_parameter.ixs, par_edata_idx
+        ):
+            if edata_idx is not None:
+                sim_sy = sy_i[:, edata_idx, :][mask_i]
+            else:
+                sim_sy = np.full(sy_i[:, 0, :][mask_i].shape, 0)
             for sim_sy_i in sim_sy:
                 sy_all.append(sim_sy_i)
     return np.array(sy_all)

@@ -71,12 +71,21 @@ def test_optimization(inner_solver_options: List[Dict]):
     petab_problem = petab.Problem.from_yaml(example_ordinal_yaml)
 
     optimizer = pypesto.optimize.ScipyOptimizer(
-        method='Nelder-Mead', options={'maxiter': 10}
+        method='L-BFGS-B', options={'maxiter': 10}
     )
     for option in inner_solver_options:
         problem = _create_problem(petab_problem, option)
-        pypesto.optimize.minimize(
+        result = pypesto.optimize.minimize(
             problem=problem, n_starts=1, optimizer=optimizer
+        )
+        # Check that optimization finished without infinite or nan values.
+        assert np.isfinite(result.optimize_result.list[0]['fval'])
+        assert np.all(np.isfinite(result.optimize_result.list[0]['x']))
+        assert np.all(np.isfinite(result.optimize_result.list[0]['grad'][2:]))
+        # Check that optimization finished with a lower objective value.
+        assert (
+            result.optimize_result.list[0]['fval']
+            < result.optimize_result.list[0]['fval0']
         )
 
 
@@ -134,16 +143,35 @@ def test_optimal_scaling_calculator_and_objective():
         method: calculate(problems[method], x_dct=x_dct) for method in methods
     }
 
+    finite_differences = pypesto.objective.FD(
+        problem.objective,
+    )
+    finite_differences_results = finite_differences(
+        petab_problem.x_nominal_scaled,
+        (
+            0,
+            1,
+        ),
+        MODE_FUN,
+    )
+
     # The results of the objective gradient and function value
     # should not depend on the method given.
     assert np.isclose(
         calculator_results[STANDARD]['fval'],
         calculator_results[REDUCED]['fval'],
     )
-    assert np.isclose(
+    assert np.allclose(
         calculator_results[STANDARD]['grad'],
         calculator_results[REDUCED]['grad'],
-    ).all()
+    )
+
+    # Check that the gradient is the same as the one obtained
+    # with finite differences.
+    assert np.allclose(
+        finite_differences_results[1],
+        calculator_results[STANDARD]['grad'],
+    )
 
     # Since the nominal parameters are close to true ones,
     # the fval and grad should both be low.
@@ -237,11 +265,11 @@ def test_optimal_scaling_solver():
         sim=[simulation],
     )[0]
 
-    assert np.all(
-        np.isclose(standard_result['x'], expected_values[STANDARD], rtol=rtol)
+    assert np.allclose(
+        standard_result['x'], expected_values[STANDARD], rtol=rtol
     )
-    assert np.all(np.isclose(standard_result['fun'], 0, rtol=rtol))
-    assert np.all(np.isclose(standard_result['jac'], 0, rtol=rtol))
+    assert np.allclose(standard_result['fun'], 0, rtol=rtol)
+    assert np.allclose(standard_result['jac'], 0, rtol=rtol)
 
     solver = OptimalScalingInnerSolver(
         options={'method': REDUCED, 'reparameterized': False}
@@ -255,8 +283,8 @@ def test_optimal_scaling_solver():
     assert np.all(
         np.isclose(reduced_result['x'], expected_values[REDUCED], rtol=rtol)
     )
-    assert np.all(np.isclose(reduced_result['fun'], 0, rtol=rtol))
-    assert np.all(np.isclose(reduced_result['jac'], 0, rtol=rtol))
+    assert np.allclose(reduced_result['fun'], 0, rtol=rtol)
+    assert np.allclose(reduced_result['jac'], 0, rtol=rtol)
 
 
 def test_surrogate_data_analytical_calculation():
@@ -270,12 +298,15 @@ def test_surrogate_data_analytical_calculation():
     rtol = 1e-3
 
     optimal_inner_parameters = inner_parameters[STANDARD]
+    n_categories = len(optimal_inner_parameters) / 2
 
-    expected_values = {
-        'interval_range': 0.9090909090909091,
-        'interval_gap': 0.5882352941176472,
-        'surrogate_data': np.linspace(1, 10, 10),
-    }
+    expected_values = {}
+    expected_values['interval_range'] = max(sim) / (2 * n_categories + 1)
+    expected_values['interval_gap'] = max(sim) / (4 * (n_categories - 1) + 1)
+
+    # As we have optimized the inner parameters, the surrogate data
+    # should be the same as the simulation.
+    expected_values['surrogate_data'] = sim
 
     options = {
         'method': STANDARD,
@@ -303,8 +334,6 @@ def test_surrogate_data_analytical_calculation():
         interval_range, expected_values['interval_range'], rtol=rtol
     )
     assert np.isclose(interval_gap, expected_values['interval_gap'], rtol=rtol)
-    assert np.all(
-        np.isclose(
-            surrogate_data, expected_values['surrogate_data'], rtol=rtol
-        )
+    assert np.allclose(
+        surrogate_data, expected_values['surrogate_data'], rtol=rtol
     )

@@ -300,20 +300,17 @@ def plot_categories_from_inner_result(
                 colors = plt.cm.rainbow(np.linspace(0, 1, len(simulation_all)))
 
                 # Plot the categories and surrogate data for all conditions.
-                for condition_index, color in zip(
-                    range(len(simulation_all)), colors
+                for condition_index, condition_id, color in zip(
+                    range(len(simulation_all)), condition_ids, colors
                 ):
                     # Plot the categories and surrogate data for the current condition
                     axs[group_idx].plot(
                         timepoints_all[condition_index],
                         simulation_all[condition_index],
-                        '.',
+                        linestyle='-',
+                        marker='.',
                         color=color,
-                    )
-                    axs[group_idx].plot(
-                        timepoints_all[condition_index],
-                        simulation_all[condition_index],
-                        color=color,
+                        label=condition_id,
                     )
                     axs[group_idx].plot(
                         timepoints_all[condition_index],
@@ -322,44 +319,39 @@ def plot_categories_from_inner_result(
                         color=color,
                     )
 
-                # Gather the category bounds for unique timepoints across conditions
-                # and plot them
-                unique_timepoints = []
-                upper_bounds = []
-                lower_bounds = []
+                # Get all unique timepoints in ascending order
+                unique_timepoints = np.unique(np.concatenate(timepoints_all))
+
+                # Gather timepoints for each category in a dictionary
+                # with upper, lower bound tuple as key and list of timepoints as value
+                category_timepoints_dict = {}
 
                 for condition_idx in range(len(simulation_all)):
-                    for timepoint_idx in range(
-                        len(timepoints_all[condition_idx])
+                    for upper_bound, lower_bound, timepoint in zip(
+                        upper_bounds_all[condition_idx],
+                        lower_bounds_all[condition_idx],
+                        timepoints_all[condition_idx],
                     ):
                         if (
-                            timepoints_all[condition_idx][timepoint_idx]
-                            not in unique_timepoints
-                        ):
-                            unique_timepoints.append(
-                                timepoints_all[condition_idx][timepoint_idx]
-                            )
-                            upper_bounds.append(
-                                upper_bounds_all[condition_idx][timepoint_idx]
-                            )
-                            lower_bounds.append(
-                                lower_bounds_all[condition_idx][timepoint_idx]
-                            )
-
-                # Sort all lists such that timepoints are in ascending order
-                unique_timepoints, upper_bounds, lower_bounds = zip(
-                    *sorted(zip(unique_timepoints, upper_bounds, lower_bounds))
-                )
+                            upper_bound,
+                            lower_bound,
+                        ) not in category_timepoints_dict:
+                            category_timepoints_dict[
+                                (upper_bound, lower_bound)
+                            ] = [timepoint]
+                        else:
+                            category_timepoints_dict[
+                                (upper_bound, lower_bound)
+                            ].append(timepoint)
 
                 # Plot the category rectangles
-                _plot_category_rectangles(
+                _plot_category_rectangles_across_conditions(
                     axs[group_idx],
+                    category_timepoints_dict,
                     unique_timepoints,
-                    upper_bounds,
-                    lower_bounds,
                 )
 
-                # Add to legend meaning of x, . and rectangles
+                # Add to legend meaning of x, and -o- markers.
                 axs[group_idx].plot(
                     [],
                     [],
@@ -370,7 +362,8 @@ def plot_categories_from_inner_result(
                 axs[group_idx].plot(
                     [],
                     [],
-                    '.',
+                    linestyle='-',
+                    marker='.',
                     color='black',
                     label='Simulation',
                 )
@@ -385,6 +378,41 @@ def plot_categories_from_inner_result(
         ax.remove()
 
     return fig, axs
+
+
+def _plot_category_rectangles_across_conditions(
+    ax, category_timepoints_dict, unique_timepoints
+) -> None:
+    for (
+        upper_bound,
+        lower_bound,
+    ), timepoints in category_timepoints_dict.items():
+        # If the largest timepoint is not the last unique timepoint, add the next unique timepoint
+        # to the list of timepoints
+        max_timepoint_unique_ind = np.where(
+            unique_timepoints == max(timepoints)
+        )[0][0]
+        if max_timepoint_unique_ind + 1 < len(unique_timepoints):
+            timepoints.append(unique_timepoints[max_timepoint_unique_ind + 1])
+
+        # Plot the category rectangle
+        ax.fill_between(
+            timepoints,
+            [upper_bound] * len(timepoints),
+            [lower_bound] * len(timepoints),
+            color='gray',
+            alpha=0.5,
+        )
+
+    # Add to legend meaning of gray rectangles.
+    ax.fill_between(
+        [],
+        [],
+        [],
+        color='gray',
+        alpha=0.5,
+        label='Categories',
+    )
 
 
 def _plot_category_rectangles(
