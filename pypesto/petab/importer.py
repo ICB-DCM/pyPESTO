@@ -104,7 +104,7 @@ class PetabImporter(AmiciObjectBuilder):
         ordinal:
             Whether ordinal data is used in the optimization problem. In this
             case the Optimal Scaling approach will be used
-            to integrate it in a inner optimization subproblem.
+            to integrate it in an inner optimization subproblem.
         inner_solver_options:
             Options of the inner solver, passed to constructors of inner solvers.
             If not provided, default options will be used.
@@ -645,24 +645,22 @@ class PetabImporter(AmiciObjectBuilder):
         else:
             return None
 
-    def create_startpoint_method(self) -> Union[StartpointMethod, None]:
+    def create_startpoint_method(self, **kwargs) -> StartpointMethod:
         """Create a startpoint method.
 
-        If the PEtab problem specifies an initializationPrior. Returns None,
-        if no initializationPrior is specified.
+        Parameters
+        ----------
+        **kwargs:
+            Additional keyword arguments passed on to
+            :meth:`pypesto.startpoint.FunctionStartpoints.__init__`.
         """
-        if (
-            petab.INITIALIZATION_PRIOR_TYPE
-            not in self.petab_problem.parameter_df
-        ):
-            return None
 
         def startpoint_method(n_starts: int, **kwargs):
             return petab.sample_parameter_startpoints(
                 self.petab_problem.parameter_df, n_starts=n_starts
             )
 
-        return FunctionStartpoints(function=startpoint_method)
+        return FunctionStartpoints(function=startpoint_method, **kwargs)
 
     def create_problem(
         self,
