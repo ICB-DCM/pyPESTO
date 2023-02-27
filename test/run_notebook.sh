@@ -27,6 +27,7 @@ nbs_1=(
   'hdf5_storage.ipynb'
   'hierarchical.ipynb'
   'example_ordinal.ipynb'
+  'example_nonlinear_monotone.ipynb'
 )
 
 # Sampling notebooks

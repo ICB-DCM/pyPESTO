@@ -60,8 +60,17 @@ def test_optimization(inner_solver_options: List[Dict]):
     )
     for option in inner_solver_options:
         problem = _create_problem(petab_problem, option)
-        pypesto.optimize.minimize(
+        result = pypesto.optimize.minimize(
             problem=problem, n_starts=1, optimizer=optimizer
+        )
+        # Check that optimization finished without infinite or nan values.
+        assert np.isfinite(result.optimize_result.list[0]['fval'])
+        assert np.all(np.isfinite(result.optimize_result.list[0]['x']))
+        assert np.all(np.isfinite(result.optimize_result.list[0]['grad'][2:]))
+        # Check that optimization finished with a lower value.
+        assert (
+            result.optimize_result.list[0]['fval']
+            < result.optimize_result.list[0]['fval0']
         )
 
 
@@ -127,6 +136,12 @@ def test_optimal_scaling_calculator_and_objective():
         minimal_diff: calculate(problems[minimal_diff], x_dct=x_dct)
         for minimal_diff in options.keys()
     }
+    finite_differences = pypesto.objective.FD(problem.objective)
+    FD_results = finite_differences(
+        x=petab_problem.x_nominal_scaled,
+        sensi_orders=(0, 1),
+        mode=MODE_FUN,
+    )
 
     # For nominal parameters, the objective function and gradient
     # will not depend on whether we constrain minimal difference.
@@ -135,10 +150,17 @@ def test_optimal_scaling_calculator_and_objective():
         calculator_results['minimal_diff_on']['fval'],
         calculator_results['minimal_diff_off']['fval'],
     )
-    assert np.isclose(
+    assert np.allclose(
         calculator_results['minimal_diff_on']['grad'],
         calculator_results['minimal_diff_off']['grad'],
-    ).all()
+    )
+
+    # The gradient should be close to the one calculated using
+    # finite differences.
+    assert np.allclose(
+        calculator_results['minimal_diff_on']['grad'],
+        FD_results[1],
+    )
 
     # Since the nominal parameters are close to true ones, the
     # the fval and grad should both be low.
@@ -247,12 +269,12 @@ def test_spline_inner_solver():
         assert np.isclose(
             results[minimal_diff][0]['fun'], expected_values['fun'], rtol=rtol
         )
-        assert np.isclose(
+        assert np.allclose(
             results[minimal_diff][0]['jac'], expected_values['jac'], rtol=rtol
-        ).all()
-        assert np.isclose(
+        )
+        assert np.allclose(
             results[minimal_diff][0]['x'], expected_values['x'], rtol=rtol
-        ).all()
+        )
 
 
 def test_get_spline_mapped_simulations():
@@ -260,9 +282,11 @@ def test_get_spline_mapped_simulations():
     spline_parameters = np.array([2, 4, 6, 8, 15])
     simulation = np.array([1, 1.5, 2, 2.5, 3, 3.5, 4, 4.2, 5])
     n_spline_pars = 5
-    delta_c = 1
-    c = np.array([1, 2, 3, 4, 5])
-    simulation_intervals = np.array([1, 2, 3, 3, 4, 4, 5, 5, 5])
+    distance_between_bases = 1
+    spline_bases = np.array([1, 2, 3, 4, 5])
+    simulation_intervals = (
+        np.ceil((simulation - spline_bases[0]) / distance_between_bases) + 1
+    ).astype(int)
 
     rtol = 1e-6
 
@@ -274,12 +298,15 @@ def test_get_spline_mapped_simulations():
         spline_parameters,
         simulation,
         n_spline_pars,
-        delta_c,
-        c,
+        distance_between_bases,
+        spline_bases,
         simulation_intervals,
     )
-    assert np.isclose(
+    assert np.allclose(
         spline_mapped_simulations,
         expected_spline_mapped_simulations,
         rtol=rtol,
-    ).all()
+    )
+
+
+test_get_spline_mapped_simulations()
