@@ -97,8 +97,9 @@ class PetabImporter(AmiciObjectBuilder):
             parameter table).
         ordinal:
             Whether ordinal data is used in the optimization problem. In this
-            case the Optimal Scaling approach will be used
-            to integrate it in an inner optimization subproblem.
+            case the Optimal Scaling approach will be used to integrate it
+            in an inner optimization subproblem. This requires the `hierarchical`
+            flag to be set to `True`.
         inner_solver_options:
             Options of the inner solver, passed to constructors of inner solvers.
             If not provided, default options will be used.
@@ -106,6 +107,13 @@ class PetabImporter(AmiciObjectBuilder):
         self.petab_problem = petab_problem
         self._hierarchical = hierarchical
         self._ordinal = ordinal
+
+        if self._ordinal and not self._hierarchical:
+            raise ValueError(
+                "Ordinal data requires hierarchical optimization to be "
+                "enabled.",
+            )
+
         self._inner_solver_options = inner_solver_options
         if self._inner_solver_options is None:
             self._inner_solver_options = {}
@@ -426,23 +434,8 @@ class PetabImporter(AmiciObjectBuilder):
 
         calculator = None
         amici_reporting = None
-        if self._hierarchical:
-            inner_problem = InnerProblem.from_petab_amici(
-                self.petab_problem, model, edatas
-            )
-            calculator = HierarchicalAmiciCalculator(inner_problem)
-            amici_reporting = amici.RDataReporting.full
-            inner_parameter_ids = calculator.inner_problem.get_x_ids()
-            par_ids = [x for x in par_ids if x not in inner_parameter_ids]
 
-            # FIXME: currently not supported with hierarchical
-            if 'guess_steadystate' in kwargs and kwargs['guess_steadystate']:
-                warnings.warn(
-                    "`guess_steadystate` not supported with hierarchical optimization. Disabling `guess_steadystate`."
-                )
-            kwargs['guess_steadystate'] = False
-
-        if self._ordinal:
+        if self._ordinal and self._hierarchical:
             inner_solver_options = kwargs.pop('inner_solver_options', None)
             inner_solver_options = (
                 inner_solver_options
@@ -466,6 +459,21 @@ class PetabImporter(AmiciObjectBuilder):
             if 'guess_steadystate' in kwargs and kwargs['guess_steadystate']:
                 warnings.warn(
                     "`guess_steadystate` not supported with optimal scaling. Disabling `guess_steadystate`."
+                )
+            kwargs['guess_steadystate'] = False
+        elif self._hierarchical:
+            inner_problem = InnerProblem.from_petab_amici(
+                self.petab_problem, model, edatas
+            )
+            calculator = HierarchicalAmiciCalculator(inner_problem)
+            amici_reporting = amici.RDataReporting.full
+            inner_parameter_ids = calculator.inner_problem.get_x_ids()
+            par_ids = [x for x in par_ids if x not in inner_parameter_ids]
+
+            # FIXME: currently not supported with hierarchical
+            if 'guess_steadystate' in kwargs and kwargs['guess_steadystate']:
+                warnings.warn(
+                    "`guess_steadystate` not supported with hierarchical optimization. Disabling `guess_steadystate`."
                 )
             kwargs['guess_steadystate'] = False
 
