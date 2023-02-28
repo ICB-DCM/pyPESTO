@@ -795,7 +795,7 @@ class ScipyDifferentialEvolutionOptimizer(Optimizer):
         bounds = list(zip(problem.lb, problem.ub))
 
         result = scipy.optimize.differential_evolution(
-            problem.objective.get_fval, bounds, **self.options
+            problem.objective.get_fval, bounds, x0=x0, **self.options
         )
 
         optimizer_result = OptimizerResult(
@@ -888,6 +888,7 @@ class PyswarmsOptimizer(Optimizer):
             dimensions=len(x0),
             options=self.options,
             bounds=(lb, ub),
+            # init_pos=x0,  # TODO: is a problem if x0 is not of the swarm size
         )
 
         def successively_working_fval(swarm: np.ndarray) -> np.ndarray:
