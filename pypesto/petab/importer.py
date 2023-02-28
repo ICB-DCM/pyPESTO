@@ -684,19 +684,20 @@ class PetabImporter(AmiciObjectBuilder):
         ub = self.petab_problem.ub_scaled
 
         # Raise error if the correct calculator is not used.
-        if self._hierarchical:
-            if not isinstance(
-                objective.calculator, HierarchicalAmiciCalculator
-            ):
-                raise AssertionError(
-                    f"If hierarchical optimization is enabled, the `calculator` attribute of the `objective` has to be {HierarchicalAmiciCalculator} and not {objective.calculator}."
-                )
+
         if self._ordinal:
             if not isinstance(
                 objective.calculator, OptimalScalingAmiciCalculator
             ):
                 raise AssertionError(
                     f"If the measurements are ordinal, the `calculator` attribute of the `objective` has to be {OptimalScalingAmiciCalculator} and not {objective.calculator}."
+                )
+        elif self._hierarchical:
+            if not isinstance(
+                objective.calculator, HierarchicalAmiciCalculator
+            ):
+                raise AssertionError(
+                    f"If hierarchical optimization is enabled, the `calculator` attribute of the `objective` has to be {HierarchicalAmiciCalculator} and not {objective.calculator}."
                 )
         # In case of hierarchical optimization, parameters estimated in the
         # inner subproblem are removed from the outer problem
