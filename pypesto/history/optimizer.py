@@ -55,7 +55,6 @@ class OptimizerHistory:
     def __init__(
         self,
         history: HistoryBase,
-        x0: np.ndarray,
         lb: np.ndarray,
         ub: np.ndarray,
         generate_from_history: bool = False,
@@ -64,7 +63,7 @@ class OptimizerHistory:
 
         # initial point
         self.fval0: Union[float, None] = None
-        self.x0: np.ndarray = x0
+        self.x0: np.ndarray = None
 
         # bounds
         self.lb: np.ndarray = lb
@@ -104,6 +103,8 @@ class OptimizerHistory:
         exitflag:
             Optimizer exitflag to be saved.
         """
+        # get initial point from history
+        self.x0 = self.history.get_x_trace(0)
         self.history.finalize(message=message, exitflag=exitflag)
 
         # There can be entries in the history e.g. for grad that are not
@@ -194,6 +195,9 @@ class OptimizerHistory:
         if not len(self.history):
             # nothing to be computed from empty history
             return
+        # set initial points
+        self.x0 = self.history.get_x_trace(0)
+        self.fval0 = self.history.get_fval_trace(0)
 
         # some optimizers may evaluate hess+grad first to compute trust region
         # etc

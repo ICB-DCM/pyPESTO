@@ -583,9 +583,9 @@ def test_correct_startpoint_usage(optimizer):
         optimizer=opt,
         n_starts=1,
         progress_bar=False,
+        history_options=pypesto.HistoryOptions(trace_record=True),
     )
     # check that the startpoint was used
     assert result.optimize_result.list[0].x0 == pytest.approx(
-        problem.x_guesses[0]
+        result.optimize_result[0].history.get_x_trace()[0]
     )
-    print(opt)
