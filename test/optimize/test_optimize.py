@@ -575,7 +575,7 @@ def test_correct_startpoint_usage(optimizer):
     opt = get_optimizer(*optimizer)
 
     # define a problem with an x_guess
-    problem = CRProblem(x_guesses=[np.array([1.0, 1.0])]).get_problem()
+    problem = CRProblem(x_guesses=[np.array([0.25, 0.25])]).get_problem()
 
     # run optimization
     result = optimize.minimize(
