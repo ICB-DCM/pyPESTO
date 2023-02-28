@@ -94,7 +94,7 @@ class PetabImporter(AmiciObjectBuilder):
             Whether to use hierarchical optimization or not, in case the
             underlying PEtab problem has parameters marked for hierarchical
             optimization (non-empty `parameterType` column in the PEtab
-            parameter table).
+            parameter table). Required for ordinal data.
         ordinal:
             Whether ordinal data is used in the optimization problem. In this
             case the Optimal Scaling approach will be used to integrate it
@@ -381,8 +381,9 @@ class PetabImporter(AmiciObjectBuilder):
             Whether to force-compile the model if not passed.
         **kwargs:
             Additional arguments passed on to the objective.
-            Inner_solver_options can optionally be passed here.
-            Otherwise, those given to the importer constructor (or inner solver defaults) will be chosen.
+            In case of ordinal measurements, Inner_solver_options can optionally be passed here.
+            If none are given, inner_solver_options given to the importer constructor
+            (or inner solver defaults) will be chosen.
 
         Returns
         -------
