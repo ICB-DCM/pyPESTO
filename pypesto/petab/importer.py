@@ -373,8 +373,8 @@ class PetabImporter(AmiciObjectBuilder):
             Whether to force-compile the model if not passed.
         **kwargs:
             Additional arguments passed on to the objective.
-            In case of ordinal measurements, inner_solver_options can optionally be passed here,
-            otherwise, those given to the importer constructor (or inner solver defaults) will be chosen.
+            Inner_solver_options can optionally be passed here.
+            Otherwise, those given to the importer constructor (or inner solver defaults) will be chosen.
 
         Returns
         -------
@@ -460,7 +460,7 @@ class PetabImporter(AmiciObjectBuilder):
             calculator = OptimalScalingAmiciCalculator(
                 inner_problem, inner_solver
             )
-            amici_reporting = amici.RDataReporting.full
+            amici_reporting = amici.RDataReporting.residuals
 
             # FIXME: currently not supported with hierarchical
             if 'guess_steadystate' in kwargs and kwargs['guess_steadystate']:
