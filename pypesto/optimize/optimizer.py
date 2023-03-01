@@ -22,6 +22,7 @@ from ..problem import Problem
 from ..result import OptimizerResult
 from .load import fill_result_from_history
 from .options import OptimizeOptions
+from .util import check_finite_bounds
 
 if TYPE_CHECKING:
     import fides
@@ -233,14 +234,9 @@ class Optimizer(abc.ABC):
         """Create default options specific for the optimizer."""
         return None
 
-
-def check_finite_bounds(lb, ub):
-    """Raise if bounds are not finite."""
-    if not np.isfinite(lb).all() or not np.isfinite(ub).all():
-        raise ValueError(
-            'Selected optimizer cannot work with unconstrained '
-            'optimization problems.'
-        )
+    def check_x0_support(self, problem: Problem):
+        """Check whether the optimizer supports the problem."""
+        pass
 
 
 class ScipyOptimizer(Optimizer):
@@ -606,6 +602,13 @@ class DlibOptimizer(Optimizer):
         """Create default options specific for the optimizer."""
         return {'maxiter': 10000}
 
+    def check_x0_support(self, problem: Problem):
+        """Check whether optimizer supports x0."""
+        if problem.x_guesses is not None:
+            logger.warn("The Dlib optimizer does not support x0.")
+        else:
+            logger.debug("The Dlib optimizer does not support x0.")
+
 
 class PyswarmOptimizer(Optimizer):
     """Global optimization using pyswarm."""
@@ -657,6 +660,13 @@ class PyswarmOptimizer(Optimizer):
     def is_least_squares(self):
         """Check whether optimizer is a least squares optimizer."""
         return False
+
+    def check_x0_support(self, problem: Problem):
+        """Check whether optimizer supports x0."""
+        if problem.x_guesses is not None:
+            logger.warn("The pyswarm optimizer does not support x0.")
+        else:
+            logger.debug("The pyswarm optimizer does not support x0.")
 
 
 class CmaesOptimizer(Optimizer):
@@ -925,6 +935,13 @@ class PyswarmsOptimizer(Optimizer):
     def is_least_squares(self):
         """Check whether optimizer is a least squares optimizer."""
         return False
+
+    def check_x0_support(self, problem: Problem):
+        """Check whether optimizer supports x0."""
+        if problem.x_guesses is not None:
+            logger.warn("The pyswarms optimizer does not support x0.")
+        else:
+            logger.debug("The pyswarms optimizer does not support x0.")
 
 
 class NLoptOptimizer(Optimizer):
