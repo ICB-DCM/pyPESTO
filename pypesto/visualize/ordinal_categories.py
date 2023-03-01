@@ -4,15 +4,15 @@ from typing import Dict, List
 import matplotlib.pyplot as plt
 import numpy as np
 
-from ...result import Result
-from .parameter import OptimalScalingParameter
-from .problem import OptimalScalingProblem
-from .solver import (
+from ..hierarchical.optimal_scaling.parameter import OptimalScalingParameter
+from ..hierarchical.optimal_scaling.problem import OptimalScalingProblem
+from ..hierarchical.optimal_scaling.solver import (
     OptimalScalingInnerSolver,
     compute_interval_constraints,
     get_bounds_for_category,
     undo_inner_parameter_reparameterization,
 )
+from ..result import Result
 
 try:
     import amici
