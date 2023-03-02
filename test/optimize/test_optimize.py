@@ -572,7 +572,14 @@ def test_out_of_bound_optimization(optimizer):
     """
     Test that out of bound optimization is handled correctly.
     """
-    # exclude optimizers that do not support inital values
+    # exclude optimizers that do not support inital values (or not fully)
+    if optimizer in [
+        ('dlib', ''),
+        ('pyswarm', ''),
+        ('pyswarms', ''),
+        ('scipydiffevolopt', ''),
+    ]:
+        assert True
 
     opt = get_optimizer(*optimizer)
 
