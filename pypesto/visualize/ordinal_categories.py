@@ -117,8 +117,8 @@ def plot_categories_from_pypesto_result(
 
 
 def plot_categories_from_inner_result(
-    inner_problem: OptimalScalingProblem,
-    inner_solver: OptimalScalingInnerSolver,
+    inner_problem: 'OptimalScalingProblem',
+    inner_solver: 'OptimalScalingInnerSolver',
     results: List[Dict],
     simulation: List[np.ndarray],
     timepoints: List[np.ndarray],
@@ -467,7 +467,7 @@ def _plot_category_rectangles(
 
 
 def _get_data_for_plotting(
-    inner_parameters: List[OptimalScalingParameter],
+    inner_parameters: List['OptimalScalingParameter'],
     optimal_scaling_bounds: List,
     sim: List[np.ndarray],
     timepoints: List[np.ndarray],
