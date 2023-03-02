@@ -575,6 +575,7 @@ def test_correct_startpoint_usage(optimizer):
     # initial start values is not supported for pyswarm, dlib and pyswarms
     if optimizer in [('dlib', ''), ('pyswarm', ''), ('pyswarms', '')]:
         assert True
+        return
 
     opt = get_optimizer(*optimizer)
 
@@ -590,6 +591,6 @@ def test_correct_startpoint_usage(optimizer):
         history_options=pypesto.HistoryOptions(trace_record=True),
     )
     # check that the startpoint was used
-    assert result.optimize_result[0].x0 == pytest.approx(
+    assert problem.x_guesses[0] == pytest.approx(
         result.optimize_result[0].history.get_x_trace(0)
     )

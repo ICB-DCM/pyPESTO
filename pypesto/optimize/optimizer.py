@@ -70,6 +70,7 @@ def history_decorator(minimize):
         )
         optimizer_history = OptimizerHistory(
             history=history,
+            x0=x0,
             lb=problem.lb,
             ub=problem.ub,
         )
