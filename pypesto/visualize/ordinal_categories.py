@@ -4,6 +4,11 @@ from typing import Dict, List
 import matplotlib.pyplot as plt
 import numpy as np
 
+try:
+    import amici
+except ImportError:
+    pass
+
 from ..hierarchical.optimal_scaling.parameter import OptimalScalingParameter
 from ..hierarchical.optimal_scaling.problem import OptimalScalingProblem
 from ..hierarchical.optimal_scaling.solver import (
@@ -13,11 +18,6 @@ from ..hierarchical.optimal_scaling.solver import (
     undo_inner_parameter_reparameterization,
 )
 from ..result import Result
-
-try:
-    import amici
-except ImportError:
-    pass
 
 
 def plot_categories_from_pypesto_result(
