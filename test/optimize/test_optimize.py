@@ -566,3 +566,27 @@ def test_scipy_integrated_grad():
         len(result.optimize_result.history[0].get_fval_trace())
         == result.optimize_result.history[0].n_fval
     )
+
+
+def test_out_of_bound_optimization(optimizer):
+    """
+    Test that out of bound optimization is handled correctly.
+    """
+    # exclude optimizers that do not support inital values
+
+    opt = get_optimizer(*optimizer)
+
+    # define a problem with an x_guess
+    problem = CRProblem(x_guesses=[np.array([1.0, 1.0])]).get_problem()
+
+    # run optimization
+    result = optimize.minimize(
+        problem=problem,
+        optimizer=opt,
+        n_starts=1,
+        progress_bar=False,
+        history_options=pypesto.HistoryOptions(trace_record=True),
+    )
+    # no optimization should finish successfully
+    if result.optimize_result[0].exitflag is not None:
+        assert result.optimize_result[0].exitflag < 0
