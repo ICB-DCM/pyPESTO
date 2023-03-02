@@ -590,6 +590,6 @@ def test_correct_startpoint_usage(optimizer):
         history_options=pypesto.HistoryOptions(trace_record=True),
     )
     # check that the startpoint was used
-    assert result.optimize_result.list[0].x0 == pytest.approx(
-        result.optimize_result[0].history.get_x_trace()[0]
+    assert result.optimize_result[0].x0 == pytest.approx(
+        result.optimize_result[0].history.get_x_trace(0)
     )
