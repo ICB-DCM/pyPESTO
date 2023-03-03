@@ -100,11 +100,12 @@ class PetabImporter(AmiciObjectBuilder):
             Whether to use hierarchical optimization or not, in case the
             underlying PEtab problem has parameters marked for hierarchical
             optimization (non-empty `parameterType` column in the PEtab
-            parameter table).
+            parameter table). Required for ordinal data.
         ordinal:
             Whether ordinal data is used in the optimization problem. In this
-            case the Optimal Scaling approach will be used
-            to integrate it in an inner optimization subproblem.
+            case the Optimal Scaling approach will be used to integrate it
+            in an inner optimization subproblem. This requires the `hierarchical`
+            flag to be set to `True`.
         inner_solver_options:
             Options of the inner solver, passed to constructors of inner solvers.
             If not provided, default options will be used.
@@ -112,10 +113,17 @@ class PetabImporter(AmiciObjectBuilder):
         self.petab_problem = petab_problem
         self._hierarchical = hierarchical
         self._ordinal = ordinal
+        self._nonlinear_monotone = nonlinear_monotone
+
+        if self._ordinal and not self._hierarchical:
+            raise ValueError(
+                "Ordinal data requires hierarchical optimization to be "
+                "enabled.",
+            )
+
         self._inner_solver_options = inner_solver_options
         if self._inner_solver_options is None:
             self._inner_solver_options = {}
-        self._nonlinear_monotone = nonlinear_monotone
 
         if validate_petab:
             if petab.lint_problem(petab_problem):
@@ -380,8 +388,9 @@ class PetabImporter(AmiciObjectBuilder):
             Whether to force-compile the model if not passed.
         **kwargs:
             Additional arguments passed on to the objective.
-            In case of ordinal measurements, inner_solver_options can optionally be passed here,
-            otherwise, those given to the importer constructor (or inner solver defaults) will be chosen.
+            In case of ordinal measurements, Inner_solver_options can optionally be passed here.
+            If none are given, inner_solver_options given to the importer constructor
+            (or inner solver defaults) will be chosen.
 
         Returns
         -------
@@ -433,23 +442,8 @@ class PetabImporter(AmiciObjectBuilder):
 
         calculator = None
         amici_reporting = None
-        if self._hierarchical:
-            inner_problem = InnerProblem.from_petab_amici(
-                self.petab_problem, model, edatas
-            )
-            calculator = HierarchicalAmiciCalculator(inner_problem)
-            amici_reporting = amici.RDataReporting.full
-            inner_parameter_ids = calculator.inner_problem.get_x_ids()
-            par_ids = [x for x in par_ids if x not in inner_parameter_ids]
 
-            # FIXME: currently not supported with hierarchical
-            if 'guess_steadystate' in kwargs and kwargs['guess_steadystate']:
-                warnings.warn(
-                    "`guess_steadystate` not supported with hierarchical optimization. Disabling `guess_steadystate`."
-                )
-            kwargs['guess_steadystate'] = False
-
-        if self._ordinal:
+        if self._ordinal and self._hierarchical:
             inner_solver_options = kwargs.pop('inner_solver_options', None)
             inner_solver_options = (
                 inner_solver_options
@@ -467,7 +461,7 @@ class PetabImporter(AmiciObjectBuilder):
             calculator = OptimalScalingAmiciCalculator(
                 inner_problem, inner_solver
             )
-            amici_reporting = amici.RDataReporting.full
+            amici_reporting = amici.RDataReporting.residuals
 
             # FIXME: currently not supported with hierarchical
             if 'guess_steadystate' in kwargs and kwargs['guess_steadystate']:
@@ -476,7 +470,7 @@ class PetabImporter(AmiciObjectBuilder):
                 )
             kwargs['guess_steadystate'] = False
 
-        if self._nonlinear_monotone:
+        elif self._nonlinear_monotone and self._hierarchical:
             inner_solver_options = kwargs.pop('inner_solver_options', None)
             inner_solver_options = (
                 inner_solver_options
@@ -492,6 +486,26 @@ class PetabImporter(AmiciObjectBuilder):
             calculator = SplineAmiciCalculator(inner_problem, inner_solver)
             amici_reporting = amici.RDataReporting.full
             # FIXME: currently not supported with hierarchical
+            if 'guess_steadystate' in kwargs and kwargs['guess_steadystate']:
+                warnings.warn(
+                    "`guess_steadystate` not supported with optimal scaling. Disabling `guess_steadystate`."
+                )
+            kwargs['guess_steadystate'] = False
+
+        elif self._hierarchical:
+            inner_problem = InnerProblem.from_petab_amici(
+                self.petab_problem, model, edatas
+            )
+            calculator = HierarchicalAmiciCalculator(inner_problem)
+            amici_reporting = amici.RDataReporting.full
+            inner_parameter_ids = calculator.inner_problem.get_x_ids()
+            par_ids = [x for x in par_ids if x not in inner_parameter_ids]
+
+            # FIXME: currently not supported with hierarchical
+            if 'guess_steadystate' in kwargs and kwargs['guess_steadystate']:
+                warnings.warn(
+                    "`guess_steadystate` not supported with hierarchical optimization. Disabling `guess_steadystate`."
+                )
             kwargs['guess_steadystate'] = False
 
         # create objective
@@ -700,19 +714,25 @@ class PetabImporter(AmiciObjectBuilder):
         ub = self.petab_problem.ub_scaled
 
         # Raise error if the correct calculator is not used.
-        if self._hierarchical:
-            if not isinstance(
-                objective.calculator, HierarchicalAmiciCalculator
-            ):
-                raise AssertionError(
-                    f"If hierarchical optimization is enabled, the `calculator` attribute of the `objective` has to be {HierarchicalAmiciCalculator} and not {objective.calculator}."
-                )
+
         if self._ordinal:
             if not isinstance(
                 objective.calculator, OptimalScalingAmiciCalculator
             ):
                 raise AssertionError(
                     f"If the measurements are ordinal, the `calculator` attribute of the `objective` has to be {OptimalScalingAmiciCalculator} and not {objective.calculator}."
+                )
+        elif self._nonlinear_monotone:
+            if not isinstance(objective.calculator, SplineAmiciCalculator):
+                raise AssertionError(
+                    f"If the measurements are nonlinear-monotone, the `calculator` attribute of the `objective` has to be {SplineAmiciCalculator} and not {objective.calculator}."
+                )
+        elif self._hierarchical:
+            if not isinstance(
+                objective.calculator, HierarchicalAmiciCalculator
+            ):
+                raise AssertionError(
+                    f"If hierarchical optimization is enabled, the `calculator` attribute of the `objective` has to be {HierarchicalAmiciCalculator} and not {objective.calculator}."
                 )
         # In case of hierarchical optimization, parameters estimated in the
         # inner subproblem are removed from the outer problem

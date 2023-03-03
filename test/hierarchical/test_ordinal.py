@@ -93,7 +93,9 @@ def _create_problem(
     petab_problem: petab.Problem, option: Dict
 ) -> pypesto.Problem:
     """Creates the ordinal pyPESTO problem with given options."""
-    importer = pypesto.petab.PetabImporter(petab_problem, ordinal=True)
+    importer = pypesto.petab.PetabImporter(
+        petab_problem, ordinal=True, hierarchical=True
+    )
     importer.create_model()
 
     objective = importer.create_objective(
@@ -116,7 +118,9 @@ def test_optimal_scaling_calculator_and_objective():
     problems = {}
 
     for method, options in options_per_method.items():
-        importer = pypesto.petab.PetabImporter(petab_problem, ordinal=True)
+        importer = pypesto.petab.PetabImporter(
+            petab_problem, ordinal=True, hierarchical=True
+        )
         objective = importer.create_objective(
             inner_solver_options=options,
         )

@@ -459,6 +459,17 @@ def optimize_surrogate_data_per_group(
             options,
         )
 
+    def grad_surr(x):
+        return grad_surrogate_data(
+            category_upper_bounds,
+            x,
+            sim,
+            interval_gap,
+            interval_range,
+            w,
+            options,
+        )
+
     inner_options = get_inner_optimization_options(
         category_upper_bounds,
         category_lower_bounds,
@@ -468,13 +479,13 @@ def optimize_surrogate_data_per_group(
         options,
     )
     try:
-        results = minimize(obj_surr, **inner_options)
-    except BaseException:
+        results = minimize(obj_surr, jac=grad_surr, **inner_options)
+    except ValueError:
         warnings.warn(
             "x0 violate bound constraints. Retrying with array of zeros."
         )
         inner_options['x0'] = np.zeros(len(inner_options['x0']))
-        results = minimize(obj_surr, **inner_options)
+        results = minimize(obj_surr, jac=grad_surr, **inner_options)
 
     return results
 
@@ -547,6 +558,10 @@ def get_inner_optimization_options(
         x0 = reparameterize_inner_parameters(
             x0, category_upper_bounds, interval_gap, interval_range
         )
+        # If taking last_opt_values, it's possible that x0 is negative.
+        # due to different simulations. Clip so bounds are satisfied.
+        x0 = np.clip(x0, 0, None)
+
         bounds = Bounds(
             [0.0] * parameter_length,
             [max_all + (interval_range + interval_gap) * parameter_length]
@@ -803,6 +818,86 @@ def obj_surrogate_data(
                 obj += (y_surrogate - y_sim_i) ** 2
     obj = np.divide(obj, w)
     return obj
+
+
+def grad_surrogate_data(
+    xs: List[OptimalScalingParameter],
+    optimal_scaling_bounds: np.ndarray,
+    sim: List[np.ndarray],
+    interval_gap: float,
+    interval_range: float,
+    w: float,
+    options: Dict,
+) -> float:
+    """Compute optimal scaling objective function."""
+    grad = np.zeros(len(optimal_scaling_bounds))
+    if options['reparameterized']:
+        optimal_scaling_bounds = undo_inner_parameter_reparameterization(
+            optimal_scaling_bounds, xs, interval_gap, interval_range
+        )
+
+    if options['method'] == STANDARD:
+        for x in xs:
+            x_category = int(x.category)
+            x_lower = optimal_scaling_bounds[2 * x_category - 2]
+            x_upper = optimal_scaling_bounds[2 * x_category - 1]
+
+            for sim_i, mask_i in zip(sim, x.ixs):
+                y_sim = sim_i[mask_i]
+                for y_sim_i in y_sim:
+                    if x_lower > y_sim_i:
+                        y_surrogate = x_lower
+                        grad[2 * x_category - 2] += 2 * (y_surrogate - y_sim_i)
+                    elif y_sim_i > x_upper:
+                        y_surrogate = x_upper
+                        grad[2 * x_category - 1] += 2 * (y_surrogate - y_sim_i)
+                    else:
+                        continue
+    elif options['method'] == REDUCED:
+        for x in xs:
+            x_category = int(x.category)
+            x_upper = optimal_scaling_bounds[x_category - 1]
+            if x_category == 1:
+                x_lower = 0.0
+            else:
+                x_lower = optimal_scaling_bounds[x_category - 2] + interval_gap
+
+            for sim_i, mask_i in zip(sim, x.ixs):
+                y_sim = sim_i[mask_i]
+                for y_sim_i in y_sim:
+                    if x_lower > y_sim_i and x_category != 1:
+                        y_surrogate = x_lower
+                        grad[x_category - 2] += 2 * (y_surrogate - y_sim_i)
+                    elif y_sim_i > x_upper:
+                        y_surrogate = x_upper
+                        grad[x_category - 1] += 2 * (y_surrogate - y_sim_i)
+                    else:
+                        continue
+
+    if options['reparameterized']:
+        grad = reparameterize_gradient(
+            grad,
+            xs,
+        )
+    grad = np.divide(grad, w)
+    return grad
+
+
+def reparameterize_gradient(
+    grad: np.ndarray,
+    xs: List[OptimalScalingParameter],
+) -> np.ndarray:
+    """Transform gradient to reparameterized gradient."""
+    reparameterized_grad = np.full(
+        shape=(np.shape(grad)),
+        fill_value=np.nan,
+    )
+    for inner_parameter in xs:
+        inner_parameter_category = int(inner_parameter.category)
+        reparameterized_grad[inner_parameter_category - 1] = np.sum(
+            grad[inner_parameter_category - 1 :]
+        )
+    return reparameterized_grad
 
 
 def get_bounds_for_category(

@@ -136,13 +136,13 @@ class OptimalScalingProblem(InnerProblem):
         return list(set(groups))
 
     def get_xs_for_group(self, group: int) -> List[OptimalScalingParameter]:
-        """Get ``OptimalScalingParameter``s that belong to the given group."""
+        r"""Get ``OptimalScalingParameter``\s that belong to the given group."""
         return [x for x in self.xs.values() if x.group == group]
 
     def get_free_xs_for_group(
         self, group: int
     ) -> List[OptimalScalingParameter]:
-        """Get ``OptimalScalingParameter``s that are free and belong to the given group."""
+        r"""Get ``OptimalScalingParameter``\s that are free and belong to the given group."""
         return [
             x
             for x in self.xs.values()
@@ -152,7 +152,7 @@ class OptimalScalingProblem(InnerProblem):
     def get_fixed_xs_for_group(
         self, group: int
     ) -> List[OptimalScalingParameter]:
-        """Get ``OptimalScalingParameter``s that are fixed and belong to the given group."""
+        r"""Get ``OptimalScalingParameter``\s that are fixed and belong to the given group."""
         return [
             x
             for x in self.xs.values()
@@ -162,7 +162,7 @@ class OptimalScalingProblem(InnerProblem):
     def get_cat_ub_parameters_for_group(
         self, group: int
     ) -> List[OptimalScalingParameter]:
-        """Get ``OptimalScalingParameter``s that are category upper boundaries and belong to the given group."""
+        r"""Get ``OptimalScalingParameter``\s that are category upper boundaries and belong to the given group."""
         return [
             x
             for x in self.xs.values()
@@ -172,7 +172,7 @@ class OptimalScalingProblem(InnerProblem):
     def get_cat_lb_parameters_for_group(
         self, group: int
     ) -> List[OptimalScalingParameter]:
-        """Get ``OptimalScalingParameter``s that are category lower boundaries and belong to the given group."""
+        r"""Get ``OptimalScalingParameter``\s that are category lower boundaries and belong to the given group."""
         return [
             x
             for x in self.xs.values()
