@@ -198,12 +198,12 @@ def plot_splines_from_inner_result(
 
 
 def visualize_spline_optimized_model_fit(
-    petab_problem: petab.Problem,
+    petab_problem: 'petab.Problem',
     result: Union[Result, Sequence[Result]],
     pypesto_problem: Problem,
     start_index: int = 0,
     return_dict: bool = False,
-    unflattened_petab_problem: petab.Problem = None,
+    unflattened_petab_problem: 'petab.Problem' = None,
     **kwargs,
 ) -> Union[matplotlib.axes.Axes, None]:
     """Visualize the spline optimized model fit.
