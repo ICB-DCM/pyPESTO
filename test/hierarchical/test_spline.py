@@ -220,6 +220,7 @@ def _inner_problem_exp():
             scale=LIN,
             lb=-np.inf,
             ub=np.inf,
+            observable_id='obs1',
             ixs=mask,
             index=par_index + 1,
             group=1,
