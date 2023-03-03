@@ -1,0 +1,11 @@
+format_version: 1
+parameter_file: parameters_example_ordinal.tsv
+problems:
+- condition_files:
+  - experimentalCondition_example_ordinal.tsv
+  measurement_files:
+  - measurementData_example_ordinal.tsv
+  observable_files:
+  - observables_example_ordinal.tsv
+  sbml_files:
+  - model_example_ordinal.xml
