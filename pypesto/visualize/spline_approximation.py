@@ -4,20 +4,20 @@ from typing import Dict, List, Sequence, Union
 import matplotlib.axes
 import matplotlib.pyplot as plt
 import numpy as np
-import petab
 
 from ..problem import Problem
 from ..result import Result
-from .model_fit import visualize_optimized_model_fit
 
 try:
     import amici
+    import petab
 
     from ..hierarchical.spline_approximation.problem import SplineInnerProblem
     from ..hierarchical.spline_approximation.solver import (
         SplineInnerSolver,
         get_spline_mapped_simulations,
     )
+    from .model_fit import visualize_optimized_model_fit
 except ImportError:
     pass
 

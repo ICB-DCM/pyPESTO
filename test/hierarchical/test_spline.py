@@ -79,7 +79,9 @@ def _create_problem(
 ) -> pypesto.Problem:
     """Creates the spline pyPESTO problem with given options."""
     importer = pypesto.petab.PetabImporter(
-        petab_problem, nonlinear_monotone=True
+        petab_problem,
+        nonlinear_monotone=True,
+        hierarchical=True,
     )
     importer.create_model()
 
@@ -108,7 +110,9 @@ def test_optimal_scaling_calculator_and_objective():
 
     for minimal_diff, option in options.items():
         importer = pypesto.petab.PetabImporter(
-            petab_problem, nonlinear_monotone=True
+            petab_problem,
+            nonlinear_monotone=True,
+            hierarchical=True,
         )
         objective = importer.create_objective(
             inner_solver_options=option,
