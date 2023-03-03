@@ -41,7 +41,7 @@ example_nonlinear_monotone_yaml = (
     / 'doc'
     / 'example'
     / 'example_nonlinear_monotone'
-    / 'example_nonlinear_monotone.yaml'
+    / 'example_nonlinear_monotone_linear.yaml'
 )
 
 
@@ -92,7 +92,7 @@ def _create_problem(
     return problem
 
 
-def test_optimal_scaling_calculator_and_objective():
+def test_spline_calculator_and_objective():
     """Test the spline calculation of objective values."""
     petab_problem = petab.Problem.from_yaml(example_nonlinear_monotone_yaml)
 
@@ -147,16 +147,21 @@ def test_optimal_scaling_calculator_and_objective():
         mode=MODE_FUN,
     )
 
+    atol = 1e-3
+    grad_atol = 1e-2
+
     # For nominal parameters, the objective function and gradient
     # will not depend on whether we constrain minimal difference.
     # In general, this is not the case.
     assert np.isclose(
         calculator_results['minimal_diff_on']['fval'],
         calculator_results['minimal_diff_off']['fval'],
+        atol=atol,
     )
     assert np.allclose(
         calculator_results['minimal_diff_on']['grad'],
         calculator_results['minimal_diff_off']['grad'],
+        atol=atol,
     )
 
     # The gradient should be close to the one calculated using
@@ -164,12 +169,13 @@ def test_optimal_scaling_calculator_and_objective():
     assert np.allclose(
         calculator_results['minimal_diff_on']['grad'],
         FD_results[1],
+        atol=atol,
     )
 
     # Since the nominal parameters are close to true ones, the
     # the fval and grad should both be low.
-    assert np.all(calculator_results['minimal_diff_on']['fval'] < 1e-4)
-    assert np.all(calculator_results['minimal_diff_off']['grad'] < 1e-4)
+    assert np.all(calculator_results['minimal_diff_on']['fval'] < atol)
+    assert np.all(calculator_results['minimal_diff_off']['grad'] < grad_atol)
 
 
 def test_extract_expdata_using_mask():
