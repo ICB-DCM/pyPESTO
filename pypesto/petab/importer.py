@@ -120,6 +120,11 @@ class PetabImporter(AmiciObjectBuilder):
                 "Ordinal data requires hierarchical optimization to be "
                 "enabled.",
             )
+        if self._nonlinear_monotone and not self._hierarchical:
+            raise ValueError(
+                "Nonlinear-monotone data requires hierarchical "
+                "optimization to be enabled.",
+            )
 
         self._inner_solver_options = inner_solver_options
         if self._inner_solver_options is None:

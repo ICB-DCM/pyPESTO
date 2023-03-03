@@ -107,11 +107,11 @@ class SplineInnerProblem(InnerProblem):
         return list(set(groups))
 
     def get_xs_for_group(self, group: int) -> List[SplineInnerParameter]:
-        """Get ``SplineParameter``s that belong to the given group."""
+        r"""Get ``SplineParameter``\s that belong to the given group."""
         return [x for x in self.xs.values() if x.group == group]
 
     def get_free_xs_for_group(self, group: int) -> List[SplineInnerParameter]:
-        """Get ``SplineParameter``s that are free and belong to the given group."""
+        r"""Get ``SplineParameter``\s that are free and belong to the given group."""
         return [
             x
             for x in self.xs.values()
@@ -119,7 +119,7 @@ class SplineInnerProblem(InnerProblem):
         ]
 
     def get_fixed_xs_for_group(self, group: int) -> List[SplineInnerParameter]:
-        """Get ``SplineParameter``s that are fixed and belong to the given group."""
+        r"""Get ``SplineParameter``\s that are fixed and belong to the given group."""
         return [
             x
             for x in self.xs.values()

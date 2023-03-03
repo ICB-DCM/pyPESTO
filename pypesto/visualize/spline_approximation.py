@@ -6,14 +6,18 @@ import matplotlib.pyplot as plt
 import numpy as np
 import petab
 
-from ...problem import Problem
-from ...result import Result
-from ...visualize.model_fit import visualize_optimized_model_fit
-from .problem import SplineInnerProblem
-from .solver import SplineInnerSolver, get_spline_mapped_simulations
+from ..problem import Problem
+from ..result import Result
+from .model_fit import visualize_optimized_model_fit
 
 try:
     import amici
+
+    from ..hierarchical.spline_approximation.problem import SplineInnerProblem
+    from ..hierarchical.spline_approximation.solver import (
+        SplineInnerSolver,
+        get_spline_mapped_simulations,
+    )
 except ImportError:
     pass
 
@@ -96,7 +100,7 @@ def plot_splines_from_pypesto_result(
 
 
 def plot_splines_from_inner_result(
-    inner_problem: SplineInnerProblem,
+    inner_problem: 'SplineInnerProblem',
     results: List[Dict],
     observable_ids=None,
     **kwargs,
@@ -159,7 +163,7 @@ def plot_splines_from_inner_result(
 
         # For the simulation, get the spline bases
         delta_c, spline_bases, n = SplineInnerSolver._rescale_spline_bases(
-            self='a',
+            self=None,
             sim_all=simulation,
             N=len(inner_parameters),
             K=len(simulation),
@@ -296,7 +300,7 @@ def visualize_spline_optimized_model_fit(
 
         # For the simulation, get the spline bases
         delta_c, spline_bases, n = SplineInnerSolver._rescale_spline_bases(
-            self='a',
+            self=None,
             sim_all=simulation,
             N=len(inner_parameters),
             K=len(simulation),
@@ -335,5 +339,9 @@ def visualize_spline_optimized_model_fit(
             marker='^',
             label='Spline mapped simulation',
         )
+
+    # Reset the legend.
+    for ax in axes.values():
+        ax.legend()
 
     return axes
