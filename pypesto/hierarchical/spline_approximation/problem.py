@@ -46,12 +46,10 @@ class SplineInnerProblem(InnerProblem):
         self,
         xs: List[SplineInnerParameter],
         data: List[np.ndarray],
-        spline_ratio: float = None,
+        spline_ratio: float = 0.5,
     ):
         """Construct."""
         super().__init__(xs, data)
-        if spline_ratio is None:
-            spline_ratio = 1 / 2
         self.spline_ratio = spline_ratio
 
         if spline_ratio <= 0:

@@ -1,5 +1,5 @@
 from pathlib import Path
-from typing import Dict, List
+from typing import Dict
 
 import numpy as np
 import petab
@@ -24,13 +24,11 @@ from pypesto.hierarchical.spline_approximation.solver import (
 )
 
 inner_solver_options = [
-    [
-        {
-            'spline_ratio': spline_ratio,
-            'use_minimal_difference': use_minimal_difference,
-        }
-        for spline_ratio in [1, 1 / 2, 1 / 3, 1 / 4]
-    ]
+    {
+        'spline_ratio': spline_ratio,
+        'use_minimal_difference': use_minimal_difference,
+    }
+    for spline_ratio in [1, 1 / 2, 1 / 3, 1 / 4]
     for use_minimal_difference in [True, False]
 ]
 
@@ -50,7 +48,7 @@ def inner_solver_options(request):
     return request.param
 
 
-def test_optimization(inner_solver_options: List[Dict]):
+def test_optimization(inner_solver_options: Dict):
     """Check that optimizations finishes without error."""
     petab_problem = petab.Problem.from_yaml(example_nonlinear_monotone_yaml)
 
@@ -58,20 +56,19 @@ def test_optimization(inner_solver_options: List[Dict]):
         method="L-BFGS-B",
         options={"disp": None, "ftol": 2.220446049250313e-09, "gtol": 1e-5},
     )
-    for option in inner_solver_options:
-        problem = _create_problem(petab_problem, option)
-        result = pypesto.optimize.minimize(
-            problem=problem, n_starts=1, optimizer=optimizer
-        )
-        # Check that optimization finished without infinite or nan values.
-        assert np.isfinite(result.optimize_result.list[0]['fval'])
-        assert np.all(np.isfinite(result.optimize_result.list[0]['x']))
-        assert np.all(np.isfinite(result.optimize_result.list[0]['grad'][2:]))
-        # Check that optimization finished with a lower value.
-        assert (
-            result.optimize_result.list[0]['fval']
-            < result.optimize_result.list[0]['fval0']
-        )
+    problem = _create_problem(petab_problem, inner_solver_options)
+    result = pypesto.optimize.minimize(
+        problem=problem, n_starts=1, optimizer=optimizer
+    )
+    # Check that optimization finished without infinite or nan values.
+    assert np.isfinite(result.optimize_result.list[0]['fval'])
+    assert np.all(np.isfinite(result.optimize_result.list[0]['x']))
+    assert np.all(np.isfinite(result.optimize_result.list[0]['grad'][2:]))
+    # Check that optimization finished with a lower value.
+    assert (
+        result.optimize_result.list[0]['fval']
+        < result.optimize_result.list[0]['fval0']
+    )
 
 
 def _create_problem(

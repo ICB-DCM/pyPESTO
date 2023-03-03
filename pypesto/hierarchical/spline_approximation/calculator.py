@@ -189,27 +189,3 @@ class SplineAmiciCalculator:
             )
 
         return filter_return_dict(inner_result)
-
-
-def get_min_range_of_simulation(rdatas: List[np.ndarray]):
-    """Get the minimum range of the simulation results.
-
-    Parameters
-    ----------
-    rdatas:
-        The list of simulation results.
-
-    Returns
-    -------
-    min_range:
-        The minimum range of the simulation results.
-    """
-    min_range = np.max(rdatas[0]['y'][:, 0]) - np.min(rdatas[0]['y'][:, 0])
-    for rdata in rdatas:
-        for obs_ind in range(rdata['y'].shape[1]):
-            min_range = min(
-                min_range,
-                np.max(rdata['y'][:, obs_ind])
-                - np.min(rdata['y'][:, obs_ind]),
-            )
-    return min_range

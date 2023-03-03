@@ -22,7 +22,7 @@ class SplineInnerSolver(InnerSolver):
     -------
     minimal_difference:
         If True then the method will constrain minimal spline parameter
-        difference. Otherwise there will be no such constrain.
+        difference. Otherwise there will be no such constraint.
     """
 
     def __init__(self, options: Dict = None):
