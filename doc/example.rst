@@ -23,6 +23,7 @@ Getting started
 .. toctree::
    :maxdepth: 2
 
+   example/getting_started.ipynb
    example/rosenbrock.ipynb
 
 PEtab and AMICI
@@ -49,6 +50,7 @@ Algorithms and features
    example/model_selection.ipynb
    example/julia.ipynb
    example/hierarchical.ipynb
+   example/example_ordinal.ipynb
 
 Application examples
 --------------------

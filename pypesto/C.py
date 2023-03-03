@@ -86,6 +86,7 @@ ID = 'id'
 INNER_PARAMETERS = 'inner_parameters'
 INNER_RDATAS = 'inner_rdatas'
 PARAMETER_TYPE = 'parameterType'
+X_INNER_OPT = 'x_inner_opt'
 
 
 class InnerParameterType(str, Enum):
@@ -94,12 +95,14 @@ class InnerParameterType(str, Enum):
     OFFSET = 'offset'
     SCALING = 'scaling'
     SIGMA = 'sigma'
+    OPTIMAL_SCALING = 'optimal_scaling'
 
 
 DUMMY_INNER_VALUE = {
     InnerParameterType.OFFSET: 0.0,
     InnerParameterType.SCALING: 1.0,
     InnerParameterType.SIGMA: 1.0,
+    InnerParameterType.OPTIMAL_SCALING: 0.0,
 }
 
 INNER_PARAMETER_BOUNDS = {
@@ -115,8 +118,26 @@ INNER_PARAMETER_BOUNDS = {
         LOWER_BOUND: 0,
         UPPER_BOUND: float('inf'),
     },
+    InnerParameterType.OPTIMAL_SCALING: {
+        LOWER_BOUND: -float('inf'),
+        UPPER_BOUND: float('inf'),
+    },
 }
 
+###############################################################################
+# OPTIMAL SCALING
+
+# Should go to PEtab constants at some point
+MEASUREMENT_CATEGORY = 'measurementCategory'
+MEASUREMENT_GROUP = 'measurementGroup'
+MEASUREMENT_TYPE = 'measurementType'
+
+ORDINAL = 'ordinal'
+
+REDUCED = 'reduced'
+STANDARD = 'standard'
+MAXMIN = 'max-min'
+MAX = 'max'
 
 ###############################################################################
 # HISTORY

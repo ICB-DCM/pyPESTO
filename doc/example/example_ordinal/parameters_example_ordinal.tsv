@@ -1,0 +1,5 @@
+parameterId	parameterName	parameterScale	lowerBound	upperBound	nominalValue	estimate	priorType	priorParameters
+K1	K1	lin	-5	5	0.04	0
+K2	K2	lin	-5	5	20	0
+K3	K3	log10	0.1	100000	4000	1
+K5	K5	log10	1.00E-05	100000	0.1	1

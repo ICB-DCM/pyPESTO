@@ -1,0 +1,19 @@
+observableId	preequilibrationConditionId	simulationConditionId	measurement	time	observableParameters	noiseParameters	observableTransformation	noiseDistribution	measurementType	measurementCategory	measurementGroup
+Activity		Inhibitor_0	0	5		1	lin	normal	ordinal	2	1
+Activity		Inhibitor_3	0	5		1	lin	normal	ordinal	2	1
+Activity		Inhibitor_10	0	5		1	lin	normal	ordinal	3	1
+Activity		Inhibitor_25	0	5		1	lin	normal	ordinal	3	1
+Activity		Inhibitor_35	0	5		1	lin	normal	ordinal	2	1
+Activity		Inhibitor_50	0	5		1	lin	normal	ordinal	1	1
+Activity		Inhibitor_75	0	5		1	lin	normal	ordinal	1	1
+Activity		Inhibitor_100	0	5		1	lin	normal	ordinal	1	1
+Activity		Inhibitor_300	0	5		1	lin	normal	ordinal	1	1
+Ybar		Inhibitor_0	0	5		1	lin	normal	ordinal	1	2
+Ybar		Inhibitor_3	0	5		1	lin	normal	ordinal	1	2
+Ybar		Inhibitor_10	0	5		1	lin	normal	ordinal	1	2
+Ybar		Inhibitor_25	0	5		1	lin	normal	ordinal	2	2
+Ybar		Inhibitor_35	0	5		1	lin	normal	ordinal	2	2
+Ybar		Inhibitor_50	0	5		1	lin	normal	ordinal	3	2
+Ybar		Inhibitor_75	0	5		1	lin	normal	ordinal	3	2
+Ybar		Inhibitor_100	0	5		1	lin	normal	ordinal	3	2
+Ybar		Inhibitor_300	0	5		1	lin	normal	ordinal	3	2
