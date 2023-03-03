@@ -494,7 +494,7 @@ class PetabImporter(AmiciObjectBuilder):
             )
             inner_solver = SplineInnerSolver(options=inner_solver_options)
             calculator = SplineAmiciCalculator(inner_problem, inner_solver)
-            amici_reporting = amici.RDataReporting.full
+            amici_reporting = amici.RDataReporting.residuals
             # FIXME: currently not supported with hierarchical
             if 'guess_steadystate' in kwargs and kwargs['guess_steadystate']:
                 warnings.warn(
