@@ -4,7 +4,11 @@ from typing import Dict, List, Sequence, Tuple
 import numpy as np
 
 from ...C import FVAL, GRAD, HESS, MODE_RES, RDATAS, RES, SRES, X_INNER_OPT
-from ...objective.amici.amici_calculator import AmiciModel, AmiciSolver
+from ...objective.amici.amici_calculator import (
+    AmiciCalculator,
+    AmiciModel,
+    AmiciSolver,
+)
 from ...objective.amici.amici_util import (
     filter_return_dict,
     init_return_values,
@@ -19,7 +23,7 @@ except ImportError:
     pass
 
 
-class SplineAmiciCalculator:
+class SplineAmiciCalculator(AmiciCalculator):
     """A calculator is passed as `calculator` to the pypesto.AmiciObjective.
 
     The object is called by :func:`pypesto.AmiciObjective.call_unprocessed`
@@ -41,6 +45,7 @@ class SplineAmiciCalculator:
             A solver to solve ``inner_problem``.
             Defaults to ``SplineInnerSolver``.
         """
+        super().__init__()
         self.inner_problem = inner_problem
 
         if inner_solver is None:
