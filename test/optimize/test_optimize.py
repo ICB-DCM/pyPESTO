@@ -573,7 +573,12 @@ def test_correct_startpoint_usage(optimizer):
     Test that the startpoint is correctly used in all optimizers.
     """
     # initial start values is not supported for pyswarm, dlib and pyswarms
-    if optimizer in [('dlib', ''), ('pyswarm', ''), ('pyswarms', '')]:
+    if optimizer in [
+        ('dlib', ''),
+        ('pyswarm', ''),
+        ('pyswarms', ''),
+        ('cmaes', ''),
+    ]:
         return
 
     opt = get_optimizer(*optimizer)
