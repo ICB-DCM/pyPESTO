@@ -235,8 +235,8 @@ class Optimizer(abc.ABC):
         """Create default options specific for the optimizer."""
         return None
 
-    def check_x0_support(self, problem: Problem):
-        """Check whether the optimizer supports the problem."""
+    def check_x0_support(self, x_guesses: np.ndarray):
+        """Check whether optimizer supports x0."""
         pass
 
 
@@ -603,9 +603,9 @@ class DlibOptimizer(Optimizer):
         """Create default options specific for the optimizer."""
         return {'maxiter': 10000}
 
-    def check_x0_support(self, problem: Problem):
+    def check_x0_support(self, x_guesses: np.ndarray):
         """Check whether optimizer supports x0."""
-        if problem.x_guesses is not None:
+        if x_guesses.size > 0:
             logger.warn("The Dlib optimizer does not support x0.")
 
 
@@ -660,9 +660,9 @@ class PyswarmOptimizer(Optimizer):
         """Check whether optimizer is a least squares optimizer."""
         return False
 
-    def check_x0_support(self, problem: Problem):
+    def check_x0_support(self, x_guesses: np.ndarray):
         """Check whether optimizer supports x0."""
-        if problem.x_guesses is not None:
+        if x_guesses.size > 0:
             logger.warn("The pyswarm optimizer does not support x0.")
 
 
@@ -933,9 +933,9 @@ class PyswarmsOptimizer(Optimizer):
         """Check whether optimizer is a least squares optimizer."""
         return False
 
-    def check_x0_support(self, problem: Problem):
+    def check_x0_support(self, x_guesses: np.ndarray):
         """Check whether optimizer supports x0."""
-        if problem.x_guesses is not None:
+        if x_guesses.size > 0:
             logger.warn("The pyswarms optimizer does not support x0.")
 
 
