@@ -3,6 +3,8 @@ API reference
 
 .. automodule:: pypesto.engine
 .. automodule:: pypesto.ensemble
+.. automodule:: pypesto.hierarchical
+.. automodule:: pypesto.hierarchical.optimal_scaling
 .. automodule:: pypesto.history
 .. automodule:: pypesto.logging
 .. automodule:: pypesto.objective
