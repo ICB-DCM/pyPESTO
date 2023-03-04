@@ -607,8 +607,6 @@ class DlibOptimizer(Optimizer):
         """Check whether optimizer supports x0."""
         if problem.x_guesses is not None:
             logger.warn("The Dlib optimizer does not support x0.")
-        else:
-            logger.debug("The Dlib optimizer does not support x0.")
 
 
 class PyswarmOptimizer(Optimizer):
@@ -666,8 +664,6 @@ class PyswarmOptimizer(Optimizer):
         """Check whether optimizer supports x0."""
         if problem.x_guesses is not None:
             logger.warn("The pyswarm optimizer does not support x0.")
-        else:
-            logger.debug("The pyswarm optimizer does not support x0.")
 
 
 class CmaesOptimizer(Optimizer):
@@ -941,8 +937,6 @@ class PyswarmsOptimizer(Optimizer):
         """Check whether optimizer supports x0."""
         if problem.x_guesses is not None:
             logger.warn("The pyswarms optimizer does not support x0.")
-        else:
-            logger.debug("The pyswarms optimizer does not support x0.")
 
 
 class NLoptOptimizer(Optimizer):
