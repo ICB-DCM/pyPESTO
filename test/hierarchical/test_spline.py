@@ -26,10 +26,10 @@ from pypesto.hierarchical.spline_approximation.solver import (
 inner_solver_options = [
     {
         'spline_ratio': spline_ratio,
-        'use_minimal_difference': use_minimal_difference,
+        'min_diff_factor': min_diff_factor,
     }
-    for spline_ratio in [1, 1 / 2, 1 / 3, 1 / 4]
-    for use_minimal_difference in [True, False]
+    for spline_ratio in [1.0, 1 / 2, 1 / 3, 1 / 4]
+    for min_diff_factor in [1.0, 1 / 2, 1 / 3, 1 / 4, 0.0]
 ]
 
 example_nonlinear_monotone_yaml = (
@@ -97,11 +97,11 @@ def test_spline_calculator_and_objective():
     options = {
         'minimal_diff_on': {
             'spline_ratio': 1 / 2,
-            'use_minimal_difference': True,
+            'min_diff_factor': 1 / 2,
         },
         'minimal_diff_off': {
             'spline_ratio': 1 / 2,
-            'use_minimal_difference': False,
+            'min_diff_factor': 0.0,
         },
     }
 
@@ -249,11 +249,11 @@ def test_spline_inner_solver():
     options = {
         'minimal_diff_on': {
             'spline_ratio': 1 / 2,
-            'use_minimal_difference': True,
+            'min_diff_factor': 1 / 2,
         },
         'minimal_diff_off': {
             'spline_ratio': 1 / 2,
-            'use_minimal_difference': False,
+            'min_diff_factor': 0.0,
         },
     }
 

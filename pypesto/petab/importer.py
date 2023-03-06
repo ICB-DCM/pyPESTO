@@ -23,7 +23,7 @@ from typing import (
 import numpy as np
 import pandas as pd
 
-from ..C import CONDITION_SEP, MODE_FUN, MODE_RES, SPLINE_RATIO
+from ..C import CONDITION_SEP, MODE_FUN, MODE_RES
 from ..hierarchical.calculator import HierarchicalAmiciCalculator
 from ..hierarchical.optimal_scaling import (
     OptimalScalingAmiciCalculator,
@@ -487,7 +487,7 @@ class PetabImporter(AmiciObjectBuilder):
                 if inner_solver_options is not None
                 else self._inner_solver_options
             )
-            spline_ratio = inner_solver_options.get(SPLINE_RATIO, None)
+            spline_ratio = inner_solver_options.get('spline_ratio', None)
 
             inner_problem = SplineInnerProblem.from_petab_amici(
                 self.petab_problem, model, edatas, spline_ratio

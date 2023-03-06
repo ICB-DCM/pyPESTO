@@ -4,7 +4,7 @@ from typing import Dict, List
 import numpy as np
 from scipy.optimize import minimize
 
-from ...C import MIN_SIM_RANGE, USE_MINIMAL_DIFFERENCE, InnerParameterType
+from ...C import MIN_DIFF_FACTOR, MIN_SIM_RANGE, InnerParameterType
 from ..solver import InnerSolver
 from .parameter import SplineInnerParameter
 from .problem import SplineInnerProblem
@@ -20,9 +20,10 @@ class SplineInnerSolver(InnerSolver):
 
     Options
     -------
-    minimal_difference:
-        If True then the method will constrain minimal spline parameter
-        difference. Otherwise there will be no such constraint.
+    min_diff_factor:
+        Determines the minimum difference between two consecutive spline
+        as ``min_diff_factor * (measurement_range) / n_spline_pars``.
+        Default is 1/2.
     """
 
     def __init__(self, options: Dict = None):
@@ -38,8 +39,10 @@ class SplineInnerSolver(InnerSolver):
 
     def validate_options(self):
         """Validate the current options dictionary."""
-        if self.options[USE_MINIMAL_DIFFERENCE] not in [True, False]:
-            raise ValueError('Minimal difference must be a boolean value.')
+        if type(self.options[MIN_DIFF_FACTOR]) is not float:
+            raise TypeError(f"{MIN_DIFF_FACTOR} must be of type float.")
+        elif self.options[MIN_DIFF_FACTOR] < 0:
+            raise ValueError(f"{MIN_DIFF_FACTOR} must be greater than zero.")
 
     def solve(
         self,
@@ -218,12 +221,9 @@ class SplineInnerSolver(InnerSolver):
                     min_meas = group_dict['min_datapoint']
                     max_meas = group_dict['max_datapoint']
                     min_diff = self._get_minimal_difference(
-                        min_meas=min_meas,
-                        max_meas=max_meas,
+                        measurement_range=max_meas - min_meas,
                         N=N,
-                        use_minimal_difference=self.options[
-                            USE_MINIMAL_DIFFERENCE
-                        ],
+                        min_diff_factor=self.options[MIN_DIFF_FACTOR],
                     )
 
                     # Calculate df_ds term only if mu is not all 0
@@ -271,7 +271,7 @@ class SplineInnerSolver(InnerSolver):
     def get_default_options() -> Dict:
         """Return default options for solving the inner problem."""
         options = {
-            "use_minimal_difference": True,
+            MIN_DIFF_FACTOR: 1 / 2,
         }
         return options
 
@@ -306,10 +306,9 @@ class SplineInnerSolver(InnerSolver):
         min_meas = group_dict['min_datapoint']
         max_meas = group_dict['max_datapoint']
         min_diff = self._get_minimal_difference(
-            min_meas=min_meas,
-            max_meas=max_meas,
+            measurement_range=max_meas - min_meas,
             N=n_spline_pars,
-            use_minimal_difference=self.options[USE_MINIMAL_DIFFERENCE],
+            min_diff_factor=self.options[MIN_DIFF_FACTOR],
         )
 
         inner_options = self._get_inner_optimization_options(
@@ -415,14 +414,13 @@ class SplineInnerSolver(InnerSolver):
         n = np.ones(K)
 
         # In case the simulation are very close to each other
-        # or even collapse into a single point (e.g. steady-state)
+        # or even collapse into a single point.
         if max_all - min_all < MIN_SIM_RANGE:
             average_value = (max_all + min_all) / 2
+            delta_c = MIN_SIM_RANGE / (N - 1)
             if average_value < (MIN_SIM_RANGE / 2):
-                delta_c = MIN_SIM_RANGE / (N - 1)
                 c = np.linspace(0, MIN_SIM_RANGE, N)
             else:
-                delta_c = MIN_SIM_RANGE / (N - 1)
                 c = np.linspace(
                     average_value - (MIN_SIM_RANGE / 2),
                     average_value + (MIN_SIM_RANGE / 2),
@@ -455,17 +453,12 @@ class SplineInnerSolver(InnerSolver):
 
     def _get_minimal_difference(
         self,
-        min_meas: float,
-        max_meas: float,
+        measurement_range: float,
         N: int,
-        use_minimal_difference: bool,
+        min_diff_factor: float,
     ):
         """Return minimal parameter difference for spline parameters."""
-        if use_minimal_difference:
-            min_diff = (max_meas - min_meas) / (2 * N)
-        else:
-            min_diff = 0
-        return min_diff
+        return min_diff_factor * measurement_range / N
 
     def _get_inner_optimization_options(
         self,
