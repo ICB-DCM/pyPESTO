@@ -7,7 +7,6 @@ import time
 import warnings
 from typing import TYPE_CHECKING, Dict, Optional
 
-import nlopt
 import numpy as np
 import scipy.optimize
 
@@ -1170,6 +1169,8 @@ class NLoptOptimizer(Optimizer):
 
     def check_x0_support(self, x_guesses: np.ndarray = None) -> bool:
         """Check whether optimizer supports multiple initial guesses."""
+        import nlopt
+
         if self.method in (
             nlopt.GN_AGS,
             nlopt.GD_STOGO,
