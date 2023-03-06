@@ -22,6 +22,7 @@ from ..problem import Problem
 from ..result import OptimizerResult
 from .load import fill_result_from_history
 from .options import OptimizeOptions
+from .util import check_finite_bounds
 
 if TYPE_CHECKING:
     import fides
@@ -234,14 +235,9 @@ class Optimizer(abc.ABC):
         """Create default options specific for the optimizer."""
         return None
 
-
-def check_finite_bounds(lb, ub):
-    """Raise if bounds are not finite."""
-    if not np.isfinite(lb).all() or not np.isfinite(ub).all():
-        raise ValueError(
-            'Selected optimizer cannot work with unconstrained '
-            'optimization problems.'
-        )
+    def check_x0_support(self, x_guesses: np.ndarray = None) -> bool:
+        """Check whether optimizer supports x0, return boolean."""
+        return True
 
 
 class ScipyOptimizer(Optimizer):
@@ -607,6 +603,12 @@ class DlibOptimizer(Optimizer):
         """Create default options specific for the optimizer."""
         return {'maxiter': 10000}
 
+    def check_x0_support(self, x_guesses: np.ndarray = None) -> bool:
+        """Check whether optimizer supports x0."""
+        if x_guesses is not None and x_guesses.size > 0:
+            logger.warn("The Dlib optimizer does not support x0.")
+        return False
+
 
 class PyswarmOptimizer(Optimizer):
     """Global optimization using pyswarm."""
@@ -657,6 +659,12 @@ class PyswarmOptimizer(Optimizer):
 
     def is_least_squares(self):
         """Check whether optimizer is a least squares optimizer."""
+        return False
+
+    def check_x0_support(self, x_guesses: np.ndarray = None) -> bool:
+        """Check whether optimizer supports x0."""
+        if x_guesses is not None and x_guesses.size > 0:
+            logger.warn("The pyswarm optimizer does not support x0.")
         return False
 
 
@@ -795,7 +803,7 @@ class ScipyDifferentialEvolutionOptimizer(Optimizer):
         bounds = list(zip(problem.lb, problem.ub))
 
         result = scipy.optimize.differential_evolution(
-            problem.objective.get_fval, bounds, **self.options
+            problem.objective.get_fval, bounds, x0=x0, **self.options
         )
 
         optimizer_result = OptimizerResult(
@@ -888,6 +896,7 @@ class PyswarmsOptimizer(Optimizer):
             dimensions=len(x0),
             options=self.options,
             bounds=(lb, ub),
+            # init_pos=x0,  # TODO: is a problem if x0 is not of the swarm size
         )
 
         def successively_working_fval(swarm: np.ndarray) -> np.ndarray:
@@ -924,6 +933,12 @@ class PyswarmsOptimizer(Optimizer):
 
     def is_least_squares(self):
         """Check whether optimizer is a least squares optimizer."""
+        return False
+
+    def check_x0_support(self, x_guesses: np.ndarray = None) -> bool:
+        """Check whether optimizer supports x0."""
+        if x_guesses is not None and x_guesses.size > 0:
+            logger.warn("The pyswarms optimizer does not support x0.")
         return False
 
 
@@ -1151,6 +1166,30 @@ class NLoptOptimizer(Optimizer):
     def is_least_squares(self):
         """Check whether optimizer is a least squares optimizer."""
         return False
+
+    def check_x0_support(self, x_guesses: np.ndarray = None) -> bool:
+        """Check whether optimizer supports multiple initial guesses."""
+        import nlopt
+
+        if self.method in (
+            nlopt.GN_AGS,
+            nlopt.GD_STOGO,
+            nlopt.GD_STOGO_RAND,
+            nlopt.GN_ORIG_DIRECT,
+            nlopt.GN_ORIG_DIRECT_L,
+            nlopt.GN_DIRECT,
+            nlopt.GN_DIRECT_L,
+            nlopt.GN_DIRECT_L_NOSCAL,
+            nlopt.GN_DIRECT_L_RAND,
+            nlopt.GN_DIRECT_L_RAND_NOSCAL,
+        ):
+            if x_guesses is not None and x_guesses.size > 0:
+                logger.warn(
+                    f"The NLopt optimizer method {self.method} does "
+                    "not support x0."
+                )
+            return False
+        return True
 
 
 class FidesOptimizer(Optimizer):
