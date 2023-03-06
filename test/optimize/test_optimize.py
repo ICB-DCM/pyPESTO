@@ -572,19 +572,17 @@ def test_correct_startpoint_usage(optimizer):
     """
     Test that the startpoint is correctly used in all optimizers.
     """
-    # initial start values is not supported for pyswarm, dlib and pyswarms
-    if optimizer in [
-        ('dlib', ''),
-        ('pyswarm', ''),
-        ('pyswarms', ''),
-        ('cmaes', ''),
-    ]:
+    # cmaes supports x0, but samples from this initial guess, therefore return
+    if optimizer == ('cmaes', ''):
         return
 
     opt = get_optimizer(*optimizer)
+    # return if the optimizer knowingly does not support x_guesses
+    if not opt.check_x0_support():
+        return
 
     # define a problem with an x_guess
-    problem = CRProblem(x_guesses=[np.array([0.25, 0.25])]).get_problem()
+    problem = CRProblem(x_guesses=[np.array([0.1, 0.1])]).get_problem()
 
     # run optimization
     result = optimize.minimize(

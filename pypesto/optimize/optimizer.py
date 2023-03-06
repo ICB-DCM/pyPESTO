@@ -7,6 +7,7 @@ import time
 import warnings
 from typing import TYPE_CHECKING, Dict, Optional
 
+import nlopt
 import numpy as np
 import scipy.optimize
 
@@ -235,9 +236,9 @@ class Optimizer(abc.ABC):
         """Create default options specific for the optimizer."""
         return None
 
-    def check_x0_support(self, x_guesses: np.ndarray):
-        """Check whether optimizer supports x0."""
-        pass
+    def check_x0_support(self, x_guesses: np.ndarray = None) -> bool:
+        """Check whether optimizer supports x0, return boolean."""
+        return True
 
 
 class ScipyOptimizer(Optimizer):
@@ -603,10 +604,11 @@ class DlibOptimizer(Optimizer):
         """Create default options specific for the optimizer."""
         return {'maxiter': 10000}
 
-    def check_x0_support(self, x_guesses: np.ndarray):
+    def check_x0_support(self, x_guesses: np.ndarray = None) -> bool:
         """Check whether optimizer supports x0."""
-        if x_guesses.size > 0:
+        if x_guesses is not None and x_guesses.size > 0:
             logger.warn("The Dlib optimizer does not support x0.")
+        return False
 
 
 class PyswarmOptimizer(Optimizer):
@@ -660,10 +662,11 @@ class PyswarmOptimizer(Optimizer):
         """Check whether optimizer is a least squares optimizer."""
         return False
 
-    def check_x0_support(self, x_guesses: np.ndarray):
+    def check_x0_support(self, x_guesses: np.ndarray = None) -> bool:
         """Check whether optimizer supports x0."""
-        if x_guesses.size > 0:
+        if x_guesses is not None and x_guesses.size > 0:
             logger.warn("The pyswarm optimizer does not support x0.")
+        return False
 
 
 class CmaesOptimizer(Optimizer):
@@ -933,10 +936,11 @@ class PyswarmsOptimizer(Optimizer):
         """Check whether optimizer is a least squares optimizer."""
         return False
 
-    def check_x0_support(self, x_guesses: np.ndarray):
+    def check_x0_support(self, x_guesses: np.ndarray = None) -> bool:
         """Check whether optimizer supports x0."""
-        if x_guesses.size > 0:
+        if x_guesses is not None and x_guesses.size > 0:
             logger.warn("The pyswarms optimizer does not support x0.")
+        return False
 
 
 class NLoptOptimizer(Optimizer):
@@ -1163,6 +1167,28 @@ class NLoptOptimizer(Optimizer):
     def is_least_squares(self):
         """Check whether optimizer is a least squares optimizer."""
         return False
+
+    def check_x0_support(self, x_guesses: np.ndarray = None) -> bool:
+        """Check whether optimizer supports multiple initial guesses."""
+        if self.method in (
+            nlopt.GN_AGS,
+            nlopt.GD_STOGO,
+            nlopt.GD_STOGO_RAND,
+            nlopt.GN_ORIG_DIRECT,
+            nlopt.GN_ORIG_DIRECT_L,
+            nlopt.GN_DIRECT,
+            nlopt.GN_DIRECT_L,
+            nlopt.GN_DIRECT_L_NOSCAL,
+            nlopt.GN_DIRECT_L_RAND,
+            nlopt.GN_DIRECT_L_RAND_NOSCAL,
+        ):
+            if x_guesses is not None and x_guesses.size > 0:
+                logger.warn(
+                    f"The NLopt optimizer method {self.method} does "
+                    "not support x0."
+                )
+            return False
+        return True
 
 
 class FidesOptimizer(Optimizer):
