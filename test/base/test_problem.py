@@ -116,7 +116,7 @@ def test_out_of_bounds_x_guesses(caplog):
         objective=objective, lb=[-1] * 4, ub=[1] * 4, x_guesses=[[1, 0, -1, 4]]
     )
     expected_warning = (
-        "WARNING: Some initial guesses supplied violate the "
+        "Some initial guesses supplied violate the "
         "bounds set for this problem."
     )
     assert expected_warning in [r.message for r in caplog.records]
