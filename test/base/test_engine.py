@@ -20,6 +20,8 @@ def test_basic():
         pypesto.engine.SingleCoreEngine(),
         pypesto.engine.MultiProcessEngine(n_procs=2),
         pypesto.engine.MultiProcessEngine(n_procs=2, method="spawn"),
+        pypesto.engine.MultiProcessEngine(n_procs=2, method="fork"),
+        pypesto.engine.MultiProcessEngine(n_procs=2, method="forkserver"),
         pypesto.engine.MultiThreadEngine(n_threads=4),
     ]:
         _test_basic(engine)
@@ -47,6 +49,8 @@ def test_petab():
         pypesto.engine.SingleCoreEngine(),
         pypesto.engine.MultiProcessEngine(n_procs=2),
         pypesto.engine.MultiProcessEngine(n_procs=2, method="spawn"),
+        pypesto.engine.MultiProcessEngine(n_procs=2, method="fork"),
+        pypesto.engine.MultiProcessEngine(n_procs=2, method="forkserver"),
         pypesto.engine.MultiThreadEngine(n_threads=4),
     ]:
         _test_petab(engine)
