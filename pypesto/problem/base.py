@@ -245,7 +245,7 @@ class Problem:
         # if any bounds are violated, log a warning
         if not adheres_bounds.all():
             logger.warning(
-                "WARNING: Some initial guesses supplied violate the bounds "
+                "Some initial guesses supplied violate the bounds "
                 "set for this problem."
             )
 
