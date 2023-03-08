@@ -4,7 +4,16 @@ from typing import Dict, List, Tuple
 
 import numpy as np
 
-from ...C import MAX, MAXMIN, REDUCED, STANDARD, InnerParameterType
+from ...C import (
+    CENSORED,
+    MAX,
+    MAXMIN,
+    MEASUREMENT_TYPE,
+    ORDINAL,
+    REDUCED,
+    STANDARD,
+    InnerParameterType,
+)
 from ..solver import InnerSolver
 from .parameter import OptimalScalingParameter
 from .problem import OptimalScalingProblem
@@ -82,6 +91,7 @@ class OptimalScalingInnerSolver(InnerSolver):
         self,
         problem: OptimalScalingProblem,
         sim: List[np.ndarray],
+        sigma: List[np.ndarray],
     ) -> list:
         """Get results for every group (inner optimization problem).
 
@@ -91,6 +101,8 @@ class OptimalScalingInnerSolver(InnerSolver):
             Optimal scaling inner problem.
         sim:
             Model simulations.
+        sigma:
+            Standard deviation of the noise.
 
         Returns
         -------
@@ -106,20 +118,33 @@ class OptimalScalingInnerSolver(InnerSolver):
             category_lower_bounds = problem.get_cat_lb_parameters_for_group(
                 group
             )
-            surrogate_opt_results = optimize_surrogate_data_per_group(
-                category_upper_bounds=category_upper_bounds,
-                category_lower_bounds=category_lower_bounds,
-                sim=sim,
-                options=self.options,
-            )
-            save_inner_parameters_to_inner_problem(
-                category_upper_bounds=category_upper_bounds,
-                group=group,
-                problem=problem,
-                x_inner_opt=surrogate_opt_results,
-                sim=sim,
-                options=self.options,
-            )
+            if problem.groups[group][MEASUREMENT_TYPE] == ORDINAL:
+                surrogate_opt_results = optimize_surrogate_data_per_group(
+                    category_upper_bounds=category_upper_bounds,
+                    category_lower_bounds=category_lower_bounds,
+                    sim=sim,
+                    options=self.options,
+                )
+                save_inner_parameters_to_inner_problem(
+                    category_upper_bounds=category_upper_bounds,
+                    group=group,
+                    problem=problem,
+                    x_inner_opt=surrogate_opt_results,
+                    sim=sim,
+                    options=self.options,
+                )
+            elif problem.groups[group][MEASUREMENT_TYPE] == CENSORED:
+                quantitative_data = problem.groups[group]['quantitative_data']
+                quantitative_ixs = problem.groups[group]['quantitative_ixs']
+                surrogate_opt_results = calculate_censored_obj(
+                    category_upper_bounds=category_upper_bounds,
+                    category_lower_bounds=category_lower_bounds,
+                    sim=sim,
+                    sigma=sigma,
+                    quantitative_data=quantitative_data,
+                    quantitative_ixs=quantitative_ixs,
+                )
+
             optimal_surrogates.append(surrogate_opt_results)
         return optimal_surrogates
 
@@ -156,6 +181,8 @@ class OptimalScalingInnerSolver(InnerSolver):
         x_inner_opt: List[Dict],
         sim: List[np.ndarray],
         sy: List[np.ndarray],
+        sigma: List[np.ndarray],
+        ssigma: List[np.ndarray],
         parameter_mapping: ParameterMapping,
         par_opt_ids: List,
         par_sim_ids: List,
@@ -225,60 +252,88 @@ class OptimalScalingInnerSolver(InnerSolver):
                         InnerParameterType.OPTIMAL_SCALING
                     )
                 ):
-                    xs = problem.get_cat_ub_parameters_for_group(group)
-                    xi = get_xi(
-                        group, problem, x_inner_opt[idx], sim, self.options
-                    )
-                    sim_all = get_sim_all(xs, sim)
-                    sy_all = get_sy_all(xs, sy, par_edata_idx)
-
-                    problem.groups[group]['W'] = problem.get_w(group, sim_all)
-                    problem.groups[group]['Wdot'] = problem.get_wdot(
-                        group, sim_all, sy_all
-                    )
-
-                    residual = np.block(
-                        [
-                            xi[: problem.groups[group]['num_datapoints']]
-                            - sim_all,
-                            np.zeros(
-                                problem.groups[group]['num_inner_params']
-                                - problem.groups[group]['num_datapoints']
-                            ),
+                    if problem.groups[group][MEASUREMENT_TYPE] == CENSORED:
+                        category_upper_bounds = (
+                            problem.get_cat_ub_parameters_for_group(group)
+                        )
+                        category_lower_bounds = (
+                            problem.get_cat_lb_parameters_for_group(group)
+                        )
+                        quantitative_data = problem.groups[group][
+                            'quantitative_data'
                         ]
-                    )
-                    dy_dtheta = get_dy_dtheta(group, problem, sy_all)
+                        quantitative_ixs = problem.groups[group][
+                            'quantitative_ixs'
+                        ]
 
-                    df_dtheta = residual.dot(
-                        residual.dot(problem.groups[group]['Wdot'])
-                        - 2 * problem.groups[group]['W'].dot(dy_dtheta)
-                    )
-                    df_dxi = 2 * problem.groups[group]['W'].dot(residual)
-
-                    if df_dxi.any():
-                        dd_dtheta = problem.get_dd_dtheta(
-                            group, xs, sim_all, sy_all
+                        grad += calculate_censored_grad(
+                            category_upper_bounds=category_upper_bounds,
+                            category_lower_bounds=category_lower_bounds,
+                            sim=sim,
+                            sy=sy,
+                            sigma=sigma,
+                            ssigma=ssigma,
+                            par_edata_idx=par_edata_idx,
+                            quantitative_data=quantitative_data,
+                            quantitative_ixs=quantitative_ixs,
                         )
-                        d = problem.get_d(
-                            group, xs, sim_all, self.options['minGap']
+                    elif problem.groups[group][MEASUREMENT_TYPE] == ORDINAL:
+                        xs = problem.get_cat_ub_parameters_for_group(group)
+                        xi = get_xi(
+                            group, problem, x_inner_opt[idx], sim, self.options
+                        )
+                        sim_all = get_sim_all(xs, sim)
+                        sy_all = get_sy_all(xs, sy, par_edata_idx)
+
+                        problem.groups[group]['W'] = problem.get_w(
+                            group, sim_all
+                        )
+                        problem.groups[group]['Wdot'] = problem.get_wdot(
+                            group, sim_all, sy_all
                         )
 
-                        mu = get_mu(group, problem, residual)
-
-                        dxi_dtheta = calculate_dxi_dtheta(
-                            group,
-                            problem,
-                            xi,
-                            mu,
-                            dy_dtheta,
-                            residual,
-                            d,
-                            dd_dtheta,
+                        residual = np.block(
+                            [
+                                xi[: problem.groups[group]['num_datapoints']]
+                                - sim_all,
+                                np.zeros(
+                                    problem.groups[group]['num_inner_params']
+                                    - problem.groups[group]['num_datapoints']
+                                ),
+                            ]
                         )
+                        dy_dtheta = get_dy_dtheta(group, problem, sy_all)
 
-                        grad += dxi_dtheta.dot(df_dxi) + df_dtheta
-                    else:
-                        grad += df_dtheta
+                        df_dtheta = residual.dot(
+                            residual.dot(problem.groups[group]['Wdot'])
+                            - 2 * problem.groups[group]['W'].dot(dy_dtheta)
+                        )
+                        df_dxi = 2 * problem.groups[group]['W'].dot(residual)
+
+                        if df_dxi.any():
+                            dd_dtheta = problem.get_dd_dtheta(
+                                group, xs, sim_all, sy_all
+                            )
+                            d = problem.get_d(
+                                group, xs, sim_all, self.options['minGap']
+                            )
+
+                            mu = get_mu(group, problem, residual)
+
+                            dxi_dtheta = calculate_dxi_dtheta(
+                                group,
+                                problem,
+                                xi,
+                                mu,
+                                dy_dtheta,
+                                residual,
+                                d,
+                                dd_dtheta,
+                            )
+
+                            grad += dxi_dtheta.dot(df_dxi) + df_dtheta
+                        else:
+                            grad += df_dtheta
 
                 snllh[par_opt_idx] = grad
         return snllh
@@ -602,7 +657,7 @@ def get_min_max(
 def get_sy_all(
     inner_parameters: List[OptimalScalingParameter],
     sy: List[np.ndarray],
-    par_edata_idx: int,
+    par_edata_idx: List,
 ):
     """Return model sensitivities for inner parameters and outer parameter index."""
     sy_all = []
@@ -985,3 +1040,203 @@ def save_inner_parameters_to_inner_problem(
         inner_parameter.value = x_upper[inner_parameter.category - 1]
     for inner_parameter in problem.get_cat_lb_parameters_for_group(group):
         inner_parameter.value = x_lower[inner_parameter.category - 1]
+
+
+def calculate_censored_obj(
+    category_upper_bounds: List[OptimalScalingParameter],
+    category_lower_bounds: List[OptimalScalingParameter],
+    sim: List[np.ndarray],
+    sigma: List[np.ndarray],
+    quantitative_data: np.ndarray,
+    quantitative_ixs: List[np.ndarray],
+) -> Dict:
+    """Calculate objective function for a group with cesored data.
+
+    Parameters
+    ----------
+    category_upper_bounds:
+        The upper bounds for the categories.
+    category_lower_bounds:
+        The lower bounds for the categories.
+    sim:
+        The model simulation.
+    sigma:
+        The noise parameters from AMICI.
+    observable_ids:
+        The observable ids from the model.
+
+    Returns
+    -------
+    Dictionary with the objective function value.
+    """
+    cat_lb_values = np.array([x.value for x in category_lower_bounds])
+    cat_ub_values = np.array([x.value for x in category_upper_bounds])
+
+    obj = 0
+    # Calculate the objective function for censored data.
+    for cat_lb, cat_ub, cat_ub_par in zip(
+        cat_lb_values,
+        cat_ub_values,
+        category_upper_bounds,
+    ):
+        for sim_i, sigma_i, mask_i in zip(sim, sigma, cat_ub_par.ixs):
+            y_sim = sim_i[mask_i]
+            if len(y_sim) == 0:
+                continue
+            sigma_for_observable = sigma_i[mask_i][0]
+            for y_sim_i in y_sim:
+                if cat_lb > y_sim_i:
+                    y_surrogate = cat_lb
+                elif y_sim_i > cat_ub:
+                    y_surrogate = cat_ub
+                else:
+                    y_surrogate = y_sim_i
+                obj += 0.5 * (
+                    np.log(2 * np.pi * sigma_for_observable**2)
+                    + (y_surrogate - y_sim_i) ** 2 / sigma_for_observable**2
+                )
+
+    # Gather the simulation and sigma values for the quantitative data.
+    quantitative_sim = np.concatenate(
+        [sim_i[mask_i] for sim_i, mask_i in zip(sim, quantitative_ixs)]
+    )
+    quantitative_sigma = np.concatenate(
+        [sigma_i[mask_i] for sigma_i, mask_i in zip(sigma, quantitative_ixs)]
+    )
+
+    # Calcualte the objective function for uncensored, quantitative data.
+    obj += 0.5 * np.sum(
+        np.log(2 * np.pi * quantitative_sigma**2)
+        + (quantitative_data - quantitative_sim) ** 2 / quantitative_sigma**2
+    )
+
+    return_dictionary = {
+        'success': True,
+        'fun': obj,
+        'x': np.ravel([cat_lb_values, cat_ub_values], order='F'),
+    }
+    return return_dictionary
+
+
+def calculate_censored_grad(
+    category_upper_bounds: List[OptimalScalingParameter],
+    category_lower_bounds: List[OptimalScalingParameter],
+    sim: List[np.ndarray],
+    sy: np.ndarray,
+    sigma: List[np.ndarray],
+    ssigma: np.ndarray,
+    par_edata_idx: List,
+    quantitative_data: np.ndarray,
+    quantitative_ixs: List[np.ndarray],
+):
+    """Calculate gradient for a group with cesored data with respect to an outer parameter.
+
+    Parameters
+    ----------
+    category_upper_bounds:
+        The upper bounds for the categories.
+    category_lower_bounds:
+        The lower bounds for the categories.
+    sim:
+        The model simulation.
+    sy_all:
+        The sensitivities of the simulation.
+    sigma:
+        The noise parameters from AMICI.
+    ssigma_all:
+        The sensitivities of the noise parameters.
+
+    Returns
+    -------
+    gradient.
+    """
+    cat_lb_values = np.array([x.value for x in category_lower_bounds])
+    cat_ub_values = np.array([x.value for x in category_upper_bounds])
+
+    surrogate_all = []
+    sim_all = []
+    sigma_all = []
+    sy_all = get_sy_all(category_upper_bounds, sy, par_edata_idx)
+    ssigma_all = get_sy_all(category_upper_bounds, ssigma, par_edata_idx)
+
+    # Gather the surrogate data, the simulation data
+    # and the noise parameter arrays across categories.
+    for cat_lb, cat_ub, cat_ub_par in zip(
+        cat_lb_values,
+        cat_ub_values,
+        category_upper_bounds,
+    ):
+        for sim_i, sigma_i, mask_i in zip(sim, sigma, cat_ub_par.ixs):
+            y_sim = sim_i[mask_i]
+            if len(y_sim) == 0:
+                continue
+            sigma_for_observable = sigma_i[mask_i][0]
+            for y_sim_i in y_sim:
+                if cat_lb > y_sim_i:
+                    y_surrogate = cat_lb
+                elif y_sim_i > cat_ub:
+                    y_surrogate = cat_ub
+                else:
+                    y_surrogate = y_sim_i
+                sim_all.append(y_sim_i)
+                sigma_all.append(sigma_for_observable)
+                surrogate_all.append(y_surrogate)
+
+    sim_all = np.array(sim_all)
+    sigma_all = np.array(sigma_all)
+    surrogate_all = np.array(surrogate_all)
+
+    # Calculate the negative log likelihood gradient for censored data.
+    gradient = np.sum(
+        (
+            np.full(len(sim_all), 1)
+            - (surrogate_all - sim_all) ** 2 / sigma_all**2
+        )
+        * ssigma_all
+        / sigma_all
+    ) - np.sum((surrogate_all - sim_all) * sy_all / sigma_all**2)
+
+    # Gather the simulation, sigma values and sensitivities for the quantitative data.
+    quantitative_sim = np.concatenate(
+        [sim_i[mask_i] for sim_i, mask_i in zip(sim, quantitative_ixs)]
+    )
+    quantitative_sigma = np.concatenate(
+        [sigma_i[mask_i] for sigma_i, mask_i in zip(sigma, quantitative_ixs)]
+    )
+    quantitative_sy = np.concatenate(
+        [
+            sy_i[:, edata_idx, :][mask_i]
+            if edata_idx is not None
+            else np.full(sy_i[:, 0, :][mask_i].shape, 0)
+            for sy_i, mask_i, edata_idx in zip(
+                sy, quantitative_ixs, par_edata_idx
+            )
+        ]
+    )
+    quantitative_ssigma = np.concatenate(
+        [
+            ssigma_i[:, edata_idx, :][mask_i]
+            if edata_idx is not None
+            else np.full(ssigma_i[:, 0, :][mask_i].shape, 0)
+            for ssigma_i, mask_i, edata_idx in zip(
+                ssigma, quantitative_ixs, par_edata_idx
+            )
+        ]
+    )
+
+    # Calculate the negative log likelihood gradient for uncensored, quantitative data.
+    gradient += np.sum(
+        (
+            np.full(len(quantitative_sim), 1)
+            - (quantitative_data - quantitative_sim) ** 2
+            / quantitative_sigma**2
+        )
+        * quantitative_ssigma
+        / quantitative_sigma
+    ) - np.sum(
+        (quantitative_data - quantitative_sim)
+        * quantitative_sy
+        / quantitative_sigma**2
+    )
+
+    return gradient

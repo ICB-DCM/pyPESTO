@@ -5,13 +5,17 @@ import numpy as np
 import pandas as pd
 
 from ...C import (
+    CENSORED,
+    CENSORING_BOUNDS,
     INNER_PARAMETER_BOUNDS,
+    INTERVAL_CENSORED,
+    LEFT_CENSORED,
     LIN,
     MEASUREMENT_CATEGORY,
-    MEASUREMENT_GROUP,
     MEASUREMENT_TYPE,
     ORDINAL,
     REDUCED,
+    RIGHT_CENSORED,
     STANDARD,
     TIME,
     InnerParameterType,
@@ -88,11 +92,6 @@ class OptimalScalingProblem(InnerProblem):
                 + 2 * self.groups[group]['num_categories']
             )
 
-            self.groups[group]['num_constr_full'] = (
-                2 * self.groups[group]['num_datapoints']
-                + 2 * self.groups[group]['num_categories']
-            )
-
             self.groups[group]['lb_indices'] = list(
                 range(
                     self.groups[group]['num_datapoints'],
@@ -109,11 +108,37 @@ class OptimalScalingProblem(InnerProblem):
                 )
             )
 
-            self.groups[group]['C'] = self.initialize_c(group)
+            if all([x.censoring_type is not None for x in xs]):
+                self.groups[group][MEASUREMENT_TYPE] = CENSORED
+                self.groups[group][
+                    'quantitative_ixs'
+                ] = self.get_censored_group_quantiative_ixs(xs)
+                self.groups[group]['quantitative_data'] = np.concatenate(
+                    [
+                        data_i[mask_i]
+                        for data_i, mask_i in zip(
+                            self.data, self.groups[group]['quantitative_ixs']
+                        )
+                    ]
+                )
+            elif all([x.censoring_type is None for x in xs]):
+                self.groups[group][MEASUREMENT_TYPE] = ORDINAL
 
-            self.groups[group]['W'] = self.initialize_w(group)
+                self.groups[group]['num_constr_full'] = (
+                    2 * self.groups[group]['num_datapoints']
+                    + 2 * self.groups[group]['num_categories']
+                )
 
-            self.groups[group]['Wdot'] = self.initialize_w(group)
+                self.groups[group]['C'] = self.initialize_c(group)
+
+                self.groups[group]['W'] = self.initialize_w(group)
+
+                self.groups[group]['Wdot'] = self.initialize_w(group)
+            else:
+                raise ValueError(
+                    'Censoring types of optimal scaling parameters of a group '
+                    'have to either be all None, or all not None.'
+                )
 
     @staticmethod
     def from_petab_amici(
@@ -370,6 +395,41 @@ class OptimalScalingProblem(InnerProblem):
 
         return dd_dtheta
 
+    def get_censored_group_quantiative_ixs(
+        self, xs: List[OptimalScalingParameter]
+    ) -> List[np.ndarray]:
+        r"""Return a list of boolean masks indicating which data points are quantitative.
+
+        For a given group with censored data, return a list of boolean masks indicating
+        which data points are not censored, and therefore quantitative.
+
+        Parameters
+        ----------
+        xs:
+            List of ``OptimalScalingParameter``\s of a group with censored data.
+
+        Returns
+        -------
+        quantitative_ixs:
+            List of boolean masks indicating which data points are quantitative.
+        """
+        # Initialize boolean masks with False and find corresponding observable index.
+        quantitative_ixs = [np.full(ixs_i.shape, False) for ixs_i in xs[0].ixs]
+        observable_index = np.concatenate(
+            [np.where(ixs_i)[1] for ixs_i in xs[0].ixs]
+        )[0]
+
+        # Set to True all datapoints of the corresponding observable.
+        for quantitative_ixs_i in quantitative_ixs:
+            quantitative_ixs_i[:, observable_index] = True
+
+        # Set to False for all censored datapoints.
+        for x in xs:
+            for ixs_i, quantitative_ixs_i in zip(x.ixs, quantitative_ixs):
+                quantitative_ixs_i[ixs_i] = False
+
+        return quantitative_ixs
+
     def get_inner_parameter_dictionary(self) -> Dict:
         """Return a dictionary with inner parameter ids and their values."""
         inner_par_dict = {}
@@ -387,7 +447,7 @@ def optimal_scaling_inner_problem_from_petab_problem(
     """Construct the inner problem from the `petab_problem`."""
     # inner parameters
     inner_parameters = optimal_scaling_inner_parameters_from_measurement_df(
-        petab_problem.measurement_df, method
+        petab_problem.measurement_df, method, amici_model
     )
 
     # used indices for all measurement specific parameters
@@ -417,9 +477,12 @@ def optimal_scaling_inner_problem_from_petab_problem(
 def optimal_scaling_inner_parameters_from_measurement_df(
     df: pd.DataFrame,
     method: str,
+    amici_model: 'amici.Model',
 ) -> List[OptimalScalingParameter]:
     """Create list of inner free parameters from PEtab measurement table dependent on the method provided."""
     df = df.reset_index()
+
+    observable_ids = amici_model.getObservableIds()
 
     estimate = get_estimate_for_method(method)
     par_types = ['cat_lb', 'cat_ub']
@@ -429,29 +492,76 @@ def optimal_scaling_inner_parameters_from_measurement_df(
         InnerParameterType.OPTIMAL_SCALING
     ].values()
 
-    for par_type, par_estimate in zip(par_types, estimate):
-        for _, row in df.iterrows():
-            if row[MEASUREMENT_TYPE] == ORDINAL:
-                par_id = f'{par_type}_{row[OBSERVABLE_ID]}_{row[MEASUREMENT_GROUP]}_{row[MEASUREMENT_CATEGORY]}'
+    censoring_types = [LEFT_CENSORED, INTERVAL_CENSORED, RIGHT_CENSORED]
 
-                # Create only one set of bound parameters per category of a
-                # group.
-                if par_id not in [
-                    inner_par.inner_parameter_id
-                    for inner_par in inner_parameters
-                ]:
-                    inner_parameters.append(
-                        OptimalScalingParameter(
-                            inner_parameter_id=par_id,
-                            inner_parameter_type=InnerParameterType.OPTIMAL_SCALING,
-                            scale=LIN,
-                            lb=lb,
-                            ub=ub,
-                            category=row[MEASUREMENT_CATEGORY],
-                            group=row[MEASUREMENT_GROUP],
-                            estimate=par_estimate,
+    for observable_id in observable_ids:
+        group = observable_ids.index(observable_id) + 1
+
+        observable_df = df[df[OBSERVABLE_ID] == observable_id]
+
+        if all(observable_df[MEASUREMENT_TYPE] == ORDINAL):
+            # Add optimal scaling parameters for ordinal measurements.
+            for par_type, par_estimate in zip(par_types, estimate):
+                for _, row in observable_df.iterrows():
+                    par_id = f'{par_type}_{observable_id}_{row[MEASUREMENT_TYPE]}_{int(row[MEASUREMENT_CATEGORY])}'
+
+                    # Create only one set of bound parameters per category of a group.
+                    if par_id not in [
+                        inner_par.inner_parameter_id
+                        for inner_par in inner_parameters
+                    ]:
+                        inner_parameters.append(
+                            OptimalScalingParameter(
+                                inner_parameter_id=par_id,
+                                inner_parameter_type=InnerParameterType.OPTIMAL_SCALING,
+                                scale=LIN,
+                                lb=lb,
+                                ub=ub,
+                                observable_id=observable_id,
+                                category=int(row[MEASUREMENT_CATEGORY]),
+                                group=group,
+                                estimate=par_estimate,
+                            )
                         )
+        elif any(observable_df[MEASUREMENT_TYPE].isin(censoring_types)):
+            # Get df with only censored measurements.
+            censored_df = df.loc[df[MEASUREMENT_TYPE].isin(censoring_types)]
+            # Get censoring types for this observable and order them.
+            obs_censoring_types = observable_df[MEASUREMENT_TYPE].unique()
+            obs_censoring_types = [
+                censoring_type
+                for censoring_type in censoring_types
+                if censoring_type in obs_censoring_types
+            ]
+            for par_type in par_types:
+                for _, row in censored_df.iterrows():
+                    category = int(
+                        obs_censoring_types.index(row[MEASUREMENT_TYPE]) + 1
                     )
+                    par_id = f'{par_type}_{observable_id}_{row[MEASUREMENT_TYPE]}_{category}'
+                    # Create only one set of bound parameters per category of a group.
+                    if par_id not in [
+                        inner_par.inner_parameter_id
+                        for inner_par in inner_parameters
+                    ]:
+                        inner_parameters.append(
+                            OptimalScalingParameter(
+                                inner_parameter_id=par_id,
+                                inner_parameter_type=InnerParameterType.OPTIMAL_SCALING,
+                                scale=LIN,
+                                lb=lb,
+                                ub=ub,
+                                observable_id=observable_id,
+                                category=category,
+                                group=group,
+                                estimate=False,
+                                censoring_type=row[MEASUREMENT_TYPE],
+                            )
+                        )
+                        _add_value_to_censored_bound_parameter(
+                            inner_parameters[-1], row, par_type
+                        )
+
     inner_parameters.sort(key=lambda x: (x.group, x.category))
 
     return inner_parameters
@@ -532,10 +642,11 @@ def optimal_scaling_ixs_for_measurement_specific_parameters(
                 )
 
                 # try to insert if hierarchical parameter
-                for override in inner_par_ids_for_meas:
-                    ixs_for_par.setdefault(override, []).append(
-                        (condition_ix, time_w_reps_ix, observable_ix)
-                    )
+                if inner_par_ids_for_meas:
+                    for override in inner_par_ids_for_meas:
+                        ixs_for_par.setdefault(override, []).append(
+                            (condition_ix, time_w_reps_ix, observable_ix)
+                        )
     return ixs_for_par
 
 
@@ -544,9 +655,42 @@ def get_inner_par_ids_for_measurement(
     inner_parameters: List[OptimalScalingParameter],
 ):
     """Return inner parameter ids of parameters which are related to the measurement."""
-    return [
-        inner_par.inner_parameter_id
-        for inner_par in inner_parameters
-        if inner_par.category == measurement[MEASUREMENT_CATEGORY]
-        and inner_par.group == measurement[MEASUREMENT_GROUP]
-    ]
+    if measurement[MEASUREMENT_TYPE] == ORDINAL:
+        return [
+            inner_par.inner_parameter_id
+            for inner_par in inner_parameters
+            if inner_par.category == measurement[MEASUREMENT_CATEGORY]
+            and inner_par.observable_id == measurement[OBSERVABLE_ID]
+        ]
+    elif measurement[MEASUREMENT_TYPE] in [
+        LEFT_CENSORED,
+        INTERVAL_CENSORED,
+        RIGHT_CENSORED,
+    ]:
+        return [
+            inner_par.inner_parameter_id
+            for inner_par in inner_parameters
+            if inner_par.observable_id == measurement[OBSERVABLE_ID]
+            and inner_par.censoring_type == measurement[MEASUREMENT_TYPE]
+        ]
+
+
+def _add_value_to_censored_bound_parameter(
+    inner_parameter: OptimalScalingParameter,
+    row: pd.Series,
+    par_type: str,
+) -> None:
+    if row[MEASUREMENT_TYPE] == LEFT_CENSORED and par_type == 'cat_lb':
+        inner_parameter.value = 0.0
+    elif row[MEASUREMENT_TYPE] == LEFT_CENSORED and par_type == 'cat_ub':
+        inner_parameter.value = float(row[CENSORING_BOUNDS])
+
+    elif row[MEASUREMENT_TYPE] == RIGHT_CENSORED and par_type == 'cat_lb':
+        inner_parameter.value = float(row[CENSORING_BOUNDS])
+    elif row[MEASUREMENT_TYPE] == RIGHT_CENSORED and par_type == 'cat_ub':
+        inner_parameter.value = np.inf
+
+    elif row[MEASUREMENT_TYPE] == INTERVAL_CENSORED and par_type == 'cat_lb':
+        inner_parameter.value = float(row[CENSORING_BOUNDS].split(';')[0])
+    elif row[MEASUREMENT_TYPE] == INTERVAL_CENSORED and par_type == 'cat_ub':
+        inner_parameter.value = float(row[CENSORING_BOUNDS].split(';')[1])

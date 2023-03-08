@@ -21,6 +21,7 @@ except ImportError:
     pass
 
 
+from ..C import CENSORED, MEASUREMENT_TYPE, ORDINAL
 from ..result import Result
 
 
@@ -90,19 +91,16 @@ def plot_categories_from_pypesto_result(
 
     # Get simulation and sigma.
     sim = [rdata['y'] for rdata in inner_rdatas]
+    sigma = [rdata['sigmay'] for rdata in inner_rdatas]
     timepoints = [rdata['ts'] for rdata in inner_rdatas]
     condition_ids = [edata.id for edata in edatas]
     condition_ids_from_petab = list(petab_problem.condition_df.index)
-    petab_condition_ordering = [
-        condition_ids.index(condition_id)
-        for condition_id in condition_ids_from_petab
-    ]
 
     # Get the inner solver and problem.
     inner_solver = pypesto_result.problem.objective.calculator.inner_solver
     inner_problem = pypesto_result.problem.objective.calculator.inner_problem
 
-    inner_results = inner_solver.solve(inner_problem, sim)
+    inner_results = inner_solver.solve(inner_problem, sim, sigma)
 
     return plot_categories_from_inner_result(
         inner_problem,
@@ -110,8 +108,8 @@ def plot_categories_from_pypesto_result(
         inner_results,
         sim,
         timepoints,
+        condition_ids,
         condition_ids_from_petab,
-        petab_condition_ordering,
         **kwargs,
     )
 
@@ -123,7 +121,7 @@ def plot_categories_from_inner_result(
     simulation: List[np.ndarray],
     timepoints: List[np.ndarray],
     condition_ids: List[str] = None,
-    petab_condition_ordering: List[str] = None,
+    condition_ids_from_petab: List[str] = None,
     **kwargs,
 ):
     """Plot the inner solutions.
@@ -191,7 +189,8 @@ def plot_categories_from_inner_result(
         interval_range, interval_gap = compute_interval_constraints(
             xs, simulation, options
         )
-
+        observable_index = group - 1
+        measurement_type = inner_problem.groups[group][MEASUREMENT_TYPE]
         # Get surrogate datapoints and category bounds
         (
             simulation_all,
@@ -207,6 +206,7 @@ def plot_categories_from_inner_result(
             interval_range,
             interval_gap,
             options,
+            measurement_type,
         )
 
         # Get the number of distinct timepoints in timepoints_all
@@ -215,45 +215,134 @@ def plot_categories_from_inner_result(
 
         # If there is only one distinct timepoint, plot with respect to conditions
         if n_distinct_timepoints == 1:
+            if measurement_type == CENSORED:
+                # Get the condition indices which have censored data
+                # and the corresponding condition ids with their ordering
+                censored_condition_ids = [
+                    condition_ids[i]
+                    for i, cond_sim in enumerate(simulation_all)
+                    if len(cond_sim) > 0
+                ]
+                petab_censored_conditions = [
+                    condition_id
+                    for condition_id in condition_ids_from_petab
+                    if condition_id in censored_condition_ids
+                ]
+                petab_censored_conditions_ordering = [
+                    censored_condition_ids.index(condition_id)
+                    for condition_id in petab_censored_conditions
+                ]
+                # Get all other condition indices for quantitative data
+                # and the corresponding condition ids with their ordering
+                quantitative_condition_ids = [
+                    condition_id
+                    for condition_id in condition_ids
+                    if condition_id not in censored_condition_ids
+                ]
+                petab_quantitative_conditions = [
+                    condition_id
+                    for condition_id in condition_ids_from_petab
+                    if condition_id in quantitative_condition_ids
+                ]
+                petab_quantitative_condition_ordering = [
+                    quantitative_condition_ids.index(condition_id)
+                    for condition_id in petab_quantitative_conditions
+                ]
+
+            petab_condition_ordering = [
+                condition_ids.index(condition_id)
+                for condition_id in condition_ids_from_petab
+            ]
+
             # Merge the simulation, surrogate, and bounds across conditions
             simulation_all = np.concatenate(simulation_all)
             surrogate_all = np.concatenate(surrogate_all)
             upper_bounds_all = np.concatenate(upper_bounds_all)
             lower_bounds_all = np.concatenate(lower_bounds_all)
 
-            # Change ordering of simulation, surrogate data and bounds to petab condition ordering
-            simulation_all = simulation_all[petab_condition_ordering]
-            surrogate_all = surrogate_all[petab_condition_ordering]
-            upper_bounds_all = upper_bounds_all[petab_condition_ordering]
-            lower_bounds_all = lower_bounds_all[petab_condition_ordering]
+            if measurement_type == CENSORED:
+                # Change ordering of simulation, surrogate data and bounds to petab condition ordering
+                simulation_all = simulation_all[
+                    petab_censored_conditions_ordering
+                ]
+                surrogate_all = surrogate_all[
+                    petab_censored_conditions_ordering
+                ]
+                upper_bounds_all = upper_bounds_all[
+                    petab_censored_conditions_ordering
+                ]
+                lower_bounds_all = lower_bounds_all[
+                    petab_censored_conditions_ordering
+                ]
 
-            # Plot the categories and surrogate data across conditions
+                whole_simulation = np.concatenate(
+                    [sim_i[:, observable_index] for sim_i in simulation]
+                )[petab_condition_ordering]
 
-            axs[group_idx].plot(
-                condition_ids,
-                simulation_all,
-                'b.',
-                label='Simulation',
-            )
-            axs[group_idx].plot(
-                condition_ids,
-                simulation_all,
-                'b',
-                label='Simulation',
-            )
-            axs[group_idx].plot(
-                condition_ids,
-                surrogate_all,
-                'rx',
-                label='Surrogate data',
-            )
+                axs[group_idx].plot(
+                    condition_ids_from_petab,
+                    whole_simulation,
+                    linestyle='-',
+                    marker='.',
+                    color='b',
+                    label='Simulation',
+                )
+                axs[group_idx].plot(
+                    petab_censored_conditions,
+                    surrogate_all,
+                    'rx',
+                    label='Surrogate data',
+                )
+                _plot_category_rectangles(
+                    axs[group_idx],
+                    petab_censored_conditions,
+                    upper_bounds_all,
+                    lower_bounds_all,
+                )
 
-            _plot_category_rectangles(
-                axs[group_idx],
-                condition_ids,
-                upper_bounds_all,
-                lower_bounds_all,
-            )
+                quantitative_data = inner_problem.groups[group][
+                    'quantitative_data'
+                ]
+                quantitative_data = quantitative_data[
+                    petab_quantitative_condition_ordering
+                ]
+                axs[group_idx].plot(
+                    petab_quantitative_conditions,
+                    quantitative_data,
+                    'gs',
+                    label='Quantitative data',
+                )
+
+            elif measurement_type == ORDINAL:
+                # Change ordering of simulation, surrogate data and bounds to petab condition ordering
+                simulation_all = simulation_all[petab_condition_ordering]
+                surrogate_all = surrogate_all[petab_condition_ordering]
+                upper_bounds_all = upper_bounds_all[petab_condition_ordering]
+                lower_bounds_all = lower_bounds_all[petab_condition_ordering]
+
+                # Plot the categories and surrogate data across conditions
+
+                axs[group_idx].plot(
+                    condition_ids_from_petab,
+                    simulation_all,
+                    linestyle='-',
+                    marker='.',
+                    color='b',
+                    label='Simulation',
+                )
+                axs[group_idx].plot(
+                    condition_ids_from_petab,
+                    surrogate_all,
+                    'rx',
+                    label='Surrogate data',
+                )
+
+                _plot_category_rectangles(
+                    axs[group_idx],
+                    condition_ids_from_petab,
+                    upper_bounds_all,
+                    lower_bounds_all,
+                )
 
             # Set the condition xticks on an angle
             axs[group_idx].tick_params(axis='x', rotation=25)
@@ -270,18 +359,41 @@ def plot_categories_from_inner_result(
             # If there is only one condition, we don't need separate colors
             # for the different conditions
             if n_conditions == 1:
-                axs[group_idx].plot(
-                    timepoints_all[0],
-                    simulation_all[0],
-                    'b.',
-                    label='Simulation',
-                )
-                axs[group_idx].plot(
-                    timepoints_all[0],
-                    simulation_all[0],
-                    'b',
-                    label='Simulation',
-                )
+                if measurement_type == ORDINAL:
+                    axs[group_idx].plot(
+                        timepoints_all[0],
+                        simulation_all[0],
+                        linestyle='-',
+                        marker='.',
+                        color='b',
+                        label='Simulation',
+                    )
+                elif measurement_type == CENSORED:
+                    quantitative_data = inner_problem.groups[group][
+                        'quantitative_data'
+                    ]
+                    quantitative_ixs = inner_problem.groups[group][
+                        'quantitative_ixs'
+                    ]
+                    quantitative_timepoints = timepoints[0][
+                        quantitative_ixs[0].T[observable_index]
+                    ]
+
+                    axs[group_idx].plot(
+                        timepoints[0],
+                        simulation[0][:, observable_index],
+                        linestyle='-',
+                        marker='.',
+                        color='b',
+                        label='Simulation',
+                    )
+                    axs[group_idx].plot(
+                        quantitative_timepoints,
+                        quantitative_data,
+                        'gs',
+                        label='Quantitative data',
+                    )
+
                 axs[group_idx].plot(
                     timepoints_all[0],
                     surrogate_all[0],
@@ -303,19 +415,60 @@ def plot_categories_from_inner_result(
                 # Get as many colors as there are conditions
                 colors = plt.cm.rainbow(np.linspace(0, 1, len(simulation_all)))
 
+                if measurement_type == CENSORED:
+                    quantitative_data_flattened = inner_problem.groups[group][
+                        'quantitative_data'
+                    ]
+                    quantitative_ixs = inner_problem.groups[group][
+                        'quantitative_ixs'
+                    ]
+                    quantitative_timepoints = [
+                        timepoints[cond_i][
+                            quantitative_ixs[cond_i].T[observable_index]
+                        ]
+                        for cond_i in range(len(timepoints))
+                    ]
+                    quantitative_data = []
+                    index_offset = 0
+                    # Separate quantitative data across conditions to be as timepoints
+                    for cond_i in range(len(timepoints)):
+                        quantitative_data.append(
+                            quantitative_data_flattened[
+                                index_offset : index_offset
+                                + len(quantitative_timepoints[cond_i])
+                            ]
+                        )
+
                 # Plot the categories and surrogate data for all conditions.
                 for condition_index, condition_id, color in zip(
                     range(len(simulation_all)), condition_ids, colors
                 ):
                     # Plot the categories and surrogate data for the current condition
-                    axs[group_idx].plot(
-                        timepoints_all[condition_index],
-                        simulation_all[condition_index],
-                        linestyle='-',
-                        marker='.',
-                        color=color,
-                        label=condition_id,
-                    )
+                    if measurement_type == ORDINAL:
+                        axs[group_idx].plot(
+                            timepoints_all[condition_index],
+                            simulation_all[condition_index],
+                            linestyle='-',
+                            marker='.',
+                            color=color,
+                            label=condition_id,
+                        )
+                    elif measurement_type == CENSORED:
+                        axs[group_idx].plot(
+                            timepoints[condition_index],
+                            simulation[condition_index][:, observable_index],
+                            linestyle='-',
+                            marker='.',
+                            color=color,
+                            label=condition_id,
+                        )
+                        axs[group_idx].plot(
+                            quantitative_timepoints[condition_index],
+                            quantitative_data[condition_index],
+                            marker='s',
+                            color=color,
+                        )
+
                     axs[group_idx].plot(
                         timepoints_all[condition_index],
                         surrogate_all[condition_index],
@@ -371,9 +524,17 @@ def plot_categories_from_inner_result(
                     color='black',
                     label='Simulation',
                 )
+                if measurement_type == CENSORED:
+                    axs[group_idx].plot(
+                        [],
+                        [],
+                        marker='s',
+                        color='black',
+                        label='Quantitative data',
+                    )
 
             axs[group_idx].legend()
-            axs[group_idx].set_title(f'Group {group}')
+            axs[group_idx].set_title(f'Group {group}, {measurement_type} data')
 
             axs[group_idx].set_xlabel('Timepoints')
             axs[group_idx].set_ylabel('Simulation/Surrogate data')
@@ -474,9 +635,10 @@ def _get_data_for_plotting(
     interval_range: float,
     interval_gap: float,
     options: Dict,
+    measurement_type: str,
 ):
     """Return data in the form suited for plotting."""
-    if options['reparameterized']:
+    if options['reparameterized'] and measurement_type == ORDINAL:
         optimal_scaling_bounds = undo_inner_parameter_reparameterization(
             optimal_scaling_bounds,
             inner_parameters,
@@ -498,9 +660,18 @@ def _get_data_for_plotting(
         cond_lower_bounds = []
 
         for inner_parameter in inner_parameters:
-            upper_bound, lower_bound = get_bounds_for_category(
-                inner_parameter, optimal_scaling_bounds, interval_gap, options
-            )
+            if measurement_type == ORDINAL:
+                upper_bound, lower_bound = get_bounds_for_category(
+                    inner_parameter,
+                    optimal_scaling_bounds,
+                    interval_gap,
+                    options,
+                )
+            elif measurement_type == CENSORED:
+                x_category = inner_parameter.category
+                lower_bound = optimal_scaling_bounds[2 * x_category - 2]
+                upper_bound = optimal_scaling_bounds[2 * x_category - 1]
+
             # Get the condition specific simulation, mask, and timepoints
             sim_i = sim[condition_index]
             mask_i = inner_parameter.ixs[condition_index]
@@ -556,6 +727,20 @@ def _get_data_for_plotting(
         timepoints_all.append(cond_timepoints)
         upper_bounds_all.append(cond_upper_bounds)
         lower_bounds_all.append(cond_lower_bounds)
+
+    # If the measurement type is censored, we need set the np.inf upper bounds to a value
+    if measurement_type == CENSORED:
+        max_surrogate = max(
+            [
+                max(surrogate)
+                for surrogate in surrogate_all
+                if len(surrogate) > 0
+            ]
+        )
+        for i in range(len(upper_bounds_all)):
+            upper_bounds_all[i] = upper_bounds_all[i].clip(
+                max=1.1 * max_surrogate
+            )
 
     return (
         simulation_all,

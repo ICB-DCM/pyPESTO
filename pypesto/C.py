@@ -135,10 +135,14 @@ INNER_PARAMETER_BOUNDS = {
 
 # Should go to PEtab constants at some point
 MEASUREMENT_CATEGORY = 'measurementCategory'
-MEASUREMENT_GROUP = 'measurementGroup'
 MEASUREMENT_TYPE = 'measurementType'
+CENSORING_BOUNDS = 'censoringBounds'
 
 ORDINAL = 'ordinal'
+CENSORED = 'censored'
+LEFT_CENSORED = 'left-censored'
+RIGHT_CENSORED = 'right-censored'
+INTERVAL_CENSORED = 'interval-censored'
 
 REDUCED = 'reduced'
 STANDARD = 'standard'

@@ -171,9 +171,10 @@ class OptimalScalingAmiciCalculator(AmiciCalculator):
             return filter_return_dict(inner_result)
 
         sim = [rdata['y'] for rdata in inner_rdatas]
+        sigma = [rdata['sigmay'] for rdata in inner_rdatas]
 
         # compute optimal inner parameters
-        x_inner_opt = self.inner_solver.solve(self.inner_problem, sim)
+        x_inner_opt = self.inner_solver.solve(self.inner_problem, sim, sigma)
         inner_result[FVAL] = self.inner_solver.calculate_obj_function(
             x_inner_opt
         )
@@ -183,12 +184,16 @@ class OptimalScalingAmiciCalculator(AmiciCalculator):
 
         # calculate analytical gradients if requested
         if sensi_order > 0:
+            # print([opt['fun'] for opt in x_inner_opt])
             sy = [rdata['sy'] for rdata in inner_rdatas]
+            ssigma = [rdata['ssigmay'] for rdata in inner_rdatas]
             inner_result[GRAD] = self.inner_solver.calculate_gradients(
                 problem=self.inner_problem,
                 x_inner_opt=x_inner_opt,
                 sim=sim,
                 sy=sy,
+                sigma=sigma,
+                ssigma=ssigma,
                 parameter_mapping=parameter_mapping,
                 par_opt_ids=x_ids,
                 par_sim_ids=amici_model.getParameterIds(),

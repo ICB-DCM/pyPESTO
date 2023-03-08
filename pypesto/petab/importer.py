@@ -76,8 +76,8 @@ class PetabImporter(AmiciObjectBuilder):
         validate_petab_hierarchical: bool = True,
         hierarchical: bool = False,
         ordinal: bool = False,
-        inner_solver_options: Dict = None,
         nonlinear_monotone: bool = False,
+        inner_solver_options: Dict = None,
     ):
         """Initialize importer.
 
