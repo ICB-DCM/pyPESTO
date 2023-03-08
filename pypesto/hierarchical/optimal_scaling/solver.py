@@ -1067,7 +1067,8 @@ def calculate_censored_obj(
 
     Returns
     -------
-    Dictionary with the objective function value.
+    Dictionary with the objective function value, dummy success
+    and censoring category bounds.
     """
     cat_lb_values = np.array([x.value for x in category_lower_bounds])
     cat_ub_values = np.array([x.value for x in category_upper_bounds])
@@ -1148,7 +1149,7 @@ def calculate_censored_grad(
 
     Returns
     -------
-    gradient.
+    Gradient.
     """
     cat_lb_values = np.array([x.value for x in category_lower_bounds])
     cat_ub_values = np.array([x.value for x in category_upper_bounds])
