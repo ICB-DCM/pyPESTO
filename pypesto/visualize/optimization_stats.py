@@ -388,7 +388,6 @@ def stats_lowlevel(
     # assign colors
     colors = assign_colors(vals=fvals, colors=color, balance_alpha=False)
 
-    # sort TODO: issue # 378
     sorted_indices = sorted(range(n_starts), key=lambda j: fvals[j])
     values = values[sorted_indices]
 
