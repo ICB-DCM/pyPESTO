@@ -143,6 +143,7 @@ CENSORED = 'censored'
 LEFT_CENSORED = 'left-censored'
 RIGHT_CENSORED = 'right-censored'
 INTERVAL_CENSORED = 'interval-censored'
+CENSORING_TYPES = [LEFT_CENSORED, RIGHT_CENSORED, INTERVAL_CENSORED]
 
 REDUCED = 'reduced'
 STANDARD = 'standard'

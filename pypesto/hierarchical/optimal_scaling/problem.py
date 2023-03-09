@@ -7,6 +7,7 @@ import pandas as pd
 from ...C import (
     CENSORED,
     CENSORING_BOUNDS,
+    CENSORING_TYPES,
     INNER_PARAMETER_BOUNDS,
     INTERVAL_CENSORED,
     LEFT_CENSORED,
@@ -492,8 +493,6 @@ def optimal_scaling_inner_parameters_from_measurement_df(
         InnerParameterType.OPTIMAL_SCALING
     ].values()
 
-    censoring_types = [LEFT_CENSORED, INTERVAL_CENSORED, RIGHT_CENSORED]
-
     for observable_id in observable_ids:
         group = observable_ids.index(observable_id) + 1
 
@@ -523,20 +522,20 @@ def optimal_scaling_inner_parameters_from_measurement_df(
                                 estimate=par_estimate,
                             )
                         )
-        elif any(observable_df[MEASUREMENT_TYPE].isin(censoring_types)):
+        elif any(observable_df[MEASUREMENT_TYPE].isin(CENSORING_TYPES)):
             # Get df with only censored measurements.
-            censored_df = df.loc[df[MEASUREMENT_TYPE].isin(censoring_types)]
-            # Get censoring types for this observable and order them.
-            obs_censoring_types = observable_df[MEASUREMENT_TYPE].unique()
-            obs_censoring_types = [
-                censoring_type
-                for censoring_type in censoring_types
-                if censoring_type in obs_censoring_types
-            ]
+            censored_df = df.loc[df[MEASUREMENT_TYPE].isin(CENSORING_TYPES)]
+            # Check for unique values in the CENSORING_BOUNDS column and
+            # order them with resect to the first float value in the string.
+            unique_censoring_bounds = sorted(
+                censored_df[CENSORING_BOUNDS].unique(),
+                key=lambda x: float(x.split(';')[0]),
+            )
             for par_type in par_types:
                 for _, row in censored_df.iterrows():
                     category = int(
-                        obs_censoring_types.index(row[MEASUREMENT_TYPE]) + 1
+                        unique_censoring_bounds.index(row[CENSORING_BOUNDS])
+                        + 1
                     )
                     par_id = f'{par_type}_{observable_id}_{row[MEASUREMENT_TYPE]}_{category}'
                     # Create only one set of bound parameters per category of a group.
@@ -598,10 +597,26 @@ def optimal_scaling_ixs_for_measurement_specific_parameters(
     simulation_conditions = (
         petab_problem.get_simulation_conditions_from_measurement_df()
     )
+    measurement_df = petab_problem.measurement_df
+
+    # Get unique censoring bounds for each observable.
+    unique_censoring_bounds_per_observable = {}
+    for observable_id in observable_ids:
+        observable_df = measurement_df[
+            measurement_df[OBSERVABLE_ID] == observable_id
+        ]
+        censored_observable_df = observable_df.loc[
+            observable_df[MEASUREMENT_TYPE].isin(CENSORING_TYPES)
+        ]
+        unique_censoring_bounds_per_observable[observable_id] = sorted(
+            censored_observable_df[CENSORING_BOUNDS].unique(),
+            key=lambda x: float(x.split(';')[0]),
+        )
+
     for condition_ix, condition in simulation_conditions.iterrows():
         # measurement table for current condition
         df_for_condition = petab.get_rows_for_condition(
-            measurement_df=petab_problem.measurement_df, condition=condition
+            measurement_df=measurement_df, condition=condition
         )
 
         # unique sorted list of timepoints
@@ -638,7 +653,9 @@ def optimal_scaling_ixs_for_measurement_specific_parameters(
                 time_w_reps_ix = time_ix_for_obs_ix[observable_ix]
 
                 inner_par_ids_for_meas = get_inner_par_ids_for_measurement(
-                    measurement, inner_parameters
+                    measurement,
+                    inner_parameters,
+                    unique_censoring_bounds_per_observable,
                 )
 
                 # try to insert if hierarchical parameter
@@ -653,6 +670,7 @@ def optimal_scaling_ixs_for_measurement_specific_parameters(
 def get_inner_par_ids_for_measurement(
     measurement: Dict,
     inner_parameters: List[OptimalScalingParameter],
+    unique_censoring_bounds_per_observable: Dict[str, List[float]],
 ):
     """Return inner parameter ids of parameters which are related to the measurement."""
     if measurement[MEASUREMENT_TYPE] == ORDINAL:
@@ -667,11 +685,17 @@ def get_inner_par_ids_for_measurement(
         INTERVAL_CENSORED,
         RIGHT_CENSORED,
     ]:
+        unique_censoring_bounds = unique_censoring_bounds_per_observable[
+            measurement[OBSERVABLE_ID]
+        ]
+        measurement_category = int(
+            unique_censoring_bounds.index(measurement[CENSORING_BOUNDS]) + 1
+        )
         return [
             inner_par.inner_parameter_id
             for inner_par in inner_parameters
             if inner_par.observable_id == measurement[OBSERVABLE_ID]
-            and inner_par.censoring_type == measurement[MEASUREMENT_TYPE]
+            and inner_par.category == measurement_category
         ]
 
 
