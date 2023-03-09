@@ -12,6 +12,9 @@ try:
     import amici
     import petab
 
+    from ..hierarchical.spline_approximation.calculator import (
+        SplineAmiciCalculator,
+    )
     from ..hierarchical.spline_approximation.problem import SplineInnerProblem
     from ..hierarchical.spline_approximation.solver import (
         SplineInnerSolver,
@@ -88,9 +91,17 @@ def plot_splines_from_pypesto_result(
     sim = [rdata['y'] for rdata in inner_rdatas]
     sigma = [rdata['sigmay'] for rdata in inner_rdatas]
 
+    spline_calculator = None
+    for (
+        calculator
+    ) in pypesto_result.problem.objective.calculator.inner_calculators:
+        if isinstance(calculator, SplineAmiciCalculator):
+            spline_calculator = calculator
+            break
+
     # Get the inner solver and problem.
-    inner_solver = pypesto_result.problem.objective.calculator.inner_solver
-    inner_problem = pypesto_result.problem.objective.calculator.inner_problem
+    inner_solver = spline_calculator.inner_solver
+    inner_problem = spline_calculator.inner_problem
 
     inner_results = inner_solver.solve(inner_problem, sim, sigma)
 
@@ -271,9 +282,15 @@ def visualize_spline_optimized_model_fit(
     sim = [rdata['y'] for rdata in inner_rdatas]
     sigma = [rdata['sigmay'] for rdata in inner_rdatas]
 
+    spline_calculator = None
+    for calculator in pypesto_problem.objective.calculator.inner_calculators:
+        if isinstance(calculator, SplineAmiciCalculator):
+            spline_calculator = calculator
+            break
+
     # Get the inner solver and problem.
-    inner_solver = pypesto_problem.objective.calculator.inner_solver
-    inner_problem = pypesto_problem.objective.calculator.inner_problem
+    inner_solver = spline_calculator.inner_solver
+    inner_problem = spline_calculator.inner_problem
 
     # Solve the inner problem.
     inner_results = inner_solver.solve(inner_problem, sim, sigma)

@@ -6,11 +6,15 @@ import numpy as np
 
 from ...C import (
     CENSORED,
+    INTERVAL_CONSTRAINTS,
     MAX,
     MAXMIN,
     MEASUREMENT_TYPE,
+    METHOD,
+    MIN_GAP,
     ORDINAL,
     REDUCED,
+    REPARAMETERIZED,
     STANDARD,
     InnerParameterType,
 )
@@ -57,31 +61,30 @@ class OptimalScalingInnerSolver(InnerSolver):
 
     def validate_options(self):
         """Validate the current options dictionary."""
-        if self.options['method'] not in [STANDARD, REDUCED]:
+        if self.options[METHOD] not in [STANDARD, REDUCED]:
             raise ValueError(
-                f"Inner solver method cannot be {self.options['method']}. Please enter either {STANDARD} or {REDUCED}"
+                f"Inner solver method cannot be {self.options[METHOD]}. Please enter either {STANDARD} or {REDUCED}"
             )
-        elif type(self.options['reparameterized']) is not bool:
+        elif type(self.options[REPARAMETERIZED]) is not bool:
             raise ValueError(
-                f"Inner solver option 'reparameterized' has to be boolean, not {type(self.options['reparameterized'])}."
+                f"Inner solver option 'reparameterized' has to be boolean, not {type(self.options[REPARAMETERIZED])}."
             )
-        elif self.options['intervalConstraints'] not in [MAX, MAXMIN]:
+        elif self.options[INTERVAL_CONSTRAINTS] not in [MAX, MAXMIN]:
             raise ValueError(
-                f"Inner solver method cannot be {self.options['intervalConstraints']}. Please enter either {MAX} or {MAXMIN}"
+                f"Inner solver method cannot be {self.options[INTERVAL_CONSTRAINTS]}. Please enter either {MAX} or {MAXMIN}"
             )
-        elif type(self.options['minGap']) is not float:
+        elif type(self.options[MIN_GAP]) is not float:
             raise ValueError(
-                f"Inner solver option 'reparameterized' has to be a float, not {type(self.options['minGap'])}."
+                f"Inner solver option 'reparameterized' has to be a float, not {type(self.options[MIN_GAP])}."
             )
         elif (
-            self.options['method'] == STANDARD
-            and self.options['reparameterized']
+            self.options[METHOD] == STANDARD and self.options[REPARAMETERIZED]
         ):
             raise NotImplementedError(
                 'Combining standard approach with '
                 'reparameterization not implemented.'
             )
-        elif self.options['method'] == STANDARD:
+        elif self.options[METHOD] == STANDARD:
             warnings.warn(
                 'Standard approach is not recommended, as it is less efficient.'
                 'Please consider using the reduced approach instead.'
@@ -315,7 +318,7 @@ class OptimalScalingInnerSolver(InnerSolver):
                                 group, xs, sim_all, sy_all
                             )
                             d = problem.get_d(
-                                group, xs, sim_all, self.options['minGap']
+                                group, xs, sim_all, self.options[MIN_GAP]
                             )
 
                             mu = get_mu(group, problem, residual)
@@ -342,10 +345,10 @@ class OptimalScalingInnerSolver(InnerSolver):
     def get_default_options() -> Dict:
         """Return default options for solving the inner problem."""
         options = {
-            'method': REDUCED,
-            'reparameterized': True,
-            'intervalConstraints': MAX,
-            'minGap': 1e-16,
+            METHOD: REDUCED,
+            REPARAMETERIZED: True,
+            INTERVAL_CONSTRAINTS: MAX,
+            MIN_GAP: 1e-16,
         }
         return options
 
@@ -576,9 +579,9 @@ def get_inner_optimization_options(
     from scipy.optimize import Bounds
 
     min_all, max_all = get_min_max(category_upper_bounds, sim)
-    if options['method'] == REDUCED:
+    if options[METHOD] == REDUCED:
         last_opt_values = np.asarray([x.value for x in category_upper_bounds])
-    elif options['method'] == STANDARD:
+    elif options[METHOD] == STANDARD:
         last_opt_values = np.ravel(
             [
                 np.asarray([x.value for x in category_lower_bounds]),
@@ -587,7 +590,7 @@ def get_inner_optimization_options(
             'F',
         )
 
-    if options['method'] == REDUCED:
+    if options[METHOD] == REDUCED:
         parameter_length = len(category_upper_bounds)
         if len(np.nonzero(last_opt_values)) > 0:
             x0 = last_opt_values
@@ -597,7 +600,7 @@ def get_inner_optimization_options(
                 max_all + (interval_range + interval_gap) * parameter_length,
                 parameter_length,
             )
-    elif options['method'] == STANDARD:
+    elif options[METHOD] == STANDARD:
         parameter_length = 2 * len(category_upper_bounds)
         if len(np.nonzero(last_opt_values)) > 0:
             x0 = last_opt_values
@@ -605,11 +608,11 @@ def get_inner_optimization_options(
             x0 = np.linspace(0, max_all + interval_range, parameter_length)
     else:
         raise NotImplementedError(
-            f"Unknown optimal scaling 'method' {options['method']}. "
+            f"Unknown optimal scaling method {options[METHOD]}. "
             f"Please use {STANDARD} or {REDUCED}."
         )
 
-    if options['reparameterized']:
+    if options[REPARAMETERIZED]:
         x0 = reparameterize_inner_parameters(
             x0, category_upper_bounds, interval_gap, interval_range
         )
@@ -694,7 +697,7 @@ def get_surrogate_all(
     options: Dict,
 ):
     """Return surrogate data, lower and upper category bounds."""
-    if options['reparameterized']:
+    if options[REPARAMETERIZED]:
         optimal_scaling_bounds = undo_inner_parameter_reparameterization(
             optimal_scaling_bounds,
             inner_parameters,
@@ -749,27 +752,27 @@ def compute_interval_constraints(
     """Compute minimal interval range and gap."""
     # compute constraints on interval size and interval gap size
     # similar to Pargett et al. (2014)
-    if 'minGap' not in options:
+    if MIN_GAP not in options:
         eps = 1e-16
     else:
-        eps = options['minGap']
+        eps = options[MIN_GAP]
 
     min_simulation, max_simulation = get_min_max(inner_parameters, sim)
 
-    if options['intervalConstraints'] == MAXMIN:
+    if options[INTERVAL_CONSTRAINTS] == MAXMIN:
         interval_range = (max_simulation - min_simulation) / (
             2 * len(inner_parameters) + 1
         )
         interval_gap = (max_simulation - min_simulation) / (
             4 * (len(inner_parameters) - 1) + 1
         )
-    elif options['intervalConstraints'] == MAX:
+    elif options[INTERVAL_CONSTRAINTS] == MAX:
         interval_range = max_simulation / (2 * len(inner_parameters) + 1)
         interval_gap = max_simulation / (4 * (len(inner_parameters) - 1) + 1)
     else:
         raise NotImplementedError(
             f"intervalConstraints = "
-            f"{options['intervalConstraints']} not implemented. "
+            f"{options[INTERVAL_CONSTRAINTS]} not implemented. "
             f"Please use {MAX} or {MAXMIN}."
         )
     return interval_range, interval_gap + eps
@@ -850,7 +853,7 @@ def obj_surrogate_data(
 ) -> float:
     """Compute optimal scaling objective function."""
     obj = 0.0
-    if options['reparameterized']:
+    if options[REPARAMETERIZED]:
         optimal_scaling_bounds = undo_inner_parameter_reparameterization(
             optimal_scaling_bounds, xs, interval_gap, interval_range
         )
@@ -886,12 +889,12 @@ def grad_surrogate_data(
 ) -> float:
     """Compute optimal scaling objective function."""
     grad = np.zeros(len(optimal_scaling_bounds))
-    if options['reparameterized']:
+    if options[REPARAMETERIZED]:
         optimal_scaling_bounds = undo_inner_parameter_reparameterization(
             optimal_scaling_bounds, xs, interval_gap, interval_range
         )
 
-    if options['method'] == STANDARD:
+    if options[METHOD] == STANDARD:
         for x in xs:
             x_category = int(x.category)
             x_lower = optimal_scaling_bounds[2 * x_category - 2]
@@ -908,7 +911,7 @@ def grad_surrogate_data(
                         grad[2 * x_category - 1] += 2 * (y_surrogate - y_sim_i)
                     else:
                         continue
-    elif options['method'] == REDUCED:
+    elif options[METHOD] == REDUCED:
         for x in xs:
             x_category = int(x.category)
             x_upper = optimal_scaling_bounds[x_category - 1]
@@ -929,7 +932,7 @@ def grad_surrogate_data(
                     else:
                         continue
 
-    if options['reparameterized']:
+    if options[REPARAMETERIZED]:
         grad = reparameterize_gradient(
             grad,
             xs,
@@ -964,7 +967,7 @@ def get_bounds_for_category(
     """Return upper and lower bound for a specific category x."""
     x_category = int(x.category)
 
-    if options['method'] == REDUCED:
+    if options[METHOD] == REDUCED:
         x_upper = optimal_scaling_bounds[x_category - 1]
         if x_category == 1:
             x_lower = 0
@@ -972,12 +975,12 @@ def get_bounds_for_category(
             x_lower = optimal_scaling_bounds[x_category - 2] + interval_gap
         else:
             raise ValueError('Category value needs to be larger than 0.')
-    elif options['method'] == STANDARD:
+    elif options[METHOD] == STANDARD:
         x_lower = optimal_scaling_bounds[2 * x_category - 2]
         x_upper = optimal_scaling_bounds[2 * x_category - 1]
     else:
         raise NotImplementedError(
-            f"Unknown optimal scaling 'method' {options['method']}. "
+            f"Unknown optimal scaling method {options[METHOD]}. "
             f"Please use {REDUCED} or {STANDARD}."
         )
     return x_upper, x_lower
@@ -991,7 +994,7 @@ def get_constraints_for_optimization(
     interval_range, interval_gap = compute_interval_constraints(
         xs, sim, options
     )
-    if options['method'] == REDUCED:
+    if options[METHOD] == REDUCED:
         a = np.diag(-np.ones(num_categories), -1) + np.diag(
             np.ones(num_categories + 1)
         )
@@ -999,7 +1002,7 @@ def get_constraints_for_optimization(
         b = np.empty((num_categories,))
         b[0] = interval_range
         b[1:] = interval_range + interval_gap
-    elif options['method'] == STANDARD:
+    elif options[METHOD] == STANDARD:
         a = np.diag(-np.ones(2 * num_categories), -1) + np.diag(
             np.ones(2 * num_categories + 1)
         )
@@ -1106,7 +1109,7 @@ def calculate_censored_obj(
     )
 
     # Calcualte the objective function for uncensored, quantitative data.
-    obj += 0.5 * np.sum(
+    obj += 0.5 * np.nansum(
         np.log(2 * np.pi * quantitative_sigma**2)
         + (quantitative_data - quantitative_sim) ** 2 / quantitative_sigma**2
     )
@@ -1188,14 +1191,14 @@ def calculate_censored_grad(
     surrogate_all = np.array(surrogate_all)
 
     # Calculate the negative log likelihood gradient for censored data.
-    gradient = np.sum(
+    gradient = np.nansum(
         (
             np.full(len(sim_all), 1)
             - (surrogate_all - sim_all) ** 2 / sigma_all**2
         )
         * ssigma_all
         / sigma_all
-    ) - np.sum((surrogate_all - sim_all) * sy_all / sigma_all**2)
+    ) - np.nansum((surrogate_all - sim_all) * sy_all / sigma_all**2)
 
     # Gather the simulation, sigma values and sensitivities for the quantitative data.
     quantitative_sim = np.concatenate(
@@ -1226,7 +1229,7 @@ def calculate_censored_grad(
     )
 
     # Calculate the negative log likelihood gradient for uncensored, quantitative data.
-    gradient += np.sum(
+    gradient += np.nansum(
         (
             np.full(len(quantitative_sim), 1)
             - (quantitative_data - quantitative_sim) ** 2
@@ -1234,7 +1237,7 @@ def calculate_censored_grad(
         )
         * quantitative_ssigma
         / quantitative_sigma
-    ) - np.sum(
+    ) - np.nansum(
         (quantitative_data - quantitative_sim)
         * quantitative_sy
         / quantitative_sigma**2

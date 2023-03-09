@@ -90,7 +90,7 @@ class SplineInnerProblem(InnerProblem):
         petab_problem: petab.Problem,
         amici_model: 'amici.Model',
         edatas: List['amici.ExpData'],
-        spline_ratio: Dict = None,
+        spline_ratio: float = None,
     ) -> 'SplineInnerProblem':
         """Construct the inner problem from the `petab_problem`."""
         if spline_ratio is None:

@@ -23,21 +23,23 @@ from typing import (
 import numpy as np
 import pandas as pd
 
-from ..C import CONDITION_SEP, MODE_FUN, MODE_RES
+from ..C import (
+    CENSORED,
+    CENSORING_TYPES,
+    CONDITION_SEP,
+    MEASUREMENT_TYPE,
+    MODE_FUN,
+    MODE_RES,
+    NONLINEAR_MONOTONE,
+    ORDINAL,
+)
 from ..hierarchical.calculator import HierarchicalAmiciCalculator
-from ..hierarchical.optimal_scaling import (
-    OptimalScalingAmiciCalculator,
-    OptimalScalingInnerSolver,
-    OptimalScalingProblem,
-)
 from ..hierarchical.problem import InnerProblem
-from ..hierarchical.spline_approximation import (
-    SplineAmiciCalculator,
-    SplineInnerProblem,
-    SplineInnerSolver,
-)
 from ..objective import AggregatedObjective, AmiciObjective
 from ..objective.amici import AmiciObjectBuilder
+from ..objective.amici.inner_calculator_collector import (
+    InnerCalculatorCollector,
+)
 from ..objective.priors import NegLogParameterPriors, get_parameter_prior_dict
 from ..predict import AmiciPredictor
 from ..problem import Problem
@@ -75,9 +77,7 @@ class PetabImporter(AmiciObjectBuilder):
         validate_petab: bool = True,
         validate_petab_hierarchical: bool = True,
         hierarchical: bool = False,
-        ordinal: bool = False,
-        nonlinear_monotone: bool = False,
-        inner_solver_options: Dict = None,
+        inner_options: Dict = None,
     ):
         """Initialize importer.
 
@@ -100,40 +100,27 @@ class PetabImporter(AmiciObjectBuilder):
             Whether to use hierarchical optimization or not, in case the
             underlying PEtab problem has parameters marked for hierarchical
             optimization (non-empty `parameterType` column in the PEtab
-            parameter table). Required for ordinal and nonlinear-monotone data.
-        ordinal:
-            Whether ordinal data is used in the optimization problem. In this
-            case the Optimal Scaling approach will be used to integrate it
-            in an inner optimization subproblem. This requires the `hierarchical`
-            flag to be set to `True`.
-        nonlinear_monotone:
-            Whether nonlinear-monotone data is used in the optimization problem.
-            In this case the spline approximation approach will be used to
-            integrate it in an inner optimization subproblem. This requires the
-            `hierarchical` flag to be set to `True`.
-        inner_solver_options:
-            Options of the inner solver, passed to constructors of inner solvers.
+            parameter table). Required for ordinal, censored and nonlinear-monotone data.
+        inner_options:
+            Options for the inner problems and solvers.
             If not provided, default options will be used.
         """
         self.petab_problem = petab_problem
         self._hierarchical = hierarchical
-        self._ordinal = ordinal
-        self._nonlinear_monotone = nonlinear_monotone
 
-        if self._ordinal and not self._hierarchical:
+        self._non_quantitative_data_types = (
+            get_petab_non_quantitative_data_types(petab_problem)
+        )
+
+        if self._non_quantitative_data_types and not self._hierarchical:
             raise ValueError(
-                "Ordinal data requires hierarchical optimization to be "
-                "enabled.",
-            )
-        if self._nonlinear_monotone and not self._hierarchical:
-            raise ValueError(
-                "Nonlinear-monotone data requires hierarchical "
-                "optimization to be enabled.",
+                "Ordinal, censored and nonlinear-monotone data require "
+                "hierarchical optimization to be enabled.",
             )
 
-        self._inner_solver_options = inner_solver_options
-        if self._inner_solver_options is None:
-            self._inner_solver_options = {}
+        self.inner_options = inner_options
+        if self.inner_options is None:
+            self.inner_options = {}
 
         if validate_petab:
             if petab.lint_problem(petab_problem):
@@ -398,9 +385,9 @@ class PetabImporter(AmiciObjectBuilder):
             Whether to force-compile the model if not passed.
         **kwargs:
             Additional arguments passed on to the objective. In case of ordinal
-            or nonlinear-monotone measurements, Inner_solver_options can optionally
-            be passed here. If none are given, inner_solver_options given to the
-            importer constructor (or inner solver defaults) will be chosen.
+            or nonlinear-monotone measurements, inner_options can optionally
+            be passed here. If none are given, inner_options given to the
+            importer constructor (or inner defaults) will be chosen.
 
         Returns
         -------
@@ -453,54 +440,21 @@ class PetabImporter(AmiciObjectBuilder):
         calculator = None
         amici_reporting = None
 
-        if self._ordinal and self._hierarchical:
-            inner_solver_options = kwargs.pop('inner_solver_options', None)
-            inner_solver_options = (
-                inner_solver_options
-                if inner_solver_options is not None
-                else self._inner_solver_options
+        if self._non_quantitative_data_types and self._hierarchical:
+            inner_options = kwargs.pop('inner_options', None)
+            inner_options = (
+                inner_options
+                if inner_options is not None
+                else self.inner_options
             )
-            inner_problem_method = inner_solver_options.get('method', None)
-
-            inner_problem = OptimalScalingProblem.from_petab_amici(
-                self.petab_problem, model, edatas, inner_problem_method
-            )
-            inner_solver = OptimalScalingInnerSolver(
-                options=inner_solver_options
-            )
-            calculator = OptimalScalingAmiciCalculator(
-                inner_problem, inner_solver
+            calculator = InnerCalculatorCollector(
+                self._non_quantitative_data_types,
+                self.petab_problem,
+                model,
+                edatas,
+                self.inner_options,
             )
             amici_reporting = amici.RDataReporting.residuals
-
-            # FIXME: currently not supported with hierarchical
-            if 'guess_steadystate' in kwargs and kwargs['guess_steadystate']:
-                warnings.warn(
-                    "`guess_steadystate` not supported with optimal scaling. Disabling `guess_steadystate`."
-                )
-            kwargs['guess_steadystate'] = False
-
-        elif self._nonlinear_monotone and self._hierarchical:
-            inner_solver_options = kwargs.pop('inner_solver_options', None)
-            inner_solver_options = (
-                inner_solver_options
-                if inner_solver_options is not None
-                else self._inner_solver_options
-            )
-            spline_ratio = inner_solver_options.get('spline_ratio', None)
-
-            inner_problem = SplineInnerProblem.from_petab_amici(
-                self.petab_problem, model, edatas, spline_ratio
-            )
-            inner_solver = SplineInnerSolver(options=inner_solver_options)
-            calculator = SplineAmiciCalculator(inner_problem, inner_solver)
-            amici_reporting = amici.RDataReporting.residuals
-            # FIXME: currently not supported with hierarchical
-            if 'guess_steadystate' in kwargs and kwargs['guess_steadystate']:
-                warnings.warn(
-                    "`guess_steadystate` not supported with optimal scaling. Disabling `guess_steadystate`."
-                )
-            kwargs['guess_steadystate'] = False
 
         elif self._hierarchical:
             inner_problem = InnerProblem.from_petab_amici(
@@ -511,6 +465,7 @@ class PetabImporter(AmiciObjectBuilder):
             inner_parameter_ids = calculator.inner_problem.get_x_ids()
             par_ids = [x for x in par_ids if x not in inner_parameter_ids]
 
+        if self._hierarchical:
             # FIXME: currently not supported with hierarchical
             if 'guess_steadystate' in kwargs and kwargs['guess_steadystate']:
                 warnings.warn(
@@ -725,28 +680,21 @@ class PetabImporter(AmiciObjectBuilder):
 
         # Raise error if the correct calculator is not used.
 
-        if self._ordinal:
-            if not isinstance(
-                objective.calculator, OptimalScalingAmiciCalculator
-            ):
+        if self._non_quantitative_data_types:
+            if not isinstance(objective.calculator, InnerCalculatorCollector):
                 raise AssertionError(
-                    f"If the measurements are ordinal, the `calculator` attribute of the `objective` has to be {OptimalScalingAmiciCalculator} and not {objective.calculator}."
-                )
-        elif self._nonlinear_monotone:
-            if not isinstance(objective.calculator, SplineAmiciCalculator):
-                raise AssertionError(
-                    f"If the measurements are nonlinear-monotone, the `calculator` attribute of the `objective` has to be {SplineAmiciCalculator} and not {objective.calculator}."
+                    f"If there are ordinal, censored or nonlinear-monotone measurements, the `calculator` attribute of the `objective` has to be {InnerCalculatorCollector} and not {objective.calculator}."
                 )
         elif self._hierarchical:
             if not isinstance(
                 objective.calculator, HierarchicalAmiciCalculator
             ):
                 raise AssertionError(
-                    f"If hierarchical optimization is enabled, the `calculator` attribute of the `objective` has to be {HierarchicalAmiciCalculator} and not {objective.calculator}."
+                    f"If hierarchical optimization of relative data is enabled, the `calculator` attribute of the `objective` has to be {HierarchicalAmiciCalculator} and not {objective.calculator}."
                 )
         # In case of hierarchical optimization, parameters estimated in the
         # inner subproblem are removed from the outer problem
-        if self._hierarchical:
+        if not self._non_quantitative_data_types and self._hierarchical:
             inner_parameter_ids = (
                 objective.calculator.inner_problem.get_x_ids()
             )
@@ -942,3 +890,36 @@ def _find_output_folder_name(
 def _find_model_name(output_folder: str) -> str:
     """Just re-use the last part of the output folder."""
     return os.path.split(os.path.normpath(output_folder))[-1]
+
+
+def get_petab_non_quantitative_data_types(
+    petab_problem: petab.Problem,
+) -> List[str]:
+    """
+    Get the data types from the PEtab problem.
+
+    Parameters
+    ----------
+    petab_problem:
+        The PEtab problem.
+
+    Returns
+    -------
+    data_types:
+        A list of the data types.
+    """
+    non_quantitative_data_types = []
+    petab_data_types = petab_problem.measurement_df[MEASUREMENT_TYPE].unique()
+    if ORDINAL in petab_data_types:
+        non_quantitative_data_types.append(ORDINAL)
+    if any(
+        censoring_type in petab_data_types
+        for censoring_type in CENSORING_TYPES
+    ):
+        non_quantitative_data_types.append(CENSORED)
+    if NONLINEAR_MONOTONE in petab_data_types:
+        non_quantitative_data_types.append(NONLINEAR_MONOTONE)
+
+    if len(non_quantitative_data_types) == 0:
+        return None
+    return non_quantitative_data_types

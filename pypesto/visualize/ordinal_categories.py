@@ -7,6 +7,9 @@ import numpy as np
 try:
     import amici
 
+    from ..hierarchical.optimal_scaling.calculator import (
+        OptimalScalingAmiciCalculator,
+    )
     from ..hierarchical.optimal_scaling.parameter import (
         OptimalScalingParameter,
     )
@@ -96,9 +99,17 @@ def plot_categories_from_pypesto_result(
     condition_ids = [edata.id for edata in edatas]
     condition_ids_from_petab = list(petab_problem.condition_df.index)
 
+    optimal_scaling_calculator = None
+    for (
+        calculator
+    ) in pypesto_result.problem.objective.calculator.inner_calculators:
+        if isinstance(calculator, OptimalScalingAmiciCalculator):
+            optimal_scaling_calculator = calculator
+            break
+
     # Get the inner solver and problem.
-    inner_solver = pypesto_result.problem.objective.calculator.inner_solver
-    inner_problem = pypesto_result.problem.objective.calculator.inner_problem
+    inner_solver = optimal_scaling_calculator.inner_solver
+    inner_problem = optimal_scaling_calculator.inner_problem
 
     inner_results = inner_solver.solve(inner_problem, sim, sigma)
 

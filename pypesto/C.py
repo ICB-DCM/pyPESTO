@@ -150,14 +150,27 @@ STANDARD = 'standard'
 MAXMIN = 'max-min'
 MAX = 'max'
 
+METHOD = 'method'
+REPARAMETERIZED = 'reparameterized'
+INTERVAL_CONSTRAINTS = 'interval_constraints'
+MIN_GAP = 'min_gap'
+OPTIMAL_SCALING_OPTIONS = [
+    METHOD,
+    REPARAMETERIZED,
+    INTERVAL_CONSTRAINTS,
+    MIN_GAP,
+]
+
 ###############################################################################
-# SPLINE APPROACH
+# SPLINE APPROXIMATION
 
 MEASUREMENT_TYPE = 'measurementType'
 
 NONLINEAR_MONOTONE = 'nonlinear_monotone'
 
+SPLINE_RATIO = 'spline_ratio'
 MIN_DIFF_FACTOR = 'min_diff_factor'
+SPLINE_APPROXIMATION_OPTIONS = [SPLINE_RATIO, MIN_DIFF_FACTOR]
 
 MIN_SIM_RANGE = 1e-16
 
