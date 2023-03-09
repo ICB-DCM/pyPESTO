@@ -248,11 +248,9 @@ def test_spline_inner_solver():
 
     options = {
         'minimal_diff_on': {
-            'spline_ratio': 1 / 2,
             'min_diff_factor': 1 / 2,
         },
         'minimal_diff_off': {
-            'spline_ratio': 1 / 2,
             'min_diff_factor': 0.0,
         },
     }

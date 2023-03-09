@@ -110,7 +110,7 @@ class SplineInnerSolver(InnerSolver):
             warnings.warn("Inner optimization failed.")
         else:
             obj = np.sum(
-                x_inner_opt[idx]['fun'] for idx in range(len(x_inner_opt))
+                [x_inner_opt[idx]['fun'] for idx in range(len(x_inner_opt))]
             )
         return obj
 
