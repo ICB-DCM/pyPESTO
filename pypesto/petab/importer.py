@@ -487,7 +487,7 @@ class PetabImporter(AmiciObjectBuilder):
                 if inner_solver_options is not None
                 else self._inner_solver_options
             )
-            spline_ratio = inner_solver_options.get('spline_ratio', None)
+            spline_ratio = inner_solver_options.pop('spline_ratio', None)
 
             inner_problem = SplineInnerProblem.from_petab_amici(
                 self.petab_problem, model, edatas, spline_ratio
