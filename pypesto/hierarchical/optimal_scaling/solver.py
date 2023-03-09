@@ -34,13 +34,9 @@ class OptimalScalingInnerSolver(InnerSolver):
 
     def __init__(self, options: Dict = None):
         """Construct."""
-        self.options = options
-
-        if not self.options:
-            self.options = {}
         self.options = {
             **self.get_default_options(),
-            **self.options,
+            **(options or {}),
         }
         self.validate_options()
 
@@ -77,6 +73,12 @@ class OptimalScalingInnerSolver(InnerSolver):
                 'Standard approach is not recommended, as it is less efficient.'
                 'Please consider using the reduced approach instead.'
             )
+        # Check for any other options
+        for key in self.options:
+            if key not in self.get_default_options():
+                raise ValueError(
+                    f"Unknown OptimalScalingInnerSolver option {key}."
+                )
 
     def solve(
         self,
