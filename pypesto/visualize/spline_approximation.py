@@ -177,7 +177,14 @@ def plot_splines_from_inner_result(
         )
         axs[group_idx].plot(spline_bases, inner_parameters, 'g')
         axs[group_idx].plot(
-            spline_bases, inner_parameters, 'g.', label='Spline parameters'
+            spline_bases, inner_parameters, 'g.', label='Spline knots'
+        )
+        axs[group_idx].plot(
+            spline_bases,
+            inner_parameters,
+            linestyle='-',
+            color='g',
+            label='Spline function',
         )
         axs[group_idx].plot(
             simulation, mapped_simulations, 'r^', label='Mapped simulation'
