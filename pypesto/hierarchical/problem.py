@@ -60,7 +60,7 @@ class InnerProblem:
         petab_problem: 'petab.Problem',
         amici_model: 'amici.Model',
         edatas: List['amici.ExpData'],
-    ):
+    ) -> 'InnerProblem':
         """Create an InnerProblem from a PEtab problem and AMICI objects."""
         return inner_problem_from_petab_problem(
             petab_problem, amici_model, edatas

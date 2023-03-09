@@ -1308,9 +1308,6 @@ def sampling_1d_marginals(
     # fig, ax = plt.subplots(nr_params, figsize=size)[1]
     for idx, par_id in enumerate(param_names):
         if plot_type == 'kde':
-            # bw_method argument is deprecated... FutureWarning:
-            # The `bw_method` parameter is deprecated in favor of
-            # `bw_method` and `bw_adjust`.
             # TODO: add bw_adjust as option?
             sns.kdeplot(
                 params_fval[par_id], bw_method=bw_method, ax=par_ax[par_id]

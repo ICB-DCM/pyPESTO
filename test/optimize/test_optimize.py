@@ -566,3 +566,33 @@ def test_scipy_integrated_grad():
         len(result.optimize_result.history[0].get_fval_trace())
         == result.optimize_result.history[0].n_fval
     )
+
+
+def test_correct_startpoint_usage(optimizer):
+    """
+    Test that the startpoint is correctly used in all optimizers.
+    """
+    # cmaes supports x0, but samples from this initial guess, therefore return
+    if optimizer == ('cmaes', ''):
+        return
+
+    opt = get_optimizer(*optimizer)
+    # return if the optimizer knowingly does not support x_guesses
+    if not opt.check_x0_support():
+        return
+
+    # define a problem with an x_guess
+    problem = CRProblem(x_guesses=[np.array([0.1, 0.1])]).get_problem()
+
+    # run optimization
+    result = optimize.minimize(
+        problem=problem,
+        optimizer=opt,
+        n_starts=1,
+        progress_bar=False,
+        history_options=pypesto.HistoryOptions(trace_record=True),
+    )
+    # check that the startpoint was used
+    assert problem.x_guesses[0] == pytest.approx(
+        result.optimize_result[0].history.get_x_trace(0)
+    )
