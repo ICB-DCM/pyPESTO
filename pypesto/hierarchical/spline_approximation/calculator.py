@@ -1,4 +1,3 @@
-"""Definition of an optimal scaling calculator class."""
 import copy
 from typing import Dict, List, Sequence, Tuple
 
@@ -14,8 +13,8 @@ from ...objective.amici.amici_util import (
     filter_return_dict,
     init_return_values,
 )
-from .problem import OptimalScalingProblem
-from .solver import OptimalScalingInnerSolver
+from .problem import SplineInnerProblem
+from .solver import SplineInnerSolver
 
 try:
     import amici
@@ -24,7 +23,7 @@ except ImportError:
     pass
 
 
-class OptimalScalingAmiciCalculator(AmiciCalculator):
+class SplineAmiciCalculator(AmiciCalculator):
     """A calculator is passed as `calculator` to the pypesto.AmiciObjective.
 
     The object is called by :func:`pypesto.AmiciObjective.call_unprocessed`
@@ -33,8 +32,8 @@ class OptimalScalingAmiciCalculator(AmiciCalculator):
 
     def __init__(
         self,
-        inner_problem: OptimalScalingProblem,
-        inner_solver: OptimalScalingInnerSolver = None,
+        inner_problem: SplineInnerProblem,
+        inner_solver: SplineInnerSolver = None,
     ):
         """Initialize the calculator from the given problem.
 
@@ -44,21 +43,14 @@ class OptimalScalingAmiciCalculator(AmiciCalculator):
             The optimal scaling inner problem.
         inner_solver:
             A solver to solve ``inner_problem``.
-            Defaults to ``OptimalScalingInnerSolver``.
+            Defaults to ``SplineInnerSolver``.
         """
         super().__init__()
         self.inner_problem = inner_problem
 
         if inner_solver is None:
-            inner_solver = OptimalScalingInnerSolver()
+            inner_solver = SplineInnerSolver()
         self.inner_solver = inner_solver
-        if (
-            self.inner_problem.method
-            is not self.inner_solver.options['method']
-        ):
-            raise ValueError(
-                f"The inner problem method {self.inner_problem.method} and the inner solver method {self.inner_solver.options['method']} have to coincide."
-            )
 
     def initialize(self):
         """Initialize."""
@@ -110,11 +102,11 @@ class OptimalScalingAmiciCalculator(AmiciCalculator):
         """
         if mode == MODE_RES:
             raise ValueError(
-                "Optimal scaling method cannot be called with residual mode."
+                "Spline approximation cannot be called with residual mode."
             )
         if 2 in sensi_orders:
             raise ValueError(
-                "Hessian and FIM are not implemented for the optimal scaling calculator."
+                "Hessian and FIM are not implemented for the spline calculator."
             )
 
         # get dimension of outer problem
@@ -171,9 +163,14 @@ class OptimalScalingAmiciCalculator(AmiciCalculator):
             return filter_return_dict(inner_result)
 
         sim = [rdata['y'] for rdata in inner_rdatas]
+        sigma = [rdata['sigmay'] for rdata in inner_rdatas]
+
+        # Clip negative simulation values to zero, to avoid numerical issues.
+        for i in range(len(sim)):
+            sim[i] = sim[i].clip(min=0)
 
         # compute optimal inner parameters
-        x_inner_opt = self.inner_solver.solve(self.inner_problem, sim)
+        x_inner_opt = self.inner_solver.solve(self.inner_problem, sim, sigma)
         inner_result[FVAL] = self.inner_solver.calculate_obj_function(
             x_inner_opt
         )
@@ -181,18 +178,18 @@ class OptimalScalingAmiciCalculator(AmiciCalculator):
             X_INNER_OPT
         ] = self.inner_problem.get_inner_parameter_dictionary()
 
-        # calculate analytical gradients if requested
+        # Calculate analytical gradients if requested
         if sensi_order > 0:
             sy = [rdata['sy'] for rdata in inner_rdatas]
             inner_result[GRAD] = self.inner_solver.calculate_gradients(
                 problem=self.inner_problem,
                 x_inner_opt=x_inner_opt,
                 sim=sim,
+                sigma=sigma,
                 sy=sy,
                 parameter_mapping=parameter_mapping,
                 par_opt_ids=x_ids,
                 par_sim_ids=amici_model.getParameterIds(),
-                par_edatas_indices=[edata.plist for edata in edatas],
                 snllh=snllh,
             )
 

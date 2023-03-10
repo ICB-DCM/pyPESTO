@@ -232,13 +232,9 @@ def plot_categories_from_inner_result(
             axs[group_idx].plot(
                 condition_ids,
                 simulation_all,
-                'b.',
-                label='Simulation',
-            )
-            axs[group_idx].plot(
-                condition_ids,
-                simulation_all,
-                'b',
+                marker='.',
+                linestyle='-',
+                color='b',
                 label='Simulation',
             )
             axs[group_idx].plot(
@@ -273,13 +269,9 @@ def plot_categories_from_inner_result(
                 axs[group_idx].plot(
                     timepoints_all[0],
                     simulation_all[0],
-                    'b.',
-                    label='Simulation',
-                )
-                axs[group_idx].plot(
-                    timepoints_all[0],
-                    simulation_all[0],
-                    'b',
+                    marker='.',
+                    color='b',
+                    linestyle='-',
                     label='Simulation',
                 )
                 axs[group_idx].plot(

@@ -47,4 +47,9 @@ from .sampling import (
     sampling_prediction_trajectories,
     sampling_scatter,
 )
+from .spline_approximation import (
+    plot_splines_from_inner_result,
+    plot_splines_from_pypesto_result,
+    visualize_spline_optimized_model_fit,
+)
 from .waterfall import waterfall, waterfall_lowlevel

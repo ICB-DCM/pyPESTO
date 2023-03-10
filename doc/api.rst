@@ -5,6 +5,7 @@ API reference
 .. automodule:: pypesto.ensemble
 .. automodule:: pypesto.hierarchical
 .. automodule:: pypesto.hierarchical.optimal_scaling
+.. automodule:: pypesto.hierarchical.spline_approximation
 .. automodule:: pypesto.history
 .. automodule:: pypesto.logging
 .. automodule:: pypesto.objective
