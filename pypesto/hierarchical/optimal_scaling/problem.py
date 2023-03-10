@@ -598,20 +598,20 @@ def optimal_scaling_ixs_for_measurement_specific_parameters(
         petab_problem.get_simulation_conditions_from_measurement_df()
     )
     measurement_df = petab_problem.measurement_df
-
     # Get unique censoring bounds for each observable.
     unique_censoring_bounds_per_observable = {}
-    for observable_id in observable_ids:
-        observable_df = measurement_df[
-            measurement_df[OBSERVABLE_ID] == observable_id
-        ]
-        censored_observable_df = observable_df.loc[
-            observable_df[MEASUREMENT_TYPE].isin(CENSORING_TYPES)
-        ]
-        unique_censoring_bounds_per_observable[observable_id] = sorted(
-            censored_observable_df[CENSORING_BOUNDS].unique(),
-            key=lambda x: float(x.split(';')[0]),
-        )
+    if CENSORING_BOUNDS in measurement_df.columns:
+        for observable_id in observable_ids:
+            observable_df = measurement_df[
+                measurement_df[OBSERVABLE_ID] == observable_id
+            ]
+            censored_observable_df = observable_df.loc[
+                observable_df[MEASUREMENT_TYPE].isin(CENSORING_TYPES)
+            ]
+            unique_censoring_bounds_per_observable[observable_id] = sorted(
+                censored_observable_df[CENSORING_BOUNDS].unique(),
+                key=lambda x: float(x.split(';')[0]),
+            )
 
     for condition_ix, condition in simulation_conditions.iterrows():
         # measurement table for current condition

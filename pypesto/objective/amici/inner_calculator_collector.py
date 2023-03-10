@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import copy
 from typing import Dict, List, Sequence, Tuple, Union
 
 import numpy as np
@@ -149,13 +150,18 @@ class InnerCalculatorCollector(AmiciCalculator):
         observable_ids: List[str],
         edatas: List['amici.ExpData'],
     ) -> List[np.ndarray]:
+        # transform experimental data
+        edatas = [
+            amici.numpy.ExpDataView(edata)['observedData'] for edata in edatas
+        ]
+
         measurement_df = petab_problem.measurement_df
 
         quantitative_data_mask = [
             np.zeros_like(edata, dtype=bool) for edata in edatas
         ]
 
-        for observable_id in observable_ids:
+        for observable_idx, observable_id in enumerate(observable_ids):
             observable_df = measurement_df[
                 measurement_df[OBSERVABLE_ID] == observable_id
             ]
@@ -163,7 +169,7 @@ class InnerCalculatorCollector(AmiciCalculator):
             # then fill that axis of the mask with True
             if observable_df[MEASUREMENT_TYPE].isna().all():
                 for condition_mask in quantitative_data_mask:
-                    condition_mask[:, observable_id] = True
+                    condition_mask[:, observable_idx] = True
 
         # If there is no quantitative data, return None
         if not all([mask.any() for mask in quantitative_data_mask]):
@@ -239,11 +245,9 @@ class InnerCalculatorCollector(AmiciCalculator):
         if sensi_orders:
             sensi_order = max(sensi_orders)
 
-        if sensi_order == 2 and fim_for_hess:
-            # we use the FIM
-            amici_solver.setSensitivityOrder(sensi_order - 1)
-        else:
-            amici_solver.setSensitivityOrder(sensi_order)
+        amici_solver.setSensitivityOrder(sensi_order)
+
+        x_dct = copy.deepcopy(x_dct)
 
         # fill in parameters
         amici.parameter_mapping.fill_in_parameters(
@@ -330,6 +334,10 @@ class InnerCalculatorCollector(AmiciCalculator):
                 mode=mode,
                 quantitative_data_mask=self.quantitative_data_mask,
                 dim=dim,
+                parameter_mapping=parameter_mapping,
+                par_opt_ids=x_ids,
+                par_sim_ids=amici_model.getParameterIds(),
+                par_edatas_indices=[edata.plist for edata in edatas],
             )
             nllh += quantitative_result[FVAL]
             if sensi_order > 0:
@@ -355,15 +363,24 @@ def calculate_quantitative_result(
     mode: ModeType,
     quantitative_data_mask: List[np.ndarray],
     dim: int,
+    parameter_mapping: ParameterMapping,
+    par_opt_ids: List[str],
+    par_sim_ids: List[str],
+    par_edatas_indices: List[List[int]],
 ):
     """Calculate the function values from rdatas and return as dict."""
     nllh, snllh, s2nllh, chi2, res, sres = init_return_values(
         sensi_orders, mode, dim
     )
 
+    # transform experimental data
+    edatas = [
+        amici.numpy.ExpDataView(edata)['observedData'] for edata in edatas
+    ]
+
     # calculate the function value
     for rdata, edata, mask in zip(rdatas, edatas, quantitative_data_mask):
-        data_i = edata['y'][mask]
+        data_i = edata[mask]
         sim_i = rdata['y'][mask]
         sigma_i = rdata['sigmay'][mask]
 
@@ -373,15 +390,64 @@ def calculate_quantitative_result(
         )
 
     if 1 in sensi_orders:
+        parameter_map_sim_var = [
+            cond_par_map.map_sim_var for cond_par_map in parameter_mapping
+        ]
         # calculate the gradient
-        for rdata, edata, mask in zip(rdatas, edatas, quantitative_data_mask):
-            data_i = edata['y'][mask]
+        for (
+            rdata,
+            edata,
+            mask,
+            condition_map_sim_var,
+            par_edata_indices,
+        ) in zip(
+            rdatas,
+            edatas,
+            quantitative_data_mask,
+            parameter_map_sim_var,
+            par_edatas_indices,
+        ):
+            data_i = edata[mask]
             sim_i = rdata['y'][mask]
             sigma_i = rdata['sigmay'][mask]
-            # ssigma_i = rdata['ssigmay'][mask]
-            # breakpoint()
 
-            snllh += ((data_i - sim_i) / sigma_i**2) @ rdata['sy'][mask, :]
+            n_parameters = rdata['sy'].shape[1]
+
+            # Get sensitivities of observables and sigmas
+            sensitivities_i = np.asarray(
+                [
+                    rdata['sy'][:, parameter_index, :][mask]
+                    for parameter_index in range(n_parameters)
+                ]
+            )
+            ssigma_i = np.asarray(
+                [
+                    rdata['ssigmay'][:, parameter_index][mask]
+                    for parameter_index in range(n_parameters)
+                ]
+            )
+            # Calculate the gradient for the condition
+            gradient_for_condition = ssigma_i @ (
+                (
+                    np.full(len(data_i), 1)
+                    - (data_i - sim_i) ** 2 / sigma_i**2
+                )
+                / sigma_i
+            ) + sensitivities_i @ ((data_i - sim_i) / sigma_i**2)
+
+            for par_sim, par_opt in condition_map_sim_var.items():
+                if not isinstance(par_opt, str):
+                    continue
+                par_opt_idx = par_opt_ids.index(par_opt)
+                par_sim_idx = par_sim_ids.index(par_sim)
+                par_edata_idx = (
+                    par_edata_indices.index(par_sim_idx)
+                    if par_sim_idx in par_edata_indices
+                    else None
+                )
+
+                if par_edata_idx is not None:
+                    snllh[par_opt_idx] += gradient_for_condition[par_edata_idx]
 
     ret = {
         FVAL: nllh,
