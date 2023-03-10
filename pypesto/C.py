@@ -175,6 +175,17 @@ SPLINE_APPROXIMATION_OPTIONS = [SPLINE_RATIO, MIN_DIFF_FACTOR]
 MIN_SIM_RANGE = 1e-16
 
 ###############################################################################
+# SPLINE APPROACH
+
+MEASUREMENT_TYPE = 'measurementType'
+
+NONLINEAR_MONOTONE = 'nonlinear_monotone'
+
+MIN_DIFF_FACTOR = 'min_diff_factor'
+
+MIN_SIM_RANGE = 1e-16
+
+###############################################################################
 # HISTORY
 
 HISTORY = "history"

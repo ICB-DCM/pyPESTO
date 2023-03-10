@@ -1,7 +1,7 @@
 """Engines with multi-process parallelization."""
 import logging
+import multiprocessing
 import os
-from multiprocessing import Pool
 from typing import List
 
 import cloudpickle as pickle
@@ -31,9 +31,12 @@ class MultiProcessEngine(Engine):
         `os.cpu_count()`.
         The effectively used number of processes will be the minimum of
         `n_procs` and the number of tasks submitted.
+    method:
+        Start method, any of "fork", "spawn", "forkserver", or None,
+        giving the system specific default context.
     """
 
-    def __init__(self, n_procs: int = None):
+    def __init__(self, n_procs: int = None, method: str = None):
         super().__init__()
 
         if n_procs is None:
@@ -44,6 +47,7 @@ class MultiProcessEngine(Engine):
                 f"appropriate on some systems."
             )
         self.n_procs: int = n_procs
+        self.method: str = method
 
     def execute(self, tasks: List[Task], progress_bar: bool = True):
         """Pickle tasks and distribute work over parallel processes.
@@ -64,7 +68,9 @@ class MultiProcessEngine(Engine):
             f"Performing parallel task execution on {n_procs} " f"processes."
         )
 
-        with Pool(processes=n_procs) as pool:
+        ctx = multiprocessing.get_context(method=self.method)
+
+        with ctx.Pool(processes=n_procs) as pool:
             results = pool.map(
                 work, tqdm(pickled_tasks, disable=not progress_bar)
             )

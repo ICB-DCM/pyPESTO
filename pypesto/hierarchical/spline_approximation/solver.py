@@ -27,13 +27,9 @@ class SplineInnerSolver(InnerSolver):
     """
 
     def __init__(self, options: Dict = None):
-        self.options = options
-        if not self.options:
-            self.options = {}
-
         self.options = {
             **self.get_default_options(),
-            **self.options,
+            **(options or {}),
         }
         self.validate_options()
 
@@ -43,6 +39,9 @@ class SplineInnerSolver(InnerSolver):
             raise TypeError(f"{MIN_DIFF_FACTOR} must be of type float.")
         elif self.options[MIN_DIFF_FACTOR] < 0:
             raise ValueError(f"{MIN_DIFF_FACTOR} must be greater than zero.")
+        for key in self.options:
+            if key not in self.get_default_options():
+                raise ValueError(f"Unknown SplineInnerSolver option {key}.")
 
     def solve(
         self,
@@ -104,9 +103,9 @@ class SplineInnerSolver(InnerSolver):
         -------
         Inner objective function value.
         """
-        if False in [
+        if False in (
             x_inner_opt[idx]['success'] for idx in range(len(x_inner_opt))
-        ]:
+        ):
             obj = np.inf
             warnings.warn("Inner optimization failed.")
         else:
@@ -348,33 +347,6 @@ class SplineInnerSolver(InnerSolver):
             jac=inner_gradient_wrapper,
             **inner_options,
         )
-        # plot_Boehm = True
-
-        # if plot_Boehm:
-        #     print("last opt values\n", [x.value for x in inner_parameters])
-        #     print("current opt values\n", results['x'])
-        #     print("current simulation\n", current_group_simulation)
-        #     print("intervals_per_sim\n", intervals_per_sim)
-        #     s = results['x']
-        #     xi = np.zeros(len(s))
-        #     for i in range(len(s)):
-        #         for j in range(i, len(s)):
-        #             xi[j] += s[i]
-
-        #     mapped_simulations = get_spline_mapped_simulations(
-        #         s,
-        #         current_group_simulation,
-        #         n_spline_pars,
-        #         distance_between_bases,
-        #         spline_bases,
-        #         intervals_per_sim
-        #     )
-        #     import matplotlib.pyplot as plt
-        #     plt.plot(current_group_simulation, group_measurements, 'bs')
-        #     plt.plot(spline_bases, xi, 'g')
-        #     plt.plot(spline_bases, xi, 'g.')
-        #     plt.plot(current_group_simulation, mapped_simulations, 'r^')
-        #     plt.show()
 
         return results
 
@@ -495,6 +467,9 @@ class SplineInnerSolver(InnerSolver):
 
         if (last_opt_values > 0).any():
             x0 = last_opt_values
+        # In case this is the first inner optimization, initialize the
+        # spline parameters to a linear function with a symmetric 60%
+        # larger range than the measurement range.
         else:
             x0 = np.full(
                 N,
@@ -752,7 +727,6 @@ def calculate_df_dyk(
         sim_all, measurements, sy_all, sigma, n
     ):
         i = n_k - 1
-        sum_s = 0
         sum_s = np.sum(s[:i])
         if i > 0 and i < N:
             df_dyk += (

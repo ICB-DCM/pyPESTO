@@ -35,6 +35,7 @@ from ..C import (
 )
 from ..hierarchical.calculator import HierarchicalAmiciCalculator
 from ..hierarchical.problem import InnerProblem
+from ..hierarchical.spline_approximation import SplineAmiciCalculator
 from ..objective import AggregatedObjective, AmiciObjective
 from ..objective.amici import AmiciObjectBuilder
 from ..objective.amici.inner_calculator_collector import (
@@ -116,6 +117,11 @@ class PetabImporter(AmiciObjectBuilder):
             raise ValueError(
                 "Ordinal, censored and nonlinear-monotone data require "
                 "hierarchical optimization to be enabled.",
+            )
+        if self._nonlinear_monotone and not self._hierarchical:
+            raise ValueError(
+                "Nonlinear-monotone data requires hierarchical "
+                "optimization to be enabled.",
             )
 
         self.inner_options = inner_options
@@ -684,6 +690,11 @@ class PetabImporter(AmiciObjectBuilder):
             if not isinstance(objective.calculator, InnerCalculatorCollector):
                 raise AssertionError(
                     f"If there are ordinal, censored or nonlinear-monotone measurements, the `calculator` attribute of the `objective` has to be {InnerCalculatorCollector} and not {objective.calculator}."
+                )
+        elif self._nonlinear_monotone:
+            if not isinstance(objective.calculator, SplineAmiciCalculator):
+                raise AssertionError(
+                    f"If the measurements are nonlinear-monotone, the `calculator` attribute of the `objective` has to be {SplineAmiciCalculator} and not {objective.calculator}."
                 )
         elif self._hierarchical:
             if not isinstance(
