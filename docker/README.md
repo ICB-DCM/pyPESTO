@@ -2,14 +2,11 @@
 
 ## Create image
 
-In the AMICI base directory run:
-
 ```bash
-git archive -o <path to pypesto base directory>/docker/amici.tar.gz --format=tar.gz HEAD
 cd <path to pypesto base directory>/docker && docker build -t $USER/amici_pypesto:latest .
 ```
 
-To install pyPESTO from a particular branch, e.g. develop, use th following
+To install pyPESTO from a particular branch, e.g. develop, use the following
 line in the Dockerfile
 
 ```
