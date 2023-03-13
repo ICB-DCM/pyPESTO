@@ -389,11 +389,12 @@ def calculate_quantitative_result(
             + (data_i - sim_i) ** 2 / sigma_i**2
         )
 
+    # calculate the gradient if requested
     if 1 in sensi_orders:
         parameter_map_sim_var = [
             cond_par_map.map_sim_var for cond_par_map in parameter_mapping
         ]
-        # calculate the gradient
+        # iterate over simulation conditions
         for (
             rdata,
             edata,
@@ -426,15 +427,16 @@ def calculate_quantitative_result(
                     for parameter_index in range(n_parameters)
                 ]
             )
-            # Calculate the gradient for the condition
+            # calculate the gradient for the condition
             gradient_for_condition = ssigma_i @ (
                 (
                     np.full(len(data_i), 1)
                     - (data_i - sim_i) ** 2 / sigma_i**2
                 )
                 / sigma_i
-            ) + sensitivities_i @ ((data_i - sim_i) / sigma_i**2)
+            ) - sensitivities_i @ ((data_i - sim_i) / sigma_i**2)
 
+            # add gradient to correct index of snllh
             for par_sim, par_opt in condition_map_sim_var.items():
                 if not isinstance(par_opt, str):
                     continue

@@ -524,12 +524,14 @@ def optimal_scaling_inner_parameters_from_measurement_df(
                         )
         elif any(observable_df[MEASUREMENT_TYPE].isin(CENSORING_TYPES)):
             # Get df with only censored measurements.
-            censored_df = df.loc[df[MEASUREMENT_TYPE].isin(CENSORING_TYPES)]
+            censored_df = observable_df.loc[
+                df[MEASUREMENT_TYPE].isin(CENSORING_TYPES)
+            ]
             # Check for unique values in the CENSORING_BOUNDS column and
             # order them with resect to the first float value in the string.
             unique_censoring_bounds = sorted(
                 censored_df[CENSORING_BOUNDS].unique(),
-                key=lambda x: float(x.split(';')[0]),
+                key=lambda x: float(str(x).split(';')[0]),
             )
             for par_type in par_types:
                 for _, row in censored_df.iterrows():
@@ -610,7 +612,7 @@ def optimal_scaling_ixs_for_measurement_specific_parameters(
             ]
             unique_censoring_bounds_per_observable[observable_id] = sorted(
                 censored_observable_df[CENSORING_BOUNDS].unique(),
-                key=lambda x: float(x.split(';')[0]),
+                key=lambda x: float(str(x).split(';')[0]),
             )
 
     for condition_ix, condition in simulation_conditions.iterrows():

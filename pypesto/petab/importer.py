@@ -35,7 +35,6 @@ from ..C import (
 )
 from ..hierarchical.calculator import HierarchicalAmiciCalculator
 from ..hierarchical.problem import InnerProblem
-from ..hierarchical.spline_approximation import SplineAmiciCalculator
 from ..objective import AggregatedObjective, AmiciObjective
 from ..objective.amici import AmiciObjectBuilder
 from ..objective.amici.inner_calculator_collector import (
@@ -686,11 +685,6 @@ class PetabImporter(AmiciObjectBuilder):
                 raise AssertionError(
                     f"If there are ordinal, censored or nonlinear-monotone measurements, the `calculator` attribute of the `objective` has to be {InnerCalculatorCollector} and not {objective.calculator}."
                 )
-        elif self._nonlinear_monotone:
-            if not isinstance(objective.calculator, SplineAmiciCalculator):
-                raise AssertionError(
-                    f"If the measurements are nonlinear-monotone, the `calculator` attribute of the `objective` has to be {SplineAmiciCalculator} and not {objective.calculator}."
-                )
         elif self._hierarchical:
             if not isinstance(
                 objective.calculator, HierarchicalAmiciCalculator
@@ -915,16 +909,19 @@ def get_petab_non_quantitative_data_types(
         A list of the data types.
     """
     non_quantitative_data_types = []
-    petab_data_types = petab_problem.measurement_df[MEASUREMENT_TYPE].unique()
-    if ORDINAL in petab_data_types:
-        non_quantitative_data_types.append(ORDINAL)
-    if any(
-        censoring_type in petab_data_types
-        for censoring_type in CENSORING_TYPES
-    ):
-        non_quantitative_data_types.append(CENSORED)
-    if NONLINEAR_MONOTONE in petab_data_types:
-        non_quantitative_data_types.append(NONLINEAR_MONOTONE)
+    if MEASUREMENT_TYPE in petab_problem.measurement_df.columns:
+        petab_data_types = petab_problem.measurement_df[
+            MEASUREMENT_TYPE
+        ].unique()
+        if ORDINAL in petab_data_types:
+            non_quantitative_data_types.append(ORDINAL)
+        if any(
+            censoring_type in petab_data_types
+            for censoring_type in CENSORING_TYPES
+        ):
+            non_quantitative_data_types.append(CENSORED)
+        if NONLINEAR_MONOTONE in petab_data_types:
+            non_quantitative_data_types.append(NONLINEAR_MONOTONE)
 
     if len(non_quantitative_data_types) == 0:
         return None
