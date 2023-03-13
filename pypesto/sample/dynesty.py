@@ -118,7 +118,15 @@ class DynestySampler(Sampler):
             prior_sample * (self.problem.ub - self.problem.lb)
             + self.problem.lb
         )
-
+    def loglikelihood(self, x):
+        """Log-probability density function."""
+        # check if parameter lies within bounds
+        if any(x < self.problem.lb) or any(x > self.problem.ub):
+            return -np.inf
+        # invert sign
+        # TODO this is possibly the posterior if priors are defined
+        return -1.0 * self.problem.objective(x)
+    
     def initialize(
         self,
         problem: Problem,
@@ -131,14 +139,6 @@ class DynestySampler(Sampler):
 
         self.problem = problem
 
-        def loglikelihood(x):
-            """Log-probability density function."""
-            # check if parameter lies within bounds
-            if any(x < self.problem.lb) or any(x > self.problem.ub):
-                return -np.inf
-            # invert sign
-            # TODO this is possibly the posterior if priors are defined
-            return -1.0 * self.problem.objective(x)
 
         sampler_class = dynesty.NestedSampler
         if self.dynamic:
@@ -146,7 +146,7 @@ class DynestySampler(Sampler):
 
         # initialize sampler
         self.sampler = sampler_class(
-            loglikelihood=loglikelihood,
+            loglikelihood=self.loglikelihood,
             prior_transform=self.prior_transform,
             ndim=len(self.problem.x_free_indices),
             **self.sampler_args,
