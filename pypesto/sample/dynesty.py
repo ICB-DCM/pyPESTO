@@ -127,7 +127,6 @@ class DynestySampler(Sampler):
         # invert sign
         # TODO this is possibly the posterior if priors are defined
         return -1.0 * self.problem.objective(x)
-    
     def initialize(
         self,
         problem: Problem,
@@ -139,7 +138,6 @@ class DynestySampler(Sampler):
         setup_dynesty()
 
         self.problem = problem
-
 
         sampler_class = dynesty.NestedSampler
         if self.dynamic:
