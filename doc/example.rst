@@ -50,6 +50,8 @@ Algorithms and features
    example/model_selection.ipynb
    example/julia.ipynb
    example/hierarchical.ipynb
+   example/example_ordinal.ipynb
+   example/example_nonlinear_monotone.ipynb
 
 Application examples
 --------------------
