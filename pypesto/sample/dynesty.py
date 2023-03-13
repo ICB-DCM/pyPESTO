@@ -118,6 +118,7 @@ class DynestySampler(Sampler):
             prior_sample * (self.problem.ub - self.problem.lb)
             + self.problem.lb
         )
+
     def loglikelihood(self, x):
         """Log-probability density function."""
         # check if parameter lies within bounds
