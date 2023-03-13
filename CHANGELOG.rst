@@ -6,6 +6,20 @@ Release notes
 ..........
 
 
+0.2.17 (2023-03-13)
+-------------------
+
+* Optimize:
+    * Parameter estimation from ordinal data (#971)
+    * Parameter estimation from nonlinear-monotone data using spline approximation (#1028)
+    * Fix optimizer start point handling. (#1027)
+* Engine
+    * Allow custom multiprocessing context (#1032)
+* General
+    * Update Dockerfile (#1034)
+    * proper bound handling for x_guesses (#1029)
+
+
 0.2.16 (2023-02-23)
 -------------------
 
