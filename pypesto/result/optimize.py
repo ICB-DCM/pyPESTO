@@ -96,12 +96,12 @@ class OptimizerResult(dict):
         super().__init__()
         self.id = id
         self.x: np.ndarray = np.array(x) if x is not None else None
-        self.x_full: np.ndarray = None
+        self.x_red: np.ndarray = self.x
         self.fval: float = fval
         self.grad: np.ndarray = np.array(grad) if grad is not None else None
-        self.grad_full: np.ndarray = None
+        self.grad_red: np.ndarray = self.grad
         self.hess: np.ndarray = np.array(hess) if hess is not None else None
-        self.hess_full: np.ndarray = None
+        self.hess_red: np.ndarray = self.hess
         self.res: np.ndarray = np.array(res) if res is not None else None
         self.sres: np.ndarray = np.array(sres) if sres is not None else None
         self.n_fval: int = n_fval
@@ -110,7 +110,7 @@ class OptimizerResult(dict):
         self.n_res: int = n_res
         self.n_sres: int = n_sres
         self.x0: np.ndarray = np.array(x0) if x0 is not None else None
-        self.x0_full: np.ndarray = None
+        self.x0_red: np.ndarray = self.x0
         self.fval0: float = fval0
         self.history: HistoryBase = history
         self.exitflag: int = exitflag
@@ -146,8 +146,8 @@ class OptimizerResult(dict):
             f"* message: {self.message} \n"
             f"* number of evaluations: {self.n_fval}\n"
             f"* time taken to optimize: {self.time:0.3f}s\n"
-            f"* startpoint: {self.x0_full if full else self.x0}\n"
-            f"* endpoint: {self.x_full if full else self.x}\n"
+            f"* startpoint: {self.x0 if full else self.x0_red}\n"
+            f"* endpoint: {self.x if full else self.x_red}\n"
         )
         # add fval, gradient, hessian, res, sres if available
         if self.fval is not None:
@@ -155,12 +155,12 @@ class OptimizerResult(dict):
         if self.grad is not None:
             message += (
                 f"* final gradient value: "
-                f"{self.grad_full if full else self.grad}\n"
+                f"{self.grad if full else self.grad_red}\n"
             )
         if self.hess is not None:
             message += (
                 f"* final hessian value: "
-                f"{self.hess_full if full else self.hess}\n"
+                f"{self.hess if full else self.hess_red}\n"
             )
         if self.res is not None:
             message += f"* final residual value: {self.res}\n"
