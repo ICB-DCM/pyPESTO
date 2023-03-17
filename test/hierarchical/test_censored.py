@@ -13,6 +13,7 @@ from pypesto.C import (
     LIN,
     MODE_FUN,
     RIGHT_CENSORED,
+    STANDARD,
     InnerParameterType,
 )
 from pypesto.hierarchical.optimal_scaling import (
@@ -169,7 +170,9 @@ def _inner_problem_exp():
     expected_values = np.asarray([0, 2, 2, 4, 6, 8, 8, np.inf])
 
     # Construct inner problem
-    inner_problem = OptimalScalingProblem(xs=inner_parameters, data=[data])
+    inner_problem = OptimalScalingProblem(
+        xs=inner_parameters, data=[data], method=STANDARD
+    )
 
     return inner_problem, expected_values, simulation
 
