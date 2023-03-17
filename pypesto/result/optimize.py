@@ -96,9 +96,12 @@ class OptimizerResult(dict):
         super().__init__()
         self.id = id
         self.x: np.ndarray = np.array(x) if x is not None else None
+        self.x_full: np.ndarray = None
         self.fval: float = fval
         self.grad: np.ndarray = np.array(grad) if grad is not None else None
+        self.grad_full: np.ndarray = None
         self.hess: np.ndarray = np.array(hess) if hess is not None else None
+        self.hess_full: np.ndarray = None
         self.res: np.ndarray = np.array(res) if res is not None else None
         self.sres: np.ndarray = np.array(sres) if sres is not None else None
         self.n_fval: int = n_fval
@@ -107,6 +110,7 @@ class OptimizerResult(dict):
         self.n_res: int = n_res
         self.n_sres: int = n_sres
         self.x0: np.ndarray = np.array(x0) if x0 is not None else None
+        self.x0_full: np.ndarray = None
         self.fval0: float = fval0
         self.history: HistoryBase = history
         self.exitflag: int = exitflag
@@ -123,24 +127,41 @@ class OptimizerResult(dict):
     __setattr__ = dict.__setitem__
     __delattr__ = dict.__delitem__
 
-    def summary(self):
-        """Get summary of the object."""
+    def summary(self, full: bool = False) -> str:
+        """
+        Get summary of the object.
+
+        Parameters
+        ----------
+        full:
+            If True, print full vectors including fixed parameters.
+
+        Returns
+        -------
+        summary: str
+        """
         message = (
             "### Optimizer Result\n\n"
             f"* optimizer used: {self.optimizer}\n"
             f"* message: {self.message} \n"
             f"* number of evaluations: {self.n_fval}\n"
             f"* time taken to optimize: {self.time:0.3f}s\n"
-            f"* startpoint: {self.x0}\n"
-            f"* endpoint: {self.x}\n"
+            f"* startpoint: {self.x0_full if full else self.x0}\n"
+            f"* endpoint: {self.x_full if full else self.x}\n"
         )
         # add fval, gradient, hessian, res, sres if available
         if self.fval is not None:
             message += f"* final objective value: {self.fval}\n"
         if self.grad is not None:
-            message += f"* final gradient value: {self.grad}\n"
+            message += (
+                f"* final gradient value: "
+                f"{self.grad_full if full else self.grad}\n"
+            )
         if self.hess is not None:
-            message += f"* final hessian value: {self.hess}\n"
+            message += (
+                f"* final hessian value: "
+                f"{self.hess_full if full else self.hess}\n"
+            )
         if self.res is not None:
             message += f"* final residual value: {self.res}\n"
         if self.sres is not None:
@@ -158,10 +179,10 @@ class OptimizerResult(dict):
             problem which contains info about how to convert to full vectors
             or matrices
         """
-        self.x = problem.get_full_vector(self.x, problem.x_fixed_vals)
-        self.grad = problem.get_full_vector(self.grad)
-        self.hess = problem.get_full_matrix(self.hess)
-        self.x0 = problem.get_full_vector(self.x0, problem.x_fixed_vals)
+        self.x_full = problem.get_full_vector(self.x, problem.x_fixed_vals)
+        self.grad_full = problem.get_full_vector(self.grad)
+        self.hess_full = problem.get_full_matrix(self.hess)
+        self.x0_full = problem.get_full_vector(self.x0, problem.x_fixed_vals)
 
 
 class OptimizeResult:
@@ -205,7 +226,12 @@ class OptimizeResult:
     def __len__(self):
         return len(self.list)
 
-    def summary(self, disp_best: bool = True, disp_worst: bool = False) -> str:
+    def summary(
+        self,
+        disp_best: bool = True,
+        disp_worst: bool = False,
+        full: bool = False,
+    ) -> str:
         """
         Get summary of the object.
 
@@ -215,6 +241,8 @@ class OptimizeResult:
             Whether to display a detailed summary of the best run.
         disp_worst:
             Whether to display a detailed summary of the worst run.
+        full:
+            If True, print full vectors including fixed parameters.
         """
         if len(self) == 0:
             return "## Optimization Result \n\n*empty*\n"
@@ -258,9 +286,14 @@ class OptimizeResult:
             f"* number of plateaus found: {num_plateaus}\n"
         )
         if disp_best:
-            summary += f"\nA summary of the best run:\n\n{self[0].summary()}"
+            summary += (
+                f"\nA summary of the best run:\n\n" f"{self[0].summary(full)}"
+            )
         if disp_worst:
-            summary += f"\nA summary of the worst run:\n\n{self[-1].summary()}"
+            summary += (
+                f"\nA summary of the worst run:\n\n"
+                f"{self[-1].summary(full)}"
+            )
         return summary
 
     def append(
