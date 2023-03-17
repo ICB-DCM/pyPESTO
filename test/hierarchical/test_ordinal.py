@@ -22,20 +22,20 @@ from pypesto.hierarchical.optimal_scaling.solver import (
     get_surrogate_all,
 )
 
-inner_solver_options = [
+inner_options = [
     [
         {
             key: value
             for key, value in zip(
-                ['method', 'reparameterized', 'intervalConstraints'],
-                [method, reparameterized, intervalConstraints],
+                ['method', 'reparameterized', 'interval_constraints'],
+                [method, reparameterized, interval_constraints],
             )
         }
         for method, reparameterized in zip(
             ['standard', 'reduced', 'reduced'], [False, False, True]
         )
     ]
-    for intervalConstraints in ['max', 'max-min']
+    for interval_constraints in ['max', 'max-min']
 ]
 
 example_ordinal_yaml = (
@@ -49,31 +49,31 @@ example_ordinal_yaml = (
 )
 
 
-@pytest.fixture(params=inner_solver_options)
-def inner_solver_options(request):
+@pytest.fixture(params=inner_options)
+def inner_options(request):
     return request.param
 
 
-def test_evaluate_objective(inner_solver_options: List[Dict]):
+def test_evaluate_objective(inner_options: List[Dict]):
     """Check that standard / reduced / reparameterized formulations yield the
     same result."""
     petab_problem = petab.Problem.from_yaml(example_ordinal_yaml)
     vals = []
-    for idx, option in enumerate(inner_solver_options):
+    for idx, option in enumerate(inner_options):
         problem = _create_problem(petab_problem, option)
         val = problem.objective(np.array([0, 0]))
         vals.append(val)
         assert np.isclose(vals[idx], vals[idx - 1])
 
 
-def test_optimization(inner_solver_options: List[Dict]):
+def test_optimization(inner_options: List[Dict]):
     """Check that optimizations finishes without error."""
     petab_problem = petab.Problem.from_yaml(example_ordinal_yaml)
 
     optimizer = pypesto.optimize.ScipyOptimizer(
         method='L-BFGS-B', options={'maxiter': 10}
     )
-    for option in inner_solver_options:
+    for option in inner_options:
         problem = _create_problem(petab_problem, option)
         result = pypesto.optimize.minimize(
             problem=problem, n_starts=1, optimizer=optimizer
@@ -93,13 +93,11 @@ def _create_problem(
     petab_problem: petab.Problem, option: Dict
 ) -> pypesto.Problem:
     """Creates the ordinal pyPESTO problem with given options."""
-    importer = pypesto.petab.PetabImporter(
-        petab_problem, ordinal=True, hierarchical=True
-    )
+    importer = pypesto.petab.PetabImporter(petab_problem, hierarchical=True)
     importer.create_model()
 
     objective = importer.create_objective(
-        inner_solver_options=option,
+        inner_options=option,
     )
     problem = importer.create_problem(objective)
     return problem
@@ -119,10 +117,10 @@ def test_optimal_scaling_calculator_and_objective():
 
     for method, options in options_per_method.items():
         importer = pypesto.petab.PetabImporter(
-            petab_problem, ordinal=True, hierarchical=True
+            petab_problem, hierarchical=True
         )
         objective = importer.create_objective(
-            inner_solver_options=options,
+            inner_options=options,
         )
         problem = importer.create_problem(objective)
         problems[method] = problem
@@ -267,6 +265,7 @@ def test_optimal_scaling_solver():
     standard_result = solver.solve(
         problem=inner_problem,
         sim=[simulation],
+        sigma=[np.ones(len(simulation))],
     )[0]
 
     assert np.allclose(
@@ -282,6 +281,7 @@ def test_optimal_scaling_solver():
     reduced_result = solver.solve(
         problem=inner_problem,
         sim=[simulation],
+        sigma=[np.ones(len(simulation))],
     )[0]
 
     assert np.all(
@@ -315,8 +315,8 @@ def test_surrogate_data_analytical_calculation():
     options = {
         'method': STANDARD,
         'reparameterized': False,
-        'intervalConstraints': MAX,
-        'minGap': 1e-16,
+        'interval_constraints': MAX,
+        'min_gap': 1e-16,
     }
 
     category_upper_bounds = inner_problem.get_cat_ub_parameters_for_group(1)

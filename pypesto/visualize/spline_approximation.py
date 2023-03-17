@@ -1,5 +1,5 @@
 import warnings
-from typing import Dict, List, Sequence, Union
+from typing import Dict, List, Optional, Sequence, Union
 
 import matplotlib.axes
 import matplotlib.pyplot as plt
@@ -10,7 +10,6 @@ from ..result import Result
 
 try:
     import amici
-    import petab
 
     from ..hierarchical.spline_approximation.calculator import (
         SplineAmiciCalculator,
@@ -20,7 +19,6 @@ try:
         SplineInnerSolver,
         get_spline_mapped_simulations,
     )
-    from .model_fit import visualize_optimized_model_fit
 except ImportError:
     pass
 
@@ -214,14 +212,11 @@ def plot_splines_from_inner_result(
     return fig, axs
 
 
-def visualize_spline_optimized_model_fit(
-    petab_problem: 'petab.Problem',
+def _add_spline_mapped_simulations_to_model_fit(
     result: Union[Result, Sequence[Result]],
     pypesto_problem: Problem,
     start_index: int = 0,
-    return_dict: bool = False,
-    unflattened_petab_problem: 'petab.Problem' = None,
-    **kwargs,
+    axes: Optional[plt.Axes] = None,
 ) -> Union[matplotlib.axes.Axes, None]:
     """Visualize the spline optimized model fit.
 
@@ -231,17 +226,8 @@ def visualize_spline_optimized_model_fit(
     :py:func:`pypesto.visualize.model_fit.visualize_optimized_model_fit`.
     """
 
-    # Get the axes from the pypesto visualization.
-    axes = visualize_optimized_model_fit(
-        petab_problem,
-        result,
-        pypesto_problem,
-        start_index=start_index,
-        return_dict=return_dict,
-        unflattened_petab_problem=unflattened_petab_problem,
-        **kwargs,
-    )
-
+    # If no visualize_optimized_model_fit axes were given,
+    # return None.
     if axes is None:
         return None
 
@@ -304,9 +290,8 @@ def visualize_spline_optimized_model_fit(
     # Get the observable ids.
     observable_ids = amici_model.getObservableIds()
 
-    for inner_result, observable_id, group in zip(
-        inner_results, observable_ids, range(1, len(observable_ids) + 1)
-    ):
+    for inner_result, group in zip(inner_results, inner_problem.groups):
+        observable_id = observable_ids[group - 1]
         # Get the ax for the current observable.
         ax = [
             ax

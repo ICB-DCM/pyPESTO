@@ -3,11 +3,12 @@ Optimal scaling
 ===============
 
 Contains the implementation of the optimal scaling approach, applied for integration
-of ordinal data in ODE modeling. Each ordinal datapoint is defined as being part of
-a category, where the mutual ordering of the categories of the same group is known.
-The category interval bounds are numerically optimized and quantitative surrogate
+of ordinal and censored data in ODE modeling. Each ordinal datapoint is defined as
+being part of a category, where the mutual ordering of the categories of the same group
+is known. The category interval bounds are numerically optimized and quantitative surrogate
 measurements are calculated to represent the ordinal measurements. This constitutes
-the inner subproblem of the hierarchical optimization problem.
+the inner subproblem of the hierarchical optimization problem. For censored data, as the
+category interval bounds are known, the surrogate measurements are directly calculated.
 
 Details on the optimal scaling approach can be found in Shepard, 1962 (https://doi.org/10.1007/BF02289621).
 Details on the application of the gradient-based optimal scaling approach to mechanistic modeling

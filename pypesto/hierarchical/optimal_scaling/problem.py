@@ -416,13 +416,16 @@ class OptimalScalingProblem(InnerProblem):
         """
         # Initialize boolean masks with False and find corresponding observable index.
         quantitative_ixs = [np.full(ixs_i.shape, False) for ixs_i in xs[0].ixs]
-        observable_index = np.concatenate(
-            [np.where(ixs_i)[1] for ixs_i in xs[0].ixs]
-        )[0]
+        observable_index = xs[0].group
 
         # Set to True all datapoints of the corresponding observable.
-        for quantitative_ixs_i in quantitative_ixs:
-            quantitative_ixs_i[:, observable_index] = True
+        if np.ndim(quantitative_ixs) == 2:
+            quantitative_ixs = [
+                np.full(ixs_i.shape, True) for ixs_i in xs[0].ixs
+            ]
+        else:
+            for quantitative_ixs_i in quantitative_ixs:
+                quantitative_ixs_i[:, observable_index] = True
 
         # Set to False for all censored datapoints.
         for x in xs:

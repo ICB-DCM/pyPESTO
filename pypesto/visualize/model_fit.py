@@ -14,9 +14,12 @@ import petab
 from amici.petab_objective import rdatas_to_simulation_df
 from petab.visualize import plot_problem
 
-from ..C import RDATAS
+from ..C import CENSORED, NONLINEAR_MONOTONE, ORDINAL, RDATAS
+from ..petab.importer import get_petab_non_quantitative_data_types
 from ..problem import Problem
 from ..result import Result
+from .ordinal_categories import plot_categories_from_pypesto_result
+from .spline_approximation import _add_spline_mapped_simulations_to_model_fit
 
 AmiciModel = Union['amici.Model', 'amici.ModelPtr']
 
@@ -91,6 +94,27 @@ def visualize_optimized_model_fit(
         simulations_df=simulation_df,
         **kwargs,
     )
+
+    non_quantitative_data_types = get_petab_non_quantitative_data_types(
+        petab_problem
+    )
+    if (
+        ORDINAL in non_quantitative_data_types
+        or CENSORED in non_quantitative_data_types
+    ):
+        axes = plot_categories_from_pypesto_result(
+            result,
+            start_index=start_index,
+            axes=axes,
+        )
+    if NONLINEAR_MONOTONE in non_quantitative_data_types:
+        axes = _add_spline_mapped_simulations_to_model_fit(
+            result=result,
+            pypesto_problem=pypesto_problem,
+            start_index=start_index,
+            axes=axes,
+        )
+
     if return_dict:
         return {
             'axes': axes,

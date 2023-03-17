@@ -31,7 +31,9 @@ from ..C import (
     MODE_FUN,
     MODE_RES,
     NONLINEAR_MONOTONE,
+    OPTIMAL_SCALING_OPTIONS,
     ORDINAL,
+    SPLINE_APPROXIMATION_OPTIONS,
 )
 from ..hierarchical.calculator import HierarchicalAmiciCalculator
 from ..hierarchical.problem import InnerProblem
@@ -122,6 +124,8 @@ class PetabImporter(AmiciObjectBuilder):
         if self.inner_options is None:
             self.inner_options = {}
 
+        self.validate_inner_options()
+
         if validate_petab:
             if petab.lint_problem(petab_problem):
                 raise ValueError("Invalid PEtab problem.")
@@ -157,6 +161,15 @@ class PetabImporter(AmiciObjectBuilder):
             output_folder=output_folder,
             model_name=model_name,
         )
+
+    def validate_inner_options(self):
+        """Validate the inner options."""
+        for key in self.inner_options:
+            if (
+                key not in OPTIMAL_SCALING_OPTIONS
+                and key not in SPLINE_APPROXIMATION_OPTIONS
+            ):
+                raise ValueError(f"Unknown inner option {key}.")
 
     def check_gradients(
         self,
@@ -452,7 +465,7 @@ class PetabImporter(AmiciObjectBuilder):
                 self.petab_problem,
                 model,
                 edatas,
-                self.inner_options,
+                inner_options,
             )
             amici_reporting = amici.RDataReporting.residuals
 

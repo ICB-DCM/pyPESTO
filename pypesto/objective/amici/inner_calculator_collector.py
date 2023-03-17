@@ -96,7 +96,7 @@ class InnerCalculatorCollector(AmiciCalculator):
                 for key, value in inner_options.items()
                 if key in OPTIMAL_SCALING_OPTIONS
             }
-            inner_problem_method = optimal_scaling_inner_options.pop(
+            inner_problem_method = optimal_scaling_inner_options.get(
                 METHOD, None
             )
             OS_inner_problem = OptimalScalingProblem.from_petab_amici(
