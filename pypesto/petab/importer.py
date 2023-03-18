@@ -729,10 +729,9 @@ class PetabImporter(AmiciObjectBuilder):
         prior = self.create_prior()
 
         if prior is not None:
-            if self._hierarchical or self._ordinal:
+            if self._hierarchical:
                 raise NotImplementedError(
-                    "Hierarchical or optimal scaling "
-                    "optimization in combination with priors "
+                    "Hierarchical optimization in combination with priors "
                     "is not yet supported."
                 )
             objective = AggregatedObjective([objective, prior])
