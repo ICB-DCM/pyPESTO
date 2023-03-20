@@ -1055,7 +1055,7 @@ def calculate_censored_obj(
     quantitative_data: np.ndarray,
     quantitative_ixs: List[np.ndarray],
 ) -> Dict:
-    """Calculate objective function for a group with cesored data.
+    """Calculate objective function for a group with censored data.
 
     Parameters
     ----------
@@ -1110,7 +1110,7 @@ def calculate_censored_obj(
         [sigma_i[mask_i] for sigma_i, mask_i in zip(sigma, quantitative_ixs)]
     )
 
-    # Calcualte the objective function for uncensored, quantitative data.
+    # Calculate the objective function for uncensored, quantitative data.
     obj += 0.5 * np.nansum(
         np.log(2 * np.pi * quantitative_sigma**2)
         + (quantitative_data - quantitative_sim) ** 2 / quantitative_sigma**2
@@ -1135,7 +1135,7 @@ def calculate_censored_grad(
     quantitative_data: np.ndarray,
     quantitative_ixs: List[np.ndarray],
 ):
-    """Calculate gradient for a group with cesored data with respect to an outer parameter.
+    """Calculate gradient for a group with censored data with respect to an outer parameter.
 
     Parameters
     ----------

@@ -36,12 +36,10 @@ from ..C import (
     SPLINE_APPROXIMATION_OPTIONS,
 )
 from ..hierarchical.calculator import HierarchicalAmiciCalculator
+from ..hierarchical.inner_calculator_collector import InnerCalculatorCollector
 from ..hierarchical.problem import InnerProblem
 from ..objective import AggregatedObjective, AmiciObjective
 from ..objective.amici import AmiciObjectBuilder
-from ..objective.amici.inner_calculator_collector import (
-    InnerCalculatorCollector,
-)
 from ..objective.priors import NegLogParameterPriors, get_parameter_prior_dict
 from ..predict import AmiciPredictor
 from ..problem import Problem

@@ -109,11 +109,11 @@ class OptimalScalingProblem(InnerProblem):
                 )
             )
 
-            if all([x.censoring_type is not None for x in xs]):
+            if all(x.censoring_type is not None for x in xs):
                 self.groups[group][MEASUREMENT_TYPE] = CENSORED
                 self.groups[group][
                     'quantitative_ixs'
-                ] = self.get_censored_group_quantiative_ixs(xs)
+                ] = self.get_censored_group_quantitative_ixs(xs)
                 self.groups[group]['quantitative_data'] = np.concatenate(
                     [
                         data_i[mask_i]
@@ -122,7 +122,7 @@ class OptimalScalingProblem(InnerProblem):
                         )
                     ]
                 )
-            elif all([x.censoring_type is None for x in xs]):
+            elif all(x.censoring_type is None for x in xs):
                 self.groups[group][MEASUREMENT_TYPE] = ORDINAL
 
                 self.groups[group]['num_constr_full'] = (
@@ -396,7 +396,7 @@ class OptimalScalingProblem(InnerProblem):
 
         return dd_dtheta
 
-    def get_censored_group_quantiative_ixs(
+    def get_censored_group_quantitative_ixs(
         self, xs: List[OptimalScalingParameter]
     ) -> List[np.ndarray]:
         r"""Return a list of boolean masks indicating which data points are quantitative.
@@ -496,8 +496,8 @@ def optimal_scaling_inner_parameters_from_measurement_df(
         InnerParameterType.OPTIMAL_SCALING
     ].values()
 
-    for observable_id in observable_ids:
-        group = observable_ids.index(observable_id) + 1
+    for observable_idx, observable_id in enumerate(observable_ids):
+        group = observable_idx + 1
 
         observable_df = df[df[OBSERVABLE_ID] == observable_id]
 
@@ -528,7 +528,7 @@ def optimal_scaling_inner_parameters_from_measurement_df(
         elif any(observable_df[MEASUREMENT_TYPE].isin(CENSORING_TYPES)):
             # Get df with only censored measurements.
             censored_df = observable_df.loc[
-                df[MEASUREMENT_TYPE].isin(CENSORING_TYPES)
+                observable_df[MEASUREMENT_TYPE].isin(CENSORING_TYPES)
             ]
             # Check for unique values in the CENSORING_BOUNDS column and
             # order them with resect to the first float value in the string.

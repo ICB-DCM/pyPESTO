@@ -1,3 +1,8 @@
+"""Module for the InnerCalculatorCollector class.
+
+In case of non-quantitative measurements, this class is used to collect
+hierarchical inner calculators for each data type and merge their results.
+"""
 from __future__ import annotations
 
 import copy
@@ -5,7 +10,7 @@ from typing import Dict, List, Sequence, Tuple, Union
 
 import numpy as np
 
-from ...C import (
+from ..C import (
     CENSORED,
     FVAL,
     GRAD,
@@ -24,8 +29,8 @@ from ...C import (
     X_INNER_OPT,
     ModeType,
 )
-from .amici_calculator import AmiciCalculator
-from .amici_util import filter_return_dict, init_return_values
+from ..objective.amici.amici_calculator import AmiciCalculator
+from ..objective.amici.amici_util import filter_return_dict, init_return_values
 
 try:
     import amici
@@ -36,12 +41,12 @@ except ImportError:
     petab = None
     ParameterMapping = None
 
-from ...hierarchical.optimal_scaling import (
+from .optimal_scaling import (
     OptimalScalingAmiciCalculator,
     OptimalScalingInnerSolver,
     OptimalScalingProblem,
 )
-from ...hierarchical.spline_approximation import (
+from .spline_approximation import (
     SplineAmiciCalculator,
     SplineInnerProblem,
     SplineInnerSolver,
@@ -52,7 +57,26 @@ AmiciSolver = Union['amici.Solver', 'amici.SolverPtr']
 
 
 class InnerCalculatorCollector(AmiciCalculator):
-    """Class to perform the AMICI call and obtain objective function values."""
+    """Class to collect inner calculators in case of non-quantitative data types.
+
+    Upon import of a petab problem, the PEtab importer checks whether there are
+    non-quantitative data types. If so, it creates an instance of this class
+    instead of an AmiciCalculator. This class then collects the inner calculators
+    for each data type and merges their results with the quantitative results.
+
+    Parameters
+    ----------
+    data_types:
+        List of non-quantitative data types in the problem.
+    petab_problem:
+        The PEtab problem.
+    model:
+        The AMICI model.
+    edatas:
+        The experimental data.
+    inner_options:
+        Options for the inner problems and solvers.
+    """
 
     def __init__(
         self,
@@ -99,16 +123,16 @@ class InnerCalculatorCollector(AmiciCalculator):
             inner_problem_method = optimal_scaling_inner_options.get(
                 METHOD, None
             )
-            OS_inner_problem = OptimalScalingProblem.from_petab_amici(
+            os_inner_problem = OptimalScalingProblem.from_petab_amici(
                 petab_problem, model, edatas, inner_problem_method
             )
-            OS_inner_solver = OptimalScalingInnerSolver(
+            os_inner_solver = OptimalScalingInnerSolver(
                 options=optimal_scaling_inner_options
             )
-            OS_calculator = OptimalScalingAmiciCalculator(
-                OS_inner_problem, OS_inner_solver
+            os_calculator = OptimalScalingAmiciCalculator(
+                os_inner_problem, os_inner_solver
             )
-            self.inner_calculators.append(OS_calculator)
+            self.inner_calculators.append(os_calculator)
 
         if NONLINEAR_MONOTONE in self.data_types:
             spline_inner_options = {
@@ -128,6 +152,16 @@ class InnerCalculatorCollector(AmiciCalculator):
             )
             self.inner_calculators.append(spline_calculator)
         # TODO relative data
+
+        if set(self.data_types) - {ORDINAL, CENSORED, NONLINEAR_MONOTONE}:
+            unsupported_data_types = set(self.data_types) - {
+                ORDINAL,
+                CENSORED,
+                NONLINEAR_MONOTONE,
+            }
+            raise NotImplementedError(
+                f"Data types {unsupported_data_types} are not supported."
+            )
 
     def validate_options(self, inner_options: Dict):
         """Validate the inner options.
