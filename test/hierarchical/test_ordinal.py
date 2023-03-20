@@ -25,10 +25,11 @@ from pypesto.hierarchical.optimal_scaling.solver import (
 inner_options = [
     [
         {
-            key: value
-            for key, value in zip(
-                ['method', 'reparameterized', 'interval_constraints'],
-                [method, reparameterized, interval_constraints],
+            dict(
+                zip(
+                    ['method', 'reparameterized', 'interval_constraints'],
+                    [method, reparameterized, interval_constraints],
+                )
             )
         }
         for method, reparameterized in zip(

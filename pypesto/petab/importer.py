@@ -434,12 +434,9 @@ class PetabImporter(AmiciObjectBuilder):
 
         # fill in dummy parameters (this is needed since some objective
         #  initialization e.g. checks for preeq parameters)
-        problem_parameters = {
-            key: val
-            for key, val in zip(
-                self.petab_problem.x_ids, self.petab_problem.x_nominal_scaled
-            )
-        }
+        problem_parameters = dict(
+            zip(self.petab_problem.x_ids, self.petab_problem.x_nominal_scaled)
+        )
         amici.parameter_mapping.fill_in_parameters(
             edatas=edatas,
             problem_parameters=problem_parameters,
