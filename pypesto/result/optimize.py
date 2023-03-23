@@ -113,6 +113,7 @@ class OptimizerResult(dict):
         self.time: float = time
         self.message: str = message
         self.optimizer = optimizer
+        self.free_indices = None
 
     def __getattr__(self, key):
         try:
