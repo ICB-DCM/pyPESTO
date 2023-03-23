@@ -137,6 +137,14 @@ class OptimizerResult(dict):
         -------
         summary: str
         """
+        # add warning, if self.free_indices is None
+        if self.free_indices is None:
+            if full:
+                warnings.warn(
+                    "There is no information about fixed parameters, "
+                    "run update_to_full with the corresponding problem first."
+                )
+            full = True
         message = (
             "### Optimizer Result\n\n"
             f"* optimizer used: {self.optimizer}\n"
