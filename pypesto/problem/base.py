@@ -1,4 +1,5 @@
 import copy
+import logging
 from typing import Iterable, List, Optional, SupportsFloat, SupportsInt, Union
 
 import numpy as np
@@ -9,6 +10,8 @@ from ..objective.priors import NegLogParameterPriors
 
 SupportsFloatIterableOrValue = Union[Iterable[SupportsFloat], SupportsFloat]
 SupportsIntIterableOrValue = Union[Iterable[SupportsInt], SupportsInt]
+
+logger = logging.getLogger(__name__)
 
 
 class Problem:
@@ -142,6 +145,7 @@ class Problem:
         self.x_priors = x_priors_defs
 
         self.normalize()
+        self._check_x_guesses()
 
     @property
     def lb(self) -> np.ndarray:
@@ -231,6 +235,20 @@ class Problem:
         if np.any(self.lb >= self.ub):
             raise ValueError('lb<ub not fulfilled.')
 
+    def _check_x_guesses(self):
+        """Check whether the supplied x_guesses adhere to the bounds."""
+        if self.x_guesses == np.zeros((0, self.dim_full)):
+            return
+        adheres_ub = self.x_guesses < self.ub
+        adheres_lb = self.x_guesses < self.lb
+        adheres_bounds = adheres_ub & adheres_lb
+        # if any bounds are violated, log a warning
+        if not adheres_bounds.all():
+            logger.warning(
+                "Some initial guesses supplied violate the bounds "
+                "set for this problem."
+            )
+
     def set_x_guesses(self, x_guesses: Iterable[float]):
         """
         Set the x_guesses of a problem.
@@ -245,6 +263,7 @@ class Problem:
                 'The dimension of individual x_guesses must be ' 'dim_full.'
             )
         self.x_guesses_full = x_guesses_full
+        self._check_x_guesses()
 
     def fix_parameters(
         self,
