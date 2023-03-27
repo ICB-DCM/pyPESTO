@@ -164,8 +164,8 @@ class PetabImporter(AmiciObjectBuilder):
         """Validate the inner options."""
         for key in self.inner_options:
             if (
-                key not in OPTIMAL_SCALING_OPTIONS
-                and key not in SPLINE_APPROXIMATION_OPTIONS
+                key
+                not in OPTIMAL_SCALING_OPTIONS + SPLINE_APPROXIMATION_OPTIONS
             ):
                 raise ValueError(f"Unknown inner option {key}.")
 
