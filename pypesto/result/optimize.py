@@ -1,5 +1,6 @@
 """Optimization result."""
 
+import logging
 import warnings
 from collections import Counter
 from copy import deepcopy
@@ -13,6 +14,7 @@ from ..problem import Problem
 from ..util import assign_clusters, delete_nan_inf
 
 OptimizationResult = Union['OptimizerResult', 'OptimizeResult']
+logger = logging.getLogger(__name__)
 
 
 class OptimizerResult(dict):
@@ -140,7 +142,7 @@ class OptimizerResult(dict):
         # add warning, if self.free_indices is None
         if self.free_indices is None:
             if full:
-                warnings.warn(
+                logger.warning(
                     "There is no information about fixed parameters, "
                     "run update_to_full with the corresponding problem first."
                 )
@@ -295,7 +297,7 @@ class OptimizeResult:
         )
         if disp_best:
             summary += (
-                f"\nA summary of the best run:\n\n" f"{self[0].summary(full)}"
+                f"\nA summary of the best run:\n\n{self[0].summary(full)}"
             )
         if disp_worst:
             summary += (
