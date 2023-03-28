@@ -20,6 +20,7 @@ import pypesto
 import pypesto.optimize as optimize
 from pypesto.store import read_result
 
+from ..base.test_x_fixed import create_problem
 from ..util import CRProblem, rosen_for_sensi
 
 
@@ -596,3 +597,32 @@ def test_correct_startpoint_usage(optimizer):
     assert problem.x_guesses[0] == pytest.approx(
         result.optimize_result[0].history.get_x_trace(0)
     )
+
+
+def test_summary(caplog):
+    """Test the result summary."""
+    problem = create_problem()
+    optimizer = pypesto.optimize.ScipyOptimizer()
+    n_starts = 5
+    result = pypesto.optimize.minimize(
+        problem=problem,
+        optimizer=optimizer,
+        n_starts=n_starts,
+        progress_bar=False,
+    )
+
+    # test that both full and reduced summary are available
+    assert isinstance(result.summary(full=False), str)
+    assert isinstance(result.summary(full=True), str)  # creates warning
+
+    # as we have fixed parameters, the string of full should be longer
+    assert len(result.summary(full=False)) < len(result.summary(full=True))
+
+    # test that a warning is correctly printed.
+    result.optimize_result[0].free_indices = None
+    result.optimize_result[0].summary(full=True)
+    expected_warning = (
+        "There is no information about fixed parameters, "
+        "run update_to_full with the corresponding problem first."
+    )
+    assert expected_warning in [r.message for r in caplog.records]
