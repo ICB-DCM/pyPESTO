@@ -2,17 +2,18 @@ Release notes
 =============
 
 
-0.3 series
+0.2 series
 ..........
 
 
-0.3.0 (2023-03-25)
+0.2.17 (2023-03-25)
 -------------------
 
 * Optimize:
     * Parameter estimation from ordinal data (#971)
     * Parameter estimation from nonlinear-monotone data using spline approximation (#1028)
     * Fix optimizer start point handling. (#1027)
+    * Add option to summary to print full or reduced vectors. (#1040)
 * Sampling:
     * Dynesty sampler parallelization: changed the nested loglikelihood function to a class method (#1037)
 * Engine
@@ -21,10 +22,6 @@ Release notes
     * Update Dockerfile (#1034)
     * proper bound handling for x_guesses (#1029)
     * Updated to flake8 standards (#1042)
-
-
-0.2 series
-..........
 
 
 0.2.16 (2023-02-23)
