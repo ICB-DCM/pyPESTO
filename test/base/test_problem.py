@@ -105,3 +105,18 @@ def test_x_names():
     # defaults
     problem = pypesto.Problem(**kwargs)
     assert problem.x_names == ['x0', 'x1', 'x2']
+
+
+def test_out_of_bounds_x_guesses(caplog):
+    """Test that out of bounds x_guesses are handled correctly"""
+    objective = pypesto.Objective()
+
+    # define problem with bounds including x_guesses
+    pypesto.Problem(
+        objective=objective, lb=[-1] * 4, ub=[1] * 4, x_guesses=[[1, 0, -1, 4]]
+    )
+    expected_warning = (
+        "Some initial guesses supplied violate the "
+        "bounds set for this problem."
+    )
+    assert expected_warning in [r.message for r in caplog.records]
