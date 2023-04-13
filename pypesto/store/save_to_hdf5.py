@@ -4,7 +4,6 @@ import logging
 import os
 from numbers import Integral
 from typing import Union
-from warnings import warn
 
 import h5py
 import numpy as np
@@ -17,7 +16,7 @@ logger = logging.getLogger(__name__)
 
 def check_overwrite(
     f: Union[h5py.File, h5py.Group], overwrite: bool, target: str
-) -> bool:
+):
     """
     Check whether target already exists.
 
@@ -35,14 +34,12 @@ def check_overwrite(
         if overwrite:
             del f[target]
         else:
-            warn(
+            raise RuntimeError(
                 f"File `{f.filename}` already exists and contains "
                 f"information about {target} result. "
                 f"If you wish to overwrite the file, set "
-                f"`overwrite=True`. The file is not saved."
+                f"`overwrite=True`."
             )
-            return False
-    return True
 
 
 class ProblemHDF5Writer:
@@ -75,10 +72,7 @@ class ProblemHDF5Writer:
                 os.makedirs(basedir, exist_ok=True)
 
         with h5py.File(self.storage_filename, "a") as f:
-            valid_path = check_overwrite(f, overwrite, 'problem')
-            if not valid_path:
-                # file is not saved since it already exists and overwrite is False
-                return
+            check_overwrite(f, overwrite, 'problem')
             attrs_to_save = [
                 a
                 for a in dir(problem)
@@ -131,10 +125,7 @@ class OptimizationResultHDF5Writer:
                 os.makedirs(basedir, exist_ok=True)
 
         with h5py.File(self.storage_filename, "a") as f:
-            valid_path = check_overwrite(f, overwrite, 'optimization')
-            if not valid_path:
-                # file is not saved since it already exists and overwrite is False
-                return
+            check_overwrite(f, overwrite, 'optimization')
             optimization_grp = f.require_group("optimization")
             # settings =
             # optimization_grp.create_dataset("settings", settings, dtype=)
@@ -193,10 +184,7 @@ class SamplingResultHDF5Writer:
                 os.makedirs(basedir, exist_ok=True)
 
         with h5py.File(self.storage_filename, "a") as f:
-            valid_path = check_overwrite(f, overwrite, 'sampling')
-            if not valid_path:
-                # file is not saved since it already exists and overwrite is False
-                return
+            check_overwrite(f, overwrite, 'sampling')
             results_grp = f.require_group("sampling/results")
 
             for key in result.sample_result.keys():
@@ -239,10 +227,7 @@ class ProfileResultHDF5Writer:
                 os.makedirs(basedir, exist_ok=True)
 
         with h5py.File(self.storage_filename, "a") as f:
-            valid_path = check_overwrite(f, overwrite, 'profiling')
-            if not valid_path:
-                # file is not saved since it already exists and overwrite is False
-                return
+            check_overwrite(f, overwrite, 'profiling')
             profiling_grp = f.require_group("profiling")
 
             for profile_id, profile in enumerate(result.profile_result.list):
