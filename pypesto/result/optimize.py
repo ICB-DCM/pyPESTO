@@ -167,9 +167,7 @@ class OptimizerResult(dict):
         if self.hess is not None:
             hess = self.hess
             if not full:
-                hess = self.hess[
-                    np.ix_(self.x_free_indices, self.x_free_indices)
-                ]
+                hess = self.hess[np.ix_(self.free_indices, self.free_indices)]
             message += f"* final hessian value: {hess}\n"
         if self.res is not None:
             message += f"* final residual value: {self.res}\n"
