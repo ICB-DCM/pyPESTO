@@ -4,6 +4,7 @@ import binascii
 import datetime
 import os
 from typing import Callable, Union
+from warnings import warn
 
 from ..result import Result
 from .save_to_hdf5 import write_result
@@ -40,6 +41,14 @@ def autosave(
 
     if filename == "Auto":
         filename = default_filename
+    elif isinstance(filename, str):
+        if os.path.exists(filename) and not overwrite:
+            warn(
+                f"The file {filename} already exists. "
+                "Please choose a different filename or set overwrite=True. "
+                "File will be saved as in AUTO mode."
+            )
+            filename = default_filename
     if not isinstance(filename, str):
         filename = filename(
             result=result,
