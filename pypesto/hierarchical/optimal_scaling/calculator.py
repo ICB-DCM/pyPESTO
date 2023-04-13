@@ -4,7 +4,20 @@ from typing import Dict, List, Sequence, Tuple
 
 import numpy as np
 
-from ...C import FVAL, GRAD, HESS, MODE_RES, RDATAS, RES, SRES, X_INNER_OPT
+from ...C import (
+    AMICI_SIGMAY,
+    AMICI_SSIGMAY,
+    AMICI_SY,
+    AMICI_Y,
+    FVAL,
+    GRAD,
+    HESS,
+    MODE_RES,
+    RDATAS,
+    RES,
+    SRES,
+    X_INNER_OPT,
+)
 from ...objective.amici.amici_calculator import (
     AmiciCalculator,
     AmiciModel,
@@ -178,8 +191,8 @@ class OptimalScalingAmiciCalculator(AmiciCalculator):
                 )
             return filter_return_dict(inner_result)
 
-        sim = [rdata['y'] for rdata in rdatas]
-        sigma = [rdata['sigmay'] for rdata in rdatas]
+        sim = [rdata[AMICI_Y] for rdata in rdatas]
+        sigma = [rdata[AMICI_SIGMAY] for rdata in rdatas]
 
         # compute optimal inner parameters
         x_inner_opt = self.inner_solver.solve(self.inner_problem, sim, sigma)
@@ -193,8 +206,8 @@ class OptimalScalingAmiciCalculator(AmiciCalculator):
         # calculate analytical gradients if requested
         if sensi_order > 0:
             # print([opt['fun'] for opt in x_inner_opt])
-            sy = [rdata['sy'] for rdata in rdatas]
-            ssigma = [rdata['ssigmay'] for rdata in rdatas]
+            sy = [rdata[AMICI_SY] for rdata in rdatas]
+            ssigma = [rdata[AMICI_SSIGMAY] for rdata in rdatas]
             inner_result[GRAD] = self.inner_solver.calculate_gradients(
                 problem=self.inner_problem,
                 x_inner_opt=x_inner_opt,

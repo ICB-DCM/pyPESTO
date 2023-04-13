@@ -4,10 +4,19 @@ import numpy as np
 import pandas as pd
 
 from ...C import (
+    CURRENT_SIMULATION,
+    DATAPOINTS,
+    EXPDATA_MASK,
     INNER_PARAMETER_BOUNDS,
     LIN,
+    MAX_DATAPOINT,
     MEASUREMENT_TYPE,
+    MIN_DATAPOINT,
+    N_SPLINE_PARS,
+    NOISE_PARAMETERS,
     NONLINEAR_MONOTONE,
+    NUM_DATAPOINTS,
+    SPLINE_PAR_TYPE,
     TIME,
     InnerParameterType,
 )
@@ -63,26 +72,26 @@ class SplineInnerProblem(InnerProblem):
             xs = self.get_xs_for_group(group)
 
             self.groups[group] = {}
-            self.groups[group]['n_spline_pars'] = len({x.index for x in xs})
-            self.groups[group]['datapoints'] = self.get_measurements_for_group(
+            self.groups[group][N_SPLINE_PARS] = len({x.index for x in xs})
+            self.groups[group][DATAPOINTS] = self.get_measurements_for_group(
                 group
             )
-            self.groups[group]['n_datapoints'] = len(
-                self.groups[group]['datapoints']
+            self.groups[group][NUM_DATAPOINTS] = len(
+                self.groups[group][DATAPOINTS]
             )
-            self.groups[group]['min_datapoint'] = np.min(
-                self.groups[group]['datapoints']
+            self.groups[group][MIN_DATAPOINT] = np.min(
+                self.groups[group][DATAPOINTS]
             )
-            self.groups[group]['max_datapoint'] = np.max(
-                self.groups[group]['datapoints']
+            self.groups[group][MAX_DATAPOINT] = np.max(
+                self.groups[group][DATAPOINTS]
             )
 
-            self.groups[group]['expdata_mask'] = xs[0].ixs
-            self.groups[group]['current_simulation'] = np.zeros(
-                self.groups[group]['n_datapoints']
+            self.groups[group][EXPDATA_MASK] = xs[0].ixs
+            self.groups[group][CURRENT_SIMULATION] = np.zeros(
+                self.groups[group][NUM_DATAPOINTS]
             )
-            self.groups[group]['noise_parameters'] = np.zeros(
-                self.groups[group]['n_datapoints']
+            self.groups[group][NOISE_PARAMETERS] = np.zeros(
+                self.groups[group][NUM_DATAPOINTS]
             )
 
     @staticmethod
@@ -202,7 +211,7 @@ def spline_inner_parameters_from_measurement_df(
 
     observable_ids = amici_model.getObservableIds()
 
-    par_type = 'spline'
+    par_type = SPLINE_PAR_TYPE
     estimate = True
     lb, ub = INNER_PARAMETER_BOUNDS[InnerParameterType.SPLINE].values()
 

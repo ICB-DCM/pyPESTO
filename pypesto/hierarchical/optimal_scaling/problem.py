@@ -5,20 +5,34 @@ import numpy as np
 import pandas as pd
 
 from ...C import (
+    C_MATRIX,
+    CAT_LB,
+    CAT_UB,
     CENSORED,
     CENSORING_BOUNDS,
     CENSORING_TYPES,
     INNER_PARAMETER_BOUNDS,
     INTERVAL_CENSORED,
+    LB_INDICES,
     LEFT_CENSORED,
     LIN,
     MEASUREMENT_CATEGORY,
     MEASUREMENT_TYPE,
+    NUM_CATEGORIES,
+    NUM_CONSTR_FULL,
+    NUM_DATAPOINTS,
+    NUM_INNER_PARAMS,
     ORDINAL,
+    QUANTITATIVE_DATA,
+    QUANTITATIVE_IXS,
     REDUCED,
     RIGHT_CENSORED,
     STANDARD,
+    SURROGATE_DATA,
     TIME,
+    UB_INDICES,
+    W_DOT_MATRIX,
+    W_MATRIX,
     InnerParameterType,
 )
 from ..problem import (
@@ -31,7 +45,7 @@ from .parameter import OptimalScalingParameter
 try:
     import amici
     import petab
-    from petab.C import OBSERVABLE_ID
+    from petab.C import OBSERVABLE_ID, PARAMETER_SEPARATOR
 except ImportError:
     pass
 
@@ -74,67 +88,65 @@ class OptimalScalingProblem(InnerProblem):
         ):
             self.groups[group] = {}
             xs = self.get_xs_for_group(group)
-            self.groups[group]['num_categories'] = len(
-                {x.category for x in xs}
-            )
-            self.groups[group]['num_datapoints'] = sum(
+            self.groups[group][NUM_CATEGORIES] = len({x.category for x in xs})
+            self.groups[group][NUM_DATAPOINTS] = sum(
                 [
                     sum([np.sum(ixs) for ixs in x.ixs])
                     for x in self.get_cat_ub_parameters_for_group(group)
                 ]
             )
 
-            self.groups[group]['surrogate_data'] = np.zeros(
-                self.groups[group]['num_datapoints']
+            self.groups[group][SURROGATE_DATA] = np.zeros(
+                self.groups[group][NUM_DATAPOINTS]
             )
 
-            self.groups[group]['num_inner_params'] = (
-                self.groups[group]['num_datapoints']
-                + 2 * self.groups[group]['num_categories']
+            self.groups[group][NUM_INNER_PARAMS] = (
+                self.groups[group][NUM_DATAPOINTS]
+                + 2 * self.groups[group][NUM_CATEGORIES]
             )
 
-            self.groups[group]['lb_indices'] = list(
+            self.groups[group][LB_INDICES] = list(
                 range(
-                    self.groups[group]['num_datapoints'],
-                    self.groups[group]['num_datapoints']
-                    + self.groups[group]['num_categories'],
+                    self.groups[group][NUM_DATAPOINTS],
+                    self.groups[group][NUM_DATAPOINTS]
+                    + self.groups[group][NUM_CATEGORIES],
                 )
             )
 
-            self.groups[group]['ub_indices'] = list(
+            self.groups[group][UB_INDICES] = list(
                 range(
-                    self.groups[group]['num_datapoints']
-                    + self.groups[group]['num_categories'],
-                    self.groups[group]['num_inner_params'],
+                    self.groups[group][NUM_DATAPOINTS]
+                    + self.groups[group][NUM_CATEGORIES],
+                    self.groups[group][NUM_INNER_PARAMS],
                 )
             )
 
             if all(x.censoring_type is not None for x in xs):
                 self.groups[group][MEASUREMENT_TYPE] = CENSORED
                 self.groups[group][
-                    'quantitative_ixs'
+                    QUANTITATIVE_IXS
                 ] = self.get_censored_group_quantitative_ixs(xs)
-                self.groups[group]['quantitative_data'] = np.concatenate(
+                self.groups[group][QUANTITATIVE_DATA] = np.concatenate(
                     [
                         data_i[mask_i]
                         for data_i, mask_i in zip(
-                            self.data, self.groups[group]['quantitative_ixs']
+                            self.data, self.groups[group][QUANTITATIVE_IXS]
                         )
                     ]
                 )
             elif all(x.censoring_type is None for x in xs):
                 self.groups[group][MEASUREMENT_TYPE] = ORDINAL
 
-                self.groups[group]['num_constr_full'] = (
-                    2 * self.groups[group]['num_datapoints']
-                    + 2 * self.groups[group]['num_categories']
+                self.groups[group][NUM_CONSTR_FULL] = (
+                    2 * self.groups[group][NUM_DATAPOINTS]
+                    + 2 * self.groups[group][NUM_CATEGORIES]
                 )
 
-                self.groups[group]['C'] = self.initialize_c(group)
+                self.groups[group][C_MATRIX] = self.initialize_c(group)
 
-                self.groups[group]['W'] = self.initialize_w(group)
+                self.groups[group][W_MATRIX] = self.initialize_w(group)
 
-                self.groups[group]['Wdot'] = self.initialize_w(group)
+                self.groups[group][W_DOT_MATRIX] = self.initialize_w(group)
             else:
                 raise ValueError(
                     'Censoring types of optimal scaling parameters of a group '
@@ -192,7 +204,7 @@ class OptimalScalingProblem(InnerProblem):
         return [
             x
             for x in self.xs.values()
-            if x.group == group and x.inner_parameter_id[:6] == 'cat_ub'
+            if x.group == group and x.inner_parameter_id[:6] == CAT_UB
         ]
 
     def get_cat_lb_parameters_for_group(
@@ -202,7 +214,7 @@ class OptimalScalingProblem(InnerProblem):
         return [
             x
             for x in self.xs.values()
-            if x.group == group and x.inner_parameter_id[:6] == 'cat_lb'
+            if x.group == group and x.inner_parameter_id[:6] == CAT_LB
         ]
 
     def initialize_c(self, group: int) -> np.ndarray:
@@ -213,18 +225,18 @@ class OptimalScalingProblem(InnerProblem):
         vector of inner paramters (surrogate data, lower bounds, upper bounds)^T, and d is the
         vector of minimal category interval ranges and gaps.
 
-        First `self.groups[group]['num_datapoints']` rows constrain the surrogate data to stay
+        First `self.groups[group][NUM_DATAPOINTS]` rows constrain the surrogate data to stay
         larger than lower category bounds.
-        Then another `self.groups[group]['num_datapoints']` rows constrain the surrogate data to
+        Then another `self.groups[group][NUM_DATAPOINTS]` rows constrain the surrogate data to
         stay smaller than upper category bounds.
-        Then `self.groups[group]['num_categories']` rows constrain the ordering of the categories.
-        And lastly, the remaining `self.groups[group]['num_categories']` constrain the lower
+        Then `self.groups[group][NUM_CATEGORIES]` rows constrain the ordering of the categories.
+        And lastly, the remaining `self.groups[group][NUM_CATEGORIES]` constrain the lower
         bound to be smaller than the upper bound for each category.
         """
         constr = np.zeros(
             [
-                self.groups[group]['num_constr_full'],
-                self.groups[group]['num_inner_params'],
+                self.groups[group][NUM_CONSTR_FULL],
+                self.groups[group][NUM_INNER_PARAMS],
             ]
         )
         data_idx = 0
@@ -247,52 +259,52 @@ class OptimalScalingProblem(InnerProblem):
                 # lb - y_surr <= 0
                 constr[data_idx, data_idx] = -1
                 constr[
-                    data_idx, cat_idx + self.groups[group]['num_datapoints']
+                    data_idx, cat_idx + self.groups[group][NUM_DATAPOINTS]
                 ] = 1
 
                 # y_surr - ub <= 0
                 constr[
-                    data_idx + self.groups[group]['num_datapoints'], data_idx
+                    data_idx + self.groups[group][NUM_DATAPOINTS], data_idx
                 ] = 1
                 constr[
-                    data_idx + self.groups[group]['num_datapoints'],
+                    data_idx + self.groups[group][NUM_DATAPOINTS],
                     cat_idx
-                    + self.groups[group]['num_datapoints']
-                    + self.groups[group]['num_categories'],
+                    + self.groups[group][NUM_DATAPOINTS]
+                    + self.groups[group][NUM_CATEGORIES],
                 ] = -1
                 data_idx += 1
 
             # Constrain the ordering wrt. neighbouring categories, i.e. ub_i - lb_{i+1} <= 0.
             if cat_idx == 0:
                 constr[
-                    2 * self.groups[group]['num_datapoints'] + cat_idx,
-                    self.groups[group]['num_datapoints'] + cat_idx,
+                    2 * self.groups[group][NUM_DATAPOINTS] + cat_idx,
+                    self.groups[group][NUM_DATAPOINTS] + cat_idx,
                 ] = -1
             else:
                 constr[
-                    2 * self.groups[group]['num_datapoints'] + cat_idx,
-                    self.groups[group]['num_datapoints'] + cat_idx,
+                    2 * self.groups[group][NUM_DATAPOINTS] + cat_idx,
+                    self.groups[group][NUM_DATAPOINTS] + cat_idx,
                 ] = -1
                 constr[
-                    2 * self.groups[group]['num_datapoints'] + cat_idx,
-                    self.groups[group]['num_datapoints']
-                    + self.groups[group]['num_categories']
+                    2 * self.groups[group][NUM_DATAPOINTS] + cat_idx,
+                    self.groups[group][NUM_DATAPOINTS]
+                    + self.groups[group][NUM_CATEGORIES]
                     + cat_idx
                     - 1,
                 ] = 1
 
             # Constrain upper bound to be larger than lower bound, i.e. lb_i - ub_i <= 0.
             constr[
-                2 * self.groups[group]['num_datapoints']
-                + self.groups[group]['num_categories']  # - 1
+                2 * self.groups[group][NUM_DATAPOINTS]
+                + self.groups[group][NUM_CATEGORIES]  # - 1
                 + cat_idx,
-                self.groups[group]['lb_indices'][cat_idx],
+                self.groups[group][LB_INDICES][cat_idx],
             ] = 1
             constr[
-                2 * self.groups[group]['num_datapoints']
-                + self.groups[group]['num_categories']  # - 1
+                2 * self.groups[group][NUM_DATAPOINTS]
+                + self.groups[group][NUM_CATEGORIES]  # - 1
                 + cat_idx,
-                self.groups[group]['ub_indices'][cat_idx],
+                self.groups[group][UB_INDICES][cat_idx],
             ] = -1
 
         return constr
@@ -302,8 +314,8 @@ class OptimalScalingProblem(InnerProblem):
         weights = np.diag(
             np.block(
                 [
-                    np.ones(self.groups[group]['num_datapoints']),
-                    np.zeros(2 * self.groups[group]['num_categories']),
+                    np.ones(self.groups[group][NUM_DATAPOINTS]),
+                    np.zeros(2 * self.groups[group][NUM_CATEGORIES]),
                 ]
             )
         )
@@ -314,9 +326,9 @@ class OptimalScalingProblem(InnerProblem):
         weights = np.diag(
             np.block(
                 [
-                    np.ones(self.groups[group]['num_datapoints'])
+                    np.ones(self.groups[group][NUM_DATAPOINTS])
                     / (np.sum(np.abs(y_sim_all)) + 1e-8),
-                    np.zeros(2 * self.groups[group]['num_categories']),
+                    np.zeros(2 * self.groups[group][NUM_CATEGORIES]),
                 ]
             )
         )
@@ -329,13 +341,13 @@ class OptimalScalingProblem(InnerProblem):
         w_dot = np.diag(
             np.block(
                 [
-                    np.ones(self.groups[group]['num_datapoints'])
+                    np.ones(self.groups[group][NUM_DATAPOINTS])
                     * (
                         -1
                         * np.sum(sy_all)
                         / ((np.sum(np.abs(y_sim_all)) + 1e-8) ** 2)
                     ),
-                    np.zeros(2 * self.groups[group]['num_categories']),
+                    np.zeros(2 * self.groups[group][NUM_CATEGORIES]),
                 ]
             )
         )
@@ -354,17 +366,17 @@ class OptimalScalingProblem(InnerProblem):
         interval_range = max_simulation / (2 * len(xs) + 1)
         interval_gap = max_simulation / (4 * (len(xs) - 1) + 1)
 
-        d = np.zeros(self.groups[group]['num_constr_full'])
+        d = np.zeros(self.groups[group][NUM_CONSTR_FULL])
 
         d[
-            2 * self.groups[group]['num_datapoints']
-            + 1 : 2 * self.groups[group]['num_datapoints']
-            + self.groups[group]['num_categories']
+            2 * self.groups[group][NUM_DATAPOINTS]
+            + 1 : 2 * self.groups[group][NUM_DATAPOINTS]
+            + self.groups[group][NUM_CATEGORIES]
         ] = (interval_gap + eps)
 
         d[
-            2 * self.groups[group]['num_datapoints']
-            + self.groups[group]['num_categories'] :
+            2 * self.groups[group][NUM_DATAPOINTS]
+            + self.groups[group][NUM_CATEGORIES] :
         ] = interval_range
         return d
 
@@ -378,20 +390,20 @@ class OptimalScalingProblem(InnerProblem):
         """Return the derivative of vector of minimal gaps and ranges with respect to an outer parameter."""
         max_sim_idx = np.argmax(y_sim_all)
         max_sy = sy_all[max_sim_idx]
-        dd_dtheta = np.zeros(self.groups[group]['num_constr_full'])
+        dd_dtheta = np.zeros(self.groups[group][NUM_CONSTR_FULL])
 
         dinterval_range_dtheta = max_sy / (2 * len(xs) + 1)
         dinterval_gap_dtheta = max_sy / (4 * (len(xs) - 1) + 1)
 
         dd_dtheta[
-            2 * self.groups[group]['num_datapoints']
-            + 1 : 2 * self.groups[group]['num_datapoints']
-            + self.groups[group]['num_categories']
+            2 * self.groups[group][NUM_DATAPOINTS]
+            + 1 : 2 * self.groups[group][NUM_DATAPOINTS]
+            + self.groups[group][NUM_CATEGORIES]
         ] = dinterval_gap_dtheta
 
         dd_dtheta[
-            2 * self.groups[group]['num_datapoints']
-            + self.groups[group]['num_categories'] :
+            2 * self.groups[group][NUM_DATAPOINTS]
+            + self.groups[group][NUM_CATEGORIES] :
         ] = dinterval_range_dtheta
 
         return dd_dtheta
@@ -489,7 +501,7 @@ def optimal_scaling_inner_parameters_from_measurement_df(
     observable_ids = amici_model.getObservableIds()
 
     estimate = get_estimate_for_method(method)
-    par_types = ['cat_lb', 'cat_ub']
+    par_types = [CAT_LB, CAT_UB]
 
     inner_parameters = []
     lb, ub = INNER_PARAMETER_BOUNDS[
@@ -534,7 +546,7 @@ def optimal_scaling_inner_parameters_from_measurement_df(
             # order them with resect to the first float value in the string.
             unique_censoring_bounds = sorted(
                 censored_df[CENSORING_BOUNDS].unique(),
-                key=lambda x: float(str(x).split(';')[0]),
+                key=lambda x: float(str(x).split(PARAMETER_SEPARATOR)[0]),
             )
             for par_type in par_types:
                 for _, row in censored_df.iterrows():
@@ -615,7 +627,7 @@ def optimal_scaling_ixs_for_measurement_specific_parameters(
             ]
             unique_censoring_bounds_per_observable[observable_id] = sorted(
                 censored_observable_df[CENSORING_BOUNDS].unique(),
-                key=lambda x: float(str(x).split(';')[0]),
+                key=lambda x: float(str(x).split(PARAMETER_SEPARATOR)[0]),
             )
 
     for condition_ix, condition in simulation_conditions.iterrows():
@@ -709,17 +721,21 @@ def _add_value_to_censored_bound_parameter(
     row: pd.Series,
     par_type: str,
 ) -> None:
-    if row[MEASUREMENT_TYPE] == LEFT_CENSORED and par_type == 'cat_lb':
+    if row[MEASUREMENT_TYPE] == LEFT_CENSORED and par_type == CAT_LB:
         inner_parameter.value = 0.0
-    elif row[MEASUREMENT_TYPE] == LEFT_CENSORED and par_type == 'cat_ub':
+    elif row[MEASUREMENT_TYPE] == LEFT_CENSORED and par_type == CAT_UB:
         inner_parameter.value = float(row[CENSORING_BOUNDS])
 
-    elif row[MEASUREMENT_TYPE] == RIGHT_CENSORED and par_type == 'cat_lb':
+    elif row[MEASUREMENT_TYPE] == RIGHT_CENSORED and par_type == CAT_LB:
         inner_parameter.value = float(row[CENSORING_BOUNDS])
-    elif row[MEASUREMENT_TYPE] == RIGHT_CENSORED and par_type == 'cat_ub':
+    elif row[MEASUREMENT_TYPE] == RIGHT_CENSORED and par_type == CAT_UB:
         inner_parameter.value = np.inf
 
-    elif row[MEASUREMENT_TYPE] == INTERVAL_CENSORED and par_type == 'cat_lb':
-        inner_parameter.value = float(row[CENSORING_BOUNDS].split(';')[0])
-    elif row[MEASUREMENT_TYPE] == INTERVAL_CENSORED and par_type == 'cat_ub':
-        inner_parameter.value = float(row[CENSORING_BOUNDS].split(';')[1])
+    elif row[MEASUREMENT_TYPE] == INTERVAL_CENSORED and par_type == CAT_LB:
+        inner_parameter.value = float(
+            row[CENSORING_BOUNDS].split(PARAMETER_SEPARATOR)[0]
+        )
+    elif row[MEASUREMENT_TYPE] == INTERVAL_CENSORED and par_type == CAT_UB:
+        inner_parameter.value = float(
+            row[CENSORING_BOUNDS].split(PARAMETER_SEPARATOR)[1]
+        )

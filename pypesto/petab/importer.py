@@ -226,17 +226,15 @@ class PetabImporter(AmiciObjectBuilder):
                 return False
 
         return all(
-            [
-                any(
-                    [
-                        np.all(
-                            (mode_df.rel_err.values < rtol)
-                            | (mode_df.abs_err.values < atol)
-                        ),
-                    ]
-                )
-                for mode_df in dfs
-            ]
+            any(
+                [
+                    np.all(
+                        (mode_df.rel_err.values < rtol)
+                        | (mode_df.abs_err.values < atol)
+                    ),
+                ]
+            )
+            for mode_df in dfs
         )
 
     def create_model(
@@ -396,8 +394,8 @@ class PetabImporter(AmiciObjectBuilder):
             Whether to force-compile the model if not passed.
         **kwargs:
             Additional arguments passed on to the objective. In case of ordinal
-            or nonlinear-monotone measurements, inner_options can optionally
-            be passed here. If none are given, inner_options given to the
+            or nonlinear-monotone measurements, ``inner_options`` can optionally
+            be passed here. If none are given, ``inner_options`` given to the
             importer constructor (or inner defaults) will be chosen.
 
         Returns

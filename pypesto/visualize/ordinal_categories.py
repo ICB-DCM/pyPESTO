@@ -25,7 +25,18 @@ except ImportError:
     pass
 
 
-from ..C import CENSORED, MEASUREMENT_TYPE, ORDINAL
+from ..C import (
+    AMICI_SIGMAY,
+    AMICI_T,
+    AMICI_Y,
+    CENSORED,
+    MEASUREMENT_TYPE,
+    ORDINAL,
+    QUANTITATIVE_DATA,
+    QUANTITATIVE_IXS,
+    REPARAMETERIZED,
+    SCIPY_X,
+)
 from ..result import Result
 
 
@@ -99,9 +110,9 @@ def plot_categories_from_pypesto_result(
         return None
 
     # Get simulation and sigma.
-    sim = [rdata['y'] for rdata in inner_rdatas]
-    sigma = [rdata['sigmay'] for rdata in inner_rdatas]
-    timepoints = [rdata['ts'] for rdata in inner_rdatas]
+    sim = [rdata[AMICI_Y] for rdata in inner_rdatas]
+    sigma = [rdata[AMICI_SIGMAY] for rdata in inner_rdatas]
+    timepoints = [rdata[AMICI_T] for rdata in inner_rdatas]
     observable_ids = amici_model.getObservableIds()
     condition_ids = [edata.id for edata in edatas]
     petab_condition_ordering = list(petab_problem.condition_df.index)
@@ -225,7 +236,7 @@ def plot_categories_from_inner_result(
             lower_bounds_all,
         ) = _get_data_for_plotting(
             xs,
-            result['x'],
+            result[SCIPY_X],
             simulation,
             timepoints,
             interval_range,
@@ -407,7 +418,7 @@ def _get_data_for_plotting(
     measurement_type: str,
 ):
     """Return data in the form suited for plotting."""
-    if options['reparameterized'] and measurement_type == ORDINAL:
+    if options[REPARAMETERIZED] and measurement_type == ORDINAL:
         optimal_scaling_bounds = undo_inner_parameter_reparameterization(
             optimal_scaling_bounds,
             inner_parameters,
@@ -643,7 +654,7 @@ def _plot_observable_fit_across_conditions(
             lower_bounds_all,
         )
 
-        quantitative_data = inner_problem.groups[group]['quantitative_data']
+        quantitative_data = inner_problem.groups[group][QUANTITATIVE_DATA]
         quantitative_data = quantitative_data[
             petab_quantitative_condition_ordering
         ]
@@ -722,8 +733,8 @@ def _plot_observable_fit_for_one_condition(
                 label='Simulation',
             )
     elif measurement_type == CENSORED:
-        quantitative_data = inner_problem.groups[group]['quantitative_data']
-        quantitative_ixs = inner_problem.groups[group]['quantitative_ixs']
+        quantitative_data = inner_problem.groups[group][QUANTITATIVE_DATA]
+        quantitative_ixs = inner_problem.groups[group][QUANTITATIVE_IXS]
         quantitative_timepoints = timepoints[0][
             quantitative_ixs[0].T[observable_index]
         ]
@@ -789,9 +800,9 @@ def _plot_observable_fit_for_multiple_conditions(
 
     if measurement_type == CENSORED:
         quantitative_data_flattened = inner_problem.groups[group][
-            'quantitative_data'
+            QUANTITATIVE_DATA
         ]
-        quantitative_ixs = inner_problem.groups[group]['quantitative_ixs']
+        quantitative_ixs = inner_problem.groups[group][QUANTITATIVE_IXS]
         quantitative_timepoints = [
             timepoints[cond_i][quantitative_ixs[cond_i].T[observable_index]]
             for cond_i in range(len(timepoints))

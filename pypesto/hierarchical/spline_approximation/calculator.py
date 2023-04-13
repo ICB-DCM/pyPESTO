@@ -3,7 +3,19 @@ from typing import Dict, List, Sequence, Tuple
 
 import numpy as np
 
-from ...C import FVAL, GRAD, HESS, MODE_RES, RDATAS, RES, SRES, X_INNER_OPT
+from ...C import (
+    AMICI_SIGMAY,
+    AMICI_SY,
+    AMICI_Y,
+    FVAL,
+    GRAD,
+    HESS,
+    MODE_RES,
+    RDATAS,
+    RES,
+    SRES,
+    X_INNER_OPT,
+)
 from ...objective.amici.amici_calculator import (
     AmiciCalculator,
     AmiciModel,
@@ -171,8 +183,8 @@ class SplineAmiciCalculator(AmiciCalculator):
                 )
             return filter_return_dict(inner_result)
 
-        sim = [rdata['y'] for rdata in rdatas]
-        sigma = [rdata['sigmay'] for rdata in rdatas]
+        sim = [rdata[AMICI_Y] for rdata in rdatas]
+        sigma = [rdata[AMICI_SIGMAY] for rdata in rdatas]
 
         # Clip negative simulation values to zero, to avoid numerical issues.
         for i in range(len(sim)):
@@ -189,7 +201,7 @@ class SplineAmiciCalculator(AmiciCalculator):
 
         # Calculate analytical gradients if requested
         if sensi_order > 0:
-            sy = [rdata['sy'] for rdata in rdatas]
+            sy = [rdata[AMICI_SY] for rdata in rdatas]
             inner_result[GRAD] = self.inner_solver.calculate_gradients(
                 problem=self.inner_problem,
                 x_inner_opt=x_inner_opt,

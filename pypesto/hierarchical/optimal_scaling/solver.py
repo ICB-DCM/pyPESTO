@@ -5,17 +5,31 @@ from typing import Dict, List, Tuple
 import numpy as np
 
 from ...C import (
+    C_MATRIX,
     CENSORED,
     INTERVAL_CONSTRAINTS,
+    LB_INDICES,
     MAX,
     MAXMIN,
     MEASUREMENT_TYPE,
     METHOD,
     MIN_GAP,
+    NUM_CATEGORIES,
+    NUM_DATAPOINTS,
+    NUM_INNER_PARAMS,
     ORDINAL,
+    QUANTITATIVE_DATA,
+    QUANTITATIVE_IXS,
     REDUCED,
     REPARAMETERIZED,
+    SCIPY_FUN,
+    SCIPY_SUCCESS,
+    SCIPY_X,
     STANDARD,
+    SURROGATE_DATA,
+    UB_INDICES,
+    W_DOT_MATRIX,
+    W_MATRIX,
     InnerParameterType,
 )
 from ..solver import InnerSolver
@@ -139,8 +153,8 @@ class OptimalScalingInnerSolver(InnerSolver):
                     options=self.options,
                 )
             elif problem.groups[group][MEASUREMENT_TYPE] == CENSORED:
-                quantitative_data = problem.groups[group]['quantitative_data']
-                quantitative_ixs = problem.groups[group]['quantitative_ixs']
+                quantitative_data = problem.groups[group][QUANTITATIVE_DATA]
+                quantitative_ixs = problem.groups[group][QUANTITATIVE_IXS]
                 surrogate_opt_results = calculate_censored_obj(
                     category_upper_bounds=category_upper_bounds,
                     category_lower_bounds=category_lower_bounds,
@@ -170,13 +184,16 @@ class OptimalScalingInnerSolver(InnerSolver):
         Inner objective function value.
         """
         if False in [
-            x_inner_opt[idx]['success'] for idx in range(len(x_inner_opt))
+            x_inner_opt[idx][SCIPY_SUCCESS] for idx in range(len(x_inner_opt))
         ]:
             obj = np.inf
             warnings.warn("Inner optimization failed.")
         else:
             obj = np.sum(
-                [x_inner_opt[idx]['fun'] for idx in range(len(x_inner_opt))]
+                [
+                    x_inner_opt[idx][SCIPY_FUN]
+                    for idx in range(len(x_inner_opt))
+                ]
             )
         return obj
 
@@ -209,6 +226,10 @@ class OptimalScalingInnerSolver(InnerSolver):
             Model simulations.
         sy:
             Model sensitivities.
+        sigma:
+            Model noise parameters.
+        ssigma:
+            Model sensitivity of noise parameters.
         parameter_mapping:
             Mapping of optimization to simulation parameters.
         par_opt_ids:
@@ -265,10 +286,10 @@ class OptimalScalingInnerSolver(InnerSolver):
                             problem.get_cat_lb_parameters_for_group(group)
                         )
                         quantitative_data = problem.groups[group][
-                            'quantitative_data'
+                            QUANTITATIVE_DATA
                         ]
                         quantitative_ixs = problem.groups[group][
-                            'quantitative_ixs'
+                            QUANTITATIVE_IXS
                         ]
 
                         grad += calculate_censored_grad(
@@ -290,30 +311,33 @@ class OptimalScalingInnerSolver(InnerSolver):
                         sim_all = get_sim_all(xs, sim)
                         sy_all = get_sy_all(xs, sy, par_edata_idx)
 
-                        problem.groups[group]['W'] = problem.get_w(
+                        problem.groups[group][W_MATRIX] = problem.get_w(
                             group, sim_all
                         )
-                        problem.groups[group]['Wdot'] = problem.get_wdot(
+                        problem.groups[group][W_DOT_MATRIX] = problem.get_wdot(
                             group, sim_all, sy_all
                         )
 
                         residual = np.block(
                             [
-                                xi[: problem.groups[group]['num_datapoints']]
+                                xi[: problem.groups[group][NUM_DATAPOINTS]]
                                 - sim_all,
                                 np.zeros(
-                                    problem.groups[group]['num_inner_params']
-                                    - problem.groups[group]['num_datapoints']
+                                    problem.groups[group][NUM_INNER_PARAMS]
+                                    - problem.groups[group][NUM_DATAPOINTS]
                                 ),
                             ]
                         )
                         dy_dtheta = get_dy_dtheta(group, problem, sy_all)
 
                         df_dtheta = residual.dot(
-                            residual.dot(problem.groups[group]['Wdot'])
-                            - 2 * problem.groups[group]['W'].dot(dy_dtheta)
+                            residual.dot(problem.groups[group][W_DOT_MATRIX])
+                            - 2
+                            * problem.groups[group][W_MATRIX].dot(dy_dtheta)
                         )
-                        df_dxi = 2 * problem.groups[group]['W'].dot(residual)
+                        df_dxi = 2 * problem.groups[group][W_MATRIX].dot(
+                            residual
+                        )
 
                         if df_dxi.any():
                             dd_dtheta = problem.get_dd_dtheta(
@@ -391,12 +415,12 @@ def calculate_dxi_dtheta(
     A = np.block(
         [
             [
-                2 * problem.groups[group]['W'],
-                problem.groups[group]['C'].transpose(),
+                2 * problem.groups[group][W_MATRIX],
+                problem.groups[group][C_MATRIX].transpose(),
             ],
             [
-                (mu * problem.groups[group]['C'].transpose()).transpose(),
-                np.diag(problem.groups[group]['C'].dot(xi) + d),
+                (mu * problem.groups[group][C_MATRIX].transpose()).transpose(),
+                np.diag(problem.groups[group][C_MATRIX].dot(xi) + d),
             ],
         ]
     )
@@ -404,14 +428,14 @@ def calculate_dxi_dtheta(
 
     b = np.block(
         [
-            2 * dy_dtheta.dot(problem.groups[group]['W'])
-            - 2 * problem.groups[group]['Wdot'].dot(residual),
+            2 * dy_dtheta.dot(problem.groups[group][W_MATRIX])
+            - 2 * problem.groups[group][W_DOT_MATRIX].dot(residual),
             -mu * dd_dtheta,
         ]
     )
 
     dxi_dtheta = linalg.spsolve(A_sp, b)
-    return dxi_dtheta[: problem.groups[group]['num_inner_params']]
+    return dxi_dtheta[: problem.groups[group][NUM_INNER_PARAMS]]
 
 
 def get_dy_dtheta(
@@ -419,7 +443,7 @@ def get_dy_dtheta(
 ):
     """Restructure sensitivities into a numpy matrix of right dimension."""
     return np.block(
-        [sy_all, np.zeros(2 * problem.groups[group]['num_categories'])]
+        [sy_all, np.zeros(2 * problem.groups[group][NUM_CATEGORIES])]
     )
 
 
@@ -438,8 +462,8 @@ def get_mu(group: int, problem: OptimalScalingProblem, residual: np.ndarray):
     from scipy import linalg
 
     mu = linalg.lstsq(
-        problem.groups[group]['C'].transpose(),
-        -2 * residual.dot(problem.groups[group]['W']),
+        problem.groups[group][C_MATRIX].transpose(),
+        -2 * residual.dot(problem.groups[group][W_MATRIX]),
         lapack_driver='gelsy',
     )
     return mu[0]
@@ -472,13 +496,13 @@ def get_xi(
         xs, sim, options
     )
 
-    xi = np.zeros(problem.groups[group]['num_inner_params'])
+    xi = np.zeros(problem.groups[group][NUM_INNER_PARAMS])
     surrogate_all, x_lower, x_upper = get_surrogate_all(
-        xs, x_inner_opt['x'], sim, interval_range, interval_gap, options
+        xs, x_inner_opt[SCIPY_X], sim, interval_range, interval_gap, options
     )
-    xi[: problem.groups[group]['num_datapoints']] = surrogate_all.flatten()
-    xi[problem.groups[group]['lb_indices']] = x_lower
-    xi[problem.groups[group]['ub_indices']] = x_upper
+    xi[: problem.groups[group][NUM_DATAPOINTS]] = surrogate_all.flatten()
+    xi[problem.groups[group][LB_INDICES]] = x_lower
+    xi[problem.groups[group][UB_INDICES]] = x_upper
     return xi
 
 
@@ -1033,13 +1057,13 @@ def save_inner_parameters_to_inner_problem(
 
     surrogate_all, x_lower, x_upper = get_surrogate_all(
         category_upper_bounds,
-        x_inner_opt['x'],
+        x_inner_opt[SCIPY_X],
         sim,
         interval_range,
         interval_gap,
         options,
     )
-    problem.groups[group]['surrogate_data'] = surrogate_all.flatten()
+    problem.groups[group][SURROGATE_DATA] = surrogate_all.flatten()
 
     for inner_parameter in problem.get_cat_ub_parameters_for_group(group):
         inner_parameter.value = x_upper[inner_parameter.category - 1]
@@ -1117,9 +1141,9 @@ def calculate_censored_obj(
     )
 
     return_dictionary = {
-        'success': True,
-        'fun': obj,
-        'x': np.ravel([cat_lb_values, cat_ub_values], order='F'),
+        SCIPY_SUCCESS: True,
+        SCIPY_FUN: obj,
+        SCIPY_X: np.ravel([cat_lb_values, cat_ub_values], order='F'),
     }
     return return_dictionary
 

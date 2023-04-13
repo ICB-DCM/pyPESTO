@@ -11,6 +11,11 @@ from typing import Dict, List, Sequence, Tuple, Union
 import numpy as np
 
 from ..C import (
+    AMICI_SIGMAY,
+    AMICI_SSIGMAY,
+    AMICI_SSIGMAZ,
+    AMICI_SY,
+    AMICI_Y,
     CENSORED,
     FVAL,
     GRAD,
@@ -206,7 +211,7 @@ class InnerCalculatorCollector(AmiciCalculator):
                     condition_mask[:, observable_idx] = True
 
         # If there is no quantitative data, return None
-        if not all([mask.any() for mask in quantitative_data_mask]):
+        if not all(mask.any() for mask in quantitative_data_mask):
             return None
 
         return quantitative_data_mask
@@ -326,8 +331,11 @@ class InnerCalculatorCollector(AmiciCalculator):
         ):
             if not amici_model.getAddSigmaResiduals() and any(
                 (
-                    (r['ssigmay'] is not None and np.any(r['ssigmay']))
-                    or (r['ssigmaz'] is not None and np.any(r['ssigmaz']))
+                    (r[AMICI_SSIGMAY] is not None and np.any(r[AMICI_SSIGMAY]))
+                    or (
+                        r[AMICI_SSIGMAZ] is not None
+                        and np.any(r[AMICI_SSIGMAZ])
+                    )
                 )
                 for r in rdatas
             ):
@@ -415,8 +423,8 @@ def calculate_quantitative_result(
     # calculate the function value
     for rdata, edata, mask in zip(rdatas, edatas, quantitative_data_mask):
         data_i = edata[mask]
-        sim_i = rdata['y'][mask]
-        sigma_i = rdata['sigmay'][mask]
+        sim_i = rdata[AMICI_Y][mask]
+        sigma_i = rdata[AMICI_SIGMAY][mask]
 
         nllh += 0.5 * np.nansum(
             np.log(2 * np.pi * sigma_i**2)
@@ -443,21 +451,21 @@ def calculate_quantitative_result(
             par_edatas_indices,
         ):
             data_i = edata[mask]
-            sim_i = rdata['y'][mask]
-            sigma_i = rdata['sigmay'][mask]
+            sim_i = rdata[AMICI_Y][mask]
+            sigma_i = rdata[AMICI_SIGMAY][mask]
 
-            n_parameters = rdata['sy'].shape[1]
+            n_parameters = rdata[AMICI_SY].shape[1]
 
             # Get sensitivities of observables and sigmas
             sensitivities_i = np.asarray(
                 [
-                    rdata['sy'][:, parameter_index, :][mask]
+                    rdata[AMICI_SY][:, parameter_index, :][mask]
                     for parameter_index in range(n_parameters)
                 ]
             )
             ssigma_i = np.asarray(
                 [
-                    rdata['ssigmay'][:, parameter_index][mask]
+                    rdata[AMICI_SSIGMAY][:, parameter_index][mask]
                     for parameter_index in range(n_parameters)
                 ]
             )

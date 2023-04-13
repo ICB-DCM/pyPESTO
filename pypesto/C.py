@@ -161,6 +161,27 @@ OPTIMAL_SCALING_OPTIONS = [
     MIN_GAP,
 ]
 
+CAT_LB = 'cat_lb'
+CAT_UB = 'cat_ub'
+
+NUM_CATEGORIES = 'num_categories'
+NUM_DATAPOINTS = 'num_datapoints'
+SURROGATE_DATA = 'surrogate_data'
+NUM_INNER_PARAMS = 'num_inner_params'
+LB_INDICES = 'lb_indices'
+UB_INDICES = 'ub_indices'
+
+QUANTITATIVE_IXS = 'quantitative_ixs'
+QUANTITATIVE_DATA = 'quantitative_data'
+NUM_CONSTR_FULL = 'num_constr_full'
+C_MATRIX = 'C_matrix'
+W_MATRIX = 'W_matrix'
+W_DOT_MATRIX = 'W_dot_matrix'
+
+SCIPY_SUCCESS = 'success'
+SCIPY_FUN = 'fun'
+SCIPY_X = 'x'
+
 ###############################################################################
 # SPLINE APPROXIMATION
 
@@ -188,6 +209,15 @@ TRACE_SAVE_ITER = "trace_save_iter"
 SUFFIXES_CSV = ["csv"]
 SUFFIXES_HDF5 = ["hdf5", "h5"]
 SUFFIXES = SUFFIXES_CSV + SUFFIXES_HDF5
+
+SPLINE_PAR_TYPE = 'spline'
+N_SPLINE_PARS = 'n_spline_pars'
+DATAPOINTS = 'datapoints'
+MIN_DATAPOINT = 'min_datapoint'
+MAX_DATAPOINT = 'max_datapoint'
+EXPDATA_MASK = 'expdata_mask'
+CURRENT_SIMULATION = 'current_simulation'
+NOISE_PARAMETERS = 'noise_parameters'
 
 
 ###############################################################################
@@ -231,6 +261,8 @@ AMICI_SY = 'sy'  # return field in amici simulation result
 AMICI_LLH = 'llh'  # return field in amici simulation result
 AMICI_STATUS = 'status'  # return field in amici simulation result
 AMICI_SIGMAY = 'sigmay'  # return field in amici simulation result
+AMICI_SSIGMAY = 'ssigmay'  # return field in amici simulation result
+AMICI_SSIGMAZ = 'ssigmaz'  # return field in amici simulation result
 
 CONDITION = 'condition'
 CONDITION_IDS = 'condition_ids'

@@ -5,6 +5,7 @@ import matplotlib.axes
 import matplotlib.pyplot as plt
 import numpy as np
 
+from ..C import AMICI_SIGMAY, AMICI_Y, CURRENT_SIMULATION, DATAPOINTS, SCIPY_X
 from ..problem import Problem
 from ..result import Result
 
@@ -86,8 +87,8 @@ def plot_splines_from_pypesto_result(
         return None
 
     # Get simulation and sigma.
-    sim = [rdata['y'] for rdata in inner_rdatas]
-    sigma = [rdata['sigmay'] for rdata in inner_rdatas]
+    sim = [rdata[AMICI_Y] for rdata in inner_rdatas]
+    sigma = [rdata[AMICI_SIGMAY] for rdata in inner_rdatas]
 
     spline_calculator = None
     for (
@@ -164,11 +165,11 @@ def plot_splines_from_inner_result(
         # For each group get the inner parameters and simulation
         xs = inner_problem.get_xs_for_group(group)
 
-        s = result['x']
+        s = result[SCIPY_X]
 
         inner_parameters = np.array([x.value for x in xs])
-        measurements = inner_problem.groups[group]['datapoints']
-        simulation = inner_problem.groups[group]['current_simulation']
+        measurements = inner_problem.groups[group][DATAPOINTS]
+        simulation = inner_problem.groups[group][CURRENT_SIMULATION]
 
         # For the simulation, get the spline bases
         delta_c, spline_bases, n = SplineInnerSolver._rescale_spline_bases(
@@ -271,8 +272,8 @@ def _add_spline_mapped_simulations_to_model_fit(
         return None
 
     # Get simulation and sigma.
-    sim = [rdata['y'] for rdata in inner_rdatas]
-    sigma = [rdata['sigmay'] for rdata in inner_rdatas]
+    sim = [rdata[AMICI_Y] for rdata in inner_rdatas]
+    sigma = [rdata[AMICI_SIGMAY] for rdata in inner_rdatas]
 
     spline_calculator = None
     for calculator in pypesto_problem.objective.calculator.inner_calculators:
@@ -301,10 +302,10 @@ def _add_spline_mapped_simulations_to_model_fit(
 
         # Get the inner parameters and simulation.
         xs = inner_problem.get_xs_for_group(group)
-        s = inner_result['x']
+        s = inner_result[SCIPY_X]
 
         inner_parameters = np.array([x.value for x in xs])
-        simulation = inner_problem.groups[group]['current_simulation']
+        simulation = inner_problem.groups[group][CURRENT_SIMULATION]
 
         # For the simulation, get the spline bases
         delta_c, spline_bases, n = SplineInnerSolver._rescale_spline_bases(
