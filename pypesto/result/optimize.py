@@ -1,5 +1,6 @@
 """Optimization result."""
 
+import logging
 import warnings
 from collections import Counter
 from copy import deepcopy
@@ -13,6 +14,7 @@ from ..problem import Problem
 from ..util import assign_clusters, delete_nan_inf
 
 OptimizationResult = Union['OptimizerResult', 'OptimizeResult']
+logger = logging.getLogger(__name__)
 
 
 class OptimizerResult(dict):
@@ -113,6 +115,7 @@ class OptimizerResult(dict):
         self.time: float = time
         self.message: str = message
         self.optimizer = optimizer
+        self.free_indices = None
 
     def __getattr__(self, key):
         try:
@@ -123,24 +126,49 @@ class OptimizerResult(dict):
     __setattr__ = dict.__setitem__
     __delattr__ = dict.__delitem__
 
-    def summary(self):
-        """Get summary of the object."""
+    def summary(self, full: bool = False) -> str:
+        """
+        Get summary of the object.
+
+        Parameters
+        ----------
+        full:
+            If True, print full vectors including fixed parameters.
+
+        Returns
+        -------
+        summary: str
+        """
+        # add warning, if self.free_indices is None
+        if self.free_indices is None:
+            if full:
+                logger.warning(
+                    "There is no information about fixed parameters, "
+                    "run update_to_full with the corresponding problem first."
+                )
+            full = True
         message = (
             "### Optimizer Result\n\n"
             f"* optimizer used: {self.optimizer}\n"
             f"* message: {self.message} \n"
             f"* number of evaluations: {self.n_fval}\n"
             f"* time taken to optimize: {self.time:0.3f}s\n"
-            f"* startpoint: {self.x0}\n"
-            f"* endpoint: {self.x}\n"
+            f"* startpoint: {self.x0 if full else self.x0[self.free_indices]}\n"
+            f"* endpoint: {self.x if full else self.x[self.free_indices]}\n"
         )
         # add fval, gradient, hessian, res, sres if available
         if self.fval is not None:
             message += f"* final objective value: {self.fval}\n"
         if self.grad is not None:
-            message += f"* final gradient value: {self.grad}\n"
+            message += (
+                f"* final gradient value: "
+                f"{self.grad if full else self.grad[self.free_indices]}\n"
+            )
         if self.hess is not None:
-            message += f"* final hessian value: {self.hess}\n"
+            hess = self.hess
+            if not full:
+                hess = self.hess[np.ix_(self.free_indices, self.free_indices)]
+            message += f"* final hessian value: {hess}\n"
         if self.res is not None:
             message += f"* final residual value: {self.res}\n"
         if self.sres is not None:
@@ -162,6 +190,7 @@ class OptimizerResult(dict):
         self.grad = problem.get_full_vector(self.grad)
         self.hess = problem.get_full_matrix(self.hess)
         self.x0 = problem.get_full_vector(self.x0, problem.x_fixed_vals)
+        self.free_indices = np.array(problem.x_free_indices)
 
 
 class OptimizeResult:
@@ -205,7 +234,12 @@ class OptimizeResult:
     def __len__(self):
         return len(self.list)
 
-    def summary(self, disp_best: bool = True, disp_worst: bool = False) -> str:
+    def summary(
+        self,
+        disp_best: bool = True,
+        disp_worst: bool = False,
+        full: bool = False,
+    ) -> str:
         """
         Get summary of the object.
 
@@ -215,6 +249,8 @@ class OptimizeResult:
             Whether to display a detailed summary of the best run.
         disp_worst:
             Whether to display a detailed summary of the worst run.
+        full:
+            If True, print full vectors including fixed parameters.
         """
         if len(self) == 0:
             return "## Optimization Result \n\n*empty*\n"
@@ -258,9 +294,14 @@ class OptimizeResult:
             f"* number of plateaus found: {num_plateaus}\n"
         )
         if disp_best:
-            summary += f"\nA summary of the best run:\n\n{self[0].summary()}"
+            summary += (
+                f"\nA summary of the best run:\n\n{self[0].summary(full)}"
+            )
         if disp_worst:
-            summary += f"\nA summary of the worst run:\n\n{self[-1].summary()}"
+            summary += (
+                f"\nA summary of the worst run:\n\n"
+                f"{self[-1].summary(full)}"
+            )
         return summary
 
     def append(
