@@ -6,6 +6,7 @@ from pathlib import Path
 from typing import Iterable, List
 
 import h5py
+import numpy as np
 
 from .. import C
 from ..engine import Engine, SingleCoreEngine
@@ -170,3 +171,12 @@ def assign_ids(
             "Manually assigned ids must differ from existing ones."
         )
     return ids
+
+
+def check_finite_bounds(lb, ub):
+    """Raise if bounds are not finite."""
+    if not np.isfinite(lb).all() or not np.isfinite(ub).all():
+        raise ValueError(
+            'Selected optimizer cannot work with unconstrained '
+            'optimization problems.'
+        )

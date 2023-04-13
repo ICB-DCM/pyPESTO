@@ -26,6 +26,10 @@ from .optimization_stats import (
 )
 from .optimizer_convergence import optimizer_convergence
 from .optimizer_history import optimizer_history, optimizer_history_lowlevel
+from .ordinal_categories import (
+    plot_categories_from_inner_result,
+    plot_categories_from_pypesto_result,
+)
 from .parameters import (
     optimization_scatter,
     parameter_hist,
@@ -43,5 +47,10 @@ from .sampling import (
     sampling_parameter_traces,
     sampling_prediction_trajectories,
     sampling_scatter,
+)
+from .spline_approximation import (
+    plot_splines_from_inner_result,
+    plot_splines_from_pypesto_result,
+    visualize_spline_optimized_model_fit,
 )
 from .waterfall import waterfall, waterfall_lowlevel

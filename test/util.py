@@ -159,6 +159,7 @@ class CRProblem:
         sigma: Standard deviation of a normal noise model.
         lb: Lower bound.
         ub: Upper bound.
+        x_guesses: Guesses for the initial states.
         """
         self.ts = anp.linspace(0, max_t, n_t)
 

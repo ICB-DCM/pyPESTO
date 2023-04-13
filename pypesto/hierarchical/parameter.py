@@ -70,9 +70,11 @@ class InnerParameter:
         self.scale = scale
 
         if inner_parameter_type not in (
+            InnerParameterType.OPTIMAL_SCALING,
             InnerParameterType.OFFSET,
             InnerParameterType.SIGMA,
             InnerParameterType.SCALING,
+            InnerParameterType.SPLINE,
         ):
             raise ValueError(
                 f"Unsupported inner parameter type `{inner_parameter_type}`."
@@ -97,6 +99,7 @@ class InnerParameter:
 
     def check_bounds(self):
         """Check bounds."""
+
         expected_lb = INNER_PARAMETER_BOUNDS[self.inner_parameter_type][
             LOWER_BOUND
         ]
