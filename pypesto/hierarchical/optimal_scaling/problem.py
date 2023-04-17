@@ -428,7 +428,7 @@ class OptimalScalingProblem(InnerProblem):
         """
         # Initialize boolean masks with False and find corresponding observable index.
         quantitative_ixs = [np.full(ixs_i.shape, False) for ixs_i in xs[0].ixs]
-        observable_index = xs[0].group
+        observable_index = xs[0].group - 1
 
         # Set to True all datapoints of the corresponding observable.
         if np.ndim(quantitative_ixs) == 2:
