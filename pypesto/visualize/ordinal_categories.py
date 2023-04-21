@@ -361,13 +361,55 @@ def _plot_category_rectangles_across_conditions(
 
 
 def _plot_category_rectangles(
-    ax, timepoints, upper_bounds, lower_bounds
+    ax,
+    timepoints,
+    upper_bounds,
+    lower_bounds,
+    surrogate_data,
+    measurement_type,
 ) -> None:
     """Plot the category rectangles."""
     interval_length = 0
+
     for i in range(len(timepoints)):
         if i + 1 == len(timepoints) or upper_bounds[i + 1] != upper_bounds[i]:
             if i + 1 == len(timepoints):
+                if upper_bounds[i] == np.inf:
+                    upper_bounds[i - interval_length : i + 1] = 1.1 * max(
+                        surrogate_data
+                    )
+                    middle_index = int((i - interval_length + i) / 2)
+                    middle_timepoint = timepoints[middle_index]
+                    # Draw a vertical short grey arrow at the middle point of the interval
+                    # at the upper_bounds[i] height
+                    ax.annotate(
+                        '',
+                        xy=(middle_timepoint, upper_bounds[i]),
+                        xytext=(
+                            middle_timepoint,
+                            upper_bounds[i] + 0.1 * max(surrogate_data),
+                        ),
+                        arrowprops={
+                            'arrowstyle': '<-',
+                            'color': 'gray',
+                            'linewidth': 2,
+                        },
+                    )
+                    ax.text(
+                        middle_timepoint,
+                        upper_bounds[i] + 0.1 * max(surrogate_data),
+                        'INF',
+                        color='gray',
+                        fontsize=12,
+                    )
+                    # Extend the ax to contain the text
+                    ax.set_ylim(
+                        bottom=ax.get_ylim()[0],
+                        top=max(
+                            ax.get_ylim()[1],
+                            upper_bounds[i] + 0.1 * max(surrogate_data),
+                        ),
+                    )
                 ax.fill_between(
                     timepoints[i - interval_length : i + 1],
                     upper_bounds[i - interval_length : i + 1],
@@ -376,6 +418,43 @@ def _plot_category_rectangles(
                     alpha=0.5,
                 )
             else:
+                if upper_bounds[i] == np.inf:
+                    upper_bounds[i - interval_length : i + 1] = 1.1 * max(
+                        surrogate_data
+                    )
+                    middle_index = int((i - interval_length + i + 1) / 2)
+                    middle_timepoint = timepoints[middle_index]
+                    # Draw a vertical short grey arrow at the middle point of the interval
+                    # at the upper_bounds[i] height
+                    ax.annotate(
+                        '',
+                        xy=(middle_timepoint, upper_bounds[i]),
+                        xytext=(
+                            middle_timepoint,
+                            upper_bounds[i] + 0.1 * max(surrogate_data),
+                        ),
+                        arrowprops={
+                            'arrowstyle': '<-',
+                            'color': 'gray',
+                            'linewidth': 2,
+                        },
+                    )
+                    ax.text(
+                        middle_timepoint,
+                        upper_bounds[i] + 0.1 * max(surrogate_data),
+                        'INF',
+                        color='gray',
+                        fontsize=12,
+                    )
+                    # Extend the ax to contain the text
+                    ax.set_ylim(
+                        bottom=ax.get_ylim()[0],
+                        top=max(
+                            ax.get_ylim()[1],
+                            upper_bounds[i] + 0.1 * max(surrogate_data),
+                        ),
+                    )
+
                 ax.fill_between(
                     timepoints[i - interval_length : i + 2],
                     np.concatenate(
@@ -396,15 +475,26 @@ def _plot_category_rectangles(
             interval_length = 0
         else:
             interval_length += 1
-    # Add to legend meaning of rectangles
-    ax.fill_between(
-        [],
-        [],
-        [],
-        color='gray',
-        alpha=0.5,
-        label='Categories',
-    )
+    if measurement_type == ORDINAL:
+        # Add to legend meaning of rectangles
+        ax.fill_between(
+            [],
+            [],
+            [],
+            color='gray',
+            alpha=0.5,
+            label='Categories',
+        )
+    elif measurement_type == CENSORED:
+        # Add to legend meaning of rectangles
+        ax.fill_between(
+            [],
+            [],
+            [],
+            color='gray',
+            alpha=0.5,
+            label='Censoring areas',
+        )
 
 
 def _get_data_for_plotting(
@@ -507,20 +597,6 @@ def _get_data_for_plotting(
         timepoints_all.append(cond_timepoints)
         upper_bounds_all.append(cond_upper_bounds)
         lower_bounds_all.append(cond_lower_bounds)
-
-    # If the measurement type is censored, we need set the np.inf upper bounds to a value
-    if measurement_type == CENSORED:
-        max_surrogate = max(
-            [
-                max(surrogate)
-                for surrogate in surrogate_all
-                if len(surrogate) > 0
-            ]
-        )
-        for i in range(len(upper_bounds_all)):
-            upper_bounds_all[i] = upper_bounds_all[i].clip(
-                max=1.1 * max_surrogate
-            )
 
     return (
         simulation_all,
@@ -652,6 +728,8 @@ def _plot_observable_fit_across_conditions(
             petab_censored_conditions,
             upper_bounds_all,
             lower_bounds_all,
+            surrogate_all,
+            measurement_type,
         )
 
         quantitative_data = inner_problem.groups[group][QUANTITATIVE_DATA]
@@ -694,6 +772,8 @@ def _plot_observable_fit_across_conditions(
             condition_ids_from_petab,
             upper_bounds_all,
             lower_bounds_all,
+            surrogate_all,
+            measurement_type,
         )
 
     # Set the condition xticks on an angle
@@ -768,6 +848,8 @@ def _plot_observable_fit_for_one_condition(
         timepoints_all[0],
         upper_bounds_all[0],
         lower_bounds_all[0],
+        surrogate_all[0],
+        measurement_type,
     )
 
 
