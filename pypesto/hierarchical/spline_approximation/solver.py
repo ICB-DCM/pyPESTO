@@ -4,7 +4,22 @@ from typing import Dict, List
 import numpy as np
 from scipy.optimize import minimize
 
-from ...C import MIN_DIFF_FACTOR, MIN_SIM_RANGE, InnerParameterType
+from ...C import (
+    CURRENT_SIMULATION,
+    DATAPOINTS,
+    EXPDATA_MASK,
+    MAX_DATAPOINT,
+    MIN_DATAPOINT,
+    MIN_DIFF_FACTOR,
+    MIN_SIM_RANGE,
+    N_SPLINE_PARS,
+    NOISE_PARAMETERS,
+    NUM_DATAPOINTS,
+    SCIPY_FUN,
+    SCIPY_SUCCESS,
+    SCIPY_X,
+    InnerParameterType,
+)
 from ..solver import InnerSolver
 from .parameter import SplineInnerParameter
 from .problem import SplineInnerProblem
@@ -67,11 +82,11 @@ class SplineInnerSolver(InnerSolver):
         inner_optimization_results = []
         for group in problem.get_groups_for_xs(InnerParameterType.SPLINE):
             group_dict = problem.groups[group]
-            group_dict['noise_parameters'] = extract_expdata_using_mask(
-                expdata=sigma, mask=group_dict['expdata_mask']
+            group_dict[NOISE_PARAMETERS] = extract_expdata_using_mask(
+                expdata=sigma, mask=group_dict[EXPDATA_MASK]
             )
-            group_dict['current_simulation'] = extract_expdata_using_mask(
-                expdata=sim, mask=group_dict['expdata_mask']
+            group_dict[CURRENT_SIMULATION] = extract_expdata_using_mask(
+                expdata=sim, mask=group_dict[EXPDATA_MASK]
             )
 
             inner_optimization_results_per_group = self._optimize_spline(
@@ -83,7 +98,7 @@ class SplineInnerSolver(InnerSolver):
             )
             save_inner_parameters_to_inner_problem(
                 inner_parameters=problem.get_xs_for_group(group),
-                s=inner_optimization_results_per_group['x'],
+                s=inner_optimization_results_per_group[SCIPY_X],
             )
         return inner_optimization_results
 
@@ -104,13 +119,16 @@ class SplineInnerSolver(InnerSolver):
         Inner objective function value.
         """
         if False in (
-            x_inner_opt[idx]['success'] for idx in range(len(x_inner_opt))
+            x_inner_opt[idx][SCIPY_SUCCESS] for idx in range(len(x_inner_opt))
         ):
             obj = np.inf
             warnings.warn("Inner optimization failed.")
         else:
             obj = np.sum(
-                [x_inner_opt[idx]['fun'] for idx in range(len(x_inner_opt))]
+                [
+                    x_inner_opt[idx][SCIPY_FUN]
+                    for idx in range(len(x_inner_opt))
+                ]
             )
         return obj
 
@@ -183,18 +201,18 @@ class SplineInnerSolver(InnerSolver):
                     problem.get_groups_for_xs(InnerParameterType.SPLINE)
                 ):
                     # Get the reformulated spline parameters
-                    s = np.asarray(x_inner_opt[group_idx]["x"])
+                    s = np.asarray(x_inner_opt[group_idx][SCIPY_X])
                     group_dict = problem.groups[group]
 
-                    measurements = group_dict['datapoints']
-                    sigma = group_dict['noise_parameters']
-                    sim_all = group_dict['current_simulation']
-                    N = group_dict['n_spline_pars']
-                    K = group_dict['n_datapoints']
+                    measurements = group_dict[DATAPOINTS]
+                    sigma = group_dict[NOISE_PARAMETERS]
+                    sim_all = group_dict[CURRENT_SIMULATION]
+                    N = group_dict[N_SPLINE_PARS]
+                    K = group_dict[NUM_DATAPOINTS]
 
                     sy_all = extract_expdata_using_mask(
                         expdata=sy_for_outer_parameter,
-                        mask=group_dict['expdata_mask'],
+                        mask=group_dict[EXPDATA_MASK],
                     )
 
                     delta_c, c, n = self._rescale_spline_bases(
@@ -217,8 +235,8 @@ class SplineInnerSolver(InnerSolver):
                         c=c,
                         n=n,
                     )
-                    min_meas = group_dict['min_datapoint']
-                    max_meas = group_dict['max_datapoint']
+                    min_meas = group_dict[MIN_DATAPOINT]
+                    max_meas = group_dict[MAX_DATAPOINT]
                     min_diff = self._get_minimal_difference(
                         measurement_range=max_meas - min_meas,
                         N=N,
@@ -288,11 +306,11 @@ class SplineInnerSolver(InnerSolver):
         group_dict:
             The group dictionary.
         """
-        group_measurements = group_dict['datapoints']
-        group_noise_parameters = group_dict['noise_parameters']
-        current_group_simulation = group_dict['current_simulation']
-        n_datapoints = group_dict['n_datapoints']
-        n_spline_pars = group_dict['n_spline_pars']
+        group_measurements = group_dict[DATAPOINTS]
+        group_noise_parameters = group_dict[NOISE_PARAMETERS]
+        current_group_simulation = group_dict[CURRENT_SIMULATION]
+        n_datapoints = group_dict[NUM_DATAPOINTS]
+        n_spline_pars = group_dict[N_SPLINE_PARS]
 
         (
             distance_between_bases,
@@ -302,8 +320,8 @@ class SplineInnerSolver(InnerSolver):
             sim_all=current_group_simulation, N=n_spline_pars, K=n_datapoints
         )
 
-        min_meas = group_dict['min_datapoint']
-        max_meas = group_dict['max_datapoint']
+        min_meas = group_dict[MIN_DATAPOINT]
+        max_meas = group_dict[MAX_DATAPOINT]
         min_diff = self._get_minimal_difference(
             measurement_range=max_meas - min_meas,
             N=n_spline_pars,

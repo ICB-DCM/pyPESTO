@@ -9,7 +9,21 @@ import pypesto
 import pypesto.logging
 import pypesto.optimize
 import pypesto.petab
-from pypesto.C import LIN, MAX, MODE_FUN, REDUCED, STANDARD, InnerParameterType
+from pypesto.C import (
+    CAT_LB,
+    CAT_UB,
+    INTERVAL_CONSTRAINTS,
+    LIN,
+    MAX,
+    MAXMIN,
+    METHOD,
+    MIN_GAP,
+    MODE_FUN,
+    REDUCED,
+    REPARAMETERIZED,
+    STANDARD,
+    InnerParameterType,
+)
 from pypesto.hierarchical.optimal_scaling import (
     OptimalScalingInnerSolver,
     OptimalScalingProblem,
@@ -22,19 +36,19 @@ from pypesto.hierarchical.optimal_scaling.solver import (
     get_surrogate_all,
 )
 
-inner_solver_options = [
+inner_options = [
     [
         dict(
             zip(
-                ['method', 'reparameterized', 'intervalConstraints'],
-                [method, reparameterized, intervalConstraints],
+                [METHOD, REPARAMETERIZED, INTERVAL_CONSTRAINTS],
+                [method, reparameterized, interval_constraints],
             )
         )
         for method, reparameterized in zip(
-            ['standard', 'reduced', 'reduced'], [False, False, True]
+            [STANDARD, REDUCED, REDUCED], [False, False, True]
         )
     ]
-    for intervalConstraints in ['max', 'max-min']
+    for interval_constraints in [MAX, MAXMIN]
 ]
 
 example_ordinal_yaml = (
@@ -48,31 +62,31 @@ example_ordinal_yaml = (
 )
 
 
-@pytest.fixture(params=inner_solver_options)
-def inner_solver_options(request):
+@pytest.fixture(params=inner_options)
+def inner_options(request):
     return request.param
 
 
-def test_evaluate_objective(inner_solver_options: List[Dict]):
+def test_evaluate_objective(inner_options: List[Dict]):
     """Check that standard / reduced / reparameterized formulations yield the
     same result."""
     petab_problem = petab.Problem.from_yaml(example_ordinal_yaml)
     vals = []
-    for idx, option in enumerate(inner_solver_options):
+    for idx, option in enumerate(inner_options):
         problem = _create_problem(petab_problem, option)
         val = problem.objective(np.array([0, 0]))
         vals.append(val)
         assert np.isclose(vals[idx], vals[idx - 1])
 
 
-def test_optimization(inner_solver_options: List[Dict]):
+def test_optimization(inner_options: List[Dict]):
     """Check that optimizations finishes without error."""
     petab_problem = petab.Problem.from_yaml(example_ordinal_yaml)
 
     optimizer = pypesto.optimize.ScipyOptimizer(
         method='L-BFGS-B', options={'maxiter': 10}
     )
-    for option in inner_solver_options:
+    for option in inner_options:
         problem = _create_problem(petab_problem, option)
         result = pypesto.optimize.minimize(
             problem=problem, n_starts=1, optimizer=optimizer
@@ -92,13 +106,11 @@ def _create_problem(
     petab_problem: petab.Problem, option: Dict
 ) -> pypesto.Problem:
     """Creates the ordinal pyPESTO problem with given options."""
-    importer = pypesto.petab.PetabImporter(
-        petab_problem, ordinal=True, hierarchical=True
-    )
+    importer = pypesto.petab.PetabImporter(petab_problem, hierarchical=True)
     importer.create_model()
 
     objective = importer.create_objective(
-        inner_solver_options=option,
+        inner_options=option,
     )
     problem = importer.create_problem(objective)
     return problem
@@ -111,17 +123,17 @@ def test_optimal_scaling_calculator_and_objective():
     methods = [STANDARD, REDUCED]
 
     options_per_method = {
-        STANDARD: {'method': STANDARD, 'reparameterized': False},
-        REDUCED: {'method': REDUCED, 'reparameterized': False},
+        STANDARD: {METHOD: STANDARD, REPARAMETERIZED: False},
+        REDUCED: {METHOD: REDUCED, REPARAMETERIZED: False},
     }
     problems = {}
 
     for method, options in options_per_method.items():
         importer = pypesto.petab.PetabImporter(
-            petab_problem, ordinal=True, hierarchical=True
+            petab_problem, hierarchical=True
         )
         objective = importer.create_objective(
-            inner_solver_options=options,
+            inner_options=options,
         )
         problem = importer.create_problem(objective)
         problems[method] = problem
@@ -208,7 +220,7 @@ def _inner_problem_exp():
     simulation = timepoints
     data = np.full(simulation.shape, np.nan)
 
-    par_types = ['cat_lb', 'cat_ub']
+    par_types = [CAT_LB, CAT_UB]
 
     categories = [1, 2, 3, 4, 5, 1, 2, 3, 4, 5]
     inner_parameter_ids = [
@@ -260,12 +272,13 @@ def test_optimal_scaling_solver():
     rtol = 1e-3
 
     solver = OptimalScalingInnerSolver(
-        options={'method': STANDARD, 'reparameterized': False}
+        options={METHOD: STANDARD, REPARAMETERIZED: False}
     )
 
     standard_result = solver.solve(
         problem=inner_problem,
         sim=[simulation],
+        sigma=[np.ones(len(simulation))],
     )[0]
 
     assert np.allclose(
@@ -275,12 +288,13 @@ def test_optimal_scaling_solver():
     assert np.allclose(standard_result['jac'], 0, rtol=rtol)
 
     solver = OptimalScalingInnerSolver(
-        options={'method': REDUCED, 'reparameterized': False}
+        options={METHOD: REDUCED, REPARAMETERIZED: False}
     )
 
     reduced_result = solver.solve(
         problem=inner_problem,
         sim=[simulation],
+        sigma=[np.ones(len(simulation))],
     )[0]
 
     assert np.all(
@@ -312,10 +326,10 @@ def test_surrogate_data_analytical_calculation():
     expected_values['surrogate_data'] = sim
 
     options = {
-        'method': STANDARD,
-        'reparameterized': False,
-        'intervalConstraints': MAX,
-        'minGap': 1e-16,
+        METHOD: STANDARD,
+        REPARAMETERIZED: False,
+        INTERVAL_CONSTRAINTS: MAX,
+        MIN_GAP: 1e-16,
     }
 
     category_upper_bounds = inner_problem.get_cat_ub_parameters_for_group(1)
