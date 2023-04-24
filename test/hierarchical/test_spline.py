@@ -23,7 +23,7 @@ from pypesto.hierarchical.spline_approximation.solver import (
     get_spline_mapped_simulations,
 )
 
-inner_solver_options = [
+inner_options = [
     {
         'spline_ratio': spline_ratio,
         'min_diff_factor': min_diff_factor,
@@ -43,12 +43,12 @@ example_nonlinear_monotone_yaml = (
 )
 
 
-@pytest.fixture(params=inner_solver_options)
-def inner_solver_options(request):
+@pytest.fixture(params=inner_options)
+def inner_options(request):
     return request.param
 
 
-def test_optimization(inner_solver_options: Dict):
+def test_optimization(inner_options: Dict):
     """Check that optimizations finishes without error."""
     petab_problem = petab.Problem.from_yaml(example_nonlinear_monotone_yaml)
 
@@ -56,7 +56,7 @@ def test_optimization(inner_solver_options: Dict):
         method="L-BFGS-B",
         options={"disp": None, "ftol": 2.220446049250313e-09, "gtol": 1e-5},
     )
-    problem = _create_problem(petab_problem, inner_solver_options)
+    problem = _create_problem(petab_problem, inner_options)
     result = pypesto.optimize.minimize(
         problem=problem, n_starts=1, optimizer=optimizer
     )
@@ -77,13 +77,12 @@ def _create_problem(
     """Creates the spline pyPESTO problem with given options."""
     importer = pypesto.petab.PetabImporter(
         petab_problem,
-        nonlinear_monotone=True,
         hierarchical=True,
     )
     importer.create_model()
 
     objective = importer.create_objective(
-        inner_solver_options=option,
+        inner_options=option,
     )
     problem = importer.create_problem(objective)
     return problem
@@ -108,11 +107,10 @@ def test_spline_calculator_and_objective():
     for minimal_diff, option in options.items():
         importer = pypesto.petab.PetabImporter(
             petab_problem,
-            nonlinear_monotone=True,
             hierarchical=True,
         )
         objective = importer.create_objective(
-            inner_solver_options=option,
+            inner_options=option,
         )
         problem = importer.create_problem(objective)
         problems[minimal_diff] = problem
@@ -313,6 +311,3 @@ def test_get_spline_mapped_simulations():
         expected_spline_mapped_simulations,
         rtol=rtol,
     )
-
-
-test_get_spline_mapped_simulations()
