@@ -1,23 +1,25 @@
 import warnings
-from typing import Dict, List, Sequence, Union
+from typing import Dict, List, Optional, Sequence, Union
 
 import matplotlib.axes
 import matplotlib.pyplot as plt
 import numpy as np
 
+from ..C import AMICI_SIGMAY, AMICI_Y, CURRENT_SIMULATION, DATAPOINTS, SCIPY_X
 from ..problem import Problem
 from ..result import Result
 
 try:
     import amici
-    import petab
 
+    from ..hierarchical.spline_approximation.calculator import (
+        SplineAmiciCalculator,
+    )
     from ..hierarchical.spline_approximation.problem import SplineInnerProblem
     from ..hierarchical.spline_approximation.solver import (
         SplineInnerSolver,
         get_spline_mapped_simulations,
     )
-    from .model_fit import visualize_optimized_model_fit
 except ImportError:
     pass
 
@@ -85,12 +87,20 @@ def plot_splines_from_pypesto_result(
         return None
 
     # Get simulation and sigma.
-    sim = [rdata['y'] for rdata in inner_rdatas]
-    sigma = [rdata['sigmay'] for rdata in inner_rdatas]
+    sim = [rdata[AMICI_Y] for rdata in inner_rdatas]
+    sigma = [rdata[AMICI_SIGMAY] for rdata in inner_rdatas]
+
+    spline_calculator = None
+    for (
+        calculator
+    ) in pypesto_result.problem.objective.calculator.inner_calculators:
+        if isinstance(calculator, SplineAmiciCalculator):
+            spline_calculator = calculator
+            break
 
     # Get the inner solver and problem.
-    inner_solver = pypesto_result.problem.objective.calculator.inner_solver
-    inner_problem = pypesto_result.problem.objective.calculator.inner_problem
+    inner_solver = spline_calculator.inner_solver
+    inner_problem = spline_calculator.inner_problem
 
     inner_results = inner_solver.solve(inner_problem, sim, sigma)
 
@@ -155,11 +165,11 @@ def plot_splines_from_inner_result(
         # For each group get the inner parameters and simulation
         xs = inner_problem.get_xs_for_group(group)
 
-        s = result['x']
+        s = result[SCIPY_X]
 
         inner_parameters = np.array([x.value for x in xs])
-        measurements = inner_problem.groups[group]['datapoints']
-        simulation = inner_problem.groups[group]['current_simulation']
+        measurements = inner_problem.groups[group][DATAPOINTS]
+        simulation = inner_problem.groups[group][CURRENT_SIMULATION]
 
         # For the simulation, get the spline bases
         delta_c, spline_bases, n = SplineInnerSolver._rescale_spline_bases(
@@ -175,7 +185,6 @@ def plot_splines_from_inner_result(
         axs[group_idx].plot(
             simulation, measurements, 'bs', label='Measurements'
         )
-        axs[group_idx].plot(spline_bases, inner_parameters, 'g')
         axs[group_idx].plot(
             spline_bases, inner_parameters, 'g.', label='Spline knots'
         )
@@ -204,14 +213,11 @@ def plot_splines_from_inner_result(
     return fig, axs
 
 
-def visualize_spline_optimized_model_fit(
-    petab_problem: 'petab.Problem',
+def _add_spline_mapped_simulations_to_model_fit(
     result: Union[Result, Sequence[Result]],
     pypesto_problem: Problem,
     start_index: int = 0,
-    return_dict: bool = False,
-    unflattened_petab_problem: 'petab.Problem' = None,
-    **kwargs,
+    axes: Optional[plt.Axes] = None,
 ) -> Union[matplotlib.axes.Axes, None]:
     """Visualize the spline optimized model fit.
 
@@ -221,17 +227,8 @@ def visualize_spline_optimized_model_fit(
     :py:func:`pypesto.visualize.model_fit.visualize_optimized_model_fit`.
     """
 
-    # Get the axes from the pypesto visualization.
-    axes = visualize_optimized_model_fit(
-        petab_problem,
-        result,
-        pypesto_problem,
-        start_index=start_index,
-        return_dict=return_dict,
-        unflattened_petab_problem=unflattened_petab_problem,
-        **kwargs,
-    )
-
+    # If no visualize_optimized_model_fit axes were given,
+    # return None.
     if axes is None:
         return None
 
@@ -275,12 +272,18 @@ def visualize_spline_optimized_model_fit(
         return None
 
     # Get simulation and sigma.
-    sim = [rdata['y'] for rdata in inner_rdatas]
-    sigma = [rdata['sigmay'] for rdata in inner_rdatas]
+    sim = [rdata[AMICI_Y] for rdata in inner_rdatas]
+    sigma = [rdata[AMICI_SIGMAY] for rdata in inner_rdatas]
+
+    spline_calculator = None
+    for calculator in pypesto_problem.objective.calculator.inner_calculators:
+        if isinstance(calculator, SplineAmiciCalculator):
+            spline_calculator = calculator
+            break
 
     # Get the inner solver and problem.
-    inner_solver = pypesto_problem.objective.calculator.inner_solver
-    inner_problem = pypesto_problem.objective.calculator.inner_problem
+    inner_solver = spline_calculator.inner_solver
+    inner_problem = spline_calculator.inner_problem
 
     # Solve the inner problem.
     inner_results = inner_solver.solve(inner_problem, sim, sigma)
@@ -288,9 +291,8 @@ def visualize_spline_optimized_model_fit(
     # Get the observable ids.
     observable_ids = amici_model.getObservableIds()
 
-    for inner_result, observable_id, group in zip(
-        inner_results, observable_ids, range(1, len(observable_ids) + 1)
-    ):
+    for inner_result, group in zip(inner_results, inner_problem.groups):
+        observable_id = observable_ids[group - 1]
         # Get the ax for the current observable.
         ax = [
             ax
@@ -300,10 +302,10 @@ def visualize_spline_optimized_model_fit(
 
         # Get the inner parameters and simulation.
         xs = inner_problem.get_xs_for_group(group)
-        s = inner_result['x']
+        s = inner_result[SCIPY_X]
 
         inner_parameters = np.array([x.value for x in xs])
-        simulation = inner_problem.groups[group]['current_simulation']
+        simulation = inner_problem.groups[group][CURRENT_SIMULATION]
 
         # For the simulation, get the spline bases
         delta_c, spline_bases, n = SplineInnerSolver._rescale_spline_bases(
