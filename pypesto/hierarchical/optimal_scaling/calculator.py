@@ -4,7 +4,20 @@ from typing import Dict, List, Sequence, Tuple
 
 import numpy as np
 
-from ...C import FVAL, GRAD, HESS, MODE_RES, RDATAS, RES, SRES, X_INNER_OPT
+from ...C import (
+    AMICI_SIGMAY,
+    AMICI_SSIGMAY,
+    AMICI_SY,
+    AMICI_Y,
+    FVAL,
+    GRAD,
+    HESS,
+    MODE_RES,
+    RDATAS,
+    RES,
+    SRES,
+    X_INNER_OPT,
+)
 from ...objective.amici.amici_calculator import (
     AmiciCalculator,
     AmiciModel,
@@ -76,6 +89,7 @@ class OptimalScalingAmiciCalculator(AmiciCalculator):
         x_ids: Sequence[str],
         parameter_mapping: ParameterMapping,
         fim_for_hess: bool,
+        rdatas: List['amici.ReturnData'] = None,
     ):
         """Perform the actual AMICI call.
 
@@ -102,6 +116,10 @@ class OptimalScalingAmiciCalculator(AmiciCalculator):
         fim_for_hess:
             Whether to use the FIM (if available) instead of the Hessian (if
             requested).
+        rdatas:
+            AMICI simulation return data. In case the calculator is part of
+            the :class:`pypesto.objective.amici.InnerCalculatorCollector`,
+            it will already simulate the model and pass the results here.
 
         Returns
         -------
@@ -129,51 +147,55 @@ class OptimalScalingAmiciCalculator(AmiciCalculator):
         if sensi_orders:
             sensi_order = max(sensi_orders)
 
-        amici_solver.setSensitivityOrder(sensi_order)
+        # If AMICI ReturnData is not provided, we need to simulate the model
+        if rdatas is None:
+            amici_solver.setSensitivityOrder(sensi_order)
 
-        x_dct = copy.deepcopy(x_dct)
+            x_dct = copy.deepcopy(x_dct)
 
-        # fill in parameters
-        amici.parameter_mapping.fill_in_parameters(
-            edatas=edatas,
-            problem_parameters=x_dct,
-            scaled_parameters=True,
-            parameter_mapping=parameter_mapping,
-            amici_model=amici_model,
-        )
-        # run amici simulation
-        inner_rdatas = amici.runAmiciSimulations(
-            amici_model,
-            amici_solver,
-            edatas,
-            num_threads=min(n_threads, len(edatas)),
-        )
+            # fill in parameters
+            amici.parameter_mapping.fill_in_parameters(
+                edatas=edatas,
+                problem_parameters=x_dct,
+                scaled_parameters=True,
+                parameter_mapping=parameter_mapping,
+                amici_model=amici_model,
+            )
+            # run amici simulation
+            rdatas = amici.runAmiciSimulations(
+                amici_model,
+                amici_solver,
+                edatas,
+                num_threads=min(n_threads, len(edatas)),
+            )
+
         inner_result = {
             FVAL: nllh,
             GRAD: snllh,
             HESS: s2nllh,
             RES: res,
             SRES: sres,
-            RDATAS: inner_rdatas,
+            RDATAS: rdatas,
             X_INNER_OPT: self.inner_problem.get_inner_parameter_dictionary(),
         }
 
         # if any amici simulation failed, it's unlikely we can compute
         # meaningful inner parameters, so we better just fail early.
-        if any(rdata.status != amici.AMICI_SUCCESS for rdata in inner_rdatas):
-            # if the gradient was requested, we need to provide some value
-            # for it
+        if any(rdata.status != amici.AMICI_SUCCESS for rdata in rdatas):
             inner_result[FVAL] = np.inf
+            # if the gradient was requested,
+            # we need to provide some value for it
             if 1 in sensi_orders:
                 inner_result[GRAD] = np.full(
                     shape=len(x_ids), fill_value=np.nan
                 )
             return filter_return_dict(inner_result)
 
-        sim = [rdata['y'] for rdata in inner_rdatas]
+        sim = [rdata[AMICI_Y] for rdata in rdatas]
+        sigma = [rdata[AMICI_SIGMAY] for rdata in rdatas]
 
         # compute optimal inner parameters
-        x_inner_opt = self.inner_solver.solve(self.inner_problem, sim)
+        x_inner_opt = self.inner_solver.solve(self.inner_problem, sim, sigma)
         inner_result[FVAL] = self.inner_solver.calculate_obj_function(
             x_inner_opt
         )
@@ -183,12 +205,16 @@ class OptimalScalingAmiciCalculator(AmiciCalculator):
 
         # calculate analytical gradients if requested
         if sensi_order > 0:
-            sy = [rdata['sy'] for rdata in inner_rdatas]
+            # print([opt['fun'] for opt in x_inner_opt])
+            sy = [rdata[AMICI_SY] for rdata in rdatas]
+            ssigma = [rdata[AMICI_SSIGMAY] for rdata in rdatas]
             inner_result[GRAD] = self.inner_solver.calculate_gradients(
                 problem=self.inner_problem,
                 x_inner_opt=x_inner_opt,
                 sim=sim,
                 sy=sy,
+                sigma=sigma,
+                ssigma=ssigma,
                 parameter_mapping=parameter_mapping,
                 par_opt_ids=x_ids,
                 par_sim_ids=amici_model.getParameterIds(),
