@@ -21,7 +21,7 @@ nbs_1=(
   'fixed_parameters.ipynb'
   'petab_import.ipynb'
   'prior_definition.ipynb'
-  'rosenbrock.ipynb'
+  'custom_objective_function.ipynb'
   'store.ipynb'
   'synthetic_data.ipynb'
   'hdf5_storage.ipynb'
