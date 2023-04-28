@@ -2,7 +2,7 @@
 import logging
 import multiprocessing
 import os
-from typing import List
+from typing import Any, List
 
 import cloudpickle as pickle
 from tqdm import tqdm
@@ -49,7 +49,9 @@ class MultiProcessEngine(Engine):
         self.n_procs: int = n_procs
         self.method: str = method
 
-    def execute(self, tasks: List[Task], progress_bar: bool = True):
+    def execute(
+        self, tasks: List[Task], progress_bar: bool = True
+    ) -> List[Any]:
         """Pickle tasks and distribute work over parallel processes.
 
         Parameters
@@ -71,8 +73,12 @@ class MultiProcessEngine(Engine):
         ctx = multiprocessing.get_context(method=self.method)
 
         with ctx.Pool(processes=n_procs) as pool:
-            results = pool.map(
-                work, tqdm(pickled_tasks, disable=not progress_bar)
+            results = list(
+                tqdm(
+                    pool.imap(work, pickled_tasks),
+                    total=len(pickled_tasks),
+                    disable=not progress_bar,
+                ),
             )
 
         return results
