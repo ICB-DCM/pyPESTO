@@ -68,7 +68,7 @@ class MultiThreadEngine(Engine):
         with ThreadPoolExecutor(max_workers=n_threads) as pool:
             results = list(
                 tqdm(
-                    pool.imap(work, copied_tasks),
+                    pool.map(work, copied_tasks),
                     total=len(copied_tasks),
                     disable=not progress_bar,
                 ),
